@@ -1,9 +1,350 @@
 import Anthropic from '@anthropic-ai/sdk'
+import type { DbUser, DbCompany, DbTask, DbCalendarEvent, DbWeeklyReview } from '@/types/database'
+
+// ─── Client ──────────────────────────────────────────────────────────────────
 
 const client = new Anthropic({
   apiKey: import.meta.env.VITE_ANTHROPIC_API_KEY ?? '',
   dangerouslyAllowBrowser: true,
 })
+
+const MODEL = 'claude-sonnet-4-5'
+const MAX_TOKENS = 1000
+
+// ─── Error ───────────────────────────────────────────────────────────────────
+
+export class ProfessorError extends Error {
+  readonly code: 'api_error' | 'parse_error' | 'config_error'
+  readonly cause?: unknown
+
+  constructor(
+    message: string,
+    code: 'api_error' | 'parse_error' | 'config_error',
+    cause?: unknown,
+  ) {
+    super(message)
+    this.name = 'ProfessorError'
+    this.code = code
+    this.cause = cause
+  }
+}
+
+// ─── Input types ─────────────────────────────────────────────────────────────
+
+export interface UserContext {
+  user: DbUser
+  companies: DbCompany[]
+}
+
+export interface DayContext extends UserContext {
+  todayEvents: DbCalendarEvent[]
+  pendingTasks: DbTask[]
+  energyLevel?: number   // 1-5 from this morning's log
+  date: string           // "YYYY-MM-DD"
+}
+
+export interface EmailData extends UserContext {
+  subject: string
+  fromEmail: string
+  body: string
+  receivedAt: string
+}
+
+export interface CalEvent extends UserContext {
+  event: DbCalendarEvent
+  relatedTasks?: DbTask[]
+}
+
+export interface WeekData extends UserContext {
+  review: DbWeeklyReview
+  completedTasks: DbTask[]
+  habits: { name: string; streak: number; completedThisWeek: number; target: number }[]
+}
+
+// ─── Output types ────────────────────────────────────────────────────────────
+
+export interface DayPlan {
+  schedule: { time: string; activity: string; company?: string }[]
+  top3: string[]
+  focusTip: string
+}
+
+export interface EmailTriage {
+  classification: 'decision' | 'fyi' | 'waiting' | 'delegate'
+  suggestedReply: string
+  followUpDate?: string
+  urgency: 'high' | 'medium' | 'low'
+}
+
+export interface MeetingPrep {
+  contextSummary: string
+  talkingPoints: string[]
+  goal: string
+}
+
+// ─── System prompt builder ───────────────────────────────────────────────────
+
+function baseSystem(user: DbUser, companies: DbCompany[]): string {
+  const rules = user.schedule_rules as Record<string, string | number | boolean | string[]>
+
+  const companyList = companies
+    .filter(c => c.is_active)
+    .map(c => `  • ${c.name}${c.color_tag ? ` (${c.color_tag})` : ''}`)
+    .join('\n')
+
+  const ruleLines = Object.entries(rules)
+    .map(([k, v]) => `  ${k}: ${Array.isArray(v) ? v.join(', ') : v}`)
+    .join('\n')
+
+  return `You are The Professor — a premium AI executive productivity assistant.
+Your tone is authoritative, warm, concise, and always actionable.
+Never invent facts. If context is missing, say so briefly.
+
+USER PROFILE
+  Name: ${user.full_name ?? user.email}
+  Active framework: ${user.active_framework}
+
+COMPANIES / CONTEXTS
+${companyList || '  (none configured)'}
+
+SCHEDULE RULES
+${ruleLines || '  (none configured)'}`
+}
+
+// ─── Core call helper ────────────────────────────────────────────────────────
+
+async function call(system: string, userMessage: string): Promise<string> {
+  try {
+    const msg = await client.messages.create({
+      model: MODEL,
+      max_tokens: MAX_TOKENS,
+      system,
+      messages: [{ role: 'user', content: userMessage }],
+    })
+    const block = msg.content.find(b => b.type === 'text')
+    return block?.type === 'text' ? block.text.trim() : ''
+  } catch (err) {
+    throw new ProfessorError(
+      'Claude API request failed',
+      'api_error',
+      err,
+    )
+  }
+}
+
+/** Parse JSON from a response that may wrap it in a fenced code block. */
+function parseJson<T>(raw: string): T | null {
+  try {
+    const stripped = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim()
+    return JSON.parse(stripped) as T
+  } catch {
+    return null
+  }
+}
+
+// ─── planMyDay ───────────────────────────────────────────────────────────────
+
+export async function planMyDay(context: DayContext): Promise<DayPlan> {
+  const system = baseSystem(context.user, context.companies) + `
+
+TASK: Build an optimised day plan for ${context.date}.
+Return ONLY valid JSON matching this shape — no prose:
+{
+  "schedule": [{ "time": "HH:MM", "activity": "...", "company": "..." }],
+  "top3": ["task 1", "task 2", "task 3"],
+  "focusTip": "one actionable sentence"
+}`
+
+  const events = context.todayEvents
+    .map(e => `  ${e.start_time} – ${e.end_time}: ${e.title}`)
+    .join('\n') || '  (no meetings)'
+
+  const tasks = context.pendingTasks
+    .slice(0, 20)
+    .map(t => `  [${t.quadrant ?? 'unset'}] ${t.title}${t.due_date ? ` (due ${t.due_date})` : ''}`)
+    .join('\n') || '  (no pending tasks)'
+
+  const userMsg = [
+    `Today's calendar:\n${events}`,
+    `Pending tasks:\n${tasks}`,
+    context.energyLevel ? `Morning energy level: ${context.energyLevel}/5` : '',
+  ].filter(Boolean).join('\n\n')
+
+  try {
+    const raw = await call(system, userMsg)
+    const parsed = parseJson<DayPlan>(raw)
+    if (!parsed || !Array.isArray(parsed.schedule) || !Array.isArray(parsed.top3)) {
+      return { schedule: [], top3: [], focusTip: '' }
+    }
+    return parsed
+  } catch (err) {
+    if (err instanceof ProfessorError) throw err
+    throw new ProfessorError('Failed to plan day', 'parse_error', err)
+  }
+}
+
+// ─── triageEmail ─────────────────────────────────────────────────────────────
+
+const EMAIL_CLASSIFICATIONS = ['decision', 'fyi', 'waiting', 'delegate'] as const
+const URGENCIES = ['high', 'medium', 'low'] as const
+
+export async function triageEmail(email: EmailData): Promise<EmailTriage> {
+  const system = baseSystem(email.user, email.companies) + `
+
+TASK: Triage this email for a busy executive.
+Return ONLY valid JSON — no prose:
+{
+  "classification": "decision|fyi|waiting|delegate",
+  "suggestedReply": "ready-to-send reply (or empty string if none needed)",
+  "followUpDate": "YYYY-MM-DD or omit if not applicable",
+  "urgency": "high|medium|low"
+}`
+
+  const userMsg = `From: ${email.fromEmail}
+Subject: ${email.subject}
+Received: ${email.receivedAt}
+
+${email.body}`
+
+  try {
+    const raw = await call(system, userMsg)
+    const parsed = parseJson<EmailTriage>(raw)
+    if (
+      !parsed ||
+      !EMAIL_CLASSIFICATIONS.includes(parsed.classification) ||
+      !URGENCIES.includes(parsed.urgency)
+    ) {
+      return {
+        classification: 'fyi',
+        suggestedReply: '',
+        urgency: 'low',
+      }
+    }
+    return parsed
+  } catch (err) {
+    if (err instanceof ProfessorError) throw err
+    throw new ProfessorError('Failed to triage email', 'parse_error', err)
+  }
+}
+
+// ─── generateMeetingPrep ─────────────────────────────────────────────────────
+
+export async function generateMeetingPrep(input: CalEvent): Promise<MeetingPrep> {
+  const system = baseSystem(input.user, input.companies) + `
+
+TASK: Generate concise meeting preparation for the event below.
+Return ONLY valid JSON — no prose:
+{
+  "contextSummary": "2-3 sentence background",
+  "talkingPoints": ["point 1", "point 2", "point 3"],
+  "goal": "single clear outcome sentence"
+}`
+
+  const { event } = input
+  const tasks = (input.relatedTasks ?? [])
+    .map(t => `  • ${t.title}`)
+    .join('\n')
+
+  const userMsg = [
+    `Meeting: ${event.title}`,
+    `Time: ${event.start_time} – ${event.end_time}`,
+    event.location ? `Location: ${event.location}` : '',
+    event.meeting_type ? `Type: ${event.meeting_type}` : '',
+    tasks ? `Related tasks:\n${tasks}` : '',
+  ].filter(Boolean).join('\n')
+
+  try {
+    const raw = await call(system, userMsg)
+    const parsed = parseJson<MeetingPrep>(raw)
+    if (!parsed || !Array.isArray(parsed.talkingPoints)) {
+      return { contextSummary: '', talkingPoints: [], goal: '' }
+    }
+    return parsed
+  } catch (err) {
+    if (err instanceof ProfessorError) throw err
+    throw new ProfessorError('Failed to generate meeting prep', 'parse_error', err)
+  }
+}
+
+// ─── weeklyInsight ───────────────────────────────────────────────────────────
+
+export async function weeklyInsight(review: WeekData): Promise<string> {
+  const system = baseSystem(review.user, review.companies) + `
+
+TASK: Write a short weekly performance insight (3-5 sentences) for the executive.
+Be direct, honest, and forward-looking. Plain text — no JSON, no markdown headers.`
+
+  const { review: r } = review
+  const habits = review.habits
+    .map(h => `  ${h.name}: ${h.completedThisWeek}/${h.target} (streak ${h.streak})`)
+    .join('\n')
+
+  const userMsg = [
+    `Week of: ${r.week_of}`,
+    `Tasks shipped: ${r.shipped_count ?? 0}  Slipped: ${r.slipped_count ?? 0}`,
+    `Focus hours: ${r.focus_hours ?? 0}  Meeting hours: ${r.meeting_hours ?? 0}`,
+    habits ? `Habit performance:\n${habits}` : '',
+    review.completedTasks.length
+      ? `Completed tasks:\n${review.completedTasks.slice(0, 10).map(t => `  • ${t.title}`).join('\n')}`
+      : '',
+  ].filter(Boolean).join('\n')
+
+  try {
+    return await call(system, userMsg)
+  } catch (err) {
+    if (err instanceof ProfessorError) throw err
+    throw new ProfessorError('Failed to generate weekly insight', 'api_error', err)
+  }
+}
+
+// ─── checkTaskLoad ───────────────────────────────────────────────────────────
+
+/** Returns a warning string if overloaded, null if load looks healthy. */
+export async function checkTaskLoad(tasks: DbTask[]): Promise<string | null> {
+  if (tasks.length === 0) return null
+
+  // Quick heuristic — only call AI if load is potentially problematic
+  const urgent = tasks.filter(
+    t => t.quadrant === 'urgent_important' && t.status !== 'done',
+  ).length
+
+  if (urgent < 5) return null
+
+  const system = `You are The Professor, an executive productivity assistant.
+Evaluate the task list below and return ONE short sentence (max 20 words)
+warning the executive if they are overloaded, or return exactly the string "OK" if load is fine.`
+
+  const userMsg = tasks
+    .slice(0, 30)
+    .map(t => `[${t.quadrant ?? 'unset'}][${t.status}] ${t.title}`)
+    .join('\n')
+
+  try {
+    const result = await call(system, userMsg)
+    return result === 'OK' ? null : result
+  } catch {
+    // Non-critical — swallow and return null gracefully
+    return null
+  }
+}
+
+// ─── chat ────────────────────────────────────────────────────────────────────
+
+export async function chat(message: string, ctx: UserContext): Promise<string> {
+  const system = baseSystem(ctx.user, ctx.companies) + `
+
+Answer the executive's question or request below concisely and helpfully.
+If the question is outside your role as a productivity assistant, politely say so.`
+
+  try {
+    return await call(system, message)
+  } catch (err) {
+    if (err instanceof ProfessorError) throw err
+    throw new ProfessorError('Chat request failed', 'api_error', err)
+  }
+}
+
+// ─── Legacy export (backwards compat with existing UI) ───────────────────────
 
 export interface ProfessorMessage {
   role: 'user' | 'assistant'
@@ -14,20 +355,20 @@ export async function askProfessor(
   messages: ProfessorMessage[],
   systemContext?: string,
 ): Promise<string> {
-  const systemPrompt = `You are The Professor — a premium AI executive productivity assistant. 
-You help busy executives manage their time, priorities, and decisions with clarity and precision.
+  const system = `You are The Professor — a premium AI executive productivity assistant.
 Your tone is authoritative yet warm, concise, and always actionable.
 ${systemContext ?? ''}`
 
-  const stream = await client.messages.stream({
-    model: 'claude-opus-4-6',
-    max_tokens: 2048,
-    thinking: { type: 'adaptive' },
-    system: systemPrompt,
-    messages: messages.map(m => ({ role: m.role, content: m.content })),
-  })
-
-  const response = await stream.finalMessage()
-  const textBlock = response.content.find(b => b.type === 'text')
-  return textBlock && textBlock.type === 'text' ? textBlock.text : ''
+  try {
+    const msg = await client.messages.create({
+      model: MODEL,
+      max_tokens: MAX_TOKENS,
+      system,
+      messages: messages.map(m => ({ role: m.role, content: m.content })),
+    })
+    const block = msg.content.find(b => b.type === 'text')
+    return block?.type === 'text' ? block.text : ''
+  } catch (err) {
+    throw new ProfessorError('askProfessor failed', 'api_error', err)
+  }
 }
