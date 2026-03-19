@@ -1,0 +1,38 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap');
+@import url('https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@700,800,500,400&display=swap');
+
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #1C1814;
+  --color-surface: #2A2218;
+  --color-border: #3A3020;
+  --color-amber: #C49A3C;
+  --color-ptext: #F0E8D8;
+  --color-muted: #8A7A60;
+  --color-teradix: #C49A3C;
+  --color-dxtech: #7F77DD;
+  --color-consulting: #1D9E75;
+  --color-personal: #888780;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  background-color: #1C1814;
+  color: #F0E8D8;
+  font-family: 'DM Sans', sans-serif;
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+#root { min-height: 100vh; }
+
+h1,h2,h3,h4,h5,h6 { font-family: 'Cabinet Grotesk', sans-serif; }
+
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: #1C1814; }
+::-webkit-scrollbar-thumb { background: #3A3020; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #8A7A60; }
