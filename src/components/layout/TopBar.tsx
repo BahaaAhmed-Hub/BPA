@@ -1,5 +1,6 @@
 
 import { Bell, Search, Settings } from 'lucide-react'
+import { useUIStore } from '@/store/uiStore'
 
 interface TopBarProps {
   title: string
@@ -7,6 +8,7 @@ interface TopBarProps {
 }
 
 export function TopBar({ title, subtitle }: TopBarProps) {
+  const setActiveModule = useUIStore(s => s.setActiveModule)
   const now = new Date()
   const dateStr = now.toLocaleDateString('en-US', {
     weekday: 'long',
@@ -62,6 +64,7 @@ export function TopBar({ title, subtitle }: TopBarProps) {
         {[Search, Bell, Settings].map((Icon, i) => (
           <button
             key={i}
+            onClick={i === 2 ? () => setActiveModule('settings') : undefined}
             style={{
               width: 34,
               height: 34,
