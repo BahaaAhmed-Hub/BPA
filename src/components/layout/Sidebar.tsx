@@ -91,7 +91,7 @@ export function Sidebar() {
       </div>
 
       {/* Navigation */}
-      <nav style={{ flex: 1, padding: '12px 8px', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+      <nav style={{ flex: 1, padding: '12px 8px', overflowY: 'auto', overflowX: 'hidden', display: 'flex', flexDirection: 'column' }}>
         <div style={{ flex: 1 }}>
           {NAV_ITEMS.map(({ id, label, Icon }) => {
             const active = activeModule === id
