@@ -8,6 +8,7 @@ import { InboxModule } from './modules/inbox/InboxModule'
 import { HabitsModule } from './modules/habits/HabitsModule'
 import { ReviewModule } from './modules/review/ReviewModule'
 import { MorningModule } from './modules/morning/MorningModule'
+import { SettingsModule } from './modules/settings/SettingsModule'
 import { useUIStore } from './store/uiStore'
 
 function ActiveModule() {
@@ -20,6 +21,7 @@ function ActiveModule() {
     case 'habits':     return <HabitsModule />
     case 'review':     return <ReviewModule />
     case 'morning':    return <MorningModule />
+    case 'settings':   return <SettingsModule />
     default:           return <ExecutiveDashboard />
   }
 }
