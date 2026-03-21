@@ -124,7 +124,7 @@ const DEFAULTS: AppSettings = {
   theme: 'dark-warm', sidebarDefault: false, compact: false,
 }
 
-// ─── localStorage fallback ────────────────────────────────────────────────────
+// ─── localStorage helpers ─────────────────────────────────────────────────────
 
 function localSaveSettings(s: AppSettings) {
   try { localStorage.setItem('professor-settings', JSON.stringify(s)) } catch { /* quota */ }
@@ -135,6 +135,28 @@ function localLoadSettings(): AppSettings | null {
     const raw = localStorage.getItem('professor-settings')
     return raw ? { ...DEFAULTS, ...(JSON.parse(raw) as Partial<AppSettings>) } : null
   } catch { return null }
+}
+
+function localSaveCompanies(companies: CompanyRow[]) {
+  try { localStorage.setItem('professor-companies', JSON.stringify(companies)) } catch { /* quota */ }
+}
+
+function localLoadCompanies(): CompanyRow[] {
+  try {
+    const raw = localStorage.getItem('professor-companies')
+    return raw ? (JSON.parse(raw) as CompanyRow[]) : []
+  } catch { return [] }
+}
+
+function localSaveHabits(habits: HabitRow[]) {
+  try { localStorage.setItem('professor-habit-config', JSON.stringify(habits)) } catch { /* quota */ }
+}
+
+function localLoadHabits(): HabitRow[] {
+  try {
+    const raw = localStorage.getItem('professor-habit-config')
+    return raw ? (JSON.parse(raw) as HabitRow[]) : []
+  } catch { return [] }
 }
 
 // ─── Google Calendar list helper ──────────────────────────────────────────────
@@ -406,8 +428,8 @@ function SortableRow({
 export function Settings() {
   const { setSidebarCollapsed } = useUIStore()
   const [s, setS] = useState<AppSettings>(() => localLoadSettings() ?? DEFAULTS)
-  const [companies,   setCompanies]   = useState<CompanyRow[]>([])
-  const [habits,      setHabits]      = useState<HabitRow[]>([])
+  const [companies,   setCompanies]   = useState<CompanyRow[]>(() => localLoadCompanies())
+  const [habits,      setHabits]      = useState<HabitRow[]>(() => localLoadHabits())
   const [saveStatus,  setSaveStatus]  = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [connected,   setConnected]   = useState(false)
   const [connEmail,   setConnEmail]   = useState('')
@@ -415,6 +437,20 @@ export function Settings() {
   const [calLoading,  setCalLoading]  = useState(false)
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const uid   = useRef<string | null>(null)
+
+  // ── Apply persisted settings on mount ───────────────────────────────────
+  useEffect(() => {
+    const saved = localLoadSettings()
+    if (saved) {
+      applyTheme(saved.theme)
+      if (saved.sidebarDefault) setSidebarCollapsed(true)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // ── Sync companies & habits to localStorage whenever they change ─────────
+  useEffect(() => { localSaveCompanies(companies) }, [companies])
+  useEffect(() => { localSaveHabits(habits) }, [habits])
 
   // ── Load from Supabase on mount ──────────────────────────────────────────
   useEffect(() => {
@@ -555,17 +591,20 @@ export function Settings() {
 
   function updateCompany(id: string, patch: Partial<CompanyRow>) {
     setCompanies(prev => prev.map(c => c.id === id ? { ...c, ...patch } : c))
-    if (!uid.current) return
-    clearTimeout(timer.current)
     setSaveStatus('saving')
-    timer.current = setTimeout(async () => {
-      const row = companies.find(c => c.id === id)
-      if (!row) return
-      const m = { ...row, ...patch }
-      await supabase.from('companies').update({
-        name: m.name, color_tag: m.color,
-        calendar_id: m.calendarId || null, is_active: m.isActive,
-      }).eq('id', id)
+    clearTimeout(timer.current)
+    timer.current = setTimeout(() => {
+      // Read from current DOM state via functional update to avoid stale closure
+      setCompanies(prev => {
+        const row = prev.find(c => c.id === id)
+        if (row && uid.current) {
+          void supabase.from('companies').update({
+            name: row.name, color_tag: row.color,
+            calendar_id: row.calendarId || null, is_active: row.isActive,
+          }).eq('id', id)
+        }
+        return prev // no state change, just side-effect
+      })
       setSaveStatus('saved')
       setTimeout(() => setSaveStatus('idle'), 2000)
     }, 800)
@@ -596,16 +635,18 @@ export function Settings() {
 
   function updateHabit(id: string, patch: Partial<HabitRow>) {
     setHabits(prev => prev.map(h => h.id === id ? { ...h, ...patch } : h))
-    if (!uid.current) return
-    clearTimeout(timer.current)
     setSaveStatus('saving')
-    timer.current = setTimeout(async () => {
-      const row = habits.find(h => h.id === id)
-      if (!row) return
-      const m = { ...row, ...patch }
-      await supabase.from('habits').update({
-        name: m.name, frequency: m.frequency, is_active: m.isActive,
-      }).eq('id', id)
+    clearTimeout(timer.current)
+    timer.current = setTimeout(() => {
+      setHabits(prev => {
+        const row = prev.find(h => h.id === id)
+        if (row && uid.current) {
+          void supabase.from('habits').update({
+            name: row.name, frequency: row.frequency, is_active: row.isActive,
+          }).eq('id', id)
+        }
+        return prev
+      })
       setSaveStatus('saved')
       setTimeout(() => setSaveStatus('idle'), 2000)
     }, 800)
