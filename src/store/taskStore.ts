@@ -11,89 +11,10 @@ interface TaskState {
   toggleComplete: (id: string) => void
 }
 
-const DEMO_TASKS: Task[] = [
-  {
-    id: '1',
-    title: 'Q2 Board Presentation',
-    description: 'Prepare slides for quarterly board review',
-    quadrant: 'do',
-    company: 'teradix',
-    dueDate: '2026-03-21',
-    completed: false,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: '2',
-    title: 'Strategic Partnership Proposal',
-    description: 'Draft proposal for DX Technologies integration',
-    quadrant: 'schedule',
-    company: 'dxtech',
-    dueDate: '2026-03-28',
-    completed: false,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: '3',
-    title: 'Client Contract Review',
-    description: 'Review and sign consulting agreement',
-    quadrant: 'do',
-    company: 'consulting',
-    dueDate: '2026-03-20',
-    completed: false,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: '4',
-    title: 'Team Expense Reports',
-    description: 'Approve pending expense submissions',
-    quadrant: 'delegate',
-    company: 'teradix',
-    completed: false,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: '5',
-    title: 'Gym Membership Renewal',
-    description: 'Annual membership auto-renews soon',
-    quadrant: 'eliminate',
-    company: 'personal',
-    completed: false,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: '6',
-    title: 'Monthly Newsletter',
-    description: 'Write thought leadership article',
-    quadrant: 'schedule',
-    company: 'personal',
-    dueDate: '2026-03-30',
-    completed: false,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: '7',
-    title: 'Infrastructure Audit',
-    description: 'Review cloud spend & optimize costs',
-    quadrant: 'schedule',
-    company: 'dxtech',
-    completed: false,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: '8',
-    title: 'Reply to vendor emails',
-    description: 'Low-priority vendor follow-ups',
-    quadrant: 'delegate',
-    company: 'consulting',
-    completed: false,
-    createdAt: new Date().toISOString(),
-  },
-]
-
 export const useTaskStore = create<TaskState>()(
   persist(
     set => ({
-      tasks: DEMO_TASKS,
+      tasks: [],
       addTask: task =>
         set(s => ({
           tasks: [

@@ -20,13 +20,7 @@ interface HabitLogs {
 
 const HABIT_COLORS = ['#C49A3C', '#7F77DD', '#1D9E75', '#E05252', '#888780', '#E0944A']
 
-const DEFAULT_HABITS: Habit[] = [
-  { id: 'h1', name: 'Morning meditation',  color: '#7F77DD', createdAt: new Date().toISOString() },
-  { id: 'h2', name: 'Review priorities',   color: '#C49A3C', createdAt: new Date().toISOString() },
-  { id: 'h3', name: 'Deep work block',     color: '#1D9E75', createdAt: new Date().toISOString() },
-  { id: 'h4', name: 'Exercise',            color: '#E05252', createdAt: new Date().toISOString() },
-  { id: 'h5', name: 'Read 20 minutes',     color: '#E0944A', createdAt: new Date().toISOString() },
-]
+const DEFAULT_HABITS: Habit[] = []
 
 // ─── Storage helpers ──────────────────────────────────────────────────────────
 

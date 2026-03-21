@@ -19,8 +19,9 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { Plus, Trash2, GripVertical, Check, RefreshCw, Wifi, WifiOff } from 'lucide-react'
+import { Plus, Trash2, GripVertical, Check, RefreshCw, Wifi, WifiOff, LogIn, LogOut } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { signInWithGoogle, signOut as googleSignOut } from '@/lib/google'
 import { useUIStore } from '@/store/uiStore'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -121,6 +122,32 @@ const DEFAULTS: AppSettings = {
   windDownOn: true, windDownTime: '21:00', followUpNudges: true,
   weeklyReviewOn: true, weeklyReviewDay: 'Sunday', weeklyReviewTime: '18:00',
   theme: 'dark-warm', sidebarDefault: false, compact: false,
+}
+
+// ─── localStorage fallback ────────────────────────────────────────────────────
+
+function localSaveSettings(s: AppSettings) {
+  try { localStorage.setItem('professor-settings', JSON.stringify(s)) } catch { /* quota */ }
+}
+
+function localLoadSettings(): AppSettings | null {
+  try {
+    const raw = localStorage.getItem('professor-settings')
+    return raw ? { ...DEFAULTS, ...(JSON.parse(raw) as Partial<AppSettings>) } : null
+  } catch { return null }
+}
+
+// ─── Google Calendar list helper ──────────────────────────────────────────────
+
+interface GCalCalendar { id: string; summary: string; primary?: boolean }
+
+async function fetchGCalendars(token: string): Promise<GCalCalendar[]> {
+  const res = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList', {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  if (!res.ok) return []
+  const data = (await res.json()) as { items?: GCalCalendar[] }
+  return data.items ?? []
 }
 
 // ─── Theme ────────────────────────────────────────────────────────────────────
@@ -378,10 +405,14 @@ function SortableRow({
 
 export function Settings() {
   const { setSidebarCollapsed } = useUIStore()
-  const [s, setS] = useState<AppSettings>(DEFAULTS)
-  const [companies, setCompanies] = useState<CompanyRow[]>([])
-  const [habits, setHabits]       = useState<HabitRow[]>([])
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const [s, setS] = useState<AppSettings>(() => localLoadSettings() ?? DEFAULTS)
+  const [companies,   setCompanies]   = useState<CompanyRow[]>([])
+  const [habits,      setHabits]      = useState<HabitRow[]>([])
+  const [saveStatus,  setSaveStatus]  = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const [connected,   setConnected]   = useState(false)
+  const [connEmail,   setConnEmail]   = useState('')
+  const [gcalendars,  setGcalendars]  = useState<GCalCalendar[]>([])
+  const [calLoading,  setCalLoading]  = useState(false)
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const uid   = useRef<string | null>(null)
 
@@ -391,6 +422,17 @@ export function Settings() {
       const { data: session } = await supabase.auth.getSession()
       if (!session.session) return
       uid.current = session.session.user.id
+
+      // Google connection status
+      const providerToken = session.session.provider_token
+      if (providerToken) {
+        setConnected(true)
+        setConnEmail(session.session.user.email ?? '')
+        setCalLoading(true)
+        const cals = await fetchGCalendars(providerToken)
+        setGcalendars(cals)
+        setCalLoading(false)
+      }
 
       const { data: u } = await supabase
         .from('users')
@@ -459,6 +501,7 @@ export function Settings() {
   const scheduleSave = useCallback((next: AppSettings) => {
     clearTimeout(timer.current)
     setSaveStatus('saving')
+    localSaveSettings(next) // always save to localStorage immediately
     timer.current = setTimeout(async () => {
       try {
         if (uid.current) {
@@ -783,43 +826,89 @@ export function Settings() {
 
       {/* ── 6. INTEGRATIONS ────────────────────────────────────────────── */}
       <div style={S.card}>
-        <SectionHeader title="Integrations" />
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          {[
-            { name: 'Google Calendar', icon: '📅', connected: true,  email: 'user@gmail.com', sync: '2 min ago' },
-            { name: 'Gmail',           icon: '📧', connected: true,  email: 'user@gmail.com', sync: '5 min ago' },
-            { name: 'Slack',           icon: '💬', connected: false, comingSoon: true },
-            { name: 'Notion',          icon: '📝', connected: false, comingSoon: true },
-          ].map(int => (
-            <div key={int.name} style={{
-              background: '#1C1814', border: '1px solid #3A3020', borderRadius: 10,
-              padding: '16px 18px', opacity: int.comingSoon ? 0.5 : 1,
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: 20 }}>{int.icon}</span>
-                  <span style={{ fontSize: 13.5, fontWeight: 600, color: '#F0E8D8' }}>{int.name}</span>
-                </div>
-                {int.connected ? <Wifi size={14} color="#1D9E75" /> : <WifiOff size={14} color="#8A7A60" />}
+        <SectionHeader title="Integrations" description="Connect Google to sync your calendar and inbox." />
+
+        {/* Google Account */}
+        <div style={{ background: '#1C1814', border: '1px solid #3A3020', borderRadius: 10, padding: '18px 20px', marginBottom: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 22 }}>🔗</span>
+              <div>
+                <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#F0E8D8' }}>Google Account</p>
+                <p style={{ margin: '2px 0 0', fontSize: 12, color: '#8A7A60' }}>
+                  {connected ? connEmail : 'Not connected — no calendar or Gmail data'}
+                </p>
               </div>
-              {int.connected && (
-                <div style={{ fontSize: 11.5, color: '#8A7A60', marginBottom: 10 }}>
-                  <div>{int.email}</div><div>Last sync: {int.sync}</div>
-                </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              {connected ? <Wifi size={14} color="#1D9E75" /> : <WifiOff size={14} color="#8A7A60" />}
+              {connected ? (
+                <button
+                  onClick={() => void googleSignOut().then(() => { setConnected(false); setConnEmail(''); setGcalendars([]) })}
+                  style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 7, background: 'transparent', border: '1px solid rgba(224,82,82,0.3)', color: '#E05252', fontSize: 12, cursor: 'pointer' }}
+                >
+                  <LogOut size={11} /> Disconnect
+                </button>
+              ) : (
+                <button
+                  onClick={() => void signInWithGoogle()}
+                  style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 14px', borderRadius: 7, background: 'rgba(196,154,60,0.12)', border: '1px solid rgba(196,154,60,0.25)', color: '#C49A3C', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}
+                >
+                  <LogIn size={11} /> Connect Google
+                </button>
               )}
-              {int.comingSoon
-                ? <span style={{ fontSize: 11, color: '#8A7A60', background: '#3A3020', padding: '3px 8px', borderRadius: 4 }}>Coming soon</span>
-                : (
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <button style={{ fontSize: 12, padding: '5px 10px', borderRadius: 6, background: 'transparent', border: '1px solid #3A3020', color: '#8A7A60', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <RefreshCw size={11} /> Sync now
-                    </button>
-                    <button style={{ fontSize: 12, padding: '5px 10px', borderRadius: 6, background: 'transparent', border: '1px solid rgba(224,82,82,0.3)', color: '#E05252', cursor: 'pointer' }}>
-                      Disconnect
-                    </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Google Calendars list */}
+        {connected && (
+          <div style={{ background: '#1C1814', border: '1px solid #3A3020', borderRadius: 10, padding: '18px 20px', marginBottom: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+              <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#F0E8D8' }}>
+                📅 Your Google Calendars
+              </p>
+              {calLoading && <RefreshCw size={13} color="#C49A3C" style={{ animation: 'spin 1s linear infinite' }} />}
+            </div>
+            {gcalendars.length === 0 && !calLoading && (
+              <p style={{ margin: 0, fontSize: 12.5, color: '#8A7A60' }}>No calendars found.</p>
+            )}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {gcalendars.map(cal => (
+                <div key={cal.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 12px', borderRadius: 8, background: '#2A2218', border: '1px solid #3A3020' }}>
+                  <div>
+                    <p style={{ margin: 0, fontSize: 13, color: '#F0E8D8', fontWeight: cal.primary ? 600 : 400 }}>
+                      {cal.summary}
+                      {cal.primary && <span style={{ marginLeft: 6, fontSize: 10, color: '#C49A3C', background: '#C49A3C18', padding: '1px 6px', borderRadius: 3 }}>Primary</span>}
+                    </p>
+                    <p style={{ margin: '2px 0 0', fontSize: 11, color: '#5A4E3A', fontFamily: 'monospace' }}>{cal.id}</p>
                   </div>
-                )
-              }
+                  <button
+                    onClick={() => { void navigator.clipboard.writeText(cal.id) }}
+                    style={{ fontSize: 11, padding: '4px 8px', borderRadius: 5, background: 'transparent', border: '1px solid #3A3020', color: '#8A7A60', cursor: 'pointer' }}
+                    title="Copy Calendar ID"
+                  >
+                    Copy ID
+                  </button>
+                </div>
+              ))}
+            </div>
+            <p style={{ margin: '12px 0 0', fontSize: 11.5, color: '#5A4E3A', lineHeight: 1.5 }}>
+              Copy a Calendar ID and paste it into the corresponding company row above to filter events by company.
+            </p>
+          </div>
+        )}
+
+        {/* Coming soon */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          {[{ name: 'Slack', icon: '💬' }, { name: 'Notion', icon: '📝' }].map(item => (
+            <div key={item.name} style={{ background: '#1C1814', border: '1px solid #3A3020', borderRadius: 10, padding: '14px 16px', opacity: 0.45 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                <span style={{ fontSize: 18 }}>{item.icon}</span>
+                <span style={{ fontSize: 13, fontWeight: 600, color: '#F0E8D8' }}>{item.name}</span>
+                <WifiOff size={13} color="#8A7A60" style={{ marginLeft: 'auto' }} />
+              </div>
+              <span style={{ fontSize: 11, color: '#8A7A60', background: '#3A3020', padding: '2px 7px', borderRadius: 4 }}>Coming soon</span>
             </div>
           ))}
         </div>

@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 import type { User } from '@/types'
 
 interface AuthState {
@@ -8,9 +9,17 @@ interface AuthState {
   setLoading: (loading: boolean) => void
 }
 
-export const useAuthStore = create<AuthState>(set => ({
-  user: null,
-  loading: true,
-  setUser: user => set({ user }),
-  setLoading: loading => set({ loading }),
-}))
+export const useAuthStore = create<AuthState>()(
+  persist(
+    set => ({
+      user: null,
+      loading: true,
+      setUser: user => set({ user }),
+      setLoading: loading => set({ loading }),
+    }),
+    {
+      name: 'professor-auth',
+      partialize: state => ({ user: state.user }), // only persist user, not loading
+    },
+  ),
+)

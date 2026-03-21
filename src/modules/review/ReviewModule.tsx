@@ -10,20 +10,58 @@ import type { DbUser, DbCompany, DbTask, DbWeeklyReview } from '@/types/database
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const MOCK_COMPANIES: DbCompany[] = [
-  { id: 'teradix',    user_id: 'demo', name: 'Teradix',    color_tag: '#C49A3C', calendar_id: null, is_active: true },
-  { id: 'dxtech',     user_id: 'demo', name: 'DX Tech',    color_tag: '#7F77DD', calendar_id: null, is_active: true },
-  { id: 'consulting', user_id: 'demo', name: 'Consulting', color_tag: '#1D9E75', calendar_id: null, is_active: true },
-  { id: 'personal',   user_id: 'demo', name: 'Personal',   color_tag: '#888780', calendar_id: null, is_active: true },
-]
+const MOCK_COMPANIES: DbCompany[] = []
 
-const COMPANY_COLORS: Record<string, string> = {
-  teradix: '#C49A3C', dxtech: '#7F77DD', consulting: '#1D9E75', personal: '#888780',
-}
+const COMPANY_COLORS: Record<string, string> = {}
 
 const QUADRANT_MAP: Record<string, DbTask['quadrant']> = {
   do: 'urgent_important', schedule: 'important_not_urgent',
   delegate: 'urgent_not_important', eliminate: 'neither',
+}
+
+// ─── Storage helpers ─────────────────────────────────────────────────────────
+
+function loadHours(): { focus: number; meeting: number } {
+  try {
+    const raw = localStorage.getItem('professor-review-hours')
+    return raw ? (JSON.parse(raw) as { focus: number; meeting: number }) : { focus: 0, meeting: 0 }
+  } catch { return { focus: 0, meeting: 0 } }
+}
+
+function saveHours(focus: number, meeting: number) {
+  try { localStorage.setItem('professor-review-hours', JSON.stringify({ focus, meeting })) } catch { /* quota */ }
+}
+
+function loadHabitsForReview(): { name: string; streak: number; completedThisWeek: number; target: number }[] {
+  try {
+    const habitsRaw = localStorage.getItem('professor-habits')
+    const logsRaw   = localStorage.getItem('professor-habit-logs')
+    if (!habitsRaw) return []
+    const habits = JSON.parse(habitsRaw) as { id: string; name: string }[]
+    const logs   = logsRaw ? (JSON.parse(logsRaw) as Record<string, string[]>) : {}
+    const today  = new Date()
+    const weekDates = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(today)
+      d.setDate(d.getDate() - i)
+      return d.toISOString().slice(0, 10)
+    })
+    return habits.map(h => {
+      const dates = logs[h.id] ?? []
+      const completedThisWeek = dates.filter(d => weekDates.includes(d)).length
+      // streak calculation
+      const sorted = [...dates].sort().reverse()
+      let streak = 0
+      let cursor = today.toISOString().slice(0, 10)
+      for (const date of sorted) {
+        if (date === cursor) {
+          streak++
+          const d = new Date(cursor); d.setDate(d.getDate() - 1)
+          cursor = d.toISOString().slice(0, 10)
+        } else break
+      }
+      return { name: h.name, streak, completedThisWeek, target: 7 }
+    })
+  } catch { return [] }
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -114,8 +152,8 @@ export function ReviewModule() {
   const activeTasks    = tasks.filter(t => !t.completed)
   const slipped        = activeTasks.filter(t => t.dueDate && t.dueDate < new Date().toISOString().slice(0, 10)).length
 
-  const [focusHours,   setFocusHours]   = useState(22)
-  const [meetingHours, setMeetingHours] = useState(8)
+  const [focusHours,   setFocusHours]   = useState(() => loadHours().focus)
+  const [meetingHours, setMeetingHours] = useState(() => loadHours().meeting)
   const [insight,      setInsight]      = useState<string | null>(null)
   const [loading,      setLoading]      = useState(false)
   const [error,        setError]        = useState<string | null>(null)
@@ -159,12 +197,7 @@ export function ReviewModule() {
         companies: MOCK_COMPANIES,
         review,
         completedTasks: dbCompletedTasks,
-        habits: [
-          { name: 'Morning meditation', streak: 7,  completedThisWeek: 6, target: 7 },
-          { name: 'Review priorities',  streak: 14, completedThisWeek: 7, target: 7 },
-          { name: 'Deep work block',    streak: 3,  completedThisWeek: 4, target: 5 },
-          { name: 'Exercise',           streak: 5,  completedThisWeek: 4, target: 5 },
-        ],
+        habits: loadHabitsForReview(),
       }
 
       const result = await weeklyInsight(data)
@@ -231,7 +264,7 @@ export function ReviewModule() {
             icon={Clock}
             color="#7F77DD"
             editable
-            onChange={setFocusHours}
+            onChange={v => { setFocusHours(v); saveHours(v, meetingHours) }}
           />
           <StatCard
             label="Meeting Hours"
@@ -240,7 +273,7 @@ export function ReviewModule() {
             icon={Users}
             color="#C49A3C"
             editable
-            onChange={setMeetingHours}
+            onChange={v => { setMeetingHours(v); saveHours(focusHours, v) }}
           />
         </div>
 

@@ -5,6 +5,7 @@ import {
 } from 'lucide-react'
 import { planMyDay } from '@/lib/professor'
 import type { DayPlan, DayContext } from '@/lib/professor'
+import { fetchWeekEvents, detectMeetingType } from '@/lib/googleCalendar'
 import { useAuthStore } from '@/store/authStore'
 import { useTaskStore } from '@/store/taskStore'
 import type { DbUser, DbCompany, DbCalendarEvent, DbTask } from '@/types/database'
@@ -49,48 +50,15 @@ const MOCK_COMPANIES: DbCompany[] = [
   { id: 'personal',   user_id: 'demo', name: 'Personal',   color_tag: '#888780', calendar_id: null, is_active: true },
 ]
 
-const DEMO_HABITS = [
-  { id: 'h1', name: 'Morning meditation' },
-  { id: 'h2', name: 'Review priorities'  },
-  { id: 'h3', name: 'Deep work block'    },
-  { id: 'h4', name: 'Exercise'           },
-]
-
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function todayAt(hours: number, minutes = 0): string {
-  const d = new Date()
-  d.setHours(hours, minutes, 0, 0)
-  return d.toISOString()
+function loadStoredHabits(): { id: string; name: string }[] {
+  try {
+    const raw = localStorage.getItem('professor-habits')
+    if (!raw) return []
+    return (JSON.parse(raw) as { id: string; name: string }[]).slice(0, 6)
+  } catch { return [] }
 }
-
-// Generated once so times are stable for the session
-const DEMO_EVENTS: DbCalendarEvent[] = [
-  {
-    id: 'e1', user_id: 'demo', company_id: 'teradix',
-    google_event_id: null, title: 'Leadership Sync',
-    start_time: todayAt(9, 0), end_time: todayAt(9, 30),
-    location: null, meeting_type: 'internal', prep_notes: null, is_synced: false,
-  },
-  {
-    id: 'e2', user_id: 'demo', company_id: 'dxtech',
-    google_event_id: null, title: 'Product Strategy Review',
-    start_time: todayAt(11, 0), end_time: todayAt(12, 0),
-    location: 'Zoom', meeting_type: 'video', prep_notes: null, is_synced: false,
-  },
-  {
-    id: 'e3', user_id: 'demo', company_id: 'consulting',
-    google_event_id: null, title: 'Client Check-in — Acme',
-    start_time: todayAt(14, 30), end_time: todayAt(15, 0),
-    location: null, meeting_type: 'external', prep_notes: null, is_synced: false,
-  },
-  {
-    id: 'e4', user_id: 'demo', company_id: 'teradix',
-    google_event_id: null, title: '1:1 with CTO',
-    start_time: todayAt(16, 0), end_time: todayAt(16, 30),
-    location: null, meeting_type: 'one_on_one', prep_notes: null, is_synced: false,
-  },
-]
 
 function todayKey(): string {
   return new Date().toISOString().slice(0, 10)
@@ -124,7 +92,7 @@ function buildMockUser(user: { id: string; email: string; name?: string; avatarU
   }
 }
 
-function buildContext(dbUser: DbUser, tasks: Task[], energyLevel: number | null): DayContext {
+function buildContext(dbUser: DbUser, tasks: Task[], energyLevel: number | null, todayEvents: DbCalendarEvent[]): DayContext {
   const pendingTasks: DbTask[] = tasks
     .filter(t => !t.completed)
     .map(t => ({
@@ -146,7 +114,7 @@ function buildContext(dbUser: DbUser, tasks: Task[], energyLevel: number | null)
   return {
     user: dbUser,
     companies: MOCK_COMPANIES,
-    todayEvents: DEMO_EVENTS,
+    todayEvents,
     pendingTasks,
     energyLevel: energyLevel ?? undefined,
     date: todayKey(),
@@ -268,20 +236,44 @@ export function MorningBrief() {
   const [isGenerating, setIsGenerating] = useState(!loadCachedPlan())
   const [error, setError]               = useState<string | null>(null)
   const [habits, setHabits]             = useState(() =>
-    DEMO_HABITS.map(h => ({ ...h, checked: false })),
+    loadStoredHabits().map(h => ({ ...h, checked: false })),
   )
+  const [todayEvents, setTodayEvents]   = useState<DbCalendarEvent[]>([])
 
-  const firstName = getFirstName(user?.name, user?.email ?? 'Bahaa')
+  const firstName = getFirstName(user?.name, user?.email ?? '')
   const dateStr   = new Date().toLocaleDateString('en-US', {
     weekday: 'long', month: 'long', day: 'numeric',
   })
+
+  // Fetch today's Google Calendar events on mount
+  useEffect(() => {
+    const today = new Date()
+    const start = new Date(today); start.setHours(0, 0, 0, 0)
+    const end   = new Date(today); end.setHours(23, 59, 59, 999)
+    void fetchWeekEvents(start, end).then(({ events }) => {
+      setTodayEvents(events.map(e => ({
+        id: e.id,
+        user_id: user?.id ?? '',
+        company_id: null,
+        google_event_id: e.id,
+        title: e.summary ?? '(No title)',
+        start_time: e.start.dateTime ?? e.start.date ?? '',
+        end_time:   e.end.dateTime   ?? e.end.date   ?? '',
+        location:   e.location ?? null,
+        meeting_type: detectMeetingType(e),
+        prep_notes: null,
+        is_synced: true,
+      })))
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const generate = useCallback(async (energy: number | null = energyLevel) => {
     setIsGenerating(true)
     setError(null)
     try {
       const dbUser  = buildMockUser(user)
-      const context = buildContext(dbUser, tasks, energy)
+      const context = buildContext(dbUser, tasks, energy, todayEvents)
       const result  = await planMyDay(context)
       setPlan(result)
       savePlan(result)
@@ -291,7 +283,7 @@ export function MorningBrief() {
     } finally {
       setIsGenerating(false)
     }
-  }, [user, tasks, energyLevel])
+  }, [user, tasks, energyLevel, todayEvents])
 
   // Generate on first load only if no cache
   useEffect(() => {
@@ -620,49 +612,48 @@ export function MorningBrief() {
             }}>
               <SectionLabel>Today's Meetings</SectionLabel>
 
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                {DEMO_EVENTS.map((event, i) => {
-                  const co      = event.company_id ?? 'personal'
-                  const color   = CO_COLOR[co] ?? '#888780'
-                  const isPast  = new Date(event.end_time) < new Date()
-                  return (
-                    <div key={event.id} style={{
-                      display: 'flex', gap: 12, alignItems: 'flex-start',
-                      paddingBottom: i < DEMO_EVENTS.length - 1 ? 18 : 0,
-                      opacity: isPast ? 0.45 : 1,
-                    }}>
-                      {/* Time */}
-                      <div style={{ width: 54, flexShrink: 0, textAlign: 'right' }}>
-                        <p style={{ margin: 0, fontSize: 11.5, color: '#F0E8D8', fontWeight: 500 }}>
-                          {fmtTime(event.start_time)}
-                        </p>
-                        <p style={{ margin: '1px 0 0', fontSize: 10, color: '#8A7A60' }}>
-                          {fmtTime(event.end_time)}
-                        </p>
-                      </div>
-
-                      {/* Company color bar */}
-                      <div style={{
-                        width: 3, borderRadius: 2, flexShrink: 0,
-                        background: color, alignSelf: 'stretch', minHeight: 36,
-                      }} />
-
-                      {/* Details */}
-                      <div style={{ flex: 1, paddingBottom: 4 }}>
-                        <p style={{ margin: 0, fontSize: 13, color: '#F0E8D8', fontWeight: 500, lineHeight: 1.3 }}>
-                          {event.title}
-                        </p>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 5 }}>
-                          <MeetingTypeIcon type={event.meeting_type} />
-                          <span style={{ fontSize: 10.5, color: CO_COLOR[co] ?? '#8A7A60' }}>
-                            {CO_NAME[co] ?? co}
-                          </span>
+              {todayEvents.length === 0 ? (
+                <p style={{ margin: 0, fontSize: 13, color: '#8A7A60' }}>
+                  No meetings today — or connect Google Calendar to see them.
+                </p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  {todayEvents.map((event, i) => {
+                    const isPast = new Date(event.end_time) < new Date()
+                    return (
+                      <div key={event.id} style={{
+                        display: 'flex', gap: 12, alignItems: 'flex-start',
+                        paddingBottom: i < todayEvents.length - 1 ? 18 : 0,
+                        opacity: isPast ? 0.45 : 1,
+                      }}>
+                        <div style={{ width: 54, flexShrink: 0, textAlign: 'right' }}>
+                          <p style={{ margin: 0, fontSize: 11.5, color: '#F0E8D8', fontWeight: 500 }}>
+                            {fmtTime(event.start_time)}
+                          </p>
+                          <p style={{ margin: '1px 0 0', fontSize: 10, color: '#8A7A60' }}>
+                            {fmtTime(event.end_time)}
+                          </p>
+                        </div>
+                        <div style={{
+                          width: 3, borderRadius: 2, flexShrink: 0,
+                          background: '#C49A3C', alignSelf: 'stretch', minHeight: 36,
+                        }} />
+                        <div style={{ flex: 1, paddingBottom: 4 }}>
+                          <p style={{ margin: 0, fontSize: 13, color: '#F0E8D8', fontWeight: 500, lineHeight: 1.3 }}>
+                            {event.title}
+                          </p>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 5 }}>
+                            <MeetingTypeIcon type={event.meeting_type} />
+                            {event.location && (
+                              <span style={{ fontSize: 10.5, color: '#8A7A60' }}>{event.location}</span>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  )
-                })}
-              </div>
+                    )
+                  })}
+                </div>
+              )}
             </div>
 
             {/* ─── 5. Habit Status ─────────────────────────────────────── */}
