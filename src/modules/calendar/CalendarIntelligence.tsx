@@ -12,20 +12,6 @@ import type { DbUser, DbCompany, DbCalendarEvent } from '@/types/database'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const CO_COLOR: Record<string, string> = {
-  teradix:    '#C49A3C',
-  dxtech:     '#7F77DD',
-  consulting: '#1D9E75',
-  personal:   '#888780',
-}
-
-const CO_NAME: Record<string, string> = {
-  teradix:    'Teradix',
-  dxtech:     'DX Tech',
-  consulting: 'Consulting',
-  personal:   'Personal',
-}
-
 const MOCK_COMPANIES: DbCompany[] = [
   { id: 'teradix',    user_id: 'demo', name: 'Teradix',    color_tag: '#C49A3C', calendar_id: null, is_active: true },
   { id: 'dxtech',     user_id: 'demo', name: 'DX Tech',    color_tag: '#7F77DD', calendar_id: null, is_active: true },
