@@ -540,6 +540,8 @@ export function Settings() {
     const next = { ...s, [key]: val }
     setS(next)
     scheduleSave(next)
+    if (key === 'theme') applyTheme(val as AppSettings['theme'])
+    if (key === 'sidebarDefault') setSidebarCollapsed(val as boolean)
   }
 
   // ── Company helpers ──────────────────────────────────────────────────────
