@@ -329,7 +329,7 @@ function App() {
   if (!user)   return <LoginScreen />
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: '#0D0F1A' }}>
+    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--color-bg, #0D0F1A)' }}>
       <Sidebar />
       <PageShell>
         <ActiveModule />

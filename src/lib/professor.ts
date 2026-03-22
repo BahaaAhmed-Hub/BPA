@@ -8,8 +8,8 @@ const client = new Anthropic({
   dangerouslyAllowBrowser: true,
 })
 
-const MODEL = 'claude-sonnet-4-5'
-const MAX_TOKENS = 1000
+const MODEL = 'claude-opus-4-6'
+const MAX_TOKENS = 4000
 
 // ─── Error ───────────────────────────────────────────────────────────────────
 
