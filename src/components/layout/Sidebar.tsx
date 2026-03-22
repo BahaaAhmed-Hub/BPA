@@ -13,6 +13,7 @@ import {
   Settings,
 } from 'lucide-react'
 import { useUIStore } from '@/store/uiStore'
+import { getTheme } from '@/lib/themes'
 
 const NAV_ITEMS = [
   { id: 'dashboard',  label: 'Dashboard',      Icon: LayoutDashboard },
@@ -29,15 +30,16 @@ const SYSTEM_ITEMS = [
 ]
 
 export function Sidebar() {
-  const { sidebarCollapsed, activeModule, toggleSidebar, setActiveModule } = useUIStore()
+  const { sidebarCollapsed, activeModule, toggleSidebar, setActiveModule, themeId } = useUIStore()
+  const theme = getTheme(themeId)
 
   return (
     <aside
       style={{
         width: sidebarCollapsed ? 64 : 220,
         minWidth: sidebarCollapsed ? 64 : 220,
-        background: '#161929',
-        borderRight: '1px solid #252A3E',
+        background: theme.sidebarBg,
+        borderRight: `1px solid ${theme.border}`,
         height: '100vh',
         display: 'flex',
         flexDirection: 'column',
@@ -52,7 +54,7 @@ export function Sidebar() {
       <div
         style={{
           padding: sidebarCollapsed ? '20px 0' : '20px 20px',
-          borderBottom: '1px solid #252A3E',
+          borderBottom: `1px solid ${theme.border}`,
           display: 'flex',
           alignItems: 'center',
           gap: 10,
@@ -64,7 +66,7 @@ export function Sidebar() {
           style={{
             width: 32,
             height: 32,
-            background: '#1E40AF',
+            background: theme.accent,
             borderRadius: 6,
             display: 'flex',
             alignItems: 'center',
@@ -80,7 +82,7 @@ export function Sidebar() {
               fontFamily: "'Cabinet Grotesk', sans-serif",
               fontWeight: 700,
               fontSize: 16,
-              color: '#E8EAF6',
+              color: theme.text,
               letterSpacing: '-0.3px',
               whiteSpace: 'nowrap',
             }}
@@ -107,26 +109,26 @@ export function Sidebar() {
                   gap: 10,
                   padding: sidebarCollapsed ? '10px 0' : '10px 12px',
                   justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
-                  background: active ? 'rgba(30,64,175,0.12)' : 'transparent',
+                  background: active ? theme.accentFill : 'transparent',
                   border: 'none',
                   borderRadius: 8,
                   cursor: 'pointer',
-                  color: active ? '#1E40AF' : '#FFFFFF',
+                  color: active ? '#FFFFFF' : theme.textDim,
                   marginBottom: 2,
                   transition: 'all 0.15s ease',
                 }}
                 onMouseEnter={e => {
                   if (!active) {
                     const el = e.currentTarget as HTMLElement
-                    el.style.background = 'rgba(255,255,255,0.04)'
-                    el.style.color = '#E8EAF6'
+                    el.style.background = theme.accentFill
+                    el.style.color = theme.text
                   }
                 }}
                 onMouseLeave={e => {
                   if (!active) {
                     const el = e.currentTarget as HTMLElement
                     el.style.background = 'transparent'
-                    el.style.color = '#FFFFFF'
+                    el.style.color = theme.textDim
                   }
                 }}
               >
@@ -137,7 +139,7 @@ export function Sidebar() {
                   </span>
                 )}
                 {active && !sidebarCollapsed && (
-                  <div style={{ marginLeft: 'auto', width: 4, height: 4, borderRadius: '50%', background: '#1E40AF' }} />
+                  <div style={{ marginLeft: 'auto', width: 4, height: 4, borderRadius: '50%', background: theme.accent }} />
                 )}
               </button>
             )
@@ -145,11 +147,11 @@ export function Sidebar() {
         </div>
 
         {/* System section */}
-        <div style={{ borderTop: '1px solid #252A3E', paddingTop: 10, marginTop: 4 }}>
+        <div style={{ borderTop: `1px solid ${theme.border}`, paddingTop: 10, marginTop: 4 }}>
           {!sidebarCollapsed && (
             <span style={{
               display: 'block', padding: '4px 12px 6px',
-              fontSize: 9.5, fontWeight: 700, color: '#FFFFFF',
+              fontSize: 9.5, fontWeight: 700, color: theme.accentBright,
               textTransform: 'uppercase', letterSpacing: '1.2px',
             }}>
               System
@@ -167,23 +169,23 @@ export function Sidebar() {
                   display: 'flex', alignItems: 'center', gap: 10,
                   padding: sidebarCollapsed ? '10px 0' : '10px 12px',
                   justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
-                  background: active ? 'rgba(30,64,175,0.12)' : 'transparent',
+                  background: active ? theme.accentFill : 'transparent',
                   border: 'none', borderRadius: 8, cursor: 'pointer',
-                  color: active ? '#1E40AF' : '#FFFFFF',
+                  color: active ? '#FFFFFF' : theme.textDim,
                   marginBottom: 2, transition: 'all 0.15s ease',
                 }}
                 onMouseEnter={e => {
                   if (!active) {
                     const el = e.currentTarget as HTMLElement
-                    el.style.background = 'rgba(255,255,255,0.04)'
-                    el.style.color = '#E8EAF6'
+                    el.style.background = theme.accentFill
+                    el.style.color = theme.text
                   }
                 }}
                 onMouseLeave={e => {
                   if (!active) {
                     const el = e.currentTarget as HTMLElement
                     el.style.background = 'transparent'
-                    el.style.color = '#FFFFFF'
+                    el.style.color = theme.textDim
                   }
                 }}
               >
@@ -194,7 +196,7 @@ export function Sidebar() {
                   </span>
                 )}
                 {active && !sidebarCollapsed && (
-                  <div style={{ marginLeft: 'auto', width: 4, height: 4, borderRadius: '50%', background: '#1E40AF' }} />
+                  <div style={{ marginLeft: 'auto', width: 4, height: 4, borderRadius: '50%', background: theme.accent }} />
                 )}
               </button>
             )
@@ -203,7 +205,7 @@ export function Sidebar() {
       </nav>
 
       {/* Collapse toggle */}
-      <div style={{ padding: '12px 8px', borderTop: '1px solid #252A3E' }}>
+      <div style={{ padding: '12px 8px', borderTop: `1px solid ${theme.border}` }}>
         <button
           onClick={toggleSidebar}
           style={{
@@ -215,7 +217,7 @@ export function Sidebar() {
             background: 'transparent',
             border: 'none',
             cursor: 'pointer',
-            color: '#FFFFFF',
+            color: theme.textDim,
             borderRadius: 6,
           }}
           title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}

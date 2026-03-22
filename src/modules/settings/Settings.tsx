@@ -23,6 +23,7 @@ import { Plus, Trash2, GripVertical, Check, RefreshCw, Wifi, WifiOff, LogIn, Log
 import { supabase } from '@/lib/supabase'
 import { signInWithGoogle, signOut as googleSignOut } from '@/lib/google'
 import { useUIStore } from '@/store/uiStore'
+import { THEMES, getTheme, applyThemeVars, resolveThemeId } from '@/lib/themes'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -58,7 +59,7 @@ interface AppSettings {
   weeklyReviewDay: string
   weeklyReviewTime: string
   // Appearance
-  theme: 'dark-warm' | 'dark-cool' | 'light'
+  theme: string
   sidebarDefault: boolean
   compact: boolean
 }
@@ -141,7 +142,7 @@ const DEFAULTS: AppSettings = {
   morningReminderOn: true, morningReminderTime: '07:00',
   windDownOn: true, windDownTime: '21:00', followUpNudges: true,
   weeklyReviewOn: true, weeklyReviewDay: 'Sunday', weeklyReviewTime: '18:00',
-  theme: 'dark-warm', sidebarDefault: false, compact: false,
+  theme: 'navy-night', sidebarDefault: false, compact: false,
 }
 
 // ─── localStorage helpers ─────────────────────────────────────────────────────
@@ -192,17 +193,10 @@ async function fetchGCalendars(token: string): Promise<GCalCalendar[]> {
   return data.items ?? []
 }
 
-// ─── Theme ────────────────────────────────────────────────────────────────────
+// ─── Theme (delegates to themes.ts) ───────────────────────────────────────────
 
-function applyTheme(theme: AppSettings['theme']) {
-  const el = document.documentElement
-  el.setAttribute('data-theme', theme === 'dark-warm' ? '' : theme)
-  const bgMap: Record<AppSettings['theme'], string> = {
-    'dark-warm': '#0D0F1A',
-    'dark-cool': '#111827',
-    'light':     '#F5F0E8',
-  }
-  document.body.style.background = bgMap[theme]
+function applyTheme(id: string) {
+  applyThemeVars(getTheme(id))
 }
 
 // ─── Shared style objects ─────────────────────────────────────────────────────
@@ -247,16 +241,17 @@ function SectionHeader({ title, description }: { title: string; description?: st
   return (
     <div style={{ marginBottom: 22 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <div style={{ width: 3, height: 13, background: '#1E40AF', borderRadius: 2, flexShrink: 0 }} />
+        <div style={{ width: 3, height: 13, background: 'var(--color-accent, #60A5FA)', borderRadius: 2, flexShrink: 0 }} />
         <span style={{
-          fontSize: 10.5, fontWeight: 700, color: '#1E40AF',
+          fontSize: 10.5, fontWeight: 700,
+          color: 'var(--color-accent-bright, #93C5FD)',
           textTransform: 'uppercase', letterSpacing: '1.4px',
         }}>
           {title}
         </span>
       </div>
       {description && (
-        <p style={{ margin: '5px 0 0 11px', fontSize: 12, color: '#FFFFFF', lineHeight: 1.55 }}>
+        <p style={{ margin: '5px 0 0 11px', fontSize: 12, color: 'var(--color-text-dim, #94A3B8)', lineHeight: 1.55 }}>
           {description}
         </p>
       )}
@@ -268,9 +263,9 @@ function FieldRow({ label, children }: { label: string; children: React.ReactNod
   return (
     <div style={{
       display: 'flex', alignItems: 'flex-start', gap: 16,
-      padding: '11px 0', borderBottom: '1px solid rgba(58,48,32,0.5)',
+      padding: '11px 0', borderBottom: '1px solid var(--color-border, #252A3E)',
     }}>
-      <span style={{ width: 210, fontSize: 13, color: '#FFFFFF', flexShrink: 0, paddingTop: 2 }}>
+      <span style={{ width: 210, fontSize: 13, color: 'var(--color-text, #E8EAF6)', flexShrink: 0, paddingTop: 2 }}>
         {label}
       </span>
       <div style={{ flex: 1 }}>{children}</div>
@@ -446,7 +441,7 @@ function SortableRow({
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function Settings() {
-  const { setSidebarCollapsed } = useUIStore()
+  const { setSidebarCollapsed, setThemeId } = useUIStore()
   const [s, setS] = useState<AppSettings>(() => localLoadSettings() ?? DEFAULTS)
   const [companies,   setCompanies]   = useState<CompanyRow[]>(() => localLoadCompanies())
   const [habits,      setHabits]      = useState<HabitRow[]>(() => localLoadHabits())
@@ -462,7 +457,9 @@ export function Settings() {
   useEffect(() => {
     const saved = localLoadSettings()
     if (saved) {
-      applyTheme(saved.theme)
+      const id = resolveThemeId(saved.theme)
+      applyTheme(id)
+      setThemeId(id)
       if (saved.sidebarDefault) setSidebarCollapsed(true)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -531,7 +528,9 @@ export function Settings() {
           compact:             (r.compact as boolean)                            ?? DEFAULTS.compact,
         }
         setS(loaded)
-        applyTheme(loaded.theme)
+        const resolvedId = resolveThemeId(loaded.theme)
+        applyTheme(resolvedId)
+        setThemeId(resolvedId)
       }
 
       const { data: cos } = await supabase
@@ -599,7 +598,11 @@ export function Settings() {
     const next = { ...s, [key]: val }
     setS(next)
     scheduleSave(next)
-    if (key === 'theme') applyTheme(val as AppSettings['theme'])
+    if (key === 'theme') {
+      const id = resolveThemeId(val as string)
+      applyTheme(id)
+      setThemeId(id)
+    }
     if (key === 'sidebarDefault') setSidebarCollapsed(val as boolean)
   }
 
@@ -714,9 +717,9 @@ export function Settings() {
                 <button key={d} onClick={() => update('workWeek', on ? s.workWeek.filter(x => x !== d) : [...s.workWeek, d])}
                   style={{
                     width: 38, height: 30, borderRadius: 6, fontSize: 12, fontWeight: 500, cursor: 'pointer',
-                    border: `1px solid ${on ? '#1E40AF' : '#252A3E'}`,
-                    background: on ? 'rgba(30,64,175,0.12)' : 'transparent',
-                    color: on ? '#1E40AF' : '#6B7280',
+                    border: `1px solid ${on ? 'var(--color-accent, #60A5FA)' : 'var(--color-border, #252A3E)'}`,
+                    background: on ? 'var(--color-accent-fill, rgba(59,130,246,0.18))' : 'transparent',
+                    color: on ? '#FFFFFF' : 'var(--color-text-muted, #6B7280)',
                   }}>
                   {d}
                 </button>
@@ -855,9 +858,9 @@ export function Settings() {
             {(['brief', 'balanced', 'detailed'] as const).map(opt => (
               <button key={opt} onClick={() => update('commStyle', opt)} style={{
                 padding: '6px 14px', borderRadius: 7, fontSize: 12.5, fontWeight: 500, cursor: 'pointer',
-                border: `1px solid ${s.commStyle === opt ? '#1E40AF' : '#252A3E'}`,
-                background: s.commStyle === opt ? 'rgba(30,64,175,0.12)' : 'transparent',
-                color: s.commStyle === opt ? '#1E40AF' : '#6B7280',
+                border: `1px solid ${s.commStyle === opt ? 'var(--color-accent, #60A5FA)' : 'var(--color-border, #252A3E)'}`,
+                background: s.commStyle === opt ? 'var(--color-accent-fill, rgba(59,130,246,0.18))' : 'transparent',
+                color: s.commStyle === opt ? '#FFFFFF' : 'var(--color-text-muted, #6B7280)',
               }}>
                 {opt === 'brief' ? 'Direct & Brief' : opt === 'balanced' ? 'Balanced' : 'Detailed & Thorough'}
               </button>
@@ -1016,31 +1019,65 @@ export function Settings() {
       {/* ── 8. APPEARANCE ──────────────────────────────────────────────── */}
       <div style={S.card}>
         <SectionHeader title="Appearance" />
-        <FieldRow label="Theme">
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            {([
-              { value: 'dark-warm' as const, label: 'Dark Warm', bg: '#0D0F1A', dot: '#1E40AF' },
-              { value: 'dark-cool' as const, label: 'Dark Cool', bg: '#111827', dot: '#60A5FA' },
-              { value: 'light'     as const, label: 'Light',     bg: '#F5F0E8', dot: '#1E3A8A' },
-            ]).map(t => {
-              const active = s.theme === t.value
+
+        {/* ── 10-theme grid ── */}
+        <div style={{ marginBottom: 24 }}>
+          <p style={{ margin: '0 0 12px', fontSize: 13, color: 'var(--color-text, #E8EAF6)' }}>Theme</p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10 }}>
+            {THEMES.map(t => {
+              const active = resolveThemeId(s.theme) === t.id
               return (
-                <button key={t.value} onClick={() => { update('theme', t.value); applyTheme(t.value) }} style={{
-                  padding: '8px 14px', borderRadius: 8, cursor: 'pointer',
-                  border: `1.5px solid ${active ? '#1E40AF' : '#252A3E'}`,
-                  background: active ? 'rgba(30,64,175,0.08)' : 'transparent',
-                  display: 'flex', alignItems: 'center', gap: 8,
-                }}>
-                  <div style={{ width: 32, height: 20, borderRadius: 4, background: t.bg, border: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <div style={{ width: 10, height: 10, borderRadius: '50%', background: t.dot }} />
+                <button
+                  key={t.id}
+                  onClick={() => update('theme', t.id)}
+                  title={t.name}
+                  style={{
+                    padding: '10px 8px 8px',
+                    borderRadius: 10,
+                    cursor: 'pointer',
+                    border: `2px solid ${active ? t.accent : t.border}`,
+                    background: active ? t.accentFill : t.surface,
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+                    transition: 'all 0.15s ease',
+                    position: 'relative',
+                  }}
+                >
+                  {/* Color preview strip */}
+                  <div style={{
+                    width: '100%', height: 28, borderRadius: 6,
+                    background: t.bg,
+                    border: `1px solid ${t.border}`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+                  }}>
+                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: t.accent }} />
+                    <div style={{ width: 20, height: 4, borderRadius: 2, background: t.surface }} />
+                    <div style={{ width: 12, height: 4, borderRadius: 2, background: t.border }} />
                   </div>
-                  <span style={{ fontSize: 13, color: active ? '#1E40AF' : '#6B7280', fontWeight: active ? 600 : 400 }}>{t.label}</span>
-                  {active && <Check size={12} color="#1E40AF" />}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <span style={{ fontSize: 11 }}>{t.emoji}</span>
+                    <span style={{
+                      fontSize: 11, fontWeight: active ? 700 : 400,
+                      color: active ? '#FFFFFF' : t.textDim,
+                      whiteSpace: 'nowrap',
+                    }}>
+                      {t.name}
+                    </span>
+                  </div>
+                  {active && (
+                    <div style={{
+                      position: 'absolute', top: 5, right: 5,
+                      width: 14, height: 14, borderRadius: '50%',
+                      background: t.accent,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      <Check size={9} color={t.isDark ? '#000' : '#fff'} />
+                    </div>
+                  )}
                 </button>
               )
             })}
           </div>
-        </FieldRow>
+        </div>
         <FieldRow label="Sidebar collapsed by default">
           <Toggle checked={s.sidebarDefault} onChange={v => { update('sidebarDefault', v); setSidebarCollapsed(v) }} />
         </FieldRow>

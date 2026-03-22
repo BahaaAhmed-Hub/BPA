@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useState } from 'react'
 import { Sidebar } from './components/layout/Sidebar'
 import { PageShell } from './components/layout/PageShell'
 import { ExecutiveDashboard } from './modules/dashboard/ExecutiveDashboard'
@@ -14,6 +14,7 @@ import { useUIStore } from './store/uiStore'
 import { useAuthStore } from './store/authStore'
 import { supabase } from './lib/supabase'
 import { signInWithGoogle } from './lib/google'
+import { getTheme, applyThemeVars } from './lib/themes'
 import { GraduationCap, Calendar, Mail, CheckSquare, Brain, ArrowRight } from 'lucide-react'
 
 // ─── Feature pills shown on the login screen ──────────────────────────────────
@@ -433,6 +434,12 @@ function ActiveModule() {
 
 function App() {
   const { setUser, setLoading, user, loading } = useAuthStore()
+  const themeId = useUIStore(s => s.themeId)
+
+  // Apply CSS variables immediately before first paint, then on every theme change
+  useLayoutEffect(() => {
+    applyThemeVars(getTheme(themeId))
+  }, [themeId])
 
   useEffect(() => {
     void supabase.auth.getSession().then(({ data }) => {
