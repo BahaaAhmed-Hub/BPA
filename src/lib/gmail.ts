@@ -110,11 +110,12 @@ export function extractBody(msg: GmailMessage): string {
   }
 
   if (msg.payload.mimeType === 'text/plain' && msg.payload.body.data) {
-    return decodeBase64(msg.payload.body.data)
+    const text = decodeBase64(msg.payload.body.data)
+    if (!/please enable html/i.test(text)) return text
   }
 
   const plain = findByMime(msg.payload.parts, 'text/plain')
-  if (plain) return plain
+  if (plain && !/please enable html/i.test(plain)) return plain
 
   // Fall back to HTML — strip tags to get readable text
   if (msg.payload.mimeType === 'text/html' && msg.payload.body.data) {
