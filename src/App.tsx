@@ -71,7 +71,7 @@ function LoginScreen() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 56 }}>
           <div style={{
             width: 48, height: 48, borderRadius: 12,
-            background: 'linear-gradient(135deg, #7C3AED 0%, #E8B84B 100%)',
+            background: 'linear-gradient(135deg, #7C3AED 0%, #A78BFA 100%)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             boxShadow: '0 8px 24px rgba(124,58,237,0.35)',
           }}>
@@ -95,7 +95,7 @@ function LoginScreen() {
           }}>
             Your AI Executive<br />
             <span style={{
-              background: 'linear-gradient(135deg, #7C3AED 0%, #E8B84B 60%, #7C3AED 100%)',
+              background: 'linear-gradient(135deg, #7C3AED 0%, #A78BFA 60%, #7C3AED 100%)',
               WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
             }}>
               Operating System
@@ -118,7 +118,7 @@ function LoginScreen() {
                 border: '1px solid rgba(124,58,237,0.18)',
               }}>
                 <Icon size={13} color="#7C3AED" />
-                <span style={{ fontSize: 12.5, color: '#C8BAA0', fontWeight: 500 }}>{label}</span>
+                <span style={{ fontSize: 12.5, color: '#94A3B8', fontWeight: 500 }}>{label}</span>
               </div>
             ))}
           </div>
@@ -181,7 +181,7 @@ function LoginScreen() {
           { label: 'Meetings today',     value: '4',          sub: '2h 45m scheduled',       color: '#7C3AED' },
           { label: 'Unread emails',      value: '12',         sub: '3 need decisions',        color: '#7F77DD' },
           { label: 'Tasks in progress',  value: '7',          sub: '2 due today',             color: '#1D9E75' },
-          { label: 'Habit streak',       value: '14 days',    sub: 'Morning routine',         color: '#E8B84B' },
+          { label: 'Habit streak',       value: '14 days',    sub: 'Morning routine',         color: '#A78BFA' },
         ].map(card => (
           <div key={card.label} style={{
             padding: '16px 18px', borderRadius: 12,
@@ -190,11 +190,11 @@ function LoginScreen() {
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           }}>
             <div>
-              <p style={{ margin: '0 0 3px', fontSize: 11.5, color: '#6A5A40' }}>{card.label}</p>
+              <p style={{ margin: '0 0 3px', fontSize: 11.5, color: '#64748B' }}>{card.label}</p>
               <p style={{ margin: 0, fontSize: 20, fontWeight: 800, color: '#E8EAF6', fontFamily: "'Cabinet Grotesk', sans-serif", letterSpacing: '-0.5px' }}>
                 {card.value}
               </p>
-              <p style={{ margin: '2px 0 0', fontSize: 11, color: '#6A5A40' }}>{card.sub}</p>
+              <p style={{ margin: '2px 0 0', fontSize: 11, color: '#64748B' }}>{card.sub}</p>
             </div>
             <div style={{
               width: 36, height: 36, borderRadius: 10,
@@ -230,8 +230,8 @@ function LoginScreen() {
               padding: '7px 0', borderBottom: '1px solid rgba(255,255,255,0.04)',
             }}>
               <div>
-                <span style={{ fontSize: 12, color: '#C8BAA0', fontWeight: 500 }}>{email.from}</span>
-                <span style={{ fontSize: 11.5, color: '#6A5A40', marginLeft: 8 }}>{email.subject}</span>
+                <span style={{ fontSize: 12, color: '#94A3B8', fontWeight: 500 }}>{email.from}</span>
+                <span style={{ fontSize: 11.5, color: '#64748B', marginLeft: 8 }}>{email.subject}</span>
               </div>
               <span style={{
                 fontSize: 10, padding: '2px 7px', borderRadius: 4, fontWeight: 600,
@@ -265,7 +265,7 @@ function LoadingScreen() {
     }}>
       <div style={{
         width: 44, height: 44, borderRadius: 11,
-        background: 'linear-gradient(135deg, #7C3AED 0%, #E8B84B 100%)',
+        background: 'linear-gradient(135deg, #7C3AED 0%, #A78BFA 100%)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         boxShadow: '0 8px 24px rgba(124,58,237,0.3)',
         animation: 'pulse 1.5s ease-in-out infinite',

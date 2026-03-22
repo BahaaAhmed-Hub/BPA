@@ -295,7 +295,7 @@ export function ReviewModule() {
                     background: '#0D0F1A', border: '1px solid #252A3E',
                   }}>
                     <CheckSquare size={13} color="#1D9E75" style={{ flexShrink: 0 }} />
-                    <span style={{ fontSize: 13, color: '#C8BAA0', flex: 1, textDecoration: 'line-through', opacity: 0.7 }}>
+                    <span style={{ fontSize: 13, color: '#94A3B8', flex: 1, textDecoration: 'line-through', opacity: 0.7 }}>
                       {task.title}
                     </span>
                     {task.company && (

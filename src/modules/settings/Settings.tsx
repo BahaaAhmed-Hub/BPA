@@ -1021,7 +1021,7 @@ export function Settings() {
             {([
               { value: 'dark-warm' as const, label: 'Dark Warm', bg: '#0D0F1A', dot: '#7C3AED' },
               { value: 'dark-cool' as const, label: 'Dark Cool', bg: '#111827', dot: '#60A5FA' },
-              { value: 'light'     as const, label: 'Light',     bg: '#F5F0E8', dot: '#B8860B' },
+              { value: 'light'     as const, label: 'Light',     bg: '#F5F0E8', dot: '#6D28D9' },
             ]).map(t => {
               const active = s.theme === t.value
               return (

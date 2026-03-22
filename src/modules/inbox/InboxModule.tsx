@@ -214,7 +214,7 @@ export function InboxModule() {
                       <RefreshCw size={10} color="#7C3AED" style={{ animation: 'spin 1s linear infinite', flexShrink: 0 }} />
                     )}
                   </div>
-                  <p style={{ margin: '0 0 3px', fontSize: 12.5, color: '#C8BAA0', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <p style={{ margin: '0 0 3px', fontSize: 12.5, color: '#94A3B8', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {email.subject}
                   </p>
                   <p style={{ margin: 0, fontSize: 11.5, color: '#6B7280', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -295,7 +295,7 @@ export function InboxModule() {
             </span>
           </div>
           <div style={{ height: 1, background: '#252A3E', marginBottom: 16 }} />
-          <p style={{ margin: 0, fontSize: 13.5, color: '#C8BAA0', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
+          <p style={{ margin: 0, fontSize: 13.5, color: '#94A3B8', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
             {selectedEmail.body}
           </p>
         </div>
@@ -358,7 +358,7 @@ export function InboxModule() {
                     {selectedTriage.copied ? <><CheckCheck size={10} /><span>Copied</span></> : <><Copy size={10} /><span>Copy</span></>}
                   </button>
                 </div>
-                <p style={{ margin: 0, fontSize: 13, color: '#C8BAA0', lineHeight: 1.65, whiteSpace: 'pre-wrap' }}>
+                <p style={{ margin: 0, fontSize: 13, color: '#94A3B8', lineHeight: 1.65, whiteSpace: 'pre-wrap' }}>
                   {selectedTriage.result.suggestedReply}
                 </p>
               </div>
