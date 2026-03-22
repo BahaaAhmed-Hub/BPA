@@ -99,7 +99,6 @@ const ALL_TIMEZONES: { value: string; label: string; offset: number }[] = (() =>
        'America/Toronto', 'America/Vancouver', 'Europe/London', 'Europe/Paris',
        'Europe/Berlin', 'Europe/Amsterdam', 'Asia/Dubai', 'Asia/Kolkata',
        'Asia/Singapore', 'Asia/Tokyo', 'Australia/Sydney', 'Pacific/Auckland']
-  const now = Date.now()
   return zones.map(tz => {
     const offsetStr = getUtcOffset(tz)
     const sign = offsetStr.includes('-') ? -1 : 1
