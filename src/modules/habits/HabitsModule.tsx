@@ -4,7 +4,6 @@ import { TopBar } from '@/components/layout/TopBar'
 import {
   useHabitsStore, loadLogs, saveLogs,
   calcStreak, lastNDays, getHabitColors,
-  type Habit,
 } from '@/store/habitsStore'
 
 // ─── Date helpers ──────────────────────────────────────────────────────────────

@@ -3,7 +3,7 @@
  * Each function maps the local app shape → DB row shape and upserts.
  */
 import { supabase } from './supabase'
-import type { DbUser, DbCompany, DbHabit, DbHabitLog } from '@/types/database'
+import type { DbCompany, DbHabit, DbHabitLog } from '@/types/database'
 
 // ─── Types mirroring Settings local state ────────────────────────────────────
 

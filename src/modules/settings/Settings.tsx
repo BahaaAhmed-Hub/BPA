@@ -1,7 +1,7 @@
 // ─── CHUNK 1: Types, constants, localStorage helpers ─────────────────────────
 // (remaining chunks appended below)
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   DndContext, closestCenter, KeyboardSensor, PointerSensor,
   useSensor, useSensors, type DragEndEvent,
@@ -14,15 +14,15 @@ import { CSS } from '@dnd-kit/utilities'
 import {
   Plus, Trash2, GripVertical, LogIn, LogOut,
   ChevronDown, ChevronUp, User, Clock, Building2, Flame,
-  Brain, Bell, Palette, Link, X, Check, RefreshCw,
+  Brain, Bell, Palette, Link, X, RefreshCw,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { signInWithGoogle, signOut as googleSignOut } from '@/lib/google'
 import { useUIStore } from '@/store/uiStore'
 import { useAuthStore } from '@/store/authStore'
 import { THEMES, getTheme, applyThemeVars } from '@/lib/themes'
-import { useHabitsStore, getHabitColors, type Habit as UnifiedHabit } from '@/store/habitsStore'
-import { loadAccounts, type ConnectedAccount } from '@/lib/multiAccount'
+import { useHabitsStore, getHabitColors } from '@/store/habitsStore'
+import { loadAccounts, removeAccount, type ConnectedAccount } from '@/lib/multiAccount'
 import {
   saveProfileToDB, savePrefsToDB, saveCompaniesToDB, saveHabitsToDB, saveHabitLogsToDB,
   type CompanyRow as DbSyncCompanyRow,
@@ -201,19 +201,6 @@ function FieldRow({ label, sub, children }: { label: string; sub?: string; child
   )
 }
 
-function SaveBadge({ saved }: { saved: boolean }) {
-  if (!saved) return null
-  return (
-    <span style={{
-      display: 'inline-flex', alignItems: 'center', gap: 4,
-      padding: '3px 9px', borderRadius: 20, fontSize: 11,
-      background: 'rgba(29,158,117,0.12)', color: '#1D9E75',
-      border: '1px solid rgba(29,158,117,0.25)', fontWeight: 500,
-    }}>
-      <Check size={10} /> Saved
-    </span>
-  )
-}
 
 // ─── Sortable Section Shell ────────────────────────────────────────────────────
 
@@ -316,8 +303,8 @@ function SectionShell({
 // ─── CHUNK 3: Profile & Schedule sections ────────────────────────────────────
 
 function ProfileSection({
-  s, set, onSave,
-}: { s: AppSettings; set: (p: Partial<AppSettings>) => void; onSave: () => void }) {
+  s, set,
+}: { s: AppSettings; set: (p: Partial<AppSettings>) => void }) {
   return (
     <div>
       <FieldRow label="Full name">
@@ -355,8 +342,8 @@ function ProfileSection({
 }
 
 function ScheduleSection({
-  s, set, onSave,
-}: { s: AppSettings; set: (p: Partial<AppSettings>) => void; onSave: () => void }) {
+  s, set,
+}: { s: AppSettings; set: (p: Partial<AppSettings>) => void }) {
   return (
     <div>
       <FieldRow label="Focus window" sub="Block for deep work">
@@ -419,12 +406,11 @@ function ScheduleSection({
 // ─── CHUNK 4: Companies + Habits sections ────────────────────────────────────
 
 function CompaniesSection({
-  companies, setCompanies, accounts, onSaveDB,
+  companies, setCompanies, accounts,
 }: {
   companies: CompanyRow[]
   setCompanies: (c: CompanyRow[]) => void
   accounts: ConnectedAccount[]
-  onSaveDB?: () => void
 }) {
   const [adding, setAdding] = useState(false)
   const [newName, setNewName] = useState('')
@@ -551,7 +537,7 @@ function CompaniesSection({
   )
 }
 
-function HabitsSection({ onSaveDB }: { onSaveDB?: () => void }) {
+function HabitsSection() {
   const COLORS = getHabitColors()
   const { habits, addHabit: storeAdd, updateHabit, deleteHabit: storeDel } = useHabitsStore()
   const [adding, setAdding] = useState(false)
@@ -794,7 +780,7 @@ function AccountsSection({
 
 // ─── CHUNK 6: Professor AI + Notifications + Appearance sections ──────────────
 
-function ProfessorSection({ s, set, onSave }: { s: AppSettings; set: (p: Partial<AppSettings>) => void; onSave: () => void }) {
+function ProfessorSection({ s, set }: { s: AppSettings; set: (p: Partial<AppSettings>) => void }) {
   return (
     <div>
       <FieldRow label="Communication style" sub="How detailed should responses be?">
@@ -832,7 +818,7 @@ function ProfessorSection({ s, set, onSave }: { s: AppSettings; set: (p: Partial
   )
 }
 
-function NotificationsSection({ s, set, onSave }: { s: AppSettings; set: (p: Partial<AppSettings>) => void; onSave: () => void }) {
+function NotificationsSection({ s, set }: { s: AppSettings; set: (p: Partial<AppSettings>) => void }) {
   return (
     <div>
       <FieldRow label="Morning brief reminder">
@@ -875,7 +861,7 @@ function NotificationsSection({ s, set, onSave }: { s: AppSettings; set: (p: Par
   )
 }
 
-function AppearanceSection({ s, set, onSave }: { s: AppSettings; set: (p: Partial<AppSettings>) => void; onSave: () => void }) {
+function AppearanceSection({ s, set }: { s: AppSettings; set: (p: Partial<AppSettings>) => void }) {
   const { setThemeId } = useUIStore()
 
   function pickTheme(id: string) {
@@ -931,7 +917,7 @@ export function Settings() {
   const [companies, setCompanies]       = useState<CompanyRow[]>(loadCompanies)
   const [accounts, setAccounts]         = useState<ConnectedAccount[]>(loadAccounts)
   const [sectionOrder, setSectionOrder] = useState<SectionId[]>(loadSectionOrder)
-  const [collapsed, setCollapsed]       = useState<Record<SectionId, boolean>>({} as Record<SectionId, boolean>)
+
   const [supaOk, setSupaOk]             = useState<boolean | null>(null)
   // Per-section save states
   const [sectionSaving, setSectionSaving] = useState<Record<string, 'idle'|'saving'|'saved'|'error'>>({})
@@ -982,14 +968,9 @@ export function Settings() {
     saveSectionOrder(next)
   }
 
-  function toggleCollapse(id: SectionId) {
-    setCollapsed(prev => ({ ...prev, [id]: !prev[id] }))
-  }
-
   // ── Section renderer ─────────────────────────────────────────────────────────
   function renderSection(id: SectionId) {
     const meta = SECTION_META.find(m => m.id === id)!
-    const isCollapsed = collapsed[id] ?? false
     const saving = sectionSaving[id] ?? 'idle'
 
     // Wrap save button label with state feedback
@@ -1012,8 +993,8 @@ export function Settings() {
         saveLabel={saveLabel}
         onSave={saveFn ? withSectionSave(id, saveFn) : undefined}
       >
-        {id === 'profile'       && <ProfileSection       s={settings} set={update} onSave={() => {}} />}
-        {id === 'schedule'      && <ScheduleSection      s={settings} set={update} onSave={() => {}} />}
+        {id === 'profile'       && <ProfileSection       s={settings} set={update} />}
+        {id === 'schedule'      && <ScheduleSection      s={settings} set={update} />}
         {id === 'companies'     && <CompaniesSection     companies={companies}
                                       setCompanies={c => { setCompanies(c); saveCompanies(c) }}
                                       accounts={accounts} />}
@@ -1021,9 +1002,9 @@ export function Settings() {
         {id === 'accounts'      && <AccountsSection      accounts={accounts}
                                       setAccounts={a => { setAccounts(a) }}
                                       primaryEmail={authUser?.email ?? ''} />}
-        {id === 'professor'     && <ProfessorSection     s={settings} set={update} onSave={() => {}} />}
-        {id === 'notifications' && <NotificationsSection s={settings} set={update} onSave={() => {}} />}
-        {id === 'appearance'    && <AppearanceSection    s={settings} set={update} onSave={() => {}} />}
+        {id === 'professor'     && <ProfessorSection     s={settings} set={update} />}
+        {id === 'notifications' && <NotificationsSection s={settings} set={update} />}
+        {id === 'appearance'    && <AppearanceSection    s={settings} set={update} />}
       </SectionShell>
     )
   }

@@ -42,9 +42,6 @@ function getWeekStart(d: Date): Date {
 function isSameDay(a: Date, b: Date): boolean {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
 }
-function fmtMonthYear(d: Date): string {
-  return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
-}
 function fmtDay(d: Date): string {
   return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
 }
@@ -107,7 +104,6 @@ function layoutDayEvents(events: GCalEvent[], dayDate: Date, dayIdx: number): Po
   const columns: GCalEvent[][] = []
   for (const ev of sorted) {
     const evStart = new Date(ev.start.dateTime!).getTime()
-    const evEnd   = new Date(ev.end.dateTime!).getTime()
     let placed = false
     for (const col of columns) {
       const lastEnd = new Date(col[col.length - 1].end.dateTime!).getTime()
@@ -308,15 +304,12 @@ function EventDetail({
             <div style={{ borderTop: '1px solid var(--color-border, #252A3E)', paddingTop: 16, marginBottom: 12 }}>
               <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-accent, #1E40AF)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>AI Meeting Brief</span>
             </div>
-            {prep.agenda && (
-              <div style={{ marginBottom: 12 }}>
-                <p style={{ margin: '0 0 6px', fontSize: 11.5, fontWeight: 600, color: 'var(--color-text-dim, #94A3B8)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>Agenda</p>
-                <ul style={{ margin: 0, paddingLeft: 16 }}>
-                  {prep.agenda.map((a, i) => <li key={i} style={{ fontSize: 12.5, color: 'var(--color-text, #E8EAF6)', marginBottom: 3 }}>{a}</li>)}
-                </ul>
-              </div>
+            {prep.contextSummary && (
+              <p style={{ margin: '0 0 12px', fontSize: 12.5, color: 'var(--color-text, #E8EAF6)', lineHeight: 1.6 }}>
+                {prep.contextSummary}
+              </p>
             )}
-            {prep.talkingPoints && (
+            {prep.talkingPoints && prep.talkingPoints.length > 0 && (
               <div style={{ marginBottom: 12 }}>
                 <p style={{ margin: '0 0 6px', fontSize: 11.5, fontWeight: 600, color: 'var(--color-text-dim, #94A3B8)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>Talking Points</p>
                 <ul style={{ margin: 0, paddingLeft: 16 }}>
@@ -324,17 +317,9 @@ function EventDetail({
                 </ul>
               </div>
             )}
-            {prep.goals && prep.goals.length > 0 && (
-              <div style={{ marginBottom: 12 }}>
-                <p style={{ margin: '0 0 6px', fontSize: 11.5, fontWeight: 600, color: 'var(--color-text-dim, #94A3B8)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>Goals</p>
-                <ul style={{ margin: 0, paddingLeft: 16 }}>
-                  {prep.goals.map((g, i) => <li key={i} style={{ fontSize: 12.5, color: 'var(--color-text, #E8EAF6)', marginBottom: 3 }}>{g}</li>)}
-                </ul>
-              </div>
-            )}
-            {prep.summary && (
+            {prep.goal && (
               <p style={{ margin: 0, fontSize: 12.5, color: 'var(--color-text, #E8EAF6)', lineHeight: 1.6, borderTop: '1px solid var(--color-border, #252A3E)', paddingTop: 12 }}>
-                {prep.summary}
+                <strong>Goal:</strong> {prep.goal}
               </p>
             )}
           </div>
@@ -347,11 +332,10 @@ function EventDetail({
 // ─── Time Grid ────────────────────────────────────────────────────────────────
 
 function TimeGrid({
-  days, events, viewMode, onEventClick,
+  days, events, onEventClick,
 }: {
   days: Date[]
   events: GCalEvent[]
-  viewMode: ViewMode
   onEventClick: (e: GCalEvent) => void
 }) {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -608,7 +592,6 @@ export function CalendarView() {
       <TimeGrid
         days={days}
         events={events}
-        viewMode={viewMode}
         onEventClick={e => setSelected(e)}
       />
 
