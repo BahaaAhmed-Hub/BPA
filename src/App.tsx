@@ -45,6 +45,12 @@ function App() {
       const u = session?.user
       setUser(u ? { id: u.id, email: u.email ?? '', name: u.user_metadata?.full_name as string | undefined, avatarUrl: u.user_metadata?.avatar_url as string | undefined } : null)
       setLoading(false)
+      // Persist provider_token (Google OAuth) — Supabase doesn't restore it after refresh
+      if (session?.provider_token) {
+        localStorage.setItem('google_provider_token', session.provider_token)
+      } else if (!session) {
+        localStorage.removeItem('google_provider_token')
+      }
     })
 
     return () => subscription.unsubscribe()

@@ -8,7 +8,7 @@ export async function signInWithGoogle() {
         'https://www.googleapis.com/auth/calendar.readonly',
         'https://www.googleapis.com/auth/gmail.readonly',
       ].join(' '),
-      redirectTo: `${window.location.origin}/auth/callback`,
+      redirectTo: window.location.origin + import.meta.env.BASE_URL,
     },
   })
   if (error) throw error

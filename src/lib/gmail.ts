@@ -33,7 +33,7 @@ export interface GmailThread {
 
 async function accessToken(): Promise<string> {
   const { data } = await supabase.auth.getSession()
-  const token = data.session?.provider_token
+  const token = data.session?.provider_token ?? localStorage.getItem('google_provider_token')
   if (!token) throw new Error('No Google access token — please sign in with Google.')
   return token
 }
