@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react'
 import { Plus, CheckCircle2, Circle, Flame, Trash2, X } from 'lucide-react'
 import { TopBar } from '@/components/layout/TopBar'
 import {
-  loadHabits, saveHabits, loadLogs, saveLogs,
+  useHabitsStore, loadLogs, saveLogs,
   calcStreak, lastNDays, getHabitColors,
   type Habit,
 } from '@/store/habitsStore'
@@ -53,7 +53,7 @@ function WeekDots({ logs, color }: { logs: string[]; color: string }) {
 export function HabitsModule() {
   const HABIT_COLORS = getHabitColors()
 
-  const [habits, setHabits]       = useState<Habit[]>(loadHabits)
+  const { habits, addHabit: storeAdd, deleteHabit: storeDelete } = useHabitsStore()
   const [logs, setLogs]           = useState(loadLogs)
   const [addingHabit, setAdding]  = useState(false)
   const [newName, setNewName]     = useState('')
@@ -77,30 +77,13 @@ export function HabitsModule() {
 
   const addHabit = () => {
     if (!newName.trim()) return
-    const habit: Habit = {
-      id:        crypto.randomUUID(),
-      name:      newName.trim(),
-      emoji:     newEmoji,
-      color:     newColor,
-      frequency: 'daily',
-      isActive:  true,
-      createdAt: new Date().toISOString(),
-    }
-    setHabits(prev => {
-      const next = [...prev, habit]
-      saveHabits(next)
-      return next
-    })
+    storeAdd({ name: newName.trim(), emoji: newEmoji, color: newColor, frequency: 'daily', isActive: true })
     setNewName('')
     setAdding(false)
   }
 
   const deleteHabit = (habitId: string) => {
-    setHabits(prev => {
-      const next = prev.filter(h => h.id !== habitId)
-      saveHabits(next)
-      return next
-    })
+    storeDelete(habitId)
     setLogs(prev => {
       const next = { ...prev }
       delete next[habitId]

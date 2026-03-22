@@ -1,8 +1,9 @@
 /**
  * Unified habit store — single source of truth for habits.
- * Both the Settings page and the Habits page read/write from here.
+ * Uses Zustand so both Settings and HabitsModule share live reactive state.
  * localStorage key: 'professor-habits'
  */
+import { create } from 'zustand'
 
 export interface Habit {
   id: string
@@ -23,11 +24,11 @@ const LOGS_KEY   = 'professor-habit-logs'
 
 const DEFAULT_COLORS = ['#1E40AF', '#7F77DD', '#1D9E75', '#E05252', '#888780', '#E0944A']
 
-export function loadHabits(): Habit[] {
+// ─── Raw localStorage helpers (kept for non-reactive consumers) ───────────────
+
+function parseHabits(raw: string | null): Habit[] {
+  if (!raw) return []
   try {
-    const raw = localStorage.getItem(HABITS_KEY)
-    if (!raw) return []
-    // Migrate old format (just {id, name, color, createdAt}) if needed
     const parsed = JSON.parse(raw) as Partial<Habit>[]
     return parsed.map((h, i) => ({
       id:        h.id        ?? String(Date.now() + i),
@@ -39,6 +40,10 @@ export function loadHabits(): Habit[] {
       createdAt: h.createdAt ?? new Date().toISOString(),
     }))
   } catch { return [] }
+}
+
+export function loadHabits(): Habit[] {
+  return parseHabits(localStorage.getItem(HABITS_KEY))
 }
 
 export function saveHabits(habits: Habit[]): void {
@@ -59,6 +64,57 @@ export function saveLogs(logs: HabitLogs): void {
 export function getHabitColors(): string[] {
   return DEFAULT_COLORS
 }
+
+// ─── Zustand store ────────────────────────────────────────────────────────────
+
+interface HabitsState {
+  habits: Habit[]
+  addHabit:    (h: Omit<Habit, 'id' | 'createdAt'>) => void
+  updateHabit: (id: string, patch: Partial<Habit>) => void
+  deleteHabit: (id: string) => void
+  reorderHabits: (from: number, to: number) => void
+}
+
+function arrayMove<T>(arr: T[], from: number, to: number): T[] {
+  const next = [...arr]
+  const [item] = next.splice(from, 1)
+  next.splice(to, 0, item)
+  return next
+}
+
+export const useHabitsStore = create<HabitsState>((set, get) => ({
+  habits: loadHabits(),
+
+  addHabit(h) {
+    const next = [...get().habits, {
+      ...h,
+      id: crypto.randomUUID(),
+      createdAt: new Date().toISOString(),
+    }]
+    saveHabits(next)
+    set({ habits: next })
+  },
+
+  updateHabit(id, patch) {
+    const next = get().habits.map(h => h.id === id ? { ...h, ...patch } : h)
+    saveHabits(next)
+    set({ habits: next })
+  },
+
+  deleteHabit(id) {
+    const next = get().habits.filter(h => h.id !== id)
+    saveHabits(next)
+    set({ habits: next })
+  },
+
+  reorderHabits(from, to) {
+    const next = arrayMove(get().habits, from, to)
+    saveHabits(next)
+    set({ habits: next })
+  },
+}))
+
+// ─── Utility functions ────────────────────────────────────────────────────────
 
 /** Compute streak for a habit given its log dates */
 export function calcStreak(dates: string[]): number {

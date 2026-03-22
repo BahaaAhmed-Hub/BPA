@@ -21,7 +21,7 @@ import { signInWithGoogle, signOut as googleSignOut } from '@/lib/google'
 import { useUIStore } from '@/store/uiStore'
 import { useAuthStore } from '@/store/authStore'
 import { THEMES, getTheme, applyThemeVars } from '@/lib/themes'
-import { loadHabits, saveHabits, getHabitColors, type Habit as UnifiedHabit } from '@/store/habitsStore'
+import { useHabitsStore, getHabitColors, type Habit as UnifiedHabit } from '@/store/habitsStore'
 import { loadAccounts, type ConnectedAccount } from '@/lib/multiAccount'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -545,7 +545,7 @@ function CompaniesSection({
 
 function HabitsSection() {
   const COLORS = getHabitColors()
-  const [habits, setHabits] = useState<UnifiedHabit[]>(loadHabits)
+  const { habits, addHabit: storeAdd, updateHabit, deleteHabit: storeDel } = useHabitsStore()
   const [adding, setAdding] = useState(false)
   const [newName, setNewName]     = useState('')
   const [newEmoji, setNewEmoji]   = useState('🎯')
@@ -554,19 +554,15 @@ function HabitsSection() {
 
   function addHabit() {
     if (!newName.trim()) return
-    const h: UnifiedHabit = {
-      id: crypto.randomUUID(), name: newName.trim(), emoji: newEmoji,
-      color: newColor, frequency: newFreq, isActive: true, createdAt: new Date().toISOString(),
-    }
-    const next = [...habits, h]; setHabits(next); saveHabits(next)
+    storeAdd({ name: newName.trim(), emoji: newEmoji, color: newColor, frequency: newFreq, isActive: true })
     setNewName(''); setAdding(false)
   }
   function toggle(id: string) {
-    const next = habits.map(h => h.id === id ? { ...h, isActive: !h.isActive } : h)
-    setHabits(next); saveHabits(next)
+    const h = habits.find(x => x.id === id)
+    if (h) updateHabit(id, { isActive: !h.isActive })
   }
   function del(id: string) {
-    const next = habits.filter(h => h.id !== id); setHabits(next); saveHabits(next)
+    storeDel(id)
   }
 
   return (
