@@ -1,1056 +1,1093 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-  type DraggableAttributes,
-} from '@dnd-kit/core'
+// ─── CHUNK 1: Types, constants, localStorage helpers ─────────────────────────
+// (remaining chunks appended below)
 
-type DndListeners = Record<string, React.EventHandler<React.SyntheticEvent>>
+import { useState, useEffect, useCallback } from 'react'
 import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  useSortable,
-  verticalListSortingStrategy,
+  DndContext, closestCenter, KeyboardSensor, PointerSensor,
+  useSensor, useSensors, type DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  arrayMove, SortableContext, sortableKeyboardCoordinates,
+  useSortable, verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { Plus, Trash2, GripVertical, Check, RefreshCw, Wifi, WifiOff, LogIn, LogOut } from 'lucide-react'
+import {
+  Plus, Trash2, GripVertical, LogIn, LogOut,
+  ChevronDown, ChevronUp, User, Clock, Building2, Flame,
+  Brain, Bell, Palette, Link, X, Check, RefreshCw,
+} from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { signInWithGoogle, signOut as googleSignOut } from '@/lib/google'
 import { useUIStore } from '@/store/uiStore'
+import { useAuthStore } from '@/store/authStore'
+import { THEMES, getTheme, applyThemeVars } from '@/lib/themes'
+import { loadHabits, saveHabits, getHabitColors, type Habit as UnifiedHabit } from '@/store/habitsStore'
+import { loadAccounts, type ConnectedAccount } from '@/lib/multiAccount'
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 interface AppSettings {
-  // Profile
-  fullName: string
-  timezone: string
-  workWeek: string[]
-  framework: string
-  // Schedule
-  focusStart: string
-  focusEnd: string
-  earliestMeeting: string
-  bufferMins: number
-  physicalBufferMins: number
-  endOfDay: string
-  familyStart: string
-  protectFocus: boolean
-  autoDeclineEarly: boolean
-  // Professor AI
-  commStyle: 'brief' | 'balanced' | 'detailed'
-  proactive: boolean
-  briefTime: string
-  reviewDay: string
-  customInstructions: string
-  // Notifications
-  morningReminderOn: boolean
-  morningReminderTime: string
-  windDownOn: boolean
-  windDownTime: string
-  followUpNudges: boolean
-  weeklyReviewOn: boolean
-  weeklyReviewDay: string
-  weeklyReviewTime: string
-  // Appearance
-  theme: 'dark-warm' | 'dark-cool' | 'light'
-  sidebarDefault: boolean
-  compact: boolean
+  fullName: string; timezone: string; workWeek: string[]; framework: string
+  focusStart: string; focusEnd: string; earliestMeeting: string
+  bufferMins: number; physicalBufferMins: number
+  endOfDay: string; familyStart: string
+  protectFocus: boolean; autoDeclineEarly: boolean
+  commStyle: 'brief' | 'balanced' | 'detailed'; proactive: boolean
+  briefTime: string; reviewDay: string; customInstructions: string
+  morningReminderOn: boolean; morningReminderTime: string
+  windDownOn: boolean; windDownTime: string; followUpNudges: boolean
+  weeklyReviewOn: boolean; weeklyReviewDay: string; weeklyReviewTime: string
+  theme: string; sidebarDefault: boolean; compact: boolean
 }
 
 interface CompanyRow {
-  id: string
-  name: string
-  color: string
-  calendarId: string
-  isActive: boolean
+  id: string; name: string; color: string
+  calendarId: string; emailDomain: string; accountId: string; isActive: boolean
 }
 
-interface HabitRow {
-  id: string
-  emoji: string
-  name: string
-  frequency: 'daily' | 'weekdays' | 'weekly'
-  isActive: boolean
-}
+const SECTION_IDS = ['profile','schedule','companies','habits','accounts','professor','notifications','appearance'] as const
+type SectionId = typeof SECTION_IDS[number]
+
+interface SectionMeta { id: SectionId; title: string; icon: React.ElementType; description: string }
+const SECTION_META: SectionMeta[] = [
+  { id: 'profile',       title: 'Profile',            icon: User,      description: 'Name, timezone, work week & framework' },
+  { id: 'schedule',      title: 'Schedule Rules',     icon: Clock,     description: 'Focus hours, buffers, meeting protections' },
+  { id: 'companies',     title: 'Companies',          icon: Building2, description: 'Contexts, colors, calendar & email domain mapping' },
+  { id: 'habits',        title: 'Habits',             icon: Flame,     description: 'Configure daily habits — synced with Habits page' },
+  { id: 'accounts',      title: 'Connected Accounts', icon: Link,      description: 'Google accounts, calendars & Gmail access' },
+  { id: 'professor',     title: 'Professor AI',       icon: Brain,     description: 'Communication style, daily brief & review day' },
+  { id: 'notifications', title: 'Notifications',      icon: Bell,      description: 'Morning reminder, wind-down & weekly review nudges' },
+  { id: 'appearance',    title: 'Appearance',         icon: Palette,   description: 'Theme, density & sidebar default' },
+]
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 function getUtcOffset(tz: string): string {
   try {
-    const offset = new Intl.DateTimeFormat('en', { timeZone: tz, timeZoneName: 'shortOffset' })
-      .formatToParts(new Date())
-      .find(p => p.type === 'timeZoneName')?.value ?? 'UTC'
-    return offset === 'GMT' ? 'UTC+0' : offset.replace('GMT', 'UTC')
-  } catch {
-    return 'UTC'
-  }
+    const v = new Intl.DateTimeFormat('en', { timeZone: tz, timeZoneName: 'shortOffset' })
+      .formatToParts(new Date()).find(p => p.type === 'timeZoneName')?.value ?? 'UTC'
+    return v === 'GMT' ? 'UTC+0' : v.replace('GMT', 'UTC')
+  } catch { return 'UTC' }
 }
-
-const ALL_TIMEZONES: { value: string; label: string; offset: number }[] = (() => {
-  const zones: string[] = Intl.supportedValuesOf
-    ? Intl.supportedValuesOf('timeZone')
-    : ['America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles',
-       'America/Toronto', 'America/Vancouver', 'Europe/London', 'Europe/Paris',
-       'Europe/Berlin', 'Europe/Amsterdam', 'Asia/Dubai', 'Asia/Kolkata',
-       'Asia/Singapore', 'Asia/Tokyo', 'Australia/Sydney', 'Pacific/Auckland']
+const ALL_TZ = (() => {
+  const zones: string[] = Intl.supportedValuesOf ? Intl.supportedValuesOf('timeZone')
+    : ['America/New_York','America/Los_Angeles','Europe/London','Europe/Paris','Asia/Dubai','Asia/Tokyo']
   return zones.map(tz => {
-    const offsetStr = getUtcOffset(tz)
-    const sign = offsetStr.includes('-') ? -1 : 1
-    const parts = offsetStr.replace('UTC', '').replace('+', '').replace('-', '').split(':')
-    const offsetMins = sign * ((parseInt(parts[0]) || 0) * 60 + (parseInt(parts[1]) || 0))
-    return { value: tz, label: `(${offsetStr}) ${tz.replace(/_/g, ' ')}`, offset: offsetMins }
-  }).sort((a, b) => a.offset - b.offset || a.value.localeCompare(b.value))
+    const o = getUtcOffset(tz)
+    const s = o.includes('-') ? -1 : 1
+    const p = o.replace('UTC','').replace('+','').replace('-','').split(':')
+    return { value: tz, label: `(${o}) ${tz.replace(/_/g,' ')}`, offset: s*((parseInt(p[0])||0)*60+(parseInt(p[1])||0)) }
+  }).sort((a,b) => a.offset - b.offset || a.value.localeCompare(b.value))
 })()
 
 const FRAMEWORKS = [
-  { value: 'time_blocking', label: 'Time Blocking' },
-  { value: 'gtd',           label: 'GTD (Getting Things Done)' },
-  { value: 'deep_work',     label: 'Deep Work' },
-  { value: 'eisenhower',    label: 'Eisenhower Matrix' },
-  { value: 'pomodoro',      label: 'Pomodoro' },
-  { value: '12_week_year',  label: '12-Week Year' },
+  {value:'time_blocking',label:'Time Blocking'},{value:'gtd',label:'GTD'},
+  {value:'deep_work',label:'Deep Work'},{value:'eisenhower',label:'Eisenhower Matrix'},
+  {value:'pomodoro',label:'Pomodoro'},{value:'12_week_year',label:'12-Week Year'},
 ]
-
-const WORK_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-
-const C_COLORS = ['#7C3AED', '#7F77DD', '#1D9E75', '#E05252', '#888780', '#5B9BD5']
-
-const EMOJIS = [
-  '💼','🎯','🚀','📊','💡','🔧','📝','🌟','⚡','🎨',
-  '🏆','📱','💻','🤝','📈','🌿','🔬','🏗️','💰','🌍',
-]
-
-const BUFFER_STEPS  = [0, 15, 30, 45, 60]
-const PHYS_STEPS    = [0, 30, 60, 90]
+const WORK_DAYS    = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
+const C_COLORS     = ['#1E40AF','#7F77DD','#1D9E75','#E05252','#888780','#5B9BD5','#E0944A']
+const BUFFER_STEPS = [0,15,30,45,60]
+const PHYS_STEPS   = [0,30,60,90]
+const HABIT_EMOJIS = ['🎯','💪','📚','🏃','💧','🧘','🍎','💤','🌿','✍️','🧠','🔥','🎨','🏋️','🎵']
+const FREQ_OPTS    = ['daily','weekdays','weekly'] as const
 
 const DEFAULTS: AppSettings = {
-  fullName: '', timezone: 'America/New_York',
-  workWeek: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], framework: 'time_blocking',
-  focusStart: '09:00', focusEnd: '11:00', earliestMeeting: '10:00',
-  bufferMins: 30, physicalBufferMins: 60,
-  endOfDay: '17:00', familyStart: '18:00',
-  protectFocus: true, autoDeclineEarly: true,
-  commStyle: 'balanced', proactive: true,
-  briefTime: '07:00', reviewDay: 'Sunday', customInstructions: '',
-  morningReminderOn: true, morningReminderTime: '07:00',
-  windDownOn: true, windDownTime: '21:00', followUpNudges: true,
-  weeklyReviewOn: true, weeklyReviewDay: 'Sunday', weeklyReviewTime: '18:00',
-  theme: 'dark-warm', sidebarDefault: false, compact: false,
+  fullName:'', timezone:'America/New_York', workWeek:['Mon','Tue','Wed','Thu','Fri'], framework:'time_blocking',
+  focusStart:'09:00', focusEnd:'11:00', earliestMeeting:'10:00',
+  bufferMins:30, physicalBufferMins:60, endOfDay:'17:00', familyStart:'18:00',
+  protectFocus:true, autoDeclineEarly:true,
+  commStyle:'balanced', proactive:true, briefTime:'07:00', reviewDay:'Sunday', customInstructions:'',
+  morningReminderOn:true, morningReminderTime:'07:00',
+  windDownOn:true, windDownTime:'21:00', followUpNudges:true,
+  weeklyReviewOn:true, weeklyReviewDay:'Sunday', weeklyReviewTime:'18:00',
+  theme:'navy-night', sidebarDefault:false, compact:false,
 }
 
-// ─── localStorage helpers ─────────────────────────────────────────────────────
+// ─── Storage helpers ──────────────────────────────────────────────────────────
 
-function localSaveSettings(s: AppSettings) {
-  try { localStorage.setItem('professor-settings', JSON.stringify(s)) } catch { /* quota */ }
+function ls<T>(key: string, fb: T): T {
+  try { const r = localStorage.getItem(key); return r ? JSON.parse(r) as T : fb } catch { return fb }
 }
+function lsSet<T>(key: string, v: T) { try { localStorage.setItem(key, JSON.stringify(v)) } catch { /**/ } }
 
-function localLoadSettings(): AppSettings | null {
+function loadSettings():   AppSettings   { return { ...DEFAULTS, ...ls<Partial<AppSettings>>('professor-settings', {}) } }
+function saveSettings(s:   AppSettings)  { lsSet('professor-settings', s) }
+function loadCompanies():  CompanyRow[]  { return ls('professor-companies', []) }
+function saveCompanies(c:  CompanyRow[]) { lsSet('professor-companies', c) }
+function loadSectionOrder(): SectionId[] {
+  const saved = ls<SectionId[]>('professor-section-order', [])
+  const valid = saved.filter(id => (SECTION_IDS as readonly string[]).includes(id))
+  const miss  = SECTION_IDS.filter(id => !valid.includes(id))
+  return [...valid, ...miss]
+}
+function saveSectionOrder(ids: SectionId[]) { lsSet('professor-section-order', ids) }
+
+// ─── Google Calendars fetch ───────────────────────────────────────────────────
+
+interface GCalCal { id: string; summary: string; primary?: boolean }
+async function fetchGCals(token: string): Promise<GCalCal[]> {
   try {
-    const raw = localStorage.getItem('professor-settings')
-    return raw ? { ...DEFAULTS, ...(JSON.parse(raw) as Partial<AppSettings>) } : null
-  } catch { return null }
-}
-
-function localSaveCompanies(companies: CompanyRow[]) {
-  try { localStorage.setItem('professor-companies', JSON.stringify(companies)) } catch { /* quota */ }
-}
-
-function localLoadCompanies(): CompanyRow[] {
-  try {
-    const raw = localStorage.getItem('professor-companies')
-    return raw ? (JSON.parse(raw) as CompanyRow[]) : []
+    const r = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList',
+      { headers: { Authorization: `Bearer ${token}` } })
+    if (!r.ok) return []
+    return ((await r.json()) as { items?: GCalCal[] }).items ?? []
   } catch { return [] }
 }
 
-function localSaveHabits(habits: HabitRow[]) {
-  try { localStorage.setItem('professor-habit-config', JSON.stringify(habits)) } catch { /* quota */ }
+// ─── Supabase check ───────────────────────────────────────────────────────────
+
+async function checkSupabase(): Promise<boolean> {
+  try { const { error } = await supabase.from('users').select('id').limit(1); return !error }
+  catch { return false }
 }
 
-function localLoadHabits(): HabitRow[] {
-  try {
-    const raw = localStorage.getItem('professor-habit-config')
-    return raw ? (JSON.parse(raw) as HabitRow[]) : []
-  } catch { return [] }
+// ─── CHUNK 2: Shared UI atoms ─────────────────────────────────────────────────
+
+// Card style using CSS variables for full theme support
+const card: React.CSSProperties = {
+  background: 'var(--color-surface, #161929)',
+  border: '1px solid var(--color-border, #252A3E)',
+  borderRadius: 14, padding: '0',
+  marginBottom: 12, overflow: 'hidden',
 }
-
-// ─── Google Calendar list helper ──────────────────────────────────────────────
-
-interface GCalCalendar { id: string; summary: string; primary?: boolean }
-
-async function fetchGCalendars(token: string): Promise<GCalCalendar[]> {
-  const res = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList', {
-    headers: { Authorization: `Bearer ${token}` },
-  })
-  if (!res.ok) return []
-  const data = (await res.json()) as { items?: GCalCalendar[] }
-  return data.items ?? []
+const inputStyle: React.CSSProperties = {
+  background: 'var(--color-surface2, #0D0F1A)',
+  border: '1px solid var(--color-border, #252A3E)',
+  borderRadius: 7, color: 'var(--color-text, #E8EAF6)',
+  fontSize: 13.5, padding: '7px 11px', outline: 'none',
+  fontFamily: 'DM Sans, sans-serif', width: '100%', boxSizing: 'border-box' as const,
 }
-
-// ─── Theme ────────────────────────────────────────────────────────────────────
-
-function applyTheme(theme: AppSettings['theme']) {
-  const el = document.documentElement
-  el.setAttribute('data-theme', theme === 'dark-warm' ? '' : theme)
-  const bgMap: Record<AppSettings['theme'], string> = {
-    'dark-warm': '#0D0F1A',
-    'dark-cool': '#111827',
-    'light':     '#F5F0E8',
-  }
-  document.body.style.background = bgMap[theme]
-}
-
-// ─── Shared style objects ─────────────────────────────────────────────────────
-
-const S = {
-  card: {
-    background: '#161929',
-    border: '1px solid #252A3E',
-    borderRadius: 12,
-    padding: '24px 28px',
-    marginBottom: 20,
-  } as React.CSSProperties,
-
-  input: {
-    background: '#0D0F1A',
-    border: '1px solid #252A3E',
-    borderRadius: 7,
-    color: '#E8EAF6',
-    fontSize: 13.5,
-    padding: '7px 11px',
-    outline: 'none',
-    fontFamily: 'DM Sans, sans-serif',
-    width: '100%',
-  } as React.CSSProperties,
-
-  select: {
-    background: '#0D0F1A',
-    border: '1px solid #252A3E',
-    borderRadius: 7,
-    color: '#E8EAF6',
-    fontSize: 13.5,
-    padding: '7px 11px',
-    outline: 'none',
-    cursor: 'pointer',
-    fontFamily: 'DM Sans, sans-serif',
-  } as React.CSSProperties,
-}
-
-// ─── Shared UI components ─────────────────────────────────────────────────────
-
-function SectionHeader({ title, description }: { title: string; description?: string }) {
-  return (
-    <div style={{ marginBottom: 22 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <div style={{ width: 3, height: 13, background: '#7C3AED', borderRadius: 2, flexShrink: 0 }} />
-        <span style={{
-          fontSize: 10.5, fontWeight: 700, color: '#7C3AED',
-          textTransform: 'uppercase', letterSpacing: '1.4px',
-        }}>
-          {title}
-        </span>
-      </div>
-      {description && (
-        <p style={{ margin: '5px 0 0 11px', fontSize: 12, color: '#6B7280', lineHeight: 1.55 }}>
-          {description}
-        </p>
-      )}
-    </div>
-  )
-}
-
-function FieldRow({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div style={{
-      display: 'flex', alignItems: 'flex-start', gap: 16,
-      padding: '11px 0', borderBottom: '1px solid rgba(58,48,32,0.5)',
-    }}>
-      <span style={{ width: 210, fontSize: 13, color: '#6B7280', flexShrink: 0, paddingTop: 2 }}>
-        {label}
-      </span>
-      <div style={{ flex: 1 }}>{children}</div>
-    </div>
-  )
+const selectStyle: React.CSSProperties = {
+  ...inputStyle, cursor: 'pointer', width: 'auto',
 }
 
 function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
+  const accent = 'var(--color-accent, #1E40AF)'
   return (
-    <button
-      role="switch"
-      aria-checked={checked}
-      onClick={() => onChange(!checked)}
+    <button role="switch" aria-checked={checked} onClick={() => onChange(!checked)}
       style={{
-        width: 42, height: 24, borderRadius: 12,
-        background: checked ? '#7C3AED' : '#252A3E',
-        border: 'none', cursor: 'pointer', position: 'relative',
-        transition: 'background 0.2s', flexShrink: 0, padding: 0,
-      }}
-    >
+        width: 42, height: 24, borderRadius: 12, flexShrink: 0,
+        background: checked ? accent : 'var(--color-border, #252A3E)',
+        border: 'none', cursor: 'pointer', position: 'relative', padding: 0, transition: 'background 0.2s',
+      }}>
       <span style={{
-        position: 'absolute', top: 4,
-        left: checked ? 22 : 4,
-        width: 16, height: 16, borderRadius: '50%',
-        background: checked ? '#0D0F1A' : '#6B7280',
-        transition: 'left 0.2s', display: 'block',
+        position: 'absolute', top: 4, left: checked ? 22 : 4,
+        width: 16, height: 16, borderRadius: '50%', display: 'block',
+        background: checked ? 'var(--color-surface, #161929)' : 'var(--color-text-muted, #6B7280)',
+        transition: 'left 0.2s',
       }} />
     </button>
   )
 }
 
-function TimeInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+function FieldRow({ label, sub, children }: { label: string; sub?: string; children: React.ReactNode }) {
   return (
-    <input
-      type="time"
-      value={value}
-      onChange={e => onChange(e.target.value)}
-      style={{ ...S.input, width: 130, colorScheme: 'dark' }}
-    />
-  )
-}
-
-function StepSlider({
-  value, onChange, steps, unit = 'min',
-}: { value: number; onChange: (v: number) => void; steps: number[]; unit?: string }) {
-  const idx = Math.max(0, steps.indexOf(value))
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-      <input
-        type="range"
-        min={0} max={steps.length - 1} step={1}
-        value={idx}
-        onChange={e => onChange(steps[Number(e.target.value)])}
-        style={{ width: 160, accentColor: '#7C3AED', cursor: 'pointer' }}
-      />
-      <span style={{ fontSize: 13, color: '#E8EAF6', minWidth: 55 }}>
-        {value} {unit}
-      </span>
+    <div style={{
+      display: 'flex', alignItems: 'flex-start', gap: 16,
+      padding: '11px 0', borderBottom: '1px solid var(--color-border, #252A3E)',
+    }}>
+      <div style={{ width: 210, flexShrink: 0, paddingTop: 2 }}>
+        <span style={{ fontSize: 13, color: 'var(--color-text, #E8EAF6)' }}>{label}</span>
+        {sub && <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--color-text-muted, #6B7280)' }}>{sub}</p>}
+      </div>
+      <div style={{ flex: 1 }}>{children}</div>
     </div>
   )
 }
 
-function ColorPicker({ value, onChange }: { value: string; onChange: (c: string) => void }) {
+function SaveBadge({ saved }: { saved: boolean }) {
+  if (!saved) return null
   return (
-    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-      {C_COLORS.map(c => (
-        <button
-          key={c}
-          onClick={() => onChange(c)}
-          style={{
-            width: 20, height: 20, borderRadius: '50%', background: c,
-            border: value === c ? '2px solid #E8EAF6' : '2px solid transparent',
-            outline: value === c ? `2px solid ${c}` : 'none',
-            outlineOffset: 1, cursor: 'pointer', padding: 0,
-          }}
-        />
-      ))}
-    </div>
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: 4,
+      padding: '3px 9px', borderRadius: 20, fontSize: 11,
+      background: 'rgba(29,158,117,0.12)', color: '#1D9E75',
+      border: '1px solid rgba(29,158,117,0.25)', fontWeight: 500,
+    }}>
+      <Check size={10} /> Saved
+    </span>
   )
 }
 
-function EmojiPickerBtn({ value, onChange }: { value: string; onChange: (e: string) => void }) {
-  const [open, setOpen] = useState(false)
+// ─── Sortable Section Shell ────────────────────────────────────────────────────
+
+function SectionShell({
+  id, meta, children, defaultOpen = false,
+}: {
+  id: SectionId
+  meta: SectionMeta
+  children: React.ReactNode
+  defaultOpen?: boolean
+}) {
+  const [open, setOpen] = useState(defaultOpen)
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
+  const Icon = meta.icon
+
   return (
-    <div style={{ position: 'relative' }}>
-      <button
-        onClick={() => setOpen(o => !o)}
-        style={{
-          fontSize: 18, background: '#0D0F1A', border: '1px solid #252A3E',
-          borderRadius: 7, width: 38, height: 34, cursor: 'pointer',
+    <div
+      ref={setNodeRef}
+      style={{
+        ...card,
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.5 : 1,
+        boxShadow: isDragging ? '0 8px 32px rgba(0,0,0,0.4)' : 'none',
+      }}
+    >
+      {/* Header row */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 12,
+        padding: '16px 20px', cursor: 'pointer',
+        borderBottom: open ? '1px solid var(--color-border, #252A3E)' : 'none',
+        userSelect: 'none',
+      }}>
+        {/* Drag handle */}
+        <span
+          {...attributes} {...listeners}
+          style={{ color: 'var(--color-text-muted, #4B5563)', cursor: 'grab', flexShrink: 0, display: 'flex', touchAction: 'none' }}
+          title="Drag to reorder"
+        >
+          <GripVertical size={16} />
+        </span>
+
+        {/* Icon */}
+        <div style={{
+          width: 30, height: 30, borderRadius: 7, flexShrink: 0,
+          background: 'var(--color-accent-fill, rgba(30,64,175,0.12))',
+          border: '1px solid var(--color-accent, #1E40AF)30',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}
-      >
-        {value}
-      </button>
+        }}>
+          <Icon size={14} color="var(--color-accent, #1E40AF)" />
+        </div>
+
+        {/* Title + description */}
+        <div style={{ flex: 1 }} onClick={() => setOpen(o => !o)}>
+          <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: 'var(--color-text, #E8EAF6)' }}>
+            {meta.title}
+          </p>
+          {!open && (
+            <p style={{ margin: '1px 0 0', fontSize: 11.5, color: 'var(--color-text-muted, #4B5563)' }}>
+              {meta.description}
+            </p>
+          )}
+        </div>
+
+        {/* Chevron */}
+        <button onClick={() => setOpen(o => !o)}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted, #4B5563)', display: 'flex', padding: 4 }}>
+          {open ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+        </button>
+      </div>
+
+      {/* Body */}
       {open && (
-        <>
-          <div
-            style={{ position: 'fixed', inset: 0, zIndex: 49 }}
-            onClick={() => setOpen(false)}
-          />
-          <div style={{
-            position: 'absolute', top: 40, left: 0, zIndex: 50,
-            background: '#161929', border: '1px solid #252A3E', borderRadius: 10,
-            padding: 10, display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 4,
-            boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
-          }}>
-            {EMOJIS.map(em => (
-              <button
-                key={em}
-                onClick={() => { onChange(em); setOpen(false) }}
-                style={{
-                  fontSize: 18, background: 'transparent', border: 'none',
-                  cursor: 'pointer', width: 34, height: 34, borderRadius: 6,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}
-                onMouseEnter={e => (e.currentTarget.style.background = '#252A3E')}
-                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-              >
-                {em}
-              </button>
-            ))}
-          </div>
-        </>
+        <div style={{ padding: '20px 24px 24px' }}>
+          {children}
+        </div>
       )}
     </div>
   )
 }
 
-function SaveBadge({ status }: { status: 'idle' | 'saving' | 'saved' | 'error' }) {
-  if (status === 'idle') return null
-  const isErr = status === 'error'
+// ─── CHUNK 3: Profile & Schedule sections ────────────────────────────────────
+
+function ProfileSection({
+  s, set, onSave,
+}: { s: AppSettings; set: (p: Partial<AppSettings>) => void; onSave: () => void }) {
   return (
-    <div style={{
-      position: 'fixed', top: 76, right: 24,
-      display: 'flex', alignItems: 'center', gap: 6,
-      padding: '5px 13px', borderRadius: 20,
-      background: isErr ? 'rgba(224,82,82,0.12)' : 'rgba(29,158,117,0.12)',
-      border: `1px solid ${isErr ? 'rgba(224,82,82,0.3)' : 'rgba(29,158,117,0.3)'}`,
-      color: isErr ? '#E05252' : '#1D9E75',
-      fontSize: 12, fontWeight: 500, zIndex: 100,
-    }}>
-      {status === 'saving'
-        ? <RefreshCw size={11} style={{ animation: 'spin 1s linear infinite' }} />
-        : <Check size={11} />
-      }
-      {status === 'saving' ? 'Saving…' : isErr ? 'Save failed' : 'Saved'}
+    <div>
+      <FieldRow label="Full name">
+        <input value={s.fullName} onChange={e => set({ fullName: e.target.value })}
+          placeholder="Your name" style={inputStyle} />
+      </FieldRow>
+      <FieldRow label="Timezone">
+        <select value={s.timezone} onChange={e => set({ timezone: e.target.value })} style={{ ...selectStyle, width: '100%' }}>
+          {ALL_TZ.map(tz => <option key={tz.value} value={tz.value}>{tz.label}</option>)}
+        </select>
+      </FieldRow>
+      <FieldRow label="Work days">
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {WORK_DAYS.map(d => {
+            const on = s.workWeek.includes(d)
+            return (
+              <button key={d} onClick={() => set({ workWeek: on ? s.workWeek.filter(x => x !== d) : [...s.workWeek, d] })}
+                style={{
+                  padding: '5px 11px', borderRadius: 6, fontSize: 12, cursor: 'pointer', fontWeight: 500,
+                  background: on ? 'var(--color-accent-fill, rgba(30,64,175,0.15))' : 'var(--color-surface2, #0D0F1A)',
+                  border: `1px solid ${on ? 'var(--color-accent, #1E40AF)' : 'var(--color-border, #252A3E)'}`,
+                  color: on ? 'var(--color-accent, #1E40AF)' : 'var(--color-text-muted, #6B7280)',
+                }}>{d}</button>
+            )
+          })}
+        </div>
+      </FieldRow>
+      <FieldRow label="Productivity framework">
+        <select value={s.framework} onChange={e => set({ framework: e.target.value })} style={{ ...selectStyle, width: '100%' }}>
+          {FRAMEWORKS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
+        </select>
+      </FieldRow>
+      <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end' }}>
+        <button onClick={onSave} style={{
+          padding: '8px 20px', borderRadius: 8,
+          background: 'var(--color-accent-fill, rgba(30,64,175,0.15))',
+          border: '1px solid var(--color-accent, #1E40AF)50',
+          color: 'var(--color-accent, #1E40AF)', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+        }}>Save Profile</button>
+      </div>
     </div>
   )
 }
 
-function SortableRow({
-  id, children,
+function ScheduleSection({
+  s, set, onSave,
+}: { s: AppSettings; set: (p: Partial<AppSettings>) => void; onSave: () => void }) {
+  return (
+    <div>
+      <FieldRow label="Focus window" sub="Block for deep work">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <input type="time" value={s.focusStart} onChange={e => set({ focusStart: e.target.value })}
+            style={{ ...inputStyle, width: 120 }} />
+          <span style={{ color: 'var(--color-text-muted, #6B7280)', fontSize: 12 }}>to</span>
+          <input type="time" value={s.focusEnd} onChange={e => set({ focusEnd: e.target.value })}
+            style={{ ...inputStyle, width: 120 }} />
+        </div>
+      </FieldRow>
+      <FieldRow label="Earliest meeting" sub="No calls before this time">
+        <input type="time" value={s.earliestMeeting} onChange={e => set({ earliestMeeting: e.target.value })}
+          style={{ ...inputStyle, width: 120 }} />
+      </FieldRow>
+      <FieldRow label="End of work day">
+        <input type="time" value={s.endOfDay} onChange={e => set({ endOfDay: e.target.value })}
+          style={{ ...inputStyle, width: 120 }} />
+      </FieldRow>
+      <FieldRow label="Family / personal time">
+        <input type="time" value={s.familyStart} onChange={e => set({ familyStart: e.target.value })}
+          style={{ ...inputStyle, width: 120 }} />
+      </FieldRow>
+      <FieldRow label="Meeting buffer" sub="Virtual gap between meetings">
+        <div style={{ display: 'flex', gap: 6 }}>
+          {BUFFER_STEPS.map(n => (
+            <button key={n} onClick={() => set({ bufferMins: n })}
+              style={{
+                padding: '5px 12px', borderRadius: 6, fontSize: 12, cursor: 'pointer', fontWeight: 500,
+                background: s.bufferMins === n ? 'var(--color-accent-fill)' : 'var(--color-surface2, #0D0F1A)',
+                border: `1px solid ${s.bufferMins === n ? 'var(--color-accent, #1E40AF)' : 'var(--color-border, #252A3E)'}`,
+                color: s.bufferMins === n ? 'var(--color-accent, #1E40AF)' : 'var(--color-text-muted, #6B7280)',
+              }}>{n === 0 ? 'None' : `${n}m`}</button>
+          ))}
+        </div>
+      </FieldRow>
+      <FieldRow label="Physical meeting buffer" sub="Extra travel time">
+        <div style={{ display: 'flex', gap: 6 }}>
+          {PHYS_STEPS.map(n => (
+            <button key={n} onClick={() => set({ physicalBufferMins: n })}
+              style={{
+                padding: '5px 12px', borderRadius: 6, fontSize: 12, cursor: 'pointer', fontWeight: 500,
+                background: s.physicalBufferMins === n ? 'var(--color-accent-fill)' : 'var(--color-surface2, #0D0F1A)',
+                border: `1px solid ${s.physicalBufferMins === n ? 'var(--color-accent, #1E40AF)' : 'var(--color-border, #252A3E)'}`,
+                color: s.physicalBufferMins === n ? 'var(--color-accent, #1E40AF)' : 'var(--color-text-muted, #6B7280)',
+              }}>{n === 0 ? 'None' : `${n}m`}</button>
+          ))}
+        </div>
+      </FieldRow>
+      <FieldRow label="Protect focus window">
+        <Toggle checked={s.protectFocus} onChange={v => set({ protectFocus: v })} />
+      </FieldRow>
+      <FieldRow label="Auto-decline early meetings">
+        <Toggle checked={s.autoDeclineEarly} onChange={v => set({ autoDeclineEarly: v })} />
+      </FieldRow>
+      <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end' }}>
+        <button onClick={onSave} style={{
+          padding: '8px 20px', borderRadius: 8,
+          background: 'var(--color-accent-fill)',
+          border: '1px solid var(--color-accent, #1E40AF)50',
+          color: 'var(--color-accent, #1E40AF)', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+        }}>Save Schedule</button>
+      </div>
+    </div>
+  )
+}
+
+// ─── CHUNK 4: Companies + Habits sections ────────────────────────────────────
+
+function CompaniesSection({
+  companies, setCompanies, accounts,
 }: {
-  id: string
-  children: (drag: { listeners: DndListeners | undefined; attributes: DraggableAttributes }) => React.ReactNode
+  companies: CompanyRow[]
+  setCompanies: (c: CompanyRow[]) => void
+  accounts: ConnectedAccount[]
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
-  return (
-    <div
-      ref={setNodeRef}
-      style={{
-        transform: CSS.Transform.toString(transform),
-        transition, opacity: isDragging ? 0.45 : 1,
-        position: 'relative', zIndex: isDragging ? 10 : 'auto',
-      }}
-    >
-      {children({ listeners: listeners as DndListeners | undefined, attributes })}
-    </div>
-  )
-}
+  const [adding, setAdding] = useState(false)
+  const [newName, setNewName] = useState('')
+  const [newColor, setNewColor] = useState(C_COLORS[0])
+  const [newDomain, setNewDomain] = useState('')
+  const [newAccountId, setNewAccountId] = useState('')
 
-// ─── Main component ───────────────────────────────────────────────────────────
-
-export function Settings() {
-  const { setSidebarCollapsed } = useUIStore()
-  const [s, setS] = useState<AppSettings>(() => localLoadSettings() ?? DEFAULTS)
-  const [companies,   setCompanies]   = useState<CompanyRow[]>(() => localLoadCompanies())
-  const [habits,      setHabits]      = useState<HabitRow[]>(() => localLoadHabits())
-  const [saveStatus,  setSaveStatus]  = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
-  const [connected,   setConnected]   = useState(false)
-  const [connEmail,   setConnEmail]   = useState('')
-  const [gcalendars,  setGcalendars]  = useState<GCalCalendar[]>([])
-  const [calLoading,  setCalLoading]  = useState(false)
-  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
-  const uid   = useRef<string | null>(null)
-
-  // ── Apply persisted settings on mount ───────────────────────────────────
-  useEffect(() => {
-    const saved = localLoadSettings()
-    if (saved) {
-      applyTheme(saved.theme)
-      if (saved.sidebarDefault) setSidebarCollapsed(true)
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  // ── Sync companies & habits to localStorage whenever they change ─────────
-  useEffect(() => { localSaveCompanies(companies) }, [companies])
-  useEffect(() => { localSaveHabits(habits) }, [habits])
-
-  // ── Load from Supabase on mount ──────────────────────────────────────────
-  useEffect(() => {
-    void (async () => {
-      const { data: session } = await supabase.auth.getSession()
-      if (!session.session) return
-      uid.current = session.session.user.id
-
-      // Google connection status
-      const providerToken = session.session.provider_token
-      if (providerToken) {
-        setConnected(true)
-        setConnEmail(session.session.user.email ?? '')
-        setCalLoading(true)
-        const cals = await fetchGCalendars(providerToken)
-        setGcalendars(cals)
-        setCalLoading(false)
-      }
-
-      const { data: u } = await supabase
-        .from('users')
-        .select('full_name, active_framework, schedule_rules')
-        .eq('id', uid.current)
-        .single()
-
-      if (u) {
-        const r = (u.schedule_rules ?? {}) as Record<string, unknown>
-        const loaded: AppSettings = {
-          ...DEFAULTS,
-          fullName:            (u.full_name as string)                           ?? DEFAULTS.fullName,
-          framework:           (u.active_framework as string)                    ?? DEFAULTS.framework,
-          timezone:            (r.timezone as string)                            ?? DEFAULTS.timezone,
-          workWeek:            (r.work_week as string[])                         ?? DEFAULTS.workWeek,
-          focusStart:          (r.focus_start as string)                         ?? DEFAULTS.focusStart,
-          focusEnd:            (r.focus_end as string)                           ?? DEFAULTS.focusEnd,
-          earliestMeeting:     (r.earliest_meeting as string)                    ?? DEFAULTS.earliestMeeting,
-          bufferMins:          (r.buffer_mins as number)                         ?? DEFAULTS.bufferMins,
-          physicalBufferMins:  (r.physical_buffer_mins as number)                ?? DEFAULTS.physicalBufferMins,
-          endOfDay:            (r.end_of_day as string)                          ?? DEFAULTS.endOfDay,
-          familyStart:         (r.family_start as string)                        ?? DEFAULTS.familyStart,
-          protectFocus:        (r.protect_focus as boolean)                      ?? DEFAULTS.protectFocus,
-          autoDeclineEarly:    (r.auto_decline_early as boolean)                 ?? DEFAULTS.autoDeclineEarly,
-          commStyle:           (r.comm_style as AppSettings['commStyle'])        ?? DEFAULTS.commStyle,
-          proactive:           (r.proactive as boolean)                          ?? DEFAULTS.proactive,
-          briefTime:           (r.brief_time as string)                          ?? DEFAULTS.briefTime,
-          reviewDay:           (r.review_day as string)                          ?? DEFAULTS.reviewDay,
-          customInstructions:  (r.custom_instructions as string)                 ?? DEFAULTS.customInstructions,
-          morningReminderOn:   (r.morning_reminder_on as boolean)                ?? DEFAULTS.morningReminderOn,
-          morningReminderTime: (r.morning_reminder_time as string)               ?? DEFAULTS.morningReminderTime,
-          windDownOn:          (r.wind_down_on as boolean)                       ?? DEFAULTS.windDownOn,
-          windDownTime:        (r.wind_down_time as string)                      ?? DEFAULTS.windDownTime,
-          followUpNudges:      (r.follow_up_nudges as boolean)                   ?? DEFAULTS.followUpNudges,
-          weeklyReviewOn:      (r.weekly_review_on as boolean)                   ?? DEFAULTS.weeklyReviewOn,
-          weeklyReviewDay:     (r.weekly_review_day as string)                   ?? DEFAULTS.weeklyReviewDay,
-          weeklyReviewTime:    (r.weekly_review_time as string)                  ?? DEFAULTS.weeklyReviewTime,
-          theme:               (r.theme as AppSettings['theme'])                 ?? DEFAULTS.theme,
-          sidebarDefault:      (r.sidebar_default as boolean)                    ?? DEFAULTS.sidebarDefault,
-          compact:             (r.compact as boolean)                            ?? DEFAULTS.compact,
-        }
-        setS(loaded)
-        applyTheme(loaded.theme)
-      }
-
-      const { data: cos } = await supabase
-        .from('companies').select('id,name,color_tag,calendar_id,is_active')
-        .eq('user_id', uid.current).order('name')
-      if (cos) setCompanies(cos.map(c => ({
-        id: c.id, name: c.name ?? '', color: c.color_tag ?? C_COLORS[0],
-        calendarId: c.calendar_id ?? '', isActive: c.is_active ?? true,
-      })))
-
-      const { data: hbs } = await supabase
-        .from('habits').select('id,name,frequency,is_active')
-        .eq('user_id', uid.current).order('name')
-      if (hbs) setHabits(hbs.map(h => ({
-        id: h.id, emoji: '🎯', name: h.name ?? '',
-        frequency: (h.frequency as HabitRow['frequency']) ?? 'daily',
-        isActive: h.is_active ?? true,
-      })))
-    })()
-  }, [])
-
-  // ── Auto-save main settings ──────────────────────────────────────────────
-  const scheduleSave = useCallback((next: AppSettings) => {
-    clearTimeout(timer.current)
-    setSaveStatus('saving')
-    localSaveSettings(next) // always save to localStorage immediately
-    timer.current = setTimeout(async () => {
-      try {
-        if (uid.current) {
-          const { data: sessionData } = await supabase.auth.getSession()
-          await supabase.from('users').upsert({
-            id: uid.current,
-            email: sessionData.session?.user.email ?? '',
-            full_name: next.fullName,
-            active_framework: next.framework,
-            schedule_rules: {
-              timezone: next.timezone, work_week: next.workWeek,
-              focus_start: next.focusStart, focus_end: next.focusEnd,
-              earliest_meeting: next.earliestMeeting,
-              buffer_mins: next.bufferMins, physical_buffer_mins: next.physicalBufferMins,
-              end_of_day: next.endOfDay, family_start: next.familyStart,
-              protect_focus: next.protectFocus, auto_decline_early: next.autoDeclineEarly,
-              comm_style: next.commStyle, proactive: next.proactive,
-              brief_time: next.briefTime, review_day: next.reviewDay,
-              custom_instructions: next.customInstructions,
-              morning_reminder_on: next.morningReminderOn, morning_reminder_time: next.morningReminderTime,
-              wind_down_on: next.windDownOn, wind_down_time: next.windDownTime,
-              follow_up_nudges: next.followUpNudges,
-              weekly_review_on: next.weeklyReviewOn, weekly_review_day: next.weeklyReviewDay,
-              weekly_review_time: next.weeklyReviewTime,
-              theme: next.theme, sidebar_default: next.sidebarDefault, compact: next.compact,
-            },
-          }, { onConflict: 'id' })
-        }
-        setSaveStatus('saved')
-        setTimeout(() => setSaveStatus('idle'), 2000)
-      } catch {
-        setSaveStatus('error')
-        setTimeout(() => setSaveStatus('idle'), 3000)
-      }
-    }, 800)
-  }, [])
-
-  function update<K extends keyof AppSettings>(key: K, val: AppSettings[K]) {
-    const next = { ...s, [key]: val }
-    setS(next)
-    scheduleSave(next)
-    if (key === 'theme') applyTheme(val as AppSettings['theme'])
-    if (key === 'sidebarDefault') setSidebarCollapsed(val as boolean)
-  }
-
-  // ── Company helpers ──────────────────────────────────────────────────────
-  async function addCompany() {
-    const id = crypto.randomUUID()
-    const row: CompanyRow = { id, name: '', color: C_COLORS[0], calendarId: '', isActive: true }
-    setCompanies(prev => [...prev, row])
-    if (uid.current)
-      await supabase.from('companies').insert({ id, user_id: uid.current, name: '', color_tag: C_COLORS[0], is_active: true })
+  function addCompany() {
+    if (!newName.trim()) return
+    const next = [...companies, {
+      id: crypto.randomUUID(), name: newName.trim(),
+      color: newColor, calendarId: '', emailDomain: newDomain.trim(),
+      accountId: newAccountId, isActive: true,
+    }]
+    setCompanies(next); saveCompanies(next)
+    setNewName(''); setNewDomain(''); setAdding(false)
   }
 
   function updateCompany(id: string, patch: Partial<CompanyRow>) {
-    setCompanies(prev => prev.map(c => c.id === id ? { ...c, ...patch } : c))
-    setSaveStatus('saving')
-    clearTimeout(timer.current)
-    timer.current = setTimeout(() => {
-      // Read from current DOM state via functional update to avoid stale closure
-      setCompanies(prev => {
-        const row = prev.find(c => c.id === id)
-        if (row && uid.current) {
-          void supabase.from('companies').update({
-            name: row.name, color_tag: row.color,
-            calendar_id: row.calendarId || null, is_active: row.isActive,
-          }).eq('id', id)
-        }
-        return prev // no state change, just side-effect
-      })
-      setSaveStatus('saved')
-      setTimeout(() => setSaveStatus('idle'), 2000)
-    }, 800)
+    const next = companies.map(c => c.id === id ? { ...c, ...patch } : c)
+    setCompanies(next); saveCompanies(next)
   }
 
-  async function deleteCompany(id: string) {
-    setCompanies(prev => prev.filter(c => c.id !== id))
-    if (uid.current) await supabase.from('companies').delete().eq('id', id)
+  function deleteCompany(id: string) {
+    const next = companies.filter(c => c.id !== id)
+    setCompanies(next); saveCompanies(next)
   }
 
-  const cSensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
-  )
-  function onCompaniesDragEnd({ active, over }: DragEndEvent) {
-    if (over && active.id !== over.id)
-      setCompanies(prev => arrayMove(prev, prev.findIndex(c => c.id === active.id), prev.findIndex(c => c.id === over.id)))
-  }
-
-  // ── Habit helpers ────────────────────────────────────────────────────────
-  async function addHabit() {
-    const id = crypto.randomUUID()
-    const row: HabitRow = { id, emoji: '🎯', name: '', frequency: 'daily', isActive: true }
-    setHabits(prev => [...prev, row])
-    if (uid.current)
-      await supabase.from('habits').insert({ id, user_id: uid.current, name: '', frequency: 'daily', is_active: true })
-  }
-
-  function updateHabit(id: string, patch: Partial<HabitRow>) {
-    setHabits(prev => prev.map(h => h.id === id ? { ...h, ...patch } : h))
-    setSaveStatus('saving')
-    clearTimeout(timer.current)
-    timer.current = setTimeout(() => {
-      setHabits(prev => {
-        const row = prev.find(h => h.id === id)
-        if (row && uid.current) {
-          void supabase.from('habits').update({
-            name: row.name, frequency: row.frequency, is_active: row.isActive,
-          }).eq('id', id)
-        }
-        return prev
-      })
-      setSaveStatus('saved')
-      setTimeout(() => setSaveStatus('idle'), 2000)
-    }, 800)
-  }
-
-  async function deleteHabit(id: string) {
-    setHabits(prev => prev.filter(h => h.id !== id))
-    if (uid.current) await supabase.from('habits').delete().eq('id', id)
-  }
-
-  const hSensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
-  )
-  function onHabitsDragEnd({ active, over }: DragEndEvent) {
-    if (over && active.id !== over.id)
-      setHabits(prev => arrayMove(prev, prev.findIndex(h => h.id === active.id), prev.findIndex(h => h.id === over.id)))
-  }
-
-  // ── JSX ──────────────────────────────────────────────────────────────────
   return (
-    <div style={{ padding: '28px 32px 60px', maxWidth: 820, margin: '0 auto' }}>
-      <SaveBadge status={saveStatus} />
+    <div>
+      <p style={{ margin: '0 0 16px', fontSize: 12.5, color: 'var(--color-text-muted, #6B7280)', lineHeight: 1.55 }}>
+        Companies are your work contexts. Assign a colour, link to a Google account, and optionally map an email domain for automatic tagging.
+      </p>
 
-      {/* ── 1. PROFILE ─────────────────────────────────────────────────── */}
-      <div style={S.card}>
-        <SectionHeader title="Profile" />
-        <FieldRow label="Full name">
-          <input style={{ ...S.input, width: 280 }} value={s.fullName} placeholder="Your name"
-            onChange={e => update('fullName', e.target.value)} />
-        </FieldRow>
-        <FieldRow label="Display timezone">
-          <select style={{ ...S.select, width: 300 }} value={s.timezone} onChange={e => update('timezone', e.target.value)}>
-            {ALL_TIMEZONES.map(tz => <option key={tz.value} value={tz.value}>{tz.label}</option>)}
-          </select>
-        </FieldRow>
-        <FieldRow label="Work week">
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            {WORK_DAYS.map(d => {
-              const on = s.workWeek.includes(d)
-              return (
-                <button key={d} onClick={() => update('workWeek', on ? s.workWeek.filter(x => x !== d) : [...s.workWeek, d])}
-                  style={{
-                    width: 38, height: 30, borderRadius: 6, fontSize: 12, fontWeight: 500, cursor: 'pointer',
-                    border: `1px solid ${on ? '#7C3AED' : '#252A3E'}`,
-                    background: on ? 'rgba(124,58,237,0.12)' : 'transparent',
-                    color: on ? '#7C3AED' : '#6B7280',
-                  }}>
-                  {d}
-                </button>
-              )
-            })}
+      {companies.map(co => (
+        <div key={co.id} style={{
+          display: 'flex', alignItems: 'flex-start', gap: 12,
+          padding: '14px 0', borderBottom: '1px solid var(--color-border, #252A3E)',
+        }}>
+          {/* Color swatch */}
+          <div style={{ position: 'relative', flexShrink: 0 }}>
+            <div style={{ width: 28, height: 28, borderRadius: 7, background: co.color, cursor: 'pointer' }} title="Color" />
           </div>
-        </FieldRow>
-        <FieldRow label="Default active framework">
-          <select style={{ ...S.select, width: 230 }} value={s.framework} onChange={e => update('framework', e.target.value)}>
-            {FRAMEWORKS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
-          </select>
-        </FieldRow>
-      </div>
-
-      {/* ── 2. SCHEDULE RULES ──────────────────────────────────────────── */}
-      <div style={S.card}>
-        <SectionHeader title="Schedule Rules" description="These feed directly into The Professor's system prompt." />
-        <FieldRow label="Focus block start"><TimeInput value={s.focusStart} onChange={v => update('focusStart', v)} /></FieldRow>
-        <FieldRow label="Focus block end"><TimeInput value={s.focusEnd} onChange={v => update('focusEnd', v)} /></FieldRow>
-        <FieldRow label="Earliest meeting time"><TimeInput value={s.earliestMeeting} onChange={v => update('earliestMeeting', v)} /></FieldRow>
-        <FieldRow label="Buffer between meetings">
-          <StepSlider value={s.bufferMins} onChange={v => update('bufferMins', v)} steps={BUFFER_STEPS} />
-        </FieldRow>
-        <FieldRow label="Physical meeting extra buffer">
-          <StepSlider value={s.physicalBufferMins} onChange={v => update('physicalBufferMins', v)} steps={PHYS_STEPS} />
-        </FieldRow>
-        <FieldRow label="End of work day"><TimeInput value={s.endOfDay} onChange={v => update('endOfDay', v)} /></FieldRow>
-        <FieldRow label="Family time start"><TimeInput value={s.familyStart} onChange={v => update('familyStart', v)} /></FieldRow>
-        <FieldRow label="Protect focus block">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Toggle checked={s.protectFocus} onChange={v => update('protectFocus', v)} />
-            <span style={{ fontSize: 12, color: '#6B7280' }}>Prevent events from being booked during focus time</span>
-          </div>
-        </FieldRow>
-        <FieldRow label="Auto-decline early meetings">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Toggle checked={s.autoDeclineEarly} onChange={v => update('autoDeclineEarly', v)} />
-            <span style={{ fontSize: 12, color: '#6B7280' }}>Decline meetings before earliest meeting time</span>
-          </div>
-        </FieldRow>
-      </div>
-
-      {/* ── 3. COMPANIES & CONTEXTS ────────────────────────────────────── */}
-      <div style={S.card}>
-        <SectionHeader title="Companies & Contexts" />
-        <DndContext sensors={cSensors} collisionDetection={closestCenter} onDragEnd={onCompaniesDragEnd}>
-          <SortableContext items={companies.map(c => c.id)} strategy={verticalListSortingStrategy}>
-            {companies.map(co => (
-              <SortableRow key={co.id} id={co.id}>
-                {({ listeners, attributes }) => (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 0', borderBottom: '1px solid rgba(58,48,32,0.5)' }}>
-                    <button {...(listeners ?? {})} {...attributes}
-                      style={{ background: 'none', border: 'none', cursor: 'grab', color: '#252A3E', padding: 2, flexShrink: 0 }}>
-                      <GripVertical size={15} />
-                    </button>
-                    <input style={{ ...S.input, flex: 1, minWidth: 0, width: 'auto' }} value={co.name} placeholder="Company name"
-                      onChange={e => updateCompany(co.id, { name: e.target.value })} />
-                    <ColorPicker value={co.color} onChange={c => updateCompany(co.id, { color: c })} />
-                    <input style={{ ...S.input, width: 170, fontSize: 12 }} value={co.calendarId} placeholder="Calendar ID (optional)"
-                      onChange={e => updateCompany(co.id, { calendarId: e.target.value })} />
-                    <Toggle checked={co.isActive} onChange={v => updateCompany(co.id, { isActive: v })} />
-                    <button onClick={() => void deleteCompany(co.id)}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6B7280', padding: 4, flexShrink: 0 }}
-                      onMouseEnter={e => (e.currentTarget.style.color = '#E05252')}
-                      onMouseLeave={e => (e.currentTarget.style.color = '#6B7280')}>
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                )}
-              </SortableRow>
-            ))}
-          </SortableContext>
-        </DndContext>
-        <button onClick={() => void addCompany()} style={{
-          marginTop: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-          width: '100%', padding: '8px 14px', background: 'transparent',
-          border: '1px dashed #252A3E', borderRadius: 7, color: '#6B7280', fontSize: 13, cursor: 'pointer',
-        }}
-          onMouseEnter={e => { e.currentTarget.style.borderColor = '#7C3AED'; e.currentTarget.style.color = '#7C3AED' }}
-          onMouseLeave={e => { e.currentTarget.style.borderColor = '#252A3E'; e.currentTarget.style.color = '#6B7280' }}>
-          <Plus size={14} /> Add Company
-        </button>
-      </div>
-
-      {/* ── 4. HABITS CONFIGURATION ────────────────────────────────────── */}
-      <div style={S.card}>
-        <SectionHeader title="Habits Configuration" />
-        <DndContext sensors={hSensors} collisionDetection={closestCenter} onDragEnd={onHabitsDragEnd}>
-          <SortableContext items={habits.map(h => h.id)} strategy={verticalListSortingStrategy}>
-            {habits.map(h => (
-              <SortableRow key={h.id} id={h.id}>
-                {({ listeners, attributes }) => (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 0', borderBottom: '1px solid rgba(58,48,32,0.5)' }}>
-                    <button {...(listeners ?? {})} {...attributes}
-                      style={{ background: 'none', border: 'none', cursor: 'grab', color: '#252A3E', padding: 2, flexShrink: 0 }}>
-                      <GripVertical size={15} />
-                    </button>
-                    <EmojiPickerBtn value={h.emoji} onChange={em => updateHabit(h.id, { emoji: em })} />
-                    <input style={{ ...S.input, flex: 1, minWidth: 0, width: 'auto' }} value={h.name} placeholder="Habit name"
-                      onChange={e => updateHabit(h.id, { name: e.target.value })} />
-                    <select style={{ ...S.select, width: 115 }} value={h.frequency}
-                      onChange={e => updateHabit(h.id, { frequency: e.target.value as HabitRow['frequency'] })}>
-                      <option value="daily">Daily</option>
-                      <option value="weekdays">Weekdays</option>
-                      <option value="weekly">Weekly</option>
-                    </select>
-                    <Toggle checked={h.isActive} onChange={v => updateHabit(h.id, { isActive: v })} />
-                    <button onClick={() => void deleteHabit(h.id)}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6B7280', padding: 4, flexShrink: 0 }}
-                      onMouseEnter={e => (e.currentTarget.style.color = '#E05252')}
-                      onMouseLeave={e => (e.currentTarget.style.color = '#6B7280')}>
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                )}
-              </SortableRow>
-            ))}
-          </SortableContext>
-        </DndContext>
-        <button onClick={() => void addHabit()} style={{
-          marginTop: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-          width: '100%', padding: '8px 14px', background: 'transparent',
-          border: '1px dashed #252A3E', borderRadius: 7, color: '#6B7280', fontSize: 13, cursor: 'pointer',
-        }}
-          onMouseEnter={e => { e.currentTarget.style.borderColor = '#7C3AED'; e.currentTarget.style.color = '#7C3AED' }}
-          onMouseLeave={e => { e.currentTarget.style.borderColor = '#252A3E'; e.currentTarget.style.color = '#6B7280' }}>
-          <Plus size={14} /> Add Habit
-        </button>
-      </div>
-
-      {/* ── 5. THE PROFESSOR (AI) ──────────────────────────────────────── */}
-      <div style={S.card}>
-        <SectionHeader title="The Professor (AI)" />
-        <FieldRow label="Communication style">
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            {(['brief', 'balanced', 'detailed'] as const).map(opt => (
-              <button key={opt} onClick={() => update('commStyle', opt)} style={{
-                padding: '6px 14px', borderRadius: 7, fontSize: 12.5, fontWeight: 500, cursor: 'pointer',
-                border: `1px solid ${s.commStyle === opt ? '#7C3AED' : '#252A3E'}`,
-                background: s.commStyle === opt ? 'rgba(124,58,237,0.12)' : 'transparent',
-                color: s.commStyle === opt ? '#7C3AED' : '#6B7280',
-              }}>
-                {opt === 'brief' ? 'Direct & Brief' : opt === 'balanced' ? 'Balanced' : 'Detailed & Thorough'}
-              </button>
-            ))}
-          </div>
-        </FieldRow>
-        <FieldRow label="Proactive suggestions">
-          <Toggle checked={s.proactive} onChange={v => update('proactive', v)} />
-        </FieldRow>
-        <FieldRow label="Morning brief auto-generate">
-          <TimeInput value={s.briefTime} onChange={v => update('briefTime', v)} />
-        </FieldRow>
-        <FieldRow label="Weekly review day">
-          <select style={{ ...S.select, width: 160 }} value={s.reviewDay} onChange={e => update('reviewDay', e.target.value)}>
-            {['Sunday', 'Saturday', 'Friday'].map(d => <option key={d} value={d}>{d}</option>)}
-          </select>
-        </FieldRow>
-        <FieldRow label="Custom instructions">
-          <div>
-            <textarea value={s.customInstructions}
-              onChange={e => update('customInstructions', e.target.value.slice(0, 500))}
-              placeholder="e.g. Always prioritize DX client work over internal tasks"
-              rows={3}
-              style={{ ...S.input, width: '100%', resize: 'vertical', lineHeight: 1.55, minHeight: 72 }}
-            />
-            <div style={{ textAlign: 'right', fontSize: 11, color: '#6B7280', marginTop: 4 }}>
-              {s.customInstructions.length}/500
-            </div>
-          </div>
-        </FieldRow>
-      </div>
-
-      {/* ── 6. INTEGRATIONS ────────────────────────────────────────────── */}
-      <div style={S.card}>
-        <SectionHeader title="Integrations" description="Connect Google to sync your calendar and inbox." />
-
-        {/* Google Account */}
-        <div style={{ background: '#0D0F1A', border: '1px solid #252A3E', borderRadius: 10, padding: '18px 20px', marginBottom: 12 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span style={{ fontSize: 22 }}>🔗</span>
-              <div>
-                <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#E8EAF6' }}>Google Account</p>
-                <p style={{ margin: '2px 0 0', fontSize: 12, color: '#6B7280' }}>
-                  {connected ? connEmail : 'Not connected — no calendar or Gmail data'}
-                </p>
-              </div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              {connected ? <Wifi size={14} color="#1D9E75" /> : <WifiOff size={14} color="#6B7280" />}
-              {connected ? (
-                <button
-                  onClick={() => void googleSignOut().then(() => { setConnected(false); setConnEmail(''); setGcalendars([]) })}
-                  style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 7, background: 'transparent', border: '1px solid rgba(224,82,82,0.3)', color: '#E05252', fontSize: 12, cursor: 'pointer' }}
-                >
-                  <LogOut size={11} /> Disconnect
-                </button>
-              ) : (
-                <button
-                  onClick={() => void signInWithGoogle()}
-                  style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 14px', borderRadius: 7, background: 'rgba(124,58,237,0.12)', border: '1px solid rgba(124,58,237,0.25)', color: '#7C3AED', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}
-                >
-                  <LogIn size={11} /> Connect Google
-                </button>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+              <input value={co.name} onChange={e => updateCompany(co.id, { name: e.target.value })}
+                style={{ ...inputStyle, width: 160 }} placeholder="Company name" />
+              {/* Email domain */}
+              <input value={co.emailDomain} onChange={e => updateCompany(co.id, { emailDomain: e.target.value })}
+                style={{ ...inputStyle, width: 180 }} placeholder="@domain.com (email filter)" />
+              {/* Account selector */}
+              {accounts.length > 0 && (
+                <select value={co.accountId} onChange={e => updateCompany(co.id, { accountId: e.target.value })}
+                  style={{ ...selectStyle, width: 180 }}>
+                  <option value="">No account linked</option>
+                  {accounts.map(a => <option key={a.id} value={a.id}>{a.email}</option>)}
+                </select>
               )}
             </div>
-          </div>
-        </div>
-
-        {/* Google Calendars list */}
-        {connected && (
-          <div style={{ background: '#0D0F1A', border: '1px solid #252A3E', borderRadius: 10, padding: '18px 20px', marginBottom: 12 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-              <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#E8EAF6' }}>
-                📅 Your Google Calendars
-              </p>
-              {calLoading && <RefreshCw size={13} color="#7C3AED" style={{ animation: 'spin 1s linear infinite' }} />}
-            </div>
-            {gcalendars.length === 0 && !calLoading && (
-              <p style={{ margin: 0, fontSize: 12.5, color: '#6B7280' }}>No calendars found.</p>
-            )}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {gcalendars.map(cal => (
-                <div key={cal.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 12px', borderRadius: 8, background: '#161929', border: '1px solid #252A3E' }}>
-                  <div>
-                    <p style={{ margin: 0, fontSize: 13, color: '#E8EAF6', fontWeight: cal.primary ? 600 : 400 }}>
-                      {cal.summary}
-                      {cal.primary && <span style={{ marginLeft: 6, fontSize: 10, color: '#7C3AED', background: '#7C3AED18', padding: '1px 6px', borderRadius: 3 }}>Primary</span>}
-                    </p>
-                    <p style={{ margin: '2px 0 0', fontSize: 11, color: '#5A4E3A', fontFamily: 'monospace' }}>{cal.id}</p>
-                  </div>
-                  <button
-                    onClick={() => { void navigator.clipboard.writeText(cal.id) }}
-                    style={{ fontSize: 11, padding: '4px 8px', borderRadius: 5, background: 'transparent', border: '1px solid #252A3E', color: '#6B7280', cursor: 'pointer' }}
-                    title="Copy Calendar ID"
-                  >
-                    Copy ID
-                  </button>
-                </div>
+            {/* Color row */}
+            <div style={{ display: 'flex', gap: 6 }}>
+              {C_COLORS.map(c => (
+                <button key={c} onClick={() => updateCompany(co.id, { color: c })}
+                  style={{
+                    width: 20, height: 20, borderRadius: '50%', background: c, border: 'none', cursor: 'pointer',
+                    outline: co.color === c ? `2px solid ${c}` : 'none', outlineOffset: 2,
+                  }} />
               ))}
             </div>
-            <p style={{ margin: '12px 0 0', fontSize: 11.5, color: '#5A4E3A', lineHeight: 1.5 }}>
-              Copy a Calendar ID and paste it into the corresponding company row above to filter events by company.
+          </div>
+          {/* Active toggle + delete */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+            <Toggle checked={co.isActive} onChange={v => updateCompany(co.id, { isActive: v })} />
+            <button onClick={() => deleteCompany(co.id)}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted, #6B7280)', padding: 4 }}>
+              <Trash2 size={13} />
+            </button>
+          </div>
+        </div>
+      ))}
+
+      {adding ? (
+        <div style={{ marginTop: 14, padding: '14px', background: 'var(--color-surface2, #0D0F1A)', borderRadius: 10, border: '1px solid var(--color-border, #252A3E)' }}>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
+            <input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Company name"
+              style={{ ...inputStyle, width: 160 }} autoFocus />
+            <input value={newDomain} onChange={e => setNewDomain(e.target.value)} placeholder="@domain.com"
+              style={{ ...inputStyle, width: 170 }} />
+            {accounts.length > 0 && (
+              <select value={newAccountId} onChange={e => setNewAccountId(e.target.value)} style={{ ...selectStyle, width: 180 }}>
+                <option value="">No account</option>
+                {accounts.map(a => <option key={a.id} value={a.id}>{a.email}</option>)}
+              </select>
+            )}
+          </div>
+          <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+            {C_COLORS.map(c => (
+              <button key={c} onClick={() => setNewColor(c)}
+                style={{ width: 22, height: 22, borderRadius: '50%', background: c, border: 'none', cursor: 'pointer', outline: newColor === c ? `2px solid ${c}` : 'none', outlineOffset: 2 }} />
+            ))}
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={() => { setAdding(false); setNewName('') }}
+              style={{ padding: '6px 14px', borderRadius: 7, background: 'transparent', border: '1px solid var(--color-border, #252A3E)', color: 'var(--color-text-dim, #94A3B8)', fontSize: 12, cursor: 'pointer', display: 'flex', gap: 5, alignItems: 'center' }}>
+              <X size={11} /> Cancel
+            </button>
+            <button onClick={addCompany} disabled={!newName.trim()}
+              style={{ padding: '6px 16px', borderRadius: 7, background: 'var(--color-accent-fill)', border: '1px solid var(--color-accent, #1E40AF)50', color: 'var(--color-accent, #1E40AF)', fontSize: 12, fontWeight: 500, cursor: 'pointer', opacity: newName.trim() ? 1 : 0.4, display: 'flex', gap: 5, alignItems: 'center' }}>
+              <Plus size={11} /> Add Company
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button onClick={() => setAdding(true)} style={{
+          marginTop: 12, display: 'flex', alignItems: 'center', gap: 7, width: '100%',
+          padding: '11px 16px', borderRadius: 9, background: 'transparent',
+          border: '1px dashed var(--color-border, #252A3E)',
+          color: 'var(--color-text-muted, #6B7280)', fontSize: 13, cursor: 'pointer',
+        }}>
+          <Plus size={13} /> Add a company / context
+        </button>
+      )}
+    </div>
+  )
+}
+
+function HabitsSection() {
+  const COLORS = getHabitColors()
+  const [habits, setHabits] = useState<UnifiedHabit[]>(loadHabits)
+  const [adding, setAdding] = useState(false)
+  const [newName, setNewName]     = useState('')
+  const [newEmoji, setNewEmoji]   = useState('🎯')
+  const [newColor, setNewColor]   = useState(COLORS[0])
+  const [newFreq, setNewFreq]     = useState<typeof FREQ_OPTS[number]>('daily')
+
+  function addHabit() {
+    if (!newName.trim()) return
+    const h: UnifiedHabit = {
+      id: crypto.randomUUID(), name: newName.trim(), emoji: newEmoji,
+      color: newColor, frequency: newFreq, isActive: true, createdAt: new Date().toISOString(),
+    }
+    const next = [...habits, h]; setHabits(next); saveHabits(next)
+    setNewName(''); setAdding(false)
+  }
+  function toggle(id: string) {
+    const next = habits.map(h => h.id === id ? { ...h, isActive: !h.isActive } : h)
+    setHabits(next); saveHabits(next)
+  }
+  function del(id: string) {
+    const next = habits.filter(h => h.id !== id); setHabits(next); saveHabits(next)
+  }
+
+  return (
+    <div>
+      <p style={{ margin: '0 0 14px', fontSize: 12.5, color: 'var(--color-text-muted, #6B7280)' }}>
+        Changes here instantly sync with the Habits Tracker page.
+      </p>
+
+      {habits.map(h => (
+        <div key={h.id} style={{
+          display: 'flex', alignItems: 'center', gap: 12,
+          padding: '10px 0', borderBottom: '1px solid var(--color-border, #252A3E)',
+          opacity: h.isActive ? 1 : 0.5,
+        }}>
+          <span style={{ fontSize: 18, flexShrink: 0 }}>{h.emoji}</span>
+          <div style={{ width: 10, height: 10, borderRadius: '50%', background: h.color, flexShrink: 0 }} />
+          <span style={{ flex: 1, fontSize: 13.5, color: 'var(--color-text, #E8EAF6)' }}>{h.name}</span>
+          <span style={{ fontSize: 11, color: 'var(--color-text-muted, #6B7280)', background: 'var(--color-surface2, #0D0F1A)', padding: '2px 8px', borderRadius: 4 }}>
+            {h.frequency}
+          </span>
+          <Toggle checked={h.isActive} onChange={() => toggle(h.id)} />
+          <button onClick={() => del(h.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted, #6B7280)', padding: 4 }}>
+            <Trash2 size={13} />
+          </button>
+        </div>
+      ))}
+
+      {adding ? (
+        <div style={{ marginTop: 12, padding: 14, background: 'var(--color-surface2, #0D0F1A)', borderRadius: 10, border: '1px solid var(--color-border, #252A3E)' }}>
+          {/* Emoji picker */}
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
+            {HABIT_EMOJIS.map(e => (
+              <button key={e} onClick={() => setNewEmoji(e)} style={{
+                fontSize: 16, width: 34, height: 34, borderRadius: 7, cursor: 'pointer',
+                background: newEmoji === e ? 'var(--color-accent-fill)' : 'transparent',
+                border: `1px solid ${newEmoji === e ? 'var(--color-accent, #1E40AF)' : 'var(--color-border, #252A3E)'}`,
+              }}>{e}</button>
+            ))}
+          </div>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
+            <input value={newName} onChange={e => setNewName(e.target.value)} autoFocus placeholder="Habit name"
+              style={{ ...inputStyle, width: 200 }}
+              onKeyDown={e => { if (e.key === 'Enter') addHabit(); if (e.key === 'Escape') setAdding(false) }} />
+            <select value={newFreq} onChange={e => setNewFreq(e.target.value as typeof FREQ_OPTS[number])}
+              style={{ ...selectStyle, width: 120 }}>
+              {FREQ_OPTS.map(f => <option key={f} value={f}>{f}</option>)}
+            </select>
+          </div>
+          <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+            {COLORS.map(c => (
+              <button key={c} onClick={() => setNewColor(c)} style={{
+                width: 22, height: 22, borderRadius: '50%', background: c, border: 'none', cursor: 'pointer',
+                outline: newColor === c ? `2px solid ${c}` : 'none', outlineOffset: 2,
+              }} />
+            ))}
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={() => { setAdding(false); setNewName('') }} style={{ padding: '6px 14px', borderRadius: 7, background: 'transparent', border: '1px solid var(--color-border, #252A3E)', color: 'var(--color-text-dim, #94A3B8)', fontSize: 12, cursor: 'pointer', display: 'flex', gap: 5, alignItems: 'center' }}>
+              <X size={11} /> Cancel
+            </button>
+            <button onClick={addHabit} disabled={!newName.trim()} style={{ padding: '6px 16px', borderRadius: 7, background: 'var(--color-accent-fill)', border: '1px solid var(--color-accent, #1E40AF)50', color: 'var(--color-accent, #1E40AF)', fontSize: 12, fontWeight: 500, cursor: 'pointer', opacity: newName.trim() ? 1 : 0.4, display: 'flex', gap: 5, alignItems: 'center' }}>
+              <Plus size={11} /> Add Habit
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button onClick={() => setAdding(true)} style={{
+          marginTop: 12, display: 'flex', alignItems: 'center', gap: 7, width: '100%',
+          padding: '11px 16px', borderRadius: 9, background: 'transparent',
+          border: '1px dashed var(--color-border, #252A3E)',
+          color: 'var(--color-text-muted, #6B7280)', fontSize: 13, cursor: 'pointer',
+        }}>
+          <Plus size={13} /> Add a habit
+        </button>
+      )}
+    </div>
+  )
+}
+
+// ─── CHUNK 5: Connected Accounts (multi-Google) ───────────────────────────────
+
+function AccountsSection({
+  accounts, setAccounts, primaryEmail,
+}: {
+  accounts: ConnectedAccount[]
+  setAccounts: (a: ConnectedAccount[]) => void
+  primaryEmail: string
+}) {
+  const [adding, setAdding]         = useState(false)
+  const [calendars, setCalendars]   = useState<Record<string, string[]>>({}) // accountId → calendar names
+  const [loadingCals, setLoading]   = useState<string | null>(null)
+
+  async function connectAdditional() {
+    setAdding(true)
+    try {
+      // Open OAuth popup for additional scope — we use signInWithGoogle which redirects.
+      // For additional accounts we store the token separately after redirect.
+      await signInWithGoogle()
+    } catch { /* user cancelled */ }
+    setAdding(false)
+  }
+
+  async function loadCalendars(acc: ConnectedAccount) {
+    setLoading(acc.id)
+    const cals = await fetchGCals(acc.providerToken)
+    setCalendars(prev => ({ ...prev, [acc.id]: cals.map(c => c.summary) }))
+    setLoading(null)
+  }
+
+  function removeAcc(id: string) {
+    removeAccount(id)
+    setAccounts(loadAccounts())
+  }
+
+  // Primary account row (from Supabase session)
+  const primaryToken = localStorage.getItem('google_provider_token') ?? ''
+
+  return (
+    <div>
+      <p style={{ margin: '0 0 16px', fontSize: 12.5, color: 'var(--color-text-muted, #6B7280)', lineHeight: 1.55 }}>
+        Connect multiple Google accounts to aggregate all your calendars and Gmail inboxes in one place.
+        Primary account is your sign-in account.
+      </p>
+
+      {/* Primary account */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 12,
+        padding: '12px 14px', borderRadius: 10, marginBottom: 10,
+        background: 'var(--color-surface2, #0D0F1A)',
+        border: '1px solid var(--color-accent, #1E40AF)30',
+      }}>
+        <div style={{
+          width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
+          background: 'var(--color-accent-fill)', border: '1px solid var(--color-accent, #1E40AF)40',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: 'var(--color-accent, #1E40AF)',
+        }}>
+          {primaryEmail ? primaryEmail[0].toUpperCase() : 'G'}
+        </div>
+        <div style={{ flex: 1 }}>
+          <p style={{ margin: 0, fontSize: 13, fontWeight: 500, color: 'var(--color-text, #E8EAF6)' }}>{primaryEmail || 'Primary Google Account'}</p>
+          <p style={{ margin: '2px 0 0', fontSize: 11, color: '#1D9E75' }}>✓ Primary · Calendar + Gmail access</p>
+        </div>
+        <span style={{ fontSize: 10.5, padding: '3px 10px', borderRadius: 20, background: 'rgba(29,158,117,0.1)', color: '#1D9E75', border: '1px solid rgba(29,158,117,0.2)' }}>
+          Active
+        </span>
+        {primaryToken && (
+          <button onClick={() => loadCalendars({ id: 'primary', email: primaryEmail, name: '', providerToken: primaryToken, scopes: [], connectedAt: '', isPrimary: true })}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted, #6B7280)', padding: 4, display: 'flex', alignItems: 'center', gap: 4, fontSize: 11 }}
+            title="Load calendars">
+            <RefreshCw size={12} style={{ animation: loadingCals === 'primary' ? 'spin 1s linear infinite' : 'none' }} />
+          </button>
+        )}
+      </div>
+
+      {/* Show primary calendars */}
+      {calendars['primary'] && (
+        <div style={{ marginBottom: 12, padding: '8px 14px', background: 'var(--color-surface2, #0D0F1A)', borderRadius: 8, border: '1px solid var(--color-border, #252A3E)' }}>
+          <p style={{ margin: '0 0 6px', fontSize: 11, fontWeight: 600, color: 'var(--color-text-muted, #6B7280)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>Calendars in this account</p>
+          {calendars['primary'].map(name => (
+            <p key={name} style={{ margin: '3px 0', fontSize: 12, color: 'var(--color-text-dim, #94A3B8)' }}>• {name}</p>
+          ))}
+        </div>
+      )}
+
+      {/* Additional connected accounts */}
+      {accounts.filter(a => !a.isPrimary).map(acc => (
+        <div key={acc.id} style={{
+          display: 'flex', alignItems: 'center', gap: 12,
+          padding: '12px 14px', borderRadius: 10, marginBottom: 8,
+          background: 'var(--color-surface2, #0D0F1A)',
+          border: '1px solid var(--color-border, #252A3E)',
+        }}>
+          <div style={{ width: 32, height: 32, borderRadius: '50%', flexShrink: 0, background: '#7F77DD18', border: '1px solid #7F77DD40', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: '#7F77DD' }}>
+            {acc.email ? acc.email[0].toUpperCase() : 'G'}
+          </div>
+          <div style={{ flex: 1 }}>
+            <p style={{ margin: 0, fontSize: 13, fontWeight: 500, color: 'var(--color-text, #E8EAF6)' }}>{acc.email || acc.name}</p>
+            <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--color-text-muted, #6B7280)' }}>
+              Connected {new Date(acc.connectedAt).toLocaleDateString()}
             </p>
           </div>
-        )}
+          <button onClick={() => loadCalendars(acc)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted, #6B7280)', padding: 4, display: 'flex' }} title="Load calendars">
+            <RefreshCw size={12} style={{ animation: loadingCals === acc.id ? 'spin 1s linear infinite' : 'none' }} />
+          </button>
+          <button onClick={() => removeAcc(acc.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#E05252', padding: 4, display: 'flex' }}>
+            <Trash2 size={13} />
+          </button>
+        </div>
+      ))}
 
-        {/* Coming soon */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-          {[{ name: 'Slack', icon: '💬' }, { name: 'Notion', icon: '📝' }].map(item => (
-            <div key={item.name} style={{ background: '#0D0F1A', border: '1px solid #252A3E', borderRadius: 10, padding: '14px 16px', opacity: 0.45 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                <span style={{ fontSize: 18 }}>{item.icon}</span>
-                <span style={{ fontSize: 13, fontWeight: 600, color: '#E8EAF6' }}>{item.name}</span>
-                <WifiOff size={13} color="#6B7280" style={{ marginLeft: 'auto' }} />
-              </div>
-              <span style={{ fontSize: 11, color: '#6B7280', background: '#252A3E', padding: '2px 7px', borderRadius: 4 }}>Coming soon</span>
-            </div>
+      {/* Show calendars for additional accounts */}
+      {accounts.filter(a => !a.isPrimary).map(acc => calendars[acc.id] ? (
+        <div key={`${acc.id}-cals`} style={{ marginBottom: 8, padding: '8px 14px', background: 'var(--color-surface2, #0D0F1A)', borderRadius: 8, border: '1px solid var(--color-border, #252A3E)' }}>
+          <p style={{ margin: '0 0 6px', fontSize: 11, fontWeight: 600, color: 'var(--color-text-muted, #6B7280)', textTransform: 'uppercase' }}>{acc.email} calendars</p>
+          {calendars[acc.id].map(name => <p key={name} style={{ margin: '3px 0', fontSize: 12, color: 'var(--color-text-dim, #94A3B8)' }}>• {name}</p>)}
+        </div>
+      ) : null)}
+
+      {/* Add account button */}
+      <button onClick={() => void connectAdditional()} disabled={adding}
+        style={{
+          marginTop: 8, display: 'flex', alignItems: 'center', gap: 8, width: '100%',
+          padding: '12px 16px', borderRadius: 9,
+          background: 'var(--color-surface2, #0D0F1A)',
+          border: '1px dashed var(--color-border, #252A3E)',
+          color: 'var(--color-accent, #1E40AF)', fontSize: 13, fontWeight: 500, cursor: 'pointer',
+          opacity: adding ? 0.6 : 1,
+        }}>
+        <LogIn size={14} />
+        {adding ? 'Connecting…' : '+ Connect another Google account'}
+      </button>
+
+      <p style={{ margin: '10px 0 0', fontSize: 11.5, color: 'var(--color-text-muted, #6B7280)', lineHeight: 1.55 }}>
+        All connected accounts are used for calendar aggregation and inbox triage. Tokens are stored locally only.
+      </p>
+
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  )
+}
+
+// ─── CHUNK 6: Professor AI + Notifications + Appearance sections ──────────────
+
+function ProfessorSection({ s, set, onSave }: { s: AppSettings; set: (p: Partial<AppSettings>) => void; onSave: () => void }) {
+  return (
+    <div>
+      <FieldRow label="Communication style" sub="How detailed should responses be?">
+        <div style={{ display: 'flex', gap: 8 }}>
+          {(['brief','balanced','detailed'] as const).map(v => (
+            <button key={v} onClick={() => set({ commStyle: v })}
+              style={{
+                padding: '6px 14px', borderRadius: 7, fontSize: 12, cursor: 'pointer', fontWeight: 500, textTransform: 'capitalize',
+                background: s.commStyle === v ? 'var(--color-accent-fill)' : 'var(--color-surface2, #0D0F1A)',
+                border: `1px solid ${s.commStyle === v ? 'var(--color-accent, #1E40AF)' : 'var(--color-border, #252A3E)'}`,
+                color: s.commStyle === v ? 'var(--color-accent, #1E40AF)' : 'var(--color-text-muted, #6B7280)',
+              }}>{v}</button>
           ))}
+        </div>
+      </FieldRow>
+      <FieldRow label="Proactive suggestions" sub="Professor offers advice without being asked">
+        <Toggle checked={s.proactive} onChange={v => set({ proactive: v })} />
+      </FieldRow>
+      <FieldRow label="Morning brief time">
+        <input type="time" value={s.briefTime} onChange={e => set({ briefTime: e.target.value })}
+          style={{ ...inputStyle, width: 120 }} />
+      </FieldRow>
+      <FieldRow label="Weekly review day">
+        <select value={s.reviewDay} onChange={e => set({ reviewDay: e.target.value })} style={{ ...selectStyle, width: 140 }}>
+          {['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'].map(d =>
+            <option key={d} value={d}>{d}</option>)}
+        </select>
+      </FieldRow>
+      <FieldRow label="Custom instructions" sub="Guide the Professor's personality and priorities">
+        <textarea value={s.customInstructions} onChange={e => set({ customInstructions: e.target.value })}
+          rows={3} placeholder="e.g. Always be concise. Prioritise Teradix work…"
+          style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.5 }} />
+      </FieldRow>
+      <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end' }}>
+        <button onClick={onSave} style={{ padding: '8px 20px', borderRadius: 8, background: 'var(--color-accent-fill)', border: '1px solid var(--color-accent, #1E40AF)50', color: 'var(--color-accent, #1E40AF)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+          Save AI Settings
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function NotificationsSection({ s, set, onSave }: { s: AppSettings; set: (p: Partial<AppSettings>) => void; onSave: () => void }) {
+  return (
+    <div>
+      <FieldRow label="Morning brief reminder">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <Toggle checked={s.morningReminderOn} onChange={v => set({ morningReminderOn: v })} />
+          {s.morningReminderOn && (
+            <input type="time" value={s.morningReminderTime} onChange={e => set({ morningReminderTime: e.target.value })}
+              style={{ ...inputStyle, width: 110 }} />
+          )}
+        </div>
+      </FieldRow>
+      <FieldRow label="Wind-down reminder">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <Toggle checked={s.windDownOn} onChange={v => set({ windDownOn: v })} />
+          {s.windDownOn && (
+            <input type="time" value={s.windDownTime} onChange={e => set({ windDownTime: e.target.value })}
+              style={{ ...inputStyle, width: 110 }} />
+          )}
+        </div>
+      </FieldRow>
+      <FieldRow label="Follow-up nudges" sub="Remind you of delegated/waiting tasks">
+        <Toggle checked={s.followUpNudges} onChange={v => set({ followUpNudges: v })} />
+      </FieldRow>
+      <FieldRow label="Weekly review reminder">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <Toggle checked={s.weeklyReviewOn} onChange={v => set({ weeklyReviewOn: v })} />
+          {s.weeklyReviewOn && (
+            <>
+              <select value={s.weeklyReviewDay} onChange={e => set({ weeklyReviewDay: e.target.value })} style={{ ...selectStyle, width: 120 }}>
+                {['Sunday','Monday','Saturday'].map(d => <option key={d} value={d}>{d}</option>)}
+              </select>
+              <input type="time" value={s.weeklyReviewTime} onChange={e => set({ weeklyReviewTime: e.target.value })}
+                style={{ ...inputStyle, width: 110 }} />
+            </>
+          )}
+        </div>
+      </FieldRow>
+      <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end' }}>
+        <button onClick={onSave} style={{ padding: '8px 20px', borderRadius: 8, background: 'var(--color-accent-fill)', border: '1px solid var(--color-accent, #1E40AF)50', color: 'var(--color-accent, #1E40AF)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+          Save Notifications
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function AppearanceSection({ s, set, onSave }: { s: AppSettings; set: (p: Partial<AppSettings>) => void; onSave: () => void }) {
+  const { setThemeId } = useUIStore()
+
+  function pickTheme(id: string) {
+    set({ theme: id })
+    setThemeId(id)
+    applyThemeVars(getTheme(id))
+  }
+
+  return (
+    <div>
+      {/* Theme picker grid */}
+      <p style={{ margin: '0 0 12px', fontSize: 12.5, color: 'var(--color-text-muted, #6B7280)' }}>Theme</p>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10, marginBottom: 20 }}>
+        {THEMES.map(t => {
+          const active = s.theme === t.id
+          return (
+            <button key={t.id} onClick={() => pickTheme(t.id)}
+              style={{
+                padding: '10px 8px', borderRadius: 10, cursor: 'pointer', flexDirection: 'column',
+                display: 'flex', alignItems: 'center', gap: 6,
+                background: t.surface, border: `2px solid ${active ? t.accent : t.border}`,
+                boxShadow: active ? `0 0 12px ${t.accent}40` : 'none',
+                transition: 'all 0.15s',
+              }}>
+              {/* Mini preview */}
+              <div style={{ display: 'flex', gap: 3 }}>
+                {[t.accent, t.accentFill ? t.accentBright : t.textDim, t.textMuted].map((c, i) => (
+                  <div key={i} style={{ width: 10, height: 10, borderRadius: '50%', background: c }} />
+                ))}
+              </div>
+              <span style={{ fontSize: 14 }}>{t.emoji}</span>
+              <span style={{ fontSize: 10, color: t.text, fontWeight: active ? 700 : 400, whiteSpace: 'nowrap' }}>{t.name}</span>
+            </button>
+          )
+        })}
+      </div>
+
+      <FieldRow label="Sidebar expanded by default">
+        <Toggle checked={!s.sidebarDefault} onChange={v => set({ sidebarDefault: !v })} />
+      </FieldRow>
+      <FieldRow label="Compact density" sub="Tighter spacing throughout the UI">
+        <Toggle checked={s.compact} onChange={v => set({ compact: v })} />
+      </FieldRow>
+      <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end' }}>
+        <button onClick={onSave} style={{ padding: '8px 20px', borderRadius: 8, background: 'var(--color-accent-fill)', border: '1px solid var(--color-accent, #1E40AF)50', color: 'var(--color-accent, #1E40AF)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+          Save Appearance
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ─── CHUNK 7: Main Settings component ────────────────────────────────────────
+
+export function Settings() {
+  const [settings, setSettings]       = useState<AppSettings>(loadSettings)
+  const [companies, setCompanies]     = useState<CompanyRow[]>(loadCompanies)
+  const [accounts, setAccounts]       = useState<ConnectedAccount[]>(loadAccounts)
+  const [sectionOrder, setSectionOrder] = useState<SectionId[]>(loadSectionOrder)
+  const [collapsed, setCollapsed]     = useState<Record<SectionId, boolean>>({} as Record<SectionId, boolean>)
+  const [saveState, setSaveState]     = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const [supaOk, setSupaOk]           = useState<boolean | null>(null)
+  const authUser = useAuthStore(s => s.user)
+
+  // ── Check Supabase on mount ──────────────────────────────────────────────────
+  useEffect(() => { void checkSupabase().then(setSupaOk) }, [])
+
+  // ── Debounced auto-save ──────────────────────────────────────────────────────
+  const saveTimer = useState<ReturnType<typeof setTimeout> | null>(null)
+
+  const triggerSave = useCallback((s: AppSettings) => {
+    if (saveTimer[0]) clearTimeout(saveTimer[0])
+    setSaveState('saving')
+    const t = setTimeout(() => {
+      try {
+        saveSettings(s)
+        setSaveState('saved')
+        setTimeout(() => setSaveState('idle'), 2000)
+      } catch {
+        setSaveState('error')
+      }
+    }, 800)
+    saveTimer[1](t)
+  }, [saveTimer])
+
+  function update(patch: Partial<AppSettings>) {
+    setSettings(prev => {
+      const next = { ...prev, ...patch }
+      triggerSave(next)
+      return next
+    })
+  }
+
+  // ── DnD sensors ─────────────────────────────────────────────────────────────
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  )
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+    const oldIdx = sectionOrder.indexOf(active.id as SectionId)
+    const newIdx = sectionOrder.indexOf(over.id as SectionId)
+    const next = arrayMove(sectionOrder, oldIdx, newIdx)
+    setSectionOrder(next)
+    saveSectionOrder(next)
+  }
+
+  function toggleCollapse(id: SectionId) {
+    setCollapsed(prev => ({ ...prev, [id]: !prev[id] }))
+  }
+
+
+  // ── Section renderer ─────────────────────────────────────────────────────────
+  function renderSection(id: SectionId) {
+    const meta = SECTION_META.find(m => m.id === id)!
+    const isCollapsed = collapsed[id] ?? false
+    const noop = () => {}
+    return (
+      <SectionShell
+        key={id} id={id}
+        title={meta.title} icon={meta.icon} description={meta.description}
+        isCollapsed={isCollapsed} onToggle={() => toggleCollapse(id)}
+      >
+        {id === 'profile'       && <ProfileSection       s={settings} set={update} onSave={noop} />}
+        {id === 'schedule'      && <ScheduleSection      s={settings} set={update} onSave={noop} />}
+        {id === 'companies'     && <CompaniesSection     companies={companies}
+                                      setCompanies={c => { setCompanies(c); saveCompanies(c) }}
+                                      accounts={accounts} />}
+        {id === 'habits'        && <HabitsSection />}
+        {id === 'accounts'      && <AccountsSection      accounts={accounts}
+                                      setAccounts={a => { setAccounts(a) }}
+                                      primaryEmail={authUser?.email ?? ''} />}
+        {id === 'professor'     && <ProfessorSection     s={settings} set={update} onSave={noop} />}
+        {id === 'notifications' && <NotificationsSection s={settings} set={update} onSave={noop} />}
+        {id === 'appearance'    && <AppearanceSection    s={settings} set={update} onSave={noop} />}
+      </SectionShell>
+    )
+  }
+
+  // ── Sign out ─────────────────────────────────────────────────────────────────
+  async function handleSignOut() {
+    await googleSignOut()
+  }
+
+  return (
+    <div style={{ padding: '28px 28px 60px', maxWidth: 780, margin: '0 auto' }}>
+      {/* ── Save badge ──────────────────────────────────────────────────────── */}
+      <SaveBadge state={saveState} />
+
+      {/* ── Top bar: user info + status ─────────────────────────────────────── */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        marginBottom: 24, padding: '16px 20px',
+        background: 'var(--color-surface, #161929)',
+        border: '1px solid var(--color-border, #252A3E)',
+        borderRadius: 14,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          {authUser?.avatarUrl
+            ? <img src={authUser.avatarUrl} alt="avatar" style={{ width: 40, height: 40, borderRadius: '50%', border: '2px solid var(--color-border, #252A3E)' }} />
+            : <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--color-accent-fill, rgba(30,64,175,0.15))', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <User size={18} color="var(--color-accent, #1E40AF)" />
+              </div>
+          }
+          <div>
+            <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: 'var(--color-text, #E8EAF6)' }}>
+              {authUser?.name ?? authUser?.email ?? 'Professor User'}
+            </p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 3 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                <div style={{ width: 6, height: 6, borderRadius: '50%', background: supaOk === null ? '#888780' : supaOk ? '#1D9E75' : '#E05252' }} />
+                <span style={{ fontSize: 11, color: 'var(--color-text-muted, #6B7280)' }}>
+                  {supaOk === null ? 'Checking...' : supaOk ? 'Supabase connected' : 'Offline (local only)'}
+                </span>
+              </div>
+              <span style={{ color: 'var(--color-border, #252A3E)' }}>·</span>
+              <span style={{ fontSize: 11, color: 'var(--color-text-muted, #6B7280)' }}>
+                {accounts.length + 1} account{accounts.length !== 0 ? 's' : ''} connected
+              </span>
+            </div>
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={() => void checkSupabase().then(setSupaOk)}
+            style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 13px', borderRadius: 8, background: 'transparent', border: '1px solid var(--color-border, #252A3E)', color: 'var(--color-text-dim, #94A3B8)', fontSize: 12, cursor: 'pointer' }}>
+            <RefreshCw size={12} /> Refresh
+          </button>
+          <button onClick={() => void handleSignOut()}
+            style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 13px', borderRadius: 8, background: 'transparent', border: '1px solid rgba(224,82,82,0.3)', color: '#E05252', fontSize: 12, cursor: 'pointer' }}>
+            <LogOut size={12} /> Sign out
+          </button>
         </div>
       </div>
 
-      {/* ── 7. NOTIFICATIONS ───────────────────────────────────────────── */}
-      <div style={S.card}>
-        <SectionHeader title="Notifications" />
-        <FieldRow label="Morning brief reminder">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <Toggle checked={s.morningReminderOn} onChange={v => update('morningReminderOn', v)} />
-            {s.morningReminderOn && <TimeInput value={s.morningReminderTime} onChange={v => update('morningReminderTime', v)} />}
-          </div>
-        </FieldRow>
-        <FieldRow label="Daily wind-down reminder">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <Toggle checked={s.windDownOn} onChange={v => update('windDownOn', v)} />
-            {s.windDownOn && <TimeInput value={s.windDownTime} onChange={v => update('windDownTime', v)} />}
-          </div>
-        </FieldRow>
-        <FieldRow label="Follow-up nudges">
-          <Toggle checked={s.followUpNudges} onChange={v => update('followUpNudges', v)} />
-        </FieldRow>
-        <FieldRow label="Weekly review reminder">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-            <Toggle checked={s.weeklyReviewOn} onChange={v => update('weeklyReviewOn', v)} />
-            {s.weeklyReviewOn && (
-              <>
-                <select style={{ ...S.select, width: 110 }} value={s.weeklyReviewDay} onChange={e => update('weeklyReviewDay', e.target.value)}>
-                  {['Sunday', 'Monday', 'Friday', 'Saturday'].map(d => <option key={d}>{d}</option>)}
-                </select>
-                <TimeInput value={s.weeklyReviewTime} onChange={v => update('weeklyReviewTime', v)} />
-              </>
-            )}
-          </div>
-        </FieldRow>
-      </div>
+      {/* ── Drag-reorderable sections ────────────────────────────────────────── */}
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext items={sectionOrder} strategy={verticalListSortingStrategy}>
+          {sectionOrder.map(id => renderSection(id))}
+        </SortableContext>
+      </DndContext>
 
-      {/* ── 8. APPEARANCE ──────────────────────────────────────────────── */}
-      <div style={S.card}>
-        <SectionHeader title="Appearance" />
-        <FieldRow label="Theme">
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            {([
-              { value: 'dark-warm' as const, label: 'Dark Warm', bg: '#0D0F1A', dot: '#7C3AED' },
-              { value: 'dark-cool' as const, label: 'Dark Cool', bg: '#111827', dot: '#60A5FA' },
-              { value: 'light'     as const, label: 'Light',     bg: '#F5F0E8', dot: '#B8860B' },
-            ]).map(t => {
-              const active = s.theme === t.value
-              return (
-                <button key={t.value} onClick={() => { update('theme', t.value); applyTheme(t.value) }} style={{
-                  padding: '8px 14px', borderRadius: 8, cursor: 'pointer',
-                  border: `1.5px solid ${active ? '#7C3AED' : '#252A3E'}`,
-                  background: active ? 'rgba(124,58,237,0.08)' : 'transparent',
-                  display: 'flex', alignItems: 'center', gap: 8,
-                }}>
-                  <div style={{ width: 32, height: 20, borderRadius: 4, background: t.bg, border: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <div style={{ width: 10, height: 10, borderRadius: '50%', background: t.dot }} />
-                  </div>
-                  <span style={{ fontSize: 13, color: active ? '#7C3AED' : '#6B7280', fontWeight: active ? 600 : 400 }}>{t.label}</span>
-                  {active && <Check size={12} color="#7C3AED" />}
-                </button>
-              )
-            })}
-          </div>
-        </FieldRow>
-        <FieldRow label="Sidebar collapsed by default">
-          <Toggle checked={s.sidebarDefault} onChange={v => { update('sidebarDefault', v); setSidebarCollapsed(v) }} />
-        </FieldRow>
-        <FieldRow label="Compact density">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Toggle checked={s.compact} onChange={v => update('compact', v)} />
-            <span style={{ fontSize: 12, color: '#6B7280' }}>Reduces padding throughout the interface</span>
-          </div>
-        </FieldRow>
-      </div>
+      {/* ── Footer hint ─────────────────────────────────────────────────────── */}
+      <p style={{ textAlign: 'center', fontSize: 11.5, color: 'var(--color-text-muted, #6B7280)', marginTop: 24 }}>
+        Drag sections to reorder · Changes save automatically
+      </p>
     </div>
   )
 }
