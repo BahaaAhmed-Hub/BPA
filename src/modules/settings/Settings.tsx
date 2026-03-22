@@ -81,12 +81,33 @@ interface HabitRow {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const TIMEZONES = [
-  'America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles',
-  'America/Toronto', 'America/Vancouver', 'Europe/London', 'Europe/Paris',
-  'Europe/Berlin', 'Europe/Amsterdam', 'Asia/Dubai', 'Asia/Kolkata',
-  'Asia/Singapore', 'Asia/Tokyo', 'Australia/Sydney', 'Pacific/Auckland',
-]
+function getUtcOffset(tz: string): string {
+  try {
+    const offset = new Intl.DateTimeFormat('en', { timeZone: tz, timeZoneName: 'shortOffset' })
+      .formatToParts(new Date())
+      .find(p => p.type === 'timeZoneName')?.value ?? 'UTC'
+    return offset === 'GMT' ? 'UTC+0' : offset.replace('GMT', 'UTC')
+  } catch {
+    return 'UTC'
+  }
+}
+
+const ALL_TIMEZONES: { value: string; label: string; offset: number }[] = (() => {
+  const zones: string[] = Intl.supportedValuesOf
+    ? Intl.supportedValuesOf('timeZone')
+    : ['America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles',
+       'America/Toronto', 'America/Vancouver', 'Europe/London', 'Europe/Paris',
+       'Europe/Berlin', 'Europe/Amsterdam', 'Asia/Dubai', 'Asia/Kolkata',
+       'Asia/Singapore', 'Asia/Tokyo', 'Australia/Sydney', 'Pacific/Auckland']
+  const now = Date.now()
+  return zones.map(tz => {
+    const offsetStr = getUtcOffset(tz)
+    const sign = offsetStr.includes('-') ? -1 : 1
+    const parts = offsetStr.replace('UTC', '').replace('+', '').replace('-', '').split(':')
+    const offsetMins = sign * ((parseInt(parts[0]) || 0) * 60 + (parseInt(parts[1]) || 0))
+    return { value: tz, label: `(${offsetStr}) ${tz.replace(/_/g, ' ')}`, offset: offsetMins }
+  }).sort((a, b) => a.offset - b.offset || a.value.localeCompare(b.value))
+})()
 
 const FRAMEWORKS = [
   { value: 'time_blocking', label: 'Time Blocking' },
@@ -679,8 +700,8 @@ export function Settings() {
             onChange={e => update('fullName', e.target.value)} />
         </FieldRow>
         <FieldRow label="Display timezone">
-          <select style={{ ...S.select, width: 230 }} value={s.timezone} onChange={e => update('timezone', e.target.value)}>
-            {TIMEZONES.map(tz => <option key={tz} value={tz}>{tz.replace(/_/g, ' ')}</option>)}
+          <select style={{ ...S.select, width: 300 }} value={s.timezone} onChange={e => update('timezone', e.target.value)}>
+            {ALL_TIMEZONES.map(tz => <option key={tz.value} value={tz.value}>{tz.label}</option>)}
           </select>
         </FieldRow>
         <FieldRow label="Work week">

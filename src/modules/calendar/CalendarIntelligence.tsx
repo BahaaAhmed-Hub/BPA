@@ -92,8 +92,12 @@ function gcalToDbEvent(e: GCalEvent): DbCalendarEvent {
   }
 }
 
+function localDateStr(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 function getDayKey(iso: string): string {
-  return new Date(iso).toISOString().slice(0, 10)
+  return localDateStr(new Date(iso))
 }
 
 function groupByDay(events: GCalEvent[]): Map<string, GCalEvent[]> {
@@ -429,7 +433,7 @@ export function CalendarIntelligence() {
     return isNaN(start.getTime()) ? acc : acc + (end.getTime() - start.getTime()) / 3_600_000
   }, 0)
 
-  const today = new Date().toISOString().slice(0, 10)
+  const today = localDateStr(new Date())
 
   // ─── Render ─────────────────────────────────────────────────────────────────
 
@@ -535,7 +539,7 @@ export function CalendarIntelligence() {
           display: 'flex', gap: 6, marginBottom: 24, overflowX: 'auto',
         }}>
           {weekDays.map(day => {
-            const key     = day.toISOString().slice(0, 10)
+            const key     = localDateStr(day)
             const count   = grouped.get(key)?.length ?? 0
             const isToday = key === today
             return (
@@ -637,7 +641,7 @@ export function CalendarIntelligence() {
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {weekDays.map(day => {
-                  const key       = day.toISOString().slice(0, 10)
+                  const key       = localDateStr(day)
                   const dayEvents = grouped.get(key) ?? []
                   const isToday   = key === today
                   if (dayEvents.length === 0) return null
