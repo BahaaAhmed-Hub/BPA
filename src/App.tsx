@@ -160,89 +160,125 @@ function LoginScreen() {
         </div>
       </div>
 
-      {/* Right panel — decorative dashboard preview */}
+      {/* Right panel — SVG illustration */}
       <div style={{
         width: 440,
         background: 'rgba(255,255,255,0.018)',
-        borderLeft: '1px solid rgba(30,64,175,0.1)',
+        borderLeft: '1px solid rgba(30,64,175,0.15)',
         display: 'flex',
-        flexDirection: 'column',
+        alignItems: 'center',
         justifyContent: 'center',
         padding: '48px 40px',
-        gap: 14,
         position: 'relative',
+        overflow: 'hidden',
       }}>
-        <p style={{ margin: '0 0 8px', fontSize: 11, fontWeight: 700, color: '#FFFFFF', textTransform: 'uppercase', letterSpacing: '1.2px' }}>
-          Live Preview
-        </p>
-
-        {/* Mock stat cards */}
-        {[
-          { label: 'Meetings today',     value: '4',          sub: '2h 45m scheduled',       color: '#1E40AF' },
-          { label: 'Unread emails',      value: '12',         sub: '3 need decisions',        color: '#7F77DD' },
-          { label: 'Tasks in progress',  value: '7',          sub: '2 due today',             color: '#1D9E75' },
-          { label: 'Habit streak',       value: '14 days',    sub: 'Morning routine',         color: '#60A5FA' },
-        ].map(card => (
-          <div key={card.label} style={{
-            padding: '16px 18px', borderRadius: 12,
-            background: 'rgba(255,255,255,0.03)',
-            border: '1px solid rgba(255,255,255,0.06)',
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          }}>
-            <div>
-              <p style={{ margin: '0 0 3px', fontSize: 11.5, color: '#FFFFFF' }}>{card.label}</p>
-              <p style={{ margin: 0, fontSize: 20, fontWeight: 800, color: '#E8EAF6', fontFamily: "'Cabinet Grotesk', sans-serif", letterSpacing: '-0.5px' }}>
-                {card.value}
-              </p>
-              <p style={{ margin: '2px 0 0', fontSize: 11, color: '#FFFFFF' }}>{card.sub}</p>
-            </div>
-            <div style={{
-              width: 36, height: 36, borderRadius: 10,
-              background: `${card.color}18`,
-              border: `1px solid ${card.color}30`,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>
-              <div style={{ width: 10, height: 10, borderRadius: '50%', background: card.color, opacity: 0.85 }} />
-            </div>
-          </div>
-        ))}
-
-        {/* Mock email triage */}
+        {/* Ambient glow behind SVG */}
         <div style={{
-          padding: '16px 18px', borderRadius: 12,
-          background: 'rgba(30,64,175,0.04)',
-          border: '1px solid rgba(30,64,175,0.12)',
-          marginTop: 4,
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 10 }}>
-            <Brain size={12} color="#1E40AF" />
-            <span style={{ fontSize: 11, fontWeight: 600, color: '#1E40AF', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
-              AI Triage
-            </span>
-          </div>
-          {[
-            { from: 'Sarah K.',    subject: 'Q4 Budget Review',    tag: 'Decision', tagColor: '#1E40AF' },
-            { from: 'Dev Team',    subject: 'PR #247 merged',      tag: 'FYI',      tagColor: '#7F77DD' },
-            { from: 'Alex M.',     subject: 'Client proposal',     tag: 'Urgent',   tagColor: '#E05252' },
-          ].map(email => (
-            <div key={email.subject} style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: '7px 0', borderBottom: '1px solid rgba(255,255,255,0.04)',
-            }}>
-              <div>
-                <span style={{ fontSize: 12, color: '#FFFFFF', fontWeight: 500 }}>{email.from}</span>
-                <span style={{ fontSize: 11.5, color: '#FFFFFF', marginLeft: 8 }}>{email.subject}</span>
-              </div>
-              <span style={{
-                fontSize: 10, padding: '2px 7px', borderRadius: 4, fontWeight: 600,
-                background: `${email.tagColor}18`, color: email.tagColor,
-                border: `1px solid ${email.tagColor}30`,
-              }}>
-                {email.tag}
-              </span>
-            </div>
-          ))}
-        </div>
+          position: 'absolute', top: '50%', left: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: 340, height: 340, borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(30,64,175,0.12) 0%, transparent 70%)',
+          pointerEvents: 'none',
+        }} />
+
+        <svg viewBox="0 0 360 400" fill="none" xmlns="http://www.w3.org/2000/svg"
+          style={{ width: '100%', maxWidth: 360, position: 'relative', zIndex: 1 }}>
+          <defs>
+            <linearGradient id="gBlue" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor="#3B82F6" />
+              <stop offset="100%" stopColor="#1E40AF" />
+            </linearGradient>
+            <linearGradient id="gTeal" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor="#34D399" />
+              <stop offset="100%" stopColor="#059669" />
+            </linearGradient>
+            <linearGradient id="gIndigo" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor="#818CF8" />
+              <stop offset="100%" stopColor="#4F46E5" />
+            </linearGradient>
+            <linearGradient id="gOrange" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor="#FB923C" />
+              <stop offset="100%" stopColor="#EA580C" />
+            </linearGradient>
+          </defs>
+
+          {/* ── Central AI Brain ── */}
+          <circle cx="180" cy="180" r="56" fill="url(#gBlue)" opacity="0.15" />
+          <circle cx="180" cy="180" r="44" fill="url(#gBlue)" opacity="0.18" />
+          <circle cx="180" cy="180" r="32" fill="url(#gBlue)" opacity="0.9" />
+          {/* Brain icon paths */}
+          <g transform="translate(163, 163)">
+            <path d="M17 8.5C17 5.46 14.54 3 11.5 3C10.24 3 9.09 3.45 8.2 4.2C7.48 3.46 6.49 3 5.39 3C3.52 3 1.96 4.27 1.5 6C0.62 6.34 0 7.18 0 8.17C0 8.9 0.32 9.56 0.83 10.02C0.31 10.48 0 11.16 0 11.92C0 13.07 0.75 14.04 1.79 14.38C1.94 16.37 3.59 17.94 5.61 18H8V22H9V18H11V22H12V18H12.39C14.41 18 16.07 16.43 16.21 14.43C17.25 14.1 18 13.12 18 11.96C18 11.21 17.69 10.54 17.18 10.08C17.71 9.62 18 8.97 18 8.27L17 8.5Z" fill="white" fillOpacity="0.9" />
+          </g>
+
+          {/* ── Orbit ring ── */}
+          <circle cx="180" cy="180" r="80" stroke="rgba(59,130,246,0.2)" strokeWidth="1" strokeDasharray="4 6" />
+          <circle cx="180" cy="180" r="110" stroke="rgba(59,130,246,0.1)" strokeWidth="1" strokeDasharray="2 8" />
+
+          {/* ── Satellite nodes ── */}
+          {/* Calendar - top */}
+          <circle cx="180" cy="100" r="22" fill="#161929" stroke="rgba(59,130,246,0.4)" strokeWidth="1.5" />
+          <rect x="171" y="108" width="18" height="14" rx="2" fill="none" stroke="#3B82F6" strokeWidth="1.4" />
+          <line x1="171" y1="113" x2="189" y2="113" stroke="#3B82F6" strokeWidth="1.2" />
+          <rect x="174" y="116" width="3" height="3" rx="0.5" fill="#3B82F6" />
+          <rect x="179" y="116" width="3" height="3" rx="0.5" fill="#3B82F6" />
+          <rect x="184" y="116" width="3" height="3" rx="0.5" fill="#60A5FA" opacity="0.5" />
+          <line x1="175" y1="108" x2="175" y2="105" stroke="#3B82F6" strokeWidth="1.5" strokeLinecap="round" />
+          <line x1="185" y1="108" x2="185" y2="105" stroke="#3B82F6" strokeWidth="1.5" strokeLinecap="round" />
+          <text x="180" y="97" textAnchor="middle" fontSize="8" fill="#60A5FA" fontFamily="DM Sans">Calendar</text>
+
+          {/* Inbox - right */}
+          <circle cx="260" cy="180" r="22" fill="#161929" stroke="rgba(129,140,248,0.4)" strokeWidth="1.5" />
+          <rect x="251" y="173" width="18" height="13" rx="2" fill="none" stroke="#818CF8" strokeWidth="1.4" />
+          <polyline points="251,174 260,181 269,174" fill="none" stroke="#818CF8" strokeWidth="1.2" />
+          <text x="260" y="210" textAnchor="middle" fontSize="8" fill="#818CF8" fontFamily="DM Sans">Inbox</text>
+
+          {/* Habits - bottom */}
+          <circle cx="180" cy="260" r="22" fill="#161929" stroke="rgba(52,211,153,0.4)" strokeWidth="1.5" />
+          <circle cx="180" cy="260" r="10" fill="none" stroke="#34D399" strokeWidth="1.4" strokeDasharray="3 2" />
+          <circle cx="180" cy="260" r="5" fill="#34D399" opacity="0.8" />
+          <text x="180" y="292" textAnchor="middle" fontSize="8" fill="#34D399" fontFamily="DM Sans">Habits</text>
+
+          {/* Tasks - left */}
+          <circle cx="100" cy="180" r="22" fill="#161929" stroke="rgba(251,146,60,0.4)" strokeWidth="1.5" />
+          <line x1="93" y1="175" x2="107" y2="175" stroke="#FB923C" strokeWidth="1.3" strokeLinecap="round" />
+          <line x1="93" y1="180" x2="107" y2="180" stroke="#FB923C" strokeWidth="1.3" strokeLinecap="round" />
+          <line x1="93" y1="185" x2="102" y2="185" stroke="#FB923C" strokeWidth="1.3" strokeLinecap="round" opacity="0.5" />
+          <polyline points="90,173 93,176 99,170" fill="none" stroke="#34D399" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+          <text x="100" y="210" textAnchor="middle" fontSize="8" fill="#FB923C" fontFamily="DM Sans">Tasks</text>
+
+          {/* ── Connector lines from center to nodes ── */}
+          <line x1="180" y1="148" x2="180" y2="122" stroke="rgba(59,130,246,0.3)" strokeWidth="1" />
+          <line x1="212" y1="168" x2="238" y2="180" stroke="rgba(129,140,248,0.3)" strokeWidth="1" />
+          <line x1="180" y1="212" x2="180" y2="238" stroke="rgba(52,211,153,0.3)" strokeWidth="1" />
+          <line x1="148" y1="180" x2="122" y2="180" stroke="rgba(251,146,60,0.3)" strokeWidth="1" />
+
+          {/* ── Floating data pills ── */}
+          {/* Pill 1 - top right */}
+          <rect x="218" y="118" width="96" height="24" rx="12" fill="rgba(59,130,246,0.1)" stroke="rgba(59,130,246,0.25)" strokeWidth="1" />
+          <circle cx="230" cy="130" r="5" fill="#3B82F6" opacity="0.9" />
+          <text x="240" y="134" fontSize="9.5" fill="white" fontFamily="DM Sans" fontWeight="500">AI Meeting Prep</text>
+
+          {/* Pill 2 - bottom right */}
+          <rect x="218" y="248" width="90" height="24" rx="12" fill="rgba(52,211,153,0.1)" stroke="rgba(52,211,153,0.25)" strokeWidth="1" />
+          <circle cx="230" cy="260" r="5" fill="#34D399" opacity="0.9" />
+          <text x="240" y="264" fontSize="9.5" fill="white" fontFamily="DM Sans" fontWeight="500">Streak: 14 days</text>
+
+          {/* Pill 3 - top left */}
+          <rect x="46" y="118" width="86" height="24" rx="12" fill="rgba(251,146,60,0.1)" stroke="rgba(251,146,60,0.25)" strokeWidth="1" />
+          <circle cx="58" cy="130" r="5" fill="#FB923C" opacity="0.9" />
+          <text x="68" y="134" fontSize="9.5" fill="white" fontFamily="DM Sans" fontWeight="500">7 Tasks Due</text>
+
+          {/* Pill 4 - bottom left */}
+          <rect x="46" y="248" width="90" height="24" rx="12" fill="rgba(129,140,248,0.1)" stroke="rgba(129,140,248,0.25)" strokeWidth="1" />
+          <circle cx="58" cy="260" r="5" fill="#818CF8" opacity="0.9" />
+          <text x="68" y="264" fontSize="9.5" fill="white" fontFamily="DM Sans" fontWeight="500">12 Emails AI'd</text>
+
+          {/* ── Bottom tagline ── */}
+          <text x="180" y="355" textAnchor="middle" fontSize="12" fill="rgba(255,255,255,0.35)" fontFamily="DM Sans" letterSpacing="0.5">
+            One AI. Every workflow.
+          </text>
+        </svg>
       </div>
 
       <style>{`
