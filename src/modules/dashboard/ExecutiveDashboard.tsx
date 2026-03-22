@@ -18,12 +18,12 @@ function MetricCard({
   icon: React.ElementType
   accentColor?: string
 }) {
-  const color = accentColor ?? '#C49A3C'
+  const color = accentColor ?? '#7C3AED'
   return (
     <div
       style={{
-        background: '#2A2218',
-        border: '1px solid #3A3020',
+        background: '#161929',
+        border: '1px solid #252A3E',
         borderRadius: 12,
         padding: '20px 22px',
         display: 'flex',
@@ -54,7 +54,7 @@ function MetricCard({
           style={{
             fontSize: 28,
             fontWeight: 700,
-            color: '#F0E8D8',
+            color: '#E8EAF6',
             fontFamily: "'Cabinet Grotesk', sans-serif",
             letterSpacing: '-0.5px',
             lineHeight: 1,
@@ -62,7 +62,7 @@ function MetricCard({
         >
           {value}
         </div>
-        <div style={{ fontSize: 12.5, color: '#8A7A60', marginTop: 4, fontWeight: 400 }}>
+        <div style={{ fontSize: 12.5, color: '#6B7280', marginTop: 4, fontWeight: 400 }}>
           {label}
         </div>
       </div>
@@ -104,14 +104,14 @@ function CompanyBadge({ company, count }: { company: CompanyTag; count: number }
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: '10px 14px',
-        background: '#1C1814',
+        background: '#0D0F1A',
         borderRadius: 8,
-        border: '1px solid #3A3020',
+        border: '1px solid #252A3E',
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <div style={{ width: 8, height: 8, borderRadius: '50%', background: color }} />
-        <span style={{ fontSize: 13, color: '#F0E8D8', fontWeight: 400 }}>
+        <span style={{ fontSize: 13, color: '#E8EAF6', fontWeight: 400 }}>
           {COMPANY_LABELS[company]}
         </span>
       </div>
@@ -154,14 +154,14 @@ export function ExecutiveDashboard() {
               margin: 0,
               fontSize: 22,
               fontWeight: 700,
-              color: '#F0E8D8',
+              color: '#E8EAF6',
               fontFamily: "'Cabinet Grotesk', sans-serif",
               letterSpacing: '-0.4px',
             }}
           >
             Good morning.
           </h2>
-          <p style={{ margin: '4px 0 0', fontSize: 13.5, color: '#8A7A60' }}>
+          <p style={{ margin: '4px 0 0', fontSize: 13.5, color: '#6B7280' }}>
             Here's what demands your attention today.
           </p>
         </div>
@@ -181,7 +181,7 @@ export function ExecutiveDashboard() {
             delta="3 added this week"
             deltaPositive={false}
             icon={CheckSquare}
-            accentColor="#C49A3C"
+            accentColor="#7C3AED"
           />
           <MetricCard
             label="Urgent & Important"
@@ -225,7 +225,7 @@ export function ExecutiveDashboard() {
             delta="5 require action"
             deltaPositive={false}
             icon={Inbox}
-            accentColor="#C49A3C"
+            accentColor="#7C3AED"
           />
           <MetricCard
             label="Habit Streak"
@@ -242,8 +242,8 @@ export function ExecutiveDashboard() {
           {/* Company Breakdown */}
           <div
             style={{
-              background: '#2A2218',
-              border: '1px solid #3A3020',
+              background: '#161929',
+              border: '1px solid #252A3E',
               borderRadius: 12,
               padding: '20px 22px',
             }}
@@ -253,7 +253,7 @@ export function ExecutiveDashboard() {
                 margin: '0 0 16px',
                 fontSize: 13,
                 fontWeight: 600,
-                color: '#8A7A60',
+                color: '#6B7280',
                 textTransform: 'uppercase',
                 letterSpacing: '0.8px',
               }}
@@ -270,8 +270,8 @@ export function ExecutiveDashboard() {
           {/* Priority Matrix Summary */}
           <div
             style={{
-              background: '#2A2218',
-              border: '1px solid #3A3020',
+              background: '#161929',
+              border: '1px solid #252A3E',
               borderRadius: 12,
               padding: '20px 22px',
             }}
@@ -281,7 +281,7 @@ export function ExecutiveDashboard() {
                 margin: '0 0 16px',
                 fontSize: 13,
                 fontWeight: 600,
-                color: '#8A7A60',
+                color: '#6B7280',
                 textTransform: 'uppercase',
                 letterSpacing: '0.8px',
               }}
@@ -291,7 +291,7 @@ export function ExecutiveDashboard() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
               {(
                 [
-                  { key: 'do', label: 'Do Now', color: '#C49A3C' },
+                  { key: 'do', label: 'Do Now', color: '#7C3AED' },
                   { key: 'schedule', label: 'Schedule', color: '#7F77DD' },
                   { key: 'delegate', label: 'Delegate', color: '#1D9E75' },
                   { key: 'eliminate', label: 'Eliminate', color: '#888780' },
@@ -302,7 +302,7 @@ export function ExecutiveDashboard() {
                   <div
                     key={key}
                     style={{
-                      background: '#1C1814',
+                      background: '#0D0F1A',
                       border: `1px solid ${color}30`,
                       borderRadius: 8,
                       padding: '12px 14px',
@@ -314,7 +314,7 @@ export function ExecutiveDashboard() {
                     <div style={{ fontSize: 22, fontWeight: 700, color, fontFamily: "'Cabinet Grotesk', sans-serif" }}>
                       {count}
                     </div>
-                    <div style={{ fontSize: 11.5, color: '#8A7A60' }}>{label}</div>
+                    <div style={{ fontSize: 11.5, color: '#6B7280' }}>{label}</div>
                   </div>
                 )
               })}
@@ -326,8 +326,8 @@ export function ExecutiveDashboard() {
         <div
           style={{
             marginTop: 14,
-            background: 'rgba(196, 154, 60, 0.06)',
-            border: '1px solid rgba(196, 154, 60, 0.2)',
+            background: 'rgba(124, 58, 237, 0.06)',
+            border: '1px solid rgba(124, 58, 237, 0.2)',
             borderRadius: 12,
             padding: '16px 20px',
             display: 'flex',
@@ -340,8 +340,8 @@ export function ExecutiveDashboard() {
               width: 28,
               height: 28,
               borderRadius: 6,
-              background: 'rgba(196, 154, 60, 0.15)',
-              border: '1px solid rgba(196, 154, 60, 0.3)',
+              background: 'rgba(124, 58, 237, 0.15)',
+              border: '1px solid rgba(124, 58, 237, 0.3)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -349,13 +349,13 @@ export function ExecutiveDashboard() {
               marginTop: 1,
             }}
           >
-            <TrendingUp size={13} color="#C49A3C" strokeWidth={2.5} />
+            <TrendingUp size={13} color="#7C3AED" strokeWidth={2.5} />
           </div>
           <div>
-            <div style={{ fontSize: 12, fontWeight: 600, color: '#C49A3C', marginBottom: 4, letterSpacing: '0.3px' }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: '#7C3AED', marginBottom: 4, letterSpacing: '0.3px' }}>
               THE PROFESSOR
             </div>
-            <p style={{ margin: 0, fontSize: 13.5, color: '#F0E8D8', lineHeight: 1.55 }}>
+            <p style={{ margin: 0, fontSize: 13.5, color: '#E8EAF6', lineHeight: 1.55 }}>
               You have {urgentTasks.length} urgent & important tasks that require your direct attention today.
               Consider blocking your first 2 hours for deep work on the Q2 Board Presentation — 
               it's your highest-leverage activity this week.

@@ -9,7 +9,7 @@ export const COMPANY_LABELS: Record<CompanyTag, string> = {
 }
 
 export const COMPANY_COLORS: Record<CompanyTag, string> = {
-  teradix: '#C49A3C',
+  teradix: '#7C3AED',
   dxtech: '#7F77DD',
   consulting: '#1D9E75',
   personal: '#888780',
@@ -19,7 +19,7 @@ export const COMPANY_COLORS: Record<CompanyTag, string> = {
 export type Quadrant = 'do' | 'schedule' | 'delegate' | 'eliminate'
 
 export const QUADRANT_META: Record<Quadrant, { label: string; sub: string; color: string }> = {
-  do:       { label: 'Do',       sub: 'Urgent + Important',     color: '#C49A3C' },
+  do:       { label: 'Do',       sub: 'Urgent + Important',     color: '#7C3AED' },
   schedule: { label: 'Schedule', sub: 'Not Urgent + Important', color: '#7F77DD' },
   delegate: { label: 'Delegate', sub: 'Urgent + Not Important', color: '#1D9E75' },
   eliminate:{ label: 'Eliminate',sub: 'Not Urgent + Not Important', color: '#888780' },

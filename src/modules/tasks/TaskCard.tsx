@@ -37,8 +37,8 @@ export function TaskCard({ task }: TaskCardProps) {
       ref={setNodeRef}
       style={{
         ...style,
-        background: hovered ? '#2e261c' : '#2A2218',
-        border: `1px solid ${isDragging ? '#C49A3C' : '#3A3020'}`,
+        background: hovered ? '#2e261c' : '#161929',
+        border: `1px solid ${isDragging ? '#7C3AED' : '#252A3E'}`,
         borderRadius: 8,
         padding: '10px 12px',
         cursor: isDragging ? 'grabbing' : 'default',
@@ -70,7 +70,7 @@ export function TaskCard({ task }: TaskCardProps) {
           {...attributes}
           style={{
             cursor: 'grab',
-            color: hovered ? '#8A7A60' : 'transparent',
+            color: hovered ? '#6B7280' : 'transparent',
             transition: 'color 0.15s',
             marginTop: 1,
             flexShrink: 0,
@@ -86,7 +86,7 @@ export function TaskCard({ task }: TaskCardProps) {
             width: 16,
             height: 16,
             borderRadius: 4,
-            border: `1.5px solid ${task.completed ? '#1D9E75' : '#3A3020'}`,
+            border: `1.5px solid ${task.completed ? '#1D9E75' : '#252A3E'}`,
             background: task.completed ? '#1D9E75' : 'transparent',
             display: 'flex',
             alignItems: 'center',
@@ -107,7 +107,7 @@ export function TaskCard({ task }: TaskCardProps) {
               margin: 0,
               fontSize: 13,
               fontWeight: 500,
-              color: '#F0E8D8',
+              color: '#E8EAF6',
               lineHeight: 1.35,
               textDecoration: task.completed ? 'line-through' : 'none',
               overflow: 'hidden',
@@ -122,7 +122,7 @@ export function TaskCard({ task }: TaskCardProps) {
               style={{
                 margin: '2px 0 0',
                 fontSize: 11.5,
-                color: '#8A7A60',
+                color: '#6B7280',
                 lineHeight: 1.3,
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
@@ -149,7 +149,7 @@ export function TaskCard({ task }: TaskCardProps) {
               {COMPANY_LABELS[task.company]}
             </span>
             {task.dueDate && (
-              <span style={{ fontSize: 10.5, color: '#8A7A60' }}>
+              <span style={{ fontSize: 10.5, color: '#6B7280' }}>
                 {new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
               </span>
             )}
@@ -164,7 +164,7 @@ export function TaskCard({ task }: TaskCardProps) {
               background: 'transparent',
               border: 'none',
               cursor: 'pointer',
-              color: '#8A7A60',
+              color: '#6B7280',
               padding: 2,
               borderRadius: 4,
               display: 'flex',

@@ -33,7 +33,7 @@ interface TriageState {
 // ─── Meta ─────────────────────────────────────────────────────────────────────
 
 const CLASS_META = {
-  decision: { label: 'Decision Needed', color: '#C49A3C', bg: 'rgba(196,154,60,0.1)' },
+  decision: { label: 'Decision Needed', color: '#7C3AED', bg: 'rgba(124,58,237,0.1)' },
   fyi:      { label: 'FYI',             color: '#7F77DD', bg: 'rgba(127,119,221,0.1)' },
   waiting:  { label: 'Waiting',         color: '#888780', bg: 'rgba(136,135,128,0.1)' },
   delegate: { label: 'Delegate',        color: '#1D9E75', bg: 'rgba(29,158,117,0.1)'  },
@@ -41,7 +41,7 @@ const CLASS_META = {
 
 const URGENCY_META = {
   high:   { label: 'High',   color: '#E05252' },
-  medium: { label: 'Medium', color: '#C49A3C' },
+  medium: { label: 'Medium', color: '#7C3AED' },
   low:    { label: 'Low',    color: '#888780' },
 } as const
 
@@ -167,11 +167,11 @@ export function InboxModule() {
   function renderLeft() {
     if (loading) {
       return (
-        <div style={{ background: '#2A2218', border: '1px solid #3A3020', borderRadius: 12, overflow: 'hidden' }}>
+        <div style={{ background: '#161929', border: '1px solid #252A3E', borderRadius: 12, overflow: 'hidden' }}>
           {[0,1,2,3].map(i => (
-            <div key={i} style={{ padding: '16px 18px', borderBottom: i < 3 ? '1px solid #3A3020' : 'none' }}>
-              <div style={{ height: 12, borderRadius: 6, background: 'linear-gradient(90deg,#3A3020 25%,#4A3E28 50%,#3A3020 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.6s infinite', marginBottom: 8, width: '60%' }} />
-              <div style={{ height: 10, borderRadius: 6, background: 'linear-gradient(90deg,#3A3020 25%,#4A3E28 50%,#3A3020 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.6s infinite', width: '80%' }} />
+            <div key={i} style={{ padding: '16px 18px', borderBottom: i < 3 ? '1px solid #252A3E' : 'none' }}>
+              <div style={{ height: 12, borderRadius: 6, background: 'linear-gradient(90deg,#252A3E 25%,#4A3E28 50%,#252A3E 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.6s infinite', marginBottom: 8, width: '60%' }} />
+              <div style={{ height: 10, borderRadius: 6, background: 'linear-gradient(90deg,#252A3E 25%,#4A3E28 50%,#252A3E 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.6s infinite', width: '80%' }} />
             </div>
           ))}
         </div>
@@ -181,7 +181,7 @@ export function InboxModule() {
     if (noAuth || emails.length === 0) return null
 
     return (
-      <div style={{ background: '#2A2218', border: '1px solid #3A3020', borderRadius: 12, overflow: 'hidden' }}>
+      <div style={{ background: '#161929', border: '1px solid #252A3E', borderRadius: 12, overflow: 'hidden' }}>
         {emails.map((email, i) => {
           const isSelected = selectedId === email.id
           const triage     = triageMap[email.id]
@@ -192,17 +192,17 @@ export function InboxModule() {
               onClick={() => setSelectedId(email.id)}
               style={{
                 width: '100%', padding: '15px 18px', textAlign: 'left',
-                background: isSelected ? 'rgba(196,154,60,0.06)' : 'transparent',
+                background: isSelected ? 'rgba(124,58,237,0.06)' : 'transparent',
                 border: 'none',
-                borderBottom: i < emails.length - 1 ? '1px solid #3A3020' : 'none',
-                borderLeft: isSelected ? '3px solid #C49A3C' : '3px solid transparent',
+                borderBottom: i < emails.length - 1 ? '1px solid #252A3E' : 'none',
+                borderLeft: isSelected ? '3px solid #7C3AED' : '3px solid transparent',
                 cursor: 'pointer',
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 3 }}>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: '#F0E8D8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: '#E8EAF6', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {email.fromName}
                     </span>
                     {classMeta && (
@@ -211,17 +211,17 @@ export function InboxModule() {
                       </span>
                     )}
                     {triage?.loading && (
-                      <RefreshCw size={10} color="#C49A3C" style={{ animation: 'spin 1s linear infinite', flexShrink: 0 }} />
+                      <RefreshCw size={10} color="#7C3AED" style={{ animation: 'spin 1s linear infinite', flexShrink: 0 }} />
                     )}
                   </div>
                   <p style={{ margin: '0 0 3px', fontSize: 12.5, color: '#C8BAA0', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {email.subject}
                   </p>
-                  <p style={{ margin: 0, fontSize: 11.5, color: '#8A7A60', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <p style={{ margin: 0, fontSize: 11.5, color: '#6B7280', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {email.preview}
                   </p>
                 </div>
-                <span style={{ fontSize: 10.5, color: '#8A7A60', flexShrink: 0, paddingTop: 2 }}>
+                <span style={{ fontSize: 10.5, color: '#6B7280', flexShrink: 0, paddingTop: 2 }}>
                   {fmtRelTime(email.receivedAt)}
                 </span>
               </div>
@@ -236,19 +236,19 @@ export function InboxModule() {
     if (noAuth) {
       return (
         <div style={{
-          background: '#2A2218', border: '1px dashed #3A3020',
+          background: '#161929', border: '1px dashed #252A3E',
           borderRadius: 12, padding: '48px 32px',
           display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16,
           textAlign: 'center',
         }}>
-          <div style={{ width: 48, height: 48, borderRadius: 12, background: 'rgba(196,154,60,0.08)', border: '1px solid rgba(196,154,60,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <WifiOff size={22} color="#C49A3C" />
+          <div style={{ width: 48, height: 48, borderRadius: 12, background: 'rgba(124,58,237,0.08)', border: '1px solid rgba(124,58,237,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <WifiOff size={22} color="#7C3AED" />
           </div>
           <div>
-            <p style={{ margin: '0 0 6px', fontSize: 16, fontWeight: 700, color: '#F0E8D8', fontFamily: "'Cabinet Grotesk', sans-serif" }}>
+            <p style={{ margin: '0 0 6px', fontSize: 16, fontWeight: 700, color: '#E8EAF6', fontFamily: "'Cabinet Grotesk', sans-serif" }}>
               Connect Gmail
             </p>
-            <p style={{ margin: 0, fontSize: 13, color: '#8A7A60', lineHeight: 1.6, maxWidth: 320 }}>
+            <p style={{ margin: 0, fontSize: 13, color: '#6B7280', lineHeight: 1.6, maxWidth: 320 }}>
               Sign in with Google to load your real unread emails and triage them with AI.
             </p>
           </div>
@@ -257,8 +257,8 @@ export function InboxModule() {
             style={{
               display: 'flex', alignItems: 'center', gap: 7,
               padding: '10px 22px', borderRadius: 8,
-              background: 'rgba(196,154,60,0.12)', border: '1px solid rgba(196,154,60,0.25)',
-              color: '#C49A3C', fontSize: 13, fontWeight: 500, cursor: 'pointer',
+              background: 'rgba(124,58,237,0.12)', border: '1px solid rgba(124,58,237,0.25)',
+              color: '#7C3AED', fontSize: 13, fontWeight: 500, cursor: 'pointer',
             }}
           >
             <Mail size={14} /> Connect Google Account
@@ -269,9 +269,9 @@ export function InboxModule() {
 
     if (fetchError) {
       return (
-        <div style={{ background: '#2A2218', border: '1px solid #3A3020', borderRadius: 12, padding: '32px', textAlign: 'center' }}>
-          <p style={{ margin: '0 0 14px', fontSize: 13, color: '#8A7A60' }}>{fetchError}</p>
-          <button onClick={() => void loadEmails()} style={{ padding: '7px 18px', borderRadius: 8, background: '#C49A3C18', border: '1px solid #C49A3C30', color: '#C49A3C', fontSize: 12, cursor: 'pointer' }}>
+        <div style={{ background: '#161929', border: '1px solid #252A3E', borderRadius: 12, padding: '32px', textAlign: 'center' }}>
+          <p style={{ margin: '0 0 14px', fontSize: 13, color: '#6B7280' }}>{fetchError}</p>
+          <button onClick={() => void loadEmails()} style={{ padding: '7px 18px', borderRadius: 8, background: '#7C3AED18', border: '1px solid #7C3AED30', color: '#7C3AED', fontSize: 12, cursor: 'pointer' }}>
             Retry
           </button>
         </div>
@@ -283,18 +283,18 @@ export function InboxModule() {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         {/* Email body */}
-        <div style={{ background: '#2A2218', border: '1px solid #3A3020', borderRadius: 12, padding: '22px 24px' }}>
-          <p style={{ margin: '0 0 8px', fontSize: 18, fontWeight: 700, color: '#F0E8D8', fontFamily: "'Cabinet Grotesk', sans-serif", letterSpacing: '-0.3px' }}>
+        <div style={{ background: '#161929', border: '1px solid #252A3E', borderRadius: 12, padding: '22px 24px' }}>
+          <p style={{ margin: '0 0 8px', fontSize: 18, fontWeight: 700, color: '#E8EAF6', fontFamily: "'Cabinet Grotesk', sans-serif", letterSpacing: '-0.3px' }}>
             {selectedEmail.subject}
           </p>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-            <span style={{ fontSize: 12.5, color: '#C49A3C', fontWeight: 500 }}>{selectedEmail.fromName}</span>
-            <span style={{ fontSize: 12, color: '#8A7A60' }}>{`<${selectedEmail.fromEmail}>`}</span>
-            <span style={{ fontSize: 11, color: '#8A7A60', marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span style={{ fontSize: 12.5, color: '#7C3AED', fontWeight: 500 }}>{selectedEmail.fromName}</span>
+            <span style={{ fontSize: 12, color: '#6B7280' }}>{`<${selectedEmail.fromEmail}>`}</span>
+            <span style={{ fontSize: 11, color: '#6B7280', marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4 }}>
               <Clock size={10} />{fmtRelTime(selectedEmail.receivedAt)}
             </span>
           </div>
-          <div style={{ height: 1, background: '#3A3020', marginBottom: 16 }} />
+          <div style={{ height: 1, background: '#252A3E', marginBottom: 16 }} />
           <p style={{ margin: 0, fontSize: 13.5, color: '#C8BAA0', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
             {selectedEmail.body}
           </p>
@@ -302,58 +302,58 @@ export function InboxModule() {
 
         {/* Triage panel */}
         {selectedTriage?.loading ? (
-          <div style={{ background: '#2A2218', border: '1px solid rgba(196,154,60,0.2)', borderRadius: 12, padding: '22px 24px', display: 'flex', alignItems: 'center', gap: 12 }}>
-            <RefreshCw size={15} color="#C49A3C" style={{ animation: 'spin 1s linear infinite' }} />
-            <span style={{ fontSize: 13, color: '#C49A3C' }}>The Professor is analyzing this email…</span>
+          <div style={{ background: '#161929', border: '1px solid rgba(124,58,237,0.2)', borderRadius: 12, padding: '22px 24px', display: 'flex', alignItems: 'center', gap: 12 }}>
+            <RefreshCw size={15} color="#7C3AED" style={{ animation: 'spin 1s linear infinite' }} />
+            <span style={{ fontSize: 13, color: '#7C3AED' }}>The Professor is analyzing this email…</span>
           </div>
 
         ) : selectedTriage?.error ? (
-          <div style={{ background: '#2A2218', border: '1px solid #3A3020', borderRadius: 12, padding: '20px 24px' }}>
-            <p style={{ margin: '0 0 12px', fontSize: 13, color: '#8A7A60' }}>{selectedTriage.error}</p>
-            <button onClick={() => void handleTriage(selectedEmail)} style={{ padding: '7px 14px', borderRadius: 7, background: '#C49A3C18', border: '1px solid #C49A3C30', color: '#C49A3C', fontSize: 12, cursor: 'pointer' }}>
+          <div style={{ background: '#161929', border: '1px solid #252A3E', borderRadius: 12, padding: '20px 24px' }}>
+            <p style={{ margin: '0 0 12px', fontSize: 13, color: '#6B7280' }}>{selectedTriage.error}</p>
+            <button onClick={() => void handleTriage(selectedEmail)} style={{ padding: '7px 14px', borderRadius: 7, background: '#7C3AED18', border: '1px solid #7C3AED30', color: '#7C3AED', fontSize: 12, cursor: 'pointer' }}>
               Try again
             </button>
           </div>
 
         ) : selectedTriage?.result ? (
-          <div style={{ background: 'rgba(196,154,60,0.05)', border: '1px solid rgba(196,154,60,0.2)', borderRadius: 12, padding: '22px 24px' }}>
+          <div style={{ background: 'rgba(124,58,237,0.05)', border: '1px solid rgba(124,58,237,0.2)', borderRadius: 12, padding: '22px 24px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 18 }}>
-              <div style={{ width: 24, height: 24, borderRadius: 5, background: 'rgba(196,154,60,0.15)', border: '1px solid rgba(196,154,60,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Zap size={12} color="#C49A3C" />
+              <div style={{ width: 24, height: 24, borderRadius: 5, background: 'rgba(124,58,237,0.15)', border: '1px solid rgba(124,58,237,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Zap size={12} color="#7C3AED" />
               </div>
-              <span style={{ fontSize: 11, fontWeight: 600, color: '#C49A3C', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+              <span style={{ fontSize: 11, fontWeight: 600, color: '#7C3AED', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
                 The Professor's Triage
               </span>
             </div>
 
             <div style={{ display: 'flex', gap: 10, marginBottom: 18 }}>
               <div style={{ flex: 1, padding: '12px 14px', background: CLASS_META[selectedTriage.result.classification].bg, border: `1px solid ${CLASS_META[selectedTriage.result.classification].color}30`, borderRadius: 8 }}>
-                <div style={{ fontSize: 10, color: '#8A7A60', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Classification</div>
+                <div style={{ fontSize: 10, color: '#6B7280', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Classification</div>
                 <div style={{ fontSize: 14, fontWeight: 600, color: CLASS_META[selectedTriage.result.classification].color }}>
                   {CLASS_META[selectedTriage.result.classification].label}
                 </div>
               </div>
-              <div style={{ flex: 1, padding: '12px 14px', background: '#1C1814', border: `1px solid ${URGENCY_META[selectedTriage.result.urgency].color}30`, borderRadius: 8 }}>
-                <div style={{ fontSize: 10, color: '#8A7A60', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Urgency</div>
+              <div style={{ flex: 1, padding: '12px 14px', background: '#0D0F1A', border: `1px solid ${URGENCY_META[selectedTriage.result.urgency].color}30`, borderRadius: 8 }}>
+                <div style={{ fontSize: 10, color: '#6B7280', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Urgency</div>
                 <div style={{ fontSize: 14, fontWeight: 600, color: URGENCY_META[selectedTriage.result.urgency].color }}>
                   {URGENCY_META[selectedTriage.result.urgency].label}
                 </div>
               </div>
               {selectedTriage.result.followUpDate && (
-                <div style={{ flex: 1, padding: '12px 14px', background: '#1C1814', border: '1px solid #3A3020', borderRadius: 8 }}>
-                  <div style={{ fontSize: 10, color: '#8A7A60', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Follow Up</div>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: '#F0E8D8' }}>{selectedTriage.result.followUpDate}</div>
+                <div style={{ flex: 1, padding: '12px 14px', background: '#0D0F1A', border: '1px solid #252A3E', borderRadius: 8 }}>
+                  <div style={{ fontSize: 10, color: '#6B7280', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Follow Up</div>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: '#E8EAF6' }}>{selectedTriage.result.followUpDate}</div>
                 </div>
               )}
             </div>
 
             {selectedTriage.result.suggestedReply && (
-              <div style={{ background: '#1C1814', border: '1px solid #3A3020', borderRadius: 8, padding: '14px 16px' }}>
+              <div style={{ background: '#0D0F1A', border: '1px solid #252A3E', borderRadius: 8, padding: '14px 16px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                  <span style={{ fontSize: 11, fontWeight: 600, color: '#8A7A60', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Suggested Reply</span>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Suggested Reply</span>
                   <button
                     onClick={() => handleCopyReply(selectedEmail.id, selectedTriage.result!.suggestedReply)}
-                    style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 9px', borderRadius: 5, background: 'transparent', border: '1px solid #3A3020', color: '#8A7A60', fontSize: 11, cursor: 'pointer' }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 9px', borderRadius: 5, background: 'transparent', border: '1px solid #252A3E', color: '#6B7280', fontSize: 11, cursor: 'pointer' }}
                   >
                     {selectedTriage.copied ? <><CheckCheck size={10} /><span>Copied</span></> : <><Copy size={10} /><span>Copy</span></>}
                   </button>
@@ -366,17 +366,17 @@ export function InboxModule() {
           </div>
 
         ) : (
-          <div style={{ background: '#2A2218', border: '1px dashed #3A3020', borderRadius: 12, padding: '36px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
-            <div style={{ width: 44, height: 44, borderRadius: 10, background: 'rgba(196,154,60,0.08)', border: '1px solid rgba(196,154,60,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Zap size={18} color="#C49A3C" />
+          <div style={{ background: '#161929', border: '1px dashed #252A3E', borderRadius: 12, padding: '36px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
+            <div style={{ width: 44, height: 44, borderRadius: 10, background: 'rgba(124,58,237,0.08)', border: '1px solid rgba(124,58,237,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Zap size={18} color="#7C3AED" />
             </div>
             <div style={{ textAlign: 'center' }}>
-              <p style={{ margin: '0 0 5px', fontSize: 14, color: '#F0E8D8', fontWeight: 500 }}>Let The Professor triage this</p>
-              <p style={{ margin: 0, fontSize: 12.5, color: '#8A7A60' }}>Get classification, urgency level, and a ready-to-send reply</p>
+              <p style={{ margin: '0 0 5px', fontSize: 14, color: '#E8EAF6', fontWeight: 500 }}>Let The Professor triage this</p>
+              <p style={{ margin: 0, fontSize: 12.5, color: '#6B7280' }}>Get classification, urgency level, and a ready-to-send reply</p>
             </div>
             <button
               onClick={() => void handleTriage(selectedEmail)}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 20px', borderRadius: 8, background: 'rgba(196,154,60,0.12)', border: '1px solid rgba(196,154,60,0.25)', color: '#C49A3C', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 20px', borderRadius: 8, background: 'rgba(124,58,237,0.12)', border: '1px solid rgba(124,58,237,0.25)', color: '#7C3AED', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}
             >
               <Zap size={13} /> Triage with AI <ArrowRight size={13} />
             </button>
@@ -401,21 +401,21 @@ export function InboxModule() {
 
         {/* Stats bar */}
         {!noAuth && (
-          <div style={{ display: 'flex', gap: 20, marginBottom: 20, padding: '13px 20px', background: '#2A2218', border: '1px solid #3A3020', borderRadius: 10, alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: 20, marginBottom: 20, padding: '13px 20px', background: '#161929', border: '1px solid #252A3E', borderRadius: 10, alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-              <Mail size={14} color="#C49A3C" />
-              <span style={{ fontSize: 13, color: '#F0E8D8' }}>{loading ? '…' : emails.length} unread</span>
+              <Mail size={14} color="#7C3AED" />
+              <span style={{ fontSize: 13, color: '#E8EAF6' }}>{loading ? '…' : emails.length} unread</span>
             </div>
-            <div style={{ width: 1, height: 14, background: '#3A3020' }} />
+            <div style={{ width: 1, height: 14, background: '#252A3E' }} />
             <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
               <Zap size={14} color="#1D9E75" />
-              <span style={{ fontSize: 13, color: '#F0E8D8' }}>{triagedCount} triaged</span>
+              <span style={{ fontSize: 13, color: '#E8EAF6' }}>{triagedCount} triaged</span>
             </div>
             <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
               <button
                 onClick={() => void loadEmails()}
                 disabled={loading}
-                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 7, background: 'transparent', border: '1px solid #3A3020', color: '#8A7A60', fontSize: 12, cursor: 'pointer', opacity: loading ? 0.5 : 1 }}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 7, background: 'transparent', border: '1px solid #252A3E', color: '#6B7280', fontSize: 12, cursor: 'pointer', opacity: loading ? 0.5 : 1 }}
               >
                 <RefreshCw size={12} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} />
                 Refresh
@@ -424,7 +424,7 @@ export function InboxModule() {
                 <button
                   onClick={() => void handleTriage(selectedEmail)}
                   disabled={triageMap[selectedEmail.id]?.loading}
-                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 7, background: 'rgba(196,154,60,0.12)', border: '1px solid rgba(196,154,60,0.25)', color: '#C49A3C', fontSize: 12, fontWeight: 500, cursor: 'pointer', opacity: triageMap[selectedEmail.id]?.loading ? 0.5 : 1 }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 7, background: 'rgba(124,58,237,0.12)', border: '1px solid rgba(124,58,237,0.25)', color: '#7C3AED', fontSize: 12, fontWeight: 500, cursor: 'pointer', opacity: triageMap[selectedEmail.id]?.loading ? 0.5 : 1 }}
                 >
                   <Zap size={12} /> Triage with AI
                 </button>

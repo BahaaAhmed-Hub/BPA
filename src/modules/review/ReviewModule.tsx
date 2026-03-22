@@ -101,7 +101,7 @@ function StatCard({
 }) {
   return (
     <div style={{
-      background: '#2A2218', border: '1px solid #3A3020',
+      background: '#161929', border: '1px solid #252A3E',
       borderRadius: 12, padding: '18px 20px',
       position: 'relative', overflow: 'hidden',
     }}>
@@ -116,18 +116,18 @@ function StatCard({
               value={value}
               onChange={e => onChange(parseFloat(e.target.value) || 0)}
               style={{
-                fontSize: 28, fontWeight: 700, color: '#F0E8D8',
+                fontSize: 28, fontWeight: 700, color: '#E8EAF6',
                 fontFamily: "'Cabinet Grotesk', sans-serif", letterSpacing: '-0.5px',
                 background: 'none', border: 'none', outline: 'none',
                 width: 80, padding: 0,
               }}
             />
           ) : (
-            <div style={{ fontSize: 28, fontWeight: 700, color: '#F0E8D8', fontFamily: "'Cabinet Grotesk', sans-serif", letterSpacing: '-0.5px', lineHeight: 1 }}>
+            <div style={{ fontSize: 28, fontWeight: 700, color: '#E8EAF6', fontFamily: "'Cabinet Grotesk', sans-serif", letterSpacing: '-0.5px', lineHeight: 1 }}>
               {value}
             </div>
           )}
-          <div style={{ fontSize: 12.5, color: '#8A7A60', marginTop: 4 }}>{label}</div>
+          <div style={{ fontSize: 12.5, color: '#6B7280', marginTop: 4 }}>{label}</div>
           <div style={{ fontSize: 11, color, marginTop: 6, fontWeight: 500 }}>{sub}</div>
         </div>
         <div style={{
@@ -218,10 +218,10 @@ export function ReviewModule() {
         {/* ─── Week label ───────────────────────────────────────────────────── */}
         <div style={{ marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <h2 style={{ margin: '0 0 3px', fontSize: 20, fontWeight: 700, color: '#F0E8D8', fontFamily: "'Cabinet Grotesk', sans-serif", letterSpacing: '-0.3px' }}>
+            <h2 style={{ margin: '0 0 3px', fontSize: 20, fontWeight: 700, color: '#E8EAF6', fontFamily: "'Cabinet Grotesk', sans-serif", letterSpacing: '-0.3px' }}>
               Week of {new Date(getMonday() + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
             </h2>
-            <p style={{ margin: 0, fontSize: 13, color: '#8A7A60' }}>
+            <p style={{ margin: 0, fontSize: 13, color: '#6B7280' }}>
               Adjust hours below, then generate your AI insight.
             </p>
           </div>
@@ -231,8 +231,8 @@ export function ReviewModule() {
             style={{
               display: 'flex', alignItems: 'center', gap: 7,
               padding: '9px 18px', borderRadius: 8,
-              background: 'rgba(196,154,60,0.12)', border: '1px solid rgba(196,154,60,0.25)',
-              color: '#C49A3C', fontSize: 13, fontWeight: 500, cursor: 'pointer',
+              background: 'rgba(124,58,237,0.12)', border: '1px solid rgba(124,58,237,0.25)',
+              color: '#7C3AED', fontSize: 13, fontWeight: 500, cursor: 'pointer',
               opacity: loading ? 0.6 : 1,
             }}
           >
@@ -271,7 +271,7 @@ export function ReviewModule() {
             value={meetingHours}
             sub="Click to edit"
             icon={Users}
-            color="#C49A3C"
+            color="#7C3AED"
             editable
             onChange={v => { setMeetingHours(v); saveHours(focusHours, v) }}
           />
@@ -280,19 +280,19 @@ export function ReviewModule() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
 
           {/* ─── Completed tasks ──────────────────────────────────────────── */}
-          <div style={{ background: '#2A2218', border: '1px solid #3A3020', borderRadius: 14, padding: '22px 24px' }}>
-            <p style={{ margin: '0 0 16px', fontSize: 11, fontWeight: 600, color: '#8A7A60', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+          <div style={{ background: '#161929', border: '1px solid #252A3E', borderRadius: 14, padding: '22px 24px' }}>
+            <p style={{ margin: '0 0 16px', fontSize: 11, fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
               Shipped This Week
             </p>
             {completedTasks.length === 0 ? (
-              <p style={{ margin: 0, fontSize: 13, color: '#8A7A60' }}>No completed tasks yet.</p>
+              <p style={{ margin: 0, fontSize: 13, color: '#6B7280' }}>No completed tasks yet.</p>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {completedTasks.slice(0, 8).map(task => (
                   <div key={task.id} style={{
                     display: 'flex', alignItems: 'center', gap: 10,
                     padding: '10px 12px', borderRadius: 8,
-                    background: '#1C1814', border: '1px solid #3A3020',
+                    background: '#0D0F1A', border: '1px solid #252A3E',
                   }}>
                     <CheckSquare size={13} color="#1D9E75" style={{ flexShrink: 0 }} />
                     <span style={{ fontSize: 13, color: '#C8BAA0', flex: 1, textDecoration: 'line-through', opacity: 0.7 }}>
@@ -311,7 +311,7 @@ export function ReviewModule() {
                   </div>
                 ))}
                 {completedTasks.length > 8 && (
-                  <p style={{ margin: '4px 0 0', fontSize: 12, color: '#8A7A60', textAlign: 'center' }}>
+                  <p style={{ margin: '4px 0 0', fontSize: 12, color: '#6B7280', textAlign: 'center' }}>
                     + {completedTasks.length - 8} more
                   </p>
                 )}
@@ -322,23 +322,23 @@ export function ReviewModule() {
           {/* ─── AI Insight ───────────────────────────────────────────────── */}
           <div style={{
             background: loading
-              ? '#2A2218'
+              ? '#161929'
               : insight
-                ? 'rgba(196,154,60,0.05)'
-                : '#2A2218',
-            border: `1px solid ${insight ? 'rgba(196,154,60,0.2)' : '#3A3020'}`,
+                ? 'rgba(124,58,237,0.05)'
+                : '#161929',
+            border: `1px solid ${insight ? 'rgba(124,58,237,0.2)' : '#252A3E'}`,
             borderRadius: 14, padding: '22px 24px',
             display: 'flex', flexDirection: 'column',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
               <div style={{
                 width: 26, height: 26, borderRadius: 6,
-                background: 'rgba(196,154,60,0.12)', border: '1px solid rgba(196,154,60,0.25)',
+                background: 'rgba(124,58,237,0.12)', border: '1px solid rgba(124,58,237,0.25)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
-                <Sparkles size={13} color="#C49A3C" />
+                <Sparkles size={13} color="#7C3AED" />
               </div>
-              <span style={{ fontSize: 11, fontWeight: 600, color: '#C49A3C', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+              <span style={{ fontSize: 11, fontWeight: 600, color: '#7C3AED', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
                 The Professor's Insight
               </span>
             </div>
@@ -346,26 +346,26 @@ export function ReviewModule() {
             {loading ? (
               <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10 }}>
                 <style>{`@keyframes spin { from { transform: rotate(0deg) } to { transform: rotate(360deg) } }`}</style>
-                <RefreshCw size={14} color="#C49A3C" style={{ animation: 'spin 1s linear infinite' }} />
-                <span style={{ fontSize: 13, color: '#C49A3C' }}>Analyzing your week…</span>
+                <RefreshCw size={14} color="#7C3AED" style={{ animation: 'spin 1s linear infinite' }} />
+                <span style={{ fontSize: 13, color: '#7C3AED' }}>Analyzing your week…</span>
               </div>
             ) : error ? (
               <div style={{ flex: 1 }}>
-                <p style={{ margin: '0 0 12px', fontSize: 13, color: '#8A7A60' }}>{error}</p>
+                <p style={{ margin: '0 0 12px', fontSize: 13, color: '#6B7280' }}>{error}</p>
                 <button
                   onClick={() => void handleGenerate()}
-                  style={{ padding: '7px 14px', borderRadius: 7, background: '#C49A3C18', border: '1px solid #C49A3C30', color: '#C49A3C', fontSize: 12, cursor: 'pointer' }}
+                  style={{ padding: '7px 14px', borderRadius: 7, background: '#7C3AED18', border: '1px solid #7C3AED30', color: '#7C3AED', fontSize: 12, cursor: 'pointer' }}
                 >
                   Try again
                 </button>
               </div>
             ) : insight ? (
-              <p style={{ margin: 0, fontSize: 14, color: '#F0E8D8', lineHeight: 1.7 }}>
+              <p style={{ margin: 0, fontSize: 14, color: '#E8EAF6', lineHeight: 1.7 }}>
                 {insight}
               </p>
             ) : (
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, padding: '16px 0' }}>
-                <Sparkles size={28} color="#3A3020" />
+                <Sparkles size={28} color="#252A3E" />
                 <div style={{ textAlign: 'center' }}>
                   <p style={{ margin: '0 0 4px', fontSize: 14, color: '#5A4E3A', fontWeight: 500 }}>
                     No insight yet

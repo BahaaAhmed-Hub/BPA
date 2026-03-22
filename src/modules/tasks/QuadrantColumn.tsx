@@ -37,8 +37,8 @@ export function QuadrantColumn({ quadrant, tasks }: QuadrantColumnProps) {
       style={{
         display: 'flex',
         flexDirection: 'column',
-        background: '#2A2218',
-        border: `1px solid ${isOver ? meta.color + '60' : '#3A3020'}`,
+        background: '#161929',
+        border: `1px solid ${isOver ? meta.color + '60' : '#252A3E'}`,
         borderRadius: 12,
         overflow: 'hidden',
         transition: 'border-color 0.15s ease',
@@ -49,7 +49,7 @@ export function QuadrantColumn({ quadrant, tasks }: QuadrantColumnProps) {
       <div
         style={{
           padding: '14px 16px 12px',
-          borderBottom: '1px solid #3A3020',
+          borderBottom: '1px solid #252A3E',
           background: isOver ? `${meta.color}08` : 'transparent',
           transition: 'background 0.15s ease',
         }}
@@ -69,7 +69,7 @@ export function QuadrantColumn({ quadrant, tasks }: QuadrantColumnProps) {
               margin: 0,
               fontSize: 14,
               fontWeight: 700,
-              color: '#F0E8D8',
+              color: '#E8EAF6',
               fontFamily: "'Cabinet Grotesk', sans-serif",
               letterSpacing: '-0.2px',
             }}
@@ -90,7 +90,7 @@ export function QuadrantColumn({ quadrant, tasks }: QuadrantColumnProps) {
             {tasks.length}
           </span>
         </div>
-        <p style={{ margin: '3px 0 0 16px', fontSize: 11, color: '#8A7A60' }}>
+        <p style={{ margin: '3px 0 0 16px', fontSize: 11, color: '#6B7280' }}>
           {meta.sub}
         </p>
       </div>
@@ -121,11 +121,11 @@ export function QuadrantColumn({ quadrant, tasks }: QuadrantColumnProps) {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#8A7A60',
+              color: '#6B7280',
               fontSize: 12,
               fontStyle: 'italic',
               opacity: isOver ? 0 : 0.6,
-              border: `1px dashed ${isOver ? meta.color : '#3A3020'}`,
+              border: `1px dashed ${isOver ? meta.color : '#252A3E'}`,
               borderRadius: 8,
               minHeight: 80,
               transition: 'all 0.15s ease',
@@ -137,7 +137,7 @@ export function QuadrantColumn({ quadrant, tasks }: QuadrantColumnProps) {
       </div>
 
       {/* Add task */}
-      <div style={{ padding: '8px 10px', borderTop: '1px solid #3A3020' }}>
+      <div style={{ padding: '8px 10px', borderTop: '1px solid #252A3E' }}>
         {adding ? (
           <div style={{ display: 'flex', gap: 6 }}>
             <input
@@ -152,12 +152,12 @@ export function QuadrantColumn({ quadrant, tasks }: QuadrantColumnProps) {
               placeholder="Task title..."
               style={{
                 flex: 1,
-                background: '#1C1814',
-                border: '1px solid #3A3020',
+                background: '#0D0F1A',
+                border: '1px solid #252A3E',
                 borderRadius: 6,
                 padding: '6px 10px',
                 fontSize: 12.5,
-                color: '#F0E8D8',
+                color: '#E8EAF6',
                 outline: 'none',
               }}
             />
@@ -173,14 +173,14 @@ export function QuadrantColumn({ quadrant, tasks }: QuadrantColumnProps) {
               display: 'flex',
               alignItems: 'center',
               gap: 5,
-              color: '#8A7A60',
+              color: '#6B7280',
               fontSize: 12,
               padding: '4px 4px',
               borderRadius: 6,
               transition: 'color 0.15s ease',
             }}
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#C49A3C' }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#8A7A60' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#7C3AED' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#6B7280' }}
           >
             <Plus size={12} strokeWidth={2.5} />
             Add task
