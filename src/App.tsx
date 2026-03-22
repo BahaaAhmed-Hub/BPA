@@ -160,131 +160,171 @@ function LoginScreen() {
         </div>
       </div>
 
-      {/* Right panel — SVG illustration */}
+      {/* Right panel — Power illustration */}
       <div style={{
-        width: 440,
-        background: 'rgba(255,255,255,0.018)',
-        borderLeft: '1px solid rgba(30,64,175,0.15)',
+        flex: '0 0 480px',
+        background: 'linear-gradient(160deg, rgba(30,64,175,0.08) 0%, rgba(13,15,26,0) 60%)',
+        borderLeft: '1px solid rgba(59,130,246,0.18)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '48px 40px',
         position: 'relative',
         overflow: 'hidden',
+        minHeight: '100vh',
       }}>
-        {/* Ambient glow behind SVG */}
-        <div style={{
-          position: 'absolute', top: '50%', left: '50%',
-          transform: 'translate(-50%, -50%)',
-          width: 340, height: 340, borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(30,64,175,0.12) 0%, transparent 70%)',
-          pointerEvents: 'none',
-        }} />
+        {/* Multi-layer ambient glow */}
+        <div style={{ position:'absolute', top:'20%', left:'50%', transform:'translate(-50%,-50%)', width:500, height:500, borderRadius:'50%', background:'radial-gradient(circle, rgba(59,130,246,0.13) 0%, transparent 65%)', pointerEvents:'none' }} />
+        <div style={{ position:'absolute', bottom:'15%', left:'30%', width:300, height:300, borderRadius:'50%', background:'radial-gradient(circle, rgba(52,211,153,0.08) 0%, transparent 65%)', pointerEvents:'none' }} />
+        <div style={{ position:'absolute', top:'50%', right:'10%', width:200, height:200, borderRadius:'50%', background:'radial-gradient(circle, rgba(251,146,60,0.07) 0%, transparent 65%)', pointerEvents:'none' }} />
 
-        <svg viewBox="0 0 360 400" fill="none" xmlns="http://www.w3.org/2000/svg"
-          style={{ width: '100%', maxWidth: 360, position: 'relative', zIndex: 1 }}>
+        <svg viewBox="0 0 440 580" fill="none" xmlns="http://www.w3.org/2000/svg"
+          style={{ width:'100%', height:'100%', maxHeight:'100vh', position:'relative', zIndex:1 }}>
           <defs>
-            <linearGradient id="gBlue" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor="#3B82F6" />
-              <stop offset="100%" stopColor="#1E40AF" />
+            <linearGradient id="gCore" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor="#60A5FA" />
+              <stop offset="100%" stopColor="#1D4ED8" />
             </linearGradient>
             <linearGradient id="gTeal" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor="#34D399" />
+              <stop offset="0%" stopColor="#6EE7B7" />
               <stop offset="100%" stopColor="#059669" />
             </linearGradient>
+            <linearGradient id="gAmber" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor="#FCD34D" />
+              <stop offset="100%" stopColor="#F59E0B" />
+            </linearGradient>
+            <linearGradient id="gRose" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor="#FDA4AF" />
+              <stop offset="100%" stopColor="#E11D48" />
+            </linearGradient>
             <linearGradient id="gIndigo" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor="#818CF8" />
-              <stop offset="100%" stopColor="#4F46E5" />
+              <stop offset="0%" stopColor="#A5B4FC" />
+              <stop offset="100%" stopColor="#4338CA" />
             </linearGradient>
-            <linearGradient id="gOrange" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor="#FB923C" />
-              <stop offset="100%" stopColor="#EA580C" />
-            </linearGradient>
+            <radialGradient id="coreGlow" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="#3B82F6" stopOpacity="0.5" />
+              <stop offset="100%" stopColor="#1E40AF" stopOpacity="0" />
+            </radialGradient>
+            <filter id="blur1"><feGaussianBlur stdDeviation="8" /></filter>
+            <filter id="blur2"><feGaussianBlur stdDeviation="3" /></filter>
           </defs>
 
-          {/* ── Central AI Brain ── */}
-          <circle cx="180" cy="180" r="56" fill="url(#gBlue)" opacity="0.15" />
-          <circle cx="180" cy="180" r="44" fill="url(#gBlue)" opacity="0.18" />
-          <circle cx="180" cy="180" r="32" fill="url(#gBlue)" opacity="0.9" />
-          {/* Brain icon paths */}
-          <g transform="translate(163, 163)">
-            <path d="M17 8.5C17 5.46 14.54 3 11.5 3C10.24 3 9.09 3.45 8.2 4.2C7.48 3.46 6.49 3 5.39 3C3.52 3 1.96 4.27 1.5 6C0.62 6.34 0 7.18 0 8.17C0 8.9 0.32 9.56 0.83 10.02C0.31 10.48 0 11.16 0 11.92C0 13.07 0.75 14.04 1.79 14.38C1.94 16.37 3.59 17.94 5.61 18H8V22H9V18H11V22H12V18H12.39C14.41 18 16.07 16.43 16.21 14.43C17.25 14.1 18 13.12 18 11.96C18 11.21 17.69 10.54 17.18 10.08C17.71 9.62 18 8.97 18 8.27L17 8.5Z" fill="white" fillOpacity="0.9" />
-          </g>
+          {/* ── Deep glow behind core ── */}
+          <circle cx="220" cy="240" r="120" fill="url(#coreGlow)" filter="url(#blur1)" />
+          <circle cx="220" cy="240" r="80"  fill="rgba(59,130,246,0.12)" filter="url(#blur2)" />
 
-          {/* ── Orbit ring ── */}
-          <circle cx="180" cy="180" r="80" stroke="rgba(59,130,246,0.2)" strokeWidth="1" strokeDasharray="4 6" />
-          <circle cx="180" cy="180" r="110" stroke="rgba(59,130,246,0.1)" strokeWidth="1" strokeDasharray="2 8" />
+          {/* ── Rotating orbit rings ── */}
+          <circle cx="220" cy="240" r="130" stroke="rgba(59,130,246,0.18)" strokeWidth="1.5" strokeDasharray="6 9"  style={{ transformOrigin:'220px 240px', animation:'spin 22s linear infinite' }} />
+          <circle cx="220" cy="240" r="100" stroke="rgba(99,102,241,0.15)"  strokeWidth="1"   strokeDasharray="3 12" style={{ transformOrigin:'220px 240px', animation:'spinR 16s linear infinite' }} />
+          <circle cx="220" cy="240" r="160" stroke="rgba(52,211,153,0.10)"  strokeWidth="1"   strokeDasharray="2 14" style={{ transformOrigin:'220px 240px', animation:'spin 30s linear infinite' }} />
 
-          {/* ── Satellite nodes ── */}
-          {/* Calendar - top */}
-          <circle cx="180" cy="100" r="22" fill="#161929" stroke="rgba(59,130,246,0.4)" strokeWidth="1.5" />
-          <rect x="171" y="108" width="18" height="14" rx="2" fill="none" stroke="#3B82F6" strokeWidth="1.4" />
-          <line x1="171" y1="113" x2="189" y2="113" stroke="#3B82F6" strokeWidth="1.2" />
-          <rect x="174" y="116" width="3" height="3" rx="0.5" fill="#3B82F6" />
-          <rect x="179" y="116" width="3" height="3" rx="0.5" fill="#3B82F6" />
-          <rect x="184" y="116" width="3" height="3" rx="0.5" fill="#60A5FA" opacity="0.5" />
-          <line x1="175" y1="108" x2="175" y2="105" stroke="#3B82F6" strokeWidth="1.5" strokeLinecap="round" />
-          <line x1="185" y1="108" x2="185" y2="105" stroke="#3B82F6" strokeWidth="1.5" strokeLinecap="round" />
-          <text x="180" y="97" textAnchor="middle" fontSize="8" fill="#60A5FA" fontFamily="DM Sans">Calendar</text>
+          {/* ── Connector beams (center → satellites) ── */}
+          <line x1="220" y1="195" x2="220" y2="115"  stroke="url(#gCore)"  strokeWidth="1.5" opacity="0.4" />
+          <line x1="260" y1="215" x2="326" y2="162"  stroke="url(#gIndigo)" strokeWidth="1.5" opacity="0.4" />
+          <line x1="265" y1="255" x2="336" y2="310"  stroke="url(#gTeal)"  strokeWidth="1.5" opacity="0.4" />
+          <line x1="220" y1="285" x2="220" y2="355"  stroke="url(#gAmber)" strokeWidth="1.5" opacity="0.4" />
+          <line x1="175" y1="255" x2="104" y2="310"  stroke="url(#gRose)"  strokeWidth="1.5" opacity="0.4" />
+          <line x1="180" y1="215" x2="114" y2="162"  stroke="url(#gCore)"  strokeWidth="1.5" opacity="0.4" />
 
-          {/* Inbox - right */}
-          <circle cx="260" cy="180" r="22" fill="#161929" stroke="rgba(129,140,248,0.4)" strokeWidth="1.5" />
-          <rect x="251" y="173" width="18" height="13" rx="2" fill="none" stroke="#818CF8" strokeWidth="1.4" />
-          <polyline points="251,174 260,181 269,174" fill="none" stroke="#818CF8" strokeWidth="1.2" />
-          <text x="260" y="210" textAnchor="middle" fontSize="8" fill="#818CF8" fontFamily="DM Sans">Inbox</text>
+          {/* ── Central AI Core ── */}
+          <circle cx="220" cy="240" r="58" fill="rgba(30,58,138,0.6)" stroke="rgba(96,165,250,0.6)" strokeWidth="2" />
+          <circle cx="220" cy="240" r="46" fill="rgba(29,78,216,0.8)" stroke="rgba(147,197,253,0.3)" strokeWidth="1" style={{ animation:'pulse 3s ease-in-out infinite' }} />
+          {/* AI lightning bolt — power symbol */}
+          <polygon points="224,218 214,242 222,242 216,262 230,236 221,236" fill="white" opacity="0.95" />
+          {/* Inner glow ring */}
+          <circle cx="220" cy="240" r="58" fill="none" stroke="rgba(147,197,253,0.25)" strokeWidth="8" style={{ animation:'pulse 3s ease-in-out infinite' }} />
 
-          {/* Habits - bottom */}
-          <circle cx="180" cy="260" r="22" fill="#161929" stroke="rgba(52,211,153,0.4)" strokeWidth="1.5" />
-          <circle cx="180" cy="260" r="10" fill="none" stroke="#34D399" strokeWidth="1.4" strokeDasharray="3 2" />
-          <circle cx="180" cy="260" r="5" fill="#34D399" opacity="0.8" />
-          <text x="180" y="292" textAnchor="middle" fontSize="8" fill="#34D399" fontFamily="DM Sans">Habits</text>
+          {/* ══ Satellite: Calendar (top) ══ */}
+          <circle cx="220" cy="100" r="30" fill="rgba(14,20,50,0.95)" stroke="rgba(96,165,250,0.7)" strokeWidth="2" style={{ animation:'floatY 4s ease-in-out infinite' }} />
+          <rect x="209" y="110" width="22" height="17" rx="3" fill="none" stroke="#60A5FA" strokeWidth="1.8" />
+          <line x1="209" y1="116" x2="231" y2="116" stroke="#60A5FA" strokeWidth="1.4" />
+          <rect x="212" y="119" width="4" height="4" rx="1" fill="#60A5FA" />
+          <rect x="218" y="119" width="4" height="4" rx="1" fill="#60A5FA" />
+          <rect x="224" y="119" width="4" height="4" rx="1" fill="#93C5FD" opacity="0.5" />
+          <line x1="213" y1="110" x2="213" y2="106" stroke="#60A5FA" strokeWidth="2" strokeLinecap="round" />
+          <line x1="227" y1="110" x2="227" y2="106" stroke="#60A5FA" strokeWidth="2" strokeLinecap="round" />
+          <text x="220" y="93" textAnchor="middle" fontSize="10" fontWeight="700" fill="#93C5FD" fontFamily="DM Sans" letterSpacing="0.5">CALENDAR</text>
 
-          {/* Tasks - left */}
-          <circle cx="100" cy="180" r="22" fill="#161929" stroke="rgba(251,146,60,0.4)" strokeWidth="1.5" />
-          <line x1="93" y1="175" x2="107" y2="175" stroke="#FB923C" strokeWidth="1.3" strokeLinecap="round" />
-          <line x1="93" y1="180" x2="107" y2="180" stroke="#FB923C" strokeWidth="1.3" strokeLinecap="round" />
-          <line x1="93" y1="185" x2="102" y2="185" stroke="#FB923C" strokeWidth="1.3" strokeLinecap="round" opacity="0.5" />
-          <polyline points="90,173 93,176 99,170" fill="none" stroke="#34D399" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-          <text x="100" y="210" textAnchor="middle" fontSize="8" fill="#FB923C" fontFamily="DM Sans">Tasks</text>
+          {/* ══ Satellite: Inbox (top-right) ══ */}
+          <circle cx="340" cy="155" r="28" fill="rgba(14,20,50,0.95)" stroke="rgba(165,180,252,0.7)" strokeWidth="2" style={{ animation:'floatY 5s ease-in-out infinite 0.5s' }} />
+          <rect x="329" y="147" width="22" height="16" rx="3" fill="none" stroke="#A5B4FC" strokeWidth="1.8" />
+          <polyline points="329,148 340,157 351,148" fill="none" stroke="#A5B4FC" strokeWidth="1.6" />
+          <text x="340" y="143" textAnchor="middle" fontSize="10" fontWeight="700" fill="#C7D2FE" fontFamily="DM Sans" letterSpacing="0.5">INBOX</text>
+          <text x="340" y="194" textAnchor="middle" fontSize="9" fill="rgba(165,180,252,0.6)" fontFamily="DM Sans">12 triaged by AI</text>
 
-          {/* ── Connector lines from center to nodes ── */}
-          <line x1="180" y1="148" x2="180" y2="122" stroke="rgba(59,130,246,0.3)" strokeWidth="1" />
-          <line x1="212" y1="168" x2="238" y2="180" stroke="rgba(129,140,248,0.3)" strokeWidth="1" />
-          <line x1="180" y1="212" x2="180" y2="238" stroke="rgba(52,211,153,0.3)" strokeWidth="1" />
-          <line x1="148" y1="180" x2="122" y2="180" stroke="rgba(251,146,60,0.3)" strokeWidth="1" />
+          {/* ══ Satellite: Habits (bottom-right) ══ */}
+          <circle cx="340" cy="325" r="28" fill="rgba(14,20,50,0.95)" stroke="rgba(110,231,183,0.7)" strokeWidth="2" style={{ animation:'floatY 4.5s ease-in-out infinite 1s' }} />
+          <circle cx="340" cy="325" r="13" fill="none" stroke="#6EE7B7" strokeWidth="1.8" strokeDasharray="4 3" />
+          <circle cx="340" cy="325" r="6"  fill="#34D399" opacity="0.9" style={{ animation:'pulse 2.5s ease-in-out infinite' }} />
+          <text x="340" y="313" textAnchor="middle" fontSize="10" fontWeight="700" fill="#6EE7B7" fontFamily="DM Sans" letterSpacing="0.5">HABITS</text>
+          <text x="340" y="364" textAnchor="middle" fontSize="9" fill="rgba(110,231,183,0.6)" fontFamily="DM Sans">🔥 14-day streak</text>
 
-          {/* ── Floating data pills ── */}
-          {/* Pill 1 - top right */}
-          <rect x="218" y="118" width="96" height="24" rx="12" fill="rgba(59,130,246,0.1)" stroke="rgba(59,130,246,0.25)" strokeWidth="1" />
-          <circle cx="230" cy="130" r="5" fill="#3B82F6" opacity="0.9" />
-          <text x="240" y="134" fontSize="9.5" fill="white" fontFamily="DM Sans" fontWeight="500">AI Meeting Prep</text>
+          {/* ══ Satellite: Tasks (bottom) ══ */}
+          <circle cx="220" cy="375" r="30" fill="rgba(14,20,50,0.95)" stroke="rgba(253,211,77,0.7)" strokeWidth="2" style={{ animation:'floatY 3.8s ease-in-out infinite 0.8s' }} />
+          <line x1="210" y1="370" x2="230" y2="370" stroke="#FCD34D" strokeWidth="1.8" strokeLinecap="round" />
+          <line x1="210" y1="376" x2="230" y2="376" strokeWidth="1.8" strokeLinecap="round" stroke="#FCD34D" />
+          <line x1="210" y1="382" x2="222" y2="382" stroke="#FCD34D" strokeWidth="1.8" strokeLinecap="round" opacity="0.5" />
+          <polyline points="207,367 210,371 217,364" fill="none" stroke="#6EE7B7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          <text x="220" y="363" textAnchor="middle" fontSize="10" fontWeight="700" fill="#FDE68A" fontFamily="DM Sans" letterSpacing="0.5">TASKS</text>
+          <text x="220" y="415" textAnchor="middle" fontSize="9" fill="rgba(253,211,77,0.6)" fontFamily="DM Sans">7 done today</text>
 
-          {/* Pill 2 - bottom right */}
-          <rect x="218" y="248" width="90" height="24" rx="12" fill="rgba(52,211,153,0.1)" stroke="rgba(52,211,153,0.25)" strokeWidth="1" />
-          <circle cx="230" cy="260" r="5" fill="#34D399" opacity="0.9" />
-          <text x="240" y="264" fontSize="9.5" fill="white" fontFamily="DM Sans" fontWeight="500">Streak: 14 days</text>
+          {/* ══ Satellite: Review (bottom-left) ══ */}
+          <circle cx="100" cy="325" r="28" fill="rgba(14,20,50,0.95)" stroke="rgba(253,164,175,0.7)" strokeWidth="2" style={{ animation:'floatY 4.2s ease-in-out infinite 1.5s' }} />
+          <path d="M91 325 A9 9 0 1 1 109 325" fill="none" stroke="#FDA4AF" strokeWidth="1.8" strokeLinecap="round" />
+          <polyline points="109,320 109,325 114,325" fill="none" stroke="#FDA4AF" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          <text x="100" y="313" textAnchor="middle" fontSize="10" fontWeight="700" fill="#FECDD3" fontFamily="DM Sans" letterSpacing="0.5">REVIEW</text>
+          <text x="100" y="364" textAnchor="middle" fontSize="9" fill="rgba(253,164,175,0.6)" fontFamily="DM Sans">Weekly insights</text>
 
-          {/* Pill 3 - top left */}
-          <rect x="46" y="118" width="86" height="24" rx="12" fill="rgba(251,146,60,0.1)" stroke="rgba(251,146,60,0.25)" strokeWidth="1" />
-          <circle cx="58" cy="130" r="5" fill="#FB923C" opacity="0.9" />
-          <text x="68" y="134" fontSize="9.5" fill="white" fontFamily="DM Sans" fontWeight="500">7 Tasks Due</text>
+          {/* ══ Satellite: Morning Brief (top-left) ══ */}
+          <circle cx="100" cy="155" r="28" fill="rgba(14,20,50,0.95)" stroke="rgba(253,211,77,0.5)" strokeWidth="2" style={{ animation:'floatY 5s ease-in-out infinite 2s' }} />
+          {/* Sun rays */}
+          <circle cx="100" cy="155" r="7" fill="#FCD34D" opacity="0.9" />
+          <line x1="100" y1="143" x2="100" y2="140" stroke="#FCD34D" strokeWidth="2" strokeLinecap="round" />
+          <line x1="100" y1="167" x2="100" y2="170" stroke="#FCD34D" strokeWidth="2" strokeLinecap="round" />
+          <line x1="88"  y1="155" x2="85"  y2="155" stroke="#FCD34D" strokeWidth="2" strokeLinecap="round" />
+          <line x1="112" y1="155" x2="115" y2="155" stroke="#FCD34D" strokeWidth="2" strokeLinecap="round" />
+          <line x1="92"  y1="147" x2="90"  y2="145" stroke="#FCD34D" strokeWidth="1.5" strokeLinecap="round" />
+          <line x1="108" y1="163" x2="110" y2="165" stroke="#FCD34D" strokeWidth="1.5" strokeLinecap="round" />
+          <line x1="108" y1="147" x2="110" y2="145" stroke="#FCD34D" strokeWidth="1.5" strokeLinecap="round" />
+          <line x1="92"  y1="163" x2="90"  y2="165" stroke="#FCD34D" strokeWidth="1.5" strokeLinecap="round" />
+          <text x="100" y="143" textAnchor="middle" fontSize="9" fontWeight="700" fill="#FDE68A" fontFamily="DM Sans" letterSpacing="0.3">MORNING</text>
+          <text x="100" y="194" textAnchor="middle" fontSize="9" fill="rgba(253,211,77,0.6)" fontFamily="DM Sans">Daily briefing</text>
 
-          {/* Pill 4 - bottom left */}
-          <rect x="46" y="248" width="90" height="24" rx="12" fill="rgba(129,140,248,0.1)" stroke="rgba(129,140,248,0.25)" strokeWidth="1" />
-          <circle cx="58" cy="260" r="5" fill="#818CF8" opacity="0.9" />
-          <text x="68" y="264" fontSize="9.5" fill="white" fontFamily="DM Sans" fontWeight="500">12 Emails AI'd</text>
+          {/* ── Floating spark particles ── */}
+          <circle cx="170" cy="160" r="2.5" fill="#60A5FA" opacity="0.7" style={{ animation:'spark 3s ease-in-out infinite' }} />
+          <circle cx="275" cy="195" r="2"   fill="#A5B4FC" opacity="0.6" style={{ animation:'spark 4s ease-in-out infinite 1s' }} />
+          <circle cx="260" cy="290" r="2.5" fill="#6EE7B7" opacity="0.7" style={{ animation:'spark 3.5s ease-in-out infinite 0.5s' }} />
+          <circle cx="170" cy="295" r="2"   fill="#FDA4AF" opacity="0.6" style={{ animation:'spark 4.5s ease-in-out infinite 1.5s' }} />
+          <circle cx="300" cy="240" r="1.8" fill="#FCD34D" opacity="0.5" style={{ animation:'spark 2.8s ease-in-out infinite 0.8s' }} />
+          <circle cx="140" cy="240" r="1.8" fill="#60A5FA" opacity="0.5" style={{ animation:'spark 3.2s ease-in-out infinite 1.2s' }} />
 
-          {/* ── Bottom tagline ── */}
-          <text x="180" y="355" textAnchor="middle" fontSize="12" fill="rgba(255,255,255,0.35)" fontFamily="DM Sans" letterSpacing="0.5">
-            One AI. Every workflow.
+          {/* ── Bottom power tagline ── */}
+          <text x="220" y="500" textAnchor="middle" fontSize="18" fontWeight="800" fill="white" fontFamily="Cabinet Grotesk" letterSpacing="-0.5" opacity="0.92">
+            One AI. Total Command.
+          </text>
+          <text x="220" y="522" textAnchor="middle" fontSize="11" fill="rgba(147,197,253,0.55)" fontFamily="DM Sans" letterSpacing="0.3">
+            Every workflow. Every day. Amplified.
           </text>
         </svg>
       </div>
 
       <style>{`
+        @keyframes spin  { from { transform: rotate(0deg);   } to { transform: rotate(360deg);  } }
+        @keyframes spinR { from { transform: rotate(0deg);   } to { transform: rotate(-360deg); } }
+        @keyframes pulse {
+          0%, 100% { opacity: 1;   transform: scale(1);    }
+          50%       { opacity: 0.6; transform: scale(0.93); }
+        }
+        @keyframes floatY {
+          0%, 100% { transform: translateY(0px);  }
+          50%       { transform: translateY(-8px); }
+        }
+        @keyframes spark {
+          0%, 100% { opacity: 0.2; transform: scale(0.8); }
+          50%       { opacity: 1;   transform: scale(1.4); }
+        }
         @keyframes fadeUp {
           from { opacity: 0; transform: translateY(20px); }
-          to   { opacity: 1; transform: translateY(0); }
+          to   { opacity: 1; transform: translateY(0);    }
         }
       `}</style>
     </div>
