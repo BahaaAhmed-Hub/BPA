@@ -1,7 +1,7 @@
 // ─── CHUNK 1: Types, constants, localStorage helpers ─────────────────────────
 // (remaining chunks appended below)
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   DndContext, closestCenter, KeyboardSensor, PointerSensor,
   useSensor, useSensors, type DragEndEvent,
@@ -23,6 +23,11 @@ import { useAuthStore } from '@/store/authStore'
 import { THEMES, getTheme, applyThemeVars } from '@/lib/themes'
 import { useHabitsStore, getHabitColors, type Habit as UnifiedHabit } from '@/store/habitsStore'
 import { loadAccounts, type ConnectedAccount } from '@/lib/multiAccount'
+import {
+  saveProfileToDB, savePrefsToDB, saveCompaniesToDB, saveHabitsToDB, saveHabitLogsToDB,
+  type CompanyRow as DbSyncCompanyRow,
+} from '@/lib/dbSync'
+import { loadLogs } from '@/store/habitsStore'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -213,12 +218,13 @@ function SaveBadge({ saved }: { saved: boolean }) {
 // ─── Sortable Section Shell ────────────────────────────────────────────────────
 
 function SectionShell({
-  id, meta, children, defaultOpen = false,
+  id, meta, children, defaultOpen = false, saveLabel,
 }: {
   id: SectionId
   meta: SectionMeta
   children: React.ReactNode
   defaultOpen?: boolean
+  saveLabel?: string
 }) {
   const [open, setOpen] = useState(defaultOpen)
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
@@ -272,6 +278,17 @@ function SectionShell({
             </p>
           )}
         </div>
+
+        {/* Save state label */}
+        {saveLabel && (
+          <span style={{
+            fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 5,
+            background: saveLabel.includes('✓') ? 'rgba(29,158,117,0.12)' : saveLabel.includes('✗') ? 'rgba(224,82,82,0.12)' : 'var(--color-accent-fill, rgba(30,64,175,0.12))',
+            color: saveLabel.includes('✓') ? '#1D9E75' : saveLabel.includes('✗') ? '#E05252' : 'var(--color-accent, #1E40AF)',
+          }}>
+            {saveLabel}
+          </span>
+        )}
 
         {/* Chevron */}
         <button onClick={() => setOpen(o => !o)}
@@ -412,11 +429,12 @@ function ScheduleSection({
 // ─── CHUNK 4: Companies + Habits sections ────────────────────────────────────
 
 function CompaniesSection({
-  companies, setCompanies, accounts,
+  companies, setCompanies, accounts, onSaveDB,
 }: {
   companies: CompanyRow[]
   setCompanies: (c: CompanyRow[]) => void
   accounts: ConnectedAccount[]
+  onSaveDB?: () => void
 }) {
   const [adding, setAdding] = useState(false)
   const [newName, setNewName] = useState('')
@@ -539,11 +557,18 @@ function CompaniesSection({
           <Plus size={13} /> Add a company / context
         </button>
       )}
+      {onSaveDB && (
+        <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end' }}>
+          <button onClick={onSaveDB} style={{ padding: '8px 20px', borderRadius: 8, background: 'var(--color-accent-fill)', border: '1px solid var(--color-accent, #1E40AF)50', color: 'var(--color-accent, #1E40AF)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+            Save to Cloud
+          </button>
+        </div>
+      )}
     </div>
   )
 }
 
-function HabitsSection() {
+function HabitsSection({ onSaveDB }: { onSaveDB?: () => void }) {
   const COLORS = getHabitColors()
   const { habits, addHabit: storeAdd, updateHabit, deleteHabit: storeDel } = useHabitsStore()
   const [adding, setAdding] = useState(false)
@@ -637,6 +662,13 @@ function HabitsSection() {
         }}>
           <Plus size={13} /> Add a habit
         </button>
+      )}
+      {onSaveDB && (
+        <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end' }}>
+          <button onClick={onSaveDB} style={{ padding: '8px 20px', borderRadius: 8, background: 'var(--color-accent-fill)', border: '1px solid var(--color-accent, #1E40AF)50', color: 'var(--color-accent, #1E40AF)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+            Save to Cloud
+          </button>
+        </div>
       )}
     </div>
   )
@@ -932,42 +964,43 @@ function AppearanceSection({ s, set, onSave }: { s: AppSettings; set: (p: Partia
 // ─── CHUNK 7: Main Settings component ────────────────────────────────────────
 
 export function Settings() {
-  const [settings, setSettings]       = useState<AppSettings>(loadSettings)
-  const [companies, setCompanies]     = useState<CompanyRow[]>(loadCompanies)
-  const [accounts, setAccounts]       = useState<ConnectedAccount[]>(loadAccounts)
+  const [settings, setSettings]         = useState<AppSettings>(loadSettings)
+  const [companies, setCompanies]       = useState<CompanyRow[]>(loadCompanies)
+  const [accounts, setAccounts]         = useState<ConnectedAccount[]>(loadAccounts)
   const [sectionOrder, setSectionOrder] = useState<SectionId[]>(loadSectionOrder)
-  const [collapsed, setCollapsed]     = useState<Record<SectionId, boolean>>({} as Record<SectionId, boolean>)
-  const [saveState, setSaveState]     = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
-  const [supaOk, setSupaOk]           = useState<boolean | null>(null)
+  const [collapsed, setCollapsed]       = useState<Record<SectionId, boolean>>({} as Record<SectionId, boolean>)
+  const [supaOk, setSupaOk]             = useState<boolean | null>(null)
+  // Per-section save states
+  const [sectionSaving, setSectionSaving] = useState<Record<string, 'idle'|'saving'|'saved'|'error'>>({})
   const authUser = useAuthStore(s => s.user)
+  const settingsRef = useRef(settings)
+  settingsRef.current = settings
 
-  // ── Check Supabase on mount ──────────────────────────────────────────────────
   useEffect(() => { void checkSupabase().then(setSupaOk) }, [])
 
-  // ── Debounced auto-save ──────────────────────────────────────────────────────
-  const saveTimer = useState<ReturnType<typeof setTimeout> | null>(null)
-
-  const triggerSave = useCallback((s: AppSettings) => {
-    if (saveTimer[0]) clearTimeout(saveTimer[0])
-    setSaveState('saving')
-    const t = setTimeout(() => {
-      try {
-        saveSettings(s)
-        setSaveState('saved')
-        setTimeout(() => setSaveState('idle'), 2000)
-      } catch {
-        setSaveState('error')
-      }
-    }, 800)
-    saveTimer[1](t)
-  }, [saveTimer])
-
+  // ── Local-only field updates (immediate localStorage) ────────────────────────
   function update(patch: Partial<AppSettings>) {
     setSettings(prev => {
       const next = { ...prev, ...patch }
-      triggerSave(next)
+      saveSettings(next)
       return next
     })
+  }
+
+  // ── Per-section DB save helper ───────────────────────────────────────────────
+  function withSectionSave(sectionId: string, fn: () => Promise<void>) {
+    return async () => {
+      setSectionSaving(p => ({ ...p, [sectionId]: 'saving' }))
+      try {
+        await fn()
+        setSectionSaving(p => ({ ...p, [sectionId]: 'saved' }))
+        setTimeout(() => setSectionSaving(p => ({ ...p, [sectionId]: 'idle' })), 2000)
+      } catch (err) {
+        console.error(err)
+        setSectionSaving(p => ({ ...p, [sectionId]: 'error' }))
+        setTimeout(() => setSectionSaving(p => ({ ...p, [sectionId]: 'idle' })), 3000)
+      }
+    }
   }
 
   // ── DnD sensors ─────────────────────────────────────────────────────────────
@@ -990,44 +1023,49 @@ export function Settings() {
     setCollapsed(prev => ({ ...prev, [id]: !prev[id] }))
   }
 
-
   // ── Section renderer ─────────────────────────────────────────────────────────
   function renderSection(id: SectionId) {
     const meta = SECTION_META.find(m => m.id === id)!
     const isCollapsed = collapsed[id] ?? false
-    const noop = () => {}
+    const saving = sectionSaving[id] ?? 'idle'
+
+    // Wrap save button label with state feedback
+    const saveLabel = saving === 'saving' ? 'Saving…' : saving === 'saved' ? 'Saved ✓' : saving === 'error' ? 'Error ✗' : undefined
+
     return (
-      <SectionShell
-        key={id} id={id}
-        title={meta.title} icon={meta.icon} description={meta.description}
-        isCollapsed={isCollapsed} onToggle={() => toggleCollapse(id)}
-      >
-        {id === 'profile'       && <ProfileSection       s={settings} set={update} onSave={noop} />}
-        {id === 'schedule'      && <ScheduleSection      s={settings} set={update} onSave={noop} />}
+      <SectionShell key={id} id={id} meta={meta} saveLabel={saveLabel}>
+        {id === 'profile'       && <ProfileSection       s={settings} set={update}
+                                      onSave={withSectionSave('profile', () => saveProfileToDB(settingsRef.current))} />}
+        {id === 'schedule'      && <ScheduleSection      s={settings} set={update}
+                                      onSave={withSectionSave('schedule', () => saveProfileToDB(settingsRef.current))} />}
         {id === 'companies'     && <CompaniesSection     companies={companies}
                                       setCompanies={c => { setCompanies(c); saveCompanies(c) }}
-                                      accounts={accounts} />}
-        {id === 'habits'        && <HabitsSection />}
+                                      accounts={accounts}
+                                      onSaveDB={withSectionSave('companies', () => saveCompaniesToDB(companies as DbSyncCompanyRow[]))} />}
+        {id === 'habits'        && <HabitsSection        onSaveDB={withSectionSave('habits', async () => {
+                                      const { habits } = useHabitsStore.getState()
+                                      await saveHabitsToDB(habits)
+                                      await saveHabitLogsToDB(loadLogs())
+                                    })} />}
         {id === 'accounts'      && <AccountsSection      accounts={accounts}
                                       setAccounts={a => { setAccounts(a) }}
                                       primaryEmail={authUser?.email ?? ''} />}
-        {id === 'professor'     && <ProfessorSection     s={settings} set={update} onSave={noop} />}
-        {id === 'notifications' && <NotificationsSection s={settings} set={update} onSave={noop} />}
-        {id === 'appearance'    && <AppearanceSection    s={settings} set={update} onSave={noop} />}
+        {id === 'professor'     && <ProfessorSection     s={settings} set={update}
+                                      onSave={withSectionSave('professor', () => savePrefsToDB(settingsRef.current))} />}
+        {id === 'notifications' && <NotificationsSection s={settings} set={update}
+                                      onSave={withSectionSave('notifications', () => savePrefsToDB(settingsRef.current))} />}
+        {id === 'appearance'    && <AppearanceSection    s={settings} set={update}
+                                      onSave={withSectionSave('appearance', () => savePrefsToDB(settingsRef.current))} />}
       </SectionShell>
     )
   }
 
-  // ── Sign out ─────────────────────────────────────────────────────────────────
   async function handleSignOut() {
     await googleSignOut()
   }
 
   return (
     <div style={{ padding: '28px 28px 60px', maxWidth: 780, margin: '0 auto' }}>
-      {/* ── Save badge ──────────────────────────────────────────────────────── */}
-      <SaveBadge state={saveState} />
-
       {/* ── Top bar: user info + status ─────────────────────────────────────── */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
