@@ -1,6 +1,9 @@
 
-import { Bell, Search, Settings } from 'lucide-react'
+import { useState } from 'react'
+import { Bell, Search, Settings, LogOut } from 'lucide-react'
 import { useUIStore } from '@/store/uiStore'
+import { useAuthStore } from '@/store/authStore'
+import { signOut } from '@/lib/google'
 
 interface TopBarProps {
   title: string
@@ -9,6 +12,8 @@ interface TopBarProps {
 
 export function TopBar({ title, subtitle }: TopBarProps) {
   const setActiveModule = useUIStore(s => s.setActiveModule)
+  const user = useAuthStore(s => s.user)
+  const [menuOpen, setMenuOpen] = useState(false)
   const now = new Date()
   const dateStr = now.toLocaleDateString('en-US', {
     weekday: 'long',
@@ -96,21 +101,42 @@ export function TopBar({ title, subtitle }: TopBarProps) {
         ))}
       </div>
 
-      {/* Avatar */}
-      <div
-        style={{
-          width: 32,
-          height: 32,
-          borderRadius: '50%',
-          background: 'rgba(196, 154, 60, 0.2)',
-          border: '1.5px solid #C49A3C',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          cursor: 'pointer',
-        }}
-      >
-        <span style={{ fontSize: 12, fontWeight: 600, color: '#C49A3C' }}>P</span>
+      {/* Avatar + sign out */}
+      <div style={{ position: 'relative' }}>
+        <button
+          onClick={() => setMenuOpen(o => !o)}
+          style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}
+        >
+          {user?.avatarUrl ? (
+            <img src={user.avatarUrl} alt={user.name ?? ''} style={{ width: 32, height: 32, borderRadius: '50%', border: '1.5px solid #C49A3C', objectFit: 'cover' }} />
+          ) : (
+            <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgba(196,154,60,0.2)', border: '1.5px solid #C49A3C', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: '#C49A3C' }}>
+                {user?.name?.[0]?.toUpperCase() ?? 'P'}
+              </span>
+            </div>
+          )}
+        </button>
+
+        {menuOpen && (
+          <>
+            <div onClick={() => setMenuOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 40 }} />
+            <div style={{ position: 'absolute', right: 0, top: 40, zIndex: 50, background: '#2A2218', border: '1px solid #3A3020', borderRadius: 10, padding: 8, minWidth: 200, boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}>
+              <div style={{ padding: '8px 12px 10px', borderBottom: '1px solid #3A3020', marginBottom: 6 }}>
+                <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#F0E8D8' }}>{user?.name ?? 'User'}</p>
+                <p style={{ margin: '2px 0 0', fontSize: 11, color: '#8A7A60' }}>{user?.email}</p>
+              </div>
+              <button
+                onClick={() => { setMenuOpen(false); void signOut() }}
+                style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'transparent', border: 'none', borderRadius: 7, color: '#E05252', fontSize: 13, cursor: 'pointer', textAlign: 'left' }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(224,82,82,0.08)' }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
+              >
+                <LogOut size={14} /> Sign out
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </header>
   )
