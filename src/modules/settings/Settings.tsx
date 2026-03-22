@@ -186,20 +186,24 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
   )
 }
 
-function FieldRow({ label, sub, children }: { label: string; sub?: string; children: React.ReactNode }) {
+// 2-column grid field (stacked label + control)
+function FieldCol({ label, sub, children, span }: { label: string; sub?: string; children: React.ReactNode; span?: boolean }) {
   return (
     <div style={{
-      display: 'flex', alignItems: 'flex-start', gap: 16,
-      padding: '11px 0', borderBottom: '1px solid var(--color-border, #252A3E)',
+      display: 'flex', flexDirection: 'column', gap: 7,
+      padding: '12px 0', borderBottom: '1px solid var(--color-border, #252A3E)',
+      gridColumn: span ? '1 / -1' : undefined,
     }}>
-      <div style={{ width: 210, flexShrink: 0, paddingTop: 2 }}>
-        <span style={{ fontSize: 13, color: 'var(--color-text, #E8EAF6)' }}>{label}</span>
-        {sub && <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--color-text-muted, #6B7280)' }}>{sub}</p>}
+      <div>
+        <span style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--color-text, #E8EAF6)' }}>{label}</span>
+        {sub && <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--color-text-muted, #6B7280)', lineHeight: 1.4 }}>{sub}</p>}
       </div>
-      <div style={{ flex: 1 }}>{children}</div>
+      <div>{children}</div>
     </div>
   )
 }
+
+const col2: React.CSSProperties = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 24px' }
 
 
 // ─── Sortable Section Shell ────────────────────────────────────────────────────
@@ -306,17 +310,22 @@ function ProfileSection({
   s, set,
 }: { s: AppSettings; set: (p: Partial<AppSettings>) => void }) {
   return (
-    <div>
-      <FieldRow label="Full name">
+    <div style={col2}>
+      <FieldCol label="Full name">
         <input value={s.fullName} onChange={e => set({ fullName: e.target.value })}
           placeholder="Your name" style={inputStyle} />
-      </FieldRow>
-      <FieldRow label="Timezone">
+      </FieldCol>
+      <FieldCol label="Productivity framework">
+        <select value={s.framework} onChange={e => set({ framework: e.target.value })} style={{ ...selectStyle, width: '100%' }}>
+          {FRAMEWORKS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
+        </select>
+      </FieldCol>
+      <FieldCol label="Timezone" span>
         <select value={s.timezone} onChange={e => set({ timezone: e.target.value })} style={{ ...selectStyle, width: '100%' }}>
           {ALL_TZ.map(tz => <option key={tz.value} value={tz.value}>{tz.label}</option>)}
         </select>
-      </FieldRow>
-      <FieldRow label="Work days">
+      </FieldCol>
+      <FieldCol label="Work days" span>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           {WORK_DAYS.map(d => {
             const on = s.workWeek.includes(d)
@@ -331,12 +340,7 @@ function ProfileSection({
             )
           })}
         </div>
-      </FieldRow>
-      <FieldRow label="Productivity framework">
-        <select value={s.framework} onChange={e => set({ framework: e.target.value })} style={{ ...selectStyle, width: '100%' }}>
-          {FRAMEWORKS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
-        </select>
-      </FieldRow>
+      </FieldCol>
     </div>
   )
 }
@@ -345,60 +349,60 @@ function ScheduleSection({
   s, set,
 }: { s: AppSettings; set: (p: Partial<AppSettings>) => void }) {
   return (
-    <div>
-      <FieldRow label="Focus window" sub="Block for deep work">
+    <div style={col2}>
+      <FieldCol label="Focus window" sub="Block for deep work" span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <input type="time" value={s.focusStart} onChange={e => set({ focusStart: e.target.value })}
-            style={{ ...inputStyle, width: 120 }} />
+            style={{ ...inputStyle, width: 130 }} />
           <span style={{ color: 'var(--color-text-muted, #6B7280)', fontSize: 12 }}>to</span>
           <input type="time" value={s.focusEnd} onChange={e => set({ focusEnd: e.target.value })}
-            style={{ ...inputStyle, width: 120 }} />
+            style={{ ...inputStyle, width: 130 }} />
         </div>
-      </FieldRow>
-      <FieldRow label="Earliest meeting" sub="No calls before this time">
+      </FieldCol>
+      <FieldCol label="Earliest meeting" sub="No calls before this time">
         <input type="time" value={s.earliestMeeting} onChange={e => set({ earliestMeeting: e.target.value })}
-          style={{ ...inputStyle, width: 120 }} />
-      </FieldRow>
-      <FieldRow label="End of work day">
+          style={{ ...inputStyle, width: '100%' }} />
+      </FieldCol>
+      <FieldCol label="End of work day">
         <input type="time" value={s.endOfDay} onChange={e => set({ endOfDay: e.target.value })}
-          style={{ ...inputStyle, width: 120 }} />
-      </FieldRow>
-      <FieldRow label="Family / personal time">
+          style={{ ...inputStyle, width: '100%' }} />
+      </FieldCol>
+      <FieldCol label="Family / personal time">
         <input type="time" value={s.familyStart} onChange={e => set({ familyStart: e.target.value })}
-          style={{ ...inputStyle, width: 120 }} />
-      </FieldRow>
-      <FieldRow label="Meeting buffer" sub="Virtual gap between meetings">
-        <div style={{ display: 'flex', gap: 6 }}>
+          style={{ ...inputStyle, width: '100%' }} />
+      </FieldCol>
+      <FieldCol label="Protect focus window">
+        <Toggle checked={s.protectFocus} onChange={v => set({ protectFocus: v })} />
+      </FieldCol>
+      <FieldCol label="Auto-decline early meetings">
+        <Toggle checked={s.autoDeclineEarly} onChange={v => set({ autoDeclineEarly: v })} />
+      </FieldCol>
+      <FieldCol label="Meeting buffer" sub="Virtual gap between meetings" span>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           {BUFFER_STEPS.map(n => (
             <button key={n} onClick={() => set({ bufferMins: n })}
               style={{
-                padding: '5px 12px', borderRadius: 6, fontSize: 12, cursor: 'pointer', fontWeight: 500,
+                padding: '5px 14px', borderRadius: 6, fontSize: 12, cursor: 'pointer', fontWeight: 500,
                 background: s.bufferMins === n ? 'var(--color-accent-fill)' : 'var(--color-surface2, #0D0F1A)',
                 border: `1px solid ${s.bufferMins === n ? 'var(--color-accent, #1E40AF)' : 'var(--color-border, #252A3E)'}`,
                 color: s.bufferMins === n ? 'var(--color-accent, #1E40AF)' : 'var(--color-text-muted, #6B7280)',
               }}>{n === 0 ? 'None' : `${n}m`}</button>
           ))}
         </div>
-      </FieldRow>
-      <FieldRow label="Physical meeting buffer" sub="Extra travel time">
-        <div style={{ display: 'flex', gap: 6 }}>
+      </FieldCol>
+      <FieldCol label="Physical meeting buffer" sub="Extra travel time" span>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           {PHYS_STEPS.map(n => (
             <button key={n} onClick={() => set({ physicalBufferMins: n })}
               style={{
-                padding: '5px 12px', borderRadius: 6, fontSize: 12, cursor: 'pointer', fontWeight: 500,
+                padding: '5px 14px', borderRadius: 6, fontSize: 12, cursor: 'pointer', fontWeight: 500,
                 background: s.physicalBufferMins === n ? 'var(--color-accent-fill)' : 'var(--color-surface2, #0D0F1A)',
                 border: `1px solid ${s.physicalBufferMins === n ? 'var(--color-accent, #1E40AF)' : 'var(--color-border, #252A3E)'}`,
                 color: s.physicalBufferMins === n ? 'var(--color-accent, #1E40AF)' : 'var(--color-text-muted, #6B7280)',
               }}>{n === 0 ? 'None' : `${n}m`}</button>
           ))}
         </div>
-      </FieldRow>
-      <FieldRow label="Protect focus window">
-        <Toggle checked={s.protectFocus} onChange={v => set({ protectFocus: v })} />
-      </FieldRow>
-      <FieldRow label="Auto-decline early meetings">
-        <Toggle checked={s.autoDeclineEarly} onChange={v => set({ autoDeclineEarly: v })} />
-      </FieldRow>
+      </FieldCol>
     </div>
   )
 }
@@ -782,81 +786,80 @@ function AccountsSection({
 
 function ProfessorSection({ s, set }: { s: AppSettings; set: (p: Partial<AppSettings>) => void }) {
   return (
-    <div>
-      <FieldRow label="Communication style" sub="How detailed should responses be?">
+    <div style={col2}>
+      <FieldCol label="Communication style" sub="How detailed should responses be?" span>
         <div style={{ display: 'flex', gap: 8 }}>
           {(['brief','balanced','detailed'] as const).map(v => (
             <button key={v} onClick={() => set({ commStyle: v })}
               style={{
-                padding: '6px 14px', borderRadius: 7, fontSize: 12, cursor: 'pointer', fontWeight: 500, textTransform: 'capitalize',
+                padding: '6px 16px', borderRadius: 7, fontSize: 12, cursor: 'pointer', fontWeight: 500, textTransform: 'capitalize',
                 background: s.commStyle === v ? 'var(--color-accent-fill)' : 'var(--color-surface2, #0D0F1A)',
                 border: `1px solid ${s.commStyle === v ? 'var(--color-accent, #1E40AF)' : 'var(--color-border, #252A3E)'}`,
                 color: s.commStyle === v ? 'var(--color-accent, #1E40AF)' : 'var(--color-text-muted, #6B7280)',
               }}>{v}</button>
           ))}
         </div>
-      </FieldRow>
-      <FieldRow label="Proactive suggestions" sub="Professor offers advice without being asked">
+      </FieldCol>
+      <FieldCol label="Proactive suggestions" sub="Offers advice without being asked">
         <Toggle checked={s.proactive} onChange={v => set({ proactive: v })} />
-      </FieldRow>
-      <FieldRow label="Morning brief time">
+      </FieldCol>
+      <FieldCol label="Morning brief time">
         <input type="time" value={s.briefTime} onChange={e => set({ briefTime: e.target.value })}
-          style={{ ...inputStyle, width: 120 }} />
-      </FieldRow>
-      <FieldRow label="Weekly review day">
-        <select value={s.reviewDay} onChange={e => set({ reviewDay: e.target.value })} style={{ ...selectStyle, width: 140 }}>
+          style={{ ...inputStyle, width: '100%' }} />
+      </FieldCol>
+      <FieldCol label="Weekly review day">
+        <select value={s.reviewDay} onChange={e => set({ reviewDay: e.target.value })} style={{ ...selectStyle, width: '100%' }}>
           {['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'].map(d =>
             <option key={d} value={d}>{d}</option>)}
         </select>
-      </FieldRow>
-      <FieldRow label="Custom instructions" sub="Guide the Professor's personality and priorities">
+      </FieldCol>
+      <FieldCol label="Custom instructions" sub="Guide the Professor's personality and priorities" span>
         <textarea value={s.customInstructions} onChange={e => set({ customInstructions: e.target.value })}
           rows={3} placeholder="e.g. Always be concise. Prioritise Teradix work…"
           style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.5 }} />
-      </FieldRow>
+      </FieldCol>
     </div>
   )
 }
 
 function NotificationsSection({ s, set }: { s: AppSettings; set: (p: Partial<AppSettings>) => void }) {
   return (
-    <div>
-      <FieldRow label="Morning brief reminder">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+    <div style={col2}>
+      <FieldCol label="Morning brief reminder">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           <Toggle checked={s.morningReminderOn} onChange={v => set({ morningReminderOn: v })} />
           {s.morningReminderOn && (
             <input type="time" value={s.morningReminderTime} onChange={e => set({ morningReminderTime: e.target.value })}
               style={{ ...inputStyle, width: 110 }} />
           )}
         </div>
-      </FieldRow>
-      <FieldRow label="Wind-down reminder">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      </FieldCol>
+      <FieldCol label="Wind-down reminder">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           <Toggle checked={s.windDownOn} onChange={v => set({ windDownOn: v })} />
           {s.windDownOn && (
             <input type="time" value={s.windDownTime} onChange={e => set({ windDownTime: e.target.value })}
               style={{ ...inputStyle, width: 110 }} />
           )}
         </div>
-      </FieldRow>
-      <FieldRow label="Follow-up nudges" sub="Remind you of delegated/waiting tasks">
+      </FieldCol>
+      <FieldCol label="Follow-up nudges" sub="Remind you of delegated/waiting tasks">
         <Toggle checked={s.followUpNudges} onChange={v => set({ followUpNudges: v })} />
-      </FieldRow>
-      <FieldRow label="Weekly review reminder">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      </FieldCol>
+      <FieldCol label="Weekly review reminder" span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <Toggle checked={s.weeklyReviewOn} onChange={v => set({ weeklyReviewOn: v })} />
           {s.weeklyReviewOn && (
             <>
-              <select value={s.weeklyReviewDay} onChange={e => set({ weeklyReviewDay: e.target.value })} style={{ ...selectStyle, width: 120 }}>
+              <select value={s.weeklyReviewDay} onChange={e => set({ weeklyReviewDay: e.target.value })} style={{ ...selectStyle, width: 130 }}>
                 {['Sunday','Monday','Saturday'].map(d => <option key={d} value={d}>{d}</option>)}
               </select>
               <input type="time" value={s.weeklyReviewTime} onChange={e => set({ weeklyReviewTime: e.target.value })}
-                style={{ ...inputStyle, width: 110 }} />
+                style={{ ...inputStyle, width: 120 }} />
             </>
           )}
         </div>
-      </FieldRow>
-
+      </FieldCol>
     </div>
   )
 }
@@ -871,41 +874,41 @@ function AppearanceSection({ s, set }: { s: AppSettings; set: (p: Partial<AppSet
   }
 
   return (
-    <div>
-      {/* Theme picker grid */}
-      <p style={{ margin: '0 0 12px', fontSize: 12.5, color: 'var(--color-text-muted, #6B7280)' }}>Theme</p>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10, marginBottom: 20 }}>
-        {THEMES.map(t => {
-          const active = s.theme === t.id
-          return (
-            <button key={t.id} onClick={() => pickTheme(t.id)}
-              style={{
-                padding: '10px 8px', borderRadius: 10, cursor: 'pointer', flexDirection: 'column',
-                display: 'flex', alignItems: 'center', gap: 6,
-                background: t.surface, border: `2px solid ${active ? t.accent : t.border}`,
-                boxShadow: active ? `0 0 12px ${t.accent}40` : 'none',
-                transition: 'all 0.15s',
-              }}>
-              {/* Mini preview */}
-              <div style={{ display: 'flex', gap: 3 }}>
-                {[t.accent, t.accentFill ? t.accentBright : t.textDim, t.textMuted].map((c, i) => (
-                  <div key={i} style={{ width: 10, height: 10, borderRadius: '50%', background: c }} />
-                ))}
-              </div>
-              <span style={{ fontSize: 14 }}>{t.emoji}</span>
-              <span style={{ fontSize: 10, color: t.text, fontWeight: active ? 700 : 400, whiteSpace: 'nowrap' }}>{t.name}</span>
-            </button>
-          )
-        })}
+    <div style={col2}>
+      {/* Theme picker — full width */}
+      <div style={{ gridColumn: '1 / -1', paddingBottom: 12, borderBottom: '1px solid var(--color-border, #252A3E)' }}>
+        <p style={{ margin: '0 0 12px', fontSize: 12.5, fontWeight: 500, color: 'var(--color-text, #E8EAF6)' }}>Theme</p>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10 }}>
+          {THEMES.map(t => {
+            const active = s.theme === t.id
+            return (
+              <button key={t.id} onClick={() => pickTheme(t.id)}
+                style={{
+                  padding: '10px 8px', borderRadius: 10, cursor: 'pointer', flexDirection: 'column',
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  background: t.surface, border: `2px solid ${active ? t.accent : t.border}`,
+                  boxShadow: active ? `0 0 12px ${t.accent}40` : 'none',
+                  transition: 'all 0.15s',
+                }}>
+                <div style={{ display: 'flex', gap: 3 }}>
+                  {[t.accent, t.accentFill ? t.accentBright : t.textDim, t.textMuted].map((c, i) => (
+                    <div key={i} style={{ width: 10, height: 10, borderRadius: '50%', background: c }} />
+                  ))}
+                </div>
+                <span style={{ fontSize: 14 }}>{t.emoji}</span>
+                <span style={{ fontSize: 10, color: t.text, fontWeight: active ? 700 : 400, whiteSpace: 'nowrap' }}>{t.name}</span>
+              </button>
+            )
+          })}
+        </div>
       </div>
 
-      <FieldRow label="Sidebar expanded by default">
+      <FieldCol label="Sidebar expanded by default">
         <Toggle checked={!s.sidebarDefault} onChange={v => set({ sidebarDefault: !v })} />
-      </FieldRow>
-      <FieldRow label="Compact density" sub="Tighter spacing throughout the UI">
+      </FieldCol>
+      <FieldCol label="Compact density" sub="Tighter spacing throughout the UI">
         <Toggle checked={s.compact} onChange={v => set({ compact: v })} />
-      </FieldRow>
-
+      </FieldCol>
     </div>
   )
 }

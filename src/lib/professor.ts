@@ -8,7 +8,7 @@ const client = new Anthropic({
   dangerouslyAllowBrowser: true,
 })
 
-const MODEL = 'claude-opus-4-6'
+const MODEL = 'claude-sonnet-4-6'
 const MAX_TOKENS = 4000
 
 // ─── Error ───────────────────────────────────────────────────────────────────
@@ -114,6 +114,13 @@ ${ruleLines || '  (none configured)'}`
 // ─── Core call helper ────────────────────────────────────────────────────────
 
 async function call(system: string, userMessage: string): Promise<string> {
+  const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY ?? ''
+  if (!apiKey) {
+    throw new ProfessorError(
+      'Anthropic API key is not configured. Add VITE_ANTHROPIC_API_KEY to your .env file.',
+      'config_error',
+    )
+  }
   try {
     const msg = await client.messages.create({
       model: MODEL,
@@ -124,8 +131,10 @@ async function call(system: string, userMessage: string): Promise<string> {
     const block = msg.content.find(b => b.type === 'text')
     return block?.type === 'text' ? block.text.trim() : ''
   } catch (err) {
+    if (err instanceof ProfessorError) throw err
+    const msg = err instanceof Error ? err.message : String(err)
     throw new ProfessorError(
-      'Claude API request failed',
+      `Claude API request failed: ${msg}`,
       'api_error',
       err,
     )
