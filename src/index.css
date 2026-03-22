@@ -70,6 +70,33 @@ html, body {
 h1,h2,h3,h4,h5,h6 { font-family: 'Cabinet Grotesk', sans-serif; }
 
 ::-webkit-scrollbar { width: 5px; height: 5px; }
-::-webkit-scrollbar-track { background: #0D0F1A; }
-::-webkit-scrollbar-thumb { background: #252A3E; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #6B7280; }
+::-webkit-scrollbar-track { background: var(--color-bg, var(--bg-base, #0D0F1A)); }
+::-webkit-scrollbar-thumb { background: var(--color-border, var(--border-color, #252A3E)); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-text-muted, #6B7280); }
+
+/* ─── Light theme global overrides ─────────────────────────────────────────── */
+[data-theme="light"] { color-scheme: light; }
+
+[data-theme="light"] input,
+[data-theme="light"] select,
+[data-theme="light"] textarea {
+  background: var(--color-surface) !important;
+  border-color: var(--color-border) !important;
+  color: var(--color-text) !important;
+  color-scheme: light;
+}
+
+/* Themed card utility class — add className="t-card" to any card div */
+.t-card {
+  background: var(--color-surface, #161929);
+  border: 1px solid var(--color-border, #252A3E);
+  color: var(--color-text, #E8EAF6);
+}
+
+.t-surface2 {
+  background: var(--color-surface2, #0D0F1A);
+}
+
+.t-text { color: var(--color-text, #E8EAF6); }
+.t-text-dim { color: var(--color-text-dim, #94A3B8); }
+.t-text-muted { color: var(--color-text-muted, #4B5563); }

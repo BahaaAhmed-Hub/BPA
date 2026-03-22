@@ -123,6 +123,7 @@ export function getTheme(id: string): AppTheme {
 
 export function applyThemeVars(theme: AppTheme): void {
   const s = document.documentElement.style
+  // New CSS variable names (used by components via var())
   s.setProperty('--color-bg',           theme.bg)
   s.setProperty('--color-surface',      theme.surface)
   s.setProperty('--color-surface2',     theme.surface2)
@@ -134,5 +135,16 @@ export function applyThemeVars(theme: AppTheme): void {
   s.setProperty('--color-text-dim',     theme.textDim)
   s.setProperty('--color-text-muted',   theme.textMuted)
   s.setProperty('--color-sidebar',      theme.sidebarBg)
+  // Legacy CSS variable names (used in older CSS rules)
+  s.setProperty('--bg-base',      theme.bg)
+  s.setProperty('--bg-surface',   theme.surface)
+  s.setProperty('--bg-surface2',  theme.surface2)
+  s.setProperty('--border-color', theme.border)
+  s.setProperty('--text-primary', theme.text)
+  s.setProperty('--text-muted',   theme.textMuted)
+  s.setProperty('--accent',       theme.accent)
+  // Set data-theme for CSS selector-based overrides
+  document.documentElement.setAttribute('data-theme', theme.isDark ? 'dark' : 'light')
   document.body.style.background = theme.bg
+  document.body.style.color = theme.text
 }
