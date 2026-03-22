@@ -1,12 +1,11 @@
-
 import { TopBar } from '@/components/layout/TopBar'
-import { CalendarIntelligence } from './CalendarIntelligence'
+import { CalendarView } from './CalendarView'
 
 export function CalendarModule() {
   return (
-    <div>
-      <TopBar title="Calendar Intelligence" subtitle="Smart scheduling — your time, optimized." />
-      <CalendarIntelligence />
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+      <TopBar title="Calendar" subtitle="Daily and weekly view — all your events in one place." />
+      <CalendarView />
     </div>
   )
 }
