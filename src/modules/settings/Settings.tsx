@@ -919,8 +919,9 @@ export function Settings() {
   const [sectionOrder, setSectionOrder] = useState<SectionId[]>(loadSectionOrder)
 
   const [supaOk, setSupaOk]             = useState<boolean | null>(null)
-  // Per-section save states
+  // Per-section save states + error messages
   const [sectionSaving, setSectionSaving] = useState<Record<string, 'idle'|'saving'|'saved'|'error'>>({})
+  const [sectionError,  setSectionError]  = useState<Record<string, string>>({})
   const authUser = useAuthStore(s => s.user)
   const settingsRef = useRef(settings)
   settingsRef.current = settings
@@ -940,14 +941,17 @@ export function Settings() {
   function withSectionSave(sectionId: string, fn: () => Promise<void>) {
     return async () => {
       setSectionSaving(p => ({ ...p, [sectionId]: 'saving' }))
+      setSectionError(p => ({ ...p, [sectionId]: '' }))
       try {
         await fn()
         setSectionSaving(p => ({ ...p, [sectionId]: 'saved' }))
         setTimeout(() => setSectionSaving(p => ({ ...p, [sectionId]: 'idle' })), 2000)
       } catch (err) {
-        console.error(err)
+        const msg = err instanceof Error ? err.message : 'Unknown error'
+        console.error(`[Settings save:${sectionId}]`, msg)
+        setSectionError(p => ({ ...p, [sectionId]: msg }))
         setSectionSaving(p => ({ ...p, [sectionId]: 'error' }))
-        setTimeout(() => setSectionSaving(p => ({ ...p, [sectionId]: 'idle' })), 3000)
+        setTimeout(() => setSectionSaving(p => ({ ...p, [sectionId]: 'idle' })), 5000)
       }
     }
   }
@@ -988,11 +992,18 @@ export function Settings() {
     }
     const saveFn = saveFns[id]
 
+    const errMsg = sectionError[id]
+
     return (
       <SectionShell key={id} id={id} meta={meta}
         saveLabel={saveLabel}
         onSave={saveFn ? withSectionSave(id, saveFn) : undefined}
       >
+        {saving === 'error' && errMsg && (
+          <div style={{ margin: '0 0 14px', padding: '8px 12px', borderRadius: 8, background: 'rgba(224,82,82,0.08)', border: '1px solid rgba(224,82,82,0.25)', fontSize: 12, color: '#E05252' }}>
+            ✗ {errMsg}
+          </div>
+        )}
         {id === 'profile'       && <ProfileSection       s={settings} set={update} />}
         {id === 'schedule'      && <ScheduleSection      s={settings} set={update} />}
         {id === 'companies'     && <CompaniesSection     companies={companies}

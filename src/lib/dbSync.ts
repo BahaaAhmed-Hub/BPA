@@ -33,18 +33,20 @@ export interface HabitRow {
 
 export interface HabitLogs { [habitId: string]: string[] }
 
-// ─── Get current user id ──────────────────────────────────────────────────────
+// ─── Get current session ──────────────────────────────────────────────────────
 
-async function getUserId(): Promise<string | null> {
+async function getSession() {
   const { data } = await supabase.auth.getSession()
-  return data.session?.user.id ?? null
+  if (!data.session) throw new Error('Not signed in — please sign in with Google first')
+  return data.session
 }
 
 // ─── Profile + Schedule → users row ──────────────────────────────────────────
 
 export async function saveProfileToDB(s: AppSettings): Promise<void> {
-  const userId = await getUserId()
-  if (!userId) throw new Error('Not signed in')
+  const session = await getSession()
+  const userId  = session.user.id
+  const email   = session.user.email ?? ''
 
   const scheduleRules = {
     timezone:           s.timezone,
@@ -60,26 +62,31 @@ export async function saveProfileToDB(s: AppSettings): Promise<void> {
     auto_decline_early: s.autoDeclineEarly,
   }
 
-  const { error } = await supabase.from('users').upsert({
-    id:               userId,
-    full_name:        s.fullName,
-    active_framework: s.framework,
-    schedule_rules:   scheduleRules,
-  }, { onConflict: 'id' })
+  // Use update first (row created by auth trigger); fall back to upsert with email
+  const { error: updateErr } = await supabase.from('users')
+    .update({ full_name: s.fullName, active_framework: s.framework, schedule_rules: scheduleRules })
+    .eq('id', userId)
 
-  if (error) throw new Error(error.message)
+  if (updateErr) {
+    // Row might not exist yet — upsert with all required fields
+    const { error: upsertErr } = await supabase.from('users').upsert({
+      id: userId, email,
+      full_name: s.fullName, active_framework: s.framework, schedule_rules: scheduleRules,
+    }, { onConflict: 'id' })
+    if (upsertErr) throw new Error(upsertErr.message)
+  }
 }
 
 // ─── Professor AI + Notifications + Appearance → users.schedule_rules ────────
 
 export async function savePrefsToDB(s: AppSettings): Promise<void> {
-  const userId = await getUserId()
-  if (!userId) throw new Error('Not signed in')
+  const session = await getSession()
+  const userId  = session.user.id
+  const email   = session.user.email ?? ''
 
-  // Read existing schedule_rules first so we don't overwrite profile fields
-  const { data: existing, error: fetchErr } = await supabase
-    .from('users').select('schedule_rules').eq('id', userId).single()
-  if (fetchErr) throw new Error(fetchErr.message)
+  // Read existing schedule_rules — ignore "no rows" error
+  const { data: existing } = await supabase
+    .from('users').select('schedule_rules').eq('id', userId).maybeSingle()
 
   const merged = {
     ...(existing?.schedule_rules as Record<string, unknown> ?? {}),
@@ -101,32 +108,30 @@ export async function savePrefsToDB(s: AppSettings): Promise<void> {
     compact:               s.compact,
   }
 
-  const { error } = await supabase.from('users')
-    .update({ schedule_rules: merged })
-    .eq('id', userId)
-
+  const { error } = await supabase.from('users').upsert(
+    { id: userId, email, schedule_rules: merged },
+    { onConflict: 'id' },
+  )
   if (error) throw new Error(error.message)
 }
 
 // ─── Companies ────────────────────────────────────────────────────────────────
 
 export async function saveCompaniesToDB(companies: CompanyRow[]): Promise<void> {
-  const userId = await getUserId()
-  if (!userId) throw new Error('Not signed in')
+  const session = await getSession()
+  const userId  = session.user.id
 
-  // Delete removed companies
   const { data: existing } = await supabase
     .from('companies').select('id').eq('user_id', userId)
   const existingIds = (existing ?? []).map((r: { id: string }) => r.id)
-  const keepIds = companies.map(c => c.id)
-  const toDelete = existingIds.filter((id: string) => !keepIds.includes(id))
+  const keepIds     = companies.map(c => c.id)
+  const toDelete    = existingIds.filter((id: string) => !keepIds.includes(id))
 
   if (toDelete.length) {
     const { error } = await supabase.from('companies').delete().in('id', toDelete)
     if (error) throw new Error(error.message)
   }
 
-  // Upsert remaining
   if (companies.length) {
     const rows: DbCompany[] = companies.map(c => ({
       id:          c.id,
@@ -144,22 +149,20 @@ export async function saveCompaniesToDB(companies: CompanyRow[]): Promise<void> 
 // ─── Habits ───────────────────────────────────────────────────────────────────
 
 export async function saveHabitsToDB(habits: HabitRow[]): Promise<void> {
-  const userId = await getUserId()
-  if (!userId) throw new Error('Not signed in')
+  const session = await getSession()
+  const userId  = session.user.id
 
-  // Delete removed habits
   const { data: existing } = await supabase
     .from('habits').select('id').eq('user_id', userId)
   const existingIds = (existing ?? []).map((r: { id: string }) => r.id)
-  const keepIds = habits.map(h => h.id)
-  const toDelete = existingIds.filter((id: string) => !keepIds.includes(id))
+  const keepIds     = habits.map(h => h.id)
+  const toDelete    = existingIds.filter((id: string) => !keepIds.includes(id))
 
   if (toDelete.length) {
     const { error } = await supabase.from('habits').delete().in('id', toDelete)
     if (error) throw new Error(error.message)
   }
 
-  // Upsert — DB schema doesn't have emoji/color so we store core fields only
   if (habits.length) {
     const rows: DbHabit[] = habits.map(h => ({
       id:             h.id,
@@ -178,8 +181,8 @@ export async function saveHabitsToDB(habits: HabitRow[]): Promise<void> {
 // ─── Habit logs ───────────────────────────────────────────────────────────────
 
 export async function saveHabitLogsToDB(logs: HabitLogs): Promise<void> {
-  const userId = await getUserId()
-  if (!userId) throw new Error('Not signed in')
+  const session = await getSession()
+  const userId  = session.user.id
 
   const rows: Omit<DbHabitLog, 'id'>[] = []
   for (const [habitId, dates] of Object.entries(logs)) {
