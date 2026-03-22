@@ -218,13 +218,14 @@ function SaveBadge({ saved }: { saved: boolean }) {
 // ─── Sortable Section Shell ────────────────────────────────────────────────────
 
 function SectionShell({
-  id, meta, children, defaultOpen = false, saveLabel,
+  id, meta, children, defaultOpen = false, saveLabel, onSave,
 }: {
   id: SectionId
   meta: SectionMeta
   children: React.ReactNode
   defaultOpen?: boolean
   saveLabel?: string
+  onSave?: () => void
 }) {
   const [open, setOpen] = useState(defaultOpen)
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
@@ -279,15 +280,20 @@ function SectionShell({
           )}
         </div>
 
-        {/* Save state label */}
-        {saveLabel && (
-          <span style={{
-            fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 5,
-            background: saveLabel.includes('✓') ? 'rgba(29,158,117,0.12)' : saveLabel.includes('✗') ? 'rgba(224,82,82,0.12)' : 'var(--color-accent-fill, rgba(30,64,175,0.12))',
-            color: saveLabel.includes('✓') ? '#1D9E75' : saveLabel.includes('✗') ? '#E05252' : 'var(--color-accent, #1E40AF)',
-          }}>
-            {saveLabel}
-          </span>
+        {/* Save button — always visible in header */}
+        {onSave && (
+          <button
+            onClick={e => { e.stopPropagation(); onSave() }}
+            style={{
+              padding: '5px 14px', borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+              background: saveLabel?.includes('✓') ? 'rgba(29,158,117,0.12)' : saveLabel?.includes('✗') ? 'rgba(224,82,82,0.12)' : 'var(--color-accent-fill, rgba(30,64,175,0.12))',
+              border: `1px solid ${saveLabel?.includes('✓') ? '#1D9E7560' : saveLabel?.includes('✗') ? '#E0525260' : 'var(--color-accent, #1E40AF)40'}`,
+              color: saveLabel?.includes('✓') ? '#1D9E75' : saveLabel?.includes('✗') ? '#E05252' : 'var(--color-accent, #1E40AF)',
+              transition: 'all 0.15s', flexShrink: 0,
+            }}
+          >
+            {saveLabel ?? 'Save'}
+          </button>
         )}
 
         {/* Chevron */}
@@ -344,14 +350,6 @@ function ProfileSection({
           {FRAMEWORKS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
         </select>
       </FieldRow>
-      <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end' }}>
-        <button onClick={onSave} style={{
-          padding: '8px 20px', borderRadius: 8,
-          background: 'var(--color-accent-fill, rgba(30,64,175,0.15))',
-          border: '1px solid var(--color-accent, #1E40AF)50',
-          color: 'var(--color-accent, #1E40AF)', fontSize: 13, fontWeight: 600, cursor: 'pointer',
-        }}>Save Profile</button>
-      </div>
     </div>
   )
 }
@@ -414,14 +412,6 @@ function ScheduleSection({
       <FieldRow label="Auto-decline early meetings">
         <Toggle checked={s.autoDeclineEarly} onChange={v => set({ autoDeclineEarly: v })} />
       </FieldRow>
-      <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end' }}>
-        <button onClick={onSave} style={{
-          padding: '8px 20px', borderRadius: 8,
-          background: 'var(--color-accent-fill)',
-          border: '1px solid var(--color-accent, #1E40AF)50',
-          color: 'var(--color-accent, #1E40AF)', fontSize: 13, fontWeight: 600, cursor: 'pointer',
-        }}>Save Schedule</button>
-      </div>
     </div>
   )
 }
@@ -557,13 +547,6 @@ function CompaniesSection({
           <Plus size={13} /> Add a company / context
         </button>
       )}
-      {onSaveDB && (
-        <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end' }}>
-          <button onClick={onSaveDB} style={{ padding: '8px 20px', borderRadius: 8, background: 'var(--color-accent-fill)', border: '1px solid var(--color-accent, #1E40AF)50', color: 'var(--color-accent, #1E40AF)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-            Save to Cloud
-          </button>
-        </div>
-      )}
     </div>
   )
 }
@@ -662,13 +645,6 @@ function HabitsSection({ onSaveDB }: { onSaveDB?: () => void }) {
         }}>
           <Plus size={13} /> Add a habit
         </button>
-      )}
-      {onSaveDB && (
-        <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end' }}>
-          <button onClick={onSaveDB} style={{ padding: '8px 20px', borderRadius: 8, background: 'var(--color-accent-fill)', border: '1px solid var(--color-accent, #1E40AF)50', color: 'var(--color-accent, #1E40AF)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-            Save to Cloud
-          </button>
-        </div>
       )}
     </div>
   )
@@ -852,11 +828,6 @@ function ProfessorSection({ s, set, onSave }: { s: AppSettings; set: (p: Partial
           rows={3} placeholder="e.g. Always be concise. Prioritise Teradix work…"
           style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.5 }} />
       </FieldRow>
-      <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end' }}>
-        <button onClick={onSave} style={{ padding: '8px 20px', borderRadius: 8, background: 'var(--color-accent-fill)', border: '1px solid var(--color-accent, #1E40AF)50', color: 'var(--color-accent, #1E40AF)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-          Save AI Settings
-        </button>
-      </div>
     </div>
   )
 }
@@ -899,11 +870,7 @@ function NotificationsSection({ s, set, onSave }: { s: AppSettings; set: (p: Par
           )}
         </div>
       </FieldRow>
-      <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end' }}>
-        <button onClick={onSave} style={{ padding: '8px 20px', borderRadius: 8, background: 'var(--color-accent-fill)', border: '1px solid var(--color-accent, #1E40AF)50', color: 'var(--color-accent, #1E40AF)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-          Save Notifications
-        </button>
-      </div>
+
     </div>
   )
 }
@@ -952,11 +919,7 @@ function AppearanceSection({ s, set, onSave }: { s: AppSettings; set: (p: Partia
       <FieldRow label="Compact density" sub="Tighter spacing throughout the UI">
         <Toggle checked={s.compact} onChange={v => set({ compact: v })} />
       </FieldRow>
-      <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end' }}>
-        <button onClick={onSave} style={{ padding: '8px 20px', borderRadius: 8, background: 'var(--color-accent-fill)', border: '1px solid var(--color-accent, #1E40AF)50', color: 'var(--color-accent, #1E40AF)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-          Save Appearance
-        </button>
-      </div>
+
     </div>
   )
 }
@@ -1032,30 +995,35 @@ export function Settings() {
     // Wrap save button label with state feedback
     const saveLabel = saving === 'saving' ? 'Saving…' : saving === 'saved' ? 'Saved ✓' : saving === 'error' ? 'Error ✗' : undefined
 
+    // Map section id → its DB save function
+    const saveFns: Partial<Record<SectionId, () => Promise<void>>> = {
+      profile:       () => saveProfileToDB(settingsRef.current),
+      schedule:      () => saveProfileToDB(settingsRef.current),
+      companies:     () => saveCompaniesToDB(companies as DbSyncCompanyRow[]),
+      habits:        async () => { const { habits } = useHabitsStore.getState(); await saveHabitsToDB(habits); await saveHabitLogsToDB(loadLogs()) },
+      professor:     () => savePrefsToDB(settingsRef.current),
+      notifications: () => savePrefsToDB(settingsRef.current),
+      appearance:    () => savePrefsToDB(settingsRef.current),
+    }
+    const saveFn = saveFns[id]
+
     return (
-      <SectionShell key={id} id={id} meta={meta} saveLabel={saveLabel}>
-        {id === 'profile'       && <ProfileSection       s={settings} set={update}
-                                      onSave={withSectionSave('profile', () => saveProfileToDB(settingsRef.current))} />}
-        {id === 'schedule'      && <ScheduleSection      s={settings} set={update}
-                                      onSave={withSectionSave('schedule', () => saveProfileToDB(settingsRef.current))} />}
+      <SectionShell key={id} id={id} meta={meta}
+        saveLabel={saveLabel}
+        onSave={saveFn ? withSectionSave(id, saveFn) : undefined}
+      >
+        {id === 'profile'       && <ProfileSection       s={settings} set={update} onSave={() => {}} />}
+        {id === 'schedule'      && <ScheduleSection      s={settings} set={update} onSave={() => {}} />}
         {id === 'companies'     && <CompaniesSection     companies={companies}
                                       setCompanies={c => { setCompanies(c); saveCompanies(c) }}
-                                      accounts={accounts}
-                                      onSaveDB={withSectionSave('companies', () => saveCompaniesToDB(companies as DbSyncCompanyRow[]))} />}
-        {id === 'habits'        && <HabitsSection        onSaveDB={withSectionSave('habits', async () => {
-                                      const { habits } = useHabitsStore.getState()
-                                      await saveHabitsToDB(habits)
-                                      await saveHabitLogsToDB(loadLogs())
-                                    })} />}
+                                      accounts={accounts} />}
+        {id === 'habits'        && <HabitsSection />}
         {id === 'accounts'      && <AccountsSection      accounts={accounts}
                                       setAccounts={a => { setAccounts(a) }}
                                       primaryEmail={authUser?.email ?? ''} />}
-        {id === 'professor'     && <ProfessorSection     s={settings} set={update}
-                                      onSave={withSectionSave('professor', () => savePrefsToDB(settingsRef.current))} />}
-        {id === 'notifications' && <NotificationsSection s={settings} set={update}
-                                      onSave={withSectionSave('notifications', () => savePrefsToDB(settingsRef.current))} />}
-        {id === 'appearance'    && <AppearanceSection    s={settings} set={update}
-                                      onSave={withSectionSave('appearance', () => savePrefsToDB(settingsRef.current))} />}
+        {id === 'professor'     && <ProfessorSection     s={settings} set={update} onSave={() => {}} />}
+        {id === 'notifications' && <NotificationsSection s={settings} set={update} onSave={() => {}} />}
+        {id === 'appearance'    && <AppearanceSection    s={settings} set={update} onSave={() => {}} />}
       </SectionShell>
     )
   }
