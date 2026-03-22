@@ -18,7 +18,7 @@ function MetricCard({
   icon: React.ElementType
   accentColor?: string
 }) {
-  const color = accentColor ?? '#7C3AED'
+  const color = accentColor ?? '#1E40AF'
   return (
     <div
       style={{
@@ -62,7 +62,7 @@ function MetricCard({
         >
           {value}
         </div>
-        <div style={{ fontSize: 12.5, color: '#6B7280', marginTop: 4, fontWeight: 400 }}>
+        <div style={{ fontSize: 12.5, color: '#FFFFFF', marginTop: 4, fontWeight: 400 }}>
           {label}
         </div>
       </div>
@@ -161,7 +161,7 @@ export function ExecutiveDashboard() {
           >
             Good morning.
           </h2>
-          <p style={{ margin: '4px 0 0', fontSize: 13.5, color: '#6B7280' }}>
+          <p style={{ margin: '4px 0 0', fontSize: 13.5, color: '#FFFFFF' }}>
             Here's what demands your attention today.
           </p>
         </div>
@@ -181,7 +181,7 @@ export function ExecutiveDashboard() {
             delta="3 added this week"
             deltaPositive={false}
             icon={CheckSquare}
-            accentColor="#7C3AED"
+            accentColor="#1E40AF"
           />
           <MetricCard
             label="Urgent & Important"
@@ -225,7 +225,7 @@ export function ExecutiveDashboard() {
             delta="5 require action"
             deltaPositive={false}
             icon={Inbox}
-            accentColor="#7C3AED"
+            accentColor="#1E40AF"
           />
           <MetricCard
             label="Habit Streak"
@@ -253,7 +253,7 @@ export function ExecutiveDashboard() {
                 margin: '0 0 16px',
                 fontSize: 13,
                 fontWeight: 600,
-                color: '#6B7280',
+                color: '#FFFFFF',
                 textTransform: 'uppercase',
                 letterSpacing: '0.8px',
               }}
@@ -281,7 +281,7 @@ export function ExecutiveDashboard() {
                 margin: '0 0 16px',
                 fontSize: 13,
                 fontWeight: 600,
-                color: '#6B7280',
+                color: '#FFFFFF',
                 textTransform: 'uppercase',
                 letterSpacing: '0.8px',
               }}
@@ -291,7 +291,7 @@ export function ExecutiveDashboard() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
               {(
                 [
-                  { key: 'do', label: 'Do Now', color: '#7C3AED' },
+                  { key: 'do', label: 'Do Now', color: '#1E40AF' },
                   { key: 'schedule', label: 'Schedule', color: '#7F77DD' },
                   { key: 'delegate', label: 'Delegate', color: '#1D9E75' },
                   { key: 'eliminate', label: 'Eliminate', color: '#888780' },
@@ -314,7 +314,7 @@ export function ExecutiveDashboard() {
                     <div style={{ fontSize: 22, fontWeight: 700, color, fontFamily: "'Cabinet Grotesk', sans-serif" }}>
                       {count}
                     </div>
-                    <div style={{ fontSize: 11.5, color: '#6B7280' }}>{label}</div>
+                    <div style={{ fontSize: 11.5, color: '#FFFFFF' }}>{label}</div>
                   </div>
                 )
               })}
@@ -326,8 +326,8 @@ export function ExecutiveDashboard() {
         <div
           style={{
             marginTop: 14,
-            background: 'rgba(124, 58, 237, 0.06)',
-            border: '1px solid rgba(124, 58, 237, 0.2)',
+            background: 'rgba(30, 64, 175, 0.06)',
+            border: '1px solid rgba(30, 64, 175, 0.2)',
             borderRadius: 12,
             padding: '16px 20px',
             display: 'flex',
@@ -340,8 +340,8 @@ export function ExecutiveDashboard() {
               width: 28,
               height: 28,
               borderRadius: 6,
-              background: 'rgba(124, 58, 237, 0.15)',
-              border: '1px solid rgba(124, 58, 237, 0.3)',
+              background: 'rgba(30, 64, 175, 0.15)',
+              border: '1px solid rgba(30, 64, 175, 0.3)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -349,10 +349,10 @@ export function ExecutiveDashboard() {
               marginTop: 1,
             }}
           >
-            <TrendingUp size={13} color="#7C3AED" strokeWidth={2.5} />
+            <TrendingUp size={13} color="#1E40AF" strokeWidth={2.5} />
           </div>
           <div>
-            <div style={{ fontSize: 12, fontWeight: 600, color: '#7C3AED', marginBottom: 4, letterSpacing: '0.3px' }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: '#1E40AF', marginBottom: 4, letterSpacing: '0.3px' }}>
               THE PROFESSOR
             </div>
             <p style={{ margin: 0, fontSize: 13.5, color: '#E8EAF6', lineHeight: 1.55 }}>

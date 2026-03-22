@@ -64,7 +64,7 @@ export function Sidebar() {
           style={{
             width: 32,
             height: 32,
-            background: '#7C3AED',
+            background: '#1E40AF',
             borderRadius: 6,
             display: 'flex',
             alignItems: 'center',
@@ -107,11 +107,11 @@ export function Sidebar() {
                   gap: 10,
                   padding: sidebarCollapsed ? '10px 0' : '10px 12px',
                   justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
-                  background: active ? 'rgba(124,58,237,0.12)' : 'transparent',
+                  background: active ? 'rgba(30,64,175,0.12)' : 'transparent',
                   border: 'none',
                   borderRadius: 8,
                   cursor: 'pointer',
-                  color: active ? '#7C3AED' : '#6B7280',
+                  color: active ? '#1E40AF' : '#FFFFFF',
                   marginBottom: 2,
                   transition: 'all 0.15s ease',
                 }}
@@ -126,7 +126,7 @@ export function Sidebar() {
                   if (!active) {
                     const el = e.currentTarget as HTMLElement
                     el.style.background = 'transparent'
-                    el.style.color = '#6B7280'
+                    el.style.color = '#FFFFFF'
                   }
                 }}
               >
@@ -137,7 +137,7 @@ export function Sidebar() {
                   </span>
                 )}
                 {active && !sidebarCollapsed && (
-                  <div style={{ marginLeft: 'auto', width: 4, height: 4, borderRadius: '50%', background: '#7C3AED' }} />
+                  <div style={{ marginLeft: 'auto', width: 4, height: 4, borderRadius: '50%', background: '#1E40AF' }} />
                 )}
               </button>
             )
@@ -149,7 +149,7 @@ export function Sidebar() {
           {!sidebarCollapsed && (
             <span style={{
               display: 'block', padding: '4px 12px 6px',
-              fontSize: 9.5, fontWeight: 700, color: '#374151',
+              fontSize: 9.5, fontWeight: 700, color: '#FFFFFF',
               textTransform: 'uppercase', letterSpacing: '1.2px',
             }}>
               System
@@ -167,9 +167,9 @@ export function Sidebar() {
                   display: 'flex', alignItems: 'center', gap: 10,
                   padding: sidebarCollapsed ? '10px 0' : '10px 12px',
                   justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
-                  background: active ? 'rgba(124,58,237,0.12)' : 'transparent',
+                  background: active ? 'rgba(30,64,175,0.12)' : 'transparent',
                   border: 'none', borderRadius: 8, cursor: 'pointer',
-                  color: active ? '#7C3AED' : '#6B7280',
+                  color: active ? '#1E40AF' : '#FFFFFF',
                   marginBottom: 2, transition: 'all 0.15s ease',
                 }}
                 onMouseEnter={e => {
@@ -183,7 +183,7 @@ export function Sidebar() {
                   if (!active) {
                     const el = e.currentTarget as HTMLElement
                     el.style.background = 'transparent'
-                    el.style.color = '#6B7280'
+                    el.style.color = '#FFFFFF'
                   }
                 }}
               >
@@ -194,7 +194,7 @@ export function Sidebar() {
                   </span>
                 )}
                 {active && !sidebarCollapsed && (
-                  <div style={{ marginLeft: 'auto', width: 4, height: 4, borderRadius: '50%', background: '#7C3AED' }} />
+                  <div style={{ marginLeft: 'auto', width: 4, height: 4, borderRadius: '50%', background: '#1E40AF' }} />
                 )}
               </button>
             )
@@ -215,7 +215,7 @@ export function Sidebar() {
             background: 'transparent',
             border: 'none',
             cursor: 'pointer',
-            color: '#6B7280',
+            color: '#FFFFFF',
             borderRadius: 6,
           }}
           title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}

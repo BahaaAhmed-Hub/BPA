@@ -18,7 +18,7 @@ interface HabitLogs {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const HABIT_COLORS = ['#7C3AED', '#7F77DD', '#1D9E75', '#E05252', '#888780', '#E0944A']
+const HABIT_COLORS = ['#1E40AF', '#7F77DD', '#1D9E75', '#E05252', '#888780', '#E0944A']
 
 const DEFAULT_HABITS: Habit[] = []
 
@@ -185,7 +185,7 @@ export function HabitsModule() {
               label: "Today's Progress",
               value: `${todayCompleted}/${habits.length}`,
               sub: `${completionRate}% complete`,
-              color: completionRate === 100 ? '#1D9E75' : '#7C3AED',
+              color: completionRate === 100 ? '#1D9E75' : '#1E40AF',
             },
             {
               label: 'Best Streak',
@@ -197,7 +197,7 @@ export function HabitsModule() {
               label: 'Active Habits',
               value: habits.length,
               sub: 'Being tracked',
-              color: '#7C3AED',
+              color: '#1E40AF',
             },
           ].map(card => (
             <div key={card.label} style={{
@@ -209,7 +209,7 @@ export function HabitsModule() {
               <div style={{ fontSize: 28, fontWeight: 700, color: '#E8EAF6', fontFamily: "'Cabinet Grotesk', sans-serif", letterSpacing: '-0.5px', lineHeight: 1 }}>
                 {card.value}
               </div>
-              <div style={{ fontSize: 12.5, color: '#6B7280', marginTop: 4 }}>{card.label}</div>
+              <div style={{ fontSize: 12.5, color: '#FFFFFF', marginTop: 4 }}>{card.label}</div>
               <div style={{ fontSize: 11, color: card.color, marginTop: 6, fontWeight: 500 }}>{card.sub}</div>
             </div>
           ))}
@@ -224,20 +224,20 @@ export function HabitsModule() {
             padding: '16px 20px', borderBottom: '1px solid #252A3E',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-              <span style={{ fontSize: 11, fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+              <span style={{ fontSize: 11, fontWeight: 600, color: '#FFFFFF', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
                 Habit
               </span>
               <div style={{ display: 'flex', gap: 4 }}>
                 {days.map(d => (
                   <div key={d} style={{ width: 22, textAlign: 'center' }}>
-                    <span style={{ fontSize: 9.5, color: d === today ? '#7C3AED' : '#5A4E3A', fontWeight: d === today ? 600 : 400 }}>
+                    <span style={{ fontSize: 9.5, color: d === today ? '#1E40AF' : '#5A4E3A', fontWeight: d === today ? 600 : 400 }}>
                       {fmtDayLabel(d)}
                     </span>
                   </div>
                 ))}
               </div>
             </div>
-            <span style={{ fontSize: 11, fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+            <span style={{ fontSize: 11, fontWeight: 600, color: '#FFFFFF', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
               Streak
             </span>
           </div>
@@ -245,7 +245,7 @@ export function HabitsModule() {
           {/* Habit rows */}
           {habits.length === 0 && (
             <div style={{ padding: '32px', textAlign: 'center' }}>
-              <p style={{ margin: 0, fontSize: 13, color: '#6B7280' }}>No habits yet. Add one below.</p>
+              <p style={{ margin: 0, fontSize: 13, color: '#FFFFFF' }}>No habits yet. Add one below.</p>
             </div>
           )}
 
@@ -291,8 +291,8 @@ export function HabitsModule() {
 
                 {/* Streak */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 5, width: 52, justifyContent: 'flex-end' }}>
-                  {streak > 0 && <Flame size={12} color={streak >= 7 ? '#E05252' : '#7C3AED'} />}
-                  <span style={{ fontSize: 13, fontWeight: 600, color: streak > 0 ? (streak >= 7 ? '#E05252' : '#7C3AED') : '#5A4E3A' }}>
+                  {streak > 0 && <Flame size={12} color={streak >= 7 ? '#E05252' : '#1E40AF'} />}
+                  <span style={{ fontSize: 13, fontWeight: 600, color: streak > 0 ? (streak >= 7 ? '#E05252' : '#1E40AF') : '#5A4E3A' }}>
                     {streak > 0 ? `${streak}d` : '—'}
                   </span>
                 </div>
@@ -316,7 +316,7 @@ export function HabitsModule() {
             background: '#161929', border: '1px solid #252A3E',
             borderRadius: 12, padding: '18px 20px',
           }}>
-            <p style={{ margin: '0 0 14px', fontSize: 12, fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+            <p style={{ margin: '0 0 14px', fontSize: 12, fontWeight: 600, color: '#FFFFFF', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
               New Habit
             </p>
             <input
@@ -349,7 +349,7 @@ export function HabitsModule() {
               <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
                 <button
                   onClick={() => { setAddingHabit(false); setNewHabitName('') }}
-                  style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 14px', borderRadius: 7, background: 'transparent', border: '1px solid #252A3E', color: '#6B7280', fontSize: 12, cursor: 'pointer' }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 14px', borderRadius: 7, background: 'transparent', border: '1px solid #252A3E', color: '#FFFFFF', fontSize: 12, cursor: 'pointer' }}
                 >
                   <X size={12} /> Cancel
                 </button>
@@ -359,8 +359,8 @@ export function HabitsModule() {
                   style={{
                     display: 'flex', alignItems: 'center', gap: 5,
                     padding: '7px 16px', borderRadius: 7,
-                    background: 'rgba(124,58,237,0.15)', border: '1px solid rgba(124,58,237,0.3)',
-                    color: '#7C3AED', fontSize: 12, fontWeight: 500, cursor: 'pointer',
+                    background: 'rgba(30,64,175,0.15)', border: '1px solid rgba(30,64,175,0.3)',
+                    color: '#1E40AF', fontSize: 12, fontWeight: 500, cursor: 'pointer',
                     opacity: newHabitName.trim() ? 1 : 0.4,
                   }}
                 >
@@ -379,7 +379,7 @@ export function HabitsModule() {
               color: '#5A4E3A', fontSize: 13, cursor: 'pointer',
               transition: 'all 0.15s',
             }}
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = '#7C3AED50'; (e.currentTarget as HTMLElement).style.color = '#7C3AED' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = '#1E40AF50'; (e.currentTarget as HTMLElement).style.color = '#1E40AF' }}
             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = '#252A3E'; (e.currentTarget as HTMLElement).style.color = '#5A4E3A' }}
           >
             <Plus size={14} /> Add a habit

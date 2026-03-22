@@ -38,7 +38,7 @@ export function TaskCard({ task }: TaskCardProps) {
       style={{
         ...style,
         background: hovered ? '#2e261c' : '#161929',
-        border: `1px solid ${isDragging ? '#7C3AED' : '#252A3E'}`,
+        border: `1px solid ${isDragging ? '#1E40AF' : '#252A3E'}`,
         borderRadius: 8,
         padding: '10px 12px',
         cursor: isDragging ? 'grabbing' : 'default',
@@ -122,7 +122,7 @@ export function TaskCard({ task }: TaskCardProps) {
               style={{
                 margin: '2px 0 0',
                 fontSize: 11.5,
-                color: '#6B7280',
+                color: '#FFFFFF',
                 lineHeight: 1.3,
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
@@ -149,7 +149,7 @@ export function TaskCard({ task }: TaskCardProps) {
               {COMPANY_LABELS[task.company]}
             </span>
             {task.dueDate && (
-              <span style={{ fontSize: 10.5, color: '#6B7280' }}>
+              <span style={{ fontSize: 10.5, color: '#FFFFFF' }}>
                 {new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
               </span>
             )}
@@ -164,7 +164,7 @@ export function TaskCard({ task }: TaskCardProps) {
               background: 'transparent',
               border: 'none',
               cursor: 'pointer',
-              color: '#6B7280',
+              color: '#FFFFFF',
               padding: 2,
               borderRadius: 4,
               display: 'flex',

@@ -53,14 +53,14 @@ export function TopBar({ title, subtitle }: TopBarProps) {
           {title}
         </h1>
         {subtitle && (
-          <p style={{ margin: 0, fontSize: 12, color: '#6B7280', marginTop: 2 }}>
+          <p style={{ margin: 0, fontSize: 12, color: '#FFFFFF', marginTop: 2 }}>
             {subtitle}
           </p>
         )}
       </div>
 
       {/* Date */}
-      <span style={{ fontSize: 12, color: '#6B7280', letterSpacing: '0.2px' }}>
+      <span style={{ fontSize: 12, color: '#FFFFFF', letterSpacing: '0.2px' }}>
         {dateStr}
       </span>
 
@@ -80,7 +80,7 @@ export function TopBar({ title, subtitle }: TopBarProps) {
               border: '1px solid transparent',
               borderRadius: 7,
               cursor: 'pointer',
-              color: '#6B7280',
+              color: '#FFFFFF',
               transition: 'all 0.15s ease',
             }}
             onMouseEnter={e => {
@@ -93,7 +93,7 @@ export function TopBar({ title, subtitle }: TopBarProps) {
               const el = e.currentTarget as HTMLElement
               el.style.background = 'transparent'
               el.style.borderColor = 'transparent'
-              el.style.color = '#6B7280'
+              el.style.color = '#FFFFFF'
             }}
           >
             <Icon size={15} strokeWidth={1.8} />
@@ -108,10 +108,10 @@ export function TopBar({ title, subtitle }: TopBarProps) {
           style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}
         >
           {user?.avatarUrl ? (
-            <img src={user.avatarUrl} alt={user.name ?? ''} style={{ width: 32, height: 32, borderRadius: '50%', border: '1.5px solid #7C3AED', objectFit: 'cover' }} />
+            <img src={user.avatarUrl} alt={user.name ?? ''} style={{ width: 32, height: 32, borderRadius: '50%', border: '1.5px solid #1E40AF', objectFit: 'cover' }} />
           ) : (
-            <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgba(124,58,237,0.2)', border: '1.5px solid #7C3AED', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <span style={{ fontSize: 12, fontWeight: 600, color: '#7C3AED' }}>
+            <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgba(30,64,175,0.2)', border: '1.5px solid #1E40AF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: '#1E40AF' }}>
                 {user?.name?.[0]?.toUpperCase() ?? 'P'}
               </span>
             </div>
@@ -124,7 +124,7 @@ export function TopBar({ title, subtitle }: TopBarProps) {
             <div style={{ position: 'absolute', right: 0, top: 40, zIndex: 50, background: '#161929', border: '1px solid #252A3E', borderRadius: 10, padding: 8, minWidth: 200, boxShadow: '0 8px 24px rgba(0,0,0,0.5)' }}>
               <div style={{ padding: '8px 12px 10px', borderBottom: '1px solid #252A3E', marginBottom: 6 }}>
                 <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#E8EAF6' }}>{user?.name ?? 'User'}</p>
-                <p style={{ margin: '2px 0 0', fontSize: 11, color: '#6B7280' }}>{user?.email}</p>
+                <p style={{ margin: '2px 0 0', fontSize: 11, color: '#FFFFFF' }}>{user?.email}</p>
               </div>
               <button
                 onClick={() => { setMenuOpen(false); void signOut() }}

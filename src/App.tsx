@@ -48,7 +48,7 @@ function LoginScreen() {
       <div style={{
         position: 'absolute', top: '-20%', left: '-10%',
         width: 600, height: 600, borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(124,58,237,0.08) 0%, transparent 70%)',
+        background: 'radial-gradient(circle, rgba(30,64,175,0.08) 0%, transparent 70%)',
         pointerEvents: 'none',
       }} />
       <div style={{
@@ -71,9 +71,9 @@ function LoginScreen() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 56 }}>
           <div style={{
             width: 48, height: 48, borderRadius: 12,
-            background: 'linear-gradient(135deg, #7C3AED 0%, #A78BFA 100%)',
+            background: 'linear-gradient(135deg, #1E40AF 0%, #60A5FA 100%)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 8px 24px rgba(124,58,237,0.35)',
+            boxShadow: '0 8px 24px rgba(30,64,175,0.35)',
           }}>
             <GraduationCap size={24} color="#0D0F1A" strokeWidth={2.5} />
           </div>
@@ -95,7 +95,7 @@ function LoginScreen() {
           }}>
             Your AI Executive<br />
             <span style={{
-              background: 'linear-gradient(135deg, #7C3AED 0%, #A78BFA 60%, #7C3AED 100%)',
+              background: 'linear-gradient(135deg, #1E40AF 0%, #60A5FA 60%, #1E40AF 100%)',
               WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
             }}>
               Operating System
@@ -103,7 +103,7 @@ function LoginScreen() {
           </h1>
           <p style={{
             margin: '0 0 48px',
-            fontSize: 17, color: '#6B7280', lineHeight: 1.7, maxWidth: 420,
+            fontSize: 17, color: '#FFFFFF', lineHeight: 1.7, maxWidth: 420,
           }}>
             Triage emails, prep for meetings, manage tasks, and track habits — all powered by AI and connected to your Google workspace.
           </p>
@@ -114,11 +114,11 @@ function LoginScreen() {
               <div key={label} style={{
                 display: 'flex', alignItems: 'center', gap: 7,
                 padding: '8px 14px', borderRadius: 100,
-                background: 'rgba(124,58,237,0.07)',
-                border: '1px solid rgba(124,58,237,0.18)',
+                background: 'rgba(30,64,175,0.07)',
+                border: '1px solid rgba(30,64,175,0.18)',
               }}>
-                <Icon size={13} color="#7C3AED" />
-                <span style={{ fontSize: 12.5, color: '#94A3B8', fontWeight: 500 }}>{label}</span>
+                <Icon size={13} color="#1E40AF" />
+                <span style={{ fontSize: 12.5, color: '#FFFFFF', fontWeight: 500 }}>{label}</span>
               </div>
             ))}
           </div>
@@ -133,14 +133,14 @@ function LoginScreen() {
               display: 'inline-flex', alignItems: 'center', gap: 12,
               padding: '15px 28px', borderRadius: 14,
               background: hovered
-                ? 'rgba(124,58,237,0.18)'
-                : 'rgba(124,58,237,0.10)',
-              border: `1px solid ${hovered ? 'rgba(124,58,237,0.5)' : 'rgba(124,58,237,0.25)'}`,
+                ? 'rgba(30,64,175,0.18)'
+                : 'rgba(30,64,175,0.10)',
+              border: `1px solid ${hovered ? 'rgba(30,64,175,0.5)' : 'rgba(30,64,175,0.25)'}`,
               color: '#E8EAF6', fontSize: 15, fontWeight: 600, cursor: signing ? 'wait' : 'pointer',
               fontFamily: "'Cabinet Grotesk', sans-serif",
               transition: 'all 0.2s ease',
               transform: hovered ? 'translateY(-1px)' : 'none',
-              boxShadow: hovered ? '0 8px 24px rgba(124,58,237,0.15)' : 'none',
+              boxShadow: hovered ? '0 8px 24px rgba(30,64,175,0.15)' : 'none',
               opacity: signing ? 0.7 : 1,
             }}
           >
@@ -151,10 +151,10 @@ function LoginScreen() {
               <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.962L3.964 6.294C4.672 4.169 6.656 3.58 9 3.58z"/>
             </svg>
             {signing ? 'Redirecting…' : 'Continue with Google'}
-            {!signing && <ArrowRight size={16} color="#7C3AED" />}
+            {!signing && <ArrowRight size={16} color="#1E40AF" />}
           </button>
 
-          <p style={{ margin: '16px 0 0', fontSize: 12, color: '#374151' }}>
+          <p style={{ margin: '16px 0 0', fontSize: 12, color: '#FFFFFF' }}>
             Your data is isolated and encrypted. Only you can access it.
           </p>
         </div>
@@ -164,7 +164,7 @@ function LoginScreen() {
       <div style={{
         width: 440,
         background: 'rgba(255,255,255,0.018)',
-        borderLeft: '1px solid rgba(124,58,237,0.1)',
+        borderLeft: '1px solid rgba(30,64,175,0.1)',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'center',
@@ -172,16 +172,16 @@ function LoginScreen() {
         gap: 14,
         position: 'relative',
       }}>
-        <p style={{ margin: '0 0 8px', fontSize: 11, fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '1.2px' }}>
+        <p style={{ margin: '0 0 8px', fontSize: 11, fontWeight: 700, color: '#FFFFFF', textTransform: 'uppercase', letterSpacing: '1.2px' }}>
           Live Preview
         </p>
 
         {/* Mock stat cards */}
         {[
-          { label: 'Meetings today',     value: '4',          sub: '2h 45m scheduled',       color: '#7C3AED' },
+          { label: 'Meetings today',     value: '4',          sub: '2h 45m scheduled',       color: '#1E40AF' },
           { label: 'Unread emails',      value: '12',         sub: '3 need decisions',        color: '#7F77DD' },
           { label: 'Tasks in progress',  value: '7',          sub: '2 due today',             color: '#1D9E75' },
-          { label: 'Habit streak',       value: '14 days',    sub: 'Morning routine',         color: '#A78BFA' },
+          { label: 'Habit streak',       value: '14 days',    sub: 'Morning routine',         color: '#60A5FA' },
         ].map(card => (
           <div key={card.label} style={{
             padding: '16px 18px', borderRadius: 12,
@@ -190,11 +190,11 @@ function LoginScreen() {
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           }}>
             <div>
-              <p style={{ margin: '0 0 3px', fontSize: 11.5, color: '#64748B' }}>{card.label}</p>
+              <p style={{ margin: '0 0 3px', fontSize: 11.5, color: '#FFFFFF' }}>{card.label}</p>
               <p style={{ margin: 0, fontSize: 20, fontWeight: 800, color: '#E8EAF6', fontFamily: "'Cabinet Grotesk', sans-serif", letterSpacing: '-0.5px' }}>
                 {card.value}
               </p>
-              <p style={{ margin: '2px 0 0', fontSize: 11, color: '#64748B' }}>{card.sub}</p>
+              <p style={{ margin: '2px 0 0', fontSize: 11, color: '#FFFFFF' }}>{card.sub}</p>
             </div>
             <div style={{
               width: 36, height: 36, borderRadius: 10,
@@ -210,18 +210,18 @@ function LoginScreen() {
         {/* Mock email triage */}
         <div style={{
           padding: '16px 18px', borderRadius: 12,
-          background: 'rgba(124,58,237,0.04)',
-          border: '1px solid rgba(124,58,237,0.12)',
+          background: 'rgba(30,64,175,0.04)',
+          border: '1px solid rgba(30,64,175,0.12)',
           marginTop: 4,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 10 }}>
-            <Brain size={12} color="#7C3AED" />
-            <span style={{ fontSize: 11, fontWeight: 600, color: '#7C3AED', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+            <Brain size={12} color="#1E40AF" />
+            <span style={{ fontSize: 11, fontWeight: 600, color: '#1E40AF', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
               AI Triage
             </span>
           </div>
           {[
-            { from: 'Sarah K.',    subject: 'Q4 Budget Review',    tag: 'Decision', tagColor: '#7C3AED' },
+            { from: 'Sarah K.',    subject: 'Q4 Budget Review',    tag: 'Decision', tagColor: '#1E40AF' },
             { from: 'Dev Team',    subject: 'PR #247 merged',      tag: 'FYI',      tagColor: '#7F77DD' },
             { from: 'Alex M.',     subject: 'Client proposal',     tag: 'Urgent',   tagColor: '#E05252' },
           ].map(email => (
@@ -230,8 +230,8 @@ function LoginScreen() {
               padding: '7px 0', borderBottom: '1px solid rgba(255,255,255,0.04)',
             }}>
               <div>
-                <span style={{ fontSize: 12, color: '#94A3B8', fontWeight: 500 }}>{email.from}</span>
-                <span style={{ fontSize: 11.5, color: '#64748B', marginLeft: 8 }}>{email.subject}</span>
+                <span style={{ fontSize: 12, color: '#FFFFFF', fontWeight: 500 }}>{email.from}</span>
+                <span style={{ fontSize: 11.5, color: '#FFFFFF', marginLeft: 8 }}>{email.subject}</span>
               </div>
               <span style={{
                 fontSize: 10, padding: '2px 7px', borderRadius: 4, fontWeight: 600,
@@ -265,9 +265,9 @@ function LoadingScreen() {
     }}>
       <div style={{
         width: 44, height: 44, borderRadius: 11,
-        background: 'linear-gradient(135deg, #7C3AED 0%, #A78BFA 100%)',
+        background: 'linear-gradient(135deg, #1E40AF 0%, #60A5FA 100%)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        boxShadow: '0 8px 24px rgba(124,58,237,0.3)',
+        boxShadow: '0 8px 24px rgba(30,64,175,0.3)',
         animation: 'pulse 1.5s ease-in-out infinite',
       }}>
         <GraduationCap size={22} color="#0D0F1A" strokeWidth={2.5} />

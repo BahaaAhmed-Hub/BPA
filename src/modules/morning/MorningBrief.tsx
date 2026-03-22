@@ -14,7 +14,7 @@ import type { Task } from '@/types'
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const CO_COLOR: Record<string, string> = {
-  teradix:    '#7C3AED',
+  teradix:    '#1E40AF',
   dxtech:     '#7F77DD',
   consulting: '#1D9E75',
   personal:   '#888780',
@@ -30,8 +30,8 @@ const CO_NAME: Record<string, string> = {
 const ENERGY_META = [
   null,
   { label: 'Depleted', color: '#888780' },
-  { label: 'Low',      color: '#6B7280' },
-  { label: 'Steady',   color: '#7C3AED' },
+  { label: 'Low',      color: '#FFFFFF' },
+  { label: 'Steady',   color: '#1E40AF' },
   { label: 'Energized',color: '#1D9E75' },
   { label: 'Peak',     color: '#7F77DD' },
 ] as const
@@ -44,7 +44,7 @@ const QUADRANT_MAP: Record<string, DbTask['quadrant']> = {
 }
 
 const MOCK_COMPANIES: DbCompany[] = [
-  { id: 'teradix',    user_id: 'demo', name: 'Teradix',    color_tag: '#7C3AED', calendar_id: null, is_active: true },
+  { id: 'teradix',    user_id: 'demo', name: 'Teradix',    color_tag: '#1E40AF', calendar_id: null, is_active: true },
   { id: 'dxtech',     user_id: 'demo', name: 'DX Tech',    color_tag: '#7F77DD', calendar_id: null, is_active: true },
   { id: 'consulting', user_id: 'demo', name: 'Consulting', color_tag: '#1D9E75', calendar_id: null, is_active: true },
   { id: 'personal',   user_id: 'demo', name: 'Personal',   color_tag: '#888780', calendar_id: null, is_active: true },
@@ -204,7 +204,7 @@ function PrioritySkeleton() {
 function MeetingTypeIcon({ type }: { type: string | null }) {
   if (type === 'video')       return <Video size={12}    color="#7F77DD" />
   if (type === 'one_on_one')  return <Users size={12}    color="#1D9E75" />
-  if (type === 'external')    return <Calendar size={12} color="#7C3AED" />
+  if (type === 'external')    return <Calendar size={12} color="#1E40AF" />
   return                             <Users size={12}    color="#6B7280" />
 }
 
@@ -216,7 +216,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
       margin: '0 0 14px',
       fontSize: 11,
       fontWeight: 600,
-      color: '#6B7280',
+      color: '#FFFFFF',
       textTransform: 'uppercase',
       letterSpacing: '1px',
     }}>
@@ -326,7 +326,7 @@ export function MorningBrief() {
         <div className="brief-section" style={{ marginBottom: 32 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
-              <p style={{ margin: '0 0 2px', fontSize: 15, color: '#6B7280', fontWeight: 400 }}>
+              <p style={{ margin: '0 0 2px', fontSize: 15, color: '#FFFFFF', fontWeight: 400 }}>
                 Good morning,
               </p>
               <h1 style={{
@@ -340,7 +340,7 @@ export function MorningBrief() {
               }}>
                 {firstName}.
               </h1>
-              <p style={{ margin: '10px 0 0', fontSize: 13, color: '#6B7280' }}>
+              <p style={{ margin: '10px 0 0', fontSize: 13, color: '#FFFFFF' }}>
                 {dateStr}
               </p>
             </div>
@@ -354,7 +354,7 @@ export function MorningBrief() {
                 padding: '8px 14px', borderRadius: 8,
                 background: 'transparent',
                 border: '1px solid #252A3E',
-                color: '#6B7280', fontSize: 12, cursor: 'pointer',
+                color: '#FFFFFF', fontSize: 12, cursor: 'pointer',
                 transition: 'all 0.15s',
                 opacity: isGenerating ? 0.5 : 1,
               }}
@@ -368,7 +368,7 @@ export function MorningBrief() {
           <div style={{
             marginTop: 24,
             height: 1,
-            background: 'linear-gradient(90deg, #7C3AED40 0%, #252A3E 60%, transparent 100%)',
+            background: 'linear-gradient(90deg, #1E40AF40 0%, #252A3E 60%, transparent 100%)',
           }} />
         </div>
 
@@ -380,7 +380,7 @@ export function MorningBrief() {
           borderRadius: 14,
           padding: '20px 24px',
         }}>
-          <p style={{ margin: '0 0 16px', fontSize: 13, color: '#6B7280' }}>
+          <p style={{ margin: '0 0 16px', fontSize: 13, color: '#FFFFFF' }}>
             How's your energy this morning?
           </p>
           <div style={{ display: 'flex', gap: 14 }}>
@@ -433,21 +433,21 @@ export function MorningBrief() {
               border: '1px solid #252A3E',
               borderRadius: 14,
               padding: '24px 26px',
-              borderLeft: '3px solid #7C3AED50',
+              borderLeft: '3px solid #1E40AF50',
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 20 }}>
                 <div style={{
                   width: 26, height: 26, borderRadius: 6,
-                  background: '#7C3AED18', border: '1px solid #7C3AED30',
+                  background: '#1E40AF18', border: '1px solid #1E40AF30',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
-                  <Sparkles size={13} color="#7C3AED" />
+                  <Sparkles size={13} color="#1E40AF" />
                 </div>
-                <span style={{ fontSize: 11, fontWeight: 600, color: '#7C3AED', letterSpacing: '0.8px', textTransform: 'uppercase' }}>
+                <span style={{ fontSize: 11, fontWeight: 600, color: '#1E40AF', letterSpacing: '0.8px', textTransform: 'uppercase' }}>
                   AI Day Plan
                 </span>
                 {isGenerating && (
-                  <span style={{ fontSize: 11, color: '#6B7280', marginLeft: 'auto' }}>
+                  <span style={{ fontSize: 11, color: '#FFFFFF', marginLeft: 'auto' }}>
                     Generating…
                   </span>
                 )}
@@ -458,8 +458,8 @@ export function MorningBrief() {
                 <div style={{
                   marginBottom: 22,
                   padding: '12px 16px',
-                  background: 'rgba(124,58,237,0.07)',
-                  borderLeft: '2px solid #7C3AED',
+                  background: 'rgba(30,64,175,0.07)',
+                  borderLeft: '2px solid #1E40AF',
                   borderRadius: '0 8px 8px 0',
                 }}>
                   <p style={{ margin: 0, fontSize: 13, color: '#E8EAF6', lineHeight: 1.55 }}>
@@ -473,13 +473,13 @@ export function MorningBrief() {
                 <PlanSkeleton />
               ) : error ? (
                 <div style={{ textAlign: 'center', padding: '24px 0' }}>
-                  <p style={{ margin: '0 0 14px', fontSize: 13, color: '#6B7280' }}>{error}</p>
+                  <p style={{ margin: '0 0 14px', fontSize: 13, color: '#FFFFFF' }}>{error}</p>
                   <button
                     onClick={() => generate()}
                     style={{
                       padding: '7px 16px', borderRadius: 7,
-                      background: '#7C3AED18', border: '1px solid #7C3AED30',
-                      color: '#7C3AED', fontSize: 12, cursor: 'pointer',
+                      background: '#1E40AF18', border: '1px solid #1E40AF30',
+                      color: '#1E40AF', fontSize: 12, cursor: 'pointer',
                     }}
                   >
                     Try again
@@ -492,14 +492,14 @@ export function MorningBrief() {
                       {/* Time */}
                       <span style={{
                         fontSize: 12, fontFamily: 'monospace',
-                        color: '#7C3AED', width: 48, flexShrink: 0, paddingTop: 1,
+                        color: '#1E40AF', width: 48, flexShrink: 0, paddingTop: 1,
                       }}>
                         {item.time}
                       </span>
 
                       {/* Dot + line */}
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0 }}>
-                        <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#7C3AED', marginTop: 4 }} />
+                        <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#1E40AF', marginTop: 4 }} />
                         {i < plan.schedule.length - 1 && (
                           <div style={{ width: 1, flex: 1, background: '#252A3E', minHeight: 18, marginTop: 4 }} />
                         )}
@@ -526,7 +526,7 @@ export function MorningBrief() {
                   ))}
                 </div>
               ) : (
-                <p style={{ margin: 0, fontSize: 13, color: '#6B7280' }}>
+                <p style={{ margin: 0, fontSize: 13, color: '#FFFFFF' }}>
                   No schedule generated. Try regenerating.
                 </p>
               )}
@@ -552,7 +552,7 @@ export function MorningBrief() {
                       <div key={i} style={{
                         display: 'flex', alignItems: 'center', gap: 14,
                         background: '#0D0F1A',
-                        border: `1px solid ${i === 0 ? '#7C3AED30' : '#252A3E'}`,
+                        border: `1px solid ${i === 0 ? '#1E40AF30' : '#252A3E'}`,
                         borderRadius: 12, padding: '13px 16px',
                         position: 'relative', overflow: 'hidden',
                       }}>
@@ -561,8 +561,8 @@ export function MorningBrief() {
                           width: 28, height: 28, borderRadius: '50%',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           fontSize: 12, fontWeight: 700, flexShrink: 0,
-                          background: i === 0 ? '#7C3AED20' : '#252A3E',
-                          color: i === 0 ? '#7C3AED' : '#6B7280',
+                          background: i === 0 ? '#1E40AF20' : '#252A3E',
+                          color: i === 0 ? '#1E40AF' : '#6B7280',
                         }}>
                           {i + 1}
                         </span>
@@ -584,7 +584,7 @@ export function MorningBrief() {
                         {i === 0 && (
                           <div style={{
                             position: 'absolute', top: 0, left: 0,
-                            width: 3, height: '100%', background: '#7C3AED',
+                            width: 3, height: '100%', background: '#1E40AF',
                             borderRadius: '12px 0 0 12px',
                           }} />
                         )}
@@ -593,7 +593,7 @@ export function MorningBrief() {
                   })}
                 </div>
               ) : (
-                <p style={{ margin: 0, fontSize: 13, color: '#6B7280' }}>
+                <p style={{ margin: 0, fontSize: 13, color: '#FFFFFF' }}>
                   Priorities will appear once the plan is generated.
                 </p>
               )}
@@ -613,7 +613,7 @@ export function MorningBrief() {
               <SectionLabel>Today's Meetings</SectionLabel>
 
               {todayEvents.length === 0 ? (
-                <p style={{ margin: 0, fontSize: 13, color: '#6B7280' }}>
+                <p style={{ margin: 0, fontSize: 13, color: '#FFFFFF' }}>
                   No meetings today — or connect Google Calendar to see them.
                 </p>
               ) : (
@@ -630,13 +630,13 @@ export function MorningBrief() {
                           <p style={{ margin: 0, fontSize: 11.5, color: '#E8EAF6', fontWeight: 500 }}>
                             {fmtTime(event.start_time)}
                           </p>
-                          <p style={{ margin: '1px 0 0', fontSize: 10, color: '#6B7280' }}>
+                          <p style={{ margin: '1px 0 0', fontSize: 10, color: '#FFFFFF' }}>
                             {fmtTime(event.end_time)}
                           </p>
                         </div>
                         <div style={{
                           width: 3, borderRadius: 2, flexShrink: 0,
-                          background: '#7C3AED', alignSelf: 'stretch', minHeight: 36,
+                          background: '#1E40AF', alignSelf: 'stretch', minHeight: 36,
                         }} />
                         <div style={{ flex: 1, paddingBottom: 4 }}>
                           <p style={{ margin: 0, fontSize: 13, color: '#E8EAF6', fontWeight: 500, lineHeight: 1.3 }}>
@@ -645,7 +645,7 @@ export function MorningBrief() {
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 5 }}>
                             <MeetingTypeIcon type={event.meeting_type} />
                             {event.location && (
-                              <span style={{ fontSize: 10.5, color: '#6B7280' }}>{event.location}</span>
+                              <span style={{ fontSize: 10.5, color: '#FFFFFF' }}>{event.location}</span>
                             )}
                           </div>
                         </div>

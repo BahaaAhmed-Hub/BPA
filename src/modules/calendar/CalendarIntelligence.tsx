@@ -13,7 +13,7 @@ import type { DbUser, DbCompany, DbCalendarEvent } from '@/types/database'
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const MOCK_COMPANIES: DbCompany[] = [
-  { id: 'teradix',    user_id: 'demo', name: 'Teradix',    color_tag: '#7C3AED', calendar_id: null, is_active: true },
+  { id: 'teradix',    user_id: 'demo', name: 'Teradix',    color_tag: '#1E40AF', calendar_id: null, is_active: true },
   { id: 'dxtech',     user_id: 'demo', name: 'DX Tech',    color_tag: '#7F77DD', calendar_id: null, is_active: true },
   { id: 'consulting', user_id: 'demo', name: 'Consulting', color_tag: '#1D9E75', calendar_id: null, is_active: true },
   { id: 'personal',   user_id: 'demo', name: 'Personal',   color_tag: '#888780', calendar_id: null, is_active: true },
@@ -164,7 +164,7 @@ function PrepSkeleton() {
 function MeetingTypeIcon({ type }: { type: string | null }) {
   if (type === 'video')      return <Video    size={12} color="#7F77DD" />
   if (type === 'one_on_one') return <Users    size={12} color="#1D9E75" />
-  if (type === 'external')   return <Calendar size={12} color="#7C3AED" />
+  if (type === 'external')   return <Calendar size={12} color="#1E40AF" />
   return                            <Users    size={12} color="#6B7280" />
 }
 
@@ -193,7 +193,7 @@ function PrepPanel({
     <div style={{
       background: '#161929',
       border: '1px solid #252A3E',
-      borderLeft: '3px solid #7C3AED',
+      borderLeft: '3px solid #1E40AF',
       borderRadius: 14,
       padding: '24px 24px 28px',
       display: 'flex',
@@ -206,12 +206,12 @@ function PrepPanel({
           <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 6 }}>
             <div style={{
               width: 24, height: 24, borderRadius: 6,
-              background: '#7C3AED18', border: '1px solid #7C3AED30',
+              background: '#1E40AF18', border: '1px solid #1E40AF30',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
-              <Sparkles size={12} color="#7C3AED" />
+              <Sparkles size={12} color="#1E40AF" />
             </div>
-            <span style={{ fontSize: 10, fontWeight: 600, color: '#7C3AED', letterSpacing: '0.8px', textTransform: 'uppercase' }}>
+            <span style={{ fontSize: 10, fontWeight: 600, color: '#1E40AF', letterSpacing: '0.8px', textTransform: 'uppercase' }}>
               AI Meeting Prep
             </span>
           </div>
@@ -225,7 +225,7 @@ function PrepPanel({
           }}>
             {event.summary ?? '(No title)'}
           </h3>
-          <p style={{ margin: '5px 0 0', fontSize: 12, color: '#6B7280' }}>
+          <p style={{ margin: '5px 0 0', fontSize: 12, color: '#FFFFFF' }}>
             {startLabel} – {endLabel}
             {dbEvent.location && (
               <span style={{ marginLeft: 10 }}>
@@ -240,7 +240,7 @@ function PrepPanel({
           onClick={onClose}
           style={{
             background: 'none', border: 'none', cursor: 'pointer',
-            color: '#6B7280', padding: 4, lineHeight: 1, flexShrink: 0,
+            color: '#FFFFFF', padding: 4, lineHeight: 1, flexShrink: 0,
           }}
         >
           <X size={16} />
@@ -255,13 +255,13 @@ function PrepPanel({
         <PrepSkeleton />
       ) : error ? (
         <div style={{ textAlign: 'center', padding: '16px 0' }}>
-          <p style={{ margin: '0 0 12px', fontSize: 13, color: '#6B7280' }}>{error}</p>
+          <p style={{ margin: '0 0 12px', fontSize: 13, color: '#FFFFFF' }}>{error}</p>
           <button
             onClick={onRetry}
             style={{
               padding: '7px 16px', borderRadius: 7,
-              background: '#7C3AED18', border: '1px solid #7C3AED30',
-              color: '#7C3AED', fontSize: 12, cursor: 'pointer',
+              background: '#1E40AF18', border: '1px solid #1E40AF30',
+              color: '#1E40AF', fontSize: 12, cursor: 'pointer',
             }}
           >
             Try again
@@ -273,11 +273,11 @@ function PrepPanel({
           {/* Goal */}
           <div style={{
             padding: '12px 16px',
-            background: 'rgba(124,58,237,0.07)',
-            borderLeft: '2px solid #7C3AED',
+            background: 'rgba(30,64,175,0.07)',
+            borderLeft: '2px solid #1E40AF',
             borderRadius: '0 8px 8px 0',
           }}>
-            <p style={{ margin: '0 0 3px', fontSize: 10, fontWeight: 600, color: '#7C3AED', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+            <p style={{ margin: '0 0 3px', fontSize: 10, fontWeight: 600, color: '#1E40AF', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
               Goal
             </p>
             <p style={{ margin: 0, fontSize: 13, color: '#E8EAF6', lineHeight: 1.55 }}>
@@ -287,7 +287,7 @@ function PrepPanel({
 
           {/* Context Summary */}
           <div>
-            <p style={{ margin: '0 0 8px', fontSize: 10, fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+            <p style={{ margin: '0 0 8px', fontSize: 10, fontWeight: 600, color: '#FFFFFF', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
               Context
             </p>
             <p style={{ margin: 0, fontSize: 13, color: '#C8BC9E', lineHeight: 1.65 }}>
@@ -298,7 +298,7 @@ function PrepPanel({
           {/* Talking Points */}
           {prep.talkingPoints.length > 0 && (
             <div>
-              <p style={{ margin: '0 0 10px', fontSize: 10, fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+              <p style={{ margin: '0 0 10px', fontSize: 10, fontWeight: 600, color: '#FFFFFF', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
                 Talking Points
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
@@ -314,7 +314,7 @@ function PrepPanel({
                       width: 18, height: 18, borderRadius: '50%', flexShrink: 0,
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       fontSize: 10, fontWeight: 700,
-                      background: '#252A3E', color: '#6B7280',
+                      background: '#252A3E', color: '#FFFFFF',
                     }}>
                       {i + 1}
                     </span>
@@ -469,7 +469,7 @@ export function CalendarIntelligence() {
             }}>
               {fmtWeekRange(weekStart)}
             </h1>
-            <p style={{ margin: 0, fontSize: 13, color: '#6B7280' }}>
+            <p style={{ margin: 0, fontSize: 13, color: '#FFFFFF' }}>
               {isThisWeek(weekStart) ? 'This week' : 'Week view'}
               {!loadingEvents && ` · ${events.length} event${events.length !== 1 ? 's' : ''}`}
               {!loadingEvents && totalHrs > 0 && ` · ${totalHrs.toFixed(1)}h scheduled`}
@@ -482,8 +482,8 @@ export function CalendarIntelligence() {
                 onClick={handleThisWeek}
                 style={{
                   padding: '7px 14px', borderRadius: 8,
-                  background: '#7C3AED18', border: '1px solid #7C3AED30',
-                  color: '#7C3AED', fontSize: 12, cursor: 'pointer',
+                  background: '#1E40AF18', border: '1px solid #1E40AF30',
+                  color: '#1E40AF', fontSize: 12, cursor: 'pointer',
                 }}
               >
                 This Week
@@ -497,7 +497,7 @@ export function CalendarIntelligence() {
                 display: 'flex', alignItems: 'center', gap: 6,
                 padding: '7px 12px', borderRadius: 8,
                 background: 'transparent', border: '1px solid #252A3E',
-                color: '#6B7280', fontSize: 12, cursor: 'pointer',
+                color: '#FFFFFF', fontSize: 12, cursor: 'pointer',
                 opacity: loadingEvents ? 0.5 : 1,
               }}
             >
@@ -509,7 +509,7 @@ export function CalendarIntelligence() {
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 width: 34, height: 34, borderRadius: 8,
                 background: 'transparent', border: '1px solid #252A3E',
-                color: '#6B7280', cursor: 'pointer',
+                color: '#FFFFFF', cursor: 'pointer',
               }}
             >
               <ChevronLeft size={16} />
@@ -520,7 +520,7 @@ export function CalendarIntelligence() {
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 width: 34, height: 34, borderRadius: 8,
                 background: 'transparent', border: '1px solid #252A3E',
-                color: '#6B7280', cursor: 'pointer',
+                color: '#FFFFFF', cursor: 'pointer',
               }}
             >
               <ChevronRight size={16} />
@@ -531,7 +531,7 @@ export function CalendarIntelligence() {
         {/* Gold divider */}
         <div style={{
           height: 1, marginBottom: 28,
-          background: 'linear-gradient(90deg, #7C3AED40 0%, #252A3E 60%, transparent 100%)',
+          background: 'linear-gradient(90deg, #1E40AF40 0%, #252A3E 60%, transparent 100%)',
         }} />
 
         {/* ─── Day Tabs ──────────────────────────────────────────────────── */}
@@ -546,12 +546,12 @@ export function CalendarIntelligence() {
               <div key={key} style={{
                 flex: '1 1 0', minWidth: 72, padding: '10px 8px',
                 borderRadius: 10, textAlign: 'center',
-                background: isToday ? '#7C3AED14' : '#161929',
-                border: `1px solid ${isToday ? '#7C3AED40' : '#252A3E'}`,
+                background: isToday ? '#1E40AF14' : '#161929',
+                border: `1px solid ${isToday ? '#1E40AF40' : '#252A3E'}`,
               }}>
                 <p style={{
                   margin: '0 0 2px', fontSize: 10, fontWeight: 600,
-                  color: isToday ? '#7C3AED' : '#6B7280',
+                  color: isToday ? '#1E40AF' : '#6B7280',
                   textTransform: 'uppercase', letterSpacing: '0.8px',
                 }}>
                   {DAY_LABELS[day.getDay()]}
@@ -567,9 +567,9 @@ export function CalendarIntelligence() {
                   <span style={{
                     display: 'inline-block',
                     width: 18, height: 18, borderRadius: '50%',
-                    background: isToday ? '#7C3AED22' : '#252A3E',
+                    background: isToday ? '#1E40AF22' : '#252A3E',
                     fontSize: 10, fontWeight: 700,
-                    color: isToday ? '#7C3AED' : '#6B7280',
+                    color: isToday ? '#1E40AF' : '#6B7280',
                     lineHeight: '18px',
                   }}>
                     {count}
@@ -597,13 +597,13 @@ export function CalendarIntelligence() {
                 textAlign: 'center', padding: '48px 0',
                 background: '#161929', border: '1px solid #252A3E', borderRadius: 14,
               }}>
-                <p style={{ margin: '0 0 14px', fontSize: 13, color: '#6B7280' }}>{fetchError}</p>
+                <p style={{ margin: '0 0 14px', fontSize: 13, color: '#FFFFFF' }}>{fetchError}</p>
                 <button
                   onClick={() => loadEvents(weekStart)}
                   style={{
                     padding: '7px 18px', borderRadius: 8,
-                    background: '#7C3AED18', border: '1px solid #7C3AED30',
-                    color: '#7C3AED', fontSize: 12, cursor: 'pointer',
+                    background: '#1E40AF18', border: '1px solid #1E40AF30',
+                    color: '#1E40AF', fontSize: 12, cursor: 'pointer',
                   }}
                 >
                   Retry
@@ -616,16 +616,16 @@ export function CalendarIntelligence() {
               }}>
                 <div style={{
                   width: 44, height: 44, borderRadius: 12,
-                  background: '#7C3AED14', border: '1px solid #7C3AED30',
+                  background: '#1E40AF14', border: '1px solid #1E40AF30',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   margin: '0 auto 16px',
                 }}>
-                  <Calendar size={20} color="#7C3AED" />
+                  <Calendar size={20} color="#1E40AF" />
                 </div>
                 <h3 style={{ margin: '0 0 8px', fontSize: 16, color: '#E8EAF6', fontFamily: "'Cabinet Grotesk', sans-serif" }}>
                   Connect Google Calendar
                 </h3>
-                <p style={{ margin: 0, fontSize: 13, color: '#6B7280', lineHeight: 1.6, maxWidth: 320, marginInline: 'auto' }}>
+                <p style={{ margin: 0, fontSize: 13, color: '#FFFFFF', lineHeight: 1.6, maxWidth: 320, marginInline: 'auto' }}>
                   Sign in with Google to sync your calendar and get AI-powered meeting prep.
                 </p>
               </div>
@@ -634,7 +634,7 @@ export function CalendarIntelligence() {
                 textAlign: 'center', padding: '48px 24px',
                 background: '#161929', border: '1px solid #252A3E', borderRadius: 14,
               }}>
-                <p style={{ margin: 0, fontSize: 13, color: '#6B7280' }}>
+                <p style={{ margin: 0, fontSize: 13, color: '#FFFFFF' }}>
                   No events this week. Enjoy the open space.
                 </p>
               </div>
@@ -651,7 +651,7 @@ export function CalendarIntelligence() {
                       {/* Day header */}
                       <p style={{
                         margin: '0 0 8px', fontSize: 11, fontWeight: 600,
-                        color: isToday ? '#7C3AED' : '#6B7280',
+                        color: isToday ? '#1E40AF' : '#6B7280',
                         textTransform: 'uppercase', letterSpacing: '0.8px',
                       }}>
                         {isToday ? 'Today' : FULL_DAYS[day.getDay()]}
@@ -679,10 +679,10 @@ export function CalendarIntelligence() {
                                 padding: '13px 16px',
                                 borderRadius: 10,
                                 background: isSelected ? '#32291A' : '#161929',
-                                border: `1px solid ${isSelected ? '#7C3AED50' : '#252A3E'}`,
+                                border: `1px solid ${isSelected ? '#1E40AF50' : '#252A3E'}`,
                                 opacity: isPast ? 0.55 : 1,
                                 transition: 'all 0.15s',
-                                borderLeft: isSelected ? '3px solid #7C3AED' : '1px solid #252A3E',
+                                borderLeft: isSelected ? '3px solid #1E40AF' : '1px solid #252A3E',
                               }}
                             >
                               {/* Time */}
@@ -690,7 +690,7 @@ export function CalendarIntelligence() {
                                 <p style={{ margin: 0, fontSize: 11.5, color: '#E8EAF6', fontWeight: 500, fontFamily: 'monospace' }}>
                                   {fmtTime(db.start_time)}
                                 </p>
-                                <p style={{ margin: '1px 0 0', fontSize: 10, color: '#6B7280', fontFamily: 'monospace' }}>
+                                <p style={{ margin: '1px 0 0', fontSize: 10, color: '#FFFFFF', fontFamily: 'monospace' }}>
                                   {fmtTime(db.end_time)}
                                 </p>
                               </div>
@@ -698,7 +698,7 @@ export function CalendarIntelligence() {
                               {/* Color bar */}
                               <div style={{
                                 width: 3, borderRadius: 2, flexShrink: 0, alignSelf: 'stretch',
-                                background: isSelected ? '#7C3AED' : '#252A3E',
+                                background: isSelected ? '#1E40AF' : '#252A3E',
                                 minHeight: 32,
                               }} />
 
@@ -713,7 +713,7 @@ export function CalendarIntelligence() {
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                                   <MeetingTypeIcon type={mType} />
                                   {mType && (
-                                    <span style={{ fontSize: 10.5, color: '#6B7280', textTransform: 'capitalize' }}>
+                                    <span style={{ fontSize: 10.5, color: '#FFFFFF', textTransform: 'capitalize' }}>
                                       {mType.replace('_', ' ')}
                                     </span>
                                   )}
@@ -727,7 +727,7 @@ export function CalendarIntelligence() {
                                     </span>
                                   )}
                                   {db.location && (
-                                    <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10.5, color: '#6B7280' }}>
+                                    <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10.5, color: '#FFFFFF' }}>
                                       <MapPin size={10} />
                                       {db.location.length > 28 ? db.location.slice(0, 28) + '…' : db.location}
                                     </span>
@@ -740,9 +740,9 @@ export function CalendarIntelligence() {
                                 flexShrink: 0,
                                 display: 'flex', alignItems: 'center', gap: 5,
                                 padding: '5px 10px', borderRadius: 6,
-                                background: isSelected ? '#7C3AED18' : '#161929',
-                                border: `1px solid ${isSelected ? '#7C3AED40' : '#252A3E'}`,
-                                color: isSelected ? '#7C3AED' : '#6B7280',
+                                background: isSelected ? '#1E40AF18' : '#161929',
+                                border: `1px solid ${isSelected ? '#1E40AF40' : '#252A3E'}`,
+                                color: isSelected ? '#1E40AF' : '#6B7280',
                                 fontSize: 11,
                               }}>
                                 <Sparkles size={11} />

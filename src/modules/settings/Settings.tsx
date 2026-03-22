@@ -119,7 +119,7 @@ const FRAMEWORKS = [
 
 const WORK_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
-const C_COLORS = ['#7C3AED', '#7F77DD', '#1D9E75', '#E05252', '#888780', '#5B9BD5']
+const C_COLORS = ['#1E40AF', '#7F77DD', '#1D9E75', '#E05252', '#888780', '#5B9BD5']
 
 const EMOJIS = [
   '💼','🎯','🚀','📊','💡','🔧','📝','🌟','⚡','🎨',
@@ -247,16 +247,16 @@ function SectionHeader({ title, description }: { title: string; description?: st
   return (
     <div style={{ marginBottom: 22 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <div style={{ width: 3, height: 13, background: '#7C3AED', borderRadius: 2, flexShrink: 0 }} />
+        <div style={{ width: 3, height: 13, background: '#1E40AF', borderRadius: 2, flexShrink: 0 }} />
         <span style={{
-          fontSize: 10.5, fontWeight: 700, color: '#7C3AED',
+          fontSize: 10.5, fontWeight: 700, color: '#1E40AF',
           textTransform: 'uppercase', letterSpacing: '1.4px',
         }}>
           {title}
         </span>
       </div>
       {description && (
-        <p style={{ margin: '5px 0 0 11px', fontSize: 12, color: '#6B7280', lineHeight: 1.55 }}>
+        <p style={{ margin: '5px 0 0 11px', fontSize: 12, color: '#FFFFFF', lineHeight: 1.55 }}>
           {description}
         </p>
       )}
@@ -270,7 +270,7 @@ function FieldRow({ label, children }: { label: string; children: React.ReactNod
       display: 'flex', alignItems: 'flex-start', gap: 16,
       padding: '11px 0', borderBottom: '1px solid rgba(58,48,32,0.5)',
     }}>
-      <span style={{ width: 210, fontSize: 13, color: '#6B7280', flexShrink: 0, paddingTop: 2 }}>
+      <span style={{ width: 210, fontSize: 13, color: '#FFFFFF', flexShrink: 0, paddingTop: 2 }}>
         {label}
       </span>
       <div style={{ flex: 1 }}>{children}</div>
@@ -286,7 +286,7 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
       onClick={() => onChange(!checked)}
       style={{
         width: 42, height: 24, borderRadius: 12,
-        background: checked ? '#7C3AED' : '#252A3E',
+        background: checked ? '#1E40AF' : '#252A3E',
         border: 'none', cursor: 'pointer', position: 'relative',
         transition: 'background 0.2s', flexShrink: 0, padding: 0,
       }}
@@ -324,7 +324,7 @@ function StepSlider({
         min={0} max={steps.length - 1} step={1}
         value={idx}
         onChange={e => onChange(steps[Number(e.target.value)])}
-        style={{ width: 160, accentColor: '#7C3AED', cursor: 'pointer' }}
+        style={{ width: 160, accentColor: '#1E40AF', cursor: 'pointer' }}
       />
       <span style={{ fontSize: 13, color: '#E8EAF6', minWidth: 55 }}>
         {value} {unit}
@@ -714,9 +714,9 @@ export function Settings() {
                 <button key={d} onClick={() => update('workWeek', on ? s.workWeek.filter(x => x !== d) : [...s.workWeek, d])}
                   style={{
                     width: 38, height: 30, borderRadius: 6, fontSize: 12, fontWeight: 500, cursor: 'pointer',
-                    border: `1px solid ${on ? '#7C3AED' : '#252A3E'}`,
-                    background: on ? 'rgba(124,58,237,0.12)' : 'transparent',
-                    color: on ? '#7C3AED' : '#6B7280',
+                    border: `1px solid ${on ? '#1E40AF' : '#252A3E'}`,
+                    background: on ? 'rgba(30,64,175,0.12)' : 'transparent',
+                    color: on ? '#1E40AF' : '#6B7280',
                   }}>
                   {d}
                 </button>
@@ -748,13 +748,13 @@ export function Settings() {
         <FieldRow label="Protect focus block">
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <Toggle checked={s.protectFocus} onChange={v => update('protectFocus', v)} />
-            <span style={{ fontSize: 12, color: '#6B7280' }}>Prevent events from being booked during focus time</span>
+            <span style={{ fontSize: 12, color: '#FFFFFF' }}>Prevent events from being booked during focus time</span>
           </div>
         </FieldRow>
         <FieldRow label="Auto-decline early meetings">
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <Toggle checked={s.autoDeclineEarly} onChange={v => update('autoDeclineEarly', v)} />
-            <span style={{ fontSize: 12, color: '#6B7280' }}>Decline meetings before earliest meeting time</span>
+            <span style={{ fontSize: 12, color: '#FFFFFF' }}>Decline meetings before earliest meeting time</span>
           </div>
         </FieldRow>
       </div>
@@ -779,7 +779,7 @@ export function Settings() {
                       onChange={e => updateCompany(co.id, { calendarId: e.target.value })} />
                     <Toggle checked={co.isActive} onChange={v => updateCompany(co.id, { isActive: v })} />
                     <button onClick={() => void deleteCompany(co.id)}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6B7280', padding: 4, flexShrink: 0 }}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#FFFFFF', padding: 4, flexShrink: 0 }}
                       onMouseEnter={e => (e.currentTarget.style.color = '#E05252')}
                       onMouseLeave={e => (e.currentTarget.style.color = '#6B7280')}>
                       <Trash2 size={14} />
@@ -793,9 +793,9 @@ export function Settings() {
         <button onClick={() => void addCompany()} style={{
           marginTop: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
           width: '100%', padding: '8px 14px', background: 'transparent',
-          border: '1px dashed #252A3E', borderRadius: 7, color: '#6B7280', fontSize: 13, cursor: 'pointer',
+          border: '1px dashed #252A3E', borderRadius: 7, color: '#FFFFFF', fontSize: 13, cursor: 'pointer',
         }}
-          onMouseEnter={e => { e.currentTarget.style.borderColor = '#7C3AED'; e.currentTarget.style.color = '#7C3AED' }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = '#1E40AF'; e.currentTarget.style.color = '#1E40AF' }}
           onMouseLeave={e => { e.currentTarget.style.borderColor = '#252A3E'; e.currentTarget.style.color = '#6B7280' }}>
           <Plus size={14} /> Add Company
         </button>
@@ -825,7 +825,7 @@ export function Settings() {
                     </select>
                     <Toggle checked={h.isActive} onChange={v => updateHabit(h.id, { isActive: v })} />
                     <button onClick={() => void deleteHabit(h.id)}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6B7280', padding: 4, flexShrink: 0 }}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#FFFFFF', padding: 4, flexShrink: 0 }}
                       onMouseEnter={e => (e.currentTarget.style.color = '#E05252')}
                       onMouseLeave={e => (e.currentTarget.style.color = '#6B7280')}>
                       <Trash2 size={14} />
@@ -839,9 +839,9 @@ export function Settings() {
         <button onClick={() => void addHabit()} style={{
           marginTop: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
           width: '100%', padding: '8px 14px', background: 'transparent',
-          border: '1px dashed #252A3E', borderRadius: 7, color: '#6B7280', fontSize: 13, cursor: 'pointer',
+          border: '1px dashed #252A3E', borderRadius: 7, color: '#FFFFFF', fontSize: 13, cursor: 'pointer',
         }}
-          onMouseEnter={e => { e.currentTarget.style.borderColor = '#7C3AED'; e.currentTarget.style.color = '#7C3AED' }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = '#1E40AF'; e.currentTarget.style.color = '#1E40AF' }}
           onMouseLeave={e => { e.currentTarget.style.borderColor = '#252A3E'; e.currentTarget.style.color = '#6B7280' }}>
           <Plus size={14} /> Add Habit
         </button>
@@ -855,9 +855,9 @@ export function Settings() {
             {(['brief', 'balanced', 'detailed'] as const).map(opt => (
               <button key={opt} onClick={() => update('commStyle', opt)} style={{
                 padding: '6px 14px', borderRadius: 7, fontSize: 12.5, fontWeight: 500, cursor: 'pointer',
-                border: `1px solid ${s.commStyle === opt ? '#7C3AED' : '#252A3E'}`,
-                background: s.commStyle === opt ? 'rgba(124,58,237,0.12)' : 'transparent',
-                color: s.commStyle === opt ? '#7C3AED' : '#6B7280',
+                border: `1px solid ${s.commStyle === opt ? '#1E40AF' : '#252A3E'}`,
+                background: s.commStyle === opt ? 'rgba(30,64,175,0.12)' : 'transparent',
+                color: s.commStyle === opt ? '#1E40AF' : '#6B7280',
               }}>
                 {opt === 'brief' ? 'Direct & Brief' : opt === 'balanced' ? 'Balanced' : 'Detailed & Thorough'}
               </button>
@@ -883,7 +883,7 @@ export function Settings() {
               rows={3}
               style={{ ...S.input, width: '100%', resize: 'vertical', lineHeight: 1.55, minHeight: 72 }}
             />
-            <div style={{ textAlign: 'right', fontSize: 11, color: '#6B7280', marginTop: 4 }}>
+            <div style={{ textAlign: 'right', fontSize: 11, color: '#FFFFFF', marginTop: 4 }}>
               {s.customInstructions.length}/500
             </div>
           </div>
@@ -901,7 +901,7 @@ export function Settings() {
               <span style={{ fontSize: 22 }}>🔗</span>
               <div>
                 <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#E8EAF6' }}>Google Account</p>
-                <p style={{ margin: '2px 0 0', fontSize: 12, color: '#6B7280' }}>
+                <p style={{ margin: '2px 0 0', fontSize: 12, color: '#FFFFFF' }}>
                   {connected ? connEmail : 'Not connected — no calendar or Gmail data'}
                 </p>
               </div>
@@ -918,7 +918,7 @@ export function Settings() {
               ) : (
                 <button
                   onClick={() => void signInWithGoogle()}
-                  style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 14px', borderRadius: 7, background: 'rgba(124,58,237,0.12)', border: '1px solid rgba(124,58,237,0.25)', color: '#7C3AED', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 14px', borderRadius: 7, background: 'rgba(30,64,175,0.12)', border: '1px solid rgba(30,64,175,0.25)', color: '#1E40AF', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}
                 >
                   <LogIn size={11} /> Connect Google
                 </button>
@@ -934,10 +934,10 @@ export function Settings() {
               <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#E8EAF6' }}>
                 📅 Your Google Calendars
               </p>
-              {calLoading && <RefreshCw size={13} color="#7C3AED" style={{ animation: 'spin 1s linear infinite' }} />}
+              {calLoading && <RefreshCw size={13} color="#1E40AF" style={{ animation: 'spin 1s linear infinite' }} />}
             </div>
             {gcalendars.length === 0 && !calLoading && (
-              <p style={{ margin: 0, fontSize: 12.5, color: '#6B7280' }}>No calendars found.</p>
+              <p style={{ margin: 0, fontSize: 12.5, color: '#FFFFFF' }}>No calendars found.</p>
             )}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               {gcalendars.map(cal => (
@@ -945,13 +945,13 @@ export function Settings() {
                   <div>
                     <p style={{ margin: 0, fontSize: 13, color: '#E8EAF6', fontWeight: cal.primary ? 600 : 400 }}>
                       {cal.summary}
-                      {cal.primary && <span style={{ marginLeft: 6, fontSize: 10, color: '#7C3AED', background: '#7C3AED18', padding: '1px 6px', borderRadius: 3 }}>Primary</span>}
+                      {cal.primary && <span style={{ marginLeft: 6, fontSize: 10, color: '#1E40AF', background: '#1E40AF18', padding: '1px 6px', borderRadius: 3 }}>Primary</span>}
                     </p>
                     <p style={{ margin: '2px 0 0', fontSize: 11, color: '#5A4E3A', fontFamily: 'monospace' }}>{cal.id}</p>
                   </div>
                   <button
                     onClick={() => { void navigator.clipboard.writeText(cal.id) }}
-                    style={{ fontSize: 11, padding: '4px 8px', borderRadius: 5, background: 'transparent', border: '1px solid #252A3E', color: '#6B7280', cursor: 'pointer' }}
+                    style={{ fontSize: 11, padding: '4px 8px', borderRadius: 5, background: 'transparent', border: '1px solid #252A3E', color: '#FFFFFF', cursor: 'pointer' }}
                     title="Copy Calendar ID"
                   >
                     Copy ID
@@ -974,7 +974,7 @@ export function Settings() {
                 <span style={{ fontSize: 13, fontWeight: 600, color: '#E8EAF6' }}>{item.name}</span>
                 <WifiOff size={13} color="#6B7280" style={{ marginLeft: 'auto' }} />
               </div>
-              <span style={{ fontSize: 11, color: '#6B7280', background: '#252A3E', padding: '2px 7px', borderRadius: 4 }}>Coming soon</span>
+              <span style={{ fontSize: 11, color: '#FFFFFF', background: '#252A3E', padding: '2px 7px', borderRadius: 4 }}>Coming soon</span>
             </div>
           ))}
         </div>
@@ -1019,23 +1019,23 @@ export function Settings() {
         <FieldRow label="Theme">
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             {([
-              { value: 'dark-warm' as const, label: 'Dark Warm', bg: '#0D0F1A', dot: '#7C3AED' },
+              { value: 'dark-warm' as const, label: 'Dark Warm', bg: '#0D0F1A', dot: '#1E40AF' },
               { value: 'dark-cool' as const, label: 'Dark Cool', bg: '#111827', dot: '#60A5FA' },
-              { value: 'light'     as const, label: 'Light',     bg: '#F5F0E8', dot: '#6D28D9' },
+              { value: 'light'     as const, label: 'Light',     bg: '#F5F0E8', dot: '#1E3A8A' },
             ]).map(t => {
               const active = s.theme === t.value
               return (
                 <button key={t.value} onClick={() => { update('theme', t.value); applyTheme(t.value) }} style={{
                   padding: '8px 14px', borderRadius: 8, cursor: 'pointer',
-                  border: `1.5px solid ${active ? '#7C3AED' : '#252A3E'}`,
-                  background: active ? 'rgba(124,58,237,0.08)' : 'transparent',
+                  border: `1.5px solid ${active ? '#1E40AF' : '#252A3E'}`,
+                  background: active ? 'rgba(30,64,175,0.08)' : 'transparent',
                   display: 'flex', alignItems: 'center', gap: 8,
                 }}>
                   <div style={{ width: 32, height: 20, borderRadius: 4, background: t.bg, border: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <div style={{ width: 10, height: 10, borderRadius: '50%', background: t.dot }} />
                   </div>
-                  <span style={{ fontSize: 13, color: active ? '#7C3AED' : '#6B7280', fontWeight: active ? 600 : 400 }}>{t.label}</span>
-                  {active && <Check size={12} color="#7C3AED" />}
+                  <span style={{ fontSize: 13, color: active ? '#1E40AF' : '#6B7280', fontWeight: active ? 600 : 400 }}>{t.label}</span>
+                  {active && <Check size={12} color="#1E40AF" />}
                 </button>
               )
             })}
@@ -1047,7 +1047,7 @@ export function Settings() {
         <FieldRow label="Compact density">
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <Toggle checked={s.compact} onChange={v => update('compact', v)} />
-            <span style={{ fontSize: 12, color: '#6B7280' }}>Reduces padding throughout the interface</span>
+            <span style={{ fontSize: 12, color: '#FFFFFF' }}>Reduces padding throughout the interface</span>
           </div>
         </FieldRow>
       </div>

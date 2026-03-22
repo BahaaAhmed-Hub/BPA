@@ -27,19 +27,19 @@ export function TaskCommand() {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-          <CheckSquare size={14} color="#7C3AED" strokeWidth={2} />
-          <span style={{ fontSize: 13, color: '#6B7280' }}>
+          <CheckSquare size={14} color="#1E40AF" strokeWidth={2} />
+          <span style={{ fontSize: 13, color: '#FFFFFF' }}>
             <span style={{ color: '#E8EAF6', fontWeight: 600 }}>{active.length}</span> active tasks
           </span>
         </div>
         <div style={{ width: 1, height: 16, background: '#252A3E' }} />
         <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
           <Zap size={14} color="#E05252" strokeWidth={2} />
-          <span style={{ fontSize: 13, color: '#6B7280' }}>
+          <span style={{ fontSize: 13, color: '#FFFFFF' }}>
             <span style={{ color: '#E8EAF6', fontWeight: 600 }}>{urgent.length}</span> urgent
           </span>
         </div>
-        <div style={{ marginLeft: 'auto', fontSize: 12, color: '#6B7280', fontStyle: 'italic' }}>
+        <div style={{ marginLeft: 'auto', fontSize: 12, color: '#FFFFFF', fontStyle: 'italic' }}>
           Drag tasks between quadrants to reprioritize
         </div>
       </div>
