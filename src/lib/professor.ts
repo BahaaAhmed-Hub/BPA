@@ -1,15 +1,9 @@
-import Anthropic from '@anthropic-ai/sdk'
+import { supabase } from './supabase'
 import type { DbUser, DbCompany, DbTask, DbCalendarEvent, DbWeeklyReview } from '@/types/database'
 
-// ─── Client ──────────────────────────────────────────────────────────────────
+// ─── Edge function URL ────────────────────────────────────────────────────────
 
-const client = new Anthropic({
-  apiKey: import.meta.env.VITE_ANTHROPIC_API_KEY ?? '',
-  dangerouslyAllowBrowser: true,
-})
-
-const MODEL = 'claude-sonnet-4-5'
-const MAX_TOKENS = 1000
+const PROFESSOR_URL = `${import.meta.env.VITE_SUPABASE_URL as string}/functions/v1/professor`
 
 // ─── Error ───────────────────────────────────────────────────────────────────
 
@@ -114,21 +108,28 @@ ${ruleLines || '  (none configured)'}`
 // ─── Core call helper ────────────────────────────────────────────────────────
 
 async function call(system: string, userMessage: string): Promise<string> {
+  const { data: { session } } = await supabase.auth.getSession()
   try {
-    const msg = await client.messages.create({
-      model: MODEL,
-      max_tokens: MAX_TOKENS,
-      system,
-      messages: [{ role: 'user', content: userMessage }],
+    const res = await fetch(PROFESSOR_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session?.access_token ?? import.meta.env.VITE_SUPABASE_ANON_KEY as string}`,
+      },
+      body: JSON.stringify({
+        system,
+        messages: [{ role: 'user', content: userMessage }],
+      }),
     })
-    const block = msg.content.find(b => b.type === 'text')
+    const data = await res.json() as { content?: { type: string; text: string }[]; error?: string }
+    if (!res.ok) {
+      throw new ProfessorError(data.error ?? `Edge function ${res.status}`, 'api_error')
+    }
+    const block = data.content?.find(b => b.type === 'text')
     return block?.type === 'text' ? block.text.trim() : ''
   } catch (err) {
-    throw new ProfessorError(
-      'Claude API request failed',
-      'api_error',
-      err,
-    )
+    if (err instanceof ProfessorError) throw err
+    throw new ProfessorError('Claude API request failed', 'api_error', err)
   }
 }
 
@@ -359,16 +360,24 @@ export async function askProfessor(
 Your tone is authoritative yet warm, concise, and always actionable.
 ${systemContext ?? ''}`
 
+  const { data: { session } } = await supabase.auth.getSession()
   try {
-    const msg = await client.messages.create({
-      model: MODEL,
-      max_tokens: MAX_TOKENS,
-      system,
-      messages: messages.map(m => ({ role: m.role, content: m.content })),
+    const res = await fetch(PROFESSOR_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session?.access_token ?? import.meta.env.VITE_SUPABASE_ANON_KEY as string}`,
+      },
+      body: JSON.stringify({ system, messages }),
     })
-    const block = msg.content.find(b => b.type === 'text')
+    const data = await res.json() as { content?: { type: string; text: string }[]; error?: string }
+    if (!res.ok) {
+      throw new ProfessorError(data.error ?? `Edge function ${res.status}`, 'api_error')
+    }
+    const block = data.content?.find(b => b.type === 'text')
     return block?.type === 'text' ? block.text : ''
   } catch (err) {
+    if (err instanceof ProfessorError) throw err
     throw new ProfessorError('askProfessor failed', 'api_error', err)
   }
 }
