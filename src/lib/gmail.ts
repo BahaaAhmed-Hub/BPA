@@ -81,21 +81,49 @@ function encodeBase64url(str: string): string {
     .replace(/=+$/, '')
 }
 
-/** Recursively extract plain-text body from a MIME payload. */
+function stripHtml(html: string): string {
+  return html
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+}
+
+/** Recursively extract plain-text body from a MIME payload, falling back to HTML. */
 export function extractBody(msg: GmailMessage): string {
-  function findText(parts?: GmailPart[]): string | null {
+  function findByMime(parts: GmailPart[] | undefined, mime: string): string | null {
     if (!parts) return null
     for (const part of parts) {
-      if (part.mimeType === 'text/plain' && part.body.data) return decodeBase64(part.body.data)
-      const nested = findText(part.parts)
+      if (part.mimeType === mime && part.body.data) return decodeBase64(part.body.data)
+      const nested = findByMime(part.parts, mime)
       if (nested) return nested
     }
     return null
   }
+
   if (msg.payload.mimeType === 'text/plain' && msg.payload.body.data) {
     return decodeBase64(msg.payload.body.data)
   }
-  return findText(msg.payload.parts) ?? msg.snippet
+
+  const plain = findByMime(msg.payload.parts, 'text/plain')
+  if (plain) return plain
+
+  // Fall back to HTML — strip tags to get readable text
+  if (msg.payload.mimeType === 'text/html' && msg.payload.body.data) {
+    return stripHtml(decodeBase64(msg.payload.body.data))
+  }
+  const html = findByMime(msg.payload.parts, 'text/html')
+  if (html) return stripHtml(html)
+
+  return msg.snippet
 }
 
 // ─── Gmail API calls ──────────────────────────────────────────────────────────
