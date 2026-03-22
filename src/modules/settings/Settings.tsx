@@ -561,7 +561,10 @@ export function Settings() {
     timer.current = setTimeout(async () => {
       try {
         if (uid.current) {
-          await supabase.from('users').update({
+          const { data: sessionData } = await supabase.auth.getSession()
+          await supabase.from('users').upsert({
+            id: uid.current,
+            email: sessionData.session?.user.email ?? '',
             full_name: next.fullName,
             active_framework: next.framework,
             schedule_rules: {
@@ -581,7 +584,7 @@ export function Settings() {
               weekly_review_time: next.weeklyReviewTime,
               theme: next.theme, sidebar_default: next.sidebarDefault, compact: next.compact,
             },
-          }).eq('id', uid.current)
+          }, { onConflict: 'id' })
         }
         setSaveStatus('saved')
         setTimeout(() => setSaveStatus('idle'), 2000)
