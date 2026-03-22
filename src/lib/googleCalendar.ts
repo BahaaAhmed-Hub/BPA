@@ -22,7 +22,7 @@ export interface GCalError {
 
 async function getProviderToken(): Promise<string | null> {
   const { data } = await supabase.auth.getSession()
-  return data.session?.provider_token ?? null
+  return data.session?.provider_token ?? localStorage.getItem('google_provider_token')
 }
 
 // ─── API call ────────────────────────────────────────────────────────────────
