@@ -38,7 +38,7 @@ function LoginScreen() {
 
   return (
     <div style={{
-      minHeight: '100vh',
+      height: '100vh',
       background: '#0D0F1A',
       display: 'flex',
       overflow: 'hidden',
@@ -66,6 +66,7 @@ function LoginScreen() {
         justifyContent: 'center',
         padding: '60px 80px',
         position: 'relative',
+        overflowY: 'auto',
       }}>
         {/* Logo */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 56 }}>
@@ -160,167 +161,220 @@ function LoginScreen() {
         </div>
       </div>
 
-      {/* Right panel — Power illustration */}
+      {/* Right panel — Human illustration */}
       <div style={{
-        flex: '0 0 480px',
-        background: 'linear-gradient(160deg, rgba(30,64,175,0.08) 0%, rgba(13,15,26,0) 60%)',
-        borderLeft: '1px solid rgba(59,130,246,0.18)',
+        flex: '0 0 460px',
+        height: '100%',
+        background: 'linear-gradient(170deg, rgba(30,64,175,0.1) 0%, rgba(13,15,26,0.0) 55%)',
+        borderLeft: '1px solid rgba(59,130,246,0.15)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         position: 'relative',
         overflow: 'hidden',
-        minHeight: '100vh',
       }}>
-        {/* Multi-layer ambient glow */}
-        <div style={{ position:'absolute', top:'20%', left:'50%', transform:'translate(-50%,-50%)', width:500, height:500, borderRadius:'50%', background:'radial-gradient(circle, rgba(59,130,246,0.13) 0%, transparent 65%)', pointerEvents:'none' }} />
-        <div style={{ position:'absolute', bottom:'15%', left:'30%', width:300, height:300, borderRadius:'50%', background:'radial-gradient(circle, rgba(52,211,153,0.08) 0%, transparent 65%)', pointerEvents:'none' }} />
-        <div style={{ position:'absolute', top:'50%', right:'10%', width:200, height:200, borderRadius:'50%', background:'radial-gradient(circle, rgba(251,146,60,0.07) 0%, transparent 65%)', pointerEvents:'none' }} />
+        {/* Glow blobs */}
+        <div style={{ position:'absolute', top:'30%', left:'40%', width:320, height:320, borderRadius:'50%', background:'radial-gradient(circle, rgba(59,130,246,0.1) 0%, transparent 70%)', pointerEvents:'none' }} />
+        <div style={{ position:'absolute', bottom:'20%', right:'10%', width:180, height:180, borderRadius:'50%', background:'radial-gradient(circle, rgba(52,211,153,0.07) 0%, transparent 70%)', pointerEvents:'none' }} />
 
-        <svg viewBox="0 0 440 580" fill="none" xmlns="http://www.w3.org/2000/svg"
-          style={{ width:'100%', height:'100%', maxHeight:'100vh', position:'relative', zIndex:1 }}>
+        <svg viewBox="0 0 420 560" fill="none" xmlns="http://www.w3.org/2000/svg"
+          style={{ width:'100%', maxHeight:'90vh', position:'relative', zIndex:1 }}>
           <defs>
-            <linearGradient id="gCore" x1="0" y1="0" x2="1" y2="1">
+            <linearGradient id="bodyGrad" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="#60A5FA" />
-              <stop offset="100%" stopColor="#1D4ED8" />
+              <stop offset="100%" stopColor="#1E40AF" />
             </linearGradient>
-            <linearGradient id="gTeal" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor="#6EE7B7" />
-              <stop offset="100%" stopColor="#059669" />
+            <linearGradient id="skinGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#FBBF24" />
+              <stop offset="100%" stopColor="#D97706" />
             </linearGradient>
-            <linearGradient id="gAmber" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor="#FCD34D" />
-              <stop offset="100%" stopColor="#F59E0B" />
+            <linearGradient id="shadowGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="rgba(30,64,175,0.3)" />
+              <stop offset="100%" stopColor="rgba(30,64,175,0)" />
             </linearGradient>
-            <linearGradient id="gRose" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor="#FDA4AF" />
-              <stop offset="100%" stopColor="#E11D48" />
-            </linearGradient>
-            <linearGradient id="gIndigo" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor="#A5B4FC" />
-              <stop offset="100%" stopColor="#4338CA" />
-            </linearGradient>
-            <radialGradient id="coreGlow" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stopColor="#3B82F6" stopOpacity="0.5" />
-              <stop offset="100%" stopColor="#1E40AF" stopOpacity="0" />
-            </radialGradient>
-            <filter id="blur1"><feGaussianBlur stdDeviation="8" /></filter>
-            <filter id="blur2"><feGaussianBlur stdDeviation="3" /></filter>
+            <filter id="glow"><feGaussianBlur stdDeviation="4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+            <filter id="softBlur"><feGaussianBlur stdDeviation="6"/></filter>
           </defs>
 
-          {/* ── Deep glow behind core ── */}
-          <circle cx="220" cy="240" r="120" fill="url(#coreGlow)" filter="url(#blur1)" />
-          <circle cx="220" cy="240" r="80"  fill="rgba(59,130,246,0.12)" filter="url(#blur2)" />
+          {/* ── Ground shadow ── */}
+          <ellipse cx="210" cy="470" rx="90" ry="12" fill="url(#shadowGrad)" />
 
-          {/* ── Rotating orbit rings ── */}
-          <circle cx="220" cy="240" r="130" stroke="rgba(59,130,246,0.18)" strokeWidth="1.5" strokeDasharray="6 9"  style={{ transformOrigin:'220px 240px', animation:'spin 22s linear infinite' }} />
-          <circle cx="220" cy="240" r="100" stroke="rgba(99,102,241,0.15)"  strokeWidth="1"   strokeDasharray="3 12" style={{ transformOrigin:'220px 240px', animation:'spinR 16s linear infinite' }} />
-          <circle cx="220" cy="240" r="160" stroke="rgba(52,211,153,0.10)"  strokeWidth="1"   strokeDasharray="2 14" style={{ transformOrigin:'220px 240px', animation:'spin 30s linear infinite' }} />
+          {/* ── Speed lines (motion trail) ── */}
+          <line x1="20"  y1="310" x2="110" y2="300" stroke="rgba(59,130,246,0.25)" strokeWidth="2" strokeLinecap="round" style={{ animation:'trailFade 1.8s ease-in-out infinite' }} />
+          <line x1="10"  y1="325" x2="95"  y2="318" stroke="rgba(59,130,246,0.18)" strokeWidth="1.5" strokeLinecap="round" style={{ animation:'trailFade 1.8s ease-in-out infinite 0.15s' }} />
+          <line x1="25"  y1="340" x2="100" y2="335" stroke="rgba(59,130,246,0.12)" strokeWidth="1" strokeLinecap="round" style={{ animation:'trailFade 1.8s ease-in-out infinite 0.3s' }} />
+          <line x1="30"  y1="355" x2="108" y2="350" stroke="rgba(59,130,246,0.08)" strokeWidth="1" strokeLinecap="round" style={{ animation:'trailFade 1.8s ease-in-out infinite 0.45s' }} />
 
-          {/* ── Connector beams (center → satellites) ── */}
-          <line x1="220" y1="195" x2="220" y2="115"  stroke="url(#gCore)"  strokeWidth="1.5" opacity="0.4" />
-          <line x1="260" y1="215" x2="326" y2="162"  stroke="url(#gIndigo)" strokeWidth="1.5" opacity="0.4" />
-          <line x1="265" y1="255" x2="336" y2="310"  stroke="url(#gTeal)"  strokeWidth="1.5" opacity="0.4" />
-          <line x1="220" y1="285" x2="220" y2="355"  stroke="url(#gAmber)" strokeWidth="1.5" opacity="0.4" />
-          <line x1="175" y1="255" x2="104" y2="310"  stroke="url(#gRose)"  strokeWidth="1.5" opacity="0.4" />
-          <line x1="180" y1="215" x2="114" y2="162"  stroke="url(#gCore)"  strokeWidth="1.5" opacity="0.4" />
+          {/* ══ HUMAN FIGURE (running, leaning forward) ══ */}
 
-          {/* ── Central AI Core ── */}
-          <circle cx="220" cy="240" r="58" fill="rgba(30,58,138,0.6)" stroke="rgba(96,165,250,0.6)" strokeWidth="2" />
-          <circle cx="220" cy="240" r="46" fill="rgba(29,78,216,0.8)" stroke="rgba(147,197,253,0.3)" strokeWidth="1" style={{ animation:'pulse 3s ease-in-out infinite' }} />
-          {/* AI lightning bolt — power symbol */}
-          <polygon points="224,218 214,242 222,242 216,262 230,236 221,236" fill="white" opacity="0.95" />
-          {/* Inner glow ring */}
-          <circle cx="220" cy="240" r="58" fill="none" stroke="rgba(147,197,253,0.25)" strokeWidth="8" style={{ animation:'pulse 3s ease-in-out infinite' }} />
+          {/* Back leg (extended behind) */}
+          <g style={{ animation:'legBack 0.9s ease-in-out infinite alternate' }}>
+            {/* Upper back leg */}
+            <path d="M200 370 Q185 395 175 420" stroke="url(#bodyGrad)" strokeWidth="14" strokeLinecap="round" fill="none"/>
+            {/* Lower back leg */}
+            <path d="M175 420 Q168 442 180 455" stroke="url(#bodyGrad)" strokeWidth="12" strokeLinecap="round" fill="none"/>
+            {/* Back foot */}
+            <ellipse cx="183" cy="456" rx="14" ry="7" fill="#1E40AF" transform="rotate(-15 183 456)"/>
+          </g>
 
-          {/* ══ Satellite: Calendar (top) ══ */}
-          <circle cx="220" cy="100" r="30" fill="rgba(14,20,50,0.95)" stroke="rgba(96,165,250,0.7)" strokeWidth="2" style={{ animation:'floatY 4s ease-in-out infinite' }} />
-          <rect x="209" y="110" width="22" height="17" rx="3" fill="none" stroke="#60A5FA" strokeWidth="1.8" />
-          <line x1="209" y1="116" x2="231" y2="116" stroke="#60A5FA" strokeWidth="1.4" />
-          <rect x="212" y="119" width="4" height="4" rx="1" fill="#60A5FA" />
-          <rect x="218" y="119" width="4" height="4" rx="1" fill="#60A5FA" />
-          <rect x="224" y="119" width="4" height="4" rx="1" fill="#93C5FD" opacity="0.5" />
-          <line x1="213" y1="110" x2="213" y2="106" stroke="#60A5FA" strokeWidth="2" strokeLinecap="round" />
-          <line x1="227" y1="110" x2="227" y2="106" stroke="#60A5FA" strokeWidth="2" strokeLinecap="round" />
-          <text x="220" y="93" textAnchor="middle" fontSize="10" fontWeight="700" fill="#93C5FD" fontFamily="DM Sans" letterSpacing="0.5">CALENDAR</text>
+          {/* Front leg (driving forward) */}
+          <g style={{ animation:'legFront 0.9s ease-in-out infinite alternate' }}>
+            {/* Upper front leg */}
+            <path d="M215 370 Q240 390 248 415" stroke="#2563EB" strokeWidth="14" strokeLinecap="round" fill="none"/>
+            {/* Lower front leg */}
+            <path d="M248 415 Q255 440 242 458" stroke="#2563EB" strokeWidth="12" strokeLinecap="round" fill="none"/>
+            {/* Front foot */}
+            <ellipse cx="245" cy="459" rx="16" ry="7" fill="#3B82F6" transform="rotate(10 245 459)"/>
+          </g>
 
-          {/* ══ Satellite: Inbox (top-right) ══ */}
-          <circle cx="340" cy="155" r="28" fill="rgba(14,20,50,0.95)" stroke="rgba(165,180,252,0.7)" strokeWidth="2" style={{ animation:'floatY 5s ease-in-out infinite 0.5s' }} />
-          <rect x="329" y="147" width="22" height="16" rx="3" fill="none" stroke="#A5B4FC" strokeWidth="1.8" />
-          <polyline points="329,148 340,157 351,148" fill="none" stroke="#A5B4FC" strokeWidth="1.6" />
-          <text x="340" y="143" textAnchor="middle" fontSize="10" fontWeight="700" fill="#C7D2FE" fontFamily="DM Sans" letterSpacing="0.5">INBOX</text>
-          <text x="340" y="194" textAnchor="middle" fontSize="9" fill="rgba(165,180,252,0.6)" fontFamily="DM Sans">12 triaged by AI</text>
+          {/* Torso (leaning forward ~20°) */}
+          <path d="M195 290 Q205 330 208 368" stroke="url(#bodyGrad)" strokeWidth="28" strokeLinecap="round" fill="none"/>
+          {/* Torso highlight */}
+          <path d="M200 295 Q208 330 210 362" stroke="rgba(147,197,253,0.3)" strokeWidth="10" strokeLinecap="round" fill="none"/>
 
-          {/* ══ Satellite: Habits (bottom-right) ══ */}
-          <circle cx="340" cy="325" r="28" fill="rgba(14,20,50,0.95)" stroke="rgba(110,231,183,0.7)" strokeWidth="2" style={{ animation:'floatY 4.5s ease-in-out infinite 1s' }} />
-          <circle cx="340" cy="325" r="13" fill="none" stroke="#6EE7B7" strokeWidth="1.8" strokeDasharray="4 3" />
-          <circle cx="340" cy="325" r="6"  fill="#34D399" opacity="0.9" style={{ animation:'pulse 2.5s ease-in-out infinite' }} />
-          <text x="340" y="313" textAnchor="middle" fontSize="10" fontWeight="700" fill="#6EE7B7" fontFamily="DM Sans" letterSpacing="0.5">HABITS</text>
-          <text x="340" y="364" textAnchor="middle" fontSize="9" fill="rgba(110,231,183,0.6)" fontFamily="DM Sans">🔥 14-day streak</text>
+          {/* ── Back arm (swinging back, holding phone) ── */}
+          <g style={{ animation:'armBack 0.9s ease-in-out infinite alternate' }}>
+            <path d="M200 305 Q175 325 162 350" stroke="#1D4ED8" strokeWidth="12" strokeLinecap="round" fill="none"/>
+            <path d="M162 350 Q155 368 160 382" stroke="#1D4ED8" strokeWidth="10" strokeLinecap="round" fill="none"/>
+            {/* Phone in back hand */}
+            <rect x="148" y="378" width="22" height="34" rx="4" fill="#0F172A" stroke="#38BDF8" strokeWidth="1.5" style={{ animation:'floatCard 2s ease-in-out infinite 0.5s' }}/>
+            <rect x="152" y="382" width="14" height="20" rx="2" fill="#1E3A5F"/>
+            <line x1="155" y1="386" x2="163" y2="386" stroke="#38BDF8" strokeWidth="1" opacity="0.8"/>
+            <line x1="155" y1="390" x2="161" y2="390" stroke="#38BDF8" strokeWidth="1" opacity="0.5"/>
+            <circle cx="159" cy="396" r="2" fill="#34D399"/>
+          </g>
 
-          {/* ══ Satellite: Tasks (bottom) ══ */}
-          <circle cx="220" cy="375" r="30" fill="rgba(14,20,50,0.95)" stroke="rgba(253,211,77,0.7)" strokeWidth="2" style={{ animation:'floatY 3.8s ease-in-out infinite 0.8s' }} />
-          <line x1="210" y1="370" x2="230" y2="370" stroke="#FCD34D" strokeWidth="1.8" strokeLinecap="round" />
-          <line x1="210" y1="376" x2="230" y2="376" strokeWidth="1.8" strokeLinecap="round" stroke="#FCD34D" />
-          <line x1="210" y1="382" x2="222" y2="382" stroke="#FCD34D" strokeWidth="1.8" strokeLinecap="round" opacity="0.5" />
-          <polyline points="207,367 210,371 217,364" fill="none" stroke="#6EE7B7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-          <text x="220" y="363" textAnchor="middle" fontSize="10" fontWeight="700" fill="#FDE68A" fontFamily="DM Sans" letterSpacing="0.5">TASKS</text>
-          <text x="220" y="415" textAnchor="middle" fontSize="9" fill="rgba(253,211,77,0.6)" fontFamily="DM Sans">7 done today</text>
+          {/* ── Front arm (raised forward, holding tablet with tasks) ── */}
+          <g style={{ animation:'armFront 0.9s ease-in-out infinite alternate' }}>
+            <path d="M215 305 Q245 280 265 265" stroke="#3B82F6" strokeWidth="12" strokeLinecap="round" fill="none"/>
+            <path d="M265 265 Q280 255 285 245" stroke="#3B82F6" strokeWidth="10" strokeLinecap="round" fill="none"/>
+            {/* Tablet/clipboard in front hand */}
+            <rect x="278" y="218" width="68" height="52" rx="6" fill="#0D1B3E" stroke="#60A5FA" strokeWidth="1.8" style={{ animation:'floatCard 2.2s ease-in-out infinite' }}/>
+            <rect x="283" y="223" width="58" height="38" rx="3" fill="#0F2458"/>
+            {/* Task list on tablet */}
+            <line x1="288" y1="230" x2="335" y2="230" stroke="white" strokeWidth="1.2" opacity="0.6"/>
+            <line x1="288" y1="237" x2="328" y2="237" stroke="white" strokeWidth="1.2" opacity="0.5"/>
+            <line x1="288" y1="244" x2="320" y2="244" stroke="white" strokeWidth="1.2" opacity="0.4"/>
+            <line x1="288" y1="251" x2="330" y2="251" stroke="white" strokeWidth="1.2" opacity="0.3"/>
+            <circle cx="285" cy="230" r="2.5" fill="#34D399"/>
+            <circle cx="285" cy="237" r="2.5" fill="#34D399"/>
+            <circle cx="285" cy="244" r="2.5" fill="#FCD34D"/>
+            <circle cx="285" cy="251" r="2.5" fill="rgba(255,255,255,0.3)"/>
+          </g>
 
-          {/* ══ Satellite: Review (bottom-left) ══ */}
-          <circle cx="100" cy="325" r="28" fill="rgba(14,20,50,0.95)" stroke="rgba(253,164,175,0.7)" strokeWidth="2" style={{ animation:'floatY 4.2s ease-in-out infinite 1.5s' }} />
-          <path d="M91 325 A9 9 0 1 1 109 325" fill="none" stroke="#FDA4AF" strokeWidth="1.8" strokeLinecap="round" />
-          <polyline points="109,320 109,325 114,325" fill="none" stroke="#FDA4AF" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-          <text x="100" y="313" textAnchor="middle" fontSize="10" fontWeight="700" fill="#FECDD3" fontFamily="DM Sans" letterSpacing="0.5">REVIEW</text>
-          <text x="100" y="364" textAnchor="middle" fontSize="9" fill="rgba(253,164,175,0.6)" fontFamily="DM Sans">Weekly insights</text>
+          {/* Neck */}
+          <rect x="202" y="272" width="16" height="22" rx="7" fill="#D97706"/>
 
-          {/* ══ Satellite: Morning Brief (top-left) ══ */}
-          <circle cx="100" cy="155" r="28" fill="rgba(14,20,50,0.95)" stroke="rgba(253,211,77,0.5)" strokeWidth="2" style={{ animation:'floatY 5s ease-in-out infinite 2s' }} />
-          {/* Sun rays */}
-          <circle cx="100" cy="155" r="7" fill="#FCD34D" opacity="0.9" />
-          <line x1="100" y1="143" x2="100" y2="140" stroke="#FCD34D" strokeWidth="2" strokeLinecap="round" />
-          <line x1="100" y1="167" x2="100" y2="170" stroke="#FCD34D" strokeWidth="2" strokeLinecap="round" />
-          <line x1="88"  y1="155" x2="85"  y2="155" stroke="#FCD34D" strokeWidth="2" strokeLinecap="round" />
-          <line x1="112" y1="155" x2="115" y2="155" stroke="#FCD34D" strokeWidth="2" strokeLinecap="round" />
-          <line x1="92"  y1="147" x2="90"  y2="145" stroke="#FCD34D" strokeWidth="1.5" strokeLinecap="round" />
-          <line x1="108" y1="163" x2="110" y2="165" stroke="#FCD34D" strokeWidth="1.5" strokeLinecap="round" />
-          <line x1="108" y1="147" x2="110" y2="145" stroke="#FCD34D" strokeWidth="1.5" strokeLinecap="round" />
-          <line x1="92"  y1="163" x2="90"  y2="165" stroke="#FCD34D" strokeWidth="1.5" strokeLinecap="round" />
-          <text x="100" y="143" textAnchor="middle" fontSize="9" fontWeight="700" fill="#FDE68A" fontFamily="DM Sans" letterSpacing="0.3">MORNING</text>
-          <text x="100" y="194" textAnchor="middle" fontSize="9" fill="rgba(253,211,77,0.6)" fontFamily="DM Sans">Daily briefing</text>
+          {/* Head */}
+          <circle cx="210" cy="255" r="28" fill="url(#skinGrad)" style={{ animation:'headBob 0.9s ease-in-out infinite alternate' }}/>
+          {/* Hair */}
+          <path d="M185 248 Q190 228 210 226 Q230 228 235 248 Q228 234 210 232 Q192 234 185 248Z" fill="#92400E"/>
+          {/* Face — determined expression */}
+          <circle cx="203" cy="252" r="2.5" fill="#1C1C1E"/>
+          <circle cx="217" cy="252" r="2.5" fill="#1C1C1E"/>
+          {/* Focused brow */}
+          <path d="M199 246 Q203 243 207 246" stroke="#92400E" strokeWidth="2" strokeLinecap="round" fill="none"/>
+          <path d="M213 246 Q217 243 221 246" stroke="#92400E" strokeWidth="2" strokeLinecap="round" fill="none"/>
+          {/* Slight smile */}
+          <path d="M204 260 Q210 265 216 260" stroke="#92400E" strokeWidth="1.8" strokeLinecap="round" fill="none"/>
 
-          {/* ── Floating spark particles ── */}
-          <circle cx="170" cy="160" r="2.5" fill="#60A5FA" opacity="0.7" style={{ animation:'spark 3s ease-in-out infinite' }} />
-          <circle cx="275" cy="195" r="2"   fill="#A5B4FC" opacity="0.6" style={{ animation:'spark 4s ease-in-out infinite 1s' }} />
-          <circle cx="260" cy="290" r="2.5" fill="#6EE7B7" opacity="0.7" style={{ animation:'spark 3.5s ease-in-out infinite 0.5s' }} />
-          <circle cx="170" cy="295" r="2"   fill="#FDA4AF" opacity="0.6" style={{ animation:'spark 4.5s ease-in-out infinite 1.5s' }} />
-          <circle cx="300" cy="240" r="1.8" fill="#FCD34D" opacity="0.5" style={{ animation:'spark 2.8s ease-in-out infinite 0.8s' }} />
-          <circle cx="140" cy="240" r="1.8" fill="#60A5FA" opacity="0.5" style={{ animation:'spark 3.2s ease-in-out infinite 1.2s' }} />
+          {/* ── Floating UI cards orbiting the figure ── */}
 
-          {/* ── Bottom power tagline ── */}
-          <text x="220" y="500" textAnchor="middle" fontSize="18" fontWeight="800" fill="white" fontFamily="Cabinet Grotesk" letterSpacing="-0.5" opacity="0.92">
-            One AI. Total Command.
+          {/* Card: Calendar — top left */}
+          <g style={{ animation:'floatCard 3s ease-in-out infinite' }}>
+            <rect x="42" y="145" width="100" height="70" rx="10" fill="rgba(14,28,72,0.92)" stroke="rgba(96,165,250,0.5)" strokeWidth="1.5"/>
+            <rect x="50" y="153" width="84" height="54" rx="6" fill="rgba(30,58,138,0.5)"/>
+            <text x="55" y="167" fontSize="8" fontWeight="700" fill="#93C5FD" fontFamily="DM Sans" letterSpacing="0.8">CALENDAR</text>
+            <line x1="50" y1="171" x2="126" y2="171" stroke="rgba(96,165,250,0.3)" strokeWidth="1"/>
+            <text x="55" y="183" fontSize="9" fill="white" fontFamily="DM Sans">4 meetings</text>
+            <text x="55" y="195" fontSize="8" fill="rgba(147,197,253,0.6)" fontFamily="DM Sans">Next: 9:30 AM</text>
+            <rect x="106" y="176" width="22" height="16" rx="4" fill="rgba(59,130,246,0.3)" stroke="rgba(96,165,250,0.4)" strokeWidth="1"/>
+            <text x="117" y="187" textAnchor="middle" fontSize="9" fill="#60A5FA" fontFamily="DM Sans">✓</text>
+          </g>
+
+          {/* Card: Inbox — top right */}
+          <g style={{ animation:'floatCard 2.8s ease-in-out infinite 0.7s' }}>
+            <rect x="288" y="100" width="100" height="65" rx="10" fill="rgba(14,28,72,0.92)" stroke="rgba(165,180,252,0.5)" strokeWidth="1.5"/>
+            <text x="298" y="116" fontSize="8" fontWeight="700" fill="#A5B4FC" fontFamily="DM Sans" letterSpacing="0.8">INBOX</text>
+            <line x1="294" y1="120" x2="382" y2="120" stroke="rgba(165,180,252,0.3)" strokeWidth="1"/>
+            <text x="298" y="132" fontSize="9" fill="white" fontFamily="DM Sans">12 emails</text>
+            <text x="298" y="144" fontSize="8" fill="rgba(165,180,252,0.6)" fontFamily="DM Sans">3 need action</text>
+            <rect x="355" y="125" width="28" height="14" rx="7" fill="rgba(165,180,252,0.2)" stroke="rgba(165,180,252,0.4)" strokeWidth="1"/>
+            <text x="369" y="135" textAnchor="middle" fontSize="8" fill="#A5B4FC" fontFamily="DM Sans">AI</text>
+          </g>
+
+          {/* Card: Habits — bottom right */}
+          <g style={{ animation:'floatCard 3.4s ease-in-out infinite 1.2s' }}>
+            <rect x="300" y="395" width="100" height="65" rx="10" fill="rgba(14,28,72,0.92)" stroke="rgba(52,211,153,0.5)" strokeWidth="1.5"/>
+            <text x="310" y="411" fontSize="8" fontWeight="700" fill="#34D399" fontFamily="DM Sans" letterSpacing="0.8">HABITS</text>
+            <line x1="306" y1="415" x2="394" y2="415" stroke="rgba(52,211,153,0.3)" strokeWidth="1"/>
+            <text x="310" y="428" fontSize="9" fill="white" fontFamily="DM Sans">🔥 14-day streak</text>
+            {/* Mini progress bar */}
+            <rect x="310" y="434" width="80" height="5" rx="2.5" fill="rgba(52,211,153,0.15)"/>
+            <rect x="310" y="434" width="62" height="5" rx="2.5" fill="#34D399"/>
+            <text x="310" y="450" fontSize="8" fill="rgba(52,211,153,0.6)" fontFamily="DM Sans">Morning routine 78%</text>
+          </g>
+
+          {/* Card: AI Brief — bottom left */}
+          <g style={{ animation:'floatCard 2.6s ease-in-out infinite 1.8s' }}>
+            <rect x="22" y="400" width="108" height="65" rx="10" fill="rgba(14,28,72,0.92)" stroke="rgba(253,211,77,0.4)" strokeWidth="1.5"/>
+            <text x="32" y="416" fontSize="8" fontWeight="700" fill="#FCD34D" fontFamily="DM Sans" letterSpacing="0.8">AI BRIEF</text>
+            <line x1="28" y1="420" x2="124" y2="420" stroke="rgba(253,211,77,0.3)" strokeWidth="1"/>
+            <text x="32" y="433" fontSize="8.5" fill="white" fontFamily="DM Sans">Good morning!</text>
+            <text x="32" y="445" fontSize="8" fill="rgba(253,211,77,0.6)" fontFamily="DM Sans">3 priorities today</text>
+            <text x="32" y="457" fontSize="8" fill="rgba(255,255,255,0.4)" fontFamily="DM Sans">Focus: Q4 review</text>
+          </g>
+
+          {/* ── Floating sparkles / energy dots ── */}
+          <circle cx="158" cy="230" r="3" fill="#60A5FA" style={{ animation:'sparkle 2s ease-in-out infinite' }}/>
+          <circle cx="268" cy="310" r="2.5" fill="#34D399" style={{ animation:'sparkle 2.5s ease-in-out infinite 0.6s' }}/>
+          <circle cx="140" cy="350" r="2" fill="#FCD34D" style={{ animation:'sparkle 1.8s ease-in-out infinite 1s' }}/>
+          <circle cx="290" cy="380" r="2" fill="#A5B4FC" style={{ animation:'sparkle 2.2s ease-in-out infinite 0.3s' }}/>
+          <circle cx="175" cy="195" r="2.5" fill="#FCD34D" style={{ animation:'sparkle 3s ease-in-out infinite 1.4s' }}/>
+          <circle cx="310" cy="210" r="2" fill="#60A5FA" style={{ animation:'sparkle 2.4s ease-in-out infinite 0.8s' }}/>
+
+          {/* ── Tagline ── */}
+          <text x="210" y="512" textAnchor="middle" fontSize="17" fontWeight="800" fill="white" fontFamily="Cabinet Grotesk" letterSpacing="-0.5" opacity="0.95">
+            Stay ahead. Stay organized.
           </text>
-          <text x="220" y="522" textAnchor="middle" fontSize="11" fill="rgba(147,197,253,0.55)" fontFamily="DM Sans" letterSpacing="0.3">
-            Every workflow. Every day. Amplified.
+          <text x="210" y="532" textAnchor="middle" fontSize="10.5" fill="rgba(147,197,253,0.5)" fontFamily="DM Sans" letterSpacing="0.2">
+            Your AI co-pilot for every workday.
           </text>
         </svg>
       </div>
 
       <style>{`
-        @keyframes spin  { from { transform: rotate(0deg);   } to { transform: rotate(360deg);  } }
-        @keyframes spinR { from { transform: rotate(0deg);   } to { transform: rotate(-360deg); } }
-        @keyframes pulse {
-          0%, 100% { opacity: 1;   transform: scale(1);    }
-          50%       { opacity: 0.6; transform: scale(0.93); }
-        }
-        @keyframes floatY {
+        @keyframes floatCard {
           0%, 100% { transform: translateY(0px);  }
-          50%       { transform: translateY(-8px); }
+          50%       { transform: translateY(-7px); }
         }
-        @keyframes spark {
-          0%, 100% { opacity: 0.2; transform: scale(0.8); }
-          50%       { opacity: 1;   transform: scale(1.4); }
+        @keyframes sparkle {
+          0%, 100% { opacity: 0.15; transform: scale(0.7); }
+          50%       { opacity: 1;   transform: scale(1.5);  }
+        }
+        @keyframes headBob {
+          0%   { transform: translateY(0px) rotate(-3deg); }
+          100% { transform: translateY(-4px) rotate(2deg); }
+        }
+        @keyframes armFront {
+          0%   { transform: rotate(-5deg); transform-origin: 215px 305px; }
+          100% { transform: rotate(5deg);  transform-origin: 215px 305px; }
+        }
+        @keyframes armBack {
+          0%   { transform: rotate(5deg);  transform-origin: 200px 305px; }
+          100% { transform: rotate(-5deg); transform-origin: 200px 305px; }
+        }
+        @keyframes legFront {
+          0%   { transform: rotate(-6deg); transform-origin: 215px 370px; }
+          100% { transform: rotate(4deg);  transform-origin: 215px 370px; }
+        }
+        @keyframes legBack {
+          0%   { transform: rotate(4deg);  transform-origin: 200px 370px; }
+          100% { transform: rotate(-6deg); transform-origin: 200px 370px; }
+        }
+        @keyframes trailFade {
+          0%, 100% { opacity: 0.1; }
+          50%       { opacity: 1;   }
         }
         @keyframes fadeUp {
           from { opacity: 0; transform: translateY(20px); }
