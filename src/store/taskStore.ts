@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { Task, Quadrant } from '@/types'
+import type { Task, Quadrant, TaskStatus } from '@/types'
 
 interface TaskState {
   tasks: Task[]
@@ -9,6 +9,7 @@ interface TaskState {
   moveTask: (id: string, quadrant: Quadrant) => void
   deleteTask: (id: string) => void
   toggleComplete: (id: string) => void
+  setStatus: (id: string, status: TaskStatus) => void
 }
 
 export const useTaskStore = create<TaskState>()(
@@ -19,7 +20,11 @@ export const useTaskStore = create<TaskState>()(
         set(s => ({
           tasks: [
             ...s.tasks,
-            { ...task, id: crypto.randomUUID(), createdAt: new Date().toISOString() },
+            {
+              ...task,
+              id: crypto.randomUUID(),
+              createdAt: new Date().toISOString(),
+            },
           ],
         })),
       updateTask: (id, updates) =>
@@ -29,7 +34,15 @@ export const useTaskStore = create<TaskState>()(
       deleteTask: id => set(s => ({ tasks: s.tasks.filter(t => t.id !== id) })),
       toggleComplete: id =>
         set(s => ({
-          tasks: s.tasks.map(t => (t.id === id ? { ...t, completed: !t.completed } : t)),
+          tasks: s.tasks.map(t =>
+            t.id === id ? { ...t, completed: !t.completed, status: t.completed ? 'open' : 'done' } : t
+          ),
+        })),
+      setStatus: (id, status) =>
+        set(s => ({
+          tasks: s.tasks.map(t =>
+            t.id === id ? { ...t, status, completed: status === 'done' } : t
+          ),
         })),
     }),
     { name: 'professor-tasks' },

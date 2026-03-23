@@ -15,24 +15,59 @@ export const COMPANY_COLORS: Record<CompanyTag, string> = {
   personal: '#888780',
 }
 
+// ─── Company User (from Settings companies) ──────────────────────────────────
+export interface CompanyUser {
+  id: string
+  name: string
+  email?: string
+}
+
+// ─── Dynamic Company (from localStorage professor-companies) ─────────────────
+export interface DynamicCompany {
+  id: string
+  name: string
+  color: string
+  users: CompanyUser[]
+}
+
+export function loadDynamicCompanies(): DynamicCompany[] {
+  try {
+    const raw = localStorage.getItem('professor-companies')
+    return raw ? (JSON.parse(raw) as DynamicCompany[]) : []
+  } catch { return [] }
+}
+
+export function getAllUsers(): (CompanyUser & { companyId: string; companyName: string; companyColor: string })[] {
+  return loadDynamicCompanies().flatMap(co =>
+    (co.users ?? []).map(u => ({ ...u, companyId: co.id, companyName: co.name, companyColor: co.color }))
+  )
+}
+
 // ─── Eisenhower Quadrants ───────────────────────────────────────────────────
 export type Quadrant = 'do' | 'schedule' | 'delegate' | 'eliminate'
 
 export const QUADRANT_META: Record<Quadrant, { label: string; sub: string; color: string }> = {
-  do:       { label: 'Do',       sub: 'Urgent + Important',     color: '#7C3AED' },
-  schedule: { label: 'Schedule', sub: 'Not Urgent + Important', color: '#7F77DD' },
-  delegate: { label: 'Delegate', sub: 'Urgent + Not Important', color: '#1D9E75' },
-  eliminate:{ label: 'Eliminate',sub: 'Not Urgent + Not Important', color: '#888780' },
+  do:       { label: 'Do',        sub: 'Urgent + Important',         color: '#7C3AED' },
+  schedule: { label: 'Schedule',  sub: 'Not Urgent + Important',     color: '#7F77DD' },
+  delegate: { label: 'Delegate',  sub: 'Urgent + Not Important',     color: '#1D9E75' },
+  eliminate:{ label: 'Eliminate', sub: 'Not Urgent + Not Important', color: '#888780' },
 }
 
 // ─── Task ────────────────────────────────────────────────────────────────────
+export type TaskStatus = 'open' | 'done' | 'cancelled'
+
 export interface Task {
   id: string
   title: string
   description?: string
-  quadrant: Quadrant
+  quadrant: Quadrant | null  // null = inbox/undefined (right panel)
   company: CompanyTag
-  dueDate?: string
+  companyId?: string         // dynamic company id from settings
+  dueDate?: string           // YYYY-MM-DD
+  duration?: number          // minutes
+  plannedTime?: string       // HH:MM for schedule quadrant
+  owner?: string             // CompanyUser.id
+  status: TaskStatus
   completed: boolean
   createdAt: string
 }

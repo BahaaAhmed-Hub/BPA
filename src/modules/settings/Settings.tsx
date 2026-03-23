@@ -45,9 +45,12 @@ interface AppSettings {
   theme: string; sidebarDefault: boolean; compact: boolean
 }
 
+interface CompanyUser { id: string; name: string; email?: string }
+
 interface CompanyRow {
   id: string; name: string; color: string
   calendarId: string; emailDomain: string; accountId: string; isActive: boolean
+  users: CompanyUser[]
 }
 
 const SECTION_IDS = ['profile','schedule','companies','habits','accounts','professor','notifications','appearance'] as const
@@ -405,6 +408,134 @@ function ScheduleSection({
 
 // ─── CHUNK 4: Companies + Habits sections ────────────────────────────────────
 
+function CompanyCard({
+  co, accounts, onUpdate, onDelete,
+}: {
+  co: CompanyRow
+  accounts: ConnectedAccount[]
+  onUpdate: (patch: Partial<CompanyRow>) => void
+  onDelete: () => void
+}) {
+  const [usersOpen, setUsersOpen] = useState(false)
+  const [newUserName, setNewUserName] = useState('')
+  const [newUserEmail, setNewUserEmail] = useState('')
+
+  const users: CompanyUser[] = co.users ?? []
+
+  function addUser() {
+    if (!newUserName.trim()) return
+    const next = [...users, { id: crypto.randomUUID(), name: newUserName.trim(), email: newUserEmail.trim() || undefined }]
+    onUpdate({ users: next })
+    setNewUserName(''); setNewUserEmail('')
+  }
+
+  function removeUser(id: string) {
+    onUpdate({ users: users.filter(u => u.id !== id) })
+  }
+
+  return (
+    <div style={{ borderBottom: '1px solid var(--color-border, #252A3E)' }}>
+      {/* Main company row */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '12px 0' }}>
+        <div style={{ width: 26, height: 26, borderRadius: 7, background: co.color, flexShrink: 0, marginTop: 1 }} />
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 7 }}>
+          <div style={{ display: 'flex', gap: 7, alignItems: 'center', flexWrap: 'wrap' }}>
+            <input value={co.name} onChange={e => onUpdate({ name: e.target.value })}
+              style={{ ...inputStyle, width: 150 }} placeholder="Company name" />
+            <input value={co.emailDomain} onChange={e => onUpdate({ emailDomain: e.target.value })}
+              style={{ ...inputStyle, width: 160 }} placeholder="@domain.com" />
+            {accounts.length > 0 && (
+              <select value={co.accountId} onChange={e => onUpdate({ accountId: e.target.value })}
+                style={{ ...selectStyle, width: 160 }}>
+                <option value="">No account</option>
+                {accounts.map(a => <option key={a.id} value={a.id}>{a.email}</option>)}
+              </select>
+            )}
+          </div>
+          <div style={{ display: 'flex', gap: 5 }}>
+            {C_COLORS.map(c => (
+              <button key={c} onClick={() => onUpdate({ color: c })}
+                style={{
+                  width: 18, height: 18, borderRadius: '50%', background: c, border: 'none', cursor: 'pointer',
+                  outline: co.color === c ? `2px solid ${c}` : 'none', outlineOffset: 2,
+                }} />
+            ))}
+          </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+          {/* Users toggle */}
+          <button onClick={() => setUsersOpen(o => !o)} style={{
+            padding: '3px 9px', borderRadius: 5, fontSize: 10.5, cursor: 'pointer',
+            background: usersOpen ? 'var(--color-accent-fill)' : 'transparent',
+            border: `1px solid ${usersOpen ? 'var(--color-accent, #1E40AF)' : 'var(--color-border, #252A3E)'}`,
+            color: usersOpen ? 'var(--color-accent, #1E40AF)' : 'var(--color-text-muted, #6B7280)',
+          }}>
+            {users.length > 0 ? `${users.length} user${users.length > 1 ? 's' : ''}` : 'Users'}
+          </button>
+          <Toggle checked={co.isActive} onChange={v => onUpdate({ isActive: v })} />
+          <button onClick={onDelete}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted, #6B7280)', padding: 3 }}>
+            <Trash2 size={12} />
+          </button>
+        </div>
+      </div>
+
+      {/* Users sub-panel */}
+      {usersOpen && (
+        <div style={{
+          margin: '0 0 10px 36px', padding: 10,
+          background: 'var(--color-surface2, #0D0F1A)',
+          border: '1px solid var(--color-border, #252A3E)',
+          borderRadius: 9,
+        }}>
+          <p style={{ margin: '0 0 8px', fontSize: 11, fontWeight: 600, color: 'var(--color-text-muted, #6B7280)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            Users / Team Members
+          </p>
+
+          {users.length === 0 && (
+            <p style={{ margin: '0 0 8px', fontSize: 11.5, color: 'var(--color-text-muted, #6B7280)', fontStyle: 'italic' }}>
+              No users yet — add members below.
+            </p>
+          )}
+
+          {users.map(u => (
+            <div key={u.id} style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              padding: '6px 0', borderBottom: '1px solid var(--color-border, #252A3E)',
+            }}>
+              <div style={{ width: 7, height: 7, borderRadius: '50%', background: co.color, flexShrink: 0 }} />
+              <span style={{ flex: 1, fontSize: 12.5, color: 'var(--color-text, #E8EAF6)' }}>{u.name}</span>
+              {u.email && <span style={{ fontSize: 11, color: 'var(--color-text-muted, #6B7280)' }}>{u.email}</span>}
+              <button onClick={() => removeUser(u.id)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted, #6B7280)', padding: 2 }}>
+                <Trash2 size={11} />
+              </button>
+            </div>
+          ))}
+
+          {/* Add user inline */}
+          <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
+            <input value={newUserName} onChange={e => setNewUserName(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') addUser() }}
+              placeholder="Name" style={{ ...inputStyle, width: 130 }} />
+            <input value={newUserEmail} onChange={e => setNewUserEmail(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') addUser() }}
+              placeholder="Email (optional)" style={{ ...inputStyle, flex: 1 }} />
+            <button onClick={addUser} disabled={!newUserName.trim()} style={{
+              padding: '5px 11px', borderRadius: 6, fontSize: 11.5, fontWeight: 500, cursor: 'pointer',
+              background: 'var(--color-accent-fill)', border: '1px solid var(--color-accent, #1E40AF)50',
+              color: 'var(--color-accent, #1E40AF)', opacity: newUserName.trim() ? 1 : 0.4,
+              display: 'flex', alignItems: 'center', gap: 4,
+            }}>
+              <Plus size={10} /> Add
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function CompaniesSection({
   companies, setCompanies, accounts,
 }: {
@@ -423,7 +554,7 @@ function CompaniesSection({
     const next = [...companies, {
       id: crypto.randomUUID(), name: newName.trim(),
       color: newColor, calendarId: '', emailDomain: newDomain.trim(),
-      accountId: newAccountId, isActive: true,
+      accountId: newAccountId, isActive: true, users: [],
     }]
     setCompanies(next); saveCompanies(next)
     setNewName(''); setNewDomain(''); setAdding(false)
@@ -446,50 +577,9 @@ function CompaniesSection({
       </p>
 
       {companies.map(co => (
-        <div key={co.id} style={{
-          display: 'flex', alignItems: 'flex-start', gap: 12,
-          padding: '14px 0', borderBottom: '1px solid var(--color-border, #252A3E)',
-        }}>
-          {/* Color swatch */}
-          <div style={{ position: 'relative', flexShrink: 0 }}>
-            <div style={{ width: 28, height: 28, borderRadius: 7, background: co.color, cursor: 'pointer' }} title="Color" />
-          </div>
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-              <input value={co.name} onChange={e => updateCompany(co.id, { name: e.target.value })}
-                style={{ ...inputStyle, width: 160 }} placeholder="Company name" />
-              {/* Email domain */}
-              <input value={co.emailDomain} onChange={e => updateCompany(co.id, { emailDomain: e.target.value })}
-                style={{ ...inputStyle, width: 180 }} placeholder="@domain.com (email filter)" />
-              {/* Account selector */}
-              {accounts.length > 0 && (
-                <select value={co.accountId} onChange={e => updateCompany(co.id, { accountId: e.target.value })}
-                  style={{ ...selectStyle, width: 180 }}>
-                  <option value="">No account linked</option>
-                  {accounts.map(a => <option key={a.id} value={a.id}>{a.email}</option>)}
-                </select>
-              )}
-            </div>
-            {/* Color row */}
-            <div style={{ display: 'flex', gap: 6 }}>
-              {C_COLORS.map(c => (
-                <button key={c} onClick={() => updateCompany(co.id, { color: c })}
-                  style={{
-                    width: 20, height: 20, borderRadius: '50%', background: c, border: 'none', cursor: 'pointer',
-                    outline: co.color === c ? `2px solid ${c}` : 'none', outlineOffset: 2,
-                  }} />
-              ))}
-            </div>
-          </div>
-          {/* Active toggle + delete */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-            <Toggle checked={co.isActive} onChange={v => updateCompany(co.id, { isActive: v })} />
-            <button onClick={() => deleteCompany(co.id)}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted, #6B7280)', padding: 4 }}>
-              <Trash2 size={13} />
-            </button>
-          </div>
-        </div>
+        <CompanyCard key={co.id} co={co} accounts={accounts}
+          onUpdate={patch => updateCompany(co.id, patch)}
+          onDelete={() => deleteCompany(co.id)} />
       ))}
 
       {adding ? (
@@ -930,8 +1020,9 @@ export function Settings() {
     if (companies.length === 0) {
       loadCompaniesFromDB().then(rows => {
         if (rows.length > 0) {
-          setCompanies(rows)
-          saveCompanies(rows)
+          const hydrated: CompanyRow[] = rows.map(r => ({ ...r, emailDomain: '', accountId: '', users: [] }))
+          setCompanies(hydrated)
+          saveCompanies(hydrated)
         }
       }).catch(() => { /* offline / not signed in */ })
     }

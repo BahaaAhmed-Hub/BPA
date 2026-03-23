@@ -170,7 +170,7 @@ export function ReviewModule() {
         company_id: t.company,
         title: t.title,
         description: t.description ?? null,
-        quadrant: QUADRANT_MAP[t.quadrant] ?? null,
+        quadrant: t.quadrant ? (QUADRANT_MAP[t.quadrant] ?? null) : null,
         effort_minutes: null,
         due_date: t.dueDate ?? null,
         status: 'done' as const,
