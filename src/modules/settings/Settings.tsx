@@ -17,7 +17,7 @@ import {
   Brain, Bell, Palette, Link, X, RefreshCw,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
-import { signInWithGoogle, signOut as googleSignOut } from '@/lib/google'
+import { connectAdditionalGoogleAccount, signOut as googleSignOut } from '@/lib/google'
 import { useUIStore } from '@/store/uiStore'
 import { useAuthStore } from '@/store/authStore'
 import { THEMES, getTheme, applyThemeVars } from '@/lib/themes'
@@ -652,11 +652,11 @@ function AccountsSection({
   async function connectAdditional() {
     setAdding(true)
     try {
-      // Open OAuth popup for additional scope — we use signInWithGoogle which redirects.
-      // For additional accounts we store the token separately after redirect.
-      await signInWithGoogle()
-    } catch { /* user cancelled */ }
-    setAdding(false)
+      // Saves current session, redirects to Google with account picker forced.
+      // On return, App.tsx detects the pending flag, stores the new token as
+      // an additional account, and restores the original session.
+      await connectAdditionalGoogleAccount()
+    } catch { setAdding(false) }
   }
 
   async function loadCalendars(acc: ConnectedAccount) {

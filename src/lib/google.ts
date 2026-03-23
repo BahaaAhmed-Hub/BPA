@@ -1,5 +1,7 @@
 import { supabase } from './supabase'
 
+const PENDING_ADD_ACCOUNT_KEY = 'professor-pending-add-account'
+
 export async function signInWithGoogle() {
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
@@ -13,6 +15,50 @@ export async function signInWithGoogle() {
   })
   if (error) throw error
   return data
+}
+
+/**
+ * Connect an additional Google account without replacing the current session.
+ * Saves the current session tokens, then triggers OAuth. On return, App.tsx
+ * detects the pending flag, stores the new token as an additional account,
+ * and restores the original session.
+ */
+export async function connectAdditionalGoogleAccount() {
+  const { data: { session } } = await supabase.auth.getSession()
+  if (session) {
+    localStorage.setItem(PENDING_ADD_ACCOUNT_KEY, JSON.stringify({
+      access_token:  session.access_token,
+      refresh_token: session.refresh_token,
+    }))
+  }
+
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      scopes: [
+        'https://www.googleapis.com/auth/calendar.readonly',
+        'https://www.googleapis.com/auth/gmail.readonly',
+      ].join(' '),
+      redirectTo: window.location.origin + import.meta.env.BASE_URL,
+      queryParams: { prompt: 'select_account' }, // force account picker
+    },
+  })
+  if (error) {
+    localStorage.removeItem(PENDING_ADD_ACCOUNT_KEY)
+    throw error
+  }
+  return data
+}
+
+export function getPendingAddAccount(): { access_token: string; refresh_token: string } | null {
+  try {
+    const raw = localStorage.getItem(PENDING_ADD_ACCOUNT_KEY)
+    return raw ? JSON.parse(raw) : null
+  } catch { return null }
+}
+
+export function clearPendingAddAccount() {
+  localStorage.removeItem(PENDING_ADD_ACCOUNT_KEY)
 }
 
 export async function signOut() {

@@ -13,7 +13,8 @@ import { SettingsModule } from './modules/settings/SettingsModule'
 import { useUIStore } from './store/uiStore'
 import { useAuthStore } from './store/authStore'
 import { supabase } from './lib/supabase'
-import { signInWithGoogle } from './lib/google'
+import { signInWithGoogle, getPendingAddAccount, clearPendingAddAccount } from './lib/google'
+import { addAccount } from './lib/multiAccount'
 import { getTheme, applyThemeVars } from './lib/themes'
 import { GraduationCap, Calendar, Mail, CheckSquare, Brain, ArrowRight } from 'lucide-react'
 
@@ -449,6 +450,25 @@ function App() {
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      // ── Additional account flow: restore original session ─────────────────
+      const pending = getPendingAddAccount()
+      if (pending && session?.provider_token && session.user) {
+        clearPendingAddAccount()
+        // Store new Google account's token + info
+        addAccount({
+          email:         session.user.email ?? '',
+          name:          session.user.user_metadata?.full_name as string ?? '',
+          avatarUrl:     session.user.user_metadata?.avatar_url as string | undefined,
+          providerToken: session.provider_token,
+          scopes:        ['calendar.readonly', 'gmail.readonly'],
+          isPrimary:     false,
+        })
+        // Restore the previous session without changing current user
+        void supabase.auth.setSession(pending).catch(() => {/* expired token – user must re-login */})
+        return
+      }
+
+      // ── Normal sign-in / sign-out ─────────────────────────────────────────
       const u = session?.user
       setUser(u ? { id: u.id, email: u.email ?? '', name: u.user_metadata?.full_name as string | undefined, avatarUrl: u.user_metadata?.avatar_url as string | undefined } : null)
       setLoading(false)
