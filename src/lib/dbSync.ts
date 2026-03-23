@@ -146,6 +146,23 @@ export async function saveCompaniesToDB(companies: CompanyRow[]): Promise<void> 
   }
 }
 
+export async function loadCompaniesFromDB(): Promise<CompanyRow[]> {
+  const session = await getSession()
+  const userId  = session.user.id
+  const { data, error } = await supabase
+    .from('companies').select('*').eq('user_id', userId)
+  if (error || !data) return []
+  return (data as DbCompany[]).map(r => ({
+    id:          r.id,
+    name:        r.name,
+    color:       r.color_tag ?? '#6B7280',
+    calendarId:  r.calendar_id ?? '',
+    emailDomain: '',
+    accountId:   '',
+    isActive:    r.is_active ?? true,
+  }))
+}
+
 // ─── Habits ───────────────────────────────────────────────────────────────────
 
 export async function saveHabitsToDB(habits: HabitRow[]): Promise<void> {

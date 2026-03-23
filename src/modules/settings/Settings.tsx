@@ -24,7 +24,7 @@ import { THEMES, getTheme, applyThemeVars } from '@/lib/themes'
 import { useHabitsStore, getHabitColors } from '@/store/habitsStore'
 import { loadAccounts, removeAccount, type ConnectedAccount } from '@/lib/multiAccount'
 import {
-  saveProfileToDB, savePrefsToDB, saveCompaniesToDB, saveHabitsToDB, saveHabitLogsToDB,
+  saveProfileToDB, savePrefsToDB, saveCompaniesToDB, loadCompaniesFromDB, saveHabitsToDB, saveHabitLogsToDB,
   type CompanyRow as DbSyncCompanyRow,
 } from '@/lib/dbSync'
 import { loadLogs } from '@/store/habitsStore'
@@ -186,24 +186,20 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
   )
 }
 
-// 2-column grid field (stacked label + control)
-function FieldCol({ label, sub, children, span }: { label: string; sub?: string; children: React.ReactNode; span?: boolean }) {
+function FieldRow({ label, sub, children }: { label: string; sub?: string; children: React.ReactNode }) {
   return (
     <div style={{
-      display: 'flex', flexDirection: 'column', gap: 7,
-      padding: '12px 0', borderBottom: '1px solid var(--color-border, #252A3E)',
-      gridColumn: span ? '1 / -1' : undefined,
+      display: 'flex', alignItems: 'flex-start', gap: 12,
+      padding: '10px 0', borderBottom: '1px solid var(--color-border, #252A3E)',
     }}>
-      <div>
-        <span style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--color-text, #E8EAF6)' }}>{label}</span>
-        {sub && <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--color-text-muted, #6B7280)', lineHeight: 1.4 }}>{sub}</p>}
+      <div style={{ width: 140, flexShrink: 0, paddingTop: 2 }}>
+        <span style={{ fontSize: 12.5, color: 'var(--color-text, #E8EAF6)' }}>{label}</span>
+        {sub && <p style={{ margin: '2px 0 0', fontSize: 10.5, color: 'var(--color-text-muted, #6B7280)', lineHeight: 1.4 }}>{sub}</p>}
       </div>
-      <div>{children}</div>
+      <div style={{ flex: 1, minWidth: 0 }}>{children}</div>
     </div>
   )
 }
-
-const col2: React.CSSProperties = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 24px' }
 
 
 // ─── Sortable Section Shell ────────────────────────────────────────────────────
@@ -310,29 +306,29 @@ function ProfileSection({
   s, set,
 }: { s: AppSettings; set: (p: Partial<AppSettings>) => void }) {
   return (
-    <div style={col2}>
-      <FieldCol label="Full name">
+    <div>
+      <FieldRow label="Full name">
         <input value={s.fullName} onChange={e => set({ fullName: e.target.value })}
           placeholder="Your name" style={inputStyle} />
-      </FieldCol>
-      <FieldCol label="Productivity framework">
+      </FieldRow>
+      <FieldRow label="Framework">
         <select value={s.framework} onChange={e => set({ framework: e.target.value })} style={{ ...selectStyle, width: '100%' }}>
           {FRAMEWORKS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
         </select>
-      </FieldCol>
-      <FieldCol label="Timezone" span>
+      </FieldRow>
+      <FieldRow label="Timezone">
         <select value={s.timezone} onChange={e => set({ timezone: e.target.value })} style={{ ...selectStyle, width: '100%' }}>
           {ALL_TZ.map(tz => <option key={tz.value} value={tz.value}>{tz.label}</option>)}
         </select>
-      </FieldCol>
-      <FieldCol label="Work days" span>
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+      </FieldRow>
+      <FieldRow label="Work days">
+        <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
           {WORK_DAYS.map(d => {
             const on = s.workWeek.includes(d)
             return (
               <button key={d} onClick={() => set({ workWeek: on ? s.workWeek.filter(x => x !== d) : [...s.workWeek, d] })}
                 style={{
-                  padding: '5px 11px', borderRadius: 6, fontSize: 12, cursor: 'pointer', fontWeight: 500,
+                  padding: '4px 9px', borderRadius: 6, fontSize: 11.5, cursor: 'pointer', fontWeight: 500,
                   background: on ? 'var(--color-accent-fill, rgba(30,64,175,0.15))' : 'var(--color-surface2, #0D0F1A)',
                   border: `1px solid ${on ? 'var(--color-accent, #1E40AF)' : 'var(--color-border, #252A3E)'}`,
                   color: on ? 'var(--color-accent, #1E40AF)' : 'var(--color-text-muted, #6B7280)',
@@ -340,7 +336,7 @@ function ProfileSection({
             )
           })}
         </div>
-      </FieldCol>
+      </FieldRow>
     </div>
   )
 }
@@ -349,60 +345,60 @@ function ScheduleSection({
   s, set,
 }: { s: AppSettings; set: (p: Partial<AppSettings>) => void }) {
   return (
-    <div style={col2}>
-      <FieldCol label="Focus window" sub="Block for deep work" span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+    <div>
+      <FieldRow label="Focus window" sub="Deep work block">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <input type="time" value={s.focusStart} onChange={e => set({ focusStart: e.target.value })}
-            style={{ ...inputStyle, width: 130 }} />
-          <span style={{ color: 'var(--color-text-muted, #6B7280)', fontSize: 12 }}>to</span>
+            style={{ ...inputStyle, width: 100 }} />
+          <span style={{ color: 'var(--color-text-muted, #6B7280)', fontSize: 11 }}>to</span>
           <input type="time" value={s.focusEnd} onChange={e => set({ focusEnd: e.target.value })}
-            style={{ ...inputStyle, width: 130 }} />
+            style={{ ...inputStyle, width: 100 }} />
         </div>
-      </FieldCol>
-      <FieldCol label="Earliest meeting" sub="No calls before this time">
+      </FieldRow>
+      <FieldRow label="Earliest meeting" sub="No calls before">
         <input type="time" value={s.earliestMeeting} onChange={e => set({ earliestMeeting: e.target.value })}
-          style={{ ...inputStyle, width: '100%' }} />
-      </FieldCol>
-      <FieldCol label="End of work day">
+          style={{ ...inputStyle, width: 110 }} />
+      </FieldRow>
+      <FieldRow label="End of day">
         <input type="time" value={s.endOfDay} onChange={e => set({ endOfDay: e.target.value })}
-          style={{ ...inputStyle, width: '100%' }} />
-      </FieldCol>
-      <FieldCol label="Family / personal time">
+          style={{ ...inputStyle, width: 110 }} />
+      </FieldRow>
+      <FieldRow label="Family time">
         <input type="time" value={s.familyStart} onChange={e => set({ familyStart: e.target.value })}
-          style={{ ...inputStyle, width: '100%' }} />
-      </FieldCol>
-      <FieldCol label="Protect focus window">
-        <Toggle checked={s.protectFocus} onChange={v => set({ protectFocus: v })} />
-      </FieldCol>
-      <FieldCol label="Auto-decline early meetings">
-        <Toggle checked={s.autoDeclineEarly} onChange={v => set({ autoDeclineEarly: v })} />
-      </FieldCol>
-      <FieldCol label="Meeting buffer" sub="Virtual gap between meetings" span>
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          style={{ ...inputStyle, width: 110 }} />
+      </FieldRow>
+      <FieldRow label="Meeting buffer" sub="Virtual gap">
+        <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
           {BUFFER_STEPS.map(n => (
             <button key={n} onClick={() => set({ bufferMins: n })}
               style={{
-                padding: '5px 14px', borderRadius: 6, fontSize: 12, cursor: 'pointer', fontWeight: 500,
+                padding: '4px 10px', borderRadius: 6, fontSize: 11.5, cursor: 'pointer', fontWeight: 500,
                 background: s.bufferMins === n ? 'var(--color-accent-fill)' : 'var(--color-surface2, #0D0F1A)',
                 border: `1px solid ${s.bufferMins === n ? 'var(--color-accent, #1E40AF)' : 'var(--color-border, #252A3E)'}`,
                 color: s.bufferMins === n ? 'var(--color-accent, #1E40AF)' : 'var(--color-text-muted, #6B7280)',
               }}>{n === 0 ? 'None' : `${n}m`}</button>
           ))}
         </div>
-      </FieldCol>
-      <FieldCol label="Physical meeting buffer" sub="Extra travel time" span>
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+      </FieldRow>
+      <FieldRow label="Physical buffer" sub="Travel time">
+        <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
           {PHYS_STEPS.map(n => (
             <button key={n} onClick={() => set({ physicalBufferMins: n })}
               style={{
-                padding: '5px 14px', borderRadius: 6, fontSize: 12, cursor: 'pointer', fontWeight: 500,
+                padding: '4px 10px', borderRadius: 6, fontSize: 11.5, cursor: 'pointer', fontWeight: 500,
                 background: s.physicalBufferMins === n ? 'var(--color-accent-fill)' : 'var(--color-surface2, #0D0F1A)',
                 border: `1px solid ${s.physicalBufferMins === n ? 'var(--color-accent, #1E40AF)' : 'var(--color-border, #252A3E)'}`,
                 color: s.physicalBufferMins === n ? 'var(--color-accent, #1E40AF)' : 'var(--color-text-muted, #6B7280)',
               }}>{n === 0 ? 'None' : `${n}m`}</button>
           ))}
         </div>
-      </FieldCol>
+      </FieldRow>
+      <FieldRow label="Protect focus">
+        <Toggle checked={s.protectFocus} onChange={v => set({ protectFocus: v })} />
+      </FieldRow>
+      <FieldRow label="Auto-decline early">
+        <Toggle checked={s.autoDeclineEarly} onChange={v => set({ autoDeclineEarly: v })} />
+      </FieldRow>
     </div>
   )
 }
@@ -786,80 +782,80 @@ function AccountsSection({
 
 function ProfessorSection({ s, set }: { s: AppSettings; set: (p: Partial<AppSettings>) => void }) {
   return (
-    <div style={col2}>
-      <FieldCol label="Communication style" sub="How detailed should responses be?" span>
-        <div style={{ display: 'flex', gap: 8 }}>
+    <div>
+      <FieldRow label="Comm. style" sub="Response verbosity">
+        <div style={{ display: 'flex', gap: 6 }}>
           {(['brief','balanced','detailed'] as const).map(v => (
             <button key={v} onClick={() => set({ commStyle: v })}
               style={{
-                padding: '6px 16px', borderRadius: 7, fontSize: 12, cursor: 'pointer', fontWeight: 500, textTransform: 'capitalize',
+                padding: '5px 12px', borderRadius: 7, fontSize: 11.5, cursor: 'pointer', fontWeight: 500, textTransform: 'capitalize',
                 background: s.commStyle === v ? 'var(--color-accent-fill)' : 'var(--color-surface2, #0D0F1A)',
                 border: `1px solid ${s.commStyle === v ? 'var(--color-accent, #1E40AF)' : 'var(--color-border, #252A3E)'}`,
                 color: s.commStyle === v ? 'var(--color-accent, #1E40AF)' : 'var(--color-text-muted, #6B7280)',
               }}>{v}</button>
           ))}
         </div>
-      </FieldCol>
-      <FieldCol label="Proactive suggestions" sub="Offers advice without being asked">
+      </FieldRow>
+      <FieldRow label="Proactive" sub="Offers advice unprompted">
         <Toggle checked={s.proactive} onChange={v => set({ proactive: v })} />
-      </FieldCol>
-      <FieldCol label="Morning brief time">
+      </FieldRow>
+      <FieldRow label="Morning brief">
         <input type="time" value={s.briefTime} onChange={e => set({ briefTime: e.target.value })}
-          style={{ ...inputStyle, width: '100%' }} />
-      </FieldCol>
-      <FieldCol label="Weekly review day">
+          style={{ ...inputStyle, width: 110 }} />
+      </FieldRow>
+      <FieldRow label="Review day">
         <select value={s.reviewDay} onChange={e => set({ reviewDay: e.target.value })} style={{ ...selectStyle, width: '100%' }}>
           {['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'].map(d =>
             <option key={d} value={d}>{d}</option>)}
         </select>
-      </FieldCol>
-      <FieldCol label="Custom instructions" sub="Guide the Professor's personality and priorities" span>
+      </FieldRow>
+      <FieldRow label="Instructions" sub="Personality & priorities">
         <textarea value={s.customInstructions} onChange={e => set({ customInstructions: e.target.value })}
           rows={3} placeholder="e.g. Always be concise. Prioritise Teradix work…"
-          style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.5 }} />
-      </FieldCol>
+          style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.5, width: '100%' }} />
+      </FieldRow>
     </div>
   )
 }
 
 function NotificationsSection({ s, set }: { s: AppSettings; set: (p: Partial<AppSettings>) => void }) {
   return (
-    <div style={col2}>
-      <FieldCol label="Morning brief reminder">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+    <div>
+      <FieldRow label="Morning brief">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <Toggle checked={s.morningReminderOn} onChange={v => set({ morningReminderOn: v })} />
           {s.morningReminderOn && (
             <input type="time" value={s.morningReminderTime} onChange={e => set({ morningReminderTime: e.target.value })}
-              style={{ ...inputStyle, width: 110 }} />
+              style={{ ...inputStyle, width: 100 }} />
           )}
         </div>
-      </FieldCol>
-      <FieldCol label="Wind-down reminder">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+      </FieldRow>
+      <FieldRow label="Wind-down">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <Toggle checked={s.windDownOn} onChange={v => set({ windDownOn: v })} />
           {s.windDownOn && (
             <input type="time" value={s.windDownTime} onChange={e => set({ windDownTime: e.target.value })}
-              style={{ ...inputStyle, width: 110 }} />
+              style={{ ...inputStyle, width: 100 }} />
           )}
         </div>
-      </FieldCol>
-      <FieldCol label="Follow-up nudges" sub="Remind you of delegated/waiting tasks">
+      </FieldRow>
+      <FieldRow label="Follow-up nudges" sub="Delegated/waiting tasks">
         <Toggle checked={s.followUpNudges} onChange={v => set({ followUpNudges: v })} />
-      </FieldCol>
-      <FieldCol label="Weekly review reminder" span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+      </FieldRow>
+      <FieldRow label="Weekly review">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <Toggle checked={s.weeklyReviewOn} onChange={v => set({ weeklyReviewOn: v })} />
           {s.weeklyReviewOn && (
             <>
-              <select value={s.weeklyReviewDay} onChange={e => set({ weeklyReviewDay: e.target.value })} style={{ ...selectStyle, width: 130 }}>
+              <select value={s.weeklyReviewDay} onChange={e => set({ weeklyReviewDay: e.target.value })} style={{ ...selectStyle, width: 100 }}>
                 {['Sunday','Monday','Saturday'].map(d => <option key={d} value={d}>{d}</option>)}
               </select>
               <input type="time" value={s.weeklyReviewTime} onChange={e => set({ weeklyReviewTime: e.target.value })}
-                style={{ ...inputStyle, width: 120 }} />
+                style={{ ...inputStyle, width: 95 }} />
             </>
           )}
         </div>
-      </FieldCol>
+      </FieldRow>
     </div>
   )
 }
@@ -874,41 +870,39 @@ function AppearanceSection({ s, set }: { s: AppSettings; set: (p: Partial<AppSet
   }
 
   return (
-    <div style={col2}>
-      {/* Theme picker — full width */}
-      <div style={{ gridColumn: '1 / -1', paddingBottom: 12, borderBottom: '1px solid var(--color-border, #252A3E)' }}>
-        <p style={{ margin: '0 0 12px', fontSize: 12.5, fontWeight: 500, color: 'var(--color-text, #E8EAF6)' }}>Theme</p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10 }}>
+    <div>
+      <div style={{ paddingBottom: 12, borderBottom: '1px solid var(--color-border, #252A3E)', marginBottom: 4 }}>
+        <p style={{ margin: '0 0 10px', fontSize: 12, fontWeight: 500, color: 'var(--color-text, #E8EAF6)' }}>Theme</p>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 7 }}>
           {THEMES.map(t => {
             const active = s.theme === t.id
             return (
               <button key={t.id} onClick={() => pickTheme(t.id)}
                 style={{
-                  padding: '10px 8px', borderRadius: 10, cursor: 'pointer', flexDirection: 'column',
-                  display: 'flex', alignItems: 'center', gap: 6,
+                  padding: '8px 4px', borderRadius: 9, cursor: 'pointer', flexDirection: 'column',
+                  display: 'flex', alignItems: 'center', gap: 5,
                   background: t.surface, border: `2px solid ${active ? t.accent : t.border}`,
-                  boxShadow: active ? `0 0 12px ${t.accent}40` : 'none',
+                  boxShadow: active ? `0 0 10px ${t.accent}40` : 'none',
                   transition: 'all 0.15s',
                 }}>
                 <div style={{ display: 'flex', gap: 3 }}>
                   {[t.accent, t.accentFill ? t.accentBright : t.textDim, t.textMuted].map((c, i) => (
-                    <div key={i} style={{ width: 10, height: 10, borderRadius: '50%', background: c }} />
+                    <div key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: c }} />
                   ))}
                 </div>
-                <span style={{ fontSize: 14 }}>{t.emoji}</span>
-                <span style={{ fontSize: 10, color: t.text, fontWeight: active ? 700 : 400, whiteSpace: 'nowrap' }}>{t.name}</span>
+                <span style={{ fontSize: 13 }}>{t.emoji}</span>
+                <span style={{ fontSize: 9.5, color: t.text, fontWeight: active ? 700 : 400, whiteSpace: 'nowrap' }}>{t.name}</span>
               </button>
             )
           })}
         </div>
       </div>
-
-      <FieldCol label="Sidebar expanded by default">
+      <FieldRow label="Sidebar expanded">
         <Toggle checked={!s.sidebarDefault} onChange={v => set({ sidebarDefault: !v })} />
-      </FieldCol>
-      <FieldCol label="Compact density" sub="Tighter spacing throughout the UI">
+      </FieldRow>
+      <FieldRow label="Compact density" sub="Tighter spacing">
         <Toggle checked={s.compact} onChange={v => set({ compact: v })} />
-      </FieldCol>
+      </FieldRow>
     </div>
   )
 }
@@ -930,6 +924,19 @@ export function Settings() {
   settingsRef.current = settings
 
   useEffect(() => { void checkSupabase().then(setSupaOk) }, [])
+
+  // ── If localStorage is empty, try recovering companies from Supabase ─────────
+  useEffect(() => {
+    if (companies.length === 0) {
+      loadCompaniesFromDB().then(rows => {
+        if (rows.length > 0) {
+          setCompanies(rows)
+          saveCompanies(rows)
+        }
+      }).catch(() => { /* offline / not signed in */ })
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // ── Local-only field updates (immediate localStorage) ────────────────────────
   function update(patch: Partial<AppSettings>) {
@@ -1028,7 +1035,7 @@ export function Settings() {
   }
 
   return (
-    <div style={{ padding: '28px 28px 60px', maxWidth: 780, margin: '0 auto' }}>
+    <div style={{ padding: '28px 28px 60px', maxWidth: 1080, margin: '0 auto' }}>
       {/* ── Top bar: user info + status ─────────────────────────────────────── */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -1074,10 +1081,12 @@ export function Settings() {
         </div>
       </div>
 
-      {/* ── Drag-reorderable sections ────────────────────────────────────────── */}
+      {/* ── Drag-reorderable sections (2-column grid) ───────────────────────── */}
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={sectionOrder} strategy={verticalListSortingStrategy}>
-          {sectionOrder.map(id => renderSection(id))}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, alignItems: 'start' }}>
+            {sectionOrder.map(id => renderSection(id))}
+          </div>
         </SortableContext>
       </DndContext>
 
