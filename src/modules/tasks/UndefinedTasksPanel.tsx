@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { Plus, Trash2, X, Inbox, Check, Calendar, User } from 'lucide-react'
+import { Plus, Trash2, X, Inbox, Check, Calendar, User, GripVertical } from 'lucide-react'
+import { useDroppable, useDraggable } from '@dnd-kit/core'
 import { useTaskStore } from '@/store/taskStore'
-import { getAllUsers, loadDynamicCompanies, COMPANY_COLORS, COMPANY_LABELS, type TaskStatus, type CompanyTag } from '@/types'
+import { getAllUsers, loadDynamicCompanies, COMPANY_COLORS, COMPANY_LABELS, type TaskStatus, type CompanyTag, type Task } from '@/types'
 
 type Filter = 'all' | 'open' | 'done' | 'cancelled'
 
@@ -16,6 +17,123 @@ const sel: React.CSSProperties = { ...inp }
 const STATUS_COLORS: Record<TaskStatus, string> = {
   open: '#7F77DD', done: '#1D9E75', cancelled: '#6B7280',
 }
+
+// ─── Draggable card for inbox tasks ──────────────────────────────────────────
+
+interface InboxCardProps {
+  task: Task
+  accentColor: string
+  companyLabel: string
+  taskStatus: TaskStatus
+  ownerUser?: { name: string }
+  onOpen: (id: string) => void
+  onToggle: () => void
+  onDelete: () => void
+}
+
+function DraggableInboxCard({ task, accentColor, companyLabel, taskStatus, ownerUser, onOpen, onToggle, onDelete }: InboxCardProps) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: task.id })
+  const [hovered, setHovered] = useState(false)
+
+  return (
+    <div
+      ref={setNodeRef}
+      onClick={() => onOpen(task.id)}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        padding: '9px 11px',
+        background: isDragging ? '#252A3E' : '#0D0F1A',
+        border: `1px solid ${hovered ? '#353A50' : '#252A3E'}`,
+        borderRadius: 8,
+        opacity: isDragging ? 0.4 : taskStatus === 'cancelled' ? 0.5 : taskStatus === 'done' ? 0.6 : 1,
+        position: 'relative',
+        cursor: isDragging ? 'grabbing' : 'pointer',
+        transition: 'border-color 0.15s ease, background 0.15s ease',
+      }}
+    >
+      {/* Left accent */}
+      <div style={{
+        position: 'absolute', left: 0, top: 0, bottom: 0, width: 3,
+        background: accentColor, borderRadius: '8px 0 0 8px', opacity: 0.7,
+      }} />
+
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 7, paddingLeft: 4 }}>
+        {/* Drag handle */}
+        <div
+          {...listeners} {...attributes}
+          onClick={e => e.stopPropagation()}
+          style={{ cursor: 'grab', color: hovered ? '#6B7280' : 'transparent', transition: 'color 0.15s', marginTop: 1, flexShrink: 0 }}
+        >
+          <GripVertical size={12} strokeWidth={2} />
+        </div>
+
+        {/* Checkbox */}
+        <button
+          onClick={e => { e.stopPropagation(); onToggle() }}
+          style={{
+            width: 15, height: 15, borderRadius: 4,
+            border: `1.5px solid ${task.completed ? '#1D9E75' : '#252A3E'}`,
+            background: task.completed ? '#1D9E75' : 'transparent',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer', flexShrink: 0, marginTop: 1, transition: 'all 0.15s ease',
+          }}
+        >
+          {task.completed && <Check size={9} color="#fff" strokeWidth={3} />}
+        </button>
+
+        {/* Content */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{
+            margin: 0, fontSize: 12.5, fontWeight: 500, color: '#E8EAF6', lineHeight: 1.35,
+            textDecoration: taskStatus === 'done' ? 'line-through' : 'none',
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>{task.title}</p>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 5, flexWrap: 'wrap' }}>
+            <span style={{
+              fontSize: 10, fontWeight: 600, color: accentColor,
+              background: `${accentColor}18`, padding: '1px 5px', borderRadius: 3,
+            }}>{companyLabel}</span>
+
+            {task.dueDate && (
+              <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: '#6B7280' }}>
+                <Calendar size={9} />
+                {new Date(task.dueDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              </span>
+            )}
+
+            {ownerUser && (
+              <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: '#1D9E75' }}>
+                <User size={9} /> {ownerUser.name}
+              </span>
+            )}
+
+            <span style={{
+              marginLeft: 'auto', width: 6, height: 6, borderRadius: '50%',
+              background: STATUS_COLORS[taskStatus], flexShrink: 0,
+            }} />
+          </div>
+        </div>
+
+        {/* Delete */}
+        <button
+          onClick={e => { e.stopPropagation(); onDelete() }}
+          style={{
+            background: 'transparent', border: 'none', cursor: 'pointer',
+            color: '#6B7280', padding: 2, borderRadius: 4,
+            display: 'flex', alignItems: 'center', flexShrink: 0,
+            opacity: hovered ? 1 : 0, transition: 'opacity 0.15s',
+          }}
+        >
+          <Trash2 size={11} strokeWidth={2} />
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ─── Panel ────────────────────────────────────────────────────────────────────
 
 interface Props {
   onOpen: (id: string) => void
@@ -76,6 +194,9 @@ export function UndefinedTasksPanel({ onOpen }: Props) {
 
   const FILTERS: Filter[] = ['all', 'open', 'done', 'cancelled']
 
+  // Drop zone — board cards can be dragged here to send back to inbox
+  const { isOver: inboxOver, setNodeRef: setInboxRef } = useDroppable({ id: 'inbox' })
+
   return (
     <div style={{
       width: 300, flexShrink: 0,
@@ -109,13 +230,26 @@ export function UndefinedTasksPanel({ onOpen }: Props) {
         </div>
       </div>
 
-      {/* Task list */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '8px', display: 'flex', flexDirection: 'column', gap: 5 }}>
+      {/* Task list — also a drop zone for board cards */}
+      <div
+        ref={setInboxRef}
+        style={{
+          flex: 1, overflowY: 'auto', padding: '8px',
+          display: 'flex', flexDirection: 'column', gap: 5,
+          background: inboxOver ? '#7F77DD08' : 'transparent',
+          transition: 'background 0.15s ease',
+        }}
+      >
         {filtered.length === 0 && !adding && (
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            minHeight: 80, color: '#6B7280', fontSize: 12, fontStyle: 'italic',
-          }}>No tasks</div>
+            minHeight: 80, color: inboxOver ? '#7F77DD' : '#6B7280',
+            fontSize: 12, fontStyle: 'italic',
+            border: `1px dashed ${inboxOver ? '#7F77DD60' : '#252A3E'}`,
+            borderRadius: 8, transition: 'all 0.15s ease',
+          }}>
+            {inboxOver ? 'Drop here to move to inbox' : 'No tasks'}
+          </div>
         )}
 
         {filtered.map(t => {
@@ -126,98 +260,17 @@ export function UndefinedTasksPanel({ onOpen }: Props) {
           const companyLabel = co?.name ?? COMPANY_LABELS[t.company as CompanyTag] ?? t.company
 
           return (
-            <div
+            <DraggableInboxCard
               key={t.id}
-              onClick={() => onOpen(t.id)}
-              style={{
-                padding: '9px 11px',
-                background: '#0D0F1A',
-                border: '1px solid #252A3E',
-                borderRadius: 8,
-                opacity: taskStatus === 'cancelled' ? 0.5 : taskStatus === 'done' ? 0.6 : 1,
-                position: 'relative',
-                cursor: 'pointer',
-                transition: 'border-color 0.15s ease, background 0.15s ease',
-              }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = '#353A50' }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = '#252A3E' }}
-            >
-              {/* Left accent */}
-              <div style={{
-                position: 'absolute', left: 0, top: 0, bottom: 0, width: 3,
-                background: accentColor, borderRadius: '8px 0 0 8px', opacity: 0.7,
-              }} />
-
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 7, paddingLeft: 4 }}>
-                {/* Checkbox */}
-                <button
-                  onClick={e => { e.stopPropagation(); toggleComplete(t.id) }}
-                  style={{
-                    width: 15, height: 15, borderRadius: 4,
-                    border: `1.5px solid ${t.completed ? '#1D9E75' : '#252A3E'}`,
-                    background: t.completed ? '#1D9E75' : 'transparent',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    cursor: 'pointer', flexShrink: 0, marginTop: 1, transition: 'all 0.15s ease',
-                  }}
-                >
-                  {t.completed && <Check size={9} color="#fff" strokeWidth={3} />}
-                </button>
-
-                {/* Content */}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{
-                    margin: 0, fontSize: 12.5, fontWeight: 500, color: '#E8EAF6',
-                    lineHeight: 1.35,
-                    textDecoration: taskStatus === 'done' ? 'line-through' : 'none',
-                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                  }}>{t.title}</p>
-
-                  {/* Meta row */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 5, flexWrap: 'wrap' }}>
-                    <span style={{
-                      fontSize: 10, fontWeight: 600, color: accentColor,
-                      background: `${accentColor}18`, padding: '1px 5px', borderRadius: 3,
-                    }}>{companyLabel}</span>
-
-                    {t.dueDate && (
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: '#6B7280' }}>
-                        <Calendar size={9} />
-                        {new Date(t.dueDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                      </span>
-                    )}
-
-                    {ownerUser && (
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: '#1D9E75' }}>
-                        <User size={9} /> {ownerUser.name}
-                      </span>
-                    )}
-
-                    {/* Status dot */}
-                    <span style={{
-                      marginLeft: 'auto',
-                      width: 6, height: 6, borderRadius: '50%',
-                      background: STATUS_COLORS[taskStatus], flexShrink: 0,
-                    }} />
-                  </div>
-                </div>
-
-                {/* Delete */}
-                <button
-                  onClick={e => { e.stopPropagation(); deleteTask(t.id) }}
-                  style={{
-                    background: 'transparent', border: 'none', cursor: 'pointer',
-                    color: '#6B7280', padding: 2, borderRadius: 4,
-                    display: 'flex', alignItems: 'center', flexShrink: 0, opacity: 0,
-                  }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = '1' }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = '0' }}
-                  onFocus={e => { (e.currentTarget as HTMLElement).style.opacity = '1' }}
-                  onBlur={e => { (e.currentTarget as HTMLElement).style.opacity = '0' }}
-                >
-                  <Trash2 size={11} strokeWidth={2} />
-                </button>
-              </div>
-            </div>
+              task={t}
+              accentColor={accentColor}
+              companyLabel={companyLabel}
+              taskStatus={taskStatus}
+              ownerUser={ownerUser}
+              onOpen={onOpen}
+              onToggle={() => toggleComplete(t.id)}
+              onDelete={() => deleteTask(t.id)}
+            />
           )
         })}
       </div>

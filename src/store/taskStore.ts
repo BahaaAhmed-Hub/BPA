@@ -12,7 +12,7 @@ interface TaskState {
   activities: TaskActivity[]
   addTask: (task: Omit<Task, 'id' | 'createdAt'>) => void
   updateTask: (id: string, updates: Partial<Task>) => void
-  moveTask: (id: string, quadrant: Quadrant) => void
+  moveTask: (id: string, quadrant: Quadrant | null) => void
   deleteTask: (id: string) => void
   toggleComplete: (id: string) => void
   setStatus: (id: string, status: TaskStatus) => void
@@ -69,7 +69,7 @@ export const useTaskStore = create<TaskState>()(
         set(s => {
           const old = s.tasks.find(t => t.id === id)
           const from = old?.quadrant ? QUADRANT_META[old.quadrant].label : 'Inbox'
-          const to = QUADRANT_META[quadrant].label
+          const to = quadrant ? QUADRANT_META[quadrant].label : 'Inbox'
           return {
             tasks: s.tasks.map(t => t.id === id ? { ...t, quadrant } : t),
             activities: [...s.activities, act(id, 'moved', `Moved from ${from} to ${to}`)],

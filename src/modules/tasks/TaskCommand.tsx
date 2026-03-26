@@ -1,19 +1,59 @@
 import { useState } from 'react'
+import {
+  DndContext, DragOverlay, closestCorners,
+  KeyboardSensor, PointerSensor, useSensor, useSensors,
+  type DragStartEvent, type DragEndEvent,
+} from '@dnd-kit/core'
+import { sortableKeyboardCoordinates } from '@dnd-kit/sortable'
 import { TopBar } from '@/components/layout/TopBar'
 import { EisenhowerBoard } from './EisenhowerBoard'
 import { UndefinedTasksPanel } from './UndefinedTasksPanel'
 import { TaskDetailModal } from './TaskDetailModal'
+import { TaskCard } from './TaskCard'
 import { useTaskStore } from '@/store/taskStore'
 import { CheckSquare, Zap } from 'lucide-react'
+import type { Quadrant } from '@/types'
+
+const QUADRANTS: Quadrant[] = ['do', 'schedule', 'delegate', 'eliminate']
 
 export function TaskCommand() {
-  const tasks  = useTaskStore(s => s.tasks)
+  const { tasks, moveTask } = useTaskStore()
   const active = tasks.filter(t => t.quadrant !== null && !t.completed)
   const urgent = tasks.filter(t => t.quadrant === 'do' && !t.completed)
   const inbox  = tasks.filter(t => t.quadrant === null && t.status !== 'done' && t.status !== 'cancelled' && !t.completed)
 
-  const [modalTaskId, setModalTaskId] = useState<string | null>(null)
-  const modalTask = modalTaskId ? tasks.find(t => t.id === modalTaskId) ?? null : null
+  const [activeTaskId, setActiveTaskId] = useState<string | null>(null)
+  const [modalTaskId,  setModalTaskId]  = useState<string | null>(null)
+
+  const activeTask = activeTaskId ? tasks.find(t => t.id === activeTaskId) ?? null : null
+  const modalTask  = modalTaskId  ? tasks.find(t => t.id === modalTaskId)  ?? null : null
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  )
+
+  function handleDragStart({ active }: DragStartEvent) {
+    setActiveTaskId(active.id as string)
+  }
+
+  function handleDragEnd({ active, over }: DragEndEvent) {
+    setActiveTaskId(null)
+    if (!over) return
+
+    const taskId = active.id as string
+    const overId = over.id as string
+
+    if (overId === 'inbox') {
+      moveTask(taskId, null)
+    } else if (QUADRANTS.includes(overId as Quadrant)) {
+      moveTask(taskId, overId as Quadrant)
+    } else {
+      // over is another task — use its quadrant
+      const target = tasks.find(t => t.id === overId)
+      if (target !== undefined) moveTask(taskId, target.quadrant)
+    }
+  }
 
   return (
     <div>
@@ -49,17 +89,32 @@ export function TaskCommand() {
           </>
         )}
         <div style={{ marginLeft: 'auto', fontSize: 11.5, color: '#6B7280', fontStyle: 'italic' }}>
-          Drag tasks between quadrants · click any card to view details
+          Drag tasks between quadrants & inbox · click any card to view details
         </div>
       </div>
 
-      {/* Board + right panel */}
-      <div style={{ display: 'flex', gap: 14, padding: '18px 28px', alignItems: 'flex-start' }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <EisenhowerBoard onOpen={setModalTaskId} />
+      {/* Board + inbox — all inside one DndContext */}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCorners}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
+        <div style={{ display: 'flex', gap: 14, padding: '18px 28px', alignItems: 'flex-start' }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <EisenhowerBoard onOpen={setModalTaskId} />
+          </div>
+          <UndefinedTasksPanel onOpen={setModalTaskId} />
         </div>
-        <UndefinedTasksPanel onOpen={setModalTaskId} />
-      </div>
+
+        <DragOverlay>
+          {activeTask && (
+            <div style={{ transform: 'rotate(1.5deg)', filter: 'drop-shadow(0 8px 24px rgba(0,0,0,0.5))' }}>
+              <TaskCard task={activeTask} onOpen={() => {}} />
+            </div>
+          )}
+        </DragOverlay>
+      </DndContext>
 
       {/* Detail modal */}
       {modalTask && (
