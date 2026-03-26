@@ -416,119 +416,216 @@ function CompanyCard({
   onUpdate: (patch: Partial<CompanyRow>) => void
   onDelete: () => void
 }) {
-  const [usersOpen, setUsersOpen] = useState(false)
-  const [newUserName, setNewUserName] = useState('')
+  const [usersOpen, setUsersOpen]     = useState(true)
+  const [colorOpen, setColorOpen]     = useState(false)
+  const [editingName, setEditingName] = useState(false)
+  const [nameDraft, setNameDraft]     = useState(co.name)
+  const [editingDomain, setEditingDomain] = useState(false)
+  const [domainDraft, setDomainDraft] = useState(co.emailDomain)
+  const [newUserName, setNewUserName]   = useState('')
   const [newUserEmail, setNewUserEmail] = useState('')
+  const [editingUserId, setEditingUserId] = useState<string | null>(null)
+  const [userDrafts, setUserDrafts] = useState<Record<string, { name: string; email: string }>>({})
+  const colorRef = useRef<HTMLDivElement>(null)
 
   const users: CompanyUser[] = co.users ?? []
 
+  useEffect(() => {
+    if (!colorOpen) return
+    function handler(e: MouseEvent) {
+      if (colorRef.current && !colorRef.current.contains(e.target as Node)) setColorOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [colorOpen])
+
+  function saveName() {
+    const v = nameDraft.trim(); if (v) onUpdate({ name: v }); else setNameDraft(co.name)
+    setEditingName(false)
+  }
+  function saveDomain() { onUpdate({ emailDomain: domainDraft.trim() }); setEditingDomain(false) }
+
   function addUser() {
     if (!newUserName.trim()) return
-    const next = [...users, { id: crypto.randomUUID(), name: newUserName.trim(), email: newUserEmail.trim() || undefined }]
-    onUpdate({ users: next })
+    onUpdate({ users: [...users, { id: crypto.randomUUID(), name: newUserName.trim(), email: newUserEmail.trim() || undefined }] })
     setNewUserName(''); setNewUserEmail('')
   }
+  function removeUser(id: string) { onUpdate({ users: users.filter(u => u.id !== id) }) }
 
-  function removeUser(id: string) {
-    onUpdate({ users: users.filter(u => u.id !== id) })
+  function startEditUser(u: CompanyUser) {
+    setEditingUserId(u.id)
+    setUserDrafts(d => ({ ...d, [u.id]: { name: u.name, email: u.email ?? '' } }))
+  }
+  function saveUser(id: string) {
+    const draft = userDrafts[id]; if (!draft) return
+    onUpdate({ users: users.map(u => u.id === id ? { ...u, name: draft.name.trim() || u.name, email: draft.email.trim() || undefined } : u) })
+    setEditingUserId(null)
+  }
+
+  const tinp: React.CSSProperties = {
+    background: 'transparent', border: 'none', borderBottom: '1px solid #7F77DD',
+    outline: 'none', color: '#E8EAF6', fontFamily: 'inherit', padding: '0 2px',
   }
 
   return (
-    <div style={{ borderBottom: '1px solid var(--color-border, #252A3E)' }}>
-      {/* Main company row */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '12px 0' }}>
-        <div style={{ width: 26, height: 26, borderRadius: 7, background: co.color, flexShrink: 0, marginTop: 1 }} />
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 7 }}>
-          <div style={{ display: 'flex', gap: 7, alignItems: 'center', flexWrap: 'wrap' }}>
-            <input value={co.name} onChange={e => onUpdate({ name: e.target.value })}
-              style={{ ...inputStyle, width: 150 }} placeholder="Company name" />
-            <input value={co.emailDomain} onChange={e => onUpdate({ emailDomain: e.target.value })}
-              style={{ ...inputStyle, width: 160 }} placeholder="@domain.com" />
-            {accounts.length > 0 && (
-              <select value={co.accountId} onChange={e => onUpdate({ accountId: e.target.value })}
-                style={{ ...selectStyle, width: 160 }}>
-                <option value="">No account</option>
-                {accounts.map(a => <option key={a.id} value={a.id}>{a.email}</option>)}
-              </select>
-            )}
-          </div>
-          <div style={{ display: 'flex', gap: 5 }}>
-            {C_COLORS.map(c => (
-              <button key={c} onClick={() => onUpdate({ color: c })}
-                style={{
-                  width: 18, height: 18, borderRadius: '50%', background: c, border: 'none', cursor: 'pointer',
-                  outline: co.color === c ? `2px solid ${c}` : 'none', outlineOffset: 2,
-                }} />
-            ))}
-          </div>
+    <div style={{ background: '#0D0F1A', border: '1px solid #252A3E', borderRadius: 10, marginBottom: 8, overflow: 'visible' }}>
+      {/* Company header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px' }}>
+
+        {/* Color circle → color picker */}
+        <div ref={colorRef} style={{ position: 'relative', flexShrink: 0 }}>
+          <button
+            onClick={() => setColorOpen(o => !o)}
+            title="Change color"
+            style={{
+              width: 22, height: 22, borderRadius: '50%', background: co.color, cursor: 'pointer',
+              border: `2px solid ${co.color}80`, flexShrink: 0,
+            }}
+          />
+          {colorOpen && (
+            <div style={{
+              position: 'absolute', top: 28, left: 0, zIndex: 200,
+              background: '#161929', border: '1px solid #353A50', borderRadius: 8,
+              padding: '8px 10px', display: 'flex', gap: 6,
+              boxShadow: '0 8px 28px rgba(0,0,0,0.6)',
+            }}>
+              {C_COLORS.map(c => (
+                <button key={c} onClick={() => { onUpdate({ color: c }); setColorOpen(false) }}
+                  style={{
+                    width: 20, height: 20, borderRadius: '50%', background: c,
+                    border: 'none', cursor: 'pointer',
+                    outline: co.color === c ? `2px solid ${c}` : 'none', outlineOffset: 2,
+                  }} />
+              ))}
+            </div>
+          )}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-          {/* Users toggle */}
-          <button onClick={() => setUsersOpen(o => !o)} style={{
-            padding: '3px 9px', borderRadius: 5, fontSize: 10.5, cursor: 'pointer',
-            background: usersOpen ? 'var(--color-accent-fill)' : 'transparent',
-            border: `1px solid ${usersOpen ? 'var(--color-accent, #1E40AF)' : 'var(--color-border, #252A3E)'}`,
-            color: usersOpen ? 'var(--color-accent, #1E40AF)' : 'var(--color-text-muted, #6B7280)',
-          }}>
-            {users.length > 0 ? `${users.length} user${users.length > 1 ? 's' : ''}` : 'Users'}
-          </button>
-          <Toggle checked={co.isActive} onChange={v => onUpdate({ isActive: v })} />
-          <button onClick={onDelete}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted, #6B7280)', padding: 3 }}>
-            <Trash2 size={12} />
-          </button>
-        </div>
+
+        {/* Company name – click to edit */}
+        {editingName ? (
+          <input autoFocus value={nameDraft}
+            onChange={e => setNameDraft(e.target.value)}
+            onBlur={saveName}
+            onKeyDown={e => { if (e.key === 'Enter') saveName(); if (e.key === 'Escape') { setNameDraft(co.name); setEditingName(false) } }}
+            style={{ ...tinp, fontSize: 13.5, fontWeight: 600, width: 150 }}
+          />
+        ) : (
+          <span onClick={() => setEditingName(true)} title="Click to rename"
+            style={{ fontSize: 13.5, fontWeight: 600, color: '#E8EAF6', cursor: 'text', minWidth: 40 }}>
+            {co.name || 'Untitled'}
+          </span>
+        )}
+
+        {/* Domain – small editable beside name */}
+        {editingDomain ? (
+          <input autoFocus value={domainDraft}
+            onChange={e => setDomainDraft(e.target.value)}
+            onBlur={saveDomain}
+            onKeyDown={e => { if (e.key === 'Enter') saveDomain(); if (e.key === 'Escape') { setDomainDraft(co.emailDomain); setEditingDomain(false) } }}
+            placeholder="@domain.com"
+            style={{ ...tinp, fontSize: 11, color: '#6B7280', width: 130 }}
+          />
+        ) : (
+          <span onClick={() => setEditingDomain(true)} title="Click to set domain"
+            style={{ fontSize: 11, color: co.emailDomain ? '#6B7280' : '#3a3f55', cursor: 'text' }}>
+            {co.emailDomain || '+ domain'}
+          </span>
+        )}
+
+        <div style={{ flex: 1 }} />
+
+        {/* Account selector */}
+        {accounts.length > 0 && (
+          <select value={co.accountId} onChange={e => onUpdate({ accountId: e.target.value })}
+            style={{ ...selectStyle, fontSize: 11, padding: '3px 6px', maxWidth: 150 }}>
+            <option value="">No account</option>
+            {accounts.map(a => <option key={a.id} value={a.id}>{a.email}</option>)}
+          </select>
+        )}
+
+        {/* Users expand toggle */}
+        <button onClick={() => setUsersOpen(o => !o)} style={{
+          display: 'flex', alignItems: 'center', gap: 4,
+          padding: '3px 8px', borderRadius: 5, fontSize: 10.5, cursor: 'pointer',
+          background: usersOpen ? '#7F77DD18' : 'transparent',
+          border: `1px solid ${usersOpen ? '#7F77DD50' : '#252A3E'}`,
+          color: usersOpen ? '#7F77DD' : '#6B7280',
+        }}>
+          {users.length > 0 ? users.length : '+'} user{users.length !== 1 ? 's' : ''}
+          {usersOpen ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
+        </button>
+
+        <Toggle checked={co.isActive} onChange={v => onUpdate({ isActive: v })} />
+
+        <button onClick={onDelete}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6B7280', padding: 3, display: 'flex', alignItems: 'center' }}>
+          <Trash2 size={12} />
+        </button>
       </div>
 
-      {/* Users sub-panel */}
+      {/* Users tree */}
       {usersOpen && (
-        <div style={{
-          margin: '0 0 10px 36px', padding: 10,
-          background: 'var(--color-surface2, #0D0F1A)',
-          border: '1px solid var(--color-border, #252A3E)',
-          borderRadius: 9,
-        }}>
-          <p style={{ margin: '0 0 8px', fontSize: 11, fontWeight: 600, color: 'var(--color-text-muted, #6B7280)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-            Users / Team Members
-          </p>
-
+        <div style={{ borderTop: '1px solid #1a1f35', padding: '8px 14px 10px 46px' }}>
           {users.length === 0 && (
-            <p style={{ margin: '0 0 8px', fontSize: 11.5, color: 'var(--color-text-muted, #6B7280)', fontStyle: 'italic' }}>
-              No users yet — add members below.
-            </p>
+            <p style={{ margin: '0 0 6px', fontSize: 11, color: '#3a3f55', fontStyle: 'italic' }}>No members yet</p>
           )}
 
-          {users.map(u => (
-            <div key={u.id} style={{
-              display: 'flex', alignItems: 'center', gap: 8,
-              padding: '6px 0', borderBottom: '1px solid var(--color-border, #252A3E)',
-            }}>
-              <div style={{ width: 7, height: 7, borderRadius: '50%', background: co.color, flexShrink: 0 }} />
-              <span style={{ flex: 1, fontSize: 12.5, color: 'var(--color-text, #E8EAF6)' }}>{u.name}</span>
-              {u.email && <span style={{ fontSize: 11, color: 'var(--color-text-muted, #6B7280)' }}>{u.email}</span>}
-              <button onClick={() => removeUser(u.id)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted, #6B7280)', padding: 2 }}>
-                <Trash2 size={11} />
-              </button>
-            </div>
-          ))}
+          {users.map(u => {
+            const isEditing = editingUserId === u.id
+            const draft = userDrafts[u.id]
+            return (
+              <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0', borderBottom: '1px solid #1a1f35' }}>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: co.color, flexShrink: 0 }} />
 
-          {/* Add user inline */}
-          <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
+                {isEditing ? (
+                  <>
+                    <input autoFocus value={draft?.name ?? u.name}
+                      onChange={e => setUserDrafts(d => ({ ...d, [u.id]: { ...d[u.id], name: e.target.value } }))}
+                      onBlur={() => saveUser(u.id)}
+                      onKeyDown={e => { if (e.key === 'Enter') saveUser(u.id); if (e.key === 'Escape') setEditingUserId(null) }}
+                      style={{ ...tinp, fontSize: 12, width: 120 }}
+                    />
+                    <input value={draft?.email ?? (u.email ?? '')}
+                      onChange={e => setUserDrafts(d => ({ ...d, [u.id]: { ...d[u.id], email: e.target.value } }))}
+                      onBlur={() => saveUser(u.id)}
+                      onKeyDown={e => { if (e.key === 'Enter') saveUser(u.id); if (e.key === 'Escape') setEditingUserId(null) }}
+                      placeholder="email"
+                      style={{ ...tinp, fontSize: 11, color: '#6B7280', flex: 1 }}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <span onClick={() => startEditUser(u)} style={{ fontSize: 12, color: '#E8EAF6', cursor: 'text', minWidth: 60 }}>{u.name}</span>
+                    <span onClick={() => startEditUser(u)} style={{ fontSize: 11, color: '#6B7280', cursor: 'text', flex: 1 }}>
+                      {u.email || <span style={{ color: '#3a3f55' }}>+ email</span>}
+                    </span>
+                  </>
+                )}
+
+                <button onClick={() => removeUser(u.id)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6B7280', padding: 2, display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                  <Trash2 size={10} />
+                </button>
+              </div>
+            )
+          })}
+
+          {/* Add user row */}
+          <div style={{ display: 'flex', gap: 6, marginTop: 8, alignItems: 'center' }}>
+            <Plus size={10} color="#6B7280" style={{ flexShrink: 0 }} />
             <input value={newUserName} onChange={e => setNewUserName(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') addUser() }}
-              placeholder="Name" style={{ ...inputStyle, width: 130 }} />
+              placeholder="Name"
+              style={{ ...inputStyle, fontSize: 11, padding: '3px 7px', width: 110 }} />
             <input value={newUserEmail} onChange={e => setNewUserEmail(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') addUser() }}
-              placeholder="Email (optional)" style={{ ...inputStyle, flex: 1 }} />
+              placeholder="Email (optional)"
+              style={{ ...inputStyle, fontSize: 11, padding: '3px 7px', flex: 1 }} />
             <button onClick={addUser} disabled={!newUserName.trim()} style={{
-              padding: '5px 11px', borderRadius: 6, fontSize: 11.5, fontWeight: 500, cursor: 'pointer',
-              background: 'var(--color-accent-fill)', border: '1px solid var(--color-accent, #1E40AF)50',
-              color: 'var(--color-accent, #1E40AF)', opacity: newUserName.trim() ? 1 : 0.4,
-              display: 'flex', alignItems: 'center', gap: 4,
-            }}>
-              <Plus size={10} /> Add
-            </button>
+              padding: '3px 10px', borderRadius: 5, fontSize: 11, fontWeight: 500, cursor: 'pointer',
+              background: '#7F77DD18', border: '1px solid #7F77DD50',
+              color: '#7F77DD', opacity: newUserName.trim() ? 1 : 0.4,
+            }}>Add</button>
           </div>
         </div>
       )}
