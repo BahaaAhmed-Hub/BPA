@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { ChevronLeft, ChevronRight, Video, MapPin, Sparkles, X, RefreshCw } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Video, MapPin, Sparkles, X, RefreshCw, LogIn } from 'lucide-react'
 import { fetchWeekEvents, detectMeetingType } from '@/lib/googleCalendar'
 import type { GCalEvent } from '@/lib/googleCalendar'
 import { generateMeetingPrep } from '@/lib/professor'
 import type { MeetingPrep, CalEvent } from '@/lib/professor'
 import type { DbCalendarEvent } from '@/types/database'
 import { useAuthStore } from '@/store/authStore'
+import { signInWithGoogle } from '@/lib/google'
 
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -582,9 +583,22 @@ export function CalendarView() {
           padding: '10px 20px',
           background: 'rgba(224,82,82,0.07)',
           borderBottom: '1px solid rgba(224,82,82,0.2)',
-          fontSize: 12.5, color: '#E05252',
+          display: 'flex', alignItems: 'center', gap: 12,
         }}>
-          Google Calendar not connected — sign in with Google to see your events.
+          <span style={{ fontSize: 12.5, color: '#E05252', flex: 1 }}>
+            Google Calendar token expired or not connected.
+          </span>
+          <button
+            onClick={async () => { try { await signInWithGoogle() } catch { /* ignore */ } }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '5px 12px', borderRadius: 6, fontSize: 12, fontWeight: 500,
+              background: 'rgba(224,82,82,0.15)', border: '1px solid rgba(224,82,82,0.4)',
+              color: '#E05252', cursor: 'pointer', flexShrink: 0,
+            }}
+          >
+            <LogIn size={12} /> Reconnect Google
+          </button>
         </div>
       )}
 
