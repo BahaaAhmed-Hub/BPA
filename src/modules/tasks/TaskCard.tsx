@@ -1,18 +1,26 @@
 import { useState } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { Trash2, Check, GripVertical, Clock, Calendar, User } from 'lucide-react'
-import type { Task } from '@/types'
+import { Trash2, Check, GripVertical, Clock, Calendar, User, Plus } from 'lucide-react'
+import type { Task, CompanyTag } from '@/types'
 import { COMPANY_COLORS, COMPANY_LABELS, getAllUsers } from '@/types'
 import { useTaskStore } from '@/store/taskStore'
+
+const COMPANY_TAGS: CompanyTag[] = ['teradix', 'dxtech', 'consulting', 'personal']
 
 interface TaskCardProps {
   task: Task
 }
 
 export function TaskCard({ task }: TaskCardProps) {
-  const { toggleComplete, deleteTask } = useTaskStore()
+  const { toggleComplete, deleteTask, updateTask } = useTaskStore()
   const [hovered, setHovered] = useState(false)
+  const [editingTitle, setEditingTitle] = useState(false)
+  const [titleDraft, setTitleDraft] = useState(task.title)
+  const [editingDate, setEditingDate] = useState(false)
+  const [editingTime, setEditingTime] = useState(false)
+  const [editingDuration, setEditingDuration] = useState(false)
+  const [editingOwner, setEditingOwner] = useState(false)
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id })
 
@@ -24,9 +32,24 @@ export function TaskCard({ task }: TaskCardProps) {
   }
 
   const companyColor = COMPANY_COLORS[task.company] ?? '#6B7280'
-
-  // Resolve owner name
   const ownerUser = task.owner ? getAllUsers().find(u => u.id === task.owner) : undefined
+  const users = getAllUsers()
+
+  // Show quadrant-specific empty field slots so moving a card "adds" those fields
+  const isSchedule = task.quadrant === 'schedule'
+  const isDelegate = task.quadrant === 'delegate'
+
+  function saveTitle() {
+    const trimmed = titleDraft.trim()
+    if (trimmed && trimmed !== task.title) updateTask(task.id, { title: trimmed })
+    else setTitleDraft(task.title)
+    setEditingTitle(false)
+  }
+
+  const fieldInput: React.CSSProperties = {
+    background: '#0D0F1A', border: '1px solid #353A50', borderRadius: 4,
+    color: '#E8EAF6', fontSize: 10, padding: '1px 5px', outline: 'none',
+  }
 
   return (
     <div
@@ -73,39 +96,179 @@ export function TaskCard({ task }: TaskCardProps) {
 
         {/* Content */}
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{
-            margin: 0, fontSize: 12.5, fontWeight: 500, color: '#E8EAF6',
-            lineHeight: 1.35, textDecoration: task.completed ? 'line-through' : 'none',
-            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-          }}>{task.title}</p>
+          {/* Title – click to edit */}
+          {editingTitle ? (
+            <input
+              autoFocus
+              value={titleDraft}
+              onChange={e => setTitleDraft(e.target.value)}
+              onBlur={saveTitle}
+              onKeyDown={e => {
+                if (e.key === 'Enter') saveTitle()
+                if (e.key === 'Escape') { setTitleDraft(task.title); setEditingTitle(false) }
+              }}
+              style={{
+                background: 'transparent', border: 'none',
+                borderBottom: '1px solid #7F77DD', outline: 'none',
+                color: '#E8EAF6', fontSize: 12.5, fontWeight: 500,
+                width: '100%', padding: 0, fontFamily: 'inherit', lineHeight: 1.35,
+              }}
+            />
+          ) : (
+            <p
+              onClick={() => { if (!task.completed) setEditingTitle(true) }}
+              title={task.completed ? undefined : 'Click to rename'}
+              style={{
+                margin: 0, fontSize: 12.5, fontWeight: 500, color: '#E8EAF6',
+                lineHeight: 1.35, textDecoration: task.completed ? 'line-through' : 'none',
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                cursor: task.completed ? 'default' : 'text',
+              }}
+            >{task.title}</p>
+          )}
 
           {/* Meta row */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 5, flexWrap: 'wrap' }}>
-            <span style={{
-              fontSize: 10, fontWeight: 600, color: companyColor,
-              background: `${companyColor}18`, padding: '1px 5px', borderRadius: 3,
-            }}>{COMPANY_LABELS[task.company]}</span>
 
-            {task.dueDate && (
-              <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: '#6B7280' }}>
-                <Calendar size={9} /> {new Date(task.dueDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-              </span>
+            {/* Company – native select styled as badge */}
+            <select
+              value={task.company}
+              onChange={e => updateTask(task.id, { company: e.target.value as CompanyTag })}
+              title="Change company"
+              style={{
+                fontSize: 10, fontWeight: 600,
+                color: companyColor,
+                background: `${companyColor}18`,
+                padding: '1px 5px', borderRadius: 3,
+                border: 'none', outline: 'none',
+                cursor: 'pointer',
+                appearance: 'none', WebkitAppearance: 'none',
+                fontFamily: 'inherit',
+              }}
+            >
+              {COMPANY_TAGS.map(c => (
+                <option key={c} value={c}>{COMPANY_LABELS[c]}</option>
+              ))}
+            </select>
+
+            {/* Due date – show if has value OR in schedule quadrant */}
+            {(task.dueDate || isSchedule) && (
+              editingDate ? (
+                <input
+                  type="date"
+                  autoFocus
+                  value={task.dueDate ?? ''}
+                  onChange={e => updateTask(task.id, { dueDate: e.target.value || undefined })}
+                  onBlur={() => setEditingDate(false)}
+                  onKeyDown={e => e.key === 'Escape' && setEditingDate(false)}
+                  style={fieldInput}
+                />
+              ) : (
+                <span
+                  onClick={() => setEditingDate(true)}
+                  title="Set due date"
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 3, fontSize: 10,
+                    color: task.dueDate ? '#6B7280' : '#404560',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <Calendar size={9} />
+                  {task.dueDate
+                    ? new Date(task.dueDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                    : <Plus size={8} />
+                  }
+                </span>
+              )
             )}
 
-            {task.plannedTime && (
-              <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: '#7F77DD' }}>
-                <Clock size={9} /> {task.plannedTime}
-              </span>
+            {/* Planned time – show if has value OR in schedule quadrant */}
+            {(task.plannedTime || isSchedule) && (
+              editingTime ? (
+                <input
+                  type="time"
+                  autoFocus
+                  value={task.plannedTime ?? ''}
+                  onChange={e => updateTask(task.id, { plannedTime: e.target.value || undefined })}
+                  onBlur={() => setEditingTime(false)}
+                  onKeyDown={e => e.key === 'Escape' && setEditingTime(false)}
+                  style={{ ...fieldInput, color: '#7F77DD' }}
+                />
+              ) : (
+                <span
+                  onClick={() => setEditingTime(true)}
+                  title="Set planned time"
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 3, fontSize: 10,
+                    color: task.plannedTime ? '#7F77DD' : '#404560',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <Clock size={9} />
+                  {task.plannedTime ?? <Plus size={8} />}
+                </span>
+              )
             )}
 
-            {task.duration && (
-              <span style={{ fontSize: 10, color: '#6B7280' }}>{task.duration}m</span>
+            {/* Duration – show if has value OR in schedule quadrant */}
+            {(task.duration || isSchedule) && (
+              editingDuration ? (
+                <input
+                  type="number"
+                  autoFocus
+                  min={5} step={5}
+                  value={task.duration ?? ''}
+                  onChange={e => updateTask(task.id, { duration: e.target.value ? parseInt(e.target.value, 10) : undefined })}
+                  onBlur={() => setEditingDuration(false)}
+                  onKeyDown={e => e.key === 'Escape' && setEditingDuration(false)}
+                  style={{ ...fieldInput, width: 52 }}
+                  placeholder="min"
+                />
+              ) : (
+                <span
+                  onClick={() => setEditingDuration(true)}
+                  title="Set duration"
+                  style={{
+                    fontSize: 10,
+                    color: task.duration ? '#6B7280' : '#404560',
+                    cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', gap: 2,
+                  }}
+                >
+                  {task.duration ? `${task.duration}m` : <><Plus size={8} />m</>}
+                </span>
+              )
             )}
 
-            {ownerUser && (
-              <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: '#1D9E75' }}>
-                <User size={9} /> {ownerUser.name}
-              </span>
+            {/* Owner – show if has value OR in delegate quadrant */}
+            {(task.owner || isDelegate) && (
+              editingOwner ? (
+                <select
+                  autoFocus
+                  value={task.owner ?? ''}
+                  onChange={e => { updateTask(task.id, { owner: e.target.value || undefined }); setEditingOwner(false) }}
+                  onBlur={() => setEditingOwner(false)}
+                  style={fieldInput}
+                >
+                  <option value="">— none —</option>
+                  {users.map(u => (
+                    <option key={u.id} value={u.id}>{u.name}</option>
+                  ))}
+                </select>
+              ) : (
+                <span
+                  onClick={() => setEditingOwner(true)}
+                  title="Assign owner"
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 3, fontSize: 10,
+                    color: ownerUser ? '#1D9E75' : '#404560',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <User size={9} />
+                  {ownerUser ? ownerUser.name : <Plus size={8} />}
+                </span>
+              )
             )}
           </div>
         </div>
