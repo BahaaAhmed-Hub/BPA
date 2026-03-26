@@ -527,7 +527,7 @@ function CompanyCard({
           ) : (
             <span onClick={() => setEditingDomain(true)} title="Click to set domain"
               style={{ fontSize: 10.5, color: co.emailDomain ? '#6B7280' : '#3a3f55', cursor: 'text' }}>
-              {co.emailDomain || '+ domain'}
+              {co.emailDomain || ''}
             </span>
           )}
         </div>
