@@ -10,9 +10,10 @@ const COMPANY_TAGS: CompanyTag[] = ['teradix', 'dxtech', 'consulting', 'personal
 
 interface TaskCardProps {
   task: Task
+  onOpen: (id: string) => void
 }
 
-export function TaskCard({ task }: TaskCardProps) {
+export function TaskCard({ task, onOpen }: TaskCardProps) {
   const { toggleComplete, deleteTask, updateTask } = useTaskStore()
   const [hovered, setHovered] = useState(false)
   const [editingTitle, setEditingTitle] = useState(false)
@@ -35,7 +36,6 @@ export function TaskCard({ task }: TaskCardProps) {
   const ownerUser = task.owner ? getAllUsers().find(u => u.id === task.owner) : undefined
   const users = getAllUsers()
 
-  // Show quadrant-specific empty field slots so moving a card "adds" those fields
   const isSchedule = task.quadrant === 'schedule'
   const isDelegate = task.quadrant === 'delegate'
 
@@ -46,6 +46,13 @@ export function TaskCard({ task }: TaskCardProps) {
     setEditingTitle(false)
   }
 
+  // Clicking the card background opens the modal.
+  // Interactive child elements stop propagation via data-nm attribute check.
+  function handleCardClick(e: React.MouseEvent) {
+    if ((e.target as HTMLElement).closest('[data-nm]')) return
+    onOpen(task.id)
+  }
+
   const fieldInput: React.CSSProperties = {
     background: '#0D0F1A', border: '1px solid #353A50', borderRadius: 4,
     color: '#E8EAF6', fontSize: 10, padding: '1px 5px', outline: 'none',
@@ -54,13 +61,14 @@ export function TaskCard({ task }: TaskCardProps) {
   return (
     <div
       ref={setNodeRef}
+      onClick={handleCardClick}
       style={{
         ...style,
         background: hovered ? '#1a1f35' : '#161929',
         border: `1px solid ${isDragging ? '#1E40AF' : '#252A3E'}`,
         borderRadius: 8,
         padding: '9px 11px',
-        cursor: isDragging ? 'grabbing' : 'default',
+        cursor: isDragging ? 'grabbing' : 'pointer',
         transition: 'background 0.15s ease, border-color 0.15s ease',
         position: 'relative',
         opacity: task.completed ? 0.5 : 1,
@@ -76,7 +84,7 @@ export function TaskCard({ task }: TaskCardProps) {
 
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 7, paddingLeft: 4 }}>
         {/* Drag handle */}
-        <div {...listeners} {...attributes} style={{
+        <div data-nm {...listeners} {...attributes} style={{
           cursor: 'grab', color: hovered ? '#6B7280' : 'transparent',
           transition: 'color 0.15s', marginTop: 1, flexShrink: 0,
         }}>
@@ -84,7 +92,7 @@ export function TaskCard({ task }: TaskCardProps) {
         </div>
 
         {/* Checkbox */}
-        <button onClick={() => toggleComplete(task.id)} style={{
+        <button data-nm onClick={() => toggleComplete(task.id)} style={{
           width: 15, height: 15, borderRadius: 4,
           border: `1.5px solid ${task.completed ? '#1D9E75' : '#252A3E'}`,
           background: task.completed ? '#1D9E75' : 'transparent',
@@ -99,6 +107,7 @@ export function TaskCard({ task }: TaskCardProps) {
           {/* Title – click to edit */}
           {editingTitle ? (
             <input
+              data-nm
               autoFocus
               value={titleDraft}
               onChange={e => setTitleDraft(e.target.value)}
@@ -116,6 +125,7 @@ export function TaskCard({ task }: TaskCardProps) {
             />
           ) : (
             <p
+              data-nm
               onClick={() => { if (!task.completed) setEditingTitle(true) }}
               title={task.completed ? undefined : 'Click to rename'}
               style={{
@@ -130,20 +140,18 @@ export function TaskCard({ task }: TaskCardProps) {
           {/* Meta row */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 5, flexWrap: 'wrap' }}>
 
-            {/* Company – native select styled as badge */}
+            {/* Company */}
             <select
+              data-nm
               value={task.company}
               onChange={e => updateTask(task.id, { company: e.target.value as CompanyTag })}
               title="Change company"
               style={{
                 fontSize: 10, fontWeight: 600,
-                color: companyColor,
-                background: `${companyColor}18`,
+                color: companyColor, background: `${companyColor}18`,
                 padding: '1px 5px', borderRadius: 3,
-                border: 'none', outline: 'none',
-                cursor: 'pointer',
-                appearance: 'none', WebkitAppearance: 'none',
-                fontFamily: 'inherit',
+                border: 'none', outline: 'none', cursor: 'pointer',
+                appearance: 'none', WebkitAppearance: 'none', fontFamily: 'inherit',
               }}
             >
               {COMPANY_TAGS.map(c => (
@@ -151,13 +159,11 @@ export function TaskCard({ task }: TaskCardProps) {
               ))}
             </select>
 
-            {/* Due date – show if has value OR in schedule quadrant */}
+            {/* Due date */}
             {(task.dueDate || isSchedule) && (
               editingDate ? (
                 <input
-                  type="date"
-                  autoFocus
-                  value={task.dueDate ?? ''}
+                  data-nm type="date" autoFocus value={task.dueDate ?? ''}
                   onChange={e => updateTask(task.id, { dueDate: e.target.value || undefined })}
                   onBlur={() => setEditingDate(false)}
                   onKeyDown={e => e.key === 'Escape' && setEditingDate(false)}
@@ -165,13 +171,8 @@ export function TaskCard({ task }: TaskCardProps) {
                 />
               ) : (
                 <span
-                  onClick={() => setEditingDate(true)}
-                  title="Set due date"
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 3, fontSize: 10,
-                    color: task.dueDate ? '#6B7280' : '#404560',
-                    cursor: 'pointer',
-                  }}
+                  data-nm onClick={() => setEditingDate(true)} title="Set due date"
+                  style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: task.dueDate ? '#6B7280' : '#404560', cursor: 'pointer' }}
                 >
                   <Calendar size={9} />
                   {task.dueDate
@@ -182,13 +183,11 @@ export function TaskCard({ task }: TaskCardProps) {
               )
             )}
 
-            {/* Planned time – show if has value OR in schedule quadrant */}
+            {/* Planned time */}
             {(task.plannedTime || isSchedule) && (
               editingTime ? (
                 <input
-                  type="time"
-                  autoFocus
-                  value={task.plannedTime ?? ''}
+                  data-nm type="time" autoFocus value={task.plannedTime ?? ''}
                   onChange={e => updateTask(task.id, { plannedTime: e.target.value || undefined })}
                   onBlur={() => setEditingTime(false)}
                   onKeyDown={e => e.key === 'Escape' && setEditingTime(false)}
@@ -196,13 +195,8 @@ export function TaskCard({ task }: TaskCardProps) {
                 />
               ) : (
                 <span
-                  onClick={() => setEditingTime(true)}
-                  title="Set planned time"
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 3, fontSize: 10,
-                    color: task.plannedTime ? '#7F77DD' : '#404560',
-                    cursor: 'pointer',
-                  }}
+                  data-nm onClick={() => setEditingTime(true)} title="Set planned time"
+                  style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: task.plannedTime ? '#7F77DD' : '#404560', cursor: 'pointer' }}
                 >
                   <Clock size={9} />
                   {task.plannedTime ?? <Plus size={8} />}
@@ -210,60 +204,42 @@ export function TaskCard({ task }: TaskCardProps) {
               )
             )}
 
-            {/* Duration – show if has value OR in schedule quadrant */}
+            {/* Duration */}
             {(task.duration || isSchedule) && (
               editingDuration ? (
                 <input
-                  type="number"
-                  autoFocus
-                  min={5} step={5}
-                  value={task.duration ?? ''}
+                  data-nm type="number" autoFocus min={5} step={5} value={task.duration ?? ''}
                   onChange={e => updateTask(task.id, { duration: e.target.value ? parseInt(e.target.value, 10) : undefined })}
                   onBlur={() => setEditingDuration(false)}
                   onKeyDown={e => e.key === 'Escape' && setEditingDuration(false)}
-                  style={{ ...fieldInput, width: 52 }}
-                  placeholder="min"
+                  style={{ ...fieldInput, width: 52 }} placeholder="min"
                 />
               ) : (
                 <span
-                  onClick={() => setEditingDuration(true)}
-                  title="Set duration"
-                  style={{
-                    fontSize: 10,
-                    color: task.duration ? '#6B7280' : '#404560',
-                    cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', gap: 2,
-                  }}
+                  data-nm onClick={() => setEditingDuration(true)} title="Set duration"
+                  style={{ fontSize: 10, color: task.duration ? '#6B7280' : '#404560', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 2 }}
                 >
                   {task.duration ? `${task.duration}m` : <><Plus size={8} />m</>}
                 </span>
               )
             )}
 
-            {/* Owner – show if has value OR in delegate quadrant */}
+            {/* Owner */}
             {(task.owner || isDelegate) && (
               editingOwner ? (
                 <select
-                  autoFocus
-                  value={task.owner ?? ''}
+                  data-nm autoFocus value={task.owner ?? ''}
                   onChange={e => { updateTask(task.id, { owner: e.target.value || undefined }); setEditingOwner(false) }}
                   onBlur={() => setEditingOwner(false)}
                   style={fieldInput}
                 >
                   <option value="">— none —</option>
-                  {users.map(u => (
-                    <option key={u.id} value={u.id}>{u.name}</option>
-                  ))}
+                  {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
                 </select>
               ) : (
                 <span
-                  onClick={() => setEditingOwner(true)}
-                  title="Assign owner"
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 3, fontSize: 10,
-                    color: ownerUser ? '#1D9E75' : '#404560',
-                    cursor: 'pointer',
-                  }}
+                  data-nm onClick={() => setEditingOwner(true)} title="Assign owner"
+                  style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: ownerUser ? '#1D9E75' : '#404560', cursor: 'pointer' }}
                 >
                   <User size={9} />
                   {ownerUser ? ownerUser.name : <Plus size={8} />}
@@ -275,7 +251,7 @@ export function TaskCard({ task }: TaskCardProps) {
 
         {/* Delete */}
         {hovered && (
-          <button onClick={() => deleteTask(task.id)} style={{
+          <button data-nm onClick={() => deleteTask(task.id)} style={{
             background: 'transparent', border: 'none', cursor: 'pointer',
             color: '#6B7280', padding: 2, borderRadius: 4,
             display: 'flex', alignItems: 'center', flexShrink: 0,

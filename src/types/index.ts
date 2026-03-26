@@ -72,6 +72,17 @@ export interface Task {
   createdAt: string
 }
 
+// ─── Task Activity Log ───────────────────────────────────────────────────────
+export type TaskActivityType = 'created' | 'moved' | 'status_changed' | 'field_updated'
+
+export interface TaskActivity {
+  id: string
+  taskId: string
+  type: TaskActivityType
+  description: string
+  timestamp: string
+}
+
 // ─── Metric Card ─────────────────────────────────────────────────────────────
 export interface MetricCard {
   id: string

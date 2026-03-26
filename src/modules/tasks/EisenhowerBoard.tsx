@@ -18,7 +18,11 @@ import type { Quadrant } from '@/types'
 
 const QUADRANTS: Quadrant[] = ['do', 'schedule', 'delegate', 'eliminate']
 
-export function EisenhowerBoard() {
+interface EisenhowerBoardProps {
+  onOpen: (id: string) => void
+}
+
+export function EisenhowerBoard({ onOpen }: EisenhowerBoardProps) {
   const { tasks, moveTask } = useTaskStore()
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null)
 
@@ -70,6 +74,7 @@ export function EisenhowerBoard() {
             key={q}
             quadrant={q}
             tasks={tasks.filter(t => t.quadrant === q)}
+            onOpen={onOpen}
           />
         ))}
       </div>
@@ -77,7 +82,7 @@ export function EisenhowerBoard() {
       <DragOverlay>
         {activeTask && (
           <div style={{ transform: 'rotate(1.5deg)', filter: 'drop-shadow(0 8px 24px rgba(0,0,0,0.5))' }}>
-            <TaskCard task={activeTask} />
+            <TaskCard task={activeTask} onOpen={onOpen} />
           </div>
         )}
       </DragOverlay>

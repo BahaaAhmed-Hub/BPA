@@ -16,9 +16,10 @@ const lbl: React.CSSProperties = { fontSize: 10.5, color: '#6B7280', marginBotto
 interface QuadrantColumnProps {
   quadrant: Quadrant
   tasks: Task[]
+  onOpen: (id: string) => void
 }
 
-export function QuadrantColumn({ quadrant, tasks }: QuadrantColumnProps) {
+export function QuadrantColumn({ quadrant, tasks, onOpen }: QuadrantColumnProps) {
   const meta = QUADRANT_META[quadrant]
   const { isOver, setNodeRef } = useDroppable({ id: quadrant })
   const addTask = useTaskStore(s => s.addTask)
@@ -90,13 +91,13 @@ export function QuadrantColumn({ quadrant, tasks }: QuadrantColumnProps) {
       {/* Drop zone */}
       <div ref={setNodeRef} style={{ flex: 1, padding: '8px', display: 'flex', flexDirection: 'column', gap: 5, minHeight: 100 }}>
         <SortableContext items={activeTasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
-          {activeTasks.map(t => <TaskCard key={t.id} task={t} />)}
+          {activeTasks.map(t => <TaskCard key={t.id} task={t} onOpen={onOpen} />)}
         </SortableContext>
 
         {/* Completed tasks (collapsed) */}
         {doneTasks.length > 0 && (
           <div style={{ marginTop: 4, opacity: 0.5 }}>
-            {doneTasks.map(t => <TaskCard key={t.id} task={t} />)}
+            {doneTasks.map(t => <TaskCard key={t.id} task={t} onOpen={onOpen} />)}
           </div>
         )}
 
