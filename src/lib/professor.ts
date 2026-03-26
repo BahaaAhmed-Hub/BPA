@@ -353,6 +353,76 @@ If the question is outside your role as a productivity assistant, politely say s
   }
 }
 
+// ─── analyzeTask ─────────────────────────────────────────────────────────────
+
+export interface TaskAnalysis {
+  icon: string | null
+  companyId: string | null
+  ownerId: string | null
+  quadrant: 'do' | 'schedule' | 'delegate' | 'eliminate' | null
+  assignToMe: boolean
+  titleWithIcon: string
+}
+
+interface AnalysisCompany {
+  id: string
+  name: string
+  users?: { id: string; name: string }[]
+}
+
+export async function analyzeTask(
+  title: string,
+  companies: AnalysisCompany[],
+): Promise<TaskAnalysis> {
+  const fallback: TaskAnalysis = {
+    icon: null, companyId: null, ownerId: null, quadrant: null,
+    assignToMe: true, titleWithIcon: title,
+  }
+  if (!title.trim()) return fallback
+
+  const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY ?? ''
+  if (!apiKey) return fallback
+
+  const companyList = companies.map(c => ({
+    id: c.id, name: c.name,
+    users: (c.users ?? []).map(u => ({ id: u.id, name: u.name })),
+  }))
+
+  const system = `You are an AI task intelligence assistant. Analyze a task title and return structured JSON.
+
+Return ONLY valid JSON with this exact shape:
+{
+  "icon": "emoji or null",
+  "companyId": "matching company id or null",
+  "ownerId": "matching user id from a company's users list or null",
+  "quadrant": "do|schedule|delegate|eliminate or null",
+  "assignToMe": true or false,
+  "titleWithIcon": "title prefixed with icon if icon is set, else original title"
+}
+
+Rules:
+- icon: 📞 for calls/ring/call with, ✅ for follow-up/followup/check in, 🔨 for build/develop/implement/code, 📝 for write/draft/document/report, 📊 for review/analyze/data, 💬 for discuss/meeting/sync/chat, 🔍 for research/investigate/look into, null if none match
+- companyId: detect company name in title (case-insensitive partial match)
+- ownerId: if a person's name is in the title and they exist in a company's users list
+- quadrant: "do" if urgent/ASAP/today/critical, "schedule" if has future date/plan/research, "delegate" if "ask/tell/send to [person]", "eliminate" if maybe/someday/consider, null if unclear
+- assignToMe: false if delegating to someone else, true otherwise
+- titleWithIcon: prepend icon + space to title if icon is set`
+
+  const userMsg = `Task title: "${title}"
+
+Available companies and users:
+${JSON.stringify(companyList, null, 2)}`
+
+  try {
+    const raw = await call(system, userMsg)
+    const parsed = parseJson<TaskAnalysis>(raw)
+    if (!parsed || typeof parsed.assignToMe !== 'boolean') return fallback
+    return parsed
+  } catch {
+    return fallback
+  }
+}
+
 // ─── Legacy export (backwards compat with existing UI) ───────────────────────
 
 export interface ProfessorMessage {

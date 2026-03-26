@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { ChevronLeft, ChevronRight, Video, MapPin, Sparkles, X, RefreshCw, LogIn } from 'lucide-react'
-import { fetchWeekEvents, detectMeetingType } from '@/lib/googleCalendar'
-import type { GCalEvent } from '@/lib/googleCalendar'
+import { ChevronLeft, ChevronRight, Video, MapPin, Sparkles, X, RefreshCw, LogIn, Eye, EyeOff } from 'lucide-react'
+import { listCalendars, fetchAllCalendarsEvents, detectMeetingType } from '@/lib/googleCalendar'
+import type { GCalEventWithCalendar, GCalCalendar } from '@/lib/googleCalendar'
 import { generateMeetingPrep } from '@/lib/professor'
 import type { MeetingPrep, CalEvent } from '@/lib/professor'
 import type { DbCalendarEvent } from '@/types/database'
 import { useAuthStore } from '@/store/authStore'
 import { signInWithGoogle } from '@/lib/google'
+import type { GCalEvent } from '@/lib/googleCalendar'
 
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -21,7 +22,7 @@ const PX_PER_MIN  = PX_PER_HOUR / 60
 type ViewMode = 'day' | 'week'
 
 interface PositionedEvent {
-  event: GCalEvent
+  event: GCalEventWithCalendar
   top: number     // px from grid top
   height: number  // px
   col: number     // 0-indexed column within day (for overlap)
@@ -92,7 +93,7 @@ function getMeetingColor(type: string): string {
 
 // ─── Overlap layout algorithm ─────────────────────────────────────────────────
 
-function layoutDayEvents(events: GCalEvent[], dayDate: Date, dayIdx: number): PositionedEvent[] {
+function layoutDayEvents(events: GCalEventWithCalendar[], dayDate: Date, dayIdx: number): PositionedEvent[] {
   const timed = events.filter(e => !isAllDay(e) && isSameDay(getEventDay(e), dayDate))
   if (!timed.length) return []
 
@@ -141,9 +142,9 @@ function layoutDayEvents(events: GCalEvent[], dayDate: Date, dayIdx: number): Po
 
 function EventCard({
   pe, dayWidth, onClick,
-}: { pe: PositionedEvent; dayWidth: number; onClick: (e: GCalEvent) => void }) {
+}: { pe: PositionedEvent; dayWidth: number; onClick: (e: GCalEventWithCalendar) => void }) {
   const type  = detectMeetingType(pe.event)
-  const color = getMeetingColor(type)
+  const color = pe.event.calendarColor ?? getMeetingColor(type)
   const w     = (dayWidth / pe.cols) - 2
   const left  = (dayWidth / pe.cols) * pe.col + 1
   const title = pe.event.summary ?? '(No title)'
@@ -181,11 +182,302 @@ function EventCard({
   )
 }
 
+// ─── macOS-style Event Edit Modal ─────────────────────────────────────────────
+
+interface EditState {
+  id?: string
+  calendarId: string
+  title: string
+  allDay: boolean
+  startDate: string
+  startTime: string
+  endDate: string
+  endTime: string
+  location: string
+  description: string
+  videoLink?: string
+  attendees: { email: string; displayName?: string; responseStatus?: string }[]
+}
+
+function eventToEdit(event: GCalEventWithCalendar): EditState {
+  const allDay = !event.start.dateTime
+  const sd = allDay
+    ? new Date(event.start.date! + 'T00:00:00')
+    : new Date(event.start.dateTime!)
+  const ed = allDay
+    ? new Date(event.end.date! + 'T00:00:00')
+    : new Date(event.end.dateTime!)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return {
+    id: event.id,
+    calendarId: event.calendarId,
+    title: event.summary ?? '',
+    allDay,
+    startDate: `${sd.getFullYear()}-${pad(sd.getMonth()+1)}-${pad(sd.getDate())}`,
+    startTime: allDay ? '' : `${pad(sd.getHours())}:${pad(sd.getMinutes())}`,
+    endDate: `${ed.getFullYear()}-${pad(ed.getMonth()+1)}-${pad(ed.getDate())}`,
+    endTime: allDay ? '' : `${pad(ed.getHours())}:${pad(ed.getMinutes())}`,
+    location: event.location ?? '',
+    description: event.description ?? '',
+    videoLink: event.conferenceData?.entryPoints?.find(e => e.entryPointType === 'video')?.uri,
+    attendees: event.attendees ?? [],
+  }
+}
+
+function blankEdit(calendarId: string): EditState {
+  const now = new Date()
+  const pad = (n: number) => String(n).padStart(2, '0')
+  const date = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`
+  const startH = now.getHours() + 1
+  return {
+    calendarId,
+    title: '',
+    allDay: false,
+    startDate: date, startTime: `${pad(startH)}:00`,
+    endDate: date,   endTime: `${pad(startH + 1)}:00`,
+    location: '', description: '', attendees: [],
+  }
+}
+
+import { createCalendarEvent, updateCalendarEvent, deleteCalendarEvent } from '@/lib/googleCalendar'
+
+function EventEditModal({
+  initial, calendars, onSave, onDelete, onClose,
+}: {
+  initial: EditState
+  calendars: GCalCalendar[]
+  onSave: () => void
+  onDelete?: () => void
+  onClose: () => void
+}) {
+  const [state, setState] = useState<EditState>(initial)
+  const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [error, setError] = useState('')
+  const isNew = !initial.id
+
+  function set<K extends keyof EditState>(k: K, v: EditState[K]) {
+    setState(prev => ({ ...prev, [k]: v }))
+  }
+
+  const finp: React.CSSProperties = {
+    background: '#0D0F1A', border: '1px solid #252A3E', borderRadius: 7,
+    padding: '7px 10px', fontSize: 13, color: '#E8EAF6', outline: 'none', width: '100%',
+    boxSizing: 'border-box',
+  }
+  const flbl: React.CSSProperties = { fontSize: 11, color: '#6B7280', display: 'block', marginBottom: 4 }
+
+  async function handleSave() {
+    if (!state.title.trim()) { setError('Title is required'); return }
+    setSaving(true); setError('')
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
+    const payload = {
+      summary: state.title.trim(),
+      description: state.description || undefined,
+      location: state.location || undefined,
+      start: state.allDay
+        ? { date: state.startDate }
+        : { dateTime: `${state.startDate}T${state.startTime}:00`, timeZone: tz },
+      end: state.allDay
+        ? { date: state.endDate }
+        : { dateTime: `${state.endDate}T${state.endTime}:00`, timeZone: tz },
+    }
+    try {
+      if (state.id) {
+        const r = await updateCalendarEvent(state.calendarId, state.id, payload)
+        if (r.error) { setError(r.error); setSaving(false); return }
+      } else {
+        const r = await createCalendarEvent(state.calendarId, payload)
+        if (r.error) { setError(r.error); setSaving(false); return }
+      }
+      onSave()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Save failed')
+    }
+    setSaving(false)
+  }
+
+  async function handleDelete() {
+    if (!state.id || !confirm('Delete this event?')) return
+    setDeleting(true)
+    try {
+      await deleteCalendarEvent(state.calendarId, state.id)
+      onDelete?.()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Delete failed')
+    }
+    setDeleting(false)
+  }
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 300,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)',
+    }} onClick={onClose}>
+      <div style={{
+        background: '#161929', border: '1px solid #252A3E',
+        borderRadius: 18, padding: '24px 26px', width: 500, maxWidth: '94vw',
+        maxHeight: '88vh', overflowY: 'auto',
+        boxShadow: '0 32px 80px rgba(0,0,0,0.5)',
+      }} onClick={e => e.stopPropagation()}>
+
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.7px' }}>
+            {isNew ? 'New Event' : 'Edit Event'}
+          </span>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6B7280', padding: 4 }}>
+            <X size={16} />
+          </button>
+        </div>
+
+        {/* Title */}
+        <input
+          autoFocus value={state.title}
+          onChange={e => set('title', e.target.value)}
+          placeholder="Event title"
+          style={{ ...finp, fontSize: 17, fontWeight: 600, marginBottom: 16, padding: '9px 12px' }}
+        />
+
+        {/* All-day toggle */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+          <button onClick={() => set('allDay', !state.allDay)} style={{
+            width: 36, height: 20, borderRadius: 10, border: 'none', cursor: 'pointer',
+            background: state.allDay ? '#1D9E75' : '#252A3E',
+            position: 'relative', flexShrink: 0, transition: 'background 0.2s',
+          }}>
+            <div style={{
+              position: 'absolute', top: 3, left: state.allDay ? 19 : 3,
+              width: 14, height: 14, borderRadius: '50%', background: '#fff',
+              transition: 'left 0.2s',
+            }} />
+          </button>
+          <span style={{ fontSize: 12, color: '#94A3B8' }}>All day</span>
+        </div>
+
+        {/* Date / time */}
+        <div style={{ display: 'grid', gridTemplateColumns: state.allDay ? '1fr 1fr' : '1fr 1fr 1fr 1fr', gap: 8, marginBottom: 14 }}>
+          <div>
+            <span style={flbl}>Start date</span>
+            <input type="date" value={state.startDate} onChange={e => set('startDate', e.target.value)} style={finp} />
+          </div>
+          {!state.allDay && (
+            <div>
+              <span style={flbl}>Start time</span>
+              <input type="time" value={state.startTime} onChange={e => set('startTime', e.target.value)} style={finp} />
+            </div>
+          )}
+          <div>
+            <span style={flbl}>End date</span>
+            <input type="date" value={state.endDate} onChange={e => set('endDate', e.target.value)} style={finp} />
+          </div>
+          {!state.allDay && (
+            <div>
+              <span style={flbl}>End time</span>
+              <input type="time" value={state.endTime} onChange={e => set('endTime', e.target.value)} style={finp} />
+            </div>
+          )}
+        </div>
+
+        {/* Location */}
+        <div style={{ marginBottom: 12 }}>
+          <span style={flbl}>Location</span>
+          <div style={{ position: 'relative' }}>
+            <MapPin size={12} color="#6B7280" style={{ position: 'absolute', left: 10, top: 9, pointerEvents: 'none' }} />
+            <input value={state.location} onChange={e => set('location', e.target.value)}
+              placeholder="Add location"
+              style={{ ...finp, paddingLeft: 28 }} />
+          </div>
+        </div>
+
+        {/* Calendar selector */}
+        {calendars.length > 1 && (
+          <div style={{ marginBottom: 12 }}>
+            <span style={flbl}>Calendar</span>
+            <select value={state.calendarId} onChange={e => set('calendarId', e.target.value)} style={{ ...finp, appearance: 'none' }}>
+              {calendars.map(c => <option key={c.id} value={c.id}>{c.summary}</option>)}
+            </select>
+          </div>
+        )}
+
+        {/* Video link (read-only) */}
+        {state.videoLink && (
+          <div style={{ marginBottom: 12 }}>
+            <span style={flbl}>Video call</span>
+            <a href={state.videoLink} target="_blank" rel="noopener noreferrer"
+              style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: '#7F77DD', textDecoration: 'none' }}>
+              <Video size={12} /> Join video call
+            </a>
+          </div>
+        )}
+
+        {/* Attendees (read-only) */}
+        {state.attendees.length > 0 && (
+          <div style={{ marginBottom: 12 }}>
+            <span style={flbl}>Attendees ({state.attendees.length})</span>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+              {state.attendees.slice(0, 8).map((a, i) => (
+                <span key={i} style={{
+                  fontSize: 11, padding: '2px 8px', borderRadius: 12,
+                  background: a.responseStatus === 'accepted' ? '#1D9E7520' : '#6B728020',
+                  color: a.responseStatus === 'accepted' ? '#1D9E75' : '#94A3B8',
+                  border: `1px solid ${a.responseStatus === 'accepted' ? '#1D9E7540' : '#252A3E'}`,
+                }}>
+                  {a.displayName ?? a.email}
+                </span>
+              ))}
+              {state.attendees.length > 8 && (
+                <span style={{ fontSize: 11, color: '#6B7280' }}>+{state.attendees.length - 8} more</span>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Description */}
+        <div style={{ marginBottom: 18 }}>
+          <span style={flbl}>Notes</span>
+          <textarea value={state.description} onChange={e => set('description', e.target.value)}
+            placeholder="Add notes…" rows={3}
+            style={{ ...finp, resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.5 }} />
+        </div>
+
+        {error && <p style={{ margin: '0 0 12px', fontSize: 12, color: '#E05252' }}>{error}</p>}
+
+        {/* Footer */}
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          {!isNew && (
+            <button onClick={() => void handleDelete()} disabled={deleting} style={{
+              padding: '8px 14px', borderRadius: 8, border: '1px solid rgba(224,82,82,0.4)',
+              background: 'rgba(224,82,82,0.1)', color: '#E05252',
+              fontSize: 12.5, fontWeight: 500, cursor: 'pointer',
+            }}>
+              {deleting ? 'Deleting…' : 'Delete'}
+            </button>
+          )}
+          <div style={{ flex: 1 }} />
+          <button onClick={onClose} style={{
+            padding: '8px 16px', borderRadius: 8, border: '1px solid #252A3E',
+            background: 'transparent', color: '#6B7280', fontSize: 12.5, cursor: 'pointer',
+          }}>Cancel</button>
+          <button onClick={() => void handleSave()} disabled={saving} style={{
+            padding: '8px 18px', borderRadius: 8, border: 'none',
+            background: '#1E40AF', color: '#fff',
+            fontSize: 12.5, fontWeight: 600, cursor: saving ? 'wait' : 'pointer',
+          }}>
+            {saving ? 'Saving…' : isNew ? 'Create' : 'Save'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Event Detail Popover ─────────────────────────────────────────────────────
 
 function EventDetail({
   event, onClose,
-}: { event: GCalEvent; onClose: () => void }) {
+}: { event: GCalEventWithCalendar; onClose: () => void }) {
   const [prep, setPrep]       = useState<MeetingPrep | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError]     = useState('')
@@ -336,8 +628,8 @@ function TimeGrid({
   days, events, onEventClick,
 }: {
   days: Date[]
-  events: GCalEvent[]
-  onEventClick: (e: GCalEvent) => void
+  events: GCalEventWithCalendar[]
+  onEventClick: (e: GCalEventWithCalendar) => void
 }) {
   const containerRef = useRef<HTMLDivElement>(null)
   const today = startOfDay(new Date())
@@ -486,12 +778,15 @@ function TimeGrid({
 // ─── Main CalendarView ────────────────────────────────────────────────────────
 
 export function CalendarView() {
-  const [viewMode, setViewMode]       = useState<ViewMode>('week')
-  const [currentDate, setCurrentDate] = useState(() => startOfDay(new Date()))
-  const [events, setEvents]           = useState<GCalEvent[]>([])
-  const [loading, setLoading]         = useState(false)
-  const [noAuth, setNoAuth]           = useState(false)
-  const [selected, setSelected]       = useState<GCalEvent | null>(null)
+  const [viewMode, setViewMode]               = useState<ViewMode>('week')
+  const [currentDate, setCurrentDate]         = useState(() => startOfDay(new Date()))
+  const [events, setEvents]                   = useState<GCalEventWithCalendar[]>([])
+  const [calendars, setCalendars]             = useState<GCalCalendar[]>([])
+  const [hiddenCalendars, setHiddenCalendars] = useState<Set<string>>(new Set())
+  const [loading, setLoading]                 = useState(false)
+  const [noAuth, setNoAuth]                   = useState(false)
+  const [selected, setSelected]               = useState<GCalEventWithCalendar | null>(null)
+  const [editing, setEditing]                 = useState<EditState | null>(null)
 
   // Compute days to display
   const days: Date[] = viewMode === 'day'
@@ -499,19 +794,46 @@ export function CalendarView() {
     : Array.from({ length: 7 }, (_, i) => addDays(getWeekStart(currentDate), i))
 
   const rangeStart = days[0]
-  const rangeEnd   = addDays(days[days.length - 1], 1) // exclusive
+  const rangeEnd   = addDays(days[days.length - 1], 1)
+
+  // Load calendar list once
+  useEffect(() => {
+    void (async () => {
+      const { calendars: cals, noAuth: na } = await listCalendars()
+      if (na) { setNoAuth(true); return }
+      setCalendars(cals)
+    })()
+  }, [])
 
   const loadEvents = useCallback(async () => {
     setLoading(true)
     try {
-      const { events: evs, noAuth: na } = await fetchWeekEvents(rangeStart, rangeEnd)
+      const activeCals = calendars.length
+        ? calendars.filter(c => !hiddenCalendars.has(c.id))
+        : [{ id: 'primary', summary: 'Primary' } as GCalCalendar]
+      const { events: evs, noAuth: na } = await fetchAllCalendarsEvents(activeCals, rangeStart, rangeEnd)
       setEvents(evs)
       setNoAuth(na)
     } catch { setNoAuth(true) }
     setLoading(false)
-  }, [rangeStart.getTime(), rangeEnd.getTime()])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rangeStart.getTime(), rangeEnd.getTime(), calendars, hiddenCalendars])
 
   useEffect(() => { void loadEvents() }, [loadEvents])
+
+  // Auto-refresh every 5 minutes
+  useEffect(() => {
+    const id = setInterval(() => { void loadEvents() }, 5 * 60 * 1000)
+    return () => clearInterval(id)
+  }, [loadEvents])
+
+  function toggleCalendar(id: string) {
+    setHiddenCalendars(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id); else next.add(id)
+      return next
+    })
+  }
 
   function navigate(dir: -1 | 1) {
     const delta = viewMode === 'day' ? 1 : 7
@@ -552,6 +874,17 @@ export function CalendarView() {
         <h2 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: 'var(--color-text, #E8EAF6)', flex: 1 }}>
           {title}
         </h2>
+
+        {/* New Event */}
+        <button
+          onClick={() => {
+            const defaultCal = calendars.find(c => c.primary) ?? calendars[0]
+            setEditing(blankEdit(defaultCal?.id ?? 'primary'))
+          }}
+          style={{ ...navBtn, padding: '5px 14px', color: '#7F77DD', borderColor: '#7F77DD40', background: '#7F77DD10', fontWeight: 600, fontSize: 12 }}
+        >
+          + New
+        </button>
 
         {/* Refresh */}
         <button onClick={() => void loadEvents()} style={{ ...navBtn, padding: '5px 10px' }} title="Refresh">
@@ -602,15 +935,60 @@ export function CalendarView() {
         </div>
       )}
 
+      {/* ── Calendar indicator chips ─────────────────────────────────────── */}
+      {calendars.length > 0 && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 6, padding: '6px 20px',
+          borderBottom: '1px solid var(--color-border, #252A3E)', flexWrap: 'wrap',
+          background: 'var(--color-surface, #161929)', flexShrink: 0,
+        }}>
+          {calendars.map(cal => {
+            const hidden = hiddenCalendars.has(cal.id)
+            return (
+              <button key={cal.id} onClick={() => toggleCalendar(cal.id)} style={{
+                display: 'flex', alignItems: 'center', gap: 5, padding: '3px 9px',
+                borderRadius: 20, border: '1px solid var(--color-border, #252A3E)',
+                background: hidden ? 'transparent' : `${cal.backgroundColor ?? '#1E40AF'}15`,
+                cursor: 'pointer', fontSize: 11.5, fontWeight: 500,
+                color: hidden ? 'var(--color-text-muted, #6B7280)' : 'var(--color-text, #E8EAF6)',
+                opacity: hidden ? 0.5 : 1, transition: 'all 0.15s ease',
+              }}>
+                <div style={{
+                  width: 8, height: 8, borderRadius: '50%',
+                  background: hidden ? '#6B7280' : (cal.backgroundColor ?? '#1E40AF'),
+                  flexShrink: 0,
+                }} />
+                {cal.summary}
+                {hidden
+                  ? <EyeOff size={10} style={{ marginLeft: 2, opacity: 0.6 }} />
+                  : <Eye size={10} style={{ marginLeft: 2, opacity: 0.4 }} />
+                }
+              </button>
+            )
+          })}
+        </div>
+      )}
+
       {/* ── Time grid ───────────────────────────────────────────────────────── */}
       <TimeGrid
         days={days}
         events={events}
-        onEventClick={e => setSelected(e)}
+        onEventClick={e => setEditing(eventToEdit(e))}
       />
 
-      {/* ── Event detail modal ──────────────────────────────────────────────── */}
+      {/* ── Event detail (AI prep) — opens from edit modal ──────────────────── */}
       {selected && <EventDetail event={selected} onClose={() => setSelected(null)} />}
+
+      {/* ── Event edit modal ─────────────────────────────────────────────────── */}
+      {editing && (
+        <EventEditModal
+          initial={editing}
+          calendars={calendars}
+          onSave={() => { setEditing(null); void loadEvents() }}
+          onDelete={() => { setEditing(null); void loadEvents() }}
+          onClose={() => setEditing(null)}
+        />
+      )}
 
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }

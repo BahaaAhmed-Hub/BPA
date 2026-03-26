@@ -478,13 +478,13 @@ function CompanyCard({
             onClick={() => setColorOpen(o => !o)}
             title="Change color"
             style={{
-              width: 22, height: 22, borderRadius: '50%', background: co.color, cursor: 'pointer',
-              border: `2px solid ${co.color}80`, flexShrink: 0,
+              width: 28, height: 28, borderRadius: '50%', background: co.color, cursor: 'pointer',
+              border: `2px solid ${co.color}60`, flexShrink: 0,
             }}
           />
           {colorOpen && (
             <div style={{
-              position: 'absolute', top: 28, left: 0, zIndex: 200,
+              position: 'absolute', top: 34, left: 0, zIndex: 200,
               background: '#161929', border: '1px solid #353A50', borderRadius: 8,
               padding: '8px 10px', display: 'flex', gap: 6,
               boxShadow: '0 8px 28px rgba(0,0,0,0.6)',
@@ -501,43 +501,41 @@ function CompanyCard({
           )}
         </div>
 
-        {/* Company name – click to edit */}
-        {editingName ? (
-          <input autoFocus value={nameDraft}
-            onChange={e => setNameDraft(e.target.value)}
-            onBlur={saveName}
-            onKeyDown={e => { if (e.key === 'Enter') saveName(); if (e.key === 'Escape') { setNameDraft(co.name); setEditingName(false) } }}
-            style={{ ...tinp, fontSize: 13.5, fontWeight: 600, width: 150 }}
-          />
-        ) : (
-          <span onClick={() => setEditingName(true)} title="Click to rename"
-            style={{ fontSize: 13.5, fontWeight: 600, color: '#E8EAF6', cursor: 'text', minWidth: 40 }}>
-            {co.name || 'Untitled'}
-          </span>
-        )}
+        {/* Name + domain stacked */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 1, flex: 1, minWidth: 0 }}>
+          {editingName ? (
+            <input autoFocus value={nameDraft}
+              onChange={e => setNameDraft(e.target.value)}
+              onBlur={saveName}
+              onKeyDown={e => { if (e.key === 'Enter') saveName(); if (e.key === 'Escape') { setNameDraft(co.name); setEditingName(false) } }}
+              style={{ ...tinp, fontSize: 13.5, fontWeight: 600, width: 160 }}
+            />
+          ) : (
+            <span onClick={() => setEditingName(true)} title="Click to rename"
+              style={{ fontSize: 13.5, fontWeight: 600, color: '#E8EAF6', cursor: 'text', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {co.name || 'Untitled'}
+            </span>
+          )}
+          {editingDomain ? (
+            <input autoFocus value={domainDraft}
+              onChange={e => setDomainDraft(e.target.value)}
+              onBlur={saveDomain}
+              onKeyDown={e => { if (e.key === 'Enter') saveDomain(); if (e.key === 'Escape') { setDomainDraft(co.emailDomain); setEditingDomain(false) } }}
+              placeholder="@domain.com"
+              style={{ ...tinp, fontSize: 10.5, color: '#6B7280', width: 140 }}
+            />
+          ) : (
+            <span onClick={() => setEditingDomain(true)} title="Click to set domain"
+              style={{ fontSize: 10.5, color: co.emailDomain ? '#6B7280' : '#3a3f55', cursor: 'text' }}>
+              {co.emailDomain || ''}
+            </span>
+          )}
+        </div>
 
-        {/* Domain – small editable beside name */}
-        {editingDomain ? (
-          <input autoFocus value={domainDraft}
-            onChange={e => setDomainDraft(e.target.value)}
-            onBlur={saveDomain}
-            onKeyDown={e => { if (e.key === 'Enter') saveDomain(); if (e.key === 'Escape') { setDomainDraft(co.emailDomain); setEditingDomain(false) } }}
-            placeholder="@domain.com"
-            style={{ ...tinp, fontSize: 11, color: '#6B7280', width: 130 }}
-          />
-        ) : (
-          <span onClick={() => setEditingDomain(true)} title="Click to set domain"
-            style={{ fontSize: 11, color: co.emailDomain ? '#6B7280' : '#3a3f55', cursor: 'text' }}>
-            {co.emailDomain || '+ domain'}
-          </span>
-        )}
-
-        <div style={{ flex: 1 }} />
-
-        {/* Account selector */}
+        {/* Account selector — compact */}
         {accounts.length > 0 && (
           <select value={co.accountId} onChange={e => onUpdate({ accountId: e.target.value })}
-            style={{ ...selectStyle, fontSize: 11, padding: '3px 6px', maxWidth: 150 }}>
+            style={{ ...selectStyle, fontSize: 11, padding: '3px 6px', maxWidth: 130 }}>
             <option value="">No account</option>
             {accounts.map(a => <option key={a.id} value={a.id}>{a.email}</option>)}
           </select>
@@ -545,7 +543,7 @@ function CompanyCard({
 
         {/* Users expand toggle */}
         <button onClick={() => setUsersOpen(o => !o)} style={{
-          display: 'flex', alignItems: 'center', gap: 4,
+          display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0,
           padding: '3px 8px', borderRadius: 5, fontSize: 10.5, cursor: 'pointer',
           background: usersOpen ? '#7F77DD18' : 'transparent',
           border: `1px solid ${usersOpen ? '#7F77DD50' : '#252A3E'}`,

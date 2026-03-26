@@ -9,8 +9,33 @@ export interface GCalEvent {
   end:   { dateTime?: string; date?: string; timeZone?: string }
   location?: string
   description?: string
+  attendees?: { email: string; displayName?: string; responseStatus?: string; self?: boolean }[]
   conferenceData?: { entryPoints?: { entryPointType: string; uri: string }[] }
   status?: string
+  organizer?: { email?: string; displayName?: string }
+}
+
+export interface GCalEventWithCalendar extends GCalEvent {
+  calendarId: string
+  calendarColor?: string
+}
+
+export interface GCalCalendar {
+  id: string
+  summary: string
+  backgroundColor?: string
+  foregroundColor?: string
+  primary?: boolean
+  accessRole?: string
+}
+
+export interface GCalEventCreate {
+  summary: string
+  description?: string
+  location?: string
+  start: { dateTime?: string; date?: string; timeZone?: string }
+  end: { dateTime?: string; date?: string; timeZone?: string }
+  attendees?: { email: string }[]
 }
 
 export interface GCalError {
@@ -23,13 +48,11 @@ export interface GCalError {
 const TOKEN_KEY = 'google_provider_token'
 
 async function getProviderToken(): Promise<string | null> {
-  // 1. Try live session first (freshest)
   const { data } = await supabase.auth.getSession()
   if (data.session?.provider_token) {
     localStorage.setItem(TOKEN_KEY, data.session.provider_token)
     return data.session.provider_token
   }
-  // 2. Try refreshing the Supabase session (may yield a new provider_token)
   try {
     const { data: refreshed } = await supabase.auth.refreshSession()
     if (refreshed.session?.provider_token) {
@@ -37,37 +60,38 @@ async function getProviderToken(): Promise<string | null> {
       return refreshed.session.provider_token
     }
   } catch { /* ignore */ }
-  // 3. Fall back to cached token (may be expired — caller handles 401)
   return localStorage.getItem(TOKEN_KEY)
 }
 
-// ─── API call ────────────────────────────────────────────────────────────────
+// ─── Core API helper ──────────────────────────────────────────────────────────
 
-async function calendarFetch(token: string, params: URLSearchParams): Promise<Response> {
-  return fetch(
-    `https://www.googleapis.com/calendar/v3/calendars/primary/events?${params}`,
-    { headers: { Authorization: `Bearer ${token}` } },
-  )
+const BASE = 'https://www.googleapis.com/calendar/v3'
+
+async function gcalRequest(
+  token: string,
+  path: string,
+  options: RequestInit = {},
+): Promise<Response> {
+  const url = path.startsWith('http') ? path : `${BASE}${path}`
+  return fetch(url, {
+    ...options,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+      ...(options.headers as Record<string, string> | undefined ?? {}),
+    },
+  })
 }
 
-export async function fetchWeekEvents(
-  weekStart: Date,
-  weekEnd: Date,
-): Promise<{ events: GCalEvent[]; noAuth: boolean }> {
+/** Resolve a valid token, call fn(token), retry once on 401 with refreshed token. */
+async function withAuth(
+  fn: (token: string) => Promise<Response>,
+): Promise<{ res: Response; noAuth: false } | { res: null; noAuth: true }> {
   const token = await getProviderToken()
-  if (!token) return { events: [], noAuth: true }
+  if (!token) return { res: null, noAuth: true }
 
-  const params = new URLSearchParams({
-    timeMin:      weekStart.toISOString(),
-    timeMax:      weekEnd.toISOString(),
-    singleEvents: 'true',
-    orderBy:      'startTime',
-    maxResults:   '100',
-  })
+  let res = await fn(token)
 
-  let res = await calendarFetch(token, params)
-
-  // Token expired — clear cache and try once more with a refreshed session
   if (res.status === 401) {
     localStorage.removeItem(TOKEN_KEY)
     try {
@@ -75,17 +99,162 @@ export async function fetchWeekEvents(
       const fresh = refreshed.session?.provider_token
       if (fresh) {
         localStorage.setItem(TOKEN_KEY, fresh)
-        res = await calendarFetch(fresh, params)
+        res = await fn(fresh)
       }
     } catch { /* ignore */ }
   }
 
-  if (res.status === 401) return { events: [], noAuth: true }
-  if (!res.ok) throw new Error(`Google Calendar API ${res.status}: ${await res.text()}`)
+  if (res.status === 401) return { res: null, noAuth: true }
+  return { res, noAuth: false }
+}
+
+// ─── List calendars ───────────────────────────────────────────────────────────
+
+export async function listCalendars(): Promise<{ calendars: GCalCalendar[]; noAuth: boolean }> {
+  const result = await withAuth(token =>
+    gcalRequest(token, '/users/me/calendarList')
+  )
+  if (result.noAuth) return { calendars: [], noAuth: true }
+
+  const { res } = result
+  if (!res.ok) return { calendars: [], noAuth: false }
+
+  const data = (await res.json()) as { items?: GCalCalendar[] }
+  const calendars = (data.items ?? []).filter(c =>
+    c.accessRole === 'owner' || c.accessRole === 'writer' || c.accessRole === 'reader'
+  )
+  return { calendars, noAuth: false }
+}
+
+// ─── Fetch events from one calendar ──────────────────────────────────────────
+
+export async function fetchCalendarEvents(
+  calendarId: string,
+  weekStart: Date,
+  weekEnd: Date,
+  calendarColor?: string,
+): Promise<GCalEventWithCalendar[]> {
+  const params = new URLSearchParams({
+    timeMin:      weekStart.toISOString(),
+    timeMax:      weekEnd.toISOString(),
+    singleEvents: 'true',
+    orderBy:      'startTime',
+    maxResults:   '250',
+  })
+
+  const result = await withAuth(token =>
+    gcalRequest(token, `/calendars/${encodeURIComponent(calendarId)}/events?${params}`)
+  )
+  if (result.noAuth) return []
+  const { res } = result
+  if (!res.ok) return []
 
   const data = (await res.json()) as { items?: GCalEvent[] }
-  const events = (data.items ?? []).filter(e => e.status !== 'cancelled')
-  return { events, noAuth: false }
+  return (data.items ?? [])
+    .filter(e => e.status !== 'cancelled')
+    .map(e => ({ ...e, calendarId, calendarColor }))
+}
+
+// ─── Fetch events from multiple calendars ────────────────────────────────────
+
+export async function fetchAllCalendarsEvents(
+  calendars: GCalCalendar[],
+  weekStart: Date,
+  weekEnd: Date,
+): Promise<{ events: GCalEventWithCalendar[]; noAuth: boolean }> {
+  if (!calendars.length) return { events: [], noAuth: false }
+
+  // Check auth first
+  const token = await getProviderToken()
+  if (!token) return { events: [], noAuth: true }
+
+  try {
+    const allResults = await Promise.all(
+      calendars.map(cal =>
+        fetchCalendarEvents(cal.id, weekStart, weekEnd, cal.backgroundColor)
+      )
+    )
+    const events = allResults.flat()
+    return { events, noAuth: false }
+  } catch {
+    return { events: [], noAuth: true }
+  }
+}
+
+// ─── Create event ─────────────────────────────────────────────────────────────
+
+export async function createCalendarEvent(
+  calendarId: string,
+  event: GCalEventCreate,
+): Promise<{ event: GCalEvent | null; noAuth: boolean; error?: string }> {
+  const result = await withAuth(token =>
+    gcalRequest(token, `/calendars/${encodeURIComponent(calendarId)}/events`, {
+      method: 'POST',
+      body: JSON.stringify(event),
+    })
+  )
+  if (result.noAuth) return { event: null, noAuth: true }
+  const { res } = result
+  if (!res.ok) {
+    const text = await res.text()
+    return { event: null, noAuth: false, error: `${res.status}: ${text}` }
+  }
+  const created = (await res.json()) as GCalEvent
+  return { event: created, noAuth: false }
+}
+
+// ─── Update event ─────────────────────────────────────────────────────────────
+
+export async function updateCalendarEvent(
+  calendarId: string,
+  eventId: string,
+  event: Partial<GCalEventCreate>,
+): Promise<{ event: GCalEvent | null; noAuth: boolean; error?: string }> {
+  const result = await withAuth(token =>
+    gcalRequest(token, `/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}`, {
+      method: 'PATCH',
+      body: JSON.stringify(event),
+    })
+  )
+  if (result.noAuth) return { event: null, noAuth: true }
+  const { res } = result
+  if (!res.ok) {
+    const text = await res.text()
+    return { event: null, noAuth: false, error: `${res.status}: ${text}` }
+  }
+  const updated = (await res.json()) as GCalEvent
+  return { event: updated, noAuth: false }
+}
+
+// ─── Delete event ─────────────────────────────────────────────────────────────
+
+export async function deleteCalendarEvent(
+  calendarId: string,
+  eventId: string,
+): Promise<{ success: boolean; noAuth: boolean; error?: string }> {
+  const result = await withAuth(token =>
+    gcalRequest(token, `/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}`, {
+      method: 'DELETE',
+    })
+  )
+  if (result.noAuth) return { success: false, noAuth: true }
+  const { res } = result
+  if (res.status === 204 || res.ok) return { success: true, noAuth: false }
+  const text = await res.text()
+  return { success: false, noAuth: false, error: `${res.status}: ${text}` }
+}
+
+// ─── Legacy: fetch primary calendar (kept for backward compat) ────────────────
+
+export async function fetchWeekEvents(
+  weekStart: Date,
+  weekEnd: Date,
+): Promise<{ events: GCalEventWithCalendar[]; noAuth: boolean }> {
+  return fetchAllCalendarsEvents(
+    [{ id: 'primary', summary: 'Primary' }],
+    weekStart,
+    weekEnd,
+  )
 }
 
 // ─── Meeting type detection ───────────────────────────────────────────────────
