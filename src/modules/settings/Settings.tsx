@@ -122,7 +122,16 @@ function lsSet<T>(key: string, v: T) { try { localStorage.setItem(key, JSON.stri
 function loadSettings():   AppSettings   { return { ...DEFAULTS, ...ls<Partial<AppSettings>>('professor-settings', {}) } }
 function saveSettings(s:   AppSettings)  { lsSet('professor-settings', s) }
 function loadCompanies():  CompanyRow[]  { return ls('professor-companies', []) }
-function saveCompanies(c:  CompanyRow[]) { lsSet('professor-companies', c) }
+function saveCompanies(c:  CompanyRow[]) {
+  lsSet('professor-companies', c)
+  // Backup users separately so DB recovery can restore them
+  const usersMap: Record<string, CompanyUser[]> = {}
+  c.forEach(co => { if (co.users?.length) usersMap[co.id] = co.users })
+  lsSet('professor-company-users', usersMap)
+}
+function loadCompanyUsersBackup(): Record<string, CompanyUser[]> {
+  return ls('professor-company-users', {})
+}
 function loadSectionOrder(): SectionId[] {
   const saved = ls<SectionId[]>('professor-section-order', [])
   const valid = saved.filter(id => (SECTION_IDS as readonly string[]).includes(id))
@@ -485,16 +494,18 @@ function CompanyCard({
           {colorOpen && (
             <div style={{
               position: 'absolute', top: 34, left: 0, zIndex: 200,
-              background: '#161929', border: '1px solid #353A50', borderRadius: 8,
-              padding: '8px 10px', display: 'flex', gap: 6,
-              boxShadow: '0 8px 28px rgba(0,0,0,0.6)',
+              background: '#1a1f35', border: '1px solid #2e3450', borderRadius: 10,
+              padding: '7px 8px', display: 'flex', gap: 5,
+              boxShadow: '0 6px 20px rgba(0,0,0,0.5)',
             }}>
               {C_COLORS.map(c => (
                 <button key={c} onClick={() => { onUpdate({ color: c }); setColorOpen(false) }}
                   style={{
-                    width: 20, height: 20, borderRadius: '50%', background: c,
-                    border: 'none', cursor: 'pointer',
-                    outline: co.color === c ? `2px solid ${c}` : 'none', outlineOffset: 2,
+                    width: 16, height: 16, borderRadius: '50%', background: c,
+                    border: 'none', cursor: 'pointer', flexShrink: 0,
+                    boxShadow: co.color === c ? `0 0 0 2px #1a1f35, 0 0 0 3.5px ${c}` : 'none',
+                    transform: co.color === c ? 'scale(1.2)' : 'scale(1)',
+                    transition: 'transform 0.1s ease',
                   }} />
               ))}
             </div>
@@ -1115,7 +1126,13 @@ export function Settings() {
     if (companies.length === 0) {
       loadCompaniesFromDB().then(rows => {
         if (rows.length > 0) {
-          const hydrated: CompanyRow[] = rows.map(r => ({ ...r, emailDomain: '', accountId: '', users: [] }))
+          const usersBackup = loadCompanyUsersBackup()
+          const hydrated: CompanyRow[] = rows.map(r => ({
+            ...r,
+            emailDomain: '',
+            accountId: '',
+            users: usersBackup[r.id] ?? [],   // restore users from backup
+          }))
           setCompanies(hydrated)
           saveCompanies(hydrated)
         }

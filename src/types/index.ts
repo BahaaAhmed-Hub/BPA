@@ -33,7 +33,17 @@ export interface DynamicCompany {
 export function loadDynamicCompanies(): DynamicCompany[] {
   try {
     const raw = localStorage.getItem('professor-companies')
-    return raw ? (JSON.parse(raw) as DynamicCompany[]) : []
+    const companies: DynamicCompany[] = raw ? (JSON.parse(raw) as DynamicCompany[]) : []
+    // Merge users from backup key (in case main key was restored from DB without users)
+    const backupRaw = localStorage.getItem('professor-company-users')
+    if (backupRaw) {
+      const backup: Record<string, CompanyUser[]> = JSON.parse(backupRaw)
+      return companies.map(co => ({
+        ...co,
+        users: co.users?.length ? co.users : (backup[co.id] ?? []),
+      }))
+    }
+    return companies
   } catch { return [] }
 }
 
