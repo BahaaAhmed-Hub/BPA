@@ -1,11 +1,13 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
-import { Plus, X } from 'lucide-react'
+import { Plus, X, Sparkles } from 'lucide-react'
 import { TaskCard } from './TaskCard'
 import type { Task, Quadrant } from '@/types'
-import { QUADRANT_META, getAllUsers } from '@/types'
+import { QUADRANT_META, getAllUsers, loadDynamicCompanies } from '@/types'
 import { useTaskStore } from '@/store/taskStore'
+import { analyzeTask } from '@/lib/professor'
+import type { TaskAnalysis } from '@/lib/professor'
 
 const inp: React.CSSProperties = {
   background: '#0D0F1A', border: '1px solid #252A3E', borderRadius: 6,
@@ -24,32 +26,54 @@ export function QuadrantColumn({ quadrant, tasks, onOpen }: QuadrantColumnProps)
   const { isOver, setNodeRef } = useDroppable({ id: quadrant })
   const addTask = useTaskStore(s => s.addTask)
 
-  const [adding, setAdding] = useState(false)
+  const [adding, setAdding]         = useState(false)
   const [title, setTitle]           = useState('')
   const [dueDate, setDueDate]       = useState('')
   const [duration, setDuration]     = useState('')
   const [plannedTime, setPlanned]   = useState('')
   const [owner, setOwner]           = useState('')
+  const [aiHint, setAiHint]         = useState<TaskAnalysis | null>(null)
+  const [aiLoading, setAiLoading]   = useState(false)
+  const aiTimer                     = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const users = getAllUsers()
+  const companies = loadDynamicCompanies()
+
+  // Debounce AI analysis 900ms after typing stops
+  useEffect(() => {
+    if (!adding || title.trim().length < 4) { setAiHint(null); return }
+    if (aiTimer.current) clearTimeout(aiTimer.current)
+    aiTimer.current = setTimeout(async () => {
+      setAiLoading(true)
+      const result = await analyzeTask(title, companies)
+      setAiHint(result)
+      setAiLoading(false)
+    }, 900)
+    return () => { if (aiTimer.current) clearTimeout(aiTimer.current) }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [title, adding])
 
   function reset() {
     setTitle(''); setDueDate(''); setDuration(''); setPlanned(''); setOwner('')
-    setAdding(false)
+    setAiHint(null); setAdding(false)
   }
 
   function handleAdd() {
     if (!title.trim()) { reset(); return }
+    const finalTitle = (aiHint?.titleWithIcon ?? title).trim()
+    const finalOwner = owner || aiHint?.ownerId || ''
+    const finalCompanyId = aiHint?.companyId || undefined
     addTask({
-      title: title.trim(),
+      title: finalTitle,
       quadrant,
       company: 'teradix',
       status: 'open',
       completed: false,
-      ...(dueDate     && { dueDate }),
-      ...(duration    && { duration: parseInt(duration, 10) }),
-      ...(plannedTime && { plannedTime }),
-      ...(owner       && { owner }),
+      ...(dueDate       && { dueDate }),
+      ...(duration      && { duration: parseInt(duration, 10) }),
+      ...(plannedTime   && { plannedTime }),
+      ...(finalOwner    && { owner: finalOwner }),
+      ...(finalCompanyId && { companyId: finalCompanyId }),
     })
     reset()
   }
@@ -120,6 +144,48 @@ export function QuadrantColumn({ quadrant, tasks, onOpen }: QuadrantColumnProps)
             <input autoFocus value={title} onChange={e => setTitle(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') handleAdd(); if (e.key === 'Escape') reset() }}
               placeholder="Task title…" style={inp} />
+
+            {/* AI suggestion strip */}
+            {(aiLoading || aiHint) && (
+              <div style={{
+                background: '#0D0F1A', border: '1px solid #252A3E', borderRadius: 6,
+                padding: '6px 8px', display: 'flex', flexWrap: 'wrap', gap: 5, alignItems: 'center',
+              }}>
+                <Sparkles size={10} color="#7F77DD" style={{ flexShrink: 0 }} />
+                {aiLoading && <span style={{ fontSize: 10.5, color: '#6B7280' }}>Analyzing…</span>}
+                {!aiLoading && aiHint && (
+                  <>
+                    {aiHint.icon && (
+                      <span style={{ fontSize: 10.5, color: '#94A3B8' }}>Icon: {aiHint.icon}</span>
+                    )}
+                    {aiHint.companyId && (() => {
+                      const co = companies.find(c => c.id === aiHint.companyId)
+                      return co ? (
+                        <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 3, background: `${co.color}18`, color: co.color, fontWeight: 600 }}>
+                          {co.name}
+                        </span>
+                      ) : null
+                    })()}
+                    {aiHint.ownerId && (() => {
+                      const u = users.find(u => u.id === aiHint.ownerId)
+                      return u ? (
+                        <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 3, background: '#1D9E7518', color: '#1D9E75', fontWeight: 600 }}>
+                          → {u.name}
+                        </span>
+                      ) : null
+                    })()}
+                    {aiHint.quadrant && aiHint.quadrant !== quadrant && (
+                      <span style={{ fontSize: 10, color: '#E0944A', padding: '1px 5px', borderRadius: 3, background: '#E0944A15' }}>
+                        Suggest: {QUADRANT_META[aiHint.quadrant].label}
+                      </span>
+                    )}
+                    {aiHint.assignToMe && !aiHint.ownerId && (
+                      <span style={{ fontSize: 10, color: '#7F77DD' }}>assign to me</span>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
 
             {/* Schedule: due date + duration + planned time */}
             {quadrant === 'schedule' && (

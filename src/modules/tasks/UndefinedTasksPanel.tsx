@@ -1,8 +1,10 @@
-import { useState } from 'react'
-import { Plus, Trash2, X, Inbox, Check, Calendar, User, GripVertical } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { Plus, Trash2, X, Inbox, Check, Calendar, User, GripVertical, Sparkles } from 'lucide-react'
 import { useDroppable, useDraggable } from '@dnd-kit/core'
 import { useTaskStore } from '@/store/taskStore'
 import { getAllUsers, loadDynamicCompanies, COMPANY_COLORS, COMPANY_LABELS, type TaskStatus, type CompanyTag, type Task } from '@/types'
+import { analyzeTask } from '@/lib/professor'
+import type { TaskAnalysis } from '@/lib/professor'
 
 type Filter = 'all' | 'open' | 'done' | 'cancelled'
 
@@ -151,6 +153,23 @@ export function UndefinedTasksPanel({ onOpen }: Props) {
   const [owner, setOwner]         = useState('')
   const [duration, setDuration]   = useState('')
   const [status, setFormStatus]   = useState<TaskStatus>('open')
+  const [aiHint, setAiHint]       = useState<TaskAnalysis | null>(null)
+  const [aiLoading, setAiLoading] = useState(false)
+  const aiTimer                   = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Debounce AI analysis 900ms after typing
+  useEffect(() => {
+    if (!adding || title.trim().length < 4) { setAiHint(null); return }
+    if (aiTimer.current) clearTimeout(aiTimer.current)
+    aiTimer.current = setTimeout(async () => {
+      setAiLoading(true)
+      const result = await analyzeTask(title, companies)
+      setAiHint(result)
+      setAiLoading(false)
+    }, 900)
+    return () => { if (aiTimer.current) clearTimeout(aiTimer.current) }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [title, adding])
 
   const companies = loadDynamicCompanies()
   const users     = getAllUsers()
@@ -173,21 +192,24 @@ export function UndefinedTasksPanel({ onOpen }: Props) {
 
   function reset() {
     setTitle(''); setCompanyId(''); setDueDate(''); setOwner('')
-    setDuration(''); setFormStatus('open'); setAdding(false)
+    setDuration(''); setFormStatus('open'); setAiHint(null); setAdding(false)
   }
 
   function handleAdd() {
     if (!title.trim()) { reset(); return }
+    const finalTitle     = (aiHint?.titleWithIcon ?? title).trim()
+    const finalCompanyId = companyId || aiHint?.companyId || ''
+    const finalOwner     = owner || aiHint?.ownerId || ''
     addTask({
-      title: title.trim(),
+      title: finalTitle,
       quadrant: null,
       company: 'teradix',
       status,
       completed: status === 'done',
-      ...(companyId && { companyId }),
-      ...(dueDate   && { dueDate }),
-      ...(owner     && { owner }),
-      ...(duration  && { duration: parseInt(duration, 10) }),
+      ...(finalCompanyId && { companyId: finalCompanyId }),
+      ...(dueDate        && { dueDate }),
+      ...(finalOwner     && { owner: finalOwner }),
+      ...(duration       && { duration: parseInt(duration, 10) }),
     })
     reset()
   }
@@ -282,6 +304,35 @@ export function UndefinedTasksPanel({ onOpen }: Props) {
             <input autoFocus value={title} onChange={e => setTitle(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') handleAdd(); if (e.key === 'Escape') reset() }}
               placeholder="Task title…" style={inp} />
+
+            {/* AI suggestion strip */}
+            {(aiLoading || aiHint) && (
+              <div style={{
+                background: '#0D0F1A', border: '1px solid #252A3E', borderRadius: 6,
+                padding: '5px 8px', display: 'flex', flexWrap: 'wrap', gap: 5, alignItems: 'center',
+              }}>
+                <Sparkles size={10} color="#7F77DD" style={{ flexShrink: 0 }} />
+                {aiLoading && <span style={{ fontSize: 10.5, color: '#6B7280' }}>Analyzing…</span>}
+                {!aiLoading && aiHint && (
+                  <>
+                    {aiHint.icon && <span style={{ fontSize: 10.5, color: '#94A3B8' }}>Icon: {aiHint.icon}</span>}
+                    {aiHint.companyId && (() => {
+                      const co = companies.find(c => c.id === aiHint.companyId)
+                      return co ? <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 3, background: `${co.color}18`, color: co.color, fontWeight: 600 }}>{co.name}</span> : null
+                    })()}
+                    {aiHint.ownerId && (() => {
+                      const u = users.find(u => u.id === aiHint.ownerId)
+                      return u ? <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 3, background: '#1D9E7518', color: '#1D9E75', fontWeight: 600 }}>→ {u.name}</span> : null
+                    })()}
+                    {aiHint.quadrant && (
+                      <span style={{ fontSize: 10, color: '#E0944A', padding: '1px 5px', borderRadius: 3, background: '#E0944A15' }}>
+                        Suggest quadrant: {aiHint.quadrant}
+                      </span>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
               <div>
