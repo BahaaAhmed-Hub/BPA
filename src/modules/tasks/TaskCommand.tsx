@@ -1,6 +1,8 @@
+import { useState } from 'react'
 import { TopBar } from '@/components/layout/TopBar'
 import { EisenhowerBoard } from './EisenhowerBoard'
 import { UndefinedTasksPanel } from './UndefinedTasksPanel'
+import { TaskDetailModal } from './TaskDetailModal'
 import { useTaskStore } from '@/store/taskStore'
 import { CheckSquare, Zap } from 'lucide-react'
 
@@ -9,6 +11,9 @@ export function TaskCommand() {
   const active = tasks.filter(t => t.quadrant !== null && !t.completed)
   const urgent = tasks.filter(t => t.quadrant === 'do' && !t.completed)
   const inbox  = tasks.filter(t => t.quadrant === null && t.status !== 'done' && t.status !== 'cancelled' && !t.completed)
+
+  const [modalTaskId, setModalTaskId] = useState<string | null>(null)
+  const modalTask = modalTaskId ? tasks.find(t => t.id === modalTaskId) ?? null : null
 
   return (
     <div>
@@ -44,17 +49,22 @@ export function TaskCommand() {
           </>
         )}
         <div style={{ marginLeft: 'auto', fontSize: 11.5, color: '#6B7280', fontStyle: 'italic' }}>
-          Drag tasks between quadrants to reprioritize
+          Drag tasks between quadrants · click any card to view details
         </div>
       </div>
 
       {/* Board + right panel */}
       <div style={{ display: 'flex', gap: 14, padding: '18px 28px', alignItems: 'flex-start' }}>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <EisenhowerBoard />
+          <EisenhowerBoard onOpen={setModalTaskId} />
         </div>
-        <UndefinedTasksPanel />
+        <UndefinedTasksPanel onOpen={setModalTaskId} />
       </div>
+
+      {/* Detail modal */}
+      {modalTask && (
+        <TaskDetailModal task={modalTask} onClose={() => setModalTaskId(null)} />
+      )}
     </div>
   )
 }
