@@ -24,7 +24,9 @@ import { THEMES, getTheme, applyThemeVars } from '@/lib/themes'
 import { useHabitsStore, getHabitColors } from '@/store/habitsStore'
 import { loadAccounts, removeAccount, type ConnectedAccount } from '@/lib/multiAccount'
 import {
-  saveProfileToDB, savePrefsToDB, saveCompaniesToDB, loadCompaniesFromDB, saveHabitsToDB, saveHabitLogsToDB,
+  saveProfileToDB, savePrefsToDB, saveCompaniesToDB, loadCompaniesFromDB,
+  saveHabitsToDB, saveHabitLogsToDB, loadSettingsFromDB,
+  saveAccountsToDB, loadAccountsFromDB,
   type CompanyRow as DbSyncCompanyRow,
 } from '@/lib/dbSync'
 import { loadLogs } from '@/store/habitsStore'
@@ -128,9 +130,6 @@ function saveCompanies(c:  CompanyRow[]) {
   const usersMap: Record<string, CompanyUser[]> = {}
   c.forEach(co => { if (co.users?.length) usersMap[co.id] = co.users })
   lsSet('professor-company-users', usersMap)
-}
-function loadCompanyUsersBackup(): Record<string, CompanyUser[]> {
-  return ls('professor-company-users', {})
 }
 function loadSectionOrder(): SectionId[] {
   const saved = ls<SectionId[]>('professor-section-order', [])
@@ -655,25 +654,28 @@ function CompaniesSection({
   const [newDomain, setNewDomain] = useState('')
   const [newAccountId, setNewAccountId] = useState('')
 
+  function persistCompanies(next: CompanyRow[]) {
+    setCompanies(next)
+    saveCompanies(next)
+    saveCompaniesToDB(next as unknown as DbSyncCompanyRow[]).catch(console.warn)
+  }
+
   function addCompany() {
     if (!newName.trim()) return
-    const next = [...companies, {
+    persistCompanies([...companies, {
       id: crypto.randomUUID(), name: newName.trim(),
       color: newColor, calendarId: '', emailDomain: newDomain.trim(),
       accountId: newAccountId, isActive: true, users: [],
-    }]
-    setCompanies(next); saveCompanies(next)
+    }])
     setNewName(''); setNewDomain(''); setAdding(false)
   }
 
   function updateCompany(id: string, patch: Partial<CompanyRow>) {
-    const next = companies.map(c => c.id === id ? { ...c, ...patch } : c)
-    setCompanies(next); saveCompanies(next)
+    persistCompanies(companies.map(c => c.id === id ? { ...c, ...patch } : c))
   }
 
   function deleteCompany(id: string) {
-    const next = companies.filter(c => c.id !== id)
-    setCompanies(next); saveCompanies(next)
+    persistCompanies(companies.filter(c => c.id !== id))
   }
 
   return (
@@ -864,7 +866,9 @@ function AccountsSection({
 
   function removeAcc(id: string) {
     removeAccount(id)
-    setAccounts(loadAccounts())
+    const updated = loadAccounts()
+    setAccounts(updated)
+    saveAccountsToDB(updated).catch(console.warn)
   }
 
   // Primary account row (from Supabase session)
@@ -1121,23 +1125,40 @@ export function Settings() {
 
   useEffect(() => { void checkSupabase().then(setSupaOk) }, [])
 
-  // ── If localStorage is empty, try recovering companies from Supabase ─────────
+  // ── On mount: load all data from DB (authoritative source) ───────────────────
   useEffect(() => {
-    if (companies.length === 0) {
-      loadCompaniesFromDB().then(rows => {
-        if (rows.length > 0) {
-          const usersBackup = loadCompanyUsersBackup()
-          const hydrated: CompanyRow[] = rows.map(r => ({
-            ...r,
-            emailDomain: '',
-            accountId: '',
-            users: usersBackup[r.id] ?? [],   // restore users from backup
-          }))
-          setCompanies(hydrated)
-          saveCompanies(hydrated)
+    void (async () => {
+      try {
+        // Settings
+        const dbSettings = await loadSettingsFromDB(DEFAULTS)
+        setSettings(dbSettings)
+        saveSettings(dbSettings)
+
+        // Companies (full — with users, emailDomain, accountId)
+        const dbCompanies = await loadCompaniesFromDB()
+        if (dbCompanies.length > 0) {
+          setCompanies(dbCompanies)
+          saveCompanies(dbCompanies)
+        } else if (companies.length === 0) {
+          // DB empty too — nothing to recover
         }
-      }).catch(() => { /* offline / not signed in */ })
-    }
+
+        // Connected accounts metadata from DB
+        const dbAccounts = await loadAccountsFromDB()
+        if (dbAccounts.length > 0) {
+          // Merge: keep local providerTokens, fill in metadata from DB for any missing
+          setAccounts(prev => {
+            const merged = [...prev]
+            for (const dba of dbAccounts) {
+              if (!merged.find(a => a.email === dba.email)) {
+                merged.push({ ...dba, providerToken: '' })
+              }
+            }
+            return merged
+          })
+        }
+      } catch { /* offline / not signed in */ }
+    })()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

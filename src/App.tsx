@@ -12,9 +12,11 @@ import { MorningModule } from './modules/morning/MorningModule'
 import { SettingsModule } from './modules/settings/SettingsModule'
 import { useUIStore } from './store/uiStore'
 import { useAuthStore } from './store/authStore'
+import { useTaskStore } from './store/taskStore'
 import { supabase } from './lib/supabase'
 import { signInWithGoogle, getPendingAddAccount, clearPendingAddAccount } from './lib/google'
-import { addAccount } from './lib/multiAccount'
+import { addAccount, loadAccounts } from './lib/multiAccount'
+import { saveAccountsToDB } from './lib/dbSync'
 import { getTheme, applyThemeVars } from './lib/themes'
 import { GraduationCap, Calendar, Mail, CheckSquare, Brain, ArrowRight } from 'lucide-react'
 
@@ -436,6 +438,7 @@ function ActiveModule() {
 function App() {
   const { setUser, setLoading, user, loading } = useAuthStore()
   const themeId = useUIStore(s => s.themeId)
+  const loadTasksFromDB = useTaskStore(s => s.loadFromDB)
 
   // Apply CSS variables immediately before first paint, then on every theme change
   useLayoutEffect(() => {
@@ -446,6 +449,7 @@ function App() {
     void supabase.auth.getSession().then(({ data }) => {
       const u = data.session?.user
       setUser(u ? { id: u.id, email: u.email ?? '', name: u.user_metadata?.full_name as string | undefined, avatarUrl: u.user_metadata?.avatar_url as string | undefined } : null)
+      if (u) void loadTasksFromDB()   // hydrate tasks from DB on session restore
       setLoading(false)
     })
 
@@ -463,6 +467,8 @@ function App() {
           scopes:        ['calendar.readonly', 'gmail.readonly'],
           isPrimary:     false,
         })
+        // Persist accounts to DB (token stripped server-side)
+        void saveAccountsToDB(loadAccounts()).catch(console.warn)
         // Restore the previous session without changing current user
         void supabase.auth.setSession(pending).catch(() => {/* expired token – user must re-login */})
         return
@@ -477,10 +483,12 @@ function App() {
       } else if (!session) {
         localStorage.removeItem('google_provider_token')
       }
+      // On sign-in: pull all data from DB so nothing is lost across devices/sessions
+      if (u) void loadTasksFromDB()
     })
 
     return () => subscription.unsubscribe()
-  }, [setUser, setLoading])
+  }, [setUser, setLoading, loadTasksFromDB])
 
   if (loading) return <LoadingScreen />
   if (!user)   return <LoginScreen />

@@ -2,9 +2,43 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { Task, Quadrant, TaskStatus, TaskActivity } from '@/types'
 import { COMPANY_LABELS, QUADRANT_META, getAllUsers } from '@/types'
+import { saveTasksToDB, loadTasksFromDB } from '@/lib/dbSync'
+import type { TaskRow } from '@/lib/dbSync'
 
 function act(taskId: string, type: TaskActivity['type'], description: string): TaskActivity {
   return { id: crypto.randomUUID(), taskId, type, description, timestamp: new Date().toISOString() }
+}
+
+function toRow(t: Task): TaskRow {
+  return {
+    id: t.id, title: t.title, quadrant: t.quadrant ?? null,
+    company: t.company, companyId: t.companyId,
+    status: t.status, completed: t.completed,
+    dueDate: t.dueDate, duration: t.duration, plannedTime: t.plannedTime,
+    owner: t.owner, createdAt: t.createdAt,
+  }
+}
+
+function fromRow(r: TaskRow): Task {
+  return {
+    id: r.id, title: r.title,
+    quadrant: r.quadrant as Quadrant | null ?? null,
+    company: (r.company as Task['company']) || 'teradix',
+    companyId: r.companyId,
+    status: (r.status as TaskStatus) || 'open',
+    completed: r.completed,
+    dueDate: r.dueDate, duration: r.duration, plannedTime: r.plannedTime,
+    owner: r.owner, createdAt: r.createdAt,
+  }
+}
+
+// Debounced DB push — batches rapid mutations into one write
+let dbTimer: ReturnType<typeof setTimeout> | null = null
+function scheduleDbSync(tasks: Task[]) {
+  if (dbTimer) clearTimeout(dbTimer)
+  dbTimer = setTimeout(() => {
+    saveTasksToDB(tasks.map(toRow)).catch(console.warn)
+  }, 1500)
 }
 
 interface TaskState {
@@ -16,19 +50,39 @@ interface TaskState {
   deleteTask: (id: string) => void
   toggleComplete: (id: string) => void
   setStatus: (id: string, status: TaskStatus) => void
+  loadFromDB: () => Promise<void>
 }
 
 export const useTaskStore = create<TaskState>()(
   persist(
-    set => ({
+    (set, _get) => ({
       tasks: [],
       activities: [],
+
+      loadFromDB: async () => {
+        try {
+          const rows = await loadTasksFromDB()
+          if (rows.length > 0) {
+            set(s => ({
+              // Merge DB rows with local — DB wins on conflict
+              tasks: (() => {
+                const local = s.tasks
+                const dbMap = new Map(rows.map(r => [r.id, fromRow(r)]))
+                const localOnly = local.filter(t => !dbMap.has(t.id))
+                return [...dbMap.values(), ...localOnly]
+              })(),
+            }))
+          }
+        } catch { /* offline — keep local */ }
+      },
 
       addTask: task =>
         set(s => {
           const newTask: Task = { ...task, id: crypto.randomUUID(), createdAt: new Date().toISOString() }
+          const next = [...s.tasks, newTask]
+          scheduleDbSync(next)
           return {
-            tasks: [...s.tasks, newTask],
+            tasks: next,
             activities: [...s.activities, act(newTask.id, 'created', 'Task created')],
           }
         }),
@@ -57,8 +111,10 @@ export const useTaskStore = create<TaskState>()(
             const to = updates.quadrant ? QUADRANT_META[updates.quadrant].label : 'Inbox'
             desc.push(`Moved from ${from} to ${to}`)
           }
+          const next = s.tasks.map(t => t.id === id ? { ...t, ...updates } : t)
+          scheduleDbSync(next)
           return {
-            tasks: s.tasks.map(t => t.id === id ? { ...t, ...updates } : t),
+            tasks: next,
             activities: desc.length
               ? [...s.activities, act(id, 'field_updated', desc.join('; '))]
               : s.activities,
@@ -70,37 +126,49 @@ export const useTaskStore = create<TaskState>()(
           const old = s.tasks.find(t => t.id === id)
           const from = old?.quadrant ? QUADRANT_META[old.quadrant].label : 'Inbox'
           const to = quadrant ? QUADRANT_META[quadrant].label : 'Inbox'
+          const next = s.tasks.map(t => t.id === id ? { ...t, quadrant } : t)
+          scheduleDbSync(next)
           return {
-            tasks: s.tasks.map(t => t.id === id ? { ...t, quadrant } : t),
+            tasks: next,
             activities: [...s.activities, act(id, 'moved', `Moved from ${from} to ${to}`)],
           }
         }),
 
       deleteTask: id =>
-        set(s => ({
-          tasks: s.tasks.filter(t => t.id !== id),
-          activities: s.activities.filter(a => a.taskId !== id),
-        })),
+        set(s => {
+          const next = s.tasks.filter(t => t.id !== id)
+          scheduleDbSync(next)
+          return {
+            tasks: next,
+            activities: s.activities.filter(a => a.taskId !== id),
+          }
+        }),
 
       toggleComplete: id =>
         set(s => {
           const task = s.tasks.find(t => t.id === id)
           const nowDone = !task?.completed
+          const next: Task[] = s.tasks.map(t =>
+            t.id === id ? { ...t, completed: !t.completed, status: (t.completed ? 'open' : 'done') as TaskStatus } : t
+          )
+          scheduleDbSync(next)
           return {
-            tasks: s.tasks.map(t =>
-              t.id === id ? { ...t, completed: !t.completed, status: t.completed ? 'open' : 'done' } : t
-            ),
+            tasks: next,
             activities: [...s.activities, act(id, 'status_changed', nowDone ? 'Marked as done' : 'Reopened')],
           }
         }),
 
       setStatus: (id, status) =>
-        set(s => ({
-          tasks: s.tasks.map(t =>
+        set(s => {
+          const next = s.tasks.map(t =>
             t.id === id ? { ...t, status, completed: status === 'done' } : t
-          ),
-          activities: [...s.activities, act(id, 'status_changed', `Status → ${status}`)],
-        })),
+          )
+          scheduleDbSync(next)
+          return {
+            tasks: next,
+            activities: [...s.activities, act(id, 'status_changed', `Status → ${status}`)],
+          }
+        }),
     }),
     { name: 'professor-tasks' },
   ),

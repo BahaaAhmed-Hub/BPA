@@ -200,7 +200,10 @@ interface EditState {
   status: 'confirmed' | 'tentative' | 'cancelled' | 'done'
   videoLink?: string
   attendees: { email: string; displayName?: string; responseStatus?: string }[]
+  attachments: { title: string; fileUrl: string }[]
   newInvitee: string
+  newAttachmentUrl: string
+  newAttachmentTitle: string
   activityLog: { time: string; text: string }[]
 }
 
@@ -225,7 +228,8 @@ function eventToEdit(event: GCalEventWithCalendar): EditState {
     status: (event.status === 'cancelled' ? 'cancelled' : 'confirmed') as EditState['status'],
     videoLink: event.conferenceData?.entryPoints?.find(e => e.entryPointType === 'video')?.uri,
     attendees: event.attendees ?? [],
-    newInvitee: '',
+    attachments: [],
+    newInvitee: '', newAttachmentUrl: '', newAttachmentTitle: '',
     activityLog: [],
   }
 }
@@ -240,7 +244,8 @@ function blankEdit(calendarId: string): EditState {
     startDate: date, startTime: `${pad(startH)}:00`,
     endDate: date,   endTime: `${pad(startH + 1)}:00`,
     location: '', url: '', description: '', repeat: 'never',
-    status: 'confirmed', attendees: [], newInvitee: '', activityLog: [],
+    status: 'confirmed', attendees: [], attachments: [],
+    newInvitee: '', newAttachmentUrl: '', newAttachmentTitle: '', activityLog: [],
   }
 }
 
@@ -313,6 +318,9 @@ function EventEditModal({
       end: state.allDay ? { date: state.endDate }
         : { dateTime: `${state.endDate}T${state.endTime}:00`, timeZone: tz },
       attendees: state.attendees.length ? state.attendees.map(a => ({ email: a.email })) : undefined,
+      ...(state.attachments.length ? {
+        attachments: state.attachments.map(a => ({ title: a.title || a.fileUrl, fileUrl: a.fileUrl })),
+      } : {}),
     }
     try {
       if (state.id) {
@@ -345,6 +353,18 @@ function EventEditModal({
     if (!email || state.attendees.some(a => a.email === email)) { set('newInvitee', ''); return }
     setState(prev => ({ ...prev, attendees: [...prev.attendees, { email }], newInvitee: '' }))
     addLog(`Added invitee: ${email}`)
+  }
+
+  function addAttachment() {
+    const url = state.newAttachmentUrl.trim()
+    if (!url) return
+    const title = state.newAttachmentTitle.trim() || url.split('/').pop() || url
+    setState(prev => ({
+      ...prev,
+      attachments: [...prev.attachments, { title, fileUrl: url }],
+      newAttachmentUrl: '', newAttachmentTitle: '',
+    }))
+    addLog(`Attached: ${title}`)
   }
 
   return (
@@ -541,6 +561,42 @@ function EventEditModal({
               <span style={{ fontSize: 11, color: '#6B7280', display: 'block', marginBottom: 4 }}>URL</span>
               <input value={state.url} onChange={e => set('url', e.target.value)}
                 placeholder="https://…" style={inp} />
+            </div>
+          </div>
+
+          {/* ── Attachments ───────────────────────────────────────────────── */}
+          <div style={row}>
+            <span style={icon}>📎</span>
+            <div style={{ flex: 1 }}>
+              <span style={{ fontSize: 11, color: '#6B7280', display: 'block', marginBottom: 6 }}>
+                Attachments {state.attachments.length > 0 && `(${state.attachments.length})`}
+              </span>
+              {state.attachments.map((a, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
+                  <a href={a.fileUrl} target="_blank" rel="noopener noreferrer"
+                    style={{ fontSize: 12, color: calColor, textDecoration: 'none', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {a.title}
+                  </a>
+                  <button onClick={() => { setState(p => ({ ...p, attachments: p.attachments.filter((_, j) => j !== i) })); addLog(`Removed attachment: ${a.title}`) }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6B7280', padding: 0, flexShrink: 0 }}>
+                    <X size={11} />
+                  </button>
+                </div>
+              ))}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginTop: 4 }}>
+                <input value={state.newAttachmentUrl} onChange={e => set('newAttachmentUrl', e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') addAttachment() }}
+                  placeholder="Google Drive URL or link…" style={{ ...inp, fontSize: 12 }} />
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <input value={state.newAttachmentTitle} onChange={e => set('newAttachmentTitle', e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') addAttachment() }}
+                    placeholder="Label (optional)" style={{ ...inp, flex: 1, fontSize: 12 }} />
+                  <button onClick={addAttachment} style={{
+                    padding: '3px 10px', borderRadius: 6, border: '1px solid #252A3E',
+                    background: 'transparent', color: '#6B7280', fontSize: 11, cursor: 'pointer', flexShrink: 0,
+                  }}>Add</button>
+                </div>
+              </div>
             </div>
           </div>
 

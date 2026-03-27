@@ -1,11 +1,11 @@
 /**
- * dbSync.ts — Supabase write helpers for manual save.
- * Each function maps the local app shape → DB row shape and upserts.
+ * dbSync.ts — Supabase write/read helpers. All app data synced to DB.
+ * Run supabase/migrations/20240002_extend_schema.sql before deploying.
  */
 import { supabase } from './supabase'
 import type { DbCompany, DbHabit, DbHabitLog } from '@/types/database'
 
-// ─── Types mirroring Settings local state ────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface AppSettings {
   fullName: string; timezone: string; workWeek: string[]; framework: string
@@ -21,9 +21,19 @@ export interface AppSettings {
   theme: string; sidebarDefault: boolean; compact: boolean
 }
 
+export interface CompanyUser { id: string; name: string; email?: string }
+
 export interface CompanyRow {
   id: string; name: string; color: string
   calendarId: string; emailDomain: string; accountId: string; isActive: boolean
+  users: CompanyUser[]
+}
+
+export interface TaskRow {
+  id: string; title: string; quadrant: string | null; company: string
+  companyId?: string; status: string; completed: boolean
+  dueDate?: string; duration?: number; plannedTime?: string
+  owner?: string; createdAt: string
 }
 
 export interface HabitRow {
@@ -33,22 +43,61 @@ export interface HabitRow {
 
 export interface HabitLogs { [habitId: string]: string[] }
 
-// ─── Get current session ──────────────────────────────────────────────────────
+export interface ConnectedAccount {
+  id: string; email: string; name: string; avatarUrl?: string
+  providerToken: string; scopes: string[]; connectedAt: string; isPrimary: boolean
+}
+
+// ─── Session ──────────────────────────────────────────────────────────────────
 
 async function getSession() {
   const { data } = await supabase.auth.getSession()
-  if (!data.session) throw new Error('Not signed in — please sign in with Google first')
+  if (!data.session) throw new Error('Not signed in')
   return data.session
 }
 
-// ─── Profile + Schedule → users row ──────────────────────────────────────────
+// ─── helpers ──────────────────────────────────────────────────────────────────
+
+function quadrantToDb(q: string | null): string | null {
+  const map: Record<string, string> = {
+    do: 'urgent_important', schedule: 'important_not_urgent',
+    delegate: 'urgent_not_important', eliminate: 'neither',
+  }
+  return q ? (map[q] ?? null) : null
+}
+
+function quadrantFromDb(q: string | null): string | null {
+  const map: Record<string, string> = {
+    urgent_important: 'do', important_not_urgent: 'schedule',
+    urgent_not_important: 'delegate', neither: 'eliminate',
+  }
+  return q ? (map[q] ?? null) : null
+}
+
+function statusToDb(s: string): string {
+  const map: Record<string, string> = { open: 'todo', in_progress: 'in_progress', done: 'done', cancelled: 'deferred' }
+  return map[s] ?? 'todo'
+}
+
+function statusFromDb(s: string): string {
+  const map: Record<string, string> = { todo: 'open', in_progress: 'in_progress', done: 'done', deferred: 'cancelled' }
+  return map[s] ?? 'open'
+}
+
+// ─── Profile + Schedule ───────────────────────────────────────────────────────
 
 export async function saveProfileToDB(s: AppSettings): Promise<void> {
   const session = await getSession()
   const userId  = session.user.id
   const email   = session.user.email ?? ''
 
+  // Load existing schedule_rules to merge (preserve connected_accounts etc.)
+  const { data: existing } = await supabase
+    .from('users').select('schedule_rules').eq('id', userId).maybeSingle()
+  const prev = (existing?.schedule_rules as Record<string, unknown>) ?? {}
+
   const scheduleRules = {
+    ...prev,
     timezone:           s.timezone,
     work_week:          s.workWeek,
     focus_start:        s.focusStart,
@@ -62,29 +111,20 @@ export async function saveProfileToDB(s: AppSettings): Promise<void> {
     auto_decline_early: s.autoDeclineEarly,
   }
 
-  // Use update first (row created by auth trigger); fall back to upsert with email
-  const { error: updateErr } = await supabase.from('users')
-    .update({ full_name: s.fullName, active_framework: s.framework, schedule_rules: scheduleRules })
-    .eq('id', userId)
-
-  if (updateErr) {
-    // Row might not exist yet — upsert with all required fields
-    const { error: upsertErr } = await supabase.from('users').upsert({
-      id: userId, email,
-      full_name: s.fullName, active_framework: s.framework, schedule_rules: scheduleRules,
-    }, { onConflict: 'id' })
-    if (upsertErr) throw new Error(upsertErr.message)
-  }
+  const { error } = await supabase.from('users').upsert(
+    { id: userId, email, full_name: s.fullName, active_framework: s.framework, schedule_rules: scheduleRules },
+    { onConflict: 'id' },
+  )
+  if (error) throw new Error(error.message)
 }
 
-// ─── Professor AI + Notifications + Appearance → users.schedule_rules ────────
+// ─── Professor AI + Notifications + Appearance ────────────────────────────────
 
 export async function savePrefsToDB(s: AppSettings): Promise<void> {
   const session = await getSession()
   const userId  = session.user.id
   const email   = session.user.email ?? ''
 
-  // Read existing schedule_rules — ignore "no rows" error
   const { data: existing } = await supabase
     .from('users').select('schedule_rules').eq('id', userId).maybeSingle()
 
@@ -115,7 +155,53 @@ export async function savePrefsToDB(s: AppSettings): Promise<void> {
   if (error) throw new Error(error.message)
 }
 
-// ─── Companies ────────────────────────────────────────────────────────────────
+// Load all settings from DB → merge into AppSettings defaults
+export async function loadSettingsFromDB(defaults: AppSettings): Promise<AppSettings> {
+  const session = await getSession()
+  const { data } = await supabase
+    .from('users').select('full_name, active_framework, schedule_rules').eq('id', session.user.id).maybeSingle()
+  if (!data) return defaults
+  const r = (data.schedule_rules as Record<string, unknown>) ?? {}
+  return {
+    fullName:            (data.full_name as string) || defaults.fullName,
+    framework:           (data.active_framework as string) || defaults.framework,
+    timezone:            (r.timezone as string) || defaults.timezone,
+    workWeek:            (r.work_week as string[]) || defaults.workWeek,
+    focusStart:          (r.focus_start as string) || defaults.focusStart,
+    focusEnd:            (r.focus_end as string) || defaults.focusEnd,
+    earliestMeeting:     (r.earliest_meeting as string) || defaults.earliestMeeting,
+    bufferMins:          (r.buffer_mins as number) ?? defaults.bufferMins,
+    physicalBufferMins:  (r.physical_buffer as number) ?? defaults.physicalBufferMins,
+    endOfDay:            (r.end_of_day as string) || defaults.endOfDay,
+    familyStart:         (r.family_start as string) || defaults.familyStart,
+    protectFocus:        (r.protect_focus as boolean) ?? defaults.protectFocus,
+    autoDeclineEarly:    (r.auto_decline_early as boolean) ?? defaults.autoDeclineEarly,
+    commStyle:           (r.comm_style as AppSettings['commStyle']) || defaults.commStyle,
+    proactive:           (r.proactive as boolean) ?? defaults.proactive,
+    briefTime:           (r.brief_time as string) || defaults.briefTime,
+    reviewDay:           (r.review_day as string) || defaults.reviewDay,
+    customInstructions:  (r.custom_instructions as string) || defaults.customInstructions,
+    morningReminderOn:   (r.morning_reminder_on as boolean) ?? defaults.morningReminderOn,
+    morningReminderTime: (r.morning_reminder_time as string) || defaults.morningReminderTime,
+    windDownOn:          (r.wind_down_on as boolean) ?? defaults.windDownOn,
+    windDownTime:        (r.wind_down_time as string) || defaults.windDownTime,
+    followUpNudges:      (r.follow_up_nudges as boolean) ?? defaults.followUpNudges,
+    weeklyReviewOn:      (r.weekly_review_on as boolean) ?? defaults.weeklyReviewOn,
+    weeklyReviewDay:     (r.weekly_review_day as string) || defaults.weeklyReviewDay,
+    weeklyReviewTime:    (r.weekly_review_time as string) || defaults.weeklyReviewTime,
+    theme:               (r.theme as string) || defaults.theme,
+    sidebarDefault:      (r.sidebar_default as boolean) ?? defaults.sidebarDefault,
+    compact:             (r.compact as boolean) ?? defaults.compact,
+  }
+}
+
+// ─── Companies (full — with users, emailDomain, accountId) ───────────────────
+
+type DbCompanyExtended = DbCompany & {
+  email_domain?: string | null
+  account_id?: string | null
+  users_data?: CompanyUser[] | null
+}
 
 export async function saveCompaniesToDB(companies: CompanyRow[]): Promise<void> {
   const session = await getSession()
@@ -128,18 +214,20 @@ export async function saveCompaniesToDB(companies: CompanyRow[]): Promise<void> 
   const toDelete    = existingIds.filter((id: string) => !keepIds.includes(id))
 
   if (toDelete.length) {
-    const { error } = await supabase.from('companies').delete().in('id', toDelete)
-    if (error) throw new Error(error.message)
+    await supabase.from('companies').delete().in('id', toDelete)
   }
 
   if (companies.length) {
-    const rows: DbCompany[] = companies.map(c => ({
-      id:          c.id,
-      user_id:     userId,
-      name:        c.name,
-      color_tag:   c.color,
-      calendar_id: c.calendarId || null,
-      is_active:   c.isActive,
+    const rows = companies.map(c => ({
+      id:           c.id,
+      user_id:      userId,
+      name:         c.name,
+      color_tag:    c.color,
+      calendar_id:  c.calendarId || null,
+      is_active:    c.isActive,
+      email_domain: c.emailDomain || null,
+      account_id:   c.accountId || null,
+      users_data:   c.users ?? [],
     }))
     const { error } = await supabase.from('companies').upsert(rows, { onConflict: 'id' })
     if (error) throw new Error(error.message)
@@ -152,15 +240,111 @@ export async function loadCompaniesFromDB(): Promise<CompanyRow[]> {
   const { data, error } = await supabase
     .from('companies').select('*').eq('user_id', userId)
   if (error || !data) return []
-  return (data as DbCompany[]).map(r => ({
+  return (data as DbCompanyExtended[]).map(r => ({
     id:          r.id,
     name:        r.name,
     color:       r.color_tag ?? '#6B7280',
     calendarId:  r.calendar_id ?? '',
-    emailDomain: '',
-    accountId:   '',
+    emailDomain: r.email_domain ?? '',
+    accountId:   r.account_id ?? '',
     isActive:    r.is_active ?? true,
+    users:       (r.users_data as CompanyUser[]) ?? [],
   }))
+}
+
+// ─── Tasks ────────────────────────────────────────────────────────────────────
+
+export async function saveTasksToDB(tasks: TaskRow[]): Promise<void> {
+  const session = await getSession()
+  const userId  = session.user.id
+
+  // Delete rows not in local list
+  const { data: existing } = await supabase
+    .from('tasks').select('id').eq('user_id', userId)
+  const existingIds = (existing ?? []).map((r: { id: string }) => r.id)
+  const keepIds     = tasks.map(t => t.id)
+  const toDelete    = existingIds.filter((id: string) => !keepIds.includes(id))
+  if (toDelete.length) {
+    await supabase.from('tasks').delete().in('id', toDelete)
+  }
+
+  if (!tasks.length) return
+
+  const rows = tasks.map(t => ({
+    id:           t.id,
+    user_id:      userId,
+    company_id:   null as null,
+    title:        t.title,
+    description:  null as null,
+    quadrant:     quadrantToDb(t.quadrant),
+    effort_minutes: t.duration ?? null,
+    due_date:     t.dueDate ?? null,
+    status:       statusToDb(t.status),
+    delegated_to: t.owner ?? null,
+    done_looks_like: null as null,
+    created_at:   t.createdAt,
+    completed_at: t.completed ? new Date().toISOString() : null,
+    // extended columns (from migration 20240002)
+    planned_time: t.plannedTime ?? null,
+    owner_id:     t.owner ?? null,
+    company_tag:  t.company ?? null,
+    completed:    t.completed,
+  }))
+
+  const { error } = await supabase.from('tasks').upsert(rows, { onConflict: 'id' })
+  if (error) throw new Error(error.message)
+}
+
+export async function loadTasksFromDB(): Promise<TaskRow[]> {
+  const session = await getSession()
+  const userId  = session.user.id
+  const { data, error } = await supabase
+    .from('tasks').select('*').eq('user_id', userId).order('created_at', { ascending: true })
+  if (error || !data) return []
+
+  return (data as (Record<string, unknown>)[]).map(r => ({
+    id:          r.id as string,
+    title:       r.title as string,
+    quadrant:    quadrantFromDb(r.quadrant as string | null),
+    company:     (r.company_tag as string) || 'teradix',
+    status:      statusFromDb(r.status as string),
+    completed:   (r.completed as boolean) ?? (r.completed_at != null),
+    dueDate:     (r.due_date as string) ?? undefined,
+    duration:    (r.effort_minutes as number) ?? undefined,
+    plannedTime: (r.planned_time as string) ?? undefined,
+    owner:       (r.delegated_to as string) ?? (r.owner_id as string) ?? undefined,
+    createdAt:   r.created_at as string,
+  }))
+}
+
+// ─── Connected accounts → users.schedule_rules.connected_accounts ─────────────
+
+export async function saveAccountsToDB(accounts: ConnectedAccount[]): Promise<void> {
+  const session = await getSession()
+  const userId  = session.user.id
+
+  const { data: existing } = await supabase
+    .from('users').select('schedule_rules').eq('id', userId).maybeSingle()
+  const prev = (existing?.schedule_rules as Record<string, unknown>) ?? {}
+
+  // Strip tokens before saving to DB for security — store metadata only
+  const safe = accounts.map(a => ({
+    id: a.id, email: a.email, name: a.name, avatarUrl: a.avatarUrl,
+    scopes: a.scopes, connectedAt: a.connectedAt, isPrimary: a.isPrimary,
+  }))
+
+  const { error } = await supabase.from('users').update({
+    schedule_rules: { ...prev, connected_accounts: safe },
+  }).eq('id', userId)
+  if (error) throw new Error(error.message)
+}
+
+export async function loadAccountsFromDB(): Promise<Omit<ConnectedAccount, 'providerToken'>[]> {
+  const session = await getSession()
+  const { data } = await supabase
+    .from('users').select('schedule_rules').eq('id', session.user.id).maybeSingle()
+  const r = (data?.schedule_rules as Record<string, unknown>) ?? {}
+  return (r.connected_accounts as Omit<ConnectedAccount, 'providerToken'>[]) ?? []
 }
 
 // ─── Habits ───────────────────────────────────────────────────────────────────
@@ -172,12 +356,10 @@ export async function saveHabitsToDB(habits: HabitRow[]): Promise<void> {
   const { data: existing } = await supabase
     .from('habits').select('id').eq('user_id', userId)
   const existingIds = (existing ?? []).map((r: { id: string }) => r.id)
-  const keepIds     = habits.map(h => h.id)
-  const toDelete    = existingIds.filter((id: string) => !keepIds.includes(id))
+  const toDelete    = existingIds.filter((id: string) => !habits.map(h => h.id).includes(id))
 
   if (toDelete.length) {
-    const { error } = await supabase.from('habits').delete().in('id', toDelete)
-    if (error) throw new Error(error.message)
+    await supabase.from('habits').delete().in('id', toDelete)
   }
 
   if (habits.length) {
