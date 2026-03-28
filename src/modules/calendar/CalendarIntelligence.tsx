@@ -353,7 +353,7 @@ interface CalWithAccount extends GCalCalendar {
 }
 
 async function loadAllCalendars(primaryEmail: string): Promise<CalWithAccount[]> {
-  // Primary account — proper token refresh via withAuth + Supabase session
+  // Primary account — proper refresh via withAuth + Supabase session
   const { calendars: primaryCals } = await listCalendars()
   const primaryToken = localStorage.getItem('google_provider_token') ?? ''
   const primaryResult: CalWithAccount[] = primaryCals.map(c => ({
@@ -371,8 +371,7 @@ async function loadAllCalendars(primaryEmail: string): Promise<CalWithAccount[]>
     })
   )
 
-  // Merge all — keep duplicates per account so each account's view is shown
-  // but deduplicate by (accountEmail + calendarId) pair
+  // Deduplicate by (accountEmail + calendarId) — same cal in 2 accounts shows once per account
   const seen = new Set<string>()
   return [...primaryResult, ...extraResults.flat()].filter(c => {
     const key = `${c.accountEmail}:${c.id}`
