@@ -428,13 +428,17 @@ export function CalendarIntelligence() {
   const [prepLoading,    setPrepLoading]    = useState(false)
   const [prepError,      setPrepError]      = useState<string | null>(null)
 
-  // Load calendars from all accounts once
+  // Load calendars from all accounts — called on mount and on manual refresh
+  const reloadCalendars = useCallback(async () => {
+    const { calendars, needsReconnect } = await loadAllCalendars(user?.email ?? '')
+    setAllCalendars(calendars)
+    setReconnectNeeded(needsReconnect)
+    if (!calendars.length) setNoAuth(true)
+    return calendars
+  }, [user?.email])
+
   useEffect(() => {
-    void loadAllCalendars(user?.email ?? '').then(({ calendars, needsReconnect }) => {
-      setAllCalendars(calendars)
-      setReconnectNeeded(needsReconnect)
-      if (!calendars.length) setNoAuth(true)
-    })
+    void reloadCalendars()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.email])
 
@@ -597,9 +601,9 @@ export function CalendarIntelligence() {
               </button>
             )}
             <button
-              onClick={() => void loadEvents(weekStart, allCalendars, hiddenCals)}
+              onClick={() => void reloadCalendars().then(cals => loadEvents(weekStart, cals, hiddenCals))}
               disabled={loadingEvents}
-              title="Refresh"
+              title="Refresh accounts &amp; events"
               style={{
                 display: 'flex', alignItems: 'center', gap: 6,
                 padding: '7px 12px', borderRadius: 8,
