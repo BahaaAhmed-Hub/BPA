@@ -94,13 +94,18 @@ export async function getProviderTokenForAccount(account: ConnectedAccount): Pro
     try {
       const { data: { session: primary } } = await supabase.auth.getSession()
 
-      const { data: refreshed } = await supabase.auth.setSession({
+      // Switch to the additional account's Supabase session
+      await supabase.auth.setSession({
         access_token:  account.supabaseAccessToken,
         refresh_token: account.supabaseRefreshToken,
       })
 
+      // Force a full token refresh — this makes Supabase use its stored
+      // Google refresh token to get a brand-new Google provider_token
+      const { data: refreshed } = await supabase.auth.refreshSession()
       const freshToken = refreshed.session?.provider_token ?? ''
 
+      // Restore the primary session
       if (primary) {
         await supabase.auth.setSession({
           access_token:  primary.access_token,
