@@ -1,45 +1,295 @@
-import { useState, useCallback } from 'react'
-import { Plus, CheckCircle2, Circle, Flame, Trash2, X } from 'lucide-react'
+import { useState, useCallback, useRef, useEffect } from 'react'
+import { Plus, CheckCircle2, Circle, Flame, Trash2, X, ChevronLeft, ChevronRight } from 'lucide-react'
 import { TopBar } from '@/components/layout/TopBar'
 import {
   useHabitsStore, loadLogs, saveLogs,
-  calcStreak, lastNDays, getHabitColors,
+  calcStreak, getHabitColors,
 } from '@/store/habitsStore'
+import { useTaskStore } from '@/store/taskStore'
+import { QUADRANT_META } from '@/types'
 
-// ─── Date helpers ──────────────────────────────────────────────────────────────
+// ─── Date helpers ─────────────────────────────────────────────────────────────
 
-function todayKey(): string {
-  return new Date().toISOString().slice(0, 10)
+function toKey(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
+
+function todayKey(): string { return toKey(new Date()) }
 
 function fmtDayLabel(dateKey: string): string {
   return new Date(dateKey + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short' }).slice(0, 1)
 }
 
+function fmtHeaderDate(d: Date): string {
+  return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+}
+
+function offsetDays(base: string, delta: number): string {
+  const d = new Date(base + 'T12:00:00')
+  d.setDate(d.getDate() + delta)
+  return toKey(d)
+}
+
+function daysWindow(anchor: string, n: number): string[] {
+  // Show n days ending on anchor
+  const result: string[] = []
+  for (let i = n - 1; i >= 0; i--) result.push(offsetDays(anchor, -i))
+  return result
+}
+
+// ─── Frequency options ────────────────────────────────────────────────────────
+
+const FREQ_OPTS = ['daily', 'weekdays', 'weekly'] as const
+type Freq = typeof FREQ_OPTS[number]
+
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
-function WeekDots({ logs, color }: { logs: string[]; color: string }) {
-  const days = lastNDays(7)
-  const today = todayKey()
+function DayDots({
+  logs, color, days, viewDate,
+  onToggle,
+}: {
+  logs: string[]; color: string; days: string[]; viewDate: string
+  onToggle: (day: string) => void
+}) {
   return (
-    <div style={{ display: 'flex', gap: 4 }}>
+    <div style={{ display: 'flex', gap: 3 }}>
       {days.map(d => {
-        const done = logs.includes(d)
-        const isToday = d === today
+        const done    = logs.includes(d)
+        const isView  = d === viewDate
+        const isFuture = d > todayKey()
         return (
-          <div
+          <button
             key={d}
             title={d}
+            disabled={isFuture}
+            onClick={() => !isFuture && onToggle(d)}
             style={{
-              width: 22, height: 22, borderRadius: 5,
+              width: 22, height: 22, borderRadius: 5, padding: 0, border: 'none',
               background: done ? color : 'var(--color-surface2, #0D0F1A)',
-              border: `1px solid ${done ? color : isToday ? color + '60' : 'var(--color-border, #252A3E)'}`,
+              outline: isView ? `2px solid ${color}` : undefined,
+              outlineOffset: 1,
+              cursor: isFuture ? 'default' : 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
+              opacity: isFuture ? 0.3 : 1,
             }}
           >
-            <span style={{ fontSize: 8.5, color: done ? 'var(--color-bg, #0D0F1A)' : 'var(--color-text-muted, #4B5563)', fontWeight: 600 }}>
+            <span style={{ fontSize: 8, color: done ? 'var(--color-bg, #0D0F1A)' : 'var(--color-text-muted, #4B5563)', fontWeight: 600, userSelect: 'none' }}>
               {fmtDayLabel(d)}
             </span>
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+// Inline editable text
+function InlineEdit({
+  value, onSave, style,
+}: {
+  value: string
+  onSave: (v: string) => void
+  style?: React.CSSProperties
+}) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft]     = useState(value)
+  const ref = useRef<HTMLInputElement>(null)
+
+  useEffect(() => { if (editing) ref.current?.focus() }, [editing])
+
+  function commit() {
+    const v = draft.trim()
+    if (v && v !== value) onSave(v)
+    else setDraft(value)
+    setEditing(false)
+  }
+
+  if (editing) {
+    return (
+      <input
+        ref={ref}
+        value={draft}
+        onChange={e => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={e => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') { setDraft(value); setEditing(false) } }}
+        style={{
+          background: 'transparent', border: 'none',
+          borderBottom: '1px solid var(--color-accent, #1E40AF)',
+          outline: 'none', color: 'var(--color-text, #E8EAF6)',
+          fontFamily: 'inherit', padding: '0 2px',
+          ...style,
+        }}
+      />
+    )
+  }
+  return (
+    <span
+      onClick={() => { setDraft(value); setEditing(true) }}
+      title="Click to rename"
+      style={{ cursor: 'text', ...style }}
+    >
+      {value}
+    </span>
+  )
+}
+
+// Emoji picker popover
+function EmojiBtn({ value, onSelect }: { value: string; onSelect: (e: string) => void }) {
+  const EMOJIS = ['🎯','💪','📚','🏃','💧','🧘','🍎','💤','🌿','✍️','🧠','🔥','🎵','🏋️','🚿','🫁','🥗','☀️','🧹','🧩']
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false) }
+    document.addEventListener('mousedown', h)
+    return () => document.removeEventListener('mousedown', h)
+  }, [open])
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <button onClick={() => setOpen(o => !o)} title="Change icon"
+        style={{ fontSize: 16, background: 'transparent', border: 'none', cursor: 'pointer', padding: 2 }}>
+        {value}
+      </button>
+      {open && (
+        <div style={{
+          position: 'absolute', top: 28, left: 0, zIndex: 300,
+          background: '#1a1f35', border: '1px solid #2e3450', borderRadius: 10,
+          padding: '8px', display: 'flex', gap: 4, flexWrap: 'wrap', width: 210,
+          boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+        }}>
+          {EMOJIS.map(e => (
+            <button key={e} onClick={() => { onSelect(e); setOpen(false) }}
+              style={{
+                fontSize: 16, width: 32, height: 32, borderRadius: 7, cursor: 'pointer', border: 'none',
+                background: e === value ? 'var(--color-accent-fill)' : 'transparent',
+              }}>{e}</button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Color picker dot
+function ColorBtn({ value, colors, onSelect }: { value: string; colors: string[]; onSelect: (c: string) => void }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false) }
+    document.addEventListener('mousedown', h)
+    return () => document.removeEventListener('mousedown', h)
+  }, [open])
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <button onClick={() => setOpen(o => !o)} title="Change color"
+        style={{
+          width: 14, height: 14, borderRadius: '50%', background: value,
+          border: 'none', cursor: 'pointer', flexShrink: 0,
+          boxShadow: `0 0 0 2px #0D0F1A, 0 0 0 3px ${value}60`,
+        }} />
+      {open && (
+        <div style={{
+          position: 'absolute', top: 20, left: 0, zIndex: 300,
+          background: '#1a1f35', border: '1px solid #2e3450', borderRadius: 8,
+          padding: '7px 8px', display: 'flex', gap: 5,
+          boxShadow: '0 6px 20px rgba(0,0,0,0.5)',
+        }}>
+          {colors.map(c => (
+            <button key={c} onClick={() => { onSelect(c); setOpen(false) }}
+              style={{
+                width: 16, height: 16, borderRadius: '50%', background: c,
+                border: 'none', cursor: 'pointer',
+                boxShadow: value === c ? `0 0 0 2px #1a1f35, 0 0 0 3.5px ${c}` : 'none',
+                transform: value === c ? 'scale(1.2)' : 'scale(1)',
+                transition: 'transform 0.1s',
+              }} />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Planned activities section ───────────────────────────────────────────────
+
+function PlannedActivities() {
+  const tasks = useTaskStore(s => s.tasks)
+  const toggleComplete = useTaskStore(s => s.toggleComplete)
+
+  const boardTasks = tasks.filter(t => t.quadrant !== null && !t.completed)
+  if (boardTasks.length === 0) return null
+
+  const byQuadrant = boardTasks.reduce<Record<string, typeof boardTasks>>((acc, t) => {
+    const q = t.quadrant!
+    if (!acc[q]) acc[q] = []
+    acc[q].push(t)
+    return acc
+  }, {})
+
+  const total     = boardTasks.length
+  const completed = tasks.filter(t => t.quadrant !== null && t.completed).length
+  const pct       = total + completed > 0 ? Math.round((completed / (total + completed)) * 100) : 0
+
+  return (
+    <div style={{
+      background: 'var(--color-surface, #161929)',
+      border: '1px solid var(--color-border, #252A3E)',
+      borderRadius: 14, padding: '18px 20px', marginBottom: 20,
+    }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+        <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--color-text-dim, #94A3B8)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+          Planned Activities
+        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 11, color: 'var(--color-text-muted, #6B7280)' }}>{completed}/{total + completed} done</span>
+          <div style={{ width: 80, height: 5, borderRadius: 3, background: 'var(--color-surface2, #0D0F1A)', overflow: 'hidden' }}>
+            <div style={{ width: `${pct}%`, height: '100%', borderRadius: 3, background: pct === 100 ? '#1D9E75' : 'var(--color-accent, #1E40AF)', transition: 'width 0.3s' }} />
+          </div>
+          <span style={{ fontSize: 10, color: pct === 100 ? '#1D9E75' : 'var(--color-accent, #1E40AF)', fontWeight: 600 }}>{pct}%</span>
+        </div>
+      </div>
+
+      {/* Groups by quadrant */}
+      {(Object.entries(byQuadrant) as [string, typeof boardTasks][]).map(([q, qtasks]) => {
+        const meta = QUADRANT_META[q as keyof typeof QUADRANT_META]
+        return (
+          <div key={q} style={{ marginBottom: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+              <div style={{ width: 6, height: 6, borderRadius: '50%', background: meta.color }} />
+              <span style={{ fontSize: 10, fontWeight: 600, color: meta.color, textTransform: 'uppercase', letterSpacing: '0.7px' }}>
+                {meta.label}
+              </span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {qtasks.map(t => (
+                <div key={t.id} style={{
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  padding: '7px 10px', borderRadius: 8,
+                  background: 'var(--color-surface2, #0D0F1A)',
+                  border: '1px solid var(--color-border, #252A3E)',
+                }}>
+                  <button onClick={() => toggleComplete(t.id)}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, flexShrink: 0 }}>
+                    <Circle size={14} color="var(--color-text-muted, #4B5563)" />
+                  </button>
+                  <span style={{ flex: 1, fontSize: 12.5, color: 'var(--color-text, #E8EAF6)', lineHeight: 1.3 }}>
+                    {t.title}
+                  </span>
+                  {t.company && (
+                    <span style={{ fontSize: 10, color: 'var(--color-text-muted, #6B7280)', flexShrink: 0 }}>{t.company}</span>
+                  )}
+                  {t.plannedTime && (
+                    <span style={{ fontSize: 10, color: meta.color, flexShrink: 0, fontFamily: 'monospace' }}>{t.plannedTime}</span>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         )
       })}
@@ -52,31 +302,34 @@ function WeekDots({ logs, color }: { logs: string[]; color: string }) {
 export function HabitsModule() {
   const HABIT_COLORS = getHabitColors()
 
-  const { habits, addHabit: storeAdd, deleteHabit: storeDelete } = useHabitsStore()
+  const { habits, addHabit: storeAdd, updateHabit, deleteHabit: storeDelete } = useHabitsStore()
   const [logs, setLogs]           = useState(loadLogs)
+  const [viewDate, setViewDate]   = useState(todayKey)
   const [addingHabit, setAdding]  = useState(false)
   const [newName, setNewName]     = useState('')
   const [newEmoji, setNewEmoji]   = useState('🎯')
   const [newColor, setNewColor]   = useState(HABIT_COLORS[0])
+  const [newFreq, setNewFreq]     = useState<Freq>('daily')
 
-  const today = todayKey()
-  const days  = lastNDays(7)
+  const today  = todayKey()
+  const days   = daysWindow(viewDate, 7)
 
-  const toggleHabit = useCallback((habitId: string) => {
+  const toggleHabit = useCallback((habitId: string, day?: string) => {
+    const d = day ?? viewDate
     setLogs(prev => {
       const existing = prev[habitId] ?? []
-      const updated  = existing.includes(today)
-        ? existing.filter(d => d !== today)
-        : [...existing, today]
+      const updated  = existing.includes(d)
+        ? existing.filter(x => x !== d)
+        : [...existing, d]
       const next = { ...prev, [habitId]: updated }
       saveLogs(next)
       return next
     })
-  }, [today])
+  }, [viewDate])
 
   const addHabit = () => {
     if (!newName.trim()) return
-    storeAdd({ name: newName.trim(), emoji: newEmoji, color: newColor, frequency: 'daily', isActive: true })
+    storeAdd({ name: newName.trim(), emoji: newEmoji, color: newColor, frequency: newFreq, isActive: true })
     setNewName('')
     setAdding(false)
   }
@@ -91,11 +344,12 @@ export function HabitsModule() {
     })
   }
 
-  const activeHabits     = habits.filter(h => h.isActive)
-  const todayCompleted   = activeHabits.filter(h => (logs[h.id] ?? []).includes(today)).length
-  const completionRate   = activeHabits.length > 0 ? Math.round((todayCompleted / activeHabits.length) * 100) : 0
+  const activeHabits   = habits.filter(h => h.isActive)
+  const viewCompleted  = activeHabits.filter(h => (logs[h.id] ?? []).includes(viewDate)).length
+  const completionRate = activeHabits.length > 0 ? Math.round((viewCompleted / activeHabits.length) * 100) : 0
+  const isToday        = viewDate === today
 
-  const EMOJIS = ['🎯','💪','📚','🏃','💧','🧘','🍎','💤','🌿','✍️','🧠','🔥']
+  const EMOJIS = ['🎯','💪','📚','🏃','💧','🧘','🍎','💤','🌿','✍️','🧠','🔥','🎵','🏋️','🚿','🫁','🥗','☀️','🧹','🧩']
 
   return (
     <div>
@@ -107,8 +361,8 @@ export function HabitsModule() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 24 }}>
           {[
             {
-              label: "Today's Progress",
-              value: `${todayCompleted}/${activeHabits.length}`,
+              label: isToday ? "Today's Progress" : `${fmtHeaderDate(new Date(viewDate + 'T12:00:00'))}`,
+              value: `${viewCompleted}/${activeHabits.length}`,
               sub: `${completionRate}% complete`,
               color: completionRate === 100 ? '#1D9E75' : 'var(--color-accent, #1E40AF)',
             },
@@ -141,31 +395,56 @@ export function HabitsModule() {
           ))}
         </div>
 
+        {/* ─── Planned activities ─────────────────────────────────────────── */}
+        <PlannedActivities />
+
         {/* ─── Habits list ───────────────────────────────────────────────── */}
         <div style={{
           background: 'var(--color-surface, #161929)',
           border: '1px solid var(--color-border, #252A3E)',
-          borderRadius: 14, overflow: 'hidden', marginBottom: 14,
+          borderRadius: 14, overflow: 'visible', marginBottom: 14,
         }}>
-          {/* List header */}
+          {/* List header with day nav */}
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            padding: '16px 20px', borderBottom: '1px solid var(--color-border, #252A3E)',
+            padding: '12px 16px 12px 20px', borderBottom: '1px solid var(--color-border, #252A3E)',
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-              <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--color-text-dim, #94A3B8)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
-                Habit
+            <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--color-text-dim, #94A3B8)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+              Habit
+            </span>
+
+            {/* Day navigation */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <button onClick={() => setViewDate(d => offsetDays(d, -1))}
+                style={{ background: 'none', border: '1px solid var(--color-border, #252A3E)', borderRadius: 6, cursor: 'pointer', padding: '3px 6px', color: 'var(--color-text-dim, #94A3B8)', display: 'flex' }}>
+                <ChevronLeft size={13} />
+              </button>
+              <span style={{ fontSize: 11.5, fontWeight: 600, color: isToday ? 'var(--color-accent, #1E40AF)' : 'var(--color-text, #E8EAF6)', minWidth: 90, textAlign: 'center' }}>
+                {isToday ? 'Today' : fmtHeaderDate(new Date(viewDate + 'T12:00:00'))}
               </span>
-              <div style={{ display: 'flex', gap: 4 }}>
-                {days.map(d => (
-                  <div key={d} style={{ width: 22, textAlign: 'center' }}>
-                    <span style={{ fontSize: 9.5, color: d === today ? 'var(--color-accent, #1E40AF)' : 'var(--color-text-muted, #4B5563)', fontWeight: d === today ? 600 : 400 }}>
-                      {fmtDayLabel(d)}
-                    </span>
-                  </div>
-                ))}
-              </div>
+              <button onClick={() => setViewDate(d => offsetDays(d, 1))} disabled={viewDate >= today}
+                style={{ background: 'none', border: '1px solid var(--color-border, #252A3E)', borderRadius: 6, cursor: viewDate >= today ? 'default' : 'pointer', padding: '3px 6px', color: 'var(--color-text-dim, #94A3B8)', display: 'flex', opacity: viewDate >= today ? 0.3 : 1 }}>
+                <ChevronRight size={13} />
+              </button>
+              {!isToday && (
+                <button onClick={() => setViewDate(today)}
+                  style={{ fontSize: 10, padding: '2px 8px', borderRadius: 5, background: 'var(--color-accent-fill)', border: '1px solid var(--color-accent, #1E40AF)30', color: 'var(--color-accent, #1E40AF)', cursor: 'pointer' }}>
+                  Today
+                </button>
+              )}
             </div>
+
+            {/* Day column labels */}
+            <div style={{ display: 'flex', gap: 3 }}>
+              {days.map(d => (
+                <div key={d} style={{ width: 22, textAlign: 'center' }}>
+                  <span style={{ fontSize: 9, color: d === viewDate ? 'var(--color-accent, #1E40AF)' : 'var(--color-text-muted, #4B5563)', fontWeight: d === viewDate ? 700 : 400 }}>
+                    {fmtDayLabel(d)}
+                  </span>
+                </div>
+              ))}
+            </div>
+
             <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--color-text-dim, #94A3B8)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
               Streak
             </span>
@@ -179,42 +458,57 @@ export function HabitsModule() {
 
           {activeHabits.map((habit, i) => {
             const habitLogs = logs[habit.id] ?? []
-            const doneToday = habitLogs.includes(today)
+            const doneToday = habitLogs.includes(viewDate)
             const streak    = calcStreak(habitLogs)
             return (
               <div key={habit.id} style={{
-                display: 'flex', alignItems: 'center', gap: 14,
-                padding: '14px 20px',
+                display: 'flex', alignItems: 'center', gap: 12,
+                padding: '12px 16px 12px 20px',
                 borderBottom: i < activeHabits.length - 1 ? '1px solid var(--color-border, #252A3E)' : 'none',
                 background: doneToday ? `${habit.color}08` : 'transparent',
                 transition: 'background 0.15s',
               }}>
-                {/* Emoji */}
-                <span style={{ fontSize: 16, flexShrink: 0 }}>{habit.emoji}</span>
+                {/* Emoji — click to change */}
+                <EmojiBtn value={habit.emoji} onSelect={e => updateHabit(habit.id, { emoji: e })} />
 
-                {/* Check */}
-                <button onClick={() => toggleHabit(habit.id)}
+                {/* Check for viewDate */}
+                <button onClick={() => toggleHabit(habit.id, viewDate)}
                   style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, flexShrink: 0 }}>
                   {doneToday
                     ? <CheckCircle2 size={20} color={habit.color} />
                     : <Circle size={20} color="var(--color-text-muted, #4B5563)" />}
                 </button>
 
-                {/* Name */}
-                <span style={{
-                  flex: 1, fontSize: 13.5, fontWeight: 500,
-                  color: doneToday ? habit.color : 'var(--color-text, #E8EAF6)',
-                  textDecoration: doneToday ? 'line-through' : 'none',
-                  opacity: doneToday ? 0.8 : 1,
-                }}>
-                  {habit.name}
-                  <span style={{ marginLeft: 8, fontSize: 10, color: 'var(--color-text-muted, #4B5563)', fontWeight: 400 }}>
-                    {habit.frequency}
-                  </span>
-                </span>
+                {/* Color dot — click to change */}
+                <ColorBtn value={habit.color} colors={HABIT_COLORS} onSelect={c => updateHabit(habit.id, { color: c })} />
 
-                {/* Week dots */}
-                <WeekDots logs={habitLogs} color={habit.color} />
+                {/* Name — click to rename */}
+                <InlineEdit
+                  value={habit.name}
+                  onSave={v => updateHabit(habit.id, { name: v })}
+                  style={{ flex: 1, fontSize: 13.5, fontWeight: 500, color: doneToday ? habit.color : 'var(--color-text, #E8EAF6)', textDecoration: doneToday ? 'line-through' : 'none', opacity: doneToday ? 0.8 : 1 }}
+                />
+
+                {/* Frequency badge — click to cycle */}
+                <button
+                  onClick={() => {
+                    const idx  = FREQ_OPTS.indexOf(habit.frequency)
+                    const next = FREQ_OPTS[(idx + 1) % FREQ_OPTS.length]
+                    updateHabit(habit.id, { frequency: next })
+                  }}
+                  title="Click to change frequency"
+                  style={{
+                    fontSize: 9.5, padding: '2px 6px', borderRadius: 4, cursor: 'pointer',
+                    background: 'var(--color-surface2, #0D0F1A)',
+                    border: '1px solid var(--color-border, #252A3E)',
+                    color: 'var(--color-text-muted, #6B7280)',
+                  }}
+                >
+                  {habit.frequency}
+                </button>
+
+                {/* Day dots — each is clickable */}
+                <DayDots logs={habitLogs} color={habit.color} days={days} viewDate={viewDate} onToggle={d => toggleHabit(habit.id, d)} />
 
                 {/* Streak */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 5, width: 52, justifyContent: 'flex-end' }}>
@@ -246,7 +540,7 @@ export function HabitsModule() {
             </p>
 
             {/* Emoji picker */}
-            <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>
               {EMOJIS.map(e => (
                 <button key={e} onClick={() => setNewEmoji(e)}
                   style={{
@@ -263,15 +557,31 @@ export function HabitsModule() {
               onKeyDown={e => { if (e.key === 'Enter') addHabit(); if (e.key === 'Escape') setAdding(false) }}
               placeholder="e.g. Journal 10 minutes"
               style={{
-                width: '100%', padding: '10px 14px', borderRadius: 8, marginBottom: 14,
+                width: '100%', padding: '10px 14px', borderRadius: 8, marginBottom: 12,
                 background: 'var(--color-surface2, #0D0F1A)',
                 border: '1px solid var(--color-border, #252A3E)',
                 color: 'var(--color-text, #E8EAF6)', fontSize: 14, outline: 'none', boxSizing: 'border-box',
               }}
             />
 
+            {/* Frequency selector */}
+            <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
+              {FREQ_OPTS.map(f => (
+                <button key={f} onClick={() => setNewFreq(f)}
+                  style={{
+                    padding: '5px 14px', borderRadius: 7, fontSize: 12, cursor: 'pointer',
+                    background: newFreq === f ? 'var(--color-accent-fill)' : 'transparent',
+                    border: `1px solid ${newFreq === f ? 'var(--color-accent, #1E40AF)' : 'var(--color-border, #252A3E)'}`,
+                    color: newFreq === f ? 'var(--color-accent, #1E40AF)' : 'var(--color-text-muted, #6B7280)',
+                    fontWeight: newFreq === f ? 600 : 400, textTransform: 'capitalize',
+                  }}>
+                  {f}
+                </button>
+              ))}
+            </div>
+
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ display: 'flex', gap: 8 }}>
+              <div style={{ display: 'flex', gap: 7 }}>
                 {HABIT_COLORS.map(c => (
                   <button key={c} onClick={() => setNewColor(c)}
                     style={{
@@ -316,7 +626,7 @@ export function HabitsModule() {
         )}
 
         {/* ─── Completion banner ──────────────────────────────────────────── */}
-        {todayCompleted === activeHabits.length && activeHabits.length > 0 && (
+        {viewCompleted === activeHabits.length && activeHabits.length > 0 && (
           <div style={{
             marginTop: 20, padding: '16px 20px', borderRadius: 10,
             background: 'rgba(29,158,117,0.08)', border: '1px solid rgba(29,158,117,0.2)',
@@ -324,7 +634,9 @@ export function HabitsModule() {
           }}>
             <Flame size={16} color="#1D9E75" />
             <p style={{ margin: 0, fontSize: 13.5, color: '#1D9E75', fontWeight: 500 }}>
-              All habits complete for today. Exceptional discipline — keep the streak alive.
+              {isToday
+                ? 'All habits complete for today. Exceptional discipline — keep the streak alive.'
+                : `All habits complete for ${fmtHeaderDate(new Date(viewDate + 'T12:00:00'))}.`}
             </p>
           </div>
         )}

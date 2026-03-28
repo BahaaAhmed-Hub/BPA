@@ -147,6 +147,45 @@ export async function listCalendars(): Promise<{ calendars: GCalCalendar[]; noAu
   return { calendars, noAuth: false }
 }
 
+/** List calendars using a specific token (for multi-account). */
+export async function listCalendarsWithToken(
+  token: string,
+): Promise<GCalCalendar[]> {
+  try {
+    const res = await gcalRequest(token, '/users/me/calendarList')
+    if (!res.ok) return []
+    const data = (await res.json()) as { items?: GCalCalendar[] }
+    return (data.items ?? []).filter(c =>
+      c.accessRole === 'owner' || c.accessRole === 'writer' || c.accessRole === 'reader'
+    )
+  } catch { return [] }
+}
+
+/** Fetch events from a calendar using a specific token (for multi-account). */
+export async function fetchCalendarEventsWithToken(
+  token: string,
+  calendarId: string,
+  weekStart: Date,
+  weekEnd: Date,
+  calendarColor?: string,
+): Promise<GCalEvent[]> {
+  try {
+    const params = new URLSearchParams({
+      timeMin:      weekStart.toISOString(),
+      timeMax:      weekEnd.toISOString(),
+      singleEvents: 'true',
+      orderBy:      'startTime',
+      maxResults:   '250',
+    })
+    const res = await gcalRequest(token, `/calendars/${encodeURIComponent(calendarId)}/events?${params}`)
+    if (!res.ok) return []
+    const data = (await res.json()) as { items?: GCalEvent[] }
+    return (data.items ?? [])
+      .filter(e => e.status !== 'cancelled')
+      .map(e => ({ ...e, calendarId, calendarColor }))
+  } catch { return [] }
+}
+
 // ─── Fetch events from one calendar ──────────────────────────────────────────
 
 export async function fetchCalendarEvents(

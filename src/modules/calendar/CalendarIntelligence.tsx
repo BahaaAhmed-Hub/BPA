@@ -1,14 +1,27 @@
 import { useState, useEffect, useCallback } from 'react'
 import {
   ChevronLeft, ChevronRight, Calendar, Video, Users,
-  Sparkles, MapPin, RefreshCw, X,
+  Sparkles, MapPin, RefreshCw, X, Eye, EyeOff,
 } from 'lucide-react'
-import { fetchWeekEvents, detectMeetingType } from '@/lib/googleCalendar'
-import type { GCalEvent } from '@/lib/googleCalendar'
+import { detectMeetingType, listCalendarsWithToken, fetchCalendarEventsWithToken } from '@/lib/googleCalendar'
+import type { GCalEvent, GCalCalendar } from '@/lib/googleCalendar'
 import { generateMeetingPrep } from '@/lib/professor'
 import type { MeetingPrep } from '@/lib/professor'
 import { useAuthStore } from '@/store/authStore'
+import { getAllTokens } from '@/lib/multiAccount'
 import type { DbUser, DbCompany, DbCalendarEvent } from '@/types/database'
+
+// ─── Persistence helpers ─────────────────────────────────────────────────────
+
+function loadHiddenIntel(): Set<string> {
+  try {
+    const raw = localStorage.getItem('cal-intel-hidden')
+    return raw ? new Set(JSON.parse(raw) as string[]) : new Set()
+  } catch { return new Set() }
+}
+function saveHiddenIntel(hidden: Set<string>) {
+  localStorage.setItem('cal-intel-hidden', JSON.stringify([...hidden]))
+}
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -332,11 +345,53 @@ function PrepPanel({
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
+// ─── Multi-account calendar helpers ─────────────────────────────────────────
+
+interface CalWithAccount extends GCalCalendar {
+  accountEmail: string
+  accountToken: string
+}
+
+async function loadAllCalendars(): Promise<CalWithAccount[]> {
+  const tokens = getAllTokens()
+  if (!tokens.length) return []
+  const results = await Promise.all(
+    tokens.map(async ({ email, token }) => {
+      const cals = await listCalendarsWithToken(token)
+      return cals.map(c => ({ ...c, accountEmail: email, accountToken: token }))
+    })
+  )
+  // Deduplicate by calendar id
+  const seen = new Set<string>()
+  return results.flat().filter(c => {
+    if (seen.has(c.id)) return false
+    seen.add(c.id); return true
+  })
+}
+
+async function fetchAllEvents(
+  allCals: CalWithAccount[],
+  hidden: Set<string>,
+  start: Date,
+  end: Date,
+): Promise<GCalEvent[]> {
+  const active = allCals.filter(c => !hidden.has(c.id))
+  if (!active.length) return []
+  const results = await Promise.all(
+    active.map(c => fetchCalendarEventsWithToken(c.accountToken, c.id, start, end, c.backgroundColor))
+  )
+  return results.flat()
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
+
 export function CalendarIntelligence() {
   const user = useAuthStore(s => s.user)
 
   const [weekStart,      setWeekStart]      = useState<Date>(() => getWeekStart(new Date()))
   const [events,         setEvents]         = useState<GCalEvent[]>([])
+  const [allCalendars,   setAllCalendars]   = useState<CalWithAccount[]>([])
+  const [hiddenCals,     setHiddenCals]     = useState<Set<string>>(loadHiddenIntel)
   const [loadingEvents,  setLoadingEvents]  = useState(true)
   const [noAuth,         setNoAuth]         = useState(false)
   const [fetchError,     setFetchError]     = useState<string | null>(null)
@@ -346,17 +401,39 @@ export function CalendarIntelligence() {
   const [prepLoading,    setPrepLoading]    = useState(false)
   const [prepError,      setPrepError]      = useState<string | null>(null)
 
-  // Fetch events whenever week changes
-  const loadEvents = useCallback(async (start: Date) => {
+  // Load calendars from all accounts once
+  useEffect(() => {
+    void loadAllCalendars().then(cals => {
+      setAllCalendars(cals)
+      if (!cals.length) setNoAuth(true)
+    })
+  }, [])
+
+  function toggleCal(id: string) {
+    setHiddenCals(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id); else next.add(id)
+      saveHiddenIntel(next)
+      return next
+    })
+  }
+
+  // Fetch events whenever week or visible calendars change
+  const loadEvents = useCallback(async (start: Date, cals: CalWithAccount[], hidden: Set<string>) => {
     setLoadingEvents(true)
     setFetchError(null)
     setSelectedEvent(null)
     setPrep(null)
     try {
       const end = getWeekEnd(start)
-      const { events: fetched, noAuth: na } = await fetchWeekEvents(start, end)
+      if (!cals.length) {
+        setNoAuth(true)
+        setEvents([])
+        return
+      }
+      const fetched = await fetchAllEvents(cals, hidden, start, end)
       setEvents(fetched)
-      setNoAuth(na)
+      setNoAuth(false)
     } catch (err) {
       setFetchError(err instanceof Error ? err.message : 'Failed to load events.')
       setEvents([])
@@ -366,8 +443,9 @@ export function CalendarIntelligence() {
   }, [])
 
   useEffect(() => {
-    loadEvents(weekStart)
-  }, [weekStart, loadEvents])
+    if (allCalendars.length) void loadEvents(weekStart, allCalendars, hiddenCals)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [weekStart, allCalendars, hiddenCals, loadEvents])
 
   // Generate meeting prep for a selected event
   const generatePrep = useCallback(async (event: GCalEvent) => {
@@ -490,7 +568,7 @@ export function CalendarIntelligence() {
               </button>
             )}
             <button
-              onClick={() => loadEvents(weekStart)}
+              onClick={() => void loadEvents(weekStart, allCalendars, hiddenCals)}
               disabled={loadingEvents}
               title="Refresh"
               style={{
@@ -530,9 +608,33 @@ export function CalendarIntelligence() {
 
         {/* Gold divider */}
         <div style={{
-          height: 1, marginBottom: 28,
+          height: 1, marginBottom: 16,
           background: 'linear-gradient(90deg, #1E40AF40 0%, #252A3E 60%, transparent 100%)',
         }} />
+
+        {/* ─── Calendar filter chips ─────────────────────────────────────── */}
+        {allCalendars.length > 0 && (
+          <div style={{ display: 'flex', gap: 6, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
+            <span style={{ fontSize: 10, fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.7px', marginRight: 4 }}>Calendars</span>
+            {allCalendars.map(cal => {
+              const hidden = hiddenCals.has(cal.id)
+              return (
+                <button key={`${cal.accountEmail}:${cal.id}`} onClick={() => toggleCal(cal.id)} style={{
+                  display: 'flex', alignItems: 'center', gap: 5, padding: '3px 9px',
+                  borderRadius: 20, border: '1px solid #252A3E', cursor: 'pointer', fontSize: 11.5,
+                  background: hidden ? 'transparent' : `${cal.backgroundColor ?? '#1E40AF'}15`,
+                  color: hidden ? '#4B5563' : '#E8EAF6',
+                  opacity: hidden ? 0.5 : 1, transition: 'all 0.15s',
+                }}>
+                  <div style={{ width: 7, height: 7, borderRadius: '50%', background: hidden ? '#4B5563' : (cal.backgroundColor ?? '#1E40AF'), flexShrink: 0 }} />
+                  {cal.summary}
+                  {cal.accountEmail && <span style={{ fontSize: 9.5, color: hidden ? '#4B5563' : '#6B7280', marginLeft: 1 }}>({cal.accountEmail.split('@')[0]})</span>}
+                  {hidden ? <EyeOff size={9} style={{ marginLeft: 2, opacity: 0.6 }} /> : <Eye size={9} style={{ marginLeft: 2, opacity: 0.35 }} />}
+                </button>
+              )
+            })}
+          </div>
+        )}
 
         {/* ─── Day Tabs ──────────────────────────────────────────────────── */}
         <div className="cal-fade" style={{
@@ -599,7 +701,7 @@ export function CalendarIntelligence() {
               }}>
                 <p style={{ margin: '0 0 14px', fontSize: 13, color: '#FFFFFF' }}>{fetchError}</p>
                 <button
-                  onClick={() => loadEvents(weekStart)}
+                  onClick={() => void loadEvents(weekStart, allCalendars, hiddenCals)}
                   style={{
                     padding: '7px 18px', borderRadius: 8,
                     background: '#1E40AF18', border: '1px solid #1E40AF30',

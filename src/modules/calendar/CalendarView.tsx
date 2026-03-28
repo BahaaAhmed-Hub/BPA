@@ -966,11 +966,18 @@ function TimeGrid({
 // ─── Main CalendarView ────────────────────────────────────────────────────────
 
 export function CalendarView() {
-  const [viewMode, setViewMode]               = useState<ViewMode>('week')
+  const [viewMode, setViewMode]               = useState<ViewMode>(() =>
+    (localStorage.getItem('cal-view-mode') as ViewMode) ?? 'week'
+  )
   const [currentDate, setCurrentDate]         = useState(() => startOfDay(new Date()))
   const [events, setEvents]                   = useState<GCalEventWithCalendar[]>([])
   const [calendars, setCalendars]             = useState<GCalCalendar[]>([])
-  const [hiddenCalendars, setHiddenCalendars] = useState<Set<string>>(new Set())
+  const [hiddenCalendars, setHiddenCalendars] = useState<Set<string>>(() => {
+    try {
+      const raw = localStorage.getItem('cal-hidden-calendars')
+      return raw ? new Set(JSON.parse(raw) as string[]) : new Set()
+    } catch { return new Set() }
+  })
   const [loading, setLoading]                 = useState(false)
   const [noAuth, setNoAuth]                   = useState(false)
   const [selected, setSelected]               = useState<GCalEventWithCalendar | null>(null)
@@ -1019,6 +1026,7 @@ export function CalendarView() {
     setHiddenCalendars(prev => {
       const next = new Set(prev)
       if (next.has(id)) next.delete(id); else next.add(id)
+      localStorage.setItem('cal-hidden-calendars', JSON.stringify([...next]))
       return next
     })
   }
@@ -1085,7 +1093,7 @@ export function CalendarView() {
           border: '1px solid var(--color-border, #252A3E)',
         }}>
           {(['day', 'week'] as ViewMode[]).map(m => (
-            <button key={m} onClick={() => setViewMode(m)}
+            <button key={m} onClick={() => { setViewMode(m); localStorage.setItem('cal-view-mode', m) }}
               style={{
                 padding: '5px 14px', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600,
                 background: viewMode === m ? 'var(--color-accent, #1E40AF)' : 'transparent',
