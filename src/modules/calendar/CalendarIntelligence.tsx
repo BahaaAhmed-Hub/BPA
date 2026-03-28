@@ -9,6 +9,7 @@ import { generateMeetingPrep } from '@/lib/professor'
 import type { MeetingPrep } from '@/lib/professor'
 import { useAuthStore } from '@/store/authStore'
 import { loadAccounts, getProviderTokenForAccount } from '@/lib/multiAccount'
+import { connectAdditionalGoogleAccount } from '@/lib/google'
 import type { DbUser, DbCompany, DbCalendarEvent } from '@/types/database'
 
 // ─── Persistence helpers ─────────────────────────────────────────────────────
@@ -650,17 +651,26 @@ export function CalendarIntelligence() {
           <div style={{
             marginBottom: 16, padding: '10px 14px', borderRadius: 8,
             background: 'rgba(224,165,36,0.08)', border: '1px solid rgba(224,165,36,0.3)',
-            display: 'flex', alignItems: 'center', gap: 10,
+            display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
           }}>
             <span style={{ fontSize: 14 }}>⚠</span>
-            <div style={{ flex: 1 }}>
-              <span style={{ fontSize: 12, color: '#E0A524', fontWeight: 600 }}>
-                {reconnectNeeded.join(', ')}
-              </span>
-              <span style={{ fontSize: 12, color: '#94A3B8' }}>
-                {' '}— token expired. Go to <strong style={{ color: '#E8EAF6' }}>Settings → Integrations</strong> and click <strong style={{ color: '#E8EAF6' }}>Reconnect</strong> to restore calendar access.
-              </span>
-            </div>
+            <span style={{ fontSize: 12, color: '#94A3B8', flex: 1 }}>
+              Calendar access expired for:
+            </span>
+            {reconnectNeeded.map(email => (
+              <button
+                key={email}
+                onClick={() => void connectAdditionalGoogleAccount(email)}
+                style={{
+                  padding: '4px 12px', borderRadius: 8, fontSize: 11.5, fontWeight: 600,
+                  background: 'rgba(224,165,36,0.15)', border: '1px solid rgba(224,165,36,0.45)',
+                  color: '#E0A524', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5,
+                }}
+              >
+                <RefreshCw size={11} />
+                Reconnect {email.split('@')[0]}
+              </button>
+            ))}
           </div>
         )}
 
