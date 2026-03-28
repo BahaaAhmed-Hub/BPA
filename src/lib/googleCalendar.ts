@@ -62,15 +62,19 @@ function isTokenStale(): boolean {
 async function getProviderToken(): Promise<string | null> {
   const { data } = await supabase.auth.getSession()
 
-  // Fresh token from live session — use it
+  // 1. Live session has a fresh provider token — always use and cache it
   if (data.session?.provider_token) {
     saveToken(data.session.provider_token)
     return data.session.provider_token
   }
 
-  // Token in localStorage but stale — try refreshing first
+  // No active session at all — user is signed out
+  if (!data.session) return null
+
   const cached = localStorage.getItem(TOKEN_KEY)
-  if (!cached || isTokenStale()) {
+
+  // 2. Token is stale — try refreshing via Supabase (works if signed in with access_type=offline)
+  if (isTokenStale()) {
     try {
       const { data: refreshed } = await supabase.auth.refreshSession()
       if (refreshed.session?.provider_token) {
@@ -80,6 +84,7 @@ async function getProviderToken(): Promise<string | null> {
     } catch { /* ignore */ }
   }
 
+  // 3. Return whatever we have in cache (may be slightly stale but worth trying)
   return cached
 }
 
@@ -113,16 +118,24 @@ async function withAuth(
   let res = await fn(token)
 
   if (res.status === 401) {
-    localStorage.removeItem(TOKEN_KEY)
-    localStorage.removeItem(TOKEN_SAVED_AT)
+    // DON'T clear the cached token yet — only replace it if we get a fresh one
+    // so a failed refresh doesn't leave us permanently tokenless
     try {
       const { data: refreshed } = await supabase.auth.refreshSession()
       const fresh = refreshed.session?.provider_token
       if (fresh) {
         saveToken(fresh)
         res = await fn(fresh)
+      } else {
+        // Supabase refresh didn't yield a new Google token (user signed in
+        // before access_type=offline was added). Mark the timestamp as stale
+        // so the next getProviderToken() call retries, but keep the token
+        // in localStorage so the app doesn't lose it entirely.
+        localStorage.removeItem(TOKEN_SAVED_AT)
       }
-    } catch { /* ignore */ }
+    } catch {
+      localStorage.removeItem(TOKEN_SAVED_AT)
+    }
   }
 
   if (res.status === 401) return { res: null, noAuth: true }
