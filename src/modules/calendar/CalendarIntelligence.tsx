@@ -481,6 +481,15 @@ export function CalendarIntelligence() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [weekStart, allCalendars, hiddenCals, loadEvents])
 
+  // When a new Google account is connected, reload all calendars + events
+  useEffect(() => {
+    const handler = () => {
+      void reloadCalendars().then(cals => loadEvents(weekStart, cals, hiddenCals))
+    }
+    window.addEventListener('professor:accountsUpdated', handler)
+    return () => window.removeEventListener('professor:accountsUpdated', handler)
+  }, [reloadCalendars, loadEvents, weekStart, hiddenCals])
+
   // Generate meeting prep for a selected event
   const generatePrep = useCallback(async (event: GCalEvent) => {
     setPrepLoading(true)
