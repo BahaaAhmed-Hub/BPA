@@ -518,61 +518,83 @@ function App() {
   }, [themeId])
 
   useEffect(() => {
-    // Capture BEFORE onAuthStateChange subscription runs — it may clear the key immediately
+    // Capture BEFORE subscription runs — onAuthStateChange may clear it in INITIAL_SESSION
     const hasPendingOnLoad = !!getPendingAddAccount()
+    // Guard: prevents getSession() and onAuthStateChange from both processing add-account
+    let addAccountHandled = false
 
+    /**
+     * Try to complete the add-account flow with the given session.
+     * Returns true if handled (caller should return/skip normal flow).
+     */
+    function tryHandleAddAccount(session: { user: { id: string; email?: string; user_metadata?: Record<string,unknown> }; provider_token?: string | null; access_token: string; refresh_token?: string } | null): boolean {
+      if (addAccountHandled || !hasPendingOnLoad) return false
+      const pending = getPendingAddAccount()
+      if (!pending) { console.log('[AddAccount] pending key missing'); return false }
+      if (!session?.provider_token) { console.log('[AddAccount] no provider_token in session, event may be INITIAL_SESSION — will retry on SIGNED_IN'); return false }
+      if (!session.user) { console.log('[AddAccount] no user in session'); return false }
+      addAccountHandled = true
+      clearPendingAddAccount()
+      console.log('[AddAccount] ✓ Adding account:', session.user.email)
+      addAccount({
+        email:                session.user.email ?? '',
+        name:                 (session.user.user_metadata?.full_name as string) ?? '',
+        avatarUrl:            session.user.user_metadata?.avatar_url as string | undefined,
+        providerToken:        session.provider_token,
+        supabaseAccessToken:  session.access_token,
+        supabaseRefreshToken: session.refresh_token ?? '',
+        scopes:               ['calendar', 'calendar.events', 'gmail.readonly'],
+        isPrimary:            false,
+      })
+      // Notify Settings (and any other listeners) to re-read accounts from localStorage
+      window.dispatchEvent(new CustomEvent('professor:accountsUpdated'))
+      // Restore original session THEN persist accounts under the correct user
+      void supabase.auth.setSession(pending)
+        .then(() => saveAccountsToDB(loadAccounts()))
+        .catch(console.warn)
+      return true
+    }
+
+    // ── Initial session check ────────────────────────────────────────────────
     void supabase.auth.getSession().then(({ data }) => {
-      const u = data.session?.user
-      if (u && !hasPendingOnLoad) {
-        // Normal page load: do user-switch detection
+      const s = data.session
+      console.log('[getSession] hasPendingOnLoad:', hasPendingOnLoad, 'user:', s?.user?.email, 'hasProviderToken:', !!s?.provider_token)
+      if (hasPendingOnLoad) {
+        // Try with getSession result (works when provider_token is stored in session)
+        tryHandleAddAccount(s as Parameters<typeof tryHandleAddAccount>[0])
+        // Regardless: skip normal init — onAuthStateChange handles setUser + setLoading
+        return
+      }
+      const u = s?.user
+      if (u) {
         const lastUserId = localStorage.getItem(LAST_USER_KEY)
-        if (lastUserId && lastUserId !== u.id) {
-          clearUserData(clearTasks, clearHabits)
-        }
+        if (lastUserId && lastUserId !== u.id) clearUserData(clearTasks, clearHabits)
         localStorage.setItem(LAST_USER_KEY, u.id)
       }
-      // If hasPendingOnLoad: onAuthStateChange handles add-account flow + restores session.
-      // Still call setUser/setLoading so the UI doesn't hang, but skip loadAllFromDB
-      // (onAuthStateChange's second call for the restored session will trigger it).
       setUser(u ? { id: u.id, email: u.email ?? '', name: u.user_metadata?.full_name as string | undefined, avatarUrl: u.user_metadata?.avatar_url as string | undefined } : null)
-      if (u && !hasPendingOnLoad) { void loadAllFromDB(loadTasksFromDB, loadHabitsFromDB) }
+      if (u) void loadAllFromDB(loadTasksFromDB, loadHabitsFromDB)
       setLoading(false)
     })
 
+    // ── Auth state changes ───────────────────────────────────────────────────
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      // ── Additional account flow: restore original session ─────────────────
-      const pending = getPendingAddAccount()
-      if (pending && session?.provider_token && session.user) {
-        clearPendingAddAccount()
-        // Store new Google account's token + info
-        addAccount({
-          email:                session.user.email ?? '',
-          name:                 session.user.user_metadata?.full_name as string ?? '',
-          avatarUrl:            session.user.user_metadata?.avatar_url as string | undefined,
-          providerToken:        session.provider_token,
-          supabaseAccessToken:  session.access_token,
-          supabaseRefreshToken: session.refresh_token ?? '',
-          scopes:               ['calendar', 'calendar.events', 'gmail.readonly'],
-          isPrimary:            false,
-        })
-        // Restore the original session first, then save accounts to DB under the correct user
-        void supabase.auth.setSession(pending)
-          .then(() => saveAccountsToDB(loadAccounts()))
-          .catch(console.warn)
-        return
+      console.log('[onAuthStateChange]', _event, 'user:', session?.user?.email, 'hasProviderToken:', !!session?.provider_token, 'hasPendingOnLoad:', hasPendingOnLoad)
+
+      // ── Add-account flow ───────────────────────────────────────────────────
+      if (hasPendingOnLoad) {
+        if (tryHandleAddAccount(session as Parameters<typeof tryHandleAddAccount>[0])) return
+        // tryHandleAddAccount returned false (no provider_token yet, or already handled):
+        // fall through to normal path so setUser + setLoading are called
       }
 
-      // ── Normal sign-in / sign-out ─────────────────────────────────────────
+      // ── Normal sign-in / sign-out ──────────────────────────────────────────
       const u = session?.user
       setUser(u ? { id: u.id, email: u.email ?? '', name: u.user_metadata?.full_name as string | undefined, avatarUrl: u.user_metadata?.avatar_url as string | undefined } : null)
       setLoading(false)
 
       if (u) {
-        // Detect account switch — if a different user signed in, wipe previous user's data
         const lastUserId = localStorage.getItem(LAST_USER_KEY)
-        if (lastUserId && lastUserId !== u.id) {
-          clearUserData(clearTasks, clearHabits)
-        }
+        if (lastUserId && lastUserId !== u.id) clearUserData(clearTasks, clearHabits)
         localStorage.setItem(LAST_USER_KEY, u.id)
       }
 
@@ -584,14 +606,11 @@ function App() {
         localStorage.removeItem('google_provider_token_saved_at')
         localStorage.removeItem(LAST_USER_KEY)
       }
-      // On sign-in: reload all data from DB (database is source of truth)
-      if (u) {
-        void loadAllFromDB(loadTasksFromDB, loadHabitsFromDB)
-      }
+      if (u) void loadAllFromDB(loadTasksFromDB, loadHabitsFromDB)
     })
 
     return () => subscription.unsubscribe()
-  }, [setUser, setLoading, loadTasksFromDB])
+  }, [setUser, setLoading, loadTasksFromDB, clearTasks, clearHabits])
 
   if (loading) return <LoadingScreen />
   if (!user)   return <LoginScreen />
