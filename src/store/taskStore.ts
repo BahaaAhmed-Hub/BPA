@@ -50,6 +50,7 @@ interface TaskState {
   moveTask: (id: string, quadrant: Quadrant | null) => void
   reorderInbox: (activeId: string, overId: string) => void
   reorderQuadrant: (activeId: string, overId: string) => void
+  clearAll: () => void
   deleteTask: (id: string) => void
   toggleComplete: (id: string) => void
   setStatus: (id: string, status: TaskStatus) => void
@@ -204,6 +205,8 @@ export const useTaskStore = create<TaskState>()(
             activities: [...s.activities, act(id, 'status_changed', `Status → ${status}`)],
           }
         }),
+
+      clearAll: () => set({ tasks: [], activities: [] }),
     }),
     { name: 'professor-tasks' },
   ),

@@ -403,3 +403,33 @@ export async function saveHabitLogsToDB(logs: HabitLogs): Promise<void> {
     .upsert(rows as DbHabitLog[], { onConflict: 'habit_id,date', ignoreDuplicates: true })
   if (error) throw new Error(error.message)
 }
+
+export async function loadHabitsFromDB(): Promise<HabitRow[]> {
+  const session = await getSession()
+  const userId  = session.user.id
+  const { data, error } = await supabase
+    .from('habits').select('*').eq('user_id', userId)
+  if (error || !data) return []
+  return (data as (DbHabit & { emoji?: string; color?: string; created_at?: string })[]).map(r => ({
+    id: r.id, name: r.name,
+    emoji:     r.emoji     ?? '✅',
+    color:     r.color     ?? '#1E40AF',
+    frequency: (r.frequency as HabitRow['frequency']) ?? 'daily',
+    isActive:  r.is_active ?? true,
+    createdAt: r.created_at ?? new Date().toISOString(),
+  }))
+}
+
+export async function loadHabitLogsFromDB(): Promise<HabitLogs> {
+  const session = await getSession()
+  const userId  = session.user.id
+  const { data, error } = await supabase
+    .from('habit_logs').select('habit_id, date').eq('user_id', userId)
+  if (error || !data) return {}
+  const logs: HabitLogs = {}
+  for (const row of data as { habit_id: string; date: string }[]) {
+    if (!logs[row.habit_id]) logs[row.habit_id] = []
+    logs[row.habit_id].push(row.date)
+  }
+  return logs
+}

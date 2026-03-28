@@ -4,6 +4,7 @@
  * localStorage key: 'professor-habits'
  */
 import { create } from 'zustand'
+import { loadHabitsFromDB, loadHabitLogsFromDB } from '@/lib/dbSync'
 
 export interface Habit {
   id: string
@@ -69,10 +70,12 @@ export function getHabitColors(): string[] {
 
 interface HabitsState {
   habits: Habit[]
-  addHabit:    (h: Omit<Habit, 'id' | 'createdAt'>) => void
-  updateHabit: (id: string, patch: Partial<Habit>) => void
-  deleteHabit: (id: string) => void
-  reorderHabits: (from: number, to: number) => void
+  addHabit:     (h: Omit<Habit, 'id' | 'createdAt'>) => void
+  updateHabit:  (id: string, patch: Partial<Habit>) => void
+  deleteHabit:  (id: string) => void
+  reorderHabits:(from: number, to: number) => void
+  clearAll:     () => void
+  loadFromDB:   () => Promise<void>
 }
 
 function arrayMove<T>(arr: T[], from: number, to: number): T[] {
@@ -111,6 +114,23 @@ export const useHabitsStore = create<HabitsState>((set, get) => ({
     const next = arrayMove(get().habits, from, to)
     saveHabits(next)
     set({ habits: next })
+  },
+
+  clearAll() {
+    saveHabits([])
+    saveLogs({})
+    set({ habits: [] })
+  },
+
+  async loadFromDB() {
+    try {
+      const [habits, logs] = await Promise.all([loadHabitsFromDB(), loadHabitLogsFromDB()])
+      if (habits.length > 0) {
+        saveHabits(habits)
+        saveLogs(logs)
+        set({ habits })
+      }
+    } catch { /* offline — keep local */ }
   },
 }))
 

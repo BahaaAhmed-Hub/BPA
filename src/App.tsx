@@ -13,9 +13,10 @@ import { SettingsModule } from './modules/settings/SettingsModule'
 import { useUIStore } from './store/uiStore'
 import { useAuthStore } from './store/authStore'
 import { useTaskStore } from './store/taskStore'
+import { useHabitsStore } from './store/habitsStore'
 import { supabase } from './lib/supabase'
 import { signInWithGoogle, getPendingAddAccount, clearPendingAddAccount } from './lib/google'
-import { addAccount, loadAccounts } from './lib/multiAccount'
+import { addAccount, loadAccounts, saveAccounts } from './lib/multiAccount'
 import { saveAccountsToDB } from './lib/dbSync'
 import { getTheme, applyThemeVars } from './lib/themes'
 import { GraduationCap, Calendar, Mail, CheckSquare, Brain, ArrowRight } from 'lucide-react'
@@ -435,10 +436,36 @@ function ActiveModule() {
 
 // ─── App ──────────────────────────────────────────────────────────────────────
 
+const LAST_USER_KEY = 'professor-last-user-id'
+
+/** Wipe every user-specific key from localStorage and reset in-memory stores. */
+function clearUserData(clearTasks: () => void, clearHabits: () => void) {
+  const userKeys = [
+    'professor-tasks', 'professor-habits', 'professor-habit-logs',
+    'professor-companies', 'professor-company-users', 'professor-connected-accounts',
+    'professor-review-hours', 'professor-section-order',
+    'cal-view-mode', 'cal-hidden-calendars', 'cal-intel-hidden', 'cal-list-cache',
+    'google_provider_token', 'google_provider_token_saved_at',
+    'professor-pending-add-account',
+  ]
+  userKeys.forEach(k => localStorage.removeItem(k))
+  // Clear dynamic day-plan keys
+  Object.keys(localStorage)
+    .filter(k => k.startsWith('professor-dayplan-'))
+    .forEach(k => localStorage.removeItem(k))
+  // Reset in-memory Zustand stores
+  clearTasks()
+  clearHabits()
+  saveAccounts([])
+}
+
 function App() {
   const { setUser, setLoading, user, loading } = useAuthStore()
   const themeId = useUIStore(s => s.themeId)
-  const loadTasksFromDB = useTaskStore(s => s.loadFromDB)
+  const loadTasksFromDB  = useTaskStore(s => s.loadFromDB)
+  const clearTasks       = useTaskStore(s => s.clearAll)
+  const loadHabitsFromDB = useHabitsStore(s => s.loadFromDB)
+  const clearHabits      = useHabitsStore(s => s.clearAll)
 
   // Apply CSS variables immediately before first paint, then on every theme change
   useLayoutEffect(() => {
@@ -448,8 +475,15 @@ function App() {
   useEffect(() => {
     void supabase.auth.getSession().then(({ data }) => {
       const u = data.session?.user
+      if (u) {
+        const lastUserId = localStorage.getItem(LAST_USER_KEY)
+        if (lastUserId && lastUserId !== u.id) {
+          clearUserData(clearTasks, clearHabits)
+        }
+        localStorage.setItem(LAST_USER_KEY, u.id)
+      }
       setUser(u ? { id: u.id, email: u.email ?? '', name: u.user_metadata?.full_name as string | undefined, avatarUrl: u.user_metadata?.avatar_url as string | undefined } : null)
-      if (u) void loadTasksFromDB()   // hydrate tasks from DB on session restore
+      if (u) { void loadTasksFromDB(); void loadHabitsFromDB() }
       setLoading(false)
     })
 
@@ -480,15 +514,29 @@ function App() {
       const u = session?.user
       setUser(u ? { id: u.id, email: u.email ?? '', name: u.user_metadata?.full_name as string | undefined, avatarUrl: u.user_metadata?.avatar_url as string | undefined } : null)
       setLoading(false)
+
+      if (u) {
+        // Detect account switch — if a different user signed in, wipe previous user's data
+        const lastUserId = localStorage.getItem(LAST_USER_KEY)
+        if (lastUserId && lastUserId !== u.id) {
+          clearUserData(clearTasks, clearHabits)
+        }
+        localStorage.setItem(LAST_USER_KEY, u.id)
+      }
+
       if (session?.provider_token) {
         localStorage.setItem('google_provider_token', session.provider_token)
         localStorage.setItem('google_provider_token_saved_at', Date.now().toString())
       } else if (!session) {
         localStorage.removeItem('google_provider_token')
         localStorage.removeItem('google_provider_token_saved_at')
+        localStorage.removeItem(LAST_USER_KEY)
       }
-      // On sign-in: pull all data from DB so nothing is lost across devices/sessions
-      if (u) void loadTasksFromDB()
+      // On sign-in: reload all data from DB (database is source of truth)
+      if (u) {
+        void loadTasksFromDB()
+        void loadHabitsFromDB()
+      }
     })
 
     return () => subscription.unsubscribe()
