@@ -49,6 +49,7 @@ interface TaskState {
   updateTask: (id: string, updates: Partial<Task>) => void
   moveTask: (id: string, quadrant: Quadrant | null) => void
   reorderInbox: (activeId: string, overId: string) => void
+  reorderQuadrant: (activeId: string, overId: string) => void
   deleteTask: (id: string) => void
   toggleComplete: (id: string) => void
   setStatus: (id: string, status: TaskStatus) => void
@@ -146,6 +147,24 @@ export const useTaskStore = create<TaskState>()(
           const inboxSet = new Set(inboxIds)
           const others   = s.tasks.filter(t => !inboxSet.has(t.id))
           const next     = [...others, ...reorderedInbox.map(id => s.tasks.find(t => t.id === id)!)]
+          scheduleDbSync(next)
+          return { tasks: next }
+        }),
+
+      reorderQuadrant: (activeId, overId) =>
+        set(s => {
+          const dragged = s.tasks.find(t => t.id === activeId)
+          const target  = s.tasks.find(t => t.id === overId)
+          if (!dragged || !target || dragged.quadrant !== target.quadrant || dragged.quadrant === null) return s
+          const q = dragged.quadrant
+          const qIds = s.tasks.filter(t => t.quadrant === q).map(t => t.id)
+          const fromIdx = qIds.indexOf(activeId)
+          const toIdx   = qIds.indexOf(overId)
+          if (fromIdx === -1 || toIdx === -1 || fromIdx === toIdx) return s
+          const reordered = arrayMove(qIds, fromIdx, toIdx)
+          const qSet = new Set(qIds)
+          const others = s.tasks.filter(t => !qSet.has(t.id))
+          const next = [...others, ...reordered.map(id => s.tasks.find(t => t.id === id)!)]
           scheduleDbSync(next)
           return { tasks: next }
         }),
