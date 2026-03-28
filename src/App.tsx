@@ -464,12 +464,14 @@ async function loadAllFromDB(
         localStorage.setItem('professor-settings', JSON.stringify({ ...stored, ...partial }))
       }
     }),
-    // Connected accounts — restore metadata from DB, preserve local tokens
+    // Connected accounts — DB provides metadata, local provides tokens.
+    // Union: keep local-only accounts (e.g. just added, not yet saved to DB).
     loadAccountsFromDB().then(dbAccounts => {
-      if (dbAccounts.length === 0) return
       const local = loadAccounts()
+      if (dbAccounts.length === 0 && local.length === 0) return
       const tokenMap = new Map(local.map(a => [a.email, a as typeof local[number]]))
-      const merged = dbAccounts.map(a => {
+      // DB accounts enriched with local tokens
+      const fromDb = dbAccounts.map(a => {
         const localAcc = tokenMap.get(a.email)
         return {
           ...a,
@@ -479,7 +481,10 @@ async function loadAllFromDB(
           supabaseRefreshToken: localAcc?.supabaseRefreshToken,
         }
       })
-      saveAccounts(merged)
+      // Keep local accounts not yet in DB (e.g. just added via OAuth, saveAccountsToDB pending)
+      const dbEmails = new Set(dbAccounts.map(a => a.email))
+      const localOnly = local.filter(a => !dbEmails.has(a.email))
+      saveAccounts([...fromDb, ...localOnly])
     }),
   ])
 }
