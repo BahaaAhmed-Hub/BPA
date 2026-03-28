@@ -934,6 +934,11 @@ function AccountsSection({
             <RefreshCw size={12} style={{ animation: loadingCals === 'primary' ? 'spin 1s linear infinite' : 'none' }} />
           </button>
         )}
+        <button onClick={() => void googleSignOut()}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#E05252', padding: 4, display: 'flex', alignItems: 'center' }}
+          title="Sign out">
+          <LogOut size={13} />
+        </button>
       </div>
 
       {/* Show primary calendars */}
@@ -946,8 +951,8 @@ function AccountsSection({
         </div>
       )}
 
-      {/* Additional connected accounts */}
-      {accounts.filter(a => !a.isPrimary).map(acc => {
+      {/* Additional connected accounts — show ALL stored accounts with delete */}
+      {accounts.map(acc => {
         const isStale = staleIds.has(acc.id)
         const isRecon = reconnecting === acc.id
         return (
@@ -992,7 +997,7 @@ function AccountsSection({
       })}
 
       {/* Show calendars for additional accounts */}
-      {accounts.filter(a => !a.isPrimary).map(acc => calendars[acc.id] ? (
+      {accounts.map(acc => calendars[acc.id] ? (
         <div key={`${acc.id}-cals`} style={{ marginBottom: 8, padding: '8px 14px', background: 'var(--color-surface2, #0D0F1A)', borderRadius: 8, border: '1px solid var(--color-border, #252A3E)' }}>
           <p style={{ margin: '0 0 6px', fontSize: 11, fontWeight: 600, color: 'var(--color-text-muted, #6B7280)', textTransform: 'uppercase' }}>{acc.email} calendars</p>
           {calendars[acc.id].map(name => <p key={name} style={{ margin: '3px 0', fontSize: 12, color: 'var(--color-text-dim, #94A3B8)' }}>• {name}</p>)}
@@ -1014,10 +1019,10 @@ function AccountsSection({
           {adding ? 'Connecting…' : '+ Connect another Google account'}
         </button>
 
-        {accounts.filter(a => !a.isPrimary).length > 0 && (
+        {accounts.length > 0 && (
           <button
             onClick={() => {
-              accounts.filter(a => !a.isPrimary).forEach(a => removeAccount(a.id))
+              accounts.forEach(a => removeAccount(a.id))
               const updated = loadAccounts()
               setAccounts(updated)
               saveAccountsToDB(updated).catch(console.warn)
