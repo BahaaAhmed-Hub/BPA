@@ -3,7 +3,7 @@ import {
   ChevronLeft, ChevronRight, Calendar, Video, Users,
   Sparkles, MapPin, RefreshCw, X, Eye, EyeOff,
 } from 'lucide-react'
-import { detectMeetingType, listCalendarsWithToken, fetchCalendarEventsWithToken } from '@/lib/googleCalendar'
+import { detectMeetingType, listCalendars, listCalendarsWithToken, fetchCalendarEventsWithToken } from '@/lib/googleCalendar'
 import type { GCalEvent, GCalCalendar } from '@/lib/googleCalendar'
 import { generateMeetingPrep } from '@/lib/professor'
 import type { MeetingPrep } from '@/lib/professor'
@@ -352,18 +352,26 @@ interface CalWithAccount extends GCalCalendar {
   accountToken: string
 }
 
-async function loadAllCalendars(): Promise<CalWithAccount[]> {
-  const tokens = getAllTokens()
-  if (!tokens.length) return []
-  const results = await Promise.all(
-    tokens.map(async ({ email, token }) => {
+async function loadAllCalendars(primaryEmail: string): Promise<CalWithAccount[]> {
+  // Primary account: use the full withAuth flow (handles token refresh via Supabase)
+  const { calendars: primaryCals } = await listCalendars()
+  const primaryToken = localStorage.getItem('google_provider_token') ?? ''
+  const primaryResult: CalWithAccount[] = primaryCals.map(c => ({
+    ...c, accountEmail: primaryEmail, accountToken: primaryToken,
+  }))
+
+  // Additional connected accounts: use their stored tokens directly
+  const extraAccounts = getAllTokens().filter(t => t.accountId !== 'primary' && t.email)
+  const extraResults = await Promise.all(
+    extraAccounts.map(async ({ email, token }) => {
       const cals = await listCalendarsWithToken(token)
       return cals.map(c => ({ ...c, accountEmail: email, accountToken: token }))
     })
   )
-  // Deduplicate by calendar id
+
+  // Merge, deduplicate by id
   const seen = new Set<string>()
-  return results.flat().filter(c => {
+  return [...primaryResult, ...extraResults.flat()].filter(c => {
     if (seen.has(c.id)) return false
     seen.add(c.id); return true
   })
@@ -403,11 +411,12 @@ export function CalendarIntelligence() {
 
   // Load calendars from all accounts once
   useEffect(() => {
-    void loadAllCalendars().then(cals => {
+    void loadAllCalendars(user?.email ?? '').then(cals => {
       setAllCalendars(cals)
       if (!cals.length) setNoAuth(true)
     })
-  }, [])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.email])
 
   function toggleCal(id: string) {
     setHiddenCals(prev => {

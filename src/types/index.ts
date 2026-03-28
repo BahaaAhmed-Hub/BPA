@@ -76,6 +76,7 @@ export interface Task {
   dueDate?: string           // YYYY-MM-DD
   duration?: number          // minutes
   plannedTime?: string       // HH:MM for schedule quadrant
+  calendarId?: string        // Google Calendar id to link this task
   owner?: string             // CompanyUser.id
   status: TaskStatus
   completed: boolean

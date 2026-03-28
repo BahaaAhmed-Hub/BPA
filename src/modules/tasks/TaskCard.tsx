@@ -5,6 +5,7 @@ import { Trash2, Check, GripVertical, Clock, Calendar, User, Plus } from 'lucide
 import type { Task } from '@/types'
 import { COMPANY_COLORS, getAllUsers, loadDynamicCompanies } from '@/types'
 import { useTaskStore } from '@/store/taskStore'
+import { getCalendarCache } from '@/lib/googleCalendar'
 
 interface TaskCardProps {
   task: Task
@@ -35,9 +36,11 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
   const companyColor = dynCompany?.color ?? COMPANY_COLORS[task.company] ?? '#6B7280'
   const ownerUser = task.owner ? getAllUsers().find(u => u.id === task.owner) : undefined
   const users = getAllUsers()
+  const cachedCals = getCalendarCache()
 
   const isSchedule = task.quadrant === 'schedule'
   const isDelegate = task.quadrant === 'delegate'
+  const showCalPicker = isSchedule || !!task.calendarId
 
   function saveTitle() {
     const trimmed = titleDraft.trim()
@@ -225,6 +228,29 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
                   {task.duration ? `${task.duration}m` : <><Plus size={8} />m</>}
                 </span>
               )
+            )}
+
+            {/* Calendar */}
+            {showCalPicker && cachedCals.length > 0 && (
+              <select
+                data-nm
+                value={task.calendarId ?? ''}
+                onChange={e => updateTask(task.id, { calendarId: e.target.value || undefined })}
+                title="Link to calendar"
+                style={{
+                  fontSize: 10, color: task.calendarId ? '#7F77DD' : '#404560',
+                  background: task.calendarId ? '#7F77DD12' : 'transparent',
+                  padding: '1px 4px', borderRadius: 3,
+                  border: 'none', outline: 'none', cursor: 'pointer',
+                  appearance: 'none', WebkitAppearance: 'none', fontFamily: 'inherit',
+                  display: 'flex', alignItems: 'center', gap: 3,
+                }}
+              >
+                <option value="">📅 calendar</option>
+                {cachedCals.map(c => (
+                  <option key={c.id} value={c.id}>{c.summary}</option>
+                ))}
+              </select>
             )}
 
             {/* Owner */}

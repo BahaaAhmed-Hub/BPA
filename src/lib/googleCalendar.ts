@@ -131,6 +131,19 @@ async function withAuth(
 
 // ─── List calendars ───────────────────────────────────────────────────────────
 
+const CAL_CACHE_KEY = 'cal-list-cache'
+
+export function getCalendarCache(): GCalCalendar[] {
+  try {
+    const raw = localStorage.getItem(CAL_CACHE_KEY)
+    return raw ? (JSON.parse(raw) as GCalCalendar[]) : []
+  } catch { return [] }
+}
+
+function saveCalendarCache(cals: GCalCalendar[]) {
+  try { localStorage.setItem(CAL_CACHE_KEY, JSON.stringify(cals)) } catch { /* quota */ }
+}
+
 export async function listCalendars(): Promise<{ calendars: GCalCalendar[]; noAuth: boolean }> {
   const result = await withAuth(token =>
     gcalRequest(token, '/users/me/calendarList')
@@ -144,6 +157,7 @@ export async function listCalendars(): Promise<{ calendars: GCalCalendar[]; noAu
   const calendars = (data.items ?? []).filter(c =>
     c.accessRole === 'owner' || c.accessRole === 'writer' || c.accessRole === 'reader'
   )
+  saveCalendarCache(calendars)
   return { calendars, noAuth: false }
 }
 
