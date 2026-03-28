@@ -47,7 +47,7 @@ export async function connectAdditionalGoogleAccount() {
       ].join(' '),
       redirectTo: window.location.origin + import.meta.env.BASE_URL,
       queryParams: {
-        access_type: 'offline',   // get refresh token so Supabase can refresh provider_token
+        access_type: 'offline',
         prompt: 'consent select_account',
       },
     },

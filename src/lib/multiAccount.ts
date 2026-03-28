@@ -20,6 +20,7 @@ export interface ConnectedAccount {
 }
 
 const ACCOUNTS_KEY = 'professor-connected-accounts'
+const TOKEN_TTL = 50 * 60 * 1000 // 50 min
 
 export function loadAccounts(): ConnectedAccount[] {
   try {
@@ -118,9 +119,48 @@ export function getAllTokens(): { accountId: string; email: string; token: strin
   const primary  = getPrimaryToken()
   const accounts = loadAccounts()
   const result   = accounts.map(a => ({ accountId: a.id, email: a.email, token: a.providerToken }))
-  // Ensure primary token (from Supabase auth) is always included
   if (primary && !result.some(r => r.token === primary)) {
     result.unshift({ accountId: 'primary', email: '', token: primary })
   }
   return result
+}
+
+/** Returns a fresh provider token for an additional account, refreshing via stored Supabase session if stale. */
+export async function getProviderTokenForAccount(account: ConnectedAccount): Promise<string> {
+  const age = Date.now() - (account.providerTokenSavedAt ?? 0)
+  if (age < TOKEN_TTL) return account.providerToken
+
+  if (account.supabaseAccessToken && account.supabaseRefreshToken) {
+    try {
+      const { data: { session: primary } } = await supabase.auth.getSession()
+
+      const { data: refreshed } = await supabase.auth.setSession({
+        access_token:  account.supabaseAccessToken,
+        refresh_token: account.supabaseRefreshToken,
+      })
+
+      const freshToken = refreshed.session?.provider_token ?? ''
+
+      if (primary) {
+        await supabase.auth.setSession({
+          access_token:  primary.access_token,
+          refresh_token: primary.refresh_token,
+        })
+      }
+
+      if (freshToken) {
+        const accounts = loadAccounts()
+        saveAccounts(accounts.map(a => a.id === account.id ? {
+          ...a,
+          providerToken:        freshToken,
+          providerTokenSavedAt: Date.now(),
+          supabaseAccessToken:  refreshed.session?.access_token ?? a.supabaseAccessToken,
+          supabaseRefreshToken: refreshed.session?.refresh_token ?? a.supabaseRefreshToken,
+        } : a))
+        return freshToken
+      }
+    } catch { /* fall through */ }
+  }
+
+  return account.providerToken
 }
