@@ -41,11 +41,15 @@ export async function connectAdditionalGoogleAccount() {
     provider: 'google',
     options: {
       scopes: [
-        'https://www.googleapis.com/auth/calendar.readonly',
+        'https://www.googleapis.com/auth/calendar',
+        'https://www.googleapis.com/auth/calendar.events',
         'https://www.googleapis.com/auth/gmail.readonly',
       ].join(' '),
       redirectTo: window.location.origin + import.meta.env.BASE_URL,
-      queryParams: { prompt: 'select_account' }, // force account picker
+      queryParams: {
+        access_type: 'offline',   // get refresh token so Supabase can refresh provider_token
+        prompt: 'consent select_account',
+      },
     },
   })
   if (error) {

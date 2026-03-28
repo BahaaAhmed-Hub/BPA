@@ -460,12 +460,14 @@ function App() {
         clearPendingAddAccount()
         // Store new Google account's token + info
         addAccount({
-          email:         session.user.email ?? '',
-          name:          session.user.user_metadata?.full_name as string ?? '',
-          avatarUrl:     session.user.user_metadata?.avatar_url as string | undefined,
-          providerToken: session.provider_token,
-          scopes:        ['calendar.readonly', 'gmail.readonly'],
-          isPrimary:     false,
+          email:                session.user.email ?? '',
+          name:                 session.user.user_metadata?.full_name as string ?? '',
+          avatarUrl:            session.user.user_metadata?.avatar_url as string | undefined,
+          providerToken:        session.provider_token,
+          supabaseAccessToken:  session.access_token,
+          supabaseRefreshToken: session.refresh_token ?? '',
+          scopes:               ['calendar', 'calendar.events', 'gmail.readonly'],
+          isPrimary:            false,
         })
         // Persist accounts to DB (token stripped server-side)
         void saveAccountsToDB(loadAccounts()).catch(console.warn)
