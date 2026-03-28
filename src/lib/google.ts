@@ -7,10 +7,15 @@ export async function signInWithGoogle() {
     provider: 'google',
     options: {
       scopes: [
-        'https://www.googleapis.com/auth/calendar.readonly',
+        'https://www.googleapis.com/auth/calendar',
+        'https://www.googleapis.com/auth/calendar.events',
         'https://www.googleapis.com/auth/gmail.readonly',
       ].join(' '),
       redirectTo: window.location.origin + import.meta.env.BASE_URL,
+      queryParams: {
+        access_type: 'offline',  // ensures Google issues a refresh token to Supabase
+        prompt: 'consent',       // force consent so refresh token is always granted
+      },
     },
   })
   if (error) throw error

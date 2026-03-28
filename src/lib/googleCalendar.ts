@@ -45,22 +45,42 @@ export interface GCalError {
 
 // ─── Token ───────────────────────────────────────────────────────────────────
 
-const TOKEN_KEY = 'google_provider_token'
+const TOKEN_KEY      = 'google_provider_token'
+const TOKEN_SAVED_AT = 'google_provider_token_saved_at'
+const TOKEN_TTL_MS   = 50 * 60 * 1000  // refresh after 50 min (token expires at 60 min)
+
+function saveToken(token: string) {
+  localStorage.setItem(TOKEN_KEY, token)
+  localStorage.setItem(TOKEN_SAVED_AT, Date.now().toString())
+}
+
+function isTokenStale(): boolean {
+  const savedAt = parseInt(localStorage.getItem(TOKEN_SAVED_AT) ?? '0', 10)
+  return Date.now() - savedAt > TOKEN_TTL_MS
+}
 
 async function getProviderToken(): Promise<string | null> {
   const { data } = await supabase.auth.getSession()
+
+  // Fresh token from live session — use it
   if (data.session?.provider_token) {
-    localStorage.setItem(TOKEN_KEY, data.session.provider_token)
+    saveToken(data.session.provider_token)
     return data.session.provider_token
   }
-  try {
-    const { data: refreshed } = await supabase.auth.refreshSession()
-    if (refreshed.session?.provider_token) {
-      localStorage.setItem(TOKEN_KEY, refreshed.session.provider_token)
-      return refreshed.session.provider_token
-    }
-  } catch { /* ignore */ }
-  return localStorage.getItem(TOKEN_KEY)
+
+  // Token in localStorage but stale — try refreshing first
+  const cached = localStorage.getItem(TOKEN_KEY)
+  if (!cached || isTokenStale()) {
+    try {
+      const { data: refreshed } = await supabase.auth.refreshSession()
+      if (refreshed.session?.provider_token) {
+        saveToken(refreshed.session.provider_token)
+        return refreshed.session.provider_token
+      }
+    } catch { /* ignore */ }
+  }
+
+  return cached
 }
 
 // ─── Core API helper ──────────────────────────────────────────────────────────
@@ -94,11 +114,12 @@ async function withAuth(
 
   if (res.status === 401) {
     localStorage.removeItem(TOKEN_KEY)
+    localStorage.removeItem(TOKEN_SAVED_AT)
     try {
       const { data: refreshed } = await supabase.auth.refreshSession()
       const fresh = refreshed.session?.provider_token
       if (fresh) {
-        localStorage.setItem(TOKEN_KEY, fresh)
+        saveToken(fresh)
         res = await fn(fresh)
       }
     } catch { /* ignore */ }

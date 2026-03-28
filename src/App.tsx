@@ -480,8 +480,10 @@ function App() {
       setLoading(false)
       if (session?.provider_token) {
         localStorage.setItem('google_provider_token', session.provider_token)
+        localStorage.setItem('google_provider_token_saved_at', Date.now().toString())
       } else if (!session) {
         localStorage.removeItem('google_provider_token')
+        localStorage.removeItem('google_provider_token_saved_at')
       }
       // On sign-in: pull all data from DB so nothing is lost across devices/sessions
       if (u) void loadTasksFromDB()
