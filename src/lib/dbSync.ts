@@ -218,29 +218,27 @@ export async function saveCompaniesToDB(companies: CompanyRow[]): Promise<void> 
   }
 
   if (companies.length) {
-    // Step 1: always save base columns (these always exist)
-    const baseRows = companies.map(c => ({
-      id:          c.id,
-      user_id:     userId,
-      name:        c.name,
-      color_tag:   c.color,
-      calendar_id: c.calendarId || null,
-      is_active:   c.isActive,
-    }))
-    const { error: baseError } = await supabase.from('companies').upsert(baseRows, { onConflict: 'id' })
-    if (baseError) throw new Error(baseError.message)
-
-    // Step 2: try to save extended columns (only if migration has been run)
-    // Silently skip if columns don't exist yet
-    const extRows = companies.map(c => ({
+    const rows = companies.map(c => ({
       id:           c.id,
+      user_id:      userId,
+      name:         c.name,
+      color_tag:    c.color,
+      calendar_id:  c.calendarId || null,
+      is_active:    c.isActive,
       email_domain: c.emailDomain || null,
       account_id:   c.accountId || null,
       users_data:   c.users ?? [],
     }))
-    try {
-      await supabase.from('companies').upsert(extRows, { onConflict: 'id' })
-    } catch { /* migration not run yet — extended columns don't exist */ }
+
+    const { error } = await supabase.from('companies').upsert(rows, { onConflict: 'id' })
+    if (error) {
+      // Migration not run yet — fall back to base columns only
+      const baseRows = rows.map(({ id, user_id, name, color_tag, calendar_id, is_active }) =>
+        ({ id, user_id, name, color_tag, calendar_id, is_active })
+      )
+      const { error: baseError } = await supabase.from('companies').upsert(baseRows, { onConflict: 'id' })
+      if (baseError) throw new Error(baseError.message)
+    }
   }
 }
 
