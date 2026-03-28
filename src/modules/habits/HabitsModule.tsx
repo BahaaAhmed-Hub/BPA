@@ -5,8 +5,6 @@ import {
   useHabitsStore, loadLogs, saveLogs,
   calcStreak, getHabitColors,
 } from '@/store/habitsStore'
-import { useTaskStore } from '@/store/taskStore'
-import { QUADRANT_META } from '@/types'
 
 // ─── Date helpers ─────────────────────────────────────────────────────────────
 
@@ -215,88 +213,6 @@ function ColorBtn({ value, colors, onSelect }: { value: string; colors: string[]
   )
 }
 
-// ─── Planned activities section ───────────────────────────────────────────────
-
-function PlannedActivities() {
-  const tasks = useTaskStore(s => s.tasks)
-  const toggleComplete = useTaskStore(s => s.toggleComplete)
-
-  const boardTasks = tasks.filter(t => t.quadrant !== null && !t.completed)
-  if (boardTasks.length === 0) return null
-
-  const byQuadrant = boardTasks.reduce<Record<string, typeof boardTasks>>((acc, t) => {
-    const q = t.quadrant!
-    if (!acc[q]) acc[q] = []
-    acc[q].push(t)
-    return acc
-  }, {})
-
-  const total     = boardTasks.length
-  const completed = tasks.filter(t => t.quadrant !== null && t.completed).length
-  const pct       = total + completed > 0 ? Math.round((completed / (total + completed)) * 100) : 0
-
-  return (
-    <div style={{
-      background: 'var(--color-surface, #161929)',
-      border: '1px solid var(--color-border, #252A3E)',
-      borderRadius: 14, padding: '18px 20px', marginBottom: 20,
-    }}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-        <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--color-text-dim, #94A3B8)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
-          Planned Activities
-        </span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 11, color: 'var(--color-text-muted, #6B7280)' }}>{completed}/{total + completed} done</span>
-          <div style={{ width: 80, height: 5, borderRadius: 3, background: 'var(--color-surface2, #0D0F1A)', overflow: 'hidden' }}>
-            <div style={{ width: `${pct}%`, height: '100%', borderRadius: 3, background: pct === 100 ? '#1D9E75' : 'var(--color-accent, #1E40AF)', transition: 'width 0.3s' }} />
-          </div>
-          <span style={{ fontSize: 10, color: pct === 100 ? '#1D9E75' : 'var(--color-accent, #1E40AF)', fontWeight: 600 }}>{pct}%</span>
-        </div>
-      </div>
-
-      {/* Groups by quadrant */}
-      {(Object.entries(byQuadrant) as [string, typeof boardTasks][]).map(([q, qtasks]) => {
-        const meta = QUADRANT_META[q as keyof typeof QUADRANT_META]
-        return (
-          <div key={q} style={{ marginBottom: 12 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-              <div style={{ width: 6, height: 6, borderRadius: '50%', background: meta.color }} />
-              <span style={{ fontSize: 10, fontWeight: 600, color: meta.color, textTransform: 'uppercase', letterSpacing: '0.7px' }}>
-                {meta.label}
-              </span>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              {qtasks.map(t => (
-                <div key={t.id} style={{
-                  display: 'flex', alignItems: 'center', gap: 10,
-                  padding: '7px 10px', borderRadius: 8,
-                  background: 'var(--color-surface2, #0D0F1A)',
-                  border: '1px solid var(--color-border, #252A3E)',
-                }}>
-                  <button onClick={() => toggleComplete(t.id)}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, flexShrink: 0 }}>
-                    <Circle size={14} color="var(--color-text-muted, #4B5563)" />
-                  </button>
-                  <span style={{ flex: 1, fontSize: 12.5, color: 'var(--color-text, #E8EAF6)', lineHeight: 1.3 }}>
-                    {t.title}
-                  </span>
-                  {t.company && (
-                    <span style={{ fontSize: 10, color: 'var(--color-text-muted, #6B7280)', flexShrink: 0 }}>{t.company}</span>
-                  )}
-                  {t.plannedTime && (
-                    <span style={{ fontSize: 10, color: meta.color, flexShrink: 0, fontFamily: 'monospace' }}>{t.plannedTime}</span>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        )
-      })}
-    </div>
-  )
-}
-
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function HabitsModule() {
@@ -394,9 +310,6 @@ export function HabitsModule() {
             </div>
           ))}
         </div>
-
-        {/* ─── Planned activities ─────────────────────────────────────────── */}
-        <PlannedActivities />
 
         {/* ─── Habits list ───────────────────────────────────────────────── */}
         <div style={{
