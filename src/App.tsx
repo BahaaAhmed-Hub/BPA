@@ -492,7 +492,6 @@ function clearUserData(clearTasks: () => void, clearHabits: () => void) {
     'professor-review-hours', 'professor-section-order',
     'cal-view-mode', 'cal-hidden-calendars', 'cal-intel-hidden', 'cal-list-cache',
     'google_provider_token', 'google_provider_token_saved_at',
-    'professor-pending-add-account',
   ]
   userKeys.forEach(k => localStorage.removeItem(k))
   // Clear dynamic day-plan keys
@@ -522,11 +521,16 @@ function App() {
     void supabase.auth.getSession().then(({ data }) => {
       const u = data.session?.user
       if (u) {
-        const lastUserId = localStorage.getItem(LAST_USER_KEY)
-        if (lastUserId && lastUserId !== u.id) {
-          clearUserData(clearTasks, clearHabits)
+        // If we're returning from an add-account OAuth flow, skip user-switch detection.
+        // onAuthStateChange will handle restoring the original session.
+        const hasPendingAddAccount = !!getPendingAddAccount()
+        if (!hasPendingAddAccount) {
+          const lastUserId = localStorage.getItem(LAST_USER_KEY)
+          if (lastUserId && lastUserId !== u.id) {
+            clearUserData(clearTasks, clearHabits)
+          }
+          localStorage.setItem(LAST_USER_KEY, u.id)
         }
-        localStorage.setItem(LAST_USER_KEY, u.id)
       }
       setUser(u ? { id: u.id, email: u.email ?? '', name: u.user_metadata?.full_name as string | undefined, avatarUrl: u.user_metadata?.avatar_url as string | undefined } : null)
       if (u) { void loadAllFromDB(loadTasksFromDB, loadHabitsFromDB) }
