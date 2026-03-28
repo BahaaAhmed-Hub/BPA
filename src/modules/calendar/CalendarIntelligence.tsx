@@ -8,7 +8,7 @@ import type { GCalEvent, GCalCalendar } from '@/lib/googleCalendar'
 import { generateMeetingPrep } from '@/lib/professor'
 import type { MeetingPrep } from '@/lib/professor'
 import { useAuthStore } from '@/store/authStore'
-import { getAllTokens } from '@/lib/multiAccount'
+import { loadAccounts, getProviderTokenForAccount } from '@/lib/multiAccount'
 import type { DbUser, DbCompany, DbCalendarEvent } from '@/types/database'
 
 // ─── Persistence helpers ─────────────────────────────────────────────────────
@@ -353,27 +353,30 @@ interface CalWithAccount extends GCalCalendar {
 }
 
 async function loadAllCalendars(primaryEmail: string): Promise<CalWithAccount[]> {
-  // Primary account: use the full withAuth flow (handles token refresh via Supabase)
+  // Primary account — proper refresh via withAuth + Supabase session
   const { calendars: primaryCals } = await listCalendars()
   const primaryToken = localStorage.getItem('google_provider_token') ?? ''
   const primaryResult: CalWithAccount[] = primaryCals.map(c => ({
     ...c, accountEmail: primaryEmail, accountToken: primaryToken,
   }))
 
-  // Additional connected accounts: use their stored tokens directly
-  const extraAccounts = getAllTokens().filter(t => t.accountId !== 'primary' && t.email)
+  // Additional accounts — refresh stale tokens via stored Supabase sessions
+  const extraAccounts = loadAccounts()
   const extraResults = await Promise.all(
-    extraAccounts.map(async ({ email, token }) => {
+    extraAccounts.map(async account => {
+      const token = await getProviderTokenForAccount(account)
+      if (!token) return []
       const cals = await listCalendarsWithToken(token)
-      return cals.map(c => ({ ...c, accountEmail: email, accountToken: token }))
+      return cals.map(c => ({ ...c, accountEmail: account.email, accountToken: token }))
     })
   )
 
-  // Merge, deduplicate by id
+  // Deduplicate by (accountEmail + calendarId) — same cal in 2 accounts shows once per account
   const seen = new Set<string>()
   return [...primaryResult, ...extraResults.flat()].filter(c => {
-    if (seen.has(c.id)) return false
-    seen.add(c.id); return true
+    const key = `${c.accountEmail}:${c.id}`
+    if (seen.has(key)) return false
+    seen.add(key); return true
   })
 }
 
