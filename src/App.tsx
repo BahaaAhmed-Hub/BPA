@@ -520,6 +520,8 @@ function App() {
   useEffect(() => {
     // Capture BEFORE subscription runs — onAuthStateChange may clear it in INITIAL_SESSION
     const hasPendingOnLoad = !!getPendingAddAccount()
+    // Remember the original user so we can identify intermediate sessions from the new account
+    const originalUserIdOnLoad = localStorage.getItem(LAST_USER_KEY)
     // Guard: prevents getSession() and onAuthStateChange from both processing add-account
     let addAccountHandled = false
 
@@ -593,20 +595,35 @@ function App() {
       setLoading(false)
 
       if (u) {
-        const lastUserId = localStorage.getItem(LAST_USER_KEY)
-        if (lastUserId && lastUserId !== u.id) clearUserData(clearTasks, clearHabits)
-        localStorage.setItem(LAST_USER_KEY, u.id)
-      }
-
-      if (session?.provider_token) {
-        localStorage.setItem('google_provider_token', session.provider_token)
-        localStorage.setItem('google_provider_token_saved_at', Date.now().toString())
+        if (hasPendingOnLoad) {
+          // During add-account flow: NEVER clear user data.
+          // Also skip loadAllFromDB for the intermediate new-account session (after addAccountHandled)
+          // — only run it for the original user (pre-add or restored session).
+          localStorage.setItem(LAST_USER_KEY, u.id)
+          const isIntermediateSession = addAccountHandled && u.id !== originalUserIdOnLoad
+          if (!isIntermediateSession) {
+            if (session?.provider_token) {
+              localStorage.setItem('google_provider_token', session.provider_token)
+              localStorage.setItem('google_provider_token_saved_at', Date.now().toString())
+            }
+            void loadAllFromDB(loadTasksFromDB, loadHabitsFromDB)
+          }
+        } else {
+          // Normal sign-in: check for user switch
+          const lastUserId = localStorage.getItem(LAST_USER_KEY)
+          if (lastUserId && lastUserId !== u.id) clearUserData(clearTasks, clearHabits)
+          localStorage.setItem(LAST_USER_KEY, u.id)
+          if (session?.provider_token) {
+            localStorage.setItem('google_provider_token', session.provider_token)
+            localStorage.setItem('google_provider_token_saved_at', Date.now().toString())
+          }
+          void loadAllFromDB(loadTasksFromDB, loadHabitsFromDB)
+        }
       } else if (!session) {
         localStorage.removeItem('google_provider_token')
         localStorage.removeItem('google_provider_token_saved_at')
         localStorage.removeItem(LAST_USER_KEY)
       }
-      if (u) void loadAllFromDB(loadTasksFromDB, loadHabitsFromDB)
     })
 
     return () => subscription.unsubscribe()
