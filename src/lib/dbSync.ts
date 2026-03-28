@@ -355,6 +355,49 @@ export async function loadAccountsFromDB(): Promise<Omit<ConnectedAccount, 'prov
   return (r.connected_accounts as Omit<ConnectedAccount, 'providerToken'>[]) ?? []
 }
 
+/** Load only the fields that actually exist in DB (no defaults needed). */
+export async function loadRawSettingsFromDB(): Promise<Partial<AppSettings>> {
+  try {
+    const session = await getSession()
+    const { data } = await supabase
+      .from('users').select('full_name, active_framework, schedule_rules')
+      .eq('id', session.user.id).maybeSingle()
+    if (!data) return {}
+    const r = (data.schedule_rules as Record<string, unknown>) ?? {}
+    const out: Partial<AppSettings> = {}
+    if (data.full_name)               out.fullName              = data.full_name as string
+    if (data.active_framework)        out.framework             = data.active_framework as string
+    if (r.timezone)                   out.timezone              = r.timezone as string
+    if (r.work_week)                  out.workWeek              = r.work_week as string[]
+    if (r.focus_start)                out.focusStart            = r.focus_start as string
+    if (r.focus_end)                  out.focusEnd              = r.focus_end as string
+    if (r.earliest_meeting)           out.earliestMeeting       = r.earliest_meeting as string
+    if (r.buffer_mins        != null) out.bufferMins            = r.buffer_mins as number
+    if (r.physical_buffer    != null) out.physicalBufferMins    = r.physical_buffer as number
+    if (r.end_of_day)                 out.endOfDay              = r.end_of_day as string
+    if (r.family_start)               out.familyStart           = r.family_start as string
+    if (r.protect_focus      != null) out.protectFocus          = r.protect_focus as boolean
+    if (r.auto_decline_early != null) out.autoDeclineEarly      = r.auto_decline_early as boolean
+    if (r.comm_style)                 out.commStyle             = r.comm_style as AppSettings['commStyle']
+    if (r.proactive          != null) out.proactive             = r.proactive as boolean
+    if (r.brief_time)                 out.briefTime             = r.brief_time as string
+    if (r.review_day)                 out.reviewDay             = r.review_day as string
+    if (r.custom_instructions)        out.customInstructions    = r.custom_instructions as string
+    if (r.morning_reminder_on   != null) out.morningReminderOn   = r.morning_reminder_on as boolean
+    if (r.morning_reminder_time)         out.morningReminderTime = r.morning_reminder_time as string
+    if (r.wind_down_on          != null) out.windDownOn          = r.wind_down_on as boolean
+    if (r.wind_down_time)                out.windDownTime        = r.wind_down_time as string
+    if (r.follow_up_nudges      != null) out.followUpNudges      = r.follow_up_nudges as boolean
+    if (r.weekly_review_on      != null) out.weeklyReviewOn      = r.weekly_review_on as boolean
+    if (r.weekly_review_day)             out.weeklyReviewDay     = r.weekly_review_day as string
+    if (r.weekly_review_time)            out.weeklyReviewTime    = r.weekly_review_time as string
+    if (r.theme)                         out.theme               = r.theme as string
+    if (r.sidebar_default       != null) out.sidebarDefault      = r.sidebar_default as boolean
+    if (r.compact               != null) out.compact             = r.compact as boolean
+    return out
+  } catch { return {} }
+}
+
 // ─── Habits ───────────────────────────────────────────────────────────────────
 
 export async function saveHabitsToDB(habits: HabitRow[]): Promise<void> {

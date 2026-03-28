@@ -17,7 +17,7 @@ import { useHabitsStore } from './store/habitsStore'
 import { supabase } from './lib/supabase'
 import { signInWithGoogle, getPendingAddAccount, clearPendingAddAccount } from './lib/google'
 import { addAccount, loadAccounts, saveAccounts } from './lib/multiAccount'
-import { saveAccountsToDB } from './lib/dbSync'
+import { saveAccountsToDB, loadCompaniesFromDB, loadRawSettingsFromDB, loadAccountsFromDB } from './lib/dbSync'
 import { getTheme, applyThemeVars } from './lib/themes'
 import { GraduationCap, Calendar, Mail, CheckSquare, Brain, ArrowRight } from 'lucide-react'
 
@@ -438,6 +438,52 @@ function ActiveModule() {
 
 const LAST_USER_KEY = 'professor-last-user-id'
 
+/**
+ * Load all user data from DB into localStorage so every module reads fresh data.
+ * Called on every sign-in — database is the source of truth.
+ */
+async function loadAllFromDB(
+  loadTasksFn: () => Promise<void>,
+  loadHabitsFn: () => Promise<void>,
+): Promise<void> {
+  await Promise.allSettled([
+    loadTasksFn(),
+    loadHabitsFn(),
+    // Companies
+    loadCompaniesFromDB().then(companies => {
+      if (companies.length > 0)
+        localStorage.setItem('professor-companies', JSON.stringify(companies))
+    }),
+    // Settings (partial — Settings component merges with its own DEFAULTS)
+    loadRawSettingsFromDB().then(partial => {
+      if (Object.keys(partial).length > 0) {
+        const stored = (() => {
+          try { return JSON.parse(localStorage.getItem('professor-settings') ?? '{}') as object }
+          catch { return {} }
+        })()
+        localStorage.setItem('professor-settings', JSON.stringify({ ...stored, ...partial }))
+      }
+    }),
+    // Connected accounts — restore metadata from DB, preserve local tokens
+    loadAccountsFromDB().then(dbAccounts => {
+      if (dbAccounts.length === 0) return
+      const local = loadAccounts()
+      const tokenMap = new Map(local.map(a => [a.email, a as typeof local[number]]))
+      const merged = dbAccounts.map(a => {
+        const localAcc = tokenMap.get(a.email)
+        return {
+          ...a,
+          providerToken:        localAcc?.providerToken ?? '',
+          providerTokenSavedAt: localAcc?.providerTokenSavedAt,
+          supabaseAccessToken:  localAcc?.supabaseAccessToken,
+          supabaseRefreshToken: localAcc?.supabaseRefreshToken,
+        }
+      })
+      saveAccounts(merged)
+    }),
+  ])
+}
+
 /** Wipe every user-specific key from localStorage and reset in-memory stores. */
 function clearUserData(clearTasks: () => void, clearHabits: () => void) {
   const userKeys = [
@@ -483,7 +529,7 @@ function App() {
         localStorage.setItem(LAST_USER_KEY, u.id)
       }
       setUser(u ? { id: u.id, email: u.email ?? '', name: u.user_metadata?.full_name as string | undefined, avatarUrl: u.user_metadata?.avatar_url as string | undefined } : null)
-      if (u) { void loadTasksFromDB(); void loadHabitsFromDB() }
+      if (u) { void loadAllFromDB(loadTasksFromDB, loadHabitsFromDB) }
       setLoading(false)
     })
 
@@ -534,8 +580,7 @@ function App() {
       }
       // On sign-in: reload all data from DB (database is source of truth)
       if (u) {
-        void loadTasksFromDB()
-        void loadHabitsFromDB()
+        void loadAllFromDB(loadTasksFromDB, loadHabitsFromDB)
       }
     })
 
