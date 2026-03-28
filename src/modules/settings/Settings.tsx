@@ -22,7 +22,7 @@ import { useUIStore } from '@/store/uiStore'
 import { useAuthStore } from '@/store/authStore'
 import { THEMES, getTheme, applyThemeVars } from '@/lib/themes'
 import { useHabitsStore, getHabitColors } from '@/store/habitsStore'
-import { loadAccounts, removeAccount, type ConnectedAccount } from '@/lib/multiAccount'
+import { loadAccounts, removeAccount, getProviderTokenForAccount, type ConnectedAccount } from '@/lib/multiAccount'
 import {
   saveProfileToDB, savePrefsToDB, saveCompaniesToDB, loadCompaniesFromDB,
   saveHabitsToDB, saveHabitLogsToDB, loadSettingsFromDB,
@@ -843,22 +843,48 @@ function AccountsSection({
   primaryEmail: string
 }) {
   const [adding, setAdding]         = useState(false)
-  const [calendars, setCalendars]   = useState<Record<string, string[]>>({}) // accountId → calendar names
+  const [reconnecting, setRecon]    = useState<string | null>(null)
+  const [calendars, setCalendars]   = useState<Record<string, string[]>>({})
   const [loadingCals, setLoading]   = useState<string | null>(null)
+  const [staleIds, setStaleIds]     = useState<Set<string>>(new Set())
+
+  // On mount: check each additional account's token status
+  useEffect(() => {
+    const extraAccounts = accounts.filter(a => !a.isPrimary)
+    if (!extraAccounts.length) return
+    const now = Date.now()
+    const stale = new Set<string>()
+    for (const acc of extraAccounts) {
+      const age = now - (acc.providerTokenSavedAt ?? 0)
+      const canRefresh = !!(acc.supabaseAccessToken && acc.supabaseRefreshToken)
+      // 50min TTL — if expired AND no refresh capability, mark stale
+      if (age >= 50 * 60 * 1000 && !canRefresh) stale.add(acc.id)
+    }
+    setStaleIds(stale)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accounts.length])
 
   async function connectAdditional() {
     setAdding(true)
     try {
-      // Saves current session, redirects to Google with account picker forced.
-      // On return, App.tsx detects the pending flag, stores the new token as
-      // an additional account, and restores the original session.
       await connectAdditionalGoogleAccount()
     } catch { setAdding(false) }
   }
 
+  async function reconnectAccount(acc: ConnectedAccount) {
+    setRecon(acc.id)
+    try {
+      await connectAdditionalGoogleAccount(acc.email)
+    } catch { setRecon(null) }
+  }
+
   async function loadCalendars(acc: ConnectedAccount) {
     setLoading(acc.id)
-    const cals = await fetchGCals(acc.providerToken)
+    // Use getProviderTokenForAccount to get a fresh token (auto-refreshes if stale)
+    const token = acc.isPrimary
+      ? (localStorage.getItem('google_provider_token') ?? acc.providerToken)
+      : (await getProviderTokenForAccount(acc) ?? acc.providerToken)
+    const cals = await fetchGCals(token)
     setCalendars(prev => ({ ...prev, [acc.id]: cals.map(c => c.summary) }))
     setLoading(null)
   }
@@ -921,30 +947,49 @@ function AccountsSection({
       )}
 
       {/* Additional connected accounts */}
-      {accounts.filter(a => !a.isPrimary).map(acc => (
-        <div key={acc.id} style={{
-          display: 'flex', alignItems: 'center', gap: 12,
-          padding: '12px 14px', borderRadius: 10, marginBottom: 8,
-          background: 'var(--color-surface2, #0D0F1A)',
-          border: '1px solid var(--color-border, #252A3E)',
-        }}>
-          <div style={{ width: 32, height: 32, borderRadius: '50%', flexShrink: 0, background: '#7F77DD18', border: '1px solid #7F77DD40', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: '#7F77DD' }}>
-            {acc.email ? acc.email[0].toUpperCase() : 'G'}
+      {accounts.filter(a => !a.isPrimary).map(acc => {
+        const isStale = staleIds.has(acc.id)
+        const isRecon = reconnecting === acc.id
+        return (
+          <div key={acc.id} style={{
+            display: 'flex', alignItems: 'center', gap: 12,
+            padding: '12px 14px', borderRadius: 10, marginBottom: 8,
+            background: 'var(--color-surface2, #0D0F1A)',
+            border: `1px solid ${isStale ? 'rgba(224,165,36,0.35)' : 'var(--color-border, #252A3E)'}`,
+          }}>
+            <div style={{ width: 32, height: 32, borderRadius: '50%', flexShrink: 0, background: '#7F77DD18', border: '1px solid #7F77DD40', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: '#7F77DD' }}>
+              {acc.email ? acc.email[0].toUpperCase() : 'G'}
+            </div>
+            <div style={{ flex: 1 }}>
+              <p style={{ margin: 0, fontSize: 13, fontWeight: 500, color: 'var(--color-text, #E8EAF6)' }}>{acc.email || acc.name}</p>
+              <p style={{ margin: '2px 0 0', fontSize: 11, color: isStale ? '#E0A524' : 'var(--color-text-muted, #6B7280)' }}>
+                {isStale ? '⚠ Token expired — reconnect to restore calendar access' : `Connected ${new Date(acc.connectedAt).toLocaleDateString()}`}
+              </p>
+            </div>
+            {isStale ? (
+              <button
+                onClick={() => void reconnectAccount(acc)}
+                disabled={isRecon}
+                style={{
+                  padding: '4px 10px', borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: isRecon ? 'wait' : 'pointer',
+                  background: 'rgba(224,165,36,0.12)', border: '1px solid rgba(224,165,36,0.4)', color: '#E0A524',
+                  display: 'flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap',
+                }}
+              >
+                <RefreshCw size={11} style={{ animation: isRecon ? 'spin 1s linear infinite' : 'none' }} />
+                {isRecon ? 'Redirecting…' : 'Reconnect'}
+              </button>
+            ) : (
+              <button onClick={() => void loadCalendars(acc)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted, #6B7280)', padding: 4, display: 'flex' }} title="Load calendars">
+                <RefreshCw size={12} style={{ animation: loadingCals === acc.id ? 'spin 1s linear infinite' : 'none' }} />
+              </button>
+            )}
+            <button onClick={() => removeAcc(acc.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#E05252', padding: 4, display: 'flex' }}>
+              <Trash2 size={13} />
+            </button>
           </div>
-          <div style={{ flex: 1 }}>
-            <p style={{ margin: 0, fontSize: 13, fontWeight: 500, color: 'var(--color-text, #E8EAF6)' }}>{acc.email || acc.name}</p>
-            <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--color-text-muted, #6B7280)' }}>
-              Connected {new Date(acc.connectedAt).toLocaleDateString()}
-            </p>
-          </div>
-          <button onClick={() => loadCalendars(acc)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted, #6B7280)', padding: 4, display: 'flex' }} title="Load calendars">
-            <RefreshCw size={12} style={{ animation: loadingCals === acc.id ? 'spin 1s linear infinite' : 'none' }} />
-          </button>
-          <button onClick={() => removeAcc(acc.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#E05252', padding: 4, display: 'flex' }}>
-            <Trash2 size={13} />
-          </button>
-        </div>
-      ))}
+        )
+      })}
 
       {/* Show calendars for additional accounts */}
       {accounts.filter(a => !a.isPrimary).map(acc => calendars[acc.id] ? (

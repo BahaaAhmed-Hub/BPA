@@ -28,7 +28,11 @@ export async function signInWithGoogle() {
  * detects the pending flag, stores the new token as an additional account,
  * and restores the original session.
  */
-export async function connectAdditionalGoogleAccount() {
+/**
+ * emailHint: pass an existing account email to force reconnect for that specific
+ * account (uses login_hint so Google pre-selects it). Omit for a new account.
+ */
+export async function connectAdditionalGoogleAccount(emailHint?: string) {
   const { data: { session } } = await supabase.auth.getSession()
   if (session) {
     localStorage.setItem(PENDING_ADD_ACCOUNT_KEY, JSON.stringify({
@@ -49,6 +53,7 @@ export async function connectAdditionalGoogleAccount() {
       queryParams: {
         access_type: 'offline',
         prompt: 'consent select_account',
+        ...(emailHint ? { login_hint: emailHint } : {}),
       },
     },
   })

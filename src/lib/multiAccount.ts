@@ -59,53 +59,6 @@ export function addAccount(account: Omit<ConnectedAccount, 'id' | 'connectedAt'>
   return newAccount
 }
 
-const TOKEN_TTL = 50 * 60 * 1000 // 50 min
-
-/** Returns a fresh provider token for an additional account, refreshing via Supabase if stale. */
-export async function getProviderTokenForAccount(account: ConnectedAccount): Promise<string> {
-  const age = Date.now() - (account.providerTokenSavedAt ?? 0)
-  if (age < TOKEN_TTL) return account.providerToken  // still fresh
-
-  // Token is stale — refresh via stored Supabase session
-  if (account.supabaseAccessToken && account.supabaseRefreshToken) {
-    try {
-      // Save current primary session so we can restore it
-      const { data: { session: primary } } = await supabase.auth.getSession()
-
-      // Temporarily set the additional account's session
-      const { data: refreshed } = await supabase.auth.setSession({
-        access_token:  account.supabaseAccessToken,
-        refresh_token: account.supabaseRefreshToken,
-      })
-
-      const freshProviderToken = refreshed.session?.provider_token ?? ''
-
-      // Restore original session
-      if (primary) {
-        await supabase.auth.setSession({
-          access_token:  primary.access_token,
-          refresh_token: primary.refresh_token,
-        })
-      }
-
-      if (freshProviderToken) {
-        // Persist the updated token + new session tokens
-        const accounts = loadAccounts()
-        saveAccounts(accounts.map(a => a.id === account.id ? {
-          ...a,
-          providerToken:        freshProviderToken,
-          providerTokenSavedAt: Date.now(),
-          supabaseAccessToken:  refreshed.session?.access_token ?? a.supabaseAccessToken,
-          supabaseRefreshToken: refreshed.session?.refresh_token ?? a.supabaseRefreshToken,
-        } : a))
-        return freshProviderToken
-      }
-    } catch { /* fall through to cached token */ }
-  }
-
-  return account.providerToken  // best-effort: return stale token
-}
-
 export function removeAccount(id: string): void {
   const accounts = loadAccounts().filter(a => a.id !== id)
   saveAccounts(accounts)
@@ -125,8 +78,15 @@ export function getAllTokens(): { accountId: string; email: string; token: strin
   return result
 }
 
-/** Returns a fresh provider token for an additional account, refreshing via stored Supabase session if stale. */
-export async function getProviderTokenForAccount(account: ConnectedAccount): Promise<string> {
+/**
+ * Returns a fresh provider token for an additional account, refreshing via
+ * stored Supabase session if stale.
+ *
+ * Returns null when the token is expired AND cannot be auto-refreshed
+ * (account was connected before session tokens were stored). In that case
+ * the UI should prompt the user to reconnect that specific account.
+ */
+export async function getProviderTokenForAccount(account: ConnectedAccount): Promise<string | null> {
   const age = Date.now() - (account.providerTokenSavedAt ?? 0)
   if (age < TOKEN_TTL) return account.providerToken
 
@@ -162,5 +122,6 @@ export async function getProviderTokenForAccount(account: ConnectedAccount): Pro
     } catch { /* fall through */ }
   }
 
-  return account.providerToken
+  // Token is expired and we have no way to refresh it — signal needs-reconnect
+  return null
 }
