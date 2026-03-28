@@ -999,19 +999,43 @@ function AccountsSection({
         </div>
       ) : null)}
 
-      {/* Add account button */}
-      <button onClick={() => void connectAdditional()} disabled={adding}
-        style={{
-          marginTop: 8, display: 'flex', alignItems: 'center', gap: 8, width: '100%',
-          padding: '12px 16px', borderRadius: 9,
-          background: 'var(--color-surface2, #0D0F1A)',
-          border: '1px dashed var(--color-border, #252A3E)',
-          color: 'var(--color-accent, #1E40AF)', fontSize: 13, fontWeight: 500, cursor: 'pointer',
-          opacity: adding ? 0.6 : 1,
-        }}>
-        <LogIn size={14} />
-        {adding ? 'Connecting…' : '+ Connect another Google account'}
-      </button>
+      {/* Add account button + Remove all */}
+      <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
+        <button onClick={() => void connectAdditional()} disabled={adding}
+          style={{
+            flex: 1, display: 'flex', alignItems: 'center', gap: 8,
+            padding: '12px 16px', borderRadius: 9,
+            background: 'var(--color-surface2, #0D0F1A)',
+            border: '1px dashed var(--color-border, #252A3E)',
+            color: 'var(--color-accent, #1E40AF)', fontSize: 13, fontWeight: 500, cursor: 'pointer',
+            opacity: adding ? 0.6 : 1,
+          }}>
+          <LogIn size={14} />
+          {adding ? 'Connecting…' : '+ Connect another Google account'}
+        </button>
+
+        {accounts.filter(a => !a.isPrimary).length > 0 && (
+          <button
+            onClick={() => {
+              accounts.filter(a => !a.isPrimary).forEach(a => removeAccount(a.id))
+              const updated = loadAccounts()
+              setAccounts(updated)
+              saveAccountsToDB(updated).catch(console.warn)
+            }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '12px 14px', borderRadius: 9,
+              background: 'rgba(224,82,82,0.06)',
+              border: '1px solid rgba(224,82,82,0.25)',
+              color: '#E05252', fontSize: 12, fontWeight: 500, cursor: 'pointer',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            <Trash2 size={13} />
+            Remove all
+          </button>
+        )}
+      </div>
 
       <p style={{ margin: '10px 0 0', fontSize: 11.5, color: 'var(--color-text-muted, #6B7280)', lineHeight: 1.55 }}>
         All connected accounts are used for calendar aggregation and inbox triage. Tokens are stored locally only.
