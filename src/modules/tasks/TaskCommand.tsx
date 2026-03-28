@@ -17,7 +17,7 @@ import type { Quadrant } from '@/types'
 const QUADRANTS: Quadrant[] = ['do', 'schedule', 'delegate', 'eliminate']
 
 export function TaskCommand() {
-  const { tasks, moveTask } = useTaskStore()
+  const { tasks, moveTask, reorderInbox } = useTaskStore()
   const active = tasks.filter(t => t.quadrant !== null && !t.completed)
   const urgent = tasks.filter(t => t.quadrant === 'do' && !t.completed)
   const inbox  = tasks.filter(t => t.quadrant === null && t.status !== 'done' && t.status !== 'cancelled' && !t.completed)
@@ -49,9 +49,16 @@ export function TaskCommand() {
     } else if (QUADRANTS.includes(overId as Quadrant)) {
       moveTask(taskId, overId as Quadrant)
     } else {
-      // over is another task — use its quadrant
-      const target = tasks.find(t => t.id === overId)
-      if (target !== undefined) moveTask(taskId, target.quadrant)
+      // over is another task
+      const dragged = tasks.find(t => t.id === taskId)
+      const target  = tasks.find(t => t.id === overId)
+      if (!target) return
+      if (dragged?.quadrant === null && target.quadrant === null) {
+        // Both are inbox tasks — reorder within inbox
+        reorderInbox(taskId, overId)
+      } else {
+        moveTask(taskId, target.quadrant)
+      }
     }
   }
 

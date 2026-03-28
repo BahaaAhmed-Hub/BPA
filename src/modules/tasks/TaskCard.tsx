@@ -2,11 +2,9 @@ import { useState } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { Trash2, Check, GripVertical, Clock, Calendar, User, Plus } from 'lucide-react'
-import type { Task, CompanyTag } from '@/types'
-import { COMPANY_COLORS, COMPANY_LABELS, getAllUsers } from '@/types'
+import type { Task } from '@/types'
+import { COMPANY_COLORS, getAllUsers, loadDynamicCompanies } from '@/types'
 import { useTaskStore } from '@/store/taskStore'
-
-const COMPANY_TAGS: CompanyTag[] = ['teradix', 'dxtech', 'consulting', 'personal']
 
 interface TaskCardProps {
   task: Task
@@ -32,7 +30,9 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
     zIndex: isDragging ? 50 : 'auto' as const,
   }
 
-  const companyColor = COMPANY_COLORS[task.company] ?? '#6B7280'
+  const companies    = loadDynamicCompanies()
+  const dynCompany   = companies.find(c => c.id === task.companyId)
+  const companyColor = dynCompany?.color ?? COMPANY_COLORS[task.company] ?? '#6B7280'
   const ownerUser = task.owner ? getAllUsers().find(u => u.id === task.owner) : undefined
   const users = getAllUsers()
 
@@ -143,8 +143,11 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
             {/* Company */}
             <select
               data-nm
-              value={task.company}
-              onChange={e => updateTask(task.id, { company: e.target.value as CompanyTag })}
+              value={task.companyId ?? task.company}
+              onChange={e => {
+                const co = companies.find(c => c.id === e.target.value)
+                updateTask(task.id, { companyId: e.target.value, company: (co?.id as Task['company']) ?? task.company })
+              }}
               title="Change company"
               style={{
                 fontSize: 10, fontWeight: 600,
@@ -154,8 +157,8 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
                 appearance: 'none', WebkitAppearance: 'none', fontFamily: 'inherit',
               }}
             >
-              {COMPANY_TAGS.map(c => (
-                <option key={c} value={c}>{COMPANY_LABELS[c]}</option>
+              {companies.map(c => (
+                <option key={c.id} value={c.id}>{c.name}</option>
               ))}
             </select>
 

@@ -230,7 +230,19 @@ export async function saveCompaniesToDB(companies: CompanyRow[]): Promise<void> 
       users_data:   c.users ?? [],
     }))
     const { error } = await supabase.from('companies').upsert(rows, { onConflict: 'id' })
-    if (error) throw new Error(error.message)
+    if (error) {
+      // Migration may not have run yet — fall back to base columns only
+      const baseRows = companies.map(c => ({
+        id:          c.id,
+        user_id:     userId,
+        name:        c.name,
+        color_tag:   c.color,
+        calendar_id: c.calendarId || null,
+        is_active:   c.isActive,
+      }))
+      const { error: baseError } = await supabase.from('companies').upsert(baseRows, { onConflict: 'id' })
+      if (baseError) throw new Error(baseError.message)
+    }
   }
 }
 

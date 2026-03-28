@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { arrayMove } from '@dnd-kit/sortable'
 import type { Task, Quadrant, TaskStatus, TaskActivity } from '@/types'
 import { COMPANY_LABELS, QUADRANT_META, getAllUsers } from '@/types'
 import { saveTasksToDB, loadTasksFromDB } from '@/lib/dbSync'
@@ -47,6 +48,7 @@ interface TaskState {
   addTask: (task: Omit<Task, 'id' | 'createdAt'>) => void
   updateTask: (id: string, updates: Partial<Task>) => void
   moveTask: (id: string, quadrant: Quadrant | null) => void
+  reorderInbox: (activeId: string, overId: string) => void
   deleteTask: (id: string) => void
   toggleComplete: (id: string) => void
   setStatus: (id: string, status: TaskStatus) => void
@@ -132,6 +134,20 @@ export const useTaskStore = create<TaskState>()(
             tasks: next,
             activities: [...s.activities, act(id, 'moved', `Moved from ${from} to ${to}`)],
           }
+        }),
+
+      reorderInbox: (activeId, overId) =>
+        set(s => {
+          const inboxIds = s.tasks.filter(t => t.quadrant === null).map(t => t.id)
+          const fromIdx = inboxIds.indexOf(activeId)
+          const toIdx   = inboxIds.indexOf(overId)
+          if (fromIdx === -1 || toIdx === -1 || fromIdx === toIdx) return s
+          const reorderedInbox = arrayMove(inboxIds, fromIdx, toIdx)
+          const inboxSet = new Set(inboxIds)
+          const others   = s.tasks.filter(t => !inboxSet.has(t.id))
+          const next     = [...others, ...reorderedInbox.map(id => s.tasks.find(t => t.id === id)!)]
+          scheduleDbSync(next)
+          return { tasks: next }
         }),
 
       deleteTask: id =>
