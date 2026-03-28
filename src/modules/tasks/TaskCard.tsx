@@ -34,8 +34,12 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
   const companies    = loadDynamicCompanies()
   const dynCompany   = companies.find(c => c.id === task.companyId)
   const companyColor = dynCompany?.color ?? COMPANY_COLORS[task.company] ?? '#6B7280'
-  const ownerUser = task.owner ? getAllUsers().find(u => u.id === task.owner) : undefined
-  const users = getAllUsers()
+  const allUsers  = getAllUsers()
+  const ownerUser = task.owner ? allUsers.find(u => u.id === task.owner) : undefined
+  // Only show users belonging to the task's selected company in the owner picker
+  const users = task.companyId
+    ? allUsers.filter(u => u.companyId === task.companyId)
+    : allUsers
   const cachedCals = getCalendarCache()
 
   const isSchedule = task.quadrant === 'schedule'
