@@ -518,22 +518,24 @@ function App() {
   }, [themeId])
 
   useEffect(() => {
+    // Capture BEFORE onAuthStateChange subscription runs — it may clear the key immediately
+    const hasPendingOnLoad = !!getPendingAddAccount()
+
     void supabase.auth.getSession().then(({ data }) => {
       const u = data.session?.user
-      if (u) {
-        // If we're returning from an add-account OAuth flow, skip user-switch detection.
-        // onAuthStateChange will handle restoring the original session.
-        const hasPendingAddAccount = !!getPendingAddAccount()
-        if (!hasPendingAddAccount) {
-          const lastUserId = localStorage.getItem(LAST_USER_KEY)
-          if (lastUserId && lastUserId !== u.id) {
-            clearUserData(clearTasks, clearHabits)
-          }
-          localStorage.setItem(LAST_USER_KEY, u.id)
+      if (u && !hasPendingOnLoad) {
+        // Normal page load: do user-switch detection
+        const lastUserId = localStorage.getItem(LAST_USER_KEY)
+        if (lastUserId && lastUserId !== u.id) {
+          clearUserData(clearTasks, clearHabits)
         }
+        localStorage.setItem(LAST_USER_KEY, u.id)
       }
+      // If hasPendingOnLoad: onAuthStateChange handles add-account flow + restores session.
+      // Still call setUser/setLoading so the UI doesn't hang, but skip loadAllFromDB
+      // (onAuthStateChange's second call for the restored session will trigger it).
       setUser(u ? { id: u.id, email: u.email ?? '', name: u.user_metadata?.full_name as string | undefined, avatarUrl: u.user_metadata?.avatar_url as string | undefined } : null)
-      if (u) { void loadAllFromDB(loadTasksFromDB, loadHabitsFromDB) }
+      if (u && !hasPendingOnLoad) { void loadAllFromDB(loadTasksFromDB, loadHabitsFromDB) }
       setLoading(false)
     })
 
@@ -553,10 +555,10 @@ function App() {
           scopes:               ['calendar', 'calendar.events', 'gmail.readonly'],
           isPrimary:            false,
         })
-        // Persist accounts to DB (token stripped server-side)
-        void saveAccountsToDB(loadAccounts()).catch(console.warn)
-        // Restore the previous session without changing current user
-        void supabase.auth.setSession(pending).catch(() => {/* expired token – user must re-login */})
+        // Restore the original session first, then save accounts to DB under the correct user
+        void supabase.auth.setSession(pending)
+          .then(() => saveAccountsToDB(loadAccounts()))
+          .catch(console.warn)
         return
       }
 

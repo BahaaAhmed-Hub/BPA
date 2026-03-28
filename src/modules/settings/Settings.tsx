@@ -1196,6 +1196,14 @@ export function Settings() {
   const settingsRef = useRef(settings)
   settingsRef.current = settings
 
+  // Re-read accounts from localStorage whenever auth user changes.
+  // This catches the add-account OAuth return: onAuthStateChange calls addAccount()
+  // then restores the original session (changing authUser.id), at which point
+  // the newly added account is already in localStorage.
+  useEffect(() => {
+    setAccounts(loadAccounts())
+  }, [authUser?.id])
+
   useEffect(() => { void checkSupabase().then(setSupaOk) }, [])
 
   // ── On mount: load all data from DB (authoritative source) ───────────────────
