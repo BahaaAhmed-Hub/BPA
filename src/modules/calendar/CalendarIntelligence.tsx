@@ -352,32 +352,47 @@ interface CalWithAccount extends GCalCalendar {
   accountToken: string
 }
 
-async function loadAllCalendars(primaryEmail: string): Promise<CalWithAccount[]> {
+interface LoadCalendarsResult {
+  calendars: CalWithAccount[]
+  needsReconnect: string[]  // emails of accounts with expired/unrefreshable tokens
+}
+
+async function loadAllCalendars(primaryEmail: string): Promise<LoadCalendarsResult> {
   // Primary account — proper refresh via withAuth + Supabase session
   const { calendars: primaryCals } = await listCalendars()
   const primaryToken = localStorage.getItem('google_provider_token') ?? ''
+  console.log(`[CalIntel] Primary (${primaryEmail}): ${primaryCals.length} calendars`)
   const primaryResult: CalWithAccount[] = primaryCals.map(c => ({
     ...c, accountEmail: primaryEmail, accountToken: primaryToken,
   }))
 
   // Additional accounts — refresh stale tokens via stored Supabase sessions
-  const extraAccounts = loadAccounts()
+  const extraAccounts = loadAccounts().filter(a => !a.isPrimary)
+  console.log(`[CalIntel] Extra accounts in storage: ${extraAccounts.map(a => a.email).join(', ') || 'none'}`)
+
+  const needsReconnect: string[] = []
   const extraResults = await Promise.all(
     extraAccounts.map(async account => {
       const token = await getProviderTokenForAccount(account)
-      if (!token) return []
+      if (!token) {
+        console.warn(`[CalIntel] ${account.email}: token expired, cannot refresh — needs reconnect`)
+        needsReconnect.push(account.email)
+        return []
+      }
       const cals = await listCalendarsWithToken(token)
+      console.log(`[CalIntel] ${account.email}: ${cals.length} calendars loaded`)
       return cals.map(c => ({ ...c, accountEmail: account.email, accountToken: token }))
     })
   )
 
-  // Deduplicate by (accountEmail + calendarId) — same cal in 2 accounts shows once per account
+  // Deduplicate by (accountEmail + calendarId)
   const seen = new Set<string>()
-  return [...primaryResult, ...extraResults.flat()].filter(c => {
+  const calendars = [...primaryResult, ...extraResults.flat()].filter(c => {
     const key = `${c.accountEmail}:${c.id}`
     if (seen.has(key)) return false
     seen.add(key); return true
   })
+  return { calendars, needsReconnect }
 }
 
 async function fetchAllEvents(
@@ -406,6 +421,7 @@ export function CalendarIntelligence() {
   const [loadingEvents,  setLoadingEvents]  = useState(true)
   const [noAuth,         setNoAuth]         = useState(false)
   const [fetchError,     setFetchError]     = useState<string | null>(null)
+  const [reconnectNeeded, setReconnectNeeded] = useState<string[]>([])
 
   const [selectedEvent,  setSelectedEvent]  = useState<GCalEvent | null>(null)
   const [prep,           setPrep]           = useState<MeetingPrep | null>(null)
@@ -414,9 +430,10 @@ export function CalendarIntelligence() {
 
   // Load calendars from all accounts once
   useEffect(() => {
-    void loadAllCalendars(user?.email ?? '').then(cals => {
-      setAllCalendars(cals)
-      if (!cals.length) setNoAuth(true)
+    void loadAllCalendars(user?.email ?? '').then(({ calendars, needsReconnect }) => {
+      setAllCalendars(calendars)
+      setReconnectNeeded(needsReconnect)
+      if (!calendars.length) setNoAuth(true)
     })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.email])
@@ -623,6 +640,25 @@ export function CalendarIntelligence() {
           height: 1, marginBottom: 16,
           background: 'linear-gradient(90deg, #1E40AF40 0%, #252A3E 60%, transparent 100%)',
         }} />
+
+        {/* ─── Reconnect banner for stale accounts ──────────────────────── */}
+        {reconnectNeeded.length > 0 && (
+          <div style={{
+            marginBottom: 16, padding: '10px 14px', borderRadius: 8,
+            background: 'rgba(224,165,36,0.08)', border: '1px solid rgba(224,165,36,0.3)',
+            display: 'flex', alignItems: 'center', gap: 10,
+          }}>
+            <span style={{ fontSize: 14 }}>⚠</span>
+            <div style={{ flex: 1 }}>
+              <span style={{ fontSize: 12, color: '#E0A524', fontWeight: 600 }}>
+                {reconnectNeeded.join(', ')}
+              </span>
+              <span style={{ fontSize: 12, color: '#94A3B8' }}>
+                {' '}— token expired. Go to <strong style={{ color: '#E8EAF6' }}>Settings → Integrations</strong> and click <strong style={{ color: '#E8EAF6' }}>Reconnect</strong> to restore calendar access.
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* ─── Calendar filter chips ─────────────────────────────────────── */}
         {allCalendars.length > 0 && (

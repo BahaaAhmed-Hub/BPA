@@ -174,18 +174,24 @@ export async function listCalendars(): Promise<{ calendars: GCalCalendar[]; noAu
   return { calendars, noAuth: false }
 }
 
-/** List calendars using a specific token (for multi-account). */
+/** List calendars using a specific token (for multi-account). Logs errors for debugging. */
 export async function listCalendarsWithToken(
   token: string,
 ): Promise<GCalCalendar[]> {
   try {
     const res = await gcalRequest(token, '/users/me/calendarList')
-    if (!res.ok) return []
+    if (!res.ok) {
+      console.warn(`[CalIntel] listCalendarsWithToken HTTP ${res.status}`)
+      return []
+    }
     const data = (await res.json()) as { items?: GCalCalendar[] }
     return (data.items ?? []).filter(c =>
       c.accessRole === 'owner' || c.accessRole === 'writer' || c.accessRole === 'reader'
     )
-  } catch { return [] }
+  } catch (err) {
+    console.warn('[CalIntel] listCalendarsWithToken error:', err)
+    return []
+  }
 }
 
 /** Fetch events from a calendar using a specific token (for multi-account). */
