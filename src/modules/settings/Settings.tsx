@@ -424,7 +424,7 @@ function CompanyCard({
   onUpdate: (patch: Partial<CompanyRow>) => void
   onDelete: () => void
 }) {
-  const [usersOpen, setUsersOpen]     = useState(true)
+  const [usersOpen, setUsersOpen]     = useState(false)
   const [colorOpen, setColorOpen]     = useState(false)
   const [editingName, setEditingName] = useState(false)
   const [nameDraft, setNameDraft]     = useState(co.name)
@@ -486,13 +486,13 @@ function CompanyCard({
             onClick={() => setColorOpen(o => !o)}
             title="Change color"
             style={{
-              width: 28, height: 28, borderRadius: '50%', background: co.color, cursor: 'pointer',
+              width: 18, height: 18, borderRadius: '50%', background: co.color, cursor: 'pointer',
               border: `2px solid ${co.color}60`, flexShrink: 0,
             }}
           />
           {colorOpen && (
             <div style={{
-              position: 'absolute', top: 34, left: 0, zIndex: 200,
+              position: 'absolute', top: 24, left: 0, zIndex: 200,
               background: '#1a1f35', border: '1px solid #2e3450', borderRadius: 10,
               padding: '7px 8px', display: 'flex', gap: 5,
               boxShadow: '0 6px 20px rgba(0,0,0,0.5)',
@@ -552,14 +552,13 @@ function CompanyCard({
         )}
 
         {/* Users expand toggle */}
-        <button onClick={() => setUsersOpen(o => !o)} style={{
-          display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0,
-          padding: '3px 8px', borderRadius: 5, fontSize: 10.5, cursor: 'pointer',
-          background: usersOpen ? '#7F77DD18' : 'transparent',
-          border: `1px solid ${usersOpen ? '#7F77DD50' : '#252A3E'}`,
-          color: usersOpen ? '#7F77DD' : '#6B7280',
+        <button onClick={() => setUsersOpen(o => !o)} title={usersOpen ? 'Collapse members' : 'Expand members'} style={{
+          display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0,
+          padding: '2px 7px', borderRadius: 5, fontSize: 10.5, cursor: 'pointer',
+          background: 'transparent', border: '1px solid #252A3E',
+          color: '#6B7280',
         }}>
-          {users.length > 0 ? users.length : '+'} user{users.length !== 1 ? 's' : ''}
+          <span style={{ color: co.color, fontWeight: 600 }}>{users.length}</span>
           {usersOpen ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
         </button>
 
