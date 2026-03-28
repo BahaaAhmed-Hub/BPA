@@ -19,3 +19,4 @@ alter table public.tasks
 -- ─── users: add connected_accounts + app_preferences ─────────
 -- Store connected Google accounts and extra preferences in schedule_rules (already jsonb)
 -- No schema change needed — stored as sub-keys in schedule_rules jsonb.
+
