@@ -657,7 +657,7 @@ function CompaniesSection({
   function persistCompanies(next: CompanyRow[]) {
     setCompanies(next)
     saveCompanies(next)
-    saveCompaniesToDB(next as unknown as DbSyncCompanyRow[]).catch(console.warn)
+    saveCompaniesToDB(next as unknown as DbSyncCompanyRow[]).catch(e => console.error('[persistCompanies]', e))
   }
 
   function addCompany() {
@@ -1137,8 +1137,14 @@ export function Settings() {
         // Companies (full — with users, emailDomain, accountId)
         const dbCompanies = await loadCompaniesFromDB()
         if (dbCompanies.length > 0) {
-          setCompanies(dbCompanies)
-          saveCompanies(dbCompanies)
+          // Merge: DB wins for metadata, but preserve localStorage users if DB has none yet
+          const localBackup: Record<string, CompanyUser[]> = ls('professor-company-users', {})
+          const merged = dbCompanies.map(c => ({
+            ...c,
+            users: c.users?.length ? c.users : (localBackup[c.id] ?? []),
+          }))
+          setCompanies(merged)
+          saveCompanies(merged)
         } else if (companies.length === 0) {
           // DB empty too — nothing to recover
         }
