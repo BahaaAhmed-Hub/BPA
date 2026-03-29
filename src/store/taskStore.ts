@@ -46,6 +46,7 @@ interface TaskState {
   tasks: Task[]
   activities: TaskActivity[]
   addTask: (task: Omit<Task, 'id' | 'createdAt'>) => void
+  addTasksBatch: (tasks: Omit<Task, 'id' | 'createdAt'>[]) => void
   updateTask: (id: string, updates: Partial<Task>) => void
   moveTask: (id: string, quadrant: Quadrant | null) => void
   reorderInbox: (activeId: string, overId: string) => void
@@ -68,12 +69,18 @@ export const useTaskStore = create<TaskState>()(
           const rows = await loadTasksFromDB()
           if (rows.length > 0) {
             set(s => ({
-              // Merge DB rows with local — DB wins on conflict
+              // Merge: DB data wins on fields, local order is preserved
               tasks: (() => {
                 const local = s.tasks
                 const dbMap = new Map(rows.map(r => [r.id, fromRow(r)]))
-                const localOnly = local.filter(t => !dbMap.has(t.id))
-                return [...dbMap.values(), ...localOnly]
+                // Update local tasks with fresh DB data (preserves drag order)
+                const merged = local.map(t =>
+                  dbMap.has(t.id) ? { ...t, ...dbMap.get(t.id)! } : t
+                )
+                // Append tasks that exist in DB but not locally
+                const localIds = new Set(local.map(t => t.id))
+                const dbOnly = rows.filter(r => !localIds.has(r.id)).map(r => fromRow(r))
+                return [...merged, ...dbOnly]
               })(),
             }))
           }
@@ -88,6 +95,22 @@ export const useTaskStore = create<TaskState>()(
           return {
             tasks: next,
             activities: [...s.activities, act(newTask.id, 'created', 'Task created')],
+          }
+        }),
+
+      addTasksBatch: tasks =>
+        set(s => {
+          const newTasks: Task[] = tasks.map(t => ({
+            ...t, id: crypto.randomUUID(), createdAt: new Date().toISOString(),
+          }))
+          const next = [...s.tasks, ...newTasks]
+          scheduleDbSync(next)
+          return {
+            tasks: next,
+            activities: [
+              ...s.activities,
+              ...newTasks.map(t => act(t.id, 'created', 'Task created from meeting notes')),
+            ],
           }
         }),
 

@@ -319,6 +319,51 @@ export async function updateCalendarEvent(
   return { event: updated, noAuth: false }
 }
 
+// ─── Reschedule event to a new date (same time) ──────────────────────────────
+
+/** Move an event to a different calendar day, preserving start time and duration.
+ *  Uses a specific token (for multi-account support). */
+export async function updateCalendarEventDate(
+  token: string,
+  calendarId: string,
+  eventId: string,
+  newDateStr: string,   // YYYY-MM-DD
+  originalEvent: GCalEvent,
+): Promise<boolean> {
+  try {
+    const isAllDay = !originalEvent.start.dateTime
+    let body: Record<string, unknown>
+
+    if (isAllDay) {
+      body = {
+        start: { date: newDateStr },
+        end:   { date: newDateStr },
+      }
+    } else {
+      const origStart = new Date(originalEvent.start.dateTime!)
+      const origEnd   = new Date(originalEvent.end.dateTime!)
+      const duration  = origEnd.getTime() - origStart.getTime()
+      const [y, m, d] = newDateStr.split('-').map(Number)
+      const newStart  = new Date(origStart)
+      newStart.setFullYear(y, m - 1, d)
+      const newEnd = new Date(newStart.getTime() + duration)
+      body = {
+        start: { dateTime: newStart.toISOString(), timeZone: originalEvent.start.timeZone ?? 'UTC' },
+        end:   { dateTime: newEnd.toISOString(),   timeZone: originalEvent.end.timeZone ?? 'UTC' },
+      }
+    }
+
+    const res = await gcalRequest(
+      token,
+      `/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}`,
+      { method: 'PATCH', body: JSON.stringify(body) },
+    )
+    return res.ok
+  } catch {
+    return false
+  }
+}
+
 // ─── Delete event ─────────────────────────────────────────────────────────────
 
 export async function deleteCalendarEvent(

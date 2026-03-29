@@ -423,6 +423,64 @@ ${JSON.stringify(companyList, null, 2)}`
   }
 }
 
+// ─── breakdownMeetingNotes ────────────────────────────────────────────────────
+
+export interface ExtractedTask {
+  title: string
+  quadrant: 'do' | 'schedule' | 'delegate' | 'eliminate' | null
+  dueDate?: string
+  ownerName?: string
+}
+
+export async function breakdownMeetingNotes(
+  notes: string,
+  parentTitle: string,
+  companies: AnalysisCompany[],
+): Promise<ExtractedTask[]> {
+  const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY ?? ''
+  if (!apiKey || !notes.trim()) return []
+
+  const companyList = companies.map(c => ({
+    id: c.id, name: c.name,
+    users: (c.users ?? []).map(u => ({ id: u.id, name: u.name })),
+  }))
+
+  const system = `You are an AI task extraction assistant. Given meeting notes or raw action items, extract clear actionable tasks.
+
+Return ONLY a valid JSON array (max 10 items):
+[
+  {
+    "title": "task title with emoji prefix",
+    "quadrant": "do|schedule|delegate|eliminate or null",
+    "dueDate": "YYYY-MM-DD or omit if none",
+    "ownerName": "first name of person responsible if mentioned, or omit"
+  }
+]
+
+Rules:
+- Extract only clear action items (not observations or context)
+- Emoji prefix: ✅ follow-up/check, 📝 write/draft/document, 📞 call someone, 📊 review/analyze, 🔨 build/implement/fix, 💬 discuss/meet, 📧 email/send, 🔍 research/investigate
+- quadrant: "do" if urgent/ASAP/today, "schedule" if specific future date, "delegate" if for someone else, null if unclear
+- ownerName: only if explicitly delegated to a named person`
+
+  const userMsg = `Meeting: "${parentTitle}"
+
+Notes / action items:
+${notes}
+
+Available team members:
+${JSON.stringify(companyList, null, 2)}`
+
+  try {
+    const raw = await call(system, userMsg)
+    const parsed = parseJson<ExtractedTask[]>(raw)
+    if (!Array.isArray(parsed)) return []
+    return parsed.filter(t => typeof t.title === 'string' && t.title.trim())
+  } catch {
+    return []
+  }
+}
+
 // ─── Legacy export (backwards compat with existing UI) ───────────────────────
 
 export interface ProfessorMessage {

@@ -1,9 +1,14 @@
 import { useState, useEffect, useCallback } from 'react'
 import {
   ChevronLeft, ChevronRight, Calendar, Video, Users,
-  Sparkles, MapPin, RefreshCw, X, Eye, EyeOff,
+  Sparkles, MapPin, RefreshCw, X, Eye, EyeOff, GripVertical,
 } from 'lucide-react'
-import { detectMeetingType, listCalendars, listCalendarsWithToken, fetchCalendarEventsWithToken } from '@/lib/googleCalendar'
+import {
+  DndContext, DragOverlay, PointerSensor, useSensor, useSensors,
+  useDraggable, useDroppable,
+  type DragEndEvent, type DragStartEvent,
+} from '@dnd-kit/core'
+import { detectMeetingType, listCalendars, listCalendarsWithToken, fetchCalendarEventsWithToken, updateCalendarEventDate } from '@/lib/googleCalendar'
 import type { GCalEvent, GCalCalendar } from '@/lib/googleCalendar'
 import { generateMeetingPrep } from '@/lib/professor'
 import type { MeetingPrep } from '@/lib/professor'
@@ -11,6 +16,29 @@ import { useAuthStore } from '@/store/authStore'
 import { loadAccounts, getProviderTokenForAccount } from '@/lib/multiAccount'
 import { connectAdditionalGoogleAccount } from '@/lib/google'
 import type { DbUser, DbCompany, DbCalendarEvent } from '@/types/database'
+
+// ─── DnD helpers ─────────────────────────────────────────────────────────────
+
+// Events from fetchCalendarEventsWithToken have calendarId/calendarColor added
+type GCalEventExt = GCalEvent & { calendarId?: string; calendarColor?: string }
+
+function DroppableDayTab({ dateKey, children, isOver }: { dateKey: string; children: React.ReactNode; isOver?: boolean }) {
+  const { setNodeRef, isOver: over } = useDroppable({ id: `day-${dateKey}` })
+  return (
+    <div ref={setNodeRef} style={{ flex: '1 1 0', minWidth: 72, outline: (isOver ?? over) ? '2px solid #1E40AF60' : 'none', borderRadius: 10, transition: 'outline 0.1s' }}>
+      {children}
+    </div>
+  )
+}
+
+function DraggableEventRow({ event, children }: { event: GCalEvent; children: (drag: { listeners: ReturnType<typeof useDraggable>['listeners']; attributes: ReturnType<typeof useDraggable>['attributes']; isDragging: boolean }) => React.ReactNode }) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: event.id })
+  return (
+    <div ref={setNodeRef}>
+      {children({ listeners, attributes, isDragging })}
+    </div>
+  )
+}
 
 // ─── Persistence helpers ─────────────────────────────────────────────────────
 
@@ -424,6 +452,12 @@ export function CalendarIntelligence() {
   const [hiddenCals,     setHiddenCals]     = useState<Set<string>>(loadHiddenIntel)
   const [loadingEvents,  setLoadingEvents]  = useState(true)
   const [noAuth,         setNoAuth]         = useState(false)
+  const [draggingEvent,  setDraggingEvent]  = useState<GCalEvent | null>(null)
+  const [rescheduling,   setRescheduling]   = useState<string | null>(null) // eventId being rescheduled
+
+  const dndSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+  )
   const [fetchError,     setFetchError]     = useState<string | null>(null)
   const [reconnectNeeded, setReconnectNeeded] = useState<string[]>([])
 
@@ -493,6 +527,51 @@ export function CalendarIntelligence() {
     window.addEventListener('professor:accountsUpdated', handler)
     return () => window.removeEventListener('professor:accountsUpdated', handler)
   }, [reloadCalendars, loadEvents, weekStart, hiddenCals])
+
+  // ─── Calendar DnD: drag event to a different day tab to reschedule ──────────
+
+  function handleCalDragStart({ active }: DragStartEvent) {
+    const ev = events.find(e => e.id === active.id)
+    setDraggingEvent(ev ?? null)
+  }
+
+  async function handleCalDragEnd({ active, over }: DragEndEvent) {
+    setDraggingEvent(null)
+    if (!over) return
+
+    const overId = over.id as string
+    if (!overId.startsWith('day-')) return  // not dropped on a day
+
+    const newDateStr = overId.replace('day-', '')   // YYYY-MM-DD
+    const event = events.find(e => e.id === active.id)
+    if (!event) return
+
+    // Check if already on this day (no-op)
+    const eventDate = localDateStr(new Date(
+      (event as GCalEventExt).start?.dateTime
+        ? new Date((event as GCalEventExt).start.dateTime!)
+        : new Date((event as GCalEventExt).start.date + 'T00:00:00'),
+    ))
+    if (eventDate === newDateStr) return
+
+    // Find the calendar token for this event
+    const ext = event as GCalEventExt
+    const calId = ext.calendarId
+    if (!calId) return
+    const cal = allCalendars.find(c => c.id === calId)
+    if (!cal) return
+
+    setRescheduling(event.id)
+    try {
+      const ok = await updateCalendarEventDate(cal.accountToken, calId, event.id, newDateStr, event)
+      if (ok) {
+        // Reload events to reflect new date
+        void loadEvents(weekStart, allCalendars, hiddenCals)
+      }
+    } finally {
+      setRescheduling(null)
+    }
+  }
 
   // Generate meeting prep for a selected event
   const generatePrep = useCallback(async (event: GCalEvent) => {
@@ -573,6 +652,7 @@ export function CalendarIntelligence() {
           from { opacity: 0; transform: translateY(6px); }
           to   { opacity: 1; transform: translateY(0); }
         }
+        @keyframes spin { to { transform: rotate(360deg); } }
         .cal-fade { animation: fadeIn 0.3s ease both; }
         .event-row:hover { background: #32291A !important; cursor: pointer; }
       `}</style>
@@ -711,7 +791,14 @@ export function CalendarIntelligence() {
           </div>
         )}
 
-        {/* ─── Day Tabs ──────────────────────────────────────────────────── */}
+        {/* ─── DnD Context wraps day tabs + event list ──────────────────── */}
+        <DndContext
+          sensors={dndSensors}
+          onDragStart={handleCalDragStart}
+          onDragEnd={handleCalDragEnd}
+        >
+
+        {/* ─── Day Tabs (droppable) ──────────────────────────────────────── */}
         <div className="cal-fade" style={{
           display: 'flex', gap: 6, marginBottom: 24, overflowX: 'auto',
         }}>
@@ -720,39 +807,42 @@ export function CalendarIntelligence() {
             const count   = grouped.get(key)?.length ?? 0
             const isToday = key === today
             return (
-              <div key={key} style={{
-                flex: '1 1 0', minWidth: 72, padding: '10px 8px',
-                borderRadius: 10, textAlign: 'center',
-                background: isToday ? '#1E40AF14' : '#161929',
-                border: `1px solid ${isToday ? '#1E40AF40' : '#252A3E'}`,
-              }}>
-                <p style={{
-                  margin: '0 0 2px', fontSize: 10, fontWeight: 600,
-                  color: isToday ? '#1E40AF' : '#6B7280',
-                  textTransform: 'uppercase', letterSpacing: '0.8px',
+              <DroppableDayTab key={key} dateKey={key}>
+                <div style={{
+                  padding: '10px 8px',
+                  borderRadius: 10, textAlign: 'center',
+                  background: isToday ? '#1E40AF14' : '#161929',
+                  border: `1px solid ${isToday ? '#1E40AF40' : '#252A3E'}`,
+                  transition: 'border-color 0.1s',
                 }}>
-                  {DAY_LABELS[day.getDay()]}
-                </p>
-                <p style={{
-                  margin: '0 0 4px', fontSize: 18, fontWeight: 700,
-                  color: isToday ? '#E8EAF6' : '#C8BC9E',
-                  fontFamily: "'Cabinet Grotesk', sans-serif",
-                }}>
-                  {day.getDate()}
-                </p>
-                {count > 0 && (
-                  <span style={{
-                    display: 'inline-block',
-                    width: 18, height: 18, borderRadius: '50%',
-                    background: isToday ? '#1E40AF22' : '#252A3E',
-                    fontSize: 10, fontWeight: 700,
+                  <p style={{
+                    margin: '0 0 2px', fontSize: 10, fontWeight: 600,
                     color: isToday ? '#1E40AF' : '#6B7280',
-                    lineHeight: '18px',
+                    textTransform: 'uppercase', letterSpacing: '0.8px',
                   }}>
-                    {count}
-                  </span>
-                )}
-              </div>
+                    {DAY_LABELS[day.getDay()]}
+                  </p>
+                  <p style={{
+                    margin: '0 0 4px', fontSize: 18, fontWeight: 700,
+                    color: isToday ? '#E8EAF6' : '#C8BC9E',
+                    fontFamily: "'Cabinet Grotesk', sans-serif",
+                  }}>
+                    {day.getDate()}
+                  </p>
+                  {count > 0 && (
+                    <span style={{
+                      display: 'inline-block',
+                      width: 18, height: 18, borderRadius: '50%',
+                      background: isToday ? '#1E40AF22' : '#252A3E',
+                      fontSize: 10, fontWeight: 700,
+                      color: isToday ? '#1E40AF' : '#6B7280',
+                      lineHeight: '18px',
+                    }}>
+                      {count}
+                    </span>
+                  )}
+                </div>
+              </DroppableDayTab>
             )
           })}
         </div>
@@ -840,92 +930,118 @@ export function CalendarIntelligence() {
                       {/* Events */}
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                         {dayEvents.map(event => {
-                          const db        = gcalToDbEvent(event)
+                          const db         = gcalToDbEvent(event)
                           const isSelected = selectedEvent?.id === event.id
-                          const isPast    = new Date(db.end_time) < new Date()
-                          const mType     = db.meeting_type
-                          const hasVideo  = !!event.conferenceData?.entryPoints?.length
+                          const isPast     = new Date(db.end_time) < new Date()
+                          const mType      = db.meeting_type
+                          const hasVideo   = !!event.conferenceData?.entryPoints?.length
+                          const isRescheduling = rescheduling === event.id
 
                           return (
-                            <div
-                              key={event.id}
-                              className="event-row"
-                              onClick={() => handleSelectEvent(event)}
-                              style={{
-                                display: 'flex', gap: 12, alignItems: 'center',
-                                padding: '13px 16px',
-                                borderRadius: 10,
-                                background: isSelected ? '#32291A' : '#161929',
-                                border: `1px solid ${isSelected ? '#1E40AF50' : '#252A3E'}`,
-                                opacity: isPast ? 0.55 : 1,
-                                transition: 'all 0.15s',
-                                borderLeft: isSelected ? '3px solid #1E40AF' : '1px solid #252A3E',
-                              }}
-                            >
-                              {/* Time */}
-                              <div style={{ width: 58, flexShrink: 0, textAlign: 'right' }}>
-                                <p style={{ margin: 0, fontSize: 11.5, color: '#E8EAF6', fontWeight: 500, fontFamily: 'monospace' }}>
-                                  {fmtTime(db.start_time)}
-                                </p>
-                                <p style={{ margin: '1px 0 0', fontSize: 10, color: '#FFFFFF', fontFamily: 'monospace' }}>
-                                  {fmtTime(db.end_time)}
-                                </p>
-                              </div>
+                            <DraggableEventRow key={event.id} event={event}>
+                              {({ listeners, attributes, isDragging }) => (
+                                <div
+                                  className="event-row"
+                                  onClick={() => !isDragging && handleSelectEvent(event)}
+                                  style={{
+                                    display: 'flex', gap: 12, alignItems: 'center',
+                                    padding: '13px 16px',
+                                    borderRadius: 10,
+                                    background: isSelected ? '#32291A' : '#161929',
+                                    border: `1px solid ${isSelected ? '#1E40AF50' : '#252A3E'}`,
+                                    opacity: (isPast ? 0.55 : 1) * (isDragging ? 0.35 : 1),
+                                    transition: 'all 0.15s',
+                                    borderLeft: isSelected ? '3px solid #1E40AF' : '1px solid #252A3E',
+                                    cursor: isDragging ? 'grabbing' : 'pointer',
+                                  }}
+                                >
+                                  {/* Drag handle */}
+                                  <div
+                                    {...listeners}
+                                    {...attributes}
+                                    title="Drag to reschedule"
+                                    style={{
+                                      cursor: 'grab', color: '#404560', flexShrink: 0,
+                                      display: 'flex', alignItems: 'center',
+                                    }}
+                                    onClick={e => e.stopPropagation()}
+                                  >
+                                    <GripVertical size={13} strokeWidth={2} />
+                                  </div>
 
-                              {/* Color bar */}
-                              <div style={{
-                                width: 3, borderRadius: 2, flexShrink: 0, alignSelf: 'stretch',
-                                background: isSelected ? '#1E40AF' : '#252A3E',
-                                minHeight: 32,
-                              }} />
+                                  {/* Time */}
+                                  <div style={{ width: 58, flexShrink: 0, textAlign: 'right' }}>
+                                    <p style={{ margin: 0, fontSize: 11.5, color: '#E8EAF6', fontWeight: 500, fontFamily: 'monospace' }}>
+                                      {fmtTime(db.start_time)}
+                                    </p>
+                                    <p style={{ margin: '1px 0 0', fontSize: 10, color: '#FFFFFF', fontFamily: 'monospace' }}>
+                                      {fmtTime(db.end_time)}
+                                    </p>
+                                  </div>
 
-                              {/* Title + meta */}
-                              <div style={{ flex: 1 }}>
-                                <p style={{
-                                  margin: '0 0 4px', fontSize: 13.5, color: '#E8EAF6',
-                                  fontWeight: 500, lineHeight: 1.35,
-                                }}>
-                                  {event.summary ?? '(No title)'}
-                                </p>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                                  <MeetingTypeIcon type={mType} />
-                                  {mType && (
-                                    <span style={{ fontSize: 10.5, color: '#FFFFFF', textTransform: 'capitalize' }}>
-                                      {mType.replace('_', ' ')}
-                                    </span>
-                                  )}
-                                  {hasVideo && (
-                                    <span style={{
-                                      fontSize: 10, padding: '1px 6px', borderRadius: 4,
-                                      background: '#7F77DD18', color: '#7F77DD',
-                                      border: '1px solid #7F77DD30',
+                                  {/* Color bar */}
+                                  <div style={{
+                                    width: 3, borderRadius: 2, flexShrink: 0, alignSelf: 'stretch',
+                                    background: isSelected ? '#1E40AF' : '#252A3E',
+                                    minHeight: 32,
+                                  }} />
+
+                                  {/* Title + meta */}
+                                  <div style={{ flex: 1 }}>
+                                    <p style={{
+                                      margin: '0 0 4px', fontSize: 13.5, color: '#E8EAF6',
+                                      fontWeight: 500, lineHeight: 1.35,
                                     }}>
-                                      Video
-                                    </span>
-                                  )}
-                                  {db.location && (
-                                    <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10.5, color: '#FFFFFF' }}>
-                                      <MapPin size={10} />
-                                      {db.location.length > 28 ? db.location.slice(0, 28) + '…' : db.location}
-                                    </span>
+                                      {event.summary ?? '(No title)'}
+                                    </p>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                                      <MeetingTypeIcon type={mType} />
+                                      {mType && (
+                                        <span style={{ fontSize: 10.5, color: '#FFFFFF', textTransform: 'capitalize' }}>
+                                          {mType.replace('_', ' ')}
+                                        </span>
+                                      )}
+                                      {hasVideo && (
+                                        <span style={{
+                                          fontSize: 10, padding: '1px 6px', borderRadius: 4,
+                                          background: '#7F77DD18', color: '#7F77DD',
+                                          border: '1px solid #7F77DD30',
+                                        }}>
+                                          Video
+                                        </span>
+                                      )}
+                                      {db.location && (
+                                        <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10.5, color: '#FFFFFF' }}>
+                                          <MapPin size={10} />
+                                          {db.location.length > 28 ? db.location.slice(0, 28) + '…' : db.location}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  {/* AI badge / rescheduling indicator */}
+                                  {isRescheduling ? (
+                                    <div style={{ flexShrink: 0, fontSize: 11, color: '#7F77DD', display: 'flex', alignItems: 'center', gap: 5 }}>
+                                      <RefreshCw size={11} style={{ animation: 'spin 1s linear infinite' }} />
+                                      Moving…
+                                    </div>
+                                  ) : (
+                                    <div style={{
+                                      flexShrink: 0,
+                                      display: 'flex', alignItems: 'center', gap: 5,
+                                      padding: '5px 10px', borderRadius: 6,
+                                      background: isSelected ? '#1E40AF18' : '#161929',
+                                      border: `1px solid ${isSelected ? '#1E40AF40' : '#252A3E'}`,
+                                      color: isSelected ? '#1E40AF' : '#6B7280',
+                                      fontSize: 11,
+                                    }}>
+                                      <Sparkles size={11} />
+                                      {isSelected ? 'Prep open' : 'Prep'}
+                                    </div>
                                   )}
                                 </div>
-                              </div>
-
-                              {/* AI badge */}
-                              <div style={{
-                                flexShrink: 0,
-                                display: 'flex', alignItems: 'center', gap: 5,
-                                padding: '5px 10px', borderRadius: 6,
-                                background: isSelected ? '#1E40AF18' : '#161929',
-                                border: `1px solid ${isSelected ? '#1E40AF40' : '#252A3E'}`,
-                                color: isSelected ? '#1E40AF' : '#6B7280',
-                                fontSize: 11,
-                              }}>
-                                <Sparkles size={11} />
-                                {isSelected ? 'Prep open' : 'Prep'}
-                              </div>
-                            </div>
+                              )}
+                            </DraggableEventRow>
                           )
                         })}
                       </div>
@@ -950,6 +1066,23 @@ export function CalendarIntelligence() {
             </div>
           )}
         </div>
+
+        {/* Drag overlay — ghost label shown while dragging */}
+        <DragOverlay dropAnimation={null}>
+          {draggingEvent && (
+            <div style={{
+              padding: '8px 14px', borderRadius: 8, fontSize: 12.5, fontWeight: 500,
+              background: '#1E1B38', border: '1px solid #7F77DD60', color: '#E8EAF6',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+              display: 'flex', alignItems: 'center', gap: 8, maxWidth: 280,
+            }}>
+              <GripVertical size={13} color="#7F77DD" />
+              {draggingEvent.summary ?? '(No title)'}
+            </div>
+          )}
+        </DragOverlay>
+
+        </DndContext>
       </div>
     </>
   )

@@ -6,6 +6,17 @@ import type { Task } from '@/types'
 import { COMPANY_COLORS, getAllUsers, loadDynamicCompanies } from '@/types'
 import { useTaskStore } from '@/store/taskStore'
 import { getCalendarCache } from '@/lib/googleCalendar'
+import { MeetingFollowUpPopup } from './MeetingFollowUpPopup'
+import type { ExtractedTask } from '@/lib/professor'
+
+const MEETING_KEYWORDS = ['meeting', 'call', 'sync', 'standup', 'stand-up', '1:1', 'interview', 'check-in', 'debrief', 'catchup', 'catch-up']
+const MEETING_EMOJIS   = ['📞', '💬', '🤝', '📅']
+
+function isMeetingTask(title: string): boolean {
+  const lower = title.toLowerCase()
+  return MEETING_EMOJIS.some(e => title.includes(e)) ||
+    MEETING_KEYWORDS.some(k => lower.includes(k))
+}
 
 interface TaskCardProps {
   task: Task
@@ -13,8 +24,9 @@ interface TaskCardProps {
 }
 
 export function TaskCard({ task, onOpen }: TaskCardProps) {
-  const { toggleComplete, deleteTask, updateTask } = useTaskStore()
+  const { toggleComplete, deleteTask, updateTask, addTasksBatch } = useTaskStore()
   const [hovered, setHovered] = useState(false)
+  const [showMeetingPopup, setShowMeetingPopup] = useState(false)
   const [editingTitle, setEditingTitle] = useState(false)
   const [titleDraft, setTitleDraft] = useState(task.title)
   const [editingDate, setEditingDate] = useState(false)
@@ -99,13 +111,24 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
         </div>
 
         {/* Checkbox */}
-        <button data-nm onClick={() => toggleComplete(task.id)} style={{
-          width: 15, height: 15, borderRadius: 4,
-          border: `1.5px solid ${task.completed ? '#1D9E75' : '#252A3E'}`,
-          background: task.completed ? '#1D9E75' : 'transparent',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          cursor: 'pointer', flexShrink: 0, marginTop: 1, transition: 'all 0.15s ease',
-        }}>
+        <button
+          data-nm
+          onClick={() => {
+            // Intercept completion of meeting/call tasks to capture follow-up notes
+            if (!task.completed && isMeetingTask(task.title)) {
+              setShowMeetingPopup(true)
+            } else {
+              toggleComplete(task.id)
+            }
+          }}
+          style={{
+            width: 15, height: 15, borderRadius: 4,
+            border: `1.5px solid ${task.completed ? '#1D9E75' : '#252A3E'}`,
+            background: task.completed ? '#1D9E75' : 'transparent',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer', flexShrink: 0, marginTop: 1, transition: 'all 0.15s ease',
+          }}
+        >
           {task.completed && <Check size={9} color="#fff" strokeWidth={3} />}
         </button>
 
@@ -293,6 +316,33 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
           </button>
         )}
       </div>
+
+      {/* Meeting follow-up popup — shown when completing a meeting/call task */}
+      {showMeetingPopup && (
+        <MeetingFollowUpPopup
+          parentTask={task}
+          onConfirm={(extracted: ExtractedTask[]) => {
+            setShowMeetingPopup(false)
+            toggleComplete(task.id)
+            if (extracted.length > 0) {
+              addTasksBatch(extracted.map(t => ({
+                title:        t.title,
+                quadrant:     t.quadrant ?? null,
+                company:      task.company,
+                companyId:    task.companyId,
+                parentTaskId: task.id,
+                status:       'open' as const,
+                completed:    false,
+                ...(t.dueDate && { dueDate: t.dueDate }),
+              })))
+            }
+          }}
+          onSkip={() => {
+            setShowMeetingPopup(false)
+            toggleComplete(task.id)
+          }}
+        />
+      )}
     </div>
   )
 }
