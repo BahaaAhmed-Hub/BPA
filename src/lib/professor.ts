@@ -471,14 +471,10 @@ ${notes}
 Available team members:
 ${JSON.stringify(companyList, null, 2)}`
 
-  try {
-    const raw = await call(system, userMsg)
-    const parsed = parseJson<ExtractedTask[]>(raw)
-    if (!Array.isArray(parsed)) return []
-    return parsed.filter(t => typeof t.title === 'string' && t.title.trim())
-  } catch {
-    return []
-  }
+  const raw = await call(system, userMsg)
+  const parsed = parseJson<ExtractedTask[]>(raw)
+  if (!Array.isArray(parsed)) return []
+  return parsed.filter(t => typeof t.title === 'string' && t.title.trim())
 }
 
 // ─── Legacy export (backwards compat with existing UI) ───────────────────────

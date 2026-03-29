@@ -233,6 +233,7 @@ export function MeetingFollowUpPopup({ parentTask, onConfirm, onSkip }: Props) {
   const [loading,     setLoading]     = useState(false)
   const [drafts,      setDrafts]      = useState<DraftTask[] | null>(null)
   const [expandedIdx, setExpandedIdx] = useState<number | null>(null)
+  const [error,       setError]       = useState<string | null>(null)
 
   const companies = loadDynamicCompanies()
   const allUsers  = getAllUsers()
@@ -240,12 +241,13 @@ export function MeetingFollowUpPopup({ parentTask, onConfirm, onSkip }: Props) {
   async function handleAnalyze() {
     if (!notes.trim()) { onConfirm([]); return }
     setLoading(true)
+    setError(null)
     try {
       const tasks = await breakdownMeetingNotes(notes, parentTask.title, companies)
       setDrafts(tasks.map(t => toDraft(t, allUsers)))
       setExpandedIdx(null)
-    } catch {
-      setDrafts([])
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Analysis failed. Check your API key.')
     } finally {
       setLoading(false)
     }
@@ -362,6 +364,15 @@ export function MeetingFollowUpPopup({ parentTask, onConfirm, onSkip }: Props) {
               <p style={{ margin: '6px 0 0', fontSize: 10.5, color: '#4B5563' }}>
                 ⌘↵ to analyze · Leave empty to skip
               </p>
+              {error && (
+                <div style={{
+                  marginTop: 10, padding: '8px 12px', borderRadius: 8,
+                  background: '#E0525218', border: '1px solid #E0525240',
+                  color: '#E05252', fontSize: 11.5, lineHeight: 1.4,
+                }}>
+                  {error}
+                </div>
+              )}
             </>
 
           ) : drafts.length === 0 ? (
@@ -399,7 +410,7 @@ export function MeetingFollowUpPopup({ parentTask, onConfirm, onSkip }: Props) {
 
               {/* Re-analyze link */}
               <button
-                onClick={() => { setDrafts(null); setExpandedIdx(null) }}
+                onClick={() => { setDrafts(null); setExpandedIdx(null); setError(null) }}
                 style={{
                   alignSelf: 'flex-start', marginTop: 4,
                   background: 'transparent', border: 'none', cursor: 'pointer',
