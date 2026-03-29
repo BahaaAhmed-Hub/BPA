@@ -204,7 +204,7 @@ function EventCard({
           lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
           textDecoration: isCancelled ? `line-through ${color}` : 'none',
         }}>
-          {isDone && '✓ '}{title}
+          {isDone && <span style={{ color: '#fff' }}>✓ </span>}{title}
         </p>
       )}
       {pe.height >= 48 && (
