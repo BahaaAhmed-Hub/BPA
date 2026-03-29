@@ -174,7 +174,7 @@ function EventCard({
 
   const bgBase   = `${color}22`
   const bgHover  = `${color}38`
-  const barColor = isDone ? '#1D9E75' : isCancelled ? '#E05252' : color
+  const barColor = color
   const textColor = color
 
   return (
