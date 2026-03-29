@@ -490,6 +490,8 @@ ${JSON.stringify(companyList, null, 2)}`
   } catch (err) {
     if (err instanceof ProfessorError) throw err
     const msg = err instanceof Error ? err.message : String(err)
+    const is401 = msg.includes('401') || msg.includes('authentication_error') || msg.includes('invalid x-api-key')
+    if (is401) throw new ProfessorError('Invalid Anthropic API key. Update VITE_ANTHROPIC_API_KEY in GitHub repository secrets (Settings → Secrets → Actions).', 'config_error')
     throw new ProfessorError(`AI request failed: ${msg}`, 'api_error', err)
   }
 }

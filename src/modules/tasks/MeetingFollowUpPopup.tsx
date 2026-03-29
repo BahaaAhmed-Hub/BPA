@@ -45,14 +45,14 @@ interface RowProps {
   draft:    DraftTask
   index:    number
   expanded: boolean
+  users:    ReturnType<typeof getAllUsers>
   onToggle: () => void
   onChange: (patch: Partial<DraftTask>) => void
   onDelete: () => void
 }
 
-function TaskRow({ draft, index, expanded, onToggle, onChange, onDelete }: RowProps) {
-  const allUsers = getAllUsers()
-  const owner    = draft.ownerId ? allUsers.find(u => u.id === draft.ownerId) : undefined
+function TaskRow({ draft, index, expanded, users, onToggle, onChange, onDelete }: RowProps) {
+  const owner = draft.ownerId ? users.find(u => u.id === draft.ownerId) : undefined
   const q        = Q_OPTIONS.find(o => o.value === draft.quadrant)
 
   const inp: React.CSSProperties = {
@@ -183,8 +183,8 @@ function TaskRow({ draft, index, expanded, onToggle, onChange, onDelete }: RowPr
                 style={{ ...inp, width: '100%', boxSizing: 'border-box', cursor: 'pointer' }}
               >
                 <option value="">— unassigned —</option>
-                {allUsers.map(u => (
-                  <option key={u.id} value={u.id}>{u.name} · {u.companyName}</option>
+                {users.map(u => (
+                  <option key={u.id} value={u.id}>{u.name}{users.some(x => x.companyId !== u.companyId) ? ` · ${u.companyName}` : ''}</option>
                 ))}
               </select>
             </div>
@@ -235,8 +235,15 @@ export function MeetingFollowUpPopup({ parentTask, onConfirm, onSkip }: Props) {
   const [expandedIdx, setExpandedIdx] = useState<number | null>(null)
   const [error,       setError]       = useState<string | null>(null)
 
-  const companies = loadDynamicCompanies()
-  const allUsers  = getAllUsers()
+  const allCompanies = loadDynamicCompanies()
+  // Scope to parent task's company if set, otherwise all companies
+  const companies    = parentTask.companyId
+    ? allCompanies.filter(c => c.id === parentTask.companyId)
+    : allCompanies
+  const allUsers     = getAllUsers()
+  const scopedUsers  = parentTask.companyId
+    ? allUsers.filter(u => u.companyId === parentTask.companyId)
+    : allUsers
 
   async function handleAnalyze() {
     if (!notes.trim()) { onConfirm([]); return }
@@ -244,7 +251,7 @@ export function MeetingFollowUpPopup({ parentTask, onConfirm, onSkip }: Props) {
     setError(null)
     try {
       const tasks = await breakdownMeetingNotes(notes, parentTask.title, companies)
-      setDrafts(tasks.map(t => toDraft(t, allUsers)))
+      setDrafts(tasks.map(t => toDraft(t, scopedUsers)))
       setExpandedIdx(null)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Analysis failed. Check your API key.')
@@ -270,7 +277,7 @@ export function MeetingFollowUpPopup({ parentTask, onConfirm, onSkip }: Props) {
       quadrant:  d.quadrant,
       dueDate:   d.dueDate || undefined,
       ownerName: d.ownerId
-        ? allUsers.find(u => u.id === d.ownerId)?.name
+        ? scopedUsers.find(u => u.id === d.ownerId)?.name
         : undefined,
       ownerId:   d.ownerId || undefined,
     } as ExtractedTask & { ownerId?: string })))
@@ -402,6 +409,7 @@ export function MeetingFollowUpPopup({ parentTask, onConfirm, onSkip }: Props) {
                   draft={draft}
                   index={i}
                   expanded={expandedIdx === i}
+                  users={scopedUsers}
                   onToggle={() => setExpandedIdx(expandedIdx === i ? null : i)}
                   onChange={patch => patchDraft(i, patch)}
                   onDelete={() => deleteDraft(i)}
