@@ -438,7 +438,11 @@ export async function breakdownMeetingNotes(
   companies: AnalysisCompany[],
 ): Promise<ExtractedTask[]> {
   const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY ?? ''
-  if (!apiKey || !notes.trim()) return []
+  if (!apiKey) throw new ProfessorError('Anthropic API key is not configured (VITE_ANTHROPIC_API_KEY).', 'config_error')
+  if (!notes.trim()) return []
+
+  // Always create client with current key (handles cases where env var loads late)
+  const freshClient = new Anthropic({ apiKey, dangerouslyAllowBrowser: true })
 
   const companyList = companies.map(c => ({
     id: c.id, name: c.name,
@@ -471,10 +475,23 @@ ${notes}
 Available team members:
 ${JSON.stringify(companyList, null, 2)}`
 
-  const raw = await call(system, userMsg)
-  const parsed = parseJson<ExtractedTask[]>(raw)
-  if (!Array.isArray(parsed)) return []
-  return parsed.filter(t => typeof t.title === 'string' && t.title.trim())
+  try {
+    const msg = await freshClient.messages.create({
+      model: MODEL, max_tokens: MAX_TOKENS, system,
+      messages: [{ role: 'user', content: userMsg }],
+    })
+    const block = msg.content.find(b => b.type === 'text')
+    const raw = block?.type === 'text' ? block.text.trim() : ''
+    const parsed = parseJson<ExtractedTask[]>(raw)
+    if (!Array.isArray(parsed)) {
+      throw new ProfessorError(`Could not parse AI response as task list. Raw: ${raw.slice(0, 200)}`, 'parse_error')
+    }
+    return parsed.filter(t => typeof t.title === 'string' && t.title.trim())
+  } catch (err) {
+    if (err instanceof ProfessorError) throw err
+    const msg = err instanceof Error ? err.message : String(err)
+    throw new ProfessorError(`AI request failed: ${msg}`, 'api_error', err)
+  }
 }
 
 // ─── Legacy export (backwards compat with existing UI) ───────────────────────

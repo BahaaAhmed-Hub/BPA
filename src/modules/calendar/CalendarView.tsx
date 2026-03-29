@@ -172,10 +172,10 @@ function EventCard({
   const isDone  = status === 'done'
   const isCancelled = status === 'cancelled'
 
-  const bgBase  = isDone ? '#1D9E7515' : isCancelled ? '#E0525215' : `${color}22`
-  const bgHover = isDone ? '#1D9E7525' : isCancelled ? '#E0525225' : `${color}38`
+  const bgBase   = `${color}22`
+  const bgHover  = `${color}38`
   const barColor = isDone ? '#1D9E75' : isCancelled ? '#E05252' : color
-  const textColor = isDone || isCancelled ? '#6B7280' : color
+  const textColor = color
 
   return (
     <div
@@ -195,14 +195,14 @@ function EventCard({
         boxSizing: 'border-box',
         transition: 'background 0.1s',
         zIndex: 1,
-        opacity: isDone || isCancelled ? 0.65 : 1,
+        opacity: isCancelled ? 0.5 : isDone ? 0.7 : 1,
       }}
     >
       {pe.height >= 32 && (
         <p style={{
           margin: 0, fontSize: 11.5, fontWeight: 600, color: textColor,
           lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-          textDecoration: isCancelled ? 'line-through' : 'none',
+          textDecoration: isCancelled ? `line-through ${color}` : 'none',
         }}>
           {isDone && '✓ '}{title}
         </p>
