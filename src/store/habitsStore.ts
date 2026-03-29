@@ -4,7 +4,7 @@
  * localStorage key: 'professor-habits'
  */
 import { create } from 'zustand'
-import { loadHabitsFromDB, loadHabitLogsFromDB } from '@/lib/dbSync'
+import { loadHabitsFromDB, loadHabitLogsFromDB, saveHabitsToDB, saveHabitLogsToDB } from '@/lib/dbSync'
 
 export interface Habit {
   id: string
@@ -62,6 +62,15 @@ export function saveLogs(logs: HabitLogs): void {
   try { localStorage.setItem(LOGS_KEY, JSON.stringify(logs)) } catch { /* quota */ }
 }
 
+let dbSyncTimer: ReturnType<typeof setTimeout> | null = null
+function scheduleHabitsSync(habits: Habit[], logs?: HabitLogs) {
+  if (dbSyncTimer) clearTimeout(dbSyncTimer)
+  dbSyncTimer = setTimeout(() => {
+    void saveHabitsToDB(habits).catch(() => { /* offline */ })
+    if (logs) void saveHabitLogsToDB(logs).catch(() => { /* offline */ })
+  }, 1500)
+}
+
 export function getHabitColors(): string[] {
   return DEFAULT_COLORS
 }
@@ -95,24 +104,28 @@ export const useHabitsStore = create<HabitsState>((set, get) => ({
       createdAt: new Date().toISOString(),
     }]
     saveHabits(next)
+    scheduleHabitsSync(next)
     set({ habits: next })
   },
 
   updateHabit(id, patch) {
     const next = get().habits.map(h => h.id === id ? { ...h, ...patch } : h)
     saveHabits(next)
+    scheduleHabitsSync(next)
     set({ habits: next })
   },
 
   deleteHabit(id) {
     const next = get().habits.filter(h => h.id !== id)
     saveHabits(next)
+    scheduleHabitsSync(next)
     set({ habits: next })
   },
 
   reorderHabits(from, to) {
     const next = arrayMove(get().habits, from, to)
     saveHabits(next)
+    scheduleHabitsSync(next)
     set({ habits: next })
   },
 

@@ -5,6 +5,15 @@ import {
   useHabitsStore, loadLogs, saveLogs,
   calcStreak, getHabitColors,
 } from '@/store/habitsStore'
+import { saveHabitLogsToDB } from '@/lib/dbSync'
+
+let logsDbTimer: ReturnType<typeof setTimeout> | null = null
+function scheduleLogsSync(logs: import('@/store/habitsStore').HabitLogs) {
+  if (logsDbTimer) clearTimeout(logsDbTimer)
+  logsDbTimer = setTimeout(() => {
+    void saveHabitLogsToDB(logs).catch(() => { /* offline */ })
+  }, 1500)
+}
 
 // ─── Date helpers ─────────────────────────────────────────────────────────────
 
@@ -239,6 +248,7 @@ export function HabitsModule() {
         : [...existing, d]
       const next = { ...prev, [habitId]: updated }
       saveLogs(next)
+      scheduleLogsSync(next)
       return next
     })
   }, [viewDate])
@@ -256,6 +266,7 @@ export function HabitsModule() {
       const next = { ...prev }
       delete next[habitId]
       saveLogs(next)
+      scheduleLogsSync(next)
       return next
     })
   }
