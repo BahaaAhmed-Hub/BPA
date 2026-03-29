@@ -335,13 +335,14 @@ const STATUS_OPTIONS: { value: EditState['status']; label: string; color: string
 ]
 
 function EventEditModal({
-  initial, calendars, onSave, onDelete, onClose,
+  initial, calendars, onSave, onDelete, onClose, onStatusChange,
 }: {
   initial: EditState
   calendars: GCalCalendar[]
   onSave: () => void
   onDelete?: () => void
   onClose: () => void
+  onStatusChange?: (id: string, status: EventStatus | null) => void
 }) {
   const [state, setState] = useState<EditState>(initial)
   const [saving, setSaving] = useState(false)
@@ -489,7 +490,14 @@ function EventEditModal({
           {/* ── Status decision ───────────────────────────────────────────── */}
           <div style={{ display: 'flex', gap: 6, padding: '10px 0', borderBottom: '1px solid #1a1f35', flexWrap: 'wrap' }}>
             {STATUS_OPTIONS.map(s => (
-              <button key={s.value} onClick={() => { set('status', s.value); addLog(`Status → ${s.label}`) }} style={{
+              <button key={s.value} onClick={() => {
+                set('status', s.value)
+                addLog(`Status → ${s.label}`)
+                if (state.id && onStatusChange) {
+                  const localStatus = (s.value === 'done' || s.value === 'cancelled') ? s.value : null
+                  onStatusChange(state.id, localStatus)
+                }
+              }} style={{
                 padding: '3px 10px', borderRadius: 12, border: `1px solid ${s.color}40`,
                 background: state.status === s.value ? `${s.color}20` : 'transparent',
                 color: state.status === s.value ? s.color : '#6B7280',
@@ -1055,10 +1063,14 @@ export function CalendarView() {
   const [editing, setEditing]                 = useState<EditState | null>(null)
   const [eventStatuses, setEventStatuses]     = useState<Record<string, EventStatus>>(loadEventStatuses)
 
-  function toggleEventStatus(eventId: string, status: EventStatus) {
+  function toggleEventStatus(eventId: string, status: EventStatus | null) {
     setEventStatuses(prev => {
       const next = { ...prev }
-      if (next[eventId] === status) delete next[eventId]; else next[eventId] = status
+      if (status === null || next[eventId] === status) {
+        delete next[eventId]
+      } else {
+        next[eventId] = status
+      }
       saveEventStatuses(next)
       return next
     })
@@ -1250,7 +1262,11 @@ export function CalendarView() {
       <TimeGrid
         days={days}
         events={events}
-        onEventClick={e => setEditing(eventToEdit(e))}
+        onEventClick={e => {
+          const base = eventToEdit(e)
+          const localStatus = eventStatuses[e.id]
+          setEditing(localStatus ? { ...base, status: localStatus } : base)
+        }}
         eventStatuses={eventStatuses}
         onStatusChange={toggleEventStatus}
       />
@@ -1266,6 +1282,7 @@ export function CalendarView() {
           onSave={() => { setEditing(null); void loadEvents() }}
           onDelete={() => { setEditing(null); void loadEvents() }}
           onClose={() => setEditing(null)}
+          onStatusChange={toggleEventStatus}
         />
       )}
 
