@@ -360,9 +360,12 @@ interface LoadCalendarsResult {
 
 async function loadAllCalendars(primaryEmail: string): Promise<LoadCalendarsResult> {
   // Primary account — proper refresh via withAuth + Supabase session
+  const tokenAge = Math.round((Date.now() - parseInt(localStorage.getItem('google_provider_token_saved_at') ?? '0', 10)) / 1000)
+  const hasToken = !!localStorage.getItem('google_provider_token')
+  console.log(`[CalIntel] loadAllCalendars: primaryEmail=${primaryEmail}, hasToken=${hasToken}, tokenAge=${tokenAge}s`)
   const { calendars: primaryCals } = await listCalendars()
   const primaryToken = localStorage.getItem('google_provider_token') ?? ''
-  console.log(`[CalIntel] Primary (${primaryEmail}): ${primaryCals.length} calendars`)
+  console.log(`[CalIntel] Primary (${primaryEmail}): ${primaryCals.length} calendars, token present after call: ${!!primaryToken}`)
   const primaryResult: CalWithAccount[] = primaryCals.map(c => ({
     ...c, accountEmail: primaryEmail, accountToken: primaryToken,
   }))
@@ -434,7 +437,8 @@ export function CalendarIntelligence() {
     const { calendars, needsReconnect } = await loadAllCalendars(user?.email ?? '')
     setAllCalendars(calendars)
     setReconnectNeeded(needsReconnect)
-    if (!calendars.length) setNoAuth(true)
+    if (calendars.length) setNoAuth(false)
+    else setNoAuth(true)
     return calendars
   }, [user?.email])
 

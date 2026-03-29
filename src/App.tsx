@@ -555,9 +555,33 @@ function App() {
       })
       // Notify Settings (and any other listeners) to re-read accounts from localStorage
       window.dispatchEvent(new CustomEvent('professor:accountsUpdated'))
-      // Restore original session THEN persist accounts under the correct user
+      // Restore original session, then refresh to get a fresh primary Google token
       void supabase.auth.setSession(pending)
-        .then(() => saveAccountsToDB(loadAccounts()))
+        .then(async () => {
+          // Try to get a fresh Google access token for the primary account after restore.
+          // The restored session (from setSession) doesn't carry provider_token, so
+          // refreshSession() is the only way to get a fresh one.
+          try {
+            const { data } = await supabase.auth.refreshSession()
+            if (data.session?.provider_token) {
+              localStorage.setItem('google_provider_token', data.session.provider_token)
+              localStorage.setItem('google_provider_token_saved_at', Date.now().toString())
+              console.log('[AddAccount] ✓ Primary Google token refreshed after session restore')
+            } else {
+              // Supabase didn't return a fresh Google token — mark existing one as fresh
+              // so it is used directly without triggering unnecessary refresh loops.
+              // (The token itself may still be valid; we just reset the staleness timestamp.)
+              const existing = localStorage.getItem('google_provider_token')
+              if (existing) {
+                localStorage.setItem('google_provider_token_saved_at', Date.now().toString())
+                console.log('[AddAccount] Primary Google token TTL reset (no new token from refresh)')
+              }
+            }
+          } catch (e) {
+            console.warn('[AddAccount] Could not refresh primary token:', e)
+          }
+          return saveAccountsToDB(loadAccounts())
+        })
         .catch(console.warn)
       return true
     }
