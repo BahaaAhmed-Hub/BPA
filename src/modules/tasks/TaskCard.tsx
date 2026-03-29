@@ -321,7 +321,7 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
       {showMeetingPopup && (
         <MeetingFollowUpPopup
           parentTask={task}
-          onConfirm={(extracted: ExtractedTask[]) => {
+          onConfirm={(extracted: (ExtractedTask & { ownerId?: string })[]) => {
             setShowMeetingPopup(false)
             toggleComplete(task.id)
             if (extracted.length > 0) {
@@ -333,7 +333,8 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
                 parentTaskId: task.id,
                 status:       'open' as const,
                 completed:    false,
-                ...(t.dueDate && { dueDate: t.dueDate }),
+                ...(t.dueDate  && { dueDate: t.dueDate }),
+                ...(t.ownerId  && { owner: t.ownerId }),
               })))
             }
           }}
