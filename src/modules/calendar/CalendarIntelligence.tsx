@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import {
   ChevronLeft, ChevronRight, Calendar, Video, Users,
   Sparkles, MapPin, RefreshCw, X, Eye, EyeOff, GripVertical,
+  CheckCircle2, XCircle,
 } from 'lucide-react'
 import {
   DndContext, DragOverlay, PointerSensor, useSensor, useSensors,
@@ -50,6 +51,17 @@ function loadHiddenIntel(): Set<string> {
 }
 function saveHiddenIntel(hidden: Set<string>) {
   localStorage.setItem('cal-intel-hidden', JSON.stringify([...hidden]))
+}
+
+type EventStatus = 'done' | 'cancelled'
+function loadEventStatuses(): Record<string, EventStatus> {
+  try {
+    const raw = localStorage.getItem('cal-event-statuses')
+    return raw ? (JSON.parse(raw) as Record<string, EventStatus>) : {}
+  } catch { return {} }
+}
+function saveEventStatuses(statuses: Record<string, EventStatus>) {
+  localStorage.setItem('cal-event-statuses', JSON.stringify(statuses))
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -461,10 +473,11 @@ export function CalendarIntelligence() {
   const [fetchError,     setFetchError]     = useState<string | null>(null)
   const [reconnectNeeded, setReconnectNeeded] = useState<string[]>([])
 
-  const [selectedEvent,  setSelectedEvent]  = useState<GCalEvent | null>(null)
-  const [prep,           setPrep]           = useState<MeetingPrep | null>(null)
-  const [prepLoading,    setPrepLoading]    = useState(false)
-  const [prepError,      setPrepError]      = useState<string | null>(null)
+  const [selectedEvent,   setSelectedEvent]   = useState<GCalEvent | null>(null)
+  const [prep,            setPrep]            = useState<MeetingPrep | null>(null)
+  const [prepLoading,     setPrepLoading]     = useState(false)
+  const [prepError,       setPrepError]       = useState<string | null>(null)
+  const [eventStatuses,   setEventStatuses]   = useState<Record<string, EventStatus>>(loadEventStatuses)
 
   // Load calendars from all accounts — called on mount and on manual refresh
   const reloadCalendars = useCallback(async () => {
@@ -529,6 +542,19 @@ export function CalendarIntelligence() {
   }, [reloadCalendars, loadEvents, weekStart, hiddenCals])
 
   // ─── Calendar DnD: drag event to a different day tab to reschedule ──────────
+
+  function toggleEventStatus(eventId: string, status: EventStatus) {
+    setEventStatuses(prev => {
+      const next = { ...prev }
+      if (next[eventId] === status) {
+        delete next[eventId]  // toggle off
+      } else {
+        next[eventId] = status
+      }
+      saveEventStatuses(next)
+      return next
+    })
+  }
 
   function handleCalDragStart({ active }: DragStartEvent) {
     const ev = events.find(e => e.id === active.id)
@@ -930,12 +956,15 @@ export function CalendarIntelligence() {
                       {/* Events */}
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                         {dayEvents.map(event => {
-                          const db         = gcalToDbEvent(event)
-                          const isSelected = selectedEvent?.id === event.id
-                          const isPast     = new Date(db.end_time) < new Date()
-                          const mType      = db.meeting_type
-                          const hasVideo   = !!event.conferenceData?.entryPoints?.length
+                          const db             = gcalToDbEvent(event)
+                          const isSelected     = selectedEvent?.id === event.id
+                          const isPast         = new Date(db.end_time) < new Date()
+                          const mType          = db.meeting_type
+                          const hasVideo       = !!event.conferenceData?.entryPoints?.length
                           const isRescheduling = rescheduling === event.id
+                          const evStatus       = eventStatuses[event.id] ?? null
+                          const isDone         = evStatus === 'done'
+                          const isCancelled    = evStatus === 'cancelled'
 
                           return (
                             <DraggableEventRow key={event.id} event={event}>
@@ -947,11 +976,11 @@ export function CalendarIntelligence() {
                                     display: 'flex', gap: 12, alignItems: 'center',
                                     padding: '13px 16px',
                                     borderRadius: 10,
-                                    background: isSelected ? '#32291A' : '#161929',
-                                    border: `1px solid ${isSelected ? '#1E40AF50' : '#252A3E'}`,
-                                    opacity: (isPast ? 0.55 : 1) * (isDragging ? 0.35 : 1),
+                                    background: isDone ? '#1D9E7508' : isCancelled ? '#E0525208' : isSelected ? '#32291A' : '#161929',
+                                    border: `1px solid ${isDone ? '#1D9E7530' : isCancelled ? '#E0525230' : isSelected ? '#1E40AF50' : '#252A3E'}`,
+                                    opacity: (isPast || isDone || isCancelled ? 0.6 : 1) * (isDragging ? 0.35 : 1),
                                     transition: 'all 0.15s',
-                                    borderLeft: isSelected ? '3px solid #1E40AF' : '1px solid #252A3E',
+                                    borderLeft: isDone ? '3px solid #1D9E75' : isCancelled ? '3px solid #E05252' : isSelected ? '3px solid #1E40AF' : '1px solid #252A3E',
                                     cursor: isDragging ? 'grabbing' : 'pointer',
                                   }}
                                 >
@@ -982,21 +1011,29 @@ export function CalendarIntelligence() {
                                   {/* Color bar */}
                                   <div style={{
                                     width: 3, borderRadius: 2, flexShrink: 0, alignSelf: 'stretch',
-                                    background: isSelected ? '#1E40AF' : '#252A3E',
+                                    background: isDone ? '#1D9E75' : isCancelled ? '#E05252' : isSelected ? '#1E40AF' : '#252A3E',
                                     minHeight: 32,
                                   }} />
 
                                   {/* Title + meta */}
                                   <div style={{ flex: 1 }}>
                                     <p style={{
-                                      margin: '0 0 4px', fontSize: 13.5, color: '#E8EAF6',
+                                      margin: '0 0 4px', fontSize: 13.5,
+                                      color: isDone || isCancelled ? '#6B7280' : '#E8EAF6',
                                       fontWeight: 500, lineHeight: 1.35,
+                                      textDecoration: isCancelled ? 'line-through' : 'none',
                                     }}>
                                       {event.summary ?? '(No title)'}
                                     </p>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                                      <MeetingTypeIcon type={mType} />
-                                      {mType && (
+                                      {isDone && (
+                                        <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 4, background: '#1D9E7518', color: '#1D9E75', border: '1px solid #1D9E7530', fontWeight: 600 }}>Done</span>
+                                      )}
+                                      {isCancelled && (
+                                        <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 4, background: '#E0525218', color: '#E05252', border: '1px solid #E0525230', fontWeight: 600 }}>Cancelled</span>
+                                      )}
+                                      {!isDone && !isCancelled && <MeetingTypeIcon type={mType} />}
+                                      {!isDone && !isCancelled && mType && (
                                         <span style={{ fontSize: 10.5, color: '#FFFFFF', textTransform: 'capitalize' }}>
                                           {mType.replace('_', ' ')}
                                         </span>
@@ -1017,6 +1054,36 @@ export function CalendarIntelligence() {
                                         </span>
                                       )}
                                     </div>
+                                  </div>
+
+                                  {/* Quick status buttons */}
+                                  <div style={{ display: 'flex', gap: 4, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
+                                    <button
+                                      title={isDone ? 'Mark as not done' : 'Mark as done'}
+                                      onClick={() => toggleEventStatus(event.id, 'done')}
+                                      style={{
+                                        background: isDone ? '#1D9E7522' : 'transparent',
+                                        border: `1px solid ${isDone ? '#1D9E7550' : '#252A3E'}`,
+                                        borderRadius: 6, padding: '4px 5px', cursor: 'pointer',
+                                        color: isDone ? '#1D9E75' : '#404560', display: 'flex', alignItems: 'center',
+                                        transition: 'all 0.1s',
+                                      }}
+                                    >
+                                      <CheckCircle2 size={13} />
+                                    </button>
+                                    <button
+                                      title={isCancelled ? 'Unmark cancelled' : 'Mark as cancelled'}
+                                      onClick={() => toggleEventStatus(event.id, 'cancelled')}
+                                      style={{
+                                        background: isCancelled ? '#E0525222' : 'transparent',
+                                        border: `1px solid ${isCancelled ? '#E0525250' : '#252A3E'}`,
+                                        borderRadius: 6, padding: '4px 5px', cursor: 'pointer',
+                                        color: isCancelled ? '#E05252' : '#404560', display: 'flex', alignItems: 'center',
+                                        transition: 'all 0.1s',
+                                      }}
+                                    >
+                                      <XCircle size={13} />
+                                    </button>
                                   </div>
 
                                   {/* AI badge / rescheduling indicator */}

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { ChevronLeft, ChevronRight, Video, MapPin, Sparkles, X, RefreshCw, LogIn, Eye, EyeOff } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Video, MapPin, Sparkles, X, RefreshCw, LogIn, Eye, EyeOff, CheckCircle2, XCircle } from 'lucide-react'
 import { listCalendars, fetchAllCalendarsEvents, detectMeetingType } from '@/lib/googleCalendar'
 import type { GCalEventWithCalendar, GCalCalendar } from '@/lib/googleCalendar'
 import { generateMeetingPrep } from '@/lib/professor'
@@ -9,6 +9,19 @@ import { useAuthStore } from '@/store/authStore'
 import { signInWithGoogle } from '@/lib/google'
 import type { GCalEvent } from '@/lib/googleCalendar'
 
+
+// ─── Event status persistence ─────────────────────────────────────────────────
+
+type EventStatus = 'done' | 'cancelled'
+function loadEventStatuses(): Record<string, EventStatus> {
+  try {
+    const raw = localStorage.getItem('cal-event-statuses')
+    return raw ? (JSON.parse(raw) as Record<string, EventStatus>) : {}
+  } catch { return {} }
+}
+function saveEventStatuses(s: Record<string, EventStatus>) {
+  localStorage.setItem('cal-event-statuses', JSON.stringify(s))
+}
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -141,42 +154,96 @@ function layoutDayEvents(events: GCalEventWithCalendar[], dayDate: Date, dayIdx:
 // ─── Event Card ───────────────────────────────────────────────────────────────
 
 function EventCard({
-  pe, dayWidth, onClick,
-}: { pe: PositionedEvent; dayWidth: number; onClick: (e: GCalEventWithCalendar) => void }) {
-  const type  = detectMeetingType(pe.event)
-  const color = pe.event.calendarColor ?? getMeetingColor(type)
-  const w     = (dayWidth / pe.cols) - 2
-  const left  = (dayWidth / pe.cols) * pe.col + 1
-  const title = pe.event.summary ?? '(No title)'
-  const start = pe.event.start.dateTime ? fmtTime(pe.event.start.dateTime) : ''
+  pe, dayWidth, onClick, status, onStatusChange,
+}: {
+  pe: PositionedEvent
+  dayWidth: number
+  onClick: (e: GCalEventWithCalendar) => void
+  status: EventStatus | null
+  onStatusChange: (id: string, s: EventStatus) => void
+}) {
+  const [hovered, setHovered] = useState(false)
+  const type    = detectMeetingType(pe.event)
+  const color   = pe.event.calendarColor ?? getMeetingColor(type)
+  const w       = (dayWidth / pe.cols) - 2
+  const left    = (dayWidth / pe.cols) * pe.col + 1
+  const title   = pe.event.summary ?? '(No title)'
+  const start   = pe.event.start.dateTime ? fmtTime(pe.event.start.dateTime) : ''
+  const isDone  = status === 'done'
+  const isCancelled = status === 'cancelled'
+
+  const bgBase  = isDone ? '#1D9E7515' : isCancelled ? '#E0525215' : `${color}22`
+  const bgHover = isDone ? '#1D9E7525' : isCancelled ? '#E0525225' : `${color}38`
+  const barColor = isDone ? '#1D9E75' : isCancelled ? '#E05252' : color
+  const textColor = isDone || isCancelled ? '#6B7280' : color
 
   return (
     <div
       onClick={() => onClick(pe.event)}
       title={title}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       style={{
         position: 'absolute',
         top: pe.top, left, width: w, height: pe.height,
         borderRadius: 6,
-        background: `${color}22`,
-        borderLeft: `3px solid ${color}`,
+        background: hovered ? bgHover : bgBase,
+        borderLeft: `3px solid ${barColor}`,
         padding: '3px 6px',
         cursor: 'pointer',
         overflow: 'hidden',
         boxSizing: 'border-box',
         transition: 'background 0.1s',
         zIndex: 1,
+        opacity: isDone || isCancelled ? 0.65 : 1,
       }}
-      onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = `${color}38` }}
-      onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = `${color}22` }}
     >
       {pe.height >= 32 && (
-        <p style={{ margin: 0, fontSize: 11.5, fontWeight: 600, color, lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          {title}
+        <p style={{
+          margin: 0, fontSize: 11.5, fontWeight: 600, color: textColor,
+          lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+          textDecoration: isCancelled ? 'line-through' : 'none',
+        }}>
+          {isDone && '✓ '}{title}
         </p>
       )}
       {pe.height >= 48 && (
-        <p style={{ margin: '1px 0 0', fontSize: 10.5, color: `${color}CC`, whiteSpace: 'nowrap' }}>{start}</p>
+        <p style={{ margin: '1px 0 0', fontSize: 10.5, color: `${textColor}CC`, whiteSpace: 'nowrap' }}>{start}</p>
+      )}
+      {/* Quick status buttons — shown on hover when tall enough */}
+      {hovered && pe.height >= 40 && (
+        <div
+          onClick={e => e.stopPropagation()}
+          style={{
+            position: 'absolute', bottom: 3, right: 3,
+            display: 'flex', gap: 2,
+          }}
+        >
+          <button
+            title={isDone ? 'Unmark done' : 'Mark done'}
+            onClick={e => { e.stopPropagation(); onStatusChange(pe.event.id, 'done') }}
+            style={{
+              background: isDone ? '#1D9E7530' : 'rgba(0,0,0,0.45)',
+              border: 'none', borderRadius: 4, padding: '2px 3px',
+              color: isDone ? '#1D9E75' : '#ccc', cursor: 'pointer',
+              display: 'flex', alignItems: 'center',
+            }}
+          >
+            <CheckCircle2 size={10} />
+          </button>
+          <button
+            title={isCancelled ? 'Unmark cancelled' : 'Mark cancelled'}
+            onClick={e => { e.stopPropagation(); onStatusChange(pe.event.id, 'cancelled') }}
+            style={{
+              background: isCancelled ? '#E0525230' : 'rgba(0,0,0,0.45)',
+              border: 'none', borderRadius: 4, padding: '2px 3px',
+              color: isCancelled ? '#E05252' : '#ccc', cursor: 'pointer',
+              display: 'flex', alignItems: 'center',
+            }}
+          >
+            <XCircle size={10} />
+          </button>
+        </div>
       )}
     </div>
   )
@@ -813,11 +880,13 @@ function EventDetail({
 // ─── Time Grid ────────────────────────────────────────────────────────────────
 
 function TimeGrid({
-  days, events, onEventClick,
+  days, events, onEventClick, eventStatuses, onStatusChange,
 }: {
   days: Date[]
   events: GCalEventWithCalendar[]
   onEventClick: (e: GCalEventWithCalendar) => void
+  eventStatuses: Record<string, EventStatus>
+  onStatusChange: (id: string, s: EventStatus) => void
 }) {
   const containerRef = useRef<HTMLDivElement>(null)
   const today = startOfDay(new Date())
@@ -942,6 +1011,8 @@ function TimeGrid({
                     pe={pe}
                     dayWidth={1000 / NUM_DAYS} /* rough — handled via flex */
                     onClick={onEventClick}
+                    status={eventStatuses[pe.event.id] ?? null}
+                    onStatusChange={onStatusChange}
                   />
                 ))}
                 {/* Now line (only on today column) */}
@@ -982,6 +1053,16 @@ export function CalendarView() {
   const [noAuth, setNoAuth]                   = useState(false)
   const [selected, setSelected]               = useState<GCalEventWithCalendar | null>(null)
   const [editing, setEditing]                 = useState<EditState | null>(null)
+  const [eventStatuses, setEventStatuses]     = useState<Record<string, EventStatus>>(loadEventStatuses)
+
+  function toggleEventStatus(eventId: string, status: EventStatus) {
+    setEventStatuses(prev => {
+      const next = { ...prev }
+      if (next[eventId] === status) delete next[eventId]; else next[eventId] = status
+      saveEventStatuses(next)
+      return next
+    })
+  }
 
   // Compute days to display
   const days: Date[] = viewMode === 'day'
@@ -1170,6 +1251,8 @@ export function CalendarView() {
         days={days}
         events={events}
         onEventClick={e => setEditing(eventToEdit(e))}
+        eventStatuses={eventStatuses}
+        onStatusChange={toggleEventStatus}
       />
 
       {/* ── Event detail (AI prep) — opens from edit modal ──────────────────── */}
