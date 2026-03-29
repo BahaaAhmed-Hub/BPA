@@ -122,6 +122,22 @@ function ls<T>(key: string, fb: T): T {
 function lsSet<T>(key: string, v: T) { try { localStorage.setItem(key, JSON.stringify(v)) } catch { /**/ } }
 
 function loadSettings():   AppSettings   { return { ...DEFAULTS, ...ls<Partial<AppSettings>>('professor-settings', {}) } }
+
+// ─── AI Provider config (kept local — never synced to DB) ────────────────────
+
+export interface AIConfig {
+  provider: 'anthropic' | 'groq'
+  anthropicKey: string
+  groqKey: string
+  groqModel: string
+}
+const AI_CONFIG_DEFAULTS: AIConfig = {
+  provider: 'anthropic', anthropicKey: '', groqKey: '', groqModel: 'llama-3.3-70b-versatile',
+}
+export function loadAIConfig(): AIConfig {
+  return { ...AI_CONFIG_DEFAULTS, ...ls<Partial<AIConfig>>('professor-ai-config', {}) }
+}
+function saveAIConfig(c: AIConfig) { lsSet('professor-ai-config', c) }
 function saveSettings(s:   AppSettings)  { lsSet('professor-settings', s) }
 function loadCompanies():  CompanyRow[]  { return ls('professor-companies', []) }
 function saveCompanies(c:  CompanyRow[]) {
@@ -1053,9 +1069,71 @@ function AccountsSection({
 
 // ─── CHUNK 6: Professor AI + Notifications + Appearance sections ──────────────
 
+const GROQ_MODELS = [
+  { value: 'llama-3.3-70b-versatile',  label: 'LLaMA 3.3 70B (best quality)' },
+  { value: 'llama-3.1-8b-instant',     label: 'LLaMA 3.1 8B (fastest)'       },
+  { value: 'mixtral-8x7b-32768',       label: 'Mixtral 8x7B'                  },
+]
+
 function ProfessorSection({ s, set }: { s: AppSettings; set: (p: Partial<AppSettings>) => void }) {
+  const [ai, setAIRaw] = useState<AIConfig>(loadAIConfig)
+  const [showKey, setShowKey] = useState(false)
+
+  function setAI(patch: Partial<AIConfig>) {
+    const next = { ...ai, ...patch }
+    setAIRaw(next)
+    saveAIConfig(next)
+  }
+
+  const activeKey = ai.provider === 'groq' ? ai.groqKey : ai.anthropicKey
+  const keyLabel  = ai.provider === 'groq' ? 'Groq API key' : 'Anthropic API key'
+  const keyHint   = ai.provider === 'groq'
+    ? 'Free at console.groq.com'
+    : 'console.anthropic.com (paid)'
+
   return (
     <div>
+      {/* ── AI Provider ── */}
+      <FieldRow label="AI Provider" sub="Backend for meeting analysis & AI features">
+        <div style={{ display: 'flex', gap: 6 }}>
+          {(['anthropic', 'groq'] as const).map(p => (
+            <button key={p} onClick={() => setAI({ provider: p })}
+              style={{
+                padding: '5px 14px', borderRadius: 7, fontSize: 11.5, cursor: 'pointer',
+                fontWeight: 600, textTransform: 'capitalize',
+                background: ai.provider === p ? 'var(--color-accent-fill)' : 'var(--color-surface2, #0D0F1A)',
+                border: `1px solid ${ai.provider === p ? 'var(--color-accent, #1E40AF)' : 'var(--color-border, #252A3E)'}`,
+                color: ai.provider === p ? 'var(--color-accent, #1E40AF)' : 'var(--color-text-muted, #6B7280)',
+              }}>{p === 'groq' ? 'Groq (free)' : 'Anthropic'}</button>
+          ))}
+        </div>
+      </FieldRow>
+      <FieldRow label={keyLabel} sub={keyHint}>
+        <div style={{ display: 'flex', gap: 6, width: '100%' }}>
+          <input
+            type={showKey ? 'text' : 'password'}
+            value={activeKey}
+            onChange={e => setAI(ai.provider === 'groq' ? { groqKey: e.target.value } : { anthropicKey: e.target.value })}
+            placeholder={ai.provider === 'groq' ? 'gsk_...' : 'sk-ant-...'}
+            style={{ ...inputStyle, flex: 1, fontFamily: 'monospace', fontSize: 11.5 }}
+          />
+          <button onClick={() => setShowKey(v => !v)} style={{
+            background: 'transparent', border: '1px solid var(--color-border, #252A3E)',
+            borderRadius: 6, padding: '4px 8px', cursor: 'pointer', color: 'var(--color-text-muted, #6B7280)',
+            fontSize: 11, flexShrink: 0,
+          }}>{showKey ? 'Hide' : 'Show'}</button>
+        </div>
+      </FieldRow>
+      {ai.provider === 'groq' && (
+        <FieldRow label="Groq model">
+          <select value={ai.groqModel} onChange={e => setAI({ groqModel: e.target.value })}
+            style={{ ...selectStyle, width: '100%' }}>
+            {GROQ_MODELS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+          </select>
+        </FieldRow>
+      )}
+      <div style={{ height: 8 }} />
+      {/* ── Professor personality ── */}
       <FieldRow label="Comm. style" sub="Response verbosity">
         <div style={{ display: 'flex', gap: 6 }}>
           {(['brief','balanced','detailed'] as const).map(v => (

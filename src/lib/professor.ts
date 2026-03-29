@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import type { DbUser, DbCompany, DbTask, DbCalendarEvent, DbWeeklyReview } from '@/types/database'
+import type { AIConfig } from '@/modules/settings/Settings'
 
 // ─── Client ──────────────────────────────────────────────────────────────────
 
@@ -10,6 +11,44 @@ const client = new Anthropic({
 
 const MODEL = 'claude-sonnet-4-6'
 const MAX_TOKENS = 4000
+
+// ─── AI config helpers ────────────────────────────────────────────────────────
+
+function getAIConfig(): AIConfig {
+  try {
+    const raw = localStorage.getItem('professor-ai-config')
+    const saved = raw ? JSON.parse(raw) as Partial<AIConfig> : {}
+    return {
+      provider: saved.provider ?? 'anthropic',
+      anthropicKey: saved.anthropicKey ?? import.meta.env.VITE_ANTHROPIC_API_KEY ?? '',
+      groqKey: saved.groqKey ?? '',
+      groqModel: saved.groqModel ?? 'llama-3.3-70b-versatile',
+    }
+  } catch {
+    return { provider: 'anthropic', anthropicKey: import.meta.env.VITE_ANTHROPIC_API_KEY ?? '', groqKey: '', groqModel: 'llama-3.3-70b-versatile' }
+  }
+}
+
+async function callGroq(apiKey: string, model: string, system: string, userMessage: string): Promise<string> {
+  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+    body: JSON.stringify({
+      model,
+      max_tokens: MAX_TOKENS,
+      messages: [
+        { role: 'system', content: system },
+        { role: 'user',   content: userMessage },
+      ],
+    }),
+  })
+  if (!res.ok) {
+    const errText = await res.text()
+    throw new ProfessorError(`Groq API error ${res.status}: ${errText}`, 'api_error')
+  }
+  const data = await res.json() as { choices: { message: { content: string } }[] }
+  return data.choices[0]?.message?.content?.trim() ?? ''
+}
 
 // ─── Error ───────────────────────────────────────────────────────────────────
 
@@ -437,12 +476,17 @@ export async function breakdownMeetingNotes(
   parentTitle: string,
   companies: AnalysisCompany[],
 ): Promise<ExtractedTask[]> {
-  const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY ?? ''
-  if (!apiKey) throw new ProfessorError('Anthropic API key is not configured (VITE_ANTHROPIC_API_KEY).', 'config_error')
   if (!notes.trim()) return []
 
-  // Always create client with current key (handles cases where env var loads late)
-  const freshClient = new Anthropic({ apiKey, dangerouslyAllowBrowser: true })
+  const aiCfg = getAIConfig()
+
+  if (aiCfg.provider === 'groq') {
+    if (!aiCfg.groqKey) throw new ProfessorError('Groq API key not set. Go to Settings → Professor AI and enter your Groq key (free at console.groq.com).', 'config_error')
+  } else {
+    const anthropicKey = aiCfg.anthropicKey || (import.meta.env.VITE_ANTHROPIC_API_KEY ?? '')
+    if (!anthropicKey) throw new ProfessorError('Anthropic API key not set. Go to Settings → Professor AI and enter your key, or switch to Groq (free).', 'config_error')
+    aiCfg.anthropicKey = anthropicKey
+  }
 
   const companyList = companies.map(c => ({
     id: c.id, name: c.name,
@@ -476,22 +520,28 @@ Available team members:
 ${JSON.stringify(companyList, null, 2)}`
 
   try {
-    const msg = await freshClient.messages.create({
-      model: MODEL, max_tokens: MAX_TOKENS, system,
-      messages: [{ role: 'user', content: userMsg }],
-    })
-    const block = msg.content.find(b => b.type === 'text')
-    const raw = block?.type === 'text' ? block.text.trim() : ''
+    let raw: string
+    if (aiCfg.provider === 'groq') {
+      raw = await callGroq(aiCfg.groqKey, aiCfg.groqModel, system, userMsg)
+    } else {
+      const freshClient = new Anthropic({ apiKey: aiCfg.anthropicKey, dangerouslyAllowBrowser: true })
+      const msg = await freshClient.messages.create({
+        model: MODEL, max_tokens: MAX_TOKENS, system,
+        messages: [{ role: 'user', content: userMsg }],
+      })
+      const block = msg.content.find(b => b.type === 'text')
+      raw = block?.type === 'text' ? block.text.trim() : ''
+    }
     const parsed = parseJson<ExtractedTask[]>(raw)
     if (!Array.isArray(parsed)) {
-      throw new ProfessorError(`Could not parse AI response as task list. Raw: ${raw.slice(0, 200)}`, 'parse_error')
+      throw new ProfessorError(`Could not parse AI response. Raw: ${raw.slice(0, 200)}`, 'parse_error')
     }
     return parsed.filter(t => typeof t.title === 'string' && t.title.trim())
   } catch (err) {
     if (err instanceof ProfessorError) throw err
     const msg = err instanceof Error ? err.message : String(err)
     const is401 = msg.includes('401') || msg.includes('authentication_error') || msg.includes('invalid x-api-key')
-    if (is401) throw new ProfessorError('Invalid Anthropic API key. Update VITE_ANTHROPIC_API_KEY in GitHub repository secrets (Settings → Secrets → Actions).', 'config_error')
+    if (is401) throw new ProfessorError(`Invalid ${aiCfg.provider === 'groq' ? 'Groq' : 'Anthropic'} API key. Check Settings → Professor AI.`, 'config_error')
     throw new ProfessorError(`AI request failed: ${msg}`, 'api_error', err)
   }
 }
