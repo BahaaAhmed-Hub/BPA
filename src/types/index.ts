@@ -77,6 +77,7 @@ export interface Task {
   duration?: number          // minutes
   plannedTime?: string       // HH:MM for schedule quadrant
   calendarId?: string        // Google Calendar id to link this task
+  gcalEventId?: string       // Google Calendar event ID created for this task
   owner?: string             // CompanyUser.id
   parentTaskId?: string      // id of the parent meeting/call task that generated this task
   status: TaskStatus

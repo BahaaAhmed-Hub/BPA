@@ -274,6 +274,17 @@ export async function fetchAllCalendarsEvents(
   }
 }
 
+// ─── Fetch events for a specific day ─────────────────────────────────────────
+
+export async function fetchDayEvents(
+  calendarId: string,
+  dateStr: string, // YYYY-MM-DD
+): Promise<GCalEventWithCalendar[]> {
+  const dayStart = new Date(dateStr + 'T00:00:00')
+  const dayEnd   = new Date(dateStr + 'T23:59:59')
+  return fetchCalendarEvents(calendarId, dayStart, dayEnd)
+}
+
 // ─── Create event ─────────────────────────────────────────────────────────────
 
 export async function createCalendarEvent(

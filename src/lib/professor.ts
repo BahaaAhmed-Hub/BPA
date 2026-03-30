@@ -152,7 +152,7 @@ ${ruleLines || '  (none configured)'}`
 
 // ─── Core call helper ────────────────────────────────────────────────────────
 
-async function call(system: string, userMessage: string): Promise<string> {
+export async function call(system: string, userMessage: string): Promise<string> {
   const aiCfg = getAIConfig()
   console.log('[AI] provider:', aiCfg.provider, '| groqKey set:', !!aiCfg.groqKey, '| anthropicKey set:', !!aiCfg.anthropicKey)
 

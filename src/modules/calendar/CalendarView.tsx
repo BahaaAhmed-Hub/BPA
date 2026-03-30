@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { ChevronLeft, ChevronRight, Video, MapPin, Sparkles, X, RefreshCw, LogIn, Eye, EyeOff, CheckCircle2, XCircle } from 'lucide-react'
+import { loadAiMovedEvents } from '@/lib/aiScheduler'
 import { listCalendars, fetchAllCalendarsEvents, detectMeetingType } from '@/lib/googleCalendar'
 import type { GCalEventWithCalendar, GCalCalendar } from '@/lib/googleCalendar'
 import { generateMeetingPrep } from '@/lib/professor'
@@ -154,13 +155,14 @@ function layoutDayEvents(events: GCalEventWithCalendar[], dayDate: Date, dayIdx:
 // ─── Event Card ───────────────────────────────────────────────────────────────
 
 function EventCard({
-  pe, dayWidth, onClick, status, onStatusChange,
+  pe, dayWidth, onClick, status, onStatusChange, aiMoved,
 }: {
   pe: PositionedEvent
   dayWidth: number
   onClick: (e: GCalEventWithCalendar) => void
   status: EventStatus | null
   onStatusChange: (id: string, s: EventStatus) => void
+  aiMoved: boolean
 }) {
   const [hovered, setHovered] = useState(false)
   const type    = detectMeetingType(pe.event)
@@ -204,7 +206,9 @@ function EventCard({
           lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
           textDecoration: isCancelled ? `line-through ${color}` : 'none',
         }}>
-          {isDone && <span style={{ color: '#fff' }}>✓ </span>}{title}
+          {isDone && <span style={{ color: '#fff' }}>✓ </span>}
+          {aiMoved && <span title="Rescheduled by AI" style={{ marginRight: 2, opacity: 0.85 }}>⚡</span>}
+          {title}
         </p>
       )}
       {pe.height >= 48 && (
@@ -888,13 +892,14 @@ function EventDetail({
 // ─── Time Grid ────────────────────────────────────────────────────────────────
 
 function TimeGrid({
-  days, events, onEventClick, eventStatuses, onStatusChange,
+  days, events, onEventClick, eventStatuses, onStatusChange, aiMovedEvents,
 }: {
   days: Date[]
   events: GCalEventWithCalendar[]
   onEventClick: (e: GCalEventWithCalendar) => void
   eventStatuses: Record<string, EventStatus>
   onStatusChange: (id: string, s: EventStatus) => void
+  aiMovedEvents: Set<string>
 }) {
   const containerRef = useRef<HTMLDivElement>(null)
   const today = startOfDay(new Date())
@@ -1017,10 +1022,11 @@ function TimeGrid({
                   <EventCard
                     key={pe.event.id}
                     pe={pe}
-                    dayWidth={1000 / NUM_DAYS} /* rough — handled via flex */
+                    dayWidth={1000 / NUM_DAYS}
                     onClick={onEventClick}
                     status={eventStatuses[pe.event.id] ?? null}
                     onStatusChange={onStatusChange}
+                    aiMoved={aiMovedEvents.has(pe.event.id)}
                   />
                 ))}
                 {/* Now line (only on today column) */}
@@ -1062,6 +1068,10 @@ export function CalendarView() {
   const [selected, setSelected]               = useState<GCalEventWithCalendar | null>(null)
   const [editing, setEditing]                 = useState<EditState | null>(null)
   const [eventStatuses, setEventStatuses]     = useState<Record<string, EventStatus>>(loadEventStatuses)
+  const [aiMovedEvents, setAiMovedEvents]     = useState<Set<string>>(loadAiMovedEvents)
+
+  // Refresh AI-moved set when events reload (scheduler may have run)
+  useEffect(() => { setAiMovedEvents(loadAiMovedEvents()) }, [events])
 
   function toggleEventStatus(eventId: string, status: EventStatus | null) {
     setEventStatuses(prev => {
@@ -1269,6 +1279,7 @@ export function CalendarView() {
         }}
         eventStatuses={eventStatuses}
         onStatusChange={toggleEventStatus}
+        aiMovedEvents={aiMovedEvents}
       />
 
       {/* ── Event detail (AI prep) — opens from edit modal ──────────────────── */}
