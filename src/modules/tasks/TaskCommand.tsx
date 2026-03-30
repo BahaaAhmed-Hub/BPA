@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   DndContext, DragOverlay, closestCorners,
   KeyboardSensor, PointerSensor, useSensor, useSensors,
@@ -13,11 +13,12 @@ import { TaskCard } from './TaskCard'
 import { useTaskStore } from '@/store/taskStore'
 import { CheckSquare, Zap } from 'lucide-react'
 import type { Quadrant } from '@/types'
+import { scheduleTaskToCalendar } from '@/lib/aiScheduler'
 
 const QUADRANTS: Quadrant[] = ['do', 'schedule', 'delegate', 'eliminate']
 
 export function TaskCommand() {
-  const { tasks, moveTask, reorderInbox, reorderQuadrant } = useTaskStore()
+  const { tasks, moveTask, reorderInbox, reorderQuadrant, updateTask } = useTaskStore()
   const active = tasks.filter(t => t.quadrant !== null && !t.completed)
   const urgent = tasks.filter(t => t.quadrant === 'do' && !t.completed)
   const inbox  = tasks.filter(t => t.quadrant === null && t.status !== 'done' && t.status !== 'cancelled' && !t.completed)
@@ -27,6 +28,25 @@ export function TaskCommand() {
 
   const activeTask = activeTaskId ? tasks.find(t => t.id === activeTaskId) ?? null : null
   const modalTask  = modalTaskId  ? tasks.find(t => t.id === modalTaskId)  ?? null : null
+
+  // Auto-schedule tasks that enter the 'schedule' quadrant with a dueDate
+  const schedulingRef = useRef<Set<string>>(new Set())
+  useEffect(() => {
+    const candidates = tasks.filter(
+      t => t.quadrant === 'schedule' && t.dueDate && !t.gcalEventId && !schedulingRef.current.has(t.id)
+    )
+    for (const task of candidates) {
+      schedulingRef.current.add(task.id)
+      scheduleTaskToCalendar(task)
+        .then(res => {
+          if (res.success && res.gcalEventId) {
+            updateTask(task.id, { gcalEventId: res.gcalEventId })
+          }
+        })
+        .catch(() => { /* offline or no auth */ })
+        .finally(() => schedulingRef.current.delete(task.id))
+    }
+  }, [tasks, updateTask])
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),

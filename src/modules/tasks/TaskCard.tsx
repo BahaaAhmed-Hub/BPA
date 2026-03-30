@@ -1,14 +1,13 @@
 import { useState } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { Trash2, Check, GripVertical, Clock, Calendar, User, Plus, CalendarPlus, Loader } from 'lucide-react'
+import { Trash2, Check, GripVertical, Clock, Calendar, User, Plus, CalendarCheck } from 'lucide-react'
 import type { Task } from '@/types'
 import { COMPANY_COLORS, getAllUsers, loadDynamicCompanies } from '@/types'
 import { useTaskStore } from '@/store/taskStore'
 import { getCalendarCache } from '@/lib/googleCalendar'
 import { MeetingFollowUpPopup } from './MeetingFollowUpPopup'
 import type { ExtractedTask } from '@/lib/professor'
-import { scheduleTaskToCalendar } from '@/lib/aiScheduler'
 
 const MEETING_KEYWORDS = ['meeting', 'call', 'sync', 'standup', 'stand-up', '1:1', 'interview', 'check-in', 'debrief', 'catchup', 'catch-up']
 const MEETING_EMOJIS   = ['📞', '💬', '🤝', '📅']
@@ -29,8 +28,6 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
   const [hovered, setHovered] = useState(false)
   const [showMeetingPopup, setShowMeetingPopup] = useState(false)
   const [editingTitle, setEditingTitle] = useState(false)
-  const [scheduling, setScheduling] = useState(false)
-  const [scheduleMsg, setScheduleMsg] = useState<string | null>(null)
   const [titleDraft, setTitleDraft] = useState(task.title)
   const [editingDate, setEditingDate] = useState(false)
   const [editingTime, setEditingTime] = useState(false)
@@ -283,54 +280,10 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
               </select>
             )}
 
-            {/* Schedule to Calendar button — shown when task has a due date and not yet scheduled */}
-            {task.dueDate && !task.gcalEventId && (
-              <span
-                data-nm
-                title={task.plannedTime ? 'Add to calendar at planned time' : 'AI-schedule to calendar'}
-                onClick={async e => {
-                  e.stopPropagation()
-                  if (scheduling) return
-                  setScheduling(true)
-                  setScheduleMsg(null)
-                  try {
-                    const res = await scheduleTaskToCalendar(task)
-                    if (res.success) {
-                      updateTask(task.id, { gcalEventId: res.gcalEventId })
-                      const moved = res.movedCount ? ` (moved ${res.movedCount} event${res.movedCount > 1 ? 's' : ''})` : ''
-                      setScheduleMsg(`✓ Added at ${res.scheduledTime}${moved}`)
-                    } else {
-                      setScheduleMsg(`✗ ${res.error ?? 'Failed'}`)
-                    }
-                  } catch (err) {
-                    setScheduleMsg(`✗ ${err instanceof Error ? err.message : 'Error'}`)
-                  } finally {
-                    setScheduling(false)
-                    setTimeout(() => setScheduleMsg(null), 4000)
-                  }
-                }}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 3,
-                  fontSize: 10, cursor: scheduling ? 'wait' : 'pointer',
-                  color: '#1D9E75', padding: '1px 4px', borderRadius: 3,
-                  background: '#1D9E7512',
-                }}
-              >
-                {scheduling
-                  ? <Loader size={9} style={{ animation: 'spin 1s linear infinite' }} />
-                  : <CalendarPlus size={9} />
-                }
-                {scheduling ? 'Scheduling…' : 'Schedule'}
-              </span>
-            )}
+            {/* Calendar scheduled indicator — shown when task has been auto-scheduled */}
             {task.gcalEventId && (
-              <span style={{ fontSize: 10, color: '#1D9E75', display: 'flex', alignItems: 'center', gap: 2 }}>
-                <CalendarPlus size={9} /> Scheduled
-              </span>
-            )}
-            {scheduleMsg && (
-              <span style={{ fontSize: 10, color: scheduleMsg.startsWith('✓') ? '#1D9E75' : '#E05252' }}>
-                {scheduleMsg}
+              <span title="Scheduled to Google Calendar" style={{ fontSize: 10, color: '#1D9E75', display: 'flex', alignItems: 'center', gap: 2 }}>
+                <CalendarCheck size={9} /> Scheduled ✓
               </span>
             )}
 
