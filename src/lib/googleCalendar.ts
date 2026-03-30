@@ -380,6 +380,32 @@ export async function updateCalendarEventDate(
   }
 }
 
+/** Move an event to an arbitrary start+end datetime (for DnD move and resize).
+ *  Uses a specific token (for multi-account support). */
+export async function updateCalendarEventTimes(
+  token: string,
+  calendarId: string,
+  eventId: string,
+  newStart: Date,
+  newEnd: Date,
+  timeZone = 'UTC',
+): Promise<boolean> {
+  try {
+    const body = {
+      start: { dateTime: newStart.toISOString(), timeZone },
+      end:   { dateTime: newEnd.toISOString(),   timeZone },
+    }
+    const res = await gcalRequest(
+      token,
+      `/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}`,
+      { method: 'PATCH', body: JSON.stringify(body) },
+    )
+    return res.ok
+  } catch {
+    return false
+  }
+}
+
 // ─── Delete event ─────────────────────────────────────────────────────────────
 
 export async function deleteCalendarEvent(
