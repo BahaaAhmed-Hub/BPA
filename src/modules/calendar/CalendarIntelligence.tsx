@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   ChevronLeft, ChevronRight, Calendar, Video, Users,
-  Sparkles, MapPin, RefreshCw, X, Eye, EyeOff, GripVertical,
+  Sparkles, MapPin, RefreshCw, X, Eye, EyeOff,
   CheckCircle2, XCircle,
 } from 'lucide-react'
 import {
@@ -9,7 +9,14 @@ import {
   useDraggable, useDroppable,
   type DragEndEvent, type DragStartEvent,
 } from '@dnd-kit/core'
-import { detectMeetingType, listCalendars, listCalendarsWithToken, fetchCalendarEventsWithToken, updateCalendarEventDate } from '@/lib/googleCalendar'
+import { CSS } from '@dnd-kit/utilities'
+import {
+  detectMeetingType,
+  listCalendars,
+  listCalendarsWithToken,
+  fetchCalendarEventsWithToken,
+  updateCalendarEventTimes,
+} from '@/lib/googleCalendar'
 import type { GCalEvent, GCalCalendar } from '@/lib/googleCalendar'
 import { generateMeetingPrep } from '@/lib/professor'
 import type { MeetingPrep } from '@/lib/professor'
@@ -18,54 +25,27 @@ import { loadAccounts } from '@/lib/multiAccount'
 import { connectAdditionalGoogleAccount } from '@/lib/google'
 import type { DbUser, DbCompany, DbCalendarEvent } from '@/types/database'
 
-// ─── DnD helpers ─────────────────────────────────────────────────────────────
+// ─── Grid constants ───────────────────────────────────────────────────────────
+const HOUR_PX  = 56     // pixels per hour
+const SNAP_MIN = 15     // snap to 15-minute increments
+const GRID_H   = HOUR_PX * 24  // total grid height (24h)
 
-// Events from fetchCalendarEventsWithToken have calendarId/calendarColor added
+// ─── Types ────────────────────────────────────────────────────────────────────
 type GCalEventExt = GCalEvent & { calendarId?: string; calendarColor?: string }
+type EventStatus  = 'done' | 'cancelled'
+type DragMode     = 'move' | 'resize'
+interface EventLayout { left: number; width: number }
 
-function DroppableDayTab({ dateKey, children, isOver }: { dateKey: string; children: React.ReactNode; isOver?: boolean }) {
-  const { setNodeRef, isOver: over } = useDroppable({ id: `day-${dateKey}` })
-  return (
-    <div ref={setNodeRef} style={{ flex: '1 1 0', minWidth: 72, outline: (isOver ?? over) ? '2px solid #1E40AF60' : 'none', borderRadius: 10, transition: 'outline 0.1s' }}>
-      {children}
-    </div>
-  )
+interface CalWithAccount extends GCalCalendar {
+  accountEmail: string
+  accountToken: string
+}
+interface LoadCalendarsResult {
+  calendars: CalWithAccount[]
+  needsReconnect: string[]
 }
 
-function DraggableEventRow({ event, children }: { event: GCalEvent; children: (drag: { listeners: ReturnType<typeof useDraggable>['listeners']; attributes: ReturnType<typeof useDraggable>['attributes']; isDragging: boolean }) => React.ReactNode }) {
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: event.id })
-  return (
-    <div ref={setNodeRef}>
-      {children({ listeners, attributes, isDragging })}
-    </div>
-  )
-}
-
-// ─── Persistence helpers ─────────────────────────────────────────────────────
-
-function loadHiddenIntel(): Set<string> {
-  try {
-    const raw = localStorage.getItem('cal-intel-hidden')
-    return raw ? new Set(JSON.parse(raw) as string[]) : new Set()
-  } catch { return new Set() }
-}
-function saveHiddenIntel(hidden: Set<string>) {
-  localStorage.setItem('cal-intel-hidden', JSON.stringify([...hidden]))
-}
-
-type EventStatus = 'done' | 'cancelled'
-function loadEventStatuses(): Record<string, EventStatus> {
-  try {
-    const raw = localStorage.getItem('cal-event-statuses')
-    return raw ? (JSON.parse(raw) as Record<string, EventStatus>) : {}
-  } catch { return {} }
-}
-function saveEventStatuses(statuses: Record<string, EventStatus>) {
-  localStorage.setItem('cal-event-statuses', JSON.stringify(statuses))
-}
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-
+// ─── Mock data for AI prep ────────────────────────────────────────────────────
 const MOCK_COMPANIES: DbCompany[] = [
   { id: 'teradix',    user_id: 'demo', name: 'Teradix',    color_tag: '#1E40AF', calendar_id: null, is_active: true },
   { id: 'dxtech',     user_id: 'demo', name: 'DX Tech',    color_tag: '#7F77DD', calendar_id: null, is_active: true },
@@ -74,376 +54,145 @@ const MOCK_COMPANIES: DbCompany[] = [
 ]
 
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-const FULL_DAYS  = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
+// ─── Date/time helpers ────────────────────────────────────────────────────────
 function getWeekStart(date: Date): Date {
   const d = new Date(date)
-  const day = d.getDay()
-  d.setDate(d.getDate() - day)
+  d.setDate(d.getDate() - d.getDay())
   d.setHours(0, 0, 0, 0)
   return d
 }
-
 function getWeekEnd(start: Date): Date {
   const d = new Date(start)
   d.setDate(d.getDate() + 6)
   d.setHours(23, 59, 59, 999)
   return d
 }
-
-function fmtTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString('en-US', {
-    hour: 'numeric', minute: '2-digit', hour12: true,
-  })
+function isThisWeek(start: Date): boolean {
+  return start.getTime() === getWeekStart(new Date()).getTime()
 }
-
+function localDateStr(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+}
 function fmtWeekRange(start: Date): string {
-  const end = getWeekEnd(start)
+  const end  = getWeekEnd(start)
   const opts: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' }
-  if (start.getFullYear() !== new Date().getFullYear()) {
-    opts.year = 'numeric'
-  }
   return `${start.toLocaleDateString('en-US', opts)} – ${end.toLocaleDateString('en-US', opts)}`
 }
-
-function isThisWeek(start: Date): boolean {
-  const thisWeek = getWeekStart(new Date())
-  return start.getTime() === thisWeek.getTime()
+function fmtShort(iso: string): string {
+  const d = new Date(iso)
+  const h = d.getHours(), m = d.getMinutes()
+  const ampm = h >= 12 ? 'PM' : 'AM'
+  const h12  = h % 12 || 12
+  return m === 0 ? `${h12} ${ampm}` : `${h12}:${String(m).padStart(2,'0')} ${ampm}`
 }
-
-function buildMockUser(user: { id: string; email: string; name?: string } | null): DbUser {
-  return {
-    id: user?.id ?? 'demo',
-    email: user?.email ?? 'bahaa@example.com',
-    full_name: user?.name ?? 'Bahaa Ahmed',
-    avatar_url: null,
-    active_framework: 'time_blocking',
-    schedule_rules: {
-      focus_hours: '09:00–12:00',
-      buffer_minutes: 15,
-      no_meeting_days: 'Wednesday',
-      max_meetings_per_day: 4,
-    },
-    created_at: new Date().toISOString(),
-  }
+function fmtHourLabel(h: number): string {
+  if (h === 0)  return '12 AM'
+  if (h === 12) return '12 PM'
+  return h < 12 ? `${h} AM` : `${h-12} PM`
 }
-
-function gcalToDbEvent(e: GCalEvent): DbCalendarEvent {
-  return {
-    id:              e.id,
-    user_id:         'demo',
-    company_id:      null,
-    google_event_id: e.id,
-    title:           e.summary ?? '(No title)',
-    start_time:      e.start.dateTime ?? e.start.date ?? '',
-    end_time:        e.end.dateTime   ?? e.end.date   ?? '',
-    location:        e.location ?? null,
-    meeting_type:    detectMeetingType(e),
-    prep_notes:      e.description ?? null,
-    is_synced:       true,
-  }
+function fmtPopupDate(startIso: string, endIso: string, isAllDay: boolean): string {
+  const d = new Date(isAllDay ? startIso + 'T00:00:00' : startIso)
+  const date = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+  if (isAllDay) return date
+  return `${date}  ·  ${fmtShort(startIso)} – ${fmtShort(endIso)}`
 }
-
-function localDateStr(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
-
-function getDayKey(iso: string): string {
-  return localDateStr(new Date(iso))
-}
-
-function groupByDay(events: GCalEvent[]): Map<string, GCalEvent[]> {
-  const map = new Map<string, GCalEvent[]>()
+function groupByDay(events: GCalEvent[]): Map<string, GCalEventExt[]> {
+  const map = new Map<string, GCalEventExt[]>()
   for (const e of events) {
-    const key = getDayKey(e.start.dateTime ?? e.start.date ?? '')
+    const key = localDateStr(new Date(e.start.dateTime ?? (e.start.date + 'T00:00:00')))
     if (!map.has(key)) map.set(key, [])
-    map.get(key)!.push(e)
+    map.get(key)!.push(e as GCalEventExt)
   }
   return map
 }
 
-// ─── Skeleton ─────────────────────────────────────────────────────────────────
-
-function Skel({ w = '100%', h = 14, radius = 8 }: { w?: string | number; h?: number; radius?: number }) {
-  return (
-    <div style={{
-      width: w, height: h, borderRadius: radius, flexShrink: 0,
-      background: 'linear-gradient(90deg, #252A3E 25%, #4A3E28 50%, #252A3E 75%)',
-      backgroundSize: '200% 100%',
-      animation: 'shimmer 1.6s infinite',
-    }} />
-  )
+// ─── AI prep helpers ──────────────────────────────────────────────────────────
+function buildMockUser(user: { id: string; email: string; name?: string } | null): DbUser {
+  return {
+    id: user?.id ?? 'demo', email: user?.email ?? '',
+    full_name: user?.name ?? 'User', avatar_url: null,
+    active_framework: 'time_blocking',
+    schedule_rules: { focus_hours: '09:00–12:00', buffer_minutes: 15, no_meeting_days: 'Wednesday', max_meetings_per_day: 4 },
+    created_at: new Date().toISOString(),
+  }
+}
+function gcalToDbEvent(e: GCalEvent): DbCalendarEvent {
+  return {
+    id: e.id, user_id: 'demo', company_id: null, google_event_id: e.id,
+    title: e.summary ?? '(No title)',
+    start_time: e.start.dateTime ?? e.start.date ?? '',
+    end_time:   e.end.dateTime   ?? e.end.date   ?? '',
+    location: e.location ?? null,
+    meeting_type: detectMeetingType(e),
+    prep_notes: e.description ?? null,
+    is_synced: true,
+  }
 }
 
-function EventSkeleton() {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-      {[0, 1, 2, 3].map(i => (
-        <div key={i} style={{
-          display: 'flex', gap: 12, alignItems: 'center',
-          padding: '14px 16px', borderRadius: 10,
-          background: '#161929', border: '1px solid #252A3E',
-        }}>
-          <Skel w={48} h={12} />
-          <Skel w={3} h={36} radius={2} />
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <Skel w={`${65 - i * 8}%`} h={13} />
-            <Skel w="30%" h={10} />
-          </div>
-        </div>
-      ))}
-    </div>
-  )
+// ─── Persistence helpers ──────────────────────────────────────────────────────
+function loadHiddenIntel(): Set<string> {
+  try { const r = localStorage.getItem('cal-intel-hidden'); return r ? new Set(JSON.parse(r) as string[]) : new Set() } catch { return new Set() }
+}
+function saveHiddenIntel(s: Set<string>) { localStorage.setItem('cal-intel-hidden', JSON.stringify([...s])) }
+
+function loadEventStatuses(): Record<string, EventStatus> {
+  try { const r = localStorage.getItem('cal-event-statuses'); return r ? JSON.parse(r) as Record<string,EventStatus> : {} } catch { return {} }
+}
+function saveEventStatuses(s: Record<string, EventStatus>) { localStorage.setItem('cal-event-statuses', JSON.stringify(s)) }
+
+// ─── Calendar list cache ──────────────────────────────────────────────────────
+const CAL_INTEL_CACHE_KEY = 'cal-intel-cals-cache'
+interface CachedCal { id: string; summary: string; backgroundColor?: string; foregroundColor?: string; primary?: boolean; accessRole?: string; accountEmail: string }
+
+function loadCalIntelCache(): CachedCal[] {
+  try { const r = localStorage.getItem(CAL_INTEL_CACHE_KEY); return r ? JSON.parse(r) as CachedCal[] : [] } catch { return [] }
+}
+function saveCalIntelCache(cals: CalWithAccount[]): void {
+  try {
+    const existing    = loadCalIntelCache()
+    const updatedEmails = new Set(cals.map(c => c.accountEmail))
+    const kept        = existing.filter(c => !updatedEmails.has(c.accountEmail))
+    const fresh: CachedCal[] = cals.map(c => ({ id: c.id, summary: c.summary ?? '', backgroundColor: c.backgroundColor, foregroundColor: c.foregroundColor, primary: c.primary, accessRole: c.accessRole, accountEmail: c.accountEmail }))
+    localStorage.setItem(CAL_INTEL_CACHE_KEY, JSON.stringify([...fresh, ...kept]))
+  } catch { /* quota */ }
+}
+function rebuildFromCache(cached: CachedCal[]): CalWithAccount[] {
+  const primaryToken = localStorage.getItem('google_provider_token') ?? ''
+  const accounts     = loadAccounts()
+  return cached.map(c => {
+    const acct  = accounts.find(a => a.email === c.accountEmail)
+    const token = acct ? acct.providerToken : primaryToken
+    return { ...c, accountToken: token } as CalWithAccount
+  })
 }
 
-function PrepSkeleton() {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <Skel w="85%" h={13} />
-      <Skel w="70%" h={13} />
-      <Skel w="90%" h={13} />
-      <div style={{ height: 12 }} />
-      <Skel w="40%" h={11} />
-      <Skel w="75%" h={13} />
-      <Skel w="60%" h={13} />
-      <Skel w="68%" h={13} />
-    </div>
-  )
-}
-
-// ─── Meeting Type Icon ────────────────────────────────────────────────────────
-
-function MeetingTypeIcon({ type }: { type: string | null }) {
-  if (type === 'video')      return <Video    size={12} color="#7F77DD" />
-  if (type === 'one_on_one') return <Users    size={12} color="#1D9E75" />
-  if (type === 'external')   return <Calendar size={12} color="#1E40AF" />
-  return                            <Users    size={12} color="#6B7280" />
-}
-
-// ─── Meeting Prep Panel ───────────────────────────────────────────────────────
-
-function PrepPanel({
-  event,
-  prep,
-  loading,
-  error,
-  onClose,
-  onRetry,
-}: {
-  event: GCalEvent
-  prep: MeetingPrep | null
-  loading: boolean
-  error: string | null
-  onClose: () => void
-  onRetry: () => void
-}) {
-  const dbEvent = gcalToDbEvent(event)
-  const startLabel = fmtTime(dbEvent.start_time)
-  const endLabel   = fmtTime(dbEvent.end_time)
-
-  return (
-    <div style={{
-      background: '#161929',
-      border: '1px solid #252A3E',
-      borderLeft: '3px solid #1E40AF',
-      borderRadius: 14,
-      padding: '24px 24px 28px',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 0,
-    }}>
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 18 }}>
-        <div style={{ flex: 1, paddingRight: 12 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 6 }}>
-            <div style={{
-              width: 24, height: 24, borderRadius: 6,
-              background: '#1E40AF18', border: '1px solid #1E40AF30',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>
-              <Sparkles size={12} color="#1E40AF" />
-            </div>
-            <span style={{ fontSize: 10, fontWeight: 600, color: '#1E40AF', letterSpacing: '0.8px', textTransform: 'uppercase' }}>
-              AI Meeting Prep
-            </span>
-          </div>
-          <h3 style={{
-            margin: 0,
-            fontSize: 16,
-            fontWeight: 700,
-            color: '#E8EAF6',
-            fontFamily: "'Cabinet Grotesk', sans-serif",
-            lineHeight: 1.3,
-          }}>
-            {event.summary ?? '(No title)'}
-          </h3>
-          <p style={{ margin: '5px 0 0', fontSize: 12, color: '#FFFFFF' }}>
-            {startLabel} – {endLabel}
-            {dbEvent.location && (
-              <span style={{ marginLeft: 10 }}>
-                <MapPin size={10} style={{ verticalAlign: 'middle', marginRight: 3 }} />
-                {dbEvent.location}
-              </span>
-            )}
-          </p>
-        </div>
-
-        <button
-          onClick={onClose}
-          style={{
-            background: 'none', border: 'none', cursor: 'pointer',
-            color: '#FFFFFF', padding: 4, lineHeight: 1, flexShrink: 0,
-          }}
-        >
-          <X size={16} />
-        </button>
-      </div>
-
-      {/* Divider */}
-      <div style={{ height: 1, background: '#252A3E', marginBottom: 20 }} />
-
-      {/* Content */}
-      {loading ? (
-        <PrepSkeleton />
-      ) : error ? (
-        <div style={{ textAlign: 'center', padding: '16px 0' }}>
-          <p style={{ margin: '0 0 12px', fontSize: 13, color: '#FFFFFF' }}>{error}</p>
-          <button
-            onClick={onRetry}
-            style={{
-              padding: '7px 16px', borderRadius: 7,
-              background: '#1E40AF18', border: '1px solid #1E40AF30',
-              color: '#1E40AF', fontSize: 12, cursor: 'pointer',
-            }}
-          >
-            Try again
-          </button>
-        </div>
-      ) : prep ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-
-          {/* Goal */}
-          <div style={{
-            padding: '12px 16px',
-            background: 'rgba(30,64,175,0.07)',
-            borderLeft: '2px solid #1E40AF',
-            borderRadius: '0 8px 8px 0',
-          }}>
-            <p style={{ margin: '0 0 3px', fontSize: 10, fontWeight: 600, color: '#1E40AF', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
-              Goal
-            </p>
-            <p style={{ margin: 0, fontSize: 13, color: '#E8EAF6', lineHeight: 1.55 }}>
-              {prep.goal}
-            </p>
-          </div>
-
-          {/* Context Summary */}
-          <div>
-            <p style={{ margin: '0 0 8px', fontSize: 10, fontWeight: 600, color: '#FFFFFF', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
-              Context
-            </p>
-            <p style={{ margin: 0, fontSize: 13, color: '#C8BC9E', lineHeight: 1.65 }}>
-              {prep.contextSummary}
-            </p>
-          </div>
-
-          {/* Talking Points */}
-          {prep.talkingPoints.length > 0 && (
-            <div>
-              <p style={{ margin: '0 0 10px', fontSize: 10, fontWeight: 600, color: '#FFFFFF', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
-                Talking Points
-              </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-                {prep.talkingPoints.map((point, i) => (
-                  <div key={i} style={{
-                    display: 'flex', gap: 10, alignItems: 'flex-start',
-                    padding: '10px 14px',
-                    background: '#0D0F1A',
-                    border: '1px solid #252A3E',
-                    borderRadius: 9,
-                  }}>
-                    <span style={{
-                      width: 18, height: 18, borderRadius: '50%', flexShrink: 0,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: 10, fontWeight: 700,
-                      background: '#252A3E', color: '#FFFFFF',
-                    }}>
-                      {i + 1}
-                    </span>
-                    <span style={{ fontSize: 13, color: '#E8EAF6', lineHeight: 1.45 }}>{point}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      ) : null}
-    </div>
-  )
-}
-
-// ─── Main Component ───────────────────────────────────────────────────────────
-
-// ─── Multi-account calendar helpers ─────────────────────────────────────────
-
-interface CalWithAccount extends GCalCalendar {
-  accountEmail: string
-  accountToken: string
-}
-
-interface LoadCalendarsResult {
-  calendars: CalWithAccount[]
-  needsReconnect: string[]  // emails of accounts with expired/unrefreshable tokens
-}
-
+// ─── Multi-account calendar loading ──────────────────────────────────────────
 async function loadAllCalendars(primaryEmail: string): Promise<LoadCalendarsResult> {
-  // Primary account — proper refresh via withAuth + Supabase session
-  const tokenAge = Math.round((Date.now() - parseInt(localStorage.getItem('google_provider_token_saved_at') ?? '0', 10)) / 1000)
-  const hasToken = !!localStorage.getItem('google_provider_token')
-  console.log(`[CalIntel] loadAllCalendars: primaryEmail=${primaryEmail}, hasToken=${hasToken}, tokenAge=${tokenAge}s`)
   const { calendars: primaryCals } = await listCalendars()
   const primaryToken = localStorage.getItem('google_provider_token') ?? ''
-  console.log(`[CalIntel] Primary (${primaryEmail}): ${primaryCals.length} calendars, token present after call: ${!!primaryToken}`)
-  const primaryResult: CalWithAccount[] = primaryCals.map(c => ({
-    ...c, accountEmail: primaryEmail, accountToken: primaryToken,
-  }))
+  const primaryResult: CalWithAccount[] = primaryCals.map(c => ({ ...c, accountEmail: primaryEmail, accountToken: primaryToken }))
 
-  // Additional accounts — use stored token directly; detect real expiry from API 401.
-  // When a token is expired/missing, fall back to CACHED calendar metadata so the
-  // filter chips remain visible and the user can see which account needs reconnect.
   const extraAccounts = loadAccounts().filter(a => !a.isPrimary)
-  console.log(`[CalIntel] Extra accounts in storage: ${extraAccounts.map(a => a.email).join(', ') || 'none'}`)
-  const calCache = loadCalIntelCache()
-
+  const calCache      = loadCalIntelCache()
   const needsReconnect: string[] = []
+
   const extraResults = await Promise.all(
     extraAccounts.map(async account => {
       const token = account.providerToken
       if (!token) {
-        console.warn(`[CalIntel] ${account.email}: no token stored — needs reconnect`)
         needsReconnect.push(account.email)
-        // Return cached calendar entries so chips stay visible
-        return calCache
-          .filter(c => c.accountEmail === account.email)
-          .map(c => ({ ...c, accountToken: '' } as CalWithAccount))
+        return calCache.filter(c => c.accountEmail === account.email).map(c => ({ ...c, accountToken: '' } as CalWithAccount))
       }
       const { calendars: cals, authFailed } = await listCalendarsWithToken(token)
       if (authFailed) {
-        console.warn(`[CalIntel] ${account.email}: token rejected by Google — needs reconnect`)
         needsReconnect.push(account.email)
-        // Return cached calendar entries so chips stay visible despite expired token
-        return calCache
-          .filter(c => c.accountEmail === account.email)
-          .map(c => ({ ...c, accountToken: token } as CalWithAccount))
+        return calCache.filter(c => c.accountEmail === account.email).map(c => ({ ...c, accountToken: token } as CalWithAccount))
       }
-      console.log(`[CalIntel] ${account.email}: ${cals.length} calendars loaded`)
       return cals.map(c => ({ ...c, accountEmail: account.email, accountToken: token }))
     })
   )
 
-  // Deduplicate by (accountEmail + calendarId)
   const seen = new Set<string>()
   const calendars = [...primaryResult, ...extraResults.flat()].filter(c => {
     const key = `${c.accountEmail}:${c.id}`
@@ -453,791 +202,821 @@ async function loadAllCalendars(primaryEmail: string): Promise<LoadCalendarsResu
   return { calendars, needsReconnect }
 }
 
-async function fetchAllEvents(
-  allCals: CalWithAccount[],
-  hidden: Set<string>,
-  start: Date,
-  end: Date,
-): Promise<GCalEvent[]> {
+async function fetchAllEvents(allCals: CalWithAccount[], hidden: Set<string>, start: Date, end: Date): Promise<GCalEvent[]> {
   const active = allCals.filter(c => !hidden.has(c.id))
   if (!active.length) return []
-  const results = await Promise.all(
-    active.map(c => fetchCalendarEventsWithToken(c.accountToken, c.id, start, end, c.backgroundColor))
-  )
+  const results = await Promise.all(active.map(c => fetchCalendarEventsWithToken(c.accountToken, c.id, start, end, c.backgroundColor)))
   return results.flat()
 }
 
-// ─── Multi-account calendar list cache ───────────────────────────────────────
-// Persists calendar metadata (without tokens) so the page shows calendars
-// immediately on revisit without waiting for a Google API round-trip.
-
-const CAL_INTEL_CACHE_KEY = 'cal-intel-cals-cache'
-
-interface CachedCal {
-  id: string
-  summary: string
-  backgroundColor?: string
-  foregroundColor?: string
-  primary?: boolean
-  accessRole?: string
-  accountEmail: string
+// ─── Time grid helpers ────────────────────────────────────────────────────────
+function eventTopPx(startIso: string): number {
+  const d = new Date(startIso)
+  return (d.getHours() + d.getMinutes() / 60) * HOUR_PX
+}
+function eventHeightPx(startIso: string, endIso: string): number {
+  const mins = Math.max(15, (new Date(endIso).getTime() - new Date(startIso).getTime()) / 60000)
+  return mins / 60 * HOUR_PX
+}
+function snapMinutes(deltaY: number): number {
+  const raw = deltaY / HOUR_PX * 60
+  return Math.round(raw / SNAP_MIN) * SNAP_MIN
+}
+function nowTopPx(): number {
+  const now = new Date()
+  return (now.getHours() + now.getMinutes() / 60) * HOUR_PX
 }
 
-function loadCalIntelCache(): CachedCal[] {
-  try {
-    const raw = localStorage.getItem(CAL_INTEL_CACHE_KEY)
-    return raw ? (JSON.parse(raw) as CachedCal[]) : []
-  } catch { return [] }
-}
+// ─── Overlap layout calculation ───────────────────────────────────────────────
+// Groups overlapping events into columns and returns left%/width% for each.
+function computeOverlaps(dayEvents: GCalEventExt[]): Map<string, EventLayout> {
+  const layout = new Map<string, EventLayout>()
+  const timed  = dayEvents.filter(e => !!e.start.dateTime)
+  if (!timed.length) return layout
 
-function saveCalIntelCache(cals: CalWithAccount[]): void {
-  try {
-    // MERGE: update entries for accounts present in `cals`, keep existing entries
-    // for accounts that aren't in this update (e.g. expired tokens weren't fetched).
-    // This prevents cache wipe when only a subset of accounts loads successfully.
-    const existing = loadCalIntelCache()
-    const updatedEmails = new Set(cals.map(c => c.accountEmail))
-    const kept = existing.filter(c => !updatedEmails.has(c.accountEmail))
-    const fresh: CachedCal[] = cals.map(c => ({
-      id:              c.id,
-      summary:         c.summary ?? '',
-      backgroundColor: c.backgroundColor,
-      foregroundColor: c.foregroundColor,
-      primary:         c.primary,
-      accessRole:      c.accessRole,
-      accountEmail:    c.accountEmail,
-    }))
-    localStorage.setItem(CAL_INTEL_CACHE_KEY, JSON.stringify([...fresh, ...kept]))
-  } catch { /* quota */ }
-}
+  const sorted = [...timed].sort((a, b) =>
+    new Date(a.start.dateTime!).getTime() - new Date(b.start.dateTime!).getTime()
+  )
 
-/** Reconstruct CalWithAccount[] from cache by pairing each entry with a stored token. */
-function rebuildFromCache(cached: CachedCal[]): CalWithAccount[] {
-  const primaryToken = localStorage.getItem('google_provider_token') ?? ''
-  const accounts = loadAccounts()
-  return cached.map(c => {
-    const acct  = accounts.find(a => a.email === c.accountEmail)
-    const token = acct ? acct.providerToken : primaryToken
-    return { ...c, accountToken: token } as CalWithAccount
+  // Assign each event to the first column it fits in (no overlap with last in that col)
+  const cols: GCalEventExt[][] = []
+  for (const ev of sorted) {
+    const s = new Date(ev.start.dateTime!).getTime()
+    let placed = false
+    for (const col of cols) {
+      const lastEnd = new Date(col[col.length - 1].end.dateTime ?? col[col.length - 1].start.dateTime!).getTime()
+      if (lastEnd <= s) { col.push(ev); placed = true; break }
+    }
+    if (!placed) cols.push([ev])
+  }
+
+  const total = cols.length
+  cols.forEach((col, ci) => {
+    col.forEach(ev => {
+      // Check how many columns to the right this event overlaps with
+      const s = new Date(ev.start.dateTime!).getTime()
+      const e = new Date(ev.end.dateTime ?? ev.start.dateTime!).getTime()
+      let span = 1
+      for (let c = ci + 1; c < total; c++) {
+        const overlaps = cols[c].some(o => {
+          const os = new Date(o.start.dateTime!).getTime()
+          const oe = new Date(o.end.dateTime ?? o.start.dateTime!).getTime()
+          return os < e && oe > s
+        })
+        if (overlaps) break
+        span++
+      }
+      layout.set(ev.id, {
+        left:  (ci / total) * 100,
+        width: (span / total) * 100 - 0.5,
+      })
+    })
   })
+
+  // All-day events get full width
+  dayEvents.filter(e => !e.start.dateTime).forEach(e => {
+    layout.set(e.id, { left: 0, width: 99 })
+  })
+
+  return layout
+}
+
+// ─── DayColumn (droppable) ────────────────────────────────────────────────────
+function DayColumn({ dateStr, isToday, children }: { dateStr: string; isToday: boolean; children: React.ReactNode }) {
+  const { setNodeRef, isOver } = useDroppable({ id: `col-${dateStr}` })
+  return (
+    <div ref={setNodeRef} style={{
+      flex: 1, position: 'relative', height: GRID_H,
+      borderRight: '1px solid #1A1D2E',
+      background: isToday ? 'rgba(30,64,175,0.04)' : isOver ? 'rgba(30,64,175,0.07)' : 'transparent',
+      transition: 'background 0.1s', minWidth: 0,
+    }}>
+      {/* Hour lines */}
+      {Array.from({ length: 24 }, (_, h) => (
+        <div key={h} style={{ position: 'absolute', top: h * HOUR_PX, left: 0, right: 0, borderTop: '1px solid #1A1D2E', pointerEvents: 'none' }} />
+      ))}
+      {/* Half-hour lines */}
+      {Array.from({ length: 24 }, (_, h) => (
+        <div key={`h${h}`} style={{ position: 'absolute', top: h * HOUR_PX + HOUR_PX / 2, left: 0, right: 0, borderTop: '1px dashed #141722', pointerEvents: 'none' }} />
+      ))}
+      {children}
+    </div>
+  )
+}
+
+// ─── ResizeHandle ─────────────────────────────────────────────────────────────
+function ResizeHandle({ eventId }: { eventId: string }) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: `resize:${eventId}` })
+  return (
+    <div ref={setNodeRef} {...listeners} {...attributes}
+      onClick={e => e.stopPropagation()}
+      style={{ position: 'absolute', bottom: 0, left: '15%', right: '15%', height: 10, cursor: 'ns-resize', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 3 }}
+    >
+      <div style={{ width: 28, height: 3, borderRadius: 2, background: isDragging ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.35)' }} />
+    </div>
+  )
+}
+
+// ─── EventBlock (draggable, positioned in time grid) ─────────────────────────
+function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverlay, onClick }: {
+  event: GCalEventExt
+  layout: EventLayout
+  status: EventStatus | undefined
+  isSelected: boolean
+  isDragSrc: boolean
+  isDragOverlay?: boolean
+  onClick: (e: React.MouseEvent) => void
+}) {
+  const { attributes, listeners, setNodeRef, isDragging, transform } = useDraggable({
+    id: event.id,
+    disabled: isDragOverlay,
+  })
+
+  const isAllDay = !event.start.dateTime
+  if (isAllDay) return null
+
+  const top    = eventTopPx(event.start.dateTime!)
+  const height = eventHeightPx(event.start.dateTime!, event.end.dateTime ?? event.start.dateTime!)
+  const color  = event.calendarColor ?? '#1E40AF'
+  const isDone = status === 'done'
+  const isCancelled = status === 'cancelled'
+
+  const baseAlpha = isDone || isCancelled ? '88' : 'CC'
+
+  return (
+    <div
+      ref={setNodeRef}
+      {...(isDragOverlay ? {} : listeners)}
+      {...(isDragOverlay ? {} : attributes)}
+      onClick={onClick}
+      style={{
+        position: isDragOverlay ? 'relative' : 'absolute',
+        top:    isDragOverlay ? undefined : top,
+        left:   isDragOverlay ? undefined : `${layout.left}%`,
+        width:  isDragOverlay ? 130 : `${layout.width}%`,
+        height: isDragOverlay ? Math.max(38, height) : height,
+        background: `${color}${baseAlpha}`,
+        borderRadius: 5,
+        borderLeft: `3px solid ${color}`,
+        padding: '3px 5px 8px',
+        overflow: 'hidden',
+        cursor: isDragOverlay ? 'grabbing' : 'pointer',
+        opacity: isDragSrc ? 0.3 : 1,
+        transform: isDragOverlay ? undefined : CSS.Transform.toString(transform),
+        transition: isDragging ? 'none' : 'box-shadow 0.12s, opacity 0.12s',
+        boxSizing: 'border-box',
+        zIndex: isSelected ? 4 : 2,
+        boxShadow: isSelected
+          ? `0 0 0 2px ${color}, 0 4px 14px rgba(0,0,0,0.4)`
+          : '0 1px 3px rgba(0,0,0,0.25)',
+        userSelect: 'none',
+      }}
+    >
+      <div style={{
+        fontSize: height < 30 ? 10 : 11,
+        fontWeight: 600,
+        color: '#fff',
+        lineHeight: 1.25,
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: height < 36 ? 'nowrap' : 'normal',
+        textDecoration: isCancelled ? 'line-through' : 'none',
+      }}>
+        {isDone && <span style={{ marginRight: 3, fontSize: 9 }}>✓</span>}
+        {isCancelled && <span style={{ marginRight: 3, fontSize: 9 }}>✗</span>}
+        {event.summary ?? '(No title)'}
+      </div>
+      {height >= 38 && (
+        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.75)', marginTop: 2 }}>
+          {fmtShort(event.start.dateTime!)}
+          {event.end.dateTime ? ` – ${fmtShort(event.end.dateTime)}` : ''}
+        </div>
+      )}
+      {!isDragOverlay && <ResizeHandle eventId={event.id} />}
+    </div>
+  )
+}
+
+// ─── EventPopup (macOS Calendar style) ───────────────────────────────────────
+function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepError, pos, onClose, onStatusToggle, onPrepRequest }: {
+  event: GCalEventExt
+  status: EventStatus | undefined
+  calName: string
+  calColor: string
+  prep: MeetingPrep | null
+  prepLoading: boolean
+  prepError: string | null
+  pos: { x: number; y: number }
+  onClose: () => void
+  onStatusToggle: (s: EventStatus) => void
+  onPrepRequest: () => void
+}) {
+  const popupRef  = useRef<HTMLDivElement>(null)
+  const [showPrep, setShowPrep] = useState(false)
+  const [adjPos, setAdjPos]     = useState(pos)
+
+  // Adjust position to stay within viewport
+  useEffect(() => {
+    if (!popupRef.current) return
+    const { width, height } = popupRef.current.getBoundingClientRect()
+    let x = pos.x + 14, y = pos.y
+    if (x + width  > window.innerWidth  - 12) x = pos.x - width - 14
+    if (y + height > window.innerHeight - 12) y = window.innerHeight - height - 12
+    if (y < 8) y = 8
+    setAdjPos({ x, y })
+  }, [pos.x, pos.y, showPrep])
+
+  // Close on outside click
+  useEffect(() => {
+    const fn = (e: MouseEvent) => { if (popupRef.current && !popupRef.current.contains(e.target as Node)) onClose() }
+    document.addEventListener('mousedown', fn)
+    return () => document.removeEventListener('mousedown', fn)
+  }, [onClose])
+
+  const isAllDay   = !event.start.dateTime
+  const startIso   = event.start.dateTime ?? (event.start.date + 'T00:00:00')
+  const endIso     = event.end.dateTime   ?? (event.end.date   + 'T00:00:00')
+  const videoLink  = event.conferenceData?.entryPoints?.find(ep => ep.entryPointType === 'video')?.uri
+  const attendees  = (event.attendees ?? []).filter(a => !a.self)
+
+  const btn = (active: boolean, color: string): React.CSSProperties => ({
+    display: 'flex', alignItems: 'center', gap: 5,
+    padding: '5px 11px', borderRadius: 7, fontSize: 12, cursor: 'pointer',
+    background: active ? `${color}22` : 'transparent',
+    border: `1px solid ${active ? color : '#2A2F45'}`,
+    color: active ? color : '#8B93A8',
+    transition: 'all 0.12s',
+  })
+
+  return (
+    <div ref={popupRef} onClick={e => e.stopPropagation()} style={{
+      position: 'fixed', top: adjPos.y, left: adjPos.x,
+      width: 312, background: '#161929',
+      border: '1px solid #252A3E', borderRadius: 12,
+      boxShadow: '0 12px 40px rgba(0,0,0,0.55)',
+      zIndex: 1000, overflow: 'hidden',
+    }}>
+      {/* Calendar color bar */}
+      <div style={{ height: 4, background: calColor }} />
+
+      {/* Title + close */}
+      <div style={{ padding: '14px 16px 0', display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+        <div style={{ fontSize: 15, fontWeight: 700, color: '#E8EAF6', lineHeight: 1.3, flex: 1 }}>
+          {event.summary ?? '(No title)'}
+        </div>
+        <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6B7280', padding: 0, lineHeight: 1, flexShrink: 0 }}>
+          <X size={15} />
+        </button>
+      </div>
+
+      {/* Fields */}
+      <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 9 }}>
+        {/* Date/time */}
+        <Row icon={<Calendar size={13} color="#6B7280" />}>
+          <span style={{ fontSize: 13, color: '#C0C4D6' }}>{fmtPopupDate(startIso, endIso, isAllDay)}</span>
+        </Row>
+        {/* Calendar */}
+        <Row icon={<div style={{ width: 12, height: 12, borderRadius: '50%', background: calColor, flexShrink: 0 }} />}>
+          <span style={{ fontSize: 13, color: '#C0C4D6' }}>{calName}</span>
+        </Row>
+        {/* Location */}
+        {event.location && (
+          <Row icon={<MapPin size={13} color="#6B7280" />}>
+            <span style={{ fontSize: 13, color: '#C0C4D6' }}>{event.location}</span>
+          </Row>
+        )}
+        {/* Video call */}
+        {videoLink && (
+          <Row icon={<Video size={13} color="#6B7280" />}>
+            <a href={videoLink} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: '#7F77DD', textDecoration: 'none' }}>
+              Join video call
+            </a>
+          </Row>
+        )}
+        {/* Attendees */}
+        {attendees.length > 0 && (
+          <Row icon={<Users size={13} color="#6B7280" />}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              {attendees.slice(0, 5).map(a => (
+                <div key={a.email} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#C0C4D6' }}>
+                  <span>{a.displayName ?? a.email}</span>
+                  <span style={{ fontSize: 10, color: a.responseStatus === 'accepted' ? '#1D9E75' : a.responseStatus === 'declined' ? '#E05252' : '#6B7280' }}>
+                    {a.responseStatus === 'accepted' ? '✓' : a.responseStatus === 'declined' ? '✗' : '·'}
+                  </span>
+                </div>
+              ))}
+              {attendees.length > 5 && <span style={{ fontSize: 11, color: '#6B7280' }}>+{attendees.length - 5} more</span>}
+            </div>
+          </Row>
+        )}
+        {/* Notes */}
+        {event.description && (
+          <div style={{ fontSize: 12, color: '#8B93A8', lineHeight: 1.55, maxHeight: 72, overflow: 'hidden', borderTop: '1px solid #1E2235', paddingTop: 9 }}>
+            {event.description.replace(/<[^>]*>/g, '').slice(0, 220)}{event.description.length > 220 ? '…' : ''}
+          </div>
+        )}
+      </div>
+
+      {/* Action buttons */}
+      <div style={{ padding: '8px 14px 12px', display: 'flex', gap: 6, borderTop: '1px solid #1E2235', flexWrap: 'wrap' }}>
+        <button style={btn(status === 'done', '#1D9E75')} onClick={() => onStatusToggle('done')}>
+          <CheckCircle2 size={12} /> Done
+        </button>
+        <button style={btn(status === 'cancelled', '#E05252')} onClick={() => onStatusToggle('cancelled')}>
+          <XCircle size={12} /> Cancel
+        </button>
+        <button
+          style={{ ...btn(showPrep, '#7F77DD'), marginLeft: 'auto' }}
+          onClick={() => { setShowPrep(p => !p); if (!prep && !prepLoading) onPrepRequest() }}
+        >
+          <Sparkles size={12} /> AI Prep
+        </button>
+      </div>
+
+      {/* AI Prep section */}
+      {showPrep && (
+        <div style={{ borderTop: '1px solid #1E2235', padding: '12px 16px 16px' }}>
+          {prepLoading ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+              {[75, 55, 85, 65].map((w, i) => (
+                <div key={i} style={{ height: 9, width: `${w}%`, borderRadius: 3, background: 'linear-gradient(90deg, #1E2235 25%, #252A3E 50%, #1E2235 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.5s infinite' }} />
+              ))}
+            </div>
+          ) : prepError ? (
+            <p style={{ margin: 0, fontSize: 12, color: '#E05252' }}>{prepError}</p>
+          ) : prep ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {prep.goal && (
+                <div>
+                  <div style={{ fontSize: 10, fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.7px', marginBottom: 4 }}>Goal</div>
+                  <div style={{ fontSize: 12, color: '#C0C4D6', lineHeight: 1.55 }}>{prep.goal}</div>
+                </div>
+              )}
+              {prep.talkingPoints?.length > 0 && (
+                <div>
+                  <div style={{ fontSize: 10, fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.7px', marginBottom: 6 }}>Talking Points</div>
+                  {prep.talkingPoints.map((pt, i) => (
+                    <div key={i} style={{ display: 'flex', gap: 7, fontSize: 12, color: '#C0C4D6', lineHeight: 1.45, marginBottom: 4 }}>
+                      <span style={{ color: '#6B7280', flexShrink: 0 }}>{i+1}.</span>
+                      <span>{pt}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            <p style={{ margin: 0, fontSize: 12, color: '#6B7280' }}>Generating prep…</p>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Small helper used by EventPopup rows
+function Row({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 9 }}>
+      <div style={{ flexShrink: 0, marginTop: 1 }}>{icon}</div>
+      <div style={{ flex: 1, minWidth: 0 }}>{children}</div>
+    </div>
+  )
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
-
 export function CalendarIntelligence() {
   const user = useAuthStore(s => s.user)
 
-  const [weekStart,      setWeekStart]      = useState<Date>(() => getWeekStart(new Date()))
-  const [events,         setEvents]         = useState<GCalEvent[]>([])
-  // Hydrate from cache immediately so calendars/events show on revisit without a round-trip
-  const [allCalendars,   setAllCalendars]   = useState<CalWithAccount[]>(() => {
-    const cache = loadCalIntelCache()
-    return cache.length ? rebuildFromCache(cache) : []
+  // ── Calendar + event state ──────────────────────────────────────────────────
+  const [weekStart,       setWeekStart]       = useState<Date>(() => getWeekStart(new Date()))
+  const [events,          setEvents]          = useState<GCalEvent[]>([])
+  const [allCalendars,    setAllCalendars]    = useState<CalWithAccount[]>(() => {
+    const c = loadCalIntelCache(); return c.length ? rebuildFromCache(c) : []
   })
-  const [hiddenCals,     setHiddenCals]     = useState<Set<string>>(loadHiddenIntel)
-  const [loadingEvents,  setLoadingEvents]  = useState(true)
-  const [noAuth,         setNoAuth]         = useState(false)
-  const [draggingEvent,  setDraggingEvent]  = useState<GCalEvent | null>(null)
-  const [rescheduling,   setRescheduling]   = useState<string | null>(null) // eventId being rescheduled
-
-  const dndSensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-  )
-  const [fetchError,     setFetchError]     = useState<string | null>(null)
+  const [hiddenCals,      setHiddenCals]      = useState<Set<string>>(loadHiddenIntel)
+  const [loadingEvents,   setLoadingEvents]   = useState(true)
+  const [noAuth,          setNoAuth]          = useState(false)
+  const [fetchError,      setFetchError]      = useState<string | null>(null)
   const [reconnectNeeded, setReconnectNeeded] = useState<string[]>([])
+  const [rescheduling,    setRescheduling]    = useState<string | null>(null)
 
-  const [selectedEvent,   setSelectedEvent]   = useState<GCalEvent | null>(null)
-  const [prep,            setPrep]            = useState<MeetingPrep | null>(null)
-  const [prepLoading,     setPrepLoading]     = useState(false)
-  const [prepError,       setPrepError]       = useState<string | null>(null)
-  const [eventStatuses,   setEventStatuses]   = useState<Record<string, EventStatus>>(loadEventStatuses)
+  // ── Popup + prep state ──────────────────────────────────────────────────────
+  const [selectedEvent, setSelectedEvent] = useState<GCalEventExt | null>(null)
+  const [popupPos,      setPopupPos]      = useState<{ x: number; y: number } | null>(null)
+  const [prep,          setPrep]          = useState<MeetingPrep | null>(null)
+  const [prepLoading,   setPrepLoading]   = useState(false)
+  const [prepError,     setPrepError]     = useState<string | null>(null)
+  const [eventStatuses, setEventStatuses] = useState<Record<string, EventStatus>>(loadEventStatuses)
 
-  // Load calendars from all accounts — called on mount and on manual refresh.
-  // On failure, falls back to the persisted cache so the page never goes blank.
+  // ── DnD state ───────────────────────────────────────────────────────────────
+  const [dragMode,     setDragMode]     = useState<DragMode | null>(null)
+  const [draggingEvt,  setDraggingEvt]  = useState<GCalEventExt | null>(null)
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
+
+  // ── Grid scroll ref (auto-scroll to current time on mount) ──────────────────
+  const gridRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (gridRef.current) {
+      const top = Math.max(0, nowTopPx() - 120)
+      gridRef.current.scrollTo({ top, behavior: 'smooth' })
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // ── Calendar loading ────────────────────────────────────────────────────────
   const reloadCalendars = useCallback(async () => {
     const { calendars, needsReconnect } = await loadAllCalendars(user?.email ?? '')
     setReconnectNeeded(needsReconnect)
     if (calendars.length) {
-      saveCalIntelCache(calendars)
-      setAllCalendars(calendars)
-      setNoAuth(false)
-      return calendars
+      saveCalIntelCache(calendars); setAllCalendars(calendars); setNoAuth(false); return calendars
     }
-    // Fresh fetch returned empty — try to fall back to persisted cache
     const cached = loadCalIntelCache()
     if (cached.length) {
-      const fromCache = rebuildFromCache(cached)
-      setAllCalendars(fromCache)
-      setNoAuth(false)
-      return fromCache
+      const fromCache = rebuildFromCache(cached); setAllCalendars(fromCache); setNoAuth(false); return fromCache
     }
-    // Truly no calendars anywhere
-    setNoAuth(true)
-    return []
+    setNoAuth(true); return []
   }, [user?.email])
 
-  useEffect(() => {
-    void reloadCalendars()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.email])
+  useEffect(() => { void reloadCalendars() }, [user?.email]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  function toggleCal(id: string) {
-    setHiddenCals(prev => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id); else next.add(id)
-      saveHiddenIntel(next)
-      return next
-    })
-  }
-
-  // Fetch events whenever week or visible calendars change
   const loadEvents = useCallback(async (start: Date, cals: CalWithAccount[], hidden: Set<string>) => {
-    setLoadingEvents(true)
-    setFetchError(null)
-    setSelectedEvent(null)
-    setPrep(null)
+    setLoadingEvents(true); setFetchError(null)
     try {
-      const end = getWeekEnd(start)
-      if (!cals.length) {
-        setNoAuth(true)
-        setEvents([])
-        return
-      }
+      if (!cals.length) { setNoAuth(true); setEvents([]); return }
+      const end     = getWeekEnd(start)
       const fetched = await fetchAllEvents(cals, hidden, start, end)
-      setEvents(fetched)
-      setNoAuth(false)
+      setEvents(fetched); setNoAuth(false)
     } catch (err) {
       setFetchError(err instanceof Error ? err.message : 'Failed to load events.')
       setEvents([])
-    } finally {
-      setLoadingEvents(false)
-    }
+    } finally { setLoadingEvents(false) }
   }, [])
 
   useEffect(() => {
     if (allCalendars.length) void loadEvents(weekStart, allCalendars, hiddenCals)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [weekStart, allCalendars, hiddenCals, loadEvents])
+  }, [weekStart, allCalendars, hiddenCals, loadEvents]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // When a new Google account is connected, reload all calendars + events
   useEffect(() => {
-    const handler = () => {
-      void reloadCalendars().then(cals => loadEvents(weekStart, cals, hiddenCals))
-    }
+    const handler = () => void reloadCalendars().then(c => loadEvents(weekStart, c, hiddenCals))
     window.addEventListener('professor:accountsUpdated', handler)
     return () => window.removeEventListener('professor:accountsUpdated', handler)
   }, [reloadCalendars, loadEvents, weekStart, hiddenCals])
 
-  // ─── Calendar DnD: drag event to a different day tab to reschedule ──────────
-
-  function toggleEventStatus(eventId: string, status: EventStatus) {
+  // ── Status toggle ───────────────────────────────────────────────────────────
+  function toggleStatus(eventId: string, status: EventStatus) {
     setEventStatuses(prev => {
       const next = { ...prev }
-      if (next[eventId] === status) {
-        delete next[eventId]  // toggle off
-      } else {
-        next[eventId] = status
-      }
-      saveEventStatuses(next)
-      return next
+      if (next[eventId] === status) delete next[eventId]; else next[eventId] = status
+      saveEventStatuses(next); return next
     })
   }
 
-  function handleCalDragStart({ active }: DragStartEvent) {
-    const ev = events.find(e => e.id === active.id)
-    setDraggingEvent(ev ?? null)
+  // ── Calendar visibility ─────────────────────────────────────────────────────
+  function toggleCal(id: string) {
+    setHiddenCals(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id); else next.add(id)
+      saveHiddenIntel(next); return next
+    })
   }
 
-  async function handleCalDragEnd({ active, over }: DragEndEvent) {
-    setDraggingEvent(null)
-    if (!over) return
-
-    const overId = over.id as string
-    if (!overId.startsWith('day-')) return  // not dropped on a day
-
-    const newDateStr = overId.replace('day-', '')   // YYYY-MM-DD
-    const event = events.find(e => e.id === active.id)
-    if (!event) return
-
-    // Check if already on this day (no-op)
-    const eventDate = localDateStr(new Date(
-      (event as GCalEventExt).start?.dateTime
-        ? new Date((event as GCalEventExt).start.dateTime!)
-        : new Date((event as GCalEventExt).start.date + 'T00:00:00'),
-    ))
-    if (eventDate === newDateStr) return
-
-    // Find the calendar token for this event
-    const ext = event as GCalEventExt
-    const calId = ext.calendarId
-    if (!calId) return
-    const cal = allCalendars.find(c => c.id === calId)
-    if (!cal) return
-
-    setRescheduling(event.id)
-    try {
-      const ok = await updateCalendarEventDate(cal.accountToken, calId, event.id, newDateStr, event)
-      if (ok) {
-        // Reload events to reflect new date
-        void loadEvents(weekStart, allCalendars, hiddenCals)
-      }
-    } finally {
-      setRescheduling(null)
-    }
+  // ── Popup + prep ────────────────────────────────────────────────────────────
+  function handleEventClick(ev: GCalEventExt, e: React.MouseEvent) {
+    e.stopPropagation()
+    if (selectedEvent?.id === ev.id) { setSelectedEvent(null); setPopupPos(null); return }
+    setSelectedEvent(ev); setPopupPos({ x: e.clientX, y: e.clientY })
+    setPrep(null); setPrepError(null)
   }
 
-  // Generate meeting prep for a selected event
-  const generatePrep = useCallback(async (event: GCalEvent) => {
-    setPrepLoading(true)
-    setPrepError(null)
-    setPrep(null)
+  const generatePrep = useCallback(async (ev: GCalEvent) => {
+    setPrepLoading(true); setPrepError(null); setPrep(null)
     try {
-      const dbUser = buildMockUser(user)
-      const result = await generateMeetingPrep({
-        user: dbUser,
-        companies: MOCK_COMPANIES,
-        event: gcalToDbEvent(event),
-      })
+      const result = await generateMeetingPrep({ user: buildMockUser(user), companies: MOCK_COMPANIES, event: gcalToDbEvent(ev) })
       setPrep(result)
-    } catch (err) {
-      setPrepError(err instanceof Error ? err.message : 'Could not generate prep.')
-    } finally {
-      setPrepLoading(false)
-    }
+    } catch (err) { setPrepError(err instanceof Error ? err.message : 'Could not generate prep.') }
+    finally { setPrepLoading(false) }
   }, [user])
 
-  function handleSelectEvent(event: GCalEvent) {
-    if (selectedEvent?.id === event.id) {
-      setSelectedEvent(null)
-      setPrep(null)
+  // ── DnD handlers ────────────────────────────────────────────────────────────
+  function handleDragStart({ active }: DragStartEvent) {
+    setSelectedEvent(null); setPopupPos(null)
+    const id = active.id as string
+    if (id.startsWith('resize:')) {
+      const ev = events.find(e => e.id === id.replace('resize:', '')) as GCalEventExt | undefined
+      setDraggingEvt(ev ?? null); setDragMode('resize')
+    } else {
+      const ev = events.find(e => e.id === id) as GCalEventExt | undefined
+      setDraggingEvt(ev ?? null); setDragMode('move')
+    }
+  }
+
+  async function handleDragEnd({ active, over, delta }: DragEndEvent) {
+    const mode = dragMode
+    setDraggingEvt(null); setDragMode(null)
+    const id = active.id as string
+
+    if (mode === 'resize') {
+      const eventId = id.replace('resize:', '')
+      const ev      = events.find(e => e.id === eventId) as GCalEventExt | undefined
+      if (!ev?.end.dateTime || !ev.start.dateTime) return
+      const dm = snapMinutes(delta.y)
+      if (dm === 0) return
+      const newEnd = new Date(ev.end.dateTime)
+      newEnd.setMinutes(newEnd.getMinutes() + dm)
+      const start = new Date(ev.start.dateTime)
+      if (newEnd.getTime() - start.getTime() < 15 * 60000) return
+      const cal = allCalendars.find(c => c.id === ev.calendarId)
+      if (!cal) return
+      setRescheduling(eventId)
+      try { if (await updateCalendarEventTimes(cal.accountToken, ev.calendarId!, eventId, start, newEnd)) void loadEvents(weekStart, allCalendars, hiddenCals) }
+      finally { setRescheduling(null) }
       return
     }
-    setSelectedEvent(event)
-    generatePrep(event)
+
+    // move
+    if (!over) return
+    const overId = over.id as string
+    if (!overId.startsWith('col-')) return
+    const ev = events.find(e => e.id === id) as GCalEventExt | undefined
+    if (!ev?.start.dateTime) return
+
+    const [yr, mo, dy]   = overId.replace('col-', '').split('-').map(Number)
+    const origStart      = new Date(ev.start.dateTime)
+    const origEnd        = ev.end.dateTime ? new Date(ev.end.dateTime) : new Date(origStart.getTime() + 3600000)
+    const duration       = origEnd.getTime() - origStart.getTime()
+    const dm             = snapMinutes(delta.y)
+
+    const newStart = new Date(origStart)
+    newStart.setFullYear(yr, mo - 1, dy)
+    newStart.setMinutes(newStart.getMinutes() + dm)
+    const newEnd = new Date(newStart.getTime() + duration)
+
+    if (newStart.getTime() === origStart.getTime()) return
+    const cal = allCalendars.find(c => c.id === ev.calendarId)
+    if (!cal) return
+    setRescheduling(id)
+    try { if (await updateCalendarEventTimes(cal.accountToken, ev.calendarId!, id, newStart, newEnd)) void loadEvents(weekStart, allCalendars, hiddenCals) }
+    finally { setRescheduling(null) }
   }
 
-  function handlePrevWeek() {
-    setWeekStart(prev => {
-      const d = new Date(prev)
-      d.setDate(d.getDate() - 7)
-      return d
-    })
-  }
+  // ── Week navigation ──────────────────────────────────────────────────────────
+  const weekDays = Array.from({ length: 7 }, (_, i) => { const d = new Date(weekStart); d.setDate(d.getDate() + i); return d })
+  const grouped  = groupByDay(events)
+  const today    = localDateStr(new Date())
+  const [nowPx,  setNowPx] = useState(nowTopPx())
+  useEffect(() => {
+    const t = setInterval(() => setNowPx(nowTopPx()), 60000)
+    return () => clearInterval(t)
+  }, [])
 
-  function handleNextWeek() {
-    setWeekStart(prev => {
-      const d = new Date(prev)
-      d.setDate(d.getDate() + 7)
-      return d
-    })
-  }
+  function closePopup() { setSelectedEvent(null); setPopupPos(null) }
 
-  function handleThisWeek() {
-    setWeekStart(getWeekStart(new Date()))
-  }
-
-  // Build week day columns (Mon–Fri, or Sun–Sat)
-  const weekDays: Date[] = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(weekStart)
-    d.setDate(d.getDate() + i)
-    return d
-  })
-
-  const grouped   = groupByDay(events)
-  const totalHrs  = events.reduce((acc, e) => {
-    const start = new Date(e.start.dateTime ?? '')
-    const end   = new Date(e.end.dateTime ?? '')
-    return isNaN(start.getTime()) ? acc : acc + (end.getTime() - start.getTime()) / 3_600_000
-  }, 0)
-
-  const today = localDateStr(new Date())
-
-  // ─── Render ─────────────────────────────────────────────────────────────────
-
+  // ── Render ───────────────────────────────────────────────────────────────────
   return (
-    <>
-      <style>{`
-        @keyframes shimmer {
-          0%   { background-position: 200% 0; }
-          100% { background-position: -200% 0; }
-        }
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(6px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        .cal-fade { animation: fadeIn 0.3s ease both; }
-        .event-row:hover { background: #32291A !important; cursor: pointer; }
-      `}</style>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#0D0F1E', color: '#E8EAF6', fontFamily: 'inherit', overflow: 'hidden' }}>
 
-      <div style={{ padding: '36px 32px 60px', maxWidth: 1080, margin: '0 auto' }}>
+      {/* ── Top bar ─────────────────────────────────────────────────────────── */}
+      <div style={{ padding: '14px 20px 10px', borderBottom: '1px solid #1A1D2E', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          {/* Week range title */}
+          <span style={{ fontSize: 17, fontWeight: 700, color: '#E8EAF6', flex: 1, minWidth: 160 }}>
+            {fmtWeekRange(weekStart)}
+          </span>
 
-        {/* ─── Week Nav ──────────────────────────────────────────────────── */}
-        <div className="cal-fade" style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          marginBottom: 28,
-        }}>
-          <div>
-            <h1 style={{
-              margin: '0 0 4px',
-              fontSize: 32, fontWeight: 800,
-              color: '#E8EAF6',
-              fontFamily: "'Cabinet Grotesk', sans-serif",
-              letterSpacing: '-1px', lineHeight: 1.1,
-            }}>
-              {fmtWeekRange(weekStart)}
-            </h1>
-            <p style={{ margin: 0, fontSize: 13, color: '#FFFFFF' }}>
-              {isThisWeek(weekStart) ? 'This week' : 'Week view'}
-              {!loadingEvents && ` · ${events.length} event${events.length !== 1 ? 's' : ''}`}
-              {!loadingEvents && totalHrs > 0 && ` · ${totalHrs.toFixed(1)}h scheduled`}
-            </p>
-          </div>
+          {/* Nav buttons */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <button
+              onClick={() => { const d = new Date(weekStart); d.setDate(d.getDate() - 7); setWeekStart(d) }}
+              style={{ background: 'none', border: '1px solid #252A3E', borderRadius: 7, cursor: 'pointer', color: '#8B93A8', padding: '4px 8px', display: 'flex', alignItems: 'center' }}
+            ><ChevronLeft size={15} /></button>
 
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             {!isThisWeek(weekStart) && (
               <button
-                onClick={handleThisWeek}
-                style={{
-                  padding: '7px 14px', borderRadius: 8,
-                  background: '#1E40AF18', border: '1px solid #1E40AF30',
-                  color: '#1E40AF', fontSize: 12, cursor: 'pointer',
-                }}
-              >
-                This Week
-              </button>
+                onClick={() => setWeekStart(getWeekStart(new Date()))}
+                style={{ background: 'none', border: '1px solid #252A3E', borderRadius: 7, cursor: 'pointer', color: '#8B93A8', padding: '4px 9px', fontSize: 12 }}
+              >Today</button>
             )}
+
             <button
-              onClick={() => void reloadCalendars().then(cals => loadEvents(weekStart, cals, hiddenCals))}
-              disabled={loadingEvents}
-              title="Refresh accounts &amp; events"
-              style={{
-                display: 'flex', alignItems: 'center', gap: 6,
-                padding: '7px 12px', borderRadius: 8,
-                background: 'transparent', border: '1px solid #252A3E',
-                color: '#FFFFFF', fontSize: 12, cursor: 'pointer',
-                opacity: loadingEvents ? 0.5 : 1,
-              }}
-            >
-              <RefreshCw size={12} style={{ animation: loadingEvents ? 'spin 1s linear infinite' : 'none' }} />
-            </button>
+              onClick={() => { const d = new Date(weekStart); d.setDate(d.getDate() + 7); setWeekStart(d) }}
+              style={{ background: 'none', border: '1px solid #252A3E', borderRadius: 7, cursor: 'pointer', color: '#8B93A8', padding: '4px 8px', display: 'flex', alignItems: 'center' }}
+            ><ChevronRight size={15} /></button>
+
             <button
-              onClick={handlePrevWeek}
-              style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                width: 34, height: 34, borderRadius: 8,
-                background: 'transparent', border: '1px solid #252A3E',
-                color: '#FFFFFF', cursor: 'pointer',
-              }}
-            >
-              <ChevronLeft size={16} />
-            </button>
-            <button
-              onClick={handleNextWeek}
-              style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                width: 34, height: 34, borderRadius: 8,
-                background: 'transparent', border: '1px solid #252A3E',
-                color: '#FFFFFF', cursor: 'pointer',
-              }}
-            >
-              <ChevronRight size={16} />
-            </button>
+              onClick={() => void reloadCalendars().then(c => loadEvents(weekStart, c, hiddenCals))}
+              style={{ background: 'none', border: '1px solid #252A3E', borderRadius: 7, cursor: 'pointer', color: '#8B93A8', padding: '4px 8px', display: 'flex', alignItems: 'center' }}
+            ><RefreshCw size={13} /></button>
           </div>
         </div>
 
-        {/* Gold divider */}
-        <div style={{
-          height: 1, marginBottom: 16,
-          background: 'linear-gradient(90deg, #1E40AF40 0%, #252A3E 60%, transparent 100%)',
-        }} />
-
-        {/* ─── Reconnect banner for stale accounts ──────────────────────── */}
-        {reconnectNeeded.length > 0 && (
-          <div style={{
-            marginBottom: 16, padding: '10px 14px', borderRadius: 8,
-            background: 'rgba(224,165,36,0.08)', border: '1px solid rgba(224,165,36,0.3)',
-            display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
-          }}>
-            <span style={{ fontSize: 14 }}>⚠</span>
-            <span style={{ fontSize: 12, color: '#94A3B8', flex: 1 }}>
-              Calendar access expired for:
-            </span>
-            {reconnectNeeded.map(email => (
-              <button
-                key={email}
-                onClick={() => void connectAdditionalGoogleAccount(email)}
-                style={{
-                  padding: '4px 12px', borderRadius: 8, fontSize: 11.5, fontWeight: 600,
-                  background: 'rgba(224,165,36,0.15)', border: '1px solid rgba(224,165,36,0.45)',
-                  color: '#E0A524', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5,
-                }}
-              >
-                <RefreshCw size={11} />
-                Reconnect {email.split('@')[0]}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* ─── Calendar filter chips ─────────────────────────────────────── */}
+        {/* Calendar chips */}
         {allCalendars.length > 0 && (
-          <div style={{ display: 'flex', gap: 6, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
-            <span style={{ fontSize: 10, fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.7px', marginRight: 4 }}>Calendars</span>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
             {allCalendars.map(cal => {
               const hidden = hiddenCals.has(cal.id)
+              const color  = cal.backgroundColor ?? '#1E40AF'
               return (
-                <button key={`${cal.accountEmail}:${cal.id}`} onClick={() => toggleCal(cal.id)} style={{
-                  display: 'flex', alignItems: 'center', gap: 5, padding: '3px 9px',
-                  borderRadius: 20, border: '1px solid #252A3E', cursor: 'pointer', fontSize: 11.5,
-                  background: hidden ? 'transparent' : `${cal.backgroundColor ?? '#1E40AF'}15`,
-                  color: hidden ? '#4B5563' : '#E8EAF6',
-                  opacity: hidden ? 0.5 : 1, transition: 'all 0.15s',
-                }}>
-                  <div style={{ width: 7, height: 7, borderRadius: '50%', background: hidden ? '#4B5563' : (cal.backgroundColor ?? '#1E40AF'), flexShrink: 0 }} />
-                  {cal.summary}
-                  {cal.accountEmail && <span style={{ fontSize: 9.5, color: hidden ? '#4B5563' : '#6B7280', marginLeft: 1 }}>({cal.accountEmail.split('@')[0]})</span>}
-                  {hidden ? <EyeOff size={9} style={{ marginLeft: 2, opacity: 0.6 }} /> : <Eye size={9} style={{ marginLeft: 2, opacity: 0.35 }} />}
+                <button key={`${cal.accountEmail}:${cal.id}`} onClick={() => toggleCal(cal.id)}
+                  title={cal.accountEmail}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 5,
+                    padding: '3px 9px 3px 7px', borderRadius: 20,
+                    border: `1px solid ${hidden ? '#252A3E' : color}`,
+                    background: hidden ? 'transparent' : `${color}22`,
+                    cursor: 'pointer', fontSize: 11, color: hidden ? '#4B5268' : '#C0C4D6',
+                    transition: 'all 0.12s',
+                  }}
+                >
+                  {hidden ? <EyeOff size={11} color="#4B5268" /> : <Eye size={11} color={color} />}
+                  <span style={{ maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {cal.summary}
+                  </span>
                 </button>
               )
             })}
           </div>
         )}
 
-        {/* ─── DnD Context wraps day tabs + event list ──────────────────── */}
-        <DndContext
-          sensors={dndSensors}
-          onDragStart={handleCalDragStart}
-          onDragEnd={handleCalDragEnd}
-        >
+        {/* Reconnect banners */}
+        {reconnectNeeded.map(email => (
+          <div key={email} style={{ marginTop: 8, padding: '7px 12px', background: '#2A1A1A', border: '1px solid #5C2A2A', borderRadius: 8, fontSize: 12, color: '#E05252', display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ flex: 1 }}>⚠ Calendar access expired for <strong>{email}</strong></span>
+            <button
+              onClick={() => void connectAdditionalGoogleAccount(email)}
+              style={{ background: '#5C2A2A', border: 'none', borderRadius: 5, cursor: 'pointer', color: '#FFAAAA', padding: '3px 10px', fontSize: 11 }}
+            >Reconnect</button>
+          </div>
+        ))}
 
-        {/* ─── Day Tabs (droppable) ──────────────────────────────────────── */}
-        <div className="cal-fade" style={{
-          display: 'flex', gap: 6, marginBottom: 24, overflowX: 'auto',
-        }}>
-          {weekDays.map(day => {
-            const key     = localDateStr(day)
-            const count   = grouped.get(key)?.length ?? 0
-            const isToday = key === today
-            return (
-              <DroppableDayTab key={key} dateKey={key}>
-                <div style={{
-                  padding: '10px 8px',
-                  borderRadius: 10, textAlign: 'center',
-                  background: isToday ? '#1E40AF14' : '#161929',
-                  border: `1px solid ${isToday ? '#1E40AF40' : '#252A3E'}`,
-                  transition: 'border-color 0.1s',
-                }}>
-                  <p style={{
-                    margin: '0 0 2px', fontSize: 10, fontWeight: 600,
-                    color: isToday ? '#1E40AF' : '#6B7280',
-                    textTransform: 'uppercase', letterSpacing: '0.8px',
-                  }}>
+        {/* Fetch error */}
+        {fetchError && (
+          <div style={{ marginTop: 8, padding: '6px 12px', background: '#1E1216', border: '1px solid #4A1A24', borderRadius: 7, fontSize: 12, color: '#E05252' }}>
+            {fetchError}
+          </div>
+        )}
+      </div>
+
+      {/* ── Grid ────────────────────────────────────────────────────────────── */}
+      <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+
+          {/* Sticky day headers */}
+          <div style={{ display: 'flex', borderBottom: '1px solid #1A1D2E', flexShrink: 0 }}>
+            {/* Time gutter spacer */}
+            <div style={{ width: 52, flexShrink: 0 }} />
+            {weekDays.map(day => {
+              const ds      = localDateStr(day)
+              const isToday = ds === today
+              return (
+                <div key={ds} style={{ flex: 1, textAlign: 'center', padding: '8px 4px 7px', minWidth: 0 }}>
+                  <div style={{ fontSize: 11, color: isToday ? '#7F77DD' : '#6B7280', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
                     {DAY_LABELS[day.getDay()]}
-                  </p>
-                  <p style={{
-                    margin: '0 0 4px', fontSize: 18, fontWeight: 700,
-                    color: isToday ? '#E8EAF6' : '#C8BC9E',
-                    fontFamily: "'Cabinet Grotesk', sans-serif",
+                  </div>
+                  <div style={{
+                    fontSize: 19, fontWeight: 700, lineHeight: 1.2, marginTop: 2,
+                    color: isToday ? '#fff' : '#C0C4D6',
+                    background: isToday ? '#7F77DD' : 'transparent',
+                    width: isToday ? 32 : undefined, height: isToday ? 32 : undefined,
+                    borderRadius: isToday ? '50%' : undefined,
+                    display: isToday ? 'flex' : undefined, alignItems: isToday ? 'center' : undefined, justifyContent: isToday ? 'center' : undefined,
+                    margin: isToday ? '2px auto 0' : undefined,
                   }}>
                     {day.getDate()}
-                  </p>
-                  {count > 0 && (
-                    <span style={{
-                      display: 'inline-block',
-                      width: 18, height: 18, borderRadius: '50%',
-                      background: isToday ? '#1E40AF22' : '#252A3E',
-                      fontSize: 10, fontWeight: 700,
-                      color: isToday ? '#1E40AF' : '#6B7280',
-                      lineHeight: '18px',
-                    }}>
-                      {count}
-                    </span>
-                  )}
+                  </div>
                 </div>
-              </DroppableDayTab>
-            )
-          })}
-        </div>
-
-        {/* ─── Main grid: events + prep panel ───────────────────────────── */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: selectedEvent ? '1fr 380px' : '1fr',
-          gap: 20,
-          alignItems: 'flex-start',
-        }}>
-
-          {/* Events list */}
-          <div className="cal-fade">
-            {loadingEvents ? (
-              <EventSkeleton />
-            ) : fetchError ? (
-              <div style={{
-                textAlign: 'center', padding: '48px 0',
-                background: '#161929', border: '1px solid #252A3E', borderRadius: 14,
-              }}>
-                <p style={{ margin: '0 0 14px', fontSize: 13, color: '#FFFFFF' }}>{fetchError}</p>
-                <button
-                  onClick={() => void loadEvents(weekStart, allCalendars, hiddenCals)}
-                  style={{
-                    padding: '7px 18px', borderRadius: 8,
-                    background: '#1E40AF18', border: '1px solid #1E40AF30',
-                    color: '#1E40AF', fontSize: 12, cursor: 'pointer',
-                  }}
-                >
-                  Retry
-                </button>
-              </div>
-            ) : noAuth ? (
-              <div style={{
-                textAlign: 'center', padding: '48px 24px',
-                background: '#161929', border: '1px solid #252A3E', borderRadius: 14,
-              }}>
-                <div style={{
-                  width: 44, height: 44, borderRadius: 12,
-                  background: '#1E40AF14', border: '1px solid #1E40AF30',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  margin: '0 auto 16px',
-                }}>
-                  <Calendar size={20} color="#1E40AF" />
-                </div>
-                <h3 style={{ margin: '0 0 8px', fontSize: 16, color: '#E8EAF6', fontFamily: "'Cabinet Grotesk', sans-serif" }}>
-                  Connect Google Calendar
-                </h3>
-                <p style={{ margin: 0, fontSize: 13, color: '#FFFFFF', lineHeight: 1.6, maxWidth: 320, marginInline: 'auto' }}>
-                  Sign in with Google to sync your calendar and get AI-powered meeting prep.
-                </p>
-              </div>
-            ) : events.length === 0 ? (
-              <div style={{
-                textAlign: 'center', padding: '48px 24px',
-                background: '#161929', border: '1px solid #252A3E', borderRadius: 14,
-              }}>
-                <p style={{ margin: 0, fontSize: 13, color: '#FFFFFF' }}>
-                  No events this week. Enjoy the open space.
-                </p>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {weekDays.map(day => {
-                  const key       = localDateStr(day)
-                  const dayEvents = grouped.get(key) ?? []
-                  const isToday   = key === today
-                  if (dayEvents.length === 0) return null
-
-                  return (
-                    <div key={key} style={{ marginBottom: 8 }}>
-                      {/* Day header */}
-                      <p style={{
-                        margin: '0 0 8px', fontSize: 11, fontWeight: 600,
-                        color: isToday ? '#1E40AF' : '#6B7280',
-                        textTransform: 'uppercase', letterSpacing: '0.8px',
-                      }}>
-                        {isToday ? 'Today' : FULL_DAYS[day.getDay()]}
-                        <span style={{ marginLeft: 6, fontWeight: 400 }}>
-                          {day.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                        </span>
-                      </p>
-
-                      {/* Events */}
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                        {dayEvents.map(event => {
-                          const db             = gcalToDbEvent(event)
-                          const isSelected     = selectedEvent?.id === event.id
-                          const isPast         = new Date(db.end_time) < new Date()
-                          const mType          = db.meeting_type
-                          const hasVideo       = !!event.conferenceData?.entryPoints?.length
-                          const isRescheduling = rescheduling === event.id
-                          const evStatus       = eventStatuses[event.id] ?? null
-                          const isDone         = evStatus === 'done'
-                          const isCancelled    = evStatus === 'cancelled'
-
-                          return (
-                            <DraggableEventRow key={event.id} event={event}>
-                              {({ listeners, attributes, isDragging }) => (
-                                <div
-                                  className="event-row"
-                                  onClick={() => !isDragging && handleSelectEvent(event)}
-                                  style={{
-                                    display: 'flex', gap: 12, alignItems: 'center',
-                                    padding: '13px 16px',
-                                    borderRadius: 10,
-                                    background: isDone ? '#1D9E7508' : isCancelled ? '#E0525208' : isSelected ? '#32291A' : '#161929',
-                                    border: `1px solid ${isDone ? '#1D9E7530' : isCancelled ? '#E0525230' : isSelected ? '#1E40AF50' : '#252A3E'}`,
-                                    opacity: (isPast || isDone || isCancelled ? 0.6 : 1) * (isDragging ? 0.35 : 1),
-                                    transition: 'all 0.15s',
-                                    borderLeft: isDone ? '3px solid #1D9E75' : isCancelled ? '3px solid #E05252' : isSelected ? '3px solid #1E40AF' : '1px solid #252A3E',
-                                    cursor: isDragging ? 'grabbing' : 'pointer',
-                                  }}
-                                >
-                                  {/* Drag handle */}
-                                  <div
-                                    {...listeners}
-                                    {...attributes}
-                                    title="Drag to reschedule"
-                                    style={{
-                                      cursor: 'grab', color: '#404560', flexShrink: 0,
-                                      display: 'flex', alignItems: 'center',
-                                    }}
-                                    onClick={e => e.stopPropagation()}
-                                  >
-                                    <GripVertical size={13} strokeWidth={2} />
-                                  </div>
-
-                                  {/* Time */}
-                                  <div style={{ width: 58, flexShrink: 0, textAlign: 'right' }}>
-                                    <p style={{ margin: 0, fontSize: 11.5, color: '#E8EAF6', fontWeight: 500, fontFamily: 'monospace' }}>
-                                      {fmtTime(db.start_time)}
-                                    </p>
-                                    <p style={{ margin: '1px 0 0', fontSize: 10, color: '#FFFFFF', fontFamily: 'monospace' }}>
-                                      {fmtTime(db.end_time)}
-                                    </p>
-                                  </div>
-
-                                  {/* Color bar */}
-                                  <div style={{
-                                    width: 3, borderRadius: 2, flexShrink: 0, alignSelf: 'stretch',
-                                    background: isDone ? '#1D9E75' : isCancelled ? '#E05252' : isSelected ? '#1E40AF' : '#252A3E',
-                                    minHeight: 32,
-                                  }} />
-
-                                  {/* Title + meta */}
-                                  <div style={{ flex: 1 }}>
-                                    <p style={{
-                                      margin: '0 0 4px', fontSize: 13.5,
-                                      color: isDone || isCancelled ? '#6B7280' : '#E8EAF6',
-                                      fontWeight: 500, lineHeight: 1.35,
-                                      textDecoration: isCancelled ? 'line-through' : 'none',
-                                    }}>
-                                      {event.summary ?? '(No title)'}
-                                    </p>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                                      {isDone && (
-                                        <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 4, background: '#1D9E7518', color: '#1D9E75', border: '1px solid #1D9E7530', fontWeight: 600 }}>Done</span>
-                                      )}
-                                      {isCancelled && (
-                                        <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 4, background: '#E0525218', color: '#E05252', border: '1px solid #E0525230', fontWeight: 600 }}>Cancelled</span>
-                                      )}
-                                      {!isDone && !isCancelled && <MeetingTypeIcon type={mType} />}
-                                      {!isDone && !isCancelled && mType && (
-                                        <span style={{ fontSize: 10.5, color: '#FFFFFF', textTransform: 'capitalize' }}>
-                                          {mType.replace('_', ' ')}
-                                        </span>
-                                      )}
-                                      {hasVideo && (
-                                        <span style={{
-                                          fontSize: 10, padding: '1px 6px', borderRadius: 4,
-                                          background: '#7F77DD18', color: '#7F77DD',
-                                          border: '1px solid #7F77DD30',
-                                        }}>
-                                          Video
-                                        </span>
-                                      )}
-                                      {db.location && (
-                                        <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10.5, color: '#FFFFFF' }}>
-                                          <MapPin size={10} />
-                                          {db.location.length > 28 ? db.location.slice(0, 28) + '…' : db.location}
-                                        </span>
-                                      )}
-                                    </div>
-                                  </div>
-
-                                  {/* Quick status buttons */}
-                                  <div style={{ display: 'flex', gap: 4, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
-                                    <button
-                                      title={isDone ? 'Mark as not done' : 'Mark as done'}
-                                      onClick={() => toggleEventStatus(event.id, 'done')}
-                                      style={{
-                                        background: isDone ? '#1D9E7522' : 'transparent',
-                                        border: `1px solid ${isDone ? '#1D9E7550' : '#252A3E'}`,
-                                        borderRadius: 6, padding: '4px 5px', cursor: 'pointer',
-                                        color: isDone ? '#1D9E75' : '#404560', display: 'flex', alignItems: 'center',
-                                        transition: 'all 0.1s',
-                                      }}
-                                    >
-                                      <CheckCircle2 size={13} />
-                                    </button>
-                                    <button
-                                      title={isCancelled ? 'Unmark cancelled' : 'Mark as cancelled'}
-                                      onClick={() => toggleEventStatus(event.id, 'cancelled')}
-                                      style={{
-                                        background: isCancelled ? '#E0525222' : 'transparent',
-                                        border: `1px solid ${isCancelled ? '#E0525250' : '#252A3E'}`,
-                                        borderRadius: 6, padding: '4px 5px', cursor: 'pointer',
-                                        color: isCancelled ? '#E05252' : '#404560', display: 'flex', alignItems: 'center',
-                                        transition: 'all 0.1s',
-                                      }}
-                                    >
-                                      <XCircle size={13} />
-                                    </button>
-                                  </div>
-
-                                  {/* AI badge / rescheduling indicator */}
-                                  {isRescheduling ? (
-                                    <div style={{ flexShrink: 0, fontSize: 11, color: '#7F77DD', display: 'flex', alignItems: 'center', gap: 5 }}>
-                                      <RefreshCw size={11} style={{ animation: 'spin 1s linear infinite' }} />
-                                      Moving…
-                                    </div>
-                                  ) : (
-                                    <div style={{
-                                      flexShrink: 0,
-                                      display: 'flex', alignItems: 'center', gap: 5,
-                                      padding: '5px 10px', borderRadius: 6,
-                                      background: isSelected ? '#1E40AF18' : '#161929',
-                                      border: `1px solid ${isSelected ? '#1E40AF40' : '#252A3E'}`,
-                                      color: isSelected ? '#1E40AF' : '#6B7280',
-                                      fontSize: 11,
-                                    }}>
-                                      <Sparkles size={11} />
-                                      {isSelected ? 'Prep open' : 'Prep'}
-                                    </div>
-                                  )}
-                                </div>
-                              )}
-                            </DraggableEventRow>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
+              )
+            })}
           </div>
 
-          {/* AI Prep Panel */}
-          {selectedEvent && (
-            <div className="cal-fade" style={{ position: 'sticky', top: 24 }}>
-              <PrepPanel
-                event={selectedEvent}
-                prep={prep}
-                loading={prepLoading}
-                error={prepError}
-                onClose={() => { setSelectedEvent(null); setPrep(null) }}
-                onRetry={() => generatePrep(selectedEvent)}
-              />
+          {/* Scrollable time grid */}
+          <div ref={gridRef} onClick={closePopup}
+            style={{ flex: 1, overflowY: 'auto', display: 'flex', position: 'relative' }}
+          >
+            {/* Time labels column */}
+            <div style={{ width: 52, flexShrink: 0, position: 'relative', height: GRID_H }}>
+              {Array.from({ length: 24 }, (_, h) => (
+                <div key={h} style={{
+                  position: 'absolute', top: h * HOUR_PX - 7,
+                  right: 8, fontSize: 10, color: '#3A3F55', whiteSpace: 'nowrap',
+                }}>
+                  {fmtHourLabel(h)}
+                </div>
+              ))}
             </div>
-          )}
+
+            {/* Day columns */}
+            <div style={{ flex: 1, display: 'flex', position: 'relative' }}>
+              {weekDays.map(day => {
+                const ds        = localDateStr(day)
+                const isToday   = ds === today
+                const dayEvents = grouped.get(ds) ?? []
+                const layouts   = computeOverlaps(dayEvents)
+
+                return (
+                  <DayColumn key={ds} dateStr={ds} isToday={isToday}>
+                    {/* Current time indicator */}
+                    {isToday && (
+                      <>
+                        <div style={{ position: 'absolute', top: nowPx - 5, left: -5, width: 10, height: 10, borderRadius: '50%', background: '#E05252', zIndex: 5, pointerEvents: 'none' }} />
+                        <div style={{ position: 'absolute', top: nowPx, left: 0, right: 0, borderTop: '1.5px solid #E05252', zIndex: 5, pointerEvents: 'none' }} />
+                      </>
+                    )}
+
+                    {/* Events */}
+                    {dayEvents.map(ev => {
+                      if (!ev.start.dateTime) return null
+                      const layout = layouts.get(ev.id) ?? { left: 0, width: 99 }
+                      return (
+                        <EventBlock
+                          key={ev.id}
+                          event={ev}
+                          layout={layout}
+                          status={eventStatuses[ev.id]}
+                          isSelected={selectedEvent?.id === ev.id}
+                          isDragSrc={draggingEvt?.id === ev.id && dragMode === 'move'}
+                          onClick={e => handleEventClick(ev, e)}
+                        />
+                      )
+                    })}
+                  </DayColumn>
+                )
+              })}
+            </div>
+          </div>
         </div>
 
-        {/* Drag overlay — ghost label shown while dragging */}
-        <DragOverlay dropAnimation={null}>
-          {draggingEvent && (
-            <div style={{
-              padding: '8px 14px', borderRadius: 8, fontSize: 12.5, fontWeight: 500,
-              background: '#1E1B38', border: '1px solid #7F77DD60', color: '#E8EAF6',
-              boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
-              display: 'flex', alignItems: 'center', gap: 8, maxWidth: 280,
-            }}>
-              <GripVertical size={13} color="#7F77DD" />
-              {draggingEvent.summary ?? '(No title)'}
-            </div>
-          )}
+        {/* Drag overlay */}
+        <DragOverlay>
+          {draggingEvt && dragMode === 'move' && (() => {
+            const dummyLayout: EventLayout = { left: 0, width: 99 }
+            return (
+              <EventBlock
+                event={draggingEvt}
+                layout={dummyLayout}
+                status={eventStatuses[draggingEvt.id]}
+                isSelected={false}
+                isDragSrc={false}
+                isDragOverlay
+                onClick={() => {}}
+              />
+            )
+          })()}
         </DragOverlay>
+      </DndContext>
 
-        </DndContext>
-      </div>
-    </>
+      {/* Loading spinner overlay */}
+      {loadingEvents && (
+        <div style={{ position: 'absolute', bottom: 18, right: 22, display: 'flex', alignItems: 'center', gap: 7, fontSize: 12, color: '#6B7280', pointerEvents: 'none' }}>
+          <div style={{ width: 14, height: 14, border: '2px solid #252A3E', borderTopColor: '#7F77DD', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+          Loading…
+        </div>
+      )}
+
+      {/* Rescheduling indicator */}
+      {rescheduling && (
+        <div style={{ position: 'absolute', bottom: 18, right: 22, display: 'flex', alignItems: 'center', gap: 7, fontSize: 12, color: '#7F77DD', pointerEvents: 'none' }}>
+          <div style={{ width: 14, height: 14, border: '2px solid #252A3E', borderTopColor: '#7F77DD', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+          Saving…
+        </div>
+      )}
+
+      {/* No auth state */}
+      {noAuth && !loadingEvents && (
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(13,15,30,0.85)', pointerEvents: 'none' }}>
+          <div style={{ textAlign: 'center' }}>
+            <Calendar size={36} color="#3A3F55" />
+            <p style={{ margin: '12px 0 0', fontSize: 14, color: '#6B7280' }}>Connect Google Calendar to see your events</p>
+          </div>
+        </div>
+      )}
+
+      {/* Event popup */}
+      {selectedEvent && popupPos && (() => {
+        const cal      = allCalendars.find(c => c.id === (selectedEvent as GCalEventExt).calendarId)
+        const calName  = cal?.summary  ?? 'Calendar'
+        const calColor = cal?.backgroundColor ?? '#1E40AF'
+        return (
+          <EventPopup
+            event={selectedEvent}
+            status={eventStatuses[selectedEvent.id]}
+            calName={calName}
+            calColor={calColor}
+            prep={prep}
+            prepLoading={prepLoading}
+            prepError={prepError}
+            pos={popupPos}
+            onClose={closePopup}
+            onStatusToggle={s => toggleStatus(selectedEvent.id, s)}
+            onPrepRequest={() => void generatePrep(selectedEvent)}
+          />
+        )
+      })()}
+
+      {/* CSS animations */}
+      <style>{`
+        @keyframes spin    { to { transform: rotate(360deg); } }
+        @keyframes shimmer { 0%,100% { background-position: 200% 0; } 50% { background-position: -200% 0; } }
+      `}</style>
+    </div>
   )
 }
