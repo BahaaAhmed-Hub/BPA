@@ -773,7 +773,7 @@ export function CalendarIntelligence() {
 
   // ── Render ───────────────────────────────────────────────────────────────────
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#0D0F1E', color: '#E8EAF6', fontFamily: 'inherit', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#0D0F1E', color: '#E8EAF6', fontFamily: 'inherit', overflow: 'hidden' }}>
 
       {/* ── Top bar ─────────────────────────────────────────────────────────── */}
       <div style={{ padding: '14px 20px 10px', borderBottom: '1px solid #1A1D2E', flexShrink: 0 }}>
