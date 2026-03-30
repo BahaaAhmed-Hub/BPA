@@ -410,10 +410,12 @@ async function loadAllCalendars(primaryEmail: string): Promise<LoadCalendarsResu
     ...c, accountEmail: primaryEmail, accountToken: primaryToken,
   }))
 
-  // Additional accounts — use stored token directly; detect real expiry from API 401
-  // (Don't reject by timestamp — Google tokens often outlive the 50-min estimate)
+  // Additional accounts — use stored token directly; detect real expiry from API 401.
+  // When a token is expired/missing, fall back to CACHED calendar metadata so the
+  // filter chips remain visible and the user can see which account needs reconnect.
   const extraAccounts = loadAccounts().filter(a => !a.isPrimary)
   console.log(`[CalIntel] Extra accounts in storage: ${extraAccounts.map(a => a.email).join(', ') || 'none'}`)
+  const calCache = loadCalIntelCache()
 
   const needsReconnect: string[] = []
   const extraResults = await Promise.all(
@@ -422,13 +424,19 @@ async function loadAllCalendars(primaryEmail: string): Promise<LoadCalendarsResu
       if (!token) {
         console.warn(`[CalIntel] ${account.email}: no token stored — needs reconnect`)
         needsReconnect.push(account.email)
-        return []
+        // Return cached calendar entries so chips stay visible
+        return calCache
+          .filter(c => c.accountEmail === account.email)
+          .map(c => ({ ...c, accountToken: '' } as CalWithAccount))
       }
       const { calendars: cals, authFailed } = await listCalendarsWithToken(token)
       if (authFailed) {
         console.warn(`[CalIntel] ${account.email}: token rejected by Google — needs reconnect`)
         needsReconnect.push(account.email)
-        return []
+        // Return cached calendar entries so chips stay visible despite expired token
+        return calCache
+          .filter(c => c.accountEmail === account.email)
+          .map(c => ({ ...c, accountToken: token } as CalWithAccount))
       }
       console.log(`[CalIntel] ${account.email}: ${cals.length} calendars loaded`)
       return cals.map(c => ({ ...c, accountEmail: account.email, accountToken: token }))
@@ -484,7 +492,13 @@ function loadCalIntelCache(): CachedCal[] {
 
 function saveCalIntelCache(cals: CalWithAccount[]): void {
   try {
-    const toSave: CachedCal[] = cals.map(c => ({
+    // MERGE: update entries for accounts present in `cals`, keep existing entries
+    // for accounts that aren't in this update (e.g. expired tokens weren't fetched).
+    // This prevents cache wipe when only a subset of accounts loads successfully.
+    const existing = loadCalIntelCache()
+    const updatedEmails = new Set(cals.map(c => c.accountEmail))
+    const kept = existing.filter(c => !updatedEmails.has(c.accountEmail))
+    const fresh: CachedCal[] = cals.map(c => ({
       id:              c.id,
       summary:         c.summary ?? '',
       backgroundColor: c.backgroundColor,
@@ -493,7 +507,7 @@ function saveCalIntelCache(cals: CalWithAccount[]): void {
       accessRole:      c.accessRole,
       accountEmail:    c.accountEmail,
     }))
-    localStorage.setItem(CAL_INTEL_CACHE_KEY, JSON.stringify(toSave))
+    localStorage.setItem(CAL_INTEL_CACHE_KEY, JSON.stringify([...fresh, ...kept]))
   } catch { /* quota */ }
 }
 
