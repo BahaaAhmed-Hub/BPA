@@ -177,20 +177,25 @@ export async function listCalendars(): Promise<{ calendars: GCalCalendar[]; noAu
 /** List calendars using a specific token (for multi-account). Logs errors for debugging. */
 export async function listCalendarsWithToken(
   token: string,
-): Promise<GCalCalendar[]> {
+): Promise<{ calendars: GCalCalendar[]; authFailed: boolean }> {
   try {
     const res = await gcalRequest(token, '/users/me/calendarList')
+    if (res.status === 401 || res.status === 403) {
+      console.warn(`[CalIntel] listCalendarsWithToken auth error HTTP ${res.status} — token expired`)
+      return { calendars: [], authFailed: true }
+    }
     if (!res.ok) {
       console.warn(`[CalIntel] listCalendarsWithToken HTTP ${res.status}`)
-      return []
+      return { calendars: [], authFailed: false }
     }
     const data = (await res.json()) as { items?: GCalCalendar[] }
-    return (data.items ?? []).filter(c =>
+    const calendars = (data.items ?? []).filter(c =>
       c.accessRole === 'owner' || c.accessRole === 'writer' || c.accessRole === 'reader'
     )
+    return { calendars, authFailed: false }
   } catch (err) {
     console.warn('[CalIntel] listCalendarsWithToken error:', err)
-    return []
+    return { calendars: [], authFailed: false }
   }
 }
 

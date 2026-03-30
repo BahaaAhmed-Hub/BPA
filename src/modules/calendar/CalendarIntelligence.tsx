@@ -14,7 +14,7 @@ import type { GCalEvent, GCalCalendar } from '@/lib/googleCalendar'
 import { generateMeetingPrep } from '@/lib/professor'
 import type { MeetingPrep } from '@/lib/professor'
 import { useAuthStore } from '@/store/authStore'
-import { loadAccounts, getProviderTokenForAccount } from '@/lib/multiAccount'
+import { loadAccounts } from '@/lib/multiAccount'
 import { connectAdditionalGoogleAccount } from '@/lib/google'
 import type { DbUser, DbCompany, DbCalendarEvent } from '@/types/database'
 
@@ -410,20 +410,26 @@ async function loadAllCalendars(primaryEmail: string): Promise<LoadCalendarsResu
     ...c, accountEmail: primaryEmail, accountToken: primaryToken,
   }))
 
-  // Additional accounts — refresh stale tokens via stored Supabase sessions
+  // Additional accounts — use stored token directly; detect real expiry from API 401
+  // (Don't reject by timestamp — Google tokens often outlive the 50-min estimate)
   const extraAccounts = loadAccounts().filter(a => !a.isPrimary)
   console.log(`[CalIntel] Extra accounts in storage: ${extraAccounts.map(a => a.email).join(', ') || 'none'}`)
 
   const needsReconnect: string[] = []
   const extraResults = await Promise.all(
     extraAccounts.map(async account => {
-      const token = await getProviderTokenForAccount(account)
+      const token = account.providerToken
       if (!token) {
-        console.warn(`[CalIntel] ${account.email}: token expired, cannot refresh — needs reconnect`)
+        console.warn(`[CalIntel] ${account.email}: no token stored — needs reconnect`)
         needsReconnect.push(account.email)
         return []
       }
-      const cals = await listCalendarsWithToken(token)
+      const { calendars: cals, authFailed } = await listCalendarsWithToken(token)
+      if (authFailed) {
+        console.warn(`[CalIntel] ${account.email}: token rejected by Google — needs reconnect`)
+        needsReconnect.push(account.email)
+        return []
+      }
       console.log(`[CalIntel] ${account.email}: ${cals.length} calendars loaded`)
       return cals.map(c => ({ ...c, accountEmail: account.email, accountToken: token }))
     })
