@@ -453,6 +453,55 @@ async function fetchAllEvents(
   return results.flat()
 }
 
+// ─── Multi-account calendar list cache ───────────────────────────────────────
+// Persists calendar metadata (without tokens) so the page shows calendars
+// immediately on revisit without waiting for a Google API round-trip.
+
+const CAL_INTEL_CACHE_KEY = 'cal-intel-cals-cache'
+
+interface CachedCal {
+  id: string
+  summary: string
+  backgroundColor?: string
+  foregroundColor?: string
+  primary?: boolean
+  accessRole?: string
+  accountEmail: string
+}
+
+function loadCalIntelCache(): CachedCal[] {
+  try {
+    const raw = localStorage.getItem(CAL_INTEL_CACHE_KEY)
+    return raw ? (JSON.parse(raw) as CachedCal[]) : []
+  } catch { return [] }
+}
+
+function saveCalIntelCache(cals: CalWithAccount[]): void {
+  try {
+    const toSave: CachedCal[] = cals.map(c => ({
+      id:              c.id,
+      summary:         c.summary ?? '',
+      backgroundColor: c.backgroundColor,
+      foregroundColor: c.foregroundColor,
+      primary:         c.primary,
+      accessRole:      c.accessRole,
+      accountEmail:    c.accountEmail,
+    }))
+    localStorage.setItem(CAL_INTEL_CACHE_KEY, JSON.stringify(toSave))
+  } catch { /* quota */ }
+}
+
+/** Reconstruct CalWithAccount[] from cache by pairing each entry with a stored token. */
+function rebuildFromCache(cached: CachedCal[]): CalWithAccount[] {
+  const primaryToken = localStorage.getItem('google_provider_token') ?? ''
+  const accounts = loadAccounts()
+  return cached.map(c => {
+    const acct  = accounts.find(a => a.email === c.accountEmail)
+    const token = acct ? acct.providerToken : primaryToken
+    return { ...c, accountToken: token } as CalWithAccount
+  })
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export function CalendarIntelligence() {
@@ -460,7 +509,11 @@ export function CalendarIntelligence() {
 
   const [weekStart,      setWeekStart]      = useState<Date>(() => getWeekStart(new Date()))
   const [events,         setEvents]         = useState<GCalEvent[]>([])
-  const [allCalendars,   setAllCalendars]   = useState<CalWithAccount[]>([])
+  // Hydrate from cache immediately so calendars/events show on revisit without a round-trip
+  const [allCalendars,   setAllCalendars]   = useState<CalWithAccount[]>(() => {
+    const cache = loadCalIntelCache()
+    return cache.length ? rebuildFromCache(cache) : []
+  })
   const [hiddenCals,     setHiddenCals]     = useState<Set<string>>(loadHiddenIntel)
   const [loadingEvents,  setLoadingEvents]  = useState(true)
   const [noAuth,         setNoAuth]         = useState(false)
@@ -479,14 +532,28 @@ export function CalendarIntelligence() {
   const [prepError,       setPrepError]       = useState<string | null>(null)
   const [eventStatuses,   setEventStatuses]   = useState<Record<string, EventStatus>>(loadEventStatuses)
 
-  // Load calendars from all accounts — called on mount and on manual refresh
+  // Load calendars from all accounts — called on mount and on manual refresh.
+  // On failure, falls back to the persisted cache so the page never goes blank.
   const reloadCalendars = useCallback(async () => {
     const { calendars, needsReconnect } = await loadAllCalendars(user?.email ?? '')
-    setAllCalendars(calendars)
     setReconnectNeeded(needsReconnect)
-    if (calendars.length) setNoAuth(false)
-    else setNoAuth(true)
-    return calendars
+    if (calendars.length) {
+      saveCalIntelCache(calendars)
+      setAllCalendars(calendars)
+      setNoAuth(false)
+      return calendars
+    }
+    // Fresh fetch returned empty — try to fall back to persisted cache
+    const cached = loadCalIntelCache()
+    if (cached.length) {
+      const fromCache = rebuildFromCache(cached)
+      setAllCalendars(fromCache)
+      setNoAuth(false)
+      return fromCache
+    }
+    // Truly no calendars anywhere
+    setNoAuth(true)
+    return []
   }, [user?.email])
 
   useEffect(() => {
