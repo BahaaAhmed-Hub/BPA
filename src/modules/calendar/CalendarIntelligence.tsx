@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   ChevronLeft, ChevronRight, Calendar, Video, Users,
   Sparkles, MapPin, RefreshCw, X, Eye, EyeOff,
-  CheckCircle2, XCircle,
+  CheckCircle2, XCircle, Link, Phone, Repeat, User,
+  ExternalLink,
 } from 'lucide-react'
 import {
   DndContext, DragOverlay, PointerSensor, useSensor, useSensors,
@@ -140,6 +141,11 @@ function loadEventStatuses(): Record<string, EventStatus> {
   try { const r = localStorage.getItem('cal-event-statuses'); return r ? JSON.parse(r) as Record<string,EventStatus> : {} } catch { return {} }
 }
 function saveEventStatuses(s: Record<string, EventStatus>) { localStorage.setItem('cal-event-statuses', JSON.stringify(s)) }
+
+function loadCalColors(): Record<string, string> {
+  try { const r = localStorage.getItem('cal-intel-colors'); return r ? JSON.parse(r) as Record<string,string> : {} } catch { return {} }
+}
+function saveCalColors(s: Record<string, string>) { localStorage.setItem('cal-intel-colors', JSON.stringify(s)) }
 
 // ─── Calendar list cache ──────────────────────────────────────────────────────
 const CAL_INTEL_CACHE_KEY = 'cal-intel-cals-cache'
@@ -281,6 +287,37 @@ function computeOverlaps(dayEvents: GCalEventExt[]): Map<string, EventLayout> {
   return layout
 }
 
+// ─── Calendar color palette (macOS Calendar colors) ──────────────────────────
+const CAL_COLORS = [
+  '#FF3B30', '#FF9500', '#FFCC00', '#34C759',
+  '#5AC8FA', '#007AFF', '#5856D6', '#AF52DE',
+  '#FF2D55', '#A2845E', '#8E8E93',
+]
+
+// ─── Inline color picker for calendar chips ───────────────────────────────────
+function ColorPickerPopover({ current, onPick, onClose }: { current: string; onPick: (c: string) => void; onClose: () => void }) {
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const fn = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) onClose() }
+    document.addEventListener('mousedown', fn)
+    return () => document.removeEventListener('mousedown', fn)
+  }, [onClose])
+  return (
+    <div ref={ref} onClick={e => e.stopPropagation()} style={{
+      position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 200,
+      background: '#161929', border: '1px solid #252A3E', borderRadius: 10,
+      padding: '10px 10px 8px', boxShadow: '0 8px 28px rgba(0,0,0,0.5)',
+      display: 'flex', flexWrap: 'wrap', gap: 7, width: 152,
+    }}>
+      {CAL_COLORS.map(c => (
+        <button key={c} onClick={() => { onPick(c); onClose() }}
+          style={{ width: 22, height: 22, borderRadius: '50%', background: c, border: c === current ? '2px solid #fff' : '2px solid transparent', cursor: 'pointer', padding: 0, flexShrink: 0 }}
+        />
+      ))}
+    </div>
+  )
+}
+
 // ─── DayColumn (droppable) ────────────────────────────────────────────────────
 function DayColumn({ dateStr, isToday, children }: { dateStr: string; isToday: boolean; children: React.ReactNode }) {
   const { setNodeRef, isOver } = useDroppable({ id: `col-${dateStr}` })
@@ -318,13 +355,14 @@ function ResizeHandle({ eventId }: { eventId: string }) {
 }
 
 // ─── EventBlock (draggable, positioned in time grid) ─────────────────────────
-function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverlay, onClick }: {
+function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverlay, colorOverride, onClick }: {
   event: GCalEventExt
   layout: EventLayout
   status: EventStatus | undefined
   isSelected: boolean
   isDragSrc: boolean
   isDragOverlay?: boolean
+  colorOverride?: string
   onClick: (e: React.MouseEvent) => void
 }) {
   const { attributes, listeners, setNodeRef, isDragging, transform } = useDraggable({
@@ -337,7 +375,7 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
 
   const top    = eventTopPx(event.start.dateTime!)
   const height = eventHeightPx(event.start.dateTime!, event.end.dateTime ?? event.start.dateTime!)
-  const color  = event.calendarColor ?? '#1E40AF'
+  const color  = colorOverride ?? event.calendarColor ?? '#1E40AF'
   const isDone = status === 'done'
   const isCancelled = status === 'cancelled'
 
@@ -397,7 +435,7 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
   )
 }
 
-// ─── EventPopup (macOS Calendar style) ───────────────────────────────────────
+// ─── EventPopup (macOS Calendar style — complete fields) ─────────────────────
 function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepError, pos, onClose, onStatusToggle, onPrepRequest }: {
   event: GCalEventExt
   status: EventStatus | undefined
@@ -415,7 +453,6 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
   const [showPrep, setShowPrep] = useState(false)
   const [adjPos, setAdjPos]     = useState(pos)
 
-  // Adjust position to stay within viewport
   useEffect(() => {
     if (!popupRef.current) return
     const { width, height } = popupRef.current.getBoundingClientRect()
@@ -426,18 +463,29 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
     setAdjPos({ x, y })
   }, [pos.x, pos.y, showPrep])
 
-  // Close on outside click
   useEffect(() => {
     const fn = (e: MouseEvent) => { if (popupRef.current && !popupRef.current.contains(e.target as Node)) onClose() }
     document.addEventListener('mousedown', fn)
     return () => document.removeEventListener('mousedown', fn)
   }, [onClose])
 
-  const isAllDay   = !event.start.dateTime
-  const startIso   = event.start.dateTime ?? (event.start.date + 'T00:00:00')
-  const endIso     = event.end.dateTime   ?? (event.end.date   + 'T00:00:00')
-  const videoLink  = event.conferenceData?.entryPoints?.find(ep => ep.entryPointType === 'video')?.uri
-  const attendees  = (event.attendees ?? []).filter(a => !a.self)
+  const isAllDay     = !event.start.dateTime
+  const startIso     = event.start.dateTime ?? (event.start.date + 'T00:00:00')
+  const endIso       = event.end.dateTime   ?? (event.end.date   + 'T00:00:00')
+  const entryPoints  = event.conferenceData?.entryPoints ?? []
+  const videoLink    = entryPoints.find(ep => ep.entryPointType === 'video')?.uri
+  const phoneEntry   = entryPoints.find(ep => ep.entryPointType === 'phone')
+  const allAttendees = event.attendees ?? []
+  const selfAttendee = allAttendees.find(a => a.self)
+  const others       = allAttendees.filter(a => !a.self)
+  const organizer    = event.organizer
+  const isOrganizer  = organizer?.self !== false || !organizer
+  const isRecurring  = !!event.recurringEventId || (event.recurrence?.length ?? 0) > 0
+  const isTentative  = event.status === 'tentative'
+  const notes        = event.description?.replace(/<[^>]*>/g, '').trim() ?? ''
+
+  const rsvpColor = (s?: string) => s === 'accepted' ? '#1D9E75' : s === 'declined' ? '#E05252' : s === 'tentative' ? '#FF9500' : '#6B7280'
+  const rsvpLabel = (s?: string) => s === 'accepted' ? 'Accepted' : s === 'declined' ? 'Declined' : s === 'tentative' ? 'Maybe' : 'Awaiting'
 
   const btn = (active: boolean, color: string): React.CSSProperties => ({
     display: 'flex', alignItems: 'center', gap: 5,
@@ -451,68 +499,130 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
   return (
     <div ref={popupRef} onClick={e => e.stopPropagation()} style={{
       position: 'fixed', top: adjPos.y, left: adjPos.x,
-      width: 312, background: '#161929',
-      border: '1px solid #252A3E', borderRadius: 12,
-      boxShadow: '0 12px 40px rgba(0,0,0,0.55)',
-      zIndex: 1000, overflow: 'hidden',
+      width: 320, maxHeight: 'calc(100vh - 24px)', overflowY: 'auto',
+      background: '#161929', border: '1px solid #252A3E', borderRadius: 12,
+      boxShadow: '0 12px 40px rgba(0,0,0,0.55)', zIndex: 1000,
     }}>
-      {/* Calendar color bar */}
-      <div style={{ height: 4, background: calColor }} />
+      {/* Color bar */}
+      <div style={{ height: 4, background: calColor, flexShrink: 0 }} />
 
-      {/* Title + close */}
+      {/* Title + status badges + close */}
       <div style={{ padding: '14px 16px 0', display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-        <div style={{ fontSize: 15, fontWeight: 700, color: '#E8EAF6', lineHeight: 1.3, flex: 1 }}>
-          {event.summary ?? '(No title)'}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 15, fontWeight: 700, color: '#E8EAF6', lineHeight: 1.3 }}>
+            {event.summary ?? '(No title)'}
+          </div>
+          <div style={{ display: 'flex', gap: 5, marginTop: 5, flexWrap: 'wrap' }}>
+            {isTentative && (
+              <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 4, background: '#FF950022', color: '#FF9500', border: '1px solid #FF950055' }}>Tentative</span>
+            )}
+            {isRecurring && (
+              <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 4, background: '#7F77DD22', color: '#7F77DD', border: '1px solid #7F77DD55', display: 'flex', alignItems: 'center', gap: 3 }}>
+                <Repeat size={9} /> Recurring
+              </span>
+            )}
+            {selfAttendee && (
+              <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 4, background: `${rsvpColor(selfAttendee.responseStatus)}22`, color: rsvpColor(selfAttendee.responseStatus), border: `1px solid ${rsvpColor(selfAttendee.responseStatus)}55` }}>
+                {rsvpLabel(selfAttendee.responseStatus)}
+              </span>
+            )}
+          </div>
         </div>
-        <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6B7280', padding: 0, lineHeight: 1, flexShrink: 0 }}>
+        <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6B7280', padding: 0, lineHeight: 1, flexShrink: 0, marginTop: 2 }}>
           <X size={15} />
         </button>
       </div>
 
       {/* Fields */}
       <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 9 }}>
-        {/* Date/time */}
+
+        {/* Date / time */}
         <Row icon={<Calendar size={13} color="#6B7280" />}>
           <span style={{ fontSize: 13, color: '#C0C4D6' }}>{fmtPopupDate(startIso, endIso, isAllDay)}</span>
         </Row>
+
         {/* Calendar */}
-        <Row icon={<div style={{ width: 12, height: 12, borderRadius: '50%', background: calColor, flexShrink: 0 }} />}>
+        <Row icon={<div style={{ width: 11, height: 11, borderRadius: '50%', background: calColor, flexShrink: 0, marginTop: 1 }} />}>
           <span style={{ fontSize: 13, color: '#C0C4D6' }}>{calName}</span>
         </Row>
+
         {/* Location */}
         {event.location && (
           <Row icon={<MapPin size={13} color="#6B7280" />}>
             <span style={{ fontSize: 13, color: '#C0C4D6' }}>{event.location}</span>
           </Row>
         )}
+
         {/* Video call */}
         {videoLink && (
           <Row icon={<Video size={13} color="#6B7280" />}>
-            <a href={videoLink} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: '#7F77DD', textDecoration: 'none' }}>
-              Join video call
+            <a href={videoLink} target="_blank" rel="noopener noreferrer"
+              style={{ fontSize: 13, color: '#7F77DD', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
+              Join video call <ExternalLink size={11} />
             </a>
           </Row>
         )}
-        {/* Attendees */}
-        {attendees.length > 0 && (
-          <Row icon={<Users size={13} color="#6B7280" />}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-              {attendees.slice(0, 5).map(a => (
-                <div key={a.email} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#C0C4D6' }}>
-                  <span>{a.displayName ?? a.email}</span>
-                  <span style={{ fontSize: 10, color: a.responseStatus === 'accepted' ? '#1D9E75' : a.responseStatus === 'declined' ? '#E05252' : '#6B7280' }}>
-                    {a.responseStatus === 'accepted' ? '✓' : a.responseStatus === 'declined' ? '✗' : '·'}
-                  </span>
-                </div>
-              ))}
-              {attendees.length > 5 && <span style={{ fontSize: 11, color: '#6B7280' }}>+{attendees.length - 5} more</span>}
+
+        {/* Phone conference */}
+        {phoneEntry && (
+          <Row icon={<Phone size={13} color="#6B7280" />}>
+            <div style={{ fontSize: 13, color: '#C0C4D6' }}>
+              <a href={phoneEntry.uri} style={{ color: '#7F77DD', textDecoration: 'none' }}>
+                {phoneEntry.label ?? phoneEntry.uri.replace('tel:', '')}
+              </a>
+              {phoneEntry.pin && <span style={{ color: '#6B7280', marginLeft: 6, fontSize: 12 }}>PIN: {phoneEntry.pin}</span>}
             </div>
           </Row>
         )}
-        {/* Notes */}
-        {event.description && (
-          <div style={{ fontSize: 12, color: '#8B93A8', lineHeight: 1.55, maxHeight: 72, overflow: 'hidden', borderTop: '1px solid #1E2235', paddingTop: 9 }}>
-            {event.description.replace(/<[^>]*>/g, '').slice(0, 220)}{event.description.length > 220 ? '…' : ''}
+
+        {/* Organizer (only if someone else organized it) */}
+        {organizer && !organizer.self && !isOrganizer && (
+          <Row icon={<User size={13} color="#6B7280" />}>
+            <span style={{ fontSize: 13, color: '#C0C4D6' }}>
+              {organizer.displayName ?? organizer.email}
+              <span style={{ fontSize: 11, color: '#6B7280', marginLeft: 5 }}>· organizer</span>
+            </span>
+          </Row>
+        )}
+
+        {/* Attendees */}
+        {others.length > 0 && (
+          <Row icon={<Users size={13} color="#6B7280" />}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {others.slice(0, 6).map(a => (
+                <div key={a.email} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
+                  <span style={{ flex: 1, color: '#C0C4D6', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {a.displayName ?? a.email}
+                  </span>
+                  <span style={{ fontSize: 10, color: rsvpColor(a.responseStatus), flexShrink: 0, fontWeight: 500 }}>
+                    {a.responseStatus === 'accepted' ? '✓' : a.responseStatus === 'declined' ? '✗' : a.responseStatus === 'tentative' ? '?' : '–'}
+                  </span>
+                </div>
+              ))}
+              {others.length > 6 && (
+                <span style={{ fontSize: 11, color: '#6B7280' }}>+{others.length - 6} more</span>
+              )}
+            </div>
+          </Row>
+        )}
+
+        {/* Google Calendar link */}
+        {event.htmlLink && (
+          <Row icon={<Link size={13} color="#6B7280" />}>
+            <a href={event.htmlLink} target="_blank" rel="noopener noreferrer"
+              style={{ fontSize: 13, color: '#7F77DD', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
+              Open in Google Calendar <ExternalLink size={11} />
+            </a>
+          </Row>
+        )}
+
+        {/* Notes / Description */}
+        {notes && (
+          <div style={{ borderTop: '1px solid #1E2235', paddingTop: 10, marginTop: 2 }}>
+            <div style={{ fontSize: 10, fontWeight: 600, color: '#4B5268', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 5 }}>Notes</div>
+            <div style={{ fontSize: 12, color: '#8B93A8', lineHeight: 1.6, maxHeight: 90, overflowY: 'auto', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+              {notes.slice(0, 400)}{notes.length > 400 ? '…' : ''}
+            </div>
           </div>
         )}
       </div>
@@ -607,6 +717,17 @@ export function CalendarIntelligence() {
   const [prepLoading,   setPrepLoading]   = useState(false)
   const [prepError,     setPrepError]     = useState<string | null>(null)
   const [eventStatuses, setEventStatuses] = useState<Record<string, EventStatus>>(loadEventStatuses)
+  const [calColors,     setCalColorsMap]  = useState<Record<string, string>>(loadCalColors)
+  const [pickerOpenId,  setPickerOpenId]  = useState<string | null>(null)
+
+  function setCalColor(id: string, color: string) {
+    setCalColorsMap(prev => { const next = { ...prev, [id]: color }; saveCalColors(next); return next })
+  }
+
+  // Effective color: custom override > google color > fallback
+  function calEffectiveColor(cal: CalWithAccount): string {
+    return calColors[cal.id] ?? cal.backgroundColor ?? '#1E40AF'
+  }
 
   // ── DnD state ───────────────────────────────────────────────────────────────
   const [dragMode,     setDragMode]     = useState<DragMode | null>(null)
@@ -813,25 +934,61 @@ export function CalendarIntelligence() {
         {allCalendars.length > 0 && (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
             {allCalendars.map(cal => {
-              const hidden = hiddenCals.has(cal.id)
-              const color  = cal.backgroundColor ?? '#1E40AF'
+              const hidden  = hiddenCals.has(cal.id)
+              const color   = calEffectiveColor(cal)
+              const chipKey = `${cal.accountEmail}:${cal.id}`
               return (
-                <button key={`${cal.accountEmail}:${cal.id}`} onClick={() => toggleCal(cal.id)}
-                  title={cal.accountEmail}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 5,
-                    padding: '3px 9px 3px 7px', borderRadius: 20,
-                    border: `1px solid ${hidden ? '#252A3E' : color}`,
-                    background: hidden ? 'transparent' : `${color}22`,
-                    cursor: 'pointer', fontSize: 11, color: hidden ? '#4B5268' : '#C0C4D6',
-                    transition: 'all 0.12s',
-                  }}
-                >
-                  {hidden ? <EyeOff size={11} color="#4B5268" /> : <Eye size={11} color={color} />}
-                  <span style={{ maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {cal.summary}
-                  </span>
-                </button>
+                <div key={chipKey} style={{ position: 'relative' }}>
+                  <div
+                    title={cal.accountEmail}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 0,
+                      borderRadius: 20, overflow: 'visible',
+                      border: `1px solid ${hidden ? '#252A3E' : color}`,
+                      background: hidden ? 'transparent' : `${color}18`,
+                      transition: 'all 0.12s',
+                    }}
+                  >
+                    {/* Color dot — click to open picker */}
+                    <button
+                      onClick={e => { e.stopPropagation(); setPickerOpenId(pickerOpenId === cal.id ? null : cal.id) }}
+                      title="Change color"
+                      style={{
+                        width: 24, height: 26, borderRadius: '20px 0 0 20px',
+                        background: 'none', border: 'none', cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        flexShrink: 0,
+                      }}
+                    >
+                      <div style={{ width: 10, height: 10, borderRadius: '50%', background: hidden ? '#3A3F55' : color, border: '1px solid rgba(255,255,255,0.2)' }} />
+                    </button>
+
+                    {/* Name + eye toggle */}
+                    <button
+                      onClick={() => toggleCal(cal.id)}
+                      style={{
+                        background: 'none', border: 'none', cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', gap: 4,
+                        padding: '3px 8px 3px 2px', fontSize: 11,
+                        color: hidden ? '#4B5268' : '#C0C4D6',
+                      }}
+                    >
+                      <span style={{ maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {cal.summary}
+                      </span>
+                      {hidden ? <EyeOff size={10} color="#4B5268" /> : <Eye size={10} color={color} />}
+                    </button>
+                  </div>
+
+                  {/* Inline color picker */}
+                  {pickerOpenId === cal.id && (
+                    <ColorPickerPopover
+                      current={color}
+                      onPick={c => setCalColor(cal.id, c)}
+                      onClose={() => setPickerOpenId(null)}
+                    />
+                  )}
+                </div>
               )
             })}
           </div>
@@ -926,6 +1083,7 @@ export function CalendarIntelligence() {
                     {dayEvents.map(ev => {
                       if (!ev.start.dateTime) return null
                       const layout = layouts.get(ev.id) ?? { left: 0, width: 99 }
+                      const cal    = allCalendars.find(c => c.id === (ev as GCalEventExt).calendarId)
                       return (
                         <EventBlock
                           key={ev.id}
@@ -934,6 +1092,7 @@ export function CalendarIntelligence() {
                           status={eventStatuses[ev.id]}
                           isSelected={selectedEvent?.id === ev.id}
                           isDragSrc={draggingEvt?.id === ev.id && dragMode === 'move'}
+                          colorOverride={cal ? calEffectiveColor(cal) : undefined}
                           onClick={e => handleEventClick(ev, e)}
                         />
                       )
@@ -949,6 +1108,7 @@ export function CalendarIntelligence() {
         <DragOverlay>
           {draggingEvt && dragMode === 'move' && (() => {
             const dummyLayout: EventLayout = { left: 0, width: 99 }
+            const cal = allCalendars.find(c => c.id === draggingEvt.calendarId)
             return (
               <EventBlock
                 event={draggingEvt}
@@ -957,6 +1117,7 @@ export function CalendarIntelligence() {
                 isSelected={false}
                 isDragSrc={false}
                 isDragOverlay
+                colorOverride={cal ? calEffectiveColor(cal) : undefined}
                 onClick={() => {}}
               />
             )
@@ -993,8 +1154,8 @@ export function CalendarIntelligence() {
       {/* Event popup */}
       {selectedEvent && popupPos && (() => {
         const cal      = allCalendars.find(c => c.id === (selectedEvent as GCalEventExt).calendarId)
-        const calName  = cal?.summary  ?? 'Calendar'
-        const calColor = cal?.backgroundColor ?? '#1E40AF'
+        const calName  = cal?.summary ?? 'Calendar'
+        const calColor = cal ? calEffectiveColor(cal) : '#1E40AF'
         return (
           <EventPopup
             event={selectedEvent}

@@ -10,9 +10,13 @@ export interface GCalEvent {
   location?: string
   description?: string
   attendees?: { email: string; displayName?: string; responseStatus?: string; self?: boolean }[]
-  conferenceData?: { entryPoints?: { entryPointType: string; uri: string }[] }
+  conferenceData?: { entryPoints?: { entryPointType: string; uri: string; label?: string; pin?: string }[] }
   status?: string
-  organizer?: { email?: string; displayName?: string }
+  organizer?: { email?: string; displayName?: string; self?: boolean }
+  recurringEventId?: string
+  recurrence?: string[]
+  htmlLink?: string
+  reminders?: { useDefault: boolean; overrides?: { method: string; minutes: number }[] }
 }
 
 export interface GCalEventWithCalendar extends GCalEvent {
