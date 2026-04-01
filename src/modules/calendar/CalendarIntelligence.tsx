@@ -760,17 +760,34 @@ export function CalendarIntelligence() {
 
   // ── Calendar loading ────────────────────────────────────────────────────────
   const reloadCalendars = useCallback(async () => {
-    // listCalendars() → getProviderToken() already calls refreshSession() internally
-    // when the primary token is stale. Extra accounts are refreshed via direct
-    // GoTrue HTTP call (no session swap) in loadAllCalendars.
-    const { calendars, needsReconnect } = await loadAllCalendars(user?.email ?? '')
+    const { calendars: fresh, needsReconnect } = await loadAllCalendars(user?.email ?? '')
     setReconnectNeeded(needsReconnect)
-    if (calendars.length) {
-      saveCalIntelCache(calendars); setAllCalendars(calendars); setNoAuth(false); return calendars
+
+    if (fresh.length) {
+      saveCalIntelCache(fresh)
+      // Merge: keep any previously-known accounts that weren't returned this run
+      // (e.g. extra account whose refresh was slow/failed). This prevents chips
+      // from disappearing on every reload.
+      setAllCalendars(prev => {
+        const freshEmails = new Set(fresh.map(c => c.accountEmail))
+        const kept = prev.filter(c => !freshEmails.has(c.accountEmail))
+        // Deduplicate
+        const seen = new Set<string>()
+        return [...fresh, ...kept].filter(c => {
+          const key = `${c.accountEmail}:${c.id}`
+          if (seen.has(key)) return false
+          seen.add(key); return true
+        })
+      })
+      setNoAuth(false)
+      return fresh
     }
+
+    // Nothing from API — fall back to full cache
     const cached = loadCalIntelCache()
     if (cached.length) {
-      const fromCache = rebuildFromCache(cached); setAllCalendars(fromCache); setNoAuth(false); return fromCache
+      const fromCache = rebuildFromCache(cached)
+      setAllCalendars(fromCache); setNoAuth(false); return fromCache
     }
     setNoAuth(true); return []
   }, [user?.email])
