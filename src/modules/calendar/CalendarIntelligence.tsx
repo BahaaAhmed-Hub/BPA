@@ -722,7 +722,6 @@ export function CalendarIntelligence() {
   const [noAuth,          setNoAuth]          = useState(false)
   const [fetchError,      setFetchError]      = useState<string | null>(null)
   const [reconnectNeeded, setReconnectNeeded] = useState<string[]>([])
-  const [rescheduling,    setRescheduling]    = useState<string | null>(null)
 
   // ── Popup + prep state ──────────────────────────────────────────────────────
   const [selectedEvent, setSelectedEvent] = useState<GCalEventExt | null>(null)
@@ -765,13 +764,20 @@ export function CalendarIntelligence() {
 
     if (fresh.length) {
       saveCalIntelCache(fresh)
-      // Merge: keep any previously-known accounts that weren't returned this run
-      // (e.g. extra account whose refresh was slow/failed). This prevents chips
-      // from disappearing on every reload.
+      // Read the latest primary token AFTER listCalendars() has had a chance to refresh it
+      const latestPrimaryToken = localStorage.getItem('google_provider_token') ?? ''
+      const primaryEmail = user?.email ?? ''
+
       setAllCalendars(prev => {
         const freshEmails = new Set(fresh.map(c => c.accountEmail))
-        const kept = prev.filter(c => !freshEmails.has(c.accountEmail))
-        // Deduplicate
+        // Keep accounts not in fresh result, but inject the latest primary token
+        // so stale tokens from prev never cause event fetches to 401
+        const kept = prev
+          .filter(c => !freshEmails.has(c.accountEmail))
+          .map(c => c.accountEmail === primaryEmail
+            ? { ...c, accountToken: latestPrimaryToken }
+            : c
+          )
         const seen = new Set<string>()
         return [...fresh, ...kept].filter(c => {
           const key = `${c.accountEmail}:${c.id}`
@@ -865,6 +871,24 @@ export function CalendarIntelligence() {
     }
   }
 
+  function applyOptimisticUpdate(eventId: string, newStart: Date, newEnd: Date) {
+    setEvents(prev => prev.map(e => {
+      if (e.id !== eventId) return e
+      return {
+        ...e,
+        start: { ...e.start, dateTime: newStart.toISOString() },
+        end:   { ...e.end,   dateTime: newEnd.toISOString() },
+      }
+    }))
+  }
+
+  function revertOptimisticUpdate(eventId: string, origStart: string, origEnd: string) {
+    setEvents(prev => prev.map(e => {
+      if (e.id !== eventId) return e
+      return { ...e, start: { ...e.start, dateTime: origStart }, end: { ...e.end, dateTime: origEnd } }
+    }))
+  }
+
   async function handleDragEnd({ active, over, delta }: DragEndEvent) {
     const mode = dragMode
     setDraggingEvt(null); setDragMode(null)
@@ -882,9 +906,12 @@ export function CalendarIntelligence() {
       if (newEnd.getTime() - start.getTime() < 15 * 60000) return
       const cal = allCalendars.find(c => c.id === ev.calendarId)
       if (!cal) return
-      setRescheduling(eventId)
-      try { if (await updateCalendarEventTimes(cal.accountToken, ev.calendarId!, eventId, start, newEnd)) void loadEvents(weekStart, allCalendars, hiddenCals) }
-      finally { setRescheduling(null) }
+
+      // Optimistic update — instant UI feedback
+      applyOptimisticUpdate(eventId, start, newEnd)
+
+      const ok = await updateCalendarEventTimes(cal.accountToken, ev.calendarId!, eventId, start, newEnd)
+      if (!ok) revertOptimisticUpdate(eventId, ev.start.dateTime, ev.end.dateTime)
       return
     }
 
@@ -895,11 +922,11 @@ export function CalendarIntelligence() {
     const ev = events.find(e => e.id === id) as GCalEventExt | undefined
     if (!ev?.start.dateTime) return
 
-    const [yr, mo, dy]   = overId.replace('col-', '').split('-').map(Number)
-    const origStart      = new Date(ev.start.dateTime)
-    const origEnd        = ev.end.dateTime ? new Date(ev.end.dateTime) : new Date(origStart.getTime() + 3600000)
-    const duration       = origEnd.getTime() - origStart.getTime()
-    const dm             = snapMinutes(delta.y)
+    const [yr, mo, dy] = overId.replace('col-', '').split('-').map(Number)
+    const origStart    = new Date(ev.start.dateTime)
+    const origEnd      = ev.end.dateTime ? new Date(ev.end.dateTime) : new Date(origStart.getTime() + 3600000)
+    const duration     = origEnd.getTime() - origStart.getTime()
+    const dm           = snapMinutes(delta.y)
 
     const newStart = new Date(origStart)
     newStart.setFullYear(yr, mo - 1, dy)
@@ -909,9 +936,12 @@ export function CalendarIntelligence() {
     if (newStart.getTime() === origStart.getTime()) return
     const cal = allCalendars.find(c => c.id === ev.calendarId)
     if (!cal) return
-    setRescheduling(id)
-    try { if (await updateCalendarEventTimes(cal.accountToken, ev.calendarId!, id, newStart, newEnd)) void loadEvents(weekStart, allCalendars, hiddenCals) }
-    finally { setRescheduling(null) }
+
+    // Optimistic update — instant UI feedback
+    applyOptimisticUpdate(id, newStart, newEnd)
+
+    const ok = await updateCalendarEventTimes(cal.accountToken, ev.calendarId!, id, newStart, newEnd)
+    if (!ok) revertOptimisticUpdate(id, ev.start.dateTime, ev.end.dateTime ?? origEnd.toISOString())
   }
 
   // ── Week navigation ──────────────────────────────────────────────────────────
@@ -1167,13 +1197,6 @@ export function CalendarIntelligence() {
         </div>
       )}
 
-      {/* Rescheduling indicator */}
-      {rescheduling && (
-        <div style={{ position: 'absolute', bottom: 18, right: 22, display: 'flex', alignItems: 'center', gap: 7, fontSize: 12, color: '#7F77DD', pointerEvents: 'none' }}>
-          <div style={{ width: 14, height: 14, border: '2px solid #252A3E', borderTopColor: '#7F77DD', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
-          Saving…
-        </div>
-      )}
 
       {/* No auth state */}
       {noAuth && !loadingEvents && (
