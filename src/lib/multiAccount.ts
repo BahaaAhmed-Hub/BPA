@@ -5,6 +5,9 @@
 
 import { supabase } from './supabase'
 
+const SUPABASE_URL      = import.meta.env.VITE_SUPABASE_URL  as string ?? ''
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string ?? ''
+
 export interface ConnectedAccount {
   id: string
   email: string
@@ -90,63 +93,53 @@ export async function getProviderTokenForAccount(account: ConnectedAccount): Pro
 
 /**
  * Silently refreshes the Google provider_token for an extra (non-primary) account
- * by temporarily swapping the Supabase session to that account, calling
- * refreshSession(), extracting the new provider_token, then immediately restoring
- * the primary session.
+ * by calling the GoTrue /token endpoint directly — NO session swap, so
+ * onAuthStateChange in App.tsx is never triggered and the primary session is
+ * never touched.
  *
- * Returns the fresh provider_token on success, or null if refresh fails
- * (e.g. the Supabase refresh_token has also expired — ~30 day TTL).
+ * Returns the fresh provider_token on success, or null if the Supabase
+ * refresh_token has expired (~30-day TTL).
  */
 export async function silentRefreshAccountToken(account: ConnectedAccount): Promise<string | null> {
-  if (!account.supabaseRefreshToken) return null
-
-  // Snapshot current primary session so we can restore it
-  let primaryAccessToken: string | null = null
-  let primaryRefreshToken: string | null = null
-  try {
-    const { data } = await supabase.auth.getSession()
-    primaryAccessToken  = data.session?.access_token  ?? null
-    primaryRefreshToken = data.session?.refresh_token ?? null
-  } catch { /* proceed anyway */ }
+  if (!account.supabaseRefreshToken || !SUPABASE_URL || !SUPABASE_ANON_KEY) return null
 
   try {
-    // Swap to the extra account's saved Supabase session
-    await supabase.auth.setSession({
-      access_token:  account.supabaseAccessToken  ?? '',
-      refresh_token: account.supabaseRefreshToken ?? '',
-    })
+    const res = await fetch(
+      `${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+        },
+        body: JSON.stringify({ refresh_token: account.supabaseRefreshToken }),
+      }
+    )
 
-    // Refresh — Supabase will issue new Supabase JWT + fresh Google provider_token
-    const { data: refreshed, error } = await supabase.auth.refreshSession()
-    if (error || !refreshed.session?.provider_token) return null
+    if (!res.ok) return null
 
-    const newProviderToken     = refreshed.session.provider_token
-    const newSupabaseAccess    = refreshed.session.access_token
-    const newSupabaseRefresh   = refreshed.session.refresh_token ?? account.supabaseRefreshToken
+    const data = await res.json() as {
+      provider_token?: string
+      access_token?: string
+      refresh_token?: string
+    }
 
-    // Persist the fresh tokens back into the stored account
+    const newProviderToken = data.provider_token ?? null
+    if (!newProviderToken) return null
+
+    // Persist fresh tokens back — no session swap, no auth events
     const accounts = loadAccounts()
     saveAccounts(accounts.map(a => a.id === account.id ? {
       ...a,
       providerToken:        newProviderToken,
       providerTokenSavedAt: Date.now(),
-      supabaseAccessToken:  newSupabaseAccess,
-      supabaseRefreshToken: newSupabaseRefresh,
+      supabaseAccessToken:  data.access_token  ?? a.supabaseAccessToken,
+      supabaseRefreshToken: data.refresh_token ?? a.supabaseRefreshToken,
     } : a))
 
     return newProviderToken
   } catch {
     return null
-  } finally {
-    // Always restore the primary session, even if refresh failed
-    if (primaryAccessToken && primaryRefreshToken) {
-      try {
-        await supabase.auth.setSession({
-          access_token:  primaryAccessToken,
-          refresh_token: primaryRefreshToken,
-        })
-      } catch { /* best effort */ }
-    }
   }
 }
 

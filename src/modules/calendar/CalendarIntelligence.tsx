@@ -24,7 +24,6 @@ import type { MeetingPrep } from '@/lib/professor'
 import { useAuthStore } from '@/store/authStore'
 import { loadAccounts, silentRefreshAccountToken } from '@/lib/multiAccount'
 import { connectAdditionalGoogleAccount } from '@/lib/google'
-import { supabase } from '@/lib/supabase'
 import type { DbUser, DbCompany, DbCalendarEvent } from '@/types/database'
 
 // ─── Grid constants ───────────────────────────────────────────────────────────
@@ -761,16 +760,9 @@ export function CalendarIntelligence() {
 
   // ── Calendar loading ────────────────────────────────────────────────────────
   const reloadCalendars = useCallback(async () => {
-    // Silently refresh primary Google token before loading — this works because
-    // Supabase holds a server-side refresh token for the primary OAuth account.
-    try {
-      const { data } = await supabase.auth.refreshSession()
-      if (data.session?.provider_token) {
-        localStorage.setItem('google_provider_token', data.session.provider_token)
-        localStorage.setItem('google_provider_token_saved_at', Date.now().toString())
-      }
-    } catch { /* ignore — will fall back to cached token */ }
-
+    // listCalendars() → getProviderToken() already calls refreshSession() internally
+    // when the primary token is stale. Extra accounts are refreshed via direct
+    // GoTrue HTTP call (no session swap) in loadAllCalendars.
     const { calendars, needsReconnect } = await loadAllCalendars(user?.email ?? '')
     setReconnectNeeded(needsReconnect)
     if (calendars.length) {
