@@ -81,18 +81,73 @@ export function getAllTokens(): { accountId: string; email: string; token: strin
 /**
  * Returns the stored provider token for an additional account if it is still
  * within its ~50-minute TTL, or null if it has expired.
- *
- * NOTE: Supabase's client SDK cannot reliably refresh the Google provider_token
- * for secondary OAuth accounts — calling refreshSession() while swapping sessions
- * risks overwriting valid tokens with stale ones from the wrong account.
- * The only reliable token is the one captured directly at OAuth connect time.
- * When null is returned, the UI should prompt the user to reconnect that account.
  */
 export async function getProviderTokenForAccount(account: ConnectedAccount): Promise<string | null> {
   const age = Date.now() - (account.providerTokenSavedAt ?? 0)
   if (age < TOKEN_TTL) return account.providerToken
-  // Token is expired and cannot be safely refreshed client-side — needs reconnect
   return null
+}
+
+/**
+ * Silently refreshes the Google provider_token for an extra (non-primary) account
+ * by temporarily swapping the Supabase session to that account, calling
+ * refreshSession(), extracting the new provider_token, then immediately restoring
+ * the primary session.
+ *
+ * Returns the fresh provider_token on success, or null if refresh fails
+ * (e.g. the Supabase refresh_token has also expired — ~30 day TTL).
+ */
+export async function silentRefreshAccountToken(account: ConnectedAccount): Promise<string | null> {
+  if (!account.supabaseRefreshToken) return null
+
+  // Snapshot current primary session so we can restore it
+  let primaryAccessToken: string | null = null
+  let primaryRefreshToken: string | null = null
+  try {
+    const { data } = await supabase.auth.getSession()
+    primaryAccessToken  = data.session?.access_token  ?? null
+    primaryRefreshToken = data.session?.refresh_token ?? null
+  } catch { /* proceed anyway */ }
+
+  try {
+    // Swap to the extra account's saved Supabase session
+    await supabase.auth.setSession({
+      access_token:  account.supabaseAccessToken  ?? '',
+      refresh_token: account.supabaseRefreshToken ?? '',
+    })
+
+    // Refresh — Supabase will issue new Supabase JWT + fresh Google provider_token
+    const { data: refreshed, error } = await supabase.auth.refreshSession()
+    if (error || !refreshed.session?.provider_token) return null
+
+    const newProviderToken     = refreshed.session.provider_token
+    const newSupabaseAccess    = refreshed.session.access_token
+    const newSupabaseRefresh   = refreshed.session.refresh_token ?? account.supabaseRefreshToken
+
+    // Persist the fresh tokens back into the stored account
+    const accounts = loadAccounts()
+    saveAccounts(accounts.map(a => a.id === account.id ? {
+      ...a,
+      providerToken:        newProviderToken,
+      providerTokenSavedAt: Date.now(),
+      supabaseAccessToken:  newSupabaseAccess,
+      supabaseRefreshToken: newSupabaseRefresh,
+    } : a))
+
+    return newProviderToken
+  } catch {
+    return null
+  } finally {
+    // Always restore the primary session, even if refresh failed
+    if (primaryAccessToken && primaryRefreshToken) {
+      try {
+        await supabase.auth.setSession({
+          access_token:  primaryAccessToken,
+          refresh_token: primaryRefreshToken,
+        })
+      } catch { /* best effort */ }
+    }
+  }
 }
 
 /** Sign out of Supabase (used only to clear the primary session). */

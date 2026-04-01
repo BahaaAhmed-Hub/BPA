@@ -22,7 +22,7 @@ import type { GCalEvent, GCalCalendar } from '@/lib/googleCalendar'
 import { generateMeetingPrep } from '@/lib/professor'
 import type { MeetingPrep } from '@/lib/professor'
 import { useAuthStore } from '@/store/authStore'
-import { loadAccounts } from '@/lib/multiAccount'
+import { loadAccounts, silentRefreshAccountToken } from '@/lib/multiAccount'
 import { connectAdditionalGoogleAccount } from '@/lib/google'
 import { supabase } from '@/lib/supabase'
 import type { DbUser, DbCompany, DbCalendarEvent } from '@/types/database'
@@ -186,17 +186,31 @@ async function loadAllCalendars(primaryEmail: string): Promise<LoadCalendarsResu
 
   const extraResults = await Promise.all(
     extraAccounts.map(async account => {
-      const token = account.providerToken
-      if (!token) {
-        needsReconnect.push(account.email)
-        return calCache.filter(c => c.accountEmail === account.email).map(c => ({ ...c, accountToken: '' } as CalWithAccount))
+      let token = account.providerToken
+
+      // First attempt with stored token
+      if (token) {
+        const { calendars: cals, authFailed } = await listCalendarsWithToken(token)
+        if (!authFailed) {
+          return cals.map(c => ({ ...c, accountEmail: account.email, accountToken: token }))
+        }
       }
-      const { calendars: cals, authFailed } = await listCalendarsWithToken(token)
-      if (authFailed) {
-        needsReconnect.push(account.email)
-        return calCache.filter(c => c.accountEmail === account.email).map(c => ({ ...c, accountToken: token } as CalWithAccount))
+
+      // Token missing or rejected — try silent background refresh using stored Supabase refresh_token
+      const refreshed = await silentRefreshAccountToken(account)
+      if (refreshed) {
+        const { calendars: cals, authFailed } = await listCalendarsWithToken(refreshed)
+        if (!authFailed) {
+          return cals.map(c => ({ ...c, accountEmail: account.email, accountToken: refreshed }))
+        }
       }
-      return cals.map(c => ({ ...c, accountEmail: account.email, accountToken: token }))
+
+      // Silent refresh also failed — Supabase refresh_token expired (~30 day TTL)
+      // Fall back to cached calendar list so chips remain visible; flag for reconnect
+      needsReconnect.push(account.email)
+      return calCache
+        .filter(c => c.accountEmail === account.email)
+        .map(c => ({ ...c, accountToken: token ?? '' } as CalWithAccount))
     })
   )
 
