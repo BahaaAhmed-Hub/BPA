@@ -3,7 +3,7 @@ import {
   ChevronLeft, ChevronRight, Calendar, Video, Users,
   Sparkles, MapPin, RefreshCw, X, Eye, EyeOff,
   CheckCircle2, XCircle, Link, Phone, Repeat, User,
-  ExternalLink,
+  ExternalLink, AlertCircle,
 } from 'lucide-react'
 import {
   DndContext, DragOverlay, PointerSensor, useSensor, useSensors,
@@ -24,6 +24,7 @@ import type { MeetingPrep } from '@/lib/professor'
 import { useAuthStore } from '@/store/authStore'
 import { loadAccounts } from '@/lib/multiAccount'
 import { connectAdditionalGoogleAccount } from '@/lib/google'
+import { supabase } from '@/lib/supabase'
 import type { DbUser, DbCompany, DbCalendarEvent } from '@/types/database'
 
 // ─── Grid constants ───────────────────────────────────────────────────────────
@@ -746,6 +747,16 @@ export function CalendarIntelligence() {
 
   // ── Calendar loading ────────────────────────────────────────────────────────
   const reloadCalendars = useCallback(async () => {
+    // Silently refresh primary Google token before loading — this works because
+    // Supabase holds a server-side refresh token for the primary OAuth account.
+    try {
+      const { data } = await supabase.auth.refreshSession()
+      if (data.session?.provider_token) {
+        localStorage.setItem('google_provider_token', data.session.provider_token)
+        localStorage.setItem('google_provider_token_saved_at', Date.now().toString())
+      }
+    } catch { /* ignore — will fall back to cached token */ }
+
     const { calendars, needsReconnect } = await loadAllCalendars(user?.email ?? '')
     setReconnectNeeded(needsReconnect)
     if (calendars.length) {
@@ -978,6 +989,17 @@ export function CalendarIntelligence() {
                       </span>
                       {hidden ? <EyeOff size={10} color="#4B5268" /> : <Eye size={10} color={color} />}
                     </button>
+
+                    {/* Subtle reconnect badge — only shown when this account needs reconnect */}
+                    {reconnectNeeded.includes(cal.accountEmail) && (
+                      <button
+                        onClick={e => { e.stopPropagation(); void connectAdditionalGoogleAccount(cal.accountEmail) }}
+                        title={`Token expired for ${cal.accountEmail} — click to reconnect`}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 5px 0 0', display: 'flex', alignItems: 'center', flexShrink: 0 }}
+                      >
+                        <AlertCircle size={11} color="#FF9500" />
+                      </button>
+                    )}
                   </div>
 
                   {/* Inline color picker */}
@@ -994,21 +1016,10 @@ export function CalendarIntelligence() {
           </div>
         )}
 
-        {/* Reconnect banners */}
-        {reconnectNeeded.map(email => (
-          <div key={email} style={{ marginTop: 8, padding: '7px 12px', background: '#2A1A1A', border: '1px solid #5C2A2A', borderRadius: 8, fontSize: 12, color: '#E05252', display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ flex: 1 }}>⚠ Calendar access expired for <strong>{email}</strong></span>
-            <button
-              onClick={() => void connectAdditionalGoogleAccount(email)}
-              style={{ background: '#5C2A2A', border: 'none', borderRadius: 5, cursor: 'pointer', color: '#FFAAAA', padding: '3px 10px', fontSize: 11 }}
-            >Reconnect</button>
-          </div>
-        ))}
-
-        {/* Fetch error */}
+        {/* Fetch error — keep but make subtle */}
         {fetchError && (
-          <div style={{ marginTop: 8, padding: '6px 12px', background: '#1E1216', border: '1px solid #4A1A24', borderRadius: 7, fontSize: 12, color: '#E05252' }}>
-            {fetchError}
+          <div style={{ marginTop: 6, padding: '5px 10px', background: '#1E1216', border: '1px solid #4A1A24', borderRadius: 6, fontSize: 11, color: '#E05252', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <AlertCircle size={11} /> {fetchError}
           </div>
         )}
       </div>
