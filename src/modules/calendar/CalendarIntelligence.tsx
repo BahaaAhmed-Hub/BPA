@@ -15,6 +15,7 @@ import {
   detectMeetingType,
   listCalendars,
   listCalendarsWithToken,
+  fetchCalendarEvents,
   fetchCalendarEventsWithToken,
   updateCalendarEventTimes,
 } from '@/lib/googleCalendar'
@@ -34,7 +35,7 @@ const GRID_H   = HOUR_PX * 24  // total grid height (24h)
 // ─── Types ────────────────────────────────────────────────────────────────────
 type GCalEventExt = GCalEvent & { calendarId?: string; calendarColor?: string }
 type EventStatus  = 'done' | 'cancelled'
-type DragMode     = 'move' | 'resize'
+type DragMode     = 'move' | 'resize-top' | 'resize-bottom'
 interface EventLayout { left: number; width: number }
 
 interface CalWithAccount extends GCalCalendar {
@@ -222,10 +223,18 @@ async function loadAllCalendars(primaryEmail: string): Promise<LoadCalendarsResu
   return { calendars, needsReconnect }
 }
 
-async function fetchAllEvents(allCals: CalWithAccount[], hidden: Set<string>, start: Date, end: Date): Promise<GCalEvent[]> {
+async function fetchAllEvents(allCals: CalWithAccount[], hidden: Set<string>, start: Date, end: Date, primaryEmail: string): Promise<GCalEvent[]> {
   const active = allCals.filter(c => !hidden.has(c.id))
   if (!active.length) return []
-  const results = await Promise.all(active.map(c => fetchCalendarEventsWithToken(c.accountToken, c.id, start, end, c.backgroundColor)))
+  const results = await Promise.all(active.map(c => {
+    // Primary account: use fetchCalendarEvents which goes through withAuth
+    // (auto token refresh via Supabase) — never silently fails on expired token
+    if (c.accountEmail.toLowerCase() === primaryEmail.toLowerCase()) {
+      return fetchCalendarEvents(c.id, start, end, c.backgroundColor)
+    }
+    // Extra accounts: use the stored token (refreshed via GoTrue HTTP in loadAllCalendars)
+    return fetchCalendarEventsWithToken(c.accountToken, c.id, start, end, c.backgroundColor)
+  }))
   return results.flat()
 }
 
@@ -355,13 +364,20 @@ function DayColumn({ dateStr, isToday, children }: { dateStr: string; isToday: b
   )
 }
 
-// ─── ResizeHandle ─────────────────────────────────────────────────────────────
-function ResizeHandle({ eventId }: { eventId: string }) {
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: `resize:${eventId}` })
+// ─── ResizeHandle (top or bottom) ────────────────────────────────────────────
+function ResizeHandle({ eventId, edge }: { eventId: string; edge: 'top' | 'bottom' }) {
+  const dragId = edge === 'top' ? `resize-top:${eventId}` : `resize-bottom:${eventId}`
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: dragId })
   return (
     <div ref={setNodeRef} {...listeners} {...attributes}
       onClick={e => e.stopPropagation()}
-      style={{ position: 'absolute', bottom: 0, left: '15%', right: '15%', height: 10, cursor: 'ns-resize', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 3 }}
+      style={{
+        position: 'absolute',
+        top:    edge === 'top'    ? 0       : undefined,
+        bottom: edge === 'bottom' ? 0       : undefined,
+        left: '15%', right: '15%', height: 10,
+        cursor: 'ns-resize', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 3,
+      }}
     >
       <div style={{ width: 28, height: 3, borderRadius: 2, background: isDragging ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.35)' }} />
     </div>
@@ -444,7 +460,8 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
           {event.end.dateTime ? ` – ${fmtShort(event.end.dateTime)}` : ''}
         </div>
       )}
-      {!isDragOverlay && <ResizeHandle eventId={event.id} />}
+      {!isDragOverlay && <ResizeHandle eventId={event.id} edge="top" />}
+      {!isDragOverlay && <ResizeHandle eventId={event.id} edge="bottom" />}
     </div>
   )
 }
@@ -805,13 +822,13 @@ export function CalendarIntelligence() {
     try {
       if (!cals.length) { setNoAuth(true); setEvents([]); return }
       const end     = getWeekEnd(start)
-      const fetched = await fetchAllEvents(cals, hidden, start, end)
+      const fetched = await fetchAllEvents(cals, hidden, start, end, user?.email ?? '')
       setEvents(fetched); setNoAuth(false)
     } catch (err) {
       setFetchError(err instanceof Error ? err.message : 'Failed to load events.')
       setEvents([])
     } finally { setLoadingEvents(false) }
-  }, [])
+  }, [user?.email])
 
   useEffect(() => {
     if (allCalendars.length) void loadEvents(weekStart, allCalendars, hiddenCals)
@@ -862,9 +879,12 @@ export function CalendarIntelligence() {
   function handleDragStart({ active }: DragStartEvent) {
     setSelectedEvent(null); setPopupPos(null)
     const id = active.id as string
-    if (id.startsWith('resize:')) {
-      const ev = events.find(e => e.id === id.replace('resize:', '')) as GCalEventExt | undefined
-      setDraggingEvt(ev ?? null); setDragMode('resize')
+    if (id.startsWith('resize-top:')) {
+      const ev = events.find(e => e.id === id.replace('resize-top:', '')) as GCalEventExt | undefined
+      setDraggingEvt(ev ?? null); setDragMode('resize-top')
+    } else if (id.startsWith('resize-bottom:')) {
+      const ev = events.find(e => e.id === id.replace('resize-bottom:', '')) as GCalEventExt | undefined
+      setDraggingEvt(ev ?? null); setDragMode('resize-bottom')
     } else {
       const ev = events.find(e => e.id === id) as GCalEventExt | undefined
       setDraggingEvt(ev ?? null); setDragMode('move')
@@ -894,23 +914,38 @@ export function CalendarIntelligence() {
     setDraggingEvt(null); setDragMode(null)
     const id = active.id as string
 
-    if (mode === 'resize') {
-      const eventId = id.replace('resize:', '')
+    if (mode === 'resize-bottom') {
+      const eventId = id.replace('resize-bottom:', '')
       const ev      = events.find(e => e.id === eventId) as GCalEventExt | undefined
       if (!ev?.end.dateTime || !ev.start.dateTime) return
-      const dm = snapMinutes(delta.y)
+      const dm  = snapMinutes(delta.y)
       if (dm === 0) return
+      const start  = new Date(ev.start.dateTime)
       const newEnd = new Date(ev.end.dateTime)
       newEnd.setMinutes(newEnd.getMinutes() + dm)
-      const start = new Date(ev.start.dateTime)
       if (newEnd.getTime() - start.getTime() < 15 * 60000) return
       const cal = allCalendars.find(c => c.id === ev.calendarId)
       if (!cal) return
-
-      // Optimistic update — instant UI feedback
       applyOptimisticUpdate(eventId, start, newEnd)
-
       const ok = await updateCalendarEventTimes(cal.accountToken, ev.calendarId!, eventId, start, newEnd)
+      if (!ok) revertOptimisticUpdate(eventId, ev.start.dateTime, ev.end.dateTime)
+      return
+    }
+
+    if (mode === 'resize-top') {
+      const eventId  = id.replace('resize-top:', '')
+      const ev       = events.find(e => e.id === eventId) as GCalEventExt | undefined
+      if (!ev?.start.dateTime || !ev.end.dateTime) return
+      const dm       = snapMinutes(delta.y)
+      if (dm === 0) return
+      const newStart = new Date(ev.start.dateTime)
+      newStart.setMinutes(newStart.getMinutes() + dm)
+      const end      = new Date(ev.end.dateTime)
+      if (end.getTime() - newStart.getTime() < 15 * 60000) return
+      const cal = allCalendars.find(c => c.id === ev.calendarId)
+      if (!cal) return
+      applyOptimisticUpdate(eventId, newStart, end)
+      const ok = await updateCalendarEventTimes(cal.accountToken, ev.calendarId!, eventId, newStart, end)
       if (!ok) revertOptimisticUpdate(eventId, ev.start.dateTime, ev.end.dateTime)
       return
     }
@@ -1170,7 +1205,7 @@ export function CalendarIntelligence() {
 
         {/* Drag overlay */}
         <DragOverlay>
-          {draggingEvt && dragMode === 'move' && (() => {
+          {draggingEvt && (dragMode === 'move') && (() => {
             const dummyLayout: EventLayout = { left: 0, width: 99 }
             const cal = allCalendars.find(c => c.id === draggingEvt.calendarId)
             return (
