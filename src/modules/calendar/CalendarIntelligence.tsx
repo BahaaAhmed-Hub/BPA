@@ -420,6 +420,7 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
       {...(isDragOverlay ? {} : listeners)}
       {...(isDragOverlay ? {} : attributes)}
       onClick={onClick}
+      className="event-card"
       style={{
         position: isDragOverlay ? 'relative' : 'absolute',
         top:    isDragOverlay ? undefined : top,
@@ -463,10 +464,11 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
           {event.end.dateTime ? ` – ${fmtShort(event.end.dateTime)}` : ''}
         </div>
       )}
-      {/* Inline Done / Cancel icon buttons — shown when card is tall enough */}
+      {/* Inline Done / Cancel icon buttons — visible on hover, or always if active */}
       {height >= 48 && !isDragOverlay && (
         <div
           onClick={e => e.stopPropagation()}
+          className="event-actions"
           style={{ position: 'absolute', bottom: 10, right: 5, display: 'flex', gap: 4 }}
         >
           <button
@@ -477,6 +479,7 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
               background: isDone ? 'rgba(29,158,117,0.9)' : 'rgba(0,0,0,0.35)',
               color: isDone ? '#fff' : 'rgba(255,255,255,0.65)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
+              opacity: isDone ? 1 : 0, transition: 'opacity 0.12s',
             }}
           >
             <CheckCircle2 size={11} />
@@ -489,6 +492,7 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
               background: isCancelled ? 'rgba(224,82,82,0.9)' : 'rgba(0,0,0,0.35)',
               color: isCancelled ? '#fff' : 'rgba(255,255,255,0.65)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
+              opacity: isCancelled ? 1 : 0, transition: 'opacity 0.12s',
             }}
           >
             <XCircle size={11} />
@@ -1307,6 +1311,7 @@ export function CalendarIntelligence() {
       <style>{`
         @keyframes spin    { to { transform: rotate(360deg); } }
         @keyframes shimmer { 0%,100% { background-position: 200% 0; } 50% { background-position: -200% 0; } }
+        .event-card:hover .event-actions button { opacity: 1 !important; }
       `}</style>
     </div>
   )
