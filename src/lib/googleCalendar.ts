@@ -1,5 +1,24 @@
 import { supabase } from './supabase'
 
+const SUPABASE_URL      = (import.meta.env.VITE_SUPABASE_URL      as string) ?? ''
+const SUPABASE_ANON_KEY = (import.meta.env.VITE_SUPABASE_ANON_KEY as string) ?? ''
+
+/** Direct GoTrue HTTP refresh — reliably returns provider_token unlike refreshSession() */
+async function goTrueRefresh(refreshToken: string): Promise<{ provider_token: string; access_token: string; refresh_token: string } | null> {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !refreshToken) return null
+  try {
+    const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY },
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    })
+    if (!res.ok) return null
+    const data = await res.json() as { provider_token?: string; access_token?: string; refresh_token?: string }
+    if (!data.provider_token) return null
+    return { provider_token: data.provider_token, access_token: data.access_token ?? '', refresh_token: data.refresh_token ?? refreshToken }
+  } catch { return null }
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface GCalEvent {
@@ -66,19 +85,26 @@ function isTokenStale(): boolean {
 async function getProviderToken(): Promise<string | null> {
   const { data } = await supabase.auth.getSession()
 
-  // 1. Live session has a fresh provider token — always use and cache it
+  // 1. Live session already has a fresh provider token — use and cache it
   if (data.session?.provider_token) {
     saveToken(data.session.provider_token)
     return data.session.provider_token
   }
 
-  // No active session at all — user is signed out
+  // No active session — user is signed out
   if (!data.session) return null
 
   const cached = localStorage.getItem(TOKEN_KEY)
 
-  // 2. Token is stale — try refreshing via Supabase (works if signed in with access_type=offline)
-  if (isTokenStale()) {
+  // 2. Token stale — refresh. Try GoTrue HTTP first (reliably returns provider_token),
+  //    then fall back to refreshSession() (sometimes works, often returns no provider_token)
+  if (isTokenStale() && data.session.refresh_token) {
+    const gotrue = await goTrueRefresh(data.session.refresh_token)
+    if (gotrue) {
+      saveToken(gotrue.provider_token)
+      return gotrue.provider_token
+    }
+    // GoTrue didn't help — try Supabase SDK as last resort
     try {
       const { data: refreshed } = await supabase.auth.refreshSession()
       if (refreshed.session?.provider_token) {
@@ -88,7 +114,7 @@ async function getProviderToken(): Promise<string | null> {
     } catch { /* ignore */ }
   }
 
-  // 3. Return whatever we have in cache (may be slightly stale but worth trying)
+  // 3. Return cached token (may be slightly stale, worth trying — withAuth handles 401 retry)
   return cached
 }
 
@@ -122,23 +148,11 @@ async function withAuth(
   let res = await fn(token)
 
   if (res.status === 401) {
-    // DON'T clear the cached token yet — only replace it if we get a fresh one
-    // so a failed refresh doesn't leave us permanently tokenless
-    try {
-      const { data: refreshed } = await supabase.auth.refreshSession()
-      const fresh = refreshed.session?.provider_token
-      if (fresh) {
-        saveToken(fresh)
-        res = await fn(fresh)
-      } else {
-        // Supabase refresh didn't yield a new Google token (user signed in
-        // before access_type=offline was added). Mark the timestamp as stale
-        // so the next getProviderToken() call retries, but keep the token
-        // in localStorage so the app doesn't lose it entirely.
-        localStorage.removeItem(TOKEN_SAVED_AT)
-      }
-    } catch {
-      localStorage.removeItem(TOKEN_SAVED_AT)
+    // Token expired — refresh and retry once
+    localStorage.removeItem(TOKEN_SAVED_AT) // force isTokenStale() = true
+    const fresh = await getProviderToken()  // will attempt GoTrue + refreshSession
+    if (fresh && fresh !== token) {
+      res = await fn(fresh)
     }
   }
 

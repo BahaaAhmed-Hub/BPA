@@ -385,7 +385,7 @@ function ResizeHandle({ eventId, edge }: { eventId: string; edge: 'top' | 'botto
 }
 
 // ─── EventBlock (draggable, positioned in time grid) ─────────────────────────
-function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverlay, colorOverride, onClick }: {
+function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverlay, colorOverride, onStatusToggle, onClick }: {
   event: GCalEventExt
   layout: EventLayout
   status: EventStatus | undefined
@@ -393,6 +393,7 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
   isDragSrc: boolean
   isDragOverlay?: boolean
   colorOverride?: string
+  onStatusToggle: (s: EventStatus) => void
   onClick: (e: React.MouseEvent) => void
 }) {
   const { attributes, listeners, setNodeRef, isDragging, transform } = useDraggable({
@@ -458,6 +459,38 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
         <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.75)', marginTop: 2 }}>
           {fmtShort(event.start.dateTime!)}
           {event.end.dateTime ? ` – ${fmtShort(event.end.dateTime)}` : ''}
+        </div>
+      )}
+      {/* Inline Done / Cancel action pills — shown when card is tall enough */}
+      {height >= 54 && !isDragOverlay && (
+        <div
+          onClick={e => e.stopPropagation()}
+          style={{ position: 'absolute', bottom: 12, left: 5, right: 5, display: 'flex', gap: 4 }}
+        >
+          <button
+            onClick={e => { e.stopPropagation(); onStatusToggle('done') }}
+            style={{
+              flex: 1, padding: '2px 0', borderRadius: 4, fontSize: 10, fontWeight: 600,
+              cursor: 'pointer', border: 'none',
+              background: isDone ? 'rgba(29,158,117,0.85)' : 'rgba(0,0,0,0.35)',
+              color: isDone ? '#fff' : 'rgba(255,255,255,0.7)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3,
+            }}
+          >
+            <CheckCircle2 size={9} /> Done
+          </button>
+          <button
+            onClick={e => { e.stopPropagation(); onStatusToggle('cancelled') }}
+            style={{
+              flex: 1, padding: '2px 0', borderRadius: 4, fontSize: 10, fontWeight: 600,
+              cursor: 'pointer', border: 'none',
+              background: isCancelled ? 'rgba(224,82,82,0.85)' : 'rgba(0,0,0,0.35)',
+              color: isCancelled ? '#fff' : 'rgba(255,255,255,0.7)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3,
+            }}
+          >
+            <XCircle size={9} /> Cancel
+          </button>
         </div>
       )}
       {!isDragOverlay && <ResizeHandle eventId={event.id} edge="top" />}
@@ -1192,6 +1225,7 @@ export function CalendarIntelligence() {
                           isSelected={selectedEvent?.id === ev.id}
                           isDragSrc={draggingEvt?.id === ev.id && dragMode === 'move'}
                           colorOverride={cal ? calEffectiveColor(cal) : undefined}
+                          onStatusToggle={s => toggleStatus(ev.id, s)}
                           onClick={e => handleEventClick(ev, e)}
                         />
                       )
@@ -1217,6 +1251,7 @@ export function CalendarIntelligence() {
                 isDragSrc={false}
                 isDragOverlay
                 colorOverride={cal ? calEffectiveColor(cal) : undefined}
+                onStatusToggle={s => toggleStatus(draggingEvt.id, s)}
                 onClick={() => {}}
               />
             )
