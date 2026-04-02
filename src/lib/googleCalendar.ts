@@ -118,6 +118,41 @@ async function getProviderToken(): Promise<string | null> {
   return cached
 }
 
+/**
+ * Exported helper: tries every available path to obtain a fresh Google provider_token
+ * for the primary account and persists it to localStorage.
+ * Call this before any event-fetching to maximise the chance of having a valid token.
+ */
+export async function refreshPrimaryToken(): Promise<string | null> {
+  const { data } = await supabase.auth.getSession()
+  if (!data.session) return localStorage.getItem(TOKEN_KEY)  // no session — return whatever we have
+
+  // Already in session (right after sign-in)
+  if (data.session.provider_token) {
+    saveToken(data.session.provider_token)
+    return data.session.provider_token
+  }
+
+  // Try GoTrue HTTP — most reliable path for getting provider_token
+  if (data.session.refresh_token) {
+    const gotrue = await goTrueRefresh(data.session.refresh_token)
+    if (gotrue) {
+      saveToken(gotrue.provider_token)
+      return gotrue.provider_token
+    }
+    // GoTrue didn't return provider_token — try SDK refresh as last resort
+    try {
+      const { data: refreshed } = await supabase.auth.refreshSession()
+      if (refreshed.session?.provider_token) {
+        saveToken(refreshed.session.provider_token)
+        return refreshed.session.provider_token
+      }
+    } catch { /* ignore */ }
+  }
+
+  return localStorage.getItem(TOKEN_KEY)  // fall back to whatever is cached
+}
+
 // ─── Core API helper ──────────────────────────────────────────────────────────
 
 const BASE = 'https://www.googleapis.com/calendar/v3'

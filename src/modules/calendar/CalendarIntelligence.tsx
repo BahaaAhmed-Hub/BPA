@@ -17,6 +17,7 @@ import {
   listCalendarsWithToken,
   fetchCalendarEventsWithToken,
   updateCalendarEventTimes,
+  refreshPrimaryToken,
 } from '@/lib/googleCalendar'
 import type { GCalEvent, GCalCalendar } from '@/lib/googleCalendar'
 import { generateMeetingPrep } from '@/lib/professor'
@@ -175,12 +176,23 @@ function rebuildFromCache(cached: CachedCal[]): CalWithAccount[] {
 
 // ─── Multi-account calendar loading ──────────────────────────────────────────
 async function loadAllCalendars(primaryEmail: string): Promise<LoadCalendarsResult> {
+  // Ensure primary Google token is as fresh as possible before any API calls
+  await refreshPrimaryToken()
+
+  const calCache = loadCalIntelCache()
   const { calendars: primaryCals } = await listCalendars()
   const primaryToken = localStorage.getItem('google_provider_token') ?? ''
-  const primaryResult: CalWithAccount[] = primaryCals.map(c => ({ ...c, accountEmail: primaryEmail, accountToken: primaryToken }))
+
+  // Fall back to cached primary calendars if API call failed (same as extra accounts)
+  const effectivePrimaryCals: GCalCalendar[] = primaryCals.length > 0
+    ? primaryCals
+    : calCache.filter(c => c.accountEmail === primaryEmail) as unknown as GCalCalendar[]
+
+  const primaryResult: CalWithAccount[] = effectivePrimaryCals.map(c => ({
+    ...c, accountEmail: primaryEmail, accountToken: primaryToken,
+  }))
 
   const extraAccounts = loadAccounts().filter(a => !a.isPrimary)
-  const calCache      = loadCalIntelCache()
   const needsReconnect: string[] = []
 
   const extraResults = await Promise.all(
