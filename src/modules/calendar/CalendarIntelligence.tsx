@@ -185,17 +185,27 @@ async function loadAllCalendars(primaryEmail: string): Promise<LoadCalendarsResu
 
   const extraResults = await Promise.all(
     extraAccounts.map(async account => {
-      let token = account.providerToken
+      const token = account.providerToken
+      const age   = Date.now() - (account.providerTokenSavedAt ?? 0)
+      const fresh = age < 50 * 60 * 1000  // within Google's ~60-min TTL
 
-      // First attempt with stored token
+      // If token is fresh, skip API validation — use cached calendar list directly
+      if (fresh && token) {
+        const cached = calCache.filter(c => c.accountEmail === account.email)
+        if (cached.length) return cached.map(c => ({ ...c, accountToken: token } as CalWithAccount))
+      }
+
+      // Token stale or no cache — try API with stored token first
       if (token) {
         const { calendars: cals, authFailed } = await listCalendarsWithToken(token)
         if (!authFailed) {
+          // Token still valid — proactively refresh in background if stale
+          if (!fresh) void silentRefreshAccountToken(account)
           return cals.map(c => ({ ...c, accountEmail: account.email, accountToken: token }))
         }
       }
 
-      // Token missing or rejected — try silent background refresh using stored Supabase refresh_token
+      // Got 401 from Google — try GoTrue silent refresh
       const refreshed = await silentRefreshAccountToken(account)
       if (refreshed) {
         const { calendars: cals, authFailed } = await listCalendarsWithToken(refreshed)
@@ -204,8 +214,7 @@ async function loadAllCalendars(primaryEmail: string): Promise<LoadCalendarsResu
         }
       }
 
-      // Silent refresh also failed — Supabase refresh_token expired (~30 day TTL)
-      // Fall back to cached calendar list so chips remain visible; flag for reconnect
+      // Confirmed 401 from Google AND GoTrue refresh failed — truly needs reconnect
       needsReconnect.push(account.email)
       return calCache
         .filter(c => c.accountEmail === account.email)
@@ -802,7 +811,8 @@ export function CalendarIntelligence() {
 
   // ── Calendar loading ────────────────────────────────────────────────────────
   const reloadCalendars = useCallback(async () => {
-    const { calendars: fresh, needsReconnect } = await loadAllCalendars(user?.email ?? '')
+    if (!user?.email) return  // wait for user — prevents concurrent double-call race
+    const { calendars: fresh, needsReconnect } = await loadAllCalendars(user.email)
     setReconnectNeeded(needsReconnect)
 
     if (fresh.length) {
@@ -861,7 +871,7 @@ export function CalendarIntelligence() {
   }, [weekStart, allCalendars, hiddenCals, loadEvents]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    const handler = () => void reloadCalendars().then(c => loadEvents(weekStart, c, hiddenCals))
+    const handler = () => void reloadCalendars().then(c => { if (c) void loadEvents(weekStart, c, hiddenCals) })
     window.addEventListener('professor:accountsUpdated', handler)
     return () => window.removeEventListener('professor:accountsUpdated', handler)
   }, [reloadCalendars, loadEvents, weekStart, hiddenCals])
@@ -1049,7 +1059,7 @@ export function CalendarIntelligence() {
             ><ChevronRight size={15} /></button>
 
             <button
-              onClick={() => void reloadCalendars().then(c => loadEvents(weekStart, c, hiddenCals))}
+              onClick={() => void reloadCalendars().then(c => { if (c) void loadEvents(weekStart, c, hiddenCals) })}
               style={{ background: 'none', border: '1px solid #252A3E', borderRadius: 7, cursor: 'pointer', color: '#8B93A8', padding: '4px 8px', display: 'flex', alignItems: 'center' }}
             ><RefreshCw size={13} /></button>
           </div>
