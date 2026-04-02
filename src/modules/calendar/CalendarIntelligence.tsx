@@ -378,23 +378,21 @@ function DayColumn({ dateStr, isToday, children }: { dateStr: string; isToday: b
   )
 }
 
-// ─── ResizeHandle (top or bottom) ────────────────────────────────────────────
+// ─── ResizeHandle (top or bottom) — invisible hit area on card edge ──────────
 function ResizeHandle({ eventId, edge }: { eventId: string; edge: 'top' | 'bottom' }) {
   const dragId = edge === 'top' ? `resize-top:${eventId}` : `resize-bottom:${eventId}`
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: dragId })
+  const { attributes, listeners, setNodeRef } = useDraggable({ id: dragId })
   return (
     <div ref={setNodeRef} {...listeners} {...attributes}
       onClick={e => e.stopPropagation()}
       style={{
         position: 'absolute',
-        top:    edge === 'top'    ? 0       : undefined,
-        bottom: edge === 'bottom' ? 0       : undefined,
-        left: '15%', right: '15%', height: 10,
-        cursor: 'ns-resize', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 3,
+        top:    edge === 'top'    ? 0 : undefined,
+        bottom: edge === 'bottom' ? 0 : undefined,
+        left: 0, right: 0, height: 8,
+        cursor: 'ns-resize', zIndex: 3,
       }}
-    >
-      <div style={{ width: 28, height: 3, borderRadius: 2, background: isDragging ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.35)' }} />
-    </div>
+    />
   )
 }
 
@@ -491,7 +489,7 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
               background: isDone ? 'rgba(29,158,117,0.9)' : 'rgba(0,0,0,0.35)',
               color: isDone ? '#fff' : 'rgba(255,255,255,0.65)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              opacity: isDone ? 1 : 0, transition: 'opacity 0.12s',
+              opacity: 0, transition: 'opacity 0.12s',
             }}
           >
             <CheckCircle2 size={11} />
@@ -504,7 +502,7 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
               background: isCancelled ? 'rgba(224,82,82,0.9)' : 'rgba(0,0,0,0.35)',
               color: isCancelled ? '#fff' : 'rgba(255,255,255,0.65)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              opacity: isCancelled ? 1 : 0, transition: 'opacity 0.12s',
+              opacity: 0, transition: 'opacity 0.12s',
             }}
           >
             <XCircle size={11} />

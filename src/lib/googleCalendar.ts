@@ -220,9 +220,7 @@ export async function listCalendars(): Promise<{ calendars: GCalCalendar[]; noAu
   if (!res.ok) return { calendars: [], noAuth: false }
 
   const data = (await res.json()) as { items?: GCalCalendar[] }
-  const calendars = (data.items ?? []).filter(c =>
-    c.accessRole === 'owner' || c.accessRole === 'writer' || c.accessRole === 'reader'
-  )
+  const calendars = data.items ?? []   // include ALL calendars (freeBusyReader etc. for Gmail events)
   saveCalendarCache(calendars)
   return { calendars, noAuth: false }
 }
@@ -242,9 +240,7 @@ export async function listCalendarsWithToken(
       return { calendars: [], authFailed: false }
     }
     const data = (await res.json()) as { items?: GCalCalendar[] }
-    const calendars = (data.items ?? []).filter(c =>
-      c.accessRole === 'owner' || c.accessRole === 'writer' || c.accessRole === 'reader'
-    )
+    const calendars = data.items ?? []   // include ALL calendars
     return { calendars, authFailed: false }
   } catch (err) {
     console.warn('[CalIntel] listCalendarsWithToken error:', err)
