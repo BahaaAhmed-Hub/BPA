@@ -15,7 +15,6 @@ import {
   detectMeetingType,
   listCalendars,
   listCalendarsWithToken,
-  fetchCalendarEvents,
   fetchCalendarEventsWithToken,
   updateCalendarEventTimes,
 } from '@/lib/googleCalendar'
@@ -223,18 +222,12 @@ async function loadAllCalendars(primaryEmail: string): Promise<LoadCalendarsResu
   return { calendars, needsReconnect }
 }
 
-async function fetchAllEvents(allCals: CalWithAccount[], hidden: Set<string>, start: Date, end: Date, primaryEmail: string): Promise<GCalEvent[]> {
+async function fetchAllEvents(allCals: CalWithAccount[], hidden: Set<string>, start: Date, end: Date): Promise<GCalEvent[]> {
   const active = allCals.filter(c => !hidden.has(c.id))
   if (!active.length) return []
-  const results = await Promise.all(active.map(c => {
-    // Primary account: use fetchCalendarEvents which goes through withAuth
-    // (auto token refresh via Supabase) — never silently fails on expired token
-    if (c.accountEmail.toLowerCase() === primaryEmail.toLowerCase()) {
-      return fetchCalendarEvents(c.id, start, end, c.backgroundColor)
-    }
-    // Extra accounts: use the stored token (refreshed via GoTrue HTTP in loadAllCalendars)
-    return fetchCalendarEventsWithToken(c.accountToken, c.id, start, end, c.backgroundColor)
-  }))
+  const results = await Promise.all(
+    active.map(c => fetchCalendarEventsWithToken(c.accountToken, c.id, start, end, c.backgroundColor))
+  )
   return results.flat()
 }
 
@@ -461,35 +454,35 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
           {event.end.dateTime ? ` – ${fmtShort(event.end.dateTime)}` : ''}
         </div>
       )}
-      {/* Inline Done / Cancel action pills — shown when card is tall enough */}
-      {height >= 54 && !isDragOverlay && (
+      {/* Inline Done / Cancel icon buttons — shown when card is tall enough */}
+      {height >= 48 && !isDragOverlay && (
         <div
           onClick={e => e.stopPropagation()}
-          style={{ position: 'absolute', bottom: 12, left: 5, right: 5, display: 'flex', gap: 4 }}
+          style={{ position: 'absolute', bottom: 10, right: 5, display: 'flex', gap: 4 }}
         >
           <button
             onClick={e => { e.stopPropagation(); onStatusToggle('done') }}
+            title="Mark done"
             style={{
-              flex: 1, padding: '2px 0', borderRadius: 4, fontSize: 10, fontWeight: 600,
-              cursor: 'pointer', border: 'none',
-              background: isDone ? 'rgba(29,158,117,0.85)' : 'rgba(0,0,0,0.35)',
-              color: isDone ? '#fff' : 'rgba(255,255,255,0.7)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3,
+              width: 18, height: 18, borderRadius: '50%', cursor: 'pointer', border: 'none', padding: 0,
+              background: isDone ? 'rgba(29,158,117,0.9)' : 'rgba(0,0,0,0.35)',
+              color: isDone ? '#fff' : 'rgba(255,255,255,0.65)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}
           >
-            <CheckCircle2 size={9} /> Done
+            <CheckCircle2 size={11} />
           </button>
           <button
             onClick={e => { e.stopPropagation(); onStatusToggle('cancelled') }}
+            title="Cancel"
             style={{
-              flex: 1, padding: '2px 0', borderRadius: 4, fontSize: 10, fontWeight: 600,
-              cursor: 'pointer', border: 'none',
-              background: isCancelled ? 'rgba(224,82,82,0.85)' : 'rgba(0,0,0,0.35)',
-              color: isCancelled ? '#fff' : 'rgba(255,255,255,0.7)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3,
+              width: 18, height: 18, borderRadius: '50%', cursor: 'pointer', border: 'none', padding: 0,
+              background: isCancelled ? 'rgba(224,82,82,0.9)' : 'rgba(0,0,0,0.35)',
+              color: isCancelled ? '#fff' : 'rgba(255,255,255,0.65)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}
           >
-            <XCircle size={9} /> Cancel
+            <XCircle size={11} />
           </button>
         </div>
       )}
@@ -855,13 +848,13 @@ export function CalendarIntelligence() {
     try {
       if (!cals.length) { setNoAuth(true); setEvents([]); return }
       const end     = getWeekEnd(start)
-      const fetched = await fetchAllEvents(cals, hidden, start, end, user?.email ?? '')
+      const fetched = await fetchAllEvents(cals, hidden, start, end)
       setEvents(fetched); setNoAuth(false)
     } catch (err) {
       setFetchError(err instanceof Error ? err.message : 'Failed to load events.')
       setEvents([])
     } finally { setLoadingEvents(false) }
-  }, [user?.email])
+  }, [])
 
   useEffect(() => {
     if (allCalendars.length) void loadEvents(weekStart, allCalendars, hiddenCals)
