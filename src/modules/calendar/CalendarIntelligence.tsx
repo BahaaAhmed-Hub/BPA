@@ -44,6 +44,7 @@ interface NewEventDraft { dateStr: string; startMin: number; endMin: number; anc
 interface CalWithAccount extends GCalCalendar {
   accountEmail: string
   accountToken: string
+  accountId?: string   // id of the ConnectedAccount for extra accounts (used for token refresh)
 }
 interface LoadCalendarsResult {
   calendars: CalWithAccount[]
@@ -173,7 +174,7 @@ function rebuildFromCache(cached: CachedCal[]): CalWithAccount[] {
   return cached.map(c => {
     const acct  = accounts.find(a => a.email === c.accountEmail)
     const token = acct ? acct.providerToken : primaryToken
-    return { ...c, accountToken: token } as CalWithAccount
+    return { ...c, accountToken: token, accountId: acct?.id } as CalWithAccount
   })
 }
 
@@ -205,9 +206,12 @@ async function loadAllCalendars(primaryEmail: string): Promise<LoadCalendarsResu
       const fresh      = age < 50 * 60 * 1000  // within Google's ~60-min TTL
       const cachedCals = calCache.filter(c => c.accountEmail === account.email)
 
+      const withId = (cals: CalWithAccount[]) =>
+        cals.map(c => ({ ...c, accountId: account.id }))
+
       // If token is fresh, skip API validation — use cached calendar list directly
       if (fresh && token && cachedCals.length) {
-        return cachedCals.map(c => ({ ...c, accountToken: token } as CalWithAccount))
+        return withId(cachedCals.map(c => ({ ...c, accountToken: token } as CalWithAccount)))
       }
 
       // Token stale or no cache — try API with stored token first
@@ -216,7 +220,7 @@ async function loadAllCalendars(primaryEmail: string): Promise<LoadCalendarsResu
         if (!authFailed) {
           // Token still valid — proactively refresh in background if stale
           if (!fresh) void silentRefreshAccountToken(account)
-          return cals.map(c => ({ ...c, accountEmail: account.email, accountToken: token }))
+          return withId(cals.map(c => ({ ...c, accountEmail: account.email, accountToken: token })))
         }
       }
 
@@ -225,7 +229,7 @@ async function loadAllCalendars(primaryEmail: string): Promise<LoadCalendarsResu
       if (refreshed) {
         const { calendars: cals, authFailed } = await listCalendarsWithToken(refreshed)
         if (!authFailed) {
-          return cals.map(c => ({ ...c, accountEmail: account.email, accountToken: refreshed }))
+          return withId(cals.map(c => ({ ...c, accountEmail: account.email, accountToken: refreshed })))
         }
       }
 
@@ -234,18 +238,24 @@ async function loadAllCalendars(primaryEmail: string): Promise<LoadCalendarsResu
       // events just won't load. Only flag reconnect if there is NO cache at all
       // (first-ever connection or cache cleared), so the badge is a last resort.
       if (cachedCals.length) {
-        return cachedCals.map(c => ({ ...c, accountToken: token ?? '' } as CalWithAccount))
+        return withId(cachedCals.map(c => ({ ...c, accountToken: token ?? '' } as CalWithAccount)))
       }
       needsReconnect.push(account.email)
       return []
     })
   )
 
+  // Extra-account entries take precedence: if the same calendar ID appears in
+  // both the primary account list and an extra account list, keep the extra
+  // account's version (it owns the calendar and its token has proper access).
+  const allExtra  = extraResults.flat()
+  const extraIds  = new Set(allExtra.map(c => c.id))
+  const filteredPrimary = primaryResult.filter(c => !extraIds.has(c.id))
+
   const seen = new Set<string>()
-  const calendars = [...primaryResult, ...extraResults.flat()].filter(c => {
-    const key = `${c.accountEmail}:${c.id}`
-    if (seen.has(key)) return false
-    seen.add(key); return true
+  const calendars = [...filteredPrimary, ...allExtra].filter(c => {
+    if (seen.has(c.id)) return false
+    seen.add(c.id); return true
   })
   return { calendars, needsReconnect }
 }
@@ -253,8 +263,41 @@ async function loadAllCalendars(primaryEmail: string): Promise<LoadCalendarsResu
 async function fetchAllEvents(allCals: CalWithAccount[], hidden: Set<string>, hiddenAccts: Set<string>, start: Date, end: Date): Promise<GCalEvent[]> {
   const active = allCals.filter(c => !hidden.has(c.id) && !hiddenAccts.has(c.accountEmail))
   if (!active.length) return []
+
+  // Group extra-account calendars by accountId so we can do a single token refresh per account
+  const accountTokenCache = new Map<string, string>()  // accountId → best token
+
   const results = await Promise.all(
-    active.map(c => fetchCalendarEventsWithToken(c.accountToken, c.id, start, end, c.backgroundColor))
+    active.map(async c => {
+      let token = c.accountToken
+      if (!token) return []
+
+      // For extra accounts: if we already refreshed this account's token in this
+      // fetch pass, use the cached refreshed token
+      if (c.accountId) {
+        const cached = accountTokenCache.get(c.accountId)
+        if (cached) token = cached
+      }
+
+      let events = await fetchCalendarEventsWithToken(token, c.id, start, end, c.backgroundColor)
+
+      // If we got nothing back AND this is an extra account, try a silent token
+      // refresh — the stored token may have expired between the last loadAllCalendars
+      // call and now. This is the main cause of "events missing despite chip ON".
+      if (events.length === 0 && c.accountId && !accountTokenCache.has(c.accountId)) {
+        const accounts = loadAccounts()
+        const account  = accounts.find(a => a.id === c.accountId)
+        if (account) {
+          const fresh = await silentRefreshAccountToken(account)
+          if (fresh) {
+            accountTokenCache.set(c.accountId, fresh)
+            events = await fetchCalendarEventsWithToken(fresh, c.id, start, end, c.backgroundColor)
+          }
+        }
+      }
+
+      return events
+    })
   )
   return results.flat()
 }
