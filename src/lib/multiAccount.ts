@@ -62,9 +62,36 @@ export function addAccount(account: Omit<ConnectedAccount, 'id' | 'connectedAt'>
   return newAccount
 }
 
+const CAL_INTEL_CACHE_KEY = 'cal-intel-cals-cache'
+
 export function removeAccount(id: string): void {
-  const accounts = loadAccounts().filter(a => a.id !== id)
-  saveAccounts(accounts)
+  const all     = loadAccounts()
+  const removed = all.find(a => a.id === id)
+  saveAccounts(all.filter(a => a.id !== id))
+
+  // Clean this account's calendars from the CalendarIntelligence cache so they
+  // don't reappear on the next page load.
+  if (removed) {
+    try {
+      const raw = localStorage.getItem(CAL_INTEL_CACHE_KEY)
+      if (raw) {
+        const cals = JSON.parse(raw) as Array<{ accountEmail: string }>
+        localStorage.setItem(CAL_INTEL_CACHE_KEY, JSON.stringify(
+          cals.filter(c => c.accountEmail !== removed.email)
+        ))
+      }
+    } catch { /* ignore */ }
+
+    // Also remove any hidden-account entry for this email
+    try {
+      const hiddenRaw = localStorage.getItem('cal-intel-hidden-accounts')
+      if (hiddenRaw) {
+        const hidden = new Set(JSON.parse(hiddenRaw) as string[])
+        hidden.delete(removed.email)
+        localStorage.setItem('cal-intel-hidden-accounts', JSON.stringify([...hidden]))
+      }
+    } catch { /* ignore */ }
+  }
 }
 
 export function getPrimaryToken(): string {

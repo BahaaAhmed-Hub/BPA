@@ -156,8 +156,30 @@ function saveCalColors(s: Record<string, string>) { localStorage.setItem('cal-in
 const CAL_INTEL_CACHE_KEY = 'cal-intel-cals-cache'
 interface CachedCal { id: string; summary: string; backgroundColor?: string; foregroundColor?: string; primary?: boolean; accessRole?: string; accountEmail: string }
 
-function loadCalIntelCache(): CachedCal[] {
-  try { const r = localStorage.getItem(CAL_INTEL_CACHE_KEY); return r ? JSON.parse(r) as CachedCal[] : [] } catch { return [] }
+function loadCalIntelCache(primaryEmail?: string): CachedCal[] {
+  try {
+    const r = localStorage.getItem(CAL_INTEL_CACHE_KEY)
+    if (!r) return []
+    const all = JSON.parse(r) as CachedCal[]
+    // Self-heal: remove calendars for extra accounts that no longer exist.
+    // This catches stale entries from before removeAccount cleaned the cache.
+    const knownExtraEmails = new Set(loadAccounts().map(a => a.email))
+    const cleaned = all.filter(c => {
+      // Keep primary account calendars always
+      if (primaryEmail && c.accountEmail === primaryEmail) return true
+      // Keep extra account calendars only if account still exists
+      if (knownExtraEmails.has(c.accountEmail)) return true
+      // If accountEmail is not in loadAccounts() and not the primary,
+      // it's an orphan from a deleted account — purge it.
+      if (!primaryEmail) return true  // can't tell yet (initial load before auth)
+      return false
+    })
+    // Persist the cleaned cache if we removed anything
+    if (cleaned.length !== all.length) {
+      try { localStorage.setItem(CAL_INTEL_CACHE_KEY, JSON.stringify(cleaned)) } catch { /* quota */ }
+    }
+    return cleaned
+  } catch { return [] }
 }
 function saveCalIntelCache(cals: CalWithAccount[]): void {
   try {
@@ -1042,8 +1064,8 @@ export function CalendarIntelligence() {
       return fresh
     }
 
-    // Nothing from API — fall back to full cache
-    const cached = loadCalIntelCache()
+    // Nothing from API — fall back to full cache (pass primaryEmail for orphan cleanup)
+    const cached = loadCalIntelCache(user?.email)
     if (cached.length) {
       const fromCache = rebuildFromCache(cached)
       setAllCalendars(fromCache); setNoAuth(false); return fromCache
@@ -1085,6 +1107,44 @@ export function CalendarIntelligence() {
     window.addEventListener('professor:accountVisibilityChanged', handler)
     return () => window.removeEventListener('professor:accountVisibilityChanged', handler)
   }, [])
+
+  // ── Silent background token refresh ─────────────────────────────────────────
+  // Refresh extra-account tokens every 45 min (before Google's 60-min expiry),
+  // and also whenever the tab becomes visible (e.g. after backgrounding).
+  // This keeps tokens current without any user interaction.
+  useEffect(() => {
+    const refresh = async () => {
+      const extraAccounts = loadAccounts().filter(a => !a.isPrimary)
+      if (!extraAccounts.length) return
+      const freshTokens: Record<string, string> = {}  // email → new token
+      for (const account of extraAccounts) {
+        const newToken = await silentRefreshAccountToken(account)
+        if (newToken) freshTokens[account.email] = newToken
+      }
+      if (Object.keys(freshTokens).length === 0) return
+      // Update allCalendars with new tokens so the next event fetch uses them
+      setAllCalendars(prev =>
+        prev.map(c => freshTokens[c.accountEmail]
+          ? { ...c, accountToken: freshTokens[c.accountEmail] }
+          : c
+        )
+      )
+    }
+
+    // Fire once shortly after mount (catches stale tokens on page load)
+    const initialTimer = setTimeout(() => void refresh(), 5000)
+    // Then every 45 minutes
+    const interval = setInterval(() => void refresh(), 45 * 60 * 1000)
+    // Also on tab becoming visible (handles long background periods)
+    const onVisible = () => { if (document.visibilityState === 'visible') void refresh() }
+    document.addEventListener('visibilitychange', onVisible)
+
+    return () => {
+      clearTimeout(initialTimer)
+      clearInterval(interval)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
+  }, []) // runs once; refresh() reads accounts fresh each time via loadAccounts()
 
   // ── Status toggle ───────────────────────────────────────────────────────────
   function toggleStatus(eventId: string, status: EventStatus) {
