@@ -157,9 +157,10 @@ function DraggableInboxCard({ task, accentColor, taskStatus, ownerUser, onOpen, 
 
 interface Props {
   onOpen: (id: string) => void
+  hideCompleted?: boolean
 }
 
-export function UndefinedTasksPanel({ onOpen }: Props) {
+export function UndefinedTasksPanel({ onOpen, hideCompleted = false }: Props) {
   const { tasks, addTask, deleteTask, toggleComplete, updateTask } = useTaskStore()
   const [filter, setFilter] = useState<Filter>('open')
   const [adding, setAdding] = useState(false)
@@ -193,13 +194,16 @@ export function UndefinedTasksPanel({ onOpen }: Props) {
   const users     = getAllUsers()
 
   const inbox = tasks.filter(t => t.quadrant === null)
+  const visibleInbox = hideCompleted
+    ? inbox.filter(t => !t.completed && t.status !== 'done')
+    : inbox
   const filtered = filter === 'all'
-    ? inbox
+    ? visibleInbox
     : filter === 'done'
-      ? inbox.filter(t => t.completed || t.status === 'done')
+      ? visibleInbox.filter(t => t.completed || t.status === 'done')
       : filter === 'open'
-        ? inbox.filter(t => !t.completed && (t.status === 'open' || !t.status))
-        : inbox.filter(t => t.status === filter)
+        ? visibleInbox.filter(t => !t.completed && (t.status === 'open' || !t.status))
+        : visibleInbox.filter(t => t.status === filter)
 
   const counts: Record<Filter, number> = {
     all:       inbox.length,

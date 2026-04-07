@@ -6,9 +6,10 @@ const QUADRANTS: Quadrant[] = ['do', 'schedule', 'delegate', 'eliminate']
 
 interface EisenhowerBoardProps {
   onOpen: (id: string) => void
+  hideCompleted?: boolean
 }
 
-export function EisenhowerBoard({ onOpen }: EisenhowerBoardProps) {
+export function EisenhowerBoard({ onOpen, hideCompleted = false }: EisenhowerBoardProps) {
   const tasks = useTaskStore(s => s.tasks)
 
   return (
@@ -17,7 +18,7 @@ export function EisenhowerBoard({ onOpen }: EisenhowerBoardProps) {
         <QuadrantColumn
           key={q}
           quadrant={q}
-          tasks={tasks.filter(t => t.quadrant === q)}
+          tasks={tasks.filter(t => t.quadrant === q && (!hideCompleted || (!t.completed && t.status !== 'done')))}
           onOpen={onOpen}
         />
       ))}
