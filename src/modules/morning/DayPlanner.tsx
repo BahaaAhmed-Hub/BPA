@@ -16,9 +16,10 @@ import type { Task } from '@/types'
 import type { RichMeetingEvent } from './MorningBriefTypes'
 import {
   generateSlotPlan,
-  type PlanSlot, type BlockType, type SlotPlanPrefs,
+  type PlanSlot, type BlockType, type SlotPlanPrefs, type SlotPlanPriorityTask,
 } from '@/lib/professor'
 import type { DbCalendarEvent, DbTask } from '@/types/database'
+import { loadDynamicCompanies } from '@/types'
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -70,10 +71,15 @@ const BLOCK_LABELS: Record<BlockType, string> = {
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
 function hhmm(iso: string): string {
-  // Accepts "HH:MM" or full ISO — returns "HH:MM"
-  if (iso.includes('T')) return iso.slice(11, 16)
-  if (iso.length >= 5)   return iso.slice(0, 5)
-  return iso
+  // Accepts "HH:MM" or full ISO — returns local "HH:MM"
+  if (!iso.includes('T')) return iso.slice(0, 5)  // already HH:MM
+  try {
+    return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
+  } catch { return iso.slice(11, 16) }
+}
+
+function todayISO(): string {
+  return new Date().toISOString().slice(0, 10)
 }
 
 function slotDurationMins(s: SlotUI): number {
@@ -187,9 +193,9 @@ function GeneratingSkeleton() {
 // ─── Main DayPlanner component ────────────────────────────────────────────────
 
 export function DayPlanner({ energyLevel, tasks, todayEvents, dbUser, companies, date }: DayPlannerProps) {
-  const [phase,       setPhase]       = useState<Phase>('idle')
-  const [deadlines,   setDeadlines]   = useState('')
-  const [deepWork,    setDeepWork]    = useState<SlotPlanPrefs['deepWorkPref']>('morning')
+  const [phase,            setPhase]            = useState<Phase>('idle')
+  const [selectedTaskIds,  setSelectedTaskIds]  = useState<Set<string>>(new Set())
+  const [deepWork,         setDeepWork]         = useState<SlotPlanPrefs['deepWorkPref']>('morning')
   const [slots,       setSlots]       = useState<SlotUI[]>([])
   const [applying,    setApplying]    = useState<Record<string, 'pending' | 'done' | 'error'>>({})
   const [results,     setResults]     = useState<ApplyResult[]>([])
@@ -221,9 +227,17 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, dbUser, companies,
         prep_notes: e.prep_notes, is_synced: e.is_synced,
       }))
 
+      const dynCompanies = loadDynamicCompanies()
+      const priorityTasks: SlotPlanPriorityTask[] = tasks
+        .filter(t => selectedTaskIds.has(t.id))
+        .map(t => {
+          const co = dynCompanies.find(c => c.id === t.company || c.name === t.company)
+          return { id: t.id, title: t.title, company: co?.name ?? t.company, dueDate: t.dueDate }
+        })
+
       const raw = await generateSlotPlan(
         { user: dbUser, companies, todayEvents: todayDbEvents, pendingTasks, energyLevel: energyLevel ?? undefined, date },
-        { deadlines, deepWorkPref: deepWork },
+        { priorityTasks, deepWorkPref: deepWork },
       )
 
       // Merge: existing events get action='keep' if AI didn't include them
@@ -256,7 +270,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, dbUser, companies,
       setError(isCredit ? 'credit_balance' : msg)
       setPhase('qa')
     }
-  }, [tasks, todayEvents, dbUser, companies, date, energyLevel, deadlines, deepWork])
+  }, [tasks, todayEvents, dbUser, companies, date, energyLevel, selectedTaskIds, deepWork])
 
   // ── Phase 3: slot decision helpers ────────────────────────────────────────
   function decide(id: string, d: Decision) {
@@ -402,25 +416,117 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, dbUser, companies,
           </div>
         )}
 
-        {/* Q1 — Deadlines */}
-        <div>
-          <label style={{ fontSize: 11, fontWeight: 600, color: '#FFFFFF', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: 8 }}>
-            Any hard deadlines today?
-          </label>
-          <input
-            type="text"
-            placeholder="e.g. finish report by noon, send invoice before 3pm"
-            value={deadlines}
-            onChange={e => setDeadlines(e.target.value)}
-            style={{
-              width: '100%', boxSizing: 'border-box',
-              padding: '10px 12px', borderRadius: 8,
-              background: '#0D0F1A', border: '1px solid #252A3E',
-              color: '#E8EAF6', fontSize: 12.5,
-              outline: 'none',
-            }}
-          />
-        </div>
+        {/* Q1 — Priority tasks (task multi-select from companies) */}
+        {(() => {
+          const dynCompanies = loadDynamicCompanies()
+          const today        = todayISO()
+          const pending      = tasks.filter(t => !t.completed && t.status !== 'done')
+          if (pending.length === 0) return null
+
+          // Group by company; tasks with no company go under 'other'
+          type Group = { id: string; name: string; color: string; tasks: Task[] }
+          const groups: Group[] = dynCompanies.map(co => ({
+            id: co.id, name: co.name, color: co.color,
+            tasks: pending.filter(t => t.company === co.id || t.company === co.name),
+          })).filter(g => g.tasks.length > 0)
+
+          const uncategorised = pending.filter(t =>
+            !dynCompanies.some(co => t.company === co.id || t.company === co.name)
+          )
+          if (uncategorised.length > 0) {
+            groups.push({ id: 'other', name: 'Other', color: '#6B7280', tasks: uncategorised })
+          }
+
+          return (
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
+                <label style={{ fontSize: 11, fontWeight: 600, color: '#FFFFFF', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  What must get done today?
+                </label>
+                {selectedTaskIds.size > 0 && (
+                  <span style={{ fontSize: 10.5, color: '#7F77DD' }}>
+                    {selectedTaskIds.size} selected
+                  </span>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxHeight: 280, overflowY: 'auto' }}>
+                {groups.map(group => (
+                  <div key={group.id}>
+                    {/* Company header */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                      <div style={{ width: 6, height: 6, borderRadius: '50%', background: group.color, flexShrink: 0 }} />
+                      <span style={{ fontSize: 10, fontWeight: 600, color: group.color, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        {group.name}
+                      </span>
+                    </div>
+
+                    {/* Tasks for this company */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      {group.tasks.map(task => {
+                        const isSelected = selectedTaskIds.has(task.id)
+                        const isDueToday = task.dueDate === today
+                        return (
+                          <button
+                            key={task.id}
+                            onClick={() => setSelectedTaskIds(prev => {
+                              const next = new Set(prev)
+                              if (next.has(task.id)) next.delete(task.id); else next.add(task.id)
+                              return next
+                            })}
+                            style={{
+                              display: 'flex', alignItems: 'center', gap: 9,
+                              padding: '8px 10px', borderRadius: 7,
+                              background: isSelected ? `${group.color}12` : '#0A0C14',
+                              border: `1px solid ${isSelected ? `${group.color}40` : '#252A3E'}`,
+                              cursor: 'pointer', textAlign: 'left',
+                              transition: 'all 0.12s',
+                            }}
+                          >
+                            {/* Checkbox */}
+                            <div style={{
+                              width: 14, height: 14, borderRadius: 4, flexShrink: 0,
+                              background: isSelected ? group.color : 'transparent',
+                              border: `1.5px solid ${isSelected ? group.color : '#6B7280'}`,
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            }}>
+                              {isSelected && <Check size={9} color="#fff" strokeWidth={3} />}
+                            </div>
+
+                            <span style={{
+                              flex: 1, fontSize: 12, color: isSelected ? '#E8EAF6' : '#FFFFFF',
+                              lineHeight: 1.3,
+                              textDecoration: 'none',
+                            }}>
+                              {task.title}
+                            </span>
+
+                            {isDueToday && (
+                              <span style={{
+                                fontSize: 9.5, padding: '1px 5px', borderRadius: 3, flexShrink: 0,
+                                background: '#EF444418', border: '1px solid #EF444430', color: '#EF4444',
+                              }}>
+                                today
+                              </span>
+                            )}
+                            {task.quadrant === 'do' && !isDueToday && (
+                              <span style={{
+                                fontSize: 9.5, padding: '1px 5px', borderRadius: 3, flexShrink: 0,
+                                background: '#F59E0B15', border: '1px solid #F59E0B30', color: '#F59E0B',
+                              }}>
+                                urgent
+                              </span>
+                            )}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )
+        })()}
 
         {/* Q2 — Deep work pref */}
         <div>
@@ -451,7 +557,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, dbUser, companies,
         {/* Actions */}
         <div style={{ display: 'flex', gap: 10 }}>
           <button
-            onClick={() => { setPhase('idle'); setError(null) }}
+            onClick={() => { setPhase('idle'); setError(null); setSelectedTaskIds(new Set()) }}
             style={{
               padding: '9px 16px', borderRadius: 8, cursor: 'pointer',
               background: 'transparent', border: '1px solid #252A3E',

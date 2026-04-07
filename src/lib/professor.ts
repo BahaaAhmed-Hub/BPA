@@ -119,8 +119,15 @@ export interface PlanSlot {
   note?: string             // AI reasoning shown in review phase
 }
 
+export interface SlotPlanPriorityTask {
+  id: string
+  title: string
+  company?: string
+  dueDate?: string
+}
+
 export interface SlotPlanPrefs {
-  deadlines: string                              // freeform "finish X by noon"
+  priorityTasks: SlotPlanPriorityTask[]         // tasks user flagged as today's priorities
   deepWorkPref: 'morning' | 'afternoon' | 'flexible'
 }
 
@@ -302,20 +309,37 @@ Return ONLY a JSON array — no prose, no wrapping object:
   }
 ]`
 
-  const existingEvents = context.todayEvents
-    .map(e => `  [EXISTING id=${e.google_event_id ?? e.id}] ${e.start_time.slice(11, 16)}–${e.end_time.slice(11, 16)}: ${e.title}`)
-    .join('\n') || '  (no existing events)'
+  // Convert ISO timestamp to local HH:MM (handles both offset and Z-suffix UTC)
+  const toLocalHHMM = (iso: string) => {
+    try {
+      const d = new Date(iso)
+      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
+    } catch { return iso.slice(11, 16) }
+  }
+
+  const existingEvents = context.todayEvents.length
+    ? context.todayEvents
+        .map(e => `  [FIXED id=${e.google_event_id ?? e.id}] ${toLocalHHMM(e.start_time)}–${toLocalHHMM(e.end_time)}: ${e.title}`)
+        .join('\n')
+    : '  (no calendar events today — entire day is free to fill)'
 
   const tasks = context.pendingTasks
-    .slice(0, 15)
-    .map(t => `  [id=${t.id} quad=${t.quadrant ?? 'unset'}] ${t.title}${t.due_date ? ` (due ${t.due_date})` : ''}`)
+    .slice(0, 20)
+    .map(t => `  [id=${t.id} quad=${t.quadrant ?? 'unset'}${t.company_id ? ` co=${t.company_id}` : ''}] ${t.title}${t.due_date ? ` (due ${t.due_date})` : ''}`)
     .join('\n') || '  (no pending tasks)'
 
+  const priorityBlock = prefs.priorityTasks.length
+    ? `Today's priority tasks (user-selected, schedule these first):\n${
+        prefs.priorityTasks.map(t =>
+          `  - [id=${t.id}] "${t.title}"${t.company ? ` (${t.company})` : ''}${t.dueDate ? ` — due ${t.dueDate}` : ''}`
+        ).join('\n')}`
+    : ''
+
   const userMsg = [
-    `Today's existing events:\n${existingEvents}`,
-    `Pending tasks:\n${tasks}`,
+    `Today's FIXED calendar events (do NOT overlap these):\n${existingEvents}`,
+    `All pending tasks:\n${tasks}`,
+    priorityBlock,
     context.energyLevel ? `Energy level this morning: ${context.energyLevel}/5` : '',
-    prefs.deadlines ? `Hard deadlines: ${prefs.deadlines}` : '',
     `Deep work preference: ${prefs.deepWorkPref}`,
   ].filter(Boolean).join('\n\n')
 
