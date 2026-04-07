@@ -181,11 +181,17 @@ function loadCalIntelCache(primaryEmail?: string): CachedCal[] {
     return cleaned
   } catch { return [] }
 }
-function saveCalIntelCache(cals: CalWithAccount[]): void {
+function saveCalIntelCache(cals: CalWithAccount[], primaryEmail?: string): void {
   try {
-    const existing    = loadCalIntelCache()
+    const existing      = loadCalIntelCache()
     const updatedEmails = new Set(cals.map(c => c.accountEmail))
-    const kept        = existing.filter(c => !updatedEmails.has(c.accountEmail))
+    // Build the set of all valid account emails so orphaned (deleted) accounts
+    // are NOT preserved in the kept list — they get purged on every save.
+    const validEmails   = new Set(loadAccounts().map(a => a.email))
+    if (primaryEmail) validEmails.add(primaryEmail)
+    const kept = existing.filter(c =>
+      !updatedEmails.has(c.accountEmail) && validEmails.has(c.accountEmail)
+    )
     const fresh: CachedCal[] = cals.map(c => ({ id: c.id, summary: c.summary ?? '', backgroundColor: c.backgroundColor, foregroundColor: c.foregroundColor, primary: c.primary, accessRole: c.accessRole, accountEmail: c.accountEmail }))
     localStorage.setItem(CAL_INTEL_CACHE_KEY, JSON.stringify([...fresh, ...kept]))
   } catch { /* quota */ }
@@ -941,7 +947,11 @@ export function CalendarIntelligence() {
   const [weekStart,       setWeekStart]       = useState<Date>(() => getWeekStart(new Date()))
   const [events,          setEvents]          = useState<GCalEvent[]>([])
   const [allCalendars,    setAllCalendars]    = useState<CalWithAccount[]>(() => {
-    const c = loadCalIntelCache(); return c.length ? rebuildFromCache(c) : []
+    // Use the last known primary email (saved to localStorage after each successful auth)
+    // so we can filter orphaned deleted-account entries even on the very first render.
+    const savedPrimaryEmail = localStorage.getItem('cal-intel-primary-email') ?? undefined
+    const c = loadCalIntelCache(savedPrimaryEmail)
+    return c.length ? rebuildFromCache(c) : []
   })
   const [hiddenCals,      setHiddenCals]      = useState<Set<string>>(loadHiddenIntel)
   const [hiddenAccounts, setHiddenAccounts] = useState<Set<string>>(loadHiddenAccounts)
@@ -1034,30 +1044,34 @@ export function CalendarIntelligence() {
   // ── Calendar loading ────────────────────────────────────────────────────────
   const reloadCalendars = useCallback(async () => {
     if (!user?.email) return  // wait for user — prevents concurrent double-call race
+    // Persist primary email for the initial-render cache cleanup on next page load
+    localStorage.setItem('cal-intel-primary-email', user.email)
     const { calendars: fresh, needsReconnect } = await loadAllCalendars(user.email)
     setReconnectNeeded(needsReconnect)
 
     if (fresh.length) {
-      saveCalIntelCache(fresh)
+      // Pass primaryEmail so saveCalIntelCache can purge orphaned deleted accounts
+      const primaryEmail = user.email
+      saveCalIntelCache(fresh, primaryEmail)
       // Read the latest primary token AFTER listCalendars() has had a chance to refresh it
       const latestPrimaryToken = localStorage.getItem('google_provider_token') ?? ''
-      const primaryEmail = user?.email ?? ''
 
       setAllCalendars(prev => {
         const freshEmails = new Set(fresh.map(c => c.accountEmail))
-        // Keep accounts not in fresh result, but inject the latest primary token
-        // so stale tokens from prev never cause event fetches to 401
+        const validEmails = new Set(loadAccounts().map(a => a.email))
+        validEmails.add(primaryEmail)
+        // Keep accounts not in fresh result, filter out deleted (orphaned) accounts,
+        // and inject the latest primary token to avoid stale-token 401s
         const kept = prev
-          .filter(c => !freshEmails.has(c.accountEmail))
+          .filter(c => !freshEmails.has(c.accountEmail) && validEmails.has(c.accountEmail))
           .map(c => c.accountEmail === primaryEmail
             ? { ...c, accountToken: latestPrimaryToken }
             : c
           )
         const seen = new Set<string>()
         return [...fresh, ...kept].filter(c => {
-          const key = `${c.accountEmail}:${c.id}`
-          if (seen.has(key)) return false
-          seen.add(key); return true
+          if (seen.has(c.id)) return false
+          seen.add(c.id); return true
         })
       })
       setNoAuth(false)
