@@ -384,6 +384,22 @@ export async function updateCalendarEvent(
   return { event: updated, noAuth: false }
 }
 
+/** Create an event using a specific token (for multi-account). */
+export async function createCalendarEventWithToken(
+  token: string,
+  calendarId: string,
+  event: GCalEventCreate,
+): Promise<{ event: GCalEvent | null; error?: string }> {
+  try {
+    const res = await gcalRequest(token, `/calendars/${encodeURIComponent(calendarId)}/events`, {
+      method: 'POST',
+      body: JSON.stringify(event),
+    })
+    if (!res.ok) { const t = await res.text(); return { event: null, error: `${res.status}: ${t}` } }
+    return { event: (await res.json()) as GCalEvent }
+  } catch (e) { return { event: null, error: String(e) } }
+}
+
 // ─── Reschedule event to a new date (same time) ──────────────────────────────
 
 /** Move an event to a different calendar day, preserving start time and duration.

@@ -18,6 +18,7 @@ import {
   fetchCalendarEventsWithToken,
   updateCalendarEventTimes,
   refreshPrimaryToken,
+  createCalendarEventWithToken,
 } from '@/lib/googleCalendar'
 import type { GCalEvent, GCalCalendar } from '@/lib/googleCalendar'
 import { generateMeetingPrep } from '@/lib/professor'
@@ -37,6 +38,8 @@ type GCalEventExt = GCalEvent & { calendarId?: string; calendarColor?: string }
 type EventStatus  = 'done' | 'cancelled'
 type DragMode     = 'move' | 'resize-top' | 'resize-bottom'
 interface EventLayout { left: number; width: number }
+interface CreatingEvt  { dateStr: string; originMin: number; currentMin: number }
+interface NewEventDraft { dateStr: string; startMin: number; endMin: number; anchorX: number; anchorY: number }
 
 interface CalWithAccount extends GCalCalendar {
   accountEmail: string
@@ -268,6 +271,10 @@ function snapMinutes(deltaY: number): number {
 function nowTopPx(): number {
   const now = new Date()
   return (now.getHours() + now.getMinutes() / 60) * HOUR_PX
+}
+function minToIso(dateStr: string, totalMinutes: number): string {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  return new Date(y, m - 1, d, Math.floor(totalMinutes / 60), totalMinutes % 60).toISOString()
 }
 
 // ─── Overlap layout calculation ───────────────────────────────────────────────
@@ -773,6 +780,90 @@ function Row({ icon, children }: { icon: React.ReactNode; children: React.ReactN
   )
 }
 
+// ─── NewEventForm ─────────────────────────────────────────────────────────────
+function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
+  draft: NewEventDraft
+  calendars: CalWithAccount[]
+  calColors: Record<string, string>
+  onSave: (title: string, calId: string) => void
+  onCancel: () => void
+}) {
+  const writable   = calendars.filter(c => c.accessRole === 'owner' || c.accessRole === 'writer')
+  const defaultCal = writable.find(c => c.primary) ?? writable[0]
+  const [title,  setTitle]  = useState('')
+  const [calId,  setCalId]  = useState(defaultCal?.id ?? '')
+  const [pos,    setPos]    = useState({ x: draft.anchorX + 16, y: draft.anchorY - 40 })
+  const ref      = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    inputRef.current?.focus()
+    if (!ref.current) return
+    const { width, height } = ref.current.getBoundingClientRect()
+    let x = draft.anchorX + 16, y = draft.anchorY - 40
+    if (x + width  > window.innerWidth  - 12) x = draft.anchorX - width - 16
+    if (y + height > window.innerHeight - 12) y = window.innerHeight - height - 12
+    if (y < 8) y = 8
+    setPos({ x, y })
+  }, [draft.anchorX, draft.anchorY])
+
+  useEffect(() => {
+    const fn = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) onCancel() }
+    document.addEventListener('mousedown', fn)
+    return () => document.removeEventListener('mousedown', fn)
+  }, [onCancel])
+
+  const startIso = minToIso(draft.dateStr, draft.startMin)
+  const endIso   = minToIso(draft.dateStr, draft.endMin)
+  const calColor = calColors[calId] ?? calendars.find(c => c.id === calId)?.backgroundColor ?? '#7F77DD'
+
+  return (
+    <div ref={ref} onClick={e => e.stopPropagation()} style={{
+      position: 'fixed', top: pos.y, left: pos.x, width: 288, zIndex: 1100,
+      background: '#161929', border: '1px solid #252A3E', borderRadius: 12,
+      boxShadow: '0 16px 48px rgba(0,0,0,0.6)', padding: '14px 16px 12px',
+    }}>
+      <div style={{ height: 3, background: calColor, borderRadius: 2, marginBottom: 12 }} />
+      <div style={{ fontSize: 12, fontWeight: 600, color: '#6B7280', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.5px' }}>New Event</div>
+
+      <input ref={inputRef} value={title} onChange={e => setTitle(e.target.value)}
+        onKeyDown={e => { if (e.key === 'Enter' && title.trim()) onSave(title.trim(), calId); if (e.key === 'Escape') onCancel() }}
+        placeholder="Event title"
+        style={{
+          width: '100%', boxSizing: 'border-box', marginBottom: 10,
+          background: '#1E2235', border: '1px solid #2A2F45', borderRadius: 7,
+          color: '#E8EAF6', fontSize: 14, padding: '8px 10px', outline: 'none',
+        }}
+      />
+
+      <div style={{ fontSize: 12, color: '#8B93A8', marginBottom: 10 }}>
+        {fmtPopupDate(startIso, endIso, false)}
+      </div>
+
+      {writable.length > 1 && (
+        <select value={calId} onChange={e => setCalId(e.target.value)} style={{
+          width: '100%', marginBottom: 12, background: '#1E2235', border: '1px solid #2A2F45',
+          borderRadius: 7, color: '#C0C4D6', fontSize: 12, padding: '6px 8px', outline: 'none', cursor: 'pointer',
+        }}>
+          {writable.map(c => <option key={c.id} value={c.id}>{c.summary}</option>)}
+        </select>
+      )}
+
+      <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+        <button onClick={onCancel} style={{
+          background: 'transparent', border: '1px solid #2A2F45', borderRadius: 7,
+          color: '#6B7280', fontSize: 12, padding: '5px 14px', cursor: 'pointer',
+        }}>Cancel</button>
+        <button onClick={() => { if (title.trim()) onSave(title.trim(), calId) }} style={{
+          background: title.trim() ? '#7F77DD' : '#252A3E', border: 'none', borderRadius: 7,
+          color: title.trim() ? '#fff' : '#4B5268', fontSize: 12, padding: '5px 14px',
+          cursor: title.trim() ? 'pointer' : 'default', transition: 'background 0.15s',
+        }}>Save</button>
+      </div>
+    </div>
+  )
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 export function CalendarIntelligence() {
   const user = useAuthStore(s => s.user)
@@ -812,6 +903,53 @@ export function CalendarIntelligence() {
   const [dragMode,     setDragMode]     = useState<DragMode | null>(null)
   const [draggingEvt,  setDraggingEvt]  = useState<GCalEventExt | null>(null)
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
+
+  // ── Drag-to-create state ────────────────────────────────────────────────────
+  const [creatingEvt,   setCreatingEvt]   = useState<CreatingEvt | null>(null)
+  const [newEventDraft, setNewEventDraft] = useState<NewEventDraft | null>(null)
+  const creatingRef = useRef<CreatingEvt | null>(null)
+  useEffect(() => { creatingRef.current = creatingEvt }, [creatingEvt])
+
+  useEffect(() => {
+    if (!creatingEvt) return
+    const onMove = (e: MouseEvent) => {
+      if (!gridRef.current) return
+      const rect = gridRef.current.getBoundingClientRect()
+      const relY = e.clientY - rect.top + gridRef.current.scrollTop
+      const minutes = Math.max(0, Math.min(23 * 60 + 45,
+        Math.round((relY / HOUR_PX * 60) / SNAP_MIN) * SNAP_MIN))
+      setCreatingEvt(prev => prev ? { ...prev, currentMin: minutes } : null)
+    }
+    const onUp = (e: MouseEvent) => {
+      const cur = creatingRef.current
+      setCreatingEvt(null)
+      if (!cur) return
+      const startMin = Math.min(cur.originMin, cur.currentMin)
+      const endMin   = Math.max(cur.originMin + SNAP_MIN, cur.currentMin)
+      if (endMin - startMin >= SNAP_MIN) {
+        setNewEventDraft({ dateStr: cur.dateStr, startMin, endMin, anchorX: e.clientX, anchorY: e.clientY })
+      }
+    }
+    document.addEventListener('mousemove', onMove)
+    document.addEventListener('mouseup',   onUp)
+    return () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp) }
+  }, [!!creatingEvt]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  function handleGridMouseDown(e: React.MouseEvent<HTMLDivElement>) {
+    if ((e.target as HTMLElement).closest('.event-card, button, [role="button"], select')) return
+    if (draggingEvt) return
+    if (!gridRef.current) return
+    const rect       = gridRef.current.getBoundingClientRect()
+    const relX       = e.clientX - rect.left - 52
+    const relY       = e.clientY - rect.top  + gridRef.current.scrollTop
+    if (relX < 0) return
+    const dayIdx = Math.max(0, Math.min(6, Math.floor(relX / ((gridRef.current.clientWidth - 52) / 7))))
+    const day    = weekDays[dayIdx]
+    if (!day) return
+    const minutes = Math.max(0, Math.min(23 * 60, Math.round((relY / HOUR_PX * 60) / SNAP_MIN) * SNAP_MIN))
+    setCreatingEvt({ dateStr: localDateStr(day), originMin: minutes, currentMin: minutes })
+    setSelectedEvent(null); setPopupPos(null); setNewEventDraft(null)
+  }
 
   // ── Grid scroll ref (auto-scroll to current time on mount) ──────────────────
   const gridRef = useRef<HTMLDivElement>(null)
@@ -1041,9 +1179,39 @@ export function CalendarIntelligence() {
 
   function closePopup() { setSelectedEvent(null); setPopupPos(null) }
 
+  async function handleCreateEvent(title: string, calId: string) {
+    const draft = newEventDraft
+    setNewEventDraft(null)
+    if (!draft) return
+    const tz       = Intl.DateTimeFormat().resolvedOptions().timeZone
+    const startIso = minToIso(draft.dateStr, draft.startMin)
+    const endIso   = minToIso(draft.dateStr, draft.endMin)
+    const cal      = allCalendars.find(c => c.id === calId)
+    const tempId   = `temp-${Date.now()}`
+    // Optimistic add
+    setEvents(prev => [...prev, {
+      id: tempId, summary: title,
+      start: { dateTime: startIso }, end: { dateTime: endIso },
+      calendarId: calId, calendarColor: cal ? calEffectiveColor(cal) : '#7F77DD',
+    } as GCalEventExt])
+    const { event: created } = await createCalendarEventWithToken(
+      cal?.accountToken ?? '',
+      calId,
+      { summary: title, start: { dateTime: startIso, timeZone: tz }, end: { dateTime: endIso, timeZone: tz } },
+    )
+    if (created) {
+      setEvents(prev => prev.map(e => e.id === tempId
+        ? { ...created, calendarId: calId, calendarColor: cal ? calEffectiveColor(cal) : undefined } as GCalEventExt
+        : e
+      ))
+    } else {
+      setEvents(prev => prev.filter(e => e.id !== tempId))
+    }
+  }
+
   // ── Render ───────────────────────────────────────────────────────────────────
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#0D0F1E', color: '#E8EAF6', fontFamily: 'inherit', overflow: 'hidden' }}>
+    <div className={creatingEvt ? 'cal-grid-creating' : undefined} style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#0D0F1E', color: '#E8EAF6', fontFamily: 'inherit', overflow: 'hidden' }}>
 
       {/* ── Top bar ─────────────────────────────────────────────────────────── */}
       <div style={{ padding: '14px 20px 10px', borderBottom: '1px solid #1A1D2E', flexShrink: 0 }}>
@@ -1211,7 +1379,7 @@ export function CalendarIntelligence() {
             </div>
 
             {/* Day columns */}
-            <div style={{ flex: 1, display: 'flex', position: 'relative' }}>
+            <div style={{ flex: 1, display: 'flex', position: 'relative' }} onMouseDown={handleGridMouseDown}>
               {weekDays.map(day => {
                 const ds        = localDateStr(day)
                 const isToday   = ds === today
@@ -1227,6 +1395,25 @@ export function CalendarIntelligence() {
                         <div style={{ position: 'absolute', top: nowPx, left: 0, right: 0, borderTop: '1.5px solid #E05252', zIndex: 5, pointerEvents: 'none' }} />
                       </>
                     )}
+
+                    {/* Creation ghost block */}
+                    {creatingEvt?.dateStr === ds && (() => {
+                      const sMin = Math.min(creatingEvt.originMin, creatingEvt.currentMin)
+                      const eMin = Math.max(creatingEvt.originMin + SNAP_MIN, creatingEvt.currentMin)
+                      const top  = sMin / 60 * HOUR_PX
+                      const h    = Math.max(SNAP_MIN / 60 * HOUR_PX, (eMin - sMin) / 60 * HOUR_PX)
+                      return (
+                        <div style={{
+                          position: 'absolute', top, left: '1%', right: '1%', height: h, zIndex: 10,
+                          background: 'rgba(127,119,221,0.25)', border: '2px solid #7F77DD',
+                          borderRadius: 5, pointerEvents: 'none', boxSizing: 'border-box',
+                        }}>
+                          <div style={{ fontSize: 10, color: '#fff', padding: '2px 5px', fontWeight: 600 }}>
+                            {fmtShort(minToIso(ds, sMin))} – {fmtShort(minToIso(ds, eMin))}
+                          </div>
+                        </div>
+                      )
+                    })()}
 
                     {/* Events */}
                     {dayEvents.map(ev => {
@@ -1317,11 +1504,23 @@ export function CalendarIntelligence() {
         )
       })()}
 
+      {/* New event form — shown after drag-to-create */}
+      {newEventDraft && (
+        <NewEventForm
+          draft={newEventDraft}
+          calendars={allCalendars}
+          calColors={calColors}
+          onSave={(title, calId) => void handleCreateEvent(title, calId)}
+          onCancel={() => setNewEventDraft(null)}
+        />
+      )}
+
       {/* CSS animations */}
       <style>{`
         @keyframes spin    { to { transform: rotate(360deg); } }
         @keyframes shimmer { 0%,100% { background-position: 200% 0; } 50% { background-position: -200% 0; } }
         .event-card:hover .event-actions button { opacity: 1 !important; }
+        .cal-grid-creating, .cal-grid-creating * { cursor: crosshair !important; }
       `}</style>
     </div>
   )
