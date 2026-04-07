@@ -628,16 +628,17 @@ export function MorningBrief() {
       } catch { /* fall through to primary only */ }
 
       // Fallback: primary account only (no Cal Intel cache yet)
-      void fetchWeekEvents(start, end).then(({ events }) =>
-        setTodayEvents(
-          events
-            .map(e => mapRichEvent(
-              e as GCalEvent & { calendarId?: string; calendarColor?: string },
-              'Primary calendar',
-              user?.email ?? undefined,
-            ))
-            .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
-        )
+      // Must be awaited so tryMultiAccount() only resolves after events are set,
+      // otherwise .finally(setEventsLoading(false)) fires before events arrive.
+      const { events } = await fetchWeekEvents(start, end)
+      setTodayEvents(
+        events
+          .map(e => mapRichEvent(
+            e as GCalEvent & { calendarId?: string; calendarColor?: string },
+            'Primary calendar',
+            user?.email ?? undefined,
+          ))
+          .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
       )
     }
     void tryMultiAccount().finally(() => setEventsLoading(false))
