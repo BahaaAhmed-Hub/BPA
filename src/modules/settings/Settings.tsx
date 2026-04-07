@@ -870,6 +870,7 @@ function AccountsSection({
       const next = new Set(prev)
       if (next.has(email)) next.delete(email); else next.add(email)
       saveHiddenAccounts(next)
+      window.dispatchEvent(new CustomEvent('professor:accountVisibilityChanged'))
       return next
     })
   }

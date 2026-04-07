@@ -879,7 +879,7 @@ export function CalendarIntelligence() {
     const c = loadCalIntelCache(); return c.length ? rebuildFromCache(c) : []
   })
   const [hiddenCals,      setHiddenCals]      = useState<Set<string>>(loadHiddenIntel)
-  const [hiddenAccounts]  = useState<Set<string>>(loadHiddenAccounts)
+  const [hiddenAccounts, setHiddenAccounts] = useState<Set<string>>(loadHiddenAccounts)
   const [loadingEvents,   setLoadingEvents]   = useState(true)
   const [noAuth,          setNoAuth]          = useState(false)
   const [fetchError,      setFetchError]      = useState<string | null>(null)
@@ -1032,6 +1032,16 @@ export function CalendarIntelligence() {
     window.addEventListener('professor:accountsUpdated', handler)
     return () => window.removeEventListener('professor:accountsUpdated', handler)
   }, [reloadCalendars, loadEvents, weekStart, hiddenCals])
+
+  // React to account visibility changes triggered from Settings
+  useEffect(() => {
+    const handler = () => {
+      const updated = loadHiddenAccounts()
+      setHiddenAccounts(updated)
+    }
+    window.addEventListener('professor:accountVisibilityChanged', handler)
+    return () => window.removeEventListener('professor:accountVisibilityChanged', handler)
+  }, [])
 
   // ── Status toggle ───────────────────────────────────────────────────────────
   function toggleStatus(eventId: string, status: EventStatus) {
