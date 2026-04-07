@@ -489,6 +489,22 @@ export async function deleteCalendarEvent(
   return { success: false, noAuth: false, error: `${res.status}: ${text}` }
 }
 
+/** Delete an event using a specific token (for multi-account). */
+export async function deleteCalendarEventWithToken(
+  token: string,
+  calendarId: string,
+  eventId: string,
+): Promise<boolean> {
+  try {
+    const res = await gcalRequest(
+      token,
+      `/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}`,
+      { method: 'DELETE' },
+    )
+    return res.status === 204 || res.ok
+  } catch { return false }
+}
+
 // ─── Legacy: fetch primary calendar (kept for backward compat) ────────────────
 
 export async function fetchWeekEvents(

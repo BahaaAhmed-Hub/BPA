@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   RefreshCw, Calendar, Users, Video,
   CheckCircle2, Circle, Sparkles,
-  X, MapPin, ExternalLink, CreditCard, AlertTriangle,
+  X, MapPin, ExternalLink,
 } from 'lucide-react'
 import { planMyDay } from '@/lib/professor'
 import type { DayPlan, DayContext } from '@/lib/professor'
@@ -12,26 +12,8 @@ import { useAuthStore } from '@/store/authStore'
 import { useTaskStore } from '@/store/taskStore'
 import type { DbUser, DbCompany, DbCalendarEvent, DbTask } from '@/types/database'
 import type { Task } from '@/types'
-
-// ─── Rich meeting event (extends DbCalendarEvent with raw GCal data) ─────────
-
-interface RichMeetingEvent extends DbCalendarEvent {
-  calendarId?: string
-  calendarName?: string
-  calendarColor?: string
-  accountEmail?: string
-  attendees?: GCalEvent['attendees']
-  description?: string
-  htmlLink?: string
-  conferenceData?: GCalEvent['conferenceData']
-}
-
-type CalCacheItem = {
-  id: string
-  accountEmail: string
-  summary?: string
-  backgroundColor?: string
-}
+import type { RichMeetingEvent, CalCacheItem } from './MorningBriefTypes'
+import { DayPlanner } from './DayPlanner'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -224,22 +206,6 @@ function Skel({ w = '100%', h = 14, radius = 8 }: { w?: string | number; h?: num
         flexShrink: 0,
       }}
     />
-  )
-}
-
-function PlanSkeleton() {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      {[0, 1, 2, 3, 4].map(i => (
-        <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-          <Skel w={52} h={13} />
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: 1 }}>
-            <Skel w={`${70 - i * 8}%`} h={13} />
-            {i % 2 === 0 && <Skel w="25%" h={10} />}
-          </div>
-        </div>
-      ))}
-    </div>
   )
 }
 
@@ -544,8 +510,6 @@ export function MorningBrief() {
   const [energyLevel, setEnergyLevel]   = useState<number | null>(null)
   const [plan, setPlan]                 = useState<DayPlan | null>(loadCachedPlan)
   const [isGenerating, setIsGenerating] = useState(!loadCachedPlan())
-  const [error, setError]               = useState<string | null>(null)
-  const [errorType, setErrorType]       = useState<'credit' | 'generic'>('generic')
   // Today's Habits — read real completion state from logs
   const [habits, setHabits] = useState(() => {
     const todayStr = todayKey()
@@ -681,21 +645,14 @@ export function MorningBrief() {
 
   const generate = useCallback(async (energy: number | null = energyLevel) => {
     setIsGenerating(true)
-    setError(null)
     try {
       const dbUser  = buildMockUser(user)
       const context = buildContext(dbUser, tasks, energy, todayEvents)
       const result  = await planMyDay(context)
       setPlan(result)
       savePlan(result)
-    } catch (err) {
-      const raw = err instanceof Error ? err.message : 'Could not generate plan.'
-      const isCredit = raw.includes('credit balance') || raw.includes('402') || raw.includes('billing') || raw.includes('invalid_request_error')
-      setErrorType(isCredit ? 'credit' : 'generic')
-      setError(isCredit ? 'credit_balance' : raw)
-    } finally {
-      setIsGenerating(false)
-    }
+    } catch { /* Top-3 errors are silent — DayPlanner shows its own errors */ }
+    finally { setIsGenerating(false) }
   }, [user, tasks, energyLevel, todayEvents])
 
   // Generate on first load only if no cache
@@ -854,149 +811,35 @@ export function MorningBrief() {
           {/* LEFT COLUMN */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-            {/* ─── 2. AI Day Plan ──────────────────────────────────────── */}
+            {/* ─── 2. AI Day Planner ───────────────────────────────────── */}
             <div className="brief-section" style={{
               background: '#161929',
               border: '1px solid #252A3E',
               borderRadius: 14,
               padding: '24px 26px',
-              borderLeft: '3px solid #1E40AF50',
+              borderLeft: '3px solid #7F77DD50',
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 20 }}>
                 <div style={{
                   width: 26, height: 26, borderRadius: 6,
-                  background: '#1E40AF18', border: '1px solid #1E40AF30',
+                  background: '#7F77DD18', border: '1px solid #7F77DD30',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
-                  <Sparkles size={13} color="#1E40AF" />
+                  <Sparkles size={13} color="#7F77DD" />
                 </div>
-                <span style={{ fontSize: 11, fontWeight: 600, color: '#1E40AF', letterSpacing: '0.8px', textTransform: 'uppercase' }}>
-                  AI Day Plan
+                <span style={{ fontSize: 11, fontWeight: 600, color: '#7F77DD', letterSpacing: '0.8px', textTransform: 'uppercase' }}>
+                  AI Day Planner
                 </span>
-                {isGenerating && (
-                  <span style={{ fontSize: 11, color: '#FFFFFF', marginLeft: 'auto' }}>
-                    Generating…
-                  </span>
-                )}
               </div>
 
-              {/* Focus tip */}
-              {!isGenerating && plan?.focusTip && (
-                <div style={{
-                  marginBottom: 22,
-                  padding: '12px 16px',
-                  background: 'rgba(30,64,175,0.07)',
-                  borderLeft: '2px solid #1E40AF',
-                  borderRadius: '0 8px 8px 0',
-                }}>
-                  <p style={{ margin: 0, fontSize: 13, color: '#E8EAF6', lineHeight: 1.55 }}>
-                    {plan.focusTip}
-                  </p>
-                </div>
-              )}
-
-              {/* Schedule */}
-              {isGenerating ? (
-                <PlanSkeleton />
-              ) : error ? (
-                errorType === 'credit' ? (
-                  /* ── Credit balance error ── */
-                  <div style={{
-                    borderRadius: 12,
-                    background: '#1C1410',
-                    border: '1px solid #92400E40',
-                    overflow: 'hidden',
-                  }}>
-                    <div style={{
-                      display: 'flex', gap: 14, alignItems: 'flex-start',
-                      padding: '18px 20px',
-                      borderBottom: '1px solid #92400E30',
-                    }}>
-                      <div style={{
-                        width: 36, height: 36, borderRadius: 8, flexShrink: 0,
-                        background: '#92400E22', border: '1px solid #92400E40',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      }}>
-                        <CreditCard size={16} color="#F59E0B" />
-                      </div>
-                      <div>
-                        <p style={{ margin: '0 0 4px', fontSize: 13.5, fontWeight: 600, color: '#FCD34D' }}>
-                          API Credit Balance Too Low
-                        </p>
-                        <p style={{ margin: 0, fontSize: 12.5, color: '#FFFFFF', lineHeight: 1.55 }}>
-                          Your Anthropic account has insufficient credits to generate an AI plan.
-                          Visit <strong>console.anthropic.com → Billing</strong> to top up.
-                        </p>
-                      </div>
-                    </div>
-                    <div style={{ padding: '12px 20px', display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <AlertTriangle size={11} color="#6B7280" />
-                      <span style={{ fontSize: 11, color: '#6B7280' }}>
-                        Other features are unaffected. Only AI-powered planning requires API credits.
-                      </span>
-                    </div>
-                  </div>
-                ) : (
-                  /* ── Generic error ── */
-                  <div style={{ textAlign: 'center', padding: '24px 0' }}>
-                    <p style={{ margin: '0 0 14px', fontSize: 13, color: '#FFFFFF' }}>{error}</p>
-                    <button
-                      onClick={() => generate()}
-                      style={{
-                        padding: '7px 16px', borderRadius: 7,
-                        background: '#1E40AF18', border: '1px solid #1E40AF30',
-                        color: '#1E40AF', fontSize: 12, cursor: 'pointer',
-                      }}
-                    >
-                      Try again
-                    </button>
-                  </div>
-                )
-              ) : plan?.schedule.length ? (
-                <div>
-                  {plan.schedule.map((item, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 14, paddingBottom: i < plan.schedule.length - 1 ? 18 : 0 }}>
-                      {/* Time */}
-                      <span style={{
-                        fontSize: 12, fontFamily: 'monospace',
-                        color: '#1E40AF', width: 48, flexShrink: 0, paddingTop: 1,
-                      }}>
-                        {item.time}
-                      </span>
-
-                      {/* Dot + line */}
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0 }}>
-                        <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#1E40AF', marginTop: 4 }} />
-                        {i < plan.schedule.length - 1 && (
-                          <div style={{ width: 1, flex: 1, background: '#252A3E', minHeight: 18, marginTop: 4 }} />
-                        )}
-                      </div>
-
-                      {/* Activity */}
-                      <div style={{ flex: 1, paddingBottom: 4 }}>
-                        <p style={{ margin: 0, fontSize: 13.5, color: '#E8EAF6', lineHeight: 1.4 }}>
-                          {item.activity}
-                        </p>
-                        {item.company && (
-                          <span style={{
-                            display: 'inline-block', marginTop: 4,
-                            fontSize: 10.5, fontWeight: 500,
-                            padding: '2px 8px', borderRadius: 4,
-                            color: CO_COLOR[item.company] ?? '#6B7280',
-                            background: `${CO_COLOR[item.company] ?? '#6B7280'}18`,
-                          }}>
-                            {CO_NAME[item.company] ?? item.company}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p style={{ margin: 0, fontSize: 13, color: '#FFFFFF' }}>
-                  No schedule generated. Try regenerating.
-                </p>
-              )}
+              <DayPlanner
+                energyLevel={energyLevel}
+                tasks={tasks}
+                todayEvents={todayEvents}
+                dbUser={buildMockUser(user)}
+                companies={MOCK_COMPANIES}
+                date={todayKey()}
+              />
             </div>
 
             {/* ─── 3. Top 3 Priorities ─────────────────────────────────── */}

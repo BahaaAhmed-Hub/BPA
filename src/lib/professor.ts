@@ -100,6 +100,30 @@ export interface WeekData extends UserContext {
   habits: { name: string; streak: number; completedThisWeek: number; target: number }[]
 }
 
+// ─── Slot plan types ─────────────────────────────────────────────────────────
+
+export type BlockType   = 'focus' | 'meeting' | 'buffer' | 'break' | 'task' | 'admin'
+export type BlockAction = 'create' | 'keep' | 'reschedule' | 'remove'
+
+export interface PlanSlot {
+  id: string
+  title: string
+  startTime: string         // "HH:MM"
+  endTime: string           // "HH:MM"
+  type: BlockType
+  action: BlockAction
+  company?: string          // company slug/name — used to resolve target calendar
+  taskId?: string           // linked task ID if this block covers a task
+  existingEventId?: string  // Google event ID if this is an existing event
+  isExisting: boolean
+  note?: string             // AI reasoning shown in review phase
+}
+
+export interface SlotPlanPrefs {
+  deadlines: string                              // freeform "finish X by noon"
+  deepWorkPref: 'morning' | 'afternoon' | 'flexible'
+}
+
 // ─── Output types ────────────────────────────────────────────────────────────
 
 export interface DayPlan {
@@ -240,6 +264,71 @@ Return ONLY valid JSON matching this shape — no prose:
   } catch (err) {
     if (err instanceof ProfessorError) throw err
     throw new ProfessorError('Failed to plan day', 'parse_error', err)
+  }
+}
+
+// ─── generateSlotPlan ────────────────────────────────────────────────────────
+
+export async function generateSlotPlan(
+  context: DayContext,
+  prefs: SlotPlanPrefs,
+): Promise<PlanSlot[]> {
+  const system = baseSystem(context.user, context.companies) + `
+
+TASK: Build a structured, time-blocked day plan for ${context.date}.
+
+Rules:
+1. Never overlap with existing calendar events (those are fixed unless action=reschedule).
+2. Respect schedule rules: buffer_minutes between blocks, focus_hours window, max_meetings_per_day.
+3. Insert 5–15 min buffer blocks between deep work sessions.
+4. Suggest rescheduling an existing event only if it conflicts with a critical task or the user's preference.
+5. Mark existing events as action "keep" unless there is a clear reason to reschedule or remove.
+6. The workday ends at 18:00 unless context says otherwise.
+
+Return ONLY a JSON array — no prose, no wrapping object:
+[
+  {
+    "id": "unique-kebab-id",
+    "title": "...",
+    "startTime": "HH:MM",
+    "endTime": "HH:MM",
+    "type": "focus|meeting|buffer|break|task|admin",
+    "action": "create|keep|reschedule|remove",
+    "company": "company name or omit",
+    "taskId": "task id or omit",
+    "existingEventId": "google event id or omit",
+    "isExisting": true or false,
+    "note": "one-sentence reasoning"
+  }
+]`
+
+  const existingEvents = context.todayEvents
+    .map(e => `  [EXISTING id=${e.google_event_id ?? e.id}] ${e.start_time.slice(11, 16)}–${e.end_time.slice(11, 16)}: ${e.title}`)
+    .join('\n') || '  (no existing events)'
+
+  const tasks = context.pendingTasks
+    .slice(0, 15)
+    .map(t => `  [id=${t.id} quad=${t.quadrant ?? 'unset'}] ${t.title}${t.due_date ? ` (due ${t.due_date})` : ''}`)
+    .join('\n') || '  (no pending tasks)'
+
+  const userMsg = [
+    `Today's existing events:\n${existingEvents}`,
+    `Pending tasks:\n${tasks}`,
+    context.energyLevel ? `Energy level this morning: ${context.energyLevel}/5` : '',
+    prefs.deadlines ? `Hard deadlines: ${prefs.deadlines}` : '',
+    `Deep work preference: ${prefs.deepWorkPref}`,
+  ].filter(Boolean).join('\n\n')
+
+  try {
+    const raw     = await call(system, userMsg)
+    const parsed  = parseJson<PlanSlot[]>(raw)
+    if (!Array.isArray(parsed)) return []
+    return parsed.filter(s =>
+      s.id && s.title && s.startTime && s.endTime && s.type && s.action
+    )
+  } catch (err) {
+    if (err instanceof ProfessorError) throw err
+    throw new ProfessorError('Failed to generate slot plan', 'parse_error', err)
   }
 }
 
