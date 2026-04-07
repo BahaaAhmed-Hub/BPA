@@ -601,35 +601,68 @@ export function MorningBrief() {
         const cacheRaw = localStorage.getItem('cal-intel-cals-cache')
         if (cacheRaw) {
           const cached = JSON.parse(cacheRaw) as CalCacheItem[]
-          if (cached.length > 0) {
+
+          // ── Respect Cal Intel visibility toggles ────────────────────────────
+          // 1. Hidden calendar IDs (eye toggle per calendar in Cal Intel sidebar)
+          const hiddenCalIds: Set<string> = (() => {
+            try { return new Set(JSON.parse(localStorage.getItem('cal-intel-hidden') ?? '[]') as string[]) }
+            catch { return new Set<string>() }
+          })()
+          // 2. Hidden account emails (account-level eye toggle in Settings)
+          const hiddenAccEmails: Set<string> = (() => {
+            try { return new Set(JSON.parse(localStorage.getItem('cal-intel-hidden-accounts') ?? '[]') as string[]) }
+            catch { return new Set<string>() }
+          })()
+
+          const visible = cached.filter(c =>
+            !hiddenCalIds.has(c.id) && !hiddenAccEmails.has(c.accountEmail)
+          )
+
+          if (visible.length > 0) {
             const { fetchCalendarEventsWithToken } = await import('@/lib/googleCalendar')
-            const { loadAccounts } = await import('@/lib/multiAccount')
-            const accounts      = loadAccounts()
-            const primaryToken  = localStorage.getItem('google_provider_token') ?? ''
-            const allEvents = await Promise.all(cached.map(c => {
-              const acc   = accounts.find(a => a.email === c.accountEmail)
-              const token = acc ? acc.providerToken : primaryToken
-              if (!token) return Promise.resolve([] as RichMeetingEvent[])
-              return fetchCalendarEventsWithToken(token, c.id, start, end, c.backgroundColor)
-                .then(evs => evs.map(e =>
-                  mapRichEvent(
-                    e as GCalEvent & { calendarId?: string; calendarColor?: string },
-                    c.summary ?? c.id,
-                    c.accountEmail,
-                  )
-                ))
+            const { loadAccounts, silentRefreshAccountToken } = await import('@/lib/multiAccount')
+            const accounts     = loadAccounts()
+            // Always use the freshest primary token from localStorage, not the
+            // stale copy that may be saved inside professor-connected-accounts
+            const primaryToken = localStorage.getItem('google_provider_token') ?? ''
+
+            const allEvents = await Promise.all(visible.map(async c => {
+              const acc = accounts.find(a => a.email === c.accountEmail)
+              // Primary: use google_provider_token; extra: use providerToken from account
+              const token = acc?.isPrimary ? primaryToken : (acc?.providerToken ?? primaryToken)
+              if (!token) return [] as RichMeetingEvent[]
+
+              let evs = await fetchCalendarEventsWithToken(token, c.id, start, end, c.backgroundColor)
+
+              // If extra account returns nothing, attempt a silent token refresh + retry
+              if (evs.length === 0 && acc && !acc.isPrimary) {
+                const refreshed = await silentRefreshAccountToken(acc)
+                if (refreshed) {
+                  evs = await fetchCalendarEventsWithToken(refreshed, c.id, start, end, c.backgroundColor)
+                }
+              }
+
+              return evs.map(e =>
+                mapRichEvent(
+                  e as GCalEvent & { calendarId?: string; calendarColor?: string },
+                  c.summary ?? c.id,
+                  c.accountEmail,
+                )
+              )
             }))
+
             const flat = allEvents.flat()
-            if (flat.length > 0) {
-              setTodayEvents(flat.sort((a, b) =>
-                new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
-              ))
-              return
-            }
+            // Commit result even if some calendars returned 0 — that just means
+            // those calendars have no events today, not that fetch failed.
+            setTodayEvents(flat.sort((a, b) =>
+              new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
+            ))
+            return
           }
         }
       } catch { /* fall through to primary only */ }
-      // Fallback: primary account only
+
+      // Fallback: primary account only (no Cal Intel cache yet)
       void fetchWeekEvents(start, end).then(({ events }) =>
         setTodayEvents(
           events
