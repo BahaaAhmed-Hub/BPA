@@ -6,13 +6,14 @@ import {
 } from 'lucide-react'
 import { planMyDay } from '@/lib/professor'
 import type { DayPlan, DayContext } from '@/lib/professor'
-import { fetchWeekEvents, detectMeetingType } from '@/lib/googleCalendar'
+import { detectMeetingType } from '@/lib/googleCalendar'
 import type { GCalEvent } from '@/lib/googleCalendar'
+import { fetchVisibleEvents } from '@/lib/calendarEvents'
 import { useAuthStore } from '@/store/authStore'
 import { useTaskStore } from '@/store/taskStore'
 import type { DbUser, DbCompany, DbCalendarEvent, DbTask } from '@/types/database'
 import type { Task } from '@/types'
-import type { RichMeetingEvent, CalCacheItem } from './MorningBriefTypes'
+import type { RichMeetingEvent } from './MorningBriefTypes'
 import { DayPlanner } from './DayPlanner'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -560,101 +561,27 @@ export function MorningBrief() {
       }
     }
 
-    // Try multi-account fetch using cal-intel cache (same as CalendarIntelligence)
-    const tryMultiAccount = async () => {
+    void fetchVisibleEvents(start, end).then(evs => {
+      // Build a calendarId → {name, accountEmail} lookup from the cache
+      type CacheItem = { id: string; summary?: string; accountEmail: string }
+      const calMeta: Record<string, CacheItem> = {}
       try {
-        const cacheRaw = localStorage.getItem('cal-intel-cals-cache')
-        if (cacheRaw) {
-          const cached = JSON.parse(cacheRaw) as CalCacheItem[]
-
-          // ── Respect Cal Intel visibility toggles ────────────────────────────
-          // 1. Hidden calendar IDs (eye toggle per calendar in Cal Intel sidebar)
-          const hiddenCalIds: Set<string> = (() => {
-            try { return new Set(JSON.parse(localStorage.getItem('cal-intel-hidden') ?? '[]') as string[]) }
-            catch { return new Set<string>() }
-          })()
-          // 2. Hidden account emails (account-level eye toggle in Settings)
-          const hiddenAccEmails: Set<string> = (() => {
-            try { return new Set(JSON.parse(localStorage.getItem('cal-intel-hidden-accounts') ?? '[]') as string[]) }
-            catch { return new Set<string>() }
-          })()
-
-          const visible = cached.filter(c =>
-            !hiddenCalIds.has(c.id) && !hiddenAccEmails.has(c.accountEmail)
-          )
-
-          if (visible.length > 0) {
-            const { fetchCalendarEventsWithToken } = await import('@/lib/googleCalendar')
-            const { loadAccounts, silentRefreshAccountToken } = await import('@/lib/multiAccount')
-            const accounts     = loadAccounts()
-            // Always use the freshest primary token from localStorage, not the
-            // stale copy that may be saved inside professor-connected-accounts
-            const primaryToken = localStorage.getItem('google_provider_token') ?? ''
-
-            // Attempt a primary token refresh upfront via Supabase session
-            let activePrimaryToken = primaryToken
-            try {
-              const { supabase } = await import('@/lib/supabase')
-              const { data } = await supabase.auth.getSession()
-              if (data.session?.provider_token) {
-                activePrimaryToken = data.session.provider_token
-                localStorage.setItem('google_provider_token', activePrimaryToken)
-              }
-            } catch { /* use cached token */ }
-
-            const allEvents = await Promise.all(visible.map(async c => {
-              const acc = accounts.find(a => a.email === c.accountEmail)
-              // Primary: use freshly-retrieved session token; extra: use stored providerToken
-              const token = (acc?.isPrimary || !acc) ? activePrimaryToken : (acc.providerToken ?? activePrimaryToken)
-              if (!token) return [] as RichMeetingEvent[]
-
-              let evs = await fetchCalendarEventsWithToken(token, c.id, start, end, c.backgroundColor)
-
-              // If extra account returns nothing, attempt a silent token refresh + retry
-              if (evs.length === 0 && acc && !acc.isPrimary) {
-                const refreshed = await silentRefreshAccountToken(acc)
-                if (refreshed) {
-                  evs = await fetchCalendarEventsWithToken(refreshed, c.id, start, end, c.backgroundColor)
-                }
-              }
-
-              return evs.map(e =>
-                mapRichEvent(
-                  e as GCalEvent & { calendarId?: string; calendarColor?: string },
-                  c.summary ?? c.id,
-                  c.accountEmail,
-                )
-              )
-            }))
-
-            const flat = allEvents.flat()
-            if (flat.length > 0) {
-              setTodayEvents(flat.sort((a, b) =>
-                new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
-              ))
-              return
-            }
-            // Zero events from cache path — tokens may be stale.
-            // Fall through to fetchWeekEvents which uses withAuth (proper token refresh).
-          }
+        const raw = localStorage.getItem('cal-intel-cals-cache')
+        if (raw) {
+          (JSON.parse(raw) as CacheItem[]).forEach(c => { calMeta[c.id] = c })
         }
-      } catch { /* fall through to primary only */ }
+      } catch { /* ignore */ }
 
-      // Fallback: primary account only (no Cal Intel cache yet)
-      // Must be awaited so tryMultiAccount() only resolves after events are set,
-      // otherwise .finally(setEventsLoading(false)) fires before events arrive.
-      const { events } = await fetchWeekEvents(start, end)
       setTodayEvents(
-        events
-          .map(e => mapRichEvent(
-            e as GCalEvent & { calendarId?: string; calendarColor?: string },
-            'Primary calendar',
-            user?.email ?? undefined,
-          ))
+        evs
+          .map(e => {
+            const rich = e as GCalEvent & { calendarId?: string; calendarColor?: string }
+            const meta = rich.calendarId ? calMeta[rich.calendarId] : undefined
+            return mapRichEvent(rich, meta?.summary, meta?.accountEmail)
+          })
           .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
       )
-    }
-    void tryMultiAccount().finally(() => setEventsLoading(false))
+    }).finally(() => setEventsLoading(false))
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
