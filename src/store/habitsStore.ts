@@ -137,11 +137,19 @@ export const useHabitsStore = create<HabitsState>((set, get) => ({
 
   async loadFromDB() {
     try {
-      const [habits, logs] = await Promise.all([loadHabitsFromDB(), loadHabitLogsFromDB()])
-      if (habits.length > 0) {
-        saveHabits(habits)
+      const [dbHabits, logs] = await Promise.all([loadHabitsFromDB(), loadHabitLogsFromDB()])
+      if (dbHabits.length > 0) {
+        // Merge: keep locally customised emoji/color — they may have been changed
+        // after the last DB sync (scheduleHabitsSync is debounced 1.5s, so there's
+        // a window where loadFromDB can overwrite a just-changed emoji/color).
+        const local = get().habits
+        const merged = dbHabits.map(h => {
+          const localH = local.find(l => l.id === h.id)
+          return localH ? { ...h, emoji: localH.emoji, color: localH.color } : h
+        })
+        saveHabits(merged)
         saveLogs(logs)
-        set({ habits })
+        set({ habits: merged })
       }
     } catch { /* offline — keep local */ }
   },

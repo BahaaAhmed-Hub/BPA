@@ -6,8 +6,7 @@ import {
 } from 'lucide-react'
 import { useTaskStore } from '@/store/taskStore'
 import { useUIStore } from '@/store/uiStore'
-import { COMPANY_COLORS, COMPANY_LABELS } from '@/types'
-import type { CompanyTag } from '@/types'
+import { loadDynamicCompanies } from '@/types'
 import { loadHabits, loadLogs, calcStreak } from '@/store/habitsStore'
 import { fetchWeekEvents } from '@/lib/googleCalendar'
 
@@ -66,7 +65,7 @@ function MetricCard({
 
       {delta && (
         <div style={{ fontSize: 11.5, color: deltaPositive ? '#1D9E75' : '#E05252', fontWeight: 500 }}>
-          {deltaPositive ? '↑' : '↓'} {delta}
+          {delta}
         </div>
       )}
 
@@ -79,8 +78,7 @@ function MetricCard({
   )
 }
 
-function CompanyBadge({ company, count }: { company: CompanyTag; count: number }) {
-  const color = COMPANY_COLORS[company]
+function CompanyBadge({ name, color, count }: { name: string; color: string; count: number }) {
   return (
     <div style={{
       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -91,7 +89,7 @@ function CompanyBadge({ company, count }: { company: CompanyTag; count: number }
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <div style={{ width: 8, height: 8, borderRadius: '50%', background: color }} />
         <span style={{ fontSize: 13, color: 'var(--color-text, #E8EAF6)', fontWeight: 400 }}>
-          {COMPANY_LABELS[company]}
+          {name}
         </span>
       </div>
       <span style={{ fontSize: 12, fontWeight: 600, color, background: `${color}18`, padding: '2px 8px', borderRadius: 4 }}>
@@ -137,16 +135,24 @@ export function ExecutiveDashboard() {
   const urgentTasks    = tasks.filter(t => t.quadrant === 'do' && !t.completed)
   const completedTasks = tasks.filter(t => t.completed)
 
-  // Completed this week
-  const weekStart = new Date(); weekStart.setDate(weekStart.getDate() - weekStart.getDay()); weekStart.setHours(0,0,0,0)
-  const completedThisWeek = completedTasks.filter(t => t.createdAt && new Date(t.createdAt) >= weekStart).length
-
   // Tasks added this week
+  const weekStart     = new Date(); weekStart.setDate(weekStart.getDate() - weekStart.getDay()); weekStart.setHours(0,0,0,0)
   const addedThisWeek = tasks.filter(t => t.createdAt && new Date(t.createdAt) >= weekStart).length
 
-  const tasksByCompany = (['teradix', 'dxtech', 'consulting', 'personal'] as CompanyTag[]).map(c => ({
-    company: c, count: activeTasks.filter(t => t.company === c).length,
-  }))
+  // Tasks by Company — use dynamic companies from Settings, match by companyId or company name
+  const dynamicCompanies = loadDynamicCompanies()
+  const tasksByCompany = dynamicCompanies
+    .map(co => ({
+      id:    co.id,
+      name:  co.name,
+      color: co.color,
+      count: activeTasks.filter(t =>
+        t.companyId === co.id ||
+        t.company === co.id ||
+        t.company?.toLowerCase() === co.name.toLowerCase()
+      ).length,
+    }))
+    .filter(co => co.count > 0 || dynamicCompanies.length <= 4)
 
   // Load habit data
   useEffect(() => {
@@ -232,7 +238,7 @@ export function ExecutiveDashboard() {
           <MetricCard
             label="Completed"
             value={completedTasks.length}
-            delta={completedThisWeek > 0 ? `${completedThisWeek} this week` : undefined}
+            delta={completedTasks.length > 0 ? 'Tasks shipped' : undefined}
             deltaPositive={true}
             icon={Award}
             accentColor="#1D9E75"
@@ -296,9 +302,12 @@ export function ExecutiveDashboard() {
               </button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {tasksByCompany.map(({ company, count }) => (
-                <CompanyBadge key={company} company={company} count={count} />
-              ))}
+              {tasksByCompany.length === 0
+                ? <p style={{ margin: 0, fontSize: 12.5, color: '#6B7280' }}>No companies set up yet — add them in Settings.</p>
+                : tasksByCompany.map(co => (
+                    <CompanyBadge key={co.id} name={co.name} color={co.color} count={co.count} />
+                  ))
+              }
             </div>
           </div>
 

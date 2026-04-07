@@ -235,36 +235,67 @@ export function MorningBrief() {
   const [plan, setPlan]                 = useState<DayPlan | null>(loadCachedPlan)
   const [isGenerating, setIsGenerating] = useState(!loadCachedPlan())
   const [error, setError]               = useState<string | null>(null)
-  const [habits, setHabits]             = useState(() =>
-    loadStoredHabits().map(h => ({ ...h, checked: false })),
-  )
-  const [todayEvents, setTodayEvents]   = useState<DbCalendarEvent[]>([])
+  // Today's Habits — read real completion state from logs
+  const [habits, setHabits] = useState(() => {
+    const todayStr = todayKey()
+    const logs     = (() => { try { const r = localStorage.getItem('professor-habit-logs'); return r ? JSON.parse(r) as Record<string, string[]> : {} } catch { return {} } })()
+    return loadStoredHabits().map(h => ({ ...h, checked: (logs[h.id] ?? []).includes(todayStr) }))
+  })
+  const [todayEvents, setTodayEvents] = useState<DbCalendarEvent[]>([])
 
   const firstName = getFirstName(user?.name, user?.email ?? '')
   const dateStr   = new Date().toLocaleDateString('en-US', {
     weekday: 'long', month: 'long', day: 'numeric',
   })
 
-  // Fetch today's Google Calendar events on mount
+  // Fetch today's calendar events from ALL connected accounts via cal-intel cache
   useEffect(() => {
     const today = new Date()
     const start = new Date(today); start.setHours(0, 0, 0, 0)
     const end   = new Date(today); end.setHours(23, 59, 59, 999)
-    void fetchWeekEvents(start, end).then(({ events }) => {
-      setTodayEvents(events.map(e => ({
-        id: e.id,
-        user_id: user?.id ?? '',
-        company_id: null,
-        google_event_id: e.id,
-        title: e.summary ?? '(No title)',
-        start_time: e.start.dateTime ?? e.start.date ?? '',
-        end_time:   e.end.dateTime   ?? e.end.date   ?? '',
-        location:   e.location ?? null,
-        meeting_type: detectMeetingType(e),
-        prep_notes: null,
-        is_synced: true,
-      })))
+
+    const mapEvent = (e: Parameters<typeof detectMeetingType>[0]): DbCalendarEvent => ({
+      id: e.id,
+      user_id: user?.id ?? '',
+      company_id: null,
+      google_event_id: e.id,
+      title: e.summary ?? '(No title)',
+      start_time: e.start.dateTime ?? e.start.date ?? '',
+      end_time:   e.end.dateTime   ?? e.end.date   ?? '',
+      location:   (e as { location?: string }).location ?? null,
+      meeting_type: detectMeetingType(e),
+      prep_notes: null,
+      is_synced: true,
     })
+
+    // Try multi-account fetch using cal-intel cache (same as CalendarIntelligence)
+    const tryMultiAccount = async () => {
+      try {
+        const cacheRaw = localStorage.getItem('cal-intel-cals-cache')
+        if (cacheRaw) {
+          const cached = JSON.parse(cacheRaw) as Array<{ id: string; accountEmail: string }>
+          if (cached.length > 0) {
+            const { fetchCalendarEventsWithToken } = await import('@/lib/googleCalendar')
+            const { loadAccounts } = await import('@/lib/multiAccount')
+            const accounts = loadAccounts()
+            const primaryToken = localStorage.getItem('google_provider_token') ?? ''
+            const allEvents = await Promise.all(cached.map(c => {
+              const acc = accounts.find(a => a.email === c.accountEmail)
+              const token = acc ? acc.providerToken : primaryToken
+              return token ? fetchCalendarEventsWithToken(token, c.id, start, end) : Promise.resolve([])
+            }))
+            const flat = allEvents.flat()
+            if (flat.length > 0) {
+              setTodayEvents(flat.map(mapEvent))
+              return
+            }
+          }
+        }
+      } catch { /* fall through to primary only */ }
+      // Fallback: primary account only
+      void fetchWeekEvents(start, end).then(({ events }) => setTodayEvents(events.map(mapEvent)))
+    }
+    void tryMultiAccount()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -278,8 +309,13 @@ export function MorningBrief() {
       setPlan(result)
       savePlan(result)
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Could not generate plan.'
-      setError(msg)
+      const raw = err instanceof Error ? err.message : 'Could not generate plan.'
+      // Detect Anthropic credit balance error and show a friendly message
+      const isCredit = raw.includes('credit balance') || raw.includes('402') || raw.includes('billing')
+      setError(isCredit
+        ? 'AI plan unavailable — API credits needed. Check Anthropic billing to top up.'
+        : raw
+      )
     } finally {
       setIsGenerating(false)
     }
