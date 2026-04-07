@@ -591,10 +591,21 @@ export function MorningBrief() {
             // stale copy that may be saved inside professor-connected-accounts
             const primaryToken = localStorage.getItem('google_provider_token') ?? ''
 
+            // Attempt a primary token refresh upfront via Supabase session
+            let activePrimaryToken = primaryToken
+            try {
+              const { supabase } = await import('@/lib/supabase')
+              const { data } = await supabase.auth.getSession()
+              if (data.session?.provider_token) {
+                activePrimaryToken = data.session.provider_token
+                localStorage.setItem('google_provider_token', activePrimaryToken)
+              }
+            } catch { /* use cached token */ }
+
             const allEvents = await Promise.all(visible.map(async c => {
               const acc = accounts.find(a => a.email === c.accountEmail)
-              // Primary: use google_provider_token; extra: use providerToken from account
-              const token = acc?.isPrimary ? primaryToken : (acc?.providerToken ?? primaryToken)
+              // Primary: use freshly-retrieved session token; extra: use stored providerToken
+              const token = (acc?.isPrimary || !acc) ? activePrimaryToken : (acc.providerToken ?? activePrimaryToken)
               if (!token) return [] as RichMeetingEvent[]
 
               let evs = await fetchCalendarEventsWithToken(token, c.id, start, end, c.backgroundColor)
@@ -617,12 +628,14 @@ export function MorningBrief() {
             }))
 
             const flat = allEvents.flat()
-            // Commit result even if some calendars returned 0 — that just means
-            // those calendars have no events today, not that fetch failed.
-            setTodayEvents(flat.sort((a, b) =>
-              new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
-            ))
-            return
+            if (flat.length > 0) {
+              setTodayEvents(flat.sort((a, b) =>
+                new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
+              ))
+              return
+            }
+            // Zero events from cache path — tokens may be stale.
+            // Fall through to fetchWeekEvents which uses withAuth (proper token refresh).
           }
         }
       } catch { /* fall through to primary only */ }
