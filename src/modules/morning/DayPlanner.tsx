@@ -43,6 +43,7 @@ export interface DayPlannerProps {
   energyLevel: number | null
   tasks: Task[]
   todayEvents: RichMeetingEvent[]
+  eventsLoading: boolean
   dbUser: import('@/types/database').DbUser
   companies: import('@/types/database').DbCompany[]
   date: string
@@ -192,7 +193,7 @@ function GeneratingSkeleton() {
 
 // ─── Main DayPlanner component ────────────────────────────────────────────────
 
-export function DayPlanner({ energyLevel, tasks, todayEvents, dbUser, companies, date }: DayPlannerProps) {
+export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbUser, companies, date }: DayPlannerProps) {
   const [phase,            setPhase]            = useState<Phase>('idle')
   const [selectedTaskIds,  setSelectedTaskIds]  = useState<Set<string>>(new Set())
   const [deepWork,         setDeepWork]         = useState<SlotPlanPrefs['deepWorkPref']>('morning')
@@ -528,6 +529,66 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, dbUser, companies,
           )
         })()}
 
+        {/* Today's fixed meetings — so you know what the AI will work around */}
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
+            <label style={{ fontSize: 11, fontWeight: 600, color: '#FFFFFF', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              Today's calendar
+            </label>
+            {eventsLoading && (
+              <span style={{ fontSize: 10.5, color: '#6B7280', display: 'flex', alignItems: 'center', gap: 4 }}>
+                <RefreshCw size={10} style={{ animation: 'spin 1s linear infinite' }} />
+                Loading…
+              </span>
+            )}
+          </div>
+
+          {eventsLoading ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {[70, 55, 80].map((w, i) => (
+                <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <div style={{ width: 3, height: 28, borderRadius: 2, background: '#252A3E', flexShrink: 0 }} />
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <div style={{ height: 9, width: 38, borderRadius: 4, background: '#252A3E' }} />
+                    <div style={{ height: 11, width: `${w}%`, borderRadius: 4, background: '#1A1D2E' }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : todayEvents.length === 0 ? (
+            <p style={{ margin: 0, fontSize: 12, color: '#6B7280', fontStyle: 'italic' }}>
+              No meetings today — AI will fill your entire day.
+            </p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+              {todayEvents.map(ev => {
+                const color = ev.calendarColor ?? '#1E40AF'
+                return (
+                  <div key={ev.id} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <div style={{ width: 3, height: '100%', minHeight: 28, borderRadius: 2, background: color, flexShrink: 0 }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <span style={{ fontSize: 10, fontFamily: 'monospace', color: '#6B7280' }}>
+                        {hhmm(ev.start_time)}–{hhmm(ev.end_time)}
+                      </span>
+                      <p style={{ margin: '1px 0 0', fontSize: 12, color: '#E8EAF6', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {ev.title}
+                      </p>
+                    </div>
+                    {ev.calendarName && (
+                      <span style={{
+                        fontSize: 9.5, padding: '1px 5px', borderRadius: 3, flexShrink: 0,
+                        background: `${color}18`, border: `1px solid ${color}30`, color,
+                      }}>
+                        {ev.calendarName}
+                      </span>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+
         {/* Q2 — Deep work pref */}
         <div>
           <label style={{ fontSize: 11, fontWeight: 600, color: '#FFFFFF', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: 8 }}>
@@ -568,16 +629,21 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, dbUser, companies,
           </button>
           <button
             onClick={() => void generate()}
+            disabled={eventsLoading}
+            title={eventsLoading ? 'Waiting for calendar to load…' : undefined}
             style={{
-              flex: 1, padding: '10px 0', borderRadius: 8, cursor: 'pointer',
+              flex: 1, padding: '10px 0', borderRadius: 8, cursor: eventsLoading ? 'not-allowed' : 'pointer',
               background: '#7F77DD', border: 'none',
               color: '#fff', fontSize: 12.5, fontWeight: 600,
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+              opacity: eventsLoading ? 0.45 : 1,
               transition: 'opacity 0.15s',
             }}
           >
-            <Sparkles size={13} />
-            Generate My Day Plan
+            {eventsLoading
+              ? <><RefreshCw size={13} style={{ animation: 'spin 1s linear infinite' }} /> Loading calendar…</>
+              : <><Sparkles size={13} /> Generate My Day Plan</>
+            }
           </button>
         </div>
       </div>

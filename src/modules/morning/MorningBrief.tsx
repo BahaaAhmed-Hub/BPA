@@ -516,7 +516,8 @@ export function MorningBrief() {
     const logs     = (() => { try { const r = localStorage.getItem('professor-habit-logs'); return r ? JSON.parse(r) as Record<string, string[]> : {} } catch { return {} } })()
     return loadStoredHabits().map(h => ({ ...h, checked: (logs[h.id] ?? []).includes(todayStr) }))
   })
-  const [todayEvents, setTodayEvents]   = useState<RichMeetingEvent[]>([])
+  const [todayEvents, setTodayEvents]     = useState<RichMeetingEvent[]>([])
+  const [eventsLoading, setEventsLoading] = useState(true)
   const [selectedEvent, setSelectedEvent] = useState<RichMeetingEvent | null>(null)
 
   const firstName = getFirstName(user?.name, user?.email ?? '')
@@ -639,7 +640,7 @@ export function MorningBrief() {
         )
       )
     }
-    void tryMultiAccount()
+    void tryMultiAccount().finally(() => setEventsLoading(false))
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -836,6 +837,7 @@ export function MorningBrief() {
                 energyLevel={energyLevel}
                 tasks={tasks}
                 todayEvents={todayEvents}
+                eventsLoading={eventsLoading}
                 dbUser={buildMockUser(user)}
                 companies={MOCK_COMPANIES}
                 date={todayKey()}
