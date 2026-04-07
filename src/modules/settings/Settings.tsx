@@ -14,7 +14,7 @@ import { CSS } from '@dnd-kit/utilities'
 import {
   Plus, Trash2, GripVertical, LogIn, LogOut,
   ChevronDown, ChevronUp, User, Clock, Building2, Flame,
-  Brain, Bell, Palette, Link, X, RefreshCw,
+  Brain, Bell, Palette, Link, X, RefreshCw, Eye, EyeOff,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { connectAdditionalGoogleAccount, signOut as googleSignOut } from '@/lib/google'
@@ -22,7 +22,7 @@ import { useUIStore } from '@/store/uiStore'
 import { useAuthStore } from '@/store/authStore'
 import { THEMES, getTheme, applyThemeVars } from '@/lib/themes'
 import { useHabitsStore, getHabitColors } from '@/store/habitsStore'
-import { loadAccounts, removeAccount, getProviderTokenForAccount, type ConnectedAccount } from '@/lib/multiAccount'
+import { loadAccounts, removeAccount, getProviderTokenForAccount, loadHiddenAccounts, saveHiddenAccounts, type ConnectedAccount } from '@/lib/multiAccount'
 import {
   saveProfileToDB, savePrefsToDB, saveCompaniesToDB, loadCompaniesFromDB,
   saveHabitsToDB, saveHabitLogsToDB, loadSettingsFromDB,
@@ -863,6 +863,16 @@ function AccountsSection({
   const [calendars, setCalendars]   = useState<Record<string, string[]>>({})
   const [loadingCals, setLoading]   = useState<string | null>(null)
   const [staleIds, setStaleIds]     = useState<Set<string>>(new Set())
+  const [hiddenAccts, setHiddenAccts] = useState<Set<string>>(loadHiddenAccounts)
+
+  function toggleAccountVisibility(email: string) {
+    setHiddenAccts(prev => {
+      const next = new Set(prev)
+      if (next.has(email)) next.delete(email); else next.add(email)
+      saveHiddenAccounts(next)
+      return next
+    })
+  }
 
   // On mount: check each additional account's token status
   useEffect(() => {
@@ -977,6 +987,8 @@ function AccountsSection({
             padding: '12px 14px', borderRadius: 10, marginBottom: 8,
             background: 'var(--color-surface2, #0D0F1A)',
             border: `1px solid ${isStale ? 'rgba(224,165,36,0.35)' : 'var(--color-border, #252A3E)'}`,
+            opacity: hiddenAccts.has(acc.email) ? 0.5 : 1,
+            transition: 'opacity 0.15s',
           }}>
             <div style={{ width: 32, height: 32, borderRadius: '50%', flexShrink: 0, background: '#7F77DD18', border: '1px solid #7F77DD40', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: '#7F77DD' }}>
               {acc.email ? acc.email[0].toUpperCase() : 'G'}
@@ -1005,6 +1017,13 @@ function AccountsSection({
                 <RefreshCw size={12} style={{ animation: loadingCals === acc.id ? 'spin 1s linear infinite' : 'none' }} />
               </button>
             )}
+            <button
+              onClick={() => toggleAccountVisibility(acc.email)}
+              title={hiddenAccts.has(acc.email) ? 'Show in Calendar' : 'Hide from Calendar'}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, display: 'flex', color: hiddenAccts.has(acc.email) ? '#4B5268' : 'var(--color-text-muted, #6B7280)' }}
+            >
+              {hiddenAccts.has(acc.email) ? <EyeOff size={13} /> : <Eye size={13} />}
+            </button>
             <button onClick={() => removeAcc(acc.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#E05252', padding: 4, display: 'flex' }}>
               <Trash2 size={13} />
             </button>

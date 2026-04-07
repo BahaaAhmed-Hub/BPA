@@ -24,7 +24,7 @@ import type { GCalEvent, GCalCalendar } from '@/lib/googleCalendar'
 import { generateMeetingPrep } from '@/lib/professor'
 import type { MeetingPrep } from '@/lib/professor'
 import { useAuthStore } from '@/store/authStore'
-import { loadAccounts, silentRefreshAccountToken } from '@/lib/multiAccount'
+import { loadAccounts, silentRefreshAccountToken, loadHiddenAccounts } from '@/lib/multiAccount'
 import { connectAdditionalGoogleAccount } from '@/lib/google'
 import type { DbUser, DbCompany, DbCalendarEvent } from '@/types/database'
 
@@ -200,14 +200,14 @@ async function loadAllCalendars(primaryEmail: string): Promise<LoadCalendarsResu
 
   const extraResults = await Promise.all(
     extraAccounts.map(async account => {
-      const token = account.providerToken
-      const age   = Date.now() - (account.providerTokenSavedAt ?? 0)
-      const fresh = age < 50 * 60 * 1000  // within Google's ~60-min TTL
+      const token      = account.providerToken
+      const age        = Date.now() - (account.providerTokenSavedAt ?? 0)
+      const fresh      = age < 50 * 60 * 1000  // within Google's ~60-min TTL
+      const cachedCals = calCache.filter(c => c.accountEmail === account.email)
 
       // If token is fresh, skip API validation — use cached calendar list directly
-      if (fresh && token) {
-        const cached = calCache.filter(c => c.accountEmail === account.email)
-        if (cached.length) return cached.map(c => ({ ...c, accountToken: token } as CalWithAccount))
+      if (fresh && token && cachedCals.length) {
+        return cachedCals.map(c => ({ ...c, accountToken: token } as CalWithAccount))
       }
 
       // Token stale or no cache — try API with stored token first
@@ -229,11 +229,15 @@ async function loadAllCalendars(primaryEmail: string): Promise<LoadCalendarsResu
         }
       }
 
-      // Confirmed 401 from Google AND GoTrue refresh failed — truly needs reconnect
+      // Token confirmed expired + refresh failed.
+      // If we have cached calendars, return them silently — chips stay visible,
+      // events just won't load. Only flag reconnect if there is NO cache at all
+      // (first-ever connection or cache cleared), so the badge is a last resort.
+      if (cachedCals.length) {
+        return cachedCals.map(c => ({ ...c, accountToken: token ?? '' } as CalWithAccount))
+      }
       needsReconnect.push(account.email)
-      return calCache
-        .filter(c => c.accountEmail === account.email)
-        .map(c => ({ ...c, accountToken: token ?? '' } as CalWithAccount))
+      return []
     })
   )
 
@@ -246,8 +250,8 @@ async function loadAllCalendars(primaryEmail: string): Promise<LoadCalendarsResu
   return { calendars, needsReconnect }
 }
 
-async function fetchAllEvents(allCals: CalWithAccount[], hidden: Set<string>, start: Date, end: Date): Promise<GCalEvent[]> {
-  const active = allCals.filter(c => !hidden.has(c.id))
+async function fetchAllEvents(allCals: CalWithAccount[], hidden: Set<string>, hiddenAccts: Set<string>, start: Date, end: Date): Promise<GCalEvent[]> {
+  const active = allCals.filter(c => !hidden.has(c.id) && !hiddenAccts.has(c.accountEmail))
   if (!active.length) return []
   const results = await Promise.all(
     active.map(c => fetchCalendarEventsWithToken(c.accountToken, c.id, start, end, c.backgroundColor))
@@ -875,6 +879,7 @@ export function CalendarIntelligence() {
     const c = loadCalIntelCache(); return c.length ? rebuildFromCache(c) : []
   })
   const [hiddenCals,      setHiddenCals]      = useState<Set<string>>(loadHiddenIntel)
+  const [hiddenAccounts]  = useState<Set<string>>(loadHiddenAccounts)
   const [loadingEvents,   setLoadingEvents]   = useState(true)
   const [noAuth,          setNoAuth]          = useState(false)
   const [fetchError,      setFetchError]      = useState<string | null>(null)
@@ -1005,12 +1010,12 @@ export function CalendarIntelligence() {
 
   useEffect(() => { void reloadCalendars() }, [user?.email]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const loadEvents = useCallback(async (start: Date, cals: CalWithAccount[], hidden: Set<string>) => {
+  const loadEvents = useCallback(async (start: Date, cals: CalWithAccount[], hidden: Set<string>, hiddenAccts = hiddenAccounts) => {
     setLoadingEvents(true); setFetchError(null)
     try {
       if (!cals.length) { setNoAuth(true); setEvents([]); return }
       const end     = getWeekEnd(start)
-      const fetched = await fetchAllEvents(cals, hidden, start, end)
+      const fetched = await fetchAllEvents(cals, hidden, hiddenAccts, start, end)
       setEvents(fetched); setNoAuth(false)
     } catch (err) {
       setFetchError(err instanceof Error ? err.message : 'Failed to load events.')
@@ -1019,8 +1024,8 @@ export function CalendarIntelligence() {
   }, [])
 
   useEffect(() => {
-    if (allCalendars.length) void loadEvents(weekStart, allCalendars, hiddenCals)
-  }, [weekStart, allCalendars, hiddenCals, loadEvents]) // eslint-disable-line react-hooks/exhaustive-deps
+    if (allCalendars.length) void loadEvents(weekStart, allCalendars, hiddenCals, hiddenAccounts)
+  }, [weekStart, allCalendars, hiddenCals, hiddenAccounts, loadEvents]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const handler = () => void reloadCalendars().then(c => { if (c) void loadEvents(weekStart, c, hiddenCals) })
@@ -1250,7 +1255,7 @@ export function CalendarIntelligence() {
         {/* Calendar chips */}
         {allCalendars.length > 0 && (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
-            {allCalendars.map(cal => {
+            {allCalendars.filter(cal => !hiddenAccounts.has(cal.accountEmail)).map(cal => {
               const hidden  = hiddenCals.has(cal.id)
               const color   = calEffectiveColor(cal)
               const chipKey = `${cal.accountEmail}:${cal.id}`

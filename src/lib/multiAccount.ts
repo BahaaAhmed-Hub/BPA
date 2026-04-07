@@ -108,10 +108,7 @@ export async function silentRefreshAccountToken(account: ConnectedAccount): Prom
       `${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`,
       {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': SUPABASE_ANON_KEY,
-        },
+        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY },
         body: JSON.stringify({ refresh_token: account.supabaseRefreshToken }),
       }
     )
@@ -124,23 +121,35 @@ export async function silentRefreshAccountToken(account: ConnectedAccount): Prom
       refresh_token?: string
     }
 
-    const newProviderToken = data.provider_token ?? null
-    if (!newProviderToken) return null
-
-    // Persist fresh tokens back — no session swap, no auth events
+    // ALWAYS save the rotated Supabase tokens — even if provider_token is absent.
+    // If we don't save the new refresh_token here, Supabase invalidates the old one
+    // and every subsequent call fails with 400 (token already used/rotated).
     const accounts = loadAccounts()
     saveAccounts(accounts.map(a => a.id === account.id ? {
       ...a,
-      providerToken:        newProviderToken,
-      providerTokenSavedAt: Date.now(),
       supabaseAccessToken:  data.access_token  ?? a.supabaseAccessToken,
       supabaseRefreshToken: data.refresh_token ?? a.supabaseRefreshToken,
+      // Only update Google token if Supabase returned one
+      ...(data.provider_token ? {
+        providerToken:        data.provider_token,
+        providerTokenSavedAt: Date.now(),
+      } : {}),
     } : a))
 
-    return newProviderToken
+    return data.provider_token ?? null
   } catch {
     return null
   }
+}
+
+// ─── Account visibility (hide entire account from the calendar) ───────────────
+const HIDDEN_ACCOUNTS_KEY = 'cal-intel-hidden-accounts'
+
+export function loadHiddenAccounts(): Set<string> {
+  try { const r = localStorage.getItem(HIDDEN_ACCOUNTS_KEY); return r ? new Set(JSON.parse(r) as string[]) : new Set() } catch { return new Set() }
+}
+export function saveHiddenAccounts(s: Set<string>): void {
+  localStorage.setItem(HIDDEN_ACCOUNTS_KEY, JSON.stringify([...s]))
 }
 
 /** Sign out of Supabase (used only to clear the primary session). */
