@@ -292,11 +292,21 @@ async function fetchAllEvents(allCals: CalWithAccount[], hidden: Set<string>, hi
   const active = allCals.filter(c => !hidden.has(c.id) && !hiddenAccts.has(c.accountEmail))
   if (!active.length) return []
 
+  // Refresh primary token upfront — the stored token may be stale after 60 min of inactivity.
+  // This mirrors what calendarEvents.ts/loadAllCalendars already do correctly.
+  await refreshPrimaryToken()
+  const freshPrimaryToken = localStorage.getItem('google_provider_token') ?? ''
+
+  // Inject the freshly-refreshed token into all primary-account calendars (no accountId)
+  const activeCals = active.map(c =>
+    !c.accountId && freshPrimaryToken ? { ...c, accountToken: freshPrimaryToken } : c
+  )
+
   // Group extra-account calendars by accountId so we can do a single token refresh per account
   const accountTokenCache = new Map<string, string>()  // accountId → best token
 
   const results = await Promise.all(
-    active.map(async c => {
+    activeCals.map(async c => {
       let token = c.accountToken
       if (!token) return []
 
