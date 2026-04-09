@@ -292,49 +292,49 @@ async function fetchAllEvents(allCals: CalWithAccount[], hidden: Set<string>, hi
   const active = allCals.filter(c => !hidden.has(c.id) && !hiddenAccts.has(c.accountEmail))
   if (!active.length) return []
 
-  // Refresh primary token upfront — the stored token may be stale after 60 min of inactivity.
-  // This mirrors what calendarEvents.ts/loadAllCalendars already do correctly.
+  // ── Step 1: Refresh primary token upfront ───────────────────────────────────
+  // The stored token may be stale after 60 min of inactivity.
   await refreshPrimaryToken()
   const freshPrimaryToken = localStorage.getItem('google_provider_token') ?? ''
 
-  // Inject the freshly-refreshed token into all primary-account calendars (no accountId)
-  const activeCals = active.map(c =>
-    !c.accountId && freshPrimaryToken ? { ...c, accountToken: freshPrimaryToken } : c
-  )
+  // ── Step 2: Pre-refresh extra account tokens (one per account) ───────────────
+  // We group by accountId and refresh each account exactly once BEFORE the
+  // concurrent fetch loop. Doing it inside Promise.all previously caused Supabase
+  // refresh-token rotation conflicts: multiple calendars from the same account
+  // would all call silentRefreshAccountToken concurrently with the same (old)
+  // refresh token — the first call rotated it, all subsequent calls got 400.
+  const accounts       = loadAccounts()
+  const extraAccountIds = [...new Set(active.filter(c => c.accountId).map(c => c.accountId!))]
+  const accountTokenMap = new Map<string, string>()  // accountId → best available token
 
-  // Group extra-account calendars by accountId so we can do a single token refresh per account
-  const accountTokenCache = new Map<string, string>()  // accountId → best token
+  await Promise.all(extraAccountIds.map(async accountId => {
+    const cal     = active.find(c => c.accountId === accountId)
+    const stored  = cal?.accountToken ?? ''
+    const account = accounts.find(a => a.id === accountId)
 
+    if (!account) { if (stored) accountTokenMap.set(accountId, stored); return }
+
+    const age   = Date.now() - (account.providerTokenSavedAt ?? 0)
+    const fresh = age < 50 * 60 * 1000  // within 50-min TTL
+
+    if (fresh && stored) {
+      accountTokenMap.set(accountId, stored)
+      return
+    }
+
+    // Token is stale — refresh exactly once for this account
+    const refreshed = await silentRefreshAccountToken(account)
+    accountTokenMap.set(accountId, refreshed ?? stored)
+  }))
+
+  // ── Step 3: Fetch all calendars concurrently using pre-refreshed tokens ──────
   const results = await Promise.all(
-    activeCals.map(async c => {
-      let token = c.accountToken
+    active.map(async c => {
+      const token = c.accountId
+        ? (accountTokenMap.get(c.accountId) ?? c.accountToken)
+        : (freshPrimaryToken || c.accountToken)
       if (!token) return []
-
-      // For extra accounts: if we already refreshed this account's token in this
-      // fetch pass, use the cached refreshed token
-      if (c.accountId) {
-        const cached = accountTokenCache.get(c.accountId)
-        if (cached) token = cached
-      }
-
-      let events = await fetchCalendarEventsWithToken(token, c.id, start, end, c.backgroundColor)
-
-      // If we got nothing back AND this is an extra account, try a silent token
-      // refresh — the stored token may have expired between the last loadAllCalendars
-      // call and now. This is the main cause of "events missing despite chip ON".
-      if (events.length === 0 && c.accountId && !accountTokenCache.has(c.accountId)) {
-        const accounts = loadAccounts()
-        const account  = accounts.find(a => a.id === c.accountId)
-        if (account) {
-          const fresh = await silentRefreshAccountToken(account)
-          if (fresh) {
-            accountTokenCache.set(c.accountId, fresh)
-            events = await fetchCalendarEventsWithToken(fresh, c.id, start, end, c.backgroundColor)
-          }
-        }
-      }
-
-      return events
+      return fetchCalendarEventsWithToken(token, c.id, start, end, c.backgroundColor)
     })
   )
   return results.flat()
