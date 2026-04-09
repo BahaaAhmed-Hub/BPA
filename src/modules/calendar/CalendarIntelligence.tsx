@@ -261,14 +261,14 @@ async function loadAllCalendars(primaryEmail: string): Promise<LoadCalendarsResu
         }
       }
 
-      // Token confirmed expired + refresh failed.
-      // If we have cached calendars, return them silently — chips stay visible,
-      // events just won't load. Only flag reconnect if there is NO cache at all
-      // (first-ever connection or cache cleared), so the badge is a last resort.
+      // Token confirmed expired + refresh failed (GoTrue does not return provider_token
+      // in refresh responses — only the initial OAuth callback has it). Always flag
+      // reconnect so the user knows the account needs reauthorization. Return cached
+      // calendars so chips stay visible with a reconnect badge alongside them.
+      needsReconnect.push(account.email)
       if (cachedCals.length) {
         return withId(cachedCals.map(c => ({ ...c, accountToken: token ?? '' } as CalWithAccount)))
       }
-      needsReconnect.push(account.email)
       return []
     })
   )
@@ -1141,18 +1141,32 @@ export function CalendarIntelligence() {
       const extraAccounts = loadAccounts().filter(a => !a.isPrimary)
       if (!extraAccounts.length) return
       const freshTokens: Record<string, string> = {}  // email → new token
+      const expiredEmails: string[] = []               // accounts that need reconnect
       for (const account of extraAccounts) {
+        const age   = Date.now() - (account.providerTokenSavedAt ?? 0)
+        const stale = age > 50 * 60 * 1000
         const newToken = await silentRefreshAccountToken(account)
-        if (newToken) freshTokens[account.email] = newToken
+        if (newToken) {
+          freshTokens[account.email] = newToken
+        } else if (stale) {
+          // GoTrue didn't return a provider_token (it never does in refresh responses).
+          // If the token is stale, it will expire soon — flag for reconnect now so
+          // the badge appears before events stop loading (not just on next page reload).
+          expiredEmails.push(account.email)
+        }
       }
-      if (Object.keys(freshTokens).length === 0) return
-      // Update allCalendars with new tokens so the next event fetch uses them
-      setAllCalendars(prev =>
-        prev.map(c => freshTokens[c.accountEmail]
-          ? { ...c, accountToken: freshTokens[c.accountEmail] }
-          : c
+      if (Object.keys(freshTokens).length > 0) {
+        // Update allCalendars with new tokens so the next event fetch uses them
+        setAllCalendars(prev =>
+          prev.map(c => freshTokens[c.accountEmail]
+            ? { ...c, accountToken: freshTokens[c.accountEmail] }
+            : c
+          )
         )
-      )
+      }
+      if (expiredEmails.length > 0) {
+        setReconnectNeeded(prev => [...new Set([...prev, ...expiredEmails])])
+      }
     }
 
     // Fire once shortly after mount (catches stale tokens on page load)
