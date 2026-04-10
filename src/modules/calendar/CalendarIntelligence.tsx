@@ -21,10 +21,11 @@ import {
   createCalendarEventWithToken,
 } from '@/lib/googleCalendar'
 import type { GCalEvent, GCalCalendar } from '@/lib/googleCalendar'
+import { getGoogleToken, seedToken } from '@/lib/tokenManager'
 import { generateMeetingPrep } from '@/lib/professor'
 import type { MeetingPrep } from '@/lib/professor'
 import { useAuthStore } from '@/store/authStore'
-import { loadAccounts, silentRefreshAccountToken, loadHiddenAccounts } from '@/lib/multiAccount'
+import { loadAccounts, loadHiddenAccounts } from '@/lib/multiAccount'
 import { connectAdditionalGoogleAccount } from '@/lib/google'
 import type { DbUser, DbCompany, DbCalendarEvent } from '@/types/database'
 
@@ -229,47 +230,38 @@ async function loadAllCalendars(primaryEmail: string): Promise<LoadCalendarsResu
 
   const extraResults = await Promise.all(
     extraAccounts.map(async account => {
-      const token      = account.providerToken
-      const age        = Date.now() - (account.providerTokenSavedAt ?? 0)
-      const fresh      = age < 50 * 60 * 1000  // within Google's ~60-min TTL
       const cachedCals = calCache.filter(c => c.accountEmail === account.email)
-
       const withId = (cals: CalWithAccount[]) =>
         cals.map(c => ({ ...c, accountId: account.id }))
 
-      // If token is fresh, skip API validation — use cached calendar list directly
-      if (fresh && token && cachedCals.length) {
-        return withId(cachedCals.map(c => ({ ...c, accountToken: token } as CalWithAccount)))
+      // Seed tokenManager with the stored token if it's still within its TTL —
+      // avoids an Edge Function round-trip for the calendar-list call below.
+      const age = Date.now() - (account.providerTokenSavedAt ?? 0)
+      if (age < 50 * 60 * 1000 && account.providerToken) {
+        seedToken(account.email, account.providerToken)
       }
 
-      // Token stale or no cache — try API with stored token first
-      if (token) {
-        const { calendars: cals, authFailed } = await listCalendarsWithToken(token)
-        if (!authFailed) {
-          // Token still valid — proactively refresh in background if stale
-          if (!fresh) void silentRefreshAccountToken(account)
-          return withId(cals.map(c => ({ ...c, accountEmail: account.email, accountToken: token })))
-        }
+      // Get a fresh token via tokenManager (Edge Function handles expiry/refresh).
+      const token = await getGoogleToken(account.email)
+
+      if (!token) {
+        // Edge Function returned reconnect_required — flag and return cached chips
+        needsReconnect.push(account.email)
+        return cachedCals.length
+          ? withId(cachedCals.map(c => ({ ...c, accountToken: '' } as CalWithAccount)))
+          : []
       }
 
-      // Got 401 from Google — try GoTrue silent refresh
-      const refreshed = await silentRefreshAccountToken(account)
-      if (refreshed) {
-        const { calendars: cals, authFailed } = await listCalendarsWithToken(refreshed)
-        if (!authFailed) {
-          return withId(cals.map(c => ({ ...c, accountEmail: account.email, accountToken: refreshed })))
-        }
+      const { calendars: cals, authFailed } = await listCalendarsWithToken(token)
+      if (!authFailed) {
+        return withId(cals.map(c => ({ ...c, accountEmail: account.email, accountToken: token })))
       }
 
-      // Token confirmed expired + refresh failed (GoTrue does not return provider_token
-      // in refresh responses — only the initial OAuth callback has it). Always flag
-      // reconnect so the user knows the account needs reauthorization. Return cached
-      // calendars so chips stay visible with a reconnect badge alongside them.
+      // Token rejected by Google even after Edge Function refresh — needs reconnect
       needsReconnect.push(account.email)
-      if (cachedCals.length) {
-        return withId(cachedCals.map(c => ({ ...c, accountToken: token ?? '' } as CalWithAccount)))
-      }
-      return []
+      return cachedCals.length
+        ? withId(cachedCals.map(c => ({ ...c, accountToken: token } as CalWithAccount)))
+        : []
     })
   )
 
@@ -292,48 +284,18 @@ async function fetchAllEvents(allCals: CalWithAccount[], hidden: Set<string>, hi
   const active = allCals.filter(c => !hidden.has(c.id) && !hiddenAccts.has(c.accountEmail))
   if (!active.length) return []
 
-  // ── Step 1: Refresh primary token upfront ───────────────────────────────────
-  // The stored token may be stale after 60 min of inactivity.
+  // Primary token: existing GoTrue-backed refresh (works reliably for primary).
+  // Extra accounts: tokenManager calls the Edge Function which exchanges the
+  // stored Google refresh token — no more 60-min expiry, no rotation conflicts.
   await refreshPrimaryToken()
-  const freshPrimaryToken = localStorage.getItem('google_provider_token') ?? ''
+  const primaryToken = localStorage.getItem('google_provider_token') ?? ''
 
-  // ── Step 2: Pre-refresh extra account tokens (one per account) ───────────────
-  // We group by accountId and refresh each account exactly once BEFORE the
-  // concurrent fetch loop. Doing it inside Promise.all previously caused Supabase
-  // refresh-token rotation conflicts: multiple calendars from the same account
-  // would all call silentRefreshAccountToken concurrently with the same (old)
-  // refresh token — the first call rotated it, all subsequent calls got 400.
-  const accounts       = loadAccounts()
-  const extraAccountIds = [...new Set(active.filter(c => c.accountId).map(c => c.accountId!))]
-  const accountTokenMap = new Map<string, string>()  // accountId → best available token
-
-  await Promise.all(extraAccountIds.map(async accountId => {
-    const cal     = active.find(c => c.accountId === accountId)
-    const stored  = cal?.accountToken ?? ''
-    const account = accounts.find(a => a.id === accountId)
-
-    if (!account) { if (stored) accountTokenMap.set(accountId, stored); return }
-
-    const age   = Date.now() - (account.providerTokenSavedAt ?? 0)
-    const fresh = age < 50 * 60 * 1000  // within 50-min TTL
-
-    if (fresh && stored) {
-      accountTokenMap.set(accountId, stored)
-      return
-    }
-
-    // Token is stale — refresh exactly once for this account
-    const refreshed = await silentRefreshAccountToken(account)
-    accountTokenMap.set(accountId, refreshed ?? stored)
-  }))
-
-  // ── Step 3: Fetch all calendars concurrently using pre-refreshed tokens ──────
   const results = await Promise.all(
     active.map(async c => {
       const token = c.accountId
-        ? (accountTokenMap.get(c.accountId) ?? c.accountToken)
-        : (freshPrimaryToken || c.accountToken)
-      if (!token) return []
+        ? await getGoogleToken(c.accountEmail)  // Edge Function path
+        : (primaryToken || c.accountToken)       // GoTrue path
+      if (!token) return [] as GCalEvent[]
       return fetchCalendarEventsWithToken(token, c.id, start, end, c.backgroundColor)
     })
   )
@@ -1132,57 +1094,17 @@ export function CalendarIntelligence() {
     return () => window.removeEventListener('professor:accountVisibilityChanged', handler)
   }, [])
 
-  // ── Silent background token refresh ─────────────────────────────────────────
-  // Refresh extra-account tokens every 45 min (before Google's 60-min expiry),
-  // and also whenever the tab becomes visible (e.g. after backgrounding).
-  // This keeps tokens current without any user interaction.
+  // ── Token expiry listener ────────────────────────────────────────────────────
+  // tokenManager dispatches 'cal:reconnect-required' when the Edge Function
+  // returns reconnect_required for an extra account. Show the badge immediately.
   useEffect(() => {
-    const refresh = async () => {
-      const extraAccounts = loadAccounts().filter(a => !a.isPrimary)
-      if (!extraAccounts.length) return
-      const freshTokens: Record<string, string> = {}  // email → new token
-      const expiredEmails: string[] = []               // accounts that need reconnect
-      for (const account of extraAccounts) {
-        const age   = Date.now() - (account.providerTokenSavedAt ?? 0)
-        const stale = age > 50 * 60 * 1000
-        const newToken = await silentRefreshAccountToken(account)
-        if (newToken) {
-          freshTokens[account.email] = newToken
-        } else if (stale) {
-          // GoTrue didn't return a provider_token (it never does in refresh responses).
-          // If the token is stale, it will expire soon — flag for reconnect now so
-          // the badge appears before events stop loading (not just on next page reload).
-          expiredEmails.push(account.email)
-        }
-      }
-      if (Object.keys(freshTokens).length > 0) {
-        // Update allCalendars with new tokens so the next event fetch uses them
-        setAllCalendars(prev =>
-          prev.map(c => freshTokens[c.accountEmail]
-            ? { ...c, accountToken: freshTokens[c.accountEmail] }
-            : c
-          )
-        )
-      }
-      if (expiredEmails.length > 0) {
-        setReconnectNeeded(prev => [...new Set([...prev, ...expiredEmails])])
-      }
+    const handler = (e: Event) => {
+      const email = (e as CustomEvent<{ email: string }>).detail?.email
+      if (email) setReconnectNeeded(prev => [...new Set([...prev, email])])
     }
-
-    // Fire once shortly after mount (catches stale tokens on page load)
-    const initialTimer = setTimeout(() => void refresh(), 5000)
-    // Then every 45 minutes
-    const interval = setInterval(() => void refresh(), 45 * 60 * 1000)
-    // Also on tab becoming visible (handles long background periods)
-    const onVisible = () => { if (document.visibilityState === 'visible') void refresh() }
-    document.addEventListener('visibilitychange', onVisible)
-
-    return () => {
-      clearTimeout(initialTimer)
-      clearInterval(interval)
-      document.removeEventListener('visibilitychange', onVisible)
-    }
-  }, []) // runs once; refresh() reads accounts fresh each time via loadAccounts()
+    window.addEventListener('cal:reconnect-required', handler)
+    return () => window.removeEventListener('cal:reconnect-required', handler)
+  }, [])
 
   // ── Status toggle ───────────────────────────────────────────────────────────
   function toggleStatus(eventId: string, status: EventStatus) {

@@ -18,6 +18,7 @@ import { supabase } from './lib/supabase'
 import { signInWithGoogle, getPendingAddAccount, clearPendingAddAccount } from './lib/google'
 import { addAccount, loadAccounts, saveAccounts } from './lib/multiAccount'
 import { saveAccountsToDB, loadCompaniesFromDB, loadRawSettingsFromDB, loadAccountsFromDB } from './lib/dbSync'
+import { seedToken, seedFromLocalStorage, clearAllTokens } from './lib/tokenManager'
 import { getTheme, applyThemeVars } from './lib/themes'
 import { GraduationCap, Calendar, Mail, CheckSquare, Brain, ArrowRight } from 'lucide-react'
 
@@ -534,7 +535,7 @@ function App() {
      * Try to complete the add-account flow with the given session.
      * Returns true if handled (caller should return/skip normal flow).
      */
-    function tryHandleAddAccount(session: { user: { id: string; email?: string; user_metadata?: Record<string,unknown> }; provider_token?: string | null; access_token: string; refresh_token?: string } | null): boolean {
+    function tryHandleAddAccount(session: { user: { id: string; email?: string; user_metadata?: Record<string,unknown> }; provider_token?: string | null; provider_refresh_token?: string | null; access_token: string; refresh_token?: string } | null): boolean {
       if (addAccountHandled || !hasPendingOnLoad) return false
       const pending = getPendingAddAccount()
       if (!pending) { console.log('[AddAccount] pending key missing'); return false }
@@ -542,9 +543,10 @@ function App() {
       if (!session.user) { console.log('[AddAccount] no user in session'); return false }
       addAccountHandled = true
       clearPendingAddAccount()
-      console.log('[AddAccount] ✓ Adding account:', session.user.email)
+      const email = session.user.email ?? ''
+      console.log('[AddAccount] ✓ Adding account:', email)
       addAccount({
-        email:                session.user.email ?? '',
+        email,
         name:                 (session.user.user_metadata?.full_name as string) ?? '',
         avatarUrl:            session.user.user_metadata?.avatar_url as string | undefined,
         providerToken:        session.provider_token,
@@ -553,6 +555,20 @@ function App() {
         scopes:               ['calendar', 'calendar.events', 'gmail.readonly'],
         isPrimary:            false,
       })
+      // Seed tokenManager cache so the first fetchAllEvents doesn't hit the Edge Function
+      if (session.provider_token) seedToken(email, session.provider_token)
+      // Persist Google refresh token to DB so Edge Function can refresh after 60 min
+      if (session.provider_refresh_token) {
+        void supabase.from('connected_google_accounts').upsert({
+          user_id:              session.user.id,
+          email,
+          name:                 (session.user.user_metadata?.full_name as string) ?? null,
+          avatar_url:           session.user.user_metadata?.avatar_url as string | undefined ?? null,
+          google_refresh_token: session.provider_refresh_token,
+          scopes:               ['calendar', 'calendar.events', 'gmail.readonly'],
+          is_primary:           false,
+        }, { onConflict: 'user_id,email' })
+      }
       // Notify Settings (and any other listeners) to re-read accounts from localStorage
       window.dispatchEvent(new CustomEvent('professor:accountsUpdated'))
       // Restore original session, then refresh to get a fresh primary Google token
@@ -646,12 +662,28 @@ function App() {
             localStorage.setItem('google_provider_token', session.provider_token)
             localStorage.setItem('google_provider_token_saved_at', Date.now().toString())
           }
+          // Warm tokenManager cache from any fresh extra-account tokens in localStorage
+          seedFromLocalStorage()
+          // Persist primary account's Google refresh token to DB (for completeness;
+          // primary refresh still goes through refreshPrimaryToken() GoTrue path)
+          if (session?.provider_refresh_token && u.email) {
+            void supabase.from('connected_google_accounts').upsert({
+              user_id:              u.id,
+              email:                u.email,
+              name:                 u.user_metadata?.full_name as string | undefined ?? null,
+              avatar_url:           u.user_metadata?.avatar_url as string | undefined ?? null,
+              google_refresh_token: session.provider_refresh_token,
+              scopes:               ['calendar', 'calendar.events', 'gmail.readonly'],
+              is_primary:           true,
+            }, { onConflict: 'user_id,email' })
+          }
           void loadAllFromDB(loadTasksFromDB, loadHabitsFromDB)
         }
       } else if (!session) {
         localStorage.removeItem('google_provider_token')
         localStorage.removeItem('google_provider_token_saved_at')
         localStorage.removeItem(LAST_USER_KEY)
+        clearAllTokens()
       }
     })
 

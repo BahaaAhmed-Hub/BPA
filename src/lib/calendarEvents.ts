@@ -1,13 +1,15 @@
 /**
- * Shared calendar event fetching used by CalendarIntelligence and MorningBrief.
- * Reads cal-intel-cals-cache, respects visibility toggles, refreshes tokens.
+ * Shared calendar event fetching used by MorningBrief and DayPlanner.
+ * Reads cal-intel-cals-cache, respects visibility toggles, and uses
+ * tokenManager for extra-account tokens so they never expire silently.
  */
 import {
   fetchCalendarEventsWithToken,
   refreshPrimaryToken,
   type GCalEvent,
 } from './googleCalendar'
-import { loadAccounts, silentRefreshAccountToken, loadHiddenAccounts } from './multiAccount'
+import { loadHiddenAccounts } from './multiAccount'
+import { getGoogleToken, seedToken } from './tokenManager'
 
 interface CachedCal {
   id: string
@@ -32,10 +34,16 @@ function buildCalendarsFromCache(): CalWithToken[] {
     if (!raw) return []
     const cached = JSON.parse(raw) as CachedCal[]
     const primaryToken = localStorage.getItem('google_provider_token') ?? ''
-    const accounts = loadAccounts()
+    // Parse accounts only for seeding tokenManager — tokens for events come from
+    // getGoogleToken() which uses the Edge Function for extra accounts.
+    const accounts: Array<{
+      email: string; providerToken?: string; providerTokenSavedAt?: number; isPrimary?: boolean; id?: string
+    }> = (() => {
+      try { return JSON.parse(localStorage.getItem('professor-connected-accounts') ?? '[]') } catch { return [] }
+    })()
     return cached.map(c => {
       const acct = accounts.find(a => a.email === c.accountEmail)
-      const token = (acct && !acct.isPrimary) ? acct.providerToken : primaryToken
+      const token = (acct && !acct.isPrimary) ? (acct.providerToken ?? '') : primaryToken
       return { ...c, accountToken: token, accountId: acct?.id }
     })
   } catch { return [] }
@@ -44,12 +52,13 @@ function buildCalendarsFromCache(): CalWithToken[] {
 /**
  * Fetch all visible calendar events for a time range.
  * Respects cal-intel-hidden (per-calendar eye) and cal-intel-hidden-accounts.
- * Silently refreshes stale tokens. Falls back to primary 'primary' calendar
- * via withAuth if cache is empty or returns nothing.
+ * Uses tokenManager for extra accounts — no more silent 60-min expiry.
+ * Falls back to primary 'primary' calendar via withAuth if cache is empty.
  */
 export async function fetchVisibleEvents(start: Date, end: Date): Promise<GCalEvent[]> {
-  // Always refresh the primary token first
+  // Refresh primary token (GoTrue path — reliable for primary account)
   await refreshPrimaryToken()
+  const primaryToken = localStorage.getItem('google_provider_token') ?? ''
 
   const hiddenCals     = loadHiddenCals()
   const hiddenAccounts = loadHiddenAccounts()
@@ -60,40 +69,32 @@ export async function fetchVisibleEvents(start: Date, end: Date): Promise<GCalEv
   )
 
   if (visible.length === 0) {
-    // No cache yet — fall back to primary calendar via withAuth
     const { fetchWeekEvents } = await import('./googleCalendar')
     const { events } = await fetchWeekEvents(start, end)
     return events
   }
 
-  const tokenCache = new Map<string, string>() // accountId → refreshed token
+  // Seed tokenManager from localStorage for extra accounts that are still fresh
+  const accounts: Array<{
+    email: string; providerToken?: string; providerTokenSavedAt?: number; isPrimary?: boolean
+  }> = (() => {
+    try { return JSON.parse(localStorage.getItem('professor-connected-accounts') ?? '[]') } catch { return [] }
+  })()
+  const now = Date.now()
+  for (const a of accounts) {
+    if (a.isPrimary || !a.providerToken || !a.providerTokenSavedAt) continue
+    if (now - a.providerTokenSavedAt < 50 * 60 * 1000) {
+      seedToken(a.email, a.providerToken)
+    }
+  }
 
   const results = await Promise.all(
     visible.map(async c => {
-      let token = c.accountToken
+      const token = c.accountId
+        ? await getGoogleToken(c.accountEmail)   // Edge Function path
+        : (primaryToken || c.accountToken)        // GoTrue path
       if (!token) return [] as GCalEvent[]
-
-      if (c.accountId) {
-        const cached = tokenCache.get(c.accountId)
-        if (cached) token = cached
-      }
-
-      let events = await fetchCalendarEventsWithToken(token, c.id, start, end, c.backgroundColor)
-
-      // Stale extra-account token — refresh once per account per fetch pass
-      if (events.length === 0 && c.accountId && !tokenCache.has(c.accountId)) {
-        const accounts = loadAccounts()
-        const account  = accounts.find(a => a.id === c.accountId)
-        if (account) {
-          const fresh = await silentRefreshAccountToken(account)
-          if (fresh) {
-            tokenCache.set(c.accountId, fresh)
-            events = await fetchCalendarEventsWithToken(fresh, c.id, start, end, c.backgroundColor)
-          }
-        }
-      }
-
-      return events
+      return fetchCalendarEventsWithToken(token, c.id, start, end, c.backgroundColor)
     })
   )
 
