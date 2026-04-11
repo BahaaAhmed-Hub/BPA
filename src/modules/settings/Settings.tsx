@@ -1307,7 +1307,8 @@ function BlockingRulesSection() {
   const [srcCal,     setSrcCal]    = useState('')
   const [tgtCal,     setTgtCal]    = useState('')
   const [detail,     setDetail]    = useState<DetailLevel>('busy')
-  const [autoApply,  setAutoApply] = useState(false)
+  const [autoApply,   setAutoApply]  = useState(false)
+  const [hideBlocked, setHideBlocked] = useState(false)
 
   useEffect(() => {
     setCals(loadCachedCalendars())
@@ -1328,6 +1329,7 @@ function BlockingRulesSection() {
       id:                  crypto.randomUUID(),
       enabled:             true,
       autoApply,
+      hideBlocked,
       sourceCalendarId:    srcEntry.id,
       sourceCalendarName:  srcEntry.summary ?? srcEntry.id,
       sourceAccountEmail:  srcEntry.accountEmail,
@@ -1337,7 +1339,7 @@ function BlockingRulesSection() {
       detailLevel:         detail,
     }
     saveRules([...rules, rule])
-    setSrcCal(''); setTgtCal(''); setDetail('busy'); setAutoApply(false); setShowForm(false)
+    setSrcCal(''); setTgtCal(''); setDetail('busy'); setAutoApply(false); setHideBlocked(false); setShowForm(false)
   }
 
   function deleteRule(id: string) {
@@ -1392,6 +1394,11 @@ function BlockingRulesSection() {
               {rule.autoApply && (
                 <span style={{ fontSize: 10.5, fontWeight: 600, padding: '2px 7px', borderRadius: 20, background: 'rgba(29,158,117,0.12)', color: '#1D9E75' }}>
                   Auto
+                </span>
+              )}
+              {rule.hideBlocked && (
+                <span style={{ fontSize: 10.5, fontWeight: 600, padding: '2px 7px', borderRadius: 20, background: 'rgba(127,119,221,0.12)', color: '#7F77DD' }}>
+                  Originals only
                 </span>
               )}
               <span style={{ fontSize: 10.5, color: 'var(--color-text-muted, #6B7280)' }}>
@@ -1482,6 +1489,23 @@ function BlockingRulesSection() {
               </div>
               <Toggle checked={autoApply} onChange={setAutoApply} />
             </div>
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '10px 12px', borderRadius: 8,
+              background: hideBlocked ? 'rgba(127,119,221,0.07)' : 'var(--color-surface, #161929)',
+              border: `1px solid ${hideBlocked ? 'rgba(127,119,221,0.3)' : 'var(--color-border, #252A3E)'}`,
+              transition: 'all 0.15s',
+            }}>
+              <div>
+                <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: 'var(--color-text, #E8EAF6)' }}>
+                  Show originals only
+                </p>
+                <p style={{ margin: '2px 0 0', fontSize: 10.5, color: 'var(--color-text-muted, #6B7280)' }}>
+                  Hide created blocks from your calendar view (blocks still exist for recipients)
+                </p>
+              </div>
+              <Toggle checked={hideBlocked} onChange={setHideBlocked} />
+            </div>
           </div>
           <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
             <button onClick={addRule}
@@ -1495,7 +1519,7 @@ function BlockingRulesSection() {
               }}>
               Add Rule
             </button>
-            <button onClick={() => { setShowForm(false); setSrcCal(''); setTgtCal(''); setDetail('busy'); setAutoApply(false) }}
+            <button onClick={() => { setShowForm(false); setSrcCal(''); setTgtCal(''); setDetail('busy'); setAutoApply(false); setHideBlocked(false) }}
               style={{
                 padding: '8px 16px', borderRadius: 8, cursor: 'pointer',
                 background: 'transparent', border: '1px solid var(--color-border, #252A3E)',

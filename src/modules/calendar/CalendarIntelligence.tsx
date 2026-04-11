@@ -30,7 +30,7 @@ import { connectAdditionalGoogleAccount } from '@/lib/google'
 import type { DbUser, DbCompany, DbCalendarEvent } from '@/types/database'
 import {
   loadBlockingRules, applyBlockingRules, cleanupStaleBlocks,
-  type SourceEvent,
+  loadApplied, type SourceEvent,
 } from '@/lib/blockingRules'
 
 // ─── Grid constants ───────────────────────────────────────────────────────────
@@ -939,6 +939,7 @@ export function CalendarIntelligence() {
   const [reconnectNeeded, setReconnectNeeded] = useState<string[]>([])
   const [applyingRules,   setApplyingRules]   = useState(false)
   const [rulesResult,     setRulesResult]     = useState<string | null>(null)
+  const [originalsOnly,   setOriginalsOnly]   = useState(false)
 
   // ── Popup + prep state ──────────────────────────────────────────────────────
   const [selectedEvent, setSelectedEvent] = useState<GCalEventExt | null>(null)
@@ -1275,7 +1276,19 @@ export function CalendarIntelligence() {
 
   // ── Week navigation ──────────────────────────────────────────────────────────
   const weekDays = Array.from({ length: 7 }, (_, i) => { const d = new Date(weekStart); d.setDate(d.getDate() + i); return d })
-  const grouped  = groupByDay(events)
+  // Filter out block-events for rules with hideBlocked=true (or global originalsOnly)
+  const displayedEvents = (() => {
+    const rules = loadBlockingRules().filter(r => r.enabled && (r.hideBlocked || originalsOnly))
+    if (!rules.length) return events
+    const applied = loadApplied()
+    const hiddenTargetIds = new Set<string>()
+    for (const rule of rules) {
+      const ruleApplied = applied[rule.id] ?? {}
+      for (const targetId of Object.values(ruleApplied)) hiddenTargetIds.add(targetId)
+    }
+    return events.filter(e => !hiddenTargetIds.has(e.id))
+  })()
+  const grouped  = groupByDay(displayedEvents)
   const today    = localDateStr(new Date())
   const [nowPx,  setNowPx] = useState(nowTopPx())
   useEffect(() => {
@@ -1403,6 +1416,23 @@ export function CalendarIntelligence() {
             >
               <Shield size={13} />
               {applyingRules ? 'Applying…' : 'Apply Rules'}
+            </button>
+
+            <button
+              onClick={() => setOriginalsOnly(v => !v)}
+              title={originalsOnly ? 'Showing originals only — click to show all events' : 'Show originals only (hide created blocks)'}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 5,
+                background: originalsOnly ? 'rgba(127,119,221,0.12)' : 'none',
+                border: `1px solid ${originalsOnly ? 'rgba(127,119,221,0.5)' : '#252A3E'}`,
+                borderRadius: 7, cursor: 'pointer',
+                color: originalsOnly ? '#7F77DD' : '#8B93A8',
+                padding: '4px 8px', fontSize: 12,
+                transition: 'all 0.15s',
+              }}
+            >
+              {originalsOnly ? <EyeOff size={13} /> : <Eye size={13} />}
+              Originals
             </button>
           </div>
 

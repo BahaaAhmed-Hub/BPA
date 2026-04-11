@@ -21,6 +21,7 @@ export interface BlockingRule {
   id:                   string
   enabled:              boolean
   autoApply:            boolean
+  hideBlocked:          boolean   // hide created blocks from Cal Intel view
   sourceCalendarId:     string
   sourceCalendarName:   string
   sourceAccountEmail:   string
@@ -45,7 +46,7 @@ export function saveBlockingRules(rules: BlockingRule[]): void {
   localStorage.setItem(RULES_KEY, JSON.stringify(rules))
 }
 
-function loadApplied(): AppliedBlocksMap {
+export function loadApplied(): AppliedBlocksMap {
   try { return JSON.parse(localStorage.getItem(APPLIED_KEY) ?? '{}') } catch { return {} }
 }
 function saveApplied(map: AppliedBlocksMap): void {
