@@ -201,7 +201,7 @@ function buildBlockEvent(
   // full_details
   return {
     ...base,
-    summary:     source.summary,
+    summary:     source.summary ?? 'Busy',
     description: source.description,
     location:    source.location,
   }
