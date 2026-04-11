@@ -1112,6 +1112,26 @@ export function CalendarIntelligence() {
       const end     = getWeekEnd(start)
       const fetched = await fetchAllEvents(cals, hidden, hiddenAccts, start, end)
       setEvents(fetched); setNoAuth(false)
+
+      // Auto-apply rules silently in the background
+      const autoRules = loadBlockingRules().filter(r => r.enabled && r.autoApply)
+      if (autoRules.length) {
+        const sourceEvents: SourceEvent[] = (fetched as GCalEventExt[])
+          .filter(e => e.calendarId && e.id)
+          .map(e => ({
+            id:          e.id,
+            calendarId:  e.calendarId!,
+            summary:     e.summary,
+            description: e.description,
+            location:    e.location,
+            start:       e.start,
+            end:         e.end,
+          }))
+        void Promise.all([
+          applyBlockingRules(autoRules, sourceEvents),
+          cleanupStaleBlocks(autoRules, sourceEvents),
+        ])
+      }
     } catch (err) {
       setFetchError(err instanceof Error ? err.message : 'Failed to load events.')
       setEvents([])

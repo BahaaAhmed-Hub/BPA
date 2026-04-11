@@ -20,6 +20,7 @@ export type DetailLevel = 'busy' | 'focus_time' | 'full_details'
 export interface BlockingRule {
   id:                   string
   enabled:              boolean
+  autoApply:            boolean
   sourceCalendarId:     string
   sourceCalendarName:   string
   sourceAccountEmail:   string

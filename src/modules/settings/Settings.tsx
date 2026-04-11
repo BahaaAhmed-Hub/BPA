@@ -1304,9 +1304,10 @@ function BlockingRulesSection() {
   const [showForm, setShowForm]    = useState(false)
 
   // New-rule form state
-  const [srcCal,  setSrcCal]       = useState('')
-  const [tgtCal,  setTgtCal]       = useState('')
-  const [detail,  setDetail]       = useState<DetailLevel>('busy')
+  const [srcCal,     setSrcCal]    = useState('')
+  const [tgtCal,     setTgtCal]    = useState('')
+  const [detail,     setDetail]    = useState<DetailLevel>('busy')
+  const [autoApply,  setAutoApply] = useState(false)
 
   useEffect(() => {
     setCals(loadCachedCalendars())
@@ -1326,6 +1327,7 @@ function BlockingRulesSection() {
     const rule: BlockingRule = {
       id:                  crypto.randomUUID(),
       enabled:             true,
+      autoApply,
       sourceCalendarId:    srcEntry.id,
       sourceCalendarName:  srcEntry.summary ?? srcEntry.id,
       sourceAccountEmail:  srcEntry.accountEmail,
@@ -1335,7 +1337,7 @@ function BlockingRulesSection() {
       detailLevel:         detail,
     }
     saveRules([...rules, rule])
-    setSrcCal(''); setTgtCal(''); setDetail('busy'); setShowForm(false)
+    setSrcCal(''); setTgtCal(''); setDetail('busy'); setAutoApply(false); setShowForm(false)
   }
 
   function deleteRule(id: string) {
@@ -1387,6 +1389,11 @@ function BlockingRulesSection() {
             </p>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3 }}>
               {badge(rule.detailLevel)}
+              {rule.autoApply && (
+                <span style={{ fontSize: 10.5, fontWeight: 600, padding: '2px 7px', borderRadius: 20, background: 'rgba(29,158,117,0.12)', color: '#1D9E75' }}>
+                  Auto
+                </span>
+              )}
               <span style={{ fontSize: 10.5, color: 'var(--color-text-muted, #6B7280)' }}>
                 {rule.sourceAccountEmail === rule.targetAccountEmail
                   ? rule.sourceAccountEmail
@@ -1458,6 +1465,23 @@ function BlockingRulesSection() {
                 ))}
               </div>
             </div>
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '10px 12px', borderRadius: 8,
+              background: autoApply ? 'rgba(29,158,117,0.07)' : 'var(--color-surface, #161929)',
+              border: `1px solid ${autoApply ? 'rgba(29,158,117,0.3)' : 'var(--color-border, #252A3E)'}`,
+              transition: 'all 0.15s',
+            }}>
+              <div>
+                <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: 'var(--color-text, #E8EAF6)' }}>
+                  Auto-apply
+                </p>
+                <p style={{ margin: '2px 0 0', fontSize: 10.5, color: 'var(--color-text-muted, #6B7280)' }}>
+                  Run this rule automatically whenever the calendar loads
+                </p>
+              </div>
+              <Toggle checked={autoApply} onChange={setAutoApply} />
+            </div>
           </div>
           <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
             <button onClick={addRule}
@@ -1471,7 +1495,7 @@ function BlockingRulesSection() {
               }}>
               Add Rule
             </button>
-            <button onClick={() => { setShowForm(false); setSrcCal(''); setTgtCal(''); setDetail('busy') }}
+            <button onClick={() => { setShowForm(false); setSrcCal(''); setTgtCal(''); setDetail('busy'); setAutoApply(false) }}
               style={{
                 padding: '8px 16px', borderRadius: 8, cursor: 'pointer',
                 background: 'transparent', border: '1px solid var(--color-border, #252A3E)',
