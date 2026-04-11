@@ -557,30 +557,33 @@ function App() {
       })
       // Seed tokenManager cache so the first fetchAllEvents doesn't hit the Edge Function
       if (session.provider_token) seedToken(email, session.provider_token)
-      // Persist Google refresh token to DB so Edge Function can refresh after 60 min.
-      // IMPORTANT: use the PRIMARY user's ID (originalUserIdOnLoad), NOT session.user.id —
-      // during the add-account OAuth flow, session.user is the extra account's Supabase
-      // user, but the Edge Function authenticates with the primary user's JWT.
+      // Capture refresh token now — we'll save it to DB AFTER restoring the primary
+      // session, because the RLS policy requires auth.uid() = user_id. While the
+      // extra account's session is active, auth.uid() = extraAccountId ≠ primaryUserId,
+      // so any upsert attempted here would silently fail the RLS check.
+      const googleRefreshToken = session.provider_refresh_token ?? null
       const primaryUserId = originalUserIdOnLoad ?? session.user.id
-      if (session.provider_refresh_token) {
-        void supabase.from('connected_google_accounts').upsert({
-          user_id:              primaryUserId,
-          email,
-          name:                 (session.user.user_metadata?.full_name as string) ?? null,
-          avatar_url:           session.user.user_metadata?.avatar_url as string | undefined ?? null,
-          google_refresh_token: session.provider_refresh_token,
-          scopes:               ['calendar', 'calendar.events', 'gmail.readonly'],
-          is_primary:           false,
-        }, { onConflict: 'user_id,email' })
-      }
       // Notify Settings (and any other listeners) to re-read accounts from localStorage
       window.dispatchEvent(new CustomEvent('professor:accountsUpdated'))
       // Restore original session, then refresh to get a fresh primary Google token
       void supabase.auth.setSession(pending)
         .then(async () => {
-          // Try to get a fresh Google access token for the primary account after restore.
-          // The restored session (from setSession) doesn't carry provider_token, so
-          // refreshSession() is the only way to get a fresh one.
+          // ── Save refresh token NOW — primary session is active, RLS passes ────
+          if (googleRefreshToken) {
+            const { error: upsertErr } = await supabase.from('connected_google_accounts').upsert({
+              user_id:              primaryUserId,
+              email,
+              name:                 (session.user.user_metadata?.full_name as string) ?? null,
+              avatar_url:           session.user.user_metadata?.avatar_url as string | undefined ?? null,
+              google_refresh_token: googleRefreshToken,
+              scopes:               ['calendar', 'calendar.events', 'gmail.readonly'],
+              is_primary:           false,
+            }, { onConflict: 'user_id,email' })
+            if (upsertErr) console.warn('[AddAccount] Failed to save refresh token to DB:', upsertErr)
+            else console.log('[AddAccount] ✓ Refresh token saved to DB for', email)
+          } else {
+            console.warn('[AddAccount] No provider_refresh_token in session — token will expire in ~60 min')
+          }
           try {
             const { data } = await supabase.auth.refreshSession()
             if (data.session?.provider_token) {
