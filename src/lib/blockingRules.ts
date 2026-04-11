@@ -96,49 +96,59 @@ export interface ApplyResult {
   errors:  string[]
 }
 
+// Concurrency guard — prevents duplicate blocks from concurrent auto+manual runs
+let applyInProgress = false
+
 /** Apply all enabled rules for the given source events. Creates blocks in target calendars. */
 export async function applyBlockingRules(
   rules: BlockingRule[],
   sourceEvents: SourceEvent[],
 ): Promise<ApplyResult> {
+  if (applyInProgress) return { created: 0, skipped: 0, failed: 0, errors: ['Apply already in progress'] }
+  applyInProgress = true
+
   const applied = loadApplied()
   const result: ApplyResult = { created: 0, skipped: 0, failed: 0, errors: [] }
 
-  for (const rule of rules) {
-    if (!rule.enabled) continue
+  try {
+    for (const rule of rules) {
+      if (!rule.enabled) continue
 
-    const ruleApplied = applied[rule.id] ?? {}
-    const matching = sourceEvents.filter(e => e.calendarId === rule.sourceCalendarId)
+      const ruleApplied = applied[rule.id] ?? {}
+      const matching = sourceEvents.filter(e => e.calendarId === rule.sourceCalendarId)
 
-    for (const ev of matching) {
-      // Already created a block for this event under this rule
-      if (ruleApplied[ev.id]) { result.skipped++; continue }
+      for (const ev of matching) {
+        // Already created a block for this event under this rule
+        if (ruleApplied[ev.id]) { result.skipped++; continue }
 
-      // All-day events: skip (no start.dateTime)
-      if (!ev.start.dateTime) { result.skipped++; continue }
+        // All-day events: skip (no start.dateTime)
+        if (!ev.start.dateTime) { result.skipped++; continue }
 
-      const token = await getToken(rule.targetAccountEmail)
-      if (!token) {
-        result.failed++
-        result.errors.push(`No token for ${rule.targetAccountEmail}`)
-        continue
+        const token = await getToken(rule.targetAccountEmail)
+        if (!token) {
+          result.failed++
+          result.errors.push(`No token for ${rule.targetAccountEmail}`)
+          continue
+        }
+
+        const blockEvent = buildBlockEvent(ev, rule)
+        const { event, error } = await createCalendarEventWithToken(
+          token, rule.targetCalendarId, blockEvent
+        )
+
+        if (event) {
+          ruleApplied[ev.id] = event.id
+          result.created++
+        } else {
+          result.failed++
+          if (error) result.errors.push(error)
+        }
       }
 
-      const blockEvent = buildBlockEvent(ev, rule.detailLevel)
-      const { event, error } = await createCalendarEventWithToken(
-        token, rule.targetCalendarId, blockEvent
-      )
-
-      if (event) {
-        ruleApplied[ev.id] = event.id
-        result.created++
-      } else {
-        result.failed++
-        if (error) result.errors.push(error)
-      }
+      applied[rule.id] = ruleApplied
     }
-
-    applied[rule.id] = ruleApplied
+  } finally {
+    applyInProgress = false
   }
 
   saveApplied(applied)
@@ -178,24 +188,24 @@ export async function cleanupStaleBlocks(
 
 // ─── Event builder ────────────────────────────────────────────────────────────
 
-function buildBlockEvent(
-  source: SourceEvent,
-  level: DetailLevel,
-) {
-  const base = {
-    start: source.start,
-    end:   source.end,
+/** Hidden marker embedded in every created block so we can detect cross-device duplicates. */
+function dedupMarker(ruleId: string, sourceId: string) {
+  return `\n[bpa-block:${ruleId}:${sourceId}]`
+}
+
+function buildBlockEvent(source: SourceEvent, rule: BlockingRule) {
+  const marker = dedupMarker(rule.id, source.id)
+  const base   = { start: source.start, end: source.end }
+
+  if (rule.detailLevel === 'busy') {
+    return { ...base, summary: 'Busy', description: marker.trim() }
   }
 
-  if (level === 'busy') {
-    return { ...base, summary: 'Busy' }
-  }
-
-  if (level === 'focus_time') {
+  if (rule.detailLevel === 'focus_time') {
     return {
       ...base,
       summary:     'Focus Time',
-      description: `Blocked from ${source.summary ?? 'another calendar'}`,
+      description: `Blocked from ${source.summary ?? 'another calendar'}${marker}`,
     }
   }
 
@@ -203,7 +213,7 @@ function buildBlockEvent(
   return {
     ...base,
     summary:     source.summary ?? 'Busy',
-    description: source.description,
+    description: (source.description ? source.description + marker : marker.trim()),
     location:    source.location,
   }
 }

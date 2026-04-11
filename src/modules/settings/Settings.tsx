@@ -14,7 +14,7 @@ import { CSS } from '@dnd-kit/utilities'
 import {
   Plus, Trash2, GripVertical, LogIn, LogOut,
   ChevronDown, ChevronUp, User, Clock, Building2, Flame,
-  Brain, Bell, Palette, Link, X, RefreshCw, Eye, EyeOff, Shield,
+  Brain, Bell, Palette, Link, X, RefreshCw, Eye, EyeOff, Shield, Pencil,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { connectAdditionalGoogleAccount, signOut as googleSignOut } from '@/lib/google'
@@ -1302,8 +1302,9 @@ function BlockingRulesSection() {
   const [rules, setRulesState]     = useState<BlockingRule[]>(loadBlockingRules)
   const [cals, setCals]            = useState<CachedCalEntry[]>([])
   const [showForm, setShowForm]    = useState(false)
+  const [editingRule, setEditingRule] = useState<BlockingRule | null>(null)
 
-  // New-rule form state
+  // Form state (used for both add and edit)
   const [srcCal,     setSrcCal]    = useState('')
   const [tgtCal,     setTgtCal]    = useState('')
   const [detail,     setDetail]    = useState<DetailLevel>('busy')
@@ -1319,27 +1320,58 @@ function BlockingRulesSection() {
     setRulesState(updated)
   }
 
-  function addRule() {
+  function resetForm() {
+    setSrcCal(''); setTgtCal(''); setDetail('busy'); setAutoApply(false); setHideBlocked(false)
+    setShowForm(false); setEditingRule(null)
+  }
+
+  function openEdit(rule: BlockingRule) {
+    setCals(loadCachedCalendars())
+    setSrcCal(rule.sourceCalendarId)
+    setTgtCal(rule.targetCalendarId)
+    setDetail(rule.detailLevel)
+    setAutoApply(rule.autoApply)
+    setHideBlocked(rule.hideBlocked)
+    setEditingRule(rule)
+    setShowForm(true)
+  }
+
+  function saveForm() {
     if (!srcCal || !tgtCal || srcCal === tgtCal) return
     const srcEntry = cals.find(c => c.id === srcCal)
     const tgtEntry = cals.find(c => c.id === tgtCal)
     if (!srcEntry || !tgtEntry) return
 
-    const rule: BlockingRule = {
-      id:                  crypto.randomUUID(),
-      enabled:             true,
-      autoApply,
-      hideBlocked,
-      sourceCalendarId:    srcEntry.id,
-      sourceCalendarName:  srcEntry.summary ?? srcEntry.id,
-      sourceAccountEmail:  srcEntry.accountEmail,
-      targetCalendarId:    tgtEntry.id,
-      targetCalendarName:  tgtEntry.summary ?? tgtEntry.id,
-      targetAccountEmail:  tgtEntry.accountEmail,
-      detailLevel:         detail,
+    if (editingRule) {
+      // Update existing rule — preserve id, enabled state, and applied-blocks map key
+      saveRules(rules.map(r => r.id === editingRule.id ? {
+        ...r,
+        autoApply,
+        hideBlocked,
+        sourceCalendarId:   srcEntry.id,
+        sourceCalendarName: srcEntry.summary ?? srcEntry.id,
+        sourceAccountEmail: srcEntry.accountEmail,
+        targetCalendarId:   tgtEntry.id,
+        targetCalendarName: tgtEntry.summary ?? tgtEntry.id,
+        targetAccountEmail: tgtEntry.accountEmail,
+        detailLevel:        detail,
+      } : r))
+    } else {
+      saveRules([...rules, {
+        id:                  crypto.randomUUID(),
+        enabled:             true,
+        autoApply,
+        hideBlocked,
+        sourceCalendarId:    srcEntry.id,
+        sourceCalendarName:  srcEntry.summary ?? srcEntry.id,
+        sourceAccountEmail:  srcEntry.accountEmail,
+        targetCalendarId:    tgtEntry.id,
+        targetCalendarName:  tgtEntry.summary ?? tgtEntry.id,
+        targetAccountEmail:  tgtEntry.accountEmail,
+        detailLevel:         detail,
+      }])
     }
-    saveRules([...rules, rule])
-    setSrcCal(''); setTgtCal(''); setDetail('busy'); setAutoApply(false); setHideBlocked(false); setShowForm(false)
+    resetForm()
   }
 
   function deleteRule(id: string) {
@@ -1408,8 +1440,14 @@ function BlockingRulesSection() {
               </span>
             </div>
           </div>
+          <button onClick={() => openEdit(rule)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-dim, #94A3B8)', display: 'flex', padding: 4, opacity: 0.7, flexShrink: 0 }}
+            title="Edit rule">
+            <Pencil size={13} />
+          </button>
           <button onClick={() => deleteRule(rule.id)}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#E05252', display: 'flex', padding: 4, opacity: 0.7, flexShrink: 0 }}>
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#E05252', display: 'flex', padding: 4, opacity: 0.7, flexShrink: 0 }}
+            title="Delete rule">
             <Trash2 size={14} />
           </button>
         </div>
@@ -1423,7 +1461,7 @@ function BlockingRulesSection() {
           border: '1px solid var(--color-accent, #1E40AF)40',
         }}>
           <p style={{ margin: '0 0 12px', fontSize: 12.5, fontWeight: 600, color: 'var(--color-text, #E8EAF6)' }}>
-            New blocking rule
+            {editingRule ? 'Edit blocking rule' : 'New blocking rule'}
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <div>
@@ -1508,7 +1546,7 @@ function BlockingRulesSection() {
             </div>
           </div>
           <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
-            <button onClick={addRule}
+            <button onClick={saveForm}
               disabled={!srcCal || !tgtCal || srcCal === tgtCal}
               style={{
                 flex: 1, padding: '8px 0', borderRadius: 8, cursor: 'pointer',
@@ -1517,9 +1555,9 @@ function BlockingRulesSection() {
                 color: (!srcCal || !tgtCal || srcCal === tgtCal) ? 'var(--color-text-muted, #6B7280)' : 'var(--color-accent, #1E40AF)',
                 fontSize: 12.5, fontWeight: 600,
               }}>
-              Add Rule
+              {editingRule ? 'Update Rule' : 'Add Rule'}
             </button>
-            <button onClick={() => { setShowForm(false); setSrcCal(''); setTgtCal(''); setDetail('busy'); setAutoApply(false); setHideBlocked(false) }}
+            <button onClick={resetForm}
               style={{
                 padding: '8px 16px', borderRadius: 8, cursor: 'pointer',
                 background: 'transparent', border: '1px solid var(--color-border, #252A3E)',
@@ -1530,7 +1568,7 @@ function BlockingRulesSection() {
           </div>
         </div>
       ) : (
-        <button onClick={() => { setCals(loadCachedCalendars()); setShowForm(true) }}
+        <button onClick={() => { setCals(loadCachedCalendars()); setEditingRule(null); setShowForm(true) }}
           style={{
             display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px',
             borderRadius: 8, cursor: 'pointer', marginTop: 4,
