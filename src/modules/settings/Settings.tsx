@@ -14,7 +14,7 @@ import { CSS } from '@dnd-kit/utilities'
 import {
   Plus, Trash2, GripVertical, LogIn, LogOut,
   ChevronDown, ChevronUp, User, Clock, Building2, Flame,
-  Brain, Bell, Palette, Link, X, RefreshCw, Eye, EyeOff,
+  Brain, Bell, Palette, Link, X, RefreshCw, Eye, EyeOff, Shield,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { connectAdditionalGoogleAccount, signOut as googleSignOut } from '@/lib/google'
@@ -30,6 +30,11 @@ import {
   type CompanyRow as DbSyncCompanyRow,
 } from '@/lib/dbSync'
 import { loadLogs } from '@/store/habitsStore'
+import {
+  loadBlockingRules, saveBlockingRules,
+  type BlockingRule, type DetailLevel,
+  loadCachedCalendars, type CachedCalEntry,
+} from '@/lib/blockingRules'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -55,19 +60,20 @@ interface CompanyRow {
   users: CompanyUser[]
 }
 
-const SECTION_IDS = ['profile','schedule','companies','habits','accounts','professor','notifications','appearance'] as const
+const SECTION_IDS = ['profile','schedule','companies','habits','accounts','professor','notifications','appearance','blocking'] as const
 type SectionId = typeof SECTION_IDS[number]
 
 interface SectionMeta { id: SectionId; title: string; icon: React.ElementType; description: string }
 const SECTION_META: SectionMeta[] = [
-  { id: 'profile',       title: 'Profile',            icon: User,      description: 'Name, timezone, work week & framework' },
-  { id: 'schedule',      title: 'Schedule Rules',     icon: Clock,     description: 'Focus hours, buffers, meeting protections' },
-  { id: 'companies',     title: 'Companies',          icon: Building2, description: 'Contexts, colors, calendar & email domain mapping' },
-  { id: 'habits',        title: 'Habits',             icon: Flame,     description: 'Configure daily habits — synced with Habits page' },
-  { id: 'accounts',      title: 'Connected Accounts', icon: Link,      description: 'Google accounts, calendars & Gmail access' },
-  { id: 'professor',     title: 'Professor AI',       icon: Brain,     description: 'Communication style, daily brief & review day' },
-  { id: 'notifications', title: 'Notifications',      icon: Bell,      description: 'Morning reminder, wind-down & weekly review nudges' },
-  { id: 'appearance',    title: 'Appearance',         icon: Palette,   description: 'Theme, density & sidebar default' },
+  { id: 'profile',       title: 'Profile',              icon: User,    description: 'Name, timezone, work week & framework' },
+  { id: 'schedule',      title: 'Schedule Rules',       icon: Clock,   description: 'Focus hours, buffers, meeting protections' },
+  { id: 'companies',     title: 'Companies',            icon: Building2, description: 'Contexts, colors, calendar & email domain mapping' },
+  { id: 'habits',        title: 'Habits',               icon: Flame,   description: 'Configure daily habits — synced with Habits page' },
+  { id: 'accounts',      title: 'Connected Accounts',   icon: Link,    description: 'Google accounts, calendars & Gmail access' },
+  { id: 'professor',     title: 'Professor AI',         icon: Brain,   description: 'Communication style, daily brief & review day' },
+  { id: 'notifications', title: 'Notifications',        icon: Bell,    description: 'Morning reminder, wind-down & weekly review nudges' },
+  { id: 'appearance',    title: 'Appearance',           icon: Palette, description: 'Theme, density & sidebar default' },
+  { id: 'blocking',      title: 'Productivity Blocking', icon: Shield,  description: 'Block calendar slots across accounts automatically' },
 ]
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -1278,6 +1284,219 @@ function AppearanceSection({ s, set }: { s: AppSettings; set: (p: Partial<AppSet
   )
 }
 
+// ─── CHUNK 6b: Productivity Blocking section ─────────────────────────────────
+
+const DETAIL_LEVELS: { value: DetailLevel; label: string; desc: string }[] = [
+  { value: 'busy',         label: 'Busy',         desc: 'Just marks time as unavailable' },
+  { value: 'focus_time',   label: 'Focus Time',   desc: 'Shows "Focus Time" + source cal name' },
+  { value: 'full_details', label: 'Full Details',  desc: 'Copies title, description & location' },
+]
+
+const DETAIL_BADGE: Record<DetailLevel, { bg: string; color: string }> = {
+  busy:         { bg: 'rgba(224,82,82,0.12)',   color: '#E05252' },
+  focus_time:   { bg: 'rgba(29,158,117,0.12)',  color: '#1D9E75' },
+  full_details: { bg: 'rgba(30,64,175,0.12)',   color: '#6B9FFF' },
+}
+
+function BlockingRulesSection() {
+  const [rules, setRulesState]     = useState<BlockingRule[]>(loadBlockingRules)
+  const [cals, setCals]            = useState<CachedCalEntry[]>([])
+  const [showForm, setShowForm]    = useState(false)
+
+  // New-rule form state
+  const [srcCal,  setSrcCal]       = useState('')
+  const [tgtCal,  setTgtCal]       = useState('')
+  const [detail,  setDetail]       = useState<DetailLevel>('busy')
+
+  useEffect(() => {
+    setCals(loadCachedCalendars())
+  }, [])
+
+  function saveRules(updated: BlockingRule[]) {
+    saveBlockingRules(updated)
+    setRulesState(updated)
+  }
+
+  function addRule() {
+    if (!srcCal || !tgtCal || srcCal === tgtCal) return
+    const srcEntry = cals.find(c => c.id === srcCal)
+    const tgtEntry = cals.find(c => c.id === tgtCal)
+    if (!srcEntry || !tgtEntry) return
+
+    const rule: BlockingRule = {
+      id:                  crypto.randomUUID(),
+      enabled:             true,
+      sourceCalendarId:    srcEntry.id,
+      sourceCalendarName:  srcEntry.summary ?? srcEntry.id,
+      sourceAccountEmail:  srcEntry.accountEmail,
+      targetCalendarId:    tgtEntry.id,
+      targetCalendarName:  tgtEntry.summary ?? tgtEntry.id,
+      targetAccountEmail:  tgtEntry.accountEmail,
+      detailLevel:         detail,
+    }
+    saveRules([...rules, rule])
+    setSrcCal(''); setTgtCal(''); setDetail('busy'); setShowForm(false)
+  }
+
+  function deleteRule(id: string) {
+    saveRules(rules.filter(r => r.id !== id))
+  }
+
+  function toggleRule(id: string) {
+    saveRules(rules.map(r => r.id === id ? { ...r, enabled: !r.enabled } : r))
+  }
+
+  const badge = (level: DetailLevel) => {
+    const { bg, color } = DETAIL_BADGE[level]
+    const label = DETAIL_LEVELS.find(d => d.value === level)?.label ?? level
+    return (
+      <span style={{ fontSize: 10.5, fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: bg, color }}>
+        {label}
+      </span>
+    )
+  }
+
+  return (
+    <div>
+      <p style={{ margin: '0 0 16px', fontSize: 12.5, color: 'var(--color-text-muted, #6B7280)', lineHeight: 1.55 }}>
+        When an event appears on a source calendar, a matching block is automatically
+        created on the target calendar. Choose how much detail to share.
+      </p>
+
+      {/* Rule list */}
+      {rules.length === 0 && !showForm && (
+        <p style={{ fontSize: 12.5, color: 'var(--color-text-muted, #6B7280)', margin: '0 0 12px', textAlign: 'center', padding: '12px 0' }}>
+          No rules yet — add one below.
+        </p>
+      )}
+
+      {rules.map(rule => (
+        <div key={rule.id} style={{
+          display: 'flex', alignItems: 'center', gap: 10,
+          padding: '10px 14px', borderRadius: 10, marginBottom: 8,
+          background: 'var(--color-surface2, #0D0F1A)',
+          border: `1px solid ${rule.enabled ? 'var(--color-accent, #1E40AF)30' : 'var(--color-border, #252A3E)'}`,
+          opacity: rule.enabled ? 1 : 0.6,
+        }}>
+          <Toggle checked={rule.enabled} onChange={() => toggleRule(rule.id)} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ margin: 0, fontSize: 12.5, fontWeight: 500, color: 'var(--color-text, #E8EAF6)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {rule.sourceCalendarName}
+              <span style={{ margin: '0 6px', color: 'var(--color-text-muted, #6B7280)' }}>→</span>
+              {rule.targetCalendarName}
+            </p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3 }}>
+              {badge(rule.detailLevel)}
+              <span style={{ fontSize: 10.5, color: 'var(--color-text-muted, #6B7280)' }}>
+                {rule.sourceAccountEmail === rule.targetAccountEmail
+                  ? rule.sourceAccountEmail
+                  : `${rule.sourceAccountEmail} → ${rule.targetAccountEmail}`}
+              </span>
+            </div>
+          </div>
+          <button onClick={() => deleteRule(rule.id)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#E05252', display: 'flex', padding: 4, opacity: 0.7, flexShrink: 0 }}>
+            <Trash2 size={14} />
+          </button>
+        </div>
+      ))}
+
+      {/* Add rule form */}
+      {showForm ? (
+        <div style={{
+          padding: '14px 16px', borderRadius: 10, marginTop: 8,
+          background: 'var(--color-surface2, #0D0F1A)',
+          border: '1px solid var(--color-accent, #1E40AF)40',
+        }}>
+          <p style={{ margin: '0 0 12px', fontSize: 12.5, fontWeight: 600, color: 'var(--color-text, #E8EAF6)' }}>
+            New blocking rule
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div>
+              <label style={{ fontSize: 11, color: 'var(--color-text-muted, #6B7280)', display: 'block', marginBottom: 4 }}>
+                Source calendar (events to watch)
+              </label>
+              <select value={srcCal} onChange={e => setSrcCal(e.target.value)} style={{ ...selectStyle, width: '100%' }}>
+                <option value="">— choose —</option>
+                {cals.map(c => (
+                  <option key={c.id} value={c.id}>
+                    {c.summary ?? c.id} ({c.accountEmail})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label style={{ fontSize: 11, color: 'var(--color-text-muted, #6B7280)', display: 'block', marginBottom: 4 }}>
+                Target calendar (where blocks are created)
+              </label>
+              <select value={tgtCal} onChange={e => setTgtCal(e.target.value)} style={{ ...selectStyle, width: '100%' }}>
+                <option value="">— choose —</option>
+                {cals.filter(c => c.id !== srcCal).map(c => (
+                  <option key={c.id} value={c.id}>
+                    {c.summary ?? c.id} ({c.accountEmail})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label style={{ fontSize: 11, color: 'var(--color-text-muted, #6B7280)', display: 'block', marginBottom: 4 }}>
+                Detail level
+              </label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {DETAIL_LEVELS.map(d => (
+                  <button key={d.value} onClick={() => setDetail(d.value)}
+                    style={{
+                      flex: 1, padding: '7px 6px', borderRadius: 8, cursor: 'pointer', textAlign: 'center',
+                      background: detail === d.value ? DETAIL_BADGE[d.value].bg : 'var(--color-surface, #161929)',
+                      border: `1px solid ${detail === d.value ? DETAIL_BADGE[d.value].color + '80' : 'var(--color-border, #252A3E)'}`,
+                      color: detail === d.value ? DETAIL_BADGE[d.value].color : 'var(--color-text-dim, #94A3B8)',
+                      transition: 'all 0.15s',
+                    }}>
+                    <p style={{ margin: 0, fontSize: 11.5, fontWeight: 600 }}>{d.label}</p>
+                    <p style={{ margin: '2px 0 0', fontSize: 9.5, opacity: 0.7, lineHeight: 1.3 }}>{d.desc}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+            <button onClick={addRule}
+              disabled={!srcCal || !tgtCal || srcCal === tgtCal}
+              style={{
+                flex: 1, padding: '8px 0', borderRadius: 8, cursor: 'pointer',
+                background: (!srcCal || !tgtCal || srcCal === tgtCal) ? 'var(--color-surface, #161929)' : 'var(--color-accent-fill, rgba(30,64,175,0.15))',
+                border: '1px solid var(--color-accent, #1E40AF)50',
+                color: (!srcCal || !tgtCal || srcCal === tgtCal) ? 'var(--color-text-muted, #6B7280)' : 'var(--color-accent, #1E40AF)',
+                fontSize: 12.5, fontWeight: 600,
+              }}>
+              Add Rule
+            </button>
+            <button onClick={() => { setShowForm(false); setSrcCal(''); setTgtCal(''); setDetail('busy') }}
+              style={{
+                padding: '8px 16px', borderRadius: 8, cursor: 'pointer',
+                background: 'transparent', border: '1px solid var(--color-border, #252A3E)',
+                color: 'var(--color-text-muted, #6B7280)', fontSize: 12.5,
+              }}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button onClick={() => { setCals(loadCachedCalendars()); setShowForm(true) }}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px',
+            borderRadius: 8, cursor: 'pointer', marginTop: 4,
+            background: 'var(--color-accent-fill, rgba(30,64,175,0.10))',
+            border: '1px solid var(--color-accent, #1E40AF)40',
+            color: 'var(--color-accent, #1E40AF)', fontSize: 12.5,
+          }}>
+          <Plus size={13} /> Add Rule
+        </button>
+      )}
+    </div>
+  )
+}
+
 // ─── CHUNK 7: Main Settings component ────────────────────────────────────────
 
 export function Settings() {
@@ -1434,6 +1653,7 @@ export function Settings() {
         {id === 'professor'     && <ProfessorSection     s={settings} set={update} />}
         {id === 'notifications' && <NotificationsSection s={settings} set={update} />}
         {id === 'appearance'    && <AppearanceSection    s={settings} set={update} />}
+        {id === 'blocking'      && <BlockingRulesSection />}
       </SectionShell>
     )
   }
