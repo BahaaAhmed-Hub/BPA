@@ -3,7 +3,7 @@ import {
   ChevronLeft, ChevronRight, Calendar, Video, Users,
   Sparkles, MapPin, RefreshCw, X, Eye, EyeOff,
   CheckCircle2, XCircle, Link, Phone, Repeat, User,
-  ExternalLink, AlertCircle,
+  ExternalLink, AlertCircle, Shield,
 } from 'lucide-react'
 import {
   DndContext, DragOverlay, PointerSensor, useSensor, useSensors,
@@ -28,6 +28,10 @@ import { useAuthStore } from '@/store/authStore'
 import { loadAccounts, loadHiddenAccounts } from '@/lib/multiAccount'
 import { connectAdditionalGoogleAccount } from '@/lib/google'
 import type { DbUser, DbCompany, DbCalendarEvent } from '@/types/database'
+import {
+  loadBlockingRules, applyBlockingRules, cleanupStaleBlocks,
+  type SourceEvent,
+} from '@/lib/blockingRules'
 
 // ─── Grid constants ───────────────────────────────────────────────────────────
 const HOUR_PX  = 56     // pixels per hour
@@ -933,6 +937,8 @@ export function CalendarIntelligence() {
   const [noAuth,          setNoAuth]          = useState(false)
   const [fetchError,      setFetchError]      = useState<string | null>(null)
   const [reconnectNeeded, setReconnectNeeded] = useState<string[]>([])
+  const [applyingRules,   setApplyingRules]   = useState(false)
+  const [rulesResult,     setRulesResult]     = useState<string | null>(null)
 
   // ── Popup + prep state ──────────────────────────────────────────────────────
   const [selectedEvent, setSelectedEvent] = useState<GCalEventExt | null>(null)
@@ -1070,6 +1076,26 @@ export function CalendarIntelligence() {
       const end     = getWeekEnd(start)
       const fetched = await fetchAllEvents(cals, hidden, hiddenAccts, start, end)
       setEvents(fetched); setNoAuth(false)
+
+      // Auto-apply rules silently in the background
+      const autoRules = loadBlockingRules().filter(r => r.enabled && r.autoApply)
+      if (autoRules.length) {
+        const sourceEvents: SourceEvent[] = (fetched as GCalEventExt[])
+          .filter(e => e.calendarId && e.id)
+          .map(e => ({
+            id:          e.id,
+            calendarId:  e.calendarId!,
+            summary:     e.summary,
+            description: e.description,
+            location:    e.location,
+            start:       e.start,
+            end:         e.end,
+          }))
+        void Promise.all([
+          applyBlockingRules(autoRules, sourceEvents),
+          cleanupStaleBlocks(autoRules, sourceEvents),
+        ])
+      }
     } catch (err) {
       setFetchError(err instanceof Error ? err.message : 'Failed to load events.')
       setEvents([])
@@ -1289,6 +1315,43 @@ export function CalendarIntelligence() {
     }
   }
 
+  // ── Apply blocking rules ─────────────────────────────────────────────────────
+  async function handleApplyRules() {
+    const rules = loadBlockingRules().filter(r => r.enabled)
+    if (!rules.length) { setRulesResult('No enabled rules configured.'); setTimeout(() => setRulesResult(null), 3000); return }
+    setApplyingRules(true); setRulesResult(null)
+    try {
+      // Convert current week's events to SourceEvent format
+      const sourceEvents: SourceEvent[] = (events as GCalEventExt[])
+        .filter(e => e.calendarId && e.id)
+        .map(e => ({
+          id:          e.id,
+          calendarId:  e.calendarId!,
+          summary:     e.summary,
+          description: e.description,
+          location:    e.location,
+          start:       e.start,
+          end:         e.end,
+        }))
+      const [applyRes, removed] = await Promise.all([
+        applyBlockingRules(rules, sourceEvents),
+        cleanupStaleBlocks(rules, sourceEvents),
+      ])
+      const msg = [
+        applyRes.created  ? `${applyRes.created} block${applyRes.created > 1 ? 's' : ''} created` : '',
+        removed           ? `${removed} stale removed` : '',
+        applyRes.skipped  ? `${applyRes.skipped} skipped` : '',
+        applyRes.failed   ? `${applyRes.failed} failed` : '',
+      ].filter(Boolean).join(' · ') || 'All up to date'
+      setRulesResult(msg)
+    } catch (err) {
+      setRulesResult(`Error: ${err instanceof Error ? err.message : 'unknown'}`)
+    } finally {
+      setApplyingRules(false)
+      setTimeout(() => setRulesResult(null), 5000)
+    }
+  }
+
   // ── Render ───────────────────────────────────────────────────────────────────
   return (
     <div className={creatingEvt ? 'cal-grid-creating' : undefined} style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#0D0F1E', color: '#E8EAF6', fontFamily: 'inherit', overflow: 'hidden' }}>
@@ -1324,7 +1387,31 @@ export function CalendarIntelligence() {
               onClick={() => void reloadCalendars().then(c => { if (c) void loadEvents(weekStart, c, hiddenCals) })}
               style={{ background: 'none', border: '1px solid #252A3E', borderRadius: 7, cursor: 'pointer', color: '#8B93A8', padding: '4px 8px', display: 'flex', alignItems: 'center' }}
             ><RefreshCw size={13} /></button>
+
+            <button
+              onClick={() => void handleApplyRules()}
+              disabled={applyingRules}
+              title="Apply productivity blocking rules"
+              style={{
+                display: 'flex', alignItems: 'center', gap: 5,
+                background: 'none', border: '1px solid #252A3E', borderRadius: 7,
+                cursor: applyingRules ? 'default' : 'pointer',
+                color: applyingRules ? '#4B5268' : '#8B93A8',
+                padding: '4px 8px', fontSize: 12,
+                opacity: applyingRules ? 0.6 : 1,
+              }}
+            >
+              <Shield size={13} />
+              {applyingRules ? 'Applying…' : 'Apply Rules'}
+            </button>
           </div>
+
+          {/* Rules result toast */}
+          {rulesResult && (
+            <span style={{ fontSize: 11.5, color: rulesResult.startsWith('Error') ? '#E05252' : '#1D9E75', marginLeft: 4 }}>
+              {rulesResult}
+            </span>
+          )}
         </div>
 
         {/* Calendar chips */}
