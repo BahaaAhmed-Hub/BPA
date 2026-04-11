@@ -557,10 +557,14 @@ function App() {
       })
       // Seed tokenManager cache so the first fetchAllEvents doesn't hit the Edge Function
       if (session.provider_token) seedToken(email, session.provider_token)
-      // Persist Google refresh token to DB so Edge Function can refresh after 60 min
+      // Persist Google refresh token to DB so Edge Function can refresh after 60 min.
+      // IMPORTANT: use the PRIMARY user's ID (originalUserIdOnLoad), NOT session.user.id —
+      // during the add-account OAuth flow, session.user is the extra account's Supabase
+      // user, but the Edge Function authenticates with the primary user's JWT.
+      const primaryUserId = originalUserIdOnLoad ?? session.user.id
       if (session.provider_refresh_token) {
         void supabase.from('connected_google_accounts').upsert({
-          user_id:              session.user.id,
+          user_id:              primaryUserId,
           email,
           name:                 (session.user.user_metadata?.full_name as string) ?? null,
           avatar_url:           session.user.user_metadata?.avatar_url as string | undefined ?? null,

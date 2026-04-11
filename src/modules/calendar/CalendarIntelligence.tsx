@@ -201,7 +201,9 @@ function rebuildFromCache(cached: CachedCal[]): CalWithAccount[] {
   const primaryToken = localStorage.getItem('google_provider_token') ?? ''
   const accounts     = loadAccounts()
   return cached.map(c => {
-    const acct  = accounts.find(a => a.email === c.accountEmail)
+    // Only match non-primary accounts — primary cals must NOT get an accountId
+    // or fetchAllEvents will route them through the Edge Function path instead of GoTrue.
+    const acct  = accounts.find(a => a.email === c.accountEmail && !a.isPrimary)
     const token = acct ? acct.providerToken : primaryToken
     return { ...c, accountToken: token, accountId: acct?.id } as CalWithAccount
   })
