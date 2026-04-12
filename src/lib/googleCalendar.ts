@@ -1,23 +1,5 @@
 import { supabase } from './supabase'
-
-const SUPABASE_URL      = (import.meta.env.VITE_SUPABASE_URL      as string) ?? ''
-const SUPABASE_ANON_KEY = (import.meta.env.VITE_SUPABASE_ANON_KEY as string) ?? ''
-
-/** Direct GoTrue HTTP refresh — reliably returns provider_token unlike refreshSession() */
-async function goTrueRefresh(refreshToken: string): Promise<{ provider_token: string; access_token: string; refresh_token: string } | null> {
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !refreshToken) return null
-  try {
-    const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY },
-      body: JSON.stringify({ refresh_token: refreshToken }),
-    })
-    if (!res.ok) return null
-    const data = await res.json() as { provider_token?: string; access_token?: string; refresh_token?: string }
-    if (!data.provider_token) return null
-    return { provider_token: data.provider_token, access_token: data.access_token ?? '', refresh_token: data.refresh_token ?? refreshToken }
-  } catch { return null }
-}
+import { getGoogleToken } from './tokenManager'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -85,7 +67,7 @@ function isTokenStale(): boolean {
 async function getProviderToken(): Promise<string | null> {
   const { data } = await supabase.auth.getSession()
 
-  // 1. Live session already has a fresh provider token — use and cache it
+  // 1. Live session has a fresh provider token (right after OAuth) — cache and return
   if (data.session?.provider_token) {
     saveToken(data.session.provider_token)
     return data.session.provider_token
@@ -94,73 +76,44 @@ async function getProviderToken(): Promise<string | null> {
   // No active session — user is signed out
   if (!data.session) return null
 
-  const cached = localStorage.getItem(TOKEN_KEY)
-
-  // 2. Token stale — refresh. Try GoTrue HTTP first (reliably returns provider_token),
-  //    then fall back to refreshSession() (sometimes works, often returns no provider_token)
-  if (isTokenStale() && data.session.refresh_token) {
-    const gotrue = await goTrueRefresh(data.session.refresh_token)
-    if (gotrue) {
-      saveToken(gotrue.provider_token)
-      // CRITICAL: sync the new Supabase tokens back into the client session.
-      // goTrueRefresh consumes (rotates) the refresh token — if we don't update
-      // the Supabase client here, it keeps the old (now-invalid) refresh token,
-      // causing cascading TOKEN_REFRESHED loops and 401s on all Edge Function calls.
-      if (gotrue.access_token && gotrue.refresh_token) {
-        await supabase.auth.setSession({
-          access_token:  gotrue.access_token,
-          refresh_token: gotrue.refresh_token,
-        })
-      }
-      return gotrue.provider_token
-    }
-    // GoTrue didn't help — try Supabase SDK as last resort
-    try {
-      const { data: refreshed } = await supabase.auth.refreshSession()
-      if (refreshed.session?.provider_token) {
-        saveToken(refreshed.session.provider_token)
-        return refreshed.session.provider_token
-      }
-    } catch { /* ignore */ }
-  }
-
-  // 3. Return cached token (may be slightly stale, worth trying — withAuth handles 401 retry)
-  return cached
+  // 2. Return cached token — Edge Function keeps it fresh via refreshPrimaryToken()
+  return localStorage.getItem(TOKEN_KEY)
 }
 
 /**
- * Exported helper: tries every available path to obtain a fresh Google provider_token
- * for the primary account and persists it to localStorage.
- * Call this before any event-fetching to maximise the chance of having a valid token.
+ * Refreshes the primary account's Google access token.
+ * Uses the Edge Function (same as extra accounts) — the DB stores the primary
+ * account's google_refresh_token at sign-in. Falls back to the localStorage cache
+ * if the Edge Function is unavailable (e.g. during the first 60 min after sign-in
+ * before the DB row exists).
+ *
+ * NOTE: goTrueRefresh was removed — calling GoTrue's /token endpoint directly
+ * rotates the Supabase refresh token without the SDK knowing, which corrupts the
+ * session and causes cascading TOKEN_REFRESHED loops + 401s on all Edge Function
+ * calls. The Edge Function is the safe, session-friendly alternative.
  */
 export async function refreshPrimaryToken(): Promise<string | null> {
   const { data } = await supabase.auth.getSession()
-  if (!data.session) return localStorage.getItem(TOKEN_KEY)  // no session — return whatever we have
+  if (!data.session) return localStorage.getItem(TOKEN_KEY)
 
-  // Already in session (right after sign-in)
+  // Already in session (right after sign-in — only time provider_token is present)
   if (data.session.provider_token) {
     saveToken(data.session.provider_token)
     return data.session.provider_token
   }
 
-  // Try GoTrue HTTP — most reliable path for getting provider_token
-  if (data.session.refresh_token) {
-    const gotrue = await goTrueRefresh(data.session.refresh_token)
-    if (gotrue) {
-      saveToken(gotrue.provider_token)
-      return gotrue.provider_token
+  const cached = localStorage.getItem(TOKEN_KEY)
+
+  // If stale, try the Edge Function (it holds our google_refresh_token server-side)
+  if (isTokenStale() && data.session.user.email) {
+    const fresh = await getGoogleToken(data.session.user.email)
+    if (fresh) {
+      saveToken(fresh)
+      return fresh
     }
-    // GoTrue didn't return provider_token — try SDK refresh as last resort
-    try {
-      const { data: refreshed } = await supabase.auth.refreshSession()
-      if (refreshed.session?.provider_token) {
-        saveToken(refreshed.session.provider_token)
-        return refreshed.session.provider_token
-      }
-    } catch { /* ignore */ }
   }
 
-  return localStorage.getItem(TOKEN_KEY)  // fall back to whatever is cached
+  return cached
 }
 
 // ─── Core API helper ──────────────────────────────────────────────────────────

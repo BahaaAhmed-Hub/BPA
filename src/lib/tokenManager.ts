@@ -27,8 +27,20 @@ const BUFFER_MS    =  2 * 60 * 1000  // refetch when < 2 min remaining
 
 interface CachedToken { token: string; expiresAt: number }
 
-const cache   = new Map<string, CachedToken>()          // email → { token, expiresAt }
-const inFlight = new Map<string, Promise<string | null>>() // email → pending refresh
+const cache    = new Map<string, CachedToken>()             // email → { token, expiresAt }
+const inFlight = new Map<string, Promise<string | null>>()  // email → pending Edge Fn call
+
+// Single shared promise for Supabase session refresh — prevents concurrent
+// refreshSession() calls from consuming the refresh token multiple times
+let sessionRefreshInFlight: Promise<string | null> | null = null
+
+async function getFreshAccessToken(): Promise<string | null> {
+  if (sessionRefreshInFlight) return sessionRefreshInFlight
+  sessionRefreshInFlight = supabase.auth.refreshSession()
+    .then(({ data }) => data.session?.access_token ?? null)
+    .finally(() => { sessionRefreshInFlight = null })
+  return sessionRefreshInFlight
+}
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 
@@ -110,16 +122,17 @@ async function callEdgeFunction(email: string): Promise<string | null> {
       body: JSON.stringify({ email }),
     })
 
-    // If 401, the cached access_token is expired — force a session refresh and retry once
+    // If 401, the cached access_token is expired — refresh session (deduplicated)
+    // and retry once. Using a shared promise prevents concurrent calls from each
+    // calling refreshSession(), which would rotate the refresh token multiple times.
     if (res.status === 401) {
-      const { data: refreshed } = await supabase.auth.refreshSession()
-      if (refreshed.session) {
-        session = refreshed.session
+      const freshToken = await getFreshAccessToken()
+      if (freshToken) {
         res = await fetch(`${SUPABASE_URL}/functions/v1/google-token-refresh`, {
           method:  'POST',
           headers: {
             'Content-Type':  'application/json',
-            'Authorization': `Bearer ${session.access_token}`,
+            'Authorization': `Bearer ${freshToken}`,
           },
           body: JSON.stringify({ email }),
         })
