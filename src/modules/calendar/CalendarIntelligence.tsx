@@ -3,7 +3,7 @@ import {
   ChevronLeft, ChevronRight, Calendar, Video, Users,
   Sparkles, MapPin, RefreshCw, X, Eye, EyeOff,
   CheckCircle2, XCircle, Link, Phone, Repeat, User,
-  ExternalLink, AlertCircle, Shield,
+  ExternalLink, AlertCircle, Shield, Copy, Trash2,
 } from 'lucide-react'
 import {
   DndContext, DragOverlay, PointerSensor, useSensor, useSensors,
@@ -19,6 +19,7 @@ import {
   updateCalendarEventTimes,
   refreshPrimaryToken,
   createCalendarEventWithToken,
+  deleteCalendarEventWithToken,
 } from '@/lib/googleCalendar'
 import type { GCalEvent, GCalCalendar } from '@/lib/googleCalendar'
 import { getGoogleToken, seedToken } from '@/lib/tokenManager'
@@ -457,7 +458,7 @@ function ResizeHandle({ eventId, edge }: { eventId: string; edge: 'top' | 'botto
 }
 
 // ─── EventBlock (draggable, positioned in time grid) ─────────────────────────
-function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverlay, colorOverride, onStatusToggle, onClick }: {
+function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverlay, colorOverride, onStatusToggle, onClick, onContextMenu }: {
   event: GCalEventExt
   layout: EventLayout
   status: EventStatus | undefined
@@ -467,6 +468,7 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
   colorOverride?: string
   onStatusToggle: (s: EventStatus) => void
   onClick: (e: React.MouseEvent) => void
+  onContextMenu?: (e: React.MouseEvent) => void
 }) {
   const { attributes, listeners, setNodeRef, isDragging, transform } = useDraggable({
     id: event.id,
@@ -490,6 +492,7 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
       {...(isDragOverlay ? {} : listeners)}
       {...(isDragOverlay ? {} : attributes)}
       onClick={onClick}
+      onContextMenu={isDragOverlay ? undefined : onContextMenu}
       className="event-card"
       style={{
         position: isDragOverlay ? 'relative' : 'absolute',
@@ -823,6 +826,155 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
   )
 }
 
+// ─── EventContextMenu ─────────────────────────────────────────────────────────
+function EventContextMenu({
+  event,
+  pos,
+  status,
+  onClose,
+  onViewDetails,
+  onStatusToggle,
+  onDelete,
+}: {
+  event: GCalEventExt
+  pos: { x: number; y: number }
+  status: EventStatus | undefined
+  onClose: () => void
+  onViewDetails: () => void
+  onStatusToggle: (s: EventStatus) => void
+  onDelete: () => void
+}) {
+  const menuRef = useRef<HTMLDivElement>(null)
+  const [adjPos, setAdjPos] = useState(pos)
+  const [hoveredItem, setHoveredItem] = useState<string | null>(null)
+
+  // Viewport clamping — same logic as EventPopup
+  useEffect(() => {
+    if (!menuRef.current) return
+    const { width, height } = menuRef.current.getBoundingClientRect()
+    let x = pos.x, y = pos.y
+    if (x + width  > window.innerWidth  - 8) x = pos.x - width
+    if (y + height > window.innerHeight - 8) y = window.innerHeight - height - 8
+    if (y < 8) y = 8
+    if (x < 8) x = 8
+    setAdjPos({ x, y })
+  }, [pos.x, pos.y])
+
+  // Outside-click dismissal — same pattern as EventPopup
+  useEffect(() => {
+    const fn = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) onClose()
+    }
+    document.addEventListener('mousedown', fn)
+    return () => document.removeEventListener('mousedown', fn)
+  }, [onClose])
+
+  // Escape key dismissal
+  useEffect(() => {
+    const fn = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', fn)
+    return () => document.removeEventListener('keydown', fn)
+  }, [onClose])
+
+  const isDone      = status === 'done'
+  const isCancelled = status === 'cancelled'
+
+  const conferenceUrl = event.conferenceData?.entryPoints
+    ?.find(ep => ep.entryPointType === 'video')?.uri
+
+  function formatCopyDetails(): string {
+    const startIso = event.start.dateTime
+    const endIso   = event.end.dateTime
+    const lines: string[] = [event.summary ?? '(No title)']
+    if (startIso) lines.push(fmtPopupDate(startIso, endIso ?? startIso, false))
+    else if (event.start.date) lines.push(event.start.date)
+    if (event.location) lines.push(event.location)
+    return lines.join('\n')
+  }
+
+  const sep: React.CSSProperties = { height: 1, background: '#1E2235', margin: '3px 8px' }
+
+  function item(
+    id: string,
+    icon: React.ReactNode,
+    label: string,
+    action: (() => void) | undefined,
+    opts: { destructive?: boolean; disabled?: boolean } = {}
+  ) {
+    const { destructive = false, disabled = false } = opts
+    const hovered = hoveredItem === id && !disabled
+    return (
+      <div
+        key={id}
+        onMouseEnter={() => setHoveredItem(id)}
+        onMouseLeave={() => setHoveredItem(null)}
+        onClick={disabled ? undefined : () => { action?.(); onClose() }}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 9,
+          padding: '0 12px', height: 32, fontSize: 13,
+          color: disabled ? '#4B5268' : destructive ? '#E05252' : '#C0C4D6',
+          cursor: disabled ? 'default' : 'pointer',
+          borderRadius: 6, userSelect: 'none',
+          background: hovered
+            ? (destructive ? 'rgba(224,82,82,0.1)' : 'rgba(127,119,221,0.12)')
+            : 'transparent',
+          transition: 'background 0.08s',
+        }}
+      >
+        <span style={{ flexShrink: 0, opacity: disabled ? 0.4 : 1 }}>{icon}</span>
+        <span>{label}</span>
+      </div>
+    )
+  }
+
+  return (
+    <div
+      ref={menuRef}
+      onClick={e => e.stopPropagation()}
+      onContextMenu={e => e.preventDefault()}
+      style={{
+        position: 'fixed',
+        top: adjPos.y, left: adjPos.x,
+        width: 210,
+        background: '#161929',
+        border: '1px solid #252A3E',
+        borderRadius: 10,
+        boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
+        zIndex: 1100,
+        padding: '4px 0',
+        overflow: 'hidden',
+      }}
+    >
+      {/* Group 1: Navigation */}
+      {item('view',   <Eye size={13} />,          'View Details',             onViewDetails)}
+      {item('gcal',   <ExternalLink size={13} />,  'Open in Google Calendar',  event.htmlLink ? () => window.open(event.htmlLink, '_blank') : undefined, { disabled: !event.htmlLink })}
+      {conferenceUrl && item('join', <Video size={13} />, 'Join Meeting', () => window.open(conferenceUrl, '_blank'))}
+
+      <div style={sep} />
+
+      {/* Group 2: Clipboard */}
+      {item('copy-link',    <Link size={13} />, 'Copy Event Link',
+        event.htmlLink ? () => navigator.clipboard.writeText(event.htmlLink!).catch(() => {}) : undefined,
+        { disabled: !event.htmlLink })}
+      {item('copy-details', <Copy size={13} />, 'Copy Details',
+        () => navigator.clipboard.writeText(formatCopyDetails()).catch(() => {}))}
+
+      <div style={sep} />
+
+      {/* Group 3: Status */}
+      {item('done',      <CheckCircle2 size={13} />, isDone      ? 'Unmark Done'      : 'Mark as Done',
+        () => { onStatusToggle('done');      onClose() }, )}
+      {item('cancelled', <XCircle size={13} />,      isCancelled ? 'Restore Event'    : 'Mark as Cancelled',
+        () => { onStatusToggle('cancelled'); onClose() }, )}
+
+      <div style={sep} />
+
+      {/* Group 4: Destructive */}
+      {item('delete', <Trash2 size={13} />, 'Delete Event', onDelete, { destructive: true })}
+    </div>
+  )
+}
+
 // Small helper used by EventPopup rows
 function Row({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
   return (
@@ -950,6 +1102,7 @@ export function CalendarIntelligence() {
   const [eventStatuses, setEventStatuses] = useState<Record<string, EventStatus>>(loadEventStatuses)
   const [calColors,     setCalColorsMap]  = useState<Record<string, string>>(loadCalColors)
   const [pickerOpenId,  setPickerOpenId]  = useState<string | null>(null)
+  const [ctxMenu, setCtxMenu] = useState<{ event: GCalEventExt; x: number; y: number } | null>(null)
 
   function setCalColor(id: string, color: string) {
     setCalColorsMap(prev => { const next = { ...prev, [id]: color }; saveCalColors(next); return next })
@@ -1159,6 +1312,28 @@ export function CalendarIntelligence() {
     if (selectedEvent?.id === ev.id) { setSelectedEvent(null); setPopupPos(null); return }
     setSelectedEvent(ev); setPopupPos({ x: e.clientX, y: e.clientY })
     setPrep(null); setPrepError(null)
+  }
+
+  function handleEventContextMenu(ev: GCalEventExt, e: React.MouseEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+    setSelectedEvent(null); setPopupPos(null)
+    setCtxMenu({ event: ev, x: e.clientX, y: e.clientY })
+  }
+
+  async function handleDeleteEvent(ev: GCalEventExt) {
+    setCtxMenu(null)
+    const cal = allCalendars.find(c => c.id === ev.calendarId)
+    if (!cal || !ev.calendarId) return
+    const token = cal.accountId
+      ? await getGoogleToken(cal.accountEmail)
+      : (await refreshPrimaryToken() || cal.accountToken)
+    if (!token) return
+    const ok = await deleteCalendarEventWithToken(token, ev.calendarId, ev.id)
+    if (ok) {
+      setEvents(prev => prev.filter(e => e.id !== ev.id))
+      if (selectedEvent?.id === ev.id) { setSelectedEvent(null); setPopupPos(null) }
+    }
   }
 
   const generatePrep = useCallback(async (ev: GCalEvent) => {
@@ -1664,6 +1839,7 @@ export function CalendarIntelligence() {
                           colorOverride={cal ? calEffectiveColor(cal) : undefined}
                           onStatusToggle={s => toggleStatus(ev.id, s)}
                           onClick={e => handleEventClick(ev, e)}
+                          onContextMenu={e => handleEventContextMenu(ev, e)}
                         />
                       )
                     })}
@@ -1736,6 +1912,24 @@ export function CalendarIntelligence() {
           />
         )
       })()}
+
+      {/* Context menu */}
+      {ctxMenu && (
+        <EventContextMenu
+          event={ctxMenu.event}
+          pos={{ x: ctxMenu.x, y: ctxMenu.y }}
+          status={eventStatuses[ctxMenu.event.id]}
+          onClose={() => setCtxMenu(null)}
+          onViewDetails={() => {
+            setCtxMenu(null)
+            setSelectedEvent(ctxMenu.event)
+            setPopupPos({ x: ctxMenu.x, y: ctxMenu.y })
+            setPrep(null); setPrepError(null)
+          }}
+          onStatusToggle={s => { toggleStatus(ctxMenu.event.id, s); setCtxMenu(null) }}
+          onDelete={() => void handleDeleteEvent(ctxMenu.event)}
+        />
+      )}
 
       {/* New event form — shown after drag-to-create */}
       {newEventDraft && (
