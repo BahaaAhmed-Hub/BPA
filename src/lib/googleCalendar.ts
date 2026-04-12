@@ -40,6 +40,12 @@ export interface GCalEventCreate {
   start: { dateTime?: string; date?: string; timeZone?: string }
   end: { dateTime?: string; date?: string; timeZone?: string }
   attendees?: { email: string }[]
+  conferenceData?: {
+    createRequest: {
+      requestId: string
+      conferenceSolutionKey: { type: 'hangoutsMeet' }
+    }
+  }
 }
 
 export interface GCalError {
@@ -334,7 +340,9 @@ export async function createCalendarEventWithToken(
   event: GCalEventCreate,
 ): Promise<{ event: GCalEvent | null; error?: string }> {
   try {
-    const res = await gcalRequest(token, `/calendars/${encodeURIComponent(calendarId)}/events`, {
+    // conferenceDataVersion=1 is required for Google Meet link generation
+    const qs  = event.conferenceData ? '?conferenceDataVersion=1' : ''
+    const res = await gcalRequest(token, `/calendars/${encodeURIComponent(calendarId)}/events${qs}`, {
       method: 'POST',
       body: JSON.stringify(event),
     })

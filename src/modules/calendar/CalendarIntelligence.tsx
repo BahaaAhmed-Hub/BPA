@@ -21,7 +21,7 @@ import {
   createCalendarEventWithToken,
   deleteCalendarEventWithToken,
 } from '@/lib/googleCalendar'
-import type { GCalEvent, GCalCalendar } from '@/lib/googleCalendar'
+import type { GCalEvent, GCalCalendar, GCalEventCreate } from '@/lib/googleCalendar'
 import { getGoogleToken, seedToken } from '@/lib/tokenManager'
 import { generateMeetingPrep } from '@/lib/professor'
 import type { MeetingPrep } from '@/lib/professor'
@@ -46,6 +46,19 @@ type DragMode     = 'move' | 'resize-top' | 'resize-bottom'
 interface EventLayout { left: number; width: number }
 interface CreatingEvt  { dateStr: string; originMin: number; currentMin: number }
 interface NewEventDraft { dateStr: string; startMin: number; endMin: number; anchorX: number; anchorY: number }
+interface NewEventData {
+  title:        string
+  calId:        string
+  startDate:    string
+  startTime:    string     // HH:MM — empty string when allDay
+  endDate:      string
+  endTime:      string     // HH:MM — empty string when allDay
+  allDay:       boolean
+  location?:    string
+  description?: string
+  invitees:     { email: string }[]
+  addMeet:      boolean
+}
 
 interface CalWithAccount extends GCalCalendar {
   accountEmail: string
@@ -985,27 +998,41 @@ function Row({ icon, children }: { icon: React.ReactNode; children: React.ReactN
   )
 }
 
-// ─── NewEventForm ─────────────────────────────────────────────────────────────
+// ─── NewEventForm (macOS Calendar style) ─────────────────────────────────────
 function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
-  draft: NewEventDraft
+  draft:     NewEventDraft
   calendars: CalWithAccount[]
   calColors: Record<string, string>
-  onSave: (title: string, calId: string) => void
-  onCancel: () => void
+  onSave:    (data: NewEventData) => void
+  onCancel:  () => void
 }) {
   const writable   = calendars.filter(c => c.accessRole === 'owner' || c.accessRole === 'writer')
   const defaultCal = writable.find(c => c.primary) ?? writable[0]
-  const [title,  setTitle]  = useState('')
-  const [calId,  setCalId]  = useState(defaultCal?.id ?? '')
-  const [pos,    setPos]    = useState({ x: draft.anchorX + 16, y: draft.anchorY - 40 })
+
+  const padMin = (m: number) =>
+    `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
+
+  const [title,        setTitle]        = useState('')
+  const [calId,        setCalId]        = useState(defaultCal?.id ?? '')
+  const [location,     setLocation]     = useState('')
+  const [description,  setDescription]  = useState('')
+  const [allDay,       setAllDay]       = useState(false)
+  const [startDate,    setStartDate]    = useState(draft.dateStr)
+  const [startTime,    setStartTime]    = useState(padMin(draft.startMin))
+  const [endDate,      setEndDate]      = useState(draft.dateStr)
+  const [endTime,      setEndTime]      = useState(padMin(draft.endMin))
+  const [inviteeInput, setInviteeInput] = useState('')
+  const [invitees,     setInvitees]     = useState<string[]>([])
+  const [addMeet,      setAddMeet]      = useState(false)
+  const [pos,          setPos]          = useState({ x: draft.anchorX + 16, y: draft.anchorY - 40 })
   const ref      = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const titleRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    inputRef.current?.focus()
+    titleRef.current?.focus()
     if (!ref.current) return
     const { width, height } = ref.current.getBoundingClientRect()
-    let x = draft.anchorX + 16, y = draft.anchorY - 40
+    let x = draft.anchorX + 16, y = draft.anchorY - 60
     if (x + width  > window.innerWidth  - 12) x = draft.anchorX - width - 16
     if (y + height > window.innerHeight - 12) y = window.innerHeight - height - 12
     if (y < 8) y = 8
@@ -1013,57 +1040,246 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
   }, [draft.anchorX, draft.anchorY])
 
   useEffect(() => {
-    const fn = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) onCancel() }
+    const fn = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) onCancel()
+    }
     document.addEventListener('mousedown', fn)
     return () => document.removeEventListener('mousedown', fn)
   }, [onCancel])
 
-  const startIso = minToIso(draft.dateStr, draft.startMin)
-  const endIso   = minToIso(draft.dateStr, draft.endMin)
   const calColor = calColors[calId] ?? calendars.find(c => c.id === calId)?.backgroundColor ?? '#7F77DD'
 
+  function addInvitee(raw: string) {
+    const email = raw.trim().toLowerCase().replace(/,$/,'')
+    if (email && email.includes('@') && !invitees.includes(email))
+      setInvitees(prev => [...prev, email])
+    setInviteeInput('')
+  }
+
+  function handleSave() {
+    if (!title.trim()) return
+    onSave({
+      title:       title.trim(),
+      calId,
+      startDate,   startTime: allDay ? '' : startTime,
+      endDate,     endTime:   allDay ? '' : endTime,
+      allDay,
+      location:    location.trim() || undefined,
+      description: description.trim() || undefined,
+      invitees:    invitees.map(email => ({ email })),
+      addMeet,
+    })
+  }
+
+  const inputBase: React.CSSProperties = {
+    background: 'transparent', border: 'none', outline: 'none',
+    color: '#E8EAF6', fontFamily: 'inherit', fontSize: 13,
+    padding: 0, margin: 0, width: '100%', colorScheme: 'dark',
+  }
+
+  function FieldRow({ label, children }: { label: string; children: React.ReactNode }) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', minHeight: 34, padding: '0 16px' }}>
+        <div style={{ width: 90, flexShrink: 0, textAlign: 'right', paddingRight: 14, fontSize: 12.5, color: '#8B93A8' }}>
+          {label}
+        </div>
+        <div style={{ flex: 1 }}>{children}</div>
+      </div>
+    )
+  }
+
   return (
-    <div ref={ref} onClick={e => e.stopPropagation()} style={{
-      position: 'fixed', top: pos.y, left: pos.x, width: 288, zIndex: 1100,
-      background: '#161929', border: '1px solid #252A3E', borderRadius: 12,
-      boxShadow: '0 16px 48px rgba(0,0,0,0.6)', padding: '14px 16px 12px',
-    }}>
-      <div style={{ height: 3, background: calColor, borderRadius: 2, marginBottom: 12 }} />
-      <div style={{ fontSize: 12, fontWeight: 600, color: '#6B7280', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.5px' }}>New Event</div>
-
-      <input ref={inputRef} value={title} onChange={e => setTitle(e.target.value)}
-        onKeyDown={e => { if (e.key === 'Enter' && title.trim()) onSave(title.trim(), calId); if (e.key === 'Escape') onCancel() }}
-        placeholder="Event title"
-        style={{
-          width: '100%', boxSizing: 'border-box', marginBottom: 10,
-          background: '#1E2235', border: '1px solid #2A2F45', borderRadius: 7,
-          color: '#E8EAF6', fontSize: 14, padding: '8px 10px', outline: 'none',
-        }}
-      />
-
-      <div style={{ fontSize: 12, color: '#8B93A8', marginBottom: 10 }}>
-        {fmtPopupDate(startIso, endIso, false)}
+    <div
+      ref={ref}
+      onClick={e => e.stopPropagation()}
+      onContextMenu={e => e.preventDefault()}
+      style={{
+        position: 'fixed', top: pos.y, left: pos.x, width: 340, zIndex: 1100,
+        background: '#1C1F2E',
+        border: '1px solid #2E3348',
+        borderRadius: 14,
+        boxShadow: '0 24px 64px rgba(0,0,0,0.75)',
+        overflow: 'hidden',
+      }}
+    >
+      {/* ── Title + Calendar selector ── */}
+      <div style={{ padding: '14px 16px 12px', borderBottom: '1px solid #252A3E' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <input
+            ref={titleRef}
+            value={title}
+            onChange={e => setTitle(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter' && title.trim()) handleSave()
+              if (e.key === 'Escape') onCancel()
+            }}
+            placeholder="New Event"
+            style={{
+              flex: 1, background: 'transparent', border: 'none', outline: 'none',
+              color: '#E8EAF6', fontSize: 17, fontWeight: 700, padding: 0,
+              fontFamily: 'inherit',
+            }}
+          />
+          {/* Calendar dot + picker */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+            <div style={{ width: 13, height: 13, borderRadius: '50%', background: calColor, flexShrink: 0 }} />
+            <select
+              value={calId}
+              onChange={e => setCalId(e.target.value)}
+              style={{
+                background: '#252A3E', border: '1px solid #2E3348', borderRadius: 6,
+                color: '#C0C4D6', fontSize: 11, padding: '3px 6px',
+                cursor: 'pointer', outline: 'none', maxWidth: 110,
+              }}
+            >
+              {writable.map(c => <option key={c.id} value={c.id}>{c.summary}</option>)}
+            </select>
+          </div>
+        </div>
       </div>
 
-      {writable.length > 1 && (
-        <select value={calId} onChange={e => setCalId(e.target.value)} style={{
-          width: '100%', marginBottom: 12, background: '#1E2235', border: '1px solid #2A2F45',
-          borderRadius: 7, color: '#C0C4D6', fontSize: 12, padding: '6px 8px', outline: 'none', cursor: 'pointer',
+      {/* ── Location / Video Call ── */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 10,
+        padding: '9px 16px', borderBottom: '1px solid #252A3E',
+      }}>
+        <MapPin size={14} color="#6B7280" style={{ flexShrink: 0 }} />
+        <input
+          value={location}
+          onChange={e => setLocation(e.target.value)}
+          placeholder="Add Location or Video Call"
+          style={{ ...inputBase, color: location ? '#E8EAF6' : '#6B7280' }}
+        />
+        <button
+          onClick={() => setAddMeet(v => !v)}
+          title={addMeet ? 'Remove Google Meet' : 'Add Google Meet link'}
+          style={{
+            flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: 30, height: 26, borderRadius: 7,
+            background: addMeet ? 'rgba(29,158,117,0.15)' : '#1E2235',
+            border: `1px solid ${addMeet ? '#1D9E75' : '#2E3348'}`,
+            color: addMeet ? '#1D9E75' : '#6B7280', cursor: 'pointer',
+            transition: 'all 0.15s',
+          }}
+        >
+          <Video size={13} />
+        </button>
+      </div>
+      {addMeet && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 7,
+          padding: '6px 16px', borderBottom: '1px solid #252A3E',
+          background: 'rgba(29,158,117,0.06)', fontSize: 11.5, color: '#1D9E75',
         }}>
-          {writable.map(c => <option key={c.id} value={c.id}>{c.summary}</option>)}
-        </select>
+          <Video size={11} />
+          Google Meet link will be created on save
+        </div>
       )}
 
-      <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-        <button onClick={onCancel} style={{
-          background: 'transparent', border: '1px solid #2A2F45', borderRadius: 7,
-          color: '#6B7280', fontSize: 12, padding: '5px 14px', cursor: 'pointer',
-        }}>Cancel</button>
-        <button onClick={() => { if (title.trim()) onSave(title.trim(), calId) }} style={{
-          background: title.trim() ? '#7F77DD' : '#252A3E', border: 'none', borderRadius: 7,
-          color: title.trim() ? '#fff' : '#4B5268', fontSize: 12, padding: '5px 14px',
-          cursor: title.trim() ? 'pointer' : 'default', transition: 'background 0.15s',
-        }}>Save</button>
+      {/* ── Date / Time ── */}
+      <div style={{ padding: '6px 0', borderBottom: '1px solid #252A3E' }}>
+        <FieldRow label="All Day:">
+          <input
+            type="checkbox"
+            checked={allDay}
+            onChange={e => setAllDay(e.target.checked)}
+            style={{ width: 15, height: 15, cursor: 'pointer', accentColor: calColor }}
+          />
+        </FieldRow>
+        <FieldRow label="Starts:">
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+            <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
+              style={{ ...inputBase, width: 'auto', colorScheme: 'dark' }} />
+            {!allDay && (
+              <input type="time" value={startTime} onChange={e => setStartTime(e.target.value)}
+                style={{ ...inputBase, width: 'auto', colorScheme: 'dark', fontWeight: 600 }} />
+            )}
+          </div>
+        </FieldRow>
+        <FieldRow label="Ends:">
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+            <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
+              style={{ ...inputBase, width: 'auto', colorScheme: 'dark' }} />
+            {!allDay && (
+              <input type="time" value={endTime} onChange={e => setEndTime(e.target.value)}
+                style={{ ...inputBase, width: 'auto', colorScheme: 'dark', fontWeight: 600 }} />
+            )}
+          </div>
+        </FieldRow>
+      </div>
+
+      {/* ── Invitees ── */}
+      <div style={{ padding: '9px 16px', borderBottom: '1px solid #252A3E' }}>
+        {invitees.length > 0 && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 7 }}>
+            {invitees.map(email => (
+              <div key={email} style={{
+                display: 'flex', alignItems: 'center', gap: 5,
+                background: '#252A3E', borderRadius: 20,
+                padding: '3px 8px 3px 10px', fontSize: 11.5, color: '#C0C4D6',
+              }}>
+                {email}
+                <span
+                  onClick={() => setInvitees(prev => prev.filter(e => e !== email))}
+                  style={{ cursor: 'pointer', color: '#6B7280', fontSize: 14, lineHeight: 1 }}
+                >×</span>
+              </div>
+            ))}
+          </div>
+        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Users size={14} color="#6B7280" style={{ flexShrink: 0 }} />
+          <input
+            value={inviteeInput}
+            onChange={e => setInviteeInput(e.target.value)}
+            onKeyDown={e => {
+              if ((e.key === 'Enter' || e.key === ',') && inviteeInput.trim()) {
+                e.preventDefault(); addInvitee(inviteeInput)
+              }
+            }}
+            onBlur={() => { if (inviteeInput.trim()) addInvitee(inviteeInput) }}
+            placeholder="Add invitees..."
+            style={{ ...inputBase, color: inviteeInput ? '#E8EAF6' : '#6B7280' }}
+          />
+        </div>
+      </div>
+
+      {/* ── Notes ── */}
+      <div style={{ padding: '9px 16px', borderBottom: '1px solid #252A3E' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+          <Repeat size={14} color="#6B7280" style={{ flexShrink: 0, marginTop: 2 }} />
+          <textarea
+            value={description}
+            onChange={e => setDescription(e.target.value)}
+            placeholder="Add notes, URL, or attachments..."
+            rows={2}
+            style={{
+              ...inputBase, resize: 'none', lineHeight: 1.5,
+              color: description ? '#E8EAF6' : '#6B7280',
+            }}
+          />
+        </div>
+      </div>
+
+      {/* ── Actions ── */}
+      <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', padding: '10px 16px' }}>
+        <button
+          onClick={onCancel}
+          style={{
+            background: 'transparent', border: '1px solid #2E3348', borderRadius: 8,
+            color: '#8B93A8', fontSize: 12.5, padding: '6px 18px', cursor: 'pointer',
+          }}
+        >Cancel</button>
+        <button
+          onClick={handleSave}
+          disabled={!title.trim()}
+          style={{
+            background: title.trim() ? calColor : '#252A3E', border: 'none', borderRadius: 8,
+            color: title.trim() ? '#fff' : '#4B5268', fontSize: 12.5, fontWeight: 600,
+            padding: '6px 20px', cursor: title.trim() ? 'pointer' : 'default',
+            transition: 'background 0.15s',
+          }}
+        >Done</button>
       </div>
     </div>
   )
@@ -1509,29 +1725,46 @@ export function CalendarIntelligence() {
 
   function closePopup() { setSelectedEvent(null); setPopupPos(null) }
 
-  async function handleCreateEvent(title: string, calId: string) {
-    const draft = newEventDraft
+  async function handleCreateEvent(data: NewEventData) {
     setNewEventDraft(null)
-    if (!draft) return
-    const tz       = Intl.DateTimeFormat().resolvedOptions().timeZone
-    const startIso = minToIso(draft.dateStr, draft.startMin)
-    const endIso   = minToIso(draft.dateStr, draft.endMin)
-    const cal      = allCalendars.find(c => c.id === calId)
-    const tempId   = `temp-${Date.now()}`
+    const tz     = Intl.DateTimeFormat().resolvedOptions().timeZone
+    const cal    = allCalendars.find(c => c.id === data.calId)
+    const tempId = `temp-${Date.now()}`
+
+    const startIso = data.allDay ? data.startDate : `${data.startDate}T${data.startTime}:00`
+    const endIso   = data.allDay ? data.endDate   : `${data.endDate}T${data.endTime}:00`
+
     // Optimistic add
     setEvents(prev => [...prev, {
-      id: tempId, summary: title,
-      start: { dateTime: startIso }, end: { dateTime: endIso },
-      calendarId: calId, calendarColor: cal ? calEffectiveColor(cal) : '#7F77DD',
+      id: tempId, summary: data.title,
+      start: data.allDay ? { date: data.startDate } : { dateTime: startIso },
+      end:   data.allDay ? { date: data.endDate }   : { dateTime: endIso },
+      calendarId: data.calId, calendarColor: cal ? calEffectiveColor(cal) : '#7F77DD',
     } as GCalEventExt])
+
+    const eventBody: GCalEventCreate = {
+      summary:  data.title,
+      start:    data.allDay ? { date: data.startDate }      : { dateTime: startIso, timeZone: tz },
+      end:      data.allDay ? { date: data.endDate }        : { dateTime: endIso,   timeZone: tz },
+      ...(data.location    && { location:    data.location }),
+      ...(data.description && { description: data.description }),
+      ...(data.invitees.length && { attendees: data.invitees }),
+      ...(data.addMeet && {
+        conferenceData: {
+          createRequest: {
+            requestId: `bpa-${Date.now()}`,
+            conferenceSolutionKey: { type: 'hangoutsMeet' as const },
+          },
+        },
+      }),
+    }
+
     const { event: created } = await createCalendarEventWithToken(
-      cal?.accountToken ?? '',
-      calId,
-      { summary: title, start: { dateTime: startIso, timeZone: tz }, end: { dateTime: endIso, timeZone: tz } },
+      cal?.accountToken ?? '', data.calId, eventBody,
     )
     if (created) {
       setEvents(prev => prev.map(e => e.id === tempId
-        ? { ...created, calendarId: calId, calendarColor: cal ? calEffectiveColor(cal) : undefined } as GCalEventExt
+        ? { ...created, calendarId: data.calId, calendarColor: cal ? calEffectiveColor(cal) : undefined } as GCalEventExt
         : e
       ))
     } else {
@@ -1937,7 +2170,7 @@ export function CalendarIntelligence() {
           draft={newEventDraft}
           calendars={allCalendars}
           calColors={calColors}
-          onSave={(title, calId) => void handleCreateEvent(title, calId)}
+          onSave={data => void handleCreateEvent(data)}
           onCancel={() => setNewEventDraft(null)}
         />
       )}
