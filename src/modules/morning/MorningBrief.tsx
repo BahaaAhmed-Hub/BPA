@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   RefreshCw, Calendar, Users, Video,
   CheckCircle2, Circle, Sparkles,
-  X, MapPin, ExternalLink,
+  X, MapPin, ExternalLink, Copy, Link,
 } from 'lucide-react'
 import { planMyDay } from '@/lib/professor'
 import type { DayPlan, DayContext } from '@/lib/professor'
@@ -275,6 +275,123 @@ function StatusBadge({ status }: { status: ReturnType<typeof getEventStatus> }) 
   )
 }
 
+// ─── Event context menu ───────────────────────────────────────────────────────
+function EventContextMenu({
+  event,
+  pos,
+  onClose,
+  onViewDetails,
+}: {
+  event: RichMeetingEvent
+  pos: { x: number; y: number }
+  onClose: () => void
+  onViewDetails: () => void
+}) {
+  const menuRef = useRef<HTMLDivElement>(null)
+  const [adjPos, setAdjPos] = useState(pos)
+  const [hoveredItem, setHoveredItem] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!menuRef.current) return
+    const { width, height } = menuRef.current.getBoundingClientRect()
+    let x = pos.x, y = pos.y
+    if (x + width  > window.innerWidth  - 8) x = pos.x - width
+    if (y + height > window.innerHeight - 8) y = window.innerHeight - height - 8
+    if (y < 8) y = 8
+    if (x < 8) x = 8
+    setAdjPos({ x, y })
+  }, [pos.x, pos.y])
+
+  useEffect(() => {
+    const fn = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) onClose()
+    }
+    document.addEventListener('mousedown', fn)
+    return () => document.removeEventListener('mousedown', fn)
+  }, [onClose])
+
+  useEffect(() => {
+    const fn = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', fn)
+    return () => document.removeEventListener('keydown', fn)
+  }, [onClose])
+
+  const joinLink = getJoinLink(event.conferenceData)
+
+  function formatCopyDetails(): string {
+    const lines = [
+      event.title,
+      `${fmtTime(event.start_time)} – ${fmtTime(event.end_time)}`,
+    ]
+    if (event.location) lines.push(event.location)
+    return lines.join('\n')
+  }
+
+  const sep: React.CSSProperties = { height: 1, background: '#1E2235', margin: '3px 8px' }
+
+  function item(
+    id: string,
+    icon: React.ReactNode,
+    label: string,
+    action: (() => void) | undefined,
+    disabled = false,
+  ) {
+    const hovered = hoveredItem === id && !disabled
+    return (
+      <div
+        key={id}
+        onMouseEnter={() => setHoveredItem(id)}
+        onMouseLeave={() => setHoveredItem(null)}
+        onClick={disabled ? undefined : () => { action?.(); onClose() }}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 9,
+          padding: '0 12px', height: 32, fontSize: 13,
+          color: disabled ? '#4B5268' : '#C0C4D6',
+          cursor: disabled ? 'default' : 'pointer',
+          borderRadius: 6, userSelect: 'none',
+          background: hovered ? 'rgba(127,119,221,0.12)' : 'transparent',
+          transition: 'background 0.08s',
+        }}
+      >
+        <span style={{ flexShrink: 0, opacity: disabled ? 0.4 : 1 }}>{icon}</span>
+        <span>{label}</span>
+      </div>
+    )
+  }
+
+  return (
+    <div
+      ref={menuRef}
+      onClick={e => e.stopPropagation()}
+      onContextMenu={e => e.preventDefault()}
+      style={{
+        position: 'fixed',
+        top: adjPos.y, left: adjPos.x,
+        width: 210,
+        background: '#161929',
+        border: '1px solid #252A3E',
+        borderRadius: 10,
+        boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
+        zIndex: 9100,
+        padding: '4px 0',
+        overflow: 'hidden',
+      }}
+    >
+      {item('view',   <Calendar size={13} />,     'View Details',             onViewDetails)}
+      {item('gcal',   <ExternalLink size={13} />,  'Open in Google Calendar',  event.htmlLink ? () => window.open(event.htmlLink, '_blank') : undefined, !event.htmlLink)}
+      {joinLink && item('join', <Video size={13} />, 'Join Meeting', () => window.open(joinLink, '_blank'))}
+
+      <div style={sep} />
+
+      {item('copy-link',    <Link size={13} />, 'Copy Event Link',
+        event.htmlLink ? () => navigator.clipboard.writeText(event.htmlLink!).catch(() => {}) : undefined,
+        !event.htmlLink)}
+      {item('copy-details', <Copy size={13} />, 'Copy Details',
+        () => navigator.clipboard.writeText(formatCopyDetails()).catch(() => {}))}
+    </div>
+  )
+}
+
 // ─── Event detail panel ────────────────────────────────────────────────────────
 
 function EventDetailPanel({ event, onClose }: { event: RichMeetingEvent; onClose: () => void }) {
@@ -520,6 +637,7 @@ export function MorningBrief() {
   const [todayEvents, setTodayEvents]     = useState<RichMeetingEvent[]>([])
   const [eventsLoading, setEventsLoading] = useState(true)
   const [selectedEvent, setSelectedEvent] = useState<RichMeetingEvent | null>(null)
+  const [ctxMenu, setCtxMenu] = useState<{ event: RichMeetingEvent; x: number; y: number } | null>(null)
 
   const firstName = getFirstName(user?.name, user?.email ?? '')
   const dateStr   = new Date().toLocaleDateString('en-US', {
@@ -622,6 +740,16 @@ export function MorningBrief() {
       {/* Event detail panel */}
       {selectedEvent && (
         <EventDetailPanel event={selectedEvent} onClose={() => setSelectedEvent(null)} />
+      )}
+
+      {/* Event context menu */}
+      {ctxMenu && (
+        <EventContextMenu
+          event={ctxMenu.event}
+          pos={{ x: ctxMenu.x, y: ctxMenu.y }}
+          onClose={() => setCtxMenu(null)}
+          onViewDetails={() => { setCtxMenu(null); setSelectedEvent(ctxMenu.event) }}
+        />
       )}
 
       {/* Shimmer keyframe */}
@@ -887,6 +1015,7 @@ export function MorningBrief() {
                         key={event.id}
                         className="event-row"
                         onClick={() => setSelectedEvent(event)}
+                        onContextMenu={e => { e.preventDefault(); e.stopPropagation(); setCtxMenu({ event, x: e.clientX, y: e.clientY }) }}
                         style={{
                           display: 'flex', gap: 10, alignItems: 'stretch',
                           padding: '10px 12px',
