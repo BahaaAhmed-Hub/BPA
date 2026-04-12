@@ -102,6 +102,16 @@ async function getProviderToken(): Promise<string | null> {
     const gotrue = await goTrueRefresh(data.session.refresh_token)
     if (gotrue) {
       saveToken(gotrue.provider_token)
+      // CRITICAL: sync the new Supabase tokens back into the client session.
+      // goTrueRefresh consumes (rotates) the refresh token — if we don't update
+      // the Supabase client here, it keeps the old (now-invalid) refresh token,
+      // causing cascading TOKEN_REFRESHED loops and 401s on all Edge Function calls.
+      if (gotrue.access_token && gotrue.refresh_token) {
+        await supabase.auth.setSession({
+          access_token:  gotrue.access_token,
+          refresh_token: gotrue.refresh_token,
+        })
+      }
       return gotrue.provider_token
     }
     // GoTrue didn't help — try Supabase SDK as last resort

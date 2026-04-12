@@ -95,10 +95,13 @@ export async function getGoogleToken(email: string): Promise<string | null> {
 
 async function callEdgeFunction(email: string): Promise<string | null> {
   try {
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) return cache.get(email)?.token ?? null  // no session → fallback
+    // Use getSession() for the access token but fall back to a fresh token if it
+    // looks stale. getSession() reads local cache and can return an expired token;
+    // if the Edge Function returns 401 we retry once with a force-refreshed session.
+    let { data: { session } } = await supabase.auth.getSession()
+    if (!session) return cache.get(email)?.token ?? null
 
-    const res = await fetch(`${SUPABASE_URL}/functions/v1/google-token-refresh`, {
+    let res = await fetch(`${SUPABASE_URL}/functions/v1/google-token-refresh`, {
       method:  'POST',
       headers: {
         'Content-Type':  'application/json',
@@ -106,6 +109,22 @@ async function callEdgeFunction(email: string): Promise<string | null> {
       },
       body: JSON.stringify({ email }),
     })
+
+    // If 401, the cached access_token is expired — force a session refresh and retry once
+    if (res.status === 401) {
+      const { data: refreshed } = await supabase.auth.refreshSession()
+      if (refreshed.session) {
+        session = refreshed.session
+        res = await fetch(`${SUPABASE_URL}/functions/v1/google-token-refresh`, {
+          method:  'POST',
+          headers: {
+            'Content-Type':  'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ email }),
+        })
+      }
+    }
 
     if (!res.ok) {
       console.warn('[tokenManager] Edge Function HTTP error:', res.status)
