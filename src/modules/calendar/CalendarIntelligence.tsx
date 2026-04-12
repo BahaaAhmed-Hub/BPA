@@ -30,7 +30,7 @@ import { connectAdditionalGoogleAccount } from '@/lib/google'
 import type { DbUser, DbCompany, DbCalendarEvent } from '@/types/database'
 import {
   loadBlockingRules, applyBlockingRules, cleanupStaleBlocks,
-  loadApplied, type SourceEvent,
+  loadApplied, saveApplied, type AppliedBlocksMap, type SourceEvent,
 } from '@/lib/blockingRules'
 
 // ─── Grid constants ───────────────────────────────────────────────────────────
@@ -1276,17 +1276,53 @@ export function CalendarIntelligence() {
 
   // ── Week navigation ──────────────────────────────────────────────────────────
   const weekDays = Array.from({ length: 7 }, (_, i) => { const d = new Date(weekStart); d.setDate(d.getDate() + i); return d })
-  // Filter out block-events for rules with hideBlocked=true (or global originalsOnly)
+  // Filter out block-events for rules with hideBlocked=true (or global originalsOnly).
+  // Uses two paths: localStorage map (fast) + description marker (cross-device, no Apply needed).
   const displayedEvents = (() => {
     const rules = loadBlockingRules().filter(r => r.enabled && (r.hideBlocked || originalsOnly))
     if (!rules.length) return events
+
+    const activeRuleIds = new Set(rules.map(r => r.id))
+    const BPA_BLOCK_RE  = /\[bpa-block:([^:\]]+):([^\]]+)\]/
+
+    // Secondary: localStorage map (fast path, no parsing)
     const applied = loadApplied()
-    const hiddenTargetIds = new Set<string>()
+    const hiddenByStorage = new Set<string>()
     for (const rule of rules) {
       const ruleApplied = applied[rule.id] ?? {}
-      for (const targetId of Object.values(ruleApplied)) hiddenTargetIds.add(targetId)
+      for (const targetId of Object.values(ruleApplied)) hiddenByStorage.add(targetId)
     }
-    return events.filter(e => !hiddenTargetIds.has(e.id))
+
+    const backfill: AppliedBlocksMap = {}
+
+    const result = events.filter(e => {
+      // Fast path: already known from localStorage
+      if (hiddenByStorage.has(e.id)) return false
+
+      // Marker path: parse the bpa-block tag embedded in the event description.
+      // Works cross-device and before "Apply Rules" is ever clicked.
+      const match = BPA_BLOCK_RE.exec(e.description ?? '')
+      if (match) {
+        const [, ruleId, sourceEventId] = match
+        if (activeRuleIds.has(ruleId)) {
+          if (!backfill[ruleId]) backfill[ruleId] = {}
+          backfill[ruleId][sourceEventId] = e.id
+          return false
+        }
+      }
+      return true
+    })
+
+    // Back-fill localStorage so future renders use the fast path
+    if (Object.keys(backfill).length > 0) {
+      const merged = loadApplied()
+      for (const [ruleId, entries] of Object.entries(backfill)) {
+        merged[ruleId] = { ...(merged[ruleId] ?? {}), ...entries }
+      }
+      saveApplied(merged)
+    }
+
+    return result
   })()
   const grouped  = groupByDay(displayedEvents)
   const today    = localDateStr(new Date())

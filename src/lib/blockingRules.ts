@@ -49,7 +49,7 @@ export function saveBlockingRules(rules: BlockingRule[]): void {
 export function loadApplied(): AppliedBlocksMap {
   try { return JSON.parse(localStorage.getItem(APPLIED_KEY) ?? '{}') } catch { return {} }
 }
-function saveApplied(map: AppliedBlocksMap): void {
+export function saveApplied(map: AppliedBlocksMap): void {
   localStorage.setItem(APPLIED_KEY, JSON.stringify(map))
 }
 
