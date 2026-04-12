@@ -1,5 +1,4 @@
 import { supabase } from './supabase'
-import { getGoogleToken } from './tokenManager'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -52,17 +51,12 @@ export interface GCalError {
 
 const TOKEN_KEY      = 'google_provider_token'
 const TOKEN_SAVED_AT = 'google_provider_token_saved_at'
-const TOKEN_TTL_MS   = 50 * 60 * 1000  // refresh after 50 min (token expires at 60 min)
 
 function saveToken(token: string) {
   localStorage.setItem(TOKEN_KEY, token)
   localStorage.setItem(TOKEN_SAVED_AT, Date.now().toString())
 }
 
-function isTokenStale(): boolean {
-  const savedAt = parseInt(localStorage.getItem(TOKEN_SAVED_AT) ?? '0', 10)
-  return Date.now() - savedAt > TOKEN_TTL_MS
-}
 
 async function getProviderToken(): Promise<string | null> {
   const { data } = await supabase.auth.getSession()
@@ -82,38 +76,24 @@ async function getProviderToken(): Promise<string | null> {
 
 /**
  * Refreshes the primary account's Google access token.
- * Uses the Edge Function (same as extra accounts) — the DB stores the primary
- * account's google_refresh_token at sign-in. Falls back to the localStorage cache
- * if the Edge Function is unavailable (e.g. during the first 60 min after sign-in
- * before the DB row exists).
- *
- * NOTE: goTrueRefresh was removed — calling GoTrue's /token endpoint directly
- * rotates the Supabase refresh token without the SDK knowing, which corrupts the
- * session and causes cascading TOKEN_REFRESHED loops + 401s on all Edge Function
- * calls. The Edge Function is the safe, session-friendly alternative.
+ * Uses the session provider_token (only present right after OAuth) or the
+ * localStorage cache. Does NOT call the Edge Function for the primary account —
+ * the Edge Function is only for extra accounts and can dispatch
+ * cal:reconnect-required if the primary DB row is absent, which would show
+ * error marks on all primary calendars.
  */
 export async function refreshPrimaryToken(): Promise<string | null> {
   const { data } = await supabase.auth.getSession()
   if (!data.session) return localStorage.getItem(TOKEN_KEY)
 
-  // Already in session (right after sign-in — only time provider_token is present)
+  // Right after OAuth sign-in the session carries a fresh provider_token — cache it
   if (data.session.provider_token) {
     saveToken(data.session.provider_token)
     return data.session.provider_token
   }
 
-  const cached = localStorage.getItem(TOKEN_KEY)
-
-  // If stale, try the Edge Function (it holds our google_refresh_token server-side)
-  if (isTokenStale() && data.session.user.email) {
-    const fresh = await getGoogleToken(data.session.user.email)
-    if (fresh) {
-      saveToken(fresh)
-      return fresh
-    }
-  }
-
-  return cached
+  // Return the cached token; it was saved at sign-in and is valid for ~60 min
+  return localStorage.getItem(TOKEN_KEY)
 }
 
 // ─── Core API helper ──────────────────────────────────────────────────────────
