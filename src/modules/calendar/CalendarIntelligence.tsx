@@ -20,6 +20,7 @@ import {
   refreshPrimaryToken,
   createCalendarEventWithToken,
   deleteCalendarEventWithToken,
+  addMeetingToEvent,
 } from '@/lib/googleCalendar'
 import type { GCalEvent, GCalCalendar, GCalEventCreate } from '@/lib/googleCalendar'
 import { getGoogleToken, seedToken } from '@/lib/tokenManager'
@@ -591,8 +592,8 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
   )
 }
 
-// ─── EventPopup (macOS Calendar style — complete fields) ─────────────────────
-function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepError, pos, onClose, onStatusToggle, onPrepRequest }: {
+// ─── EventPopup (macOS Calendar style) ────────────────────────────────────────
+function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepError, pos, onClose, onStatusToggle, onPrepRequest, onAddMeet }: {
   event: GCalEventExt
   status: EventStatus | undefined
   calName: string
@@ -604,10 +605,12 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
   onClose: () => void
   onStatusToggle: (s: EventStatus) => void
   onPrepRequest: () => void
+  onAddMeet?: () => Promise<void>
 }) {
   const popupRef  = useRef<HTMLDivElement>(null)
-  const [showPrep, setShowPrep] = useState(false)
-  const [adjPos, setAdjPos]     = useState(pos)
+  const [showPrep,    setShowPrep]    = useState(false)
+  const [adjPos,      setAdjPos]      = useState(pos)
+  const [addingMeet,  setAddingMeet]  = useState(false)
 
   useEffect(() => {
     if (!popupRef.current) return
@@ -626,8 +629,6 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
   }, [onClose])
 
   const isAllDay     = !event.start.dateTime
-  const startIso     = event.start.dateTime ?? (event.start.date + 'T00:00:00')
-  const endIso       = event.end.dateTime   ?? (event.end.date   + 'T00:00:00')
   const entryPoints  = event.conferenceData?.entryPoints ?? []
   const videoLink    = entryPoints.find(ep => ep.entryPointType === 'video')?.uri
   const phoneEntry   = entryPoints.find(ep => ep.entryPointType === 'phone')
@@ -635,13 +636,32 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
   const selfAttendee = allAttendees.find(a => a.self)
   const others       = allAttendees.filter(a => !a.self)
   const organizer    = event.organizer
-  const isOrganizer  = organizer?.self !== false || !organizer
   const isRecurring  = !!event.recurringEventId || (event.recurrence?.length ?? 0) > 0
   const isTentative  = event.status === 'tentative'
   const notes        = event.description?.replace(/<[^>]*>/g, '').trim() ?? ''
 
   const rsvpColor = (s?: string) => s === 'accepted' ? '#1D9E75' : s === 'declined' ? '#E05252' : s === 'tentative' ? '#FF9500' : '#6B7280'
   const rsvpLabel = (s?: string) => s === 'accepted' ? 'Accepted' : s === 'declined' ? 'Declined' : s === 'tentative' ? 'Maybe' : 'Awaiting'
+
+  function fmtDT(iso: string) {
+    const d = new Date(iso)
+    return {
+      date: d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }),
+      time: d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
+    }
+  }
+  const startIso = event.start.dateTime ?? (event.start.date + 'T00:00:00')
+  const endIso   = event.end.dateTime   ?? (event.end.date   + 'T00:00:00')
+  const startDT  = isAllDay ? null : fmtDT(startIso)
+  const endDT    = isAllDay ? null : fmtDT(endIso)
+
+  const labelStyle: React.CSSProperties = { width: 84, flexShrink: 0, textAlign: 'right', paddingRight: 14, fontSize: 12.5, color: '#8B93A8' }
+  const fieldRow = (label: string, content: React.ReactNode) => (
+    <div style={{ display: 'flex', alignItems: 'center', minHeight: 30, padding: '0 16px' }}>
+      <div style={labelStyle}>{label}</div>
+      <div style={{ flex: 1 }}>{content}</div>
+    </div>
+  )
 
   const btn = (active: boolean, color: string): React.CSSProperties => ({
     display: 'flex', alignItems: 'center', gap: 5,
@@ -655,17 +675,16 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
   return (
     <div ref={popupRef} onClick={e => e.stopPropagation()} style={{
       position: 'fixed', top: adjPos.y, left: adjPos.x,
-      width: 320, maxHeight: 'calc(100vh - 24px)', overflowY: 'auto',
-      background: '#161929', border: '1px solid #252A3E', borderRadius: 12,
-      boxShadow: '0 12px 40px rgba(0,0,0,0.55)', zIndex: 1000,
+      width: 330, maxHeight: 'calc(100vh - 24px)', overflowY: 'auto',
+      background: '#1C1F2E', border: '1px solid #2E3348', borderRadius: 14,
+      boxShadow: '0 16px 48px rgba(0,0,0,0.65)', zIndex: 1000,
     }}>
-      {/* Color bar */}
-      <div style={{ height: 4, background: calColor, flexShrink: 0 }} />
 
-      {/* Title + status badges + close */}
-      <div style={{ padding: '14px 16px 0', display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+      {/* Header: calendar dot + title + close */}
+      <div style={{ padding: '14px 14px 10px', display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+        <div style={{ width: 14, height: 14, borderRadius: '50%', background: calColor, flexShrink: 0, marginTop: 3 }} />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 15, fontWeight: 700, color: '#E8EAF6', lineHeight: 1.3 }}>
+          <div style={{ fontSize: 17, fontWeight: 700, color: '#E8EAF6', lineHeight: 1.3, wordBreak: 'break-word' }}>
             {event.summary ?? '(No title)'}
           </div>
           <div style={{ display: 'flex', gap: 5, marginTop: 5, flexWrap: 'wrap' }}>
@@ -689,102 +708,156 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
         </button>
       </div>
 
-      {/* Fields */}
-      <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 9 }}>
+      <div style={{ height: 1, background: '#252A3E' }} />
 
-        {/* Date / time */}
-        <Row icon={<Calendar size={13} color="#6B7280" />}>
-          <span style={{ fontSize: 13, color: '#C0C4D6' }}>{fmtPopupDate(startIso, endIso, isAllDay)}</span>
-        </Row>
+      {/* Location */}
+      {event.location && (
+        <div style={{ display: 'flex', alignItems: 'center', padding: '8px 14px', gap: 9 }}>
+          <MapPin size={13} color="#6B7280" style={{ flexShrink: 0 }} />
+          <span style={{ fontSize: 13, color: '#C0C4D6', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{event.location}</span>
+        </div>
+      )}
 
-        {/* Calendar */}
-        <Row icon={<div style={{ width: 11, height: 11, borderRadius: '50%', background: calColor, flexShrink: 0, marginTop: 1 }} />}>
-          <span style={{ fontSize: 13, color: '#C0C4D6' }}>{calName}</span>
-        </Row>
+      {/* Video / Meet */}
+      {videoLink ? (
+        <div style={{ display: 'flex', alignItems: 'center', padding: '8px 14px', gap: 9 }}>
+          <Video size={13} color="#6B7280" style={{ flexShrink: 0 }} />
+          <a href={videoLink} target="_blank" rel="noopener noreferrer"
+            style={{ fontSize: 13, color: '#7F77DD', textDecoration: 'none', flex: 1, display: 'flex', alignItems: 'center', gap: 4 }}>
+            Join Video Call <ExternalLink size={11} />
+          </a>
+        </div>
+      ) : onAddMeet ? (
+        <div style={{ display: 'flex', alignItems: 'center', padding: '8px 14px', gap: 9 }}>
+          <Video size={13} color="#6B7280" style={{ flexShrink: 0 }} />
+          <button
+            onClick={async () => { setAddingMeet(true); await onAddMeet(); setAddingMeet(false) }}
+            disabled={addingMeet}
+            style={{ background: 'none', border: 'none', cursor: addingMeet ? 'wait' : 'pointer', padding: 0, fontSize: 13, color: '#7F77DD', display: 'flex', alignItems: 'center', gap: 5 }}
+          >
+            {addingMeet ? 'Adding…' : 'Add Google Meet'} <Video size={11} />
+          </button>
+        </div>
+      ) : null}
 
-        {/* Location */}
-        {event.location && (
-          <Row icon={<MapPin size={13} color="#6B7280" />}>
-            <span style={{ fontSize: 13, color: '#C0C4D6' }}>{event.location}</span>
-          </Row>
-        )}
-
-        {/* Video call */}
-        {videoLink && (
-          <Row icon={<Video size={13} color="#6B7280" />}>
-            <a href={videoLink} target="_blank" rel="noopener noreferrer"
-              style={{ fontSize: 13, color: '#7F77DD', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
-              Join video call <ExternalLink size={11} />
+      {/* Phone */}
+      {phoneEntry && (
+        <div style={{ display: 'flex', alignItems: 'center', padding: '8px 14px', gap: 9 }}>
+          <Phone size={13} color="#6B7280" style={{ flexShrink: 0 }} />
+          <div style={{ fontSize: 13, color: '#C0C4D6' }}>
+            <a href={phoneEntry.uri} style={{ color: '#7F77DD', textDecoration: 'none' }}>
+              {phoneEntry.label ?? phoneEntry.uri.replace('tel:', '')}
             </a>
-          </Row>
-        )}
+            {phoneEntry.pin && <span style={{ color: '#6B7280', marginLeft: 6, fontSize: 12 }}>PIN: {phoneEntry.pin}</span>}
+          </div>
+        </div>
+      )}
 
-        {/* Phone conference */}
-        {phoneEntry && (
-          <Row icon={<Phone size={13} color="#6B7280" />}>
-            <div style={{ fontSize: 13, color: '#C0C4D6' }}>
-              <a href={phoneEntry.uri} style={{ color: '#7F77DD', textDecoration: 'none' }}>
-                {phoneEntry.label ?? phoneEntry.uri.replace('tel:', '')}
-              </a>
-              {phoneEntry.pin && <span style={{ color: '#6B7280', marginLeft: 6, fontSize: 12 }}>PIN: {phoneEntry.pin}</span>}
+      {(event.location || videoLink || onAddMeet || phoneEntry) && (
+        <div style={{ height: 1, background: '#252A3E' }} />
+      )}
+
+      {/* Date / time fieldRows */}
+      <div style={{ padding: '6px 0' }}>
+        {isAllDay
+          ? fieldRow('All Day', <span style={{ fontSize: 13, color: '#C0C4D6' }}>{fmtPopupDate(startIso, endIso, true)}</span>)
+          : <>
+              {fieldRow('Starts', (
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <span style={{ fontSize: 13, color: '#C0C4D6' }}>{startDT?.date}</span>
+                  <span style={{ fontSize: 13, color: '#8B93A8' }}>{startDT?.time}</span>
+                </div>
+              ))}
+              {fieldRow('Ends', (
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <span style={{ fontSize: 13, color: '#C0C4D6' }}>{endDT?.date}</span>
+                  <span style={{ fontSize: 13, color: '#8B93A8' }}>{endDT?.time}</span>
+                </div>
+              ))}
+            </>
+        }
+        {isRecurring && fieldRow('Repeat', <span style={{ fontSize: 13, color: '#C0C4D6' }}>Recurring</span>)}
+        {fieldRow('Calendar', (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+            <div style={{ width: 10, height: 10, borderRadius: '50%', background: calColor, flexShrink: 0 }} />
+            <span style={{ fontSize: 13, color: '#C0C4D6' }}>{calName}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Attendees */}
+      {(others.length > 0 || (organizer && !organizer.self)) && (
+        <>
+          <div style={{ height: 1, background: '#252A3E' }} />
+          <div style={{ padding: '10px 14px' }}>
+            <div style={{ fontSize: 10, fontWeight: 600, color: '#4B5268', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 8 }}>
+              Attendees
             </div>
-          </Row>
-        )}
-
-        {/* Organizer (only if someone else organized it) */}
-        {organizer && !organizer.self && !isOrganizer && (
-          <Row icon={<User size={13} color="#6B7280" />}>
-            <span style={{ fontSize: 13, color: '#C0C4D6' }}>
-              {organizer.displayName ?? organizer.email}
-              <span style={{ fontSize: 11, color: '#6B7280', marginLeft: 5 }}>· organizer</span>
-            </span>
-          </Row>
-        )}
-
-        {/* Attendees */}
-        {others.length > 0 && (
-          <Row icon={<Users size={13} color="#6B7280" />}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {organizer && !organizer.self && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#3A4060', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600, color: '#A0A8C0', flexShrink: 0 }}>
+                    {(organizer.displayName ?? organizer.email)[0].toUpperCase()}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 12.5, color: '#C0C4D6', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {organizer.displayName ?? organizer.email}
+                    </div>
+                    <div style={{ fontSize: 10.5, color: '#6B7280' }}>organizer</div>
+                  </div>
+                </div>
+              )}
               {others.slice(0, 6).map(a => (
-                <div key={a.email} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
-                  <span style={{ flex: 1, color: '#C0C4D6', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {a.displayName ?? a.email}
-                  </span>
-                  <span style={{ fontSize: 10, color: rsvpColor(a.responseStatus), flexShrink: 0, fontWeight: 500 }}>
+                <div key={a.email} style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#3A4060', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600, color: '#A0A8C0', flexShrink: 0 }}>
+                    {(a.displayName ?? a.email)[0].toUpperCase()}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 12.5, color: '#C0C4D6', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {a.displayName ?? a.email}
+                    </div>
+                    <div style={{ fontSize: 10.5, color: rsvpColor(a.responseStatus) }}>
+                      {rsvpLabel(a.responseStatus)}
+                    </div>
+                  </div>
+                  <span style={{ fontSize: 13, color: rsvpColor(a.responseStatus), flexShrink: 0 }}>
                     {a.responseStatus === 'accepted' ? '✓' : a.responseStatus === 'declined' ? '✗' : a.responseStatus === 'tentative' ? '?' : '–'}
                   </span>
                 </div>
               ))}
               {others.length > 6 && (
-                <span style={{ fontSize: 11, color: '#6B7280' }}>+{others.length - 6} more</span>
+                <span style={{ fontSize: 11, color: '#6B7280', paddingLeft: 37 }}>+{others.length - 6} more</span>
               )}
             </div>
-          </Row>
-        )}
+          </div>
+        </>
+      )}
 
-        {/* Google Calendar link */}
-        {event.htmlLink && (
-          <Row icon={<Link size={13} color="#6B7280" />}>
-            <a href={event.htmlLink} target="_blank" rel="noopener noreferrer"
-              style={{ fontSize: 13, color: '#7F77DD', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
-              Open in Google Calendar <ExternalLink size={11} />
-            </a>
-          </Row>
-        )}
-
-        {/* Notes / Description */}
-        {notes && (
-          <div style={{ borderTop: '1px solid #1E2235', paddingTop: 10, marginTop: 2 }}>
+      {/* Notes */}
+      {notes && (
+        <>
+          <div style={{ height: 1, background: '#252A3E' }} />
+          <div style={{ padding: '10px 14px' }}>
             <div style={{ fontSize: 10, fontWeight: 600, color: '#4B5268', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 5 }}>Notes</div>
             <div style={{ fontSize: 12, color: '#8B93A8', lineHeight: 1.6, maxHeight: 90, overflowY: 'auto', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
               {notes.slice(0, 400)}{notes.length > 400 ? '…' : ''}
             </div>
           </div>
-        )}
-      </div>
+        </>
+      )}
+
+      {/* Open in GCal link */}
+      {event.htmlLink && (
+        <div style={{ padding: '6px 14px 10px' }}>
+          <a href={event.htmlLink} target="_blank" rel="noopener noreferrer"
+            style={{ fontSize: 12, color: '#5B6080', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
+            <ExternalLink size={11} /> Open in Google Calendar
+          </a>
+        </div>
+      )}
 
       {/* Action buttons */}
-      <div style={{ padding: '8px 14px 12px', display: 'flex', gap: 6, borderTop: '1px solid #1E2235', flexWrap: 'wrap' }}>
+      <div style={{ padding: '8px 14px 14px', display: 'flex', gap: 6, borderTop: '1px solid #252A3E', flexWrap: 'wrap' }}>
         <button style={btn(status === 'done', '#1D9E75')} onClick={() => onStatusToggle('done')}>
           <CheckCircle2 size={12} /> Done
         </button>
@@ -801,7 +874,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
 
       {/* AI Prep section */}
       {showPrep && (
-        <div style={{ borderTop: '1px solid #1E2235', padding: '12px 16px 16px' }}>
+        <div style={{ borderTop: '1px solid #252A3E', padding: '12px 14px 16px' }}>
           {prepLoading ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
               {[75, 55, 85, 65].map((w, i) => (
@@ -984,16 +1057,6 @@ function EventContextMenu({
 
       {/* Group 4: Destructive */}
       {item('delete', <Trash2 size={13} />, 'Delete Event', onDelete, { destructive: true })}
-    </div>
-  )
-}
-
-// Small helper used by EventPopup rows
-function Row({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 9 }}>
-      <div style={{ flexShrink: 0, marginTop: 1 }}>{icon}</div>
-      <div style={{ flex: 1, minWidth: 0 }}>{children}</div>
     </div>
   )
 }
@@ -1549,6 +1612,21 @@ export function CalendarIntelligence() {
     if (ok) {
       setEvents(prev => prev.filter(e => e.id !== ev.id))
       if (selectedEvent?.id === ev.id) { setSelectedEvent(null); setPopupPos(null) }
+    }
+  }
+
+  async function handleAddMeet(ev: GCalEventExt) {
+    const cal = allCalendars.find(c => c.id === ev.calendarId)
+    if (!cal || !ev.calendarId) return
+    const token = cal.accountId
+      ? await getGoogleToken(cal.accountEmail)
+      : (await refreshPrimaryToken() || cal.accountToken)
+    if (!token) return
+    const updated = await addMeetingToEvent(token, ev.calendarId, ev.id)
+    if (updated) {
+      const merged = { ...ev, conferenceData: updated.conferenceData }
+      setEvents(prev => prev.map(e => e.id === ev.id ? { ...e, conferenceData: updated.conferenceData } : e))
+      if (selectedEvent?.id === ev.id) setSelectedEvent(merged as GCalEventExt)
     }
   }
 
@@ -2142,6 +2220,7 @@ export function CalendarIntelligence() {
             onClose={closePopup}
             onStatusToggle={s => toggleStatus(selectedEvent.id, s)}
             onPrepRequest={() => void generatePrep(selectedEvent)}
+            onAddMeet={() => handleAddMeet(selectedEvent)}
           />
         )
       })()}

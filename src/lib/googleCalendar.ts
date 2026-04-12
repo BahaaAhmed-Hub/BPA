@@ -351,6 +351,33 @@ export async function createCalendarEventWithToken(
   } catch (e) { return { event: null, error: String(e) } }
 }
 
+/** Patch an existing event to add a Google Meet link. */
+export async function addMeetingToEvent(
+  token: string,
+  calendarId: string,
+  eventId: string,
+): Promise<GCalEvent | null> {
+  try {
+    const res = await gcalRequest(
+      token,
+      `/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}?conferenceDataVersion=1`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify({
+          conferenceData: {
+            createRequest: {
+              requestId: `bpa-meet-${Date.now()}`,
+              conferenceSolutionKey: { type: 'hangoutsMeet' },
+            },
+          },
+        }),
+      },
+    )
+    if (!res.ok) return null
+    return (await res.json()) as GCalEvent
+  } catch { return null }
+}
+
 // ─── Reschedule event to a new date (same time) ──────────────────────────────
 
 /** Move an event to a different calendar day, preserving start time and duration.
