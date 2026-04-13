@@ -38,9 +38,15 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
       - name: Set Google OAuth secrets
-        if: ${{ secrets.GOOGLE_CLIENT_ID != '' }}
-        run: |
-          supabase secrets set GOOGLE_CLIENT_ID="${{ secrets.GOOGLE_CLIENT_ID }}"
-          supabase secrets set GOOGLE_CLIENT_SECRET="${{ secrets.GOOGLE_CLIENT_SECRET }}"
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+        run: |
+          if [ -n "$GOOGLE_CLIENT_ID" ]; then
+            supabase secrets set GOOGLE_CLIENT_ID="$GOOGLE_CLIENT_ID"
+            supabase secrets set GOOGLE_CLIENT_SECRET="$GOOGLE_CLIENT_SECRET"
+            echo "Google OAuth secrets set."
+          else
+            echo "GOOGLE_CLIENT_ID not provided — skipping."
+          fi
