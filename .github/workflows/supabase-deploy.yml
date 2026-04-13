@@ -1,0 +1,46 @@
+name: Deploy to Supabase
+
+on:
+  push:
+    branches:
+      - claude/build-professor-ai-app-sDbyz
+    paths:
+      - 'supabase/migrations/**'
+      - 'supabase/functions/**'
+  workflow_dispatch:   # allows manual trigger from GitHub Actions UI
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link Supabase project
+        run: supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: Push DB migrations
+        run: supabase db push --include-all
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: Deploy edge functions
+        run: |
+          supabase functions deploy google-oauth
+          supabase functions deploy google-calendar-sync
+          supabase functions deploy google-calendar-write
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: Set Google OAuth secrets
+        if: ${{ secrets.GOOGLE_CLIENT_ID != '' }}
+        run: |
+          supabase secrets set GOOGLE_CLIENT_ID="${{ secrets.GOOGLE_CLIENT_ID }}"
+          supabase secrets set GOOGLE_CLIENT_SECRET="${{ secrets.GOOGLE_CLIENT_SECRET }}"
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
