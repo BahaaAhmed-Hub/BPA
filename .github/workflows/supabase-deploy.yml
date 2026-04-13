@@ -15,7 +15,10 @@ jobs:
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
     steps:
+      # Always check out the feature branch so we get the new migrations + functions
       - uses: actions/checkout@v4
+        with:
+          ref: claude/build-professor-ai-app-sDbyz
 
       - uses: supabase/setup-cli@v1
         with:
@@ -24,7 +27,15 @@ jobs:
       - name: Link Supabase project
         run: supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
 
-      - name: Push DB migrations
+      # Mark old migrations as already applied so db push doesn't try to re-run them
+      # (the tables exist in the DB but weren't tracked in migration history)
+      - name: Repair migration history
+        run: |
+          supabase migration repair --status applied 20240001
+          supabase migration repair --status applied 20240002
+          supabase migration repair --status applied 20250002
+
+      - name: Push new DB migrations
         run: supabase db push
 
       - name: Deploy edge functions
