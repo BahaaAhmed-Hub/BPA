@@ -11,10 +11,10 @@ import type { TaskAnalysis } from '@/lib/professor'
 type Filter = 'all' | 'open' | 'done' | 'cancelled'
 
 const inp: React.CSSProperties = {
-  background: '#0D0F1A',
-  border: '1px solid #252A3E',
+  background: 'var(--color-bg, #0D0F1A)',
+  border: '1px solid var(--color-border, #252A3E)',
   borderRadius: 6, padding: '5px 8px', fontSize: 12,
-  color: '#E8EAF6', outline: 'none', width: '100%',
+  color: 'var(--color-text, #E8EAF6)', outline: 'none', width: '100%',
 }
 const sel: React.CSSProperties = { ...inp }
 
@@ -52,8 +52,8 @@ function DraggableInboxCard({ task, accentColor, taskStatus, ownerUser, onOpen, 
     >
       <div style={{
         padding: '9px 11px',
-        background: isDragging ? '#252A3E' : '#0D0F1A',
-        border: `1px solid ${hovered ? '#353A50' : '#252A3E'}`,
+        background: isDragging ? 'var(--color-surface2, #252A3E)' : 'var(--color-bg, #0D0F1A)',
+        border: `1px solid ${hovered ? '#353A50' : 'var(--color-border, #252A3E)'}`,
         borderRadius: 8,
         opacity: taskStatus === 'cancelled' ? 0.5 : taskStatus === 'done' ? 0.6 : 1,
         cursor: isDragging ? 'grabbing' : 'pointer',
@@ -80,7 +80,7 @@ function DraggableInboxCard({ task, accentColor, taskStatus, ownerUser, onOpen, 
             onClick={e => { e.stopPropagation(); onToggle() }}
             style={{
               width: 15, height: 15, borderRadius: 4,
-              border: `1.5px solid ${task.completed ? '#1D9E75' : '#252A3E'}`,
+              border: `1.5px solid ${task.completed ? '#1D9E75' : 'var(--color-border, #252A3E)'}`,
               background: task.completed ? '#1D9E75' : 'transparent',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               cursor: 'pointer', flexShrink: 0, marginTop: 1, transition: 'all 0.15s ease',
@@ -92,7 +92,7 @@ function DraggableInboxCard({ task, accentColor, taskStatus, ownerUser, onOpen, 
           {/* Content */}
           <div style={{ flex: 1, minWidth: 0 }}>
             <p style={{
-              margin: 0, fontSize: 12.5, fontWeight: 500, color: '#E8EAF6', lineHeight: 1.35,
+              margin: 0, fontSize: 12.5, fontWeight: 500, color: 'var(--color-text, #E8EAF6)', lineHeight: 1.35,
               textDecoration: taskStatus === 'done' ? 'line-through' : 'none',
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             }}>{task.title}</p>
@@ -244,16 +244,16 @@ export function UndefinedTasksPanel({ onOpen, hideCompleted = false }: Props) {
   return (
     <div style={{
       width: 300, flexShrink: 0,
-      background: '#161929',
-      border: '1px solid #252A3E',
+      background: 'var(--color-surface, #161929)',
+      border: '1px solid var(--color-border, #252A3E)',
       borderRadius: 12, display: 'flex', flexDirection: 'column',
       overflow: 'hidden', maxHeight: 'calc(100vh - 160px)',
     }}>
       {/* Header */}
-      <div style={{ padding: '14px 16px 10px', borderBottom: '1px solid #252A3E' }}>
+      <div style={{ padding: '14px 16px 10px', borderBottom: '1px solid var(--color-border, #252A3E)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
           <Inbox size={14} color="#6B7280" />
-          <span style={{ fontSize: 13.5, fontWeight: 700, color: '#E8EAF6' }}>Inbox</span>
+          <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--color-text, #E8EAF6)' }}>Inbox</span>
           <span style={{
             marginLeft: 'auto', fontSize: 10.5, fontWeight: 600,
             color: '#6B7280', background: '#6B728018', padding: '1px 6px', borderRadius: 4,
@@ -265,7 +265,7 @@ export function UndefinedTasksPanel({ onOpen, hideCompleted = false }: Props) {
               padding: '3px 8px', borderRadius: 5, fontSize: 10.5, fontWeight: 500,
               cursor: 'pointer', textTransform: 'capitalize',
               background: filter === f ? '#1E40AF18' : 'transparent',
-              border: `1px solid ${filter === f ? '#1E40AF50' : '#252A3E'}`,
+              border: `1px solid ${filter === f ? '#1E40AF50' : 'var(--color-border, #252A3E)'}`,
               color: filter === f ? '#7F77DD' : '#6B7280',
             }}>
               {f} {counts[f] > 0 && <span style={{ opacity: 0.7 }}>({counts[f]})</span>}
@@ -289,7 +289,7 @@ export function UndefinedTasksPanel({ onOpen, hideCompleted = false }: Props) {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             minHeight: 80, color: inboxOver ? '#7F77DD' : '#6B7280',
             fontSize: 12, fontStyle: 'italic',
-            border: `1px dashed ${inboxOver ? '#7F77DD60' : '#252A3E'}`,
+            border: `1px dashed ${inboxOver ? '#7F77DD60' : 'var(--color-border, #252A3E)'}`,
             borderRadius: 8, transition: 'all 0.15s ease',
           }}>
             {inboxOver ? 'Drop here to move to inbox' : 'No tasks'}
@@ -324,7 +324,7 @@ export function UndefinedTasksPanel({ onOpen, hideCompleted = false }: Props) {
       </div>
 
       {/* Add form */}
-      <div style={{ borderTop: '1px solid #252A3E', padding: '8px' }}>
+      <div style={{ borderTop: '1px solid var(--color-border, #252A3E)', padding: '8px' }}>
         {adding ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
             <input autoFocus value={title} onChange={e => setTitle(e.target.value)}
@@ -334,7 +334,7 @@ export function UndefinedTasksPanel({ onOpen, hideCompleted = false }: Props) {
             {/* AI suggestion strip */}
             {(aiLoading || aiHint) && (
               <div style={{
-                background: '#0D0F1A', border: '1px solid #252A3E', borderRadius: 6,
+                background: 'var(--color-bg, #0D0F1A)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 6,
                 padding: '5px 8px', display: 'flex', flexWrap: 'wrap', gap: 5, alignItems: 'center',
               }}>
                 <Sparkles size={10} color="#7F77DD" style={{ flexShrink: 0 }} />
@@ -399,7 +399,7 @@ export function UndefinedTasksPanel({ onOpen, hideCompleted = false }: Props) {
                       flex: 1, padding: '4px', borderRadius: 5, fontSize: 11, fontWeight: 500,
                       cursor: 'pointer', textTransform: 'capitalize',
                       background: status === s ? STATUS_COLORS[s] + '22' : 'transparent',
-                      border: `1px solid ${status === s ? STATUS_COLORS[s] + '80' : '#252A3E'}`,
+                      border: `1px solid ${status === s ? STATUS_COLORS[s] + '80' : 'var(--color-border, #252A3E)'}`,
                       color: status === s ? STATUS_COLORS[s] : '#6B7280',
                     }}>{s}</button>
                   ))}
@@ -416,14 +416,14 @@ export function UndefinedTasksPanel({ onOpen, hideCompleted = false }: Props) {
               }}>Add Task</button>
               <button onClick={reset} style={{
                 padding: '6px 10px', borderRadius: 6,
-                background: 'transparent', border: '1px solid #252A3E',
+                background: 'transparent', border: '1px solid var(--color-border, #252A3E)',
                 color: '#6B7280', cursor: 'pointer', fontSize: 12,
               }}><X size={12} /></button>
             </div>
           </div>
         ) : (
           <button onClick={() => setAdding(true)} style={{
-            width: '100%', background: 'transparent', border: '1px dashed #252A3E',
+            width: '100%', background: 'transparent', border: '1px dashed var(--color-border, #252A3E)',
             borderRadius: 7, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
             color: '#6B7280', fontSize: 12, padding: '7px 10px',
           }}>

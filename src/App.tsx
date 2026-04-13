@@ -45,7 +45,7 @@ function LoginScreen() {
   return (
     <div style={{
       height: '100vh',
-      background: '#0D0F1A',
+      background: 'var(--color-bg, #0D0F1A)',
       display: 'flex',
       overflow: 'hidden',
       position: 'relative',
@@ -82,11 +82,11 @@ function LoginScreen() {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             boxShadow: '0 8px 24px rgba(30,64,175,0.35)',
           }}>
-            <GraduationCap size={24} color="#0D0F1A" strokeWidth={2.5} />
+            <GraduationCap size={24} color="var(--color-bg, #0D0F1A)" strokeWidth={2.5} />
           </div>
           <span style={{
             fontFamily: "'Cabinet Grotesk', sans-serif",
-            fontWeight: 800, fontSize: 22, color: '#E8EAF6', letterSpacing: '-0.5px',
+            fontWeight: 800, fontSize: 22, color: 'var(--color-text, #E8EAF6)', letterSpacing: '-0.5px',
           }}>
             The Professor
           </span>
@@ -98,7 +98,7 @@ function LoginScreen() {
             margin: '0 0 20px',
             fontSize: 52, fontWeight: 900,
             fontFamily: "'Cabinet Grotesk', sans-serif",
-            color: '#E8EAF6', letterSpacing: '-2px', lineHeight: 1.08,
+            color: 'var(--color-text, #E8EAF6)', letterSpacing: '-2px', lineHeight: 1.08,
           }}>
             Your AI Executive<br />
             <span style={{
@@ -143,7 +143,7 @@ function LoginScreen() {
                 ? 'rgba(30,64,175,0.18)'
                 : 'rgba(30,64,175,0.10)',
               border: `1px solid ${hovered ? 'rgba(30,64,175,0.5)' : 'rgba(30,64,175,0.25)'}`,
-              color: '#E8EAF6', fontSize: 15, fontWeight: 600, cursor: signing ? 'wait' : 'pointer',
+              color: 'var(--color-text, #E8EAF6)', fontSize: 15, fontWeight: 600, cursor: signing ? 'wait' : 'pointer',
               fontFamily: "'Cabinet Grotesk', sans-serif",
               transition: 'all 0.2s ease',
               transform: hovered ? 'translateY(-1px)' : 'none',
@@ -397,7 +397,7 @@ function LoadingScreen() {
   return (
     <div style={{
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-      minHeight: '100vh', background: '#0D0F1A', gap: 16,
+      minHeight: '100vh', background: 'var(--color-bg, #0D0F1A)', gap: 16,
     }}>
       <div style={{
         width: 44, height: 44, borderRadius: 11,
@@ -406,7 +406,7 @@ function LoadingScreen() {
         boxShadow: '0 8px 24px rgba(30,64,175,0.3)',
         animation: 'pulse 1.5s ease-in-out infinite',
       }}>
-        <GraduationCap size={22} color="#0D0F1A" strokeWidth={2.5} />
+        <GraduationCap size={22} color="var(--color-bg, #0D0F1A)" strokeWidth={2.5} />
       </div>
       <style>{`
         @keyframes pulse {

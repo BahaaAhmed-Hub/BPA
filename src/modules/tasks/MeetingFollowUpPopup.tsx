@@ -56,16 +56,16 @@ function TaskRow({ draft, index, expanded, users, onToggle, onChange, onDelete }
   const q        = Q_OPTIONS.find(o => o.value === draft.quadrant)
 
   const inp: React.CSSProperties = {
-    background: '#0D0F1A', border: '1px solid #2E3450', borderRadius: 6,
-    color: '#E8EAF6', fontSize: 12, padding: '5px 8px', outline: 'none',
+    background: 'var(--color-bg, #0D0F1A)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 6,
+    color: 'var(--color-text, #E8EAF6)', fontSize: 12, padding: '5px 8px', outline: 'none',
     fontFamily: 'inherit',
   }
 
   return (
     <div style={{
       borderRadius: 10,
-      border: `1px solid ${expanded ? '#353A60' : '#252A3E'}`,
-      background: expanded ? '#1A1F38' : '#161929',
+      border: `1px solid ${expanded ? '#353A60' : 'var(--color-border, #252A3E)'}`,
+      background: expanded ? 'var(--color-surface2, #1A1F38)' : 'var(--color-surface, #161929)',
       overflow: 'hidden',
       transition: 'all 0.15s',
       opacity: draft.deleted ? 0.35 : 1,
@@ -81,7 +81,7 @@ function TaskRow({ draft, index, expanded, users, onToggle, onChange, onDelete }
         {/* Row number */}
         <span style={{
           width: 18, height: 18, borderRadius: '50%', flexShrink: 0,
-          background: '#252A3E', fontSize: 10, fontWeight: 700,
+          background: 'var(--color-surface2, #252A3E)', fontSize: 10, fontWeight: 700,
           color: '#6B7280', display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
           {index + 1}
@@ -89,7 +89,7 @@ function TaskRow({ draft, index, expanded, users, onToggle, onChange, onDelete }
 
         {/* Title */}
         <span style={{
-          flex: 1, fontSize: 12.5, color: '#E8EAF6', fontWeight: 500,
+          flex: 1, fontSize: 12.5, color: 'var(--color-text, #E8EAF6)', fontWeight: 500,
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         }}>
           {draft.title || <span style={{ color: '#6B7280', fontStyle: 'italic' }}>No title</span>}
@@ -152,7 +152,7 @@ function TaskRow({ draft, index, expanded, users, onToggle, onChange, onDelete }
                     style={{
                       padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: active ? 700 : 500,
                       background: active ? `${opt.color}22` : 'transparent',
-                      border: `1px solid ${active ? opt.color + '60' : '#252A3E'}`,
+                      border: `1px solid ${active ? opt.color + '60' : 'var(--color-border, #252A3E)'}`,
                       color: active ? opt.color : '#6B7280',
                       cursor: 'pointer', transition: 'all 0.1s',
                     }}
@@ -196,7 +196,7 @@ function TaskRow({ draft, index, expanded, users, onToggle, onChange, onDelete }
               onClick={onDelete}
               style={{
                 display: 'flex', alignItems: 'center', gap: 5,
-                background: 'transparent', border: '1px solid #252A3E',
+                background: 'transparent', border: '1px solid var(--color-border, #252A3E)',
                 borderRadius: 6, padding: '4px 10px', color: '#6B7280',
                 fontSize: 11.5, cursor: 'pointer',
               }}
@@ -303,8 +303,8 @@ export function MeetingFollowUpPopup({ parentTask, onConfirm, onSkip }: Props) {
         zIndex: 1001,
         width: 560, maxWidth: 'calc(100vw - 32px)',
         maxHeight: 'calc(100vh - 64px)',
-        background: '#161929',
-        border: '1px solid #252A3E',
+        background: 'var(--color-surface, #161929)',
+        border: '1px solid var(--color-border, #252A3E)',
         borderRadius: 16,
         display: 'flex', flexDirection: 'column',
         overflow: 'hidden',
@@ -314,7 +314,7 @@ export function MeetingFollowUpPopup({ parentTask, onConfirm, onSkip }: Props) {
         {/* Header */}
         <div style={{
           padding: '16px 20px 14px',
-          borderBottom: '1px solid #252A3E',
+          borderBottom: '1px solid var(--color-border, #252A3E)',
           display: 'flex', alignItems: 'flex-start', gap: 10,
         }}>
           <div style={{
@@ -325,7 +325,7 @@ export function MeetingFollowUpPopup({ parentTask, onConfirm, onSkip }: Props) {
             <Check size={16} color="#1D9E75" strokeWidth={2.5} />
           </div>
           <div style={{ flex: 1 }}>
-            <h3 style={{ margin: '0 0 2px', fontSize: 15, fontWeight: 700, color: '#E8EAF6' }}>
+            <h3 style={{ margin: '0 0 2px', fontSize: 15, fontWeight: 700, color: 'var(--color-text, #E8EAF6)' }}>
               {drafts === null ? 'Meeting complete!' : `${activeCount} follow-up task${activeCount !== 1 ? 's' : ''}`}
             </h3>
             <p style={{ margin: 0, fontSize: 12, color: '#6B7280', lineHeight: 1.4 }}>
@@ -359,8 +359,8 @@ export function MeetingFollowUpPopup({ parentTask, onConfirm, onSkip }: Props) {
                 placeholder={'- Follow up with Ali on the API proposal\n- Schedule deep dive on Q3 metrics\n- John to send updated deck by Friday'}
                 style={{
                   width: '100%', minHeight: 140, resize: 'vertical',
-                  background: '#0D0F1A', border: '1px solid #252A3E', borderRadius: 8,
-                  color: '#E8EAF6', fontSize: 12.5, padding: '10px 12px',
+                  background: 'var(--color-bg, #0D0F1A)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 8,
+                  color: 'var(--color-text, #E8EAF6)', fontSize: 12.5, padding: '10px 12px',
                   outline: 'none', fontFamily: 'inherit', lineHeight: 1.5,
                   boxSizing: 'border-box',
                 }}
@@ -434,12 +434,12 @@ export function MeetingFollowUpPopup({ parentTask, onConfirm, onSkip }: Props) {
         {/* Footer */}
         <div style={{
           padding: '12px 20px',
-          borderTop: '1px solid #252A3E',
+          borderTop: '1px solid var(--color-border, #252A3E)',
           display: 'flex', gap: 8, justifyContent: 'flex-end', alignItems: 'center',
         }}>
           <button onClick={onSkip} style={{
             padding: '7px 16px', borderRadius: 8, fontSize: 12.5,
-            background: 'transparent', border: '1px solid #252A3E',
+            background: 'transparent', border: '1px solid var(--color-border, #252A3E)',
             color: '#6B7280', cursor: 'pointer',
           }}>
             Skip
@@ -451,7 +451,7 @@ export function MeetingFollowUpPopup({ parentTask, onConfirm, onSkip }: Props) {
               disabled={loading}
               style={{
                 padding: '7px 16px', borderRadius: 8, fontSize: 12.5, fontWeight: 600,
-                background: loading ? '#252A3E' : '#7F77DD22',
+                background: loading ? 'var(--color-surface2, #252A3E)' : '#7F77DD22',
                 border: '1px solid #7F77DD50',
                 color: loading ? '#6B7280' : '#7F77DD',
                 cursor: loading ? 'not-allowed' : 'pointer',
@@ -467,8 +467,8 @@ export function MeetingFollowUpPopup({ parentTask, onConfirm, onSkip }: Props) {
               disabled={activeCount === 0}
               style={{
                 padding: '7px 18px', borderRadius: 8, fontSize: 12.5, fontWeight: 600,
-                background: activeCount > 0 ? '#1D9E7522' : '#252A3E',
-                border: `1px solid ${activeCount > 0 ? '#1D9E7550' : '#252A3E'}`,
+                background: activeCount > 0 ? '#1D9E7522' : 'var(--color-surface2, #252A3E)',
+                border: `1px solid ${activeCount > 0 ? '#1D9E7550' : 'var(--color-border, #252A3E)'}`,
                 color: activeCount > 0 ? '#1D9E75' : '#6B7280',
                 cursor: activeCount > 0 ? 'pointer' : 'not-allowed',
                 display: 'flex', alignItems: 'center', gap: 6,

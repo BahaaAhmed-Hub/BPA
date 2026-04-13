@@ -120,27 +120,27 @@ export function TaskCommand() {
 
       {/* Stats bar */}
       <div style={{
-        padding: '12px 28px', borderBottom: '1px solid #252A3E',
+        padding: '12px 28px', borderBottom: '1px solid var(--color-border, #252A3E)',
         display: 'flex', gap: 18, alignItems: 'center',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <CheckSquare size={13} color="#1E40AF" strokeWidth={2} />
-          <span style={{ fontSize: 12.5, color: '#E8EAF6' }}>
+          <span style={{ fontSize: 12.5, color: 'var(--color-text, #E8EAF6)' }}>
             <span style={{ fontWeight: 600 }}>{active.length}</span> active
           </span>
         </div>
-        <div style={{ width: 1, height: 14, background: '#252A3E' }} />
+        <div style={{ width: 1, height: 14, background: 'var(--color-border, #252A3E)' }} />
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <Zap size={13} color="#E05252" strokeWidth={2} />
-          <span style={{ fontSize: 12.5, color: '#E8EAF6' }}>
+          <span style={{ fontSize: 12.5, color: 'var(--color-text, #E8EAF6)' }}>
             <span style={{ fontWeight: 600 }}>{urgent.length}</span> urgent
           </span>
         </div>
         {inbox.length > 0 && (
           <>
-            <div style={{ width: 1, height: 14, background: '#252A3E' }} />
+            <div style={{ width: 1, height: 14, background: 'var(--color-border, #252A3E)' }} />
             <span style={{ fontSize: 12.5, color: '#6B7280' }}>
-              <span style={{ fontWeight: 600, color: '#E8EAF6' }}>{inbox.length}</span> unassigned
+              <span style={{ fontWeight: 600, color: 'var(--color-text, #E8EAF6)' }}>{inbox.length}</span> unassigned
             </span>
           </>
         )}
@@ -159,7 +159,7 @@ export function TaskCommand() {
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 width: 28, height: 28, borderRadius: 7, cursor: 'pointer',
                 background: configOpen ? 'rgba(127,119,221,0.12)' : 'transparent',
-                border: `1px solid ${configOpen ? '#7F77DD40' : '#252A3E'}`,
+                border: `1px solid ${configOpen ? '#7F77DD40' : 'var(--color-border, #252A3E)'}`,
                 color: configOpen ? '#7F77DD' : '#6B7280',
                 transition: 'all 0.12s',
               }}
@@ -171,7 +171,7 @@ export function TaskCommand() {
             {configOpen && (
               <div style={{
                 position: 'absolute', top: 34, right: 0, zIndex: 100,
-                background: '#161929', border: '1px solid #252A3E',
+                background: 'var(--color-surface, #161929)', border: '1px solid var(--color-border, #252A3E)',
                 borderRadius: 10, padding: '12px 14px', minWidth: 220,
                 boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
               }}>
@@ -186,7 +186,7 @@ export function TaskCommand() {
                     onClick={() => setHideCompleted(!hideCompleted)}
                     style={{
                       width: 36, height: 20, borderRadius: 10, flexShrink: 0,
-                      background: hideCompleted ? '#7F77DD' : '#252A3E',
+                      background: hideCompleted ? '#7F77DD' : 'var(--color-border, #252A3E)',
                       position: 'relative', cursor: 'pointer', transition: 'background 0.15s',
                     }}
                   >

@@ -101,7 +101,7 @@ function StatCard({
 }) {
   return (
     <div style={{
-      background: '#161929', border: '1px solid #252A3E',
+      background: 'var(--color-surface, #161929)', border: '1px solid var(--color-border, #252A3E)',
       borderRadius: 12, padding: '18px 20px',
       position: 'relative', overflow: 'hidden',
     }}>
@@ -116,14 +116,14 @@ function StatCard({
               value={value}
               onChange={e => onChange(parseFloat(e.target.value) || 0)}
               style={{
-                fontSize: 28, fontWeight: 700, color: '#E8EAF6',
+                fontSize: 28, fontWeight: 700, color: 'var(--color-text, #E8EAF6)',
                 fontFamily: "'Cabinet Grotesk', sans-serif", letterSpacing: '-0.5px',
                 background: 'none', border: 'none', outline: 'none',
                 width: 80, padding: 0,
               }}
             />
           ) : (
-            <div style={{ fontSize: 28, fontWeight: 700, color: '#E8EAF6', fontFamily: "'Cabinet Grotesk', sans-serif", letterSpacing: '-0.5px', lineHeight: 1 }}>
+            <div style={{ fontSize: 28, fontWeight: 700, color: 'var(--color-text, #E8EAF6)', fontFamily: "'Cabinet Grotesk', sans-serif", letterSpacing: '-0.5px', lineHeight: 1 }}>
               {value}
             </div>
           )}
@@ -218,7 +218,7 @@ export function ReviewModule() {
         {/* ─── Week label ───────────────────────────────────────────────────── */}
         <div style={{ marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <h2 style={{ margin: '0 0 3px', fontSize: 20, fontWeight: 700, color: '#E8EAF6', fontFamily: "'Cabinet Grotesk', sans-serif", letterSpacing: '-0.3px' }}>
+            <h2 style={{ margin: '0 0 3px', fontSize: 20, fontWeight: 700, color: 'var(--color-text, #E8EAF6)', fontFamily: "'Cabinet Grotesk', sans-serif", letterSpacing: '-0.3px' }}>
               Week of {new Date(getMonday() + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
             </h2>
             <p style={{ margin: 0, fontSize: 13, color: '#FFFFFF' }}>
@@ -280,7 +280,7 @@ export function ReviewModule() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
 
           {/* ─── Completed tasks ──────────────────────────────────────────── */}
-          <div style={{ background: '#161929', border: '1px solid #252A3E', borderRadius: 14, padding: '22px 24px' }}>
+          <div style={{ background: 'var(--color-surface, #161929)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 14, padding: '22px 24px' }}>
             <p style={{ margin: '0 0 16px', fontSize: 11, fontWeight: 600, color: '#FFFFFF', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
               Shipped This Week
             </p>
@@ -292,7 +292,7 @@ export function ReviewModule() {
                   <div key={task.id} style={{
                     display: 'flex', alignItems: 'center', gap: 10,
                     padding: '10px 12px', borderRadius: 8,
-                    background: '#0D0F1A', border: '1px solid #252A3E',
+                    background: 'var(--color-bg, #0D0F1A)', border: '1px solid var(--color-border, #252A3E)',
                   }}>
                     <CheckSquare size={13} color="#1D9E75" style={{ flexShrink: 0 }} />
                     <span style={{ fontSize: 13, color: '#FFFFFF', flex: 1, textDecoration: 'line-through', opacity: 0.7 }}>
@@ -322,11 +322,11 @@ export function ReviewModule() {
           {/* ─── AI Insight ───────────────────────────────────────────────── */}
           <div style={{
             background: loading
-              ? '#161929'
+              ? 'var(--color-surface, #161929)'
               : insight
                 ? 'rgba(30,64,175,0.05)'
-                : '#161929',
-            border: `1px solid ${insight ? 'rgba(30,64,175,0.2)' : '#252A3E'}`,
+                : 'var(--color-surface, #161929)',
+            border: `1px solid ${insight ? 'rgba(30,64,175,0.2)' : 'var(--color-border, #252A3E)'}`,
             borderRadius: 14, padding: '22px 24px',
             display: 'flex', flexDirection: 'column',
           }}>
@@ -360,12 +360,12 @@ export function ReviewModule() {
                 </button>
               </div>
             ) : insight ? (
-              <p style={{ margin: 0, fontSize: 14, color: '#E8EAF6', lineHeight: 1.7 }}>
+              <p style={{ margin: 0, fontSize: 14, color: 'var(--color-text, #E8EAF6)', lineHeight: 1.7 }}>
                 {insight}
               </p>
             ) : (
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, padding: '16px 0' }}>
-                <Sparkles size={28} color="#252A3E" />
+                <Sparkles size={28} color="var(--color-border, #252A3E)" />
                 <div style={{ textAlign: 'center' }}>
                   <p style={{ margin: '0 0 4px', fontSize: 14, color: '#5A4E3A', fontWeight: 500 }}>
                     No insight yet

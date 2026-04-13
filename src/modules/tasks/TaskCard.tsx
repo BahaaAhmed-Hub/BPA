@@ -73,8 +73,8 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
   }
 
   const fieldInput: React.CSSProperties = {
-    background: '#0D0F1A', border: '1px solid #353A50', borderRadius: 4,
-    color: '#E8EAF6', fontSize: 10, padding: '1px 5px', outline: 'none',
+    background: 'var(--color-bg, #0D0F1A)', border: '1px solid #353A50', borderRadius: 4,
+    color: 'var(--color-text, #E8EAF6)', fontSize: 10, padding: '1px 5px', outline: 'none',
   }
 
   return (
@@ -83,8 +83,8 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
       onClick={handleCardClick}
       style={{
         ...style,
-        background: hovered ? '#1a1f35' : '#161929',
-        border: `1px solid ${isDragging ? '#1E40AF' : '#252A3E'}`,
+        background: hovered ? 'var(--color-surface2, #1a1f35)' : 'var(--color-surface, #161929)',
+        border: `1px solid ${isDragging ? '#1E40AF' : 'var(--color-border, #252A3E)'}`,
         borderRadius: 8,
         padding: '9px 11px',
         cursor: isDragging ? 'grabbing' : 'pointer',
@@ -123,7 +123,7 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
           }}
           style={{
             width: 15, height: 15, borderRadius: 4,
-            border: `1.5px solid ${task.completed ? '#1D9E75' : '#252A3E'}`,
+            border: `1.5px solid ${task.completed ? '#1D9E75' : 'var(--color-border, #252A3E)'}`,
             background: task.completed ? '#1D9E75' : 'transparent',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             cursor: 'pointer', flexShrink: 0, marginTop: 1, transition: 'all 0.15s ease',
@@ -149,7 +149,7 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
               style={{
                 background: 'transparent', border: 'none',
                 borderBottom: '1px solid #7F77DD', outline: 'none',
-                color: '#E8EAF6', fontSize: 12.5, fontWeight: 500,
+                color: 'var(--color-text, #E8EAF6)', fontSize: 12.5, fontWeight: 500,
                 width: '100%', padding: 0, fontFamily: 'inherit', lineHeight: 1.35,
               }}
             />
@@ -159,7 +159,7 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
               onClick={() => { if (!task.completed) setEditingTitle(true) }}
               title={task.completed ? undefined : 'Click to rename'}
               style={{
-                margin: 0, fontSize: 12.5, fontWeight: 500, color: '#E8EAF6',
+                margin: 0, fontSize: 12.5, fontWeight: 500, color: 'var(--color-text, #E8EAF6)',
                 lineHeight: 1.35, textDecoration: task.completed ? 'line-through' : 'none',
                 overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                 cursor: task.completed ? 'default' : 'text',

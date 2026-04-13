@@ -494,11 +494,11 @@ function CompanyCard({
 
   const tinp: React.CSSProperties = {
     background: 'transparent', border: 'none', borderBottom: '1px solid #7F77DD',
-    outline: 'none', color: '#E8EAF6', fontFamily: 'inherit', padding: '0 2px',
+    outline: 'none', color: 'var(--color-text, #E8EAF6)', fontFamily: 'inherit', padding: '0 2px',
   }
 
   return (
-    <div style={{ background: '#0D0F1A', border: '1px solid #252A3E', borderRadius: 10, marginBottom: 8, overflow: 'visible' }}>
+    <div style={{ background: 'var(--color-bg, #0D0F1A)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 10, marginBottom: 8, overflow: 'visible' }}>
       {/* Company header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px' }}>
 
@@ -515,7 +515,7 @@ function CompanyCard({
           {colorOpen && (
             <div style={{
               position: 'absolute', top: 24, left: 0, zIndex: 200,
-              background: '#1a1f35', border: '1px solid #2e3450', borderRadius: 10,
+              background: 'var(--color-surface, #161929)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 10,
               padding: '7px 8px', display: 'flex', gap: 5,
               boxShadow: '0 6px 20px rgba(0,0,0,0.5)',
             }}>
@@ -524,7 +524,7 @@ function CompanyCard({
                   style={{
                     width: 16, height: 16, borderRadius: '50%', background: c,
                     border: 'none', cursor: 'pointer', flexShrink: 0,
-                    boxShadow: co.color === c ? `0 0 0 2px #1a1f35, 0 0 0 3.5px ${c}` : 'none',
+                    boxShadow: co.color === c ? `0 0 0 2px var(--color-surface, #161929), 0 0 0 3.5px ${c}` : 'none',
                     transform: co.color === c ? 'scale(1.2)' : 'scale(1)',
                     transition: 'transform 0.1s ease',
                   }} />
@@ -544,7 +544,7 @@ function CompanyCard({
             />
           ) : (
             <span onClick={() => setEditingName(true)} title="Click to rename"
-              style={{ fontSize: 13.5, fontWeight: 600, color: '#E8EAF6', cursor: 'text', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--color-text, #E8EAF6)', cursor: 'text', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {co.name || 'Untitled'}
             </span>
           )}
@@ -577,7 +577,7 @@ function CompanyCard({
         <button onClick={() => setUsersOpen(o => !o)} title={usersOpen ? 'Collapse members' : 'Expand members'} style={{
           display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0,
           padding: '2px 7px', borderRadius: 5, fontSize: 10.5, cursor: 'pointer',
-          background: 'transparent', border: '1px solid #252A3E',
+          background: 'transparent', border: '1px solid var(--color-border, #252A3E)',
           color: '#6B7280',
         }}>
           <span style={{ color: co.color, fontWeight: 600 }}>{users.length}</span>
@@ -594,7 +594,7 @@ function CompanyCard({
 
       {/* Users tree */}
       {usersOpen && (
-        <div style={{ borderTop: '1px solid #1a1f35', padding: '8px 14px 10px 46px' }}>
+        <div style={{ borderTop: '1px solid var(--color-border, #252A3E)', padding: '8px 14px 10px 46px' }}>
           {users.length === 0 && (
             <p style={{ margin: '0 0 6px', fontSize: 11, color: '#3a3f55', fontStyle: 'italic' }}>No members yet</p>
           )}
@@ -603,7 +603,7 @@ function CompanyCard({
             const isEditing = editingUserId === u.id
             const draft = userDrafts[u.id]
             return (
-              <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0', borderBottom: '1px solid #1a1f35' }}>
+              <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0', borderBottom: '1px solid var(--color-border, #252A3E)' }}>
                 <span style={{ width: 6, height: 6, borderRadius: '50%', background: co.color, flexShrink: 0 }} />
 
                 {isEditing ? (
@@ -624,7 +624,7 @@ function CompanyCard({
                   </>
                 ) : (
                   <>
-                    <span onClick={() => startEditUser(u)} style={{ fontSize: 12, color: '#E8EAF6', cursor: 'text', minWidth: 60 }}>{u.name}</span>
+                    <span onClick={() => startEditUser(u)} style={{ fontSize: 12, color: 'var(--color-text, #E8EAF6)', cursor: 'text', minWidth: 60 }}>{u.name}</span>
                     <span onClick={() => startEditUser(u)} style={{ fontSize: 11, color: '#6B7280', cursor: 'text', flex: 1 }}>
                       {u.email || <span style={{ color: '#3a3f55' }}>+ email</span>}
                     </span>

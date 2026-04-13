@@ -162,7 +162,7 @@ function EmojiBtn({ value, onSelect }: { value: string; onSelect: (e: string) =>
       {open && (
         <div style={{
           position: 'absolute', top: 28, left: 0, zIndex: 300,
-          background: '#1a1f35', border: '1px solid #2e3450', borderRadius: 10,
+          background: 'var(--color-surface, #161929)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 10,
           padding: '8px', display: 'flex', gap: 4, flexWrap: 'wrap', width: 210,
           boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
         }}>
@@ -197,12 +197,12 @@ function ColorBtn({ value, colors, onSelect }: { value: string; colors: string[]
         style={{
           width: 14, height: 14, borderRadius: '50%', background: value,
           border: 'none', cursor: 'pointer', flexShrink: 0,
-          boxShadow: `0 0 0 2px #0D0F1A, 0 0 0 3px ${value}60`,
+          boxShadow: `0 0 0 2px var(--color-bg, #0D0F1A), 0 0 0 3px ${value}60`,
         }} />
       {open && (
         <div style={{
           position: 'absolute', top: 20, left: 0, zIndex: 300,
-          background: '#1a1f35', border: '1px solid #2e3450', borderRadius: 8,
+          background: 'var(--color-surface, #161929)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 8,
           padding: '7px 8px', display: 'flex', gap: 5,
           boxShadow: '0 6px 20px rgba(0,0,0,0.5)',
         }}>
@@ -211,7 +211,7 @@ function ColorBtn({ value, colors, onSelect }: { value: string; colors: string[]
               style={{
                 width: 16, height: 16, borderRadius: '50%', background: c,
                 border: 'none', cursor: 'pointer',
-                boxShadow: value === c ? `0 0 0 2px #1a1f35, 0 0 0 3.5px ${c}` : 'none',
+                boxShadow: value === c ? `0 0 0 2px var(--color-surface, #161929), 0 0 0 3.5px ${c}` : 'none',
                 transform: value === c ? 'scale(1.2)' : 'scale(1)',
                 transition: 'transform 0.1s',
               }} />

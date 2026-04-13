@@ -170,8 +170,8 @@ export function InboxModule() {
         <div style={{ background: 'var(--color-surface, #161929)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 12, overflow: 'hidden' }}>
           {[0,1,2,3].map(i => (
             <div key={i} style={{ padding: '16px 18px', borderBottom: i < 3 ? '1px solid var(--color-border, #252A3E)' : 'none' }}>
-              <div style={{ height: 12, borderRadius: 6, background: 'linear-gradient(90deg,#252A3E 25%,#4A3E28 50%,#252A3E 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.6s infinite', marginBottom: 8, width: '60%' }} />
-              <div style={{ height: 10, borderRadius: 6, background: 'linear-gradient(90deg,#252A3E 25%,#4A3E28 50%,#252A3E 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.6s infinite', width: '80%' }} />
+              <div style={{ height: 12, borderRadius: 6, background: 'linear-gradient(90deg, var(--color-border, #252A3E) 25%, var(--color-surface2, #4A3E28) 50%, var(--color-border, #252A3E) 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.6s infinite', marginBottom: 8, width: '60%' }} />
+              <div style={{ height: 10, borderRadius: 6, background: 'linear-gradient(90deg, var(--color-border, #252A3E) 25%, var(--color-surface2, #4A3E28) 50%, var(--color-border, #252A3E) 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.6s infinite', width: '80%' }} />
             </div>
           ))}
         </div>
@@ -333,27 +333,27 @@ export function InboxModule() {
                   {CLASS_META[selectedTriage.result.classification].label}
                 </div>
               </div>
-              <div style={{ flex: 1, padding: '12px 14px', background: '#0D0F1A', border: `1px solid ${URGENCY_META[selectedTriage.result.urgency].color}30`, borderRadius: 8 }}>
+              <div style={{ flex: 1, padding: '12px 14px', background: 'var(--color-bg, #0D0F1A)', border: `1px solid ${URGENCY_META[selectedTriage.result.urgency].color}30`, borderRadius: 8 }}>
                 <div style={{ fontSize: 10, color: '#FFFFFF', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Urgency</div>
                 <div style={{ fontSize: 14, fontWeight: 600, color: URGENCY_META[selectedTriage.result.urgency].color }}>
                   {URGENCY_META[selectedTriage.result.urgency].label}
                 </div>
               </div>
               {selectedTriage.result.followUpDate && (
-                <div style={{ flex: 1, padding: '12px 14px', background: '#0D0F1A', border: '1px solid #252A3E', borderRadius: 8 }}>
+                <div style={{ flex: 1, padding: '12px 14px', background: 'var(--color-bg, #0D0F1A)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 8 }}>
                   <div style={{ fontSize: 10, color: '#FFFFFF', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Follow Up</div>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: '#E8EAF6' }}>{selectedTriage.result.followUpDate}</div>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text, #E8EAF6)' }}>{selectedTriage.result.followUpDate}</div>
                 </div>
               )}
             </div>
 
             {selectedTriage.result.suggestedReply && (
-              <div style={{ background: '#0D0F1A', border: '1px solid #252A3E', borderRadius: 8, padding: '14px 16px' }}>
+              <div style={{ background: 'var(--color-bg, #0D0F1A)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 8, padding: '14px 16px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
                   <span style={{ fontSize: 11, fontWeight: 600, color: '#FFFFFF', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Suggested Reply</span>
                   <button
                     onClick={() => handleCopyReply(selectedEmail.id, selectedTriage.result!.suggestedReply)}
-                    style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 9px', borderRadius: 5, background: 'transparent', border: '1px solid #252A3E', color: '#FFFFFF', fontSize: 11, cursor: 'pointer' }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 9px', borderRadius: 5, background: 'transparent', border: '1px solid var(--color-border, #252A3E)', color: '#FFFFFF', fontSize: 11, cursor: 'pointer' }}
                   >
                     {selectedTriage.copied ? <><CheckCheck size={10} /><span>Copied</span></> : <><Copy size={10} /><span>Copy</span></>}
                   </button>
@@ -366,12 +366,12 @@ export function InboxModule() {
           </div>
 
         ) : (
-          <div style={{ background: '#161929', border: '1px dashed #252A3E', borderRadius: 12, padding: '36px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
+          <div style={{ background: 'var(--color-surface, #161929)', border: '1px dashed var(--color-border, #252A3E)', borderRadius: 12, padding: '36px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
             <div style={{ width: 44, height: 44, borderRadius: 10, background: 'rgba(30,64,175,0.08)', border: '1px solid rgba(30,64,175,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Zap size={18} color="#1E40AF" />
             </div>
             <div style={{ textAlign: 'center' }}>
-              <p style={{ margin: '0 0 5px', fontSize: 14, color: '#E8EAF6', fontWeight: 500 }}>Let The Professor triage this</p>
+              <p style={{ margin: '0 0 5px', fontSize: 14, color: 'var(--color-text, #E8EAF6)', fontWeight: 500 }}>Let The Professor triage this</p>
               <p style={{ margin: 0, fontSize: 12.5, color: '#FFFFFF' }}>Get classification, urgency level, and a ready-to-send reply</p>
             </div>
             <button
@@ -401,21 +401,21 @@ export function InboxModule() {
 
         {/* Stats bar */}
         {!noAuth && (
-          <div style={{ display: 'flex', gap: 20, marginBottom: 20, padding: '13px 20px', background: '#161929', border: '1px solid #252A3E', borderRadius: 10, alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: 20, marginBottom: 20, padding: '13px 20px', background: 'var(--color-surface, #161929)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 10, alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
               <Mail size={14} color="#1E40AF" />
-              <span style={{ fontSize: 13, color: '#E8EAF6' }}>{loading ? '…' : emails.length} unread</span>
+              <span style={{ fontSize: 13, color: 'var(--color-text, #E8EAF6)' }}>{loading ? '…' : emails.length} unread</span>
             </div>
-            <div style={{ width: 1, height: 14, background: '#252A3E' }} />
+            <div style={{ width: 1, height: 14, background: 'var(--color-border, #252A3E)' }} />
             <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
               <Zap size={14} color="#1D9E75" />
-              <span style={{ fontSize: 13, color: '#E8EAF6' }}>{triagedCount} triaged</span>
+              <span style={{ fontSize: 13, color: 'var(--color-text, #E8EAF6)' }}>{triagedCount} triaged</span>
             </div>
             <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
               <button
                 onClick={() => void loadEmails()}
                 disabled={loading}
-                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 7, background: 'transparent', border: '1px solid #252A3E', color: '#FFFFFF', fontSize: 12, cursor: 'pointer', opacity: loading ? 0.5 : 1 }}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 7, background: 'transparent', border: '1px solid var(--color-border, #252A3E)', color: '#FFFFFF', fontSize: 12, cursor: 'pointer', opacity: loading ? 0.5 : 1 }}
               >
                 <RefreshCw size={12} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} />
                 Refresh

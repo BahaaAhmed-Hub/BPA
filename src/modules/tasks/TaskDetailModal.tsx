@@ -20,8 +20,8 @@ const STATUS_COLORS: Record<TaskStatus, string> = {
 }
 
 const field: React.CSSProperties = {
-  background: '#0D0F1A', border: '1px solid #252A3E', borderRadius: 6,
-  padding: '6px 9px', fontSize: 12, color: '#E8EAF6', outline: 'none', width: '100%',
+  background: 'var(--color-bg, #0D0F1A)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 6,
+  padding: '6px 9px', fontSize: 12, color: 'var(--color-text, #E8EAF6)', outline: 'none', width: '100%',
   fontFamily: 'inherit', boxSizing: 'border-box',
 }
 const lbl: React.CSSProperties = {
@@ -85,7 +85,7 @@ export function TaskDetailModal({ task, onClose }: Props) {
         onClick={e => e.stopPropagation()}
         style={{
           width: '100%', maxWidth: 580, maxHeight: '85vh',
-          background: '#161929', border: '1px solid #252A3E', borderRadius: 14,
+          background: 'var(--color-surface, #161929)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 14,
           display: 'flex', flexDirection: 'column', overflow: 'hidden',
           boxShadow: '0 24px 80px rgba(0,0,0,0.7)',
         }}
@@ -93,7 +93,7 @@ export function TaskDetailModal({ task, onClose }: Props) {
         {/* Header */}
         <div style={{
           padding: '16px 20px 14px',
-          borderBottom: '1px solid #252A3E',
+          borderBottom: '1px solid var(--color-border, #252A3E)',
           display: 'flex', alignItems: 'flex-start', gap: 12,
         }}>
           <div style={{
@@ -122,7 +122,7 @@ export function TaskDetailModal({ task, onClose }: Props) {
                 onClick={() => setEditingTitle(true)}
                 title="Click to rename"
                 style={{
-                  margin: 0, fontSize: 16, fontWeight: 700, color: '#E8EAF6',
+                  margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--color-text, #E8EAF6)',
                   cursor: 'text', lineHeight: 1.3,
                   textDecoration: task.completed ? 'line-through' : 'none',
                 }}
@@ -164,7 +164,7 @@ export function TaskDetailModal({ task, onClose }: Props) {
                     flex: 1, padding: '5px 4px', borderRadius: 5, fontSize: 10.5, fontWeight: 500,
                     cursor: 'pointer', textTransform: 'capitalize',
                     background: taskStatus === s ? STATUS_COLORS[s] + '22' : 'transparent',
-                    border: `1px solid ${taskStatus === s ? STATUS_COLORS[s] + '80' : '#252A3E'}`,
+                    border: `1px solid ${taskStatus === s ? STATUS_COLORS[s] + '80' : 'var(--color-border, #252A3E)'}`,
                     color: taskStatus === s ? STATUS_COLORS[s] : '#6B7280',
                   }}>{s}</button>
                 ))}

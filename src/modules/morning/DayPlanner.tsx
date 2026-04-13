@@ -164,7 +164,7 @@ function Skel({ w = '100%', h = 12 }: { w?: string | number; h?: number }) {
   return (
     <div style={{
       width: w, height: h, borderRadius: 6,
-      background: 'linear-gradient(90deg,#252A3E 25%,#4A3E28 50%,#252A3E 75%)',
+      background: 'linear-gradient(90deg, var(--color-border, #252A3E) 25%, var(--color-surface2, #4A3E28) 50%, var(--color-border, #252A3E) 75%)',
       backgroundSize: '200% 100%',
       animation: 'shimmer 1.6s infinite',
     }} />
@@ -367,7 +367,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
         style={{
           width: '100%', padding: '14px 18px',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          background: '#0D0F1A', border: '1px dashed #7F77DD40',
+          background: 'var(--color-bg, #0D0F1A)', border: '1px dashed #7F77DD40',
           borderRadius: 12, cursor: 'pointer', transition: 'all 0.15s',
         }}
       >
@@ -380,7 +380,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
             <Sparkles size={13} color="#7F77DD" />
           </div>
           <div style={{ textAlign: 'left' }}>
-            <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#E8EAF6' }}>Build My Day</p>
+            <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: 'var(--color-text, #E8EAF6)' }}>Build My Day</p>
             <p style={{ margin: 0, fontSize: 11, color: '#6B7280' }}>AI-powered time blocking + calendar sync</p>
           </div>
         </div>
@@ -478,8 +478,8 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                             style={{
                               display: 'flex', alignItems: 'center', gap: 9,
                               padding: '8px 10px', borderRadius: 7,
-                              background: isSelected ? `${group.color}12` : '#0A0C14',
-                              border: `1px solid ${isSelected ? `${group.color}40` : '#252A3E'}`,
+                              background: isSelected ? `${group.color}12` : 'var(--color-bg, #0D0F1A)',
+                              border: `1px solid ${isSelected ? `${group.color}40` : 'var(--color-border, #252A3E)'}`,
                               cursor: 'pointer', textAlign: 'left',
                               transition: 'all 0.12s',
                             }}
@@ -495,7 +495,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                             </div>
 
                             <span style={{
-                              flex: 1, fontSize: 12, color: isSelected ? '#E8EAF6' : '#FFFFFF',
+                              flex: 1, fontSize: 12, color: 'var(--color-text, #E8EAF6)',
                               lineHeight: 1.3,
                               textDecoration: 'none',
                             }}>
@@ -547,9 +547,9 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               {[70, 55, 80].map((w, i) => (
                 <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                  <div style={{ width: 3, height: 28, borderRadius: 2, background: '#252A3E', flexShrink: 0 }} />
+                  <div style={{ width: 3, height: 28, borderRadius: 2, background: 'var(--color-border, #252A3E)', flexShrink: 0 }} />
                   <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    <div style={{ height: 9, width: 38, borderRadius: 4, background: '#252A3E' }} />
+                    <div style={{ height: 9, width: 38, borderRadius: 4, background: 'var(--color-border, #252A3E)' }} />
                     <div style={{ height: 11, width: `${w}%`, borderRadius: 4, background: '#1A1D2E' }} />
                   </div>
                 </div>
@@ -570,7 +570,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                       <span style={{ fontSize: 10, fontFamily: 'monospace', color: '#6B7280' }}>
                         {hhmm(ev.start_time)}–{hhmm(ev.end_time)}
                       </span>
-                      <p style={{ margin: '1px 0 0', fontSize: 12, color: '#E8EAF6', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <p style={{ margin: '1px 0 0', fontSize: 12, color: 'var(--color-text, #E8EAF6)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {ev.title}
                       </p>
                     </div>
@@ -602,8 +602,8 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                 style={{
                   flex: 1, padding: '9px 0', borderRadius: 8, cursor: 'pointer',
                   fontSize: 12, fontWeight: deepWork === opt ? 600 : 400,
-                  background: deepWork === opt ? '#7F77DD18' : '#0D0F1A',
-                  border: `1px solid ${deepWork === opt ? '#7F77DD40' : '#252A3E'}`,
+                  background: deepWork === opt ? '#7F77DD18' : 'var(--color-bg, #0D0F1A)',
+                  border: `1px solid ${deepWork === opt ? '#7F77DD40' : 'var(--color-border, #252A3E)'}`,
                   color: deepWork === opt ? '#7F77DD' : '#6B7280',
                   transition: 'all 0.15s',
                   textTransform: 'capitalize',
@@ -621,7 +621,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
             onClick={() => { setPhase('idle'); setError(null); setSelectedTaskIds(new Set()) }}
             style={{
               padding: '9px 16px', borderRadius: 8, cursor: 'pointer',
-              background: 'transparent', border: '1px solid #252A3E',
+              background: 'transparent', border: '1px solid var(--color-border, #252A3E)',
               color: '#6B7280', fontSize: 12,
             }}
           >
@@ -665,7 +665,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: '#E8EAF6' }}>Review Your Day Plan</p>
+            <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: 'var(--color-text, #E8EAF6)' }}>Review Your Day Plan</p>
             <p style={{ margin: '2px 0 0', fontSize: 10.5, color: '#6B7280' }}>
               {confirmed} confirmed
               {toCreate > 0 && ` · ${toCreate} to create`}
@@ -695,8 +695,8 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                 style={{
                   display: 'flex', gap: 10, alignItems: 'stretch',
                   padding: '10px 12px', borderRadius: 10,
-                  background: isPast ? '#0A0C14' : '#0D0F1A',
-                  border: `1px solid ${slot.decision === 'confirmed' ? `${color}30` : '#252A3E'}`,
+                  background: isPast ? 'var(--color-surface2, #252A3E)' : 'var(--color-bg, #0D0F1A)',
+                  border: `1px solid ${slot.decision === 'confirmed' ? `${color}30` : 'var(--color-border, #252A3E)'}`,
                   opacity: isPast ? 0.45 : 1,
                   transition: 'all 0.15s',
                 }}
@@ -743,7 +743,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                     )}
                   </div>
 
-                  <p style={{ margin: '4px 0 0', fontSize: 12.5, color: '#E8EAF6', fontWeight: 500, lineHeight: 1.3 }}>
+                  <p style={{ margin: '4px 0 0', fontSize: 12.5, color: 'var(--color-text, #E8EAF6)', fontWeight: 500, lineHeight: 1.3 }}>
                     {slot.title}
                   </p>
 
@@ -854,7 +854,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
             <div key={slot.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <div style={{
                 width: 16, height: 16, borderRadius: '50%', flexShrink: 0,
-                background: st === 'done' ? '#1D9E75' : st === 'error' ? '#EF4444' : '#252A3E',
+                background: st === 'done' ? '#1D9E75' : st === 'error' ? '#EF4444' : 'var(--color-surface2, #252A3E)',
                 border: `1px solid ${st === 'done' ? '#1D9E75' : st === 'error' ? '#EF4444' : '#7F77DD'}`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
@@ -862,7 +862,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                 {st === 'error' && <X     size={9} color="#fff" />}
                 {!st && <RefreshCw size={8} color="#7F77DD" style={{ animation: 'spin 1s linear infinite' }} />}
               </div>
-              <span style={{ fontSize: 12, color: st === 'error' ? '#EF4444' : '#E8EAF6' }}>
+              <span style={{ fontSize: 12, color: st === 'error' ? '#EF4444' : 'var(--color-text, #E8EAF6)' }}>
                 {slot.title}
               </span>
               <span style={{ fontSize: 10.5, color: '#6B7280', marginLeft: 'auto' }}>
@@ -898,9 +898,9 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
           <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#1D9E75' }}>Plan Applied</p>
         </div>
         <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-          {created > 0 && <span style={{ fontSize: 12, color: '#E8EAF6' }}>{created} created</span>}
-          {updated > 0 && <span style={{ fontSize: 12, color: '#E8EAF6' }}>{updated} rescheduled</span>}
-          {deleted > 0 && <span style={{ fontSize: 12, color: '#E8EAF6' }}>{deleted} removed</span>}
+          {created > 0 && <span style={{ fontSize: 12, color: 'var(--color-text, #E8EAF6)' }}>{created} created</span>}
+          {updated > 0 && <span style={{ fontSize: 12, color: 'var(--color-text, #E8EAF6)' }}>{updated} rescheduled</span>}
+          {deleted > 0 && <span style={{ fontSize: 12, color: 'var(--color-text, #E8EAF6)' }}>{deleted} removed</span>}
           {errored.length > 0 && <span style={{ fontSize: 12, color: '#EF4444' }}>{errored.length} failed</span>}
         </div>
         {errored.length > 0 && (
@@ -918,7 +918,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
         onClick={() => { setPhase('idle'); setSlots([]); setResults([]); setApplying({}) }}
         style={{
           padding: '9px 0', borderRadius: 8, cursor: 'pointer',
-          background: 'transparent', border: '1px solid #252A3E',
+          background: 'transparent', border: '1px solid var(--color-border, #252A3E)',
           color: '#6B7280', fontSize: 12,
         }}
       >
