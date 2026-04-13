@@ -27,7 +27,7 @@ import { getGoogleToken, seedToken } from '@/lib/tokenManager'
 import { generateMeetingPrep } from '@/lib/professor'
 import type { MeetingPrep } from '@/lib/professor'
 import { useAuthStore } from '@/store/authStore'
-import { loadAccounts, loadHiddenAccounts } from '@/lib/multiAccount'
+import { loadAccounts, loadHiddenAccounts, silentRefreshAccountToken } from '@/lib/multiAccount'
 import { connectAdditionalGoogleAccount } from '@/lib/google'
 import type { DbUser, DbCompany, DbCalendarEvent } from '@/types/database'
 import {
@@ -263,10 +263,20 @@ async function loadAllCalendars(primaryEmail: string): Promise<LoadCalendarsResu
       }
 
       // Get a fresh token via tokenManager (Edge Function handles expiry/refresh).
-      const token = await getGoogleToken(account.email)
+      let token = await getGoogleToken(account.email)
+
+      // Edge Function failed or returned reconnect_required — try Supabase silent refresh
+      // as a fallback before showing the reconnect badge.
+      if (!token && account.supabaseRefreshToken) {
+        const fallback = await silentRefreshAccountToken(account)
+        if (fallback) {
+          seedToken(account.email, fallback)
+          token = fallback
+        }
+      }
 
       if (!token) {
-        // Edge Function returned reconnect_required — flag and return cached chips
+        // Both paths failed — account needs reconnect
         needsReconnect.push(account.email)
         return cachedCals.length
           ? withId(cachedCals.map(c => ({ ...c, accountToken: '' } as CalWithAccount)))

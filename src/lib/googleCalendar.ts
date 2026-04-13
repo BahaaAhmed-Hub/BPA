@@ -57,10 +57,41 @@ export interface GCalError {
 
 const TOKEN_KEY      = 'google_provider_token'
 const TOKEN_SAVED_AT = 'google_provider_token_saved_at'
+const TOKEN_TTL_MS   = 55 * 60 * 1000  // 55 min — refresh before Google's 60-min expiry
 
 function saveToken(token: string) {
   localStorage.setItem(TOKEN_KEY, token)
   localStorage.setItem(TOKEN_SAVED_AT, Date.now().toString())
+}
+
+function isTokenStale(): boolean {
+  const savedAt = parseInt(localStorage.getItem(TOKEN_SAVED_AT) ?? '0', 10)
+  if (!savedAt) return true
+  return Date.now() - savedAt > TOKEN_TTL_MS
+}
+
+/** Refresh the primary Google access token via the google-oauth Edge Function. */
+async function refreshPrimaryViaEdgeFn(accessToken: string, email: string): Promise<string | null> {
+  try {
+    const SUPABASE_URL     = import.meta.env.VITE_SUPABASE_URL     as string ?? ''
+    const SUPABASE_ANON    = import.meta.env.VITE_SUPABASE_ANON_KEY as string ?? ''
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/google-oauth`, {
+      method:  'POST',
+      headers: {
+        'Content-Type':  'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+        'apikey':        SUPABASE_ANON,
+      },
+      body: JSON.stringify({ action: 'refresh', email }),
+    })
+    if (!res.ok) return null
+    const data = await res.json() as { access_token?: string; error?: string }
+    if (data.access_token) {
+      saveToken(data.access_token)
+      return data.access_token
+    }
+    return null
+  } catch { return null }
 }
 
 
@@ -82,23 +113,34 @@ async function getProviderToken(): Promise<string | null> {
 
 /**
  * Refreshes the primary account's Google access token.
- * Uses the session provider_token (only present right after OAuth) or the
- * localStorage cache. Does NOT call the Edge Function for the primary account —
- * the Edge Function is only for extra accounts and can dispatch
- * cal:reconnect-required if the primary DB row is absent, which would show
- * error marks on all primary calendars.
+ * 1. If the Supabase session contains a fresh provider_token (right after OAuth) — use it.
+ * 2. If the cached token is still within 55-min TTL — use it.
+ * 3. Otherwise call the google-oauth Edge Function which exchanges the stored
+ *    Google refresh_token for a new access token and updates google_account_tokens.
+ *    We intentionally do NOT dispatch 'cal:reconnect-required' for the primary account
+ *    to avoid showing error badges on primary calendars.
  */
 export async function refreshPrimaryToken(): Promise<string | null> {
   const { data } = await supabase.auth.getSession()
   if (!data.session) return localStorage.getItem(TOKEN_KEY)
 
-  // Right after OAuth sign-in the session carries a fresh provider_token — cache it
+  // 1. Right after OAuth sign-in the session carries a fresh provider_token — cache it
   if (data.session.provider_token) {
     saveToken(data.session.provider_token)
     return data.session.provider_token
   }
 
-  // Return the cached token; it was saved at sign-in and is valid for ~60 min
+  // 2. Cached token is still fresh — return it
+  if (!isTokenStale()) return localStorage.getItem(TOKEN_KEY)
+
+  // 3. Token is stale — refresh via Edge Function (uses stored Google refresh_token)
+  const email = data.session.user?.email
+  if (email) {
+    const fresh = await refreshPrimaryViaEdgeFn(data.session.access_token, email)
+    if (fresh) return fresh
+  }
+
+  // Fall back to cached token (possibly stale, but better than null)
   return localStorage.getItem(TOKEN_KEY)
 }
 
@@ -132,9 +174,9 @@ async function withAuth(
   let res = await fn(token)
 
   if (res.status === 401) {
-    // Token expired — refresh and retry once
-    localStorage.removeItem(TOKEN_SAVED_AT) // force isTokenStale() = true
-    const fresh = await getProviderToken()  // will attempt GoTrue + refreshSession
+    // Token expired — force stale so refreshPrimaryToken() calls the Edge Function
+    localStorage.removeItem(TOKEN_SAVED_AT)
+    const fresh = await refreshPrimaryToken()
     if (fresh && fresh !== token) {
       res = await fn(fresh)
     }
