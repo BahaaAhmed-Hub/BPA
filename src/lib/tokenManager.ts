@@ -3,10 +3,10 @@
  *
  * Architecture:
  *   - In-memory cache (Map) — no localStorage, no stale-on-reload problem.
- *   - For extra (non-primary) accounts: calls the google-token-refresh Edge
- *     Function which exchanges the stored Google refresh token for a fresh
- *     access token. Tokens are cached for 55 min (conservative of Google's
- *     60-min TTL).
+ *   - For extra (non-primary) accounts: calls the google-oauth Edge Function
+ *     (action: 'refresh') which exchanges the stored Google refresh token for
+ *     a fresh access token. Tokens are cached for 55 min (conservative of
+ *     Google's 60-min TTL).
  *   - Concurrent calls for the same email are deduplicated: one in-flight
  *     Promise is shared so we never call the Edge Function twice simultaneously.
  *   - Primary account tokens are NOT managed here — they go through the
@@ -21,9 +21,8 @@
 
 import { supabase } from './supabase'
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string ?? ''
-const TTL_MS       = 55 * 60 * 1000  // 55 min — refresh before Google's 60-min expiry
-const BUFFER_MS    =  2 * 60 * 1000  // refetch when < 2 min remaining
+const TTL_MS    = 55 * 60 * 1000  // 55 min — refresh before Google's 60-min expiry
+const BUFFER_MS =  2 * 60 * 1000  // refetch when < 2 min remaining
 
 interface CachedToken { token: string; expiresAt: number }
 
@@ -107,40 +106,31 @@ export async function getGoogleToken(email: string): Promise<string | null> {
 
 async function callEdgeFunction(email: string): Promise<string | null> {
   try {
-    // Use getSession() for the access token but fall back to a fresh token if it
-    // looks stale. getSession() reads local cache and can return an expired token;
-    // if the Edge Function returns 401 we retry once with a force-refreshed session.
-    let { data: { session } } = await supabase.auth.getSession()
+    // supabase.functions.invoke automatically attaches the current JWT.
+    // If the session looks stale, we refresh it first (deduplicated).
+    const { data: { session } } = await supabase.auth.getSession()
     if (!session) return cache.get(email)?.token ?? null
 
-    let res = await fetch(`${SUPABASE_URL}/functions/v1/google-token-refresh`, {
+    // Ensure the JWT is fresh before calling the edge function
+    const supabaseToken = session.expires_at && session.expires_at * 1000 < Date.now() + 60_000
+      ? (await getFreshAccessToken()) ?? session.access_token
+      : session.access_token
+
+    // Temporarily set the session so supabase.functions.invoke uses the right token.
+    // We call the function directly via fetch to control the auth header precisely.
+    const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string ?? ''
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/google-oauth`, {
       method:  'POST',
       headers: {
         'Content-Type':  'application/json',
-        'Authorization': `Bearer ${session.access_token}`,
+        'Authorization': `Bearer ${supabaseToken}`,
+        'apikey':        import.meta.env.VITE_SUPABASE_ANON_KEY as string ?? '',
       },
-      body: JSON.stringify({ email }),
+      body: JSON.stringify({ action: 'refresh', email }),
     })
 
-    // If 401, the cached access_token is expired — refresh session (deduplicated)
-    // and retry once. Using a shared promise prevents concurrent calls from each
-    // calling refreshSession(), which would rotate the refresh token multiple times.
-    if (res.status === 401) {
-      const freshToken = await getFreshAccessToken()
-      if (freshToken) {
-        res = await fetch(`${SUPABASE_URL}/functions/v1/google-token-refresh`, {
-          method:  'POST',
-          headers: {
-            'Content-Type':  'application/json',
-            'Authorization': `Bearer ${freshToken}`,
-          },
-          body: JSON.stringify({ email }),
-        })
-      }
-    }
-
     if (!res.ok) {
-      console.warn('[tokenManager] Edge Function HTTP error:', res.status)
+      console.warn('[tokenManager] google-oauth HTTP error:', res.status)
       return cache.get(email)?.token ?? null
     }
 

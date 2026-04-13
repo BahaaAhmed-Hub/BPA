@@ -17,12 +17,12 @@ import {
   Brain, Bell, Palette, Link, X, RefreshCw, Eye, EyeOff, Shield, Pencil,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
-import { connectAdditionalGoogleAccount, signOut as googleSignOut } from '@/lib/google'
+import { connectAdditionalGoogleAccount, signOut as googleSignOut, disconnectGoogleAccount } from '@/lib/google'
 import { useUIStore } from '@/store/uiStore'
 import { useAuthStore } from '@/store/authStore'
 import { THEMES, getTheme, applyThemeVars } from '@/lib/themes'
 import { useHabitsStore, getHabitColors } from '@/store/habitsStore'
-import { loadAccounts, removeAccount, getProviderTokenForAccount, loadHiddenAccounts, saveHiddenAccounts, type ConnectedAccount } from '@/lib/multiAccount'
+import { loadAccounts, removeAccount, getProviderTokenForAccount, loadHiddenAccounts, saveHiddenAccounts, loadAccountsFromServer, type ConnectedAccount, type ServerAccount } from '@/lib/multiAccount'
 import {
   saveProfileToDB, savePrefsToDB, saveCompaniesToDB, loadCompaniesFromDB,
   saveHabitsToDB, saveHabitLogsToDB, loadSettingsFromDB,
@@ -870,6 +870,12 @@ function AccountsSection({
   const [loadingCals, setLoading]   = useState<string | null>(null)
   const [needsReconnect, setNeedsReconnect] = useState<Set<string>>(new Set())
   const [hiddenAccts, setHiddenAccts] = useState<Set<string>>(loadHiddenAccounts)
+  // DB account IDs from google_accounts — needed to call disconnectGoogleAccount
+  const [serverAccounts, setServerAccounts] = useState<ServerAccount[]>([])
+
+  useEffect(() => {
+    loadAccountsFromServer().then(rows => { if (rows) setServerAccounts(rows) }).catch(() => {})
+  }, [])
 
   function toggleAccountVisibility(email: string) {
     setHiddenAccts(prev => {
@@ -920,9 +926,19 @@ function AccountsSection({
   }
 
   function removeAcc(id: string) {
+    // Remove from localStorage immediately (optimistic)
     removeAccount(id)
     const updated = loadAccounts()
     setAccounts(updated)
+    // Remove from DB via edge function (uses server account_id, looked up by email)
+    const localAcc = loadAccounts().find(a => a.id === id) ?? accounts.find(a => a.id === id)
+    const serverAcc = localAcc
+      ? serverAccounts.find(s => s.email === localAcc.email)
+      : undefined
+    if (serverAcc) {
+      void disconnectGoogleAccount(serverAcc.id)
+        .then(() => setServerAccounts(prev => prev.filter(s => s.id !== serverAcc.id)))
+    }
     saveAccountsToDB(updated).catch(console.warn)
   }
 
@@ -1082,7 +1098,7 @@ function AccountsSection({
       </div>
 
       <p style={{ margin: '10px 0 0', fontSize: 11.5, color: 'var(--color-text-muted, #6B7280)', lineHeight: 1.55 }}>
-        All connected accounts are used for calendar aggregation and inbox triage. Tokens are stored locally only.
+        All connected accounts are used for calendar aggregation and inbox triage. Tokens are stored securely on the server — never in the browser.
       </p>
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>

@@ -568,21 +568,26 @@ function App() {
       // Restore original session, then refresh to get a fresh primary Google token
       void supabase.auth.setSession(pending)
         .then(async () => {
-          // ── Save refresh token NOW — primary session is active, RLS passes ────
-          if (googleRefreshToken) {
-            const { error: upsertErr } = await supabase.from('connected_google_accounts').upsert({
-              user_id:              primaryUserId,
-              email,
-              name:                 (session.user.user_metadata?.full_name as string) ?? null,
-              avatar_url:           session.user.user_metadata?.avatar_url as string | undefined ?? null,
-              google_refresh_token: googleRefreshToken,
-              scopes:               ['calendar', 'calendar.events', 'gmail.readonly'],
-              is_primary:           false,
-            }, { onConflict: 'user_id,email' })
-            if (upsertErr) console.warn('[AddAccount] Failed to save refresh token to DB:', upsertErr)
-            else console.log('[AddAccount] ✓ Refresh token saved to DB for', email)
+          // ── Save tokens to secure google_account_tokens via edge function ────
+          // Primary session is now active → JWT auth passes as the primary user.
+          if (session.provider_token && googleRefreshToken) {
+            const expiresAt = new Date(Date.now() + 3500 * 1000).toISOString()
+            const { error: fnErr } = await supabase.functions.invoke('google-oauth', {
+              body: {
+                action:        'save_account',
+                email,
+                name:          (session.user.user_metadata?.full_name as string) ?? null,
+                avatar_url:    session.user.user_metadata?.avatar_url as string | undefined ?? null,
+                access_token:  session.provider_token,
+                refresh_token: googleRefreshToken,
+                expires_at:    expiresAt,
+                scopes:        ['calendar', 'calendar.events', 'gmail.readonly'],
+              },
+            })
+            if (fnErr) console.warn('[AddAccount] Failed to save tokens via google-oauth edge fn:', fnErr)
+            else console.log('[AddAccount] ✓ Tokens saved to google_account_tokens for', email)
           } else {
-            console.warn('[AddAccount] No provider_refresh_token in session — token will expire in ~60 min')
+            console.warn('[AddAccount] No provider_token or refresh_token — account token not persisted')
           }
           try {
             const { data } = await supabase.auth.refreshSession()
@@ -674,18 +679,24 @@ function App() {
           if (u.email) localStorage.setItem('google_primary_email', u.email)
           // Warm tokenManager cache from any fresh extra-account tokens in localStorage
           seedFromLocalStorage()
-          // Persist primary account's Google refresh token to DB (for completeness;
-          // primary refresh still goes through refreshPrimaryToken() GoTrue path)
-          if (session?.provider_refresh_token && u.email) {
-            void supabase.from('connected_google_accounts').upsert({
-              user_id:              u.id,
-              email:                u.email,
-              name:                 u.user_metadata?.full_name as string | undefined ?? null,
-              avatar_url:           u.user_metadata?.avatar_url as string | undefined ?? null,
-              google_refresh_token: session.provider_refresh_token,
-              scopes:               ['calendar', 'calendar.events', 'gmail.readonly'],
-              is_primary:           true,
-            }, { onConflict: 'user_id,email' })
+          // Persist primary account tokens to secure google_account_tokens via edge function.
+          if (session?.provider_token && session?.provider_refresh_token && u.email) {
+            const expiresAt = new Date(Date.now() + 3500 * 1000).toISOString()
+            void supabase.functions.invoke('google-oauth', {
+              body: {
+                action:        'save_primary',
+                email:         u.email,
+                name:          u.user_metadata?.full_name as string | undefined ?? null,
+                avatar_url:    u.user_metadata?.avatar_url as string | undefined ?? null,
+                access_token:  session.provider_token,
+                refresh_token: session.provider_refresh_token,
+                expires_at:    expiresAt,
+                scopes:        ['calendar', 'calendar.events', 'gmail.readonly'],
+              },
+            }).then(({ error }) => {
+              if (error) console.warn('[App] Failed to save primary tokens via google-oauth:', error)
+              else console.log('[App] ✓ Primary tokens saved to google_account_tokens')
+            })
           }
           void loadAllFromDB(loadTasksFromDB, loadHabitsFromDB)
         }

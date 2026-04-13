@@ -75,6 +75,22 @@ export function clearPendingAddAccount() {
   localStorage.removeItem(PENDING_ADD_ACCOUNT_KEY)
 }
 
+/**
+ * Removes a connected Google account from the server.
+ * Deletes the google_accounts row (tokens cascade via FK).
+ * Returns true on success, false on failure.
+ */
+export async function disconnectGoogleAccount(accountId: string): Promise<boolean> {
+  const { error } = await supabase.functions.invoke('google-oauth', {
+    body: { action: 'delete', account_id: accountId },
+  })
+  if (error) {
+    console.warn('[disconnectGoogleAccount] error:', error)
+    return false
+  }
+  return true
+}
+
 export async function signOut() {
   const { error } = await supabase.auth.signOut()
   if (error) throw error

@@ -510,6 +510,87 @@ export function detectMeetingType(event: GCalEvent): string {
   return 'internal'
 }
 
+// ─── Edge-function-backed write operations ────────────────────────────────────
+// These call the google-calendar-write edge function so tokens never reach the
+// browser. Use accountId (from google_accounts.id) instead of a raw token.
+
+/**
+ * Create an event via the google-calendar-write edge function.
+ */
+export async function efCreateEvent(
+  accountId: string,
+  calendarId: string,
+  event: GCalEventCreate,
+): Promise<{ event: GCalEvent | null; error?: string }> {
+  const { data, error } = await supabase.functions.invoke('google-calendar-write', {
+    body: { action: 'create_event', account_id: accountId, calendar_id: calendarId, event },
+  })
+  if (error) return { event: null, error: error.message }
+  if (data?.error === 'reconnect_required') {
+    window.dispatchEvent(new CustomEvent('cal:reconnect-required', { detail: { accountId } }))
+    return { event: null, error: 'reconnect_required' }
+  }
+  return { event: data?.event ?? null, error: data?.error }
+}
+
+/**
+ * Patch an event via the google-calendar-write edge function.
+ */
+export async function efUpdateEvent(
+  accountId: string,
+  calendarId: string,
+  eventId: string,
+  patch: Partial<GCalEventCreate>,
+): Promise<{ event: GCalEvent | null; error?: string }> {
+  const { data, error } = await supabase.functions.invoke('google-calendar-write', {
+    body: { action: 'update_event', account_id: accountId, calendar_id: calendarId, event_id: eventId, patch },
+  })
+  if (error) return { event: null, error: error.message }
+  if (data?.error === 'reconnect_required') {
+    window.dispatchEvent(new CustomEvent('cal:reconnect-required', { detail: { accountId } }))
+    return { event: null, error: 'reconnect_required' }
+  }
+  return { event: data?.event ?? null, error: data?.error }
+}
+
+/**
+ * Delete an event via the google-calendar-write edge function.
+ */
+export async function efDeleteEvent(
+  accountId: string,
+  calendarId: string,
+  eventId: string,
+): Promise<boolean> {
+  const { data, error } = await supabase.functions.invoke('google-calendar-write', {
+    body: { action: 'delete_event', account_id: accountId, calendar_id: calendarId, event_id: eventId },
+  })
+  if (error) { console.warn('[efDeleteEvent]', error); return false }
+  if (data?.error === 'reconnect_required') {
+    window.dispatchEvent(new CustomEvent('cal:reconnect-required', { detail: { accountId } }))
+    return false
+  }
+  return !!data?.deleted
+}
+
+/**
+ * Add a Google Meet link to an event via the google-calendar-write edge function.
+ */
+export async function efAddMeet(
+  accountId: string,
+  calendarId: string,
+  eventId: string,
+): Promise<GCalEvent | null> {
+  const { data, error } = await supabase.functions.invoke('google-calendar-write', {
+    body: { action: 'add_meet', account_id: accountId, calendar_id: calendarId, event_id: eventId },
+  })
+  if (error) { console.warn('[efAddMeet]', error); return null }
+  if (data?.error === 'reconnect_required') {
+    window.dispatchEvent(new CustomEvent('cal:reconnect-required', { detail: { accountId } }))
+    return null
+  }
+  return data?.event ?? null
+}
+
 // ─── Supabase sync ────────────────────────────────────────────────────────────
 
 export async function syncEventsToSupabase(

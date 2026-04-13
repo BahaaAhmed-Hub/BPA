@@ -1555,6 +1555,17 @@ export function CalendarIntelligence() {
     return () => window.removeEventListener('professor:accountVisibilityChanged', handler)
   }, [])
 
+  // ── Auto-refresh events every 2 minutes ─────────────────────────────────────
+  // Keeps the calendar view current without a full page reload. Uses the same
+  // loadEvents path as the manual refresh so visibility/filter state is respected.
+  useEffect(() => {
+    if (!allCalendars.length) return
+    const id = setInterval(() => {
+      void loadEvents(weekStart, allCalendars, hiddenCals, hiddenAccounts)
+    }, 2 * 60 * 1000)
+    return () => clearInterval(id)
+  }, [allCalendars, weekStart, hiddenCals, hiddenAccounts, loadEvents]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // ── Token expiry listener ────────────────────────────────────────────────────
   // tokenManager dispatches 'cal:reconnect-required' when the Edge Function
   // returns reconnect_required for an extra account. Show the badge immediately.
