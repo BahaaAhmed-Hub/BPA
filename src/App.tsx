@@ -669,6 +669,9 @@ function App() {
             localStorage.setItem('google_provider_token', session.provider_token)
             localStorage.setItem('google_provider_token_saved_at', Date.now().toString())
           }
+          // Persist primary email so blockingRules.getToken() can identify the primary
+          // account even when professor-connected-accounts is empty (e.g. after clearUserData)
+          if (u.email) localStorage.setItem('google_primary_email', u.email)
           // Warm tokenManager cache from any fresh extra-account tokens in localStorage
           seedFromLocalStorage()
           // Persist primary account's Google refresh token to DB (for completeness;

@@ -888,9 +888,13 @@ function AccountsSection({
     const now = Date.now()
     const stale = new Set<string>()
     for (const acc of extraAccounts) {
-      const age = now - (acc.providerTokenSavedAt ?? 0)
+      // Only mark stale if the account was actually connected locally at some
+      // point (providerTokenSavedAt > 0). Accounts restored from DB have
+      // providerTokenSavedAt === undefined; they may still work via the Edge
+      // Function's stored google_refresh_token, so don't show "Reconnect" for them.
+      if (!acc.providerTokenSavedAt) continue
+      const age = now - acc.providerTokenSavedAt
       const canRefresh = !!(acc.supabaseAccessToken && acc.supabaseRefreshToken)
-      // 50min TTL — if expired AND no refresh capability, mark stale
       if (age >= 50 * 60 * 1000 && !canRefresh) stale.add(acc.id)
     }
     setStaleIds(stale)
