@@ -868,7 +868,7 @@ function AccountsSection({
   const [reconnecting, setRecon]    = useState<string | null>(null)
   const [calendars, setCalendars]   = useState<Record<string, string[]>>({})
   const [loadingCals, setLoading]   = useState<string | null>(null)
-  const [staleIds, setStaleIds]     = useState<Set<string>>(new Set())
+  const [needsReconnect, setNeedsReconnect] = useState<Set<string>>(new Set())
   const [hiddenAccts, setHiddenAccts] = useState<Set<string>>(loadHiddenAccounts)
 
   function toggleAccountVisibility(email: string) {
@@ -881,25 +881,18 @@ function AccountsSection({
     })
   }
 
-  // On mount: check each additional account's token status
+  // Listen for cal:reconnect-required events dispatched by Cal Intel / tokenManager.
+  // This is the only reliable signal that an account genuinely needs reconnection
+  // (Edge Function returned reconnect_required). Local token age checks produce
+  // false positives because the Edge Function auto-refreshes via google_refresh_token.
   useEffect(() => {
-    const extraAccounts = accounts.filter(a => !a.isPrimary)
-    if (!extraAccounts.length) return
-    const now = Date.now()
-    const stale = new Set<string>()
-    for (const acc of extraAccounts) {
-      // Only mark stale if the account was actually connected locally at some
-      // point (providerTokenSavedAt > 0). Accounts restored from DB have
-      // providerTokenSavedAt === undefined; they may still work via the Edge
-      // Function's stored google_refresh_token, so don't show "Reconnect" for them.
-      if (!acc.providerTokenSavedAt) continue
-      const age = now - acc.providerTokenSavedAt
-      const canRefresh = !!(acc.supabaseAccessToken && acc.supabaseRefreshToken)
-      if (age >= 50 * 60 * 1000 && !canRefresh) stale.add(acc.id)
+    const handler = (e: Event) => {
+      const email = (e as CustomEvent<{ email: string }>).detail?.email
+      if (email) setNeedsReconnect(prev => new Set([...prev, email]))
     }
-    setStaleIds(stale)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [accounts.length])
+    window.addEventListener('cal:reconnect-required', handler)
+    return () => window.removeEventListener('cal:reconnect-required', handler)
+  }, [])
 
   async function connectAdditional() {
     setAdding(true)
@@ -990,7 +983,7 @@ function AccountsSection({
 
       {/* Additional connected accounts — show ALL stored accounts with delete */}
       {accounts.map(acc => {
-        const isStale = staleIds.has(acc.id)
+        const isStale = needsReconnect.has(acc.email)
         const isRecon = reconnecting === acc.id
         return (
           <div key={acc.id} style={{
@@ -1007,7 +1000,7 @@ function AccountsSection({
             <div style={{ flex: 1 }}>
               <p style={{ margin: 0, fontSize: 13, fontWeight: 500, color: 'var(--color-text, #E8EAF6)' }}>{acc.email || acc.name}</p>
               <p style={{ margin: '2px 0 0', fontSize: 11, color: isStale ? '#E0A524' : 'var(--color-text-muted, #6B7280)' }}>
-                {isStale ? '⚠ Token expired — reconnect to restore calendar access' : `Connected ${new Date(acc.connectedAt).toLocaleDateString()}`}
+                {isStale ? '⚠ Calendar access lost — reconnect to restore' : `Connected ${new Date(acc.connectedAt).toLocaleDateString()}`}
               </p>
             </div>
             {isStale ? (
