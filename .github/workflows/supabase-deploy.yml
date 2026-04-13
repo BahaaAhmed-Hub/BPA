@@ -14,8 +14,9 @@ jobs:
     runs-on: ubuntu-latest
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+
     steps:
-      # Always check out the feature branch so we get the new migrations + functions
       - uses: actions/checkout@v4
         with:
           ref: claude/build-professor-ai-app-sDbyz
@@ -24,19 +25,32 @@ jobs:
         with:
           version: latest
 
-      - name: Link Supabase project
-        run: supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
-
-      # Mark old migrations as already applied so db push doesn't try to re-run them
-      # (the tables exist in the DB but weren't tracked in migration history)
-      - name: Repair migration history
+      # Apply only our new migrations directly via the Management API.
+      # This bypasses `supabase db push` and its migration-history conflicts.
+      - name: Apply new DB migrations via API
         run: |
-          supabase migration repair --status applied 20240001
-          supabase migration repair --status applied 20240002
-          supabase migration repair --status applied 20250002
+          for file in \
+            supabase/migrations/20250010_google_accounts_secure.sql \
+            supabase/migrations/20250011_google_calendar_settings.sql \
+            supabase/migrations/20250012_google_event_metadata.sql; do
+            echo "Applying $file ..."
+            SQL=$(cat "$file")
+            RESPONSE=$(curl -s -w "\n%{http_code}" \
+              -X POST "https://api.supabase.com/v1/projects/${PROJECT_REF}/database/query" \
+              -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" \
+              -H "Content-Type: application/json" \
+              -d "{\"query\": $(echo "$SQL" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))')}")
+            HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+            BODY=$(echo "$RESPONSE" | head -1)
+            echo "  → HTTP $HTTP_CODE: $BODY"
+            if [ "$HTTP_CODE" != "200" ] && [ "$HTTP_CODE" != "201" ]; then
+              echo "ERROR applying $file" && exit 1
+            fi
+          done
+          echo "All migrations applied."
 
-      - name: Push new DB migrations
-        run: supabase db push
+      - name: Link project (for functions deploy)
+        run: supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
 
       - name: Deploy edge functions
         run: |
@@ -55,3 +69,4 @@ jobs:
           else
             echo "GOOGLE_CLIENT_ID not provided — skipping."
           fi
+
