@@ -26,8 +26,8 @@ export function TopBar({ title, subtitle }: TopBarProps) {
     <header
       style={{
         height: 64,
-        background: '#161929',
-        borderBottom: '1px solid #252A3E',
+        background: 'var(--color-surface, #161929)',
+        borderBottom: '1px solid var(--color-border, #252A3E)',
         display: 'flex',
         alignItems: 'center',
         padding: '0 24px',
@@ -44,7 +44,7 @@ export function TopBar({ title, subtitle }: TopBarProps) {
             margin: 0,
             fontSize: 18,
             fontWeight: 700,
-            color: '#E8EAF6',
+            color: 'var(--color-text, #E8EAF6)',
             letterSpacing: '-0.3px',
             lineHeight: 1,
             fontFamily: "'Cabinet Grotesk', sans-serif",
@@ -86,8 +86,8 @@ export function TopBar({ title, subtitle }: TopBarProps) {
             onMouseEnter={e => {
               const el = e.currentTarget as HTMLElement
               el.style.background = 'rgba(255,255,255,0.05)'
-              el.style.borderColor = '#252A3E'
-              el.style.color = '#E8EAF6'
+              el.style.borderColor = 'var(--color-border, #252A3E)'
+              el.style.color = 'var(--color-text, #E8EAF6)'
             }}
             onMouseLeave={e => {
               const el = e.currentTarget as HTMLElement
@@ -121,9 +121,9 @@ export function TopBar({ title, subtitle }: TopBarProps) {
         {menuOpen && (
           <>
             <div onClick={() => setMenuOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 40 }} />
-            <div style={{ position: 'absolute', right: 0, top: 40, zIndex: 50, background: '#161929', border: '1px solid #252A3E', borderRadius: 10, padding: 8, minWidth: 200, boxShadow: '0 8px 24px rgba(0,0,0,0.5)' }}>
-              <div style={{ padding: '8px 12px 10px', borderBottom: '1px solid #252A3E', marginBottom: 6 }}>
-                <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#E8EAF6' }}>{user?.name ?? 'User'}</p>
+            <div style={{ position: 'absolute', right: 0, top: 40, zIndex: 50, background: 'var(--color-surface, #161929)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 10, padding: 8, minWidth: 200, boxShadow: '0 8px 24px rgba(0,0,0,0.5)' }}>
+              <div style={{ padding: '8px 12px 10px', borderBottom: '1px solid var(--color-border, #252A3E)', marginBottom: 6 }}>
+                <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: 'var(--color-text, #E8EAF6)' }}>{user?.name ?? 'User'}</p>
                 <p style={{ margin: '2px 0 0', fontSize: 11, color: '#FFFFFF' }}>{user?.email}</p>
               </div>
               <button

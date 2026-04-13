@@ -167,9 +167,9 @@ export function InboxModule() {
   function renderLeft() {
     if (loading) {
       return (
-        <div style={{ background: '#161929', border: '1px solid #252A3E', borderRadius: 12, overflow: 'hidden' }}>
+        <div style={{ background: 'var(--color-surface, #161929)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 12, overflow: 'hidden' }}>
           {[0,1,2,3].map(i => (
-            <div key={i} style={{ padding: '16px 18px', borderBottom: i < 3 ? '1px solid #252A3E' : 'none' }}>
+            <div key={i} style={{ padding: '16px 18px', borderBottom: i < 3 ? '1px solid var(--color-border, #252A3E)' : 'none' }}>
               <div style={{ height: 12, borderRadius: 6, background: 'linear-gradient(90deg,#252A3E 25%,#4A3E28 50%,#252A3E 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.6s infinite', marginBottom: 8, width: '60%' }} />
               <div style={{ height: 10, borderRadius: 6, background: 'linear-gradient(90deg,#252A3E 25%,#4A3E28 50%,#252A3E 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.6s infinite', width: '80%' }} />
             </div>
@@ -181,7 +181,7 @@ export function InboxModule() {
     if (noAuth || emails.length === 0) return null
 
     return (
-      <div style={{ background: '#161929', border: '1px solid #252A3E', borderRadius: 12, overflow: 'hidden' }}>
+      <div style={{ background: 'var(--color-surface, #161929)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 12, overflow: 'hidden' }}>
         {emails.map((email, i) => {
           const isSelected = selectedId === email.id
           const triage     = triageMap[email.id]
@@ -194,7 +194,7 @@ export function InboxModule() {
                 width: '100%', padding: '15px 18px', textAlign: 'left',
                 background: isSelected ? 'rgba(30,64,175,0.06)' : 'transparent',
                 border: 'none',
-                borderBottom: i < emails.length - 1 ? '1px solid #252A3E' : 'none',
+                borderBottom: i < emails.length - 1 ? '1px solid var(--color-border, #252A3E)' : 'none',
                 borderLeft: isSelected ? '3px solid #1E40AF' : '3px solid transparent',
                 cursor: 'pointer',
               }}
@@ -202,7 +202,7 @@ export function InboxModule() {
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 3 }}>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: '#E8EAF6', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text, #E8EAF6)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {email.fromName}
                     </span>
                     {classMeta && (
@@ -236,7 +236,7 @@ export function InboxModule() {
     if (noAuth) {
       return (
         <div style={{
-          background: '#161929', border: '1px dashed #252A3E',
+          background: 'var(--color-surface, #161929)', border: '1px dashed var(--color-border, #252A3E)',
           borderRadius: 12, padding: '48px 32px',
           display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16,
           textAlign: 'center',
@@ -245,7 +245,7 @@ export function InboxModule() {
             <WifiOff size={22} color="#1E40AF" />
           </div>
           <div>
-            <p style={{ margin: '0 0 6px', fontSize: 16, fontWeight: 700, color: '#E8EAF6', fontFamily: "'Cabinet Grotesk', sans-serif" }}>
+            <p style={{ margin: '0 0 6px', fontSize: 16, fontWeight: 700, color: 'var(--color-text, #E8EAF6)', fontFamily: "'Cabinet Grotesk', sans-serif" }}>
               Connect Gmail
             </p>
             <p style={{ margin: 0, fontSize: 13, color: '#FFFFFF', lineHeight: 1.6, maxWidth: 320 }}>
@@ -269,7 +269,7 @@ export function InboxModule() {
 
     if (fetchError) {
       return (
-        <div style={{ background: '#161929', border: '1px solid #252A3E', borderRadius: 12, padding: '32px', textAlign: 'center' }}>
+        <div style={{ background: 'var(--color-surface, #161929)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 12, padding: '32px', textAlign: 'center' }}>
           <p style={{ margin: '0 0 14px', fontSize: 13, color: '#FFFFFF' }}>{fetchError}</p>
           <button onClick={() => void loadEmails()} style={{ padding: '7px 18px', borderRadius: 8, background: '#1E40AF18', border: '1px solid #1E40AF30', color: '#1E40AF', fontSize: 12, cursor: 'pointer' }}>
             Retry
@@ -283,8 +283,8 @@ export function InboxModule() {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         {/* Email body */}
-        <div style={{ background: '#161929', border: '1px solid #252A3E', borderRadius: 12, padding: '22px 24px' }}>
-          <p style={{ margin: '0 0 8px', fontSize: 18, fontWeight: 700, color: '#E8EAF6', fontFamily: "'Cabinet Grotesk', sans-serif", letterSpacing: '-0.3px' }}>
+        <div style={{ background: 'var(--color-surface, #161929)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 12, padding: '22px 24px' }}>
+          <p style={{ margin: '0 0 8px', fontSize: 18, fontWeight: 700, color: 'var(--color-text, #E8EAF6)', fontFamily: "'Cabinet Grotesk', sans-serif", letterSpacing: '-0.3px' }}>
             {selectedEmail.subject}
           </p>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
@@ -294,7 +294,7 @@ export function InboxModule() {
               <Clock size={10} />{fmtRelTime(selectedEmail.receivedAt)}
             </span>
           </div>
-          <div style={{ height: 1, background: '#252A3E', marginBottom: 16 }} />
+          <div style={{ height: 1, background: 'var(--color-border, #252A3E)', marginBottom: 16 }} />
           <p style={{ margin: 0, fontSize: 13.5, color: '#FFFFFF', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
             {selectedEmail.body}
           </p>
@@ -302,13 +302,13 @@ export function InboxModule() {
 
         {/* Triage panel */}
         {selectedTriage?.loading ? (
-          <div style={{ background: '#161929', border: '1px solid rgba(30,64,175,0.2)', borderRadius: 12, padding: '22px 24px', display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ background: 'var(--color-surface, #161929)', border: '1px solid rgba(30,64,175,0.2)', borderRadius: 12, padding: '22px 24px', display: 'flex', alignItems: 'center', gap: 12 }}>
             <RefreshCw size={15} color="#1E40AF" style={{ animation: 'spin 1s linear infinite' }} />
             <span style={{ fontSize: 13, color: '#1E40AF' }}>The Professor is analyzing this email…</span>
           </div>
 
         ) : selectedTriage?.error ? (
-          <div style={{ background: '#161929', border: '1px solid #252A3E', borderRadius: 12, padding: '20px 24px' }}>
+          <div style={{ background: 'var(--color-surface, #161929)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 12, padding: '20px 24px' }}>
             <p style={{ margin: '0 0 12px', fontSize: 13, color: '#FFFFFF' }}>{selectedTriage.error}</p>
             <button onClick={() => void handleTriage(selectedEmail)} style={{ padding: '7px 14px', borderRadius: 7, background: '#1E40AF18', border: '1px solid #1E40AF30', color: '#1E40AF', fontSize: 12, cursor: 'pointer' }}>
               Try again
