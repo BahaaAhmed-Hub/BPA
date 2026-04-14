@@ -96,16 +96,88 @@ serve(async (req: Request) => {
   }
 })
 
+// ─── Bootstrap helper ─────────────────────────────────────────────────────────
+
+/**
+ * Exchanges a stored Supabase refresh_token (from the extra account's local
+ * session) with GoTrue.  GoTrue's refresh response includes provider_token and
+ * provider_refresh_token when the original session was created via Google OAuth.
+ * If we get them, we save them to google_account_tokens so future refreshes
+ * work via the normal Google path.
+ */
+async function tryBootstrapFromSupabaseToken(
+  adminClient: ReturnType<typeof createClient>,
+  userId:               string,
+  email:                string,
+  supabaseRefreshToken: string,
+): Promise<{ access_token: string; expires_in: number } | null> {
+  try {
+    const supabaseUrl     = Deno.env.get('SUPABASE_URL')!
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+
+    const res = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=refresh_token`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': supabaseAnonKey },
+      body:    JSON.stringify({ refresh_token: supabaseRefreshToken }),
+    })
+
+    if (!res.ok) return null
+
+    const data = await res.json() as {
+      provider_token?:         string
+      provider_refresh_token?: string
+      access_token?:           string
+      refresh_token?:          string
+    }
+
+    if (!data.provider_token) return null
+
+    // Persist to DB so future refreshes use the normal Google-token path.
+    if (data.provider_refresh_token && email) {
+      const expiresAt = new Date(Date.now() + 3500 * 1000).toISOString()
+      const { data: acc } = await adminClient
+        .from('google_accounts')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('email', email)
+        .maybeSingle()
+
+      if (acc) {
+        await adminClient
+          .from('google_account_tokens')
+          .upsert(
+            {
+              user_id:       userId,
+              account_id:    acc.id,
+              access_token:  data.provider_token,
+              refresh_token: data.provider_refresh_token,
+              expires_at:    expiresAt,
+              scopes:        [],
+              updated_at:    new Date().toISOString(),
+            },
+            { onConflict: 'account_id', ignoreDuplicates: false },
+          )
+        console.log('[google-oauth] bootstrapped Google tokens from Supabase refresh for', email)
+      }
+    }
+
+    return { access_token: data.provider_token, expires_in: 3600 }
+  } catch (e) {
+    console.warn('[google-oauth] tryBootstrapFromSupabaseToken failed:', e)
+    return null
+  }
+}
+
 // ─── Action handlers ──────────────────────────────────────────────────────────
 
 interface SaveBody {
-  email:         string
-  name?:         string
-  avatar_url?:   string
-  access_token:  string
-  refresh_token: string
-  expires_at:    string   // ISO timestamp
-  scopes?:       string[]
+  email:          string
+  name?:          string
+  avatar_url?:    string
+  access_token:   string
+  refresh_token?: string   // optional — omit when only access_token is available
+  expires_at?:    string   // ISO timestamp
+  scopes?:        string[]
 }
 
 async function handleSave(
@@ -119,10 +191,8 @@ async function handleSave(
     access_token, refresh_token, expires_at, scopes,
   } = body as SaveBody
 
-  if (!email)         return err('Missing email')
-  if (!access_token)  return err('Missing access_token')
-  if (!refresh_token) return err('Missing refresh_token')
-  if (!expires_at)    return err('Missing expires_at')
+  if (!email)        return err('Missing email')
+  if (!access_token) return err('Missing access_token')
 
   // Upsert google_accounts (metadata only, safe to expose via RLS)
   const { data: account, error: accErr } = await adminClient
@@ -145,25 +215,30 @@ async function handleSave(
     return err('Failed to save account metadata', 500)
   }
 
-  // Upsert google_account_tokens (service_role only — NO SELECT for users)
-  const { error: tokErr } = await adminClient
-    .from('google_account_tokens')
-    .upsert(
-      {
-        user_id:       userId,
-        account_id:    account.id,
-        access_token,
-        refresh_token,
-        expires_at,
-        scopes:        scopes ?? [],
-        updated_at:    new Date().toISOString(),
-      },
-      { onConflict: 'account_id', ignoreDuplicates: false }
-    )
+  // Upsert google_account_tokens only when we have a refresh_token.
+  // Without it, the token row is useless (can't refresh later), but the
+  // google_accounts metadata row is still valuable for UI display and as
+  // an anchor for the tryBootstrapFromSupabaseToken path in handleRefresh.
+  if (refresh_token && expires_at) {
+    const { error: tokErr } = await adminClient
+      .from('google_account_tokens')
+      .upsert(
+        {
+          user_id:       userId,
+          account_id:    account.id,
+          access_token,
+          refresh_token,
+          expires_at,
+          scopes:        scopes ?? [],
+          updated_at:    new Date().toISOString(),
+        },
+        { onConflict: 'account_id', ignoreDuplicates: false }
+      )
 
-  if (tokErr) {
-    console.error('[google-oauth] save google_account_tokens:', tokErr)
-    return err('Failed to save tokens', 500)
+    if (tokErr) {
+      console.error('[google-oauth] save google_account_tokens:', tokErr)
+      // Non-fatal — metadata row was saved successfully; tokens can be bootstrapped later.
+    }
   }
 
   return ok({ account_id: account.id, email, is_primary: isPrimary })
@@ -208,8 +283,9 @@ async function handleRefresh(
   userId: string,
   body: Record<string, unknown>,
 ) {
-  const account_id = body.account_id as string | undefined
-  const email      = body.email      as string | undefined
+  const account_id           = body.account_id             as string | undefined
+  const email                = body.email                  as string | undefined
+  const supabaseRefreshToken = body.supabase_refresh_token as string | undefined
 
   if (!account_id && !email) return err('Missing account_id or email')
 
@@ -218,6 +294,8 @@ async function handleRefresh(
     .from('google_account_tokens')
     .select('refresh_token, account_id')
     .eq('user_id', userId)
+
+  let resolvedEmail = email ?? ''
 
   if (account_id) {
     query = query.eq('account_id', account_id)
@@ -229,14 +307,32 @@ async function handleRefresh(
       .eq('user_id', userId)
       .eq('email', email!)
       .maybeSingle()
-    if (!acc) return ok({ error: 'reconnect_required' })
+    if (!acc) {
+      // No google_accounts row — try bootstrapping via stored Supabase refresh token
+      if (supabaseRefreshToken) {
+        const bootstrapped = await tryBootstrapFromSupabaseToken(
+          adminClient, userId, resolvedEmail, supabaseRefreshToken,
+        )
+        if (bootstrapped) return ok(bootstrapped)
+      }
+      return ok({ error: 'reconnect_required' })
+    }
     query = query.eq('account_id', acc.id)
   }
 
   const { data: tokenRow, error: dbErr } = await query.maybeSingle()
 
   if (dbErr) return err('DB error', 500)
-  if (!tokenRow?.refresh_token) return ok({ error: 'reconnect_required' })
+  if (!tokenRow?.refresh_token) {
+    // Row exists but no refresh token — try bootstrapping via stored Supabase refresh token
+    if (supabaseRefreshToken) {
+      const bootstrapped = await tryBootstrapFromSupabaseToken(
+        adminClient, userId, resolvedEmail, supabaseRefreshToken,
+      )
+      if (bootstrapped) return ok(bootstrapped)
+    }
+    return ok({ error: 'reconnect_required' })
+  }
 
   if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
     console.error('[google-oauth] GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET not set')

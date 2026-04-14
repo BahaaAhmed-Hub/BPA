@@ -568,26 +568,33 @@ function App() {
       // Restore original session, then refresh to get a fresh primary Google token
       void supabase.auth.setSession(pending)
         .then(async () => {
-          // ── Save tokens to secure google_account_tokens via edge function ────
+          // ── Save account metadata + tokens via edge function ─────────────────
           // Primary session is now active → JWT auth passes as the primary user.
-          if (session.provider_token && googleRefreshToken) {
+          // Always call save_account so google_accounts metadata row is created even
+          // when provider_refresh_token is absent (needed for the bootstrap fallback).
+          if (session.provider_token) {
             const expiresAt = new Date(Date.now() + 3500 * 1000).toISOString()
-            const { error: fnErr } = await supabase.functions.invoke('google-oauth', {
-              body: {
-                action:        'save_account',
-                email,
-                name:          (session.user.user_metadata?.full_name as string) ?? null,
-                avatar_url:    session.user.user_metadata?.avatar_url as string | undefined ?? null,
-                access_token:  session.provider_token,
-                refresh_token: googleRefreshToken,
-                expires_at:    expiresAt,
-                scopes:        ['calendar', 'calendar.events', 'gmail.readonly'],
-              },
-            })
-            if (fnErr) console.warn('[AddAccount] Failed to save tokens via google-oauth edge fn:', fnErr)
-            else console.log('[AddAccount] ✓ Tokens saved to google_account_tokens for', email)
+            const body: Record<string, unknown> = {
+              action:       'save_account',
+              email,
+              name:         (session.user.user_metadata?.full_name as string) ?? null,
+              avatar_url:   session.user.user_metadata?.avatar_url as string | undefined ?? null,
+              access_token: session.provider_token,
+              scopes:       ['calendar', 'calendar.events', 'gmail.readonly'],
+            }
+            // Include refresh_token only when Google provided one — Edge Function skips
+            // google_account_tokens upsert when absent.
+            if (googleRefreshToken) {
+              body.refresh_token = googleRefreshToken
+              body.expires_at    = expiresAt
+            } else {
+              console.warn('[AddAccount] No provider_refresh_token — google_account_tokens row will be created on first successful bootstrap')
+            }
+            const { error: fnErr } = await supabase.functions.invoke('google-oauth', { body })
+            if (fnErr) console.warn('[AddAccount] Failed to save via google-oauth edge fn:', fnErr)
+            else console.log('[AddAccount] ✓ Account row saved for', email, googleRefreshToken ? '(with refresh token)' : '(metadata only)')
           } else {
-            console.warn('[AddAccount] No provider_token or refresh_token — account token not persisted')
+            console.warn('[AddAccount] No provider_token — account not persisted to DB')
           }
           try {
             const { data } = await supabase.auth.refreshSession()

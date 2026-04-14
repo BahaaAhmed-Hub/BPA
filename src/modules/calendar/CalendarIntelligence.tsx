@@ -23,11 +23,11 @@ import {
   addMeetingToEvent,
 } from '@/lib/googleCalendar'
 import type { GCalEvent, GCalCalendar, GCalEventCreate } from '@/lib/googleCalendar'
-import { getGoogleToken, seedToken } from '@/lib/tokenManager'
+import { getGoogleToken, seedToken, getGoogleTokenViaSupabaseRefresh } from '@/lib/tokenManager'
 import { generateMeetingPrep } from '@/lib/professor'
 import type { MeetingPrep } from '@/lib/professor'
 import { useAuthStore } from '@/store/authStore'
-import { loadAccounts, loadHiddenAccounts, silentRefreshAccountToken } from '@/lib/multiAccount'
+import { loadAccounts, loadHiddenAccounts } from '@/lib/multiAccount'
 import { connectAdditionalGoogleAccount } from '@/lib/google'
 import type { DbUser, DbCompany, DbCalendarEvent } from '@/types/database'
 import {
@@ -265,14 +265,12 @@ async function loadAllCalendars(primaryEmail: string): Promise<LoadCalendarsResu
       // Get a fresh token via tokenManager (Edge Function handles expiry/refresh).
       let token = await getGoogleToken(account.email)
 
-      // Edge Function failed or returned reconnect_required — try Supabase silent refresh
-      // as a fallback before showing the reconnect badge.
+      // Edge Function returned reconnect_required — try server-side bootstrap using the
+      // stored Supabase refresh token. GoTrue's token endpoint returns provider_token
+      // (Google access token) when the session was originally created via Google OAuth,
+      // which lets the server bootstrap google_account_tokens for future refreshes too.
       if (!token && account.supabaseRefreshToken) {
-        const fallback = await silentRefreshAccountToken(account)
-        if (fallback) {
-          seedToken(account.email, fallback)
-          token = fallback
-        }
+        token = await getGoogleTokenViaSupabaseRefresh(account.email, account.supabaseRefreshToken)
       }
 
       if (!token) {

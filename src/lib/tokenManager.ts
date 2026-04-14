@@ -158,3 +158,53 @@ async function callEdgeFunction(email: string): Promise<string | null> {
     return cache.get(email)?.token ?? null
   }
 }
+
+// ─── Bootstrap fallback ───────────────────────────────────────────────────────
+
+/**
+ * When the Edge Function has no stored Google refresh token for an extra account
+ * (because save_account was never called or failed), this function asks the Edge
+ * Function to try exchanging the account's STORED Supabase refresh token with GoTrue.
+ * GoTrue often returns provider_token (Google access token) and provider_refresh_token
+ * in the refresh response, which lets the server bootstrap the google_account_tokens row.
+ *
+ * On success, seeds the token in the in-memory cache and returns it.
+ * On failure (GoTrue doesn't return provider_token), returns null.
+ */
+export async function getGoogleTokenViaSupabaseRefresh(
+  email: string,
+  supabaseRefreshToken: string,
+): Promise<string | null> {
+  if (!supabaseRefreshToken) return null
+  try {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) return null
+
+    const supabaseToken = session.expires_at && session.expires_at * 1000 < Date.now() + 60_000
+      ? (await getFreshAccessToken()) ?? session.access_token
+      : session.access_token
+
+    const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string ?? ''
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/google-oauth`, {
+      method:  'POST',
+      headers: {
+        'Content-Type':  'application/json',
+        'Authorization': `Bearer ${supabaseToken}`,
+        'apikey':        import.meta.env.VITE_SUPABASE_ANON_KEY as string ?? '',
+      },
+      body: JSON.stringify({ action: 'refresh', email, supabase_refresh_token: supabaseRefreshToken }),
+    })
+
+    if (!res.ok) return null
+
+    const data = await res.json() as { access_token?: string; expires_in?: number; error?: string }
+    if (data.error || !data.access_token) return null
+
+    const expiresInMs = ((data.expires_in ?? 3600) * 1000) - BUFFER_MS
+    seedToken(email, data.access_token, expiresInMs)
+    return data.access_token
+  } catch (e) {
+    console.warn('[tokenManager] getGoogleTokenViaSupabaseRefresh failed:', e)
+    return null
+  }
+}
