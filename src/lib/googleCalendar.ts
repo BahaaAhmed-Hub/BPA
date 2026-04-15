@@ -140,6 +140,17 @@ export async function refreshPrimaryToken(): Promise<string | null> {
     if (fresh) return fresh
   }
 
+  // 4. Edge Function failed — try supabase.auth.refreshSession() as last resort.
+  //    GoTrue's token refresh response includes provider_token when the original
+  //    session was created via Google OAuth.
+  try {
+    const { data: refreshed } = await supabase.auth.refreshSession()
+    if (refreshed.session?.provider_token) {
+      saveToken(refreshed.session.provider_token)
+      return refreshed.session.provider_token
+    }
+  } catch { /* ignore */ }
+
   // Fall back to cached token (possibly stale, but better than null)
   return localStorage.getItem(TOKEN_KEY)
 }

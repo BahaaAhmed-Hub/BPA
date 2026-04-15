@@ -342,19 +342,36 @@ async function fetchAllEvents(allCals: CalWithAccount[], hidden: Set<string>, hi
   const active = allCals.filter(c => !hidden.has(c.id) && !hiddenAccts.has(c.accountEmail))
   if (!active.length) return []
 
-  // Primary token: existing GoTrue-backed refresh (works reliably for primary).
-  // Extra accounts: tokenManager calls the Edge Function which exchanges the
-  // stored Google refresh token — no more 60-min expiry, no rotation conflicts.
-  await refreshPrimaryToken()
-  const primaryToken = localStorage.getItem('google_provider_token') ?? ''
+  // Use the return value directly so we get the freshest possible token even when
+  // localStorage wasn't updated (e.g. Edge Function fallback returned an older token).
+  const primaryToken = await refreshPrimaryToken() ?? ''
 
   const results = await Promise.all(
     active.map(async c => {
-      const token = c.accountId
-        ? await getGoogleToken(c.accountEmail)  // Edge Function path
-        : (primaryToken || c.accountToken)       // GoTrue path
+      if (c.accountId) {
+        // Extra account — tokenManager / Edge Function path
+        const token = await getGoogleToken(c.accountEmail)
+        if (!token) return [] as GCalEvent[]
+        return fetchCalendarEventsWithToken(token, c.id, start, end, c.backgroundColor)
+      }
+
+      // Primary account — use the fresh token; retry once on empty result in case
+      // the token expired between the refresh call above and this fetch.
+      const token = primaryToken || c.accountToken
       if (!token) return [] as GCalEvent[]
-      return fetchCalendarEventsWithToken(token, c.id, start, end, c.backgroundColor)
+      let events = await fetchCalendarEventsWithToken(token, c.id, start, end, c.backgroundColor)
+
+      if (!events.length) {
+        // Could be a genuine empty calendar or a silent 401. Force-stale the token
+        // and retry once with a freshly fetched token so we don't silently drop events.
+        localStorage.removeItem('google_provider_token_saved_at')
+        const retryToken = await refreshPrimaryToken()
+        if (retryToken && retryToken !== token) {
+          events = await fetchCalendarEventsWithToken(retryToken, c.id, start, end, c.backgroundColor)
+        }
+      }
+
+      return events
     })
   )
   return results.flat()
