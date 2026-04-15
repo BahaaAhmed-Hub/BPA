@@ -172,6 +172,35 @@ function loadCalColors(): Record<string, string> {
 }
 function saveCalColors(s: Record<string, string>) { localStorage.setItem('cal-intel-colors', JSON.stringify(s)) }
 
+// ─── Event cache (per week) ───────────────────────────────────────────────────
+const EVENTS_CACHE_KEY = 'cal-intel-events-cache'
+const EVENTS_CACHE_TTL = 10 * 60 * 1000  // 10 min — show stale while fresh loads
+
+interface EventsCacheEntry { weekKey: string; events: GCalEvent[]; savedAt: number }
+
+function eventsWeekKey(weekStart: Date): string {
+  return weekStart.toISOString().slice(0, 10)
+}
+function saveEventsCache(weekStart: Date, events: GCalEvent[]): void {
+  try {
+    localStorage.setItem(EVENTS_CACHE_KEY, JSON.stringify({
+      weekKey: eventsWeekKey(weekStart),
+      events,
+      savedAt: Date.now(),
+    } satisfies EventsCacheEntry))
+  } catch { /* quota */ }
+}
+function loadEventsCache(weekStart: Date): GCalEvent[] {
+  try {
+    const raw = localStorage.getItem(EVENTS_CACHE_KEY)
+    if (!raw) return []
+    const entry = JSON.parse(raw) as EventsCacheEntry
+    if (entry.weekKey !== eventsWeekKey(weekStart)) return []
+    if (Date.now() - entry.savedAt > EVENTS_CACHE_TTL) return []
+    return entry.events
+  } catch { return [] }
+}
+
 // ─── Calendar list cache ──────────────────────────────────────────────────────
 const CAL_INTEL_CACHE_KEY = 'cal-intel-cals-cache'
 interface CachedCal { id: string; summary: string; backgroundColor?: string; foregroundColor?: string; primary?: boolean; accessRole?: string; accountEmail: string }
@@ -1362,7 +1391,7 @@ export function CalendarIntelligence() {
 
   // ── Calendar + event state ──────────────────────────────────────────────────
   const [weekStart,       setWeekStart]       = useState<Date>(() => getWeekStart(new Date()))
-  const [events,          setEvents]          = useState<GCalEvent[]>([])
+  const [events,          setEvents]          = useState<GCalEvent[]>(() => loadEventsCache(getWeekStart(new Date())))
   const [allCalendars,    setAllCalendars]    = useState<CalWithAccount[]>(() => {
     // Use the last known primary email (saved to localStorage after each successful auth)
     // so we can filter orphaned deleted-account entries even on the very first render.
@@ -1372,7 +1401,8 @@ export function CalendarIntelligence() {
   })
   const [hiddenCals,      setHiddenCals]      = useState<Set<string>>(loadHiddenIntel)
   const [hiddenAccounts, setHiddenAccounts] = useState<Set<string>>(loadHiddenAccounts)
-  const [loadingEvents,   setLoadingEvents]   = useState(true)
+  // Start as not-loading if we have cached events so the grid renders immediately.
+  const [loadingEvents,   setLoadingEvents]   = useState(() => loadEventsCache(getWeekStart(new Date())).length === 0)
   const [noAuth,          setNoAuth]          = useState(false)
   const [fetchError,      setFetchError]      = useState<string | null>(null)
   const [reconnectNeeded, setReconnectNeeded] = useState<string[]>([])
@@ -1511,12 +1541,16 @@ export function CalendarIntelligence() {
   useEffect(() => { void reloadCalendars() }, [user?.email]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadEvents = useCallback(async (start: Date, cals: CalWithAccount[], hidden: Set<string>, hiddenAccts = hiddenAccounts) => {
-    setLoadingEvents(true); setFetchError(null)
+    setFetchError(null)
+    // Show spinner only when there's nothing cached for this week; otherwise update silently.
+    const alreadyCached = loadEventsCache(start).length > 0
+    if (!alreadyCached) setLoadingEvents(true)
     try {
       if (!cals.length) { setNoAuth(true); setEvents([]); return }
       const end     = getWeekEnd(start)
       const fetched = await fetchAllEvents(cals, hidden, hiddenAccts, start, end)
       setEvents(fetched); setNoAuth(false)
+      saveEventsCache(start, fetched)
 
       // Auto-apply rules silently in the background
       const autoRules = loadBlockingRules().filter(r => r.enabled && r.autoApply)
@@ -1542,6 +1576,18 @@ export function CalendarIntelligence() {
       setEvents([])
     } finally { setLoadingEvents(false) }
   }, [])
+
+  // When the user navigates to a different week, immediately show whatever is cached for
+  // that week so the grid isn't empty while fresh events load.
+  const prevWeekKey = useRef(eventsWeekKey(weekStart))
+  useEffect(() => {
+    const key = eventsWeekKey(weekStart)
+    if (key === prevWeekKey.current) return
+    prevWeekKey.current = key
+    const cached = loadEventsCache(weekStart)
+    if (cached.length) { setEvents(cached); setLoadingEvents(false) }
+    else setLoadingEvents(true)
+  }, [weekStart])
 
   useEffect(() => {
     if (allCalendars.length) void loadEvents(weekStart, allCalendars, hiddenCals, hiddenAccounts)
