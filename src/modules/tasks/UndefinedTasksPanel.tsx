@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Plus, Trash2, X, Inbox, Check, Calendar, User, GripVertical, Sparkles } from 'lucide-react'
+import { Plus, Trash2, X, Inbox, Check, Calendar, User, GripVertical, Sparkles, ListPlus } from 'lucide-react'
 import { useDroppable } from '@dnd-kit/core'
 import { useSortable, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
@@ -161,9 +161,24 @@ interface Props {
 }
 
 export function UndefinedTasksPanel({ onOpen, hideCompleted = false }: Props) {
-  const { tasks, addTask, deleteTask, toggleComplete, updateTask } = useTaskStore()
+  const { tasks, addTask, addTasksBatch, deleteTask, toggleComplete, updateTask } = useTaskStore()
   const [filter, setFilter] = useState<Filter>('open')
   const [adding, setAdding] = useState(false)
+
+  // Bulk add state
+  const [bulkOpen, setBulkOpen] = useState(false)
+  const [bulkText, setBulkText] = useState('')
+  const [bulkDone, setBulkDone] = useState(false)
+  const bulkRef = useRef<HTMLTextAreaElement>(null)
+  const bulkLines = bulkText.split('\n').map(l => l.trim()).filter(Boolean)
+
+  function handleBulkAdd() {
+    if (!bulkLines.length) return
+    addTasksBatch(bulkLines.map(t => ({ title: t, quadrant: null, company: 'personal' as const, status: 'open' as const, completed: false })))
+    setBulkText('')
+    setBulkDone(true)
+    setTimeout(() => { setBulkDone(false); setBulkOpen(false) }, 1400)
+  }
 
   // Form state
   const [title, setTitle]         = useState('')
@@ -255,10 +270,60 @@ export function UndefinedTasksPanel({ onOpen, hideCompleted = false }: Props) {
           <Inbox size={14} color="#6B7280" />
           <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--color-text, #E8EAF6)' }}>Inbox</span>
           <span style={{
-            marginLeft: 'auto', fontSize: 10.5, fontWeight: 600,
+            fontSize: 10.5, fontWeight: 600,
             color: '#6B7280', background: '#6B728018', padding: '1px 6px', borderRadius: 4,
           }}>{inbox.length}</span>
+          <button
+            onClick={() => { setBulkOpen(o => !o); setBulkText(''); setBulkDone(false); setTimeout(() => bulkRef.current?.focus(), 50) }}
+            title="Bulk add tasks"
+            style={{
+              marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 5,
+              padding: '3px 8px', borderRadius: 5, fontSize: 11, fontWeight: 500,
+              background: bulkOpen ? 'rgba(29,158,117,0.12)' : 'transparent',
+              border: `1px solid ${bulkOpen ? 'rgba(29,158,117,0.3)' : 'var(--color-border, #252A3E)'}`,
+              color: bulkOpen ? '#1D9E75' : '#6B7280', cursor: 'pointer',
+            }}
+          >
+            <ListPlus size={11} /> Bulk add
+          </button>
         </div>
+
+        {/* Bulk add panel */}
+        {bulkOpen && (
+          <div style={{ marginBottom: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <textarea
+              ref={bulkRef}
+              value={bulkText}
+              onChange={e => setBulkText(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleBulkAdd() }}
+              placeholder={'One task per line…\nBuy milk\nSend report\nCall client'}
+              rows={4}
+              style={{
+                ...inp, resize: 'vertical', lineHeight: 1.5, fontFamily: 'inherit',
+              }}
+            />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 10.5, color: '#6B7280', flex: 1 }}>
+                {bulkLines.length > 0 ? `${bulkLines.length} task${bulkLines.length > 1 ? 's' : ''} ready` : 'Paste or type tasks above'}
+              </span>
+              <button onClick={() => { setBulkOpen(false); setBulkText('') }} style={{
+                padding: '4px 8px', borderRadius: 5, fontSize: 11, background: 'transparent',
+                border: '1px solid var(--color-border, #252A3E)', color: '#6B7280', cursor: 'pointer',
+              }}>Cancel</button>
+              <button onClick={handleBulkAdd} disabled={bulkLines.length === 0 || bulkDone} style={{
+                display: 'flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 5,
+                fontSize: 11, fontWeight: 500,
+                background: bulkDone ? 'rgba(29,158,117,0.15)' : 'rgba(29,158,117,0.12)',
+                border: `1px solid ${bulkDone ? 'rgba(29,158,117,0.5)' : 'rgba(29,158,117,0.3)'}`,
+                color: '#1D9E75', cursor: bulkLines.length === 0 ? 'default' : 'pointer',
+                opacity: bulkLines.length === 0 ? 0.4 : 1,
+              }}>
+                {bulkDone ? 'Added!' : <><Plus size={11} /> Add {bulkLines.length > 0 ? `${bulkLines.length} ` : ''}task{bulkLines.length !== 1 ? 's' : ''}</>}
+              </button>
+            </div>
+          </div>
+        )}
+
         <div style={{ display: 'flex', gap: 4 }}>
           {FILTERS.map(f => (
             <button key={f} onClick={() => setFilter(f)} style={{
