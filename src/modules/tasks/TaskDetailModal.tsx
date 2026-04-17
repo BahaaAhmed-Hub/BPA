@@ -61,8 +61,18 @@ export function TaskDetailModal({ task, onClose }: Props) {
   const companies  = loadDynamicCompanies()
   const users      = getAllUsers()
   const taskActs   = activities.filter(a => a.taskId === task.id).slice().reverse()
-  const companyColor = COMPANY_COLORS[task.company] ?? '#6B7280'
+  const activeCo   = companies.find(c => c.id === task.companyId)
+  const companyColor = activeCo?.color ?? COMPANY_COLORS[task.company] ?? '#6B7280'
   const taskStatus: TaskStatus = task.completed ? 'done' : (task.status ?? 'open')
+
+  function handleCompanyChange(value: string) {
+    if (companies.length > 0) {
+      const co = companies.find(c => c.id === value)
+      updateTask(task.id, { companyId: value || undefined, company: (co?.id ?? value) as CompanyTag })
+    } else {
+      updateTask(task.id, { company: value as CompanyTag, companyId: undefined })
+    }
+  }
 
   function saveTitle() {
     const t = titleDraft.trim()
@@ -150,8 +160,18 @@ export function TaskDetailModal({ task, onClose }: Props) {
             {/* Company */}
             <div>
               <div style={lbl}><Building2 size={10} /> Company</div>
-              <select value={task.company} onChange={e => updateTask(task.id, { company: e.target.value as CompanyTag })} style={field}>
-                {COMPANY_TAGS.map(c => <option key={c} value={c}>{COMPANY_LABELS[c]}</option>)}
+              <select
+                value={companies.length > 0 ? (task.companyId ?? '') : task.company}
+                onChange={e => handleCompanyChange(e.target.value)}
+                style={field}
+              >
+                {companies.length > 0
+                  ? <>
+                      <option value="">— none —</option>
+                      {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </>
+                  : COMPANY_TAGS.map(c => <option key={c} value={c}>{COMPANY_LABELS[c]}</option>)
+                }
               </select>
             </div>
 
@@ -226,19 +246,6 @@ export function TaskDetailModal({ task, onClose }: Props) {
               )}
             </div>
 
-            {/* Dynamic company (companyId) if set */}
-            {companies.length > 0 && (
-              <div style={{ gridColumn: '1 / -1' }}>
-                <div style={lbl}>Company (from Settings)</div>
-                <select value={task.companyId ?? ''}
-                  onChange={e => updateTask(task.id, { companyId: e.target.value || undefined })}
-                  style={field}
-                >
-                  <option value="">— none —</option>
-                  {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-              </div>
-            )}
           </div>
 
           {/* Activity Log */}
