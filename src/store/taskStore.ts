@@ -25,11 +25,13 @@ function fromRow(r: TaskRow): Task {
     id: r.id, title: r.title,
     quadrant: r.quadrant as Quadrant | null ?? null,
     company: (r.company as Task['company']) || 'teradix',
-    companyId: r.companyId,
     status: (r.status as TaskStatus) || 'open',
     completed: r.completed,
     dueDate: r.dueDate, duration: r.duration, plannedTime: r.plannedTime,
-    owner: r.owner, urgent: r.urgent, createdAt: r.createdAt,
+    owner: r.owner, createdAt: r.createdAt,
+    // Only include these if DB actually has them — avoids overwriting local state on merge
+    ...(r.companyId != null ? { companyId: r.companyId } : {}),
+    ...(r.urgent    != null ? { urgent:    r.urgent    } : {}),
   }
 }
 
