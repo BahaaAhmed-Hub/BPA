@@ -49,6 +49,7 @@ interface TaskState {
   addTasksBatch: (tasks: Omit<Task, 'id' | 'createdAt'>[]) => void
   updateTask: (id: string, updates: Partial<Task>) => void
   moveTask: (id: string, quadrant: Quadrant | null) => void
+  moveTaskBefore: (activeId: string, overId: string) => void
   reorderInbox: (activeId: string, overId: string) => void
   reorderQuadrant: (activeId: string, overId: string) => void
   clearAll: () => void
@@ -158,6 +159,28 @@ export const useTaskStore = create<TaskState>()(
           return {
             tasks: next,
             activities: [...s.activities, act(id, 'moved', `Moved from ${from} to ${to}`)],
+          }
+        }),
+
+      moveTaskBefore: (activeId, overId) =>
+        set(s => {
+          const dragged = s.tasks.find(t => t.id === activeId)
+          const target  = s.tasks.find(t => t.id === overId)
+          if (!dragged || !target) return s
+          const from = dragged.quadrant ? QUADRANT_META[dragged.quadrant].label : 'Inbox'
+          const to   = target.quadrant  ? QUADRANT_META[target.quadrant].label  : 'Inbox'
+          // Remove dragged from array, insert before target
+          const without = s.tasks.filter(t => t.id !== activeId)
+          const targetIdx = without.findIndex(t => t.id === overId)
+          const next = [
+            ...without.slice(0, targetIdx),
+            { ...dragged, quadrant: target.quadrant },
+            ...without.slice(targetIdx),
+          ]
+          scheduleDbSync(next)
+          return {
+            tasks: next,
+            activities: [...s.activities, act(activeId, 'moved', `Moved from ${from} to ${to}`)],
           }
         }),
 

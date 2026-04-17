@@ -23,7 +23,7 @@ function loadTaskConfig(): { hideCompleted: boolean } {
 }
 
 export function TaskCommand() {
-  const { tasks, moveTask, reorderInbox, reorderQuadrant, updateTask } = useTaskStore()
+  const { tasks, moveTask, moveTaskBefore, reorderInbox, reorderQuadrant, updateTask } = useTaskStore()
 
   const [cfg, setCfg] = useState(loadTaskConfig)
   const [configOpen, setConfigOpen] = useState(false)
@@ -106,7 +106,7 @@ export function TaskCommand() {
       } else if (dragged?.quadrant !== null && dragged?.quadrant === target.quadrant) {
         reorderQuadrant(taskId, overId)
       } else {
-        moveTask(taskId, target.quadrant)
+        moveTaskBefore(taskId, overId)
       }
     }
   }
