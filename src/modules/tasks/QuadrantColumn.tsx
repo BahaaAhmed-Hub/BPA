@@ -3,47 +3,31 @@ import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { Plus, X, Sparkles, ChevronDown, ChevronRight } from 'lucide-react'
 import { TaskCard } from './TaskCard'
-import type { Task, Quadrant } from '@/types'
-import { QUADRANT_META, COMPANY_LABELS, getAllUsers, loadDynamicCompanies } from '@/types'
+import type { Task, Quadrant, TaskType } from '@/types'
+import { QUADRANT_META, COMPANY_LABELS, TASK_TYPE_META, inferTaskType, getAllUsers, loadDynamicCompanies } from '@/types'
 import { useTaskStore } from '@/store/taskStore'
 import { analyzeTask } from '@/lib/professor'
 import type { TaskAnalysis } from '@/lib/professor'
 
-// ─── Task type classification ─────────────────────────────────────────────────
-
-const TASK_TYPES = [
-  { key: 'meeting',  label: 'Meeting / Schedule', emoji: '📅', color: '#7F77DD', pattern: /meeting|sync|standup|stand.?up|1:1|interview|check.in|debrief|catch.?up|🤝|💬|📅/ },
-  { key: 'call',     label: 'Call',               emoji: '📞', color: '#1D9E75', pattern: /\bcall\b|phone|dial|📞/ },
-  { key: 'followup', label: 'Follow-up',          emoji: '↩️', color: '#E0944A', pattern: /follow.?up/ },
-  { key: 'email',    label: 'Email',              emoji: '✉️', color: '#60A5FA', pattern: /\bemail\b|send.*mail|reply|respond|draft.*mail/ },
-  { key: 'research', label: 'Research',           emoji: '🔍', color: '#A78BFA', pattern: /research|investigate|analy[sz]e|explore|look into/ },
-  { key: 'study',    label: 'Study',              emoji: '📚', color: '#34D399', pattern: /\bstudy\b|\blearn\b|\bread\b|course|training|practice/ },
-  { key: 'do',       label: 'Do',                 emoji: '✅', color: '#6B7280', pattern: null },
-] as const
-
-type TaskTypeKey = typeof TASK_TYPES[number]['key']
-
-function classifyTask(title: string): TaskTypeKey {
-  const t = title.toLowerCase()
-  for (const type of TASK_TYPES) {
-    if (type.pattern && type.pattern.test(t)) return type.key
-  }
-  return 'do'
-}
+// ─── Task type grouping helpers ───────────────────────────────────────────────
 
 interface TaskGroup { key: string; label: string; emoji: string; color: string; tasks: Task[] }
 
 function buildGroups(tasks: Task[], groupBy: 'type' | 'company'): TaskGroup[] {
   if (groupBy === 'type') {
-    const map = new Map<TaskTypeKey, Task[]>()
+    const map = new Map<TaskType, Task[]>()
     for (const t of tasks) {
-      const k = classifyTask(t.title)
+      const k = t.taskType ?? inferTaskType(t.title)
       if (!map.has(k)) map.set(k, [])
       map.get(k)!.push(t)
     }
-    return TASK_TYPES
-      .filter(type => map.has(type.key))
-      .map(type => ({ key: type.key, label: type.label, emoji: type.emoji, color: type.color, tasks: map.get(type.key)! }))
+    return (Object.keys(TASK_TYPE_META) as TaskType[])
+      .filter(k => map.has(k))
+      .map(k => ({
+        key: k, label: TASK_TYPE_META[k].label,
+        emoji: TASK_TYPE_META[k].emoji, color: TASK_TYPE_META[k].color,
+        tasks: map.get(k)!,
+      }))
   } else {
     const companies = loadDynamicCompanies()
     const map = new Map<string, Task[]>()

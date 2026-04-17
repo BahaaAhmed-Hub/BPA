@@ -2,8 +2,8 @@ import { useState } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { Trash2, Check, GripVertical, Clock, Calendar, User, Plus, CalendarCheck, Zap } from 'lucide-react'
-import type { Task } from '@/types'
-import { COMPANY_COLORS, getAllUsers, loadDynamicCompanies } from '@/types'
+import type { Task, TaskType } from '@/types'
+import { COMPANY_COLORS, TASK_TYPE_META, inferTaskType, getAllUsers, loadDynamicCompanies } from '@/types'
 import { useTaskStore } from '@/store/taskStore'
 import { getCalendarCache } from '@/lib/googleCalendar'
 import { MeetingFollowUpPopup } from './MeetingFollowUpPopup'
@@ -33,6 +33,7 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
   const [editingTime, setEditingTime] = useState(false)
   const [editingDuration, setEditingDuration] = useState(false)
   const [editingOwner, setEditingOwner] = useState(false)
+  const [editingType, setEditingType] = useState(false)
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id })
 
@@ -191,6 +192,34 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}
             </select>
+
+            {/* Task type badge */}
+            {(() => {
+              const tt = task.taskType ?? inferTaskType(task.title)
+              const meta = TASK_TYPE_META[tt]
+              return editingType ? (
+                <select
+                  data-nm autoFocus
+                  value={tt}
+                  onChange={e => { updateTask(task.id, { taskType: e.target.value as TaskType }); setEditingType(false) }}
+                  onBlur={() => setEditingType(false)}
+                  style={{ ...fieldInput, fontSize: 10 }}
+                >
+                  {(Object.keys(TASK_TYPE_META) as TaskType[]).map(k => (
+                    <option key={k} value={k}>{TASK_TYPE_META[k].emoji} {TASK_TYPE_META[k].label}</option>
+                  ))}
+                </select>
+              ) : (
+                <span
+                  data-nm onClick={() => setEditingType(true)} title="Change task type"
+                  style={{
+                    fontSize: 10, fontWeight: 600, cursor: 'pointer',
+                    color: meta.color, background: `${meta.color}18`,
+                    padding: '1px 5px', borderRadius: 3,
+                  }}
+                >{meta.emoji} {meta.label}</span>
+              )
+            })()}
 
             {/* Due date */}
             {(task.dueDate || isSchedule) && (

@@ -33,7 +33,7 @@ export interface TaskRow {
   id: string; title: string; quadrant: string | null; company: string
   companyId?: string; status: string; completed: boolean
   dueDate?: string; duration?: number; plannedTime?: string
-  owner?: string; urgent?: boolean; createdAt: string
+  owner?: string; urgent?: boolean; taskType?: string; createdAt: string
 }
 
 export interface HabitRow {
@@ -283,7 +283,7 @@ export async function saveTasksToDB(tasks: TaskRow[]): Promise<void> {
     user_id:      userId,
     company_id:   null as null,
     title:        t.title,
-    description:  null as null,
+    description:  t.taskType ?? null,
     quadrant:     quadrantToDb(t.quadrant),
     effort_minutes: t.duration ?? null,
     due_date:     t.dueDate ?? null,
@@ -329,6 +329,7 @@ export async function loadTasksFromDB(): Promise<TaskRow[]> {
       plannedTime: (r.planned_time as string) ?? undefined,
       owner:       (r.delegated_to as string) ?? (r.owner_id as string) ?? undefined,
       createdAt:   r.created_at as string,
+      ...(r.description ? { taskType: r.description as string } : {}),
     }
   })
 }

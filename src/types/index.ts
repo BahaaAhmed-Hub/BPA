@@ -63,6 +63,37 @@ export const QUADRANT_META: Record<Quadrant, { label: string; sub: string; color
   eliminate:{ label: 'Eliminate', sub: 'Not Urgent + Not Important', color: '#888780' },
 }
 
+// ─── Task Type ───────────────────────────────────────────────────────────────
+export type TaskType = 'meeting' | 'call' | 'followup' | 'email' | 'research' | 'study' | 'do'
+
+export const TASK_TYPE_META: Record<TaskType, { label: string; emoji: string; color: string }> = {
+  meeting:  { label: 'Meeting / Schedule', emoji: '📅', color: '#7F77DD' },
+  call:     { label: 'Call',               emoji: '📞', color: '#1D9E75' },
+  followup: { label: 'Follow-up',          emoji: '↩️', color: '#E0944A' },
+  email:    { label: 'Email',              emoji: '✉️', color: '#60A5FA' },
+  research: { label: 'Research',           emoji: '🔍', color: '#A78BFA' },
+  study:    { label: 'Study',              emoji: '📚', color: '#34D399' },
+  do:       { label: 'Do',                 emoji: '✅', color: '#6B7280' },
+}
+
+/** Keyword-based task type classifier. Used as default when taskType is not manually set. */
+export function inferTaskType(title: string): TaskType {
+  const t = title.toLowerCase()
+  // Meeting / Schedule — broad set of collaboration keywords
+  if (/meeting|sync|standup|stand.?up|1:1|one.on.one|interview|check.?in|debrief|catch.?up|kickoff|kick.?off|appointment|review.*with|scheduled.*call|join.*call|schedule.*with|briefing|workshop|webinar|🤝|💬|📅/.test(t)) return 'meeting'
+  // Call — phone / video
+  if (/\bcall\b|\bcalled\b|\bcalling\b|phone|dial|zoom|teams|skype|hangout|facetime|📞/.test(t)) return 'call'
+  // Follow-up
+  if (/follow.?up|follow up|check back|get back to|circle back|ping/.test(t)) return 'followup'
+  // Email / messaging
+  if (/\bemail\b|\be-mail\b|\bmail\b|send.*to|reply|respond|draft|inbox|gmail|outlook|message|slack|✉/.test(t)) return 'email'
+  // Research / analysis
+  if (/research|investigate|analy[sz]e|analysis|explore|look into|benchmark|evaluate|compare|audit|assess/.test(t)) return 'research'
+  // Study / learning
+  if (/\bstudy\b|\blearn\b|\bread\b|reading|course|training|practice|tutorial|docs|documentation|watch.*video|📚/.test(t)) return 'study'
+  return 'do'
+}
+
 // ─── Task ────────────────────────────────────────────────────────────────────
 export type TaskStatus = 'open' | 'done' | 'cancelled'
 
@@ -73,6 +104,7 @@ export interface Task {
   quadrant: Quadrant | null  // null = inbox/undefined (right panel)
   company: CompanyTag
   companyId?: string         // dynamic company id from settings
+  taskType?: TaskType        // manual override; inferred from title when not set
   dueDate?: string           // YYYY-MM-DD
   duration?: number          // minutes
   plannedTime?: string       // HH:MM for schedule quadrant

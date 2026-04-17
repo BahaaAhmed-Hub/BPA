@@ -8,7 +8,7 @@ import { useTaskStore } from '@/store/taskStore'
 import { useUIStore } from '@/store/uiStore'
 import { loadDynamicCompanies } from '@/types'
 import { loadHabits, loadLogs, calcStreak } from '@/store/habitsStore'
-import { fetchWeekEvents } from '@/lib/googleCalendar'
+import { fetchVisibleEvents } from '@/lib/calendarEvents'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -170,7 +170,7 @@ export function ExecutiveDashboard() {
     const today = new Date()
     const start = new Date(today); start.setHours(0, 0, 0, 0)
     const end   = new Date(today); end.setHours(23, 59, 59, 999)
-    fetchWeekEvents(start, end).then(({ events }) => {
+    fetchVisibleEvents(start, end).then(events => {
       setTodayMeetings(events.length)
     }).catch(() => { /* no calendar connected */ })
   }, [])

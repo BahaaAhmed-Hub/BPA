@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { X, Clock, Calendar, User, Building2, Activity } from 'lucide-react'
-import type { Task, CompanyTag, TaskStatus } from '@/types'
+import type { Task, CompanyTag, TaskStatus, TaskType } from '@/types'
 import {
-  COMPANY_LABELS, COMPANY_COLORS, getAllUsers,
+  COMPANY_LABELS, COMPANY_COLORS, TASK_TYPE_META, inferTaskType, getAllUsers,
   loadDynamicCompanies,
 } from '@/types'
 import { useTaskStore } from '@/store/taskStore'
@@ -172,6 +172,20 @@ export function TaskDetailModal({ task, onClose }: Props) {
                     </>
                   : COMPANY_TAGS.map(c => <option key={c} value={c}>{COMPANY_LABELS[c]}</option>)
                 }
+              </select>
+            </div>
+
+            {/* Task Type */}
+            <div>
+              <div style={lbl}>Task Type</div>
+              <select
+                value={task.taskType ?? inferTaskType(task.title)}
+                onChange={e => updateTask(task.id, { taskType: e.target.value as TaskType })}
+                style={field}
+              >
+                {(Object.keys(TASK_TYPE_META) as TaskType[]).map(k => (
+                  <option key={k} value={k}>{TASK_TYPE_META[k].emoji} {TASK_TYPE_META[k].label}</option>
+                ))}
               </select>
             </div>
 

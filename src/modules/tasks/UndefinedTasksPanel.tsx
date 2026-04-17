@@ -4,7 +4,7 @@ import { useDroppable } from '@dnd-kit/core'
 import { useSortable, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { useTaskStore } from '@/store/taskStore'
-import { getAllUsers, loadDynamicCompanies, COMPANY_COLORS, type TaskStatus, type CompanyTag, type Task } from '@/types'
+import { getAllUsers, loadDynamicCompanies, COMPANY_COLORS, TASK_TYPE_META, inferTaskType, type TaskStatus, type TaskType, type CompanyTag, type Task } from '@/types'
 import { analyzeTask } from '@/lib/professor'
 import type { TaskAnalysis } from '@/lib/professor'
 
@@ -277,36 +277,18 @@ export function UndefinedTasksPanel({ onOpen, hideCompleted = false, groupBy = '
 
   const FILTERS: Filter[] = ['all', 'open', 'done', 'cancelled']
 
-  // ─── Group helpers (mirrors QuadrantColumn logic) ──────────────────────────
-  const TASK_TYPES_INBOX = [
-    { key: 'meeting',  label: 'Meeting / Schedule', emoji: '📅', color: '#7F77DD', pattern: /meeting|sync|standup|stand.?up|1:1|interview|check.in|debrief|catch.?up|📅/ },
-    { key: 'call',     label: 'Call',               emoji: '📞', color: '#1D9E75', pattern: /\bcall\b|phone|dial|📞/ },
-    { key: 'followup', label: 'Follow-up',          emoji: '↩️', color: '#E0944A', pattern: /follow.?up/ },
-    { key: 'email',    label: 'Email',              emoji: '✉️', color: '#60A5FA', pattern: /\bemail\b|send.*mail|reply|respond|draft.*mail/ },
-    { key: 'research', label: 'Research',           emoji: '🔍', color: '#A78BFA', pattern: /research|investigate|analy[sz]e|explore|look into/ },
-    { key: 'study',    label: 'Study',              emoji: '📚', color: '#34D399', pattern: /\bstudy\b|\blearn\b|\bread\b|course|training|practice/ },
-    { key: 'do',       label: 'Do',                 emoji: '✅', color: '#6B7280', pattern: null },
-  ] as const
-
-  function classifyInboxTask(title: string) {
-    const t = title.toLowerCase()
-    for (const type of TASK_TYPES_INBOX) {
-      if (type.pattern && type.pattern.test(t)) return type.key
-    }
-    return 'do'
-  }
-
+  // ─── Group helpers ────────────────────────────────────────────────────────
   function buildInboxGroups(tasks: Task[], gBy: 'type' | 'company') {
     if (gBy === 'type') {
-      const map = new Map<string, Task[]>()
+      const map = new Map<TaskType, Task[]>()
       for (const t of tasks) {
-        const k = classifyInboxTask(t.title)
+        const k = t.taskType ?? inferTaskType(t.title)
         if (!map.has(k)) map.set(k, [])
         map.get(k)!.push(t)
       }
-      return TASK_TYPES_INBOX
-        .filter(type => map.has(type.key))
-        .map(type => ({ key: type.key, label: type.label, emoji: type.emoji, color: type.color, tasks: map.get(type.key)! }))
+      return (Object.keys(TASK_TYPE_META) as TaskType[])
+        .filter(k => map.has(k))
+        .map(k => ({ key: k, label: TASK_TYPE_META[k].label, emoji: TASK_TYPE_META[k].emoji, color: TASK_TYPE_META[k].color, tasks: map.get(k)! }))
     } else {
       const map = new Map<string, Task[]>()
       for (const t of tasks) {

@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { arrayMove } from '@dnd-kit/sortable'
-import type { Task, Quadrant, TaskStatus, TaskActivity } from '@/types'
+import type { Task, Quadrant, TaskStatus, TaskActivity, TaskType } from '@/types'
 import { COMPANY_LABELS, QUADRANT_META, getAllUsers } from '@/types'
 import { saveTasksToDB, loadTasksFromDB } from '@/lib/dbSync'
 import type { TaskRow } from '@/lib/dbSync'
@@ -16,7 +16,7 @@ function toRow(t: Task): TaskRow {
     company: t.company, companyId: t.companyId,
     status: t.status, completed: t.completed,
     dueDate: t.dueDate, duration: t.duration, plannedTime: t.plannedTime,
-    owner: t.owner, urgent: t.urgent, createdAt: t.createdAt,
+    owner: t.owner, urgent: t.urgent, taskType: t.taskType, createdAt: t.createdAt,
   }
 }
 
@@ -30,8 +30,9 @@ function fromRow(r: TaskRow): Task {
     dueDate: r.dueDate, duration: r.duration, plannedTime: r.plannedTime,
     owner: r.owner, createdAt: r.createdAt,
     // Only include these if DB actually has them — avoids overwriting local state on merge
-    ...(r.companyId != null ? { companyId: r.companyId } : {}),
-    ...(r.urgent    != null ? { urgent:    r.urgent    } : {}),
+    ...(r.companyId != null ? { companyId: r.companyId }            : {}),
+    ...(r.urgent    != null ? { urgent:    r.urgent    }            : {}),
+    ...(r.taskType  != null ? { taskType:  r.taskType as TaskType } : {}),
   }
 }
 
