@@ -16,7 +16,7 @@ function toRow(t: Task): TaskRow {
     company: t.company, companyId: t.companyId,
     status: t.status, completed: t.completed,
     dueDate: t.dueDate, duration: t.duration, plannedTime: t.plannedTime,
-    owner: t.owner, createdAt: t.createdAt,
+    owner: t.owner, urgent: t.urgent, createdAt: t.createdAt,
   }
 }
 
@@ -29,7 +29,7 @@ function fromRow(r: TaskRow): Task {
     status: (r.status as TaskStatus) || 'open',
     completed: r.completed,
     dueDate: r.dueDate, duration: r.duration, plannedTime: r.plannedTime,
-    owner: r.owner, createdAt: r.createdAt,
+    owner: r.owner, urgent: r.urgent, createdAt: r.createdAt,
   }
 }
 
@@ -53,6 +53,7 @@ interface TaskState {
   reorderInbox: (activeId: string, overId: string) => void
   reorderQuadrant: (activeId: string, overId: string) => void
   clearAll: () => void
+  toggleUrgent: (id: string) => void
   deleteTask: (id: string) => void
   toggleComplete: (id: string) => void
   setStatus: (id: string, status: TaskStatus) => void
@@ -212,6 +213,37 @@ export const useTaskStore = create<TaskState>()(
           const qSet = new Set(qIds)
           const others = s.tasks.filter(t => !qSet.has(t.id))
           const next = [...others, ...reordered.map(id => s.tasks.find(t => t.id === id)!)]
+          scheduleDbSync(next)
+          return { tasks: next }
+        }),
+
+      toggleUrgent: (id) =>
+        set(s => {
+          const task = s.tasks.find(t => t.id === id)
+          if (!task) return s
+          const newUrgent = !task.urgent
+          const updated = { ...task, urgent: newUrgent }
+          if (!newUrgent) {
+            const next = s.tasks.map(t => t.id === id ? updated : t)
+            scheduleDbSync(next)
+            return { tasks: next }
+          }
+          // Move to top of section, right after the last already-urgent task in the same section
+          const without = s.tasks.filter(t => t.id !== id)
+          const sectionIds = without
+            .filter(t => t.quadrant === task.quadrant)
+            .map(t => t.id)
+          const lastUrgentSectionId = [...sectionIds].reverse().find(sid => without.find(t => t.id === sid)?.urgent)
+          const insertBeforeId = lastUrgentSectionId
+            ? sectionIds[sectionIds.indexOf(lastUrgentSectionId) + 1] ?? null
+            : sectionIds[0] ?? null
+          let next: Task[]
+          if (insertBeforeId === null) {
+            next = [...without, updated]
+          } else {
+            const at = without.findIndex(t => t.id === insertBeforeId)
+            next = [...without.slice(0, at), updated, ...without.slice(at)]
+          }
           scheduleDbSync(next)
           return { tasks: next }
         }),

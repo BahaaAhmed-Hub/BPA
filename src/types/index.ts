@@ -82,6 +82,7 @@ export interface Task {
   parentTaskId?: string      // id of the parent meeting/call task that generated this task
   status: TaskStatus
   completed: boolean
+  urgent?: boolean
   createdAt: string
 }
 

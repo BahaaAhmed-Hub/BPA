@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { Trash2, Check, GripVertical, Clock, Calendar, User, Plus, CalendarCheck } from 'lucide-react'
+import { Trash2, Check, GripVertical, Clock, Calendar, User, Plus, CalendarCheck, Zap } from 'lucide-react'
 import type { Task } from '@/types'
 import { COMPANY_COLORS, getAllUsers, loadDynamicCompanies } from '@/types'
 import { useTaskStore } from '@/store/taskStore'
@@ -24,7 +24,7 @@ interface TaskCardProps {
 }
 
 export function TaskCard({ task, onOpen }: TaskCardProps) {
-  const { toggleComplete, deleteTask, updateTask, addTasksBatch } = useTaskStore()
+  const { toggleComplete, deleteTask, updateTask, addTasksBatch, toggleUrgent } = useTaskStore()
   const [hovered, setHovered] = useState(false)
   const [showMeetingPopup, setShowMeetingPopup] = useState(false)
   const [editingTitle, setEditingTitle] = useState(false)
@@ -84,7 +84,7 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
       style={{
         ...style,
         background: hovered ? 'var(--color-surface2, #1a1f35)' : 'var(--color-surface, #161929)',
-        border: `1px solid ${isDragging ? '#1E40AF' : 'var(--color-border, #252A3E)'}`,
+        border: `1px solid ${isDragging ? '#1E40AF' : task.urgent ? '#E0711A40' : 'var(--color-border, #252A3E)'}`,
         borderRadius: 8,
         padding: '9px 11px',
         cursor: isDragging ? 'grabbing' : 'pointer',
@@ -312,16 +312,30 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
           </div>
         </div>
 
-        {/* Delete */}
-        {hovered && (
-          <button data-nm onClick={() => deleteTask(task.id)} style={{
-            background: 'transparent', border: 'none', cursor: 'pointer',
-            color: '#6B7280', padding: 2, borderRadius: 4,
-            display: 'flex', alignItems: 'center', flexShrink: 0,
-          }}>
-            <Trash2 size={11} strokeWidth={2} />
+        {/* Urgent + Delete */}
+        <div data-nm style={{ display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0 }}>
+          <button
+            data-nm
+            onClick={() => toggleUrgent(task.id)}
+            title={task.urgent ? 'Unmark urgent' : 'Mark urgent'}
+            style={{
+              background: 'transparent', border: 'none', cursor: 'pointer', padding: 2, borderRadius: 4,
+              color: task.urgent ? '#E0711A' : hovered ? '#4B5268' : 'transparent',
+              display: 'flex', alignItems: 'center', transition: 'color 0.15s',
+            }}
+          >
+            <Zap size={11} strokeWidth={2} fill={task.urgent ? '#E0711A' : 'none'} />
           </button>
-        )}
+          {hovered && (
+            <button data-nm onClick={() => deleteTask(task.id)} style={{
+              background: 'transparent', border: 'none', cursor: 'pointer',
+              color: '#6B7280', padding: 2, borderRadius: 4,
+              display: 'flex', alignItems: 'center',
+            }}>
+              <Trash2 size={11} strokeWidth={2} />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Meeting follow-up popup — shown when completing a meeting/call task */}

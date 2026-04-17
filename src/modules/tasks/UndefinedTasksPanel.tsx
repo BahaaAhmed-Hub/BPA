@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Plus, Trash2, X, Inbox, Check, Calendar, User, GripVertical, Sparkles, ListPlus } from 'lucide-react'
+import { Plus, Trash2, X, Inbox, Check, Calendar, User, GripVertical, Sparkles, ListPlus, Zap } from 'lucide-react'
 import { useDroppable } from '@dnd-kit/core'
 import { useSortable, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
@@ -33,10 +33,11 @@ interface InboxCardProps {
   onToggle: () => void
   onDelete: () => void
   onCompanyChange: (companyId: string) => void
+  onToggleUrgent: () => void
   companies: ReturnType<typeof loadDynamicCompanies>
 }
 
-function DraggableInboxCard({ task, accentColor, taskStatus, ownerUser, onOpen, onToggle, onDelete, onCompanyChange, companies }: InboxCardProps) {
+function DraggableInboxCard({ task, accentColor, taskStatus, ownerUser, onOpen, onToggle, onDelete, onCompanyChange, onToggleUrgent, companies }: InboxCardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id })
   const [hovered, setHovered] = useState(false)
 
@@ -53,7 +54,7 @@ function DraggableInboxCard({ task, accentColor, taskStatus, ownerUser, onOpen, 
       <div style={{
         padding: '9px 11px',
         background: isDragging ? 'var(--color-surface2, #252A3E)' : 'var(--color-bg, #0D0F1A)',
-        border: `1px solid ${hovered ? '#353A50' : 'var(--color-border, #252A3E)'}`,
+        border: `1px solid ${task.urgent ? '#E0711A40' : hovered ? '#353A50' : 'var(--color-border, #252A3E)'}`,
         borderRadius: 8,
         opacity: taskStatus === 'cancelled' ? 0.5 : taskStatus === 'done' ? 0.6 : 1,
         cursor: isDragging ? 'grabbing' : 'pointer',
@@ -135,18 +136,31 @@ function DraggableInboxCard({ task, accentColor, taskStatus, ownerUser, onOpen, 
             </div>
           </div>
 
-          {/* Delete */}
-          <button
-            onClick={e => { e.stopPropagation(); onDelete() }}
-            style={{
-              background: 'transparent', border: 'none', cursor: 'pointer',
-              color: '#6B7280', padding: 2, borderRadius: 4,
-              display: 'flex', alignItems: 'center', flexShrink: 0,
-              opacity: hovered ? 1 : 0, transition: 'opacity 0.15s',
-            }}
-          >
-            <Trash2 size={11} strokeWidth={2} />
-          </button>
+          {/* Urgent + Delete */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0 }}>
+            <button
+              onClick={e => { e.stopPropagation(); onToggleUrgent() }}
+              title={task.urgent ? 'Unmark urgent' : 'Mark urgent'}
+              style={{
+                background: 'transparent', border: 'none', cursor: 'pointer', padding: 2, borderRadius: 4,
+                color: task.urgent ? '#E0711A' : hovered ? '#4B5268' : 'transparent',
+                display: 'flex', alignItems: 'center', transition: 'color 0.15s',
+              }}
+            >
+              <Zap size={11} strokeWidth={2} fill={task.urgent ? '#E0711A' : 'none'} />
+            </button>
+            <button
+              onClick={e => { e.stopPropagation(); onDelete() }}
+              style={{
+                background: 'transparent', border: 'none', cursor: 'pointer',
+                color: '#6B7280', padding: 2, borderRadius: 4,
+                display: 'flex', alignItems: 'center',
+                opacity: hovered ? 1 : 0, transition: 'opacity 0.15s',
+              }}
+            >
+              <Trash2 size={11} strokeWidth={2} />
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -161,7 +175,7 @@ interface Props {
 }
 
 export function UndefinedTasksPanel({ onOpen, hideCompleted = false }: Props) {
-  const { tasks, addTask, addTasksBatch, deleteTask, toggleComplete, updateTask } = useTaskStore()
+  const { tasks, addTask, addTasksBatch, deleteTask, toggleComplete, updateTask, toggleUrgent } = useTaskStore()
   const [filter, setFilter] = useState<Filter>('open')
   const [adding, setAdding] = useState(false)
 
@@ -378,6 +392,7 @@ export function UndefinedTasksPanel({ onOpen, hideCompleted = false }: Props) {
                 onOpen={onOpen}
                 onToggle={() => toggleComplete(t.id)}
                 onDelete={() => deleteTask(t.id)}
+                onToggleUrgent={() => toggleUrgent(t.id)}
                 onCompanyChange={companyId => {
                   const co2 = companies.find(c => c.id === companyId)
                   updateTask(t.id, { companyId, company: (co2?.id as CompanyTag) ?? t.company })

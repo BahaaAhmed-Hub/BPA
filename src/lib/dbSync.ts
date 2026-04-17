@@ -33,7 +33,7 @@ export interface TaskRow {
   id: string; title: string; quadrant: string | null; company: string
   companyId?: string; status: string; completed: boolean
   dueDate?: string; duration?: number; plannedTime?: string
-  owner?: string; createdAt: string
+  owner?: string; urgent?: boolean; createdAt: string
 }
 
 export interface HabitRow {
