@@ -562,7 +562,6 @@ function App() {
       // extra account's session is active, auth.uid() = extraAccountId ≠ primaryUserId,
       // so any upsert attempted here would silently fail the RLS check.
       const googleRefreshToken = session.provider_refresh_token ?? null
-      const primaryUserId = originalUserIdOnLoad ?? session.user.id
       // Notify Settings (and any other listeners) to re-read accounts from localStorage
       window.dispatchEvent(new CustomEvent('professor:accountsUpdated'))
       // Restore original session, then refresh to get a fresh primary Google token

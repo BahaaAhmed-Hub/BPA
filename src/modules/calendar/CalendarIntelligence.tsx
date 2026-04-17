@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   ChevronLeft, ChevronRight, Calendar, Video, Users,
   Sparkles, MapPin, RefreshCw, X, Eye, EyeOff,
-  CheckCircle2, XCircle, Link, Phone, Repeat, User,
+  CheckCircle2, XCircle, Link, Phone, Repeat,
   ExternalLink, AlertCircle, Shield, Copy, Trash2,
 } from 'lucide-react'
 import {
@@ -851,7 +851,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
               {organizer && !organizer.self && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
                   <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#3A4060', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600, color: '#A0A8C0', flexShrink: 0 }}>
-                    {(organizer.displayName ?? organizer.email)[0].toUpperCase()}
+                    {((organizer.displayName ?? organizer.email) ?? '?')[0].toUpperCase()}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 12.5, color: '#C0C4D6', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
