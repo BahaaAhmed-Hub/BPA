@@ -7,9 +7,11 @@ const QUADRANTS: Quadrant[] = ['do', 'schedule', 'delegate', 'eliminate']
 interface EisenhowerBoardProps {
   onOpen: (id: string) => void
   hideCompleted?: boolean
+  groupBy?: 'none' | 'type' | 'company'
+  allGroupsExpanded?: boolean
 }
 
-export function EisenhowerBoard({ onOpen, hideCompleted = false }: EisenhowerBoardProps) {
+export function EisenhowerBoard({ onOpen, hideCompleted = false, groupBy = 'none', allGroupsExpanded = true }: EisenhowerBoardProps) {
   const tasks = useTaskStore(s => s.tasks)
 
   return (
@@ -20,6 +22,8 @@ export function EisenhowerBoard({ onOpen, hideCompleted = false }: EisenhowerBoa
           quadrant={q}
           tasks={tasks.filter(t => t.quadrant === q && (!hideCompleted || (!t.completed && t.status !== 'done')))}
           onOpen={onOpen}
+          groupBy={groupBy}
+          allGroupsExpanded={allGroupsExpanded}
         />
       ))}
     </div>

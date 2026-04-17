@@ -18,8 +18,12 @@ import { scheduleTaskToCalendar } from '@/lib/aiScheduler'
 const QUADRANTS: Quadrant[] = ['do', 'schedule', 'delegate', 'eliminate']
 const TASKS_CONFIG_KEY = 'task-command-config'
 
-function loadTaskConfig(): { hideCompleted: boolean } {
-  try { return JSON.parse(localStorage.getItem(TASKS_CONFIG_KEY) ?? '{}') } catch { return { hideCompleted: false } }
+type GroupBy = 'none' | 'type' | 'company'
+interface TaskConfig { hideCompleted: boolean; groupBy: GroupBy; allGroupsExpanded: boolean }
+
+function loadTaskConfig(): TaskConfig {
+  try { return { hideCompleted: false, groupBy: 'none', allGroupsExpanded: true, ...JSON.parse(localStorage.getItem(TASKS_CONFIG_KEY) ?? '{}') } }
+  catch { return { hideCompleted: false, groupBy: 'none', allGroupsExpanded: true } }
 }
 
 export function TaskCommand() {
@@ -30,12 +34,17 @@ export function TaskCommand() {
   const configRef = useRef<HTMLDivElement>(null)
 
   const hideCompleted = cfg.hideCompleted ?? false
+  const groupBy = cfg.groupBy ?? 'none'
+  const allGroupsExpanded = cfg.allGroupsExpanded ?? true
 
-  function setHideCompleted(val: boolean) {
-    const next = { ...cfg, hideCompleted: val }
+  function saveCfg(patch: Partial<TaskConfig>) {
+    const next = { ...cfg, ...patch }
     setCfg(next)
     localStorage.setItem(TASKS_CONFIG_KEY, JSON.stringify(next))
   }
+  function setHideCompleted(val: boolean) { saveCfg({ hideCompleted: val }) }
+  function setGroupBy(val: GroupBy) { saveCfg({ groupBy: val }) }
+  function setAllGroupsExpanded(val: boolean) { saveCfg({ allGroupsExpanded: val }) }
 
   // Close popup on outside click
   useEffect(() => {
@@ -172,7 +181,7 @@ export function TaskCommand() {
               <div style={{
                 position: 'absolute', top: 34, right: 0, zIndex: 100,
                 background: 'var(--color-surface, #161929)', border: '1px solid var(--color-border, #252A3E)',
-                borderRadius: 10, padding: '12px 14px', minWidth: 220,
+                borderRadius: 10, padding: '12px 14px', minWidth: 240,
                 boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
               }}>
                 <p style={{ margin: '0 0 10px', fontSize: 11, fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
@@ -180,16 +189,13 @@ export function TaskCommand() {
                 </p>
 
                 {/* Hide completed toggle */}
-                <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', gap: 10 }}>
+                <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', gap: 10, marginBottom: 14 }}>
                   <span style={{ fontSize: 13, color: '#C0C4D6' }}>Hide completed tasks</span>
-                  <div
-                    onClick={() => setHideCompleted(!hideCompleted)}
-                    style={{
-                      width: 36, height: 20, borderRadius: 10, flexShrink: 0,
-                      background: hideCompleted ? '#7F77DD' : 'var(--color-border, #252A3E)',
-                      position: 'relative', cursor: 'pointer', transition: 'background 0.15s',
-                    }}
-                  >
+                  <div onClick={() => setHideCompleted(!hideCompleted)} style={{
+                    width: 36, height: 20, borderRadius: 10, flexShrink: 0,
+                    background: hideCompleted ? '#7F77DD' : 'var(--color-border, #252A3E)',
+                    position: 'relative', cursor: 'pointer', transition: 'background 0.15s',
+                  }}>
                     <div style={{
                       position: 'absolute', top: 3, left: hideCompleted ? 19 : 3,
                       width: 14, height: 14, borderRadius: '50%', background: '#fff',
@@ -197,6 +203,44 @@ export function TaskCommand() {
                     }} />
                   </div>
                 </label>
+
+                <div style={{ width: '100%', height: 1, background: 'var(--color-border, #252A3E)', marginBottom: 12 }} />
+                <p style={{ margin: '0 0 8px', fontSize: 11, fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+                  Group tasks by
+                </p>
+
+                {(['none', 'type', 'company'] as GroupBy[]).map(opt => (
+                  <label key={opt} onClick={() => setGroupBy(opt)} style={{
+                    display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer',
+                    padding: '5px 6px', borderRadius: 6, marginBottom: 2,
+                    background: groupBy === opt ? 'rgba(127,119,221,0.1)' : 'transparent',
+                  }}>
+                    <div style={{
+                      width: 13, height: 13, borderRadius: '50%', flexShrink: 0,
+                      border: `2px solid ${groupBy === opt ? '#7F77DD' : '#6B7280'}`,
+                      background: groupBy === opt ? '#7F77DD' : 'transparent',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      {groupBy === opt && <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#fff' }} />}
+                    </div>
+                    <span style={{ fontSize: 12.5, color: groupBy === opt ? '#C0C4D6' : '#8B93A8' }}>
+                      {opt === 'none' ? 'None' : opt === 'type' ? 'Task type' : 'Company'}
+                    </span>
+                  </label>
+                ))}
+
+                {groupBy !== 'none' && (
+                  <button
+                    onClick={() => setAllGroupsExpanded(!allGroupsExpanded)}
+                    style={{
+                      marginTop: 10, width: '100%', padding: '6px 10px', borderRadius: 7,
+                      background: 'rgba(127,119,221,0.08)', border: '1px solid rgba(127,119,221,0.25)',
+                      color: '#9B94E8', fontSize: 12, cursor: 'pointer', fontWeight: 500,
+                    }}
+                  >
+                    {allGroupsExpanded ? '⊟ Collapse all groups' : '⊞ Expand all groups'}
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -212,9 +256,9 @@ export function TaskCommand() {
       >
         <div style={{ display: 'flex', gap: 14, padding: '18px 28px', alignItems: 'flex-start' }}>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <EisenhowerBoard onOpen={setModalTaskId} hideCompleted={hideCompleted} />
+            <EisenhowerBoard onOpen={setModalTaskId} hideCompleted={hideCompleted} groupBy={groupBy} allGroupsExpanded={allGroupsExpanded} />
           </div>
-          <UndefinedTasksPanel onOpen={setModalTaskId} hideCompleted={hideCompleted} />
+          <UndefinedTasksPanel onOpen={setModalTaskId} hideCompleted={hideCompleted} groupBy={groupBy} allGroupsExpanded={allGroupsExpanded} />
         </div>
 
         <DragOverlay>

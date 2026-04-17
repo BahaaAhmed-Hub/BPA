@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Plus, Trash2, X, Inbox, Check, Calendar, User, GripVertical, Sparkles, ListPlus, Zap } from 'lucide-react'
+import { Plus, Trash2, X, Inbox, Check, Calendar, User, GripVertical, Sparkles, ListPlus, Zap, ChevronDown, ChevronRight } from 'lucide-react'
 import { useDroppable } from '@dnd-kit/core'
 import { useSortable, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
@@ -172,12 +172,22 @@ function DraggableInboxCard({ task, accentColor, taskStatus, ownerUser, onOpen, 
 interface Props {
   onOpen: (id: string) => void
   hideCompleted?: boolean
+  groupBy?: 'none' | 'type' | 'company'
+  allGroupsExpanded?: boolean
 }
 
-export function UndefinedTasksPanel({ onOpen, hideCompleted = false }: Props) {
+export function UndefinedTasksPanel({ onOpen, hideCompleted = false, groupBy = 'none', allGroupsExpanded = true }: Props) {
   const { tasks, addTask, addTasksBatch, deleteTask, toggleComplete, updateTask, toggleUrgent } = useTaskStore()
   const [filter, setFilter] = useState<Filter>('open')
   const [adding, setAdding] = useState(false)
+
+  // Group expand state
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({})
+  useEffect(() => {
+    setExpandedGroups(prev => Object.fromEntries(Object.keys(prev).map(k => [k, allGroupsExpanded])))
+  }, [allGroupsExpanded])
+  function isGroupExpanded(key: string) { return expandedGroups[key] ?? true }
+  function toggleGroupExpanded(key: string) { setExpandedGroups(prev => ({ ...prev, [key]: !isGroupExpanded(key) })) }
 
   // Bulk add state
   const [bulkOpen, setBulkOpen] = useState(false)
@@ -266,6 +276,72 @@ export function UndefinedTasksPanel({ onOpen, hideCompleted = false }: Props) {
   }
 
   const FILTERS: Filter[] = ['all', 'open', 'done', 'cancelled']
+
+  // ─── Group helpers (mirrors QuadrantColumn logic) ──────────────────────────
+  const TASK_TYPES_INBOX = [
+    { key: 'meeting',  label: 'Meeting / Schedule', emoji: '📅', color: '#7F77DD', pattern: /meeting|sync|standup|stand.?up|1:1|interview|check.in|debrief|catch.?up|📅/ },
+    { key: 'call',     label: 'Call',               emoji: '📞', color: '#1D9E75', pattern: /\bcall\b|phone|dial|📞/ },
+    { key: 'followup', label: 'Follow-up',          emoji: '↩️', color: '#E0944A', pattern: /follow.?up/ },
+    { key: 'email',    label: 'Email',              emoji: '✉️', color: '#60A5FA', pattern: /\bemail\b|send.*mail|reply|respond|draft.*mail/ },
+    { key: 'research', label: 'Research',           emoji: '🔍', color: '#A78BFA', pattern: /research|investigate|analy[sz]e|explore|look into/ },
+    { key: 'study',    label: 'Study',              emoji: '📚', color: '#34D399', pattern: /\bstudy\b|\blearn\b|\bread\b|course|training|practice/ },
+    { key: 'do',       label: 'Do',                 emoji: '✅', color: '#6B7280', pattern: null },
+  ] as const
+
+  function classifyInboxTask(title: string) {
+    const t = title.toLowerCase()
+    for (const type of TASK_TYPES_INBOX) {
+      if (type.pattern && type.pattern.test(t)) return type.key
+    }
+    return 'do'
+  }
+
+  function buildInboxGroups(tasks: Task[], gBy: 'type' | 'company') {
+    if (gBy === 'type') {
+      const map = new Map<string, Task[]>()
+      for (const t of tasks) {
+        const k = classifyInboxTask(t.title)
+        if (!map.has(k)) map.set(k, [])
+        map.get(k)!.push(t)
+      }
+      return TASK_TYPES_INBOX
+        .filter(type => map.has(type.key))
+        .map(type => ({ key: type.key, label: type.label, emoji: type.emoji, color: type.color, tasks: map.get(type.key)! }))
+    } else {
+      const map = new Map<string, Task[]>()
+      for (const t of tasks) {
+        const k = t.companyId ?? t.company
+        if (!map.has(k)) map.set(k, [])
+        map.get(k)!.push(t)
+      }
+      return [...map.entries()].map(([k, ts]) => {
+        const dynCo = companies.find(c => c.id === k)
+        const label = dynCo?.name ?? k
+        const color = dynCo?.color ?? '#6B7280'
+        return { key: k, label, emoji: '🏢', color, tasks: ts }
+      })
+    }
+  }
+
+  function renderCard(t: Task) {
+    const co = companies.find(c => c.id === t.companyId)
+    const ownerUser = t.owner ? users.find(u => u.id === t.owner) : undefined
+    const taskStatus: TaskStatus = t.completed ? 'done' : (t.status ?? 'open')
+    const accentColor = co?.color ?? COMPANY_COLORS[t.company] ?? '#6B7280'
+    return (
+      <DraggableInboxCard
+        key={t.id} task={t} accentColor={accentColor} taskStatus={taskStatus}
+        ownerUser={ownerUser} companies={companies} onOpen={onOpen}
+        onToggle={() => toggleComplete(t.id)}
+        onDelete={() => deleteTask(t.id)}
+        onToggleUrgent={() => toggleUrgent(t.id)}
+        onCompanyChange={cId => {
+          const co2 = companies.find(c => c.id === cId)
+          updateTask(t.id, { companyId: cId, company: (co2?.id as CompanyTag) ?? t.company })
+        }}
+      />
+    )
+  }
 
   // Drop zone — board cards can be dragged here to send back to inbox
   const { isOver: inboxOver, setNodeRef: setInboxRef } = useDroppable({ id: 'inbox' })
@@ -375,32 +451,36 @@ export function UndefinedTasksPanel({ onOpen, hideCompleted = false }: Props) {
           </div>
         )}
 
-        <SortableContext items={filtered.map(t => t.id)} strategy={verticalListSortingStrategy}>
-          {filtered.map(t => {
-            const co = companies.find(c => c.id === t.companyId)
-            const ownerUser = t.owner ? users.find(u => u.id === t.owner) : undefined
-            const taskStatus: TaskStatus = t.completed ? 'done' : (t.status ?? 'open')
-            const accentColor = co?.color ?? COMPANY_COLORS[t.company] ?? '#6B7280'
-            return (
-              <DraggableInboxCard
-                key={t.id}
-                task={t}
-                accentColor={accentColor}
-                taskStatus={taskStatus}
-                ownerUser={ownerUser}
-                companies={companies}
-                onOpen={onOpen}
-                onToggle={() => toggleComplete(t.id)}
-                onDelete={() => deleteTask(t.id)}
-                onToggleUrgent={() => toggleUrgent(t.id)}
-                onCompanyChange={companyId => {
-                  const co2 = companies.find(c => c.id === companyId)
-                  updateTask(t.id, { companyId, company: (co2?.id as CompanyTag) ?? t.company })
-                }}
-              />
-            )
-          })}
-        </SortableContext>
+        {groupBy === 'none' ? (
+          <SortableContext items={filtered.map(t => t.id)} strategy={verticalListSortingStrategy}>
+            {filtered.map(t => renderCard(t))}
+          </SortableContext>
+        ) : (() => {
+          const groups = buildInboxGroups(filtered, groupBy)
+          const orderedIds = groups.flatMap(g => g.tasks.map(t => t.id))
+          return (
+            <SortableContext items={orderedIds} strategy={verticalListSortingStrategy}>
+              {groups.map(g => (
+                <div key={g.key} style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 4 }}>
+                  <button onClick={() => toggleGroupExpanded(g.key)} style={{
+                    width: '100%', display: 'flex', alignItems: 'center', gap: 6,
+                    padding: '4px 6px', borderRadius: 6, cursor: 'pointer',
+                    background: `${g.color}10`, border: `1px solid ${g.color}30`,
+                    marginBottom: isGroupExpanded(g.key) ? 4 : 0,
+                  }}>
+                    <span style={{ fontSize: 11 }}>{g.emoji}</span>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: g.color, flex: 1, textAlign: 'left' }}>{g.label}</span>
+                    <span style={{ fontSize: 10, fontWeight: 600, color: g.color, background: `${g.color}20`, padding: '0 5px', borderRadius: 3 }}>{g.tasks.length}</span>
+                    {isGroupExpanded(g.key)
+                      ? <ChevronDown size={11} color={g.color} strokeWidth={2.5} />
+                      : <ChevronRight size={11} color={g.color} strokeWidth={2.5} />}
+                  </button>
+                  {isGroupExpanded(g.key) && g.tasks.map(t => renderCard(t))}
+                </div>
+              ))}
+            </SortableContext>
+          )
+        })()}
       </div>
 
       {/* Add form */}

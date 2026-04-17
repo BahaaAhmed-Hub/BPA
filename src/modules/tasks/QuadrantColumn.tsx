@@ -1,13 +1,91 @@
 import { useState, useEffect, useRef } from 'react'
 import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
-import { Plus, X, Sparkles } from 'lucide-react'
+import { Plus, X, Sparkles, ChevronDown, ChevronRight } from 'lucide-react'
 import { TaskCard } from './TaskCard'
 import type { Task, Quadrant } from '@/types'
-import { QUADRANT_META, getAllUsers, loadDynamicCompanies } from '@/types'
+import { QUADRANT_META, COMPANY_LABELS, getAllUsers, loadDynamicCompanies } from '@/types'
 import { useTaskStore } from '@/store/taskStore'
 import { analyzeTask } from '@/lib/professor'
 import type { TaskAnalysis } from '@/lib/professor'
+
+// ─── Task type classification ─────────────────────────────────────────────────
+
+const TASK_TYPES = [
+  { key: 'meeting',  label: 'Meeting / Schedule', emoji: '📅', color: '#7F77DD', pattern: /meeting|sync|standup|stand.?up|1:1|interview|check.in|debrief|catch.?up|🤝|💬|📅/ },
+  { key: 'call',     label: 'Call',               emoji: '📞', color: '#1D9E75', pattern: /\bcall\b|phone|dial|📞/ },
+  { key: 'followup', label: 'Follow-up',          emoji: '↩️', color: '#E0944A', pattern: /follow.?up/ },
+  { key: 'email',    label: 'Email',              emoji: '✉️', color: '#60A5FA', pattern: /\bemail\b|send.*mail|reply|respond|draft.*mail/ },
+  { key: 'research', label: 'Research',           emoji: '🔍', color: '#A78BFA', pattern: /research|investigate|analy[sz]e|explore|look into/ },
+  { key: 'study',    label: 'Study',              emoji: '📚', color: '#34D399', pattern: /\bstudy\b|\blearn\b|\bread\b|course|training|practice/ },
+  { key: 'do',       label: 'Do',                 emoji: '✅', color: '#6B7280', pattern: null },
+] as const
+
+type TaskTypeKey = typeof TASK_TYPES[number]['key']
+
+function classifyTask(title: string): TaskTypeKey {
+  const t = title.toLowerCase()
+  for (const type of TASK_TYPES) {
+    if (type.pattern && type.pattern.test(t)) return type.key
+  }
+  return 'do'
+}
+
+interface TaskGroup { key: string; label: string; emoji: string; color: string; tasks: Task[] }
+
+function buildGroups(tasks: Task[], groupBy: 'type' | 'company'): TaskGroup[] {
+  if (groupBy === 'type') {
+    const map = new Map<TaskTypeKey, Task[]>()
+    for (const t of tasks) {
+      const k = classifyTask(t.title)
+      if (!map.has(k)) map.set(k, [])
+      map.get(k)!.push(t)
+    }
+    return TASK_TYPES
+      .filter(type => map.has(type.key))
+      .map(type => ({ key: type.key, label: type.label, emoji: type.emoji, color: type.color, tasks: map.get(type.key)! }))
+  } else {
+    const companies = loadDynamicCompanies()
+    const map = new Map<string, Task[]>()
+    for (const t of tasks) {
+      const k = t.companyId ?? t.company
+      if (!map.has(k)) map.set(k, [])
+      map.get(k)!.push(t)
+    }
+    return [...map.entries()].map(([k, ts]) => {
+      const dynCo = companies.find(c => c.id === k)
+      const label = dynCo?.name ?? COMPANY_LABELS[k as keyof typeof COMPANY_LABELS] ?? k
+      const color = dynCo?.color ?? '#6B7280'
+      return { key: k, label, emoji: '🏢', color, tasks: ts }
+    })
+  }
+}
+
+function GroupHeader({ label, emoji, color, count, expanded, onToggle }: {
+  label: string; emoji: string; color: string; count: number; expanded: boolean; onToggle: () => void
+}) {
+  return (
+    <button
+      onClick={onToggle}
+      style={{
+        width: '100%', display: 'flex', alignItems: 'center', gap: 6,
+        padding: '4px 6px', borderRadius: 6, cursor: 'pointer',
+        background: `${color}10`, border: `1px solid ${color}30`,
+        marginBottom: expanded ? 4 : 0,
+      }}
+    >
+      <span style={{ fontSize: 11 }}>{emoji}</span>
+      <span style={{ fontSize: 11, fontWeight: 600, color, flex: 1, textAlign: 'left' }}>{label}</span>
+      <span style={{
+        fontSize: 10, fontWeight: 600, color, background: `${color}20`,
+        padding: '0px 5px', borderRadius: 3,
+      }}>{count}</span>
+      {expanded
+        ? <ChevronDown size={11} color={color} strokeWidth={2.5} />
+        : <ChevronRight size={11} color={color} strokeWidth={2.5} />}
+    </button>
+  )
+}
 
 const inp: React.CSSProperties = {
   background: 'var(--color-bg, #0D0F1A)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 6,
@@ -19,13 +97,16 @@ interface QuadrantColumnProps {
   quadrant: Quadrant
   tasks: Task[]
   onOpen: (id: string) => void
+  groupBy?: 'none' | 'type' | 'company'
+  allGroupsExpanded?: boolean
 }
 
-export function QuadrantColumn({ quadrant, tasks, onOpen }: QuadrantColumnProps) {
+export function QuadrantColumn({ quadrant, tasks, onOpen, groupBy = 'none', allGroupsExpanded = true }: QuadrantColumnProps) {
   const meta = QUADRANT_META[quadrant]
   const { isOver, setNodeRef } = useDroppable({ id: quadrant })
   const addTask = useTaskStore(s => s.addTask)
 
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({})
   const [adding, setAdding]         = useState(false)
   const [title, setTitle]           = useState('')
   const [dueDate, setDueDate]       = useState('')
@@ -38,6 +119,14 @@ export function QuadrantColumn({ quadrant, tasks, onOpen }: QuadrantColumnProps)
 
   const users = getAllUsers()
   const companies = loadDynamicCompanies()
+
+  // Sync expand/collapse all from parent
+  useEffect(() => {
+    setExpandedGroups(prev => Object.fromEntries(Object.keys(prev).map(k => [k, allGroupsExpanded])))
+  }, [allGroupsExpanded])
+
+  function isExpanded(key: string) { return expandedGroups[key] ?? true }
+  function toggleGroup(key: string) { setExpandedGroups(prev => ({ ...prev, [key]: !isExpanded(key) })) }
 
   // Debounce AI analysis 900ms after typing stops
   useEffect(() => {
@@ -114,11 +203,30 @@ export function QuadrantColumn({ quadrant, tasks, onOpen }: QuadrantColumnProps)
 
       {/* Drop zone */}
       <div ref={setNodeRef} style={{ flex: 1, padding: '8px', display: 'flex', flexDirection: 'column', gap: 5, minHeight: 100 }}>
-        <SortableContext items={activeTasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
-          {activeTasks.map(t => <TaskCard key={t.id} task={t} onOpen={onOpen} />)}
-        </SortableContext>
+        {groupBy === 'none' ? (
+          <SortableContext items={activeTasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
+            {activeTasks.map(t => <TaskCard key={t.id} task={t} onOpen={onOpen} />)}
+          </SortableContext>
+        ) : (() => {
+          const groups = buildGroups(activeTasks, groupBy)
+          const orderedIds = groups.flatMap(g => g.tasks.map(t => t.id))
+          return (
+            <SortableContext items={orderedIds} strategy={verticalListSortingStrategy}>
+              {groups.map(g => (
+                <div key={g.key} style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 4 }}>
+                  <GroupHeader
+                    label={g.label} emoji={g.emoji} color={g.color}
+                    count={g.tasks.length} expanded={isExpanded(g.key)}
+                    onToggle={() => toggleGroup(g.key)}
+                  />
+                  {isExpanded(g.key) && g.tasks.map(t => <TaskCard key={t.id} task={t} onOpen={onOpen} />)}
+                </div>
+              ))}
+            </SortableContext>
+          )
+        })()}
 
-        {/* Completed tasks (collapsed) */}
+        {/* Completed tasks */}
         {doneTasks.length > 0 && (
           <div style={{ marginTop: 4, opacity: 0.5 }}>
             {doneTasks.map(t => <TaskCard key={t.id} task={t} onOpen={onOpen} />)}
