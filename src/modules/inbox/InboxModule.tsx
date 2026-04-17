@@ -1,12 +1,13 @@
 
-import { useState, useCallback, useEffect } from 'react'
-import { Mail, Zap, Clock, Copy, CheckCheck, RefreshCw, ArrowRight, WifiOff } from 'lucide-react'
+import { useState, useCallback, useEffect, useRef } from 'react'
+import { Mail, Zap, Clock, Copy, CheckCheck, RefreshCw, ArrowRight, WifiOff, ListPlus, Plus } from 'lucide-react'
 import { TopBar } from '@/components/layout/TopBar'
 import { triageEmail } from '@/lib/professor'
 import type { EmailTriage, EmailData } from '@/lib/professor'
 import { listUnreadThreadIds, getThread, extractBody, header } from '@/lib/gmail'
 import { signInWithGoogle } from '@/lib/google'
 import { useAuthStore } from '@/store/authStore'
+import { useTaskStore } from '@/store/taskStore'
 import type { DbUser } from '@/types/database'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -71,7 +72,8 @@ function buildMockUser(user: { id: string; email: string; name?: string } | null
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function InboxModule() {
-  const user = useAuthStore(s => s.user)
+  const user         = useAuthStore(s => s.user)
+  const addTasksBatch = useTaskStore(s => s.addTasksBatch)
 
   const [emails,     setEmails]     = useState<Email[]>([])
   const [loading,    setLoading]    = useState(true)
@@ -79,6 +81,28 @@ export function InboxModule() {
   const [fetchError, setFetchError] = useState<string | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [triageMap,  setTriageMap]  = useState<Record<string, TriageState>>({})
+
+  // ── Bulk task state ──────────────────────────────────────────────────────────
+  const [bulkOpen,   setBulkOpen]   = useState(false)
+  const [bulkText,   setBulkText]   = useState('')
+  const [bulkDone,   setBulkDone]   = useState(false)
+  const bulkRef = useRef<HTMLTextAreaElement>(null)
+
+  const bulkLines = bulkText.split('\n').map(l => l.trim()).filter(Boolean)
+
+  function handleBulkAdd() {
+    if (!bulkLines.length) return
+    addTasksBatch(bulkLines.map(title => ({
+      title,
+      quadrant: null,
+      company:  'personal',
+      status:   'open',
+      completed: false,
+    })))
+    setBulkText('')
+    setBulkDone(true)
+    setTimeout(() => { setBulkDone(false); setBulkOpen(false) }, 1400)
+  }
 
   const selectedEmail  = emails.find(e => e.id === selectedId) ?? null
   const selectedTriage = selectedId ? (triageMap[selectedId] ?? null) : null
@@ -401,7 +425,7 @@ export function InboxModule() {
 
         {/* Stats bar */}
         {!noAuth && (
-          <div style={{ display: 'flex', gap: 20, marginBottom: 20, padding: '13px 20px', background: 'var(--color-surface, #161929)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 10, alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: 20, marginBottom: bulkOpen ? 10 : 20, padding: '13px 20px', background: 'var(--color-surface, #161929)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 10, alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
               <Mail size={14} color="#1E40AF" />
               <span style={{ fontSize: 13, color: 'var(--color-text, #E8EAF6)' }}>{loading ? '…' : emails.length} unread</span>
@@ -413,9 +437,15 @@ export function InboxModule() {
             </div>
             <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
               <button
+                onClick={() => { setBulkOpen(o => !o); setBulkText(''); setBulkDone(false); setTimeout(() => bulkRef.current?.focus(), 50) }}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 7, background: bulkOpen ? 'rgba(29,158,117,0.12)' : 'transparent', border: `1px solid ${bulkOpen ? 'rgba(29,158,117,0.3)' : 'var(--color-border, #252A3E)'}`, color: bulkOpen ? '#1D9E75' : 'var(--color-text-dim, #8B93A8)', fontSize: 12, cursor: 'pointer' }}
+              >
+                <ListPlus size={12} /> Bulk add tasks
+              </button>
+              <button
                 onClick={() => void loadEmails()}
                 disabled={loading}
-                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 7, background: 'transparent', border: '1px solid var(--color-border, #252A3E)', color: '#FFFFFF', fontSize: 12, cursor: 'pointer', opacity: loading ? 0.5 : 1 }}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 7, background: 'transparent', border: '1px solid var(--color-border, #252A3E)', color: 'var(--color-text-dim, #8B93A8)', fontSize: 12, cursor: 'pointer', opacity: loading ? 0.5 : 1 }}
               >
                 <RefreshCw size={12} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} />
                 Refresh
@@ -429,6 +459,53 @@ export function InboxModule() {
                   <Zap size={12} /> Triage with AI
                 </button>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* Bulk task input panel */}
+        {bulkOpen && (
+          <div style={{ marginBottom: 20, padding: '16px 20px', background: 'var(--color-surface, #161929)', border: '1px solid rgba(29,158,117,0.25)', borderRadius: 10 }}>
+            <p style={{ margin: '0 0 10px', fontSize: 12.5, color: 'var(--color-text-dim, #8B93A8)' }}>
+              Paste or type tasks — one per line. All land in your task inbox.
+            </p>
+            <textarea
+              ref={bulkRef}
+              value={bulkText}
+              onChange={e => setBulkText(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleBulkAdd() }}
+              placeholder={'Follow up with John\nReview Q2 report\nSchedule team sync'}
+              rows={5}
+              style={{
+                width: '100%', boxSizing: 'border-box',
+                padding: '10px 12px', borderRadius: 8, resize: 'vertical',
+                background: 'var(--color-bg, #0D0F1A)', border: '1px solid var(--color-border, #252A3E)',
+                color: 'var(--color-text, #E8EAF6)', fontSize: 13, lineHeight: 1.6,
+                fontFamily: 'inherit', outline: 'none',
+              }}
+            />
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
+              <span style={{ fontSize: 12, color: 'var(--color-text-dim, #8B93A8)' }}>
+                {bulkLines.length > 0 ? `${bulkLines.length} task${bulkLines.length > 1 ? 's' : ''} ready` : 'Paste or type tasks above'}
+              </span>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  onClick={() => { setBulkOpen(false); setBulkText('') }}
+                  style={{ padding: '7px 14px', borderRadius: 7, background: 'transparent', border: '1px solid var(--color-border, #252A3E)', color: 'var(--color-text-dim, #8B93A8)', fontSize: 12, cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleBulkAdd}
+                  disabled={bulkLines.length === 0 || bulkDone}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 16px', borderRadius: 7, background: bulkDone ? 'rgba(29,158,117,0.15)' : 'rgba(29,158,117,0.12)', border: `1px solid ${bulkDone ? 'rgba(29,158,117,0.5)' : 'rgba(29,158,117,0.3)'}`, color: '#1D9E75', fontSize: 12, fontWeight: 500, cursor: bulkLines.length === 0 ? 'default' : 'pointer', opacity: bulkLines.length === 0 ? 0.4 : 1, transition: 'all 0.15s' }}
+                >
+                  {bulkDone
+                    ? <><CheckCheck size={12} /> Added!</>
+                    : <><Plus size={12} /> Add {bulkLines.length > 0 ? `${bulkLines.length} ` : ''}task{bulkLines.length !== 1 ? 's' : ''}</>
+                  }
+                </button>
+              </div>
             </div>
           </div>
         )}
