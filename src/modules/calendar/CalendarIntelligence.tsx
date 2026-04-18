@@ -339,7 +339,8 @@ async function loadAllCalendars(primaryEmail: string): Promise<LoadCalendarsResu
 }
 
 async function fetchAllEvents(allCals: CalWithAccount[], hidden: Set<string>, hiddenAccts: Set<string>, start: Date, end: Date): Promise<GCalEvent[]> {
-  const active = allCals.filter(c => !hidden.has(c.id) && !hiddenAccts.has(c.accountEmail))
+  // hiddenAccts applies only to extra accounts (c.accountId set) — primary account is never hidden
+  const active = allCals.filter(c => !hidden.has(c.id) && (!c.accountId || !hiddenAccts.has(c.accountEmail)))
   if (!active.length) return []
 
   // Use the return value directly so we get the freshest possible token even when
@@ -2051,7 +2052,7 @@ export function CalendarIntelligence() {
         {/* Calendar chips */}
         {allCalendars.length > 0 && (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
-            {allCalendars.filter(cal => !hiddenAccounts.has(cal.accountEmail)).map(cal => {
+            {allCalendars.filter(cal => !cal.accountId || !hiddenAccounts.has(cal.accountEmail)).map(cal => {
               const hidden  = hiddenCals.has(cal.id)
               const color   = calEffectiveColor(cal)
               const chipKey = `${cal.accountEmail}:${cal.id}`

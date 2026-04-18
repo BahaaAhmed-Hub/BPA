@@ -66,8 +66,9 @@ export async function fetchVisibleEvents(start: Date, end: Date): Promise<GCalEv
   const hiddenAccounts = loadHiddenAccounts()
   const allCals        = buildCalendarsFromCache()
 
+  // hiddenAccounts applies only to extra accounts (accountId set) — primary is never hidden
   const visible = allCals.filter(
-    c => !hiddenCals.has(c.id) && !hiddenAccounts.has(c.accountEmail)
+    c => !hiddenCals.has(c.id) && (!c.accountId || !hiddenAccounts.has(c.accountEmail))
   )
 
   if (visible.length === 0) {
