@@ -141,6 +141,17 @@ async function callEdgeFunction(email: string): Promise<string | null> {
     }
 
     if (data.error === 'reconnect_required') {
+      // Try bootstrap before showing the reconnect badge
+      const accounts = (() => {
+        try { return JSON.parse(localStorage.getItem('professor-connected-accounts') ?? '[]') as Array<{ email: string; supabaseRefreshToken?: string }> }
+        catch { return [] }
+      })()
+      const acct = accounts.find(a => a.email === email)
+      if (acct?.supabaseRefreshToken) {
+        const bootstrapped = await getGoogleTokenViaSupabaseRefresh(email, acct.supabaseRefreshToken)
+        if (bootstrapped) return bootstrapped
+      }
+      // All fallbacks exhausted — show the badge
       window.dispatchEvent(new CustomEvent('cal:reconnect-required', { detail: { email } }))
       cache.delete(email)
       return null
