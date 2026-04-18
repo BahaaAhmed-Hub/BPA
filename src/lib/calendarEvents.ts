@@ -42,8 +42,10 @@ function buildCalendarsFromCache(): CalWithToken[] {
       try { return JSON.parse(localStorage.getItem('professor-connected-accounts') ?? '[]') } catch { return [] }
     })()
     return cached.map(c => {
-      const acct = accounts.find(a => a.email === c.accountEmail)
-      const token = (acct && !acct.isPrimary) ? (acct.providerToken ?? '') : primaryToken
+      // Only match non-primary accounts — primary cals must NOT get an accountId
+      // or fetchVisibleEvents will route them through the Edge Function path instead of GoTrue.
+      const acct = accounts.find(a => a.email === c.accountEmail && !a.isPrimary)
+      const token = acct ? (acct.providerToken ?? '') : primaryToken
       return { ...c, accountToken: token, accountId: acct?.id }
     })
   } catch { return [] }
