@@ -91,6 +91,7 @@ export function QuadrantColumn({ quadrant, tasks, onOpen, groupBy = 'none', allG
   const addTask = useTaskStore(s => s.addTask)
 
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({})
+  const [globalExpanded, setGlobalExpanded] = useState(true)
   const [adding, setAdding]         = useState(false)
   const [title, setTitle]           = useState('')
   const [dueDate, setDueDate]       = useState('')
@@ -104,12 +105,13 @@ export function QuadrantColumn({ quadrant, tasks, onOpen, groupBy = 'none', allG
   const users = getAllUsers()
   const companies = loadDynamicCompanies()
 
-  // Sync expand/collapse all from parent
+  // Sync expand/collapse all: update the global default and clear individual overrides
   useEffect(() => {
-    setExpandedGroups(prev => Object.fromEntries(Object.keys(prev).map(k => [k, allGroupsExpanded])))
+    setGlobalExpanded(allGroupsExpanded)
+    setExpandedGroups({})
   }, [allGroupsExpanded])
 
-  function isExpanded(key: string) { return expandedGroups[key] ?? true }
+  function isExpanded(key: string) { return expandedGroups[key] ?? globalExpanded }
   function toggleGroup(key: string) { setExpandedGroups(prev => ({ ...prev, [key]: !isExpanded(key) })) }
 
   // Debounce AI analysis 900ms after typing stops

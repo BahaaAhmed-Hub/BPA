@@ -183,10 +183,12 @@ export function UndefinedTasksPanel({ onOpen, hideCompleted = false, groupBy = '
 
   // Group expand state
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({})
+  const [globalExpanded, setGlobalExpanded] = useState(true)
   useEffect(() => {
-    setExpandedGroups(prev => Object.fromEntries(Object.keys(prev).map(k => [k, allGroupsExpanded])))
+    setGlobalExpanded(allGroupsExpanded)
+    setExpandedGroups({})
   }, [allGroupsExpanded])
-  function isGroupExpanded(key: string) { return expandedGroups[key] ?? true }
+  function isGroupExpanded(key: string) { return expandedGroups[key] ?? globalExpanded }
   function toggleGroupExpanded(key: string) { setExpandedGroups(prev => ({ ...prev, [key]: !isGroupExpanded(key) })) }
 
   // Bulk add state
