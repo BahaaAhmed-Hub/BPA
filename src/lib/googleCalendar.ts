@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { getGoogleTokenViaSupabaseRefresh } from './tokenManager'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -148,6 +149,15 @@ export async function refreshPrimaryToken(): Promise<string | null> {
     if (refreshed.session?.provider_token) {
       saveToken(refreshed.session.provider_token)
       return refreshed.session.provider_token
+    }
+    // 4b. GoTrue refresh didn't return provider_token — try the bootstrap path.
+    //     Pass the Supabase refresh token to the Edge Function so it can call
+    //     GoTrue's /token endpoint directly and extract provider_token from there.
+    //     This works even when google_account_tokens has no stored Google refresh_token.
+    const rt = refreshed.session?.refresh_token ?? data.session.refresh_token
+    if (email && rt) {
+      const bootstrapped = await getGoogleTokenViaSupabaseRefresh(email, rt)
+      if (bootstrapped) { saveToken(bootstrapped); return bootstrapped }
     }
   } catch { /* ignore */ }
 
