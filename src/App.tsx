@@ -686,23 +686,28 @@ function App() {
           // Warm tokenManager cache from any fresh extra-account tokens in localStorage
           seedFromLocalStorage()
           // Persist primary account tokens to secure google_account_tokens via edge function.
+          // Retry up to 3 times — this is fire-and-forget at sign-in but critical for
+          // token refresh to work after the 1-hour access token expires.
           if (session?.provider_token && session?.provider_refresh_token && u.email) {
             const expiresAt = new Date(Date.now() + 3500 * 1000).toISOString()
-            void supabase.functions.invoke('google-oauth', {
-              body: {
-                action:        'save_primary',
-                email:         u.email,
-                name:          u.user_metadata?.full_name as string | undefined ?? null,
-                avatar_url:    u.user_metadata?.avatar_url as string | undefined ?? null,
-                access_token:  session.provider_token,
-                refresh_token: session.provider_refresh_token,
-                expires_at:    expiresAt,
-                scopes:        ['calendar', 'calendar.events', 'gmail.readonly'],
-              },
-            }).then(({ error }) => {
-              if (error) console.warn('[App] Failed to save primary tokens via google-oauth:', error)
-              else console.log('[App] ✓ Primary tokens saved to google_account_tokens')
-            })
+            const body = {
+              action:        'save_primary',
+              email:         u.email,
+              name:          u.user_metadata?.full_name as string | undefined ?? null,
+              avatar_url:    u.user_metadata?.avatar_url as string | undefined ?? null,
+              access_token:  session.provider_token,
+              refresh_token: session.provider_refresh_token,
+              expires_at:    expiresAt,
+              scopes:        ['calendar', 'calendar.events', 'gmail.readonly'],
+            };
+            (async () => {
+              for (let attempt = 1; attempt <= 3; attempt++) {
+                const { error } = await supabase.functions.invoke('google-oauth', { body })
+                if (!error) { console.log('[App] ✓ Primary tokens saved to google_account_tokens'); break }
+                console.warn(`[App] save_primary attempt ${attempt}/3 failed:`, error)
+                if (attempt < 3) await new Promise(r => setTimeout(r, attempt * 1500))
+              }
+            })()
           }
           void loadAllFromDB(loadTasksFromDB, loadHabitsFromDB)
         }
