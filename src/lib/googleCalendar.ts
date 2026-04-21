@@ -267,6 +267,7 @@ export async function fetchCalendarEventsWithToken(
   weekStart: Date,
   weekEnd: Date,
   calendarColor?: string,
+  onAuthFail?: () => void,
 ): Promise<GCalEvent[]> {
   try {
     const params = new URLSearchParams({
@@ -277,7 +278,10 @@ export async function fetchCalendarEventsWithToken(
       maxResults:   '250',
     })
     const res = await gcalRequest(token, `/calendars/${encodeURIComponent(calendarId)}/events?${params}`)
-    if (!res.ok) return []
+    if (!res.ok) {
+      if ((res.status === 401 || res.status === 403) && onAuthFail) onAuthFail()
+      return []
+    }
     const data = (await res.json()) as { items?: GCalEvent[] }
     return (data.items ?? [])
       .filter(e => e.status !== 'cancelled')

@@ -350,10 +350,16 @@ async function fetchAllEvents(allCals: CalWithAccount[], hidden: Set<string>, hi
   const results = await Promise.all(
     active.map(async c => {
       if (c.accountId) {
-        // Extra account — tokenManager / Edge Function path
-        const token = await getGoogleToken(c.accountEmail)
+        // Extra account — tokenManager / Edge Function path.
+        // Pass onAuthFail so that if the bootstrapped token silently fails (401/403),
+        // the reconnect badge appears even without a reconnect_required Edge Function error.
+        const email = c.accountEmail
+        const onAuthFail = () =>
+          window.dispatchEvent(new CustomEvent('cal:reconnect-required', { detail: { email } }))
+
+        const token = await getGoogleToken(email)
         if (!token) return [] as GCalEvent[]
-        return fetchCalendarEventsWithToken(token, c.id, start, end, c.backgroundColor)
+        return fetchCalendarEventsWithToken(token, c.id, start, end, c.backgroundColor, onAuthFail)
       }
 
       // Primary account — use the fresh token; retry once on empty result in case

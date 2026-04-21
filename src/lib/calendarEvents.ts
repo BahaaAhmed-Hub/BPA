@@ -93,9 +93,17 @@ export async function fetchVisibleEvents(start: Date, end: Date): Promise<GCalEv
 
   const results = await Promise.all(
     visible.map(async c => {
-      const token = c.accountId
-        ? await getGoogleToken(c.accountEmail)   // Edge Function path
-        : (primaryToken || c.accountToken)        // GoTrue path
+      if (c.accountId) {
+        // Extra account — dispatch reconnect if the token silently fails (401/403)
+        const email = c.accountEmail
+        const onAuthFail = () =>
+          window.dispatchEvent(new CustomEvent('cal:reconnect-required', { detail: { email } }))
+        const token = await getGoogleToken(email)
+        if (!token) return [] as GCalEvent[]
+        return fetchCalendarEventsWithToken(token, c.id, start, end, c.backgroundColor, onAuthFail)
+      }
+      // Primary account — GoTrue path
+      const token = primaryToken || c.accountToken
       if (!token) return [] as GCalEvent[]
       return fetchCalendarEventsWithToken(token, c.id, start, end, c.backgroundColor)
     })
