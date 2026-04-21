@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { CheckSquare, Clock, Users, TrendingUp, ChevronLeft, ChevronRight, CheckCircle2, XCircle, CalendarDays } from 'lucide-react'
 import { TopBar } from '@/components/layout/TopBar'
 import { useTaskStore } from '@/store/taskStore'
+import type { Task } from '@/types'
 import type { GCalEvent } from '@/lib/googleCalendar'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -39,6 +40,20 @@ function loadDayEvents(dayStr: string): GCalEvent[] {
   } catch { return [] }
 }
 
+function loadWeekEventsGrouped(): Record<string, GCalEvent[]> {
+  try {
+    const raw = localStorage.getItem('cal-intel-events-cache')
+    if (!raw) return {}
+    const entry = JSON.parse(raw) as { weekKey: string; events: GCalEvent[]; savedAt: number }
+    const result: Record<string, GCalEvent[]> = {}
+    for (const e of entry.events ?? []) {
+      const d = e.start.dateTime?.slice(0, 10) ?? e.start.date ?? ''
+      if (d) { if (!result[d]) result[d] = []; result[d].push(e) }
+    }
+    return result
+  } catch { return {} }
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function todayStr(): string { return new Date().toISOString().slice(0, 10) }
@@ -47,6 +62,17 @@ function shiftDay(dayStr: string, delta: number): string {
   const d = new Date(dayStr + 'T12:00:00')
   d.setDate(d.getDate() + delta)
   return d.toISOString().slice(0, 10)
+}
+
+function getMondayOf(dayStr: string): string {
+  const d = new Date(dayStr + 'T12:00:00')
+  const day = d.getDay()
+  d.setDate(d.getDate() - (day === 0 ? 6 : day - 1))
+  return d.toISOString().slice(0, 10)
+}
+
+function getWeekDays(mondayStr: string): string[] {
+  return Array.from({ length: 7 }, (_, i) => shiftDay(mondayStr, i))
 }
 
 function fmtDayLabel(dayStr: string): string {
@@ -59,6 +85,15 @@ function fmtDayLabel(dayStr: string): string {
   if (dayStr === yesterday) return `Yesterday · ${base}`
   if (dayStr === tomorrow)  return `Tomorrow · ${base}`
   return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
+}
+
+function fmtWeekRange(mondayStr: string): string {
+  const mon = new Date(mondayStr + 'T12:00:00')
+  const sun = new Date(mondayStr + 'T12:00:00')
+  sun.setDate(sun.getDate() + 6)
+  const monLabel = mon.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  const sunLabel = sun.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  return `${monLabel} – ${sunLabel}`
 }
 
 function fmtEventTime(e: GCalEvent): string {
@@ -184,6 +219,61 @@ function PillStat({ done, total, label, color }: { done: number; total: number; 
   )
 }
 
+// ─── Weekly day card ──────────────────────────────────────────────────────────
+
+function WeeklyDayCard({ dayStr, allEvents, statuses, tasks }: {
+  dayStr: string
+  allEvents: Record<string, GCalEvent[]>
+  statuses: Record<string, EventStatus>
+  tasks: Task[]
+}) {
+  const isToday = dayStr === todayStr()
+  const dayLabel = new Date(dayStr + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+  const events = allEvents[dayStr] ?? []
+
+  const doneEvts       = events.filter(e => statuses[e.id] === 'done').sort(sortByTime)
+  const cancelledEvts  = events.filter(e => statuses[e.id] === 'cancelled').sort(sortByTime)
+  const dayTasks       = tasks.filter(t => t.dueDate === dayStr)
+  const doneTasks      = dayTasks.filter(t => t.completed || t.status === 'done')
+  const cancelledTasks = dayTasks.filter(t => t.status === 'cancelled' && !t.completed)
+
+  const hasActivity = doneEvts.length > 0 || cancelledEvts.length > 0 || doneTasks.length > 0 || cancelledTasks.length > 0
+
+  return (
+    <div style={{ borderBottom: '1px solid #1A1D2E' }}>
+      {/* Day header row */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 16, padding: '13px 20px',
+        background: isToday ? 'rgba(127,119,221,0.05)' : undefined,
+      }}>
+        <span style={{ fontSize: 12.5, fontWeight: 700, color: isToday ? '#7F77DD' : '#8B93A8', minWidth: 120 }}>
+          {dayLabel}{isToday ? '  ·  Today' : ''}
+        </span>
+        <span style={{ fontSize: 11, color: doneEvts.length > 0 ? '#7F77DD' : '#3A3F55' }}>
+          {doneEvts.length}/{events.length} events
+        </span>
+        <span style={{ color: '#252A3E', fontSize: 11 }}>·</span>
+        <span style={{ fontSize: 11, color: doneTasks.length > 0 ? '#1D9E75' : '#3A3F55' }}>
+          {doneTasks.length}/{dayTasks.length} tasks
+        </span>
+        {!hasActivity && (
+          <span style={{ fontSize: 11, color: '#3A3F55', marginLeft: 'auto' }}>No activity</span>
+        )}
+      </div>
+
+      {/* Items */}
+      {hasActivity && (
+        <div style={{ padding: '2px 20px 12px' }}>
+          {doneEvts.map(e      => <EventRow key={e.id} event={e} />)}
+          {cancelledEvts.map(e => <EventRow key={e.id} event={e} cancelled />)}
+          {doneTasks.map(t     => <TaskRow key={t.id} title={t.title} company={t.company} />)}
+          {cancelledTasks.map(t => <TaskRow key={t.id} title={t.title} company={t.company} cancelled />)}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function ReviewModule() {
@@ -196,20 +286,31 @@ export function ReviewModule() {
   const [focusHours,   setFocusHours]   = useState(() => loadHours().focus)
   const [meetingHours, setMeetingHours] = useState(() => loadHours().meeting)
   const [selectedDay,  setSelectedDay]  = useState(todayStr)
+  const [viewMode,     setViewMode]     = useState<'daily' | 'weekly'>('daily')
 
-  // ── Daily data ─────────────────────────────────────────────────────────────
+  // ── Shared ─────────────────────────────────────────────────────────────────
   const eventStatuses = loadEventStatuses()
-  const dayEvents     = loadDayEvents(selectedDay)
 
+  // ── Daily ──────────────────────────────────────────────────────────────────
+  const dayEvents       = loadDayEvents(selectedDay)
   const doneEvents      = dayEvents.filter(e => eventStatuses[e.id] === 'done').sort(sortByTime)
   const cancelledEvents = dayEvents.filter(e => eventStatuses[e.id] === 'cancelled').sort(sortByTime)
   const dayTasks        = tasks.filter(t => t.dueDate === selectedDay)
   const doneTasks       = dayTasks.filter(t => t.completed || t.status === 'done')
   const cancelledTasks  = dayTasks.filter(t => t.status === 'cancelled' && !t.completed)
+  const isDailyEmpty    = doneEvents.length === 0 && cancelledEvents.length === 0 && doneTasks.length === 0 && cancelledTasks.length === 0
 
-  const totalEvents = dayEvents.length
-  const totalTasks  = dayTasks.length
-  const isEmpty     = doneEvents.length === 0 && cancelledEvents.length === 0 && doneTasks.length === 0 && cancelledTasks.length === 0
+  // ── Weekly ─────────────────────────────────────────────────────────────────
+  const weekStart     = getMondayOf(selectedDay)
+  const weekDays      = getWeekDays(weekStart)
+  const weekEventsMap = loadWeekEventsGrouped()
+
+  const allWeekEvents  = Object.values(weekEventsMap).flat()
+  const weekDoneEvts   = allWeekEvents.filter(e => eventStatuses[e.id] === 'done').length
+  const weekTasksAll   = tasks.filter(t => t.dueDate && weekDays.includes(t.dueDate))
+  const weekDoneTasks  = weekTasksAll.filter(t => t.completed || t.status === 'done').length
+
+  const isCurrentWeek = weekStart === getMondayOf(todayStr())
 
   return (
     <div>
@@ -232,20 +333,26 @@ export function ReviewModule() {
           <StatCard label="Meeting Hours" value={meetingHours} sub="Click to edit" icon={Users} color="#1E40AF" editable onChange={v => { setMeetingHours(v); saveHours(focusHours, v) }} />
         </div>
 
-        {/* ─── Daily view ─────────────────────────────────────────────────── */}
+        {/* ─── Panel ──────────────────────────────────────────────────────── */}
         <div style={{ background: 'var(--color-surface, #161929)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 14, overflow: 'hidden' }}>
 
-          {/* Day navigation header */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid var(--color-border, #252A3E)' }}>
+          {/* Navigation header */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', borderBottom: '1px solid var(--color-border, #252A3E)' }}>
+
             <button
-              onClick={() => setSelectedDay(d => shiftDay(d, -1))}
+              onClick={() => setSelectedDay(d => shiftDay(d, viewMode === 'weekly' ? -7 : -1))}
               style={{ background: 'none', border: '1px solid #252A3E', borderRadius: 7, cursor: 'pointer', color: '#8B93A8', padding: '5px 8px', display: 'flex', alignItems: 'center' }}
             ><ChevronLeft size={15} /></button>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <CalendarDays size={15} color="#7F77DD" />
-              <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text, #E8EAF6)' }}>{fmtDayLabel(selectedDay)}</span>
-              {selectedDay !== todayStr() && (
+              <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-text, #E8EAF6)' }}>
+                {viewMode === 'daily'
+                  ? fmtDayLabel(selectedDay)
+                  : `Week of ${fmtWeekRange(weekStart)}`
+                }
+              </span>
+              {(viewMode === 'daily' ? selectedDay !== todayStr() : !isCurrentWeek) && (
                 <button
                   onClick={() => setSelectedDay(todayStr())}
                   style={{ fontSize: 11, color: '#7F77DD', background: 'rgba(127,119,221,0.1)', border: '1px solid rgba(127,119,221,0.25)', borderRadius: 5, padding: '2px 8px', cursor: 'pointer' }}
@@ -253,66 +360,102 @@ export function ReviewModule() {
               )}
             </div>
 
-            <button
-              onClick={() => setSelectedDay(d => shiftDay(d, +1))}
-              style={{ background: 'none', border: '1px solid #252A3E', borderRadius: 7, cursor: 'pointer', color: '#8B93A8', padding: '5px 8px', display: 'flex', alignItems: 'center' }}
-            ><ChevronRight size={15} /></button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              {/* Daily / Weekly toggle */}
+              <div style={{ display: 'flex', background: '#0D0F1A', border: '1px solid #252A3E', borderRadius: 7, overflow: 'hidden' }}>
+                {(['daily', 'weekly'] as const).map(mode => (
+                  <button
+                    key={mode}
+                    onClick={() => setViewMode(mode)}
+                    style={{
+                      padding: '4px 13px', fontSize: 11, fontWeight: 600, cursor: 'pointer', border: 'none',
+                      background: viewMode === mode ? '#7F77DD' : 'none',
+                      color: viewMode === mode ? '#fff' : '#6B7280',
+                      textTransform: 'capitalize',
+                    }}
+                  >{mode}</button>
+                ))}
+              </div>
+              <button
+                onClick={() => setSelectedDay(d => shiftDay(d, viewMode === 'weekly' ? +7 : +1))}
+                style={{ background: 'none', border: '1px solid #252A3E', borderRadius: 7, cursor: 'pointer', color: '#8B93A8', padding: '5px 8px', display: 'flex', alignItems: 'center' }}
+              ><ChevronRight size={15} /></button>
+            </div>
           </div>
 
           {/* Analytics bar */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 24, padding: '12px 20px', borderBottom: '1px solid #1A1D2E', background: '#0D0F1A' }}>
-            <PillStat done={doneEvents.length} total={totalEvents} label="events done" color="#7F77DD" />
-            <div style={{ width: 1, height: 20, background: '#252A3E' }} />
-            <PillStat done={doneTasks.length} total={totalTasks} label="tasks done" color="#1D9E75" />
-          </div>
-
-          {/* Content */}
-          <div style={{ padding: '20px 20px' }}>
-
-            {isEmpty ? (
-              <div style={{ textAlign: 'center', padding: '32px 0', color: '#4B5268' }}>
-                <CalendarDays size={28} style={{ opacity: 0.4, marginBottom: 10 }} />
-                <p style={{ margin: 0, fontSize: 13 }}>No events or tasks recorded for this day.</p>
-                {dayEvents.length === 0 && (
-                  <p style={{ margin: '6px 0 0', fontSize: 11, color: '#3A3F55' }}>Events only load from the current week's cache. Navigate to Cal Intel to load another week.</p>
-                )}
-              </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 24, padding: '11px 20px', borderBottom: '1px solid #1A1D2E', background: '#0D0F1A' }}>
+            {viewMode === 'daily' ? (
+              <>
+                <PillStat done={doneEvents.length} total={dayEvents.length} label="events done" color="#7F77DD" />
+                <div style={{ width: 1, height: 20, background: '#252A3E' }} />
+                <PillStat done={doneTasks.length} total={dayTasks.length} label="tasks done" color="#1D9E75" />
+              </>
             ) : (
               <>
-                {/* Done events */}
-                {doneEvents.length > 0 && (
-                  <div style={{ marginBottom: 18 }}>
-                    <SectionHead label="Events Done" count={doneEvents.length} color="#7F77DD" />
-                    {doneEvents.map(e => <EventRow key={e.id} event={e} />)}
-                  </div>
-                )}
-
-                {/* Cancelled events */}
-                {cancelledEvents.length > 0 && (
-                  <div style={{ marginBottom: 18 }}>
-                    <SectionHead label="Events Cancelled" count={cancelledEvents.length} color="#6B7280" />
-                    {cancelledEvents.map(e => <EventRow key={e.id} event={e} cancelled />)}
-                  </div>
-                )}
-
-                {/* Done tasks */}
-                {doneTasks.length > 0 && (
-                  <div style={{ marginBottom: 18 }}>
-                    <SectionHead label="Tasks Done" count={doneTasks.length} color="#1D9E75" />
-                    {doneTasks.map(t => <TaskRow key={t.id} title={t.title} company={t.company} />)}
-                  </div>
-                )}
-
-                {/* Cancelled tasks */}
-                {cancelledTasks.length > 0 && (
-                  <div>
-                    <SectionHead label="Tasks Cancelled" count={cancelledTasks.length} color="#6B7280" />
-                    {cancelledTasks.map(t => <TaskRow key={t.id} title={t.title} company={t.company} cancelled />)}
-                  </div>
-                )}
+                <PillStat done={weekDoneEvts} total={allWeekEvents.length} label="events done this week" color="#7F77DD" />
+                <div style={{ width: 1, height: 20, background: '#252A3E' }} />
+                <PillStat done={weekDoneTasks} total={weekTasksAll.length} label="tasks done this week" color="#1D9E75" />
               </>
             )}
           </div>
+
+          {/* ── Daily content ──────────────────────────────────────────────── */}
+          {viewMode === 'daily' && (
+            <div style={{ padding: 20 }}>
+              {isDailyEmpty ? (
+                <div style={{ textAlign: 'center', padding: '32px 0', color: '#4B5268' }}>
+                  <CalendarDays size={28} style={{ opacity: 0.4, marginBottom: 10 }} />
+                  <p style={{ margin: 0, fontSize: 13 }}>No events or tasks recorded for this day.</p>
+                  {dayEvents.length === 0 && (
+                    <p style={{ margin: '6px 0 0', fontSize: 11, color: '#3A3F55' }}>Events load from the current week's cache — open Cal Intel to load another week.</p>
+                  )}
+                </div>
+              ) : (
+                <>
+                  {doneEvents.length > 0 && (
+                    <div style={{ marginBottom: 18 }}>
+                      <SectionHead label="Events Done" count={doneEvents.length} color="#7F77DD" />
+                      {doneEvents.map(e => <EventRow key={e.id} event={e} />)}
+                    </div>
+                  )}
+                  {cancelledEvents.length > 0 && (
+                    <div style={{ marginBottom: 18 }}>
+                      <SectionHead label="Events Cancelled" count={cancelledEvents.length} color="#6B7280" />
+                      {cancelledEvents.map(e => <EventRow key={e.id} event={e} cancelled />)}
+                    </div>
+                  )}
+                  {doneTasks.length > 0 && (
+                    <div style={{ marginBottom: 18 }}>
+                      <SectionHead label="Tasks Done" count={doneTasks.length} color="#1D9E75" />
+                      {doneTasks.map(t => <TaskRow key={t.id} title={t.title} company={t.company} />)}
+                    </div>
+                  )}
+                  {cancelledTasks.length > 0 && (
+                    <div>
+                      <SectionHead label="Tasks Cancelled" count={cancelledTasks.length} color="#6B7280" />
+                      {cancelledTasks.map(t => <TaskRow key={t.id} title={t.title} company={t.company} cancelled />)}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
+          {/* ── Weekly content ─────────────────────────────────────────────── */}
+          {viewMode === 'weekly' && (
+            <div>
+              {weekDays.map(day => (
+                <WeeklyDayCard
+                  key={day}
+                  dayStr={day}
+                  allEvents={weekEventsMap}
+                  statuses={eventStatuses}
+                  tasks={tasks}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
