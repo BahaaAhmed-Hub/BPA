@@ -28,41 +28,36 @@ function loadEventStatuses(): Record<string, EventStatus> {
   try { const r = localStorage.getItem('cal-event-statuses'); return r ? JSON.parse(r) as Record<string, EventStatus> : {} } catch { return {} }
 }
 
-// CalendarIntelligence uses Sunday-start weeks; we must match its cache key format.
-function calIntelWeekKey(dayStr: string): string {
-  const d = new Date(dayStr + 'T12:00:00')
-  d.setDate(d.getDate() - d.getDay())  // same as CalIntel's getWeekStart
-  return d.toISOString().slice(0, 10)
-}
-
-function loadWeekEventsRaw(weekKey: string): GCalEvent[] {
+// Scan every cal-intel-events-cache:* slot and collect all events.
+// This avoids any key-format dependency (timezone, Sunday vs Monday start, etc.)
+function loadAllCachedEvents(): GCalEvent[] {
+  const all: GCalEvent[] = []
   try {
-    const raw = localStorage.getItem(`cal-intel-events-cache:${weekKey}`)
-    if (!raw) return []
-    const entry = JSON.parse(raw) as { weekKey: string; events: GCalEvent[]; savedAt: number }
-    return entry.events ?? []
-  } catch { return [] }
+    for (const key of Object.keys(localStorage)) {
+      if (!key.startsWith('cal-intel-events-cache:')) continue
+      const raw = localStorage.getItem(key)
+      if (!raw) continue
+      const entry = JSON.parse(raw) as { events?: GCalEvent[] }
+      all.push(...(entry.events ?? []))
+    }
+  } catch { /* ignore */ }
+  return all
 }
 
 function loadDayEvents(dayStr: string): GCalEvent[] {
-  return loadWeekEventsRaw(calIntelWeekKey(dayStr))
-    .filter(e => (e.start.dateTime?.slice(0, 10) ?? e.start.date ?? '') === dayStr)
+  return loadAllCachedEvents().filter(
+    e => (e.start.dateTime?.slice(0, 10) ?? e.start.date ?? '') === dayStr
+  )
 }
 
-// A Mon–Sun display week spans up to two CalIntel Sunday-start cache slots
-// (Mon–Sat live in one key, Sunday lives in the next). Collect from both.
 function loadWeekEventsGrouped(mondayStr: string): Record<string, GCalEvent[]> {
+  const weekDays = new Set(Array.from({ length: 7 }, (_, i) => shiftDay(mondayStr, i)))
   const result: Record<string, GCalEvent[]> = {}
-  const seenKeys = new Set<string>()
-  for (let i = 0; i < 7; i++) {
-    const dayStr = shiftDay(mondayStr, i)
-    const key = calIntelWeekKey(dayStr)
-    if (seenKeys.has(key)) continue
-    seenKeys.add(key)
-    for (const e of loadWeekEventsRaw(key)) {
-      const d = e.start.dateTime?.slice(0, 10) ?? e.start.date ?? ''
-      if (d) { if (!result[d]) result[d] = []; result[d].push(e) }
-    }
+  for (const e of loadAllCachedEvents()) {
+    const d = e.start.dateTime?.slice(0, 10) ?? e.start.date ?? ''
+    if (!weekDays.has(d)) continue
+    if (!result[d]) result[d] = []
+    result[d].push(e)
   }
   return result
 }
