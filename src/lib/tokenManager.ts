@@ -23,11 +23,22 @@ import { supabase } from './supabase'
 
 const TTL_MS    = 55 * 60 * 1000  // 55 min — refresh before Google's 60-min expiry
 const BUFFER_MS =  2 * 60 * 1000  // refetch when < 2 min remaining
+const SS_PREFIX = 'gtoken:'       // sessionStorage key prefix (tab-scoped, cleared on close)
 
 interface CachedToken { token: string; expiresAt: number }
 
 const cache    = new Map<string, CachedToken>()             // email → { token, expiresAt }
 const inFlight = new Map<string, Promise<string | null>>()  // email → pending Edge Fn call
+
+// Warm in-memory cache from sessionStorage on module load (survives page refresh within tab)
+try {
+  for (const key of Object.keys(sessionStorage)) {
+    if (!key.startsWith(SS_PREFIX)) continue
+    const entry = JSON.parse(sessionStorage.getItem(key)!) as CachedToken
+    if (entry.expiresAt > Date.now() + BUFFER_MS) cache.set(key.slice(SS_PREFIX.length), entry)
+    else sessionStorage.removeItem(key)
+  }
+} catch { /* sessionStorage may be unavailable (private browsing restrictions) */ }
 
 // Single shared promise for Supabase session refresh — prevents concurrent
 // refreshSession() calls from consuming the refresh token multiple times
@@ -48,7 +59,10 @@ async function getFreshAccessToken(): Promise<string | null> {
  * Avoids an Edge Function round-trip for freshly connected accounts.
  */
 export function seedToken(email: string, token: string, expiresInMs = TTL_MS): void {
-  if (token) cache.set(email, { token, expiresAt: Date.now() + expiresInMs })
+  if (!token) return
+  const entry: CachedToken = { token, expiresAt: Date.now() + expiresInMs }
+  cache.set(email, entry)
+  try { sessionStorage.setItem(`${SS_PREFIX}${email}`, JSON.stringify(entry)) } catch { /* quota */ }
 }
 
 /**
@@ -80,6 +94,11 @@ export function seedFromLocalStorage(): void {
 export function clearAllTokens(): void {
   cache.clear()
   inFlight.clear()
+  try {
+    for (const key of Object.keys(sessionStorage)) {
+      if (key.startsWith(SS_PREFIX)) sessionStorage.removeItem(key)
+    }
+  } catch { /* ignore */ }
 }
 
 /**
@@ -154,6 +173,7 @@ async function callEdgeFunction(email: string): Promise<string | null> {
       // All fallbacks exhausted — show the badge
       window.dispatchEvent(new CustomEvent('cal:reconnect-required', { detail: { email } }))
       cache.delete(email)
+      try { sessionStorage.removeItem(`${SS_PREFIX}${email}`) } catch { /* ignore */ }
       return null
     }
 

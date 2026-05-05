@@ -105,7 +105,10 @@ export async function fetchVisibleEvents(start: Date, end: Date): Promise<GCalEv
       // Primary account — GoTrue path
       const token = primaryToken || c.accountToken
       if (!token) return [] as GCalEvent[]
-      return fetchCalendarEventsWithToken(token, c.id, start, end, c.backgroundColor)
+      // On 401, mark the cached token stale so the next refreshPrimaryToken() call
+      // hits the Edge Function rather than returning the expired localStorage token.
+      const onPrimaryAuthFail = () => localStorage.removeItem('google_provider_token_saved_at')
+      return fetchCalendarEventsWithToken(token, c.id, start, end, c.backgroundColor, onPrimaryAuthFail)
     })
   )
 

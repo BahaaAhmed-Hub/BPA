@@ -18,7 +18,8 @@ import { supabase } from './lib/supabase'
 import { signInWithGoogle, getPendingAddAccount, clearPendingAddAccount } from './lib/google'
 import { addAccount, loadAccounts, saveAccounts } from './lib/multiAccount'
 import { saveAccountsToDB, loadCompaniesFromDB, loadRawSettingsFromDB, loadAccountsFromDB } from './lib/dbSync'
-import { seedToken, seedFromLocalStorage, clearAllTokens } from './lib/tokenManager'
+import { seedToken, seedFromLocalStorage, clearAllTokens, getGoogleToken } from './lib/tokenManager'
+import { refreshPrimaryToken } from './lib/googleCalendar'
 import { getTheme, applyThemeVars } from './lib/themes'
 import { GraduationCap, Calendar, Mail, CheckSquare, Brain, ArrowRight } from 'lucide-react'
 
@@ -688,19 +689,25 @@ function App() {
           // Persist primary account tokens to secure google_account_tokens via edge function.
           // Retry up to 3 times — this is fire-and-forget at sign-in but critical for
           // token refresh to work after the 1-hour access token expires.
-          if (session?.provider_token && session?.provider_refresh_token && u.email) {
+          // Always call save_primary when provider_token is present — this ensures the
+          // google_accounts metadata row exists even when provider_refresh_token is absent
+          // (which happens on every sign-in after the first). Without the metadata row,
+          // handleRefresh in the Edge Function can't resolve the account by email and
+          // returns reconnect_required even when a valid Google refresh token is in the DB.
+          if (session?.provider_token && u.email) {
             const expiresAt = new Date(Date.now() + 3500 * 1000).toISOString()
-            const body = {
-              action:        'save_primary',
-              email:         u.email,
-              name:          u.user_metadata?.full_name as string | undefined ?? null,
-              avatar_url:    u.user_metadata?.avatar_url as string | undefined ?? null,
-              access_token:  session.provider_token,
-              refresh_token: session.provider_refresh_token,
-              expires_at:    expiresAt,
-              scopes:        ['calendar', 'calendar.events', 'gmail.readonly'],
-            };
-            (async () => {
+            const body: Record<string, unknown> = {
+              action:       'save_primary',
+              email:        u.email,
+              name:         u.user_metadata?.full_name as string | undefined ?? null,
+              avatar_url:   u.user_metadata?.avatar_url as string | undefined ?? null,
+              access_token: session.provider_token,
+              expires_at:   expiresAt,
+              scopes:       ['calendar', 'calendar.events', 'gmail.readonly'],
+            }
+            // Include refresh_token only when Google provides it (first OAuth grant only)
+            if (session.provider_refresh_token) body.refresh_token = session.provider_refresh_token
+            ;(async () => {
               for (let attempt = 1; attempt <= 3; attempt++) {
                 const { error } = await supabase.functions.invoke('google-oauth', { body })
                 if (!error) { console.log('[App] ✓ Primary tokens saved to google_account_tokens'); break }
@@ -721,6 +728,20 @@ function App() {
 
     return () => subscription.unsubscribe()
   }, [setUser, setLoading, loadTasksFromDB, clearTasks, clearHabits])
+
+  // ── Proactive 45-min background token refresh ────────────────────────────────
+  // Prevents the 60-min Google token expiry from silently breaking calendar fetches
+  // while the tab is open but idle. Runs for both primary and all extra accounts.
+  useEffect(() => {
+    if (!user) return
+    const refresh = async () => {
+      await refreshPrimaryToken()
+      const extras = loadAccounts().filter(a => !a.isPrimary)
+      await Promise.all(extras.map(a => getGoogleToken(a.email)))
+    }
+    const id = setInterval(refresh, 45 * 60 * 1000)
+    return () => clearInterval(id)
+  }, [user])
 
   if (loading) return <LoadingScreen />
   if (!user)   return <LoginScreen />

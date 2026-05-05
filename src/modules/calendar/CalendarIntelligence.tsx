@@ -172,9 +172,12 @@ function loadCalColors(): Record<string, string> {
 }
 function saveCalColors(s: Record<string, string>) { localStorage.setItem('cal-intel-colors', JSON.stringify(s)) }
 
-// ─── Event cache (per week) ───────────────────────────────────────────────────
-const EVENTS_CACHE_KEY = 'cal-intel-events-cache'
-const EVENTS_CACHE_TTL = 10 * 60 * 1000  // 10 min — show stale while fresh loads
+// ─── Event cache (per week, multi-slot) ──────────────────────────────────────
+// Each week gets its own localStorage key so navigating between weeks hits cache.
+// Old single-slot key is cleaned up on first write.
+const EVENTS_CACHE_PREFIX = 'cal-intel-events-cache:'
+const EVENTS_CACHE_TTL    = 10 * 60 * 1000  // 10 min
+const EVENTS_CACHE_MAX    = 8                // keep at most 8 weeks
 
 interface EventsCacheEntry { weekKey: string; events: GCalEvent[]; savedAt: number }
 
@@ -183,20 +186,26 @@ function eventsWeekKey(weekStart: Date): string {
 }
 function saveEventsCache(weekStart: Date, events: GCalEvent[]): void {
   try {
-    localStorage.setItem(EVENTS_CACHE_KEY, JSON.stringify({
-      weekKey: eventsWeekKey(weekStart),
-      events,
-      savedAt: Date.now(),
+    const weekKey = eventsWeekKey(weekStart)
+    localStorage.setItem(`${EVENTS_CACHE_PREFIX}${weekKey}`, JSON.stringify({
+      weekKey, events, savedAt: Date.now(),
     } satisfies EventsCacheEntry))
+    // Remove legacy single-slot key
+    localStorage.removeItem('cal-intel-events-cache')
+    // Evict oldest entries when over the cap
+    const allKeys = Object.keys(localStorage).filter(k => k.startsWith(EVENTS_CACHE_PREFIX))
+    if (allKeys.length > EVENTS_CACHE_MAX) {
+      allKeys.sort().slice(0, allKeys.length - EVENTS_CACHE_MAX).forEach(k => localStorage.removeItem(k))
+    }
   } catch { /* quota */ }
 }
 function loadEventsCache(weekStart: Date): GCalEvent[] {
   try {
-    const raw = localStorage.getItem(EVENTS_CACHE_KEY)
+    const key = `${EVENTS_CACHE_PREFIX}${eventsWeekKey(weekStart)}`
+    const raw = localStorage.getItem(key)
     if (!raw) return []
     const entry = JSON.parse(raw) as EventsCacheEntry
-    if (entry.weekKey !== eventsWeekKey(weekStart)) return []
-    if (Date.now() - entry.savedAt > EVENTS_CACHE_TTL) return []
+    if (Date.now() - entry.savedAt > EVENTS_CACHE_TTL) { localStorage.removeItem(key); return [] }
     return entry.events
   } catch { return [] }
 }
