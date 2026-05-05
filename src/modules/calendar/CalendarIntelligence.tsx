@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   ChevronLeft, ChevronRight, Calendar, Video, Users,
   Sparkles, MapPin, RefreshCw, X, Eye, EyeOff,
-  CheckCircle2, XCircle, Link, Phone, Repeat, User,
+  CheckCircle2, XCircle, Link, Phone, Repeat,
   ExternalLink, AlertCircle, Shield, Copy, Trash2,
 } from 'lucide-react'
 import {
@@ -20,9 +20,10 @@ import {
   refreshPrimaryToken,
   createCalendarEventWithToken,
   deleteCalendarEventWithToken,
+  addMeetingToEvent,
 } from '@/lib/googleCalendar'
 import type { GCalEvent, GCalCalendar, GCalEventCreate } from '@/lib/googleCalendar'
-import { getGoogleToken, seedToken } from '@/lib/tokenManager'
+import { getGoogleToken, seedToken, getGoogleTokenViaSupabaseRefresh } from '@/lib/tokenManager'
 import { generateMeetingPrep } from '@/lib/professor'
 import type { MeetingPrep } from '@/lib/professor'
 import { useAuthStore } from '@/store/authStore'
@@ -171,6 +172,44 @@ function loadCalColors(): Record<string, string> {
 }
 function saveCalColors(s: Record<string, string>) { localStorage.setItem('cal-intel-colors', JSON.stringify(s)) }
 
+// ─── Event cache (per week, multi-slot) ──────────────────────────────────────
+// Each week gets its own localStorage key so navigating between weeks hits cache.
+// Old single-slot key is cleaned up on first write.
+const EVENTS_CACHE_PREFIX = 'cal-intel-events-cache:'
+const EVENTS_CACHE_TTL    = 10 * 60 * 1000  // 10 min
+const EVENTS_CACHE_MAX    = 8                // keep at most 8 weeks
+
+interface EventsCacheEntry { weekKey: string; events: GCalEvent[]; savedAt: number }
+
+function eventsWeekKey(weekStart: Date): string {
+  return weekStart.toISOString().slice(0, 10)
+}
+function saveEventsCache(weekStart: Date, events: GCalEvent[]): void {
+  try {
+    const weekKey = eventsWeekKey(weekStart)
+    localStorage.setItem(`${EVENTS_CACHE_PREFIX}${weekKey}`, JSON.stringify({
+      weekKey, events, savedAt: Date.now(),
+    } satisfies EventsCacheEntry))
+    // Remove legacy single-slot key
+    localStorage.removeItem('cal-intel-events-cache')
+    // Evict oldest entries when over the cap
+    const allKeys = Object.keys(localStorage).filter(k => k.startsWith(EVENTS_CACHE_PREFIX))
+    if (allKeys.length > EVENTS_CACHE_MAX) {
+      allKeys.sort().slice(0, allKeys.length - EVENTS_CACHE_MAX).forEach(k => localStorage.removeItem(k))
+    }
+  } catch { /* quota */ }
+}
+function loadEventsCache(weekStart: Date): GCalEvent[] {
+  try {
+    const key = `${EVENTS_CACHE_PREFIX}${eventsWeekKey(weekStart)}`
+    const raw = localStorage.getItem(key)
+    if (!raw) return []
+    const entry = JSON.parse(raw) as EventsCacheEntry
+    if (Date.now() - entry.savedAt > EVENTS_CACHE_TTL) { localStorage.removeItem(key); return [] }
+    return entry.events
+  } catch { return [] }
+}
+
 // ─── Calendar list cache ──────────────────────────────────────────────────────
 const CAL_INTEL_CACHE_KEY = 'cal-intel-cals-cache'
 interface CachedCal { id: string; summary: string; backgroundColor?: string; foregroundColor?: string; primary?: boolean; accessRole?: string; accountEmail: string }
@@ -262,10 +301,18 @@ async function loadAllCalendars(primaryEmail: string): Promise<LoadCalendarsResu
       }
 
       // Get a fresh token via tokenManager (Edge Function handles expiry/refresh).
-      const token = await getGoogleToken(account.email)
+      let token = await getGoogleToken(account.email)
+
+      // Edge Function returned reconnect_required — try server-side bootstrap using the
+      // stored Supabase refresh token. GoTrue's token endpoint returns provider_token
+      // (Google access token) when the session was originally created via Google OAuth,
+      // which lets the server bootstrap google_account_tokens for future refreshes too.
+      if (!token && account.supabaseRefreshToken) {
+        token = await getGoogleTokenViaSupabaseRefresh(account.email, account.supabaseRefreshToken)
+      }
 
       if (!token) {
-        // Edge Function returned reconnect_required — flag and return cached chips
+        // Both paths failed — account needs reconnect
         needsReconnect.push(account.email)
         return cachedCals.length
           ? withId(cachedCals.map(c => ({ ...c, accountToken: '' } as CalWithAccount)))
@@ -301,22 +348,46 @@ async function loadAllCalendars(primaryEmail: string): Promise<LoadCalendarsResu
 }
 
 async function fetchAllEvents(allCals: CalWithAccount[], hidden: Set<string>, hiddenAccts: Set<string>, start: Date, end: Date): Promise<GCalEvent[]> {
-  const active = allCals.filter(c => !hidden.has(c.id) && !hiddenAccts.has(c.accountEmail))
+  // hiddenAccts applies only to extra accounts (c.accountId set) — primary account is never hidden
+  const active = allCals.filter(c => !hidden.has(c.id) && (!c.accountId || !hiddenAccts.has(c.accountEmail)))
   if (!active.length) return []
 
-  // Primary token: existing GoTrue-backed refresh (works reliably for primary).
-  // Extra accounts: tokenManager calls the Edge Function which exchanges the
-  // stored Google refresh token — no more 60-min expiry, no rotation conflicts.
-  await refreshPrimaryToken()
-  const primaryToken = localStorage.getItem('google_provider_token') ?? ''
+  // Use the return value directly so we get the freshest possible token even when
+  // localStorage wasn't updated (e.g. Edge Function fallback returned an older token).
+  const primaryToken = await refreshPrimaryToken() ?? ''
 
   const results = await Promise.all(
     active.map(async c => {
-      const token = c.accountId
-        ? await getGoogleToken(c.accountEmail)  // Edge Function path
-        : (primaryToken || c.accountToken)       // GoTrue path
+      if (c.accountId) {
+        // Extra account — tokenManager / Edge Function path.
+        // Pass onAuthFail so that if the bootstrapped token silently fails (401/403),
+        // the reconnect badge appears even without a reconnect_required Edge Function error.
+        const email = c.accountEmail
+        const onAuthFail = () =>
+          window.dispatchEvent(new CustomEvent('cal:reconnect-required', { detail: { email } }))
+
+        const token = await getGoogleToken(email)
+        if (!token) return [] as GCalEvent[]
+        return fetchCalendarEventsWithToken(token, c.id, start, end, c.backgroundColor, onAuthFail)
+      }
+
+      // Primary account — use the fresh token; retry once on empty result in case
+      // the token expired between the refresh call above and this fetch.
+      const token = primaryToken || c.accountToken
       if (!token) return [] as GCalEvent[]
-      return fetchCalendarEventsWithToken(token, c.id, start, end, c.backgroundColor)
+      let events = await fetchCalendarEventsWithToken(token, c.id, start, end, c.backgroundColor)
+
+      if (!events.length) {
+        // Could be a genuine empty calendar or a silent 401. Force-stale the token
+        // and retry once with a freshly fetched token so we don't silently drop events.
+        localStorage.removeItem('google_provider_token_saved_at')
+        const retryToken = await refreshPrimaryToken()
+        if (retryToken && retryToken !== token) {
+          events = await fetchCalendarEventsWithToken(retryToken, c.id, start, end, c.backgroundColor)
+        }
+      }
+
+      return events
     })
   )
   return results.flat()
@@ -416,7 +487,7 @@ function ColorPickerPopover({ current, onPick, onClose }: { current: string; onP
   return (
     <div ref={ref} onClick={e => e.stopPropagation()} style={{
       position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 200,
-      background: '#161929', border: '1px solid #252A3E', borderRadius: 10,
+      background: '#161929', border: '1px solid var(--color-border, #252A3E)', borderRadius: 10,
       padding: '10px 10px 8px', boxShadow: '0 8px 28px rgba(0,0,0,0.5)',
       display: 'flex', flexWrap: 'wrap', gap: 7, width: 152,
     }}>
@@ -591,8 +662,8 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
   )
 }
 
-// ─── EventPopup (macOS Calendar style — complete fields) ─────────────────────
-function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepError, pos, onClose, onStatusToggle, onPrepRequest }: {
+// ─── EventPopup (macOS Calendar style) ────────────────────────────────────────
+function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepError, pos, onClose, onStatusToggle, onPrepRequest, onAddMeet }: {
   event: GCalEventExt
   status: EventStatus | undefined
   calName: string
@@ -604,10 +675,12 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
   onClose: () => void
   onStatusToggle: (s: EventStatus) => void
   onPrepRequest: () => void
+  onAddMeet?: () => Promise<void>
 }) {
   const popupRef  = useRef<HTMLDivElement>(null)
-  const [showPrep, setShowPrep] = useState(false)
-  const [adjPos, setAdjPos]     = useState(pos)
+  const [showPrep,    setShowPrep]    = useState(false)
+  const [adjPos,      setAdjPos]      = useState(pos)
+  const [addingMeet,  setAddingMeet]  = useState(false)
 
   useEffect(() => {
     if (!popupRef.current) return
@@ -626,8 +699,6 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
   }, [onClose])
 
   const isAllDay     = !event.start.dateTime
-  const startIso     = event.start.dateTime ?? (event.start.date + 'T00:00:00')
-  const endIso       = event.end.dateTime   ?? (event.end.date   + 'T00:00:00')
   const entryPoints  = event.conferenceData?.entryPoints ?? []
   const videoLink    = entryPoints.find(ep => ep.entryPointType === 'video')?.uri
   const phoneEntry   = entryPoints.find(ep => ep.entryPointType === 'phone')
@@ -635,13 +706,32 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
   const selfAttendee = allAttendees.find(a => a.self)
   const others       = allAttendees.filter(a => !a.self)
   const organizer    = event.organizer
-  const isOrganizer  = organizer?.self !== false || !organizer
   const isRecurring  = !!event.recurringEventId || (event.recurrence?.length ?? 0) > 0
   const isTentative  = event.status === 'tentative'
   const notes        = event.description?.replace(/<[^>]*>/g, '').trim() ?? ''
 
   const rsvpColor = (s?: string) => s === 'accepted' ? '#1D9E75' : s === 'declined' ? '#E05252' : s === 'tentative' ? '#FF9500' : '#6B7280'
   const rsvpLabel = (s?: string) => s === 'accepted' ? 'Accepted' : s === 'declined' ? 'Declined' : s === 'tentative' ? 'Maybe' : 'Awaiting'
+
+  function fmtDT(iso: string) {
+    const d = new Date(iso)
+    return {
+      date: d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }),
+      time: d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
+    }
+  }
+  const startIso = event.start.dateTime ?? (event.start.date + 'T00:00:00')
+  const endIso   = event.end.dateTime   ?? (event.end.date   + 'T00:00:00')
+  const startDT  = isAllDay ? null : fmtDT(startIso)
+  const endDT    = isAllDay ? null : fmtDT(endIso)
+
+  const labelStyle: React.CSSProperties = { width: 84, flexShrink: 0, textAlign: 'right', paddingRight: 14, fontSize: 12.5, color: '#8B93A8' }
+  const fieldRow = (label: string, content: React.ReactNode) => (
+    <div style={{ display: 'flex', alignItems: 'center', minHeight: 30, padding: '0 16px' }}>
+      <div style={labelStyle}>{label}</div>
+      <div style={{ flex: 1 }}>{content}</div>
+    </div>
+  )
 
   const btn = (active: boolean, color: string): React.CSSProperties => ({
     display: 'flex', alignItems: 'center', gap: 5,
@@ -655,17 +745,16 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
   return (
     <div ref={popupRef} onClick={e => e.stopPropagation()} style={{
       position: 'fixed', top: adjPos.y, left: adjPos.x,
-      width: 320, maxHeight: 'calc(100vh - 24px)', overflowY: 'auto',
-      background: '#161929', border: '1px solid #252A3E', borderRadius: 12,
-      boxShadow: '0 12px 40px rgba(0,0,0,0.55)', zIndex: 1000,
+      width: 330, maxHeight: 'calc(100vh - 24px)', overflowY: 'auto',
+      background: 'var(--color-surface, #161929)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 14,
+      boxShadow: '0 16px 48px rgba(0,0,0,0.65)', zIndex: 1000,
     }}>
-      {/* Color bar */}
-      <div style={{ height: 4, background: calColor, flexShrink: 0 }} />
 
-      {/* Title + status badges + close */}
-      <div style={{ padding: '14px 16px 0', display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+      {/* Header: calendar dot + title + close */}
+      <div style={{ padding: '14px 14px 10px', display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+        <div style={{ width: 14, height: 14, borderRadius: '50%', background: calColor, flexShrink: 0, marginTop: 3 }} />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 15, fontWeight: 700, color: '#E8EAF6', lineHeight: 1.3 }}>
+          <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--color-text, #E8EAF6)', lineHeight: 1.3, wordBreak: 'break-word' }}>
             {event.summary ?? '(No title)'}
           </div>
           <div style={{ display: 'flex', gap: 5, marginTop: 5, flexWrap: 'wrap' }}>
@@ -689,102 +778,156 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
         </button>
       </div>
 
-      {/* Fields */}
-      <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 9 }}>
+      <div style={{ height: 1, background: 'var(--color-border, #252A3E)' }} />
 
-        {/* Date / time */}
-        <Row icon={<Calendar size={13} color="#6B7280" />}>
-          <span style={{ fontSize: 13, color: '#C0C4D6' }}>{fmtPopupDate(startIso, endIso, isAllDay)}</span>
-        </Row>
+      {/* Location */}
+      {event.location && (
+        <div style={{ display: 'flex', alignItems: 'center', padding: '8px 14px', gap: 9 }}>
+          <MapPin size={13} color="#6B7280" style={{ flexShrink: 0 }} />
+          <span style={{ fontSize: 13, color: '#C0C4D6', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{event.location}</span>
+        </div>
+      )}
 
-        {/* Calendar */}
-        <Row icon={<div style={{ width: 11, height: 11, borderRadius: '50%', background: calColor, flexShrink: 0, marginTop: 1 }} />}>
-          <span style={{ fontSize: 13, color: '#C0C4D6' }}>{calName}</span>
-        </Row>
+      {/* Video / Meet */}
+      {videoLink ? (
+        <div style={{ display: 'flex', alignItems: 'center', padding: '8px 14px', gap: 9 }}>
+          <Video size={13} color="#6B7280" style={{ flexShrink: 0 }} />
+          <a href={videoLink} target="_blank" rel="noopener noreferrer"
+            style={{ fontSize: 13, color: '#7F77DD', textDecoration: 'none', flex: 1, display: 'flex', alignItems: 'center', gap: 4 }}>
+            Join Video Call <ExternalLink size={11} />
+          </a>
+        </div>
+      ) : onAddMeet ? (
+        <div style={{ display: 'flex', alignItems: 'center', padding: '8px 14px', gap: 9 }}>
+          <Video size={13} color="#6B7280" style={{ flexShrink: 0 }} />
+          <button
+            onClick={async () => { setAddingMeet(true); await onAddMeet(); setAddingMeet(false) }}
+            disabled={addingMeet}
+            style={{ background: 'none', border: 'none', cursor: addingMeet ? 'wait' : 'pointer', padding: 0, fontSize: 13, color: '#7F77DD', display: 'flex', alignItems: 'center', gap: 5 }}
+          >
+            {addingMeet ? 'Adding…' : 'Add Google Meet'} <Video size={11} />
+          </button>
+        </div>
+      ) : null}
 
-        {/* Location */}
-        {event.location && (
-          <Row icon={<MapPin size={13} color="#6B7280" />}>
-            <span style={{ fontSize: 13, color: '#C0C4D6' }}>{event.location}</span>
-          </Row>
-        )}
-
-        {/* Video call */}
-        {videoLink && (
-          <Row icon={<Video size={13} color="#6B7280" />}>
-            <a href={videoLink} target="_blank" rel="noopener noreferrer"
-              style={{ fontSize: 13, color: '#7F77DD', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
-              Join video call <ExternalLink size={11} />
+      {/* Phone */}
+      {phoneEntry && (
+        <div style={{ display: 'flex', alignItems: 'center', padding: '8px 14px', gap: 9 }}>
+          <Phone size={13} color="#6B7280" style={{ flexShrink: 0 }} />
+          <div style={{ fontSize: 13, color: '#C0C4D6' }}>
+            <a href={phoneEntry.uri} style={{ color: '#7F77DD', textDecoration: 'none' }}>
+              {phoneEntry.label ?? phoneEntry.uri.replace('tel:', '')}
             </a>
-          </Row>
-        )}
+            {phoneEntry.pin && <span style={{ color: '#6B7280', marginLeft: 6, fontSize: 12 }}>PIN: {phoneEntry.pin}</span>}
+          </div>
+        </div>
+      )}
 
-        {/* Phone conference */}
-        {phoneEntry && (
-          <Row icon={<Phone size={13} color="#6B7280" />}>
-            <div style={{ fontSize: 13, color: '#C0C4D6' }}>
-              <a href={phoneEntry.uri} style={{ color: '#7F77DD', textDecoration: 'none' }}>
-                {phoneEntry.label ?? phoneEntry.uri.replace('tel:', '')}
-              </a>
-              {phoneEntry.pin && <span style={{ color: '#6B7280', marginLeft: 6, fontSize: 12 }}>PIN: {phoneEntry.pin}</span>}
+      {(event.location || videoLink || onAddMeet || phoneEntry) && (
+        <div style={{ height: 1, background: 'var(--color-border, #252A3E)' }} />
+      )}
+
+      {/* Date / time fieldRows */}
+      <div style={{ padding: '6px 0' }}>
+        {isAllDay
+          ? fieldRow('All Day', <span style={{ fontSize: 13, color: '#C0C4D6' }}>{fmtPopupDate(startIso, endIso, true)}</span>)
+          : <>
+              {fieldRow('Starts', (
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <span style={{ fontSize: 13, color: '#C0C4D6' }}>{startDT?.date}</span>
+                  <span style={{ fontSize: 13, color: '#8B93A8' }}>{startDT?.time}</span>
+                </div>
+              ))}
+              {fieldRow('Ends', (
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <span style={{ fontSize: 13, color: '#C0C4D6' }}>{endDT?.date}</span>
+                  <span style={{ fontSize: 13, color: '#8B93A8' }}>{endDT?.time}</span>
+                </div>
+              ))}
+            </>
+        }
+        {isRecurring && fieldRow('Repeat', <span style={{ fontSize: 13, color: '#C0C4D6' }}>Recurring</span>)}
+        {fieldRow('Calendar', (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+            <div style={{ width: 10, height: 10, borderRadius: '50%', background: calColor, flexShrink: 0 }} />
+            <span style={{ fontSize: 13, color: '#C0C4D6' }}>{calName}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Attendees */}
+      {(others.length > 0 || (organizer && !organizer.self)) && (
+        <>
+          <div style={{ height: 1, background: 'var(--color-border, #252A3E)' }} />
+          <div style={{ padding: '10px 14px' }}>
+            <div style={{ fontSize: 10, fontWeight: 600, color: '#4B5268', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 8 }}>
+              Attendees
             </div>
-          </Row>
-        )}
-
-        {/* Organizer (only if someone else organized it) */}
-        {organizer && !organizer.self && !isOrganizer && (
-          <Row icon={<User size={13} color="#6B7280" />}>
-            <span style={{ fontSize: 13, color: '#C0C4D6' }}>
-              {organizer.displayName ?? organizer.email}
-              <span style={{ fontSize: 11, color: '#6B7280', marginLeft: 5 }}>· organizer</span>
-            </span>
-          </Row>
-        )}
-
-        {/* Attendees */}
-        {others.length > 0 && (
-          <Row icon={<Users size={13} color="#6B7280" />}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {organizer && !organizer.self && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#3A4060', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600, color: '#A0A8C0', flexShrink: 0 }}>
+                    {((organizer.displayName ?? organizer.email) ?? '?')[0].toUpperCase()}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 12.5, color: '#C0C4D6', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {organizer.displayName ?? organizer.email}
+                    </div>
+                    <div style={{ fontSize: 10.5, color: '#6B7280' }}>organizer</div>
+                  </div>
+                </div>
+              )}
               {others.slice(0, 6).map(a => (
-                <div key={a.email} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
-                  <span style={{ flex: 1, color: '#C0C4D6', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {a.displayName ?? a.email}
-                  </span>
-                  <span style={{ fontSize: 10, color: rsvpColor(a.responseStatus), flexShrink: 0, fontWeight: 500 }}>
+                <div key={a.email} style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#3A4060', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600, color: '#A0A8C0', flexShrink: 0 }}>
+                    {(a.displayName ?? a.email)[0].toUpperCase()}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 12.5, color: '#C0C4D6', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {a.displayName ?? a.email}
+                    </div>
+                    <div style={{ fontSize: 10.5, color: rsvpColor(a.responseStatus) }}>
+                      {rsvpLabel(a.responseStatus)}
+                    </div>
+                  </div>
+                  <span style={{ fontSize: 13, color: rsvpColor(a.responseStatus), flexShrink: 0 }}>
                     {a.responseStatus === 'accepted' ? '✓' : a.responseStatus === 'declined' ? '✗' : a.responseStatus === 'tentative' ? '?' : '–'}
                   </span>
                 </div>
               ))}
               {others.length > 6 && (
-                <span style={{ fontSize: 11, color: '#6B7280' }}>+{others.length - 6} more</span>
+                <span style={{ fontSize: 11, color: '#6B7280', paddingLeft: 37 }}>+{others.length - 6} more</span>
               )}
             </div>
-          </Row>
-        )}
+          </div>
+        </>
+      )}
 
-        {/* Google Calendar link */}
-        {event.htmlLink && (
-          <Row icon={<Link size={13} color="#6B7280" />}>
-            <a href={event.htmlLink} target="_blank" rel="noopener noreferrer"
-              style={{ fontSize: 13, color: '#7F77DD', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
-              Open in Google Calendar <ExternalLink size={11} />
-            </a>
-          </Row>
-        )}
-
-        {/* Notes / Description */}
-        {notes && (
-          <div style={{ borderTop: '1px solid #1E2235', paddingTop: 10, marginTop: 2 }}>
+      {/* Notes */}
+      {notes && (
+        <>
+          <div style={{ height: 1, background: 'var(--color-border, #252A3E)' }} />
+          <div style={{ padding: '10px 14px' }}>
             <div style={{ fontSize: 10, fontWeight: 600, color: '#4B5268', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 5 }}>Notes</div>
             <div style={{ fontSize: 12, color: '#8B93A8', lineHeight: 1.6, maxHeight: 90, overflowY: 'auto', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
               {notes.slice(0, 400)}{notes.length > 400 ? '…' : ''}
             </div>
           </div>
-        )}
-      </div>
+        </>
+      )}
+
+      {/* Open in GCal link */}
+      {event.htmlLink && (
+        <div style={{ padding: '6px 14px 10px' }}>
+          <a href={event.htmlLink} target="_blank" rel="noopener noreferrer"
+            style={{ fontSize: 12, color: '#5B6080', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
+            <ExternalLink size={11} /> Open in Google Calendar
+          </a>
+        </div>
+      )}
 
       {/* Action buttons */}
-      <div style={{ padding: '8px 14px 12px', display: 'flex', gap: 6, borderTop: '1px solid #1E2235', flexWrap: 'wrap' }}>
+      <div style={{ padding: '8px 14px 14px', display: 'flex', gap: 6, borderTop: '1px solid var(--color-border, #252A3E)', flexWrap: 'wrap' }}>
         <button style={btn(status === 'done', '#1D9E75')} onClick={() => onStatusToggle('done')}>
           <CheckCircle2 size={12} /> Done
         </button>
@@ -801,7 +944,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
 
       {/* AI Prep section */}
       {showPrep && (
-        <div style={{ borderTop: '1px solid #1E2235', padding: '12px 16px 16px' }}>
+        <div style={{ borderTop: '1px solid var(--color-border, #252A3E)', padding: '12px 14px 16px' }}>
           {prepLoading ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
               {[75, 55, 85, 65].map((w, i) => (
@@ -949,8 +1092,8 @@ function EventContextMenu({
         position: 'fixed',
         top: adjPos.y, left: adjPos.x,
         width: 210,
-        background: '#161929',
-        border: '1px solid #252A3E',
+        background: 'var(--color-surface, #161929)',
+        border: '1px solid var(--color-border, #252A3E)',
         borderRadius: 10,
         boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
         zIndex: 1100,
@@ -984,16 +1127,6 @@ function EventContextMenu({
 
       {/* Group 4: Destructive */}
       {item('delete', <Trash2 size={13} />, 'Delete Event', onDelete, { destructive: true })}
-    </div>
-  )
-}
-
-// Small helper used by EventPopup rows
-function Row({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 9 }}>
-      <div style={{ flexShrink: 0, marginTop: 1 }}>{icon}</div>
-      <div style={{ flex: 1, minWidth: 0 }}>{children}</div>
     </div>
   )
 }
@@ -1073,7 +1206,7 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
 
   const inputBase: React.CSSProperties = {
     background: 'transparent', border: 'none', outline: 'none',
-    color: '#E8EAF6', fontFamily: 'inherit', fontSize: 13,
+    color: 'var(--color-text, #E8EAF6)', fontFamily: 'inherit', fontSize: 13,
     padding: 0, margin: 0, width: '100%', colorScheme: 'dark',
   }
 
@@ -1095,15 +1228,15 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
       onContextMenu={e => e.preventDefault()}
       style={{
         position: 'fixed', top: pos.y, left: pos.x, width: 340, zIndex: 1100,
-        background: '#1C1F2E',
-        border: '1px solid #2E3348',
+        background: 'var(--color-surface, #161929)',
+        border: '1px solid var(--color-border, #252A3E)',
         borderRadius: 14,
         boxShadow: '0 24px 64px rgba(0,0,0,0.75)',
         overflow: 'hidden',
       }}
     >
       {/* ── Title + Calendar selector ── */}
-      <div style={{ padding: '14px 16px 12px', borderBottom: '1px solid #252A3E' }}>
+      <div style={{ padding: '14px 16px 12px', borderBottom: '1px solid var(--color-border, #252A3E)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <input
             ref={titleRef}
@@ -1116,7 +1249,7 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
             placeholder="New Event"
             style={{
               flex: 1, background: 'transparent', border: 'none', outline: 'none',
-              color: '#E8EAF6', fontSize: 17, fontWeight: 700, padding: 0,
+              color: 'var(--color-text, #E8EAF6)', fontSize: 17, fontWeight: 700, padding: 0,
               fontFamily: 'inherit',
             }}
           />
@@ -1127,7 +1260,7 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
               value={calId}
               onChange={e => setCalId(e.target.value)}
               style={{
-                background: '#252A3E', border: '1px solid #2E3348', borderRadius: 6,
+                background: '#252A3E', border: '1px solid var(--color-border, #252A3E)', borderRadius: 6,
                 color: '#C0C4D6', fontSize: 11, padding: '3px 6px',
                 cursor: 'pointer', outline: 'none', maxWidth: 110,
               }}
@@ -1141,14 +1274,14 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
       {/* ── Location / Video Call ── */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 10,
-        padding: '9px 16px', borderBottom: '1px solid #252A3E',
+        padding: '9px 16px', borderBottom: '1px solid var(--color-border, #252A3E)',
       }}>
         <MapPin size={14} color="#6B7280" style={{ flexShrink: 0 }} />
         <input
           value={location}
           onChange={e => setLocation(e.target.value)}
           placeholder="Add Location or Video Call"
-          style={{ ...inputBase, color: location ? '#E8EAF6' : '#6B7280' }}
+          style={{ ...inputBase, color: location ? 'var(--color-text, #E8EAF6)' : '#6B7280' }}
         />
         <button
           onClick={() => setAddMeet(v => !v)}
@@ -1157,7 +1290,7 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
             flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
             width: 30, height: 26, borderRadius: 7,
             background: addMeet ? 'rgba(29,158,117,0.15)' : '#1E2235',
-            border: `1px solid ${addMeet ? '#1D9E75' : '#2E3348'}`,
+            border: `1px solid ${addMeet ? '#1D9E75' : 'var(--color-border, #252A3E)'}`,
             color: addMeet ? '#1D9E75' : '#6B7280', cursor: 'pointer',
             transition: 'all 0.15s',
           }}
@@ -1168,7 +1301,7 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
       {addMeet && (
         <div style={{
           display: 'flex', alignItems: 'center', gap: 7,
-          padding: '6px 16px', borderBottom: '1px solid #252A3E',
+          padding: '6px 16px', borderBottom: '1px solid var(--color-border, #252A3E)',
           background: 'rgba(29,158,117,0.06)', fontSize: 11.5, color: '#1D9E75',
         }}>
           <Video size={11} />
@@ -1177,7 +1310,7 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
       )}
 
       {/* ── Date / Time ── */}
-      <div style={{ padding: '6px 0', borderBottom: '1px solid #252A3E' }}>
+      <div style={{ padding: '6px 0', borderBottom: '1px solid var(--color-border, #252A3E)' }}>
         <FieldRow label="All Day:">
           <input
             type="checkbox"
@@ -1209,13 +1342,13 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
       </div>
 
       {/* ── Invitees ── */}
-      <div style={{ padding: '9px 16px', borderBottom: '1px solid #252A3E' }}>
+      <div style={{ padding: '9px 16px', borderBottom: '1px solid var(--color-border, #252A3E)' }}>
         {invitees.length > 0 && (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 7 }}>
             {invitees.map(email => (
               <div key={email} style={{
                 display: 'flex', alignItems: 'center', gap: 5,
-                background: '#252A3E', borderRadius: 20,
+                background: 'var(--color-surface2, #252A3E)', borderRadius: 20,
                 padding: '3px 8px 3px 10px', fontSize: 11.5, color: '#C0C4D6',
               }}>
                 {email}
@@ -1239,13 +1372,13 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
             }}
             onBlur={() => { if (inviteeInput.trim()) addInvitee(inviteeInput) }}
             placeholder="Add invitees..."
-            style={{ ...inputBase, color: inviteeInput ? '#E8EAF6' : '#6B7280' }}
+            style={{ ...inputBase, color: inviteeInput ? 'var(--color-text, #E8EAF6)' : '#6B7280' }}
           />
         </div>
       </div>
 
       {/* ── Notes ── */}
-      <div style={{ padding: '9px 16px', borderBottom: '1px solid #252A3E' }}>
+      <div style={{ padding: '9px 16px', borderBottom: '1px solid var(--color-border, #252A3E)' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
           <Repeat size={14} color="#6B7280" style={{ flexShrink: 0, marginTop: 2 }} />
           <textarea
@@ -1255,7 +1388,7 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
             rows={2}
             style={{
               ...inputBase, resize: 'none', lineHeight: 1.5,
-              color: description ? '#E8EAF6' : '#6B7280',
+              color: description ? 'var(--color-text, #E8EAF6)' : '#6B7280',
             }}
           />
         </div>
@@ -1266,7 +1399,7 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
         <button
           onClick={onCancel}
           style={{
-            background: 'transparent', border: '1px solid #2E3348', borderRadius: 8,
+            background: 'transparent', border: '1px solid var(--color-border, #252A3E)', borderRadius: 8,
             color: '#8B93A8', fontSize: 12.5, padding: '6px 18px', cursor: 'pointer',
           }}
         >Cancel</button>
@@ -1274,7 +1407,7 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
           onClick={handleSave}
           disabled={!title.trim()}
           style={{
-            background: title.trim() ? calColor : '#252A3E', border: 'none', borderRadius: 8,
+            background: title.trim() ? calColor : 'var(--color-surface2, #252A3E)', border: 'none', borderRadius: 8,
             color: title.trim() ? '#fff' : '#4B5268', fontSize: 12.5, fontWeight: 600,
             padding: '6px 20px', cursor: title.trim() ? 'pointer' : 'default',
             transition: 'background 0.15s',
@@ -1291,7 +1424,7 @@ export function CalendarIntelligence() {
 
   // ── Calendar + event state ──────────────────────────────────────────────────
   const [weekStart,       setWeekStart]       = useState<Date>(() => getWeekStart(new Date()))
-  const [events,          setEvents]          = useState<GCalEvent[]>([])
+  const [events,          setEvents]          = useState<GCalEvent[]>(() => loadEventsCache(getWeekStart(new Date())))
   const [allCalendars,    setAllCalendars]    = useState<CalWithAccount[]>(() => {
     // Use the last known primary email (saved to localStorage after each successful auth)
     // so we can filter orphaned deleted-account entries even on the very first render.
@@ -1301,7 +1434,8 @@ export function CalendarIntelligence() {
   })
   const [hiddenCals,      setHiddenCals]      = useState<Set<string>>(loadHiddenIntel)
   const [hiddenAccounts, setHiddenAccounts] = useState<Set<string>>(loadHiddenAccounts)
-  const [loadingEvents,   setLoadingEvents]   = useState(true)
+  // Start as not-loading if we have cached events so the grid renders immediately.
+  const [loadingEvents,   setLoadingEvents]   = useState(() => loadEventsCache(getWeekStart(new Date())).length === 0)
   const [noAuth,          setNoAuth]          = useState(false)
   const [fetchError,      setFetchError]      = useState<string | null>(null)
   const [reconnectNeeded, setReconnectNeeded] = useState<string[]>([])
@@ -1440,12 +1574,16 @@ export function CalendarIntelligence() {
   useEffect(() => { void reloadCalendars() }, [user?.email]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadEvents = useCallback(async (start: Date, cals: CalWithAccount[], hidden: Set<string>, hiddenAccts = hiddenAccounts) => {
-    setLoadingEvents(true); setFetchError(null)
+    setFetchError(null)
+    // Show spinner only when there's nothing cached for this week; otherwise update silently.
+    const alreadyCached = loadEventsCache(start).length > 0
+    if (!alreadyCached) setLoadingEvents(true)
     try {
       if (!cals.length) { setNoAuth(true); setEvents([]); return }
       const end     = getWeekEnd(start)
       const fetched = await fetchAllEvents(cals, hidden, hiddenAccts, start, end)
       setEvents(fetched); setNoAuth(false)
+      saveEventsCache(start, fetched)
 
       // Auto-apply rules silently in the background
       const autoRules = loadBlockingRules().filter(r => r.enabled && r.autoApply)
@@ -1472,6 +1610,18 @@ export function CalendarIntelligence() {
     } finally { setLoadingEvents(false) }
   }, [])
 
+  // When the user navigates to a different week, immediately show whatever is cached for
+  // that week so the grid isn't empty while fresh events load.
+  const prevWeekKey = useRef(eventsWeekKey(weekStart))
+  useEffect(() => {
+    const key = eventsWeekKey(weekStart)
+    if (key === prevWeekKey.current) return
+    prevWeekKey.current = key
+    const cached = loadEventsCache(weekStart)
+    if (cached.length) { setEvents(cached); setLoadingEvents(false) }
+    else setLoadingEvents(true)
+  }, [weekStart])
+
   useEffect(() => {
     if (allCalendars.length) void loadEvents(weekStart, allCalendars, hiddenCals, hiddenAccounts)
   }, [weekStart, allCalendars, hiddenCals, hiddenAccounts, loadEvents]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -1491,6 +1641,17 @@ export function CalendarIntelligence() {
     window.addEventListener('professor:accountVisibilityChanged', handler)
     return () => window.removeEventListener('professor:accountVisibilityChanged', handler)
   }, [])
+
+  // ── Auto-refresh events every 2 minutes ─────────────────────────────────────
+  // Keeps the calendar view current without a full page reload. Uses the same
+  // loadEvents path as the manual refresh so visibility/filter state is respected.
+  useEffect(() => {
+    if (!allCalendars.length) return
+    const id = setInterval(() => {
+      void loadEvents(weekStart, allCalendars, hiddenCals, hiddenAccounts)
+    }, 2 * 60 * 1000)
+    return () => clearInterval(id)
+  }, [allCalendars, weekStart, hiddenCals, hiddenAccounts, loadEvents]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Token expiry listener ────────────────────────────────────────────────────
   // tokenManager dispatches 'cal:reconnect-required' when the Edge Function
@@ -1549,6 +1710,21 @@ export function CalendarIntelligence() {
     if (ok) {
       setEvents(prev => prev.filter(e => e.id !== ev.id))
       if (selectedEvent?.id === ev.id) { setSelectedEvent(null); setPopupPos(null) }
+    }
+  }
+
+  async function handleAddMeet(ev: GCalEventExt) {
+    const cal = allCalendars.find(c => c.id === ev.calendarId)
+    if (!cal || !ev.calendarId) return
+    const token = cal.accountId
+      ? await getGoogleToken(cal.accountEmail)
+      : (await refreshPrimaryToken() || cal.accountToken)
+    if (!token) return
+    const updated = await addMeetingToEvent(token, ev.calendarId, ev.id)
+    if (updated) {
+      const merged = { ...ev, conferenceData: updated.conferenceData }
+      setEvents(prev => prev.map(e => e.id === ev.id ? { ...e, conferenceData: updated.conferenceData } : e))
+      if (selectedEvent?.id === ev.id) setSelectedEvent(merged as GCalEventExt)
     }
   }
 
@@ -1811,13 +1987,13 @@ export function CalendarIntelligence() {
 
   // ── Render ───────────────────────────────────────────────────────────────────
   return (
-    <div className={creatingEvt ? 'cal-grid-creating' : undefined} style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#0D0F1E', color: '#E8EAF6', fontFamily: 'inherit', overflow: 'hidden' }}>
+    <div className={creatingEvt ? 'cal-grid-creating' : undefined} style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#0D0F1E', color: 'var(--color-text, #E8EAF6)', fontFamily: 'inherit', overflow: 'hidden' }}>
 
       {/* ── Top bar ─────────────────────────────────────────────────────────── */}
       <div style={{ padding: '14px 20px 10px', borderBottom: '1px solid #1A1D2E', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           {/* Week range title */}
-          <span style={{ fontSize: 17, fontWeight: 700, color: '#E8EAF6', flex: 1, minWidth: 160 }}>
+          <span style={{ fontSize: 17, fontWeight: 700, color: 'var(--color-text, #E8EAF6)', flex: 1, minWidth: 160 }}>
             {fmtWeekRange(weekStart)}
           </span>
 
@@ -1825,24 +2001,24 @@ export function CalendarIntelligence() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
             <button
               onClick={() => { const d = new Date(weekStart); d.setDate(d.getDate() - 7); setWeekStart(d) }}
-              style={{ background: 'none', border: '1px solid #252A3E', borderRadius: 7, cursor: 'pointer', color: '#8B93A8', padding: '4px 8px', display: 'flex', alignItems: 'center' }}
+              style={{ background: 'none', border: '1px solid var(--color-border, #252A3E)', borderRadius: 7, cursor: 'pointer', color: '#8B93A8', padding: '4px 8px', display: 'flex', alignItems: 'center' }}
             ><ChevronLeft size={15} /></button>
 
             {!isThisWeek(weekStart) && (
               <button
                 onClick={() => setWeekStart(getWeekStart(new Date()))}
-                style={{ background: 'none', border: '1px solid #252A3E', borderRadius: 7, cursor: 'pointer', color: '#8B93A8', padding: '4px 9px', fontSize: 12 }}
+                style={{ background: 'none', border: '1px solid var(--color-border, #252A3E)', borderRadius: 7, cursor: 'pointer', color: '#8B93A8', padding: '4px 9px', fontSize: 12 }}
               >Today</button>
             )}
 
             <button
               onClick={() => { const d = new Date(weekStart); d.setDate(d.getDate() + 7); setWeekStart(d) }}
-              style={{ background: 'none', border: '1px solid #252A3E', borderRadius: 7, cursor: 'pointer', color: '#8B93A8', padding: '4px 8px', display: 'flex', alignItems: 'center' }}
+              style={{ background: 'none', border: '1px solid var(--color-border, #252A3E)', borderRadius: 7, cursor: 'pointer', color: '#8B93A8', padding: '4px 8px', display: 'flex', alignItems: 'center' }}
             ><ChevronRight size={15} /></button>
 
             <button
               onClick={() => void reloadCalendars().then(c => { if (c) void loadEvents(weekStart, c, hiddenCals) })}
-              style={{ background: 'none', border: '1px solid #252A3E', borderRadius: 7, cursor: 'pointer', color: '#8B93A8', padding: '4px 8px', display: 'flex', alignItems: 'center' }}
+              style={{ background: 'none', border: '1px solid var(--color-border, #252A3E)', borderRadius: 7, cursor: 'pointer', color: '#8B93A8', padding: '4px 8px', display: 'flex', alignItems: 'center' }}
             ><RefreshCw size={13} /></button>
 
             <button
@@ -1851,7 +2027,7 @@ export function CalendarIntelligence() {
               title="Apply productivity blocking rules"
               style={{
                 display: 'flex', alignItems: 'center', gap: 5,
-                background: 'none', border: '1px solid #252A3E', borderRadius: 7,
+                background: 'none', border: '1px solid var(--color-border, #252A3E)', borderRadius: 7,
                 cursor: applyingRules ? 'default' : 'pointer',
                 color: applyingRules ? '#4B5268' : '#8B93A8',
                 padding: '4px 8px', fontSize: 12,
@@ -1868,7 +2044,7 @@ export function CalendarIntelligence() {
               style={{
                 display: 'flex', alignItems: 'center', gap: 5,
                 background: originalsOnly ? 'rgba(127,119,221,0.12)' : 'none',
-                border: `1px solid ${originalsOnly ? 'rgba(127,119,221,0.5)' : '#252A3E'}`,
+                border: `1px solid ${originalsOnly ? 'rgba(127,119,221,0.5)' : 'var(--color-border, #252A3E)'}`,
                 borderRadius: 7, cursor: 'pointer',
                 color: originalsOnly ? '#7F77DD' : '#8B93A8',
                 padding: '4px 8px', fontSize: 12,
@@ -1891,7 +2067,7 @@ export function CalendarIntelligence() {
         {/* Calendar chips */}
         {allCalendars.length > 0 && (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
-            {allCalendars.filter(cal => !hiddenAccounts.has(cal.accountEmail)).map(cal => {
+            {allCalendars.filter(cal => !cal.accountId || !hiddenAccounts.has(cal.accountEmail)).map(cal => {
               const hidden  = hiddenCals.has(cal.id)
               const color   = calEffectiveColor(cal)
               const chipKey = `${cal.accountEmail}:${cal.id}`
@@ -1902,7 +2078,7 @@ export function CalendarIntelligence() {
                     style={{
                       display: 'flex', alignItems: 'center', gap: 0,
                       borderRadius: 20, overflow: 'visible',
-                      border: `1px solid ${hidden ? '#252A3E' : color}`,
+                      border: `1px solid ${hidden ? 'var(--color-border, #252A3E)' : color}`,
                       background: hidden ? 'transparent' : `${color}18`,
                       transition: 'all 0.12s',
                     }}
@@ -2108,7 +2284,7 @@ export function CalendarIntelligence() {
       {/* Loading spinner overlay */}
       {loadingEvents && (
         <div style={{ position: 'absolute', bottom: 18, right: 22, display: 'flex', alignItems: 'center', gap: 7, fontSize: 12, color: '#6B7280', pointerEvents: 'none' }}>
-          <div style={{ width: 14, height: 14, border: '2px solid #252A3E', borderTopColor: '#7F77DD', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+          <div style={{ width: 14, height: 14, border: '2px solid var(--color-border, #252A3E)', borderTopColor: '#7F77DD', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
           Loading…
         </div>
       )}
@@ -2142,6 +2318,7 @@ export function CalendarIntelligence() {
             onClose={closePopup}
             onStatusToggle={s => toggleStatus(selectedEvent.id, s)}
             onPrepRequest={() => void generatePrep(selectedEvent)}
+            onAddMeet={() => handleAddMeet(selectedEvent)}
           />
         )
       })()}

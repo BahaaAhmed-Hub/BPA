@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { Trash2, Check, GripVertical, Clock, Calendar, User, Plus, CalendarCheck } from 'lucide-react'
-import type { Task } from '@/types'
-import { COMPANY_COLORS, getAllUsers, loadDynamicCompanies } from '@/types'
+import { Trash2, Check, GripVertical, Clock, Calendar, User, Plus, CalendarCheck, Zap } from 'lucide-react'
+import type { Task, TaskType } from '@/types'
+import { COMPANY_COLORS, TASK_TYPE_META, inferTaskType, getAllUsers, loadDynamicCompanies } from '@/types'
 import { useTaskStore } from '@/store/taskStore'
 import { getCalendarCache } from '@/lib/googleCalendar'
 import { MeetingFollowUpPopup } from './MeetingFollowUpPopup'
@@ -24,7 +24,7 @@ interface TaskCardProps {
 }
 
 export function TaskCard({ task, onOpen }: TaskCardProps) {
-  const { toggleComplete, deleteTask, updateTask, addTasksBatch } = useTaskStore()
+  const { toggleComplete, deleteTask, updateTask, addTasksBatch, toggleUrgent } = useTaskStore()
   const [hovered, setHovered] = useState(false)
   const [showMeetingPopup, setShowMeetingPopup] = useState(false)
   const [editingTitle, setEditingTitle] = useState(false)
@@ -33,6 +33,7 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
   const [editingTime, setEditingTime] = useState(false)
   const [editingDuration, setEditingDuration] = useState(false)
   const [editingOwner, setEditingOwner] = useState(false)
+  const [editingType, setEditingType] = useState(false)
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id })
 
@@ -73,8 +74,8 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
   }
 
   const fieldInput: React.CSSProperties = {
-    background: '#0D0F1A', border: '1px solid #353A50', borderRadius: 4,
-    color: '#E8EAF6', fontSize: 10, padding: '1px 5px', outline: 'none',
+    background: 'var(--color-bg, #0D0F1A)', border: '1px solid #353A50', borderRadius: 4,
+    color: 'var(--color-text, #E8EAF6)', fontSize: 10, padding: '1px 5px', outline: 'none',
   }
 
   return (
@@ -83,8 +84,8 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
       onClick={handleCardClick}
       style={{
         ...style,
-        background: hovered ? '#1a1f35' : '#161929',
-        border: `1px solid ${isDragging ? '#1E40AF' : '#252A3E'}`,
+        background: hovered ? 'var(--color-surface2, #1a1f35)' : 'var(--color-surface, #161929)',
+        border: `1px solid ${isDragging ? '#1E40AF' : task.urgent ? '#E0711A40' : 'var(--color-border, #252A3E)'}`,
         borderRadius: 8,
         padding: '9px 11px',
         cursor: isDragging ? 'grabbing' : 'pointer',
@@ -123,7 +124,7 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
           }}
           style={{
             width: 15, height: 15, borderRadius: 4,
-            border: `1.5px solid ${task.completed ? '#1D9E75' : '#252A3E'}`,
+            border: `1.5px solid ${task.completed ? '#1D9E75' : 'var(--color-border, #252A3E)'}`,
             background: task.completed ? '#1D9E75' : 'transparent',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             cursor: 'pointer', flexShrink: 0, marginTop: 1, transition: 'all 0.15s ease',
@@ -149,7 +150,7 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
               style={{
                 background: 'transparent', border: 'none',
                 borderBottom: '1px solid #7F77DD', outline: 'none',
-                color: '#E8EAF6', fontSize: 12.5, fontWeight: 500,
+                color: 'var(--color-text, #E8EAF6)', fontSize: 12.5, fontWeight: 500,
                 width: '100%', padding: 0, fontFamily: 'inherit', lineHeight: 1.35,
               }}
             />
@@ -159,7 +160,7 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
               onClick={() => { if (!task.completed) setEditingTitle(true) }}
               title={task.completed ? undefined : 'Click to rename'}
               style={{
-                margin: 0, fontSize: 12.5, fontWeight: 500, color: '#E8EAF6',
+                margin: 0, fontSize: 12.5, fontWeight: 500, color: 'var(--color-text, #E8EAF6)',
                 lineHeight: 1.35, textDecoration: task.completed ? 'line-through' : 'none',
                 overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                 cursor: task.completed ? 'default' : 'text',
@@ -191,6 +192,34 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}
             </select>
+
+            {/* Task type badge */}
+            {(() => {
+              const tt = task.taskType ?? inferTaskType(task.title)
+              const meta = TASK_TYPE_META[tt]
+              return editingType ? (
+                <select
+                  data-nm autoFocus
+                  value={tt}
+                  onChange={e => { updateTask(task.id, { taskType: e.target.value as TaskType }); setEditingType(false) }}
+                  onBlur={() => setEditingType(false)}
+                  style={{ ...fieldInput, fontSize: 10 }}
+                >
+                  {(Object.keys(TASK_TYPE_META) as TaskType[]).map(k => (
+                    <option key={k} value={k}>{TASK_TYPE_META[k].emoji} {TASK_TYPE_META[k].label}</option>
+                  ))}
+                </select>
+              ) : (
+                <span
+                  data-nm onClick={() => setEditingType(true)} title="Change task type"
+                  style={{
+                    fontSize: 10, fontWeight: 600, cursor: 'pointer',
+                    color: meta.color, background: `${meta.color}18`,
+                    padding: '1px 5px', borderRadius: 3,
+                  }}
+                >{meta.emoji} {meta.label}</span>
+              )
+            })()}
 
             {/* Due date */}
             {(task.dueDate || isSchedule) && (
@@ -312,16 +341,30 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
           </div>
         </div>
 
-        {/* Delete */}
-        {hovered && (
-          <button data-nm onClick={() => deleteTask(task.id)} style={{
-            background: 'transparent', border: 'none', cursor: 'pointer',
-            color: '#6B7280', padding: 2, borderRadius: 4,
-            display: 'flex', alignItems: 'center', flexShrink: 0,
-          }}>
-            <Trash2 size={11} strokeWidth={2} />
+        {/* Urgent + Delete */}
+        <div data-nm style={{ display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0 }}>
+          <button
+            data-nm
+            onClick={() => toggleUrgent(task.id)}
+            title={task.urgent ? 'Unmark urgent' : 'Mark urgent'}
+            style={{
+              background: 'transparent', border: 'none', cursor: 'pointer', padding: 2, borderRadius: 4,
+              color: task.urgent ? '#E0711A' : hovered ? '#4B5268' : 'transparent',
+              display: 'flex', alignItems: 'center', transition: 'color 0.15s',
+            }}
+          >
+            <Zap size={11} strokeWidth={2} fill={task.urgent ? '#E0711A' : 'none'} />
           </button>
-        )}
+          {hovered && (
+            <button data-nm onClick={() => deleteTask(task.id)} style={{
+              background: 'transparent', border: 'none', cursor: 'pointer',
+              color: '#6B7280', padding: 2, borderRadius: 4,
+              display: 'flex', alignItems: 'center',
+            }}>
+              <Trash2 size={11} strokeWidth={2} />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Meeting follow-up popup — shown when completing a meeting/call task */}

@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { X, Clock, Calendar, User, Building2, Activity } from 'lucide-react'
-import type { Task, CompanyTag, TaskStatus } from '@/types'
+import type { Task, CompanyTag, TaskStatus, TaskType } from '@/types'
 import {
-  COMPANY_LABELS, COMPANY_COLORS, getAllUsers,
+  COMPANY_LABELS, COMPANY_COLORS, TASK_TYPE_META, inferTaskType, getAllUsers,
   loadDynamicCompanies,
 } from '@/types'
 import { useTaskStore } from '@/store/taskStore'
@@ -20,8 +20,8 @@ const STATUS_COLORS: Record<TaskStatus, string> = {
 }
 
 const field: React.CSSProperties = {
-  background: '#0D0F1A', border: '1px solid #252A3E', borderRadius: 6,
-  padding: '6px 9px', fontSize: 12, color: '#E8EAF6', outline: 'none', width: '100%',
+  background: 'var(--color-bg, #0D0F1A)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 6,
+  padding: '6px 9px', fontSize: 12, color: 'var(--color-text, #E8EAF6)', outline: 'none', width: '100%',
   fontFamily: 'inherit', boxSizing: 'border-box',
 }
 const lbl: React.CSSProperties = {
@@ -61,8 +61,18 @@ export function TaskDetailModal({ task, onClose }: Props) {
   const companies  = loadDynamicCompanies()
   const users      = getAllUsers()
   const taskActs   = activities.filter(a => a.taskId === task.id).slice().reverse()
-  const companyColor = COMPANY_COLORS[task.company] ?? '#6B7280'
+  const activeCo   = companies.find(c => c.id === task.companyId)
+  const companyColor = activeCo?.color ?? COMPANY_COLORS[task.company] ?? '#6B7280'
   const taskStatus: TaskStatus = task.completed ? 'done' : (task.status ?? 'open')
+
+  function handleCompanyChange(value: string) {
+    if (companies.length > 0) {
+      const co = companies.find(c => c.id === value)
+      updateTask(task.id, { companyId: value || undefined, company: (co?.id ?? value) as CompanyTag })
+    } else {
+      updateTask(task.id, { company: value as CompanyTag, companyId: undefined })
+    }
+  }
 
   function saveTitle() {
     const t = titleDraft.trim()
@@ -85,7 +95,7 @@ export function TaskDetailModal({ task, onClose }: Props) {
         onClick={e => e.stopPropagation()}
         style={{
           width: '100%', maxWidth: 580, maxHeight: '85vh',
-          background: '#161929', border: '1px solid #252A3E', borderRadius: 14,
+          background: 'var(--color-surface, #161929)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 14,
           display: 'flex', flexDirection: 'column', overflow: 'hidden',
           boxShadow: '0 24px 80px rgba(0,0,0,0.7)',
         }}
@@ -93,7 +103,7 @@ export function TaskDetailModal({ task, onClose }: Props) {
         {/* Header */}
         <div style={{
           padding: '16px 20px 14px',
-          borderBottom: '1px solid #252A3E',
+          borderBottom: '1px solid var(--color-border, #252A3E)',
           display: 'flex', alignItems: 'flex-start', gap: 12,
         }}>
           <div style={{
@@ -122,7 +132,7 @@ export function TaskDetailModal({ task, onClose }: Props) {
                 onClick={() => setEditingTitle(true)}
                 title="Click to rename"
                 style={{
-                  margin: 0, fontSize: 16, fontWeight: 700, color: '#E8EAF6',
+                  margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--color-text, #E8EAF6)',
                   cursor: 'text', lineHeight: 1.3,
                   textDecoration: task.completed ? 'line-through' : 'none',
                 }}
@@ -150,8 +160,32 @@ export function TaskDetailModal({ task, onClose }: Props) {
             {/* Company */}
             <div>
               <div style={lbl}><Building2 size={10} /> Company</div>
-              <select value={task.company} onChange={e => updateTask(task.id, { company: e.target.value as CompanyTag })} style={field}>
-                {COMPANY_TAGS.map(c => <option key={c} value={c}>{COMPANY_LABELS[c]}</option>)}
+              <select
+                value={companies.length > 0 ? (task.companyId ?? '') : task.company}
+                onChange={e => handleCompanyChange(e.target.value)}
+                style={field}
+              >
+                {companies.length > 0
+                  ? <>
+                      <option value="">— none —</option>
+                      {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </>
+                  : COMPANY_TAGS.map(c => <option key={c} value={c}>{COMPANY_LABELS[c]}</option>)
+                }
+              </select>
+            </div>
+
+            {/* Task Type */}
+            <div>
+              <div style={lbl}>Task Type</div>
+              <select
+                value={task.taskType ?? inferTaskType(task.title)}
+                onChange={e => updateTask(task.id, { taskType: e.target.value as TaskType })}
+                style={field}
+              >
+                {(Object.keys(TASK_TYPE_META) as TaskType[]).map(k => (
+                  <option key={k} value={k}>{TASK_TYPE_META[k].emoji} {TASK_TYPE_META[k].label}</option>
+                ))}
               </select>
             </div>
 
@@ -164,7 +198,7 @@ export function TaskDetailModal({ task, onClose }: Props) {
                     flex: 1, padding: '5px 4px', borderRadius: 5, fontSize: 10.5, fontWeight: 500,
                     cursor: 'pointer', textTransform: 'capitalize',
                     background: taskStatus === s ? STATUS_COLORS[s] + '22' : 'transparent',
-                    border: `1px solid ${taskStatus === s ? STATUS_COLORS[s] + '80' : '#252A3E'}`,
+                    border: `1px solid ${taskStatus === s ? STATUS_COLORS[s] + '80' : 'var(--color-border, #252A3E)'}`,
                     color: taskStatus === s ? STATUS_COLORS[s] : '#6B7280',
                   }}>{s}</button>
                 ))}
@@ -226,19 +260,6 @@ export function TaskDetailModal({ task, onClose }: Props) {
               )}
             </div>
 
-            {/* Dynamic company (companyId) if set */}
-            {companies.length > 0 && (
-              <div style={{ gridColumn: '1 / -1' }}>
-                <div style={lbl}>Company (from Settings)</div>
-                <select value={task.companyId ?? ''}
-                  onChange={e => updateTask(task.id, { companyId: e.target.value || undefined })}
-                  style={field}
-                >
-                  <option value="">— none —</option>
-                  {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-              </div>
-            )}
           </div>
 
           {/* Activity Log */}

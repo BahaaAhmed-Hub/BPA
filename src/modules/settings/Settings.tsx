@@ -17,12 +17,12 @@ import {
   Brain, Bell, Palette, Link, X, RefreshCw, Eye, EyeOff, Shield, Pencil,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
-import { connectAdditionalGoogleAccount, signOut as googleSignOut } from '@/lib/google'
+import { connectAdditionalGoogleAccount, signOut as googleSignOut, disconnectGoogleAccount } from '@/lib/google'
 import { useUIStore } from '@/store/uiStore'
 import { useAuthStore } from '@/store/authStore'
 import { THEMES, getTheme, applyThemeVars } from '@/lib/themes'
 import { useHabitsStore, getHabitColors } from '@/store/habitsStore'
-import { loadAccounts, removeAccount, getProviderTokenForAccount, loadHiddenAccounts, saveHiddenAccounts, type ConnectedAccount } from '@/lib/multiAccount'
+import { loadAccounts, removeAccount, getProviderTokenForAccount, loadHiddenAccounts, saveHiddenAccounts, loadAccountsFromServer, type ConnectedAccount, type ServerAccount } from '@/lib/multiAccount'
 import {
   saveProfileToDB, savePrefsToDB, saveCompaniesToDB, loadCompaniesFromDB,
   saveHabitsToDB, saveHabitLogsToDB, loadSettingsFromDB,
@@ -494,11 +494,11 @@ function CompanyCard({
 
   const tinp: React.CSSProperties = {
     background: 'transparent', border: 'none', borderBottom: '1px solid #7F77DD',
-    outline: 'none', color: '#E8EAF6', fontFamily: 'inherit', padding: '0 2px',
+    outline: 'none', color: 'var(--color-text, #E8EAF6)', fontFamily: 'inherit', padding: '0 2px',
   }
 
   return (
-    <div style={{ background: '#0D0F1A', border: '1px solid #252A3E', borderRadius: 10, marginBottom: 8, overflow: 'visible' }}>
+    <div style={{ background: 'var(--color-bg, #0D0F1A)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 10, marginBottom: 8, overflow: 'visible' }}>
       {/* Company header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px' }}>
 
@@ -515,7 +515,7 @@ function CompanyCard({
           {colorOpen && (
             <div style={{
               position: 'absolute', top: 24, left: 0, zIndex: 200,
-              background: '#1a1f35', border: '1px solid #2e3450', borderRadius: 10,
+              background: 'var(--color-surface, #161929)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 10,
               padding: '7px 8px', display: 'flex', gap: 5,
               boxShadow: '0 6px 20px rgba(0,0,0,0.5)',
             }}>
@@ -524,7 +524,7 @@ function CompanyCard({
                   style={{
                     width: 16, height: 16, borderRadius: '50%', background: c,
                     border: 'none', cursor: 'pointer', flexShrink: 0,
-                    boxShadow: co.color === c ? `0 0 0 2px #1a1f35, 0 0 0 3.5px ${c}` : 'none',
+                    boxShadow: co.color === c ? `0 0 0 2px var(--color-surface, #161929), 0 0 0 3.5px ${c}` : 'none',
                     transform: co.color === c ? 'scale(1.2)' : 'scale(1)',
                     transition: 'transform 0.1s ease',
                   }} />
@@ -544,7 +544,7 @@ function CompanyCard({
             />
           ) : (
             <span onClick={() => setEditingName(true)} title="Click to rename"
-              style={{ fontSize: 13.5, fontWeight: 600, color: '#E8EAF6', cursor: 'text', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--color-text, #E8EAF6)', cursor: 'text', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {co.name || 'Untitled'}
             </span>
           )}
@@ -577,7 +577,7 @@ function CompanyCard({
         <button onClick={() => setUsersOpen(o => !o)} title={usersOpen ? 'Collapse members' : 'Expand members'} style={{
           display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0,
           padding: '2px 7px', borderRadius: 5, fontSize: 10.5, cursor: 'pointer',
-          background: 'transparent', border: '1px solid #252A3E',
+          background: 'transparent', border: '1px solid var(--color-border, #252A3E)',
           color: '#6B7280',
         }}>
           <span style={{ color: co.color, fontWeight: 600 }}>{users.length}</span>
@@ -594,7 +594,7 @@ function CompanyCard({
 
       {/* Users tree */}
       {usersOpen && (
-        <div style={{ borderTop: '1px solid #1a1f35', padding: '8px 14px 10px 46px' }}>
+        <div style={{ borderTop: '1px solid var(--color-border, #252A3E)', padding: '8px 14px 10px 46px' }}>
           {users.length === 0 && (
             <p style={{ margin: '0 0 6px', fontSize: 11, color: '#3a3f55', fontStyle: 'italic' }}>No members yet</p>
           )}
@@ -603,7 +603,7 @@ function CompanyCard({
             const isEditing = editingUserId === u.id
             const draft = userDrafts[u.id]
             return (
-              <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0', borderBottom: '1px solid #1a1f35' }}>
+              <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0', borderBottom: '1px solid var(--color-border, #252A3E)' }}>
                 <span style={{ width: 6, height: 6, borderRadius: '50%', background: co.color, flexShrink: 0 }} />
 
                 {isEditing ? (
@@ -624,7 +624,7 @@ function CompanyCard({
                   </>
                 ) : (
                   <>
-                    <span onClick={() => startEditUser(u)} style={{ fontSize: 12, color: '#E8EAF6', cursor: 'text', minWidth: 60 }}>{u.name}</span>
+                    <span onClick={() => startEditUser(u)} style={{ fontSize: 12, color: 'var(--color-text, #E8EAF6)', cursor: 'text', minWidth: 60 }}>{u.name}</span>
                     <span onClick={() => startEditUser(u)} style={{ fontSize: 11, color: '#6B7280', cursor: 'text', flex: 1 }}>
                       {u.email || <span style={{ color: '#3a3f55' }}>+ email</span>}
                     </span>
@@ -868,8 +868,14 @@ function AccountsSection({
   const [reconnecting, setRecon]    = useState<string | null>(null)
   const [calendars, setCalendars]   = useState<Record<string, string[]>>({})
   const [loadingCals, setLoading]   = useState<string | null>(null)
-  const [staleIds, setStaleIds]     = useState<Set<string>>(new Set())
+  const [needsReconnect, setNeedsReconnect] = useState<Set<string>>(new Set())
   const [hiddenAccts, setHiddenAccts] = useState<Set<string>>(loadHiddenAccounts)
+  // DB account IDs from google_accounts — needed to call disconnectGoogleAccount
+  const [serverAccounts, setServerAccounts] = useState<ServerAccount[]>([])
+
+  useEffect(() => {
+    loadAccountsFromServer().then(rows => { if (rows) setServerAccounts(rows) }).catch(() => {})
+  }, [])
 
   function toggleAccountVisibility(email: string) {
     setHiddenAccts(prev => {
@@ -881,21 +887,18 @@ function AccountsSection({
     })
   }
 
-  // On mount: check each additional account's token status
+  // Listen for cal:reconnect-required events dispatched by Cal Intel / tokenManager.
+  // This is the only reliable signal that an account genuinely needs reconnection
+  // (Edge Function returned reconnect_required). Local token age checks produce
+  // false positives because the Edge Function auto-refreshes via google_refresh_token.
   useEffect(() => {
-    const extraAccounts = accounts.filter(a => !a.isPrimary)
-    if (!extraAccounts.length) return
-    const now = Date.now()
-    const stale = new Set<string>()
-    for (const acc of extraAccounts) {
-      const age = now - (acc.providerTokenSavedAt ?? 0)
-      const canRefresh = !!(acc.supabaseAccessToken && acc.supabaseRefreshToken)
-      // 50min TTL — if expired AND no refresh capability, mark stale
-      if (age >= 50 * 60 * 1000 && !canRefresh) stale.add(acc.id)
+    const handler = (e: Event) => {
+      const email = (e as CustomEvent<{ email: string }>).detail?.email
+      if (email) setNeedsReconnect(prev => new Set([...prev, email]))
     }
-    setStaleIds(stale)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [accounts.length])
+    window.addEventListener('cal:reconnect-required', handler)
+    return () => window.removeEventListener('cal:reconnect-required', handler)
+  }, [])
 
   async function connectAdditional() {
     setAdding(true)
@@ -923,9 +926,19 @@ function AccountsSection({
   }
 
   function removeAcc(id: string) {
+    // Remove from localStorage immediately (optimistic)
     removeAccount(id)
     const updated = loadAccounts()
     setAccounts(updated)
+    // Remove from DB via edge function (uses server account_id, looked up by email)
+    const localAcc = loadAccounts().find(a => a.id === id) ?? accounts.find(a => a.id === id)
+    const serverAcc = localAcc
+      ? serverAccounts.find(s => s.email === localAcc.email)
+      : undefined
+    if (serverAcc) {
+      void disconnectGoogleAccount(serverAcc.id)
+        .then(() => setServerAccounts(prev => prev.filter(s => s.id !== serverAcc.id)))
+    }
     saveAccountsToDB(updated).catch(console.warn)
   }
 
@@ -986,7 +999,7 @@ function AccountsSection({
 
       {/* Additional connected accounts — show ALL stored accounts with delete */}
       {accounts.map(acc => {
-        const isStale = staleIds.has(acc.id)
+        const isStale = needsReconnect.has(acc.email)
         const isRecon = reconnecting === acc.id
         return (
           <div key={acc.id} style={{
@@ -1003,7 +1016,7 @@ function AccountsSection({
             <div style={{ flex: 1 }}>
               <p style={{ margin: 0, fontSize: 13, fontWeight: 500, color: 'var(--color-text, #E8EAF6)' }}>{acc.email || acc.name}</p>
               <p style={{ margin: '2px 0 0', fontSize: 11, color: isStale ? '#E0A524' : 'var(--color-text-muted, #6B7280)' }}>
-                {isStale ? '⚠ Token expired — reconnect to restore calendar access' : `Connected ${new Date(acc.connectedAt).toLocaleDateString()}`}
+                {isStale ? '⚠ Calendar access lost — reconnect to restore' : `Connected ${new Date(acc.connectedAt).toLocaleDateString()}`}
               </p>
             </div>
             {isStale ? (
@@ -1085,7 +1098,7 @@ function AccountsSection({
       </div>
 
       <p style={{ margin: '10px 0 0', fontSize: 11.5, color: 'var(--color-text-muted, #6B7280)', lineHeight: 1.55 }}>
-        All connected accounts are used for calendar aggregation and inbox triage. Tokens are stored locally only.
+        All connected accounts are used for calendar aggregation and inbox triage. Tokens are stored securely on the server — never in the browser.
       </p>
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>

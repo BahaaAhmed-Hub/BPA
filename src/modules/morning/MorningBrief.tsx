@@ -201,7 +201,7 @@ function Skel({ w = '100%', h = 14, radius = 8 }: { w?: string | number; h?: num
         width: w,
         height: h,
         borderRadius: radius,
-        background: 'linear-gradient(90deg, #252A3E 25%, #4A3E28 50%, #252A3E 75%)',
+        background: 'linear-gradient(90deg, var(--color-border, #252A3E) 25%, var(--color-surface2, #4A3E28) 50%, var(--color-border, #252A3E) 75%)',
         backgroundSize: '200% 100%',
         animation: 'shimmer 1.6s infinite',
         flexShrink: 0,
@@ -218,7 +218,7 @@ function PrioritySkeleton() {
           key={i}
           style={{
             display: 'flex', alignItems: 'center', gap: 14,
-            background: '#161929', border: '1px solid #252A3E',
+            background: 'var(--color-surface, #161929)', border: '1px solid var(--color-border, #252A3E)',
             borderRadius: 12, padding: '14px 16px',
           }}
         >
@@ -368,8 +368,8 @@ function EventContextMenu({
         position: 'fixed',
         top: adjPos.y, left: adjPos.x,
         width: 210,
-        background: '#161929',
-        border: '1px solid #252A3E',
+        background: 'var(--color-surface, #161929)',
+        border: '1px solid var(--color-border, #252A3E)',
         borderRadius: 10,
         boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
         zIndex: 9100,
@@ -440,9 +440,9 @@ function EventDetailPanel({ event, onClose }: { event: RichMeetingEvent; onClose
         }}
       >
         {/* Header */}
-        <div style={{ padding: '20px 22px 16px', borderBottom: '1px solid #252A3E' }}>
+        <div style={{ padding: '20px 22px 16px', borderBottom: '1px solid var(--color-border, #252A3E)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
-            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#E8EAF6', lineHeight: 1.35, flex: 1 }}>
+            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--color-text, #E8EAF6)', lineHeight: 1.35, flex: 1 }}>
               {event.title}
             </h3>
             <button
@@ -515,7 +515,7 @@ function EventDetailPanel({ event, onClose }: { event: RichMeetingEvent; onClose
           {event.description && (
             <div style={{
               padding: '12px 14px', borderRadius: 8,
-              background: '#161929', border: '1px solid #252A3E',
+              background: 'var(--color-surface, #161929)', border: '1px solid var(--color-border, #252A3E)',
             }}>
               <p style={{ margin: '0 0 6px', fontSize: 10, fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 Description
@@ -552,7 +552,7 @@ function EventDetailPanel({ event, onClose }: { event: RichMeetingEvent; onClose
                         {initials}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={{ margin: 0, fontSize: 12, color: '#E8EAF6', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        <p style={{ margin: 0, fontSize: 12, color: 'var(--color-text, #E8EAF6)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {att.displayName ?? att.email}
                           {att.self && <span style={{ fontSize: 10, color: '#6B7280', marginLeft: 5 }}>(you)</span>}
                         </p>
@@ -787,7 +787,7 @@ export function MorningBrief() {
                 margin: 0,
                 fontSize: 48,
                 fontWeight: 800,
-                color: '#E8EAF6',
+                color: 'var(--color-text, #E8EAF6)',
                 fontFamily: "'Cabinet Grotesk', sans-serif",
                 letterSpacing: '-1.5px',
                 lineHeight: 1.05,
@@ -807,7 +807,7 @@ export function MorningBrief() {
                 display: 'flex', alignItems: 'center', gap: 7,
                 padding: '8px 14px', borderRadius: 8,
                 background: 'transparent',
-                border: '1px solid #252A3E',
+                border: '1px solid var(--color-border, #252A3E)',
                 color: '#FFFFFF', fontSize: 12, cursor: 'pointer',
                 transition: 'all 0.15s',
                 opacity: isGenerating ? 0.5 : 1,
@@ -829,8 +829,8 @@ export function MorningBrief() {
         {/* ─── Energy check-in ───────────────────────────────────────────── */}
         <div className="brief-section" style={{
           marginBottom: 36,
-          background: '#161929',
-          border: '1px solid #252A3E',
+          background: 'var(--color-surface, #161929)',
+          border: '1px solid var(--color-border, #252A3E)',
           borderRadius: 14,
           padding: '20px 24px',
         }}>
@@ -854,7 +854,7 @@ export function MorningBrief() {
                     width: 44, height: 44, borderRadius: '50%',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontSize: 14, fontWeight: 700,
-                    border: `1.5px solid ${selected ? meta.color : '#252A3E'}`,
+                    border: `1.5px solid ${selected ? meta.color : 'var(--color-border, #252A3E)'}`,
                     background: selected ? `${meta.color}22` : 'transparent',
                     color: selected ? meta.color : '#6B7280',
                     boxShadow: selected ? `0 0 14px ${meta.color}40` : 'none',
@@ -883,8 +883,8 @@ export function MorningBrief() {
 
             {/* ─── 2. AI Day Planner ───────────────────────────────────── */}
             <div className="brief-section" style={{
-              background: '#161929',
-              border: '1px solid #252A3E',
+              background: 'var(--color-surface, #161929)',
+              border: '1px solid var(--color-border, #252A3E)',
               borderRadius: 14,
               padding: '24px 26px',
               borderLeft: '3px solid #7F77DD50',
@@ -915,8 +915,8 @@ export function MorningBrief() {
 
             {/* ─── 3. Top 3 Priorities ─────────────────────────────────── */}
             <div className="brief-section" style={{
-              background: '#161929',
-              border: '1px solid #252A3E',
+              background: 'var(--color-surface, #161929)',
+              border: '1px solid var(--color-border, #252A3E)',
               borderRadius: 14,
               padding: '24px 26px',
             }}>
@@ -932,8 +932,8 @@ export function MorningBrief() {
                     return (
                       <div key={i} style={{
                         display: 'flex', alignItems: 'center', gap: 14,
-                        background: '#0D0F1A',
-                        border: `1px solid ${i === 0 ? '#1E40AF30' : '#252A3E'}`,
+                        background: 'var(--color-bg, #0D0F1A)',
+                        border: `1px solid ${i === 0 ? '#1E40AF30' : 'var(--color-border, #252A3E)'}`,
                         borderRadius: 12, padding: '13px 16px',
                         position: 'relative', overflow: 'hidden',
                       }}>
@@ -942,13 +942,13 @@ export function MorningBrief() {
                           width: 28, height: 28, borderRadius: '50%',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           fontSize: 12, fontWeight: 700, flexShrink: 0,
-                          background: i === 0 ? '#1E40AF20' : '#252A3E',
+                          background: i === 0 ? '#1E40AF20' : 'var(--color-surface2, #252A3E)',
                           color: i === 0 ? '#1E40AF' : '#6B7280',
                         }}>
                           {i + 1}
                         </span>
 
-                        <p style={{ margin: 0, flex: 1, fontSize: 13.5, color: '#E8EAF6', fontWeight: 500 }}>
+                        <p style={{ margin: 0, flex: 1, fontSize: 13.5, color: 'var(--color-text, #E8EAF6)', fontWeight: 500 }}>
                           {title}
                         </p>
 
@@ -986,8 +986,8 @@ export function MorningBrief() {
 
             {/* ─── 4. Today's Meetings ─────────────────────────────────── */}
             <div className="brief-section" style={{
-              background: '#161929',
-              border: '1px solid #252A3E',
+              background: 'var(--color-surface, #161929)',
+              border: '1px solid var(--color-border, #252A3E)',
               borderRadius: 14,
               padding: '24px 22px',
             }}>
@@ -1020,8 +1020,8 @@ export function MorningBrief() {
                           display: 'flex', gap: 10, alignItems: 'stretch',
                           padding: '10px 12px',
                           borderRadius: 10,
-                          background: '#0D0F1A',
-                          border: '1px solid #252A3E',
+                          background: 'var(--color-bg, #0D0F1A)',
+                          border: '1px solid var(--color-border, #252A3E)',
                           opacity: isPast ? 0.5 : 1,
                           transition: 'background 0.15s',
                           cursor: 'pointer',
@@ -1035,7 +1035,7 @@ export function MorningBrief() {
 
                         {/* Time column */}
                         <div style={{ width: 50, flexShrink: 0, textAlign: 'right', paddingTop: 2 }}>
-                          <p style={{ margin: 0, fontSize: 11, color: '#E8EAF6', fontWeight: 500 }}>
+                          <p style={{ margin: 0, fontSize: 11, color: 'var(--color-text, #E8EAF6)', fontWeight: 500 }}>
                             {fmtTime(event.start_time)}
                           </p>
                           <p style={{ margin: '1px 0 0', fontSize: 10, color: '#6B7280' }}>
@@ -1047,7 +1047,7 @@ export function MorningBrief() {
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
                             <p style={{
-                              margin: 0, fontSize: 12.5, color: '#E8EAF6',
+                              margin: 0, fontSize: 12.5, color: 'var(--color-text, #E8EAF6)',
                               fontWeight: 500, lineHeight: 1.3,
                               whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                               maxWidth: 160,
@@ -1083,8 +1083,8 @@ export function MorningBrief() {
 
             {/* ─── 5. Habit Status ─────────────────────────────────────── */}
             <div className="brief-section" style={{
-              background: '#161929',
-              border: '1px solid #252A3E',
+              background: 'var(--color-surface, #161929)',
+              border: '1px solid var(--color-border, #252A3E)',
               borderRadius: 14,
               padding: '24px 22px',
             }}>
@@ -1103,8 +1103,8 @@ export function MorningBrief() {
                     style={{
                       display: 'flex', alignItems: 'center', gap: 10,
                       padding: '10px 14px', borderRadius: 9, width: '100%',
-                      background: habit.checked ? '#1D9E7512' : '#0D0F1A',
-                      border: `1px solid ${habit.checked ? '#1D9E7540' : '#252A3E'}`,
+                      background: habit.checked ? '#1D9E7512' : 'var(--color-bg, #0D0F1A)',
+                      border: `1px solid ${habit.checked ? '#1D9E7540' : 'var(--color-border, #252A3E)'}`,
                       color: habit.checked ? '#1D9E75' : '#6B7280',
                       fontSize: 13, cursor: 'pointer', textAlign: 'left',
                       transition: 'all 0.15s',

@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { getGoogleTokenViaSupabaseRefresh } from './tokenManager'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -57,10 +58,41 @@ export interface GCalError {
 
 const TOKEN_KEY      = 'google_provider_token'
 const TOKEN_SAVED_AT = 'google_provider_token_saved_at'
+const TOKEN_TTL_MS   = 55 * 60 * 1000  // 55 min — refresh before Google's 60-min expiry
 
 function saveToken(token: string) {
   localStorage.setItem(TOKEN_KEY, token)
   localStorage.setItem(TOKEN_SAVED_AT, Date.now().toString())
+}
+
+function isTokenStale(): boolean {
+  const savedAt = parseInt(localStorage.getItem(TOKEN_SAVED_AT) ?? '0', 10)
+  if (!savedAt) return true
+  return Date.now() - savedAt > TOKEN_TTL_MS
+}
+
+/** Refresh the primary Google access token via the google-oauth Edge Function. */
+async function refreshPrimaryViaEdgeFn(accessToken: string, email: string): Promise<string | null> {
+  try {
+    const SUPABASE_URL     = import.meta.env.VITE_SUPABASE_URL     as string ?? ''
+    const SUPABASE_ANON    = import.meta.env.VITE_SUPABASE_ANON_KEY as string ?? ''
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/google-oauth`, {
+      method:  'POST',
+      headers: {
+        'Content-Type':  'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+        'apikey':        SUPABASE_ANON,
+      },
+      body: JSON.stringify({ action: 'refresh', email }),
+    })
+    if (!res.ok) return null
+    const data = await res.json() as { access_token?: string; error?: string }
+    if (data.access_token) {
+      saveToken(data.access_token)
+      return data.access_token
+    }
+    return null
+  } catch { return null }
 }
 
 
@@ -82,23 +114,54 @@ async function getProviderToken(): Promise<string | null> {
 
 /**
  * Refreshes the primary account's Google access token.
- * Uses the session provider_token (only present right after OAuth) or the
- * localStorage cache. Does NOT call the Edge Function for the primary account —
- * the Edge Function is only for extra accounts and can dispatch
- * cal:reconnect-required if the primary DB row is absent, which would show
- * error marks on all primary calendars.
+ * 1. If the Supabase session contains a fresh provider_token (right after OAuth) — use it.
+ * 2. If the cached token is still within 55-min TTL — use it.
+ * 3. Otherwise call the google-oauth Edge Function which exchanges the stored
+ *    Google refresh_token for a new access token and updates google_account_tokens.
+ *    We intentionally do NOT dispatch 'cal:reconnect-required' for the primary account
+ *    to avoid showing error badges on primary calendars.
  */
 export async function refreshPrimaryToken(): Promise<string | null> {
   const { data } = await supabase.auth.getSession()
   if (!data.session) return localStorage.getItem(TOKEN_KEY)
 
-  // Right after OAuth sign-in the session carries a fresh provider_token — cache it
+  // 1. Right after OAuth sign-in the session carries a fresh provider_token — cache it
   if (data.session.provider_token) {
     saveToken(data.session.provider_token)
     return data.session.provider_token
   }
 
-  // Return the cached token; it was saved at sign-in and is valid for ~60 min
+  // 2. Cached token is still fresh — return it
+  if (!isTokenStale()) return localStorage.getItem(TOKEN_KEY)
+
+  // 3. Token is stale — refresh via Edge Function (uses stored Google refresh_token)
+  const email = data.session.user?.email
+  if (email) {
+    const fresh = await refreshPrimaryViaEdgeFn(data.session.access_token, email)
+    if (fresh) return fresh
+  }
+
+  // 4. Edge Function failed — try supabase.auth.refreshSession() as last resort.
+  //    GoTrue's token refresh response includes provider_token when the original
+  //    session was created via Google OAuth.
+  try {
+    const { data: refreshed } = await supabase.auth.refreshSession()
+    if (refreshed.session?.provider_token) {
+      saveToken(refreshed.session.provider_token)
+      return refreshed.session.provider_token
+    }
+    // 4b. GoTrue refresh didn't return provider_token — try the bootstrap path.
+    //     Pass the Supabase refresh token to the Edge Function so it can call
+    //     GoTrue's /token endpoint directly and extract provider_token from there.
+    //     This works even when google_account_tokens has no stored Google refresh_token.
+    const rt = refreshed.session?.refresh_token ?? data.session.refresh_token
+    if (email && rt) {
+      const bootstrapped = await getGoogleTokenViaSupabaseRefresh(email, rt)
+      if (bootstrapped) { saveToken(bootstrapped); return bootstrapped }
+    }
+  } catch { /* ignore */ }
+
+  // Fall back to cached token (possibly stale, but better than null)
   return localStorage.getItem(TOKEN_KEY)
 }
 
@@ -132,9 +195,9 @@ async function withAuth(
   let res = await fn(token)
 
   if (res.status === 401) {
-    // Token expired — refresh and retry once
-    localStorage.removeItem(TOKEN_SAVED_AT) // force isTokenStale() = true
-    const fresh = await getProviderToken()  // will attempt GoTrue + refreshSession
+    // Token expired — force stale so refreshPrimaryToken() calls the Edge Function
+    localStorage.removeItem(TOKEN_SAVED_AT)
+    const fresh = await refreshPrimaryToken()
     if (fresh && fresh !== token) {
       res = await fn(fresh)
     }
@@ -204,6 +267,7 @@ export async function fetchCalendarEventsWithToken(
   weekStart: Date,
   weekEnd: Date,
   calendarColor?: string,
+  onAuthFail?: () => void,
 ): Promise<GCalEvent[]> {
   try {
     const params = new URLSearchParams({
@@ -214,7 +278,10 @@ export async function fetchCalendarEventsWithToken(
       maxResults:   '250',
     })
     const res = await gcalRequest(token, `/calendars/${encodeURIComponent(calendarId)}/events?${params}`)
-    if (!res.ok) return []
+    if (!res.ok) {
+      if ((res.status === 401 || res.status === 403) && onAuthFail) onAuthFail()
+      return []
+    }
     const data = (await res.json()) as { items?: GCalEvent[] }
     return (data.items ?? [])
       .filter(e => e.status !== 'cancelled')
@@ -351,6 +418,33 @@ export async function createCalendarEventWithToken(
   } catch (e) { return { event: null, error: String(e) } }
 }
 
+/** Patch an existing event to add a Google Meet link. */
+export async function addMeetingToEvent(
+  token: string,
+  calendarId: string,
+  eventId: string,
+): Promise<GCalEvent | null> {
+  try {
+    const res = await gcalRequest(
+      token,
+      `/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}?conferenceDataVersion=1`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify({
+          conferenceData: {
+            createRequest: {
+              requestId: `bpa-meet-${Date.now()}`,
+              conferenceSolutionKey: { type: 'hangoutsMeet' },
+            },
+          },
+        }),
+      },
+    )
+    if (!res.ok) return null
+    return (await res.json()) as GCalEvent
+  } catch { return null }
+}
+
 // ─── Reschedule event to a new date (same time) ──────────────────────────────
 
 /** Move an event to a different calendar day, preserving start time and duration.
@@ -481,6 +575,87 @@ export function detectMeetingType(event: GCalEvent): string {
   const desc = (event.description ?? '').toLowerCase()
   if (desc.includes('1:1') || (event.summary ?? '').toLowerCase().includes('1:1')) return 'one_on_one'
   return 'internal'
+}
+
+// ─── Edge-function-backed write operations ────────────────────────────────────
+// These call the google-calendar-write edge function so tokens never reach the
+// browser. Use accountId (from google_accounts.id) instead of a raw token.
+
+/**
+ * Create an event via the google-calendar-write edge function.
+ */
+export async function efCreateEvent(
+  accountId: string,
+  calendarId: string,
+  event: GCalEventCreate,
+): Promise<{ event: GCalEvent | null; error?: string }> {
+  const { data, error } = await supabase.functions.invoke('google-calendar-write', {
+    body: { action: 'create_event', account_id: accountId, calendar_id: calendarId, event },
+  })
+  if (error) return { event: null, error: error.message }
+  if (data?.error === 'reconnect_required') {
+    window.dispatchEvent(new CustomEvent('cal:reconnect-required', { detail: { accountId } }))
+    return { event: null, error: 'reconnect_required' }
+  }
+  return { event: data?.event ?? null, error: data?.error }
+}
+
+/**
+ * Patch an event via the google-calendar-write edge function.
+ */
+export async function efUpdateEvent(
+  accountId: string,
+  calendarId: string,
+  eventId: string,
+  patch: Partial<GCalEventCreate>,
+): Promise<{ event: GCalEvent | null; error?: string }> {
+  const { data, error } = await supabase.functions.invoke('google-calendar-write', {
+    body: { action: 'update_event', account_id: accountId, calendar_id: calendarId, event_id: eventId, patch },
+  })
+  if (error) return { event: null, error: error.message }
+  if (data?.error === 'reconnect_required') {
+    window.dispatchEvent(new CustomEvent('cal:reconnect-required', { detail: { accountId } }))
+    return { event: null, error: 'reconnect_required' }
+  }
+  return { event: data?.event ?? null, error: data?.error }
+}
+
+/**
+ * Delete an event via the google-calendar-write edge function.
+ */
+export async function efDeleteEvent(
+  accountId: string,
+  calendarId: string,
+  eventId: string,
+): Promise<boolean> {
+  const { data, error } = await supabase.functions.invoke('google-calendar-write', {
+    body: { action: 'delete_event', account_id: accountId, calendar_id: calendarId, event_id: eventId },
+  })
+  if (error) { console.warn('[efDeleteEvent]', error); return false }
+  if (data?.error === 'reconnect_required') {
+    window.dispatchEvent(new CustomEvent('cal:reconnect-required', { detail: { accountId } }))
+    return false
+  }
+  return !!data?.deleted
+}
+
+/**
+ * Add a Google Meet link to an event via the google-calendar-write edge function.
+ */
+export async function efAddMeet(
+  accountId: string,
+  calendarId: string,
+  eventId: string,
+): Promise<GCalEvent | null> {
+  const { data, error } = await supabase.functions.invoke('google-calendar-write', {
+    body: { action: 'add_meet', account_id: accountId, calendar_id: calendarId, event_id: eventId },
+  })
+  if (error) { console.warn('[efAddMeet]', error); return null }
+  if (data?.error === 'reconnect_required') {
+    window.dispatchEvent(new CustomEvent('cal:reconnect-required', { detail: { accountId } }))
+    return null
+  }
+  return data?.event ?? null
 }
 
 // ─── Supabase sync ────────────────────────────────────────────────────────────

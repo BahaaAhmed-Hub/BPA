@@ -33,7 +33,7 @@ export interface TaskRow {
   id: string; title: string; quadrant: string | null; company: string
   companyId?: string; status: string; completed: boolean
   dueDate?: string; duration?: number; plannedTime?: string
-  owner?: string; createdAt: string
+  owner?: string; urgent?: boolean; taskType?: string; createdAt: string
 }
 
 export interface HabitRow {
@@ -283,7 +283,7 @@ export async function saveTasksToDB(tasks: TaskRow[]): Promise<void> {
     user_id:      userId,
     company_id:   null as null,
     title:        t.title,
-    description:  null as null,
+    description:  t.taskType ?? null,
     quadrant:     quadrantToDb(t.quadrant),
     effort_minutes: t.duration ?? null,
     due_date:     t.dueDate ?? null,
@@ -295,7 +295,8 @@ export async function saveTasksToDB(tasks: TaskRow[]): Promise<void> {
     // extended columns (from migration 20240002)
     planned_time: t.plannedTime ?? null,
     owner_id:     t.owner ?? null,
-    company_tag:  t.company ?? null,
+    // store dynamic companyId in company_tag when set, else static company tag
+    company_tag:  t.companyId ?? t.company ?? null,
     completed:    t.completed,
   }))
 
@@ -310,19 +311,27 @@ export async function loadTasksFromDB(): Promise<TaskRow[]> {
     .from('tasks').select('*').eq('user_id', userId).order('created_at', { ascending: true })
   if (error || !data) return []
 
-  return (data as (Record<string, unknown>)[]).map(r => ({
-    id:          r.id as string,
-    title:       r.title as string,
-    quadrant:    quadrantFromDb(r.quadrant as string | null),
-    company:     (r.company_tag as string) || 'teradix',
-    status:      statusFromDb(r.status as string),
-    completed:   (r.completed as boolean) ?? (r.completed_at != null),
-    dueDate:     (r.due_date as string) ?? undefined,
-    duration:    (r.effort_minutes as number) ?? undefined,
-    plannedTime: (r.planned_time as string) ?? undefined,
-    owner:       (r.delegated_to as string) ?? (r.owner_id as string) ?? undefined,
-    createdAt:   r.created_at as string,
-  }))
+  const STATIC_TAGS = new Set(['teradix', 'dxtech', 'consulting', 'personal'])
+  return (data as (Record<string, unknown>)[]).map(r => {
+    const tag = (r.company_tag as string) || ''
+    // If tag is a dynamic companyId (not a known static tag), store in companyId
+    const isDynamic = tag && !STATIC_TAGS.has(tag)
+    return {
+      id:          r.id as string,
+      title:       r.title as string,
+      quadrant:    quadrantFromDb(r.quadrant as string | null),
+      company:     (isDynamic ? 'personal' : tag) as string || 'teradix',
+      ...(isDynamic ? { companyId: tag } : {}),
+      status:      statusFromDb(r.status as string),
+      completed:   (r.completed as boolean) ?? (r.completed_at != null),
+      dueDate:     (r.due_date as string) ?? undefined,
+      duration:    (r.effort_minutes as number) ?? undefined,
+      plannedTime: (r.planned_time as string) ?? undefined,
+      owner:       (r.delegated_to as string) ?? (r.owner_id as string) ?? undefined,
+      createdAt:   r.created_at as string,
+      ...(r.description ? { taskType: r.description as string } : {}),
+    }
+  })
 }
 
 // ─── Connected accounts → users.schedule_rules.connected_accounts ─────────────

@@ -183,3 +183,41 @@ export function saveHiddenAccounts(s: Set<string>): void {
 export async function signOutPrimary(): Promise<void> {
   await supabase.auth.signOut()
 }
+
+// ─── Server-backed account list ───────────────────────────────────────────────
+
+export interface ServerAccount {
+  id:         string
+  email:      string
+  name?:      string | null
+  avatarUrl?: string | null
+  isPrimary:  boolean
+  connectedAt: string
+}
+
+/**
+ * Loads connected Google accounts from the google_accounts DB table.
+ * Returns null on error (caller should fall back to localStorage).
+ * No tokens are returned — metadata only (email, name, avatar, isPrimary).
+ */
+export async function loadAccountsFromServer(): Promise<ServerAccount[] | null> {
+  const { data, error } = await supabase
+    .from('google_accounts')
+    .select('id, email, name, avatar_url, is_primary, connected_at')
+    .order('is_primary', { ascending: false })
+    .order('connected_at', { ascending: true })
+
+  if (error) {
+    console.warn('[multiAccount] loadAccountsFromServer error:', error)
+    return null
+  }
+
+  return (data ?? []).map(row => ({
+    id:          row.id as string,
+    email:       row.email as string,
+    name:        row.name as string | null,
+    avatarUrl:   row.avatar_url as string | null,
+    isPrimary:   row.is_primary as boolean,
+    connectedAt: row.connected_at as string,
+  }))
+}

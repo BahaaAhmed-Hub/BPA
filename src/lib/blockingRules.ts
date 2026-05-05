@@ -68,9 +68,16 @@ export function loadCachedCalendars(): CachedCalEntry[] {
 // ─── Token helper ─────────────────────────────────────────────────────────────
 
 async function getToken(accountEmail: string): Promise<string | null> {
-  const accounts = loadAccounts()
-  const acct = accounts.find(a => a.email === accountEmail)
-  if (acct?.isPrimary) {
+  const accounts     = loadAccounts()
+  const acct         = accounts.find(a => a.email === accountEmail)
+  // Use GoTrue path for the primary account.
+  // Also fall back to google_primary_email — covers the case where
+  // professor-connected-accounts was cleared (e.g. after sign-in) so
+  // loadAccounts() returns [] and acct is undefined, which would otherwise
+  // call getGoogleToken() with the primary email, dispatching
+  // cal:reconnect-required and showing error badges on all primary calendars.
+  const primaryEmail = localStorage.getItem('google_primary_email')
+  if (acct?.isPrimary || accountEmail === primaryEmail) {
     await refreshPrimaryToken()
     return localStorage.getItem('google_provider_token') || null
   }

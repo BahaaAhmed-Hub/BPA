@@ -18,7 +18,8 @@ import { supabase } from './lib/supabase'
 import { signInWithGoogle, getPendingAddAccount, clearPendingAddAccount } from './lib/google'
 import { addAccount, loadAccounts, saveAccounts } from './lib/multiAccount'
 import { saveAccountsToDB, loadCompaniesFromDB, loadRawSettingsFromDB, loadAccountsFromDB } from './lib/dbSync'
-import { seedToken, seedFromLocalStorage, clearAllTokens } from './lib/tokenManager'
+import { seedToken, seedFromLocalStorage, clearAllTokens, getGoogleToken } from './lib/tokenManager'
+import { refreshPrimaryToken } from './lib/googleCalendar'
 import { getTheme, applyThemeVars } from './lib/themes'
 import { GraduationCap, Calendar, Mail, CheckSquare, Brain, ArrowRight } from 'lucide-react'
 
@@ -45,7 +46,7 @@ function LoginScreen() {
   return (
     <div style={{
       height: '100vh',
-      background: '#0D0F1A',
+      background: 'var(--color-bg, #0D0F1A)',
       display: 'flex',
       overflow: 'hidden',
       position: 'relative',
@@ -82,11 +83,11 @@ function LoginScreen() {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             boxShadow: '0 8px 24px rgba(30,64,175,0.35)',
           }}>
-            <GraduationCap size={24} color="#0D0F1A" strokeWidth={2.5} />
+            <GraduationCap size={24} color="var(--color-bg, #0D0F1A)" strokeWidth={2.5} />
           </div>
           <span style={{
             fontFamily: "'Cabinet Grotesk', sans-serif",
-            fontWeight: 800, fontSize: 22, color: '#E8EAF6', letterSpacing: '-0.5px',
+            fontWeight: 800, fontSize: 22, color: 'var(--color-text, #E8EAF6)', letterSpacing: '-0.5px',
           }}>
             The Professor
           </span>
@@ -98,7 +99,7 @@ function LoginScreen() {
             margin: '0 0 20px',
             fontSize: 52, fontWeight: 900,
             fontFamily: "'Cabinet Grotesk', sans-serif",
-            color: '#E8EAF6', letterSpacing: '-2px', lineHeight: 1.08,
+            color: 'var(--color-text, #E8EAF6)', letterSpacing: '-2px', lineHeight: 1.08,
           }}>
             Your AI Executive<br />
             <span style={{
@@ -143,7 +144,7 @@ function LoginScreen() {
                 ? 'rgba(30,64,175,0.18)'
                 : 'rgba(30,64,175,0.10)',
               border: `1px solid ${hovered ? 'rgba(30,64,175,0.5)' : 'rgba(30,64,175,0.25)'}`,
-              color: '#E8EAF6', fontSize: 15, fontWeight: 600, cursor: signing ? 'wait' : 'pointer',
+              color: 'var(--color-text, #E8EAF6)', fontSize: 15, fontWeight: 600, cursor: signing ? 'wait' : 'pointer',
               fontFamily: "'Cabinet Grotesk', sans-serif",
               transition: 'all 0.2s ease',
               transform: hovered ? 'translateY(-1px)' : 'none',
@@ -397,7 +398,7 @@ function LoadingScreen() {
   return (
     <div style={{
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-      minHeight: '100vh', background: '#0D0F1A', gap: 16,
+      minHeight: '100vh', background: 'var(--color-bg, #0D0F1A)', gap: 16,
     }}>
       <div style={{
         width: 44, height: 44, borderRadius: 11,
@@ -406,7 +407,7 @@ function LoadingScreen() {
         boxShadow: '0 8px 24px rgba(30,64,175,0.3)',
         animation: 'pulse 1.5s ease-in-out infinite',
       }}>
-        <GraduationCap size={22} color="#0D0F1A" strokeWidth={2.5} />
+        <GraduationCap size={22} color="var(--color-bg, #0D0F1A)" strokeWidth={2.5} />
       </div>
       <style>{`
         @keyframes pulse {
@@ -562,27 +563,38 @@ function App() {
       // extra account's session is active, auth.uid() = extraAccountId ≠ primaryUserId,
       // so any upsert attempted here would silently fail the RLS check.
       const googleRefreshToken = session.provider_refresh_token ?? null
-      const primaryUserId = originalUserIdOnLoad ?? session.user.id
       // Notify Settings (and any other listeners) to re-read accounts from localStorage
       window.dispatchEvent(new CustomEvent('professor:accountsUpdated'))
       // Restore original session, then refresh to get a fresh primary Google token
       void supabase.auth.setSession(pending)
         .then(async () => {
-          // ── Save refresh token NOW — primary session is active, RLS passes ────
-          if (googleRefreshToken) {
-            const { error: upsertErr } = await supabase.from('connected_google_accounts').upsert({
-              user_id:              primaryUserId,
+          // ── Save account metadata + tokens via edge function ─────────────────
+          // Primary session is now active → JWT auth passes as the primary user.
+          // Always call save_account so google_accounts metadata row is created even
+          // when provider_refresh_token is absent (needed for the bootstrap fallback).
+          if (session.provider_token) {
+            const expiresAt = new Date(Date.now() + 3500 * 1000).toISOString()
+            const body: Record<string, unknown> = {
+              action:       'save_account',
               email,
-              name:                 (session.user.user_metadata?.full_name as string) ?? null,
-              avatar_url:           session.user.user_metadata?.avatar_url as string | undefined ?? null,
-              google_refresh_token: googleRefreshToken,
-              scopes:               ['calendar', 'calendar.events', 'gmail.readonly'],
-              is_primary:           false,
-            }, { onConflict: 'user_id,email' })
-            if (upsertErr) console.warn('[AddAccount] Failed to save refresh token to DB:', upsertErr)
-            else console.log('[AddAccount] ✓ Refresh token saved to DB for', email)
+              name:         (session.user.user_metadata?.full_name as string) ?? null,
+              avatar_url:   session.user.user_metadata?.avatar_url as string | undefined ?? null,
+              access_token: session.provider_token,
+              scopes:       ['calendar', 'calendar.events', 'gmail.readonly'],
+            }
+            // Include refresh_token only when Google provided one — Edge Function skips
+            // google_account_tokens upsert when absent.
+            if (googleRefreshToken) {
+              body.refresh_token = googleRefreshToken
+              body.expires_at    = expiresAt
+            } else {
+              console.warn('[AddAccount] No provider_refresh_token — google_account_tokens row will be created on first successful bootstrap')
+            }
+            const { error: fnErr } = await supabase.functions.invoke('google-oauth', { body })
+            if (fnErr) console.warn('[AddAccount] Failed to save via google-oauth edge fn:', fnErr)
+            else console.log('[AddAccount] ✓ Account row saved for', email, googleRefreshToken ? '(with refresh token)' : '(metadata only)')
           } else {
-            console.warn('[AddAccount] No provider_refresh_token in session — token will expire in ~60 min')
+            console.warn('[AddAccount] No provider_token — account not persisted to DB')
           }
           try {
             const { data } = await supabase.auth.refreshSession()
@@ -669,20 +681,40 @@ function App() {
             localStorage.setItem('google_provider_token', session.provider_token)
             localStorage.setItem('google_provider_token_saved_at', Date.now().toString())
           }
+          // Persist primary email so blockingRules.getToken() can identify the primary
+          // account even when professor-connected-accounts is empty (e.g. after clearUserData)
+          if (u.email) localStorage.setItem('google_primary_email', u.email)
           // Warm tokenManager cache from any fresh extra-account tokens in localStorage
           seedFromLocalStorage()
-          // Persist primary account's Google refresh token to DB (for completeness;
-          // primary refresh still goes through refreshPrimaryToken() GoTrue path)
-          if (session?.provider_refresh_token && u.email) {
-            void supabase.from('connected_google_accounts').upsert({
-              user_id:              u.id,
-              email:                u.email,
-              name:                 u.user_metadata?.full_name as string | undefined ?? null,
-              avatar_url:           u.user_metadata?.avatar_url as string | undefined ?? null,
-              google_refresh_token: session.provider_refresh_token,
-              scopes:               ['calendar', 'calendar.events', 'gmail.readonly'],
-              is_primary:           true,
-            }, { onConflict: 'user_id,email' })
+          // Persist primary account tokens to secure google_account_tokens via edge function.
+          // Retry up to 3 times — this is fire-and-forget at sign-in but critical for
+          // token refresh to work after the 1-hour access token expires.
+          // Always call save_primary when provider_token is present — this ensures the
+          // google_accounts metadata row exists even when provider_refresh_token is absent
+          // (which happens on every sign-in after the first). Without the metadata row,
+          // handleRefresh in the Edge Function can't resolve the account by email and
+          // returns reconnect_required even when a valid Google refresh token is in the DB.
+          if (session?.provider_token && u.email) {
+            const expiresAt = new Date(Date.now() + 3500 * 1000).toISOString()
+            const body: Record<string, unknown> = {
+              action:       'save_primary',
+              email:        u.email,
+              name:         u.user_metadata?.full_name as string | undefined ?? null,
+              avatar_url:   u.user_metadata?.avatar_url as string | undefined ?? null,
+              access_token: session.provider_token,
+              expires_at:   expiresAt,
+              scopes:       ['calendar', 'calendar.events', 'gmail.readonly'],
+            }
+            // Include refresh_token only when Google provides it (first OAuth grant only)
+            if (session.provider_refresh_token) body.refresh_token = session.provider_refresh_token
+            ;(async () => {
+              for (let attempt = 1; attempt <= 3; attempt++) {
+                const { error } = await supabase.functions.invoke('google-oauth', { body })
+                if (!error) { console.log('[App] ✓ Primary tokens saved to google_account_tokens'); break }
+                console.warn(`[App] save_primary attempt ${attempt}/3 failed:`, error)
+                if (attempt < 3) await new Promise(r => setTimeout(r, attempt * 1500))
+              }
+            })()
           }
           void loadAllFromDB(loadTasksFromDB, loadHabitsFromDB)
         }
@@ -696,6 +728,20 @@ function App() {
 
     return () => subscription.unsubscribe()
   }, [setUser, setLoading, loadTasksFromDB, clearTasks, clearHabits])
+
+  // ── Proactive 45-min background token refresh ────────────────────────────────
+  // Prevents the 60-min Google token expiry from silently breaking calendar fetches
+  // while the tab is open but idle. Runs for both primary and all extra accounts.
+  useEffect(() => {
+    if (!user) return
+    const refresh = async () => {
+      await refreshPrimaryToken()
+      const extras = loadAccounts().filter(a => !a.isPrimary)
+      await Promise.all(extras.map(a => getGoogleToken(a.email)))
+    }
+    const id = setInterval(refresh, 45 * 60 * 1000)
+    return () => clearInterval(id)
+  }, [user])
 
   if (loading) return <LoadingScreen />
   if (!user)   return <LoginScreen />

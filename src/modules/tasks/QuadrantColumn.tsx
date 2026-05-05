@@ -1,17 +1,79 @@
 import { useState, useEffect, useRef } from 'react'
 import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
-import { Plus, X, Sparkles } from 'lucide-react'
+import { Plus, X, Sparkles, ChevronDown, ChevronRight } from 'lucide-react'
 import { TaskCard } from './TaskCard'
-import type { Task, Quadrant } from '@/types'
-import { QUADRANT_META, getAllUsers, loadDynamicCompanies } from '@/types'
+import type { Task, Quadrant, TaskType } from '@/types'
+import { QUADRANT_META, COMPANY_LABELS, TASK_TYPE_META, inferTaskType, getAllUsers, loadDynamicCompanies } from '@/types'
 import { useTaskStore } from '@/store/taskStore'
 import { analyzeTask } from '@/lib/professor'
 import type { TaskAnalysis } from '@/lib/professor'
 
+// ─── Task type grouping helpers ───────────────────────────────────────────────
+
+interface TaskGroup { key: string; label: string; emoji: string; color: string; tasks: Task[] }
+
+function buildGroups(tasks: Task[], groupBy: 'type' | 'company'): TaskGroup[] {
+  if (groupBy === 'type') {
+    const map = new Map<TaskType, Task[]>()
+    for (const t of tasks) {
+      const k = t.taskType ?? inferTaskType(t.title)
+      if (!map.has(k)) map.set(k, [])
+      map.get(k)!.push(t)
+    }
+    return (Object.keys(TASK_TYPE_META) as TaskType[])
+      .filter(k => map.has(k))
+      .map(k => ({
+        key: k, label: TASK_TYPE_META[k].label,
+        emoji: TASK_TYPE_META[k].emoji, color: TASK_TYPE_META[k].color,
+        tasks: map.get(k)!,
+      }))
+  } else {
+    const companies = loadDynamicCompanies()
+    const map = new Map<string, Task[]>()
+    for (const t of tasks) {
+      const k = t.companyId ?? t.company
+      if (!map.has(k)) map.set(k, [])
+      map.get(k)!.push(t)
+    }
+    return [...map.entries()].map(([k, ts]) => {
+      const dynCo = companies.find(c => c.id === k)
+      const label = dynCo?.name ?? COMPANY_LABELS[k as keyof typeof COMPANY_LABELS] ?? k
+      const color = dynCo?.color ?? '#6B7280'
+      return { key: k, label, emoji: '🏢', color, tasks: ts }
+    })
+  }
+}
+
+function GroupHeader({ label, emoji, color, count, expanded, onToggle }: {
+  label: string; emoji: string; color: string; count: number; expanded: boolean; onToggle: () => void
+}) {
+  return (
+    <button
+      onClick={onToggle}
+      style={{
+        width: '100%', display: 'flex', alignItems: 'center', gap: 6,
+        padding: '4px 6px', borderRadius: 6, cursor: 'pointer',
+        background: `${color}10`, border: `1px solid ${color}30`,
+        marginBottom: expanded ? 4 : 0,
+      }}
+    >
+      <span style={{ fontSize: 11 }}>{emoji}</span>
+      <span style={{ fontSize: 11, fontWeight: 600, color, flex: 1, textAlign: 'left' }}>{label}</span>
+      <span style={{
+        fontSize: 10, fontWeight: 600, color, background: `${color}20`,
+        padding: '0px 5px', borderRadius: 3,
+      }}>{count}</span>
+      {expanded
+        ? <ChevronDown size={11} color={color} strokeWidth={2.5} />
+        : <ChevronRight size={11} color={color} strokeWidth={2.5} />}
+    </button>
+  )
+}
+
 const inp: React.CSSProperties = {
-  background: '#0D0F1A', border: '1px solid #252A3E', borderRadius: 6,
-  padding: '5px 8px', fontSize: 12, color: '#E8EAF6', outline: 'none', width: '100%',
+  background: 'var(--color-bg, #0D0F1A)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 6,
+  padding: '5px 8px', fontSize: 12, color: 'var(--color-text, #E8EAF6)', outline: 'none', width: '100%',
 }
 const lbl: React.CSSProperties = { fontSize: 10.5, color: '#6B7280', marginBottom: 3, display: 'block' }
 
@@ -19,13 +81,17 @@ interface QuadrantColumnProps {
   quadrant: Quadrant
   tasks: Task[]
   onOpen: (id: string) => void
+  groupBy?: 'none' | 'type' | 'company'
+  allGroupsExpanded?: boolean
 }
 
-export function QuadrantColumn({ quadrant, tasks, onOpen }: QuadrantColumnProps) {
+export function QuadrantColumn({ quadrant, tasks, onOpen, groupBy = 'none', allGroupsExpanded = true }: QuadrantColumnProps) {
   const meta = QUADRANT_META[quadrant]
   const { isOver, setNodeRef } = useDroppable({ id: quadrant })
   const addTask = useTaskStore(s => s.addTask)
 
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({})
+  const [globalExpanded, setGlobalExpanded] = useState(true)
   const [adding, setAdding]         = useState(false)
   const [title, setTitle]           = useState('')
   const [dueDate, setDueDate]       = useState('')
@@ -38,6 +104,15 @@ export function QuadrantColumn({ quadrant, tasks, onOpen }: QuadrantColumnProps)
 
   const users = getAllUsers()
   const companies = loadDynamicCompanies()
+
+  // Sync expand/collapse all: update the global default and clear individual overrides
+  useEffect(() => {
+    setGlobalExpanded(allGroupsExpanded)
+    setExpandedGroups({})
+  }, [allGroupsExpanded])
+
+  function isExpanded(key: string) { return expandedGroups[key] ?? globalExpanded }
+  function toggleGroup(key: string) { setExpandedGroups(prev => ({ ...prev, [key]: !isExpanded(key) })) }
 
   // Debounce AI analysis 900ms after typing stops
   useEffect(() => {
@@ -85,8 +160,8 @@ export function QuadrantColumn({ quadrant, tasks, onOpen }: QuadrantColumnProps)
     <div
       style={{
         display: 'flex', flexDirection: 'column',
-        background: '#161929',
-        border: `1px solid ${isOver ? meta.color + '60' : '#252A3E'}`,
+        background: 'var(--color-surface, #161929)',
+        border: `1px solid ${isOver ? meta.color + '60' : 'var(--color-border, #252A3E)'}`,
         borderRadius: 12, overflow: 'hidden',
         transition: 'border-color 0.15s ease', minHeight: 280,
       }}
@@ -94,13 +169,13 @@ export function QuadrantColumn({ quadrant, tasks, onOpen }: QuadrantColumnProps)
       {/* Header */}
       <div style={{
         padding: '12px 14px 10px',
-        borderBottom: '1px solid #252A3E',
+        borderBottom: '1px solid var(--color-border, #252A3E)',
         background: isOver ? `${meta.color}08` : 'transparent',
         transition: 'background 0.15s ease',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <div style={{ width: 8, height: 8, borderRadius: '50%', background: meta.color, flexShrink: 0 }} />
-          <h3 style={{ margin: 0, fontSize: 13.5, fontWeight: 700, color: '#E8EAF6', letterSpacing: '-0.2px' }}>
+          <h3 style={{ margin: 0, fontSize: 13.5, fontWeight: 700, color: 'var(--color-text, #E8EAF6)', letterSpacing: '-0.2px' }}>
             {meta.label}
           </h3>
           <span style={{
@@ -114,11 +189,30 @@ export function QuadrantColumn({ quadrant, tasks, onOpen }: QuadrantColumnProps)
 
       {/* Drop zone */}
       <div ref={setNodeRef} style={{ flex: 1, padding: '8px', display: 'flex', flexDirection: 'column', gap: 5, minHeight: 100 }}>
-        <SortableContext items={activeTasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
-          {activeTasks.map(t => <TaskCard key={t.id} task={t} onOpen={onOpen} />)}
-        </SortableContext>
+        {groupBy === 'none' ? (
+          <SortableContext items={activeTasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
+            {activeTasks.map(t => <TaskCard key={t.id} task={t} onOpen={onOpen} />)}
+          </SortableContext>
+        ) : (() => {
+          const groups = buildGroups(activeTasks, groupBy)
+          const orderedIds = groups.flatMap(g => g.tasks.map(t => t.id))
+          return (
+            <SortableContext items={orderedIds} strategy={verticalListSortingStrategy}>
+              {groups.map(g => (
+                <div key={g.key} style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 4 }}>
+                  <GroupHeader
+                    label={g.label} emoji={g.emoji} color={g.color}
+                    count={g.tasks.length} expanded={isExpanded(g.key)}
+                    onToggle={() => toggleGroup(g.key)}
+                  />
+                  {isExpanded(g.key) && g.tasks.map(t => <TaskCard key={t.id} task={t} onOpen={onOpen} />)}
+                </div>
+              ))}
+            </SortableContext>
+          )
+        })()}
 
-        {/* Completed tasks (collapsed) */}
+        {/* Completed tasks */}
         {doneTasks.length > 0 && (
           <div style={{ marginTop: 4, opacity: 0.5 }}>
             {doneTasks.map(t => <TaskCard key={t.id} task={t} onOpen={onOpen} />)}
@@ -130,14 +224,14 @@ export function QuadrantColumn({ quadrant, tasks, onOpen }: QuadrantColumnProps)
             flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
             color: '#6B7280', fontSize: 11.5, fontStyle: 'italic',
             opacity: isOver ? 0 : 0.6,
-            border: `1px dashed ${isOver ? meta.color : '#252A3E'}`,
+            border: `1px dashed ${isOver ? meta.color : 'var(--color-border, #252A3E)'}`,
             borderRadius: 8, minHeight: 60, transition: 'all 0.15s ease',
           }}>{isOver ? '' : 'Drop tasks here'}</div>
         )}
       </div>
 
       {/* Add task area */}
-      <div style={{ padding: '8px', borderTop: '1px solid #252A3E' }}>
+      <div style={{ padding: '8px', borderTop: '1px solid var(--color-border, #252A3E)' }}>
         {adding ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
             {/* Title */}
@@ -148,7 +242,7 @@ export function QuadrantColumn({ quadrant, tasks, onOpen }: QuadrantColumnProps)
             {/* AI suggestion strip */}
             {(aiLoading || aiHint) && (
               <div style={{
-                background: '#0D0F1A', border: '1px solid #252A3E', borderRadius: 6,
+                background: 'var(--color-bg, #0D0F1A)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 6,
                 padding: '6px 8px', display: 'flex', flexWrap: 'wrap', gap: 5, alignItems: 'center',
               }}>
                 <Sparkles size={10} color="#7F77DD" style={{ flexShrink: 0 }} />
@@ -234,7 +328,7 @@ export function QuadrantColumn({ quadrant, tasks, onOpen }: QuadrantColumnProps)
               }}>Add</button>
               <button onClick={reset} style={{
                 padding: '5px 8px', borderRadius: 6, fontSize: 11.5,
-                background: 'transparent', border: '1px solid #252A3E',
+                background: 'transparent', border: '1px solid var(--color-border, #252A3E)',
                 color: '#6B7280', cursor: 'pointer',
               }}><X size={11} /></button>
             </div>

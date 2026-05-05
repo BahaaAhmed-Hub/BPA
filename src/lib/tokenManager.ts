@@ -3,10 +3,10 @@
  *
  * Architecture:
  *   - In-memory cache (Map) — no localStorage, no stale-on-reload problem.
- *   - For extra (non-primary) accounts: calls the google-token-refresh Edge
- *     Function which exchanges the stored Google refresh token for a fresh
- *     access token. Tokens are cached for 55 min (conservative of Google's
- *     60-min TTL).
+ *   - For extra (non-primary) accounts: calls the google-oauth Edge Function
+ *     (action: 'refresh') which exchanges the stored Google refresh token for
+ *     a fresh access token. Tokens are cached for 55 min (conservative of
+ *     Google's 60-min TTL).
  *   - Concurrent calls for the same email are deduplicated: one in-flight
  *     Promise is shared so we never call the Edge Function twice simultaneously.
  *   - Primary account tokens are NOT managed here — they go through the
@@ -21,14 +21,24 @@
 
 import { supabase } from './supabase'
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string ?? ''
-const TTL_MS       = 55 * 60 * 1000  // 55 min — refresh before Google's 60-min expiry
-const BUFFER_MS    =  2 * 60 * 1000  // refetch when < 2 min remaining
+const TTL_MS    = 55 * 60 * 1000  // 55 min — refresh before Google's 60-min expiry
+const BUFFER_MS =  2 * 60 * 1000  // refetch when < 2 min remaining
+const SS_PREFIX = 'gtoken:'       // sessionStorage key prefix (tab-scoped, cleared on close)
 
 interface CachedToken { token: string; expiresAt: number }
 
 const cache    = new Map<string, CachedToken>()             // email → { token, expiresAt }
 const inFlight = new Map<string, Promise<string | null>>()  // email → pending Edge Fn call
+
+// Warm in-memory cache from sessionStorage on module load (survives page refresh within tab)
+try {
+  for (const key of Object.keys(sessionStorage)) {
+    if (!key.startsWith(SS_PREFIX)) continue
+    const entry = JSON.parse(sessionStorage.getItem(key)!) as CachedToken
+    if (entry.expiresAt > Date.now() + BUFFER_MS) cache.set(key.slice(SS_PREFIX.length), entry)
+    else sessionStorage.removeItem(key)
+  }
+} catch { /* sessionStorage may be unavailable (private browsing restrictions) */ }
 
 // Single shared promise for Supabase session refresh — prevents concurrent
 // refreshSession() calls from consuming the refresh token multiple times
@@ -49,7 +59,10 @@ async function getFreshAccessToken(): Promise<string | null> {
  * Avoids an Edge Function round-trip for freshly connected accounts.
  */
 export function seedToken(email: string, token: string, expiresInMs = TTL_MS): void {
-  if (token) cache.set(email, { token, expiresAt: Date.now() + expiresInMs })
+  if (!token) return
+  const entry: CachedToken = { token, expiresAt: Date.now() + expiresInMs }
+  cache.set(email, entry)
+  try { sessionStorage.setItem(`${SS_PREFIX}${email}`, JSON.stringify(entry)) } catch { /* quota */ }
 }
 
 /**
@@ -81,6 +94,11 @@ export function seedFromLocalStorage(): void {
 export function clearAllTokens(): void {
   cache.clear()
   inFlight.clear()
+  try {
+    for (const key of Object.keys(sessionStorage)) {
+      if (key.startsWith(SS_PREFIX)) sessionStorage.removeItem(key)
+    }
+  } catch { /* ignore */ }
 }
 
 /**
@@ -107,40 +125,31 @@ export async function getGoogleToken(email: string): Promise<string | null> {
 
 async function callEdgeFunction(email: string): Promise<string | null> {
   try {
-    // Use getSession() for the access token but fall back to a fresh token if it
-    // looks stale. getSession() reads local cache and can return an expired token;
-    // if the Edge Function returns 401 we retry once with a force-refreshed session.
-    let { data: { session } } = await supabase.auth.getSession()
+    // supabase.functions.invoke automatically attaches the current JWT.
+    // If the session looks stale, we refresh it first (deduplicated).
+    const { data: { session } } = await supabase.auth.getSession()
     if (!session) return cache.get(email)?.token ?? null
 
-    let res = await fetch(`${SUPABASE_URL}/functions/v1/google-token-refresh`, {
+    // Ensure the JWT is fresh before calling the edge function
+    const supabaseToken = session.expires_at && session.expires_at * 1000 < Date.now() + 60_000
+      ? (await getFreshAccessToken()) ?? session.access_token
+      : session.access_token
+
+    // Temporarily set the session so supabase.functions.invoke uses the right token.
+    // We call the function directly via fetch to control the auth header precisely.
+    const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string ?? ''
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/google-oauth`, {
       method:  'POST',
       headers: {
         'Content-Type':  'application/json',
-        'Authorization': `Bearer ${session.access_token}`,
+        'Authorization': `Bearer ${supabaseToken}`,
+        'apikey':        import.meta.env.VITE_SUPABASE_ANON_KEY as string ?? '',
       },
-      body: JSON.stringify({ email }),
+      body: JSON.stringify({ action: 'refresh', email }),
     })
 
-    // If 401, the cached access_token is expired — refresh session (deduplicated)
-    // and retry once. Using a shared promise prevents concurrent calls from each
-    // calling refreshSession(), which would rotate the refresh token multiple times.
-    if (res.status === 401) {
-      const freshToken = await getFreshAccessToken()
-      if (freshToken) {
-        res = await fetch(`${SUPABASE_URL}/functions/v1/google-token-refresh`, {
-          method:  'POST',
-          headers: {
-            'Content-Type':  'application/json',
-            'Authorization': `Bearer ${freshToken}`,
-          },
-          body: JSON.stringify({ email }),
-        })
-      }
-    }
-
     if (!res.ok) {
-      console.warn('[tokenManager] Edge Function HTTP error:', res.status)
+      console.warn('[tokenManager] google-oauth HTTP error:', res.status)
       return cache.get(email)?.token ?? null
     }
 
@@ -151,8 +160,20 @@ async function callEdgeFunction(email: string): Promise<string | null> {
     }
 
     if (data.error === 'reconnect_required') {
+      // Try bootstrap before showing the reconnect badge
+      const accounts = (() => {
+        try { return JSON.parse(localStorage.getItem('professor-connected-accounts') ?? '[]') as Array<{ email: string; supabaseRefreshToken?: string }> }
+        catch { return [] }
+      })()
+      const acct = accounts.find(a => a.email === email)
+      if (acct?.supabaseRefreshToken) {
+        const bootstrapped = await getGoogleTokenViaSupabaseRefresh(email, acct.supabaseRefreshToken)
+        if (bootstrapped) return bootstrapped
+      }
+      // All fallbacks exhausted — show the badge
       window.dispatchEvent(new CustomEvent('cal:reconnect-required', { detail: { email } }))
       cache.delete(email)
+      try { sessionStorage.removeItem(`${SS_PREFIX}${email}`) } catch { /* ignore */ }
       return null
     }
 
@@ -166,5 +187,55 @@ async function callEdgeFunction(email: string): Promise<string | null> {
   } catch (e) {
     console.warn('[tokenManager] Edge Function call failed:', e)
     return cache.get(email)?.token ?? null
+  }
+}
+
+// ─── Bootstrap fallback ───────────────────────────────────────────────────────
+
+/**
+ * When the Edge Function has no stored Google refresh token for an extra account
+ * (because save_account was never called or failed), this function asks the Edge
+ * Function to try exchanging the account's STORED Supabase refresh token with GoTrue.
+ * GoTrue often returns provider_token (Google access token) and provider_refresh_token
+ * in the refresh response, which lets the server bootstrap the google_account_tokens row.
+ *
+ * On success, seeds the token in the in-memory cache and returns it.
+ * On failure (GoTrue doesn't return provider_token), returns null.
+ */
+export async function getGoogleTokenViaSupabaseRefresh(
+  email: string,
+  supabaseRefreshToken: string,
+): Promise<string | null> {
+  if (!supabaseRefreshToken) return null
+  try {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) return null
+
+    const supabaseToken = session.expires_at && session.expires_at * 1000 < Date.now() + 60_000
+      ? (await getFreshAccessToken()) ?? session.access_token
+      : session.access_token
+
+    const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string ?? ''
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/google-oauth`, {
+      method:  'POST',
+      headers: {
+        'Content-Type':  'application/json',
+        'Authorization': `Bearer ${supabaseToken}`,
+        'apikey':        import.meta.env.VITE_SUPABASE_ANON_KEY as string ?? '',
+      },
+      body: JSON.stringify({ action: 'refresh', email, supabase_refresh_token: supabaseRefreshToken }),
+    })
+
+    if (!res.ok) return null
+
+    const data = await res.json() as { access_token?: string; expires_in?: number; error?: string }
+    if (data.error || !data.access_token) return null
+
+    const expiresInMs = ((data.expires_in ?? 3600) * 1000) - BUFFER_MS
+    seedToken(email, data.access_token, expiresInMs)
+    return data.access_token
+  } catch (e) {
+    console.warn('[tokenManager] getGoogleTokenViaSupabaseRefresh failed:', e)
+    return null
   }
 }

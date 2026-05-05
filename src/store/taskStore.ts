@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { arrayMove } from '@dnd-kit/sortable'
-import type { Task, Quadrant, TaskStatus, TaskActivity } from '@/types'
+import type { Task, Quadrant, TaskStatus, TaskActivity, TaskType } from '@/types'
 import { COMPANY_LABELS, QUADRANT_META, getAllUsers } from '@/types'
 import { saveTasksToDB, loadTasksFromDB } from '@/lib/dbSync'
 import type { TaskRow } from '@/lib/dbSync'
@@ -16,7 +16,7 @@ function toRow(t: Task): TaskRow {
     company: t.company, companyId: t.companyId,
     status: t.status, completed: t.completed,
     dueDate: t.dueDate, duration: t.duration, plannedTime: t.plannedTime,
-    owner: t.owner, createdAt: t.createdAt,
+    owner: t.owner, urgent: t.urgent, taskType: t.taskType, createdAt: t.createdAt,
   }
 }
 
@@ -25,11 +25,14 @@ function fromRow(r: TaskRow): Task {
     id: r.id, title: r.title,
     quadrant: r.quadrant as Quadrant | null ?? null,
     company: (r.company as Task['company']) || 'teradix',
-    companyId: r.companyId,
     status: (r.status as TaskStatus) || 'open',
     completed: r.completed,
     dueDate: r.dueDate, duration: r.duration, plannedTime: r.plannedTime,
     owner: r.owner, createdAt: r.createdAt,
+    // Only include these if DB actually has them — avoids overwriting local state on merge
+    ...(r.companyId != null ? { companyId: r.companyId }            : {}),
+    ...(r.urgent    != null ? { urgent:    r.urgent    }            : {}),
+    ...(r.taskType  != null ? { taskType:  r.taskType as TaskType } : {}),
   }
 }
 
@@ -49,9 +52,11 @@ interface TaskState {
   addTasksBatch: (tasks: Omit<Task, 'id' | 'createdAt'>[]) => void
   updateTask: (id: string, updates: Partial<Task>) => void
   moveTask: (id: string, quadrant: Quadrant | null) => void
+  moveTaskBefore: (activeId: string, overId: string) => void
   reorderInbox: (activeId: string, overId: string) => void
   reorderQuadrant: (activeId: string, overId: string) => void
   clearAll: () => void
+  toggleUrgent: (id: string) => void
   deleteTask: (id: string) => void
   toggleComplete: (id: string) => void
   setStatus: (id: string, status: TaskStatus) => void
@@ -161,6 +166,28 @@ export const useTaskStore = create<TaskState>()(
           }
         }),
 
+      moveTaskBefore: (activeId, overId) =>
+        set(s => {
+          const dragged = s.tasks.find(t => t.id === activeId)
+          const target  = s.tasks.find(t => t.id === overId)
+          if (!dragged || !target) return s
+          const from = dragged.quadrant ? QUADRANT_META[dragged.quadrant].label : 'Inbox'
+          const to   = target.quadrant  ? QUADRANT_META[target.quadrant].label  : 'Inbox'
+          // Remove dragged from array, insert before target
+          const without = s.tasks.filter(t => t.id !== activeId)
+          const targetIdx = without.findIndex(t => t.id === overId)
+          const next = [
+            ...without.slice(0, targetIdx),
+            { ...dragged, quadrant: target.quadrant },
+            ...without.slice(targetIdx),
+          ]
+          scheduleDbSync(next)
+          return {
+            tasks: next,
+            activities: [...s.activities, act(activeId, 'moved', `Moved from ${from} to ${to}`)],
+          }
+        }),
+
       reorderInbox: (activeId, overId) =>
         set(s => {
           const inboxIds = s.tasks.filter(t => t.quadrant === null).map(t => t.id)
@@ -189,6 +216,37 @@ export const useTaskStore = create<TaskState>()(
           const qSet = new Set(qIds)
           const others = s.tasks.filter(t => !qSet.has(t.id))
           const next = [...others, ...reordered.map(id => s.tasks.find(t => t.id === id)!)]
+          scheduleDbSync(next)
+          return { tasks: next }
+        }),
+
+      toggleUrgent: (id) =>
+        set(s => {
+          const task = s.tasks.find(t => t.id === id)
+          if (!task) return s
+          const newUrgent = !task.urgent
+          const updated = { ...task, urgent: newUrgent }
+          if (!newUrgent) {
+            const next = s.tasks.map(t => t.id === id ? updated : t)
+            scheduleDbSync(next)
+            return { tasks: next }
+          }
+          // Move to top of section, right after the last already-urgent task in the same section
+          const without = s.tasks.filter(t => t.id !== id)
+          const sectionIds = without
+            .filter(t => t.quadrant === task.quadrant)
+            .map(t => t.id)
+          const lastUrgentSectionId = [...sectionIds].reverse().find(sid => without.find(t => t.id === sid)?.urgent)
+          const insertBeforeId = lastUrgentSectionId
+            ? sectionIds[sectionIds.indexOf(lastUrgentSectionId) + 1] ?? null
+            : sectionIds[0] ?? null
+          let next: Task[]
+          if (insertBeforeId === null) {
+            next = [...without, updated]
+          } else {
+            const at = without.findIndex(t => t.id === insertBeforeId)
+            next = [...without.slice(0, at), updated, ...without.slice(at)]
+          }
           scheduleDbSync(next)
           return { tasks: next }
         }),

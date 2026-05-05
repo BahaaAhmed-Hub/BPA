@@ -42,8 +42,10 @@ function buildCalendarsFromCache(): CalWithToken[] {
       try { return JSON.parse(localStorage.getItem('professor-connected-accounts') ?? '[]') } catch { return [] }
     })()
     return cached.map(c => {
-      const acct = accounts.find(a => a.email === c.accountEmail)
-      const token = (acct && !acct.isPrimary) ? (acct.providerToken ?? '') : primaryToken
+      // Only match non-primary accounts — primary cals must NOT get an accountId
+      // or fetchVisibleEvents will route them through the Edge Function path instead of GoTrue.
+      const acct = accounts.find(a => a.email === c.accountEmail && !a.isPrimary)
+      const token = acct ? (acct.providerToken ?? '') : primaryToken
       return { ...c, accountToken: token, accountId: acct?.id }
     })
   } catch { return [] }
@@ -64,8 +66,9 @@ export async function fetchVisibleEvents(start: Date, end: Date): Promise<GCalEv
   const hiddenAccounts = loadHiddenAccounts()
   const allCals        = buildCalendarsFromCache()
 
+  // hiddenAccounts applies only to extra accounts (accountId set) — primary is never hidden
   const visible = allCals.filter(
-    c => !hiddenCals.has(c.id) && !hiddenAccounts.has(c.accountEmail)
+    c => !hiddenCals.has(c.id) && (!c.accountId || !hiddenAccounts.has(c.accountEmail))
   )
 
   if (visible.length === 0) {
@@ -90,11 +93,22 @@ export async function fetchVisibleEvents(start: Date, end: Date): Promise<GCalEv
 
   const results = await Promise.all(
     visible.map(async c => {
-      const token = c.accountId
-        ? await getGoogleToken(c.accountEmail)   // Edge Function path
-        : (primaryToken || c.accountToken)        // GoTrue path
+      if (c.accountId) {
+        // Extra account — dispatch reconnect if the token silently fails (401/403)
+        const email = c.accountEmail
+        const onAuthFail = () =>
+          window.dispatchEvent(new CustomEvent('cal:reconnect-required', { detail: { email } }))
+        const token = await getGoogleToken(email)
+        if (!token) return [] as GCalEvent[]
+        return fetchCalendarEventsWithToken(token, c.id, start, end, c.backgroundColor, onAuthFail)
+      }
+      // Primary account — GoTrue path
+      const token = primaryToken || c.accountToken
       if (!token) return [] as GCalEvent[]
-      return fetchCalendarEventsWithToken(token, c.id, start, end, c.backgroundColor)
+      // On 401, mark the cached token stale so the next refreshPrimaryToken() call
+      // hits the Edge Function rather than returning the expired localStorage token.
+      const onPrimaryAuthFail = () => localStorage.removeItem('google_provider_token_saved_at')
+      return fetchCalendarEventsWithToken(token, c.id, start, end, c.backgroundColor, onPrimaryAuthFail)
     })
   )
 
