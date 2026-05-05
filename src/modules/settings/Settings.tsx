@@ -15,6 +15,7 @@ import {
   Plus, Trash2, GripVertical, LogIn, LogOut,
   ChevronDown, ChevronUp, User, Clock, Building2, Flame,
   Brain, Bell, Palette, Link, X, RefreshCw, Eye, EyeOff, Shield, Pencil,
+  Hash, CheckSquare,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { connectAdditionalGoogleAccount, signOut as googleSignOut, disconnectGoogleAccount } from '@/lib/google'
@@ -756,26 +757,106 @@ function CompaniesSection({
   )
 }
 
+interface SettingsHabitFormState {
+  name: string; emoji: string; color: string; freq: typeof FREQ_OPTS[number]
+  type: 'boolean' | 'quantity'; goal: string; unit: string
+}
+
+function SettingsHabitForm({
+  initial, colors, onSave, onCancel,
+}: {
+  initial: SettingsHabitFormState
+  colors: string[]
+  onSave: (s: SettingsHabitFormState) => void
+  onCancel: () => void
+}) {
+  const [s, setS] = useState<SettingsHabitFormState>(initial)
+  const update = (patch: Partial<SettingsHabitFormState>) => setS(prev => ({ ...prev, ...patch }))
+  const valid = s.name.trim() !== '' && (s.type === 'boolean' || (parseFloat(s.goal) > 0 && s.unit.trim() !== ''))
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 12, padding: 14, background: 'var(--color-surface2, #0D0F1A)', borderRadius: 10, border: '1px solid var(--color-border, #252A3E)' }}>
+      {/* Emoji picker */}
+      <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+        {HABIT_EMOJIS.map(e => (
+          <button key={e} onClick={() => update({ emoji: e })}
+            style={{ fontSize: 16, width: 34, height: 34, borderRadius: 7, cursor: 'pointer', background: s.emoji === e ? 'var(--color-accent-fill)' : 'transparent', border: `1px solid ${s.emoji === e ? 'var(--color-accent, #1E40AF)' : 'var(--color-border, #252A3E)'}` }}>
+            {e}
+          </button>
+        ))}
+      </div>
+
+      {/* Name + frequency */}
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <input value={s.name} onChange={e => update({ name: e.target.value })} autoFocus
+          placeholder="e.g. Drink water, Walk 5 miles…"
+          style={{ ...inputStyle, flex: 1, minWidth: 160 }}
+          onKeyDown={e => { if (e.key === 'Enter' && valid) onSave(s); if (e.key === 'Escape') onCancel() }} />
+        <select value={s.freq} onChange={e => update({ freq: e.target.value as typeof FREQ_OPTS[number] })}
+          style={{ ...selectStyle, width: 120 }}>
+          {FREQ_OPTS.map(f => <option key={f} value={f}>{f}</option>)}
+        </select>
+      </div>
+
+      {/* Type toggle */}
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <span style={{ fontSize: 11, color: 'var(--color-text-muted, #6B7280)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Type</span>
+        <div style={{ display: 'flex', background: 'var(--color-surface, #161929)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 7, overflow: 'hidden' }}>
+          {([['boolean', '✓ Done / Not done', CheckSquare], ['quantity', '# Measurable', Hash]] as const).map(([t, label, Icon]) => (
+            <button key={t} onClick={() => update({ type: t })}
+              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 12px', fontSize: 12, fontWeight: s.type === t ? 600 : 400, cursor: 'pointer', border: 'none', background: s.type === t ? 'var(--color-accent-fill, rgba(30,64,175,0.18))' : 'none', color: s.type === t ? 'var(--color-accent, #1E40AF)' : 'var(--color-text-muted, #6B7280)' }}>
+              <Icon size={12} />{label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Goal + unit (quantity only) */}
+      {s.type === 'quantity' && (
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <span style={{ fontSize: 11, color: 'var(--color-text-muted, #6B7280)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Goal</span>
+          <input type="number" min={1} value={s.goal} onChange={e => update({ goal: e.target.value })}
+            placeholder="8"
+            style={{ ...inputStyle, width: 72, textAlign: 'center' }} />
+          <input value={s.unit} onChange={e => update({ unit: e.target.value })}
+            placeholder="glasses / miles / min…"
+            style={{ ...inputStyle, flex: 1 }} />
+        </div>
+      )}
+
+      {/* Color swatches */}
+      <div style={{ display: 'flex', gap: 6 }}>
+        {colors.map(c => (
+          <button key={c} onClick={() => update({ color: c })} style={{
+            width: 22, height: 22, borderRadius: '50%', background: c, border: 'none', cursor: 'pointer',
+            outline: s.color === c ? `2px solid ${c}` : 'none', outlineOffset: 2,
+          }} />
+        ))}
+      </div>
+
+      {/* Actions */}
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button onClick={onCancel}
+          style={{ padding: '6px 14px', borderRadius: 7, background: 'transparent', border: '1px solid var(--color-border, #252A3E)', color: 'var(--color-text-dim, #94A3B8)', fontSize: 12, cursor: 'pointer', display: 'flex', gap: 5, alignItems: 'center' }}>
+          <X size={11} /> Cancel
+        </button>
+        <button onClick={() => valid && onSave(s)} disabled={!valid}
+          style={{ padding: '6px 16px', borderRadius: 7, background: 'var(--color-accent-fill)', border: '1px solid var(--color-accent, #1E40AF)50', color: 'var(--color-accent, #1E40AF)', fontSize: 12, fontWeight: 500, cursor: valid ? 'pointer' : 'default', opacity: valid ? 1 : 0.4, display: 'flex', gap: 5, alignItems: 'center' }}>
+          <Plus size={11} /> Add Habit
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function HabitsSection() {
   const COLORS = getHabitColors()
   const { habits, addHabit: storeAdd, updateHabit, deleteHabit: storeDel } = useHabitsStore()
   const [adding, setAdding] = useState(false)
-  const [newName, setNewName]     = useState('')
-  const [newEmoji, setNewEmoji]   = useState('🎯')
-  const [newColor, setNewColor]   = useState(COLORS[0])
-  const [newFreq, setNewFreq]     = useState<typeof FREQ_OPTS[number]>('daily')
 
-  function addHabit() {
-    if (!newName.trim()) return
-    storeAdd({ name: newName.trim(), emoji: newEmoji, color: newColor, frequency: newFreq, isActive: true })
-    setNewName(''); setAdding(false)
-  }
   function toggle(id: string) {
     const h = habits.find(x => x.id === id)
     if (h) updateHabit(id, { isActive: !h.isActive })
-  }
-  function del(id: string) {
-    storeDel(id)
   }
 
   return (
@@ -793,54 +874,40 @@ function HabitsSection() {
           <span style={{ fontSize: 18, flexShrink: 0 }}>{h.emoji}</span>
           <div style={{ width: 10, height: 10, borderRadius: '50%', background: h.color, flexShrink: 0 }} />
           <span style={{ flex: 1, fontSize: 13.5, color: 'var(--color-text, #E8EAF6)' }}>{h.name}</span>
+          {h.type === 'quantity' && h.goal && h.unit && (
+            <span style={{ fontSize: 10.5, color: 'var(--color-text-muted, #6B7280)', background: 'var(--color-surface2, #0D0F1A)', padding: '2px 7px', borderRadius: 4, border: '1px solid var(--color-border, #252A3E)' }}>
+              {h.goal} {h.unit}
+            </span>
+          )}
+          <span style={{ fontSize: 10, color: 'var(--color-text-muted, #6B7280)', background: 'var(--color-surface2, #0D0F1A)', padding: '2px 7px', borderRadius: 4, border: '1px solid var(--color-border, #252A3E)' }}>
+            {h.type === 'quantity' ? `# qty` : '✓'}
+          </span>
           <span style={{ fontSize: 11, color: 'var(--color-text-muted, #6B7280)', background: 'var(--color-surface2, #0D0F1A)', padding: '2px 8px', borderRadius: 4 }}>
             {h.frequency}
           </span>
           <Toggle checked={h.isActive} onChange={() => toggle(h.id)} />
-          <button onClick={() => del(h.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted, #6B7280)', padding: 4 }}>
+          <button onClick={() => storeDel(h.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted, #6B7280)', padding: 4 }}>
             <Trash2 size={13} />
           </button>
         </div>
       ))}
 
       {adding ? (
-        <div style={{ marginTop: 12, padding: 14, background: 'var(--color-surface2, #0D0F1A)', borderRadius: 10, border: '1px solid var(--color-border, #252A3E)' }}>
-          {/* Emoji picker */}
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
-            {HABIT_EMOJIS.map(e => (
-              <button key={e} onClick={() => setNewEmoji(e)} style={{
-                fontSize: 16, width: 34, height: 34, borderRadius: 7, cursor: 'pointer',
-                background: newEmoji === e ? 'var(--color-accent-fill)' : 'transparent',
-                border: `1px solid ${newEmoji === e ? 'var(--color-accent, #1E40AF)' : 'var(--color-border, #252A3E)'}`,
-              }}>{e}</button>
-            ))}
-          </div>
-          <div style={{ display: 'flex', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
-            <input value={newName} onChange={e => setNewName(e.target.value)} autoFocus placeholder="Habit name"
-              style={{ ...inputStyle, width: 200 }}
-              onKeyDown={e => { if (e.key === 'Enter') addHabit(); if (e.key === 'Escape') setAdding(false) }} />
-            <select value={newFreq} onChange={e => setNewFreq(e.target.value as typeof FREQ_OPTS[number])}
-              style={{ ...selectStyle, width: 120 }}>
-              {FREQ_OPTS.map(f => <option key={f} value={f}>{f}</option>)}
-            </select>
-          </div>
-          <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
-            {COLORS.map(c => (
-              <button key={c} onClick={() => setNewColor(c)} style={{
-                width: 22, height: 22, borderRadius: '50%', background: c, border: 'none', cursor: 'pointer',
-                outline: newColor === c ? `2px solid ${c}` : 'none', outlineOffset: 2,
-              }} />
-            ))}
-          </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={() => { setAdding(false); setNewName('') }} style={{ padding: '6px 14px', borderRadius: 7, background: 'transparent', border: '1px solid var(--color-border, #252A3E)', color: 'var(--color-text-dim, #94A3B8)', fontSize: 12, cursor: 'pointer', display: 'flex', gap: 5, alignItems: 'center' }}>
-              <X size={11} /> Cancel
-            </button>
-            <button onClick={addHabit} disabled={!newName.trim()} style={{ padding: '6px 16px', borderRadius: 7, background: 'var(--color-accent-fill)', border: '1px solid var(--color-accent, #1E40AF)50', color: 'var(--color-accent, #1E40AF)', fontSize: 12, fontWeight: 500, cursor: 'pointer', opacity: newName.trim() ? 1 : 0.4, display: 'flex', gap: 5, alignItems: 'center' }}>
-              <Plus size={11} /> Add Habit
-            </button>
-          </div>
-        </div>
+        <SettingsHabitForm
+          initial={{ name: '', emoji: '🎯', color: COLORS[0], freq: 'daily', type: 'boolean', goal: '', unit: '' }}
+          colors={COLORS}
+          onSave={s => {
+            storeAdd({
+              name: s.name.trim(), emoji: s.emoji, color: s.color,
+              frequency: s.freq, isActive: true,
+              type: s.type,
+              goal: s.type === 'quantity' ? parseFloat(s.goal) : undefined,
+              unit: s.type === 'quantity' ? s.unit.trim() : undefined,
+            })
+            setAdding(false)
+          }}
+          onCancel={() => setAdding(false)}
+        />
       ) : (
         <button onClick={() => setAdding(true)} style={{
           marginTop: 12, display: 'flex', alignItems: 'center', gap: 7, width: '100%',

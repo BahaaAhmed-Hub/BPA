@@ -14,14 +14,21 @@ export interface Habit {
   frequency: 'daily' | 'weekdays' | 'weekly'
   isActive: boolean
   createdAt: string
+  type: 'boolean' | 'quantity'
+  goal?: number   // target quantity (e.g. 8)
+  unit?: string   // display unit (e.g. "glasses", "miles", "min")
 }
 
 export interface HabitLogs {
   [habitId: string]: string[]  // array of "YYYY-MM-DD" dates
 }
 
-const HABITS_KEY = 'professor-habits'
-const LOGS_KEY   = 'professor-habit-logs'
+// Numeric values per day for quantity habits
+export type HabitQuantityLogs = { [habitId: string]: { [dateKey: string]: number } }
+
+const HABITS_KEY   = 'professor-habits'
+const LOGS_KEY     = 'professor-habit-logs'
+const QTY_LOGS_KEY = 'professor-habit-quantity-logs'
 
 const DEFAULT_COLORS = ['#1E40AF', '#7F77DD', '#1D9E75', '#E05252', '#888780', '#E0944A']
 
@@ -39,6 +46,9 @@ function parseHabits(raw: string | null): Habit[] {
       frequency: h.frequency ?? 'daily',
       isActive:  h.isActive  ?? true,
       createdAt: h.createdAt ?? new Date().toISOString(),
+      type:      h.type      ?? 'boolean',
+      goal:      h.goal,
+      unit:      h.unit,
     }))
   } catch { return [] }
 }
@@ -60,6 +70,17 @@ export function loadLogs(): HabitLogs {
 
 export function saveLogs(logs: HabitLogs): void {
   try { localStorage.setItem(LOGS_KEY, JSON.stringify(logs)) } catch { /* quota */ }
+}
+
+export function loadQuantityLogs(): HabitQuantityLogs {
+  try {
+    const raw = localStorage.getItem(QTY_LOGS_KEY)
+    return raw ? (JSON.parse(raw) as HabitQuantityLogs) : {}
+  } catch { return {} }
+}
+
+export function saveQuantityLogs(logs: HabitQuantityLogs): void {
+  try { localStorage.setItem(QTY_LOGS_KEY, JSON.stringify(logs)) } catch { /* quota */ }
 }
 
 let dbSyncTimer: ReturnType<typeof setTimeout> | null = null
@@ -139,13 +160,24 @@ export const useHabitsStore = create<HabitsState>((set, get) => ({
     try {
       const [dbHabits, logs] = await Promise.all([loadHabitsFromDB(), loadHabitLogsFromDB()])
       if (dbHabits.length > 0) {
-        // Merge: keep locally customised emoji/color — they may have been changed
-        // after the last DB sync (scheduleHabitsSync is debounced 1.5s, so there's
-        // a window where loadFromDB can overwrite a just-changed emoji/color).
+        // Merge: keep locally customised emoji/color/type/goal/unit — these may have
+        // been changed after the last DB sync (debounced 1.5s).
         const local = get().habits
-        const merged = dbHabits.map(h => {
+        const merged: Habit[] = dbHabits.map((h, i) => {
           const localH = local.find(l => l.id === h.id)
-          return localH ? { ...h, emoji: localH.emoji, color: localH.color } : h
+          const base: Habit = {
+            id:        h.id,
+            name:      h.name,
+            emoji:     h.emoji     ?? '🎯',
+            color:     h.color     ?? DEFAULT_COLORS[i % DEFAULT_COLORS.length],
+            frequency: h.frequency ?? 'daily',
+            isActive:  h.isActive  ?? true,
+            createdAt: h.createdAt ?? new Date().toISOString(),
+            type:      localH?.type ?? 'boolean',
+            goal:      localH?.goal,
+            unit:      localH?.unit,
+          }
+          return localH ? { ...base, emoji: localH.emoji, color: localH.color } : base
         })
         saveHabits(merged)
         saveLogs(logs)
