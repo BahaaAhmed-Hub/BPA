@@ -116,6 +116,7 @@ export interface Task {
   completed: boolean
   urgent?: boolean
   createdAt: string
+  completedAt?: string  // YYYY-MM-DD — set when task is marked done, cleared on reopen
 }
 
 // ─── Task Activity Log ───────────────────────────────────────────────────────

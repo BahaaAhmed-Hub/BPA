@@ -265,8 +265,14 @@ export const useTaskStore = create<TaskState>()(
         set(s => {
           const task = s.tasks.find(t => t.id === id)
           const nowDone = !task?.completed
+          const today = new Date().toISOString().slice(0, 10)
           const next: Task[] = s.tasks.map(t =>
-            t.id === id ? { ...t, completed: !t.completed, status: (t.completed ? 'open' : 'done') as TaskStatus } : t
+            t.id === id ? {
+              ...t,
+              completed:   !t.completed,
+              status:      (t.completed ? 'open' : 'done') as TaskStatus,
+              completedAt: t.completed ? undefined : today,
+            } : t
           )
           scheduleDbSync(next)
           return {
@@ -277,8 +283,14 @@ export const useTaskStore = create<TaskState>()(
 
       setStatus: (id, status) =>
         set(s => {
+          const today = new Date().toISOString().slice(0, 10)
           const next = s.tasks.map(t =>
-            t.id === id ? { ...t, status, completed: status === 'done' } : t
+            t.id === id ? {
+              ...t,
+              status,
+              completed:   status === 'done',
+              completedAt: status === 'done' ? (t.completedAt ?? today) : undefined,
+            } : t
           )
           scheduleDbSync(next)
           return {

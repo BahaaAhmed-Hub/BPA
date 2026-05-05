@@ -28,30 +28,34 @@ function loadEventStatuses(): Record<string, EventStatus> {
   try { const r = localStorage.getItem('cal-event-statuses'); return r ? JSON.parse(r) as Record<string, EventStatus> : {} } catch { return {} }
 }
 
-function loadDayEvents(dayStr: string): GCalEvent[] {
+function getWeekMonday(dayStr: string): string {
+  const d = new Date(dayStr + 'T12:00:00')
+  const day = d.getDay()
+  d.setDate(d.getDate() - (day === 0 ? 6 : day - 1))
+  return d.toISOString().slice(0, 10)
+}
+
+function loadWeekEvents(mondayStr: string): GCalEvent[] {
   try {
-    const raw = localStorage.getItem('cal-intel-events-cache')
+    const raw = localStorage.getItem(`cal-intel-events-cache:${mondayStr}`)
     if (!raw) return []
     const entry = JSON.parse(raw) as { weekKey: string; events: GCalEvent[]; savedAt: number }
-    return (entry.events ?? []).filter(e => {
-      const d = e.start.dateTime?.slice(0, 10) ?? e.start.date ?? ''
-      return d === dayStr
-    })
+    return entry.events ?? []
   } catch { return [] }
 }
 
-function loadWeekEventsGrouped(): Record<string, GCalEvent[]> {
-  try {
-    const raw = localStorage.getItem('cal-intel-events-cache')
-    if (!raw) return {}
-    const entry = JSON.parse(raw) as { weekKey: string; events: GCalEvent[]; savedAt: number }
-    const result: Record<string, GCalEvent[]> = {}
-    for (const e of entry.events ?? []) {
-      const d = e.start.dateTime?.slice(0, 10) ?? e.start.date ?? ''
-      if (d) { if (!result[d]) result[d] = []; result[d].push(e) }
-    }
-    return result
-  } catch { return {} }
+function loadDayEvents(dayStr: string): GCalEvent[] {
+  const all = loadWeekEvents(getWeekMonday(dayStr))
+  return all.filter(e => (e.start.dateTime?.slice(0, 10) ?? e.start.date ?? '') === dayStr)
+}
+
+function loadWeekEventsGrouped(mondayStr: string): Record<string, GCalEvent[]> {
+  const result: Record<string, GCalEvent[]> = {}
+  for (const e of loadWeekEvents(mondayStr)) {
+    const d = e.start.dateTime?.slice(0, 10) ?? e.start.date ?? ''
+    if (d) { if (!result[d]) result[d] = []; result[d].push(e) }
+  }
+  return result
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -233,7 +237,10 @@ function WeeklyDayCard({ dayStr, allEvents, statuses, tasks }: {
 
   const doneEvts       = events.filter(e => statuses[e.id] === 'done').sort(sortByTime)
   const cancelledEvts  = events.filter(e => statuses[e.id] === 'cancelled').sort(sortByTime)
-  const dayTasks       = tasks.filter(t => t.dueDate === dayStr)
+  const dayTasks = tasks.filter(t => {
+    if (t.completed || t.status === 'done') return (t.completedAt ?? t.dueDate) === dayStr
+    return t.dueDate === dayStr
+  })
   const doneTasks      = dayTasks.filter(t => t.completed || t.status === 'done')
   const cancelledTasks = dayTasks.filter(t => t.status === 'cancelled' && !t.completed)
 
@@ -295,7 +302,14 @@ export function ReviewModule() {
   const dayEvents       = loadDayEvents(selectedDay)
   const doneEvents      = dayEvents.filter(e => eventStatuses[e.id] === 'done').sort(sortByTime)
   const cancelledEvents = dayEvents.filter(e => eventStatuses[e.id] === 'cancelled').sort(sortByTime)
-  const dayTasks        = tasks.filter(t => t.dueDate === selectedDay)
+  // Tasks "for" a day: done/cancelled tasks use completedAt (falling back to dueDate for
+  // older tasks without completedAt); open tasks use dueDate so they still appear on their day.
+  const dayTasks = tasks.filter(t => {
+    if (t.completed || t.status === 'done') {
+      return (t.completedAt ?? t.dueDate) === selectedDay
+    }
+    return t.dueDate === selectedDay
+  })
   const doneTasks       = dayTasks.filter(t => t.completed || t.status === 'done')
   const cancelledTasks  = dayTasks.filter(t => t.status === 'cancelled' && !t.completed)
   const isDailyEmpty    = doneEvents.length === 0 && cancelledEvents.length === 0 && doneTasks.length === 0 && cancelledTasks.length === 0
@@ -303,11 +317,14 @@ export function ReviewModule() {
   // ── Weekly ─────────────────────────────────────────────────────────────────
   const weekStart     = getMondayOf(selectedDay)
   const weekDays      = getWeekDays(weekStart)
-  const weekEventsMap = loadWeekEventsGrouped()
+  const weekEventsMap = loadWeekEventsGrouped(weekStart)
 
   const allWeekEvents  = Object.values(weekEventsMap).flat()
   const weekDoneEvts   = allWeekEvents.filter(e => eventStatuses[e.id] === 'done').length
-  const weekTasksAll   = tasks.filter(t => t.dueDate && weekDays.includes(t.dueDate))
+  const weekTasksAll   = tasks.filter(t => {
+    const anchor = (t.completed || t.status === 'done') ? (t.completedAt ?? t.dueDate) : t.dueDate
+    return anchor && weekDays.includes(anchor)
+  })
   const weekDoneTasks  = weekTasksAll.filter(t => t.completed || t.status === 'done').length
 
   const isCurrentWeek = weekStart === getMondayOf(todayStr())
