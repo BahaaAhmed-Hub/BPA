@@ -97,6 +97,23 @@ function stripHtml(html: string): string {
     .trim()
 }
 
+/** Recursively extract raw HTML body from a MIME payload (null if not found). */
+export function extractHtmlBody(msg: GmailMessage): string | null {
+  function findByMime(parts: GmailPart[] | undefined, mime: string): string | null {
+    if (!parts) return null
+    for (const part of parts) {
+      if (part.mimeType === mime && part.body.data) return decodeBase64(part.body.data)
+      const nested = findByMime(part.parts, mime)
+      if (nested) return nested
+    }
+    return null
+  }
+  if (msg.payload.mimeType === 'text/html' && msg.payload.body.data) {
+    return decodeBase64(msg.payload.body.data)
+  }
+  return findByMime(msg.payload.parts, 'text/html')
+}
+
 /** Recursively extract plain-text body from a MIME payload, falling back to HTML. */
 export function extractBody(msg: GmailMessage): string {
   function findByMime(parts: GmailPart[] | undefined, mime: string): string | null {

@@ -4,7 +4,7 @@ import { Mail, Zap, Clock, Copy, CheckCheck, RefreshCw, ArrowRight, WifiOff, Lis
 import { TopBar } from '@/components/layout/TopBar'
 import { triageEmail } from '@/lib/professor'
 import type { EmailTriage, EmailData } from '@/lib/professor'
-import { listUnreadThreadIds, getThread, extractBody, header } from '@/lib/gmail'
+import { listUnreadThreadIds, getThread, extractBody, extractHtmlBody, header } from '@/lib/gmail'
 import { signInWithGoogle } from '@/lib/google'
 import { useAuthStore } from '@/store/authStore'
 import { useTaskStore } from '@/store/taskStore'
@@ -20,6 +20,7 @@ interface Email {
   subject: string
   preview: string
   body: string
+  htmlBody?: string
   receivedAt: string
   inReplyTo?: string
 }
@@ -67,6 +68,44 @@ function buildMockUser(user: { id: string; email: string; name?: string } | null
     schedule_rules: {},
     created_at: new Date().toISOString(),
   }
+}
+
+// ─── HTML email renderer ──────────────────────────────────────────────────────
+
+function EmailBodyFrame({ html }: { html: string }) {
+  const ref = useRef<HTMLIFrameElement>(null)
+
+  // Inject base tag so relative links open in new tab, and a minimal reset
+  const doc = `<!DOCTYPE html><html><head>
+<base target="_blank">
+<meta charset="utf-8">
+<style>
+  body { margin: 0; padding: 12px 4px; font-family: -apple-system, sans-serif; font-size: 14px; line-height: 1.6; word-break: break-word; }
+  img { max-width: 100%; height: auto; }
+  a { color: #1E40AF; }
+  pre, blockquote { white-space: pre-wrap; }
+</style>
+</head><body>${html}</body></html>`
+
+  function onLoad() {
+    const iframe = ref.current
+    if (!iframe?.contentWindow) return
+    try {
+      const h = iframe.contentWindow.document.body.scrollHeight
+      iframe.style.height = `${Math.max(200, h + 24)}px`
+    } catch { /* cross-origin fallback */ }
+  }
+
+  return (
+    <iframe
+      ref={ref}
+      srcDoc={doc}
+      sandbox="allow-same-origin"
+      onLoad={onLoad}
+      title="Email body"
+      style={{ width: '100%', minHeight: 200, border: 'none', borderRadius: 4, display: 'block' }}
+    />
+  )
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -128,6 +167,7 @@ export function InboxModule() {
           subject:     header(headers, 'subject') || '(no subject)',
           preview:     msg.snippet,
           body:        extractBody(msg),
+          htmlBody:    extractHtmlBody(msg) ?? undefined,
           receivedAt:  new Date(parseInt(msg.internalDate)).toISOString(),
           inReplyTo:   header(headers, 'message-id') || undefined,
         }
@@ -319,9 +359,13 @@ export function InboxModule() {
             </span>
           </div>
           <div style={{ height: 1, background: 'var(--color-border, #252A3E)', marginBottom: 16 }} />
-          <p style={{ margin: 0, fontSize: 13.5, color: '#FFFFFF', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
-            {selectedEmail.body}
-          </p>
+          {selectedEmail.htmlBody ? (
+            <EmailBodyFrame html={selectedEmail.htmlBody} />
+          ) : (
+            <p style={{ margin: 0, fontSize: 13.5, color: 'var(--color-text, #E8EAF6)', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
+              {selectedEmail.body}
+            </p>
+          )}
         </div>
 
         {/* Triage panel */}
