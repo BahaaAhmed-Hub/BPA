@@ -3,6 +3,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { Brain, X, Send, Loader2, ChevronDown, Wrench } from 'lucide-react'
 import { useTaskStore } from '@/store/taskStore'
 import { useAuthStore } from '@/store/authStore'
+import { useHabitsStore } from '@/store/habitsStore'
 import { ASSISTANT_TOOLS, executeTool, type ToolContext } from '@/lib/assistantTools'
 import { loadAIConfig, type AIConfig } from '@/modules/settings/Settings'
 import { loadAccounts } from '@/lib/multiAccount'
@@ -173,14 +174,14 @@ export function AssistantPanel({ open, onClose }: AssistantPanelProps) {
   const tasks      = useTaskStore(s => s.tasks)
   const addTask    = useTaskStore(s => s.addTask)
   const updateTask = useTaskStore(s => s.updateTask)
+  const deleteTask = useTaskStore(s => s.deleteTask)
+  const habits     = useHabitsStore(s => s.habits)
 
   const [displayMessages, setDisplayMessages] = useState<DisplayMessage[]>([])
-  // Provider-specific API histories
   const [anthropicMsgs, setAnthropicMsgs] = useState<Anthropic.MessageParam[]>([])
   const [groqMsgs,      setGroqMsgs]      = useState<GroqMessage[]>([])
   const [input,         setInput]          = useState('')
   const [thinking,      setThinking]       = useState(false)
-  // Track last used provider so we can detect switches
   const lastProviderRef = useRef<string>('')
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -196,30 +197,44 @@ export function AssistantPanel({ open, onClose }: AssistantPanelProps) {
 
   const accounts     = loadAccounts()
   const primaryEmail = user?.email ?? ''
-  const ctx: ToolContext = { tasks, addTask, updateTask, accounts, primaryEmail }
+  const ctx: ToolContext = { tasks, addTask, updateTask, deleteTask, accounts, primaryEmail, habits }
 
-  // ── Anthropic agentic loop ──────────────────────────────────────────────────
+  // ── Anthropic agentic loop (streaming) ─────────────────────────────────────
 
   async function runAnthropic(trimmed: string, cfg: AIConfig, system: string, history: Anthropic.MessageParam[]) {
     const client = new Anthropic({ apiKey: cfg.anthropicKey, dangerouslyAllowBrowser: true })
     let msgs: Anthropic.MessageParam[] = [...history, { role: 'user', content: trimmed }]
 
     while (true) {
-      const response = await client.messages.create({
+      // Stream text in real-time; collect final message for tool-use detection
+      const streamId   = crypto.randomUUID()
+      let   accumText  = ''
+
+      const stream = client.messages.stream({
         model: 'claude-sonnet-4-6', max_tokens: 4096,
         system, tools: ASSISTANT_TOOLS, messages: msgs,
       })
 
+      stream.on('text', chunk => {
+        accumText += chunk
+        setDisplayMessages(prev => {
+          const exists = prev.some(m => m.id === streamId)
+          return exists
+            ? prev.map(m => m.id === streamId ? { ...m, content: accumText } : m)
+            : [...prev, { id: streamId, role: 'assistant' as const, content: accumText }]
+        })
+      })
+
+      const response = await stream.finalMessage()
       msgs = [...msgs, { role: 'assistant', content: response.content }]
 
       if (response.stop_reason !== 'tool_use') {
-        const text = response.content
-          .filter((b): b is Anthropic.TextBlock => b.type === 'text')
-          .map(b => b.text).join('\n').trim()
-        setDisplayMessages(prev => [...prev, { id: crypto.randomUUID(), role: 'assistant', content: text }])
         setAnthropicMsgs(msgs)
         return
       }
+
+      // Remove empty streaming placeholder before showing tool chips
+      if (!accumText) setDisplayMessages(prev => prev.filter(m => m.id !== streamId))
 
       const toolResults: Anthropic.ToolResultBlockParam[] = []
       for (const block of response.content) {
@@ -427,7 +442,7 @@ export function AssistantPanel({ open, onClose }: AssistantPanelProps) {
           ) : (
             <>
               {displayMessages.map(msg => <MessageBubble key={msg.id} msg={msg} />)}
-              {thinking && <ThinkingDot />}
+              {thinking && displayMessages[displayMessages.length - 1]?.role !== 'assistant' && <ThinkingDot />}
               <div ref={messagesEndRef} />
             </>
           )}
