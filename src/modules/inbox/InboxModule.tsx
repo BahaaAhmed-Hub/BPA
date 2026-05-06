@@ -1,10 +1,10 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { Mail, Zap, Clock, Copy, CheckCheck, RefreshCw, ArrowRight, WifiOff, ListPlus, Plus } from 'lucide-react'
+import { Mail, Zap, Clock, Copy, CheckCheck, RefreshCw, ArrowRight, WifiOff, ListPlus, Plus, Archive } from 'lucide-react'
 import { TopBar } from '@/components/layout/TopBar'
 import { triageEmail } from '@/lib/professor'
 import type { EmailTriage, EmailData } from '@/lib/professor'
-import { listUnreadThreadIds, getThread, extractBody, extractHtmlBody, header } from '@/lib/gmail'
+import { listUnreadThreadIds, getThread, extractBody, extractHtmlBody, header, markAsRead, archiveMessage, sendReply } from '@/lib/gmail'
 import { signInWithGoogle } from '@/lib/google'
 import { useAuthStore } from '@/store/authStore'
 import { useTaskStore } from '@/store/taskStore'
@@ -48,6 +48,24 @@ const URGENCY_META = {
 } as const
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
+
+const AVATAR_COLORS = ['#1E40AF','#7F77DD','#1D9E75','#E05252','#E0944A','#7C3AED','#0891B2','#059669']
+
+function avatarColor(email: string): string {
+  let hash = 0
+  for (let i = 0; i < email.length; i++) hash = email.charCodeAt(i) + ((hash << 5) - hash)
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length]
+}
+
+function SenderAvatar({ name, email }: { name: string; email: string }) {
+  const initials = name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || '?'
+  const bg = avatarColor(email)
+  return (
+    <div style={{ width: 34, height: 34, borderRadius: '50%', background: bg, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: '#fff', letterSpacing: '0.02em' }}>
+      {initials}
+    </div>
+  )
+}
 
 function fmtRelTime(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime()
@@ -120,6 +138,11 @@ export function InboxModule() {
   const [fetchError, setFetchError] = useState<string | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [triageMap,  setTriageMap]  = useState<Record<string, TriageState>>({})
+  const [readIds,    setReadIds]    = useState<Set<string>>(new Set())
+  const [archiving,  setArchiving]  = useState<string | null>(null)
+  const [replyText,  setReplyText]  = useState<Record<string, string>>({})
+  const [sending,    setSending]    = useState<string | null>(null)
+  const [sentIds,    setSentIds]    = useState<Set<string>>(new Set())
 
   // ── Bulk task state ──────────────────────────────────────────────────────────
   const [bulkOpen,   setBulkOpen]   = useState(false)
@@ -226,6 +249,32 @@ export function InboxModule() {
     })
   }
 
+  const handleArchive = useCallback(async (email: Email) => {
+    setArchiving(email.id)
+    try {
+      await archiveMessage(email.id)
+      setEmails(prev => {
+        const next = prev.filter(e => e.id !== email.id)
+        setSelectedId(next.length > 0 ? next[0].id : null)
+        return next
+      })
+    } catch { /* offline — leave in list */ }
+    finally { setArchiving(null) }
+  }, [])
+
+  const handleSendReply = useCallback(async (email: Email) => {
+    const body = replyText[email.id]?.trim()
+    if (!body) return
+    setSending(email.id)
+    try {
+      await sendReply({ to: email.fromEmail, subject: email.subject, body, threadId: email.threadId, inReplyTo: email.inReplyTo })
+      setSentIds(prev => new Set([...prev, email.id]))
+      setReplyText(prev => ({ ...prev, [email.id]: '' }))
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to send reply.')
+    } finally { setSending(null) }
+  }, [replyText])
+
   // ─── Render helpers ──────────────────────────────────────────────────────
 
   function renderLeft() {
@@ -248,14 +297,21 @@ export function InboxModule() {
       <div style={{ background: 'var(--color-surface, #161929)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 12, overflow: 'hidden' }}>
         {emails.map((email, i) => {
           const isSelected = selectedId === email.id
+          const isRead     = readIds.has(email.id)
           const triage     = triageMap[email.id]
           const classMeta  = triage?.result ? CLASS_META[triage.result.classification] : null
           return (
             <button
               key={email.id}
-              onClick={() => setSelectedId(email.id)}
+              onClick={() => {
+                setSelectedId(email.id)
+                if (!readIds.has(email.id)) {
+                  setReadIds(prev => new Set([...prev, email.id]))
+                  void markAsRead(email.id).catch(() => { /* offline */ })
+                }
+              }}
               style={{
-                width: '100%', padding: '15px 18px', textAlign: 'left',
+                width: '100%', padding: '12px 16px', textAlign: 'left',
                 background: isSelected ? 'rgba(30,64,175,0.06)' : 'transparent',
                 border: 'none',
                 borderBottom: i < emails.length - 1 ? '1px solid var(--color-border, #252A3E)' : 'none',
@@ -263,10 +319,14 @@ export function InboxModule() {
                 cursor: 'pointer',
               }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+              <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                <div style={{ position: 'relative' }}>
+                  <SenderAvatar name={email.fromName} email={email.fromEmail} />
+                  {!isRead && <div style={{ position: 'absolute', top: 0, right: 0, width: 9, height: 9, borderRadius: '50%', background: '#1E40AF', border: '2px solid var(--color-surface, #161929)' }} />}
+                </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 3 }}>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text, #E8EAF6)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <span style={{ fontSize: 13, fontWeight: isRead ? 400 : 700, color: isRead ? 'var(--color-text-dim, #94A3B8)' : 'var(--color-text, #E8EAF6)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {email.fromName}
                     </span>
                     {classMeta && (
@@ -278,10 +338,10 @@ export function InboxModule() {
                       <RefreshCw size={10} color="#1E40AF" style={{ animation: 'spin 1s linear infinite', flexShrink: 0 }} />
                     )}
                   </div>
-                  <p style={{ margin: '0 0 3px', fontSize: 12.5, color: '#FFFFFF', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <p style={{ margin: '0 0 3px', fontSize: 12.5, color: isRead ? 'var(--color-text-dim, #94A3B8)' : 'var(--color-text, #E8EAF6)', fontWeight: isRead ? 400 : 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {email.subject}
                   </p>
-                  <p style={{ margin: 0, fontSize: 11.5, color: '#FFFFFF', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <p style={{ margin: 0, fontSize: 11.5, color: 'var(--color-text-muted, #6B7280)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {email.preview}
                   </p>
                 </div>
@@ -353,10 +413,18 @@ export function InboxModule() {
           </p>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
             <span style={{ fontSize: 12.5, color: '#1E40AF', fontWeight: 500 }}>{selectedEmail.fromName}</span>
-            <span style={{ fontSize: 12, color: '#FFFFFF' }}>{`<${selectedEmail.fromEmail}>`}</span>
-            <span style={{ fontSize: 11, color: '#FFFFFF', marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span style={{ fontSize: 12, color: 'var(--color-text-muted, #6B7280)' }}>{`<${selectedEmail.fromEmail}>`}</span>
+            <span style={{ fontSize: 11, color: 'var(--color-text-muted, #6B7280)', marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4 }}>
               <Clock size={10} />{fmtRelTime(selectedEmail.receivedAt)}
             </span>
+            <button
+              onClick={() => void handleArchive(selectedEmail)}
+              disabled={archiving === selectedEmail.id}
+              title="Archive"
+              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 6, background: 'transparent', border: '1px solid var(--color-border, #252A3E)', color: 'var(--color-text-dim, #94A3B8)', fontSize: 11.5, cursor: 'pointer', opacity: archiving === selectedEmail.id ? 0.5 : 1 }}
+            >
+              <Archive size={12} /> Archive
+            </button>
           </div>
           <div style={{ height: 1, background: 'var(--color-border, #252A3E)', marginBottom: 16 }} />
           {selectedEmail.htmlBody ? (
@@ -415,22 +483,48 @@ export function InboxModule() {
               )}
             </div>
 
-            {selectedTriage.result.suggestedReply && (
-              <div style={{ background: 'var(--color-bg, #0D0F1A)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 8, padding: '14px 16px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                  <span style={{ fontSize: 11, fontWeight: 600, color: '#FFFFFF', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Suggested Reply</span>
-                  <button
-                    onClick={() => handleCopyReply(selectedEmail.id, selectedTriage.result!.suggestedReply)}
-                    style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 9px', borderRadius: 5, background: 'transparent', border: '1px solid var(--color-border, #252A3E)', color: '#FFFFFF', fontSize: 11, cursor: 'pointer' }}
-                  >
-                    {selectedTriage.copied ? <><CheckCheck size={10} /><span>Copied</span></> : <><Copy size={10} /><span>Copy</span></>}
-                  </button>
+            {selectedTriage.result.suggestedReply && (() => {
+              const draft = replyText[selectedEmail.id] ?? selectedTriage.result.suggestedReply
+              const isSent = sentIds.has(selectedEmail.id)
+              return (
+                <div style={{ background: 'var(--color-bg, #0D0F1A)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 8, padding: '14px 16px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--color-text-dim, #94A3B8)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      Reply to {selectedEmail.fromName}
+                    </span>
+                    <button
+                      onClick={() => handleCopyReply(selectedEmail.id, draft)}
+                      style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 9px', borderRadius: 5, background: 'transparent', border: '1px solid var(--color-border, #252A3E)', color: 'var(--color-text-dim, #94A3B8)', fontSize: 11, cursor: 'pointer' }}
+                    >
+                      {selectedTriage.copied ? <><CheckCheck size={10} /><span>Copied</span></> : <><Copy size={10} /><span>Copy</span></>}
+                    </button>
+                  </div>
+                  <textarea
+                    value={draft}
+                    onChange={e => setReplyText(prev => ({ ...prev, [selectedEmail.id]: e.target.value }))}
+                    rows={6}
+                    style={{ width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 6, resize: 'vertical', background: 'var(--color-surface, #161929)', border: '1px solid var(--color-border, #252A3E)', color: 'var(--color-text, #E8EAF6)', fontSize: 13, lineHeight: 1.65, fontFamily: 'inherit', outline: 'none' }}
+                  />
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10 }}>
+                    {isSent ? (
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: '#1D9E75', fontWeight: 500 }}>
+                        <CheckCheck size={13} /> Sent!
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => void handleSendReply(selectedEmail)}
+                        disabled={!draft.trim() || sending === selectedEmail.id}
+                        style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 18px', borderRadius: 7, background: 'rgba(30,64,175,0.12)', border: '1px solid rgba(30,64,175,0.25)', color: '#1E40AF', fontSize: 12, fontWeight: 500, cursor: 'pointer', opacity: sending === selectedEmail.id ? 0.5 : 1 }}
+                      >
+                        {sending === selectedEmail.id
+                          ? <><RefreshCw size={11} style={{ animation: 'spin 1s linear infinite' }} /> Sending…</>
+                          : <><ArrowRight size={11} /> Send Reply</>}
+                      </button>
+                    )}
+                  </div>
                 </div>
-                <p style={{ margin: 0, fontSize: 13, color: '#FFFFFF', lineHeight: 1.65, whiteSpace: 'pre-wrap' }}>
-                  {selectedTriage.result.suggestedReply}
-                </p>
-              </div>
-            )}
+              )
+            })()}
           </div>
 
         ) : (

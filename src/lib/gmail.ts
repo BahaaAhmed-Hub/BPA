@@ -159,6 +159,14 @@ export async function getThread(threadId: string): Promise<GmailThread> {
   return gFetch<GmailThread>(`/users/me/threads/${threadId}?format=full`)
 }
 
+/** Mark a message as read (remove UNREAD label). Requires gmail.modify scope. */
+export async function markAsRead(messageId: string): Promise<void> {
+  await gFetch(`/users/me/messages/${messageId}/modify`, {
+    method: 'POST',
+    body: JSON.stringify({ removeLabelIds: ['UNREAD'] }),
+  })
+}
+
 /** Archive a message (remove INBOX label). Requires gmail.modify scope. */
 export async function archiveMessage(messageId: string): Promise<void> {
   await gFetch(`/users/me/messages/${messageId}/modify`, {
