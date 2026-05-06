@@ -1,6 +1,6 @@
 import type Anthropic from '@anthropic-ai/sdk'
 import type { Task } from '@/types'
-import { archiveMessage, composeEmail, sendReply } from './gmail'
+import { archiveMessage } from './gmail'
 import { listDriveFiles } from './googleDrive'
 import { supabase } from './supabase'
 import { getProviderTokenForAccount, type ConnectedAccount } from './multiAccount'
@@ -59,6 +59,11 @@ async function gmailPost(token: string, path: string, body: unknown): Promise<vo
     const b = await res.json().catch(() => ({})) as { error?: { message?: string } }
     throw new Error(b?.error?.message ?? `Gmail ${res.status}`)
   }
+}
+
+function encodeBase64url(str: string): string {
+  return btoa(unescape(encodeURIComponent(str)))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
 }
 
 function hdr(headers: GmailHeader[], name: string): string {
@@ -265,25 +270,36 @@ export async function executeTool(
     }
 
     case 'send_email': {
-      // For secondary accounts we'd need per-account send; use gmail.ts (primary) for now
-      // and note the limitation if account_email points elsewhere
-      if (acctEmail && acctEmail !== ctx.primaryEmail) {
-        return { error: 'Sending from secondary accounts is not yet supported. Use the primary account.' }
-      }
-      await composeEmail({ to: input.to as string, subject: input.subject as string, body: input.body as string })
-      return { success: true, message: `Email sent to ${input.to as string}` }
+      const token = await tokenForEmail(acctEmail, ctx)
+      const rfc = [
+        `To: ${input.to as string}`,
+        `Subject: ${input.subject as string}`,
+        'MIME-Version: 1.0',
+        'Content-Type: text/plain; charset=UTF-8',
+        '',
+        input.body as string,
+      ].join('\r\n')
+      await gmailPost(token, '/users/me/messages/send', { raw: encodeBase64url(rfc) })
+      const from = acctEmail ?? ctx.primaryEmail
+      return { success: true, message: `Email sent to ${input.to as string} from ${from}` }
     }
 
     case 'reply_to_email': {
-      if (acctEmail && acctEmail !== ctx.primaryEmail) {
-        return { error: 'Replying from secondary accounts is not yet supported. Use the primary account.' }
+      const token = await tokenForEmail(acctEmail, ctx)
+      const subj  = (input.subject as string).replace(/^(re:\s*)+/i, '')
+      const lines = [
+        `To: ${input.to as string}`,
+        `Subject: Re: ${subj}`,
+        'MIME-Version: 1.0',
+        'Content-Type: text/plain; charset=UTF-8',
+      ]
+      if (input.in_reply_to) {
+        lines.push(`In-Reply-To: ${input.in_reply_to as string}`, `References: ${input.in_reply_to as string}`)
       }
-      await sendReply({
-        to:       input.to          as string,
-        subject:  input.subject     as string,
-        body:     input.body        as string,
-        threadId: input.thread_id   as string,
-        inReplyTo: input.in_reply_to as string | undefined,
+      lines.push('', input.body as string)
+      await gmailPost(token, '/users/me/messages/send', {
+        raw: encodeBase64url(lines.join('\r\n')),
+        threadId: input.thread_id as string,
       })
       return { success: true, message: `Reply sent to ${input.to as string}` }
     }
