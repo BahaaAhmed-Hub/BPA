@@ -146,12 +146,11 @@ export function extractBody(msg: GmailMessage): string {
 
 // ─── Gmail API calls ──────────────────────────────────────────────────────────
 
-/** Return the IDs of up to `max` unread threads. */
-export async function listUnreadThreadIds(max = 20): Promise<string[]> {
-  const data = await gFetch<{ threads?: { id: string }[] }>(
-    `/users/me/threads?q=is:unread in:inbox&maxResults=${max}`,
-  )
-  return (data.threads ?? []).map(t => t.id)
+/** Return unread thread IDs and an optional nextPageToken for pagination. */
+export async function listUnreadThreadIds(max = 20, pageToken?: string): Promise<{ ids: string[]; nextPageToken?: string }> {
+  const qs = `/users/me/threads?q=is:unread in:inbox&maxResults=${max}${pageToken ? `&pageToken=${pageToken}` : ''}`
+  const data = await gFetch<{ threads?: { id: string }[]; nextPageToken?: string }>(qs)
+  return { ids: (data.threads ?? []).map(t => t.id), nextPageToken: data.nextPageToken }
 }
 
 /** Fetch a full thread (all messages). */
@@ -172,6 +171,24 @@ export async function archiveMessage(messageId: string): Promise<void> {
   await gFetch(`/users/me/messages/${messageId}/modify`, {
     method: 'POST',
     body: JSON.stringify({ removeLabelIds: ['INBOX'] }),
+  })
+}
+
+/** Send a new email (not a reply). Requires gmail.send scope. */
+export async function composeEmail(opts: {
+  to: string; subject: string; body: string
+}): Promise<void> {
+  const rfc = [
+    `To: ${opts.to}`,
+    `Subject: ${opts.subject}`,
+    'MIME-Version: 1.0',
+    'Content-Type: text/plain; charset=UTF-8',
+    '',
+    opts.body,
+  ].join('\r\n')
+  await gFetch('/users/me/messages/send', {
+    method: 'POST',
+    body: JSON.stringify({ raw: encodeBase64url(rfc) }),
   })
 }
 

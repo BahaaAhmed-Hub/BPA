@@ -1,10 +1,10 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { Mail, Zap, Clock, Copy, CheckCheck, RefreshCw, ArrowRight, WifiOff, ListPlus, Plus, Archive } from 'lucide-react'
+import { Mail, Zap, Clock, Copy, CheckCheck, RefreshCw, ArrowRight, WifiOff, ListPlus, Plus, Archive, Search, X as XIcon, PenSquare } from 'lucide-react'
 import { TopBar } from '@/components/layout/TopBar'
 import { triageEmail } from '@/lib/professor'
 import type { EmailTriage, EmailData } from '@/lib/professor'
-import { listUnreadThreadIds, getThread, extractBody, extractHtmlBody, header, markAsRead, archiveMessage, sendReply } from '@/lib/gmail'
+import { listUnreadThreadIds, getThread, extractBody, extractHtmlBody, header, markAsRead, archiveMessage, sendReply, composeEmail } from '@/lib/gmail'
 import { signInWithGoogle } from '@/lib/google'
 import { useAuthStore } from '@/store/authStore'
 import { useTaskStore } from '@/store/taskStore'
@@ -12,17 +12,29 @@ import type { DbUser } from '@/types/database'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+interface EmailMessage {
+  id: string
+  fromName: string
+  fromEmail: string
+  body: string
+  htmlBody?: string
+  receivedAt: string
+}
+
 interface Email {
   id: string
   threadId: string
   fromName: string
   fromEmail: string
+  to: string
+  cc?: string
   subject: string
   preview: string
   body: string
   htmlBody?: string
   receivedAt: string
   inReplyTo?: string
+  threadMessages: EmailMessage[]
 }
 
 interface TriageState {
@@ -143,6 +155,18 @@ export function InboxModule() {
   const [replyText,  setReplyText]  = useState<Record<string, string>>({})
   const [sending,    setSending]    = useState<string | null>(null)
   const [sentIds,    setSentIds]    = useState<Set<string>>(new Set())
+  const [expandedThread, setExpandedThread] = useState<string | null>(null)
+  const [searchQuery,    setSearchQuery]    = useState('')
+  const [nextPageToken,  setNextPageToken]  = useState<string | undefined>(undefined)
+  const [loadingMore,    setLoadingMore]    = useState(false)
+  const [composing,      setComposing]      = useState(false)
+  const [composeTo,      setComposeTo]      = useState('')
+  const [composeSubject, setComposeSubject] = useState('')
+  const [composeBody,    setComposeBody]    = useState('')
+  const [composeSending, setComposeSending] = useState(false)
+  const [composeSent,    setComposeSent]    = useState(false)
+  const [selectedIds,    setSelectedIds]    = useState<Set<string>>(new Set())
+  const [batchArchiving, setBatchArchiving] = useState(false)
 
   // ── Bulk task state ──────────────────────────────────────────────────────────
   const [bulkOpen,   setBulkOpen]   = useState(false)
@@ -166,6 +190,14 @@ export function InboxModule() {
     setTimeout(() => { setBulkDone(false); setBulkOpen(false) }, 1400)
   }
 
+  const filteredEmails = searchQuery.trim()
+    ? emails.filter(e => {
+        const q = searchQuery.toLowerCase()
+        return e.fromName.toLowerCase().includes(q) || e.fromEmail.toLowerCase().includes(q) ||
+               e.subject.toLowerCase().includes(q)  || e.preview.toLowerCase().includes(q)
+      })
+    : emails
+
   const selectedEmail  = emails.find(e => e.id === selectedId) ?? null
   const selectedTriage = selectedId ? (triageMap[selectedId] ?? null) : null
   const triagedCount   = emails.filter(e => triageMap[e.id]?.result).length
@@ -175,7 +207,8 @@ export function InboxModule() {
     setFetchError(null)
     setNoAuth(false)
     try {
-      const threadIds = await listUnreadThreadIds(20)
+      const { ids: threadIds, nextPageToken: npt } = await listUnreadThreadIds(20)
+      setNextPageToken(npt)
       const threads   = await Promise.all(threadIds.map(id => getThread(id)))
       const parsed: Email[] = threads.map(thread => {
         const msg     = thread.messages[thread.messages.length - 1]
@@ -189,10 +222,22 @@ export function InboxModule() {
           fromEmail:   from.match(/<(.+)>/)?.[1] ?? from,
           subject:     header(headers, 'subject') || '(no subject)',
           preview:     msg.snippet,
+          to:          header(headers, 'to') || '',
+          cc:          header(headers, 'cc') || undefined,
           body:        extractBody(msg),
           htmlBody:    extractHtmlBody(msg) ?? undefined,
           receivedAt:  new Date(parseInt(msg.internalDate)).toISOString(),
           inReplyTo:   header(headers, 'message-id') || undefined,
+          threadMessages: thread.messages.slice(0, -1).map(m => {
+            const mh = m.payload.headers
+            const mFrom = header(mh, 'from')
+            const mName = mFrom.match(/^"?([^"<]+)"?\s*</)?.[1]?.trim() ?? mFrom.split('@')[0]
+            return {
+              id: m.id, fromName: mName, fromEmail: mFrom.match(/<(.+)>/)?.[1] ?? mFrom,
+              body: extractBody(m), htmlBody: extractHtmlBody(m) ?? undefined,
+              receivedAt: new Date(parseInt(m.internalDate)).toISOString(),
+            }
+          }),
         }
       })
       setEmails(parsed)
@@ -275,6 +320,67 @@ export function InboxModule() {
     } finally { setSending(null) }
   }, [replyText])
 
+  const handleLoadMore = useCallback(async () => {
+    if (!nextPageToken || loadingMore) return
+    setLoadingMore(true)
+    try {
+      const { ids, nextPageToken: npt } = await listUnreadThreadIds(20, nextPageToken)
+      setNextPageToken(npt)
+      const threads = await Promise.all(ids.map(id => getThread(id)))
+      const parsed: Email[] = threads.map(thread => {
+        const msg = thread.messages[thread.messages.length - 1]
+        const headers = msg.payload.headers
+        const from = header(headers, 'from')
+        const nameMatch = from.match(/^"?([^"<]+)"?\s*</)
+        return {
+          id: msg.id, threadId: thread.id,
+          fromName:  nameMatch ? nameMatch[1].trim() : from.split('@')[0],
+          fromEmail: from.match(/<(.+)>/)?.[1] ?? from,
+          to: header(headers, 'to') || '', cc: header(headers, 'cc') || undefined,
+          subject:   header(headers, 'subject') || '(no subject)',
+          preview:   msg.snippet,
+          body: extractBody(msg), htmlBody: extractHtmlBody(msg) ?? undefined,
+          receivedAt: new Date(parseInt(msg.internalDate)).toISOString(),
+          inReplyTo:  header(headers, 'message-id') || undefined,
+          threadMessages: thread.messages.slice(0, -1).map(m => {
+            const mh = m.payload.headers
+            const mFrom = header(mh, 'from')
+            const mName = mFrom.match(/^"?([^"<]+)"?\s*</)?.[1]?.trim() ?? mFrom.split('@')[0]
+            return { id: m.id, fromName: mName, fromEmail: mFrom.match(/<(.+)>/)?.[1] ?? mFrom, body: extractBody(m), htmlBody: extractHtmlBody(m) ?? undefined, receivedAt: new Date(parseInt(m.internalDate)).toISOString() }
+          }),
+        }
+      })
+      setEmails(prev => [...prev, ...parsed])
+    } catch { /* offline */ }
+    finally { setLoadingMore(false) }
+  }, [nextPageToken, loadingMore])
+
+  async function handleBatchArchive() {
+    if (!selectedIds.size || batchArchiving) return
+    setBatchArchiving(true)
+    try {
+      await Promise.all([...selectedIds].map(id => archiveMessage(id).catch(() => {})))
+      setEmails(prev => {
+        const next = prev.filter(e => !selectedIds.has(e.id))
+        setSelectedId(next.length > 0 ? next[0].id : null)
+        return next
+      })
+      setSelectedIds(new Set())
+    } finally { setBatchArchiving(false) }
+  }
+
+  async function handleComposeSend() {
+    if (!composeTo.trim() || !composeSubject.trim() || !composeBody.trim()) return
+    setComposeSending(true)
+    try {
+      await composeEmail({ to: composeTo.trim(), subject: composeSubject.trim(), body: composeBody.trim() })
+      setComposeSent(true)
+      setTimeout(() => { setComposing(false); setComposeTo(''); setComposeSubject(''); setComposeBody(''); setComposeSent(false) }, 1500)
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to send.')
+    } finally { setComposeSending(false) }
+  }
+
   // ─── Render helpers ──────────────────────────────────────────────────────
 
   function renderLeft() {
@@ -294,8 +400,44 @@ export function InboxModule() {
     if (noAuth || emails.length === 0) return null
 
     return (
-      <div style={{ background: 'var(--color-surface, #161929)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 12, overflow: 'hidden' }}>
-        {emails.map((email, i) => {
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {/* Search */}
+        <div style={{ position: 'relative' }}>
+          <Search size={13} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted, #6B7280)', pointerEvents: 'none' }} />
+          <input
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder="Search emails…"
+            style={{ width: '100%', boxSizing: 'border-box', padding: '8px 32px 8px 30px', borderRadius: 8, background: 'var(--color-surface, #161929)', border: '1px solid var(--color-border, #252A3E)', color: 'var(--color-text, #E8EAF6)', fontSize: 12.5, outline: 'none' }}
+          />
+          {searchQuery && (
+            <button onClick={() => setSearchQuery('')} style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted, #6B7280)', padding: 2, display: 'flex' }}>
+              <XIcon size={12} />
+            </button>
+          )}
+        </div>
+
+        {/* Batch action bar */}
+        {selectedIds.size > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: 'rgba(30,64,175,0.08)', border: '1px solid rgba(30,64,175,0.2)', borderRadius: 8 }}>
+            <span style={{ fontSize: 12, color: '#1E40AF', fontWeight: 500, flex: 1 }}>{selectedIds.size} selected</span>
+            <button onClick={() => void handleBatchArchive()} disabled={batchArchiving}
+              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 6, background: 'transparent', border: '1px solid rgba(30,64,175,0.3)', color: '#1E40AF', fontSize: 12, cursor: 'pointer', opacity: batchArchiving ? 0.5 : 1 }}>
+              <Archive size={11} /> Archive all
+            </button>
+            <button onClick={() => setSelectedIds(new Set())}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6B7280', padding: 2, display: 'flex' }}>
+              <XIcon size={13} />
+            </button>
+          </div>
+        )}
+
+        <div style={{ background: 'var(--color-surface, #161929)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 12, overflow: 'hidden' }}>
+        {filteredEmails.length === 0 && searchQuery ? (
+          <div style={{ padding: '24px 16px', textAlign: 'center', color: 'var(--color-text-muted, #6B7280)', fontSize: 12.5 }}>
+            No emails match "{searchQuery}"
+          </div>
+        ) : filteredEmails.map((email, i) => {
           const isSelected = selectedId === email.id
           const isRead     = readIds.has(email.id)
           const triage     = triageMap[email.id]
@@ -320,9 +462,13 @@ export function InboxModule() {
               }}
             >
               <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                <div style={{ position: 'relative' }}>
-                  <SenderAvatar name={email.fromName} email={email.fromEmail} />
-                  {!isRead && <div style={{ position: 'absolute', top: 0, right: 0, width: 9, height: 9, borderRadius: '50%', background: '#1E40AF', border: '2px solid var(--color-surface, #161929)' }} />}
+                <div style={{ position: 'relative', flexShrink: 0 }}
+                  onClick={ev => { ev.stopPropagation(); setSelectedIds(prev => { const n = new Set(prev); n.has(email.id) ? n.delete(email.id) : n.add(email.id); return n }) }}>
+                  {selectedIds.has(email.id)
+                    ? <div style={{ width: 34, height: 34, borderRadius: '50%', background: '#1E40AF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><CheckCheck size={16} color="#fff" /></div>
+                    : <SenderAvatar name={email.fromName} email={email.fromEmail} />
+                  }
+                  {!isRead && !selectedIds.has(email.id) && <div style={{ position: 'absolute', top: 0, right: 0, width: 9, height: 9, borderRadius: '50%', background: '#1E40AF', border: '2px solid var(--color-surface, #161929)' }} />}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 3 }}>
@@ -345,13 +491,25 @@ export function InboxModule() {
                     {email.preview}
                   </p>
                 </div>
-                <span style={{ fontSize: 10.5, color: '#FFFFFF', flexShrink: 0, paddingTop: 2 }}>
+                <span style={{ fontSize: 10.5, color: 'var(--color-text-muted, #6B7280)', flexShrink: 0, paddingTop: 2 }}>
                   {fmtRelTime(email.receivedAt)}
                 </span>
               </div>
             </button>
           )
         })}
+        </div>
+
+        {nextPageToken && (
+          <button
+            onClick={() => void handleLoadMore()}
+            disabled={loadingMore}
+            style={{ width: '100%', padding: '9px', borderRadius: 8, background: 'transparent', border: '1px dashed var(--color-border, #252A3E)', color: 'var(--color-text-muted, #6B7280)', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: loadingMore ? 0.5 : 1 }}
+          >
+            <RefreshCw size={12} style={{ animation: loadingMore ? 'spin 1s linear infinite' : 'none' }} />
+            {loadingMore ? 'Loading…' : 'Load more emails'}
+          </button>
+        )}
       </div>
     )
   }
@@ -411,21 +569,63 @@ export function InboxModule() {
           <p style={{ margin: '0 0 8px', fontSize: 18, fontWeight: 700, color: 'var(--color-text, #E8EAF6)', fontFamily: "'Cabinet Grotesk', sans-serif", letterSpacing: '-0.3px' }}>
             {selectedEmail.subject}
           </p>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-            <span style={{ fontSize: 12.5, color: '#1E40AF', fontWeight: 500 }}>{selectedEmail.fromName}</span>
-            <span style={{ fontSize: 12, color: 'var(--color-text-muted, #6B7280)' }}>{`<${selectedEmail.fromEmail}>`}</span>
-            <span style={{ fontSize: 11, color: 'var(--color-text-muted, #6B7280)', marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4 }}>
-              <Clock size={10} />{fmtRelTime(selectedEmail.receivedAt)}
-            </span>
-            <button
-              onClick={() => void handleArchive(selectedEmail)}
-              disabled={archiving === selectedEmail.id}
-              title="Archive"
-              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 6, background: 'transparent', border: '1px solid var(--color-border, #252A3E)', color: 'var(--color-text-dim, #94A3B8)', fontSize: 11.5, cursor: 'pointer', opacity: archiving === selectedEmail.id ? 0.5 : 1 }}
-            >
-              <Archive size={12} /> Archive
-            </button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 12.5, color: '#1E40AF', fontWeight: 600 }}>{selectedEmail.fromName}</span>
+              <span style={{ fontSize: 12, color: 'var(--color-text-muted, #6B7280)' }}>{`<${selectedEmail.fromEmail}>`}</span>
+              <span style={{ fontSize: 11, color: 'var(--color-text-muted, #6B7280)', marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                <Clock size={10} />{fmtRelTime(selectedEmail.receivedAt)}
+              </span>
+              <button
+                onClick={() => void handleArchive(selectedEmail)}
+                disabled={archiving === selectedEmail.id}
+                title="Archive"
+                style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 6, background: 'transparent', border: '1px solid var(--color-border, #252A3E)', color: 'var(--color-text-dim, #94A3B8)', fontSize: 11.5, cursor: 'pointer', opacity: archiving === selectedEmail.id ? 0.5 : 1 }}
+              >
+                <Archive size={12} /> Archive
+              </button>
+            </div>
+            {selectedEmail.to && (
+              <div style={{ display: 'flex', gap: 6, alignItems: 'baseline' }}>
+                <span style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--color-text-muted, #6B7280)', minWidth: 18 }}>To</span>
+                <span style={{ fontSize: 11.5, color: 'var(--color-text-dim, #94A3B8)', wordBreak: 'break-word' }}>{selectedEmail.to}</span>
+              </div>
+            )}
+            {selectedEmail.cc && (
+              <div style={{ display: 'flex', gap: 6, alignItems: 'baseline' }}>
+                <span style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--color-text-muted, #6B7280)', minWidth: 18 }}>CC</span>
+                <span style={{ fontSize: 11.5, color: 'var(--color-text-dim, #94A3B8)', wordBreak: 'break-word' }}>{selectedEmail.cc}</span>
+              </div>
+            )}
           </div>
+          {/* Thread history — older messages */}
+          {selectedEmail.threadMessages.length > 0 && (
+            <div style={{ marginBottom: 14 }}>
+              <button
+                onClick={() => setExpandedThread(v => v === selectedEmail.id ? null : selectedEmail.id)}
+                style={{ fontSize: 11.5, color: 'var(--color-text-muted, #6B7280)', background: 'var(--color-surface2, #0D0F1A)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 6, padding: '4px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}
+              >
+                {expandedThread === selectedEmail.id ? '▲' : '▼'} {selectedEmail.threadMessages.length} earlier message{selectedEmail.threadMessages.length > 1 ? 's' : ''} in thread
+              </button>
+              {expandedThread === selectedEmail.id && (
+                <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {selectedEmail.threadMessages.map(m => (
+                    <div key={m.id} style={{ borderLeft: '3px solid var(--color-border, #252A3E)', paddingLeft: 14 }}>
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6 }}>
+                        <span style={{ fontSize: 12, fontWeight: 600, color: '#1E40AF' }}>{m.fromName}</span>
+                        <span style={{ fontSize: 11, color: 'var(--color-text-muted, #6B7280)' }}>{fmtRelTime(m.receivedAt)}</span>
+                      </div>
+                      {m.htmlBody
+                        ? <EmailBodyFrame html={m.htmlBody} />
+                        : <p style={{ margin: 0, fontSize: 12.5, color: 'var(--color-text-dim, #94A3B8)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{m.body}</p>
+                      }
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           <div style={{ height: 1, background: 'var(--color-border, #252A3E)', marginBottom: 16 }} />
           {selectedEmail.htmlBody ? (
             <EmailBodyFrame html={selectedEmail.htmlBody} />
@@ -575,6 +775,12 @@ export function InboxModule() {
             </div>
             <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
               <button
+                onClick={() => setComposing(o => !o)}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 7, background: composing ? 'rgba(30,64,175,0.12)' : 'transparent', border: `1px solid ${composing ? 'rgba(30,64,175,0.3)' : 'var(--color-border, #252A3E)'}`, color: composing ? '#1E40AF' : 'var(--color-text-dim, #8B93A8)', fontSize: 12, cursor: 'pointer' }}
+              >
+                <PenSquare size={12} /> Compose
+              </button>
+              <button
                 onClick={() => { setBulkOpen(o => !o); setBulkText(''); setBulkDone(false); setTimeout(() => bulkRef.current?.focus(), 50) }}
                 style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 7, background: bulkOpen ? 'rgba(29,158,117,0.12)' : 'transparent', border: `1px solid ${bulkOpen ? 'rgba(29,158,117,0.3)' : 'var(--color-border, #252A3E)'}`, color: bulkOpen ? '#1D9E75' : 'var(--color-text-dim, #8B93A8)', fontSize: 12, cursor: 'pointer' }}
               >
@@ -597,6 +803,31 @@ export function InboxModule() {
                   <Zap size={12} /> Triage with AI
                 </button>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* Compose panel */}
+        {composing && (
+          <div style={{ marginBottom: 12, padding: '16px 20px', background: 'var(--color-surface, #161929)', border: '1px solid rgba(30,64,175,0.25)', borderRadius: 10 }}>
+            <p style={{ margin: '0 0 12px', fontSize: 12, fontWeight: 700, color: '#1E40AF', textTransform: 'uppercase', letterSpacing: '0.6px' }}>New Message</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <input value={composeTo} onChange={e => setComposeTo(e.target.value)} placeholder="To"
+                style={{ padding: '8px 12px', borderRadius: 7, background: 'var(--color-bg, #0D0F1A)', border: '1px solid var(--color-border, #252A3E)', color: 'var(--color-text, #E8EAF6)', fontSize: 13, outline: 'none' }} />
+              <input value={composeSubject} onChange={e => setComposeSubject(e.target.value)} placeholder="Subject"
+                style={{ padding: '8px 12px', borderRadius: 7, background: 'var(--color-bg, #0D0F1A)', border: '1px solid var(--color-border, #252A3E)', color: 'var(--color-text, #E8EAF6)', fontSize: 13, outline: 'none' }} />
+              <textarea value={composeBody} onChange={e => setComposeBody(e.target.value)} placeholder="Write your message…" rows={6}
+                style={{ padding: '10px 12px', borderRadius: 7, resize: 'vertical', background: 'var(--color-bg, #0D0F1A)', border: '1px solid var(--color-border, #252A3E)', color: 'var(--color-text, #E8EAF6)', fontSize: 13, lineHeight: 1.6, fontFamily: 'inherit', outline: 'none' }} />
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                <button onClick={() => setComposing(false)} style={{ padding: '7px 14px', borderRadius: 7, background: 'transparent', border: '1px solid var(--color-border, #252A3E)', color: 'var(--color-text-dim, #94A3B8)', fontSize: 12, cursor: 'pointer' }}>Cancel</button>
+                <button
+                  onClick={() => void handleComposeSend()}
+                  disabled={!composeTo.trim() || !composeSubject.trim() || !composeBody.trim() || composeSending}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 18px', borderRadius: 7, background: composeSent ? 'rgba(29,158,117,0.12)' : 'rgba(30,64,175,0.12)', border: `1px solid ${composeSent ? 'rgba(29,158,117,0.3)' : 'rgba(30,64,175,0.25)'}`, color: composeSent ? '#1D9E75' : '#1E40AF', fontSize: 12, fontWeight: 500, cursor: 'pointer', opacity: composeSending ? 0.5 : 1 }}
+                >
+                  {composeSent ? <><CheckCheck size={12} /> Sent!</> : composeSending ? <><RefreshCw size={11} style={{ animation: 'spin 1s linear infinite' }} /> Sending…</> : <><ArrowRight size={11} /> Send</>}
+                </button>
+              </div>
             </div>
           </div>
         )}

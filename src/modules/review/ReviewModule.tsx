@@ -252,32 +252,44 @@ function WeeklyDayCard({ dayStr, allEvents, statuses, tasks }: {
 
   return (
     <div style={{ borderBottom: '1px solid #1A1D2E' }}>
-      {/* Day header row */}
+      {/* Day header */}
       <div style={{
-        display: 'flex', alignItems: 'center', gap: 16, padding: '13px 20px',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '12px 20px', gap: 12,
         background: isToday ? 'rgba(127,119,221,0.05)' : undefined,
       }}>
-        <span style={{ fontSize: 12.5, fontWeight: 700, color: isToday ? '#7F77DD' : '#8B93A8', minWidth: 120 }}>
-          {dayLabel}{isToday ? '  ·  Today' : ''}
-        </span>
-        <span style={{ fontSize: 11, color: doneEvts.length > 0 ? '#7F77DD' : '#3A3F55' }}>
-          {doneEvts.length}/{events.length} events
-        </span>
-        <span style={{ color: '#252A3E', fontSize: 11 }}>·</span>
-        <span style={{ fontSize: 11, color: doneTasks.length > 0 ? '#1D9E75' : '#3A3F55' }}>
-          {doneTasks.length}/{dayTasks.length} tasks
-        </span>
-        {!hasActivity && (
-          <span style={{ fontSize: 11, color: '#3A3F55', marginLeft: 'auto' }}>No activity</span>
-        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+          {isToday && (
+            <span style={{ fontSize: 9, fontWeight: 700, color: '#7F77DD', background: 'rgba(127,119,221,0.15)', border: '1px solid rgba(127,119,221,0.3)', borderRadius: 4, padding: '1px 6px', flexShrink: 0 }}>TODAY</span>
+          )}
+          <span style={{ fontSize: 13, fontWeight: 700, color: isToday ? '#7F77DD' : '#C0C4D6', whiteSpace: 'nowrap' }}>
+            {dayLabel}
+          </span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexShrink: 0 }}>
+          <span style={{ fontSize: 11.5, color: doneEvts.length > 0 ? '#7F77DD' : '#3A3F55', display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span style={{ fontWeight: 600, color: doneEvts.length > 0 ? '#7F77DD' : '#3A3F55' }}>{doneEvts.length}</span>
+            <span style={{ color: '#3A3F55' }}>/ {events.length}</span>
+            <span style={{ color: '#3A3F55' }}>events</span>
+          </span>
+          <div style={{ width: 1, height: 12, background: '#252A3E' }} />
+          <span style={{ fontSize: 11.5, color: doneTasks.length > 0 ? '#1D9E75' : '#3A3F55', display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span style={{ fontWeight: 600, color: doneTasks.length > 0 ? '#1D9E75' : '#3A3F55' }}>{doneTasks.length}</span>
+            <span style={{ color: '#3A3F55' }}>/ {dayTasks.length}</span>
+            <span style={{ color: '#3A3F55' }}>tasks</span>
+          </span>
+          {!hasActivity && (
+            <span style={{ fontSize: 11, color: '#3A3F55' }}>No activity</span>
+          )}
+        </div>
       </div>
 
       {/* Items */}
       {hasActivity && (
-        <div style={{ padding: '2px 20px 12px' }}>
-          {doneEvts.map(e      => <EventRow key={e.id} event={e} />)}
-          {cancelledEvts.map(e => <EventRow key={e.id} event={e} cancelled />)}
-          {doneTasks.map(t     => <TaskRow key={t.id} title={t.title} company={t.company} />)}
+        <div style={{ padding: '4px 20px 14px' }}>
+          {doneEvts.map(e       => <EventRow key={e.id} event={e} />)}
+          {cancelledEvts.map(e  => <EventRow key={e.id} event={e} cancelled />)}
+          {doneTasks.map(t      => <TaskRow key={t.id} title={t.title} company={t.company} />)}
           {cancelledTasks.map(t => <TaskRow key={t.id} title={t.title} company={t.company} cancelled />)}
         </div>
       )}
@@ -347,7 +359,7 @@ export function ReviewModule() {
         </div>
 
         {/* ─── Stats grid ─────────────────────────────────────────────────── */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 28 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 14, marginBottom: 28 }}>
           <StatCard label="Tasks Shipped" value={completedTasks.length} sub="This week" icon={CheckSquare} color="#1D9E75" />
           <StatCard label="Tasks Slipped" value={slipped} sub={slipped > 0 ? 'Past due date' : 'All on track'} icon={TrendingUp} color={slipped > 0 ? '#E05252' : '#1D9E75'} />
           <StatCard label="Focus Hours" value={focusHours} sub="Click to edit" icon={Clock} color="#7F77DD" editable onChange={v => { setFocusHours(v); saveHours(v, meetingHours) }} />
@@ -389,7 +401,7 @@ export function ReviewModule() {
                     key={mode}
                     onClick={() => setViewMode(mode)}
                     style={{
-                      padding: '4px 13px', fontSize: 11, fontWeight: 600, cursor: 'pointer', border: 'none',
+                      padding: '5px 14px', fontSize: 11.5, fontWeight: 600, cursor: 'pointer', border: 'none',
                       background: viewMode === mode ? '#7F77DD' : 'none',
                       color: viewMode === mode ? '#fff' : '#6B7280',
                       textTransform: 'capitalize',
@@ -397,11 +409,11 @@ export function ReviewModule() {
                   >{mode}</button>
                 ))}
               </div>
-              <button
-                onClick={() => setSelectedDay(d => shiftDay(d, viewMode === 'weekly' ? +7 : +1))}
-                style={{ background: 'none', border: '1px solid #252A3E', borderRadius: 7, cursor: 'pointer', color: '#8B93A8', padding: '5px 8px', display: 'flex', alignItems: 'center' }}
-              ><ChevronRight size={15} /></button>
             </div>
+            <button
+              onClick={() => setSelectedDay(d => shiftDay(d, viewMode === 'weekly' ? +7 : +1))}
+              style={{ background: 'none', border: '1px solid #252A3E', borderRadius: 7, cursor: 'pointer', color: '#8B93A8', padding: '5px 8px', display: 'flex', alignItems: 'center' }}
+            ><ChevronRight size={15} /></button>
           </div>
 
           {/* Analytics bar */}
