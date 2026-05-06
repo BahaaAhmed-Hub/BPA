@@ -5,6 +5,7 @@ import { useTaskStore } from '@/store/taskStore'
 import { useAuthStore } from '@/store/authStore'
 import { ASSISTANT_TOOLS, executeTool, type ToolContext } from '@/lib/assistantTools'
 import { loadAIConfig, type AIConfig } from '@/modules/settings/Settings'
+import { loadAccounts } from '@/lib/multiAccount'
 
 // ─── Groq types (OpenAI-compatible) ──────────────────────────────────────────
 
@@ -155,9 +156,9 @@ function ThinkingDot() {
 
 const SUGGESTIONS = [
   'What emails need my attention today?',
+  'Which accounts do I have connected?',
   "What's on my calendar this week?",
   'Show me my open tasks',
-  'Find recent files in Drive',
 ]
 
 // ─── Main panel ───────────────────────────────────────────────────────────────
@@ -193,7 +194,9 @@ export function AssistantPanel({ open, onClose }: AssistantPanelProps) {
     if (open) setTimeout(() => inputRef.current?.focus(), 200)
   }, [open])
 
-  const ctx: ToolContext = { tasks, addTask, updateTask }
+  const accounts     = loadAccounts()
+  const primaryEmail = user?.email ?? ''
+  const ctx: ToolContext = { tasks, addTask, updateTask, accounts, primaryEmail }
 
   // ── Anthropic agentic loop ──────────────────────────────────────────────────
 
