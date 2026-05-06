@@ -1,5 +1,6 @@
 
 import { useEffect, useLayoutEffect, useState } from 'react'
+import { AssistantPanel, AssistantToggle } from './modules/assistant/AssistantPanel'
 import { Sidebar } from './components/layout/Sidebar'
 import { PageShell } from './components/layout/PageShell'
 import { ExecutiveDashboard } from './modules/dashboard/ExecutiveDashboard'
@@ -743,6 +744,8 @@ function App() {
     return () => clearInterval(id)
   }, [user])
 
+  const [assistantOpen, setAssistantOpen] = useState(false)
+
   if (loading) return <LoadingScreen />
   if (!user)   return <LoginScreen />
 
@@ -752,6 +755,8 @@ function App() {
       <PageShell>
         <ActiveModule />
       </PageShell>
+      <AssistantPanel open={assistantOpen} onClose={() => setAssistantOpen(false)} />
+      <AssistantToggle open={assistantOpen} onClick={() => setAssistantOpen(o => !o)} />
     </div>
   )
 }
