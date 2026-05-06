@@ -10,6 +10,9 @@ export async function signInWithGoogle() {
         'https://www.googleapis.com/auth/calendar',
         'https://www.googleapis.com/auth/calendar.events',
         'https://www.googleapis.com/auth/gmail.readonly',
+        'https://www.googleapis.com/auth/gmail.send',
+        'https://www.googleapis.com/auth/gmail.modify',
+        'https://www.googleapis.com/auth/drive.readonly',
       ].join(' '),
       redirectTo: window.location.origin + import.meta.env.BASE_URL,
       queryParams: {
@@ -48,6 +51,9 @@ export async function connectAdditionalGoogleAccount(emailHint?: string) {
         'https://www.googleapis.com/auth/calendar',
         'https://www.googleapis.com/auth/calendar.events',
         'https://www.googleapis.com/auth/gmail.readonly',
+        'https://www.googleapis.com/auth/gmail.send',
+        'https://www.googleapis.com/auth/gmail.modify',
+        'https://www.googleapis.com/auth/drive.readonly',
       ].join(' '),
       redirectTo: window.location.origin + import.meta.env.BASE_URL,
       queryParams: {

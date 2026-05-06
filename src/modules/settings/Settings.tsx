@@ -1,7 +1,7 @@
 // ─── CHUNK 1: Types, constants, localStorage helpers ─────────────────────────
 // (remaining chunks appended below)
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, type ReactNode } from 'react'
 import {
   DndContext, closestCenter, KeyboardSensor, PointerSensor,
   useSensor, useSensors, type DragEndEvent,
@@ -15,7 +15,7 @@ import {
   Plus, Trash2, GripVertical, LogIn, LogOut,
   ChevronDown, ChevronUp, User, Clock, Building2, Flame,
   Brain, Bell, Palette, Link, X, RefreshCw, Eye, EyeOff, Shield, Pencil,
-  Hash, CheckSquare,
+  Hash, CheckSquare, Mail, HardDrive, CalendarDays,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { connectAdditionalGoogleAccount, signOut as googleSignOut, disconnectGoogleAccount } from '@/lib/google'
@@ -924,6 +924,28 @@ function HabitsSection() {
 
 // ─── CHUNK 5: Connected Accounts (multi-Google) ───────────────────────────────
 
+function IntegrationBadge({ icon, label, active, onGrant }: {
+  icon: ReactNode; label: string; active: boolean; onGrant?: () => void
+}) {
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: 4,
+      padding: '2px 7px', borderRadius: 20, fontSize: 10, fontWeight: 500,
+      background: active ? 'rgba(29,158,117,0.1)' : 'rgba(100,116,139,0.1)',
+      border: `1px solid ${active ? 'rgba(29,158,117,0.3)' : 'rgba(100,116,139,0.25)'}`,
+      color: active ? '#1D9E75' : '#64748B',
+    }}>
+      {icon}{label}
+      {!active && onGrant && (
+        <button onClick={onGrant} style={{
+          marginLeft: 3, background: 'none', border: 'none', cursor: 'pointer',
+          color: 'var(--color-accent, #6366F1)', fontSize: 9, fontWeight: 600, padding: 0,
+        }}>Grant</button>
+      )}
+    </span>
+  )
+}
+
 function AccountsSection({
   accounts, setAccounts, primaryEmail,
 }: {
@@ -1015,7 +1037,7 @@ function AccountsSection({
   return (
     <div>
       <p style={{ margin: '0 0 16px', fontSize: 12.5, color: 'var(--color-text-muted, #6B7280)', lineHeight: 1.55 }}>
-        Connect multiple Google accounts to aggregate all your calendars and Gmail inboxes in one place.
+        Connect multiple Google accounts to aggregate your calendars, Gmail inboxes, and Drive files in one place.
         Primary account is your sign-in account.
       </p>
 
@@ -1035,7 +1057,11 @@ function AccountsSection({
         </div>
         <div style={{ flex: 1 }}>
           <p style={{ margin: 0, fontSize: 13, fontWeight: 500, color: 'var(--color-text, #E8EAF6)' }}>{primaryEmail || 'Primary Google Account'}</p>
-          <p style={{ margin: '2px 0 0', fontSize: 11, color: '#1D9E75' }}>✓ Primary · Calendar + Gmail access</p>
+          <div style={{ margin: '5px 0 0', display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+            <IntegrationBadge icon={<CalendarDays size={10} />} label="Calendar" active />
+            <IntegrationBadge icon={<Mail size={10} />} label="Gmail" active />
+            <IntegrationBadge icon={<HardDrive size={10} />} label="Drive" active />
+          </div>
         </div>
         <span style={{ fontSize: 10.5, padding: '3px 10px', borderRadius: 20, background: 'rgba(29,158,117,0.1)', color: '#1D9E75', border: '1px solid rgba(29,158,117,0.2)' }}>
           Active
@@ -1082,9 +1108,16 @@ function AccountsSection({
             </div>
             <div style={{ flex: 1 }}>
               <p style={{ margin: 0, fontSize: 13, fontWeight: 500, color: 'var(--color-text, #E8EAF6)' }}>{acc.email || acc.name}</p>
-              <p style={{ margin: '2px 0 0', fontSize: 11, color: isStale ? '#E0A524' : 'var(--color-text-muted, #6B7280)' }}>
-                {isStale ? '⚠ Calendar access lost — reconnect to restore' : `Connected ${new Date(acc.connectedAt).toLocaleDateString()}`}
-              </p>
+              {isStale ? (
+                <p style={{ margin: '2px 0 0', fontSize: 11, color: '#E0A524' }}>⚠ Access lost — reconnect to restore</p>
+              ) : (
+                <div style={{ margin: '5px 0 0', display: 'flex', gap: 5, flexWrap: 'wrap', alignItems: 'center' }}>
+                  <IntegrationBadge icon={<CalendarDays size={10} />} label="Calendar" active={acc.scopes.some(s => s.includes('calendar'))} />
+                  <IntegrationBadge icon={<Mail size={10} />} label="Gmail" active={acc.scopes.some(s => s.includes('gmail'))} />
+                  <IntegrationBadge icon={<HardDrive size={10} />} label="Drive" active={acc.scopes.some(s => s.includes('drive'))}
+                    onGrant={!acc.scopes.some(s => s.includes('drive')) ? () => void reconnectAccount(acc) : undefined} />
+                </div>
+              )}
             </div>
             {isStale ? (
               <button
@@ -1165,7 +1198,7 @@ function AccountsSection({
       </div>
 
       <p style={{ margin: '10px 0 0', fontSize: 11.5, color: 'var(--color-text-muted, #6B7280)', lineHeight: 1.55 }}>
-        All connected accounts are used for calendar aggregation and inbox triage. Tokens are stored securely on the server — never in the browser.
+        Connected accounts grant Calendar, Gmail, and Drive access for aggregation and triage. Tokens are stored securely on the server — never in the browser. Re-authorize any account to upgrade its permissions.
       </p>
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
