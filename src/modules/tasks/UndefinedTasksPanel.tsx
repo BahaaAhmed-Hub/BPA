@@ -19,7 +19,7 @@ const inp: React.CSSProperties = {
 const sel: React.CSSProperties = { ...inp }
 
 const STATUS_COLORS: Record<TaskStatus, string> = {
-  open: '#7F77DD', done: '#1D9E75', cancelled: '#6B7280',
+  open: '#7F77DD', done: '#1D9E75', cancelled: 'var(--color-text-muted, #6B7280)',
 }
 
 // ─── Draggable card for inbox tasks ──────────────────────────────────────────
@@ -71,7 +71,7 @@ function DraggableInboxCard({ task, accentColor, taskStatus, ownerUser, onOpen, 
           <div
             {...listeners} {...attributes}
             onClick={e => e.stopPropagation()}
-            style={{ cursor: 'grab', color: hovered ? '#6B7280' : 'transparent', transition: 'color 0.15s', marginTop: 1, flexShrink: 0 }}
+            style={{ cursor: 'grab', color: hovered ? 'var(--color-text-muted, #6B7280)' : 'transparent', transition: 'color 0.15s', marginTop: 1, flexShrink: 0 }}
           >
             <GripVertical size={12} strokeWidth={2} />
           </div>
@@ -117,7 +117,7 @@ function DraggableInboxCard({ task, accentColor, taskStatus, ownerUser, onOpen, 
               </select>
 
               {task.dueDate && (
-                <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: '#6B7280' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: 'var(--color-text-muted, #6B7280)' }}>
                   <Calendar size={9} />
                   {new Date(task.dueDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                 </span>
@@ -153,7 +153,7 @@ function DraggableInboxCard({ task, accentColor, taskStatus, ownerUser, onOpen, 
               onClick={e => { e.stopPropagation(); onDelete() }}
               style={{
                 background: 'transparent', border: 'none', cursor: 'pointer',
-                color: '#6B7280', padding: 2, borderRadius: 4,
+                color: 'var(--color-text-muted, #6B7280)', padding: 2, borderRadius: 4,
                 display: 'flex', alignItems: 'center',
                 opacity: hovered ? 1 : 0, transition: 'opacity 0.15s',
               }}
@@ -301,7 +301,7 @@ export function UndefinedTasksPanel({ onOpen, hideCompleted = false, groupBy = '
       return [...map.entries()].map(([k, ts]) => {
         const dynCo = companies.find(c => c.id === k)
         const label = dynCo?.name ?? k
-        const color = dynCo?.color ?? '#6B7280'
+        const color = dynCo?.color ?? 'var(--color-text-muted, #6B7280)'
         return { key: k, label, emoji: '🏢', color, tasks: ts }
       })
     }
@@ -311,7 +311,7 @@ export function UndefinedTasksPanel({ onOpen, hideCompleted = false, groupBy = '
     const co = companies.find(c => c.id === t.companyId)
     const ownerUser = t.owner ? users.find(u => u.id === t.owner) : undefined
     const taskStatus: TaskStatus = t.completed ? 'done' : (t.status ?? 'open')
-    const accentColor = co?.color ?? COMPANY_COLORS[t.company] ?? '#6B7280'
+    const accentColor = co?.color ?? COMPANY_COLORS[t.company] ?? 'var(--color-text-muted, #6B7280)'
     return (
       <DraggableInboxCard
         key={t.id} task={t} accentColor={accentColor} taskStatus={taskStatus}
@@ -345,7 +345,7 @@ export function UndefinedTasksPanel({ onOpen, hideCompleted = false, groupBy = '
           <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--color-text, #E8EAF6)' }}>Inbox</span>
           <span style={{
             fontSize: 10.5, fontWeight: 600,
-            color: '#6B7280', background: '#6B728018', padding: '1px 6px', borderRadius: 4,
+            color: 'var(--color-text-muted, #6B7280)', background: '#6B728018', padding: '1px 6px', borderRadius: 4,
           }}>{inbox.length}</span>
           <button
             onClick={() => { setBulkOpen(o => !o); setBulkText(''); setBulkDone(false); setTimeout(() => bulkRef.current?.focus(), 50) }}
@@ -355,7 +355,7 @@ export function UndefinedTasksPanel({ onOpen, hideCompleted = false, groupBy = '
               padding: '3px 8px', borderRadius: 5, fontSize: 11, fontWeight: 500,
               background: bulkOpen ? 'rgba(29,158,117,0.12)' : 'transparent',
               border: `1px solid ${bulkOpen ? 'rgba(29,158,117,0.3)' : 'var(--color-border, #252A3E)'}`,
-              color: bulkOpen ? '#1D9E75' : '#6B7280', cursor: 'pointer',
+              color: bulkOpen ? '#1D9E75' : 'var(--color-text-muted, #6B7280)', cursor: 'pointer',
             }}
           >
             <ListPlus size={11} /> Bulk add
@@ -377,12 +377,12 @@ export function UndefinedTasksPanel({ onOpen, hideCompleted = false, groupBy = '
               }}
             />
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: 10.5, color: '#6B7280', flex: 1 }}>
+              <span style={{ fontSize: 10.5, color: 'var(--color-text-muted, #6B7280)', flex: 1 }}>
                 {bulkLines.length > 0 ? `${bulkLines.length} task${bulkLines.length > 1 ? 's' : ''} ready` : 'Paste or type tasks above'}
               </span>
               <button onClick={() => { setBulkOpen(false); setBulkText('') }} style={{
                 padding: '4px 8px', borderRadius: 5, fontSize: 11, background: 'transparent',
-                border: '1px solid var(--color-border, #252A3E)', color: '#6B7280', cursor: 'pointer',
+                border: '1px solid var(--color-border, #252A3E)', color: 'var(--color-text-muted, #6B7280)', cursor: 'pointer',
               }}>Cancel</button>
               <button onClick={handleBulkAdd} disabled={bulkLines.length === 0 || bulkDone} style={{
                 display: 'flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 5,
@@ -405,7 +405,7 @@ export function UndefinedTasksPanel({ onOpen, hideCompleted = false, groupBy = '
               cursor: 'pointer', textTransform: 'capitalize',
               background: filter === f ? '#1E40AF18' : 'transparent',
               border: `1px solid ${filter === f ? '#1E40AF50' : 'var(--color-border, #252A3E)'}`,
-              color: filter === f ? '#7F77DD' : '#6B7280',
+              color: filter === f ? '#7F77DD' : 'var(--color-text-muted, #6B7280)',
             }}>
               {f} {counts[f] > 0 && <span style={{ opacity: 0.7 }}>({counts[f]})</span>}
             </button>
@@ -426,7 +426,7 @@ export function UndefinedTasksPanel({ onOpen, hideCompleted = false, groupBy = '
         {filtered.length === 0 && !adding && (
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            minHeight: 80, color: inboxOver ? '#7F77DD' : '#6B7280',
+            minHeight: 80, color: inboxOver ? '#7F77DD' : 'var(--color-text-muted, #6B7280)',
             fontSize: 12, fontStyle: 'italic',
             border: `1px dashed ${inboxOver ? '#7F77DD60' : 'var(--color-border, #252A3E)'}`,
             borderRadius: 8, transition: 'all 0.15s ease',
@@ -482,10 +482,10 @@ export function UndefinedTasksPanel({ onOpen, hideCompleted = false, groupBy = '
                 padding: '5px 8px', display: 'flex', flexWrap: 'wrap', gap: 5, alignItems: 'center',
               }}>
                 <Sparkles size={10} color="#7F77DD" style={{ flexShrink: 0 }} />
-                {aiLoading && <span style={{ fontSize: 10.5, color: '#6B7280' }}>Analyzing…</span>}
+                {aiLoading && <span style={{ fontSize: 10.5, color: 'var(--color-text-muted, #6B7280)' }}>Analyzing…</span>}
                 {!aiLoading && aiHint && (
                   <>
-                    {aiHint.icon && <span style={{ fontSize: 10.5, color: '#94A3B8' }}>Icon: {aiHint.icon}</span>}
+                    {aiHint.icon && <span style={{ fontSize: 10.5, color: 'var(--color-text-dim, #94A3B8)' }}>Icon: {aiHint.icon}</span>}
                     {aiHint.companyId && (() => {
                       const co = companies.find(c => c.id === aiHint.companyId)
                       return co ? <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 3, background: `${co.color}18`, color: co.color, fontWeight: 600 }}>{co.name}</span> : null
@@ -506,18 +506,18 @@ export function UndefinedTasksPanel({ onOpen, hideCompleted = false, groupBy = '
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
               <div>
-                <span style={{ fontSize: 10, color: '#6B7280', display: 'block', marginBottom: 2 }}>Company</span>
+                <span style={{ fontSize: 10, color: 'var(--color-text-muted, #6B7280)', display: 'block', marginBottom: 2 }}>Company</span>
                 <select value={companyId} onChange={e => setCompanyId(e.target.value)} style={sel}>
                   <option value="">—</option>
                   {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </div>
               <div>
-                <span style={{ fontSize: 10, color: '#6B7280', display: 'block', marginBottom: 2 }}>Due date</span>
+                <span style={{ fontSize: 10, color: 'var(--color-text-muted, #6B7280)', display: 'block', marginBottom: 2 }}>Due date</span>
                 <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} style={sel} />
               </div>
               <div>
-                <span style={{ fontSize: 10, color: '#6B7280', display: 'block', marginBottom: 2 }}>Owner</span>
+                <span style={{ fontSize: 10, color: 'var(--color-text-muted, #6B7280)', display: 'block', marginBottom: 2 }}>Owner</span>
                 <select value={owner} onChange={e => setOwner(e.target.value)} style={sel}>
                   <option value="">—</option>
                   {(companyId
@@ -531,12 +531,12 @@ export function UndefinedTasksPanel({ onOpen, hideCompleted = false, groupBy = '
                 </select>
               </div>
               <div>
-                <span style={{ fontSize: 10, color: '#6B7280', display: 'block', marginBottom: 2 }}>Duration (min)</span>
+                <span style={{ fontSize: 10, color: 'var(--color-text-muted, #6B7280)', display: 'block', marginBottom: 2 }}>Duration (min)</span>
                 <input type="number" min={5} step={5} value={duration}
                   onChange={e => setDuration(e.target.value)} placeholder="60" style={sel} />
               </div>
               <div style={{ gridColumn: '1 / -1' }}>
-                <span style={{ fontSize: 10, color: '#6B7280', display: 'block', marginBottom: 2 }}>Status</span>
+                <span style={{ fontSize: 10, color: 'var(--color-text-muted, #6B7280)', display: 'block', marginBottom: 2 }}>Status</span>
                 <div style={{ display: 'flex', gap: 5 }}>
                   {(['open', 'done', 'cancelled'] as TaskStatus[]).map(s => (
                     <button key={s} onClick={() => setFormStatus(s)} style={{
@@ -544,7 +544,7 @@ export function UndefinedTasksPanel({ onOpen, hideCompleted = false, groupBy = '
                       cursor: 'pointer', textTransform: 'capitalize',
                       background: status === s ? STATUS_COLORS[s] + '22' : 'transparent',
                       border: `1px solid ${status === s ? STATUS_COLORS[s] + '80' : 'var(--color-border, #252A3E)'}`,
-                      color: status === s ? STATUS_COLORS[s] : '#6B7280',
+                      color: status === s ? STATUS_COLORS[s] : 'var(--color-text-muted, #6B7280)',
                     }}>{s}</button>
                   ))}
                 </div>
@@ -561,7 +561,7 @@ export function UndefinedTasksPanel({ onOpen, hideCompleted = false, groupBy = '
               <button onClick={reset} style={{
                 padding: '6px 10px', borderRadius: 6,
                 background: 'transparent', border: '1px solid var(--color-border, #252A3E)',
-                color: '#6B7280', cursor: 'pointer', fontSize: 12,
+                color: 'var(--color-text-muted, #6B7280)', cursor: 'pointer', fontSize: 12,
               }}><X size={12} /></button>
             </div>
           </div>
@@ -569,7 +569,7 @@ export function UndefinedTasksPanel({ onOpen, hideCompleted = false, groupBy = '
           <button onClick={() => setAdding(true)} style={{
             width: '100%', background: 'transparent', border: '1px dashed var(--color-border, #252A3E)',
             borderRadius: 7, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
-            color: '#6B7280', fontSize: 12, padding: '7px 10px',
+            color: 'var(--color-text-muted, #6B7280)', fontSize: 12, padding: '7px 10px',
           }}>
             <Plus size={12} /> Add task
           </button>

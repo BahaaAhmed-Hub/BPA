@@ -426,7 +426,7 @@ export function InboxModule() {
               <Archive size={11} /> Archive all
             </button>
             <button onClick={() => setSelectedIds(new Set())}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6B7280', padding: 2, display: 'flex' }}>
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted, #6B7280)', padding: 2, display: 'flex' }}>
               <XIcon size={13} />
             </button>
           </div>

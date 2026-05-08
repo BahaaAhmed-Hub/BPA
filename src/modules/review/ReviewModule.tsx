@@ -163,7 +163,7 @@ function SectionHead({ label, count, color }: { label: string; count: number; co
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
       <span style={{ fontSize: 10.5, fontWeight: 700, color, textTransform: 'uppercase', letterSpacing: '0.07em' }}>{label}</span>
-      <span style={{ fontSize: 10.5, color: '#4B5268', background: '#1A1D2E', borderRadius: 10, padding: '0 6px', fontWeight: 600 }}>{count}</span>
+      <span style={{ fontSize: 10.5, color: '#4B5268', background: 'var(--color-surface, #1A1D2E)', borderRadius: 10, padding: '0 6px', fontWeight: 600 }}>{count}</span>
     </div>
   )
 }
@@ -173,7 +173,7 @@ function SectionHead({ label, count, color }: { label: string; count: number; co
 function EventRow({ event, cancelled }: { event: GCalEvent; cancelled?: boolean }) {
   const time = fmtEventTime(event)
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 8, background: '#0D0F1A', border: '1px solid #1A1D2E', marginBottom: 5 }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 8, background: 'var(--color-bg, #0D0F1A)', border: '1px solid var(--color-surface, #1A1D2E)', marginBottom: 5 }}>
       {cancelled
         ? <XCircle size={13} color="#6B7280" style={{ flexShrink: 0 }} />
         : <CheckCircle2 size={13} color="#1D9E75" style={{ flexShrink: 0 }} />
@@ -181,7 +181,7 @@ function EventRow({ event, cancelled }: { event: GCalEvent; cancelled?: boolean 
       {time && (
         <span style={{ fontSize: 11, color: cancelled ? '#4B5268' : '#7F77DD', fontWeight: 600, minWidth: 54, flexShrink: 0 }}>{time}</span>
       )}
-      <span style={{ fontSize: 13, color: cancelled ? '#4B5268' : '#C0C4D6', flex: 1, textDecoration: cancelled ? 'line-through' : 'none' }}>
+      <span style={{ fontSize: 13, color: cancelled ? '#4B5268' : 'var(--color-text-dim, #C0C4D6)', flex: 1, textDecoration: cancelled ? 'line-through' : 'none' }}>
         {event.summary ?? '(No title)'}
       </span>
     </div>
@@ -192,12 +192,12 @@ function EventRow({ event, cancelled }: { event: GCalEvent; cancelled?: boolean 
 
 function TaskRow({ title, company, cancelled }: { title: string; company?: string; cancelled?: boolean }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 8, background: '#0D0F1A', border: '1px solid #1A1D2E', marginBottom: 5 }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 8, background: 'var(--color-bg, #0D0F1A)', border: '1px solid var(--color-surface, #1A1D2E)', marginBottom: 5 }}>
       {cancelled
         ? <XCircle size={13} color="#6B7280" style={{ flexShrink: 0 }} />
         : <CheckSquare size={13} color="#1D9E75" style={{ flexShrink: 0 }} />
       }
-      <span style={{ fontSize: 13, color: cancelled ? '#4B5268' : '#C0C4D6', flex: 1, textDecoration: cancelled ? 'line-through' : 'none' }}>
+      <span style={{ fontSize: 13, color: cancelled ? '#4B5268' : 'var(--color-text-dim, #C0C4D6)', flex: 1, textDecoration: cancelled ? 'line-through' : 'none' }}>
         {title}
       </span>
       {company && (
@@ -215,10 +215,10 @@ function PillStat({ done, total, label, color }: { done: number; total: number; 
   const pct = total > 0 ? Math.round((done / total) * 100) : 0
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-      <div style={{ height: 4, width: 80, background: '#1A1D2E', borderRadius: 2, overflow: 'hidden' }}>
+      <div style={{ height: 4, width: 80, background: 'var(--color-surface, #1A1D2E)', borderRadius: 2, overflow: 'hidden' }}>
         <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 2, transition: 'width 0.3s' }} />
       </div>
-      <span style={{ fontSize: 12, color: '#8B93A8' }}>
+      <span style={{ fontSize: 12, color: 'var(--color-text-dim, #8B93A8)' }}>
         <span style={{ color, fontWeight: 600 }}>{done}</span>
         <span style={{ color: '#4B5268' }}>/{total}</span>
         <span style={{ marginLeft: 4 }}>{label}</span>
@@ -251,7 +251,7 @@ function WeeklyDayCard({ dayStr, allEvents, statuses, tasks }: {
   const hasActivity = doneEvts.length > 0 || cancelledEvts.length > 0 || doneTasks.length > 0 || cancelledTasks.length > 0
 
   return (
-    <div style={{ borderBottom: '1px solid #1A1D2E' }}>
+    <div style={{ borderBottom: '1px solid var(--color-surface, #1A1D2E)' }}>
       {/* Day header */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -262,7 +262,7 @@ function WeeklyDayCard({ dayStr, allEvents, statuses, tasks }: {
           {isToday && (
             <span style={{ fontSize: 9, fontWeight: 700, color: '#7F77DD', background: 'rgba(127,119,221,0.15)', border: '1px solid rgba(127,119,221,0.3)', borderRadius: 4, padding: '1px 6px', flexShrink: 0 }}>TODAY</span>
           )}
-          <span style={{ fontSize: 13, fontWeight: 700, color: isToday ? '#7F77DD' : '#C0C4D6', whiteSpace: 'nowrap' }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: isToday ? '#7F77DD' : 'var(--color-text-dim, #C0C4D6)', whiteSpace: 'nowrap' }}>
             {dayLabel}
           </span>
         </div>
@@ -272,7 +272,7 @@ function WeeklyDayCard({ dayStr, allEvents, statuses, tasks }: {
             <span style={{ color: '#3A3F55' }}>/ {events.length}</span>
             <span style={{ color: '#3A3F55' }}>events</span>
           </span>
-          <div style={{ width: 1, height: 12, background: '#252A3E' }} />
+          <div style={{ width: 1, height: 12, background: 'var(--color-border, #252A3E)' }} />
           <span style={{ fontSize: 11.5, color: doneTasks.length > 0 ? '#1D9E75' : '#3A3F55', display: 'flex', alignItems: 'center', gap: 4 }}>
             <span style={{ fontWeight: 600, color: doneTasks.length > 0 ? '#1D9E75' : '#3A3F55' }}>{doneTasks.length}</span>
             <span style={{ color: '#3A3F55' }}>/ {dayTasks.length}</span>
@@ -374,7 +374,7 @@ export function ReviewModule() {
 
             <button
               onClick={() => setSelectedDay(d => shiftDay(d, viewMode === 'weekly' ? -7 : -1))}
-              style={{ background: 'none', border: '1px solid #252A3E', borderRadius: 7, cursor: 'pointer', color: '#8B93A8', padding: '5px 8px', display: 'flex', alignItems: 'center' }}
+              style={{ background: 'none', border: '1px solid var(--color-border, #252A3E)', borderRadius: 7, cursor: 'pointer', color: 'var(--color-text-dim, #8B93A8)', padding: '5px 8px', display: 'flex', alignItems: 'center' }}
             ><ChevronLeft size={15} /></button>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -395,7 +395,7 @@ export function ReviewModule() {
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               {/* Daily / Weekly toggle */}
-              <div style={{ display: 'flex', background: '#0D0F1A', border: '1px solid #252A3E', borderRadius: 7, overflow: 'hidden' }}>
+              <div style={{ display: 'flex', background: 'var(--color-bg, #0D0F1A)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 7, overflow: 'hidden' }}>
                 {(['daily', 'weekly'] as const).map(mode => (
                   <button
                     key={mode}
@@ -403,7 +403,7 @@ export function ReviewModule() {
                     style={{
                       padding: '5px 14px', fontSize: 11.5, fontWeight: 600, cursor: 'pointer', border: 'none',
                       background: viewMode === mode ? '#7F77DD' : 'none',
-                      color: viewMode === mode ? '#fff' : '#6B7280',
+                      color: viewMode === mode ? '#fff' : 'var(--color-text-muted, #6B7280)',
                       textTransform: 'capitalize',
                     }}
                   >{mode}</button>
@@ -412,22 +412,22 @@ export function ReviewModule() {
             </div>
             <button
               onClick={() => setSelectedDay(d => shiftDay(d, viewMode === 'weekly' ? +7 : +1))}
-              style={{ background: 'none', border: '1px solid #252A3E', borderRadius: 7, cursor: 'pointer', color: '#8B93A8', padding: '5px 8px', display: 'flex', alignItems: 'center' }}
+              style={{ background: 'none', border: '1px solid var(--color-border, #252A3E)', borderRadius: 7, cursor: 'pointer', color: 'var(--color-text-dim, #8B93A8)', padding: '5px 8px', display: 'flex', alignItems: 'center' }}
             ><ChevronRight size={15} /></button>
           </div>
 
           {/* Analytics bar */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 24, padding: '11px 20px', borderBottom: '1px solid #1A1D2E', background: '#0D0F1A' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 24, padding: '11px 20px', borderBottom: '1px solid var(--color-surface, #1A1D2E)', background: 'var(--color-bg, #0D0F1A)' }}>
             {viewMode === 'daily' ? (
               <>
                 <PillStat done={doneEvents.length} total={dayEvents.length} label="events done" color="#7F77DD" />
-                <div style={{ width: 1, height: 20, background: '#252A3E' }} />
+                <div style={{ width: 1, height: 20, background: 'var(--color-border, #252A3E)' }} />
                 <PillStat done={doneTasks.length} total={dayTasks.length} label="tasks done" color="#1D9E75" />
               </>
             ) : (
               <>
                 <PillStat done={weekDoneEvts} total={allWeekEvents.length} label="events done this week" color="#7F77DD" />
-                <div style={{ width: 1, height: 20, background: '#252A3E' }} />
+                <div style={{ width: 1, height: 20, background: 'var(--color-border, #252A3E)' }} />
                 <PillStat done={weekDoneTasks} total={weekTasksAll.length} label="tasks done this week" color="#1D9E75" />
               </>
             )}

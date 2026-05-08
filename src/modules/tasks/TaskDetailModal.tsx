@@ -16,7 +16,7 @@ const QUADRANT_OPTS = [
   { value: 'eliminate', label: 'Eliminate — Not Urgent + Not Important' },
 ]
 const STATUS_COLORS: Record<TaskStatus, string> = {
-  open: '#7F77DD', done: '#1D9E75', cancelled: '#6B7280',
+  open: '#7F77DD', done: '#1D9E75', cancelled: 'var(--color-text-muted, #6B7280)',
 }
 
 const field: React.CSSProperties = {
@@ -25,7 +25,7 @@ const field: React.CSSProperties = {
   fontFamily: 'inherit', boxSizing: 'border-box',
 }
 const lbl: React.CSSProperties = {
-  fontSize: 10.5, color: '#6B7280', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4,
+  fontSize: 10.5, color: 'var(--color-text-muted, #6B7280)', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4,
 }
 
 function relativeTime(iso: string): string {
@@ -45,7 +45,7 @@ function activityIcon(type: string) {
   if (type === 'created')        return <span style={{ ...s, background: '#1D9E75' }} />
   if (type === 'moved')          return <span style={{ ...s, background: '#7F77DD' }} />
   if (type === 'status_changed') return <span style={{ ...s, background: '#F59E0B' }} />
-  return                                <span style={{ ...s, background: '#6B7280' }} />
+  return                                <span style={{ ...s, background: 'var(--color-text-muted, #6B7280)' }} />
 }
 
 interface Props {
@@ -62,7 +62,7 @@ export function TaskDetailModal({ task, onClose }: Props) {
   const users      = getAllUsers()
   const taskActs   = activities.filter(a => a.taskId === task.id).slice().reverse()
   const activeCo   = companies.find(c => c.id === task.companyId)
-  const companyColor = activeCo?.color ?? COMPANY_COLORS[task.company] ?? '#6B7280'
+  const companyColor = activeCo?.color ?? COMPANY_COLORS[task.company] ?? 'var(--color-text-muted, #6B7280)'
   const taskStatus: TaskStatus = task.completed ? 'done' : (task.status ?? 'open')
 
   function handleCompanyChange(value: string) {
@@ -138,13 +138,13 @@ export function TaskDetailModal({ task, onClose }: Props) {
                 }}
               >{task.title}</h2>
             )}
-            <div style={{ marginTop: 4, fontSize: 11, color: '#6B7280' }}>
+            <div style={{ marginTop: 4, fontSize: 11, color: 'var(--color-text-muted, #6B7280)' }}>
               Created {relativeTime(task.createdAt)}
             </div>
           </div>
           <button onClick={onClose} style={{
             background: 'transparent', border: 'none', cursor: 'pointer',
-            color: '#6B7280', padding: 4, borderRadius: 6, flexShrink: 0,
+            color: 'var(--color-text-muted, #6B7280)', padding: 4, borderRadius: 6, flexShrink: 0,
             display: 'flex', alignItems: 'center',
           }}>
             <X size={16} />
@@ -199,7 +199,7 @@ export function TaskDetailModal({ task, onClose }: Props) {
                     cursor: 'pointer', textTransform: 'capitalize',
                     background: taskStatus === s ? STATUS_COLORS[s] + '22' : 'transparent',
                     border: `1px solid ${taskStatus === s ? STATUS_COLORS[s] + '80' : 'var(--color-border, #252A3E)'}`,
-                    color: taskStatus === s ? STATUS_COLORS[s] : '#6B7280',
+                    color: taskStatus === s ? STATUS_COLORS[s] : 'var(--color-text-muted, #6B7280)',
                   }}>{s}</button>
                 ))}
               </div>
@@ -254,7 +254,7 @@ export function TaskDetailModal({ task, onClose }: Props) {
                 ))}
               </select>
               {users.length === 0 && (
-                <p style={{ margin: '4px 0 0', fontSize: 10.5, color: '#6B7280' }}>
+                <p style={{ margin: '4px 0 0', fontSize: 10.5, color: 'var(--color-text-muted, #6B7280)' }}>
                   Add users under Settings → Companies first.
                 </p>
               )}
@@ -265,21 +265,21 @@ export function TaskDetailModal({ task, onClose }: Props) {
           {/* Activity Log */}
           <div>
             <div style={{
-              fontSize: 11, fontWeight: 700, color: '#6B7280',
+              fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted, #6B7280)',
               letterSpacing: '0.06em', textTransform: 'uppercase',
               marginBottom: 10,
             }}>Activity</div>
 
             {taskActs.length === 0 ? (
-              <p style={{ fontSize: 12, color: '#6B7280', fontStyle: 'italic', margin: 0 }}>No activity yet.</p>
+              <p style={{ fontSize: 12, color: 'var(--color-text-muted, #6B7280)', fontStyle: 'italic', margin: 0 }}>No activity yet.</p>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {taskActs.map(a => (
                   <div key={a.id} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                     {activityIcon(a.type)}
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <span style={{ fontSize: 12, color: '#C7CAE0' }}>{a.description}</span>
-                      <span style={{ fontSize: 10, color: '#6B7280', marginLeft: 8 }}>{relativeTime(a.timestamp)}</span>
+                      <span style={{ fontSize: 12, color: 'var(--color-text-dim, #C7CAE0)' }}>{a.description}</span>
+                      <span style={{ fontSize: 10, color: 'var(--color-text-muted, #6B7280)', marginLeft: 8 }}>{relativeTime(a.timestamp)}</span>
                     </div>
                   </div>
                 ))}

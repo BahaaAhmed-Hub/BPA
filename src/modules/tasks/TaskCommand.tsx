@@ -148,14 +148,14 @@ export function TaskCommand() {
         {inbox.length > 0 && (
           <>
             <div style={{ width: 1, height: 14, background: 'var(--color-border, #252A3E)' }} />
-            <span style={{ fontSize: 12.5, color: '#6B7280' }}>
+            <span style={{ fontSize: 12.5, color: 'var(--color-text-muted, #6B7280)' }}>
               <span style={{ fontWeight: 600, color: 'var(--color-text, #E8EAF6)' }}>{inbox.length}</span> unassigned
             </span>
           </>
         )}
 
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: 11.5, color: '#6B7280', fontStyle: 'italic' }}>
+          <span style={{ fontSize: 11.5, color: 'var(--color-text-muted, #6B7280)', fontStyle: 'italic' }}>
             Drag tasks between quadrants & inbox · click any card to view details
           </span>
 
@@ -169,7 +169,7 @@ export function TaskCommand() {
                 width: 28, height: 28, borderRadius: 7, cursor: 'pointer',
                 background: configOpen ? 'rgba(127,119,221,0.12)' : 'transparent',
                 border: `1px solid ${configOpen ? '#7F77DD40' : 'var(--color-border, #252A3E)'}`,
-                color: configOpen ? '#7F77DD' : '#6B7280',
+                color: configOpen ? '#7F77DD' : 'var(--color-text-muted, #6B7280)',
                 transition: 'all 0.12s',
               }}
             >
@@ -184,13 +184,13 @@ export function TaskCommand() {
                 borderRadius: 10, padding: '12px 14px', minWidth: 240,
                 boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
               }}>
-                <p style={{ margin: '0 0 10px', fontSize: 11, fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+                <p style={{ margin: '0 0 10px', fontSize: 11, fontWeight: 600, color: 'var(--color-text-muted, #6B7280)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
                   Task Display
                 </p>
 
                 {/* Hide completed toggle */}
                 <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', gap: 10, marginBottom: 14 }}>
-                  <span style={{ fontSize: 13, color: '#C0C4D6' }}>Hide completed tasks</span>
+                  <span style={{ fontSize: 13, color: 'var(--color-text-dim, #C0C4D6)' }}>Hide completed tasks</span>
                   <div onClick={() => setHideCompleted(!hideCompleted)} style={{
                     width: 36, height: 20, borderRadius: 10, flexShrink: 0,
                     background: hideCompleted ? '#7F77DD' : 'var(--color-border, #252A3E)',
@@ -205,7 +205,7 @@ export function TaskCommand() {
                 </label>
 
                 <div style={{ width: '100%', height: 1, background: 'var(--color-border, #252A3E)', marginBottom: 12 }} />
-                <p style={{ margin: '0 0 8px', fontSize: 11, fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+                <p style={{ margin: '0 0 8px', fontSize: 11, fontWeight: 600, color: 'var(--color-text-muted, #6B7280)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
                   Group tasks by
                 </p>
 
@@ -217,13 +217,13 @@ export function TaskCommand() {
                   }}>
                     <div style={{
                       width: 13, height: 13, borderRadius: '50%', flexShrink: 0,
-                      border: `2px solid ${groupBy === opt ? '#7F77DD' : '#6B7280'}`,
+                      border: `2px solid ${groupBy === opt ? '#7F77DD' : 'var(--color-text-muted, #6B7280)'}`,
                       background: groupBy === opt ? '#7F77DD' : 'transparent',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}>
                       {groupBy === opt && <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#fff' }} />}
                     </div>
-                    <span style={{ fontSize: 12.5, color: groupBy === opt ? '#C0C4D6' : '#8B93A8' }}>
+                    <span style={{ fontSize: 12.5, color: groupBy === opt ? 'var(--color-text-dim, #C0C4D6)' : 'var(--color-text-dim, #8B93A8)' }}>
                       {opt === 'none' ? 'None' : opt === 'type' ? 'Task type' : 'Company'}
                     </span>
                   </label>

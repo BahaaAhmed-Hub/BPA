@@ -46,7 +46,7 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
 
   const companies    = loadDynamicCompanies()
   const dynCompany   = companies.find(c => c.id === task.companyId)
-  const companyColor = dynCompany?.color ?? COMPANY_COLORS[task.company] ?? '#6B7280'
+  const companyColor = dynCompany?.color ?? COMPANY_COLORS[task.company] ?? 'var(--color-text-muted, #6B7280)'
   const allUsers  = getAllUsers()
   const ownerUser = task.owner ? allUsers.find(u => u.id === task.owner) : undefined
   // Only show users belonging to the task's selected company in the owner picker
@@ -105,7 +105,7 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 7, paddingLeft: 4 }}>
         {/* Drag handle */}
         <div data-nm {...listeners} {...attributes} style={{
-          cursor: 'grab', color: hovered ? '#6B7280' : 'transparent',
+          cursor: 'grab', color: hovered ? 'var(--color-text-muted, #6B7280)' : 'transparent',
           transition: 'color 0.15s', marginTop: 1, flexShrink: 0,
         }}>
           <GripVertical size={12} strokeWidth={2} />
@@ -234,7 +234,7 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
               ) : (
                 <span
                   data-nm onClick={() => setEditingDate(true)} title="Set due date"
-                  style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: task.dueDate ? '#6B7280' : '#404560', cursor: 'pointer' }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: task.dueDate ? 'var(--color-text-muted, #6B7280)' : 'var(--color-border, #404560)', cursor: 'pointer' }}
                 >
                   <Calendar size={9} />
                   {task.dueDate
@@ -258,7 +258,7 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
               ) : (
                 <span
                   data-nm onClick={() => setEditingTime(true)} title="Set planned time"
-                  style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: task.plannedTime ? '#7F77DD' : '#404560', cursor: 'pointer' }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: task.plannedTime ? '#7F77DD' : 'var(--color-border, #404560)', cursor: 'pointer' }}
                 >
                   <Clock size={9} />
                   {task.plannedTime ?? <Plus size={8} />}
@@ -279,7 +279,7 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
               ) : (
                 <span
                   data-nm onClick={() => setEditingDuration(true)} title="Set duration"
-                  style={{ fontSize: 10, color: task.duration ? '#6B7280' : '#404560', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 2 }}
+                  style={{ fontSize: 10, color: task.duration ? 'var(--color-text-muted, #6B7280)' : 'var(--color-border, #404560)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 2 }}
                 >
                   {task.duration ? `${task.duration}m` : <><Plus size={8} />m</>}
                 </span>
@@ -294,7 +294,7 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
                 onChange={e => updateTask(task.id, { calendarId: e.target.value || undefined })}
                 title="Link to calendar"
                 style={{
-                  fontSize: 10, color: task.calendarId ? '#7F77DD' : '#404560',
+                  fontSize: 10, color: task.calendarId ? '#7F77DD' : 'var(--color-border, #404560)',
                   background: task.calendarId ? '#7F77DD12' : 'transparent',
                   padding: '1px 4px', borderRadius: 3,
                   border: 'none', outline: 'none', cursor: 'pointer',
@@ -331,7 +331,7 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
               ) : (
                 <span
                   data-nm onClick={() => setEditingOwner(true)} title="Assign owner"
-                  style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: ownerUser ? '#1D9E75' : '#404560', cursor: 'pointer' }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: ownerUser ? '#1D9E75' : 'var(--color-border, #404560)', cursor: 'pointer' }}
                 >
                   <User size={9} />
                   {ownerUser ? ownerUser.name : <Plus size={8} />}
@@ -349,7 +349,7 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
             title={task.urgent ? 'Unmark urgent' : 'Mark urgent'}
             style={{
               background: 'transparent', border: 'none', cursor: 'pointer', padding: 2, borderRadius: 4,
-              color: task.urgent ? '#E0711A' : hovered ? '#4B5268' : 'transparent',
+              color: task.urgent ? '#E0711A' : hovered ? 'var(--color-border, #4B5268)' : 'transparent',
               display: 'flex', alignItems: 'center', transition: 'color 0.15s',
             }}
           >
@@ -358,7 +358,7 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
           {hovered && (
             <button data-nm onClick={() => deleteTask(task.id)} style={{
               background: 'transparent', border: 'none', cursor: 'pointer',
-              color: '#6B7280', padding: 2, borderRadius: 4,
+              color: 'var(--color-text-muted, #6B7280)', padding: 2, borderRadius: 4,
               display: 'flex', alignItems: 'center',
             }}>
               <Trash2 size={11} strokeWidth={2} />

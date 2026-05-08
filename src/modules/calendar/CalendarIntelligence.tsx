@@ -487,7 +487,7 @@ function ColorPickerPopover({ current, onPick, onClose }: { current: string; onP
   return (
     <div ref={ref} onClick={e => e.stopPropagation()} style={{
       position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 200,
-      background: '#161929', border: '1px solid var(--color-border, #252A3E)', borderRadius: 10,
+      background: 'var(--color-surface, #161929)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 10,
       padding: '10px 10px 8px', boxShadow: '0 8px 28px rgba(0,0,0,0.5)',
       display: 'flex', flexWrap: 'wrap', gap: 7, width: 152,
     }}>
@@ -506,13 +506,13 @@ function DayColumn({ dateStr, isToday, children }: { dateStr: string; isToday: b
   return (
     <div ref={setNodeRef} style={{
       flex: 1, position: 'relative', height: GRID_H,
-      borderRight: '1px solid #1A1D2E',
+      borderRight: '1px solid var(--color-surface, #1A1D2E)',
       background: isToday ? 'rgba(30,64,175,0.04)' : isOver ? 'rgba(30,64,175,0.07)' : 'transparent',
       transition: 'background 0.1s', minWidth: 0,
     }}>
       {/* Hour lines */}
       {Array.from({ length: 24 }, (_, h) => (
-        <div key={h} style={{ position: 'absolute', top: h * HOUR_PX, left: 0, right: 0, borderTop: '1px solid #1A1D2E', pointerEvents: 'none' }} />
+        <div key={h} style={{ position: 'absolute', top: h * HOUR_PX, left: 0, right: 0, borderTop: '1px solid var(--color-surface, #1A1D2E)', pointerEvents: 'none' }} />
       ))}
       {/* Half-hour lines */}
       {Array.from({ length: 24 }, (_, h) => (
@@ -710,7 +710,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
   const isTentative  = event.status === 'tentative'
   const notes        = event.description?.replace(/<[^>]*>/g, '').trim() ?? ''
 
-  const rsvpColor = (s?: string) => s === 'accepted' ? '#1D9E75' : s === 'declined' ? '#E05252' : s === 'tentative' ? '#FF9500' : '#6B7280'
+  const rsvpColor = (s?: string) => s === 'accepted' ? '#1D9E75' : s === 'declined' ? '#E05252' : s === 'tentative' ? '#FF9500' : 'var(--color-text-muted, #6B7280)'
   const rsvpLabel = (s?: string) => s === 'accepted' ? 'Accepted' : s === 'declined' ? 'Declined' : s === 'tentative' ? 'Maybe' : 'Awaiting'
 
   function fmtDT(iso: string) {
@@ -725,7 +725,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
   const startDT  = isAllDay ? null : fmtDT(startIso)
   const endDT    = isAllDay ? null : fmtDT(endIso)
 
-  const labelStyle: React.CSSProperties = { width: 84, flexShrink: 0, textAlign: 'right', paddingRight: 14, fontSize: 12.5, color: '#8B93A8' }
+  const labelStyle: React.CSSProperties = { width: 84, flexShrink: 0, textAlign: 'right', paddingRight: 14, fontSize: 12.5, color: 'var(--color-text-dim, #8B93A8)' }
   const fieldRow = (label: string, content: React.ReactNode) => (
     <div style={{ display: 'flex', alignItems: 'center', minHeight: 30, padding: '0 16px' }}>
       <div style={labelStyle}>{label}</div>
@@ -738,7 +738,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
     padding: '5px 11px', borderRadius: 7, fontSize: 12, cursor: 'pointer',
     background: active ? `${color}22` : 'transparent',
     border: `1px solid ${active ? color : '#2A2F45'}`,
-    color: active ? color : '#8B93A8',
+    color: active ? color : 'var(--color-text-dim, #8B93A8)',
     transition: 'all 0.12s',
   })
 
@@ -773,7 +773,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
             )}
           </div>
         </div>
-        <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6B7280', padding: 0, lineHeight: 1, flexShrink: 0, marginTop: 2 }}>
+        <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted, #6B7280)', padding: 0, lineHeight: 1, flexShrink: 0, marginTop: 2 }}>
           <X size={15} />
         </button>
       </div>
@@ -783,15 +783,15 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
       {/* Location */}
       {event.location && (
         <div style={{ display: 'flex', alignItems: 'center', padding: '8px 14px', gap: 9 }}>
-          <MapPin size={13} color="#6B7280" style={{ flexShrink: 0 }} />
-          <span style={{ fontSize: 13, color: '#C0C4D6', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{event.location}</span>
+          <MapPin size={13} color="var(--color-text-muted, #6B7280)" style={{ flexShrink: 0 }} />
+          <span style={{ fontSize: 13, color: 'var(--color-text-dim, #C0C4D6)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{event.location}</span>
         </div>
       )}
 
       {/* Video / Meet */}
       {videoLink ? (
         <div style={{ display: 'flex', alignItems: 'center', padding: '8px 14px', gap: 9 }}>
-          <Video size={13} color="#6B7280" style={{ flexShrink: 0 }} />
+          <Video size={13} color="var(--color-text-muted, #6B7280)" style={{ flexShrink: 0 }} />
           <a href={videoLink} target="_blank" rel="noopener noreferrer"
             style={{ fontSize: 13, color: '#7F77DD', textDecoration: 'none', flex: 1, display: 'flex', alignItems: 'center', gap: 4 }}>
             Join Video Call <ExternalLink size={11} />
@@ -799,7 +799,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
         </div>
       ) : onAddMeet ? (
         <div style={{ display: 'flex', alignItems: 'center', padding: '8px 14px', gap: 9 }}>
-          <Video size={13} color="#6B7280" style={{ flexShrink: 0 }} />
+          <Video size={13} color="var(--color-text-muted, #6B7280)" style={{ flexShrink: 0 }} />
           <button
             onClick={async () => { setAddingMeet(true); await onAddMeet(); setAddingMeet(false) }}
             disabled={addingMeet}
@@ -813,12 +813,12 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
       {/* Phone */}
       {phoneEntry && (
         <div style={{ display: 'flex', alignItems: 'center', padding: '8px 14px', gap: 9 }}>
-          <Phone size={13} color="#6B7280" style={{ flexShrink: 0 }} />
-          <div style={{ fontSize: 13, color: '#C0C4D6' }}>
+          <Phone size={13} color="var(--color-text-muted, #6B7280)" style={{ flexShrink: 0 }} />
+          <div style={{ fontSize: 13, color: 'var(--color-text-dim, #C0C4D6)' }}>
             <a href={phoneEntry.uri} style={{ color: '#7F77DD', textDecoration: 'none' }}>
               {phoneEntry.label ?? phoneEntry.uri.replace('tel:', '')}
             </a>
-            {phoneEntry.pin && <span style={{ color: '#6B7280', marginLeft: 6, fontSize: 12 }}>PIN: {phoneEntry.pin}</span>}
+            {phoneEntry.pin && <span style={{ color: 'var(--color-text-muted, #6B7280)', marginLeft: 6, fontSize: 12 }}>PIN: {phoneEntry.pin}</span>}
           </div>
         </div>
       )}
@@ -830,27 +830,27 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
       {/* Date / time fieldRows */}
       <div style={{ padding: '6px 0' }}>
         {isAllDay
-          ? fieldRow('All Day', <span style={{ fontSize: 13, color: '#C0C4D6' }}>{fmtPopupDate(startIso, endIso, true)}</span>)
+          ? fieldRow('All Day', <span style={{ fontSize: 13, color: 'var(--color-text-dim, #C0C4D6)' }}>{fmtPopupDate(startIso, endIso, true)}</span>)
           : <>
               {fieldRow('Starts', (
                 <div style={{ display: 'flex', gap: 8 }}>
-                  <span style={{ fontSize: 13, color: '#C0C4D6' }}>{startDT?.date}</span>
-                  <span style={{ fontSize: 13, color: '#8B93A8' }}>{startDT?.time}</span>
+                  <span style={{ fontSize: 13, color: 'var(--color-text-dim, #C0C4D6)' }}>{startDT?.date}</span>
+                  <span style={{ fontSize: 13, color: 'var(--color-text-dim, #8B93A8)' }}>{startDT?.time}</span>
                 </div>
               ))}
               {fieldRow('Ends', (
                 <div style={{ display: 'flex', gap: 8 }}>
-                  <span style={{ fontSize: 13, color: '#C0C4D6' }}>{endDT?.date}</span>
-                  <span style={{ fontSize: 13, color: '#8B93A8' }}>{endDT?.time}</span>
+                  <span style={{ fontSize: 13, color: 'var(--color-text-dim, #C0C4D6)' }}>{endDT?.date}</span>
+                  <span style={{ fontSize: 13, color: 'var(--color-text-dim, #8B93A8)' }}>{endDT?.time}</span>
                 </div>
               ))}
             </>
         }
-        {isRecurring && fieldRow('Repeat', <span style={{ fontSize: 13, color: '#C0C4D6' }}>Recurring</span>)}
+        {isRecurring && fieldRow('Repeat', <span style={{ fontSize: 13, color: 'var(--color-text-dim, #C0C4D6)' }}>Recurring</span>)}
         {fieldRow('Calendar', (
           <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
             <div style={{ width: 10, height: 10, borderRadius: '50%', background: calColor, flexShrink: 0 }} />
-            <span style={{ fontSize: 13, color: '#C0C4D6' }}>{calName}</span>
+            <span style={{ fontSize: 13, color: 'var(--color-text-dim, #C0C4D6)' }}>{calName}</span>
           </div>
         ))}
       </div>
@@ -870,10 +870,10 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
                     {((organizer.displayName ?? organizer.email) ?? '?')[0].toUpperCase()}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 12.5, color: '#C0C4D6', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <div style={{ fontSize: 12.5, color: 'var(--color-text-dim, #C0C4D6)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {organizer.displayName ?? organizer.email}
                     </div>
-                    <div style={{ fontSize: 10.5, color: '#6B7280' }}>organizer</div>
+                    <div style={{ fontSize: 10.5, color: 'var(--color-text-muted, #6B7280)' }}>organizer</div>
                   </div>
                 </div>
               )}
@@ -883,7 +883,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
                     {(a.displayName ?? a.email)[0].toUpperCase()}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 12.5, color: '#C0C4D6', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <div style={{ fontSize: 12.5, color: 'var(--color-text-dim, #C0C4D6)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {a.displayName ?? a.email}
                     </div>
                     <div style={{ fontSize: 10.5, color: rsvpColor(a.responseStatus) }}>
@@ -896,7 +896,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
                 </div>
               ))}
               {others.length > 6 && (
-                <span style={{ fontSize: 11, color: '#6B7280', paddingLeft: 37 }}>+{others.length - 6} more</span>
+                <span style={{ fontSize: 11, color: 'var(--color-text-muted, #6B7280)', paddingLeft: 37 }}>+{others.length - 6} more</span>
               )}
             </div>
           </div>
@@ -909,7 +909,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
           <div style={{ height: 1, background: 'var(--color-border, #252A3E)' }} />
           <div style={{ padding: '10px 14px' }}>
             <div style={{ fontSize: 10, fontWeight: 600, color: '#4B5268', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 5 }}>Notes</div>
-            <div style={{ fontSize: 12, color: '#8B93A8', lineHeight: 1.6, maxHeight: 90, overflowY: 'auto', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+            <div style={{ fontSize: 12, color: 'var(--color-text-dim, #8B93A8)', lineHeight: 1.6, maxHeight: 90, overflowY: 'auto', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
               {notes.slice(0, 400)}{notes.length > 400 ? '…' : ''}
             </div>
           </div>
@@ -957,16 +957,16 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {prep.goal && (
                 <div>
-                  <div style={{ fontSize: 10, fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.7px', marginBottom: 4 }}>Goal</div>
-                  <div style={{ fontSize: 12, color: '#C0C4D6', lineHeight: 1.55 }}>{prep.goal}</div>
+                  <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--color-text-muted, #6B7280)', textTransform: 'uppercase', letterSpacing: '0.7px', marginBottom: 4 }}>Goal</div>
+                  <div style={{ fontSize: 12, color: 'var(--color-text-dim, #C0C4D6)', lineHeight: 1.55 }}>{prep.goal}</div>
                 </div>
               )}
               {prep.talkingPoints?.length > 0 && (
                 <div>
-                  <div style={{ fontSize: 10, fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.7px', marginBottom: 6 }}>Talking Points</div>
+                  <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--color-text-muted, #6B7280)', textTransform: 'uppercase', letterSpacing: '0.7px', marginBottom: 6 }}>Talking Points</div>
                   {prep.talkingPoints.map((pt, i) => (
-                    <div key={i} style={{ display: 'flex', gap: 7, fontSize: 12, color: '#C0C4D6', lineHeight: 1.45, marginBottom: 4 }}>
-                      <span style={{ color: '#6B7280', flexShrink: 0 }}>{i+1}.</span>
+                    <div key={i} style={{ display: 'flex', gap: 7, fontSize: 12, color: 'var(--color-text-dim, #C0C4D6)', lineHeight: 1.45, marginBottom: 4 }}>
+                      <span style={{ color: 'var(--color-text-muted, #6B7280)', flexShrink: 0 }}>{i+1}.</span>
                       <span>{pt}</span>
                     </div>
                   ))}
@@ -974,7 +974,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
               )}
             </div>
           ) : (
-            <p style={{ margin: 0, fontSize: 12, color: '#6B7280' }}>Generating prep…</p>
+            <p style={{ margin: 0, fontSize: 12, color: 'var(--color-text-muted, #6B7280)' }}>Generating prep…</p>
           )}
         </div>
       )}
@@ -1068,7 +1068,7 @@ function EventContextMenu({
         style={{
           display: 'flex', alignItems: 'center', gap: 9,
           padding: '0 12px', height: 32, fontSize: 13,
-          color: disabled ? '#4B5268' : destructive ? '#E05252' : '#C0C4D6',
+          color: disabled ? '#4B5268' : destructive ? '#E05252' : 'var(--color-text-dim, #C0C4D6)',
           cursor: disabled ? 'default' : 'pointer',
           borderRadius: 6, userSelect: 'none',
           background: hovered
@@ -1213,7 +1213,7 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
   function FieldRow({ label, children }: { label: string; children: React.ReactNode }) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', minHeight: 34, padding: '0 16px' }}>
-        <div style={{ width: 90, flexShrink: 0, textAlign: 'right', paddingRight: 14, fontSize: 12.5, color: '#8B93A8' }}>
+        <div style={{ width: 90, flexShrink: 0, textAlign: 'right', paddingRight: 14, fontSize: 12.5, color: 'var(--color-text-dim, #8B93A8)' }}>
           {label}
         </div>
         <div style={{ flex: 1 }}>{children}</div>
@@ -1260,8 +1260,8 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
               value={calId}
               onChange={e => setCalId(e.target.value)}
               style={{
-                background: '#252A3E', border: '1px solid var(--color-border, #252A3E)', borderRadius: 6,
-                color: '#C0C4D6', fontSize: 11, padding: '3px 6px',
+                background: 'var(--color-border, #252A3E)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 6,
+                color: 'var(--color-text-dim, #C0C4D6)', fontSize: 11, padding: '3px 6px',
                 cursor: 'pointer', outline: 'none', maxWidth: 110,
               }}
             >
@@ -1276,12 +1276,12 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
         display: 'flex', alignItems: 'center', gap: 10,
         padding: '9px 16px', borderBottom: '1px solid var(--color-border, #252A3E)',
       }}>
-        <MapPin size={14} color="#6B7280" style={{ flexShrink: 0 }} />
+        <MapPin size={14} color="var(--color-text-muted, #6B7280)" style={{ flexShrink: 0 }} />
         <input
           value={location}
           onChange={e => setLocation(e.target.value)}
           placeholder="Add Location or Video Call"
-          style={{ ...inputBase, color: location ? 'var(--color-text, #E8EAF6)' : '#6B7280' }}
+          style={{ ...inputBase, color: location ? 'var(--color-text, #E8EAF6)' : 'var(--color-text-muted, #6B7280)' }}
         />
         <button
           onClick={() => setAddMeet(v => !v)}
@@ -1291,7 +1291,7 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
             width: 30, height: 26, borderRadius: 7,
             background: addMeet ? 'rgba(29,158,117,0.15)' : '#1E2235',
             border: `1px solid ${addMeet ? '#1D9E75' : 'var(--color-border, #252A3E)'}`,
-            color: addMeet ? '#1D9E75' : '#6B7280', cursor: 'pointer',
+            color: addMeet ? '#1D9E75' : 'var(--color-text-muted, #6B7280)', cursor: 'pointer',
             transition: 'all 0.15s',
           }}
         >
@@ -1349,19 +1349,19 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
               <div key={email} style={{
                 display: 'flex', alignItems: 'center', gap: 5,
                 background: 'var(--color-surface2, #252A3E)', borderRadius: 20,
-                padding: '3px 8px 3px 10px', fontSize: 11.5, color: '#C0C4D6',
+                padding: '3px 8px 3px 10px', fontSize: 11.5, color: 'var(--color-text-dim, #C0C4D6)',
               }}>
                 {email}
                 <span
                   onClick={() => setInvitees(prev => prev.filter(e => e !== email))}
-                  style={{ cursor: 'pointer', color: '#6B7280', fontSize: 14, lineHeight: 1 }}
+                  style={{ cursor: 'pointer', color: 'var(--color-text-muted, #6B7280)', fontSize: 14, lineHeight: 1 }}
                 >×</span>
               </div>
             ))}
           </div>
         )}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Users size={14} color="#6B7280" style={{ flexShrink: 0 }} />
+          <Users size={14} color="var(--color-text-muted, #6B7280)" style={{ flexShrink: 0 }} />
           <input
             value={inviteeInput}
             onChange={e => setInviteeInput(e.target.value)}
@@ -1372,7 +1372,7 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
             }}
             onBlur={() => { if (inviteeInput.trim()) addInvitee(inviteeInput) }}
             placeholder="Add invitees..."
-            style={{ ...inputBase, color: inviteeInput ? 'var(--color-text, #E8EAF6)' : '#6B7280' }}
+            style={{ ...inputBase, color: inviteeInput ? 'var(--color-text, #E8EAF6)' : 'var(--color-text-muted, #6B7280)' }}
           />
         </div>
       </div>
@@ -1380,7 +1380,7 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
       {/* ── Notes ── */}
       <div style={{ padding: '9px 16px', borderBottom: '1px solid var(--color-border, #252A3E)' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-          <Repeat size={14} color="#6B7280" style={{ flexShrink: 0, marginTop: 2 }} />
+          <Repeat size={14} color="var(--color-text-muted, #6B7280)" style={{ flexShrink: 0, marginTop: 2 }} />
           <textarea
             value={description}
             onChange={e => setDescription(e.target.value)}
@@ -1388,7 +1388,7 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
             rows={2}
             style={{
               ...inputBase, resize: 'none', lineHeight: 1.5,
-              color: description ? 'var(--color-text, #E8EAF6)' : '#6B7280',
+              color: description ? 'var(--color-text, #E8EAF6)' : 'var(--color-text-muted, #6B7280)',
             }}
           />
         </div>
@@ -1400,7 +1400,7 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
           onClick={onCancel}
           style={{
             background: 'transparent', border: '1px solid var(--color-border, #252A3E)', borderRadius: 8,
-            color: '#8B93A8', fontSize: 12.5, padding: '6px 18px', cursor: 'pointer',
+            color: 'var(--color-text-dim, #8B93A8)', fontSize: 12.5, padding: '6px 18px', cursor: 'pointer',
           }}
         >Cancel</button>
         <button
@@ -1990,7 +1990,7 @@ export function CalendarIntelligence() {
     <div className={creatingEvt ? 'cal-grid-creating' : undefined} style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#0D0F1E', color: 'var(--color-text, #E8EAF6)', fontFamily: 'inherit', overflow: 'hidden' }}>
 
       {/* ── Top bar ─────────────────────────────────────────────────────────── */}
-      <div style={{ padding: '14px 20px 10px', borderBottom: '1px solid #1A1D2E', flexShrink: 0 }}>
+      <div style={{ padding: '14px 20px 10px', borderBottom: '1px solid var(--color-surface, #1A1D2E)', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           {/* Week range title */}
           <span style={{ fontSize: 17, fontWeight: 700, color: 'var(--color-text, #E8EAF6)', flex: 1, minWidth: 160 }}>
@@ -2001,24 +2001,24 @@ export function CalendarIntelligence() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
             <button
               onClick={() => { const d = new Date(weekStart); d.setDate(d.getDate() - 7); setWeekStart(d) }}
-              style={{ background: 'none', border: '1px solid var(--color-border, #252A3E)', borderRadius: 7, cursor: 'pointer', color: '#8B93A8', padding: '4px 8px', display: 'flex', alignItems: 'center' }}
+              style={{ background: 'none', border: '1px solid var(--color-border, #252A3E)', borderRadius: 7, cursor: 'pointer', color: 'var(--color-text-dim, #8B93A8)', padding: '4px 8px', display: 'flex', alignItems: 'center' }}
             ><ChevronLeft size={15} /></button>
 
             {!isThisWeek(weekStart) && (
               <button
                 onClick={() => setWeekStart(getWeekStart(new Date()))}
-                style={{ background: 'none', border: '1px solid var(--color-border, #252A3E)', borderRadius: 7, cursor: 'pointer', color: '#8B93A8', padding: '4px 9px', fontSize: 12 }}
+                style={{ background: 'none', border: '1px solid var(--color-border, #252A3E)', borderRadius: 7, cursor: 'pointer', color: 'var(--color-text-dim, #8B93A8)', padding: '4px 9px', fontSize: 12 }}
               >Today</button>
             )}
 
             <button
               onClick={() => { const d = new Date(weekStart); d.setDate(d.getDate() + 7); setWeekStart(d) }}
-              style={{ background: 'none', border: '1px solid var(--color-border, #252A3E)', borderRadius: 7, cursor: 'pointer', color: '#8B93A8', padding: '4px 8px', display: 'flex', alignItems: 'center' }}
+              style={{ background: 'none', border: '1px solid var(--color-border, #252A3E)', borderRadius: 7, cursor: 'pointer', color: 'var(--color-text-dim, #8B93A8)', padding: '4px 8px', display: 'flex', alignItems: 'center' }}
             ><ChevronRight size={15} /></button>
 
             <button
               onClick={() => void reloadCalendars().then(c => { if (c) void loadEvents(weekStart, c, hiddenCals) })}
-              style={{ background: 'none', border: '1px solid var(--color-border, #252A3E)', borderRadius: 7, cursor: 'pointer', color: '#8B93A8', padding: '4px 8px', display: 'flex', alignItems: 'center' }}
+              style={{ background: 'none', border: '1px solid var(--color-border, #252A3E)', borderRadius: 7, cursor: 'pointer', color: 'var(--color-text-dim, #8B93A8)', padding: '4px 8px', display: 'flex', alignItems: 'center' }}
             ><RefreshCw size={13} /></button>
 
             <button
@@ -2029,7 +2029,7 @@ export function CalendarIntelligence() {
                 display: 'flex', alignItems: 'center', gap: 5,
                 background: 'none', border: '1px solid var(--color-border, #252A3E)', borderRadius: 7,
                 cursor: applyingRules ? 'default' : 'pointer',
-                color: applyingRules ? '#4B5268' : '#8B93A8',
+                color: applyingRules ? '#4B5268' : 'var(--color-text-dim, #8B93A8)',
                 padding: '4px 8px', fontSize: 12,
                 opacity: applyingRules ? 0.6 : 1,
               }}
@@ -2046,7 +2046,7 @@ export function CalendarIntelligence() {
                 background: originalsOnly ? 'rgba(127,119,221,0.12)' : 'none',
                 border: `1px solid ${originalsOnly ? 'rgba(127,119,221,0.5)' : 'var(--color-border, #252A3E)'}`,
                 borderRadius: 7, cursor: 'pointer',
-                color: originalsOnly ? '#7F77DD' : '#8B93A8',
+                color: originalsOnly ? '#7F77DD' : 'var(--color-text-dim, #8B93A8)',
                 padding: '4px 8px', fontSize: 12,
                 transition: 'all 0.15s',
               }}
@@ -2104,7 +2104,7 @@ export function CalendarIntelligence() {
                         background: 'none', border: 'none', cursor: 'pointer',
                         display: 'flex', alignItems: 'center', gap: 4,
                         padding: '3px 8px 3px 2px', fontSize: 11,
-                        color: hidden ? '#4B5268' : '#C0C4D6',
+                        color: hidden ? '#4B5268' : 'var(--color-text-dim, #C0C4D6)',
                       }}
                     >
                       <span style={{ maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -2152,7 +2152,7 @@ export function CalendarIntelligence() {
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
           {/* Sticky day headers */}
-          <div style={{ display: 'flex', borderBottom: '1px solid #1A1D2E', flexShrink: 0 }}>
+          <div style={{ display: 'flex', borderBottom: '1px solid var(--color-surface, #1A1D2E)', flexShrink: 0 }}>
             {/* Time gutter spacer */}
             <div style={{ width: 52, flexShrink: 0 }} />
             {weekDays.map(day => {
@@ -2160,12 +2160,12 @@ export function CalendarIntelligence() {
               const isToday = ds === today
               return (
                 <div key={ds} style={{ flex: 1, textAlign: 'center', padding: '8px 4px 7px', minWidth: 0 }}>
-                  <div style={{ fontSize: 11, color: isToday ? '#7F77DD' : '#6B7280', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+                  <div style={{ fontSize: 11, color: isToday ? '#7F77DD' : 'var(--color-text-muted, #6B7280)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
                     {DAY_LABELS[day.getDay()]}
                   </div>
                   <div style={{
                     fontSize: 19, fontWeight: 700, lineHeight: 1.2, marginTop: 2,
-                    color: isToday ? '#fff' : '#C0C4D6',
+                    color: isToday ? '#fff' : 'var(--color-text-dim, #C0C4D6)',
                     background: isToday ? '#7F77DD' : 'transparent',
                     width: isToday ? 32 : undefined, height: isToday ? 32 : undefined,
                     borderRadius: isToday ? '50%' : undefined,
@@ -2283,7 +2283,7 @@ export function CalendarIntelligence() {
 
       {/* Loading spinner overlay */}
       {loadingEvents && (
-        <div style={{ position: 'absolute', bottom: 18, right: 22, display: 'flex', alignItems: 'center', gap: 7, fontSize: 12, color: '#6B7280', pointerEvents: 'none' }}>
+        <div style={{ position: 'absolute', bottom: 18, right: 22, display: 'flex', alignItems: 'center', gap: 7, fontSize: 12, color: 'var(--color-text-muted, #6B7280)', pointerEvents: 'none' }}>
           <div style={{ width: 14, height: 14, border: '2px solid var(--color-border, #252A3E)', borderTopColor: '#7F77DD', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
           Loading…
         </div>
@@ -2295,7 +2295,7 @@ export function CalendarIntelligence() {
         <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(13,15,30,0.85)', pointerEvents: 'none' }}>
           <div style={{ textAlign: 'center' }}>
             <Calendar size={36} color="#3A3F55" />
-            <p style={{ margin: '12px 0 0', fontSize: 14, color: '#6B7280' }}>Connect Google Calendar to see your events</p>
+            <p style={{ margin: '12px 0 0', fontSize: 14, color: 'var(--color-text-muted, #6B7280)' }}>Connect Google Calendar to see your events</p>
           </div>
         </div>
       )}

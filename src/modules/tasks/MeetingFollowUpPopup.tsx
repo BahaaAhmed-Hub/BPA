@@ -82,7 +82,7 @@ function TaskRow({ draft, index, expanded, users, onToggle, onChange, onDelete }
         <span style={{
           width: 18, height: 18, borderRadius: '50%', flexShrink: 0,
           background: 'var(--color-surface2, #252A3E)', fontSize: 10, fontWeight: 700,
-          color: '#6B7280', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          color: 'var(--color-text-muted, #6B7280)', display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
           {index + 1}
         </span>
@@ -92,7 +92,7 @@ function TaskRow({ draft, index, expanded, users, onToggle, onChange, onDelete }
           flex: 1, fontSize: 12.5, color: 'var(--color-text, #E8EAF6)', fontWeight: 500,
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         }}>
-          {draft.title || <span style={{ color: '#6B7280', fontStyle: 'italic' }}>No title</span>}
+          {draft.title || <span style={{ color: 'var(--color-text-muted, #6B7280)', fontStyle: 'italic' }}>No title</span>}
         </span>
 
         {/* Meta chips */}
@@ -106,7 +106,7 @@ function TaskRow({ draft, index, expanded, users, onToggle, onChange, onDelete }
             </span>
           )}
           {draft.dueDate && (
-            <span style={{ fontSize: 10, color: '#6B7280' }}>
+            <span style={{ fontSize: 10, color: 'var(--color-text-muted, #6B7280)' }}>
               {new Date(draft.dueDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
             </span>
           )}
@@ -128,7 +128,7 @@ function TaskRow({ draft, index, expanded, users, onToggle, onChange, onDelete }
         <div style={{ padding: '0 12px 12px', display: 'flex', flexDirection: 'column', gap: 10 }}>
           {/* Title */}
           <div>
-            <label style={{ fontSize: 10, color: '#6B7280', display: 'block', marginBottom: 4 }}>Title</label>
+            <label style={{ fontSize: 10, color: 'var(--color-text-muted, #6B7280)', display: 'block', marginBottom: 4 }}>Title</label>
             <input
               autoFocus
               value={draft.title}
@@ -139,7 +139,7 @@ function TaskRow({ draft, index, expanded, users, onToggle, onChange, onDelete }
 
           {/* Quadrant selector */}
           <div>
-            <label style={{ fontSize: 10, color: '#6B7280', display: 'block', marginBottom: 6 }}>
+            <label style={{ fontSize: 10, color: 'var(--color-text-muted, #6B7280)', display: 'block', marginBottom: 6 }}>
               Eisenhower box <span style={{ color: '#404560' }}>(leave as Inbox to decide later)</span>
             </label>
             <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
@@ -153,7 +153,7 @@ function TaskRow({ draft, index, expanded, users, onToggle, onChange, onDelete }
                       padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: active ? 700 : 500,
                       background: active ? `${opt.color}22` : 'transparent',
                       border: `1px solid ${active ? opt.color + '60' : 'var(--color-border, #252A3E)'}`,
-                      color: active ? opt.color : '#6B7280',
+                      color: active ? opt.color : 'var(--color-text-muted, #6B7280)',
                       cursor: 'pointer', transition: 'all 0.1s',
                     }}
                   >
@@ -167,7 +167,7 @@ function TaskRow({ draft, index, expanded, users, onToggle, onChange, onDelete }
           {/* Due date + Owner row */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <div>
-              <label style={{ fontSize: 10, color: '#6B7280', display: 'block', marginBottom: 4 }}>Due date</label>
+              <label style={{ fontSize: 10, color: 'var(--color-text-muted, #6B7280)', display: 'block', marginBottom: 4 }}>Due date</label>
               <input
                 type="date"
                 value={draft.dueDate}
@@ -176,7 +176,7 @@ function TaskRow({ draft, index, expanded, users, onToggle, onChange, onDelete }
               />
             </div>
             <div>
-              <label style={{ fontSize: 10, color: '#6B7280', display: 'block', marginBottom: 4 }}>Owner</label>
+              <label style={{ fontSize: 10, color: 'var(--color-text-muted, #6B7280)', display: 'block', marginBottom: 4 }}>Owner</label>
               <select
                 value={draft.ownerId}
                 onChange={e => onChange({ ownerId: e.target.value })}
@@ -197,7 +197,7 @@ function TaskRow({ draft, index, expanded, users, onToggle, onChange, onDelete }
               style={{
                 display: 'flex', alignItems: 'center', gap: 5,
                 background: 'transparent', border: '1px solid var(--color-border, #252A3E)',
-                borderRadius: 6, padding: '4px 10px', color: '#6B7280',
+                borderRadius: 6, padding: '4px 10px', color: 'var(--color-text-muted, #6B7280)',
                 fontSize: 11.5, cursor: 'pointer',
               }}
             >
@@ -328,16 +328,16 @@ export function MeetingFollowUpPopup({ parentTask, onConfirm, onSkip }: Props) {
             <h3 style={{ margin: '0 0 2px', fontSize: 15, fontWeight: 700, color: 'var(--color-text, #E8EAF6)' }}>
               {drafts === null ? 'Meeting complete!' : `${activeCount} follow-up task${activeCount !== 1 ? 's' : ''}`}
             </h3>
-            <p style={{ margin: 0, fontSize: 12, color: '#6B7280', lineHeight: 1.4 }}>
+            <p style={{ margin: 0, fontSize: 12, color: 'var(--color-text-muted, #6B7280)', lineHeight: 1.4 }}>
               {drafts === null
-                ? <>From <span style={{ color: '#94A3B8' }}>"{parentTask.title}"</span></>
+                ? <>From <span style={{ color: 'var(--color-text-dim, #94A3B8)' }}>"{parentTask.title}"</span></>
                 : 'Review and edit before saving to Inbox · click any row to edit'
               }
             </p>
           </div>
           <button onClick={onSkip} style={{
             background: 'transparent', border: 'none', cursor: 'pointer',
-            color: '#6B7280', padding: 4, borderRadius: 6, flexShrink: 0,
+            color: 'var(--color-text-muted, #6B7280)', padding: 4, borderRadius: 6, flexShrink: 0,
           }}>
             <X size={15} />
           </button>
@@ -349,7 +349,7 @@ export function MeetingFollowUpPopup({ parentTask, onConfirm, onSkip }: Props) {
           {drafts === null ? (
             /* ── Phase 1: paste notes ── */
             <>
-              <p style={{ margin: '0 0 10px', fontSize: 12, color: '#94A3B8' }}>
+              <p style={{ margin: '0 0 10px', fontSize: 12, color: 'var(--color-text-dim, #94A3B8)' }}>
                 Paste your notes, action items, or anything discussed. The AI will extract tasks automatically.
               </p>
               <textarea
@@ -368,7 +368,7 @@ export function MeetingFollowUpPopup({ parentTask, onConfirm, onSkip }: Props) {
                   if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) void handleAnalyze()
                 }}
               />
-              <p style={{ margin: '6px 0 0', fontSize: 10.5, color: '#4B5563' }}>
+              <p style={{ margin: '6px 0 0', fontSize: 10.5, color: 'var(--color-text-muted, #4B5563)' }}>
                 ⌘↵ to analyze · Leave empty to skip
               </p>
               {error && (
@@ -384,7 +384,7 @@ export function MeetingFollowUpPopup({ parentTask, onConfirm, onSkip }: Props) {
 
           ) : drafts.length === 0 ? (
             /* ── No tasks extracted ── */
-            <div style={{ textAlign: 'center', padding: '24px 0', color: '#6B7280', fontSize: 13 }}>
+            <div style={{ textAlign: 'center', padding: '24px 0', color: 'var(--color-text-muted, #6B7280)', fontSize: 13 }}>
               No action items detected. You can still add tasks manually from Inbox.
             </div>
 
@@ -399,7 +399,7 @@ export function MeetingFollowUpPopup({ parentTask, onConfirm, onSkip }: Props) {
                 gap: 8,
               }}>
                 {['#', 'Task', 'Box', 'Due', 'Owner'].map(h => (
-                  <span key={h} style={{ fontSize: 10, fontWeight: 600, color: '#4B5563', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{h}</span>
+                  <span key={h} style={{ fontSize: 10, fontWeight: 600, color: 'var(--color-text-muted, #4B5563)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{h}</span>
                 ))}
               </div>
 
@@ -422,7 +422,7 @@ export function MeetingFollowUpPopup({ parentTask, onConfirm, onSkip }: Props) {
                 style={{
                   alignSelf: 'flex-start', marginTop: 4,
                   background: 'transparent', border: 'none', cursor: 'pointer',
-                  fontSize: 11.5, color: '#4B5563', textDecoration: 'underline', padding: 0,
+                  fontSize: 11.5, color: 'var(--color-text-muted, #4B5563)', textDecoration: 'underline', padding: 0,
                 }}
               >
                 ← Re-paste notes
@@ -440,7 +440,7 @@ export function MeetingFollowUpPopup({ parentTask, onConfirm, onSkip }: Props) {
           <button onClick={onSkip} style={{
             padding: '7px 16px', borderRadius: 8, fontSize: 12.5,
             background: 'transparent', border: '1px solid var(--color-border, #252A3E)',
-            color: '#6B7280', cursor: 'pointer',
+            color: 'var(--color-text-muted, #6B7280)', cursor: 'pointer',
           }}>
             Skip
           </button>
@@ -453,7 +453,7 @@ export function MeetingFollowUpPopup({ parentTask, onConfirm, onSkip }: Props) {
                 padding: '7px 16px', borderRadius: 8, fontSize: 12.5, fontWeight: 600,
                 background: loading ? 'var(--color-surface2, #252A3E)' : '#7F77DD22',
                 border: '1px solid #7F77DD50',
-                color: loading ? '#6B7280' : '#7F77DD',
+                color: loading ? 'var(--color-text-muted, #6B7280)' : '#7F77DD',
                 cursor: loading ? 'not-allowed' : 'pointer',
                 display: 'flex', alignItems: 'center', gap: 6,
               }}
@@ -469,7 +469,7 @@ export function MeetingFollowUpPopup({ parentTask, onConfirm, onSkip }: Props) {
                 padding: '7px 18px', borderRadius: 8, fontSize: 12.5, fontWeight: 600,
                 background: activeCount > 0 ? '#1D9E7522' : 'var(--color-surface2, #252A3E)',
                 border: `1px solid ${activeCount > 0 ? '#1D9E7550' : 'var(--color-border, #252A3E)'}`,
-                color: activeCount > 0 ? '#1D9E75' : '#6B7280',
+                color: activeCount > 0 ? '#1D9E75' : 'var(--color-text-muted, #6B7280)',
                 cursor: activeCount > 0 ? 'pointer' : 'not-allowed',
                 display: 'flex', alignItems: 'center', gap: 6,
               }}

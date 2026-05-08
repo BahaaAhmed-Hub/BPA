@@ -107,7 +107,7 @@ function responseColor(status?: string): string {
   if (status === 'accepted')  return '#1D9E75'
   if (status === 'declined')  return '#EF4444'
   if (status === 'tentative') return '#F59E0B'
-  return '#6B7280'
+  return 'var(--color-text-muted, #6B7280)'
 }
 
 function responseSymbol(status?: string): string {
@@ -236,7 +236,7 @@ function MeetingTypeIcon({ type, size = 12 }: { type: string | null; size?: numb
   if (type === 'video')       return <Video    size={size} color="#7F77DD" />
   if (type === 'one_on_one')  return <Users    size={size} color="#1D9E75" />
   if (type === 'external')    return <Calendar size={size} color="#1E40AF" />
-  return                             <Users    size={size} color="#6B7280" />
+  return                             <Users    size={size} color="var(--color-text-muted, #6B7280)" />
 }
 
 function MeetingTypeLabel({ type }: { type: string | null }) {
@@ -253,7 +253,7 @@ function StatusBadge({ status }: { status: ReturnType<typeof getEventStatus> }) 
     live:     { label: 'Live',     bg: '#1D9E7518', border: '#1D9E7540', color: '#1D9E75', pulse: true  },
     soon:     { label: 'Soon',     bg: '#F59E0B18', border: '#F59E0B40', color: '#F59E0B', pulse: false },
     upcoming: { label: 'Upcoming', bg: '#1E40AF18', border: '#1E40AF40', color: '#1E40AF', pulse: false },
-    past:     { label: 'Done',     bg: '#25283618', border: '#25283640', color: '#6B7280', pulse: false },
+    past:     { label: 'Done',     bg: '#25283618', border: '#25283640', color: 'var(--color-text-muted, #6B7280)', pulse: false },
   }[status]
 
   return (
@@ -327,7 +327,7 @@ function EventContextMenu({
     return lines.join('\n')
   }
 
-  const sep: React.CSSProperties = { height: 1, background: '#1E2235', margin: '3px 8px' }
+  const sep: React.CSSProperties = { height: 1, background: 'var(--color-border, #252A3E)', margin: '3px 8px' }
 
   function item(
     id: string,
@@ -346,7 +346,7 @@ function EventContextMenu({
         style={{
           display: 'flex', alignItems: 'center', gap: 9,
           padding: '0 12px', height: 32, fontSize: 13,
-          color: disabled ? '#4B5268' : '#C0C4D6',
+          color: disabled ? '#4B5268' : 'var(--color-text-dim, #C0C4D6)',
           cursor: disabled ? 'default' : 'pointer',
           borderRadius: 6, userSelect: 'none',
           background: hovered ? 'rgba(127,119,221,0.12)' : 'transparent',
@@ -447,7 +447,7 @@ function EventDetailPanel({ event, onClose }: { event: RichMeetingEvent; onClose
             </h3>
             <button
               onClick={onClose}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: '#6B7280', flexShrink: 0 }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--color-text-muted, #6B7280)', flexShrink: 0 }}
             >
               <X size={16} />
             </button>
@@ -456,7 +456,7 @@ function EventDetailPanel({ event, onClose }: { event: RichMeetingEvent; onClose
             <StatusBadge status={status} />
             <span style={{ fontSize: 11, color: '#FFFFFF' }}>
               {fmtTime(event.start_time)} – {fmtTime(event.end_time)}
-              <span style={{ marginLeft: 6, color: '#6B7280' }}>({fmtDuration(event.start_time, event.end_time)})</span>
+              <span style={{ marginLeft: 6, color: 'var(--color-text-muted, #6B7280)' }}>({fmtDuration(event.start_time, event.end_time)})</span>
             </span>
           </div>
         </div>
@@ -470,7 +470,7 @@ function EventDetailPanel({ event, onClose }: { event: RichMeetingEvent; onClose
               <div style={{ width: 8, height: 8, borderRadius: '50%', background: accentColor, flexShrink: 0 }} />
               <span style={{ fontSize: 12, color: '#FFFFFF' }}>{event.calendarName}</span>
               {event.accountEmail && (
-                <span style={{ fontSize: 10.5, color: '#6B7280' }}>· {event.accountEmail}</span>
+                <span style={{ fontSize: 10.5, color: 'var(--color-text-muted, #6B7280)' }}>· {event.accountEmail}</span>
               )}
             </div>
           )}
@@ -486,7 +486,7 @@ function EventDetailPanel({ event, onClose }: { event: RichMeetingEvent; onClose
           {/* Location */}
           {event.location && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <MapPin size={13} color="#6B7280" style={{ flexShrink: 0 }} />
+              <MapPin size={13} color="var(--color-text-muted, #6B7280)" style={{ flexShrink: 0 }} />
               <span style={{ fontSize: 12, color: '#FFFFFF' }}>{event.location}</span>
             </div>
           )}
@@ -517,7 +517,7 @@ function EventDetailPanel({ event, onClose }: { event: RichMeetingEvent; onClose
               padding: '12px 14px', borderRadius: 8,
               background: 'var(--color-surface, #161929)', border: '1px solid var(--color-border, #252A3E)',
             }}>
-              <p style={{ margin: '0 0 6px', fontSize: 10, fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              <p style={{ margin: '0 0 6px', fontSize: 10, fontWeight: 600, color: 'var(--color-text-muted, #6B7280)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 Description
               </p>
               <p style={{
@@ -533,7 +533,7 @@ function EventDetailPanel({ event, onClose }: { event: RichMeetingEvent; onClose
           {/* Attendees */}
           {attendees.length > 0 && (
             <div>
-              <p style={{ margin: '0 0 10px', fontSize: 10, fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              <p style={{ margin: '0 0 10px', fontSize: 10, fontWeight: 600, color: 'var(--color-text-muted, #6B7280)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 Attendees ({attendees.length})
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -554,10 +554,10 @@ function EventDetailPanel({ event, onClose }: { event: RichMeetingEvent; onClose
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <p style={{ margin: 0, fontSize: 12, color: 'var(--color-text, #E8EAF6)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {att.displayName ?? att.email}
-                          {att.self && <span style={{ fontSize: 10, color: '#6B7280', marginLeft: 5 }}>(you)</span>}
+                          {att.self && <span style={{ fontSize: 10, color: 'var(--color-text-muted, #6B7280)', marginLeft: 5 }}>(you)</span>}
                         </p>
                         {att.displayName && (
-                          <p style={{ margin: 0, fontSize: 10, color: '#6B7280', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          <p style={{ margin: 0, fontSize: 10, color: 'var(--color-text-muted, #6B7280)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {att.email}
                           </p>
                         )}
@@ -572,7 +572,7 @@ function EventDetailPanel({ event, onClose }: { event: RichMeetingEvent; onClose
                   )
                 })}
                 {attendees.length > 8 && (
-                  <p style={{ margin: '4px 0 0', fontSize: 11, color: '#6B7280' }}>
+                  <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--color-text-muted, #6B7280)' }}>
                     +{attendees.length - 8} more attendees
                   </p>
                 )}
@@ -588,7 +588,7 @@ function EventDetailPanel({ event, onClose }: { event: RichMeetingEvent; onClose
               rel="noopener noreferrer"
               style={{
                 display: 'flex', alignItems: 'center', gap: 6,
-                fontSize: 11, color: '#6B7280', textDecoration: 'none',
+                fontSize: 11, color: 'var(--color-text-muted, #6B7280)', textDecoration: 'none',
                 marginTop: 4,
               }}
             >
@@ -771,7 +771,7 @@ export function MorningBrief() {
           50%       { opacity: 0.4; transform: scale(0.7); }
         }
         .brief-section { animation: fadeIn 0.35s ease both; }
-        .event-row:hover { background: #1A1D2E !important; cursor: pointer; }
+        .event-row:hover { background: var(--color-surface, #1A1D2E) !important; cursor: pointer; }
       `}</style>
 
       <div style={{ padding: '36px 32px 60px', maxWidth: 1080, margin: '0 auto' }}>
@@ -856,14 +856,14 @@ export function MorningBrief() {
                     fontSize: 14, fontWeight: 700,
                     border: `1.5px solid ${selected ? meta.color : 'var(--color-border, #252A3E)'}`,
                     background: selected ? `${meta.color}22` : 'transparent',
-                    color: selected ? meta.color : '#6B7280',
+                    color: selected ? meta.color : 'var(--color-text-muted, #6B7280)',
                     boxShadow: selected ? `0 0 14px ${meta.color}40` : 'none',
                     transition: 'all 0.15s',
                   }}>
                     {level}
                   </span>
                   <span style={{
-                    fontSize: 10, color: selected ? meta.color : '#6B7280',
+                    fontSize: 10, color: selected ? meta.color : 'var(--color-text-muted, #6B7280)',
                     fontWeight: selected ? 600 : 400, transition: 'color 0.15s',
                     whiteSpace: 'nowrap',
                   }}>
@@ -928,7 +928,7 @@ export function MorningBrief() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {plan.top3.map((title, i) => {
                     const co    = matchCompany(title, tasks)
-                    const color = co ? (CO_COLOR[co] ?? '#6B7280') : '#6B7280'
+                    const color = co ? (CO_COLOR[co] ?? 'var(--color-text-muted, #6B7280)') : 'var(--color-text-muted, #6B7280)'
                     return (
                       <div key={i} style={{
                         display: 'flex', alignItems: 'center', gap: 14,
@@ -943,7 +943,7 @@ export function MorningBrief() {
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           fontSize: 12, fontWeight: 700, flexShrink: 0,
                           background: i === 0 ? '#1E40AF20' : 'var(--color-surface2, #252A3E)',
-                          color: i === 0 ? '#1E40AF' : '#6B7280',
+                          color: i === 0 ? '#1E40AF' : 'var(--color-text-muted, #6B7280)',
                         }}>
                           {i + 1}
                         </span>
@@ -994,7 +994,7 @@ export function MorningBrief() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 14 }}>
                 <SectionLabel>Today's Meetings</SectionLabel>
                 {todayEvents.length > 0 && (
-                  <span style={{ fontSize: 11, color: '#6B7280' }}>
+                  <span style={{ fontSize: 11, color: 'var(--color-text-muted, #6B7280)' }}>
                     {todayEvents.filter(e => getEventStatus(e.start_time, e.end_time) !== 'past').length} remaining
                   </span>
                 )}
@@ -1038,7 +1038,7 @@ export function MorningBrief() {
                           <p style={{ margin: 0, fontSize: 11, color: 'var(--color-text, #E8EAF6)', fontWeight: 500 }}>
                             {fmtTime(event.start_time)}
                           </p>
-                          <p style={{ margin: '1px 0 0', fontSize: 10, color: '#6B7280' }}>
+                          <p style={{ margin: '1px 0 0', fontSize: 10, color: 'var(--color-text-muted, #6B7280)' }}>
                             {fmtTime(event.end_time)}
                           </p>
                         </div>
@@ -1068,7 +1068,7 @@ export function MorningBrief() {
                               </span>
                             )}
                             {event.attendees && event.attendees.length > 0 && (
-                              <span style={{ fontSize: 10, color: '#6B7280' }}>
+                              <span style={{ fontSize: 10, color: 'var(--color-text-muted, #6B7280)' }}>
                                 {event.attendees.length} attendee{event.attendees.length !== 1 ? 's' : ''}
                               </span>
                             )}
@@ -1090,7 +1090,7 @@ export function MorningBrief() {
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 14 }}>
                 <SectionLabel>Today's Habits</SectionLabel>
-                <span style={{ fontSize: 11, color: checkedHabits === habits.length ? '#1D9E75' : '#6B7280' }}>
+                <span style={{ fontSize: 11, color: checkedHabits === habits.length ? '#1D9E75' : 'var(--color-text-muted, #6B7280)' }}>
                   {checkedHabits}/{habits.length}
                 </span>
               </div>
@@ -1105,7 +1105,7 @@ export function MorningBrief() {
                       padding: '10px 14px', borderRadius: 9, width: '100%',
                       background: habit.checked ? '#1D9E7512' : 'var(--color-bg, #0D0F1A)',
                       border: `1px solid ${habit.checked ? '#1D9E7540' : 'var(--color-border, #252A3E)'}`,
-                      color: habit.checked ? '#1D9E75' : '#6B7280',
+                      color: habit.checked ? '#1D9E75' : 'var(--color-text-muted, #6B7280)',
                       fontSize: 13, cursor: 'pointer', textAlign: 'left',
                       transition: 'all 0.15s',
                     }}

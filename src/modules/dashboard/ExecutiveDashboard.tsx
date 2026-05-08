@@ -303,7 +303,7 @@ export function ExecutiveDashboard() {
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {tasksByCompany.length === 0
-                ? <p style={{ margin: 0, fontSize: 12.5, color: '#6B7280' }}>No companies set up yet — add them in Settings.</p>
+                ? <p style={{ margin: 0, fontSize: 12.5, color: 'var(--color-text-muted, #6B7280)' }}>No companies set up yet — add them in Settings.</p>
                 : tasksByCompany.map(co => (
                     <CompanyBadge key={co.id} name={co.name} color={co.color} count={co.count} />
                   ))

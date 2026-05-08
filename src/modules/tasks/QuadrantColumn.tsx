@@ -39,7 +39,7 @@ function buildGroups(tasks: Task[], groupBy: 'type' | 'company'): TaskGroup[] {
     return [...map.entries()].map(([k, ts]) => {
       const dynCo = companies.find(c => c.id === k)
       const label = dynCo?.name ?? COMPANY_LABELS[k as keyof typeof COMPANY_LABELS] ?? k
-      const color = dynCo?.color ?? '#6B7280'
+      const color = dynCo?.color ?? 'var(--color-text-muted, #6B7280)'
       return { key: k, label, emoji: '🏢', color, tasks: ts }
     })
   }
@@ -75,7 +75,7 @@ const inp: React.CSSProperties = {
   background: 'var(--color-bg, #0D0F1A)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 6,
   padding: '5px 8px', fontSize: 12, color: 'var(--color-text, #E8EAF6)', outline: 'none', width: '100%',
 }
-const lbl: React.CSSProperties = { fontSize: 10.5, color: '#6B7280', marginBottom: 3, display: 'block' }
+const lbl: React.CSSProperties = { fontSize: 10.5, color: 'var(--color-text-muted, #6B7280)', marginBottom: 3, display: 'block' }
 
 interface QuadrantColumnProps {
   quadrant: Quadrant
@@ -184,7 +184,7 @@ export function QuadrantColumn({ quadrant, tasks, onOpen, groupBy = 'none', allG
             padding: '1px 6px', borderRadius: 4,
           }}>{activeTasks.length}</span>
         </div>
-        <p style={{ margin: '2px 0 0 16px', fontSize: 10.5, color: '#6B7280' }}>{meta.sub}</p>
+        <p style={{ margin: '2px 0 0 16px', fontSize: 10.5, color: 'var(--color-text-muted, #6B7280)' }}>{meta.sub}</p>
       </div>
 
       {/* Drop zone */}
@@ -222,7 +222,7 @@ export function QuadrantColumn({ quadrant, tasks, onOpen, groupBy = 'none', allG
         {activeTasks.length === 0 && doneTasks.length === 0 && !adding && (
           <div style={{
             flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: '#6B7280', fontSize: 11.5, fontStyle: 'italic',
+            color: 'var(--color-text-muted, #6B7280)', fontSize: 11.5, fontStyle: 'italic',
             opacity: isOver ? 0 : 0.6,
             border: `1px dashed ${isOver ? meta.color : 'var(--color-border, #252A3E)'}`,
             borderRadius: 8, minHeight: 60, transition: 'all 0.15s ease',
@@ -246,11 +246,11 @@ export function QuadrantColumn({ quadrant, tasks, onOpen, groupBy = 'none', allG
                 padding: '6px 8px', display: 'flex', flexWrap: 'wrap', gap: 5, alignItems: 'center',
               }}>
                 <Sparkles size={10} color="#7F77DD" style={{ flexShrink: 0 }} />
-                {aiLoading && <span style={{ fontSize: 10.5, color: '#6B7280' }}>Analyzing…</span>}
+                {aiLoading && <span style={{ fontSize: 10.5, color: 'var(--color-text-muted, #6B7280)' }}>Analyzing…</span>}
                 {!aiLoading && aiHint && (
                   <>
                     {aiHint.icon && (
-                      <span style={{ fontSize: 10.5, color: '#94A3B8' }}>Icon: {aiHint.icon}</span>
+                      <span style={{ fontSize: 10.5, color: 'var(--color-text-dim, #94A3B8)' }}>Icon: {aiHint.icon}</span>
                     )}
                     {aiHint.companyId && (() => {
                       const co = companies.find(c => c.id === aiHint.companyId)
@@ -311,7 +311,7 @@ export function QuadrantColumn({ quadrant, tasks, onOpen, groupBy = 'none', allG
                   ))}
                 </select>
                 {users.length === 0 && (
-                  <p style={{ margin: '4px 0 0', fontSize: 10.5, color: '#6B7280' }}>
+                  <p style={{ margin: '4px 0 0', fontSize: 10.5, color: 'var(--color-text-muted, #6B7280)' }}>
                     Add users under Settings → Companies first.
                   </p>
                 )}
@@ -329,18 +329,18 @@ export function QuadrantColumn({ quadrant, tasks, onOpen, groupBy = 'none', allG
               <button onClick={reset} style={{
                 padding: '5px 8px', borderRadius: 6, fontSize: 11.5,
                 background: 'transparent', border: '1px solid var(--color-border, #252A3E)',
-                color: '#6B7280', cursor: 'pointer',
+                color: 'var(--color-text-muted, #6B7280)', cursor: 'pointer',
               }}><X size={11} /></button>
             </div>
           </div>
         ) : (
           <button onClick={() => setAdding(true)} style={{
             width: '100%', background: 'transparent', border: 'none', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', gap: 5, color: '#6B7280',
+            display: 'flex', alignItems: 'center', gap: 5, color: 'var(--color-text-muted, #6B7280)',
             fontSize: 11.5, padding: '3px 2px', borderRadius: 6, transition: 'color 0.15s ease',
           }}
             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = meta.color }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#6B7280' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--color-text-muted, #6B7280)' }}
           >
             <Plus size={12} strokeWidth={2.5} /> Add task
           </button>

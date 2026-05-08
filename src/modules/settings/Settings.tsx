@@ -555,11 +555,11 @@ function CompanyCard({
               onBlur={saveDomain}
               onKeyDown={e => { if (e.key === 'Enter') saveDomain(); if (e.key === 'Escape') { setDomainDraft(co.emailDomain); setEditingDomain(false) } }}
               placeholder="@domain.com"
-              style={{ ...tinp, fontSize: 10.5, color: '#6B7280', width: 140 }}
+              style={{ ...tinp, fontSize: 10.5, color: 'var(--color-text-muted, #6B7280)', width: 140 }}
             />
           ) : (
             <span onClick={() => setEditingDomain(true)} title="Click to set domain"
-              style={{ fontSize: 10.5, color: co.emailDomain ? '#6B7280' : '#3a3f55', cursor: 'text' }}>
+              style={{ fontSize: 10.5, color: co.emailDomain ? 'var(--color-text-muted, #6B7280)' : 'var(--color-border, #3a3f55)', cursor: 'text' }}>
               {co.emailDomain || ''}
             </span>
           )}
@@ -579,7 +579,7 @@ function CompanyCard({
           display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0,
           padding: '2px 7px', borderRadius: 5, fontSize: 10.5, cursor: 'pointer',
           background: 'transparent', border: '1px solid var(--color-border, #252A3E)',
-          color: '#6B7280',
+          color: 'var(--color-text-muted, #6B7280)',
         }}>
           <span style={{ color: co.color, fontWeight: 600 }}>{users.length}</span>
           {usersOpen ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
@@ -588,7 +588,7 @@ function CompanyCard({
         <Toggle checked={co.isActive} onChange={v => onUpdate({ isActive: v })} />
 
         <button onClick={onDelete}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6B7280', padding: 3, display: 'flex', alignItems: 'center' }}>
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted, #6B7280)', padding: 3, display: 'flex', alignItems: 'center' }}>
           <Trash2 size={12} />
         </button>
       </div>
@@ -597,7 +597,7 @@ function CompanyCard({
       {usersOpen && (
         <div style={{ borderTop: '1px solid var(--color-border, #252A3E)', padding: '8px 14px 10px 46px' }}>
           {users.length === 0 && (
-            <p style={{ margin: '0 0 6px', fontSize: 11, color: '#3a3f55', fontStyle: 'italic' }}>No members yet</p>
+            <p style={{ margin: '0 0 6px', fontSize: 11, color: 'var(--color-border, #3a3f55)', fontStyle: 'italic' }}>No members yet</p>
           )}
 
           {users.map(u => {
@@ -620,20 +620,20 @@ function CompanyCard({
                       onBlur={() => saveUser(u.id)}
                       onKeyDown={e => { if (e.key === 'Enter') saveUser(u.id); if (e.key === 'Escape') setEditingUserId(null) }}
                       placeholder="email"
-                      style={{ ...tinp, fontSize: 11, color: '#6B7280', flex: 1 }}
+                      style={{ ...tinp, fontSize: 11, color: 'var(--color-text-muted, #6B7280)', flex: 1 }}
                     />
                   </>
                 ) : (
                   <>
                     <span onClick={() => startEditUser(u)} style={{ fontSize: 12, color: 'var(--color-text, #E8EAF6)', cursor: 'text', minWidth: 60 }}>{u.name}</span>
-                    <span onClick={() => startEditUser(u)} style={{ fontSize: 11, color: '#6B7280', cursor: 'text', flex: 1 }}>
-                      {u.email || <span style={{ color: '#3a3f55' }}>+ email</span>}
+                    <span onClick={() => startEditUser(u)} style={{ fontSize: 11, color: 'var(--color-text-muted, #6B7280)', cursor: 'text', flex: 1 }}>
+                      {u.email || <span style={{ color: 'var(--color-border, #3a3f55)' }}>+ email</span>}
                     </span>
                   </>
                 )}
 
                 <button onClick={() => removeUser(u.id)}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6B7280', padding: 2, display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted, #6B7280)', padding: 2, display: 'flex', alignItems: 'center', flexShrink: 0 }}>
                   <Trash2 size={10} />
                 </button>
               </div>

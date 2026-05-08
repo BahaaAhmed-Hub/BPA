@@ -113,7 +113,7 @@ export function Sidebar() {
                   border: 'none',
                   borderRadius: 8,
                   cursor: 'pointer',
-                  color: active ? '#FFFFFF' : theme.textDim,
+                  color: active ? theme.text : theme.textDim,
                   marginBottom: 2,
                   transition: 'all 0.15s ease',
                 }}
@@ -171,7 +171,7 @@ export function Sidebar() {
                   justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
                   background: active ? theme.accentFill : 'transparent',
                   border: 'none', borderRadius: 8, cursor: 'pointer',
-                  color: active ? '#FFFFFF' : theme.textDim,
+                  color: active ? theme.text : theme.textDim,
                   marginBottom: 2, transition: 'all 0.15s ease',
                 }}
                 onMouseEnter={e => {
