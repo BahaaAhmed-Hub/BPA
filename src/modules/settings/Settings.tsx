@@ -1844,7 +1844,18 @@ export function Settings() {
         {id === 'schedule'      && <ScheduleSection      s={settings} set={update} />}
         {id === 'companies'     && <CompaniesSection     companies={companies}
                                       setCompanies={c => { setCompanies(c); saveCompanies(c) }}
-                                      accounts={accounts} />}
+                                      accounts={[
+                                        ...(authUser?.email ? [{
+                                          id: 'primary',
+                                          email: authUser.email,
+                                          name: authUser.name ?? authUser.email,
+                                          providerToken: '',
+                                          scopes: [],
+                                          connectedAt: '',
+                                          isPrimary: true,
+                                        } as ConnectedAccount] : []),
+                                        ...accounts,
+                                      ]} />}
         {id === 'habits'        && <HabitsSection />}
         {id === 'accounts'      && <AccountsSection      accounts={accounts}
                                       setAccounts={a => { setAccounts(a) }}
