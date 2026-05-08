@@ -1712,6 +1712,17 @@ export function Settings() {
   const settingsRef = useRef(settings)
   settingsRef.current = settings
 
+  // Primary email: authStore (persisted, instant) with supabase session as fallback
+  const [primaryEmail, setPrimaryEmail] = useState<string>(authUser?.email ?? '')
+  useEffect(() => {
+    if (authUser?.email) { setPrimaryEmail(authUser.email); return }
+    import('./../../lib/supabase').then(({ supabase }) =>
+      supabase.auth.getSession().then(({ data }) => {
+        if (data.session?.user?.email) setPrimaryEmail(data.session.user.email)
+      })
+    )
+  }, [authUser?.email])
+
   // Re-read accounts when the add-account OAuth flow completes (App.tsx dispatches this event)
   useEffect(() => {
     const handler = () => { setAccounts(loadAccounts()) }
@@ -1845,10 +1856,10 @@ export function Settings() {
         {id === 'companies'     && <CompaniesSection     companies={companies}
                                       setCompanies={c => { setCompanies(c); saveCompanies(c) }}
                                       accounts={[
-                                        ...(authUser?.email ? [{
+                                        ...(primaryEmail ? [{
                                           id: 'primary',
-                                          email: authUser.email,
-                                          name: authUser.name ?? authUser.email,
+                                          email: primaryEmail,
+                                          name: authUser?.name ?? primaryEmail,
                                           providerToken: '',
                                           scopes: [],
                                           connectedAt: '',
@@ -1859,7 +1870,7 @@ export function Settings() {
         {id === 'habits'        && <HabitsSection />}
         {id === 'accounts'      && <AccountsSection      accounts={accounts}
                                       setAccounts={a => { setAccounts(a) }}
-                                      primaryEmail={authUser?.email ?? ''} />}
+                                      primaryEmail={primaryEmail} />}
         {id === 'professor'     && <ProfessorSection     s={settings} set={update} />}
         {id === 'notifications' && <NotificationsSection s={settings} set={update} />}
         {id === 'appearance'    && <AppearanceSection    s={settings} set={update} />}
