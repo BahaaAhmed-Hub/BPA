@@ -28,7 +28,9 @@ async function tokenForEmail(email: string | undefined, ctx: ToolContext): Promi
   if (!email || email === ctx.primaryEmail) return primaryToken()
   const acc = ctx.accounts.find(a => a.email === email)
   if (!acc) throw new Error(`Account "${email}" is not connected. Use list_connected_accounts to see available accounts.`)
-  return (await getProviderTokenForAccount(acc)) ?? acc.providerToken ?? ''
+  const token = (await getProviderTokenForAccount(acc)) ?? acc.providerToken ?? ''
+  if (!token) throw new Error(`The access token for ${email} is missing. Please reconnect this account in Settings → Connected Accounts.`)
+  return token
 }
 
 // ─── HTTP helpers ─────────────────────────────────────────────────────────────
@@ -43,6 +45,8 @@ async function gmailGet<T>(token: string, path: string): Promise<T> {
   })
   if (!res.ok) {
     const b = await res.json().catch(() => ({})) as { error?: { message?: string } }
+    if (res.status === 401 || res.status === 403)
+      throw new Error('Google token expired or revoked. Please reconnect this account in Settings → Connected Accounts.')
     throw new Error(b?.error?.message ?? `Gmail ${res.status}`)
   }
   return res.json() as Promise<T>
@@ -56,6 +60,8 @@ async function gmailPost(token: string, path: string, body: unknown): Promise<vo
   })
   if (!res.ok) {
     const b = await res.json().catch(() => ({})) as { error?: { message?: string } }
+    if (res.status === 401 || res.status === 403)
+      throw new Error('Google token expired or revoked. Please reconnect this account in Settings → Connected Accounts.')
     throw new Error(b?.error?.message ?? `Gmail ${res.status}`)
   }
 }
@@ -66,6 +72,8 @@ async function calGet<T>(token: string, path: string): Promise<T> {
   })
   if (!res.ok) {
     const b = await res.json().catch(() => ({})) as { error?: { message?: string } }
+    if (res.status === 401 || res.status === 403)
+      throw new Error('Google token expired or revoked. Please reconnect this account in Settings → Connected Accounts.')
     throw new Error(b?.error?.message ?? `Calendar ${res.status}`)
   }
   return res.json() as Promise<T>
@@ -79,6 +87,8 @@ async function calPost<T>(token: string, path: string, body: unknown, method = '
   })
   if (!res.ok) {
     const b = await res.json().catch(() => ({})) as { error?: { message?: string } }
+    if (res.status === 401 || res.status === 403)
+      throw new Error('Google token expired or revoked. Please reconnect this account in Settings → Connected Accounts.')
     throw new Error(b?.error?.message ?? `Calendar ${res.status}`)
   }
   return res.json() as Promise<T>
@@ -90,6 +100,8 @@ async function driveGet<T>(token: string, path: string): Promise<T> {
   })
   if (!res.ok) {
     const b = await res.json().catch(() => ({})) as { error?: { message?: string } }
+    if (res.status === 401 || res.status === 403)
+      throw new Error('Google token expired or revoked. Please reconnect this account in Settings → Connected Accounts.')
     throw new Error(b?.error?.message ?? `Drive ${res.status}`)
   }
   return res.json() as Promise<T>
