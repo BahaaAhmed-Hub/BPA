@@ -2,7 +2,7 @@ import type Anthropic from '@anthropic-ai/sdk'
 import type { Task } from '@/types'
 import { archiveMessage, extractBody, type GmailMessage } from './gmail'
 import { supabase } from './supabase'
-import { getProviderTokenForAccount, type ConnectedAccount } from './multiAccount'
+import { getProviderTokenForAccount, silentRefreshAccountToken, type ConnectedAccount } from './multiAccount'
 import { loadLogs, saveLogs } from '@/store/habitsStore'
 
 // ─── Context provided by the React component ─────────────────────────────────
@@ -21,16 +21,25 @@ export interface ToolContext {
 
 async function primaryToken(): Promise<string> {
   const { data } = await supabase.auth.getSession()
-  return data.session?.provider_token ?? localStorage.getItem('google_provider_token') ?? ''
+  if (data.session?.provider_token) return data.session.provider_token
+  // Session JWT may be valid but provider_token missing — try explicit refresh
+  const { data: refreshed } = await supabase.auth.refreshSession()
+  return refreshed.session?.provider_token ?? localStorage.getItem('google_provider_token') ?? ''
 }
 
 async function tokenForEmail(email: string | undefined, ctx: ToolContext): Promise<string> {
   if (!email || email === ctx.primaryEmail) return primaryToken()
   const acc = ctx.accounts.find(a => a.email === email)
   if (!acc) throw new Error(`Account "${email}" is not connected. Use list_connected_accounts to see available accounts.`)
-  const token = (await getProviderTokenForAccount(acc)) ?? acc.providerToken ?? ''
-  if (!token) throw new Error(`The access token for ${email} is missing. Please reconnect this account in Settings → Connected Accounts.`)
-  return token
+  // Try TTL-cached token first
+  const cached = await getProviderTokenForAccount(acc)
+  if (cached) return cached
+  // Expired — attempt silent refresh via Supabase refresh token
+  const fresh = await silentRefreshAccountToken(acc)
+  if (fresh) return fresh
+  // Fall back to stored token (may still work within the 60-min Google window)
+  if (acc.providerToken) return acc.providerToken
+  throw new Error(`The access token for ${email} is missing. Please reconnect this account in Settings → Connected Accounts.`)
 }
 
 // ─── HTTP helpers ─────────────────────────────────────────────────────────────
