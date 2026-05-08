@@ -516,7 +516,7 @@ function DayColumn({ dateStr, isToday, children }: { dateStr: string; isToday: b
       ))}
       {/* Half-hour lines */}
       {Array.from({ length: 24 }, (_, h) => (
-        <div key={`h${h}`} style={{ position: 'absolute', top: h * HOUR_PX + HOUR_PX / 2, left: 0, right: 0, borderTop: '1px dashed #141722', pointerEvents: 'none' }} />
+        <div key={`h${h}`} style={{ position: 'absolute', top: h * HOUR_PX + HOUR_PX / 2, left: 0, right: 0, borderTop: '1px dashed var(--color-border, #252A3E)', opacity: 0.4, pointerEvents: 'none' }} />
       ))}
       {children}
     </div>
@@ -737,7 +737,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
     display: 'flex', alignItems: 'center', gap: 5,
     padding: '5px 11px', borderRadius: 7, fontSize: 12, cursor: 'pointer',
     background: active ? `${color}22` : 'transparent',
-    border: `1px solid ${active ? color : '#2A2F45'}`,
+    border: `1px solid ${active ? color : 'var(--color-border, #2A2F45)'}`,
     color: active ? color : 'var(--color-text-dim, #8B93A8)',
     transition: 'all 0.12s',
   })
@@ -860,13 +860,13 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
         <>
           <div style={{ height: 1, background: 'var(--color-border, #252A3E)' }} />
           <div style={{ padding: '10px 14px' }}>
-            <div style={{ fontSize: 10, fontWeight: 600, color: '#4B5268', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 8 }}>
+            <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--color-border, #4B5268)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 8 }}>
               Attendees
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               {organizer && !organizer.self && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#3A4060', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600, color: '#A0A8C0', flexShrink: 0 }}>
+                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--color-border, #3A4060)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600, color: 'var(--color-text-dim, #A0A8C0)', flexShrink: 0 }}>
                     {((organizer.displayName ?? organizer.email) ?? '?')[0].toUpperCase()}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -879,7 +879,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
               )}
               {others.slice(0, 6).map(a => (
                 <div key={a.email} style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#3A4060', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600, color: '#A0A8C0', flexShrink: 0 }}>
+                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--color-border, #3A4060)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600, color: 'var(--color-text-dim, #A0A8C0)', flexShrink: 0 }}>
                     {(a.displayName ?? a.email)[0].toUpperCase()}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -908,7 +908,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
         <>
           <div style={{ height: 1, background: 'var(--color-border, #252A3E)' }} />
           <div style={{ padding: '10px 14px' }}>
-            <div style={{ fontSize: 10, fontWeight: 600, color: '#4B5268', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 5 }}>Notes</div>
+            <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--color-border, #4B5268)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 5 }}>Notes</div>
             <div style={{ fontSize: 12, color: 'var(--color-text-dim, #8B93A8)', lineHeight: 1.6, maxHeight: 90, overflowY: 'auto', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
               {notes.slice(0, 400)}{notes.length > 400 ? '…' : ''}
             </div>
@@ -920,7 +920,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
       {event.htmlLink && (
         <div style={{ padding: '6px 14px 10px' }}>
           <a href={event.htmlLink} target="_blank" rel="noopener noreferrer"
-            style={{ fontSize: 12, color: '#5B6080', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
+            style={{ fontSize: 12, color: 'var(--color-text-dim, #5B6080)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
             <ExternalLink size={11} /> Open in Google Calendar
           </a>
         </div>
@@ -948,7 +948,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
           {prepLoading ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
               {[75, 55, 85, 65].map((w, i) => (
-                <div key={i} style={{ height: 9, width: `${w}%`, borderRadius: 3, background: 'linear-gradient(90deg, #1E2235 25%, #252A3E 50%, #1E2235 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.5s infinite' }} />
+                <div key={i} style={{ height: 9, width: `${w}%`, borderRadius: 3, background: 'linear-gradient(90deg, var(--color-surface, #1E2235) 25%, var(--color-border, #252A3E) 50%, var(--color-surface, #1E2235) 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.5s infinite' }} />
               ))}
             </div>
           ) : prepError ? (
@@ -1048,7 +1048,7 @@ function EventContextMenu({
     return lines.join('\n')
   }
 
-  const sep: React.CSSProperties = { height: 1, background: '#1E2235', margin: '3px 8px' }
+  const sep: React.CSSProperties = { height: 1, background: 'var(--color-border, #1E2235)', margin: '3px 8px' }
 
   function item(
     id: string,
@@ -1289,7 +1289,7 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
           style={{
             flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
             width: 30, height: 26, borderRadius: 7,
-            background: addMeet ? 'rgba(29,158,117,0.15)' : '#1E2235',
+            background: addMeet ? 'rgba(29,158,117,0.15)' : 'var(--color-surface, #1E2235)',
             border: `1px solid ${addMeet ? '#1D9E75' : 'var(--color-border, #252A3E)'}`,
             color: addMeet ? '#1D9E75' : 'var(--color-text-muted, #6B7280)', cursor: 'pointer',
             transition: 'all 0.15s',
@@ -1408,7 +1408,7 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
           disabled={!title.trim()}
           style={{
             background: title.trim() ? calColor : 'var(--color-surface2, #252A3E)', border: 'none', borderRadius: 8,
-            color: title.trim() ? '#fff' : '#4B5268', fontSize: 12.5, fontWeight: 600,
+            color: title.trim() ? 'var(--color-text, #E8EAF6)' : 'var(--color-border, #4B5268)', fontSize: 12.5, fontWeight: 600,
             padding: '6px 20px', cursor: title.trim() ? 'pointer' : 'default',
             transition: 'background 0.15s',
           }}
@@ -1987,7 +1987,7 @@ export function CalendarIntelligence() {
 
   // ── Render ───────────────────────────────────────────────────────────────────
   return (
-    <div className={creatingEvt ? 'cal-grid-creating' : undefined} style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#0D0F1E', color: 'var(--color-text, #E8EAF6)', fontFamily: 'inherit', overflow: 'hidden' }}>
+    <div className={creatingEvt ? 'cal-grid-creating' : undefined} style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--color-bg, #0D0F1E)', color: 'var(--color-text, #E8EAF6)', fontFamily: 'inherit', overflow: 'hidden' }}>
 
       {/* ── Top bar ─────────────────────────────────────────────────────────── */}
       <div style={{ padding: '14px 20px 10px', borderBottom: '1px solid var(--color-surface, #1A1D2E)', flexShrink: 0 }}>
@@ -2029,7 +2029,7 @@ export function CalendarIntelligence() {
                 display: 'flex', alignItems: 'center', gap: 5,
                 background: 'none', border: '1px solid var(--color-border, #252A3E)', borderRadius: 7,
                 cursor: applyingRules ? 'default' : 'pointer',
-                color: applyingRules ? '#4B5268' : 'var(--color-text-dim, #8B93A8)',
+                color: applyingRules ? 'var(--color-border, #4B5268)' : 'var(--color-text-dim, #8B93A8)',
                 padding: '4px 8px', fontSize: 12,
                 opacity: applyingRules ? 0.6 : 1,
               }}
@@ -2094,7 +2094,7 @@ export function CalendarIntelligence() {
                         flexShrink: 0,
                       }}
                     >
-                      <div style={{ width: 10, height: 10, borderRadius: '50%', background: hidden ? '#3A3F55' : color, border: '1px solid rgba(255,255,255,0.2)' }} />
+                      <div style={{ width: 10, height: 10, borderRadius: '50%', background: hidden ? 'var(--color-border, #3A3F55)' : color, border: '1px solid rgba(128,128,128,0.2)' }} />
                     </button>
 
                     {/* Name + eye toggle */}
@@ -2104,13 +2104,13 @@ export function CalendarIntelligence() {
                         background: 'none', border: 'none', cursor: 'pointer',
                         display: 'flex', alignItems: 'center', gap: 4,
                         padding: '3px 8px 3px 2px', fontSize: 11,
-                        color: hidden ? '#4B5268' : 'var(--color-text-dim, #C0C4D6)',
+                        color: hidden ? 'var(--color-border, #4B5268)' : 'var(--color-text-dim, #C0C4D6)',
                       }}
                     >
                       <span style={{ maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {cal.summary}
                       </span>
-                      {hidden ? <EyeOff size={10} color="#4B5268" /> : <Eye size={10} color={color} />}
+                      {hidden ? <EyeOff size={10} color="var(--color-border, #4B5268)" /> : <Eye size={10} color={color} />}
                     </button>
 
                     {/* Subtle reconnect badge — only shown when this account needs reconnect */}
@@ -2141,7 +2141,7 @@ export function CalendarIntelligence() {
 
         {/* Fetch error — keep but make subtle */}
         {fetchError && (
-          <div style={{ marginTop: 6, padding: '5px 10px', background: '#1E1216', border: '1px solid #4A1A24', borderRadius: 6, fontSize: 11, color: '#E05252', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div style={{ marginTop: 6, padding: '5px 10px', background: 'rgba(224,82,82,0.08)', border: '1px solid rgba(224,82,82,0.3)', borderRadius: 6, fontSize: 11, color: '#E05252', display: 'flex', alignItems: 'center', gap: 6 }}>
             <AlertCircle size={11} /> {fetchError}
           </div>
         )}
@@ -2188,7 +2188,7 @@ export function CalendarIntelligence() {
               {Array.from({ length: 24 }, (_, h) => (
                 <div key={h} style={{
                   position: 'absolute', top: h * HOUR_PX - 7,
-                  right: 8, fontSize: 10, color: '#3A3F55', whiteSpace: 'nowrap',
+                  right: 8, fontSize: 10, color: 'var(--color-border, #3A3F55)', whiteSpace: 'nowrap',
                 }}>
                   {fmtHourLabel(h)}
                 </div>
@@ -2292,9 +2292,9 @@ export function CalendarIntelligence() {
 
       {/* No auth state */}
       {noAuth && !loadingEvents && (
-        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(13,15,30,0.85)', pointerEvents: 'none' }}>
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-bg, rgba(13,15,30,0.85))', opacity: 0.9, pointerEvents: 'none' }}>
           <div style={{ textAlign: 'center' }}>
-            <Calendar size={36} color="#3A3F55" />
+            <Calendar size={36} color="var(--color-border, #3A3F55)" />
             <p style={{ margin: '12px 0 0', fontSize: 14, color: 'var(--color-text-muted, #6B7280)' }}>Connect Google Calendar to see your events</p>
           </div>
         </div>
