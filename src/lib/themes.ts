@@ -104,6 +104,29 @@ export const THEMES: AppTheme[] = [
   },
 ]
 
+export function applySamuraiModeOverride(): void {
+  const s = document.documentElement.style
+  s.setProperty('--color-bg',           '#0C0B09')
+  s.setProperty('--color-surface',      '#131210')
+  s.setProperty('--color-surface2',     '#0C0B09')
+  s.setProperty('--color-border',       '#1E1C18')
+  s.setProperty('--color-accent',       '#8B1A1A')
+  s.setProperty('--color-accent-fill',  'rgba(139,26,26,0.15)')
+  s.setProperty('--color-accent-bright','#C0392B')
+  s.setProperty('--color-text',         '#EDE4D3')
+  s.setProperty('--color-text-dim',     '#7A6E5E')
+  s.setProperty('--color-text-muted',   '#3C3530')
+  s.setProperty('--color-sidebar',      '#131210')
+  s.setProperty('--bg-base',            '#0C0B09')
+  s.setProperty('--bg-surface',         '#131210')
+  s.setProperty('--border-color',       '#1E1C18')
+  s.setProperty('--text-primary',       '#EDE4D3')
+  s.setProperty('--accent',             '#8B1A1A')
+  document.documentElement.setAttribute('data-theme', 'dark')
+  document.body.style.background = '#0C0B09'
+  document.body.style.color = '#EDE4D3'
+}
+
 export const DEFAULT_THEME_ID = 'navy-night'
 
 // Migrate old theme IDs saved before the 10-theme update

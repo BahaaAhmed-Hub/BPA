@@ -11,9 +11,11 @@ import {
   ChevronRight,
   GraduationCap,
   Settings,
+  Swords,
 } from 'lucide-react'
 import { useUIStore } from '@/store/uiStore'
 import { getTheme } from '@/lib/themes'
+import { useBehavioralStore } from '@/store/behavioralStore'
 
 const NAV_ITEMS = [
   { id: 'dashboard',  label: 'Dashboard',      Icon: LayoutDashboard },
@@ -32,6 +34,8 @@ const SYSTEM_ITEMS = [
 export function Sidebar() {
   const { sidebarCollapsed, activeModule, toggleSidebar, setActiveModule, themeId } = useUIStore()
   const theme = getTheme(themeId)
+  const behavioralEnabled = useBehavioralStore(s => s.enabled)
+  const behavioralMode    = useBehavioralStore(s => s.mode)
 
   return (
     <aside
@@ -145,6 +149,51 @@ export function Sidebar() {
             )
           })}
         </div>
+
+        {/* Behavioral OS — shown only when enabled */}
+        {behavioralEnabled && (() => {
+          const id = 'behavioral'
+          const active = activeModule === id
+          const modeLabel = behavioralMode === 'samurai' ? 'SAMURAI' : behavioralMode === 'pharaoh' ? 'PHARAOH' : 'ASTRAL'
+          return (
+            <div style={{ borderTop: `1px solid ${theme.border}`, paddingTop: 10, marginTop: 4 }}>
+              {!sidebarCollapsed && (
+                <span style={{
+                  display: 'block', padding: '4px 12px 6px',
+                  fontSize: 9.5, fontWeight: 700, color: theme.accentBright,
+                  textTransform: 'uppercase', letterSpacing: '1.2px',
+                }}>
+                  {modeLabel} MODE
+                </span>
+              )}
+              <button
+                onClick={() => setActiveModule(id)}
+                title={sidebarCollapsed ? 'Behavioral OS' : undefined}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+                  padding: sidebarCollapsed ? '10px 0' : '10px 12px',
+                  justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
+                  background: active ? theme.accentFill : 'transparent',
+                  border: 'none', borderRadius: 8, cursor: 'pointer',
+                  color: active ? theme.text : theme.textDim,
+                  marginBottom: 2, transition: 'all 0.15s ease',
+                }}
+                onMouseEnter={e => { if (!active) { const el = e.currentTarget as HTMLElement; el.style.background = theme.accentFill; el.style.color = theme.text } }}
+                onMouseLeave={e => { if (!active) { const el = e.currentTarget as HTMLElement; el.style.background = 'transparent'; el.style.color = theme.textDim } }}
+              >
+                <Swords size={18} strokeWidth={active ? 2.5 : 1.8} style={{ flexShrink: 0 }} />
+                {!sidebarCollapsed && (
+                  <span style={{ fontSize: 13.5, fontWeight: active ? 600 : 400, letterSpacing: '0.1px', whiteSpace: 'nowrap' }}>
+                    Behavioral OS
+                  </span>
+                )}
+                {active && !sidebarCollapsed && (
+                  <div style={{ marginLeft: 'auto', width: 4, height: 4, borderRadius: '50%', background: theme.accent }} />
+                )}
+              </button>
+            </div>
+          )
+        })()}
 
         {/* System section */}
         <div style={{ borderTop: `1px solid ${theme.border}`, paddingTop: 10, marginTop: 4 }}>

@@ -1,4 +1,3 @@
-
 import { useEffect, useLayoutEffect, useState } from 'react'
 import { AssistantPanel, AssistantToggle } from './modules/assistant/AssistantPanel'
 import { Sidebar } from './components/layout/Sidebar'
@@ -11,17 +10,19 @@ import { HabitsModule } from './modules/habits/HabitsModule'
 import { ReviewModule } from './modules/review/ReviewModule'
 import { MorningModule } from './modules/morning/MorningModule'
 import { SettingsModule } from './modules/settings/SettingsModule'
+import { BehavioralOS } from './modules/behavioral/BehavioralOS'
 import { useUIStore } from './store/uiStore'
 import { useAuthStore } from './store/authStore'
 import { useTaskStore } from './store/taskStore'
 import { useHabitsStore } from './store/habitsStore'
+import { useBehavioralStore } from './store/behavioralStore'
 import { supabase } from './lib/supabase'
 import { signInWithGoogle, getPendingAddAccount, clearPendingAddAccount } from './lib/google'
 import { addAccount, loadAccounts, saveAccounts } from './lib/multiAccount'
 import { saveAccountsToDB, loadCompaniesFromDB, loadRawSettingsFromDB, loadAccountsFromDB } from './lib/dbSync'
 import { seedToken, seedFromLocalStorage, clearAllTokens, getGoogleToken } from './lib/tokenManager'
 import { refreshPrimaryToken } from './lib/googleCalendar'
-import { getTheme, applyThemeVars } from './lib/themes'
+import { getTheme, applyThemeVars, applySamuraiModeOverride } from './lib/themes'
 import { GraduationCap, Calendar, Mail, CheckSquare, Brain, ArrowRight } from 'lucide-react'
 
 // ─── Feature pills shown on the login screen ──────────────────────────────────
@@ -425,15 +426,16 @@ function LoadingScreen() {
 function ActiveModule() {
   const activeModule = useUIStore(s => s.activeModule)
   switch (activeModule) {
-    case 'dashboard':  return <ExecutiveDashboard />
-    case 'tasks':      return <TaskCommand />
-    case 'calendar':   return <CalendarModule />
-    case 'inbox':      return <InboxModule />
-    case 'habits':     return <HabitsModule />
-    case 'review':     return <ReviewModule />
-    case 'morning':    return <MorningModule />
-    case 'settings':   return <SettingsModule />
-    default:           return <ExecutiveDashboard />
+    case 'dashboard':    return <ExecutiveDashboard />
+    case 'tasks':        return <TaskCommand />
+    case 'calendar':     return <CalendarModule />
+    case 'inbox':        return <InboxModule />
+    case 'habits':       return <HabitsModule />
+    case 'review':       return <ReviewModule />
+    case 'morning':      return <MorningModule />
+    case 'settings':     return <SettingsModule />
+    case 'behavioral':   return <BehavioralOS />
+    default:             return <ExecutiveDashboard />
   }
 }
 
@@ -520,10 +522,18 @@ function App() {
   const loadHabitsFromDB = useHabitsStore(s => s.loadFromDB)
   const clearHabits      = useHabitsStore(s => s.clearAll)
 
-  // Apply CSS variables immediately before first paint, then on every theme change
+  const behavioralEnabled = useBehavioralStore(s => s.enabled)
+  const behavioralMode    = useBehavioralStore(s => s.mode)
+
+  // Apply CSS variables immediately before first paint, then on every theme change.
+  // Samurai mode overrides the selected theme with its own palette.
   useLayoutEffect(() => {
-    applyThemeVars(getTheme(themeId))
-  }, [themeId])
+    if (behavioralEnabled && behavioralMode === 'samurai') {
+      applySamuraiModeOverride()
+    } else {
+      applyThemeVars(getTheme(themeId))
+    }
+  }, [themeId, behavioralEnabled, behavioralMode])
 
   useEffect(() => {
     // Capture BEFORE subscription runs — onAuthStateChange may clear it in INITIAL_SESSION
