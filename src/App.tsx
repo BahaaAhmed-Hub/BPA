@@ -23,7 +23,14 @@ import { saveAccountsToDB, loadCompaniesFromDB, loadRawSettingsFromDB, loadAccou
 import { seedToken, seedFromLocalStorage, clearAllTokens, getGoogleToken } from './lib/tokenManager'
 import { refreshPrimaryToken } from './lib/googleCalendar'
 import { getTheme, applyThemeVars, applySamuraiModeOverride } from './lib/themes'
-import { GraduationCap, Calendar, Mail, CheckSquare, Brain, ArrowRight } from 'lucide-react'
+import { GraduationCap, Swords, Crown, Sparkles, Calendar, Mail, CheckSquare, Brain, ArrowRight } from 'lucide-react'
+
+const MODE_ICONS: Record<string, typeof GraduationCap> = {
+  default: GraduationCap,
+  samurai: Swords,
+  pharaoh: Crown,
+  astral:  Sparkles,
+}
 
 // ─── Mode-specific login themes ──────────────────────────────────────────────
 
@@ -484,7 +491,7 @@ function LoginScreen() {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             boxShadow: `0 8px 24px ${T.glow1.replace('0.08','0.35').replace('0.09','0.35').replace('0.07','0.35')}`,
           }}>
-            <GraduationCap size={24} color={T.bg} strokeWidth={2.5} />
+            {(() => { const ModeIcon = MODE_ICONS[key] ?? GraduationCap; return <ModeIcon size={24} color={T.bg} strokeWidth={2.5} /> })()}
           </div>
           <div>
             <span style={{

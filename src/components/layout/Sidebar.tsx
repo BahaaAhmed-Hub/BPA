@@ -12,7 +12,24 @@ import {
   GraduationCap,
   Settings,
   Swords,
+  Crown,
+  Sparkles,
+  type LucideIcon,
 } from 'lucide-react'
+
+const MODE_ICONS: Record<string, LucideIcon> = {
+  default: GraduationCap,
+  samurai: Swords,
+  pharaoh: Crown,
+  astral:  Sparkles,
+}
+
+const MODE_ACCENT: Record<string, string> = {
+  default: '',
+  samurai: '#8B1A1A',
+  pharaoh: '#C9A227',
+  astral:  '#7C3AED',
+}
 import { useUIStore } from '@/store/uiStore'
 import { getTheme } from '@/lib/themes'
 import { useBehavioralStore } from '@/store/behavioralStore'
@@ -66,20 +83,23 @@ export function Sidebar() {
           minHeight: 64,
         }}
       >
-        <div
-          style={{
-            width: 32,
-            height: 32,
-            background: theme.accent,
-            borderRadius: 6,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0,
-          }}
-        >
-          <GraduationCap size={18} color="#FFFFFF" strokeWidth={2.5} />
-        </div>
+        {(() => {
+          const modeKey = behavioralEnabled ? behavioralMode : 'default'
+          const LogoIcon = MODE_ICONS[modeKey] ?? GraduationCap
+          const logoBg = (behavioralEnabled && MODE_ACCENT[behavioralMode]) ? MODE_ACCENT[behavioralMode] : theme.accent
+          return (
+            <div style={{
+              width: 32, height: 32,
+              background: logoBg,
+              borderRadius: behavioralMode === 'samurai' && behavioralEnabled ? 4 : 6,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0,
+              transition: 'background 0.3s ease',
+            }}>
+              <LogoIcon size={18} color="#FFFFFF" strokeWidth={2.5} />
+            </div>
+          )
+        })()}
         {!sidebarCollapsed && (
           <span
             style={{
