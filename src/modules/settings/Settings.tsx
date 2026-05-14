@@ -160,7 +160,10 @@ function loadSectionOrder(): SectionId[] {
   const saved = ls<SectionId[]>('professor-section-order', [])
   const valid = saved.filter(id => (SECTION_IDS as readonly string[]).includes(id))
   const miss  = SECTION_IDS.filter(id => !valid.includes(id))
-  return [...valid, ...miss]
+  // Pinned new feature sections get prepended so they're immediately visible
+  const pinnedNew = miss.filter(id => id === 'behavioral')
+  const otherNew  = miss.filter(id => id !== 'behavioral')
+  return [...pinnedNew, ...valid, ...otherNew]
 }
 function saveSectionOrder(ids: SectionId[]) { lsSet('professor-section-order', ids) }
 
