@@ -187,103 +187,220 @@ function BgAstral({ T }: { T: LoginTheme }) {
 
 function IllustrationDefault() {
   return (
-    <svg viewBox="0 0 420 560" fill="none" xmlns="http://www.w3.org/2000/svg"
-      style={{ width:'100%', maxHeight:'90vh', position:'relative', zIndex:1 }}>
+    <svg viewBox="0 0 420 580" fill="none" xmlns="http://www.w3.org/2000/svg"
+      style={{ width:'100%', maxHeight:'92vh', position:'relative', zIndex:1 }}>
       <defs>
-        <linearGradient id="bodyGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#60A5FA" />
-          <stop offset="100%" stopColor="#1E40AF" />
+        <radialGradient id="moonGlow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#3B82F6" stopOpacity="0.18"/>
+          <stop offset="60%" stopColor="#1E40AF" stopOpacity="0.08"/>
+          <stop offset="100%" stopColor="#1E40AF" stopOpacity="0"/>
+        </radialGradient>
+        <radialGradient id="figureGlow" cx="50%" cy="40%" r="55%">
+          <stop offset="0%" stopColor="#60A5FA" stopOpacity="0.15"/>
+          <stop offset="100%" stopColor="#60A5FA" stopOpacity="0"/>
+        </radialGradient>
+        <radialGradient id="groundFog" cx="50%" cy="100%" r="50%">
+          <stop offset="0%" stopColor="#1E40AF" stopOpacity="0.2"/>
+          <stop offset="100%" stopColor="#1E40AF" stopOpacity="0"/>
+        </radialGradient>
+        <linearGradient id="bladeGrad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#E2E8F0"/>
+          <stop offset="50%" stopColor="#FFFFFF"/>
+          <stop offset="100%" stopColor="#93C5FD"/>
         </linearGradient>
-        <linearGradient id="skinGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#FBBF24" />
-          <stop offset="100%" stopColor="#D97706" />
+        <linearGradient id="robeGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#1E3A8A"/>
+          <stop offset="100%" stopColor="#0F172A"/>
         </linearGradient>
-        <linearGradient id="shadowGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="rgba(30,64,175,0.3)" />
-          <stop offset="100%" stopColor="rgba(30,64,175,0)" />
-        </linearGradient>
-        <filter id="glow"><feGaussianBlur stdDeviation="4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        <filter id="softGlow" x="-30%" y="-30%" width="160%" height="160%">
+          <feGaussianBlur stdDeviation="6" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <filter id="bladeFilter" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation="2" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
       </defs>
-      <ellipse cx="210" cy="470" rx="90" ry="12" fill="url(#shadowGrad)" />
-      <line x1="20" y1="310" x2="110" y2="300" stroke="rgba(59,130,246,0.25)" strokeWidth="2" strokeLinecap="round" style={{ animation:'trailFade 1.8s ease-in-out infinite' }} />
-      <line x1="10" y1="325" x2="95"  y2="318" stroke="rgba(59,130,246,0.18)" strokeWidth="1.5" strokeLinecap="round" style={{ animation:'trailFade 1.8s ease-in-out infinite 0.15s' }} />
-      <line x1="25" y1="340" x2="100" y2="335" stroke="rgba(59,130,246,0.12)" strokeWidth="1" strokeLinecap="round" style={{ animation:'trailFade 1.8s ease-in-out infinite 0.3s' }} />
-      <g style={{ animation:'legBack 0.9s ease-in-out infinite alternate' }}>
-        <path d="M200 370 Q185 395 175 420" stroke="url(#bodyGrad)" strokeWidth="14" strokeLinecap="round" fill="none"/>
-        <path d="M175 420 Q168 442 180 455" stroke="url(#bodyGrad)" strokeWidth="12" strokeLinecap="round" fill="none"/>
-        <ellipse cx="183" cy="456" rx="14" ry="7" fill="#1E40AF" transform="rotate(-15 183 456)"/>
+
+      {/* ── Large moon / backdrop glow ── */}
+      <circle cx="210" cy="200" r="130" fill="url(#moonGlow)"/>
+      <circle cx="210" cy="200" r="88" fill="none" stroke="rgba(96,165,250,0.08)" strokeWidth="1"/>
+      <circle cx="210" cy="200" r="105" fill="none" stroke="rgba(96,165,250,0.05)" strokeWidth="1"/>
+
+      {/* Moon disc */}
+      <circle cx="300" cy="88" r="46" fill="#0D1B3E" stroke="#1E3A8A" strokeWidth="1"/>
+      <circle cx="300" cy="88" r="42" fill="#111827"/>
+      {/* Moon craters */}
+      <circle cx="288" cy="78" r="7" fill="#0D1B3E" opacity="0.6"/>
+      <circle cx="308" cy="96" r="5" fill="#0D1B3E" opacity="0.5"/>
+      <circle cx="294" cy="100" r="3" fill="#0D1B3E" opacity="0.4"/>
+      {/* Moon halo rings */}
+      <circle cx="300" cy="88" r="54" fill="none" stroke="rgba(59,130,246,0.12)" strokeWidth="1.5"/>
+      <circle cx="300" cy="88" r="66" fill="none" stroke="rgba(59,130,246,0.06)" strokeWidth="1.5"/>
+
+      {/* Stars */}
+      {[{x:55,y:45},{x:135,y:30},{x:170,y:72},{x:370,y:38},{x:390,y:120},{x:28,y:130},{x:400,y:200},{x:38,y:230}].map((s,i)=>(
+        <circle key={i} cx={s.x} cy={s.y} r={i%3===0?2:1.2} fill="white" opacity="0.5"
+          style={{ animation:`sparkle ${1.8+(i%3)*0.7}s ease-in-out infinite ${i*0.4}s` }}/>
+      ))}
+
+      {/* Mist / ground fog */}
+      <ellipse cx="210" cy="490" rx="190" ry="55" fill="url(#groundFog)"/>
+
+      {/* Mountain silhouettes */}
+      <path d="M0,420 L80,310 L145,380 L200,295 L260,370 L320,285 L390,340 L420,310 L420,480 L0,480 Z" fill="#0A0E1A" opacity="0.7"/>
+      <path d="M0,450 L60,380 L120,415 L180,355 L240,400 L310,360 L380,395 L420,375 L420,480 L0,480 Z" fill="#0D1224" opacity="0.9"/>
+
+      {/* Figure glow aura */}
+      <ellipse cx="210" cy="320" rx="80" ry="120" fill="url(#figureGlow)"/>
+
+      {/* ══ SAMURAI WARRIOR FIGURE ══ */}
+
+      {/* Ground shadow */}
+      <ellipse cx="210" cy="478" rx="52" ry="10" fill="rgba(59,130,246,0.15)"/>
+
+      {/* Back leg */}
+      <path d="M200,390 Q192,420 188,458" stroke="#0F172A" strokeWidth="16" strokeLinecap="round" fill="none"/>
+      <path d="M200,390 Q192,420 188,458" stroke="#1E3A8A" strokeWidth="12" strokeLinecap="round" fill="none" opacity="0.6"/>
+      <ellipse cx="190" cy="460" rx="13" ry="6" fill="#1E3A8A" transform="rotate(-8 190 460)"/>
+
+      {/* Front leg */}
+      <path d="M220,390 Q228,420 232,458" stroke="#0F172A" strokeWidth="16" strokeLinecap="round" fill="none"/>
+      <path d="M220,390 Q228,420 232,458" stroke="#1E40AF" strokeWidth="12" strokeLinecap="round" fill="none" opacity="0.5"/>
+      <ellipse cx="230" cy="460" rx="14" ry="6" fill="#1E40AF" transform="rotate(8 230 460)"/>
+
+      {/* Hakama / wide robe bottom */}
+      <path d="M185,340 Q180,365 182,392 L240,392 Q242,365 235,340 Z" fill="url(#robeGrad)" stroke="#1E3A8A" strokeWidth="0.8"/>
+      {/* Robe folds */}
+      <line x1="200" y1="345" x2="198" y2="390" stroke="rgba(96,165,250,0.15)" strokeWidth="1"/>
+      <line x1="210" y1="342" x2="210" y2="392" stroke="rgba(96,165,250,0.15)" strokeWidth="1"/>
+      <line x1="220" y1="345" x2="222" y2="390" stroke="rgba(96,165,250,0.1)" strokeWidth="1"/>
+
+      {/* Torso / chest */}
+      <path d="M188,255 Q184,295 185,340 L235,340 Q236,295 232,255 Q222,240 210,238 Q198,240 188,255Z" fill="#1A2744" stroke="#1E3A8A" strokeWidth="1"/>
+      {/* Chest plate / armor */}
+      <path d="M190,258 Q210,245 230,258 Q228,290 210,294 Q192,290 190,258Z" fill="#1E3A8A" opacity="0.8" stroke="#3B82F6" strokeWidth="0.6"/>
+      {/* Armor detail lines */}
+      <path d="M193,265 Q210,256 227,265" stroke="rgba(96,165,250,0.4)" strokeWidth="0.8" fill="none"/>
+      <path d="M192,275 Q210,266 228,275" stroke="rgba(96,165,250,0.3)" strokeWidth="0.8" fill="none"/>
+      <path d="M192,285 Q210,276 228,285" stroke="rgba(96,165,250,0.2)" strokeWidth="0.8" fill="none"/>
+      {/* Sash */}
+      <rect x="186" y="308" width="48" height="18" rx="2" fill="#1E40AF" stroke="#3B82F6" strokeWidth="0.5" opacity="0.9"/>
+      <rect x="204" y="308" width="12" height="18" rx="1" fill="#2563EB" opacity="0.8"/>
+
+      {/* Left arm — at rest, hand on hilt */}
+      <path d="M188,262 Q170,285 163,315" stroke="#1A2744" strokeWidth="13" strokeLinecap="round" fill="none"/>
+      <path d="M163,315 Q158,330 160,348" stroke="#1A2744" strokeWidth="11" strokeLinecap="round" fill="none"/>
+      <path d="M188,262 Q170,285 163,315" stroke="#1E3A8A" strokeWidth="9" strokeLinecap="round" fill="none" opacity="0.5"/>
+
+      {/* Right arm — raised, holding katana aloft */}
+      <path d="M232,262 Q252,238 268,218" stroke="#1A2744" strokeWidth="13" strokeLinecap="round" fill="none"/>
+      <path d="M268,218 Q278,204 282,190" stroke="#1A2744" strokeWidth="11" strokeLinecap="round" fill="none"/>
+      <path d="M232,262 Q252,238 268,218" stroke="#1E3A8A" strokeWidth="9" strokeLinecap="round" fill="none" opacity="0.5"/>
+
+      {/* Katana — raised diagonal, glowing */}
+      <g filter="url(#bladeFilter)">
+        {/* Blade */}
+        <path d="M280,186 L188,82" stroke="url(#bladeGrad)" strokeWidth="3" strokeLinecap="round"/>
+        <path d="M282,188 L190,84" stroke="rgba(255,255,255,0.5)" strokeWidth="1" strokeLinecap="round"/>
+        {/* Blade edge glow */}
+        <path d="M280,186 L188,82" stroke="rgba(147,197,253,0.4)" strokeWidth="7" strokeLinecap="round"/>
       </g>
-      <g style={{ animation:'legFront 0.9s ease-in-out infinite alternate' }}>
-        <path d="M215 370 Q240 390 248 415" stroke="#2563EB" strokeWidth="14" strokeLinecap="round" fill="none"/>
-        <path d="M248 415 Q255 440 242 458" stroke="#2563EB" strokeWidth="12" strokeLinecap="round" fill="none"/>
-        <ellipse cx="245" cy="459" rx="16" ry="7" fill="#3B82F6" transform="rotate(10 245 459)"/>
+      {/* Tsuba (guard) */}
+      <ellipse cx="285" cy="182" rx="10" ry="6" fill="#1E3A8A" stroke="#60A5FA" strokeWidth="1.2" transform="rotate(-48 285 182)"/>
+      {/* Handle / tsuka */}
+      <path d="M288,186 Q293,196 296,208" stroke="#6B4226" strokeWidth="9" strokeLinecap="round" fill="none"/>
+      <line x1="290" y1="188" x2="294" y2="196" stroke="rgba(201,162,39,0.7)" strokeWidth="1.2"/>
+      <line x1="291" y1="194" x2="295" y2="202" stroke="rgba(201,162,39,0.5)" strokeWidth="1.2"/>
+      {/* Blade tip sparkle */}
+      <circle cx="188" cy="82" r="5" fill="rgba(96,165,250,0.6)" style={{ animation:'sparkle 1.6s ease-in-out infinite' }}/>
+      <circle cx="188" cy="82" r="2.5" fill="white" opacity="0.9"/>
+
+      {/* Neck */}
+      <rect x="204" y="238" width="12" height="20" rx="5" fill="#1A2744"/>
+
+      {/* Head */}
+      <circle cx="210" cy="224" r="24" fill="#1A2744"/>
+      {/* Menpo / war mask */}
+      <path d="M190,222 Q210,212 230,222 Q230,238 210,242 Q190,238 190,222Z" fill="#0F172A" stroke="#1E3A8A" strokeWidth="0.8"/>
+      {/* Eyes glow */}
+      <ellipse cx="202" cy="220" rx="5" ry="3.5" fill="#0A0E1A"/>
+      <ellipse cx="218" cy="220" rx="5" ry="3.5" fill="#0A0E1A"/>
+      <ellipse cx="202" cy="220" rx="3" ry="2" fill="#3B82F6" opacity="0.9" style={{ animation:'eyeGlow 2.5s ease-in-out infinite' }}/>
+      <ellipse cx="218" cy="220" rx="3" ry="2" fill="#3B82F6" opacity="0.9" style={{ animation:'eyeGlow 2.5s ease-in-out infinite 0.4s' }}/>
+      {/* Helmet */}
+      <path d="M187,222 Q186,196 210,190 Q234,196 233,222 Q228,206 210,203 Q192,206 187,222Z" fill="#1A2744" stroke="#1E3A8A" strokeWidth="1"/>
+      {/* Helmet crest */}
+      <path d="M204,194 Q210,180 216,194" fill="#1E3A8A" stroke="#3B82F6" strokeWidth="0.6"/>
+      <line x1="210" y1="190" x2="210" y2="175" stroke="#3B82F6" strokeWidth="1.5" opacity="0.7"/>
+      <circle cx="210" cy="173" r="3.5" fill="#60A5FA" style={{ animation:'sparkle 2s ease-in-out infinite 0.5s' }}/>
+
+      {/* ── Floating UI cards ── */}
+
+      {/* Card: INBOX */}
+      <g style={{ animation:'floatCard 3.2s ease-in-out infinite' }}>
+        <rect x="18" y="118" width="116" height="82" rx="10" fill="rgba(15,23,42,0.95)" stroke="rgba(96,165,250,0.45)" strokeWidth="1.2"/>
+        <rect x="24" y="124" width="104" height="70" rx="7" fill="rgba(30,58,138,0.3)"/>
+        <text x="30" y="140" fontSize="8" fontWeight="700" fill="#93C5FD" fontFamily="DM Sans" letterSpacing="1">INBOX</text>
+        <line x1="24" y1="144" x2="128" y2="144" stroke="rgba(96,165,250,0.2)" strokeWidth="0.8"/>
+        <text x="30" y="159" fontSize="13" fontWeight="800" fill="white" fontFamily="Cabinet Grotesk">24</text>
+        <text x="52" y="159" fontSize="9" fill="rgba(147,197,253,0.7)" fontFamily="DM Sans"> emails</text>
+        <text x="30" y="174" fontSize="8.5" fill="rgba(147,197,253,0.55)" fontFamily="DM Sans">5 require action</text>
+        <rect x="30" y="180" width="92" height="4" rx="2" fill="rgba(96,165,250,0.12)"/>
+        <rect x="30" y="180" width="26" height="4" rx="2" fill="#EF4444"/>
+        <rect x="58" y="180" width="64" height="4" rx="2" fill="#60A5FA" opacity="0.5"/>
       </g>
-      <path d="M195 290 Q205 330 208 368" stroke="url(#bodyGrad)" strokeWidth="28" strokeLinecap="round" fill="none"/>
-      <path d="M200 295 Q208 330 210 362" stroke="rgba(147,197,253,0.3)" strokeWidth="10" strokeLinecap="round" fill="none"/>
-      <g style={{ animation:'armBack 0.9s ease-in-out infinite alternate' }}>
-        <path d="M200 305 Q175 325 162 350" stroke="#1D4ED8" strokeWidth="12" strokeLinecap="round" fill="none"/>
-        <path d="M162 350 Q155 368 160 382" stroke="#1D4ED8" strokeWidth="10" strokeLinecap="round" fill="none"/>
-        <rect x="148" y="378" width="22" height="34" rx="4" fill="#0F172A" stroke="#38BDF8" strokeWidth="1.5" style={{ animation:'floatCard 2s ease-in-out infinite 0.5s' }}/>
-        <rect x="152" y="382" width="14" height="20" rx="2" fill="#1E3A5F"/>
-        <line x1="155" y1="386" x2="163" y2="386" stroke="#38BDF8" strokeWidth="1" opacity="0.8"/>
-        <line x1="155" y1="390" x2="161" y2="390" stroke="#38BDF8" strokeWidth="1" opacity="0.5"/>
-        <circle cx="159" cy="396" r="2" fill="#34D399"/>
+
+      {/* Card: CALENDAR */}
+      <g style={{ animation:'floatCard 2.8s ease-in-out infinite 0.9s' }}>
+        <rect x="286" y="148" width="118" height="88" rx="10" fill="rgba(15,23,42,0.95)" stroke="rgba(165,180,252,0.45)" strokeWidth="1.2"/>
+        <rect x="292" y="154" width="106" height="76" rx="7" fill="rgba(49,46,129,0.25)"/>
+        <text x="298" y="170" fontSize="8" fontWeight="700" fill="#A5B4FC" fontFamily="DM Sans" letterSpacing="1">CALENDAR</text>
+        <line x1="292" y1="174" x2="398" y2="174" stroke="rgba(165,180,252,0.2)" strokeWidth="0.8"/>
+        <text x="298" y="190" fontSize="13" fontWeight="800" fill="white" fontFamily="Cabinet Grotesk">3</text>
+        <text x="314" y="190" fontSize="9" fill="rgba(196,181,253,0.7)" fontFamily="DM Sans"> meetings today</text>
+        <text x="298" y="205" fontSize="8.5" fill="rgba(196,181,253,0.55)" fontFamily="DM Sans">Next: 10:00 AM</text>
+        <rect x="298" y="212" width="94" height="4" rx="2" fill="rgba(165,180,252,0.12)"/>
+        <rect x="298" y="212" width="36" height="4" rx="2" fill="#A78BFA"/>
+        <text x="394" y="215" fontSize="7" fill="#A78BFA" fontFamily="DM Sans" textAnchor="end">38%</text>
       </g>
-      <g style={{ animation:'armFront 0.9s ease-in-out infinite alternate' }}>
-        <path d="M215 305 Q245 280 265 265" stroke="#3B82F6" strokeWidth="12" strokeLinecap="round" fill="none"/>
-        <path d="M265 265 Q280 255 285 245" stroke="#3B82F6" strokeWidth="10" strokeLinecap="round" fill="none"/>
-        <rect x="278" y="218" width="68" height="52" rx="6" fill="#0D1B3E" stroke="#60A5FA" strokeWidth="1.8" style={{ animation:'floatCard 2.2s ease-in-out infinite' }}/>
-        <rect x="283" y="223" width="58" height="38" rx="3" fill="#0F2458"/>
-        <line x1="288" y1="230" x2="335" y2="230" stroke="white" strokeWidth="1.2" opacity="0.6"/>
-        <line x1="288" y1="237" x2="328" y2="237" stroke="white" strokeWidth="1.2" opacity="0.5"/>
-        <line x1="288" y1="244" x2="320" y2="244" stroke="white" strokeWidth="1.2" opacity="0.4"/>
-        <circle cx="285" cy="230" r="2.5" fill="#34D399"/>
-        <circle cx="285" cy="237" r="2.5" fill="#34D399"/>
-        <circle cx="285" cy="244" r="2.5" fill="#FCD34D"/>
+
+      {/* Card: TASKS */}
+      <g style={{ animation:'floatCard 3.6s ease-in-out infinite 1.4s' }}>
+        <rect x="286" y="376" width="118" height="82" rx="10" fill="rgba(15,23,42,0.95)" stroke="rgba(52,211,153,0.4)" strokeWidth="1.2"/>
+        <rect x="292" y="382" width="106" height="70" rx="7" fill="rgba(6,78,59,0.2)"/>
+        <text x="298" y="398" fontSize="8" fontWeight="700" fill="#34D399" fontFamily="DM Sans" letterSpacing="1">TASKS</text>
+        <line x1="292" y1="402" x2="398" y2="402" stroke="rgba(52,211,153,0.2)" strokeWidth="0.8"/>
+        <text x="298" y="418" fontSize="13" fontWeight="800" fill="white" fontFamily="Cabinet Grotesk">12</text>
+        <text x="316" y="418" fontSize="9" fill="rgba(110,231,183,0.7)" fontFamily="DM Sans"> open tasks</text>
+        <text x="298" y="433" fontSize="8.5" fill="rgba(110,231,183,0.55)" fontFamily="DM Sans">4 due today</text>
+        <rect x="298" y="440" width="94" height="4" rx="2" fill="rgba(52,211,153,0.12)"/>
+        <rect x="298" y="440" width="60" height="4" rx="2" fill="#34D399"/>
+        <text x="394" y="443" fontSize="7" fill="#34D399" fontFamily="DM Sans" textAnchor="end">64%</text>
       </g>
-      <rect x="202" y="272" width="16" height="22" rx="7" fill="#D97706"/>
-      <circle cx="210" cy="255" r="28" fill="url(#skinGrad)" style={{ animation:'headBob 0.9s ease-in-out infinite alternate' }}/>
-      <path d="M185 248 Q190 228 210 226 Q230 228 235 248 Q228 234 210 232 Q192 234 185 248Z" fill="#92400E"/>
-      <circle cx="203" cy="252" r="2.5" fill="#1C1C1E"/>
-      <circle cx="217" cy="252" r="2.5" fill="#1C1C1E"/>
-      <path d="M199 246 Q203 243 207 246" stroke="#92400E" strokeWidth="2" strokeLinecap="round" fill="none"/>
-      <path d="M213 246 Q217 243 221 246" stroke="#92400E" strokeWidth="2" strokeLinecap="round" fill="none"/>
-      <path d="M204 260 Q210 265 216 260" stroke="#92400E" strokeWidth="1.8" strokeLinecap="round" fill="none"/>
-      <g style={{ animation:'floatCard 3s ease-in-out infinite' }}>
-        <rect x="42" y="145" width="100" height="70" rx="10" fill="rgba(14,28,72,0.92)" stroke="rgba(96,165,250,0.5)" strokeWidth="1.5"/>
-        <text x="55" y="167" fontSize="8" fontWeight="700" fill="#93C5FD" fontFamily="DM Sans" letterSpacing="0.8">CALENDAR</text>
-        <line x1="50" y1="171" x2="126" y2="171" stroke="rgba(96,165,250,0.3)" strokeWidth="1"/>
-        <text x="55" y="183" fontSize="9" fill="white" fontFamily="DM Sans">4 meetings</text>
-        <text x="55" y="195" fontSize="8" fill="rgba(147,197,253,0.6)" fontFamily="DM Sans">Next: 9:30 AM</text>
+
+      {/* Card: AI BRIEF */}
+      <g style={{ animation:'floatCard 2.6s ease-in-out infinite 2s' }}>
+        <rect x="18" y="376" width="118" height="82" rx="10" fill="rgba(15,23,42,0.95)" stroke="rgba(251,191,36,0.4)" strokeWidth="1.2"/>
+        <rect x="24" y="382" width="106" height="70" rx="7" fill="rgba(120,53,15,0.15)"/>
+        <text x="30" y="398" fontSize="8" fontWeight="700" fill="#FCD34D" fontFamily="DM Sans" letterSpacing="1">AI BRIEF</text>
+        <line x1="24" y1="402" x2="130" y2="402" stroke="rgba(252,211,77,0.2)" strokeWidth="0.8"/>
+        <text x="30" y="417" fontSize="9" fontWeight="600" fill="white" fontFamily="DM Sans">Good morning, Alex</text>
+        <text x="30" y="430" fontSize="8.5" fill="rgba(253,211,77,0.65)" fontFamily="DM Sans">3 priority items today</text>
+        <rect x="30" y="438" width="98" height="4" rx="2" fill="rgba(252,211,77,0.12)"/>
+        <rect x="30" y="438" width="68" height="4" rx="2" fill="#FCD34D" opacity="0.7"/>
       </g>
-      <g style={{ animation:'floatCard 2.8s ease-in-out infinite 0.7s' }}>
-        <rect x="288" y="100" width="100" height="65" rx="10" fill="rgba(14,28,72,0.92)" stroke="rgba(165,180,252,0.5)" strokeWidth="1.5"/>
-        <text x="298" y="116" fontSize="8" fontWeight="700" fill="#A5B4FC" fontFamily="DM Sans" letterSpacing="0.8">INBOX</text>
-        <line x1="294" y1="120" x2="382" y2="120" stroke="rgba(165,180,252,0.3)" strokeWidth="1"/>
-        <text x="298" y="132" fontSize="9" fill="white" fontFamily="DM Sans">12 emails</text>
-        <text x="298" y="144" fontSize="8" fill="rgba(165,180,252,0.6)" fontFamily="DM Sans">3 need action</text>
-      </g>
-      <g style={{ animation:'floatCard 3.4s ease-in-out infinite 1.2s' }}>
-        <rect x="300" y="395" width="100" height="65" rx="10" fill="rgba(14,28,72,0.92)" stroke="rgba(52,211,153,0.5)" strokeWidth="1.5"/>
-        <text x="310" y="411" fontSize="8" fontWeight="700" fill="#34D399" fontFamily="DM Sans" letterSpacing="0.8">HABITS</text>
-        <line x1="306" y1="415" x2="394" y2="415" stroke="rgba(52,211,153,0.3)" strokeWidth="1"/>
-        <text x="310" y="428" fontSize="9" fill="white" fontFamily="DM Sans">14-day streak</text>
-        <rect x="310" y="434" width="80" height="5" rx="2.5" fill="rgba(52,211,153,0.15)"/>
-        <rect x="310" y="434" width="62" height="5" rx="2.5" fill="#34D399"/>
-      </g>
-      <g style={{ animation:'floatCard 2.6s ease-in-out infinite 1.8s' }}>
-        <rect x="22" y="400" width="108" height="65" rx="10" fill="rgba(14,28,72,0.92)" stroke="rgba(253,211,77,0.4)" strokeWidth="1.5"/>
-        <text x="32" y="416" fontSize="8" fontWeight="700" fill="#FCD34D" fontFamily="DM Sans" letterSpacing="0.8">AI BRIEF</text>
-        <line x1="28" y1="420" x2="124" y2="420" stroke="rgba(253,211,77,0.3)" strokeWidth="1"/>
-        <text x="32" y="433" fontSize="8.5" fill="white" fontFamily="DM Sans">Good morning!</text>
-        <text x="32" y="445" fontSize="8" fill="rgba(253,211,77,0.6)" fontFamily="DM Sans">3 priorities today</text>
-      </g>
-      <circle cx="158" cy="230" r="3" fill="#60A5FA" style={{ animation:'sparkle 2s ease-in-out infinite' }}/>
-      <circle cx="268" cy="310" r="2.5" fill="#34D399" style={{ animation:'sparkle 2.5s ease-in-out infinite 0.6s' }}/>
-      <circle cx="140" cy="350" r="2" fill="#FCD34D" style={{ animation:'sparkle 1.8s ease-in-out infinite 1s' }}/>
-      <circle cx="290" cy="380" r="2" fill="#A5B4FC" style={{ animation:'sparkle 2.2s ease-in-out infinite 0.3s' }}/>
-      <text x="210" y="512" textAnchor="middle" fontSize="17" fontWeight="800" fill="white" fontFamily="Cabinet Grotesk" letterSpacing="-0.5" opacity="0.95">Stay ahead. Stay organized.</text>
-      <text x="210" y="532" textAnchor="middle" fontSize="10.5" fill="rgba(147,197,253,0.5)" fontFamily="DM Sans" letterSpacing="0.2">Your AI co-pilot for every workday.</text>
+
+      {/* Sparkle dots */}
+      <circle cx="160" cy="175" r="3" fill="#60A5FA" style={{ animation:'sparkle 2.2s ease-in-out infinite' }}/>
+      <circle cx="268" cy="290" r="2.5" fill="#34D399" style={{ animation:'sparkle 2.6s ease-in-out infinite 0.7s' }}/>
+      <circle cx="135" cy="340" r="2" fill="#FCD34D" style={{ animation:'sparkle 1.9s ease-in-out infinite 1.1s' }}/>
+      <circle cx="295" cy="360" r="2" fill="#A78BFA" style={{ animation:'sparkle 2.3s ease-in-out infinite 0.4s' }}/>
+      <circle cx="352" cy="142" r="1.5" fill="#60A5FA" style={{ animation:'sparkle 3s ease-in-out infinite 1.5s' }}/>
+
+      {/* Bottom tagline */}
+      <text x="210" y="522" textAnchor="middle" fontSize="15" fontWeight="800" fill="white" fontFamily="Cabinet Grotesk" letterSpacing="-0.3" opacity="0.9">Stay ahead. Stay organized.</text>
+      <text x="210" y="540" textAnchor="middle" fontSize="10" fill="rgba(147,197,253,0.6)" fontFamily="DM Sans" letterSpacing="0.3">Your AI-powered command center.</text>
     </svg>
   )
 }
@@ -768,8 +885,8 @@ function LoginScreen() {
             <br />
             <span style={{
               background: key === 'default'
-                ? 'linear-gradient(135deg, #1E40AF 0%, #60A5FA 60%, #1E40AF 100%)'
-                : `linear-gradient(135deg, ${T.accent} 0%, ${T.accentBright} 60%, ${T.accent} 100%)`,
+                ? 'linear-gradient(135deg, #3B82F6 0%, #93C5FD 50%, #60A5FA 100%)'
+                : `linear-gradient(135deg, ${T.accentBright} 0%, ${T.accent} 50%, ${T.accentBright} 100%)`,
               WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
             }}>
               {T.sub}
@@ -777,7 +894,8 @@ function LoginScreen() {
           </h1>
           <p style={{
             margin: '0 0 40px',
-            fontSize: 16, color: T.textDim, lineHeight: 1.7, maxWidth: 420,
+            fontSize: 16, color: T.text, lineHeight: 1.7, maxWidth: 420,
+            opacity: 0.75,
             fontFamily: key === 'samurai' ? "'DM Sans', sans-serif" : undefined,
             letterSpacing: key === 'samurai' ? '0.2px' : undefined,
           }}>
@@ -789,13 +907,13 @@ function LoginScreen() {
             {FEATURES.map(({ icon: Icon, label }) => (
               <div key={label} style={{
                 display: 'flex', alignItems: 'center', gap: 7,
-                padding: '7px 14px',
+                padding: '8px 16px',
                 borderRadius: key === 'samurai' ? 4 : 100,
-                background: `${T.accent}0F`,
-                border: `1px solid ${T.accent}2A`,
+                background: `${T.accent}18`,
+                border: `1px solid ${T.accent}45`,
               }}>
                 <Icon size={13} color={T.accentBright} />
-                <span style={{ fontSize: 12.5, color: T.textDim, fontWeight: 500 }}>{label}</span>
+                <span style={{ fontSize: 12.5, color: T.text, fontWeight: 500, opacity: 0.85 }}>{label}</span>
               </div>
             ))}
           </div>
@@ -810,17 +928,17 @@ function LoginScreen() {
                 onMouseLeave={() => setHovered(false)}
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 12,
-                  padding: '15px 28px',
+                  padding: '15px 32px',
                   borderRadius: key === 'samurai' ? 6 : 14,
                   background: hovered ? T.btnBgHover : T.btnBg,
-                  border: `1px solid ${hovered ? T.accentBright + '80' : T.btnBorder}`,
-                  color: T.btnText, fontSize: 15, fontWeight: 600,
+                  border: `1.5px solid ${hovered ? T.accentBright : T.accentBright + '60'}`,
+                  color: T.text, fontSize: 15, fontWeight: 700,
                   cursor: signing ? 'wait' : 'pointer',
                   fontFamily: key === 'samurai' ? "'DM Sans', sans-serif" : "'Cabinet Grotesk', sans-serif",
                   letterSpacing: key === 'samurai' ? '0.5px' : undefined,
                   transition: 'all 0.2s ease',
-                  transform: hovered ? 'translateY(-1px)' : 'none',
-                  boxShadow: hovered ? `0 8px 24px ${T.glow1}` : 'none',
+                  transform: hovered ? 'translateY(-2px)' : 'none',
+                  boxShadow: hovered ? `0 10px 30px ${T.glow1}, 0 0 0 1px ${T.accent}40` : `0 4px 16px ${T.glow1}`,
                   opacity: signing ? 0.7 : 1,
                 }}
               >
