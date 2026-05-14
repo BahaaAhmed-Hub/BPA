@@ -385,7 +385,7 @@ function LoginScreen() {
         {(key === 'samurai' || key === 'default') && (
           <div style={{
             position: 'absolute', inset: 0,
-            backgroundImage: "url('/login-samurai.png')",
+            backgroundImage: `url('${import.meta.env.BASE_URL}login-samurai.png')`,
             backgroundSize: 'cover',
             backgroundPosition: 'center top',
             filter: 'brightness(0.88) saturate(1.1)',
