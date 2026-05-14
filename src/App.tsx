@@ -95,6 +95,20 @@ const FEATURES = [
   { icon: CheckSquare, label: 'Task Command'          },
 ]
 
+const MODE_PHOTOS: Record<string, string> = {
+  default: 'https://images.unsplash.com/photo-1580851977566-8a01e4b1e3a8?auto=format&fit=crop&w=900&q=85',
+  samurai: 'https://images.unsplash.com/photo-1580851977566-8a01e4b1e3a8?auto=format&fit=crop&w=900&q=85',
+  pharaoh: 'https://images.unsplash.com/photo-1539650116574-8efeb43e2750?auto=format&fit=crop&w=900&q=85',
+  astral:  'https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?auto=format&fit=crop&w=900&q=85',
+}
+
+const MODE_QUOTES: Record<string, string> = {
+  default: 'Stay ahead. Stay organized.',
+  samurai: '七転び八起き — Fall seven times. Rise eight.',
+  pharaoh: 'Eternal systems outlast their builders.',
+  astral:  'Operate from the longest timeline.',
+}
+
 // ─── Background art layers ────────────────────────────────────────────────────
 
 function BgDefault({ T }: { T: LoginTheme }) {
@@ -180,621 +194,6 @@ function BgAstral({ T }: { T: LoginTheme }) {
         }} />
       ))}
     </>
-  )
-}
-
-// ─── Right-panel illustrations ────────────────────────────────────────────────
-
-function IllustrationDefault() {
-  return (
-    <svg viewBox="0 0 420 580" fill="none" xmlns="http://www.w3.org/2000/svg"
-      style={{ width:'100%', maxHeight:'92vh', position:'relative', zIndex:1 }}>
-      <defs>
-        <radialGradient id="moonGlow" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="#3B82F6" stopOpacity="0.18"/>
-          <stop offset="60%" stopColor="#1E40AF" stopOpacity="0.08"/>
-          <stop offset="100%" stopColor="#1E40AF" stopOpacity="0"/>
-        </radialGradient>
-        <radialGradient id="figureGlow" cx="50%" cy="40%" r="55%">
-          <stop offset="0%" stopColor="#60A5FA" stopOpacity="0.15"/>
-          <stop offset="100%" stopColor="#60A5FA" stopOpacity="0"/>
-        </radialGradient>
-        <radialGradient id="groundFog" cx="50%" cy="100%" r="50%">
-          <stop offset="0%" stopColor="#1E40AF" stopOpacity="0.2"/>
-          <stop offset="100%" stopColor="#1E40AF" stopOpacity="0"/>
-        </radialGradient>
-        <linearGradient id="bladeGrad" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#E2E8F0"/>
-          <stop offset="50%" stopColor="#FFFFFF"/>
-          <stop offset="100%" stopColor="#93C5FD"/>
-        </linearGradient>
-        <linearGradient id="robeGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#1E3A8A"/>
-          <stop offset="100%" stopColor="#0F172A"/>
-        </linearGradient>
-        <filter id="softGlow" x="-30%" y="-30%" width="160%" height="160%">
-          <feGaussianBlur stdDeviation="6" result="blur"/>
-          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-        </filter>
-        <filter id="bladeFilter" x="-20%" y="-20%" width="140%" height="140%">
-          <feGaussianBlur stdDeviation="2" result="blur"/>
-          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-        </filter>
-      </defs>
-
-      {/* ── Large moon / backdrop glow ── */}
-      <circle cx="210" cy="200" r="130" fill="url(#moonGlow)"/>
-      <circle cx="210" cy="200" r="88" fill="none" stroke="rgba(96,165,250,0.08)" strokeWidth="1"/>
-      <circle cx="210" cy="200" r="105" fill="none" stroke="rgba(96,165,250,0.05)" strokeWidth="1"/>
-
-      {/* Moon disc */}
-      <circle cx="300" cy="88" r="46" fill="#0D1B3E" stroke="#1E3A8A" strokeWidth="1"/>
-      <circle cx="300" cy="88" r="42" fill="#111827"/>
-      {/* Moon craters */}
-      <circle cx="288" cy="78" r="7" fill="#0D1B3E" opacity="0.6"/>
-      <circle cx="308" cy="96" r="5" fill="#0D1B3E" opacity="0.5"/>
-      <circle cx="294" cy="100" r="3" fill="#0D1B3E" opacity="0.4"/>
-      {/* Moon halo rings */}
-      <circle cx="300" cy="88" r="54" fill="none" stroke="rgba(59,130,246,0.12)" strokeWidth="1.5"/>
-      <circle cx="300" cy="88" r="66" fill="none" stroke="rgba(59,130,246,0.06)" strokeWidth="1.5"/>
-
-      {/* Stars */}
-      {[{x:55,y:45},{x:135,y:30},{x:170,y:72},{x:370,y:38},{x:390,y:120},{x:28,y:130},{x:400,y:200},{x:38,y:230}].map((s,i)=>(
-        <circle key={i} cx={s.x} cy={s.y} r={i%3===0?2:1.2} fill="white" opacity="0.5"
-          style={{ animation:`sparkle ${1.8+(i%3)*0.7}s ease-in-out infinite ${i*0.4}s` }}/>
-      ))}
-
-      {/* Mist / ground fog */}
-      <ellipse cx="210" cy="490" rx="190" ry="55" fill="url(#groundFog)"/>
-
-      {/* Mountain silhouettes */}
-      <path d="M0,420 L80,310 L145,380 L200,295 L260,370 L320,285 L390,340 L420,310 L420,480 L0,480 Z" fill="#0A0E1A" opacity="0.7"/>
-      <path d="M0,450 L60,380 L120,415 L180,355 L240,400 L310,360 L380,395 L420,375 L420,480 L0,480 Z" fill="#0D1224" opacity="0.9"/>
-
-      {/* Figure glow aura */}
-      <ellipse cx="210" cy="320" rx="80" ry="120" fill="url(#figureGlow)"/>
-
-      {/* ══ SAMURAI WARRIOR FIGURE ══ */}
-
-      {/* Ground shadow */}
-      <ellipse cx="210" cy="478" rx="52" ry="10" fill="rgba(59,130,246,0.15)"/>
-
-      {/* Back leg */}
-      <path d="M200,390 Q192,420 188,458" stroke="#0F172A" strokeWidth="16" strokeLinecap="round" fill="none"/>
-      <path d="M200,390 Q192,420 188,458" stroke="#1E3A8A" strokeWidth="12" strokeLinecap="round" fill="none" opacity="0.6"/>
-      <ellipse cx="190" cy="460" rx="13" ry="6" fill="#1E3A8A" transform="rotate(-8 190 460)"/>
-
-      {/* Front leg */}
-      <path d="M220,390 Q228,420 232,458" stroke="#0F172A" strokeWidth="16" strokeLinecap="round" fill="none"/>
-      <path d="M220,390 Q228,420 232,458" stroke="#1E40AF" strokeWidth="12" strokeLinecap="round" fill="none" opacity="0.5"/>
-      <ellipse cx="230" cy="460" rx="14" ry="6" fill="#1E40AF" transform="rotate(8 230 460)"/>
-
-      {/* Hakama / wide robe bottom */}
-      <path d="M185,340 Q180,365 182,392 L240,392 Q242,365 235,340 Z" fill="url(#robeGrad)" stroke="#1E3A8A" strokeWidth="0.8"/>
-      {/* Robe folds */}
-      <line x1="200" y1="345" x2="198" y2="390" stroke="rgba(96,165,250,0.15)" strokeWidth="1"/>
-      <line x1="210" y1="342" x2="210" y2="392" stroke="rgba(96,165,250,0.15)" strokeWidth="1"/>
-      <line x1="220" y1="345" x2="222" y2="390" stroke="rgba(96,165,250,0.1)" strokeWidth="1"/>
-
-      {/* Torso / chest */}
-      <path d="M188,255 Q184,295 185,340 L235,340 Q236,295 232,255 Q222,240 210,238 Q198,240 188,255Z" fill="#1A2744" stroke="#1E3A8A" strokeWidth="1"/>
-      {/* Chest plate / armor */}
-      <path d="M190,258 Q210,245 230,258 Q228,290 210,294 Q192,290 190,258Z" fill="#1E3A8A" opacity="0.8" stroke="#3B82F6" strokeWidth="0.6"/>
-      {/* Armor detail lines */}
-      <path d="M193,265 Q210,256 227,265" stroke="rgba(96,165,250,0.4)" strokeWidth="0.8" fill="none"/>
-      <path d="M192,275 Q210,266 228,275" stroke="rgba(96,165,250,0.3)" strokeWidth="0.8" fill="none"/>
-      <path d="M192,285 Q210,276 228,285" stroke="rgba(96,165,250,0.2)" strokeWidth="0.8" fill="none"/>
-      {/* Sash */}
-      <rect x="186" y="308" width="48" height="18" rx="2" fill="#1E40AF" stroke="#3B82F6" strokeWidth="0.5" opacity="0.9"/>
-      <rect x="204" y="308" width="12" height="18" rx="1" fill="#2563EB" opacity="0.8"/>
-
-      {/* Left arm — at rest, hand on hilt */}
-      <path d="M188,262 Q170,285 163,315" stroke="#1A2744" strokeWidth="13" strokeLinecap="round" fill="none"/>
-      <path d="M163,315 Q158,330 160,348" stroke="#1A2744" strokeWidth="11" strokeLinecap="round" fill="none"/>
-      <path d="M188,262 Q170,285 163,315" stroke="#1E3A8A" strokeWidth="9" strokeLinecap="round" fill="none" opacity="0.5"/>
-
-      {/* Right arm — raised, holding katana aloft */}
-      <path d="M232,262 Q252,238 268,218" stroke="#1A2744" strokeWidth="13" strokeLinecap="round" fill="none"/>
-      <path d="M268,218 Q278,204 282,190" stroke="#1A2744" strokeWidth="11" strokeLinecap="round" fill="none"/>
-      <path d="M232,262 Q252,238 268,218" stroke="#1E3A8A" strokeWidth="9" strokeLinecap="round" fill="none" opacity="0.5"/>
-
-      {/* Katana — raised diagonal, glowing */}
-      <g filter="url(#bladeFilter)">
-        {/* Blade */}
-        <path d="M280,186 L188,82" stroke="url(#bladeGrad)" strokeWidth="3" strokeLinecap="round"/>
-        <path d="M282,188 L190,84" stroke="rgba(255,255,255,0.5)" strokeWidth="1" strokeLinecap="round"/>
-        {/* Blade edge glow */}
-        <path d="M280,186 L188,82" stroke="rgba(147,197,253,0.4)" strokeWidth="7" strokeLinecap="round"/>
-      </g>
-      {/* Tsuba (guard) */}
-      <ellipse cx="285" cy="182" rx="10" ry="6" fill="#1E3A8A" stroke="#60A5FA" strokeWidth="1.2" transform="rotate(-48 285 182)"/>
-      {/* Handle / tsuka */}
-      <path d="M288,186 Q293,196 296,208" stroke="#6B4226" strokeWidth="9" strokeLinecap="round" fill="none"/>
-      <line x1="290" y1="188" x2="294" y2="196" stroke="rgba(201,162,39,0.7)" strokeWidth="1.2"/>
-      <line x1="291" y1="194" x2="295" y2="202" stroke="rgba(201,162,39,0.5)" strokeWidth="1.2"/>
-      {/* Blade tip sparkle */}
-      <circle cx="188" cy="82" r="5" fill="rgba(96,165,250,0.6)" style={{ animation:'sparkle 1.6s ease-in-out infinite' }}/>
-      <circle cx="188" cy="82" r="2.5" fill="white" opacity="0.9"/>
-
-      {/* Neck */}
-      <rect x="204" y="238" width="12" height="20" rx="5" fill="#1A2744"/>
-
-      {/* Head */}
-      <circle cx="210" cy="224" r="24" fill="#1A2744"/>
-      {/* Menpo / war mask */}
-      <path d="M190,222 Q210,212 230,222 Q230,238 210,242 Q190,238 190,222Z" fill="#0F172A" stroke="#1E3A8A" strokeWidth="0.8"/>
-      {/* Eyes glow */}
-      <ellipse cx="202" cy="220" rx="5" ry="3.5" fill="#0A0E1A"/>
-      <ellipse cx="218" cy="220" rx="5" ry="3.5" fill="#0A0E1A"/>
-      <ellipse cx="202" cy="220" rx="3" ry="2" fill="#3B82F6" opacity="0.9" style={{ animation:'eyeGlow 2.5s ease-in-out infinite' }}/>
-      <ellipse cx="218" cy="220" rx="3" ry="2" fill="#3B82F6" opacity="0.9" style={{ animation:'eyeGlow 2.5s ease-in-out infinite 0.4s' }}/>
-      {/* Helmet */}
-      <path d="M187,222 Q186,196 210,190 Q234,196 233,222 Q228,206 210,203 Q192,206 187,222Z" fill="#1A2744" stroke="#1E3A8A" strokeWidth="1"/>
-      {/* Helmet crest */}
-      <path d="M204,194 Q210,180 216,194" fill="#1E3A8A" stroke="#3B82F6" strokeWidth="0.6"/>
-      <line x1="210" y1="190" x2="210" y2="175" stroke="#3B82F6" strokeWidth="1.5" opacity="0.7"/>
-      <circle cx="210" cy="173" r="3.5" fill="#60A5FA" style={{ animation:'sparkle 2s ease-in-out infinite 0.5s' }}/>
-
-      {/* ── Floating UI cards ── */}
-
-      {/* Card: INBOX */}
-      <g style={{ animation:'floatCard 3.2s ease-in-out infinite' }}>
-        <rect x="18" y="118" width="116" height="82" rx="10" fill="rgba(15,23,42,0.95)" stroke="rgba(96,165,250,0.45)" strokeWidth="1.2"/>
-        <rect x="24" y="124" width="104" height="70" rx="7" fill="rgba(30,58,138,0.3)"/>
-        <text x="30" y="140" fontSize="8" fontWeight="700" fill="#93C5FD" fontFamily="DM Sans" letterSpacing="1">INBOX</text>
-        <line x1="24" y1="144" x2="128" y2="144" stroke="rgba(96,165,250,0.2)" strokeWidth="0.8"/>
-        <text x="30" y="159" fontSize="13" fontWeight="800" fill="white" fontFamily="Cabinet Grotesk">24</text>
-        <text x="52" y="159" fontSize="9" fill="rgba(147,197,253,0.7)" fontFamily="DM Sans"> emails</text>
-        <text x="30" y="174" fontSize="8.5" fill="rgba(147,197,253,0.55)" fontFamily="DM Sans">5 require action</text>
-        <rect x="30" y="180" width="92" height="4" rx="2" fill="rgba(96,165,250,0.12)"/>
-        <rect x="30" y="180" width="26" height="4" rx="2" fill="#EF4444"/>
-        <rect x="58" y="180" width="64" height="4" rx="2" fill="#60A5FA" opacity="0.5"/>
-      </g>
-
-      {/* Card: CALENDAR */}
-      <g style={{ animation:'floatCard 2.8s ease-in-out infinite 0.9s' }}>
-        <rect x="286" y="148" width="118" height="88" rx="10" fill="rgba(15,23,42,0.95)" stroke="rgba(165,180,252,0.45)" strokeWidth="1.2"/>
-        <rect x="292" y="154" width="106" height="76" rx="7" fill="rgba(49,46,129,0.25)"/>
-        <text x="298" y="170" fontSize="8" fontWeight="700" fill="#A5B4FC" fontFamily="DM Sans" letterSpacing="1">CALENDAR</text>
-        <line x1="292" y1="174" x2="398" y2="174" stroke="rgba(165,180,252,0.2)" strokeWidth="0.8"/>
-        <text x="298" y="190" fontSize="13" fontWeight="800" fill="white" fontFamily="Cabinet Grotesk">3</text>
-        <text x="314" y="190" fontSize="9" fill="rgba(196,181,253,0.7)" fontFamily="DM Sans"> meetings today</text>
-        <text x="298" y="205" fontSize="8.5" fill="rgba(196,181,253,0.55)" fontFamily="DM Sans">Next: 10:00 AM</text>
-        <rect x="298" y="212" width="94" height="4" rx="2" fill="rgba(165,180,252,0.12)"/>
-        <rect x="298" y="212" width="36" height="4" rx="2" fill="#A78BFA"/>
-        <text x="394" y="215" fontSize="7" fill="#A78BFA" fontFamily="DM Sans" textAnchor="end">38%</text>
-      </g>
-
-      {/* Card: TASKS */}
-      <g style={{ animation:'floatCard 3.6s ease-in-out infinite 1.4s' }}>
-        <rect x="286" y="376" width="118" height="82" rx="10" fill="rgba(15,23,42,0.95)" stroke="rgba(52,211,153,0.4)" strokeWidth="1.2"/>
-        <rect x="292" y="382" width="106" height="70" rx="7" fill="rgba(6,78,59,0.2)"/>
-        <text x="298" y="398" fontSize="8" fontWeight="700" fill="#34D399" fontFamily="DM Sans" letterSpacing="1">TASKS</text>
-        <line x1="292" y1="402" x2="398" y2="402" stroke="rgba(52,211,153,0.2)" strokeWidth="0.8"/>
-        <text x="298" y="418" fontSize="13" fontWeight="800" fill="white" fontFamily="Cabinet Grotesk">12</text>
-        <text x="316" y="418" fontSize="9" fill="rgba(110,231,183,0.7)" fontFamily="DM Sans"> open tasks</text>
-        <text x="298" y="433" fontSize="8.5" fill="rgba(110,231,183,0.55)" fontFamily="DM Sans">4 due today</text>
-        <rect x="298" y="440" width="94" height="4" rx="2" fill="rgba(52,211,153,0.12)"/>
-        <rect x="298" y="440" width="60" height="4" rx="2" fill="#34D399"/>
-        <text x="394" y="443" fontSize="7" fill="#34D399" fontFamily="DM Sans" textAnchor="end">64%</text>
-      </g>
-
-      {/* Card: AI BRIEF */}
-      <g style={{ animation:'floatCard 2.6s ease-in-out infinite 2s' }}>
-        <rect x="18" y="376" width="118" height="82" rx="10" fill="rgba(15,23,42,0.95)" stroke="rgba(251,191,36,0.4)" strokeWidth="1.2"/>
-        <rect x="24" y="382" width="106" height="70" rx="7" fill="rgba(120,53,15,0.15)"/>
-        <text x="30" y="398" fontSize="8" fontWeight="700" fill="#FCD34D" fontFamily="DM Sans" letterSpacing="1">AI BRIEF</text>
-        <line x1="24" y1="402" x2="130" y2="402" stroke="rgba(252,211,77,0.2)" strokeWidth="0.8"/>
-        <text x="30" y="417" fontSize="9" fontWeight="600" fill="white" fontFamily="DM Sans">Good morning, Alex</text>
-        <text x="30" y="430" fontSize="8.5" fill="rgba(253,211,77,0.65)" fontFamily="DM Sans">3 priority items today</text>
-        <rect x="30" y="438" width="98" height="4" rx="2" fill="rgba(252,211,77,0.12)"/>
-        <rect x="30" y="438" width="68" height="4" rx="2" fill="#FCD34D" opacity="0.7"/>
-      </g>
-
-      {/* Sparkle dots */}
-      <circle cx="160" cy="175" r="3" fill="#60A5FA" style={{ animation:'sparkle 2.2s ease-in-out infinite' }}/>
-      <circle cx="268" cy="290" r="2.5" fill="#34D399" style={{ animation:'sparkle 2.6s ease-in-out infinite 0.7s' }}/>
-      <circle cx="135" cy="340" r="2" fill="#FCD34D" style={{ animation:'sparkle 1.9s ease-in-out infinite 1.1s' }}/>
-      <circle cx="295" cy="360" r="2" fill="#A78BFA" style={{ animation:'sparkle 2.3s ease-in-out infinite 0.4s' }}/>
-      <circle cx="352" cy="142" r="1.5" fill="#60A5FA" style={{ animation:'sparkle 3s ease-in-out infinite 1.5s' }}/>
-
-      {/* Bottom tagline */}
-      <text x="210" y="522" textAnchor="middle" fontSize="15" fontWeight="800" fill="white" fontFamily="Cabinet Grotesk" letterSpacing="-0.3" opacity="0.9">Stay ahead. Stay organized.</text>
-      <text x="210" y="540" textAnchor="middle" fontSize="10" fill="rgba(147,197,253,0.6)" fontFamily="DM Sans" letterSpacing="0.3">Your AI-powered command center.</text>
-    </svg>
-  )
-}
-
-function IllustrationSamurai({ T }: { T: LoginTheme }) {
-  return (
-    <svg viewBox="0 0 420 560" fill="none" xmlns="http://www.w3.org/2000/svg"
-      style={{ width:'100%', maxHeight:'90vh', position:'relative', zIndex:1 }}>
-      <defs>
-        <linearGradient id="samuraiGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#C0392B" stopOpacity="0.7"/>
-          <stop offset="100%" stopColor="#5C0A0A" stopOpacity="0.3"/>
-        </linearGradient>
-        <radialGradient id="groundGlow" cx="50%" cy="100%" r="50%">
-          <stop offset="0%" stopColor="#8B1A1A" stopOpacity="0.25"/>
-          <stop offset="100%" stopColor="#8B1A1A" stopOpacity="0"/>
-        </radialGradient>
-        <filter id="sBlur"><feGaussianBlur stdDeviation="3"/></filter>
-      </defs>
-
-      {/* Ground glow */}
-      <ellipse cx="210" cy="490" rx="160" ry="40" fill="url(#groundGlow)" />
-
-      {/* Moon */}
-      <circle cx="340" cy="80" r="42" fill="#1A1410" stroke="#2A1F18" strokeWidth="1"/>
-      <circle cx="340" cy="80" r="38" fill="#1E1812"/>
-      <circle cx="328" cy="72" r="28" fill="#0A0804"/>
-
-      {/* Moon halo */}
-      <circle cx="340" cy="80" r="52" fill="none" stroke="rgba(139,26,26,0.12)" strokeWidth="8"/>
-      <circle cx="340" cy="80" r="65" fill="none" stroke="rgba(139,26,26,0.06)" strokeWidth="10"/>
-
-      {/* Distant torii gate silhouette */}
-      <g opacity="0.18" fill="#1A0E0E">
-        <rect x="100" y="310" width="8" height="100"/>
-        <rect x="155" y="310" width="8" height="100"/>
-        <rect x="92" y="305" width="79" height="10" rx="2"/>
-        <rect x="96" y="295" width="71" height="7" rx="1"/>
-      </g>
-
-      {/* Floating cherry blossom petals */}
-      {[
-        {cx:80,  cy:140, r:6, delay:'0s',   dur:'3.2s'},
-        {cx:320, cy:180, r:5, delay:'0.8s',  dur:'2.8s'},
-        {cx:150, cy:220, r:7, delay:'1.5s',  dur:'3.5s'},
-        {cx:360, cy:260, r:4, delay:'0.3s',  dur:'2.6s'},
-        {cx:60,  cy:300, r:5, delay:'1.1s',  dur:'3.0s'},
-        {cx:280, cy:130, r:6, delay:'2.0s',  dur:'2.9s'},
-        {cx:380, cy:360, r:4, delay:'0.6s',  dur:'3.4s'},
-        {cx:110, cy:380, r:5, delay:'1.7s',  dur:'2.7s'},
-      ].map((p, i) => (
-        <g key={i} style={{ animation:`petalFloat ${p.dur} ease-in-out infinite ${p.delay}` }}>
-          <ellipse cx={p.cx}   cy={p.cy}   rx={p.r}     ry={p.r*0.6}  fill={T.accentBright} opacity="0.5" transform={`rotate(${i*40} ${p.cx} ${p.cy})`}/>
-          <ellipse cx={p.cx+p.r*0.6} cy={p.cy-p.r*0.4} rx={p.r*0.8} ry={p.r*0.5} fill={T.accentBright} opacity="0.4" transform={`rotate(${i*40+45} ${p.cx} ${p.cy})`}/>
-          <ellipse cx={p.cx-p.r*0.5} cy={p.cy-p.r*0.5} rx={p.r*0.7} ry={p.r*0.45} fill="#C0392B" opacity="0.3" transform={`rotate(${i*40+90} ${p.cx} ${p.cy})`}/>
-        </g>
-      ))}
-
-      {/* Samurai figure — standing, katana at side raised */}
-      {/* Shadow */}
-      <ellipse cx="210" cy="480" rx="45" ry="10" fill="rgba(0,0,0,0.5)"/>
-
-      {/* Hakama (wide pants) */}
-      <path d="M185 380 Q180 420 170 475 L200 478 Q205 445 210 425 Q215 445 220 478 L250 475 Q240 420 235 380 Z" fill="#1A1410" stroke="#2A1E18" strokeWidth="1"/>
-
-      {/* Kimono / torso */}
-      <path d="M180 280 Q175 310 178 380 L242 380 Q245 310 240 280 Q225 260 210 258 Q195 260 180 280Z" fill="#1E1812" stroke="#2E2218" strokeWidth="1"/>
-      {/* Kimono collar — crimson */}
-      <path d="M200 280 Q210 270 220 280 Q215 300 210 310 Q205 300 200 280Z" fill="#8B1A1A" opacity="0.7"/>
-      {/* Sash/obi */}
-      <rect x="182" y="330" width="56" height="22" rx="2" fill="#5C0A0A" stroke="#8B1A1A" strokeWidth="0.5" opacity="0.9"/>
-      <rect x="200" y="330" width="20" height="22" rx="1" fill="#8B1A1A" opacity="0.8"/>
-
-      {/* Left arm — down at side */}
-      <path d="M182 285 Q165 310 162 345" stroke="#1A1410" strokeWidth="14" strokeLinecap="round" fill="none"/>
-      <path d="M162 345 Q158 365 162 380" stroke="#1A1410" strokeWidth="10" strokeLinecap="round" fill="none"/>
-
-      {/* Right arm — raised, holding katana */}
-      <g style={{ animation:'swordReady 4s ease-in-out infinite' }}>
-        <path d="M238 285 Q255 260 270 240" stroke="#1A1410" strokeWidth="14" strokeLinecap="round" fill="none"/>
-        <path d="M270 240 Q280 225 285 210" stroke="#1A1410" strokeWidth="10" strokeLinecap="round" fill="none"/>
-        {/* Tsuba (guard) */}
-        <ellipse cx="288" cy="205" rx="10" ry="6" fill="#3D2B10" stroke="#8B6914" strokeWidth="1" transform="rotate(-30 288 205)"/>
-        {/* Katana blade */}
-        <path d="M291 200 Q330 155 365 95" stroke="rgba(200,200,220,0.85)" strokeWidth="2.5" strokeLinecap="round" fill="none"/>
-        <path d="M293 202 Q332 157 366 97" stroke="rgba(255,255,255,0.3)" strokeWidth="1" strokeLinecap="round" fill="none"/>
-        {/* Blade tip glow */}
-        <circle cx="366" cy="96" r="4" fill="rgba(192,57,43,0.6)" style={{ animation:'sparkle 1.8s ease-in-out infinite' }}/>
-        {/* Katana handle */}
-        <path d="M284 208 Q278 218 274 228" stroke="#6B4226" strokeWidth="9" strokeLinecap="round" fill="none"/>
-        <line x1="279" y1="210" x2="282" y2="220" stroke="#C9A227" strokeWidth="1" opacity="0.6"/>
-        <line x1="276" y1="216" x2="279" y2="226" stroke="#C9A227" strokeWidth="1" opacity="0.5"/>
-      </g>
-
-      {/* Neck */}
-      <rect x="204" y="262" width="12" height="20" rx="5" fill="#2A2018" opacity="0.9"/>
-
-      {/* Head */}
-      <circle cx="210" cy="248" r="26" fill="#1E1812"/>
-      {/* Mempo / war mask lower face */}
-      <path d="M192 250 Q210 240 228 250 Q228 268 210 272 Q192 268 192 250Z" fill="#1A1410" stroke="#2A1E18" strokeWidth="0.8" opacity="0.9"/>
-      {/* Mask teeth hint */}
-      <path d="M200 264 Q205 268 210 264 Q215 268 220 264" stroke="#8B1A1A" strokeWidth="1" strokeLinecap="round" fill="none" opacity="0.5"/>
-      {/* Eyes — glowing crimson */}
-      <ellipse cx="202" cy="247" rx="5" ry="3.5" fill="#0A0804"/>
-      <ellipse cx="218" cy="247" rx="5" ry="3.5" fill="#0A0804"/>
-      <ellipse cx="202" cy="247" rx="3" ry="2" fill="#8B1A1A" style={{ animation:'eyeGlow 2.5s ease-in-out infinite' }}/>
-      <ellipse cx="218" cy="247" rx="3" ry="2" fill="#8B1A1A" style={{ animation:'eyeGlow 2.5s ease-in-out infinite 0.3s' }}/>
-      {/* Kabuto (helmet) */}
-      <path d="M185 248 Q185 215 210 210 Q235 215 235 248 Q230 230 210 226 Q190 230 185 248Z" fill="#1A1410" stroke="#2A1E18" strokeWidth="1"/>
-      {/* Kabuto front piece */}
-      <path d="M200 218 Q210 208 220 218 Q218 225 210 222 Q202 225 200 218Z" fill="#5C0A0A" stroke="#8B1A1A" strokeWidth="0.5"/>
-      {/* Kuwagata (horns) */}
-      <path d="M198 218 Q186 195 190 180 Q194 190 200 210" fill="#2A1E18" stroke="#3A2E28" strokeWidth="0.5"/>
-      <path d="M222 218 Q234 195 230 180 Q226 190 220 210" fill="#2A1E18" stroke="#3A2E28" strokeWidth="0.5"/>
-
-      {/* Floating rank card */}
-      <g style={{ animation:'floatCard 3s ease-in-out infinite 1s' }}>
-        <rect x="28" y="160" width="110" height="72" rx="8" fill="rgba(10,8,4,0.94)" stroke="rgba(139,26,26,0.5)" strokeWidth="1.2"/>
-        <text x="40" y="178" fontSize="7.5" fontWeight="700" fill="#C0392B" fontFamily="DM Sans" letterSpacing="1.2">RANK</text>
-        <line x1="34" y1="182" x2="132" y2="182" stroke="rgba(139,26,26,0.3)" strokeWidth="0.8"/>
-        <text x="40" y="198" fontSize="13" fontWeight="800" fill="#EDE4D3" fontFamily="Cabinet Grotesk">SAMURAI</text>
-        <text x="40" y="212" fontSize="8" fill="#7A6E5E" fontFamily="DM Sans">Score: 58 / 100</text>
-        <rect x="40" y="218" width="82" height="4" rx="2" fill="rgba(139,26,26,0.2)"/>
-        <rect x="40" y="218" width="48" height="4" rx="2" fill="#8B1A1A"/>
-      </g>
-
-      {/* Floating objectives card */}
-      <g style={{ animation:'floatCard 2.8s ease-in-out infinite 0.4s' }}>
-        <rect x="282" y="300" width="118" height="80" rx="8" fill="rgba(10,8,4,0.94)" stroke="rgba(139,26,26,0.4)" strokeWidth="1.2"/>
-        <text x="294" y="318" fontSize="7.5" fontWeight="700" fill="#C0392B" fontFamily="DM Sans" letterSpacing="1.2">OBJECTIVES</text>
-        <line x1="288" y1="322" x2="394" y2="322" stroke="rgba(139,26,26,0.3)" strokeWidth="0.8"/>
-        <text x="294" y="336" fontSize="8.5" fill="#EDE4D3" fontFamily="DM Sans">Q4 Strategy Review</text>
-        <text x="294" y="350" fontSize="8.5" fill="#7A6E5E" fontFamily="DM Sans">Close 2 contracts</text>
-        <text x="294" y="364" fontSize="8.5" fill="#7A6E5E" fontFamily="DM Sans" opacity="0.6">Team alignment</text>
-      </g>
-
-      {/* Energy dots */}
-      <circle cx="155" cy="200" r="2.5" fill="#C0392B" style={{ animation:'sparkle 2s ease-in-out infinite' }}/>
-      <circle cx="340" cy="320" r="2" fill="#8B1A1A" style={{ animation:'sparkle 2.5s ease-in-out infinite 0.6s' }}/>
-      <circle cx="100" cy="320" r="2" fill="#C0392B" style={{ animation:'sparkle 2.2s ease-in-out infinite 1.2s' }}/>
-      <circle cx="370" cy="180" r="1.5" fill="#EDE4D3" style={{ animation:'sparkle 1.8s ease-in-out infinite 0.8s' }} opacity="0.4"/>
-
-      {/* Bottom text */}
-      <text x="210" y="510" textAnchor="middle" fontSize="14" fontWeight="700" fill="#EDE4D3" fontFamily="Cabinet Grotesk" letterSpacing="2" opacity="0.6">七転び八起き</text>
-      <text x="210" y="528" textAnchor="middle" fontSize="9" fill="#7A6E5E" fontFamily="DM Sans" letterSpacing="0.5">Fall seven times. Rise eight.</text>
-    </svg>
-  )
-}
-
-function IllustrationPharaoh({ T }: { T: LoginTheme }) {
-  return (
-    <svg viewBox="0 0 420 560" fill="none" xmlns="http://www.w3.org/2000/svg"
-      style={{ width:'100%', maxHeight:'90vh', position:'relative', zIndex:1 }}>
-      <defs>
-        <linearGradient id="pharaohSky" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#090700"/>
-          <stop offset="60%" stopColor="#120E03"/>
-          <stop offset="100%" stopColor="#1E1705"/>
-        </linearGradient>
-        <linearGradient id="goldGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#F5D060"/>
-          <stop offset="100%" stopColor="#8B6914"/>
-        </linearGradient>
-        <radialGradient id="horizonGlow" cx="50%" cy="100%" r="60%">
-          <stop offset="0%" stopColor="#C9A227" stopOpacity="0.2"/>
-          <stop offset="100%" stopColor="#C9A227" stopOpacity="0"/>
-        </radialGradient>
-      </defs>
-
-      {/* Sky */}
-      <rect x="0" y="0" width="420" height="560" fill="url(#pharaohSky)"/>
-      {/* Horizon glow */}
-      <ellipse cx="210" cy="560" rx="250" ry="120" fill="url(#horizonGlow)"/>
-
-      {/* Stars */}
-      {[{x:50,y:40},{x:120,y:25},{x:200,y:60},{x:280,y:30},{x:370,y:55},{x:80,y:85},{x:160,y:95},{x:320,y:80},{x:400,y:40},{x:40,y:130},{x:380,y:110}].map((s,i) => (
-        <circle key={i} cx={s.x} cy={s.y} r={i%3===0?2:1} fill={T.accentBright} opacity="0.8" style={{ animation:`starTwinkle ${1.5+(i%3)*0.8}s ease-in-out infinite ${i*0.3}s` }}/>
-      ))}
-
-      {/* Large pyramid */}
-      <path d="M210,120 L360,400 L60,400 Z" fill="#0E0C04" stroke="#1E1905" strokeWidth="1.5"/>
-      <path d="M210,120 L360,400 L285,400 L210,200 Z" fill="#130F04" opacity="0.6"/>
-      {/* Pyramid gold outline */}
-      <path d="M210,120 L360,400 L60,400 Z" fill="none" stroke={T.accentBright} strokeWidth="0.6" opacity="0.3"/>
-
-      {/* Eye of Horus (on pyramid) */}
-      <g transform="translate(210,265)" style={{ animation:'eyeGlow 3s ease-in-out infinite' }}>
-        <ellipse cx="0" cy="0" rx="22" ry="12" fill="none" stroke={T.accent} strokeWidth="1.2" opacity="0.8"/>
-        <circle cx="0" cy="0" r="7" fill={T.accent} opacity="0.7"/>
-        <circle cx="0" cy="0" r="3.5" fill={T.accentBright} opacity="0.9"/>
-        <path d="M-22,0 Q-30,8 -25,14 Q-18,10 -22,0" fill={T.accent} opacity="0.5"/>
-        <path d="M22,0 Q30,8 25,14 Q18,10 22,0" fill={T.accent} opacity="0.3"/>
-        <circle cx="0" cy="0" r="12" fill="none" stroke={T.accentBright} strokeWidth="0.5" opacity="0.4"/>
-      </g>
-
-      {/* Ground line */}
-      <rect x="0" y="400" width="420" height="160" fill="#0A0800"/>
-      <line x1="0" y1="400" x2="420" y2="400" stroke={T.accent} strokeWidth="0.5" opacity="0.3"/>
-
-      {/* Pharaoh figure — standing, holding crook & flail */}
-      {/* Shadow */}
-      <ellipse cx="210" cy="492" rx="40" ry="9" fill="rgba(0,0,0,0.6)"/>
-
-      {/* Body */}
-      <path d="M192 370 Q188 400 185 475 L200 476 Q205 450 210 430 Q215 450 220 476 L235 475 Q232 400 228 370 Z" fill="#0E0C04" stroke="#1E1905" strokeWidth="0.8"/>
-
-      {/* White kilt */}
-      <path d="M192 340 Q188 365 188 395 Q195 400 210 400 Q225 400 232 395 Q232 365 228 340 Q220 350 210 350 Q200 350 192 340Z" fill="#E8D97A" opacity="0.85"/>
-      <line x1="196" y1="355" x2="224" y2="355" stroke="#C9A227" strokeWidth="0.5" opacity="0.4"/>
-      <line x1="194" y1="365" x2="226" y2="365" stroke="#C9A227" strokeWidth="0.5" opacity="0.3"/>
-      <line x1="192" y1="375" x2="228" y2="375" stroke="#C9A227" strokeWidth="0.5" opacity="0.2"/>
-
-      {/* Torso / ceremonial collar */}
-      <path d="M190 270 Q188 305 192 340 Q200 355 210 355 Q220 355 228 340 Q232 305 230 270 Q220 258 210 256 Q200 258 190 270Z" fill="#1A1506" stroke="#2A2008" strokeWidth="0.8"/>
-      {/* Usekh collar */}
-      <path d="M188 270 Q210 250 232 270 Q228 285 210 288 Q192 285 188 270Z" fill="#C9A227" opacity="0.7" stroke="#F5D060" strokeWidth="0.5"/>
-      {/* Collar detail lines */}
-      {[0.3,0.6,0.9].map((o,i) => (
-        <path key={i} d={`M${190+i*2} ${272+i*5} Q210 ${260+i*6} ${230-i*2} ${272+i*5}`} fill="none" stroke="#F5D060" strokeWidth="0.5" opacity={o*0.5}/>
-      ))}
-
-      {/* Left arm — holding crook (heqa) */}
-      <path d="M190 280 Q172 300 165 330" stroke="#0E0C04" strokeWidth="13" strokeLinecap="round" fill="none"/>
-      <path d="M165 330 Q160 350 162 365" stroke="#0E0C04" strokeWidth="10" strokeLinecap="round" fill="none"/>
-      {/* Crook */}
-      <path d="M162 362 Q155 340 145 325 Q138 315 140 305 Q150 298 158 308" stroke={T.accent} strokeWidth="3.5" strokeLinecap="round" fill="none" opacity="0.8"/>
-
-      {/* Right arm — holding flail (nekhakha) */}
-      <path d="M230 280 Q248 300 255 330" stroke="#0E0C04" strokeWidth="13" strokeLinecap="round" fill="none"/>
-      <path d="M255 330 Q260 350 258 365" stroke="#0E0C04" strokeWidth="10" strokeLinecap="round" fill="none"/>
-      {/* Flail handle */}
-      <line x1="258" y1="363" x2="268" y2="340" stroke={T.accent} strokeWidth="3" strokeLinecap="round" opacity="0.8"/>
-      {/* Flail beads */}
-      <circle cx="270" cy="334" r="4" fill={T.accentBright} opacity="0.6"/>
-      <circle cx="268" cy="323" r="4" fill={T.accent} opacity="0.7"/>
-      <circle cx="274" cy="312" r="4" fill={T.accentBright} opacity="0.5"/>
-
-      {/* Neck */}
-      <rect x="205" y="255" width="10" height="18" rx="4" fill="#1A1506"/>
-
-      {/* Head */}
-      <circle cx="210" cy="242" r="25" fill="#C49A3C" opacity="0.9"/>
-      {/* Nemes headdress */}
-      <path d="M186 238 Q186 210 210 205 Q234 210 234 238 Q228 222 210 218 Q192 222 186 238Z" fill="#E8D97A" opacity="0.85"/>
-      {/* Nemes side pieces */}
-      <path d="M186 238 Q178 255 180 278 Q186 274 188 265 Q190 252 192 240Z" fill="#E8D97A" opacity="0.7"/>
-      <path d="M234 238 Q242 255 240 278 Q234 274 232 265 Q230 252 228 240Z" fill="#E8D97A" opacity="0.7"/>
-      {/* Nemes stripe lines */}
-      <line x1="194" y1="220" x2="192" y2="270" stroke="#C9A227" strokeWidth="0.8" opacity="0.4"/>
-      <line x1="200" y1="218" x2="198" y2="272" stroke="#C9A227" strokeWidth="0.8" opacity="0.4"/>
-      <line x1="220" y1="218" x2="222" y2="272" stroke="#C9A227" strokeWidth="0.8" opacity="0.4"/>
-      <line x1="226" y1="220" x2="228" y2="270" stroke="#C9A227" strokeWidth="0.8" opacity="0.4"/>
-      {/* Uraeus (cobra on crown) */}
-      <path d="M208 206 Q205 195 207 185 Q210 180 213 185 Q215 195 212 206" fill="#8B1A1A" stroke="#C0392B" strokeWidth="0.5" opacity="0.8"/>
-      <circle cx="210" cy="183" r="4" fill="#C9A227" opacity="0.9"/>
-      {/* Eyes */}
-      <ellipse cx="203" cy="241" rx="4.5" ry="3" fill="#0A0800" stroke="#C9A227" strokeWidth="0.5"/>
-      <ellipse cx="217" cy="241" rx="4.5" ry="3" fill="#0A0800" stroke="#C9A227" strokeWidth="0.5"/>
-      <line x1="198" y1="241" x2="195" y2="244" stroke="#C9A227" strokeWidth="1" opacity="0.7"/>
-      <line x1="222" y1="241" x2="225" y2="244" stroke="#C9A227" strokeWidth="1" opacity="0.7"/>
-      {/* Kohl lines */}
-      <path d="M199 241 Q197 239 196 236" stroke="#1A1506" strokeWidth="1.2" strokeLinecap="round" fill="none"/>
-      <path d="M221 241 Q223 239 224 236" stroke="#1A1506" strokeWidth="1.2" strokeLinecap="round" fill="none"/>
-
-      {/* Floating legacy card */}
-      <g style={{ animation:'floatCard 3.2s ease-in-out infinite 0.5s' }}>
-        <rect x="20" y="150" width="118" height="72" rx="8" fill="rgba(9,7,0,0.95)" stroke="rgba(201,162,39,0.5)" strokeWidth="1.2"/>
-        <text x="32" y="168" fontSize="7.5" fontWeight="700" fill={T.accentBright} fontFamily="DM Sans" letterSpacing="1.2">LEGACY SCORE</text>
-        <line x1="26" y1="172" x2="132" y2="172" stroke="rgba(201,162,39,0.3)" strokeWidth="0.8"/>
-        <text x="32" y="192" fontSize="20" fontWeight="800" fill={T.accentBright} fontFamily="Cabinet Grotesk">94</text>
-        <text x="64" y="192" fontSize="9" fill={T.textDim} fontFamily="DM Sans">/ 100</text>
-        <text x="32" y="206" fontSize="8" fill={T.textDim} fontFamily="DM Sans">Daimyo Tier</text>
-        <rect x="32" y="212" width="88" height="3.5" rx="1.5" fill="rgba(201,162,39,0.2)"/>
-        <rect x="32" y="212" width="83" height="3.5" rx="1.5" fill={T.accent}/>
-      </g>
-
-      {/* Hieroglyph-like decorative column right */}
-      <g opacity="0.12" stroke={T.accent} strokeWidth="1">
-        <rect x="370" y="100" width="24" height="300" rx="2" fill="none"/>
-        {[120,145,170,195,220,245,270,295,320,345].map((y,i) => (
-          <rect key={i} x="374" y={y} width="16" height={i%3===0?16:10} rx="2" fill={T.accent}/>
-        ))}
-      </g>
-
-      {/* Gold sparkles */}
-      <circle cx="160" cy="160" r="2.5" fill={T.accentBright} style={{ animation:'sparkle 2s ease-in-out infinite' }}/>
-      <circle cx="340" cy="200" r="2" fill={T.accent} style={{ animation:'sparkle 2.5s ease-in-out infinite 0.7s' }}/>
-      <circle cx="80" cy="280" r="1.5" fill={T.accentBright} style={{ animation:'sparkle 2.2s ease-in-out infinite 1.2s' }}/>
-
-      <text x="210" y="520" textAnchor="middle" fontSize="13" fontWeight="700" fill={T.text} fontFamily="Cabinet Grotesk" letterSpacing="2" opacity="0.5">𓂀 𓆣 𓁹 𓆙 𓂋</text>
-      <text x="210" y="538" textAnchor="middle" fontSize="9" fill={T.textDim} fontFamily="DM Sans" letterSpacing="0.5">Eternal systems outlast their builders.</text>
-    </svg>
-  )
-}
-
-function IllustrationAstral({ T }: { T: LoginTheme }) {
-  return (
-    <svg viewBox="0 0 420 560" fill="none" xmlns="http://www.w3.org/2000/svg"
-      style={{ width:'100%', maxHeight:'90vh', position:'relative', zIndex:1 }}>
-      <defs>
-        <radialGradient id="orb" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="#A78BFA" stopOpacity="0.4"/>
-          <stop offset="40%" stopColor="#7C3AED" stopOpacity="0.2"/>
-          <stop offset="100%" stopColor="#7C3AED" stopOpacity="0"/>
-        </radialGradient>
-        <radialGradient id="coreOrb" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="#EDE9FE" stopOpacity="0.95"/>
-          <stop offset="30%" stopColor="#A78BFA" stopOpacity="0.8"/>
-          <stop offset="70%" stopColor="#7C3AED" stopOpacity="0.5"/>
-          <stop offset="100%" stopColor="#3B0764" stopOpacity="0.2"/>
-        </radialGradient>
-        <radialGradient id="nebulaA" cx="40%" cy="40%" r="60%">
-          <stop offset="0%" stopColor="#7C3AED" stopOpacity="0.2"/>
-          <stop offset="100%" stopColor="#7C3AED" stopOpacity="0"/>
-        </radialGradient>
-        <radialGradient id="nebulaB" cx="60%" cy="60%" r="60%">
-          <stop offset="0%" stopColor="#2DD4BF" stopOpacity="0.12"/>
-          <stop offset="100%" stopColor="#2DD4BF" stopOpacity="0"/>
-        </radialGradient>
-        <filter id="orbGlow"><feGaussianBlur stdDeviation="8" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-      </defs>
-
-      {/* Background nebula */}
-      <ellipse cx="200" cy="240" rx="180" ry="140" fill="url(#nebulaA)"/>
-      <ellipse cx="240" cy="300" rx="160" ry="120" fill="url(#nebulaB)"/>
-
-      {/* Outer glow ring */}
-      <circle cx="210" cy="240" r="145" fill="url(#orb)"/>
-
-      {/* Orbital rings */}
-      <ellipse cx="210" cy="240" rx="148" ry="40" fill="none" stroke="rgba(167,139,250,0.15)" strokeWidth="1" style={{ animation:'orbitRotate 8s linear infinite' }}/>
-      <ellipse cx="210" cy="240" rx="118" ry="32" fill="none" stroke="rgba(45,212,191,0.12)" strokeWidth="1" style={{ animation:'orbitRotate 12s linear infinite reverse' }}/>
-      <ellipse cx="210" cy="240" rx="88" ry="24" fill="none" stroke="rgba(167,139,250,0.18)" strokeWidth="0.8" style={{ animation:'orbitRotate 6s linear infinite' }}/>
-
-      {/* Orbiting dot on outer ring */}
-      <circle r="5" fill={T.accentBright} style={{ animation:'orbitDotOuter 8s linear infinite', filter:'drop-shadow(0 0 4px #A78BFA)' }}/>
-      <circle r="3.5" fill="#2DD4BF" style={{ animation:'orbitDotInner 12s linear infinite reverse', filter:'drop-shadow(0 0 3px #2DD4BF)' }}/>
-
-      {/* Main orb */}
-      <circle cx="210" cy="240" r="72" fill="url(#coreOrb)" filter="url(#orbGlow)"/>
-      {/* Orb surface detail */}
-      <circle cx="210" cy="240" r="72" fill="none" stroke="rgba(167,139,250,0.4)" strokeWidth="1.5"/>
-      <ellipse cx="210" cy="240" rx="72" ry="20" fill="none" stroke="rgba(167,139,250,0.15)" strokeWidth="1"/>
-      <ellipse cx="210" cy="240" rx="50" ry="72" fill="none" stroke="rgba(167,139,250,0.12)" strokeWidth="1"/>
-      {/* Continents/swirls */}
-      <path d="M185 220 Q195 210 215 215 Q230 220 225 235 Q215 245 200 240 Q185 235 185 220Z" fill="rgba(124,58,237,0.3)"/>
-      <path d="M215 255 Q230 248 238 260 Q235 272 220 268 Q210 264 215 255Z" fill="rgba(45,212,191,0.2)"/>
-      <path d="M178 250 Q186 240 195 248 Q196 258 188 260 Q178 258 178 250Z" fill="rgba(251,113,133,0.15)"/>
-      {/* Shimmer */}
-      <circle cx="190" cy="218" r="18" fill="rgba(255,255,255,0.06)"/>
-
-      {/* Stars scattered around orb */}
-      {[
-        {x:80,y:100},{x:340,y:90},{x:60,y:180},{x:370,y:160},
-        {x:50,y:340},{x:380,y:320},{x:100,y:420},{x:330,y:430},
-        {x:155,y:70},{x:285,y:65},{x:140,y:440},{x:300,y:450},
-      ].map((s,i) => (
-        <circle key={i} cx={s.x} cy={s.y} r={i%4===0?2.5:1.5} fill={i%5===0?'#2DD4BF':T.accentBright} opacity="0.8"
-          style={{ animation:`sparkle ${1.5+(i%4)*0.5}s ease-in-out infinite ${i*0.25}s` }}/>
-      ))}
-
-      {/* Floating data cards */}
-      <g style={{ animation:'floatCard 3s ease-in-out infinite 0.8s' }}>
-        <rect x="18" y="110" width="114" height="72" rx="8" fill="rgba(4,2,14,0.95)" stroke="rgba(124,58,237,0.5)" strokeWidth="1.2"/>
-        <text x="30" y="128" fontSize="7.5" fontWeight="700" fill={T.accentBright} fontFamily="DM Sans" letterSpacing="1.2">VISION CLARITY</text>
-        <line x1="24" y1="132" x2="126" y2="132" stroke="rgba(124,58,237,0.3)" strokeWidth="0.8"/>
-        <text x="30" y="152" fontSize="22" fontWeight="800" fill={T.text} fontFamily="Cabinet Grotesk">87</text>
-        <text x="62" y="152" fontSize="9" fill={T.textDim} fontFamily="DM Sans">%</text>
-        <text x="30" y="166" fontSize="8" fill={T.textDim} fontFamily="DM Sans">Astral clarity index</text>
-        <rect x="30" y="172" width="88" height="3.5" rx="1.5" fill="rgba(124,58,237,0.2)"/>
-        <rect x="30" y="172" width="76" height="3.5" rx="1.5" fill={T.accent}/>
-      </g>
-
-      <g style={{ animation:'floatCard 2.7s ease-in-out infinite 1.5s' }}>
-        <rect x="290" y="360" width="114" height="72" rx="8" fill="rgba(4,2,14,0.95)" stroke="rgba(45,212,191,0.4)" strokeWidth="1.2"/>
-        <text x="302" y="378" fontSize="7.5" fontWeight="700" fill="#5EEAD4" fontFamily="DM Sans" letterSpacing="1.2">HORIZON</text>
-        <line x1="296" y1="382" x2="398" y2="382" stroke="rgba(45,212,191,0.3)" strokeWidth="0.8"/>
-        <text x="302" y="398" fontSize="10" fill={T.text} fontFamily="DM Sans">Q4 Strategy</text>
-        <text x="302" y="412" fontSize="10" fill={T.textDim} fontFamily="DM Sans" opacity="0.7">3-year vision</text>
-        <text x="302" y="426" fontSize="10" fill={T.textDim} fontFamily="DM Sans" opacity="0.4">10-year purpose</text>
-      </g>
-
-      {/* Constellation lines */}
-      <g opacity="0.08" stroke={T.accentBright} strokeWidth="0.8">
-        <line x1="80" y1="100" x2="60" y2="180"/>
-        <line x1="340" y1="90" x2="370" y2="160"/>
-        <line x1="50" y1="340" x2="100" y2="420"/>
-        <line x1="380" y1="320" x2="330" y2="430"/>
-      </g>
-
-      <text x="210" y="514" textAnchor="middle" fontSize="13" fontWeight="700" fill={T.text} fontFamily="Cabinet Grotesk" letterSpacing="3" opacity="0.5">∞ · ✦ · ∞</text>
-      <text x="210" y="532" textAnchor="middle" fontSize="9" fill={T.textDim} fontFamily="DM Sans" letterSpacing="0.5">Operate from the longest timeline.</text>
-    </svg>
   )
 }
 
@@ -970,54 +369,64 @@ function LoginScreen() {
         </div>
       </div>
 
-      {/* Right panel — Mode illustration */}
+      {/* Right panel — HD photo */}
       <div style={{
         flex: '0 0 460px',
         height: '100%',
-        background: key === 'default'
-          ? 'linear-gradient(170deg, rgba(30,64,175,0.1) 0%, rgba(13,15,26,0.0) 55%)'
-          : `linear-gradient(170deg, ${T.glow1} 0%, transparent 55%)`,
-        borderLeft: `1px solid ${T.accent}20`,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
         position: 'relative',
         overflow: 'hidden',
       }}>
-        {/* Inner glow */}
-        <div style={{ position:'absolute', top:'30%', left:'40%', width:320, height:320, borderRadius:'50%', background:`radial-gradient(circle, ${T.glow1} 0%, transparent 70%)`, pointerEvents:'none' }} />
-        <div style={{ position:'absolute', bottom:'20%', right:'10%', width:180, height:180, borderRadius:'50%', background:`radial-gradient(circle, ${T.glow2} 0%, transparent 70%)`, pointerEvents:'none' }} />
-
-        {key === 'default' && <IllustrationDefault />}
-        {key === 'samurai' && <IllustrationSamurai T={T} />}
-        {key === 'pharaoh' && <IllustrationPharaoh T={T} />}
-        {key === 'astral'  && <IllustrationAstral  T={T} />}
+        {/* Photo */}
+        <div style={{
+          position: 'absolute', inset: 0,
+          backgroundImage: `url('${MODE_PHOTOS[key]}')`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center top',
+          filter: 'brightness(0.72) contrast(1.08)',
+        }} />
+        {/* Left-edge fade — blends into the left panel */}
+        <div style={{
+          position: 'absolute', inset: 0,
+          background: `linear-gradient(to right, ${T.bg} 0%, ${T.bg}CC 6%, ${T.bg}66 18%, transparent 38%)`,
+          pointerEvents: 'none',
+        }} />
+        {/* Top/bottom vignette */}
+        <div style={{
+          position: 'absolute', inset: 0,
+          background: 'linear-gradient(to bottom, rgba(0,0,0,0.38) 0%, rgba(0,0,0,0.06) 40%, rgba(0,0,0,0.62) 100%)',
+          pointerEvents: 'none',
+        }} />
+        {/* Accent colour tint */}
+        <div style={{
+          position: 'absolute', inset: 0,
+          background: `radial-gradient(ellipse at 65% 45%, ${T.glow1} 0%, transparent 65%)`,
+          pointerEvents: 'none',
+        }} />
+        {/* Bottom quote */}
+        <div style={{
+          position: 'absolute', bottom: 0, left: 0, right: 0,
+          padding: '56px 36px 36px',
+          background: `linear-gradient(to top, ${T.bg}F0 0%, ${T.bg}AA 45%, transparent 100%)`,
+          textAlign: 'center',
+          pointerEvents: 'none',
+        }}>
+          <p style={{
+            margin: 0,
+            fontFamily: key === 'samurai' ? "'DM Sans', sans-serif" : "'Cabinet Grotesk', sans-serif",
+            fontSize: 13,
+            fontWeight: key === 'samurai' ? 600 : 500,
+            letterSpacing: key === 'samurai' ? '1.8px' : '0.4px',
+            color: T.textDim,
+            lineHeight: 1.65,
+            textTransform: key === 'samurai' ? 'uppercase' : 'none',
+          }}>
+            {MODE_QUOTES[key]}
+          </p>
+        </div>
       </div>
 
-      {false && <svg viewBox="0 0 1 1"><path d="M0 0"/></svg>}
-
       <style>{`
-        @keyframes floatCard  { 0%,100%{transform:translateY(0)}  50%{transform:translateY(-7px)} }
-        @keyframes sparkle    { 0%,100%{opacity:.15;transform:scale(.7)} 50%{opacity:1;transform:scale(1.5)} }
-        @keyframes headBob    { 0%{transform:translateY(0) rotate(-3deg)} 100%{transform:translateY(-4px) rotate(2deg)} }
-        @keyframes armFront   { 0%{transform:rotate(-5deg)} 100%{transform:rotate(5deg)} }
-        @keyframes armBack    { 0%{transform:rotate(5deg)} 100%{transform:rotate(-5deg)} }
-        @keyframes legFront   { 0%{transform:rotate(-6deg)} 100%{transform:rotate(4deg)} }
-        @keyframes legBack    { 0%{transform:rotate(4deg)} 100%{transform:rotate(-6deg)} }
-        @keyframes trailFade  { 0%,100%{opacity:.1} 50%{opacity:1} }
-        @keyframes petalFloat { 0%,100%{transform:translateY(0) rotate(0deg)} 50%{transform:translateY(-14px) rotate(20deg)} }
-        @keyframes swordReady { 0%,100%{transform:rotate(0deg)} 50%{transform:rotate(-4deg)} }
-        @keyframes eyeGlow    { 0%,100%{opacity:.7} 50%{opacity:1} }
-        @keyframes starTwinkle{ 0%,100%{opacity:.3;transform:scale(.8)} 50%{opacity:1;transform:scale(1.3)} }
-        @keyframes orbitRotate{ from{transform:rotateX(70deg) rotate(0deg)} to{transform:rotateX(70deg) rotate(360deg)} }
-        @keyframes orbitDotOuter {
-          0%   { offset-path:path('M210,240 m-148,0 a148,40 0 1,0 296,0 a148,40 0 1,0 -296,0'); offset-distance:0% }
-          100% { offset-distance:100% }
-        }
-        @keyframes orbitDotInner {
-          0%   { offset-path:path('M210,240 m-118,0 a118,32 0 1,0 236,0 a118,32 0 1,0 -236,0'); offset-distance:0% }
-          100% { offset-distance:100% }
-        }
+        @keyframes starTwinkle { 0%,100%{opacity:.3;transform:scale(.8)} 50%{opacity:1;transform:scale(1.3)} }
         @keyframes fadeUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
       `}</style>
     </div>
