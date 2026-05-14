@@ -109,252 +109,6 @@ const MODE_QUOTES: Record<string, string> = {
   astral:  'Operate from the longest timeline.',
 }
 
-// ─── Cinematic right-panel scenes ────────────────────────────────────────────
-
-function SceneSamurai() {
-  return (
-    <svg style={{ position:'absolute', inset:0, width:'100%', height:'100%' }}
-      viewBox="0 0 460 720" preserveAspectRatio="xMidYMax slice" fill="none">
-      <defs>
-        <filter id="sceneGrain" x="0" y="0" width="100%" height="100%">
-          <feTurbulence type="fractalNoise" baseFrequency="0.72" numOctaves="4" stitchTiles="stitch" result="noise"/>
-          <feColorMatrix type="saturate" values="0" in="noise" result="grey"/>
-          <feBlend in="SourceGraphic" in2="grey" mode="overlay"/>
-        </filter>
-        <radialGradient id="smMoon" cx="50%" cy="50%" r="50%"><stop offset="0%" stopColor="#2A0A0A"/><stop offset="70%" stopColor="#180606"/><stop offset="100%" stopColor="#0F0303"/></radialGradient>
-        <radialGradient id="smMoonGlow" cx="50%" cy="50%" r="50%"><stop offset="0%" stopColor="#8B1A1A" stopOpacity="0.55"/><stop offset="50%" stopColor="#5C0A0A" stopOpacity="0.2"/><stop offset="100%" stopColor="#8B1A1A" stopOpacity="0"/></radialGradient>
-        <linearGradient id="smMist" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#3D0808" stopOpacity="0"/><stop offset="100%" stopColor="#5C1010" stopOpacity="0.35"/></linearGradient>
-      </defs>
-
-      {/* Sky */}
-      <rect width="460" height="720" fill="#060202"/>
-      {/* Moon corona */}
-      <circle cx="338" cy="148" r="200" fill="url(#smMoonGlow)"/>
-      {/* Moon disc */}
-      <circle cx="338" cy="148" r="94" fill="url(#smMoon)"/>
-      <path d="M308,112 Q324,100 348,108 Q366,120 368,142 Q360,162 340,156 Q314,148 308,112Z" fill="#0F0303" opacity="0.45"/>
-      <circle cx="326" cy="136" r="22" fill="#0F0303" opacity="0.35"/>
-      <circle cx="338" cy="148" r="94" fill="none" stroke="#6B1010" strokeWidth="1.5" opacity="0.4"/>
-
-      {/* Stars */}
-      {[[44,42],[112,28],[190,68],[22,118],[82,176],[158,92],[432,62],[406,195],[60,240],[22,300]].map(([x,y],i)=>(
-        <circle key={i} cx={x} cy={y} r={i%4===0?1.8:1} fill="white" opacity={0.3+i%3*0.15}/>
-      ))}
-
-      {/* Mountain layers — far to near */}
-      <path d="M0,435 L45,345 L95,398 L155,318 L210,378 L265,292 L318,358 L370,275 L418,328 L460,302 L460,720 L0,720Z" fill="#130808" opacity="0.75"/>
-      <path d="M0,490 L55,402 L115,450 L175,372 L235,428 L292,350 L352,408 L412,365 L460,388 L460,720 L0,720Z" fill="#0E0505" opacity="0.88"/>
-      <path d="M0,545 L62,455 L125,505 L185,425 L248,482 L308,408 L365,462 L422,432 L460,452 L460,720 L0,720Z" fill="#090303"/>
-      <path d="M0,590 Q115,568 230,572 Q345,577 460,562 L460,720 L0,720Z" fill="#060202"/>
-
-      {/* Ground mist */}
-      <rect x="0" y="545" width="460" height="175" fill="url(#smMist)"/>
-      <ellipse cx="230" cy="610" rx="230" ry="55" fill="#4A0A0A" opacity="0.1"/>
-
-      {/* Samurai silhouette */}
-      <g transform="translate(162,328)">
-        <ellipse cx="58" cy="244" rx="40" ry="9" fill="#3D0808" opacity="0.45"/>
-        {/* Feet */}
-        <ellipse cx="44" cy="243" rx="13" ry="5" fill="#060202" transform="rotate(-6,44,243)"/>
-        <ellipse cx="72" cy="243" rx="14" ry="5" fill="#060202" transform="rotate(5,72,243)"/>
-        {/* Hakama */}
-        <path d="M32,178 Q27,205 25,240 L58,242 Q60,214 58,194 Q56,214 58,240 L76,242 Q82,205 80,178Z" fill="#060202"/>
-        {/* Kimono / body */}
-        <path d="M26,92 Q22,132 28,178 L88,178 Q94,132 90,92 Q78,74 58,71 Q38,74 26,92Z" fill="#060202"/>
-        {/* Sash */}
-        <rect x="28" y="138" width="60" height="16" rx="1" fill="#0A0202"/>
-        {/* Left arm – at rest */}
-        <path d="M28,98 Q12,124 8,158" stroke="#060202" strokeWidth="17" strokeLinecap="round" fill="none"/>
-        <path d="M8,158 Q4,174 7,190" stroke="#060202" strokeWidth="13" strokeLinecap="round" fill="none"/>
-        {/* Right arm – raised, holding katana */}
-        <path d="M88,98 Q106,72 122,50" stroke="#060202" strokeWidth="17" strokeLinecap="round" fill="none"/>
-        <path d="M122,50 Q132,34 138,18" stroke="#060202" strokeWidth="13" strokeLinecap="round" fill="none"/>
-        {/* Katana blade */}
-        <path d="M140,14 L78,-105" stroke="#1A0606" strokeWidth="3.5" strokeLinecap="round"/>
-        <path d="M140,14 L78,-105" stroke="#6B1010" strokeWidth="1.2" strokeLinecap="round" opacity="0.5"/>
-        {/* Tsuba */}
-        <ellipse cx="140" cy="14" rx="9" ry="5" fill="#0A0202" stroke="#3D1010" strokeWidth="1" transform="rotate(-50,140,14)"/>
-        {/* Handle */}
-        <path d="M142,18 Q148,32 152,44" stroke="#0A0202" strokeWidth="10" strokeLinecap="round" fill="none"/>
-        {/* Head */}
-        <circle cx="58" cy="60" r="26" fill="#060202"/>
-        {/* Kabuto */}
-        <path d="M33,58 Q33,24 58,18 Q83,24 83,58 Q76,38 58,34 Q40,38 33,58Z" fill="#060202"/>
-        {/* Kuwagata horns */}
-        <path d="M50,20 Q42,4 46,-8 Q50,4 52,18" fill="#060202"/>
-        <path d="M66,20 Q74,4 70,-8 Q66,4 64,18" fill="#060202"/>
-        <line x1="58" y1="18" x2="58" y2="0" stroke="#6B1010" strokeWidth="1.5" opacity="0.35"/>
-      </g>
-
-      {/* Scattered petals (static) */}
-      {[[82,390,30],[310,420,45],[150,460,15],[390,350,60],[46,510,20]].map(([x,y,r],i)=>(
-        <ellipse key={i} cx={x} cy={y} rx={5} ry={3} fill="#8B1A1A" opacity="0.22" transform={`rotate(${r},${x},${y})`}/>
-      ))}
-
-      {/* Grain overlay */}
-      <rect width="460" height="720" fill="#080202" opacity="0.04" filter="url(#sceneGrain)"/>
-    </svg>
-  )
-}
-
-function ScenePharaoh() {
-  return (
-    <svg style={{ position:'absolute', inset:0, width:'100%', height:'100%' }}
-      viewBox="0 0 460 720" preserveAspectRatio="xMidYMax slice" fill="none">
-      <defs>
-        <filter id="phGrain" x="0" y="0" width="100%" height="100%">
-          <feTurbulence type="fractalNoise" baseFrequency="0.72" numOctaves="4" stitchTiles="stitch" result="noise"/>
-          <feColorMatrix type="saturate" values="0" in="noise" result="grey"/>
-          <feBlend in="SourceGraphic" in2="grey" mode="overlay"/>
-        </filter>
-        <radialGradient id="phHorizon" cx="50%" cy="100%" r="60%"><stop offset="0%" stopColor="#C9A227" stopOpacity="0.3"/><stop offset="100%" stopColor="#C9A227" stopOpacity="0"/></radialGradient>
-        <radialGradient id="phMoon" cx="50%" cy="50%" r="50%"><stop offset="0%" stopColor="#2A2208"/><stop offset="70%" stopColor="#1A1504"/><stop offset="100%" stopColor="#100E02"/></radialGradient>
-      </defs>
-
-      <rect width="460" height="720" fill="#060500"/>
-      <ellipse cx="230" cy="720" rx="280" ry="180" fill="url(#phHorizon)"/>
-
-      {/* Stars */}
-      {[[40,38],[110,22],[185,52],[270,28],[355,48],[420,30],[68,82],[160,74],[308,68],[422,90],[25,130],[390,145],[80,170],[240,155],[440,195]].map(([x,y],i)=>(
-        <circle key={i} cx={x} cy={y} r={i%5===0?2:1.2} fill={i%7===0?'#F5D060':'white'} opacity={0.4+i%3*0.2}/>
-      ))}
-
-      {/* Moon */}
-      <circle cx="360" cy="130" r="52" fill="url(#phMoon)"/>
-      <circle cx="360" cy="130" r="52" fill="none" stroke="#4A3D10" strokeWidth="1" opacity="0.6"/>
-      <circle cx="348" cy="120" r="20" fill="#100E02" opacity="0.5"/>
-
-      {/* Ground horizon */}
-      <rect x="0" y="520" width="460" height="200" fill="#060500"/>
-      <path d="M0,520 Q100,510 230,515 Q360,520 460,508 L460,720 L0,720Z" fill="#080600"/>
-      <line x1="0" y1="522" x2="460" y2="510" stroke="#C9A227" strokeWidth="0.6" opacity="0.25"/>
-
-      {/* Pyramid silhouettes — three, different sizes */}
-      <path d="M230,165 L390,518 L70,518Z" fill="#0C0900"/>
-      {/* Pyramid face shading */}
-      <path d="M230,165 L390,518 L310,518 L230,250Z" fill="#100D02" opacity="0.5"/>
-      <path d="M230,165 L390,518 L70,518Z" fill="none" stroke="#C9A227" strokeWidth="0.7" opacity="0.18"/>
-
-      <path d="M95,280 L188,518 L2,518Z" fill="#090700"/>
-      <path d="M95,280 L188,518 L140,518 L95,340Z" fill="#0E0B02" opacity="0.5"/>
-
-      <path d="M395,310 L452,518 L338,518Z" fill="#090700"/>
-
-      {/* Sand dunes */}
-      <path d="M0,558 Q80,536 160,548 Q240,560 320,542 Q390,530 460,545 L460,720 L0,720Z" fill="#060500"/>
-
-      {/* Eye of Horus (faint, on main pyramid) */}
-      <g transform="translate(230,360)" opacity="0.3">
-        <ellipse cx="0" cy="0" rx="22" ry="11" fill="none" stroke="#C9A227" strokeWidth="1.2"/>
-        <circle cx="0" cy="0" r="5.5" fill="#C9A227" opacity="0.6"/>
-        <circle cx="0" cy="0" r="2.5" fill="#F5D060"/>
-        <path d="M-22,0 Q-30,8 -24,14" fill="none" stroke="#C9A227" strokeWidth="1" opacity="0.7"/>
-      </g>
-
-      {/* Grain */}
-      <rect width="460" height="720" fill="#060500" opacity="0.05" filter="url(#phGrain)"/>
-    </svg>
-  )
-}
-
-function SceneAstral() {
-  return (
-    <svg style={{ position:'absolute', inset:0, width:'100%', height:'100%' }}
-      viewBox="0 0 460 720" preserveAspectRatio="xMidYMax slice" fill="none">
-      <defs>
-        <filter id="asGrain" x="0" y="0" width="100%" height="100%">
-          <feTurbulence type="fractalNoise" baseFrequency="0.72" numOctaves="4" stitchTiles="stitch" result="noise"/>
-          <feColorMatrix type="saturate" values="0" in="noise" result="grey"/>
-          <feBlend in="SourceGraphic" in2="grey" mode="overlay"/>
-        </filter>
-        <radialGradient id="asNebA" cx="40%" cy="38%" r="55%"><stop offset="0%" stopColor="#7C3AED" stopOpacity="0.28"/><stop offset="100%" stopColor="#7C3AED" stopOpacity="0"/></radialGradient>
-        <radialGradient id="asNebB" cx="65%" cy="62%" r="55%"><stop offset="0%" stopColor="#2DD4BF" stopOpacity="0.15"/><stop offset="100%" stopColor="#2DD4BF" stopOpacity="0"/></radialGradient>
-        <radialGradient id="asPlanet" cx="40%" cy="35%" r="50%"><stop offset="0%" stopColor="#4C1D95"/><stop offset="60%" stopColor="#2E1065"/><stop offset="100%" stopColor="#1A0840"/></radialGradient>
-        <radialGradient id="asRing" cx="50%" cy="50%" r="50%"><stop offset="0%" stopColor="#7C3AED" stopOpacity="0"/><stop offset="85%" stopColor="#7C3AED" stopOpacity="0.3"/><stop offset="100%" stopColor="#7C3AED" stopOpacity="0"/></radialGradient>
-      </defs>
-
-      <rect width="460" height="720" fill="#04020E"/>
-
-      {/* Nebula washes */}
-      <ellipse cx="190" cy="280" rx="220" ry="200" fill="url(#asNebA)"/>
-      <ellipse cx="300" cy="420" rx="200" ry="180" fill="url(#asNebB)"/>
-      <ellipse cx="380" cy="180" rx="140" ry="120" fill="#4C1D95" opacity="0.08"/>
-
-      {/* Star field - two sizes */}
-      {Array.from({length:80},(_,i)=>([
-        (i*137+i*43)%460, (i*97+i*31)%720, i%8===0?2.2:i%4===0?1.5:0.9,
-        i%9===0?'#2DD4BF':i%7===0?'#A78BFA':'white',
-        0.3+i%5*0.14,
-      ])).map(([x,y,r,c,o],i)=>(
-        <circle key={i} cx={x as number} cy={y as number} r={r as number} fill={c as string} opacity={o as number}/>
-      ))}
-
-      {/* Planet */}
-      <circle cx="330" cy="185" r="78" fill="url(#asPlanet)"/>
-      {/* Ring system */}
-      <ellipse cx="330" cy="185" rx="118" ry="28" fill="none" stroke="#7C3AED" strokeWidth="8" opacity="0.25"/>
-      <ellipse cx="330" cy="185" rx="118" ry="28" fill="none" stroke="#A78BFA" strokeWidth="1.5" opacity="0.35"/>
-      <ellipse cx="330" cy="185" rx="98" ry="22" fill="none" stroke="#7C3AED" strokeWidth="5" opacity="0.18"/>
-      {/* Planet surface detail */}
-      <path d="M280,168 Q305,158 340,162 Q365,168 370,182 Q360,196 335,192 Q305,186 280,168Z" fill="#3B0F8C" opacity="0.5"/>
-      <path d="M285,190 Q312,182 345,188 Q355,196 340,202 Q318,204 285,190Z" fill="#2DD4BF" opacity="0.1"/>
-      {/* Planet shadow edge */}
-      <circle cx="330" cy="185" r="78" fill="none" stroke="#A78BFA" strokeWidth="1.5" opacity="0.4"/>
-
-      {/* Grain */}
-      <rect width="460" height="720" fill="#04020E" opacity="0.04" filter="url(#asGrain)"/>
-    </svg>
-  )
-}
-
-function SceneDefault() {
-  return (
-    <svg style={{ position:'absolute', inset:0, width:'100%', height:'100%' }}
-      viewBox="0 0 460 720" preserveAspectRatio="xMidYMax slice" fill="none">
-      <defs>
-        <filter id="dfGrain" x="0" y="0" width="100%" height="100%">
-          <feTurbulence type="fractalNoise" baseFrequency="0.72" numOctaves="4" stitchTiles="stitch" result="noise"/>
-          <feColorMatrix type="saturate" values="0" in="noise" result="grey"/>
-          <feBlend in="SourceGraphic" in2="grey" mode="overlay"/>
-        </filter>
-        <radialGradient id="dfGlow" cx="50%" cy="50%" r="50%"><stop offset="0%" stopColor="#1E40AF" stopOpacity="0.35"/><stop offset="100%" stopColor="#1E40AF" stopOpacity="0"/></radialGradient>
-        <radialGradient id="dfMoon" cx="50%" cy="50%" r="50%"><stop offset="0%" stopColor="#1A2A4A"/><stop offset="70%" stopColor="#0E1D36"/><stop offset="100%" stopColor="#0A1428"/></radialGradient>
-      </defs>
-
-      <rect width="460" height="720" fill="#060810"/>
-      <circle cx="290" cy="195" r="190" fill="url(#dfGlow)"/>
-
-      {/* Stars */}
-      {[[50,45],[118,28],[192,60],[35,120],[88,175],[162,92],[440,62],[410,195],[60,240],[25,305],[445,320],[18,390]].map(([x,y],i)=>(
-        <circle key={i} cx={x} cy={y} r={i%4===0?1.8:1.1} fill={i%5===0?'#93C5FD':'white'} opacity={0.3+i%3*0.18}/>
-      ))}
-
-      {/* Moon */}
-      <circle cx="290" cy="195" r="86" fill="url(#dfMoon)"/>
-      <circle cx="278" cy="180" r="25" fill="#0A1428" opacity="0.5"/>
-      <circle cx="305" cy="210" r="14" fill="#0A1428" opacity="0.38"/>
-      <circle cx="290" cy="195" r="86" fill="none" stroke="#1E3A8A" strokeWidth="1.5" opacity="0.5"/>
-      <circle cx="290" cy="195" r="100" fill="none" stroke="#1E3A8A" strokeWidth="0.8" opacity="0.2"/>
-
-      {/* Mountain layers */}
-      <path d="M0,432 L42,348 L95,396 L152,318 L208,375 L262,295 L316,352 L368,278 L416,326 L460,300 L460,720 L0,720Z" fill="#0C1220" opacity="0.8"/>
-      <path d="M0,488 L52,400 L112,448 L172,368 L232,425 L290,345 L350,404 L410,362 L460,385 L460,720 L0,720Z" fill="#080E1A" opacity="0.9"/>
-      <path d="M0,545 L60,455 L122,505 L182,425 L244,480 L305,408 L362,462 L420,432 L460,452 L460,720 L0,720Z" fill="#060A14"/>
-
-      {/* City lights at base */}
-      {Array.from({length:28},(_,i)=>([
-        (i*37+i*11)%420+20, 548+(i%3)*4, i%6===0?3:i%3===0?2:1.5, i%5===0?'#60A5FA':i%3===0?'#F59E0B':'#E2E8F0'
-      ])).map(([x,y,r,c],i)=>(
-        <circle key={i} cx={x as number} cy={y as number} r={r as number} fill={c as string} opacity={0.4+i%4*0.12}/>
-      ))}
-      <rect x="0" y="560" width="460" height="160" fill="#060810" opacity="0.7"/>
-
-      {/* Grain */}
-      <rect width="460" height="720" fill="#060810" opacity="0.04" filter="url(#dfGrain)"/>
-    </svg>
-  )
-}
-
 // ─── Background art layers ────────────────────────────────────────────────────
 
 function BgDefault({ T }: { T: LoginTheme }) {
@@ -615,19 +369,28 @@ function LoginScreen() {
         </div>
       </div>
 
-      {/* Right panel — cinematic scene */}
+      {/* Right panel — photo background */}
       <div style={{
         flex: '0 0 460px',
         height: '100%',
         position: 'relative',
         overflow: 'hidden',
-        background: key === 'samurai' ? '#060202' : key === 'pharaoh' ? '#060500' : key === 'astral' ? '#04020E' : '#060810',
+        background: key === 'pharaoh'
+          ? 'radial-gradient(ellipse at 50% 100%, #3D2800 0%, #1A1000 35%, #090700 100%)'
+          : key === 'astral'
+            ? 'radial-gradient(ellipse at 45% 40%, #2D1B69 0%, #1A0E3D 45%, #04020E 100%)'
+            : '#08050A',
       }}>
-        {/* Cinematic scene */}
-        {key === 'samurai' && <SceneSamurai />}
-        {key === 'pharaoh' && <ScenePharaoh />}
-        {key === 'astral'  && <SceneAstral />}
-        {key === 'default' && <SceneDefault />}
+        {/* Photo (samurai + default mode) */}
+        {(key === 'samurai' || key === 'default') && (
+          <div style={{
+            position: 'absolute', inset: 0,
+            backgroundImage: "url('/login-samurai.png')",
+            backgroundSize: 'cover',
+            backgroundPosition: 'center top',
+            filter: 'brightness(0.88) saturate(1.1)',
+          }} />
+        )}
 
         {/* Left-edge fade — blends into the left panel */}
         <div style={{
