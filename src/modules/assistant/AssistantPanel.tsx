@@ -7,6 +7,7 @@ import { useHabitsStore } from '@/store/habitsStore'
 import { ASSISTANT_TOOLS, executeTool, type ToolContext } from '@/lib/assistantTools'
 import { loadAIConfig, type AIConfig } from '@/modules/settings/Settings'
 import { loadAccounts } from '@/lib/multiAccount'
+import { useBehavioralStore } from '@/store/behavioralStore'
 
 // ─── Groq types (OpenAI-compatible) ──────────────────────────────────────────
 
@@ -57,7 +58,33 @@ function providerLabel(cfg: AIConfig): string {
 
 // ─── System prompt ────────────────────────────────────────────────────────────
 
-function buildSystemPrompt(userName: string, today: string): string {
+function buildSystemPrompt(userName: string, today: string, samuraiMode = false): string {
+  if (samuraiMode) {
+    return `You are operating in Samurai Mode as a calm tactical advisor to ${userName}.
+
+Today: ${today}
+
+Behavioral directives:
+- Speak with precision and economy. Never elaborate when brevity serves.
+- Avoid enthusiasm, filler phrases, corporate language, and emojis.
+- Address ${userName} by name sparingly — only when it adds weight.
+- Reframe urgency without drama. Reframe achievement without praise.
+
+Tone translations:
+- Instead of "You still have 12 tasks left!" → "Three decisive objectives remain."
+- Instead of "Great job!" → "Momentum is maintained."
+- Instead of "Don't forget your meeting." → "Your next engagement begins in 20 minutes. Prepare."
+- Instead of "Here are your emails" → "Incoming communications, reviewed."
+
+You have tools to:
+- List, search, reply to, send, and archive emails
+- Get calendar events for any date range
+- List, create, and complete tasks
+- Search Google Drive files
+
+Use tools immediately when action is required. Summarize results with minimal words. Ask one focused question when clarification is needed.`
+  }
+
   return `You are Professor AI — ${userName}'s personal executive assistant with live access to their Gmail, task board, Google Calendar, and Google Drive.
 
 Today's date: ${today}
@@ -170,12 +197,13 @@ interface AssistantPanelProps {
 }
 
 export function AssistantPanel({ open, onClose }: AssistantPanelProps) {
-  const user       = useAuthStore(s => s.user)
-  const tasks      = useTaskStore(s => s.tasks)
-  const addTask    = useTaskStore(s => s.addTask)
-  const updateTask = useTaskStore(s => s.updateTask)
-  const deleteTask = useTaskStore(s => s.deleteTask)
-  const habits     = useHabitsStore(s => s.habits)
+  const user          = useAuthStore(s => s.user)
+  const tasks         = useTaskStore(s => s.tasks)
+  const addTask       = useTaskStore(s => s.addTask)
+  const updateTask    = useTaskStore(s => s.updateTask)
+  const deleteTask    = useTaskStore(s => s.deleteTask)
+  const habits        = useHabitsStore(s => s.habits)
+  const samuraiActive = useBehavioralStore(s => s.enabled && s.mode === 'samurai')
 
   const [displayMessages, setDisplayMessages] = useState<DisplayMessage[]>([])
   const [anthropicMsgs, setAnthropicMsgs] = useState<Anthropic.MessageParam[]>([])
@@ -329,7 +357,7 @@ export function AssistantPanel({ open, onClose }: AssistantPanelProps) {
 
     const today    = new Date().toISOString().slice(0, 10)
     const userName = user?.name?.split(' ')[0] ?? user?.email ?? 'there'
-    const system   = buildSystemPrompt(userName, today)
+    const system   = buildSystemPrompt(userName, today, samuraiActive)
 
     setInput('')
     setThinking(true)

@@ -15,7 +15,7 @@ import {
   Plus, Trash2, GripVertical, LogIn, LogOut,
   ChevronDown, ChevronUp, User, Clock, Building2, Flame,
   Brain, Bell, Palette, Link, X, RefreshCw, Eye, EyeOff, Shield, Pencil,
-  Hash, CheckSquare, Mail, HardDrive, CalendarDays,
+  Hash, CheckSquare, Mail, HardDrive, CalendarDays, Swords,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { connectAdditionalGoogleAccount, signOut as googleSignOut, disconnectGoogleAccount } from '@/lib/google'
@@ -23,6 +23,7 @@ import { useUIStore } from '@/store/uiStore'
 import { useAuthStore } from '@/store/authStore'
 import { THEMES, getTheme, applyThemeVars } from '@/lib/themes'
 import { useHabitsStore, getHabitColors } from '@/store/habitsStore'
+import { useBehavioralStore, type BehavioralMode } from '@/store/behavioralStore'
 import { loadAccounts, removeAccount, getProviderTokenForAccount, loadHiddenAccounts, saveHiddenAccounts, loadAccountsFromServer, type ConnectedAccount, type ServerAccount } from '@/lib/multiAccount'
 import {
   saveProfileToDB, savePrefsToDB, saveCompaniesToDB, loadCompaniesFromDB,
@@ -61,7 +62,7 @@ interface CompanyRow {
   users: CompanyUser[]
 }
 
-const SECTION_IDS = ['profile','schedule','companies','habits','accounts','professor','notifications','appearance','blocking'] as const
+const SECTION_IDS = ['profile','schedule','companies','habits','accounts','professor','notifications','appearance','blocking','behavioral'] as const
 type SectionId = typeof SECTION_IDS[number]
 
 interface SectionMeta { id: SectionId; title: string; icon: React.ElementType; description: string }
@@ -75,6 +76,7 @@ const SECTION_META: SectionMeta[] = [
   { id: 'notifications', title: 'Notifications',        icon: Bell,    description: 'Morning reminder, wind-down & weekly review nudges' },
   { id: 'appearance',    title: 'Appearance',           icon: Palette, description: 'Theme, density & sidebar default' },
   { id: 'blocking',      title: 'Productivity Blocking', icon: Shield,  description: 'Block calendar slots across accounts automatically' },
+  { id: 'behavioral',    title: 'Behavioral OS',        icon: Swords,  description: 'Rank system, identity detection & operating mode' },
 ]
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -158,7 +160,10 @@ function loadSectionOrder(): SectionId[] {
   const saved = ls<SectionId[]>('professor-section-order', [])
   const valid = saved.filter(id => (SECTION_IDS as readonly string[]).includes(id))
   const miss  = SECTION_IDS.filter(id => !valid.includes(id))
-  return [...valid, ...miss]
+  // Pinned new feature sections get prepended so they're immediately visible
+  const pinnedNew = miss.filter(id => id === 'behavioral')
+  const otherNew  = miss.filter(id => id !== 'behavioral')
+  return [...pinnedNew, ...valid, ...otherNew]
 }
 function saveSectionOrder(ids: SectionId[]) { lsSet('professor-section-order', ids) }
 
@@ -1696,6 +1701,86 @@ function BlockingRulesSection() {
   )
 }
 
+// ─── Behavioral OS Section ────────────────────────────────────────────────────
+
+function BehavioralSection() {
+  const { enabled, mode, setEnabled, setMode } = useBehavioralStore()
+  const theme = getTheme(useUIStore(s => s.themeId))
+
+  const modes: { id: BehavioralMode; label: string; desc: string; available: boolean }[] = [
+    { id: 'samurai', label: 'Samurai',  desc: 'Disciplined executor. Tactical tone. Rank system active.', available: true  },
+    { id: 'pharaoh', label: 'Pharaoh',  desc: 'Strategic builder. Legacy-focused framework.',             available: false },
+    { id: 'astral',  label: 'Astral',   desc: 'Vision-first. Long-horizon thinking & reflection.',        available: false },
+  ]
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      {/* Enable toggle */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', background: theme.surface2, borderRadius: 10, border: `1px solid ${theme.border}` }}>
+        <div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: theme.text }}>Enable Behavioral OS</div>
+          <div style={{ fontSize: 12, color: theme.textDim, marginTop: 2 }}>Activates rank tracking, identity detection & mode-aware AI</div>
+        </div>
+        <button
+          onClick={() => setEnabled(!enabled)}
+          style={{
+            width: 44, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer', flexShrink: 0,
+            background: enabled ? theme.accent : theme.border,
+            position: 'relative', transition: 'background 0.2s',
+          }}
+        >
+          <span style={{
+            position: 'absolute', top: 2, left: enabled ? 22 : 2,
+            width: 20, height: 20, borderRadius: '50%', background: '#fff',
+            transition: 'left 0.2s',
+          }} />
+        </button>
+      </div>
+
+      {/* Mode selection */}
+      {enabled && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: theme.accentBright, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 2 }}>Operating Mode</div>
+          {modes.map(m => (
+            <button
+              key={m.id}
+              disabled={!m.available}
+              onClick={() => m.available && setMode(m.id)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 12,
+                padding: '12px 14px', borderRadius: 10, cursor: m.available ? 'pointer' : 'default',
+                background: mode === m.id ? theme.accentFill : theme.surface2,
+                border: `1px solid ${mode === m.id ? theme.accent : theme.border}`,
+                textAlign: 'left', width: '100%', opacity: m.available ? 1 : 0.5,
+              }}
+            >
+              <Swords size={16} color={mode === m.id ? theme.accent : theme.textDim} strokeWidth={1.8} style={{ flexShrink: 0 }} />
+              <div style={{ flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 13.5, fontWeight: 600, color: theme.text }}>{m.label}</span>
+                  {!m.available && <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 4, background: theme.border, color: theme.textDim, letterSpacing: '0.5px' }}>SOON</span>}
+                </div>
+                <div style={{ fontSize: 12, color: theme.textDim, marginTop: 2 }}>{m.desc}</div>
+              </div>
+              {mode === m.id && <div style={{ width: 8, height: 8, borderRadius: '50%', background: theme.accent, flexShrink: 0 }} />}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Samurai info */}
+      {enabled && mode === 'samurai' && (
+        <div style={{ padding: '12px 14px', borderRadius: 10, background: 'rgba(139,26,26,0.08)', border: '1px solid rgba(139,26,26,0.25)' }}>
+          <div style={{ fontSize: 12, color: '#C0392B', fontWeight: 600, marginBottom: 4 }}>Samurai Mode Active</div>
+          <div style={{ fontSize: 12, color: theme.textDim, lineHeight: 1.5 }}>
+            The Behavioral OS page will appear in the sidebar. Your rank (Ronin → Shogun) is calculated from task completion, habit consistency, and planning quality. The AI assistant will adopt a tactical, no-filler communication style.
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── CHUNK 7: Main Settings component ────────────────────────────────────────
 
 export function Settings() {
@@ -1875,6 +1960,7 @@ export function Settings() {
         {id === 'notifications' && <NotificationsSection s={settings} set={update} />}
         {id === 'appearance'    && <AppearanceSection    s={settings} set={update} />}
         {id === 'blocking'      && <BlockingRulesSection />}
+        {id === 'behavioral'    && <BehavioralSection />}
       </SectionShell>
     )
   }
