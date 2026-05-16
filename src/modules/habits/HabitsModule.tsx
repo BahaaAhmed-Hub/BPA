@@ -473,6 +473,11 @@ export function HabitsModule() {
               }}>
                 <EmojiBtn value={habit.emoji} onSelect={e => updateHabit(habit.id, { emoji: e })} />
 
+                <ColorBtn value={habit.color} colors={HABIT_COLORS} onSelect={c => updateHabit(habit.id, { color: c })} />
+
+                <InlineEdit value={habit.name} onSave={v => updateHabit(habit.id, { name: v })}
+                  style={{ flex: 1, fontSize: 13.5, fontWeight: 500, color: doneToday ? habit.color : 'var(--color-text, #E8EAF6)', textDecoration: doneToday ? 'line-through' : 'none', opacity: doneToday ? 0.8 : 1 }} />
+
                 {/* Toggle / quantity control */}
                 {isQuantity ? (
                   <QuantityControl
@@ -490,11 +495,6 @@ export function HabitsModule() {
                       : <span style={{ color: 'var(--color-text-muted, #4B5563)' }}>○</span>}
                   </button>
                 )}
-
-                <ColorBtn value={habit.color} colors={HABIT_COLORS} onSelect={c => updateHabit(habit.id, { color: c })} />
-
-                <InlineEdit value={habit.name} onSave={v => updateHabit(habit.id, { name: v })}
-                  style={{ flex: 1, fontSize: 13.5, fontWeight: 500, color: doneToday ? habit.color : 'var(--color-text, #E8EAF6)', textDecoration: doneToday ? 'line-through' : 'none', opacity: doneToday ? 0.8 : 1 }} />
 
                 {/* Type badge */}
                 <span style={{ fontSize: 9, padding: '1px 5px', borderRadius: 4, background: 'var(--color-surface2, #0D0F1A)', border: '1px solid var(--color-border, #252A3E)', color: 'var(--color-text-muted, #4B5563)' }}>
