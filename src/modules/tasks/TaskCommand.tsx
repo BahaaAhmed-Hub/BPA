@@ -117,6 +117,12 @@ export function TaskCommand() {
       } else {
         moveTaskBefore(taskId, overId)
       }
+      // When grouped by company, sync the dragged task's company to the drop target's company
+      if (groupBy === 'company' && dragged) {
+        if (target.companyId !== dragged.companyId || target.company !== dragged.company) {
+          updateTask(taskId, { companyId: target.companyId, company: target.company })
+        }
+      }
     }
   }
 

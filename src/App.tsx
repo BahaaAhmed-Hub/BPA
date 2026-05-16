@@ -22,7 +22,7 @@ import { addAccount, loadAccounts, saveAccounts } from './lib/multiAccount'
 import { saveAccountsToDB, loadCompaniesFromDB, loadRawSettingsFromDB, loadAccountsFromDB } from './lib/dbSync'
 import { seedToken, seedFromLocalStorage, clearAllTokens, getGoogleToken } from './lib/tokenManager'
 import { refreshPrimaryToken } from './lib/googleCalendar'
-import { getTheme, applyThemeVars, applySamuraiModeOverride } from './lib/themes'
+import { getTheme, applyThemeVars } from './lib/themes'
 import { GraduationCap, Calendar, Mail, CheckSquare, Brain, ArrowRight } from 'lucide-react'
 
 // ─── Mode-specific login themes ──────────────────────────────────────────────
@@ -565,13 +565,8 @@ function App() {
   const behavioralMode    = useBehavioralStore(s => s.mode)
 
   // Apply CSS variables immediately before first paint, then on every theme change.
-  // Samurai mode overrides the selected theme with its own palette.
   useLayoutEffect(() => {
-    if (behavioralEnabled && behavioralMode === 'samurai') {
-      applySamuraiModeOverride()
-    } else {
-      applyThemeVars(getTheme(themeId))
-    }
+    applyThemeVars(getTheme(themeId))
   }, [themeId, behavioralEnabled, behavioralMode])
 
   useEffect(() => {
