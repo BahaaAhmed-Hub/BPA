@@ -9,9 +9,10 @@ interface EisenhowerBoardProps {
   hideCompleted?: boolean
   groupBy?: 'none' | 'type' | 'company'
   allGroupsExpanded?: boolean
+  filteredTaskIds?: Set<string> | null
 }
 
-export function EisenhowerBoard({ onOpen, hideCompleted = false, groupBy = 'none', allGroupsExpanded = true }: EisenhowerBoardProps) {
+export function EisenhowerBoard({ onOpen, hideCompleted = false, groupBy = 'none', allGroupsExpanded = true, filteredTaskIds }: EisenhowerBoardProps) {
   const tasks = useTaskStore(s => s.tasks)
 
   return (
@@ -20,7 +21,11 @@ export function EisenhowerBoard({ onOpen, hideCompleted = false, groupBy = 'none
         <QuadrantColumn
           key={q}
           quadrant={q}
-          tasks={tasks.filter(t => t.quadrant === q && (!hideCompleted || (!t.completed && t.status !== 'done')))}
+          tasks={tasks.filter(t =>
+            t.quadrant === q &&
+            (!hideCompleted || (!t.completed && t.status !== 'done')) &&
+            (!filteredTaskIds || filteredTaskIds.has(t.id))
+          )}
           onOpen={onOpen}
           groupBy={groupBy}
           allGroupsExpanded={allGroupsExpanded}

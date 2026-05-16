@@ -174,11 +174,12 @@ interface Props {
   hideCompleted?: boolean
   groupBy?: 'none' | 'type' | 'company'
   allGroupsExpanded?: boolean
+  filteredTaskIds?: Set<string> | null
 }
 
-export function UndefinedTasksPanel({ onOpen, hideCompleted = false, groupBy = 'none', allGroupsExpanded = true }: Props) {
+export function UndefinedTasksPanel({ onOpen, hideCompleted = false, groupBy = 'none', allGroupsExpanded = true, filteredTaskIds }: Props) {
   const { tasks: allTasks, addTask, addTasksBatch, deleteTask, toggleComplete, updateTask, toggleUrgent } = useTaskStore()
-  const tasks = allTasks.filter(t => !isTaskHidden(t))
+  const tasks = allTasks.filter(t => !isTaskHidden(t) && (!filteredTaskIds || filteredTaskIds.has(t.id)))
   const [filter, setFilter] = useState<Filter>('open')
   const [adding, setAdding] = useState(false)
 
