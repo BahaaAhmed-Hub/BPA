@@ -60,10 +60,18 @@ export function loadVisibleCompanies(): DynamicCompany[] {
 }
 
 /** Returns true if the task belongs to a hidden company and should be excluded from views. */
-export function isTaskHidden(task: { companyId?: string }): boolean {
-  if (!task.companyId) return false
-  const co = loadDynamicCompanies().find(c => c.id === task.companyId)
-  return co?.hidden === true
+export function isTaskHidden(task: { companyId?: string; company?: string }): boolean {
+  const companies = loadDynamicCompanies()
+  if (task.companyId) {
+    const co = companies.find(c => c.id === task.companyId)
+    if (co) return co.hidden === true
+  }
+  if (task.company) {
+    const nameLow = task.company.toLowerCase()
+    const co = companies.find(c => c.name.toLowerCase() === nameLow)
+    if (co) return co.hidden === true
+  }
+  return false
 }
 
 // ─── Eisenhower Quadrants ───────────────────────────────────────────────────
