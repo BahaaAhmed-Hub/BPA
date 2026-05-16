@@ -11,6 +11,7 @@ import { ReviewModule } from './modules/review/ReviewModule'
 import { MorningModule } from './modules/morning/MorningModule'
 import { SettingsModule } from './modules/settings/SettingsModule'
 import { BehavioralOS } from './modules/behavioral/BehavioralOS'
+import { PlanningAssistant } from './modules/planning/PlanningAssistant'
 import { useUIStore } from './store/uiStore'
 import { useAuthStore } from './store/authStore'
 import { useTaskStore } from './store/taskStore'
@@ -475,6 +476,7 @@ function ActiveModule() {
     case 'morning':      return <MorningModule />
     case 'settings':     return <SettingsModule />
     case 'behavioral':   return <BehavioralOS />
+    case 'planning':     return <PlanningAssistant />
     default:             return <ExecutiveDashboard />
   }
 }
