@@ -37,6 +37,7 @@ import {
   type BlockingRule, type DetailLevel,
   loadCachedCalendars, type CachedCalEntry,
 } from '@/lib/blockingRules'
+import { loadCustomStatuses, saveCustomStatuses, DEFAULT_STATUSES, type CustomStatus } from '@/lib/customStatuses'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -63,21 +64,22 @@ interface CompanyRow {
   users: CompanyUser[]
 }
 
-const SECTION_IDS = ['profile','schedule','companies','habits','accounts','professor','notifications','appearance','blocking','behavioral'] as const
+const SECTION_IDS = ['profile','schedule','companies','habits','tasks','accounts','professor','notifications','appearance','blocking','behavioral'] as const
 type SectionId = typeof SECTION_IDS[number]
 
 interface SectionMeta { id: SectionId; title: string; icon: React.ElementType; description: string }
 const SECTION_META: SectionMeta[] = [
-  { id: 'profile',       title: 'Profile',              icon: User,    description: 'Name, timezone, work week & framework' },
-  { id: 'schedule',      title: 'Schedule Rules',       icon: Clock,   description: 'Focus hours, buffers, meeting protections' },
-  { id: 'companies',     title: 'Companies',            icon: Building2, description: 'Contexts, colors, calendar & email domain mapping' },
-  { id: 'habits',        title: 'Habits',               icon: Flame,   description: 'Configure daily habits — synced with Habits page' },
-  { id: 'accounts',      title: 'Connected Accounts',   icon: Link,    description: 'Google accounts, calendars & Gmail access' },
-  { id: 'professor',     title: 'Professor AI',         icon: Brain,   description: 'Communication style, daily brief & review day' },
-  { id: 'notifications', title: 'Notifications',        icon: Bell,    description: 'Morning reminder, wind-down & weekly review nudges' },
-  { id: 'appearance',    title: 'Appearance',           icon: Palette, description: 'Theme, density & sidebar default' },
-  { id: 'blocking',      title: 'Productivity Blocking', icon: Shield,  description: 'Block calendar slots across accounts automatically' },
-  { id: 'behavioral',    title: 'Behavioral OS',        icon: Swords,  description: 'Rank system, identity detection & operating mode' },
+  { id: 'profile',       title: 'Profile',              icon: User,       description: 'Name, timezone, work week & framework' },
+  { id: 'schedule',      title: 'Schedule Rules',       icon: Clock,      description: 'Focus hours, buffers, meeting protections' },
+  { id: 'companies',     title: 'Companies',            icon: Building2,  description: 'Contexts, colors, calendar & email domain mapping' },
+  { id: 'habits',        title: 'Habits',               icon: Flame,      description: 'Configure daily habits — synced with Habits page' },
+  { id: 'tasks',         title: 'Task Configuration',   icon: CheckSquare, description: 'Custom board statuses & task defaults' },
+  { id: 'accounts',      title: 'Connected Accounts',   icon: Link,       description: 'Google accounts, calendars & Gmail access' },
+  { id: 'professor',     title: 'Professor AI',         icon: Brain,      description: 'Communication style, daily brief & review day' },
+  { id: 'notifications', title: 'Notifications',        icon: Bell,       description: 'Morning reminder, wind-down & weekly review nudges' },
+  { id: 'appearance',    title: 'Appearance',           icon: Palette,    description: 'Theme, density & sidebar default' },
+  { id: 'blocking',      title: 'Productivity Blocking', icon: Shield,    description: 'Block calendar slots across accounts automatically' },
+  { id: 'behavioral',    title: 'Behavioral OS',        icon: Swords,     description: 'Rank system, identity detection & operating mode' },
 ]
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -782,12 +784,13 @@ interface SettingsHabitFormState {
 }
 
 function SettingsHabitForm({
-  initial, colors, onSave, onCancel,
+  initial, colors, onSave, onCancel, saveLabel = 'Add Habit',
 }: {
   initial: SettingsHabitFormState
   colors: string[]
   onSave: (s: SettingsHabitFormState) => void
   onCancel: () => void
+  saveLabel?: string
 }) {
   const [s, setS] = useState<SettingsHabitFormState>(initial)
   const update = (patch: Partial<SettingsHabitFormState>) => setS(prev => ({ ...prev, ...patch }))
@@ -861,7 +864,7 @@ function SettingsHabitForm({
         </button>
         <button onClick={() => valid && onSave(s)} disabled={!valid}
           style={{ padding: '6px 16px', borderRadius: 7, background: 'var(--color-accent-fill)', border: '1px solid var(--color-accent, #1E40AF)50', color: 'var(--color-accent, #1E40AF)', fontSize: 12, fontWeight: 500, cursor: valid ? 'pointer' : 'default', opacity: valid ? 1 : 0.4, display: 'flex', gap: 5, alignItems: 'center' }}>
-          <Plus size={11} /> Add Habit
+          <Plus size={11} /> {saveLabel}
         </button>
       </div>
     </div>
@@ -872,11 +875,14 @@ function HabitsSection() {
   const COLORS = getHabitColors()
   const { habits, addHabit: storeAdd, updateHabit, deleteHabit: storeDel } = useHabitsStore()
   const [adding, setAdding] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
 
   function toggle(id: string) {
     const h = habits.find(x => x.id === id)
     if (h) updateHabit(id, { isActive: !h.isActive })
   }
+
+  const editingHabit = editingId ? habits.find(h => h.id === editingId) : null
 
   return (
     <div>
@@ -885,29 +891,63 @@ function HabitsSection() {
       </p>
 
       {habits.map(h => (
-        <div key={h.id} style={{
-          display: 'flex', alignItems: 'center', gap: 12,
-          padding: '10px 0', borderBottom: '1px solid var(--color-border, #252A3E)',
-          opacity: h.isActive ? 1 : 0.5,
-        }}>
-          <span style={{ fontSize: 18, flexShrink: 0 }}>{h.emoji}</span>
-          <div style={{ width: 10, height: 10, borderRadius: '50%', background: h.color, flexShrink: 0 }} />
-          <span style={{ flex: 1, fontSize: 13.5, color: 'var(--color-text, #E8EAF6)' }}>{h.name}</span>
-          {h.type === 'quantity' && h.goal && h.unit && (
-            <span style={{ fontSize: 10.5, color: 'var(--color-text-muted, #6B7280)', background: 'var(--color-surface2, #0D0F1A)', padding: '2px 7px', borderRadius: 4, border: '1px solid var(--color-border, #252A3E)' }}>
-              {h.goal} {h.unit}
+        <div key={h.id}>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 12,
+            padding: '10px 0', borderBottom: '1px solid var(--color-border, #252A3E)',
+            opacity: h.isActive ? 1 : 0.5,
+          }}>
+            <span style={{ fontSize: 18, flexShrink: 0 }}>{h.emoji}</span>
+            <div style={{ width: 10, height: 10, borderRadius: '50%', background: h.color, flexShrink: 0 }} />
+            <span style={{ flex: 1, fontSize: 13.5, color: 'var(--color-text, #E8EAF6)' }}>{h.name}</span>
+            {h.type === 'quantity' && h.goal && h.unit && (
+              <span style={{ fontSize: 10.5, color: 'var(--color-text-muted, #6B7280)', background: 'var(--color-surface2, #0D0F1A)', padding: '2px 7px', borderRadius: 4, border: '1px solid var(--color-border, #252A3E)' }}>
+                {h.goal} {h.unit}
+              </span>
+            )}
+            <span style={{ fontSize: 10, color: 'var(--color-text-muted, #6B7280)', background: 'var(--color-surface2, #0D0F1A)', padding: '2px 7px', borderRadius: 4, border: '1px solid var(--color-border, #252A3E)' }}>
+              {h.type === 'quantity' ? `# qty` : '✓'}
             </span>
+            <span style={{ fontSize: 11, color: 'var(--color-text-muted, #6B7280)', background: 'var(--color-surface2, #0D0F1A)', padding: '2px 8px', borderRadius: 4 }}>
+              {h.frequency}
+            </span>
+            <Toggle checked={h.isActive} onChange={() => toggle(h.id)} />
+            <button onClick={() => setEditingId(editingId === h.id ? null : h.id)} title="Edit habit"
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: editingId === h.id ? 'var(--color-accent, #1E40AF)' : 'var(--color-text-muted, #6B7280)', padding: 4 }}>
+              <Pencil size={13} />
+            </button>
+            <button onClick={() => { if (editingId === h.id) setEditingId(null); storeDel(h.id) }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted, #6B7280)', padding: 4 }}>
+              <Trash2 size={13} />
+            </button>
+          </div>
+
+          {/* Inline edit form */}
+          {editingId === h.id && editingHabit && (
+            <SettingsHabitForm
+              key={h.id + '-edit'}
+              initial={{
+                name: h.name, emoji: h.emoji, color: h.color,
+                freq: h.frequency as typeof FREQ_OPTS[number],
+                type: h.type ?? 'boolean',
+                goal: h.goal != null ? String(h.goal) : '',
+                unit: h.unit ?? '',
+              }}
+              colors={COLORS}
+              saveLabel="Save Changes"
+              onSave={s => {
+                updateHabit(h.id, {
+                  name: s.name.trim(), emoji: s.emoji, color: s.color,
+                  frequency: s.freq,
+                  type: s.type,
+                  goal: s.type === 'quantity' ? parseFloat(s.goal) : undefined,
+                  unit: s.type === 'quantity' ? s.unit.trim() : undefined,
+                })
+                setEditingId(null)
+              }}
+              onCancel={() => setEditingId(null)}
+            />
           )}
-          <span style={{ fontSize: 10, color: 'var(--color-text-muted, #6B7280)', background: 'var(--color-surface2, #0D0F1A)', padding: '2px 7px', borderRadius: 4, border: '1px solid var(--color-border, #252A3E)' }}>
-            {h.type === 'quantity' ? `# qty` : '✓'}
-          </span>
-          <span style={{ fontSize: 11, color: 'var(--color-text-muted, #6B7280)', background: 'var(--color-surface2, #0D0F1A)', padding: '2px 8px', borderRadius: 4 }}>
-            {h.frequency}
-          </span>
-          <Toggle checked={h.isActive} onChange={() => toggle(h.id)} />
-          <button onClick={() => storeDel(h.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted, #6B7280)', padding: 4 }}>
-            <Trash2 size={13} />
-          </button>
         </div>
       ))}
 
@@ -928,7 +968,7 @@ function HabitsSection() {
           onCancel={() => setAdding(false)}
         />
       ) : (
-        <button onClick={() => setAdding(true)} style={{
+        <button onClick={() => { setEditingId(null); setAdding(true) }} style={{
           marginTop: 12, display: 'flex', alignItems: 'center', gap: 7, width: '100%',
           padding: '11px 16px', borderRadius: 9, background: 'transparent',
           border: '1px dashed var(--color-border, #252A3E)',
@@ -937,6 +977,157 @@ function HabitsSection() {
           <Plus size={13} /> Add a habit
         </button>
       )}
+    </div>
+  )
+}
+
+// ─── Task Statuses Section ───────────────────────────────────────────────────
+
+const STATUS_COLORS_PRESETS = ['#6B7280','#3B82F6','#F59E0B','#EF4444','#F97316','#10B981','#8B5CF6','#EC4899','#14B8A6','#F97316']
+
+function TaskStatusesSection() {
+  const [statuses, setStatuses] = useState<CustomStatus[]>(loadCustomStatuses)
+  const [editIdx, setEditIdx] = useState<number | null>(null)
+  const [adding, setAdding] = useState(false)
+  const [draft, setDraft] = useState<{ id: string; label: string; color: string }>({ id: '', label: '', color: '#6B7280' })
+
+  function persist(next: CustomStatus[]) {
+    setStatuses(next)
+    saveCustomStatuses(next)
+  }
+
+  function startAdd() {
+    setEditIdx(null)
+    setDraft({ id: '', label: '', color: '#6B7280' })
+    setAdding(true)
+  }
+
+  function startEdit(i: number) {
+    setAdding(false)
+    setEditIdx(i)
+    setDraft({ ...statuses[i] })
+  }
+
+  function confirmSave() {
+    const id = draft.id.trim().toLowerCase().replace(/\s+/g, '-') || draft.label.trim().toLowerCase().replace(/\s+/g, '-')
+    const label = draft.label.trim()
+    if (!label || !id) return
+    if (adding) {
+      persist([...statuses, { id, label, color: draft.color }])
+      setAdding(false)
+    } else if (editIdx !== null) {
+      const next = statuses.map((s, i) => i === editIdx ? { id, label, color: draft.color } : s)
+      persist(next)
+      setEditIdx(null)
+    }
+  }
+
+  function remove(i: number) {
+    persist(statuses.filter((_, idx) => idx !== i))
+    if (editIdx === i) setEditIdx(null)
+  }
+
+  function resetDefaults() {
+    persist(DEFAULT_STATUSES)
+    setEditIdx(null)
+    setAdding(false)
+  }
+
+  const isEditingRow = (i: number) => editIdx === i && !adding
+
+  const formEl = (
+    <div style={{ padding: '10px 14px', background: 'var(--color-surface2, #0D0F1A)', borderRadius: 8, border: '1px solid var(--color-border, #252A3E)', marginTop: 4, display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 11, color: 'var(--color-text-muted, #6B7280)', marginBottom: 4, fontWeight: 600 }}>Label</div>
+          <input value={draft.label} onChange={e => setDraft(p => ({ ...p, label: e.target.value }))}
+            placeholder="e.g. In Review" autoFocus
+            style={{ ...inputStyle, fontSize: 12.5 }}
+            onKeyDown={e => { if (e.key === 'Enter') confirmSave(); if (e.key === 'Escape') { setAdding(false); setEditIdx(null) } }} />
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 11, color: 'var(--color-text-muted, #6B7280)', marginBottom: 4, fontWeight: 600 }}>ID (slug)</div>
+          <input value={draft.id} onChange={e => setDraft(p => ({ ...p, id: e.target.value }))}
+            placeholder="auto from label"
+            style={{ ...inputStyle, fontSize: 12.5 }} />
+        </div>
+      </div>
+      <div>
+        <div style={{ fontSize: 11, color: 'var(--color-text-muted, #6B7280)', marginBottom: 6, fontWeight: 600 }}>Color</div>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {STATUS_COLORS_PRESETS.map(c => (
+            <button key={c} onClick={() => setDraft(p => ({ ...p, color: c }))} style={{
+              width: 22, height: 22, borderRadius: '50%', background: c, border: 'none', cursor: 'pointer',
+              outline: draft.color === c ? `2px solid ${c}` : 'none', outlineOffset: 2,
+            }} />
+          ))}
+          <input type="color" value={draft.color} onChange={e => setDraft(p => ({ ...p, color: e.target.value }))}
+            style={{ width: 22, height: 22, border: 'none', borderRadius: '50%', padding: 0, cursor: 'pointer', background: 'transparent' }} />
+        </div>
+      </div>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button onClick={() => { setAdding(false); setEditIdx(null) }}
+          style={{ padding: '5px 12px', borderRadius: 6, background: 'transparent', border: '1px solid var(--color-border, #252A3E)', color: 'var(--color-text-muted, #6B7280)', fontSize: 12, cursor: 'pointer', display: 'flex', gap: 4, alignItems: 'center' }}>
+          <X size={11} /> Cancel
+        </button>
+        <button onClick={confirmSave}
+          style={{ padding: '5px 14px', borderRadius: 6, background: 'var(--color-accent-fill)', border: '1px solid var(--color-accent, #1E40AF)50', color: 'var(--color-accent, #1E40AF)', fontSize: 12, fontWeight: 500, cursor: 'pointer', display: 'flex', gap: 4, alignItems: 'center' }}>
+          <Plus size={11} /> {adding ? 'Add Status' : 'Save'}
+        </button>
+      </div>
+    </div>
+  )
+
+  return (
+    <div>
+      <p style={{ margin: '0 0 14px', fontSize: 12.5, color: 'var(--color-text-muted, #6B7280)' }}>
+        Define custom board statuses. These appear as columns in the Status board and in the task detail dropdown.
+      </p>
+
+      {statuses.map((s, i) => (
+        <div key={s.id + i}>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 10,
+            padding: '9px 0', borderBottom: '1px solid var(--color-border, #252A3E)',
+          }}>
+            <div style={{ width: 10, height: 10, borderRadius: '50%', background: s.color, flexShrink: 0 }} />
+            <span style={{ flex: 1, fontSize: 13.5, color: 'var(--color-text, #E8EAF6)' }}>{s.label}</span>
+            <span style={{ fontSize: 10.5, color: 'var(--color-text-muted, #6B7280)', background: 'var(--color-surface2, #0D0F1A)', padding: '2px 7px', borderRadius: 4, border: '1px solid var(--color-border, #252A3E)' }}>
+              {s.id}
+            </span>
+            <button onClick={() => startEdit(i)} title="Edit"
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: isEditingRow(i) ? 'var(--color-accent, #1E40AF)' : 'var(--color-text-muted, #6B7280)', padding: 4 }}>
+              <Pencil size={13} />
+            </button>
+            <button onClick={() => remove(i)} title="Delete"
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted, #6B7280)', padding: 4 }}>
+              <Trash2 size={13} />
+            </button>
+          </div>
+          {isEditingRow(i) && formEl}
+        </div>
+      ))}
+
+      {adding && formEl}
+
+      <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+        <button onClick={startAdd} style={{
+          flex: 1, display: 'flex', alignItems: 'center', gap: 7,
+          padding: '11px 16px', borderRadius: 9, background: 'transparent',
+          border: '1px dashed var(--color-border, #252A3E)',
+          color: 'var(--color-text-muted, #6B7280)', fontSize: 13, cursor: 'pointer',
+        }}>
+          <Plus size={13} /> Add a status
+        </button>
+        <button onClick={resetDefaults} title="Reset to defaults" style={{
+          padding: '11px 14px', borderRadius: 9, background: 'transparent',
+          border: '1px solid var(--color-border, #252A3E)',
+          color: 'var(--color-text-muted, #6B7280)', fontSize: 12, cursor: 'pointer',
+          display: 'flex', alignItems: 'center', gap: 5,
+        }}>
+          <RefreshCw size={12} /> Reset
+        </button>
+      </div>
     </div>
   )
 }
@@ -1970,6 +2161,7 @@ export function Settings() {
                                         ...accounts,
                                       ]} />}
         {id === 'habits'        && <HabitsSection />}
+        {id === 'tasks'         && <TaskStatusesSection />}
         {id === 'accounts'      && <AccountsSection      accounts={accounts}
                                       setAccounts={a => { setAccounts(a) }}
                                       primaryEmail={primaryEmail} />}

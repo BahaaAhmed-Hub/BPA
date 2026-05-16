@@ -7,11 +7,12 @@ import {
 } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
 import { useTaskStore } from '@/store/taskStore'
-import type { Task, TaskType, BoardStatus } from '@/types'
+import type { Task, TaskType } from '@/types'
 import {
-  BOARD_STATUS_META, TASK_TYPE_META, inferTaskType,
+  TASK_TYPE_META, inferTaskType,
   loadVisibleCompanies, getAllUsers, isTaskHidden,
 } from '@/types'
+import { loadCustomStatuses, getStatusMeta } from '@/lib/customStatuses'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -48,35 +49,69 @@ function getScheduledBucket(dueDate: string | undefined): string {
   return 'later'
 }
 
+function bucketToDate(bucket: string): string | undefined {
+  const today = new Date(); today.setHours(0, 0, 0, 0)
+  if (bucket === 'overdue' || bucket === 'today') {
+    return today.toISOString().slice(0, 10)
+  }
+  if (bucket === 'this-week') {
+    const d = new Date(today); d.setDate(d.getDate() + 1)
+    return d.toISOString().slice(0, 10)
+  }
+  if (bucket === 'next-week') {
+    const d = new Date(today)
+    const day = d.getDay()
+    const daysUntilMonday = day === 1 ? 7 : (8 - day) % 7
+    d.setDate(d.getDate() + daysUntilMonday)
+    return d.toISOString().slice(0, 10)
+  }
+  if (bucket === 'later') {
+    const d = new Date(today); d.setDate(d.getDate() + 14)
+    return d.toISOString().slice(0, 10)
+  }
+  return undefined // unscheduled → clear dueDate
+}
+
+function sortByUrgency(tasks: Task[]): Task[] {
+  return [...tasks].sort((a, b) => {
+    if (a.urgent && !b.urgent) return -1
+    if (!a.urgent && b.urgent) return 1
+    return 0
+  })
+}
+
 // ── Card ─────────────────────────────────────────────────────────────────────
 
 function KanbanCard({ task, onOpen, overlay = false }: { task: Task; onOpen: () => void; overlay?: boolean }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: task.id })
-  const companies = loadVisibleCompanies()
-  const allUsers  = getAllUsers()
+  const updateTask  = useTaskStore(s => s.updateTask)
+  const companies   = loadVisibleCompanies()
+  const allUsers    = getAllUsers()
 
-  const company     = task.companyId ? companies.find(c => c.id === task.companyId) : null
-  const companyName = company?.name ?? (task.company !== 'personal' ? task.company : null)
+  const company      = task.companyId ? companies.find(c => c.id === task.companyId) : null
+  const companyName  = company?.name ?? (task.company !== 'personal' ? task.company : null)
   const companyColor = company?.color ?? '#7F77DD'
-  const companyAbbr = companyName
+  const companyAbbr  = companyName
     ? companyName.split(/[\s(]+/).map((w: string) => w[0]).join('').toUpperCase().slice(0, 3)
     : ''
 
-  const isPersonal  = !task.companyId && task.company === 'personal'
-  const priority    = task.quadrant ? QUADRANT_PRIORITY[task.quadrant] : null
-  const taskType    = task.taskType ?? inferTaskType(task.title)
-  const typeMeta    = TASK_TYPE_META[taskType]
-  const owner       = task.owner ? allUsers.find(u => u.id === task.owner) : null
+  const isPersonal    = !task.companyId && task.company === 'personal'
+  const priority      = task.quadrant ? QUADRANT_PRIORITY[task.quadrant] : null
+  const taskType      = task.taskType ?? inferTaskType(task.title)
+  const typeMeta      = TASK_TYPE_META[taskType]
+  const owner         = task.owner ? allUsers.find(u => u.id === task.owner) : null
   const ownerInitials = owner
     ? owner.name.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2)
     : null
+
+  const statusMeta = task.boardStatus ? getStatusMeta(task.boardStatus) : null
 
   const style: React.CSSProperties = {
     transform: overlay ? undefined : CSS.Translate.toString(transform),
     opacity:   isDragging ? 0.35 : 1,
     cursor:    isDragging ? 'grabbing' : 'grab',
     background:   'var(--color-surface, #161929)',
-    border:       `1px solid var(--color-border, #252A3E)`,
+    border:       `1px solid ${task.urgent ? 'rgba(224,82,82,0.5)' : 'var(--color-border, #252A3E)'}`,
     borderRadius: 10,
     padding:      '12px 13px',
     marginBottom: 8,
@@ -90,18 +125,31 @@ function KanbanCard({ task, onOpen, overlay = false }: { task: Task; onOpen: () 
     <div ref={setNodeRef} style={style} {...attributes} {...listeners}
       onClick={e => { e.stopPropagation(); if (!isDragging) onOpen() }}
     >
-      {/* Urgent indicator */}
+      {/* Urgent left border */}
       {task.urgent && (
         <div style={{ position: 'absolute', top: 0, left: 0, width: 3, height: '100%', background: '#E05252', borderRadius: '10px 0 0 10px' }} />
       )}
 
-      {/* Title */}
-      <div style={{
-        fontSize: 12.5, fontWeight: 600, color: 'var(--color-text, #E8EAF6)',
-        marginBottom: 9, lineHeight: 1.45,
-        display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
-      }}>
-        {task.title}
+      {/* Top row: title + lightning bolt */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6, marginBottom: 9 }}>
+        <div style={{
+          flex: 1, fontSize: 12.5, fontWeight: 600, color: 'var(--color-text, #E8EAF6)',
+          lineHeight: 1.45,
+          display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+        }}>
+          {task.title}
+        </div>
+        <button
+          onPointerDown={e => e.stopPropagation()}
+          onClick={e => { e.stopPropagation(); updateTask(task.id, { urgent: !task.urgent }) }}
+          title={task.urgent ? 'Mark not urgent' : 'Mark urgent'}
+          style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            padding: '0 2px', fontSize: 13, lineHeight: 1, flexShrink: 0,
+            color: task.urgent ? '#F59E0B' : 'var(--color-text-muted, #6B7280)',
+            opacity: task.urgent ? 1 : 0.35,
+          }}
+        >⚡</button>
       </div>
 
       {/* Badges row */}
@@ -151,13 +199,12 @@ function KanbanCard({ task, onOpen, overlay = false }: { task: Task; onOpen: () 
             Unsch.
           </span>
         )}
-        {task.boardStatus && (
+        {statusMeta && (
           <span style={{
             fontSize: 10, fontWeight: 600, padding: '2px 6px', borderRadius: 4,
-            background: `${BOARD_STATUS_META[task.boardStatus].color}18`,
-            color: BOARD_STATUS_META[task.boardStatus].color,
+            background: `${statusMeta.color}18`, color: statusMeta.color,
           }}>
-            {BOARD_STATUS_META[task.boardStatus].label}
+            {statusMeta.label}
           </span>
         )}
         {ownerInitials && (
@@ -198,7 +245,6 @@ function KanbanColumnComp({ column, onOpen, onColDragStart, onColDragOver, onCol
     >
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, paddingLeft: 2, flexShrink: 0 }}>
-        {/* Drag handle */}
         <span
           draggable
           onDragStart={() => onColDragStart(column.id)}
@@ -249,6 +295,73 @@ function KanbanColumnComp({ column, onOpen, onColDragStart, onColDragOver, onCol
   )
 }
 
+// ── Date Picker Overlay (shown when dropping a task into "Planned") ───────────
+
+function DatePickerOverlay({
+  taskTitle,
+  onConfirm,
+  onCancel,
+}: {
+  taskTitle: string
+  onConfirm: (date: string) => void
+  onCancel: () => void
+}) {
+  const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 9999,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+    }}>
+      <div style={{
+        background: 'var(--color-surface, #161929)', borderRadius: 14,
+        padding: 24, width: 320, border: '1px solid var(--color-border, #252A3E)',
+        boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+      }}>
+        <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-text, #E8EAF6)', marginBottom: 6 }}>
+          Plan this task
+        </div>
+        <div style={{ fontSize: 12, color: 'var(--color-text-muted, #6B7280)', marginBottom: 16, lineHeight: 1.5 }}>
+          {taskTitle}
+        </div>
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 11, color: 'var(--color-text-muted, #6B7280)', marginBottom: 6, fontWeight: 600 }}>
+            Planned Date
+          </div>
+          <input
+            type="date"
+            value={date}
+            onChange={e => setDate(e.target.value)}
+            autoFocus
+            style={{
+              width: '100%', boxSizing: 'border-box',
+              background: 'var(--color-bg, #0D0F1A)',
+              border: '1px solid var(--color-border, #252A3E)',
+              borderRadius: 6, padding: '7px 10px',
+              fontSize: 13, color: 'var(--color-text, #E8EAF6)',
+              outline: 'none', fontFamily: 'inherit',
+            }}
+          />
+        </div>
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+          <button onClick={onCancel} style={{
+            padding: '7px 16px', borderRadius: 7, background: 'transparent',
+            border: '1px solid var(--color-border, #252A3E)',
+            color: 'var(--color-text-muted, #6B7280)', fontSize: 12, cursor: 'pointer',
+          }}>Cancel</button>
+          <button onClick={() => date && onConfirm(date)} disabled={!date} style={{
+            padding: '7px 18px', borderRadius: 7,
+            background: 'rgba(59,130,246,0.15)',
+            border: '1px solid rgba(59,130,246,0.4)',
+            color: '#3B82F6', fontSize: 12, fontWeight: 600,
+            cursor: date ? 'pointer' : 'default', opacity: date ? 1 : 0.5,
+          }}>Set Date &amp; Plan</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Board ─────────────────────────────────────────────────────────────────────
 
 interface KanbanBoardProps {
@@ -263,6 +376,7 @@ export function KanbanBoard({ onOpen, hideCompleted = false, filteredTaskIds }: 
     (localStorage.getItem('task-board-type') as BoardType) ?? 'status'
   )
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null)
+  const [pendingPlanTask, setPendingPlanTask] = useState<{ taskId: string; title: string } | null>(null)
   const dragColRef = useRef<string | null>(null)
   const [colOrder, setColOrder] = useState<Record<string, string[]>>(() => {
     try { return JSON.parse(localStorage.getItem('task-board-col-order') || '{}') } catch { return {} }
@@ -282,14 +396,18 @@ export function KanbanBoard({ onOpen, hideCompleted = false, filteredTaskIds }: 
     localStorage.setItem('task-board-type', type)
   }
 
+  const customStatuses = useMemo(() => loadCustomStatuses(), [])
+
+  // Check if any status has id 'planned' for date-picker logic
+  const hasPlannedStatus = customStatuses.some(s => s.id === 'planned')
+
   const columns = useMemo<Column[]>(() => {
     if (boardType === 'status') {
-      const statuses: BoardStatus[] = ['backlog', 'planned', 'in-progress', 'blocked', 'delayed', 'done']
-      return statuses.map(s => ({
-        id:    s,
-        label: BOARD_STATUS_META[s].label,
-        color: BOARD_STATUS_META[s].color,
-        tasks: tasks.filter(t => (t.boardStatus ?? 'backlog') === s),
+      return customStatuses.map(s => ({
+        id:    s.id,
+        label: s.label,
+        color: s.color,
+        tasks: sortByUrgency(tasks.filter(t => (t.boardStatus ?? 'backlog') === s.id)),
       }))
     }
 
@@ -298,37 +416,34 @@ export function KanbanBoard({ onOpen, hideCompleted = false, filteredTaskIds }: 
         id:    co.id,
         label: co.name,
         color: co.color,
-        tasks: tasks.filter(t =>
+        tasks: sortByUrgency(tasks.filter(t =>
           t.companyId === co.id ||
           (!t.companyId && t.company?.toLowerCase() === co.name.toLowerCase())
-        ),
+        )),
       }))
       const assigned = new Set(cols.flatMap(c => c.tasks.map(t => t.id)))
       cols.push({
         id:    'personal',
         label: 'Personal',
         color: '#888780',
-        tasks: tasks.filter(t => !assigned.has(t.id)),
+        tasks: sortByUrgency(tasks.filter(t => !assigned.has(t.id))),
       })
       return cols
     }
 
     if (boardType === 'owner') {
-      const ownerIds = [...new Set(tasks.map(t => t.owner).filter(Boolean) as string[])]
-      const cols: Column[] = ownerIds.map(ownerId => {
-        const user = allUsers.find(u => u.id === ownerId)
-        return {
-          id:    ownerId,
-          label: user?.name ?? 'Unknown',
-          color: '#7F77DD',
-          tasks: tasks.filter(t => t.owner === ownerId),
-        }
-      })
+      // Show ALL users from all companies, not just those with tasks
+      const cols: Column[] = allUsers.map(u => ({
+        id:    u.id,
+        label: u.name,
+        color: '#7F77DD',
+        tasks: sortByUrgency(tasks.filter(t => t.owner === u.id)),
+      }))
       cols.push({
         id:    'unassigned',
         label: 'Unassigned',
         color: '#6B7280',
-        tasks: tasks.filter(t => !t.owner),
+        tasks: sortByUrgency(tasks.filter(t => !t.owner)),
       })
       return cols
     }
@@ -338,29 +453,29 @@ export function KanbanBoard({ onOpen, hideCompleted = false, filteredTaskIds }: 
         id:    type,
         label: `${TASK_TYPE_META[type].emoji} ${TASK_TYPE_META[type].label}`,
         color: TASK_TYPE_META[type].color,
-        tasks: tasks.filter(t => (t.taskType ?? inferTaskType(t.title)) === type),
+        tasks: sortByUrgency(tasks.filter(t => (t.taskType ?? inferTaskType(t.title)) === type)),
       }))
     }
 
     if (boardType === 'scheduled') {
       const buckets = [
-        { id: 'overdue',     label: 'Overdue',      color: '#EF4444' },
-        { id: 'today',       label: 'Today',         color: '#3B82F6' },
-        { id: 'this-week',   label: 'This Week',     color: '#8B5CF6' },
-        { id: 'next-week',   label: 'Next Week',     color: '#6366F1' },
-        { id: 'later',       label: 'Later',         color: '#6B7280' },
-        { id: 'unscheduled', label: 'Unscheduled',   color: '#9CA3AF' },
+        { id: 'overdue',     label: 'Overdue',    color: '#EF4444' },
+        { id: 'today',       label: 'Today',      color: '#3B82F6' },
+        { id: 'this-week',   label: 'This Week',  color: '#8B5CF6' },
+        { id: 'next-week',   label: 'Next Week',  color: '#6366F1' },
+        { id: 'later',       label: 'Later',      color: '#6B7280' },
+        { id: 'unscheduled', label: 'Unscheduled',color: '#9CA3AF' },
       ]
       return buckets.map(b => ({
         id:    b.id,
         label: b.label,
         color: b.color,
-        tasks: tasks.filter(t => getScheduledBucket(t.dueDate) === b.id),
+        tasks: sortByUrgency(tasks.filter(t => getScheduledBucket(t.dueDate) === b.id)),
       }))
     }
 
     return []
-  }, [tasks, boardType, companies, allUsers])
+  }, [tasks, boardType, companies, allUsers, customStatuses])
 
   const orderedColumns = useMemo(() => {
     const order = colOrder[boardType]
@@ -397,9 +512,14 @@ export function KanbanBoard({ onOpen, hideCompleted = false, filteredTaskIds }: 
     if (!over) return
     const taskId   = active.id as string
     const columnId = over.id as string
+    const task     = tasks.find(t => t.id === taskId)
 
     if (boardType === 'status') {
-      updateTask(taskId, { boardStatus: columnId as BoardStatus })
+      if (hasPlannedStatus && columnId === 'planned') {
+        setPendingPlanTask({ taskId, title: task?.title ?? '' })
+      } else {
+        updateTask(taskId, { boardStatus: columnId })
+      }
     } else if (boardType === 'company') {
       if (columnId === 'personal') {
         updateTask(taskId, { company: 'personal', companyId: undefined })
@@ -411,14 +531,27 @@ export function KanbanBoard({ onOpen, hideCompleted = false, filteredTaskIds }: 
       updateTask(taskId, { owner: columnId === 'unassigned' ? undefined : columnId })
     } else if (boardType === 'type') {
       updateTask(taskId, { taskType: columnId as TaskType })
+    } else if (boardType === 'scheduled') {
+      updateTask(taskId, { dueDate: bucketToDate(columnId) })
     }
-    // 'scheduled' board uses date buckets — dragging not meaningful without picking a date
   }
 
   const activeTask = activeTaskId ? tasks.find(t => t.id === activeTaskId) ?? null : null
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      {/* Date picker overlay for "Planned" column */}
+      {pendingPlanTask && (
+        <DatePickerOverlay
+          taskTitle={pendingPlanTask.title}
+          onConfirm={date => {
+            updateTask(pendingPlanTask.taskId, { boardStatus: 'planned', dueDate: date })
+            setPendingPlanTask(null)
+          }}
+          onCancel={() => setPendingPlanTask(null)}
+        />
+      )}
+
       {/* Board type tabs */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 6, padding: '10px 28px',
@@ -440,11 +573,6 @@ export function KanbanBoard({ onOpen, hideCompleted = false, filteredTaskIds }: 
             </button>
           ))}
         </div>
-        {boardType === 'scheduled' && (
-          <span style={{ fontSize: 11, color: 'var(--color-text-muted, #6B7280)', fontStyle: 'italic', marginLeft: 8 }}>
-            Drag not supported — edit task to change date
-          </span>
-        )}
       </div>
 
       {/* Columns */}
