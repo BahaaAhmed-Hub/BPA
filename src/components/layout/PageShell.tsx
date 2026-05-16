@@ -11,7 +11,7 @@ export function PageShell({ children }: PageShellProps) {
         flex: 1,
         overflow: 'auto',
         background: 'var(--color-bg, #0D0F1A)',
-        minHeight: '100vh',
+        height: '100vh',
       }}
     >
       {children}
