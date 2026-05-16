@@ -135,62 +135,87 @@ function DraggableTaskCard({ task, scheduled, creating, gcalDone }: {
 
 // ── Droppable Hour Slot ───────────────────────────────────────────────────────
 
-function HourSlot({ hour, block, taskTitle, onRemove, busyEvents }: {
+function HourSlot({ hour, block, taskTitle, onRemove, busyEventsAtStart, isBusyContinued, isPast, onOpenTask }: {
   hour: number
   block?: ScheduledBlock
   taskTitle?: string
   onRemove?: () => void
-  busyEvents?: GCalEvent[]
+  busyEventsAtStart?: { event: GCalEvent; durationHours: number }[]
+  isBusyContinued?: boolean
+  isPast?: boolean
+  onOpenTask?: (taskId: string) => void
 }) {
-  const { setNodeRef, isOver } = useDroppable({ id: `slot-${hour}` })
+  const { setNodeRef, isOver } = useDroppable({ id: `slot-${hour}`, disabled: isPast })
   const blocked = hour < 6 || hour >= 22
-  const busy = busyEvents && busyEvents.length > 0
-  const busyLabel = busyEvents?.map(e => e.summary ?? 'Busy').join(', ')
+  const hasBusyStart = busyEventsAtStart && busyEventsAtStart.length > 0
 
   return (
     <div ref={setNodeRef} style={{
       display: 'flex', height: HOUR_PX,
       borderBottom: '1px solid #F3F4F6',
-      background: isOver ? 'rgba(249,115,22,0.05)' : busy ? 'rgba(59,130,246,0.04)' : 'transparent',
+      background: isPast
+        ? 'rgba(0,0,0,0.03)'
+        : isOver
+          ? 'rgba(249,115,22,0.05)'
+          : (hasBusyStart || isBusyContinued)
+            ? 'rgba(59,130,246,0.04)'
+            : 'transparent',
       transition: 'background 0.12s', position: 'relative',
+      opacity: isPast ? 0.5 : 1,
     }}>
       <div style={{ width: 56, flexShrink: 0, display: 'flex', alignItems: 'flex-start', paddingTop: 6, paddingRight: 10, justifyContent: 'flex-end' }}>
-        <span style={{ fontSize: 11, color: '#9CA3AF', fontWeight: 500 }}>{hourLabel(hour)}</span>
+        <span style={{ fontSize: 11, color: isPast ? '#C9CBD0' : '#9CA3AF', fontWeight: 500 }}>{hourLabel(hour)}</span>
       </div>
       <div style={{ flex: 1, position: 'relative', borderLeft: '1px solid #F3F4F6' }}>
-        {blocked && !block && !busy && (
+        {isPast && !block && (
+          <div style={{ position: 'absolute', inset: 0, background: 'repeating-linear-gradient(45deg, transparent, transparent 6px, rgba(0,0,0,0.03) 6px, rgba(0,0,0,0.03) 12px)' }} />
+        )}
+        {blocked && !block && !hasBusyStart && !isPast && (
           <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <span style={{ fontSize: 16, opacity: 0.25 }}>🚫</span>
           </div>
         )}
-        {/* Calendar busy overlay */}
-        {busy && !block && (
+        {/* Continued busy hours: just a thin left border tint, no label */}
+        {isBusyContinued && !block && (
           <div style={{
-            position: 'absolute', top: 2, left: 4, right: 4, bottom: 2,
+            position: 'absolute', inset: 0,
+            borderLeft: '3px solid rgba(59,130,246,0.3)',
+            background: 'rgba(59,130,246,0.04)',
+          }} />
+        )}
+        {/* Calendar busy block — only render at the start hour, spans full duration */}
+        {hasBusyStart && !block && busyEventsAtStart!.map(({ event: evt, durationHours }) => (
+          <div key={evt.id ?? evt.summary} style={{
+            position: 'absolute', top: 2, left: 4, right: 4,
+            height: durationHours * HOUR_PX - 4,
             background: 'rgba(59,130,246,0.12)',
             border: '1px solid rgba(59,130,246,0.25)',
-            borderRadius: 5,
-            display: 'flex', alignItems: 'center', padding: '0 7px',
+            borderRadius: 5, zIndex: 1,
+            display: 'flex', alignItems: 'flex-start', padding: '5px 7px',
           }}>
             <span style={{ fontSize: 10, color: '#3B82F6', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              📅 {busyLabel}
+              📅 {evt.summary ?? 'Busy'}
             </span>
           </div>
-        )}
+        ))}
         {/* Scheduled task block */}
         {block && (
-          <div style={{
-            position: 'absolute',
-            top: 2, left: 6, right: 6,
-            height: block.durationHours * HOUR_PX - 4,
-            background: block.gcalEventId
-              ? 'linear-gradient(135deg, #10B981, #34D399)'
-              : 'linear-gradient(135deg, #F97316, #FB923C)',
-            borderRadius: 6, zIndex: 2,
-            display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
-            padding: '5px 8px',
-            boxShadow: `0 2px 6px rgba(${block.gcalEventId ? '16,185,129' : '249,115,22'},0.25)`,
-          }}>
+          <div
+            onClick={() => onOpenTask?.(block.taskId)}
+            style={{
+              position: 'absolute',
+              top: 2, left: 6, right: 6,
+              height: block.durationHours * HOUR_PX - 4,
+              background: block.gcalEventId
+                ? 'linear-gradient(135deg, #10B981, #34D399)'
+                : 'linear-gradient(135deg, #F97316, #FB923C)',
+              borderRadius: 6, zIndex: 2,
+              display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
+              padding: '5px 8px',
+              boxShadow: `0 2px 6px rgba(${block.gcalEventId ? '16,185,129' : '249,115,22'},0.25)`,
+              cursor: onOpenTask ? 'pointer' : 'default',
+            }}
+          >
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 11, fontWeight: 600, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {taskTitle}
@@ -200,7 +225,10 @@ function HourSlot({ hour, block, taskTitle, onRemove, busyEvents }: {
               )}
             </div>
             {onRemove && (
-              <button onClick={onRemove} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 3, cursor: 'pointer', color: '#fff', padding: '1px 4px', fontSize: 10, flexShrink: 0 }}>
+              <button
+                onClick={e => { e.stopPropagation(); onRemove() }}
+                style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 3, cursor: 'pointer', color: '#fff', padding: '1px 4px', fontSize: 10, flexShrink: 0 }}
+              >
                 ×
               </button>
             )}
@@ -325,9 +353,10 @@ function AccountPickerOverlay({
 
 interface SmartDayPlannerProps {
   onClose: () => void
+  onOpenTask?: (taskId: string) => void
 }
 
-export function SmartDayPlanner({ onClose }: SmartDayPlannerProps) {
+export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
   const { tasks: allTasks, updateTask } = useTaskStore()
   const [blocks, setBlocks] = useState<ScheduledBlock[]>([])
   const [activeId, setActiveId] = useState<string | null>(null)
@@ -362,21 +391,22 @@ export function SmartDayPlanner({ onClose }: SmartDayPlannerProps) {
   const scheduledTaskIds = new Set(blocks.map(b => b.taskId))
   const unscheduledCount = tasks.filter(t => !scheduledTaskIds.has(t.id)).length
 
-  // Build busy-by-hour map from today's calendar events
-  const busyByHour = useMemo(() => {
-    const map: Record<number, GCalEvent[]> = {}
+  // Build busy event map: startAt = events keyed by start hour (with duration), continued = set of continuation hours
+  const busyEventMap = useMemo(() => {
+    const startAt: Record<number, { event: GCalEvent; durationHours: number }[]> = {}
+    const continued = new Set<number>()
     for (const evt of todayEvents) {
       if (!evt.start?.dateTime) continue
       const startH = parseInt(evt.start.dateTime.slice(11, 13), 10)
-      const endH   = evt.end?.dateTime ? Math.ceil(
-        parseInt(evt.end.dateTime.slice(11, 13), 10) +
-        parseInt(evt.end.dateTime.slice(14, 16), 10) / 60
-      ) : startH + 1
-      for (let h = startH; h < endH; h++) {
-        map[h] = map[h] ? [...map[h], evt] : [evt]
-      }
+      const endTotalMins = evt.end?.dateTime
+        ? parseInt(evt.end.dateTime.slice(11, 13), 10) * 60 + parseInt(evt.end.dateTime.slice(14, 16), 10)
+        : (startH + 1) * 60
+      const durationHours = Math.max(1, Math.ceil((endTotalMins - startH * 60) / 60))
+      if (!startAt[startH]) startAt[startH] = []
+      startAt[startH].push({ event: evt, durationHours })
+      for (let h = startH + 1; h < startH + durationHours; h++) continued.add(h)
     }
-    return map
+    return { startAt, continued }
   }, [todayEvents])
 
   // ── Generate Plan ─────────────────────────────────────────────────────────
@@ -407,8 +437,9 @@ export function SmartDayPlanner({ onClose }: SmartDayPlannerProps) {
       // 3. Add lunch break if enabled
       if (includeBreaks) busyIntervals.push({ start: 12, end: 13 })
 
-      // 4. Fit tasks greedily into work hours 8–18
-      const workStart = 8, workEnd = 18
+      // 4. Fit tasks greedily into work hours 8–18, skipping past hours
+      const workEnd = 18
+      const workStart = Math.max(8, new Date().getHours() + 1)
       const newBlocks: ScheduledBlock[] = []
       let cursor = workStart
 
@@ -631,15 +662,19 @@ export function SmartDayPlanner({ onClose }: SmartDayPlannerProps) {
                 </div>
                 <div ref={timelineRef} style={{ flex: 1, overflowY: 'auto', background: '#FAFAFA' }}>
                   {HOURS.map(hour => {
-                    const block = blocks.find(b => b.startHour === hour)
-                    const task  = block ? tasks.find(t => t.id === block.taskId) : undefined
+                    const block   = blocks.find(b => b.startHour === hour)
+                    const task    = block ? tasks.find(t => t.id === block.taskId) : undefined
+                    const isPast  = hour < new Date().getHours()
                     return (
                       <HourSlot
                         key={hour} hour={hour}
                         block={block}
                         taskTitle={task?.title}
                         onRemove={block ? () => removeBlock(block.taskId) : undefined}
-                        busyEvents={busyByHour[hour]}
+                        busyEventsAtStart={busyEventMap.startAt[hour]}
+                        isBusyContinued={busyEventMap.continued.has(hour)}
+                        isPast={isPast}
+                        onOpenTask={onOpenTask}
                       />
                     )
                   })}

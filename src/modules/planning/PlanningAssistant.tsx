@@ -370,7 +370,7 @@ export function PlanningAssistant() {
         <div style={{ width: 380, flexShrink: 0, display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--color-border, #252A3E)', overflow: 'hidden' }}>
 
           {/* Scrollable top: insights + suggestions */}
-          <div style={{ flexShrink: 0, overflowY: 'auto', padding: '20px 20px 0', maxHeight: '58%' }}>
+          <div style={{ flex: '0 0 auto', overflowY: 'auto', padding: '20px 20px 0', maxHeight: '55%', minHeight: 0 }}>
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
               <span style={{ fontSize: 20 }}>✦</span>
