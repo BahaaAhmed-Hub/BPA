@@ -13,6 +13,7 @@ import { useAuthStore } from '@/store/authStore'
 import { useTaskStore } from '@/store/taskStore'
 import type { DbUser, DbCompany, DbCalendarEvent, DbTask } from '@/types/database'
 import type { Task } from '@/types'
+import { isTaskHidden } from '@/types'
 import type { RichMeetingEvent } from './MorningBriefTypes'
 import { DayPlanner } from './DayPlanner'
 
@@ -623,7 +624,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 
 export function MorningBrief() {
   const user    = useAuthStore(s => s.user)
-  const tasks   = useTaskStore(s => s.tasks)
+  const tasks   = useTaskStore(s => s.tasks).filter(t => !isTaskHidden(t))
 
   const [energyLevel, setEnergyLevel]   = useState<number | null>(null)
   const [plan, setPlan]                 = useState<DayPlan | null>(loadCachedPlan)

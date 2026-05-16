@@ -28,6 +28,7 @@ export interface DynamicCompany {
   name: string
   color: string
   users: CompanyUser[]
+  hidden?: boolean
 }
 
 export function loadDynamicCompanies(): DynamicCompany[] {
@@ -51,6 +52,18 @@ export function getAllUsers(): (CompanyUser & { companyId: string; companyName: 
   return loadDynamicCompanies().flatMap(co =>
     (co.users ?? []).map(u => ({ ...u, companyId: co.id, companyName: co.name, companyColor: co.color }))
   )
+}
+
+/** Returns only companies that are not hidden. Use everywhere except Settings. */
+export function loadVisibleCompanies(): DynamicCompany[] {
+  return loadDynamicCompanies().filter(c => !c.hidden)
+}
+
+/** Returns true if the task belongs to a hidden company and should be excluded from views. */
+export function isTaskHidden(task: { companyId?: string }): boolean {
+  if (!task.companyId) return false
+  const co = loadDynamicCompanies().find(c => c.id === task.companyId)
+  return co?.hidden === true
 }
 
 // ─── Eisenhower Quadrants ───────────────────────────────────────────────────

@@ -6,7 +6,7 @@ import {
 } from 'lucide-react'
 import { useTaskStore } from '@/store/taskStore'
 import { useUIStore } from '@/store/uiStore'
-import { loadDynamicCompanies } from '@/types'
+import { loadDynamicCompanies, isTaskHidden } from '@/types'
 import { loadHabits, loadLogs, calcStreak } from '@/store/habitsStore'
 import { fetchVisibleEvents } from '@/lib/calendarEvents'
 
@@ -124,7 +124,7 @@ function QuickAction({ label, onClick }: { label: string; onClick: () => void })
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function ExecutiveDashboard() {
-  const tasks         = useTaskStore(s => s.tasks)
+  const tasks         = useTaskStore(s => s.tasks).filter(t => !isTaskHidden(t))
   const setModule     = useUIStore(s => s.setActiveModule)
 
   const [todayMeetings, setTodayMeetings] = useState(0)
@@ -141,7 +141,7 @@ export function ExecutiveDashboard() {
 
   // Tasks by Company — use dynamic companies from Settings, match by companyId or company name
   const dynamicCompanies = loadDynamicCompanies()
-  const tasksByCompany = dynamicCompanies
+  const tasksByCompany = dynamicCompanies.filter(co => !co.hidden)
     .map(co => ({
       id:    co.id,
       name:  co.name,

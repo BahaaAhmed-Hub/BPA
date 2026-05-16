@@ -19,7 +19,7 @@ import {
   type PlanSlot, type BlockType, type SlotPlanPrefs, type SlotPlanPriorityTask,
 } from '@/lib/professor'
 import type { DbCalendarEvent, DbTask } from '@/types/database'
-import { loadDynamicCompanies } from '@/types'
+import { loadVisibleCompanies } from '@/types'
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -228,7 +228,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
         prep_notes: e.prep_notes, is_synced: e.is_synced,
       }))
 
-      const dynCompanies = loadDynamicCompanies()
+      const dynCompanies = loadVisibleCompanies()
       const priorityTasks: SlotPlanPriorityTask[] = tasks
         .filter(t => selectedTaskIds.has(t.id))
         .map(t => {
@@ -419,7 +419,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
 
         {/* Q1 — Priority tasks (task multi-select from companies) */}
         {(() => {
-          const dynCompanies = loadDynamicCompanies()
+          const dynCompanies = loadVisibleCompanies()
           const today        = todayISO()
           const pending      = tasks.filter(t => !t.completed && t.status !== 'done')
           if (pending.length === 0) return null

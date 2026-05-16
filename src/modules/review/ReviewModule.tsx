@@ -3,6 +3,7 @@ import { CheckSquare, Clock, Users, TrendingUp, ChevronLeft, ChevronRight, Check
 import { TopBar } from '@/components/layout/TopBar'
 import { useTaskStore } from '@/store/taskStore'
 import type { Task } from '@/types'
+import { isTaskHidden } from '@/types'
 import type { GCalEvent } from '@/lib/googleCalendar'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -300,7 +301,7 @@ function WeeklyDayCard({ dayStr, allEvents, statuses, tasks }: {
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function ReviewModule() {
-  const tasks = useTaskStore(s => s.tasks)
+  const tasks = useTaskStore(s => s.tasks).filter(t => !isTaskHidden(t))
 
   const completedTasks = tasks.filter(t => t.completed)
   const activeTasks    = tasks.filter(t => !t.completed)

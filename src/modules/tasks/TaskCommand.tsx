@@ -13,6 +13,7 @@ import { TaskCard } from './TaskCard'
 import { useTaskStore } from '@/store/taskStore'
 import { CheckSquare, Zap, SlidersHorizontal } from 'lucide-react'
 import type { Quadrant } from '@/types'
+import { isTaskHidden } from '@/types'
 import { scheduleTaskToCalendar } from '@/lib/aiScheduler'
 
 const QUADRANTS: Quadrant[] = ['do', 'schedule', 'delegate', 'eliminate']
@@ -27,7 +28,8 @@ function loadTaskConfig(): TaskConfig {
 }
 
 export function TaskCommand() {
-  const { tasks, moveTask, moveTaskBefore, reorderInbox, reorderQuadrant, updateTask } = useTaskStore()
+  const { tasks: allTasks, moveTask, moveTaskBefore, reorderInbox, reorderQuadrant, updateTask } = useTaskStore()
+  const tasks = allTasks.filter(t => !isTaskHidden(t))
 
   const [cfg, setCfg] = useState(loadTaskConfig)
   const [configOpen, setConfigOpen] = useState(false)

@@ -4,7 +4,7 @@ import { useDroppable } from '@dnd-kit/core'
 import { useSortable, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { useTaskStore } from '@/store/taskStore'
-import { getAllUsers, loadDynamicCompanies, COMPANY_COLORS, TASK_TYPE_META, inferTaskType, type TaskStatus, type TaskType, type CompanyTag, type Task } from '@/types'
+import { getAllUsers, loadDynamicCompanies, isTaskHidden, COMPANY_COLORS, TASK_TYPE_META, inferTaskType, type TaskStatus, type TaskType, type CompanyTag, type Task } from '@/types'
 import { analyzeTask } from '@/lib/professor'
 import type { TaskAnalysis } from '@/lib/professor'
 
@@ -177,7 +177,8 @@ interface Props {
 }
 
 export function UndefinedTasksPanel({ onOpen, hideCompleted = false, groupBy = 'none', allGroupsExpanded = true }: Props) {
-  const { tasks, addTask, addTasksBatch, deleteTask, toggleComplete, updateTask, toggleUrgent } = useTaskStore()
+  const { tasks: allTasks, addTask, addTasksBatch, deleteTask, toggleComplete, updateTask, toggleUrgent } = useTaskStore()
+  const tasks = allTasks.filter(t => !isTaskHidden(t))
   const [filter, setFilter] = useState<Filter>('open')
   const [adding, setAdding] = useState(false)
 

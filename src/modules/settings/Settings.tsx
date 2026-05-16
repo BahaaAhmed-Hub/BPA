@@ -59,6 +59,7 @@ interface CompanyUser { id: string; name: string; email?: string }
 interface CompanyRow {
   id: string; name: string; color: string
   calendarId: string; emailDomain: string; accountId: string; isActive: boolean
+  hidden?: boolean
   users: CompanyUser[]
 }
 
@@ -504,7 +505,7 @@ function CompanyCard({
   }
 
   return (
-    <div style={{ background: 'var(--color-bg, #0D0F1A)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 10, marginBottom: 8, overflow: 'visible' }}>
+    <div style={{ background: 'var(--color-bg, #0D0F1A)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 10, marginBottom: 8, overflow: 'visible', opacity: co.hidden ? 0.55 : 1, transition: 'opacity 0.15s' }}>
       {/* Company header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px' }}>
 
@@ -591,6 +592,19 @@ function CompanyCard({
         </button>
 
         <Toggle checked={co.isActive} onChange={v => onUpdate({ isActive: v })} />
+
+        {/* Hide from platform toggle */}
+        <button
+          onClick={() => onUpdate({ hidden: !co.hidden })}
+          title={co.hidden ? 'Show in platform' : 'Hide from platform (tasks, calendar, dashboard…)'}
+          style={{
+            background: 'none', border: 'none', cursor: 'pointer', padding: 3,
+            display: 'flex', alignItems: 'center',
+            color: co.hidden ? 'var(--color-accent, #7F77DD)' : 'var(--color-text-muted, #6B7280)',
+          }}
+        >
+          {co.hidden ? <EyeOff size={13} /> : <Eye size={13} />}
+        </button>
 
         <button onClick={onDelete}
           style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted, #6B7280)', padding: 3, display: 'flex', alignItems: 'center' }}>
