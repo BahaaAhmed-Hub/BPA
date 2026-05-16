@@ -147,32 +147,6 @@ function EmojiBtn({ value, onSelect }: { value: string; onSelect: (e: string) =>
   )
 }
 
-// ─── Color picker ─────────────────────────────────────────────────────────────
-
-function ColorBtn({ value, colors, onSelect }: { value: string; colors: string[]; onSelect: (c: string) => void }) {
-  const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    if (!open) return
-    const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false) }
-    document.addEventListener('mousedown', h)
-    return () => document.removeEventListener('mousedown', h)
-  }, [open])
-  return (
-    <div ref={ref} style={{ position: 'relative' }}>
-      <button onClick={() => setOpen(o => !o)} title="Change color"
-        style={{ width: 14, height: 14, borderRadius: '50%', background: value, border: 'none', cursor: 'pointer', flexShrink: 0, boxShadow: `0 0 0 2px var(--color-bg, #0D0F1A), 0 0 0 3px ${value}60` }} />
-      {open && (
-        <div style={{ position: 'absolute', top: 20, left: 0, zIndex: 300, background: 'var(--color-surface, #161929)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 10, padding: '8px', display: 'flex', flexWrap: 'wrap', gap: 6, width: 196, boxShadow: '0 8px 24px rgba(0,0,0,0.5)' }}>
-          {colors.map(c => (
-            <button key={c} onClick={() => { onSelect(c); setOpen(false) }}
-              style={{ width: 16, height: 16, borderRadius: '50%', background: c, border: 'none', cursor: 'pointer', flexShrink: 0, boxShadow: value === c ? `0 0 0 2px var(--color-surface, #161929), 0 0 0 3.5px ${c}` : 'none', transform: value === c ? 'scale(1.2)' : 'scale(1)', transition: 'transform 0.1s' }} />
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
 
 // ─── Quantity stepper ─────────────────────────────────────────────────────────
 
@@ -488,21 +462,8 @@ export function HabitsModule() {
               }}>
                 <EmojiBtn value={habit.emoji} onSelect={e => updateHabit(habit.id, { emoji: e })} />
 
-                <ColorBtn value={habit.color} colors={HABIT_COLORS} onSelect={c => updateHabit(habit.id, { color: c })} />
-
-                <InlineEdit value={habit.name} onSave={v => updateHabit(habit.id, { name: v })}
-                  style={{ flex: 1, fontSize: 13.5, fontWeight: 500, color: doneToday ? habit.color : 'var(--color-text, #E8EAF6)', textDecoration: doneToday ? 'line-through' : 'none', opacity: doneToday ? 0.8 : 1 }} />
-
-                {/* Toggle / quantity control */}
-                {isQuantity ? (
-                  <QuantityControl
-                    value={qtyValue}
-                    goal={habit.goal ?? 1}
-                    unit={habit.unit}
-                    color={habit.color}
-                    onSet={v => setQuantity(habit.id, habit.goal ?? 1, viewDate, v)}
-                  />
-                ) : (
+                {/* Done circle — sits where color circle was */}
+                {!isQuantity && (
                   <button onClick={() => toggleHabit(habit.id, viewDate)} title={doneToday ? 'Mark undone' : 'Mark done'}
                     style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, flexShrink: 0, display: 'flex', alignItems: 'center' }}>
                     <div style={{
@@ -513,6 +474,20 @@ export function HabitsModule() {
                       transition: 'all 0.15s ease',
                     }} />
                   </button>
+                )}
+
+                <InlineEdit value={habit.name} onSave={v => updateHabit(habit.id, { name: v })}
+                  style={{ flex: 1, fontSize: 13.5, fontWeight: 500, color: doneToday ? habit.color : 'var(--color-text, #E8EAF6)', textDecoration: doneToday ? 'line-through' : 'none', opacity: doneToday ? 0.8 : 1 }} />
+
+                {/* Quantity control (for measurable habits) */}
+                {isQuantity && (
+                  <QuantityControl
+                    value={qtyValue}
+                    goal={habit.goal ?? 1}
+                    unit={habit.unit}
+                    color={habit.color}
+                    onSet={v => setQuantity(habit.id, habit.goal ?? 1, viewDate, v)}
+                  />
                 )}
 
                 {/* Frequency badge */}
