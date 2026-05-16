@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { X, ChevronLeft, ChevronRight, Check } from 'lucide-react'
 import { useUIStore } from '@/store/uiStore'
 import { useAuthStore } from '@/store/authStore'
@@ -85,6 +85,25 @@ export function SetupWizard({ onClose }: Props) {
     todoistToken: '', importedTasks: [], selectedTaskIds: new Set(),
   })
 
+  // Restore wizard state after OAuth redirect
+  useEffect(() => {
+    const saved = sessionStorage.getItem('bpa-wizard-resume')
+    if (!saved) return
+    sessionStorage.removeItem('bpa-wizard-resume')
+    try {
+      const parsed = JSON.parse(saved)
+      if (parsed.step) setStep(parsed.step)
+      if (parsed.data) {
+        setData({ ...parsed.data, selectedTaskIds: new Set(parsed.data.selectedTaskIds ?? []) })
+      }
+    } catch { /* ignore */ }
+  }, [])
+
+  function saveForOAuth() {
+    const serializable = { ...data, selectedTaskIds: [...data.selectedTaskIds] }
+    sessionStorage.setItem('bpa-wizard-resume', JSON.stringify({ step, data: serializable }))
+  }
+
   const onChange = useCallback((patch: Partial<WizardData>) => {
     setData(prev => ({ ...prev, ...patch }))
   }, [])
@@ -110,9 +129,12 @@ export function SetupWizard({ onClose }: Props) {
         calendarId: '', emailDomain: c.emailDomain, accountId: c.accountId,
         isActive: true, users: [],
       }))
-      localStorage.setItem('professor-companies', JSON.stringify(
-        data.companies.map(c => ({ id: c.id, name: c.name, color: c.color, users: [] }))
-      ))
+      // Merge with existing companies (don't wipe ones added elsewhere)
+      const existing: CompanyRow[] = JSON.parse(localStorage.getItem('professor-companies') || '[]')
+      const newIds = new Set(rows.map(r => r.id))
+      const merged = [...existing.filter(e => !newIds.has(e.id)), ...rows]
+      localStorage.setItem('professor-companies', JSON.stringify(merged))
+      window.dispatchEvent(new Event('professor:companiesUpdated'))
       try { await saveCompaniesToDB(rows) } catch { /* offline */ }
     }
 
@@ -214,7 +236,7 @@ export function SetupWizard({ onClose }: Props) {
           <div style={{ flex: 1, overflowY: 'auto', padding: '20px 28px' }}>
             <div key={`${step}-${animKey}`} style={{ animation: `${dir === 'fwd' ? 'wz-fwd' : 'wz-back'} 0.28s ease` }}>
               {step === 1 && <Step1Welcome data={data} onChange={onChange} />}
-              {step === 2 && <Step2Accounts data={data} onChange={onChange} />}
+              {step === 2 && <Step2Accounts data={data} onChange={onChange} onBeforeOAuth={saveForOAuth} />}
               {step === 3 && <Step3Companies data={data} onChange={onChange} />}
               {step === 4 && <Step4Habits data={data} onChange={onChange} />}
               {step === 5 && <Step5Tasks data={data} onChange={onChange} />}
