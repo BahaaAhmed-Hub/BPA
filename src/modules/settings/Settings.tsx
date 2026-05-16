@@ -15,7 +15,7 @@ import {
   Plus, Trash2, GripVertical, LogIn, LogOut,
   ChevronDown, ChevronUp, User, Clock, Building2, Flame,
   Brain, Bell, Palette, Link, X, RefreshCw, Eye, EyeOff, Shield, Pencil,
-  Hash, CheckSquare, Mail, HardDrive, CalendarDays, Swords,
+  Hash, CheckSquare, Mail, HardDrive, CalendarDays, Swords, Wand2,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { connectAdditionalGoogleAccount, signOut as googleSignOut, disconnectGoogleAccount } from '@/lib/google'
@@ -2022,6 +2022,11 @@ export function Settings() {
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            onClick={() => window.dispatchEvent(new CustomEvent('professor:openWizard'))}
+            style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 13px', borderRadius: 8, background: 'rgba(127,119,221,0.08)', border: '1px solid rgba(127,119,221,0.25)', color: '#9B94E8', fontSize: 12, cursor: 'pointer' }}>
+            <Wand2 size={12} /> Setup Wizard
+          </button>
           <button onClick={() => void checkSupabase().then(setSupaOk)}
             style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 13px', borderRadius: 8, background: 'transparent', border: '1px solid var(--color-border, #252A3E)', color: 'var(--color-text-dim, #94A3B8)', fontSize: 12, cursor: 'pointer' }}>
             <RefreshCw size={12} /> Refresh

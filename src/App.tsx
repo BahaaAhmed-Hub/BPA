@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { AssistantPanel, AssistantToggle } from './modules/assistant/AssistantPanel'
 import { Sidebar } from './components/layout/Sidebar'
 import { PageShell } from './components/layout/PageShell'
@@ -24,6 +24,7 @@ import { seedToken, seedFromLocalStorage, clearAllTokens, getGoogleToken } from 
 import { refreshPrimaryToken } from './lib/googleCalendar'
 import { getTheme, applyThemeVars } from './lib/themes'
 import { GraduationCap, Calendar, Mail, CheckSquare, Brain, ArrowRight } from 'lucide-react'
+import { SetupWizard } from './modules/wizard/SetupWizard'
 
 // ─── Mode-specific login themes ──────────────────────────────────────────────
 
@@ -789,6 +790,21 @@ function App() {
   }, [user])
 
   const [assistantOpen, setAssistantOpen] = useState(false)
+  const [showWizard, setShowWizard] = useState(false)
+  const wizardChecked = useRef(false)
+
+  // Show wizard on first login (once per account), and on professor:openWizard event
+  useEffect(() => {
+    if (!user || wizardChecked.current) return
+    wizardChecked.current = true
+    if (!localStorage.getItem('bpa-wizard-done')) setShowWizard(true)
+  }, [user])
+
+  useEffect(() => {
+    const handler = () => { setShowWizard(true) }
+    window.addEventListener('professor:openWizard', handler)
+    return () => window.removeEventListener('professor:openWizard', handler)
+  }, [])
 
   if (loading) return <LoadingScreen />
   if (!user)   return <LoginScreen />
@@ -801,6 +817,7 @@ function App() {
       </PageShell>
       <AssistantPanel open={assistantOpen} onClose={() => setAssistantOpen(false)} />
       <AssistantToggle open={assistantOpen} onClick={() => setAssistantOpen(o => !o)} />
+      {showWizard && <SetupWizard onClose={() => setShowWizard(false)} />}
     </div>
   )
 }
