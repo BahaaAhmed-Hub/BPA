@@ -30,7 +30,20 @@ const HABITS_KEY   = 'professor-habits'
 const LOGS_KEY     = 'professor-habit-logs'
 const QTY_LOGS_KEY = 'professor-habit-quantity-logs'
 
-const DEFAULT_COLORS = ['#1E40AF', '#7F77DD', '#1D9E75', '#E05252', '#888780', '#E0944A']
+const DEFAULT_COLORS = [
+  // Blues & Purples
+  '#1E40AF','#3B82F6','#60A5FA','#7F77DD','#9333EA','#A855F7','#C084FC','#6366F1',
+  // Greens
+  '#1D9E75','#10B981','#34D399','#16A34A','#4ADE80','#84CC16','#65A30D',
+  // Reds & Oranges
+  '#E05252','#EF4444','#F87171','#E0944A','#F97316','#FB923C','#FBBF24','#EAB308',
+  // Pinks & Roses
+  '#EC4899','#F472B6','#FB7185','#E11D48','#BE185D',
+  // Teals & Cyans
+  '#06B6D4','#22D3EE','#0891B2','#0E7490',
+  // Neutrals
+  '#888780','#94A3B8','#64748B','#6B7280','#78716C',
+]
 
 // ─── Raw localStorage helpers (kept for non-reactive consumers) ───────────────
 

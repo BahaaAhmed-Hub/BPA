@@ -103,7 +103,22 @@ function InlineEdit({ value, onSave, style }: { value: string; onSave: (v: strin
 
 // ─── Emoji picker ─────────────────────────────────────────────────────────────
 
-const EMOJIS = ['🎯','💪','📚','🏃','💧','🧘','🍎','💤','🌿','✍️','🧠','🔥','🎵','🏋️','🚿','🫁','🥗','☀️','🧹','🧩']
+const EMOJIS = [
+  // Health & Fitness
+  '🏃','💪','🏋️','🚴','🤸','🏊','🧘','🚶','⚽','🎾','🥊','🏄','🧗','🤾','🏇','🎿','⛷️','🤺','🏌️','🎳',
+  // Nutrition & Food
+  '💧','🍎','🥗','🥦','🍵','🫐','🍓','🥑','🫁','🥤','🧃','🥛','🍇','🥕','🫚','🌾','🍋','🫒',
+  // Mind & Learning
+  '📚','🧠','✍️','📝','📖','🔬','🗓️','🧩','💡','🔭','🎓','🗺️','📐','🖊️','📓','🃏',
+  // Productivity & Goals
+  '🎯','🔥','⚡','🏆','🥇','✅','⏰','📅','🚀','💼','📊','🗝️','⚙️','🛠️','🎪',
+  // Creative & Hobbies
+  '🎵','🎨','🎭','🎸','📷','🎹','✏️','🎺','🎻','🎤','🎬','🖼️','🧶','🪡','📸',
+  // Lifestyle & Self-care
+  '🌿','☀️','🌙','🧹','🛁','🚿','💤','🌅','🌳','🌸','🪴','🌈','🌊','🏔️','🦋',
+  // Emotions & Mindset
+  '💎','🌟','⭐','🎁','💫','🙏','❤️','🤝','😊','🧡','💛','💚','💙','💜','🤍',
+]
 
 function EmojiBtn({ value, onSelect }: { value: string; onSelect: (e: string) => void }) {
   const [open, setOpen] = useState(false)
@@ -121,7 +136,7 @@ function EmojiBtn({ value, onSelect }: { value: string; onSelect: (e: string) =>
         {value}
       </button>
       {open && (
-        <div style={{ position: 'absolute', top: 28, left: 0, zIndex: 300, background: 'var(--color-surface, #161929)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 10, padding: '8px', display: 'flex', gap: 4, flexWrap: 'wrap', width: 210, boxShadow: '0 8px 24px rgba(0,0,0,0.5)' }}>
+        <div style={{ position: 'absolute', top: 28, left: 0, zIndex: 300, background: 'var(--color-surface, #161929)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 10, padding: '8px', display: 'flex', gap: 4, flexWrap: 'wrap', width: 252, maxHeight: 260, overflowY: 'auto', boxShadow: '0 8px 24px rgba(0,0,0,0.5)' }}>
           {EMOJIS.map(e => (
             <button key={e} onClick={() => { onSelect(e); setOpen(false) }}
               style={{ fontSize: 16, width: 32, height: 32, borderRadius: 7, cursor: 'pointer', border: 'none', background: e === value ? 'var(--color-accent-fill)' : 'transparent' }}>{e}</button>
@@ -148,10 +163,10 @@ function ColorBtn({ value, colors, onSelect }: { value: string; colors: string[]
       <button onClick={() => setOpen(o => !o)} title="Change color"
         style={{ width: 14, height: 14, borderRadius: '50%', background: value, border: 'none', cursor: 'pointer', flexShrink: 0, boxShadow: `0 0 0 2px var(--color-bg, #0D0F1A), 0 0 0 3px ${value}60` }} />
       {open && (
-        <div style={{ position: 'absolute', top: 20, left: 0, zIndex: 300, background: 'var(--color-surface, #161929)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 8, padding: '7px 8px', display: 'flex', gap: 5, boxShadow: '0 6px 20px rgba(0,0,0,0.5)' }}>
+        <div style={{ position: 'absolute', top: 20, left: 0, zIndex: 300, background: 'var(--color-surface, #161929)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 10, padding: '8px', display: 'flex', flexWrap: 'wrap', gap: 6, width: 196, boxShadow: '0 8px 24px rgba(0,0,0,0.5)' }}>
           {colors.map(c => (
             <button key={c} onClick={() => { onSelect(c); setOpen(false) }}
-              style={{ width: 16, height: 16, borderRadius: '50%', background: c, border: 'none', cursor: 'pointer', boxShadow: value === c ? `0 0 0 2px var(--color-surface, #161929), 0 0 0 3.5px ${c}` : 'none', transform: value === c ? 'scale(1.2)' : 'scale(1)', transition: 'transform 0.1s' }} />
+              style={{ width: 16, height: 16, borderRadius: '50%', background: c, border: 'none', cursor: 'pointer', flexShrink: 0, boxShadow: value === c ? `0 0 0 2px var(--color-surface, #161929), 0 0 0 3.5px ${c}` : 'none', transform: value === c ? 'scale(1.2)' : 'scale(1)', transition: 'transform 0.1s' }} />
           ))}
         </div>
       )}
@@ -231,10 +246,10 @@ function HabitForm({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       {/* Emoji row */}
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', maxHeight: 160, overflowY: 'auto', padding: '2px 0' }}>
         {EMOJIS.map(e => (
           <button key={e} onClick={() => update({ emoji: e })}
-            style={{ fontSize: 18, background: s.emoji === e ? 'var(--color-accent-fill, rgba(30,64,175,0.18))' : 'transparent', border: `1px solid ${s.emoji === e ? 'var(--color-accent, #1E40AF)' : 'var(--color-border, #252A3E)'}`, borderRadius: 7, cursor: 'pointer', width: 36, height: 36 }}>
+            style={{ fontSize: 18, background: s.emoji === e ? 'var(--color-accent-fill, rgba(30,64,175,0.18))' : 'transparent', border: `1px solid ${s.emoji === e ? 'var(--color-accent, #1E40AF)' : 'var(--color-border, #252A3E)'}`, borderRadius: 7, cursor: 'pointer', width: 36, height: 36, flexShrink: 0 }}>
             {e}
           </button>
         ))}
@@ -473,6 +488,11 @@ export function HabitsModule() {
               }}>
                 <EmojiBtn value={habit.emoji} onSelect={e => updateHabit(habit.id, { emoji: e })} />
 
+                <ColorBtn value={habit.color} colors={HABIT_COLORS} onSelect={c => updateHabit(habit.id, { color: c })} />
+
+                <InlineEdit value={habit.name} onSave={v => updateHabit(habit.id, { name: v })}
+                  style={{ flex: 1, fontSize: 13.5, fontWeight: 500, color: doneToday ? habit.color : 'var(--color-text, #E8EAF6)', textDecoration: doneToday ? 'line-through' : 'none', opacity: doneToday ? 0.8 : 1 }} />
+
                 {/* Toggle / quantity control */}
                 {isQuantity ? (
                   <QuantityControl
@@ -483,23 +503,17 @@ export function HabitsModule() {
                     onSet={v => setQuantity(habit.id, habit.goal ?? 1, viewDate, v)}
                   />
                 ) : (
-                  <button onClick={() => toggleHabit(habit.id, viewDate)}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, flexShrink: 0, fontSize: 20, lineHeight: 1 }}>
-                    {doneToday
-                      ? <span style={{ color: habit.color }}>●</span>
-                      : <span style={{ color: 'var(--color-text-muted, #4B5563)' }}>○</span>}
+                  <button onClick={() => toggleHabit(habit.id, viewDate)} title={doneToday ? 'Mark undone' : 'Mark done'}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, flexShrink: 0, display: 'flex', alignItems: 'center' }}>
+                    <div style={{
+                      width: 14, height: 14, borderRadius: '50%', flexShrink: 0,
+                      background: doneToday ? habit.color : 'transparent',
+                      border: `2px solid ${doneToday ? habit.color : 'var(--color-text-muted, #4B5563)'}`,
+                      boxShadow: doneToday ? `0 0 0 2px var(--color-bg, #0D0F1A), 0 0 0 3px ${habit.color}60` : 'none',
+                      transition: 'all 0.15s ease',
+                    }} />
                   </button>
                 )}
-
-                <ColorBtn value={habit.color} colors={HABIT_COLORS} onSelect={c => updateHabit(habit.id, { color: c })} />
-
-                <InlineEdit value={habit.name} onSave={v => updateHabit(habit.id, { name: v })}
-                  style={{ flex: 1, fontSize: 13.5, fontWeight: 500, color: doneToday ? habit.color : 'var(--color-text, #E8EAF6)', textDecoration: doneToday ? 'line-through' : 'none', opacity: doneToday ? 0.8 : 1 }} />
-
-                {/* Type badge */}
-                <span style={{ fontSize: 9, padding: '1px 5px', borderRadius: 4, background: 'var(--color-surface2, #0D0F1A)', border: '1px solid var(--color-border, #252A3E)', color: 'var(--color-text-muted, #4B5563)' }}>
-                  {isQuantity ? `#${habit.unit ?? 'qty'}` : '✓'}
-                </span>
 
                 {/* Frequency badge */}
                 <button onClick={() => { const idx = FREQ_OPTS.indexOf(habit.frequency); updateHabit(habit.id, { frequency: FREQ_OPTS[(idx + 1) % FREQ_OPTS.length] }) }}

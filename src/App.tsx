@@ -23,14 +23,7 @@ import { saveAccountsToDB, loadCompaniesFromDB, loadRawSettingsFromDB, loadAccou
 import { seedToken, seedFromLocalStorage, clearAllTokens, getGoogleToken } from './lib/tokenManager'
 import { refreshPrimaryToken } from './lib/googleCalendar'
 import { getTheme, applyThemeVars } from './lib/themes'
-import { GraduationCap, Swords, Crown, Sparkles, Calendar, Mail, CheckSquare, Brain, ArrowRight } from 'lucide-react'
-
-const MODE_ICONS: Record<string, typeof GraduationCap> = {
-  default: GraduationCap,
-  samurai: Swords,
-  pharaoh: Crown,
-  astral:  Sparkles,
-}
+import { GraduationCap, Calendar, Mail, CheckSquare, Brain, ArrowRight } from 'lucide-react'
 
 // ─── Mode-specific login themes ──────────────────────────────────────────────
 
@@ -101,6 +94,13 @@ const FEATURES = [
   { icon: Calendar,    label: 'Calendar Intelligence' },
   { icon: CheckSquare, label: 'Task Command'          },
 ]
+
+const MODE_PHOTOS: Record<string, string> = {
+  default: 'https://images.unsplash.com/photo-1580851977566-8a01e4b1e3a8?auto=format&fit=crop&w=900&q=85',
+  samurai: 'https://images.unsplash.com/photo-1580851977566-8a01e4b1e3a8?auto=format&fit=crop&w=900&q=85',
+  pharaoh: 'https://images.unsplash.com/photo-1539650116574-8efeb43e2750?auto=format&fit=crop&w=900&q=85',
+  astral:  'https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?auto=format&fit=crop&w=900&q=85',
+}
 
 const MODE_QUOTES: Record<string, string> = {
   default: 'Stay ahead. Stay organized.',
@@ -245,7 +245,7 @@ function LoginScreen() {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             boxShadow: `0 8px 24px ${T.glow1.replace('0.08','0.35').replace('0.09','0.35').replace('0.07','0.35')}`,
           }}>
-            {(() => { const ModeIcon = MODE_ICONS[key] ?? GraduationCap; return <ModeIcon size={24} color={T.bg} strokeWidth={2.5} /> })()}
+            <GraduationCap size={24} color={T.bg} strokeWidth={2.5} />
           </div>
           <div>
             <span style={{
@@ -369,33 +369,37 @@ function LoginScreen() {
         </div>
       </div>
 
-      {/* Right panel — photo background */}
+      {/* Right panel — HD photo */}
       <div style={{
         flex: '0 0 460px',
         height: '100%',
         position: 'relative',
         overflow: 'hidden',
-        background: key === 'pharaoh'
-          ? 'radial-gradient(ellipse at 50% 100%, #3D2800 0%, #1A1000 35%, #090700 100%)'
-          : key === 'astral'
-            ? 'radial-gradient(ellipse at 45% 40%, #2D1B69 0%, #1A0E3D 45%, #04020E 100%)'
-            : '#08050A',
       }}>
-        {/* Photo (samurai + default mode) */}
-        {(key === 'samurai' || key === 'default') && (
-          <div style={{
-            position: 'absolute', inset: 0,
-            backgroundImage: `url('${import.meta.env.BASE_URL}login-samurai.png')`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center top',
-            filter: 'brightness(0.88) saturate(1.1)',
-          }} />
-        )}
-
+        {/* Photo */}
+        <div style={{
+          position: 'absolute', inset: 0,
+          backgroundImage: `url('${MODE_PHOTOS[key]}')`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center top',
+          filter: 'brightness(0.72) contrast(1.08)',
+        }} />
         {/* Left-edge fade — blends into the left panel */}
         <div style={{
           position: 'absolute', inset: 0,
-          background: `linear-gradient(to right, ${T.bg} 0%, ${T.bg}D0 5%, ${T.bg}70 18%, transparent 40%)`,
+          background: `linear-gradient(to right, ${T.bg} 0%, ${T.bg}CC 6%, ${T.bg}66 18%, transparent 38%)`,
+          pointerEvents: 'none',
+        }} />
+        {/* Top/bottom vignette */}
+        <div style={{
+          position: 'absolute', inset: 0,
+          background: 'linear-gradient(to bottom, rgba(0,0,0,0.38) 0%, rgba(0,0,0,0.06) 40%, rgba(0,0,0,0.62) 100%)',
+          pointerEvents: 'none',
+        }} />
+        {/* Accent colour tint */}
+        <div style={{
+          position: 'absolute', inset: 0,
+          background: `radial-gradient(ellipse at 65% 45%, ${T.glow1} 0%, transparent 65%)`,
           pointerEvents: 'none',
         }} />
         {/* Bottom quote */}
@@ -560,8 +564,7 @@ function App() {
   const behavioralEnabled = useBehavioralStore(s => s.enabled)
   const behavioralMode    = useBehavioralStore(s => s.mode)
 
-  // Apply CSS variables immediately before first paint, then on every theme/mode change.
-  // Theme selection always takes priority — mode identity is expressed via icons/backgrounds only.
+  // Apply CSS variables immediately before first paint, then on every theme change.
   useLayoutEffect(() => {
     applyThemeVars(getTheme(themeId))
   }, [themeId, behavioralEnabled, behavioralMode])
