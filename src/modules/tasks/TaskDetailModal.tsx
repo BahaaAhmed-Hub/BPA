@@ -66,9 +66,9 @@ export function TaskDetailModal({ task, onClose }: Props) {
   const taskStatus: TaskStatus = task.completed ? 'done' : (task.status ?? 'open')
 
   function handleCompanyChange(value: string) {
+    const co = companies.find(c => c.id === value)
     if (companies.length > 0) {
-      const co = companies.find(c => c.id === value)
-      updateTask(task.id, { companyId: value || undefined, company: (co?.id ?? value) as CompanyTag })
+      updateTask(task.id, { companyId: value || undefined, company: (co?.id ?? task.company) as CompanyTag })
     } else {
       updateTask(task.id, { company: value as CompanyTag, companyId: undefined })
     }
@@ -161,7 +161,7 @@ export function TaskDetailModal({ task, onClose }: Props) {
             <div>
               <div style={lbl}><Building2 size={10} /> Company</div>
               <select
-                value={companies.length > 0 ? (task.companyId ?? '') : task.company}
+                value={task.companyId ?? task.company}
                 onChange={e => handleCompanyChange(e.target.value)}
                 style={field}
               >

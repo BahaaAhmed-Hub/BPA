@@ -22,7 +22,7 @@ import { addAccount, loadAccounts, saveAccounts } from './lib/multiAccount'
 import { saveAccountsToDB, loadCompaniesFromDB, loadRawSettingsFromDB, loadAccountsFromDB } from './lib/dbSync'
 import { seedToken, seedFromLocalStorage, clearAllTokens, getGoogleToken } from './lib/tokenManager'
 import { refreshPrimaryToken } from './lib/googleCalendar'
-import { getTheme, applyThemeVars, applySamuraiModeOverride } from './lib/themes'
+import { getTheme, applyThemeVars } from './lib/themes'
 import { GraduationCap, Swords, Crown, Sparkles, Calendar, Mail, CheckSquare, Brain, ArrowRight } from 'lucide-react'
 
 const MODE_ICONS: Record<string, typeof GraduationCap> = {
@@ -560,14 +560,10 @@ function App() {
   const behavioralEnabled = useBehavioralStore(s => s.enabled)
   const behavioralMode    = useBehavioralStore(s => s.mode)
 
-  // Apply CSS variables immediately before first paint, then on every theme change.
-  // Samurai mode overrides the selected theme with its own palette.
+  // Apply CSS variables immediately before first paint, then on every theme/mode change.
+  // Theme selection always takes priority — mode identity is expressed via icons/backgrounds only.
   useLayoutEffect(() => {
-    if (behavioralEnabled && behavioralMode === 'samurai') {
-      applySamuraiModeOverride()
-    } else {
-      applyThemeVars(getTheme(themeId))
-    }
+    applyThemeVars(getTheme(themeId))
   }, [themeId, behavioralEnabled, behavioralMode])
 
   useEffect(() => {
