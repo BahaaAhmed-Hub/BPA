@@ -12,11 +12,12 @@ import { KanbanBoard } from './KanbanBoard'
 import { TaskDetailModal } from './TaskDetailModal'
 import { TaskCard } from './TaskCard'
 import { useTaskStore } from '@/store/taskStore'
-import { CheckSquare, Zap, SlidersHorizontal, Search, Filter, X, LayoutGrid, Kanban } from 'lucide-react'
+import { CheckSquare, Zap, SlidersHorizontal, Search, Filter, X, LayoutGrid, Kanban, CalendarDays } from 'lucide-react'
 import type { Quadrant } from '@/types'
 import { isTaskHidden, loadVisibleCompanies, getAllUsers, TASK_TYPE_META, inferTaskType } from '@/types'
 import { scheduleTaskToCalendar } from '@/lib/aiScheduler'
 import type { TaskType } from '@/types'
+import { SmartDayPlanner } from './SmartDayPlanner'
 
 const QUADRANTS: Quadrant[] = ['do', 'schedule', 'delegate', 'eliminate']
 const TASKS_CONFIG_KEY = 'task-command-config'
@@ -151,6 +152,7 @@ export function TaskCommand() {
 
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null)
   const [modalTaskId,  setModalTaskId]  = useState<string | null>(null)
+  const [showPlanner,  setShowPlanner]  = useState(false)
 
   const activeTask = activeTaskId ? tasks.find(t => t.id === activeTaskId) ?? null : null
   const modalTask  = modalTaskId  ? tasks.find(t => t.id === modalTaskId)  ?? null : null
@@ -244,6 +246,20 @@ export function TaskCommand() {
             </button>
           ))}
         </div>
+        <div style={{ width: 1, height: 20, background: 'var(--color-border, #252A3E)', flexShrink: 0 }} />
+
+        {/* Day Planner button */}
+        <button onClick={() => setShowPlanner(true)} title="Smart Day Planner" style={{
+          display: 'flex', alignItems: 'center', gap: 5,
+          padding: '4px 9px', borderRadius: 7, cursor: 'pointer', fontSize: 12, fontWeight: 600,
+          background: 'transparent',
+          color: 'var(--color-text-muted, #6B7280)',
+          border: '1px solid var(--color-border, #252A3E)',
+          transition: 'all 0.12s',
+          flexShrink: 0,
+        }}>
+          <CalendarDays size={14} /> Day Planner
+        </button>
         <div style={{ width: 1, height: 20, background: 'var(--color-border, #252A3E)', flexShrink: 0 }} />
 
         {/* Stats */}
@@ -503,6 +519,7 @@ export function TaskCommand() {
       )}
 
       {modalTask && <TaskDetailModal task={modalTask} onClose={() => setModalTaskId(null)} />}
+      {showPlanner && <SmartDayPlanner onClose={() => setShowPlanner(false)} />}
     </div>
   )
 }

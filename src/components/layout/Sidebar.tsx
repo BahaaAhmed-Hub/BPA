@@ -14,6 +14,7 @@ import {
   Swords,
   Crown,
   Sparkles,
+  Compass,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -42,6 +43,7 @@ const NAV_ITEMS = [
   { id: 'habits',     label: 'Habits Tracker',  Icon: Target },
   { id: 'review',     label: 'Weekly Review',   Icon: RefreshCw },
   { id: 'morning',    label: 'Morning Brief',   Icon: Sun },
+  { id: 'planning',   label: 'Planning',        Icon: Compass },
 ]
 
 const SYSTEM_ITEMS = [
