@@ -144,7 +144,7 @@ export interface Task {
   gcalEventId?: string       // Google Calendar event ID created for this task
   owner?: string             // CompanyUser.id
   parentTaskId?: string      // id of the parent meeting/call task that generated this task
-  boardStatus?: BoardStatus  // kanban board status column
+  boardStatus?: string       // kanban board status column (id from customStatuses)
   status: TaskStatus
   completed: boolean
   urgent?: boolean

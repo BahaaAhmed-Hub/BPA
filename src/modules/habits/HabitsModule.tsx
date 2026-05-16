@@ -317,11 +317,12 @@ function HabitForm({
 export function HabitsModule() {
   const HABIT_COLORS = getHabitColors()
 
-  const { habits, addHabit: storeAdd, updateHabit, deleteHabit: storeDelete } = useHabitsStore()
+  const { habits, addHabit: storeAdd, updateHabit, deleteHabit: storeDelete, reorderHabits } = useHabitsStore()
   const [logs,    setLogs]    = useState(loadLogs)
   const [qtyLogs, setQtyLogs] = useState(loadQuantityLogs)
   const [viewDate, setViewDate] = useState(todayKey)
   const [addingHabit, setAdding] = useState(false)
+  const dragHabitIdx = useRef<number | null>(null)
 
   const today = todayKey()
   const days  = daysWindow(viewDate, 7)
@@ -471,13 +472,29 @@ export function HabitsModule() {
             const qtyValue   = qtyLogs[habit.id]?.[viewDate] ?? 0
 
             return (
-              <div key={habit.id} style={{
-                display: 'flex', alignItems: 'center', gap: 12,
-                padding: '12px 16px 12px 20px',
-                borderBottom: i < activeHabits.length - 1 ? '1px solid var(--color-border, #252A3E)' : 'none',
-                background: doneToday ? `${habit.color}08` : 'transparent',
-                transition: 'background 0.15s',
-              }}>
+              <div key={habit.id}
+                onDragOver={e => e.preventDefault()}
+                onDrop={() => {
+                  if (dragHabitIdx.current !== null && dragHabitIdx.current !== i) {
+                    reorderHabits(dragHabitIdx.current, i)
+                    dragHabitIdx.current = null
+                  }
+                }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 12,
+                  padding: '12px 16px 12px 12px',
+                  borderBottom: i < activeHabits.length - 1 ? '1px solid var(--color-border, #252A3E)' : 'none',
+                  background: doneToday ? `${habit.color}08` : 'transparent',
+                  transition: 'background 0.15s',
+                }}
+              >
+                {/* Drag handle */}
+                <span
+                  draggable
+                  onDragStart={() => { dragHabitIdx.current = i }}
+                  title="Drag to reorder"
+                  style={{ cursor: 'grab', color: 'var(--color-text-muted, #4B5563)', fontSize: 14, lineHeight: 1, userSelect: 'none', flexShrink: 0 }}
+                >⠿</span>
                 <EmojiBtn value={habit.emoji} onSelect={e => updateHabit(habit.id, { emoji: e })} />
 
                 {/* Done circle — sits where color circle was */}

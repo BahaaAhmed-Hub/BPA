@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { X, Clock, Calendar, User, Building2, Activity } from 'lucide-react'
+import { X, Clock, Calendar, User, Building2, Activity, Layers } from 'lucide-react'
 import type { Task, CompanyTag, TaskStatus, TaskType } from '@/types'
 import {
   COMPANY_LABELS, COMPANY_COLORS, TASK_TYPE_META, inferTaskType, getAllUsers,
   loadDynamicCompanies,
 } from '@/types'
 import { useTaskStore } from '@/store/taskStore'
+import { loadCustomStatuses } from '@/lib/customStatuses'
 
 const COMPANY_TAGS: CompanyTag[] = ['teradix', 'dxtech', 'consulting', 'personal']
 const QUADRANT_OPTS = [
@@ -203,6 +204,20 @@ export function TaskDetailModal({ task, onClose }: Props) {
                   }}>{s}</button>
                 ))}
               </div>
+            </div>
+
+            {/* Board Status */}
+            <div>
+              <div style={lbl}><Layers size={10} /> Board Status</div>
+              <select
+                value={task.boardStatus ?? 'backlog'}
+                onChange={e => updateTask(task.id, { boardStatus: e.target.value })}
+                style={field}
+              >
+                {loadCustomStatuses().map(s => (
+                  <option key={s.id} value={s.id}>{s.label}</option>
+                ))}
+              </select>
             </div>
 
             {/* Quadrant */}
