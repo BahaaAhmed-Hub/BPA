@@ -94,6 +94,7 @@ export function QuadrantColumn({ quadrant, tasks, onOpen, groupBy = 'none', allG
   const [globalExpanded, setGlobalExpanded] = useState(true)
   const [adding, setAdding]         = useState(false)
   const [title, setTitle]           = useState('')
+  const [companyId, setCompanyId]   = useState('')
   const [dueDate, setDueDate]       = useState('')
   const [duration, setDuration]     = useState('')
   const [plannedTime, setPlanned]   = useState('')
@@ -122,6 +123,7 @@ export function QuadrantColumn({ quadrant, tasks, onOpen, groupBy = 'none', allG
       setAiLoading(true)
       const result = await analyzeTask(title, companies)
       setAiHint(result)
+      if (result.companyId) setCompanyId(result.companyId)
       setAiLoading(false)
     }, 900)
     return () => { if (aiTimer.current) clearTimeout(aiTimer.current) }
@@ -129,7 +131,7 @@ export function QuadrantColumn({ quadrant, tasks, onOpen, groupBy = 'none', allG
   }, [title, adding])
 
   function reset() {
-    setTitle(''); setDueDate(''); setDuration(''); setPlanned(''); setOwner('')
+    setTitle(''); setCompanyId(''); setDueDate(''); setDuration(''); setPlanned(''); setOwner('')
     setAiHint(null); setAdding(false)
   }
 
@@ -137,17 +139,18 @@ export function QuadrantColumn({ quadrant, tasks, onOpen, groupBy = 'none', allG
     if (!title.trim()) { reset(); return }
     const finalTitle = (aiHint?.titleWithIcon ?? title).trim()
     const finalOwner = owner || aiHint?.ownerId || ''
-    const finalCompanyId = aiHint?.companyId || undefined
+    const finalCompanyId = companyId || aiHint?.companyId || undefined
+    const co = companies.find(c => c.id === finalCompanyId)
     addTask({
       title: finalTitle,
       quadrant,
-      company: 'teradix',
+      company: (co?.id ?? 'teradix') as Task['company'],
       status: 'open',
       completed: false,
-      ...(dueDate       && { dueDate }),
-      ...(duration      && { duration: parseInt(duration, 10) }),
-      ...(plannedTime   && { plannedTime }),
-      ...(finalOwner    && { owner: finalOwner }),
+      ...(dueDate        && { dueDate }),
+      ...(duration       && { duration: parseInt(duration, 10) }),
+      ...(plannedTime    && { plannedTime }),
+      ...(finalOwner     && { owner: finalOwner }),
       ...(finalCompanyId && { companyId: finalCompanyId }),
     })
     reset()
@@ -238,6 +241,14 @@ export function QuadrantColumn({ quadrant, tasks, onOpen, groupBy = 'none', allG
             <input autoFocus value={title} onChange={e => setTitle(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') handleAdd(); if (e.key === 'Escape') reset() }}
               placeholder="Task title…" style={inp} />
+
+            {/* Company selector — auto-filled by AI, user can override */}
+            {companies.length > 0 && (
+              <select value={companyId} onChange={e => setCompanyId(e.target.value)} style={inp}>
+                <option value="">— company —</option>
+                {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            )}
 
             {/* AI suggestion strip */}
             {(aiLoading || aiHint) && (
