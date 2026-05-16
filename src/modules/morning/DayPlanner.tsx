@@ -820,21 +820,38 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
         </div>
 
         {/* Apply button */}
-        <button
-          onClick={() => void applyAll()}
-          disabled={slots.filter(s => s.decision === 'confirmed' && s.action !== 'keep').length === 0}
-          style={{
-            padding: '12px 0', borderRadius: 10, cursor: 'pointer',
-            background: 'var(--color-accent)', border: 'none',
-            color: '#fff', fontSize: 13, fontWeight: 600,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            opacity: slots.filter(s => s.decision === 'confirmed' && s.action !== 'keep').length === 0 ? 0.4 : 1,
-            transition: 'opacity 0.15s',
-          }}
-        >
-          <Shield size={14} />
-          Apply to Calendar
-        </button>
+        {(() => {
+          const pendingCount = slots.filter(s => s.decision === 'confirmed' && s.action !== 'keep').length
+          const unconfirmed  = slots.filter(s => s.decision === 'pending').length
+          const isReady = pendingCount > 0
+          return (
+            <>
+              <button
+                onClick={() => void applyAll()}
+                disabled={!isReady}
+                title={isReady ? `Apply ${pendingCount} change${pendingCount > 1 ? 's' : ''} to Google Calendar` : unconfirmed > 0 ? `Confirm ${unconfirmed} slot${unconfirmed > 1 ? 's' : ''} above to enable` : 'No calendar changes to apply'}
+                style={{
+                  padding: '12px 0', borderRadius: 10, cursor: isReady ? 'pointer' : 'not-allowed',
+                  background: 'var(--color-accent)', border: 'none',
+                  color: '#fff', fontSize: 13, fontWeight: 600,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                  opacity: isReady ? 1 : 0.4,
+                  transition: 'opacity 0.15s',
+                }}
+              >
+                <Shield size={14} />
+                Apply to Calendar{isReady ? ` (${pendingCount})` : ''}
+              </button>
+              {!isReady && (
+                <p style={{ margin: 0, textAlign: 'center', fontSize: 11, color: 'var(--color-text-muted, #6B7280)' }}>
+                  {unconfirmed > 0
+                    ? `Confirm ${unconfirmed} pending slot${unconfirmed > 1 ? 's' : ''} above to enable`
+                    : 'No new calendar changes — all events are already scheduled'}
+                </p>
+              )}
+            </>
+          )
+        })()}
       </div>
     )
   }
