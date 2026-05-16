@@ -118,6 +118,17 @@ export function inferTaskType(title: string): TaskType {
 // ─── Task ────────────────────────────────────────────────────────────────────
 export type TaskStatus = 'open' | 'done' | 'cancelled'
 
+export type BoardStatus = 'backlog' | 'planned' | 'in-progress' | 'blocked' | 'delayed' | 'done'
+
+export const BOARD_STATUS_META: Record<BoardStatus, { label: string; color: string }> = {
+  backlog:        { label: 'Backlog',      color: '#6B7280' },
+  planned:        { label: 'Planned',      color: '#3B82F6' },
+  'in-progress':  { label: 'In Progress',  color: '#F59E0B' },
+  blocked:        { label: 'Blocked',      color: '#EF4444' },
+  delayed:        { label: 'Delayed',      color: '#F97316' },
+  done:           { label: 'Done',         color: '#10B981' },
+}
+
 export interface Task {
   id: string
   title: string
@@ -133,6 +144,7 @@ export interface Task {
   gcalEventId?: string       // Google Calendar event ID created for this task
   owner?: string             // CompanyUser.id
   parentTaskId?: string      // id of the parent meeting/call task that generated this task
+  boardStatus?: BoardStatus  // kanban board status column
   status: TaskStatus
   completed: boolean
   urgent?: boolean

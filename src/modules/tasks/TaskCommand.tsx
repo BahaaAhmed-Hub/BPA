@@ -8,10 +8,11 @@ import { sortableKeyboardCoordinates } from '@dnd-kit/sortable'
 import { TopBar } from '@/components/layout/TopBar'
 import { EisenhowerBoard } from './EisenhowerBoard'
 import { UndefinedTasksPanel } from './UndefinedTasksPanel'
+import { KanbanBoard } from './KanbanBoard'
 import { TaskDetailModal } from './TaskDetailModal'
 import { TaskCard } from './TaskCard'
 import { useTaskStore } from '@/store/taskStore'
-import { CheckSquare, Zap, SlidersHorizontal, Search, Filter, X } from 'lucide-react'
+import { CheckSquare, Zap, SlidersHorizontal, Search, Filter, X, LayoutGrid, Kanban } from 'lucide-react'
 import type { Quadrant } from '@/types'
 import { isTaskHidden, loadVisibleCompanies, getAllUsers, TASK_TYPE_META, inferTaskType } from '@/types'
 import { scheduleTaskToCalendar } from '@/lib/aiScheduler'
@@ -32,6 +33,14 @@ function loadTaskConfig(): TaskConfig {
 export function TaskCommand() {
   const { tasks: allTasks, moveTask, moveTaskBefore, reorderInbox, reorderQuadrant, updateTask } = useTaskStore()
   const tasks = allTasks.filter(t => !isTaskHidden(t))
+
+  const [viewMode, setViewMode] = useState<'eisenhower' | 'board'>(() =>
+    (localStorage.getItem('task-view-mode') as 'eisenhower' | 'board') ?? 'eisenhower'
+  )
+  function switchView(mode: 'eisenhower' | 'board') {
+    setViewMode(mode)
+    localStorage.setItem('task-view-mode', mode)
+  }
 
   const [cfg, setCfg] = useState(loadTaskConfig)
   const [configOpen, setConfigOpen] = useState(false)
@@ -211,11 +220,31 @@ export function TaskCommand() {
     <div>
       <TopBar
         title="Task Command"
-        subtitle="Eisenhower Matrix — ruthless prioritization for maximum leverage."
+        subtitle={viewMode === 'eisenhower' ? 'Eisenhower Matrix — ruthless prioritization for maximum leverage.' : 'Board View — visualize tasks across dimensions.'}
       />
 
       {/* ── Stats + search bar ──────────────────────────────────────────────── */}
       <div style={{ padding: '10px 28px', borderBottom: '1px solid var(--color-border,#252A3E)', display: 'flex', gap: 14, alignItems: 'center' }}>
+
+        {/* View toggle */}
+        <div style={{ display: 'flex', gap: 3, flexShrink: 0 }}>
+          {[
+            { id: 'eisenhower' as const, icon: <LayoutGrid size={14} />, label: 'Matrix' },
+            { id: 'board'      as const, icon: <Kanban size={14} />,      label: 'Board'  },
+          ].map(v => (
+            <button key={v.id} onClick={() => switchView(v.id)} title={v.label} style={{
+              display: 'flex', alignItems: 'center', gap: 5,
+              padding: '4px 9px', borderRadius: 7, cursor: 'pointer', fontSize: 12, fontWeight: 600,
+              background: viewMode === v.id ? 'rgba(127,119,221,0.14)' : 'transparent',
+              color:  viewMode === v.id ? 'var(--color-accent, #7F77DD)' : 'var(--color-text-muted, #6B7280)',
+              border: `1px solid ${viewMode === v.id ? 'rgba(127,119,221,0.35)' : 'var(--color-border, #252A3E)'}`,
+              transition: 'all 0.12s',
+            }}>
+              {v.icon} {v.label}
+            </button>
+          ))}
+        </div>
+        <div style={{ width: 1, height: 20, background: 'var(--color-border, #252A3E)', flexShrink: 0 }} />
 
         {/* Stats */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexShrink: 0 }}>
@@ -447,23 +476,31 @@ export function TaskCommand() {
         </div>
       )}
 
-      {/* Board + inbox */}
-      <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-        <div style={{ display: 'flex', gap: 14, padding: '18px 28px', alignItems: 'flex-start' }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <EisenhowerBoard onOpen={setModalTaskId} hideCompleted={hideCompleted} groupBy={groupBy} allGroupsExpanded={allGroupsExpanded} filteredTaskIds={filteredTaskIds} />
-          </div>
-          <UndefinedTasksPanel onOpen={setModalTaskId} hideCompleted={hideCompleted} groupBy={groupBy} allGroupsExpanded={allGroupsExpanded} filteredTaskIds={filteredTaskIds} />
-        </div>
-
-        <DragOverlay>
-          {activeTask && (
-            <div style={{ transform: 'rotate(1.5deg)', filter: 'drop-shadow(0 8px 24px rgba(0,0,0,0.5))' }}>
-              <TaskCard task={activeTask} onOpen={() => {}} />
+      {/* Main content */}
+      {viewMode === 'board' ? (
+        <KanbanBoard
+          onOpen={setModalTaskId}
+          hideCompleted={hideCompleted}
+          filteredTaskIds={filteredTaskIds}
+        />
+      ) : (
+        <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+          <div style={{ display: 'flex', gap: 14, padding: '18px 28px', alignItems: 'flex-start' }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <EisenhowerBoard onOpen={setModalTaskId} hideCompleted={hideCompleted} groupBy={groupBy} allGroupsExpanded={allGroupsExpanded} filteredTaskIds={filteredTaskIds} />
             </div>
-          )}
-        </DragOverlay>
-      </DndContext>
+            <UndefinedTasksPanel onOpen={setModalTaskId} hideCompleted={hideCompleted} groupBy={groupBy} allGroupsExpanded={allGroupsExpanded} filteredTaskIds={filteredTaskIds} />
+          </div>
+
+          <DragOverlay>
+            {activeTask && (
+              <div style={{ transform: 'rotate(1.5deg)', filter: 'drop-shadow(0 8px 24px rgba(0,0,0,0.5))' }}>
+                <TaskCard task={activeTask} onOpen={() => {}} />
+              </div>
+            )}
+          </DragOverlay>
+        </DndContext>
+      )}
 
       {modalTask && <TaskDetailModal task={modalTask} onClose={() => setModalTaskId(null)} />}
     </div>
