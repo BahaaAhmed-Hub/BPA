@@ -47,29 +47,47 @@ type Freq = typeof FREQ_OPTS[number]
 // ─── Day dots ─────────────────────────────────────────────────────────────────
 
 function DayDots({
-  logs, color, days, viewDate, onToggle,
+  logs, color, days, viewDate, onToggle, quantities, goal,
 }: {
   logs: string[]; color: string; days: string[]; viewDate: string
   onToggle: (day: string) => void
+  quantities?: Record<string, number>; goal?: number
 }) {
   return (
     <div style={{ display: 'flex', gap: 3 }}>
       {days.map(d => {
-        const done    = logs.includes(d)
-        const isView  = d === viewDate
+        const done     = logs.includes(d)
+        const isView   = d === viewDate
         const isFuture = d > todayKey()
+
+        // For quantity habits: compute fill % from 0–1
+        const qty  = quantities ? (quantities[d] ?? 0) : null
+        const pct  = (qty !== null && goal) ? Math.min(qty / goal, 1) : null
+        const filled = pct !== null ? pct : (done ? 1 : 0)
+
+        // Gradient fill from bottom: color up to pct%, surface above
+        const bg = filled === 0
+          ? 'var(--color-surface2, #0D0F1A)'
+          : filled >= 1
+            ? color
+            : `linear-gradient(to top, ${color} ${Math.round(filled * 100)}%, var(--color-surface2, #0D0F1A) ${Math.round(filled * 100)}%)`
+
+        const textColor = filled >= 0.6 ? 'var(--color-bg, #0D0F1A)' : 'var(--color-text-muted, #4B5563)'
+
         return (
-          <button key={d} title={d} disabled={isFuture}
+          <button key={d} title={qty !== null ? `${qty}${goal ? ` / ${goal}` : ''} (${Math.round(filled * 100)}%)` : d}
+            disabled={isFuture}
             onClick={() => !isFuture && onToggle(d)}
             style={{
               width: 22, height: 22, borderRadius: 5, padding: 0, border: 'none',
-              background: done ? color : 'var(--color-surface2, #0D0F1A)',
+              background: bg,
               outline: isView ? `2px solid ${color}` : undefined, outlineOffset: 1,
               cursor: isFuture ? 'default' : 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               opacity: isFuture ? 0.3 : 1,
+              overflow: 'hidden',
             }}>
-            <span style={{ fontSize: 8, color: done ? 'var(--color-bg, #0D0F1A)' : 'var(--color-text-muted, #4B5563)', fontWeight: 600, userSelect: 'none' }}>
+            <span style={{ fontSize: 8, color: textColor, fontWeight: 600, userSelect: 'none' }}>
               {fmtDayLabel(d)}
             </span>
           </button>
@@ -497,11 +515,12 @@ export function HabitsModule() {
                   {habit.frequency}
                 </button>
 
-                {/* Day dots (boolean path) — for quantity: dots show goal-met days */}
+                {/* Day dots — boolean: filled/empty; quantity: partial fill shows achievement % */}
                 <DayDots logs={habitLogs} color={habit.color} days={days} viewDate={viewDate}
+                  quantities={isQuantity ? qtyLogs[habit.id] : undefined}
+                  goal={isQuantity ? (habit.goal ?? 1) : undefined}
                   onToggle={d => {
                     if (isQuantity) {
-                      // Toggle: if already met, reset to 0; otherwise jump to goal
                       const cur = qtyLogs[habit.id]?.[d] ?? 0
                       const goal = habit.goal ?? 1
                       setQuantity(habit.id, goal, d, cur >= goal ? 0 : goal)
