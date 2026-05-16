@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react'
+import { X, ChevronLeft, ChevronRight, Check } from 'lucide-react'
 import { useUIStore } from '@/store/uiStore'
 import { useAuthStore } from '@/store/authStore'
 import { useHabitsStore } from '@/store/habitsStore'
@@ -13,492 +14,264 @@ import { Step4Habits } from './steps/Step4Habits'
 import { Step5Tasks } from './steps/Step5Tasks'
 import { Step6Done } from './steps/Step6Done'
 
-// ─── Exported types (used by step components) ─────────────────────────────────
+// ─── Exported types ────────────────────────────────────────────────────────────
 
 export interface CompanyDraft {
-  id: string
-  name: string
-  color: string
-  emailDomain: string
-  accountId: string
+  id: string; name: string; color: string; emailDomain: string; accountId: string
 }
 
 export interface CustomHabitDraft {
-  name: string
-  emoji: string
-  color: string
-  type: 'boolean' | 'quantity'
-  goal?: number
-  unit?: string
+  name: string; emoji: string; color: string
+  type: 'boolean' | 'quantity'; goal?: number; unit?: string
   frequency: 'daily' | 'weekdays' | 'weekly'
 }
 
 export interface TodoistTaskItem {
-  id: string
-  content: string
-  due?: string
-  priority: number
+  id: string; content: string; due?: string; priority: number
 }
 
 export interface WizardData {
-  displayName: string
-  themeId: string
+  displayName: string; themeId: string
   companies: CompanyDraft[]
-  selectedTemplates: string[]
-  customHabits: CustomHabitDraft[]
-  todoistToken: string
-  importedTasks: TodoistTaskItem[]
+  selectedTemplates: string[]; customHabits: CustomHabitDraft[]
+  todoistToken: string; importedTasks: TodoistTaskItem[]
   selectedTaskIds: Set<string>
 }
 
-// ─── Habit template type (for reference in apply) ─────────────────────────────
+// ─── Habit templates (mirrored in Step4 for apply logic) ─────────────────────
 
-interface HabitTemplate {
-  id: string
-  name: string
-  emoji: string
-  color: string
-  type: 'boolean' | 'quantity'
-  goal?: number
-  unit?: string
-  frequency: 'daily' | 'weekdays' | 'weekly'
-}
-
-const HABIT_TEMPLATES: HabitTemplate[] = [
-  { id: 'water',       name: 'Drink Water',   emoji: '💧', color: '#60A5FA', type: 'quantity', goal: 8,     unit: 'glasses', frequency: 'daily' },
-  { id: 'exercise',    name: 'Exercise',       emoji: '💪', color: '#E05252', type: 'boolean',                               frequency: 'daily' },
-  { id: 'reading',     name: 'Reading',        emoji: '📚', color: '#A855F7', type: 'quantity', goal: 30,   unit: 'min',     frequency: 'daily' },
-  { id: 'meditation',  name: 'Meditation',     emoji: '🧘', color: '#1D9E75', type: 'quantity', goal: 10,   unit: 'min',     frequency: 'daily' },
-  { id: 'sleep',       name: '8h Sleep',       emoji: '😴', color: '#7F77DD', type: 'boolean',                               frequency: 'daily' },
-  { id: 'journaling',  name: 'Journaling',     emoji: '📓', color: '#F97316', type: 'boolean',                               frequency: 'daily' },
-  { id: 'steps',       name: 'Steps',          emoji: '🚶', color: '#34D399', type: 'quantity', goal: 10000, unit: 'steps',  frequency: 'daily' },
-  { id: 'cold-shower', name: 'Cold Shower',    emoji: '🚿', color: '#22D3EE', type: 'boolean',                               frequency: 'daily' },
-  { id: 'no-phone-am', name: 'No Phone (AM)',  emoji: '📵', color: '#6366F1', type: 'boolean',                               frequency: 'daily' },
-  { id: 'vitamins',    name: 'Vitamins',       emoji: '💊', color: '#EC4899', type: 'boolean',                               frequency: 'daily' },
-  { id: 'prayer',      name: 'Prayer',         emoji: '🤲', color: '#FBBF24', type: 'boolean',                               frequency: 'daily' },
-  { id: 'no-sugar',    name: 'No Sugar',       emoji: '🚫', color: '#E0944A', type: 'boolean',                               frequency: 'daily' },
+const HABIT_TEMPLATES = [
+  { id: 'water',       name: 'Drink Water',  emoji: '💧', color: '#60A5FA', type: 'quantity' as const, goal: 8,     unit: 'glasses', frequency: 'daily' as const },
+  { id: 'exercise',    name: 'Exercise',      emoji: '💪', color: '#E05252', type: 'boolean'  as const,                               frequency: 'daily' as const },
+  { id: 'reading',     name: 'Reading',       emoji: '📚', color: '#A855F7', type: 'quantity' as const, goal: 30,   unit: 'min',     frequency: 'daily' as const },
+  { id: 'meditation',  name: 'Meditation',    emoji: '🧘', color: '#1D9E75', type: 'quantity' as const, goal: 10,   unit: 'min',     frequency: 'daily' as const },
+  { id: 'sleep',       name: '8h Sleep',      emoji: '😴', color: '#7F77DD', type: 'boolean'  as const,                               frequency: 'daily' as const },
+  { id: 'journaling',  name: 'Journaling',    emoji: '📓', color: '#F97316', type: 'boolean'  as const,                               frequency: 'daily' as const },
+  { id: 'steps',       name: 'Steps',         emoji: '🚶', color: '#34D399', type: 'quantity' as const, goal: 10000, unit: 'steps',  frequency: 'daily' as const },
+  { id: 'cold-shower', name: 'Cold Shower',   emoji: '🚿', color: '#22D3EE', type: 'boolean'  as const,                               frequency: 'daily' as const },
+  { id: 'no-phone-am', name: 'No Phone (AM)', emoji: '📵', color: '#6366F1', type: 'boolean'  as const,                               frequency: 'daily' as const },
+  { id: 'vitamins',    name: 'Vitamins',      emoji: '💊', color: '#EC4899', type: 'boolean'  as const,                               frequency: 'daily' as const },
+  { id: 'prayer',      name: 'Prayer',        emoji: '🤲', color: '#FBBF24', type: 'boolean'  as const,                               frequency: 'daily' as const },
+  { id: 'no-sugar',    name: 'No Sugar',      emoji: '🚫', color: '#E0944A', type: 'boolean'  as const,                               frequency: 'daily' as const },
 ]
-
-// ─── Step labels ──────────────────────────────────────────────────────────────
 
 const STEP_LABELS = ['Welcome', 'Accounts', 'Companies', 'Habits', 'Import', 'Done']
 const TOTAL_STEPS = 6
 
-// ─── WizardProgress ───────────────────────────────────────────────────────────
+// Light-theme CSS variable overrides — applied inside the modal
+const LIGHT_VARS: React.CSSProperties = {
+  '--color-bg':         '#F4F4F8',
+  '--color-surface':    '#FFFFFF',
+  '--color-border':     '#E5E5EA',
+  '--color-text':       '#111827',
+  '--color-text-dim':   '#374151',
+  '--color-text-muted': '#9CA3AF',
+} as React.CSSProperties
 
-interface WizardProgressProps {
-  step: number
-}
+// ─── SetupWizard ──────────────────────────────────────────────────────────────
 
-function WizardProgress({ step }: WizardProgressProps) {
-  return (
-    <div style={{ padding: '24px 32px 0' }}>
-      <style>{`
-        @keyframes wizard-progress-fadein {
-          from { opacity: 0; }
-          to   { opacity: 1; }
-        }
-      `}</style>
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 0, position: 'relative' }}>
-        {STEP_LABELS.map((label, idx) => {
-          const num = idx + 1
-          const isCompleted = num < step
-          const isActive = num === step
-          const isFuture = num > step
-          const isLast = idx === STEP_LABELS.length - 1
-          const accent = 'var(--color-accent, #7F77DD)'
-
-          return (
-            <div key={num} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: isLast ? 'none' : 1, position: 'relative' }}>
-              {/* connector line */}
-              {!isLast && (
-                <div style={{
-                  position: 'absolute',
-                  top: 13,
-                  left: '50%',
-                  width: '100%',
-                  height: 2,
-                  background: isCompleted
-                    ? accent
-                    : 'var(--color-border)',
-                  transition: 'background 0.3s',
-                  zIndex: 0,
-                }} />
-              )}
-
-              {/* dot */}
-              <div style={{
-                width: isActive ? 28 : 24,
-                height: isActive ? 28 : 24,
-                borderRadius: '50%',
-                background: isCompleted ? accent : isActive ? accent : 'var(--color-surface)',
-                border: isFuture
-                  ? '2px solid var(--color-border)'
-                  : `2px solid ${accent}`,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                position: 'relative',
-                zIndex: 1,
-                flexShrink: 0,
-                boxShadow: isActive
-                  ? '0 0 12px rgba(127,119,221,0.6)'
-                  : 'none',
-                transition: 'all 0.25s ease',
-              }}>
-                {isCompleted ? (
-                  <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
-                    <polyline points="2,5.5 4.5,8 9,3" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                ) : (
-                  <span style={{
-                    fontSize: 10,
-                    fontWeight: 700,
-                    color: isActive ? '#fff' : isFuture ? 'var(--color-text-muted)' : '#fff',
-                    lineHeight: 1,
-                  }}>
-                    {num}
-                  </span>
-                )}
-              </div>
-
-              {/* label */}
-              <div style={{
-                fontSize: 9,
-                fontWeight: isActive ? 700 : 500,
-                color: isActive
-                  ? accent
-                  : isCompleted
-                  ? 'var(--color-text-dim)'
-                  : 'var(--color-text-muted)',
-                marginTop: 5,
-                textAlign: 'center',
-                whiteSpace: 'nowrap',
-                transition: 'color 0.2s',
-                letterSpacing: '0.03em',
-                textTransform: 'uppercase',
-              }}>
-                {label}
-              </div>
-            </div>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
-
-// ─── Main SetupWizard ─────────────────────────────────────────────────────────
-
-interface Props {
-  onClose: () => void
-}
+interface Props { onClose: () => void }
 
 export function SetupWizard({ onClose }: Props) {
-  const authName = useAuthStore(s => s.user?.name ?? '')
+  const authName      = useAuthStore(s => s.user?.name ?? '')
   const currentThemeId = useUIStore(s => s.themeId)
 
-  const [step, setStep] = useState(1)
-  const [dir, setDir] = useState<'forward' | 'back'>('forward')
+  const [step, setStep]       = useState(1)
+  const [dir,  setDir]        = useState<'fwd' | 'back'>('fwd')
   const [animKey, setAnimKey] = useState(0)
-  const [data, setData] = useState<WizardData>({
-    displayName: authName,
-    themeId: currentThemeId,
-    companies: [],
-    selectedTemplates: [],
-    customHabits: [],
-    todoistToken: '',
-    importedTasks: [],
-    selectedTaskIds: new Set<string>(),
+  const [data, setData]       = useState<WizardData>({
+    displayName: authName, themeId: currentThemeId,
+    companies: [], selectedTemplates: [], customHabits: [],
+    todoistToken: '', importedTasks: [], selectedTaskIds: new Set(),
   })
 
-  const handleChange = useCallback((patch: Partial<WizardData>) => {
+  const onChange = useCallback((patch: Partial<WizardData>) => {
     setData(prev => ({ ...prev, ...patch }))
   }, [])
 
   function goNext() {
     if (step >= TOTAL_STEPS) return
-    setDir('forward')
-    setAnimKey(k => k + 1)
-    setStep(s => s + 1)
+    setDir('fwd'); setAnimKey(k => k + 1); setStep(s => s + 1)
   }
-
   function goBack() {
     if (step <= 1) return
-    setDir('back')
-    setAnimKey(k => k + 1)
-    setStep(s => s - 1)
+    setDir('back'); setAnimKey(k => k + 1); setStep(s => s - 1)
   }
-
-  function handleSkip() {
-    localStorage.setItem('bpa-wizard-done', '1')
-    onClose()
-  }
+  function handleSkip() { localStorage.setItem('bpa-wizard-done', '1'); onClose() }
 
   async function handleFinish() {
-    // 1. Apply theme
     useUIStore.getState().setThemeId(data.themeId)
     applyThemeVars(getTheme(data.themeId))
+    if (data.displayName) localStorage.setItem('professor-display-name', data.displayName)
 
-    // 2. Save display name
-    if (data.displayName) {
-      localStorage.setItem('professor-display-name', data.displayName)
-    }
-
-    // 3. Save companies
     if (data.companies.length > 0) {
-      const companyRows: CompanyRow[] = data.companies.map(c => ({
-        id: c.id,
-        name: c.name,
-        color: c.color,
-        calendarId: '',
-        emailDomain: c.emailDomain,
-        accountId: c.accountId,
-        isActive: true,
-        users: [],
+      const rows: CompanyRow[] = data.companies.map(c => ({
+        id: c.id, name: c.name, color: c.color,
+        calendarId: '', emailDomain: c.emailDomain, accountId: c.accountId,
+        isActive: true, users: [],
       }))
       localStorage.setItem('professor-companies', JSON.stringify(
-        data.companies.map(c => ({
-          id: c.id,
-          name: c.name,
-          color: c.color,
-          users: [],
-        }))
+        data.companies.map(c => ({ id: c.id, name: c.name, color: c.color, users: [] }))
       ))
-      try {
-        await saveCompaniesToDB(companyRows)
-      } catch { /* offline */ }
+      try { await saveCompaniesToDB(rows) } catch { /* offline */ }
     }
 
-    // 4. Add habits
     const addHabit = useHabitsStore.getState().addHabit
-    for (const templateId of data.selectedTemplates) {
-      const tpl = HABIT_TEMPLATES.find(t => t.id === templateId)
-      if (tpl) {
-        addHabit({
-          name: tpl.name,
-          emoji: tpl.emoji,
-          color: tpl.color,
-          type: tpl.type,
-          goal: tpl.goal,
-          unit: tpl.unit,
-          frequency: tpl.frequency,
-          isActive: true,
-        })
-      }
+    for (const tid of data.selectedTemplates) {
+      const t = HABIT_TEMPLATES.find(x => x.id === tid)
+      if (t) addHabit({ name: t.name, emoji: t.emoji, color: t.color, type: t.type, goal: (t as {goal?: number}).goal, unit: (t as {unit?: string}).unit, frequency: t.frequency, isActive: true })
     }
     for (const ch of data.customHabits) {
-      addHabit({
-        name: ch.name,
-        emoji: ch.emoji,
-        color: ch.color,
-        type: ch.type,
-        goal: ch.goal,
-        unit: ch.unit,
-        frequency: ch.frequency,
-        isActive: true,
-      })
+      addHabit({ name: ch.name, emoji: ch.emoji, color: ch.color, type: ch.type, goal: ch.goal, unit: ch.unit, frequency: ch.frequency, isActive: true })
     }
 
-    // 5. Add imported tasks
     const addTask = useTaskStore.getState().addTask
-    for (const task of data.importedTasks) {
-      if (data.selectedTaskIds.has(task.id)) {
-        addTask({
-          title: task.content,
-          quadrant: null,
-          company: 'personal',
-          status: 'open',
-          completed: false,
-          source: 'todoist',
-        } as Parameters<typeof addTask>[0])
+    for (const t of data.importedTasks) {
+      if (data.selectedTaskIds.has(t.id)) {
+        addTask({ title: t.content, quadrant: null, company: 'personal', status: 'open', completed: false, source: 'todoist' } as Parameters<typeof addTask>[0])
       }
     }
 
-    // 6. Mark wizard done
     localStorage.setItem('bpa-wizard-done', '1')
-
     onClose()
   }
 
-  const slideAnimation = dir === 'forward'
-    ? 'wizard-slide-fwd 0.3s ease'
-    : 'wizard-slide-back 0.3s ease'
+  const pct = ((step - 1) / (TOTAL_STEPS - 1)) * 100
 
   return (
     <>
       <style>{`
-        @keyframes wizard-backdrop-fadein {
-          from { opacity: 0; }
-          to   { opacity: 1; }
-        }
-        @keyframes wizard-panel-slidein {
-          from { transform: translateX(100%); }
-          to   { transform: translateX(0); }
-        }
-        @keyframes wizard-glow-pulse {
-          0%, 100% { opacity: 0.6; }
-          50%       { opacity: 1; }
-        }
-        @keyframes wizard-slide-fwd {
-          from { opacity: 0; transform: translateX(40px); }
-          to   { opacity: 1; transform: translateX(0); }
-        }
-        @keyframes wizard-slide-back {
-          from { opacity: 0; transform: translateX(-40px); }
-          to   { opacity: 1; transform: translateX(0); }
-        }
+        @keyframes wz-backdrop { from{opacity:0} to{opacity:1} }
+        @keyframes wz-modal    { from{opacity:0;transform:translateY(28px) scale(0.98)} to{opacity:1;transform:translateY(0) scale(1)} }
+        @keyframes wz-fwd      { from{opacity:0;transform:translateX(32px)} to{opacity:1;transform:translateX(0)} }
+        @keyframes wz-back     { from{opacity:0;transform:translateX(-32px)} to{opacity:1;transform:translateX(0)} }
+        .wz-btn-back:hover  { background:#F3F4F6!important; border-color:#D1D5DB!important; }
+        .wz-btn-next:hover  { filter:brightness(1.08); transform:translateY(-1px); box-shadow:0 6px 20px rgba(0,0,0,0.18)!important; }
+        .wz-btn-next:active { filter:brightness(0.96); transform:translateY(0); }
       `}</style>
 
       {/* Backdrop */}
-      <div
-        onClick={undefined}
-        style={{
-          position: 'fixed',
-          inset: 0,
-          zIndex: 999,
-          background: 'rgba(0,0,0,0.65)',
-          backdropFilter: 'blur(6px)',
-          animation: 'wizard-backdrop-fadein 0.3s ease',
-        }}
-      />
-
-      {/* Glow */}
       <div style={{
-        position: 'fixed',
-        right: 0,
-        top: '50%',
-        transform: 'translateY(-50%)',
-        width: 700,
-        height: 700,
-        background: 'radial-gradient(ellipse at 80% 50%, rgba(127,119,221,0.12) 0%, transparent 65%)',
-        pointerEvents: 'none',
-        zIndex: 1000,
-        animation: 'wizard-glow-pulse 3s ease-in-out infinite',
-      }} />
-
-      {/* Panel */}
-      <div style={{
-        position: 'fixed',
-        top: 0,
-        right: 0,
-        bottom: 0,
-        width: 580,
-        background: 'rgba(10,12,26,0.92)',
-        backdropFilter: 'blur(28px) saturate(1.8)',
-        borderLeft: '1px solid rgba(127,119,221,0.18)',
-        boxShadow: '-24px 0 80px rgba(0,0,0,0.6), inset 0 0 0 1px rgba(255,255,255,0.04)',
-        overflow: 'hidden',
-        zIndex: 1001,
-        display: 'flex',
-        flexDirection: 'column',
-        animation: 'wizard-panel-slidein 0.45s cubic-bezier(0.16,1,0.3,1)',
+        position: 'fixed', inset: 0, zIndex: 999,
+        background: 'rgba(0,0,0,0.52)',
+        backdropFilter: 'blur(10px)',
+        animation: 'wz-backdrop 0.25s ease',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: '20px',
       }}>
-
-        {/* Progress */}
-        <WizardProgress step={step} />
-
-        {/* Step content */}
+        {/* Modal */}
         <div style={{
-          flex: 1,
-          overflowY: 'auto',
-          padding: '28px 32px',
+          ...LIGHT_VARS,
+          background: '#FFFFFF',
+          borderRadius: 20,
+          width: '100%', maxWidth: 640,
+          maxHeight: '88vh',
+          display: 'flex', flexDirection: 'column',
+          boxShadow: '0 32px 80px rgba(0,0,0,0.28), 0 0 0 1px rgba(0,0,0,0.06)',
+          animation: 'wz-modal 0.35s cubic-bezier(0.16,1,0.3,1)',
+          overflow: 'hidden',
         }}>
-          <div key={`${step}-${animKey}`} style={{ animation: slideAnimation }}>
-            {step === 1 && <Step1Welcome data={data} onChange={handleChange} />}
-            {step === 2 && <Step2Accounts data={data} onChange={handleChange} />}
-            {step === 3 && <Step3Companies data={data} onChange={handleChange} />}
-            {step === 4 && <Step4Habits data={data} onChange={handleChange} />}
-            {step === 5 && <Step5Tasks data={data} onChange={handleChange} />}
-            {step === 6 && <Step6Done data={data} />}
-          </div>
-        </div>
 
-        {/* Nav buttons */}
-        <div style={{
-          padding: '20px 32px',
-          borderTop: '1px solid var(--color-border, rgba(255,255,255,0.08))',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 10,
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            {/* Back button */}
-            {step > 1 && step < 6 ? (
-              <button
-                onClick={goBack}
-                style={{
-                  background: 'transparent',
-                  border: '1px solid var(--color-border, rgba(255,255,255,0.12))',
-                  borderRadius: 8,
-                  padding: '10px 20px',
-                  color: 'var(--color-text-dim)',
-                  fontSize: 14,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
-              >
-                Back
-              </button>
-            ) : (
-              <div />
-            )}
-
-            {/* Next / Finish */}
-            {step < TOTAL_STEPS ? (
-              <button
-                onClick={goNext}
-                style={{
-                  background: 'var(--color-accent, #7F77DD)',
-                  border: 'none',
-                  borderRadius: 8,
-                  padding: '10px 24px',
-                  color: '#fff',
-                  fontSize: 14,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
-              >
-                Next →
-              </button>
-            ) : (
-              <button
-                onClick={handleFinish}
-                style={{
-                  background: 'var(--color-accent, #7F77DD)',
-                  border: 'none',
-                  borderRadius: 8,
-                  padding: '10px 24px',
-                  color: '#fff',
-                  fontSize: 14,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
-              >
-                Finish ✓
-              </button>
-            )}
-          </div>
-
-          {/* Skip link on step 1 */}
-          {step === 1 && (
-            <div style={{ textAlign: 'center' }}>
-              <button
-                onClick={handleSkip}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: 'var(--color-text-muted)',
-                  fontSize: 12,
-                  cursor: 'pointer',
-                  textDecoration: 'underline',
-                  padding: 0,
-                }}
-              >
-                Skip setup →
-              </button>
+          {/* ── Header ───────────────────────────────────────────────────── */}
+          <div style={{ padding: '22px 28px 0', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: '#6B7280' }}>
+                  Step {step} of {TOTAL_STEPS}
+                </span>
+                <span style={{ fontSize: 12, color: '#9CA3AF', display: 'flex', alignItems: 'center', gap: 5 }}>
+                  ✦ The Professor Setup
+                </span>
+              </div>
+              {/* Segmented progress bar */}
+              <div style={{ display: 'flex', gap: 4 }}>
+                {STEP_LABELS.map((label, i) => {
+                  const n = i + 1
+                  const done   = n < step
+                  const active = n === step
+                  const accent = 'var(--color-accent,#7F77DD)'
+                  return (
+                    <div key={label} title={label} style={{ flex: 1, height: 4, borderRadius: 2, overflow: 'hidden', background: '#E5E7EB', position: 'relative', transition: 'background 0.3s' }}>
+                      <div style={{
+                        position: 'absolute', inset: 0,
+                        background: accent,
+                        transform: done ? 'scaleX(1)' : active ? 'scaleX(1)' : 'scaleX(0)',
+                        transformOrigin: 'left',
+                        opacity: done ? 1 : active ? 0.55 : 0,
+                        transition: 'transform 0.4s ease, opacity 0.3s',
+                      }} />
+                    </div>
+                  )
+                })}
+              </div>
             </div>
-          )}
+            <button onClick={handleSkip} title="Skip setup" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9CA3AF', padding: '2px 4px', display: 'flex', borderRadius: 8, flexShrink: 0, marginTop: -2, transition: 'color 0.15s' }}>
+              <X size={20} />
+            </button>
+          </div>
+
+          {/* ── Step content ─────────────────────────────────────────────── */}
+          <div style={{ flex: 1, overflowY: 'auto', padding: '20px 28px' }}>
+            <div key={`${step}-${animKey}`} style={{ animation: `${dir === 'fwd' ? 'wz-fwd' : 'wz-back'} 0.28s ease` }}>
+              {step === 1 && <Step1Welcome data={data} onChange={onChange} />}
+              {step === 2 && <Step2Accounts data={data} onChange={onChange} />}
+              {step === 3 && <Step3Companies data={data} onChange={onChange} />}
+              {step === 4 && <Step4Habits data={data} onChange={onChange} />}
+              {step === 5 && <Step5Tasks data={data} onChange={onChange} />}
+              {step === 6 && <Step6Done data={data} />}
+            </div>
+          </div>
+
+          {/* ── Footer nav ───────────────────────────────────────────────── */}
+          <div style={{ padding: '18px 28px', borderTop: '1px solid #F0F0F0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+            {step > 1 && step < TOTAL_STEPS ? (
+              <button onClick={goBack} className="wz-btn-back" style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '11px 22px', borderRadius: 100,
+                background: 'transparent', border: '1.5px solid #E5E7EB',
+                color: '#6B7280', fontSize: 14, fontWeight: 600, cursor: 'pointer',
+                transition: 'all 0.15s',
+              }}>
+                <ChevronLeft size={16} /> Back
+              </button>
+            ) : <div />}
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              {step === 1 && (
+                <button onClick={handleSkip} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9CA3AF', fontSize: 13, padding: '4px 8px' }}>
+                  Skip for now
+                </button>
+              )}
+              {step < TOTAL_STEPS ? (
+                <button onClick={goNext} className="wz-btn-next" style={{
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  padding: '11px 26px', borderRadius: 100,
+                  background: 'var(--color-accent,#7F77DD)', border: 'none',
+                  color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer',
+                  boxShadow: '0 4px 14px rgba(127,119,221,0.35)',
+                  transition: 'all 0.15s',
+                }}>
+                  Next <ChevronRight size={16} />
+                </button>
+              ) : (
+                <button onClick={() => void handleFinish()} className="wz-btn-next" style={{
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  padding: '11px 26px', borderRadius: 100,
+                  background: '#1D9E75', border: 'none',
+                  color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer',
+                  boxShadow: '0 4px 14px rgba(29,158,117,0.35)',
+                  transition: 'all 0.15s',
+                }}>
+                  <Check size={16} /> Finish
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Subtle bottom progress indicator */}
+          <div style={{ height: 3, background: '#F0F0F4', position: 'relative' }}>
+            <div style={{ position: 'absolute', inset: '0 auto 0 0', width: `${pct}%`, background: 'var(--color-accent,#7F77DD)', transition: 'width 0.4s cubic-bezier(0.4,0,0.2,1)', borderRadius: '0 2px 2px 0' }} />
+          </div>
         </div>
       </div>
     </>
