@@ -245,7 +245,7 @@ export function QuadrantColumn({ quadrant, tasks, onOpen, groupBy = 'none', allG
                 background: 'var(--color-bg, #0D0F1A)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 6,
                 padding: '6px 8px', display: 'flex', flexWrap: 'wrap', gap: 5, alignItems: 'center',
               }}>
-                <Sparkles size={10} color="#7F77DD" style={{ flexShrink: 0 }} />
+                <Sparkles size={10} color="var(--color-accent)" style={{ flexShrink: 0 }} />
                 {aiLoading && <span style={{ fontSize: 10.5, color: 'var(--color-text-muted, #6B7280)' }}>Analyzing…</span>}
                 {!aiLoading && aiHint && (
                   <>
@@ -274,7 +274,7 @@ export function QuadrantColumn({ quadrant, tasks, onOpen, groupBy = 'none', allG
                       </span>
                     )}
                     {aiHint.assignToMe && !aiHint.ownerId && (
-                      <span style={{ fontSize: 10, color: '#7F77DD' }}>assign to me</span>
+                      <span style={{ fontSize: 10, color: 'var(--color-accent)' }}>assign to me</span>
                     )}
                   </>
                 )}

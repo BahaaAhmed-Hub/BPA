@@ -392,7 +392,7 @@ export function HabitsModule() {
               label: 'Best Streak',
               value: `${Math.max(0, ...activeHabits.map(h => calcStreak(logs[h.id] ?? [])))}d`,
               sub: 'Consecutive days',
-              color: '#7F77DD',
+              color: 'var(--color-accent)',
             },
             {
               label: 'Active Habits',

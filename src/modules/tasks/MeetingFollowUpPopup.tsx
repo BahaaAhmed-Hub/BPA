@@ -33,10 +33,10 @@ function toDraft(t: ExtractedTask, allUsers: ReturnType<typeof getAllUsers>): Dr
 
 const Q_OPTIONS: { value: Quadrant | null; label: string; color: string }[] = [
   { value: 'do',        label: 'Do',       color: '#E05252' },
-  { value: 'schedule',  label: 'Schedule', color: '#7F77DD' },
+  { value: 'schedule',  label: 'Schedule', color: 'var(--color-accent)' },
   { value: 'delegate',  label: 'Delegate', color: '#1D9E75' },
   { value: 'eliminate', label: 'Eliminate',color: '#888780' },
-  { value: null,        label: 'Inbox',    color: '#1E40AF' },
+  { value: null,        label: 'Inbox',    color: 'var(--color-accent)' },
 ]
 
 // ─── inline edit row ──────────────────────────────────────────────────────────
@@ -206,8 +206,8 @@ function TaskRow({ draft, index, expanded, users, onToggle, onChange, onDelete }
             <button
               onClick={onToggle}
               style={{
-                background: '#1E40AF18', border: '1px solid #1E40AF40',
-                borderRadius: 6, padding: '4px 14px', color: '#1E40AF',
+                background: 'var(--color-accent-fill)', border: '1px solid #1E40AF40',
+                borderRadius: 6, padding: '4px 14px', color: 'var(--color-accent)',
                 fontSize: 11.5, fontWeight: 600, cursor: 'pointer',
               }}
             >
@@ -451,9 +451,9 @@ export function MeetingFollowUpPopup({ parentTask, onConfirm, onSkip }: Props) {
               disabled={loading}
               style={{
                 padding: '7px 16px', borderRadius: 8, fontSize: 12.5, fontWeight: 600,
-                background: loading ? 'var(--color-surface2, #252A3E)' : '#7F77DD22',
+                background: loading ? 'var(--color-surface2, #252A3E)' : 'var(--color-accent-fill)',
                 border: '1px solid #7F77DD50',
-                color: loading ? 'var(--color-text-muted, #6B7280)' : '#7F77DD',
+                color: loading ? 'var(--color-text-muted, #6B7280)' : 'var(--color-accent)',
                 cursor: loading ? 'not-allowed' : 'pointer',
                 display: 'flex', alignItems: 'center', gap: 6,
               }}

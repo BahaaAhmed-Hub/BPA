@@ -27,7 +27,7 @@ function MetricCard({
   accentColor?: string
   onClick?: () => void
 }) {
-  const color = accentColor ?? '#1E40AF'
+  const color = accentColor ?? 'var(--color-accent)'
   return (
     <div
       onClick={onClick}
@@ -223,7 +223,7 @@ export function ExecutiveDashboard() {
             delta={addedThisWeek > 0 ? `${addedThisWeek} added this week` : undefined}
             deltaPositive={false}
             icon={CheckSquare}
-            accentColor="#1E40AF"
+            accentColor="var(--color-accent)"
             onClick={() => setModule('tasks')}
           />
           <MetricCard
@@ -249,7 +249,7 @@ export function ExecutiveDashboard() {
             delta={todayMeetings > 0 ? 'From calendar' : 'Connect calendar'}
             deltaPositive={todayMeetings === 0}
             icon={Calendar}
-            accentColor="#7F77DD"
+            accentColor="var(--color-accent)"
             onClick={() => setModule('calendar')}
           />
         </div>
@@ -280,7 +280,7 @@ export function ExecutiveDashboard() {
             delta="Connect Gmail"
             deltaPositive={false}
             icon={Inbox}
-            accentColor="#1E40AF"
+            accentColor="var(--color-accent)"
             onClick={() => setModule('inbox')}
           />
         </div>
@@ -323,8 +323,8 @@ export function ExecutiveDashboard() {
               </h3>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                 {([
-                  { key: 'do',       label: 'Do Now',   color: '#1E40AF' },
-                  { key: 'schedule', label: 'Schedule', color: '#7F77DD' },
+                  { key: 'do',       label: 'Do Now',   color: 'var(--color-accent)' },
+                  { key: 'schedule', label: 'Schedule', color: 'var(--color-accent)' },
                   { key: 'delegate', label: 'Delegate', color: '#1D9E75' },
                   { key: 'eliminate',label: 'Eliminate',color: '#888780' },
                 ] as const).map(({ key, label, color }) => {
@@ -381,10 +381,10 @@ export function ExecutiveDashboard() {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             flexShrink: 0, marginTop: 1,
           }}>
-            <TrendingUp size={13} color="#1E40AF" strokeWidth={2.5} />
+            <TrendingUp size={13} color="var(--color-accent)" strokeWidth={2.5} />
           </div>
           <div>
-            <div style={{ fontSize: 12, fontWeight: 600, color: '#1E40AF', marginBottom: 4, letterSpacing: '0.3px' }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-accent)', marginBottom: 4, letterSpacing: '0.3px' }}>
               THE PROFESSOR
             </div>
             <p style={{ margin: 0, fontSize: 13.5, color: 'var(--color-text, #E8EAF6)', lineHeight: 1.55 }}>

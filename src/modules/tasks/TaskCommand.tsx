@@ -133,7 +133,7 @@ export function TaskCommand() {
         display: 'flex', gap: 18, alignItems: 'center',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <CheckSquare size={13} color="#1E40AF" strokeWidth={2} />
+          <CheckSquare size={13} color="var(--color-accent)" strokeWidth={2} />
           <span style={{ fontSize: 12.5, color: 'var(--color-text, #E8EAF6)' }}>
             <span style={{ fontWeight: 600 }}>{active.length}</span> active
           </span>
@@ -168,8 +168,8 @@ export function TaskCommand() {
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 width: 28, height: 28, borderRadius: 7, cursor: 'pointer',
                 background: configOpen ? 'rgba(127,119,221,0.12)' : 'transparent',
-                border: `1px solid ${configOpen ? '#7F77DD40' : 'var(--color-border, #252A3E)'}`,
-                color: configOpen ? '#7F77DD' : 'var(--color-text-muted, #6B7280)',
+                border: `1px solid ${configOpen ? 'color-mix(in srgb, var(--color-accent) 40%, transparent)' : 'var(--color-border, #252A3E)'}`,
+                color: configOpen ? 'var(--color-accent)' : 'var(--color-text-muted, #6B7280)',
                 transition: 'all 0.12s',
               }}
             >
@@ -193,7 +193,7 @@ export function TaskCommand() {
                   <span style={{ fontSize: 13, color: 'var(--color-text-dim, #C0C4D6)' }}>Hide completed tasks</span>
                   <div onClick={() => setHideCompleted(!hideCompleted)} style={{
                     width: 36, height: 20, borderRadius: 10, flexShrink: 0,
-                    background: hideCompleted ? '#7F77DD' : 'var(--color-border, #252A3E)',
+                    background: hideCompleted ? 'var(--color-accent)' : 'var(--color-border, #252A3E)',
                     position: 'relative', cursor: 'pointer', transition: 'background 0.15s',
                   }}>
                     <div style={{
@@ -217,8 +217,8 @@ export function TaskCommand() {
                   }}>
                     <div style={{
                       width: 13, height: 13, borderRadius: '50%', flexShrink: 0,
-                      border: `2px solid ${groupBy === opt ? '#7F77DD' : 'var(--color-text-muted, #6B7280)'}`,
-                      background: groupBy === opt ? '#7F77DD' : 'transparent',
+                      border: `2px solid ${groupBy === opt ? 'var(--color-accent)' : 'var(--color-text-muted, #6B7280)'}`,
+                      background: groupBy === opt ? 'var(--color-accent)' : 'transparent',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}>
                       {groupBy === opt && <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#fff' }} />}

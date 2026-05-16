@@ -19,8 +19,8 @@ import { DayPlanner } from './DayPlanner'
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const CO_COLOR: Record<string, string> = {
-  teradix:    '#1E40AF',
-  dxtech:     '#7F77DD',
+  teradix:    'var(--color-accent)',
+  dxtech:     'var(--color-accent)',
   consulting: '#1D9E75',
   personal:   '#888780',
 }
@@ -36,9 +36,9 @@ const ENERGY_META = [
   null,
   { label: 'Depleted', color: '#888780' },
   { label: 'Low',      color: '#FFFFFF' },
-  { label: 'Steady',   color: '#1E40AF' },
+  { label: 'Steady',   color: 'var(--color-accent)' },
   { label: 'Energized',color: '#1D9E75' },
-  { label: 'Peak',     color: '#7F77DD' },
+  { label: 'Peak',     color: 'var(--color-accent)' },
 ] as const
 
 const QUADRANT_MAP: Record<string, DbTask['quadrant']> = {
@@ -49,8 +49,8 @@ const QUADRANT_MAP: Record<string, DbTask['quadrant']> = {
 }
 
 const MOCK_COMPANIES: DbCompany[] = [
-  { id: 'teradix',    user_id: 'demo', name: 'Teradix',    color_tag: '#1E40AF', calendar_id: null, is_active: true },
-  { id: 'dxtech',     user_id: 'demo', name: 'DX Tech',    color_tag: '#7F77DD', calendar_id: null, is_active: true },
+  { id: 'teradix',    user_id: 'demo', name: 'Teradix',    color_tag: 'var(--color-accent)', calendar_id: null, is_active: true },
+  { id: 'dxtech',     user_id: 'demo', name: 'DX Tech',    color_tag: 'var(--color-accent)', calendar_id: null, is_active: true },
   { id: 'consulting', user_id: 'demo', name: 'Consulting', color_tag: '#1D9E75', calendar_id: null, is_active: true },
   { id: 'personal',   user_id: 'demo', name: 'Personal',   color_tag: '#888780', calendar_id: null, is_active: true },
 ]
@@ -233,9 +233,9 @@ function PrioritySkeleton() {
 // ─── Meeting icon ──────────────────────────────────────────────────────────────
 
 function MeetingTypeIcon({ type, size = 12 }: { type: string | null; size?: number }) {
-  if (type === 'video')       return <Video    size={size} color="#7F77DD" />
+  if (type === 'video')       return <Video    size={size} color="var(--color-accent)" />
   if (type === 'one_on_one')  return <Users    size={size} color="#1D9E75" />
-  if (type === 'external')    return <Calendar size={size} color="#1E40AF" />
+  if (type === 'external')    return <Calendar size={size} color="var(--color-accent)" />
   return                             <Users    size={size} color="var(--color-text-muted, #6B7280)" />
 }
 
@@ -252,7 +252,7 @@ function StatusBadge({ status }: { status: ReturnType<typeof getEventStatus> }) 
   const cfg = {
     live:     { label: 'Live',     bg: '#1D9E7518', border: '#1D9E7540', color: '#1D9E75', pulse: true  },
     soon:     { label: 'Soon',     bg: '#F59E0B18', border: '#F59E0B40', color: '#F59E0B', pulse: false },
-    upcoming: { label: 'Upcoming', bg: '#1E40AF18', border: '#1E40AF40', color: '#1E40AF', pulse: false },
+    upcoming: { label: 'Upcoming', bg: 'var(--color-accent-fill)', border: 'color-mix(in srgb, var(--color-accent) 40%, transparent)', color: 'var(--color-accent)', pulse: false },
     past:     { label: 'Done',     bg: '#25283618', border: '#25283640', color: 'var(--color-text-muted, #6B7280)', pulse: false },
   }[status]
 
@@ -415,7 +415,7 @@ function EventDetailPanel({ event, onClose }: { event: RichMeetingEvent; onClose
     return () => document.removeEventListener('keydown', handleKey)
   }, [onClose])
 
-  const accentColor = event.calendarColor ?? '#1E40AF'
+  const accentColor = event.calendarColor ?? 'var(--color-accent)'
   const attendees   = event.attendees ?? []
 
   return (
@@ -429,7 +429,7 @@ function EventDetailPanel({ event, onClose }: { event: RichMeetingEvent; onClose
         ref={panelRef}
         style={{
           width: 420, maxHeight: '80vh',
-          background: '#11131E',
+          background: 'var(--color-surface)',
           border: `1px solid ${accentColor}40`,
           borderTop: `3px solid ${accentColor}`,
           borderRadius: 16,
@@ -500,8 +500,8 @@ function EventDetailPanel({ event, onClose }: { event: RichMeetingEvent; onClose
               style={{
                 display: 'flex', alignItems: 'center', gap: 8,
                 padding: '10px 14px', borderRadius: 8,
-                background: '#7F77DD18', border: '1px solid #7F77DD40',
-                color: '#7F77DD', fontSize: 12.5, fontWeight: 600,
+                background: 'var(--color-accent-fill)', border: '1px solid #7F77DD40',
+                color: 'var(--color-accent)', fontSize: 12.5, fontWeight: 600,
                 textDecoration: 'none', transition: 'all 0.15s',
               }}
             >
@@ -892,12 +892,12 @@ export function MorningBrief() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 20 }}>
                 <div style={{
                   width: 26, height: 26, borderRadius: 6,
-                  background: '#7F77DD18', border: '1px solid #7F77DD30',
+                  background: 'var(--color-accent-fill)', border: '1px solid #7F77DD30',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
-                  <Sparkles size={13} color="#7F77DD" />
+                  <Sparkles size={13} color="var(--color-accent)" />
                 </div>
-                <span style={{ fontSize: 11, fontWeight: 600, color: '#7F77DD', letterSpacing: '0.8px', textTransform: 'uppercase' }}>
+                <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--color-accent)', letterSpacing: '0.8px', textTransform: 'uppercase' }}>
                   AI Day Planner
                 </span>
               </div>
@@ -933,7 +933,7 @@ export function MorningBrief() {
                       <div key={i} style={{
                         display: 'flex', alignItems: 'center', gap: 14,
                         background: 'var(--color-bg, #0D0F1A)',
-                        border: `1px solid ${i === 0 ? '#1E40AF30' : 'var(--color-border, #252A3E)'}`,
+                        border: `1px solid ${i === 0 ? 'var(--color-accent-fill)' : 'var(--color-border, #252A3E)'}`,
                         borderRadius: 12, padding: '13px 16px',
                         position: 'relative', overflow: 'hidden',
                       }}>
@@ -943,7 +943,7 @@ export function MorningBrief() {
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           fontSize: 12, fontWeight: 700, flexShrink: 0,
                           background: i === 0 ? '#1E40AF20' : 'var(--color-surface2, #252A3E)',
-                          color: i === 0 ? '#1E40AF' : 'var(--color-text-muted, #6B7280)',
+                          color: i === 0 ? 'var(--color-accent)' : 'var(--color-text-muted, #6B7280)',
                         }}>
                           {i + 1}
                         </span>
@@ -965,7 +965,7 @@ export function MorningBrief() {
                         {i === 0 && (
                           <div style={{
                             position: 'absolute', top: 0, left: 0,
-                            width: 3, height: '100%', background: '#1E40AF',
+                            width: 3, height: '100%', background: 'var(--color-accent)',
                             borderRadius: '12px 0 0 12px',
                           }} />
                         )}
@@ -1009,7 +1009,7 @@ export function MorningBrief() {
                   {todayEvents.map(event => {
                     const status     = getEventStatus(event.start_time, event.end_time)
                     const isPast     = status === 'past'
-                    const accentClr  = event.calendarColor ?? '#1E40AF'
+                    const accentClr  = event.calendarColor ?? 'var(--color-accent)'
                     return (
                       <div
                         key={event.id}

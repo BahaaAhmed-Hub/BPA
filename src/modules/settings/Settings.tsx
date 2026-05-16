@@ -105,7 +105,7 @@ const FRAMEWORKS = [
   {value:'pomodoro',label:'Pomodoro'},{value:'12_week_year',label:'12-Week Year'},
 ]
 const WORK_DAYS    = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
-const C_COLORS     = ['#1E40AF','#7F77DD','#1D9E75','#E05252','#888780','#5B9BD5','#E0944A']
+const C_COLORS     = ['var(--color-accent)','var(--color-accent)','#1D9E75','#E05252','#888780','#5B9BD5','#E0944A']
 const BUFFER_STEPS = [0,15,30,45,60]
 const PHYS_STEPS   = [0,30,60,90]
 const HABIT_EMOJIS = ['🎯','💪','📚','🏃','💧','🧘','🍎','💤','🌿','✍️','🧠','🔥','🎨','🏋️','🎵']
@@ -658,8 +658,8 @@ function CompanyCard({
               style={{ ...inputStyle, fontSize: 11, padding: '3px 7px', flex: 1 }} />
             <button onClick={addUser} disabled={!newUserName.trim()} style={{
               padding: '3px 10px', borderRadius: 5, fontSize: 11, fontWeight: 500, cursor: 'pointer',
-              background: '#7F77DD18', border: '1px solid #7F77DD50',
-              color: '#7F77DD', opacity: newUserName.trim() ? 1 : 0.4,
+              background: 'var(--color-accent-fill)', border: '1px solid #7F77DD50',
+              color: 'var(--color-accent)', opacity: newUserName.trim() ? 1 : 0.4,
             }}>Add</button>
           </div>
         </div>
@@ -1108,7 +1108,7 @@ function AccountsSection({
             opacity: hiddenAccts.has(acc.email) ? 0.5 : 1,
             transition: 'opacity 0.15s',
           }}>
-            <div style={{ width: 32, height: 32, borderRadius: '50%', flexShrink: 0, background: '#7F77DD18', border: '1px solid #7F77DD40', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: '#7F77DD' }}>
+            <div style={{ width: 32, height: 32, borderRadius: '50%', flexShrink: 0, background: 'var(--color-accent-fill)', border: '1px solid #7F77DD40', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: 'var(--color-accent)' }}>
               {acc.email ? acc.email[0].toUpperCase() : 'G'}
             </div>
             <div style={{ flex: 1 }}>
@@ -1547,7 +1547,7 @@ function BlockingRulesSection() {
                 </span>
               )}
               {rule.hideBlocked && (
-                <span style={{ fontSize: 10.5, fontWeight: 600, padding: '2px 7px', borderRadius: 20, background: 'rgba(127,119,221,0.12)', color: '#7F77DD' }}>
+                <span style={{ fontSize: 10.5, fontWeight: 600, padding: '2px 7px', borderRadius: 20, background: 'rgba(127,119,221,0.12)', color: 'var(--color-accent)' }}>
                   Originals only
                 </span>
               )}

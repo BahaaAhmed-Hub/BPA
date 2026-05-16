@@ -85,7 +85,7 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
       style={{
         ...style,
         background: hovered ? 'var(--color-surface2, #1a1f35)' : 'var(--color-surface, #161929)',
-        border: `1px solid ${isDragging ? '#1E40AF' : task.urgent ? '#E0711A40' : 'var(--color-border, #252A3E)'}`,
+        border: `1px solid ${isDragging ? 'var(--color-accent)' : task.urgent ? '#E0711A40' : 'var(--color-border, #252A3E)'}`,
         borderRadius: 8,
         padding: '9px 11px',
         cursor: isDragging ? 'grabbing' : 'pointer',
@@ -253,12 +253,12 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
                   onChange={e => updateTask(task.id, { plannedTime: e.target.value || undefined })}
                   onBlur={() => setEditingTime(false)}
                   onKeyDown={e => e.key === 'Escape' && setEditingTime(false)}
-                  style={{ ...fieldInput, color: '#7F77DD' }}
+                  style={{ ...fieldInput, color: 'var(--color-accent)' }}
                 />
               ) : (
                 <span
                   data-nm onClick={() => setEditingTime(true)} title="Set planned time"
-                  style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: task.plannedTime ? '#7F77DD' : 'var(--color-border, #404560)', cursor: 'pointer' }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: task.plannedTime ? 'var(--color-accent)' : 'var(--color-border, #404560)', cursor: 'pointer' }}
                 >
                   <Clock size={9} />
                   {task.plannedTime ?? <Plus size={8} />}
@@ -294,7 +294,7 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
                 onChange={e => updateTask(task.id, { calendarId: e.target.value || undefined })}
                 title="Link to calendar"
                 style={{
-                  fontSize: 10, color: task.calendarId ? '#7F77DD' : 'var(--color-border, #404560)',
+                  fontSize: 10, color: task.calendarId ? 'var(--color-accent)' : 'var(--color-border, #404560)',
                   background: task.calendarId ? '#7F77DD12' : 'transparent',
                   padding: '1px 4px', borderRadius: 3,
                   border: 'none', outline: 'none', cursor: 'pointer',

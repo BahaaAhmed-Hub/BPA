@@ -73,8 +73,8 @@ interface LoadCalendarsResult {
 
 // ─── Mock data for AI prep ────────────────────────────────────────────────────
 const MOCK_COMPANIES: DbCompany[] = [
-  { id: 'teradix',    user_id: 'demo', name: 'Teradix',    color_tag: '#1E40AF', calendar_id: null, is_active: true },
-  { id: 'dxtech',     user_id: 'demo', name: 'DX Tech',    color_tag: '#7F77DD', calendar_id: null, is_active: true },
+  { id: 'teradix',    user_id: 'demo', name: 'Teradix',    color_tag: 'var(--color-accent)', calendar_id: null, is_active: true },
+  { id: 'dxtech',     user_id: 'demo', name: 'DX Tech',    color_tag: 'var(--color-accent)', calendar_id: null, is_active: true },
   { id: 'consulting', user_id: 'demo', name: 'Consulting', color_tag: '#1D9E75', calendar_id: null, is_active: true },
   { id: 'personal',   user_id: 'demo', name: 'Personal',   color_tag: '#888780', calendar_id: null, is_active: true },
 ]
@@ -564,7 +564,7 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
 
   const top    = eventTopPx(event.start.dateTime!)
   const height = eventHeightPx(event.start.dateTime!, event.end.dateTime ?? event.start.dateTime!)
-  const color  = colorOverride ?? event.calendarColor ?? '#1E40AF'
+  const color  = colorOverride ?? event.calendarColor ?? 'var(--color-accent)'
   const isDone = status === 'done'
   const isCancelled = status === 'cancelled'
 
@@ -762,7 +762,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
               <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 4, background: '#FF950022', color: '#FF9500', border: '1px solid #FF950055' }}>Tentative</span>
             )}
             {isRecurring && (
-              <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 4, background: '#7F77DD22', color: '#7F77DD', border: '1px solid #7F77DD55', display: 'flex', alignItems: 'center', gap: 3 }}>
+              <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 4, background: 'var(--color-accent-fill)', color: 'var(--color-accent)', border: '1px solid #7F77DD55', display: 'flex', alignItems: 'center', gap: 3 }}>
                 <Repeat size={9} /> Recurring
               </span>
             )}
@@ -793,7 +793,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
         <div style={{ display: 'flex', alignItems: 'center', padding: '8px 14px', gap: 9 }}>
           <Video size={13} color="var(--color-text-muted, #6B7280)" style={{ flexShrink: 0 }} />
           <a href={videoLink} target="_blank" rel="noopener noreferrer"
-            style={{ fontSize: 13, color: '#7F77DD', textDecoration: 'none', flex: 1, display: 'flex', alignItems: 'center', gap: 4 }}>
+            style={{ fontSize: 13, color: 'var(--color-accent)', textDecoration: 'none', flex: 1, display: 'flex', alignItems: 'center', gap: 4 }}>
             Join Video Call <ExternalLink size={11} />
           </a>
         </div>
@@ -803,7 +803,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
           <button
             onClick={async () => { setAddingMeet(true); await onAddMeet(); setAddingMeet(false) }}
             disabled={addingMeet}
-            style={{ background: 'none', border: 'none', cursor: addingMeet ? 'wait' : 'pointer', padding: 0, fontSize: 13, color: '#7F77DD', display: 'flex', alignItems: 'center', gap: 5 }}
+            style={{ background: 'none', border: 'none', cursor: addingMeet ? 'wait' : 'pointer', padding: 0, fontSize: 13, color: 'var(--color-accent)', display: 'flex', alignItems: 'center', gap: 5 }}
           >
             {addingMeet ? 'Adding…' : 'Add Google Meet'} <Video size={11} />
           </button>
@@ -815,7 +815,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
         <div style={{ display: 'flex', alignItems: 'center', padding: '8px 14px', gap: 9 }}>
           <Phone size={13} color="var(--color-text-muted, #6B7280)" style={{ flexShrink: 0 }} />
           <div style={{ fontSize: 13, color: 'var(--color-text-dim, #C0C4D6)' }}>
-            <a href={phoneEntry.uri} style={{ color: '#7F77DD', textDecoration: 'none' }}>
+            <a href={phoneEntry.uri} style={{ color: 'var(--color-accent)', textDecoration: 'none' }}>
               {phoneEntry.label ?? phoneEntry.uri.replace('tel:', '')}
             </a>
             {phoneEntry.pin && <span style={{ color: 'var(--color-text-muted, #6B7280)', marginLeft: 6, fontSize: 12 }}>PIN: {phoneEntry.pin}</span>}
@@ -935,7 +935,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
           <XCircle size={12} /> Cancel
         </button>
         <button
-          style={{ ...btn(showPrep, '#7F77DD'), marginLeft: 'auto' }}
+          style={{ ...btn(showPrep, 'var(--color-accent)'), marginLeft: 'auto' }}
           onClick={() => { setShowPrep(p => !p); if (!prep && !prepLoading) onPrepRequest() }}
         >
           <Sparkles size={12} /> AI Prep
@@ -1180,7 +1180,7 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
     return () => document.removeEventListener('mousedown', fn)
   }, [onCancel])
 
-  const calColor = calColors[calId] ?? calendars.find(c => c.id === calId)?.backgroundColor ?? '#7F77DD'
+  const calColor = calColors[calId] ?? calendars.find(c => c.id === calId)?.backgroundColor ?? 'var(--color-accent)'
 
   function addInvitee(raw: string) {
     const email = raw.trim().toLowerCase().replace(/,$/,'')
@@ -1460,7 +1460,7 @@ export function CalendarIntelligence() {
 
   // Effective color: custom override > google color > fallback
   function calEffectiveColor(cal: CalWithAccount): string {
-    return calColors[cal.id] ?? cal.backgroundColor ?? '#1E40AF'
+    return calColors[cal.id] ?? cal.backgroundColor ?? 'var(--color-accent)'
   }
 
   // ── DnD state ───────────────────────────────────────────────────────────────
@@ -1915,7 +1915,7 @@ export function CalendarIntelligence() {
       id: tempId, summary: data.title,
       start: data.allDay ? { date: data.startDate } : { dateTime: startIso },
       end:   data.allDay ? { date: data.endDate }   : { dateTime: endIso },
-      calendarId: data.calId, calendarColor: cal ? calEffectiveColor(cal) : '#7F77DD',
+      calendarId: data.calId, calendarColor: cal ? calEffectiveColor(cal) : 'var(--color-accent)',
     } as GCalEventExt])
 
     const eventBody: GCalEventCreate = {
@@ -2046,7 +2046,7 @@ export function CalendarIntelligence() {
                 background: originalsOnly ? 'rgba(127,119,221,0.12)' : 'none',
                 border: `1px solid ${originalsOnly ? 'rgba(127,119,221,0.5)' : 'var(--color-border, #252A3E)'}`,
                 borderRadius: 7, cursor: 'pointer',
-                color: originalsOnly ? '#7F77DD' : 'var(--color-text-dim, #8B93A8)',
+                color: originalsOnly ? 'var(--color-accent)' : 'var(--color-text-dim, #8B93A8)',
                 padding: '4px 8px', fontSize: 12,
                 transition: 'all 0.15s',
               }}
@@ -2160,13 +2160,13 @@ export function CalendarIntelligence() {
               const isToday = ds === today
               return (
                 <div key={ds} style={{ flex: 1, textAlign: 'center', padding: '8px 4px 7px', minWidth: 0 }}>
-                  <div style={{ fontSize: 11, color: isToday ? '#7F77DD' : 'var(--color-text-muted, #6B7280)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+                  <div style={{ fontSize: 11, color: isToday ? 'var(--color-accent)' : 'var(--color-text-muted, #6B7280)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
                     {DAY_LABELS[day.getDay()]}
                   </div>
                   <div style={{
                     fontSize: 19, fontWeight: 700, lineHeight: 1.2, marginTop: 2,
                     color: isToday ? '#fff' : 'var(--color-text-dim, #C0C4D6)',
-                    background: isToday ? '#7F77DD' : 'transparent',
+                    background: isToday ? 'var(--color-accent)' : 'transparent',
                     width: isToday ? 32 : undefined, height: isToday ? 32 : undefined,
                     borderRadius: isToday ? '50%' : undefined,
                     display: isToday ? 'flex' : undefined, alignItems: isToday ? 'center' : undefined, justifyContent: isToday ? 'center' : undefined,
@@ -2284,7 +2284,7 @@ export function CalendarIntelligence() {
       {/* Loading spinner overlay */}
       {loadingEvents && (
         <div style={{ position: 'absolute', bottom: 18, right: 22, display: 'flex', alignItems: 'center', gap: 7, fontSize: 12, color: 'var(--color-text-muted, #6B7280)', pointerEvents: 'none' }}>
-          <div style={{ width: 14, height: 14, border: '2px solid var(--color-border, #252A3E)', borderTopColor: '#7F77DD', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+          <div style={{ width: 14, height: 14, border: '2px solid var(--color-border, #252A3E)', borderTopColor: 'var(--color-accent)', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
           Loading…
         </div>
       )}
@@ -2304,7 +2304,7 @@ export function CalendarIntelligence() {
       {selectedEvent && popupPos && (() => {
         const cal      = allCalendars.find(c => c.id === (selectedEvent as GCalEventExt).calendarId)
         const calName  = cal?.summary ?? 'Calendar'
-        const calColor = cal ? calEffectiveColor(cal) : '#1E40AF'
+        const calColor = cal ? calEffectiveColor(cal) : 'var(--color-accent)'
         return (
           <EventPopup
             event={selectedEvent}

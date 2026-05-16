@@ -19,7 +19,7 @@ const inp: React.CSSProperties = {
 const sel: React.CSSProperties = { ...inp }
 
 const STATUS_COLORS: Record<TaskStatus, string> = {
-  open: '#7F77DD', done: '#1D9E75', cancelled: 'var(--color-text-muted, #6B7280)',
+  open: 'var(--color-accent)', done: '#1D9E75', cancelled: 'var(--color-text-muted, #6B7280)',
 }
 
 // ─── Draggable card for inbox tasks ──────────────────────────────────────────
@@ -403,9 +403,9 @@ export function UndefinedTasksPanel({ onOpen, hideCompleted = false, groupBy = '
             <button key={f} onClick={() => setFilter(f)} style={{
               padding: '3px 8px', borderRadius: 5, fontSize: 10.5, fontWeight: 500,
               cursor: 'pointer', textTransform: 'capitalize',
-              background: filter === f ? '#1E40AF18' : 'transparent',
-              border: `1px solid ${filter === f ? '#1E40AF50' : 'var(--color-border, #252A3E)'}`,
-              color: filter === f ? '#7F77DD' : 'var(--color-text-muted, #6B7280)',
+              background: filter === f ? 'var(--color-accent-fill)' : 'transparent',
+              border: `1px solid ${filter === f ? 'color-mix(in srgb, var(--color-accent) 40%, transparent)' : 'var(--color-border, #252A3E)'}`,
+              color: filter === f ? 'var(--color-accent)' : 'var(--color-text-muted, #6B7280)',
             }}>
               {f} {counts[f] > 0 && <span style={{ opacity: 0.7 }}>({counts[f]})</span>}
             </button>
@@ -426,9 +426,9 @@ export function UndefinedTasksPanel({ onOpen, hideCompleted = false, groupBy = '
         {filtered.length === 0 && !adding && (
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            minHeight: 80, color: inboxOver ? '#7F77DD' : 'var(--color-text-muted, #6B7280)',
+            minHeight: 80, color: inboxOver ? 'var(--color-accent)' : 'var(--color-text-muted, #6B7280)',
             fontSize: 12, fontStyle: 'italic',
-            border: `1px dashed ${inboxOver ? '#7F77DD60' : 'var(--color-border, #252A3E)'}`,
+            border: `1px dashed ${inboxOver ? 'color-mix(in srgb, var(--color-accent) 40%, transparent)' : 'var(--color-border, #252A3E)'}`,
             borderRadius: 8, transition: 'all 0.15s ease',
           }}>
             {inboxOver ? 'Drop here to move to inbox' : 'No tasks'}
@@ -481,7 +481,7 @@ export function UndefinedTasksPanel({ onOpen, hideCompleted = false, groupBy = '
                 background: 'var(--color-bg, #0D0F1A)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 6,
                 padding: '5px 8px', display: 'flex', flexWrap: 'wrap', gap: 5, alignItems: 'center',
               }}>
-                <Sparkles size={10} color="#7F77DD" style={{ flexShrink: 0 }} />
+                <Sparkles size={10} color="var(--color-accent)" style={{ flexShrink: 0 }} />
                 {aiLoading && <span style={{ fontSize: 10.5, color: 'var(--color-text-muted, #6B7280)' }}>Analyzing…</span>}
                 {!aiLoading && aiHint && (
                   <>
@@ -554,8 +554,8 @@ export function UndefinedTasksPanel({ onOpen, hideCompleted = false, groupBy = '
             <div style={{ display: 'flex', gap: 6 }}>
               <button onClick={handleAdd} disabled={!title.trim()} style={{
                 flex: 1, padding: '6px', borderRadius: 6, fontSize: 12, fontWeight: 500,
-                background: '#1E40AF18', border: '1px solid #1E40AF50',
-                color: '#7F77DD', cursor: title.trim() ? 'pointer' : 'not-allowed',
+                background: 'var(--color-accent-fill)', border: '1px solid #1E40AF50',
+                color: 'var(--color-accent)', cursor: title.trim() ? 'pointer' : 'not-allowed',
                 opacity: title.trim() ? 1 : 0.4,
               }}>Add Task</button>
               <button onClick={reset} style={{

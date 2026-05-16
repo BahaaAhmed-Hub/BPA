@@ -52,8 +52,8 @@ export interface DayPlannerProps {
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
 const BLOCK_COLORS: Record<BlockType, string> = {
-  focus:   '#7F77DD',
-  meeting: '#1E40AF',
+  focus:   'var(--color-accent)',
+  meeting: 'var(--color-accent)',
   task:    '#1D9E75',
   buffer:  '#6B7280',
   break:   '#F59E0B',
@@ -175,8 +175,8 @@ function GeneratingSkeleton() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '4px 0' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-        <RefreshCw size={13} color="#7F77DD" style={{ animation: 'spin 1s linear infinite' }} />
-        <span style={{ fontSize: 12, color: '#7F77DD' }}>Analyzing your calendar and tasks…</span>
+        <RefreshCw size={13} color="var(--color-accent)" style={{ animation: 'spin 1s linear infinite' }} />
+        <span style={{ fontSize: 12, color: 'var(--color-accent)' }}>Analyzing your calendar and tasks…</span>
       </div>
       {[80, 65, 90, 55, 75].map((w, i) => (
         <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
@@ -374,10 +374,10 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{
             width: 28, height: 28, borderRadius: 7,
-            background: '#7F77DD18', border: '1px solid #7F77DD30',
+            background: 'var(--color-accent-fill)', border: '1px solid #7F77DD30',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            <Sparkles size={13} color="#7F77DD" />
+            <Sparkles size={13} color="var(--color-accent)" />
           </div>
           <div style={{ textAlign: 'left' }}>
             <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: 'var(--color-text, #E8EAF6)' }}>Build My Day</p>
@@ -445,7 +445,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                   What must get done today?
                 </label>
                 {selectedTaskIds.size > 0 && (
-                  <span style={{ fontSize: 10.5, color: '#7F77DD' }}>
+                  <span style={{ fontSize: 10.5, color: 'var(--color-accent)' }}>
                     {selectedTaskIds.size} selected
                   </span>
                 )}
@@ -562,7 +562,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
               {todayEvents.map(ev => {
-                const color = ev.calendarColor ?? '#1E40AF'
+                const color = ev.calendarColor ?? 'var(--color-accent)'
                 return (
                   <div key={ev.id} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                     <div style={{ width: 3, height: '100%', minHeight: 28, borderRadius: 2, background: color, flexShrink: 0 }} />
@@ -602,9 +602,9 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                 style={{
                   flex: 1, padding: '9px 0', borderRadius: 8, cursor: 'pointer',
                   fontSize: 12, fontWeight: deepWork === opt ? 600 : 400,
-                  background: deepWork === opt ? '#7F77DD18' : 'var(--color-bg, #0D0F1A)',
-                  border: `1px solid ${deepWork === opt ? '#7F77DD40' : 'var(--color-border, #252A3E)'}`,
-                  color: deepWork === opt ? '#7F77DD' : 'var(--color-text-muted, #6B7280)',
+                  background: deepWork === opt ? 'var(--color-accent-fill)' : 'var(--color-bg, #0D0F1A)',
+                  border: `1px solid ${deepWork === opt ? 'color-mix(in srgb, var(--color-accent) 40%, transparent)' : 'var(--color-border, #252A3E)'}`,
+                  color: deepWork === opt ? 'var(--color-accent)' : 'var(--color-text-muted, #6B7280)',
                   transition: 'all 0.15s',
                   textTransform: 'capitalize',
                 }}
@@ -633,7 +633,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
             title={eventsLoading ? 'Waiting for calendar to load…' : undefined}
             style={{
               flex: 1, padding: '10px 0', borderRadius: 8, cursor: eventsLoading ? 'not-allowed' : 'pointer',
-              background: '#7F77DD', border: 'none',
+              background: 'var(--color-accent)', border: 'none',
               color: '#fff', fontSize: 12.5, fontWeight: 600,
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
               opacity: eventsLoading ? 0.45 : 1,
@@ -825,7 +825,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
           disabled={slots.filter(s => s.decision === 'confirmed' && s.action !== 'keep').length === 0}
           style={{
             padding: '12px 0', borderRadius: 10, cursor: 'pointer',
-            background: '#7F77DD', border: 'none',
+            background: 'var(--color-accent)', border: 'none',
             color: '#fff', fontSize: 13, fontWeight: 600,
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
             opacity: slots.filter(s => s.decision === 'confirmed' && s.action !== 'keep').length === 0 ? 0.4 : 1,
@@ -845,8 +845,8 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-          <RefreshCw size={13} color="#7F77DD" style={{ animation: 'spin 1s linear infinite' }} />
-          <span style={{ fontSize: 12, color: '#7F77DD' }}>Applying changes to your calendar…</span>
+          <RefreshCw size={13} color="var(--color-accent)" style={{ animation: 'spin 1s linear infinite' }} />
+          <span style={{ fontSize: 12, color: 'var(--color-accent)' }}>Applying changes to your calendar…</span>
         </div>
         {active.map(slot => {
           const st = applying[slot.id]
@@ -855,12 +855,12 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
               <div style={{
                 width: 16, height: 16, borderRadius: '50%', flexShrink: 0,
                 background: st === 'done' ? '#1D9E75' : st === 'error' ? '#EF4444' : 'var(--color-surface2, #252A3E)',
-                border: `1px solid ${st === 'done' ? '#1D9E75' : st === 'error' ? '#EF4444' : '#7F77DD'}`,
+                border: `1px solid ${st === 'done' ? '#1D9E75' : st === 'error' ? '#EF4444' : 'var(--color-accent)'}`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
                 {st === 'done'  && <Check size={9} color="#fff" />}
                 {st === 'error' && <X     size={9} color="#fff" />}
-                {!st && <RefreshCw size={8} color="#7F77DD" style={{ animation: 'spin 1s linear infinite' }} />}
+                {!st && <RefreshCw size={8} color="var(--color-accent)" style={{ animation: 'spin 1s linear infinite' }} />}
               </div>
               <span style={{ fontSize: 12, color: st === 'error' ? '#EF4444' : 'var(--color-text, #E8EAF6)' }}>
                 {slot.title}

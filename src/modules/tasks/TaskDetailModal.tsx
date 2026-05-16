@@ -16,7 +16,7 @@ const QUADRANT_OPTS = [
   { value: 'eliminate', label: 'Eliminate — Not Urgent + Not Important' },
 ]
 const STATUS_COLORS: Record<TaskStatus, string> = {
-  open: '#7F77DD', done: '#1D9E75', cancelled: 'var(--color-text-muted, #6B7280)',
+  open: 'var(--color-accent)', done: '#1D9E75', cancelled: 'var(--color-text-muted, #6B7280)',
 }
 
 const field: React.CSSProperties = {
@@ -43,7 +43,7 @@ function relativeTime(iso: string): string {
 function activityIcon(type: string) {
   const s = { width: 6, height: 6, borderRadius: '50%', flexShrink: 0, marginTop: 5 }
   if (type === 'created')        return <span style={{ ...s, background: '#1D9E75' }} />
-  if (type === 'moved')          return <span style={{ ...s, background: '#7F77DD' }} />
+  if (type === 'moved')          return <span style={{ ...s, background: 'var(--color-accent)' }} />
   if (type === 'status_changed') return <span style={{ ...s, background: '#F59E0B' }} />
   return                                <span style={{ ...s, background: 'var(--color-text-muted, #6B7280)' }} />
 }
