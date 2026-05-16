@@ -8,6 +8,7 @@ import type { ConnectedAccount } from '@/lib/multiAccount'
 interface Props {
   data: WizardData
   onChange: (p: Partial<WizardData>) => void
+  onBeforeOAuth?: () => void
 }
 
 function GoogleIcon() {
@@ -55,7 +56,7 @@ const providerTileStyle: React.CSSProperties = {
   position: 'relative',
 }
 
-export function Step2Accounts({ data: _data, onChange: _onChange }: Props) {
+export function Step2Accounts({ data: _data, onChange: _onChange, onBeforeOAuth }: Props) {
   const user = useAuthStore(s => s.user)
   const [accounts, setAccounts] = useState<ConnectedAccount[]>([])
   const [connecting, setConnecting] = useState(false)
@@ -76,6 +77,7 @@ export function Step2Accounts({ data: _data, onChange: _onChange }: Props) {
     if (connecting) return
     setConnecting(true)
     try {
+      onBeforeOAuth?.()
       await connectAdditionalGoogleAccount()
       refreshAccounts()
     } catch (err) {
