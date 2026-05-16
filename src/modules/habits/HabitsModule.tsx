@@ -488,11 +488,15 @@ export function HabitsModule() {
                     onSet={v => setQuantity(habit.id, habit.goal ?? 1, viewDate, v)}
                   />
                 ) : (
-                  <button onClick={() => toggleHabit(habit.id, viewDate)}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, flexShrink: 0, fontSize: 20, lineHeight: 1 }}>
-                    {doneToday
-                      ? <span style={{ color: habit.color }}>●</span>
-                      : <span style={{ color: 'var(--color-text-muted, #4B5563)' }}>○</span>}
+                  <button onClick={() => toggleHabit(habit.id, viewDate)} title={doneToday ? 'Mark undone' : 'Mark done'}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, flexShrink: 0, display: 'flex', alignItems: 'center' }}>
+                    <div style={{
+                      width: 14, height: 14, borderRadius: '50%', flexShrink: 0,
+                      background: doneToday ? habit.color : 'transparent',
+                      border: `2px solid ${doneToday ? habit.color : 'var(--color-text-muted, #4B5563)'}`,
+                      boxShadow: doneToday ? `0 0 0 2px var(--color-bg, #0D0F1A), 0 0 0 3px ${habit.color}60` : 'none',
+                      transition: 'all 0.15s ease',
+                    }} />
                   </button>
                 )}
 
