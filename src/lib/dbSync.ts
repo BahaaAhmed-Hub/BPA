@@ -26,7 +26,7 @@ export interface CompanyUser { id: string; name: string; email?: string }
 export interface CompanyRow {
   id: string; name: string; color: string
   calendarId: string; emailDomain: string; accountId: string; isActive: boolean
-  users: CompanyUser[]
+  users: CompanyUser[]; hidden?: boolean
 }
 
 export interface TaskRow {
@@ -228,6 +228,7 @@ export async function saveCompaniesToDB(companies: CompanyRow[]): Promise<void> 
       email_domain: c.emailDomain || null,
       account_id:   c.accountId || null,
       users_data:   c.users ?? [],
+      hidden:       c.hidden ?? false,
     }))
 
     const { error } = await supabase.from('companies').upsert(rows, { onConflict: 'id' })
@@ -257,6 +258,7 @@ export async function loadCompaniesFromDB(): Promise<CompanyRow[]> {
     accountId:   r.account_id ?? '',
     isActive:    r.is_active ?? true,
     users:       (r.users_data as CompanyUser[]) ?? [],
+    hidden:      (r as unknown as { hidden?: boolean }).hidden ?? false,
   }))
 }
 

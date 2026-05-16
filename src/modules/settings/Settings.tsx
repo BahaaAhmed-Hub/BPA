@@ -1843,11 +1843,14 @@ export function Settings() {
         // Companies (full — with users, emailDomain, accountId)
         const dbCompanies = await loadCompaniesFromDB()
         if (dbCompanies.length > 0) {
-          // Merge: DB wins for metadata, but preserve localStorage users if DB has none yet
+          // Merge: DB wins for metadata, but preserve localStorage-only fields
           const localBackup: Record<string, CompanyUser[]> = ls('professor-company-users', {})
+          const localMap: Record<string, CompanyRow> = Object.fromEntries(companies.map(c => [c.id, c]))
           const merged = dbCompanies.map(c => ({
             ...c,
             users: c.users?.length ? c.users : (localBackup[c.id] ?? []),
+            // hidden may not be in DB yet — fall back to local value
+            hidden: c.hidden || localMap[c.id]?.hidden || false,
           }))
           setCompanies(merged)
           saveCompanies(merged)
