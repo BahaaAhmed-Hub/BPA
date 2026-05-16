@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef } from 'react'
 import {
   DndContext, DragOverlay, closestCenter,
   PointerSensor, useSensor, useSensors,
@@ -180,13 +180,35 @@ function KanbanCard({ task, onOpen, overlay = false }: { task: Task; onOpen: () 
 
 // ── Column ───────────────────────────────────────────────────────────────────
 
-function KanbanColumnComp({ column, onOpen }: { column: Column; onOpen: (id: string) => void }) {
+interface KanbanColumnProps {
+  column: Column
+  onOpen: (id: string) => void
+  onColDragStart: (id: string) => void
+  onColDragOver: (e: React.DragEvent) => void
+  onColDrop: (id: string) => void
+}
+
+function KanbanColumnComp({ column, onOpen, onColDragStart, onColDragOver, onColDrop }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: column.id })
 
   return (
-    <div style={{ flex: '0 0 250px', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+    <div style={{ flex: '0 0 250px', display: 'flex', flexDirection: 'column', minHeight: 0 }}
+      onDragOver={onColDragOver}
+      onDrop={() => onColDrop(column.id)}
+    >
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, paddingLeft: 2, flexShrink: 0 }}>
+        {/* Drag handle */}
+        <span
+          draggable
+          onDragStart={() => onColDragStart(column.id)}
+          onDragOver={onColDragOver}
+          onDrop={() => onColDrop(column.id)}
+          title="Drag to reorder"
+          style={{ cursor: 'grab', color: 'var(--color-text-muted, #6B7280)', fontSize: 14, lineHeight: 1, userSelect: 'none', marginRight: 2 }}
+        >
+          ⠿
+        </span>
         <div style={{ width: 8, height: 8, borderRadius: '50%', background: column.color, flexShrink: 0 }} />
         <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-text, #E8EAF6)', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {column.label}
@@ -241,6 +263,10 @@ export function KanbanBoard({ onOpen, hideCompleted = false, filteredTaskIds }: 
     (localStorage.getItem('task-board-type') as BoardType) ?? 'status'
   )
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null)
+  const dragColRef = useRef<string | null>(null)
+  const [colOrder, setColOrder] = useState<Record<string, string[]>>(() => {
+    try { return JSON.parse(localStorage.getItem('task-board-col-order') || '{}') } catch { return {} }
+  })
 
   const companies = loadVisibleCompanies()
   const allUsers  = getAllUsers()
@@ -336,6 +362,30 @@ export function KanbanBoard({ onOpen, hideCompleted = false, filteredTaskIds }: 
     return []
   }, [tasks, boardType, companies, allUsers])
 
+  const orderedColumns = useMemo(() => {
+    const order = colOrder[boardType]
+    if (!order?.length) return columns
+    const map = new Map(order.map((id, i) => [id, i]))
+    return [...columns].sort((a, b) =>
+      (map.has(a.id) ? map.get(a.id)! : 999) - (map.has(b.id) ? map.get(b.id)! : 999)
+    )
+  }, [columns, colOrder, boardType])
+
+  function handleColDragStart(id: string) { dragColRef.current = id }
+  function handleColDragOver(e: React.DragEvent) { e.preventDefault() }
+  function handleColDrop(targetId: string) {
+    const fromId = dragColRef.current
+    if (!fromId || fromId === targetId) return
+    const order = orderedColumns.map(c => c.id)
+    const from = order.indexOf(fromId); const to = order.indexOf(targetId)
+    if (from === -1 || to === -1) return
+    const next = [...order]; next.splice(from, 1); next.splice(to, 0, fromId)
+    const updated = { ...colOrder, [boardType]: next }
+    setColOrder(updated)
+    localStorage.setItem('task-board-col-order', JSON.stringify(updated))
+    dragColRef.current = null
+  }
+
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
 
   function handleDragStart({ active }: DragStartEvent) {
@@ -404,8 +454,12 @@ export function KanbanBoard({ onOpen, hideCompleted = false, filteredTaskIds }: 
           overflowX: 'auto', overflowY: 'hidden',
           flex: 1, alignItems: 'flex-start',
         }}>
-          {columns.map(col => (
-            <KanbanColumnComp key={col.id} column={col} onOpen={onOpen} />
+          {orderedColumns.map(col => (
+            <KanbanColumnComp key={col.id} column={col} onOpen={onOpen}
+              onColDragStart={handleColDragStart}
+              onColDragOver={handleColDragOver}
+              onColDrop={handleColDrop}
+            />
           ))}
         </div>
 
