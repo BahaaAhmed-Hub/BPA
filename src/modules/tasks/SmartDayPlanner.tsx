@@ -1,13 +1,19 @@
-import { useState, useRef, useMemo } from 'react'
+import { useState, useRef, useMemo, useCallback } from 'react'
 import {
   DndContext, DragOverlay, PointerSensor, useSensor, useSensors,
   useDroppable, useDraggable, type DragEndEvent, type DragStartEvent,
 } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
-import { X, Plus, RefreshCw, Check } from 'lucide-react'
+import { X, RefreshCw, Check, CalendarPlus } from 'lucide-react'
 import { useTaskStore } from '@/store/taskStore'
+import { useAuthStore } from '@/store/authStore'
 import type { Task } from '@/types'
-import { isTaskHidden } from '@/types'
+import { isTaskHidden, loadDynamicCompanies } from '@/types'
+import {
+  fetchCalendarEventsWithToken, createCalendarEventWithToken,
+  type GCalEvent,
+} from '@/lib/googleCalendar'
+import { loadAccounts, getPrimaryToken, type ConnectedAccount } from '@/lib/multiAccount'
 
 const HOUR_PX = 56
 const HOURS = Array.from({ length: 24 }, (_, i) => i)
@@ -16,15 +22,59 @@ const PRIORITY_ORDER = { do: 0, schedule: 1, delegate: 2, eliminate: 3 }
 const PRIORITY_LABEL: Record<string, string> = { do: 'P0', schedule: 'P1', delegate: 'P2', eliminate: 'P3' }
 const PRIORITY_COLOR: Record<string, string> = { do: '#EF4444', schedule: '#F59E0B', delegate: '#3B82F6', eliminate: '#6B7280' }
 
+// ── Types ─────────────────────────────────────────────────────────────────────
+
 interface ScheduledBlock {
   taskId: string
   startHour: number
   durationHours: number
+  gcalEventId?: string
 }
 
-// ── Draggable Task Card (right panel) ─────────────────────────────────────────
+interface CompanyWithCal {
+  id: string
+  calendarId?: string
+  accountId?: string
+}
 
-function DraggableTaskCard({ task, scheduled }: { task: Task; scheduled: boolean }) {
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function loadCompaniesWithCal(): CompanyWithCal[] {
+  try {
+    const raw = localStorage.getItem('professor-companies')
+    return raw ? (JSON.parse(raw) as CompanyWithCal[]) : []
+  } catch { return [] }
+}
+
+function saveCompanyAccountMapping(companyId: string, accountId: string) {
+  try {
+    const raw = localStorage.getItem('professor-companies')
+    if (!raw) return
+    const companies = JSON.parse(raw) as Record<string, unknown>[]
+    const updated = companies.map(co =>
+      (co as { id: string }).id === companyId ? { ...co, accountId } : co
+    )
+    localStorage.setItem('professor-companies', JSON.stringify(updated))
+    window.dispatchEvent(new CustomEvent('professor:companiesUpdated'))
+  } catch { /**/ }
+}
+
+function todayDateStr() {
+  return new Date().toISOString().slice(0, 10)
+}
+
+function hourLabel(h: number): string {
+  return h === 0 ? '12 AM' : h < 12 ? `${h} AM` : h === 12 ? '12 PM' : `${h - 12} PM`
+}
+
+// ── Draggable Task Card ───────────────────────────────────────────────────────
+
+function DraggableTaskCard({ task, scheduled, creating, gcalDone }: {
+  task: Task
+  scheduled: boolean
+  creating?: boolean
+  gcalDone?: boolean
+}) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: task.id })
   const priority = task.quadrant ? PRIORITY_LABEL[task.quadrant] : null
   const color    = task.quadrant ? PRIORITY_COLOR[task.quadrant] : '#6B7280'
@@ -35,17 +85,12 @@ function DraggableTaskCard({ task, scheduled }: { task: Task; scheduled: boolean
       ref={setNodeRef}
       style={{
         transform: CSS.Translate.toString(transform),
-        opacity: isDragging ? 0.4 : scheduled ? 0.5 : 1,
+        opacity: isDragging ? 0.4 : scheduled ? 0.65 : 1,
         background: '#FFFFFF',
-        border: '1px solid #E5E7EB',
-        borderRadius: 10,
-        padding: '10px 12px',
-        marginBottom: 8,
-        display: 'flex',
-        alignItems: 'flex-start',
-        gap: 10,
-        cursor: 'grab',
-        boxShadow: isDragging ? 'none' : '0 1px 3px rgba(0,0,0,0.06)',
+        border: `1px solid ${gcalDone ? '#D1FAE5' : '#E5E7EB'}`,
+        borderRadius: 10, padding: '10px 12px', marginBottom: 8,
+        display: 'flex', alignItems: 'flex-start', gap: 10,
+        cursor: 'grab', boxShadow: isDragging ? 'none' : '0 1px 3px rgba(0,0,0,0.06)',
         userSelect: 'none',
       }}
       {...attributes} {...listeners}
@@ -67,9 +112,19 @@ function DraggableTaskCard({ task, scheduled }: { task: Task; scheduled: boolean
               {task.duration}m
             </span>
           )}
-          {scheduled && (
-            <span style={{ fontSize: 10, fontWeight: 600, padding: '1px 6px', borderRadius: 4, background: '#D1FAE5', color: '#10B981' }}>
+          {scheduled && !creating && !gcalDone && (
+            <span style={{ fontSize: 10, fontWeight: 600, padding: '1px 6px', borderRadius: 4, background: '#FEF3C7', color: '#D97706' }}>
               Scheduled
+            </span>
+          )}
+          {creating && (
+            <span style={{ fontSize: 10, fontWeight: 600, padding: '1px 6px', borderRadius: 4, background: '#DBEAFE', color: '#2563EB' }}>
+              Adding…
+            </span>
+          )}
+          {gcalDone && (
+            <span style={{ fontSize: 10, fontWeight: 600, padding: '1px 6px', borderRadius: 4, background: '#D1FAE5', color: '#10B981' }}>
+              ✓ In Calendar
             </span>
           )}
         </div>
@@ -78,59 +133,189 @@ function DraggableTaskCard({ task, scheduled }: { task: Task; scheduled: boolean
   )
 }
 
-// ── Droppable Hour Slot ──────────────────────────────────────────────────────
+// ── Droppable Hour Slot ───────────────────────────────────────────────────────
 
-function HourSlot({ hour, block, taskTitle, onRemove }: {
+function HourSlot({ hour, block, taskTitle, onRemove, busyEvents }: {
   hour: number
   block?: ScheduledBlock
   taskTitle?: string
   onRemove?: () => void
+  busyEvents?: GCalEvent[]
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: `slot-${hour}` })
-  const hLabel = hour === 0 ? '12 AM' : hour < 12 ? `${hour} AM` : hour === 12 ? '12 PM' : `${hour - 12} PM`
-  const blocked = hour < 6 || hour >= 22  // sleeping / blocked hours
+  const blocked = hour < 6 || hour >= 22
+  const busy = busyEvents && busyEvents.length > 0
+  const busyLabel = busyEvents?.map(e => e.summary ?? 'Busy').join(', ')
 
   return (
     <div ref={setNodeRef} style={{
-      display: 'flex',
-      height: HOUR_PX,
+      display: 'flex', height: HOUR_PX,
       borderBottom: '1px solid #F3F4F6',
-      background: isOver ? 'rgba(249,115,22,0.05)' : 'transparent',
-      transition: 'background 0.12s',
-      position: 'relative',
+      background: isOver ? 'rgba(249,115,22,0.05)' : busy ? 'rgba(59,130,246,0.04)' : 'transparent',
+      transition: 'background 0.12s', position: 'relative',
     }}>
-      {/* Time label */}
       <div style={{ width: 56, flexShrink: 0, display: 'flex', alignItems: 'flex-start', paddingTop: 6, paddingRight: 10, justifyContent: 'flex-end' }}>
-        <span style={{ fontSize: 11, color: '#9CA3AF', fontWeight: 500 }}>{hLabel}</span>
+        <span style={{ fontSize: 11, color: '#9CA3AF', fontWeight: 500 }}>{hourLabel(hour)}</span>
       </div>
-      {/* Slot area */}
       <div style={{ flex: 1, position: 'relative', borderLeft: '1px solid #F3F4F6' }}>
-        {blocked && !block && (
+        {blocked && !block && !busy && (
           <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <span style={{ fontSize: 16, opacity: 0.25 }}>🚫</span>
           </div>
         )}
+        {/* Calendar busy overlay */}
+        {busy && !block && (
+          <div style={{
+            position: 'absolute', top: 2, left: 4, right: 4, bottom: 2,
+            background: 'rgba(59,130,246,0.12)',
+            border: '1px solid rgba(59,130,246,0.25)',
+            borderRadius: 5,
+            display: 'flex', alignItems: 'center', padding: '0 7px',
+          }}>
+            <span style={{ fontSize: 10, color: '#3B82F6', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              📅 {busyLabel}
+            </span>
+          </div>
+        )}
+        {/* Scheduled task block */}
         {block && (
           <div style={{
             position: 'absolute',
             top: 2, left: 6, right: 6,
-            bottom: 2,
-            background: 'linear-gradient(135deg, #F97316, #FB923C)',
-            borderRadius: 6,
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            padding: '0 8px',
-            boxShadow: '0 2px 6px rgba(249,115,22,0.25)',
+            height: block.durationHours * HOUR_PX - 4,
+            background: block.gcalEventId
+              ? 'linear-gradient(135deg, #10B981, #34D399)'
+              : 'linear-gradient(135deg, #F97316, #FB923C)',
+            borderRadius: 6, zIndex: 2,
+            display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
+            padding: '5px 8px',
+            boxShadow: `0 2px 6px rgba(${block.gcalEventId ? '16,185,129' : '249,115,22'},0.25)`,
           }}>
-            <span style={{ fontSize: 11, fontWeight: 600, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {taskTitle}
-            </span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {taskTitle}
+              </div>
+              {block.gcalEventId && (
+                <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.8)', marginTop: 2 }}>✓ Calendar</div>
+              )}
+            </div>
             {onRemove && (
-              <button onClick={onRemove} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 3, cursor: 'pointer', color: '#fff', padding: '1px 4px', fontSize: 10, display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+              <button onClick={onRemove} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 3, cursor: 'pointer', color: '#fff', padding: '1px 4px', fontSize: 10, flexShrink: 0 }}>
                 ×
               </button>
             )}
           </div>
         )}
+      </div>
+    </div>
+  )
+}
+
+// ── Account Picker Overlay ────────────────────────────────────────────────────
+
+function AccountPickerOverlay({
+  task,
+  onConfirm,
+  onSkip,
+}: {
+  task: Task
+  onConfirm: (account: ConnectedAccount | null, saveMapping: boolean) => void
+  onSkip: () => void
+}) {
+  const authUser = useAuthStore(s => s.user)
+  const [selected, setSelected] = useState<string | null>(null)
+  const [saveMapping, setSaveMapping] = useState(true)
+
+  const primaryToken = getPrimaryToken()
+  const extraAccounts = loadAccounts().filter(a => !a.isPrimary)
+
+  const companies = loadDynamicCompanies()
+  const co = task.companyId ? companies.find(c => c.id === task.companyId) : null
+
+  const primaryOption = primaryToken ? {
+    id: 'primary',
+    email: authUser?.email ?? 'Primary account',
+    name: authUser?.name ?? 'Primary account',
+    providerToken: primaryToken,
+    isPrimary: true,
+    avatarUrl: authUser?.avatarUrl,
+    scopes: [], connectedAt: '', supabaseRefreshToken: undefined,
+  } as ConnectedAccount : null
+
+  const allOptions: ConnectedAccount[] = [
+    ...(primaryOption ? [primaryOption] : []),
+    ...extraAccounts,
+  ]
+
+  const selectedAcct = allOptions.find(a => a.id === selected) ?? null
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.72)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+      <div style={{ background: '#F9FAFB', borderRadius: 16, padding: 24, width: 360, maxWidth: '100%', boxShadow: '0 24px 60px rgba(0,0,0,0.3)' }}>
+        <div style={{ fontSize: 15, fontWeight: 700, color: '#111827', marginBottom: 4 }}>
+          Add to Calendar
+        </div>
+        <div style={{ fontSize: 12, color: '#6B7280', marginBottom: 16, lineHeight: 1.5 }}>
+          "{task.title}" — choose which account's calendar to create this event in.
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
+          {allOptions.map(acct => (
+            <button key={acct.id} onClick={() => setSelected(acct.id)} style={{
+              padding: '10px 14px', borderRadius: 10, cursor: 'pointer', textAlign: 'left',
+              background: selected === acct.id ? 'rgba(249,115,22,0.06)' : '#FFFFFF',
+              border: `1.5px solid ${selected === acct.id ? '#F97316' : '#E5E7EB'}`,
+              display: 'flex', alignItems: 'center', gap: 10,
+            }}>
+              <div style={{
+                width: 34, height: 34, borderRadius: '50%', flexShrink: 0,
+                background: '#E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 14, fontWeight: 700, color: '#374151', overflow: 'hidden',
+              }}>
+                {acct.avatarUrl
+                  ? <img src={acct.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  : (acct.name[0] ?? '?').toUpperCase()
+                }
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#111827', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{acct.name}</div>
+                <div style={{ fontSize: 11, color: '#6B7280', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{acct.email}</div>
+              </div>
+              {acct.isPrimary && (
+                <span style={{ fontSize: 10, fontWeight: 600, background: '#D1FAE5', color: '#10B981', borderRadius: 4, padding: '1px 6px', flexShrink: 0 }}>Primary</span>
+              )}
+            </button>
+          ))}
+          {allOptions.length === 0 && (
+            <div style={{ fontSize: 12, color: '#6B7280', textAlign: 'center', padding: 12 }}>No Google accounts connected.</div>
+          )}
+        </div>
+
+        {co && (
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, cursor: 'pointer', fontSize: 12, color: '#374151' }}>
+            <input type="checkbox" checked={saveMapping} onChange={e => setSaveMapping(e.target.checked)}
+              style={{ width: 14, height: 14, cursor: 'pointer' }} />
+            Save as default calendar for <strong style={{ marginLeft: 2 }}>{co.name}</strong>
+          </label>
+        )}
+
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={onSkip} style={{
+            flex: 1, padding: '9px', borderRadius: 8, background: 'transparent',
+            border: '1.5px solid #E5E7EB', color: '#374151', fontSize: 13, cursor: 'pointer',
+          }}>
+            Skip
+          </button>
+          <button onClick={() => selectedAcct && onConfirm(selectedAcct, saveMapping)}
+            disabled={!selectedAcct} style={{
+              flex: 2, padding: '9px', borderRadius: 8,
+              background: selectedAcct ? '#F97316' : '#E5E7EB', border: 'none',
+              color: selectedAcct ? '#fff' : '#9CA3AF', fontSize: 13, fontWeight: 700,
+              cursor: selectedAcct ? 'pointer' : 'default',
+            }}>
+            Add to Calendar
+          </button>
+        </div>
       </div>
     </div>
   )
@@ -143,14 +328,19 @@ interface SmartDayPlannerProps {
 }
 
 export function SmartDayPlanner({ onClose }: SmartDayPlannerProps) {
-  const { tasks: allTasks } = useTaskStore()
+  const { tasks: allTasks, updateTask } = useTaskStore()
   const [blocks, setBlocks] = useState<ScheduledBlock[]>([])
   const [activeId, setActiveId] = useState<string | null>(null)
   const [includeBreaks, setIncludeBreaks] = useState(true)
   const [sortBy, setSortBy] = useState<'priority' | 'created'>('priority')
+  const [generating, setGenerating] = useState(false)
+  const [todayEvents, setTodayEvents] = useState<GCalEvent[]>([])
+  const [creatingSet, setCreatingSet] = useState<Set<string>>(new Set())
+  const [accountPicker, setAccountPicker] = useState<{ task: Task; block: ScheduledBlock } | null>(null)
   const timelineRef = useRef<HTMLDivElement>(null)
 
   const today = new Date()
+  const todayStr = todayDateStr()
   const dateLabel = today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
   const timeLabel = today.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
 
@@ -159,9 +349,11 @@ export function SmartDayPlanner({ onClose }: SmartDayPlannerProps) {
   const sortedTasks = useMemo(() => {
     return [...tasks].sort((a, b) => {
       if (sortBy === 'priority') {
-        const ap = a.quadrant ? PRIORITY_ORDER[a.quadrant as keyof typeof PRIORITY_ORDER] ?? 4 : 4
-        const bp = b.quadrant ? PRIORITY_ORDER[b.quadrant as keyof typeof PRIORITY_ORDER] ?? 4 : 4
-        return ap - bp
+        const ap = a.quadrant ? (PRIORITY_ORDER[a.quadrant as keyof typeof PRIORITY_ORDER] ?? 4) : 4
+        const bp = b.quadrant ? (PRIORITY_ORDER[b.quadrant as keyof typeof PRIORITY_ORDER] ?? 4) : 4
+        if (ap !== bp) return ap - bp
+        if (a.urgent && !b.urgent) return -1
+        if (!a.urgent && b.urgent) return 1
       }
       return a.createdAt.localeCompare(b.createdAt)
     })
@@ -170,28 +362,182 @@ export function SmartDayPlanner({ onClose }: SmartDayPlannerProps) {
   const scheduledTaskIds = new Set(blocks.map(b => b.taskId))
   const unscheduledCount = tasks.filter(t => !scheduledTaskIds.has(t.id)).length
 
+  // Build busy-by-hour map from today's calendar events
+  const busyByHour = useMemo(() => {
+    const map: Record<number, GCalEvent[]> = {}
+    for (const evt of todayEvents) {
+      if (!evt.start?.dateTime) continue
+      const startH = parseInt(evt.start.dateTime.slice(11, 13), 10)
+      const endH   = evt.end?.dateTime ? Math.ceil(
+        parseInt(evt.end.dateTime.slice(11, 13), 10) +
+        parseInt(evt.end.dateTime.slice(14, 16), 10) / 60
+      ) : startH + 1
+      for (let h = startH; h < endH; h++) {
+        map[h] = map[h] ? [...map[h], evt] : [evt]
+      }
+    }
+    return map
+  }, [todayEvents])
+
+  // ── Generate Plan ─────────────────────────────────────────────────────────
+
+  const generatePlan = useCallback(async () => {
+    setGenerating(true)
+    try {
+      // 1. Fetch today's calendar events
+      const token = getPrimaryToken()
+      let events: GCalEvent[] = []
+      if (token) {
+        const dayStart = new Date(todayStr + 'T00:00:00')
+        const dayEnd   = new Date(todayStr + 'T23:59:59')
+        events = await fetchCalendarEventsWithToken(token, 'primary', dayStart, dayEnd)
+        setTodayEvents(events)
+      }
+
+      // 2. Build busy intervals (fractional hours)
+      const busyIntervals = events
+        .filter(e => e.start?.dateTime && e.end?.dateTime)
+        .map(e => ({
+          start: parseInt(e.start!.dateTime!.slice(11, 13), 10) +
+                 parseInt(e.start!.dateTime!.slice(14, 16), 10) / 60,
+          end:   parseInt(e.end!.dateTime!.slice(11, 13), 10) +
+                 parseInt(e.end!.dateTime!.slice(14, 16), 10) / 60,
+        }))
+
+      // 3. Add lunch break if enabled
+      if (includeBreaks) busyIntervals.push({ start: 12, end: 13 })
+
+      // 4. Fit tasks greedily into work hours 8–18
+      const workStart = 8, workEnd = 18
+      const newBlocks: ScheduledBlock[] = []
+      let cursor = workStart
+
+      for (const task of sortedTasks) {
+        if (cursor >= workEnd) break
+        const durH = task.duration ? Math.ceil(task.duration / 60) : 1
+        let placed = false
+
+        while (cursor + durH <= workEnd && !placed) {
+          const slotEnd = cursor + durH
+          const blocked = busyIntervals.some(b => cursor < b.end && slotEnd > b.start)
+          if (!blocked) {
+            newBlocks.push({ taskId: task.id, startHour: cursor, durationHours: durH })
+            cursor = slotEnd
+            placed = true
+          } else {
+            cursor++
+          }
+        }
+      }
+
+      setBlocks(newBlocks)
+
+      // Scroll to first scheduled slot or 8 AM
+      const firstHour = newBlocks[0]?.startHour ?? 8
+      setTimeout(() => {
+        timelineRef.current?.scrollTo({ top: firstHour * HOUR_PX, behavior: 'smooth' })
+      }, 100)
+    } finally {
+      setGenerating(false)
+    }
+  }, [sortedTasks, includeBreaks, todayStr])
+
+  // ── GCal event creation ───────────────────────────────────────────────────
+
+  async function createGCalEvent(token: string, calendarId: string, task: Task, block: ScheduledBlock): Promise<string | null> {
+    const endHour = block.startHour + block.durationHours
+    const startISO = `${todayStr}T${String(block.startHour).padStart(2, '0')}:00:00`
+    const endISO   = `${todayStr}T${String(Math.min(endHour, 23)).padStart(2, '0')}:00:00`
+    try {
+      const result = await createCalendarEventWithToken(token, calendarId, {
+        summary:     task.title,
+        description: task.description ?? '',
+        start: { dateTime: startISO, timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone },
+        end:   { dateTime: endISO,   timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone },
+      })
+      return result.event?.id ?? null
+    } catch { return null }
+  }
+
+  async function tryScheduleToCalendar(task: Task, block: ScheduledBlock) {
+    const companiesWithCal = loadCompaniesWithCal()
+    const co = task.companyId ? companiesWithCal.find(c => c.id === task.companyId) : null
+
+    // Find account
+    let token: string | null = null
+    let calendarId = 'primary'
+
+    if (co?.accountId) {
+      const accts = loadAccounts()
+      const acct = accts.find(a => a.id === co.accountId)
+      if (acct) token = acct.providerToken
+      if (co.calendarId) calendarId = co.calendarId
+    }
+
+    if (!token) token = getPrimaryToken() || null
+
+    if (!token) {
+      // No token at all — show account picker
+      setAccountPicker({ task, block })
+      return
+    }
+
+    // If no account is mapped to this company, show picker to let them choose & optionally save
+    if (task.companyId && !co?.accountId) {
+      setAccountPicker({ task, block })
+      return
+    }
+
+    // Create the event silently
+    setCreatingSet(prev => new Set([...prev, task.id]))
+    const gcalEventId = await createGCalEvent(token, calendarId, task, block)
+    setCreatingSet(prev => { const s = new Set(prev); s.delete(task.id); return s })
+    if (gcalEventId) {
+      setBlocks(prev => prev.map(b => b.taskId === task.id ? { ...b, gcalEventId } : b))
+    }
+  }
+
+  // ── DnD handlers ──────────────────────────────────────────────────────────
+
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
 
   function handleDragStart({ active }: DragStartEvent) { setActiveId(active.id as string) }
 
-  function handleDragEnd({ active, over }: DragEndEvent) {
+  async function handleDragEnd({ active, over }: DragEndEvent) {
     setActiveId(null)
     if (!over) return
     const overId = over.id as string
     if (!overId.startsWith('slot-')) return
-    const hour = parseInt(overId.replace('slot-', ''), 10)
+    const hour   = parseInt(overId.replace('slot-', ''), 10)
     const taskId = active.id as string
-    const task = tasks.find(t => t.id === taskId)
-    const dur = task?.duration ? Math.ceil(task.duration / 60) : 1
-    setBlocks(prev => {
-      const without = prev.filter(b => b.taskId !== taskId)
-      return [...without, { taskId, startHour: hour, durationHours: dur }]
-    })
+    const task   = tasks.find(t => t.id === taskId)
+    if (!task) return
+    const durH = task.duration ? Math.ceil(task.duration / 60) : 1
+    const block: ScheduledBlock = { taskId, startHour: hour, durationHours: durH }
+
+    setBlocks(prev => [...prev.filter(b => b.taskId !== taskId), block])
+    await tryScheduleToCalendar(task, block)
   }
 
   function removeBlock(taskId: string) {
     setBlocks(prev => prev.filter(b => b.taskId !== taskId))
   }
+
+  // ── Apply Plan ────────────────────────────────────────────────────────────
+
+  function applyPlan() {
+    blocks.forEach(b => {
+      const patch: Partial<Parameters<typeof updateTask>[1]> = {
+        dueDate:     todayStr,
+        plannedTime: `${String(b.startHour).padStart(2, '0')}:00`,
+      }
+      if (b.gcalEventId) patch.gcalEventId = b.gcalEventId
+      updateTask(b.taskId, patch)
+    })
+    onClose()
+  }
+
+  // ── Stats ─────────────────────────────────────────────────────────────────
 
   const totalMinutes = blocks.reduce((sum, b) => {
     const task = tasks.find(t => t.id === b.taskId)
@@ -205,6 +551,29 @@ export function SmartDayPlanner({ onClose }: SmartDayPlannerProps) {
       <style>{`
         @keyframes sdp-in { from{opacity:0;transform:scale(0.97) translateY(12px)} to{opacity:1;transform:scale(1) translateY(0)} }
       `}</style>
+
+      {/* Account picker overlay */}
+      {accountPicker && (
+        <AccountPickerOverlay
+          task={accountPicker.task}
+          onConfirm={async (acct, saveMapping) => {
+            const { task, block } = accountPicker
+            setAccountPicker(null)
+            if (!acct) return
+            if (saveMapping && task.companyId) {
+              saveCompanyAccountMapping(task.companyId, acct.id)
+            }
+            setCreatingSet(prev => new Set([...prev, task.id]))
+            const gcalEventId = await createGCalEvent(acct.providerToken, 'primary', task, block)
+            setCreatingSet(prev => { const s = new Set(prev); s.delete(task.id); return s })
+            if (gcalEventId) {
+              setBlocks(prev => prev.map(b => b.taskId === task.id ? { ...b, gcalEventId } : b))
+            }
+          }}
+          onSkip={() => setAccountPicker(null)}
+        />
+      )}
+
       {/* Backdrop */}
       <div style={{ position: 'fixed', inset: 0, zIndex: 9000, background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
         {/* Modal */}
@@ -212,8 +581,7 @@ export function SmartDayPlanner({ onClose }: SmartDayPlannerProps) {
           background: '#F9FAFB', borderRadius: 20, width: '100%', maxWidth: 1000, maxHeight: '90vh',
           display: 'flex', flexDirection: 'column',
           boxShadow: '0 32px 80px rgba(0,0,0,0.22), 0 0 0 1px rgba(0,0,0,0.06)',
-          animation: 'sdp-in 0.3s cubic-bezier(0.16,1,0.3,1)',
-          overflow: 'hidden',
+          animation: 'sdp-in 0.3s cubic-bezier(0.16,1,0.3,1)', overflow: 'hidden',
         }}>
           {/* Header */}
           <div style={{ padding: '18px 24px', background: '#FFFFFF', borderBottom: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
@@ -223,17 +591,19 @@ export function SmartDayPlanner({ onClose }: SmartDayPlannerProps) {
               <X size={18} />
             </button>
           </div>
+
           {/* Sub-header */}
-          <div style={{ padding: '10px 24px', background: '#FFFFFF', borderBottom: '1px solid #F3F4F6', display: 'flex', alignItems: 'center', gap: 14, flexShrink: 0 }}>
-            <span style={{ fontSize: 13, color: '#6B7280', display: 'flex', alignItems: 'center', gap: 5 }}>
-              📅 {dateLabel}
-            </span>
-            <span style={{ fontSize: 13, color: '#6B7280', display: 'flex', alignItems: 'center', gap: 5 }}>
-              🕐 {timeLabel}
-            </span>
+          <div style={{ padding: '10px 24px', background: '#FFFFFF', borderBottom: '1px solid #F3F4F6', display: 'flex', alignItems: 'center', gap: 14, flexShrink: 0, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 13, color: '#6B7280' }}>📅 {dateLabel}</span>
+            <span style={{ fontSize: 13, color: '#6B7280' }}>🕐 {timeLabel}</span>
             <span style={{ fontSize: 12, fontWeight: 600, background: '#F3F4F6', color: '#374151', borderRadius: 20, padding: '3px 10px' }}>
               {unscheduledCount} unscheduled
             </span>
+            {todayEvents.length > 0 && (
+              <span style={{ fontSize: 12, fontWeight: 600, background: '#DBEAFE', color: '#2563EB', borderRadius: 20, padding: '3px 10px' }}>
+                {todayEvents.length} calendar event{todayEvents.length !== 1 ? 's' : ''} today
+              </span>
+            )}
             <div style={{ flex: 1 }} />
             <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
               <div onClick={() => setIncludeBreaks(b => !b)} style={{ width: 40, height: 22, borderRadius: 11, background: includeBreaks ? '#F97316' : '#D1D5DB', position: 'relative', cursor: 'pointer', transition: 'background 0.15s' }}>
@@ -250,12 +620,13 @@ export function SmartDayPlanner({ onClose }: SmartDayPlannerProps) {
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, borderRight: '1px solid #E5E7EB' }}>
                 <div style={{ padding: '12px 16px 8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#FFFFFF', borderBottom: '1px solid #F3F4F6', flexShrink: 0 }}>
                   <span style={{ fontSize: 14, fontWeight: 700, color: '#111827' }}>Today's Schedule</span>
-                  <button style={{
+                  <button onClick={() => void generatePlan()} disabled={generating} style={{
                     display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 20,
-                    background: '#FFFFFF', border: '1.5px solid #E5E7EB', color: '#374151',
-                    fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                    background: generating ? '#F3F4F6' : '#FFFFFF', border: '1.5px solid #E5E7EB',
+                    color: '#374151', fontSize: 13, fontWeight: 600, cursor: generating ? 'wait' : 'pointer',
                   }}>
-                    <RefreshCw size={13} /> Generate Plan
+                    <RefreshCw size={13} style={{ animation: generating ? 'spin 1s linear infinite' : 'none' }} />
+                    {blocks.length > 0 ? 'Regenerate Plan' : 'Generate Plan'}
                   </button>
                 </div>
                 <div ref={timelineRef} style={{ flex: 1, overflowY: 'auto', background: '#FAFAFA' }}>
@@ -268,6 +639,7 @@ export function SmartDayPlanner({ onClose }: SmartDayPlannerProps) {
                         block={block}
                         taskTitle={task?.title}
                         onRemove={block ? () => removeBlock(block.taskId) : undefined}
+                        busyEvents={busyByHour[hour]}
                       />
                     )
                   })}
@@ -279,17 +651,24 @@ export function SmartDayPlanner({ onClose }: SmartDayPlannerProps) {
                 <div style={{ padding: '12px 16px 8px', borderBottom: '1px solid #F3F4F6', flexShrink: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
                     <span style={{ fontSize: 14, fontWeight: 700, color: '#111827' }}>Tasks</span>
-                    <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9CA3AF', padding: 2, display: 'flex' }}><Plus size={15} /></button>
                     <div style={{ flex: 1 }} />
-                    <button onClick={() => setSortBy(s => s === 'priority' ? 'created' : 'priority')} style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: '#6B7280', fontWeight: 500 }}>
-                      🔥 Priority ∨
+                    <button onClick={() => setSortBy(s => s === 'priority' ? 'created' : 'priority')} style={{
+                      display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none',
+                      cursor: 'pointer', fontSize: 12, color: '#6B7280', fontWeight: 500,
+                    }}>
+                      {sortBy === 'priority' ? '🔥 Priority' : '🕐 Newest'} ∨
                     </button>
                   </div>
-                  <p style={{ margin: 0, fontSize: 11, color: '#9CA3AF' }}>Drag to schedule • Drag back to unschedule</p>
+                  <p style={{ margin: 0, fontSize: 11, color: '#9CA3AF' }}>Drag to schedule · Creates GCal event automatically</p>
                 </div>
                 <div style={{ flex: 1, overflowY: 'auto', padding: '10px 12px' }}>
                   {sortedTasks.map(task => (
-                    <DraggableTaskCard key={task.id} task={task} scheduled={scheduledTaskIds.has(task.id)} />
+                    <DraggableTaskCard
+                      key={task.id} task={task}
+                      scheduled={scheduledTaskIds.has(task.id)}
+                      creating={creatingSet.has(task.id)}
+                      gcalDone={!!blocks.find(b => b.taskId === task.id)?.gcalEventId}
+                    />
                   ))}
                   {sortedTasks.length === 0 && (
                     <div style={{ padding: '24px 12px', textAlign: 'center', fontSize: 13, color: '#9CA3AF' }}>
@@ -310,26 +689,35 @@ export function SmartDayPlanner({ onClose }: SmartDayPlannerProps) {
           </DndContext>
 
           {/* Footer */}
-          <div style={{ padding: '14px 24px', background: '#FFFFFF', borderTop: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+          <div style={{ padding: '14px 24px', background: '#FFFFFF', borderTop: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+            <CalendarPlus size={14} color="#6B7280" />
             <span style={{ fontSize: 13, color: '#6B7280' }}>
-              {blocks.length} task{blocks.length !== 1 ? 's' : ''} scheduled • {totalMinutes} minutes total
+              {blocks.length} task{blocks.length !== 1 ? 's' : ''} · {totalMinutes}m planned
+              {blocks.filter(b => b.gcalEventId).length > 0 && (
+                <span style={{ color: '#10B981', marginLeft: 8 }}>
+                  · {blocks.filter(b => b.gcalEventId).length} added to calendar
+                </span>
+              )}
             </span>
             <div style={{ flex: 1 }} />
-            <button onClick={onClose} style={{ padding: '9px 20px', borderRadius: 20, background: '#FFFFFF', border: '1.5px solid #E5E7EB', color: '#374151', fontSize: 13, fontWeight: 600, cursor: 'pointer', marginRight: 10 }}>
+            <button onClick={onClose} style={{ padding: '9px 20px', borderRadius: 20, background: '#FFFFFF', border: '1.5px solid #E5E7EB', color: '#374151', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
               Cancel
             </button>
-            <button style={{
+            <button onClick={applyPlan} disabled={!blocks.length} style={{
               display: 'flex', alignItems: 'center', gap: 6, padding: '9px 20px', borderRadius: 20,
-              background: blocks.length ? '#F97316' : '#E5E7EB',
-              border: 'none', color: blocks.length ? '#fff' : '#9CA3AF',
-              fontSize: 13, fontWeight: 700, cursor: blocks.length ? 'pointer' : 'default',
-              transition: 'all 0.15s',
+              background: blocks.length ? '#F97316' : '#E5E7EB', border: 'none',
+              color: blocks.length ? '#fff' : '#9CA3AF', fontSize: 13, fontWeight: 700,
+              cursor: blocks.length ? 'pointer' : 'default', transition: 'all 0.15s',
             }}>
               <Check size={14} /> Apply Plan
             </button>
           </div>
         </div>
       </div>
+
+      <style>{`
+        @keyframes spin { from { transform: rotate(0deg) } to { transform: rotate(360deg) } }
+      `}</style>
     </>
   )
 }
