@@ -519,7 +519,7 @@ export function TaskCommand() {
       )}
 
       {modalTask && <TaskDetailModal task={modalTask} onClose={() => setModalTaskId(null)} />}
-      {showPlanner && <SmartDayPlanner onClose={() => setShowPlanner(false)} />}
+      {showPlanner && <SmartDayPlanner onClose={() => setShowPlanner(false)} onOpenTask={id => { setShowPlanner(false); setModalTaskId(id) }} />}
     </div>
   )
 }
