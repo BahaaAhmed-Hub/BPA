@@ -6,6 +6,7 @@ import {
   type DragEndEvent, type DragStartEvent,
 } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
+import { Check } from 'lucide-react'
 import { useTaskStore } from '@/store/taskStore'
 import type { Task, TaskType } from '@/types'
 import {
@@ -84,7 +85,8 @@ function sortByUrgency(tasks: Task[]): Task[] {
 
 function KanbanCard({ task, onOpen, overlay = false }: { task: Task; onOpen: () => void; overlay?: boolean }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: task.id })
-  const updateTask  = useTaskStore(s => s.updateTask)
+  const updateTask     = useTaskStore(s => s.updateTask)
+  const toggleComplete = useTaskStore(s => s.toggleComplete)
   const companies   = loadVisibleCompanies()
   const allUsers    = getAllUsers()
 
@@ -130,12 +132,29 @@ function KanbanCard({ task, onOpen, overlay = false }: { task: Task; onOpen: () 
         <div style={{ position: 'absolute', top: 0, left: 0, width: 3, height: '100%', background: '#E05252', borderRadius: '10px 0 0 10px' }} />
       )}
 
-      {/* Top row: title + lightning bolt */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6, marginBottom: 9 }}>
+      {/* Top row: checkbox + title + lightning bolt */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 7, marginBottom: 9 }}>
+        {/* Completion checkbox */}
+        <button
+          onPointerDown={e => e.stopPropagation()}
+          onClick={e => { e.stopPropagation(); toggleComplete(task.id) }}
+          title={task.completed ? 'Mark incomplete' : 'Mark complete'}
+          style={{
+            width: 15, height: 15, borderRadius: 4, flexShrink: 0, marginTop: 2,
+            border: `1.5px solid ${task.completed ? '#1D9E75' : 'var(--color-border, #404560)'}`,
+            background: task.completed ? '#1D9E75' : 'transparent',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer', transition: 'all 0.15s ease',
+          }}
+        >
+          {task.completed && <Check size={9} color="#fff" strokeWidth={3} />}
+        </button>
         <div style={{
           flex: 1, fontSize: 12.5, fontWeight: 600, color: 'var(--color-text, #E8EAF6)',
           lineHeight: 1.45,
           display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+          textDecoration: task.completed ? 'line-through' : 'none',
+          opacity: task.completed ? 0.55 : 1,
         }}>
           {task.title}
         </div>
