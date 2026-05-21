@@ -1,6 +1,7 @@
 import { QuadrantColumn } from './QuadrantColumn'
 import { useTaskStore } from '@/store/taskStore'
 import type { Quadrant } from '@/types'
+import { isTaskHidden } from '@/types'
 
 const QUADRANTS: Quadrant[] = ['do', 'schedule', 'delegate', 'eliminate']
 
@@ -13,7 +14,7 @@ interface EisenhowerBoardProps {
 }
 
 export function EisenhowerBoard({ onOpen, hideCompleted = false, groupBy = 'none', allGroupsExpanded = true, filteredTaskIds }: EisenhowerBoardProps) {
-  const tasks = useTaskStore(s => s.tasks)
+  const tasks = useTaskStore(s => s.tasks).filter(t => !isTaskHidden(t))
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>

@@ -1,5 +1,5 @@
 
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import { Mail, Zap, Clock, Copy, CheckCheck, RefreshCw, ArrowRight, WifiOff, ListPlus, Plus, Archive, Search, X as XIcon, PenSquare } from 'lucide-react'
 import { TopBar } from '@/components/layout/TopBar'
 import { triageEmail } from '@/lib/professor'
@@ -9,6 +9,7 @@ import { signInWithGoogle } from '@/lib/google'
 import { useAuthStore } from '@/store/authStore'
 import { useTaskStore } from '@/store/taskStore'
 import type { DbUser } from '@/types/database'
+import { loadDynamicCompanies } from '@/types'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -190,13 +191,27 @@ export function InboxModule() {
     setTimeout(() => { setBulkDone(false); setBulkOpen(false) }, 1400)
   }
 
+  // Domains belonging to hidden companies — emails from these are filtered out
+  const hiddenDomains = useMemo(() => new Set(
+    loadDynamicCompanies()
+      .filter(c => c.hidden && c.emailDomain)
+      .map(c => c.emailDomain!.toLowerCase().replace(/^@/, ''))
+  ), [emails])
+
+  const visibleEmails = useMemo(() =>
+    emails.filter(e => {
+      const domain = e.fromEmail.split('@')[1]?.toLowerCase()
+      return !domain || !hiddenDomains.has(domain)
+    })
+  , [emails, hiddenDomains])
+
   const filteredEmails = searchQuery.trim()
-    ? emails.filter(e => {
+    ? visibleEmails.filter(e => {
         const q = searchQuery.toLowerCase()
         return e.fromName.toLowerCase().includes(q) || e.fromEmail.toLowerCase().includes(q) ||
                e.subject.toLowerCase().includes(q)  || e.preview.toLowerCase().includes(q)
       })
-    : emails
+    : visibleEmails
 
   const selectedEmail  = emails.find(e => e.id === selectedId) ?? null
   const selectedTriage = selectedId ? (triageMap[selectedId] ?? null) : null
