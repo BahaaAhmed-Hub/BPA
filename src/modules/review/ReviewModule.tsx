@@ -240,7 +240,7 @@ function WeeklyDayCard({ dayStr, allEvents, statuses, tasks }: {
   const dayLabel = new Date(dayStr + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
   const events = allEvents[dayStr] ?? []
 
-  const doneEvts       = events.filter(e => statuses[e.id] === 'done').sort(sortByTime)
+  const doneEvts       = events.filter(e => isEventDone(e, statuses)).sort(sortByTime)
   const cancelledEvts  = events.filter(e => statuses[e.id] === 'cancelled').sort(sortByTime)
   const dayTasks = tasks.filter(t => {
     if (t.completed || t.status === 'done') return (t.completedAt ?? t.dueDate) === dayStr
@@ -300,10 +300,20 @@ function WeeklyDayCard({ dayStr, allEvents, statuses, tasks }: {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
+// An event counts as "done" if manually marked done OR it already happened and wasn't cancelled
+function isEventDone(e: GCalEvent, statuses: Record<string, EventStatus>): boolean {
+  if (statuses[e.id] === 'cancelled') return false
+  if (statuses[e.id] === 'done') return true
+  const end = e.end?.dateTime ?? e.end?.date
+  return !!end && new Date(end) < new Date()
+}
+
 export function ReviewModule() {
   const tasks = useTaskStore(s => s.tasks).filter(t => !isTaskHidden(t))
 
-  const completedTasks = tasks.filter(t => t.completed)
+  // "Tasks Shipped" = completed THIS week only
+  const thisWeekDays   = new Set(getWeekDays(getMondayOf(todayStr())))
+  const completedTasks = tasks.filter(t => t.completed && thisWeekDays.has(t.completedAt ?? t.dueDate ?? ''))
   const activeTasks    = tasks.filter(t => !t.completed)
   const slipped        = activeTasks.filter(t => t.dueDate && t.dueDate < todayStr()).length
 
@@ -317,7 +327,7 @@ export function ReviewModule() {
 
   // ── Daily ──────────────────────────────────────────────────────────────────
   const dayEvents       = loadDayEvents(selectedDay)
-  const doneEvents      = dayEvents.filter(e => eventStatuses[e.id] === 'done').sort(sortByTime)
+  const doneEvents      = dayEvents.filter(e => isEventDone(e, eventStatuses)).sort(sortByTime)
   const cancelledEvents = dayEvents.filter(e => eventStatuses[e.id] === 'cancelled').sort(sortByTime)
   // Tasks "for" a day: done/cancelled tasks use completedAt (falling back to dueDate for
   // older tasks without completedAt); open tasks use dueDate so they still appear on their day.
@@ -337,7 +347,7 @@ export function ReviewModule() {
   const weekEventsMap = loadWeekEventsGrouped(weekStart)
 
   const allWeekEvents  = Object.values(weekEventsMap).flat()
-  const weekDoneEvts   = allWeekEvents.filter(e => eventStatuses[e.id] === 'done').length
+  const weekDoneEvts   = allWeekEvents.filter(e => isEventDone(e, eventStatuses)).length
   const weekTasksAll   = tasks.filter(t => {
     const anchor = (t.completed || t.status === 'done') ? (t.completedAt ?? t.dueDate) : t.dueDate
     return anchor && weekDays.includes(anchor)
