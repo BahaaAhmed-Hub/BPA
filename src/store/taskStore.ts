@@ -14,7 +14,7 @@ function toRow(t: Task): TaskRow {
   return {
     id: t.id, title: t.title, quadrant: t.quadrant ?? null,
     company: t.company, companyId: t.companyId,
-    status: t.status, completed: t.completed,
+    status: t.status, completed: t.completed, completedAt: t.completedAt,
     dueDate: t.dueDate, duration: t.duration, plannedTime: t.plannedTime,
     owner: t.owner, urgent: t.urgent, taskType: t.taskType, createdAt: t.createdAt,
   }
@@ -27,6 +27,7 @@ function fromRow(r: TaskRow): Task {
     company: (r.company as Task['company']) || 'teradix',
     status: (r.status as TaskStatus) || 'open',
     completed: r.completed,
+    completedAt: r.completedAt,
     dueDate: r.dueDate, duration: r.duration, plannedTime: r.plannedTime,
     owner: r.owner, createdAt: r.createdAt,
     // Only include these if DB actually has them — avoids overwriting local state on merge

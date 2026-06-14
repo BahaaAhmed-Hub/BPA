@@ -28,6 +28,7 @@ import { generateMeetingPrep } from '@/lib/professor'
 import type { MeetingPrep } from '@/lib/professor'
 import { useAuthStore } from '@/store/authStore'
 import { loadAccounts, loadHiddenAccounts } from '@/lib/multiAccount'
+import { loadDynamicCompanies } from '@/types'
 import { connectAdditionalGoogleAccount } from '@/lib/google'
 import type { DbUser, DbCompany, DbCalendarEvent } from '@/types/database'
 import {
@@ -347,9 +348,23 @@ async function loadAllCalendars(primaryEmail: string): Promise<LoadCalendarsResu
   return { calendars, needsReconnect }
 }
 
+function getHiddenCompanyAccountEmails(): Set<string> {
+  const accounts = loadAccounts()
+  return new Set(
+    loadDynamicCompanies()
+      .filter(c => c.hidden && c.accountId)
+      .map(c => accounts.find(a => a.id === c.accountId)?.email)
+      .filter((e): e is string => !!e)
+  )
+}
+
 async function fetchAllEvents(allCals: CalWithAccount[], hidden: Set<string>, hiddenAccts: Set<string>, start: Date, end: Date): Promise<GCalEvent[]> {
   // hiddenAccts applies only to extra accounts (c.accountId set) — primary account is never hidden
-  const active = allCals.filter(c => !hidden.has(c.id) && (!c.accountId || !hiddenAccts.has(c.accountEmail)))
+  const hiddenCompanyEmails = getHiddenCompanyAccountEmails()
+  const active = allCals.filter(c =>
+    !hidden.has(c.id) &&
+    (!c.accountId || (!hiddenAccts.has(c.accountEmail) && !hiddenCompanyEmails.has(c.accountEmail)))
+  )
   if (!active.length) return []
 
   // Use the return value directly so we get the freshest possible token even when
@@ -1438,6 +1453,7 @@ export function CalendarIntelligence() {
   const [loadingEvents,   setLoadingEvents]   = useState(() => loadEventsCache(getWeekStart(new Date())).length === 0)
   const [noAuth,          setNoAuth]          = useState(false)
   const [fetchError,      setFetchError]      = useState<string | null>(null)
+  const [refreshing,      setRefreshing]      = useState(false)
   const [reconnectNeeded, setReconnectNeeded] = useState<string[]>([])
   const [applyingRules,   setApplyingRules]   = useState(false)
   const [rulesResult,     setRulesResult]     = useState<string | null>(null)
@@ -1530,6 +1546,8 @@ export function CalendarIntelligence() {
     if (!user?.email) return  // wait for user — prevents concurrent double-call race
     // Persist primary email for the initial-render cache cleanup on next page load
     localStorage.setItem('cal-intel-primary-email', user.email)
+    // Clear stale calendar list cache so newly subscribed/added calendars always appear
+    localStorage.removeItem(CAL_INTEL_CACHE_KEY)
     const { calendars: fresh, needsReconnect } = await loadAllCalendars(user.email)
     setReconnectNeeded(needsReconnect)
 
@@ -2017,9 +2035,20 @@ export function CalendarIntelligence() {
             ><ChevronRight size={15} /></button>
 
             <button
-              onClick={() => void reloadCalendars().then(c => { if (c) void loadEvents(weekStart, c, hiddenCals) })}
-              style={{ background: 'none', border: '1px solid var(--color-border, #252A3E)', borderRadius: 7, cursor: 'pointer', color: 'var(--color-text-dim, #8B93A8)', padding: '4px 8px', display: 'flex', alignItems: 'center' }}
-            ><RefreshCw size={13} /></button>
+              onClick={async () => {
+                if (refreshing) return
+                setRefreshing(true)
+                // Clear events cache so the grid shows the loading indicator
+                Object.keys(localStorage).filter(k => k.startsWith(EVENTS_CACHE_PREFIX)).forEach(k => localStorage.removeItem(k))
+                setLoadingEvents(true)
+                try {
+                  const c = await reloadCalendars()
+                  if (c) await loadEvents(weekStart, c, hiddenCals)
+                } finally { setRefreshing(false) }
+              }}
+              disabled={refreshing}
+              style={{ background: 'none', border: '1px solid var(--color-border, #252A3E)', borderRadius: 7, cursor: refreshing ? 'default' : 'pointer', color: 'var(--color-text-dim, #8B93A8)', padding: '4px 8px', display: 'flex', alignItems: 'center', opacity: refreshing ? 0.6 : 1 }}
+            ><RefreshCw size={13} style={{ animation: refreshing ? 'spin 0.7s linear infinite' : 'none' }} /></button>
 
             <button
               onClick={() => void handleApplyRules()}
@@ -2067,7 +2096,11 @@ export function CalendarIntelligence() {
         {/* Calendar chips */}
         {allCalendars.length > 0 && (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
-            {allCalendars.filter(cal => !cal.accountId || !hiddenAccounts.has(cal.accountEmail)).map(cal => {
+            {allCalendars.filter(cal => {
+              if (cal.accountId && hiddenAccounts.has(cal.accountEmail)) return false
+              if (cal.accountId && getHiddenCompanyAccountEmails().has(cal.accountEmail)) return false
+              return true
+            }).map(cal => {
               const hidden  = hiddenCals.has(cal.id)
               const color   = calEffectiveColor(cal)
               const chipKey = `${cal.accountEmail}:${cal.id}`
@@ -2179,6 +2212,46 @@ export function CalendarIntelligence() {
             })}
           </div>
 
+          {/* All-day events strip — only shown when the week has at least one all-day event */}
+          {weekDays.some(day => (grouped.get(localDateStr(day)) ?? []).some(e => !e.start.dateTime)) && (
+            <div style={{ display: 'flex', borderBottom: '1px solid var(--color-surface, #1A1D2E)', flexShrink: 0, minHeight: 22 }}>
+              <div style={{ width: 52, flexShrink: 0, display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end', paddingRight: 6, paddingTop: 3, fontSize: 9, color: 'var(--color-text-muted, #6B7280)', letterSpacing: '0.4px' }}>
+                all day
+              </div>
+              {weekDays.map(day => {
+                const ds = localDateStr(day)
+                const allDayEvts = (grouped.get(ds) ?? []).filter(e => !e.start.dateTime)
+                return (
+                  <div key={ds} style={{ flex: 1, padding: '2px 2px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1, borderRight: '1px solid var(--color-surface, #1A1D2E)', maxHeight: 68, overflowY: 'auto' }}>
+                    {allDayEvts.map(ev => {
+                      const cal   = allCalendars.find(c => c.id === (ev as GCalEventExt).calendarId)
+                      const color = cal ? calEffectiveColor(cal) : 'var(--color-accent)'
+                      const evStatus = eventStatuses[ev.id]
+                      return (
+                        <div
+                          key={ev.id}
+                          onClick={e => handleEventClick(ev as GCalEventExt, e)}
+                          onContextMenu={e => handleEventContextMenu(ev as GCalEventExt, e)}
+                          style={{
+                            fontSize: 10, fontWeight: 600, color: '#fff',
+                            background: `${color}${evStatus ? '66' : 'CC'}`,
+                            borderLeft: `2px solid ${color}`,
+                            borderRadius: 3, padding: '1px 4px',
+                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                            cursor: 'pointer', textDecoration: evStatus === 'cancelled' ? 'line-through' : 'none',
+                          }}
+                        >
+                          {evStatus === 'done' && '✓ '}{evStatus === 'cancelled' && '✗ '}
+                          {ev.summary ?? '(No title)'}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
           {/* Scrollable time grid */}
           <div ref={gridRef} onClick={closePopup}
             style={{ flex: 1, overflowY: 'auto', display: 'flex', position: 'relative' }}
@@ -2188,7 +2261,8 @@ export function CalendarIntelligence() {
               {Array.from({ length: 24 }, (_, h) => (
                 <div key={h} style={{
                   position: 'absolute', top: h * HOUR_PX - 7,
-                  right: 8, fontSize: 10, color: 'var(--color-border, #3A3F55)', whiteSpace: 'nowrap',
+                  right: 8, fontSize: 10, color: 'var(--color-text-muted, #6B7280)', whiteSpace: 'nowrap',
+                  fontWeight: 500,
                 }}>
                   {fmtHourLabel(h)}
                 </div>

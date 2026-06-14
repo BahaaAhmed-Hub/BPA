@@ -240,6 +240,16 @@ export function TaskDetailModal({ task, onClose }: Props) {
                 style={field} />
             </div>
 
+            {/* Closed Date — only visible when task is done */}
+            {task.completed && (
+              <div>
+                <div style={lbl}><Calendar size={10} /> Closed Date</div>
+                <input type="date" value={task.completedAt ?? ''}
+                  onChange={e => updateTask(task.id, { completedAt: e.target.value || undefined })}
+                  style={field} />
+              </div>
+            )}
+
             {/* Duration */}
             <div>
               <div style={lbl}><Clock size={10} /> Duration (min)</div>

@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo, useCallback } from 'react'
+import { useState, useRef, useMemo, useCallback, useEffect } from 'react'
 import {
   DndContext, DragOverlay, PointerSensor, useSensor, useSensors,
   useDroppable, useDraggable, type DragEndEvent, type DragStartEvent,
@@ -10,9 +10,10 @@ import { useAuthStore } from '@/store/authStore'
 import type { Task } from '@/types'
 import { isTaskHidden, loadDynamicCompanies } from '@/types'
 import {
-  fetchCalendarEventsWithToken, createCalendarEventWithToken,
+  createCalendarEventWithToken,
   type GCalEvent,
 } from '@/lib/googleCalendar'
+import { fetchVisibleEvents } from '@/lib/calendarEvents'
 import { loadAccounts, getPrimaryToken, type ConnectedAccount } from '@/lib/multiAccount'
 
 const HOUR_PX = 56
@@ -135,15 +136,84 @@ function DraggableTaskCard({ task, scheduled, creating, gcalDone }: {
 
 // ── Droppable Hour Slot ───────────────────────────────────────────────────────
 
-function HourSlot({ hour, block, taskTitle, onRemove, busyEventsAtStart, isBusyContinued, isPast, onOpenTask }: {
+// ── Event detail popup ────────────────────────────────────────────────────────
+
+function EventPopup({ event, color, onClose }: { event: GCalEvent; color: string; onClose: () => void }) {
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const fn = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) onClose() }
+    document.addEventListener('mousedown', fn)
+    return () => document.removeEventListener('mousedown', fn)
+  }, [onClose])
+
+  const isAllDay   = !event.start.dateTime
+  const startISO   = event.start.dateTime ?? (event.start.date + 'T00:00:00')
+  const endISO     = event.end?.dateTime   ?? (event.end?.date   + 'T00:00:00')
+  const fmt = (iso: string) => new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+  const fmtDate = (iso: string) => new Date(iso).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+  const videoLink = event.conferenceData?.entryPoints?.find(ep => ep.entryPointType === 'video')?.uri
+  const attendees = (event.attendees ?? []).filter(a => !a.self)
+  const notes = event.description?.replace(/<[^>]*>/g, '').trim() ?? ''
+
+  return (
+    <div ref={ref} style={{
+      position: 'fixed', zIndex: 9999, top: '50%', left: '50%',
+      transform: 'translate(-50%, -50%)',
+      background: 'var(--color-surface, #161929)',
+      border: '1px solid var(--color-border, #252A3E)',
+      borderRadius: 14, width: 340, maxHeight: '80vh', overflowY: 'auto',
+      boxShadow: '0 24px 80px rgba(0,0,0,0.6)',
+    }}>
+      {/* Color bar + title */}
+      <div style={{ borderBottom: '1px solid var(--color-border, #252A3E)', padding: '14px 16px 12px', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+        <div style={{ width: 4, minHeight: 24, borderRadius: 2, background: color, flexShrink: 0, marginTop: 2 }} />
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-text, #E8EAF6)', lineHeight: 1.3 }}>{event.summary ?? '(No title)'}</div>
+          <div style={{ fontSize: 12, color: 'var(--color-text-muted, #6B7280)', marginTop: 3 }}>
+            {isAllDay ? fmtDate(startISO) : `${fmt(startISO)} – ${fmt(endISO)}`}
+          </div>
+        </div>
+        <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted, #6B7280)', padding: 2 }}>
+          <X size={15} />
+        </button>
+      </div>
+      <div style={{ padding: '10px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {videoLink && (
+          <a href={videoLink} target="_blank" rel="noreferrer" style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px',
+            background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.3)',
+            borderRadius: 7, fontSize: 12, fontWeight: 600, color: '#3B82F6', textDecoration: 'none',
+          }}>🎥 Join meeting</a>
+        )}
+        {event.location && (
+          <div style={{ fontSize: 12, color: 'var(--color-text-dim, #C7CAE0)' }}>📍 {event.location}</div>
+        )}
+        {attendees.length > 0 && (
+          <div style={{ fontSize: 12, color: 'var(--color-text-dim, #C7CAE0)' }}>
+            👥 {attendees.slice(0, 4).map(a => a.displayName ?? a.email).join(', ')}
+            {attendees.length > 4 && <span style={{ color: 'var(--color-text-muted, #6B7280)' }}> +{attendees.length - 4} more</span>}
+          </div>
+        )}
+        {notes && (
+          <div style={{ fontSize: 11, color: 'var(--color-text-muted, #6B7280)', lineHeight: 1.5, borderTop: '1px solid var(--color-border, #252A3E)', paddingTop: 8, whiteSpace: 'pre-wrap' }}>
+            {notes.slice(0, 300)}{notes.length > 300 ? '…' : ''}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function HourSlot({ hour, block, taskTitle, onRemove, busyEventsAtStart, isBusyContinued, isPast, onOpenTask, onEventClick }: {
   hour: number
   block?: ScheduledBlock
   taskTitle?: string
   onRemove?: () => void
-  busyEventsAtStart?: { event: GCalEvent; durationHours: number }[]
+  busyEventsAtStart?: { event: GCalEvent; durationHours: number; color: string }[]
   isBusyContinued?: boolean
   isPast?: boolean
   onOpenTask?: (taskId: string) => void
+  onEventClick?: (event: GCalEvent, color: string) => void
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: `slot-${hour}`, disabled: isPast })
   const blocked = hour < 6 || hour >= 22
@@ -184,18 +254,25 @@ function HourSlot({ hour, block, taskTitle, onRemove, busyEventsAtStart, isBusyC
           }} />
         )}
         {/* Calendar busy block — only render at the start hour, spans full duration */}
-        {hasBusyStart && !block && busyEventsAtStart!.map(({ event: evt, durationHours }) => (
-          <div key={evt.id ?? evt.summary} style={{
-            position: 'absolute', top: 2, left: 4, right: 4,
-            height: durationHours * HOUR_PX - 4,
-            background: 'rgba(59,130,246,0.12)',
-            border: '1px solid rgba(59,130,246,0.25)',
-            borderRadius: 5, zIndex: 1,
-            display: 'flex', alignItems: 'flex-start', padding: '5px 7px',
-          }}>
-            <span style={{ fontSize: 10, color: '#3B82F6', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              📅 {evt.summary ?? 'Busy'}
+        {hasBusyStart && !block && busyEventsAtStart!.map(({ event: evt, durationHours, color }) => (
+          <div key={evt.id ?? evt.summary}
+            onClick={() => onEventClick?.(evt, color)}
+            style={{
+              position: 'absolute', top: 2, left: 4, right: 4,
+              height: durationHours * HOUR_PX - 4,
+              background: `${color}18`,
+              border: `1px solid ${color}44`,
+              borderLeft: `3px solid ${color}`,
+              borderRadius: 5, zIndex: 1,
+              display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', padding: '4px 7px',
+              cursor: 'pointer', overflow: 'hidden',
+            }}>
+            <span style={{ fontSize: 11, color, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {evt.summary ?? 'Busy'}
             </span>
+            {evt.location && (
+              <span style={{ fontSize: 10, color, opacity: 0.7, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>📍 {evt.location}</span>
+            )}
           </div>
         ))}
         {/* Scheduled task block */}
@@ -370,10 +447,34 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
 
   const today = new Date()
   const todayStr = todayDateStr()
+
+  // Restore blocks for tasks already planned today (survives refresh)
+  useEffect(() => {
+    const restored = allTasks
+      .filter(t => t.dueDate === todayStr && t.boardStatus === 'planned' && t.plannedTime)
+      .map(t => ({
+        taskId:        t.id,
+        startHour:     parseInt(t.plannedTime!.slice(0, 2), 10),
+        durationHours: t.duration ? Math.ceil(t.duration / 60) : 1,
+        gcalEventId:   t.gcalEventId,
+      }))
+    if (restored.length > 0) setBlocks(restored)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Load today's events from all visible calendars on mount
+  useEffect(() => {
+    const dayStart = new Date(todayStr + 'T00:00:00')
+    const dayEnd   = new Date(todayStr + 'T23:59:59')
+    void fetchVisibleEvents(dayStart, dayEnd).then(setTodayEvents)
+  }, [todayStr])
   const dateLabel = today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
   const timeLabel = today.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
 
-  const tasks = allTasks.filter(t => !isTaskHidden(t) && !t.completed && t.status !== 'done')
+  const tasks = allTasks.filter(t =>
+    !isTaskHidden(t) && !t.completed && t.status !== 'done' &&
+    // exclude tasks already planned for today — they'll show on the timeline
+    !(t.dueDate === todayStr && t.boardStatus === 'planned' && t.plannedTime)
+  )
 
   const sortedTasks = useMemo(() => {
     return [...tasks].sort((a, b) => {
@@ -391,19 +492,21 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
   const scheduledTaskIds = new Set(blocks.map(b => b.taskId))
   const unscheduledCount = tasks.filter(t => !scheduledTaskIds.has(t.id)).length
 
-  // Build busy event map: startAt = events keyed by start hour (with duration), continued = set of continuation hours
+  const [selectedCalEvent, setSelectedCalEvent] = useState<{ event: GCalEvent; color: string } | null>(null)
+
+  // Build busy event map: startAt = events keyed by start hour (with duration + color), continued = set of continuation hours
   const busyEventMap = useMemo(() => {
-    const startAt: Record<number, { event: GCalEvent; durationHours: number }[]> = {}
+    const startAt: Record<number, { event: GCalEvent; durationHours: number; color: string }[]> = {}
     const continued = new Set<number>()
     for (const evt of todayEvents) {
       if (!evt.start?.dateTime) continue
-      const startH = parseInt(evt.start.dateTime.slice(11, 13), 10)
-      const endTotalMins = evt.end?.dateTime
-        ? parseInt(evt.end.dateTime.slice(11, 13), 10) * 60 + parseInt(evt.end.dateTime.slice(14, 16), 10)
-        : (startH + 1) * 60
-      const durationHours = Math.max(1, Math.ceil((endTotalMins - startH * 60) / 60))
+      const startDate = new Date(evt.start.dateTime)
+      const startH = startDate.getHours()
+      const endDate = evt.end?.dateTime ? new Date(evt.end.dateTime) : new Date(startDate.getTime() + 3600000)
+      const durationHours = Math.max(1, Math.ceil((endDate.getTime() - startDate.getTime()) / 3600000))
+      const color = (evt as GCalEvent & { calendarColor?: string }).calendarColor ?? '#3B82F6'
       if (!startAt[startH]) startAt[startH] = []
-      startAt[startH].push({ event: evt, durationHours })
+      startAt[startH].push({ event: evt, durationHours, color })
       for (let h = startH + 1; h < startH + durationHours; h++) continued.add(h)
     }
     return { startAt, continued }
@@ -414,15 +517,11 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
   const generatePlan = useCallback(async () => {
     setGenerating(true)
     try {
-      // 1. Fetch today's calendar events
-      const token = getPrimaryToken()
-      let events: GCalEvent[] = []
-      if (token) {
-        const dayStart = new Date(todayStr + 'T00:00:00')
-        const dayEnd   = new Date(todayStr + 'T23:59:59')
-        events = await fetchCalendarEventsWithToken(token, 'primary', dayStart, dayEnd)
-        setTodayEvents(events)
-      }
+      // 1. Fetch today's calendar events from ALL visible calendars
+      const dayStart = new Date(todayStr + 'T00:00:00')
+      const dayEnd   = new Date(todayStr + 'T23:59:59')
+      const events = await fetchVisibleEvents(dayStart, dayEnd)
+      setTodayEvents(events)
 
       // 2. Build busy intervals (fractional hours)
       const busyIntervals = events
@@ -443,7 +542,7 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
       const newBlocks: ScheduledBlock[] = []
       let cursor = workStart
 
-      for (const task of sortedTasks) {
+      for (const task of sortedTasks.filter(t => !(t.dueDate === todayStr && t.boardStatus === 'planned' && t.plannedTime))) {
         if (cursor >= workEnd) break
         const durH = task.duration ? Math.ceil(task.duration / 60) : 1
         let placed = false
@@ -525,6 +624,7 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
     setCreatingSet(prev => { const s = new Set(prev); s.delete(task.id); return s })
     if (gcalEventId) {
       setBlocks(prev => prev.map(b => b.taskId === task.id ? { ...b, gcalEventId } : b))
+      updateTask(task.id, { gcalEventId })
     }
   }
 
@@ -547,11 +647,21 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
     const block: ScheduledBlock = { taskId, startHour: hour, durationHours: durH }
 
     setBlocks(prev => [...prev.filter(b => b.taskId !== taskId), block])
+
+    // Persist immediately so refresh doesn't lose the plan
+    updateTask(taskId, {
+      dueDate:     todayStr,
+      plannedTime: `${String(hour).padStart(2, '0')}:00`,
+      boardStatus: 'planned',
+    })
+
     await tryScheduleToCalendar(task, block)
   }
 
   function removeBlock(taskId: string) {
     setBlocks(prev => prev.filter(b => b.taskId !== taskId))
+    // Revert the task back to unplanned
+    updateTask(taskId, { boardStatus: undefined, plannedTime: undefined, dueDate: undefined, gcalEventId: undefined })
   }
 
   // ── Apply Plan ────────────────────────────────────────────────────────────
@@ -602,6 +712,15 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
             }
           }}
           onSkip={() => setAccountPicker(null)}
+        />
+      )}
+
+      {/* Event detail popup */}
+      {selectedCalEvent && (
+        <EventPopup
+          event={selectedCalEvent.event}
+          color={selectedCalEvent.color}
+          onClose={() => setSelectedCalEvent(null)}
         />
       )}
 
@@ -675,6 +794,7 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
                         isBusyContinued={busyEventMap.continued.has(hour)}
                         isPast={isPast}
                         onOpenTask={onOpenTask}
+                        onEventClick={(ev, col) => setSelectedCalEvent({ event: ev, color: col })}
                       />
                     )
                   })}
