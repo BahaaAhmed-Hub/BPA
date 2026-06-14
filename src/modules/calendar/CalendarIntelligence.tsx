@@ -2200,6 +2200,46 @@ export function CalendarIntelligence() {
             })}
           </div>
 
+          {/* All-day events strip — only shown when the week has at least one all-day event */}
+          {weekDays.some(day => (grouped.get(localDateStr(day)) ?? []).some(e => !e.start.dateTime)) && (
+            <div style={{ display: 'flex', borderBottom: '1px solid var(--color-surface, #1A1D2E)', flexShrink: 0, minHeight: 22 }}>
+              <div style={{ width: 52, flexShrink: 0, display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end', paddingRight: 6, paddingTop: 3, fontSize: 9, color: 'var(--color-text-muted, #6B7280)', letterSpacing: '0.4px' }}>
+                all day
+              </div>
+              {weekDays.map(day => {
+                const ds = localDateStr(day)
+                const allDayEvts = (grouped.get(ds) ?? []).filter(e => !e.start.dateTime)
+                return (
+                  <div key={ds} style={{ flex: 1, padding: '2px 2px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1, borderRight: '1px solid var(--color-surface, #1A1D2E)', maxHeight: 68, overflowY: 'auto' }}>
+                    {allDayEvts.map(ev => {
+                      const cal   = allCalendars.find(c => c.id === (ev as GCalEventExt).calendarId)
+                      const color = cal ? calEffectiveColor(cal) : 'var(--color-accent)'
+                      const evStatus = eventStatuses[ev.id]
+                      return (
+                        <div
+                          key={ev.id}
+                          onClick={e => handleEventClick(ev as GCalEventExt, e)}
+                          onContextMenu={e => handleEventContextMenu(ev as GCalEventExt, e)}
+                          style={{
+                            fontSize: 10, fontWeight: 600, color: '#fff',
+                            background: `${color}${evStatus ? '66' : 'CC'}`,
+                            borderLeft: `2px solid ${color}`,
+                            borderRadius: 3, padding: '1px 4px',
+                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                            cursor: 'pointer', textDecoration: evStatus === 'cancelled' ? 'line-through' : 'none',
+                          }}
+                        >
+                          {evStatus === 'done' && '✓ '}{evStatus === 'cancelled' && '✗ '}
+                          {ev.summary ?? '(No title)'}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
           {/* Scrollable time grid */}
           <div ref={gridRef} onClick={closePopup}
             style={{ flex: 1, overflowY: 'auto', display: 'flex', position: 'relative' }}
