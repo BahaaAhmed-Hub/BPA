@@ -13,7 +13,7 @@ import {
   TASK_TYPE_META, inferTaskType,
   loadVisibleCompanies, getAllUsers, isTaskHidden,
 } from '@/types'
-import { loadCustomStatuses, getStatusMeta } from '@/lib/customStatuses'
+import { loadCustomStatuses, sortCustomStatuses, getStatusMeta } from '@/lib/customStatuses'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -268,12 +268,12 @@ function KanbanColumnComp({ column, onOpen, onColDragStart, onColDragOver, onCol
     if (!newTitle.trim()) { setAdding(false); setNewTitle(''); return }
     addTask({
       title: newTitle.trim(),
-      quadrant: null,
+      quadrant: column.id === 'do' ? 'do' : null,
       company: (companies[0]?.id ?? 'teradix') as Task['company'],
       ...(companies[0] ? { companyId: companies[0].id } : {}),
       status: 'open',
       completed: false,
-      ...(column.id !== 'inbox' ? { boardStatus: column.id } : {}),
+      ...(column.id !== 'inbox' && column.id !== 'do' ? { boardStatus: column.id } : {}),
     })
     setNewTitle('')
     setAdding(false)
@@ -489,15 +489,21 @@ export function KanbanBoard({ onOpen, hideCompleted = false, filteredTaskIds }: 
         id:    'inbox',
         label: 'Inbox / Unplanned',
         color: '#6B7280',
-        tasks: sortByUrgency(tasks.filter(t => !t.boardStatus)),
+        tasks: sortByUrgency(tasks.filter(t => !t.boardStatus && t.quadrant !== 'do')),
       }
-      const statusCols = customStatuses.map(s => ({
+      const doCol: Column = {
+        id:    'do',
+        label: '⚡ Do',
+        color: '#EF4444',
+        tasks: sortByUrgency(tasks.filter(t => !t.boardStatus && t.quadrant === 'do')),
+      }
+      const statusCols = sortCustomStatuses(customStatuses).map(s => ({
         id:    s.id,
         label: s.label,
         color: s.color,
         tasks: sortByUrgency(tasks.filter(t => t.boardStatus === s.id)),
       }))
-      return [inboxCol, ...statusCols]
+      return [inboxCol, doCol, ...statusCols]
     }
 
     if (boardType === 'company') {
@@ -605,7 +611,9 @@ export function KanbanBoard({ onOpen, hideCompleted = false, filteredTaskIds }: 
 
     if (boardType === 'status') {
       if (columnId === 'inbox') {
-        updateTask(taskId, { boardStatus: undefined })
+        updateTask(taskId, { boardStatus: undefined, quadrant: null })
+      } else if (columnId === 'do') {
+        updateTask(taskId, { boardStatus: undefined, quadrant: 'do' })
       } else if (hasPlannedStatus && columnId === 'planned') {
         setPendingPlanTask({ taskId, title: task?.title ?? '' })
       } else {
