@@ -448,6 +448,19 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
   const today = new Date()
   const todayStr = todayDateStr()
 
+  // Restore blocks for tasks already planned today (survives refresh)
+  useEffect(() => {
+    const restored = allTasks
+      .filter(t => t.dueDate === todayStr && t.boardStatus === 'planned' && t.plannedTime)
+      .map(t => ({
+        taskId:        t.id,
+        startHour:     parseInt(t.plannedTime!.slice(0, 2), 10),
+        durationHours: t.duration ? Math.ceil(t.duration / 60) : 1,
+        gcalEventId:   t.gcalEventId,
+      }))
+    if (restored.length > 0) setBlocks(restored)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
   // Load today's events from all visible calendars on mount
   useEffect(() => {
     const dayStart = new Date(todayStr + 'T00:00:00')
@@ -457,7 +470,11 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
   const dateLabel = today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
   const timeLabel = today.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
 
-  const tasks = allTasks.filter(t => !isTaskHidden(t) && !t.completed && t.status !== 'done')
+  const tasks = allTasks.filter(t =>
+    !isTaskHidden(t) && !t.completed && t.status !== 'done' &&
+    // exclude tasks already planned for today — they'll show on the timeline
+    !(t.dueDate === todayStr && t.boardStatus === 'planned' && t.plannedTime)
+  )
 
   const sortedTasks = useMemo(() => {
     return [...tasks].sort((a, b) => {
@@ -525,7 +542,7 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
       const newBlocks: ScheduledBlock[] = []
       let cursor = workStart
 
-      for (const task of sortedTasks) {
+      for (const task of sortedTasks.filter(t => !(t.dueDate === todayStr && t.boardStatus === 'planned' && t.plannedTime))) {
         if (cursor >= workEnd) break
         const durH = task.duration ? Math.ceil(task.duration / 60) : 1
         let placed = false
@@ -607,6 +624,7 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
     setCreatingSet(prev => { const s = new Set(prev); s.delete(task.id); return s })
     if (gcalEventId) {
       setBlocks(prev => prev.map(b => b.taskId === task.id ? { ...b, gcalEventId } : b))
+      updateTask(task.id, { gcalEventId })
     }
   }
 
@@ -629,6 +647,14 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
     const block: ScheduledBlock = { taskId, startHour: hour, durationHours: durH }
 
     setBlocks(prev => [...prev.filter(b => b.taskId !== taskId), block])
+
+    // Persist immediately so refresh doesn't lose the plan
+    updateTask(taskId, {
+      dueDate:     todayStr,
+      plannedTime: `${String(hour).padStart(2, '0')}:00`,
+      boardStatus: 'planned',
+    })
+
     await tryScheduleToCalendar(task, block)
   }
 
