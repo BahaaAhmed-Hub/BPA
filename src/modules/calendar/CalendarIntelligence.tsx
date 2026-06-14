@@ -1545,6 +1545,8 @@ export function CalendarIntelligence() {
     if (!user?.email) return  // wait for user — prevents concurrent double-call race
     // Persist primary email for the initial-render cache cleanup on next page load
     localStorage.setItem('cal-intel-primary-email', user.email)
+    // Clear stale calendar list cache so newly subscribed/added calendars always appear
+    localStorage.removeItem(CAL_INTEL_CACHE_KEY)
     const { calendars: fresh, needsReconnect } = await loadAllCalendars(user.email)
     setReconnectNeeded(needsReconnect)
 

@@ -224,7 +224,7 @@ function saveCalendarCache(cals: GCalCalendar[]) {
 
 export async function listCalendars(): Promise<{ calendars: GCalCalendar[]; noAuth: boolean }> {
   const result = await withAuth(token =>
-    gcalRequest(token, '/users/me/calendarList')
+    gcalRequest(token, '/users/me/calendarList?showHidden=true&minAccessRole=freeBusyReader')
   )
   if (result.noAuth) return { calendars: [], noAuth: true }
 
@@ -242,7 +242,7 @@ export async function listCalendarsWithToken(
   token: string,
 ): Promise<{ calendars: GCalCalendar[]; authFailed: boolean }> {
   try {
-    const res = await gcalRequest(token, '/users/me/calendarList')
+    const res = await gcalRequest(token, '/users/me/calendarList?showHidden=true&minAccessRole=freeBusyReader')
     if (res.status === 401 || res.status === 403) {
       console.warn(`[CalIntel] listCalendarsWithToken auth error HTTP ${res.status} — token expired`)
       return { calendars: [], authFailed: true }
