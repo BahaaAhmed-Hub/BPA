@@ -28,6 +28,7 @@ import { generateMeetingPrep } from '@/lib/professor'
 import type { MeetingPrep } from '@/lib/professor'
 import { useAuthStore } from '@/store/authStore'
 import { loadAccounts, loadHiddenAccounts } from '@/lib/multiAccount'
+import { loadDynamicCompanies } from '@/types'
 import { connectAdditionalGoogleAccount } from '@/lib/google'
 import type { DbUser, DbCompany, DbCalendarEvent } from '@/types/database'
 import {
@@ -347,9 +348,23 @@ async function loadAllCalendars(primaryEmail: string): Promise<LoadCalendarsResu
   return { calendars, needsReconnect }
 }
 
+function getHiddenCompanyAccountEmails(): Set<string> {
+  const accounts = loadAccounts()
+  return new Set(
+    loadDynamicCompanies()
+      .filter(c => c.hidden && c.accountId)
+      .map(c => accounts.find(a => a.id === c.accountId)?.email)
+      .filter((e): e is string => !!e)
+  )
+}
+
 async function fetchAllEvents(allCals: CalWithAccount[], hidden: Set<string>, hiddenAccts: Set<string>, start: Date, end: Date): Promise<GCalEvent[]> {
   // hiddenAccts applies only to extra accounts (c.accountId set) — primary account is never hidden
-  const active = allCals.filter(c => !hidden.has(c.id) && (!c.accountId || !hiddenAccts.has(c.accountEmail)))
+  const hiddenCompanyEmails = getHiddenCompanyAccountEmails()
+  const active = allCals.filter(c =>
+    !hidden.has(c.id) &&
+    (!c.accountId || (!hiddenAccts.has(c.accountEmail) && !hiddenCompanyEmails.has(c.accountEmail)))
+  )
   if (!active.length) return []
 
   // Use the return value directly so we get the freshest possible token even when
@@ -2067,7 +2082,11 @@ export function CalendarIntelligence() {
         {/* Calendar chips */}
         {allCalendars.length > 0 && (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
-            {allCalendars.filter(cal => !cal.accountId || !hiddenAccounts.has(cal.accountEmail)).map(cal => {
+            {allCalendars.filter(cal => {
+              if (cal.accountId && hiddenAccounts.has(cal.accountEmail)) return false
+              if (cal.accountId && getHiddenCompanyAccountEmails().has(cal.accountEmail)) return false
+              return true
+            }).map(cal => {
               const hidden  = hiddenCals.has(cal.id)
               const color   = calEffectiveColor(cal)
               const chipKey = `${cal.accountEmail}:${cal.id}`

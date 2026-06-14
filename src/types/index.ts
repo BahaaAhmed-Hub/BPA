@@ -29,6 +29,9 @@ export interface DynamicCompany {
   color: string
   users: CompanyUser[]
   hidden?: boolean
+  emailDomain?: string
+  accountId?: string
+  calendarId?: string
 }
 
 export function loadDynamicCompanies(): DynamicCompany[] {
