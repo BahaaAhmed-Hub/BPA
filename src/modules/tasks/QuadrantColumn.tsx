@@ -141,10 +141,12 @@ export function QuadrantColumn({ quadrant, tasks, onOpen, groupBy = 'none', allG
     const finalOwner = owner || aiHint?.ownerId || ''
     const finalCompanyId = companyId || aiHint?.companyId || undefined
     const co = companies.find(c => c.id === finalCompanyId)
+    // Use first dynamic company as static fallback instead of hardcoded 'teradix'
+    const fallbackCompany = (companies[0]?.id ?? 'teradix') as Task['company']
     addTask({
       title: finalTitle,
       quadrant,
-      company: (co?.id ?? 'teradix') as Task['company'],
+      company: (co?.id ?? fallbackCompany) as Task['company'],
       status: 'open',
       completed: false,
       ...(dueDate        && { dueDate }),

@@ -1453,6 +1453,7 @@ export function CalendarIntelligence() {
   const [loadingEvents,   setLoadingEvents]   = useState(() => loadEventsCache(getWeekStart(new Date())).length === 0)
   const [noAuth,          setNoAuth]          = useState(false)
   const [fetchError,      setFetchError]      = useState<string | null>(null)
+  const [refreshing,      setRefreshing]      = useState(false)
   const [reconnectNeeded, setReconnectNeeded] = useState<string[]>([])
   const [applyingRules,   setApplyingRules]   = useState(false)
   const [rulesResult,     setRulesResult]     = useState<string | null>(null)
@@ -2034,9 +2035,20 @@ export function CalendarIntelligence() {
             ><ChevronRight size={15} /></button>
 
             <button
-              onClick={() => void reloadCalendars().then(c => { if (c) void loadEvents(weekStart, c, hiddenCals) })}
-              style={{ background: 'none', border: '1px solid var(--color-border, #252A3E)', borderRadius: 7, cursor: 'pointer', color: 'var(--color-text-dim, #8B93A8)', padding: '4px 8px', display: 'flex', alignItems: 'center' }}
-            ><RefreshCw size={13} /></button>
+              onClick={async () => {
+                if (refreshing) return
+                setRefreshing(true)
+                // Clear events cache so the grid shows the loading indicator
+                Object.keys(localStorage).filter(k => k.startsWith(EVENTS_CACHE_PREFIX)).forEach(k => localStorage.removeItem(k))
+                setLoadingEvents(true)
+                try {
+                  const c = await reloadCalendars()
+                  if (c) await loadEvents(weekStart, c, hiddenCals)
+                } finally { setRefreshing(false) }
+              }}
+              disabled={refreshing}
+              style={{ background: 'none', border: '1px solid var(--color-border, #252A3E)', borderRadius: 7, cursor: refreshing ? 'default' : 'pointer', color: 'var(--color-text-dim, #8B93A8)', padding: '4px 8px', display: 'flex', alignItems: 'center', opacity: refreshing ? 0.6 : 1 }}
+            ><RefreshCw size={13} style={{ animation: refreshing ? 'spin 0.7s linear infinite' : 'none' }} /></button>
 
             <button
               onClick={() => void handleApplyRules()}
