@@ -223,6 +223,7 @@ function saveCalendarCache(cals: GCalCalendar[]) {
 }
 
 export async function listCalendars(): Promise<{ calendars: GCalCalendar[]; noAuth: boolean }> {
+  // Use withAuth for the first page to handle token refresh
   const result = await withAuth(token =>
     gcalRequest(token, '/users/me/calendarList?showHidden=true&minAccessRole=freeBusyReader')
   )
@@ -231,8 +232,21 @@ export async function listCalendars(): Promise<{ calendars: GCalCalendar[]; noAu
   const { res } = result
   if (!res.ok) return { calendars: [], noAuth: false }
 
-  const data = (await res.json()) as { items?: GCalCalendar[] }
-  const calendars = data.items ?? []   // include ALL calendars (freeBusyReader etc. for Gmail events)
+  const firstData = (await res.json()) as { items?: GCalCalendar[]; nextPageToken?: string }
+  const calendars: GCalCalendar[] = [...(firstData.items ?? [])]
+
+  // Follow pagination to get ALL calendars (subscribed ones may be on later pages)
+  let pageToken = firstData.nextPageToken
+  while (pageToken) {
+    const token = await getProviderToken()
+    if (!token) break
+    const nextRes = await gcalRequest(token, `/users/me/calendarList?showHidden=true&minAccessRole=freeBusyReader&pageToken=${encodeURIComponent(pageToken)}`)
+    if (!nextRes.ok) break
+    const nextData = (await nextRes.json()) as { items?: GCalCalendar[]; nextPageToken?: string }
+    calendars.push(...(nextData.items ?? []))
+    pageToken = nextData.nextPageToken
+  }
+
   saveCalendarCache(calendars)
   return { calendars, noAuth: false }
 }
@@ -251,8 +265,19 @@ export async function listCalendarsWithToken(
       console.warn(`[CalIntel] listCalendarsWithToken HTTP ${res.status}`)
       return { calendars: [], authFailed: false }
     }
-    const data = (await res.json()) as { items?: GCalCalendar[] }
-    const calendars = data.items ?? []   // include ALL calendars
+    const firstData = (await res.json()) as { items?: GCalCalendar[]; nextPageToken?: string }
+    const calendars: GCalCalendar[] = [...(firstData.items ?? [])]
+
+    // Follow pagination to get ALL calendars (subscribed ones may be on later pages)
+    let pageToken = firstData.nextPageToken
+    while (pageToken) {
+      const nextRes = await gcalRequest(token, `/users/me/calendarList?showHidden=true&minAccessRole=freeBusyReader&pageToken=${encodeURIComponent(pageToken)}`)
+      if (!nextRes.ok) break
+      const nextData = (await nextRes.json()) as { items?: GCalCalendar[]; nextPageToken?: string }
+      calendars.push(...(nextData.items ?? []))
+      pageToken = nextData.nextPageToken
+    }
+
     return { calendars, authFailed: false }
   } catch (err) {
     console.warn('[CalIntel] listCalendarsWithToken error:', err)
