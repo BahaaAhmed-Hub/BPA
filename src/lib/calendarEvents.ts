@@ -45,8 +45,6 @@ export async function fetchVisibleEvents(start: Date, end: Date): Promise<GCalEv
   const hiddenAccounts = loadHiddenAccounts()
   const cached         = loadCalIntelCache()
 
-  const primaryEmail = accounts.find(a => a.isPrimary)?.email ?? ''
-
   // Seed tokenManager for extra accounts that still have a fresh stored token
   const now = Date.now()
   for (const a of accounts) {
@@ -61,6 +59,8 @@ export async function fetchVisibleEvents(start: Date, end: Date): Promise<GCalEv
   )
   const extraTokens = Object.fromEntries(tokenEntries.filter(([, t]) => !!t))
 
+  const extraEmails = new Set(extraAccounts.map(a => a.email))
+
   const visible = cached.filter(c => !hiddenCals.has(c.id))
 
   if (!visible.length) {
@@ -70,8 +70,8 @@ export async function fetchVisibleEvents(start: Date, end: Date): Promise<GCalEv
 
   const results = await Promise.all(
     visible.map(c => {
-      if (c.accountEmail !== primaryEmail) {
-        // Extra account — use fresh token from tokenManager
+      // Treat as extra account only if its email is explicitly one of the extra accounts
+      if (c.accountEmail && extraEmails.has(c.accountEmail)) {
         if (hiddenAccounts.has(c.accountEmail)) return Promise.resolve([] as GCalEvent[])
         const token = extraTokens[c.accountEmail]
         if (!token) return Promise.resolve([] as GCalEvent[])
@@ -79,7 +79,7 @@ export async function fetchVisibleEvents(start: Date, end: Date): Promise<GCalEv
           window.dispatchEvent(new CustomEvent('cal:reconnect-required', { detail: { email: c.accountEmail } }))
         return fetchCalendarEventsWithToken(token, c.id, start, end, c.backgroundColor, onAuthFail)
       }
-      // Primary account
+      // Primary account (email matches primary, is empty, or not in extra accounts)
       if (!primaryToken) return Promise.resolve([] as GCalEvent[])
       return fetchCalendarEventsWithToken(primaryToken, c.id, start, end, c.backgroundColor)
     })
