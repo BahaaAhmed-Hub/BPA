@@ -660,6 +660,8 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
 
   function removeBlock(taskId: string) {
     setBlocks(prev => prev.filter(b => b.taskId !== taskId))
+    // Revert the task back to unplanned
+    updateTask(taskId, { boardStatus: undefined, plannedTime: undefined, dueDate: undefined, gcalEventId: undefined })
   }
 
   // ── Apply Plan ────────────────────────────────────────────────────────────
