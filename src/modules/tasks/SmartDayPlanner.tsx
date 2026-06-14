@@ -10,10 +10,10 @@ import { useAuthStore } from '@/store/authStore'
 import type { Task } from '@/types'
 import { isTaskHidden, loadDynamicCompanies } from '@/types'
 import {
-  fetchCalendarEventsWithToken, createCalendarEventWithToken,
-  fetchAllCalendarsEvents, getCalendarCache,
+  createCalendarEventWithToken,
   type GCalEvent,
 } from '@/lib/googleCalendar'
+import { fetchVisibleEvents } from '@/lib/calendarEvents'
 import { loadAccounts, getPrimaryToken, type ConnectedAccount } from '@/lib/multiAccount'
 
 const HOUR_PX = 56
@@ -374,25 +374,9 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
 
   // Load today's events from all visible calendars on mount
   useEffect(() => {
-    async function loadTodayEvents() {
-      const dayStart = new Date(todayStr + 'T00:00:00')
-      const dayEnd   = new Date(todayStr + 'T23:59:59')
-      const hiddenCals: Set<string> = (() => {
-        try { const r = localStorage.getItem('cal-intel-hidden'); return r ? new Set(JSON.parse(r) as string[]) : new Set() } catch { return new Set() }
-      })()
-      const cachedCals = getCalendarCache().filter(c => !hiddenCals.has(c.id))
-      if (cachedCals.length > 0) {
-        const { events } = await fetchAllCalendarsEvents(cachedCals, dayStart, dayEnd)
-        setTodayEvents(events)
-      } else {
-        const token = getPrimaryToken()
-        if (token) {
-          const events = await fetchCalendarEventsWithToken(token, 'primary', dayStart, dayEnd)
-          setTodayEvents(events)
-        }
-      }
-    }
-    void loadTodayEvents()
+    const dayStart = new Date(todayStr + 'T00:00:00')
+    const dayEnd   = new Date(todayStr + 'T23:59:59')
+    void fetchVisibleEvents(dayStart, dayEnd).then(setTodayEvents)
   }, [todayStr])
   const dateLabel = today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
   const timeLabel = today.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
@@ -441,19 +425,7 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
       // 1. Fetch today's calendar events from ALL visible calendars
       const dayStart = new Date(todayStr + 'T00:00:00')
       const dayEnd   = new Date(todayStr + 'T23:59:59')
-      let events: GCalEvent[] = []
-      const hiddenCals: Set<string> = (() => {
-        try { const r = localStorage.getItem('cal-intel-hidden'); return r ? new Set(JSON.parse(r) as string[]) : new Set() } catch { return new Set() }
-      })()
-      const cachedCals = getCalendarCache().filter(c => !hiddenCals.has(c.id))
-      if (cachedCals.length > 0) {
-        const { events: allEvents } = await fetchAllCalendarsEvents(cachedCals, dayStart, dayEnd)
-        events = allEvents
-      } else {
-        // Fallback: primary calendar only
-        const token = getPrimaryToken()
-        if (token) events = await fetchCalendarEventsWithToken(token, 'primary', dayStart, dayEnd)
-      }
+      const events = await fetchVisibleEvents(dayStart, dayEnd)
       setTodayEvents(events)
 
       // 2. Build busy intervals (fractional hours)
