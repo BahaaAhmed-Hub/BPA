@@ -273,7 +273,7 @@ function KanbanColumnComp({ column, onOpen, onColDragStart, onColDragOver, onCol
       ...(companies[0] ? { companyId: companies[0].id } : {}),
       status: 'open',
       completed: false,
-      boardStatus: column.id,
+      ...(column.id !== 'inbox' ? { boardStatus: column.id } : {}),
     })
     setNewTitle('')
     setAdding(false)
@@ -485,12 +485,19 @@ export function KanbanBoard({ onOpen, hideCompleted = false, filteredTaskIds }: 
 
   const columns = useMemo<Column[]>(() => {
     if (boardType === 'status') {
-      return customStatuses.map(s => ({
+      const inboxCol: Column = {
+        id:    'inbox',
+        label: 'Inbox / Unplanned',
+        color: '#6B7280',
+        tasks: sortByUrgency(tasks.filter(t => !t.boardStatus)),
+      }
+      const statusCols = customStatuses.map(s => ({
         id:    s.id,
         label: s.label,
         color: s.color,
-        tasks: sortByUrgency(tasks.filter(t => (t.boardStatus ?? 'backlog') === s.id)),
+        tasks: sortByUrgency(tasks.filter(t => t.boardStatus === s.id)),
       }))
+      return [inboxCol, ...statusCols]
     }
 
     if (boardType === 'company') {
@@ -597,7 +604,9 @@ export function KanbanBoard({ onOpen, hideCompleted = false, filteredTaskIds }: 
     const task     = tasks.find(t => t.id === taskId)
 
     if (boardType === 'status') {
-      if (hasPlannedStatus && columnId === 'planned') {
+      if (columnId === 'inbox') {
+        updateTask(taskId, { boardStatus: undefined })
+      } else if (hasPlannedStatus && columnId === 'planned') {
         setPendingPlanTask({ taskId, title: task?.title ?? '' })
       } else {
         updateTask(taskId, { boardStatus: columnId })
