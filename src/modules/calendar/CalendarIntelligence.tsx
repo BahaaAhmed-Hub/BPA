@@ -2207,7 +2207,8 @@ export function CalendarIntelligence() {
               {Array.from({ length: 24 }, (_, h) => (
                 <div key={h} style={{
                   position: 'absolute', top: h * HOUR_PX - 7,
-                  right: 8, fontSize: 10, color: 'var(--color-border, #3A3F55)', whiteSpace: 'nowrap',
+                  right: 8, fontSize: 10, color: 'var(--color-text-muted, #6B7280)', whiteSpace: 'nowrap',
+                  fontWeight: 500,
                 }}>
                   {fmtHourLabel(h)}
                 </div>
