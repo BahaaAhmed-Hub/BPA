@@ -17,10 +17,12 @@ import {
   listCalendarsWithToken,
   fetchCalendarEventsWithToken,
   updateCalendarEventTimes,
+  updateCalendarEvent,
   refreshPrimaryToken,
   createCalendarEventWithToken,
   deleteCalendarEventWithToken,
   addMeetingToEvent,
+  efUpdateEvent,
 } from '@/lib/googleCalendar'
 import type { GCalEvent, GCalCalendar, GCalEventCreate } from '@/lib/googleCalendar'
 import { getGoogleToken, seedToken, getGoogleTokenViaSupabaseRefresh } from '@/lib/tokenManager'
@@ -686,7 +688,7 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
 }
 
 // ─── EventPopup (macOS Calendar style) ────────────────────────────────────────
-function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepError, pos, onClose, onStatusToggle, onPrepRequest, onAddMeet }: {
+function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepError, pos, onClose, onStatusToggle, onPrepRequest, onAddMeet, onSave }: {
   event: GCalEventExt
   status: EventStatus | undefined
   calName: string
@@ -699,11 +701,56 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
   onStatusToggle: (s: EventStatus) => void
   onPrepRequest: () => void
   onAddMeet?: () => Promise<void>
+  onSave?: (patch: Partial<GCalEventCreate>) => Promise<GCalEvent | null>
 }) {
   const popupRef  = useRef<HTMLDivElement>(null)
   const [showPrep,    setShowPrep]    = useState(false)
   const [adjPos,      setAdjPos]      = useState(pos)
   const [addingMeet,  setAddingMeet]  = useState(false)
+  const [editMode,    setEditMode]    = useState(false)
+  const [saving,      setSaving]      = useState(false)
+  const [saveError,   setSaveError]   = useState<string | null>(null)
+
+  const isAllDayEvent = !event.start.dateTime
+  const toLocalDateTimeInput = (iso: string) => {
+    const d = new Date(iso)
+    const pad = (n: number) => String(n).padStart(2, '0')
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+  }
+  const toDateInput = (iso: string) => iso.slice(0, 10)
+
+  const [editTitle,    setEditTitle]    = useState(event.summary ?? '')
+  const [editStart,    setEditStart]    = useState(
+    isAllDayEvent ? toDateInput(event.start.date ?? '') : toLocalDateTimeInput(event.start.dateTime!)
+  )
+  const [editEnd,      setEditEnd]      = useState(
+    isAllDayEvent ? toDateInput(event.end.date ?? '') : toLocalDateTimeInput(event.end.dateTime!)
+  )
+  const [editLocation, setEditLocation] = useState(event.location ?? '')
+  const [editNotes,    setEditNotes]    = useState(event.description ?? '')
+
+  async function handleSave() {
+    if (!onSave) return
+    setSaving(true); setSaveError(null)
+    try {
+      const patch: Partial<GCalEventCreate> = {
+        summary: editTitle.trim() || undefined,
+        location: editLocation.trim() || undefined,
+        description: editNotes.trim() || undefined,
+      }
+      if (isAllDayEvent) {
+        patch.start = { date: editStart }
+        patch.end   = { date: editEnd }
+      } else {
+        const tz = event.start.timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone
+        patch.start = { dateTime: new Date(editStart).toISOString(), timeZone: tz }
+        patch.end   = { dateTime: new Date(editEnd).toISOString(),   timeZone: tz }
+      }
+      const updated = await onSave(patch)
+      if (updated) setEditMode(false)
+      else setSaveError('Could not save — check your permissions.')
+    } finally { setSaving(false) }
+  }
 
   useEffect(() => {
     if (!popupRef.current) return
@@ -775,11 +822,20 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
 
       {/* Header: calendar dot + title + close */}
       <div style={{ padding: '14px 14px 10px', display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-        <div style={{ width: 14, height: 14, borderRadius: '50%', background: calColor, flexShrink: 0, marginTop: 3 }} />
+        <div style={{ width: 14, height: 14, borderRadius: '50%', background: calColor, flexShrink: 0, marginTop: editMode ? 10 : 3 }} />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--color-text, #E8EAF6)', lineHeight: 1.3, wordBreak: 'break-word' }}>
-            {event.summary ?? '(No title)'}
-          </div>
+          {editMode ? (
+            <input
+              value={editTitle}
+              onChange={e => setEditTitle(e.target.value)}
+              placeholder="Event title"
+              style={{ width: '100%', fontSize: 17, fontWeight: 700, color: 'var(--color-text, #E8EAF6)', background: 'var(--color-bg, #0D0F1A)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 6, padding: '5px 8px', boxSizing: 'border-box', outline: 'none' }}
+            />
+          ) : (
+            <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--color-text, #E8EAF6)', lineHeight: 1.3, wordBreak: 'break-word' }}>
+              {event.summary ?? '(No title)'}
+            </div>
+          )}
           <div style={{ display: 'flex', gap: 5, marginTop: 5, flexWrap: 'wrap' }}>
             {isTentative && (
               <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 4, background: '#FF950022', color: '#FF9500', border: '1px solid #FF950055' }}>Tentative</span>
@@ -804,10 +860,15 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
       <div style={{ height: 1, background: 'var(--color-border, #252A3E)' }} />
 
       {/* Location */}
-      {event.location && (
+      {(event.location || editMode) && (
         <div style={{ display: 'flex', alignItems: 'center', padding: '8px 14px', gap: 9 }}>
           <MapPin size={13} color="var(--color-text-muted, #6B7280)" style={{ flexShrink: 0 }} />
-          <span style={{ fontSize: 13, color: 'var(--color-text-dim, #C0C4D6)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{event.location}</span>
+          {editMode ? (
+            <input value={editLocation} onChange={e => setEditLocation(e.target.value)} placeholder="Add location"
+              style={{ flex: 1, fontSize: 13, color: 'var(--color-text, #E8EAF6)', background: 'var(--color-bg, #0D0F1A)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 5, padding: '3px 7px', outline: 'none' }} />
+          ) : (
+            <span style={{ fontSize: 13, color: 'var(--color-text-dim, #C0C4D6)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{event.location}</span>
+          )}
         </div>
       )}
 
@@ -852,23 +913,35 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
 
       {/* Date / time fieldRows */}
       <div style={{ padding: '6px 0' }}>
-        {isAllDay
-          ? fieldRow('All Day', <span style={{ fontSize: 13, color: 'var(--color-text-dim, #C0C4D6)' }}>{fmtPopupDate(startIso, endIso, true)}</span>)
-          : <>
-              {fieldRow('Starts', (
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <span style={{ fontSize: 13, color: 'var(--color-text-dim, #C0C4D6)' }}>{startDT?.date}</span>
-                  <span style={{ fontSize: 13, color: 'var(--color-text-dim, #8B93A8)' }}>{startDT?.time}</span>
-                </div>
-              ))}
-              {fieldRow('Ends', (
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <span style={{ fontSize: 13, color: 'var(--color-text-dim, #C0C4D6)' }}>{endDT?.date}</span>
-                  <span style={{ fontSize: 13, color: 'var(--color-text-dim, #8B93A8)' }}>{endDT?.time}</span>
-                </div>
-              ))}
-            </>
-        }
+        {editMode ? (
+          <>
+            {fieldRow(isAllDayEvent ? 'Start date' : 'Starts', (
+              <input type={isAllDayEvent ? 'date' : 'datetime-local'} value={editStart} onChange={e => setEditStart(e.target.value)}
+                style={{ fontSize: 12, color: 'var(--color-text, #E8EAF6)', background: 'var(--color-bg, #0D0F1A)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 5, padding: '3px 7px', outline: 'none', colorScheme: 'dark' }} />
+            ))}
+            {fieldRow(isAllDayEvent ? 'End date' : 'Ends', (
+              <input type={isAllDayEvent ? 'date' : 'datetime-local'} value={editEnd} onChange={e => setEditEnd(e.target.value)}
+                style={{ fontSize: 12, color: 'var(--color-text, #E8EAF6)', background: 'var(--color-bg, #0D0F1A)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 5, padding: '3px 7px', outline: 'none', colorScheme: 'dark' }} />
+            ))}
+          </>
+        ) : isAllDay ? (
+          fieldRow('All Day', <span style={{ fontSize: 13, color: 'var(--color-text-dim, #C0C4D6)' }}>{fmtPopupDate(startIso, endIso, true)}</span>)
+        ) : (
+          <>
+            {fieldRow('Starts', (
+              <div style={{ display: 'flex', gap: 8 }}>
+                <span style={{ fontSize: 13, color: 'var(--color-text-dim, #C0C4D6)' }}>{startDT?.date}</span>
+                <span style={{ fontSize: 13, color: 'var(--color-text-dim, #8B93A8)' }}>{startDT?.time}</span>
+              </div>
+            ))}
+            {fieldRow('Ends', (
+              <div style={{ display: 'flex', gap: 8 }}>
+                <span style={{ fontSize: 13, color: 'var(--color-text-dim, #C0C4D6)' }}>{endDT?.date}</span>
+                <span style={{ fontSize: 13, color: 'var(--color-text-dim, #8B93A8)' }}>{endDT?.time}</span>
+              </div>
+            ))}
+          </>
+        )}
         {isRecurring && fieldRow('Repeat', <span style={{ fontSize: 13, color: 'var(--color-text-dim, #C0C4D6)' }}>Recurring</span>)}
         {fieldRow('Calendar', (
           <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
@@ -927,14 +1000,19 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
       )}
 
       {/* Notes */}
-      {notes && (
+      {(notes || editMode) && (
         <>
           <div style={{ height: 1, background: 'var(--color-border, #252A3E)' }} />
           <div style={{ padding: '10px 14px' }}>
             <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--color-border, #4B5268)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 5 }}>Notes</div>
-            <div style={{ fontSize: 12, color: 'var(--color-text-dim, #8B93A8)', lineHeight: 1.6, maxHeight: 90, overflowY: 'auto', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-              {notes.slice(0, 400)}{notes.length > 400 ? '…' : ''}
-            </div>
+            {editMode ? (
+              <textarea value={editNotes} onChange={e => setEditNotes(e.target.value)} placeholder="Add notes…" rows={3}
+                style={{ width: '100%', fontSize: 12, color: 'var(--color-text, #E8EAF6)', background: 'var(--color-bg, #0D0F1A)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 5, padding: '5px 7px', resize: 'vertical', outline: 'none', boxSizing: 'border-box', lineHeight: 1.5 }} />
+            ) : (
+              <div style={{ fontSize: 12, color: 'var(--color-text-dim, #8B93A8)', lineHeight: 1.6, maxHeight: 90, overflowY: 'auto', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                {notes.slice(0, 400)}{notes.length > 400 ? '…' : ''}
+              </div>
+            )}
           </div>
         </>
       )}
@@ -951,18 +1029,43 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
 
       {/* Action buttons */}
       <div style={{ padding: '8px 14px 14px', display: 'flex', gap: 6, borderTop: '1px solid var(--color-border, #252A3E)', flexWrap: 'wrap' }}>
-        <button style={btn(status === 'done', '#1D9E75')} onClick={() => onStatusToggle('done')}>
-          <CheckCircle2 size={12} /> Done
-        </button>
-        <button style={btn(status === 'cancelled', '#E05252')} onClick={() => onStatusToggle('cancelled')}>
-          <XCircle size={12} /> Cancel
-        </button>
-        <button
-          style={{ ...btn(showPrep, 'var(--color-accent)'), marginLeft: 'auto' }}
-          onClick={() => { setShowPrep(p => !p); if (!prep && !prepLoading) onPrepRequest() }}
-        >
-          <Sparkles size={12} /> AI Prep
-        </button>
+        {editMode ? (
+          <>
+            <button
+              onClick={handleSave} disabled={saving}
+              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 13px', borderRadius: 7, fontSize: 12, cursor: saving ? 'default' : 'pointer', background: '#7F77DD22', border: '1px solid #7F77DD', color: 'var(--color-accent)', fontWeight: 600, opacity: saving ? 0.6 : 1 }}
+            >
+              {saving ? 'Saving…' : 'Save'}
+            </button>
+            <button
+              onClick={() => { setEditMode(false); setSaveError(null) }}
+              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 11px', borderRadius: 7, fontSize: 12, cursor: 'pointer', background: 'transparent', border: '1px solid var(--color-border, #2A2F45)', color: 'var(--color-text-dim, #8B93A8)' }}
+            >
+              Cancel
+            </button>
+            {saveError && <span style={{ fontSize: 11, color: '#E05252', alignSelf: 'center' }}>{saveError}</span>}
+          </>
+        ) : (
+          <>
+            <button style={btn(status === 'done', '#1D9E75')} onClick={() => onStatusToggle('done')}>
+              <CheckCircle2 size={12} /> Done
+            </button>
+            <button style={btn(status === 'cancelled', '#E05252')} onClick={() => onStatusToggle('cancelled')}>
+              <XCircle size={12} /> Cancel
+            </button>
+            {onSave && (
+              <button style={btn(false, 'var(--color-accent)')} onClick={() => setEditMode(true)}>
+                Edit
+              </button>
+            )}
+            <button
+              style={{ ...btn(showPrep, 'var(--color-accent)'), marginLeft: 'auto' }}
+              onClick={() => { setShowPrep(p => !p); if (!prep && !prepLoading) onPrepRequest() }}
+            >
+              <Sparkles size={12} /> AI Prep
+            </button>
+          </>
+        )}
       </div>
 
       {/* AI Prep section */}
@@ -1739,6 +1842,26 @@ export function CalendarIntelligence() {
     }
   }
 
+  async function handleUpdateEvent(ev: GCalEventExt, patch: Partial<GCalEventCreate>): Promise<GCalEvent | null> {
+    const cal = allCalendars.find(c => c.id === ev.calendarId)
+    if (!cal || !ev.calendarId) return null
+    let updated: GCalEvent | null = null
+    if (cal.accountId) {
+      const result = await efUpdateEvent(cal.accountId, ev.calendarId, ev.id, patch)
+      updated = result.event
+    } else {
+      const token = await refreshPrimaryToken() || cal.accountToken
+      if (!token) return null
+      const result = await updateCalendarEvent(ev.calendarId, ev.id, patch)
+      updated = result.event
+    }
+    if (updated) {
+      setEvents(prev => prev.map(e => e.id === ev.id ? { ...e, ...updated } : e))
+      setSelectedEvent(prev => prev?.id === ev.id ? { ...prev, ...updated } as GCalEventExt : prev)
+    }
+    return updated
+  }
+
   async function handleAddMeet(ev: GCalEventExt) {
     const cal = allCalendars.find(c => c.id === ev.calendarId)
     if (!cal || !ev.calendarId) return
@@ -2401,6 +2524,7 @@ export function CalendarIntelligence() {
             onStatusToggle={s => toggleStatus(selectedEvent.id, s)}
             onPrepRequest={() => void generatePrep(selectedEvent)}
             onAddMeet={() => handleAddMeet(selectedEvent)}
+            onSave={patch => handleUpdateEvent(selectedEvent, patch)}
           />
         )
       })()}
