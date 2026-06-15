@@ -636,6 +636,14 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
           {event.end.dateTime ? ` – ${fmtShort(event.end.dateTime)}` : ''}
         </div>
       )}
+      {height >= 52 && event.location && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginTop: 3, overflow: 'hidden' }}>
+          <MapPin size={9} color="rgba(255,255,255,0.65)" style={{ flexShrink: 0 }} />
+          <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.65)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {event.location}
+          </span>
+        </div>
+      )}
       {/* Inline Done / Cancel icon buttons — visible on hover, or always if active */}
       {height >= 48 && !isDragOverlay && (
         <div
