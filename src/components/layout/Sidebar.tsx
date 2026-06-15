@@ -15,6 +15,7 @@ import {
   Crown,
   Sparkles,
   Compass,
+  Wallet,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -44,6 +45,7 @@ const NAV_ITEMS = [
   { id: 'review',     label: 'Weekly Review',   Icon: RefreshCw },
   { id: 'morning',    label: 'Morning Brief',   Icon: Sun },
   { id: 'planning',   label: 'Planning',        Icon: Compass },
+  { id: 'finance',    label: 'Finance',         Icon: Wallet },
 ]
 
 const SYSTEM_ITEMS = [
