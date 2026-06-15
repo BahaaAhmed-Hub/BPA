@@ -332,7 +332,7 @@ function PieChart({ slices, title }: { slices: PieSlice[]; title: string }) {
 
   return (
     <div style={{ background: 'var(--color-bg, #0D0F1A)', border: '1px solid var(--color-surface, #1A1D2E)', borderRadius: 12, padding: '14px 18px', marginBottom: 20 }}>
-      <div style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--color-border, #4B5268)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 14 }}>{title}</div>
+      <div style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--color-text-muted, #8B93A8)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 14 }}>{title}</div>
       <div style={{ display: 'flex', gap: 20, alignItems: 'center', flexWrap: 'wrap' }}>
         <svg width={136} height={136} style={{ flexShrink: 0 }}>
           {paths.map((p, i) => (
