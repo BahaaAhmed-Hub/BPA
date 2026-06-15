@@ -773,6 +773,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
   function onHeaderMouseDown(e: React.MouseEvent) {
     if ((e.target as HTMLElement).closest('button,input,textarea,a')) return
     e.preventDefault()
+    e.stopPropagation()
     const rect = popupRef.current!.getBoundingClientRect()
     dragOffset.current = { dx: e.clientX - rect.left, dy: e.clientY - rect.top }
     const onMove = (ev: MouseEvent) => {
@@ -833,7 +834,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
   })
 
   return (
-    <div ref={popupRef} onClick={e => e.stopPropagation()} style={{
+    <div ref={popupRef} onClick={e => e.stopPropagation()} onMouseDown={e => e.stopPropagation()} style={{
       position: 'fixed', top: adjPos.y, left: adjPos.x,
       width: 330, maxHeight: 'calc(100vh - 24px)', overflowY: 'auto',
       background: 'var(--color-surface, #161929)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 14,
