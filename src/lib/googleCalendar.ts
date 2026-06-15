@@ -28,6 +28,7 @@ export interface GCalEventWithCalendar extends GCalEvent {
 export interface GCalCalendar {
   id: string
   summary: string
+  summaryOverride?: string
   backgroundColor?: string
   foregroundColor?: string
   primary?: boolean
@@ -209,6 +210,12 @@ async function withAuth(
 
 // ─── List calendars ───────────────────────────────────────────────────────────
 
+// Google returns summaryOverride when the user has renamed a calendar.
+// Normalise so callers always see the display name in .summary.
+function normaliseCal(c: GCalCalendar): GCalCalendar {
+  return c.summaryOverride ? { ...c, summary: c.summaryOverride } : c
+}
+
 const CAL_CACHE_KEY = 'cal-list-cache'
 
 export function getCalendarCache(): GCalCalendar[] {
@@ -233,7 +240,7 @@ export async function listCalendars(): Promise<{ calendars: GCalCalendar[]; noAu
   if (!res.ok) return { calendars: [], noAuth: false }
 
   const firstData = (await res.json()) as { items?: GCalCalendar[]; nextPageToken?: string }
-  const calendars: GCalCalendar[] = [...(firstData.items ?? [])]
+  const calendars: GCalCalendar[] = (firstData.items ?? []).map(normaliseCal)
 
   // Follow pagination to get ALL calendars (subscribed ones may be on later pages)
   let pageToken = firstData.nextPageToken
@@ -243,7 +250,7 @@ export async function listCalendars(): Promise<{ calendars: GCalCalendar[]; noAu
     const nextRes = await gcalRequest(token, `/users/me/calendarList?showHidden=true&minAccessRole=freeBusyReader&pageToken=${encodeURIComponent(pageToken)}`)
     if (!nextRes.ok) break
     const nextData = (await nextRes.json()) as { items?: GCalCalendar[]; nextPageToken?: string }
-    calendars.push(...(nextData.items ?? []))
+    calendars.push(...(nextData.items ?? []).map(normaliseCal))
     pageToken = nextData.nextPageToken
   }
 
@@ -266,7 +273,7 @@ export async function listCalendarsWithToken(
       return { calendars: [], authFailed: false }
     }
     const firstData = (await res.json()) as { items?: GCalCalendar[]; nextPageToken?: string }
-    const calendars: GCalCalendar[] = [...(firstData.items ?? [])]
+    const calendars: GCalCalendar[] = (firstData.items ?? []).map(normaliseCal)
 
     // Follow pagination to get ALL calendars (subscribed ones may be on later pages)
     let pageToken = firstData.nextPageToken
@@ -274,7 +281,7 @@ export async function listCalendarsWithToken(
       const nextRes = await gcalRequest(token, `/users/me/calendarList?showHidden=true&minAccessRole=freeBusyReader&pageToken=${encodeURIComponent(pageToken)}`)
       if (!nextRes.ok) break
       const nextData = (await nextRes.json()) as { items?: GCalCalendar[]; nextPageToken?: string }
-      calendars.push(...(nextData.items ?? []))
+      calendars.push(...(nextData.items ?? []).map(normaliseCal))
       pageToken = nextData.nextPageToken
     }
 
