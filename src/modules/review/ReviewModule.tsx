@@ -84,6 +84,15 @@ function getWeekDays(mondayStr: string): string[] {
   return Array.from({ length: 7 }, (_, i) => shiftDay(mondayStr, i))
 }
 
+// Determine which day a completed task "belongs to" for review display.
+// If completedAt is set, use it. Otherwise fall back to dueDate — but cap
+// at today so a task with a future dueDate doesn't vanish into tomorrow.
+function completionAnchor(t: { completedAt?: string; dueDate?: string }): string | undefined {
+  if (t.completedAt) return t.completedAt
+  if (!t.dueDate) return undefined
+  return t.dueDate > todayStr() ? todayStr() : t.dueDate
+}
+
 function fmtDayLabel(dayStr: string): string {
   const today = todayStr()
   const yesterday = shiftDay(today, -1)
@@ -258,7 +267,7 @@ function WeeklyDayCard({ dayStr, allEvents, statuses, tasks }: {
   const doneEvts       = events.filter(e => isEventDone(e, statuses)).sort(sortByTime)
   const cancelledEvts  = events.filter(e => statuses[e.id] === 'cancelled').sort(sortByTime)
   const dayTasks = tasks.filter(t => {
-    if (t.completed || t.status === 'done') return (t.completedAt ?? t.dueDate) === dayStr
+    if (t.completed || t.status === 'done') return completionAnchor(t) === dayStr
     return t.dueDate === dayStr
   })
   const doneTasks      = dayTasks.filter(t => t.completed || t.status === 'done')
@@ -328,7 +337,7 @@ export function ReviewModule() {
 
   // "Tasks Shipped" = completed THIS week only
   const thisWeekDays   = new Set(getWeekDays(getMondayOf(todayStr())))
-  const completedTasks = tasks.filter(t => t.completed && thisWeekDays.has(t.completedAt ?? t.dueDate ?? ''))
+  const completedTasks = tasks.filter(t => t.completed && thisWeekDays.has(completionAnchor(t) ?? ''))
   const activeTasks    = tasks.filter(t => !t.completed)
   const slipped        = activeTasks.filter(t => t.dueDate && t.dueDate < todayStr()).length
 
@@ -347,9 +356,7 @@ export function ReviewModule() {
   // Tasks "for" a day: done/cancelled tasks use completedAt (falling back to dueDate for
   // older tasks without completedAt); open tasks use dueDate so they still appear on their day.
   const dayTasks = tasks.filter(t => {
-    if (t.completed || t.status === 'done') {
-      return (t.completedAt ?? t.dueDate) === selectedDay
-    }
+    if (t.completed || t.status === 'done') return completionAnchor(t) === selectedDay
     return t.dueDate === selectedDay
   })
   const doneTasks       = dayTasks.filter(t => t.completed || t.status === 'done')
@@ -364,7 +371,7 @@ export function ReviewModule() {
   const allWeekEvents  = Object.values(weekEventsMap).flat()
   const weekDoneEvts   = allWeekEvents.filter(e => isEventDone(e, eventStatuses)).length
   const weekTasksAll   = tasks.filter(t => {
-    const anchor = (t.completed || t.status === 'done') ? (t.completedAt ?? t.dueDate) : t.dueDate
+    const anchor = (t.completed || t.status === 'done') ? completionAnchor(t) : t.dueDate
     return anchor && weekDays.includes(anchor)
   })
   const weekDoneTasks  = weekTasksAll.filter(t => t.completed || t.status === 'done').length
