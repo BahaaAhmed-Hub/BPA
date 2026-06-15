@@ -283,7 +283,7 @@ function buildPieSlices(
   const SLEEP   = dayCount * 8 * 60
   const TOTAL   = dayCount * 24 * 60
 
-  const done = events.filter(e => isEventDone(e, statuses))
+  const done = events.filter(e => statuses[e.id] === 'done')
   const byCalId = new Map<string, { label: string; color: string; mins: number }>()
   let evtTotal = 0
 
