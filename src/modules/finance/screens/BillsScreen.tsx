@@ -1,9 +1,12 @@
 import { useFinanceStore } from '../financeStore'
 
+// ─── Colors ───────────────────────────────────────────────────────────────────
+
 const C = {
   bg:        '#0B0A08',
   surface:   '#16120D',
   border:    '#272118',
+  borderSt:  '#3A3326',
   divFaint:  '#1B160F',
   amber:     '#C49A3C',
   textPri:   '#F2EBDD',
@@ -13,36 +16,91 @@ const C = {
   green:     '#2FA869',
 }
 
+// ─── Props ────────────────────────────────────────────────────────────────────
+
 interface Props {
   onOpenAdd: () => void
 }
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function formatShortDate(dateStr: string): string {
+  const d = new Date(dateStr + 'T00:00:00')
+  const day = d.getDate()
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+  return `${day} ${months[d.getMonth()]}`
+}
+
+function formatFrequency(freq: string): string {
+  switch (freq) {
+    case 'monthly':   return 'Monthly'
+    case 'weekly':    return 'Weekly'
+    case 'yearly':    return 'Yearly'
+    case 'quarterly': return 'Quarterly'
+    default: return freq
+  }
+}
+
+// ─── Pill ─────────────────────────────────────────────────────────────────────
+
 function Pill({ isIncome, amount, currency }: { isIncome: boolean; amount: number; currency: string }) {
   return (
     <span style={{
-      display: 'inline-block',
-      padding: '7px 15px',
-      borderRadius: 9,
+      display: 'inline-flex',
+      alignItems: 'center',
+      padding: '5px 12px',
+      borderRadius: 8,
       fontSize: 13,
       fontWeight: 600,
-      background: isIncome ? C.green : C.red,
-      color: '#fff',
-      whiteSpace: 'nowrap',
+      background: isIncome ? `${C.green}28` : `${C.red}28`,
+      color: isIncome ? C.green : C.red,
+      whiteSpace: 'nowrap' as const,
+      flexShrink: 0,
     }}>
       {isIncome ? '+' : '−'}{currency} {amount.toLocaleString('en-US')}
     </span>
   )
 }
 
+// ─── Icon Circle ──────────────────────────────────────────────────────────────
+
+function IconCircle({ icon, isIncome }: { icon: string; isIncome: boolean }) {
+  return (
+    <div style={{
+      width: 40, height: 40, borderRadius: '50%',
+      border: `1px solid #2A241B`,
+      background: C.surface,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontSize: 18, flexShrink: 0,
+      color: isIncome ? C.green : C.textPri,
+    }}>
+      {icon}
+    </div>
+  )
+}
+
+// ─── Bills Screen ─────────────────────────────────────────────────────────────
+
 export function BillsScreen({ onOpenAdd }: Props) {
   const { bills } = useFinanceStore()
 
+  const today = new Date('2026-06-15')
+  const in30  = new Date('2026-07-15')
+
   const activeBills = bills.filter(b => b.isActive)
-  const upcoming = activeBills.filter(b => new Date(b.nextDue) >= new Date('2026-06-15'))
-  const past     = activeBills.filter(b => new Date(b.nextDue) < new Date('2026-06-15'))
+
+  // Upcoming: expenses due within next 30 days
+  const upcomingExpenses = activeBills
+    .filter(b => !b.isIncome)
+    .filter(b => {
+      const d = new Date(b.nextDue)
+      return d >= today && d <= in30
+    })
+    .sort((a, b) => new Date(a.nextDue).getTime() - new Date(b.nextDue).getTime())
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, height: '100%', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, height: '100%', overflow: 'hidden', background: C.bg }}>
+
       {/* Header */}
       <div style={{
         height: 64, flexShrink: 0,
@@ -60,78 +118,92 @@ export function BillsScreen({ onOpenAdd }: Props) {
             cursor: 'pointer', fontFamily: 'inherit',
           }}
         >
-          + Add
+          + Add bill
         </button>
       </div>
 
-      {/* Content */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '24px 30px' }}>
-        {upcoming.length > 0 && (
-          <div style={{ marginBottom: 28 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: C.textMuted, letterSpacing: '0.8px', marginBottom: 12 }}>
-              Upcoming
-            </div>
-            {upcoming.map(bill => {
-              const due = new Date(bill.nextDue)
-              const dateStr = due.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
-              return (
-                <div key={bill.id} style={{
-                  display: 'flex', alignItems: 'center', gap: 12,
-                  padding: '12px 0',
-                  borderBottom: `1px solid ${C.divFaint}`,
-                }}>
-                  <div style={{
-                    width: 40, height: 40, borderRadius: '50%',
-                    background: `${bill.isIncome ? C.green : C.red}22`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 18, flexShrink: 0,
-                  }}>
-                    {bill.icon}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 14, fontWeight: 500, color: C.textPri }}>{bill.name}</div>
-                    <div style={{ fontSize: 12, color: C.amber, marginTop: 2 }}>{dateStr}</div>
-                  </div>
-                  <Pill isIncome={bill.isIncome} amount={bill.amount} currency={bill.currency} />
-                </div>
-              )
-            })}
-          </div>
-        )}
+      {/* Content — two panes */}
+      <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
 
-        {past.length > 0 && (
-          <div>
-            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: C.textMuted, letterSpacing: '0.8px', marginBottom: 12 }}>
-              Past
-            </div>
-            {past.map(bill => {
-              const due = new Date(bill.nextDue)
-              const dateStr = due.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
-              return (
-                <div key={bill.id} style={{
-                  display: 'flex', alignItems: 'center', gap: 12,
-                  padding: '12px 0',
-                  borderBottom: `1px solid ${C.divFaint}`,
-                  opacity: 0.55,
-                }}>
-                  <div style={{
-                    width: 40, height: 40, borderRadius: '50%',
-                    background: `${bill.isIncome ? C.green : C.red}22`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 18, flexShrink: 0,
-                  }}>
-                    {bill.icon}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 14, fontWeight: 500, color: C.textPri }}>{bill.name}</div>
-                    <div style={{ fontSize: 12, color: C.textDim, marginTop: 2 }}>{dateStr}</div>
-                  </div>
-                  <Pill isIncome={bill.isIncome} amount={bill.amount} currency={bill.currency} />
-                </div>
-              )
-            })}
+        {/* Left pane: Upcoming */}
+        <div style={{
+          flex: 1,
+          overflowY: 'auto',
+          padding: '22px 26px',
+          borderRight: `1px solid ${C.border}`,
+        }}>
+          <div style={{
+            fontSize: 11, fontWeight: 700, textTransform: 'uppercase' as const,
+            letterSpacing: '0.8px', color: C.textMuted, marginBottom: 12,
+          }}>
+            UPCOMING · 30 DAYS
           </div>
-        )}
+
+          {upcomingExpenses.length === 0 && (
+            <div style={{ fontSize: 13, color: C.textDim, paddingTop: 8 }}>No upcoming bills</div>
+          )}
+
+          {upcomingExpenses.map(bill => (
+            <div key={bill.id} style={{
+              display: 'flex', alignItems: 'center', gap: 13,
+              padding: '13px 0',
+              borderBottom: `1px solid ${C.divFaint}`,
+            }}>
+              {/* Date */}
+              <span style={{ fontSize: 11.5, color: C.textMuted, width: 46, flexShrink: 0 }}>
+                {formatShortDate(bill.nextDue)}
+              </span>
+
+              {/* Icon */}
+              <IconCircle icon={bill.icon} isIncome={bill.isIncome} />
+
+              {/* Name */}
+              <span style={{ fontSize: 14, color: C.textPri, flex: 1 }}>{bill.name}</span>
+
+              {/* Pill */}
+              <Pill isIncome={bill.isIncome} amount={bill.amount} currency={bill.currency} />
+            </div>
+          ))}
+        </div>
+
+        {/* Right pane: All recurring */}
+        <div style={{
+          flex: 1,
+          overflowY: 'auto',
+          padding: '22px 26px',
+        }}>
+          <div style={{
+            fontSize: 11, fontWeight: 700, textTransform: 'uppercase' as const,
+            letterSpacing: '0.8px', color: C.textMuted, marginBottom: 12,
+          }}>
+            ALL RECURRING
+          </div>
+
+          {activeBills.map(bill => (
+            <div key={bill.id} style={{
+              display: 'flex', alignItems: 'center', gap: 13,
+              padding: '12px 0',
+              borderBottom: `1px solid ${C.divFaint}`,
+            }}>
+              {/* Icon */}
+              <IconCircle icon={bill.icon} isIncome={bill.isIncome} />
+
+              {/* Name + meta */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 14, color: C.textPri, fontWeight: 500 }}>{bill.name}</div>
+                <div style={{ fontSize: 11.5, color: C.textMuted, marginTop: 2 }}>
+                  {formatFrequency(bill.frequency)} · next {formatShortDate(bill.nextDue)}
+                </div>
+              </div>
+
+              {/* Amount */}
+              <span style={{ fontSize: 13.5, color: C.textPri, fontWeight: 600, flexShrink: 0 }}>
+                EGP {bill.amount.toLocaleString('en-US')}
+              </span>
+            </div>
+          ))}
+        </div>
+
       </div>
     </div>
   )
