@@ -3,7 +3,7 @@ import { CheckSquare, Clock, Users, TrendingUp, ChevronLeft, ChevronRight, Check
 import { TopBar } from '@/components/layout/TopBar'
 import { useTaskStore } from '@/store/taskStore'
 import type { Task } from '@/types'
-import { isTaskHidden } from '@/types'
+import { isTaskHidden, loadDynamicCompanies } from '@/types'
 import type { GCalEvent } from '@/lib/googleCalendar'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -191,6 +191,21 @@ function EventRow({ event, cancelled }: { event: GCalEvent; cancelled?: boolean 
 
 // ─── Task row ─────────────────────────────────────────────────────────────────
 
+function resolveCompanyLabel(task: Task): string | undefined {
+  const companies = loadDynamicCompanies()
+  if (task.companyId) {
+    const dyn = companies.find(c => c.id === task.companyId)
+    if (dyn) return dyn.name
+  }
+  // task.company may be a UUID (stored directly by some code paths) — resolve it
+  if (task.company) {
+    const byId = companies.find(c => c.id === task.company)
+    if (byId) return byId.name
+    if (task.company !== 'personal') return task.company
+  }
+  return undefined
+}
+
 function TaskRow({ title, company, cancelled }: { title: string; company?: string; cancelled?: boolean }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 8, background: 'var(--color-bg, #0D0F1A)', border: '1px solid var(--color-surface, #1A1D2E)', marginBottom: 5 }}>
@@ -290,8 +305,8 @@ function WeeklyDayCard({ dayStr, allEvents, statuses, tasks }: {
         <div style={{ padding: '4px 20px 14px' }}>
           {doneEvts.map(e       => <EventRow key={e.id} event={e} />)}
           {cancelledEvts.map(e  => <EventRow key={e.id} event={e} cancelled />)}
-          {doneTasks.map(t      => <TaskRow key={t.id} title={t.title} company={t.company} />)}
-          {cancelledTasks.map(t => <TaskRow key={t.id} title={t.title} company={t.company} cancelled />)}
+          {doneTasks.map(t      => <TaskRow key={t.id} title={t.title} company={resolveCompanyLabel(t)} />)}
+          {cancelledTasks.map(t => <TaskRow key={t.id} title={t.title} company={resolveCompanyLabel(t)} cancelled />)}
         </div>
       )}
     </div>
@@ -472,13 +487,13 @@ export function ReviewModule() {
                   {doneTasks.length > 0 && (
                     <div style={{ marginBottom: 18 }}>
                       <SectionHead label="Tasks Done" count={doneTasks.length} color="#1D9E75" />
-                      {doneTasks.map(t => <TaskRow key={t.id} title={t.title} company={t.company} />)}
+                      {doneTasks.map(t => <TaskRow key={t.id} title={t.title} company={resolveCompanyLabel(t)} />)}
                     </div>
                   )}
                   {cancelledTasks.length > 0 && (
                     <div>
                       <SectionHead label="Tasks Cancelled" count={cancelledTasks.length} color="#6B7280" />
-                      {cancelledTasks.map(t => <TaskRow key={t.id} title={t.title} company={t.company} cancelled />)}
+                      {cancelledTasks.map(t => <TaskRow key={t.id} title={t.title} company={resolveCompanyLabel(t)} cancelled />)}
                     </div>
                   )}
                 </>

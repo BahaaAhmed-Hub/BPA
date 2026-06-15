@@ -624,7 +624,7 @@ export function KanbanBoard({ onOpen, hideCompleted = false, filteredTaskIds }: 
         updateTask(taskId, { company: 'personal', companyId: undefined })
       } else {
         const co = companies.find(c => c.id === columnId)
-        if (co) updateTask(taskId, { companyId: co.id, company: 'personal' })
+        if (co) updateTask(taskId, { companyId: co.id, company: co.id as Task['company'] })
       }
     } else if (boardType === 'owner') {
       updateTask(taskId, { owner: columnId === 'unassigned' ? undefined : columnId })
