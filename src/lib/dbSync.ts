@@ -294,7 +294,7 @@ export async function saveTasksToDB(tasks: TaskRow[]): Promise<void> {
     delegated_to: t.owner ?? null,
     done_looks_like: null as null,
     created_at:   t.createdAt,
-    completed_at: t.completed ? (t.completedAt ? new Date(t.completedAt + 'T00:00:00').toISOString() : new Date().toISOString()) : null,
+    completed_at: t.completed ? (t.completedAt ? t.completedAt + 'T12:00:00Z' : new Date().toISOString()) : null,
     // extended columns (from migration 20240002)
     planned_time: t.plannedTime ?? null,
     owner_id:     t.owner ?? null,

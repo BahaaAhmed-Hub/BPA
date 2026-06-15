@@ -3,7 +3,7 @@ import { CheckSquare, Clock, Users, TrendingUp, ChevronLeft, ChevronRight, Check
 import { TopBar } from '@/components/layout/TopBar'
 import { useTaskStore } from '@/store/taskStore'
 import type { Task } from '@/types'
-import { isTaskHidden } from '@/types'
+import { isTaskHidden, loadDynamicCompanies } from '@/types'
 import type { GCalEvent } from '@/lib/googleCalendar'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -82,6 +82,15 @@ function getMondayOf(dayStr: string): string {
 
 function getWeekDays(mondayStr: string): string[] {
   return Array.from({ length: 7 }, (_, i) => shiftDay(mondayStr, i))
+}
+
+// Determine which day a completed task "belongs to" for review display.
+// If completedAt is set, use it. Otherwise fall back to dueDate — but cap
+// at today so a task with a future dueDate doesn't vanish into tomorrow.
+function completionAnchor(t: { completedAt?: string; dueDate?: string }): string | undefined {
+  if (t.completedAt) return t.completedAt
+  if (!t.dueDate) return undefined
+  return t.dueDate > todayStr() ? todayStr() : t.dueDate
 }
 
 function fmtDayLabel(dayStr: string): string {
@@ -191,6 +200,21 @@ function EventRow({ event, cancelled }: { event: GCalEvent; cancelled?: boolean 
 
 // ─── Task row ─────────────────────────────────────────────────────────────────
 
+function resolveCompanyLabel(task: Task): string | undefined {
+  const companies = loadDynamicCompanies()
+  if (task.companyId) {
+    const dyn = companies.find(c => c.id === task.companyId)
+    if (dyn) return dyn.name
+  }
+  // task.company may be a UUID (stored directly by some code paths) — resolve it
+  if (task.company) {
+    const byId = companies.find(c => c.id === task.company)
+    if (byId) return byId.name
+    if (task.company !== 'personal') return task.company
+  }
+  return undefined
+}
+
 function TaskRow({ title, company, cancelled }: { title: string; company?: string; cancelled?: boolean }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 8, background: 'var(--color-bg, #0D0F1A)', border: '1px solid var(--color-surface, #1A1D2E)', marginBottom: 5 }}>
@@ -240,10 +264,10 @@ function WeeklyDayCard({ dayStr, allEvents, statuses, tasks }: {
   const dayLabel = new Date(dayStr + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
   const events = allEvents[dayStr] ?? []
 
-  const doneEvts       = events.filter(e => statuses[e.id] === 'done').sort(sortByTime)
+  const doneEvts       = events.filter(e => isEventDone(e, statuses)).sort(sortByTime)
   const cancelledEvts  = events.filter(e => statuses[e.id] === 'cancelled').sort(sortByTime)
   const dayTasks = tasks.filter(t => {
-    if (t.completed || t.status === 'done') return (t.completedAt ?? t.dueDate) === dayStr
+    if (t.completed || t.status === 'done') return completionAnchor(t) === dayStr
     return t.dueDate === dayStr
   })
   const doneTasks      = dayTasks.filter(t => t.completed || t.status === 'done')
@@ -290,8 +314,8 @@ function WeeklyDayCard({ dayStr, allEvents, statuses, tasks }: {
         <div style={{ padding: '4px 20px 14px' }}>
           {doneEvts.map(e       => <EventRow key={e.id} event={e} />)}
           {cancelledEvts.map(e  => <EventRow key={e.id} event={e} cancelled />)}
-          {doneTasks.map(t      => <TaskRow key={t.id} title={t.title} company={t.company} />)}
-          {cancelledTasks.map(t => <TaskRow key={t.id} title={t.title} company={t.company} cancelled />)}
+          {doneTasks.map(t      => <TaskRow key={t.id} title={t.title} company={resolveCompanyLabel(t)} />)}
+          {cancelledTasks.map(t => <TaskRow key={t.id} title={t.title} company={resolveCompanyLabel(t)} cancelled />)}
         </div>
       )}
     </div>
@@ -300,10 +324,20 @@ function WeeklyDayCard({ dayStr, allEvents, statuses, tasks }: {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
+// An event counts as "done" if manually marked done OR it already happened and wasn't cancelled
+function isEventDone(e: GCalEvent, statuses: Record<string, EventStatus>): boolean {
+  if (statuses[e.id] === 'cancelled') return false
+  if (statuses[e.id] === 'done') return true
+  const end = e.end?.dateTime ?? e.end?.date
+  return !!end && new Date(end) < new Date()
+}
+
 export function ReviewModule() {
   const tasks = useTaskStore(s => s.tasks).filter(t => !isTaskHidden(t))
 
-  const completedTasks = tasks.filter(t => t.completed)
+  // "Tasks Shipped" = completed THIS week only
+  const thisWeekDays   = new Set(getWeekDays(getMondayOf(todayStr())))
+  const completedTasks = tasks.filter(t => t.completed && thisWeekDays.has(completionAnchor(t) ?? ''))
   const activeTasks    = tasks.filter(t => !t.completed)
   const slipped        = activeTasks.filter(t => t.dueDate && t.dueDate < todayStr()).length
 
@@ -317,14 +351,12 @@ export function ReviewModule() {
 
   // ── Daily ──────────────────────────────────────────────────────────────────
   const dayEvents       = loadDayEvents(selectedDay)
-  const doneEvents      = dayEvents.filter(e => eventStatuses[e.id] === 'done').sort(sortByTime)
+  const doneEvents      = dayEvents.filter(e => isEventDone(e, eventStatuses)).sort(sortByTime)
   const cancelledEvents = dayEvents.filter(e => eventStatuses[e.id] === 'cancelled').sort(sortByTime)
   // Tasks "for" a day: done/cancelled tasks use completedAt (falling back to dueDate for
   // older tasks without completedAt); open tasks use dueDate so they still appear on their day.
   const dayTasks = tasks.filter(t => {
-    if (t.completed || t.status === 'done') {
-      return (t.completedAt ?? t.dueDate) === selectedDay
-    }
+    if (t.completed || t.status === 'done') return completionAnchor(t) === selectedDay
     return t.dueDate === selectedDay
   })
   const doneTasks       = dayTasks.filter(t => t.completed || t.status === 'done')
@@ -337,9 +369,9 @@ export function ReviewModule() {
   const weekEventsMap = loadWeekEventsGrouped(weekStart)
 
   const allWeekEvents  = Object.values(weekEventsMap).flat()
-  const weekDoneEvts   = allWeekEvents.filter(e => eventStatuses[e.id] === 'done').length
+  const weekDoneEvts   = allWeekEvents.filter(e => isEventDone(e, eventStatuses)).length
   const weekTasksAll   = tasks.filter(t => {
-    const anchor = (t.completed || t.status === 'done') ? (t.completedAt ?? t.dueDate) : t.dueDate
+    const anchor = (t.completed || t.status === 'done') ? completionAnchor(t) : t.dueDate
     return anchor && weekDays.includes(anchor)
   })
   const weekDoneTasks  = weekTasksAll.filter(t => t.completed || t.status === 'done').length
@@ -462,13 +494,13 @@ export function ReviewModule() {
                   {doneTasks.length > 0 && (
                     <div style={{ marginBottom: 18 }}>
                       <SectionHead label="Tasks Done" count={doneTasks.length} color="#1D9E75" />
-                      {doneTasks.map(t => <TaskRow key={t.id} title={t.title} company={t.company} />)}
+                      {doneTasks.map(t => <TaskRow key={t.id} title={t.title} company={resolveCompanyLabel(t)} />)}
                     </div>
                   )}
                   {cancelledTasks.length > 0 && (
                     <div>
                       <SectionHead label="Tasks Cancelled" count={cancelledTasks.length} color="#6B7280" />
-                      {cancelledTasks.map(t => <TaskRow key={t.id} title={t.title} company={t.company} cancelled />)}
+                      {cancelledTasks.map(t => <TaskRow key={t.id} title={t.title} company={resolveCompanyLabel(t)} cancelled />)}
                     </div>
                   )}
                 </>

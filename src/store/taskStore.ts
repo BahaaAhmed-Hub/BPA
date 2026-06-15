@@ -275,7 +275,8 @@ export const useTaskStore = create<TaskState>()(
               completedAt: t.completed ? undefined : today,
             } : t
           )
-          scheduleDbSync(next)
+          // Save immediately — debouncing risks losing the change if user refreshes
+          saveTasksToDB(next.map(toRow)).catch(console.warn)
           return {
             tasks: next,
             activities: [...s.activities, act(id, 'status_changed', nowDone ? 'Marked as done' : 'Reopened')],
@@ -293,7 +294,8 @@ export const useTaskStore = create<TaskState>()(
               completedAt: status === 'done' ? (t.completedAt ?? today) : undefined,
             } : t
           )
-          scheduleDbSync(next)
+          // Save immediately for status changes so completion date persists through refresh
+          saveTasksToDB(next.map(toRow)).catch(console.warn)
           return {
             tasks: next,
             activities: [...s.activities, act(id, 'status_changed', `Status → ${status}`)],
