@@ -6,6 +6,8 @@ import type { Task } from '@/types'
 import { isTaskHidden, loadDynamicCompanies } from '@/types'
 import type { GCalEvent } from '@/lib/googleCalendar'
 
+type ExtEvent = GCalEvent & { calendarColor?: string; calendarId?: string }
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const COMPANY_COLORS: Record<string, string> = {}
@@ -252,6 +254,105 @@ function PillStat({ done, total, label, color }: { done: number; total: number; 
   )
 }
 
+// ─── Pie chart ────────────────────────────────────────────────────────────────
+
+type PieSlice = { label: string; minutes: number; color: string }
+
+function loadCalNames(): Map<string, { name: string; color: string }> {
+  try {
+    const raw = localStorage.getItem('cal-intel-cals-cache')
+    if (!raw) return new Map()
+    const cals = JSON.parse(raw) as { id: string; summary?: string; backgroundColor?: string }[]
+    return new Map(cals.map(c => [c.id, { name: c.summary ?? 'Calendar', color: c.backgroundColor ?? '#7F77DD' }]))
+  } catch { return new Map() }
+}
+
+function eventMins(e: GCalEvent): number {
+  const s = e.start.dateTime, f = e.end?.dateTime
+  if (!s || !f) return 0
+  return Math.max(0, (new Date(f).getTime() - new Date(s).getTime()) / 60000)
+}
+
+function buildPieSlices(
+  events: GCalEvent[],
+  tasks: Task[],
+  statuses: Record<string, EventStatus>,
+  dayCount: number,
+): PieSlice[] {
+  const calMap  = loadCalNames()
+  const SLEEP   = dayCount * 8 * 60
+  const TOTAL   = dayCount * 24 * 60
+
+  const done = events.filter(e => isEventDone(e, statuses))
+  const byCalId = new Map<string, { label: string; color: string; mins: number }>()
+  let evtTotal = 0
+
+  for (const e of done) {
+    const ext = e as ExtEvent
+    const id  = ext.calendarId ?? '__primary__'
+    const info = ext.calendarId ? calMap.get(ext.calendarId) : null
+    const color = info?.color ?? ext.calendarColor ?? '#7F77DD'
+    const label = info?.name  ?? 'Calendar'
+    const m = eventMins(e)
+    evtTotal += m
+    const existing = byCalId.get(id)
+    if (existing) existing.mins += m
+    else byCalId.set(id, { label, color, mins: m })
+  }
+
+  const taskTotal = tasks
+    .filter(t => t.completed || t.status === 'done')
+    .reduce((s, t) => s + (t.duration ?? 0), 0)
+
+  const free = Math.max(0, TOTAL - SLEEP - evtTotal - taskTotal)
+
+  return [
+    { label: 'Sleep', minutes: SLEEP, color: '#13152B' },
+    ...[...byCalId.values()].filter(v => v.mins > 0).map(v => ({ label: v.label, minutes: v.mins, color: v.color })),
+    ...(taskTotal > 0 ? [{ label: 'Tasks', minutes: taskTotal, color: '#1D9E75' }] : []),
+    { label: 'Unaccounted', minutes: free, color: '#252A3E' },
+  ]
+}
+
+function PieChart({ slices, title }: { slices: PieSlice[]; title: string }) {
+  const total = slices.reduce((s, sl) => s + sl.minutes, 0)
+  if (total === 0) return null
+  const active = slices.filter(sl => sl.minutes > 0)
+  const R = 56, cx = 68, cy = 68
+  let angle = -Math.PI / 2
+  const paths = active.map(sl => {
+    const frac = sl.minutes / total
+    const a0 = angle, a1 = angle + frac * 2 * Math.PI
+    angle = a1
+    const x0 = cx + R * Math.cos(a0), y0 = cy + R * Math.sin(a0)
+    const x1 = cx + R * Math.cos(a1), y1 = cy + R * Math.sin(a1)
+    return { d: `M${cx},${cy} L${x0.toFixed(1)},${y0.toFixed(1)} A${R},${R} 0 ${frac > 0.5 ? 1 : 0} 1 ${x1.toFixed(1)},${y1.toFixed(1)} Z`, color: sl.color, label: sl.label, mins: sl.minutes }
+  })
+  const fmt = (m: number) => m >= 60 ? `${(m / 60).toFixed(1)}h` : `${Math.round(m)}m`
+
+  return (
+    <div style={{ background: 'var(--color-bg, #0D0F1A)', border: '1px solid var(--color-surface, #1A1D2E)', borderRadius: 12, padding: '14px 18px', marginBottom: 20 }}>
+      <div style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--color-border, #4B5268)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 14 }}>{title}</div>
+      <div style={{ display: 'flex', gap: 20, alignItems: 'center', flexWrap: 'wrap' }}>
+        <svg width={136} height={136} style={{ flexShrink: 0 }}>
+          {paths.map((p, i) => (
+            <path key={i} d={p.d} fill={p.color} stroke="var(--color-bg, #0D0F1A)" strokeWidth={1.5} />
+          ))}
+        </svg>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 7, minWidth: 130 }}>
+          {active.map((sl, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ width: 9, height: 9, borderRadius: 2, background: sl.color, border: '1px solid rgba(255,255,255,0.12)', flexShrink: 0 }} />
+              <span style={{ fontSize: 11.5, color: 'var(--color-text-dim, #C0C4D6)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sl.label}</span>
+              <span style={{ fontSize: 11, color: 'var(--color-text-muted, #6B7280)', fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>{fmt(sl.minutes)}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Weekly day card ──────────────────────────────────────────────────────────
 
 function WeeklyDayCard({ dayStr, allEvents, statuses, tasks }: {
@@ -469,6 +570,10 @@ export function ReviewModule() {
           {/* ── Daily content ──────────────────────────────────────────────── */}
           {viewMode === 'daily' && (
             <div style={{ padding: 20 }}>
+              <PieChart
+                title={`How ${selectedDay === todayStr() ? 'today' : 'this day'} was spent`}
+                slices={buildPieSlices(dayEvents, dayTasks, eventStatuses, 1)}
+              />
               {isDailyEmpty ? (
                 <div style={{ textAlign: 'center', padding: '32px 0', color: '#4B5268' }}>
                   <CalendarDays size={28} style={{ opacity: 0.4, marginBottom: 10 }} />
@@ -511,6 +616,17 @@ export function ReviewModule() {
           {/* ── Weekly content ─────────────────────────────────────────────── */}
           {viewMode === 'weekly' && (
             <div>
+              <div style={{ padding: '20px 20px 4px' }}>
+                <PieChart
+                  title={`How this week was spent (${weekDays.filter(d => d <= todayStr()).length} days so far)`}
+                  slices={buildPieSlices(
+                    Object.values(weekEventsMap).flat(),
+                    weekTasksAll,
+                    eventStatuses,
+                    Math.max(1, weekDays.filter(d => d <= todayStr()).length),
+                  )}
+                />
+              </div>
               {weekDays.map(day => (
                 <WeeklyDayCard
                   key={day}
