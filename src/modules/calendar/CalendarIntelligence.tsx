@@ -768,6 +768,26 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
     return () => document.removeEventListener('mousedown', fn)
   }, [onClose])
 
+  // Drag-to-move: track pointer offset from popup top-left while dragging header
+  const dragOffset = useRef<{ dx: number; dy: number } | null>(null)
+  function onHeaderMouseDown(e: React.MouseEvent) {
+    if ((e.target as HTMLElement).closest('button,input,textarea,a')) return
+    e.preventDefault()
+    const rect = popupRef.current!.getBoundingClientRect()
+    dragOffset.current = { dx: e.clientX - rect.left, dy: e.clientY - rect.top }
+    const onMove = (ev: MouseEvent) => {
+      if (!dragOffset.current) return
+      setAdjPos({ x: ev.clientX - dragOffset.current.dx, y: ev.clientY - dragOffset.current.dy })
+    }
+    const onUp = () => {
+      dragOffset.current = null
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+  }
+
   const isAllDay     = !event.start.dateTime
   const entryPoints  = event.conferenceData?.entryPoints ?? []
   const videoLink    = entryPoints.find(ep => ep.entryPointType === 'video')?.uri
@@ -820,8 +840,8 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
       boxShadow: '0 16px 48px rgba(0,0,0,0.65)', zIndex: 1000,
     }}>
 
-      {/* Header: calendar dot + title + close */}
-      <div style={{ padding: '14px 14px 10px', display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+      {/* Header: calendar dot + title + close — draggable */}
+      <div onMouseDown={onHeaderMouseDown} style={{ padding: '14px 14px 10px', display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'grab' }}>
         <div style={{ width: 14, height: 14, borderRadius: '50%', background: calColor, flexShrink: 0, marginTop: editMode ? 10 : 3 }} />
         <div style={{ flex: 1, minWidth: 0 }}>
           {editMode ? (
