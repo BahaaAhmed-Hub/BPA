@@ -77,6 +77,7 @@ export function BudgetScreen() {
     monthlyAmount: string; currency: Currency; startDate: string; endDate: string; rollover: boolean
   }>({ monthlyAmount: '', currency: 'EGP', startDate: currentMonth, endDate: '', rollover: false })
   const [hoveredCatId, setHoveredCatId] = useState<string | null>(null)
+  const [hoveredSubCatId, setHoveredSubCatId] = useState<string | null>(null)
 
   // ─── Computed helpers ─────────────────────────────────────────────────────
 
@@ -476,24 +477,43 @@ export function BudgetScreen() {
                   const actual = monthTxns.filter(tx => tx.categoryId === sub.id).reduce((s, tx) => s + Math.abs(tx.amount), 0)
                   const budget = budgetForCat(sub.id)
                   const over = actual > budget && budget > 0
+                  const isHovered = hoveredSubCatId === sub.id
                   return (
                     <div
                       key={sub.id}
                       onClick={() => handleSubCatClick(sub.id)}
+                      onMouseEnter={() => setHoveredSubCatId(sub.id)}
+                      onMouseLeave={() => setHoveredSubCatId(null)}
                       style={{
                         display: 'flex', alignItems: 'center', gap: 12,
                         padding: '12px 16px', borderBottom: `1px solid ${theme.border}`,
                         cursor: 'pointer',
                       }}
                     >
-                      <div style={{
-                        width: 40, height: 40, borderRadius: '50%', flexShrink: 0,
-                        background: theme.bg,
-                        border: `2px solid ${over ? RED : theme.border}`,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: 18,
-                      }}>
-                        {sub.icon}
+                      {/* Circle with hover edit pencil */}
+                      <div style={{ position: 'relative', flexShrink: 0 }}>
+                        <div style={{
+                          width: 40, height: 40, borderRadius: '50%',
+                          background: theme.bg,
+                          border: `2px solid ${over ? RED : theme.border}`,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: 18,
+                        }}>
+                          {sub.icon}
+                        </div>
+                        {isHovered && (
+                          <button
+                            onClick={e => { e.stopPropagation(); setCatModal({ open: true, category: sub }) }}
+                            style={{
+                              position: 'absolute', top: -5, right: -3,
+                              background: theme.surface, border: `1px solid ${theme.border}`,
+                              borderRadius: '50%', width: 18, height: 18,
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              cursor: 'pointer', fontSize: 10, color: theme.textDim, lineHeight: 1,
+                              padding: 0,
+                            }}
+                          >✏</button>
+                        )}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 14, color: theme.text, fontWeight: 500 }}>{sub.name}</div>
@@ -501,13 +521,6 @@ export function BudgetScreen() {
                           {fmt(actual)}{budget > 0 ? ` / ${fmt(budget)}` : ''}
                         </div>
                       </div>
-                      <button
-                        onClick={e => { e.stopPropagation(); setCatModal({ open: true, category: sub }) }}
-                        style={{
-                          background: 'none', border: 'none', cursor: 'pointer',
-                          color: theme.textDim, fontSize: 14, padding: 4,
-                        }}
-                      >✏</button>
                       <span style={{ color: theme.textDim, fontSize: 16 }}>›</span>
                     </div>
                   )
