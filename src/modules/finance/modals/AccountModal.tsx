@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useUIStore } from '@/store/uiStore'
 import { getTheme } from '@/lib/themes'
 import type { Account, AccountType, Currency } from '../types'
+import { IconPicker } from '../components/IconPicker'
 
 const RED   = '#DA4A3E'
 const GREEN = '#2FA869'
@@ -199,17 +200,10 @@ export function AccountModal({ account, onSave, onDelete, onClose }: Props) {
             />
           </div>
 
-          {/* Emoji icon */}
+          {/* Emoji / image icon */}
           <div style={fieldStyle}>
-            <label style={labelStyle}>Emoji icon</label>
-            <input
-              style={inputStyle}
-              type="text"
-              value={emoji}
-              onChange={e => setEmoji(e.target.value.slice(0, 2))}
-              maxLength={2}
-              placeholder="🏦"
-            />
+            <label style={labelStyle}>Icon</label>
+            <IconPicker value={emoji} onChange={setEmoji} size={44} />
           </div>
 
           {/* Color */}

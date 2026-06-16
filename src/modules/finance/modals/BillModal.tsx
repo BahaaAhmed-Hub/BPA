@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useUIStore } from '@/store/uiStore'
 import { getTheme } from '@/lib/themes'
 import type { Bill, BillFrequency, Category, Account, Currency } from '../types'
+import { IconPicker } from '../components/IconPicker'
 
 const RED   = '#DA4A3E'
 const GREEN = '#2FA869'
@@ -141,14 +142,7 @@ export function BillModal({ bill, categories, accounts, onSave, onDelete, onClos
           {/* Icon */}
           <div style={fieldStyle}>
             <label style={labelStyle}>Icon</label>
-            <input
-              style={inputStyle}
-              type="text"
-              value={icon}
-              onChange={e => setIcon(e.target.value.slice(0, 2))}
-              maxLength={2}
-              placeholder="🔁"
-            />
+            <IconPicker value={icon} onChange={setIcon} size={44} />
           </div>
 
           {/* Amount */}
