@@ -148,7 +148,7 @@ export function FinanceModule() {
     switch (screen) {
       case 'today':   return <TodayScreen {...props} />
       case 'balance': return <BalanceScreen />
-      case 'budget':  return <BudgetScreen {...props} />
+      case 'budget':  return <BudgetScreen />
       case 'bills':   return <BillsScreen {...props} />
       case 'reports': return <ReportsScreen {...props} />
       case 'reflect': return <ReflectionScreen {...props} />
