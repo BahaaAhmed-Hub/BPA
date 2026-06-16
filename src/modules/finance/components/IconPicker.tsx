@@ -145,8 +145,9 @@ export function IconPicker({ value, onChange, size = 44, trigger }: Props) {
           boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
           overflow: 'hidden',
         }}>
-          {/* Search */}
-          <div style={{ padding: '10px 12px 0' }}>
+
+          {/* Search + Upload row */}
+          <div style={{ display: 'flex', gap: 8, padding: '10px 12px 0' }}>
             <input
               autoFocus
               type="text"
@@ -154,20 +155,68 @@ export function IconPicker({ value, onChange, size = 44, trigger }: Props) {
               value={search}
               onChange={e => setSearch(e.target.value)}
               style={{
-                width: '100%', padding: '7px 10px',
+                flex: 1, padding: '7px 10px',
                 borderRadius: 8, border: `1px solid ${theme.border}`,
                 background: theme.bg, color: theme.text,
-                fontSize: 13, outline: 'none', boxSizing: 'border-box',
+                fontSize: 13, outline: 'none', boxSizing: 'border-box' as const,
                 fontFamily: 'inherit',
               }}
             />
+            <input ref={fileRef} type="file" accept="image/*" onChange={handleFile} style={{ display: 'none' }} />
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              title="Upload image"
+              style={{
+                flexShrink: 0,
+                display: 'flex', alignItems: 'center', gap: 5,
+                padding: '7px 11px',
+                borderRadius: 8,
+                border: `1px solid ${theme.accent}`,
+                background: theme.accentFill,
+                color: theme.accent,
+                fontSize: 12, fontWeight: 600,
+                cursor: 'pointer', fontFamily: 'inherit',
+                whiteSpace: 'nowrap' as const,
+              }}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="17 8 12 3 7 8"/>
+                <line x1="12" y1="3" x2="12" y2="15"/>
+              </svg>
+              Upload
+            </button>
           </div>
 
-          {/* Category tabs */}
+          {/* Current uploaded image preview */}
+          {isImage && (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              margin: '8px 12px 0',
+              padding: '6px 10px',
+              borderRadius: 8,
+              background: theme.bg,
+              border: `1px solid ${theme.border}`,
+            }}>
+              <img src={value} alt="current" style={{ width: 28, height: 28, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }} />
+              <span style={{ fontSize: 12, color: theme.textDim, flex: 1 }}>Current image</span>
+              <button
+                type="button"
+                onClick={() => onChange('📁')}
+                style={{
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  color: theme.textDim, fontSize: 12, padding: 0, lineHeight: 1,
+                }}
+              >✕</button>
+            </div>
+          )}
+
+          {/* Category tabs — emoji groups only */}
           {!search && (
             <div style={{
               display: 'flex', overflowX: 'auto', padding: '8px 12px 4px',
-              gap: 2, scrollbarWidth: 'none',
+              gap: 2, scrollbarWidth: 'none' as const,
             }}>
               {GROUPS.map(g => (
                 <button
@@ -186,80 +235,39 @@ export function IconPicker({ value, onChange, size = 44, trigger }: Props) {
                   {g.label}
                 </button>
               ))}
-              {/* Upload tab */}
-              <button
-                type="button"
-                onClick={() => { setTab('upload'); setSearch('') }}
-                title="Upload image"
-                style={{
-                  flexShrink: 0, width: 32, height: 28,
-                  borderRadius: 6, border: 'none',
-                  background: tab === 'upload' ? theme.accentFill : 'transparent',
-                  cursor: 'pointer', fontSize: 14,
-                  color: tab === 'upload' ? theme.accent : theme.textDim,
-                  outline: tab === 'upload' ? `1px solid ${theme.accent}44` : 'none',
-                }}
-              >
-                🖼
-              </button>
             </div>
           )}
 
-          {/* Content */}
-          {tab === 'upload' && !search ? (
-            <div style={{ padding: '16px 12px 12px', textAlign: 'center' }}>
-              <input ref={fileRef} type="file" accept="image/*" onChange={handleFile} style={{ display: 'none' }} />
+          {/* Emoji grid */}
+          <div style={{
+            display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)',
+            gap: 2, padding: '6px 8px 10px',
+            maxHeight: 220, overflowY: 'auto',
+          }}>
+            {displayEmojis.map(emoji => (
               <button
+                key={emoji}
                 type="button"
-                onClick={() => fileRef.current?.click()}
+                onClick={() => { onChange(emoji); setOpen(false); setSearch('') }}
                 style={{
-                  width: '100%', padding: '12px',
-                  borderRadius: 10, border: `2px dashed ${theme.border}`,
-                  background: theme.bg, color: theme.textDim,
-                  fontSize: 13, cursor: 'pointer', fontFamily: 'inherit',
+                  width: 34, height: 34, borderRadius: 6,
+                  border: value === emoji ? `1px solid ${theme.accent}` : '1px solid transparent',
+                  background: value === emoji ? theme.accentFill : 'transparent',
+                  cursor: 'pointer', fontSize: 20,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  transition: 'background 0.1s',
                 }}
+                title={emoji}
               >
-                📁 Click to upload image
+                {emoji}
               </button>
-              {isImage && (
-                <div style={{ marginTop: 10 }}>
-                  <img src={value} alt="current" style={{ width: 60, height: 60, borderRadius: 10, objectFit: 'cover', border: `1px solid ${theme.border}` }} />
-                  <div style={{ fontSize: 11, color: theme.textDim, marginTop: 4 }}>Current image</div>
-                </div>
-              )}
-              <div style={{ marginTop: 10, fontSize: 12, color: theme.textMuted }}>PNG, JPG, WebP · stored as base64</div>
-            </div>
-          ) : (
-            <div style={{
-              display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)',
-              gap: 2, padding: '6px 8px 10px',
-              maxHeight: 220, overflowY: 'auto',
-            }}>
-              {displayEmojis.map(emoji => (
-                <button
-                  key={emoji}
-                  type="button"
-                  onClick={() => { onChange(emoji); setOpen(false); setSearch('') }}
-                  style={{
-                    width: 34, height: 34, borderRadius: 6,
-                    border: value === emoji ? `1px solid ${theme.accent}` : '1px solid transparent',
-                    background: value === emoji ? theme.accentFill : 'transparent',
-                    cursor: 'pointer', fontSize: 20,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    transition: 'background 0.1s',
-                  }}
-                  title={emoji}
-                >
-                  {emoji}
-                </button>
-              ))}
-              {displayEmojis.length === 0 && (
-                <div style={{ gridColumn: 'span 8', padding: '16px 0', textAlign: 'center', fontSize: 13, color: theme.textDim }}>
-                  No emojis found
-                </div>
-              )}
-            </div>
-          )}
+            ))}
+            {displayEmojis.length === 0 && (
+              <div style={{ gridColumn: 'span 8', padding: '16px 0', textAlign: 'center', fontSize: 13, color: theme.textDim }}>
+                No emojis found
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
