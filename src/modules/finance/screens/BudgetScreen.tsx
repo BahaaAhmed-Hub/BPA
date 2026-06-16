@@ -569,11 +569,11 @@ export function BudgetScreen() {
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 14, color: theme.text, fontWeight: 500, whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {tx.payee || 'Unnamed'}
+                          {tx.payee || txCat?.name || 'Transaction'}
                         </div>
                         <div style={{ fontSize: 12, color: theme.textMuted, marginTop: 2, display: 'flex', gap: 6 }}>
                           <span>{tx.date}</span>
-                          {txCat && <span style={{ color: theme.textDim }}>· {txCat.icon} {txCat.name}</span>}
+                          {txCat && tx.payee && <span style={{ color: theme.textDim }}>· {txCat.icon} {txCat.name}</span>}
                         </div>
                       </div>
                       <span style={{

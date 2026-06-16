@@ -147,11 +147,11 @@ export function TodayScreen({ onOpenAdd }: Props) {
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 14, fontWeight: 500, color: C.textPri, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {tx.payee || 'Unnamed'}
+            {tx.payee || cat?.name || 'Transaction'}
           </div>
           <div style={{ fontSize: 12, color: C.textMuted, marginTop: 2, display: 'flex', gap: 6 }}>
             <span>{tx.date}</span>
-            {cat && <span style={{ color: C.textDim }}>· {cat.name}</span>}
+            {cat && tx.payee && <span style={{ color: C.textDim }}>· {cat.name}</span>}
           </div>
         </div>
         <Pill
@@ -227,22 +227,22 @@ export function TodayScreen({ onOpenAdd }: Props) {
               const hasData    = net !== undefined
               const dots       = billDotsMap[day] ?? []
 
-              // Day cell background: today accent > selected > net color > transparent
-              let cellBg = 'transparent'
-              let cellBorder = C.border
-              if (isToday)    { cellBg = C.amberBg; cellBorder = C.amber }
-              else if (isSelected) { cellBg = `${C.amber}22`; cellBorder = C.amber }
-              else if (hasData) {
-                cellBg = net >= 0 ? `${GREEN}18` : `${RED}18`
-                cellBorder = net >= 0 ? `${GREEN}50` : `${RED}50`
-              }
+              // Cell border: accent for today or selected, faint otherwise
+              const cellBorder = (isToday || isSelected) ? C.amber : C.border
+              const cellBg     = isToday ? C.amberBg : 'transparent'
 
-              // Day number color
-              const numColor = isToday || isSelected
-                ? C.amber
-                : hasData
-                  ? (net >= 0 ? GREEN : RED)
-                  : (isViewingCurrentMonth && day > today.getDate() ? C.textDim : C.textMuted)
+              // Day NUMBER pill: colored background only when there are transactions
+              // Today overrides to accent. Selection adds accent border to cell only (no fill).
+              let numBg: string | undefined
+              let numColor = isViewingCurrentMonth && day > today.getDate() ? C.textDim : C.textMuted
+              if (isToday) {
+                numBg = C.amber; numColor = theme.bg
+              } else if (hasData) {
+                numBg = net >= 0 ? `${GREEN}30` : `${RED}30`
+                numColor = net >= 0 ? GREEN : RED
+              } else if (isSelected) {
+                numColor = C.amber
+              }
 
               return (
                 <div
@@ -254,10 +254,17 @@ export function TodayScreen({ onOpenAdd }: Props) {
                     background: cellBg,
                     padding: '7px 8px',
                     display: 'flex', flexDirection: 'column', gap: 3,
-                    cursor: 'pointer', transition: 'background 0.1s, border-color 0.1s',
+                    cursor: 'pointer', transition: 'border-color 0.1s',
                   }}
                 >
-                  <span style={{ fontSize: 13, fontWeight: isToday || isSelected ? 700 : 400, color: numColor, lineHeight: 1 }}>
+                  <span style={{
+                    fontSize: 12, fontWeight: (isToday || isSelected || hasData) ? 700 : 400,
+                    color: numColor, lineHeight: 1,
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                    minWidth: 22, height: 22, borderRadius: 6,
+                    background: numBg,
+                    padding: numBg ? '0 4px' : undefined,
+                  }}>
                     {day}
                   </span>
                   {dots.length > 0 && (

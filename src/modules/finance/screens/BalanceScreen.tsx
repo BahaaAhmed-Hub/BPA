@@ -343,11 +343,11 @@ function formatBalance(bal: number, currency = 'EGP'): string {
                       fontSize: 14, fontWeight: 500, color: C.textPri,
                       overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                     }}>
-                      {tx.payee}
+                      {tx.payee || cat?.name || 'Transaction'}
                     </div>
                     <div style={{ fontSize: 12, color: C.textDim, marginTop: 1, display: 'flex', gap: 6 }}>
                       <span style={{ color: C.green }}>{dateStr}</span>
-                      {cat && <span>· {cat.name}</span>}
+                      {cat && tx.payee && <span>· {cat.name}</span>}
                     </div>
                   </div>
                   <Pill
