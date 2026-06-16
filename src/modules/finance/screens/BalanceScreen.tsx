@@ -190,7 +190,7 @@ export function BalanceScreen() {
               display: 'flex', alignItems: 'center', gap: 6,
               padding: '8px 16px', borderRadius: 9,
               background: C.amber, border: 'none',
-              color: '#0B0A08', fontSize: 13, fontWeight: 700,
+              color: C.bg, fontSize: 13, fontWeight: 700,
               cursor: 'pointer', fontFamily: 'inherit',
             }}
           >
@@ -305,7 +305,7 @@ export function BalanceScreen() {
                 borderRadius: 9,
                 background: C.amber,
                 border: 'none',
-                color: '#0B0A08',
+                color: C.bg,
                 fontSize: 13,
                 fontWeight: 700,
                 cursor: 'pointer',

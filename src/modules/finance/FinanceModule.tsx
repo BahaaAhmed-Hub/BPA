@@ -71,15 +71,6 @@ function IconFinancials({ color }: { color: string }) {
   )
 }
 
-function IconSync({ color }: { color: string }) {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="8 17 12 21 16 17"/>
-      <line x1="12" y1="12" x2="12" y2="21"/>
-      <path d="M20.88 18.09A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.29"/>
-    </svg>
-  )
-}
 
 function IconPlus({ color }: { color: string }) {
   return (
@@ -234,12 +225,7 @@ export function FinanceModule() {
             flexShrink: 0, marginBottom: 14,
           }}
         >
-          <IconPlus color="#0B0A08" />
-        </button>
-
-        {/* Sync */}
-        <button style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '8px 0', flexShrink: 0 }}>
-          <IconSync color={C.textDim} />
+          <IconPlus color={C.bg} />
         </button>
       </div>
 
