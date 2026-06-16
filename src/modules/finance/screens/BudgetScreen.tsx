@@ -8,7 +8,6 @@ import type { Category, Transaction, Budget, Currency } from '../types'
 
 const RED   = '#DA4A3E'
 const GREEN = '#2FA869'
-
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
 
 function addMonth(ym: string, delta: number): string {
@@ -32,21 +31,21 @@ export function BudgetScreen() {
     upsertTransaction,
   } = useFinanceStore()
 
-  const todayDate = new Date()
+  const todayDate  = new Date()
   const currentYear = todayDate.getFullYear()
 
-  const [currentMonth, setCurrentMonth] = useState(() => {
-    return `${todayDate.getFullYear()}-${String(todayDate.getMonth() + 1).padStart(2, '0')}`
-  })
-  const [selectedCatId, setSelectedCatId] = useState<string | null>(null)
+  const [currentMonth, setCurrentMonth] = useState(() =>
+    `${todayDate.getFullYear()}-${String(todayDate.getMonth() + 1).padStart(2, '0')}`,
+  )
+  const [selectedCatId,    setSelectedCatId]    = useState<string | null>(null)
   const [selectedSubCatId, setSelectedSubCatId] = useState<string | null>(null)
-  const [rightMode, setRightMode] = useState<'detail' | 'budget'>('detail')
-  const [budgetEdit, setBudgetEdit] = useState<{
+  const [rightMode,        setRightMode]         = useState<'txns' | 'budget'>('txns')
+  const [budgetEdit,       setBudgetEdit]        = useState<{
     monthlyAmount: string; currency: Currency; startDate: string; endDate: string; rollover: boolean
   }>({ monthlyAmount: '', currency: 'EGP', startDate: '', endDate: '', rollover: false })
-  const [hoveredCatId, setHoveredCatId] = useState<string | null>(null)
+  const [hoveredCatId,  setHoveredCatId]  = useState<string | null>(null)
   const [catModal, setCatModal] = useState<{ open: boolean; category: Category | null }>({ open: false, category: null })
-  const [txModal, setTxModal] = useState<{ open: boolean; tx: Transaction | null }>({ open: false, tx: null })
+  const [txModal,  setTxModal]  = useState<{ open: boolean; tx: Transaction | null }>({ open: false, tx: null })
 
   // DnD
   const [draggedCatId, setDraggedCatId] = useState<string | null>(null)
@@ -54,25 +53,21 @@ export function BudgetScreen() {
 
   // ─── Data helpers ──────────────────────────────────────────────────────
 
-  function subCatsOf(id: string): Category[] {
-    return categories.filter(c => c.parentId === id)
-  }
+  function subCatsOf(id: string) { return categories.filter(c => c.parentId === id) }
 
-  function txsInMonth(catId: string, ym: string): Transaction[] {
+  function txsInMonth(catId: string, ym: string) {
     return transactions.filter(tx => tx.categoryId === catId && tx.date.startsWith(ym))
   }
 
   function actualInMonth(catId: string, ym: string): number {
-    const subs = subCatsOf(catId)
-    const ids = [catId, ...subs.map(s => s.id)]
+    const ids = [catId, ...subCatsOf(catId).map(s => s.id)]
     return transactions
       .filter(tx => ids.includes(tx.categoryId ?? '') && tx.date.startsWith(ym))
       .reduce((s, tx) => s + Math.abs(tx.amount), 0)
   }
 
   function budgetAmt(catId: string): number {
-    const b = budgets.find(b => b.categoryId === catId)
-    return b ? b.monthlyAmount : 0
+    return budgets.find(b => b.categoryId === catId)?.monthlyAmount ?? 0
   }
 
   function budgetObj(catId: string): Budget | undefined {
@@ -87,12 +82,10 @@ export function BudgetScreen() {
   const totalIncActual = topIncCats.reduce((s, c) => s + actualInMonth(c.id, currentMonth), 0)
   const totalIncBudget = topIncCats.reduce((s, c) => s + budgetAmt(c.id), 0)
 
-  // ─── Monthly bars (always visible in left panel) ───────────────────────
+  // ─── Monthly bars data ─────────────────────────────────────────────────
   //
-  // When no category selected: each bar = net income minus expense for that month
-  //   green = net positive, red = net negative
-  // When a category/subcat is selected: each bar = that category's monthly actual
-  //   colored by category type
+  // Home view (no selection): each bar = net income − expense.  Green if positive, red if negative.
+  // Category selected: each bar = that category's monthly actual.  Coloured by txType.
 
   const focusCatId = selectedSubCatId ?? selectedCatId
   const focusCat   = focusCatId ? categories.find(c => c.id === focusCatId) : null
@@ -100,15 +93,10 @@ export function BudgetScreen() {
   const barsData: { value: number; color: string }[] = Array.from({ length: 12 }, (_, i) => {
     const ym = `${currentYear}-${String(i + 1).padStart(2, '0')}`
     if (focusCatId) {
-      const val = actualInMonth(focusCatId, ym)
-      return { value: val, color: focusCat?.txType === 'income' ? GREEN : RED }
+      return { value: actualInMonth(focusCatId, ym), color: focusCat?.txType === 'income' ? GREEN : RED }
     }
-    const inc = transactions
-      .filter(tx => tx.type === 'income' && tx.date.startsWith(ym))
-      .reduce((s, tx) => s + tx.amount, 0)
-    const exp = transactions
-      .filter(tx => tx.type === 'expense' && tx.date.startsWith(ym))
-      .reduce((s, tx) => s + Math.abs(tx.amount), 0)
+    const inc = transactions.filter(tx => tx.type === 'income'  && tx.date.startsWith(ym)).reduce((s, tx) => s + tx.amount, 0)
+    const exp = transactions.filter(tx => tx.type === 'expense' && tx.date.startsWith(ym)).reduce((s, tx) => s + Math.abs(tx.amount), 0)
     const net = inc - exp
     return { value: Math.abs(net), color: net >= 0 ? GREEN : RED }
   })
@@ -126,9 +114,8 @@ export function BudgetScreen() {
   const activeActual = activeCatId ? actualInMonth(activeCatId, currentMonth) : 0
   const activeBudget = activeCatId ? budgetAmt(activeCatId) : 0
   const panelTxns    = activeCatId ? txsInMonth(activeCatId, currentMonth) : []
-  const panelSubs    = selectedCatId && !selectedSubCatId ? subCatsOf(selectedCatId) : []
 
-  // ─── Budget save ────────────────────────────────────────────────────────
+  // ─── Budget editor ────────────────────────────────────────────────────
 
   function openBudget(catId: string) {
     const ex = budgetObj(catId)
@@ -154,7 +141,7 @@ export function BudgetScreen() {
       endDate:       budgetEdit.endDate || undefined,
       rollover:      budgetEdit.rollover,
     })
-    setRightMode('detail')
+    setRightMode('txns')
   }
 
   // ─── DnD handlers ────────────────────────────────────────────────────
@@ -163,11 +150,7 @@ export function BudgetScreen() {
     e.dataTransfer.effectAllowed = 'move'
     setDraggedCatId(catId)
   }
-
-  function onDragEnd() {
-    setDraggedCatId(null)
-    setDropTargetId(null)
-  }
+  function onDragEnd() { setDraggedCatId(null); setDropTargetId(null) }
 
   function onDragOver(e: React.DragEvent, targetId: string) {
     e.preventDefault()
@@ -180,7 +163,6 @@ export function BudgetScreen() {
     if (!draggedCatId) return
     const dragged = categories.find(c => c.id === draggedCatId)
     if (!dragged) return
-
     if (targetId === null) {
       if (dragged.parentId) upsertCategory({ ...dragged, parentId: undefined })
     } else {
@@ -189,24 +171,20 @@ export function BudgetScreen() {
       if (!target || target.parentId === draggedCatId) return
       upsertCategory({ ...dragged, parentId: targetId })
     }
-
     setDraggedCatId(null)
     setDropTargetId(null)
   }
 
-  // ─── Shared circle renderer ────────────────────────────────────────────
+  // ─── Shared circle renderer (called as function, not component) ────────
 
-  function renderCircle(
-    cat: Category,
-    opts: { size?: number; isSelected?: boolean; isIncome?: boolean },
-  ) {
-    const { size = 64, isSelected = false, isIncome = false } = opts
-    const actual  = actualInMonth(cat.id, currentMonth)
-    const budget  = budgetAmt(cat.id)
-    const over    = actual > budget && budget > 0
-    const isDrop  = dropTargetId === cat.id
-    const isDrag  = draggedCatId === cat.id
-    const ringCol = isDrop ? theme.accent : isSelected ? theme.accent : over ? RED : isIncome ? GREEN : theme.border
+  function renderCircle(cat: Category, size: number, isIncome: boolean, isParent: boolean) {
+    const actual     = actualInMonth(cat.id, currentMonth)
+    const budget     = budgetAmt(cat.id)
+    const over       = actual > budget && budget > 0
+    const isDrop     = dropTargetId === cat.id
+    const isDrag     = draggedCatId === cat.id
+    const isSelected = isParent ? selectedCatId === cat.id : selectedSubCatId === cat.id
+    const ringColor  = isDrop ? theme.accent : isSelected ? theme.accent : over ? RED : isIncome ? GREEN : theme.border
 
     return (
       <div
@@ -227,20 +205,21 @@ export function BudgetScreen() {
           onDragStart={e => onDragStart(e, cat.id)}
           onDragEnd={onDragEnd}
           onClick={() => {
-            if (cat.parentId) {
-              setSelectedSubCatId(cat.id)
-            } else {
+            if (isParent) {
               setSelectedCatId(cat.id)
               setSelectedSubCatId(null)
+            } else {
+              setSelectedSubCatId(cat.id)
+              setSelectedCatId(cat.parentId ?? null)
             }
-            setRightMode('detail')
+            setRightMode('txns')
           }}
           style={{
             width: size, height: size, borderRadius: '50%',
-            border: `2.5px solid ${ringCol}`,
+            border: `2.5px solid ${ringColor}`,
             background: isDrop ? `${theme.accent}18` : theme.surface,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: Math.round(size * 0.4), cursor: 'grab',
+            fontSize: Math.round(size * 0.38), cursor: 'grab',
             transition: 'border-color 0.15s',
             boxShadow: isDrop ? `0 0 0 3px ${theme.accent}33` : 'none',
           }}
@@ -251,7 +230,7 @@ export function BudgetScreen() {
           <button
             onClick={e => { e.stopPropagation(); setCatModal({ open: true, category: cat }) }}
             style={{
-              position: 'absolute', top: -4, right: size > 56 ? 2 : 4,
+              position: 'absolute', top: -4, right: 4,
               background: theme.surface, border: `1px solid ${theme.border}`,
               borderRadius: '50%', width: 18, height: 18,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -260,15 +239,89 @@ export function BudgetScreen() {
           >✏</button>
         )}
         <div style={{ fontSize: 11, color: theme.text, marginTop: 7, lineHeight: 1.2 }}>{cat.name}</div>
-        <div style={{ fontSize: 11, color: over ? RED : isIncome ? GREEN : theme.textDim, marginTop: 2 }}>
-          {fmt(actual)}
-        </div>
+        <div style={{ fontSize: 11, color: over ? RED : isIncome ? GREEN : theme.textDim, marginTop: 2 }}>{fmt(actual)}</div>
         <div style={{ fontSize: 10, color: theme.textMuted }}>{fmt(budget)}</div>
       </div>
     )
   }
 
+  // ─── Inline subcat box (below parent circles) ─────────────────────────
+
+  function renderSubcatBox(parentCat: Category) {
+    const subs     = subCatsOf(parentCat.id)
+    const isIncome = parentCat.txType === 'income'
+    const parentActual = actualInMonth(parentCat.id, currentMonth)
+    const parentBudget = budgetAmt(parentCat.id)
+
+    return (
+      <div style={{
+        marginTop: 14,
+        border: `1px solid ${theme.border}`,
+        borderRadius: 12,
+        overflow: 'hidden',
+      }}>
+        {/* Box header = parent category */}
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '10px 16px',
+          background: theme.surface,
+          borderBottom: `1px solid ${theme.border}`,
+          cursor: 'pointer',
+        }}
+          onClick={() => { setSelectedCatId(parentCat.id); setSelectedSubCatId(null); setRightMode('txns') }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{
+              width: 34, height: 34, borderRadius: '50%',
+              background: theme.bg, border: `2px solid ${isIncome ? GREEN : theme.border}`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0,
+            }}>
+              {parentCat.icon}
+            </div>
+            <span style={{ fontSize: 14, fontWeight: 600, color: theme.text }}>{parentCat.name}</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 5 }}>
+            <span style={{ fontSize: 14, fontWeight: 700, color: isIncome ? GREEN : (parentActual > parentBudget && parentBudget > 0 ? RED : theme.textDim) }}>
+              {fmt(parentActual)}
+            </span>
+            {parentBudget > 0 && (
+              <span style={{ fontSize: 12, color: theme.textMuted }}>/ {fmt(parentBudget)}</span>
+            )}
+          </div>
+        </div>
+
+        {/* Subcategory circle grid */}
+        <div style={{
+          padding: '14px 12px',
+          background: theme.bg,
+          display: 'flex', flexWrap: 'wrap', gap: '12px 6px',
+        }}>
+          {subs.map(sub => renderCircle(sub, 52, isIncome, false))}
+          {/* + Add subcategory */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: 6 }}>
+            <button
+              onClick={() => setCatModal({ open: true, category: {
+                id: crypto.randomUUID(), name: '', icon: '📁',
+                color: theme.accent, parentId: parentCat.id,
+                txType: parentCat.txType, isSystem: false,
+              }})}
+              style={{
+                width: 34, height: 34, borderRadius: '50%',
+                border: `2px dashed ${theme.border}`, background: 'none', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: theme.textDim, fontSize: 16, lineHeight: 1,
+              }}
+            >+</button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   // ─── Render ────────────────────────────────────────────────────────────
+
+  const selExpCat = selectedCatId ? topExpCats.find(c => c.id === selectedCatId) ?? null : null
+  const selIncCat = selectedCatId ? topIncCats.find(c => c.id === selectedCatId) ?? null : null
 
   return (
     <div style={{ display: 'flex', flex: 1, height: '100%', overflow: 'hidden', background: theme.bg }}>
@@ -305,15 +358,17 @@ export function BudgetScreen() {
           <div style={{ width: 32 }} />
         </div>
 
-        {/* ── Monthly bars — always visible ── */}
-        <div style={{ padding: '12px 24px 0', flexShrink: 0, borderBottom: `1px solid ${theme.border}` }}>
-          <div style={{ fontSize: 11, color: theme.textMuted, marginBottom: 6 }}>
-            {focusCat ? `${focusCat.name} · ${currentYear}` : `Net income vs expense · ${currentYear}`}
+        {/* Monthly bars — always visible */}
+        <div style={{ padding: '14px 24px 0', flexShrink: 0, borderBottom: `1px solid ${theme.border}` }}>
+          <div style={{ fontSize: 11, color: theme.textMuted, marginBottom: 8 }}>
+            {focusCat
+              ? `${focusCat.name} · ${currentYear}`
+              : `Net income vs expenses · ${currentYear}`}
           </div>
-          <div style={{ display: 'flex', gap: 3, height: 76, alignItems: 'flex-end' }}>
+          <div style={{ display: 'flex', gap: 4, height: 116, alignItems: 'flex-end' }}>
             {barsData.map(({ value, color }, i) => {
               const isSelected = i === currentMonthIdx
-              const barH = value > 0 ? Math.max(Math.round(value / maxBarVal * 58), 4) : 0
+              const barH = value > 0 ? Math.max(Math.round(value / maxBarVal * 92), 8) : 0
               return (
                 <div
                   key={i}
@@ -321,20 +376,20 @@ export function BudgetScreen() {
                   style={{
                     flex: 1, display: 'flex', flexDirection: 'column',
                     alignItems: 'center', justifyContent: 'flex-end',
-                    cursor: 'pointer', gap: 4,
+                    cursor: 'pointer', gap: 5,
                   }}
                 >
                   <div style={{
-                    width: '100%', borderRadius: '2px 2px 0 0',
+                    width: '100%', borderRadius: '3px 3px 0 0',
                     background: isSelected ? color : `${color}44`,
-                    height: barH || 3,
-                    opacity: barH === 0 ? 0.15 : 1,
-                    transition: 'background 0.15s',
+                    height: barH || 4,
+                    opacity: barH === 0 ? 0.1 : 1,
+                    transition: 'height 0.2s, background 0.15s',
                     outline: isSelected ? `2px solid ${color}` : 'none',
                     outlineOffset: 1,
                   }} />
                   <div style={{
-                    fontSize: 9, paddingBottom: 4,
+                    fontSize: 9, paddingBottom: 5,
                     color: isSelected ? color : theme.textMuted,
                     fontWeight: isSelected ? 700 : 400,
                   }}>
@@ -346,17 +401,18 @@ export function BudgetScreen() {
           </div>
         </div>
 
-        {/* Category circles — drag onto another to reparent, drag to empty area to un-parent */}
+        {/* Scrollable category content */}
         <div
           style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}
-          onDragOver={e => { e.preventDefault(); if (dropTargetId !== '__root__') setDropTargetId('__root__') }}
+          onDragOver={e => { e.preventDefault(); setDropTargetId('__root__') }}
           onDragLeave={e => {
             const t = e.currentTarget as HTMLElement
             if (!t.contains(e.relatedTarget as Node)) setDropTargetId(null)
           }}
           onDrop={e => onDrop(e, null)}
         >
-          {/* Expenses */}
+
+          {/* EXPENSES */}
           <div style={{ marginBottom: 28 }}>
             <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 16 }}>
               <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.8px', color: theme.textDim }}>
@@ -368,7 +424,7 @@ export function BudgetScreen() {
               </div>
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '14px 8px' }}>
-              {topExpCats.map(cat => renderCircle(cat, { isSelected: selectedCatId === cat.id }))}
+              {topExpCats.map(cat => renderCircle(cat, 64, false, true))}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: 12 }}>
                 <button
                   onClick={() => setCatModal({ open: true, category: null })}
@@ -381,9 +437,11 @@ export function BudgetScreen() {
                 >+</button>
               </div>
             </div>
+            {/* Inline subcat box — only for selected expense category that has subcats */}
+            {selExpCat && subCatsOf(selExpCat.id).length > 0 && renderSubcatBox(selExpCat)}
           </div>
 
-          {/* Income */}
+          {/* INCOME */}
           <div style={{ marginBottom: 28 }}>
             <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 16 }}>
               <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.8px', color: theme.textDim }}>
@@ -395,7 +453,7 @@ export function BudgetScreen() {
               </div>
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '14px 8px' }}>
-              {topIncCats.map(cat => renderCircle(cat, { isSelected: selectedCatId === cat.id, isIncome: true }))}
+              {topIncCats.map(cat => renderCircle(cat, 64, true, true))}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: 12 }}>
                 <button
                   onClick={() => setCatModal({ open: true, category: null })}
@@ -408,30 +466,30 @@ export function BudgetScreen() {
                 >+</button>
               </div>
             </div>
+            {/* Inline subcat box — only for selected income category that has subcats */}
+            {selIncCat && subCatsOf(selIncCat.id).length > 0 && renderSubcatBox(selIncCat)}
           </div>
 
         </div>
       </div>
 
-      {/* ── RIGHT PANEL ── */}
-      {selectedCatId && activeCat && (
+      {/* ── RIGHT PANEL: transactions + budget editor ── */}
+      {activeCatId && activeCat && (
         <div style={{
           width: 340, flexShrink: 0,
           borderLeft: `1px solid ${theme.border}`,
           display: 'flex', flexDirection: 'column',
           background: theme.surface, overflow: 'hidden',
         }}>
-
-          {rightMode === 'detail' ? (
+          {rightMode === 'txns' ? (
             <>
-              {/* Breadcrumb header */}
+              {/* Header */}
               <div style={{
-                height: 52, flexShrink: 0,
-                borderBottom: `1px solid ${theme.border}`,
+                height: 52, flexShrink: 0, borderBottom: `1px solid ${theme.border}`,
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 padding: '0 14px',
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
                   <button
                     onClick={() => {
                       if (selectedSubCatId) setSelectedSubCatId(null)
@@ -447,7 +505,7 @@ export function BudgetScreen() {
                       {selectedCat.icon} {selectedCat.name} ›{' '}
                     </span>
                   )}
-                  <span style={{ fontSize: 15, fontWeight: 600, color: theme.text, whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <span style={{ fontSize: 15, fontWeight: 600, color: theme.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>
                     {activeCat.icon} {activeCat.name}
                   </span>
                 </div>
@@ -459,34 +517,9 @@ export function BudgetScreen() {
                 </span>
               </div>
 
-              {/* Body: subcategory circles OR transaction list */}
+              {/* Transaction list */}
               <div style={{ flex: 1, overflowY: 'auto' }}>
-                {panelSubs.length > 0 ? (
-                  <div style={{ padding: '16px 12px' }}>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '14px 6px' }}>
-                      {panelSubs.map(sub => renderCircle(sub, {
-                        size: 56,
-                        isSelected: selectedSubCatId === sub.id,
-                      }))}
-                      {/* + Add subcategory */}
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: 8 }}>
-                        <button
-                          onClick={() => setCatModal({ open: true, category: {
-                            id: crypto.randomUUID(), name: '', icon: '📁',
-                            color: theme.accent, parentId: selectedCatId!,
-                            txType: activeCat.txType, isSystem: false,
-                          }})}
-                          style={{
-                            width: 36, height: 36, borderRadius: '50%',
-                            border: `2px dashed ${theme.border}`, background: 'none', cursor: 'pointer',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            color: theme.textDim, fontSize: 18, lineHeight: 1,
-                          }}
-                        >+</button>
-                      </div>
-                    </div>
-                  </div>
-                ) : panelTxns.length === 0 ? (
+                {panelTxns.length === 0 ? (
                   <div style={{ padding: 24, textAlign: 'center' as const, color: theme.textMuted, fontSize: 13 }}>
                     No transactions in {MONTHS[parseInt(currentMonth.slice(5, 7)) - 1]}
                   </div>
@@ -507,8 +540,7 @@ export function BudgetScreen() {
                         width: 38, height: 38, borderRadius: '50%', flexShrink: 0,
                         background: acct ? `${acct.color}22` : theme.bg,
                         border: `1px solid ${acct ? acct.color + '44' : theme.border}`,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: 15,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15,
                       }}>
                         {acct?.emoji ?? '🏦'}
                       </div>
@@ -543,7 +575,7 @@ export function BudgetScreen() {
                   }}
                 >+ Add</button>
                 <button
-                  onClick={() => openBudget(activeCatId!)}
+                  onClick={() => openBudget(activeCatId)}
                   style={{
                     flex: 1, padding: '8px 0',
                     background: 'transparent', border: `1px solid ${theme.border}`,
@@ -554,7 +586,7 @@ export function BudgetScreen() {
               </div>
             </>
           ) : (
-            /* ── Budget editor ── */
+            /* Budget editor */
             <>
               <div style={{
                 height: 56, flexShrink: 0, borderBottom: `1px solid ${theme.border}`,
@@ -562,7 +594,7 @@ export function BudgetScreen() {
                 padding: '0 16px',
               }}>
                 <button
-                  onClick={() => setRightMode('detail')}
+                  onClick={() => setRightMode('txns')}
                   style={{ background: 'none', border: 'none', cursor: 'pointer', color: theme.textDim, fontSize: 14, textAlign: 'left' as const, fontFamily: 'inherit', padding: 0 }}
                 >Cancel</button>
                 <span style={{ fontSize: 15, fontWeight: 700, color: theme.text }}>Budget</span>
@@ -660,8 +692,8 @@ export function BudgetScreen() {
                 {activeCatId && budgetObj(activeCatId) && (
                   <button
                     onClick={() => {
-                      const b = budgetObj(activeCatId!)
-                      if (b) { removeBudget(b.id); setRightMode('detail') }
+                      const b = budgetObj(activeCatId)
+                      if (b) { removeBudget(b.id); setRightMode('txns') }
                     }}
                     style={{
                       marginTop: 20, background: 'none', border: 'none', cursor: 'pointer',
@@ -676,7 +708,7 @@ export function BudgetScreen() {
         </div>
       )}
 
-      {/* ── Modals ── */}
+      {/* Modals */}
       {catModal.open && (
         <CategoryModal
           category={catModal.category}
