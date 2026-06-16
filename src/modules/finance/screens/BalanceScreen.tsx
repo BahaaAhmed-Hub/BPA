@@ -4,6 +4,7 @@ import { useUIStore } from '@/store/uiStore'
 import { getTheme } from '@/lib/themes'
 import { AccountModal } from '../modals/AccountModal'
 import { TransactionModal } from '../modals/TransactionModal'
+import { IconPicker } from '../components/IconPicker'
 import type { Account, Transaction } from '../types'
 
 // ─── Pill ─────────────────────────────────────────────────────────────────────
@@ -100,15 +101,27 @@ export function BalanceScreen() {
           position: 'relative',
         }}
       >
-        <div style={{
-          width: 40, height: 40, borderRadius: '50%',
-          background: `${account.color}22`,
-          border: `1px solid ${account.color}44`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 17, flexShrink: 0,
-        }}>
-          {account.emoji}
-        </div>
+        <IconPicker
+          value={account.emoji}
+          onChange={newEmoji => upsertAccount({ ...account, emoji: newEmoji })}
+          trigger={(onClick) => (
+            <div
+              onClick={onClick}
+              title="Click to change icon"
+              style={{
+                width: 40, height: 40, borderRadius: '50%',
+                background: `${account.color}22`,
+                border: `1px solid ${account.color}44`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                flexShrink: 0, cursor: 'pointer', overflow: 'hidden',
+              }}
+            >
+              {account.emoji.startsWith('data:') || account.emoji.startsWith('http')
+                ? <img src={account.emoji} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                : <span style={{ fontSize: 17 }}>{account.emoji}</span>}
+            </div>
+          )}
+        />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 14, fontWeight: 500, color: C.textPri }}>{account.name}</div>
           {account.last4 && (

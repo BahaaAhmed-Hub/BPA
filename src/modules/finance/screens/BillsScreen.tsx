@@ -3,6 +3,7 @@ import { useFinanceStore } from '../financeStore'
 import { useUIStore } from '@/store/uiStore'
 import { getTheme } from '@/lib/themes'
 import { BillModal } from '../modals/BillModal'
+import { IconPicker } from '../components/IconPicker'
 import type { Bill } from '../types'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -50,19 +51,39 @@ function Pill({ isIncome, amount, currency }: { isIncome: boolean; amount: numbe
 
 // ─── Icon Circle ──────────────────────────────────────────────────────────────
 
-function IconCircle({ icon, isIncome, surface, textPri }: { icon: string; isIncome: boolean; surface: string; textPri: string }) {
-  return (
-    <div style={{
-      width: 40, height: 40, borderRadius: '50%',
-      border: `1px solid #2A241B`,
-      background: surface,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      fontSize: 18, flexShrink: 0,
-      color: isIncome ? GREEN : textPri,
-    }}>
-      {icon}
-    </div>
-  )
+function IconCircle({ icon, isIncome, surface, textPri, onIconChange }: {
+  icon: string; isIncome: boolean; surface: string; textPri: string
+  onIconChange?: (icon: string) => void
+}) {
+  const circleStyle: React.CSSProperties = {
+    width: 40, height: 40, borderRadius: '50%',
+    border: '1px solid #2A241B',
+    background: surface,
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    fontSize: 18, flexShrink: 0,
+    color: isIncome ? GREEN : textPri,
+    overflow: 'hidden',
+  }
+  if (onIconChange) {
+    return (
+      <IconPicker
+        value={icon}
+        onChange={onIconChange}
+        trigger={(onClick) => (
+          <div
+            onClick={onClick}
+            title="Click to change icon"
+            style={{ ...circleStyle, cursor: 'pointer' }}
+          >
+            {icon.startsWith('data:') || icon.startsWith('http')
+              ? <img src={icon} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              : icon}
+          </div>
+        )}
+      />
+    )
+  }
+  return <div style={circleStyle}>{icon}</div>
 }
 
 // ─── Bills Screen ─────────────────────────────────────────────────────────────
@@ -88,15 +109,13 @@ export function BillsScreen({ onOpenAdd: _onOpenAdd }: Props) {
     green:     '#2FA869',
   }
 
-  const { bills: storeBills, accounts, categories } = useFinanceStore()
-  const [localBills, setLocalBills] = useState<Bill[]>(storeBills)
-
+  const { bills, accounts, categories, upsertBill, removeBill } = useFinanceStore()
   const [billModal, setBillModal] = useState<{ open: boolean; bill: Bill | null }>({ open: false, bill: null })
 
-  const today = new Date('2026-06-15')
-  const in30  = new Date('2026-07-15')
+  const today = new Date()
+  const in30  = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
 
-  const activeBills = localBills.filter(b => b.isActive)
+  const activeBills = bills.filter(b => b.isActive)
 
   // Upcoming: expenses due within next 30 days
   const upcomingExpenses = activeBills
@@ -108,16 +127,12 @@ export function BillsScreen({ onOpenAdd: _onOpenAdd }: Props) {
     .sort((a, b) => new Date(a.nextDue).getTime() - new Date(b.nextDue).getTime())
 
   function handleSave(bill: Bill) {
-    setLocalBills(prev =>
-      prev.some(b => b.id === bill.id)
-        ? prev.map(b => b.id === bill.id ? bill : b)
-        : [...prev, bill]
-    )
+    upsertBill(bill)
     setBillModal({ open: false, bill: null })
   }
 
   function handleDelete(id: string) {
-    setLocalBills(prev => prev.filter(b => b.id !== id))
+    removeBill(id)
     setBillModal({ open: false, bill: null })
   }
 
@@ -183,7 +198,10 @@ export function BillsScreen({ onOpenAdd: _onOpenAdd }: Props) {
               </span>
 
               {/* Icon */}
-              <IconCircle icon={bill.icon} isIncome={bill.isIncome} surface={C.surface} textPri={C.textPri} />
+              <IconCircle
+                icon={bill.icon} isIncome={bill.isIncome} surface={C.surface} textPri={C.textPri}
+                onIconChange={newIcon => upsertBill({ ...bill, icon: newIcon })}
+              />
 
               {/* Name */}
               <span style={{ fontSize: 14, color: C.textPri, flex: 1 }}>{bill.name}</span>
@@ -219,7 +237,10 @@ export function BillsScreen({ onOpenAdd: _onOpenAdd }: Props) {
               }}
             >
               {/* Icon */}
-              <IconCircle icon={bill.icon} isIncome={bill.isIncome} surface={C.surface} textPri={C.textPri} />
+              <IconCircle
+                icon={bill.icon} isIncome={bill.isIncome} surface={C.surface} textPri={C.textPri}
+                onIconChange={newIcon => upsertBill({ ...bill, icon: newIcon })}
+              />
 
               {/* Name + meta */}
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -231,7 +252,7 @@ export function BillsScreen({ onOpenAdd: _onOpenAdd }: Props) {
 
               {/* Amount */}
               <span style={{ fontSize: 13.5, color: C.textPri, fontWeight: 600, flexShrink: 0 }}>
-                EGP {bill.amount.toLocaleString('en-US')}
+                {bill.currency} {bill.amount.toLocaleString('en-US')}
               </span>
             </div>
           ))}

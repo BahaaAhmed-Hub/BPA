@@ -42,6 +42,10 @@ interface FinanceState {
   upsertTransaction: (tx: Transaction) => Promise<void>
   removeTransaction: (id: string) => Promise<void>
 
+  // Bills CRUD
+  upsertBill: (b: Bill) => void
+  removeBill: (id: string) => void
+
   // Plans
   setPlan: (categoryId: string, year: number, month: number, amount: number) => Promise<void>
 
@@ -244,6 +248,16 @@ export const useFinanceStore = create<FinanceState>()(
         set(s => ({ transactions: s.transactions.filter(x => x.id !== id) }))
         dbDeleteTransaction(id).catch(console.warn)
       },
+
+      // ─── Bills CRUD ─────────────────────────────────────────────────────────
+
+      upsertBill: (b: Bill) => set(s => ({
+        bills: s.bills.some(x => x.id === b.id)
+          ? s.bills.map(x => x.id === b.id ? b : x)
+          : [...s.bills, b],
+      })),
+
+      removeBill: (id: string) => set(s => ({ bills: s.bills.filter(x => x.id !== id) })),
 
       // ─── Plans ──────────────────────────────────────────────────────────────
 

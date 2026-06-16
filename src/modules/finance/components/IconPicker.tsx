@@ -53,11 +53,13 @@ interface Props {
   value: string
   onChange: (v: string) => void
   size?: number
+  /** Custom trigger element. Receives an onClick handler and open state. */
+  trigger?: (onClick: (e: React.MouseEvent) => void, isOpen: boolean) => React.ReactNode
 }
 
 // ─── IconPicker ────────────────────────────────────────────────────────────────
 
-export function IconPicker({ value, onChange, size = 44 }: Props) {
+export function IconPicker({ value, onChange, size = 44, trigger }: Props) {
   const theme = getTheme(useUIStore(s => s.themeId))
   const [open, setOpen] = useState(false)
   const [tab, setTab] = useState('finance')
@@ -102,28 +104,32 @@ export function IconPicker({ value, onChange, size = 44 }: Props) {
 
   return (
     <div ref={wrapRef} style={{ position: 'relative', display: 'inline-block' }}>
-      {/* Preview trigger */}
-      <button
-        type="button"
-        onClick={() => setOpen(o => !o)}
-        title="Click to change icon"
-        style={{
-          width: size, height: size,
-          borderRadius: 12,
-          border: `2px solid ${open ? theme.accent : theme.border}`,
-          background: theme.surface,
-          cursor: 'pointer',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          overflow: 'hidden',
-          padding: 0,
-          transition: 'border-color 0.15s',
-        }}
-      >
-        {isImage
-          ? <img src={value} alt="icon" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-          : <span style={{ fontSize: size * 0.55 }}>{value || '📁'}</span>
-        }
-      </button>
+      {/* Trigger — custom or default */}
+      {trigger ? (
+        trigger(e => { e.stopPropagation(); setOpen(o => !o) }, open)
+      ) : (
+        <button
+          type="button"
+          onClick={() => setOpen(o => !o)}
+          title="Click to change icon"
+          style={{
+            width: size, height: size,
+            borderRadius: 12,
+            border: `2px solid ${open ? theme.accent : theme.border}`,
+            background: theme.surface,
+            cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            overflow: 'hidden',
+            padding: 0,
+            transition: 'border-color 0.15s',
+          }}
+        >
+          {isImage
+            ? <img src={value} alt="icon" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            : <span style={{ fontSize: size * 0.55 }}>{value || '📁'}</span>
+          }
+        </button>
+      )}
 
       {/* Picker popup */}
       {open && (
