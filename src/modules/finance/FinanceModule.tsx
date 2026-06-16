@@ -141,7 +141,15 @@ export function FinanceModule() {
 
   const { accounts, categories, upsertTransaction } = useFinanceStore()
 
-  const [screen, setScreen] = useState<FinanceScreen>('today')
+  const [screen, setScreen] = useState<FinanceScreen>(() => {
+    const saved = localStorage.getItem('finance-active-screen')
+    return (NAV_ITEMS.some(n => n.id === saved) ? saved : 'today') as FinanceScreen
+  })
+
+  function handleSetScreen(s: FinanceScreen) {
+    localStorage.setItem('finance-active-screen', s)
+    setScreen(s)
+  }
   const [addOpen, setAddOpen] = useState(false)
 
   function renderScreen() {
@@ -185,7 +193,7 @@ export function FinanceModule() {
             return (
               <button
                 key={id}
-                onClick={() => setScreen(id)}
+                onClick={() => handleSetScreen(id)}
                 style={{
                   display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
                   padding: '13px 0', cursor: 'pointer', width: '100%',
