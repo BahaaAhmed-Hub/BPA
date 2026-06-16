@@ -1,7 +1,10 @@
+import { useState } from 'react'
 import { useFinanceStore } from '../financeStore'
 import { useUIStore } from '@/store/uiStore'
 import { getTheme } from '@/lib/themes'
+import { TransactionModal } from '../modals/TransactionModal'
 import { MOCK_BILLS, MOCK_GOALS } from '../mockData'
+import type { Transaction } from '../types'
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -79,7 +82,9 @@ export function TodayScreen({ onOpenAdd }: Props) {
     purple:    '#7E78DD',
   }
 
-  const { transactions } = useFinanceStore()
+  const { transactions, accounts, categories, upsertTransaction, removeTransaction } = useFinanceStore()
+
+  const [txModal, setTxModal] = useState<{ open: boolean; tx: Transaction | null }>({ open: false, tx: null })
 
   const today = new Date('2026-06-15')
   const todayNum = today.getDate()
@@ -269,10 +274,13 @@ export function TodayScreen({ onOpenAdd }: Props) {
               <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: C.textMuted, letterSpacing: '0.8px' }}>
                 Goals
               </span>
-              <button style={{
-                background: 'none', border: 'none', color: C.amber,
-                fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
-              }}>
+              <button
+                onClick={() => setTxModal({ open: true, tx: null })}
+                style={{
+                  background: 'none', border: 'none', color: C.amber,
+                  fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                }}
+              >
                 Add
               </button>
             </div>
@@ -378,12 +386,14 @@ export function TodayScreen({ onOpenAdd }: Props) {
                   return (
                     <div
                       key={tx.id}
+                      onClick={() => setTxModal({ open: true, tx })}
                       style={{
                         display: 'flex',
                         alignItems: 'center',
                         gap: 12,
                         padding: '10px 0',
                         borderBottom: `1px solid ${C.divFaint}`,
+                        cursor: 'pointer',
                       }}
                     >
                       <div style={{
@@ -435,6 +445,18 @@ export function TodayScreen({ onOpenAdd }: Props) {
           </div>
         </div>
       </div>
+
+      {/* TransactionModal */}
+      {txModal.open && (
+        <TransactionModal
+          transaction={txModal.tx}
+          accounts={accounts}
+          categories={categories}
+          onSave={tx => { upsertTransaction(tx); setTxModal({ open: false, tx: null }) }}
+          onDelete={id => { removeTransaction(id); setTxModal({ open: false, tx: null }) }}
+          onClose={() => setTxModal({ open: false, tx: null })}
+        />
+      )}
     </div>
   )
 }

@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import { useUIStore } from '@/store/uiStore'
 import { getTheme } from '@/lib/themes'
+import { useFinanceStore } from '../financeStore'
+import { CategoryModal } from '../modals/CategoryModal'
+import type { Category } from '../types'
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
@@ -116,8 +119,11 @@ export function BudgetScreen(_props?: { onOpenAdd?: () => void }) {
     green:     '#2FA869',
   }
 
+  const { categories, upsertCategory, removeCategory } = useFinanceStore()
+
   const [reportMode, setReportMode] = useState<'actual' | 'remaining'>('actual')
   const [currentMonth, setCurrentMonth] = useState('2026-06')
+  const [catModal, setCatModal] = useState<{ open: false } | { open: true; category: Category | null }>({ open: false })
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, height: '100%', overflow: 'hidden', background: C.bg }}>
@@ -129,8 +135,26 @@ export function BudgetScreen(_props?: { onOpenAdd?: () => void }) {
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '0 30px',
       }}>
-        {/* Left: Edit */}
-        <span style={{ fontSize: 13, color: C.textMuted, cursor: 'pointer' }}>Edit</span>
+        {/* Left: Edit + Manage Categories */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <span style={{ fontSize: 13, color: C.textMuted, cursor: 'pointer' }}>Edit</span>
+          <button
+            onClick={() => setCatModal({ open: true, category: null })}
+            title="Manage Categories"
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: 16,
+              color: C.textMuted,
+              padding: '2px 4px',
+              fontFamily: 'inherit',
+              lineHeight: 1,
+            }}
+          >
+            ⚙
+          </button>
+        </div>
 
         {/* Center: month nav */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -246,6 +270,17 @@ export function BudgetScreen(_props?: { onOpenAdd?: () => void }) {
         </div>
 
       </div>
+
+      {/* CategoryModal */}
+      {catModal.open && (
+        <CategoryModal
+          category={catModal.category}
+          categories={categories}
+          onSave={c => { upsertCategory(c); setCatModal({ open: false }) }}
+          onDelete={id => { removeCategory(id); setCatModal({ open: false }) }}
+          onClose={() => setCatModal({ open: false })}
+        />
+      )}
     </div>
   )
 }
