@@ -36,6 +36,8 @@ export interface Transaction {
   categoryId?: string
   date: string
   note?: string
+  attachments?: string[]
+  tags?: string[]
   isCleared: boolean
   isRecurring: boolean
   createdAt: string
@@ -44,8 +46,11 @@ export interface Transaction {
 export interface Budget {
   id: string
   categoryId: string
-  amount: number
-  period: string
+  monthlyAmount: number
+  currency: Currency
+  startDate: string   // 'YYYY-MM'
+  endDate?: string    // 'YYYY-MM', undefined = never
+  rollover: boolean
 }
 
 export interface Bill {

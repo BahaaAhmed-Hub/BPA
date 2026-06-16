@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { supabase } from '@/lib/supabase'
-import type { Account, Category, Transaction, Bill, Goal } from './types'
+import type { Account, Category, Transaction, Bill, Goal, Budget } from './types'
 import {
   loadAccounts, saveAccount, deleteAccount as dbDeleteAccount,
   loadCategories, saveCategory, deleteCategory as dbDeleteCategory,
@@ -22,6 +22,7 @@ interface FinanceState {
   transactions: Transaction[]
   bills: Bill[]
   goals: Goal[]
+  budgets: Budget[]
   plans: PlanRow[]
   overrides: OverrideRow[]
   comments: CommentRow[]
@@ -45,6 +46,10 @@ interface FinanceState {
   // Bills CRUD
   upsertBill: (b: Bill) => void
   removeBill: (id: string) => void
+
+  // Budgets CRUD
+  upsertBudget: (b: Budget) => void
+  removeBudget: (id: string) => void
 
   // Plans
   setPlan: (categoryId: string, year: number, month: number, amount: number) => Promise<void>
@@ -76,6 +81,7 @@ export const useFinanceStore = create<FinanceState>()(
       transactions: [],
       bills: [],
       goals: [],
+      budgets: [],
       plans: [],
       overrides: [],
       comments: [],
@@ -258,6 +264,15 @@ export const useFinanceStore = create<FinanceState>()(
       })),
 
       removeBill: (id: string) => set(s => ({ bills: s.bills.filter(x => x.id !== id) })),
+
+      // ─── Budgets CRUD ───────────────────────────────────────────────────────
+
+      upsertBudget: (b) => set(s => ({
+        budgets: s.budgets.some(x => x.id === b.id)
+          ? s.budgets.map(x => x.id === b.id ? b : x)
+          : [...s.budgets, b],
+      })),
+      removeBudget: (id) => set(s => ({ budgets: s.budgets.filter(x => x.id !== id) })),
 
       // ─── Plans ──────────────────────────────────────────────────────────────
 

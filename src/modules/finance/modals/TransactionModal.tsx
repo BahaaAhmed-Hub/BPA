@@ -3,7 +3,7 @@ import { useUIStore } from '@/store/uiStore'
 import { getTheme } from '@/lib/themes'
 import type { Transaction, Account, Category, Currency, TxType } from '../types'
 
-const RED  = '#DA4A3E'
+const RED   = '#DA4A3E'
 const GREEN = '#2FA869'
 const BLUE  = '#3B82F6'
 
@@ -30,20 +30,29 @@ export function TransactionModal({ transaction, accounts, categories, onSave, on
 
   const todayStr = new Date().toISOString().slice(0, 10)
 
-  const [type,       setType]       = useState<TxType>(transaction?.type       ?? 'expense')
-  const [amountStr,  setAmountStr]  = useState(String(transaction?.amount      ?? ''))
-  const [currency,   setCurrency]   = useState<Currency>(transaction?.currency  ?? 'EGP')
-  const [payee,      setPayee]      = useState(transaction?.payee               ?? '')
-  const [note,       setNote]       = useState(transaction?.note                ?? '')
-  const [accountId,  setAccountId]  = useState(transaction?.accountId           ?? (accounts[0]?.id ?? ''))
-  const [categoryId, setCategoryId] = useState(transaction?.categoryId          ?? '')
-  const [date,       setDate]       = useState(transaction?.date                ?? todayStr)
-  const [isCleared,  setIsCleared]  = useState(transaction?.isCleared           ?? false)
+  const [type,        setType]        = useState<TxType>(transaction?.type       ?? 'expense')
+  const [amountStr,   setAmountStr]   = useState(String(transaction?.amount      ?? ''))
+  const [currency,    setCurrency]    = useState<Currency>(transaction?.currency  ?? 'EGP')
+  const [payee,       setPayee]       = useState(transaction?.payee               ?? '')
+  const [note,        setNote]        = useState(transaction?.note                ?? '')
+  const [accountId,   setAccountId]   = useState(transaction?.accountId           ?? (accounts[0]?.id ?? ''))
+  const [categoryId,  setCategoryId]  = useState(transaction?.categoryId          ?? '')
+  const [date,        setDate]        = useState(transaction?.date                ?? todayStr)
+  const [isCleared,   setIsCleared]   = useState(transaction?.isCleared           ?? false)
+  const [attachments, setAttachments] = useState<string[]>(transaction?.attachments ?? [])
+  const [tags,        setTags]        = useState<string[]>(transaction?.tags        ?? [])
+  const [tagInput,    setTagInput]    = useState('')
+  const [showTagInput, setShowTagInput] = useState(false)
 
   const [showAccountPicker,  setShowAccountPicker]  = useState(false)
   const [showCategoryPicker, setShowCategoryPicker] = useState(false)
   const [editingAmount,      setEditingAmount]      = useState(false)
-  const amountRef = useRef<HTMLInputElement>(null)
+
+  const amountRef  = useRef<HTMLInputElement>(null)
+  const payeeRef   = useRef<HTMLInputElement>(null)
+  const noteRef    = useRef<HTMLTextAreaElement>(null)
+  const fileRef    = useRef<HTMLInputElement>(null)
+  const tagInputRef = useRef<HTMLInputElement>(null)
 
   const selectedAccount  = accounts.find(a => a.id === accountId)
   const selectedCategory = categories.find(c => c.id === categoryId)
@@ -68,10 +77,42 @@ export function TransactionModal({ transaction, accounts, categories, onSave, on
       categoryId:  categoryId || undefined,
       date,
       note:        note.trim() || undefined,
+      attachments: attachments.length > 0 ? attachments : undefined,
+      tags:        tags.length > 0 ? tags : undefined,
       isCleared,
       isRecurring: transaction?.isRecurring ?? false,
       createdAt:   transaction?.createdAt   ?? new Date().toISOString(),
     })
+  }
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? [])
+    files.forEach(file => {
+      const reader = new FileReader()
+      reader.onload = ev => {
+        const result = ev.target?.result as string
+        if (result) setAttachments(prev => [...prev, result])
+      }
+      reader.readAsDataURL(file)
+    })
+    // Reset so same file can be re-added
+    e.target.value = ''
+  }
+
+  function addTag(raw: string) {
+    const t = raw.trim().replace(/,$/, '').trim()
+    if (t && !tags.includes(t)) setTags(prev => [...prev, t])
+    setTagInput('')
+  }
+
+  function handleTagKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault()
+      addTag(tagInput)
+    }
+    if (e.key === 'Backspace' && tagInput === '' && tags.length > 0) {
+      setTags(prev => prev.slice(0, -1))
+    }
   }
 
   const displayAmount = (parseFloat(amountStr) || 0).toLocaleString('en-US', {
@@ -84,14 +125,26 @@ export function TransactionModal({ transaction, accounts, categories, onSave, on
     cursor: 'pointer',
   }
 
-  function ToolBtn({ title, children }: { title: string; children: React.ReactNode }) {
+  // Toolbar button — "active" when its section has content
+  function ToolBtn({
+    title, active, onClick, children,
+  }: {
+    title: string; active?: boolean; onClick?: () => void; children: React.ReactNode
+  }) {
     return (
-      <button title={title} style={{
-        background: 'none', border: `1.5px solid ${theme.border}`,
-        borderRadius: 10, width: 46, height: 46,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        cursor: 'pointer', color: theme.textDim,
-      }}>
+      <button
+        title={title}
+        onClick={onClick}
+        style={{
+          background:   active ? theme.accentFill : 'none',
+          border:       `1.5px solid ${active ? theme.accent : theme.border}`,
+          borderRadius: 10,
+          width: 46, height: 46,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          cursor: 'pointer',
+          color: active ? theme.accent : theme.textDim,
+        }}
+      >
         {children}
       </button>
     )
@@ -107,6 +160,16 @@ export function TransactionModal({ transaction, accounts, categories, onSave, on
         zIndex: 1000,
       }}
     >
+      {/* Hidden file input */}
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*,application/pdf"
+        multiple
+        style={{ display: 'none' }}
+        onChange={handleFileChange}
+      />
+
       <div style={{
         width: 400,
         background: theme.surface,
@@ -114,6 +177,8 @@ export function TransactionModal({ transaction, accounts, categories, onSave, on
         boxShadow: '0 32px 80px rgba(0,0,0,0.6)',
         overflow: 'hidden',
         display: 'flex', flexDirection: 'column',
+        maxHeight: '90vh',
+        overflowY: 'auto',
       }}>
 
         {/* ── Header: Cancel | Type | Save ── */}
@@ -345,6 +410,7 @@ export function TransactionModal({ transaction, accounts, categories, onSave, on
           padding: '13px 20px', borderBottom: `1px solid ${theme.border}`,
         }}>
           <input
+            ref={payeeRef}
             type="text"
             value={payee}
             onChange={e => setPayee(e.target.value)}
@@ -366,7 +432,7 @@ export function TransactionModal({ transaction, accounts, categories, onSave, on
             >✕</button>
           ) : (
             <button
-              onClick={() => {}}
+              onClick={() => payeeRef.current?.focus()}
               style={{
                 background: 'none', border: `1.5px solid ${theme.border}`,
                 borderRadius: '50%', width: 26, height: 26,
@@ -381,20 +447,97 @@ export function TransactionModal({ transaction, accounts, categories, onSave, on
           )}
         </div>
 
-        {/* Note field — shown when payee has text */}
-        {payee && (
-          <div style={{ borderBottom: `1px solid ${theme.border}` }}>
-            <textarea
-              value={note}
-              onChange={e => setNote(e.target.value)}
-              placeholder="Add a note..."
-              rows={2}
-              style={{
-                width: '100%', background: 'transparent', border: 'none', outline: 'none',
-                color: theme.textDim, fontSize: 13, fontFamily: 'inherit',
-                resize: 'none', padding: '10px 20px', boxSizing: 'border-box',
-              }}
-            />
+        {/* ── Note textarea — always visible ── */}
+        <div style={{ borderBottom: `1px solid ${theme.border}` }}>
+          <textarea
+            ref={noteRef}
+            value={note}
+            onChange={e => setNote(e.target.value)}
+            placeholder="Description..."
+            rows={3}
+            style={{
+              width: '100%', background: 'transparent', border: 'none', outline: 'none',
+              color: theme.text, fontSize: 13, fontFamily: 'inherit',
+              resize: 'none', padding: '10px 20px', boxSizing: 'border-box',
+            }}
+          />
+        </div>
+
+        {/* ── Attachment thumbnail strip ── */}
+        {attachments.length > 0 && (
+          <div style={{
+            display: 'flex', gap: 8, padding: '10px 20px',
+            borderBottom: `1px solid ${theme.border}`,
+            flexWrap: 'wrap',
+          }}>
+            {attachments.map((src, i) => (
+              <div key={i} style={{ position: 'relative', flexShrink: 0 }}>
+                <img
+                  src={src}
+                  alt={`attachment ${i + 1}`}
+                  style={{
+                    width: 40, height: 40, borderRadius: 6,
+                    objectFit: 'cover',
+                    border: `1px solid ${theme.border}`,
+                  }}
+                />
+                <button
+                  onClick={() => setAttachments(prev => prev.filter((_, j) => j !== i))}
+                  style={{
+                    position: 'absolute', top: -6, right: -6,
+                    background: RED, border: 'none', borderRadius: '50%',
+                    width: 16, height: 16, cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: '#fff', fontSize: 9, lineHeight: 1,
+                  }}
+                >✕</button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* ── Tags row ── */}
+        {(tags.length > 0 || showTagInput) && (
+          <div style={{
+            display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6,
+            padding: '10px 20px', borderBottom: `1px solid ${theme.border}`,
+          }}>
+            {tags.map((tag, i) => (
+              <span
+                key={i}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 4,
+                  background: theme.accentFill, color: theme.accent,
+                  border: `1px solid ${theme.accent}44`,
+                  borderRadius: 20, padding: '3px 8px', fontSize: 12,
+                }}
+              >
+                #{tag}
+                <button
+                  onClick={() => setTags(prev => prev.filter((_, j) => j !== i))}
+                  style={{
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    color: theme.accent, fontSize: 10, padding: 0, lineHeight: 1,
+                    display: 'flex', alignItems: 'center',
+                  }}
+                >✕</button>
+              </span>
+            ))}
+            {showTagInput && (
+              <input
+                ref={tagInputRef}
+                value={tagInput}
+                onChange={e => setTagInput(e.target.value)}
+                onKeyDown={handleTagKeyDown}
+                onBlur={() => { if (tagInput) addTag(tagInput); setShowTagInput(false) }}
+                placeholder="Add tag..."
+                style={{
+                  background: 'transparent', border: 'none', outline: 'none',
+                  color: theme.text, fontSize: 13, fontFamily: 'inherit',
+                  minWidth: 80, flex: 1,
+                }}
+              />
+            )}
           </div>
         )}
 
@@ -441,31 +584,63 @@ export function TransactionModal({ transaction, accounts, categories, onSave, on
           display: 'flex', alignItems: 'center', justifyContent: 'space-around',
           padding: '14px 20px',
         }}>
-          <ToolBtn title="Note">
+          {/* 💬 Note */}
+          <ToolBtn
+            title="Note"
+            active={note.trim().length > 0}
+            onClick={() => noteRef.current?.focus()}
+          >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
             </svg>
           </ToolBtn>
-          <ToolBtn title="Attachment">
+
+          {/* 🖼 Attachment */}
+          <ToolBtn
+            title="Attachment"
+            active={attachments.length > 0}
+            onClick={() => fileRef.current?.click()}
+          >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
               <circle cx="8.5" cy="8.5" r="1.5"/>
               <polyline points="21 15 16 10 5 21"/>
             </svg>
           </ToolBtn>
-          <ToolBtn title="Tag">
+
+          {/* # Tag */}
+          <ToolBtn
+            title="Tag"
+            active={tags.length > 0}
+            onClick={() => {
+              setShowTagInput(true)
+              setTimeout(() => tagInputRef.current?.focus(), 30)
+            }}
+          >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
               <line x1="7" y1="7" x2="7.01" y2="7"/>
             </svg>
           </ToolBtn>
-          <ToolBtn title="Payee">
+
+          {/* 👤 Payee */}
+          <ToolBtn
+            title="Payee"
+            active={payee.trim().length > 0}
+            onClick={() => payeeRef.current?.focus()}
+          >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
               <circle cx="12" cy="7" r="4"/>
             </svg>
           </ToolBtn>
-          <ToolBtn title="Receipt">
+
+          {/* 🗂 Receipt / File */}
+          <ToolBtn
+            title="Receipt"
+            active={attachments.length > 0}
+            onClick={() => fileRef.current?.click()}
+          >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
               <polyline points="14 2 14 8 20 8"/>
@@ -480,4 +655,3 @@ export function TransactionModal({ transaction, accounts, categories, onSave, on
     </div>
   )
 }
-
