@@ -1,33 +1,15 @@
 import { useFinanceStore } from '../financeStore'
+import { useUIStore } from '@/store/uiStore'
+import { getTheme } from '@/lib/themes'
 import { MOCK_CATEGORIES } from '../mockData'
-
-// ─── Colors ───────────────────────────────────────────────────────────────────
-
-const C = {
-  bg:          '#0B0A08',
-  rail:        '#100D0A',
-  panel:       '#110E0A',
-  surface:     '#16120D',
-  surfaceEl:   '#1E1913',
-  amberBg:     '#1E1609',
-  border:      '#272118',
-  borderSt:    '#3A3326',
-  divFaint:    '#1B160F',
-  amber:       '#C49A3C',
-  amberSoft:   '#E0C57E',
-  textPri:     '#F2EBDD',
-  textMuted:   '#8C8071',
-  textDim:     '#565049',
-  red:         '#DA4A3E',
-  green:       '#2FA869',
-  cyan:        '#46B6C9',
-  purple:      '#7E78DD',
-}
 
 // ─── Pill ─────────────────────────────────────────────────────────────────────
 
+const RED = '#DA4A3E'
+const GREEN = '#2FA869'
+
 function Pill({ type, amount, currency }: { type: 'expense' | 'income' | 'transfer'; amount: number; currency: string }) {
-  const bg = type === 'expense' ? C.red : type === 'income' ? C.green : '#EDE6D8'
+  const bg = type === 'expense' ? RED : type === 'income' ? GREEN : '#EDE6D8'
   const color = type === 'transfer' ? '#1A1714' : '#fff'
   return (
     <span style={{
@@ -48,6 +30,26 @@ function Pill({ type, amount, currency }: { type: 'expense' | 'income' | 'transf
 // ─── Balance Screen ───────────────────────────────────────────────────────────
 
 export function BalanceScreen() {
+  const themeId = useUIStore(s => s.themeId)
+  const theme = getTheme(themeId)
+  const C = {
+    bg:        theme.bg,
+    surface:   theme.surface,
+    surfaceEl: theme.surface2 || theme.surface,
+    amberBg:   theme.accentFill,
+    border:    theme.border,
+    divFaint:  theme.border,
+    amber:     theme.accent,
+    amberSoft: theme.accentBright,
+    textPri:   theme.text,
+    textMuted: theme.textDim,
+    textDim:   theme.textMuted,
+    red:       '#DA4A3E',
+    green:     '#2FA869',
+    cyan:      '#46B6C9',
+    purple:    '#7E78DD',
+  }
+
   const { accounts, transactions } = useFinanceStore()
 
   const netWorth = accounts.reduce((s, a) => s + a.balance, 0)

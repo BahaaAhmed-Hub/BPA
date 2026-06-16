@@ -1,21 +1,6 @@
 import { useState } from 'react'
-
-// ─── Colors ───────────────────────────────────────────────────────────────────
-
-const C = {
-  bg:        '#0B0A08',
-  surface:   '#16120D',
-  amberBg:   '#1E1609',
-  border:    '#272118',
-  borderSt:  '#3A3326',
-  divFaint:  '#1B160F',
-  amber:     '#C49A3C',
-  textPri:   '#F2EBDD',
-  textMuted: '#8C8071',
-  textDim:   '#565049',
-  red:       '#DA4A3E',
-  green:     '#2FA869',
-}
+import { useUIStore } from '@/store/uiStore'
+import { getTheme } from '@/lib/themes'
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
@@ -55,6 +40,23 @@ function buildSegments(data: { name: string; amt: number; color: string }[], tot
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function ReportsScreen(_props?: any) {
+  const themeId = useUIStore(s => s.themeId)
+  const theme = getTheme(themeId)
+  const C = {
+    bg:        theme.bg,
+    surface:   theme.surface,
+    amberBg:   theme.accentFill,
+    border:    theme.border,
+    borderSt:  theme.border,
+    divFaint:  theme.border,
+    amber:     theme.accent,
+    textPri:   theme.text,
+    textMuted: theme.textDim,
+    textDim:   theme.textMuted,
+    red:       '#DA4A3E',
+    green:     '#2FA869',
+  }
+
   const [reportView, setReportView] = useState<'donut' | 'bars'>('donut')
 
   const segments = buildSegments(REPORT_DATA, TOTAL)

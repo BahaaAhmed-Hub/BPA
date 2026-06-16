@@ -1,34 +1,13 @@
 import { useState } from 'react'
 import { useFinanceStore } from './financeStore'
+import { useUIStore } from '@/store/uiStore'
+import { getTheme } from '@/lib/themes'
 import { TodayScreen } from './screens/TodayScreen'
 import { BalanceScreen } from './screens/BalanceScreen'
 import { BudgetScreen } from './screens/BudgetScreen'
 import { BillsScreen } from './screens/BillsScreen'
 import { ReportsScreen } from './screens/ReportsScreen'
 import { ReflectionScreen } from './screens/ReflectionScreen'
-
-// ─── Colors ───────────────────────────────────────────────────────────────────
-
-const C = {
-  bg:          '#0B0A08',
-  rail:        '#100D0A',
-  panel:       '#110E0A',
-  surface:     '#16120D',
-  surfaceEl:   '#1E1913',
-  amberBg:     '#1E1609',
-  border:      '#272118',
-  borderSt:    '#3A3326',
-  divFaint:    '#1B160F',
-  amber:       '#C49A3C',
-  amberSoft:   '#E0C57E',
-  textPri:     '#F2EBDD',
-  textMuted:   '#8C8071',
-  textDim:     '#565049',
-  red:         '#DA4A3E',
-  green:       '#2FA869',
-  cyan:        '#46B6C9',
-  purple:      '#7E78DD',
-}
 
 // ─── Nav icon SVGs ────────────────────────────────────────────────────────────
 
@@ -156,11 +135,19 @@ const TX_TYPES = [
   'Discharge of Liability',
 ]
 
-interface AddModalProps {
-  onClose: () => void
+interface ColorMap {
+  bg: string; rail: string; panel: string; surface: string; surfaceEl: string
+  amberBg: string; border: string; borderSt: string; divFaint: string
+  amber: string; amberSoft: string; textPri: string; textMuted: string
+  textDim: string; red: string; green: string; cyan: string; purple: string
 }
 
-function AddTransactionModal({ onClose }: AddModalProps) {
+interface AddModalProps {
+  onClose: () => void
+  colors: ColorMap
+}
+
+function AddTransactionModal({ onClose, colors: C }: AddModalProps) {
   const [txLabel, setTxLabel] = useState('Expense')
   const [typeMenuOpen, setTypeMenuOpen] = useState(false)
   const [keypadOpen, setKeypadOpen] = useState(false)
@@ -444,6 +431,30 @@ function AddTransactionModal({ onClose }: AddModalProps) {
 // ─── Finance Module ───────────────────────────────────────────────────────────
 
 export function FinanceModule() {
+  const themeId = useUIStore(s => s.themeId)
+  const theme = getTheme(themeId)
+
+  const C: ColorMap = {
+    bg:        theme.bg,
+    rail:      theme.sidebarBg,
+    panel:     theme.surface,
+    surface:   theme.surface,
+    surfaceEl: theme.surface2 || theme.surface,
+    amberBg:   theme.accentFill,
+    border:    theme.border,
+    borderSt:  theme.border,
+    divFaint:  theme.border,
+    amber:     theme.accent,
+    amberSoft: theme.accentBright,
+    textPri:   theme.text,
+    textMuted: theme.textDim,
+    textDim:   theme.textMuted,
+    red:       '#DA4A3E',
+    green:     '#2FA869',
+    cyan:      '#46B6C9',
+    purple:    '#7E78DD',
+  }
+
   const [screen, setScreen] = useState<FinanceScreen>('today')
   const [addOpen, setAddOpen] = useState(false)
 
@@ -543,7 +554,7 @@ export function FinanceModule() {
         {renderScreen()}
       </div>
 
-      {addOpen && <AddTransactionModal onClose={() => setAddOpen(false)} />}
+      {addOpen && <AddTransactionModal onClose={() => setAddOpen(false)} colors={C} />}
     </div>
   )
 }

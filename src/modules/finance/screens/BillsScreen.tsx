@@ -1,20 +1,6 @@
 import { useFinanceStore } from '../financeStore'
-
-// ─── Colors ───────────────────────────────────────────────────────────────────
-
-const C = {
-  bg:        '#0B0A08',
-  surface:   '#16120D',
-  border:    '#272118',
-  borderSt:  '#3A3326',
-  divFaint:  '#1B160F',
-  amber:     '#C49A3C',
-  textPri:   '#F2EBDD',
-  textMuted: '#8C8071',
-  textDim:   '#565049',
-  red:       '#DA4A3E',
-  green:     '#2FA869',
-}
+import { useUIStore } from '@/store/uiStore'
+import { getTheme } from '@/lib/themes'
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -43,6 +29,9 @@ function formatFrequency(freq: string): string {
 
 // ─── Pill ─────────────────────────────────────────────────────────────────────
 
+const RED = '#DA4A3E'
+const GREEN = '#2FA869'
+
 function Pill({ isIncome, amount, currency }: { isIncome: boolean; amount: number; currency: string }) {
   return (
     <span style={{
@@ -52,8 +41,8 @@ function Pill({ isIncome, amount, currency }: { isIncome: boolean; amount: numbe
       borderRadius: 8,
       fontSize: 13,
       fontWeight: 600,
-      background: isIncome ? `${C.green}28` : `${C.red}28`,
-      color: isIncome ? C.green : C.red,
+      background: isIncome ? `${GREEN}28` : `${RED}28`,
+      color: isIncome ? GREEN : RED,
       whiteSpace: 'nowrap' as const,
       flexShrink: 0,
     }}>
@@ -64,15 +53,15 @@ function Pill({ isIncome, amount, currency }: { isIncome: boolean; amount: numbe
 
 // ─── Icon Circle ──────────────────────────────────────────────────────────────
 
-function IconCircle({ icon, isIncome }: { icon: string; isIncome: boolean }) {
+function IconCircle({ icon, isIncome, surface, textPri }: { icon: string; isIncome: boolean; surface: string; textPri: string }) {
   return (
     <div style={{
       width: 40, height: 40, borderRadius: '50%',
       border: `1px solid #2A241B`,
-      background: C.surface,
+      background: surface,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       fontSize: 18, flexShrink: 0,
-      color: isIncome ? C.green : C.textPri,
+      color: isIncome ? GREEN : textPri,
     }}>
       {icon}
     </div>
@@ -82,6 +71,22 @@ function IconCircle({ icon, isIncome }: { icon: string; isIncome: boolean }) {
 // ─── Bills Screen ─────────────────────────────────────────────────────────────
 
 export function BillsScreen({ onOpenAdd }: Props) {
+  const themeId = useUIStore(s => s.themeId)
+  const theme = getTheme(themeId)
+  const C = {
+    bg:        theme.bg,
+    surface:   theme.surface,
+    border:    theme.border,
+    borderSt:  theme.border,
+    divFaint:  theme.border,
+    amber:     theme.accent,
+    textPri:   theme.text,
+    textMuted: theme.textDim,
+    textDim:   theme.textMuted,
+    red:       '#DA4A3E',
+    green:     '#2FA869',
+  }
+
   const { bills } = useFinanceStore()
 
   const today = new Date('2026-06-15')
@@ -155,7 +160,7 @@ export function BillsScreen({ onOpenAdd }: Props) {
               </span>
 
               {/* Icon */}
-              <IconCircle icon={bill.icon} isIncome={bill.isIncome} />
+              <IconCircle icon={bill.icon} isIncome={bill.isIncome} surface={C.surface} textPri={C.textPri} />
 
               {/* Name */}
               <span style={{ fontSize: 14, color: C.textPri, flex: 1 }}>{bill.name}</span>
@@ -186,7 +191,7 @@ export function BillsScreen({ onOpenAdd }: Props) {
               borderBottom: `1px solid ${C.divFaint}`,
             }}>
               {/* Icon */}
-              <IconCircle icon={bill.icon} isIncome={bill.isIncome} />
+              <IconCircle icon={bill.icon} isIncome={bill.isIncome} surface={C.surface} textPri={C.textPri} />
 
               {/* Name + meta */}
               <div style={{ flex: 1, minWidth: 0 }}>

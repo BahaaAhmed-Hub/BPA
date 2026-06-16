@@ -1,28 +1,7 @@
 import { useFinanceStore } from '../financeStore'
+import { useUIStore } from '@/store/uiStore'
+import { getTheme } from '@/lib/themes'
 import { MOCK_BILLS, MOCK_GOALS } from '../mockData'
-
-// ─── Colors ───────────────────────────────────────────────────────────────────
-
-const C = {
-  bg:          '#0B0A08',
-  rail:        '#100D0A',
-  panel:       '#110E0A',
-  surface:     '#16120D',
-  surfaceEl:   '#1E1913',
-  amberBg:     '#1E1609',
-  border:      '#272118',
-  borderSt:    '#3A3326',
-  divFaint:    '#1B160F',
-  amber:       '#C49A3C',
-  amberSoft:   '#E0C57E',
-  textPri:     '#F2EBDD',
-  textMuted:   '#8C8071',
-  textDim:     '#565049',
-  red:         '#DA4A3E',
-  green:       '#2FA869',
-  cyan:        '#46B6C9',
-  purple:      '#7E78DD',
-}
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -33,7 +12,7 @@ interface Props {
 // ─── Pill ─────────────────────────────────────────────────────────────────────
 
 function Pill({ type, amount, currency }: { type: 'expense' | 'income' | 'transfer'; amount: number; currency: string }) {
-  const bg = type === 'expense' ? C.red : type === 'income' ? C.green : '#EDE6D8'
+  const bg = type === 'expense' ? '#DA4A3E' : type === 'income' ? '#2FA869' : '#EDE6D8'
   const color = type === 'transfer' ? '#1A1714' : '#fff'
   return (
     <span style={{
@@ -53,30 +32,53 @@ function Pill({ type, amount, currency }: { type: 'expense' | 'income' | 'transf
 
 // ─── Bill dots map ────────────────────────────────────────────────────────────
 
+const RED = '#DA4A3E'
+const GREEN = '#2FA869'
+
 const BILL_DOTS: Record<number, string[]> = {
-  2:  [C.green],
-  4:  [C.red],
-  5:  [C.red],
-  7:  [C.red],
-  9:  [C.red, C.green],
-  11: [C.green],
-  12: [C.red],
-  13: [C.red],
-  14: [C.red],
-  15: [C.red],
-  17: [C.red],
-  18: [C.red],
-  20: [C.green],
-  22: [C.red],
-  24: [C.red],
-  25: [C.red, C.green],
-  28: [C.red],
-  30: [C.red],
+  2:  [GREEN],
+  4:  [RED],
+  5:  [RED],
+  7:  [RED],
+  9:  [RED, GREEN],
+  11: [GREEN],
+  12: [RED],
+  13: [RED],
+  14: [RED],
+  15: [RED],
+  17: [RED],
+  18: [RED],
+  20: [GREEN],
+  22: [RED],
+  24: [RED],
+  25: [RED, GREEN],
+  28: [RED],
+  30: [RED],
 }
 
 // ─── Today Screen ─────────────────────────────────────────────────────────────
 
 export function TodayScreen({ onOpenAdd }: Props) {
+  const themeId = useUIStore(s => s.themeId)
+  const theme = getTheme(themeId)
+  const C = {
+    bg:        theme.bg,
+    surface:   theme.surface,
+    surfaceEl: theme.surface2 || theme.surface,
+    amberBg:   theme.accentFill,
+    border:    theme.border,
+    divFaint:  theme.border,
+    amber:     theme.accent,
+    amberSoft: theme.accentBright,
+    textPri:   theme.text,
+    textMuted: theme.textDim,
+    textDim:   theme.textMuted,
+    red:       '#DA4A3E',
+    green:     '#2FA869',
+    cyan:      '#46B6C9',
+    purple:    '#7E78DD',
+  }
+
   const { transactions } = useFinanceStore()
 
   const today = new Date('2026-06-15')

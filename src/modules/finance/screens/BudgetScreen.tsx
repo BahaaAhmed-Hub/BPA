@@ -1,21 +1,6 @@
 import { useState } from 'react'
-
-// ─── Colors ───────────────────────────────────────────────────────────────────
-
-const C = {
-  bg:        '#0B0A08',
-  surface:   '#16120D',
-  amberBg:   '#1E1609',
-  border:    '#272118',
-  borderSt:  '#3A3326',
-  divFaint:  '#1B160F',
-  amber:     '#C49A3C',
-  textPri:   '#F2EBDD',
-  textMuted: '#8C8071',
-  textDim:   '#565049',
-  red:       '#DA4A3E',
-  green:     '#2FA869',
-}
+import { useUIStore } from '@/store/uiStore'
+import { getTheme } from '@/lib/themes'
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
@@ -57,12 +42,20 @@ function addMonth(ym: string, delta: number): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
 }
 
+// ─── Color map type ───────────────────────────────────────────────────────────
+
+interface Colors {
+  bg: string; surface: string; amberBg: string; border: string; borderSt: string
+  amber: string; textPri: string; textMuted: string; textDim: string
+  red: string; green: string
+}
+
 // ─── Category Cell ────────────────────────────────────────────────────────────
 
 function CategoryCell({
-  icon, name, actual, budget, over, isIncome,
+  icon, name, actual, budget, over, isIncome, C,
 }: {
-  icon: string; name: string; actual: string; budget: string; over?: boolean; isIncome?: boolean
+  icon: string; name: string; actual: string; budget: string; over?: boolean; isIncome?: boolean; C: Colors
 }) {
   const ringColor = isIncome ? C.green : over ? C.red : C.borderSt
   const actualColor = isIncome ? C.green : over ? C.red : C.amber
@@ -85,8 +78,8 @@ function CategoryCell({
 
 // ─── Section label row ────────────────────────────────────────────────────────
 
-function SectionRow({ label, main, mainColor, sub }: {
-  label: string; main: string; mainColor: string; sub: string
+function SectionRow({ label, main, mainColor, sub, C }: {
+  label: string; main: string; mainColor: string; sub: string; C: Colors
 }) {
   return (
     <div style={{
@@ -107,6 +100,22 @@ function SectionRow({ label, main, mainColor, sub }: {
 // ─── Budget Screen ────────────────────────────────────────────────────────────
 
 export function BudgetScreen(_props?: { onOpenAdd?: () => void }) {
+  const themeId = useUIStore(s => s.themeId)
+  const theme = getTheme(themeId)
+  const C: Colors = {
+    bg:        theme.bg,
+    surface:   theme.surface,
+    amberBg:   theme.accentFill,
+    border:    theme.border,
+    borderSt:  theme.border,
+    amber:     theme.accent,
+    textPri:   theme.text,
+    textMuted: theme.textDim,
+    textDim:   theme.textMuted,
+    red:       '#DA4A3E',
+    green:     '#2FA869',
+  }
+
   const [reportMode, setReportMode] = useState<'actual' | 'remaining'>('actual')
   const [currentMonth, setCurrentMonth] = useState('2026-06')
 
@@ -116,7 +125,7 @@ export function BudgetScreen(_props?: { onOpenAdd?: () => void }) {
       {/* Header */}
       <div style={{
         height: 64, flexShrink: 0,
-        borderBottom: `1px solid #211C14`,
+        borderBottom: `1px solid ${C.border}`,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '0 30px',
       }}>
@@ -210,28 +219,28 @@ export function BudgetScreen(_props?: { onOpenAdd?: () => void }) {
 
         {/* Expenses section */}
         <div style={{ marginBottom: 32 }}>
-          <SectionRow label="Expenses" main="126,815" mainColor={C.red} sub="/ EGP 82,467" />
+          <SectionRow label="Expenses" main="126,815" mainColor={C.red} sub="/ EGP 82,467" C={C} />
           <div style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(8, 1fr)',
             gap: '14px 8px',
           }}>
             {EXPENSE_CATS.map(cat => (
-              <CategoryCell key={cat.name} {...cat} />
+              <CategoryCell key={cat.name} {...cat} C={C} />
             ))}
           </div>
         </div>
 
         {/* Income section */}
         <div style={{ marginBottom: 32 }}>
-          <SectionRow label="Income" main="140,000" mainColor={C.green} sub="/ EGP 108,893" />
+          <SectionRow label="Income" main="140,000" mainColor={C.green} sub="/ EGP 108,893" C={C} />
           <div style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(8, 1fr)',
             gap: '14px 8px',
           }}>
             {INCOME_CATS.map(cat => (
-              <CategoryCell key={cat.name} {...cat} isIncome />
+              <CategoryCell key={cat.name} {...cat} isIncome C={C} />
             ))}
           </div>
         </div>
