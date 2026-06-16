@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useFinanceStore } from './financeStore'
 import { useUIStore } from '@/store/uiStore'
 import { getTheme } from '@/lib/themes'
+import { TopBar } from '@/components/layout/TopBar'
 import { TodayScreen } from './screens/TodayScreen'
 import { BalanceScreen } from './screens/BalanceScreen'
 import { BudgetScreen } from './screens/BudgetScreen'
@@ -183,27 +184,21 @@ export function FinanceModule() {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden', background: C.bg }}>
-      {/* Horizontal subheader nav */}
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', background: C.bg }}>
+
+      {/* Layer 1 — main app header (64px): aligns with sidebar logo */}
+      <TopBar title="Finance" />
+
+      {/* Layer 2 — Finance sub-nav (44px): module-specific tabs */}
       <div style={{
-        height: 52, flexShrink: 0,
+        height: 44, flexShrink: 0,
         background: C.rail,
         borderBottom: `1px solid ${C.border}`,
         display: 'flex', alignItems: 'center',
-        padding: '0 12px', gap: 4,
+        padding: '0 12px', gap: 2,
       }}>
-        {/* Brand mark */}
-        <div style={{
-          width: 32, height: 32, borderRadius: '50%',
-          border: `1.5px solid ${C.amber}`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          marginRight: 8, flexShrink: 0,
-        }}>
-          <span style={{ color: C.amber, fontSize: 16, fontWeight: 700, fontStyle: 'italic', lineHeight: 1 }}>P</span>
-        </div>
-
         {/* Nav tabs — draggable to reorder */}
-        <div style={{ flex: 1, display: 'flex', gap: 2, overflowX: 'auto' }}>
+        <div style={{ flex: 1, display: 'flex', gap: 1, overflowX: 'auto' }}>
           {navItems.map(({ id, label, Icon }) => {
             const active = screen === id
             const isDragging = draggedTab === id
@@ -218,13 +213,12 @@ export function FinanceModule() {
                 onDragEnd={() => { setDraggedTab(null); setDropTab(null) }}
                 onClick={() => handleSetScreen(id)}
                 style={{
-                  display: 'flex', alignItems: 'center', gap: 6,
-                  padding: '5px 10px', borderRadius: 8, cursor: 'grab',
-                  background: active ? `${C.amber}14` : 'transparent',
-                  border: `1px solid ${isDropTarget ? C.amber : active ? `${C.amber}33` : 'transparent'}`,
+                  display: 'flex', alignItems: 'center', gap: 5,
+                  padding: '4px 10px', borderRadius: 7, cursor: 'grab',
+                  background: active ? `${C.amber}18` : 'transparent',
+                  border: `1px solid ${isDropTarget ? C.amber : active ? `${C.amber}40` : 'transparent'}`,
                   opacity: isDragging ? 0.35 : 1,
                   userSelect: 'none', flexShrink: 0,
-                  position: 'relative',
                 } as React.CSSProperties}
               >
                 <Icon color={active ? C.amber : C.textMuted} />
@@ -240,21 +234,21 @@ export function FinanceModule() {
           })}
         </div>
 
-        {/* Add button */}
+        {/* Add transaction button */}
         <button
           onClick={() => setAddOpen(true)}
           style={{
-            width: 34, height: 34, borderRadius: 10,
+            height: 28, paddingInline: 12, borderRadius: 7,
             background: C.amber, border: 'none', cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            flexShrink: 0,
+            flexShrink: 0, gap: 4,
           }}
         >
           <IconPlus color={C.bg} />
         </button>
       </div>
 
-      {/* Main content area */}
+      {/* Screen content */}
       <div style={{ flex: 1, overflow: 'hidden' }}>
         {renderScreen()}
       </div>

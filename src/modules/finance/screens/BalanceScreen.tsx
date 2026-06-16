@@ -73,14 +73,7 @@ export function BalanceScreen() {
   // Sorted transactions desc
   const sorted = [...transactions].sort((a, b) => b.date.localeCompare(a.date))
 
-  // Category emoji lookup from store
-  function getCatEmoji(categoryId?: string): string {
-    if (!categoryId) return '💳'
-    const cat = categories.find(c => c.id === categoryId)
-    return cat?.icon ?? '💳'
-  }
-
-  function formatBalance(bal: number, currency = 'EGP'): string {
+function formatBalance(bal: number, currency = 'EGP'): string {
     if (bal < 0) return `(${currency} ${Math.abs(bal).toLocaleString('en-US')})`
     return `${currency} ${bal.toLocaleString('en-US')}`
   }
@@ -320,7 +313,8 @@ export function BalanceScreen() {
           {/* Transaction feed */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
             {sorted.map(tx => {
-              const emoji = getCatEmoji(tx.categoryId)
+              const cat    = tx.categoryId ? categories.find(c => c.id === tx.categoryId) : null
+              const emoji  = cat?.icon ?? (tx.type === 'income' ? '💼' : '💳')
               const txDate = new Date(tx.date)
               const dateStr = txDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
               return (
@@ -351,8 +345,9 @@ export function BalanceScreen() {
                     }}>
                       {tx.payee}
                     </div>
-                    <div style={{ fontSize: 12, color: C.green, marginTop: 1 }}>
-                      {dateStr}
+                    <div style={{ fontSize: 12, color: C.textDim, marginTop: 1, display: 'flex', gap: 6 }}>
+                      <span style={{ color: C.green }}>{dateStr}</span>
+                      {cat && <span>· {cat.name}</span>}
                     </div>
                   </div>
                   <Pill

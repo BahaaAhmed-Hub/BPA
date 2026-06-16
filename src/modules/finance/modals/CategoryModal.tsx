@@ -18,7 +18,12 @@ interface Props {
 
 export function CategoryModal({ category, categories, onSave, onDelete, onClose }: Props) {
   const theme = getTheme(useUIStore(s => s.themeId))
-  const isEdit = !!category
+
+  // A "real edit" is when the category already has a name (exists in store).
+  // Opening from a section "+" button has name='' — it's creation, not editing.
+  const isEdit = !!(category?.name)
+  // When created from a section button, the txType is pre-determined and should be locked.
+  const txTypeLocked = !isEdit && !!category?.txType
 
   const [name,     setName]     = useState(category?.name     ?? '')
   const [icon,     setIcon]     = useState(category?.icon     ?? '📁')
@@ -30,13 +35,14 @@ export function CategoryModal({ category, categories, onSave, onDelete, onClose 
 
   function handleSave() {
     const saved: Category = {
-      id:       category?.id ?? crypto.randomUUID(),
-      name:     name.trim(),
-      icon:     icon || '📁',
+      id:        category?.id ?? crypto.randomUUID(),
+      name:      name.trim(),
+      icon:      icon || '📁',
       color,
-      parentId: parentId || undefined,
-      isSystem: category?.isSystem ?? false,
+      parentId:  parentId || undefined,
+      isSystem:  category?.isSystem ?? false,
       txType,
+      sortOrder: category?.sortOrder,
     }
     onSave(saved)
   }
@@ -95,9 +101,22 @@ export function CategoryModal({ category, categories, onSave, onDelete, onClose 
 
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: 18, fontWeight: 700, color: theme.text }}>
-            {isEdit ? 'Edit Category' : 'New Category'}
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 18, fontWeight: 700, color: theme.text }}>
+              {isEdit ? 'Edit Category' : 'New Category'}
+            </span>
+            {txTypeLocked && (
+              <span style={{
+                fontSize: 10, fontWeight: 700, letterSpacing: '0.8px',
+                padding: '3px 8px', borderRadius: 5,
+                background: txType === 'income' ? 'rgba(47,168,105,0.15)' : 'rgba(218,74,62,0.15)',
+                color: txType === 'income' ? '#2FA869' : '#DA4A3E',
+                textTransform: 'uppercase' as const,
+              }}>
+                {txType}
+              </span>
+            )}
+          </div>
           <button
             onClick={onClose}
             style={{
@@ -147,19 +166,21 @@ export function CategoryModal({ category, categories, onSave, onDelete, onClose 
             />
           </div>
 
-          {/* Type */}
-          <div style={fieldStyle}>
-            <label style={labelStyle}>Type</label>
-            <select
-              style={inputStyle}
-              value={txType}
-              onChange={e => setTxType(e.target.value as Category['txType'])}
-            >
-              <option value="expense">Expense</option>
-              <option value="income">Income</option>
-              <option value="both">Both</option>
-            </select>
-          </div>
+          {/* Type — locked when creating from a section button */}
+          {!txTypeLocked && (
+            <div style={fieldStyle}>
+              <label style={labelStyle}>Type</label>
+              <select
+                style={inputStyle}
+                value={txType}
+                onChange={e => setTxType(e.target.value as Category['txType'])}
+              >
+                <option value="expense">Expense</option>
+                <option value="income">Income</option>
+                <option value="both">Both</option>
+              </select>
+            </div>
+          )}
 
           {/* Parent Category */}
           <div style={fieldStyle}>

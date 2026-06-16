@@ -345,10 +345,10 @@ export function BudgetScreen() {
 
         {/* Header */}
         <div style={{
-          height: 64, flexShrink: 0,
+          height: 48, flexShrink: 0,
           borderBottom: `1px solid ${theme.border}`,
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '0 24px',
+          padding: '0 20px',
         }}>
           <button
             onClick={() => setCatModal({ open: true, category: null })}
@@ -507,7 +507,7 @@ export function BudgetScreen() {
             <>
               {/* Header */}
               <div style={{
-                height: 52, flexShrink: 0, borderBottom: `1px solid ${theme.border}`,
+                height: 48, flexShrink: 0, borderBottom: `1px solid ${theme.border}`,
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 padding: '0 14px',
               }}>
@@ -548,6 +548,7 @@ export function BudgetScreen() {
                 ) : panelTxns.map(tx => {
                   const acct  = accounts.find(a => a.id === tx.accountId)
                   const isExp = tx.type === 'expense'
+                  const txCat = tx.categoryId ? categories.find(c => c.id === tx.categoryId) : null
                   return (
                     <div
                       key={tx.id}
@@ -570,7 +571,10 @@ export function BudgetScreen() {
                         <div style={{ fontSize: 14, color: theme.text, fontWeight: 500, whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {tx.payee || 'Unnamed'}
                         </div>
-                        <div style={{ fontSize: 12, color: theme.textMuted, marginTop: 2 }}>{tx.date}</div>
+                        <div style={{ fontSize: 12, color: theme.textMuted, marginTop: 2, display: 'flex', gap: 6 }}>
+                          <span>{tx.date}</span>
+                          {txCat && <span style={{ color: theme.textDim }}>· {txCat.icon} {txCat.name}</span>}
+                        </div>
                       </div>
                       <span style={{
                         fontSize: 13, fontWeight: 700, flexShrink: 0,
@@ -611,7 +615,7 @@ export function BudgetScreen() {
             /* Budget editor */
             <>
               <div style={{
-                height: 56, flexShrink: 0, borderBottom: `1px solid ${theme.border}`,
+                height: 48, flexShrink: 0, borderBottom: `1px solid ${theme.border}`,
                 display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center',
                 padding: '0 16px',
               }}>
