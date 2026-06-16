@@ -1,7 +1,10 @@
+import { useState } from 'react'
 import { useFinanceStore } from '../financeStore'
 import { useUIStore } from '@/store/uiStore'
 import { getTheme } from '@/lib/themes'
-import { MOCK_CATEGORIES } from '../mockData'
+import { AccountModal } from '../modals/AccountModal'
+import { TransactionModal } from '../modals/TransactionModal'
+import type { Account, Transaction } from '../types'
 
 // ─── Pill ─────────────────────────────────────────────────────────────────────
 
@@ -50,7 +53,11 @@ export function BalanceScreen() {
     purple:    '#7E78DD',
   }
 
-  const { accounts, transactions } = useFinanceStore()
+  const { accounts, transactions, categories, upsertAccount, removeAccount, upsertTransaction, removeTransaction } = useFinanceStore()
+
+  const [accountModal, setAccountModal] = useState<{ open: boolean; account: Account | null }>({ open: false, account: null })
+  const [txModal, setTxModal] = useState<{ open: boolean; tx: Transaction | null }>({ open: false, tx: null })
+  const [hoveredAccountId, setHoveredAccountId] = useState<string | null>(null)
 
   const netWorth = accounts.reduce((s, a) => s + a.balance, 0)
 
@@ -65,10 +72,10 @@ export function BalanceScreen() {
   // Sorted transactions desc
   const sorted = [...transactions].sort((a, b) => b.date.localeCompare(a.date))
 
-  // Category emoji lookup
+  // Category emoji lookup from store
   function getCatEmoji(categoryId?: string): string {
     if (!categoryId) return '💳'
-    const cat = MOCK_CATEGORIES.find(c => c.id === categoryId)
+    const cat = categories.find(c => c.id === categoryId)
     return cat?.icon ?? '💳'
   }
 
@@ -79,14 +86,20 @@ export function BalanceScreen() {
 
   function AccountRow({ account }: { account: typeof accounts[number] }) {
     const isNeg = account.balance < 0
+    const isHovered = hoveredAccountId === account.id
     return (
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 12,
-        padding: '11px 0',
-        borderBottom: `1px solid ${C.divFaint}`,
-      }}>
+      <div
+        onMouseEnter={() => setHoveredAccountId(account.id)}
+        onMouseLeave={() => setHoveredAccountId(null)}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          padding: '11px 0',
+          borderBottom: `1px solid ${C.divFaint}`,
+          position: 'relative',
+        }}
+      >
         <div style={{
           width: 40, height: 40, borderRadius: '50%',
           background: `${account.color}22`,
@@ -109,8 +122,41 @@ export function BalanceScreen() {
         }}>
           {formatBalance(account.balance)}
         </div>
+        {/* Edit pencil — visible on hover */}
+        {isHovered && (
+          <button
+            onClick={() => setAccountModal({ open: true, account })}
+            title="Edit account"
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              padding: '2px 4px',
+              color: C.textMuted,
+              flexShrink: 0,
+              lineHeight: 1,
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+            </svg>
+          </button>
+        )}
       </div>
     )
+  }
+
+  const addAccountBtnStyle: React.CSSProperties = {
+    padding: '5px 12px',
+    borderRadius: 8,
+    background: theme.accentFill,
+    color: theme.accent,
+    border: 'none',
+    cursor: 'pointer',
+    fontSize: 12,
+    fontFamily: 'inherit',
+    fontWeight: 600,
   }
 
   return (
@@ -178,9 +224,17 @@ export function BalanceScreen() {
               <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: C.textDim, letterSpacing: '0.8px' }}>
                 Payment Accounts
               </span>
-              <span style={{ fontSize: 13, fontWeight: 600, color: C.green }}>
-                EGP {paymentTotal.toLocaleString('en-US')}
-              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: C.green }}>
+                  EGP {paymentTotal.toLocaleString('en-US')}
+                </span>
+                <button
+                  onClick={() => setAccountModal({ open: true, account: null })}
+                  style={addAccountBtnStyle}
+                >
+                  + Add Account
+                </button>
+              </div>
             </div>
             {paymentAccounts.map(acc => <AccountRow key={acc.id} account={acc} />)}
           </div>
@@ -224,21 +278,39 @@ export function BalanceScreen() {
           overflowY: 'auto',
           padding: '22px 26px',
         }}>
-          {/* Date range pill */}
-          <div style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 8,
-            padding: '8px 16px',
-            background: C.surface,
-            border: `1px solid ${C.border}`,
-            borderRadius: 10,
-            marginBottom: 20,
-          }}>
-            <span style={{ fontSize: 13, fontWeight: 500, color: C.textPri }}>1 Jun 2026</span>
-            <span style={{ color: C.textDim }}>›</span>
-            <span style={{ fontSize: 13, fontWeight: 500, color: C.textPri }}>30 Jun 2026</span>
-            <span style={{ color: C.textDim, fontSize: 16, letterSpacing: 1 }}>···</span>
+          {/* Date range pill + Add button */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 8,
+              padding: '8px 16px',
+              background: C.surface,
+              border: `1px solid ${C.border}`,
+              borderRadius: 10,
+            }}>
+              <span style={{ fontSize: 13, fontWeight: 500, color: C.textPri }}>1 Jun 2026</span>
+              <span style={{ color: C.textDim }}>›</span>
+              <span style={{ fontSize: 13, fontWeight: 500, color: C.textPri }}>30 Jun 2026</span>
+              <span style={{ color: C.textDim, fontSize: 16, letterSpacing: 1 }}>···</span>
+            </div>
+            <button
+              onClick={() => setTxModal({ open: true, tx: null })}
+              style={{
+                padding: '8px 14px',
+                borderRadius: 9,
+                background: C.amber,
+                border: 'none',
+                color: '#0B0A08',
+                fontSize: 13,
+                fontWeight: 700,
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              + Add
+            </button>
           </div>
 
           {/* Transaction feed */}
@@ -250,12 +322,14 @@ export function BalanceScreen() {
               return (
                 <div
                   key={tx.id}
+                  onClick={() => setTxModal({ open: true, tx })}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
                     gap: 12,
                     padding: '11px 0',
                     borderBottom: `1px solid ${C.divFaint}`,
+                    cursor: 'pointer',
                   }}
                 >
                   <div style={{
@@ -288,6 +362,26 @@ export function BalanceScreen() {
           </div>
         </div>
       </div>
+
+      {/* Modals */}
+      {accountModal.open && (
+        <AccountModal
+          account={accountModal.account}
+          onSave={a => { upsertAccount(a); setAccountModal({ open: false, account: null }) }}
+          onDelete={id => { removeAccount(id); setAccountModal({ open: false, account: null }) }}
+          onClose={() => setAccountModal({ open: false, account: null })}
+        />
+      )}
+      {txModal.open && (
+        <TransactionModal
+          transaction={txModal.tx}
+          accounts={accounts}
+          categories={categories}
+          onSave={tx => { upsertTransaction(tx); setTxModal({ open: false, tx: null }) }}
+          onDelete={id => { removeTransaction(id); setTxModal({ open: false, tx: null }) }}
+          onClose={() => setTxModal({ open: false, tx: null })}
+        />
+      )}
     </div>
   )
 }

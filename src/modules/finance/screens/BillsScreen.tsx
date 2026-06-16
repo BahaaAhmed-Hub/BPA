@@ -1,12 +1,9 @@
+import { useState } from 'react'
 import { useFinanceStore } from '../financeStore'
 import { useUIStore } from '@/store/uiStore'
 import { getTheme } from '@/lib/themes'
-
-// ─── Props ────────────────────────────────────────────────────────────────────
-
-interface Props {
-  onOpenAdd: () => void
-}
+import { BillModal } from '../modals/BillModal'
+import type { Bill } from '../types'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -70,7 +67,11 @@ function IconCircle({ icon, isIncome, surface, textPri }: { icon: string; isInco
 
 // ─── Bills Screen ─────────────────────────────────────────────────────────────
 
-export function BillsScreen({ onOpenAdd }: Props) {
+interface Props {
+  onOpenAdd?: () => void
+}
+
+export function BillsScreen({ onOpenAdd: _onOpenAdd }: Props) {
   const themeId = useUIStore(s => s.themeId)
   const theme = getTheme(themeId)
   const C = {
@@ -87,12 +88,15 @@ export function BillsScreen({ onOpenAdd }: Props) {
     green:     '#2FA869',
   }
 
-  const { bills } = useFinanceStore()
+  const { bills: storeBills, accounts, categories } = useFinanceStore()
+  const [localBills, setLocalBills] = useState<Bill[]>(storeBills)
+
+  const [billModal, setBillModal] = useState<{ open: boolean; bill: Bill | null }>({ open: false, bill: null })
 
   const today = new Date('2026-06-15')
   const in30  = new Date('2026-07-15')
 
-  const activeBills = bills.filter(b => b.isActive)
+  const activeBills = localBills.filter(b => b.isActive)
 
   // Upcoming: expenses due within next 30 days
   const upcomingExpenses = activeBills
@@ -102,6 +106,20 @@ export function BillsScreen({ onOpenAdd }: Props) {
       return d >= today && d <= in30
     })
     .sort((a, b) => new Date(a.nextDue).getTime() - new Date(b.nextDue).getTime())
+
+  function handleSave(bill: Bill) {
+    setLocalBills(prev =>
+      prev.some(b => b.id === bill.id)
+        ? prev.map(b => b.id === bill.id ? bill : b)
+        : [...prev, bill]
+    )
+    setBillModal({ open: false, bill: null })
+  }
+
+  function handleDelete(id: string) {
+    setLocalBills(prev => prev.filter(b => b.id !== id))
+    setBillModal({ open: false, bill: null })
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, height: '100%', overflow: 'hidden', background: C.bg }}>
@@ -115,7 +133,7 @@ export function BillsScreen({ onOpenAdd }: Props) {
       }}>
         <span style={{ fontSize: 20, fontWeight: 700, color: C.textPri }}>Bills</span>
         <button
-          onClick={onOpenAdd}
+          onClick={() => setBillModal({ open: true, bill: null })}
           style={{
             padding: '8px 18px', borderRadius: 9,
             background: C.amber, border: 'none',
@@ -149,11 +167,16 @@ export function BillsScreen({ onOpenAdd }: Props) {
           )}
 
           {upcomingExpenses.map(bill => (
-            <div key={bill.id} style={{
-              display: 'flex', alignItems: 'center', gap: 13,
-              padding: '13px 0',
-              borderBottom: `1px solid ${C.divFaint}`,
-            }}>
+            <div
+              key={bill.id}
+              onClick={() => setBillModal({ open: true, bill })}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 13,
+                padding: '13px 0',
+                borderBottom: `1px solid ${C.divFaint}`,
+                cursor: 'pointer',
+              }}
+            >
               {/* Date */}
               <span style={{ fontSize: 11.5, color: C.textMuted, width: 46, flexShrink: 0 }}>
                 {formatShortDate(bill.nextDue)}
@@ -185,11 +208,16 @@ export function BillsScreen({ onOpenAdd }: Props) {
           </div>
 
           {activeBills.map(bill => (
-            <div key={bill.id} style={{
-              display: 'flex', alignItems: 'center', gap: 13,
-              padding: '12px 0',
-              borderBottom: `1px solid ${C.divFaint}`,
-            }}>
+            <div
+              key={bill.id}
+              onClick={() => setBillModal({ open: true, bill })}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 13,
+                padding: '12px 0',
+                borderBottom: `1px solid ${C.divFaint}`,
+                cursor: 'pointer',
+              }}
+            >
               {/* Icon */}
               <IconCircle icon={bill.icon} isIncome={bill.isIncome} surface={C.surface} textPri={C.textPri} />
 
@@ -210,6 +238,18 @@ export function BillsScreen({ onOpenAdd }: Props) {
         </div>
 
       </div>
+
+      {/* BillModal */}
+      {billModal.open && (
+        <BillModal
+          bill={billModal.bill}
+          categories={categories}
+          accounts={accounts}
+          onSave={handleSave}
+          onDelete={handleDelete}
+          onClose={() => setBillModal({ open: false, bill: null })}
+        />
+      )}
     </div>
   )
 }
