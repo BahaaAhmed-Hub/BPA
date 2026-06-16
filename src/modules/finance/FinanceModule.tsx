@@ -143,6 +143,33 @@ export function FinanceModule() {
   }
   const [addOpen, setAddOpen] = useState(false)
 
+  const [navItems, setNavItems] = useState<{ id: FinanceScreen; label: string; Icon: (p: { color: string }) => React.ReactElement }[]>(() => {
+    const saved = localStorage.getItem('finance-tab-order')
+    if (saved) {
+      try {
+        const order: string[] = JSON.parse(saved)
+        return [...NAV_ITEMS].sort((a, b) => {
+          const ai = order.indexOf(a.id); const bi = order.indexOf(b.id)
+          return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi)
+        })
+      } catch {}
+    }
+    return NAV_ITEMS
+  })
+  const [draggedTab, setDraggedTab] = useState<FinanceScreen | null>(null)
+  const [dropTab, setDropTab] = useState<FinanceScreen | null>(null)
+
+  function reorderTabs(fromId: FinanceScreen, toId: FinanceScreen) {
+    if (fromId === toId) return
+    const items = [...navItems]
+    const fromIdx = items.findIndex(i => i.id === fromId)
+    const toIdx = items.findIndex(i => i.id === toId)
+    const [removed] = items.splice(fromIdx, 1)
+    items.splice(toIdx, 0, removed)
+    setNavItems(items)
+    localStorage.setItem('finance-tab-order', JSON.stringify(items.map(i => i.id)))
+  }
+
   function renderScreen() {
     const props = { onOpenAdd: () => setAddOpen(true) }
     switch (screen) {
@@ -156,73 +183,71 @@ export function FinanceModule() {
   }
 
   return (
-    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: C.bg }}>
-      {/* Left icon rail */}
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden', background: C.bg }}>
+      {/* Horizontal subheader nav */}
       <div style={{
-        width: 86, flexShrink: 0,
+        height: 52, flexShrink: 0,
         background: C.rail,
-        borderRight: `1px solid ${C.border}`,
-        display: 'flex', flexDirection: 'column',
-        alignItems: 'center',
-        padding: '18px 0 14px',
-        overflowY: 'auto',
+        borderBottom: `1px solid ${C.border}`,
+        display: 'flex', alignItems: 'center',
+        padding: '0 12px', gap: 4,
       }}>
         {/* Brand mark */}
         <div style={{
-          width: 38, height: 38, borderRadius: '50%',
+          width: 32, height: 32, borderRadius: '50%',
           border: `1.5px solid ${C.amber}`,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          marginBottom: 22, flexShrink: 0,
+          marginRight: 8, flexShrink: 0,
         }}>
-          <span style={{ color: C.amber, fontSize: 20, fontWeight: 700, fontStyle: 'italic', lineHeight: 1 }}>P</span>
+          <span style={{ color: C.amber, fontSize: 16, fontWeight: 700, fontStyle: 'italic', lineHeight: 1 }}>P</span>
         </div>
 
-        {/* Nav items */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 0, flex: 1, width: '100%', alignItems: 'center' }}>
-          {NAV_ITEMS.map(({ id, label, Icon }) => {
+        {/* Nav tabs — draggable to reorder */}
+        <div style={{ flex: 1, display: 'flex', gap: 2, overflowX: 'auto' }}>
+          {navItems.map(({ id, label, Icon }) => {
             const active = screen === id
+            const isDragging = draggedTab === id
+            const isDropTarget = dropTab === id && dropTab !== draggedTab
             return (
-              <button
+              <div
                 key={id}
+                draggable
+                onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; setDraggedTab(id) }}
+                onDragOver={e => { e.preventDefault(); setDropTab(id) }}
+                onDrop={e => { e.preventDefault(); if (draggedTab) reorderTabs(draggedTab, id); setDropTab(null) }}
+                onDragEnd={() => { setDraggedTab(null); setDropTab(null) }}
                 onClick={() => handleSetScreen(id)}
                 style={{
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
-                  padding: '13px 0', cursor: 'pointer', width: '100%',
-                  position: 'relative', border: 'none',
-                  background: active ? `rgba(196,154,60,0.06)` : 'transparent',
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  padding: '5px 10px', borderRadius: 8, cursor: 'grab',
+                  background: active ? `${C.amber}14` : 'transparent',
+                  border: `1px solid ${isDropTarget ? C.amber : active ? `${C.amber}33` : 'transparent'}`,
+                  opacity: isDragging ? 0.35 : 1,
+                  userSelect: 'none', flexShrink: 0,
+                  position: 'relative',
                 } as React.CSSProperties}
               >
-                {active && (
-                  <div style={{
-                    position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)',
-                    width: 3, height: 28, borderRadius: '0 2px 2px 0',
-                    background: C.amber,
-                  }} />
-                )}
                 <Icon color={active ? C.amber : C.textMuted} />
                 <span style={{
-                  fontSize: 10, fontWeight: 500,
+                  fontSize: 12, fontWeight: active ? 600 : 400,
                   color: active ? C.amber : C.textMuted,
-                  letterSpacing: '0.2px',
-                  textAlign: 'center',
-                  lineHeight: 1.2,
+                  whiteSpace: 'nowrap' as const, letterSpacing: '0.1px',
                 }}>
                   {label}
                 </span>
-              </button>
+              </div>
             )
           })}
         </div>
 
-        {/* Add (+) button */}
+        {/* Add button */}
         <button
           onClick={() => setAddOpen(true)}
           style={{
-            width: 48, height: 48, borderRadius: 14,
-            background: C.amber,
-            border: 'none', cursor: 'pointer',
+            width: 34, height: 34, borderRadius: 10,
+            background: C.amber, border: 'none', cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            flexShrink: 0, marginBottom: 14,
+            flexShrink: 0,
           }}
         >
           <IconPlus color={C.bg} />
@@ -230,7 +255,7 @@ export function FinanceModule() {
       </div>
 
       {/* Main content area */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div style={{ flex: 1, overflow: 'hidden' }}>
         {renderScreen()}
       </div>
 

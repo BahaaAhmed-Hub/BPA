@@ -53,7 +53,9 @@ export function BudgetScreen() {
 
   // ─── Data helpers ──────────────────────────────────────────────────────
 
-  function subCatsOf(id: string) { return categories.filter(c => c.parentId === id) }
+  function subCatsOf(id: string) {
+    return categories.filter(c => c.parentId === id).sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+  }
 
   function txsInMonth(catId: string, ym: string) {
     return transactions.filter(tx => tx.categoryId === catId && tx.date.startsWith(ym))
@@ -74,8 +76,8 @@ export function BudgetScreen() {
     return budgets.find(b => b.categoryId === catId)
   }
 
-  const topExpCats = categories.filter(c => !c.parentId && (c.txType === 'expense' || c.txType === 'both'))
-  const topIncCats = categories.filter(c => !c.parentId && (c.txType === 'income'  || c.txType === 'both'))
+  const topExpCats = categories.filter(c => !c.parentId && (c.txType === 'expense' || c.txType === 'both')).sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+  const topIncCats = categories.filter(c => !c.parentId && (c.txType === 'income'  || c.txType === 'both')).sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
 
   const totalExpActual = topExpCats.reduce((s, c) => s + actualInMonth(c.id, currentMonth), 0)
   const totalExpBudget = topExpCats.reduce((s, c) => s + budgetAmt(c.id), 0)
@@ -163,16 +165,27 @@ export function BudgetScreen() {
     if (!draggedCatId) return
     const dragged = categories.find(c => c.id === draggedCatId)
     if (!dragged) return
+
     if (targetId === null) {
       if (dragged.parentId) upsertCategory({ ...dragged, parentId: undefined })
     } else {
       if (draggedCatId === targetId) return
       const target = categories.find(c => c.id === targetId)
-      if (!target || target.parentId === draggedCatId) return
-      upsertCategory({ ...dragged, parentId: targetId })
+      if (!target) return
+
+      if (dragged.parentId === target.parentId) {
+        // Same level → swap sort orders to reorder
+        const draggedOrder = dragged.sortOrder ?? 0
+        const targetOrder  = target.sortOrder ?? 0
+        upsertCategory({ ...dragged, sortOrder: targetOrder })
+        upsertCategory({ ...target, sortOrder: draggedOrder })
+      } else {
+        // Different level → reparent (guard against dropping parent onto own child)
+        if (target.parentId === draggedCatId) return
+        upsertCategory({ ...dragged, parentId: targetId })
+      }
     }
-    setDraggedCatId(null)
-    setDropTargetId(null)
+    setDraggedCatId(null); setDropTargetId(null)
   }
 
   // ─── Shared circle renderer (called as function, not component) ────────
@@ -304,6 +317,7 @@ export function BudgetScreen() {
                 id: crypto.randomUUID(), name: '', icon: '📁',
                 color: theme.accent, parentId: parentCat.id,
                 txType: parentCat.txType, isSystem: false,
+                sortOrder: subCatsOf(parentCat.id).length,
               }})}
               style={{
                 width: 34, height: 34, borderRadius: '50%',
@@ -427,7 +441,11 @@ export function BudgetScreen() {
               {topExpCats.map(cat => renderCircle(cat, 64, false, true))}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: 12 }}>
                 <button
-                  onClick={() => setCatModal({ open: true, category: null })}
+                  onClick={() => setCatModal({ open: true, category: {
+                    id: crypto.randomUUID(), name: '', icon: '📁',
+                    color: theme.accent, txType: 'expense', isSystem: false,
+                    sortOrder: categories.filter(c => !c.parentId).length,
+                  }})}
                   style={{
                     width: 40, height: 40, borderRadius: '50%',
                     border: `2px dashed ${theme.border}`, background: 'none', cursor: 'pointer',
@@ -456,7 +474,11 @@ export function BudgetScreen() {
               {topIncCats.map(cat => renderCircle(cat, 64, true, true))}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: 12 }}>
                 <button
-                  onClick={() => setCatModal({ open: true, category: null })}
+                  onClick={() => setCatModal({ open: true, category: {
+                    id: crypto.randomUUID(), name: '', icon: '📁',
+                    color: theme.accent, txType: 'income', isSystem: false,
+                    sortOrder: categories.filter(c => !c.parentId).length,
+                  }})}
                   style={{
                     width: 40, height: 40, borderRadius: '50%',
                     border: `2px dashed ${theme.border}`, background: 'none', cursor: 'pointer',

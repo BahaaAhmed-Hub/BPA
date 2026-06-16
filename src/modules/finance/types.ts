@@ -23,6 +23,7 @@ export interface Category {
   color: string
   parentId?: string
   isSystem: boolean
+  sortOrder?: number
   txType: 'expense' | 'income' | 'both'
 }
 
