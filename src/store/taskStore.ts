@@ -14,7 +14,7 @@ function toRow(t: Task): TaskRow {
   return {
     id: t.id, title: t.title, quadrant: t.quadrant ?? null,
     company: t.company, companyId: t.companyId,
-    status: t.status, completed: t.completed,
+    status: t.status, completed: t.completed, completedAt: t.completedAt,
     dueDate: t.dueDate, duration: t.duration, plannedTime: t.plannedTime,
     owner: t.owner, urgent: t.urgent, taskType: t.taskType, createdAt: t.createdAt,
   }
@@ -27,6 +27,7 @@ function fromRow(r: TaskRow): Task {
     company: (r.company as Task['company']) || 'teradix',
     status: (r.status as TaskStatus) || 'open',
     completed: r.completed,
+    completedAt: r.completedAt,
     dueDate: r.dueDate, duration: r.duration, plannedTime: r.plannedTime,
     owner: r.owner, createdAt: r.createdAt,
     // Only include these if DB actually has them — avoids overwriting local state on merge
@@ -274,7 +275,8 @@ export const useTaskStore = create<TaskState>()(
               completedAt: t.completed ? undefined : today,
             } : t
           )
-          scheduleDbSync(next)
+          // Save immediately — debouncing risks losing the change if user refreshes
+          saveTasksToDB(next.map(toRow)).catch(console.warn)
           return {
             tasks: next,
             activities: [...s.activities, act(id, 'status_changed', nowDone ? 'Marked as done' : 'Reopened')],
@@ -292,7 +294,8 @@ export const useTaskStore = create<TaskState>()(
               completedAt: status === 'done' ? (t.completedAt ?? today) : undefined,
             } : t
           )
-          scheduleDbSync(next)
+          // Save immediately for status changes so completion date persists through refresh
+          saveTasksToDB(next.map(toRow)).catch(console.warn)
           return {
             tasks: next,
             activities: [...s.activities, act(id, 'status_changed', `Status → ${status}`)],

@@ -17,10 +17,12 @@ import {
   listCalendarsWithToken,
   fetchCalendarEventsWithToken,
   updateCalendarEventTimes,
+  updateCalendarEvent,
   refreshPrimaryToken,
   createCalendarEventWithToken,
   deleteCalendarEventWithToken,
   addMeetingToEvent,
+  efUpdateEvent,
 } from '@/lib/googleCalendar'
 import type { GCalEvent, GCalCalendar, GCalEventCreate } from '@/lib/googleCalendar'
 import { getGoogleToken, seedToken, getGoogleTokenViaSupabaseRefresh } from '@/lib/tokenManager'
@@ -636,6 +638,14 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
           {event.end.dateTime ? ` – ${fmtShort(event.end.dateTime)}` : ''}
         </div>
       )}
+      {height >= 52 && event.location && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginTop: 3, overflow: 'hidden' }}>
+          <MapPin size={9} color="rgba(255,255,255,0.65)" style={{ flexShrink: 0 }} />
+          <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.65)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {event.location}
+          </span>
+        </div>
+      )}
       {/* Inline Done / Cancel icon buttons — visible on hover, or always if active */}
       {height >= 48 && !isDragOverlay && (
         <div
@@ -678,7 +688,7 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
 }
 
 // ─── EventPopup (macOS Calendar style) ────────────────────────────────────────
-function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepError, pos, onClose, onStatusToggle, onPrepRequest, onAddMeet }: {
+function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepError, pos, onClose, onStatusToggle, onPrepRequest, onAddMeet, onSave }: {
   event: GCalEventExt
   status: EventStatus | undefined
   calName: string
@@ -691,11 +701,56 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
   onStatusToggle: (s: EventStatus) => void
   onPrepRequest: () => void
   onAddMeet?: () => Promise<void>
+  onSave?: (patch: Partial<GCalEventCreate>) => Promise<GCalEvent | null>
 }) {
   const popupRef  = useRef<HTMLDivElement>(null)
   const [showPrep,    setShowPrep]    = useState(false)
   const [adjPos,      setAdjPos]      = useState(pos)
   const [addingMeet,  setAddingMeet]  = useState(false)
+  const [editMode,    setEditMode]    = useState(false)
+  const [saving,      setSaving]      = useState(false)
+  const [saveError,   setSaveError]   = useState<string | null>(null)
+
+  const isAllDayEvent = !event.start.dateTime
+  const toLocalDateTimeInput = (iso: string) => {
+    const d = new Date(iso)
+    const pad = (n: number) => String(n).padStart(2, '0')
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+  }
+  const toDateInput = (iso: string) => iso.slice(0, 10)
+
+  const [editTitle,    setEditTitle]    = useState(event.summary ?? '')
+  const [editStart,    setEditStart]    = useState(
+    isAllDayEvent ? toDateInput(event.start.date ?? '') : toLocalDateTimeInput(event.start.dateTime!)
+  )
+  const [editEnd,      setEditEnd]      = useState(
+    isAllDayEvent ? toDateInput(event.end.date ?? '') : toLocalDateTimeInput(event.end.dateTime!)
+  )
+  const [editLocation, setEditLocation] = useState(event.location ?? '')
+  const [editNotes,    setEditNotes]    = useState(event.description ?? '')
+
+  async function handleSave() {
+    if (!onSave) return
+    setSaving(true); setSaveError(null)
+    try {
+      const patch: Partial<GCalEventCreate> = {
+        summary: editTitle.trim() || undefined,
+        location: editLocation.trim() || undefined,
+        description: editNotes.trim() || undefined,
+      }
+      if (isAllDayEvent) {
+        patch.start = { date: editStart }
+        patch.end   = { date: editEnd }
+      } else {
+        const tz = event.start.timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone
+        patch.start = { dateTime: new Date(editStart).toISOString(), timeZone: tz }
+        patch.end   = { dateTime: new Date(editEnd).toISOString(),   timeZone: tz }
+      }
+      const updated = await onSave(patch)
+      if (updated) setEditMode(false)
+      else setSaveError('Could not save — check your permissions.')
+    } finally { setSaving(false) }
+  }
 
   useEffect(() => {
     if (!popupRef.current) return
@@ -712,6 +767,27 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
     document.addEventListener('mousedown', fn)
     return () => document.removeEventListener('mousedown', fn)
   }, [onClose])
+
+  // Drag-to-move: track pointer offset from popup top-left while dragging header
+  const dragOffset = useRef<{ dx: number; dy: number } | null>(null)
+  function onHeaderMouseDown(e: React.MouseEvent) {
+    if ((e.target as HTMLElement).closest('button,input,textarea,a')) return
+    e.preventDefault()
+    e.stopPropagation()
+    const rect = popupRef.current!.getBoundingClientRect()
+    dragOffset.current = { dx: e.clientX - rect.left, dy: e.clientY - rect.top }
+    const onMove = (ev: MouseEvent) => {
+      if (!dragOffset.current) return
+      setAdjPos({ x: ev.clientX - dragOffset.current.dx, y: ev.clientY - dragOffset.current.dy })
+    }
+    const onUp = () => {
+      dragOffset.current = null
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+  }
 
   const isAllDay     = !event.start.dateTime
   const entryPoints  = event.conferenceData?.entryPoints ?? []
@@ -758,20 +834,29 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
   })
 
   return (
-    <div ref={popupRef} onClick={e => e.stopPropagation()} style={{
+    <div ref={popupRef} onClick={e => e.stopPropagation()} onMouseDown={e => e.stopPropagation()} style={{
       position: 'fixed', top: adjPos.y, left: adjPos.x,
       width: 330, maxHeight: 'calc(100vh - 24px)', overflowY: 'auto',
       background: 'var(--color-surface, #161929)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 14,
       boxShadow: '0 16px 48px rgba(0,0,0,0.65)', zIndex: 1000,
     }}>
 
-      {/* Header: calendar dot + title + close */}
-      <div style={{ padding: '14px 14px 10px', display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-        <div style={{ width: 14, height: 14, borderRadius: '50%', background: calColor, flexShrink: 0, marginTop: 3 }} />
+      {/* Header: calendar dot + title + close — draggable */}
+      <div onMouseDown={onHeaderMouseDown} style={{ padding: '14px 14px 10px', display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'grab' }}>
+        <div style={{ width: 14, height: 14, borderRadius: '50%', background: calColor, flexShrink: 0, marginTop: editMode ? 10 : 3 }} />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--color-text, #E8EAF6)', lineHeight: 1.3, wordBreak: 'break-word' }}>
-            {event.summary ?? '(No title)'}
-          </div>
+          {editMode ? (
+            <input
+              value={editTitle}
+              onChange={e => setEditTitle(e.target.value)}
+              placeholder="Event title"
+              style={{ width: '100%', fontSize: 17, fontWeight: 700, color: 'var(--color-text, #E8EAF6)', background: 'var(--color-bg, #0D0F1A)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 6, padding: '5px 8px', boxSizing: 'border-box', outline: 'none' }}
+            />
+          ) : (
+            <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--color-text, #E8EAF6)', lineHeight: 1.3, wordBreak: 'break-word' }}>
+              {event.summary ?? '(No title)'}
+            </div>
+          )}
           <div style={{ display: 'flex', gap: 5, marginTop: 5, flexWrap: 'wrap' }}>
             {isTentative && (
               <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 4, background: '#FF950022', color: '#FF9500', border: '1px solid #FF950055' }}>Tentative</span>
@@ -796,10 +881,15 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
       <div style={{ height: 1, background: 'var(--color-border, #252A3E)' }} />
 
       {/* Location */}
-      {event.location && (
+      {(event.location || editMode) && (
         <div style={{ display: 'flex', alignItems: 'center', padding: '8px 14px', gap: 9 }}>
           <MapPin size={13} color="var(--color-text-muted, #6B7280)" style={{ flexShrink: 0 }} />
-          <span style={{ fontSize: 13, color: 'var(--color-text-dim, #C0C4D6)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{event.location}</span>
+          {editMode ? (
+            <input value={editLocation} onChange={e => setEditLocation(e.target.value)} placeholder="Add location"
+              style={{ flex: 1, fontSize: 13, color: 'var(--color-text, #E8EAF6)', background: 'var(--color-bg, #0D0F1A)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 5, padding: '3px 7px', outline: 'none' }} />
+          ) : (
+            <span style={{ fontSize: 13, color: 'var(--color-text-dim, #C0C4D6)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{event.location}</span>
+          )}
         </div>
       )}
 
@@ -844,23 +934,35 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
 
       {/* Date / time fieldRows */}
       <div style={{ padding: '6px 0' }}>
-        {isAllDay
-          ? fieldRow('All Day', <span style={{ fontSize: 13, color: 'var(--color-text-dim, #C0C4D6)' }}>{fmtPopupDate(startIso, endIso, true)}</span>)
-          : <>
-              {fieldRow('Starts', (
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <span style={{ fontSize: 13, color: 'var(--color-text-dim, #C0C4D6)' }}>{startDT?.date}</span>
-                  <span style={{ fontSize: 13, color: 'var(--color-text-dim, #8B93A8)' }}>{startDT?.time}</span>
-                </div>
-              ))}
-              {fieldRow('Ends', (
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <span style={{ fontSize: 13, color: 'var(--color-text-dim, #C0C4D6)' }}>{endDT?.date}</span>
-                  <span style={{ fontSize: 13, color: 'var(--color-text-dim, #8B93A8)' }}>{endDT?.time}</span>
-                </div>
-              ))}
-            </>
-        }
+        {editMode ? (
+          <>
+            {fieldRow(isAllDayEvent ? 'Start date' : 'Starts', (
+              <input type={isAllDayEvent ? 'date' : 'datetime-local'} value={editStart} onChange={e => setEditStart(e.target.value)}
+                style={{ fontSize: 12, color: 'var(--color-text, #E8EAF6)', background: 'var(--color-bg, #0D0F1A)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 5, padding: '3px 7px', outline: 'none', colorScheme: 'dark' }} />
+            ))}
+            {fieldRow(isAllDayEvent ? 'End date' : 'Ends', (
+              <input type={isAllDayEvent ? 'date' : 'datetime-local'} value={editEnd} onChange={e => setEditEnd(e.target.value)}
+                style={{ fontSize: 12, color: 'var(--color-text, #E8EAF6)', background: 'var(--color-bg, #0D0F1A)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 5, padding: '3px 7px', outline: 'none', colorScheme: 'dark' }} />
+            ))}
+          </>
+        ) : isAllDay ? (
+          fieldRow('All Day', <span style={{ fontSize: 13, color: 'var(--color-text-dim, #C0C4D6)' }}>{fmtPopupDate(startIso, endIso, true)}</span>)
+        ) : (
+          <>
+            {fieldRow('Starts', (
+              <div style={{ display: 'flex', gap: 8 }}>
+                <span style={{ fontSize: 13, color: 'var(--color-text-dim, #C0C4D6)' }}>{startDT?.date}</span>
+                <span style={{ fontSize: 13, color: 'var(--color-text-dim, #8B93A8)' }}>{startDT?.time}</span>
+              </div>
+            ))}
+            {fieldRow('Ends', (
+              <div style={{ display: 'flex', gap: 8 }}>
+                <span style={{ fontSize: 13, color: 'var(--color-text-dim, #C0C4D6)' }}>{endDT?.date}</span>
+                <span style={{ fontSize: 13, color: 'var(--color-text-dim, #8B93A8)' }}>{endDT?.time}</span>
+              </div>
+            ))}
+          </>
+        )}
         {isRecurring && fieldRow('Repeat', <span style={{ fontSize: 13, color: 'var(--color-text-dim, #C0C4D6)' }}>Recurring</span>)}
         {fieldRow('Calendar', (
           <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
@@ -919,14 +1021,19 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
       )}
 
       {/* Notes */}
-      {notes && (
+      {(notes || editMode) && (
         <>
           <div style={{ height: 1, background: 'var(--color-border, #252A3E)' }} />
           <div style={{ padding: '10px 14px' }}>
             <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--color-border, #4B5268)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 5 }}>Notes</div>
-            <div style={{ fontSize: 12, color: 'var(--color-text-dim, #8B93A8)', lineHeight: 1.6, maxHeight: 90, overflowY: 'auto', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-              {notes.slice(0, 400)}{notes.length > 400 ? '…' : ''}
-            </div>
+            {editMode ? (
+              <textarea value={editNotes} onChange={e => setEditNotes(e.target.value)} placeholder="Add notes…" rows={3}
+                style={{ width: '100%', fontSize: 12, color: 'var(--color-text, #E8EAF6)', background: 'var(--color-bg, #0D0F1A)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 5, padding: '5px 7px', resize: 'vertical', outline: 'none', boxSizing: 'border-box', lineHeight: 1.5 }} />
+            ) : (
+              <div style={{ fontSize: 12, color: 'var(--color-text-dim, #8B93A8)', lineHeight: 1.6, maxHeight: 90, overflowY: 'auto', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                {notes.slice(0, 400)}{notes.length > 400 ? '…' : ''}
+              </div>
+            )}
           </div>
         </>
       )}
@@ -943,18 +1050,43 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
 
       {/* Action buttons */}
       <div style={{ padding: '8px 14px 14px', display: 'flex', gap: 6, borderTop: '1px solid var(--color-border, #252A3E)', flexWrap: 'wrap' }}>
-        <button style={btn(status === 'done', '#1D9E75')} onClick={() => onStatusToggle('done')}>
-          <CheckCircle2 size={12} /> Done
-        </button>
-        <button style={btn(status === 'cancelled', '#E05252')} onClick={() => onStatusToggle('cancelled')}>
-          <XCircle size={12} /> Cancel
-        </button>
-        <button
-          style={{ ...btn(showPrep, 'var(--color-accent)'), marginLeft: 'auto' }}
-          onClick={() => { setShowPrep(p => !p); if (!prep && !prepLoading) onPrepRequest() }}
-        >
-          <Sparkles size={12} /> AI Prep
-        </button>
+        {editMode ? (
+          <>
+            <button
+              onClick={handleSave} disabled={saving}
+              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 13px', borderRadius: 7, fontSize: 12, cursor: saving ? 'default' : 'pointer', background: '#7F77DD22', border: '1px solid #7F77DD', color: 'var(--color-accent)', fontWeight: 600, opacity: saving ? 0.6 : 1 }}
+            >
+              {saving ? 'Saving…' : 'Save'}
+            </button>
+            <button
+              onClick={() => { setEditMode(false); setSaveError(null) }}
+              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 11px', borderRadius: 7, fontSize: 12, cursor: 'pointer', background: 'transparent', border: '1px solid var(--color-border, #2A2F45)', color: 'var(--color-text-dim, #8B93A8)' }}
+            >
+              Cancel
+            </button>
+            {saveError && <span style={{ fontSize: 11, color: '#E05252', alignSelf: 'center' }}>{saveError}</span>}
+          </>
+        ) : (
+          <>
+            <button style={btn(status === 'done', '#1D9E75')} onClick={() => onStatusToggle('done')}>
+              <CheckCircle2 size={12} /> Done
+            </button>
+            <button style={btn(status === 'cancelled', '#E05252')} onClick={() => onStatusToggle('cancelled')}>
+              <XCircle size={12} /> Cancel
+            </button>
+            {onSave && (
+              <button style={btn(false, 'var(--color-accent)')} onClick={() => setEditMode(true)}>
+                Edit
+              </button>
+            )}
+            <button
+              style={{ ...btn(showPrep, 'var(--color-accent)'), marginLeft: 'auto' }}
+              onClick={() => { setShowPrep(p => !p); if (!prep && !prepLoading) onPrepRequest() }}
+            >
+              <Sparkles size={12} /> AI Prep
+            </button>
+          </>
+        )}
       </div>
 
       {/* AI Prep section */}
@@ -1453,6 +1585,7 @@ export function CalendarIntelligence() {
   const [loadingEvents,   setLoadingEvents]   = useState(() => loadEventsCache(getWeekStart(new Date())).length === 0)
   const [noAuth,          setNoAuth]          = useState(false)
   const [fetchError,      setFetchError]      = useState<string | null>(null)
+  const [refreshing,      setRefreshing]      = useState(false)
   const [reconnectNeeded, setReconnectNeeded] = useState<string[]>([])
   const [applyingRules,   setApplyingRules]   = useState(false)
   const [rulesResult,     setRulesResult]     = useState<string | null>(null)
@@ -1545,6 +1678,8 @@ export function CalendarIntelligence() {
     if (!user?.email) return  // wait for user — prevents concurrent double-call race
     // Persist primary email for the initial-render cache cleanup on next page load
     localStorage.setItem('cal-intel-primary-email', user.email)
+    // Clear stale calendar list cache so newly subscribed/added calendars always appear
+    localStorage.removeItem(CAL_INTEL_CACHE_KEY)
     const { calendars: fresh, needsReconnect } = await loadAllCalendars(user.email)
     setReconnectNeeded(needsReconnect)
 
@@ -1726,6 +1861,26 @@ export function CalendarIntelligence() {
       setEvents(prev => prev.filter(e => e.id !== ev.id))
       if (selectedEvent?.id === ev.id) { setSelectedEvent(null); setPopupPos(null) }
     }
+  }
+
+  async function handleUpdateEvent(ev: GCalEventExt, patch: Partial<GCalEventCreate>): Promise<GCalEvent | null> {
+    const cal = allCalendars.find(c => c.id === ev.calendarId)
+    if (!cal || !ev.calendarId) return null
+    let updated: GCalEvent | null = null
+    if (cal.accountId) {
+      const result = await efUpdateEvent(cal.accountId, ev.calendarId, ev.id, patch)
+      updated = result.event
+    } else {
+      const token = await refreshPrimaryToken() || cal.accountToken
+      if (!token) return null
+      const result = await updateCalendarEvent(ev.calendarId, ev.id, patch)
+      updated = result.event
+    }
+    if (updated) {
+      setEvents(prev => prev.map(e => e.id === ev.id ? { ...e, ...updated } : e))
+      setSelectedEvent(prev => prev?.id === ev.id ? { ...prev, ...updated } as GCalEventExt : prev)
+    }
+    return updated
   }
 
   async function handleAddMeet(ev: GCalEventExt) {
@@ -2032,9 +2187,20 @@ export function CalendarIntelligence() {
             ><ChevronRight size={15} /></button>
 
             <button
-              onClick={() => void reloadCalendars().then(c => { if (c) void loadEvents(weekStart, c, hiddenCals) })}
-              style={{ background: 'none', border: '1px solid var(--color-border, #252A3E)', borderRadius: 7, cursor: 'pointer', color: 'var(--color-text-dim, #8B93A8)', padding: '4px 8px', display: 'flex', alignItems: 'center' }}
-            ><RefreshCw size={13} /></button>
+              onClick={async () => {
+                if (refreshing) return
+                setRefreshing(true)
+                // Clear events cache so the grid shows the loading indicator
+                Object.keys(localStorage).filter(k => k.startsWith(EVENTS_CACHE_PREFIX)).forEach(k => localStorage.removeItem(k))
+                setLoadingEvents(true)
+                try {
+                  const c = await reloadCalendars()
+                  if (c) await loadEvents(weekStart, c, hiddenCals)
+                } finally { setRefreshing(false) }
+              }}
+              disabled={refreshing}
+              style={{ background: 'none', border: '1px solid var(--color-border, #252A3E)', borderRadius: 7, cursor: refreshing ? 'default' : 'pointer', color: 'var(--color-text-dim, #8B93A8)', padding: '4px 8px', display: 'flex', alignItems: 'center', opacity: refreshing ? 0.6 : 1 }}
+            ><RefreshCw size={13} style={{ animation: refreshing ? 'spin 0.7s linear infinite' : 'none' }} /></button>
 
             <button
               onClick={() => void handleApplyRules()}
@@ -2198,6 +2364,46 @@ export function CalendarIntelligence() {
             })}
           </div>
 
+          {/* All-day events strip — only shown when the week has at least one all-day event */}
+          {weekDays.some(day => (grouped.get(localDateStr(day)) ?? []).some(e => !e.start.dateTime)) && (
+            <div style={{ display: 'flex', borderBottom: '1px solid var(--color-surface, #1A1D2E)', flexShrink: 0, minHeight: 22 }}>
+              <div style={{ width: 52, flexShrink: 0, display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end', paddingRight: 6, paddingTop: 3, fontSize: 9, color: 'var(--color-text-muted, #6B7280)', letterSpacing: '0.4px' }}>
+                all day
+              </div>
+              {weekDays.map(day => {
+                const ds = localDateStr(day)
+                const allDayEvts = (grouped.get(ds) ?? []).filter(e => !e.start.dateTime)
+                return (
+                  <div key={ds} style={{ flex: 1, padding: '2px 2px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1, borderRight: '1px solid var(--color-surface, #1A1D2E)', maxHeight: 68, overflowY: 'auto' }}>
+                    {allDayEvts.map(ev => {
+                      const cal   = allCalendars.find(c => c.id === (ev as GCalEventExt).calendarId)
+                      const color = cal ? calEffectiveColor(cal) : 'var(--color-accent)'
+                      const evStatus = eventStatuses[ev.id]
+                      return (
+                        <div
+                          key={ev.id}
+                          onClick={e => handleEventClick(ev as GCalEventExt, e)}
+                          onContextMenu={e => handleEventContextMenu(ev as GCalEventExt, e)}
+                          style={{
+                            fontSize: 10, fontWeight: 600, color: '#fff',
+                            background: `${color}${evStatus ? '66' : 'CC'}`,
+                            borderLeft: `2px solid ${color}`,
+                            borderRadius: 3, padding: '1px 4px',
+                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                            cursor: 'pointer', textDecoration: evStatus === 'cancelled' ? 'line-through' : 'none',
+                          }}
+                        >
+                          {evStatus === 'done' && '✓ '}{evStatus === 'cancelled' && '✗ '}
+                          {ev.summary ?? '(No title)'}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
           {/* Scrollable time grid */}
           <div ref={gridRef} onClick={closePopup}
             style={{ flex: 1, overflowY: 'auto', display: 'flex', position: 'relative' }}
@@ -2207,7 +2413,8 @@ export function CalendarIntelligence() {
               {Array.from({ length: 24 }, (_, h) => (
                 <div key={h} style={{
                   position: 'absolute', top: h * HOUR_PX - 7,
-                  right: 8, fontSize: 10, color: 'var(--color-border, #3A3F55)', whiteSpace: 'nowrap',
+                  right: 8, fontSize: 10, color: 'var(--color-text-muted, #6B7280)', whiteSpace: 'nowrap',
+                  fontWeight: 500,
                 }}>
                   {fmtHourLabel(h)}
                 </div>
@@ -2338,6 +2545,7 @@ export function CalendarIntelligence() {
             onStatusToggle={s => toggleStatus(selectedEvent.id, s)}
             onPrepRequest={() => void generatePrep(selectedEvent)}
             onAddMeet={() => handleAddMeet(selectedEvent)}
+            onSave={patch => handleUpdateEvent(selectedEvent, patch)}
           />
         )
       })()}

@@ -3,8 +3,10 @@ import { CheckSquare, Clock, Users, TrendingUp, ChevronLeft, ChevronRight, Check
 import { TopBar } from '@/components/layout/TopBar'
 import { useTaskStore } from '@/store/taskStore'
 import type { Task } from '@/types'
-import { isTaskHidden } from '@/types'
+import { isTaskHidden, loadDynamicCompanies } from '@/types'
 import type { GCalEvent } from '@/lib/googleCalendar'
+
+type ExtEvent = GCalEvent & { calendarColor?: string; calendarId?: string }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -82,6 +84,15 @@ function getMondayOf(dayStr: string): string {
 
 function getWeekDays(mondayStr: string): string[] {
   return Array.from({ length: 7 }, (_, i) => shiftDay(mondayStr, i))
+}
+
+// Determine which day a completed task "belongs to" for review display.
+// If completedAt is set, use it. Otherwise fall back to dueDate — but cap
+// at today so a task with a future dueDate doesn't vanish into tomorrow.
+function completionAnchor(t: { completedAt?: string; dueDate?: string }): string | undefined {
+  if (t.completedAt) return t.completedAt
+  if (!t.dueDate) return undefined
+  return t.dueDate > todayStr() ? todayStr() : t.dueDate
 }
 
 function fmtDayLabel(dayStr: string): string {
@@ -191,6 +202,21 @@ function EventRow({ event, cancelled }: { event: GCalEvent; cancelled?: boolean 
 
 // ─── Task row ─────────────────────────────────────────────────────────────────
 
+function resolveCompanyLabel(task: Task): string | undefined {
+  const companies = loadDynamicCompanies()
+  if (task.companyId) {
+    const dyn = companies.find(c => c.id === task.companyId)
+    if (dyn) return dyn.name
+  }
+  // task.company may be a UUID (stored directly by some code paths) — resolve it
+  if (task.company) {
+    const byId = companies.find(c => c.id === task.company)
+    if (byId) return byId.name
+    if (task.company !== 'personal') return task.company
+  }
+  return undefined
+}
+
 function TaskRow({ title, company, cancelled }: { title: string; company?: string; cancelled?: boolean }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 8, background: 'var(--color-bg, #0D0F1A)', border: '1px solid var(--color-surface, #1A1D2E)', marginBottom: 5 }}>
@@ -228,6 +254,105 @@ function PillStat({ done, total, label, color }: { done: number; total: number; 
   )
 }
 
+// ─── Pie chart ────────────────────────────────────────────────────────────────
+
+type PieSlice = { label: string; minutes: number; color: string }
+
+function loadCalNames(): Map<string, { name: string; color: string }> {
+  try {
+    const raw = localStorage.getItem('cal-intel-cals-cache')
+    if (!raw) return new Map()
+    const cals = JSON.parse(raw) as { id: string; summary?: string; backgroundColor?: string }[]
+    return new Map(cals.map(c => [c.id, { name: c.summary ?? 'Calendar', color: c.backgroundColor ?? '#7F77DD' }]))
+  } catch { return new Map() }
+}
+
+function eventMins(e: GCalEvent): number {
+  const s = e.start.dateTime, f = e.end?.dateTime
+  if (!s || !f) return 0
+  return Math.max(0, (new Date(f).getTime() - new Date(s).getTime()) / 60000)
+}
+
+function buildPieSlices(
+  events: GCalEvent[],
+  tasks: Task[],
+  statuses: Record<string, EventStatus>,
+  dayCount: number,
+): PieSlice[] {
+  const calMap  = loadCalNames()
+  const SLEEP   = dayCount * 8 * 60
+  const TOTAL   = dayCount * 24 * 60
+
+  const done = events.filter(e => statuses[e.id] === 'done')
+  const byCalId = new Map<string, { label: string; color: string; mins: number }>()
+  let evtTotal = 0
+
+  for (const e of done) {
+    const ext = e as ExtEvent
+    const id  = ext.calendarId ?? '__primary__'
+    const info = ext.calendarId ? calMap.get(ext.calendarId) : null
+    const color = info?.color ?? ext.calendarColor ?? '#7F77DD'
+    const label = info?.name  ?? 'Calendar'
+    const m = eventMins(e)
+    evtTotal += m
+    const existing = byCalId.get(id)
+    if (existing) existing.mins += m
+    else byCalId.set(id, { label, color, mins: m })
+  }
+
+  const taskTotal = tasks
+    .filter(t => t.completed || t.status === 'done')
+    .reduce((s, t) => s + (t.duration ?? 0), 0)
+
+  const free = Math.max(0, TOTAL - SLEEP - evtTotal - taskTotal)
+
+  return [
+    { label: 'Sleep', minutes: SLEEP, color: '#13152B' },
+    ...[...byCalId.values()].filter(v => v.mins > 0).map(v => ({ label: v.label, minutes: v.mins, color: v.color })),
+    ...(taskTotal > 0 ? [{ label: 'Tasks', minutes: taskTotal, color: '#1D9E75' }] : []),
+    { label: 'Unaccounted', minutes: free, color: '#252A3E' },
+  ]
+}
+
+function PieChart({ slices, title }: { slices: PieSlice[]; title: string }) {
+  const total = slices.reduce((s, sl) => s + sl.minutes, 0)
+  if (total === 0) return null
+  const active = slices.filter(sl => sl.minutes > 0)
+  const R = 56, cx = 68, cy = 68
+  let angle = -Math.PI / 2
+  const paths = active.map(sl => {
+    const frac = sl.minutes / total
+    const a0 = angle, a1 = angle + frac * 2 * Math.PI
+    angle = a1
+    const x0 = cx + R * Math.cos(a0), y0 = cy + R * Math.sin(a0)
+    const x1 = cx + R * Math.cos(a1), y1 = cy + R * Math.sin(a1)
+    return { d: `M${cx},${cy} L${x0.toFixed(1)},${y0.toFixed(1)} A${R},${R} 0 ${frac > 0.5 ? 1 : 0} 1 ${x1.toFixed(1)},${y1.toFixed(1)} Z`, color: sl.color, label: sl.label, mins: sl.minutes }
+  })
+  const fmt = (m: number) => m >= 60 ? `${(m / 60).toFixed(1)}h` : `${Math.round(m)}m`
+
+  return (
+    <div style={{ background: 'var(--color-bg, #0D0F1A)', border: '1px solid var(--color-surface, #1A1D2E)', borderRadius: 12, padding: '14px 18px', marginBottom: 20 }}>
+      <div style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--color-text-muted, #8B93A8)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 14 }}>{title}</div>
+      <div style={{ display: 'flex', gap: 20, alignItems: 'center', flexWrap: 'wrap' }}>
+        <svg width={136} height={136} style={{ flexShrink: 0 }}>
+          {paths.map((p, i) => (
+            <path key={i} d={p.d} fill={p.color} stroke="var(--color-bg, #0D0F1A)" strokeWidth={1.5} />
+          ))}
+        </svg>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 7, minWidth: 130 }}>
+          {active.map((sl, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ width: 9, height: 9, borderRadius: 2, background: sl.color, border: '1px solid rgba(255,255,255,0.12)', flexShrink: 0 }} />
+              <span style={{ fontSize: 11.5, color: 'var(--color-text-dim, #C0C4D6)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sl.label}</span>
+              <span style={{ fontSize: 11, color: 'var(--color-text-muted, #6B7280)', fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>{fmt(sl.minutes)}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Weekly day card ──────────────────────────────────────────────────────────
 
 function WeeklyDayCard({ dayStr, allEvents, statuses, tasks }: {
@@ -240,10 +365,10 @@ function WeeklyDayCard({ dayStr, allEvents, statuses, tasks }: {
   const dayLabel = new Date(dayStr + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
   const events = allEvents[dayStr] ?? []
 
-  const doneEvts       = events.filter(e => statuses[e.id] === 'done').sort(sortByTime)
+  const doneEvts       = events.filter(e => isEventDone(e, statuses)).sort(sortByTime)
   const cancelledEvts  = events.filter(e => statuses[e.id] === 'cancelled').sort(sortByTime)
   const dayTasks = tasks.filter(t => {
-    if (t.completed || t.status === 'done') return (t.completedAt ?? t.dueDate) === dayStr
+    if (t.completed || t.status === 'done') return completionAnchor(t) === dayStr
     return t.dueDate === dayStr
   })
   const doneTasks      = dayTasks.filter(t => t.completed || t.status === 'done')
@@ -290,8 +415,8 @@ function WeeklyDayCard({ dayStr, allEvents, statuses, tasks }: {
         <div style={{ padding: '4px 20px 14px' }}>
           {doneEvts.map(e       => <EventRow key={e.id} event={e} />)}
           {cancelledEvts.map(e  => <EventRow key={e.id} event={e} cancelled />)}
-          {doneTasks.map(t      => <TaskRow key={t.id} title={t.title} company={t.company} />)}
-          {cancelledTasks.map(t => <TaskRow key={t.id} title={t.title} company={t.company} cancelled />)}
+          {doneTasks.map(t      => <TaskRow key={t.id} title={t.title} company={resolveCompanyLabel(t)} />)}
+          {cancelledTasks.map(t => <TaskRow key={t.id} title={t.title} company={resolveCompanyLabel(t)} cancelled />)}
         </div>
       )}
     </div>
@@ -300,10 +425,20 @@ function WeeklyDayCard({ dayStr, allEvents, statuses, tasks }: {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
+// An event counts as "done" if manually marked done OR it already happened and wasn't cancelled
+function isEventDone(e: GCalEvent, statuses: Record<string, EventStatus>): boolean {
+  if (statuses[e.id] === 'cancelled') return false
+  if (statuses[e.id] === 'done') return true
+  const end = e.end?.dateTime ?? e.end?.date
+  return !!end && new Date(end) < new Date()
+}
+
 export function ReviewModule() {
   const tasks = useTaskStore(s => s.tasks).filter(t => !isTaskHidden(t))
 
-  const completedTasks = tasks.filter(t => t.completed)
+  // "Tasks Shipped" = completed THIS week only
+  const thisWeekDays   = new Set(getWeekDays(getMondayOf(todayStr())))
+  const completedTasks = tasks.filter(t => t.completed && thisWeekDays.has(completionAnchor(t) ?? ''))
   const activeTasks    = tasks.filter(t => !t.completed)
   const slipped        = activeTasks.filter(t => t.dueDate && t.dueDate < todayStr()).length
 
@@ -317,14 +452,12 @@ export function ReviewModule() {
 
   // ── Daily ──────────────────────────────────────────────────────────────────
   const dayEvents       = loadDayEvents(selectedDay)
-  const doneEvents      = dayEvents.filter(e => eventStatuses[e.id] === 'done').sort(sortByTime)
+  const doneEvents      = dayEvents.filter(e => isEventDone(e, eventStatuses)).sort(sortByTime)
   const cancelledEvents = dayEvents.filter(e => eventStatuses[e.id] === 'cancelled').sort(sortByTime)
   // Tasks "for" a day: done/cancelled tasks use completedAt (falling back to dueDate for
   // older tasks without completedAt); open tasks use dueDate so they still appear on their day.
   const dayTasks = tasks.filter(t => {
-    if (t.completed || t.status === 'done') {
-      return (t.completedAt ?? t.dueDate) === selectedDay
-    }
+    if (t.completed || t.status === 'done') return completionAnchor(t) === selectedDay
     return t.dueDate === selectedDay
   })
   const doneTasks       = dayTasks.filter(t => t.completed || t.status === 'done')
@@ -337,9 +470,9 @@ export function ReviewModule() {
   const weekEventsMap = loadWeekEventsGrouped(weekStart)
 
   const allWeekEvents  = Object.values(weekEventsMap).flat()
-  const weekDoneEvts   = allWeekEvents.filter(e => eventStatuses[e.id] === 'done').length
+  const weekDoneEvts   = allWeekEvents.filter(e => isEventDone(e, eventStatuses)).length
   const weekTasksAll   = tasks.filter(t => {
-    const anchor = (t.completed || t.status === 'done') ? (t.completedAt ?? t.dueDate) : t.dueDate
+    const anchor = (t.completed || t.status === 'done') ? completionAnchor(t) : t.dueDate
     return anchor && weekDays.includes(anchor)
   })
   const weekDoneTasks  = weekTasksAll.filter(t => t.completed || t.status === 'done').length
@@ -437,6 +570,10 @@ export function ReviewModule() {
           {/* ── Daily content ──────────────────────────────────────────────── */}
           {viewMode === 'daily' && (
             <div style={{ padding: 20 }}>
+              <PieChart
+                title={`How ${selectedDay === todayStr() ? 'today' : 'this day'} was spent`}
+                slices={buildPieSlices(dayEvents, dayTasks, eventStatuses, 1)}
+              />
               {isDailyEmpty ? (
                 <div style={{ textAlign: 'center', padding: '32px 0', color: '#4B5268' }}>
                   <CalendarDays size={28} style={{ opacity: 0.4, marginBottom: 10 }} />
@@ -462,13 +599,13 @@ export function ReviewModule() {
                   {doneTasks.length > 0 && (
                     <div style={{ marginBottom: 18 }}>
                       <SectionHead label="Tasks Done" count={doneTasks.length} color="#1D9E75" />
-                      {doneTasks.map(t => <TaskRow key={t.id} title={t.title} company={t.company} />)}
+                      {doneTasks.map(t => <TaskRow key={t.id} title={t.title} company={resolveCompanyLabel(t)} />)}
                     </div>
                   )}
                   {cancelledTasks.length > 0 && (
                     <div>
                       <SectionHead label="Tasks Cancelled" count={cancelledTasks.length} color="#6B7280" />
-                      {cancelledTasks.map(t => <TaskRow key={t.id} title={t.title} company={t.company} cancelled />)}
+                      {cancelledTasks.map(t => <TaskRow key={t.id} title={t.title} company={resolveCompanyLabel(t)} cancelled />)}
                     </div>
                   )}
                 </>
@@ -479,6 +616,17 @@ export function ReviewModule() {
           {/* ── Weekly content ─────────────────────────────────────────────── */}
           {viewMode === 'weekly' && (
             <div>
+              <div style={{ padding: '20px 20px 4px' }}>
+                <PieChart
+                  title={`How this week was spent (${weekDays.filter(d => d <= todayStr()).length} days so far)`}
+                  slices={buildPieSlices(
+                    Object.values(weekEventsMap).flat(),
+                    weekTasksAll,
+                    eventStatuses,
+                    Math.max(1, weekDays.filter(d => d <= todayStr()).length),
+                  )}
+                />
+              </div>
               {weekDays.map(day => (
                 <WeeklyDayCard
                   key={day}

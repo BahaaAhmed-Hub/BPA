@@ -34,6 +34,7 @@ export interface TaskRow {
   companyId?: string; status: string; completed: boolean
   dueDate?: string; duration?: number; plannedTime?: string
   owner?: string; urgent?: boolean; taskType?: string; createdAt: string
+  completedAt?: string
 }
 
 export interface HabitRow {
@@ -293,7 +294,7 @@ export async function saveTasksToDB(tasks: TaskRow[]): Promise<void> {
     delegated_to: t.owner ?? null,
     done_looks_like: null as null,
     created_at:   t.createdAt,
-    completed_at: t.completed ? new Date().toISOString() : null,
+    completed_at: t.completed ? (t.completedAt ? t.completedAt + 'T12:00:00Z' : new Date().toISOString()) : null,
     // extended columns (from migration 20240002)
     planned_time: t.plannedTime ?? null,
     owner_id:     t.owner ?? null,
@@ -326,6 +327,7 @@ export async function loadTasksFromDB(): Promise<TaskRow[]> {
       ...(isDynamic ? { companyId: tag } : {}),
       status:      statusFromDb(r.status as string),
       completed:   (r.completed as boolean) ?? (r.completed_at != null),
+      completedAt: r.completed_at ? (r.completed_at as string).slice(0, 10) : undefined,
       dueDate:     (r.due_date as string) ?? undefined,
       duration:    (r.effort_minutes as number) ?? undefined,
       plannedTime: (r.planned_time as string) ?? undefined,

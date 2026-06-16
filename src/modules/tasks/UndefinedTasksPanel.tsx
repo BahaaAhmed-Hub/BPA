@@ -114,6 +114,10 @@ function DraggableInboxCard({ task, accentColor, taskStatus, ownerUser, onOpen, 
                 }}
               >
                 {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                {/* Ensure current value always has a matching option when not a dynamic company */}
+                {!task.companyId && !companies.find(c => c.id === task.company) && (
+                  <option value={task.company}>{task.company}</option>
+                )}
               </select>
 
               {task.dueDate && (

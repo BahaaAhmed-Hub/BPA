@@ -177,7 +177,7 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
               value={task.companyId ?? task.company}
               onChange={e => {
                 const co = companies.find(c => c.id === e.target.value)
-                updateTask(task.id, { companyId: e.target.value, company: (co?.id as Task['company']) ?? task.company })
+                updateTask(task.id, { companyId: co ? e.target.value : undefined, company: (co?.id as Task['company']) ?? (e.target.value as Task['company']) })
               }}
               title="Change company"
               style={{
@@ -191,6 +191,10 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
               {companies.map(c => (
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}
+              {/* Ensure current value always has a matching option when not a dynamic company */}
+              {!task.companyId && !companies.find(c => c.id === task.company) && (
+                <option value={task.company}>{task.company}</option>
+              )}
             </select>
 
             {/* Task type badge */}

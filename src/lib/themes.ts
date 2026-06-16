@@ -99,7 +99,7 @@ export const THEMES: AppTheme[] = [
     bg: '#F8FAFC', surface: '#FFFFFF', surface2: '#F1F5F9',
     border: '#E2E8F0',
     accent: '#1E40AF', accentFill: 'rgba(30,64,175,0.1)', accentBright: '#3B82F6',
-    text: '#0F172A', textDim: '#475569', textMuted: '#94A3B8',
+    text: '#0F172A', textDim: '#475569', textMuted: '#64748B',
     sidebarBg: '#F1F5F9', isDark: false,
   },
 ]

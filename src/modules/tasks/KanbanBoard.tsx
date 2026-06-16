@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import {
   DndContext, DragOverlay, closestCenter,
   PointerSensor, useSensor, useSensors,
@@ -6,14 +6,14 @@ import {
   type DragEndEvent, type DragStartEvent,
 } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
-import { Check } from 'lucide-react'
+import { Check, Plus, X as XIcon } from 'lucide-react'
 import { useTaskStore } from '@/store/taskStore'
 import type { Task, TaskType } from '@/types'
 import {
   TASK_TYPE_META, inferTaskType,
   loadVisibleCompanies, getAllUsers, isTaskHidden,
 } from '@/types'
-import { loadCustomStatuses, getStatusMeta } from '@/lib/customStatuses'
+import { loadCustomStatuses, sortCustomStatuses, getStatusMeta } from '@/lib/customStatuses'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -256,6 +256,28 @@ interface KanbanColumnProps {
 
 function KanbanColumnComp({ column, onOpen, onColDragStart, onColDragOver, onColDrop }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: column.id })
+  const addTask = useTaskStore(s => s.addTask)
+  const companies = loadVisibleCompanies()
+  const [adding, setAdding] = useState(false)
+  const [newTitle, setNewTitle] = useState('')
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => { if (adding) inputRef.current?.focus() }, [adding])
+
+  function commitAdd() {
+    if (!newTitle.trim()) { setAdding(false); setNewTitle(''); return }
+    addTask({
+      title: newTitle.trim(),
+      quadrant: column.id === 'do' ? 'do' : null,
+      company: (companies[0]?.id ?? 'teradix') as Task['company'],
+      ...(companies[0] ? { companyId: companies[0].id } : {}),
+      status: 'open',
+      completed: false,
+      ...(column.id !== 'inbox' && column.id !== 'do' ? { boardStatus: column.id } : {}),
+    })
+    setNewTitle('')
+    setAdding(false)
+  }
 
   return (
     <div style={{ flex: '0 0 250px', display: 'flex', flexDirection: 'column', minHeight: 0 }}
@@ -298,7 +320,7 @@ function KanbanColumnComp({ column, onOpen, onColDragStart, onColDragOver, onCol
           transition: 'background 0.15s, border-color 0.15s',
         }}
       >
-        {column.tasks.length === 0 ? (
+        {column.tasks.length === 0 && !adding ? (
           <div style={{ padding: '20px 12px', textAlign: 'center', fontSize: 12, color: 'var(--color-text-muted, #6B7280)', fontStyle: 'italic' }}>
             No tasks
           </div>
@@ -309,7 +331,48 @@ function KanbanColumnComp({ column, onOpen, onColDragStart, onColDragOver, onCol
             ))}
           </div>
         )}
+
+        {/* Quick-add inline form */}
+        {adding && (
+          <div style={{ padding: '6px 8px' }}>
+            <input
+              ref={inputRef}
+              value={newTitle}
+              onChange={e => setNewTitle(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') commitAdd(); if (e.key === 'Escape') { setAdding(false); setNewTitle('') } }}
+              placeholder="Task title…"
+              style={{
+                width: '100%', boxSizing: 'border-box',
+                background: 'var(--color-bg, #0D0F1A)', border: '1px solid var(--color-accent, #7F77DD)',
+                borderRadius: 6, padding: '6px 8px', fontSize: 12,
+                color: 'var(--color-text, #E8EAF6)', outline: 'none', fontFamily: 'inherit',
+              }}
+            />
+            <div style={{ display: 'flex', gap: 5, marginTop: 5 }}>
+              <button onClick={commitAdd} style={{ flex: 1, padding: '4px 0', fontSize: 11, fontWeight: 600, background: 'var(--color-accent, #7F77DD)', color: '#fff', border: 'none', borderRadius: 5, cursor: 'pointer' }}>
+                Add
+              </button>
+              <button onClick={() => { setAdding(false); setNewTitle('') }} style={{ padding: '4px 8px', fontSize: 11, background: 'transparent', color: 'var(--color-text-muted, #6B7280)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 5, cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                <XIcon size={11} />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Add task button */}
+      <button
+        onClick={() => setAdding(true)}
+        style={{
+          marginTop: 6, width: '100%', padding: '5px 0', fontSize: 11, fontWeight: 500,
+          background: 'transparent', border: '1px dashed var(--color-border, #252A3E)', borderRadius: 6,
+          color: 'var(--color-text-muted, #6B7280)', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+          transition: 'all 0.12s',
+        }}
+      >
+        <Plus size={11} /> New task
+      </button>
     </div>
   )
 }
@@ -422,12 +485,25 @@ export function KanbanBoard({ onOpen, hideCompleted = false, filteredTaskIds }: 
 
   const columns = useMemo<Column[]>(() => {
     if (boardType === 'status') {
-      return customStatuses.map(s => ({
+      const inboxCol: Column = {
+        id:    'inbox',
+        label: 'Inbox / Unplanned',
+        color: '#6B7280',
+        tasks: sortByUrgency(tasks.filter(t => !t.boardStatus && t.quadrant !== 'do')),
+      }
+      const doCol: Column = {
+        id:    'do',
+        label: '⚡ Do',
+        color: '#EF4444',
+        tasks: sortByUrgency(tasks.filter(t => !t.boardStatus && t.quadrant === 'do')),
+      }
+      const statusCols = sortCustomStatuses(customStatuses).map(s => ({
         id:    s.id,
         label: s.label,
         color: s.color,
-        tasks: sortByUrgency(tasks.filter(t => (t.boardStatus ?? 'backlog') === s.id)),
+        tasks: sortByUrgency(tasks.filter(t => t.boardStatus === s.id)),
       }))
+      return [inboxCol, doCol, ...statusCols]
     }
 
     if (boardType === 'company') {
@@ -534,7 +610,11 @@ export function KanbanBoard({ onOpen, hideCompleted = false, filteredTaskIds }: 
     const task     = tasks.find(t => t.id === taskId)
 
     if (boardType === 'status') {
-      if (hasPlannedStatus && columnId === 'planned') {
+      if (columnId === 'inbox') {
+        updateTask(taskId, { boardStatus: undefined, quadrant: null })
+      } else if (columnId === 'do') {
+        updateTask(taskId, { boardStatus: undefined, quadrant: 'do' })
+      } else if (hasPlannedStatus && columnId === 'planned') {
         setPendingPlanTask({ taskId, title: task?.title ?? '' })
       } else {
         updateTask(taskId, { boardStatus: columnId })
@@ -544,7 +624,7 @@ export function KanbanBoard({ onOpen, hideCompleted = false, filteredTaskIds }: 
         updateTask(taskId, { company: 'personal', companyId: undefined })
       } else {
         const co = companies.find(c => c.id === columnId)
-        if (co) updateTask(taskId, { companyId: co.id, company: 'personal' })
+        if (co) updateTask(taskId, { companyId: co.id, company: co.id as Task['company'] })
       }
     } else if (boardType === 'owner') {
       updateTask(taskId, { owner: columnId === 'unassigned' ? undefined : columnId })
