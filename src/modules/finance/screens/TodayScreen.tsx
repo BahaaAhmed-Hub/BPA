@@ -147,11 +147,11 @@ export function TodayScreen({ onOpenAdd }: Props) {
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 14, fontWeight: 500, color: C.textPri, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {tx.payee || cat?.name || 'Transaction'}
+            {tx.payee?.trim() || cat?.name || 'Transaction'}
           </div>
           <div style={{ fontSize: 12, color: C.textMuted, marginTop: 2, display: 'flex', gap: 6 }}>
             <span>{tx.date}</span>
-            {cat && tx.payee && <span style={{ color: C.textDim }}>· {cat.name}</span>}
+            {cat && tx.payee?.trim() && <span style={{ color: C.textDim }}>· {cat.name}</span>}
           </div>
         </div>
         <Pill

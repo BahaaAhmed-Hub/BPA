@@ -75,16 +75,16 @@ export function Sidebar() {
         overflow: 'hidden',
       }}
     >
-      {/* Logo */}
+      {/* Logo — exact 64px height to align with TopBar */}
       <div
         style={{
-          padding: sidebarCollapsed ? '20px 0' : '20px 20px',
+          height: 64, flexShrink: 0,
+          padding: sidebarCollapsed ? '0' : '0 20px',
           borderBottom: `1px solid ${theme.border}`,
           display: 'flex',
           alignItems: 'center',
           gap: 10,
           justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
-          minHeight: 64,
         }}
       >
         {(() => {
