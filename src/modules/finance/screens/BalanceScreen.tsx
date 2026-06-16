@@ -79,9 +79,9 @@ export function BalanceScreen() {
     return cat?.icon ?? '💳'
   }
 
-  function formatBalance(bal: number): string {
-    if (bal < 0) return `(EGP ${Math.abs(bal).toLocaleString('en-US')})`
-    return `EGP ${bal.toLocaleString('en-US')}`
+  function formatBalance(bal: number, currency = 'EGP'): string {
+    if (bal < 0) return `(${currency} ${Math.abs(bal).toLocaleString('en-US')})`
+    return `${currency} ${bal.toLocaleString('en-US')}`
   }
 
   function AccountRow({ account }: { account: typeof accounts[number] }) {
@@ -120,7 +120,7 @@ export function BalanceScreen() {
           color: isNeg ? C.red : C.green,
           flexShrink: 0,
         }}>
-          {formatBalance(account.balance)}
+          {formatBalance(account.balance, account.currency)}
         </div>
         {/* Edit pencil — visible on hover */}
         {isHovered && (
@@ -177,7 +177,7 @@ export function BalanceScreen() {
               display: 'flex', alignItems: 'center', gap: 6,
               padding: '8px 16px', borderRadius: 9,
               background: C.amber, border: 'none',
-              color: C.bg || '#0B0A08', fontSize: 13, fontWeight: 700,
+              color: '#0B0A08', fontSize: 13, fontWeight: 700,
               cursor: 'pointer', fontFamily: 'inherit',
             }}
           >
