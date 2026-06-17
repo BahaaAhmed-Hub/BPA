@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 280" width="800" height="280">
+  <defs>
+    <radialGradient id="rg" cx="50%" cy="60%" r="60%">
+      <stop offset="0%" stop-color="#1a1410"/>
+      <stop offset="100%" stop-color="#0a0906"/>
+    </radialGradient>
+    <filter id="blur"><feGaussianBlur stdDeviation="2"/></filter>
+    <filter id="glow"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="280" fill="url(#rg)"/>
+
+  <!-- Subtle rain lines -->
+  <g opacity="0.12" stroke="#7a9ab0" stroke-width="0.5">
+    <line x1="80" y1="0" x2="60" y2="280"/><line x1="140" y1="0" x2="120" y2="280"/>
+    <line x1="200" y1="0" x2="180" y2="280"/><line x1="260" y1="0" x2="240" y2="280"/>
+    <line x1="320" y1="0" x2="300" y2="280"/><line x1="380" y1="0" x2="360" y2="280"/>
+    <line x1="440" y1="0" x2="420" y2="280"/><line x1="500" y1="0" x2="480" y2="280"/>
+    <line x1="560" y1="0" x2="540" y2="280"/><line x1="620" y1="0" x2="600" y2="280"/>
+    <line x1="680" y1="0" x2="660" y2="280"/><line x1="740" y1="0" x2="720" y2="280"/>
+    <line x1="110" y1="0" x2="90" y2="280"/><line x1="170" y1="0" x2="150" y2="280"/>
+    <line x1="230" y1="0" x2="210" y2="280"/><line x1="290" y1="0" x2="270" y2="280"/>
+    <line x1="350" y1="0" x2="330" y2="280"/><line x1="410" y1="0" x2="390" y2="280"/>
+    <line x1="470" y1="0" x2="450" y2="280"/><line x1="530" y1="0" x2="510" y2="280"/>
+    <line x1="590" y1="0" x2="570" y2="280"/><line x1="650" y1="0" x2="630" y2="280"/>
+    <line x1="710" y1="0" x2="690" y2="280"/><line x1="770" y1="0" x2="750" y2="280"/>
+  </g>
+
+  <!-- Distant water horizon -->
+  <rect x="0" y="190" width="800" height="2" fill="#2a3a4a" opacity="0.3"/>
+  <rect x="0" y="192" width="800" height="88" fill="#0d1a22" opacity="0.5"/>
+
+  <!-- Silhouette: standing ronin figure -->
+  <!-- Body/cloak -->
+  <ellipse cx="400" cy="310" rx="55" ry="30" fill="#0a0906" opacity="0.9"/>
+  <path d="M370 240 Q390 180 400 140 Q410 180 430 240 Q415 260 400 265 Q385 260 370 240Z" fill="#0f0e0c"/>
+  <!-- Head -->
+  <ellipse cx="400" cy="128" rx="18" ry="20" fill="#0f0e0c"/>
+  <!-- Hair/messy top -->
+  <path d="M382 118 Q384 105 390 108 Q394 100 400 102 Q406 99 410 108 Q416 104 418 118" fill="none" stroke="#0f0e0c" stroke-width="3"/>
+  <!-- Sword across back - diagonal -->
+  <line x1="360" y1="155" x2="445" y2="125" stroke="#4a5a6a" stroke-width="2.5" opacity="0.8"/>
+  <rect x="353" y="152" width="8" height="4" rx="1" fill="#3a4a5a" opacity="0.9" transform="rotate(-17 357 154)"/>
+  <!-- Cloak flowing in wind -->
+  <path d="M370 240 Q340 230 320 250 Q335 245 370 255" fill="#0d0c0a" opacity="0.7"/>
+  <path d="M430 240 Q460 225 475 245 Q455 240 430 255" fill="#0d0c0a" opacity="0.7"/>
+  <!-- Cloth strips flying -->
+  <path d="M385 170 Q370 165 355 175 Q365 168 385 175" fill="none" stroke="#1a1815" stroke-width="1.5"/>
+  <path d="M415 175 Q430 168 445 178 Q432 171 415 180" fill="none" stroke="#1a1815" stroke-width="1.5"/>
+
+  <!-- Moon behind figure -->
+  <circle cx="400" cy="80" r="45" fill="#1a2530" opacity="0.4" filter="url(#blur)"/>
+  <circle cx="400" cy="80" r="35" fill="#1e2e3e" opacity="0.25"/>
+
+  <!-- Distant ship silhouette -->
+  <path d="M600 188 L640 188 L630 170 L610 170 Z" fill="#1a2530" opacity="0.5"/>
+  <line x1="615" y1="170" x2="615" y2="148" stroke="#1a2530" stroke-width="1.5" opacity="0.5"/>
+  <path d="M605 158 L615 148 L625 158 Z" fill="#1a2530" opacity="0.4"/>
+
+  <!-- Ground mist -->
+  <ellipse cx="400" cy="270" rx="120" ry="20" fill="#1a2530" opacity="0.15" filter="url(#blur)"/>
+
+  <!-- Atmospheric fog layers -->
+  <rect x="0" y="160" width="800" height="40" fill="url(#rg)" opacity="0.3"/>
+</svg>
