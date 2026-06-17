@@ -99,7 +99,8 @@ function ComponentBar({ label, value }: { label: string; value: number }) {
 }
 
 function RankArtwork({ rank, rankMeta, score }: { rank: Rank; rankMeta: { label: string } | null; score: number }) {
-  const [src, setSrc] = useState(`/ranks/${rank}.png`)
+  const base = import.meta.env.BASE_URL
+  const [src, setSrc] = useState(`${base}ranks/${rank}.png`)
   const [imgOk, setImgOk] = useState(true)
 
   const RANK_BG: Record<Rank, string> = {
@@ -110,9 +111,8 @@ function RankArtwork({ rank, rankMeta, score }: { rank: Rank; rankMeta: { label:
   }
 
   function handleError() {
-    // PNG not found → fall back to SVG illustration
     if (src.endsWith('.png')) {
-      setSrc(`/ranks/${rank}.svg`)
+      setSrc(`${base}ranks/${rank}.svg`)
     } else {
       setImgOk(false)
     }
