@@ -151,7 +151,7 @@ function RankArtwork({ rank, rankMeta, score }: { rank: Rank; rankMeta: { label:
   )
 }
 
-
+function IdentityCard({ identity }: { identity: IdentityResult }) {
   return (
     <div style={{
       padding: '16px 18px',
