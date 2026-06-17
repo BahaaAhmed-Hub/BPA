@@ -489,11 +489,15 @@ export function KanbanBoard({ onOpen, hideCompleted = false, filteredTaskIds }: 
 
   const columns = useMemo<Column[]>(() => {
     if (boardType === 'status') {
+      // A task with a dueDate but no explicit boardStatus is implicitly "planned"
+      const isImplicitlyPlanned = (t: Task) =>
+        hasPlannedStatus && !!t.dueDate && !t.boardStatus && t.quadrant !== 'do'
+
       const inboxCol: Column = {
         id:    'inbox',
         label: 'Inbox / Unplanned',
         color: '#6B7280',
-        tasks: sortByUrgency(tasks.filter(t => !t.boardStatus && t.quadrant !== 'do')),
+        tasks: sortByUrgency(tasks.filter(t => !t.boardStatus && t.quadrant !== 'do' && !isImplicitlyPlanned(t))),
       }
       const doCol: Column = {
         id:    'do',
@@ -505,7 +509,9 @@ export function KanbanBoard({ onOpen, hideCompleted = false, filteredTaskIds }: 
         id:    s.id,
         label: s.label,
         color: s.color,
-        tasks: sortByUrgency(tasks.filter(t => t.boardStatus === s.id)),
+        tasks: sortByUrgency(tasks.filter(t =>
+          t.boardStatus === s.id || (s.id === 'planned' && isImplicitlyPlanned(t))
+        )),
       }))
       return [inboxCol, doCol, ...statusCols]
     }
