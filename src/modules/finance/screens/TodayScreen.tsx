@@ -100,13 +100,13 @@ export function TodayScreen({ onOpenAdd }: Props) {
     ? `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(selectedDay).padStart(2, '0')}`
     : null
   const selectedDayTx = selectedDayStr
-    ? transactions.filter(tx => tx.date === selectedDayStr).sort((a, b) => b.date.localeCompare(a.date))
+    ? transactions.filter(tx => tx.date === selectedDayStr).sort((a, b) => a.date.localeCompare(b.date))
     : []
 
-  // All transactions for the viewed month, sorted by date desc (for default right panel)
+  // All transactions for the viewed month, sorted by date asc (earliest first)
   const monthTx = transactions
     .filter(tx => tx.date.startsWith(monthPrefix))
-    .sort((a, b) => b.date.localeCompare(a.date))
+    .sort((a, b) => a.date.localeCompare(b.date))
 
   const totalExpense = transactions.filter(tx => tx.date.startsWith(monthPrefix) && tx.type === 'expense').reduce((s, tx) => s + tx.amount, 0)
   const totalIncome  = transactions.filter(tx => tx.date.startsWith(monthPrefix) && tx.type === 'income').reduce((s, tx) => s + tx.amount, 0)
