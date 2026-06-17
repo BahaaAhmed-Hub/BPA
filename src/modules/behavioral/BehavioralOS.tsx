@@ -101,10 +101,10 @@ function ComponentBar({ label, value }: { label: string; value: number }) {
 function RankArtwork({ rank, rankMeta, score }: { rank: Rank; rankMeta: { label: string } | null; score: number }) {
   const [imgOk, setImgOk] = useState(true)
   const RANK_ART: Record<Rank, string> = {
-    ronin:   '/ranks/ronin.png',
-    samurai: '/ranks/samurai.png',
-    daimyo:  '/ranks/daimyo.png',
-    shogun:  '/ranks/shogun.png',
+    ronin:   '/ranks/ronin.svg',
+    samurai: '/ranks/samurai.svg',
+    daimyo:  '/ranks/daimyo.svg',
+    shogun:  '/ranks/shogun.svg',
   }
   const RANK_BG: Record<Rank, string> = {
     ronin:   'linear-gradient(135deg, #0C0B09 0%, #1A1410 50%, #0C0B09 100%)',

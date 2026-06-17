@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 280" width="800" height="280">
+  <defs>
+    <radialGradient id="sg" cx="50%" cy="40%" r="70%">
+      <stop offset="0%" stop-color="#1a0a0a"/>
+      <stop offset="100%" stop-color="#080504"/>
+    </radialGradient>
+    <radialGradient id="sun" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#8B1A1A" stop-opacity="0.9"/>
+      <stop offset="60%" stop-color="#6b1010" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#3a0808" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="glow2"><feGaussianBlur stdDeviation="6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <filter id="soften"><feGaussianBlur stdDeviation="1.5"/></filter>
+  </defs>
+
+  <rect width="800" height="280" fill="url(#sg)"/>
+
+  <!-- Rising sun -->
+  <circle cx="400" cy="130" r="90" fill="url(#sun)"/>
+  <circle cx="400" cy="130" r="65" fill="#6b1010" opacity="0.3"/>
+  <circle cx="400" cy="130" r="42" fill="#8B1A1A" opacity="0.4"/>
+
+  <!-- Sun rays -->
+  <g stroke="#8B1A1A" stroke-width="1" opacity="0.25">
+    <line x1="400" y1="0" x2="400" y2="50"/><line x1="400" y1="210" x2="400" y2="280"/>
+    <line x1="200" y1="130" x2="260" y2="130"/><line x1="540" y1="130" x2="600" y2="130"/>
+    <line x1="260" y1="0" x2="290" y2="60"/><line x1="540" y1="0" x2="510" y2="60"/>
+    <line x1="200" y1="50" x2="260" y2="90"/><line x1="600" y1="50" x2="540" y2="90"/>
+    <line x1="160" y1="130" x2="220" y2="110"/><line x1="640" y1="130" x2="580" y2="110"/>
+  </g>
+
+  <!-- Cherry blossom petals -->
+  <g fill="#c0392b" opacity="0.35">
+    <ellipse cx="120" cy="60" rx="8" ry="4" transform="rotate(30 120 60)"/>
+    <ellipse cx="150" cy="40" rx="6" ry="3" transform="rotate(-20 150 40)"/>
+    <ellipse cx="650" cy="45" rx="7" ry="3.5" transform="rotate(45 650 45)"/>
+    <ellipse cx="680" cy="70" rx="5" ry="2.5" transform="rotate(-30 680 70)"/>
+    <ellipse cx="220" cy="30" rx="6" ry="3" transform="rotate(60 220 30)"/>
+    <ellipse cx="580" cy="30" rx="7" ry="3.5" transform="rotate(-45 580 30)"/>
+    <ellipse cx="300" cy="20" rx="5" ry="2.5" transform="rotate(15 300 20)"/>
+    <ellipse cx="500" cy="25" rx="6" ry="3" transform="rotate(-60 500 25)"/>
+    <ellipse cx="100" cy="100" rx="4" ry="2" transform="rotate(70 100 100)"/>
+    <ellipse cx="700" cy="95" rx="5" ry="2.5" transform="rotate(-40 700 95)"/>
+  </g>
+
+  <!-- Pagoda silhouette right -->
+  <g fill="#1a0a0a" opacity="0.6">
+    <rect x="620" y="140" width="40" height="80"/>
+    <rect x="610" y="160" width="60" height="10"/>
+    <path d="M605 160 L640 145 L675 160Z"/>
+    <rect x="615" y="130" width="50" height="12"/>
+    <path d="M608 130 L640 115 L672 130Z"/>
+    <rect x="622" y="118" width="36" height="14"/>
+    <path d="M615 118 L640 102 L665 118Z"/>
+  </g>
+
+  <!-- Samurai figure - armored, standing proud -->
+  <!-- Base/legs -->
+  <rect x="385" y="220" width="14" height="50" fill="#0f0c0c" rx="2"/>
+  <rect x="401" y="220" width="14" height="50" fill="#100d0d" rx="2"/>
+  <!-- Body armor -->
+  <rect x="372" y="155" width="56" height="70" rx="4" fill="#1a0f0f"/>
+  <!-- Chest plate detail -->
+  <rect x="378" y="162" width="44" height="55" rx="3" fill="#150c0c"/>
+  <rect x="383" y="168" width="34" height="8" rx="1" fill="#0f0909" opacity="0.8"/>
+  <rect x="383" y="180" width="34" height="6" rx="1" fill="#0f0909" opacity="0.8"/>
+  <rect x="383" y="190" width="34" height="6" rx="1" fill="#0f0909" opacity="0.8"/>
+  <!-- Shoulder guards -->
+  <rect x="355" y="158" width="20" height="30" rx="3" fill="#1a0f0f"/>
+  <rect x="425" y="158" width="20" height="30" rx="3" fill="#1a0f0f"/>
+  <!-- Arms -->
+  <rect x="358" y="185" width="14" height="35" rx="3" fill="#150c0c"/>
+  <rect x="428" y="185" width="14" height="35" rx="3" fill="#150c0c"/>
+  <!-- Neck -->
+  <rect x="393" y="140" width="14" height="20" rx="2" fill="#1a1010"/>
+  <!-- Helmet -->
+  <ellipse cx="400" cy="132" rx="28" ry="20" fill="#1a0f0f"/>
+  <path d="M372 132 Q380 110 400 108 Q420 110 428 132" fill="#150c0c"/>
+  <!-- Helmet crest -->
+  <path d="M390 108 Q400 90 410 108" fill="#1a0f0f" stroke="#8B1A1A" stroke-width="1.5"/>
+  <!-- Face guard -->
+  <ellipse cx="400" cy="138" rx="18" ry="14" fill="#120909"/>
+  <!-- Eyes glow slightly red -->
+  <ellipse cx="394" cy="134" rx="3" ry="2" fill="#5a1010" opacity="0.8"/>
+  <ellipse cx="406" cy="134" rx="3" ry="2" fill="#5a1010" opacity="0.8"/>
+  <!-- Sword held upright -->
+  <line x1="430" y1="270" x2="480" y2="60" stroke="#6a7a8a" stroke-width="2.5"/>
+  <rect x="422" y="216" width="18" height="7" rx="2" fill="#3a2a2a" transform="rotate(-15 431 219)"/>
+  <!-- Red accent on armor -->
+  <path d="M383 162 L417 162" stroke="#8B1A1A" stroke-width="1.5" opacity="0.7"/>
+  <path d="M383 200 L417 200" stroke="#8B1A1A" stroke-width="1" opacity="0.5"/>
+
+  <!-- Ground shadow -->
+  <ellipse cx="400" cy="272" rx="80" ry="8" fill="#0a0505" opacity="0.6"/>
+
+  <!-- Bottom fade -->
+  <rect x="0" y="220" width="800" height="60" fill="url(#sg)" opacity="0.5"/>
+</svg>
