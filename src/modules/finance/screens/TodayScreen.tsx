@@ -52,9 +52,6 @@ export function TodayScreen({ onOpenAdd }: Props) {
   const [viewMonth, setViewMonth] = useState(today.getMonth())
 
   const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
-  const yesterdayDate = new Date(today)
-  yesterdayDate.setDate(yesterdayDate.getDate() - 1)
-  const yesterdayStr = `${yesterdayDate.getFullYear()}-${String(yesterdayDate.getMonth() + 1).padStart(2, '0')}-${String(yesterdayDate.getDate()).padStart(2, '0')}`
 
   const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate()
   const startOffset = (new Date(viewYear, viewMonth, 1).getDay() + 6) % 7
@@ -106,9 +103,9 @@ export function TodayScreen({ onOpenAdd }: Props) {
     ? transactions.filter(tx => tx.date === selectedDayStr).sort((a, b) => b.date.localeCompare(a.date))
     : []
 
-  // Recent transactions (today / yesterday) for default right panel
-  const recentTx = transactions
-    .filter(tx => tx.date === todayStr || tx.date === yesterdayStr)
+  // All transactions for the viewed month, sorted by date desc (for default right panel)
+  const monthTx = transactions
+    .filter(tx => tx.date.startsWith(monthPrefix))
     .sort((a, b) => b.date.localeCompare(a.date))
 
   const totalExpense = transactions.filter(tx => tx.date.startsWith(monthPrefix) && tx.type === 'expense').reduce((s, tx) => s + tx.amount, 0)
@@ -126,7 +123,8 @@ export function TodayScreen({ onOpenAdd }: Props) {
   function renderTxRow(tx: Transaction) {
     const cat  = tx.categoryId ? categories.find(c => c.id === tx.categoryId) : null
     const acct = tx.accountId  ? accounts.find(a => a.id === tx.accountId)    : null
-    const isExp = tx.type === 'expense'
+    const isExp    = tx.type === 'expense'
+    const isFuture = tx.date > todayStr
     return (
       <div
         key={tx.id}
@@ -135,6 +133,7 @@ export function TodayScreen({ onOpenAdd }: Props) {
           display: 'flex', alignItems: 'center', gap: 12,
           padding: '10px 0', borderBottom: `1px solid ${C.border}`,
           cursor: 'pointer',
+          opacity: isFuture ? 0.75 : 1,
         }}
       >
         <div style={{
@@ -146,8 +145,14 @@ export function TodayScreen({ onOpenAdd }: Props) {
           {cat?.icon ?? acct?.emoji ?? (isExp ? '💳' : '💼')}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 14, fontWeight: 500, color: C.textPri, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <div style={{ fontSize: 14, fontWeight: 500, color: C.textPri, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 6 }}>
             {tx.payee?.trim() || cat?.name || 'Transaction'}
+            {isFuture && (
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={C.textMuted} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" title="Planned (not yet paid)" style={{ flexShrink: 0, opacity: 0.7 }}>
+                <circle cx="12" cy="12" r="10"/>
+                <polyline points="12 6 12 12 16 14"/>
+              </svg>
+            )}
           </div>
           <div style={{ fontSize: 12, color: C.textMuted, marginTop: 2, display: 'flex', gap: 6 }}>
             <span>{tx.date}</span>
@@ -403,15 +408,22 @@ export function TodayScreen({ onOpenAdd }: Props) {
                 </div>
               )}
 
-              {/* Recent transactions (today / yesterday) */}
-              {recentTx.length > 0 && (
+              {/* Month transactions */}
+              {monthTx.length > 0 && (
                 <div style={{ marginBottom: 24 }}>
                   <div style={{ marginBottom: 12 }}>
-                    <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: C.textMuted, letterSpacing: '0.8px' }}>Paid</span>
+                    <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: C.textMuted, letterSpacing: '0.8px' }}>
+                      {MONTH_NAMES[viewMonth]}
+                    </span>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    {recentTx.map(tx => renderTxRow(tx))}
+                    {monthTx.map(tx => renderTxRow(tx))}
                   </div>
+                </div>
+              )}
+              {monthTx.length === 0 && (
+                <div style={{ fontSize: 13, color: C.textDim, textAlign: 'center', padding: '32px 0' }}>
+                  No transactions in {MONTH_NAMES[viewMonth]}
                 </div>
               )}
             </>
