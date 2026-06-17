@@ -98,7 +98,60 @@ function ComponentBar({ label, value }: { label: string; value: number }) {
   )
 }
 
-function IdentityCard({ identity }: { identity: IdentityResult }) {
+function RankArtwork({ rank, rankMeta, score }: { rank: Rank; rankMeta: { label: string } | null; score: number }) {
+  const [imgOk, setImgOk] = useState(true)
+  const RANK_ART: Record<Rank, string> = {
+    ronin:   '/ranks/ronin.png',
+    samurai: '/ranks/samurai.png',
+    daimyo:  '/ranks/daimyo.png',
+    shogun:  '/ranks/shogun.png',
+  }
+  const RANK_BG: Record<Rank, string> = {
+    ronin:   'linear-gradient(135deg, #0C0B09 0%, #1A1410 50%, #0C0B09 100%)',
+    samurai: 'linear-gradient(135deg, #0C0B09 0%, #1A0A0A 50%, #0C0B09 100%)',
+    daimyo:  'linear-gradient(135deg, #0C0B09 0%, #0A0D1A 50%, #0C0B09 100%)',
+    shogun:  'linear-gradient(135deg, #0C0B09 0%, #1A0A0A 60%, #2A0A0A 100%)',
+  }
+  return (
+    <div style={{ position: 'relative', width: '100%', height: 260, overflow: 'hidden', background: RANK_BG[rank] }}>
+      {imgOk && (
+        <img
+          src={RANK_ART[rank]}
+          alt={rankMeta?.label}
+          onError={() => setImgOk(false)}
+          style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top', display: 'block' }}
+        />
+      )}
+      {/* Decorative pattern when no image */}
+      {!imgOk && (
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{
+            fontSize: 96, fontWeight: 900, letterSpacing: '-0.05em',
+            color: '#8B1A1A', opacity: 0.08, userSelect: 'none',
+            fontFamily: 'serif',
+          }}>
+            {rankMeta?.label?.toUpperCase()}
+          </div>
+        </div>
+      )}
+      {/* Gradient fade */}
+      <div style={{
+        position: 'absolute', inset: 0,
+        background: 'linear-gradient(to bottom, rgba(12,11,9,0) 40%, rgba(12,11,9,0.85) 80%, rgba(12,11,9,1) 100%)',
+      }} />
+      {/* Rank label overlay */}
+      <div style={{
+        position: 'absolute', bottom: 20, left: 28,
+        fontSize: 9, letterSpacing: '0.28em', textTransform: 'uppercase',
+        color: '#C0392B', fontWeight: 600,
+      }}>
+        {rankMeta?.label} · {score} / 100
+      </div>
+    </div>
+  )
+}
+
+
   return (
     <div style={{
       padding: '16px 18px',
@@ -232,45 +285,9 @@ export function BehavioralOS() {
             {rank ? (
               <>
                 {/* Rank artwork — samurai mode only */}
-                {mode === 'samurai' && (() => {
-                  const RANK_ART: Record<Rank, string> = {
-                    ronin:   '/ranks/ronin.png',
-                    samurai: '/ranks/samurai.png',
-                    daimyo:  '/ranks/daimyo.png',
-                    shogun:  '/ranks/shogun.png',
-                  }
-                  return (
-                    <div style={{
-                      position: 'relative',
-                      width: '100%',
-                      height: 260,
-                      overflow: 'hidden',
-                    }}>
-                      <img
-                        src={RANK_ART[rank.rank]}
-                        alt={rankMeta?.label}
-                        style={{
-                          width: '100%', height: '100%',
-                          objectFit: 'cover', objectPosition: 'center top',
-                          display: 'block',
-                        }}
-                      />
-                      {/* Gradient fade into panel */}
-                      <div style={{
-                        position: 'absolute', inset: 0,
-                        background: 'linear-gradient(to bottom, rgba(12,11,9,0) 40%, rgba(12,11,9,0.85) 80%, rgba(12,11,9,1) 100%)',
-                      }} />
-                      {/* Rank label overlaid on artwork */}
-                      <div style={{
-                        position: 'absolute', bottom: 20, left: 28,
-                        fontSize: 9, letterSpacing: '0.28em', textTransform: 'uppercase',
-                        color: S.accentFg, fontWeight: 600,
-                      }}>
-                        {rankMeta?.label} · {rank.score} / 100
-                      </div>
-                    </div>
-                  )
-                })()}
+                {mode === 'samurai' && (
+                  <RankArtwork rank={rank.rank} rankMeta={rankMeta} score={rank.score} />
+                )}
 
                 <div style={{ padding: '24px 32px 24px' }}>
                   <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 4 }}>
