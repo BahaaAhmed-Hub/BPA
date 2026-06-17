@@ -427,6 +427,30 @@ export function TodayScreen({ onOpenAdd }: Props) {
                   No transactions in {MONTH_NAMES[viewMonth]}
                 </div>
               )}
+
+              {/* Net cashflow summary */}
+              {monthTx.length > 0 && (() => {
+                const inc = monthTx.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0)
+                const exp = monthTx.filter(t => t.type === 'expense').reduce((s, t) => s + Math.abs(t.amount), 0)
+                const net = inc - exp
+                return (
+                  <div style={{
+                    marginTop: 16, paddingTop: 12,
+                    borderTop: `1px solid ${C.border}`,
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  }}>
+                    <span style={{ fontSize: 12, color: RED, fontWeight: 600 }}>
+                      −EGP {exp.toLocaleString('en-US')}
+                    </span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: net >= 0 ? GREEN : RED }}>
+                      Net {net >= 0 ? '+' : ''}EGP {Math.abs(net).toLocaleString('en-US')}
+                    </span>
+                    <span style={{ fontSize: 12, color: GREEN, fontWeight: 600 }}>
+                      +EGP {inc.toLocaleString('en-US')}
+                    </span>
+                  </div>
+                )
+              })()}
             </>
           )}
         </div>
