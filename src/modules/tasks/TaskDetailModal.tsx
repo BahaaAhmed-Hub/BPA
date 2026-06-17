@@ -67,6 +67,10 @@ export function TaskDetailModal({ task, onClose }: Props) {
   const taskStatus: TaskStatus = task.completed ? 'done' : (task.status ?? 'open')
 
   function handleCompanyChange(value: string) {
+    if (value === 'personal') {
+      updateTask(task.id, { company: 'personal', companyId: undefined })
+      return
+    }
     const co = companies.find(c => c.id === value)
     if (companies.length > 0) {
       updateTask(task.id, { companyId: value || undefined, company: (co?.id ?? task.company) as CompanyTag })
@@ -162,16 +166,14 @@ export function TaskDetailModal({ task, onClose }: Props) {
             <div>
               <div style={lbl}><Building2 size={10} /> Company</div>
               <select
-                value={task.companyId ?? task.company}
+                value={task.company === 'personal' ? 'personal' : (task.companyId ?? task.company)}
                 onChange={e => handleCompanyChange(e.target.value)}
                 style={field}
               >
+                <option value="personal">Personal</option>
                 {companies.length > 0
-                  ? <>
-                      <option value="">— none —</option>
-                      {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                    </>
-                  : COMPANY_TAGS.map(c => <option key={c} value={c}>{COMPANY_LABELS[c]}</option>)
+                  ? companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)
+                  : COMPANY_TAGS.filter(c => c !== 'personal').map(c => <option key={c} value={c}>{COMPANY_LABELS[c]}</option>)
                 }
               </select>
             </div>

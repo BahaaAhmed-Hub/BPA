@@ -185,13 +185,14 @@ const isPersonal    = !task.companyId && task.company === 'personal'
 
       {/* Badges row */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap', marginBottom: companyName && !isPersonal ? 5 : 8 }}>
-        <span style={{
-          fontSize: 10, fontWeight: 600, padding: '2px 6px', borderRadius: 4,
-          background: isPersonal ? 'rgba(136,135,128,0.12)' : 'rgba(127,119,221,0.12)',
-          color: isPersonal ? '#888780' : '#9B94E8',
-        }}>
-          {isPersonal ? 'Personal' : 'Work'}
-        </span>
+        {isPersonal && (
+          <span style={{
+            fontSize: 10, fontWeight: 600, padding: '2px 6px', borderRadius: 4,
+            background: 'rgba(136,135,128,0.12)', color: '#888780',
+          }}>
+            Personal
+          </span>
+        )}
         <span title={typeMeta.label} style={{ fontSize: 12 }}>{typeMeta.emoji}</span>
       </div>
 
