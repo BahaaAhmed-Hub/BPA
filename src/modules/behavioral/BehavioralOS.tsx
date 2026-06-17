@@ -99,26 +99,31 @@ function ComponentBar({ label, value }: { label: string; value: number }) {
 }
 
 function RankArtwork({ rank, rankMeta, score }: { rank: Rank; rankMeta: { label: string } | null; score: number }) {
+  const [src, setSrc] = useState(`/ranks/${rank}.png`)
   const [imgOk, setImgOk] = useState(true)
-  const RANK_ART: Record<Rank, string> = {
-    ronin:   '/ranks/ronin.svg',
-    samurai: '/ranks/samurai.svg',
-    daimyo:  '/ranks/daimyo.svg',
-    shogun:  '/ranks/shogun.svg',
-  }
+
   const RANK_BG: Record<Rank, string> = {
     ronin:   'linear-gradient(135deg, #0C0B09 0%, #1A1410 50%, #0C0B09 100%)',
     samurai: 'linear-gradient(135deg, #0C0B09 0%, #1A0A0A 50%, #0C0B09 100%)',
     daimyo:  'linear-gradient(135deg, #0C0B09 0%, #0A0D1A 50%, #0C0B09 100%)',
     shogun:  'linear-gradient(135deg, #0C0B09 0%, #1A0A0A 60%, #2A0A0A 100%)',
   }
+
+  function handleError() {
+    // PNG not found → fall back to SVG illustration
+    if (src.endsWith('.png')) {
+      setSrc(`/ranks/${rank}.svg`)
+    } else {
+      setImgOk(false)
+    }
+  }
   return (
     <div style={{ position: 'relative', width: '100%', height: 260, overflow: 'hidden', background: RANK_BG[rank] }}>
       {imgOk && (
         <img
-          src={RANK_ART[rank]}
+          src={src}
           alt={rankMeta?.label}
-          onError={() => setImgOk(false)}
+          onError={handleError}
           style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top', display: 'block' }}
         />
       )}
