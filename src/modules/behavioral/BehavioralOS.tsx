@@ -118,35 +118,35 @@ function RankArtwork({ rank, rankMeta, score }: { rank: Rank; rankMeta: { label:
     }
   }
   return (
-    <div style={{ position: 'relative', width: '100%', height: 260, overflow: 'hidden', background: RANK_BG[rank] }}>
+    <div style={{ position: 'relative', width: '100%', background: RANK_BG[rank], overflow: 'hidden' }}>
       {imgOk && (
         <img
           src={src}
           alt={rankMeta?.label}
           onError={handleError}
-          style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top', display: 'block' }}
+          style={{ width: '100%', height: 'auto', display: 'block' }}
         />
       )}
-      {/* Decorative pattern when no image */}
+      {/* Fallback when both PNG and SVG fail */}
       {!imgOk && (
-        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ height: 220, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{
             fontSize: 96, fontWeight: 900, letterSpacing: '-0.05em',
-            color: '#8B1A1A', opacity: 0.08, userSelect: 'none',
-            fontFamily: 'serif',
+            color: '#8B1A1A', opacity: 0.08, userSelect: 'none', fontFamily: 'serif',
           }}>
             {rankMeta?.label?.toUpperCase()}
           </div>
         </div>
       )}
-      {/* Gradient fade */}
+      {/* Gradient fade into panel below */}
       <div style={{
         position: 'absolute', inset: 0,
-        background: 'linear-gradient(to bottom, rgba(12,11,9,0) 40%, rgba(12,11,9,0.85) 80%, rgba(12,11,9,1) 100%)',
+        background: 'linear-gradient(to bottom, rgba(12,11,9,0) 50%, rgba(12,11,9,0.7) 80%, rgba(12,11,9,1) 100%)',
+        pointerEvents: 'none',
       }} />
       {/* Rank label overlay */}
       <div style={{
-        position: 'absolute', bottom: 20, left: 28,
+        position: 'absolute', bottom: 18, left: 28,
         fontSize: 9, letterSpacing: '0.28em', textTransform: 'uppercase',
         color: '#C0392B', fontWeight: 600,
       }}>
