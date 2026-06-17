@@ -6,7 +6,7 @@ import {
   type DragEndEvent, type DragStartEvent,
 } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
-import { Check, Plus, X as XIcon } from 'lucide-react'
+import { Check, Plus, Trash2, X as XIcon } from 'lucide-react'
 import { useTaskStore } from '@/store/taskStore'
 import type { Task, TaskType } from '@/types'
 import {
@@ -87,16 +87,13 @@ function KanbanCard({ task, onOpen, overlay = false }: { task: Task; onOpen: () 
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: task.id })
   const updateTask     = useTaskStore(s => s.updateTask)
   const toggleComplete = useTaskStore(s => s.toggleComplete)
+  const deleteTask     = useTaskStore(s => s.deleteTask)
   const companies   = loadVisibleCompanies()
   const allUsers    = getAllUsers()
 
   const company      = task.companyId ? companies.find(c => c.id === task.companyId) : null
   const companyName  = company?.name ?? (task.company !== 'personal' ? task.company : null)
   const companyColor = company?.color ?? '#7F77DD'
-  const companyAbbr  = companyName
-    ? companyName.split(/[\s(]+/).map((w: string) => w[0]).join('').toUpperCase().slice(0, 3)
-    : ''
-
   const isPersonal    = !task.companyId && task.company === 'personal'
   const priority      = task.quadrant ? QUADRANT_PRIORITY[task.quadrant] : null
   const taskType      = task.taskType ?? inferTaskType(task.title)
@@ -169,6 +166,22 @@ function KanbanCard({ task, onOpen, overlay = false }: { task: Task; onOpen: () 
             opacity: task.urgent ? 1 : 0.35,
           }}
         >⚡</button>
+        <button
+          onPointerDown={e => e.stopPropagation()}
+          onClick={e => { e.stopPropagation(); deleteTask(task.id) }}
+          title="Delete task"
+          style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            padding: '0 2px', lineHeight: 1, flexShrink: 0,
+            color: 'var(--color-text-muted, #6B7280)',
+            opacity: 0.35,
+            display: 'flex', alignItems: 'center',
+          }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = '1'; (e.currentTarget as HTMLElement).style.color = '#E05252' }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = '0.35'; (e.currentTarget as HTMLElement).style.color = 'var(--color-text-muted, #6B7280)' }}
+        >
+          <Trash2 size={12} />
+        </button>
       </div>
 
       {/* Badges row */}
@@ -180,14 +193,6 @@ function KanbanCard({ task, onOpen, overlay = false }: { task: Task; onOpen: () 
         }}>
           {isPersonal ? 'Personal' : 'Work'}
         </span>
-        {!isPersonal && companyAbbr && (
-          <span style={{
-            fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 4,
-            background: `${companyColor}20`, color: companyColor,
-          }}>
-            {companyAbbr}
-          </span>
-        )}
         <span title={typeMeta.label} style={{ fontSize: 12 }}>{typeMeta.emoji}</span>
       </div>
 

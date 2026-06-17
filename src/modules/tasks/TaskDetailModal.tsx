@@ -10,11 +10,11 @@ import { loadCustomStatuses } from '@/lib/customStatuses'
 
 const COMPANY_TAGS: CompanyTag[] = ['teradix', 'dxtech', 'consulting', 'personal']
 const QUADRANT_OPTS = [
-  { value: '', label: 'Inbox (unassigned)' },
-  { value: 'do', label: 'Do — Urgent + Important' },
-  { value: 'schedule', label: 'Schedule — Not Urgent + Important' },
-  { value: 'delegate', label: 'Delegate — Urgent + Not Important' },
-  { value: 'eliminate', label: 'Eliminate — Not Urgent + Not Important' },
+  { value: '', label: 'No priority' },
+  { value: 'do', label: 'P0 — Do (Urgent + Important)' },
+  { value: 'schedule', label: 'P1 — Schedule (Not Urgent + Important)' },
+  { value: 'delegate', label: 'P2 — Delegate (Urgent + Not Important)' },
+  { value: 'eliminate', label: 'P3 — Eliminate (Not Urgent + Not Important)' },
 ]
 const STATUS_COLORS: Record<TaskStatus, string> = {
   open: 'var(--color-accent)', done: '#1D9E75', cancelled: 'var(--color-text-muted, #6B7280)',
@@ -220,9 +220,9 @@ export function TaskDetailModal({ task, onClose }: Props) {
               </select>
             </div>
 
-            {/* Quadrant */}
+            {/* Priority */}
             <div>
-              <div style={lbl}>Quadrant</div>
+              <div style={lbl}>Priority</div>
               <select
                 value={task.quadrant ?? ''}
                 onChange={e => updateTask(task.id, { quadrant: (e.target.value || null) as any })}
