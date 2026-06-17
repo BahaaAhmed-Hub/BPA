@@ -98,60 +98,41 @@ function ComponentBar({ label, value }: { label: string; value: number }) {
   )
 }
 
-function RankArtwork({ rank, rankMeta, score }: { rank: Rank; rankMeta: { label: string } | null; score: number }) {
+function RankArtwork({ rank, rankMeta }: { rank: Rank; rankMeta: { label: string } | null }) {
   const base = import.meta.env.BASE_URL
   const [src, setSrc] = useState(`${base}ranks/${rank}.png`)
   const [imgOk, setImgOk] = useState(true)
 
-  const RANK_BG: Record<Rank, string> = {
-    ronin:   'linear-gradient(135deg, #0C0B09 0%, #1A1410 50%, #0C0B09 100%)',
-    samurai: 'linear-gradient(135deg, #0C0B09 0%, #1A0A0A 50%, #0C0B09 100%)',
-    daimyo:  'linear-gradient(135deg, #0C0B09 0%, #0A0D1A 50%, #0C0B09 100%)',
-    shogun:  'linear-gradient(135deg, #0C0B09 0%, #1A0A0A 60%, #2A0A0A 100%)',
+  function handleError() {
+    if (src.endsWith('.png')) setSrc(`${base}ranks/${rank}.svg`)
+    else setImgOk(false)
   }
 
-  function handleError() {
-    if (src.endsWith('.png')) {
-      setSrc(`${base}ranks/${rank}.svg`)
-    } else {
-      setImgOk(false)
-    }
-  }
   return (
-    <div style={{ position: 'relative', width: '100%', background: RANK_BG[rank], overflow: 'hidden' }}>
-      {imgOk && (
+    <div style={{
+      width: 88, height: 88, borderRadius: 8, flexShrink: 0,
+      overflow: 'hidden',
+      border: '1px solid #3a0808',
+      background: 'linear-gradient(135deg, #1a0a0a, #0c0b09)',
+      position: 'relative',
+    }}>
+      {imgOk ? (
         <img
           src={src}
           alt={rankMeta?.label}
           onError={handleError}
-          style={{ width: '100%', height: 'auto', display: 'block' }}
+          style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top', display: 'block' }}
         />
-      )}
-      {/* Fallback when both PNG and SVG fail */}
-      {!imgOk && (
-        <div style={{ height: 220, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{
-            fontSize: 96, fontWeight: 900, letterSpacing: '-0.05em',
-            color: '#8B1A1A', opacity: 0.08, userSelect: 'none', fontFamily: 'serif',
-          }}>
-            {rankMeta?.label?.toUpperCase()}
-          </div>
+      ) : (
+        <div style={{
+          width: '100%', height: '100%',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 28, fontWeight: 900, color: '#8B1A1A', opacity: 0.25,
+          fontFamily: 'serif', letterSpacing: '-0.03em',
+        }}>
+          {rankMeta?.label?.[0]}
         </div>
       )}
-      {/* Gradient fade into panel below */}
-      <div style={{
-        position: 'absolute', inset: 0,
-        background: 'linear-gradient(to bottom, rgba(12,11,9,0) 50%, rgba(12,11,9,0.7) 80%, rgba(12,11,9,1) 100%)',
-        pointerEvents: 'none',
-      }} />
-      {/* Rank label overlay */}
-      <div style={{
-        position: 'absolute', bottom: 18, left: 28,
-        fontSize: 9, letterSpacing: '0.28em', textTransform: 'uppercase',
-        color: '#C0392B', fontWeight: 600,
-      }}>
-        {rankMeta?.label} · {score} / 100
-      </div>
     </div>
   )
 }
@@ -289,22 +270,15 @@ export function BehavioralOS() {
           }}>
             {rank ? (
               <>
-                {/* Rank artwork — samurai mode only */}
-                {mode === 'samurai' && (
-                  <RankArtwork rank={rank.rank} rankMeta={rankMeta} score={rank.score} />
-                )}
-
                 <div style={{ padding: '24px 32px 24px' }}>
                   <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 4 }}>
                     <div>
-                      {mode !== 'samurai' && (
-                        <div style={{
-                          fontSize: 9, letterSpacing: '0.2em', textTransform: 'uppercase',
-                          color: S.dim, marginBottom: 10,
-                        }}>
-                          Your Rank
-                        </div>
-                      )}
+                      <div style={{
+                        fontSize: 9, letterSpacing: '0.2em', textTransform: 'uppercase',
+                        color: S.dim, marginBottom: 10,
+                      }}>
+                        Your Rank
+                      </div>
                       <div style={{
                         fontSize: 38, fontWeight: 700, letterSpacing: '-0.03em',
                         color: S.text, lineHeight: 1,
@@ -315,7 +289,10 @@ export function BehavioralOS() {
                         {rankMeta?.philosophy}
                       </div>
                     </div>
-                    {mode !== 'samurai' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 10 }}>
+                      {mode === 'samurai' && (
+                        <RankArtwork rank={rank.rank} rankMeta={rankMeta} />
+                      )}
                       <div style={{ textAlign: 'right' }}>
                         <div style={{ fontSize: 36, fontWeight: 300, color: rank.score >= 60 ? S.accent : S.dim, lineHeight: 1 }}>
                           {rank.score}
@@ -324,7 +301,7 @@ export function BehavioralOS() {
                           /&nbsp;100
                         </div>
                       </div>
-                    )}
+                    </div>
                   </div>
 
                   <RankProgressBar score={rank.score} />
