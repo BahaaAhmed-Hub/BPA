@@ -850,10 +850,15 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
               value={editTitle}
               onChange={e => setEditTitle(e.target.value)}
               placeholder="Event title"
+              autoFocus
               style={{ width: '100%', fontSize: 17, fontWeight: 700, color: 'var(--color-text, #E8EAF6)', background: 'var(--color-bg, #0D0F1A)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 6, padding: '5px 8px', boxSizing: 'border-box', outline: 'none' }}
             />
           ) : (
-            <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--color-text, #E8EAF6)', lineHeight: 1.3, wordBreak: 'break-word' }}>
+            <div
+              onClick={() => onSave && setEditMode(true)}
+              title={onSave ? 'Click to edit' : undefined}
+              style={{ fontSize: 17, fontWeight: 700, color: 'var(--color-text, #E8EAF6)', lineHeight: 1.3, wordBreak: 'break-word', cursor: onSave ? 'text' : 'default' }}
+            >
               {event.summary ?? '(No title)'}
             </div>
           )}
@@ -882,7 +887,10 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
 
       {/* Location */}
       {(event.location || editMode) && (
-        <div style={{ display: 'flex', alignItems: 'center', padding: '8px 14px', gap: 9 }}>
+        <div
+          style={{ display: 'flex', alignItems: 'center', padding: '8px 14px', gap: 9, cursor: (!editMode && onSave) ? 'text' : 'default' }}
+          onClick={() => !editMode && onSave && setEditMode(true)}
+        >
           <MapPin size={13} color="var(--color-text-muted, #6B7280)" style={{ flexShrink: 0 }} />
           {editMode ? (
             <input value={editLocation} onChange={e => setEditLocation(e.target.value)} placeholder="Add location"
@@ -946,9 +954,11 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
             ))}
           </>
         ) : isAllDay ? (
-          fieldRow('All Day', <span style={{ fontSize: 13, color: 'var(--color-text-dim, #C0C4D6)' }}>{fmtPopupDate(startIso, endIso, true)}</span>)
+          <div onClick={() => onSave && setEditMode(true)} style={{ cursor: onSave ? 'text' : 'default' }}>
+            {fieldRow('All Day', <span style={{ fontSize: 13, color: 'var(--color-text-dim, #C0C4D6)' }}>{fmtPopupDate(startIso, endIso, true)}</span>)}
+          </div>
         ) : (
-          <>
+          <div onClick={() => onSave && setEditMode(true)} style={{ cursor: onSave ? 'text' : 'default' }}>
             {fieldRow('Starts', (
               <div style={{ display: 'flex', gap: 8 }}>
                 <span style={{ fontSize: 13, color: 'var(--color-text-dim, #C0C4D6)' }}>{startDT?.date}</span>
@@ -961,13 +971,13 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
                 <span style={{ fontSize: 13, color: 'var(--color-text-dim, #8B93A8)' }}>{endDT?.time}</span>
               </div>
             ))}
-          </>
+          </div>
         )}
         {isRecurring && fieldRow('Repeat', <span style={{ fontSize: 13, color: 'var(--color-text-dim, #C0C4D6)' }}>Recurring</span>)}
         {fieldRow('Calendar', (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0, overflow: 'hidden' }}>
             <div style={{ width: 10, height: 10, borderRadius: '50%', background: calColor, flexShrink: 0 }} />
-            <span style={{ fontSize: 13, color: 'var(--color-text-dim, #C0C4D6)' }}>{calName}</span>
+            <span style={{ fontSize: 13, color: 'var(--color-text-dim, #C0C4D6)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{calName}</span>
           </div>
         ))}
       </div>
@@ -1030,7 +1040,10 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
               <textarea value={editNotes} onChange={e => setEditNotes(e.target.value)} placeholder="Add notes…" rows={3}
                 style={{ width: '100%', fontSize: 12, color: 'var(--color-text, #E8EAF6)', background: 'var(--color-bg, #0D0F1A)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 5, padding: '5px 7px', resize: 'vertical', outline: 'none', boxSizing: 'border-box', lineHeight: 1.5 }} />
             ) : (
-              <div style={{ fontSize: 12, color: 'var(--color-text-dim, #8B93A8)', lineHeight: 1.6, maxHeight: 90, overflowY: 'auto', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+              <div
+                onClick={() => onSave && setEditMode(true)}
+                style={{ fontSize: 12, color: 'var(--color-text-dim, #8B93A8)', lineHeight: 1.6, maxHeight: 90, overflowY: 'auto', whiteSpace: 'pre-wrap', wordBreak: 'break-word', cursor: onSave ? 'text' : 'default' }}
+              >
                 {notes.slice(0, 400)}{notes.length > 400 ? '…' : ''}
               </div>
             )}
@@ -1074,11 +1087,6 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
             <button style={btn(status === 'cancelled', '#E05252')} onClick={() => onStatusToggle('cancelled')}>
               <XCircle size={12} /> Cancel
             </button>
-            {onSave && (
-              <button style={btn(false, 'var(--color-accent)')} onClick={() => setEditMode(true)}>
-                Edit
-              </button>
-            )}
             <button
               style={{ ...btn(showPrep, 'var(--color-accent)'), marginLeft: 'auto' }}
               onClick={() => { setShowPrep(p => !p); if (!prep && !prepLoading) onPrepRequest() }}
