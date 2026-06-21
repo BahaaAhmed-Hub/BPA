@@ -174,7 +174,7 @@ export function FinanceModule() {
   function renderScreen() {
     const props = { onOpenAdd: () => setAddOpen(true) }
     switch (screen) {
-      case 'today':   return <TodayScreen {...props} />
+      case 'today':   return <TodayScreen />
       case 'balance': return <BalanceScreen />
       case 'budget':  return <BudgetScreen />
       case 'bills':   return <BillsScreen {...props} />
