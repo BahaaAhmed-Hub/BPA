@@ -15,6 +15,7 @@ import {
   Crown,
   Sparkles,
   Compass,
+  Wallet,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -44,6 +45,7 @@ const NAV_ITEMS = [
   { id: 'review',     label: 'Weekly Review',   Icon: RefreshCw },
   { id: 'morning',    label: 'Morning Brief',   Icon: Sun },
   { id: 'planning',   label: 'Planning',        Icon: Compass },
+  { id: 'finance',    label: 'Finance',         Icon: Wallet },
 ]
 
 const SYSTEM_ITEMS = [
@@ -73,16 +75,16 @@ export function Sidebar() {
         overflow: 'hidden',
       }}
     >
-      {/* Logo */}
+      {/* Logo — exact 64px height to align with TopBar */}
       <div
         style={{
-          padding: sidebarCollapsed ? '20px 0' : '20px 20px',
+          height: 64, flexShrink: 0,
+          padding: sidebarCollapsed ? '0' : '0 20px',
           borderBottom: `1px solid ${theme.border}`,
           display: 'flex',
           alignItems: 'center',
           gap: 10,
           justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
-          minHeight: 64,
         }}
       >
         {(() => {

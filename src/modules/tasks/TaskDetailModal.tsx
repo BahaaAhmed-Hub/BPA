@@ -10,11 +10,11 @@ import { loadCustomStatuses } from '@/lib/customStatuses'
 
 const COMPANY_TAGS: CompanyTag[] = ['teradix', 'dxtech', 'consulting', 'personal']
 const QUADRANT_OPTS = [
-  { value: '', label: 'Inbox (unassigned)' },
-  { value: 'do', label: 'Do — Urgent + Important' },
-  { value: 'schedule', label: 'Schedule — Not Urgent + Important' },
-  { value: 'delegate', label: 'Delegate — Urgent + Not Important' },
-  { value: 'eliminate', label: 'Eliminate — Not Urgent + Not Important' },
+  { value: '', label: 'No priority' },
+  { value: 'do', label: 'P0 — Do (Urgent + Important)' },
+  { value: 'schedule', label: 'P1 — Schedule (Not Urgent + Important)' },
+  { value: 'delegate', label: 'P2 — Delegate (Urgent + Not Important)' },
+  { value: 'eliminate', label: 'P3 — Eliminate (Not Urgent + Not Important)' },
 ]
 const STATUS_COLORS: Record<TaskStatus, string> = {
   open: 'var(--color-accent)', done: '#1D9E75', cancelled: 'var(--color-text-muted, #6B7280)',
@@ -67,6 +67,10 @@ export function TaskDetailModal({ task, onClose }: Props) {
   const taskStatus: TaskStatus = task.completed ? 'done' : (task.status ?? 'open')
 
   function handleCompanyChange(value: string) {
+    if (value === 'personal') {
+      updateTask(task.id, { company: 'personal', companyId: undefined })
+      return
+    }
     const co = companies.find(c => c.id === value)
     if (companies.length > 0) {
       updateTask(task.id, { companyId: value || undefined, company: (co?.id ?? task.company) as CompanyTag })
@@ -162,16 +166,14 @@ export function TaskDetailModal({ task, onClose }: Props) {
             <div>
               <div style={lbl}><Building2 size={10} /> Company</div>
               <select
-                value={task.companyId ?? task.company}
+                value={task.company === 'personal' ? 'personal' : (task.companyId ?? task.company)}
                 onChange={e => handleCompanyChange(e.target.value)}
                 style={field}
               >
+                <option value="personal">Personal</option>
                 {companies.length > 0
-                  ? <>
-                      <option value="">— none —</option>
-                      {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                    </>
-                  : COMPANY_TAGS.map(c => <option key={c} value={c}>{COMPANY_LABELS[c]}</option>)
+                  ? companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)
+                  : COMPANY_TAGS.filter(c => c !== 'personal').map(c => <option key={c} value={c}>{COMPANY_LABELS[c]}</option>)
                 }
               </select>
             </div>
@@ -220,9 +222,9 @@ export function TaskDetailModal({ task, onClose }: Props) {
               </select>
             </div>
 
-            {/* Quadrant */}
+            {/* Priority */}
             <div>
-              <div style={lbl}>Quadrant</div>
+              <div style={lbl}>Priority</div>
               <select
                 value={task.quadrant ?? ''}
                 onChange={e => updateTask(task.id, { quadrant: (e.target.value || null) as any })}

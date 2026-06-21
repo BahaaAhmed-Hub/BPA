@@ -609,6 +609,19 @@ export function detectMeetingType(event: GCalEvent): string {
   return 'internal'
 }
 
+/** Move an event to a different calendar (within the same Google account). */
+export async function moveCalendarEventWithToken(
+  token: string,
+  srcCalendarId: string,
+  eventId: string,
+  destCalendarId: string,
+): Promise<GCalEvent | null> {
+  const path = `/calendars/${encodeURIComponent(srcCalendarId)}/events/${encodeURIComponent(eventId)}/move?destination=${encodeURIComponent(destCalendarId)}`
+  const res = await gcalRequest(token, path, { method: 'POST' })
+  if (!res.ok) return null
+  return res.json() as Promise<GCalEvent>
+}
+
 // ─── Edge-function-backed write operations ────────────────────────────────────
 // These call the google-calendar-write edge function so tokens never reach the
 // browser. Use accountId (from google_accounts.id) instead of a raw token.

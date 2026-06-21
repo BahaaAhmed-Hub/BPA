@@ -6,7 +6,7 @@ import {
   type DragEndEvent, type DragStartEvent,
 } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
-import { Check, Plus, X as XIcon } from 'lucide-react'
+import { Check, Plus, Trash2, X as XIcon } from 'lucide-react'
 import { useTaskStore } from '@/store/taskStore'
 import type { Task, TaskType } from '@/types'
 import {
@@ -87,16 +87,12 @@ function KanbanCard({ task, onOpen, overlay = false }: { task: Task; onOpen: () 
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: task.id })
   const updateTask     = useTaskStore(s => s.updateTask)
   const toggleComplete = useTaskStore(s => s.toggleComplete)
+  const deleteTask     = useTaskStore(s => s.deleteTask)
   const companies   = loadVisibleCompanies()
   const allUsers    = getAllUsers()
 
   const company      = task.companyId ? companies.find(c => c.id === task.companyId) : null
   const companyName  = company?.name ?? (task.company !== 'personal' ? task.company : null)
-  const companyColor = company?.color ?? '#7F77DD'
-  const companyAbbr  = companyName
-    ? companyName.split(/[\s(]+/).map((w: string) => w[0]).join('').toUpperCase().slice(0, 3)
-    : ''
-
   const isPersonal    = !task.companyId && task.company === 'personal'
   const priority      = task.quadrant ? QUADRANT_PRIORITY[task.quadrant] : null
   const taskType      = task.taskType ?? inferTaskType(task.title)
@@ -169,23 +165,32 @@ function KanbanCard({ task, onOpen, overlay = false }: { task: Task; onOpen: () 
             opacity: task.urgent ? 1 : 0.35,
           }}
         >⚡</button>
+        <button
+          onPointerDown={e => e.stopPropagation()}
+          onClick={e => { e.stopPropagation(); deleteTask(task.id) }}
+          title="Delete task"
+          style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            padding: '0 2px', lineHeight: 1, flexShrink: 0,
+            color: 'var(--color-text-muted, #6B7280)',
+            opacity: 0.35,
+            display: 'flex', alignItems: 'center',
+          }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = '1'; (e.currentTarget as HTMLElement).style.color = '#E05252' }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = '0.35'; (e.currentTarget as HTMLElement).style.color = 'var(--color-text-muted, #6B7280)' }}
+        >
+          <Trash2 size={12} />
+        </button>
       </div>
 
       {/* Badges row */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap', marginBottom: companyName && !isPersonal ? 5 : 8 }}>
-        <span style={{
-          fontSize: 10, fontWeight: 600, padding: '2px 6px', borderRadius: 4,
-          background: isPersonal ? 'rgba(136,135,128,0.12)' : 'rgba(127,119,221,0.12)',
-          color: isPersonal ? '#888780' : '#9B94E8',
-        }}>
-          {isPersonal ? 'Personal' : 'Work'}
-        </span>
-        {!isPersonal && companyAbbr && (
+        {isPersonal && (
           <span style={{
-            fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 4,
-            background: `${companyColor}20`, color: companyColor,
+            fontSize: 10, fontWeight: 600, padding: '2px 6px', borderRadius: 4,
+            background: 'rgba(136,135,128,0.12)', color: '#888780',
           }}>
-            {companyAbbr}
+            Personal
           </span>
         )}
         <span title={typeMeta.label} style={{ fontSize: 12 }}>{typeMeta.emoji}</span>
@@ -485,11 +490,15 @@ export function KanbanBoard({ onOpen, hideCompleted = false, filteredTaskIds }: 
 
   const columns = useMemo<Column[]>(() => {
     if (boardType === 'status') {
+      // A task with a dueDate but no explicit boardStatus is implicitly "planned"
+      const isImplicitlyPlanned = (t: Task) =>
+        hasPlannedStatus && !!t.dueDate && !t.boardStatus && t.quadrant !== 'do'
+
       const inboxCol: Column = {
         id:    'inbox',
         label: 'Inbox / Unplanned',
         color: '#6B7280',
-        tasks: sortByUrgency(tasks.filter(t => !t.boardStatus && t.quadrant !== 'do')),
+        tasks: sortByUrgency(tasks.filter(t => !t.boardStatus && t.quadrant !== 'do' && !isImplicitlyPlanned(t))),
       }
       const doCol: Column = {
         id:    'do',
@@ -501,7 +510,9 @@ export function KanbanBoard({ onOpen, hideCompleted = false, filteredTaskIds }: 
         id:    s.id,
         label: s.label,
         color: s.color,
-        tasks: sortByUrgency(tasks.filter(t => t.boardStatus === s.id)),
+        tasks: sortByUrgency(tasks.filter(t =>
+          t.boardStatus === s.id || (s.id === 'planned' && isImplicitlyPlanned(t))
+        )),
       }))
       return [inboxCol, doCol, ...statusCols]
     }

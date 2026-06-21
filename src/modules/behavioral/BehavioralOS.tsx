@@ -98,6 +98,45 @@ function ComponentBar({ label, value }: { label: string; value: number }) {
   )
 }
 
+function RankArtwork({ rank, rankMeta }: { rank: Rank; rankMeta: { label: string } | null }) {
+  const base = import.meta.env.BASE_URL
+  const [src, setSrc] = useState(`${base}ranks/${rank}.png`)
+  const [imgOk, setImgOk] = useState(true)
+
+  function handleError() {
+    if (src.endsWith('.png')) setSrc(`${base}ranks/${rank}.svg`)
+    else setImgOk(false)
+  }
+
+  return (
+    <div style={{
+      width: 88, height: 88, borderRadius: 8, flexShrink: 0,
+      overflow: 'hidden',
+      border: '1px solid #3a0808',
+      background: 'linear-gradient(135deg, #1a0a0a, #0c0b09)',
+      position: 'relative',
+    }}>
+      {imgOk ? (
+        <img
+          src={src}
+          alt={rankMeta?.label}
+          onError={handleError}
+          style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top', display: 'block' }}
+        />
+      ) : (
+        <div style={{
+          width: '100%', height: '100%',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 28, fontWeight: 900, color: '#8B1A1A', opacity: 0.25,
+          fontFamily: 'serif', letterSpacing: '-0.03em',
+        }}>
+          {rankMeta?.label?.[0]}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function IdentityCard({ identity }: { identity: IdentityResult }) {
   return (
     <div style={{
@@ -249,12 +288,15 @@ export function BehavioralOS() {
                       {rankMeta?.philosophy}
                     </div>
                   </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: 36, fontWeight: 300, color: rank.score >= 60 ? S.accent : S.dim, lineHeight: 1 }}>
-                      {rank.score}
-                    </div>
-                    <div style={{ fontSize: 9, color: S.muted, letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: 4 }}>
-                      /&nbsp;100
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 10 }}>
+                    {mode === 'samurai' && <RankArtwork rank={rank.rank} rankMeta={rankMeta} />}
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: 36, fontWeight: 300, color: rank.score >= 60 ? S.accent : S.dim, lineHeight: 1 }}>
+                        {rank.score}
+                      </div>
+                      <div style={{ fontSize: 9, color: S.muted, letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: 4 }}>
+                        /&nbsp;100
+                      </div>
                     </div>
                   </div>
                 </div>
