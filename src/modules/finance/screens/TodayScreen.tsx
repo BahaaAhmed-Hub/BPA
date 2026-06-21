@@ -1,123 +1,280 @@
-import { useState } from 'react'
-import { useFinanceStore } from '../financeStore'
-import { useUIStore } from '@/store/uiStore'
-import { getTheme } from '@/lib/themes'
-import { TransactionModal } from '../modals/TransactionModal'
-import type { Transaction } from '../types'
+import { useState, useMemo } from 'react'
 
-interface Props {
-  onOpenAdd: () => void
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+export interface FinanceCategory {
+  id: string
+  name: string
+  icon?: string
+  color?: string
 }
 
-function Pill({ type, amount, currency }: { type: 'expense' | 'income' | 'transfer'; amount: number; currency: string }) {
-  const bg = type === 'expense' ? '#DA4A3E' : type === 'income' ? '#2FA869' : '#EDE6D8'
-  const color = type === 'transfer' ? '#1A1714' : '#fff'
+export interface FinanceAccount {
+  id: string
+  name: string
+  emoji?: string
+  color?: string
+}
+
+export interface Transaction {
+  id: string
+  date: string          // 'YYYY-MM-DD'
+  type: 'income' | 'expense' | 'transfer'
+  amount: number        // always positive
+  payee?: string
+  categoryId?: string
+  accountId?: string
+  currency?: string
+  notes?: string
+}
+
+// ── Palette ───────────────────────────────────────────────────────────────────
+
+const RED   = '#E05252'
+const GREEN = '#1D9E75'
+
+const C = {
+  bg:      'var(--color-bg, #0D0F1A)',
+  surface: 'var(--color-surface, #161929)',
+  border:  'var(--color-border, #252A3E)',
+  textPri: 'var(--color-text, #E8EAF6)',
+  textDim: 'var(--color-text-dim, #C7CAE0)',
+  textMuted: 'var(--color-text-muted, #6B7280)',
+  accent:  'var(--color-accent, #7F77DD)',
+}
+
+const MONTH_NAMES = [
+  'January','February','March','April','May','June',
+  'July','August','September','October','November','December',
+]
+
+// ── Pill ──────────────────────────────────────────────────────────────────────
+
+function Pill({ type, amount, currency }: { type: 'income' | 'expense' | 'transfer'; amount: number; currency?: string }) {
+  const cur = currency ?? 'EGP'
+  const isIncome   = type === 'income'
+  const isTransfer = type === 'transfer'
+  const color = isTransfer ? C.accent : isIncome ? GREEN : RED
+  const sign  = isTransfer ? '↔' : isIncome ? '+' : '−'
   return (
     <span style={{
-      display: 'inline-block', padding: '7px 15px', borderRadius: 9,
-      fontSize: 13, fontWeight: 600, background: bg, color, whiteSpace: 'nowrap',
+      fontSize: 13, fontWeight: 700,
+      color,
+      whiteSpace: 'nowrap',
+      flexShrink: 0,
     }}>
-      {type === 'expense' ? '−' : type === 'income' ? '+' : ''}{currency} {amount.toLocaleString('en-US')}
+      {sign}{cur} {Math.abs(amount).toLocaleString('en-US')}
     </span>
   )
 }
 
-const RED   = '#DA4A3E'
-const GREEN = '#2FA869'
-const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December']
+// ── TxModal ───────────────────────────────────────────────────────────────────
 
-export function TodayScreen({ onOpenAdd }: Props) {
-  const themeId = useUIStore(s => s.themeId)
-  const theme   = getTheme(themeId)
-  const C = {
-    bg:        theme.bg,
-    surface:   theme.surface,
-    border:    theme.border,
-    amber:     theme.accent,
-    amberBg:   theme.accentFill,
-    textPri:   theme.text,
-    textMuted: theme.textDim,
-    textDim:   theme.textMuted,
-    red:       RED,
-    green:     GREEN,
-  }
+interface TxModalState { open: boolean; tx: Transaction | null }
 
-  const { transactions, accounts, categories, bills, goals, upsertTransaction, removeTransaction } = useFinanceStore()
+function TxModal({
+  tx,
+  categories,
+  accounts,
+  onClose,
+}: {
+  tx: Transaction
+  categories: FinanceCategory[]
+  accounts: FinanceAccount[]
+  onClose: () => void
+}) {
+  const cat  = tx.categoryId ? categories.find(c => c.id === tx.categoryId) : null
+  const acct = tx.accountId  ? accounts.find(a => a.id === tx.accountId)    : null
 
-  const [txModal,     setTxModal]     = useState<{ open: boolean; tx: Transaction | null }>({ open: false, tx: null })
-  const [selectedDay, setSelectedDay] = useState<number | null>(null)
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 1000,
+        background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(3px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: 24,
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          width: '100%', maxWidth: 400,
+          background: C.surface, border: `1px solid ${C.border}`,
+          borderRadius: 14, padding: 24,
+          boxShadow: '0 24px 80px rgba(0,0,0,0.7)',
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+          <div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: C.textPri, marginBottom: 4 }}>
+              {tx.payee?.trim() || cat?.name || 'Transaction'}
+            </div>
+            <div style={{ fontSize: 12, color: C.textMuted }}>{tx.date}</div>
+          </div>
+          <Pill type={tx.type === 'income' ? 'income' : tx.type === 'transfer' ? 'transfer' : 'expense'} amount={tx.amount} currency={tx.currency} />
+        </div>
 
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          {cat && (
+            <div>
+              <div style={{ fontSize: 10, color: C.textMuted, marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Category</div>
+              <div style={{ fontSize: 13, color: C.textDim }}>{cat.icon ?? ''} {cat.name}</div>
+            </div>
+          )}
+          {acct && (
+            <div>
+              <div style={{ fontSize: 10, color: C.textMuted, marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Account</div>
+              <div style={{ fontSize: 13, color: C.textDim }}>{acct.emoji ?? ''} {acct.name}</div>
+            </div>
+          )}
+          {tx.notes && (
+            <div style={{ gridColumn: '1 / -1' }}>
+              <div style={{ fontSize: 10, color: C.textMuted, marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Notes</div>
+              <div style={{ fontSize: 13, color: C.textDim }}>{tx.notes}</div>
+            </div>
+          )}
+        </div>
+
+        <button
+          onClick={onClose}
+          style={{
+            marginTop: 24, width: '100%', padding: '9px 0',
+            background: 'transparent', border: `1px solid ${C.border}`,
+            borderRadius: 8, fontSize: 13, color: C.textMuted, cursor: 'pointer',
+          }}
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ── Mini Calendar ─────────────────────────────────────────────────────────────
+
+function MiniCalendar({
+  year, month,
+  selectedDay,
+  txDates,
+  onSelectDay,
+  onPrevMonth,
+  onNextMonth,
+}: {
+  year: number
+  month: number
+  selectedDay: string | null
+  txDates: Set<string>
+  onSelectDay: (d: string) => void
+  onPrevMonth: () => void
+  onNextMonth: () => void
+}) {
   const today = new Date()
-  const [viewYear,  setViewYear]  = useState(today.getFullYear())
-  const [viewMonth, setViewMonth] = useState(today.getMonth())
+  const todayStr = today.toISOString().slice(0, 10)
 
-  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
-
-  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate()
-  const startOffset = (new Date(viewYear, viewMonth, 1).getDay() + 6) % 7
-
-  const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+  const firstDay = new Date(year, month, 1).getDay()
+  const daysInMonth = new Date(year, month + 1, 0).getDate()
 
   const cells: (number | null)[] = []
-  for (let i = 0; i < startOffset; i++) cells.push(null)
+  for (let i = 0; i < firstDay; i++) cells.push(null)
   for (let d = 1; d <= daysInMonth; d++) cells.push(d)
+  while (cells.length % 7 !== 0) cells.push(null)
+
+  return (
+    <div style={{ userSelect: 'none' }}>
+      {/* Month nav */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <button onClick={onPrevMonth} style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.textMuted, fontSize: 16, padding: '0 4px' }}>‹</button>
+        <span style={{ fontSize: 13, fontWeight: 700, color: C.textPri }}>{MONTH_NAMES[month]} {year}</span>
+        <button onClick={onNextMonth} style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.textMuted, fontSize: 16, padding: '0 4px' }}>›</button>
+      </div>
+      {/* Day headers */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2, marginBottom: 4 }}>
+        {['Su','Mo','Tu','We','Th','Fr','Sa'].map(d => (
+          <div key={d} style={{ textAlign: 'center', fontSize: 10, color: C.textMuted, fontWeight: 600 }}>{d}</div>
+        ))}
+      </div>
+      {/* Cells */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2 }}>
+        {cells.map((day, i) => {
+          if (!day) return <div key={i} />
+          const dateStr = `${year}-${String(month + 1).padStart(2,'0')}-${String(day).padStart(2,'0')}`
+          const isToday    = dateStr === todayStr
+          const isSelected = dateStr === selectedDay
+          const hasTx      = txDates.has(dateStr)
+          return (
+            <button
+              key={i}
+              onClick={() => onSelectDay(isSelected ? '' : dateStr)}
+              style={{
+                width: '100%', aspectRatio: '1', borderRadius: 6,
+                border: isSelected ? `1px solid ${C.accent}` : isToday ? `1px solid ${C.border}` : '1px solid transparent',
+                background: isSelected ? `${C.accent}22` : 'transparent',
+                color: isToday ? C.accent : C.textDim,
+                fontSize: 11, fontWeight: isToday ? 700 : 400,
+                cursor: 'pointer', position: 'relative',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}
+            >
+              {day}
+              {hasTx && (
+                <span style={{
+                  position: 'absolute', bottom: 2, left: '50%', transform: 'translateX(-50%)',
+                  width: 4, height: 4, borderRadius: '50%',
+                  background: isSelected ? C.accent : C.textMuted,
+                }} />
+              )}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// ── Main Screen ───────────────────────────────────────────────────────────────
+
+interface TodayScreenProps {
+  transactions?: Transaction[]
+  categories?: FinanceCategory[]
+  accounts?: FinanceAccount[]
+}
+
+export function TodayScreen({
+  transactions = [],
+  categories   = [],
+  accounts     = [],
+}: TodayScreenProps) {
+  const today      = new Date()
+  const todayStr   = today.toISOString().slice(0, 10)
+
+  const [viewYear,  setViewYear]  = useState(today.getFullYear())
+  const [viewMonth, setViewMonth] = useState(today.getMonth())
+  const [selectedDay, setSelectedDay] = useState<string>(todayStr)
+  const [txModal, setTxModal] = useState<TxModalState>({ open: false, tx: null })
 
   const monthPrefix = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}`
-
-  // Per-day net: income - expense (for coloring)
-  const dayNet: Record<number, number> = {}
-  transactions
-    .filter(tx => tx.date.startsWith(monthPrefix))
-    .forEach(tx => {
-      const d = parseInt(tx.date.slice(8, 10))
-      if (!dayNet[d]) dayNet[d] = 0
-      if (tx.type === 'income')  dayNet[d] += tx.amount
-      if (tx.type === 'expense') dayNet[d] -= Math.abs(tx.amount)
-    })
-
-  // Bill dots from real bills
-  const billDotsMap: Record<number, string[]> = {}
-  bills.forEach(bill => {
-    if (!bill.isActive) return
-    const due = new Date(bill.nextDue)
-    if (due.getFullYear() === viewYear && due.getMonth() === viewMonth) {
-      const day = due.getDate()
-      if (!billDotsMap[day]) billDotsMap[day] = []
-      billDotsMap[day].push(bill.isIncome ? GREEN : RED)
-    }
-  })
-
-  // Planned bills (next 30 days)
-  const in30 = new Date(today); in30.setDate(in30.getDate() + 30)
-  const plannedBills = bills.filter(b => {
-    if (!b.isActive || b.isIncome) return false
-    const due = new Date(b.nextDue)
-    return due.getTime() >= today.getTime() && due.getTime() <= in30.getTime()
-  })
-
-  // Transactions for selected day
-  const selectedDayStr = selectedDay !== null
-    ? `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(selectedDay).padStart(2, '0')}`
-    : null
-  const selectedDayTx = selectedDayStr
-    ? transactions.filter(tx => tx.date === selectedDayStr).sort((a, b) => a.date.localeCompare(b.date))
-    : []
 
   // All transactions for the viewed month, sorted by date asc (earliest first)
   const monthTx = transactions
     .filter(tx => tx.date.startsWith(monthPrefix))
     .sort((a, b) => a.date.localeCompare(b.date))
 
-  const totalExpense = transactions.filter(tx => tx.date.startsWith(monthPrefix) && tx.type === 'expense').reduce((s, tx) => s + tx.amount, 0)
-  const totalIncome  = transactions.filter(tx => tx.date.startsWith(monthPrefix) && tx.type === 'income').reduce((s, tx) => s + tx.amount, 0)
+  const txDates = useMemo(() => new Set(transactions.map(tx => tx.date)), [transactions])
 
-  const isViewingCurrentMonth = viewYear === today.getFullYear() && viewMonth === today.getMonth()
+  const selectedDayTx = selectedDay
+    ? transactions
+        .filter(tx => tx.date === selectedDay)
+        .sort((a, b) => a.date.localeCompare(b.date))
+    : []
 
-  function navigateMonth(delta: number) {
-    const d = new Date(viewYear, viewMonth + delta, 1)
-    setViewYear(d.getFullYear())
-    setViewMonth(d.getMonth())
-    setSelectedDay(null)
+  function prevMonth() {
+    if (viewMonth === 0) { setViewYear(y => y - 1); setViewMonth(11) }
+    else setViewMonth(m => m - 1)
+  }
+  function nextMonth() {
+    if (viewMonth === 11) { setViewYear(y => y + 1); setViewMonth(0) }
+    else setViewMonth(m => m + 1)
   }
 
   function renderTxRow(tx: Transaction) {
@@ -157,7 +314,7 @@ export function TodayScreen({ onOpenAdd }: Props) {
           </div>
           <div style={{ fontSize: 12, color: C.textMuted, marginTop: 2, display: 'flex', gap: 6 }}>
             <span>{tx.date}</span>
-            {cat && tx.payee?.trim() && <span style={{ color: C.textDim }}>· {cat.name}</span>}
+            {cat && tx.payee?.trim() && <span style={{ color: C.textMuted }}>· {cat.name}</span>}
           </div>
         </div>
         <Pill
@@ -170,299 +327,107 @@ export function TodayScreen({ onOpenAdd }: Props) {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, height: '100%', overflow: 'hidden' }}>
-
-      {/* Header */}
+    <div style={{ display: 'flex', height: '100%', background: C.bg }}>
+      {/* Left panel — calendar */}
       <div style={{
-        height: 48, flexShrink: 0,
-        borderBottom: `1px solid ${C.border}`,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '0 24px',
+        width: 280, flexShrink: 0, borderRight: `1px solid ${C.border}`,
+        padding: '24px 20px', overflowY: 'auto',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <button
-            onClick={() => navigateMonth(-1)}
-            style={{ background: 'none', border: 'none', color: C.textMuted, fontSize: 18, cursor: 'pointer', padding: '2px 6px', lineHeight: 1 }}
-          >‹</button>
-          <span style={{ fontSize: 16, fontWeight: 600, color: C.textPri }}>
-            {MONTH_NAMES[viewMonth]} {viewYear}
-          </span>
-          <button
-            onClick={() => navigateMonth(1)}
-            style={{ background: 'none', border: 'none', color: C.textMuted, fontSize: 18, cursor: 'pointer', padding: '2px 6px', lineHeight: 1 }}
-          >›</button>
-        </div>
-        <button
-          onClick={onOpenAdd}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}
-        >
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={C.textMuted} strokeWidth="1.7" strokeLinecap="round">
-            <circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="22" y2="22"/>
-          </svg>
-        </button>
-      </div>
+        <MiniCalendar
+          year={viewYear}
+          month={viewMonth}
+          selectedDay={selectedDay}
+          txDates={txDates}
+          onSelectDay={setSelectedDay}
+          onPrevMonth={prevMonth}
+          onNextMonth={nextMonth}
+        />
 
-      {/* Content */}
-      <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-
-        {/* ── Left: Calendar ── */}
-        <div style={{
-          flex: 1.25, overflowY: 'auto', padding: '20px 22px',
-          borderRight: `1px solid ${C.border}`,
-          display: 'flex', flexDirection: 'column', gap: 0,
-        }}>
-          {/* Weekday labels */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 5, marginBottom: 5 }}>
-            {weekdays.map(d => (
-              <div key={d} style={{
-                textAlign: 'center', fontSize: 10, fontWeight: 600,
-                textTransform: 'uppercase', color: C.textMuted, letterSpacing: '0.5px', padding: '4px 0',
-              }}>
-                {d}
-              </div>
-            ))}
-          </div>
-
-          {/* Day cells */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 5 }}>
-            {cells.map((day, idx) => {
-              if (day === null) return <div key={`b${idx}`} />
-              const isToday    = isViewingCurrentMonth && day === today.getDate()
-              const isSelected = selectedDay === day
-              const net        = dayNet[day]
-              const hasData    = net !== undefined
-              const dots       = billDotsMap[day] ?? []
-
-              // Cell border: accent for today or selected, faint otherwise
-              const cellBorder = (isToday || isSelected) ? C.amber : C.border
-              const cellBg     = isToday ? C.amberBg : 'transparent'
-
-              // Day NUMBER pill: colored background only when there are transactions
-              // Today overrides to accent. Selection adds accent border to cell only (no fill).
-              let numBg: string | undefined
-              let numColor = isViewingCurrentMonth && day > today.getDate() ? C.textDim : C.textMuted
-              if (isToday) {
-                numBg = C.amber; numColor = theme.bg
-              } else if (hasData) {
-                numBg = net >= 0 ? `${GREEN}30` : `${RED}30`
-                numColor = net >= 0 ? GREEN : RED
-              } else if (isSelected) {
-                numColor = C.amber
-              }
-
+        {/* Selected day summary */}
+        {selectedDay && selectedDayTx.length > 0 && (
+          <div style={{ marginTop: 20, paddingTop: 16, borderTop: `1px solid ${C.border}` }}>
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: C.textMuted, letterSpacing: '0.8px', marginBottom: 10 }}>
+              {selectedDay}
+            </div>
+            {selectedDayTx.map(tx => {
+              const cat = tx.categoryId ? categories.find(c => c.id === tx.categoryId) : null
+              const isExp = tx.type === 'expense'
               return (
                 <div
-                  key={day}
-                  onClick={() => setSelectedDay(isSelected ? null : day)}
+                  key={tx.id}
+                  onClick={() => setTxModal({ open: true, tx })}
                   style={{
-                    minHeight: 68, borderRadius: 8,
-                    border: `1px solid ${cellBorder}`,
-                    background: cellBg,
-                    padding: '7px 8px',
-                    display: 'flex', flexDirection: 'column', gap: 3,
-                    cursor: 'pointer', transition: 'border-color 0.1s',
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    padding: '6px 0', borderBottom: `1px solid ${C.border}`,
+                    cursor: 'pointer', gap: 8,
                   }}
                 >
-                  <span style={{
-                    fontSize: 12, fontWeight: (isToday || isSelected || hasData) ? 700 : 400,
-                    color: numColor, lineHeight: 1,
-                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                    minWidth: 22, height: 22, borderRadius: 6,
-                    background: numBg,
-                    padding: numBg ? '0 4px' : undefined,
-                  }}>
-                    {day}
+                  <span style={{ fontSize: 12, color: C.textDim, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {cat?.icon ?? (isExp ? '💳' : '💼')} {tx.payee?.trim() || cat?.name || 'Tx'}
                   </span>
-                  {dots.length > 0 && (
-                    <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', marginTop: 1 }}>
-                      {dots.map((color, di) => (
-                        <div key={di} style={{ width: 5, height: 5, borderRadius: '50%', background: color }} />
-                      ))}
-                    </div>
-                  )}
+                  <span style={{ fontSize: 12, fontWeight: 600, color: isExp ? RED : GREEN, flexShrink: 0 }}>
+                    {isExp ? '−' : '+'}{(tx.currency ?? 'EGP')} {Math.abs(tx.amount).toLocaleString('en-US')}
+                  </span>
                 </div>
               )
             })}
           </div>
-
-          {/* Month totals */}
-          <div style={{
-            marginTop: 16, paddingTop: 14, borderTop: `1px solid ${C.border}`,
-            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          }}>
-            <span style={{ fontSize: 12, color: RED, fontWeight: 600 }}>
-              −EGP {totalExpense.toLocaleString('en-US')}
-            </span>
-            <span style={{ fontSize: 12, color: C.textDim, fontWeight: 500 }}>
-              {MONTH_NAMES[viewMonth]}
-            </span>
-            <span style={{ fontSize: 12, color: GREEN, fontWeight: 600 }}>
-              +EGP {totalIncome.toLocaleString('en-US')}
-            </span>
-          </div>
-        </div>
-
-        {/* ── Right: Context panel ── */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: 0 }}>
-
-          {selectedDay !== null ? (
-            /* ─── Selected day view ─── */
-            <>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-                <span style={{ fontSize: 15, fontWeight: 700, color: C.textPri }}>
-                  {selectedDay} {MONTH_NAMES[viewMonth]}
-                </span>
-                <button
-                  onClick={() => setTxModal({ open: true, tx: null })}
-                  style={{ background: C.amber, border: 'none', borderRadius: 7, padding: '5px 12px', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: theme.bg, fontFamily: 'inherit' }}
-                >
-                  + Add
-                </button>
-              </div>
-
-              {selectedDayTx.length === 0 ? (
-                <div style={{ fontSize: 13, color: C.textDim, textAlign: 'center', padding: '32px 0' }}>
-                  No transactions on this day
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  {selectedDayTx.map(tx => renderTxRow(tx))}
-                </div>
-              )}
-
-              {/* Day summary */}
-              {selectedDayTx.length > 0 && (() => {
-                const dayInc = selectedDayTx.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0)
-                const dayExp = selectedDayTx.filter(t => t.type === 'expense').reduce((s, t) => s + Math.abs(t.amount), 0)
-                const net = dayInc - dayExp
-                return (
-                  <div style={{
-                    marginTop: 16, paddingTop: 12, borderTop: `1px solid ${C.border}`,
-                    display: 'flex', justifyContent: 'space-between',
-                  }}>
-                    {dayExp > 0 && <span style={{ fontSize: 12, color: RED, fontWeight: 600 }}>−EGP {dayExp.toLocaleString('en-US')}</span>}
-                    <span style={{ fontSize: 12, color: net >= 0 ? GREEN : RED, fontWeight: 700, marginLeft: 'auto' }}>
-                      Net {net >= 0 ? '+' : ''}EGP {net.toLocaleString('en-US')}
-                    </span>
-                  </div>
-                )
-              })()}
-            </>
-          ) : (
-            /* ─── Default view ─── */
-            <>
-              {/* Goals */}
-              <div style={{ marginBottom: 24 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                  <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: C.textMuted, letterSpacing: '0.8px' }}>Goals</span>
-                  <button
-                    onClick={() => setTxModal({ open: true, tx: null })}
-                    style={{ background: 'none', border: 'none', color: C.amber, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
-                  >Add</button>
-                </div>
-                {goals.length === 0 ? (
-                  <div style={{ fontSize: 13, color: C.textDim, textAlign: 'center', padding: '16px 0' }}>No goals yet</div>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {goals.map(goal => (
-                      <div key={goal.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0', borderBottom: `1px solid ${C.border}` }}>
-                        <div style={{ width: 40, height: 40, borderRadius: '50%', background: `${goal.color}22`, border: `1px solid ${goal.color}44`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>
-                          {goal.icon}
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 14, fontWeight: 600, color: C.textPri, marginBottom: 2 }}>{goal.name}</div>
-                          <div style={{ fontSize: 12, color: C.textMuted }}>{goal.sub}</div>
-                        </div>
-                        <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                          <div style={{ fontSize: 14, fontWeight: 700, color: goal.color }}>EGP {goal.currentAmount.toLocaleString('en-US')}</div>
-                          <div style={{ fontSize: 11, color: C.textDim }}>of {goal.targetAmount.toLocaleString('en-US')}</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Planned bills */}
-              {plannedBills.length > 0 && (
-                <div style={{ marginBottom: 24 }}>
-                  <div style={{ marginBottom: 12 }}>
-                    <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: C.textMuted, letterSpacing: '0.8px' }}>Planned</span>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    {plannedBills.map(bill => {
-                      const dateStr = new Date(bill.nextDue).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
-                      return (
-                        <div key={bill.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: `1px solid ${C.border}` }}>
-                          <div style={{ width: 40, height: 40, borderRadius: '50%', background: `${bill.isIncome ? GREEN : RED}22`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>
-                            {bill.icon}
-                          </div>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: 14, fontWeight: 500, color: C.textPri }}>{bill.name}</div>
-                            <div style={{ fontSize: 12, color: C.amber, marginTop: 1 }}>{dateStr}</div>
-                          </div>
-                          <Pill type={bill.isIncome ? 'income' : 'expense'} amount={bill.amount} currency={bill.currency} />
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* Month transactions */}
-              {monthTx.length > 0 && (
-                <div style={{ marginBottom: 24 }}>
-                  <div style={{ marginBottom: 12 }}>
-                    <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: C.textMuted, letterSpacing: '0.8px' }}>
-                      {MONTH_NAMES[viewMonth]}
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    {monthTx.map(tx => renderTxRow(tx))}
-                  </div>
-                </div>
-              )}
-              {monthTx.length === 0 && (
-                <div style={{ fontSize: 13, color: C.textDim, textAlign: 'center', padding: '32px 0' }}>
-                  No transactions in {MONTH_NAMES[viewMonth]}
-                </div>
-              )}
-
-              {/* Net cashflow summary */}
-              {monthTx.length > 0 && (() => {
-                const inc = monthTx.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0)
-                const exp = monthTx.filter(t => t.type === 'expense').reduce((s, t) => s + Math.abs(t.amount), 0)
-                const net = inc - exp
-                return (
-                  <div style={{
-                    marginTop: 16, paddingTop: 12,
-                    borderTop: `1px solid ${C.border}`,
-                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                  }}>
-                    <span style={{ fontSize: 12, color: RED, fontWeight: 600 }}>
-                      −EGP {exp.toLocaleString('en-US')}
-                    </span>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: net >= 0 ? GREEN : RED }}>
-                      Net {net >= 0 ? '+' : ''}EGP {Math.abs(net).toLocaleString('en-US')}
-                    </span>
-                    <span style={{ fontSize: 12, color: GREEN, fontWeight: 600 }}>
-                      +EGP {inc.toLocaleString('en-US')}
-                    </span>
-                  </div>
-                )
-              })()}
-            </>
-          )}
-        </div>
+        )}
       </div>
 
-      {txModal.open && (
-        <TransactionModal
-          transaction={txModal.tx}
-          accounts={accounts}
+      {/* Right panel — month list */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '24px 28px' }}>
+
+        {/* Month transactions */}
+        {monthTx.length > 0 && (
+          <div style={{ marginBottom: 24 }}>
+            <div style={{ marginBottom: 12 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: C.textMuted, letterSpacing: '0.8px' }}>
+                {MONTH_NAMES[viewMonth]}
+              </span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {monthTx.map(tx => renderTxRow(tx))}
+            </div>
+          </div>
+        )}
+        {monthTx.length === 0 && (
+          <div style={{ fontSize: 13, color: C.textMuted, textAlign: 'center', padding: '32px 0' }}>
+            No transactions in {MONTH_NAMES[viewMonth]}
+          </div>
+        )}
+
+        {/* Net cashflow summary */}
+        {monthTx.length > 0 && (() => {
+          const inc = monthTx.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0)
+          const exp = monthTx.filter(t => t.type === 'expense').reduce((s, t) => s + Math.abs(t.amount), 0)
+          const net = inc - exp
+          return (
+            <div style={{
+              marginTop: 16, paddingTop: 12,
+              borderTop: `1px solid ${C.border}`,
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            }}>
+              <span style={{ fontSize: 12, color: RED, fontWeight: 600 }}>
+                −EGP {exp.toLocaleString('en-US')}
+              </span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: net >= 0 ? GREEN : RED }}>
+                Net {net >= 0 ? '+' : ''}EGP {Math.abs(net).toLocaleString('en-US')}
+              </span>
+              <span style={{ fontSize: 12, color: GREEN, fontWeight: 600 }}>
+                +EGP {inc.toLocaleString('en-US')}
+              </span>
+            </div>
+          )
+        })()}
+      </div>
+
+      {/* Transaction detail modal */}
+      {txModal.open && txModal.tx && (
+        <TxModal
+          tx={txModal.tx}
           categories={categories}
-          onSave={tx => { upsertTransaction(tx); setTxModal({ open: false, tx: null }) }}
-          onDelete={id => { removeTransaction(id); setTxModal({ open: false, tx: null }) }}
+          accounts={accounts}
           onClose={() => setTxModal({ open: false, tx: null })}
         />
       )}

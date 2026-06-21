@@ -93,7 +93,7 @@ function KanbanCard({ task, onOpen, overlay = false }: { task: Task; onOpen: () 
 
   const company      = task.companyId ? companies.find(c => c.id === task.companyId) : null
   const companyName  = company?.name ?? (task.company !== 'personal' ? task.company : null)
-const isPersonal    = !task.companyId && task.company === 'personal'
+  const isPersonal    = !task.companyId && task.company === 'personal'
   const priority      = task.quadrant ? QUADRANT_PRIORITY[task.quadrant] : null
   const taskType      = task.taskType ?? inferTaskType(task.title)
   const typeMeta      = TASK_TYPE_META[taskType]
