@@ -23,6 +23,7 @@ import {
   deleteCalendarEventWithToken,
   addMeetingToEvent,
   efUpdateEvent,
+  moveCalendarEventWithToken,
 } from '@/lib/googleCalendar'
 import type { GCalEvent, GCalCalendar, GCalEventCreate } from '@/lib/googleCalendar'
 import { getGoogleToken, seedToken, getGoogleTokenViaSupabaseRefresh } from '@/lib/tokenManager'
@@ -688,7 +689,7 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
 }
 
 // ─── EventPopup (macOS Calendar style) ────────────────────────────────────────
-function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepError, pos, onClose, onStatusToggle, onPrepRequest, onAddMeet, onSave }: {
+function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepError, pos, onClose, onStatusToggle, onPrepRequest, onAddMeet, onSave, calendars, calColors, onMoveCalendar }: {
   event: GCalEventExt
   status: EventStatus | undefined
   calName: string
@@ -702,6 +703,9 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
   onPrepRequest: () => void
   onAddMeet?: () => Promise<void>
   onSave?: (patch: Partial<GCalEventCreate>) => Promise<GCalEvent | null>
+  calendars?: CalWithAccount[]
+  calColors?: Record<string, string>
+  onMoveCalendar?: (targetCalId: string) => Promise<boolean>
 }) {
   const popupRef  = useRef<HTMLDivElement>(null)
   const [showPrep,    setShowPrep]    = useState(false)
@@ -720,6 +724,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
   const toDateInput = (iso: string) => iso.slice(0, 10)
 
   const [editTitle,    setEditTitle]    = useState(event.summary ?? '')
+  const [editCalId,    setEditCalId]    = useState(event.calendarId ?? '')
   const [editStart,    setEditStart]    = useState(
     isAllDayEvent ? toDateInput(event.start.date ?? '') : toLocalDateTimeInput(event.start.dateTime!)
   )
@@ -733,6 +738,10 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
     if (!onSave) return
     setSaving(true); setSaveError(null)
     try {
+      if (editCalId && editCalId !== event.calendarId && onMoveCalendar) {
+        const moved = await onMoveCalendar(editCalId)
+        if (!moved) { setSaveError('Could not move event to selected calendar.'); return }
+      }
       const patch: Partial<GCalEventCreate> = {
         summary: editTitle.trim() || undefined,
         location: editLocation.trim() || undefined,
@@ -974,9 +983,19 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
           </div>
         )}
         {isRecurring && fieldRow('Repeat', <span style={{ fontSize: 13, color: 'var(--color-text-dim, #C0C4D6)' }}>Recurring</span>)}
-        {fieldRow('Calendar', (
+        {fieldRow('Calendar', editMode && onMoveCalendar && calendars && calendars.length > 1 ? (
+          <select
+            value={editCalId}
+            onChange={e => setEditCalId(e.target.value)}
+            style={{ fontSize: 13, color: 'var(--color-text, #E8EAF6)', background: 'var(--color-bg, #0D0F1A)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 5, padding: '3px 7px', outline: 'none', width: '100%' }}
+          >
+            {calendars.map(c => (
+              <option key={c.id} value={c.id}>{c.summary}</option>
+            ))}
+          </select>
+        ) : (
           <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0, overflow: 'hidden' }}>
-            <div style={{ width: 10, height: 10, borderRadius: '50%', background: calColor, flexShrink: 0 }} />
+            <div style={{ width: 10, height: 10, borderRadius: '50%', background: calColors?.[editCalId] ?? calColor, flexShrink: 0 }} />
             <span style={{ fontSize: 13, color: 'var(--color-text-dim, #C0C4D6)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{calName}</span>
           </div>
         ))}
@@ -1659,16 +1678,34 @@ export function CalendarIntelligence() {
     if ((e.target as HTMLElement).closest('.event-card, button, [role="button"], select')) return
     if (draggingEvt) return
     if (!gridRef.current) return
-    const rect       = gridRef.current.getBoundingClientRect()
-    const relX       = e.clientX - rect.left - 52
-    const relY       = e.clientY - rect.top  + gridRef.current.scrollTop
+    const rect   = gridRef.current.getBoundingClientRect()
+    const relX   = e.clientX - rect.left - 52
+    const relY   = e.clientY - rect.top  + gridRef.current.scrollTop
     if (relX < 0) return
     const dayIdx = Math.max(0, Math.min(6, Math.floor(relX / ((gridRef.current.clientWidth - 52) / 7))))
     const day    = weekDays[dayIdx]
     if (!day) return
     const minutes = Math.max(0, Math.min(23 * 60, Math.round((relY / HOUR_PX * 60) / SNAP_MIN) * SNAP_MIN))
-    setCreatingEvt({ dateStr: localDateStr(day), originMin: minutes, currentMin: minutes })
-    setSelectedEvent(null); setPopupPos(null); setNewEventDraft(null)
+    const dateStr = localDateStr(day)
+    const startX = e.clientX, startY = e.clientY
+    let started = false
+
+    const cleanup = () => {
+      document.removeEventListener('mousemove', onMove)
+      document.removeEventListener('mouseup',   onUp)
+    }
+    const onMove = (me: MouseEvent) => {
+      if (started) return
+      if (Math.sqrt((me.clientX - startX) ** 2 + (me.clientY - startY) ** 2) >= 8) {
+        started = true; cleanup()
+        setCreatingEvt({ dateStr, originMin: minutes, currentMin: minutes })
+        setSelectedEvent(null); setPopupPos(null); setNewEventDraft(null)
+      }
+    }
+    const onUp = cleanup
+
+    document.addEventListener('mousemove', onMove)
+    document.addEventListener('mouseup',   onUp)
   }
 
   // ── Grid scroll ref (auto-scroll to current time on mount) ──────────────────
@@ -1869,6 +1906,23 @@ export function CalendarIntelligence() {
       setEvents(prev => prev.filter(e => e.id !== ev.id))
       if (selectedEvent?.id === ev.id) { setSelectedEvent(null); setPopupPos(null) }
     }
+  }
+
+  async function handleMoveEvent(ev: GCalEventExt, targetCalId: string): Promise<boolean> {
+    const srcCal  = allCalendars.find(c => c.id === ev.calendarId)
+    const destCal = allCalendars.find(c => c.id === targetCalId)
+    if (!srcCal || !destCal || !ev.calendarId) return false
+    const token = srcCal.accountId
+      ? await getGoogleToken(srcCal.accountEmail)
+      : (await refreshPrimaryToken() || srcCal.accountToken)
+    if (!token) return false
+    const moved = await moveCalendarEventWithToken(token, ev.calendarId, ev.id, targetCalId)
+    if (moved) {
+      const update = { calendarId: targetCalId, calendarColor: destCal.backgroundColor }
+      setEvents(prev => prev.map(e => e.id === ev.id ? { ...e, ...update } : e))
+      setSelectedEvent(prev => prev?.id === ev.id ? { ...prev, ...update } as GCalEventExt : prev)
+    }
+    return !!moved
   }
 
   async function handleUpdateEvent(ev: GCalEventExt, patch: Partial<GCalEventCreate>): Promise<GCalEvent | null> {
@@ -2554,6 +2608,9 @@ export function CalendarIntelligence() {
             onPrepRequest={() => void generatePrep(selectedEvent)}
             onAddMeet={() => handleAddMeet(selectedEvent)}
             onSave={patch => handleUpdateEvent(selectedEvent, patch)}
+            calendars={allCalendars.filter(c => c.accessRole === 'owner' || c.accessRole === 'writer')}
+            calColors={calColors}
+            onMoveCalendar={targetCalId => handleMoveEvent(selectedEvent, targetCalId)}
           />
         )
       })()}
