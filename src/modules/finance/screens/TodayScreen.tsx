@@ -211,7 +211,7 @@ function MiniCalendar({
                 border: isSelected ? `1px solid ${C.accent}` : isToday ? `1px solid ${C.border}` : '1px solid transparent',
                 background: isSelected ? `${C.accent}22` : 'transparent',
                 color: isToday ? C.accent : C.textDim,
-                fontSize: 11, fontWeight: isToday ? 700 : 400,
+                fontSize: 13, fontWeight: isToday ? 700 : 400,
                 cursor: 'pointer', position: 'relative',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}
@@ -330,8 +330,8 @@ export function TodayScreen({
     <div style={{ display: 'flex', height: '100%', background: C.bg }}>
       {/* Left panel — calendar */}
       <div style={{
-        width: 280, flexShrink: 0, borderRight: `1px solid ${C.border}`,
-        padding: '24px 20px', overflowY: 'auto',
+        width: 360, flexShrink: 0, borderRight: `1px solid ${C.border}`,
+        padding: '24px 24px', overflowY: 'auto',
       }}>
         <MiniCalendar
           year={viewYear}
