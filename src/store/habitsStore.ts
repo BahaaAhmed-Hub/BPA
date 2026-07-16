@@ -13,6 +13,7 @@ export interface Habit {
   color: string
   frequency: 'daily' | 'weekdays' | 'weekly'
   isActive: boolean
+  archived?: boolean
   createdAt: string
   type: 'boolean' | 'quantity'
   goal?: number   // target quantity (e.g. 8)
@@ -58,6 +59,7 @@ function parseHabits(raw: string | null): Habit[] {
       color:     h.color     ?? DEFAULT_COLORS[i % DEFAULT_COLORS.length],
       frequency: h.frequency ?? 'daily',
       isActive:  h.isActive  ?? true,
+      archived:  h.archived  ?? false,
       createdAt: h.createdAt ?? new Date().toISOString(),
       type:      h.type      ?? 'boolean',
       goal:      h.goal,
@@ -185,6 +187,7 @@ export const useHabitsStore = create<HabitsState>((set, get) => ({
             color:     h.color     ?? DEFAULT_COLORS[i % DEFAULT_COLORS.length],
             frequency: h.frequency ?? 'daily',
             isActive:  h.isActive  ?? true,
+            archived:  localH?.archived ?? false,
             createdAt: h.createdAt ?? new Date().toISOString(),
             type:      localH?.type ?? 'boolean',
             goal:      localH?.goal,

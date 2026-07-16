@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
-import { Plus, Flame, Trash2, X, ChevronLeft, ChevronRight, Hash, CheckSquare } from 'lucide-react'
+import { Plus, Flame, Trash2, X, ChevronLeft, ChevronRight, Hash, CheckSquare, Archive, ArchiveRestore } from 'lucide-react'
 import { TopBar } from '@/components/layout/TopBar'
 import {
   useHabitsStore, loadLogs, saveLogs, loadQuantityLogs, saveQuantityLogs,
@@ -322,6 +322,7 @@ export function HabitsModule() {
   const [qtyLogs, setQtyLogs] = useState(loadQuantityLogs)
   const [viewDate, setViewDate] = useState(todayKey)
   const [addingHabit, setAdding] = useState(false)
+  const [showArchived, setShowArchived] = useState(false)
   const dragHabitIdx = useRef<number | null>(null)
 
   const today = todayKey()
@@ -374,7 +375,9 @@ export function HabitsModule() {
     })
   }
 
-  const activeHabits = habits.filter(h => h.isActive)
+  const activeHabits   = habits.filter(h => h.isActive && !h.archived)
+  const archivedHabits = habits.filter(h => h.archived)
+  const displayHabits  = showArchived ? archivedHabits : activeHabits
 
   // Completion for current viewDate
   const viewCompleted = activeHabits.filter(h => (logs[h.id] ?? []).includes(viewDate)).length
@@ -423,7 +426,25 @@ export function HabitsModule() {
 
           {/* List header */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px 12px 20px', borderBottom: '1px solid var(--color-border, #252A3E)' }}>
-            <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--color-text-dim, #94A3B8)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>Habit</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--color-text-dim, #94A3B8)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+                {showArchived ? 'Archived' : 'Habit'}
+              </span>
+              <button
+                onClick={() => setShowArchived(v => !v)}
+                title={showArchived ? 'Back to active habits' : 'View archived habits'}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 4,
+                  fontSize: 10.5, padding: '2px 8px', borderRadius: 5, cursor: 'pointer',
+                  background: showArchived ? 'rgba(124,111,100,0.18)' : 'transparent',
+                  border: `1px solid ${showArchived ? '#7C6F64' : 'var(--color-border, #252A3E)'}`,
+                  color: showArchived ? '#A89880' : 'var(--color-text-muted, #6B7280)',
+                  fontWeight: showArchived ? 600 : 400,
+                }}>
+                <Archive size={10} />
+                {archivedHabits.length > 0 ? `Archived (${archivedHabits.length})` : 'Archived'}
+              </button>
+            </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <button onClick={() => setViewDate(d => offsetDays(d, -1))}
@@ -458,13 +479,15 @@ export function HabitsModule() {
             <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--color-text-dim, #94A3B8)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>Streak</span>
           </div>
 
-          {activeHabits.length === 0 && (
+          {displayHabits.length === 0 && (
             <div style={{ padding: 32, textAlign: 'center' }}>
-              <p style={{ margin: 0, fontSize: 13, color: 'var(--color-text-dim, #94A3B8)' }}>No habits yet. Add one below.</p>
+              <p style={{ margin: 0, fontSize: 13, color: 'var(--color-text-dim, #94A3B8)' }}>
+                {showArchived ? 'No archived habits.' : 'No habits yet. Add one below.'}
+              </p>
             </div>
           )}
 
-          {activeHabits.map((habit, i) => {
+          {displayHabits.map((habit, i) => {
             const habitLogs  = logs[habit.id] ?? []
             const doneToday  = habitLogs.includes(viewDate)
             const streak     = calcStreak(habitLogs)
@@ -473,9 +496,9 @@ export function HabitsModule() {
 
             return (
               <div key={habit.id}
-                onDragOver={e => e.preventDefault()}
+                onDragOver={e => { if (!showArchived) e.preventDefault() }}
                 onDrop={() => {
-                  if (dragHabitIdx.current !== null && dragHabitIdx.current !== i) {
+                  if (!showArchived && dragHabitIdx.current !== null && dragHabitIdx.current !== i) {
                     reorderHabits(dragHabitIdx.current, i)
                     dragHabitIdx.current = null
                   }
@@ -483,22 +506,25 @@ export function HabitsModule() {
                 style={{
                   display: 'flex', alignItems: 'center', gap: 12,
                   padding: '12px 16px 12px 12px',
-                  borderBottom: i < activeHabits.length - 1 ? '1px solid var(--color-border, #252A3E)' : 'none',
-                  background: doneToday ? `${habit.color}08` : 'transparent',
+                  borderBottom: i < displayHabits.length - 1 ? '1px solid var(--color-border, #252A3E)' : 'none',
+                  background: showArchived ? 'rgba(124,111,100,0.05)' : doneToday ? `${habit.color}08` : 'transparent',
                   transition: 'background 0.15s',
+                  opacity: showArchived ? 0.75 : 1,
                 }}
               >
-                {/* Drag handle */}
-                <span
-                  draggable
-                  onDragStart={() => { dragHabitIdx.current = i }}
-                  title="Drag to reorder"
-                  style={{ cursor: 'grab', color: 'var(--color-text-muted, #4B5563)', fontSize: 14, lineHeight: 1, userSelect: 'none', flexShrink: 0 }}
-                >⠿</span>
+                {/* Drag handle (active only) */}
+                {!showArchived && (
+                  <span
+                    draggable
+                    onDragStart={() => { dragHabitIdx.current = i }}
+                    title="Drag to reorder"
+                    style={{ cursor: 'grab', color: 'var(--color-text-muted, #4B5563)', fontSize: 14, lineHeight: 1, userSelect: 'none', flexShrink: 0 }}
+                  >⠿</span>
+                )}
                 <EmojiBtn value={habit.emoji} onSelect={e => updateHabit(habit.id, { emoji: e })} />
 
-                {/* Done circle — sits where color circle was */}
-                {!isQuantity && (
+                {/* Done circle — active habits only */}
+                {!isQuantity && !showArchived && (
                   <button onClick={() => toggleHabit(habit.id, viewDate)} title={doneToday ? 'Mark undone' : 'Mark done'}
                     style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, flexShrink: 0, display: 'flex', alignItems: 'center' }}>
                     <div style={{
@@ -512,10 +538,10 @@ export function HabitsModule() {
                 )}
 
                 <InlineEdit value={habit.name} onSave={v => updateHabit(habit.id, { name: v })}
-                  style={{ flex: 1, fontSize: 13.5, fontWeight: 500, color: doneToday ? habit.color : 'var(--color-text, #E8EAF6)', textDecoration: doneToday ? 'line-through' : 'none', opacity: doneToday ? 0.8 : 1 }} />
+                  style={{ flex: 1, fontSize: 13.5, fontWeight: 500, color: (!showArchived && doneToday) ? habit.color : 'var(--color-text, #E8EAF6)', textDecoration: (!showArchived && doneToday) ? 'line-through' : 'none', opacity: (!showArchived && doneToday) ? 0.8 : 1 }} />
 
-                {/* Quantity control (for measurable habits) */}
-                {isQuantity && (
+                {/* Quantity control (active habits only) */}
+                {isQuantity && !showArchived && (
                   <QuantityControl
                     value={qtyValue}
                     goal={habit.goal ?? 1}
@@ -525,35 +551,50 @@ export function HabitsModule() {
                   />
                 )}
 
-                {/* Frequency badge */}
-                <button onClick={() => { const idx = FREQ_OPTS.indexOf(habit.frequency); updateHabit(habit.id, { frequency: FREQ_OPTS[(idx + 1) % FREQ_OPTS.length] }) }}
-                  title="Click to change frequency"
-                  style={{ fontSize: 9.5, padding: '2px 6px', borderRadius: 4, cursor: 'pointer', background: 'var(--color-surface2, #0D0F1A)', border: '1px solid var(--color-border, #252A3E)', color: 'var(--color-text-muted, #6B7280)' }}>
-                  {habit.frequency}
+                {/* Frequency badge (active only) */}
+                {!showArchived && (
+                  <button onClick={() => { const idx = FREQ_OPTS.indexOf(habit.frequency); updateHabit(habit.id, { frequency: FREQ_OPTS[(idx + 1) % FREQ_OPTS.length] }) }}
+                    title="Click to change frequency"
+                    style={{ fontSize: 9.5, padding: '2px 6px', borderRadius: 4, cursor: 'pointer', background: 'var(--color-surface2, #0D0F1A)', border: '1px solid var(--color-border, #252A3E)', color: 'var(--color-text-muted, #6B7280)' }}>
+                    {habit.frequency}
+                  </button>
+                )}
+
+                {/* Day dots (active only) */}
+                {!showArchived && (
+                  <DayDots logs={habitLogs} color={habit.color} days={days} viewDate={viewDate}
+                    quantities={isQuantity ? qtyLogs[habit.id] : undefined}
+                    goal={isQuantity ? (habit.goal ?? 1) : undefined}
+                    onToggle={d => {
+                      if (isQuantity) {
+                        const cur = qtyLogs[habit.id]?.[d] ?? 0
+                        const goal = habit.goal ?? 1
+                        setQuantity(habit.id, goal, d, cur >= goal ? 0 : goal)
+                      } else {
+                        toggleHabit(habit.id, d)
+                      }
+                    }} />
+                )}
+
+                {/* Streak (active only) */}
+                {!showArchived && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, width: 52, justifyContent: 'flex-end' }}>
+                    {streak > 0 && <Flame size={12} color={streak >= 7 ? '#E05252' : 'var(--color-accent, #1E40AF)'} />}
+                    <span style={{ fontSize: 13, fontWeight: 600, color: streak > 0 ? (streak >= 7 ? '#E05252' : 'var(--color-accent, #1E40AF)') : 'var(--color-text-muted, #4B5563)' }}>
+                      {streak > 0 ? `${streak}d` : '—'}
+                    </span>
+                  </div>
+                )}
+
+                {/* Archive / Restore button */}
+                <button
+                  onClick={() => updateHabit(habit.id, { archived: !habit.archived })}
+                  title={showArchived ? 'Restore habit' : 'Archive habit'}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--color-text-muted, #4B5563)', flexShrink: 0 }}>
+                  {showArchived ? <ArchiveRestore size={13} /> : <Archive size={13} />}
                 </button>
 
-                {/* Day dots — boolean: filled/empty; quantity: partial fill shows achievement % */}
-                <DayDots logs={habitLogs} color={habit.color} days={days} viewDate={viewDate}
-                  quantities={isQuantity ? qtyLogs[habit.id] : undefined}
-                  goal={isQuantity ? (habit.goal ?? 1) : undefined}
-                  onToggle={d => {
-                    if (isQuantity) {
-                      const cur = qtyLogs[habit.id]?.[d] ?? 0
-                      const goal = habit.goal ?? 1
-                      setQuantity(habit.id, goal, d, cur >= goal ? 0 : goal)
-                    } else {
-                      toggleHabit(habit.id, d)
-                    }
-                  }} />
-
-                {/* Streak */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 5, width: 52, justifyContent: 'flex-end' }}>
-                  {streak > 0 && <Flame size={12} color={streak >= 7 ? '#E05252' : 'var(--color-accent, #1E40AF)'} />}
-                  <span style={{ fontSize: 13, fontWeight: 600, color: streak > 0 ? (streak >= 7 ? '#E05252' : 'var(--color-accent, #1E40AF)') : 'var(--color-text-muted, #4B5563)' }}>
-                    {streak > 0 ? `${streak}d` : '—'}
-                  </span>
-                </div>
-
+                {/* Delete (always available) */}
                 <button onClick={() => deleteHabit(habit.id)}
                   style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--color-text-muted, #4B5563)', flexShrink: 0 }}>
                   <Trash2 size={13} />
@@ -563,30 +604,32 @@ export function HabitsModule() {
           })}
         </div>
 
-        {/* ─── Add habit ─────────────────────────────────────────────────── */}
-        {addingHabit ? (
-          <div style={{ background: 'var(--color-surface, #161929)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 12, padding: '18px 20px' }}>
-            <p style={{ margin: '0 0 14px', fontSize: 12, fontWeight: 600, color: 'var(--color-text-dim, #94A3B8)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>New Habit</p>
-            <HabitForm
-              initial={{ name: '', emoji: '🎯', color: HABIT_COLORS[0], freq: 'daily', type: 'boolean', goal: '', unit: '' }}
-              colors={HABIT_COLORS}
-              onSave={s => {
-                storeAdd({
-                  name: s.name.trim(), emoji: s.emoji, color: s.color,
-                  frequency: s.freq, isActive: true,
-                  type: s.type,
-                  goal: s.type === 'quantity' ? parseFloat(s.goal) : undefined,
-                  unit: s.type === 'quantity' ? s.unit.trim() : undefined,
-                })
-                setAdding(false)
-              }}
-              onCancel={() => setAdding(false)}
-            />
-          </div>
-        ) : (
-          <button onClick={() => setAdding(true)} style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '13px 18px', borderRadius: 10, background: 'transparent', border: '1px dashed var(--color-border, #252A3E)', color: 'var(--color-text-muted, #4B5563)', fontSize: 13, cursor: 'pointer' }}>
-            <Plus size={14} /> Add a habit
-          </button>
+        {/* ─── Add habit (active view only) ──────────────────────────────── */}
+        {!showArchived && (
+          addingHabit ? (
+            <div style={{ background: 'var(--color-surface, #161929)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 12, padding: '18px 20px' }}>
+              <p style={{ margin: '0 0 14px', fontSize: 12, fontWeight: 600, color: 'var(--color-text-dim, #94A3B8)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>New Habit</p>
+              <HabitForm
+                initial={{ name: '', emoji: '🎯', color: HABIT_COLORS[0], freq: 'daily', type: 'boolean', goal: '', unit: '' }}
+                colors={HABIT_COLORS}
+                onSave={s => {
+                  storeAdd({
+                    name: s.name.trim(), emoji: s.emoji, color: s.color,
+                    frequency: s.freq, isActive: true,
+                    type: s.type,
+                    goal: s.type === 'quantity' ? parseFloat(s.goal) : undefined,
+                    unit: s.type === 'quantity' ? s.unit.trim() : undefined,
+                  })
+                  setAdding(false)
+                }}
+                onCancel={() => setAdding(false)}
+              />
+            </div>
+          ) : (
+            <button onClick={() => setAdding(true)} style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '13px 18px', borderRadius: 10, background: 'transparent', border: '1px dashed var(--color-border, #252A3E)', color: 'var(--color-text-muted, #4B5563)', fontSize: 13, cursor: 'pointer' }}>
+              <Plus size={14} /> Add a habit
+            </button>
+          )
         )}
 
         {/* ─── Completion banner ──────────────────────────────────────────── */}
