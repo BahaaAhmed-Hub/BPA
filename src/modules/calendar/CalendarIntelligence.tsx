@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import {
-  ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Calendar, Video, Users,
+  ChevronLeft, ChevronRight, Calendar, Video, Users,
   Sparkles, MapPin, RefreshCw, X, Eye, EyeOff,
   CheckCircle2, XCircle, Link, Phone, Repeat,
   ExternalLink, AlertCircle, Shield, Copy, Trash2,
@@ -2301,6 +2301,27 @@ export function CalendarIntelligence() {
               {originalsOnly ? <EyeOff size={13} /> : <Eye size={13} />}
               Originals
             </button>
+
+            <button
+              onClick={() => {
+                const next = !showCalendars
+                setShowCalendars(next)
+                localStorage.setItem('cal-intel-show-calendars', String(next))
+              }}
+              title={showCalendars ? 'Hide calendars' : 'Show calendars'}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 5,
+                background: showCalendars ? 'rgba(127,119,221,0.12)' : 'none',
+                border: `1px solid ${showCalendars ? 'rgba(127,119,221,0.5)' : 'var(--color-border, #252A3E)'}`,
+                borderRadius: 7, cursor: 'pointer',
+                color: showCalendars ? 'var(--color-accent)' : 'var(--color-text-dim, #8B93A8)',
+                padding: '4px 8px', fontSize: 12,
+                transition: 'all 0.15s',
+              }}
+            >
+              <Calendar size={13} />
+              Calendars
+            </button>
           </div>
 
           {/* Rules result toast */}
@@ -2312,28 +2333,8 @@ export function CalendarIntelligence() {
         </div>
 
         {/* Calendar chips */}
-        {allCalendars.length > 0 && (
-          <div style={{ marginTop: 10 }}>
-            {/* Section header with toggle */}
-            <button
-              onClick={() => {
-                const next = !showCalendars
-                setShowCalendars(next)
-                localStorage.setItem('cal-intel-show-calendars', String(next))
-              }}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 4,
-                background: 'none', border: 'none', cursor: 'pointer',
-                padding: '2px 4px 2px 0', marginBottom: showCalendars ? 6 : 0,
-                color: 'var(--color-text-muted, #6B7280)', fontSize: 11,
-                fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.6px',
-              }}
-              title={showCalendars ? 'Hide calendars' : 'Show calendars'}
-            >
-              {showCalendars ? <ChevronDown size={11} /> : <ChevronUp size={11} />}
-              Calendars
-            </button>
-          {showCalendars && <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+        {allCalendars.length > 0 && showCalendars && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
             {allCalendars.filter(cal => {
               if (cal.accountId && hiddenAccounts.has(cal.accountEmail)) return false
               if (cal.accountId && getHiddenCompanyAccountEmails().has(cal.accountEmail)) return false
@@ -2407,7 +2408,6 @@ export function CalendarIntelligence() {
                 </div>
               )
             })}
-          </div>}
           </div>
         )}
 
