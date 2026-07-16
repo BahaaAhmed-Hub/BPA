@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import {
-  ChevronLeft, ChevronRight, Calendar, Video, Users,
+  ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Calendar, Video, Users,
   Sparkles, MapPin, RefreshCw, X, Eye, EyeOff,
   CheckCircle2, XCircle, Link, Phone, Repeat,
   ExternalLink, AlertCircle, Shield, Copy, Trash2,
@@ -1617,6 +1617,10 @@ export function CalendarIntelligence() {
   const [applyingRules,   setApplyingRules]   = useState(false)
   const [rulesResult,     setRulesResult]     = useState<string | null>(null)
   const [originalsOnly,   setOriginalsOnly]   = useState(false)
+  const [showCalendars,   setShowCalendars]   = useState(() => {
+    const v = localStorage.getItem('cal-intel-show-calendars')
+    return v === null ? true : v === 'true'
+  })
 
   // ── Popup + prep state ──────────────────────────────────────────────────────
   const [selectedEvent, setSelectedEvent] = useState<GCalEventExt | null>(null)
@@ -2309,7 +2313,27 @@ export function CalendarIntelligence() {
 
         {/* Calendar chips */}
         {allCalendars.length > 0 && (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
+          <div style={{ marginTop: 10 }}>
+            {/* Section header with toggle */}
+            <button
+              onClick={() => {
+                const next = !showCalendars
+                setShowCalendars(next)
+                localStorage.setItem('cal-intel-show-calendars', String(next))
+              }}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 4,
+                background: 'none', border: 'none', cursor: 'pointer',
+                padding: '2px 4px 2px 0', marginBottom: showCalendars ? 6 : 0,
+                color: 'var(--color-text-muted, #6B7280)', fontSize: 11,
+                fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.6px',
+              }}
+              title={showCalendars ? 'Hide calendars' : 'Show calendars'}
+            >
+              {showCalendars ? <ChevronDown size={11} /> : <ChevronUp size={11} />}
+              Calendars
+            </button>
+          {showCalendars && <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
             {allCalendars.filter(cal => {
               if (cal.accountId && hiddenAccounts.has(cal.accountEmail)) return false
               if (cal.accountId && getHiddenCompanyAccountEmails().has(cal.accountEmail)) return false
@@ -2383,6 +2407,7 @@ export function CalendarIntelligence() {
                 </div>
               )
             })}
+          </div>}
           </div>
         )}
 
