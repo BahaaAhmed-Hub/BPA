@@ -11,7 +11,7 @@ import { KanbanBoard } from './KanbanBoard'
 import { TaskDetailModal } from './TaskDetailModal'
 import { TaskCard } from './TaskCard'
 import { useTaskStore } from '@/store/taskStore'
-import { CheckSquare, Zap, SlidersHorizontal, Search, Filter, X, LayoutGrid, Kanban, CalendarDays } from 'lucide-react'
+import { Search, X, CalendarDays } from 'lucide-react'
 import type { Quadrant } from '@/types'
 import { isTaskHidden, loadVisibleCompanies, getAllUsers, TASK_TYPE_META, inferTaskType } from '@/types'
 import { scheduleTaskToCalendar } from '@/lib/aiScheduler'
@@ -219,76 +219,179 @@ export function TaskCommand() {
 
   return (
     <div>
-      {/* ── Stats + search bar ──────────────────────────────────────────────── */}
-      <div style={{ padding: '10px 20px', borderBottom: '1px solid var(--sb-border)', background: 'var(--sb-header)', display: 'flex', gap: 10, alignItems: 'center' }}>
+      {/* ── Page header ─────────────────────────────────────────────────────── */}
+      <div style={{ padding: '22px 26px 0', display: 'flex', alignItems: 'flex-end', gap: 20 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: '#6C6553' }}>TASK COMMAND</span>
+          <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 32, fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1, color: '#191712' }}>
+            {active.length} open {active.length === 1 ? 'task' : 'tasks'}
+          </span>
+          <span style={{ fontSize: 12, color: '#6C6553', paddingTop: 3 }}>
+            {urgent.length} urgent
+            {inbox.length > 0 ? ` · ${inbox.length} unassigned` : ''}
+            {isFiltering ? ` · ${matchCount} match${matchCount !== 1 ? 'es' : ''}` : ''}
+          </span>
+        </div>
 
-        {/* View toggle */}
-        <div style={{ display: 'flex', gap: 3, flexShrink: 0 }}>
-          {[
-            { id: 'eisenhower' as const, icon: <LayoutGrid size={14} />, label: 'Matrix' },
-            { id: 'board'      as const, icon: <Kanban size={14} />,      label: 'Board'  },
-          ].map(v => (
-            <button key={v.id} onClick={() => switchView(v.id)} title={v.label} style={{
-              display: 'flex', alignItems: 'center', gap: 5,
-              padding: '4px 9px', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 600,
-              background: viewMode === v.id ? 'var(--sb-ink-1)' : 'var(--sb-field)',
-              color:  viewMode === v.id ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
-              border: `1px solid ${viewMode === v.id ? 'var(--sb-ink-1)' : 'var(--sb-border)'}`,
-              transition: 'all 0.14s',
-            }}>
-              {v.icon} {v.label}
+        <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8, paddingBottom: 3 }}>
+          {/* Day Planner button */}
+          <button onClick={() => setShowPlanner(true)}
+            style={{ display: 'flex', alignItems: 'center', gap: 7, height: 34, boxSizing: 'border-box', padding: '0 13px', borderRadius: 999, background: '#FFFFFF', border: '1px solid #E8E1CE', color: '#191712', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>
+            <CalendarDays size={14} /> Day Planner
+          </button>
+
+          {/* Filter button */}
+          <div ref={filterRef} style={{ position: 'relative', flexShrink: 0 }}>
+            <button onClick={() => setFilterOpen(o => !o)}
+              style={{ display: 'flex', alignItems: 'center', gap: 7, height: 34, boxSizing: 'border-box', padding: '0 13px', borderRadius: 999, background: '#FFFFFF', border: `1px solid ${activeFilterCount > 0 ? '#191712' : '#E8E1CE'}`, color: '#191712', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
+              Filters
+              {activeFilterCount > 0 && (
+                <span style={{ height: 16, minWidth: 16, boxSizing: 'border-box', padding: '0 4px', borderRadius: 999, background: '#191712', color: '#FDF8E7', fontSize: 9, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {activeFilterCount}
+                </span>
+              )}
             </button>
-          ))}
-        </div>
-        <div style={{ width: 1, height: 20, background: 'var(--sb-border)', flexShrink: 0 }} />
 
-        {/* Day Planner button */}
-        <button onClick={() => setShowPlanner(true)} title="Smart Day Planner" style={{
-          display: 'flex', alignItems: 'center', gap: 5,
-          padding: '4px 9px', borderRadius: 7, cursor: 'pointer', fontSize: 12, fontWeight: 600,
-          background: 'transparent',
-          color: 'var(--sb-ink-3)',
-          border: '1px solid var(--sb-border)',
-          transition: 'all 0.12s',
-          flexShrink: 0,
-        }}>
-          <CalendarDays size={14} /> Day Planner
-        </button>
-        <div style={{ width: 1, height: 20, background: 'var(--sb-border)', flexShrink: 0 }} />
+            {/* Filter dropdown — updated styling */}
+            {filterOpen && (
+              <div style={{
+                position: 'absolute', top: 'calc(100% + 8px)', right: 0, zIndex: 100,
+                background: '#FFFFFF', border: '1px solid #E8E1CE',
+                borderRadius: 16, padding: '8px 16px 14px', width: 308,
+                boxShadow: '0 28px 60px -24px rgba(25,23,18,.4)',
+              }}>
+                {/* Config section */}
+                <span style={{ display: 'block', fontSize: 10, fontWeight: 700, letterSpacing: '.12em', color: '#6C6553', padding: '12px 0 7px' }}>TASK DISPLAY</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '2px 0 10px' }}>
+                  <span style={{ fontSize: 12.5, fontWeight: 500, color: '#191712' }}>Hide completed tasks</span>
+                  <span style={{ marginLeft: 'auto' }}>
+                    <div onClick={() => setHideCompleted(!hideCompleted)} style={{ width: 38, height: 22, boxSizing: 'border-box', borderRadius: 999, background: hideCompleted ? '#191712' : '#E8E1CE', display: 'flex', alignItems: 'center', padding: 2, justifyContent: hideCompleted ? 'flex-end' : 'flex-start', cursor: 'pointer', transition: 'all .15s' }}>
+                      <div style={{ width: 18, height: 18, borderRadius: 999, background: '#FFFFFF' }} />
+                    </div>
+                  </span>
+                </div>
+                <div style={{ borderTop: '1px solid #F0EBDC' }} />
 
-        {/* Stats */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexShrink: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-            <CheckSquare size={13} color="var(--color-accent)" strokeWidth={2} />
-            <span style={{ fontSize: 12.5, color: 'var(--sb-ink-1)' }}>
-              <span style={{ fontWeight: 600 }}>{active.length}</span> active
-            </span>
+                {/* Group by */}
+                <span style={{ display: 'block', fontSize: 10, fontWeight: 700, letterSpacing: '.12em', color: '#6C6553', padding: '12px 0 7px' }}>GROUP TASKS BY</span>
+                {(['none', 'type', 'company'] as GroupBy[]).map(opt => (
+                  <div key={opt} onClick={() => setGroupBy(opt)} style={{ display: 'flex', alignItems: 'center', gap: 10, height: 34, padding: '0 9px', borderRadius: 9, background: groupBy === opt ? '#FEF7DE' : 'transparent', cursor: 'pointer' }}>
+                    <span style={{ width: 16, height: 16, boxSizing: 'border-box', borderRadius: 999, border: `2px solid ${groupBy === opt ? '#191712' : '#C9C0A8'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      {groupBy === opt && <span style={{ width: 7, height: 7, borderRadius: 999, background: '#191712' }} />}
+                    </span>
+                    <span style={{ fontSize: 12.5, fontWeight: groupBy === opt ? 600 : 500, color: groupBy === opt ? '#191712' : '#4A4438' }}>
+                      {opt === 'none' ? 'None' : opt === 'type' ? 'Task type' : 'Company'}
+                    </span>
+                  </div>
+                ))}
+                {groupBy !== 'none' && (
+                  <button onClick={() => setAllGroupsExpanded(!allGroupsExpanded)} style={{ marginTop: 8, height: 36, width: '100%', borderRadius: 10, border: '1px solid #E8E1CE', background: '#FAF7EC', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontSize: 12.5, fontWeight: 600, color: '#191712', cursor: 'pointer' }}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18M9 21V9"/></svg>
+                    {allGroupsExpanded ? 'Collapse all groups' : 'Expand all groups'}
+                  </button>
+                )}
+                <div style={{ borderTop: '1px solid #F0EBDC', marginTop: 12 }} />
+
+                {/* Company filter */}
+                {companies.length > 0 && (
+                  <>
+                    <span style={{ display: 'block', fontSize: 10, fontWeight: 700, letterSpacing: '.12em', color: '#6C6553', padding: '12px 0 7px' }}>COMPANY</span>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                      {companies.map(co => (
+                        <button key={co.id} onClick={() => setFilters(f => ({ ...f, company: f.company === co.id ? '' : co.id }))} style={{
+                          display: 'flex', alignItems: 'center', gap: 6, height: 28, boxSizing: 'border-box', padding: '0 11px', borderRadius: 999,
+                          background: filters.company === co.id ? '#FEF7DE' : '#FFFFFF',
+                          border: `1px solid ${filters.company === co.id ? '#F5D14E' : '#E8E1CE'}`,
+                          color: '#191712', fontSize: 11.5, fontWeight: filters.company === co.id ? 600 : 500, cursor: 'pointer',
+                        }}>
+                          <span style={{ width: 8, height: 8, borderRadius: 999, background: co.color, flexShrink: 0 }} />
+                          {co.name}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+
+                {/* Type filter */}
+                <span style={{ display: 'block', fontSize: 10, fontWeight: 700, letterSpacing: '.12em', color: '#6C6553', padding: '12px 0 7px' }}>TASK TYPE</span>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {typeOptions.map(([type, meta]) => (
+                    <button key={type} onClick={() => setFilters(f => ({ ...f, type: f.type === type ? '' : type }))} style={{
+                      display: 'flex', alignItems: 'center', gap: 6, height: 28, boxSizing: 'border-box', padding: '0 11px', borderRadius: 999,
+                      background: filters.type === type ? '#FEF7DE' : '#FFFFFF',
+                      border: `1px solid ${filters.type === type ? '#F5D14E' : '#E8E1CE'}`,
+                      color: '#191712', fontSize: 11.5, fontWeight: filters.type === type ? 600 : 500, cursor: 'pointer',
+                    }}>
+                      <span>{meta.emoji}</span> {meta.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Owner filter */}
+                {ownerOptions.length > 0 && (
+                  <>
+                    <span style={{ display: 'block', fontSize: 10, fontWeight: 700, letterSpacing: '.12em', color: '#6C6553', padding: '12px 0 7px' }}>OWNER</span>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                      {ownerOptions.map(u => (
+                        <button key={u.id} onClick={() => setFilters(f => ({ ...f, owner: f.owner === u.id ? '' : u.id }))} style={{
+                          display: 'flex', alignItems: 'center', gap: 6, height: 28, boxSizing: 'border-box', padding: '0 11px', borderRadius: 999,
+                          background: filters.owner === u.id ? '#FEF7DE' : '#FFFFFF',
+                          border: `1px solid ${filters.owner === u.id ? '#F5D14E' : '#E8E1CE'}`,
+                          color: '#191712', fontSize: 11.5, fontWeight: filters.owner === u.id ? 600 : 500, cursor: 'pointer',
+                        }}>
+                          {u.name}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+
+                {activeFilterCount > 0 && (
+                  <div style={{ marginTop: 14, paddingTop: 11, borderTop: '1px solid #F0EBDC', display: 'flex', alignItems: 'center', gap: 9 }}>
+                    <span style={{ fontSize: 11, color: '#6C6553' }}>{activeFilterCount} filter{activeFilterCount !== 1 ? 's' : ''} active</span>
+                    <button onClick={() => setFilters({ company: '', type: '', owner: '' })} style={{ marginLeft: 'auto', fontSize: 11.5, fontWeight: 600, color: '#191712', background: 'none', border: 'none', cursor: 'pointer' }}>Clear all</button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
-          <div style={{ width: 1, height: 14, background: 'var(--color-border,var(--sb-border))' }} />
-          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-            <Zap size={13} color="#E05252" strokeWidth={2} />
-            <span style={{ fontSize: 12.5, color: 'var(--sb-ink-1)' }}>
-              <span style={{ fontWeight: 600 }}>{urgent.length}</span> urgent
-            </span>
-          </div>
-          {inbox.length > 0 && (
-            <>
-              <div style={{ width: 1, height: 14, background: 'var(--color-border,var(--sb-border))' }} />
-              <span style={{ fontSize: 12.5, color: 'var(--sb-ink-3)' }}>
-                <span style={{ fontWeight: 600, color: 'var(--sb-ink-1)' }}>{inbox.length}</span> unassigned
-              </span>
-            </>
-          )}
-          {isFiltering && (
-            <>
-              <div style={{ width: 1, height: 14, background: 'var(--color-border,var(--sb-border))' }} />
-              <span style={{ fontSize: 12.5, color: 'var(--color-accent,#7F77DD)', fontWeight: 600 }}>
-                {matchCount} match{matchCount !== 1 ? 'es' : ''}
-              </span>
-            </>
-          )}
-        </div>
 
+          <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 7, fontSize: 11.5, color: '#6C6553' }}>
+            Drag a card onto the calendar to schedule it
+          </span>
+
+          <span style={{ width: 1, height: 22, background: '#E8E1CE', margin: '0 4px' }} />
+
+          {/* View toggle — Board / Matrix / List */}
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2, height: 38, boxSizing: 'border-box', padding: 4, borderRadius: 999, background: '#EDE7D9', flexShrink: 0 }}>
+            {[
+              { id: 'board' as const, icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>, label: 'Board' },
+              { id: 'eisenhower' as const, icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1"/></svg>, label: 'Matrix' },
+            ].map(v => (
+              <button key={v.id} onClick={() => switchView(v.id)}
+                style={{ display: 'flex', alignItems: 'center', gap: 7, height: 30, boxSizing: 'border-box', padding: '0 16px', borderRadius: 999, background: viewMode === v.id ? '#FFFFFF' : 'transparent', boxShadow: viewMode === v.id ? '0 1px 3px rgba(25,23,18,.12)' : 'none', color: viewMode === v.id ? '#191712' : '#8A8271', fontSize: 13, fontWeight: viewMode === v.id ? 700 : 500, border: 'none', cursor: 'pointer', transition: 'all .14s', flexShrink: 0 }}>
+                {v.icon} {v.label}
+              </button>
+            ))}
+          </span>
+
+          <span style={{ width: 1, height: 24, background: '#E8E1CE', margin: '0 2px' }} />
+
+          {/* New task CTA */}
+          <button
+            onClick={() => {
+              // Open add task — find modal or create mechanism
+            }}
+            style={{ display: 'flex', alignItems: 'center', gap: 8, height: 32, boxSizing: 'border-box', padding: '0 14px', borderRadius: 999, background: '#F5D14E', color: '#191712', fontSize: 12.5, fontWeight: 600, border: 'none', cursor: 'pointer', boxShadow: '0 2px 0 rgba(25,23,18,.14)', flexShrink: 0 }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+            New task
+          </button>
+        </span>
+      </div>
+
+      {/* ── Secondary toolbar: search ────────────────────────────────────────── */}
+      <div style={{ padding: '12px 26px 14px', display: 'flex', gap: 10, alignItems: 'center' }}>
         {/* Search input */}
         <div style={{ flex: 1, position: 'relative', display: 'flex', alignItems: 'center' }}>
           <Search size={13} color="var(--sb-ink-3)" style={{ position: 'absolute', left: 10, pointerEvents: 'none' }} />
@@ -311,156 +414,11 @@ export function TaskCommand() {
             </button>
           )}
         </div>
-
-        {/* Filter button */}
-        <div ref={filterRef} style={{ position: 'relative', flexShrink: 0 }}>
-          <button
-            onClick={() => setFilterOpen(o => !o)}
-            title="Filter tasks"
-            style={{
-              display: 'flex', alignItems: 'center', gap: 5,
-              padding: '5px 10px', height: 28, borderRadius: 7, cursor: 'pointer',
-              background: activeFilterCount > 0 ? 'rgba(25,23,18,0.06)' : filterOpen ? 'rgba(127,119,221,0.08)' : 'transparent',
-              border: `1px solid ${activeFilterCount > 0 || filterOpen ? 'color-mix(in srgb, var(--color-accent) 40%, transparent)' : 'var(--color-border,var(--sb-border))'}`,
-              color: activeFilterCount > 0 ? 'var(--color-accent,#7F77DD)' : 'var(--sb-ink-3)',
-              transition: 'all 0.12s', fontSize: 12, fontWeight: 500,
-            }}
-          >
-            <Filter size={12} />
-            Filter
-            {activeFilterCount > 0 && (
-              <span style={{ background: 'var(--color-accent,#7F77DD)', color: '#fff', borderRadius: '50%', width: 16, height: 16, fontSize: 10, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                {activeFilterCount}
-              </span>
-            )}
-          </button>
-
-          {/* Filter dropdown */}
-          {filterOpen && (
-            <div style={{
-              position: 'absolute', top: 34, right: 0, zIndex: 100,
-              background: 'var(--sb-card)', border: '1px solid var(--color-border,var(--sb-border))',
-              borderRadius: 12, padding: '14px 16px', width: 260,
-              boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-            }}>
-              {/* Company filter */}
-              {companies.length > 0 && (
-                <div style={{ marginBottom: 14 }}>
-                  <p style={{ margin: '0 0 7px', fontSize: 10.5, fontWeight: 700, color: 'var(--sb-ink-3)', textTransform: 'uppercase', letterSpacing: '0.7px' }}>Company</p>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-                    {companies.map(co => (
-                      <button key={co.id} onClick={() => setFilters(f => ({ ...f, company: f.company === co.id ? '' : co.id }))} style={{
-                        display: 'flex', alignItems: 'center', gap: 5, padding: '4px 9px', borderRadius: 20, cursor: 'pointer', fontSize: 12,
-                        background: filters.company === co.id ? `${co.color}22` : 'transparent',
-                        border: `1px solid ${filters.company === co.id ? co.color : 'var(--color-border,var(--sb-border))'}`,
-                        color: filters.company === co.id ? co.color : 'var(--sb-ink-3)',
-                        fontWeight: filters.company === co.id ? 600 : 400, transition: 'all 0.12s',
-                      }}>
-                        <div style={{ width: 8, height: 8, borderRadius: '50%', background: co.color, flexShrink: 0 }} />
-                        {co.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Type filter */}
-              <div style={{ marginBottom: 14 }}>
-                <p style={{ margin: '0 0 7px', fontSize: 10.5, fontWeight: 700, color: 'var(--sb-ink-3)', textTransform: 'uppercase', letterSpacing: '0.7px' }}>Task Type</p>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-                  {typeOptions.map(([type, meta]) => (
-                    <button key={type} onClick={() => setFilters(f => ({ ...f, type: f.type === type ? '' : type }))} style={{
-                      display: 'flex', alignItems: 'center', gap: 4, padding: '4px 9px', borderRadius: 20, cursor: 'pointer', fontSize: 12,
-                      background: filters.type === type ? `${meta.color}22` : 'transparent',
-                      border: `1px solid ${filters.type === type ? meta.color : 'var(--color-border,var(--sb-border))'}`,
-                      color: filters.type === type ? meta.color : 'var(--sb-ink-3)',
-                      fontWeight: filters.type === type ? 600 : 400, transition: 'all 0.12s',
-                    }}>
-                      <span>{meta.emoji}</span> {meta.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Owner filter */}
-              {ownerOptions.length > 0 && (
-                <div style={{ marginBottom: 14 }}>
-                  <p style={{ margin: '0 0 7px', fontSize: 10.5, fontWeight: 700, color: 'var(--sb-ink-3)', textTransform: 'uppercase', letterSpacing: '0.7px' }}>Owner</p>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-                    {ownerOptions.map(u => (
-                      <button key={u.id} onClick={() => setFilters(f => ({ ...f, owner: f.owner === u.id ? '' : u.id }))} style={{
-                        padding: '4px 9px', borderRadius: 20, cursor: 'pointer', fontSize: 12,
-                        background: filters.owner === u.id ? 'rgba(25,23,18,0.06)' : 'transparent',
-                        border: `1px solid ${filters.owner === u.id ? 'var(--color-accent,#7F77DD)' : 'var(--color-border,var(--sb-border))'}`,
-                        color: filters.owner === u.id ? 'var(--color-accent,#7F77DD)' : 'var(--sb-ink-3)',
-                        fontWeight: filters.owner === u.id ? 600 : 400, transition: 'all 0.12s',
-                      }}>
-                        {u.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {activeFilterCount > 0 && (
-                <button onClick={() => setFilters({ company: '', type: '', owner: '' })} style={{
-                  width: '100%', padding: '6px 10px', borderRadius: 7, cursor: 'pointer', fontSize: 12,
-                  background: 'rgba(224,82,82,0.08)', border: '1px solid rgba(224,82,82,0.2)',
-                  color: '#E05252', fontWeight: 500,
-                }}>
-                  Clear all filters
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Config button */}
-        <div ref={configRef} style={{ position: 'relative', flexShrink: 0 }}>
-          <button onClick={() => setConfigOpen(o => !o)} title="Display settings" style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            width: 28, height: 28, borderRadius: 7, cursor: 'pointer',
-            background: configOpen ? 'rgba(25,23,18,0.06)' : 'transparent',
-            border: `1px solid ${configOpen ? 'color-mix(in srgb, var(--color-accent) 40%, transparent)' : 'var(--color-border,var(--sb-border))'}`,
-            color: configOpen ? 'var(--color-accent)' : 'var(--sb-ink-3)',
-            transition: 'all 0.12s',
-          }}>
-            <SlidersHorizontal size={13} />
-          </button>
-          {configOpen && (
-            <div style={{ position: 'absolute', top: 34, right: 0, zIndex: 100, background: 'var(--sb-card)', border: '1px solid var(--color-border,var(--sb-border))', borderRadius: 10, padding: '12px 14px', minWidth: 240, boxShadow: '0 8px 24px rgba(0,0,0,0.5)' }}>
-              <p style={{ margin: '0 0 10px', fontSize: 11, fontWeight: 600, color: 'var(--sb-ink-3)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>Task Display</p>
-              <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', gap: 10, marginBottom: 14 }}>
-                <span style={{ fontSize: 13, color: 'var(--color-text-dim,#C0C4D6)' }}>Hide completed tasks</span>
-                <div onClick={() => setHideCompleted(!hideCompleted)} style={{ width: 36, height: 20, borderRadius: 10, flexShrink: 0, background: hideCompleted ? 'var(--color-accent)' : 'var(--color-border,var(--sb-border))', position: 'relative', cursor: 'pointer', transition: 'background 0.15s' }}>
-                  <div style={{ position: 'absolute', top: 3, left: hideCompleted ? 19 : 3, width: 14, height: 14, borderRadius: '50%', background: '#fff', transition: 'left 0.15s' }} />
-                </div>
-              </label>
-              <div style={{ width: '100%', height: 1, background: 'var(--color-border,var(--sb-border))', marginBottom: 12 }} />
-              <p style={{ margin: '0 0 8px', fontSize: 11, fontWeight: 600, color: 'var(--sb-ink-3)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>Group tasks by</p>
-              {(['none', 'type', 'company'] as GroupBy[]).map(opt => (
-                <label key={opt} onClick={() => setGroupBy(opt)} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '5px 6px', borderRadius: 6, marginBottom: 2, background: groupBy === opt ? 'rgba(127,119,221,0.1)' : 'transparent' }}>
-                  <div style={{ width: 13, height: 13, borderRadius: '50%', flexShrink: 0, border: `2px solid ${groupBy === opt ? 'var(--color-accent)' : 'var(--sb-ink-3)'}`, background: groupBy === opt ? 'var(--color-accent)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    {groupBy === opt && <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#fff' }} />}
-                  </div>
-                  <span style={{ fontSize: 12.5, color: groupBy === opt ? 'var(--color-text-dim,#C0C4D6)' : 'var(--color-text-dim,#8B93A8)' }}>
-                    {opt === 'none' ? 'None' : opt === 'type' ? 'Task type' : 'Company'}
-                  </span>
-                </label>
-              ))}
-              {groupBy !== 'none' && (
-                <button onClick={() => setAllGroupsExpanded(!allGroupsExpanded)} style={{ marginTop: 10, width: '100%', padding: '6px 10px', borderRadius: 7, background: 'rgba(127,119,221,0.08)', border: '1px solid rgba(127,119,221,0.25)', color: '#9B94E8', fontSize: 12, cursor: 'pointer', fontWeight: 500 }}>
-                  {allGroupsExpanded ? '⊟ Collapse all groups' : '⊞ Expand all groups'}
-                </button>
-              )}
-            </div>
-          )}
-        </div>
       </div>
 
       {/* ── Active filter chips ─────────────────────────────────────────────── */}
       {(companyChipLabel || typeChipLabel || ownerChipLabel) && (
-        <div style={{ padding: '7px 28px', borderBottom: '1px solid var(--color-border,var(--sb-border))', display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+        <div style={{ padding: '4px 26px 10px', display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
           <span style={{ fontSize: 11, color: 'var(--sb-ink-3)', marginRight: 2 }}>Filtered by:</span>
           {companyChipLabel && (
             <span style={chipStyle}>

@@ -1,11 +1,10 @@
 import { useState } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { Trash2, Check, GripVertical, Clock, Calendar, User, Plus, CalendarCheck, Zap } from 'lucide-react'
+import { Trash2, Check, GripVertical, Clock, Calendar, User, CalendarCheck, Zap } from 'lucide-react'
 import type { Task, TaskType } from '@/types'
 import { COMPANY_COLORS, TASK_TYPE_META, inferTaskType, getAllUsers, loadDynamicCompanies } from '@/types'
 import { useTaskStore } from '@/store/taskStore'
-import { getCalendarCache } from '@/lib/googleCalendar'
 import { MeetingFollowUpPopup } from './MeetingFollowUpPopup'
 import type { ExtractedTask } from '@/lib/professor'
 
@@ -16,6 +15,20 @@ function isMeetingTask(title: string): boolean {
   const lower = title.toLowerCase()
   return MEETING_EMOJIS.some(e => title.includes(e)) ||
     MEETING_KEYWORDS.some(k => lower.includes(k))
+}
+
+/** Convert hex color (#RRGGBB or #RGB) to "R, G, B" string for rgba() */
+function hexToRgb(hex: string): string {
+  const h = hex.replace('#', '')
+  if (h.length === 3) {
+    const [r, g, b] = h.split('').map(c => parseInt(c + c, 16))
+    return `${r}, ${g}, ${b}`
+  }
+  const r = parseInt(h.slice(0, 2), 16)
+  const g = parseInt(h.slice(2, 4), 16)
+  const b = parseInt(h.slice(4, 6), 16)
+  if (isNaN(r) || isNaN(g) || isNaN(b)) return '25, 23, 18'
+  return `${r}, ${g}, ${b}`
 }
 
 interface TaskCardProps {
@@ -31,7 +44,6 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
   const [titleDraft, setTitleDraft] = useState(task.title)
   const [editingDate, setEditingDate] = useState(false)
   const [editingTime, setEditingTime] = useState(false)
-  const [editingDuration, setEditingDuration] = useState(false)
   const [editingOwner, setEditingOwner] = useState(false)
   const [editingType, setEditingType] = useState(false)
 
@@ -53,11 +65,8 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
   const users = task.companyId
     ? allUsers.filter(u => u.companyId === task.companyId)
     : allUsers
-  const cachedCals = getCalendarCache()
-
   const isSchedule = task.quadrant === 'schedule'
   const isDelegate = task.quadrant === 'delegate'
-  const showCalPicker = isSchedule || !!task.calendarId
 
   function saveTitle() {
     const trimmed = titleDraft.trim()
@@ -78,35 +87,39 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
     color: 'var(--sb-ink-1)', fontSize: 10, padding: '1px 5px', outline: 'none',
   }
 
+  // Design-spec card background: company color at 8.5% opacity
+  const cardBg = `rgba(${hexToRgb(companyColor)}, 0.085)`
+  const cardBorder = hovered || isDragging
+    ? `2px solid ${companyColor}`
+    : `1px solid rgba(${hexToRgb(companyColor)}, 0.42)`
+
   return (
     <div
       ref={setNodeRef}
       onClick={handleCardClick}
       style={{
         ...style,
-        background: hovered ? 'var(--color-surface2, #1a1f35)' : 'var(--sb-card)',
-        border: `1px solid ${isDragging ? 'var(--color-accent)' : task.urgent ? '#E0711A40' : 'var(--sb-border)'}`,
-        borderRadius: 8,
-        padding: '9px 11px',
-        cursor: isDragging ? 'grabbing' : 'pointer',
-        transition: 'background 0.15s ease, border-color 0.15s ease',
         position: 'relative',
-        opacity: task.completed ? 0.5 : 1,
+        background: cardBg,
+        border: cardBorder,
+        borderRadius: 13,
+        padding: '11px 12px',
+        display: 'flex', flexDirection: 'column', gap: 8,
+        cursor: isDragging ? 'grabbing' : 'pointer',
+        overflow: 'hidden',
+        boxShadow: hovered ? '0 8px 20px -12px rgba(25,23,18,.4)' : 'none',
+        transition: 'box-shadow 0.15s ease, border-color 0.15s ease',
+        opacity: task.completed ? 0.6 : 1,
+        minWidth: 0,
       }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      {/* Left accent */}
-      <div style={{
-        position: 'absolute', left: 0, top: 0, bottom: 0, width: 3,
-        background: companyColor, borderRadius: '8px 0 0 8px', opacity: 0.7,
-      }} />
-
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 7, paddingLeft: 4 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 9, minWidth: 0 }}>
         {/* Drag handle */}
         <div data-nm {...listeners} {...attributes} style={{
-          cursor: 'grab', color: hovered ? 'var(--sb-ink-3)' : 'transparent',
-          transition: 'color 0.15s', marginTop: 1, flexShrink: 0,
+          cursor: 'grab', color: hovered ? '#8A8272' : 'transparent',
+          transition: 'color 0.15s', flexShrink: 0, marginTop: 1, display: 'flex',
         }}>
           <GripVertical size={12} strokeWidth={2} />
         </div>
@@ -115,7 +128,6 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
         <button
           data-nm
           onClick={() => {
-            // Intercept completion of meeting/call tasks to capture follow-up notes
             if (!task.completed && isMeetingTask(task.title)) {
               setShowMeetingPopup(true)
             } else {
@@ -123,9 +135,9 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
             }
           }}
           style={{
-            width: 15, height: 15, borderRadius: 4,
-            border: `1.5px solid ${task.completed ? '#1D9E75' : 'var(--sb-border)'}`,
-            background: task.completed ? '#1D9E75' : 'transparent',
+            width: 17, height: 17, borderRadius: 5, boxSizing: 'border-box',
+            border: task.completed ? '1.5px solid #4E7645' : '1.5px solid rgba(25,23,18,.28)',
+            background: task.completed ? '#4E7645' : 'rgba(255,255,255,.75)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             cursor: 'pointer', flexShrink: 0, marginTop: 1, transition: 'all 0.15s ease',
           }}
@@ -149,9 +161,9 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
               }}
               style={{
                 background: 'transparent', border: 'none',
-                borderBottom: '1px solid #7F77DD', outline: 'none',
-                color: 'var(--sb-ink-1)', fontSize: 12.5, fontWeight: 500,
-                width: '100%', padding: 0, fontFamily: 'inherit', lineHeight: 1.35,
+                borderBottom: '1px solid #191712', outline: 'none',
+                color: '#191712', fontSize: 12.5, fontWeight: 600,
+                width: '100%', padding: 0, fontFamily: 'inherit', lineHeight: 1.32,
               }}
             />
           ) : (
@@ -160,47 +172,23 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
               onClick={() => { if (!task.completed) setEditingTitle(true) }}
               title={task.completed ? undefined : 'Click to rename'}
               style={{
-                margin: 0, fontSize: 12.5, fontWeight: 500, color: 'var(--sb-ink-1)',
-                lineHeight: 1.35, textDecoration: task.completed ? 'line-through' : 'none',
-                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                margin: 0, fontSize: 12.5, fontWeight: 600, color: '#191712',
+                lineHeight: 1.32, textDecoration: task.completed ? 'line-through' : 'none',
+                display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+                overflow: 'hidden', minWidth: 0,
                 cursor: task.completed ? 'default' : 'text',
               }}
             >{task.title}</p>
           )}
 
-          {/* Meta row */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 5, flexWrap: 'wrap' }}>
+          {/* Meta/chips row */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4, flexWrap: 'wrap', minWidth: 0 }}>
 
-            {/* Company */}
-            <select
-              data-nm
-              value={task.companyId ?? task.company}
-              onChange={e => {
-                const co = companies.find(c => c.id === e.target.value)
-                updateTask(task.id, { companyId: co ? e.target.value : undefined, company: (co?.id as Task['company']) ?? (e.target.value as Task['company']) })
-              }}
-              title="Change company"
-              style={{
-                fontSize: 10, fontWeight: 600,
-                color: companyColor, background: `${companyColor}18`,
-                padding: '1px 5px', borderRadius: 3,
-                border: 'none', outline: 'none', cursor: 'pointer',
-                appearance: 'none', WebkitAppearance: 'none', fontFamily: 'inherit',
-              }}
-            >
-              {companies.map(c => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-              {/* Ensure current value always has a matching option when not a dynamic company */}
-              {!task.companyId && !companies.find(c => c.id === task.company) && (
-                <option value={task.company}>{task.company}</option>
-              )}
-            </select>
-
-            {/* Task type badge */}
+            {/* Task type badge — Sunlit Bento spec: 19px height, 5px radius, semi-white bg with company-color border */}
             {(() => {
               const tt = task.taskType ?? inferTaskType(task.title)
               const meta = TASK_TYPE_META[tt]
+              const ccRgb = hexToRgb(companyColor.startsWith('#') ? companyColor : '#8C826A')
               return editingType ? (
                 <select
                   data-nm autoFocus
@@ -217,154 +205,109 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
                 <span
                   data-nm onClick={() => setEditingType(true)} title="Change task type"
                   style={{
-                    fontSize: 10, fontWeight: 600, cursor: 'pointer',
-                    color: meta.color, background: `${meta.color}18`,
-                    padding: '1px 5px', borderRadius: 3,
+                    display: 'flex', alignItems: 'center', gap: 5,
+                    height: 19, boxSizing: 'border-box', padding: '0 7px', borderRadius: 5,
+                    background: `rgba(255,255,255,.78)`, border: `1px solid rgba(${ccRgb},.44)`,
+                    color: companyColor.startsWith('#') ? companyColor : '#8C826A',
+                    fontSize: 10, fontWeight: 700, flexShrink: 0, cursor: 'pointer',
                   }}
                 >{meta.emoji} {meta.label}</span>
               )
             })()}
 
-            {/* Due date */}
-            {(task.dueDate || isSchedule) && (
-              editingDate ? (
-                <input
-                  data-nm type="date" autoFocus value={task.dueDate ?? ''}
-                  onChange={e => updateTask(task.id, { dueDate: e.target.value || undefined })}
-                  onBlur={() => setEditingDate(false)}
-                  onKeyDown={e => e.key === 'Escape' && setEditingDate(false)}
-                  style={fieldInput}
-                />
-              ) : (
-                <span
-                  data-nm onClick={() => setEditingDate(true)} title="Set due date"
-                  style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: task.dueDate ? 'var(--sb-ink-3)' : 'var(--color-border, #404560)', cursor: 'pointer' }}
-                >
-                  <Calendar size={9} />
-                  {task.dueDate
-                    ? new Date(task.dueDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-                    : <Plus size={8} />
-                  }
-                </span>
-              )
-            )}
-
-            {/* Planned time */}
-            {(task.plannedTime || isSchedule) && (
-              editingTime ? (
-                <input
-                  data-nm type="time" autoFocus value={task.plannedTime ?? ''}
-                  onChange={e => updateTask(task.id, { plannedTime: e.target.value || undefined })}
-                  onBlur={() => setEditingTime(false)}
-                  onKeyDown={e => e.key === 'Escape' && setEditingTime(false)}
-                  style={{ ...fieldInput, color: 'var(--color-accent)' }}
-                />
-              ) : (
-                <span
-                  data-nm onClick={() => setEditingTime(true)} title="Set planned time"
-                  style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: task.plannedTime ? 'var(--color-accent)' : 'var(--color-border, #404560)', cursor: 'pointer' }}
-                >
-                  <Clock size={9} />
-                  {task.plannedTime ?? <Plus size={8} />}
-                </span>
-              )
-            )}
-
-            {/* Duration */}
-            {(task.duration || isSchedule) && (
-              editingDuration ? (
-                <input
-                  data-nm type="number" autoFocus min={5} step={5} value={task.duration ?? ''}
-                  onChange={e => updateTask(task.id, { duration: e.target.value ? parseInt(e.target.value, 10) : undefined })}
-                  onBlur={() => setEditingDuration(false)}
-                  onKeyDown={e => e.key === 'Escape' && setEditingDuration(false)}
-                  style={{ ...fieldInput, width: 52 }} placeholder="min"
-                />
-              ) : (
-                <span
-                  data-nm onClick={() => setEditingDuration(true)} title="Set duration"
-                  style={{ fontSize: 10, color: task.duration ? 'var(--sb-ink-3)' : 'var(--color-border, #404560)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 2 }}
-                >
-                  {task.duration ? `${task.duration}m` : <><Plus size={8} />m</>}
-                </span>
-              )
-            )}
-
-            {/* Calendar */}
-            {showCalPicker && cachedCals.length > 0 && (
-              <select
-                data-nm
-                value={task.calendarId ?? ''}
-                onChange={e => updateTask(task.id, { calendarId: e.target.value || undefined })}
-                title="Link to calendar"
-                style={{
-                  fontSize: 10, color: task.calendarId ? 'var(--color-accent)' : 'var(--color-border, #404560)',
-                  background: task.calendarId ? '#7F77DD12' : 'transparent',
-                  padding: '1px 4px', borderRadius: 3,
-                  border: 'none', outline: 'none', cursor: 'pointer',
-                  appearance: 'none', WebkitAppearance: 'none', fontFamily: 'inherit',
-                  display: 'flex', alignItems: 'center', gap: 3,
-                }}
-              >
-                <option value="">📅 calendar</option>
-                {cachedCals.map(c => (
-                  <option key={c.id} value={c.id}>{c.summary}</option>
-                ))}
-              </select>
-            )}
-
-            {/* Calendar scheduled indicator — shown when task has been auto-scheduled */}
-            {task.gcalEventId && (
-              <span title="Scheduled to Google Calendar" style={{ fontSize: 10, color: '#1D9E75', display: 'flex', alignItems: 'center', gap: 2 }}>
-                <CalendarCheck size={9} /> Scheduled ✓
+            {/* Urgent badge */}
+            {task.urgent && (
+              <span style={{ height: 18, boxSizing: 'border-box', padding: '0 6px', borderRadius: 5, background: '#FBEAE4', border: '1px solid #E5BBAC', color: '#B94A2E', fontSize: 9.5, fontWeight: 700, display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                P0
               </span>
             )}
 
-            {/* Owner */}
+            {/* Company dot + name */}
+            <span
+              data-nm
+              style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, fontWeight: 600, color: companyColor, flexShrink: 0, cursor: 'pointer' }}
+              onClick={() => {
+                // Future: open company picker
+              }}
+            >
+              <span style={{ width: 7, height: 7, borderRadius: 999, background: companyColor, flexShrink: 0 }} />
+              {dynCompany?.name ?? task.company ?? ''}
+            </span>
+
+            {/* Due date chip */}
+            {(task.dueDate || isSchedule) && (
+              editingDate ? (
+                <input data-nm type="date" autoFocus value={task.dueDate ?? ''}
+                  onChange={e => updateTask(task.id, { dueDate: e.target.value || undefined })}
+                  onBlur={() => setEditingDate(false)}
+                  onKeyDown={e => e.key === 'Escape' && setEditingDate(false)}
+                  style={{ ...fieldInput, fontSize: 10 }}
+                />
+              ) : (
+                <span data-nm onClick={() => setEditingDate(true)} title="Set due date"
+                  style={{ display: 'flex', alignItems: 'center', gap: 5, height: 19, boxSizing: 'border-box', padding: '0 7px', borderRadius: 5, background: 'rgba(255,255,255,.7)', border: '1px solid rgba(25,23,18,.1)', color: '#6C6553', fontSize: 10, fontWeight: 600, flexShrink: 0, cursor: 'pointer' }}>
+                  <Calendar size={10} />
+                  {task.dueDate ? new Date(task.dueDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Set date'}
+                </span>
+              )
+            )}
+
+            {/* Planned time chip */}
+            {(task.plannedTime) && (
+              editingTime ? (
+                <input data-nm type="time" autoFocus value={task.plannedTime ?? ''}
+                  onChange={e => updateTask(task.id, { plannedTime: e.target.value || undefined })}
+                  onBlur={() => setEditingTime(false)}
+                  onKeyDown={e => e.key === 'Escape' && setEditingTime(false)}
+                  style={{ ...fieldInput, fontSize: 10 }}
+                />
+              ) : (
+                <span data-nm onClick={() => setEditingTime(true)} title="Set planned time"
+                  style={{ display: 'flex', alignItems: 'center', gap: 5, height: 19, boxSizing: 'border-box', padding: '0 7px', borderRadius: 5, background: 'rgba(255,255,255,.7)', border: '1px solid rgba(25,23,18,.1)', color: '#6C6553', fontSize: 10, fontWeight: 600, flexShrink: 0, cursor: 'pointer' }}>
+                  <Clock size={10} />
+                  {task.plannedTime}
+                </span>
+              )
+            )}
+
+            {/* Calendar scheduled indicator */}
+            {task.gcalEventId && (
+              <span title="Scheduled to Google Calendar"
+                style={{ display: 'flex', alignItems: 'center', gap: 5, height: 19, boxSizing: 'border-box', padding: '0 7px', borderRadius: 5, background: 'rgba(255,255,255,.7)', border: '1px solid rgba(25,23,18,.1)', color: '#4E7645', fontSize: 10, fontWeight: 600, flexShrink: 0 }}>
+                <CalendarCheck size={10} /> Scheduled
+              </span>
+            )}
+
+            {/* Owner chip */}
             {(task.owner || isDelegate) && (
               editingOwner ? (
-                <select
-                  data-nm autoFocus value={task.owner ?? ''}
+                <select data-nm autoFocus value={task.owner ?? ''}
                   onChange={e => { updateTask(task.id, { owner: e.target.value || undefined }); setEditingOwner(false) }}
                   onBlur={() => setEditingOwner(false)}
-                  style={fieldInput}
+                  style={{ ...fieldInput, fontSize: 10 }}
                 >
                   <option value="">— none —</option>
                   {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
                 </select>
               ) : (
-                <span
-                  data-nm onClick={() => setEditingOwner(true)} title="Assign owner"
-                  style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: ownerUser ? '#1D9E75' : 'var(--color-border, #404560)', cursor: 'pointer' }}
-                >
-                  <User size={9} />
-                  {ownerUser ? ownerUser.name : <Plus size={8} />}
+                <span data-nm onClick={() => setEditingOwner(true)} title="Assign owner"
+                  style={{ display: 'flex', alignItems: 'center', gap: 5, height: 19, boxSizing: 'border-box', padding: '0 7px', borderRadius: 5, background: 'rgba(255,255,255,.7)', border: '1px solid rgba(25,23,18,.1)', color: '#6C6553', fontSize: 10, fontWeight: 600, flexShrink: 0, cursor: 'pointer' }}>
+                  <User size={10} />
+                  {ownerUser ? ownerUser.name : 'Assign'}
                 </span>
               )
             )}
           </div>
         </div>
 
-        {/* Urgent + Delete */}
+        {/* Urgent toggle + Delete */}
         <div data-nm style={{ display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0 }}>
-          <button
-            data-nm
-            onClick={() => toggleUrgent(task.id)}
-            title={task.urgent ? 'Unmark urgent' : 'Mark urgent'}
-            style={{
-              background: 'transparent', border: 'none', cursor: 'pointer', padding: 2, borderRadius: 4,
-              color: task.urgent ? '#E0711A' : hovered ? 'var(--color-border, #4B5268)' : 'transparent',
-              display: 'flex', alignItems: 'center', transition: 'color 0.15s',
-            }}
-          >
-            <Zap size={11} strokeWidth={2} fill={task.urgent ? '#E0711A' : 'none'} />
+          <button data-nm onClick={() => toggleUrgent(task.id)} title={task.urgent ? 'Unmark urgent' : 'Mark urgent'}
+            style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 2, borderRadius: 4, color: task.urgent ? '#B94A2E' : hovered ? '#8A8272' : 'transparent', display: 'flex', alignItems: 'center', transition: 'color 0.15s' }}>
+            <Zap size={11} strokeWidth={2} fill={task.urgent ? '#B94A2E' : 'none'} />
           </button>
           {hovered && (
-            <button data-nm onClick={() => deleteTask(task.id)} style={{
-              background: 'transparent', border: 'none', cursor: 'pointer',
-              color: 'var(--sb-ink-3)', padding: 2, borderRadius: 4,
-              display: 'flex', alignItems: 'center',
-            }}>
+            <button data-nm onClick={() => deleteTask(task.id)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#8A8272', padding: 2, borderRadius: 4, display: 'flex', alignItems: 'center' }}>
               <Trash2 size={11} strokeWidth={2} />
             </button>
           )}
