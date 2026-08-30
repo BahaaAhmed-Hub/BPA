@@ -157,7 +157,7 @@ function StatCard({
           ) : (
             <div style={{ fontSize: 28, fontWeight: 700, color: '#191712', fontFamily: "'Cabinet Grotesk', sans-serif", letterSpacing: '-0.5px', lineHeight: 1 }}>{value}</div>
           )}
-          <div style={{ fontSize: 12.5, color: '#FFFFFF', marginTop: 4 }}>{label}</div>
+          <div style={{ fontSize: 12.5, color: '#9B9180', marginTop: 4 }}>{label}</div>
           <div style={{ fontSize: 11, color, marginTop: 6, fontWeight: 500 }}>{sub}</div>
         </div>
         <div style={{ width: 34, height: 34, borderRadius: 8, background: `${color}18`, border: `1px solid ${color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -174,7 +174,7 @@ function SectionHead({ label, count, color }: { label: string; count: number; co
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
       <span style={{ fontSize: 10.5, fontWeight: 700, color, textTransform: 'uppercase', letterSpacing: '0.07em' }}>{label}</span>
-      <span style={{ fontSize: 10.5, color: '#4B5268', background: '#FFFFFF', borderRadius: 10, padding: '0 6px', fontWeight: 600 }}>{count}</span>
+      <span style={{ fontSize: 10.5, color: '#9B9180', background: '#FFFFFF', borderRadius: 10, padding: '0 6px', fontWeight: 600 }}>{count}</span>
     </div>
   )
 }
@@ -184,15 +184,15 @@ function SectionHead({ label, count, color }: { label: string; count: number; co
 function EventRow({ event, cancelled }: { event: GCalEvent; cancelled?: boolean }) {
   const time = fmtEventTime(event)
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 8, background: '#F7F4EA', border: '1px solid #FFFFFF', marginBottom: 5 }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 8, background: '#F7F4EA', border: '1px solid #EDE7D9', marginBottom: 5 }}>
       {cancelled
         ? <XCircle size={13} color="#6B7280" style={{ flexShrink: 0 }} />
         : <CheckCircle2 size={13} color="#1D9E75" style={{ flexShrink: 0 }} />
       }
       {time && (
-        <span style={{ fontSize: 11, color: cancelled ? '#4B5268' : '#7F77DD', fontWeight: 600, minWidth: 54, flexShrink: 0 }}>{time}</span>
+        <span style={{ fontSize: 11, color: cancelled ? '#9B9180' : '#7F77DD', fontWeight: 600, minWidth: 54, flexShrink: 0 }}>{time}</span>
       )}
-      <span style={{ fontSize: 13, color: cancelled ? '#4B5268' : '#3D3926', flex: 1, textDecoration: cancelled ? 'line-through' : 'none' }}>
+      <span style={{ fontSize: 13, color: cancelled ? '#9B9180' : '#3D3926', flex: 1, textDecoration: cancelled ? 'line-through' : 'none' }}>
         {event.summary ?? '(No title)'}
       </span>
     </div>
@@ -218,12 +218,12 @@ function resolveCompanyLabel(task: Task): string | undefined {
 
 function TaskRow({ title, company, cancelled }: { title: string; company?: string; cancelled?: boolean }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 8, background: '#F7F4EA', border: '1px solid #FFFFFF', marginBottom: 5 }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 8, background: '#F7F4EA', border: '1px solid #EDE7D9', marginBottom: 5 }}>
       {cancelled
         ? <XCircle size={13} color="#6B7280" style={{ flexShrink: 0 }} />
         : <CheckSquare size={13} color="#1D9E75" style={{ flexShrink: 0 }} />
       }
-      <span style={{ fontSize: 13, color: cancelled ? '#4B5268' : '#3D3926', flex: 1, textDecoration: cancelled ? 'line-through' : 'none' }}>
+      <span style={{ fontSize: 13, color: cancelled ? '#9B9180' : '#3D3926', flex: 1, textDecoration: cancelled ? 'line-through' : 'none' }}>
         {title}
       </span>
       {company && (
@@ -246,7 +246,7 @@ function PillStat({ done, total, label, color }: { done: number; total: number; 
       </div>
       <span style={{ fontSize: 12, color: '#6C6553' }}>
         <span style={{ color, fontWeight: 600 }}>{done}</span>
-        <span style={{ color: '#4B5268' }}>/{total}</span>
+        <span style={{ color: '#9B9180' }}>/{total}</span>
         <span style={{ marginLeft: 4 }}>{label}</span>
       </span>
     </div>
@@ -306,7 +306,7 @@ function buildPieSlices(
   const free = Math.max(0, TOTAL - SLEEP - evtTotal - taskTotal)
 
   return [
-    { label: 'Sleep', minutes: SLEEP, color: '#13152B' },
+    { label: 'Sleep', minutes: SLEEP, color: '#6C6553' },
     ...[...byCalId.values()].filter(v => v.mins > 0).map(v => ({ label: v.label, minutes: v.mins, color: v.color })),
     ...(taskTotal > 0 ? [{ label: 'Tasks', minutes: taskTotal, color: '#1D9E75' }] : []),
     { label: 'Unaccounted', minutes: free, color: '#E8E1CE' },
@@ -330,7 +330,7 @@ function PieChart({ slices, title }: { slices: PieSlice[]; title: string }) {
   const fmt = (m: number) => m >= 60 ? `${(m / 60).toFixed(1)}h` : `${Math.round(m)}m`
 
   return (
-    <div style={{ background: '#F7F4EA', border: '1px solid #FFFFFF', borderRadius: 12, padding: '14px 18px', marginBottom: 20 }}>
+    <div style={{ background: '#F7F4EA', border: '1px solid #EDE7D9', borderRadius: 12, padding: '14px 18px', marginBottom: 20 }}>
       <div style={{ fontSize: 10.5, fontWeight: 700, color: '#9B9180', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 14 }}>{title}</div>
       <div style={{ display: 'flex', gap: 20, alignItems: 'center', flexWrap: 'wrap' }}>
         <svg width={136} height={136} style={{ flexShrink: 0 }}>
@@ -573,7 +573,7 @@ export function ReviewModule() {
                 slices={buildPieSlices(dayEvents, dayTasks, eventStatuses, 1)}
               />
               {isDailyEmpty ? (
-                <div style={{ textAlign: 'center', padding: '32px 0', color: '#4B5268' }}>
+                <div style={{ textAlign: 'center', padding: '32px 0', color: '#9B9180' }}>
                   <CalendarDays size={28} style={{ opacity: 0.4, marginBottom: 10 }} />
                   <p style={{ margin: 0, fontSize: 13 }}>No events or tasks recorded for this day.</p>
                   {dayEvents.length === 0 && (
