@@ -109,7 +109,7 @@ function KanbanCard({ task, onOpen, overlay = false }: { task: Task; onOpen: () 
     opacity:   isDragging ? 0.35 : 1,
     cursor:    isDragging ? 'grabbing' : 'grab',
     background:   'var(--sb-card)',
-    border:       `1px solid ${task.urgent ? 'rgba(224,82,82,0.5)' : 'var(--color-border, #252A3E)'}`,
+    border:       `1px solid ${task.urgent ? 'rgba(224,82,82,0.5)' : 'var(--sb-border)'}`,
     borderRadius: 10,
     padding:      '12px 13px',
     marginBottom: 8,
@@ -321,7 +321,7 @@ function KanbanColumnComp({ column, onOpen, onColDragStart, onColDragOver, onCol
           minHeight: 100,
           background: isOver ? 'rgba(127,119,221,0.06)' : 'rgba(0,0,0,0.04)',
           borderRadius: 10,
-          border: `1.5px dashed ${isOver ? 'rgba(127,119,221,0.4)' : 'var(--color-border, #252A3E)'}`,
+          border: `1.5px dashed ${isOver ? 'rgba(127,119,221,0.4)' : 'var(--sb-border)'}`,
           transition: 'background 0.15s, border-color 0.15s',
         }}
       >
@@ -357,7 +357,7 @@ function KanbanColumnComp({ column, onOpen, onColDragStart, onColDragOver, onCol
               <button onClick={commitAdd} style={{ flex: 1, padding: '4px 0', fontSize: 11, fontWeight: 600, background: 'var(--color-accent, #7F77DD)', color: '#fff', border: 'none', borderRadius: 5, cursor: 'pointer' }}>
                 Add
               </button>
-              <button onClick={() => { setAdding(false); setNewTitle('') }} style={{ padding: '4px 8px', fontSize: 11, background: 'transparent', color: 'var(--sb-ink-3)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 5, cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+              <button onClick={() => { setAdding(false); setNewTitle('') }} style={{ padding: '4px 8px', fontSize: 11, background: 'transparent', color: 'var(--sb-ink-3)', border: '1px solid var(--sb-border)', borderRadius: 5, cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
                 <XIcon size={11} />
               </button>
             </div>
@@ -370,7 +370,7 @@ function KanbanColumnComp({ column, onOpen, onColDragStart, onColDragOver, onCol
         onClick={() => setAdding(true)}
         style={{
           marginTop: 6, width: '100%', padding: '5px 0', fontSize: 11, fontWeight: 500,
-          background: 'transparent', border: '1px dashed var(--color-border, #252A3E)', borderRadius: 6,
+          background: 'transparent', border: '1px dashed var(--sb-border)', borderRadius: 6,
           color: 'var(--sb-ink-3)', cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
           transition: 'all 0.12s',
@@ -402,7 +402,7 @@ function DatePickerOverlay({
     }}>
       <div style={{
         background: 'var(--sb-card)', borderRadius: 14,
-        padding: 24, width: 320, border: '1px solid var(--color-border, #252A3E)',
+        padding: 24, width: 320, border: '1px solid var(--sb-border)',
         boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
       }}>
         <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--sb-ink-1)', marginBottom: 6 }}>
@@ -423,7 +423,7 @@ function DatePickerOverlay({
             style={{
               width: '100%', boxSizing: 'border-box',
               background: 'var(--sb-page)',
-              border: '1px solid var(--color-border, #252A3E)',
+              border: '1px solid var(--sb-border)',
               borderRadius: 6, padding: '7px 10px',
               fontSize: 13, color: 'var(--sb-ink-1)',
               outline: 'none', fontFamily: 'inherit',
@@ -433,7 +433,7 @@ function DatePickerOverlay({
         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
           <button onClick={onCancel} style={{
             padding: '7px 16px', borderRadius: 7, background: 'transparent',
-            border: '1px solid var(--color-border, #252A3E)',
+            border: '1px solid var(--sb-border)',
             color: 'var(--sb-ink-3)', fontSize: 12, cursor: 'pointer',
           }}>Cancel</button>
           <button onClick={() => date && onConfirm(date)} disabled={!date} style={{
@@ -665,7 +665,7 @@ export function KanbanBoard({ onOpen, hideCompleted = false, filteredTaskIds }: 
       {/* Board type tabs */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 6, padding: '10px 28px',
-        borderBottom: '1px solid var(--color-border, #252A3E)', flexShrink: 0,
+        borderBottom: '1px solid var(--sb-border)', flexShrink: 0,
       }}>
         <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--sb-ink-3)', marginRight: 4, flexShrink: 0 }}>
           Group by:
@@ -676,7 +676,7 @@ export function KanbanBoard({ onOpen, hideCompleted = false, filteredTaskIds }: 
               padding: '5px 13px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer',
               background: boardType === opt.id ? 'var(--color-accent, #7F77DD)' : 'transparent',
               color:      boardType === opt.id ? '#fff' : 'var(--sb-ink-3)',
-              border:     `1px solid ${boardType === opt.id ? 'var(--color-accent, #7F77DD)' : 'var(--color-border, #252A3E)'}`,
+              border:     `1px solid ${boardType === opt.id ? 'var(--color-accent, #7F77DD)' : 'var(--sb-border)'}`,
               transition: 'all 0.12s',
             }}>
               {opt.label}

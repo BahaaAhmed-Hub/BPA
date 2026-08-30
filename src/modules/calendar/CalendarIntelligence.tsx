@@ -505,7 +505,7 @@ function ColorPickerPopover({ current, onPick, onClose }: { current: string; onP
   return (
     <div ref={ref} onClick={e => e.stopPropagation()} style={{
       position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 200,
-      background: 'var(--color-surface, #161929)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 10,
+      background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 10,
       padding: '10px 10px 8px', boxShadow: '0 8px 28px rgba(0,0,0,0.5)',
       display: 'flex', flexWrap: 'wrap', gap: 7, width: 152,
     }}>
@@ -534,7 +534,7 @@ function DayColumn({ dateStr, isToday, children }: { dateStr: string; isToday: b
       ))}
       {/* Half-hour lines */}
       {Array.from({ length: 24 }, (_, h) => (
-        <div key={`h${h}`} style={{ position: 'absolute', top: h * HOUR_PX + HOUR_PX / 2, left: 0, right: 0, borderTop: '1px dashed var(--color-border, #252A3E)', opacity: 0.4, pointerEvents: 'none' }} />
+        <div key={`h${h}`} style={{ position: 'absolute', top: h * HOUR_PX + HOUR_PX / 2, left: 0, right: 0, borderTop: '1px dashed var(--sb-border)', opacity: 0.4, pointerEvents: 'none' }} />
       ))}
       {children}
     </div>
@@ -837,7 +837,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
     display: 'flex', alignItems: 'center', gap: 5,
     padding: '5px 11px', borderRadius: 7, fontSize: 12, cursor: 'pointer',
     background: active ? `${color}22` : 'transparent',
-    border: `1px solid ${active ? color : 'var(--color-border, #2A2F45)'}`,
+    border: `1px solid ${active ? color : 'var(--sb-border)'}`,
     color: active ? color : 'var(--color-text-dim, #8B93A8)',
     transition: 'all 0.12s',
   })
@@ -846,7 +846,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
     <div ref={popupRef} onClick={e => e.stopPropagation()} onMouseDown={e => e.stopPropagation()} style={{
       position: 'fixed', top: adjPos.y, left: adjPos.x,
       width: 330, maxHeight: 'calc(100vh - 24px)', overflowY: 'auto',
-      background: 'var(--color-surface, #161929)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 14,
+      background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 14,
       boxShadow: '0 16px 48px rgba(0,0,0,0.65)', zIndex: 1000,
     }}>
 
@@ -860,7 +860,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
               onChange={e => setEditTitle(e.target.value)}
               placeholder="Event title"
               autoFocus
-              style={{ width: '100%', fontSize: 17, fontWeight: 700, color: 'var(--color-text, #E8EAF6)', background: 'var(--color-bg, #0D0F1A)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 6, padding: '5px 8px', boxSizing: 'border-box', outline: 'none' }}
+              style={{ width: '100%', fontSize: 17, fontWeight: 700, color: 'var(--color-text, #E8EAF6)', background: 'var(--sb-page)', border: '1px solid var(--sb-border)', borderRadius: 6, padding: '5px 8px', boxSizing: 'border-box', outline: 'none' }}
             />
           ) : (
             <div
@@ -892,7 +892,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
         </button>
       </div>
 
-      <div style={{ height: 1, background: 'var(--color-border, #252A3E)' }} />
+      <div style={{ height: 1, background: 'var(--sb-border)' }} />
 
       {/* Location */}
       {(event.location || editMode) && (
@@ -903,7 +903,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
           <MapPin size={13} color="var(--color-text-muted, #6B7280)" style={{ flexShrink: 0 }} />
           {editMode ? (
             <input value={editLocation} onChange={e => setEditLocation(e.target.value)} placeholder="Add location"
-              style={{ flex: 1, fontSize: 13, color: 'var(--color-text, #E8EAF6)', background: 'var(--color-bg, #0D0F1A)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 5, padding: '3px 7px', outline: 'none' }} />
+              style={{ flex: 1, fontSize: 13, color: 'var(--color-text, #E8EAF6)', background: 'var(--sb-page)', border: '1px solid var(--sb-border)', borderRadius: 5, padding: '3px 7px', outline: 'none' }} />
           ) : (
             <span style={{ fontSize: 13, color: 'var(--color-text-dim, #C0C4D6)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{event.location}</span>
           )}
@@ -946,7 +946,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
       )}
 
       {(event.location || videoLink || onAddMeet || phoneEntry) && (
-        <div style={{ height: 1, background: 'var(--color-border, #252A3E)' }} />
+        <div style={{ height: 1, background: 'var(--sb-border)' }} />
       )}
 
       {/* Date / time fieldRows */}
@@ -955,11 +955,11 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
           <>
             {fieldRow(isAllDayEvent ? 'Start date' : 'Starts', (
               <input type={isAllDayEvent ? 'date' : 'datetime-local'} value={editStart} onChange={e => setEditStart(e.target.value)}
-                style={{ fontSize: 12, color: 'var(--color-text, #E8EAF6)', background: 'var(--color-bg, #0D0F1A)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 5, padding: '3px 7px', outline: 'none', colorScheme: 'dark' }} />
+                style={{ fontSize: 12, color: 'var(--color-text, #E8EAF6)', background: 'var(--sb-page)', border: '1px solid var(--sb-border)', borderRadius: 5, padding: '3px 7px', outline: 'none', colorScheme: 'dark' }} />
             ))}
             {fieldRow(isAllDayEvent ? 'End date' : 'Ends', (
               <input type={isAllDayEvent ? 'date' : 'datetime-local'} value={editEnd} onChange={e => setEditEnd(e.target.value)}
-                style={{ fontSize: 12, color: 'var(--color-text, #E8EAF6)', background: 'var(--color-bg, #0D0F1A)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 5, padding: '3px 7px', outline: 'none', colorScheme: 'dark' }} />
+                style={{ fontSize: 12, color: 'var(--color-text, #E8EAF6)', background: 'var(--sb-page)', border: '1px solid var(--sb-border)', borderRadius: 5, padding: '3px 7px', outline: 'none', colorScheme: 'dark' }} />
             ))}
           </>
         ) : isAllDay ? (
@@ -987,7 +987,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
           <select
             value={editCalId}
             onChange={e => setEditCalId(e.target.value)}
-            style={{ fontSize: 13, color: 'var(--color-text, #E8EAF6)', background: 'var(--color-bg, #0D0F1A)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 5, padding: '3px 7px', outline: 'none', width: '100%' }}
+            style={{ fontSize: 13, color: 'var(--color-text, #E8EAF6)', background: 'var(--sb-page)', border: '1px solid var(--sb-border)', borderRadius: 5, padding: '3px 7px', outline: 'none', width: '100%' }}
           >
             {calendars.map(c => (
               <option key={c.id} value={c.id}>{c.summary}</option>
@@ -1004,7 +1004,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
       {/* Attendees */}
       {(others.length > 0 || (organizer && !organizer.self)) && (
         <>
-          <div style={{ height: 1, background: 'var(--color-border, #252A3E)' }} />
+          <div style={{ height: 1, background: 'var(--sb-border)' }} />
           <div style={{ padding: '10px 14px' }}>
             <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--color-border, #4B5268)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 8 }}>
               Attendees
@@ -1052,12 +1052,12 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
       {/* Notes */}
       {(notes || editMode) && (
         <>
-          <div style={{ height: 1, background: 'var(--color-border, #252A3E)' }} />
+          <div style={{ height: 1, background: 'var(--sb-border)' }} />
           <div style={{ padding: '10px 14px' }}>
             <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--color-border, #4B5268)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 5 }}>Notes</div>
             {editMode ? (
               <textarea value={editNotes} onChange={e => setEditNotes(e.target.value)} placeholder="Add notes…" rows={3}
-                style={{ width: '100%', fontSize: 12, color: 'var(--color-text, #E8EAF6)', background: 'var(--color-bg, #0D0F1A)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 5, padding: '5px 7px', resize: 'vertical', outline: 'none', boxSizing: 'border-box', lineHeight: 1.5 }} />
+                style={{ width: '100%', fontSize: 12, color: 'var(--color-text, #E8EAF6)', background: 'var(--sb-page)', border: '1px solid var(--sb-border)', borderRadius: 5, padding: '5px 7px', resize: 'vertical', outline: 'none', boxSizing: 'border-box', lineHeight: 1.5 }} />
             ) : (
               <div
                 onClick={() => onSave && setEditMode(true)}
@@ -1081,7 +1081,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
       )}
 
       {/* Action buttons */}
-      <div style={{ padding: '8px 14px 14px', display: 'flex', gap: 6, borderTop: '1px solid var(--color-border, #252A3E)', flexWrap: 'wrap' }}>
+      <div style={{ padding: '8px 14px 14px', display: 'flex', gap: 6, borderTop: '1px solid var(--sb-border)', flexWrap: 'wrap' }}>
         {editMode ? (
           <>
             <button
@@ -1092,7 +1092,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
             </button>
             <button
               onClick={() => { setEditMode(false); setSaveError(null) }}
-              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 11px', borderRadius: 7, fontSize: 12, cursor: 'pointer', background: 'transparent', border: '1px solid var(--color-border, #2A2F45)', color: 'var(--color-text-dim, #8B93A8)' }}
+              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 11px', borderRadius: 7, fontSize: 12, cursor: 'pointer', background: 'transparent', border: '1px solid var(--sb-border)', color: 'var(--color-text-dim, #8B93A8)' }}
             >
               Cancel
             </button>
@@ -1118,11 +1118,11 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
 
       {/* AI Prep section */}
       {showPrep && (
-        <div style={{ borderTop: '1px solid var(--color-border, #252A3E)', padding: '12px 14px 16px' }}>
+        <div style={{ borderTop: '1px solid var(--sb-border)', padding: '12px 14px 16px' }}>
           {prepLoading ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
               {[75, 55, 85, 65].map((w, i) => (
-                <div key={i} style={{ height: 9, width: `${w}%`, borderRadius: 3, background: 'linear-gradient(90deg, var(--color-surface, #1E2235) 25%, var(--color-border, #252A3E) 50%, var(--color-surface, #1E2235) 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.5s infinite' }} />
+                <div key={i} style={{ height: 9, width: `${w}%`, borderRadius: 3, background: 'linear-gradient(90deg, var(--sb-card) 25%, var(--sb-border) 50%, var(--sb-card) 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.5s infinite' }} />
               ))}
             </div>
           ) : prepError ? (
@@ -1266,8 +1266,8 @@ function EventContextMenu({
         position: 'fixed',
         top: adjPos.y, left: adjPos.x,
         width: 210,
-        background: 'var(--color-surface, #161929)',
-        border: '1px solid var(--color-border, #252A3E)',
+        background: 'var(--sb-card)',
+        border: '1px solid var(--sb-border)',
         borderRadius: 10,
         boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
         zIndex: 1100,
@@ -1402,15 +1402,15 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
       onContextMenu={e => e.preventDefault()}
       style={{
         position: 'fixed', top: pos.y, left: pos.x, width: 340, zIndex: 1100,
-        background: 'var(--color-surface, #161929)',
-        border: '1px solid var(--color-border, #252A3E)',
+        background: 'var(--sb-card)',
+        border: '1px solid var(--sb-border)',
         borderRadius: 14,
         boxShadow: '0 24px 64px rgba(0,0,0,0.75)',
         overflow: 'hidden',
       }}
     >
       {/* ── Title + Calendar selector ── */}
-      <div style={{ padding: '14px 16px 12px', borderBottom: '1px solid var(--color-border, #252A3E)' }}>
+      <div style={{ padding: '14px 16px 12px', borderBottom: '1px solid var(--sb-border)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <input
             ref={titleRef}
@@ -1434,7 +1434,7 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
               value={calId}
               onChange={e => setCalId(e.target.value)}
               style={{
-                background: 'var(--color-border, #252A3E)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 6,
+                background: 'var(--sb-border)', border: '1px solid var(--sb-border)', borderRadius: 6,
                 color: 'var(--color-text-dim, #C0C4D6)', fontSize: 11, padding: '3px 6px',
                 cursor: 'pointer', outline: 'none', maxWidth: 110,
               }}
@@ -1448,7 +1448,7 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
       {/* ── Location / Video Call ── */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 10,
-        padding: '9px 16px', borderBottom: '1px solid var(--color-border, #252A3E)',
+        padding: '9px 16px', borderBottom: '1px solid var(--sb-border)',
       }}>
         <MapPin size={14} color="var(--color-text-muted, #6B7280)" style={{ flexShrink: 0 }} />
         <input
@@ -1463,8 +1463,8 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
           style={{
             flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
             width: 30, height: 26, borderRadius: 7,
-            background: addMeet ? 'rgba(29,158,117,0.15)' : 'var(--color-surface, #1E2235)',
-            border: `1px solid ${addMeet ? '#1D9E75' : 'var(--color-border, #252A3E)'}`,
+            background: addMeet ? 'rgba(29,158,117,0.15)' : 'var(--sb-card)',
+            border: `1px solid ${addMeet ? '#1D9E75' : 'var(--sb-border)'}`,
             color: addMeet ? '#1D9E75' : 'var(--color-text-muted, #6B7280)', cursor: 'pointer',
             transition: 'all 0.15s',
           }}
@@ -1475,7 +1475,7 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
       {addMeet && (
         <div style={{
           display: 'flex', alignItems: 'center', gap: 7,
-          padding: '6px 16px', borderBottom: '1px solid var(--color-border, #252A3E)',
+          padding: '6px 16px', borderBottom: '1px solid var(--sb-border)',
           background: 'rgba(29,158,117,0.06)', fontSize: 11.5, color: '#1D9E75',
         }}>
           <Video size={11} />
@@ -1484,7 +1484,7 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
       )}
 
       {/* ── Date / Time ── */}
-      <div style={{ padding: '6px 0', borderBottom: '1px solid var(--color-border, #252A3E)' }}>
+      <div style={{ padding: '6px 0', borderBottom: '1px solid var(--sb-border)' }}>
         <FieldRow label="All Day:">
           <input
             type="checkbox"
@@ -1516,13 +1516,13 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
       </div>
 
       {/* ── Invitees ── */}
-      <div style={{ padding: '9px 16px', borderBottom: '1px solid var(--color-border, #252A3E)' }}>
+      <div style={{ padding: '9px 16px', borderBottom: '1px solid var(--sb-border)' }}>
         {invitees.length > 0 && (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 7 }}>
             {invitees.map(email => (
               <div key={email} style={{
                 display: 'flex', alignItems: 'center', gap: 5,
-                background: 'var(--color-surface2, #252A3E)', borderRadius: 20,
+                background: 'var(--sb-field)', borderRadius: 20,
                 padding: '3px 8px 3px 10px', fontSize: 11.5, color: 'var(--color-text-dim, #C0C4D6)',
               }}>
                 {email}
@@ -1552,7 +1552,7 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
       </div>
 
       {/* ── Notes ── */}
-      <div style={{ padding: '9px 16px', borderBottom: '1px solid var(--color-border, #252A3E)' }}>
+      <div style={{ padding: '9px 16px', borderBottom: '1px solid var(--sb-border)' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
           <Repeat size={14} color="var(--color-text-muted, #6B7280)" style={{ flexShrink: 0, marginTop: 2 }} />
           <textarea
@@ -1573,7 +1573,7 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
         <button
           onClick={onCancel}
           style={{
-            background: 'transparent', border: '1px solid var(--color-border, #252A3E)', borderRadius: 8,
+            background: 'transparent', border: '1px solid var(--sb-border)', borderRadius: 8,
             color: 'var(--color-text-dim, #8B93A8)', fontSize: 12.5, padding: '6px 18px', cursor: 'pointer',
           }}
         >Cancel</button>
@@ -1581,7 +1581,7 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
           onClick={handleSave}
           disabled={!title.trim()}
           style={{
-            background: title.trim() ? calColor : 'var(--color-surface2, #252A3E)', border: 'none', borderRadius: 8,
+            background: title.trim() ? calColor : 'var(--sb-field)', border: 'none', borderRadius: 8,
             color: title.trim() ? 'var(--color-text, #E8EAF6)' : 'var(--color-border, #4B5268)', fontSize: 12.5, fontWeight: 600,
             padding: '6px 20px', cursor: title.trim() ? 'pointer' : 'default',
             transition: 'background 0.15s',
@@ -2349,7 +2349,7 @@ export function CalendarIntelligence() {
                     style={{
                       display: 'flex', alignItems: 'center', gap: 0,
                       borderRadius: 20, overflow: 'visible',
-                      border: `1px solid ${hidden ? 'var(--color-border, #252A3E)' : color}`,
+                      border: `1px solid ${hidden ? 'var(--sb-border)' : color}`,
                       background: hidden ? 'transparent' : `${color}18`,
                       transition: 'all 0.12s',
                     }}
@@ -2596,7 +2596,7 @@ export function CalendarIntelligence() {
       {/* Loading spinner overlay */}
       {loadingEvents && (
         <div style={{ position: 'absolute', bottom: 18, right: 22, display: 'flex', alignItems: 'center', gap: 7, fontSize: 12, color: 'var(--color-text-muted, #6B7280)', pointerEvents: 'none' }}>
-          <div style={{ width: 14, height: 14, border: '2px solid var(--color-border, #252A3E)', borderTopColor: 'var(--color-accent)', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+          <div style={{ width: 14, height: 14, border: '2px solid var(--sb-border)', borderTopColor: 'var(--color-accent)', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
           Loading…
         </div>
       )}

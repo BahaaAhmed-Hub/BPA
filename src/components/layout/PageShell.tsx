@@ -10,7 +10,7 @@ export function PageShell({ children }: PageShellProps) {
       style={{
         flex: 1,
         overflow: 'auto',
-        background: 'var(--color-bg, #0D0F1A)',
+        background: 'var(--sb-page)',
         height: '100vh',
       }}
     >

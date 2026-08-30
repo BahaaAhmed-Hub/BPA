@@ -82,7 +82,7 @@ function CompanyBadge({ name, color, count }: { name: string; color: string; cou
     <div style={{
       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       padding: '10px 14px',
-      background: 'var(--color-surface2, #0D0F1A)',
+      background: 'var(--sb-field)',
       borderRadius: 8, border: '1px solid var(--sb-border)',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -106,7 +106,7 @@ function QuickAction({ label, onClick }: { label: string; onClick: () => void })
       style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         width: '100%', padding: '12px 16px',
-        background: 'var(--color-surface2, #0D0F1A)',
+        background: 'var(--sb-field)',
         border: '1px solid var(--sb-border)',
         borderRadius: 9, cursor: 'pointer', gap: 10,
         color: 'var(--sb-ink-1)', fontSize: 13, fontWeight: 500,
@@ -330,7 +330,7 @@ export function ExecutiveDashboard() {
                   return (
                     <div key={key} onClick={() => setModule('tasks')}
                       style={{
-                        background: 'var(--color-surface2, #0D0F1A)',
+                        background: 'var(--sb-field)',
                         border: `1px solid ${color}30`,
                         borderRadius: 8, padding: '12px 14px',
                         display: 'flex', flexDirection: 'column', gap: 4,

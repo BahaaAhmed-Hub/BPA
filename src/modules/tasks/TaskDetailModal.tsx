@@ -21,7 +21,7 @@ const STATUS_COLORS: Record<TaskStatus, string> = {
 }
 
 const field: React.CSSProperties = {
-  background: 'var(--sb-page)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 6,
+  background: 'var(--sb-page)', border: '1px solid var(--sb-border)', borderRadius: 6,
   padding: '6px 9px', fontSize: 12, color: 'var(--sb-ink-1)', outline: 'none', width: '100%',
   fontFamily: 'inherit', boxSizing: 'border-box',
 }
@@ -100,7 +100,7 @@ export function TaskDetailModal({ task, onClose }: Props) {
         onClick={e => e.stopPropagation()}
         style={{
           width: '100%', maxWidth: 580, maxHeight: '85vh',
-          background: 'var(--sb-card)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 14,
+          background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 14,
           display: 'flex', flexDirection: 'column', overflow: 'hidden',
           boxShadow: '0 24px 80px rgba(0,0,0,0.7)',
         }}
@@ -108,7 +108,7 @@ export function TaskDetailModal({ task, onClose }: Props) {
         {/* Header */}
         <div style={{
           padding: '16px 20px 14px',
-          borderBottom: '1px solid var(--color-border, #252A3E)',
+          borderBottom: '1px solid var(--sb-border)',
           display: 'flex', alignItems: 'flex-start', gap: 12,
         }}>
           <div style={{
@@ -201,7 +201,7 @@ export function TaskDetailModal({ task, onClose }: Props) {
                     flex: 1, padding: '5px 4px', borderRadius: 5, fontSize: 10.5, fontWeight: 500,
                     cursor: 'pointer', textTransform: 'capitalize',
                     background: taskStatus === s ? STATUS_COLORS[s] + '22' : 'transparent',
-                    border: `1px solid ${taskStatus === s ? STATUS_COLORS[s] + '80' : 'var(--color-border, #252A3E)'}`,
+                    border: `1px solid ${taskStatus === s ? STATUS_COLORS[s] + '80' : 'var(--sb-border)'}`,
                     color: taskStatus === s ? STATUS_COLORS[s] : 'var(--sb-ink-3)',
                   }}>{s}</button>
                 ))}

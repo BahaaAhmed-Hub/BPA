@@ -202,7 +202,7 @@ function Skel({ w = '100%', h = 14, radius = 8 }: { w?: string | number; h?: num
         width: w,
         height: h,
         borderRadius: radius,
-        background: 'linear-gradient(90deg, var(--sb-border) 25%, var(--color-surface2, #4A3E28) 50%, var(--sb-border) 75%)',
+        background: 'linear-gradient(90deg, var(--sb-border) 25%, var(--sb-accent-border) 50%, var(--sb-border) 75%)',
         backgroundSize: '200% 100%',
         animation: 'shimmer 1.6s infinite',
         flexShrink: 0,
@@ -823,7 +823,7 @@ export function MorningBrief() {
           <div style={{
             marginTop: 24,
             height: 1,
-            background: 'linear-gradient(90deg, #1E40AF40 0%, #252A3E 60%, transparent 100%)',
+            background: 'linear-gradient(90deg, #1E40AF40 0%, var(--sb-border) 60%, transparent 100%)',
           }} />
         </div>
 
@@ -933,7 +933,7 @@ export function MorningBrief() {
                     return (
                       <div key={i} style={{
                         display: 'flex', alignItems: 'center', gap: 14,
-                        background: 'var(--color-bg, #0D0F1A)',
+                        background: 'var(--sb-page)',
                         border: `1px solid ${i === 0 ? 'var(--sb-accent-tint)' : 'var(--sb-border)'}`,
                         borderRadius: 12, padding: '13px 16px',
                         position: 'relative', overflow: 'hidden',
@@ -943,7 +943,7 @@ export function MorningBrief() {
                           width: 28, height: 28, borderRadius: '50%',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           fontSize: 12, fontWeight: 700, flexShrink: 0,
-                          background: i === 0 ? '#1E40AF20' : 'var(--color-surface2, #252A3E)',
+                          background: i === 0 ? '#1E40AF20' : 'var(--sb-field)',
                           color: i === 0 ? 'var(--color-accent)' : 'var(--sb-ink-3)',
                         }}>
                           {i + 1}
@@ -1021,7 +1021,7 @@ export function MorningBrief() {
                           display: 'flex', gap: 10, alignItems: 'stretch',
                           padding: '10px 12px',
                           borderRadius: 10,
-                          background: 'var(--color-bg, #0D0F1A)',
+                          background: 'var(--sb-page)',
                           border: '1px solid var(--sb-border)',
                           opacity: isPast ? 0.5 : 1,
                           transition: 'background 0.15s',
@@ -1104,7 +1104,7 @@ export function MorningBrief() {
                     style={{
                       display: 'flex', alignItems: 'center', gap: 10,
                       padding: '10px 14px', borderRadius: 9, width: '100%',
-                      background: habit.checked ? '#1D9E7512' : 'var(--color-bg, #0D0F1A)',
+                      background: habit.checked ? '#1D9E7512' : 'var(--sb-page)',
                       border: `1px solid ${habit.checked ? '#1D9E7540' : 'var(--sb-border)'}`,
                       color: habit.checked ? '#1D9E75' : 'var(--sb-ink-3)',
                       fontSize: 13, cursor: 'pointer', textAlign: 'left',

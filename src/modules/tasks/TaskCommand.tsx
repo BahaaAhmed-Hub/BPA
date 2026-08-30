@@ -240,7 +240,7 @@ export function TaskCommand() {
             </button>
           ))}
         </div>
-        <div style={{ width: 1, height: 20, background: 'var(--color-border, #252A3E)', flexShrink: 0 }} />
+        <div style={{ width: 1, height: 20, background: 'var(--sb-border)', flexShrink: 0 }} />
 
         {/* Day Planner button */}
         <button onClick={() => setShowPlanner(true)} title="Smart Day Planner" style={{
@@ -248,13 +248,13 @@ export function TaskCommand() {
           padding: '4px 9px', borderRadius: 7, cursor: 'pointer', fontSize: 12, fontWeight: 600,
           background: 'transparent',
           color: 'var(--sb-ink-3)',
-          border: '1px solid var(--color-border, #252A3E)',
+          border: '1px solid var(--sb-border)',
           transition: 'all 0.12s',
           flexShrink: 0,
         }}>
           <CalendarDays size={14} /> Day Planner
         </button>
-        <div style={{ width: 1, height: 20, background: 'var(--color-border, #252A3E)', flexShrink: 0 }} />
+        <div style={{ width: 1, height: 20, background: 'var(--sb-border)', flexShrink: 0 }} />
 
         {/* Stats */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexShrink: 0 }}>
@@ -264,7 +264,7 @@ export function TaskCommand() {
               <span style={{ fontWeight: 600 }}>{active.length}</span> active
             </span>
           </div>
-          <div style={{ width: 1, height: 14, background: 'var(--color-border,#252A3E)' }} />
+          <div style={{ width: 1, height: 14, background: 'var(--color-border,var(--sb-border))' }} />
           <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
             <Zap size={13} color="#E05252" strokeWidth={2} />
             <span style={{ fontSize: 12.5, color: 'var(--sb-ink-1)' }}>
@@ -273,7 +273,7 @@ export function TaskCommand() {
           </div>
           {inbox.length > 0 && (
             <>
-              <div style={{ width: 1, height: 14, background: 'var(--color-border,#252A3E)' }} />
+              <div style={{ width: 1, height: 14, background: 'var(--color-border,var(--sb-border))' }} />
               <span style={{ fontSize: 12.5, color: 'var(--sb-ink-3)' }}>
                 <span style={{ fontWeight: 600, color: 'var(--sb-ink-1)' }}>{inbox.length}</span> unassigned
               </span>
@@ -281,7 +281,7 @@ export function TaskCommand() {
           )}
           {isFiltering && (
             <>
-              <div style={{ width: 1, height: 14, background: 'var(--color-border,#252A3E)' }} />
+              <div style={{ width: 1, height: 14, background: 'var(--color-border,var(--sb-border))' }} />
               <span style={{ fontSize: 12.5, color: 'var(--color-accent,#7F77DD)', fontWeight: 600 }}>
                 {matchCount} match{matchCount !== 1 ? 'es' : ''}
               </span>
@@ -299,7 +299,7 @@ export function TaskCommand() {
             placeholder='Search tasks… (name, type, owner)  •  Press / to focus'
             style={{
               width: '100%', background: 'var(--sb-page)',
-              border: `1px solid ${searchQuery ? 'var(--color-accent,#7F77DD)' : 'var(--color-border,#252A3E)'}`,
+              border: `1px solid ${searchQuery ? 'var(--color-accent,#7F77DD)' : 'var(--color-border,var(--sb-border))'}`,
               borderRadius: 8, padding: '6px 32px 6px 30px',
               color: 'var(--sb-ink-1)', fontSize: 12.5, outline: 'none',
               transition: 'border-color 0.15s',
@@ -321,7 +321,7 @@ export function TaskCommand() {
               display: 'flex', alignItems: 'center', gap: 5,
               padding: '5px 10px', height: 28, borderRadius: 7, cursor: 'pointer',
               background: activeFilterCount > 0 ? 'rgba(25,23,18,0.06)' : filterOpen ? 'rgba(127,119,221,0.08)' : 'transparent',
-              border: `1px solid ${activeFilterCount > 0 || filterOpen ? 'color-mix(in srgb, var(--color-accent) 40%, transparent)' : 'var(--color-border,#252A3E)'}`,
+              border: `1px solid ${activeFilterCount > 0 || filterOpen ? 'color-mix(in srgb, var(--color-accent) 40%, transparent)' : 'var(--color-border,var(--sb-border))'}`,
               color: activeFilterCount > 0 ? 'var(--color-accent,#7F77DD)' : 'var(--sb-ink-3)',
               transition: 'all 0.12s', fontSize: 12, fontWeight: 500,
             }}
@@ -339,7 +339,7 @@ export function TaskCommand() {
           {filterOpen && (
             <div style={{
               position: 'absolute', top: 34, right: 0, zIndex: 100,
-              background: 'var(--sb-card)', border: '1px solid var(--color-border,#252A3E)',
+              background: 'var(--sb-card)', border: '1px solid var(--color-border,var(--sb-border))',
               borderRadius: 12, padding: '14px 16px', width: 260,
               boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
             }}>
@@ -352,7 +352,7 @@ export function TaskCommand() {
                       <button key={co.id} onClick={() => setFilters(f => ({ ...f, company: f.company === co.id ? '' : co.id }))} style={{
                         display: 'flex', alignItems: 'center', gap: 5, padding: '4px 9px', borderRadius: 20, cursor: 'pointer', fontSize: 12,
                         background: filters.company === co.id ? `${co.color}22` : 'transparent',
-                        border: `1px solid ${filters.company === co.id ? co.color : 'var(--color-border,#252A3E)'}`,
+                        border: `1px solid ${filters.company === co.id ? co.color : 'var(--color-border,var(--sb-border))'}`,
                         color: filters.company === co.id ? co.color : 'var(--sb-ink-3)',
                         fontWeight: filters.company === co.id ? 600 : 400, transition: 'all 0.12s',
                       }}>
@@ -372,7 +372,7 @@ export function TaskCommand() {
                     <button key={type} onClick={() => setFilters(f => ({ ...f, type: f.type === type ? '' : type }))} style={{
                       display: 'flex', alignItems: 'center', gap: 4, padding: '4px 9px', borderRadius: 20, cursor: 'pointer', fontSize: 12,
                       background: filters.type === type ? `${meta.color}22` : 'transparent',
-                      border: `1px solid ${filters.type === type ? meta.color : 'var(--color-border,#252A3E)'}`,
+                      border: `1px solid ${filters.type === type ? meta.color : 'var(--color-border,var(--sb-border))'}`,
                       color: filters.type === type ? meta.color : 'var(--sb-ink-3)',
                       fontWeight: filters.type === type ? 600 : 400, transition: 'all 0.12s',
                     }}>
@@ -391,7 +391,7 @@ export function TaskCommand() {
                       <button key={u.id} onClick={() => setFilters(f => ({ ...f, owner: f.owner === u.id ? '' : u.id }))} style={{
                         padding: '4px 9px', borderRadius: 20, cursor: 'pointer', fontSize: 12,
                         background: filters.owner === u.id ? 'rgba(25,23,18,0.06)' : 'transparent',
-                        border: `1px solid ${filters.owner === u.id ? 'var(--color-accent,#7F77DD)' : 'var(--color-border,#252A3E)'}`,
+                        border: `1px solid ${filters.owner === u.id ? 'var(--color-accent,#7F77DD)' : 'var(--color-border,var(--sb-border))'}`,
                         color: filters.owner === u.id ? 'var(--color-accent,#7F77DD)' : 'var(--sb-ink-3)',
                         fontWeight: filters.owner === u.id ? 600 : 400, transition: 'all 0.12s',
                       }}>
@@ -421,22 +421,22 @@ export function TaskCommand() {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             width: 28, height: 28, borderRadius: 7, cursor: 'pointer',
             background: configOpen ? 'rgba(25,23,18,0.06)' : 'transparent',
-            border: `1px solid ${configOpen ? 'color-mix(in srgb, var(--color-accent) 40%, transparent)' : 'var(--color-border,#252A3E)'}`,
+            border: `1px solid ${configOpen ? 'color-mix(in srgb, var(--color-accent) 40%, transparent)' : 'var(--color-border,var(--sb-border))'}`,
             color: configOpen ? 'var(--color-accent)' : 'var(--sb-ink-3)',
             transition: 'all 0.12s',
           }}>
             <SlidersHorizontal size={13} />
           </button>
           {configOpen && (
-            <div style={{ position: 'absolute', top: 34, right: 0, zIndex: 100, background: 'var(--sb-card)', border: '1px solid var(--color-border,#252A3E)', borderRadius: 10, padding: '12px 14px', minWidth: 240, boxShadow: '0 8px 24px rgba(0,0,0,0.5)' }}>
+            <div style={{ position: 'absolute', top: 34, right: 0, zIndex: 100, background: 'var(--sb-card)', border: '1px solid var(--color-border,var(--sb-border))', borderRadius: 10, padding: '12px 14px', minWidth: 240, boxShadow: '0 8px 24px rgba(0,0,0,0.5)' }}>
               <p style={{ margin: '0 0 10px', fontSize: 11, fontWeight: 600, color: 'var(--sb-ink-3)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>Task Display</p>
               <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', gap: 10, marginBottom: 14 }}>
                 <span style={{ fontSize: 13, color: 'var(--color-text-dim,#C0C4D6)' }}>Hide completed tasks</span>
-                <div onClick={() => setHideCompleted(!hideCompleted)} style={{ width: 36, height: 20, borderRadius: 10, flexShrink: 0, background: hideCompleted ? 'var(--color-accent)' : 'var(--color-border,#252A3E)', position: 'relative', cursor: 'pointer', transition: 'background 0.15s' }}>
+                <div onClick={() => setHideCompleted(!hideCompleted)} style={{ width: 36, height: 20, borderRadius: 10, flexShrink: 0, background: hideCompleted ? 'var(--color-accent)' : 'var(--color-border,var(--sb-border))', position: 'relative', cursor: 'pointer', transition: 'background 0.15s' }}>
                   <div style={{ position: 'absolute', top: 3, left: hideCompleted ? 19 : 3, width: 14, height: 14, borderRadius: '50%', background: '#fff', transition: 'left 0.15s' }} />
                 </div>
               </label>
-              <div style={{ width: '100%', height: 1, background: 'var(--color-border,#252A3E)', marginBottom: 12 }} />
+              <div style={{ width: '100%', height: 1, background: 'var(--color-border,var(--sb-border))', marginBottom: 12 }} />
               <p style={{ margin: '0 0 8px', fontSize: 11, fontWeight: 600, color: 'var(--sb-ink-3)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>Group tasks by</p>
               {(['none', 'type', 'company'] as GroupBy[]).map(opt => (
                 <label key={opt} onClick={() => setGroupBy(opt)} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '5px 6px', borderRadius: 6, marginBottom: 2, background: groupBy === opt ? 'rgba(127,119,221,0.1)' : 'transparent' }}>
@@ -460,7 +460,7 @@ export function TaskCommand() {
 
       {/* ── Active filter chips ─────────────────────────────────────────────── */}
       {(companyChipLabel || typeChipLabel || ownerChipLabel) && (
-        <div style={{ padding: '7px 28px', borderBottom: '1px solid var(--color-border,#252A3E)', display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+        <div style={{ padding: '7px 28px', borderBottom: '1px solid var(--color-border,var(--sb-border))', display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
           <span style={{ fontSize: 11, color: 'var(--sb-ink-3)', marginRight: 2 }}>Filtered by:</span>
           {companyChipLabel && (
             <span style={chipStyle}>

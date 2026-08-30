@@ -85,7 +85,7 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
       style={{
         ...style,
         background: hovered ? 'var(--color-surface2, #1a1f35)' : 'var(--sb-card)',
-        border: `1px solid ${isDragging ? 'var(--color-accent)' : task.urgent ? '#E0711A40' : 'var(--color-border, #252A3E)'}`,
+        border: `1px solid ${isDragging ? 'var(--color-accent)' : task.urgent ? '#E0711A40' : 'var(--sb-border)'}`,
         borderRadius: 8,
         padding: '9px 11px',
         cursor: isDragging ? 'grabbing' : 'pointer',
@@ -124,7 +124,7 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
           }}
           style={{
             width: 15, height: 15, borderRadius: 4,
-            border: `1.5px solid ${task.completed ? '#1D9E75' : 'var(--color-border, #252A3E)'}`,
+            border: `1.5px solid ${task.completed ? '#1D9E75' : 'var(--sb-border)'}`,
             background: task.completed ? '#1D9E75' : 'transparent',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             cursor: 'pointer', flexShrink: 0, marginTop: 1, transition: 'all 0.15s ease',

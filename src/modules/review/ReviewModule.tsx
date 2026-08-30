@@ -184,7 +184,7 @@ function SectionHead({ label, count, color }: { label: string; count: number; co
 function EventRow({ event, cancelled }: { event: GCalEvent; cancelled?: boolean }) {
   const time = fmtEventTime(event)
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 8, background: 'var(--color-bg, #0D0F1A)', border: '1px solid var(--sb-card)', marginBottom: 5 }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 8, background: 'var(--sb-page)', border: '1px solid var(--sb-card)', marginBottom: 5 }}>
       {cancelled
         ? <XCircle size={13} color="#6B7280" style={{ flexShrink: 0 }} />
         : <CheckCircle2 size={13} color="#1D9E75" style={{ flexShrink: 0 }} />
@@ -218,7 +218,7 @@ function resolveCompanyLabel(task: Task): string | undefined {
 
 function TaskRow({ title, company, cancelled }: { title: string; company?: string; cancelled?: boolean }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 8, background: 'var(--color-bg, #0D0F1A)', border: '1px solid var(--sb-card)', marginBottom: 5 }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 8, background: 'var(--sb-page)', border: '1px solid var(--sb-card)', marginBottom: 5 }}>
       {cancelled
         ? <XCircle size={13} color="#6B7280" style={{ flexShrink: 0 }} />
         : <CheckSquare size={13} color="#1D9E75" style={{ flexShrink: 0 }} />
@@ -309,7 +309,7 @@ function buildPieSlices(
     { label: 'Sleep', minutes: SLEEP, color: '#13152B' },
     ...[...byCalId.values()].filter(v => v.mins > 0).map(v => ({ label: v.label, minutes: v.mins, color: v.color })),
     ...(taskTotal > 0 ? [{ label: 'Tasks', minutes: taskTotal, color: '#1D9E75' }] : []),
-    { label: 'Unaccounted', minutes: free, color: '#252A3E' },
+    { label: 'Unaccounted', minutes: free, color: 'var(--sb-border)' },
   ]
 }
 
@@ -330,12 +330,12 @@ function PieChart({ slices, title }: { slices: PieSlice[]; title: string }) {
   const fmt = (m: number) => m >= 60 ? `${(m / 60).toFixed(1)}h` : `${Math.round(m)}m`
 
   return (
-    <div style={{ background: 'var(--color-bg, #0D0F1A)', border: '1px solid var(--sb-card)', borderRadius: 12, padding: '14px 18px', marginBottom: 20 }}>
+    <div style={{ background: 'var(--sb-page)', border: '1px solid var(--sb-card)', borderRadius: 12, padding: '14px 18px', marginBottom: 20 }}>
       <div style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--color-text-muted, #8B93A8)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 14 }}>{title}</div>
       <div style={{ display: 'flex', gap: 20, alignItems: 'center', flexWrap: 'wrap' }}>
         <svg width={136} height={136} style={{ flexShrink: 0 }}>
           {paths.map((p, i) => (
-            <path key={i} d={p.d} fill={p.color} stroke="var(--color-bg, #0D0F1A)" strokeWidth={1.5} />
+            <path key={i} d={p.d} fill={p.color} stroke="var(--sb-page)" strokeWidth={1.5} />
           ))}
         </svg>
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 7, minWidth: 130 }}>
@@ -527,7 +527,7 @@ export function ReviewModule() {
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               {/* Daily / Weekly toggle */}
-              <div style={{ display: 'flex', background: 'var(--color-bg, #0D0F1A)', border: '1px solid var(--sb-border)', borderRadius: 7, overflow: 'hidden' }}>
+              <div style={{ display: 'flex', background: 'var(--sb-page)', border: '1px solid var(--sb-border)', borderRadius: 7, overflow: 'hidden' }}>
                 {(['daily', 'weekly'] as const).map(mode => (
                   <button
                     key={mode}
@@ -549,7 +549,7 @@ export function ReviewModule() {
           </div>
 
           {/* Analytics bar */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 24, padding: '11px 20px', borderBottom: '1px solid var(--sb-card)', background: 'var(--color-bg, #0D0F1A)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 24, padding: '11px 20px', borderBottom: '1px solid var(--sb-card)', background: 'var(--sb-page)' }}>
             {viewMode === 'daily' ? (
               <>
                 <PillStat done={doneEvents.length} total={dayEvents.length} label="events done" color="var(--color-accent)" />

@@ -164,7 +164,7 @@ function Skel({ w = '100%', h = 12 }: { w?: string | number; h?: number }) {
   return (
     <div style={{
       width: w, height: h, borderRadius: 6,
-      background: 'linear-gradient(90deg, var(--color-border, #252A3E) 25%, var(--color-surface2, #4A3E28) 50%, var(--color-border, #252A3E) 75%)',
+      background: 'linear-gradient(90deg, var(--sb-border) 25%, var(--sb-accent-border) 50%, var(--sb-border) 75%)',
       backgroundSize: '200% 100%',
       animation: 'shimmer 1.6s infinite',
     }} />
@@ -367,7 +367,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
         style={{
           width: '100%', padding: '14px 18px',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          background: 'var(--color-bg, #0D0F1A)', border: '1px dashed #7F77DD40',
+          background: 'var(--sb-page)', border: '1px dashed #7F77DD40',
           borderRadius: 12, cursor: 'pointer', transition: 'all 0.15s',
         }}
       >
@@ -478,8 +478,8 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                             style={{
                               display: 'flex', alignItems: 'center', gap: 9,
                               padding: '8px 10px', borderRadius: 7,
-                              background: isSelected ? `${group.color}12` : 'var(--color-bg, #0D0F1A)',
-                              border: `1px solid ${isSelected ? `${group.color}40` : 'var(--color-border, #252A3E)'}`,
+                              background: isSelected ? `${group.color}12` : 'var(--sb-page)',
+                              border: `1px solid ${isSelected ? `${group.color}40` : 'var(--sb-border)'}`,
                               cursor: 'pointer', textAlign: 'left',
                               transition: 'all 0.12s',
                             }}
@@ -547,10 +547,10 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               {[70, 55, 80].map((w, i) => (
                 <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                  <div style={{ width: 3, height: 28, borderRadius: 2, background: 'var(--color-border, #252A3E)', flexShrink: 0 }} />
+                  <div style={{ width: 3, height: 28, borderRadius: 2, background: 'var(--sb-border)', flexShrink: 0 }} />
                   <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    <div style={{ height: 9, width: 38, borderRadius: 4, background: 'var(--color-border, #252A3E)' }} />
-                    <div style={{ height: 11, width: `${w}%`, borderRadius: 4, background: 'var(--color-surface, #1A1D2E)' }} />
+                    <div style={{ height: 9, width: 38, borderRadius: 4, background: 'var(--sb-border)' }} />
+                    <div style={{ height: 11, width: `${w}%`, borderRadius: 4, background: 'var(--sb-card)' }} />
                   </div>
                 </div>
               ))}
@@ -602,8 +602,8 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                 style={{
                   flex: 1, padding: '9px 0', borderRadius: 8, cursor: 'pointer',
                   fontSize: 12, fontWeight: deepWork === opt ? 600 : 400,
-                  background: deepWork === opt ? 'var(--color-accent-fill)' : 'var(--color-bg, #0D0F1A)',
-                  border: `1px solid ${deepWork === opt ? 'color-mix(in srgb, var(--color-accent) 40%, transparent)' : 'var(--color-border, #252A3E)'}`,
+                  background: deepWork === opt ? 'var(--color-accent-fill)' : 'var(--sb-page)',
+                  border: `1px solid ${deepWork === opt ? 'color-mix(in srgb, var(--color-accent) 40%, transparent)' : 'var(--sb-border)'}`,
                   color: deepWork === opt ? 'var(--color-accent)' : 'var(--color-text-muted, #6B7280)',
                   transition: 'all 0.15s',
                   textTransform: 'capitalize',
@@ -621,7 +621,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
             onClick={() => { setPhase('idle'); setError(null); setSelectedTaskIds(new Set()) }}
             style={{
               padding: '9px 16px', borderRadius: 8, cursor: 'pointer',
-              background: 'transparent', border: '1px solid var(--color-border, #252A3E)',
+              background: 'transparent', border: '1px solid var(--sb-border)',
               color: 'var(--color-text-muted, #6B7280)', fontSize: 12,
             }}
           >
@@ -695,8 +695,8 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                 style={{
                   display: 'flex', gap: 10, alignItems: 'stretch',
                   padding: '10px 12px', borderRadius: 10,
-                  background: isPast ? 'var(--color-surface2, #252A3E)' : 'var(--color-bg, #0D0F1A)',
-                  border: `1px solid ${slot.decision === 'confirmed' ? `${color}30` : 'var(--color-border, #252A3E)'}`,
+                  background: isPast ? 'var(--sb-field)' : 'var(--sb-page)',
+                  border: `1px solid ${slot.decision === 'confirmed' ? `${color}30` : 'var(--sb-border)'}`,
                   opacity: isPast ? 0.45 : 1,
                   transition: 'all 0.15s',
                 }}
@@ -871,7 +871,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
             <div key={slot.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <div style={{
                 width: 16, height: 16, borderRadius: '50%', flexShrink: 0,
-                background: st === 'done' ? '#1D9E75' : st === 'error' ? '#EF4444' : 'var(--color-surface2, #252A3E)',
+                background: st === 'done' ? '#1D9E75' : st === 'error' ? '#EF4444' : 'var(--sb-field)',
                 border: `1px solid ${st === 'done' ? '#1D9E75' : st === 'error' ? '#EF4444' : 'var(--color-accent)'}`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
@@ -935,7 +935,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
         onClick={() => { setPhase('idle'); setSlots([]); setResults([]); setApplying({}) }}
         style={{
           padding: '9px 0', borderRadius: 8, cursor: 'pointer',
-          background: 'transparent', border: '1px solid var(--color-border, #252A3E)',
+          background: 'transparent', border: '1px solid var(--sb-border)',
           color: 'var(--color-text-muted, #6B7280)', fontSize: 12,
         }}
       >

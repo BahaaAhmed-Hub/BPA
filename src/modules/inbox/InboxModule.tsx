@@ -403,8 +403,8 @@ export function InboxModule() {
         <div style={{ background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 12, overflow: 'hidden' }}>
           {[0,1,2,3].map(i => (
             <div key={i} style={{ padding: '16px 18px', borderBottom: i < 3 ? '1px solid var(--sb-border)' : 'none' }}>
-              <div style={{ height: 12, borderRadius: 6, background: 'linear-gradient(90deg, var(--sb-border) 25%, var(--color-surface2, #4A3E28) 50%, var(--sb-border) 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.6s infinite', marginBottom: 8, width: '60%' }} />
-              <div style={{ height: 10, borderRadius: 6, background: 'linear-gradient(90deg, var(--sb-border) 25%, var(--color-surface2, #4A3E28) 50%, var(--sb-border) 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.6s infinite', width: '80%' }} />
+              <div style={{ height: 12, borderRadius: 6, background: 'linear-gradient(90deg, var(--sb-border) 25%, var(--sb-accent-border) 50%, var(--sb-border) 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.6s infinite', marginBottom: 8, width: '60%' }} />
+              <div style={{ height: 10, borderRadius: 6, background: 'linear-gradient(90deg, var(--sb-border) 25%, var(--sb-accent-border) 50%, var(--sb-border) 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.6s infinite', width: '80%' }} />
             </div>
           ))}
         </div>
@@ -617,7 +617,7 @@ export function InboxModule() {
             <div style={{ marginBottom: 14 }}>
               <button
                 onClick={() => setExpandedThread(v => v === selectedEmail.id ? null : selectedEmail.id)}
-                style={{ fontSize: 11.5, color: 'var(--sb-ink-3)', background: 'var(--color-surface2, #0D0F1A)', border: '1px solid var(--sb-border)', borderRadius: 6, padding: '4px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}
+                style={{ fontSize: 11.5, color: 'var(--sb-ink-3)', background: 'var(--sb-field)', border: '1px solid var(--sb-border)', borderRadius: 6, padding: '4px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}
               >
                 {expandedThread === selectedEmail.id ? '▲' : '▼'} {selectedEmail.threadMessages.length} earlier message{selectedEmail.threadMessages.length > 1 ? 's' : ''} in thread
               </button>
@@ -683,14 +683,14 @@ export function InboxModule() {
                   {CLASS_META[selectedTriage.result.classification].label}
                 </div>
               </div>
-              <div style={{ flex: 1, padding: '12px 14px', background: 'var(--color-bg, #0D0F1A)', border: `1px solid ${URGENCY_META[selectedTriage.result.urgency].color}30`, borderRadius: 8 }}>
+              <div style={{ flex: 1, padding: '12px 14px', background: 'var(--sb-page)', border: `1px solid ${URGENCY_META[selectedTriage.result.urgency].color}30`, borderRadius: 8 }}>
                 <div style={{ fontSize: 10, color: '#FFFFFF', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Urgency</div>
                 <div style={{ fontSize: 14, fontWeight: 600, color: URGENCY_META[selectedTriage.result.urgency].color }}>
                   {URGENCY_META[selectedTriage.result.urgency].label}
                 </div>
               </div>
               {selectedTriage.result.followUpDate && (
-                <div style={{ flex: 1, padding: '12px 14px', background: 'var(--color-bg, #0D0F1A)', border: '1px solid var(--sb-border)', borderRadius: 8 }}>
+                <div style={{ flex: 1, padding: '12px 14px', background: 'var(--sb-page)', border: '1px solid var(--sb-border)', borderRadius: 8 }}>
                   <div style={{ fontSize: 10, color: '#FFFFFF', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Follow Up</div>
                   <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--sb-ink-1)' }}>{selectedTriage.result.followUpDate}</div>
                 </div>
@@ -701,7 +701,7 @@ export function InboxModule() {
               const draft = replyText[selectedEmail.id] ?? selectedTriage.result.suggestedReply
               const isSent = sentIds.has(selectedEmail.id)
               return (
-                <div style={{ background: 'var(--color-bg, #0D0F1A)', border: '1px solid var(--sb-border)', borderRadius: 8, padding: '14px 16px' }}>
+                <div style={{ background: 'var(--sb-page)', border: '1px solid var(--sb-border)', borderRadius: 8, padding: '14px 16px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
                     <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--color-text-dim, #94A3B8)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                       Reply to {selectedEmail.fromName}
@@ -826,11 +826,11 @@ export function InboxModule() {
             <p style={{ margin: '0 0 12px', fontSize: 12, fontWeight: 700, color: 'var(--color-accent)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>New Message</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <input value={composeTo} onChange={e => setComposeTo(e.target.value)} placeholder="To"
-                style={{ padding: '8px 12px', borderRadius: 7, background: 'var(--color-bg, #0D0F1A)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-1)', fontSize: 13, outline: 'none' }} />
+                style={{ padding: '8px 12px', borderRadius: 7, background: 'var(--sb-page)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-1)', fontSize: 13, outline: 'none' }} />
               <input value={composeSubject} onChange={e => setComposeSubject(e.target.value)} placeholder="Subject"
-                style={{ padding: '8px 12px', borderRadius: 7, background: 'var(--color-bg, #0D0F1A)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-1)', fontSize: 13, outline: 'none' }} />
+                style={{ padding: '8px 12px', borderRadius: 7, background: 'var(--sb-page)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-1)', fontSize: 13, outline: 'none' }} />
               <textarea value={composeBody} onChange={e => setComposeBody(e.target.value)} placeholder="Write your message…" rows={6}
-                style={{ padding: '10px 12px', borderRadius: 7, resize: 'vertical', background: 'var(--color-bg, #0D0F1A)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-1)', fontSize: 13, lineHeight: 1.6, fontFamily: 'inherit', outline: 'none' }} />
+                style={{ padding: '10px 12px', borderRadius: 7, resize: 'vertical', background: 'var(--sb-page)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-1)', fontSize: 13, lineHeight: 1.6, fontFamily: 'inherit', outline: 'none' }} />
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
                 <button onClick={() => setComposing(false)} style={{ padding: '7px 14px', borderRadius: 7, background: 'transparent', border: '1px solid var(--sb-border)', color: 'var(--color-text-dim, #94A3B8)', fontSize: 12, cursor: 'pointer' }}>Cancel</button>
                 <button
@@ -861,7 +861,7 @@ export function InboxModule() {
               style={{
                 width: '100%', boxSizing: 'border-box',
                 padding: '10px 12px', borderRadius: 8, resize: 'vertical',
-                background: 'var(--color-bg, #0D0F1A)', border: '1px solid var(--sb-border)',
+                background: 'var(--sb-page)', border: '1px solid var(--sb-border)',
                 color: 'var(--sb-ink-1)', fontSize: 13, lineHeight: 1.6,
                 fontFamily: 'inherit', outline: 'none',
               }}
