@@ -33,7 +33,6 @@ const MODE_ACCENT: Record<string, string> = {
   astral:  '#7C3AED',
 }
 import { useUIStore } from '@/store/uiStore'
-import { getTheme } from '@/lib/themes'
 import { useBehavioralStore } from '@/store/behavioralStore'
 
 const NAV_ITEMS = [
@@ -53,8 +52,7 @@ const SYSTEM_ITEMS = [
 ]
 
 export function Sidebar() {
-  const { sidebarCollapsed, activeModule, toggleSidebar, setActiveModule, themeId } = useUIStore()
-  const theme = getTheme(themeId)
+  const { sidebarCollapsed, activeModule, toggleSidebar, setActiveModule } = useUIStore()
   const behavioralEnabled = useBehavioralStore(s => s.enabled)
   const behavioralMode    = useBehavioralStore(s => s.mode)
 
@@ -63,8 +61,8 @@ export function Sidebar() {
       style={{
         width: sidebarCollapsed ? 64 : 220,
         minWidth: sidebarCollapsed ? 64 : 220,
-        background: theme.sidebarBg,
-        borderRight: `1px solid ${theme.border}`,
+        background: '#FCFAF4',
+        borderRight: `1px solid ${'#E8E1CE'}`,
         height: '100vh',
         display: 'flex',
         flexDirection: 'column',
@@ -80,7 +78,7 @@ export function Sidebar() {
         style={{
           height: 64, flexShrink: 0,
           padding: sidebarCollapsed ? '0' : '0 20px',
-          borderBottom: `1px solid ${theme.border}`,
+          borderBottom: `1px solid ${'#E8E1CE'}`,
           display: 'flex',
           alignItems: 'center',
           gap: 10,
@@ -90,7 +88,7 @@ export function Sidebar() {
         {(() => {
           const modeKey = behavioralEnabled ? behavioralMode : 'default'
           const LogoIcon = MODE_ICONS[modeKey] ?? GraduationCap
-          const logoBg = (behavioralEnabled && MODE_ACCENT[behavioralMode]) ? MODE_ACCENT[behavioralMode] : theme.accent
+          const logoBg = (behavioralEnabled && MODE_ACCENT[behavioralMode]) ? MODE_ACCENT[behavioralMode] : '#F5D14E'
           return (
             <div style={{
               width: 32, height: 32,
@@ -110,7 +108,7 @@ export function Sidebar() {
               fontFamily: "'Cabinet Grotesk', sans-serif",
               fontWeight: 700,
               fontSize: 16,
-              color: theme.text,
+              color: '#191712',
               letterSpacing: '-0.3px',
               whiteSpace: 'nowrap',
             }}
@@ -137,26 +135,26 @@ export function Sidebar() {
                   gap: 10,
                   padding: sidebarCollapsed ? '10px 0' : '10px 12px',
                   justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
-                  background: active ? theme.accentFill : 'transparent',
+                  background: active ? 'rgba(245,209,78,0.15)' : 'transparent',
                   border: 'none',
                   borderRadius: 8,
                   cursor: 'pointer',
-                  color: active ? theme.text : theme.textDim,
+                  color: active ? '#191712' : '#9B9180',
                   marginBottom: 2,
                   transition: 'all 0.15s ease',
                 }}
                 onMouseEnter={e => {
                   if (!active) {
                     const el = e.currentTarget as HTMLElement
-                    el.style.background = theme.accentFill
-                    el.style.color = theme.text
+                    el.style.background = 'rgba(245,209,78,0.15)'
+                    el.style.color = '#191712'
                   }
                 }}
                 onMouseLeave={e => {
                   if (!active) {
                     const el = e.currentTarget as HTMLElement
                     el.style.background = 'transparent'
-                    el.style.color = theme.textDim
+                    el.style.color = '#9B9180'
                   }
                 }}
               >
@@ -167,7 +165,7 @@ export function Sidebar() {
                   </span>
                 )}
                 {active && !sidebarCollapsed && (
-                  <div style={{ marginLeft: 'auto', width: 4, height: 4, borderRadius: '50%', background: theme.accent }} />
+                  <div style={{ marginLeft: 'auto', width: 4, height: 4, borderRadius: '50%', background: '#F5D14E' }} />
                 )}
               </button>
             )
@@ -180,11 +178,11 @@ export function Sidebar() {
           const active = activeModule === id
           const modeLabel = behavioralMode === 'samurai' ? 'SAMURAI' : behavioralMode === 'pharaoh' ? 'PHARAOH' : 'ASTRAL'
           return (
-            <div style={{ borderTop: `1px solid ${theme.border}`, paddingTop: 10, marginTop: 4 }}>
+            <div style={{ borderTop: `1px solid ${'#E8E1CE'}`, paddingTop: 10, marginTop: 4 }}>
               {!sidebarCollapsed && (
                 <span style={{
                   display: 'block', padding: '4px 12px 6px',
-                  fontSize: 9.5, fontWeight: 700, color: theme.accentBright,
+                  fontSize: 9.5, fontWeight: 700, color: '#D4A827',
                   textTransform: 'uppercase', letterSpacing: '1.2px',
                 }}>
                   {modeLabel} MODE
@@ -197,13 +195,13 @@ export function Sidebar() {
                   width: '100%', display: 'flex', alignItems: 'center', gap: 10,
                   padding: sidebarCollapsed ? '10px 0' : '10px 12px',
                   justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
-                  background: active ? theme.accentFill : 'transparent',
+                  background: active ? 'rgba(245,209,78,0.15)' : 'transparent',
                   border: 'none', borderRadius: 8, cursor: 'pointer',
-                  color: active ? theme.text : theme.textDim,
+                  color: active ? '#191712' : '#9B9180',
                   marginBottom: 2, transition: 'all 0.15s ease',
                 }}
-                onMouseEnter={e => { if (!active) { const el = e.currentTarget as HTMLElement; el.style.background = theme.accentFill; el.style.color = theme.text } }}
-                onMouseLeave={e => { if (!active) { const el = e.currentTarget as HTMLElement; el.style.background = 'transparent'; el.style.color = theme.textDim } }}
+                onMouseEnter={e => { if (!active) { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(245,209,78,0.15)'; el.style.color = '#191712' } }}
+                onMouseLeave={e => { if (!active) { const el = e.currentTarget as HTMLElement; el.style.background = 'transparent'; el.style.color = '#9B9180' } }}
               >
                 <Swords size={18} strokeWidth={active ? 2.5 : 1.8} style={{ flexShrink: 0 }} />
                 {!sidebarCollapsed && (
@@ -212,7 +210,7 @@ export function Sidebar() {
                   </span>
                 )}
                 {active && !sidebarCollapsed && (
-                  <div style={{ marginLeft: 'auto', width: 4, height: 4, borderRadius: '50%', background: theme.accent }} />
+                  <div style={{ marginLeft: 'auto', width: 4, height: 4, borderRadius: '50%', background: '#F5D14E' }} />
                 )}
               </button>
             </div>
@@ -220,11 +218,11 @@ export function Sidebar() {
         })()}
 
         {/* System section */}
-        <div style={{ borderTop: `1px solid ${theme.border}`, paddingTop: 10, marginTop: 4 }}>
+        <div style={{ borderTop: `1px solid ${'#E8E1CE'}`, paddingTop: 10, marginTop: 4 }}>
           {!sidebarCollapsed && (
             <span style={{
               display: 'block', padding: '4px 12px 6px',
-              fontSize: 9.5, fontWeight: 700, color: theme.accentBright,
+              fontSize: 9.5, fontWeight: 700, color: '#D4A827',
               textTransform: 'uppercase', letterSpacing: '1.2px',
             }}>
               System
@@ -242,23 +240,23 @@ export function Sidebar() {
                   display: 'flex', alignItems: 'center', gap: 10,
                   padding: sidebarCollapsed ? '10px 0' : '10px 12px',
                   justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
-                  background: active ? theme.accentFill : 'transparent',
+                  background: active ? 'rgba(245,209,78,0.15)' : 'transparent',
                   border: 'none', borderRadius: 8, cursor: 'pointer',
-                  color: active ? theme.text : theme.textDim,
+                  color: active ? '#191712' : '#9B9180',
                   marginBottom: 2, transition: 'all 0.15s ease',
                 }}
                 onMouseEnter={e => {
                   if (!active) {
                     const el = e.currentTarget as HTMLElement
-                    el.style.background = theme.accentFill
-                    el.style.color = theme.text
+                    el.style.background = 'rgba(245,209,78,0.15)'
+                    el.style.color = '#191712'
                   }
                 }}
                 onMouseLeave={e => {
                   if (!active) {
                     const el = e.currentTarget as HTMLElement
                     el.style.background = 'transparent'
-                    el.style.color = theme.textDim
+                    el.style.color = '#9B9180'
                   }
                 }}
               >
@@ -269,7 +267,7 @@ export function Sidebar() {
                   </span>
                 )}
                 {active && !sidebarCollapsed && (
-                  <div style={{ marginLeft: 'auto', width: 4, height: 4, borderRadius: '50%', background: theme.accent }} />
+                  <div style={{ marginLeft: 'auto', width: 4, height: 4, borderRadius: '50%', background: '#F5D14E' }} />
                 )}
               </button>
             )
@@ -278,7 +276,7 @@ export function Sidebar() {
       </nav>
 
       {/* Collapse toggle */}
-      <div style={{ padding: '12px 8px', borderTop: `1px solid ${theme.border}` }}>
+      <div style={{ padding: '12px 8px', borderTop: `1px solid ${'#E8E1CE'}` }}>
         <button
           onClick={toggleSidebar}
           style={{
@@ -290,7 +288,7 @@ export function Sidebar() {
             background: 'transparent',
             border: 'none',
             cursor: 'pointer',
-            color: theme.textDim,
+            color: '#9B9180',
             borderRadius: 6,
           }}
           title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}

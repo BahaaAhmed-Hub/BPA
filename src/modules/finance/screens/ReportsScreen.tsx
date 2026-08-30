@@ -1,6 +1,4 @@
 import { useState } from 'react'
-import { useUIStore } from '@/store/uiStore'
-import { getTheme } from '@/lib/themes'
 import { useFinanceStore } from '../financeStore'
 
 // ─── Donut chart helpers ───────────────────────────────────────────────────────
@@ -37,19 +35,17 @@ const PALETTE = ['#4CC76B','#2BA37A','#E8C04A','#C0392B','#E8553A','#46C2D6','#4
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function ReportsScreen(_props?: any) {
-  const themeId = useUIStore(s => s.themeId)
-  const theme = getTheme(themeId)
   const C = {
-    bg:        theme.bg,
-    surface:   theme.surface,
-    amberBg:   theme.accentFill,
-    border:    theme.border,
-    borderSt:  theme.border,
-    divFaint:  theme.border,
-    amber:     theme.accent,
-    textPri:   theme.text,
-    textMuted: theme.textDim,
-    textDim:   theme.textMuted,
+    bg:        '#F7F4EA',
+    surface:   '#FFFFFF',
+    amberBg:   'rgba(245,209,78,0.12)',
+    border:    '#E8E1CE',
+    borderSt:  '#E8E1CE',
+    divFaint:  '#E8E1CE',
+    amber:     '#F5D14E',
+    textPri:   '#191712',
+    textMuted: '#6C6553',
+    textDim:   '#9B9180',
     red:       '#DA4A3E',
     green:     '#2FA869',
   }
@@ -95,7 +91,7 @@ export function ReportsScreen(_props?: any) {
       {/* Header */}
       <div style={{
         height: 64, flexShrink: 0,
-        borderBottom: '1px solid #211C14',
+        borderBottom: '1px solid #E8E1CE',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '0 30px',
       }}>

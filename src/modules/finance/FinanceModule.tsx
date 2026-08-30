@@ -105,24 +105,24 @@ interface ColorMap {
 
 export function FinanceModule() {
   const C: ColorMap = {
-    bg:        'var(--sb-page)',
-    rail:      'var(--sb-header)',
-    panel:     'var(--sb-card)',
-    surface:   'var(--sb-card)',
-    surfaceEl: 'var(--sb-field)',
-    amberBg:   'var(--sb-accent-tint)',
-    border:    'var(--sb-border)',
-    borderSt:  'var(--sb-border)',
-    divFaint:  'var(--sb-hairline)',
-    amber:     'var(--sb-ink-1)',
-    amberSoft: 'var(--sb-ink-2)',
-    textPri:   'var(--sb-ink-1)',
-    textMuted: 'var(--sb-ink-4)',
-    textDim:   'var(--sb-ink-3)',
+    bg:        '#F7F4EA',
+    rail:      '#FCFAF4',
+    panel:     '#FFFFFF',
+    surface:   '#FFFFFF',
+    surfaceEl: '#FAF7EC',
+    amberBg:   'rgba(245,209,78,0.12)',
+    border:    '#E8E1CE',
+    borderSt:  '#E8E1CE',
+    divFaint:  '#EDE7D9',
+    amber:     '#191712',
+    amberSoft: '#3D3926',
+    textPri:   '#191712',
+    textMuted: '#9B9180',
+    textDim:   '#6C6553',
     red:       '#8A3B2A',
     green:     '#5F7038',
     cyan:      '#3B7A8A',
-    purple:    'var(--sb-ink-2)',
+    purple:    '#3D3926',
   }
 
   const { accounts, categories, upsertTransaction } = useFinanceStore()
@@ -208,16 +208,17 @@ export function FinanceModule() {
                 style={{
                   display: 'flex', alignItems: 'center', gap: 5,
                   padding: '4px 10px', borderRadius: 7, cursor: 'grab',
-                  background: active ? 'var(--sb-ink-1)' : 'transparent',
-                  border: `1px solid ${isDropTarget ? 'var(--sb-accent)' : active ? 'var(--sb-ink-1)' : 'transparent'}`,
+                  background: active ? '#F5D14E' : 'transparent',
+                  border: `1px solid ${isDropTarget ? '#F5D14E' : active ? 'rgba(25,23,18,0.18)' : 'transparent'}`,
+                  boxShadow: active ? '0 2px 0 rgba(25,23,18,0.1)' : 'none',
                   opacity: isDragging ? 0.35 : 1,
                   userSelect: 'none', flexShrink: 0,
                 } as React.CSSProperties}
               >
-                <Icon color={active ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-4)'} />
+                <Icon color={active ? '#191712' : '#9B9180'} />
                 <span style={{
                   fontSize: 12, fontWeight: active ? 600 : 400,
-                  color: active ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-4)',
+                  color: active ? '#191712' : '#9B9180',
                   whiteSpace: 'nowrap' as const, letterSpacing: '0.1px',
                 }}>
                   {label}
@@ -231,13 +232,13 @@ export function FinanceModule() {
         <button
           onClick={() => setAddOpen(true)}
           style={{
-            height: 28, paddingInline: 12, borderRadius: 8,
-            background: 'var(--sb-ink-1)', border: 'none', cursor: 'pointer',
+            height: 30, paddingInline: 14, borderRadius: 8,
+            background: '#F5D14E', border: '1px solid rgba(25,23,18,0.18)', cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            flexShrink: 0, gap: 4,
+            flexShrink: 0, gap: 5, boxShadow: '0 2px 0 rgba(25,23,18,0.1)',
           }}
         >
-          <IconPlus color="var(--sb-ink-on-dark)" />
+          <IconPlus color="#191712" />
         </button>
       </div>
 

@@ -159,21 +159,21 @@ function EventPopup({ event, color, onClose }: { event: GCalEvent; color: string
     <div ref={ref} style={{
       position: 'fixed', zIndex: 9999, top: '50%', left: '50%',
       transform: 'translate(-50%, -50%)',
-      background: 'var(--sb-card)',
-      border: '1px solid var(--sb-border)',
+      background: '#FFFFFF',
+      border: '1px solid #E8E1CE',
       borderRadius: 14, width: 340, maxHeight: '80vh', overflowY: 'auto',
       boxShadow: '0 24px 80px rgba(0,0,0,0.6)',
     }}>
       {/* Color bar + title */}
-      <div style={{ borderBottom: '1px solid var(--sb-border)', padding: '14px 16px 12px', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+      <div style={{ borderBottom: '1px solid #E8E1CE', padding: '14px 16px 12px', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
         <div style={{ width: 4, minHeight: 24, borderRadius: 2, background: color, flexShrink: 0, marginTop: 2 }} />
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-text, #E8EAF6)', lineHeight: 1.3 }}>{event.summary ?? '(No title)'}</div>
-          <div style={{ fontSize: 12, color: 'var(--color-text-muted, #6B7280)', marginTop: 3 }}>
+          <div style={{ fontSize: 15, fontWeight: 700, color: '#191712', lineHeight: 1.3 }}>{event.summary ?? '(No title)'}</div>
+          <div style={{ fontSize: 12, color: '#9B9180', marginTop: 3 }}>
             {isAllDay ? fmtDate(startISO) : `${fmt(startISO)} – ${fmt(endISO)}`}
           </div>
         </div>
-        <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted, #6B7280)', padding: 2 }}>
+        <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9B9180', padding: 2 }}>
           <X size={15} />
         </button>
       </div>
@@ -186,16 +186,16 @@ function EventPopup({ event, color, onClose }: { event: GCalEvent; color: string
           }}>🎥 Join meeting</a>
         )}
         {event.location && (
-          <div style={{ fontSize: 12, color: 'var(--color-text-dim, #C7CAE0)' }}>📍 {event.location}</div>
+          <div style={{ fontSize: 12, color: '#6C6553' }}>📍 {event.location}</div>
         )}
         {attendees.length > 0 && (
-          <div style={{ fontSize: 12, color: 'var(--color-text-dim, #C7CAE0)' }}>
+          <div style={{ fontSize: 12, color: '#6C6553' }}>
             👥 {attendees.slice(0, 4).map(a => a.displayName ?? a.email).join(', ')}
-            {attendees.length > 4 && <span style={{ color: 'var(--color-text-muted, #6B7280)' }}> +{attendees.length - 4} more</span>}
+            {attendees.length > 4 && <span style={{ color: '#9B9180' }}> +{attendees.length - 4} more</span>}
           </div>
         )}
         {notes && (
-          <div style={{ fontSize: 11, color: 'var(--color-text-muted, #6B7280)', lineHeight: 1.5, borderTop: '1px solid var(--sb-border)', paddingTop: 8, whiteSpace: 'pre-wrap' }}>
+          <div style={{ fontSize: 11, color: '#9B9180', lineHeight: 1.5, borderTop: '1px solid #E8E1CE', paddingTop: 8, whiteSpace: 'pre-wrap' }}>
             {notes.slice(0, 300)}{notes.length > 300 ? '…' : ''}
           </div>
         )}

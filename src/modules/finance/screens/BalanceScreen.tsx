@@ -1,7 +1,5 @@
 import { useState } from 'react'
 import { useFinanceStore } from '../financeStore'
-import { useUIStore } from '@/store/uiStore'
-import { getTheme } from '@/lib/themes'
 import { AccountModal } from '../modals/AccountModal'
 import { TransactionModal } from '../modals/TransactionModal'
 import { IconPicker } from '../components/IconPicker'
@@ -13,12 +11,13 @@ const RED = '#DA4A3E'
 const GREEN = '#2FA869'
 
 function Pill({ type, amount, currency }: { type: 'expense' | 'income' | 'transfer'; amount: number; currency: string }) {
-  const bg = type === 'expense' ? RED : type === 'income' ? GREEN : '#EDE6D8'
-  const color = type === 'transfer' ? '#1A1714' : '#fff'
+  // Soft pill style: tinted background + matching text (no white text on colored bg)
+  const bg    = type === 'expense' ? `${RED}18`   : type === 'income' ? `${GREEN}18`  : '#EDE7D9'
+  const color = type === 'expense' ? RED           : type === 'income' ? GREEN         : '#6C6553'
   return (
     <span style={{
       display: 'inline-block',
-      padding: '7px 15px',
+      padding: '6px 13px',
       borderRadius: 9,
       fontSize: 13,
       fontWeight: 600,
@@ -34,20 +33,18 @@ function Pill({ type, amount, currency }: { type: 'expense' | 'income' | 'transf
 // ─── Balance Screen ───────────────────────────────────────────────────────────
 
 export function BalanceScreen() {
-  const themeId = useUIStore(s => s.themeId)
-  const theme = getTheme(themeId)
   const C = {
-    bg:        theme.bg,
-    surface:   theme.surface,
-    surfaceEl: theme.surface2 || theme.surface,
-    amberBg:   theme.accentFill,
-    border:    theme.border,
-    divFaint:  theme.border,
-    amber:     theme.accent,
-    amberSoft: theme.accentBright,
-    textPri:   theme.text,
-    textMuted: theme.textDim,
-    textDim:   theme.textMuted,
+    bg:        '#F7F4EA',
+    surface:   '#FFFFFF',
+    surfaceEl: '#FAF7EC',
+    amberBg:   'rgba(245,209,78,0.12)',
+    border:    '#E8E1CE',
+    divFaint:  '#E8E1CE',
+    amber:     '#F5D14E',
+    amberSoft: '#D4A827',
+    textPri:   '#191712',
+    textMuted: '#6C6553',
+    textDim:   '#9B9180',
     red:       '#DA4A3E',
     green:     '#2FA869',
     cyan:      '#46B6C9',
@@ -183,7 +180,7 @@ function formatBalance(bal: number, currency = 'EGP'): string {
               display: 'flex', alignItems: 'center', gap: 6,
               padding: '8px 16px', borderRadius: 9,
               background: C.amber, border: 'none',
-              color: C.bg, fontSize: 13, fontWeight: 700,
+              color: '#191712', fontSize: 13, fontWeight: 700,
               cursor: 'pointer', fontFamily: 'inherit',
             }}
           >
@@ -201,7 +198,7 @@ function formatBalance(bal: number, currency = 'EGP'): string {
           flex: 1,
           overflowY: 'auto',
           padding: '22px 26px',
-          borderRight: `1px solid #211C14`,
+          borderRight: `1px solid #E8E1CE`,
         }}>
           {/* Net worth */}
           <div style={{
@@ -298,7 +295,7 @@ function formatBalance(bal: number, currency = 'EGP'): string {
                 borderRadius: 9,
                 background: C.amber,
                 border: 'none',
-                color: C.bg,
+                color: '#191712',
                 fontSize: 13,
                 fontWeight: 700,
                 cursor: 'pointer',

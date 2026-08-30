@@ -103,26 +103,26 @@ function ContextMenu({ menu, onClose }: { menu: ContextMenuState; onClose: () =>
       <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 8000 }} />
       <div style={{
         position: 'fixed', left: menu.x, top: menu.y, zIndex: 8001,
-        background: 'var(--sb-card)',
-        border: '1px solid var(--sb-border)',
+        background: '#FFFFFF',
+        border: '1px solid #E8E1CE',
         borderRadius: 10, overflow: 'hidden',
         boxShadow: '0 8px 32px rgba(0,0,0,0.4)', minWidth: 220,
       }}>
         {/* Event info header */}
-        <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--sb-border)' }}>
+        <div style={{ padding: '10px 14px', borderBottom: '1px solid #E8E1CE' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <div style={{ width: 10, height: 10, borderRadius: '50%', background: menu.color, flexShrink: 0 }} />
-            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--sb-ink-1)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#191712', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {menu.event.summary ?? 'Event'}
             </div>
           </div>
           {(startStr || endStr) && (
-            <div style={{ fontSize: 11, color: 'var(--sb-ink-3)', marginTop: 4, paddingLeft: 18 }}>
+            <div style={{ fontSize: 11, color: '#6C6553', marginTop: 4, paddingLeft: 18 }}>
               {startStr}{endStr ? ` – ${endStr}` : ''}
             </div>
           )}
           {menu.event.location && (
-            <div style={{ fontSize: 11, color: 'var(--sb-ink-3)', marginTop: 2, paddingLeft: 18, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <div style={{ fontSize: 11, color: '#6C6553', marginTop: 2, paddingLeft: 18, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               📍 {menu.event.location}
             </div>
           )}
@@ -145,8 +145,8 @@ function ContextMenu({ menu, onClose }: { menu: ContextMenuState; onClose: () =>
           <button key={i} onClick={item.action} style={{
             width: '100%', display: 'flex', alignItems: 'center', gap: 10,
             padding: '9px 14px', background: 'none', border: 'none', cursor: 'pointer',
-            fontSize: 13, color: 'var(--sb-ink-2)', textAlign: 'left',
-            borderBottom: i < 1 ? '1px solid var(--sb-border)' : 'none',
+            fontSize: 13, color: '#3D3926', textAlign: 'left',
+            borderBottom: i < 1 ? '1px solid #E8E1CE' : 'none',
           }}
             onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.05)')}
             onMouseLeave={e => (e.currentTarget.style.background = 'none')}
@@ -180,7 +180,7 @@ function WeekCalendar({ events, weekStart, viewMode, selectedDay, onSelectDay, o
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
       {/* Day headers */}
-      <div style={{ display: 'flex', borderBottom: '1px solid var(--sb-border)', flexShrink: 0 }}>
+      <div style={{ display: 'flex', borderBottom: '1px solid #E8E1CE', flexShrink: 0 }}>
         <div style={{ width: 52, flexShrink: 0 }} />
         {visibleDays.map((d, i) => {
           const ds = d.toISOString().slice(0, 10)
@@ -188,9 +188,9 @@ function WeekCalendar({ events, weekStart, viewMode, selectedDay, onSelectDay, o
           return (
             <div key={i} onClick={() => onSelectDay(days.indexOf(d))} style={{
               flex: 1, padding: '8px 0', textAlign: 'center', cursor: 'pointer',
-              borderLeft: i > 0 ? '1px solid var(--sb-border)' : undefined,
+              borderLeft: i > 0 ? '1px solid #E8E1CE' : undefined,
             }}>
-              <div style={{ fontSize: 11, color: 'var(--sb-ink-3)', fontWeight: 600, letterSpacing: '0.04em' }}>
+              <div style={{ fontSize: 11, color: '#6C6553', fontWeight: 600, letterSpacing: '0.04em' }}>
                 {d.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase()}
               </div>
               <div style={{
@@ -198,7 +198,7 @@ function WeekCalendar({ events, weekStart, viewMode, selectedDay, onSelectDay, o
                 background: isToday ? '#F97316' : 'transparent',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
-                <span style={{ fontSize: 14, fontWeight: isToday ? 700 : 500, color: isToday ? '#fff' : 'var(--sb-ink-1)' }}>
+                <span style={{ fontSize: 14, fontWeight: isToday ? 700 : 500, color: isToday ? '#fff' : '#191712' }}>
                   {d.getDate()}
                 </span>
               </div>
@@ -212,7 +212,7 @@ function WeekCalendar({ events, weekStart, viewMode, selectedDay, onSelectDay, o
         <div style={{ width: 52, flexShrink: 0 }}>
           {DAY_HOURS.map(h => (
             <div key={h} style={{ height: HOUR_PX, display: 'flex', alignItems: 'flex-start', paddingTop: 4, paddingRight: 8, justifyContent: 'flex-end' }}>
-              <span style={{ fontSize: 10, color: 'var(--sb-ink-3)', fontWeight: 500 }}>
+              <span style={{ fontSize: 10, color: '#6C6553', fontWeight: 500 }}>
                 {h === 12 ? '12PM' : h < 12 ? `${h}AM` : `${h - 12}PM`}
               </span>
             </div>
@@ -230,7 +230,7 @@ function WeekCalendar({ events, weekStart, viewMode, selectedDay, onSelectDay, o
           const totalMin = endMin - startMin
 
           return (
-            <div key={di} style={{ flex: 1, position: 'relative', borderLeft: '1px solid var(--sb-border)', minHeight: HOUR_PX * DAY_HOURS.length }}>
+            <div key={di} style={{ flex: 1, position: 'relative', borderLeft: '1px solid #E8E1CE', minHeight: HOUR_PX * DAY_HOURS.length }}>
               {DAY_HOURS.map(h => (
                 <div key={h} style={{ position: 'absolute', left: 0, right: 0, top: (h - DAY_HOURS[0]) * HOUR_PX, height: HOUR_PX, borderBottom: '1px solid rgba(255,255,255,0.04)' }} />
               ))}
@@ -365,7 +365,7 @@ export function PlanningAssistant() {
 
       <div style={{ flex: 1, display: 'flex', minHeight: 0, overflow: 'hidden' }}>
         {/* ── Left panel: fixed layout, no outer scroll ── */}
-        <div style={{ width: 380, flexShrink: 0, display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--sb-border)', overflow: 'hidden' }}>
+        <div style={{ width: 380, flexShrink: 0, display: 'flex', flexDirection: 'column', borderRight: '1px solid #E8E1CE', overflow: 'hidden' }}>
 
           {/* Scrollable top: insights + suggestions */}
           <div style={{ flex: '0 0 auto', overflowY: 'auto', padding: '20px 20px 0', maxHeight: '55%', minHeight: 0 }}>
@@ -373,10 +373,10 @@ export function PlanningAssistant() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
               <span style={{ fontSize: 20 }}>✦</span>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--sb-ink-1)' }}>Planning Assistant</div>
-                <div style={{ fontSize: 11, color: 'var(--sb-ink-3)' }}>Plan your schedule with AI</div>
+                <div style={{ fontSize: 15, fontWeight: 800, color: '#191712' }}>Planning Assistant</div>
+                <div style={{ fontSize: 11, color: '#6C6553' }}>Plan your schedule with AI</div>
               </div>
-              <button onClick={() => { setWeekOffset(0); setEvents([]) }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', display: 'flex', padding: 4, borderRadius: 6 }}>
+              <button onClick={() => { setWeekOffset(0); setEvents([]) }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6C6553', display: 'flex', padding: 4, borderRadius: 6 }}>
                 <RefreshCw size={14} />
               </button>
             </div>
@@ -384,13 +384,13 @@ export function PlanningAssistant() {
             {/* Schedule Insights */}
             <div style={{ marginBottom: 20 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
-                <TrendingUp size={14} color="var(--color-accent, #7F77DD)" />
-                <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--sb-ink-1)' }}>Schedule Insights</span>
+                <TrendingUp size={14} color="#F5D14E" />
+                <span style={{ fontSize: 13, fontWeight: 700, color: '#191712' }}>Schedule Insights</span>
               </div>
               {loading ? (
-                <div style={{ fontSize: 12, color: 'var(--sb-ink-3)', fontStyle: 'italic' }}>Analyzing your week…</div>
+                <div style={{ fontSize: 12, color: '#6C6553', fontStyle: 'italic' }}>Analyzing your week…</div>
               ) : insights.length === 0 ? (
-                <div style={{ fontSize: 12, color: 'var(--sb-ink-3)', fontStyle: 'italic' }}>Connect your calendar to see insights</div>
+                <div style={{ fontSize: 12, color: '#6C6553', fontStyle: 'italic' }}>Connect your calendar to see insights</div>
               ) : (
                 <>
                   {insights.map((ins, i) => (
@@ -402,7 +402,7 @@ export function PlanningAssistant() {
                       {ins.type === 'warning' && <AlertTriangle size={13} color="#FBBF24" />}
                       {ins.type === 'tip'     && <Lightbulb size={13} color="#7F77DD" />}
                       {ins.type === 'win'     && <Trophy size={13} color="#34D399" />}
-                      <span style={{ fontSize: 12, color: 'var(--sb-ink-2)', fontWeight: 500 }}>{ins.message}</span>
+                      <span style={{ fontSize: 12, color: '#3D3926', fontWeight: 500 }}>{ins.message}</span>
                     </div>
                   ))}
                   <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
@@ -410,25 +410,25 @@ export function PlanningAssistant() {
                     {tips.length > 0    && <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 10, background: 'rgba(127,119,221,0.12)', color: '#9B94E8' }}>{tips.length} tip{tips.length > 1 ? 's' : ''}</span>}
                     {wins.length > 0    && <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 10, background: 'rgba(52,211,153,0.12)', color: '#34D399' }}>{wins.length} win{wins.length > 1 ? 's' : ''}</span>}
                   </div>
-                  <p style={{ margin: '8px 0 0', fontSize: 11, color: 'var(--sb-ink-3)', fontStyle: 'italic' }}>Click an insight to get help</p>
+                  <p style={{ margin: '8px 0 0', fontSize: 11, color: '#6C6553', fontStyle: 'italic' }}>Click an insight to get help</p>
                 </>
               )}
             </div>
 
-            <div style={{ height: 1, background: 'var(--sb-border)', margin: '4px 0 20px' }} />
+            <div style={{ height: 1, background: '#E8E1CE', margin: '4px 0 20px' }} />
 
             {/* Plan Your Week */}
             <div style={{ marginBottom: 12 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
                 <span style={{ fontSize: 14 }}>📅</span>
-                <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--sb-ink-1)' }}>Plan Your Week</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: '#191712' }}>Plan Your Week</span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {WEEK_SUGGESTIONS.map((s, i) => (
                   <button key={i} onClick={() => setChatInput(s)} style={{
                     padding: '8px 12px', borderRadius: 8, textAlign: 'left', cursor: 'pointer', fontSize: 12,
-                    background: 'var(--sb-page)', border: '1px solid var(--sb-border)',
-                    color: 'var(--sb-ink-2)', fontWeight: 400,
+                    background: '#F7F4EA', border: '1px solid #E8E1CE',
+                    color: '#3D3926', fontWeight: 400,
                   }}>
                     {s}
                   </button>
@@ -441,11 +441,11 @@ export function PlanningAssistant() {
           <div ref={chatRef} style={{
             flex: 1, overflowY: 'auto', padding: '8px 20px',
             display: 'flex', flexDirection: 'column', gap: 8,
-            borderTop: '1px solid var(--sb-border)',
+            borderTop: '1px solid #E8E1CE',
           }}>
             {messages.length === 0 && (
               <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <p style={{ fontSize: 12, color: 'var(--sb-ink-3)', textAlign: 'center', fontStyle: 'italic' }}>
+                <p style={{ fontSize: 12, color: '#6C6553', textAlign: 'center', fontStyle: 'italic' }}>
                   Ask me anything about your schedule…
                 </p>
               </div>
@@ -453,24 +453,24 @@ export function PlanningAssistant() {
             {messages.map((m, i) => (
               <div key={i} style={{
                 padding: '8px 11px', borderRadius: 8, fontSize: 12, lineHeight: 1.5,
-                background: m.role === 'user' ? 'var(--color-accent, #7F77DD)' : 'var(--sb-page)',
-                color: m.role === 'user' ? '#fff' : 'var(--sb-ink-2)',
+                background: m.role === 'user' ? '#F5D14E' : '#F7F4EA',
+                color: m.role === 'user' ? '#191712' : '#3D3926',
                 alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start',
                 maxWidth: '85%',
-                border: m.role === 'assistant' ? '1px solid var(--sb-border)' : 'none',
+                border: m.role === 'assistant' ? '1px solid #E8E1CE' : 'none',
               }}>
                 {m.text}
               </div>
             ))}
             {chatLoading && (
-              <div style={{ padding: '8px 11px', borderRadius: 8, fontSize: 12, color: 'var(--sb-ink-3)', border: '1px solid var(--sb-border)', background: 'var(--sb-page)', alignSelf: 'flex-start' }}>
+              <div style={{ padding: '8px 11px', borderRadius: 8, fontSize: 12, color: '#6C6553', border: '1px solid #E8E1CE', background: '#F7F4EA', alignSelf: 'flex-start' }}>
                 Thinking…
               </div>
             )}
           </div>
 
           {/* Chat input — pinned to bottom */}
-          <div style={{ flexShrink: 0, padding: '10px 20px 16px', borderTop: '1px solid var(--sb-border)' }}>
+          <div style={{ flexShrink: 0, padding: '10px 20px 16px', borderTop: '1px solid #E8E1CE' }}>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               <div style={{ flex: 1, position: 'relative' }}>
                 <input
@@ -479,21 +479,21 @@ export function PlanningAssistant() {
                   onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void sendChat() } }}
                   placeholder="Describe your ideal schedule…"
                   style={{
-                    width: '100%', background: 'var(--sb-page)',
-                    border: `1.5px solid ${chatInput ? 'var(--color-accent, #7F77DD)' : 'var(--sb-border)'}`,
+                    width: '100%', background: '#F7F4EA',
+                    border: `1.5px solid ${chatInput ? '#F5D14E' : '#E8E1CE'}`,
                     borderRadius: 20, padding: '9px 36px 9px 14px',
-                    color: 'var(--sb-ink-1)', fontSize: 12.5, outline: 'none',
+                    color: '#191712', fontSize: 12.5, outline: 'none',
                     boxSizing: 'border-box', transition: 'border-color 0.15s',
                   }}
                 />
-                <button style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', display: 'flex', padding: 0 }}>
+                <button style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#6C6553', display: 'flex', padding: 0 }}>
                   <Mic size={13} />
                 </button>
               </div>
               <button onClick={() => void sendChat()} disabled={!chatInput.trim() || chatLoading} style={{
                 width: 36, height: 36, borderRadius: '50%', border: 'none', cursor: chatInput.trim() ? 'pointer' : 'default',
-                background: chatInput.trim() ? 'var(--color-accent, #7F77DD)' : 'var(--sb-border)',
-                color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: chatInput.trim() ? '#F5D14E' : '#E8E1CE',
+                color: '#191712', display: 'flex', alignItems: 'center', justifyContent: 'center',
                 transition: 'background 0.15s', flexShrink: 0,
               }}>
                 <Send size={13} />
@@ -504,21 +504,21 @@ export function PlanningAssistant() {
 
         {/* ── Right panel: calendar ── */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
-          <div style={{ padding: '10px 20px', borderBottom: '1px solid var(--sb-border)', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
-            <button onClick={() => setWeekOffset(o => o - 1)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', display: 'flex', padding: 4, borderRadius: 6 }}>
+          <div style={{ padding: '10px 20px', borderBottom: '1px solid #E8E1CE', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+            <button onClick={() => setWeekOffset(o => o - 1)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6C6553', display: 'flex', padding: 4, borderRadius: 6 }}>
               <ChevronLeft size={18} />
             </button>
-            <button onClick={() => setWeekOffset(o => o + 1)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', display: 'flex', padding: 4, borderRadius: 6 }}>
+            <button onClick={() => setWeekOffset(o => o + 1)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6C6553', display: 'flex', padding: 4, borderRadius: 6 }}>
               <ChevronRight size={18} />
             </button>
-            <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--sb-ink-1)', flex: 1 }}>{weekLabel}</span>
-            <div style={{ display: 'flex', background: 'var(--sb-page)', borderRadius: 8, padding: 2, border: '1px solid var(--sb-border)' }}>
+            <span style={{ fontSize: 14, fontWeight: 700, color: '#191712', flex: 1 }}>{weekLabel}</span>
+            <div style={{ display: 'flex', background: '#F7F4EA', borderRadius: 8, padding: 2, border: '1px solid #E8E1CE' }}>
               {(['day', 'week'] as const).map(m => (
                 <button key={m} onClick={() => setViewMode(m)} style={{
                   padding: '4px 12px', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 600,
-                  background: viewMode === m ? 'var(--sb-card)' : 'transparent',
+                  background: viewMode === m ? '#FFFFFF' : 'transparent',
                   border: 'none',
-                  color: viewMode === m ? 'var(--sb-ink-1)' : 'var(--sb-ink-3)',
+                  color: viewMode === m ? '#191712' : '#6C6553',
                   transition: 'all 0.12s',
                 }}>
                   {m.charAt(0).toUpperCase() + m.slice(1)}

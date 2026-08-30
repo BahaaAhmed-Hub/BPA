@@ -113,7 +113,7 @@ function InlineEdit({ value, onSave, style }: { value: string; onSave: (v: strin
     <input ref={ref} value={draft} onChange={e => setDraft(e.target.value)}
       onBlur={commit}
       onKeyDown={e => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') { setDraft(value); setEditing(false) } }}
-      style={{ background: 'transparent', border: 'none', borderBottom: '1px solid var(--color-accent, #1E40AF)', outline: 'none', color: 'var(--sb-ink-1)', fontFamily: 'inherit', padding: '0 2px', ...style }} />
+      style={{ background: 'transparent', border: 'none', borderBottom: '1px solid #F5D14E', outline: 'none', color: 'var(--sb-ink-1)', fontFamily: 'inherit', padding: '0 2px', ...style }} />
   )
   return <span onClick={() => { setDraft(value); setEditing(true) }} title="Click to rename" style={{ cursor: 'text', ...style }}>{value}</span>
 }
@@ -156,7 +156,7 @@ function EmojiBtn({ value, onSelect }: { value: string; onSelect: (e: string) =>
         <div style={{ position: 'absolute', top: 28, left: 0, zIndex: 300, background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 10, padding: '8px', display: 'flex', gap: 4, flexWrap: 'wrap', width: 252, maxHeight: 260, overflowY: 'auto', boxShadow: '0 8px 24px rgba(0,0,0,0.5)' }}>
           {EMOJIS.map(e => (
             <button key={e} onClick={() => { onSelect(e); setOpen(false) }}
-              style={{ fontSize: 16, width: 32, height: 32, borderRadius: 7, cursor: 'pointer', border: 'none', background: e === value ? 'var(--color-accent-fill)' : 'transparent' }}>{e}</button>
+              style={{ fontSize: 16, width: 32, height: 32, borderRadius: 7, cursor: 'pointer', border: 'none', background: e === value ? 'rgba(245,209,78,0.15)' : 'transparent' }}>{e}</button>
           ))}
         </div>
       )}
@@ -201,7 +201,7 @@ function QuantityControl({
           style={{ width: 44, textAlign: 'center', fontSize: 11.5, fontWeight: 600, background: 'var(--sb-field)', border: `1px solid ${color}`, borderRadius: 5, color: 'var(--sb-ink-1)', outline: 'none', padding: '1px 3px' }} />
       ) : (
         <button onClick={() => setEditing(true)} title="Click to enter value"
-          style={{ minWidth: 60, textAlign: 'center', fontSize: 11.5, fontWeight: 600, background: met ? `${color}18` : 'var(--sb-field)', border: `1px solid ${met ? color + '60' : 'var(--sb-border)'}`, borderRadius: 5, color: met ? color : 'var(--color-text-muted, #94A3B8)', padding: '2px 5px', cursor: 'pointer' }}>
+          style={{ minWidth: 60, textAlign: 'center', fontSize: 11.5, fontWeight: 600, background: met ? `${color}18` : 'var(--sb-field)', border: `1px solid ${met ? color + '60' : 'var(--sb-border)'}`, borderRadius: 5, color: met ? color : 'var(--sb-ink-4)', padding: '2px 5px', cursor: 'pointer' }}>
           {value}/{goal}{unit ? ` ${unit}` : ''}
         </button>
       )}
@@ -240,7 +240,7 @@ function HabitForm({
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', maxHeight: 160, overflowY: 'auto', padding: '2px 0' }}>
         {EMOJIS.map(e => (
           <button key={e} onClick={() => update({ emoji: e })}
-            style={{ fontSize: 18, background: s.emoji === e ? 'var(--color-accent-fill, rgba(30,64,175,0.18))' : 'transparent', border: `1px solid ${s.emoji === e ? 'var(--color-accent, #1E40AF)' : 'var(--sb-border)'}`, borderRadius: 7, cursor: 'pointer', width: 36, height: 36, flexShrink: 0 }}>
+            style={{ fontSize: 18, background: s.emoji === e ? 'rgba(245,209,78,0.15)' : 'transparent', border: `1px solid ${s.emoji === e ? '#F5D14E' : 'var(--sb-border)'}`, borderRadius: 7, cursor: 'pointer', width: 36, height: 36, flexShrink: 0 }}>
             {e}
           </button>
         ))}
@@ -258,7 +258,7 @@ function HabitForm({
         <div style={{ display: 'flex', background: 'var(--sb-field)', border: '1px solid var(--sb-border)', borderRadius: 7, overflow: 'hidden' }}>
           {([['boolean', '✓ Done / Not done', CheckSquare], ['quantity', '# Measurable', Hash]] as const).map(([t, label, Icon]) => (
             <button key={t} onClick={() => update({ type: t })}
-              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 12px', fontSize: 12, fontWeight: s.type === t ? 600 : 400, cursor: 'pointer', border: 'none', background: s.type === t ? 'var(--color-accent-fill, rgba(30,64,175,0.18))' : 'none', color: s.type === t ? 'var(--color-accent, #1E40AF)' : 'var(--sb-ink-3)' }}>
+              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 12px', fontSize: 12, fontWeight: s.type === t ? 600 : 400, cursor: 'pointer', border: 'none', background: s.type === t ? 'rgba(245,209,78,0.15)' : 'none', color: s.type === t ? '#F5D14E' : 'var(--sb-ink-3)' }}>
               <Icon size={12} />{label}
             </button>
           ))}
@@ -283,7 +283,7 @@ function HabitForm({
         <div style={{ display: 'flex', gap: 6 }}>
           {FREQ_OPTS.map(f => (
             <button key={f} onClick={() => update({ freq: f })}
-              style={{ padding: '5px 12px', borderRadius: 7, fontSize: 12, cursor: 'pointer', background: s.freq === f ? 'var(--color-accent-fill)' : 'transparent', border: `1px solid ${s.freq === f ? 'var(--color-accent, #1E40AF)' : 'var(--sb-border)'}`, color: s.freq === f ? 'var(--color-accent, #1E40AF)' : 'var(--sb-ink-3)', fontWeight: s.freq === f ? 600 : 400, textTransform: 'capitalize' }}>
+              style={{ padding: '5px 12px', borderRadius: 7, fontSize: 12, cursor: 'pointer', background: s.freq === f ? 'rgba(245,209,78,0.15)' : 'transparent', border: `1px solid ${s.freq === f ? '#F5D14E' : 'var(--sb-border)'}`, color: s.freq === f ? '#F5D14E' : 'var(--sb-ink-3)', fontWeight: s.freq === f ? 600 : 400, textTransform: 'capitalize' }}>
               {f}
             </button>
           ))}
@@ -303,7 +303,7 @@ function HabitForm({
           <X size={12} /> Cancel
         </button>
         <button onClick={() => valid && onSave(s)} disabled={!valid}
-          style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 16px', borderRadius: 7, background: 'var(--color-accent-fill, rgba(30,64,175,0.15))', border: '1px solid var(--color-accent, #1E40AF)30', color: 'var(--color-accent, #1E40AF)', fontSize: 12, fontWeight: 500, cursor: valid ? 'pointer' : 'default', opacity: valid ? 1 : 0.4 }}>
+          style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 16px', borderRadius: 7, background: 'rgba(245,209,78,0.15)', border: '1px solid #F5D14E30', color: '#F5D14E', fontSize: 12, fontWeight: 500, cursor: valid ? 'pointer' : 'default', opacity: valid ? 1 : 0.4 }}>
           <Plus size={12} /> {saveLabel ?? 'Add Habit'}
         </button>
       </div>
@@ -394,19 +394,19 @@ export function HabitsModule() {
               label: isToday ? "Today's Progress" : fmtHeaderDate(new Date(viewDate + 'T12:00:00')),
               value: `${viewCompleted}/${activeHabits.length}`,
               sub: `${completionRate}% complete`,
-              color: completionRate === 100 ? '#1D9E75' : 'var(--color-accent, #1E40AF)',
+              color: completionRate === 100 ? '#1D9E75' : '#F5D14E',
             },
             {
               label: 'Best Streak',
               value: `${Math.max(0, ...activeHabits.map(h => calcStreak(logs[h.id] ?? [])))}d`,
               sub: 'Consecutive days',
-              color: 'var(--color-accent)',
+              color: '#F5D14E',
             },
             {
               label: 'Active Habits',
               value: activeHabits.length,
               sub: 'Being tracked',
-              color: 'var(--color-accent, #1E40AF)',
+              color: '#F5D14E',
             },
           ].map(card => (
             <div key={card.label} style={{ background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-card)', padding: '18px 20px', position: 'relative', overflow: 'hidden', boxShadow: 'var(--sb-shadow-control)' }}>
@@ -449,7 +449,7 @@ export function HabitsModule() {
                 style={{ background: 'none', border: '1px solid var(--sb-border)', borderRadius: 6, cursor: 'pointer', padding: '3px 6px', color: 'var(--sb-ink-3)', display: 'flex' }}>
                 <ChevronLeft size={13} />
               </button>
-              <span style={{ fontSize: 11.5, fontWeight: 600, color: isToday ? 'var(--color-accent, #1E40AF)' : 'var(--sb-ink-1)', minWidth: 90, textAlign: 'center' }}>
+              <span style={{ fontSize: 11.5, fontWeight: 600, color: isToday ? '#F5D14E' : 'var(--sb-ink-1)', minWidth: 90, textAlign: 'center' }}>
                 {isToday ? 'Today' : fmtHeaderDate(new Date(viewDate + 'T12:00:00'))}
               </span>
               <button onClick={() => setViewDate(d => offsetDays(d, 1))} disabled={viewDate >= today}
@@ -458,7 +458,7 @@ export function HabitsModule() {
               </button>
               {!isToday && (
                 <button onClick={() => setViewDate(today)}
-                  style={{ fontSize: 10, padding: '2px 8px', borderRadius: 5, background: 'var(--color-accent-fill)', border: '1px solid var(--color-accent, #1E40AF)30', color: 'var(--color-accent, #1E40AF)', cursor: 'pointer' }}>
+                  style={{ fontSize: 10, padding: '2px 8px', borderRadius: 5, background: 'rgba(245,209,78,0.15)', border: '1px solid #F5D14E30', color: '#F5D14E', cursor: 'pointer' }}>
                   Today
                 </button>
               )}
@@ -467,7 +467,7 @@ export function HabitsModule() {
             <div style={{ display: 'flex', gap: 3 }}>
               {days.map(d => (
                 <div key={d} style={{ width: 22, textAlign: 'center' }}>
-                  <span style={{ fontSize: 9, color: d === viewDate ? 'var(--color-accent, #1E40AF)' : 'var(--sb-ink-3)', fontWeight: d === viewDate ? 700 : 400 }}>
+                  <span style={{ fontSize: 9, color: d === viewDate ? '#F5D14E' : 'var(--sb-ink-3)', fontWeight: d === viewDate ? 700 : 400 }}>
                     {fmtDayLabel(d)}
                   </span>
                 </div>
@@ -567,8 +567,8 @@ export function HabitsModule() {
 
                 {/* Streak */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 5, width: 52, justifyContent: 'flex-end' }}>
-                  {streak > 0 && <Flame size={12} color={streak >= 7 ? '#E05252' : 'var(--color-accent, #1E40AF)'} />}
-                  <span style={{ fontSize: 13, fontWeight: 600, color: streak > 0 ? (streak >= 7 ? '#E05252' : 'var(--color-accent, #1E40AF)') : 'var(--sb-ink-3)' }}>
+                  {streak > 0 && <Flame size={12} color={streak >= 7 ? '#E05252' : '#F5D14E'} />}
+                  <span style={{ fontSize: 13, fontWeight: 600, color: streak > 0 ? (streak >= 7 ? '#E05252' : '#F5D14E') : 'var(--sb-ink-3)' }}>
                     {streak > 0 ? `${streak}d` : '—'}
                   </span>
                 </div>

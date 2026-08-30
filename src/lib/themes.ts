@@ -102,6 +102,14 @@ export const THEMES: AppTheme[] = [
     text: '#0F172A', textDim: '#475569', textMuted: '#64748B',
     sidebarBg: '#F1F5F9', isDark: false,
   },
+  {
+    id: 'sunlit-bento', name: 'Sunlit Bento', emoji: '🌤️',
+    bg: '#F7F4EA', surface: '#FFFFFF', surface2: '#FAF7EC',
+    border: '#E8E1CE',
+    accent: '#F5D14E', accentFill: 'rgba(245,209,78,0.12)', accentBright: '#D4A827',
+    text: '#191712', textDim: '#6C6553', textMuted: '#9B9180',
+    sidebarBg: '#FCFAF4', isDark: false,
+  },
 ]
 
 export function applySamuraiModeOverride(): void {
@@ -127,7 +135,7 @@ export function applySamuraiModeOverride(): void {
   document.body.style.color = '#EDE4D3'
 }
 
-export const DEFAULT_THEME_ID = 'navy-night'
+export const DEFAULT_THEME_ID = 'sunlit-bento'
 
 // Migrate old theme IDs saved before the 10-theme update
 const LEGACY_MAP: Record<string, string> = {

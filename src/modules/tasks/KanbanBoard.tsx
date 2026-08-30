@@ -13,7 +13,7 @@ import {
   TASK_TYPE_META, inferTaskType,
   loadVisibleCompanies, getAllUsers, isTaskHidden,
 } from '@/types'
-import { loadCustomStatuses, sortCustomStatuses, getStatusMeta } from '@/lib/customStatuses'
+import { loadCustomStatuses, sortCustomStatuses } from '@/lib/customStatuses'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -85,15 +85,13 @@ function sortByUrgency(tasks: Task[]): Task[] {
 
 function KanbanCard({ task, onOpen, overlay = false }: { task: Task; onOpen: () => void; overlay?: boolean }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: task.id })
-  const updateTask     = useTaskStore(s => s.updateTask)
   const toggleComplete = useTaskStore(s => s.toggleComplete)
   const deleteTask     = useTaskStore(s => s.deleteTask)
   const companies   = loadVisibleCompanies()
   const allUsers    = getAllUsers()
 
   const company      = task.companyId ? companies.find(c => c.id === task.companyId) : null
-  const companyName  = company?.name ?? (task.company !== 'personal' ? task.company : null)
-  const isPersonal    = !task.companyId && task.company === 'personal'
+  const companyName  = company?.name ?? (task.company && task.company !== 'personal' ? task.company : null)
   const priority      = task.quadrant ? QUADRANT_PRIORITY[task.quadrant] : null
   const taskType      = task.taskType ?? inferTaskType(task.title)
   const typeMeta      = TASK_TYPE_META[taskType]
@@ -102,146 +100,112 @@ function KanbanCard({ task, onOpen, overlay = false }: { task: Task; onOpen: () 
     ? owner.name.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2)
     : null
 
-  const statusMeta = task.boardStatus ? getStatusMeta(task.boardStatus) : null
+  // Sunlit Bento: company-tinted card background
+  const companyHex = company?.color ?? '#8C826A'
+  const hexRgb = (hex: string) => {
+    const h = hex.replace('#', '')
+    if (h.length < 6) return '140,130,106'
+    const r = parseInt(h.slice(0,2),16), g = parseInt(h.slice(2,4),16), b = parseInt(h.slice(4,6),16)
+    return isNaN(r) ? '140,130,106' : `${r},${g},${b}`
+  }
+  const ccRgb = hexRgb(companyHex)
 
   const style: React.CSSProperties = {
     transform: overlay ? undefined : CSS.Translate.toString(transform),
     opacity:   isDragging ? 0.35 : 1,
     cursor:    isDragging ? 'grabbing' : 'grab',
-    background:   'var(--sb-card)',
-    border:       `1px solid ${task.urgent ? 'rgba(224,82,82,0.5)' : 'var(--sb-border)'}`,
-    borderRadius: 10,
-    padding:      '12px 13px',
-    marginBottom: 8,
-    boxShadow:    isDragging ? 'none' : '0 1px 4px rgba(0,0,0,0.18)',
+    position:  'relative',
+    background:   `rgba(${ccRgb}, 0.085)`,
+    border:       isDragging ? `2px solid ${companyHex}` : `1px solid rgba(${ccRgb}, 0.42)`,
+    borderRadius: 13,
+    padding:      '11px 12px',
+    marginBottom: 9,
+    display:      'flex', flexDirection: 'column', gap: 8,
+    boxShadow:    isDragging ? '0 8px 20px -12px rgba(25,23,18,.4)' : 'none',
     transition:   isDragging ? 'none' : 'box-shadow 0.15s',
     userSelect:   'none',
-    position:     'relative',
+    overflow:     'hidden', minWidth: 0,
   }
 
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners}
       onClick={e => { e.stopPropagation(); if (!isDragging) onOpen() }}
     >
-      {/* Urgent left border */}
-      {task.urgent && (
-        <div style={{ position: 'absolute', top: 0, left: 0, width: 3, height: '100%', background: '#E05252', borderRadius: '10px 0 0 10px' }} />
-      )}
-
-      {/* Top row: checkbox + title + lightning bolt */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 7, marginBottom: 9 }}>
+      {/* Top row: checkbox + title + delete */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 9, minWidth: 0 }}>
         {/* Completion checkbox */}
         <button
           onPointerDown={e => e.stopPropagation()}
           onClick={e => { e.stopPropagation(); toggleComplete(task.id) }}
           title={task.completed ? 'Mark incomplete' : 'Mark complete'}
           style={{
-            width: 15, height: 15, borderRadius: 4, flexShrink: 0, marginTop: 2,
-            border: `1.5px solid ${task.completed ? '#1D9E75' : 'var(--color-border, #404560)'}`,
-            background: task.completed ? '#1D9E75' : 'transparent',
+            width: 17, height: 17, borderRadius: 5, flexShrink: 0, marginTop: 1,
+            boxSizing: 'border-box',
+            border: task.completed ? '1.5px solid #4E7645' : '1.5px solid rgba(25,23,18,.28)',
+            background: task.completed ? '#4E7645' : 'rgba(255,255,255,.75)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             cursor: 'pointer', transition: 'all 0.15s ease',
           }}
         >
           {task.completed && <Check size={9} color="#fff" strokeWidth={3} />}
         </button>
+
         <div style={{
-          flex: 1, fontSize: 12.5, fontWeight: 600, color: 'var(--sb-ink-1)',
-          lineHeight: 1.45,
+          flex: 1, fontSize: 12.5, fontWeight: 600, color: '#191712',
+          lineHeight: 1.32, minWidth: 0,
           display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
           textDecoration: task.completed ? 'line-through' : 'none',
           opacity: task.completed ? 0.55 : 1,
         }}>
           {task.title}
         </div>
-        <button
-          onPointerDown={e => e.stopPropagation()}
-          onClick={e => { e.stopPropagation(); updateTask(task.id, { urgent: !task.urgent }) }}
-          title={task.urgent ? 'Mark not urgent' : 'Mark urgent'}
-          style={{
-            background: 'none', border: 'none', cursor: 'pointer',
-            padding: '0 2px', fontSize: 13, lineHeight: 1, flexShrink: 0,
-            color: task.urgent ? '#F59E0B' : 'var(--sb-ink-3)',
-            opacity: task.urgent ? 1 : 0.35,
-          }}
-        >⚡</button>
+
         <button
           onPointerDown={e => e.stopPropagation()}
           onClick={e => { e.stopPropagation(); deleteTask(task.id) }}
           title="Delete task"
-          style={{
-            background: 'none', border: 'none', cursor: 'pointer',
-            padding: '0 2px', lineHeight: 1, flexShrink: 0,
-            color: 'var(--sb-ink-3)',
-            opacity: 0.35,
-            display: 'flex', alignItems: 'center',
-          }}
-          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = '1'; (e.currentTarget as HTMLElement).style.color = '#E05252' }}
-          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = '0.35'; (e.currentTarget as HTMLElement).style.color = 'var(--sb-ink-3)' }}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 2px', flexShrink: 0, color: '#8A8272', opacity: 0.5, display: 'flex', alignItems: 'center' }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = '1' }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = '0.5' }}
         >
           <Trash2 size={12} />
         </button>
       </div>
 
-      {/* Badges row */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap', marginBottom: companyName && !isPersonal ? 5 : 8 }}>
-        {isPersonal && (
-          <span style={{
-            fontSize: 10, fontWeight: 600, padding: '2px 6px', borderRadius: 4,
-            background: 'rgba(136,135,128,0.12)', color: '#888780',
-          }}>
-            Personal
-          </span>
-        )}
-        <span title={typeMeta.label} style={{ fontSize: 12 }}>{typeMeta.emoji}</span>
-      </div>
+      {/* Chips row */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', minWidth: 0 }}>
+        {/* Task type chip */}
+        <span style={{ display: 'flex', alignItems: 'center', gap: 5, height: 19, boxSizing: 'border-box', padding: '0 7px', borderRadius: 5, background: `rgba(255,255,255,.78)`, border: `1px solid rgba(${ccRgb},.44)`, color: companyHex, fontSize: 10, fontWeight: 700, flexShrink: 0 }}>
+          {typeMeta.emoji} {typeMeta.label}
+        </span>
 
-      {/* Company name */}
-      {!isPersonal && companyName && (
-        <div style={{
-          fontSize: 11, color: 'var(--sb-ink-3)', marginBottom: 8,
-          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-        }}>
-          {companyName}
-        </div>
-      )}
+        {/* Urgent/Priority chip */}
+        {task.urgent && (
+          <span style={{ height: 18, boxSizing: 'border-box', padding: '0 6px', borderRadius: 5, background: '#FBEAE4', border: '1px solid #E5BBAC', color: '#B94A2E', fontSize: 9.5, fontWeight: 700, display: 'flex', alignItems: 'center', flexShrink: 0 }}>P0</span>
+        )}
+        {!task.urgent && priority && priority === 'P1' && (
+          <span style={{ height: 18, boxSizing: 'border-box', padding: '0 6px', borderRadius: 5, background: '#FEF7DE', border: '1px solid #F5D14E', color: '#191712', fontSize: 9.5, fontWeight: 700, display: 'flex', alignItems: 'center', flexShrink: 0 }}>P1</span>
+        )}
 
-      {/* Footer */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
-        {priority ? (
-          <span style={{
-            fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 4,
-            background: 'rgba(25,23,18,0.06)', color: 'var(--color-accent, #7F77DD)',
-          }}>
-            {priority}
-          </span>
-        ) : (
-          <span style={{
-            fontSize: 10, fontWeight: 600, padding: '2px 6px', borderRadius: 4,
-            background: 'rgba(251,191,36,0.12)', color: '#FBBF24',
-          }}>
-            Unsch.
+        {/* Company dot */}
+        {companyName && (
+          <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, fontWeight: 600, color: companyHex, flexShrink: 0 }}>
+            <span style={{ width: 7, height: 7, borderRadius: 999, background: companyHex }} />
+            {companyName}
           </span>
         )}
-        {statusMeta && (
-          <span style={{
-            fontSize: 10, fontWeight: 600, padding: '2px 6px', borderRadius: 4,
-            background: `${statusMeta.color}18`, color: statusMeta.color,
-          }}>
-            {statusMeta.label}
-          </span>
-        )}
+
+        {/* Owner chip */}
         {ownerInitials && (
-          <span style={{
-            fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 4,
-            background: 'rgba(52,211,153,0.1)', color: '#34D399',
-          }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 5, height: 19, boxSizing: 'border-box', padding: '0 7px', borderRadius: 5, background: 'rgba(255,255,255,.7)', border: '1px solid rgba(25,23,18,.1)', color: '#6C6553', fontSize: 10, fontWeight: 600, flexShrink: 0 }}>
             {ownerInitials}
           </span>
         )}
+
+        {/* Due date */}
         {task.dueDate && (
-          <span style={{ fontSize: 10, color: 'var(--sb-ink-3)', marginLeft: 'auto' }}>
-            {task.dueDate}
+          <span style={{ display: 'flex', alignItems: 'center', gap: 5, height: 19, boxSizing: 'border-box', padding: '0 7px', borderRadius: 5, background: 'rgba(255,255,255,.7)', border: '1px solid rgba(25,23,18,.1)', color: '#6C6553', fontSize: 10, fontWeight: 600, flexShrink: 0 }}>
+            📅 {new Date(task.dueDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
           </span>
         )}
       </div>
@@ -289,28 +253,30 @@ function KanbanColumnComp({ column, onOpen, onColDragStart, onColDragOver, onCol
       onDragOver={onColDragOver}
       onDrop={() => onColDrop(column.id)}
     >
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, paddingLeft: 2, flexShrink: 0 }}>
+      {/* Column header — design spec: 8px status dot + label + count + add icon */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 2px', flexShrink: 0 }}>
         <span
           draggable
           onDragStart={() => onColDragStart(column.id)}
           onDragOver={onColDragOver}
           onDrop={() => onColDrop(column.id)}
           title="Drag to reorder"
-          style={{ cursor: 'grab', color: 'var(--sb-ink-3)', fontSize: 14, lineHeight: 1, userSelect: 'none', marginRight: 2 }}
+          style={{ cursor: 'grab', color: '#CFC7B2', fontSize: 12, lineHeight: 1, userSelect: 'none', marginRight: 2, display: 'flex' }}
         >
-          ⠿
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="6" r="1.2"/><circle cx="9" cy="12" r="1.2"/><circle cx="9" cy="18" r="1.2"/><circle cx="15" cy="6" r="1.2"/><circle cx="15" cy="12" r="1.2"/><circle cx="15" cy="18" r="1.2"/></svg>
         </span>
-        <div style={{ width: 8, height: 8, borderRadius: '50%', background: column.color, flexShrink: 0 }} />
-        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--sb-ink-1)', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        <span style={{ width: 8, height: 8, borderRadius: '50%', background: column.color, flexShrink: 0 }} />
+        <span style={{ fontSize: 12.5, fontWeight: 600, color: '#191712', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {column.label}
         </span>
-        <span style={{
-          fontSize: 11, fontWeight: 700, color: 'var(--sb-ink-3)',
-          background: 'var(--sb-page)', padding: '1px 8px', borderRadius: 10, flexShrink: 0,
-        }}>
+        <span style={{ fontSize: 11, color: '#6C6553', fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>
           {column.tasks.length}
         </span>
+        <div style={{ display: 'flex', gap: 6, color: '#6C6553' }}>
+          <button onClick={() => setAdding(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', color: 'inherit' }}>
+            <Plus size={13} />
+          </button>
+        </div>
       </div>
 
       {/* Drop zone */}
@@ -318,19 +284,18 @@ function KanbanColumnComp({ column, onOpen, onColDragStart, onColDragOver, onCol
         ref={setNodeRef}
         style={{
           flex: 1, overflowY: 'auto', padding: '4px 2px',
-          minHeight: 100,
-          background: isOver ? 'rgba(127,119,221,0.06)' : 'rgba(0,0,0,0.04)',
+          minHeight: 80,
+          background: isOver ? 'rgba(245,209,78,0.06)' : 'transparent',
           borderRadius: 10,
-          border: `1.5px dashed ${isOver ? 'rgba(127,119,221,0.4)' : 'var(--sb-border)'}`,
-          transition: 'background 0.15s, border-color 0.15s',
+          transition: 'background 0.15s',
         }}
       >
         {column.tasks.length === 0 && !adding ? (
-          <div style={{ padding: '20px 12px', textAlign: 'center', fontSize: 12, color: 'var(--sb-ink-3)', fontStyle: 'italic' }}>
+          <div style={{ padding: '20px 12px', textAlign: 'center', fontSize: 12, color: '#8A8272', fontStyle: 'italic' }}>
             No tasks
           </div>
         ) : (
-          <div style={{ padding: '4px 6px' }}>
+          <div style={{ padding: '2px 0' }}>
             {column.tasks.map(task => (
               <KanbanCard key={task.id} task={task} onOpen={() => onOpen(task.id)} />
             ))}
@@ -348,16 +313,16 @@ function KanbanColumnComp({ column, onOpen, onColDragStart, onColDragOver, onCol
               placeholder="Task title…"
               style={{
                 width: '100%', boxSizing: 'border-box',
-                background: 'var(--sb-page)', border: '1px solid var(--color-accent, #7F77DD)',
+                background: '#F7F4EA', border: '1px solid #F5D14E',
                 borderRadius: 6, padding: '6px 8px', fontSize: 12,
-                color: 'var(--sb-ink-1)', outline: 'none', fontFamily: 'inherit',
+                color: '#191712', outline: 'none', fontFamily: 'inherit',
               }}
             />
             <div style={{ display: 'flex', gap: 5, marginTop: 5 }}>
-              <button onClick={commitAdd} style={{ flex: 1, padding: '4px 0', fontSize: 11, fontWeight: 600, background: 'var(--color-accent, #7F77DD)', color: '#fff', border: 'none', borderRadius: 5, cursor: 'pointer' }}>
+              <button onClick={commitAdd} style={{ flex: 1, padding: '4px 0', fontSize: 11, fontWeight: 600, background: '#F5D14E', color: '#191712', border: 'none', borderRadius: 5, cursor: 'pointer' }}>
                 Add
               </button>
-              <button onClick={() => { setAdding(false); setNewTitle('') }} style={{ padding: '4px 8px', fontSize: 11, background: 'transparent', color: 'var(--sb-ink-3)', border: '1px solid var(--sb-border)', borderRadius: 5, cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+              <button onClick={() => { setAdding(false); setNewTitle('') }} style={{ padding: '4px 8px', fontSize: 11, background: 'transparent', color: '#6C6553', border: '1px solid #E8E1CE', borderRadius: 5, cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
                 <XIcon size={11} />
               </button>
             </div>
@@ -370,8 +335,8 @@ function KanbanColumnComp({ column, onOpen, onColDragStart, onColDragOver, onCol
         onClick={() => setAdding(true)}
         style={{
           marginTop: 6, width: '100%', padding: '5px 0', fontSize: 11, fontWeight: 500,
-          background: 'transparent', border: '1px dashed var(--sb-border)', borderRadius: 6,
-          color: 'var(--sb-ink-3)', cursor: 'pointer',
+          background: 'transparent', border: '1px dashed #E8E1CE', borderRadius: 6,
+          color: '#6C6553', cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
           transition: 'all 0.12s',
         }}
@@ -401,18 +366,18 @@ function DatePickerOverlay({
       display: 'flex', alignItems: 'center', justifyContent: 'center',
     }}>
       <div style={{
-        background: 'var(--sb-card)', borderRadius: 14,
-        padding: 24, width: 320, border: '1px solid var(--sb-border)',
+        background: '#FFFFFF', borderRadius: 14,
+        padding: 24, width: 320, border: '1px solid #E8E1CE',
         boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
       }}>
-        <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--sb-ink-1)', marginBottom: 6 }}>
+        <div style={{ fontSize: 15, fontWeight: 700, color: '#191712', marginBottom: 6 }}>
           Plan this task
         </div>
-        <div style={{ fontSize: 12, color: 'var(--sb-ink-3)', marginBottom: 16, lineHeight: 1.5 }}>
+        <div style={{ fontSize: 12, color: '#6C6553', marginBottom: 16, lineHeight: 1.5 }}>
           {taskTitle}
         </div>
         <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 11, color: 'var(--sb-ink-3)', marginBottom: 6, fontWeight: 600 }}>
+          <div style={{ fontSize: 11, color: '#6C6553', marginBottom: 6, fontWeight: 600 }}>
             Planned Date
           </div>
           <input
@@ -422,10 +387,10 @@ function DatePickerOverlay({
             autoFocus
             style={{
               width: '100%', boxSizing: 'border-box',
-              background: 'var(--sb-page)',
-              border: '1px solid var(--sb-border)',
+              background: '#F7F4EA',
+              border: '1px solid #E8E1CE',
               borderRadius: 6, padding: '7px 10px',
-              fontSize: 13, color: 'var(--sb-ink-1)',
+              fontSize: 13, color: '#191712',
               outline: 'none', fontFamily: 'inherit',
             }}
           />
@@ -433,8 +398,8 @@ function DatePickerOverlay({
         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
           <button onClick={onCancel} style={{
             padding: '7px 16px', borderRadius: 7, background: 'transparent',
-            border: '1px solid var(--sb-border)',
-            color: 'var(--sb-ink-3)', fontSize: 12, cursor: 'pointer',
+            border: '1px solid #E8E1CE',
+            color: '#6C6553', fontSize: 12, cursor: 'pointer',
           }}>Cancel</button>
           <button onClick={() => date && onConfirm(date)} disabled={!date} style={{
             padding: '7px 18px', borderRadius: 7,
@@ -665,18 +630,18 @@ export function KanbanBoard({ onOpen, hideCompleted = false, filteredTaskIds }: 
       {/* Board type tabs */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 6, padding: '10px 28px',
-        borderBottom: '1px solid var(--sb-border)', flexShrink: 0,
+        borderBottom: '1px solid #E8E1CE', flexShrink: 0,
       }}>
-        <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--sb-ink-3)', marginRight: 4, flexShrink: 0 }}>
+        <span style={{ fontSize: 12, fontWeight: 600, color: '#6C6553', marginRight: 4, flexShrink: 0 }}>
           Group by:
         </span>
         <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
           {BOARD_TYPE_OPTIONS.map(opt => (
             <button key={opt.id} onClick={() => saveBoardType(opt.id)} style={{
               padding: '5px 13px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer',
-              background: boardType === opt.id ? 'var(--color-accent, #7F77DD)' : 'transparent',
-              color:      boardType === opt.id ? '#fff' : 'var(--sb-ink-3)',
-              border:     `1px solid ${boardType === opt.id ? 'var(--color-accent, #7F77DD)' : 'var(--sb-border)'}`,
+              background: boardType === opt.id ? '#F5D14E' : 'transparent',
+              color:      boardType === opt.id ? '#fff' : '#6C6553',
+              border:     `1px solid ${boardType === opt.id ? '#F5D14E' : '#E8E1CE'}`,
               transition: 'all 0.12s',
             }}>
               {opt.label}

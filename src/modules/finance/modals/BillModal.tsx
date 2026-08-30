@@ -1,6 +1,4 @@
 import { useState } from 'react'
-import { useUIStore } from '@/store/uiStore'
-import { getTheme } from '@/lib/themes'
 import type { Bill, BillFrequency, Category, Account, Currency } from '../types'
 import { IconPicker } from '../components/IconPicker'
 
@@ -18,7 +16,6 @@ interface Props {
 }
 
 export function BillModal({ bill, categories, accounts, onSave, onDelete, onClose }: Props) {
-  const theme = getTheme(useUIStore(s => s.themeId))
   const isEdit = !!bill
 
   const todayStr = new Date().toISOString().slice(0, 10)
@@ -54,9 +51,9 @@ export function BillModal({ bill, categories, accounts, onSave, onDelete, onClos
     width: '100%',
     padding: '10px 12px',
     borderRadius: 8,
-    border: `1px solid ${theme.border}`,
-    background: theme.bg,
-    color: theme.text,
+    border: `1px solid ${'#E8E1CE'}`,
+    background: '#F7F4EA',
+    color: '#191712',
     fontSize: 14,
     outline: 'none',
     boxSizing: 'border-box' as const,
@@ -66,7 +63,7 @@ export function BillModal({ bill, categories, accounts, onSave, onDelete, onClos
   const labelStyle: React.CSSProperties = {
     display: 'block',
     fontSize: 12,
-    color: theme.textDim,
+    color: '#6C6553',
     marginBottom: 5,
     fontWeight: 500,
   }
@@ -93,7 +90,7 @@ export function BillModal({ bill, categories, accounts, onSave, onDelete, onClos
         width: 460,
         maxHeight: '90vh',
         overflowY: 'auto',
-        background: theme.surface,
+        background: '#FFFFFF',
         borderRadius: 16,
         boxShadow: '0 24px 60px rgba(0,0,0,0.5)',
         padding: '24px 28px',
@@ -104,7 +101,7 @@ export function BillModal({ bill, categories, accounts, onSave, onDelete, onClos
 
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: 18, fontWeight: 700, color: theme.text }}>
+          <span style={{ fontSize: 18, fontWeight: 700, color: '#191712' }}>
             {isEdit ? 'Edit Bill' : 'New Bill'}
           </span>
           <button
@@ -114,7 +111,7 @@ export function BillModal({ bill, categories, accounts, onSave, onDelete, onClos
               border: 'none',
               cursor: 'pointer',
               fontSize: 20,
-              color: theme.textDim,
+              color: '#6C6553',
               lineHeight: 1,
               padding: '0 4px',
               fontFamily: 'inherit',
@@ -182,9 +179,9 @@ export function BillModal({ bill, categories, accounts, onSave, onDelete, onClos
                   flex: 1,
                   padding: '9px 0',
                   borderRadius: 8,
-                  border: `1px solid ${!isIncome ? RED : theme.border}`,
+                  border: `1px solid ${!isIncome ? RED : '#E8E1CE'}`,
                   background: !isIncome ? `${RED}20` : 'transparent',
-                  color: !isIncome ? RED : theme.textDim,
+                  color: !isIncome ? RED : '#6C6553',
                   fontSize: 13,
                   fontWeight: 600,
                   cursor: 'pointer',
@@ -199,9 +196,9 @@ export function BillModal({ bill, categories, accounts, onSave, onDelete, onClos
                   flex: 1,
                   padding: '9px 0',
                   borderRadius: 8,
-                  border: `1px solid ${isIncome ? GREEN : theme.border}`,
+                  border: `1px solid ${isIncome ? GREEN : '#E8E1CE'}`,
                   background: isIncome ? `${GREEN}20` : 'transparent',
-                  color: isIncome ? GREEN : theme.textDim,
+                  color: isIncome ? GREEN : '#6C6553',
                   fontSize: 13,
                   fontWeight: 600,
                   cursor: 'pointer',
@@ -282,7 +279,7 @@ export function BillModal({ bill, categories, accounts, onSave, onDelete, onClos
           justifyContent: 'flex-end',
           gap: 8,
           paddingTop: 8,
-          borderTop: `1px solid ${theme.border}`,
+          borderTop: `1px solid ${'#E8E1CE'}`,
         }}>
           <button
             onClick={onClose}
@@ -291,7 +288,7 @@ export function BillModal({ bill, categories, accounts, onSave, onDelete, onClos
               border: 'none',
               cursor: 'pointer',
               fontSize: 14,
-              color: theme.textDim,
+              color: '#6C6553',
               padding: '8px 14px',
               fontFamily: 'inherit',
               borderRadius: 8,
@@ -321,11 +318,11 @@ export function BillModal({ bill, categories, accounts, onSave, onDelete, onClos
           <button
             onClick={handleSave}
             style={{
-              background: theme.accent,
+              background: '#F5D14E',
               border: 'none',
               cursor: 'pointer',
               fontSize: 14,
-              color: '#fff',
+              color: '#191712',
               padding: '8px 20px',
               fontFamily: 'inherit',
               borderRadius: 8,

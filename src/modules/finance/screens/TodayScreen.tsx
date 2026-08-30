@@ -34,13 +34,13 @@ const RED   = '#E05252'
 const GREEN = '#1D9E75'
 
 const C = {
-  bg:      'var(--sb-page)',
-  surface: 'var(--sb-card)',
-  border:  'var(--sb-border)',
-  textPri: 'var(--sb-ink-1)',
-  textDim: 'var(--sb-ink-2)',
-  textMuted: 'var(--sb-ink-3)',
-  accent:  'var(--sb-ink-1)',
+  bg:      '#F7F4EA',
+  surface: '#FFFFFF',
+  border:  '#E8E1CE',
+  textPri: '#191712',
+  textDim: '#3D3926',
+  textMuted: '#6C6553',
+  accent:  '#191712',
 }
 
 const MONTH_NAMES = [

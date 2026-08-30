@@ -17,10 +17,10 @@ interface Props {
 }
 
 const inp: React.CSSProperties = {
-  background: 'var(--color-bg,var(--sb-page))',
-  border: '1px solid var(--color-border,var(--sb-border))',
+  background: '#F7F4EA',
+  border: '1px solid #E8E1CE',
   borderRadius: 7, padding: '8px 12px',
-  color: 'var(--color-text,#E8EAF6)',
+  color: '#191712',
   fontSize: 13, outline: 'none', width: '100%', boxSizing: 'border-box',
 }
 
@@ -44,10 +44,10 @@ export function Step3Companies({ data, onChange }: Props) {
 
   return (
     <div>
-      <h2 style={{ margin: '0 0 6px', fontSize: 22, fontWeight: 800, color: 'var(--color-text,#E8EAF6)' }}>
+      <h2 style={{ margin: '0 0 6px', fontSize: 22, fontWeight: 800, color: '#191712' }}>
         Your companies &amp; clients
       </h2>
-      <p style={{ margin: '0 0 24px', fontSize: 13.5, color: 'var(--color-text-dim,#94A3B8)', lineHeight: 1.6 }}>
+      <p style={{ margin: '0 0 24px', fontSize: 13.5, color: '#6C6553', lineHeight: 1.6 }}>
         Add the organizations you work with. Each can be linked to a connected account.
       </p>
 
@@ -58,20 +58,20 @@ export function Step3Companies({ data, onChange }: Props) {
             <div key={co.id} style={{
               display: 'flex', alignItems: 'center', gap: 10,
               padding: '10px 14px', borderRadius: 10,
-              background: 'var(--color-surface,var(--sb-card))',
-              border: '1px solid var(--color-border,var(--sb-border))',
+              background: '#FFFFFF',
+              border: '1px solid #E8E1CE',
             }}>
               <div style={{ width: 14, height: 14, borderRadius: '50%', background: co.color, flexShrink: 0 }} />
               <div style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--color-text,#E8EAF6)' }}>{co.name}</span>
-                {co.emailDomain && <span style={{ marginLeft: 8, fontSize: 11, color: 'var(--color-text-muted,#6B7280)' }}>{co.emailDomain}</span>}
+                <span style={{ fontSize: 13.5, fontWeight: 600, color: '#191712' }}>{co.name}</span>
+                {co.emailDomain && <span style={{ marginLeft: 8, fontSize: 11, color: '#9B9180' }}>{co.emailDomain}</span>}
               </div>
               {acc && (
                 <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 20, background: 'rgba(127,119,221,0.12)', color: '#9B94E8', flexShrink: 0 }}>
                   {acc.email.split('@')[0]}
                 </span>
               )}
-              <button onClick={() => remove(co.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted,#6B7280)', padding: 4, display: 'flex' }}>
+              <button onClick={() => remove(co.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9B9180', padding: 4, display: 'flex' }}>
                 <X size={13} />
               </button>
             </div>
@@ -80,7 +80,7 @@ export function Step3Companies({ data, onChange }: Props) {
       </div>
 
       {adding ? (
-        <div style={{ padding: '16px', borderRadius: 10, background: 'var(--color-surface,var(--sb-card))', border: '1px solid var(--color-border,var(--sb-border))', marginBottom: 12 }}>
+        <div style={{ padding: '16px', borderRadius: 10, background: '#FFFFFF', border: '1px solid #E8E1CE', marginBottom: 12 }}>
           <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
             <input value={name} onChange={e => setName(e.target.value)} placeholder="Company name" style={inp} onKeyDown={e => e.key === 'Enter' && addCompany()} autoFocus />
             <input value={domain} onChange={e => setDomain(e.target.value)} placeholder="e.g. acme.com" style={{ ...inp, width: 160 }} />
@@ -101,10 +101,10 @@ export function Step3Companies({ data, onChange }: Props) {
             </select>
           )}
           <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={addCompany} style={{ padding: '8px 18px', borderRadius: 8, background: 'var(--color-accent,#7F77DD)', color: '#fff', fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer' }}>
+            <button onClick={addCompany} style={{ padding: '8px 18px', borderRadius: 8, background: '#F5D14E', color: '#191712', fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer' }}>
               Add
             </button>
-            <button onClick={() => setAdding(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted,#6B7280)', fontSize: 13 }}>
+            <button onClick={() => setAdding(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9B9180', fontSize: 13 }}>
               Cancel
             </button>
           </div>
@@ -112,15 +112,15 @@ export function Step3Companies({ data, onChange }: Props) {
       ) : (
         <button onClick={() => setAdding(true)} style={{
           display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 8,
-          background: 'transparent', border: '1px dashed var(--color-border,var(--sb-border))',
-          color: 'var(--color-text-muted,#6B7280)', fontSize: 13, cursor: 'pointer',
+          background: 'transparent', border: '1px dashed #E8E1CE',
+          color: '#9B9180', fontSize: 13, cursor: 'pointer',
           width: '100%', justifyContent: 'center',
         }}>
           + Add company
         </button>
       )}
 
-      <p style={{ margin: '16px 0 0', fontSize: 11.5, color: 'var(--color-text-muted,#6B7280)', fontStyle: 'italic' }}>
+      <p style={{ margin: '16px 0 0', fontSize: 11.5, color: '#9B9180', fontStyle: 'italic' }}>
         You can add more companies anytime in Settings.
       </p>
     </div>
