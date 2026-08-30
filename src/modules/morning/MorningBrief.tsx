@@ -36,7 +36,7 @@ const CO_NAME: Record<string, string> = {
 const ENERGY_META = [
   null,
   { label: 'Depleted', color: '#888780' },
-  { label: 'Low',      color: '#FFFFFF' },
+  { label: 'Low',      color: '#888780' },
   { label: 'Steady',   color: '#7F77DD' },
   { label: 'Energized',color: '#1D9E75' },
   { label: 'Peak',     color: '#7F77DD' },
@@ -455,7 +455,7 @@ function EventDetailPanel({ event, onClose }: { event: RichMeetingEvent; onClose
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10 }}>
             <StatusBadge status={status} />
-            <span style={{ fontSize: 11, color: '#FFFFFF' }}>
+            <span style={{ fontSize: 11, color: '#191712' }}>
               {fmtTime(event.start_time)} – {fmtTime(event.end_time)}
               <span style={{ marginLeft: 6, color: '#6C6553' }}>({fmtDuration(event.start_time, event.end_time)})</span>
             </span>
@@ -469,7 +469,7 @@ function EventDetailPanel({ event, onClose }: { event: RichMeetingEvent; onClose
           {event.calendarName && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <div style={{ width: 8, height: 8, borderRadius: '50%', background: accentColor, flexShrink: 0 }} />
-              <span style={{ fontSize: 12, color: '#FFFFFF' }}>{event.calendarName}</span>
+              <span style={{ fontSize: 12, color: '#191712' }}>{event.calendarName}</span>
               {event.accountEmail && (
                 <span style={{ fontSize: 10.5, color: '#6C6553' }}>· {event.accountEmail}</span>
               )}
@@ -479,7 +479,7 @@ function EventDetailPanel({ event, onClose }: { event: RichMeetingEvent; onClose
           {/* Meeting type */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <MeetingTypeIcon type={event.meeting_type} size={13} />
-            <span style={{ fontSize: 12, color: '#FFFFFF' }}>
+            <span style={{ fontSize: 12, color: '#191712' }}>
               <MeetingTypeLabel type={event.meeting_type} />
             </span>
           </div>
@@ -488,7 +488,7 @@ function EventDetailPanel({ event, onClose }: { event: RichMeetingEvent; onClose
           {event.location && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <MapPin size={13} color="#6C6553" style={{ flexShrink: 0 }} />
-              <span style={{ fontSize: 12, color: '#FFFFFF' }}>{event.location}</span>
+              <span style={{ fontSize: 12, color: '#191712' }}>{event.location}</span>
             </div>
           )}
 
@@ -522,7 +522,7 @@ function EventDetailPanel({ event, onClose }: { event: RichMeetingEvent; onClose
                 Description
               </p>
               <p style={{
-                margin: 0, fontSize: 12, color: '#FFFFFF', lineHeight: 1.6,
+                margin: 0, fontSize: 12, color: '#191712', lineHeight: 1.6,
                 maxHeight: 100, overflowY: 'auto',
                 whiteSpace: 'pre-wrap', wordBreak: 'break-word',
               }}>
@@ -611,7 +611,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
       margin: '0 0 14px',
       fontSize: 11,
       fontWeight: 600,
-      color: '#FFFFFF',
+      color: '#191712',
       textTransform: 'uppercase',
       letterSpacing: '1px',
     }}>
@@ -781,7 +781,7 @@ export function MorningBrief() {
         <div className="brief-section" style={{ marginBottom: 32 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
-              <p style={{ margin: '0 0 2px', fontSize: 15, color: '#FFFFFF', fontWeight: 400 }}>
+              <p style={{ margin: '0 0 2px', fontSize: 15, color: '#191712', fontWeight: 400 }}>
                 Good morning,
               </p>
               <h1 style={{
@@ -795,7 +795,7 @@ export function MorningBrief() {
               }}>
                 {firstName}.
               </h1>
-              <p style={{ margin: '10px 0 0', fontSize: 13, color: '#FFFFFF' }}>
+              <p style={{ margin: '10px 0 0', fontSize: 13, color: '#191712' }}>
                 {dateStr}
               </p>
             </div>
@@ -809,7 +809,7 @@ export function MorningBrief() {
                 padding: '8px 14px', borderRadius: 8,
                 background: 'transparent',
                 border: '1px solid #E8E1CE',
-                color: '#FFFFFF', fontSize: 12, cursor: 'pointer',
+                color: '#191712', fontSize: 12, cursor: 'pointer',
                 transition: 'all 0.15s',
                 opacity: isGenerating ? 0.5 : 1,
               }}
@@ -835,7 +835,7 @@ export function MorningBrief() {
           borderRadius: 14,
           padding: '20px 24px',
         }}>
-          <p style={{ margin: '0 0 16px', fontSize: 13, color: '#FFFFFF' }}>
+          <p style={{ margin: '0 0 16px', fontSize: 13, color: '#191712' }}>
             How's your energy this morning?
           </p>
           <div style={{ display: 'flex', gap: 14 }}>
@@ -975,7 +975,7 @@ export function MorningBrief() {
                   })}
                 </div>
               ) : (
-                <p style={{ margin: 0, fontSize: 13, color: '#FFFFFF' }}>
+                <p style={{ margin: 0, fontSize: 13, color: '#191712' }}>
                   Priorities will appear once the plan is generated.
                 </p>
               )}
@@ -1002,7 +1002,7 @@ export function MorningBrief() {
               </div>
 
               {todayEvents.length === 0 ? (
-                <p style={{ margin: 0, fontSize: 13, color: '#FFFFFF' }}>
+                <p style={{ margin: 0, fontSize: 13, color: '#191712' }}>
                   No meetings today — or connect Google Calendar to see them.
                 </p>
               ) : (
