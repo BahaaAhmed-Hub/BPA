@@ -1,7 +1,5 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { AssistantPanel, AssistantToggle } from './modules/assistant/AssistantPanel'
-import { Sidebar } from './components/layout/Sidebar'
-import { PageShell } from './components/layout/PageShell'
 import { ExecutiveDashboard } from './modules/dashboard/ExecutiveDashboard'
 import { TaskCommand } from './modules/tasks/TaskCommand'
 import { CalendarModule } from './modules/calendar/CalendarModule'
@@ -17,197 +15,28 @@ import { useUIStore } from './store/uiStore'
 import { useAuthStore } from './store/authStore'
 import { useTaskStore } from './store/taskStore'
 import { useHabitsStore } from './store/habitsStore'
-import { useBehavioralStore } from './store/behavioralStore'
 import { supabase } from './lib/supabase'
 import { signInWithGoogle, getPendingAddAccount, clearPendingAddAccount } from './lib/google'
 import { addAccount, loadAccounts, saveAccounts } from './lib/multiAccount'
 import { saveAccountsToDB, loadCompaniesFromDB, loadRawSettingsFromDB, loadAccountsFromDB } from './lib/dbSync'
 import { seedToken, seedFromLocalStorage, clearAllTokens, getGoogleToken } from './lib/tokenManager'
 import { refreshPrimaryToken } from './lib/googleCalendar'
-import { getTheme, applyThemeVars } from './lib/themes'
-import { GraduationCap, Calendar, Mail, CheckSquare, Brain, ArrowRight } from 'lucide-react'
 import { SetupWizard } from './modules/wizard/SetupWizard'
+import { Search } from 'lucide-react'
 
-// ─── Mode-specific login themes ──────────────────────────────────────────────
+// ─── Sunlit Bento — Login screen (1A) ────────────────────────────────────────
 
-interface LoginTheme {
-  bg: string; surface: string
-  accent: string; accentBright: string
-  text: string; textDim: string; textMuted: string
-  glow1: string; glow2: string; border: string
-  headline: string; sub: string; tagline: string
-  badge: string | null; available: boolean
-  btnText: string; btnBorder: string; btnBg: string; btnBgHover: string
-}
 
-const LOGIN_MODES: Record<string, LoginTheme> = {
-  default: {
-    bg: '#0D0F1A', surface: 'rgba(14,28,72,0.92)',
-    accent: '#1E40AF', accentBright: '#60A5FA',
-    text: '#E8EAF6', textDim: '#94A3B8', textMuted: 'rgba(255,255,255,0.5)',
-    glow1: 'rgba(30,64,175,0.08)', glow2: 'rgba(127,119,221,0.06)',
-    border: 'rgba(30,64,175,0.25)',
-    headline: 'Your AI Executive', sub: 'Operating System',
-    tagline: 'Triage emails, prep for meetings, manage tasks, and track habits — all powered by AI.',
-    badge: null, available: true,
-    btnText: '#E8EAF6', btnBorder: 'rgba(30,64,175,0.3)',
-    btnBg: 'rgba(30,64,175,0.10)', btnBgHover: 'rgba(30,64,175,0.2)',
-  },
-  samurai: {
-    bg: '#0A0804', surface: 'rgba(19,18,16,0.96)',
-    accent: '#8B1A1A', accentBright: '#C0392B',
-    text: '#EDE4D3', textDim: '#7A6E5E', textMuted: 'rgba(237,228,211,0.4)',
-    glow1: 'rgba(139,26,26,0.10)', glow2: 'rgba(139,26,26,0.05)',
-    border: 'rgba(139,26,26,0.3)',
-    headline: 'Discipline.', sub: 'Precision. Mastery.',
-    tagline: 'Walk the path. Execute without hesitation. Rise.',
-    badge: 'SAMURAI MODE', available: true,
-    btnText: '#EDE4D3', btnBorder: 'rgba(139,26,26,0.5)',
-    btnBg: 'rgba(139,26,26,0.12)', btnBgHover: 'rgba(139,26,26,0.22)',
-  },
-  pharaoh: {
-    bg: '#090700', surface: 'rgba(20,16,5,0.96)',
-    accent: '#C9A227', accentBright: '#F5D060',
-    text: '#F5E6C8', textDim: '#9B8B6A', textMuted: 'rgba(245,230,200,0.4)',
-    glow1: 'rgba(201,162,39,0.09)', glow2: 'rgba(201,162,39,0.04)',
-    border: 'rgba(201,162,39,0.3)',
-    headline: 'Build Your', sub: 'Legacy.',
-    tagline: 'Your empire begins with systems. Command time. Shape history.',
-    badge: 'PHARAOH MODE', available: false,
-    btnText: '#F5E6C8', btnBorder: 'rgba(201,162,39,0.4)',
-    btnBg: 'rgba(201,162,39,0.08)', btnBgHover: 'rgba(201,162,39,0.16)',
-  },
-  astral: {
-    bg: '#04020E', surface: 'rgba(8,5,22,0.97)',
-    accent: '#7C3AED', accentBright: '#A78BFA',
-    text: '#EDE9FE', textDim: '#8B83C4', textMuted: 'rgba(237,233,254,0.4)',
-    glow1: 'rgba(124,58,237,0.08)', glow2: 'rgba(45,212,191,0.05)',
-    border: 'rgba(124,58,237,0.3)',
-    headline: 'Think in', sub: 'Horizons.',
-    tagline: 'Clarity at the cosmic scale. Operate from vision, not reaction.',
-    badge: 'ASTRAL MODE', available: false,
-    btnText: '#EDE9FE', btnBorder: 'rgba(124,58,237,0.4)',
-    btnBg: 'rgba(124,58,237,0.10)', btnBgHover: 'rgba(124,58,237,0.20)',
-  },
-}
+// ─── Login screen — 1A (Sunlit Bento) ────────────────────────────────────────
 
-const FEATURES = [
-  { icon: Brain,       label: 'AI Meeting Prep'      },
-  { icon: Mail,        label: 'Inbox Triage'          },
-  { icon: Calendar,    label: 'Calendar Intelligence' },
-  { icon: CheckSquare, label: 'Task Command'          },
+const LIVE_STATS = [
+  { value: '23',   label: 'tasks completed this week' },
+  { value: '5 / 7', label: 'habits logged today'       },
+  { value: '4.5 h', label: 'focus hours blocked'       },
 ]
 
-const MODE_PHOTOS: Record<string, string> = {
-  default: 'https://images.unsplash.com/photo-1580851977566-8a01e4b1e3a8?auto=format&fit=crop&w=900&q=85',
-  samurai: 'https://images.unsplash.com/photo-1580851977566-8a01e4b1e3a8?auto=format&fit=crop&w=900&q=85',
-  pharaoh: 'https://images.unsplash.com/photo-1539650116574-8efeb43e2750?auto=format&fit=crop&w=900&q=85',
-  astral:  'https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?auto=format&fit=crop&w=900&q=85',
-}
-
-const MODE_QUOTES: Record<string, string> = {
-  default: 'Stay ahead. Stay organized.',
-  samurai: '七転び八起き — Fall seven times. Rise eight.',
-  pharaoh: 'Eternal systems outlast their builders.',
-  astral:  'Operate from the longest timeline.',
-}
-
-// ─── Background art layers ────────────────────────────────────────────────────
-
-function BgDefault({ T }: { T: LoginTheme }) {
-  return (
-    <>
-      <div style={{ position:'absolute', top:'-20%', left:'-10%', width:600, height:600, borderRadius:'50%', background:`radial-gradient(circle, ${T.glow1} 0%, transparent 70%)`, pointerEvents:'none' }} />
-      <div style={{ position:'absolute', bottom:'-10%', right:'-5%', width:500, height:500, borderRadius:'50%', background:`radial-gradient(circle, ${T.glow2} 0%, transparent 70%)`, pointerEvents:'none' }} />
-    </>
-  )
-}
-
-function BgSamurai({ T }: { T: LoginTheme }) {
-  return (
-    <>
-      {/* Crimson glow at bottom */}
-      <div style={{ position:'absolute', bottom:0, left:'50%', transform:'translateX(-50%)', width:'80%', height:300, background:`radial-gradient(ellipse at bottom, ${T.glow1} 0%, transparent 70%)`, pointerEvents:'none' }} />
-      {/* Top-left ink splatter */}
-      <svg style={{ position:'absolute', top:0, left:0, opacity:0.07, pointerEvents:'none' }} width="420" height="380" viewBox="0 0 420 380" fill="none">
-        <path d="M0,0 Q60,40 30,120 Q10,180 80,200 Q120,220 60,280 Q20,320 0,380 Z" fill={T.accent}/>
-        <path d="M0,0 Q80,20 100,80 Q130,140 70,160 Q30,175 50,240 Q70,290 0,320 Z" fill={T.accentBright} opacity="0.5"/>
-      </svg>
-      {/* Mountain silhouette at bottom */}
-      <svg style={{ position:'absolute', bottom:0, left:0, width:'100%', pointerEvents:'none' }} viewBox="0 0 1200 180" preserveAspectRatio="none" fill="none">
-        <path d="M0,180 L0,120 Q150,30 280,90 Q380,140 450,60 Q530,-10 620,80 Q700,150 780,50 Q860,-30 940,70 Q1020,150 1100,40 L1200,30 L1200,180 Z" fill="#0D0B07" opacity="0.9"/>
-        <path d="M0,180 L0,140 Q100,80 200,120 Q300,155 380,90 Q460,40 540,110 Q620,170 700,100 Q780,50 860,120 Q940,170 1020,90 Q1100,30 1200,80 L1200,180 Z" fill="#110E0A" opacity="0.95"/>
-      </svg>
-      {/* Ink brush horizontal strokes */}
-      <svg style={{ position:'absolute', top:'35%', right:0, opacity:0.04, pointerEvents:'none' }} width="300" height="200" viewBox="0 0 300 200">
-        <path d="M300,30 Q200,20 100,40 Q50,50 10,35" stroke={T.accent} strokeWidth="18" strokeLinecap="round" fill="none"/>
-        <path d="M300,80 Q220,65 140,85 Q80,95 20,75" stroke={T.accent} strokeWidth="12" strokeLinecap="round" fill="none"/>
-        <path d="M300,130 Q240,115 170,135 Q100,148 30,130" stroke={T.accent} strokeWidth="8" strokeLinecap="round" fill="none"/>
-      </svg>
-    </>
-  )
-}
-
-function BgPharaoh({ T }: { T: LoginTheme }) {
-  return (
-    <>
-      {/* Gold horizon glow */}
-      <div style={{ position:'absolute', bottom:0, left:'50%', transform:'translateX(-50%)', width:'90%', height:350, background:`radial-gradient(ellipse at bottom, rgba(201,162,39,0.12) 0%, transparent 65%)`, pointerEvents:'none' }} />
-      {/* Star field */}
-      {Array.from({ length: 80 }).map((_, i) => (
-        <div key={i} style={{
-          position:'absolute',
-          left:`${(i * 37 + i * 13) % 100}%`,
-          top:`${(i * 31 + i * 7) % 65}%`,
-          width: i % 5 === 0 ? 2 : 1,
-          height: i % 5 === 0 ? 2 : 1,
-          borderRadius:'50%',
-          background: i % 7 === 0 ? T.accentBright : 'rgba(245,230,200,0.6)',
-          animation: `starTwinkle ${1.5 + (i % 3) * 0.7}s ease-in-out infinite ${(i % 5) * 0.4}s`,
-          pointerEvents:'none',
-        }} />
-      ))}
-      {/* Desert horizon line */}
-      <svg style={{ position:'absolute', bottom:0, left:0, width:'100%', pointerEvents:'none' }} viewBox="0 0 1200 120" preserveAspectRatio="none" fill="none">
-        <path d="M0,120 L0,80 Q200,60 350,70 Q500,80 600,65 Q750,50 900,72 Q1050,88 1200,70 L1200,120 Z" fill="#0E0A02" opacity="0.97"/>
-      </svg>
-    </>
-  )
-}
-
-function BgAstral({ T }: { T: LoginTheme }) {
-  return (
-    <>
-      {/* Nebula blobs */}
-      <div style={{ position:'absolute', top:'10%', left:'20%', width:500, height:400, borderRadius:'60% 40% 70% 30%', background:`radial-gradient(ellipse, rgba(124,58,237,0.08) 0%, transparent 70%)`, pointerEvents:'none' }} />
-      <div style={{ position:'absolute', bottom:'20%', right:'15%', width:400, height:350, borderRadius:'40% 60% 30% 70%', background:`radial-gradient(ellipse, rgba(45,212,191,0.05) 0%, transparent 70%)`, pointerEvents:'none' }} />
-      <div style={{ position:'absolute', top:'40%', right:'30%', width:300, height:300, borderRadius:'50%', background:`radial-gradient(ellipse, rgba(251,113,133,0.04) 0%, transparent 70%)`, pointerEvents:'none' }} />
-      {/* Star field */}
-      {Array.from({ length: 120 }).map((_, i) => (
-        <div key={i} style={{
-          position:'absolute',
-          left:`${(i * 43 + i * 17) % 100}%`,
-          top:`${(i * 29 + i * 11) % 100}%`,
-          width: i % 8 === 0 ? 2.5 : i % 4 === 0 ? 1.5 : 1,
-          height: i % 8 === 0 ? 2.5 : i % 4 === 0 ? 1.5 : 1,
-          borderRadius:'50%',
-          background: i % 6 === 0 ? T.accentBright : i % 11 === 0 ? 'rgba(45,212,191,0.9)' : 'rgba(255,255,255,0.6)',
-          animation: `starTwinkle ${1.2 + (i % 4) * 0.6}s ease-in-out infinite ${(i % 7) * 0.3}s`,
-          pointerEvents:'none',
-        }} />
-      ))}
-    </>
-  )
-}
-
-// ─── Login screen ─────────────────────────────────────────────────────────────
-
 function LoginScreen() {
-  const [hovered, setHovered] = useState(false)
-  const [signing, setSigning]   = useState(false)
-  const { enabled, mode } = useBehavioralStore()
-  const key = enabled ? mode : 'default'
-  const T = LOGIN_MODES[key] ?? LOGIN_MODES.default
+  const [signing, setSigning] = useState(false)
 
   async function handleSignIn() {
     setSigning(true)
@@ -216,222 +45,207 @@ function LoginScreen() {
 
   return (
     <div style={{
-      height: '100vh',
-      background: T.bg,
+      minHeight: '100vh',
+      background: 'linear-gradient(160deg, #F7F4EA 0%, #EEE8D0 100%)',
       display: 'flex',
-      overflow: 'hidden',
-      position: 'relative',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '32px 24px',
+      fontFamily: "'Instrument Sans', system-ui, sans-serif",
     }}>
-      {/* Mode-specific background art */}
-      {key === 'default' && <BgDefault T={T} />}
-      {key === 'samurai' && <BgSamurai T={T} />}
-      {key === 'pharaoh' && <BgPharaoh T={T} />}
-      {key === 'astral'  && <BgAstral  T={T} />}
-
-      {/* Left panel — branding */}
+      {/* Main card */}
       <div style={{
-        flex: 1,
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'center',
-        padding: '60px 80px',
-        position: 'relative',
-        overflowY: 'auto',
+        width: '100%',
+        maxWidth: 960,
+        display: 'grid',
+        gridTemplateColumns: '1fr 400px',
+        gap: 0,
+        background: '#FFFFFF',
+        borderRadius: 24,
+        boxShadow: '0 26px 64px -34px rgba(48,40,20,.5)',
+        overflow: 'hidden',
+        border: '1px solid #E8E1CE',
       }}>
-        {/* Logo */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: T.badge ? 24 : 48 }}>
-          <div style={{
-            width: 48, height: 48, borderRadius: key === 'samurai' ? 4 : 12,
-            background: key === 'default'
-              ? 'linear-gradient(135deg, #1E40AF 0%, #60A5FA 100%)'
-              : `linear-gradient(135deg, ${T.accent} 0%, ${T.accentBright} 100%)`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: `0 8px 24px ${T.glow1.replace('0.08','0.35').replace('0.09','0.35').replace('0.07','0.35')}`,
-          }}>
-            <GraduationCap size={24} color={T.bg} strokeWidth={2.5} />
-          </div>
-          <div>
+        {/* Left — promise */}
+        <div style={{
+          background: 'linear-gradient(160deg, #F7F4EA 0%, #EEE8D0 100%)',
+          padding: '60px 56px',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+        }}>
+          {/* Mark */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 56 }}>
+            <div style={{
+              width: 38, height: 38, borderRadius: 10,
+              background: '#191712',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0,
+            }}>
+              {/* Graduation cap inline SVG */}
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                stroke="#FDF8E7" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
+                <path d="M6 12v5c3.333 2 8.667 2 12 0v-5"/>
+              </svg>
+            </div>
             <span style={{
-              display: 'block',
-              fontFamily: "'Cabinet Grotesk', sans-serif",
-              fontWeight: 800, fontSize: 22, color: T.text, letterSpacing: key === 'samurai' ? '1px' : '-0.5px',
+              fontFamily: "'Outfit', system-ui, sans-serif",
+              fontWeight: 700, fontSize: 17, color: '#191712', letterSpacing: '-.02em',
             }}>
               The Professor
             </span>
-            {T.badge && (
-              <span style={{
-                display: 'inline-block', marginTop: 3,
-                fontSize: 9, fontWeight: 700, letterSpacing: '2px',
-                padding: '2px 8px', borderRadius: 3,
-                background: `${T.accent}22`, border: `1px solid ${T.accent}55`,
-                color: T.accentBright,
-              }}>
-                {T.badge}
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Headline */}
-        <div style={{ maxWidth: 520 }}>
-          <h1 style={{
-            margin: '0 0 20px',
-            fontSize: key === 'samurai' ? 58 : 52,
-            fontWeight: 900,
-            fontFamily: "'Cabinet Grotesk', sans-serif",
-            color: T.text,
-            letterSpacing: key === 'samurai' ? '-1px' : '-2px',
-            lineHeight: key === 'samurai' ? 1.0 : 1.08,
-          }}>
-            {T.headline}
-            <br />
-            <span style={{
-              background: key === 'default'
-                ? 'linear-gradient(135deg, #3B82F6 0%, #93C5FD 50%, #60A5FA 100%)'
-                : `linear-gradient(135deg, ${T.accentBright} 0%, ${T.accent} 50%, ${T.accentBright} 100%)`,
-              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-            }}>
-              {T.sub}
-            </span>
-          </h1>
-          <p style={{
-            margin: '0 0 40px',
-            fontSize: 16, color: T.text, lineHeight: 1.7, maxWidth: 420,
-            opacity: 0.75,
-            fontFamily: key === 'samurai' ? "'DM Sans', sans-serif" : undefined,
-            letterSpacing: key === 'samurai' ? '0.2px' : undefined,
-          }}>
-            {T.tagline}
-          </p>
-
-          {/* Feature pills */}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 48 }}>
-            {FEATURES.map(({ icon: Icon, label }) => (
-              <div key={label} style={{
-                display: 'flex', alignItems: 'center', gap: 7,
-                padding: '8px 16px',
-                borderRadius: key === 'samurai' ? 4 : 100,
-                background: `${T.accent}18`,
-                border: `1px solid ${T.accent}45`,
-              }}>
-                <Icon size={13} color={T.accentBright} />
-                <span style={{ fontSize: 12.5, color: T.text, fontWeight: 500, opacity: 0.85 }}>{label}</span>
-              </div>
-            ))}
           </div>
 
-          {/* Sign in button */}
-          {T.available ? (
-            <>
-              <button
-                onClick={() => void handleSignIn()}
-                disabled={signing}
-                onMouseEnter={() => setHovered(true)}
-                onMouseLeave={() => setHovered(false)}
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 12,
-                  padding: '15px 32px',
-                  borderRadius: key === 'samurai' ? 6 : 14,
-                  background: hovered ? T.btnBgHover : T.btnBg,
-                  border: `1.5px solid ${hovered ? T.accentBright : T.accentBright + '60'}`,
-                  color: T.text, fontSize: 15, fontWeight: 700,
-                  cursor: signing ? 'wait' : 'pointer',
-                  fontFamily: key === 'samurai' ? "'DM Sans', sans-serif" : "'Cabinet Grotesk', sans-serif",
-                  letterSpacing: key === 'samurai' ? '0.5px' : undefined,
-                  transition: 'all 0.2s ease',
-                  transform: hovered ? 'translateY(-2px)' : 'none',
-                  boxShadow: hovered ? `0 10px 30px ${T.glow1}, 0 0 0 1px ${T.accent}40` : `0 4px 16px ${T.glow1}`,
-                  opacity: signing ? 0.7 : 1,
-                }}
-              >
-                <svg width="20" height="20" viewBox="0 0 18 18">
-                  <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/>
-                  <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/>
-                  <path fill="#FBBC05" d="M3.964 10.706A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.706V4.962H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.038l3.007-2.332z"/>
-                  <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.962L3.964 6.294C4.672 4.169 6.656 3.58 9 3.58z"/>
-                </svg>
-                {signing ? 'Redirecting…' : 'Continue with Google'}
-                {!signing && <ArrowRight size={16} color={T.accentBright} />}
-              </button>
-              <p style={{ margin: '16px 0 0', fontSize: 12, color: T.textMuted }}>
-                Your data is isolated and encrypted. Only you can access it.
-              </p>
-            </>
-          ) : (
-            <div style={{
-              display: 'inline-flex', alignItems: 'center', gap: 10,
-              padding: '14px 24px', borderRadius: 10,
-              background: `${T.accent}0A`, border: `1px solid ${T.accent}30`,
-              color: T.textDim, fontSize: 14,
+          {/* Headline */}
+          <div style={{ flex: 1 }}>
+            <h1 style={{
+              margin: '0 0 16px',
+              fontFamily: "'Outfit', system-ui, sans-serif",
+              fontWeight: 700, fontSize: 42, lineHeight: 1.06,
+              color: '#191712', letterSpacing: '-.03em',
             }}>
-              <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '1.5px', color: T.accentBright }}>COMING SOON</span>
-              <span style={{ color: T.textMuted }}>·</span>
-              <span>This mode is under development</span>
+              Your personal<br />operating system.
+            </h1>
+            <p style={{
+              margin: '0 0 48px',
+              fontSize: 15, color: '#6C6553', lineHeight: 1.7, maxWidth: 380,
+            }}>
+              Reads your calendar, tasks, habits and finances — then tells you
+              exactly what to do next, in plain sentences, with the numbers behind them.
+            </p>
+
+            {/* Live numbers */}
+            <div style={{ display: 'flex', gap: 32 }}>
+              {LIVE_STATS.map(s => (
+                <div key={s.label}>
+                  <div style={{
+                    fontFamily: "'Outfit', system-ui, sans-serif",
+                    fontWeight: 700, fontSize: 26, color: '#191712', letterSpacing: '-.02em',
+                    fontVariantNumeric: 'tabular-nums',
+                  }}>{s.value}</div>
+                  <div style={{ fontSize: 11.5, color: '#8A8272', marginTop: 2 }}>{s.label}</div>
+                </div>
+              ))}
             </div>
-          )}
+          </div>
         </div>
-      </div>
 
-      {/* Right panel — HD photo */}
-      <div style={{
-        flex: '0 0 460px',
-        height: '100%',
-        position: 'relative',
-        overflow: 'hidden',
-      }}>
-        {/* Photo */}
+        {/* Right — form */}
         <div style={{
-          position: 'absolute', inset: 0,
-          backgroundImage: `url('${MODE_PHOTOS[key]}')`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center top',
-          filter: 'brightness(0.72) contrast(1.08)',
-        }} />
-        {/* Left-edge fade — blends into the left panel */}
-        <div style={{
-          position: 'absolute', inset: 0,
-          background: `linear-gradient(to right, ${T.bg} 0%, ${T.bg}CC 6%, ${T.bg}66 18%, transparent 38%)`,
-          pointerEvents: 'none',
-        }} />
-        {/* Top/bottom vignette */}
-        <div style={{
-          position: 'absolute', inset: 0,
-          background: 'linear-gradient(to bottom, rgba(0,0,0,0.38) 0%, rgba(0,0,0,0.06) 40%, rgba(0,0,0,0.62) 100%)',
-          pointerEvents: 'none',
-        }} />
-        {/* Accent colour tint */}
-        <div style={{
-          position: 'absolute', inset: 0,
-          background: `radial-gradient(ellipse at 65% 45%, ${T.glow1} 0%, transparent 65%)`,
-          pointerEvents: 'none',
-        }} />
-        {/* Bottom quote */}
-        <div style={{
-          position: 'absolute', bottom: 0, left: 0, right: 0,
-          padding: '56px 36px 36px',
-          background: `linear-gradient(to top, ${T.bg}F0 0%, ${T.bg}AA 45%, transparent 100%)`,
-          textAlign: 'center',
-          pointerEvents: 'none',
+          padding: '60px 48px',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          background: '#FFFFFF',
         }}>
-          <p style={{
-            margin: 0,
-            fontFamily: key === 'samurai' ? "'DM Sans', sans-serif" : "'Cabinet Grotesk', sans-serif",
-            fontSize: 13,
-            fontWeight: key === 'samurai' ? 600 : 500,
-            letterSpacing: key === 'samurai' ? '1.8px' : '0.4px',
-            color: T.textDim,
-            lineHeight: 1.65,
-            textTransform: key === 'samurai' ? 'uppercase' : 'none',
+          <h2 style={{
+            margin: '0 0 6px',
+            fontFamily: "'Outfit', system-ui, sans-serif",
+            fontWeight: 600, fontSize: 22, color: '#191712', letterSpacing: '-.02em',
           }}>
-            {MODE_QUOTES[key]}
+            Sign in
+          </h2>
+          <p style={{ margin: '0 0 32px', fontSize: 13, color: '#6C6553' }}>
+            Continue to your operating system.
+          </p>
+
+          {/* Google button */}
+          <button
+            onClick={() => void handleSignIn()}
+            disabled={signing}
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+              width: '100%', padding: '13px 20px',
+              borderRadius: 10,
+              background: signing ? '#FAF7EC' : '#191712',
+              border: '1px solid #191712',
+              color: '#FDF8E7',
+              fontSize: 14, fontWeight: 600,
+              cursor: signing ? 'wait' : 'pointer',
+              fontFamily: "'Instrument Sans', system-ui, sans-serif",
+              transition: 'background 140ms ease-out, box-shadow 140ms ease-out',
+              boxShadow: '0 2px 0 rgba(120,92,0,.10)',
+            }}
+          >
+            {/* Google G mark */}
+            <svg width="18" height="18" viewBox="0 0 18 18">
+              <path fill={signing ? '#8A8272' : '#FEF7DE'} fillOpacity=".9"
+                d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.716v2.259h2.908C16.658 14.076 17.64 11.768 17.64 9.2z"/>
+              <path fill={signing ? '#8A8272' : '#FEF7DE'} fillOpacity=".75"
+                d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/>
+              <path fill={signing ? '#8A8272' : '#FEF7DE'} fillOpacity=".6"
+                d="M3.964 10.706A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.706V4.962H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.038l3.007-2.332z"/>
+              <path fill={signing ? '#8A8272' : '#FEF7DE'} fillOpacity=".9"
+                d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.962L3.964 6.294C4.672 4.169 6.656 3.58 9 3.58z"/>
+            </svg>
+            {signing ? 'Redirecting…' : 'Continue with Google'}
+          </button>
+
+          {/* Divider */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '24px 0' }}>
+            <div style={{ flex: 1, height: 1, background: '#E8E1CE' }} />
+            <span style={{ fontSize: 11.5, color: '#8A8272' }}>or</span>
+            <div style={{ flex: 1, height: 1, background: '#E8E1CE' }} />
+          </div>
+
+          {/* Email (passive — redirects to Google OAuth anyway) */}
+          <div style={{ marginBottom: 12 }}>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#4A4438', marginBottom: 5 }}>
+              Email
+            </label>
+            <input
+              type="email"
+              placeholder="you@example.com"
+              disabled
+              style={{
+                width: '100%', padding: '11px 14px', borderRadius: 9,
+                background: '#FAF7EC', border: '1px solid #E8E1CE',
+                color: '#8A8272', fontSize: 13,
+                outline: 'none', cursor: 'not-allowed',
+                fontFamily: 'inherit', boxSizing: 'border-box',
+              }}
+            />
+          </div>
+          <div style={{ marginBottom: 20 }}>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#4A4438', marginBottom: 5 }}>
+              Password
+            </label>
+            <input
+              type="password"
+              placeholder="••••••••"
+              disabled
+              style={{
+                width: '100%', padding: '11px 14px', borderRadius: 9,
+                background: '#FAF7EC', border: '1px solid #E8E1CE',
+                color: '#8A8272', fontSize: 13,
+                outline: 'none', cursor: 'not-allowed',
+                fontFamily: 'inherit', boxSizing: 'border-box',
+              }}
+            />
+          </div>
+
+          <button
+            disabled
+            style={{
+              width: '100%', padding: '12px',
+              borderRadius: 10,
+              background: '#FAF7EC', border: '1px solid #E8E1CE',
+              color: '#8A8272', fontSize: 14, fontWeight: 600,
+              cursor: 'not-allowed', fontFamily: 'inherit',
+            }}
+          >
+            Log in
+          </button>
+
+          <p style={{ margin: '24px 0 0', fontSize: 11.5, color: '#8A8272', textAlign: 'center', lineHeight: 1.65 }}>
+            By continuing, you agree to our{' '}
+            <span style={{ color: '#4A4438', textDecoration: 'underline', cursor: 'pointer' }}>Terms</span>
+            {' '}and{' '}
+            <span style={{ color: '#4A4438', textDecoration: 'underline', cursor: 'pointer' }}>Privacy Policy</span>.
           </p>
         </div>
       </div>
-
-      <style>{`
-        @keyframes starTwinkle { 0%,100%{opacity:.3;transform:scale(.8)} 50%{opacity:1;transform:scale(1.3)} }
-        @keyframes fadeUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
-      `}</style>
     </div>
   )
 }
@@ -442,24 +256,149 @@ function LoadingScreen() {
   return (
     <div style={{
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-      minHeight: '100vh', background: 'var(--color-bg, #0D0F1A)', gap: 16,
+      minHeight: '100vh',
+      background: 'linear-gradient(160deg, #F7F4EA 0%, #EEE8D0 100%)',
+      gap: 16,
+      fontFamily: "'Instrument Sans', system-ui, sans-serif",
     }}>
       <div style={{
         width: 44, height: 44, borderRadius: 11,
-        background: 'linear-gradient(135deg, #1E40AF 0%, #60A5FA 100%)',
+        background: '#191712',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        boxShadow: '0 8px 24px rgba(30,64,175,0.3)',
-        animation: 'pulse 1.5s ease-in-out infinite',
+        animation: 'sbPulse 1.6s ease-in-out infinite',
       }}>
-        <GraduationCap size={22} color="var(--color-bg, #0D0F1A)" strokeWidth={2.5} />
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+          stroke="#FDF8E7" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
+          <path d="M6 12v5c3.333 2 8.667 2 12 0v-5"/>
+        </svg>
       </div>
+      <span style={{ fontSize: 13, color: '#6C6553', fontWeight: 500 }}>Loading your system…</span>
       <style>{`
-        @keyframes pulse {
+        @keyframes sbPulse {
           0%, 100% { opacity: 1; transform: scale(1); }
-          50%       { opacity: 0.7; transform: scale(0.95); }
+          50%       { opacity: 0.65; transform: scale(0.94); }
         }
       `}</style>
     </div>
+  )
+}
+
+// ─── Top navigation bar — 6B shell ────────────────────────────────────────────
+
+const NAV_ITEMS = [
+  { id: 'morning',   label: 'Morning'   },
+  { id: 'calendar',  label: 'Calendar'  },
+  { id: 'tasks',     label: 'Tasks'     },
+  { id: 'habits',    label: 'Habits'    },
+  { id: 'finance',   label: 'Finance'   },
+  { id: 'settings',  label: 'Settings'  },
+] as const
+
+function TopNav() {
+  const activeModule    = useUIStore(s => s.activeModule)
+  const setActiveModule = useUIStore(s => s.setActiveModule)
+  const user            = useAuthStore(s => s.user)
+
+  const initials = user?.name
+    ? user.name.split(' ').map((p: string) => p[0]).join('').slice(0, 2).toUpperCase()
+    : user?.email?.slice(0, 2).toUpperCase() ?? '?'
+
+  return (
+    <header style={{
+      height: 66, flexShrink: 0,
+      background: '#FCFAF4',
+      borderBottom: '1px solid #E8E1CE',
+      display: 'flex', alignItems: 'center',
+      padding: '0 22px', gap: 16,
+    }}>
+      {/* Product mark */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 9, flexShrink: 0 }}>
+        <div style={{
+          width: 30, height: 30, borderRadius: 8, background: '#191712',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+            stroke="#FDF8E7" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
+            <path d="M6 12v5c3.333 2 8.667 2 12 0v-5"/>
+          </svg>
+        </div>
+        <span style={{
+          fontFamily: "'Outfit', system-ui, sans-serif",
+          fontWeight: 700, fontSize: 14.5, color: '#191712', letterSpacing: '-.02em',
+        }}>
+          The Professor
+        </span>
+      </div>
+
+      {/* Nav pills */}
+      <nav style={{ flex: 1, display: 'flex', justifyContent: 'center', gap: 4 }}>
+        {NAV_ITEMS.map(item => {
+          const active = activeModule === item.id ||
+            (item.id === 'morning' && activeModule === 'dashboard')
+          return (
+            <button
+              key={item.id}
+              onClick={() => setActiveModule(item.id)}
+              style={{
+                height: 34, padding: '0 14px', borderRadius: 999,
+                border: 'none', cursor: 'pointer',
+                background: active ? '#191712' : 'transparent',
+                color:      active ? '#FDF8E7' : '#8A8272',
+                fontSize: 13.5, fontWeight: active ? 600 : 500,
+                fontFamily: "'Instrument Sans', system-ui, sans-serif",
+                transition: 'background 140ms ease-out, color 140ms ease-out',
+                whiteSpace: 'nowrap',
+              }}
+              onMouseEnter={e => {
+                if (!active) (e.currentTarget as HTMLButtonElement).style.background = '#FAF7EC'
+              }}
+              onMouseLeave={e => {
+                if (!active) (e.currentTarget as HTMLButtonElement).style.background = 'transparent'
+              }}
+            >
+              {item.label}
+            </button>
+          )
+        })}
+      </nav>
+
+      {/* Right — search + avatar */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 7,
+          padding: '6px 12px',
+          background: '#FAF7EC', border: '1px solid #E8E1CE',
+          borderRadius: 9, cursor: 'text',
+        }}>
+          <Search size={13} color="#8A8272" />
+          <span style={{ fontSize: 13, color: '#8A8272', userSelect: 'none' }}>Search</span>
+          <span style={{
+            marginLeft: 4,
+            fontSize: 10.5, fontFamily: "'JetBrains Mono', monospace",
+            color: '#8A8272', opacity: 0.7,
+          }}>⌘K</span>
+        </div>
+
+        {/* Avatar */}
+        <div style={{
+          width: 32, height: 32, borderRadius: '50%',
+          background: '#191712',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          cursor: 'pointer',
+          overflow: 'hidden', flexShrink: 0,
+        }}>
+          {user?.avatarUrl ? (
+            <img src={user.avatarUrl} alt={initials} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          ) : (
+            <span style={{ fontSize: 12, fontWeight: 600, color: '#FDF8E7', letterSpacing: '0.02em' }}>
+              {initials}
+            </span>
+          )}
+        </div>
+      </div>
+    </header>
   )
 }
 
@@ -566,13 +505,8 @@ function App() {
   const loadHabitsFromDB = useHabitsStore(s => s.loadFromDB)
   const clearHabits      = useHabitsStore(s => s.clearAll)
 
-  const behavioralEnabled = useBehavioralStore(s => s.enabled)
-  const behavioralMode    = useBehavioralStore(s => s.mode)
-
-  // Apply CSS variables immediately before first paint, then on every theme change.
-  useLayoutEffect(() => {
-    applyThemeVars(getTheme(themeId))
-  }, [themeId, behavioralEnabled, behavioralMode])
+  // themeId kept in store for backward compat — Sunlit Bento uses CSS tokens only
+  void themeId
 
   useEffect(() => {
     // Capture BEFORE subscription runs — onAuthStateChange may clear it in INITIAL_SESSION
@@ -814,11 +748,27 @@ function App() {
   if (!user)   return <LoginScreen />
 
   return (
-    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: 'var(--color-bg, #0D0F1A)' }}>
-      <Sidebar />
-      <PageShell>
-        <ActiveModule />
-      </PageShell>
+    <div style={{
+      minHeight: '100vh',
+      background: '#F7F4EA',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      fontFamily: "'Instrument Sans', system-ui, sans-serif",
+    }}>
+      <div style={{
+        width: '100%',
+        maxWidth: 1560,
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: '100vh',
+        background: '#F7F4EA',
+      }}>
+        <TopNav />
+        <main style={{ flex: 1, overflow: 'auto', background: '#F7F4EA' }}>
+          <ActiveModule />
+        </main>
+      </div>
       <AssistantPanel open={assistantOpen} onClose={() => setAssistantOpen(false)} />
       <AssistantToggle open={assistantOpen} onClick={() => setAssistantOpen(o => !o)} />
       {showWizard && <SetupWizard onClose={() => setShowWizard(false)} />}

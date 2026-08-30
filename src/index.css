@@ -1,102 +1,174 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap');
-@import url('https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@700,800,500,400&display=swap');
+/* ─── Sunlit Bento — Design Token System ─────────────────────────────────────
+   All values lifted verbatim from the Professor design handoff README.
+   Modules read these via var(--sb-*) names. The old var(--color-*) aliases
+   are kept below for backward compat during the progressive migration.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 @import "tailwindcss";
 
-@theme {
-  --color-bg: #0D0F1A;
-  --color-surface: #161929;
-  --color-border: #252A3E;
-  --color-amber: #1E40AF;
-  --color-ptext: #E8EAF6;
-  --color-muted: #CBD5E1;
-  --color-teradix: #1E40AF;
-  --color-dxtech: #38BDF8;
-  --color-consulting: #34D399;
-  --color-personal: #94A3B8;
-}
-
-/* ─── Theme CSS variables (toggled by Settings → Appearance) ──────────────── */
+/* ── Surfaces ─────────────────────────────────────────────────────────────── */
 :root {
-  --bg-base:      #0D0F1A;
-  --bg-surface:   #161929;
-  --bg-surface2:  #0D0F1A;
-  --border-color: #252A3E;
-  --text-primary: #E8EAF6;
-  --text-muted:   #CBD5E1;
-  --accent:       #1E40AF;
-  --accent-dim:   rgba(30,64,175,0.12);
-  --accent-border:rgba(30,64,175,0.30);
+  --sb-page:          #F7F4EA;
+  --sb-header:        #FCFAF4;
+  --sb-card:          #FFFFFF;
+  --sb-field:         #FAF7EC;
+  --sb-border:        #E8E1CE;
+  --sb-hairline:      #F0EBDC;
+
+  /* Ink */
+  --sb-ink-1:         #191712;   /* primary */
+  --sb-ink-2:         #4A4438;   /* secondary */
+  --sb-ink-3:         #6C6553;   /* muted */
+  --sb-ink-4:         #8A8272;   /* faint */
+  --sb-ink-on-dark:   #FDF8E7;
+
+  /* Accent — warm amber */
+  --sb-accent:        #F5D14E;
+  --sb-accent-tint:   #FEF7DE;
+  --sb-accent-tint2:  #FDF6DE;
+  --sb-accent-border: #EFE1B4;
+
+  /* Semantic — olive (positive) */
+  --sb-olive:         #5F7038;
+  --sb-olive-text:    #4A5A2A;
+  --sb-olive-tint:    #E9EFD9;
+
+  /* Semantic — rust (negative) */
+  --sb-rust:          #8A3B2A;
+  --sb-rust-tint:     #F7E4DE;
+
+  /* Shadows */
+  --sb-shadow-frame:   0 26px 64px -34px rgba(48,40,20,.5);
+  --sb-shadow-hover:   0 4px 12px -6px rgba(48,40,20,.4);
+  --sb-shadow-control: 0 1px 3px rgba(25,23,18,.14);
+  --sb-shadow-accent:  0 2px 0 rgba(120,92,0,.25);
+
+  /* Radii */
+  --sb-r-chip:   8px;
+  --sb-r-sm:     9px;
+  --sb-r-nav:    10px;
+  --sb-r-card:   18px;
+  --sb-r-frame:  24px;
+  --sb-r-pill:   999px;
+
+  /* Typography */
+  --sb-font-ui:   'Instrument Sans', system-ui, sans-serif;
+  --sb-font-num:  'Outfit', system-ui, sans-serif;
+  --sb-font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  /* Control heights */
+  --sb-h-pill:   34px;
+  --sb-h-nav:    36px;
+  --sb-h-header: 66px;
+
+  /* ── Backward-compat aliases for the old var(--color-*) system ───────────
+     Remove once all modules are migrated to --sb-* tokens.                  */
+  --color-bg:          var(--sb-page);
+  --color-surface:     var(--sb-card);
+  --color-surface2:    var(--sb-field);
+  --color-border:      var(--sb-border);
+  --color-accent:      var(--sb-ink-1);
+  --color-accent-fill: var(--sb-accent-tint);
+  --color-accent-bright: var(--sb-ink-1);
+  --color-text:        var(--sb-ink-1);
+  --color-text-dim:    var(--sb-ink-2);
+  --color-text-muted:  var(--sb-ink-3);
+
+  /* Raw aliases used by some components */
+  --bg-base:       var(--sb-page);
+  --bg-surface:    var(--sb-card);
+  --bg-surface2:   var(--sb-field);
+  --border-color:  var(--sb-border);
+  --text-primary:  var(--sb-ink-1);
+  --text-muted:    var(--sb-ink-3);
+  --accent:        var(--sb-ink-1);
 }
 
-[data-theme="dark-cool"] {
-  --bg-base:      #060B14;
-  --bg-surface:   #0F1929;
-  --bg-surface2:  #060B14;
-  --border-color: #1A2640;
-  --text-primary: #CBD5E1;
-  --text-muted:   #64748B;
-  --accent:       #3B82F6;
-  --accent-dim:   rgba(56,189,248,0.12);
-  --accent-border:rgba(56,189,248,0.30);
-}
-
-[data-theme="light"] {
-  --bg-base:      #F0F2FF;
-  --bg-surface:   #FFFFFF;
-  --bg-surface2:  #F0F2FF;
-  --border-color: #DDE1F5;
-  --text-primary: #0D0F1A;
-  --text-muted:   #CBD5E1;
-  --accent:       #1E3A8A;
-  --accent-dim:   rgba(30,64,175,0.08);
-  --accent-border:rgba(30,64,175,0.25);
-}
-
-* { box-sizing: border-box; }
+/* ── Global resets ────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
 
 html, body {
-  background-color: var(--bg-base, #0D0F1A);
-  color: var(--text-primary, #E8EAF6);
-  font-family: 'DM Sans', sans-serif;
   margin: 0;
   padding: 0;
-  min-height: 100vh;
+  background: var(--sb-page);
+  color: var(--sb-ink-1);
+  font-family: var(--sb-font-ui);
+  font-size: 14px;
+  line-height: 1.65;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-#root { min-height: 100vh; }
-
-h1,h2,h3,h4,h5,h6 { font-family: 'Cabinet Grotesk', sans-serif; }
-
-::-webkit-scrollbar { width: 5px; height: 5px; }
-::-webkit-scrollbar-track { background: var(--color-bg, var(--bg-base, #0D0F1A)); }
-::-webkit-scrollbar-thumb { background: var(--color-border, var(--border-color, #252A3E)); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: var(--color-text-muted, #6B7280); }
-
-/* ─── Light theme global overrides ─────────────────────────────────────────── */
-[data-theme="light"] { color-scheme: light; }
-
-[data-theme="light"] input,
-[data-theme="light"] select,
-[data-theme="light"] textarea {
-  background: var(--color-surface) !important;
-  border-color: var(--color-border) !important;
-  color: var(--color-text) !important;
-  color-scheme: light;
+/* Tabular numerals everywhere numbers appear */
+.tabular, [data-tabular], td, th {
+  font-variant-numeric: tabular-nums;
 }
 
-/* Themed card utility class — add className="t-card" to any card div */
-.t-card {
-  background: var(--color-surface, #161929);
-  border: 1px solid var(--color-border, #252A3E);
-  color: var(--color-text, #E8EAF6);
+/* Focus ring — 2px amber at 2px offset on every interactive element */
+:focus-visible {
+  outline: 2px solid var(--sb-accent);
+  outline-offset: 2px;
 }
 
-.t-surface2 {
-  background: var(--color-surface2, #0D0F1A);
+/* Custom scrollbar — thin, warm */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--sb-border); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: var(--sb-ink-4); }
+
+/* Skeleton shimmer animation */
+@keyframes sbShimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+.sb-skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--sb-hairline) 25%,
+    var(--sb-border)   50%,
+    var(--sb-hairline) 75%
+  );
+  background-size: 200% 100%;
+  animation: sbShimmer 1.6s ease-in-out infinite;
+  border-radius: var(--sb-r-chip);
 }
 
-.t-text { color: var(--color-text, #E8EAF6); }
-.t-text-dim { color: var(--color-text-dim, #94A3B8); }
-.t-text-muted { color: var(--color-text-muted, #4B5563); }
+/* Spin animation (refresh button) */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Hover lift on cards */
+.sb-card-hover {
+  transition: box-shadow 140ms ease-out, transform 140ms ease-out;
+}
+.sb-card-hover:hover {
+  box-shadow: var(--sb-shadow-hover);
+  transform: translateY(-1px);
+}
+
+/* Nav pill hover tint */
+.sb-nav-row:hover {
+  background: var(--sb-field) !important;
+}
+
+/* ── Reduced motion ────────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ── Event card hover actions ─────────────────────────────────────────────── */
+.event-card:hover .event-actions button,
+.event-card.selected .event-actions button {
+  opacity: 1 !important;
+}
+
+/* ── Responsive overflow guards ───────────────────────────────────────────── */
+table { width: 100%; }
+pre, code { overflow-x: auto; }
+img { max-width: 100%; }
