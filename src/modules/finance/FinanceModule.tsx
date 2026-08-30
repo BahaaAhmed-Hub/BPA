@@ -1,7 +1,5 @@
 import { useState } from 'react'
 import { useFinanceStore } from './financeStore'
-import { useUIStore } from '@/store/uiStore'
-import { getTheme } from '@/lib/themes'
 import { TodayScreen } from './screens/TodayScreen'
 import { BalanceScreen } from './screens/BalanceScreen'
 import { BudgetScreen } from './screens/BudgetScreen'
@@ -106,28 +104,25 @@ interface ColorMap {
 // ─── Finance Module ───────────────────────────────────────────────────────────
 
 export function FinanceModule() {
-  const themeId = useUIStore(s => s.themeId)
-  const theme = getTheme(themeId)
-
   const C: ColorMap = {
-    bg:        theme.bg,
-    rail:      theme.sidebarBg,
-    panel:     theme.surface,
-    surface:   theme.surface,
-    surfaceEl: theme.surface2 || theme.surface,
-    amberBg:   theme.accentFill,
-    border:    theme.border,
-    borderSt:  theme.border,
-    divFaint:  theme.border,
-    amber:     theme.accent,
-    amberSoft: theme.accentBright,
-    textPri:   theme.text,
-    textMuted: theme.textDim,
-    textDim:   theme.textMuted,
-    red:       '#DA4A3E',
-    green:     '#2FA869',
-    cyan:      '#46B6C9',
-    purple:    '#7E78DD',
+    bg:        'var(--sb-page)',
+    rail:      'var(--sb-header)',
+    panel:     'var(--sb-card)',
+    surface:   'var(--sb-card)',
+    surfaceEl: 'var(--sb-field)',
+    amberBg:   'var(--sb-accent-tint)',
+    border:    'var(--sb-border)',
+    borderSt:  'var(--sb-border)',
+    divFaint:  'var(--sb-hairline)',
+    amber:     'var(--sb-ink-1)',
+    amberSoft: 'var(--sb-ink-2)',
+    textPri:   'var(--sb-ink-1)',
+    textMuted: 'var(--sb-ink-4)',
+    textDim:   'var(--sb-ink-3)',
+    red:       '#8A3B2A',
+    green:     '#5F7038',
+    cyan:      '#3B7A8A',
+    purple:    'var(--sb-ink-2)',
   }
 
   const { accounts, categories, upsertTransaction } = useFinanceStore()
@@ -213,16 +208,16 @@ export function FinanceModule() {
                 style={{
                   display: 'flex', alignItems: 'center', gap: 5,
                   padding: '4px 10px', borderRadius: 7, cursor: 'grab',
-                  background: active ? `${C.amber}18` : 'transparent',
-                  border: `1px solid ${isDropTarget ? C.amber : active ? `${C.amber}40` : 'transparent'}`,
+                  background: active ? 'var(--sb-ink-1)' : 'transparent',
+                  border: `1px solid ${isDropTarget ? 'var(--sb-accent)' : active ? 'var(--sb-ink-1)' : 'transparent'}`,
                   opacity: isDragging ? 0.35 : 1,
                   userSelect: 'none', flexShrink: 0,
                 } as React.CSSProperties}
               >
-                <Icon color={active ? C.amber : C.textMuted} />
+                <Icon color={active ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-4)'} />
                 <span style={{
                   fontSize: 12, fontWeight: active ? 600 : 400,
-                  color: active ? C.amber : C.textMuted,
+                  color: active ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-4)',
                   whiteSpace: 'nowrap' as const, letterSpacing: '0.1px',
                 }}>
                   {label}
@@ -236,13 +231,13 @@ export function FinanceModule() {
         <button
           onClick={() => setAddOpen(true)}
           style={{
-            height: 28, paddingInline: 12, borderRadius: 7,
-            background: C.amber, border: 'none', cursor: 'pointer',
+            height: 28, paddingInline: 12, borderRadius: 8,
+            background: 'var(--sb-ink-1)', border: 'none', cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             flexShrink: 0, gap: 4,
           }}
         >
-          <IconPlus color={C.bg} />
+          <IconPlus color="var(--sb-ink-on-dark)" />
         </button>
       </div>
 
