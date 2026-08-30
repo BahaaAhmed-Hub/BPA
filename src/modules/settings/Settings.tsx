@@ -1785,7 +1785,7 @@ function BlockingRulesSection() {
           style={{
             display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px',
             borderRadius: 8, cursor: 'pointer', marginTop: 4,
-            background: 'var(--color-accent-fill, rgba(30,64,175,0.10))',
+            background: 'rgba(245,209,78,0.10)',
             border: '1px solid #F5D14E40',
             color: '#6C6553', fontSize: 12.5,
           }}>

@@ -151,10 +151,10 @@ function MessageBubble({ msg }: { msg: DisplayMessage }) {
       <div style={{
         maxWidth: '80%', padding: '9px 12px',
         borderRadius: isUser ? '14px 14px 4px 14px' : '4px 14px 14px 14px',
-        background: isUser ? 'var(--color-accent, #4F46E5)' : 'var(--color-surface2, #131520)',
+        background: isUser ? '#F5D14E' : '#FAF7EC',
         border: isUser ? 'none' : '1px solid #E8E1CE',
         fontSize: 13, lineHeight: 1.6,
-        color: isUser ? 'white' : '#191712',
+        color: isUser ? '#191712' : '#191712',
         whiteSpace: 'pre-wrap', wordBreak: 'break-word',
       }}>
         {msg.content}
@@ -173,7 +173,7 @@ function ThinkingDot() {
       }}>
         <Brain size={13} color="white" />
       </div>
-      <div style={{ display: 'flex', gap: 4, padding: '10px 14px', background: 'var(--color-surface2, #131520)', border: '1px solid #E8E1CE', borderRadius: '4px 14px 14px 14px' }}>
+      <div style={{ display: 'flex', gap: 4, padding: '10px 14px', background: '#FAF7EC', border: '1px solid #E8E1CE', borderRadius: '4px 14px 14px 14px' }}>
         {[0, 1, 2].map(i => (
           <div key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: '#818CF8', animation: `bounce 1.2s ease-in-out ${i * 0.2}s infinite` }} />
         ))}
@@ -457,7 +457,7 @@ export function AssistantPanel({ open, onClose }: AssistantPanelProps) {
                   <button key={s} onClick={() => void sendMessage(s)}
                     style={{
                       padding: '9px 14px', borderRadius: 10, fontSize: 12.5, textAlign: 'left',
-                      background: 'var(--color-surface2, #131520)', border: '1px solid #E8E1CE',
+                      background: '#FAF7EC', border: '1px solid #E8E1CE',
                       color: '#191712', cursor: 'pointer',
                       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     }}>
@@ -480,7 +480,7 @@ export function AssistantPanel({ open, onClose }: AssistantPanelProps) {
         <div style={{ padding: '12px 14px 14px', borderTop: '1px solid #E8E1CE', flexShrink: 0 }}>
           <div style={{
             display: 'flex', alignItems: 'flex-end', gap: 8,
-            background: 'var(--color-surface2, #131520)',
+            background: '#FAF7EC',
             border: '1px solid #E8E1CE',
             borderRadius: 12, padding: '10px 12px',
           }}>
@@ -546,7 +546,7 @@ export function AssistantToggle({ open, onClick }: AssistantToggleProps) {
         position: 'fixed', bottom: 24, right: open ? 406 : 24,
         width: 48, height: 48, borderRadius: 14, border: 'none', cursor: 'pointer',
         background: open
-          ? 'var(--color-surface2, #131520)'
+          ? '#FAF7EC'
           : 'linear-gradient(135deg, #4F46E5 0%, #818CF8 100%)',
         boxShadow: open
           ? '0 2px 12px rgba(0,0,0,0.4), inset 0 0 0 1px rgba(99,102,241,0.3)'
