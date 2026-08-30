@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { CheckSquare, Clock, Users, TrendingUp, ChevronLeft, ChevronRight, CheckCircle2, XCircle, CalendarDays } from 'lucide-react'
-import { TopBar } from '@/components/layout/TopBar'
 import { useTaskStore } from '@/store/taskStore'
 import type { Task } from '@/types'
 import { isTaskHidden, loadDynamicCompanies } from '@/types'
@@ -481,7 +480,6 @@ export function ReviewModule() {
 
   return (
     <div>
-      <TopBar title="Weekly Review" subtitle="Reflect, realign, and reset your compass." />
 
       <div style={{ padding: '28px 28px 60px' }}>
 

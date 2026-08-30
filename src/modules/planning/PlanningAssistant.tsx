@@ -4,7 +4,6 @@ import {
   AlertTriangle, TrendingUp, Lightbulb, Trophy,
   Mic, Send, ExternalLink, Copy, X as XIcon,
 } from 'lucide-react'
-import { TopBar } from '@/components/layout/TopBar'
 import { getGoogleToken } from '@/lib/tokenManager'
 import { fetchCalendarEventsWithToken } from '@/lib/googleCalendar'
 import type { GCalEvent } from '@/lib/googleCalendar'
@@ -360,7 +359,6 @@ export function PlanningAssistant() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      <TopBar title="Planning Assistant" subtitle="Plan your schedule with AI" />
 
       {/* Context menu */}
       {contextMenu && <ContextMenu menu={contextMenu} onClose={() => setContextMenu(null)} />}

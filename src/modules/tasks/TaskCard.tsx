@@ -46,7 +46,7 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
 
   const companies    = loadDynamicCompanies()
   const dynCompany   = companies.find(c => c.id === task.companyId)
-  const companyColor = dynCompany?.color ?? COMPANY_COLORS[task.company] ?? 'var(--color-text-muted, #6B7280)'
+  const companyColor = dynCompany?.color ?? COMPANY_COLORS[task.company] ?? 'var(--sb-ink-3)'
   const allUsers  = getAllUsers()
   const ownerUser = task.owner ? allUsers.find(u => u.id === task.owner) : undefined
   // Only show users belonging to the task's selected company in the owner picker
@@ -74,8 +74,8 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
   }
 
   const fieldInput: React.CSSProperties = {
-    background: 'var(--color-bg, #0D0F1A)', border: '1px solid #353A50', borderRadius: 4,
-    color: 'var(--color-text, #E8EAF6)', fontSize: 10, padding: '1px 5px', outline: 'none',
+    background: 'var(--sb-page)', border: '1px solid #353A50', borderRadius: 4,
+    color: 'var(--sb-ink-1)', fontSize: 10, padding: '1px 5px', outline: 'none',
   }
 
   return (
@@ -84,7 +84,7 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
       onClick={handleCardClick}
       style={{
         ...style,
-        background: hovered ? 'var(--color-surface2, #1a1f35)' : 'var(--color-surface, #161929)',
+        background: hovered ? 'var(--color-surface2, #1a1f35)' : 'var(--sb-card)',
         border: `1px solid ${isDragging ? 'var(--color-accent)' : task.urgent ? '#E0711A40' : 'var(--color-border, #252A3E)'}`,
         borderRadius: 8,
         padding: '9px 11px',
@@ -105,7 +105,7 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 7, paddingLeft: 4 }}>
         {/* Drag handle */}
         <div data-nm {...listeners} {...attributes} style={{
-          cursor: 'grab', color: hovered ? 'var(--color-text-muted, #6B7280)' : 'transparent',
+          cursor: 'grab', color: hovered ? 'var(--sb-ink-3)' : 'transparent',
           transition: 'color 0.15s', marginTop: 1, flexShrink: 0,
         }}>
           <GripVertical size={12} strokeWidth={2} />
@@ -150,7 +150,7 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
               style={{
                 background: 'transparent', border: 'none',
                 borderBottom: '1px solid #7F77DD', outline: 'none',
-                color: 'var(--color-text, #E8EAF6)', fontSize: 12.5, fontWeight: 500,
+                color: 'var(--sb-ink-1)', fontSize: 12.5, fontWeight: 500,
                 width: '100%', padding: 0, fontFamily: 'inherit', lineHeight: 1.35,
               }}
             />
@@ -160,7 +160,7 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
               onClick={() => { if (!task.completed) setEditingTitle(true) }}
               title={task.completed ? undefined : 'Click to rename'}
               style={{
-                margin: 0, fontSize: 12.5, fontWeight: 500, color: 'var(--color-text, #E8EAF6)',
+                margin: 0, fontSize: 12.5, fontWeight: 500, color: 'var(--sb-ink-1)',
                 lineHeight: 1.35, textDecoration: task.completed ? 'line-through' : 'none',
                 overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                 cursor: task.completed ? 'default' : 'text',
@@ -238,7 +238,7 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
               ) : (
                 <span
                   data-nm onClick={() => setEditingDate(true)} title="Set due date"
-                  style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: task.dueDate ? 'var(--color-text-muted, #6B7280)' : 'var(--color-border, #404560)', cursor: 'pointer' }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: task.dueDate ? 'var(--sb-ink-3)' : 'var(--color-border, #404560)', cursor: 'pointer' }}
                 >
                   <Calendar size={9} />
                   {task.dueDate
@@ -283,7 +283,7 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
               ) : (
                 <span
                   data-nm onClick={() => setEditingDuration(true)} title="Set duration"
-                  style={{ fontSize: 10, color: task.duration ? 'var(--color-text-muted, #6B7280)' : 'var(--color-border, #404560)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 2 }}
+                  style={{ fontSize: 10, color: task.duration ? 'var(--sb-ink-3)' : 'var(--color-border, #404560)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 2 }}
                 >
                   {task.duration ? `${task.duration}m` : <><Plus size={8} />m</>}
                 </span>
@@ -362,7 +362,7 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
           {hovered && (
             <button data-nm onClick={() => deleteTask(task.id)} style={{
               background: 'transparent', border: 'none', cursor: 'pointer',
-              color: 'var(--color-text-muted, #6B7280)', padding: 2, borderRadius: 4,
+              color: 'var(--sb-ink-3)', padding: 2, borderRadius: 4,
               display: 'flex', alignItems: 'center',
             }}>
               <Trash2 size={11} strokeWidth={2} />

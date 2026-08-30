@@ -1,7 +1,6 @@
 
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import { Mail, Zap, Clock, Copy, CheckCheck, RefreshCw, ArrowRight, WifiOff, ListPlus, Plus, Archive, Search, X as XIcon, PenSquare } from 'lucide-react'
-import { TopBar } from '@/components/layout/TopBar'
 import { triageEmail } from '@/lib/professor'
 import type { EmailTriage, EmailData } from '@/lib/professor'
 import { listUnreadThreadIds, getThread, extractBody, extractHtmlBody, header, markAsRead, archiveMessage, sendReply, composeEmail } from '@/lib/gmail'
@@ -767,7 +766,6 @@ export function InboxModule() {
 
   return (
     <div>
-      <TopBar title="Command Inbox" subtitle="Triage, delegate, act — zero inbox noise." />
 
       <style>{`
         @keyframes spin    { from { transform: rotate(0deg)  } to { transform: rotate(360deg) } }

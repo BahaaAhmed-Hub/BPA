@@ -5,7 +5,6 @@ import {
   type DragStartEvent, type DragEndEvent,
 } from '@dnd-kit/core'
 import { sortableKeyboardCoordinates } from '@dnd-kit/sortable'
-import { TopBar } from '@/components/layout/TopBar'
 import { EisenhowerBoard } from './EisenhowerBoard'
 import { UndefinedTasksPanel } from './UndefinedTasksPanel'
 import { KanbanBoard } from './KanbanBoard'
@@ -210,7 +209,7 @@ export function TaskCommand() {
   const chipStyle: React.CSSProperties = {
     display: 'inline-flex', alignItems: 'center', gap: 5,
     padding: '3px 8px 3px 10px', borderRadius: 20, fontSize: 11.5, fontWeight: 600,
-    background: 'rgba(127,119,221,0.12)', border: '1px solid rgba(127,119,221,0.3)',
+    background: 'rgba(25,23,18,0.06)', border: '1px solid rgba(127,119,221,0.3)',
     color: 'var(--color-accent,#7F77DD)', cursor: 'default',
   }
   const chipX: React.CSSProperties = {
@@ -220,13 +219,8 @@ export function TaskCommand() {
 
   return (
     <div>
-      <TopBar
-        title="Task Command"
-        subtitle={viewMode === 'eisenhower' ? 'Eisenhower Matrix — ruthless prioritization for maximum leverage.' : 'Board View — visualize tasks across dimensions.'}
-      />
-
       {/* ── Stats + search bar ──────────────────────────────────────────────── */}
-      <div style={{ padding: '10px 28px', borderBottom: '1px solid var(--color-border,#252A3E)', display: 'flex', gap: 14, alignItems: 'center' }}>
+      <div style={{ padding: '10px 20px', borderBottom: '1px solid var(--sb-border)', background: 'var(--sb-header)', display: 'flex', gap: 10, alignItems: 'center' }}>
 
         {/* View toggle */}
         <div style={{ display: 'flex', gap: 3, flexShrink: 0 }}>
@@ -236,11 +230,11 @@ export function TaskCommand() {
           ].map(v => (
             <button key={v.id} onClick={() => switchView(v.id)} title={v.label} style={{
               display: 'flex', alignItems: 'center', gap: 5,
-              padding: '4px 9px', borderRadius: 7, cursor: 'pointer', fontSize: 12, fontWeight: 600,
-              background: viewMode === v.id ? 'rgba(127,119,221,0.14)' : 'transparent',
-              color:  viewMode === v.id ? 'var(--color-accent, #7F77DD)' : 'var(--color-text-muted, #6B7280)',
-              border: `1px solid ${viewMode === v.id ? 'rgba(127,119,221,0.35)' : 'var(--color-border, #252A3E)'}`,
-              transition: 'all 0.12s',
+              padding: '4px 9px', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 600,
+              background: viewMode === v.id ? 'var(--sb-ink-1)' : 'var(--sb-field)',
+              color:  viewMode === v.id ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
+              border: `1px solid ${viewMode === v.id ? 'var(--sb-ink-1)' : 'var(--sb-border)'}`,
+              transition: 'all 0.14s',
             }}>
               {v.icon} {v.label}
             </button>
@@ -253,7 +247,7 @@ export function TaskCommand() {
           display: 'flex', alignItems: 'center', gap: 5,
           padding: '4px 9px', borderRadius: 7, cursor: 'pointer', fontSize: 12, fontWeight: 600,
           background: 'transparent',
-          color: 'var(--color-text-muted, #6B7280)',
+          color: 'var(--sb-ink-3)',
           border: '1px solid var(--color-border, #252A3E)',
           transition: 'all 0.12s',
           flexShrink: 0,
@@ -266,22 +260,22 @@ export function TaskCommand() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
             <CheckSquare size={13} color="var(--color-accent)" strokeWidth={2} />
-            <span style={{ fontSize: 12.5, color: 'var(--color-text,#E8EAF6)' }}>
+            <span style={{ fontSize: 12.5, color: 'var(--sb-ink-1)' }}>
               <span style={{ fontWeight: 600 }}>{active.length}</span> active
             </span>
           </div>
           <div style={{ width: 1, height: 14, background: 'var(--color-border,#252A3E)' }} />
           <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
             <Zap size={13} color="#E05252" strokeWidth={2} />
-            <span style={{ fontSize: 12.5, color: 'var(--color-text,#E8EAF6)' }}>
+            <span style={{ fontSize: 12.5, color: 'var(--sb-ink-1)' }}>
               <span style={{ fontWeight: 600 }}>{urgent.length}</span> urgent
             </span>
           </div>
           {inbox.length > 0 && (
             <>
               <div style={{ width: 1, height: 14, background: 'var(--color-border,#252A3E)' }} />
-              <span style={{ fontSize: 12.5, color: 'var(--color-text-muted,#6B7280)' }}>
-                <span style={{ fontWeight: 600, color: 'var(--color-text,#E8EAF6)' }}>{inbox.length}</span> unassigned
+              <span style={{ fontSize: 12.5, color: 'var(--sb-ink-3)' }}>
+                <span style={{ fontWeight: 600, color: 'var(--sb-ink-1)' }}>{inbox.length}</span> unassigned
               </span>
             </>
           )}
@@ -297,22 +291,22 @@ export function TaskCommand() {
 
         {/* Search input */}
         <div style={{ flex: 1, position: 'relative', display: 'flex', alignItems: 'center' }}>
-          <Search size={13} color="var(--color-text-muted,#6B7280)" style={{ position: 'absolute', left: 10, pointerEvents: 'none' }} />
+          <Search size={13} color="var(--sb-ink-3)" style={{ position: 'absolute', left: 10, pointerEvents: 'none' }} />
           <input
             ref={searchRef}
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             placeholder='Search tasks… (name, type, owner)  •  Press / to focus'
             style={{
-              width: '100%', background: 'var(--color-bg,#0D0F1A)',
+              width: '100%', background: 'var(--sb-page)',
               border: `1px solid ${searchQuery ? 'var(--color-accent,#7F77DD)' : 'var(--color-border,#252A3E)'}`,
               borderRadius: 8, padding: '6px 32px 6px 30px',
-              color: 'var(--color-text,#E8EAF6)', fontSize: 12.5, outline: 'none',
+              color: 'var(--sb-ink-1)', fontSize: 12.5, outline: 'none',
               transition: 'border-color 0.15s',
             }}
           />
           {searchQuery && (
-            <button onClick={() => setSearchQuery('')} style={{ position: 'absolute', right: 8, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted,#6B7280)', display: 'flex', padding: 2 }}>
+            <button onClick={() => setSearchQuery('')} style={{ position: 'absolute', right: 8, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', display: 'flex', padding: 2 }}>
               <X size={13} />
             </button>
           )}
@@ -326,9 +320,9 @@ export function TaskCommand() {
             style={{
               display: 'flex', alignItems: 'center', gap: 5,
               padding: '5px 10px', height: 28, borderRadius: 7, cursor: 'pointer',
-              background: activeFilterCount > 0 ? 'rgba(127,119,221,0.12)' : filterOpen ? 'rgba(127,119,221,0.08)' : 'transparent',
+              background: activeFilterCount > 0 ? 'rgba(25,23,18,0.06)' : filterOpen ? 'rgba(127,119,221,0.08)' : 'transparent',
               border: `1px solid ${activeFilterCount > 0 || filterOpen ? 'color-mix(in srgb, var(--color-accent) 40%, transparent)' : 'var(--color-border,#252A3E)'}`,
-              color: activeFilterCount > 0 ? 'var(--color-accent,#7F77DD)' : 'var(--color-text-muted,#6B7280)',
+              color: activeFilterCount > 0 ? 'var(--color-accent,#7F77DD)' : 'var(--sb-ink-3)',
               transition: 'all 0.12s', fontSize: 12, fontWeight: 500,
             }}
           >
@@ -345,21 +339,21 @@ export function TaskCommand() {
           {filterOpen && (
             <div style={{
               position: 'absolute', top: 34, right: 0, zIndex: 100,
-              background: 'var(--color-surface,#161929)', border: '1px solid var(--color-border,#252A3E)',
+              background: 'var(--sb-card)', border: '1px solid var(--color-border,#252A3E)',
               borderRadius: 12, padding: '14px 16px', width: 260,
               boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
             }}>
               {/* Company filter */}
               {companies.length > 0 && (
                 <div style={{ marginBottom: 14 }}>
-                  <p style={{ margin: '0 0 7px', fontSize: 10.5, fontWeight: 700, color: 'var(--color-text-muted,#6B7280)', textTransform: 'uppercase', letterSpacing: '0.7px' }}>Company</p>
+                  <p style={{ margin: '0 0 7px', fontSize: 10.5, fontWeight: 700, color: 'var(--sb-ink-3)', textTransform: 'uppercase', letterSpacing: '0.7px' }}>Company</p>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
                     {companies.map(co => (
                       <button key={co.id} onClick={() => setFilters(f => ({ ...f, company: f.company === co.id ? '' : co.id }))} style={{
                         display: 'flex', alignItems: 'center', gap: 5, padding: '4px 9px', borderRadius: 20, cursor: 'pointer', fontSize: 12,
                         background: filters.company === co.id ? `${co.color}22` : 'transparent',
                         border: `1px solid ${filters.company === co.id ? co.color : 'var(--color-border,#252A3E)'}`,
-                        color: filters.company === co.id ? co.color : 'var(--color-text-dim,#94A3B8)',
+                        color: filters.company === co.id ? co.color : 'var(--sb-ink-3)',
                         fontWeight: filters.company === co.id ? 600 : 400, transition: 'all 0.12s',
                       }}>
                         <div style={{ width: 8, height: 8, borderRadius: '50%', background: co.color, flexShrink: 0 }} />
@@ -372,14 +366,14 @@ export function TaskCommand() {
 
               {/* Type filter */}
               <div style={{ marginBottom: 14 }}>
-                <p style={{ margin: '0 0 7px', fontSize: 10.5, fontWeight: 700, color: 'var(--color-text-muted,#6B7280)', textTransform: 'uppercase', letterSpacing: '0.7px' }}>Task Type</p>
+                <p style={{ margin: '0 0 7px', fontSize: 10.5, fontWeight: 700, color: 'var(--sb-ink-3)', textTransform: 'uppercase', letterSpacing: '0.7px' }}>Task Type</p>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
                   {typeOptions.map(([type, meta]) => (
                     <button key={type} onClick={() => setFilters(f => ({ ...f, type: f.type === type ? '' : type }))} style={{
                       display: 'flex', alignItems: 'center', gap: 4, padding: '4px 9px', borderRadius: 20, cursor: 'pointer', fontSize: 12,
                       background: filters.type === type ? `${meta.color}22` : 'transparent',
                       border: `1px solid ${filters.type === type ? meta.color : 'var(--color-border,#252A3E)'}`,
-                      color: filters.type === type ? meta.color : 'var(--color-text-dim,#94A3B8)',
+                      color: filters.type === type ? meta.color : 'var(--sb-ink-3)',
                       fontWeight: filters.type === type ? 600 : 400, transition: 'all 0.12s',
                     }}>
                       <span>{meta.emoji}</span> {meta.label}
@@ -391,14 +385,14 @@ export function TaskCommand() {
               {/* Owner filter */}
               {ownerOptions.length > 0 && (
                 <div style={{ marginBottom: 14 }}>
-                  <p style={{ margin: '0 0 7px', fontSize: 10.5, fontWeight: 700, color: 'var(--color-text-muted,#6B7280)', textTransform: 'uppercase', letterSpacing: '0.7px' }}>Owner</p>
+                  <p style={{ margin: '0 0 7px', fontSize: 10.5, fontWeight: 700, color: 'var(--sb-ink-3)', textTransform: 'uppercase', letterSpacing: '0.7px' }}>Owner</p>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
                     {ownerOptions.map(u => (
                       <button key={u.id} onClick={() => setFilters(f => ({ ...f, owner: f.owner === u.id ? '' : u.id }))} style={{
                         padding: '4px 9px', borderRadius: 20, cursor: 'pointer', fontSize: 12,
-                        background: filters.owner === u.id ? 'rgba(127,119,221,0.12)' : 'transparent',
+                        background: filters.owner === u.id ? 'rgba(25,23,18,0.06)' : 'transparent',
                         border: `1px solid ${filters.owner === u.id ? 'var(--color-accent,#7F77DD)' : 'var(--color-border,#252A3E)'}`,
-                        color: filters.owner === u.id ? 'var(--color-accent,#7F77DD)' : 'var(--color-text-dim,#94A3B8)',
+                        color: filters.owner === u.id ? 'var(--color-accent,#7F77DD)' : 'var(--sb-ink-3)',
                         fontWeight: filters.owner === u.id ? 600 : 400, transition: 'all 0.12s',
                       }}>
                         {u.name}
@@ -426,16 +420,16 @@ export function TaskCommand() {
           <button onClick={() => setConfigOpen(o => !o)} title="Display settings" style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             width: 28, height: 28, borderRadius: 7, cursor: 'pointer',
-            background: configOpen ? 'rgba(127,119,221,0.12)' : 'transparent',
+            background: configOpen ? 'rgba(25,23,18,0.06)' : 'transparent',
             border: `1px solid ${configOpen ? 'color-mix(in srgb, var(--color-accent) 40%, transparent)' : 'var(--color-border,#252A3E)'}`,
-            color: configOpen ? 'var(--color-accent)' : 'var(--color-text-muted,#6B7280)',
+            color: configOpen ? 'var(--color-accent)' : 'var(--sb-ink-3)',
             transition: 'all 0.12s',
           }}>
             <SlidersHorizontal size={13} />
           </button>
           {configOpen && (
-            <div style={{ position: 'absolute', top: 34, right: 0, zIndex: 100, background: 'var(--color-surface,#161929)', border: '1px solid var(--color-border,#252A3E)', borderRadius: 10, padding: '12px 14px', minWidth: 240, boxShadow: '0 8px 24px rgba(0,0,0,0.5)' }}>
-              <p style={{ margin: '0 0 10px', fontSize: 11, fontWeight: 600, color: 'var(--color-text-muted,#6B7280)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>Task Display</p>
+            <div style={{ position: 'absolute', top: 34, right: 0, zIndex: 100, background: 'var(--sb-card)', border: '1px solid var(--color-border,#252A3E)', borderRadius: 10, padding: '12px 14px', minWidth: 240, boxShadow: '0 8px 24px rgba(0,0,0,0.5)' }}>
+              <p style={{ margin: '0 0 10px', fontSize: 11, fontWeight: 600, color: 'var(--sb-ink-3)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>Task Display</p>
               <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', gap: 10, marginBottom: 14 }}>
                 <span style={{ fontSize: 13, color: 'var(--color-text-dim,#C0C4D6)' }}>Hide completed tasks</span>
                 <div onClick={() => setHideCompleted(!hideCompleted)} style={{ width: 36, height: 20, borderRadius: 10, flexShrink: 0, background: hideCompleted ? 'var(--color-accent)' : 'var(--color-border,#252A3E)', position: 'relative', cursor: 'pointer', transition: 'background 0.15s' }}>
@@ -443,10 +437,10 @@ export function TaskCommand() {
                 </div>
               </label>
               <div style={{ width: '100%', height: 1, background: 'var(--color-border,#252A3E)', marginBottom: 12 }} />
-              <p style={{ margin: '0 0 8px', fontSize: 11, fontWeight: 600, color: 'var(--color-text-muted,#6B7280)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>Group tasks by</p>
+              <p style={{ margin: '0 0 8px', fontSize: 11, fontWeight: 600, color: 'var(--sb-ink-3)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>Group tasks by</p>
               {(['none', 'type', 'company'] as GroupBy[]).map(opt => (
                 <label key={opt} onClick={() => setGroupBy(opt)} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '5px 6px', borderRadius: 6, marginBottom: 2, background: groupBy === opt ? 'rgba(127,119,221,0.1)' : 'transparent' }}>
-                  <div style={{ width: 13, height: 13, borderRadius: '50%', flexShrink: 0, border: `2px solid ${groupBy === opt ? 'var(--color-accent)' : 'var(--color-text-muted,#6B7280)'}`, background: groupBy === opt ? 'var(--color-accent)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ width: 13, height: 13, borderRadius: '50%', flexShrink: 0, border: `2px solid ${groupBy === opt ? 'var(--color-accent)' : 'var(--sb-ink-3)'}`, background: groupBy === opt ? 'var(--color-accent)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     {groupBy === opt && <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#fff' }} />}
                   </div>
                   <span style={{ fontSize: 12.5, color: groupBy === opt ? 'var(--color-text-dim,#C0C4D6)' : 'var(--color-text-dim,#8B93A8)' }}>
@@ -467,7 +461,7 @@ export function TaskCommand() {
       {/* ── Active filter chips ─────────────────────────────────────────────── */}
       {(companyChipLabel || typeChipLabel || ownerChipLabel) && (
         <div style={{ padding: '7px 28px', borderBottom: '1px solid var(--color-border,#252A3E)', display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 11, color: 'var(--color-text-muted,#6B7280)', marginRight: 2 }}>Filtered by:</span>
+          <span style={{ fontSize: 11, color: 'var(--sb-ink-3)', marginRight: 2 }}>Filtered by:</span>
           {companyChipLabel && (
             <span style={chipStyle}>
               🏢 {companyChipLabel}
@@ -486,7 +480,7 @@ export function TaskCommand() {
               <button style={chipX} onClick={() => setFilters(f => ({ ...f, owner: '' }))}><X size={11} /></button>
             </span>
           )}
-          <button onClick={clearFilters} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: 'var(--color-text-muted,#6B7280)', textDecoration: 'underline', padding: '0 4px', marginLeft: 2 }}>
+          <button onClick={clearFilters} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: 'var(--sb-ink-3)', textDecoration: 'underline', padding: '0 4px', marginLeft: 2 }}>
             Clear all
           </button>
         </div>

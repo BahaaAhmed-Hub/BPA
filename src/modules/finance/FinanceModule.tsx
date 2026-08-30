@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { useFinanceStore } from './financeStore'
 import { useUIStore } from '@/store/uiStore'
 import { getTheme } from '@/lib/themes'
-import { TopBar } from '@/components/layout/TopBar'
 import { TodayScreen } from './screens/TodayScreen'
 import { BalanceScreen } from './screens/BalanceScreen'
 import { BudgetScreen } from './screens/BudgetScreen'
@@ -187,7 +186,6 @@ export function FinanceModule() {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', background: C.bg }}>
 
       {/* Layer 1 — main app header (64px): aligns with sidebar logo */}
-      <TopBar title="Finance" />
 
       {/* Layer 2 — Finance sub-nav (44px): module-specific tabs */}
       <div style={{

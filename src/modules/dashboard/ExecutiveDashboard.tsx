@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { TopBar } from '@/components/layout/TopBar'
 import {
   TrendingUp, CheckSquare, Calendar, Inbox,
   Target, Zap, Award, ArrowRight,
@@ -184,7 +183,6 @@ export function ExecutiveDashboard() {
 
   return (
     <div>
-      <TopBar title="Executive Dashboard" subtitle="Your command center — clear, focused, decisive." />
 
       <div style={{ padding: '28px 28px 60px' }}>
         {/* Welcome */}

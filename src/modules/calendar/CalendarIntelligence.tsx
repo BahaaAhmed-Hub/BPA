@@ -524,13 +524,13 @@ function DayColumn({ dateStr, isToday, children }: { dateStr: string; isToday: b
   return (
     <div ref={setNodeRef} style={{
       flex: 1, position: 'relative', height: GRID_H,
-      borderRight: '1px solid var(--color-surface, #1A1D2E)',
+      borderRight: '1px solid var(--sb-border)',
       background: isToday ? 'rgba(30,64,175,0.04)' : isOver ? 'rgba(30,64,175,0.07)' : 'transparent',
       transition: 'background 0.1s', minWidth: 0,
     }}>
       {/* Hour lines */}
       {Array.from({ length: 24 }, (_, h) => (
-        <div key={h} style={{ position: 'absolute', top: h * HOUR_PX, left: 0, right: 0, borderTop: '1px solid var(--color-surface, #1A1D2E)', pointerEvents: 'none' }} />
+        <div key={h} style={{ position: 'absolute', top: h * HOUR_PX, left: 0, right: 0, borderTop: '1px solid var(--sb-border)', pointerEvents: 'none' }} />
       ))}
       {/* Half-hour lines */}
       {Array.from({ length: 24 }, (_, h) => (
@@ -1617,6 +1617,9 @@ export function CalendarIntelligence() {
   const [applyingRules,   setApplyingRules]   = useState(false)
   const [rulesResult,     setRulesResult]     = useState<string | null>(null)
   const [originalsOnly,   setOriginalsOnly]   = useState(false)
+  const [showCalendars,   setShowCalendars]   = useState(() => {
+    try { return localStorage.getItem('cal-show-calendars') !== 'false' } catch { return true }
+  })
 
   // ── Popup + prep state ──────────────────────────────────────────────────────
   const [selectedEvent, setSelectedEvent] = useState<GCalEventExt | null>(null)
@@ -2219,13 +2222,13 @@ export function CalendarIntelligence() {
 
   // ── Render ───────────────────────────────────────────────────────────────────
   return (
-    <div className={creatingEvt ? 'cal-grid-creating' : undefined} style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--color-bg, #0D0F1E)', color: 'var(--color-text, #E8EAF6)', fontFamily: 'inherit', overflow: 'hidden' }}>
+    <div className={creatingEvt ? 'cal-grid-creating' : undefined} style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--sb-page)', color: 'var(--sb-ink-1)', fontFamily: 'var(--sb-font-ui)', overflow: 'hidden' }}>
 
       {/* ── Top bar ─────────────────────────────────────────────────────────── */}
-      <div style={{ padding: '14px 20px 10px', borderBottom: '1px solid var(--color-surface, #1A1D2E)', flexShrink: 0 }}>
+      <div style={{ padding: '14px 20px 10px', borderBottom: '1px solid var(--sb-border)', background: 'var(--sb-header)', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           {/* Week range title */}
-          <span style={{ fontSize: 17, fontWeight: 700, color: 'var(--color-text, #E8EAF6)', flex: 1, minWidth: 160 }}>
+          <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--sb-ink-1)', flex: 1, minWidth: 160, fontFamily: 'var(--sb-font-num)', letterSpacing: '-.02em' }}>
             {fmtWeekRange(weekStart)}
           </span>
 
@@ -2233,19 +2236,19 @@ export function CalendarIntelligence() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
             <button
               onClick={() => { const d = new Date(weekStart); d.setDate(d.getDate() - 7); setWeekStart(d) }}
-              style={{ background: 'none', border: '1px solid var(--color-border, #252A3E)', borderRadius: 7, cursor: 'pointer', color: 'var(--color-text-dim, #8B93A8)', padding: '4px 8px', display: 'flex', alignItems: 'center' }}
+              style={{ background: 'var(--sb-field)', border: '1px solid var(--sb-border)', borderRadius: 8, cursor: 'pointer', color: 'var(--sb-ink-3)', padding: '4px 8px', display: 'flex', alignItems: 'center' }}
             ><ChevronLeft size={15} /></button>
 
             {!isThisWeek(weekStart) && (
               <button
                 onClick={() => setWeekStart(getWeekStart(new Date()))}
-                style={{ background: 'none', border: '1px solid var(--color-border, #252A3E)', borderRadius: 7, cursor: 'pointer', color: 'var(--color-text-dim, #8B93A8)', padding: '4px 9px', fontSize: 12 }}
+                style={{ background: 'var(--sb-field)', border: '1px solid var(--sb-border)', borderRadius: 8, cursor: 'pointer', color: 'var(--sb-ink-3)', padding: '4px 9px', fontSize: 12 }}
               >Today</button>
             )}
 
             <button
               onClick={() => { const d = new Date(weekStart); d.setDate(d.getDate() + 7); setWeekStart(d) }}
-              style={{ background: 'none', border: '1px solid var(--color-border, #252A3E)', borderRadius: 7, cursor: 'pointer', color: 'var(--color-text-dim, #8B93A8)', padding: '4px 8px', display: 'flex', alignItems: 'center' }}
+              style={{ background: 'var(--sb-field)', border: '1px solid var(--sb-border)', borderRadius: 8, cursor: 'pointer', color: 'var(--sb-ink-3)', padding: '4px 8px', display: 'flex', alignItems: 'center' }}
             ><ChevronRight size={15} /></button>
 
             <button
@@ -2261,7 +2264,7 @@ export function CalendarIntelligence() {
                 } finally { setRefreshing(false) }
               }}
               disabled={refreshing}
-              style={{ background: 'none', border: '1px solid var(--color-border, #252A3E)', borderRadius: 7, cursor: refreshing ? 'default' : 'pointer', color: 'var(--color-text-dim, #8B93A8)', padding: '4px 8px', display: 'flex', alignItems: 'center', opacity: refreshing ? 0.6 : 1 }}
+              style={{ background: 'var(--sb-field)', border: '1px solid var(--sb-border)', borderRadius: 8, cursor: refreshing ? 'default' : 'pointer', color: 'var(--sb-ink-3)', padding: '4px 8px', display: 'flex', alignItems: 'center', opacity: refreshing ? 0.6 : 1 }}
             ><RefreshCw size={13} style={{ animation: refreshing ? 'spin 0.7s linear infinite' : 'none' }} /></button>
 
             <button
@@ -2270,9 +2273,9 @@ export function CalendarIntelligence() {
               title="Apply productivity blocking rules"
               style={{
                 display: 'flex', alignItems: 'center', gap: 5,
-                background: 'none', border: '1px solid var(--color-border, #252A3E)', borderRadius: 7,
+                background: 'var(--sb-field)', border: '1px solid var(--sb-border)', borderRadius: 8,
                 cursor: applyingRules ? 'default' : 'pointer',
-                color: applyingRules ? 'var(--color-border, #4B5268)' : 'var(--color-text-dim, #8B93A8)',
+                color: applyingRules ? 'var(--sb-ink-4)' : 'var(--sb-ink-3)',
                 padding: '4px 8px', fontSize: 12,
                 opacity: applyingRules ? 0.6 : 1,
               }}
@@ -2286,16 +2289,37 @@ export function CalendarIntelligence() {
               title={originalsOnly ? 'Showing originals only — click to show all events' : 'Show originals only (hide created blocks)'}
               style={{
                 display: 'flex', alignItems: 'center', gap: 5,
-                background: originalsOnly ? 'rgba(127,119,221,0.12)' : 'none',
-                border: `1px solid ${originalsOnly ? 'rgba(127,119,221,0.5)' : 'var(--color-border, #252A3E)'}`,
-                borderRadius: 7, cursor: 'pointer',
-                color: originalsOnly ? 'var(--color-accent)' : 'var(--color-text-dim, #8B93A8)',
+                background: originalsOnly ? 'var(--sb-ink-1)' : 'var(--sb-field)',
+                border: `1px solid ${originalsOnly ? 'var(--sb-ink-1)' : 'var(--sb-border)'}`,
+                borderRadius: 8, cursor: 'pointer',
+                color: originalsOnly ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
                 padding: '4px 8px', fontSize: 12,
-                transition: 'all 0.15s',
+                transition: 'all 0.14s',
               }}
             >
               {originalsOnly ? <EyeOff size={13} /> : <Eye size={13} />}
               Originals
+            </button>
+
+            <button
+              onClick={() => {
+                const next = !showCalendars
+                setShowCalendars(next)
+                try { localStorage.setItem('cal-show-calendars', String(next)) } catch { /* noop */ }
+              }}
+              title={showCalendars ? 'Hide calendars list' : 'Show calendars list'}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 5,
+                background: showCalendars ? 'var(--sb-ink-1)' : 'var(--sb-field)',
+                border: `1px solid ${showCalendars ? 'var(--sb-ink-1)' : 'var(--sb-border)'}`,
+                borderRadius: 8, cursor: 'pointer',
+                color: showCalendars ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
+                padding: '4px 8px', fontSize: 12,
+                transition: 'all 0.14s',
+              }}
+            >
+              <Calendar size={13} />
+              Calendars
             </button>
           </div>
 
@@ -2308,7 +2332,7 @@ export function CalendarIntelligence() {
         </div>
 
         {/* Calendar chips */}
-        {allCalendars.length > 0 && (
+        {allCalendars.length > 0 && showCalendars && (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
             {allCalendars.filter(cal => {
               if (cal.accountId && hiddenAccounts.has(cal.accountEmail)) return false
@@ -2399,7 +2423,7 @@ export function CalendarIntelligence() {
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
           {/* Sticky day headers */}
-          <div style={{ display: 'flex', borderBottom: '1px solid var(--color-surface, #1A1D2E)', flexShrink: 0 }}>
+          <div style={{ display: 'flex', borderBottom: '1px solid var(--sb-border)', flexShrink: 0 }}>
             {/* Time gutter spacer */}
             <div style={{ width: 52, flexShrink: 0 }} />
             {weekDays.map(day => {
@@ -2428,7 +2452,7 @@ export function CalendarIntelligence() {
 
           {/* All-day events strip — only shown when the week has at least one all-day event */}
           {weekDays.some(day => (grouped.get(localDateStr(day)) ?? []).some(e => !e.start.dateTime)) && (
-            <div style={{ display: 'flex', borderBottom: '1px solid var(--color-surface, #1A1D2E)', flexShrink: 0, minHeight: 22 }}>
+            <div style={{ display: 'flex', borderBottom: '1px solid var(--sb-border)', flexShrink: 0, minHeight: 22 }}>
               <div style={{ width: 52, flexShrink: 0, display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end', paddingRight: 6, paddingTop: 3, fontSize: 9, color: 'var(--color-text-muted, #6B7280)', letterSpacing: '0.4px' }}>
                 all day
               </div>
@@ -2436,7 +2460,7 @@ export function CalendarIntelligence() {
                 const ds = localDateStr(day)
                 const allDayEvts = (grouped.get(ds) ?? []).filter(e => !e.start.dateTime)
                 return (
-                  <div key={ds} style={{ flex: 1, padding: '2px 2px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1, borderRight: '1px solid var(--color-surface, #1A1D2E)', maxHeight: 68, overflowY: 'auto' }}>
+                  <div key={ds} style={{ flex: 1, padding: '2px 2px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1, borderRight: '1px solid var(--sb-border)', maxHeight: 68, overflowY: 'auto' }}>
                     {allDayEvts.map(ev => {
                       const cal   = allCalendars.find(c => c.id === (ev as GCalEventExt).calendarId)
                       const color = cal ? calEffectiveColor(cal) : 'var(--color-accent)'
