@@ -14,7 +14,7 @@ import type { IdentityResult, Rank, IdentityStage } from '@/store/behavioralStor
 const S: Record<string, string> = {
   bg:        'var(--color-bg, #0C0B09)',
   surface:   'var(--color-surface, #131210)',
-  border:    'var(--color-border, #1E1C18)',
+  border:    '#E8E1CE',
   accent:    'var(--color-accent, #8B1A1A)',
   accentFg:  'var(--color-accent-bright, #C0392B)',
   text:      'var(--color-text, #EDE4D3)',

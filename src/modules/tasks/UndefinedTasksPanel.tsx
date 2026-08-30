@@ -11,15 +11,15 @@ import type { TaskAnalysis } from '@/lib/professor'
 type Filter = 'all' | 'open' | 'done' | 'cancelled'
 
 const inp: React.CSSProperties = {
-  background: 'var(--sb-page)',
-  border: '1px solid var(--sb-border)',
+  background: '#F7F4EA',
+  border: '1px solid #E8E1CE',
   borderRadius: 6, padding: '5px 8px', fontSize: 12,
-  color: 'var(--color-text, #E8EAF6)', outline: 'none', width: '100%',
+  color: '#191712', outline: 'none', width: '100%',
 }
 const sel: React.CSSProperties = { ...inp }
 
 const STATUS_COLORS: Record<TaskStatus, string> = {
-  open: 'var(--color-accent)', done: '#1D9E75', cancelled: 'var(--color-text-muted, #6B7280)',
+  open: '#7F77DD', done: '#1D9E75', cancelled: '#9B9180',
 }
 
 // ─── Draggable card for inbox tasks ──────────────────────────────────────────
@@ -53,8 +53,8 @@ function DraggableInboxCard({ task, accentColor, taskStatus, ownerUser, onOpen, 
     >
       <div style={{
         padding: '9px 11px',
-        background: isDragging ? 'var(--sb-field)' : 'var(--sb-page)',
-        border: `1px solid ${task.urgent ? '#E0711A40' : hovered ? '#353A50' : 'var(--sb-border)'}`,
+        background: isDragging ? '#FAF7EC' : '#F7F4EA',
+        border: `1px solid ${task.urgent ? '#E0711A40' : hovered ? '#353A50' : '#E8E1CE'}`,
         borderRadius: 8,
         opacity: taskStatus === 'cancelled' ? 0.5 : taskStatus === 'done' ? 0.6 : 1,
         cursor: isDragging ? 'grabbing' : 'pointer',
@@ -71,7 +71,7 @@ function DraggableInboxCard({ task, accentColor, taskStatus, ownerUser, onOpen, 
           <div
             {...listeners} {...attributes}
             onClick={e => e.stopPropagation()}
-            style={{ cursor: 'grab', color: hovered ? 'var(--color-text-muted, #6B7280)' : 'transparent', transition: 'color 0.15s', marginTop: 1, flexShrink: 0 }}
+            style={{ cursor: 'grab', color: hovered ? '#9B9180' : 'transparent', transition: 'color 0.15s', marginTop: 1, flexShrink: 0 }}
           >
             <GripVertical size={12} strokeWidth={2} />
           </div>
@@ -81,7 +81,7 @@ function DraggableInboxCard({ task, accentColor, taskStatus, ownerUser, onOpen, 
             onClick={e => { e.stopPropagation(); onToggle() }}
             style={{
               width: 15, height: 15, borderRadius: 4,
-              border: `1.5px solid ${task.completed ? '#1D9E75' : 'var(--sb-border)'}`,
+              border: `1.5px solid ${task.completed ? '#1D9E75' : '#E8E1CE'}`,
               background: task.completed ? '#1D9E75' : 'transparent',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               cursor: 'pointer', flexShrink: 0, marginTop: 1, transition: 'all 0.15s ease',
@@ -93,7 +93,7 @@ function DraggableInboxCard({ task, accentColor, taskStatus, ownerUser, onOpen, 
           {/* Content */}
           <div style={{ flex: 1, minWidth: 0 }}>
             <p style={{
-              margin: 0, fontSize: 12.5, fontWeight: 500, color: 'var(--color-text, #E8EAF6)', lineHeight: 1.35,
+              margin: 0, fontSize: 12.5, fontWeight: 500, color: '#191712', lineHeight: 1.35,
               textDecoration: taskStatus === 'done' ? 'line-through' : 'none',
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             }}>{task.title}</p>
@@ -121,7 +121,7 @@ function DraggableInboxCard({ task, accentColor, taskStatus, ownerUser, onOpen, 
               </select>
 
               {task.dueDate && (
-                <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: 'var(--color-text-muted, #6B7280)' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: '#9B9180' }}>
                   <Calendar size={9} />
                   {new Date(task.dueDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                 </span>
@@ -157,7 +157,7 @@ function DraggableInboxCard({ task, accentColor, taskStatus, ownerUser, onOpen, 
               onClick={e => { e.stopPropagation(); onDelete() }}
               style={{
                 background: 'transparent', border: 'none', cursor: 'pointer',
-                color: 'var(--color-text-muted, #6B7280)', padding: 2, borderRadius: 4,
+                color: '#9B9180', padding: 2, borderRadius: 4,
                 display: 'flex', alignItems: 'center',
                 opacity: hovered ? 1 : 0, transition: 'opacity 0.15s',
               }}
@@ -307,7 +307,7 @@ export function UndefinedTasksPanel({ onOpen, hideCompleted = false, groupBy = '
       return [...map.entries()].map(([k, ts]) => {
         const dynCo = companies.find(c => c.id === k)
         const label = dynCo?.name ?? k
-        const color = dynCo?.color ?? 'var(--color-text-muted, #6B7280)'
+        const color = dynCo?.color ?? '#9B9180'
         return { key: k, label, emoji: '🏢', color, tasks: ts }
       })
     }
@@ -317,7 +317,7 @@ export function UndefinedTasksPanel({ onOpen, hideCompleted = false, groupBy = '
     const co = companies.find(c => c.id === t.companyId)
     const ownerUser = t.owner ? users.find(u => u.id === t.owner) : undefined
     const taskStatus: TaskStatus = t.completed ? 'done' : (t.status ?? 'open')
-    const accentColor = co?.color ?? COMPANY_COLORS[t.company] ?? 'var(--color-text-muted, #6B7280)'
+    const accentColor = co?.color ?? COMPANY_COLORS[t.company] ?? '#9B9180'
     return (
       <DraggableInboxCard
         key={t.id} task={t} accentColor={accentColor} taskStatus={taskStatus}
@@ -339,19 +339,19 @@ export function UndefinedTasksPanel({ onOpen, hideCompleted = false, groupBy = '
   return (
     <div style={{
       width: 300, flexShrink: 0,
-      background: 'var(--sb-card)',
-      border: '1px solid var(--sb-border)',
+      background: '#FFFFFF',
+      border: '1px solid #E8E1CE',
       borderRadius: 12, display: 'flex', flexDirection: 'column',
       overflow: 'hidden', maxHeight: 'calc(100vh - 160px)',
     }}>
       {/* Header */}
-      <div style={{ padding: '14px 16px 10px', borderBottom: '1px solid var(--sb-border)' }}>
+      <div style={{ padding: '14px 16px 10px', borderBottom: '1px solid #E8E1CE' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
           <Inbox size={14} color="#6B7280" />
-          <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--color-text, #E8EAF6)' }}>Inbox</span>
+          <span style={{ fontSize: 13.5, fontWeight: 700, color: '#191712' }}>Inbox</span>
           <span style={{
             fontSize: 10.5, fontWeight: 600,
-            color: 'var(--color-text-muted, #6B7280)', background: '#6B728018', padding: '1px 6px', borderRadius: 4,
+            color: '#9B9180', background: '#6B728018', padding: '1px 6px', borderRadius: 4,
           }}>{inbox.length}</span>
           <button
             onClick={() => { setBulkOpen(o => !o); setBulkText(''); setBulkDone(false); setTimeout(() => bulkRef.current?.focus(), 50) }}
@@ -360,8 +360,8 @@ export function UndefinedTasksPanel({ onOpen, hideCompleted = false, groupBy = '
               marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 5,
               padding: '3px 8px', borderRadius: 5, fontSize: 11, fontWeight: 500,
               background: bulkOpen ? 'rgba(29,158,117,0.12)' : 'transparent',
-              border: `1px solid ${bulkOpen ? 'rgba(29,158,117,0.3)' : 'var(--sb-border)'}`,
-              color: bulkOpen ? '#1D9E75' : 'var(--color-text-muted, #6B7280)', cursor: 'pointer',
+              border: `1px solid ${bulkOpen ? 'rgba(29,158,117,0.3)' : '#E8E1CE'}`,
+              color: bulkOpen ? '#1D9E75' : '#9B9180', cursor: 'pointer',
             }}
           >
             <ListPlus size={11} /> Bulk add
@@ -383,12 +383,12 @@ export function UndefinedTasksPanel({ onOpen, hideCompleted = false, groupBy = '
               }}
             />
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: 10.5, color: 'var(--color-text-muted, #6B7280)', flex: 1 }}>
+              <span style={{ fontSize: 10.5, color: '#9B9180', flex: 1 }}>
                 {bulkLines.length > 0 ? `${bulkLines.length} task${bulkLines.length > 1 ? 's' : ''} ready` : 'Paste or type tasks above'}
               </span>
               <button onClick={() => { setBulkOpen(false); setBulkText('') }} style={{
                 padding: '4px 8px', borderRadius: 5, fontSize: 11, background: 'transparent',
-                border: '1px solid var(--sb-border)', color: 'var(--color-text-muted, #6B7280)', cursor: 'pointer',
+                border: '1px solid #E8E1CE', color: '#9B9180', cursor: 'pointer',
               }}>Cancel</button>
               <button onClick={handleBulkAdd} disabled={bulkLines.length === 0 || bulkDone} style={{
                 display: 'flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 5,
@@ -409,9 +409,9 @@ export function UndefinedTasksPanel({ onOpen, hideCompleted = false, groupBy = '
             <button key={f} onClick={() => setFilter(f)} style={{
               padding: '3px 8px', borderRadius: 5, fontSize: 10.5, fontWeight: 500,
               cursor: 'pointer', textTransform: 'capitalize',
-              background: filter === f ? 'var(--color-accent-fill)' : 'transparent',
-              border: `1px solid ${filter === f ? 'color-mix(in srgb, var(--color-accent) 40%, transparent)' : 'var(--sb-border)'}`,
-              color: filter === f ? 'var(--color-accent)' : 'var(--color-text-muted, #6B7280)',
+              background: filter === f ? 'rgba(127,119,221,0.1)' : 'transparent',
+              border: `1px solid ${filter === f ? 'color-mix(in srgb, #7F77DD 40%, transparent)' : '#E8E1CE'}`,
+              color: filter === f ? '#7F77DD' : '#9B9180',
             }}>
               {f} {counts[f] > 0 && <span style={{ opacity: 0.7 }}>({counts[f]})</span>}
             </button>
@@ -432,9 +432,9 @@ export function UndefinedTasksPanel({ onOpen, hideCompleted = false, groupBy = '
         {filtered.length === 0 && !adding && (
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            minHeight: 80, color: inboxOver ? 'var(--color-accent)' : 'var(--color-text-muted, #6B7280)',
+            minHeight: 80, color: inboxOver ? '#7F77DD' : '#9B9180',
             fontSize: 12, fontStyle: 'italic',
-            border: `1px dashed ${inboxOver ? 'color-mix(in srgb, var(--color-accent) 40%, transparent)' : 'var(--sb-border)'}`,
+            border: `1px dashed ${inboxOver ? 'color-mix(in srgb, #7F77DD 40%, transparent)' : '#E8E1CE'}`,
             borderRadius: 8, transition: 'all 0.15s ease',
           }}>
             {inboxOver ? 'Drop here to move to inbox' : 'No tasks'}
@@ -474,7 +474,7 @@ export function UndefinedTasksPanel({ onOpen, hideCompleted = false, groupBy = '
       </div>
 
       {/* Add form */}
-      <div style={{ borderTop: '1px solid var(--sb-border)', padding: '8px' }}>
+      <div style={{ borderTop: '1px solid #E8E1CE', padding: '8px' }}>
         {adding ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
             <input autoFocus value={title} onChange={e => setTitle(e.target.value)}
@@ -484,11 +484,11 @@ export function UndefinedTasksPanel({ onOpen, hideCompleted = false, groupBy = '
             {/* AI suggestion strip */}
             {(aiLoading || aiHint) && (
               <div style={{
-                background: 'var(--sb-page)', border: '1px solid var(--sb-border)', borderRadius: 6,
+                background: '#F7F4EA', border: '1px solid #E8E1CE', borderRadius: 6,
                 padding: '5px 8px', display: 'flex', flexWrap: 'wrap', gap: 5, alignItems: 'center',
               }}>
-                <Sparkles size={10} color="var(--color-accent)" style={{ flexShrink: 0 }} />
-                {aiLoading && <span style={{ fontSize: 10.5, color: 'var(--color-text-muted, #6B7280)' }}>Analyzing…</span>}
+                <Sparkles size={10} color="#7F77DD" style={{ flexShrink: 0 }} />
+                {aiLoading && <span style={{ fontSize: 10.5, color: '#9B9180' }}>Analyzing…</span>}
                 {!aiLoading && aiHint && (
                   <>
                     {aiHint.icon && <span style={{ fontSize: 10.5, color: 'var(--color-text-dim, #94A3B8)' }}>Icon: {aiHint.icon}</span>}
@@ -512,18 +512,18 @@ export function UndefinedTasksPanel({ onOpen, hideCompleted = false, groupBy = '
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
               <div>
-                <span style={{ fontSize: 10, color: 'var(--color-text-muted, #6B7280)', display: 'block', marginBottom: 2 }}>Company</span>
+                <span style={{ fontSize: 10, color: '#9B9180', display: 'block', marginBottom: 2 }}>Company</span>
                 <select value={companyId} onChange={e => setCompanyId(e.target.value)} style={sel}>
                   <option value="">—</option>
                   {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </div>
               <div>
-                <span style={{ fontSize: 10, color: 'var(--color-text-muted, #6B7280)', display: 'block', marginBottom: 2 }}>Due date</span>
+                <span style={{ fontSize: 10, color: '#9B9180', display: 'block', marginBottom: 2 }}>Due date</span>
                 <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} style={sel} />
               </div>
               <div>
-                <span style={{ fontSize: 10, color: 'var(--color-text-muted, #6B7280)', display: 'block', marginBottom: 2 }}>Owner</span>
+                <span style={{ fontSize: 10, color: '#9B9180', display: 'block', marginBottom: 2 }}>Owner</span>
                 <select value={owner} onChange={e => setOwner(e.target.value)} style={sel}>
                   <option value="">—</option>
                   {(companyId
@@ -537,20 +537,20 @@ export function UndefinedTasksPanel({ onOpen, hideCompleted = false, groupBy = '
                 </select>
               </div>
               <div>
-                <span style={{ fontSize: 10, color: 'var(--color-text-muted, #6B7280)', display: 'block', marginBottom: 2 }}>Duration (min)</span>
+                <span style={{ fontSize: 10, color: '#9B9180', display: 'block', marginBottom: 2 }}>Duration (min)</span>
                 <input type="number" min={5} step={5} value={duration}
                   onChange={e => setDuration(e.target.value)} placeholder="60" style={sel} />
               </div>
               <div style={{ gridColumn: '1 / -1' }}>
-                <span style={{ fontSize: 10, color: 'var(--color-text-muted, #6B7280)', display: 'block', marginBottom: 2 }}>Status</span>
+                <span style={{ fontSize: 10, color: '#9B9180', display: 'block', marginBottom: 2 }}>Status</span>
                 <div style={{ display: 'flex', gap: 5 }}>
                   {(['open', 'done', 'cancelled'] as TaskStatus[]).map(s => (
                     <button key={s} onClick={() => setFormStatus(s)} style={{
                       flex: 1, padding: '4px', borderRadius: 5, fontSize: 11, fontWeight: 500,
                       cursor: 'pointer', textTransform: 'capitalize',
                       background: status === s ? STATUS_COLORS[s] + '22' : 'transparent',
-                      border: `1px solid ${status === s ? STATUS_COLORS[s] + '80' : 'var(--sb-border)'}`,
-                      color: status === s ? STATUS_COLORS[s] : 'var(--color-text-muted, #6B7280)',
+                      border: `1px solid ${status === s ? STATUS_COLORS[s] + '80' : '#E8E1CE'}`,
+                      color: status === s ? STATUS_COLORS[s] : '#9B9180',
                     }}>{s}</button>
                   ))}
                 </div>
@@ -560,22 +560,22 @@ export function UndefinedTasksPanel({ onOpen, hideCompleted = false, groupBy = '
             <div style={{ display: 'flex', gap: 6 }}>
               <button onClick={handleAdd} disabled={!title.trim()} style={{
                 flex: 1, padding: '6px', borderRadius: 6, fontSize: 12, fontWeight: 500,
-                background: 'var(--color-accent-fill)', border: '1px solid #1E40AF50',
-                color: 'var(--color-accent)', cursor: title.trim() ? 'pointer' : 'not-allowed',
+                background: 'rgba(127,119,221,0.1)', border: '1px solid #1E40AF50',
+                color: '#7F77DD', cursor: title.trim() ? 'pointer' : 'not-allowed',
                 opacity: title.trim() ? 1 : 0.4,
               }}>Add Task</button>
               <button onClick={reset} style={{
                 padding: '6px 10px', borderRadius: 6,
-                background: 'transparent', border: '1px solid var(--sb-border)',
-                color: 'var(--color-text-muted, #6B7280)', cursor: 'pointer', fontSize: 12,
+                background: 'transparent', border: '1px solid #E8E1CE',
+                color: '#9B9180', cursor: 'pointer', fontSize: 12,
               }}><X size={12} /></button>
             </div>
           </div>
         ) : (
           <button onClick={() => setAdding(true)} style={{
-            width: '100%', background: 'transparent', border: '1px dashed var(--sb-border)',
+            width: '100%', background: 'transparent', border: '1px dashed #E8E1CE',
             borderRadius: 7, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
-            color: 'var(--color-text-muted, #6B7280)', fontSize: 12, padding: '7px 10px',
+            color: '#9B9180', fontSize: 12, padding: '7px 10px',
           }}>
             <Plus size={12} /> Add task
           </button>

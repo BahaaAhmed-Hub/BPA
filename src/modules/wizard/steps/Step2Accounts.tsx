@@ -43,8 +43,8 @@ function AppleIcon() {
 const providerTileStyle: React.CSSProperties = {
   width: 140,
   height: 80,
-  background: 'var(--sb-card)',
-  border: '1px solid var(--sb-border)',
+  background: '#FFFFFF',
+  border: '1px solid #E8E1CE',
   borderRadius: 10,
   display: 'flex',
   flexDirection: 'column',
@@ -111,8 +111,8 @@ export function Step2Accounts({ data: _data, onChange: _onChange, onBeforeOAuth 
 
       {/* Primary account card */}
       <div style={{
-        background: 'var(--sb-card)',
-        border: '1px solid var(--sb-border)',
+        background: '#FFFFFF',
+        border: '1px solid #E8E1CE',
         borderLeft: '3px solid var(--color-accent, #7F77DD)',
         borderRadius: 10,
         padding: '14px 16px',
@@ -171,8 +171,8 @@ export function Step2Accounts({ data: _data, onChange: _onChange, onBeforeOAuth 
           </div>
           {extraAccounts.map(acct => (
             <div key={acct.id} style={{
-              background: 'var(--sb-card)',
-              border: '1px solid var(--sb-border)',
+              background: '#FFFFFF',
+              border: '1px solid #E8E1CE',
               borderRadius: 10,
               padding: '12px 16px',
               display: 'flex',
@@ -186,7 +186,7 @@ export function Step2Accounts({ data: _data, onChange: _onChange, onBeforeOAuth 
                   width: 32,
                   height: 32,
                   borderRadius: '50%',
-                  background: 'var(--sb-border)',
+                  background: '#E8E1CE',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',

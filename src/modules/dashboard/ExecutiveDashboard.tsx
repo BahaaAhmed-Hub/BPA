@@ -26,13 +26,13 @@ function MetricCard({
   accentColor?: string
   onClick?: () => void
 }) {
-  const color = accentColor ?? 'var(--color-accent)'
+  const color = accentColor ?? '#7F77DD'
   return (
     <div
       onClick={onClick}
       style={{
-        background: 'var(--sb-card)',
-        border: '1px solid var(--sb-border)',
+        background: '#FFFFFF',
+        border: '1px solid #E8E1CE',
         borderRadius: 12, padding: '20px 22px',
         display: 'flex', flexDirection: 'column', gap: 12,
         position: 'relative', overflow: 'hidden',
@@ -51,7 +51,7 @@ function MetricCard({
       <div>
         <div style={{
           fontSize: 28, fontWeight: 700,
-          color: 'var(--sb-ink-1)',
+          color: '#191712',
           fontFamily: "'Cabinet Grotesk', sans-serif",
           letterSpacing: '-0.5px', lineHeight: 1,
         }}>
@@ -82,12 +82,12 @@ function CompanyBadge({ name, color, count }: { name: string; color: string; cou
     <div style={{
       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       padding: '10px 14px',
-      background: 'var(--sb-field)',
-      borderRadius: 8, border: '1px solid var(--sb-border)',
+      background: '#FAF7EC',
+      borderRadius: 8, border: '1px solid #E8E1CE',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <div style={{ width: 8, height: 8, borderRadius: '50%', background: color }} />
-        <span style={{ fontSize: 13, color: 'var(--sb-ink-1)', fontWeight: 400 }}>
+        <span style={{ fontSize: 13, color: '#191712', fontWeight: 400 }}>
           {name}
         </span>
       </div>
@@ -106,16 +106,16 @@ function QuickAction({ label, onClick }: { label: string; onClick: () => void })
       style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         width: '100%', padding: '12px 16px',
-        background: 'var(--sb-field)',
-        border: '1px solid var(--sb-border)',
+        background: '#FAF7EC',
+        border: '1px solid #E8E1CE',
         borderRadius: 9, cursor: 'pointer', gap: 10,
-        color: 'var(--sb-ink-1)', fontSize: 13, fontWeight: 500,
+        color: '#191712', fontSize: 13, fontWeight: 500,
         transition: 'border-color 0.15s',
         textAlign: 'left',
       }}
     >
       {label}
-      <ArrowRight size={13} color="var(--sb-ink-3)" />
+      <ArrowRight size={13} color="#6C6553" />
     </button>
   )
 }
@@ -190,7 +190,7 @@ export function ExecutiveDashboard() {
           <div>
             <h2 style={{
               margin: 0, fontSize: 22, fontWeight: 700,
-              color: 'var(--sb-ink-1)',
+              color: '#191712',
               fontFamily: "'Cabinet Grotesk', sans-serif", letterSpacing: '-0.4px',
             }}>
               {greeting}
@@ -221,7 +221,7 @@ export function ExecutiveDashboard() {
             delta={addedThisWeek > 0 ? `${addedThisWeek} added this week` : undefined}
             deltaPositive={false}
             icon={CheckSquare}
-            accentColor="var(--color-accent)"
+            accentColor="#7F77DD"
             onClick={() => setModule('tasks')}
           />
           <MetricCard
@@ -247,7 +247,7 @@ export function ExecutiveDashboard() {
             delta={todayMeetings > 0 ? 'From calendar' : 'Connect calendar'}
             deltaPositive={todayMeetings === 0}
             icon={Calendar}
-            accentColor="var(--color-accent)"
+            accentColor="#7F77DD"
             onClick={() => setModule('calendar')}
           />
         </div>
@@ -278,7 +278,7 @@ export function ExecutiveDashboard() {
             delta="Connect Gmail"
             deltaPositive={false}
             icon={Inbox}
-            accentColor="var(--color-accent)"
+            accentColor="#7F77DD"
             onClick={() => setModule('inbox')}
           />
         </div>
@@ -287,21 +287,21 @@ export function ExecutiveDashboard() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
           {/* Company Breakdown */}
           <div style={{
-            background: 'var(--sb-card)',
-            border: '1px solid var(--sb-border)',
+            background: '#FFFFFF',
+            border: '1px solid #E8E1CE',
             borderRadius: 12, padding: '20px 22px',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
               <h3 style={{ margin: 0, fontSize: 13, fontWeight: 600, color: 'var(--color-text-dim, #94A3B8)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
                 Tasks by Company
               </h3>
-              <button onClick={() => setModule('tasks')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', display: 'flex', alignItems: 'center', gap: 4, fontSize: 11 }}>
+              <button onClick={() => setModule('tasks')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6C6553', display: 'flex', alignItems: 'center', gap: 4, fontSize: 11 }}>
                 View all <ArrowRight size={11} />
               </button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {tasksByCompany.length === 0
-                ? <p style={{ margin: 0, fontSize: 12.5, color: 'var(--sb-ink-3)' }}>No companies set up yet — add them in Settings.</p>
+                ? <p style={{ margin: 0, fontSize: 12.5, color: '#6C6553' }}>No companies set up yet — add them in Settings.</p>
                 : tasksByCompany.map(co => (
                     <CompanyBadge key={co.id} name={co.name} color={co.color} count={co.count} />
                   ))
@@ -312,8 +312,8 @@ export function ExecutiveDashboard() {
           {/* Eisenhower Matrix + Quick Actions */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div style={{
-              background: 'var(--sb-card)',
-              border: '1px solid var(--sb-border)',
+              background: '#FFFFFF',
+              border: '1px solid #E8E1CE',
               borderRadius: 12, padding: '20px 22px',
             }}>
               <h3 style={{ margin: '0 0 14px', fontSize: 13, fontWeight: 600, color: 'var(--color-text-dim, #94A3B8)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
@@ -321,8 +321,8 @@ export function ExecutiveDashboard() {
               </h3>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                 {([
-                  { key: 'do',       label: 'Do Now',   color: 'var(--color-accent)' },
-                  { key: 'schedule', label: 'Schedule', color: 'var(--color-accent)' },
+                  { key: 'do',       label: 'Do Now',   color: '#7F77DD' },
+                  { key: 'schedule', label: 'Schedule', color: '#7F77DD' },
                   { key: 'delegate', label: 'Delegate', color: '#1D9E75' },
                   { key: 'eliminate',label: 'Eliminate',color: '#888780' },
                 ] as const).map(({ key, label, color }) => {
@@ -330,7 +330,7 @@ export function ExecutiveDashboard() {
                   return (
                     <div key={key} onClick={() => setModule('tasks')}
                       style={{
-                        background: 'var(--sb-field)',
+                        background: '#FAF7EC',
                         border: `1px solid ${color}30`,
                         borderRadius: 8, padding: '12px 14px',
                         display: 'flex', flexDirection: 'column', gap: 4,
@@ -348,8 +348,8 @@ export function ExecutiveDashboard() {
 
             {/* Quick Actions */}
             <div style={{
-              background: 'var(--sb-card)',
-              border: '1px solid var(--sb-border)',
+              background: '#FFFFFF',
+              border: '1px solid #E8E1CE',
               borderRadius: 12, padding: '16px 18px',
             }}>
               <h3 style={{ margin: '0 0 12px', fontSize: 11, fontWeight: 600, color: 'var(--color-text-dim, #94A3B8)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
@@ -379,13 +379,13 @@ export function ExecutiveDashboard() {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             flexShrink: 0, marginTop: 1,
           }}>
-            <TrendingUp size={13} color="var(--color-accent)" strokeWidth={2.5} />
+            <TrendingUp size={13} color="#7F77DD" strokeWidth={2.5} />
           </div>
           <div>
-            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-accent)', marginBottom: 4, letterSpacing: '0.3px' }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: '#7F77DD', marginBottom: 4, letterSpacing: '0.3px' }}>
               THE PROFESSOR
             </div>
-            <p style={{ margin: 0, fontSize: 13.5, color: 'var(--sb-ink-1)', lineHeight: 1.55 }}>
+            <p style={{ margin: 0, fontSize: 13.5, color: '#191712', lineHeight: 1.55 }}>
               {urgentTasks.length > 0
                 ? `You have ${urgentTasks.length} urgent & important task${urgentTasks.length !== 1 ? 's' : ''} requiring your direct attention. Consider blocking deep-work time to address ${urgentTasks[0]?.title ? `"${urgentTasks[0].title}"` : 'the top priority'} first.`
                 : activeTasks.length === 0

@@ -108,7 +108,7 @@ const FRAMEWORKS = [
   {value:'pomodoro',label:'Pomodoro'},{value:'12_week_year',label:'12-Week Year'},
 ]
 const WORK_DAYS    = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
-const C_COLORS     = ['var(--color-accent)','var(--color-accent)','#1D9E75','#E05252','#888780','#5B9BD5','#E0944A']
+const C_COLORS     = ['#7F77DD','#7F77DD','#1D9E75','#E05252','#888780','#5B9BD5','#E0944A']
 const BUFFER_STEPS = [0,15,30,45,60]
 const PHYS_STEPS   = [0,30,60,90]
 const HABIT_EMOJIS = ['🎯','💪','📚','🏃','💧','🧘','🍎','💤','🌿','✍️','🧠','🔥','🎨','🏋️','🎵']
@@ -193,15 +193,15 @@ async function checkSupabase(): Promise<boolean> {
 
 // Card style using CSS variables for full theme support
 const card: React.CSSProperties = {
-  background: 'var(--sb-card)',
-  border: '1px solid var(--sb-border)',
+  background: '#FFFFFF',
+  border: '1px solid #E8E1CE',
   borderRadius: 14, padding: '0',
   marginBottom: 12, overflow: 'hidden',
 }
 const inputStyle: React.CSSProperties = {
-  background: 'var(--sb-field)',
-  border: '1px solid var(--sb-border)',
-  borderRadius: 7, color: 'var(--sb-ink-1)',
+  background: '#FAF7EC',
+  border: '1px solid #E8E1CE',
+  borderRadius: 7, color: '#191712',
   fontSize: 13.5, padding: '7px 11px', outline: 'none',
   fontFamily: 'DM Sans, sans-serif', width: '100%', boxSizing: 'border-box' as const,
 }
@@ -215,13 +215,13 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
     <button role="switch" aria-checked={checked} onClick={() => onChange(!checked)}
       style={{
         width: 42, height: 24, borderRadius: 12, flexShrink: 0,
-        background: checked ? accent : 'var(--sb-border)',
+        background: checked ? accent : '#E8E1CE',
         border: 'none', cursor: 'pointer', position: 'relative', padding: 0, transition: 'background 0.2s',
       }}>
       <span style={{
         position: 'absolute', top: 4, left: checked ? 22 : 4,
         width: 16, height: 16, borderRadius: '50%', display: 'block',
-        background: checked ? 'var(--sb-card)' : 'var(--sb-ink-3)',
+        background: checked ? '#FFFFFF' : '#6C6553',
         transition: 'left 0.2s',
       }} />
     </button>
@@ -232,11 +232,11 @@ function FieldRow({ label, sub, children }: { label: string; sub?: string; child
   return (
     <div style={{
       display: 'flex', alignItems: 'flex-start', gap: 12,
-      padding: '10px 0', borderBottom: '1px solid var(--sb-border)',
+      padding: '10px 0', borderBottom: '1px solid #E8E1CE',
     }}>
       <div style={{ width: 140, flexShrink: 0, paddingTop: 2 }}>
-        <span style={{ fontSize: 12.5, color: 'var(--sb-ink-1)' }}>{label}</span>
-        {sub && <p style={{ margin: '2px 0 0', fontSize: 10.5, color: 'var(--sb-ink-3)', lineHeight: 1.4 }}>{sub}</p>}
+        <span style={{ fontSize: 12.5, color: '#191712' }}>{label}</span>
+        {sub && <p style={{ margin: '2px 0 0', fontSize: 10.5, color: '#6C6553', lineHeight: 1.4 }}>{sub}</p>}
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>{children}</div>
     </div>
@@ -275,13 +275,13 @@ function SectionShell({
       <div style={{
         display: 'flex', alignItems: 'center', gap: 12,
         padding: '16px 20px', cursor: 'pointer',
-        borderBottom: open ? '1px solid var(--sb-border)' : 'none',
+        borderBottom: open ? '1px solid #E8E1CE' : 'none',
         userSelect: 'none',
       }}>
         {/* Drag handle */}
         <span
           {...attributes} {...listeners}
-          style={{ color: 'var(--sb-ink-3)', cursor: 'grab', flexShrink: 0, display: 'flex', touchAction: 'none' }}
+          style={{ color: '#6C6553', cursor: 'grab', flexShrink: 0, display: 'flex', touchAction: 'none' }}
           title="Drag to reorder"
         >
           <GripVertical size={16} />
@@ -299,11 +299,11 @@ function SectionShell({
 
         {/* Title + description */}
         <div style={{ flex: 1 }} onClick={() => setOpen(o => !o)}>
-          <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: 'var(--sb-ink-1)' }}>
+          <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#191712' }}>
             {meta.title}
           </p>
           {!open && (
-            <p style={{ margin: '1px 0 0', fontSize: 11.5, color: 'var(--sb-ink-3)' }}>
+            <p style={{ margin: '1px 0 0', fontSize: 11.5, color: '#6C6553' }}>
               {meta.description}
             </p>
           )}
@@ -327,7 +327,7 @@ function SectionShell({
 
         {/* Chevron */}
         <button onClick={() => setOpen(o => !o)}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', display: 'flex', padding: 4 }}>
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6C6553', display: 'flex', padding: 4 }}>
           {open ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
         </button>
       </div>
@@ -371,9 +371,9 @@ function ProfileSection({
               <button key={d} onClick={() => set({ workWeek: on ? s.workWeek.filter(x => x !== d) : [...s.workWeek, d] })}
                 style={{
                   padding: '4px 9px', borderRadius: 6, fontSize: 11.5, cursor: 'pointer', fontWeight: 500,
-                  background: on ? 'var(--color-accent-fill, rgba(30,64,175,0.15))' : 'var(--sb-field)',
-                  border: `1px solid ${on ? 'var(--color-accent, #1E40AF)' : 'var(--sb-border)'}`,
-                  color: on ? 'var(--color-accent, #1E40AF)' : 'var(--sb-ink-3)',
+                  background: on ? 'var(--color-accent-fill, rgba(30,64,175,0.15))' : '#FAF7EC',
+                  border: `1px solid ${on ? 'var(--color-accent, #1E40AF)' : '#E8E1CE'}`,
+                  color: on ? 'var(--color-accent, #1E40AF)' : '#6C6553',
                 }}>{d}</button>
             )
           })}
@@ -392,7 +392,7 @@ function ScheduleSection({
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <input type="time" value={s.focusStart} onChange={e => set({ focusStart: e.target.value })}
             style={{ ...inputStyle, width: 100 }} />
-          <span style={{ color: 'var(--sb-ink-3)', fontSize: 11 }}>to</span>
+          <span style={{ color: '#6C6553', fontSize: 11 }}>to</span>
           <input type="time" value={s.focusEnd} onChange={e => set({ focusEnd: e.target.value })}
             style={{ ...inputStyle, width: 100 }} />
         </div>
@@ -415,9 +415,9 @@ function ScheduleSection({
             <button key={n} onClick={() => set({ bufferMins: n })}
               style={{
                 padding: '4px 10px', borderRadius: 6, fontSize: 11.5, cursor: 'pointer', fontWeight: 500,
-                background: s.bufferMins === n ? 'var(--sb-accent-tint)' : 'var(--sb-field)',
-                border: `1px solid ${s.bufferMins === n ? 'var(--color-accent, #1E40AF)' : 'var(--sb-border)'}`,
-                color: s.bufferMins === n ? 'var(--color-accent, #1E40AF)' : 'var(--sb-ink-3)',
+                background: s.bufferMins === n ? 'var(--sb-accent-tint)' : '#FAF7EC',
+                border: `1px solid ${s.bufferMins === n ? 'var(--color-accent, #1E40AF)' : '#E8E1CE'}`,
+                color: s.bufferMins === n ? 'var(--color-accent, #1E40AF)' : '#6C6553',
               }}>{n === 0 ? 'None' : `${n}m`}</button>
           ))}
         </div>
@@ -428,9 +428,9 @@ function ScheduleSection({
             <button key={n} onClick={() => set({ physicalBufferMins: n })}
               style={{
                 padding: '4px 10px', borderRadius: 6, fontSize: 11.5, cursor: 'pointer', fontWeight: 500,
-                background: s.physicalBufferMins === n ? 'var(--sb-accent-tint)' : 'var(--sb-field)',
-                border: `1px solid ${s.physicalBufferMins === n ? 'var(--color-accent, #1E40AF)' : 'var(--sb-border)'}`,
-                color: s.physicalBufferMins === n ? 'var(--color-accent, #1E40AF)' : 'var(--sb-ink-3)',
+                background: s.physicalBufferMins === n ? 'var(--sb-accent-tint)' : '#FAF7EC',
+                border: `1px solid ${s.physicalBufferMins === n ? 'var(--color-accent, #1E40AF)' : '#E8E1CE'}`,
+                color: s.physicalBufferMins === n ? 'var(--color-accent, #1E40AF)' : '#6C6553',
               }}>{n === 0 ? 'None' : `${n}m`}</button>
           ))}
         </div>
@@ -503,11 +503,11 @@ function CompanyCard({
 
   const tinp: React.CSSProperties = {
     background: 'transparent', border: 'none', borderBottom: '1px solid #7F77DD',
-    outline: 'none', color: 'var(--sb-ink-1)', fontFamily: 'inherit', padding: '0 2px',
+    outline: 'none', color: '#191712', fontFamily: 'inherit', padding: '0 2px',
   }
 
   return (
-    <div style={{ background: 'var(--sb-page)', border: '1px solid var(--sb-border)', borderRadius: 10, marginBottom: 8, overflow: 'visible', opacity: co.hidden ? 0.55 : 1, transition: 'opacity 0.15s' }}>
+    <div style={{ background: '#F7F4EA', border: '1px solid #E8E1CE', borderRadius: 10, marginBottom: 8, overflow: 'visible', opacity: co.hidden ? 0.55 : 1, transition: 'opacity 0.15s' }}>
       {/* Company header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px' }}>
 
@@ -524,7 +524,7 @@ function CompanyCard({
           {colorOpen && (
             <div style={{
               position: 'absolute', top: 24, left: 0, zIndex: 200,
-              background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 10,
+              background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 10,
               padding: '7px 8px', display: 'flex', gap: 5,
               boxShadow: '0 6px 20px rgba(0,0,0,0.5)',
             }}>
@@ -533,7 +533,7 @@ function CompanyCard({
                   style={{
                     width: 16, height: 16, borderRadius: '50%', background: c,
                     border: 'none', cursor: 'pointer', flexShrink: 0,
-                    boxShadow: co.color === c ? `0 0 0 2px var(--sb-card), 0 0 0 3.5px ${c}` : 'none',
+                    boxShadow: co.color === c ? `0 0 0 2px #FFFFFF, 0 0 0 3.5px ${c}` : 'none',
                     transform: co.color === c ? 'scale(1.2)' : 'scale(1)',
                     transition: 'transform 0.1s ease',
                   }} />
@@ -553,7 +553,7 @@ function CompanyCard({
             />
           ) : (
             <span onClick={() => setEditingName(true)} title="Click to rename"
-              style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--sb-ink-1)', cursor: 'text', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              style={{ fontSize: 13.5, fontWeight: 600, color: '#191712', cursor: 'text', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {co.name || 'Untitled'}
             </span>
           )}
@@ -563,11 +563,11 @@ function CompanyCard({
               onBlur={saveDomain}
               onKeyDown={e => { if (e.key === 'Enter') saveDomain(); if (e.key === 'Escape') { setDomainDraft(co.emailDomain); setEditingDomain(false) } }}
               placeholder="@domain.com"
-              style={{ ...tinp, fontSize: 10.5, color: 'var(--sb-ink-3)', width: 140 }}
+              style={{ ...tinp, fontSize: 10.5, color: '#6C6553', width: 140 }}
             />
           ) : (
             <span onClick={() => setEditingDomain(true)} title="Click to set domain"
-              style={{ fontSize: 10.5, color: co.emailDomain ? 'var(--sb-ink-3)' : 'var(--color-border, #3a3f55)', cursor: 'text' }}>
+              style={{ fontSize: 10.5, color: co.emailDomain ? '#6C6553' : '#E8E1CE', cursor: 'text' }}>
               {co.emailDomain || ''}
             </span>
           )}
@@ -586,8 +586,8 @@ function CompanyCard({
         <button onClick={() => setUsersOpen(o => !o)} title={usersOpen ? 'Collapse members' : 'Expand members'} style={{
           display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0,
           padding: '2px 7px', borderRadius: 5, fontSize: 10.5, cursor: 'pointer',
-          background: 'transparent', border: '1px solid var(--sb-border)',
-          color: 'var(--sb-ink-3)',
+          background: 'transparent', border: '1px solid #E8E1CE',
+          color: '#6C6553',
         }}>
           <span style={{ color: co.color, fontWeight: 600 }}>{users.length}</span>
           {usersOpen ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
@@ -602,30 +602,30 @@ function CompanyCard({
           style={{
             background: 'none', border: 'none', cursor: 'pointer', padding: 3,
             display: 'flex', alignItems: 'center',
-            color: co.hidden ? 'var(--color-accent, #7F77DD)' : 'var(--sb-ink-3)',
+            color: co.hidden ? 'var(--color-accent, #7F77DD)' : '#6C6553',
           }}
         >
           {co.hidden ? <EyeOff size={13} /> : <Eye size={13} />}
         </button>
 
         <button onClick={onDelete}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', padding: 3, display: 'flex', alignItems: 'center' }}>
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6C6553', padding: 3, display: 'flex', alignItems: 'center' }}>
           <Trash2 size={12} />
         </button>
       </div>
 
       {/* Users tree */}
       {usersOpen && (
-        <div style={{ borderTop: '1px solid var(--sb-border)', padding: '8px 14px 10px 46px' }}>
+        <div style={{ borderTop: '1px solid #E8E1CE', padding: '8px 14px 10px 46px' }}>
           {users.length === 0 && (
-            <p style={{ margin: '0 0 6px', fontSize: 11, color: 'var(--color-border, #3a3f55)', fontStyle: 'italic' }}>No members yet</p>
+            <p style={{ margin: '0 0 6px', fontSize: 11, color: '#E8E1CE', fontStyle: 'italic' }}>No members yet</p>
           )}
 
           {users.map(u => {
             const isEditing = editingUserId === u.id
             const draft = userDrafts[u.id]
             return (
-              <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0', borderBottom: '1px solid var(--sb-border)' }}>
+              <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0', borderBottom: '1px solid #E8E1CE' }}>
                 <span style={{ width: 6, height: 6, borderRadius: '50%', background: co.color, flexShrink: 0 }} />
 
                 {isEditing ? (
@@ -641,20 +641,20 @@ function CompanyCard({
                       onBlur={() => saveUser(u.id)}
                       onKeyDown={e => { if (e.key === 'Enter') saveUser(u.id); if (e.key === 'Escape') setEditingUserId(null) }}
                       placeholder="email"
-                      style={{ ...tinp, fontSize: 11, color: 'var(--sb-ink-3)', flex: 1 }}
+                      style={{ ...tinp, fontSize: 11, color: '#6C6553', flex: 1 }}
                     />
                   </>
                 ) : (
                   <>
-                    <span onClick={() => startEditUser(u)} style={{ fontSize: 12, color: 'var(--sb-ink-1)', cursor: 'text', minWidth: 60 }}>{u.name}</span>
-                    <span onClick={() => startEditUser(u)} style={{ fontSize: 11, color: 'var(--sb-ink-3)', cursor: 'text', flex: 1 }}>
-                      {u.email || <span style={{ color: 'var(--color-border, #3a3f55)' }}>+ email</span>}
+                    <span onClick={() => startEditUser(u)} style={{ fontSize: 12, color: '#191712', cursor: 'text', minWidth: 60 }}>{u.name}</span>
+                    <span onClick={() => startEditUser(u)} style={{ fontSize: 11, color: '#6C6553', cursor: 'text', flex: 1 }}>
+                      {u.email || <span style={{ color: '#E8E1CE' }}>+ email</span>}
                     </span>
                   </>
                 )}
 
                 <button onClick={() => removeUser(u.id)}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', padding: 2, display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6C6553', padding: 2, display: 'flex', alignItems: 'center', flexShrink: 0 }}>
                   <Trash2 size={10} />
                 </button>
               </div>
@@ -675,7 +675,7 @@ function CompanyCard({
             <button onClick={addUser} disabled={!newUserName.trim()} style={{
               padding: '3px 10px', borderRadius: 5, fontSize: 11, fontWeight: 500, cursor: 'pointer',
               background: 'var(--sb-accent-tint)', border: '1px solid #7F77DD50',
-              color: 'var(--color-accent)', opacity: newUserName.trim() ? 1 : 0.4,
+              color: '#7F77DD', opacity: newUserName.trim() ? 1 : 0.4,
             }}>Add</button>
           </div>
         </div>
@@ -723,7 +723,7 @@ function CompaniesSection({
 
   return (
     <div>
-      <p style={{ margin: '0 0 16px', fontSize: 12.5, color: 'var(--sb-ink-3)', lineHeight: 1.55 }}>
+      <p style={{ margin: '0 0 16px', fontSize: 12.5, color: '#6C6553', lineHeight: 1.55 }}>
         Companies are your work contexts. Assign a colour, link to a Google account, and optionally map an email domain for automatic tagging.
       </p>
 
@@ -734,7 +734,7 @@ function CompaniesSection({
       ))}
 
       {adding ? (
-        <div style={{ marginTop: 14, padding: '14px', background: 'var(--sb-field)', borderRadius: 10, border: '1px solid var(--sb-border)' }}>
+        <div style={{ marginTop: 14, padding: '14px', background: '#FAF7EC', borderRadius: 10, border: '1px solid #E8E1CE' }}>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
             <input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Company name"
               style={{ ...inputStyle, width: 160 }} autoFocus />
@@ -755,7 +755,7 @@ function CompaniesSection({
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
             <button onClick={() => { setAdding(false); setNewName('') }}
-              style={{ padding: '6px 14px', borderRadius: 7, background: 'transparent', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-3)', fontSize: 12, cursor: 'pointer', display: 'flex', gap: 5, alignItems: 'center' }}>
+              style={{ padding: '6px 14px', borderRadius: 7, background: 'transparent', border: '1px solid #E8E1CE', color: '#6C6553', fontSize: 12, cursor: 'pointer', display: 'flex', gap: 5, alignItems: 'center' }}>
               <X size={11} /> Cancel
             </button>
             <button onClick={addCompany} disabled={!newName.trim()}
@@ -768,8 +768,8 @@ function CompaniesSection({
         <button onClick={() => setAdding(true)} style={{
           marginTop: 12, display: 'flex', alignItems: 'center', gap: 7, width: '100%',
           padding: '11px 16px', borderRadius: 9, background: 'transparent',
-          border: '1px dashed var(--sb-border)',
-          color: 'var(--sb-ink-3)', fontSize: 13, cursor: 'pointer',
+          border: '1px dashed #E8E1CE',
+          color: '#6C6553', fontSize: 13, cursor: 'pointer',
         }}>
           <Plus size={13} /> Add a company / context
         </button>
@@ -797,12 +797,12 @@ function SettingsHabitForm({
   const valid = s.name.trim() !== '' && (s.type === 'boolean' || (parseFloat(s.goal) > 0 && s.unit.trim() !== ''))
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 12, padding: 14, background: 'var(--sb-field)', borderRadius: 10, border: '1px solid var(--sb-border)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 12, padding: 14, background: '#FAF7EC', borderRadius: 10, border: '1px solid #E8E1CE' }}>
       {/* Emoji picker */}
       <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
         {HABIT_EMOJIS.map(e => (
           <button key={e} onClick={() => update({ emoji: e })}
-            style={{ fontSize: 16, width: 34, height: 34, borderRadius: 7, cursor: 'pointer', background: s.emoji === e ? 'var(--sb-accent-tint)' : 'transparent', border: `1px solid ${s.emoji === e ? 'var(--color-accent, #1E40AF)' : 'var(--sb-border)'}` }}>
+            style={{ fontSize: 16, width: 34, height: 34, borderRadius: 7, cursor: 'pointer', background: s.emoji === e ? 'var(--sb-accent-tint)' : 'transparent', border: `1px solid ${s.emoji === e ? 'var(--color-accent, #1E40AF)' : '#E8E1CE'}` }}>
             {e}
           </button>
         ))}
@@ -822,11 +822,11 @@ function SettingsHabitForm({
 
       {/* Type toggle */}
       <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-        <span style={{ fontSize: 11, color: 'var(--sb-ink-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Type</span>
-        <div style={{ display: 'flex', background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 7, overflow: 'hidden' }}>
+        <span style={{ fontSize: 11, color: '#6C6553', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Type</span>
+        <div style={{ display: 'flex', background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 7, overflow: 'hidden' }}>
           {([['boolean', '✓ Done / Not done', CheckSquare], ['quantity', '# Measurable', Hash]] as const).map(([t, label, Icon]) => (
             <button key={t} onClick={() => update({ type: t })}
-              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 12px', fontSize: 12, fontWeight: s.type === t ? 600 : 400, cursor: 'pointer', border: 'none', background: s.type === t ? 'var(--color-accent-fill, rgba(30,64,175,0.18))' : 'none', color: s.type === t ? 'var(--color-accent, #1E40AF)' : 'var(--sb-ink-3)' }}>
+              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 12px', fontSize: 12, fontWeight: s.type === t ? 600 : 400, cursor: 'pointer', border: 'none', background: s.type === t ? 'var(--color-accent-fill, rgba(30,64,175,0.18))' : 'none', color: s.type === t ? 'var(--color-accent, #1E40AF)' : '#6C6553' }}>
               <Icon size={12} />{label}
             </button>
           ))}
@@ -836,7 +836,7 @@ function SettingsHabitForm({
       {/* Goal + unit (quantity only) */}
       {s.type === 'quantity' && (
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <span style={{ fontSize: 11, color: 'var(--sb-ink-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Goal</span>
+          <span style={{ fontSize: 11, color: '#6C6553', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Goal</span>
           <input type="number" min={1} value={s.goal} onChange={e => update({ goal: e.target.value })}
             placeholder="8"
             style={{ ...inputStyle, width: 72, textAlign: 'center' }} />
@@ -859,7 +859,7 @@ function SettingsHabitForm({
       {/* Actions */}
       <div style={{ display: 'flex', gap: 8 }}>
         <button onClick={onCancel}
-          style={{ padding: '6px 14px', borderRadius: 7, background: 'transparent', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-3)', fontSize: 12, cursor: 'pointer', display: 'flex', gap: 5, alignItems: 'center' }}>
+          style={{ padding: '6px 14px', borderRadius: 7, background: 'transparent', border: '1px solid #E8E1CE', color: '#6C6553', fontSize: 12, cursor: 'pointer', display: 'flex', gap: 5, alignItems: 'center' }}>
           <X size={11} /> Cancel
         </button>
         <button onClick={() => valid && onSave(s)} disabled={!valid}
@@ -886,7 +886,7 @@ function HabitsSection() {
 
   return (
     <div>
-      <p style={{ margin: '0 0 14px', fontSize: 12.5, color: 'var(--sb-ink-3)' }}>
+      <p style={{ margin: '0 0 14px', fontSize: 12.5, color: '#6C6553' }}>
         Changes here instantly sync with the Habits Tracker page.
       </p>
 
@@ -894,30 +894,30 @@ function HabitsSection() {
         <div key={h.id}>
           <div style={{
             display: 'flex', alignItems: 'center', gap: 12,
-            padding: '10px 0', borderBottom: '1px solid var(--sb-border)',
+            padding: '10px 0', borderBottom: '1px solid #E8E1CE',
             opacity: h.isActive ? 1 : 0.5,
           }}>
             <span style={{ fontSize: 18, flexShrink: 0 }}>{h.emoji}</span>
             <div style={{ width: 10, height: 10, borderRadius: '50%', background: h.color, flexShrink: 0 }} />
-            <span style={{ flex: 1, fontSize: 13.5, color: 'var(--sb-ink-1)' }}>{h.name}</span>
+            <span style={{ flex: 1, fontSize: 13.5, color: '#191712' }}>{h.name}</span>
             {h.type === 'quantity' && h.goal && h.unit && (
-              <span style={{ fontSize: 10.5, color: 'var(--sb-ink-3)', background: 'var(--sb-field)', padding: '2px 7px', borderRadius: 4, border: '1px solid var(--sb-border)' }}>
+              <span style={{ fontSize: 10.5, color: '#6C6553', background: '#FAF7EC', padding: '2px 7px', borderRadius: 4, border: '1px solid #E8E1CE' }}>
                 {h.goal} {h.unit}
               </span>
             )}
-            <span style={{ fontSize: 10, color: 'var(--sb-ink-3)', background: 'var(--sb-field)', padding: '2px 7px', borderRadius: 4, border: '1px solid var(--sb-border)' }}>
+            <span style={{ fontSize: 10, color: '#6C6553', background: '#FAF7EC', padding: '2px 7px', borderRadius: 4, border: '1px solid #E8E1CE' }}>
               {h.type === 'quantity' ? `# qty` : '✓'}
             </span>
-            <span style={{ fontSize: 11, color: 'var(--sb-ink-3)', background: 'var(--sb-field)', padding: '2px 8px', borderRadius: 4 }}>
+            <span style={{ fontSize: 11, color: '#6C6553', background: '#FAF7EC', padding: '2px 8px', borderRadius: 4 }}>
               {h.frequency}
             </span>
             <Toggle checked={h.isActive} onChange={() => toggle(h.id)} />
             <button onClick={() => setEditingId(editingId === h.id ? null : h.id)} title="Edit habit"
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: editingId === h.id ? 'var(--color-accent, #1E40AF)' : 'var(--sb-ink-3)', padding: 4 }}>
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: editingId === h.id ? 'var(--color-accent, #1E40AF)' : '#6C6553', padding: 4 }}>
               <Pencil size={13} />
             </button>
             <button onClick={() => { if (editingId === h.id) setEditingId(null); storeDel(h.id) }}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', padding: 4 }}>
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6C6553', padding: 4 }}>
               <Trash2 size={13} />
             </button>
           </div>
@@ -971,8 +971,8 @@ function HabitsSection() {
         <button onClick={() => { setEditingId(null); setAdding(true) }} style={{
           marginTop: 12, display: 'flex', alignItems: 'center', gap: 7, width: '100%',
           padding: '11px 16px', borderRadius: 9, background: 'transparent',
-          border: '1px dashed var(--sb-border)',
-          color: 'var(--sb-ink-3)', fontSize: 13, cursor: 'pointer',
+          border: '1px dashed #E8E1CE',
+          color: '#6C6553', fontSize: 13, cursor: 'pointer',
         }}>
           <Plus size={13} /> Add a habit
         </button>
@@ -1036,24 +1036,24 @@ function TaskStatusesSection() {
   const isEditingRow = (i: number) => editIdx === i && !adding
 
   const formEl = (
-    <div style={{ padding: '10px 14px', background: 'var(--sb-field)', borderRadius: 8, border: '1px solid var(--sb-border)', marginTop: 4, display: 'flex', flexDirection: 'column', gap: 10 }}>
+    <div style={{ padding: '10px 14px', background: '#FAF7EC', borderRadius: 8, border: '1px solid #E8E1CE', marginTop: 4, display: 'flex', flexDirection: 'column', gap: 10 }}>
       <div style={{ display: 'flex', gap: 8 }}>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 11, color: 'var(--sb-ink-3)', marginBottom: 4, fontWeight: 600 }}>Label</div>
+          <div style={{ fontSize: 11, color: '#6C6553', marginBottom: 4, fontWeight: 600 }}>Label</div>
           <input value={draft.label} onChange={e => setDraft(p => ({ ...p, label: e.target.value }))}
             placeholder="e.g. In Review" autoFocus
             style={{ ...inputStyle, fontSize: 12.5 }}
             onKeyDown={e => { if (e.key === 'Enter') confirmSave(); if (e.key === 'Escape') { setAdding(false); setEditIdx(null) } }} />
         </div>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 11, color: 'var(--sb-ink-3)', marginBottom: 4, fontWeight: 600 }}>ID (slug)</div>
+          <div style={{ fontSize: 11, color: '#6C6553', marginBottom: 4, fontWeight: 600 }}>ID (slug)</div>
           <input value={draft.id} onChange={e => setDraft(p => ({ ...p, id: e.target.value }))}
             placeholder="auto from label"
             style={{ ...inputStyle, fontSize: 12.5 }} />
         </div>
       </div>
       <div>
-        <div style={{ fontSize: 11, color: 'var(--sb-ink-3)', marginBottom: 6, fontWeight: 600 }}>Color</div>
+        <div style={{ fontSize: 11, color: '#6C6553', marginBottom: 6, fontWeight: 600 }}>Color</div>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           {STATUS_COLORS_PRESETS.map(c => (
             <button key={c} onClick={() => setDraft(p => ({ ...p, color: c }))} style={{
@@ -1067,7 +1067,7 @@ function TaskStatusesSection() {
       </div>
       <div style={{ display: 'flex', gap: 8 }}>
         <button onClick={() => { setAdding(false); setEditIdx(null) }}
-          style={{ padding: '5px 12px', borderRadius: 6, background: 'transparent', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-3)', fontSize: 12, cursor: 'pointer', display: 'flex', gap: 4, alignItems: 'center' }}>
+          style={{ padding: '5px 12px', borderRadius: 6, background: 'transparent', border: '1px solid #E8E1CE', color: '#6C6553', fontSize: 12, cursor: 'pointer', display: 'flex', gap: 4, alignItems: 'center' }}>
           <X size={11} /> Cancel
         </button>
         <button onClick={confirmSave}
@@ -1080,7 +1080,7 @@ function TaskStatusesSection() {
 
   return (
     <div>
-      <p style={{ margin: '0 0 14px', fontSize: 12.5, color: 'var(--sb-ink-3)' }}>
+      <p style={{ margin: '0 0 14px', fontSize: 12.5, color: '#6C6553' }}>
         Define custom board statuses. These appear as columns in the Status board and in the task detail dropdown.
       </p>
 
@@ -1088,19 +1088,19 @@ function TaskStatusesSection() {
         <div key={s.id + i}>
           <div style={{
             display: 'flex', alignItems: 'center', gap: 10,
-            padding: '9px 0', borderBottom: '1px solid var(--sb-border)',
+            padding: '9px 0', borderBottom: '1px solid #E8E1CE',
           }}>
             <div style={{ width: 10, height: 10, borderRadius: '50%', background: s.color, flexShrink: 0 }} />
-            <span style={{ flex: 1, fontSize: 13.5, color: 'var(--sb-ink-1)' }}>{s.label}</span>
-            <span style={{ fontSize: 10.5, color: 'var(--sb-ink-3)', background: 'var(--sb-field)', padding: '2px 7px', borderRadius: 4, border: '1px solid var(--sb-border)' }}>
+            <span style={{ flex: 1, fontSize: 13.5, color: '#191712' }}>{s.label}</span>
+            <span style={{ fontSize: 10.5, color: '#6C6553', background: '#FAF7EC', padding: '2px 7px', borderRadius: 4, border: '1px solid #E8E1CE' }}>
               {s.id}
             </span>
             <button onClick={() => startEdit(i)} title="Edit"
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: isEditingRow(i) ? 'var(--color-accent, #1E40AF)' : 'var(--sb-ink-3)', padding: 4 }}>
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: isEditingRow(i) ? 'var(--color-accent, #1E40AF)' : '#6C6553', padding: 4 }}>
               <Pencil size={13} />
             </button>
             <button onClick={() => remove(i)} title="Delete"
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', padding: 4 }}>
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6C6553', padding: 4 }}>
               <Trash2 size={13} />
             </button>
           </div>
@@ -1114,15 +1114,15 @@ function TaskStatusesSection() {
         <button onClick={startAdd} style={{
           flex: 1, display: 'flex', alignItems: 'center', gap: 7,
           padding: '11px 16px', borderRadius: 9, background: 'transparent',
-          border: '1px dashed var(--sb-border)',
-          color: 'var(--sb-ink-3)', fontSize: 13, cursor: 'pointer',
+          border: '1px dashed #E8E1CE',
+          color: '#6C6553', fontSize: 13, cursor: 'pointer',
         }}>
           <Plus size={13} /> Add a status
         </button>
         <button onClick={resetDefaults} title="Reset to defaults" style={{
           padding: '11px 14px', borderRadius: 9, background: 'transparent',
-          border: '1px solid var(--sb-border)',
-          color: 'var(--sb-ink-3)', fontSize: 12, cursor: 'pointer',
+          border: '1px solid #E8E1CE',
+          color: '#6C6553', fontSize: 12, cursor: 'pointer',
           display: 'flex', alignItems: 'center', gap: 5,
         }}>
           <RefreshCw size={12} /> Reset
@@ -1246,7 +1246,7 @@ function AccountsSection({
 
   return (
     <div>
-      <p style={{ margin: '0 0 16px', fontSize: 12.5, color: 'var(--sb-ink-3)', lineHeight: 1.55 }}>
+      <p style={{ margin: '0 0 16px', fontSize: 12.5, color: '#6C6553', lineHeight: 1.55 }}>
         Connect multiple Google accounts to aggregate your calendars, Gmail inboxes, and Drive files in one place.
         Primary account is your sign-in account.
       </p>
@@ -1255,7 +1255,7 @@ function AccountsSection({
       <div style={{
         display: 'flex', alignItems: 'center', gap: 12,
         padding: '12px 14px', borderRadius: 10, marginBottom: 10,
-        background: 'var(--sb-field)',
+        background: '#FAF7EC',
         border: '1px solid var(--color-accent, #1E40AF)30',
       }}>
         <div style={{
@@ -1266,7 +1266,7 @@ function AccountsSection({
           {primaryEmail ? primaryEmail[0].toUpperCase() : 'G'}
         </div>
         <div style={{ flex: 1 }}>
-          <p style={{ margin: 0, fontSize: 13, fontWeight: 500, color: 'var(--sb-ink-1)' }}>{primaryEmail || 'Primary Google Account'}</p>
+          <p style={{ margin: 0, fontSize: 13, fontWeight: 500, color: '#191712' }}>{primaryEmail || 'Primary Google Account'}</p>
           <div style={{ margin: '5px 0 0', display: 'flex', gap: 5, flexWrap: 'wrap' }}>
             <IntegrationBadge icon={<CalendarDays size={10} />} label="Calendar" active />
             <IntegrationBadge icon={<Mail size={10} />} label="Gmail" active />
@@ -1278,7 +1278,7 @@ function AccountsSection({
         </span>
         {primaryToken && (
           <button onClick={() => loadCalendars({ id: 'primary', email: primaryEmail, name: '', providerToken: primaryToken, scopes: [], connectedAt: '', isPrimary: true })}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', padding: 4, display: 'flex', alignItems: 'center', gap: 4, fontSize: 11 }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6C6553', padding: 4, display: 'flex', alignItems: 'center', gap: 4, fontSize: 11 }}
             title="Load calendars">
             <RefreshCw size={12} style={{ animation: loadingCals === 'primary' ? 'spin 1s linear infinite' : 'none' }} />
           </button>
@@ -1292,10 +1292,10 @@ function AccountsSection({
 
       {/* Show primary calendars */}
       {calendars['primary'] && (
-        <div style={{ marginBottom: 12, padding: '8px 14px', background: 'var(--sb-field)', borderRadius: 8, border: '1px solid var(--sb-border)' }}>
-          <p style={{ margin: '0 0 6px', fontSize: 11, fontWeight: 600, color: 'var(--sb-ink-3)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>Calendars in this account</p>
+        <div style={{ marginBottom: 12, padding: '8px 14px', background: '#FAF7EC', borderRadius: 8, border: '1px solid #E8E1CE' }}>
+          <p style={{ margin: '0 0 6px', fontSize: 11, fontWeight: 600, color: '#6C6553', textTransform: 'uppercase', letterSpacing: '0.6px' }}>Calendars in this account</p>
           {calendars['primary'].map(name => (
-            <p key={name} style={{ margin: '3px 0', fontSize: 12, color: 'var(--sb-ink-3)' }}>• {name}</p>
+            <p key={name} style={{ margin: '3px 0', fontSize: 12, color: '#6C6553' }}>• {name}</p>
           ))}
         </div>
       )}
@@ -1308,16 +1308,16 @@ function AccountsSection({
           <div key={acc.id} style={{
             display: 'flex', alignItems: 'center', gap: 12,
             padding: '12px 14px', borderRadius: 10, marginBottom: 8,
-            background: 'var(--sb-field)',
-            border: `1px solid ${isStale ? 'rgba(224,165,36,0.35)' : 'var(--sb-border)'}`,
+            background: '#FAF7EC',
+            border: `1px solid ${isStale ? 'rgba(224,165,36,0.35)' : '#E8E1CE'}`,
             opacity: hiddenAccts.has(acc.email) ? 0.5 : 1,
             transition: 'opacity 0.15s',
           }}>
-            <div style={{ width: 32, height: 32, borderRadius: '50%', flexShrink: 0, background: 'var(--sb-accent-tint)', border: '1px solid #7F77DD40', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: 'var(--color-accent)' }}>
+            <div style={{ width: 32, height: 32, borderRadius: '50%', flexShrink: 0, background: 'var(--sb-accent-tint)', border: '1px solid #7F77DD40', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: '#7F77DD' }}>
               {acc.email ? acc.email[0].toUpperCase() : 'G'}
             </div>
             <div style={{ flex: 1 }}>
-              <p style={{ margin: 0, fontSize: 13, fontWeight: 500, color: 'var(--sb-ink-1)' }}>{acc.email || acc.name}</p>
+              <p style={{ margin: 0, fontSize: 13, fontWeight: 500, color: '#191712' }}>{acc.email || acc.name}</p>
               {isStale ? (
                 <p style={{ margin: '2px 0 0', fontSize: 11, color: '#E0A524' }}>⚠ Access lost — reconnect to restore</p>
               ) : (
@@ -1343,14 +1343,14 @@ function AccountsSection({
                 {isRecon ? 'Redirecting…' : 'Reconnect'}
               </button>
             ) : (
-              <button onClick={() => void loadCalendars(acc)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', padding: 4, display: 'flex' }} title="Load calendars">
+              <button onClick={() => void loadCalendars(acc)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6C6553', padding: 4, display: 'flex' }} title="Load calendars">
                 <RefreshCw size={12} style={{ animation: loadingCals === acc.id ? 'spin 1s linear infinite' : 'none' }} />
               </button>
             )}
             <button
               onClick={() => toggleAccountVisibility(acc.email)}
               title={hiddenAccts.has(acc.email) ? 'Show in Calendar' : 'Hide from Calendar'}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, display: 'flex', color: hiddenAccts.has(acc.email) ? '#4B5268' : 'var(--sb-ink-3)' }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, display: 'flex', color: hiddenAccts.has(acc.email) ? '#4B5268' : '#6C6553' }}
             >
               {hiddenAccts.has(acc.email) ? <EyeOff size={13} /> : <Eye size={13} />}
             </button>
@@ -1363,9 +1363,9 @@ function AccountsSection({
 
       {/* Show calendars for additional accounts */}
       {accounts.map(acc => calendars[acc.id] ? (
-        <div key={`${acc.id}-cals`} style={{ marginBottom: 8, padding: '8px 14px', background: 'var(--sb-field)', borderRadius: 8, border: '1px solid var(--sb-border)' }}>
-          <p style={{ margin: '0 0 6px', fontSize: 11, fontWeight: 600, color: 'var(--sb-ink-3)', textTransform: 'uppercase' }}>{acc.email} calendars</p>
-          {calendars[acc.id].map(name => <p key={name} style={{ margin: '3px 0', fontSize: 12, color: 'var(--sb-ink-3)' }}>• {name}</p>)}
+        <div key={`${acc.id}-cals`} style={{ marginBottom: 8, padding: '8px 14px', background: '#FAF7EC', borderRadius: 8, border: '1px solid #E8E1CE' }}>
+          <p style={{ margin: '0 0 6px', fontSize: 11, fontWeight: 600, color: '#6C6553', textTransform: 'uppercase' }}>{acc.email} calendars</p>
+          {calendars[acc.id].map(name => <p key={name} style={{ margin: '3px 0', fontSize: 12, color: '#6C6553' }}>• {name}</p>)}
         </div>
       ) : null)}
 
@@ -1375,8 +1375,8 @@ function AccountsSection({
           style={{
             flex: 1, display: 'flex', alignItems: 'center', gap: 8,
             padding: '12px 16px', borderRadius: 9,
-            background: 'var(--sb-field)',
-            border: '1px dashed var(--sb-border)',
+            background: '#FAF7EC',
+            border: '1px dashed #E8E1CE',
             color: 'var(--color-accent, #1E40AF)', fontSize: 13, fontWeight: 500, cursor: 'pointer',
             opacity: adding ? 0.6 : 1,
           }}>
@@ -1407,7 +1407,7 @@ function AccountsSection({
         )}
       </div>
 
-      <p style={{ margin: '10px 0 0', fontSize: 11.5, color: 'var(--sb-ink-3)', lineHeight: 1.55 }}>
+      <p style={{ margin: '10px 0 0', fontSize: 11.5, color: '#6C6553', lineHeight: 1.55 }}>
         Connected accounts grant Calendar, Gmail, and Drive access for aggregation and triage. Tokens are stored securely on the server — never in the browser. Re-authorize any account to upgrade its permissions.
       </p>
 
@@ -1450,9 +1450,9 @@ function ProfessorSection({ s, set }: { s: AppSettings; set: (p: Partial<AppSett
               style={{
                 padding: '5px 14px', borderRadius: 7, fontSize: 11.5, cursor: 'pointer',
                 fontWeight: 600, textTransform: 'capitalize',
-                background: ai.provider === p ? 'var(--sb-accent-tint)' : 'var(--sb-field)',
-                border: `1px solid ${ai.provider === p ? 'var(--color-accent, #1E40AF)' : 'var(--sb-border)'}`,
-                color: ai.provider === p ? 'var(--color-accent, #1E40AF)' : 'var(--sb-ink-3)',
+                background: ai.provider === p ? 'var(--sb-accent-tint)' : '#FAF7EC',
+                border: `1px solid ${ai.provider === p ? 'var(--color-accent, #1E40AF)' : '#E8E1CE'}`,
+                color: ai.provider === p ? 'var(--color-accent, #1E40AF)' : '#6C6553',
               }}>{p === 'groq' ? 'Groq (free)' : 'Anthropic'}</button>
           ))}
         </div>
@@ -1467,8 +1467,8 @@ function ProfessorSection({ s, set }: { s: AppSettings; set: (p: Partial<AppSett
             style={{ ...inputStyle, flex: 1, fontFamily: 'monospace', fontSize: 11.5 }}
           />
           <button onClick={() => setShowKey(v => !v)} style={{
-            background: 'transparent', border: '1px solid var(--sb-border)',
-            borderRadius: 6, padding: '4px 8px', cursor: 'pointer', color: 'var(--sb-ink-3)',
+            background: 'transparent', border: '1px solid #E8E1CE',
+            borderRadius: 6, padding: '4px 8px', cursor: 'pointer', color: '#6C6553',
             fontSize: 11, flexShrink: 0,
           }}>{showKey ? 'Hide' : 'Show'}</button>
         </div>
@@ -1489,9 +1489,9 @@ function ProfessorSection({ s, set }: { s: AppSettings; set: (p: Partial<AppSett
             <button key={v} onClick={() => set({ commStyle: v })}
               style={{
                 padding: '5px 12px', borderRadius: 7, fontSize: 11.5, cursor: 'pointer', fontWeight: 500, textTransform: 'capitalize',
-                background: s.commStyle === v ? 'var(--sb-accent-tint)' : 'var(--sb-field)',
-                border: `1px solid ${s.commStyle === v ? 'var(--color-accent, #1E40AF)' : 'var(--sb-border)'}`,
-                color: s.commStyle === v ? 'var(--color-accent, #1E40AF)' : 'var(--sb-ink-3)',
+                background: s.commStyle === v ? 'var(--sb-accent-tint)' : '#FAF7EC',
+                border: `1px solid ${s.commStyle === v ? 'var(--color-accent, #1E40AF)' : '#E8E1CE'}`,
+                color: s.commStyle === v ? 'var(--color-accent, #1E40AF)' : '#6C6553',
               }}>{v}</button>
           ))}
         </div>
@@ -1571,8 +1571,8 @@ function AppearanceSection({ s, set }: { s: AppSettings; set: (p: Partial<AppSet
 
   return (
     <div>
-      <div style={{ paddingBottom: 12, borderBottom: '1px solid var(--sb-border)', marginBottom: 4 }}>
-        <p style={{ margin: '0 0 10px', fontSize: 12, fontWeight: 500, color: 'var(--sb-ink-1)' }}>Theme</p>
+      <div style={{ paddingBottom: 12, borderBottom: '1px solid #E8E1CE', marginBottom: 4 }}>
+        <p style={{ margin: '0 0 10px', fontSize: 12, fontWeight: 500, color: '#191712' }}>Theme</p>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 7 }}>
           {THEMES.map(t => {
             const active = s.theme === t.id
@@ -1717,14 +1717,14 @@ function BlockingRulesSection() {
 
   return (
     <div>
-      <p style={{ margin: '0 0 16px', fontSize: 12.5, color: 'var(--sb-ink-3)', lineHeight: 1.55 }}>
+      <p style={{ margin: '0 0 16px', fontSize: 12.5, color: '#6C6553', lineHeight: 1.55 }}>
         When an event appears on a source calendar, a matching block is automatically
         created on the target calendar. Choose how much detail to share.
       </p>
 
       {/* Rule list */}
       {rules.length === 0 && !showForm && (
-        <p style={{ fontSize: 12.5, color: 'var(--sb-ink-3)', margin: '0 0 12px', textAlign: 'center', padding: '12px 0' }}>
+        <p style={{ fontSize: 12.5, color: '#6C6553', margin: '0 0 12px', textAlign: 'center', padding: '12px 0' }}>
           No rules yet — add one below.
         </p>
       )}
@@ -1733,15 +1733,15 @@ function BlockingRulesSection() {
         <div key={rule.id} style={{
           display: 'flex', alignItems: 'center', gap: 10,
           padding: '10px 14px', borderRadius: 10, marginBottom: 8,
-          background: 'var(--sb-field)',
-          border: `1px solid ${rule.enabled ? 'var(--color-accent, #1E40AF)30' : 'var(--sb-border)'}`,
+          background: '#FAF7EC',
+          border: `1px solid ${rule.enabled ? 'var(--color-accent, #1E40AF)30' : '#E8E1CE'}`,
           opacity: rule.enabled ? 1 : 0.6,
         }}>
           <Toggle checked={rule.enabled} onChange={() => toggleRule(rule.id)} />
           <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ margin: 0, fontSize: 12.5, fontWeight: 500, color: 'var(--sb-ink-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <p style={{ margin: 0, fontSize: 12.5, fontWeight: 500, color: '#191712', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {rule.sourceCalendarName}
-              <span style={{ margin: '0 6px', color: 'var(--sb-ink-3)' }}>→</span>
+              <span style={{ margin: '0 6px', color: '#6C6553' }}>→</span>
               {rule.targetCalendarName}
             </p>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3 }}>
@@ -1752,11 +1752,11 @@ function BlockingRulesSection() {
                 </span>
               )}
               {rule.hideBlocked && (
-                <span style={{ fontSize: 10.5, fontWeight: 600, padding: '2px 7px', borderRadius: 20, background: 'rgba(127,119,221,0.12)', color: 'var(--color-accent)' }}>
+                <span style={{ fontSize: 10.5, fontWeight: 600, padding: '2px 7px', borderRadius: 20, background: 'rgba(127,119,221,0.12)', color: '#7F77DD' }}>
                   Originals only
                 </span>
               )}
-              <span style={{ fontSize: 10.5, color: 'var(--sb-ink-3)' }}>
+              <span style={{ fontSize: 10.5, color: '#6C6553' }}>
                 {rule.sourceAccountEmail === rule.targetAccountEmail
                   ? rule.sourceAccountEmail
                   : `${rule.sourceAccountEmail} → ${rule.targetAccountEmail}`}
@@ -1764,7 +1764,7 @@ function BlockingRulesSection() {
             </div>
           </div>
           <button onClick={() => openEdit(rule)}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', display: 'flex', padding: 4, opacity: 0.7, flexShrink: 0 }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6C6553', display: 'flex', padding: 4, opacity: 0.7, flexShrink: 0 }}
             title="Edit rule">
             <Pencil size={13} />
           </button>
@@ -1780,15 +1780,15 @@ function BlockingRulesSection() {
       {showForm ? (
         <div style={{
           padding: '14px 16px', borderRadius: 10, marginTop: 8,
-          background: 'var(--sb-field)',
+          background: '#FAF7EC',
           border: '1px solid var(--color-accent, #1E40AF)40',
         }}>
-          <p style={{ margin: '0 0 12px', fontSize: 12.5, fontWeight: 600, color: 'var(--sb-ink-1)' }}>
+          <p style={{ margin: '0 0 12px', fontSize: 12.5, fontWeight: 600, color: '#191712' }}>
             {editingRule ? 'Edit blocking rule' : 'New blocking rule'}
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <div>
-              <label style={{ fontSize: 11, color: 'var(--sb-ink-3)', display: 'block', marginBottom: 4 }}>
+              <label style={{ fontSize: 11, color: '#6C6553', display: 'block', marginBottom: 4 }}>
                 Source calendar (events to watch)
               </label>
               <select value={srcCal} onChange={e => setSrcCal(e.target.value)} style={{ ...selectStyle, width: '100%' }}>
@@ -1801,7 +1801,7 @@ function BlockingRulesSection() {
               </select>
             </div>
             <div>
-              <label style={{ fontSize: 11, color: 'var(--sb-ink-3)', display: 'block', marginBottom: 4 }}>
+              <label style={{ fontSize: 11, color: '#6C6553', display: 'block', marginBottom: 4 }}>
                 Target calendar (where blocks are created)
               </label>
               <select value={tgtCal} onChange={e => setTgtCal(e.target.value)} style={{ ...selectStyle, width: '100%' }}>
@@ -1814,7 +1814,7 @@ function BlockingRulesSection() {
               </select>
             </div>
             <div>
-              <label style={{ fontSize: 11, color: 'var(--sb-ink-3)', display: 'block', marginBottom: 4 }}>
+              <label style={{ fontSize: 11, color: '#6C6553', display: 'block', marginBottom: 4 }}>
                 Detail level
               </label>
               <div style={{ display: 'flex', gap: 8 }}>
@@ -1822,9 +1822,9 @@ function BlockingRulesSection() {
                   <button key={d.value} onClick={() => setDetail(d.value)}
                     style={{
                       flex: 1, padding: '7px 6px', borderRadius: 8, cursor: 'pointer', textAlign: 'center',
-                      background: detail === d.value ? DETAIL_BADGE[d.value].bg : 'var(--sb-card)',
-                      border: `1px solid ${detail === d.value ? DETAIL_BADGE[d.value].color + '80' : 'var(--sb-border)'}`,
-                      color: detail === d.value ? DETAIL_BADGE[d.value].color : 'var(--sb-ink-3)',
+                      background: detail === d.value ? DETAIL_BADGE[d.value].bg : '#FFFFFF',
+                      border: `1px solid ${detail === d.value ? DETAIL_BADGE[d.value].color + '80' : '#E8E1CE'}`,
+                      color: detail === d.value ? DETAIL_BADGE[d.value].color : '#6C6553',
                       transition: 'all 0.15s',
                     }}>
                     <p style={{ margin: 0, fontSize: 11.5, fontWeight: 600 }}>{d.label}</p>
@@ -1836,15 +1836,15 @@ function BlockingRulesSection() {
             <div style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               padding: '10px 12px', borderRadius: 8,
-              background: autoApply ? 'rgba(29,158,117,0.07)' : 'var(--sb-card)',
-              border: `1px solid ${autoApply ? 'rgba(29,158,117,0.3)' : 'var(--sb-border)'}`,
+              background: autoApply ? 'rgba(29,158,117,0.07)' : '#FFFFFF',
+              border: `1px solid ${autoApply ? 'rgba(29,158,117,0.3)' : '#E8E1CE'}`,
               transition: 'all 0.15s',
             }}>
               <div>
-                <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: 'var(--sb-ink-1)' }}>
+                <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: '#191712' }}>
                   Auto-apply
                 </p>
-                <p style={{ margin: '2px 0 0', fontSize: 10.5, color: 'var(--sb-ink-3)' }}>
+                <p style={{ margin: '2px 0 0', fontSize: 10.5, color: '#6C6553' }}>
                   Run this rule automatically whenever the calendar loads
                 </p>
               </div>
@@ -1853,15 +1853,15 @@ function BlockingRulesSection() {
             <div style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               padding: '10px 12px', borderRadius: 8,
-              background: hideBlocked ? 'rgba(127,119,221,0.07)' : 'var(--sb-card)',
-              border: `1px solid ${hideBlocked ? 'rgba(127,119,221,0.3)' : 'var(--sb-border)'}`,
+              background: hideBlocked ? 'rgba(127,119,221,0.07)' : '#FFFFFF',
+              border: `1px solid ${hideBlocked ? 'rgba(127,119,221,0.3)' : '#E8E1CE'}`,
               transition: 'all 0.15s',
             }}>
               <div>
-                <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: 'var(--sb-ink-1)' }}>
+                <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: '#191712' }}>
                   Show originals only
                 </p>
-                <p style={{ margin: '2px 0 0', fontSize: 10.5, color: 'var(--sb-ink-3)' }}>
+                <p style={{ margin: '2px 0 0', fontSize: 10.5, color: '#6C6553' }}>
                   Hide created blocks from your calendar view (blocks still exist for recipients)
                 </p>
               </div>
@@ -1873,9 +1873,9 @@ function BlockingRulesSection() {
               disabled={!srcCal || !tgtCal || srcCal === tgtCal}
               style={{
                 flex: 1, padding: '8px 0', borderRadius: 8, cursor: 'pointer',
-                background: (!srcCal || !tgtCal || srcCal === tgtCal) ? 'var(--sb-card)' : 'var(--color-accent-fill, rgba(30,64,175,0.15))',
+                background: (!srcCal || !tgtCal || srcCal === tgtCal) ? '#FFFFFF' : 'var(--color-accent-fill, rgba(30,64,175,0.15))',
                 border: '1px solid var(--color-accent, #1E40AF)50',
-                color: (!srcCal || !tgtCal || srcCal === tgtCal) ? 'var(--sb-ink-3)' : 'var(--color-accent, #1E40AF)',
+                color: (!srcCal || !tgtCal || srcCal === tgtCal) ? '#6C6553' : 'var(--color-accent, #1E40AF)',
                 fontSize: 12.5, fontWeight: 600,
               }}>
               {editingRule ? 'Update Rule' : 'Add Rule'}
@@ -1883,8 +1883,8 @@ function BlockingRulesSection() {
             <button onClick={resetForm}
               style={{
                 padding: '8px 16px', borderRadius: 8, cursor: 'pointer',
-                background: 'transparent', border: '1px solid var(--sb-border)',
-                color: 'var(--sb-ink-3)', fontSize: 12.5,
+                background: 'transparent', border: '1px solid #E8E1CE',
+                color: '#6C6553', fontSize: 12.5,
               }}>
               Cancel
             </button>
@@ -2184,30 +2184,30 @@ export function Settings() {
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         marginBottom: 24, padding: '16px 20px',
-        background: 'var(--sb-card)',
-        border: '1px solid var(--sb-border)',
+        background: '#FFFFFF',
+        border: '1px solid #E8E1CE',
         borderRadius: 14,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           {authUser?.avatarUrl
-            ? <img src={authUser.avatarUrl} alt="avatar" style={{ width: 40, height: 40, borderRadius: '50%', border: '2px solid var(--sb-border)' }} />
+            ? <img src={authUser.avatarUrl} alt="avatar" style={{ width: 40, height: 40, borderRadius: '50%', border: '2px solid #E8E1CE' }} />
             : <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--color-accent-fill, rgba(30,64,175,0.15))', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <User size={18} color="var(--color-accent, #1E40AF)" />
               </div>
           }
           <div>
-            <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: 'var(--sb-ink-1)' }}>
+            <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#191712' }}>
               {authUser?.name ?? authUser?.email ?? 'Professor User'}
             </p>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 3 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                 <div style={{ width: 6, height: 6, borderRadius: '50%', background: supaOk === null ? '#888780' : supaOk ? '#1D9E75' : '#E05252' }} />
-                <span style={{ fontSize: 11, color: 'var(--sb-ink-3)' }}>
+                <span style={{ fontSize: 11, color: '#6C6553' }}>
                   {supaOk === null ? 'Checking...' : supaOk ? 'Supabase connected' : 'Offline (local only)'}
                 </span>
               </div>
-              <span style={{ color: 'var(--sb-border)' }}>·</span>
-              <span style={{ fontSize: 11, color: 'var(--sb-ink-3)' }}>
+              <span style={{ color: '#E8E1CE' }}>·</span>
+              <span style={{ fontSize: 11, color: '#6C6553' }}>
                 {accounts.length + 1} account{accounts.length !== 0 ? 's' : ''} connected
               </span>
             </div>
@@ -2220,7 +2220,7 @@ export function Settings() {
             <Wand2 size={12} /> Setup Wizard
           </button>
           <button onClick={() => void checkSupabase().then(setSupaOk)}
-            style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 13px', borderRadius: 8, background: 'transparent', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-3)', fontSize: 12, cursor: 'pointer' }}>
+            style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 13px', borderRadius: 8, background: 'transparent', border: '1px solid #E8E1CE', color: '#6C6553', fontSize: 12, cursor: 'pointer' }}>
             <RefreshCw size={12} /> Refresh
           </button>
           <button onClick={() => void handleSignOut()}
@@ -2240,7 +2240,7 @@ export function Settings() {
       </DndContext>
 
       {/* ── Footer hint ─────────────────────────────────────────────────────── */}
-      <p style={{ textAlign: 'center', fontSize: 11.5, color: 'var(--sb-ink-3)', marginTop: 24 }}>
+      <p style={{ textAlign: 'center', fontSize: 11.5, color: '#6C6553', marginTop: 24 }}>
         Drag sections to reorder · Changes save automatically
       </p>
     </div>

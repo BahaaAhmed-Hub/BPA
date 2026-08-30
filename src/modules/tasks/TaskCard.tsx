@@ -58,7 +58,7 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
 
   const companies    = loadDynamicCompanies()
   const dynCompany   = companies.find(c => c.id === task.companyId)
-  const companyColor = dynCompany?.color ?? COMPANY_COLORS[task.company] ?? 'var(--sb-ink-3)'
+  const companyColor = dynCompany?.color ?? COMPANY_COLORS[task.company] ?? '#6C6553'
   const allUsers  = getAllUsers()
   const ownerUser = task.owner ? allUsers.find(u => u.id === task.owner) : undefined
   // Only show users belonging to the task's selected company in the owner picker
@@ -83,8 +83,8 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
   }
 
   const fieldInput: React.CSSProperties = {
-    background: 'var(--sb-page)', border: '1px solid #353A50', borderRadius: 4,
-    color: 'var(--sb-ink-1)', fontSize: 10, padding: '1px 5px', outline: 'none',
+    background: '#F7F4EA', border: '1px solid #353A50', borderRadius: 4,
+    color: '#191712', fontSize: 10, padding: '1px 5px', outline: 'none',
   }
 
   // Design-spec card background: company color at 8.5% opacity

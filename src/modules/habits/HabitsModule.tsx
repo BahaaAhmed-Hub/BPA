@@ -79,14 +79,14 @@ function EmojiBtn({ value, onSelect }: { value: string; onSelect: (e: string) =>
   return (
     <div ref={ref} style={{ position: 'relative' }}>
       <button onClick={() => setOpen(o => !o)} title="Change icon"
-        style={{ width: 24, height: 24, borderRadius: 7, background: 'var(--sb-field)', border: '1px solid var(--sb-border)', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13 }}>
+        style={{ width: 24, height: 24, borderRadius: 7, background: '#FAF7EC', border: '1px solid #E8E1CE', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13 }}>
         {value}
       </button>
       {open && (
-        <div style={{ position: 'absolute', top: 30, left: 0, zIndex: 300, background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 10, padding: '8px', display: 'flex', gap: 4, flexWrap: 'wrap', width: 252, maxHeight: 260, overflowY: 'auto', boxShadow: '0 8px 24px rgba(0,0,0,0.15)' }}>
+        <div style={{ position: 'absolute', top: 30, left: 0, zIndex: 300, background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 10, padding: '8px', display: 'flex', gap: 4, flexWrap: 'wrap', width: 252, maxHeight: 260, overflowY: 'auto', boxShadow: '0 8px 24px rgba(0,0,0,0.15)' }}>
           {EMOJIS.map(e => (
             <button key={e} onClick={() => { onSelect(e); setOpen(false) }}
-              style={{ fontSize: 16, width: 32, height: 32, borderRadius: 7, cursor: 'pointer', border: '1px solid', borderColor: e === value ? 'var(--sb-border)' : 'transparent', background: e === value ? 'var(--sb-field)' : 'transparent' }}>{e}</button>
+              style={{ fontSize: 16, width: 32, height: 32, borderRadius: 7, cursor: 'pointer', border: '1px solid', borderColor: e === value ? '#E8E1CE' : 'transparent', background: e === value ? '#FAF7EC' : 'transparent' }}>{e}</button>
           ))}
         </div>
       )}
@@ -111,7 +111,7 @@ function InlineEdit({ value, onSave, style }: { value: string; onSave: (v: strin
     <input ref={ref} value={draft} onChange={e => setDraft(e.target.value)}
       onBlur={commit}
       onKeyDown={e => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') { setDraft(value); setEditing(false) } }}
-      style={{ background: 'transparent', border: 'none', borderBottom: '1px solid var(--sb-border)', outline: 'none', color: 'var(--sb-ink-1)', fontFamily: 'inherit', padding: '0 2px', ...style }} />
+      style={{ background: 'transparent', border: 'none', borderBottom: '1px solid #E8E1CE', outline: 'none', color: '#191712', fontFamily: 'inherit', padding: '0 2px', ...style }} />
   )
   return <span onClick={() => { setDraft(value); setEditing(true) }} title="Click to rename" style={{ cursor: 'text', ...style }}>{value}</span>
 }
@@ -171,7 +171,7 @@ function QuantityControl({ value, goal, unit, onSet }: { value: number; goal: nu
   return (
     <span style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
       <button onClick={() => onSet(Math.max(0, value - 1))}
-        style={{ width: 22, height: 22, boxSizing: 'border-box', borderRadius: 6, border: '1px solid var(--sb-border)', background: '#FFFFFF', cursor: 'pointer', color: '#6C6553', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, padding: 0 }}>
+        style={{ width: 22, height: 22, boxSizing: 'border-box', borderRadius: 6, border: '1px solid #E8E1CE', background: '#FFFFFF', cursor: 'pointer', color: '#6C6553', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, padding: 0 }}>
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/></svg>
       </button>
       {editing ? (
@@ -179,15 +179,15 @@ function QuantityControl({ value, goal, unit, onSet }: { value: number; goal: nu
           onChange={e => setDraft(e.target.value)}
           onBlur={commit}
           onKeyDown={e => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') setEditing(false) }}
-          style={{ minWidth: 52, height: 22, boxSizing: 'border-box', textAlign: 'center', fontSize: 11, fontWeight: 600, background: 'var(--sb-field)', border: '1px solid var(--sb-border)', borderRadius: 6, color: '#191712', outline: 'none', padding: '0 8px' }} />
+          style={{ minWidth: 52, height: 22, boxSizing: 'border-box', textAlign: 'center', fontSize: 11, fontWeight: 600, background: '#FAF7EC', border: '1px solid #E8E1CE', borderRadius: 6, color: '#191712', outline: 'none', padding: '0 8px' }} />
       ) : (
         <button onClick={() => setEditing(true)} title="Click to enter value"
-          style={{ minWidth: 52, height: 22, boxSizing: 'border-box', padding: '0 8px', borderRadius: 6, background: 'var(--sb-field)', border: '1px solid var(--sb-border)', color: '#191712', fontSize: 11, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontVariantNumeric: 'tabular-nums' }}>
+          style={{ minWidth: 52, height: 22, boxSizing: 'border-box', padding: '0 8px', borderRadius: 6, background: '#FAF7EC', border: '1px solid #E8E1CE', color: '#191712', fontSize: 11, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontVariantNumeric: 'tabular-nums' }}>
           {value} / {goal}{unit ? ` ${unit}` : ''}
         </button>
       )}
       <button onClick={() => onSet(value + 1)}
-        style={{ width: 22, height: 22, boxSizing: 'border-box', borderRadius: 6, border: '1px solid var(--sb-border)', background: '#FFFFFF', cursor: 'pointer', color: '#191712', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, padding: 0 }}>
+        style={{ width: 22, height: 22, boxSizing: 'border-box', borderRadius: 6, border: '1px solid #E8E1CE', background: '#FFFFFF', cursor: 'pointer', color: '#191712', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, padding: 0 }}>
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14"/></svg>
       </button>
     </span>
@@ -215,7 +215,7 @@ function HabitForm({ initial, colors, onSave, onCancel, saveLabel }: {
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', maxHeight: 120, overflowY: 'auto' }}>
         {EMOJIS.slice(0, 30).map(e => (
           <button key={e} onClick={() => update({ emoji: e })}
-            style={{ fontSize: 18, background: s.emoji === e ? 'var(--sb-field)' : 'transparent', border: `1px solid ${s.emoji === e ? 'var(--sb-border)' : 'transparent'}`, borderRadius: 7, cursor: 'pointer', width: 36, height: 36, flexShrink: 0 }}>
+            style={{ fontSize: 18, background: s.emoji === e ? '#FAF7EC' : 'transparent', border: `1px solid ${s.emoji === e ? '#E8E1CE' : 'transparent'}`, borderRadius: 7, cursor: 'pointer', width: 36, height: 36, flexShrink: 0 }}>
             {e}
           </button>
         ))}
@@ -223,19 +223,19 @@ function HabitForm({ initial, colors, onSave, onCancel, saveLabel }: {
 
       {/* Name */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-        <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--sb-ink-3)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>Name</label>
+        <label style={{ fontSize: 11, fontWeight: 600, color: '#6C6553', textTransform: 'uppercase', letterSpacing: '0.8px' }}>Name</label>
         <input value={s.name} onChange={e => update({ name: e.target.value })} placeholder="e.g. Morning meditation"
-          style={{ background: 'var(--sb-field)', border: '1px solid var(--sb-border)', borderRadius: 8, padding: '8px 11px', fontSize: 13, color: 'var(--sb-ink-1)', outline: 'none' }} />
+          style={{ background: '#FAF7EC', border: '1px solid #E8E1CE', borderRadius: 8, padding: '8px 11px', fontSize: 13, color: '#191712', outline: 'none' }} />
       </div>
 
       {/* Type & Goal */}
       <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-          <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--sb-ink-3)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>Type</label>
+          <label style={{ fontSize: 11, fontWeight: 600, color: '#6C6553', textTransform: 'uppercase', letterSpacing: '0.8px' }}>Type</label>
           <div style={{ display: 'flex', gap: 6 }}>
             {(['boolean', 'quantity'] as const).map(t => (
               <button key={t} onClick={() => update({ type: t })}
-                style={{ padding: '5px 12px', borderRadius: 7, fontSize: 12, cursor: 'pointer', background: s.type === t ? '#191712' : 'var(--sb-field)', color: s.type === t ? '#FDF8E7' : 'var(--sb-ink-3)', border: `1px solid ${s.type === t ? '#191712' : 'var(--sb-border)'}` }}>
+                style={{ padding: '5px 12px', borderRadius: 7, fontSize: 12, cursor: 'pointer', background: s.type === t ? '#191712' : '#FAF7EC', color: s.type === t ? '#FDF8E7' : '#6C6553', border: `1px solid ${s.type === t ? '#191712' : '#E8E1CE'}` }}>
                 {t === 'boolean' ? 'Done/Undone' : 'Measurable'}
               </button>
             ))}
@@ -244,14 +244,14 @@ function HabitForm({ initial, colors, onSave, onCancel, saveLabel }: {
         {s.type === 'quantity' && (
           <>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-              <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--sb-ink-3)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>Goal</label>
+              <label style={{ fontSize: 11, fontWeight: 600, color: '#6C6553', textTransform: 'uppercase', letterSpacing: '0.8px' }}>Goal</label>
               <input value={s.goal} onChange={e => update({ goal: e.target.value })} type="number" min={1} placeholder="e.g. 8"
-                style={{ width: 72, background: 'var(--sb-field)', border: '1px solid var(--sb-border)', borderRadius: 8, padding: '8px 11px', fontSize: 13, color: 'var(--sb-ink-1)', outline: 'none' }} />
+                style={{ width: 72, background: '#FAF7EC', border: '1px solid #E8E1CE', borderRadius: 8, padding: '8px 11px', fontSize: 13, color: '#191712', outline: 'none' }} />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-              <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--sb-ink-3)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>Unit</label>
+              <label style={{ fontSize: 11, fontWeight: 600, color: '#6C6553', textTransform: 'uppercase', letterSpacing: '0.8px' }}>Unit</label>
               <input value={s.unit} onChange={e => update({ unit: e.target.value })} placeholder="glasses, km…"
-                style={{ width: 120, background: 'var(--sb-field)', border: '1px solid var(--sb-border)', borderRadius: 8, padding: '8px 11px', fontSize: 13, color: 'var(--sb-ink-1)', outline: 'none' }} />
+                style={{ width: 120, background: '#FAF7EC', border: '1px solid #E8E1CE', borderRadius: 8, padding: '8px 11px', fontSize: 13, color: '#191712', outline: 'none' }} />
             </div>
           </>
         )}
@@ -259,11 +259,11 @@ function HabitForm({ initial, colors, onSave, onCancel, saveLabel }: {
 
       {/* Frequency */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-        <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--sb-ink-3)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>Frequency</label>
+        <label style={{ fontSize: 11, fontWeight: 600, color: '#6C6553', textTransform: 'uppercase', letterSpacing: '0.8px' }}>Frequency</label>
         <div style={{ display: 'flex', gap: 6 }}>
           {FREQ_OPTS.map(f => (
             <button key={f} onClick={() => update({ freq: f })}
-              style={{ padding: '5px 12px', borderRadius: 7, fontSize: 12, cursor: 'pointer', background: s.freq === f ? '#191712' : 'var(--sb-field)', color: s.freq === f ? '#FDF8E7' : 'var(--sb-ink-3)', border: `1px solid ${s.freq === f ? '#191712' : 'var(--sb-border)'}` }}>
+              style={{ padding: '5px 12px', borderRadius: 7, fontSize: 12, cursor: 'pointer', background: s.freq === f ? '#191712' : '#FAF7EC', color: s.freq === f ? '#FDF8E7' : '#6C6553', border: `1px solid ${s.freq === f ? '#191712' : '#E8E1CE'}` }}>
               {f}
             </button>
           ))}
@@ -272,7 +272,7 @@ function HabitForm({ initial, colors, onSave, onCancel, saveLabel }: {
 
       {/* Color */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-        <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--sb-ink-3)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>Accent</label>
+        <label style={{ fontSize: 11, fontWeight: 600, color: '#6C6553', textTransform: 'uppercase', letterSpacing: '0.8px' }}>Accent</label>
         <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
           {colors.map(c => (
             <button key={c} onClick={() => update({ color: c })}
@@ -284,11 +284,11 @@ function HabitForm({ initial, colors, onSave, onCancel, saveLabel }: {
       {/* Actions */}
       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
         <button onClick={onCancel}
-          style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 14px', borderRadius: 7, background: 'transparent', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-3)', fontSize: 12, cursor: 'pointer' }}>
+          style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 14px', borderRadius: 7, background: 'transparent', border: '1px solid #E8E1CE', color: '#6C6553', fontSize: 12, cursor: 'pointer' }}>
           <X size={12} /> Cancel
         </button>
         <button onClick={() => valid && onSave(s)} disabled={!valid}
-          style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 16px', borderRadius: 7, background: valid ? '#F5D14E' : 'var(--sb-field)', border: 'none', color: valid ? '#191712' : 'var(--sb-ink-3)', fontSize: 12, fontWeight: 600, cursor: valid ? 'pointer' : 'default', opacity: valid ? 1 : 0.5 }}>
+          style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 16px', borderRadius: 7, background: valid ? '#F5D14E' : '#FAF7EC', border: 'none', color: valid ? '#191712' : '#6C6553', fontSize: 12, fontWeight: 600, cursor: valid ? 'pointer' : 'default', opacity: valid ? 1 : 0.5 }}>
           <Plus size={12} /> {saveLabel ?? 'Add Habit'}
         </button>
       </div>
@@ -682,7 +682,7 @@ export function HabitsModule() {
                 <span style={{ width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13 }}>{habit.emoji}</span>
                 <span style={{ flex: 1, fontSize: 13, fontWeight: 500, color: '#8A8272', textDecoration: 'line-through', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{habit.name}</span>
                 <button onClick={() => updateHabit(habit.id, { isActive: true })} title="Restore"
-                  style={{ fontSize: 11, padding: '3px 10px', borderRadius: 6, background: 'var(--sb-field)', border: '1px solid var(--sb-border)', color: '#6C6553', cursor: 'pointer' }}>
+                  style={{ fontSize: 11, padding: '3px 10px', borderRadius: 6, background: '#FAF7EC', border: '1px solid #E8E1CE', color: '#6C6553', cursor: 'pointer' }}>
                   Restore
                 </button>
                 <button onClick={() => deleteHabit(habit.id)} title="Delete permanently"

@@ -394,22 +394,22 @@ export function TaskCommand() {
       <div style={{ padding: '12px 26px 14px', display: 'flex', gap: 10, alignItems: 'center' }}>
         {/* Search input */}
         <div style={{ flex: 1, position: 'relative', display: 'flex', alignItems: 'center' }}>
-          <Search size={13} color="var(--sb-ink-3)" style={{ position: 'absolute', left: 10, pointerEvents: 'none' }} />
+          <Search size={13} color="#6C6553" style={{ position: 'absolute', left: 10, pointerEvents: 'none' }} />
           <input
             ref={searchRef}
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             placeholder='Search tasks… (name, type, owner)  •  Press / to focus'
             style={{
-              width: '100%', background: 'var(--sb-page)',
-              border: `1px solid ${searchQuery ? 'var(--color-accent,#7F77DD)' : 'var(--color-border,var(--sb-border))'}`,
+              width: '100%', background: '#F7F4EA',
+              border: `1px solid ${searchQuery ? 'var(--color-accent,#7F77DD)' : 'var(--color-border,#E8E1CE)'}`,
               borderRadius: 8, padding: '6px 32px 6px 30px',
-              color: 'var(--sb-ink-1)', fontSize: 12.5, outline: 'none',
+              color: '#191712', fontSize: 12.5, outline: 'none',
               transition: 'border-color 0.15s',
             }}
           />
           {searchQuery && (
-            <button onClick={() => setSearchQuery('')} style={{ position: 'absolute', right: 8, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', display: 'flex', padding: 2 }}>
+            <button onClick={() => setSearchQuery('')} style={{ position: 'absolute', right: 8, background: 'none', border: 'none', cursor: 'pointer', color: '#6C6553', display: 'flex', padding: 2 }}>
               <X size={13} />
             </button>
           )}
@@ -419,7 +419,7 @@ export function TaskCommand() {
       {/* ── Active filter chips ─────────────────────────────────────────────── */}
       {(companyChipLabel || typeChipLabel || ownerChipLabel) && (
         <div style={{ padding: '4px 26px 10px', display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 11, color: 'var(--sb-ink-3)', marginRight: 2 }}>Filtered by:</span>
+          <span style={{ fontSize: 11, color: '#6C6553', marginRight: 2 }}>Filtered by:</span>
           {companyChipLabel && (
             <span style={chipStyle}>
               🏢 {companyChipLabel}
@@ -438,7 +438,7 @@ export function TaskCommand() {
               <button style={chipX} onClick={() => setFilters(f => ({ ...f, owner: '' }))}><X size={11} /></button>
             </span>
           )}
-          <button onClick={clearFilters} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: 'var(--sb-ink-3)', textDecoration: 'underline', padding: '0 4px', marginLeft: 2 }}>
+          <button onClick={clearFilters} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: '#6C6553', textDecoration: 'underline', padding: '0 4px', marginLeft: 2 }}>
             Clear all
           </button>
         </div>

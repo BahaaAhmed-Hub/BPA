@@ -68,7 +68,7 @@ export function Step6Done({ data }: Props) {
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 32 }}>
         {stats.map(s => (
-          <div key={s.label} style={{ padding: '16px 8px', borderRadius: 12, background: 'var(--color-surface,var(--sb-card))', border: '1px solid var(--color-border,var(--sb-border))' }}>
+          <div key={s.label} style={{ padding: '16px 8px', borderRadius: 12, background: 'var(--color-surface,#FFFFFF)', border: '1px solid var(--color-border,#E8E1CE)' }}>
             <div style={{ fontSize: 22, marginBottom: 6 }}>{s.emoji}</div>
             <div style={{ fontSize: 28, fontWeight: 800, color: s.color, lineHeight: 1 }}>
               <CountUp target={s.value} />

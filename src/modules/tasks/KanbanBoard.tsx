@@ -313,16 +313,16 @@ function KanbanColumnComp({ column, onOpen, onColDragStart, onColDragOver, onCol
               placeholder="Task title…"
               style={{
                 width: '100%', boxSizing: 'border-box',
-                background: 'var(--sb-page)', border: '1px solid var(--color-accent, #7F77DD)',
+                background: '#F7F4EA', border: '1px solid var(--color-accent, #7F77DD)',
                 borderRadius: 6, padding: '6px 8px', fontSize: 12,
-                color: 'var(--sb-ink-1)', outline: 'none', fontFamily: 'inherit',
+                color: '#191712', outline: 'none', fontFamily: 'inherit',
               }}
             />
             <div style={{ display: 'flex', gap: 5, marginTop: 5 }}>
               <button onClick={commitAdd} style={{ flex: 1, padding: '4px 0', fontSize: 11, fontWeight: 600, background: 'var(--color-accent, #7F77DD)', color: '#fff', border: 'none', borderRadius: 5, cursor: 'pointer' }}>
                 Add
               </button>
-              <button onClick={() => { setAdding(false); setNewTitle('') }} style={{ padding: '4px 8px', fontSize: 11, background: 'transparent', color: 'var(--sb-ink-3)', border: '1px solid var(--sb-border)', borderRadius: 5, cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+              <button onClick={() => { setAdding(false); setNewTitle('') }} style={{ padding: '4px 8px', fontSize: 11, background: 'transparent', color: '#6C6553', border: '1px solid #E8E1CE', borderRadius: 5, cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
                 <XIcon size={11} />
               </button>
             </div>
@@ -335,8 +335,8 @@ function KanbanColumnComp({ column, onOpen, onColDragStart, onColDragOver, onCol
         onClick={() => setAdding(true)}
         style={{
           marginTop: 6, width: '100%', padding: '5px 0', fontSize: 11, fontWeight: 500,
-          background: 'transparent', border: '1px dashed var(--sb-border)', borderRadius: 6,
-          color: 'var(--sb-ink-3)', cursor: 'pointer',
+          background: 'transparent', border: '1px dashed #E8E1CE', borderRadius: 6,
+          color: '#6C6553', cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
           transition: 'all 0.12s',
         }}
@@ -366,18 +366,18 @@ function DatePickerOverlay({
       display: 'flex', alignItems: 'center', justifyContent: 'center',
     }}>
       <div style={{
-        background: 'var(--sb-card)', borderRadius: 14,
-        padding: 24, width: 320, border: '1px solid var(--sb-border)',
+        background: '#FFFFFF', borderRadius: 14,
+        padding: 24, width: 320, border: '1px solid #E8E1CE',
         boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
       }}>
-        <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--sb-ink-1)', marginBottom: 6 }}>
+        <div style={{ fontSize: 15, fontWeight: 700, color: '#191712', marginBottom: 6 }}>
           Plan this task
         </div>
-        <div style={{ fontSize: 12, color: 'var(--sb-ink-3)', marginBottom: 16, lineHeight: 1.5 }}>
+        <div style={{ fontSize: 12, color: '#6C6553', marginBottom: 16, lineHeight: 1.5 }}>
           {taskTitle}
         </div>
         <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 11, color: 'var(--sb-ink-3)', marginBottom: 6, fontWeight: 600 }}>
+          <div style={{ fontSize: 11, color: '#6C6553', marginBottom: 6, fontWeight: 600 }}>
             Planned Date
           </div>
           <input
@@ -387,10 +387,10 @@ function DatePickerOverlay({
             autoFocus
             style={{
               width: '100%', boxSizing: 'border-box',
-              background: 'var(--sb-page)',
-              border: '1px solid var(--sb-border)',
+              background: '#F7F4EA',
+              border: '1px solid #E8E1CE',
               borderRadius: 6, padding: '7px 10px',
-              fontSize: 13, color: 'var(--sb-ink-1)',
+              fontSize: 13, color: '#191712',
               outline: 'none', fontFamily: 'inherit',
             }}
           />
@@ -398,8 +398,8 @@ function DatePickerOverlay({
         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
           <button onClick={onCancel} style={{
             padding: '7px 16px', borderRadius: 7, background: 'transparent',
-            border: '1px solid var(--sb-border)',
-            color: 'var(--sb-ink-3)', fontSize: 12, cursor: 'pointer',
+            border: '1px solid #E8E1CE',
+            color: '#6C6553', fontSize: 12, cursor: 'pointer',
           }}>Cancel</button>
           <button onClick={() => date && onConfirm(date)} disabled={!date} style={{
             padding: '7px 18px', borderRadius: 7,
@@ -630,9 +630,9 @@ export function KanbanBoard({ onOpen, hideCompleted = false, filteredTaskIds }: 
       {/* Board type tabs */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 6, padding: '10px 28px',
-        borderBottom: '1px solid var(--sb-border)', flexShrink: 0,
+        borderBottom: '1px solid #E8E1CE', flexShrink: 0,
       }}>
-        <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--sb-ink-3)', marginRight: 4, flexShrink: 0 }}>
+        <span style={{ fontSize: 12, fontWeight: 600, color: '#6C6553', marginRight: 4, flexShrink: 0 }}>
           Group by:
         </span>
         <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
@@ -640,8 +640,8 @@ export function KanbanBoard({ onOpen, hideCompleted = false, filteredTaskIds }: 
             <button key={opt.id} onClick={() => saveBoardType(opt.id)} style={{
               padding: '5px 13px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer',
               background: boardType === opt.id ? 'var(--color-accent, #7F77DD)' : 'transparent',
-              color:      boardType === opt.id ? '#fff' : 'var(--sb-ink-3)',
-              border:     `1px solid ${boardType === opt.id ? 'var(--color-accent, #7F77DD)' : 'var(--sb-border)'}`,
+              color:      boardType === opt.id ? '#fff' : '#6C6553',
+              border:     `1px solid ${boardType === opt.id ? 'var(--color-accent, #7F77DD)' : '#E8E1CE'}`,
               transition: 'all 0.12s',
             }}>
               {opt.label}

@@ -39,7 +39,7 @@ function buildGroups(tasks: Task[], groupBy: 'type' | 'company'): TaskGroup[] {
     return [...map.entries()].map(([k, ts]) => {
       const dynCo = companies.find(c => c.id === k)
       const label = dynCo?.name ?? COMPANY_LABELS[k as keyof typeof COMPANY_LABELS] ?? k
-      const color = dynCo?.color ?? 'var(--color-text-muted, #6B7280)'
+      const color = dynCo?.color ?? '#9B9180'
       return { key: k, label, emoji: '🏢', color, tasks: ts }
     })
   }
@@ -72,10 +72,10 @@ function GroupHeader({ label, emoji, color, count, expanded, onToggle }: {
 }
 
 const inp: React.CSSProperties = {
-  background: 'var(--sb-page)', border: '1px solid var(--sb-border)', borderRadius: 6,
-  padding: '5px 8px', fontSize: 12, color: 'var(--color-text, #E8EAF6)', outline: 'none', width: '100%',
+  background: '#FAF7EC', border: '1px solid #E8E1CE', borderRadius: 6,
+  padding: '5px 8px', fontSize: 12, color: '#191712', outline: 'none', width: '100%',
 }
-const lbl: React.CSSProperties = { fontSize: 10.5, color: 'var(--color-text-muted, #6B7280)', marginBottom: 3, display: 'block' }
+const lbl: React.CSSProperties = { fontSize: 10.5, color: '#9B9180', marginBottom: 3, display: 'block' }
 
 interface QuadrantColumnProps {
   quadrant: Quadrant
@@ -165,22 +165,23 @@ export function QuadrantColumn({ quadrant, tasks, onOpen, groupBy = 'none', allG
     <div
       style={{
         display: 'flex', flexDirection: 'column',
-        background: 'var(--sb-card)',
-        border: `1px solid ${isOver ? meta.color + '60' : 'var(--sb-border)'}`,
-        borderRadius: 12, overflow: 'hidden',
+        background: '#FFFFFF',
+        border: `1px solid ${isOver ? meta.color + '60' : '#E8E1CE'}`,
+        borderRadius: 14, overflow: 'hidden',
         transition: 'border-color 0.15s ease', minHeight: 280,
+        boxShadow: '0 1px 3px rgba(25,23,18,0.06)',
       }}
     >
       {/* Header */}
       <div style={{
-        padding: '12px 14px 10px',
-        borderBottom: '1px solid var(--sb-border)',
-        background: isOver ? `${meta.color}08` : 'transparent',
+        padding: '13px 14px 10px',
+        borderBottom: '1px solid #EDE7D9',
+        background: isOver ? `${meta.color}08` : '#FDFBF6',
         transition: 'background 0.15s ease',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <div style={{ width: 8, height: 8, borderRadius: '50%', background: meta.color, flexShrink: 0 }} />
-          <h3 style={{ margin: 0, fontSize: 13.5, fontWeight: 700, color: 'var(--color-text, #E8EAF6)', letterSpacing: '-0.2px' }}>
+          <h3 style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#191712', letterSpacing: '-0.2px', fontFamily: 'var(--sb-font-ui, "Instrument Sans", sans-serif)' }}>
             {meta.label}
           </h3>
           <span style={{
@@ -189,7 +190,7 @@ export function QuadrantColumn({ quadrant, tasks, onOpen, groupBy = 'none', allG
             padding: '1px 6px', borderRadius: 4,
           }}>{activeTasks.length}</span>
         </div>
-        <p style={{ margin: '2px 0 0 16px', fontSize: 10.5, color: 'var(--color-text-muted, #6B7280)' }}>{meta.sub}</p>
+        <p style={{ margin: '2px 0 0 16px', fontSize: 10.5, color: '#9B9180' }}>{meta.sub}</p>
       </div>
 
       {/* Drop zone */}
@@ -227,16 +228,16 @@ export function QuadrantColumn({ quadrant, tasks, onOpen, groupBy = 'none', allG
         {activeTasks.length === 0 && doneTasks.length === 0 && !adding && (
           <div style={{
             flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: 'var(--color-text-muted, #6B7280)', fontSize: 11.5, fontStyle: 'italic',
+            color: '#9B9180', fontSize: 11.5, fontStyle: 'italic',
             opacity: isOver ? 0 : 0.6,
-            border: `1px dashed ${isOver ? meta.color : 'var(--sb-border)'}`,
+            border: `1px dashed ${isOver ? meta.color : '#E8E1CE'}`,
             borderRadius: 8, minHeight: 60, transition: 'all 0.15s ease',
           }}>{isOver ? '' : 'Drop tasks here'}</div>
         )}
       </div>
 
       {/* Add task area */}
-      <div style={{ padding: '8px', borderTop: '1px solid var(--sb-border)' }}>
+      <div style={{ padding: '8px', borderTop: '1px solid #E8E1CE' }}>
         {adding ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
             {/* Title */}
@@ -255,15 +256,15 @@ export function QuadrantColumn({ quadrant, tasks, onOpen, groupBy = 'none', allG
             {/* AI suggestion strip */}
             {(aiLoading || aiHint) && (
               <div style={{
-                background: 'var(--sb-page)', border: '1px solid var(--sb-border)', borderRadius: 6,
+                background: '#FAF7EC', border: '1px solid #E8E1CE', borderRadius: 6,
                 padding: '6px 8px', display: 'flex', flexWrap: 'wrap', gap: 5, alignItems: 'center',
               }}>
-                <Sparkles size={10} color="var(--color-accent)" style={{ flexShrink: 0 }} />
-                {aiLoading && <span style={{ fontSize: 10.5, color: 'var(--color-text-muted, #6B7280)' }}>Analyzing…</span>}
+                <Sparkles size={10} color="#7F77DD" style={{ flexShrink: 0 }} />
+                {aiLoading && <span style={{ fontSize: 10.5, color: '#9B9180' }}>Analyzing…</span>}
                 {!aiLoading && aiHint && (
                   <>
                     {aiHint.icon && (
-                      <span style={{ fontSize: 10.5, color: 'var(--color-text-dim, #94A3B8)' }}>Icon: {aiHint.icon}</span>
+                      <span style={{ fontSize: 10.5, color: '#6C6553' }}>Icon: {aiHint.icon}</span>
                     )}
                     {aiHint.companyId && (() => {
                       const co = companies.find(c => c.id === aiHint.companyId)
@@ -287,7 +288,7 @@ export function QuadrantColumn({ quadrant, tasks, onOpen, groupBy = 'none', allG
                       </span>
                     )}
                     {aiHint.assignToMe && !aiHint.ownerId && (
-                      <span style={{ fontSize: 10, color: 'var(--color-accent)' }}>assign to me</span>
+                      <span style={{ fontSize: 10, color: '#7F77DD' }}>assign to me</span>
                     )}
                   </>
                 )}
@@ -324,7 +325,7 @@ export function QuadrantColumn({ quadrant, tasks, onOpen, groupBy = 'none', allG
                   ))}
                 </select>
                 {users.length === 0 && (
-                  <p style={{ margin: '4px 0 0', fontSize: 10.5, color: 'var(--color-text-muted, #6B7280)' }}>
+                  <p style={{ margin: '4px 0 0', fontSize: 10.5, color: '#9B9180' }}>
                     Add users under Settings → Companies first.
                   </p>
                 )}
@@ -341,19 +342,19 @@ export function QuadrantColumn({ quadrant, tasks, onOpen, groupBy = 'none', allG
               }}>Add</button>
               <button onClick={reset} style={{
                 padding: '5px 8px', borderRadius: 6, fontSize: 11.5,
-                background: 'transparent', border: '1px solid var(--sb-border)',
-                color: 'var(--color-text-muted, #6B7280)', cursor: 'pointer',
+                background: 'transparent', border: '1px solid #E8E1CE',
+                color: '#9B9180', cursor: 'pointer',
               }}><X size={11} /></button>
             </div>
           </div>
         ) : (
           <button onClick={() => setAdding(true)} style={{
             width: '100%', background: 'transparent', border: 'none', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', gap: 5, color: 'var(--color-text-muted, #6B7280)',
+            display: 'flex', alignItems: 'center', gap: 5, color: '#9B9180',
             fontSize: 11.5, padding: '3px 2px', borderRadius: 6, transition: 'color 0.15s ease',
           }}
             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = meta.color }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--color-text-muted, #6B7280)' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#9B9180' }}
           >
             <Plus size={12} strokeWidth={2.5} /> Add task
           </button>
