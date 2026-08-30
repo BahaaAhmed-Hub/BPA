@@ -211,7 +211,7 @@ export function SetupWizard({ onClose }: Props) {
                   const n = i + 1
                   const done   = n < step
                   const active = n === step
-                  const accent = 'var(--color-accent,#7F77DD)'
+                  const accent = '#F5D14E'
                   return (
                     <div key={label} title={label} style={{ flex: 1, height: 4, borderRadius: 2, overflow: 'hidden', background: '#E5E7EB', position: 'relative', transition: 'background 0.3s' }}>
                       <div style={{
@@ -268,7 +268,7 @@ export function SetupWizard({ onClose }: Props) {
                 <button onClick={goNext} className="wz-btn-next" style={{
                   display: 'flex', alignItems: 'center', gap: 6,
                   padding: '11px 26px', borderRadius: 100,
-                  background: 'var(--color-accent,#7F77DD)', border: 'none',
+                  background: '#F5D14E', border: 'none',
                   color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer',
                   boxShadow: '0 4px 14px rgba(127,119,221,0.35)',
                   transition: 'all 0.15s',
@@ -292,7 +292,7 @@ export function SetupWizard({ onClose }: Props) {
 
           {/* Subtle bottom progress indicator */}
           <div style={{ height: 3, background: '#F0F0F4', position: 'relative' }}>
-            <div style={{ position: 'absolute', inset: '0 auto 0 0', width: `${pct}%`, background: 'var(--color-accent,#7F77DD)', transition: 'width 0.4s cubic-bezier(0.4,0,0.2,1)', borderRadius: '0 2px 2px 0' }} />
+            <div style={{ position: 'absolute', inset: '0 auto 0 0', width: `${pct}%`, background: '#F5D14E', transition: 'width 0.4s cubic-bezier(0.4,0,0.2,1)', borderRadius: '0 2px 2px 0' }} />
           </div>
         </div>
       </div>

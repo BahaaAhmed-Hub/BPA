@@ -194,7 +194,7 @@ const selectStyle: React.CSSProperties = {
 }
 
 function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
-  const accent = 'var(--color-accent, #1E40AF)'
+  const accent = '#F5D14E'
   return (
     <button role="switch" aria-checked={checked} onClick={() => onChange(!checked)}
       style={{
@@ -261,9 +261,9 @@ function ProfileSection({
               <button key={d} onClick={() => set({ workWeek: on ? s.workWeek.filter(x => x !== d) : [...s.workWeek, d] })}
                 style={{
                   padding: '4px 9px', borderRadius: 6, fontSize: 11.5, cursor: 'pointer', fontWeight: 500,
-                  background: on ? 'var(--color-accent-fill, rgba(30,64,175,0.15))' : '#FAF7EC',
-                  border: `1px solid ${on ? 'var(--color-accent, #1E40AF)' : '#E8E1CE'}`,
-                  color: on ? 'var(--color-accent, #1E40AF)' : '#6C6553',
+                  background: on ? 'rgba(245,209,78,0.12)' : '#FAF7EC',
+                  border: `1px solid ${on ? '#F5D14E' : '#E8E1CE'}`,
+                  color: on ? '#F5D14E' : '#6C6553',
                 }}>{d}</button>
             )
           })}
@@ -305,9 +305,9 @@ function ScheduleSection({
             <button key={n} onClick={() => set({ bufferMins: n })}
               style={{
                 padding: '4px 10px', borderRadius: 6, fontSize: 11.5, cursor: 'pointer', fontWeight: 500,
-                background: s.bufferMins === n ? 'var(--sb-accent-tint)' : '#FAF7EC',
-                border: `1px solid ${s.bufferMins === n ? 'var(--color-accent, #1E40AF)' : '#E8E1CE'}`,
-                color: s.bufferMins === n ? 'var(--color-accent, #1E40AF)' : '#6C6553',
+                background: s.bufferMins === n ? 'rgba(245,209,78,0.12)' : '#FAF7EC',
+                border: `1px solid ${s.bufferMins === n ? '#F5D14E' : '#E8E1CE'}`,
+                color: s.bufferMins === n ? '#F5D14E' : '#6C6553',
               }}>{n === 0 ? 'None' : `${n}m`}</button>
           ))}
         </div>
@@ -318,9 +318,9 @@ function ScheduleSection({
             <button key={n} onClick={() => set({ physicalBufferMins: n })}
               style={{
                 padding: '4px 10px', borderRadius: 6, fontSize: 11.5, cursor: 'pointer', fontWeight: 500,
-                background: s.physicalBufferMins === n ? 'var(--sb-accent-tint)' : '#FAF7EC',
-                border: `1px solid ${s.physicalBufferMins === n ? 'var(--color-accent, #1E40AF)' : '#E8E1CE'}`,
-                color: s.physicalBufferMins === n ? 'var(--color-accent, #1E40AF)' : '#6C6553',
+                background: s.physicalBufferMins === n ? 'rgba(245,209,78,0.12)' : '#FAF7EC',
+                border: `1px solid ${s.physicalBufferMins === n ? '#F5D14E' : '#E8E1CE'}`,
+                color: s.physicalBufferMins === n ? '#F5D14E' : '#6C6553',
               }}>{n === 0 ? 'None' : `${n}m`}</button>
           ))}
         </div>
@@ -492,7 +492,7 @@ function CompanyCard({
           style={{
             background: 'none', border: 'none', cursor: 'pointer', padding: 3,
             display: 'flex', alignItems: 'center',
-            color: co.hidden ? 'var(--color-accent, #7F77DD)' : '#6C6553',
+            color: co.hidden ? '#F5D14E' : '#6C6553',
           }}
         >
           {co.hidden ? <EyeOff size={13} /> : <Eye size={13} />}
@@ -564,7 +564,7 @@ function CompanyCard({
               style={{ ...inputStyle, fontSize: 11, padding: '3px 7px', flex: 1 }} />
             <button onClick={addUser} disabled={!newUserName.trim()} style={{
               padding: '3px 10px', borderRadius: 5, fontSize: 11, fontWeight: 500, cursor: 'pointer',
-              background: 'var(--sb-accent-tint)', border: '1px solid #7F77DD50',
+              background: 'rgba(245,209,78,0.12)', border: '1px solid #7F77DD50',
               color: '#7F77DD', opacity: newUserName.trim() ? 1 : 0.4,
             }}>Add</button>
           </div>
@@ -649,7 +649,7 @@ function CompaniesSection({
               <X size={11} /> Cancel
             </button>
             <button onClick={addCompany} disabled={!newName.trim()}
-              style={{ padding: '6px 16px', borderRadius: 7, background: 'var(--sb-accent-tint)', border: '1px solid var(--color-accent, #1E40AF)50', color: 'var(--color-accent, #1E40AF)', fontSize: 12, fontWeight: 500, cursor: 'pointer', opacity: newName.trim() ? 1 : 0.4, display: 'flex', gap: 5, alignItems: 'center' }}>
+              style={{ padding: '6px 16px', borderRadius: 7, background: 'rgba(245,209,78,0.12)', border: '1px solid #F5D14E50', color: '#F5D14E', fontSize: 12, fontWeight: 500, cursor: 'pointer', opacity: newName.trim() ? 1 : 0.4, display: 'flex', gap: 5, alignItems: 'center' }}>
               <Plus size={11} /> Add Company
             </button>
           </div>
@@ -692,7 +692,7 @@ function SettingsHabitForm({
       <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
         {HABIT_EMOJIS.map(e => (
           <button key={e} onClick={() => update({ emoji: e })}
-            style={{ fontSize: 16, width: 34, height: 34, borderRadius: 7, cursor: 'pointer', background: s.emoji === e ? 'var(--sb-accent-tint)' : 'transparent', border: `1px solid ${s.emoji === e ? 'var(--color-accent, #1E40AF)' : '#E8E1CE'}` }}>
+            style={{ fontSize: 16, width: 34, height: 34, borderRadius: 7, cursor: 'pointer', background: s.emoji === e ? 'rgba(245,209,78,0.12)' : 'transparent', border: `1px solid ${s.emoji === e ? '#F5D14E' : '#E8E1CE'}` }}>
             {e}
           </button>
         ))}
@@ -716,7 +716,7 @@ function SettingsHabitForm({
         <div style={{ display: 'flex', background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 7, overflow: 'hidden' }}>
           {([['boolean', '✓ Done / Not done', CheckSquare], ['quantity', '# Measurable', Hash]] as const).map(([t, label, Icon]) => (
             <button key={t} onClick={() => update({ type: t })}
-              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 12px', fontSize: 12, fontWeight: s.type === t ? 600 : 400, cursor: 'pointer', border: 'none', background: s.type === t ? 'var(--color-accent-fill, rgba(30,64,175,0.18))' : 'none', color: s.type === t ? 'var(--color-accent, #1E40AF)' : '#6C6553' }}>
+              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 12px', fontSize: 12, fontWeight: s.type === t ? 600 : 400, cursor: 'pointer', border: 'none', background: s.type === t ? 'var(--color-accent-fill, rgba(30,64,175,0.18))' : 'none', color: s.type === t ? '#F5D14E' : '#6C6553' }}>
               <Icon size={12} />{label}
             </button>
           ))}
@@ -753,7 +753,7 @@ function SettingsHabitForm({
           <X size={11} /> Cancel
         </button>
         <button onClick={() => valid && onSave(s)} disabled={!valid}
-          style={{ padding: '6px 16px', borderRadius: 7, background: 'var(--sb-accent-tint)', border: '1px solid var(--color-accent, #1E40AF)50', color: 'var(--color-accent, #1E40AF)', fontSize: 12, fontWeight: 500, cursor: valid ? 'pointer' : 'default', opacity: valid ? 1 : 0.4, display: 'flex', gap: 5, alignItems: 'center' }}>
+          style={{ padding: '6px 16px', borderRadius: 7, background: 'rgba(245,209,78,0.12)', border: '1px solid #F5D14E50', color: '#F5D14E', fontSize: 12, fontWeight: 500, cursor: valid ? 'pointer' : 'default', opacity: valid ? 1 : 0.4, display: 'flex', gap: 5, alignItems: 'center' }}>
           <Plus size={11} /> {saveLabel}
         </button>
       </div>
@@ -803,7 +803,7 @@ function HabitsSection() {
             </span>
             <Toggle checked={h.isActive} onChange={() => toggle(h.id)} />
             <button onClick={() => setEditingId(editingId === h.id ? null : h.id)} title="Edit habit"
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: editingId === h.id ? 'var(--color-accent, #1E40AF)' : '#6C6553', padding: 4 }}>
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: editingId === h.id ? '#F5D14E' : '#6C6553', padding: 4 }}>
               <Pencil size={13} />
             </button>
             <button onClick={() => { if (editingId === h.id) setEditingId(null); storeDel(h.id) }}
@@ -961,7 +961,7 @@ function TaskStatusesSection() {
           <X size={11} /> Cancel
         </button>
         <button onClick={confirmSave}
-          style={{ padding: '5px 14px', borderRadius: 6, background: 'var(--sb-accent-tint)', border: '1px solid var(--color-accent, #1E40AF)50', color: 'var(--color-accent, #1E40AF)', fontSize: 12, fontWeight: 500, cursor: 'pointer', display: 'flex', gap: 4, alignItems: 'center' }}>
+          style={{ padding: '5px 14px', borderRadius: 6, background: 'rgba(245,209,78,0.12)', border: '1px solid #F5D14E50', color: '#F5D14E', fontSize: 12, fontWeight: 500, cursor: 'pointer', display: 'flex', gap: 4, alignItems: 'center' }}>
           <Plus size={11} /> {adding ? 'Add Status' : 'Save'}
         </button>
       </div>
@@ -986,7 +986,7 @@ function TaskStatusesSection() {
               {s.id}
             </span>
             <button onClick={() => startEdit(i)} title="Edit"
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: isEditingRow(i) ? 'var(--color-accent, #1E40AF)' : '#6C6553', padding: 4 }}>
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: isEditingRow(i) ? '#F5D14E' : '#6C6553', padding: 4 }}>
               <Pencil size={13} />
             </button>
             <button onClick={() => remove(i)} title="Delete"
@@ -1146,12 +1146,12 @@ function AccountsSection({
         display: 'flex', alignItems: 'center', gap: 12,
         padding: '12px 14px', borderRadius: 10, marginBottom: 10,
         background: '#FAF7EC',
-        border: '1px solid var(--color-accent, #1E40AF)30',
+        border: '1px solid #F5D14E30',
       }}>
         <div style={{
           width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
-          background: 'var(--sb-accent-tint)', border: '1px solid var(--color-accent, #1E40AF)40',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: 'var(--color-accent, #1E40AF)',
+          background: 'rgba(245,209,78,0.12)', border: '1px solid #F5D14E40',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: '#191712',
         }}>
           {primaryEmail ? primaryEmail[0].toUpperCase() : 'G'}
         </div>
@@ -1203,7 +1203,7 @@ function AccountsSection({
             opacity: hiddenAccts.has(acc.email) ? 0.5 : 1,
             transition: 'opacity 0.15s',
           }}>
-            <div style={{ width: 32, height: 32, borderRadius: '50%', flexShrink: 0, background: 'var(--sb-accent-tint)', border: '1px solid #7F77DD40', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: '#7F77DD' }}>
+            <div style={{ width: 32, height: 32, borderRadius: '50%', flexShrink: 0, background: 'rgba(245,209,78,0.12)', border: '1px solid #7F77DD40', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: '#7F77DD' }}>
               {acc.email ? acc.email[0].toUpperCase() : 'G'}
             </div>
             <div style={{ flex: 1 }}>
@@ -1267,7 +1267,7 @@ function AccountsSection({
             padding: '12px 16px', borderRadius: 9,
             background: '#FAF7EC',
             border: '1px dashed #E8E1CE',
-            color: 'var(--color-accent, #1E40AF)', fontSize: 13, fontWeight: 500, cursor: 'pointer',
+            color: '#6C6553', fontSize: 13, fontWeight: 500, cursor: 'pointer',
             opacity: adding ? 0.6 : 1,
           }}>
           <LogIn size={14} />
@@ -1340,9 +1340,9 @@ function ProfessorSection({ s, set }: { s: AppSettings; set: (p: Partial<AppSett
               style={{
                 padding: '5px 14px', borderRadius: 7, fontSize: 11.5, cursor: 'pointer',
                 fontWeight: 600, textTransform: 'capitalize',
-                background: ai.provider === p ? 'var(--sb-accent-tint)' : '#FAF7EC',
-                border: `1px solid ${ai.provider === p ? 'var(--color-accent, #1E40AF)' : '#E8E1CE'}`,
-                color: ai.provider === p ? 'var(--color-accent, #1E40AF)' : '#6C6553',
+                background: ai.provider === p ? 'rgba(245,209,78,0.12)' : '#FAF7EC',
+                border: `1px solid ${ai.provider === p ? '#F5D14E' : '#E8E1CE'}`,
+                color: ai.provider === p ? '#F5D14E' : '#6C6553',
               }}>{p === 'groq' ? 'Groq (free)' : 'Anthropic'}</button>
           ))}
         </div>
@@ -1379,9 +1379,9 @@ function ProfessorSection({ s, set }: { s: AppSettings; set: (p: Partial<AppSett
             <button key={v} onClick={() => set({ commStyle: v })}
               style={{
                 padding: '5px 12px', borderRadius: 7, fontSize: 11.5, cursor: 'pointer', fontWeight: 500, textTransform: 'capitalize',
-                background: s.commStyle === v ? 'var(--sb-accent-tint)' : '#FAF7EC',
-                border: `1px solid ${s.commStyle === v ? 'var(--color-accent, #1E40AF)' : '#E8E1CE'}`,
-                color: s.commStyle === v ? 'var(--color-accent, #1E40AF)' : '#6C6553',
+                background: s.commStyle === v ? 'rgba(245,209,78,0.12)' : '#FAF7EC',
+                border: `1px solid ${s.commStyle === v ? '#F5D14E' : '#E8E1CE'}`,
+                color: s.commStyle === v ? '#F5D14E' : '#6C6553',
               }}>{v}</button>
           ))}
         </div>
@@ -1624,7 +1624,7 @@ function BlockingRulesSection() {
           display: 'flex', alignItems: 'center', gap: 10,
           padding: '10px 14px', borderRadius: 10, marginBottom: 8,
           background: '#FAF7EC',
-          border: `1px solid ${rule.enabled ? 'var(--color-accent, #1E40AF)30' : '#E8E1CE'}`,
+          border: `1px solid ${rule.enabled ? '#F5D14E30' : '#E8E1CE'}`,
           opacity: rule.enabled ? 1 : 0.6,
         }}>
           <Toggle checked={rule.enabled} onChange={() => toggleRule(rule.id)} />
@@ -1671,7 +1671,7 @@ function BlockingRulesSection() {
         <div style={{
           padding: '14px 16px', borderRadius: 10, marginTop: 8,
           background: '#FAF7EC',
-          border: '1px solid var(--color-accent, #1E40AF)40',
+          border: '1px solid #F5D14E40',
         }}>
           <p style={{ margin: '0 0 12px', fontSize: 12.5, fontWeight: 600, color: '#191712' }}>
             {editingRule ? 'Edit blocking rule' : 'New blocking rule'}
@@ -1763,9 +1763,9 @@ function BlockingRulesSection() {
               disabled={!srcCal || !tgtCal || srcCal === tgtCal}
               style={{
                 flex: 1, padding: '8px 0', borderRadius: 8, cursor: 'pointer',
-                background: (!srcCal || !tgtCal || srcCal === tgtCal) ? '#FFFFFF' : 'var(--color-accent-fill, rgba(30,64,175,0.15))',
-                border: '1px solid var(--color-accent, #1E40AF)50',
-                color: (!srcCal || !tgtCal || srcCal === tgtCal) ? '#6C6553' : 'var(--color-accent, #1E40AF)',
+                background: (!srcCal || !tgtCal || srcCal === tgtCal) ? '#FFFFFF' : 'rgba(245,209,78,0.12)',
+                border: '1px solid #F5D14E50',
+                color: (!srcCal || !tgtCal || srcCal === tgtCal) ? '#6C6553' : '#F5D14E',
                 fontSize: 12.5, fontWeight: 600,
               }}>
               {editingRule ? 'Update Rule' : 'Add Rule'}
@@ -1786,8 +1786,8 @@ function BlockingRulesSection() {
             display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px',
             borderRadius: 8, cursor: 'pointer', marginTop: 4,
             background: 'var(--color-accent-fill, rgba(30,64,175,0.10))',
-            border: '1px solid var(--color-accent, #1E40AF)40',
-            color: 'var(--color-accent, #1E40AF)', fontSize: 12.5,
+            border: '1px solid #F5D14E40',
+            color: '#6C6553', fontSize: 12.5,
           }}>
           <Plus size={13} /> Add Rule
         </button>

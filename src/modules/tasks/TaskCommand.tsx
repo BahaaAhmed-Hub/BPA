@@ -210,11 +210,11 @@ export function TaskCommand() {
     display: 'inline-flex', alignItems: 'center', gap: 5,
     padding: '3px 8px 3px 10px', borderRadius: 20, fontSize: 11.5, fontWeight: 600,
     background: 'rgba(25,23,18,0.06)', border: '1px solid rgba(127,119,221,0.3)',
-    color: 'var(--color-accent,#7F77DD)', cursor: 'default',
+    color: '#3D3926', cursor: 'default',
   }
   const chipX: React.CSSProperties = {
     background: 'none', border: 'none', cursor: 'pointer',
-    color: 'var(--color-accent,#7F77DD)', padding: 0, display: 'flex', lineHeight: 1,
+    color: '#3D3926', padding: 0, display: 'flex', lineHeight: 1,
   }
 
   return (
@@ -402,7 +402,7 @@ export function TaskCommand() {
             placeholder='Search tasks… (name, type, owner)  •  Press / to focus'
             style={{
               width: '100%', background: '#F7F4EA',
-              border: `1px solid ${searchQuery ? 'var(--color-accent,#7F77DD)' : 'var(--color-border,#E8E1CE)'}`,
+              border: `1px solid ${searchQuery ? '#F5D14E' : '#E8E1CE'}`,
               borderRadius: 8, padding: '6px 32px 6px 30px',
               color: '#191712', fontSize: 12.5, outline: 'none',
               transition: 'border-color 0.15s',

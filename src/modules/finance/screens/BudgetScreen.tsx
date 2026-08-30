@@ -593,7 +593,7 @@ export function BudgetScreen() {
                     flex: 1, padding: '8px 0',
                     background: 'rgba(245,209,78,0.12)', border: `1px solid ${'#F5D14E'}44`,
                     borderRadius: 8, cursor: 'pointer',
-                    fontSize: 13, color: '#F5D14E', fontFamily: 'inherit', fontWeight: 600,
+                    fontSize: 13, color: '#191712', fontFamily: 'inherit', fontWeight: 600,
                   }}
                 >+ Add</button>
                 <button

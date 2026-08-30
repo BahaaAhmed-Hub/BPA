@@ -65,7 +65,7 @@ function TaskRow({ draft, index, expanded, users, onToggle, onChange, onDelete }
     <div style={{
       borderRadius: 10,
       border: `1px solid ${expanded ? '#353A60' : '#E8E1CE'}`,
-      background: expanded ? 'var(--color-surface2, #1A1F38)' : '#FFFFFF',
+      background: expanded ? '#FAF7EC' : '#FFFFFF',
       overflow: 'hidden',
       transition: 'all 0.15s',
       opacity: draft.deleted ? 0.35 : 1,
@@ -330,7 +330,7 @@ export function MeetingFollowUpPopup({ parentTask, onConfirm, onSkip }: Props) {
             </h3>
             <p style={{ margin: 0, fontSize: 12, color: '#9B9180', lineHeight: 1.4 }}>
               {drafts === null
-                ? <>From <span style={{ color: 'var(--color-text-dim, #94A3B8)' }}>"{parentTask.title}"</span></>
+                ? <>From <span style={{ color: '#6C6553' }}>"{parentTask.title}"</span></>
                 : 'Review and edit before saving to Inbox · click any row to edit'
               }
             </p>
@@ -349,7 +349,7 @@ export function MeetingFollowUpPopup({ parentTask, onConfirm, onSkip }: Props) {
           {drafts === null ? (
             /* ── Phase 1: paste notes ── */
             <>
-              <p style={{ margin: '0 0 10px', fontSize: 12, color: 'var(--color-text-dim, #94A3B8)' }}>
+              <p style={{ margin: '0 0 10px', fontSize: 12, color: '#6C6553' }}>
                 Paste your notes, action items, or anything discussed. The AI will extract tasks automatically.
               </p>
               <textarea
@@ -368,7 +368,7 @@ export function MeetingFollowUpPopup({ parentTask, onConfirm, onSkip }: Props) {
                   if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) void handleAnalyze()
                 }}
               />
-              <p style={{ margin: '6px 0 0', fontSize: 10.5, color: 'var(--color-text-muted, #4B5563)' }}>
+              <p style={{ margin: '6px 0 0', fontSize: 10.5, color: '#9B9180' }}>
                 ⌘↵ to analyze · Leave empty to skip
               </p>
               {error && (
@@ -399,7 +399,7 @@ export function MeetingFollowUpPopup({ parentTask, onConfirm, onSkip }: Props) {
                 gap: 8,
               }}>
                 {['#', 'Task', 'Box', 'Due', 'Owner'].map(h => (
-                  <span key={h} style={{ fontSize: 10, fontWeight: 600, color: 'var(--color-text-muted, #4B5563)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{h}</span>
+                  <span key={h} style={{ fontSize: 10, fontWeight: 600, color: '#9B9180', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{h}</span>
                 ))}
               </div>
 
@@ -422,7 +422,7 @@ export function MeetingFollowUpPopup({ parentTask, onConfirm, onSkip }: Props) {
                 style={{
                   alignSelf: 'flex-start', marginTop: 4,
                   background: 'transparent', border: 'none', cursor: 'pointer',
-                  fontSize: 11.5, color: 'var(--color-text-muted, #4B5563)', textDecoration: 'underline', padding: 0,
+                  fontSize: 11.5, color: '#9B9180', textDecoration: 'underline', padding: 0,
                 }}
               >
                 ← Re-paste notes

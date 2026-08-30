@@ -178,7 +178,7 @@ export function Step1Welcome({ data, onChange }: Props) {
             boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
             transition: 'border-color 0.15s',
           }}
-          onFocus={e => { e.target.style.borderColor = 'var(--color-accent,#7F77DD)' }}
+          onFocus={e => { e.target.style.borderColor = '#F5D14E' }}
           onBlur={e => { e.target.style.borderColor = '#E5E7EB' }}
         />
       </div>

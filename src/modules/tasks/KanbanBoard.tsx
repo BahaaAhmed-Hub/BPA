@@ -313,13 +313,13 @@ function KanbanColumnComp({ column, onOpen, onColDragStart, onColDragOver, onCol
               placeholder="Task title…"
               style={{
                 width: '100%', boxSizing: 'border-box',
-                background: '#F7F4EA', border: '1px solid var(--color-accent, #7F77DD)',
+                background: '#F7F4EA', border: '1px solid #F5D14E',
                 borderRadius: 6, padding: '6px 8px', fontSize: 12,
                 color: '#191712', outline: 'none', fontFamily: 'inherit',
               }}
             />
             <div style={{ display: 'flex', gap: 5, marginTop: 5 }}>
-              <button onClick={commitAdd} style={{ flex: 1, padding: '4px 0', fontSize: 11, fontWeight: 600, background: 'var(--color-accent, #7F77DD)', color: '#fff', border: 'none', borderRadius: 5, cursor: 'pointer' }}>
+              <button onClick={commitAdd} style={{ flex: 1, padding: '4px 0', fontSize: 11, fontWeight: 600, background: '#F5D14E', color: '#fff', border: 'none', borderRadius: 5, cursor: 'pointer' }}>
                 Add
               </button>
               <button onClick={() => { setAdding(false); setNewTitle('') }} style={{ padding: '4px 8px', fontSize: 11, background: 'transparent', color: '#6C6553', border: '1px solid #E8E1CE', borderRadius: 5, cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
@@ -639,9 +639,9 @@ export function KanbanBoard({ onOpen, hideCompleted = false, filteredTaskIds }: 
           {BOARD_TYPE_OPTIONS.map(opt => (
             <button key={opt.id} onClick={() => saveBoardType(opt.id)} style={{
               padding: '5px 13px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer',
-              background: boardType === opt.id ? 'var(--color-accent, #7F77DD)' : 'transparent',
+              background: boardType === opt.id ? '#F5D14E' : 'transparent',
               color:      boardType === opt.id ? '#fff' : '#6C6553',
-              border:     `1px solid ${boardType === opt.id ? 'var(--color-accent, #7F77DD)' : '#E8E1CE'}`,
+              border:     `1px solid ${boardType === opt.id ? '#F5D14E' : '#E8E1CE'}`,
               transition: 'all 0.12s',
             }}>
               {opt.label}

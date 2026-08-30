@@ -384,7 +384,7 @@ export function PlanningAssistant() {
             {/* Schedule Insights */}
             <div style={{ marginBottom: 20 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
-                <TrendingUp size={14} color="var(--color-accent, #7F77DD)" />
+                <TrendingUp size={14} color="#F5D14E" />
                 <span style={{ fontSize: 13, fontWeight: 700, color: '#191712' }}>Schedule Insights</span>
               </div>
               {loading ? (
@@ -453,7 +453,7 @@ export function PlanningAssistant() {
             {messages.map((m, i) => (
               <div key={i} style={{
                 padding: '8px 11px', borderRadius: 8, fontSize: 12, lineHeight: 1.5,
-                background: m.role === 'user' ? 'var(--color-accent, #7F77DD)' : '#F7F4EA',
+                background: m.role === 'user' ? '#F5D14E' : '#F7F4EA',
                 color: m.role === 'user' ? '#fff' : '#3D3926',
                 alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start',
                 maxWidth: '85%',
@@ -480,7 +480,7 @@ export function PlanningAssistant() {
                   placeholder="Describe your ideal schedule…"
                   style={{
                     width: '100%', background: '#F7F4EA',
-                    border: `1.5px solid ${chatInput ? 'var(--color-accent, #7F77DD)' : '#E8E1CE'}`,
+                    border: `1.5px solid ${chatInput ? '#F5D14E' : '#E8E1CE'}`,
                     borderRadius: 20, padding: '9px 36px 9px 14px',
                     color: '#191712', fontSize: 12.5, outline: 'none',
                     boxSizing: 'border-box', transition: 'border-color 0.15s',
@@ -492,7 +492,7 @@ export function PlanningAssistant() {
               </div>
               <button onClick={() => void sendChat()} disabled={!chatInput.trim() || chatLoading} style={{
                 width: 36, height: 36, borderRadius: '50%', border: 'none', cursor: chatInput.trim() ? 'pointer' : 'default',
-                background: chatInput.trim() ? 'var(--color-accent, #7F77DD)' : '#E8E1CE',
+                background: chatInput.trim() ? '#F5D14E' : '#E8E1CE',
                 color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
                 transition: 'background 0.15s', flexShrink: 0,
               }}>

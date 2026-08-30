@@ -181,7 +181,7 @@ export function QuadrantColumn({ quadrant, tasks, onOpen, groupBy = 'none', allG
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <div style={{ width: 8, height: 8, borderRadius: '50%', background: meta.color, flexShrink: 0 }} />
-          <h3 style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#191712', letterSpacing: '-0.2px', fontFamily: 'var(--sb-font-ui, "Instrument Sans", sans-serif)' }}>
+          <h3 style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#191712', letterSpacing: '-0.2px', fontFamily: 'var(--sb-font-ui)' }}>
             {meta.label}
           </h3>
           <span style={{

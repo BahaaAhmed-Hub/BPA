@@ -171,7 +171,7 @@ export function IconPicker({ value, onChange, size = 44, trigger }: Props) {
                 borderRadius: 8,
                 border: `1px solid ${'#F5D14E'}`,
                 background: 'rgba(245,209,78,0.12)',
-                color: '#F5D14E',
+                color: '#191712',
                 fontSize: 12, fontWeight: 600,
                 cursor: 'pointer', fontFamily: 'inherit',
                 whiteSpace: 'nowrap' as const,

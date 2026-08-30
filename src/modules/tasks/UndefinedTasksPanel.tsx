@@ -491,7 +491,7 @@ export function UndefinedTasksPanel({ onOpen, hideCompleted = false, groupBy = '
                 {aiLoading && <span style={{ fontSize: 10.5, color: '#9B9180' }}>Analyzing…</span>}
                 {!aiLoading && aiHint && (
                   <>
-                    {aiHint.icon && <span style={{ fontSize: 10.5, color: 'var(--color-text-dim, #94A3B8)' }}>Icon: {aiHint.icon}</span>}
+                    {aiHint.icon && <span style={{ fontSize: 10.5, color: '#6C6553' }}>Icon: {aiHint.icon}</span>}
                     {aiHint.companyId && (() => {
                       const co = companies.find(c => c.id === aiHint.companyId)
                       return co ? <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 3, background: `${co.color}18`, color: co.color, fontWeight: 600 }}>{co.name}</span> : null

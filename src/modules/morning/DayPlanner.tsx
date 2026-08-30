@@ -164,7 +164,7 @@ function Skel({ w = '100%', h = 12 }: { w?: string | number; h?: number }) {
   return (
     <div style={{
       width: w, height: h, borderRadius: 6,
-      background: 'linear-gradient(90deg, #E8E1CE 25%, var(--sb-accent-border) 50%, #E8E1CE 75%)',
+      background: 'linear-gradient(90deg, #E8E1CE 25%, #E8E1CE 50%, #E8E1CE 75%)',
       backgroundSize: '200% 100%',
       animation: 'shimmer 1.6s infinite',
     }} />

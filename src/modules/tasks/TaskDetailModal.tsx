@@ -305,7 +305,7 @@ export function TaskDetailModal({ task, onClose }: Props) {
                   <div key={a.id} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                     {activityIcon(a.type)}
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <span style={{ fontSize: 12, color: 'var(--color-text-dim, #C7CAE0)' }}>{a.description}</span>
+                      <span style={{ fontSize: 12, color: '#6C6553' }}>{a.description}</span>
                       <span style={{ fontSize: 10, color: '#6C6553', marginLeft: 8 }}>{relativeTime(a.timestamp)}</span>
                     </div>
                   </div>

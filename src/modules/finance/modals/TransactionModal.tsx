@@ -139,7 +139,7 @@ export function TransactionModal({ transaction, accounts, categories, onSave, on
           width: 46, height: 46,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           cursor: 'pointer',
-          color: active ? '#F5D14E' : '#6C6553',
+          color: active ? '#191712' : '#6C6553',
         }}
       >
         {children}
@@ -226,7 +226,7 @@ export function TransactionModal({ transaction, accounts, categories, onSave, on
               onClick={handleSave}
               style={{
                 background: 'none', border: 'none', cursor: 'pointer',
-                fontSize: 15, fontWeight: 700, color: '#F5D14E',
+                fontSize: 15, fontWeight: 700, color: '#191712',
                 fontFamily: 'inherit', padding: 0,
               }}
             >
@@ -504,7 +504,7 @@ export function TransactionModal({ transaction, accounts, categories, onSave, on
                 key={i}
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 4,
-                  background: 'rgba(245,209,78,0.12)', color: '#F5D14E',
+                  background: 'rgba(245,209,78,0.12)', color: '#3D3926',
                   border: `1px solid ${'#F5D14E'}44`,
                   borderRadius: 20, padding: '3px 8px', fontSize: 12,
                 }}
@@ -514,7 +514,7 @@ export function TransactionModal({ transaction, accounts, categories, onSave, on
                   onClick={() => setTags(prev => prev.filter((_, j) => j !== i))}
                   style={{
                     background: 'none', border: 'none', cursor: 'pointer',
-                    color: '#F5D14E', fontSize: 10, padding: 0, lineHeight: 1,
+                    color: '#6C6553', fontSize: 10, padding: 0, lineHeight: 1,
                     display: 'flex', alignItems: 'center',
                   }}
                 >✕</button>

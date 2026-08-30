@@ -30,7 +30,7 @@ interface Props {
 }
 
 const inp: React.CSSProperties = {
-  background: 'var(--color-bg,#F7F4EA)', border: '1px solid var(--color-border,#E8E1CE)',
+  background: 'var(--color-bg,#F7F4EA)', border: '1px solid #E8E1CE',
   borderRadius: 7, padding: '8px 12px', color: 'var(--color-text,#E8EAF6)',
   fontSize: 13, outline: 'none', boxSizing: 'border-box',
 }
@@ -81,7 +81,7 @@ export function Step4Habits({ data, onChange }: Props) {
             <button key={t.id} onClick={() => toggleTemplate(t.id)} style={{
               padding: '12px 10px', borderRadius: 10, cursor: 'pointer', position: 'relative',
               background: selected ? `${t.color}18` : 'var(--color-surface,#FFFFFF)',
-              border: `1.5px solid ${selected ? t.color : 'var(--color-border,#E8E1CE)'}`,
+              border: `1.5px solid ${selected ? t.color : '#E8E1CE'}`,
               textAlign: 'left', transition: 'all 0.15s',
             }}>
               {selected && (
@@ -104,16 +104,16 @@ export function Step4Habits({ data, onChange }: Props) {
 
       {/* Divider */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-        <div style={{ flex: 1, height: 1, background: 'var(--color-border,#E8E1CE)' }} />
+        <div style={{ flex: 1, height: 1, background: '#E8E1CE' }} />
         <span style={{ fontSize: 11.5, color: 'var(--color-text-muted,#6B7280)' }}>or add your own</span>
-        <div style={{ flex: 1, height: 1, background: 'var(--color-border,#E8E1CE)' }} />
+        <div style={{ flex: 1, height: 1, background: '#E8E1CE' }} />
       </div>
 
       {/* Custom habits */}
       {data.customHabits.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
           {data.customHabits.map((h, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 8, background: 'var(--color-surface,#FFFFFF)', border: '1px solid var(--color-border,#E8E1CE)' }}>
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 8, background: 'var(--color-surface,#FFFFFF)', border: '1px solid #E8E1CE' }}>
               <span style={{ fontSize: 18 }}>{h.emoji}</span>
               <div style={{ width: 10, height: 10, borderRadius: '50%', background: h.color, flexShrink: 0 }} />
               <span style={{ flex: 1, fontSize: 13, color: 'var(--color-text,#E8EAF6)' }}>{h.name}</span>
@@ -127,16 +127,16 @@ export function Step4Habits({ data, onChange }: Props) {
       )}
 
       {addingCustom ? (
-        <div style={{ padding: 16, borderRadius: 10, background: 'var(--color-surface,#FFFFFF)', border: '1px solid var(--color-border,#E8E1CE)' }}>
+        <div style={{ padding: 16, borderRadius: 10, background: 'var(--color-surface,#FFFFFF)', border: '1px solid #E8E1CE' }}>
           <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
             <input value={cEmoji} onChange={e => setCEmoji(e.target.value)} placeholder="💡" style={{ ...inp, width: 56, textAlign: 'center', fontSize: 18 }} />
             <input value={cName} onChange={e => setCName(e.target.value)} placeholder="Habit name" style={{ ...inp, flex: 1 }} autoFocus />
           </div>
           <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-            <button onClick={() => setCType('boolean')} style={{ flex: 1, padding: '7px', borderRadius: 7, border: `1.5px solid ${cType === 'boolean' ? 'var(--color-accent,#7F77DD)' : 'var(--color-border,#E8E1CE)'}`, background: cType === 'boolean' ? 'rgba(127,119,221,0.1)' : 'transparent', color: 'var(--color-text,#E8EAF6)', fontSize: 12.5, cursor: 'pointer' }}>
+            <button onClick={() => setCType('boolean')} style={{ flex: 1, padding: '7px', borderRadius: 7, border: `1.5px solid ${cType === 'boolean' ? '#F5D14E' : '#E8E1CE'}`, background: cType === 'boolean' ? 'rgba(127,119,221,0.1)' : 'transparent', color: 'var(--color-text,#E8EAF6)', fontSize: 12.5, cursor: 'pointer' }}>
               ✓ Boolean
             </button>
-            <button onClick={() => setCType('quantity')} style={{ flex: 1, padding: '7px', borderRadius: 7, border: `1.5px solid ${cType === 'quantity' ? 'var(--color-accent,#7F77DD)' : 'var(--color-border,#E8E1CE)'}`, background: cType === 'quantity' ? 'rgba(127,119,221,0.1)' : 'transparent', color: 'var(--color-text,#E8EAF6)', fontSize: 12.5, cursor: 'pointer' }}>
+            <button onClick={() => setCType('quantity')} style={{ flex: 1, padding: '7px', borderRadius: 7, border: `1.5px solid ${cType === 'quantity' ? '#F5D14E' : '#E8E1CE'}`, background: cType === 'quantity' ? 'rgba(127,119,221,0.1)' : 'transparent', color: 'var(--color-text,#E8EAF6)', fontSize: 12.5, cursor: 'pointer' }}>
               # Quantity
             </button>
           </div>
@@ -148,7 +148,7 @@ export function Step4Habits({ data, onChange }: Props) {
           )}
           <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
             {(['daily','weekdays','weekly'] as const).map(f => (
-              <button key={f} onClick={() => setCFreq(f)} style={{ flex: 1, padding: '6px', borderRadius: 7, border: `1.5px solid ${cFreq === f ? 'var(--color-accent,#7F77DD)' : 'var(--color-border,#E8E1CE)'}`, background: cFreq === f ? 'rgba(127,119,221,0.1)' : 'transparent', color: 'var(--color-text,#E8EAF6)', fontSize: 12, cursor: 'pointer', textTransform: 'capitalize' }}>
+              <button key={f} onClick={() => setCFreq(f)} style={{ flex: 1, padding: '6px', borderRadius: 7, border: `1.5px solid ${cFreq === f ? '#F5D14E' : '#E8E1CE'}`, background: cFreq === f ? 'rgba(127,119,221,0.1)' : 'transparent', color: 'var(--color-text,#E8EAF6)', fontSize: 12, cursor: 'pointer', textTransform: 'capitalize' }}>
                 {f}
               </button>
             ))}
@@ -159,14 +159,14 @@ export function Step4Habits({ data, onChange }: Props) {
             ))}
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={addCustom} style={{ padding: '8px 18px', borderRadius: 8, background: 'var(--color-accent,#7F77DD)', color: '#fff', fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer' }}>Add</button>
+            <button onClick={addCustom} style={{ padding: '8px 18px', borderRadius: 8, background: '#F5D14E', color: '#fff', fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer' }}>Add</button>
             <button onClick={() => setAddingCustom(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted,#6B7280)', fontSize: 13 }}>Cancel</button>
           </div>
         </div>
       ) : (
         <button onClick={() => setAddingCustom(true)} style={{
           display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 8,
-          background: 'transparent', border: '1px dashed var(--color-border,#E8E1CE)',
+          background: 'transparent', border: '1px dashed #E8E1CE',
           color: 'var(--color-text-muted,#6B7280)', fontSize: 13, cursor: 'pointer',
           width: '100%', justifyContent: 'center',
         }}>

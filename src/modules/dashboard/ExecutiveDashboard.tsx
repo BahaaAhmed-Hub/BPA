@@ -57,7 +57,7 @@ function MetricCard({
         }}>
           {value}
         </div>
-        <div style={{ fontSize: 12.5, color: 'var(--color-text-dim, #94A3B8)', marginTop: 4, fontWeight: 400 }}>
+        <div style={{ fontSize: 12.5, color: '#6C6553', marginTop: 4, fontWeight: 400 }}>
           {label}
         </div>
       </div>
@@ -195,7 +195,7 @@ export function ExecutiveDashboard() {
             }}>
               {greeting}
             </h2>
-            <p style={{ margin: '4px 0 0', fontSize: 13.5, color: 'var(--color-text-dim, #94A3B8)' }}>
+            <p style={{ margin: '4px 0 0', fontSize: 13.5, color: '#6C6553' }}>
               Here's what demands your attention today.
             </p>
           </div>
@@ -204,9 +204,9 @@ export function ExecutiveDashboard() {
             style={{
               display: 'flex', alignItems: 'center', gap: 7,
               padding: '9px 18px', borderRadius: 9,
-              background: 'var(--color-accent-fill, rgba(30,64,175,0.15))',
-              border: '1px solid var(--color-accent, #1E40AF)40',
-              color: 'var(--color-accent, #1E40AF)', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+              background: 'rgba(245,209,78,0.12)',
+              border: '1px solid #F5D14E40',
+              color: '#6C6553', fontSize: 13, fontWeight: 600, cursor: 'pointer',
             }}
           >
             <CheckSquare size={14} /> Manage Tasks
@@ -292,7 +292,7 @@ export function ExecutiveDashboard() {
             borderRadius: 12, padding: '20px 22px',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-              <h3 style={{ margin: 0, fontSize: 13, fontWeight: 600, color: 'var(--color-text-dim, #94A3B8)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+              <h3 style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#6C6553', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
                 Tasks by Company
               </h3>
               <button onClick={() => setModule('tasks')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6C6553', display: 'flex', alignItems: 'center', gap: 4, fontSize: 11 }}>
@@ -316,7 +316,7 @@ export function ExecutiveDashboard() {
               border: '1px solid #E8E1CE',
               borderRadius: 12, padding: '20px 22px',
             }}>
-              <h3 style={{ margin: '0 0 14px', fontSize: 13, fontWeight: 600, color: 'var(--color-text-dim, #94A3B8)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+              <h3 style={{ margin: '0 0 14px', fontSize: 13, fontWeight: 600, color: '#6C6553', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
                 Eisenhower Matrix
               </h3>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
@@ -339,7 +339,7 @@ export function ExecutiveDashboard() {
                       <div style={{ fontSize: 22, fontWeight: 700, color, fontFamily: "'Cabinet Grotesk', sans-serif" }}>
                         {count}
                       </div>
-                      <div style={{ fontSize: 11.5, color: 'var(--color-text-dim, #94A3B8)' }}>{label}</div>
+                      <div style={{ fontSize: 11.5, color: '#6C6553' }}>{label}</div>
                     </div>
                   )
                 })}
@@ -352,7 +352,7 @@ export function ExecutiveDashboard() {
               border: '1px solid #E8E1CE',
               borderRadius: 12, padding: '16px 18px',
             }}>
-              <h3 style={{ margin: '0 0 12px', fontSize: 11, fontWeight: 600, color: 'var(--color-text-dim, #94A3B8)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+              <h3 style={{ margin: '0 0 12px', fontSize: 11, fontWeight: 600, color: '#6C6553', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
                 Quick Access
               </h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>

@@ -486,7 +486,7 @@ export function InboxModule() {
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 3 }}>
-                    <span style={{ fontSize: 13, fontWeight: isRead ? 400 : 700, color: isRead ? 'var(--color-text-dim, #94A3B8)' : '#191712', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <span style={{ fontSize: 13, fontWeight: isRead ? 400 : 700, color: isRead ? '#6C6553' : '#191712', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {email.fromName}
                     </span>
                     {classMeta && (
@@ -498,7 +498,7 @@ export function InboxModule() {
                       <RefreshCw size={10} color="#7F77DD" style={{ animation: 'spin 1s linear infinite', flexShrink: 0 }} />
                     )}
                   </div>
-                  <p style={{ margin: '0 0 3px', fontSize: 12.5, color: isRead ? 'var(--color-text-dim, #94A3B8)' : '#191712', fontWeight: isRead ? 400 : 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <p style={{ margin: '0 0 3px', fontSize: 12.5, color: isRead ? '#6C6553' : '#191712', fontWeight: isRead ? 400 : 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {email.subject}
                   </p>
                   <p style={{ margin: 0, fontSize: 11.5, color: '#6C6553', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -567,7 +567,7 @@ export function InboxModule() {
       return (
         <div style={{ background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 12, padding: '32px', textAlign: 'center' }}>
           <p style={{ margin: '0 0 14px', fontSize: 13, color: '#FFFFFF' }}>{fetchError}</p>
-          <button onClick={() => void loadEmails()} style={{ padding: '7px 18px', borderRadius: 8, background: 'var(--sb-accent-tint)', border: '1px solid #1E40AF30', color: '#7F77DD', fontSize: 12, cursor: 'pointer' }}>
+          <button onClick={() => void loadEmails()} style={{ padding: '7px 18px', borderRadius: 8, background: 'rgba(245,209,78,0.12)', border: '1px solid #1E40AF30', color: '#7F77DD', fontSize: 12, cursor: 'pointer' }}>
             Retry
           </button>
         </div>
@@ -594,7 +594,7 @@ export function InboxModule() {
                 onClick={() => void handleArchive(selectedEmail)}
                 disabled={archiving === selectedEmail.id}
                 title="Archive"
-                style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 6, background: 'transparent', border: '1px solid #E8E1CE', color: 'var(--color-text-dim, #94A3B8)', fontSize: 11.5, cursor: 'pointer', opacity: archiving === selectedEmail.id ? 0.5 : 1 }}
+                style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 6, background: 'transparent', border: '1px solid #E8E1CE', color: '#6C6553', fontSize: 11.5, cursor: 'pointer', opacity: archiving === selectedEmail.id ? 0.5 : 1 }}
               >
                 <Archive size={12} /> Archive
               </button>
@@ -602,13 +602,13 @@ export function InboxModule() {
             {selectedEmail.to && (
               <div style={{ display: 'flex', gap: 6, alignItems: 'baseline' }}>
                 <span style={{ fontSize: 10.5, fontWeight: 600, color: '#6C6553', minWidth: 18 }}>To</span>
-                <span style={{ fontSize: 11.5, color: 'var(--color-text-dim, #94A3B8)', wordBreak: 'break-word' }}>{selectedEmail.to}</span>
+                <span style={{ fontSize: 11.5, color: '#6C6553', wordBreak: 'break-word' }}>{selectedEmail.to}</span>
               </div>
             )}
             {selectedEmail.cc && (
               <div style={{ display: 'flex', gap: 6, alignItems: 'baseline' }}>
                 <span style={{ fontSize: 10.5, fontWeight: 600, color: '#6C6553', minWidth: 18 }}>CC</span>
-                <span style={{ fontSize: 11.5, color: 'var(--color-text-dim, #94A3B8)', wordBreak: 'break-word' }}>{selectedEmail.cc}</span>
+                <span style={{ fontSize: 11.5, color: '#6C6553', wordBreak: 'break-word' }}>{selectedEmail.cc}</span>
               </div>
             )}
           </div>
@@ -631,7 +631,7 @@ export function InboxModule() {
                       </div>
                       {m.htmlBody
                         ? <EmailBodyFrame html={m.htmlBody} />
-                        : <p style={{ margin: 0, fontSize: 12.5, color: 'var(--color-text-dim, #94A3B8)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{m.body}</p>
+                        : <p style={{ margin: 0, fontSize: 12.5, color: '#6C6553', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{m.body}</p>
                       }
                     </div>
                   ))}
@@ -660,7 +660,7 @@ export function InboxModule() {
         ) : selectedTriage?.error ? (
           <div style={{ background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 12, padding: '20px 24px' }}>
             <p style={{ margin: '0 0 12px', fontSize: 13, color: '#FFFFFF' }}>{selectedTriage.error}</p>
-            <button onClick={() => void handleTriage(selectedEmail)} style={{ padding: '7px 14px', borderRadius: 7, background: 'var(--sb-accent-tint)', border: '1px solid #1E40AF30', color: '#7F77DD', fontSize: 12, cursor: 'pointer' }}>
+            <button onClick={() => void handleTriage(selectedEmail)} style={{ padding: '7px 14px', borderRadius: 7, background: 'rgba(245,209,78,0.12)', border: '1px solid #1E40AF30', color: '#7F77DD', fontSize: 12, cursor: 'pointer' }}>
               Try again
             </button>
           </div>
@@ -703,12 +703,12 @@ export function InboxModule() {
               return (
                 <div style={{ background: '#F7F4EA', border: '1px solid #E8E1CE', borderRadius: 8, padding: '14px 16px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                    <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--color-text-dim, #94A3B8)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: '#6C6553', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                       Reply to {selectedEmail.fromName}
                     </span>
                     <button
                       onClick={() => handleCopyReply(selectedEmail.id, draft)}
-                      style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 9px', borderRadius: 5, background: 'transparent', border: '1px solid #E8E1CE', color: 'var(--color-text-dim, #94A3B8)', fontSize: 11, cursor: 'pointer' }}
+                      style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 9px', borderRadius: 5, background: 'transparent', border: '1px solid #E8E1CE', color: '#6C6553', fontSize: 11, cursor: 'pointer' }}
                     >
                       {selectedTriage.copied ? <><CheckCheck size={10} /><span>Copied</span></> : <><Copy size={10} /><span>Copy</span></>}
                     </button>
@@ -832,7 +832,7 @@ export function InboxModule() {
               <textarea value={composeBody} onChange={e => setComposeBody(e.target.value)} placeholder="Write your message…" rows={6}
                 style={{ padding: '10px 12px', borderRadius: 7, resize: 'vertical', background: '#F7F4EA', border: '1px solid #E8E1CE', color: '#191712', fontSize: 13, lineHeight: 1.6, fontFamily: 'inherit', outline: 'none' }} />
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-                <button onClick={() => setComposing(false)} style={{ padding: '7px 14px', borderRadius: 7, background: 'transparent', border: '1px solid #E8E1CE', color: 'var(--color-text-dim, #94A3B8)', fontSize: 12, cursor: 'pointer' }}>Cancel</button>
+                <button onClick={() => setComposing(false)} style={{ padding: '7px 14px', borderRadius: 7, background: 'transparent', border: '1px solid #E8E1CE', color: '#6C6553', fontSize: 12, cursor: 'pointer' }}>Cancel</button>
                 <button
                   onClick={() => void handleComposeSend()}
                   disabled={!composeTo.trim() || !composeSubject.trim() || !composeBody.trim() || composeSending}

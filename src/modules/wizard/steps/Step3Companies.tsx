@@ -18,7 +18,7 @@ interface Props {
 
 const inp: React.CSSProperties = {
   background: 'var(--color-bg,#F7F4EA)',
-  border: '1px solid var(--color-border,#E8E1CE)',
+  border: '1px solid #E8E1CE',
   borderRadius: 7, padding: '8px 12px',
   color: 'var(--color-text,#E8EAF6)',
   fontSize: 13, outline: 'none', width: '100%', boxSizing: 'border-box',
@@ -59,7 +59,7 @@ export function Step3Companies({ data, onChange }: Props) {
               display: 'flex', alignItems: 'center', gap: 10,
               padding: '10px 14px', borderRadius: 10,
               background: 'var(--color-surface,#FFFFFF)',
-              border: '1px solid var(--color-border,#E8E1CE)',
+              border: '1px solid #E8E1CE',
             }}>
               <div style={{ width: 14, height: 14, borderRadius: '50%', background: co.color, flexShrink: 0 }} />
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -80,7 +80,7 @@ export function Step3Companies({ data, onChange }: Props) {
       </div>
 
       {adding ? (
-        <div style={{ padding: '16px', borderRadius: 10, background: 'var(--color-surface,#FFFFFF)', border: '1px solid var(--color-border,#E8E1CE)', marginBottom: 12 }}>
+        <div style={{ padding: '16px', borderRadius: 10, background: 'var(--color-surface,#FFFFFF)', border: '1px solid #E8E1CE', marginBottom: 12 }}>
           <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
             <input value={name} onChange={e => setName(e.target.value)} placeholder="Company name" style={inp} onKeyDown={e => e.key === 'Enter' && addCompany()} autoFocus />
             <input value={domain} onChange={e => setDomain(e.target.value)} placeholder="e.g. acme.com" style={{ ...inp, width: 160 }} />
@@ -101,7 +101,7 @@ export function Step3Companies({ data, onChange }: Props) {
             </select>
           )}
           <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={addCompany} style={{ padding: '8px 18px', borderRadius: 8, background: 'var(--color-accent,#7F77DD)', color: '#fff', fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer' }}>
+            <button onClick={addCompany} style={{ padding: '8px 18px', borderRadius: 8, background: '#F5D14E', color: '#fff', fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer' }}>
               Add
             </button>
             <button onClick={() => setAdding(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted,#6B7280)', fontSize: 13 }}>
@@ -112,7 +112,7 @@ export function Step3Companies({ data, onChange }: Props) {
       ) : (
         <button onClick={() => setAdding(true)} style={{
           display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 8,
-          background: 'transparent', border: '1px dashed var(--color-border,#E8E1CE)',
+          background: 'transparent', border: '1px dashed #E8E1CE',
           color: 'var(--color-text-muted,#6B7280)', fontSize: 13, cursor: 'pointer',
           width: '100%', justifyContent: 'center',
         }}>

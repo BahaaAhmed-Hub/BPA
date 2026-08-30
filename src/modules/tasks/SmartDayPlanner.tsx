@@ -186,10 +186,10 @@ function EventPopup({ event, color, onClose }: { event: GCalEvent; color: string
           }}>🎥 Join meeting</a>
         )}
         {event.location && (
-          <div style={{ fontSize: 12, color: 'var(--color-text-dim, #C7CAE0)' }}>📍 {event.location}</div>
+          <div style={{ fontSize: 12, color: '#6C6553' }}>📍 {event.location}</div>
         )}
         {attendees.length > 0 && (
-          <div style={{ fontSize: 12, color: 'var(--color-text-dim, #C7CAE0)' }}>
+          <div style={{ fontSize: 12, color: '#6C6553' }}>
             👥 {attendees.slice(0, 4).map(a => a.displayName ?? a.email).join(', ')}
             {attendees.length > 4 && <span style={{ color: '#9B9180' }}> +{attendees.length - 4} more</span>}
           </div>
