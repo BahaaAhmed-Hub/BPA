@@ -56,7 +56,7 @@ function TaskRow({ draft, index, expanded, users, onToggle, onChange, onDelete }
   const q        = Q_OPTIONS.find(o => o.value === draft.quadrant)
 
   const inp: React.CSSProperties = {
-    background: 'var(--color-bg, #0D0F1A)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 6,
+    background: 'var(--sb-page)', border: '1px solid var(--sb-border)', borderRadius: 6,
     color: 'var(--color-text, #E8EAF6)', fontSize: 12, padding: '5px 8px', outline: 'none',
     fontFamily: 'inherit',
   }
@@ -64,8 +64,8 @@ function TaskRow({ draft, index, expanded, users, onToggle, onChange, onDelete }
   return (
     <div style={{
       borderRadius: 10,
-      border: `1px solid ${expanded ? '#353A60' : 'var(--color-border, #252A3E)'}`,
-      background: expanded ? 'var(--color-surface2, #1A1F38)' : 'var(--color-surface, #161929)',
+      border: `1px solid ${expanded ? '#353A60' : 'var(--sb-border)'}`,
+      background: expanded ? 'var(--color-surface2, #1A1F38)' : 'var(--sb-card)',
       overflow: 'hidden',
       transition: 'all 0.15s',
       opacity: draft.deleted ? 0.35 : 1,
@@ -81,7 +81,7 @@ function TaskRow({ draft, index, expanded, users, onToggle, onChange, onDelete }
         {/* Row number */}
         <span style={{
           width: 18, height: 18, borderRadius: '50%', flexShrink: 0,
-          background: 'var(--color-surface2, #252A3E)', fontSize: 10, fontWeight: 700,
+          background: 'var(--sb-field)', fontSize: 10, fontWeight: 700,
           color: 'var(--color-text-muted, #6B7280)', display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
           {index + 1}
@@ -152,7 +152,7 @@ function TaskRow({ draft, index, expanded, users, onToggle, onChange, onDelete }
                     style={{
                       padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: active ? 700 : 500,
                       background: active ? `${opt.color}22` : 'transparent',
-                      border: `1px solid ${active ? opt.color + '60' : 'var(--color-border, #252A3E)'}`,
+                      border: `1px solid ${active ? opt.color + '60' : 'var(--sb-border)'}`,
                       color: active ? opt.color : 'var(--color-text-muted, #6B7280)',
                       cursor: 'pointer', transition: 'all 0.1s',
                     }}
@@ -196,7 +196,7 @@ function TaskRow({ draft, index, expanded, users, onToggle, onChange, onDelete }
               onClick={onDelete}
               style={{
                 display: 'flex', alignItems: 'center', gap: 5,
-                background: 'transparent', border: '1px solid var(--color-border, #252A3E)',
+                background: 'transparent', border: '1px solid var(--sb-border)',
                 borderRadius: 6, padding: '4px 10px', color: 'var(--color-text-muted, #6B7280)',
                 fontSize: 11.5, cursor: 'pointer',
               }}
@@ -303,8 +303,8 @@ export function MeetingFollowUpPopup({ parentTask, onConfirm, onSkip }: Props) {
         zIndex: 1001,
         width: 560, maxWidth: 'calc(100vw - 32px)',
         maxHeight: 'calc(100vh - 64px)',
-        background: 'var(--color-surface, #161929)',
-        border: '1px solid var(--color-border, #252A3E)',
+        background: 'var(--sb-card)',
+        border: '1px solid var(--sb-border)',
         borderRadius: 16,
         display: 'flex', flexDirection: 'column',
         overflow: 'hidden',
@@ -314,7 +314,7 @@ export function MeetingFollowUpPopup({ parentTask, onConfirm, onSkip }: Props) {
         {/* Header */}
         <div style={{
           padding: '16px 20px 14px',
-          borderBottom: '1px solid var(--color-border, #252A3E)',
+          borderBottom: '1px solid var(--sb-border)',
           display: 'flex', alignItems: 'flex-start', gap: 10,
         }}>
           <div style={{
@@ -359,7 +359,7 @@ export function MeetingFollowUpPopup({ parentTask, onConfirm, onSkip }: Props) {
                 placeholder={'- Follow up with Ali on the API proposal\n- Schedule deep dive on Q3 metrics\n- John to send updated deck by Friday'}
                 style={{
                   width: '100%', minHeight: 140, resize: 'vertical',
-                  background: 'var(--color-bg, #0D0F1A)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 8,
+                  background: 'var(--sb-page)', border: '1px solid var(--sb-border)', borderRadius: 8,
                   color: 'var(--color-text, #E8EAF6)', fontSize: 12.5, padding: '10px 12px',
                   outline: 'none', fontFamily: 'inherit', lineHeight: 1.5,
                   boxSizing: 'border-box',
@@ -434,12 +434,12 @@ export function MeetingFollowUpPopup({ parentTask, onConfirm, onSkip }: Props) {
         {/* Footer */}
         <div style={{
           padding: '12px 20px',
-          borderTop: '1px solid var(--color-border, #252A3E)',
+          borderTop: '1px solid var(--sb-border)',
           display: 'flex', gap: 8, justifyContent: 'flex-end', alignItems: 'center',
         }}>
           <button onClick={onSkip} style={{
             padding: '7px 16px', borderRadius: 8, fontSize: 12.5,
-            background: 'transparent', border: '1px solid var(--color-border, #252A3E)',
+            background: 'transparent', border: '1px solid var(--sb-border)',
             color: 'var(--color-text-muted, #6B7280)', cursor: 'pointer',
           }}>
             Skip
@@ -451,7 +451,7 @@ export function MeetingFollowUpPopup({ parentTask, onConfirm, onSkip }: Props) {
               disabled={loading}
               style={{
                 padding: '7px 16px', borderRadius: 8, fontSize: 12.5, fontWeight: 600,
-                background: loading ? 'var(--color-surface2, #252A3E)' : 'var(--color-accent-fill)',
+                background: loading ? 'var(--sb-field)' : 'var(--color-accent-fill)',
                 border: '1px solid #7F77DD50',
                 color: loading ? 'var(--color-text-muted, #6B7280)' : 'var(--color-accent)',
                 cursor: loading ? 'not-allowed' : 'pointer',
@@ -467,8 +467,8 @@ export function MeetingFollowUpPopup({ parentTask, onConfirm, onSkip }: Props) {
               disabled={activeCount === 0}
               style={{
                 padding: '7px 18px', borderRadius: 8, fontSize: 12.5, fontWeight: 600,
-                background: activeCount > 0 ? '#1D9E7522' : 'var(--color-surface2, #252A3E)',
-                border: `1px solid ${activeCount > 0 ? '#1D9E7550' : 'var(--color-border, #252A3E)'}`,
+                background: activeCount > 0 ? '#1D9E7522' : 'var(--sb-field)',
+                border: `1px solid ${activeCount > 0 ? '#1D9E7550' : 'var(--sb-border)'}`,
                 color: activeCount > 0 ? '#1D9E75' : 'var(--color-text-muted, #6B7280)',
                 cursor: activeCount > 0 ? 'pointer' : 'not-allowed',
                 display: 'flex', alignItems: 'center', gap: 6,

@@ -17,8 +17,8 @@ interface Props {
 }
 
 const inp: React.CSSProperties = {
-  background: 'var(--color-bg,#0D0F1A)',
-  border: '1px solid var(--color-border,#252A3E)',
+  background: 'var(--color-bg,var(--sb-page))',
+  border: '1px solid var(--color-border,var(--sb-border))',
   borderRadius: 7, padding: '8px 12px',
   color: 'var(--color-text,#E8EAF6)',
   fontSize: 13, outline: 'none', width: '100%', boxSizing: 'border-box',
@@ -58,8 +58,8 @@ export function Step3Companies({ data, onChange }: Props) {
             <div key={co.id} style={{
               display: 'flex', alignItems: 'center', gap: 10,
               padding: '10px 14px', borderRadius: 10,
-              background: 'var(--color-surface,#161929)',
-              border: '1px solid var(--color-border,#252A3E)',
+              background: 'var(--color-surface,var(--sb-card))',
+              border: '1px solid var(--color-border,var(--sb-border))',
             }}>
               <div style={{ width: 14, height: 14, borderRadius: '50%', background: co.color, flexShrink: 0 }} />
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -80,7 +80,7 @@ export function Step3Companies({ data, onChange }: Props) {
       </div>
 
       {adding ? (
-        <div style={{ padding: '16px', borderRadius: 10, background: 'var(--color-surface,#161929)', border: '1px solid var(--color-border,#252A3E)', marginBottom: 12 }}>
+        <div style={{ padding: '16px', borderRadius: 10, background: 'var(--color-surface,var(--sb-card))', border: '1px solid var(--color-border,var(--sb-border))', marginBottom: 12 }}>
           <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
             <input value={name} onChange={e => setName(e.target.value)} placeholder="Company name" style={inp} onKeyDown={e => e.key === 'Enter' && addCompany()} autoFocus />
             <input value={domain} onChange={e => setDomain(e.target.value)} placeholder="e.g. acme.com" style={{ ...inp, width: 160 }} />
@@ -112,7 +112,7 @@ export function Step3Companies({ data, onChange }: Props) {
       ) : (
         <button onClick={() => setAdding(true)} style={{
           display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 8,
-          background: 'transparent', border: '1px dashed var(--color-border,#252A3E)',
+          background: 'transparent', border: '1px dashed var(--color-border,var(--sb-border))',
           color: 'var(--color-text-muted,#6B7280)', fontSize: 13, cursor: 'pointer',
           width: '100%', justifyContent: 'center',
         }}>

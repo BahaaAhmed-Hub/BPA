@@ -159,13 +159,13 @@ function EventPopup({ event, color, onClose }: { event: GCalEvent; color: string
     <div ref={ref} style={{
       position: 'fixed', zIndex: 9999, top: '50%', left: '50%',
       transform: 'translate(-50%, -50%)',
-      background: 'var(--color-surface, #161929)',
-      border: '1px solid var(--color-border, #252A3E)',
+      background: 'var(--sb-card)',
+      border: '1px solid var(--sb-border)',
       borderRadius: 14, width: 340, maxHeight: '80vh', overflowY: 'auto',
       boxShadow: '0 24px 80px rgba(0,0,0,0.6)',
     }}>
       {/* Color bar + title */}
-      <div style={{ borderBottom: '1px solid var(--color-border, #252A3E)', padding: '14px 16px 12px', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+      <div style={{ borderBottom: '1px solid var(--sb-border)', padding: '14px 16px 12px', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
         <div style={{ width: 4, minHeight: 24, borderRadius: 2, background: color, flexShrink: 0, marginTop: 2 }} />
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-text, #E8EAF6)', lineHeight: 1.3 }}>{event.summary ?? '(No title)'}</div>
@@ -195,7 +195,7 @@ function EventPopup({ event, color, onClose }: { event: GCalEvent; color: string
           </div>
         )}
         {notes && (
-          <div style={{ fontSize: 11, color: 'var(--color-text-muted, #6B7280)', lineHeight: 1.5, borderTop: '1px solid var(--color-border, #252A3E)', paddingTop: 8, whiteSpace: 'pre-wrap' }}>
+          <div style={{ fontSize: 11, color: 'var(--color-text-muted, #6B7280)', lineHeight: 1.5, borderTop: '1px solid var(--sb-border)', paddingTop: 8, whiteSpace: 'pre-wrap' }}>
             {notes.slice(0, 300)}{notes.length > 300 ? '…' : ''}
           </div>
         )}

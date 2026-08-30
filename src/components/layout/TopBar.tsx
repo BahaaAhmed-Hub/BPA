@@ -26,8 +26,8 @@ export function TopBar({ title, subtitle }: TopBarProps) {
     <header
       style={{
         height: 64,
-        background: 'var(--color-surface, #161929)',
-        borderBottom: '1px solid var(--color-border, #252A3E)',
+        background: 'var(--sb-card)',
+        borderBottom: '1px solid var(--sb-border)',
         display: 'flex',
         alignItems: 'center',
         padding: '0 24px',
@@ -86,7 +86,7 @@ export function TopBar({ title, subtitle }: TopBarProps) {
             onMouseEnter={e => {
               const el = e.currentTarget as HTMLElement
               el.style.background = 'rgba(255,255,255,0.05)'
-              el.style.borderColor = 'var(--color-border, #252A3E)'
+              el.style.borderColor = 'var(--sb-border)'
               el.style.color = 'var(--color-text, #E8EAF6)'
             }}
             onMouseLeave={e => {
@@ -121,8 +121,8 @@ export function TopBar({ title, subtitle }: TopBarProps) {
         {menuOpen && (
           <>
             <div onClick={() => setMenuOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 40 }} />
-            <div style={{ position: 'absolute', right: 0, top: 40, zIndex: 50, background: 'var(--color-surface, #161929)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 10, padding: 8, minWidth: 200, boxShadow: '0 8px 24px rgba(0,0,0,0.5)' }}>
-              <div style={{ padding: '8px 12px 10px', borderBottom: '1px solid var(--color-border, #252A3E)', marginBottom: 6 }}>
+            <div style={{ position: 'absolute', right: 0, top: 40, zIndex: 50, background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 10, padding: 8, minWidth: 200, boxShadow: '0 8px 24px rgba(0,0,0,0.5)' }}>
+              <div style={{ padding: '8px 12px 10px', borderBottom: '1px solid var(--sb-border)', marginBottom: 6 }}>
                 <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: 'var(--color-text, #E8EAF6)' }}>{user?.name ?? 'User'}</p>
                 <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--color-text-dim, #94A3B8)' }}>{user?.email}</p>
               </div>

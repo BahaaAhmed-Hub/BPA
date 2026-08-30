@@ -108,8 +108,8 @@ function KanbanCard({ task, onOpen, overlay = false }: { task: Task; onOpen: () 
     transform: overlay ? undefined : CSS.Translate.toString(transform),
     opacity:   isDragging ? 0.35 : 1,
     cursor:    isDragging ? 'grabbing' : 'grab',
-    background:   'var(--color-surface, #161929)',
-    border:       `1px solid ${task.urgent ? 'rgba(224,82,82,0.5)' : 'var(--color-border, #252A3E)'}`,
+    background:   'var(--sb-card)',
+    border:       `1px solid ${task.urgent ? 'rgba(224,82,82,0.5)' : 'var(--sb-border)'}`,
     borderRadius: 10,
     padding:      '12px 13px',
     marginBottom: 8,
@@ -146,7 +146,7 @@ function KanbanCard({ task, onOpen, overlay = false }: { task: Task; onOpen: () 
           {task.completed && <Check size={9} color="#fff" strokeWidth={3} />}
         </button>
         <div style={{
-          flex: 1, fontSize: 12.5, fontWeight: 600, color: 'var(--color-text, #E8EAF6)',
+          flex: 1, fontSize: 12.5, fontWeight: 600, color: 'var(--sb-ink-1)',
           lineHeight: 1.45,
           display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
           textDecoration: task.completed ? 'line-through' : 'none',
@@ -161,7 +161,7 @@ function KanbanCard({ task, onOpen, overlay = false }: { task: Task; onOpen: () 
           style={{
             background: 'none', border: 'none', cursor: 'pointer',
             padding: '0 2px', fontSize: 13, lineHeight: 1, flexShrink: 0,
-            color: task.urgent ? '#F59E0B' : 'var(--color-text-muted, #6B7280)',
+            color: task.urgent ? '#F59E0B' : 'var(--sb-ink-3)',
             opacity: task.urgent ? 1 : 0.35,
           }}
         >⚡</button>
@@ -172,12 +172,12 @@ function KanbanCard({ task, onOpen, overlay = false }: { task: Task; onOpen: () 
           style={{
             background: 'none', border: 'none', cursor: 'pointer',
             padding: '0 2px', lineHeight: 1, flexShrink: 0,
-            color: 'var(--color-text-muted, #6B7280)',
+            color: 'var(--sb-ink-3)',
             opacity: 0.35,
             display: 'flex', alignItems: 'center',
           }}
           onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = '1'; (e.currentTarget as HTMLElement).style.color = '#E05252' }}
-          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = '0.35'; (e.currentTarget as HTMLElement).style.color = 'var(--color-text-muted, #6B7280)' }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = '0.35'; (e.currentTarget as HTMLElement).style.color = 'var(--sb-ink-3)' }}
         >
           <Trash2 size={12} />
         </button>
@@ -199,7 +199,7 @@ function KanbanCard({ task, onOpen, overlay = false }: { task: Task; onOpen: () 
       {/* Company name */}
       {!isPersonal && companyName && (
         <div style={{
-          fontSize: 11, color: 'var(--color-text-muted, #6B7280)', marginBottom: 8,
+          fontSize: 11, color: 'var(--sb-ink-3)', marginBottom: 8,
           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
         }}>
           {companyName}
@@ -211,7 +211,7 @@ function KanbanCard({ task, onOpen, overlay = false }: { task: Task; onOpen: () 
         {priority ? (
           <span style={{
             fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 4,
-            background: 'rgba(127,119,221,0.12)', color: 'var(--color-accent, #7F77DD)',
+            background: 'rgba(25,23,18,0.06)', color: 'var(--color-accent, #7F77DD)',
           }}>
             {priority}
           </span>
@@ -240,7 +240,7 @@ function KanbanCard({ task, onOpen, overlay = false }: { task: Task; onOpen: () 
           </span>
         )}
         {task.dueDate && (
-          <span style={{ fontSize: 10, color: 'var(--color-text-muted, #6B7280)', marginLeft: 'auto' }}>
+          <span style={{ fontSize: 10, color: 'var(--sb-ink-3)', marginLeft: 'auto' }}>
             {task.dueDate}
           </span>
         )}
@@ -297,17 +297,17 @@ function KanbanColumnComp({ column, onOpen, onColDragStart, onColDragOver, onCol
           onDragOver={onColDragOver}
           onDrop={() => onColDrop(column.id)}
           title="Drag to reorder"
-          style={{ cursor: 'grab', color: 'var(--color-text-muted, #6B7280)', fontSize: 14, lineHeight: 1, userSelect: 'none', marginRight: 2 }}
+          style={{ cursor: 'grab', color: 'var(--sb-ink-3)', fontSize: 14, lineHeight: 1, userSelect: 'none', marginRight: 2 }}
         >
           ⠿
         </span>
         <div style={{ width: 8, height: 8, borderRadius: '50%', background: column.color, flexShrink: 0 }} />
-        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-text, #E8EAF6)', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--sb-ink-1)', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {column.label}
         </span>
         <span style={{
-          fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted, #6B7280)',
-          background: 'var(--color-bg, #0D0F1A)', padding: '1px 8px', borderRadius: 10, flexShrink: 0,
+          fontSize: 11, fontWeight: 700, color: 'var(--sb-ink-3)',
+          background: 'var(--sb-page)', padding: '1px 8px', borderRadius: 10, flexShrink: 0,
         }}>
           {column.tasks.length}
         </span>
@@ -321,12 +321,12 @@ function KanbanColumnComp({ column, onOpen, onColDragStart, onColDragOver, onCol
           minHeight: 100,
           background: isOver ? 'rgba(127,119,221,0.06)' : 'rgba(0,0,0,0.04)',
           borderRadius: 10,
-          border: `1.5px dashed ${isOver ? 'rgba(127,119,221,0.4)' : 'var(--color-border, #252A3E)'}`,
+          border: `1.5px dashed ${isOver ? 'rgba(127,119,221,0.4)' : 'var(--sb-border)'}`,
           transition: 'background 0.15s, border-color 0.15s',
         }}
       >
         {column.tasks.length === 0 && !adding ? (
-          <div style={{ padding: '20px 12px', textAlign: 'center', fontSize: 12, color: 'var(--color-text-muted, #6B7280)', fontStyle: 'italic' }}>
+          <div style={{ padding: '20px 12px', textAlign: 'center', fontSize: 12, color: 'var(--sb-ink-3)', fontStyle: 'italic' }}>
             No tasks
           </div>
         ) : (
@@ -348,16 +348,16 @@ function KanbanColumnComp({ column, onOpen, onColDragStart, onColDragOver, onCol
               placeholder="Task title…"
               style={{
                 width: '100%', boxSizing: 'border-box',
-                background: 'var(--color-bg, #0D0F1A)', border: '1px solid var(--color-accent, #7F77DD)',
+                background: 'var(--sb-page)', border: '1px solid var(--color-accent, #7F77DD)',
                 borderRadius: 6, padding: '6px 8px', fontSize: 12,
-                color: 'var(--color-text, #E8EAF6)', outline: 'none', fontFamily: 'inherit',
+                color: 'var(--sb-ink-1)', outline: 'none', fontFamily: 'inherit',
               }}
             />
             <div style={{ display: 'flex', gap: 5, marginTop: 5 }}>
               <button onClick={commitAdd} style={{ flex: 1, padding: '4px 0', fontSize: 11, fontWeight: 600, background: 'var(--color-accent, #7F77DD)', color: '#fff', border: 'none', borderRadius: 5, cursor: 'pointer' }}>
                 Add
               </button>
-              <button onClick={() => { setAdding(false); setNewTitle('') }} style={{ padding: '4px 8px', fontSize: 11, background: 'transparent', color: 'var(--color-text-muted, #6B7280)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 5, cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+              <button onClick={() => { setAdding(false); setNewTitle('') }} style={{ padding: '4px 8px', fontSize: 11, background: 'transparent', color: 'var(--sb-ink-3)', border: '1px solid var(--sb-border)', borderRadius: 5, cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
                 <XIcon size={11} />
               </button>
             </div>
@@ -370,8 +370,8 @@ function KanbanColumnComp({ column, onOpen, onColDragStart, onColDragOver, onCol
         onClick={() => setAdding(true)}
         style={{
           marginTop: 6, width: '100%', padding: '5px 0', fontSize: 11, fontWeight: 500,
-          background: 'transparent', border: '1px dashed var(--color-border, #252A3E)', borderRadius: 6,
-          color: 'var(--color-text-muted, #6B7280)', cursor: 'pointer',
+          background: 'transparent', border: '1px dashed var(--sb-border)', borderRadius: 6,
+          color: 'var(--sb-ink-3)', cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
           transition: 'all 0.12s',
         }}
@@ -401,18 +401,18 @@ function DatePickerOverlay({
       display: 'flex', alignItems: 'center', justifyContent: 'center',
     }}>
       <div style={{
-        background: 'var(--color-surface, #161929)', borderRadius: 14,
-        padding: 24, width: 320, border: '1px solid var(--color-border, #252A3E)',
+        background: 'var(--sb-card)', borderRadius: 14,
+        padding: 24, width: 320, border: '1px solid var(--sb-border)',
         boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
       }}>
-        <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-text, #E8EAF6)', marginBottom: 6 }}>
+        <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--sb-ink-1)', marginBottom: 6 }}>
           Plan this task
         </div>
-        <div style={{ fontSize: 12, color: 'var(--color-text-muted, #6B7280)', marginBottom: 16, lineHeight: 1.5 }}>
+        <div style={{ fontSize: 12, color: 'var(--sb-ink-3)', marginBottom: 16, lineHeight: 1.5 }}>
           {taskTitle}
         </div>
         <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 11, color: 'var(--color-text-muted, #6B7280)', marginBottom: 6, fontWeight: 600 }}>
+          <div style={{ fontSize: 11, color: 'var(--sb-ink-3)', marginBottom: 6, fontWeight: 600 }}>
             Planned Date
           </div>
           <input
@@ -422,10 +422,10 @@ function DatePickerOverlay({
             autoFocus
             style={{
               width: '100%', boxSizing: 'border-box',
-              background: 'var(--color-bg, #0D0F1A)',
-              border: '1px solid var(--color-border, #252A3E)',
+              background: 'var(--sb-page)',
+              border: '1px solid var(--sb-border)',
               borderRadius: 6, padding: '7px 10px',
-              fontSize: 13, color: 'var(--color-text, #E8EAF6)',
+              fontSize: 13, color: 'var(--sb-ink-1)',
               outline: 'none', fontFamily: 'inherit',
             }}
           />
@@ -433,8 +433,8 @@ function DatePickerOverlay({
         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
           <button onClick={onCancel} style={{
             padding: '7px 16px', borderRadius: 7, background: 'transparent',
-            border: '1px solid var(--color-border, #252A3E)',
-            color: 'var(--color-text-muted, #6B7280)', fontSize: 12, cursor: 'pointer',
+            border: '1px solid var(--sb-border)',
+            color: 'var(--sb-ink-3)', fontSize: 12, cursor: 'pointer',
           }}>Cancel</button>
           <button onClick={() => date && onConfirm(date)} disabled={!date} style={{
             padding: '7px 18px', borderRadius: 7,
@@ -665,9 +665,9 @@ export function KanbanBoard({ onOpen, hideCompleted = false, filteredTaskIds }: 
       {/* Board type tabs */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 6, padding: '10px 28px',
-        borderBottom: '1px solid var(--color-border, #252A3E)', flexShrink: 0,
+        borderBottom: '1px solid var(--sb-border)', flexShrink: 0,
       }}>
-        <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-muted, #6B7280)', marginRight: 4, flexShrink: 0 }}>
+        <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--sb-ink-3)', marginRight: 4, flexShrink: 0 }}>
           Group by:
         </span>
         <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
@@ -675,8 +675,8 @@ export function KanbanBoard({ onOpen, hideCompleted = false, filteredTaskIds }: 
             <button key={opt.id} onClick={() => saveBoardType(opt.id)} style={{
               padding: '5px 13px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer',
               background: boardType === opt.id ? 'var(--color-accent, #7F77DD)' : 'transparent',
-              color:      boardType === opt.id ? '#fff' : 'var(--color-text-muted, #6B7280)',
-              border:     `1px solid ${boardType === opt.id ? 'var(--color-accent, #7F77DD)' : 'var(--color-border, #252A3E)'}`,
+              color:      boardType === opt.id ? '#fff' : 'var(--sb-ink-3)',
+              border:     `1px solid ${boardType === opt.id ? 'var(--color-accent, #7F77DD)' : 'var(--sb-border)'}`,
               transition: 'all 0.12s',
             }}>
               {opt.label}

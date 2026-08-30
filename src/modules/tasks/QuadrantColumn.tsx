@@ -72,7 +72,7 @@ function GroupHeader({ label, emoji, color, count, expanded, onToggle }: {
 }
 
 const inp: React.CSSProperties = {
-  background: 'var(--color-bg, #0D0F1A)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 6,
+  background: 'var(--sb-page)', border: '1px solid var(--sb-border)', borderRadius: 6,
   padding: '5px 8px', fontSize: 12, color: 'var(--color-text, #E8EAF6)', outline: 'none', width: '100%',
 }
 const lbl: React.CSSProperties = { fontSize: 10.5, color: 'var(--color-text-muted, #6B7280)', marginBottom: 3, display: 'block' }
@@ -165,8 +165,8 @@ export function QuadrantColumn({ quadrant, tasks, onOpen, groupBy = 'none', allG
     <div
       style={{
         display: 'flex', flexDirection: 'column',
-        background: 'var(--color-surface, #161929)',
-        border: `1px solid ${isOver ? meta.color + '60' : 'var(--color-border, #252A3E)'}`,
+        background: 'var(--sb-card)',
+        border: `1px solid ${isOver ? meta.color + '60' : 'var(--sb-border)'}`,
         borderRadius: 12, overflow: 'hidden',
         transition: 'border-color 0.15s ease', minHeight: 280,
       }}
@@ -174,7 +174,7 @@ export function QuadrantColumn({ quadrant, tasks, onOpen, groupBy = 'none', allG
       {/* Header */}
       <div style={{
         padding: '12px 14px 10px',
-        borderBottom: '1px solid var(--color-border, #252A3E)',
+        borderBottom: '1px solid var(--sb-border)',
         background: isOver ? `${meta.color}08` : 'transparent',
         transition: 'background 0.15s ease',
       }}>
@@ -229,14 +229,14 @@ export function QuadrantColumn({ quadrant, tasks, onOpen, groupBy = 'none', allG
             flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
             color: 'var(--color-text-muted, #6B7280)', fontSize: 11.5, fontStyle: 'italic',
             opacity: isOver ? 0 : 0.6,
-            border: `1px dashed ${isOver ? meta.color : 'var(--color-border, #252A3E)'}`,
+            border: `1px dashed ${isOver ? meta.color : 'var(--sb-border)'}`,
             borderRadius: 8, minHeight: 60, transition: 'all 0.15s ease',
           }}>{isOver ? '' : 'Drop tasks here'}</div>
         )}
       </div>
 
       {/* Add task area */}
-      <div style={{ padding: '8px', borderTop: '1px solid var(--color-border, #252A3E)' }}>
+      <div style={{ padding: '8px', borderTop: '1px solid var(--sb-border)' }}>
         {adding ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
             {/* Title */}
@@ -255,7 +255,7 @@ export function QuadrantColumn({ quadrant, tasks, onOpen, groupBy = 'none', allG
             {/* AI suggestion strip */}
             {(aiLoading || aiHint) && (
               <div style={{
-                background: 'var(--color-bg, #0D0F1A)', border: '1px solid var(--color-border, #252A3E)', borderRadius: 6,
+                background: 'var(--sb-page)', border: '1px solid var(--sb-border)', borderRadius: 6,
                 padding: '6px 8px', display: 'flex', flexWrap: 'wrap', gap: 5, alignItems: 'center',
               }}>
                 <Sparkles size={10} color="var(--color-accent)" style={{ flexShrink: 0 }} />
@@ -341,7 +341,7 @@ export function QuadrantColumn({ quadrant, tasks, onOpen, groupBy = 'none', allG
               }}>Add</button>
               <button onClick={reset} style={{
                 padding: '5px 8px', borderRadius: 6, fontSize: 11.5,
-                background: 'transparent', border: '1px solid var(--color-border, #252A3E)',
+                background: 'transparent', border: '1px solid var(--sb-border)',
                 color: 'var(--color-text-muted, #6B7280)', cursor: 'pointer',
               }}><X size={11} /></button>
             </div>
