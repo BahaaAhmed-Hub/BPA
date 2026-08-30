@@ -1,6 +1,4 @@
 import { useState, useRef, useEffect } from 'react'
-import { useUIStore } from '@/store/uiStore'
-import { getTheme } from '@/lib/themes'
 
 // ─── Emoji data ───────────────────────────────────────────────────────────────
 
@@ -60,7 +58,6 @@ interface Props {
 // ─── IconPicker ────────────────────────────────────────────────────────────────
 
 export function IconPicker({ value, onChange, size = 44, trigger }: Props) {
-  const theme = getTheme(useUIStore(s => s.themeId))
   const [open, setOpen] = useState(false)
   const [tab, setTab] = useState('finance')
   const [search, setSearch] = useState('')
@@ -115,8 +112,8 @@ export function IconPicker({ value, onChange, size = 44, trigger }: Props) {
           style={{
             width: size, height: size,
             borderRadius: 12,
-            border: `2px solid ${open ? theme.accent : theme.border}`,
-            background: theme.surface,
+            border: `2px solid ${open ? '#F5D14E' : '#E8E1CE'}`,
+            background: '#FFFFFF',
             cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             overflow: 'hidden',
@@ -139,8 +136,8 @@ export function IconPicker({ value, onChange, size = 44, trigger }: Props) {
           left: 0,
           zIndex: 200,
           width: 320,
-          background: theme.surface,
-          border: `1px solid ${theme.border}`,
+          background: '#FFFFFF',
+          border: `1px solid ${'#E8E1CE'}`,
           borderRadius: 14,
           boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
           overflow: 'hidden',
@@ -156,8 +153,8 @@ export function IconPicker({ value, onChange, size = 44, trigger }: Props) {
               onChange={e => setSearch(e.target.value)}
               style={{
                 flex: 1, padding: '7px 10px',
-                borderRadius: 8, border: `1px solid ${theme.border}`,
-                background: theme.bg, color: theme.text,
+                borderRadius: 8, border: `1px solid ${'#E8E1CE'}`,
+                background: '#F7F4EA', color: '#191712',
                 fontSize: 13, outline: 'none', boxSizing: 'border-box' as const,
                 fontFamily: 'inherit',
               }}
@@ -172,9 +169,9 @@ export function IconPicker({ value, onChange, size = 44, trigger }: Props) {
                 display: 'flex', alignItems: 'center', gap: 5,
                 padding: '7px 11px',
                 borderRadius: 8,
-                border: `1px solid ${theme.accent}`,
-                background: theme.accentFill,
-                color: theme.accent,
+                border: `1px solid ${'#F5D14E'}`,
+                background: 'rgba(245,209,78,0.12)',
+                color: '#F5D14E',
                 fontSize: 12, fontWeight: 600,
                 cursor: 'pointer', fontFamily: 'inherit',
                 whiteSpace: 'nowrap' as const,
@@ -196,17 +193,17 @@ export function IconPicker({ value, onChange, size = 44, trigger }: Props) {
               margin: '8px 12px 0',
               padding: '6px 10px',
               borderRadius: 8,
-              background: theme.bg,
-              border: `1px solid ${theme.border}`,
+              background: '#F7F4EA',
+              border: `1px solid ${'#E8E1CE'}`,
             }}>
               <img src={value} alt="current" style={{ width: 28, height: 28, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }} />
-              <span style={{ fontSize: 12, color: theme.textDim, flex: 1 }}>Current image</span>
+              <span style={{ fontSize: 12, color: '#6C6553', flex: 1 }}>Current image</span>
               <button
                 type="button"
                 onClick={() => onChange('📁')}
                 style={{
                   background: 'none', border: 'none', cursor: 'pointer',
-                  color: theme.textDim, fontSize: 12, padding: 0, lineHeight: 1,
+                  color: '#6C6553', fontSize: 12, padding: 0, lineHeight: 1,
                 }}
               >✕</button>
             </div>
@@ -227,9 +224,9 @@ export function IconPicker({ value, onChange, size = 44, trigger }: Props) {
                   style={{
                     flexShrink: 0, width: 32, height: 28,
                     borderRadius: 6, border: 'none',
-                    background: tab === g.id ? theme.accentFill : 'transparent',
+                    background: tab === g.id ? 'rgba(245,209,78,0.12)' : 'transparent',
                     cursor: 'pointer', fontSize: 16,
-                    outline: tab === g.id ? `1px solid ${theme.accent}44` : 'none',
+                    outline: tab === g.id ? `1px solid ${'#F5D14E'}44` : 'none',
                   }}
                 >
                   {g.label}
@@ -251,8 +248,8 @@ export function IconPicker({ value, onChange, size = 44, trigger }: Props) {
                 onClick={() => { onChange(emoji); setOpen(false); setSearch('') }}
                 style={{
                   width: 34, height: 34, borderRadius: 6,
-                  border: value === emoji ? `1px solid ${theme.accent}` : '1px solid transparent',
-                  background: value === emoji ? theme.accentFill : 'transparent',
+                  border: value === emoji ? `1px solid ${'#F5D14E'}` : '1px solid transparent',
+                  background: value === emoji ? 'rgba(245,209,78,0.12)' : 'transparent',
                   cursor: 'pointer', fontSize: 20,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   transition: 'background 0.1s',
@@ -263,7 +260,7 @@ export function IconPicker({ value, onChange, size = 44, trigger }: Props) {
               </button>
             ))}
             {displayEmojis.length === 0 && (
-              <div style={{ gridColumn: 'span 8', padding: '16px 0', textAlign: 'center', fontSize: 13, color: theme.textDim }}>
+              <div style={{ gridColumn: 'span 8', padding: '16px 0', textAlign: 'center', fontSize: 13, color: '#6C6553' }}>
                 No emojis found
               </div>
             )}

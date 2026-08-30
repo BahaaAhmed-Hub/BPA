@@ -1,6 +1,4 @@
 import { useState, useRef } from 'react'
-import { useUIStore } from '@/store/uiStore'
-import { getTheme } from '@/lib/themes'
 import type { Transaction, Account, Category, Currency, TxType } from '../types'
 
 const RED   = '#DA4A3E'
@@ -25,7 +23,6 @@ function AccountIcon({ account }: { account: Account | undefined }) {
 }
 
 export function TransactionModal({ transaction, accounts, categories, onSave, onDelete, onClose }: Props) {
-  const theme = getTheme(useUIStore(s => s.themeId))
   const isEdit = !!transaction
 
   const todayStr = new Date().toISOString().slice(0, 10)
@@ -59,7 +56,7 @@ export function TransactionModal({ transaction, accounts, categories, onSave, on
 
   const TYPE_CYCLE: TxType[] = ['expense', 'income', 'transfer']
   const typeLabel = type === 'expense' ? 'Expense' : type === 'income' ? 'Income' : 'Transfer'
-  const typeColor = type === 'expense' ? RED : type === 'income' ? GREEN : theme.accent
+  const typeColor = type === 'expense' ? RED : type === 'income' ? GREEN : '#F5D14E'
 
   function cycleType() {
     const idx = TYPE_CYCLE.indexOf(type)
@@ -121,7 +118,7 @@ export function TransactionModal({ transaction, accounts, categories, onSave, on
 
   const ROW: React.CSSProperties = {
     display: 'flex', alignItems: 'center', gap: 12,
-    padding: '13px 20px', borderBottom: `1px solid ${theme.border}`,
+    padding: '13px 20px', borderBottom: `1px solid ${'#E8E1CE'}`,
     cursor: 'pointer',
   }
 
@@ -136,13 +133,13 @@ export function TransactionModal({ transaction, accounts, categories, onSave, on
         title={title}
         onClick={onClick}
         style={{
-          background:   active ? theme.accentFill : 'none',
-          border:       `1.5px solid ${active ? theme.accent : theme.border}`,
+          background:   active ? 'rgba(245,209,78,0.12)' : 'none',
+          border:       `1.5px solid ${active ? '#F5D14E' : '#E8E1CE'}`,
           borderRadius: 10,
           width: 46, height: 46,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           cursor: 'pointer',
-          color: active ? theme.accent : theme.textDim,
+          color: active ? '#F5D14E' : '#6C6553',
         }}
       >
         {children}
@@ -172,7 +169,7 @@ export function TransactionModal({ transaction, accounts, categories, onSave, on
 
       <div style={{
         width: 400,
-        background: theme.surface,
+        background: '#FFFFFF',
         borderRadius: 20,
         boxShadow: '0 32px 80px rgba(0,0,0,0.6)',
         overflow: 'hidden',
@@ -185,13 +182,13 @@ export function TransactionModal({ transaction, accounts, categories, onSave, on
         <div style={{
           display: 'grid', gridTemplateColumns: '1fr auto 1fr',
           alignItems: 'center', padding: '15px 20px',
-          borderBottom: `1px solid ${theme.border}`,
+          borderBottom: `1px solid ${'#E8E1CE'}`,
         }}>
           <button
             onClick={onClose}
             style={{
               background: 'none', border: 'none', cursor: 'pointer',
-              fontSize: 15, color: theme.textDim, textAlign: 'left',
+              fontSize: 15, color: '#6C6553', textAlign: 'left',
               fontFamily: 'inherit', padding: 0,
             }}
           >
@@ -229,7 +226,7 @@ export function TransactionModal({ transaction, accounts, categories, onSave, on
               onClick={handleSave}
               style={{
                 background: 'none', border: 'none', cursor: 'pointer',
-                fontSize: 15, fontWeight: 700, color: theme.accent,
+                fontSize: 15, fontWeight: 700, color: '#F5D14E',
                 fontFamily: 'inherit', padding: 0,
               }}
             >
@@ -245,23 +242,23 @@ export function TransactionModal({ transaction, accounts, categories, onSave, on
         >
           <div style={{
             width: 36, height: 36, borderRadius: 10, overflow: 'hidden', flexShrink: 0,
-            background: selectedAccount ? `${selectedAccount.color}22` : theme.bg,
-            border: `1px solid ${selectedAccount ? selectedAccount.color + '44' : theme.border}`,
+            background: selectedAccount ? `${selectedAccount.color}22` : '#F7F4EA',
+            border: `1px solid ${selectedAccount ? selectedAccount.color + '44' : '#E8E1CE'}`,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
             <AccountIcon account={selectedAccount} />
           </div>
-          <span style={{ flex: 1, fontSize: 15, fontWeight: 500, color: theme.text }}>
+          <span style={{ flex: 1, fontSize: 15, fontWeight: 500, color: '#191712' }}>
             {selectedAccount?.name ?? 'No Account'}
           </span>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={theme.textDim} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={'#6C6553'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="9 18 15 12 9 6"/>
           </svg>
         </div>
 
         {/* Account picker */}
         {showAccountPicker && (
-          <div style={{ background: theme.bg, borderBottom: `1px solid ${theme.border}`, maxHeight: 180, overflowY: 'auto' }}>
+          <div style={{ background: '#F7F4EA', borderBottom: `1px solid ${'#E8E1CE'}`, maxHeight: 180, overflowY: 'auto' }}>
             {accounts.map(a => (
               <div
                 key={a.id}
@@ -269,7 +266,7 @@ export function TransactionModal({ transaction, accounts, categories, onSave, on
                 style={{
                   display: 'flex', alignItems: 'center', gap: 10,
                   padding: '10px 20px', cursor: 'pointer',
-                  background: a.id === accountId ? `${theme.accent}18` : 'transparent',
+                  background: a.id === accountId ? `${'#F5D14E'}18` : 'transparent',
                 }}
               >
                 <div style={{
@@ -281,22 +278,22 @@ export function TransactionModal({ transaction, accounts, categories, onSave, on
                     <img src={a.emoji} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   ) : <span style={{ fontSize: 15 }}>{a.emoji}</span>}
                 </div>
-                <span style={{ flex: 1, fontSize: 14, color: theme.text }}>{a.name}</span>
+                <span style={{ flex: 1, fontSize: 14, color: '#191712' }}>{a.name}</span>
                 {a.id === accountId && (
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={theme.accent} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={'#F5D14E'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <polyline points="20 6 9 17 4 12"/>
                   </svg>
                 )}
               </div>
             ))}
             {accounts.length === 0 && (
-              <div style={{ padding: '10px 20px', fontSize: 13, color: theme.textDim }}>No accounts yet</div>
+              <div style={{ padding: '10px 20px', fontSize: 13, color: '#6C6553' }}>No accounts yet</div>
             )}
           </div>
         )}
 
         {/* ── Category + Amount row ── */}
-        <div style={{ borderBottom: `1px solid ${theme.border}` }}>
+        <div style={{ borderBottom: `1px solid ${'#E8E1CE'}` }}>
           <div style={{ display: 'flex', alignItems: 'center' }}>
 
             {/* Category side */}
@@ -305,7 +302,7 @@ export function TransactionModal({ transaction, accounts, categories, onSave, on
               style={{
                 flex: 1, display: 'flex', alignItems: 'center', gap: 10,
                 padding: '13px 16px', cursor: 'pointer',
-                borderRight: `1px solid ${theme.border}`,
+                borderRight: `1px solid ${'#E8E1CE'}`,
               }}
             >
               {selectedCategory && (
@@ -317,7 +314,7 @@ export function TransactionModal({ transaction, accounts, categories, onSave, on
                   <span style={{ fontSize: 15 }}>{selectedCategory.icon}</span>
                 </div>
               )}
-              <span style={{ fontSize: 14, color: selectedCategory ? theme.text : theme.textDim }}>
+              <span style={{ fontSize: 14, color: selectedCategory ? '#191712' : '#6C6553' }}>
                 {selectedCategory?.name ?? 'No Category'}
               </span>
             </div>
@@ -336,7 +333,7 @@ export function TransactionModal({ transaction, accounts, categories, onSave, on
                 onClick={e => e.stopPropagation()}
                 style={{
                   background: 'transparent', border: 'none', outline: 'none',
-                  color: theme.textDim, fontSize: 13, fontFamily: 'inherit',
+                  color: '#6C6553', fontSize: 13, fontFamily: 'inherit',
                   cursor: 'pointer', padding: 0, appearance: 'none' as const,
                 }}
               >
@@ -370,13 +367,13 @@ export function TransactionModal({ transaction, accounts, categories, onSave, on
 
           {/* Category picker */}
           {showCategoryPicker && (
-            <div style={{ background: theme.bg, borderTop: `1px solid ${theme.border}`, maxHeight: 200, overflowY: 'auto' }}>
+            <div style={{ background: '#F7F4EA', borderTop: `1px solid ${'#E8E1CE'}`, maxHeight: 200, overflowY: 'auto' }}>
               <div
                 onClick={() => { setCategoryId(''); setShowCategoryPicker(false) }}
                 style={{
                   padding: '10px 20px', cursor: 'pointer', fontSize: 14,
-                  color: !categoryId ? theme.accent : theme.textDim,
-                  background: !categoryId ? `${theme.accent}18` : 'transparent',
+                  color: !categoryId ? '#F5D14E' : '#6C6553',
+                  background: !categoryId ? `${'#F5D14E'}18` : 'transparent',
                 }}
               >
                 No Category
@@ -388,13 +385,13 @@ export function TransactionModal({ transaction, accounts, categories, onSave, on
                   style={{
                     display: 'flex', alignItems: 'center', gap: 10,
                     padding: '10px 20px', cursor: 'pointer',
-                    background: c.id === categoryId ? `${theme.accent}18` : 'transparent',
+                    background: c.id === categoryId ? `${'#F5D14E'}18` : 'transparent',
                   }}
                 >
                   <span style={{ fontSize: 15 }}>{c.icon}</span>
-                  <span style={{ flex: 1, fontSize: 14, color: theme.text }}>{c.name}</span>
+                  <span style={{ flex: 1, fontSize: 14, color: '#191712' }}>{c.name}</span>
                   {c.id === categoryId && (
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={theme.accent} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={'#F5D14E'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                       <polyline points="20 6 9 17 4 12"/>
                     </svg>
                   )}
@@ -407,7 +404,7 @@ export function TransactionModal({ transaction, accounts, categories, onSave, on
         {/* ── Payee row ── */}
         <div style={{
           display: 'flex', alignItems: 'center', gap: 10,
-          padding: '13px 20px', borderBottom: `1px solid ${theme.border}`,
+          padding: '13px 20px', borderBottom: `1px solid ${'#E8E1CE'}`,
         }}>
           <input
             ref={payeeRef}
@@ -417,27 +414,27 @@ export function TransactionModal({ transaction, accounts, categories, onSave, on
             placeholder="Payee..."
             style={{
               flex: 1, background: 'transparent', border: 'none', outline: 'none',
-              color: theme.text, fontSize: 14, fontFamily: 'inherit',
+              color: '#191712', fontSize: 14, fontFamily: 'inherit',
             }}
           />
           {payee ? (
             <button
               onClick={() => setPayee('')}
               style={{
-                background: theme.border, border: 'none', cursor: 'pointer',
+                background: '#E8E1CE', border: 'none', cursor: 'pointer',
                 borderRadius: '50%', width: 20, height: 20,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: theme.textDim, fontSize: 11, flexShrink: 0, lineHeight: 1,
+                color: '#6C6553', fontSize: 11, flexShrink: 0, lineHeight: 1,
               }}
             >✕</button>
           ) : (
             <button
               onClick={() => payeeRef.current?.focus()}
               style={{
-                background: 'none', border: `1.5px solid ${theme.border}`,
+                background: 'none', border: `1.5px solid ${'#E8E1CE'}`,
                 borderRadius: '50%', width: 26, height: 26,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer', color: theme.textDim, flexShrink: 0,
+                cursor: 'pointer', color: '#6C6553', flexShrink: 0,
               }}
             >
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
@@ -448,7 +445,7 @@ export function TransactionModal({ transaction, accounts, categories, onSave, on
         </div>
 
         {/* ── Note textarea — always visible ── */}
-        <div style={{ borderBottom: `1px solid ${theme.border}` }}>
+        <div style={{ borderBottom: `1px solid ${'#E8E1CE'}` }}>
           <textarea
             ref={noteRef}
             value={note}
@@ -457,7 +454,7 @@ export function TransactionModal({ transaction, accounts, categories, onSave, on
             rows={3}
             style={{
               width: '100%', background: 'transparent', border: 'none', outline: 'none',
-              color: theme.text, fontSize: 13, fontFamily: 'inherit',
+              color: '#191712', fontSize: 13, fontFamily: 'inherit',
               resize: 'none', padding: '10px 20px', boxSizing: 'border-box',
             }}
           />
@@ -467,7 +464,7 @@ export function TransactionModal({ transaction, accounts, categories, onSave, on
         {attachments.length > 0 && (
           <div style={{
             display: 'flex', gap: 8, padding: '10px 20px',
-            borderBottom: `1px solid ${theme.border}`,
+            borderBottom: `1px solid ${'#E8E1CE'}`,
             flexWrap: 'wrap',
           }}>
             {attachments.map((src, i) => (
@@ -478,7 +475,7 @@ export function TransactionModal({ transaction, accounts, categories, onSave, on
                   style={{
                     width: 40, height: 40, borderRadius: 6,
                     objectFit: 'cover',
-                    border: `1px solid ${theme.border}`,
+                    border: `1px solid ${'#E8E1CE'}`,
                   }}
                 />
                 <button
@@ -500,15 +497,15 @@ export function TransactionModal({ transaction, accounts, categories, onSave, on
         {(tags.length > 0 || showTagInput) && (
           <div style={{
             display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6,
-            padding: '10px 20px', borderBottom: `1px solid ${theme.border}`,
+            padding: '10px 20px', borderBottom: `1px solid ${'#E8E1CE'}`,
           }}>
             {tags.map((tag, i) => (
               <span
                 key={i}
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 4,
-                  background: theme.accentFill, color: theme.accent,
-                  border: `1px solid ${theme.accent}44`,
+                  background: 'rgba(245,209,78,0.12)', color: '#F5D14E',
+                  border: `1px solid ${'#F5D14E'}44`,
                   borderRadius: 20, padding: '3px 8px', fontSize: 12,
                 }}
               >
@@ -517,7 +514,7 @@ export function TransactionModal({ transaction, accounts, categories, onSave, on
                   onClick={() => setTags(prev => prev.filter((_, j) => j !== i))}
                   style={{
                     background: 'none', border: 'none', cursor: 'pointer',
-                    color: theme.accent, fontSize: 10, padding: 0, lineHeight: 1,
+                    color: '#F5D14E', fontSize: 10, padding: 0, lineHeight: 1,
                     display: 'flex', alignItems: 'center',
                   }}
                 >✕</button>
@@ -533,7 +530,7 @@ export function TransactionModal({ transaction, accounts, categories, onSave, on
                 placeholder="Add tag..."
                 style={{
                   background: 'transparent', border: 'none', outline: 'none',
-                  color: theme.text, fontSize: 13, fontFamily: 'inherit',
+                  color: '#191712', fontSize: 13, fontFamily: 'inherit',
                   minWidth: 80, flex: 1,
                 }}
               />
@@ -544,7 +541,7 @@ export function TransactionModal({ transaction, accounts, categories, onSave, on
         {/* ── Date + Paid toggle ── */}
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '13px 20px', borderBottom: `1px solid ${theme.border}`,
+          padding: '13px 20px', borderBottom: `1px solid ${'#E8E1CE'}`,
         }}>
           <input
             type="date"
@@ -552,7 +549,7 @@ export function TransactionModal({ transaction, accounts, categories, onSave, on
             onChange={e => setDate(e.target.value)}
             style={{
               background: 'transparent', border: 'none', outline: 'none',
-              color: theme.text, fontSize: 14, fontFamily: 'inherit', cursor: 'pointer',
+              color: '#191712', fontSize: 14, fontFamily: 'inherit', cursor: 'pointer',
             }}
           />
           <button
@@ -561,7 +558,7 @@ export function TransactionModal({ transaction, accounts, categories, onSave, on
               display: 'flex', alignItems: 'center', gap: 6,
               background: 'none', border: 'none', cursor: 'pointer',
               fontSize: 13, fontWeight: 700, letterSpacing: '0.5px',
-              color: isCleared ? BLUE : theme.textDim,
+              color: isCleared ? BLUE : '#6C6553',
               fontFamily: 'inherit',
             }}
           >

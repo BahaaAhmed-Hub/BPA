@@ -1800,7 +1800,11 @@ function BlockingRulesSection() {
 
 function BehavioralSection() {
   const { enabled, mode, setEnabled, setMode } = useBehavioralStore()
-  const theme = getTheme(useUIStore(s => s.themeId))
+  const SB = {
+    bg: '#F7F4EA', surface: '#FFFFFF', surface2: '#FAF7EC', border: '#E8E1CE',
+    accent: '#F5D14E', accentFill: 'rgba(245,209,78,0.12)', accentBright: '#D4A827',
+    text: '#191712', textDim: '#6C6553', textMuted: '#9B9180',
+  }
 
   const modes: { id: BehavioralMode; label: string; desc: string; available: boolean }[] = [
     { id: 'samurai', label: 'Samurai',  desc: 'Disciplined executor. Tactical tone. Rank system active.', available: true  },
@@ -1811,16 +1815,16 @@ function BehavioralSection() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       {/* Enable toggle */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', background: theme.surface2, borderRadius: 10, border: `1px solid ${theme.border}` }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', background: SB.surface2, borderRadius: 10, border: `1px solid ${SB.border}` }}>
         <div>
-          <div style={{ fontSize: 14, fontWeight: 600, color: theme.text }}>Enable Behavioral OS</div>
-          <div style={{ fontSize: 12, color: theme.textDim, marginTop: 2 }}>Activates rank tracking, identity detection & mode-aware AI</div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: SB.text }}>Enable Behavioral OS</div>
+          <div style={{ fontSize: 12, color: SB.textDim, marginTop: 2 }}>Activates rank tracking, identity detection & mode-aware AI</div>
         </div>
         <button
           onClick={() => setEnabled(!enabled)}
           style={{
             width: 44, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer', flexShrink: 0,
-            background: enabled ? theme.accent : theme.border,
+            background: enabled ? SB.accent : SB.border,
             position: 'relative', transition: 'background 0.2s',
           }}
         >
@@ -1835,7 +1839,7 @@ function BehavioralSection() {
       {/* Mode selection */}
       {enabled && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: theme.accentBright, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 2 }}>Operating Mode</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: SB.accentBright, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 2 }}>Operating Mode</div>
           {modes.map(m => (
             <button
               key={m.id}
@@ -1844,20 +1848,20 @@ function BehavioralSection() {
               style={{
                 display: 'flex', alignItems: 'center', gap: 12,
                 padding: '12px 14px', borderRadius: 10, cursor: m.available ? 'pointer' : 'default',
-                background: mode === m.id ? theme.accentFill : theme.surface2,
-                border: `1px solid ${mode === m.id ? theme.accent : theme.border}`,
+                background: mode === m.id ? SB.accentFill : SB.surface2,
+                border: `1px solid ${mode === m.id ? SB.accent : SB.border}`,
                 textAlign: 'left', width: '100%', opacity: m.available ? 1 : 0.5,
               }}
             >
-              <Swords size={16} color={mode === m.id ? theme.accent : theme.textDim} strokeWidth={1.8} style={{ flexShrink: 0 }} />
+              <Swords size={16} color={mode === m.id ? SB.accent : SB.textDim} strokeWidth={1.8} style={{ flexShrink: 0 }} />
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: 13.5, fontWeight: 600, color: theme.text }}>{m.label}</span>
-                  {!m.available && <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 4, background: theme.border, color: theme.textDim, letterSpacing: '0.5px' }}>SOON</span>}
+                  <span style={{ fontSize: 13.5, fontWeight: 600, color: SB.text }}>{m.label}</span>
+                  {!m.available && <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 4, background: SB.border, color: SB.textDim, letterSpacing: '0.5px' }}>SOON</span>}
                 </div>
-                <div style={{ fontSize: 12, color: theme.textDim, marginTop: 2 }}>{m.desc}</div>
+                <div style={{ fontSize: 12, color: SB.textDim, marginTop: 2 }}>{m.desc}</div>
               </div>
-              {mode === m.id && <div style={{ width: 8, height: 8, borderRadius: '50%', background: theme.accent, flexShrink: 0 }} />}
+              {mode === m.id && <div style={{ width: 8, height: 8, borderRadius: '50%', background: SB.accent, flexShrink: 0 }} />}
             </button>
           ))}
         </div>
@@ -1867,7 +1871,7 @@ function BehavioralSection() {
       {enabled && mode === 'samurai' && (
         <div style={{ padding: '12px 14px', borderRadius: 10, background: 'rgba(139,26,26,0.08)', border: '1px solid rgba(139,26,26,0.25)' }}>
           <div style={{ fontSize: 12, color: '#C0392B', fontWeight: 600, marginBottom: 4 }}>Samurai Mode Active</div>
-          <div style={{ fontSize: 12, color: theme.textDim, lineHeight: 1.5 }}>
+          <div style={{ fontSize: 12, color: SB.textDim, lineHeight: 1.5 }}>
             The Behavioral OS page will appear in the sidebar. Your rank (Ronin → Shogun) is calculated from task completion, habit consistency, and planning quality. The AI assistant will adopt a tactical, no-filler communication style.
           </div>
         </div>

@@ -1,6 +1,4 @@
 import { useState } from 'react'
-import { useUIStore } from '@/store/uiStore'
-import { getTheme } from '@/lib/themes'
 import type { Category } from '../types'
 import { IconPicker } from '../components/IconPicker'
 
@@ -17,7 +15,6 @@ interface Props {
 }
 
 export function CategoryModal({ category, categories, onSave, onDelete, onClose }: Props) {
-  const theme = getTheme(useUIStore(s => s.themeId))
 
   // A "real edit" is when the category already has a name (exists in store).
   // Opening from a section "+" button has name='' — it's creation, not editing.
@@ -51,9 +48,9 @@ export function CategoryModal({ category, categories, onSave, onDelete, onClose 
     width: '100%',
     padding: '10px 12px',
     borderRadius: 8,
-    border: `1px solid ${theme.border}`,
-    background: theme.bg,
-    color: theme.text,
+    border: `1px solid ${'#E8E1CE'}`,
+    background: '#F7F4EA',
+    color: '#191712',
     fontSize: 14,
     outline: 'none',
     boxSizing: 'border-box' as const,
@@ -63,7 +60,7 @@ export function CategoryModal({ category, categories, onSave, onDelete, onClose 
   const labelStyle: React.CSSProperties = {
     display: 'block',
     fontSize: 12,
-    color: theme.textDim,
+    color: '#6C6553',
     marginBottom: 5,
     fontWeight: 500,
   }
@@ -90,7 +87,7 @@ export function CategoryModal({ category, categories, onSave, onDelete, onClose 
         width: 460,
         maxHeight: '90vh',
         overflowY: 'auto',
-        background: theme.surface,
+        background: '#FFFFFF',
         borderRadius: 16,
         boxShadow: '0 24px 60px rgba(0,0,0,0.5)',
         padding: '24px 28px',
@@ -102,7 +99,7 @@ export function CategoryModal({ category, categories, onSave, onDelete, onClose 
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontSize: 18, fontWeight: 700, color: theme.text }}>
+            <span style={{ fontSize: 18, fontWeight: 700, color: '#191712' }}>
               {isEdit ? 'Edit Category' : 'New Category'}
             </span>
             {txTypeLocked && (
@@ -124,7 +121,7 @@ export function CategoryModal({ category, categories, onSave, onDelete, onClose 
               border: 'none',
               cursor: 'pointer',
               fontSize: 20,
-              color: theme.textDim,
+              color: '#6C6553',
               lineHeight: 1,
               padding: '0 4px',
               fontFamily: 'inherit',
@@ -208,7 +205,7 @@ export function CategoryModal({ category, categories, onSave, onDelete, onClose 
           justifyContent: 'flex-end',
           gap: 8,
           paddingTop: 8,
-          borderTop: `1px solid ${theme.border}`,
+          borderTop: `1px solid ${'#E8E1CE'}`,
         }}>
           <button
             onClick={onClose}
@@ -217,7 +214,7 @@ export function CategoryModal({ category, categories, onSave, onDelete, onClose 
               border: 'none',
               cursor: 'pointer',
               fontSize: 14,
-              color: theme.textDim,
+              color: '#6C6553',
               padding: '8px 14px',
               fontFamily: 'inherit',
               borderRadius: 8,
@@ -247,11 +244,11 @@ export function CategoryModal({ category, categories, onSave, onDelete, onClose 
           <button
             onClick={handleSave}
             style={{
-              background: theme.accent,
+              background: '#F5D14E',
               border: 'none',
               cursor: 'pointer',
               fontSize: 14,
-              color: '#fff',
+              color: '#191712',
               padding: '8px 20px',
               fontFamily: 'inherit',
               borderRadius: 8,

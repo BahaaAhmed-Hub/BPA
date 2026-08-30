@@ -1,7 +1,5 @@
 import { useState } from 'react'
 import { useFinanceStore } from '../financeStore'
-import { useUIStore } from '@/store/uiStore'
-import { getTheme } from '@/lib/themes'
 import { BillModal } from '../modals/BillModal'
 import { IconPicker } from '../components/IconPicker'
 import type { Bill } from '../types'
@@ -57,7 +55,7 @@ function IconCircle({ icon, isIncome, surface, textPri, onIconChange }: {
 }) {
   const circleStyle: React.CSSProperties = {
     width: 40, height: 40, borderRadius: '50%',
-    border: '1px solid #2A241B',
+    border: '1px solid #E8E1CE',
     background: surface,
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     fontSize: 18, flexShrink: 0,
@@ -93,18 +91,16 @@ interface Props {
 }
 
 export function BillsScreen({ onOpenAdd: _onOpenAdd }: Props) {
-  const themeId = useUIStore(s => s.themeId)
-  const theme = getTheme(themeId)
   const C = {
-    bg:        theme.bg,
-    surface:   theme.surface,
-    border:    theme.border,
-    borderSt:  theme.border,
-    divFaint:  theme.border,
-    amber:     theme.accent,
-    textPri:   theme.text,
-    textMuted: theme.textDim,
-    textDim:   theme.textMuted,
+    bg:        '#F7F4EA',
+    surface:   '#FFFFFF',
+    border:    '#E8E1CE',
+    borderSt:  '#E8E1CE',
+    divFaint:  '#E8E1CE',
+    amber:     '#F5D14E',
+    textPri:   '#191712',
+    textMuted: '#6C6553',
+    textDim:   '#9B9180',
     red:       '#DA4A3E',
     green:     '#2FA869',
   }
@@ -142,7 +138,7 @@ export function BillsScreen({ onOpenAdd: _onOpenAdd }: Props) {
       {/* Header */}
       <div style={{
         height: 64, flexShrink: 0,
-        borderBottom: '1px solid #211C14',
+        borderBottom: '1px solid #E8E1CE',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '0 30px',
       }}>
@@ -152,7 +148,7 @@ export function BillsScreen({ onOpenAdd: _onOpenAdd }: Props) {
           style={{
             padding: '8px 18px', borderRadius: 9,
             background: C.amber, border: 'none',
-            color: C.bg, fontSize: 13, fontWeight: 700,
+            color: '#191712', fontSize: 13, fontWeight: 700,
             cursor: 'pointer', fontFamily: 'inherit',
           }}
         >

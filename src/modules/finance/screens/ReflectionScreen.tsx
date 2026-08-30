@@ -1,6 +1,4 @@
 import { useState } from 'react'
-import { useUIStore } from '@/store/uiStore'
-import { getTheme } from '@/lib/themes'
 import { useFinanceStore } from '../financeStore'
 
 // ─── Inline row types (store may not export them yet) ─────────────────────────
@@ -130,7 +128,6 @@ function ShareDonut({
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function ReflectionScreen(_props?: any) {
-  const theme = getTheme(useUIStore(s => s.themeId))
 
   // ── Store reads (defensive — store agent may still be building) ──────────
   const categories    = useFinanceStore(s => s.categories)
@@ -265,7 +262,7 @@ export function ReflectionScreen(_props?: any) {
             }}
             style={{
               width:'100%', background:'transparent', border:'none',
-              borderBottom:`1px solid ${theme.accent}`, color:theme.text,
+              borderBottom:`1px solid ${'#F5D14E'}`, color:'#191712',
               fontSize:11, textAlign:'right', outline:'none', padding:'2px 0',
               fontFamily:'inherit',
             }}
@@ -286,7 +283,7 @@ export function ReflectionScreen(_props?: any) {
         title={hasCmt ? getCommentText(catId, monthIdx) : undefined}
         style={{
           flex:1, minWidth:72, textAlign:'right', padding:'0 6px',
-          fontSize:11, color: val ? theme.textDim : theme.textMuted,
+          fontSize:11, color: val ? '#6C6553' : '#9B9180',
           position:'relative', background:bgColor,
           cursor: tableMode !== 'compare' ? 'pointer' : 'default',
         }}
@@ -341,7 +338,7 @@ export function ReflectionScreen(_props?: any) {
   }
 
   const colLabel: React.CSSProperties = {
-    width:182, flexShrink:0, fontSize:10, color:theme.textDim,
+    width:182, flexShrink:0, fontSize:10, color:'#6C6553',
   }
 
   const colTotal: React.CSSProperties = {
@@ -373,40 +370,40 @@ export function ReflectionScreen(_props?: any) {
         {/* Share donut card */}
         {donutGroups.length > 0 && (
           <div style={{
-            background: theme.surface, border:`1px solid ${theme.border}`,
+            background: '#FFFFFF', border:`1px solid ${'#E8E1CE'}`,
             borderRadius:14, padding:'18px 20px', marginBottom:12,
           }}>
             <ShareDonut
               groups={donutGroups}
-              themeBg={theme.bg}
-              themeTextMuted={theme.textMuted}
-              themeTextDim={theme.textDim}
-              themeText={theme.text}
+              themeBg={'#F7F4EA'}
+              themeTextMuted={'#9B9180'}
+              themeTextDim={'#6C6553'}
+              themeText={'#191712'}
             />
           </div>
         )}
 
         {/* Data table */}
         <div style={{
-          background: theme.surface, border:`1px solid ${theme.border}`,
+          background: '#FFFFFF', border:`1px solid ${'#E8E1CE'}`,
           borderRadius:12, overflow:'hidden', padding:'14px 16px',
         }}>
           <div style={{ minWidth: 1100, overflowX:'auto' }}>
 
             {/* Header row */}
-            <div style={{ ...rowFlex, paddingBottom:8, borderBottom:`1px solid ${theme.border}`, marginBottom:4 }}>
+            <div style={{ ...rowFlex, paddingBottom:8, borderBottom:`1px solid ${'#E8E1CE'}`, marginBottom:4 }}>
               <div style={{ ...colLabel }}>EGP</div>
               {MONTHS.map(m => (
-                <div key={m} style={{ ...cellBase, fontSize:10, color:theme.textMuted, fontWeight:600 }}>{m}</div>
+                <div key={m} style={{ ...cellBase, fontSize:10, color:'#9B9180', fontWeight:600 }}>{m}</div>
               ))}
-              <div style={{ ...colTotal, fontSize:10, color:theme.textMuted, fontWeight:600 }}>Total</div>
-              <div style={{ ...colPct,   fontSize:10, color:theme.textMuted, fontWeight:600 }}>%</div>
+              <div style={{ ...colTotal, fontSize:10, color:'#9B9180', fontWeight:600 }}>Total</div>
+              <div style={{ ...colPct,   fontSize:10, color:'#9B9180', fontWeight:600 }}>%</div>
             </div>
 
             {/* ── INCOME section ── */}
             <div style={{
               ...rowFlex, padding:'6px 0',
-              borderBottom:`1px solid ${theme.border}`,
+              borderBottom:`1px solid ${'#E8E1CE'}`,
             }}>
               <div style={{ ...colLabel, fontSize:10.5, fontWeight:700, letterSpacing:'0.7px', color:GREEN, textTransform:'uppercase' }}>
                 INCOME
@@ -415,7 +412,7 @@ export function ReflectionScreen(_props?: any) {
                 <div key={mi} style={{ ...cellBase, color:GREEN, fontWeight:600, fontSize:11 }}>{fmt(v)}</div>
               ))}
               <div style={{ ...colTotal, fontSize:11.5, fontWeight:700, color:GREEN }}>{fmt(grandIncome)}</div>
-              <div style={{ ...colPct, fontSize:10, color:theme.textDim }}>100%</div>
+              <div style={{ ...colPct, fontSize:10, color:'#6C6553' }}>100%</div>
             </div>
 
             {incomeTopCats.map(cat => {
@@ -433,22 +430,22 @@ export function ReflectionScreen(_props?: any) {
                     style={{
                       ...rowFlex, padding:'5px 0',
                       cursor:'pointer',
-                      borderBottom:`1px solid ${theme.border}`,
+                      borderBottom:`1px solid ${'#E8E1CE'}`,
                       background: `${cat.color}0A`,
                       borderLeft:`3px solid ${cat.color}`,
                       paddingLeft:6,
                     }}
                   >
                     <div style={{ width:182-6, flexShrink:0, display:'flex', alignItems:'center', gap:5 }}>
-                      <span style={{ fontSize:10, color:theme.textMuted }}>{isOpen ? '▾' : '▸'}</span>
+                      <span style={{ fontSize:10, color:'#9B9180' }}>{isOpen ? '▾' : '▸'}</span>
                       <span style={{ fontSize:12 }}>{cat.icon}</span>
                       <span style={{ fontSize:11.5, fontWeight:700, color:cat.color }}>{cat.name}</span>
                     </div>
                     {rowTotals.map((v, mi) => (
-                      <div key={mi} style={{ ...cellBase, fontWeight:600, color:theme.text, fontSize:11 }}>{fmt(v)}</div>
+                      <div key={mi} style={{ ...cellBase, fontWeight:600, color:'#191712', fontSize:11 }}>{fmt(v)}</div>
                     ))}
-                    <div style={{ ...colTotal, fontSize:11.5, fontWeight:700, color:theme.text }}>{fmt(catTotal)}</div>
-                    <div style={{ ...colPct, fontSize:10, color:theme.textDim }}>{pct}%</div>
+                    <div style={{ ...colTotal, fontSize:11.5, fontWeight:700, color:'#191712' }}>{fmt(catTotal)}</div>
+                    <div style={{ ...colPct, fontSize:10, color:'#6C6553' }}>{pct}%</div>
                   </div>
 
                   {/* Sub-rows */}
@@ -459,20 +456,20 @@ export function ReflectionScreen(_props?: any) {
                     return (
                       <div key={sub.id} style={{
                         ...rowFlex, padding:'3px 0',
-                        borderBottom:`1px solid ${theme.border}`,
+                        borderBottom:`1px solid ${'#E8E1CE'}`,
                       }}>
                         <div style={{ width:182, flexShrink:0, display:'flex', alignItems:'center', gap:5, paddingLeft:22 }}>
                           <div style={{ width:7, height:7, borderRadius:1, background:sub.color, flexShrink:0 }} />
-                          <span style={{ fontSize:11, color:theme.textDim }}>{sub.name}</span>
+                          <span style={{ fontSize:11, color:'#6C6553' }}>{sub.name}</span>
                         </div>
                         {MONTHS.map((_, mi) => renderCell(sub.id, mi, true))}
-                        <div style={{ ...colTotal, fontSize:11, fontWeight:600, color:theme.text }}>{fmt(subTotal)}</div>
-                        <div style={{ ...colPct, fontSize:10, color:theme.textDim }}>{subPct}%</div>
+                        <div style={{ ...colTotal, fontSize:11, fontWeight:600, color:'#191712' }}>{fmt(subTotal)}</div>
+                        <div style={{ ...colPct, fontSize:10, color:'#6C6553' }}>{subPct}%</div>
                         {/* Comment input row */}
                         {commentCell?.catId === sub.id && (
                           <div style={{
                             position:'absolute', left:0, right:0,
-                            background:theme.surface, border:`1px solid ${theme.border}`,
+                            background:'#FFFFFF', border:`1px solid ${'#E8E1CE'}`,
                             padding:'6px 10px', display:'flex', gap:6, alignItems:'center', zIndex:10,
                           }}>
                             <input
@@ -482,14 +479,14 @@ export function ReflectionScreen(_props?: any) {
                               onChange={e => setCommentText(e.target.value)}
                               onKeyDown={e => { if (e.key==='Enter') submitComment(); if (e.key==='Escape') { setCommentCell(null); setCommentText('') } }}
                               style={{
-                                flex:1, background:'transparent', border:`1px solid ${theme.border}`,
-                                color:theme.text, fontSize:12, borderRadius:4, padding:'3px 6px',
+                                flex:1, background:'transparent', border:`1px solid ${'#E8E1CE'}`,
+                                color:'#191712', fontSize:12, borderRadius:4, padding:'3px 6px',
                                 outline:'none', fontFamily:'inherit',
                               }}
                               placeholder="Add comment…"
                             />
-                            <button onClick={submitComment} style={{ background:theme.accent, border:'none', borderRadius:4, color:'#fff', fontSize:11, padding:'3px 8px', cursor:'pointer', fontFamily:'inherit' }}>OK</button>
-                            <button onClick={() => { setCommentCell(null); setCommentText('') }} style={{ background:'none', border:'none', color:theme.textDim, fontSize:11, cursor:'pointer', fontFamily:'inherit' }}>✕</button>
+                            <button onClick={submitComment} style={{ background:'#F5D14E', border:'none', borderRadius:4, color:'#fff', fontSize:11, padding:'3px 8px', cursor:'pointer', fontFamily:'inherit' }}>OK</button>
+                            <button onClick={() => { setCommentCell(null); setCommentText('') }} style={{ background:'none', border:'none', color:'#6C6553', fontSize:11, cursor:'pointer', fontFamily:'inherit' }}>✕</button>
                           </div>
                         )}
                       </div>
@@ -502,16 +499,16 @@ export function ReflectionScreen(_props?: any) {
             {/* ── EXPENSES section ── */}
             <div style={{
               ...rowFlex, padding:'8px 0 4px',
-              borderBottom:`1px solid ${theme.border}`,
+              borderBottom:`1px solid ${'#E8E1CE'}`,
             }}>
-              <div style={{ ...colLabel, fontSize:10.5, fontWeight:700, letterSpacing:'0.7px', color:theme.textDim, textTransform:'uppercase' }}>
+              <div style={{ ...colLabel, fontSize:10.5, fontWeight:700, letterSpacing:'0.7px', color:'#6C6553', textTransform:'uppercase' }}>
                 EXPENSES
               </div>
               {expenseByMonth.map((v, mi) => (
-                <div key={mi} style={{ ...cellBase, color:theme.textDim, fontSize:11 }}>{fmt(v)}</div>
+                <div key={mi} style={{ ...cellBase, color:'#6C6553', fontSize:11 }}>{fmt(v)}</div>
               ))}
-              <div style={{ ...colTotal, fontSize:11.5, fontWeight:700, color:theme.textDim }}>{fmt(grandExpense)}</div>
-              <div style={{ ...colPct, fontSize:10, color:theme.textDim }}>—</div>
+              <div style={{ ...colTotal, fontSize:11.5, fontWeight:700, color:'#6C6553' }}>{fmt(grandExpense)}</div>
+              <div style={{ ...colPct, fontSize:10, color:'#6C6553' }}>—</div>
             </div>
 
             {expenseTopCats.map(cat => {
@@ -529,22 +526,22 @@ export function ReflectionScreen(_props?: any) {
                     style={{
                       ...rowFlex, padding:'5px 0',
                       cursor:'pointer',
-                      borderBottom:`1px solid ${theme.border}`,
+                      borderBottom:`1px solid ${'#E8E1CE'}`,
                       background:`${cat.color}0A`,
                       borderLeft:`3px solid ${cat.color}`,
                       paddingLeft:6,
                     }}
                   >
                     <div style={{ width:182-6, flexShrink:0, display:'flex', alignItems:'center', gap:5 }}>
-                      <span style={{ fontSize:10, color:theme.textMuted }}>{isOpen ? '▾' : '▸'}</span>
+                      <span style={{ fontSize:10, color:'#9B9180' }}>{isOpen ? '▾' : '▸'}</span>
                       <span style={{ fontSize:12 }}>{cat.icon}</span>
                       <span style={{ fontSize:11.5, fontWeight:700, color:cat.color }}>{cat.name}</span>
                     </div>
                     {rowTotals.map((v, mi) => (
-                      <div key={mi} style={{ ...cellBase, fontWeight:600, color:theme.text, fontSize:11 }}>{fmt(v)}</div>
+                      <div key={mi} style={{ ...cellBase, fontWeight:600, color:'#191712', fontSize:11 }}>{fmt(v)}</div>
                     ))}
-                    <div style={{ ...colTotal, fontSize:11.5, fontWeight:700, color:theme.text }}>{fmt(catTotal)}</div>
-                    <div style={{ ...colPct, fontSize:10, color:theme.textDim }}>{pct}%</div>
+                    <div style={{ ...colTotal, fontSize:11.5, fontWeight:700, color:'#191712' }}>{fmt(catTotal)}</div>
+                    <div style={{ ...colPct, fontSize:10, color:'#6C6553' }}>{pct}%</div>
                   </div>
 
                   {/* Sub-rows */}
@@ -557,11 +554,11 @@ export function ReflectionScreen(_props?: any) {
                       <div key={sub.id} style={{ position:'relative' }}>
                         <div style={{
                           ...rowFlex, padding:'3px 0',
-                          borderBottom:`1px solid ${theme.border}`,
+                          borderBottom:`1px solid ${'#E8E1CE'}`,
                         }}>
                           <div style={{ width:182, flexShrink:0, display:'flex', alignItems:'center', gap:5, paddingLeft:22 }}>
                             <div style={{ width:7, height:7, borderRadius:1, background:sub.color, flexShrink:0 }} />
-                            <span style={{ fontSize:11, color:theme.textDim }}>{sub.name}</span>
+                            <span style={{ fontSize:11, color:'#6C6553' }}>{sub.name}</span>
                             <button
                               onClick={e => {
                                 e.stopPropagation()
@@ -570,7 +567,7 @@ export function ReflectionScreen(_props?: any) {
                               }}
                               style={{
                                 background:'none', border:'none', cursor:'pointer',
-                                color:theme.textMuted, fontSize:11, padding:'0 2px',
+                                color:'#9B9180', fontSize:11, padding:'0 2px',
                                 lineHeight:1, fontFamily:'inherit', marginLeft:2,
                               }}
                               title="Add comment"
@@ -579,12 +576,12 @@ export function ReflectionScreen(_props?: any) {
                             </button>
                           </div>
                           {MONTHS.map((_, mi) => renderCell(sub.id, mi, false))}
-                          <div style={{ ...colTotal, fontSize:11, fontWeight:600, color:theme.text }}>{fmt(subTotal)}</div>
-                          <div style={{ ...colPct, fontSize:10, color:theme.textDim }}>{subPct}%</div>
+                          <div style={{ ...colTotal, fontSize:11, fontWeight:600, color:'#191712' }}>{fmt(subTotal)}</div>
+                          <div style={{ ...colPct, fontSize:10, color:'#6C6553' }}>{subPct}%</div>
                         </div>
                         {isCommentOpen && (
                           <div style={{
-                            background:theme.surface, border:`1px solid ${theme.border}`,
+                            background:'#FFFFFF', border:`1px solid ${'#E8E1CE'}`,
                             padding:'6px 10px', display:'flex', gap:6, alignItems:'center',
                           }}>
                             <input
@@ -594,14 +591,14 @@ export function ReflectionScreen(_props?: any) {
                               onChange={e => setCommentText(e.target.value)}
                               onKeyDown={e => { if (e.key==='Enter') submitComment(); if (e.key==='Escape') { setCommentCell(null); setCommentText('') } }}
                               style={{
-                                flex:1, background:'transparent', border:`1px solid ${theme.border}`,
-                                color:theme.text, fontSize:12, borderRadius:4, padding:'3px 6px',
+                                flex:1, background:'transparent', border:`1px solid ${'#E8E1CE'}`,
+                                color:'#191712', fontSize:12, borderRadius:4, padding:'3px 6px',
                                 outline:'none', fontFamily:'inherit',
                               }}
                               placeholder="Add comment…"
                             />
-                            <button onClick={submitComment} style={{ background:theme.accent, border:'none', borderRadius:4, color:'#fff', fontSize:11, padding:'3px 8px', cursor:'pointer', fontFamily:'inherit' }}>OK</button>
-                            <button onClick={() => { setCommentCell(null); setCommentText('') }} style={{ background:'none', border:'none', color:theme.textDim, fontSize:11, cursor:'pointer', fontFamily:'inherit' }}>✕</button>
+                            <button onClick={submitComment} style={{ background:'#F5D14E', border:'none', borderRadius:4, color:'#fff', fontSize:11, padding:'3px 8px', cursor:'pointer', fontFamily:'inherit' }}>OK</button>
+                            <button onClick={() => { setCommentCell(null); setCommentText('') }} style={{ background:'none', border:'none', color:'#6C6553', fontSize:11, cursor:'pointer', fontFamily:'inherit' }}>✕</button>
                           </div>
                         )}
                       </div>
@@ -618,7 +615,7 @@ export function ReflectionScreen(_props?: any) {
               <div style={{ ...rowFlex, padding:'5px 6px' }}>
                 <div style={{ width:182, flexShrink:0, display:'flex', alignItems:'center', gap:6 }}>
                   <span style={{ color:GREEN, fontSize:12 }}>▲</span>
-                  <span style={{ fontSize:11, color:theme.textDim }}>Total income</span>
+                  <span style={{ fontSize:11, color:'#6C6553' }}>Total income</span>
                 </div>
                 {incomeByMonth.map((v, mi) => (
                   <div key={mi} style={{ ...cellBase, color:GREEN, fontWeight:600, fontSize:11 }}>{fmt(v)}</div>
@@ -631,7 +628,7 @@ export function ReflectionScreen(_props?: any) {
               <div style={{ ...rowFlex, padding:'5px 6px' }}>
                 <div style={{ width:182, flexShrink:0, display:'flex', alignItems:'center', gap:6 }}>
                   <span style={{ color:RED, fontSize:12 }}>▼</span>
-                  <span style={{ fontSize:11, color:theme.textDim }}>Total expenses</span>
+                  <span style={{ fontSize:11, color:'#6C6553' }}>Total expenses</span>
                 </div>
                 {expenseByMonth.map((v, mi) => (
                   <div key={mi} style={{ ...cellBase, color:AMBER, fontWeight:600, fontSize:11 }}>{fmt(v)}</div>
@@ -641,10 +638,10 @@ export function ReflectionScreen(_props?: any) {
               </div>
 
               {/* Net month */}
-              <div style={{ ...rowFlex, padding:'5px 6px', borderTop:`1px solid ${theme.border}` }}>
+              <div style={{ ...rowFlex, padding:'5px 6px', borderTop:`1px solid ${'#E8E1CE'}` }}>
                 <div style={{ width:182, flexShrink:0, display:'flex', alignItems:'center', gap:6 }}>
-                  <span style={{ color:theme.textMuted, fontSize:12 }}>=</span>
-                  <span style={{ fontSize:11, color:theme.textDim, fontWeight:600 }}>Net month</span>
+                  <span style={{ color:'#9B9180', fontSize:12 }}>=</span>
+                  <span style={{ fontSize:11, color:'#6C6553', fontWeight:600 }}>Net month</span>
                 </div>
                 {netByMonth.map((v, mi) => (
                   <div key={mi} style={{ ...cellBase, color: v >= 0 ? GREEN : RED, fontWeight:600, fontSize:11 }}>
@@ -660,8 +657,8 @@ export function ReflectionScreen(_props?: any) {
               {/* Cumulative */}
               <div style={{ ...rowFlex, padding:'5px 6px' }}>
                 <div style={{ width:182, flexShrink:0, display:'flex', alignItems:'center', gap:6 }}>
-                  <span style={{ color:theme.textMuted, fontSize:12 }}>∑</span>
-                  <span style={{ fontSize:11, color:theme.textDim }}>Cumulative</span>
+                  <span style={{ color:'#9B9180', fontSize:12 }}>∑</span>
+                  <span style={{ fontSize:11, color:'#6C6553' }}>Cumulative</span>
                 </div>
                 {cumulative.map((v, mi) => (
                   <div key={mi} style={{ ...cellBase, color: v >= 0 ? GREEN : RED, fontSize:11 }}>
@@ -687,9 +684,9 @@ export function ReflectionScreen(_props?: any) {
     if (categories.length === 0) {
       return (
         <div style={{
-          background:theme.surface, border:`1px solid ${theme.border}`,
+          background:'#FFFFFF', border:`1px solid ${'#E8E1CE'}`,
           borderRadius:14, padding:'40px 24px', textAlign:'center',
-          color:theme.textDim, fontSize:14,
+          color:'#6C6553', fontSize:14,
         }}>
           Add categories in Accounts &amp; Categories to see charts here.
         </div>
@@ -754,21 +751,21 @@ export function ReflectionScreen(_props?: any) {
 
     return (
       <div style={{
-        background:theme.surface, border:`1px solid ${theme.border}`,
+        background:'#FFFFFF', border:`1px solid ${'#E8E1CE'}`,
         borderRadius:14, padding:'20px 22px',
       }}>
         {detail === 'stacked' ? (
           <>
             {/* Stacked legend */}
             <div style={{ display:'flex', alignItems:'center', gap:12, flexWrap:'wrap', marginBottom:16 }}>
-              <span style={{ fontSize:10.5, color:theme.textMuted, fontWeight:700 }}>INCOME</span>
+              <span style={{ fontSize:10.5, color:'#9B9180', fontWeight:700 }}>INCOME</span>
               {incSeries.map(s => (
                 <button
                   key={s.name}
                   onClick={() => toggleSeries(s.name)}
                   style={{
                     background:'none', border:'none', cursor:'pointer', fontFamily:'inherit',
-                    fontSize:11.5, color:theme.textDim,
+                    fontSize:11.5, color:'#6C6553',
                     display:'flex', alignItems:'center', gap:5,
                     textDecoration: hiddenSeries[s.name] ? 'line-through' : 'none',
                     opacity: hiddenSeries[s.name] ? 0.28 : 1,
@@ -778,15 +775,15 @@ export function ReflectionScreen(_props?: any) {
                   {s.name}
                 </button>
               ))}
-              <div style={{ width:1, height:14, background:theme.border }} />
-              <span style={{ fontSize:10.5, color:theme.textMuted, fontWeight:700 }}>OUTFLOW</span>
+              <div style={{ width:1, height:14, background:'#E8E1CE' }} />
+              <span style={{ fontSize:10.5, color:'#9B9180', fontWeight:700 }}>OUTFLOW</span>
               {expSeries.map(s => (
                 <button
                   key={s.name}
                   onClick={() => toggleSeries(s.name)}
                   style={{
                     background:'none', border:'none', cursor:'pointer', fontFamily:'inherit',
-                    fontSize:11.5, color:theme.textDim,
+                    fontSize:11.5, color:'#6C6553',
                     display:'flex', alignItems:'center', gap:5,
                     textDecoration: hiddenSeries[s.name] ? 'line-through' : 'none',
                     opacity: hiddenSeries[s.name] ? 0.28 : 1,
@@ -809,7 +806,7 @@ export function ReflectionScreen(_props?: any) {
                 return (
                   <div key={mo} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center' }}>
                     {showValues && (
-                      <div style={{ fontSize:9, color:theme.textDim, marginBottom:2, textAlign:'center' }}>
+                      <div style={{ fontSize:9, color:'#6C6553', marginBottom:2, textAlign:'center' }}>
                         {(incTotal / 1000).toFixed(0)}K
                       </div>
                     )}
@@ -845,12 +842,12 @@ export function ReflectionScreen(_props?: any) {
                         })}
                       </div>
                     </div>
-                    <div style={{ fontSize:11, color:theme.textMuted, marginTop:6 }}>{mo}</div>
+                    <div style={{ fontSize:11, color:'#9B9180', marginTop:6 }}>{mo}</div>
                   </div>
                 )
               })}
             </div>
-            <div style={{ fontSize:11, color:theme.textDim, marginTop:8 }}>
+            <div style={{ fontSize:11, color:'#6C6553', marginTop:8 }}>
               Left bar = income · Right bar = outflow
             </div>
           </>
@@ -860,11 +857,11 @@ export function ReflectionScreen(_props?: any) {
             <div style={{ display:'flex', gap:18, marginBottom:12 }}>
               <div style={{ display:'flex', alignItems:'center', gap:5 }}>
                 <div style={{ width:10, height:10, borderRadius:2, background:GREEN }} />
-                <span style={{ fontSize:11.5, color:theme.textMuted }}>Income</span>
+                <span style={{ fontSize:11.5, color:'#9B9180' }}>Income</span>
               </div>
               <div style={{ display:'flex', alignItems:'center', gap:5 }}>
                 <div style={{ width:10, height:10, borderRadius:2, background:AMBER }} />
-                <span style={{ fontSize:11.5, color:theme.textMuted }}>Outflow</span>
+                <span style={{ fontSize:11.5, color:'#9B9180' }}>Outflow</span>
               </div>
             </div>
 
@@ -893,7 +890,7 @@ export function ReflectionScreen(_props?: any) {
                   return (
                     <div key={mo} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center' }}>
                       {showValues && (
-                        <div style={{ fontSize:9, color:theme.textDim, marginBottom:2 }}>
+                        <div style={{ fontSize:9, color:'#6C6553', marginBottom:2 }}>
                           {(incomeByMonth[mi] / 1000).toFixed(0)}K
                         </div>
                       )}
@@ -919,7 +916,7 @@ export function ReflectionScreen(_props?: any) {
             {/* Month labels */}
             <div style={{ display:'flex', gap:10, marginTop:4 }}>
               {MONTHS.map(mo => (
-                <div key={mo} style={{ flex:1, textAlign:'center', fontSize:11, color:theme.textMuted }}>{mo}</div>
+                <div key={mo} style={{ flex:1, textAlign:'center', fontSize:11, color:'#9B9180' }}>{mo}</div>
               ))}
             </div>
 
@@ -949,20 +946,20 @@ export function ReflectionScreen(_props?: any) {
   // ─────────────────────────────────────────────────────────────────────────────
 
   return (
-    <div style={{ height:'100%', overflowY:'auto', padding:'26px 30px 60px', background:theme.bg }}>
+    <div style={{ height:'100%', overflowY:'auto', padding:'26px 30px 60px', background:'#F7F4EA' }}>
 
       {/* Top controls bar */}
       <div style={{
         display:'flex', flexWrap:'wrap', gap:12, marginBottom:16, paddingBottom:16,
-        borderBottom:`1px solid ${theme.border}`,
+        borderBottom:`1px solid ${'#E8E1CE'}`,
         alignItems:'flex-end', justifyContent:'space-between',
       }}>
         {/* Left: title */}
         <div>
-          <div style={{ fontSize:10, textTransform:'uppercase', color:theme.textMuted, letterSpacing:'0.8px', fontWeight:700, marginBottom:4 }}>
+          <div style={{ fontSize:10, textTransform:'uppercase', color:'#9B9180', letterSpacing:'0.8px', fontWeight:700, marginBottom:4 }}>
             Finance · Reflect
           </div>
-          <div style={{ fontSize:24, fontWeight:700, color:theme.text }}>
+          <div style={{ fontSize:24, fontWeight:700, color:'#191712' }}>
             Financials Reflection
           </div>
         </div>
@@ -980,11 +977,11 @@ export function ReflectionScreen(_props?: any) {
               ]}
               value={tableMode}
               onChange={v => setTableMode(v as 'planning' | 'actual' | 'compare')}
-              themeSurface={theme.surface}
-              themeBorder={theme.border}
-              themeAccent={theme.accent}
-              themeAccentFill={theme.accentFill}
-              themeTextDim={theme.textDim}
+              themeSurface={'#FFFFFF'}
+              themeBorder={'#E8E1CE'}
+              themeAccent={'#F5D14E'}
+              themeAccentFill={'rgba(245,209,78,0.12)'}
+              themeTextDim={'#6C6553'}
             />
           )}
 
@@ -995,11 +992,11 @@ export function ReflectionScreen(_props?: any) {
                 options={[{ v:'stacked', label:'Stacked' }, { v:'totals', label:'Totals' }]}
                 value={detail}
                 onChange={v => setDetail(v as 'stacked' | 'totals')}
-                themeSurface={theme.surface}
-                themeBorder={theme.border}
-                themeAccent={theme.accent}
-                themeAccentFill={theme.accentFill}
-                themeTextDim={theme.textDim}
+                themeSurface={'#FFFFFF'}
+                themeBorder={'#E8E1CE'}
+                themeAccent={'#F5D14E'}
+                themeAccentFill={'rgba(245,209,78,0.12)'}
+                themeTextDim={'#6C6553'}
               />
 
               {detail === 'stacked' && (
@@ -1007,11 +1004,11 @@ export function ReflectionScreen(_props?: any) {
                   options={[{ v:'cat', label:'By category' }, { v:'type', label:'By type' }]}
                   value={by}
                   onChange={v => setBy(v as 'cat' | 'type')}
-                  themeSurface={theme.surface}
-                  themeBorder={theme.border}
-                  themeAccent={theme.accent}
-                  themeAccentFill={theme.accentFill}
-                  themeTextDim={theme.textDim}
+                  themeSurface={'#FFFFFF'}
+                  themeBorder={'#E8E1CE'}
+                  themeAccent={'#F5D14E'}
+                  themeAccentFill={'rgba(245,209,78,0.12)'}
+                  themeTextDim={'#6C6553'}
                 />
               )}
 
@@ -1019,9 +1016,9 @@ export function ReflectionScreen(_props?: any) {
                 onClick={() => setShowValues(v => !v)}
                 style={{
                   padding:'7px 13px', borderRadius:9,
-                  border:`1px solid ${showValues ? theme.accent : theme.border}`,
-                  background: showValues ? theme.accentFill : theme.surface,
-                  color: showValues ? theme.accent : theme.textDim,
+                  border:`1px solid ${showValues ? '#F5D14E' : '#E8E1CE'}`,
+                  background: showValues ? 'rgba(245,209,78,0.12)' : '#FFFFFF',
+                  color: showValues ? '#F5D14E' : '#6C6553',
                   fontSize:12, cursor:'pointer', fontFamily:'inherit',
                 }}
               >
@@ -1035,11 +1032,11 @@ export function ReflectionScreen(_props?: any) {
             options={[{ v:'table', label:'📋 Category table' }, { v:'bars', label:'📊 Cashflow bars' }]}
             value={view}
             onChange={v => setView(v as 'table' | 'bars')}
-            themeSurface={theme.surface}
-            themeBorder={theme.border}
-            themeAccent={theme.accent}
-            themeAccentFill={theme.accentFill}
-            themeTextDim={theme.textDim}
+            themeSurface={'#FFFFFF'}
+            themeBorder={'#E8E1CE'}
+            themeAccent={'#F5D14E'}
+            themeAccentFill={'rgba(245,209,78,0.12)'}
+            themeTextDim={'#6C6553'}
           />
         </div>
       </div>
@@ -1054,7 +1051,7 @@ export function ReflectionScreen(_props?: any) {
         ].map(({ label, color }) => (
           <div key={label} style={{ display:'flex', alignItems:'center', gap:5 }}>
             <div style={{ width:10, height:10, borderRadius:2, background:color, flexShrink:0 }} />
-            <span style={{ fontSize:12, color:theme.textMuted }}>{label}</span>
+            <span style={{ fontSize:12, color:'#9B9180' }}>{label}</span>
           </div>
         ))}
       </div>

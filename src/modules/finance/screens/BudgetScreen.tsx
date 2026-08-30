@@ -1,6 +1,4 @@
 import { useState } from 'react'
-import { useUIStore } from '@/store/uiStore'
-import { getTheme } from '@/lib/themes'
 import { useFinanceStore } from '../financeStore'
 import { CategoryModal } from '../modals/CategoryModal'
 import { TransactionModal } from '../modals/TransactionModal'
@@ -21,8 +19,6 @@ function fmt(n: number) {
 }
 
 export function BudgetScreen() {
-  const themeId = useUIStore(s => s.themeId)
-  const theme = getTheme(themeId)
 
   const {
     categories, transactions, accounts, budgets,
@@ -197,7 +193,7 @@ export function BudgetScreen() {
     const isDrop     = dropTargetId === cat.id
     const isDrag     = draggedCatId === cat.id
     const isSelected = isParent ? selectedCatId === cat.id : selectedSubCatId === cat.id
-    const ringColor  = isDrop ? theme.accent : isSelected ? theme.accent : over ? RED : isIncome ? GREEN : theme.border
+    const ringColor  = isDrop ? '#F5D14E' : isSelected ? '#F5D14E' : over ? RED : isIncome ? GREEN : '#E8E1CE'
 
     return (
       <div
@@ -230,11 +226,11 @@ export function BudgetScreen() {
           style={{
             width: size, height: size, borderRadius: '50%',
             border: `2.5px solid ${ringColor}`,
-            background: isDrop ? `${theme.accent}18` : theme.surface,
+            background: isDrop ? `${'#F5D14E'}18` : '#FFFFFF',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: Math.round(size * 0.38), cursor: 'grab',
             transition: 'border-color 0.15s',
-            boxShadow: isDrop ? `0 0 0 3px ${theme.accent}33` : 'none',
+            boxShadow: isDrop ? `0 0 0 3px ${'#F5D14E'}33` : 'none',
           }}
         >
           {cat.icon}
@@ -244,16 +240,16 @@ export function BudgetScreen() {
             onClick={e => { e.stopPropagation(); setCatModal({ open: true, category: cat }) }}
             style={{
               position: 'absolute', top: -4, right: 4,
-              background: theme.surface, border: `1px solid ${theme.border}`,
+              background: '#FFFFFF', border: `1px solid ${'#E8E1CE'}`,
               borderRadius: '50%', width: 18, height: 18,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer', fontSize: 10, color: theme.textDim, lineHeight: 1, padding: 0,
+              cursor: 'pointer', fontSize: 10, color: '#6C6553', lineHeight: 1, padding: 0,
             }}
           >✏</button>
         )}
-        <div style={{ fontSize: 11, color: theme.text, marginTop: 7, lineHeight: 1.2 }}>{cat.name}</div>
-        <div style={{ fontSize: 11, color: over ? RED : isIncome ? GREEN : theme.textDim, marginTop: 2 }}>{fmt(actual)}</div>
-        <div style={{ fontSize: 10, color: theme.textMuted }}>{fmt(budget)}</div>
+        <div style={{ fontSize: 11, color: '#191712', marginTop: 7, lineHeight: 1.2 }}>{cat.name}</div>
+        <div style={{ fontSize: 11, color: over ? RED : isIncome ? GREEN : '#6C6553', marginTop: 2 }}>{fmt(actual)}</div>
+        <div style={{ fontSize: 10, color: '#9B9180' }}>{fmt(budget)}</div>
       </div>
     )
   }
@@ -269,7 +265,7 @@ export function BudgetScreen() {
     return (
       <div style={{
         marginTop: 14,
-        border: `1px solid ${theme.border}`,
+        border: `1px solid ${'#E8E1CE'}`,
         borderRadius: 12,
         overflow: 'hidden',
       }}>
@@ -277,8 +273,8 @@ export function BudgetScreen() {
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: '10px 16px',
-          background: theme.surface,
-          borderBottom: `1px solid ${theme.border}`,
+          background: '#FFFFFF',
+          borderBottom: `1px solid ${'#E8E1CE'}`,
           cursor: 'pointer',
         }}
           onClick={() => { setSelectedCatId(parentCat.id); setSelectedSubCatId(null); setRightMode('txns') }}
@@ -286,19 +282,19 @@ export function BudgetScreen() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{
               width: 34, height: 34, borderRadius: '50%',
-              background: theme.bg, border: `2px solid ${isIncome ? GREEN : theme.border}`,
+              background: '#F7F4EA', border: `2px solid ${isIncome ? GREEN : '#E8E1CE'}`,
               display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0,
             }}>
               {parentCat.icon}
             </div>
-            <span style={{ fontSize: 14, fontWeight: 600, color: theme.text }}>{parentCat.name}</span>
+            <span style={{ fontSize: 14, fontWeight: 600, color: '#191712' }}>{parentCat.name}</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 5 }}>
-            <span style={{ fontSize: 14, fontWeight: 700, color: isIncome ? GREEN : (parentActual > parentBudget && parentBudget > 0 ? RED : theme.textDim) }}>
+            <span style={{ fontSize: 14, fontWeight: 700, color: isIncome ? GREEN : (parentActual > parentBudget && parentBudget > 0 ? RED : '#6C6553') }}>
               {fmt(parentActual)}
             </span>
             {parentBudget > 0 && (
-              <span style={{ fontSize: 12, color: theme.textMuted }}>/ {fmt(parentBudget)}</span>
+              <span style={{ fontSize: 12, color: '#9B9180' }}>/ {fmt(parentBudget)}</span>
             )}
           </div>
         </div>
@@ -306,7 +302,7 @@ export function BudgetScreen() {
         {/* Subcategory circle grid */}
         <div style={{
           padding: '14px 12px',
-          background: theme.bg,
+          background: '#F7F4EA',
           display: 'flex', flexWrap: 'wrap', gap: '12px 6px',
         }}>
           {subs.map(sub => renderCircle(sub, 52, isIncome, false))}
@@ -315,15 +311,15 @@ export function BudgetScreen() {
             <button
               onClick={() => setCatModal({ open: true, category: {
                 id: crypto.randomUUID(), name: '', icon: '📁',
-                color: theme.accent, parentId: parentCat.id,
+                color: '#F5D14E', parentId: parentCat.id,
                 txType: parentCat.txType, isSystem: false,
                 sortOrder: subCatsOf(parentCat.id).length,
               }})}
               style={{
                 width: 34, height: 34, borderRadius: '50%',
-                border: `2px dashed ${theme.border}`, background: 'none', cursor: 'pointer',
+                border: `2px dashed ${'#E8E1CE'}`, background: 'none', cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: theme.textDim, fontSize: 16, lineHeight: 1,
+                color: '#6C6553', fontSize: 16, lineHeight: 1,
               }}
             >+</button>
           </div>
@@ -338,7 +334,7 @@ export function BudgetScreen() {
   const selIncCat = selectedCatId ? topIncCats.find(c => c.id === selectedCatId) ?? null : null
 
   return (
-    <div style={{ display: 'flex', flex: 1, height: '100%', overflow: 'hidden', background: theme.bg }}>
+    <div style={{ display: 'flex', flex: 1, height: '100%', overflow: 'hidden', background: '#F7F4EA' }}>
 
       {/* ── LEFT PANEL ── */}
       <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
@@ -346,26 +342,26 @@ export function BudgetScreen() {
         {/* Header */}
         <div style={{
           height: 48, flexShrink: 0,
-          borderBottom: `1px solid ${theme.border}`,
+          borderBottom: `1px solid ${'#E8E1CE'}`,
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: '0 20px',
         }}>
           <button
             onClick={() => setCatModal({ open: true, category: null })}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: theme.textDim, padding: '2px 4px', lineHeight: 1 }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: '#6C6553', padding: '2px 4px', lineHeight: 1 }}
           >⚙</button>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <button
               onClick={() => setCurrentMonth(addMonth(currentMonth, -1))}
-              style={{ background: 'none', border: 'none', color: theme.textDim, fontSize: 20, cursor: 'pointer', padding: '2px 6px', lineHeight: 1 }}
+              style={{ background: 'none', border: 'none', color: '#6C6553', fontSize: 20, cursor: 'pointer', padding: '2px 6px', lineHeight: 1 }}
             >‹</button>
-            <span style={{ fontSize: 18, fontWeight: 600, color: theme.text, minWidth: 90, textAlign: 'center' as const }}>
+            <span style={{ fontSize: 18, fontWeight: 600, color: '#191712', minWidth: 90, textAlign: 'center' as const }}>
               {MONTHS[parseInt(currentMonth.slice(5, 7)) - 1]} {currentMonth.slice(0, 4)}
             </span>
             <button
               onClick={() => setCurrentMonth(addMonth(currentMonth, 1))}
-              style={{ background: 'none', border: 'none', color: theme.textDim, fontSize: 20, cursor: 'pointer', padding: '2px 6px', lineHeight: 1 }}
+              style={{ background: 'none', border: 'none', color: '#6C6553', fontSize: 20, cursor: 'pointer', padding: '2px 6px', lineHeight: 1 }}
             >›</button>
           </div>
 
@@ -373,8 +369,8 @@ export function BudgetScreen() {
         </div>
 
         {/* Monthly bars — always visible */}
-        <div style={{ padding: '14px 24px 0', flexShrink: 0, borderBottom: `1px solid ${theme.border}` }}>
-          <div style={{ fontSize: 11, color: theme.textMuted, marginBottom: 8 }}>
+        <div style={{ padding: '14px 24px 0', flexShrink: 0, borderBottom: `1px solid ${'#E8E1CE'}` }}>
+          <div style={{ fontSize: 11, color: '#9B9180', marginBottom: 8 }}>
             {focusCat
               ? `${focusCat.name} · ${currentYear}`
               : `Net income vs expenses · ${currentYear}`}
@@ -404,7 +400,7 @@ export function BudgetScreen() {
                   }} />
                   <div style={{
                     fontSize: 9, paddingBottom: 5,
-                    color: isSelected ? color : theme.textMuted,
+                    color: isSelected ? color : '#9B9180',
                     fontWeight: isSelected ? 700 : 400,
                   }}>
                     {MONTHS[i]}
@@ -429,12 +425,12 @@ export function BudgetScreen() {
           {/* EXPENSES */}
           <div style={{ marginBottom: 28 }}>
             <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 16 }}>
-              <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.8px', color: theme.textDim }}>
+              <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.8px', color: '#6C6553' }}>
                 EXPENSES
               </span>
               <div style={{ display: 'flex', gap: 6, alignItems: 'baseline' }}>
                 <span style={{ fontSize: 16, fontWeight: 700, color: RED }}>{fmt(totalExpActual)}</span>
-                <span style={{ fontSize: 14, color: theme.textMuted }}>/ EGP {fmt(totalExpBudget)}</span>
+                <span style={{ fontSize: 14, color: '#9B9180' }}>/ EGP {fmt(totalExpBudget)}</span>
               </div>
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '14px 8px' }}>
@@ -443,14 +439,14 @@ export function BudgetScreen() {
                 <button
                   onClick={() => setCatModal({ open: true, category: {
                     id: crypto.randomUUID(), name: '', icon: '📁',
-                    color: theme.accent, txType: 'expense', isSystem: false,
+                    color: '#F5D14E', txType: 'expense', isSystem: false,
                     sortOrder: categories.filter(c => !c.parentId).length,
                   }})}
                   style={{
                     width: 40, height: 40, borderRadius: '50%',
-                    border: `2px dashed ${theme.border}`, background: 'none', cursor: 'pointer',
+                    border: `2px dashed ${'#E8E1CE'}`, background: 'none', cursor: 'pointer',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    color: theme.textDim, fontSize: 20, lineHeight: 1,
+                    color: '#6C6553', fontSize: 20, lineHeight: 1,
                   }}
                 >+</button>
               </div>
@@ -462,12 +458,12 @@ export function BudgetScreen() {
           {/* INCOME */}
           <div style={{ marginBottom: 28 }}>
             <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 16 }}>
-              <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.8px', color: theme.textDim }}>
+              <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.8px', color: '#6C6553' }}>
                 INCOME
               </span>
               <div style={{ display: 'flex', gap: 6, alignItems: 'baseline' }}>
                 <span style={{ fontSize: 16, fontWeight: 700, color: GREEN }}>{fmt(totalIncActual)}</span>
-                <span style={{ fontSize: 14, color: theme.textMuted }}>/ EGP {fmt(totalIncBudget)}</span>
+                <span style={{ fontSize: 14, color: '#9B9180' }}>/ EGP {fmt(totalIncBudget)}</span>
               </div>
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '14px 8px' }}>
@@ -476,14 +472,14 @@ export function BudgetScreen() {
                 <button
                   onClick={() => setCatModal({ open: true, category: {
                     id: crypto.randomUUID(), name: '', icon: '📁',
-                    color: theme.accent, txType: 'income', isSystem: false,
+                    color: '#F5D14E', txType: 'income', isSystem: false,
                     sortOrder: categories.filter(c => !c.parentId).length,
                   }})}
                   style={{
                     width: 40, height: 40, borderRadius: '50%',
-                    border: `2px dashed ${theme.border}`, background: 'none', cursor: 'pointer',
+                    border: `2px dashed ${'#E8E1CE'}`, background: 'none', cursor: 'pointer',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    color: theme.textDim, fontSize: 20, lineHeight: 1,
+                    color: '#6C6553', fontSize: 20, lineHeight: 1,
                   }}
                 >+</button>
               </div>
@@ -499,15 +495,15 @@ export function BudgetScreen() {
       {activeCatId && activeCat && (
         <div style={{
           width: 340, flexShrink: 0,
-          borderLeft: `1px solid ${theme.border}`,
+          borderLeft: `1px solid ${'#E8E1CE'}`,
           display: 'flex', flexDirection: 'column',
-          background: theme.surface, overflow: 'hidden',
+          background: '#FFFFFF', overflow: 'hidden',
         }}>
           {rightMode === 'txns' ? (
             <>
               {/* Header */}
               <div style={{
-                height: 48, flexShrink: 0, borderBottom: `1px solid ${theme.border}`,
+                height: 48, flexShrink: 0, borderBottom: `1px solid ${'#E8E1CE'}`,
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 padding: '0 14px',
               }}>
@@ -517,23 +513,23 @@ export function BudgetScreen() {
                       if (selectedSubCatId) setSelectedSubCatId(null)
                       else setSelectedCatId(null)
                     }}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: theme.textDim, fontSize: 18, lineHeight: 1, padding: '0 4px 0 0', flexShrink: 0 }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6C6553', fontSize: 18, lineHeight: 1, padding: '0 4px 0 0', flexShrink: 0 }}
                   >‹</button>
                   {selectedSubCatId && selectedCat && (
                     <span
                       onClick={() => setSelectedSubCatId(null)}
-                      style={{ fontSize: 13, color: theme.textMuted, cursor: 'pointer', whiteSpace: 'nowrap' as const }}
+                      style={{ fontSize: 13, color: '#9B9180', cursor: 'pointer', whiteSpace: 'nowrap' as const }}
                     >
                       {selectedCat.icon} {selectedCat.name} ›{' '}
                     </span>
                   )}
-                  <span style={{ fontSize: 15, fontWeight: 600, color: theme.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>
+                  <span style={{ fontSize: 15, fontWeight: 600, color: '#191712', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>
                     {activeCat.icon} {activeCat.name}
                   </span>
                 </div>
                 <span style={{
                   fontSize: 13, fontWeight: 700, flexShrink: 0, marginLeft: 8,
-                  color: activeActual > activeBudget && activeBudget > 0 ? RED : theme.accent,
+                  color: activeActual > activeBudget && activeBudget > 0 ? RED : '#F5D14E',
                 }}>
                   {fmt(activeActual)} / EGP {fmt(activeBudget)}
                 </span>
@@ -542,7 +538,7 @@ export function BudgetScreen() {
               {/* Transaction list */}
               <div style={{ flex: 1, overflowY: 'auto' }}>
                 {panelTxns.length === 0 ? (
-                  <div style={{ padding: 24, textAlign: 'center' as const, color: theme.textMuted, fontSize: 13 }}>
+                  <div style={{ padding: 24, textAlign: 'center' as const, color: '#9B9180', fontSize: 13 }}>
                     No transactions in {MONTHS[parseInt(currentMonth.slice(5, 7)) - 1]}
                   </div>
                 ) : panelTxns.map(tx => {
@@ -555,25 +551,25 @@ export function BudgetScreen() {
                       onClick={() => setTxModal({ open: true, tx })}
                       style={{
                         display: 'flex', alignItems: 'center', gap: 12,
-                        padding: '10px 14px', borderBottom: `1px solid ${theme.border}`,
+                        padding: '10px 14px', borderBottom: `1px solid ${'#E8E1CE'}`,
                         cursor: 'pointer',
                       }}
                     >
                       <div style={{
                         width: 38, height: 38, borderRadius: '50%', flexShrink: 0,
-                        background: acct ? `${acct.color}22` : theme.bg,
-                        border: `1px solid ${acct ? acct.color + '44' : theme.border}`,
+                        background: acct ? `${acct.color}22` : '#F7F4EA',
+                        border: `1px solid ${acct ? acct.color + '44' : '#E8E1CE'}`,
                         display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15,
                       }}>
                         {acct?.emoji ?? '🏦'}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 14, color: theme.text, fontWeight: 500, whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        <div style={{ fontSize: 14, color: '#191712', fontWeight: 500, whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {tx.payee?.trim() || txCat?.name || 'Transaction'}
                         </div>
-                        <div style={{ fontSize: 12, color: theme.textMuted, marginTop: 2, display: 'flex', gap: 6 }}>
+                        <div style={{ fontSize: 12, color: '#9B9180', marginTop: 2, display: 'flex', gap: 6 }}>
                           <span>{tx.date}</span>
-                          {txCat && tx.payee?.trim() && <span style={{ color: theme.textDim }}>· {txCat.icon} {txCat.name}</span>}
+                          {txCat && tx.payee?.trim() && <span style={{ color: '#6C6553' }}>· {txCat.icon} {txCat.name}</span>}
                         </div>
                       </div>
                       <span style={{
@@ -590,23 +586,23 @@ export function BudgetScreen() {
               </div>
 
               {/* Footer */}
-              <div style={{ borderTop: `1px solid ${theme.border}`, padding: '10px 14px', display: 'flex', gap: 8 }}>
+              <div style={{ borderTop: `1px solid ${'#E8E1CE'}`, padding: '10px 14px', display: 'flex', gap: 8 }}>
                 <button
                   onClick={() => setTxModal({ open: true, tx: null })}
                   style={{
                     flex: 1, padding: '8px 0',
-                    background: theme.accentFill, border: `1px solid ${theme.accent}44`,
+                    background: 'rgba(245,209,78,0.12)', border: `1px solid ${'#F5D14E'}44`,
                     borderRadius: 8, cursor: 'pointer',
-                    fontSize: 13, color: theme.accent, fontFamily: 'inherit', fontWeight: 600,
+                    fontSize: 13, color: '#F5D14E', fontFamily: 'inherit', fontWeight: 600,
                   }}
                 >+ Add</button>
                 <button
                   onClick={() => openBudget(activeCatId)}
                   style={{
                     flex: 1, padding: '8px 0',
-                    background: 'transparent', border: `1px solid ${theme.border}`,
+                    background: 'transparent', border: `1px solid ${'#E8E1CE'}`,
                     borderRadius: 8, cursor: 'pointer',
-                    fontSize: 13, fontWeight: 600, color: theme.text, fontFamily: 'inherit',
+                    fontSize: 13, fontWeight: 600, color: '#191712', fontFamily: 'inherit',
                   }}
                 >Budget</button>
               </div>
@@ -615,18 +611,18 @@ export function BudgetScreen() {
             /* Budget editor */
             <>
               <div style={{
-                height: 48, flexShrink: 0, borderBottom: `1px solid ${theme.border}`,
+                height: 48, flexShrink: 0, borderBottom: `1px solid ${'#E8E1CE'}`,
                 display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center',
                 padding: '0 16px',
               }}>
                 <button
                   onClick={() => setRightMode('txns')}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: theme.textDim, fontSize: 14, textAlign: 'left' as const, fontFamily: 'inherit', padding: 0 }}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6C6553', fontSize: 14, textAlign: 'left' as const, fontFamily: 'inherit', padding: 0 }}
                 >Cancel</button>
-                <span style={{ fontSize: 15, fontWeight: 700, color: theme.text }}>Budget</span>
+                <span style={{ fontSize: 15, fontWeight: 700, color: '#191712' }}>Budget</span>
                 <button
                   onClick={saveBudget}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: theme.accent, fontSize: 14, fontWeight: 700, textAlign: 'right' as const, fontFamily: 'inherit', padding: 0 }}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#F5D14E', fontSize: 14, fontWeight: 700, textAlign: 'right' as const, fontFamily: 'inherit', padding: 0 }}
                 >Save</button>
               </div>
 
@@ -649,56 +645,56 @@ export function BudgetScreen() {
                       }}
                       style={{
                         flex: 1, background: 'transparent', border: 'none',
-                        borderBottom: `1px solid ${theme.border}`, outline: 'none',
-                        color: theme.text, fontSize: 16, fontWeight: 600,
+                        borderBottom: `1px solid ${'#E8E1CE'}`, outline: 'none',
+                        color: '#191712', fontSize: 16, fontWeight: 600,
                         fontFamily: 'inherit', padding: '4px 0',
                       }}
                     />
                   </div>
                 )}
 
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0', borderBottom: `1px solid ${theme.border}` }}>
-                  <span style={{ fontSize: 14, color: theme.text }}>Every Month</span>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0', borderBottom: `1px solid ${'#E8E1CE'}` }}>
+                  <span style={{ fontSize: 14, color: '#191712' }}>Every Month</span>
                   <input
                     type="number" min={0} value={budgetEdit.monthlyAmount} placeholder="0"
                     onChange={e => setBudgetEdit(p => ({ ...p, monthlyAmount: e.target.value }))}
-                    style={{ width: 100, textAlign: 'right' as const, background: 'transparent', border: 'none', outline: 'none', color: theme.accent, fontSize: 16, fontWeight: 700, fontFamily: 'inherit' }}
+                    style={{ width: 100, textAlign: 'right' as const, background: 'transparent', border: 'none', outline: 'none', color: '#F5D14E', fontSize: 16, fontWeight: 700, fontFamily: 'inherit' }}
                   />
                 </div>
 
-                <div style={{ display: 'flex', gap: 12, padding: '12px 0', borderBottom: `1px solid ${theme.border}` }}>
+                <div style={{ display: 'flex', gap: 12, padding: '12px 0', borderBottom: `1px solid ${'#E8E1CE'}` }}>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 11, color: theme.textMuted, marginBottom: 4 }}>Begin</div>
+                    <div style={{ fontSize: 11, color: '#9B9180', marginBottom: 4 }}>Begin</div>
                     <input
                       type="month" value={budgetEdit.startDate}
                       onChange={e => setBudgetEdit(p => ({ ...p, startDate: e.target.value }))}
-                      style={{ background: 'transparent', border: 'none', outline: 'none', color: theme.text, fontSize: 13, fontFamily: 'inherit', cursor: 'pointer' }}
+                      style={{ background: 'transparent', border: 'none', outline: 'none', color: '#191712', fontSize: 13, fontFamily: 'inherit', cursor: 'pointer' }}
                     />
                   </div>
-                  <div style={{ width: 1, background: theme.border }} />
+                  <div style={{ width: 1, background: '#E8E1CE' }} />
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 11, color: theme.textMuted, marginBottom: 4 }}>End</div>
+                    <div style={{ fontSize: 11, color: '#9B9180', marginBottom: 4 }}>End</div>
                     {budgetEdit.endDate ? (
                       <input
                         type="month" value={budgetEdit.endDate}
                         onChange={e => setBudgetEdit(p => ({ ...p, endDate: e.target.value }))}
-                        style={{ background: 'transparent', border: 'none', outline: 'none', color: theme.text, fontSize: 13, fontFamily: 'inherit', cursor: 'pointer' }}
+                        style={{ background: 'transparent', border: 'none', outline: 'none', color: '#191712', fontSize: 13, fontFamily: 'inherit', cursor: 'pointer' }}
                       />
                     ) : (
                       <span
                         onClick={() => setBudgetEdit(p => ({ ...p, endDate: addMonth(currentMonth, 1) }))}
-                        style={{ fontSize: 13, color: theme.textMuted, cursor: 'pointer' }}
+                        style={{ fontSize: 13, color: '#9B9180', cursor: 'pointer' }}
                       >Never</span>
                     )}
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0', borderBottom: `1px solid ${theme.border}` }}>
-                  <span style={{ fontSize: 14, color: theme.text }}>Currency</span>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0', borderBottom: `1px solid ${'#E8E1CE'}` }}>
+                  <span style={{ fontSize: 14, color: '#191712' }}>Currency</span>
                   <select
                     value={budgetEdit.currency}
                     onChange={e => setBudgetEdit(p => ({ ...p, currency: e.target.value as Currency }))}
-                    style={{ background: 'transparent', border: 'none', outline: 'none', color: theme.text, fontSize: 14, fontFamily: 'inherit', cursor: 'pointer' }}
+                    style={{ background: 'transparent', border: 'none', outline: 'none', color: '#191712', fontSize: 14, fontFamily: 'inherit', cursor: 'pointer' }}
                   >
                     <option value="EGP">EGP</option>
                     <option value="USD">USD</option>
@@ -706,12 +702,12 @@ export function BudgetScreen() {
                   </select>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0', borderBottom: `1px solid ${theme.border}` }}>
-                  <span style={{ fontSize: 14, color: theme.text }}>Rollover</span>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0', borderBottom: `1px solid ${'#E8E1CE'}` }}>
+                  <span style={{ fontSize: 14, color: '#191712' }}>Rollover</span>
                   <input
                     type="checkbox" checked={budgetEdit.rollover}
                     onChange={e => setBudgetEdit(p => ({ ...p, rollover: e.target.checked }))}
-                    style={{ width: 18, height: 18, cursor: 'pointer', accentColor: theme.accent }}
+                    style={{ width: 18, height: 18, cursor: 'pointer', accentColor: '#F5D14E' }}
                   />
                 </div>
 
