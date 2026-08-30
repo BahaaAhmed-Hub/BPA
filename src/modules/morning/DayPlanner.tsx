@@ -395,15 +395,15 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
         {error && (
           <div style={{
-            borderRadius: 10, background: '#1C1410', border: '1px solid #92400E40', overflow: 'hidden',
+            borderRadius: 10, background: '#FEF3EC', border: '1px solid #92400E30', overflow: 'hidden',
           }}>
             <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '14px 16px', borderBottom: '1px solid #92400E30' }}>
               <CreditCard size={14} color="#F59E0B" style={{ marginTop: 1, flexShrink: 0 }} />
               <div>
-                <p style={{ margin: '0 0 3px', fontSize: 12.5, fontWeight: 600, color: '#FCD34D' }}>
+                <p style={{ margin: '0 0 3px', fontSize: 12.5, fontWeight: 600, color: '#B45309' }}>
                   {errorType === 'credit' ? 'API Credit Balance Too Low' : 'Generation Failed'}
                 </p>
-                <p style={{ margin: 0, fontSize: 12, color: '#FFFFFF', lineHeight: 1.5 }}>
+                <p style={{ margin: 0, fontSize: 12, color: '#6C6553', lineHeight: 1.5 }}>
                   {errorType === 'credit'
                     ? 'Top up at console.anthropic.com → Billing, then try again.'
                     : error}
@@ -902,7 +902,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <div style={{
         padding: '16px 18px', borderRadius: 12,
-        background: '#0D1A14', border: '1px solid #1D9E7530',
+        background: '#F0FAF5', border: '1px solid #1D9E7540',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
           <div style={{
