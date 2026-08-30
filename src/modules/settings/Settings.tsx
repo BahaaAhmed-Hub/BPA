@@ -3,16 +3,7 @@
 
 import { useState, useEffect, useRef, type ReactNode } from 'react'
 import {
-  DndContext, closestCenter, KeyboardSensor, PointerSensor,
-  useSensor, useSensors, type DragEndEvent,
-} from '@dnd-kit/core'
-import {
-  arrayMove, SortableContext, sortableKeyboardCoordinates,
-  useSortable, verticalListSortingStrategy,
-} from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
-import {
-  Plus, Trash2, GripVertical, LogIn, LogOut,
+  Plus, Trash2, LogIn, LogOut,
   ChevronDown, ChevronUp, User, Clock, Building2, Flame,
   Brain, Bell, Palette, Link, X, RefreshCw, Eye, EyeOff, Shield, Pencil,
   Hash, CheckSquare, Mail, HardDrive, CalendarDays, Swords, Wand2,
@@ -168,7 +159,7 @@ function loadSectionOrder(): SectionId[] {
   const otherNew  = miss.filter(id => id !== 'behavioral')
   return [...pinnedNew, ...valid, ...otherNew]
 }
-function saveSectionOrder(ids: SectionId[]) { lsSet('professor-section-order', ids) }
+// saveSectionOrder: section order no longer draggable in Settings v2 (kept for compat reference)
 
 // ─── Google Calendars fetch ───────────────────────────────────────────────────
 
@@ -191,13 +182,6 @@ async function checkSupabase(): Promise<boolean> {
 
 // ─── CHUNK 2: Shared UI atoms ─────────────────────────────────────────────────
 
-// Card style using CSS variables for full theme support
-const card: React.CSSProperties = {
-  background: '#FFFFFF',
-  border: '1px solid #E8E1CE',
-  borderRadius: 14, padding: '0',
-  marginBottom: 12, overflow: 'hidden',
-}
 const inputStyle: React.CSSProperties = {
   background: '#FAF7EC',
   border: '1px solid #E8E1CE',
@@ -246,101 +230,7 @@ function FieldRow({ label, sub, children }: { label: string; sub?: string; child
 
 // ─── Sortable Section Shell ────────────────────────────────────────────────────
 
-function SectionShell({
-  id, meta, children, defaultOpen = false, saveLabel, onSave,
-}: {
-  id: SectionId
-  meta: SectionMeta
-  children: React.ReactNode
-  defaultOpen?: boolean
-  saveLabel?: string
-  onSave?: () => void
-}) {
-  const [open, setOpen] = useState(defaultOpen)
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
-  const Icon = meta.icon
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={{
-        ...card,
-        transform: CSS.Transform.toString(transform),
-        transition,
-        opacity: isDragging ? 0.5 : 1,
-        boxShadow: isDragging ? '0 8px 32px rgba(0,0,0,0.4)' : 'none',
-      }}
-    >
-      {/* Header row */}
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: 12,
-        padding: '16px 20px', cursor: 'pointer',
-        borderBottom: open ? '1px solid #E8E1CE' : 'none',
-        userSelect: 'none',
-      }}>
-        {/* Drag handle */}
-        <span
-          {...attributes} {...listeners}
-          style={{ color: '#6C6553', cursor: 'grab', flexShrink: 0, display: 'flex', touchAction: 'none' }}
-          title="Drag to reorder"
-        >
-          <GripVertical size={16} />
-        </span>
-
-        {/* Icon */}
-        <div style={{
-          width: 30, height: 30, borderRadius: 7, flexShrink: 0,
-          background: 'var(--color-accent-fill, rgba(30,64,175,0.12))',
-          border: '1px solid var(--color-accent, #1E40AF)30',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
-          <Icon size={14} color="var(--color-accent, #1E40AF)" />
-        </div>
-
-        {/* Title + description */}
-        <div style={{ flex: 1 }} onClick={() => setOpen(o => !o)}>
-          <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#191712' }}>
-            {meta.title}
-          </p>
-          {!open && (
-            <p style={{ margin: '1px 0 0', fontSize: 11.5, color: '#6C6553' }}>
-              {meta.description}
-            </p>
-          )}
-        </div>
-
-        {/* Save button — always visible in header */}
-        {onSave && (
-          <button
-            onClick={e => { e.stopPropagation(); onSave() }}
-            style={{
-              padding: '5px 14px', borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: 'pointer',
-              background: saveLabel?.includes('✓') ? 'rgba(29,158,117,0.12)' : saveLabel?.includes('✗') ? 'rgba(224,82,82,0.12)' : 'var(--color-accent-fill, rgba(30,64,175,0.12))',
-              border: `1px solid ${saveLabel?.includes('✓') ? '#1D9E7560' : saveLabel?.includes('✗') ? '#E0525260' : 'var(--color-accent, #1E40AF)40'}`,
-              color: saveLabel?.includes('✓') ? '#1D9E75' : saveLabel?.includes('✗') ? '#E05252' : 'var(--color-accent, #1E40AF)',
-              transition: 'all 0.15s', flexShrink: 0,
-            }}
-          >
-            {saveLabel ?? 'Save'}
-          </button>
-        )}
-
-        {/* Chevron */}
-        <button onClick={() => setOpen(o => !o)}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6C6553', display: 'flex', padding: 4 }}>
-          {open ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-        </button>
-      </div>
-
-      {/* Body */}
-      {open && (
-        <div style={{ padding: '20px 24px 24px' }}>
-          {children}
-        </div>
-      )}
-    </div>
-  )
-}
+// SectionShell removed — Settings now uses a left-rail + single-panel layout.
 
 // ─── CHUNK 3: Profile & Schedule sections ────────────────────────────────────
 
@@ -1992,7 +1882,10 @@ export function Settings() {
   const [settings, setSettings]         = useState<AppSettings>(loadSettings)
   const [companies, setCompanies]       = useState<CompanyRow[]>(loadCompanies)
   const [accounts, setAccounts]         = useState<ConnectedAccount[]>(loadAccounts)
-  const [sectionOrder, setSectionOrder] = useState<SectionId[]>(loadSectionOrder)
+  const [_sectionOrder] = useState<SectionId[]>(loadSectionOrder) // eslint-disable-line @typescript-eslint/no-unused-vars
+  const [activeSection, setActiveSection] = useState<SectionId>(() => {
+    try { return (localStorage.getItem('settings-active-section') as SectionId) ?? 'profile' } catch { return 'profile' }
+  })
 
   const [supaOk, setSupaOk]             = useState<boolean | null>(null)
   // Per-section save states + error messages
@@ -2096,21 +1989,7 @@ export function Settings() {
     }
   }
 
-  // ── DnD sensors ─────────────────────────────────────────────────────────────
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
-  )
-
-  function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event
-    if (!over || active.id === over.id) return
-    const oldIdx = sectionOrder.indexOf(active.id as SectionId)
-    const newIdx = sectionOrder.indexOf(over.id as SectionId)
-    const next = arrayMove(sectionOrder, oldIdx, newIdx)
-    setSectionOrder(next)
-    saveSectionOrder(next)
-  }
+  // ── Section order (kept for loadSectionOrder / saveSectionOrder compatibility) ─
 
   // ── Section renderer ─────────────────────────────────────────────────────────
   function renderSection(id: SectionId) {
@@ -2134,43 +2013,75 @@ export function Settings() {
 
     const errMsg = sectionError[id]
 
+    const Icon = meta.icon
     return (
-      <SectionShell key={id} id={id} meta={meta}
-        saveLabel={saveLabel}
-        onSave={saveFn ? withSectionSave(id, saveFn) : undefined}
-      >
+      <div key={id}>
+        {/* Section header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 32, height: 32, borderRadius: 8, background: '#F0EBDC', border: '1px solid #E8E1CE', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Icon size={15} color="#6C6553" />
+            </div>
+            <div>
+              <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#191712', fontFamily: 'var(--sb-font-num, "Outfit", sans-serif)', letterSpacing: '-0.02em' }}>
+                {meta.title}
+              </h2>
+              <p style={{ margin: 0, fontSize: 12, color: '#9B9180' }}>{meta.description}</p>
+            </div>
+          </div>
+          {saveFn && (
+            <button
+              onClick={withSectionSave(id, saveFn)}
+              style={{
+                padding: '7px 16px', borderRadius: 8, fontSize: 12.5, fontWeight: 600, cursor: 'pointer',
+                background: saveLabel?.includes('✓') ? 'rgba(29,158,117,0.12)' : saveLabel?.includes('✗') ? 'rgba(224,82,82,0.12)' : '#F5D14E',
+                border: saveLabel?.includes('✓') ? '1px solid #1D9E7560' : saveLabel?.includes('✗') ? '1px solid #E0525260' : '1px solid rgba(25,23,18,0.18)',
+                color: saveLabel?.includes('✓') ? '#1D9E75' : saveLabel?.includes('✗') ? '#E05252' : '#191712',
+                boxShadow: '0 2px 0 rgba(25,23,18,0.1)', transition: 'all 0.15s', flexShrink: 0,
+              }}
+            >
+              {saveLabel ?? 'Save'}
+            </button>
+          )}
+        </div>
+
+        {/* Error message */}
         {saving === 'error' && errMsg && (
-          <div style={{ margin: '0 0 14px', padding: '8px 12px', borderRadius: 8, background: 'rgba(224,82,82,0.08)', border: '1px solid rgba(224,82,82,0.25)', fontSize: 12, color: '#E05252' }}>
+          <div style={{ marginBottom: 14, padding: '8px 12px', borderRadius: 8, background: 'rgba(224,82,82,0.08)', border: '1px solid rgba(224,82,82,0.25)', fontSize: 12, color: '#E05252' }}>
             ✗ {errMsg}
           </div>
         )}
-        {id === 'profile'       && <ProfileSection       s={settings} set={update} />}
-        {id === 'schedule'      && <ScheduleSection      s={settings} set={update} />}
-        {id === 'companies'     && <CompaniesSection     companies={companies}
-                                      setCompanies={c => { setCompanies(c); saveCompanies(c) }}
-                                      accounts={[
-                                        ...(primaryEmail ? [{
-                                          id: 'primary',
-                                          email: primaryEmail,
-                                          name: authUser?.name ?? primaryEmail,
-                                          providerToken: '',
-                                          scopes: [],
-                                          connectedAt: '',
-                                          isPrimary: true,
-                                        } as ConnectedAccount] : []),
-                                        ...accounts,
-                                      ]} />}
-        {id === 'habits'        && <HabitsSection />}
-        {id === 'tasks'         && <TaskStatusesSection />}
-        {id === 'accounts'      && <AccountsSection      accounts={accounts}
-                                      setAccounts={a => { setAccounts(a) }}
-                                      primaryEmail={primaryEmail} />}
-        {id === 'professor'     && <ProfessorSection     s={settings} set={update} />}
-        {id === 'notifications' && <NotificationsSection s={settings} set={update} />}
-        {id === 'appearance'    && <AppearanceSection    s={settings} set={update} />}
-        {id === 'blocking'      && <BlockingRulesSection />}
-        {id === 'behavioral'    && <BehavioralSection />}
-      </SectionShell>
+
+        {/* Section content */}
+        <div style={{ background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 14, padding: '22px 24px 24px', boxShadow: '0 1px 3px rgba(25,23,18,0.06)' }}>
+          {id === 'profile'       && <ProfileSection       s={settings} set={update} />}
+          {id === 'schedule'      && <ScheduleSection      s={settings} set={update} />}
+          {id === 'companies'     && <CompaniesSection     companies={companies}
+                                        setCompanies={c => { setCompanies(c); saveCompanies(c) }}
+                                        accounts={[
+                                          ...(primaryEmail ? [{
+                                            id: 'primary',
+                                            email: primaryEmail,
+                                            name: authUser?.name ?? primaryEmail,
+                                            providerToken: '',
+                                            scopes: [],
+                                            connectedAt: '',
+                                            isPrimary: true,
+                                          } as ConnectedAccount] : []),
+                                          ...accounts,
+                                        ]} />}
+          {id === 'habits'        && <HabitsSection />}
+          {id === 'tasks'         && <TaskStatusesSection />}
+          {id === 'accounts'      && <AccountsSection      accounts={accounts}
+                                        setAccounts={a => { setAccounts(a) }}
+                                        primaryEmail={primaryEmail} />}
+          {id === 'professor'     && <ProfessorSection     s={settings} set={update} />}
+          {id === 'notifications' && <NotificationsSection s={settings} set={update} />}
+          {id === 'appearance'    && <AppearanceSection    s={settings} set={update} />}
+          {id === 'blocking'      && <BlockingRulesSection />}
+          {id === 'behavioral'    && <BehavioralSection />}
+        </div>
+      </div>
     )
   }
 
@@ -2179,70 +2090,88 @@ export function Settings() {
   }
 
   return (
-    <div style={{ padding: '28px 28px 60px', maxWidth: 1080, margin: '0 auto' }}>
-      {/* ── Top bar: user info + status ─────────────────────────────────────── */}
+    <div style={{ display: 'flex', height: 'calc(100vh - 66px)', overflow: 'hidden', background: '#F7F4EA' }}>
+
+      {/* ── LEFT RAIL 216px ──────────────────────────────────────────────────── */}
       <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        marginBottom: 24, padding: '16px 20px',
-        background: '#FFFFFF',
-        border: '1px solid #E8E1CE',
-        borderRadius: 14,
+        width: 216, flexShrink: 0, display: 'flex', flexDirection: 'column',
+        background: '#FCFAF4', borderRight: '1px solid #E8E1CE',
+        overflowY: 'auto',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          {authUser?.avatarUrl
-            ? <img src={authUser.avatarUrl} alt="avatar" style={{ width: 40, height: 40, borderRadius: '50%', border: '2px solid #E8E1CE' }} />
-            : <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--color-accent-fill, rgba(30,64,175,0.15))', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <User size={18} color="var(--color-accent, #1E40AF)" />
-              </div>
-          }
-          <div>
-            <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#191712' }}>
-              {authUser?.name ?? authUser?.email ?? 'Professor User'}
-            </p>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 3 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                <div style={{ width: 6, height: 6, borderRadius: '50%', background: supaOk === null ? '#888780' : supaOk ? '#1D9E75' : '#E05252' }} />
-                <span style={{ fontSize: 11, color: '#6C6553' }}>
-                  {supaOk === null ? 'Checking...' : supaOk ? 'Supabase connected' : 'Offline (local only)'}
+        {/* User card at top of rail */}
+        <div style={{ padding: '20px 16px 14px', borderBottom: '1px solid #EDE7D9' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+            {authUser?.avatarUrl
+              ? <img src={authUser.avatarUrl} alt="avatar" style={{ width: 34, height: 34, borderRadius: '50%', border: '1.5px solid #E8E1CE' }} />
+              : <div style={{ width: 34, height: 34, borderRadius: '50%', background: '#EDE7D9', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <User size={15} color="#6C6553" />
+                </div>
+            }
+            <div style={{ minWidth: 0 }}>
+              <p style={{ margin: 0, fontSize: 12.5, fontWeight: 600, color: '#191712', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {authUser?.name ?? 'Professor User'}
+              </p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 1 }}>
+                <div style={{ width: 5, height: 5, borderRadius: '50%', background: supaOk === null ? '#9B9180' : supaOk ? '#1D9E75' : '#E05252', flexShrink: 0 }} />
+                <span style={{ fontSize: 10.5, color: '#9B9180', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {supaOk === null ? 'Checking…' : supaOk ? 'Synced' : 'Local only'}
                 </span>
               </div>
-              <span style={{ color: '#E8E1CE' }}>·</span>
-              <span style={{ fontSize: 11, color: '#6C6553' }}>
-                {accounts.length + 1} account{accounts.length !== 0 ? 's' : ''} connected
-              </span>
             </div>
           </div>
+          <div style={{ display: 'flex', gap: 5 }}>
+            <button onClick={() => void checkSupabase().then(setSupaOk)}
+              style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, padding: '5px 0', borderRadius: 6, background: 'transparent', border: '1px solid #E8E1CE', color: '#6C6553', fontSize: 11, cursor: 'pointer' }}>
+              <RefreshCw size={10} /> Sync
+            </button>
+            <button onClick={() => void handleSignOut()}
+              style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, padding: '5px 0', borderRadius: 6, background: 'transparent', border: '1px solid rgba(224,82,82,0.28)', color: '#E05252', fontSize: 11, cursor: 'pointer' }}>
+              <LogOut size={10} /> Sign out
+            </button>
+          </div>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+
+        {/* Section nav items */}
+        <div style={{ padding: '8px 8px', flex: 1 }}>
+          <div style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.1em', color: '#9B9180', textTransform: 'uppercase', padding: '8px 8px 4px' }}>SETTINGS</div>
+          {SECTION_META.map(({ id, title, icon: Icon }) => {
+            const isActive = id === activeSection
+            return (
+              <button
+                key={id}
+                onClick={() => { setActiveSection(id); try { localStorage.setItem('settings-active-section', id) } catch { /* noop */ } }}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', gap: 9,
+                  padding: '8px 9px', borderRadius: 8, cursor: 'pointer', marginBottom: 1,
+                  background: isActive ? '#F5D14E' : 'transparent',
+                  border: isActive ? '1px solid rgba(25,23,18,0.14)' : '1px solid transparent',
+                  color: isActive ? '#191712' : '#6C6553',
+                  fontSize: 12.5, fontWeight: isActive ? 600 : 400, textAlign: 'left',
+                  transition: 'all 0.1s',
+                  boxShadow: isActive ? '0 1px 3px rgba(25,23,18,0.1)' : 'none',
+                }}
+              >
+                <Icon size={13} style={{ flexShrink: 0, opacity: isActive ? 1 : 0.75 }} />
+                {title}
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Setup wizard button */}
+        <div style={{ padding: '10px 8px 16px', borderTop: '1px solid #EDE7D9' }}>
           <button
             onClick={() => window.dispatchEvent(new CustomEvent('professor:openWizard'))}
-            style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 13px', borderRadius: 8, background: 'rgba(127,119,221,0.08)', border: '1px solid rgba(127,119,221,0.25)', color: '#9B94E8', fontSize: 12, cursor: 'pointer' }}>
+            style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 7, padding: '8px 9px', borderRadius: 8, background: 'rgba(127,119,221,0.08)', border: '1px solid rgba(127,119,221,0.2)', color: '#7F77DD', fontSize: 12, cursor: 'pointer', fontWeight: 500 }}>
             <Wand2 size={12} /> Setup Wizard
-          </button>
-          <button onClick={() => void checkSupabase().then(setSupaOk)}
-            style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 13px', borderRadius: 8, background: 'transparent', border: '1px solid #E8E1CE', color: '#6C6553', fontSize: 12, cursor: 'pointer' }}>
-            <RefreshCw size={12} /> Refresh
-          </button>
-          <button onClick={() => void handleSignOut()}
-            style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 13px', borderRadius: 8, background: 'transparent', border: '1px solid rgba(224,82,82,0.3)', color: '#E05252', fontSize: 12, cursor: 'pointer' }}>
-            <LogOut size={12} /> Sign out
           </button>
         </div>
       </div>
 
-      {/* ── Drag-reorderable sections (2-column grid) ───────────────────────── */}
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <SortableContext items={sectionOrder} strategy={verticalListSortingStrategy}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, alignItems: 'start' }}>
-            {sectionOrder.map(id => renderSection(id))}
-          </div>
-        </SortableContext>
-      </DndContext>
-
-      {/* ── Footer hint ─────────────────────────────────────────────────────── */}
-      <p style={{ textAlign: 'center', fontSize: 11.5, color: '#6C6553', marginTop: 24 }}>
-        Drag sections to reorder · Changes save automatically
-      </p>
+      {/* ── RIGHT CONTENT PANEL ───────────────────────────────────────────────── */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '24px 28px 48px' }}>
+        {renderSection(activeSection)}
+      </div>
     </div>
   )
 }

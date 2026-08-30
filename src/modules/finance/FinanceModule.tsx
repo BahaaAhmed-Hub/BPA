@@ -208,16 +208,17 @@ export function FinanceModule() {
                 style={{
                   display: 'flex', alignItems: 'center', gap: 5,
                   padding: '4px 10px', borderRadius: 7, cursor: 'grab',
-                  background: active ? '#191712' : 'transparent',
-                  border: `1px solid ${isDropTarget ? 'var(--sb-accent)' : active ? '#191712' : 'transparent'}`,
+                  background: active ? '#F5D14E' : 'transparent',
+                  border: `1px solid ${isDropTarget ? '#F5D14E' : active ? 'rgba(25,23,18,0.18)' : 'transparent'}`,
+                  boxShadow: active ? '0 2px 0 rgba(25,23,18,0.1)' : 'none',
                   opacity: isDragging ? 0.35 : 1,
                   userSelect: 'none', flexShrink: 0,
                 } as React.CSSProperties}
               >
-                <Icon color={active ? '#FAF7EC' : '#9B9180'} />
+                <Icon color={active ? '#191712' : '#9B9180'} />
                 <span style={{
                   fontSize: 12, fontWeight: active ? 600 : 400,
-                  color: active ? '#FAF7EC' : '#9B9180',
+                  color: active ? '#191712' : '#9B9180',
                   whiteSpace: 'nowrap' as const, letterSpacing: '0.1px',
                 }}>
                   {label}
@@ -231,13 +232,13 @@ export function FinanceModule() {
         <button
           onClick={() => setAddOpen(true)}
           style={{
-            height: 28, paddingInline: 12, borderRadius: 8,
-            background: '#191712', border: 'none', cursor: 'pointer',
+            height: 30, paddingInline: 14, borderRadius: 8,
+            background: '#F5D14E', border: '1px solid rgba(25,23,18,0.18)', cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            flexShrink: 0, gap: 4,
+            flexShrink: 0, gap: 5, boxShadow: '0 2px 0 rgba(25,23,18,0.1)',
           }}
         >
-          <IconPlus color="#FAF7EC" />
+          <IconPlus color="#191712" />
         </button>
       </div>
 
