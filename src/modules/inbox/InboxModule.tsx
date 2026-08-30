@@ -544,7 +544,7 @@ export function InboxModule() {
             <p style={{ margin: '0 0 6px', fontSize: 16, fontWeight: 700, color: '#191712', fontFamily: "'Cabinet Grotesk', sans-serif" }}>
               Connect Gmail
             </p>
-            <p style={{ margin: 0, fontSize: 13, color: '#FFFFFF', lineHeight: 1.6, maxWidth: 320 }}>
+            <p style={{ margin: 0, fontSize: 13, color: '#6C6553', lineHeight: 1.6, maxWidth: 320 }}>
               Sign in with Google to load your real unread emails and triage them with AI.
             </p>
           </div>
@@ -566,7 +566,7 @@ export function InboxModule() {
     if (fetchError) {
       return (
         <div style={{ background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 12, padding: '32px', textAlign: 'center' }}>
-          <p style={{ margin: '0 0 14px', fontSize: 13, color: '#FFFFFF' }}>{fetchError}</p>
+          <p style={{ margin: '0 0 14px', fontSize: 13, color: '#191712' }}>{fetchError}</p>
           <button onClick={() => void loadEmails()} style={{ padding: '7px 18px', borderRadius: 8, background: 'rgba(245,209,78,0.12)', border: '1px solid #1E40AF30', color: '#7F77DD', fontSize: 12, cursor: 'pointer' }}>
             Retry
           </button>
@@ -659,7 +659,7 @@ export function InboxModule() {
 
         ) : selectedTriage?.error ? (
           <div style={{ background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 12, padding: '20px 24px' }}>
-            <p style={{ margin: '0 0 12px', fontSize: 13, color: '#FFFFFF' }}>{selectedTriage.error}</p>
+            <p style={{ margin: '0 0 12px', fontSize: 13, color: '#191712' }}>{selectedTriage.error}</p>
             <button onClick={() => void handleTriage(selectedEmail)} style={{ padding: '7px 14px', borderRadius: 7, background: 'rgba(245,209,78,0.12)', border: '1px solid #1E40AF30', color: '#7F77DD', fontSize: 12, cursor: 'pointer' }}>
               Try again
             </button>
@@ -678,20 +678,20 @@ export function InboxModule() {
 
             <div style={{ display: 'flex', gap: 10, marginBottom: 18 }}>
               <div style={{ flex: 1, padding: '12px 14px', background: CLASS_META[selectedTriage.result.classification].bg, border: `1px solid ${CLASS_META[selectedTriage.result.classification].color}30`, borderRadius: 8 }}>
-                <div style={{ fontSize: 10, color: '#FFFFFF', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Classification</div>
+                <div style={{ fontSize: 10, color: '#9B9180', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Classification</div>
                 <div style={{ fontSize: 14, fontWeight: 600, color: CLASS_META[selectedTriage.result.classification].color }}>
                   {CLASS_META[selectedTriage.result.classification].label}
                 </div>
               </div>
               <div style={{ flex: 1, padding: '12px 14px', background: '#F7F4EA', border: `1px solid ${URGENCY_META[selectedTriage.result.urgency].color}30`, borderRadius: 8 }}>
-                <div style={{ fontSize: 10, color: '#FFFFFF', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Urgency</div>
+                <div style={{ fontSize: 10, color: '#9B9180', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Urgency</div>
                 <div style={{ fontSize: 14, fontWeight: 600, color: URGENCY_META[selectedTriage.result.urgency].color }}>
                   {URGENCY_META[selectedTriage.result.urgency].label}
                 </div>
               </div>
               {selectedTriage.result.followUpDate && (
                 <div style={{ flex: 1, padding: '12px 14px', background: '#F7F4EA', border: '1px solid #E8E1CE', borderRadius: 8 }}>
-                  <div style={{ fontSize: 10, color: '#FFFFFF', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Follow Up</div>
+                  <div style={{ fontSize: 10, color: '#9B9180', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Follow Up</div>
                   <div style={{ fontSize: 14, fontWeight: 600, color: '#191712' }}>{selectedTriage.result.followUpDate}</div>
                 </div>
               )}
@@ -748,7 +748,7 @@ export function InboxModule() {
             </div>
             <div style={{ textAlign: 'center' }}>
               <p style={{ margin: '0 0 5px', fontSize: 14, color: '#191712', fontWeight: 500 }}>Let The Professor triage this</p>
-              <p style={{ margin: 0, fontSize: 12.5, color: '#FFFFFF' }}>Get classification, urgency level, and a ready-to-send reply</p>
+              <p style={{ margin: 0, fontSize: 12.5, color: '#6C6553' }}>Get classification, urgency level, and a ready-to-send reply</p>
             </div>
             <button
               onClick={() => void handleTriage(selectedEmail)}

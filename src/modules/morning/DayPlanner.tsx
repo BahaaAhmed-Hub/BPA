@@ -441,7 +441,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
           return (
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
-                <label style={{ fontSize: 11, fontWeight: 600, color: '#FFFFFF', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                <label style={{ fontSize: 11, fontWeight: 600, color: '#6C6553', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                   What must get done today?
                 </label>
                 {selectedTaskIds.size > 0 && (
@@ -532,7 +532,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
         {/* Today's fixed meetings — so you know what the AI will work around */}
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
-            <label style={{ fontSize: 11, fontWeight: 600, color: '#FFFFFF', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            <label style={{ fontSize: 11, fontWeight: 600, color: '#6C6553', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
               Today's calendar
             </label>
             {eventsLoading && (
@@ -591,7 +591,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
 
         {/* Q2 — Deep work pref */}
         <div>
-          <label style={{ fontSize: 11, fontWeight: 600, color: '#FFFFFF', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: 8 }}>
+          <label style={{ fontSize: 11, fontWeight: 600, color: '#6C6553', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: 8 }}>
             When do you prefer deep work?
           </label>
           <div style={{ display: 'flex', gap: 8 }}>
