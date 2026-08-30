@@ -58,34 +58,34 @@ export function Step6Done({ data }: Props) {
         </svg>
       </div>
 
-      <h2 style={{ margin: '0 0 8px', fontSize: 26, fontWeight: 800, color: 'var(--color-text,#E8EAF6)' }}>
+      <h2 style={{ margin: '0 0 8px', fontSize: 26, fontWeight: 800, color: '#191712' }}>
         You're all set! 🎉
       </h2>
-      <p style={{ margin: '0 0 32px', fontSize: 14, color: 'var(--color-text-dim,#94A3B8)', lineHeight: 1.6 }}>
+      <p style={{ margin: '0 0 32px', fontSize: 14, color: '#6C6553', lineHeight: 1.6 }}>
         Here's what we've set up for you:
       </p>
 
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 32 }}>
         {stats.map(s => (
-          <div key={s.label} style={{ padding: '16px 8px', borderRadius: 12, background: 'var(--color-surface,#FFFFFF)', border: '1px solid #E8E1CE' }}>
+          <div key={s.label} style={{ padding: '16px 8px', borderRadius: 12, background: '#FFFFFF', border: '1px solid #E8E1CE' }}>
             <div style={{ fontSize: 22, marginBottom: 6 }}>{s.emoji}</div>
             <div style={{ fontSize: 28, fontWeight: 800, color: s.color, lineHeight: 1 }}>
               <CountUp target={s.value} />
             </div>
-            <div style={{ fontSize: 11.5, color: 'var(--color-text-muted,#6B7280)', marginTop: 4 }}>{s.label}</div>
+            <div style={{ fontSize: 11.5, color: '#9B9180', marginTop: 4 }}>{s.label}</div>
           </div>
         ))}
       </div>
 
       <div style={{ padding: '14px 20px', borderRadius: 10, background: 'rgba(127,119,221,0.06)', border: '1px solid rgba(127,119,221,0.15)', marginBottom: 16 }}>
-        <p style={{ margin: 0, fontSize: 13, color: 'var(--color-text-dim,#94A3B8)', lineHeight: 1.6 }}>
-          All your data syncs automatically. You can adjust everything in <strong style={{ color: 'var(--color-text,#E8EAF6)' }}>Settings</strong> at any time.
+        <p style={{ margin: 0, fontSize: 13, color: '#6C6553', lineHeight: 1.6 }}>
+          All your data syncs automatically. You can adjust everything in <strong style={{ color: '#191712' }}>Settings</strong> at any time.
         </p>
       </div>
 
-      <p style={{ margin: 0, fontSize: 12, color: 'var(--color-text-muted,#6B7280)' }}>
-        Click <strong style={{ color: 'var(--color-text,#E8EAF6)' }}>Finish</strong> below to enter your workspace.
+      <p style={{ margin: 0, fontSize: 12, color: '#9B9180' }}>
+        Click <strong style={{ color: '#191712' }}>Finish</strong> below to enter your workspace.
       </p>
 
       <style>{`

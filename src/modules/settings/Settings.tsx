@@ -649,7 +649,7 @@ function CompaniesSection({
               <X size={11} /> Cancel
             </button>
             <button onClick={addCompany} disabled={!newName.trim()}
-              style={{ padding: '6px 16px', borderRadius: 7, background: 'rgba(245,209,78,0.12)', border: '1px solid #F5D14E50', color: '#F5D14E', fontSize: 12, fontWeight: 500, cursor: 'pointer', opacity: newName.trim() ? 1 : 0.4, display: 'flex', gap: 5, alignItems: 'center' }}>
+              style={{ padding: '6px 16px', borderRadius: 7, background: 'rgba(245,209,78,0.12)', border: '1px solid #F5D14E50', color: '#191712', fontSize: 12, fontWeight: 500, cursor: 'pointer', opacity: newName.trim() ? 1 : 0.4, display: 'flex', gap: 5, alignItems: 'center' }}>
               <Plus size={11} /> Add Company
             </button>
           </div>
@@ -716,7 +716,7 @@ function SettingsHabitForm({
         <div style={{ display: 'flex', background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 7, overflow: 'hidden' }}>
           {([['boolean', '✓ Done / Not done', CheckSquare], ['quantity', '# Measurable', Hash]] as const).map(([t, label, Icon]) => (
             <button key={t} onClick={() => update({ type: t })}
-              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 12px', fontSize: 12, fontWeight: s.type === t ? 600 : 400, cursor: 'pointer', border: 'none', background: s.type === t ? 'var(--color-accent-fill, rgba(30,64,175,0.18))' : 'none', color: s.type === t ? '#F5D14E' : '#6C6553' }}>
+              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 12px', fontSize: 12, fontWeight: s.type === t ? 600 : 400, cursor: 'pointer', border: 'none', background: s.type === t ? 'rgba(245,209,78,0.15)' : 'none', color: s.type === t ? '#191712' : '#6C6553' }}>
               <Icon size={12} />{label}
             </button>
           ))}
@@ -753,7 +753,7 @@ function SettingsHabitForm({
           <X size={11} /> Cancel
         </button>
         <button onClick={() => valid && onSave(s)} disabled={!valid}
-          style={{ padding: '6px 16px', borderRadius: 7, background: 'rgba(245,209,78,0.12)', border: '1px solid #F5D14E50', color: '#F5D14E', fontSize: 12, fontWeight: 500, cursor: valid ? 'pointer' : 'default', opacity: valid ? 1 : 0.4, display: 'flex', gap: 5, alignItems: 'center' }}>
+          style={{ padding: '6px 16px', borderRadius: 7, background: 'rgba(245,209,78,0.12)', border: '1px solid #F5D14E50', color: '#191712', fontSize: 12, fontWeight: 500, cursor: valid ? 'pointer' : 'default', opacity: valid ? 1 : 0.4, display: 'flex', gap: 5, alignItems: 'center' }}>
           <Plus size={11} /> {saveLabel}
         </button>
       </div>
@@ -961,7 +961,7 @@ function TaskStatusesSection() {
           <X size={11} /> Cancel
         </button>
         <button onClick={confirmSave}
-          style={{ padding: '5px 14px', borderRadius: 6, background: 'rgba(245,209,78,0.12)', border: '1px solid #F5D14E50', color: '#F5D14E', fontSize: 12, fontWeight: 500, cursor: 'pointer', display: 'flex', gap: 4, alignItems: 'center' }}>
+          style={{ padding: '5px 14px', borderRadius: 6, background: 'rgba(245,209,78,0.12)', border: '1px solid #F5D14E50', color: '#191712', fontSize: 12, fontWeight: 500, cursor: 'pointer', display: 'flex', gap: 4, alignItems: 'center' }}>
           <Plus size={11} /> {adding ? 'Add Status' : 'Save'}
         </button>
       </div>
@@ -1039,7 +1039,7 @@ function IntegrationBadge({ icon, label, active, onGrant }: {
       {!active && onGrant && (
         <button onClick={onGrant} style={{
           marginLeft: 3, background: 'none', border: 'none', cursor: 'pointer',
-          color: 'var(--color-accent, #6366F1)', fontSize: 9, fontWeight: 600, padding: 0,
+          color: '#3D3926', fontSize: 9, fontWeight: 600, padding: 0,
         }}>Grant</button>
       )}
     </span>
