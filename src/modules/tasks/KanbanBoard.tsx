@@ -319,7 +319,7 @@ function KanbanColumnComp({ column, onOpen, onColDragStart, onColDragOver, onCol
               }}
             />
             <div style={{ display: 'flex', gap: 5, marginTop: 5 }}>
-              <button onClick={commitAdd} style={{ flex: 1, padding: '4px 0', fontSize: 11, fontWeight: 600, background: '#F5D14E', color: '#fff', border: 'none', borderRadius: 5, cursor: 'pointer' }}>
+              <button onClick={commitAdd} style={{ flex: 1, padding: '4px 0', fontSize: 11, fontWeight: 600, background: '#F5D14E', color: '#191712', border: 'none', borderRadius: 5, cursor: 'pointer' }}>
                 Add
               </button>
               <button onClick={() => { setAdding(false); setNewTitle('') }} style={{ padding: '4px 8px', fontSize: 11, background: 'transparent', color: '#6C6553', border: '1px solid #E8E1CE', borderRadius: 5, cursor: 'pointer', display: 'flex', alignItems: 'center' }}>

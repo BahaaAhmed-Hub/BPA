@@ -269,7 +269,7 @@ export function SetupWizard({ onClose }: Props) {
                   display: 'flex', alignItems: 'center', gap: 6,
                   padding: '11px 26px', borderRadius: 100,
                   background: '#F5D14E', border: 'none',
-                  color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer',
+                  color: '#191712', fontSize: 14, fontWeight: 700, cursor: 'pointer',
                   boxShadow: '0 4px 14px rgba(127,119,221,0.35)',
                   transition: 'all 0.15s',
                 }}>

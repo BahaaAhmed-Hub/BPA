@@ -454,7 +454,7 @@ export function PlanningAssistant() {
               <div key={i} style={{
                 padding: '8px 11px', borderRadius: 8, fontSize: 12, lineHeight: 1.5,
                 background: m.role === 'user' ? '#F5D14E' : '#F7F4EA',
-                color: m.role === 'user' ? '#fff' : '#3D3926',
+                color: m.role === 'user' ? '#191712' : '#3D3926',
                 alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start',
                 maxWidth: '85%',
                 border: m.role === 'assistant' ? '1px solid #E8E1CE' : 'none',
@@ -493,7 +493,7 @@ export function PlanningAssistant() {
               <button onClick={() => void sendChat()} disabled={!chatInput.trim() || chatLoading} style={{
                 width: 36, height: 36, borderRadius: '50%', border: 'none', cursor: chatInput.trim() ? 'pointer' : 'default',
                 background: chatInput.trim() ? '#F5D14E' : '#E8E1CE',
-                color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: '#191712', display: 'flex', alignItems: 'center', justifyContent: 'center',
                 transition: 'background 0.15s', flexShrink: 0,
               }}>
                 <Send size={13} />

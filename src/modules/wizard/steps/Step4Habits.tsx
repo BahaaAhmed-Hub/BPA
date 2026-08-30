@@ -159,7 +159,7 @@ export function Step4Habits({ data, onChange }: Props) {
             ))}
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={addCustom} style={{ padding: '8px 18px', borderRadius: 8, background: '#F5D14E', color: '#fff', fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer' }}>Add</button>
+            <button onClick={addCustom} style={{ padding: '8px 18px', borderRadius: 8, background: '#F5D14E', color: '#191712', fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer' }}>Add</button>
             <button onClick={() => setAddingCustom(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted,#6B7280)', fontSize: 13 }}>Cancel</button>
           </div>
         </div>
