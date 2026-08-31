@@ -37,6 +37,8 @@ function SlotSelect({ value, onChange, children }: {
       value={value}
       onChange={e => onChange(e.target.value)}
       onClick={e => e.stopPropagation()}
+      onPointerDown={e => e.stopPropagation()}
+      onMouseDown={e => e.stopPropagation()}
       style={{
         position: 'absolute', inset: 0, width: '100%', height: '100%',
         opacity: 0, cursor: 'pointer', border: 'none', padding: 0, margin: 0,
@@ -217,6 +219,8 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
               ? { plannedTime: e.target.value, duration: task.duration ?? 30 }
               : { plannedTime: undefined })}
             onClick={e => e.stopPropagation()}
+            onPointerDown={e => e.stopPropagation()}
+            onMouseDown={e => e.stopPropagation()}
             style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer', border: 'none', padding: 0 }}
           />
         </div>

@@ -23,6 +23,8 @@ export function OverlaySelect({ value, onChange, options, title }: {
       value={value}
       onChange={e => onChange(e.target.value)}
       onClick={e => e.stopPropagation()}
+      onPointerDown={e => e.stopPropagation()}
+      onMouseDown={e => e.stopPropagation()}
       style={OVERLAY}
     >
       {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
@@ -43,6 +45,8 @@ export function OverlayTime({ value, onChange, title }: {
       value={value}
       onChange={e => onChange(e.target.value)}
       onClick={e => e.stopPropagation()}
+      onPointerDown={e => e.stopPropagation()}
+      onMouseDown={e => e.stopPropagation()}
       style={OVERLAY}
     />
   )

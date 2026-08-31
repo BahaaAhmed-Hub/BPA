@@ -472,8 +472,9 @@ export function TaskCommand() {
         <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
           {/* 9F: the brain dump rail sits to the LEFT of the matrix */}
           <div style={{ display: 'flex', gap: 16, padding: '4px 28px 28px', alignItems: 'flex-start' }}>
-            {/* offset past the matrix's URGENT / NOT URGENT label row */}
-            <div style={{ paddingTop: 41 }}>
+            {/* offset past the matrix's axis-label row, so the rail, the quadrants
+                and the detail panel share one top edge */}
+            <div style={{ paddingTop: 45 }}>
             <BrainDumpRail
               tasks={tasks.filter(t =>
                 t.quadrant === null && !t.completed && t.status !== 'done' && t.status !== 'cancelled' &&
@@ -485,7 +486,11 @@ export function TaskCommand() {
             <div style={{ flex: 1, minWidth: 0 }}>
               <EisenhowerBoard onOpen={setModalTaskId} hideCompleted={hideCompleted} groupBy={groupBy} allGroupsExpanded={allGroupsExpanded} filteredTaskIds={filteredTaskIds} onOpenPlanner={() => setShowPlanner(true)} />
             </div>
-            {modalTask && <TaskDetailPanel key={modalTask.id} task={modalTask} onClose={() => setModalTaskId(null)} />}
+            {modalTask && (
+              <div style={{ paddingTop: 45 }}>
+                <TaskDetailPanel key={modalTask.id} task={modalTask} onClose={() => setModalTaskId(null)} />
+              </div>
+            )}
           </div>
 
           <DragOverlay>
