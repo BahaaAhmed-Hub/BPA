@@ -3,7 +3,7 @@
 // and an auto-distribute footer that reads each task's own fields.
 
 import { useState } from 'react'
-import { Plus, Sparkles, GripVertical, Check, AlertTriangle, RotateCcw } from 'lucide-react'
+import { Plus, Sparkles, GripVertical, Check, AlertTriangle, RotateCcw, Trash2 } from 'lucide-react'
 import { useDraggable } from '@dnd-kit/core'
 import type { Task, Quadrant } from '@/types'
 import { loadVisibleCompanies } from '@/types'
@@ -74,14 +74,21 @@ function relativeCapture(task: Task): string {
 
 // ─── Card ────────────────────────────────────────────────────────────────────
 
-function DumpCard({ task, onOpen }: { task: Task; onOpen: (id: string) => void }) {
+function DumpCard({ task, onOpen, onDelete }: {
+  task: Task
+  onOpen: (id: string) => void
+  onDelete: () => void
+}) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: task.id })
+  const [hovered, setHovered] = useState(false)
   const s = suggestPlacement(task)
 
   return (
     <div
       ref={setNodeRef}
       onClick={e => { if (!(e.target as HTMLElement).closest('[data-nm]')) onOpen(task.id) }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       style={{
         background: s.inferred ? '#FFFCF0' : '#FFFFFF',
         border: `1px solid ${s.inferred ? '#F0DFA8' : '#E8E1CE'}`,
@@ -95,25 +102,42 @@ function DumpCard({ task, onOpen }: { task: Task; onOpen: (id: string) => void }
         <GripVertical size={12} strokeWidth={2} />
       </span>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{
-          margin: 0, fontSize: 12.5, fontWeight: 600, color: '#191712', lineHeight: 1.3,
-          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-        }}>{task.title}</p>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, minWidth: 0 }}>
+          <p style={{
+            flex: 1, margin: 0, fontSize: 12.5, fontWeight: 600, color: '#191712', lineHeight: 1.3,
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>{task.title}</p>
+          <button
+            data-nm
+            onClick={e => { e.stopPropagation(); onDelete() }}
+            title="Delete task"
+            style={{
+              background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+              display: 'flex', flexShrink: 0, marginTop: 1,
+              color: hovered ? '#B4523A' : '#D8CFB8',
+            }}>
+            <Trash2 size={12.5} strokeWidth={2} />
+          </button>
+        </div>
         <p style={{ margin: '3px 0 0', fontSize: 11, color: '#9B9180', lineHeight: 1.3 }}>
           {relativeCapture(task)}
         </p>
-        <span style={{
-          display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 7,
-          padding: '3px 8px', borderRadius: 999,
-          background: s.inferred ? '#FDF3CE' : '#F4F1E6',
-          border: `1px solid ${s.inferred ? '#EBD79A' : '#E4DDC9'}`,
-          fontSize: 10.5, fontWeight: 600, color: '#6C6553',
-        }}>
-          {s.inferred
-            ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}><Sparkles size={10} strokeWidth={2} />AI</span>
-            : <Check size={10} strokeWidth={2.5} />}
-          <span>{QUADRANT_BADGE[s.quadrant]} · {s.bucket}</span>
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', marginTop: 7, minWidth: 0 }}>
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: 5, minWidth: 0,
+            padding: '3px 8px', borderRadius: 999,
+            background: s.inferred ? '#FDF3CE' : '#F4F1E6',
+            border: `1px solid ${s.inferred ? '#EBD79A' : '#E4DDC9'}`,
+            fontSize: 10.5, fontWeight: 600, color: '#6C6553',
+          }}>
+            {s.inferred
+              ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}><Sparkles size={10} strokeWidth={2} />AI</span>
+              : <Check size={10} strokeWidth={2.5} />}
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {QUADRANT_BADGE[s.quadrant]} · {s.bucket}
+            </span>
+          </span>
+        </div>
       </div>
     </div>
   )
@@ -125,7 +149,7 @@ export function BrainDumpRail({ tasks, onOpen }: {
   tasks: Task[]
   onOpen: (id: string) => void
 }) {
-  const { addTask, updateTask } = useTaskStore()
+  const { addTask, updateTask, deleteTask } = useTaskStore()
   const [capturing, setCapturing] = useState(false)
   const [draft, setDraft] = useState('')
   const [lastRun, setLastRun] = useState<{ id: string; quadrant: Quadrant | null; boardStatus?: string }[] | null>(null)
@@ -217,7 +241,14 @@ export function BrainDumpRail({ tasks, onOpen }: {
             Nothing uncategorised.
           </p>
         )}
-        {tasks.map(t => <DumpCard key={t.id} task={t} onOpen={onOpen} />)}
+        {tasks.map(t => (
+          <DumpCard
+            key={t.id}
+            task={t}
+            onOpen={onOpen}
+            onDelete={() => { if (window.confirm(`Delete "${t.title}"?`)) deleteTask(t.id) }}
+          />
+        ))}
       </div>
 
       {/* Auto-distribute */}
