@@ -18,6 +18,8 @@ export interface GCalEvent {
   recurrence?: string[]
   htmlLink?: string
   reminders?: { useDefault: boolean; overrides?: { method: string; minutes: number }[] }
+  /** Drive files attached to the event. Google returns no size or date for these. */
+  attachments?: { fileId?: string; fileUrl: string; title?: string; mimeType?: string; iconLink?: string }[]
 }
 
 export interface GCalEventWithCalendar extends GCalEvent {

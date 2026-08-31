@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import {
   ChevronLeft, ChevronRight, ChevronDown, Layers, Calendar, Video,
   Sparkles, MapPin, RefreshCw, X, Eye, EyeOff,
-  CheckCircle2, XCircle, Link, Check, MoreHorizontal, Plus,
+  CheckCircle2, XCircle, Link, Check, MoreHorizontal, Plus, Pencil, Paperclip, FileText,
   ExternalLink, AlertCircle, Shield, Copy, Trash2,
 } from 'lucide-react'
 import { TimeSelect } from '@/modules/tasks/SchedulePopover'
@@ -760,6 +760,18 @@ const EV_SECTION: React.CSSProperties = {
   fontSize: 12.5, color: '#6C6553',
 }
 
+/** Google gives a mime type and nothing else — no size, no date. */
+function describeMime(mime: string | undefined): string {
+  if (!mime) return 'file'
+  if (mime.includes('spreadsheet') || mime.includes('excel')) return 'spreadsheet'
+  if (mime.includes('presentation') || mime.includes('powerpoint')) return 'presentation'
+  if (mime.includes('document') || mime.includes('word')) return 'document'
+  if (mime.includes('pdf')) return 'PDF'
+  if (mime.startsWith('image/')) return 'image'
+  if (mime.includes('folder')) return 'folder'
+  return mime.split('/').pop() ?? 'file'
+}
+
 /** "AB" from a name or an address, for the attendee circles. */
 function evInitials(name: string | undefined, email: string): string {
   const src = (name ?? email.split('@')[0]).replace(/[._-]+/g, ' ')
@@ -820,6 +832,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
   onOpenEvent?: (e: GCalEventExt) => void
 }) {
   const popupRef = useRef<HTMLDivElement>(null)
+  const titleRef = useRef<HTMLInputElement>(null)
   const [menuOpen, setMenuOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
@@ -906,14 +919,15 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
     void push({ attendees: [...attendees.map(a => ({ email: a.email })), { email }] })
   }
 
+  const files = event.attachments ?? []
   const prepPoints = prep?.talkingPoints ?? []
 
   return (
     <div ref={popupRef} onClick={e => e.stopPropagation()} onMouseDown={e => e.stopPropagation()} style={{
-      position: 'fixed', top: 84, right: 20, bottom: 20,
-      width: 440, overflowY: 'auto', scrollbarWidth: 'thin',
+      width: 440, flexShrink: 0, margin: '14px 16px 16px 0',
+      overflowY: 'auto', scrollbarWidth: 'thin',
       background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 18,
-      boxShadow: '0 24px 56px -22px rgba(25,23,18,0.45)', zIndex: 1000,
+      boxShadow: '0 1px 3px rgba(25,23,18,0.06)',
       padding: '18px 20px 22px',
     }}>
 
@@ -930,13 +944,10 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
         <span style={{ flex: 1 }} />
 
         <button
-          onClick={() => onStatusToggle('done')}
-          title={status === 'done' ? 'Mark as not done' : 'Mark as done'}
-          style={{
-            ...EV_ROUND,
-            background: status === 'done' ? '#5F7038' : '#191712',
-            border: 'none', color: '#FDF8E7',
-          }}><Check size={14} strokeWidth={2.4} /></button>
+          onClick={() => { titleRef.current?.focus(); titleRef.current?.select() }}
+          title="Edit the title"
+          style={{ ...EV_ROUND, background: '#191712', border: 'none', color: '#FDF8E7' }}
+        ><Pencil size={13} strokeWidth={2} /></button>
 
         <button
           onClick={() => { if (event.htmlLink) window.open(event.htmlLink, '_blank', 'noopener') }}
@@ -956,9 +967,11 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
               boxShadow: '0 20px 44px -20px rgba(25,23,18,.42)',
             }}>
               {[
+                { label: status === 'done' ? 'Mark as not done' : 'Mark as done', run: () => { onStatusToggle('done'); setMenuOpen(false) } },
                 { label: status === 'cancelled' ? 'Restore event' : 'Mark as cancelled', run: () => { onStatusToggle('cancelled'); setMenuOpen(false) } },
                 ...(videoLink ? [] : onAddMeet ? [{ label: 'Add a Meet link', run: () => { void onAddMeet(); setMenuOpen(false) } }] : []),
                 ...(event.htmlLink ? [{ label: 'Copy event link', run: () => { void navigator.clipboard.writeText(event.htmlLink!).catch(() => {}); setMenuOpen(false) } }] : []),
+                ...(liveClashes.length && onOpenEvent ? [{ label: `Open “${liveClashes[0].summary ?? 'the clash'}”`, run: () => { onOpenEvent(liveClashes[0]); setMenuOpen(false) } }] : []),
               ].map(item => (
                 <button key={item.label} onClick={item.run} style={{
                   display: 'block', width: '100%', textAlign: 'left', padding: '7px 9px', borderRadius: 8,
@@ -980,6 +993,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
 
       {/* ── Title ────────────────────────────────────────────────────────── */}
       <input
+        ref={titleRef}
         value={title}
         onChange={e => setTitle(e.target.value)}
         onBlur={() => { if (title.trim() && title !== event.summary) void push({ summary: title.trim() }) }}
@@ -1027,13 +1041,16 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
             Clashes with {liveClashes[0].summary ?? 'another event'}
             {liveClashes.length > 1 ? ` +${liveClashes.length - 1}` : ''}
           </span>
-          <button onClick={() => setClashDismissed(true)} title="Keep it — I know"
-            style={{ ...EV_ROUND, width: 32, height: 32, borderRadius: 9 }}>
+          <button
+            onClick={moveClear}
+            disabled={!freeAfterClash || saving}
+            title={freeAfterClash ? `Move this to ${freeAfterClash}, clear of the clash` : 'Nothing to move to'}
+            style={{ ...EV_ROUND, width: 32, height: 32, borderRadius: 9, opacity: freeAfterClash ? 1 : 0.45 }}>
             <Check size={13} strokeWidth={2.4} />
           </button>
-          <button onClick={() => onOpenEvent?.(liveClashes[0])} title={`Open ${liveClashes[0].summary ?? 'the clashing event'}`}
+          <button onClick={() => setClashDismissed(true)} title="Leave it — I know"
             style={{ ...EV_ROUND, width: 32, height: 32, borderRadius: 9 }}>
-            <ExternalLink size={13} />
+            <X size={13} />
           </button>
         </div>
       )}
@@ -1088,7 +1105,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
         </div>
 
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-          <span style={EV_LABEL}>Prep</span>
+          <span style={EV_LABEL}>Prep held</span>
           <span style={{ flex: 1, minWidth: 0 }}>
             {prep ? (
               <span style={{ ...EV_PILL, width: '100%', cursor: 'default' }}>
@@ -1162,6 +1179,68 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
             </span>
           </button>
         )}
+      </div>
+
+      {/* ── Attachments ──────────────────────────────────────────────────── */}
+      <div style={{ height: 1, background: '#F0EBDC', margin: '16px 0' }} />
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+        <span style={EV_SECTION}>Attachments · {files.length}</span>
+        <span style={{ flex: 1, minWidth: 0, fontSize: 11.5, color: '#9B9180', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {attendees.length > 0
+            ? `Shared files go to the ${attendees.length} invitee${attendees.length === 1 ? '' : 's'}`
+            : 'Only you can see these'}
+        </span>
+        <button
+          onClick={() => { if (event.htmlLink) window.open(event.htmlLink, '_blank', 'noopener') }}
+          disabled={!event.htmlLink}
+          title="Google Calendar holds the file picker"
+          style={{ ...EV_PILL, height: 30, flexShrink: 0, opacity: event.htmlLink ? 1 : 0.45 }}>
+          <Paperclip size={12} /> Attach
+        </button>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        {files.map(f => (
+          <a key={f.fileUrl} href={f.fileUrl} target="_blank" rel="noreferrer" style={{
+            display: 'flex', alignItems: 'center', gap: 11, padding: '5px 0', minWidth: 0, textDecoration: 'none',
+          }}>
+            <span style={{
+              width: 30, height: 30, borderRadius: 8, flexShrink: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: '#FAF7EC', border: '1px solid #E8E1CE', color: '#6C6553',
+            }}><FileText size={14} strokeWidth={1.9} /></span>
+            <span style={{ flex: 1, minWidth: 0 }}>
+              <span style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#191712', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {f.title ?? f.fileUrl}
+              </span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 3 }}>
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 4, height: 17, padding: '0 6px', borderRadius: 5,
+                  background: attendees.length ? '#F1ECDE' : 'rgba(245,209,78,0.24)',
+                  border: `1px solid ${attendees.length ? '#E8E1CE' : 'rgba(245,209,78,0.7)'}`,
+                  color: '#6C6553', fontSize: 8.5, fontWeight: 800, letterSpacing: '0.08em',
+                }}>{attendees.length ? 'SHARED' : 'PRIVATE'}</span>
+                <span style={{ fontSize: 11, color: '#9B9180' }}>{describeMime(f.mimeType)}</span>
+              </span>
+            </span>
+          </a>
+        ))}
+        <button
+          onClick={() => { if (event.htmlLink) window.open(event.htmlLink, '_blank', 'noopener') }}
+          disabled={!event.htmlLink}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 11, padding: '5px 0',
+            background: 'none', border: 'none', cursor: event.htmlLink ? 'pointer' : 'default',
+            fontFamily: 'inherit', textAlign: 'left', opacity: event.htmlLink ? 1 : 0.5,
+          }}>
+          <span style={{
+            width: 30, height: 30, borderRadius: 8, flexShrink: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            border: '1px dashed #D8CFB8', color: '#C9C0A8',
+          }}><Plus size={14} /></span>
+          <span style={{ fontSize: 13, color: '#9B9180' }}>
+            Add a file — attachments are shared with everyone invited
+          </span>
+        </button>
       </div>
 
       {/* ── Prep gathered ────────────────────────────────────────────────── */}
@@ -1453,10 +1532,10 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
 
   return (
     <div ref={ref} onClick={e => e.stopPropagation()} onMouseDown={e => e.stopPropagation()} style={{
-      position: 'fixed', top: 84, right: 20, bottom: 20,
-      width: 440, overflowY: 'auto', scrollbarWidth: 'thin',
+      width: 440, flexShrink: 0, margin: '14px 16px 16px 0',
+      overflowY: 'auto', scrollbarWidth: 'thin',
       background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 18,
-      boxShadow: '0 24px 56px -22px rgba(25,23,18,0.45)', zIndex: 1000,
+      boxShadow: '0 1px 3px rgba(25,23,18,0.06)',
       padding: '18px 20px 22px',
     }}>
 
@@ -2261,7 +2340,11 @@ export function CalendarIntelligence() {
 
   // ── Render ───────────────────────────────────────────────────────────────────
   return (
-    <div className={creatingEvt ? 'cal-grid-creating' : undefined} style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#F7F4EA', color: '#191712', fontFamily: 'var(--sb-font-ui)', overflow: 'hidden' }}>
+    <div className={creatingEvt ? 'cal-grid-creating' : undefined} style={{ display: 'flex', height: '100%', background: '#F7F4EA', color: '#191712', fontFamily: 'var(--sb-font-ui)', overflow: 'hidden' }}>
+
+      {/* The calendar itself. An open event panel takes width from here rather
+          than covering it, so the two sit side by side. */}
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
 
       {/* ── Top bar ─────────────────────────────────────────────────────────── */}
       <div style={{ padding: '14px 22px 12px', borderBottom: '1px solid #E8E1CE', background: '#FCFAF4', flexShrink: 0 }}>
@@ -2760,7 +2843,9 @@ export function CalendarIntelligence() {
         </div>
       )}
 
-      {/* Event popup */}
+      </div>
+
+      {/* Event panel — a column of its own */}
       {selectedEvent && (() => {
         const cal      = allCalendars.find(c => c.id === (selectedEvent as GCalEventExt).calendarId)
         const calName  = cal?.summary ?? 'Calendar'
