@@ -601,43 +601,45 @@ function FillCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, o
             display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
           }}>{habit.name}</span>
         </span>
-        {/* Bottom */}
+        {/* Bottom — where you are stands on every card; the controls come with
+            the card you open */}
         <span style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0 }}>
+          <span style={{ display: 'flex', flexDirection: 'column', gap: 1, minWidth: 0 }}>
+            <span style={{
+              fontFamily: 'Outfit, sans-serif', fontSize: isSelected ? 24 : 18, fontWeight: 700,
+              letterSpacing: '-0.03em', lineHeight: 1.1, color: '#FDF8E7', fontVariantNumeric: 'tabular-nums',
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            }}>
+              {isQty ? `${qtyValue}${habit.unit ? ' ' + habit.unit : ''}` : (todayDone ? 'Done' : 'Not done')}
+            </span>
+            <span style={{ fontSize: 10, color: 'rgba(253,248,231,.78)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {hasGoal
+                ? `of ${habit.goal} ${habit.unit ?? ''}`.trim()
+                : isQty ? 'no target — count as you go'
+                : todayDone ? 'logged today' : 'nothing yet'}
+            </span>
+          </span>
+
+          {hasGoal && (
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ flex: 1, height: 5, borderRadius: 999, background: 'rgba(253,248,231,.24)', overflow: 'hidden', display: 'block' }}>
+                <span style={{ display: 'block', width: `${displayPct}%`, height: '100%', background: '#F5D14E', borderRadius: 999 }} />
+              </span>
+              <span style={{ fontSize: 9.5, fontWeight: 700, color: '#FDF8E7', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{displayPct}%</span>
+            </span>
+          )}
+
           {isSelected && (
-            <>
-              <span style={{ display: 'flex', flexDirection: 'column', gap: 1, minWidth: 0 }}>
-                <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 24, fontWeight: 700, letterSpacing: '-0.03em', lineHeight: 1, color: '#FDF8E7', fontVariantNumeric: 'tabular-nums' }}>
-                  {isQty ? `${qtyValue}${habit.unit ? ' ' + habit.unit : ''}` : (todayDone ? 'Done' : '—')}
-                </span>
-                <span style={{ fontSize: 10, color: 'rgba(253,248,231,.78)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {hasGoal
-                    ? `of ${habit.goal} ${habit.unit ?? ''}`.trim()
-                    : isQty ? 'no target — count as you go'
-                    : todayDone ? 'logged today' : 'nothing yet'}
-                </span>
-              </span>
-              <span style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
-                {/* Progress bar */}
-                {hasGoal && (
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{ flex: 1, height: 5, borderRadius: 999, background: 'rgba(253,248,231,.24)', overflow: 'hidden', display: 'block' }}>
-                      <span style={{ display: 'block', width: `${displayPct}%`, height: '100%', background: '#F5D14E', borderRadius: 999 }} />
-                    </span>
-                    <span style={{ fontSize: 9.5, fontWeight: 700, color: '#FDF8E7', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{displayPct}%</span>
-                  </span>
-                )}
-              </span>
-              <HabitLogControl
-                isQty={isQty}
-                todayDone={todayDone}
-                qtyValue={qtyValue}
-                unit={habit.unit}
-                tone="light"
-                onToggle={onToggle}
-                onIncrement={onIncrement}
-                onDecrement={onDecrement}
-              />
-            </>
+            <HabitLogControl
+              isQty={isQty}
+              todayDone={todayDone}
+              qtyValue={qtyValue}
+              unit={habit.unit}
+              tone="light"
+              onToggle={onToggle}
+              onIncrement={onIncrement}
+              onDecrement={onDecrement}
+            />
           )}
         </span>
       </span>
