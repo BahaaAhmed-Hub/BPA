@@ -8,7 +8,7 @@ import { sortableKeyboardCoordinates } from '@dnd-kit/sortable'
 import { EisenhowerBoard } from './EisenhowerBoard'
 import { BrainDumpRail } from './BrainDumpRail'
 import { KanbanBoard } from './KanbanBoard'
-import { TaskDetailModal } from './TaskDetailModal'
+import { TaskDetailPanel } from './TaskDetailPanel'
 import { TaskCard } from './TaskCard'
 import { useTaskStore } from '@/store/taskStore'
 import { Search, X, Plus, SlidersHorizontal, LayoutGrid, Target, List as ListIcon } from 'lucide-react'
@@ -433,19 +433,37 @@ export function TaskCommand() {
 
       {/* Main content */}
       {viewMode === 'list' ? (
-        <TaskListView
-          tasks={tasks}
-          onOpen={setModalTaskId}
-          hideCompleted={hideCompleted}
-          groupBy={groupBy}
-          filteredTaskIds={filteredTaskIds}
-        />
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, minWidth: 0 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <TaskListView
+              tasks={tasks}
+              onOpen={setModalTaskId}
+              hideCompleted={hideCompleted}
+              groupBy={groupBy}
+              filteredTaskIds={filteredTaskIds}
+            />
+          </div>
+          {modalTask && (
+            <div style={{ paddingRight: 28, paddingBottom: 28 }}>
+              <TaskDetailPanel key={modalTask.id} task={modalTask} onClose={() => setModalTaskId(null)} />
+            </div>
+          )}
+        </div>
       ) : viewMode === 'board' ? (
-        <KanbanBoard
-          onOpen={setModalTaskId}
-          hideCompleted={hideCompleted}
-          filteredTaskIds={filteredTaskIds}
-        />
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, minWidth: 0 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <KanbanBoard
+              onOpen={setModalTaskId}
+              hideCompleted={hideCompleted}
+              filteredTaskIds={filteredTaskIds}
+            />
+          </div>
+          {modalTask && (
+            <div style={{ paddingRight: 28, paddingBottom: 28 }}>
+              <TaskDetailPanel key={modalTask.id} task={modalTask} onClose={() => setModalTaskId(null)} />
+            </div>
+          )}
+        </div>
       ) : (
         <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
           {/* 9F: the brain dump rail sits to the LEFT of the matrix */}
@@ -460,6 +478,7 @@ export function TaskCommand() {
             <div style={{ flex: 1, minWidth: 0 }}>
               <EisenhowerBoard onOpen={setModalTaskId} hideCompleted={hideCompleted} groupBy={groupBy} allGroupsExpanded={allGroupsExpanded} filteredTaskIds={filteredTaskIds} onOpenPlanner={() => setShowPlanner(true)} />
             </div>
+            {modalTask && <TaskDetailPanel key={modalTask.id} task={modalTask} onClose={() => setModalTaskId(null)} />}
           </div>
 
           <DragOverlay>
@@ -472,7 +491,6 @@ export function TaskCommand() {
         </DndContext>
       )}
 
-      {modalTask && <TaskDetailModal task={modalTask} onClose={() => setModalTaskId(null)} />}
       {showPlanner && <SmartDayPlanner onClose={() => setShowPlanner(false)} onOpenTask={id => { setShowPlanner(false); setModalTaskId(id) }} />}
     </div>
   )

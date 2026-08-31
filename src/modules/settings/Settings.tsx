@@ -228,7 +228,7 @@ function FieldRow({ label, sub, children }: { label: string; sub?: string; child
       display: 'flex', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap',
       padding: '5px 0', borderBottom: '1px solid #F0EBDC',
     }}>
-      <div style={{ flex: '1 1 118px', minWidth: 0, maxWidth: 136, paddingTop: 2 }}>
+      <div style={{ flex: '1 1 150px', minWidth: 0, maxWidth: 172, paddingTop: 2 }}>
         <span style={{ fontSize: 12.5, color: '#191712' }}>{label}</span>
         {sub && <p style={{ margin: '2px 0 0', fontSize: 10.5, color: '#6C6553', lineHeight: 1.4 }}>{sub}</p>}
       </div>
@@ -2818,11 +2818,12 @@ function DataPrivacySection() {
 
 // ─── Page layout definitions (multi-column pages matching design artboards) ───
 
-type PageKey = 'you' | 'connected' | 'integrations' | 'work' | 'system' | 'display' | 'finance'
+type PageKey = 'you' | 'connected' | 'ai' | 'integrations' | 'work' | 'system' | 'display' | 'finance'
 
 const SECTION_TO_PAGE: Record<SectionId, PageKey> = {
   profile: 'you',   billing: 'you',
-  accounts: 'connected', professor: 'connected', schedule: 'connected',
+  accounts: 'connected', schedule: 'connected',
+  professor: 'ai',
   blocking: 'integrations',
   tasks: 'work',    habits: 'work',
   automation: 'system', notifications: 'system',
@@ -2832,7 +2833,8 @@ const SECTION_TO_PAGE: Record<SectionId, PageKey> = {
 
 const PAGE_META: Record<PageKey, { title: string; sub: string }> = {
   you:          { title: 'You and your day',  sub: 'Who you are, and what the licence costs' },
-  connected:    { title: 'System',            sub: 'Accounts, the AI behind the briefs, and everything that interrupts you' },
+  connected:    { title: 'Accounts and hours', sub: 'Your work contexts, and the shape of your working day' },
+  ai:           { title: 'The AI',             sub: 'Which model, how far it may act, and how it sounds when it writes for you' },
   integrations: { title: 'Integrations',      sub: 'The tools that already hold your work — what comes in, what goes out, and how often' },
   work:         { title: 'Work',              sub: 'Board statuses, task types and the habits the tracker runs on' },
   system:       { title: 'System',            sub: 'Rules that run themselves, and what is allowed to interrupt you' },
@@ -3143,25 +3145,31 @@ export function Settings() {
     // ── CONNECTED page: Accounts | AI | Schedule rules ──────────────────────
     if (page === 'connected') return (
       <div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.15fr) minmax(0, 1.45fr) minmax(0, 1.05fr)', gap: 16, alignItems: 'start' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
-            <SectionCard id="accounts" active={activeSection === 'accounts'} actions={
-              <button onClick={() => window.dispatchEvent(new CustomEvent('professor:openWizard'))} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 7, background: '#FAF7EC', border: '1px solid #E8E1CE', color: '#6C6553', fontSize: 11, cursor: 'pointer' }}>
-                <Wand2 size={11} /> Wizard
-              </button>
-            }>
-              <CompaniesSection companies={companies} setCompanies={c => { setCompanies(c); saveCompanies(c) }} accounts={allAccounts} />
-            </SectionCard>
-            <Card icon={Sparkles} title="Voice & instructions" sub="Tone, the morning brief, and what the assistant always knows">
-              <AIVoiceSection s={settings} set={update} />
-            </Card>
-          </div>
-          <SectionCard id="professor" active={activeSection === 'professor'} actions={<SaveBtn id="professor" />}>
-            <ProfessorSection />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 16, alignItems: 'start' }}>
+          <SectionCard id="accounts" active={activeSection === 'accounts'} actions={
+            <button onClick={() => window.dispatchEvent(new CustomEvent('professor:openWizard'))} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 7, background: '#FAF7EC', border: '1px solid #E8E1CE', color: '#6C6553', fontSize: 11, cursor: 'pointer' }}>
+              <Wand2 size={11} /> Wizard
+            </button>
+          }>
+            <CompaniesSection companies={companies} setCompanies={c => { setCompanies(c); saveCompanies(c) }} accounts={allAccounts} />
           </SectionCard>
           <SectionCard id="schedule" active={activeSection === 'schedule'} actions={<SaveBtn id="schedule" />}>
             <ScheduleSection s={settings} set={update} />
           </SectionCard>
+        </div>
+      </div>
+    )
+
+    // ── AI page: the model and how it acts, beside how it sounds ────────────
+    if (page === 'ai') return (
+      <div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 16, alignItems: 'start' }}>
+          <SectionCard id="professor" active={activeSection === 'professor'} actions={<SaveBtn id="professor" />}>
+            <ProfessorSection />
+          </SectionCard>
+          <Card icon={Sparkles} title="Voice & instructions" sub="Tone, the morning brief, and what the assistant always knows">
+            <AIVoiceSection s={settings} set={update} />
+          </Card>
         </div>
       </div>
     )

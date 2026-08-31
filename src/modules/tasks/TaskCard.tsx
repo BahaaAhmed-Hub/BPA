@@ -55,8 +55,6 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
   const { toggleComplete, deleteTask, updateTask, addTasksBatch } = useTaskStore()
   const [hovered, setHovered] = useState(false)
   const [showMeetingPopup, setShowMeetingPopup] = useState(false)
-  const [editingTitle, setEditingTitle] = useState(false)
-  const [titleDraft, setTitleDraft] = useState(task.title)
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id })
 
@@ -65,13 +63,6 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
   const allUsers = getAllUsers()
   const users = task.companyId ? allUsers.filter(u => u.companyId === task.companyId) : allUsers
   const attachmentCount = task.attachments?.length ?? 0
-
-  function saveTitle() {
-    const trimmed = titleDraft.trim()
-    if (trimmed && trimmed !== task.title) updateTask(task.id, { title: trimmed })
-    else setTitleDraft(task.title)
-    setEditingTitle(false)
-  }
 
   function handleCardClick(e: React.MouseEvent) {
     if ((e.target as HTMLElement).closest('[data-nm]')) return
@@ -122,35 +113,14 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
             {task.completed && <Check size={9} color="#fff" strokeWidth={3} />}
           </button>
 
-          {editingTitle ? (
-            <input
-              data-nm autoFocus value={titleDraft}
-              onChange={e => setTitleDraft(e.target.value)}
-              onBlur={saveTitle}
-              onKeyDown={e => {
-                if (e.key === 'Enter') saveTitle()
-                if (e.key === 'Escape') { setTitleDraft(task.title); setEditingTitle(false) }
-              }}
-              style={{
-                flex: 1, minWidth: 0, background: 'transparent', border: 'none',
-                borderBottom: '1px solid #191712', outline: 'none', padding: 0,
-                color: '#191712', fontSize: 13.5, fontWeight: 600, fontFamily: 'inherit', lineHeight: 1.35,
-              }}
-            />
-          ) : (
-            <p
-              data-nm
-              onClick={() => { if (!task.completed) setEditingTitle(true) }}
-              title={task.completed ? undefined : 'Click to rename'}
-              style={{
-                flex: 1, margin: 0, fontSize: 13.5, fontWeight: 600, color: '#191712',
-                lineHeight: 1.35, minWidth: 0,
-                textDecoration: task.completed ? 'line-through' : 'none',
-                display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
-                cursor: task.completed ? 'default' : 'text',
-              }}
-            >{task.title}</p>
-          )}
+          <p
+            style={{
+              flex: 1, margin: 0, fontSize: 13.5, fontWeight: 600, color: '#191712',
+              lineHeight: 1.35, minWidth: 0,
+              textDecoration: task.completed ? 'line-through' : 'none',
+              display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+            }}
+          >{task.title}</p>
         </div>
 
         {/* Company — coloured text, the card's only colour */}
