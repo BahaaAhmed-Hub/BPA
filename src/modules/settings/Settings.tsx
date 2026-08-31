@@ -973,19 +973,34 @@ function SettingsHabitForm({
       {/* Picture, icon, name — the three things that identify a habit */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, flexShrink: 0 }}>
-          <button
-            type="button"
-            onClick={() => imageRef.current?.click()}
-            title={s.image ? 'Change picture' : 'Add a picture'}
-            style={{
-              width: 46, height: 46, borderRadius: 13, padding: 0, cursor: 'pointer', overflow: 'hidden',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 20, color: '#C9C0A8', background: '#FFFFFF', border: '1px solid #E8E1CE',
-            }}>
-            {s.image
-              ? <img src={s.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-              : <ImagePlus size={18} />}
-          </button>
+          <span style={{ position: 'relative', display: 'inline-flex' }}>
+            <button
+              type="button"
+              onClick={() => imageRef.current?.click()}
+              title={s.image ? 'Change picture' : 'Add a picture'}
+              style={{
+                width: 46, height: 46, borderRadius: 13, padding: 0, cursor: 'pointer', overflow: 'hidden',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 20, color: '#C9C0A8', background: '#FFFFFF', border: '1px solid #E8E1CE',
+              }}>
+              {s.image
+                ? <img src={s.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                : <ImagePlus size={18} />}
+            </button>
+            {s.image && (
+              <button
+                type="button"
+                onClick={() => update({ image: undefined })}
+                title="Remove picture"
+                style={{
+                  position: 'absolute', top: -5, right: -5, width: 18, height: 18, borderRadius: '50%',
+                  padding: 0, cursor: 'pointer', background: '#191712', border: '2px solid #FAF7EC',
+                  color: '#FDF8E7', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                <X size={9} strokeWidth={3} />
+              </button>
+            )}
+          </span>
           <input
             ref={imageRef} type="file" accept="image/*" style={{ display: 'none' }}
             onChange={async e => {
@@ -994,12 +1009,7 @@ function SettingsHabitForm({
               if (!file) return
               try { update({ image: await readHabitImage(file) }) } catch { /* not a usable image */ }
             }} />
-          <button
-            type="button"
-            onClick={() => { if (s.image) update({ image: undefined }); else imageRef.current?.click() }}
-            style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#9B9180', fontSize: 10, fontFamily: 'inherit' }}>
-            {s.image ? 'Remove' : 'Picture'}
-          </button>
+          {!s.image && <span style={{ color: '#9B9180', fontSize: 10 }}>Picture</span>}
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, flexShrink: 0 }}>
@@ -1022,30 +1032,30 @@ function SettingsHabitForm({
         </div>
       </div>
 
-      {/* How it is tracked */}
-      <div>
-        <span style={LABEL}>Type</span>
-        <Segmented
-          value={s.type}
-          options={[
-            { value: 'boolean' as const, label: 'Done / not done' },
-            { value: 'quantity' as const, label: 'Measurable' },
-          ]}
-          onChange={t => update({ type: t })}
-        />
-      </div>
-
-      {/* How often */}
-      <div>
-        <span style={LABEL}>Interval</span>
-        <Segmented
-          value={s.freq}
-          options={FREQ_OPTS.map(f => ({
-            value: f,
-            label: f === 'weekdays' ? 'Weekdays' : f.charAt(0).toUpperCase() + f.slice(1),
-          }))}
-          onChange={f => update({ freq: f })}
-        />
+      {/* How it is tracked, and how often — one line, they belong together */}
+      <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
+        <div style={{ minWidth: 0 }}>
+          <span style={LABEL}>Type</span>
+          <Segmented
+            value={s.type}
+            options={[
+              { value: 'boolean' as const, label: 'Done / not done' },
+              { value: 'quantity' as const, label: 'Measurable' },
+            ]}
+            onChange={t => update({ type: t })}
+          />
+        </div>
+        <div style={{ minWidth: 0 }}>
+          <span style={LABEL}>Interval</span>
+          <Segmented
+            value={s.freq}
+            options={FREQ_OPTS.map(f => ({
+              value: f,
+              label: f === 'weekdays' ? 'Weekdays' : f.charAt(0).toUpperCase() + f.slice(1),
+            }))}
+            onChange={f => update({ freq: f })}
+          />
+        </div>
       </div>
 
       {/* What counts as a day's worth — a measurable habit only */}

@@ -123,20 +123,35 @@ function HabitImagePicker({ image, emoji, onChange, size = 54 }: {
   const ref = useRef<HTMLInputElement>(null)
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, flexShrink: 0 }}>
-      <button
-        type="button"
-        onClick={() => ref.current?.click()}
-        title={image ? 'Change picture' : 'Add a picture'}
-        style={{
-          width: size, height: size, borderRadius: 13, padding: 0, cursor: 'pointer',
-          overflow: 'hidden', background: '#FAF7EC', border: '1px solid #E8E1CE',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: Math.round(size * 0.5), lineHeight: 1,
-        }}>
-        {image
-          ? <img src={image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-          : (emoji || '🎯')}
-      </button>
+      <span style={{ position: 'relative', display: 'inline-flex' }}>
+        <button
+          type="button"
+          onClick={() => ref.current?.click()}
+          title={image ? 'Change picture' : 'Add a picture'}
+          style={{
+            width: size, height: size, borderRadius: 13, padding: 0, cursor: 'pointer',
+            overflow: 'hidden', background: '#FAF7EC', border: '1px solid #E8E1CE',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: Math.round(size * 0.5), lineHeight: 1,
+          }}>
+          {image
+            ? <img src={image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+            : (emoji || '🎯')}
+        </button>
+        {image && (
+          <button
+            type="button"
+            onClick={() => onChange(undefined)}
+            title="Remove picture"
+            style={{
+              position: 'absolute', top: -5, right: -5, width: 18, height: 18, borderRadius: '50%',
+              padding: 0, cursor: 'pointer', background: '#191712', border: '2px solid #FFFFFF',
+              color: '#FDF8E7', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+            <X size={9} strokeWidth={3} />
+          </button>
+        )}
+      </span>
       <input
         ref={ref} type="file" accept="image/*" style={{ display: 'none' }}
         onChange={async e => {
@@ -145,12 +160,7 @@ function HabitImagePicker({ image, emoji, onChange, size = 54 }: {
           if (!file) return
           try { onChange(await readHabitImage(file)) } catch { /* not a usable image */ }
         }} />
-      <button
-        type="button"
-        onClick={() => { if (image) onChange(undefined); else ref.current?.click() }}
-        style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#9B9180', fontSize: 10, fontFamily: 'inherit' }}>
-        {image ? 'Remove' : 'Picture'}
-      </button>
+      {!image && <span style={{ color: '#9B9180', fontSize: 10 }}>Picture</span>}
     </div>
   )
 }
