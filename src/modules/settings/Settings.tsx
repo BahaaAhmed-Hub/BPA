@@ -1097,6 +1097,14 @@ function SettingsHabitForm({
   )
 }
 
+/** What a habit is, in one line: how it is tracked, how much, how often. */
+function describeHabit(h: { type?: string; goal?: number; unit?: string; frequency: string }): string {
+  const how = h.frequency === 'weekdays' ? 'on weekdays' : h.frequency === 'weekly' ? 'weekly' : 'daily'
+  if (h.type !== 'quantity') return `Done or not · ${how}`
+  if (h.goal && h.goal > 0) return `${h.goal} ${h.unit ?? 'times'} · ${how}`
+  return `Counts ${h.unit ?? 'times'} · ${how}`
+}
+
 function HabitsSection() {
   const COLORS = getHabitColors()
   const { habits, addHabit: storeAdd, updateHabit, deleteHabit: storeDel } = useHabitsStore()
@@ -1155,16 +1163,8 @@ function HabitsSection() {
             />
             <div style={{ width: 10, height: 10, borderRadius: '50%', background: h.color, flexShrink: 0 }} />
             <span style={{ flex: 1, fontSize: 13.5, color: '#191712' }}>{h.name}</span>
-            {h.type === 'quantity' && h.goal && h.unit && (
-              <span style={{ fontSize: 10.5, color: '#6C6553', background: '#FAF7EC', padding: '2px 7px', borderRadius: 4, border: '1px solid #E8E1CE' }}>
-                {h.goal} {h.unit}
-              </span>
-            )}
-            <span style={{ fontSize: 10, color: '#6C6553', background: '#FAF7EC', padding: '2px 7px', borderRadius: 4, border: '1px solid #E8E1CE' }}>
-              {h.type === 'quantity' ? `# qty` : '✓'}
-            </span>
-            <span style={{ fontSize: 11, color: '#6C6553', background: '#FAF7EC', padding: '2px 8px', borderRadius: 4 }}>
-              {h.frequency}
+            <span style={{ fontSize: 11.5, color: '#9B9180', flexShrink: 0, whiteSpace: 'nowrap' }}>
+              {describeHabit(h)}
             </span>
             <Toggle checked={h.isActive} onChange={() => toggle(h.id)} />
             <button onClick={() => setEditingId(editingId === h.id ? null : h.id)} title="Edit habit"
