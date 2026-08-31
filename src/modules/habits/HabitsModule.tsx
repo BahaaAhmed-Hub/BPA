@@ -399,7 +399,6 @@ function WallCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, o
   const bgColor = WALL_PALETTE[paletteIdx % WALL_PALETTE.length]
   const isQty = habit.type === 'quantity'
   const _pct2 = isQty && habit.goal ? Math.min(100, Math.round((qtyValue / habit.goal) * 100)) : (todayDone ? 100 : 0); void _pct2
-  const weekDots = Array.from({ length: 7 }, (_, i) => i < (streak % 7) ? '#191712' : '')
 
   return (
     <div
@@ -447,12 +446,6 @@ function WallCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, o
             {isQty && habit.goal ? `of ${habit.goal} ${habit.unit ?? ''}` : (todayDone ? 'logged today' : 'not yet done')}
           </span>
         </span>
-        {/* Week dot streak (last 7 days) */}
-        <span style={{ display: 'flex', gap: 5 }}>
-          {weekDots.map((filled, i) => (
-            <span key={i} style={{ width: 8, height: 8, boxSizing: 'border-box', borderRadius: 999, background: filled || (todayDone && i === 6) ? '#191712' : 'transparent', border: `1px solid ${filled || (todayDone && i === 6) ? 'transparent' : 'rgba(25,23,18,.35)'}`, display: 'block' }} />
-          ))}
-        </span>
         {/* Log it — the same control the fill cards use */}
         <span style={{ marginTop: 'auto' }}>
           <HabitLogControl
@@ -493,7 +486,6 @@ function FillCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, o
   const pct = hasGoal
     ? Math.min(100, Math.round((qtyValue / habit.goal!) * 100))
     : isQty ? (qtyValue > 0 ? 100 : 0) : (todayDone ? 100 : 0)
-  const lastWeek = Array.from({ length: 7 }, (_, i) => i < (streak % 7))
 
   // 12D — drag-up gesture: track pointer drag to set fill level
   const dragRef = useRef<{ startY: number; startPct: number } | null>(null)
@@ -617,12 +609,6 @@ function FillCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, o
                     <span style={{ fontSize: 9.5, fontWeight: 700, color: '#FDF8E7', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{displayPct}%</span>
                   </span>
                 )}
-                {/* Week dots */}
-                <span style={{ display: 'flex', gap: 3 }}>
-                  {lastWeek.map((done, i) => (
-                    <span key={i} style={{ width: 6, height: 6, borderRadius: 999, background: done ? '#FDF8E7' : 'rgba(253,248,231,.28)', display: 'block' }} />
-                  ))}
-                </span>
               </span>
               <HabitLogControl
                 isQty={isQty}
@@ -649,7 +635,7 @@ function FillCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, o
 // how it is going, and — for a counter — today's number with its controls.
 
 function HabitDetailPanel({
-  habit, hLogs, qtyToday, today, colors, onClose, onUpdate, onDelete, onToggleToday, onSetQuantity,
+  habit, hLogs, qtyToday, today, colors, onClose, onUpdate, onToggleToday, onSetQuantity,
 }: {
   habit: Habit
   colors: string[]
@@ -658,7 +644,6 @@ function HabitDetailPanel({
   today: string
   onClose: () => void
   onUpdate: (patch: Partial<Habit>) => void
-  onDelete: () => void
   onToggleToday: () => void
   onSetQuantity: (v: number) => void
 }) {
@@ -718,55 +703,17 @@ function HabitDetailPanel({
         </button>
       </div>
 
-      {/* What kind of habit this is, and how often */}
-      <div style={{ display: 'flex', gap: 10 }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: '#6C6553', marginBottom: 6 }}>TRACK AS</div>
-          <div style={{ display: 'flex', gap: 5 }}>
-            {(['boolean', 'quantity'] as const).map(t => (
-              <button key={t} onClick={() => onUpdate({ type: t })}
-                style={{ flex: 1, padding: '5px 0', borderRadius: 7, border: '1px solid #E8E1CE', background: (habit.type ?? 'boolean') === t ? '#191712' : '#FAF7EC', color: (habit.type ?? 'boolean') === t ? '#FDF8E7' : '#6C6553', fontSize: 10, fontWeight: (habit.type ?? 'boolean') === t ? 600 : 400, cursor: 'pointer', whiteSpace: 'nowrap' as const }}>
-                {t === 'boolean' ? 'Done' : 'Count'}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div style={{ flex: 1.4, minWidth: 0 }}>
-          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: '#6C6553', marginBottom: 6 }}>CADENCE</div>
-          <div style={{ display: 'flex', gap: 5 }}>
-            {FREQ_OPTS.map(f => (
-              <button key={f} onClick={() => onUpdate({ frequency: f })}
-                style={{ flex: 1, padding: '5px 0', borderRadius: 7, border: '1px solid #E8E1CE', background: habit.frequency === f ? '#191712' : '#FAF7EC', color: habit.frequency === f ? '#FDF8E7' : '#6C6553', fontSize: 10, fontWeight: habit.frequency === f ? 600 : 400, cursor: 'pointer', whiteSpace: 'nowrap' as const }}>
-                {f === 'weekdays' ? 'Wkdays' : f.charAt(0).toUpperCase() + f.slice(1)}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Icon and colour — what the wall and fill cards use */}
-      <div>
-        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: '#6C6553', marginBottom: 6 }}>ICON &amp; COLOUR</div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <EmojiBtn value={habit.emoji} onSelect={v => onUpdate({ emoji: v })} />
-          <input
-            value={habit.emoji}
-            onChange={e => onUpdate({ emoji: [...e.target.value].slice(-2).join('') })}
-            title="Type or paste any emoji"
-            style={{
-              width: 46, boxSizing: 'border-box', textAlign: 'center', background: '#FAF7EC',
-              border: '1px solid #E8E1CE', borderRadius: 7, padding: '3px 0', fontSize: 12.5,
-              color: '#191712', outline: 'none', fontFamily: 'inherit',
-            }} />
-          <div style={{ flex: 1, minWidth: 0, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-            {colors.slice(0, 12).map(c => (
-              <button key={c} onClick={() => onUpdate({ color: c })} title={c}
-                style={{
-                  width: 15, height: 15, borderRadius: '50%', background: c, cursor: 'pointer', padding: 0,
-                  border: habit.color === c ? '2px solid #191712' : '1px solid rgba(25,23,18,.12)',
-                }} />
-            ))}
-          </div>
+      {/* Its look — one icon control, one row of colours */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <EmojiBtn value={habit.emoji} onSelect={v => onUpdate({ emoji: v })} />
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+          {colors.slice(0, 12).map(c => (
+            <button key={c} onClick={() => onUpdate({ color: c })} title={c}
+              style={{
+                width: 16, height: 16, borderRadius: '50%', background: c, cursor: 'pointer', padding: 0,
+                border: habit.color === c ? '2px solid #191712' : '1px solid rgba(25,23,18,.12)',
+              }} />
+          ))}
         </div>
       </div>
 
@@ -843,42 +790,6 @@ function HabitDetailPanel({
         </div>
       </div>
 
-      {/* Target — only a counter has one to set */}
-      {isQty && (
-        <div>
-          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: '#6C6553', marginBottom: 6 }}>DAILY TARGET</div>
-          <div style={{ display: 'flex', gap: 6 }}>
-            <input
-              type="number" min={0} defaultValue={habit.goal ?? ''} key={habit.id + String(habit.goal)}
-              placeholder="none"
-              onBlur={e => {
-                const n = parseFloat(e.target.value)
-                onUpdate({ goal: Number.isFinite(n) && n > 0 ? n : undefined })
-              }}
-              style={{ width: 78, boxSizing: 'border-box', background: '#FAF7EC', border: '1px solid #E8E1CE', borderRadius: 7, padding: '6px 9px', fontSize: 12.5, color: '#191712', outline: 'none', textAlign: 'left' }} />
-            <input
-              defaultValue={habit.unit ?? ''} key={habit.id + (habit.unit ?? '')}
-              placeholder="unit"
-              onBlur={e => onUpdate({ unit: e.target.value.trim() || undefined })}
-              style={{ flex: 1, minWidth: 0, boxSizing: 'border-box', background: '#FAF7EC', border: '1px solid #E8E1CE', borderRadius: 7, padding: '6px 9px', fontSize: 12.5, color: '#191712', outline: 'none', textAlign: 'left' }} />
-          </div>
-          <div style={{ fontSize: 10, color: '#9B9180', marginTop: 5 }}>
-            {hasGoal ? 'Cards show progress towards this target.' : 'No target — cards show the running count.'}
-          </div>
-        </div>
-      )}
-
-      {/* Archive / Delete */}
-      <div style={{ display: 'flex', gap: 6 }}>
-        <button onClick={() => { onUpdate({ isActive: false }); onClose() }}
-          style={{ flex: 1, padding: '7px 0', borderRadius: 8, border: '1px solid #E8E1CE', background: 'transparent', color: '#9B9180', fontSize: 11.5, cursor: 'pointer' }}>
-          Archive
-        </button>
-        <button onClick={() => { onDelete(); onClose() }}
-          style={{ flex: 1, padding: '7px 0', borderRadius: 8, border: '1px solid rgba(180,82,58,0.3)', background: 'rgba(180,82,58,0.06)', color: '#B4523A', fontSize: 11.5, cursor: 'pointer' }}>
-          Delete
-        </button>
-      </div>
     </div>
   )
 }
@@ -1410,7 +1321,6 @@ export function HabitsModule() {
           colors={HABIT_COLORS}
           onClose={() => setDetailHabitId(null)}
           onUpdate={patch => updateHabit(detailHabit.id, patch)}
-          onDelete={() => deleteHabit(detailHabit.id)}
           onToggleToday={() => toggleHabit(detailHabit.id, today)}
           onSetQuantity={v => setQuantity(detailHabit.id, detailHabit.goal ?? 1, today, v)}
         />

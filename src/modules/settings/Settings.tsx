@@ -910,6 +910,41 @@ function readHabitImage(file: File): Promise<string> {
   })
 }
 
+/** The picture in a habit row: click it to swap the file, no form needed. */
+function HabitRowImage({ image, emoji, onChange }: {
+  image?: string
+  emoji: string
+  onChange: (v: string | undefined) => void
+}) {
+  const ref = useRef<HTMLInputElement>(null)
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => ref.current?.click()}
+        onContextMenu={e => { if (image) { e.preventDefault(); onChange(undefined) } }}
+        title={image ? 'Click to change the picture · right-click to remove it' : 'Click to add a picture'}
+        style={{
+          width: 30, height: 30, borderRadius: 8, flexShrink: 0, padding: 0, overflow: 'hidden',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: '#FAF7EC', border: '1px solid #E8E1CE', cursor: 'pointer', fontSize: 16,
+        }}>
+        {image
+          ? <img src={image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+          : emoji}
+      </button>
+      <input
+        ref={ref} type="file" accept="image/*" style={{ display: 'none' }}
+        onChange={async e => {
+          const file = e.target.files?.[0]
+          e.target.value = ''
+          if (!file) return
+          try { onChange(await readHabitImage(file)) } catch { /* not a usable image */ }
+        }} />
+    </>
+  )
+}
+
 interface SettingsHabitFormState {
   image?: string
   name: string; emoji: string; color: string; freq: typeof FREQ_OPTS[number]
@@ -1101,9 +1136,11 @@ function HabitsSection() {
             padding: '10px 0', borderBottom: '1px solid #E8E1CE',
             opacity: h.isActive ? 1 : 0.5,
           }}>
-            {h.image
-              ? <img src={h.image} alt="" style={{ width: 24, height: 24, borderRadius: 7, objectFit: 'cover', flexShrink: 0, display: 'block' }} />
-              : <span style={{ fontSize: 18, flexShrink: 0 }}>{h.emoji}</span>}
+            <HabitRowImage
+              image={h.image}
+              emoji={h.emoji}
+              onChange={img => updateHabit(h.id, { image: img })}
+            />
             <div style={{ width: 10, height: 10, borderRadius: '50%', background: h.color, flexShrink: 0 }} />
             <span style={{ flex: 1, fontSize: 13.5, color: '#191712' }}>{h.name}</span>
             {h.type === 'quantity' && h.goal && h.unit && (
