@@ -16,6 +16,7 @@ import { loadCustomStatuses, sortCustomStatuses } from '@/lib/customStatuses'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { TaskCard } from './TaskCard'
 import { sortUrgentFirst } from './taskVisuals'
+import { CountBadge } from './controls'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -145,9 +146,7 @@ function KanbanColumnComp({ column, onOpen, onColDragStart, onColDragOver, onCol
         <span style={{ fontSize: 13.5, fontWeight: 600, color: '#191712', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {column.label}
         </span>
-        <span style={{ fontSize: 12.5, color: '#9B9180', fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>
-          {column.tasks.length}
-        </span>
+        <CountBadge value={column.tasks.length} />
         <span style={{ flex: 1 }} />
         <button onClick={() => setAdding(true)} title="Add a task here"
           style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, display: 'flex', color: '#9B9180' }}>

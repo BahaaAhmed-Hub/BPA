@@ -34,7 +34,7 @@ export function TaskRow({ task, onOpen, dense }: {
     <div
       onClick={e => { if (!(e.target as HTMLElement).closest('[data-nm]')) onOpen(task.id) }}
       style={{
-        display: 'flex', alignItems: 'center', gap: 12,
+        display: 'flex', alignItems: 'flex-start', gap: 12,
         background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 10,
         padding: dense ? '10px 13px' : '12px 14px',
         cursor: 'pointer', minWidth: 0,
@@ -46,7 +46,7 @@ export function TaskRow({ task, onOpen, dense }: {
         onClick={() => toggleComplete(task.id)}
         title={task.completed ? 'Reopen' : 'Complete'}
         style={{
-          width: 16, height: 16, borderRadius: 5, boxSizing: 'border-box', flexShrink: 0, padding: 0,
+          width: 16, height: 16, borderRadius: 5, boxSizing: 'border-box', flexShrink: 0, padding: 0, marginTop: 2,
           border: task.completed ? '1.5px solid #5F7038' : '1.5px solid #CFC6B0',
           background: task.completed ? '#5F7038' : '#FFFFFF',
           display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
@@ -57,8 +57,8 @@ export function TaskRow({ task, onOpen, dense }: {
 
       <div style={{ flex: 1, minWidth: 0 }}>
         <p style={{
-          margin: 0, fontSize: 13.5, fontWeight: 600, color: '#191712', lineHeight: 1.3,
-          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          margin: 0, fontSize: 13.5, fontWeight: 600, color: '#191712', lineHeight: 1.35,
+          overflowWrap: 'anywhere',
           textDecoration: task.completed ? 'line-through' : 'none',
         }}>{task.title}</p>
         {v.companyName && (
@@ -66,19 +66,18 @@ export function TaskRow({ task, onOpen, dense }: {
             {v.companyName}
           </p>
         )}
-        <p style={{ margin: '2px 0 0', fontSize: 11.5, color: '#9B9180', lineHeight: 1.3, display: 'flex', alignItems: 'center', gap: 6 }}>
+        <p style={{ margin: '6px 0 0', fontSize: 11.5, color: '#9B9180', lineHeight: 1.3, display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
           {meta}
           {attachmentCount > 0 && (
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
               <Paperclip size={10} /> {attachmentCount}
             </span>
           )}
-        </p>
-      </div>
+          <span style={{ flex: 1 }} />
 
-      {/* Attributes — each one is its own control, so clicking an icon edits it
-          rather than opening the task */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0, color: '#9B9180' }}>
+          {/* Attributes — each one is its own control, so clicking an icon edits
+              it rather than opening the task */}
+          <span style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0, color: '#9B9180' }}>
         <button
           data-nm
           onClick={e => { e.stopPropagation(); toggleUrgent(task.id) }}
@@ -108,7 +107,9 @@ export function TaskRow({ task, onOpen, dense }: {
           <OverlayTime
             title={v.scheduled ? `Scheduled ${task.plannedTime ?? ''}`.trim() : 'Set a time'}
             value={task.plannedTime ?? ''}
-            onChange={val => updateTask(task.id, { plannedTime: val || undefined })}
+            onChange={val => updateTask(task.id, val
+              ? { plannedTime: val, duration: task.duration ?? 30 }
+              : { plannedTime: undefined })}
           />
         </ControlSlot>
 
@@ -153,6 +154,8 @@ export function TaskRow({ task, onOpen, dense }: {
           style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', color: '#D8CFB8' }}>
           <Trash2 size={14} strokeWidth={1.9} />
         </button>
+          </span>
+        </p>
       </div>
     </div>
   )

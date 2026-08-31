@@ -56,3 +56,17 @@ export function ControlSlot({ size, children }: { size: number; children: React.
     </span>
   )
 }
+
+/** Any count in the module reads as a badge, never a loose number. */
+export function CountBadge({ value, tone }: { value: number; tone?: 'dark' }) {
+  return (
+    <span style={{
+      minWidth: 20, height: 20, boxSizing: 'border-box', padding: '0 6px',
+      borderRadius: 999, flexShrink: 0,
+      background: tone === 'dark' ? 'rgba(255,255,255,0.14)' : '#EDE7D9',
+      color: tone === 'dark' ? '#FFFFFF' : '#6C6553',
+      fontSize: 10.5, fontWeight: 700, fontVariantNumeric: 'tabular-nums',
+      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+    }}>{value}</span>
+  )
+}

@@ -8,6 +8,7 @@ import { useDraggable } from '@dnd-kit/core'
 import type { Task, Quadrant } from '@/types'
 import { loadVisibleCompanies } from '@/types'
 import { useTaskStore } from '@/store/taskStore'
+import { CountBadge } from './controls'
 
 // ─── Suggestion ──────────────────────────────────────────────────────────────
 
@@ -172,20 +173,23 @@ export function BrainDumpRail({ tasks, onOpen }: {
     }}>
       {/* Header */}
       <div style={{ padding: '14px 14px 10px' }}>
-        <p style={{ margin: 0, fontSize: 13.5, fontWeight: 600, color: '#191712', lineHeight: 1.3 }}>Brain dump</p>
+        {/* The count belongs beside the title it counts, not loose next to a button */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <p style={{ margin: 0, flex: 1, fontSize: 13.5, fontWeight: 600, color: '#191712', lineHeight: 1.3 }}>Brain dump</p>
+          <CountBadge value={tasks.length} />
+        </div>
         <p style={{ margin: '2px 0 0', fontSize: 11.5, color: '#9B9180', lineHeight: 1.35 }}>
           Uncategorised — drag into a quadrant
         </p>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginTop: 11 }}>
-          <span style={{ fontSize: 12.5, color: '#6C6553', fontVariantNumeric: 'tabular-nums' }}>{tasks.length}</span>
-          <button onClick={() => setCapturing(c => !c)} style={{
-            display: 'flex', alignItems: 'center', gap: 6, height: 28, padding: '0 12px', borderRadius: 999,
-            background: '#FAF7EC', border: '1px solid #E8E1CE', color: '#191712',
-            fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit',
-          }}>
-            <Plus size={13} strokeWidth={2} /> Capture
-          </button>
-        </div>
+        <button onClick={() => setCapturing(c => !c)} style={{
+          width: '100%', marginTop: 11,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+          height: 32, borderRadius: 9,
+          background: '#FAF7EC', border: '1px solid #E8E1CE', color: '#191712',
+          fontSize: 12.5, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit',
+        }}>
+          <Plus size={13} strokeWidth={2} /> Capture
+        </button>
         {capturing && (
           <textarea
             autoFocus value={draft} rows={3}

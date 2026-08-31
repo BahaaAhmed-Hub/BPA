@@ -213,7 +213,9 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
           </div>
           <input
             data-nm type="time" value={task.plannedTime ?? ''}
-            onChange={e => updateTask(task.id, { plannedTime: e.target.value || undefined })}
+            onChange={e => updateTask(task.id, e.target.value
+              ? { plannedTime: e.target.value, duration: task.duration ?? 30 }
+              : { plannedTime: undefined })}
             onClick={e => e.stopPropagation()}
             style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer', border: 'none', padding: 0 }}
           />

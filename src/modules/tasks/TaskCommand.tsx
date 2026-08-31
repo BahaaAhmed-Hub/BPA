@@ -237,8 +237,12 @@ export function TaskCommand() {
 
   return (
     <div>
-      {/* ── Page header ─────────────────────────────────────────────────────── */}
-      <div style={{ padding: '22px 26px 0', display: 'flex', alignItems: 'flex-end', gap: 20 }}>
+      {/* ── Summary strip, then the header beneath it ───────────────────────── */}
+      <div style={{ padding: '20px 26px 0' }}>
+        <TaskBanner tasks={tasks} />
+      </div>
+
+      <div style={{ padding: '18px 26px 0', display: 'flex', alignItems: 'flex-end', gap: 20 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 32, fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1, color: '#191712' }}>
             {active.length} open {active.length === 1 ? 'task' : 'tasks'}
@@ -432,11 +436,6 @@ export function TaskCommand() {
       </div>
 
       {/* Main content */}
-      {/* Summary strip */}
-      <div style={{ padding: '16px 26px 18px' }}>
-        <TaskBanner tasks={tasks} />
-      </div>
-
       {viewMode === 'list' ? (
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, minWidth: 0 }}>
           <div style={{ flex: 1, minWidth: 0 }}>

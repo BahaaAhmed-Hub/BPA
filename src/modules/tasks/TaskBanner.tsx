@@ -45,6 +45,29 @@ function Stat({ label, value, sub, accent, icon: Icon, center }: {
   )
 }
 
+function Legend({ color, label }: { color: string; label: string }) {
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, color: DIM, whiteSpace: 'nowrap' }}>
+      <span style={{ width: 7, height: 7, borderRadius: 2, background: color, flexShrink: 0 }} />
+      {label}
+    </span>
+  )
+}
+
+/** One day, one series. An empty day still draws a stub so the row reads. */
+function Bar({ value, peak, color, title }: { value: number; peak: number; color: string; title: string }) {
+  return (
+    <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'flex-end', height: '100%' }}>
+      <div title={title} style={{
+        width: '100%',
+        height: `${Math.max(14, Math.round((value / peak) * 100))}%`,
+        borderRadius: 4,
+        background: value === 0 ? 'rgba(255,255,255,0.09)' : color,
+      }} />
+    </div>
+  )
+}
+
 export function TaskBanner({ tasks }: { tasks: Task[] }) {
   const model = useMemo(() => {
     const today = startOfDay(new Date())
@@ -59,7 +82,7 @@ export function TaskBanner({ tasks }: { tasks: Task[] }) {
     const next = dated[0]
     const sameDay = next ? dated.filter(x => x.t.dueDate === next.t.dueDate).length : 0
 
-    // Six days of closures, oldest first
+    // Six days of work in and work out, oldest first
     const days = Array.from({ length: 6 }, (_, i) => {
       const d = new Date(today)
       d.setDate(today.getDate() - (5 - i))
@@ -67,15 +90,17 @@ export function TaskBanner({ tasks }: { tasks: Task[] }) {
       return {
         iso,
         label: d.toLocaleDateString('en-GB', { weekday: 'short' }),
-        count: tasks.filter(t => t.completed && t.completedAt === iso).length,
+        added: tasks.filter(t => t.createdAt.slice(0, 10) === iso).length,
+        closed: tasks.filter(t => t.completed && t.completedAt === iso).length,
         isToday: i === 5,
       }
     })
-    const peak = Math.max(1, ...days.map(d => d.count))
-    const closed = days.reduce((n, d) => n + d.count, 0)
+    const peak = Math.max(1, ...days.map(d => Math.max(d.added, d.closed)))
+    const added = days.reduce((n, d) => n + d.added, 0)
+    const closed = days.reduce((n, d) => n + d.closed, 0)
 
     return {
-      next, sameDay, days, peak, closed,
+      next, sameDay, days, peak, added, closed,
       onFire: open.filter(t => t.urgent).length,
       carried: open.filter(isCarriedOver).length,
     }
@@ -106,28 +131,19 @@ export function TaskBanner({ tasks }: { tasks: Task[] }) {
 
       {/* Six days of closures */}
       <div style={{ flex: 1, minWidth: 0, padding: '0 22px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-        <p style={{
-          margin: 0, fontSize: 9.5, fontWeight: 700, letterSpacing: '0.14em',
-          color: DIM, textTransform: 'uppercase',
-        }}>
-          {model.closed > 0
-            ? `${model.closed} closed over the last six days`
-            : 'Nothing closed in the last six days'}
-        </p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <p style={{
+            margin: 0, fontSize: 9.5, fontWeight: 700, letterSpacing: '0.14em',
+            color: DIM, textTransform: 'uppercase',
+          }}>Last six days</p>
+          <Legend color={AMBER} label={`${model.added} added`} />
+          <Legend color={OLIVE} label={`${model.closed} closed`} />
+        </div>
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, height: 34, marginTop: 8 }}>
           {model.days.map(d => (
-            <div key={d.iso} style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'flex-end', height: '100%' }}>
-              <div
-                title={`${d.count} closed on ${d.label}`}
-                style={{
-                  width: '100%',
-                  height: `${Math.max(22, Math.round((d.count / model.peak) * 100))}%`,
-                  borderRadius: 5,
-                  background: d.count === 0
-                    ? 'rgba(255,255,255,0.09)'
-                    : d.isToday ? AMBER : OLIVE,
-                }}
-              />
+            <div key={d.iso} style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'flex-end', gap: 3, height: '100%' }}>
+              <Bar value={d.added} peak={model.peak} color={AMBER} title={`${d.added} added on ${d.label}`} />
+              <Bar value={d.closed} peak={model.peak} color={OLIVE} title={`${d.closed} closed on ${d.label}`} />
             </div>
           ))}
         </div>

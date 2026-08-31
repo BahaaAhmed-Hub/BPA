@@ -5,8 +5,8 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
-  X, Pencil, Maximize2, ChevronDown, ChevronLeft, ChevronRight,
-  Plus, Paperclip, Link2, Folder, FileText, Image as ImageIcon, CalendarDays, BarChart3, History, Trash2, Check,
+  X, Maximize2, ChevronDown, ChevronLeft, ChevronRight,
+  Plus, Link2, Folder, FileText, Image as ImageIcon, CalendarDays, BarChart3, History, Trash2, Check,
 } from 'lucide-react'
 import type { Task, TaskType, Priority, ChecklistStep, TaskAttachment } from '@/types'
 import { PRIORITY_META, TASK_TYPE_META, getAllUsers, loadVisibleCompanies } from '@/types'
@@ -93,6 +93,22 @@ function DatePopover({ date, start, duration, onApply, onClose }: {
   const [picked, setPicked] = useState<string | undefined>(date)
   const [from, setFrom] = useState(start ?? '09:00')
   const [to, setTo] = useState(addMinutes(start ?? '09:00', duration ?? 30))
+  // End follows the start by whatever gap is currently showing — 30 minutes to
+  // begin with, or whatever the user last set the end to.
+  const gapRef = useRef(duration ?? 30)
+
+  function changeStart(v: string) {
+    setFrom(v)
+    setTo(addMinutes(v, gapRef.current))
+  }
+
+  function changeEnd(v: string) {
+    setTo(v)
+    const [fh, fm] = from.split(':').map(Number)
+    const [th, tm] = v.split(':').map(Number)
+    const gap = (th * 60 + tm) - (fh * 60 + fm)
+    if (gap > 0) gapRef.current = gap
+  }
 
   const cells = useMemo(() => {
     const first = new Date(view.getFullYear(), view.getMonth(), 1)
@@ -153,14 +169,14 @@ function DatePopover({ date, start, duration, onApply, onClose }: {
       <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
         <label style={{ flex: 1, minWidth: 0 }}>
           <span style={{ display: 'block', fontSize: 11, color: '#6C6553', marginBottom: 4 }}>Start</span>
-          <input type="time" value={from} onChange={e => setFrom(e.target.value)} style={{
+          <input type="time" value={from} onChange={e => changeStart(e.target.value)} style={{
             width: '100%', boxSizing: 'border-box', background: '#FAF7EC', border: '1px solid #E8E1CE',
             borderRadius: 8, padding: '7px 9px', fontSize: 12.5, color: '#191712', outline: 'none', fontFamily: 'inherit',
           }} />
         </label>
         <label style={{ flex: 1, minWidth: 0 }}>
           <span style={{ display: 'block', fontSize: 11, color: '#6C6553', marginBottom: 4 }}>End</span>
-          <input type="time" value={to} onChange={e => setTo(e.target.value)} style={{
+          <input type="time" value={to} onChange={e => changeEnd(e.target.value)} style={{
             width: '100%', boxSizing: 'border-box', background: '#FAF7EC', border: '1px solid #E8E1CE',
             borderRadius: 8, padding: '7px 9px', fontSize: 12.5, color: '#191712', outline: 'none', fontFamily: 'inherit',
           }} />
@@ -289,7 +305,6 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
           </select>
         </span>
 
-        <button title="Editing" style={{ ...ICON_BTN, background: '#191712', color: '#FFFFFF' }}><Pencil size={13} /></button>
         <button title={expanded ? 'Narrow the panel' : 'Widen the panel'} onClick={() => setExpanded(x => !x)} style={ICON_BTN}><Maximize2 size={14} /></button>
         <button title="Delete task" onClick={() => { if (window.confirm('Delete this task?')) { deleteTask(task.id); onClose() } }} style={ICON_BTN}>
           <Trash2 size={15} />
@@ -298,7 +313,14 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
       </div>
 
       {/* ── Scrolling body ───────────────────────────────────────────────── */}
-      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '12px 14px 0' }}>
+      <div
+        onDragOver={e => { e.preventDefault(); setDropping(true) }}
+        onDragLeave={() => setDropping(false)}
+        onDrop={e => { e.preventDefault(); setDropping(false); acceptFiles(e.dataTransfer.files) }}
+        style={{
+          flex: 1, minHeight: 0, overflowY: 'auto', padding: '18px 14px 0',
+          outline: dropping ? '2px dashed #F5D14E' : 'none', outlineOffset: -6,
+        }}>
         {/* Title */}
         <textarea
           value={draft.title}
@@ -462,69 +484,58 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
           />
         </div>
 
-        {/* Attachments */}
-        <div style={{ marginTop: 18 }}>
-          <p style={SECTION_LABEL}>Attachments · {attachments.length + (draft.links?.length ?? 0)}</p>
-          <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {(draft.links ?? []).map((url, i) => (
-              <div key={`${url}-${i}`} style={{
-                display: 'flex', alignItems: 'center', gap: 10,
-                border: '1px solid #E8E1CE', borderRadius: 10, padding: '9px 11px',
-              }}>
-                <span style={{
-                  width: 28, height: 28, borderRadius: 8, flexShrink: 0, background: '#FAF7EC',
-                  border: '1px solid #E8E1CE', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6C6553',
-                }}><Link2 size={13} /></span>
-                <a href={url} target="_blank" rel="noreferrer" style={{
-                  flex: 1, minWidth: 0, fontSize: 12.5, color: '#2F6BD8',
-                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                }}>{url}</a>
-                <button onClick={() => patch({ links: (draft.links ?? []).filter((_, j) => j !== i) })}
-                  title="Remove link" style={{ ...ICON_BTN, width: 22, height: 22, color: '#C9C0A8' }}>
-                  <X size={13} />
-                </button>
-              </div>
-            ))}
-            {attachments.map(f => {
-              const isImage = /\.(png|jpe?g|gif|webp|svg)$/i.test(f.name)
-              return (
-                <div key={f.id} style={{
+        {/* Attachments — only when the task actually has some */}
+        {(attachments.length > 0 || linkCount > 0) && (
+          <div style={{ marginTop: 18 }}>
+            <p style={SECTION_LABEL}>Attachments · {attachments.length + linkCount}</p>
+            <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {(draft.links ?? []).map((url, i) => (
+                <div key={`${url}-${i}`} style={{
                   display: 'flex', alignItems: 'center', gap: 10,
                   border: '1px solid #E8E1CE', borderRadius: 10, padding: '9px 11px',
                 }}>
                   <span style={{
                     width: 28, height: 28, borderRadius: 8, flexShrink: 0, background: '#FAF7EC',
                     border: '1px solid #E8E1CE', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6C6553',
-                  }}>{isImage ? <ImageIcon size={13} /> : <FileText size={13} />}</span>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ margin: 0, fontSize: 12.5, fontWeight: 500, color: '#191712', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.name}</p>
-                    <p style={{ margin: '1px 0 0', fontSize: 11, color: '#9B9180' }}>
-                      {formatBytes(f.size)}{f.source ? ` · ${f.source}` : ''}
-                    </p>
-                  </div>
-                  <button onClick={() => patch({ attachments: attachments.filter(x => x.id !== f.id) })}
-                    title="Remove attachment" style={{ ...ICON_BTN, width: 22, height: 22, color: '#C9C0A8' }}>
-                    <Trash2 size={13} />
+                  }}><Link2 size={13} /></span>
+                  <a href={url} target="_blank" rel="noreferrer" style={{
+                    flex: 1, minWidth: 0, fontSize: 12.5, color: '#2F6BD8',
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  }}>{url}</a>
+                  <button onClick={() => patch({ links: (draft.links ?? []).filter((_, j) => j !== i) })}
+                    title="Remove link" style={{ ...ICON_BTN, width: 22, height: 22, color: '#C9C0A8' }}>
+                    <X size={13} />
                   </button>
                 </div>
-              )
-            })}
-            <label
-              onDragOver={e => { e.preventDefault(); setDropping(true) }}
-              onDragLeave={() => setDropping(false)}
-              onDrop={e => { e.preventDefault(); setDropping(false); acceptFiles(e.dataTransfer.files) }}
-              style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
-                padding: '13px 0', borderRadius: 10, cursor: 'pointer',
-                border: `1px dashed ${dropping ? '#F5D14E' : '#DED5BF'}`,
-                background: dropping ? 'rgba(245,209,78,0.08)' : 'transparent',
-                color: '#9B9180', fontSize: 12.5,
-              }}>
-              <Paperclip size={13} /> Drop files here
-              <input ref={fileRef} type="file" multiple onChange={e => acceptFiles(e.target.files)} style={{ display: 'none' }} />
-            </label>
+              ))}
+              {attachments.map(f => {
+                const isImage = /\.(png|jpe?g|gif|webp|svg)$/i.test(f.name)
+                return (
+                  <div key={f.id} style={{
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    border: '1px solid #E8E1CE', borderRadius: 10, padding: '9px 11px',
+                  }}>
+                    <span style={{
+                      width: 28, height: 28, borderRadius: 8, flexShrink: 0, background: '#FAF7EC',
+                      border: '1px solid #E8E1CE', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6C6553',
+                    }}>{isImage ? <ImageIcon size={13} /> : <FileText size={13} />}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ margin: 0, fontSize: 12.5, fontWeight: 500, color: '#191712', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.name}</p>
+                      <p style={{ margin: '1px 0 0', fontSize: 11, color: '#9B9180' }}>
+                        {formatBytes(f.size)}{f.source ? ` · ${f.source}` : ''}
+                      </p>
+                    </div>
+                    <button onClick={() => patch({ attachments: attachments.filter(x => x.id !== f.id) })}
+                      title="Remove attachment" style={{ ...ICON_BTN, width: 22, height: 22, color: '#C9C0A8' }}>
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
           </div>
-        </div>
+        )}
+        <input ref={fileRef} type="file" multiple onChange={e => acceptFiles(e.target.files)} style={{ display: 'none' }} />
 
         {/* Activity */}
         <div style={{ marginTop: 18, paddingBottom: 14 }}>

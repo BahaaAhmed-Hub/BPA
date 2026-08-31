@@ -10,6 +10,7 @@ import type { Quadrant, Task } from '@/types'
 import { isTaskHidden, loadVisibleCompanies } from '@/types'
 import { TaskRow } from './TaskRow'
 import { buildTaskGroups, sortUrgentFirst, type TaskGroupBy } from './taskVisuals'
+import { CountBadge } from './controls'
 
 interface QuadrantSpec {
   id: Quadrant
@@ -120,7 +121,7 @@ function QuadrantPanel({ spec, tasks, onOpen, onAction, groupBy }: {
           <p style={{ margin: 0, fontSize: 13.5, fontWeight: 600, color: '#191712', lineHeight: 1.3 }}>{spec.title}</p>
           <p style={{ margin: '2px 0 0', fontSize: 11.5, color: '#9B9180', lineHeight: 1.35 }}>{spec.sub}</p>
         </div>
-        <span style={{ fontSize: 12.5, color: '#9B9180', flexShrink: 0, paddingTop: 3 }}>{tasks.length}</span>
+        <span style={{ paddingTop: 2 }}><CountBadge value={tasks.length} /></span>
         <button onClick={() => onAction(spec, tasks)} style={{
           flexShrink: 0, height: 28, padding: '0 12px', borderRadius: 999,
           background: '#FFFFFF', border: '1px solid #E8E1CE', color: '#191712',
@@ -148,7 +149,7 @@ function QuadrantPanel({ spec, tasks, onOpen, onAction, groupBy }: {
                     : <ChevronRight size={12} strokeWidth={2.2} color="#9B9180" />}
                   <span style={{ width: 7, height: 7, borderRadius: 999, background: g.color, flexShrink: 0 }} />
                   <span style={{ fontSize: 11.5, fontWeight: 600, color: '#6C6553' }}>{g.label}</span>
-                  <span style={{ fontSize: 11, color: '#9B9180' }}>{g.tasks.length}</span>
+                  <CountBadge value={g.tasks.length} />
                 </button>
               )}
               {isOpen && g.tasks.map(t => <TaskRow key={t.id} task={t} onOpen={onOpen} dense />)}
