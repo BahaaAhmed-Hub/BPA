@@ -2609,6 +2609,68 @@ function DataPrivacySection() {
   )
 }
 
+// ─── Page layout definitions (multi-column pages matching design artboards) ───
+
+type PageKey = 'you' | 'connected' | 'integrations' | 'work' | 'system' | 'finance'
+
+const SECTION_TO_PAGE: Record<SectionId, PageKey> = {
+  profile: 'you',   billing: 'you',
+  accounts: 'connected', professor: 'connected', schedule: 'connected',
+  blocking: 'integrations',
+  tasks: 'work',    habits: 'work',
+  automation: 'system', notifications: 'system', appearance: 'system',
+  behavioral: 'system', companies: 'system',
+  finance: 'finance',
+}
+
+const PAGE_META: Record<PageKey, { title: string; sub: string }> = {
+  you:          { title: 'You and your day',  sub: 'Who you are, and what the licence costs' },
+  connected:    { title: 'System',            sub: 'Accounts, the AI behind the briefs, and everything that interrupts you' },
+  integrations: { title: 'Integrations',      sub: 'The tools that already hold your work — what comes in, what goes out, and how often' },
+  work:         { title: 'Work',              sub: 'Board statuses, task types and the habits the tracker runs on' },
+  system:       { title: 'System',            sub: 'Rules that run themselves, what interrupts you, and how it all looks' },
+  finance:      { title: 'Finance',           sub: 'How money is displayed and counted — including which envelope style the budget page opens in' },
+}
+
+// Card wrapper used in every multi-column page
+function SectionCard({ id, active, children, actions }: {
+  id: SectionId
+  active: boolean
+  children: React.ReactNode
+  actions?: React.ReactNode
+}) {
+  const meta = SECTION_META.find(m => m.id === id)!
+  return (
+    <div style={{
+      background: '#FFFFFF',
+      border: '1px solid #E8E1CE',
+      borderRadius: 14,
+      padding: '18px 20px 20px',
+      boxShadow: active
+        ? '0 0 0 2px rgba(245,209,78,0.35), 0 2px 8px rgba(25,23,18,0.08)'
+        : '0 1px 3px rgba(25,23,18,0.06)',
+      display: 'flex',
+      flexDirection: 'column',
+      minWidth: 0,
+      transition: 'box-shadow 0.15s',
+      overflowY: 'auto',
+    }}>
+      {/* Card heading */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, marginBottom: 14, paddingBottom: 12, borderBottom: '1px solid #F0EBDC', flexShrink: 0 }}>
+        <div>
+          <h3 style={{ margin: 0, fontSize: 13.5, fontWeight: 700, color: '#191712', lineHeight: 1.2 }}>{meta.title}</h3>
+          <p style={{ margin: '2px 0 0', fontSize: 11, color: '#9B9180', lineHeight: 1.35 }}>{meta.description}</p>
+        </div>
+        {actions && <div style={{ flexShrink: 0 }}>{actions}</div>}
+      </div>
+      {/* Card content scrolls independently */}
+      <div style={{ flex: 1, minHeight: 0 }}>
+        {children}
+      </div>
+    </div>
+  )
+}
+
 // ─── CHUNK 7: Main Settings component ────────────────────────────────────────
 
 export function Settings() {
@@ -2623,7 +2685,7 @@ export function Settings() {
   const [supaOk, setSupaOk]             = useState<boolean | null>(null)
   // Per-section save states + error messages
   const [sectionSaving, setSectionSaving] = useState<Record<string, 'idle'|'saving'|'saved'|'error'>>({})
-  const [sectionError,  setSectionError]  = useState<Record<string, string>>({})
+  const [_sectionError, setSectionError]  = useState<Record<string, string>>({}); void _sectionError
   const authUser = useAuthStore(s => s.user)
   const settingsRef = useRef(settings)
   settingsRef.current = settings
@@ -2722,116 +2784,150 @@ export function Settings() {
     }
   }
 
-  // ── Section order (kept for loadSectionOrder / saveSectionOrder compatibility) ─
+  // ── Page renderer (multi-column layout per design artboards) ────────────────
+  function renderPage() {
+    const page = SECTION_TO_PAGE[activeSection]
+    const pm   = PAGE_META[page]
 
-  // ── Section renderer ─────────────────────────────────────────────────────────
-  function renderSection(id: SectionId) {
-    const meta = SECTION_META.find(m => m.id === id)!
-    const saving = sectionSaving[id] ?? 'idle'
+    // Shared accounts list (primary + additional)
+    const allAccounts: ConnectedAccount[] = [
+      ...(primaryEmail ? [{
+        id: 'primary', email: primaryEmail,
+        name: authUser?.name ?? primaryEmail,
+        providerToken: '', scopes: [], connectedAt: '', isPrimary: true,
+      } as ConnectedAccount] : []),
+      ...accounts,
+    ]
 
-    // Wrap save button label with state feedback
-    const saveLabel = saving === 'saving' ? 'Saving…' : saving === 'saved' ? 'Saved ✓' : saving === 'error' ? 'Error ✗' : undefined
-
-    // Map section id → its DB save function
-    const saveFns: Partial<Record<SectionId, () => Promise<void>>> = {
-      profile:       () => saveProfileToDB(settingsRef.current),
-      schedule:      () => saveProfileToDB(settingsRef.current),
-      companies:     () => saveCompaniesToDB(companies as DbSyncCompanyRow[]),
-      habits:        async () => { const { habits } = useHabitsStore.getState(); await saveHabitsToDB(habits); await saveHabitLogsToDB(loadLogs()) },
-      professor:     () => savePrefsToDB(settingsRef.current),
-      appearance:    () => savePrefsToDB(settingsRef.current),
+    // Inline save button for cards that have a DB save
+    function SaveBtn({ id }: { id: SectionId }) {
+      const fns: Partial<Record<SectionId, () => Promise<void>>> = {
+        profile:  () => saveProfileToDB(settingsRef.current),
+        schedule: () => saveProfileToDB(settingsRef.current),
+        professor:() => savePrefsToDB(settingsRef.current),
+        habits:   async () => { const { habits } = useHabitsStore.getState(); await saveHabitsToDB(habits); await saveHabitLogsToDB(loadLogs()) },
+        appearance:() => savePrefsToDB(settingsRef.current),
+      }
+      const fn = fns[id]
+      if (!fn) return null
+      const saving = sectionSaving[id] ?? 'idle'
+      const label  = saving === 'saving' ? 'Saving…' : saving === 'saved' ? '✓ Saved' : saving === 'error' ? '✗ Error' : 'Save'
+      return (
+        <button onClick={withSectionSave(id, fn)} style={{
+          padding: '4px 12px', borderRadius: 7, fontSize: 11.5, fontWeight: 600, cursor: 'pointer',
+          background: saving === 'saved' ? 'rgba(95,112,56,0.12)' : saving === 'error' ? 'rgba(180,82,58,0.1)' : '#F5D14E',
+          border: saving === 'saved' ? '1px solid #C8DAB0' : saving === 'error' ? '1px solid rgba(180,82,58,0.3)' : '1px solid rgba(25,23,18,0.18)',
+          color: saving === 'saved' ? '#5F7038' : saving === 'error' ? '#B4523A' : '#191712',
+          transition: 'all 0.15s',
+        }}>{label}</button>
+      )
     }
-    const saveFn = saveFns[id]
 
-    const errMsg = sectionError[id]
+    // Page header
+    const pageHeader = (
+      <div style={{ marginBottom: 18, flexShrink: 0 }}>
+        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.16em', color: '#9B9180', textTransform: 'uppercase', marginBottom: 3 }}>SETTINGS</div>
+        <h2 style={{ margin: 0, fontFamily: 'Outfit, sans-serif', fontSize: 26, fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1, color: '#191712' }}>{pm.title}</h2>
+        <p style={{ margin: '4px 0 0', fontSize: 12, color: '#6C6553', lineHeight: 1.4 }}>{pm.sub}</p>
+      </div>
+    )
 
-    const _Icon = meta.icon; void _Icon
+    // ── YOU page: Profile (left) + Billing (right) ──────────────────────────
+    if (page === 'you') return (
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        {pageHeader}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, flex: 1, minHeight: 0 }}>
+          <SectionCard id="profile" active={activeSection === 'profile'} actions={<SaveBtn id="profile" />}>
+            <ProfileSection s={settings} set={update} />
+          </SectionCard>
+          <SectionCard id="billing" active={activeSection === 'billing'}>
+            <BillingSection />
+          </SectionCard>
+        </div>
+      </div>
+    )
+
+    // ── CONNECTED page: Accounts | AI | Schedule rules ──────────────────────
+    if (page === 'connected') return (
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        {pageHeader}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14, flex: 1, minHeight: 0 }}>
+          <SectionCard id="accounts" active={activeSection === 'accounts'} actions={
+            <button onClick={() => window.dispatchEvent(new CustomEvent('professor:openWizard'))} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 7, background: '#FAF7EC', border: '1px solid #E8E1CE', color: '#6C6553', fontSize: 11, cursor: 'pointer' }}>
+              <Wand2 size={11} /> Wizard
+            </button>
+          }>
+            <CompaniesSection companies={companies} setCompanies={c => { setCompanies(c); saveCompanies(c) }} accounts={allAccounts} />
+          </SectionCard>
+          <SectionCard id="professor" active={activeSection === 'professor'} actions={<SaveBtn id="professor" />}>
+            <ProfessorSection s={settings} set={update} />
+          </SectionCard>
+          <SectionCard id="schedule" active={activeSection === 'schedule'} actions={<SaveBtn id="schedule" />}>
+            <ScheduleSection s={settings} set={update} />
+          </SectionCard>
+        </div>
+      </div>
+    )
+
+    // ── INTEGRATIONS page ───────────────────────────────────────────────────
+    if (page === 'integrations') return (
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        {pageHeader}
+        <SectionCard id="blocking" active={true}>
+          <IntegrationsSection accounts={accounts} setAccounts={a => setAccounts(a)} primaryEmail={primaryEmail} />
+        </SectionCard>
+      </div>
+    )
+
+    // ── WORK page: Tasks (left) + Habits (right) ────────────────────────────
+    if (page === 'work') return (
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        {pageHeader}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, flex: 1, minHeight: 0 }}>
+          <SectionCard id="tasks" active={activeSection === 'tasks'}>
+            <TaskStatusesSection />
+          </SectionCard>
+          <SectionCard id="habits" active={activeSection === 'habits'} actions={<SaveBtn id="habits" />}>
+            <HabitsSection />
+          </SectionCard>
+        </div>
+      </div>
+    )
+
+    // ── SYSTEM page: Automation | Notifications | Appearance+Behavioral+Privacy ─
+    if (page === 'system') return (
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        {pageHeader}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14, flex: 1, minHeight: 0 }}>
+          <SectionCard id="automation" active={activeSection === 'automation'}>
+            <AutomationSection />
+          </SectionCard>
+          <SectionCard id="notifications" active={activeSection === 'notifications'}>
+            <NotificationsMatrixSection />
+          </SectionCard>
+          {/* Third column: Appearance + Behavioral OS + Data & privacy stacked */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14, minHeight: 0 }}>
+            <SectionCard id="appearance" active={activeSection === 'appearance'} actions={<SaveBtn id="appearance" />}>
+              <AppearanceSection s={settings} set={update} />
+            </SectionCard>
+            <SectionCard id="behavioral" active={activeSection === 'behavioral'}>
+              <BehavioralSection />
+            </SectionCard>
+            <SectionCard id="companies" active={activeSection === 'companies'}>
+              <DataPrivacySection />
+            </SectionCard>
+          </div>
+        </div>
+      </div>
+    )
+
+    // ── FINANCE page ────────────────────────────────────────────────────────
     return (
-      <div key={id}>
-        {/* Section header — 11A design: large Outfit title + description + action buttons */}
-        <div style={{ marginBottom: 22 }}>
-          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16 }}>
-            <div>
-              <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.14em', color: '#6C6553', textTransform: 'uppercase', marginBottom: 4 }}>SETTINGS</div>
-              <h2 style={{ margin: 0, fontFamily: 'Outfit, sans-serif', fontSize: 28, fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1, color: '#191712' }}>
-                {meta.title}
-              </h2>
-              <p style={{ margin: '5px 0 0', fontSize: 12.5, color: '#6C6553', lineHeight: 1.45 }}>{meta.description}</p>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0, paddingBottom: 2 }}>
-              {/* Setup wizard shortcut for profile / accounts / schedule sections */}
-              {(id === 'profile' || id === 'billing' || id === 'accounts' || id === 'schedule') && (
-                <button onClick={() => window.dispatchEvent(new CustomEvent('professor:openWizard'))}
-                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 13px', borderRadius: 8, background: '#FFFFFF', border: '1px solid #E8E1CE', color: '#6C6553', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>
-                  <Wand2 size={12} /> Setup wizard
-                </button>
-              )}
-              {saveFn && (
-                <button
-                  onClick={withSectionSave(id, saveFn)}
-                  style={{
-                    padding: '7px 16px', borderRadius: 8, fontSize: 12.5, fontWeight: 600, cursor: 'pointer',
-                    background: saveLabel?.includes('✓') ? 'rgba(29,158,117,0.12)' : saveLabel?.includes('✗') ? 'rgba(224,82,82,0.12)' : '#F5D14E',
-                    border: saveLabel?.includes('✓') ? '1px solid #1D9E7560' : saveLabel?.includes('✗') ? '1px solid #E0525260' : '1px solid rgba(25,23,18,0.18)',
-                    color: saveLabel?.includes('✓') ? '#1D9E75' : saveLabel?.includes('✗') ? '#E05252' : '#191712',
-                    boxShadow: '0 2px 0 rgba(25,23,18,0.1)', transition: 'all 0.15s',
-                  }}
-                >
-                  {saveLabel ?? 'Save'}
-                </button>
-              )}
-              {!saveFn && (
-                <span style={{ fontSize: 11, color: '#9B9180', display: 'flex', alignItems: 'center', gap: 5 }}>
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="M12 8v4l3 3"/></svg>
-                  Saved automatically
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Error message */}
-        {saving === 'error' && errMsg && (
-          <div style={{ marginBottom: 14, padding: '8px 12px', borderRadius: 8, background: 'rgba(224,82,82,0.08)', border: '1px solid rgba(224,82,82,0.25)', fontSize: 12, color: '#E05252' }}>
-            ✗ {errMsg}
-          </div>
-        )}
-
-        {/* Section content */}
-        <div style={{ background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 14, padding: '22px 24px 24px', boxShadow: '0 1px 3px rgba(25,23,18,0.06)' }}>
-          {id === 'profile'       && <ProfileSection       s={settings} set={update} />}
-          {id === 'billing'       && <BillingSection />}
-          {id === 'schedule'      && <ScheduleSection      s={settings} set={update} />}
-          {/* 11B: Accounts & companies → company cards */}
-          {id === 'accounts'      && <CompaniesSection     companies={companies}
-                                        setCompanies={c => { setCompanies(c); saveCompanies(c) }}
-                                        accounts={[
-                                          ...(primaryEmail ? [{
-                                            id: 'primary',
-                                            email: primaryEmail,
-                                            name: authUser?.name ?? primaryEmail,
-                                            providerToken: '',
-                                            scopes: [],
-                                            connectedAt: '',
-                                            isPrimary: true,
-                                          } as ConnectedAccount] : []),
-                                          ...accounts,
-                                        ]} />}
-          {id === 'habits'        && <HabitsSection />}
-          {id === 'tasks'         && <TaskStatusesSection />}
-          {/* 11D: Integrations → third-party tools (Notion, Asana, Trello…) + Google OAuth + calendar sync */}
-          {id === 'blocking'      && <IntegrationsSection accounts={accounts} setAccounts={a => setAccounts(a)} primaryEmail={primaryEmail} />}
-          {id === 'professor'     && <ProfessorSection     s={settings} set={update} />}
-          {/* 11F: Automation → rule cards */}
-          {id === 'automation'    && <AutomationSection />}
-          {/* 11F: Notifications → Push/Mail/Digest matrix */}
-          {id === 'notifications' && <NotificationsMatrixSection />}
-          {id === 'appearance'    && <AppearanceSection    s={settings} set={update} />}
-          {id === 'behavioral'    && <BehavioralSection />}
-          {/* Data & privacy */}
-          {id === 'companies'     && <DataPrivacySection />}
-          {id === 'finance'       && <FinanceSection />}
-        </div>
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        {pageHeader}
+        <SectionCard id="finance" active={true}>
+          <FinanceSection />
+        </SectionCard>
       </div>
     )
   }
@@ -2840,127 +2936,108 @@ export function Settings() {
     await googleSignOut()
   }
 
+  function navItem(id: SectionId) {
+    const meta = SECTION_META.find(m => m.id === id)!
+    const Icon = meta.icon
+    const isActive = id === activeSection
+    const page = SECTION_TO_PAGE[id]
+    const isPageActive = SECTION_TO_PAGE[activeSection] === page
+    return (
+      <button
+        key={id}
+        onClick={() => { setActiveSection(id); try { localStorage.setItem('settings-active-section', id) } catch { /* noop */ } }}
+        style={{
+          width: '100%', display: 'flex', alignItems: 'center', gap: 8,
+          padding: '5px 8px', borderRadius: 7, cursor: 'pointer', marginBottom: 1,
+          background: isActive ? '#FFFFFF' : isPageActive ? 'rgba(255,255,255,0.5)' : 'transparent',
+          border: isActive ? '1px solid rgba(25,23,18,0.08)' : '1px solid transparent',
+          color: isActive ? '#191712' : isPageActive ? '#3D3928' : '#6C6553',
+          fontSize: 12, fontWeight: isActive ? 600 : 400, textAlign: 'left' as const,
+          transition: 'all 0.1s',
+          boxShadow: isActive ? '0 1px 3px rgba(25,23,18,0.16)' : 'none',
+        }}
+      >
+        <Icon size={12} style={{ flexShrink: 0, opacity: isActive ? 1 : 0.65 }} />
+        <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{meta.title}</span>
+        {id === 'habits' && (() => {
+          try {
+            const hs = JSON.parse(localStorage.getItem('professor-habits') ?? '[]')
+            const n  = hs.filter((h: { isActive?: boolean }) => h.isActive !== false).length
+            return n > 0 ? <span style={{ height: 15, minWidth: 15, boxSizing: 'border-box', padding: '0 4px', borderRadius: 999, background: '#EDE7D9', color: '#6C6553', fontSize: 9, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{n}</span> : null
+          } catch { return null }
+        })()}
+        {id === 'blocking' && <span style={{ height: 15, minWidth: 15, boxSizing: 'border-box', padding: '0 4px', borderRadius: 999, background: '#EDE7D9', color: '#6C6553', fontSize: 9, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>4</span>}
+      </button>
+    )
+  }
+
   return (
     <div style={{ display: 'flex', height: 'calc(100vh - 66px)', overflow: 'hidden', background: '#F7F4EA' }}>
 
-      {/* ── LEFT RAIL 216px ──────────────────────────────────────────────────── */}
+      {/* ── LEFT RAIL 200px — compact, no scroll ─────────────────────────── */}
       <div style={{
-        width: 216, flexShrink: 0, display: 'flex', flexDirection: 'column',
+        width: 200, flexShrink: 0, display: 'flex', flexDirection: 'column',
         background: '#FCFAF4', borderRight: '1px solid #E8E1CE',
-        overflowY: 'auto',
+        overflow: 'hidden',
       }}>
-        {/* User card at top of rail */}
-        <div style={{ padding: '20px 16px 14px', borderBottom: '1px solid #EDE7D9' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-            {authUser?.avatarUrl
-              ? <img src={authUser.avatarUrl} alt="avatar" style={{ width: 34, height: 34, borderRadius: '50%', border: '1.5px solid #E8E1CE' }} />
-              : <div style={{ width: 34, height: 34, borderRadius: '50%', background: '#EDE7D9', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <User size={15} color="#6C6553" />
-                </div>
-            }
-            <div style={{ minWidth: 0 }}>
-              <p style={{ margin: 0, fontSize: 12.5, fontWeight: 600, color: '#191712', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {authUser?.name ?? 'Professor User'}
-              </p>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 1 }}>
-                <div style={{ width: 5, height: 5, borderRadius: '50%', background: supaOk === null ? '#9B9180' : supaOk ? '#1D9E75' : '#E05252', flexShrink: 0 }} />
-                <span style={{ fontSize: 10.5, color: '#9B9180', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {supaOk === null ? 'Checking…' : supaOk ? 'Synced' : 'Local only'}
+        {/* Compact user row */}
+        <div style={{ padding: '10px 12px 8px', borderBottom: '1px solid #EDE7D9', display: 'flex', alignItems: 'center', gap: 9, flexShrink: 0 }}>
+          {authUser?.avatarUrl
+            ? <img src={authUser.avatarUrl} alt="avatar" style={{ width: 28, height: 28, borderRadius: '50%', border: '1.5px solid #E8E1CE', flexShrink: 0 }} />
+            : <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#EDE7D9', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <span style={{ fontSize: 10, fontWeight: 700, color: '#6C6553' }}>
+                  {(authUser?.name ?? 'P').slice(0, 2).toUpperCase()}
                 </span>
               </div>
+          }
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ margin: 0, fontSize: 11.5, fontWeight: 600, color: '#191712', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {authUser?.name ?? 'Professor User'}
+            </p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <div style={{ width: 5, height: 5, borderRadius: '50%', background: supaOk === null ? '#9B9180' : supaOk ? '#1D9E75' : '#E05252', flexShrink: 0 }} />
+              <span style={{ fontSize: 10, color: '#9B9180' }}>{supaOk === null ? 'Checking…' : supaOk ? 'Synced' : 'Local only'}</span>
             </div>
           </div>
-          <div style={{ display: 'flex', gap: 5 }}>
-            <button onClick={() => void checkSupabase().then(setSupaOk)}
-              style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, padding: '5px 0', borderRadius: 6, background: 'transparent', border: '1px solid #E8E1CE', color: '#6C6553', fontSize: 11, cursor: 'pointer' }}>
-              <RefreshCw size={10} /> Sync
-            </button>
-            <button onClick={() => void handleSignOut()}
-              style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, padding: '5px 0', borderRadius: 6, background: 'transparent', border: '1px solid rgba(224,82,82,0.28)', color: '#E05252', fontSize: 11, cursor: 'pointer' }}>
-              <LogOut size={10} /> Sign out
-            </button>
+          <button onClick={() => void handleSignOut()} title="Sign out"
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9B9180', padding: '2px 4px', flexShrink: 0 }}>
+            <LogOut size={13} />
+          </button>
+        </div>
+
+        {/* Search */}
+        <div style={{ padding: '7px 10px 6px', borderBottom: '1px solid #EDE7D9', flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#FAF7EC', border: '1px solid #E8E1CE', borderRadius: 7, padding: '5px 9px', cursor: 'text' }}>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#9B9180" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+            <span style={{ fontSize: 11, color: '#9B9180', flex: 1, userSelect: 'none' }}>Find a setting</span>
+            <span style={{ fontSize: 9, color: '#9B9180', opacity: 0.7 }}>⌘K</span>
           </div>
         </div>
 
-        {/* Search bar */}
-        <div style={{ padding: '10px 10px 8px', borderBottom: '1px solid #EDE7D9' }}>
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 7,
-            background: '#FAF7EC', border: '1px solid #E8E1CE',
-            borderRadius: 8, padding: '6px 10px', cursor: 'text',
-          }}>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#8A8272" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
-            </svg>
-            <span style={{ fontSize: 11.5, color: '#9B9180', flex: 1, userSelect: 'none' }}>Find a setting</span>
-            <span style={{ fontSize: 9.5, color: '#9B9180', fontFamily: 'JetBrains Mono, monospace', opacity: 0.7 }}>⌘K</span>
-          </div>
-        </div>
-
-        {/* Grouped nav */}
-        <div style={{ padding: '6px 8px', flex: 1, overflowY: 'auto' }}>
+        {/* Grouped nav — no overflow, compact */}
+        <div style={{ padding: '4px 8px', flex: 1 }}>
           {NAV_GROUPS.map(group => (
-            <div key={group.label} style={{ marginBottom: 4 }}>
-              <div style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.12em', color: '#9B9180', padding: '10px 9px 4px', textTransform: 'uppercase' as const }}>
+            <div key={group.label} style={{ marginBottom: 2 }}>
+              <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.13em', color: '#B5AC98', padding: '7px 8px 3px', textTransform: 'uppercase' as const }}>
                 {group.label}
               </div>
-              {group.ids.map(id => {
-                const meta = SECTION_META.find(m => m.id === id)!
-                const Icon = meta.icon
-                const isActive = id === activeSection
-                return (
-                  <button
-                    key={id}
-                    onClick={() => { setActiveSection(id); try { localStorage.setItem('settings-active-section', id) } catch { /* noop */ } }}
-                    style={{
-                      width: '100%', display: 'flex', alignItems: 'center', gap: 9,
-                      padding: '7px 9px', borderRadius: 8, cursor: 'pointer', marginBottom: 1,
-                      background: isActive ? '#FFFFFF' : 'transparent',
-                      border: isActive ? '1px solid rgba(25,23,18,0.08)' : '1px solid transparent',
-                      color: isActive ? '#191712' : '#6C6553',
-                      fontSize: 12.5, fontWeight: isActive ? 600 : 400, textAlign: 'left' as const,
-                      transition: 'all 0.1s',
-                      boxShadow: isActive ? '0 1px 3px rgba(25,23,18,0.16)' : 'none',
-                    }}
-                  >
-                    <Icon size={13} style={{ flexShrink: 0, opacity: isActive ? 1 : 0.7 }} />
-                    <span style={{ flex: 1, minWidth: 0 }}>{meta.title}</span>
-                    {/* Badge for habits count */}
-                    {id === 'habits' && (() => {
-                      try {
-                        const habits = JSON.parse(localStorage.getItem('professor-habits') ?? '[]')
-                        const active = habits.filter((h: { isActive?: boolean }) => h.isActive !== false).length
-                        return active > 0 ? (
-                          <span style={{ height: 17, minWidth: 17, boxSizing: 'border-box', padding: '0 5px', borderRadius: 999, background: '#EDE7D9', color: '#6C6553', fontSize: 9, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                            {active}
-                          </span>
-                        ) : null
-                      } catch { return null }
-                    })()}
-                  </button>
-                )
-              })}
+              {group.ids.map(id => navItem(id))}
             </div>
           ))}
         </div>
 
-        {/* Bottom: "Every change saves itself" + Setup wizard */}
-        <div style={{ padding: '8px 8px 12px', borderTop: '1px solid #EDE7D9' }}>
-          <div style={{ fontSize: 10.5, color: '#9B9180', padding: '6px 9px 8px', display: 'flex', alignItems: 'center', gap: 6 }}>
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="M12 8v4l3 3"/></svg>
+        {/* Footer */}
+        <div style={{ padding: '8px 12px 10px', borderTop: '1px solid #EDE7D9', flexShrink: 0 }}>
+          <div style={{ fontSize: 10, color: '#B5AC98', display: 'flex', alignItems: 'center', gap: 5 }}>
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="M12 8v4l3 3"/></svg>
             Every change saves itself
           </div>
-          <button
-            onClick={() => window.dispatchEvent(new CustomEvent('professor:openWizard'))}
-            style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 7, padding: '7px 9px', borderRadius: 8, background: 'rgba(127,119,221,0.08)', border: '1px solid rgba(127,119,221,0.2)', color: '#7F77DD', fontSize: 12, cursor: 'pointer', fontWeight: 500 }}>
-            <Wand2 size={12} /> Setup wizard
-          </button>
         </div>
       </div>
 
-      {/* ── RIGHT CONTENT PANEL ───────────────────────────────────────────────── */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '24px 28px 48px' }}>
-        {renderSection(activeSection)}
+      {/* ── RIGHT CONTENT PANEL — fills height, no outer scroll ──────────── */}
+      <div style={{ flex: 1, overflow: 'hidden', padding: '20px 22px', display: 'flex', flexDirection: 'column' }}>
+        {renderPage()}
       </div>
     </div>
   )
