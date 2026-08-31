@@ -63,7 +63,7 @@ interface SectionMeta { id: SectionId; title: string; icon: React.ElementType; d
 const SECTION_META: SectionMeta[] = [
   { id: 'profile',       title: 'Profile',              icon: User,        description: 'Name, timezone, work week & framework' },
   { id: 'billing',       title: 'Billing',              icon: CreditCard,  description: 'Plan, payment method and invoices' },
-  { id: 'accounts',      title: 'Accounts & companies', icon: Building2,   description: 'Work contexts, calendars and their people' },
+  { id: 'accounts',      title: 'Accounts & companies', icon: Building2,   description: 'Connected Google accounts, and the companies that use them' },
   { id: 'professor',     title: 'AI',                   icon: Brain,       description: 'Model, autonomy and what the assistant may write for you' },
   { id: 'schedule',      title: 'Schedule rules',       icon: Clock,       description: 'Focus hours, buffers, meeting protections' },
   { id: 'blocking',      title: 'Integrations',         icon: Link,        description: 'Notion, Asana, Trello, Apple Notes and calendar sync' },
@@ -80,7 +80,7 @@ const SECTION_META: SectionMeta[] = [
 // Grouped nav — matches 11A Sunlit Bento design
 const NAV_GROUPS: { label: string; ids: SectionId[] }[] = [
   { label: 'YOU',       ids: ['profile', 'billing'] },
-  { label: 'CONNECTED', ids: ['accounts', 'professor', 'schedule', 'blocking'] },
+  { label: 'WORKSPACE', ids: ['accounts', 'professor', 'schedule', 'blocking'] },
   { label: 'WORK',      ids: ['tasks', 'habits'] },
   { label: 'SYSTEM',    ids: ['automation', 'notifications', 'appearance', 'behavioral', 'companies', 'finance'] },
 ]
@@ -439,7 +439,7 @@ function ProfileSection({
           value={s.fullName}
           onChange={e => set({ fullName: e.target.value })}
           placeholder="Your name"
-          style={{ ...PILL_BASE, width: 220, textAlign: 'right' as const }}
+          style={{ ...PILL_BASE, width: 220 }}
         />
       </DRow>
 
@@ -672,14 +672,20 @@ function CompanyCard({
           )}
         </div>
 
-        {/* Account selector — compact */}
-        {accounts.length > 0 && (
-          <select value={co.accountId} onChange={e => onUpdate({ accountId: e.target.value })}
-            style={{ ...selectStyle, fontSize: 11, padding: '3px 6px', maxWidth: 130 }}>
-            <option value="">No account</option>
-            {accounts.map(a => <option key={a.id} value={a.id}>{a.email}</option>)}
-          </select>
-        )}
+        {/* Linked Google account — always visible, since the link is the point */}
+        <select
+          value={co.accountId}
+          onChange={e => onUpdate({ accountId: e.target.value })}
+          title={co.accountId ? 'Linked Google account' : 'Not linked to a Google account'}
+          style={{
+            ...selectStyle, fontSize: 11, padding: '3px 8px', maxWidth: 168, flexShrink: 0,
+            borderColor: co.accountId ? '#C8DAB0' : '#E0D6BC',
+            background: co.accountId ? 'rgba(95,112,56,0.08)' : '#FFFFFF',
+            color: co.accountId ? '#5F7038' : '#9B9180',
+          }}>
+          <option value="">{accounts.length > 0 ? 'Link an account…' : 'No accounts connected'}</option>
+          {accounts.map(a => <option key={a.id} value={a.id}>{a.email}</option>)}
+        </select>
 
         {/* Users expand toggle */}
         <button onClick={() => setUsersOpen(o => !o)} title={usersOpen ? 'Collapse members' : 'Expand members'} style={{
@@ -822,10 +828,6 @@ function CompaniesSection({
 
   return (
     <div>
-      <p style={{ margin: '0 0 16px', fontSize: 12.5, color: '#6C6553', lineHeight: 1.55 }}>
-        Companies are your work contexts. Assign a colour, link to a Google account, and optionally map an email domain for automatic tagging.
-      </p>
-
       {companies.map(co => (
         <CompanyCard key={co.id} co={co} accounts={accounts}
           onUpdate={patch => updateCompany(co.id, patch)}
@@ -1256,11 +1258,13 @@ function IntegrationBadge({ icon, label, active, onGrant }: {
 }
 
 function AccountsSection({
-  accounts, setAccounts, primaryEmail,
+  accounts, setAccounts, primaryEmail, companies = [],
 }: {
   accounts: ConnectedAccount[]
   setAccounts: (a: ConnectedAccount[]) => void
   primaryEmail: string
+  /** Shown under each account so the link reads both ways. */
+  companies?: CompanyRow[]
 }) {
   const [adding, setAdding]         = useState(false)
   const [reconnecting, setRecon]    = useState<string | null>(null)
@@ -1345,10 +1349,6 @@ function AccountsSection({
 
   return (
     <div>
-      <p style={{ margin: '0 0 16px', fontSize: 12.5, color: '#6C6553', lineHeight: 1.55 }}>
-        Connect multiple Google accounts to aggregate your calendars, Gmail inboxes, and Drive files in one place.
-        Primary account is your sign-in account.
-      </p>
 
       {/* Primary account */}
       <div style={{
@@ -1417,6 +1417,27 @@ function AccountsSection({
             </div>
             <div style={{ flex: 1 }}>
               <p style={{ margin: 0, fontSize: 13, fontWeight: 500, color: '#191712' }}>{acc.email || acc.name}</p>
+              {(() => {
+                const linked = companies.filter(c => c.accountId === acc.id)
+                if (linked.length === 0) {
+                  return <p style={{ margin: '3px 0 0', fontSize: 11, color: '#B5AC98' }}>No company uses this account yet</p>
+                }
+                return (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, margin: '5px 0 0' }}>
+                    {linked.map(c => (
+                      <span key={c.id} style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 5,
+                        padding: '2px 8px', borderRadius: 999,
+                        background: '#FFFFFF', border: '1px solid #E8E1CE',
+                        fontSize: 10.5, fontWeight: 600, color: '#6C6553',
+                      }}>
+                        <span style={{ width: 6, height: 6, borderRadius: 999, background: c.color }} />
+                        {c.name}
+                      </span>
+                    ))}
+                  </div>
+                )
+              })()}
               {isStale ? (
                 <p style={{ margin: '2px 0 0', fontSize: 11, color: '#E0A524' }}>⚠ Access lost — reconnect to restore</p>
               ) : (
@@ -2816,6 +2837,75 @@ function DataPrivacySection() {
   )
 }
 
+/** Accounts and the companies that use them, in one place (previously two
+ *  cards on two different pages, which hid the link between them). */
+function AccountsAndCompaniesSection({
+  companies, setCompanies, accounts, setAccounts, primaryEmail,
+}: {
+  companies: CompanyRow[]
+  setCompanies: (c: CompanyRow[]) => void
+  accounts: ConnectedAccount[]
+  setAccounts: (a: ConnectedAccount[]) => void
+  primaryEmail: string
+}) {
+  // AccountsSection renders the sign-in account separately from `accounts`
+  const accountCount = accounts.length + (primaryEmail ? 1 : 0)
+  const linkedIds = new Set(companies.map(c => c.accountId).filter(Boolean))
+  const unlinked = companies.filter(c => !c.accountId).length
+  const unusedAccounts = accounts.filter(a => !linkedIds.has(a.id)).length
+
+  return (
+    <div>
+      {/* How the two halves relate, stated once at the top */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+        padding: '9px 12px', marginBottom: 12,
+        background: '#FAF7EC', border: '1px solid #E8E1CE', borderRadius: 10,
+      }}>
+        <p style={{ margin: 0, flex: 1, minWidth: 180, fontSize: 11.5, color: '#6C6553', lineHeight: 1.45 }}>
+          Connect a Google account, then point a company at it. Mail, calendars and
+          Drive flow in through the account; the company decides how that work is
+          tagged, coloured and assigned.
+        </p>
+        <span style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+          <span style={{ padding: '3px 9px', borderRadius: 999, background: '#FFFFFF', border: '1px solid #E8E1CE', fontSize: 11, fontWeight: 600, color: '#6C6553' }}>
+            {accountCount} account{accountCount === 1 ? '' : 's'}
+          </span>
+          <span style={{ padding: '3px 9px', borderRadius: 999, background: '#FFFFFF', border: '1px solid #E8E1CE', fontSize: 11, fontWeight: 600, color: '#6C6553' }}>
+            {companies.length} compan{companies.length === 1 ? 'y' : 'ies'}
+          </span>
+        </span>
+      </div>
+
+      {/* Accounts */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 10 }}>
+        <Mail size={13} color="#6C6553" />
+        <p style={{ margin: 0, fontSize: 12.5, fontWeight: 700, color: '#191712' }}>Google accounts</p>
+        {unusedAccounts > 0 && (
+          <span style={{ fontSize: 11, color: '#9B9180' }}>
+            {unusedAccounts} not used by any company
+          </span>
+        )}
+      </div>
+      <AccountsSection accounts={accounts} setAccounts={setAccounts} primaryEmail={primaryEmail} companies={companies} />
+
+      <div style={{ height: 1, background: '#F0EBDC', margin: '16px 0 14px' }} />
+
+      {/* Companies */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 10 }}>
+        <Building2 size={13} color="#6C6553" />
+        <p style={{ margin: 0, fontSize: 12.5, fontWeight: 700, color: '#191712' }}>Companies</p>
+        {unlinked > 0 && (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, color: '#B4523A', fontWeight: 600 }}>
+            {unlinked} not linked to an account
+          </span>
+        )}
+      </div>
+      <CompaniesSection companies={companies} setCompanies={setCompanies} accounts={accounts} />
+    </div>
+  )
+}
+
 // ─── Page layout definitions (multi-column pages matching design artboards) ───
 
 type PageKey = 'you' | 'connected' | 'ai' | 'integrations' | 'work' | 'system' | 'display' | 'finance'
@@ -3145,13 +3235,19 @@ export function Settings() {
     // ── CONNECTED page: Accounts | AI | Schedule rules ──────────────────────
     if (page === 'connected') return (
       <div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 16, alignItems: 'start' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.35fr) minmax(0, 1fr)', gap: 16, alignItems: 'start' }}>
           <SectionCard id="accounts" active={activeSection === 'accounts'} actions={
             <button onClick={() => window.dispatchEvent(new CustomEvent('professor:openWizard'))} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 7, background: '#FAF7EC', border: '1px solid #E8E1CE', color: '#6C6553', fontSize: 11, cursor: 'pointer' }}>
               <Wand2 size={11} /> Wizard
             </button>
           }>
-            <CompaniesSection companies={companies} setCompanies={c => { setCompanies(c); saveCompanies(c) }} accounts={allAccounts} />
+            <AccountsAndCompaniesSection
+              companies={companies}
+              setCompanies={c => { setCompanies(c); saveCompanies(c) }}
+              accounts={accounts}
+              setAccounts={setAccounts}
+              primaryEmail={primaryEmail}
+            />
           </SectionCard>
           <SectionCard id="schedule" active={activeSection === 'schedule'} actions={<SaveBtn id="schedule" />}>
             <ScheduleSection s={settings} set={update} />
@@ -3176,13 +3272,10 @@ export function Settings() {
 
     // ── INTEGRATIONS page ───────────────────────────────────────────────────
     if (page === 'integrations') return (
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.6fr) minmax(0, 1fr) minmax(0, 1.05fr)', gap: 16, alignItems: 'start' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.5fr) minmax(0, 1fr)', gap: 16, alignItems: 'start' }}>
         <SectionCard id="blocking" active={true} sub="Notion, Asana, Trello and Apple Notes">
           <IntegrationsSection />
         </SectionCard>
-        <Card icon={Mail} title="Google accounts" sub="Mailboxes and calendars the Professor may read">
-          <AccountsSection accounts={accounts} setAccounts={setAccounts} primaryEmail={primaryEmail} />
-        </Card>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <Card icon={CalendarDays} title="Calendar blocking rules" sub="Which calendars block your focus time">
             <BlockingRulesSection />
