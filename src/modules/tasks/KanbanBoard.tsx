@@ -12,7 +12,7 @@ import {
   TASK_TYPE_META, inferTaskType,
   loadVisibleCompanies, getAllUsers, isTaskHidden,
 } from '@/types'
-import { loadCustomStatuses, sortCustomStatuses } from '@/lib/customStatuses'
+import { loadCustomStatuses, sortCustomStatuses, saveCustomStatuses, moveStatus } from '@/lib/customStatuses'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { TaskCard } from './TaskCard'
 import { sortUrgentFirst } from './taskVisuals'
@@ -84,19 +84,29 @@ interface KanbanColumnProps {
   onColDrop: (id: string) => void
   boardType: BoardType
   onBoardType: (t: BoardType) => void
+  /** Only status columns can be renamed — the rest take their names from data. */
+  onRename?: (id: string, label: string) => void
 }
 
 /** A long column shows a few cards and a "N more" expander, as Done does in 9B. */
 const COLLAPSE_AFTER = 6
 const COLLAPSED_VISIBLE = 3
 
-function KanbanColumnComp({ column, onOpen, onColDragStart, onColDragOver, onColDrop, boardType, onBoardType }: KanbanColumnProps) {
+function KanbanColumnComp({ column, onOpen, onColDragStart, onColDragOver, onColDrop, boardType, onBoardType, onRename }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: column.id })
   const addTask = useTaskStore(s => s.addTask)
   const companies = loadVisibleCompanies()
   const [adding, setAdding] = useState(false)
   const [newTitle, setNewTitle] = useState('')
   const [menuOpen, setMenuOpen] = useState(false)
+  const [renaming, setRenaming] = useState(false)
+  const [nameDraft, setNameDraft] = useState(column.label)
+
+  function commitRename() {
+    const label = nameDraft.trim()
+    setRenaming(false)
+    if (label && label !== column.label) onRename?.(column.id, label)
+  }
   const [expanded, setExpanded] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -143,9 +153,34 @@ function KanbanColumnComp({ column, onOpen, onColDragStart, onColDragOver, onCol
         style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '0 4px 10px', flexShrink: 0, cursor: 'grab' }}
       >
         <span style={{ width: 8, height: 8, borderRadius: '50%', background: column.color, flexShrink: 0 }} />
-        <span style={{ fontSize: 13.5, fontWeight: 600, color: '#191712', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          {column.label}
-        </span>
+        {renaming ? (
+          <input
+            autoFocus
+            value={nameDraft}
+            onChange={e => setNameDraft(e.target.value)}
+            onBlur={commitRename}
+            onKeyDown={e => {
+              if (e.key === 'Enter') commitRename()
+              if (e.key === 'Escape') { setNameDraft(column.label); setRenaming(false) }
+            }}
+            style={{
+              flex: 1, minWidth: 0, background: '#FFFFFF', border: '1px solid #F5D14E',
+              borderRadius: 7, padding: '2px 7px', outline: 'none',
+              fontSize: 13.5, fontWeight: 600, color: '#191712', fontFamily: 'inherit',
+            }}
+          />
+        ) : (
+          <span
+            onClick={() => { if (onRename) { setNameDraft(column.label); setRenaming(true) } }}
+            title={onRename ? 'Click to rename — this is the status name in Settings' : undefined}
+            style={{
+              fontSize: 13.5, fontWeight: 600, color: '#191712',
+              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+              cursor: onRename ? 'text' : 'default',
+            }}>
+            {column.label}
+          </span>
+        )}
         <CountBadge value={column.tasks.length} />
         <span style={{ flex: 1 }} />
         <button onClick={() => setAdding(true)} title="Add a task here"
@@ -358,7 +393,14 @@ export function KanbanBoard({ onOpen, hideCompleted = false, filteredTaskIds }: 
     localStorage.setItem('task-board-type', type)
   }
 
-  const customStatuses = useMemo(() => loadCustomStatuses(), [])
+  // Statuses can change here or in Settings, so hold them in state and refresh
+  // on the event the store fires.
+  const [customStatuses, setCustomStatuses] = useState(loadCustomStatuses)
+  useEffect(() => {
+    const h = () => setCustomStatuses(loadCustomStatuses())
+    window.addEventListener('professor:statusesUpdated', h)
+    return () => window.removeEventListener('professor:statusesUpdated', h)
+  }, [])
 
   // Check if any status has id 'planned' for date-picker logic
   const hasPlannedStatus = customStatuses.some(s => s.id === 'planned')
@@ -448,6 +490,7 @@ export function KanbanBoard({ onOpen, hideCompleted = false, filteredTaskIds }: 
   }, [tasks, boardType, companies, allUsers, customStatuses])
 
   const orderedColumns = useMemo(() => {
+    if (boardType === 'status') return columns
     const order = colOrder[boardType]
     if (!order?.length) return columns
     const map = new Map(order.map((id, i) => [id, i]))
@@ -455,6 +498,11 @@ export function KanbanBoard({ onOpen, hideCompleted = false, filteredTaskIds }: 
       (map.has(a.id) ? map.get(a.id)! : 999) - (map.has(b.id) ? map.get(b.id)! : 999)
     )
   }, [columns, colOrder, boardType])
+
+  /** Renaming a column renames the status itself, so Settings shows it too. */
+  function renameStatus(id: string, label: string) {
+    saveCustomStatuses(customStatuses.map(st => (st.id === id ? { ...st, label } : st)))
+  }
 
   function handleColDragStart(id: string) { dragColRef.current = id }
   function handleColDragOver(e: React.DragEvent) { e.preventDefault() }
@@ -465,9 +513,14 @@ export function KanbanBoard({ onOpen, hideCompleted = false, filteredTaskIds }: 
     const from = order.indexOf(fromId); const to = order.indexOf(targetId)
     if (from === -1 || to === -1) return
     const next = [...order]; next.splice(from, 1); next.splice(to, 0, fromId)
-    const updated = { ...colOrder, [boardType]: next }
-    setColOrder(updated)
-    localStorage.setItem('task-board-col-order', JSON.stringify(updated))
+    if (boardType === 'status') {
+      // Reorder the statuses themselves, so Settings and the board agree
+      saveCustomStatuses(moveStatus(customStatuses, from, to))
+      } else {
+      const updated = { ...colOrder, [boardType]: next }
+      setColOrder(updated)
+      localStorage.setItem('task-board-col-order', JSON.stringify(updated))
+    }
     dragColRef.current = null
   }
 
@@ -542,6 +595,7 @@ export function KanbanBoard({ onOpen, hideCompleted = false, filteredTaskIds }: 
               onColDrop={handleColDrop}
               boardType={boardType}
               onBoardType={saveBoardType}
+              onRename={boardType === 'status' ? renameStatus : undefined}
             />
           ))}
         </div>

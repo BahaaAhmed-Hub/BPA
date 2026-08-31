@@ -100,7 +100,7 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
     >
       {/* ── Left column: checkbox + title, company, meta ────────────────── */}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 9, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 7, minWidth: 0 }}>
           <button
             data-nm
             onClick={() => {
@@ -119,6 +119,16 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
             {task.completed && <Check size={9} color="#fff" strokeWidth={3} />}
           </button>
 
+          <button data-nm
+            onClick={() => { if (window.confirm(`Delete "${task.title}"?`)) deleteTask(task.id) }}
+            title="Delete task"
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex',
+              flexShrink: 0, marginTop: 2, color: hovered ? '#B4523A' : '#D8CFB8',
+            }}>
+            <Trash2 size={12.5} strokeWidth={2} />
+          </button>
+
           <p
             style={{
               flex: 1, margin: 0, fontSize: 13.5, fontWeight: 600, color: '#191712',
@@ -127,10 +137,20 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
               display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
             }}
           >{task.title}</p>
+
+          <button data-nm onClick={() => toggleUrgent(task.id)}
+            title={task.urgent ? 'On fire — click to clear' : 'Mark as on fire'}
+            style={{
+              background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex',
+              flexShrink: 0, marginTop: 2,
+              color: task.urgent ? '#B4523A' : hovered ? '#9B9180' : '#D8CFB8',
+            }}>
+            <Flame size={12.5} strokeWidth={2} fill={task.urgent ? '#B4523A' : 'none'} />
+          </button>
         </div>
 
         {/* Company — coloured text, the card's only colour, and its own picker */}
-        <div data-nm style={{ position: 'relative', display: 'inline-block', maxWidth: '100%', margin: '5px 0 0 25px' }}>
+        <div data-nm style={{ position: 'relative', display: 'inline-block', maxWidth: '100%', margin: '5px 0 0 37px' }}>
           <p style={{
             margin: 0, fontSize: 12, fontWeight: 600,
             color: v.companyName ? v.companyColor : '#C9C0A8', lineHeight: 1.3,
@@ -154,7 +174,7 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
 
         {/* Meta line */}
         <div style={{
-          display: 'flex', alignItems: 'center', gap: 11, margin: '5px 0 0 25px',
+          display: 'flex', alignItems: 'center', gap: 11, margin: '5px 0 0 37px',
           fontSize: 11.5, color: '#9B9180', minWidth: 0,
           // a narrow column (panel open) clips the trailing meta rather than
           // letting it run under the attribute rail
@@ -176,24 +196,6 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
               {task.plannedTime ?? new Date(task.dueDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
             </span>
           )}
-          <span style={{ flex: 1 }} />
-          <button data-nm onClick={() => toggleUrgent(task.id)}
-            title={task.urgent ? 'On fire — click to clear' : 'Mark as on fire'}
-            style={{
-              background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', flexShrink: 0,
-              color: task.urgent ? '#B4523A' : hovered ? '#9B9180' : '#D8CFB8',
-            }}>
-            <Flame size={12.5} strokeWidth={2} fill={task.urgent ? '#B4523A' : 'none'} />
-          </button>
-          <button data-nm
-            onClick={() => { if (window.confirm(`Delete "${task.title}"?`)) deleteTask(task.id) }}
-            title="Delete task"
-            style={{
-              background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', flexShrink: 0,
-              color: hovered ? '#B4523A' : '#D8CFB8',
-            }}>
-            <Trash2 size={12.5} strokeWidth={2} />
-          </button>
         </div>
       </div>
 

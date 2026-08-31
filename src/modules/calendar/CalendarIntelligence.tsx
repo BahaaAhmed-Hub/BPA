@@ -607,14 +607,15 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
 
   // Sunlit Bento event styles
   // past → warm parchment; done/cancelled → muted; normal → color-tinted
+  const rgb = color.startsWith('#') ? hexRgbStr(color) : '127,119,221'
   const evBg    = (isDone || isCancelled || isPast)
     ? '#F1ECDE'
-    : '#FFFFFF'
+    : `rgba(${rgb}, 0.16)`
   const evBorder = isTentative
     ? `1.5px dashed ${color}`
     : isSelected
     ? `2px solid ${color}`
-    : `1px solid rgba(${color.startsWith('#') ? hexRgbStr(color) : '127,119,221'}, 0.5)`
+    : `1px solid rgba(${rgb}, 0.45)`
   const evInk   = (isDone || isCancelled || isPast) ? '#9B9180' : '#191712'
   const evTimeInk = (isDone || isCancelled || isPast) ? '#B5AA98' : '#6C6553'
 
@@ -720,8 +721,8 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
   )
 }
 
-// ─── EventPopup (macOS Calendar style) ────────────────────────────────────────
-function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepError, pos, onClose, onStatusToggle, onPrepRequest, onAddMeet, onSave, calendars, calColors, onMoveCalendar }: {
+// ─── EventPopup — docked right-hand panel ─────────────────────────────────────
+function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepError, onClose, onStatusToggle, onPrepRequest, onAddMeet, onSave, calendars, calColors, onMoveCalendar }: {
   event: GCalEventExt
   status: EventStatus | undefined
   calName: string
@@ -729,7 +730,6 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
   prep: MeetingPrep | null
   prepLoading: boolean
   prepError: string | null
-  pos: { x: number; y: number }
   onClose: () => void
   onStatusToggle: (s: EventStatus) => void
   onPrepRequest: () => void
@@ -741,7 +741,6 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
 }) {
   const popupRef  = useRef<HTMLDivElement>(null)
   const [showPrep,    setShowPrep]    = useState(false)
-  const [adjPos,      setAdjPos]      = useState(pos)
   const [addingMeet,  setAddingMeet]  = useState(false)
   const [editMode,    setEditMode]    = useState(false)
   const [saving,      setSaving]      = useState(false)
@@ -794,41 +793,10 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
   }
 
   useEffect(() => {
-    if (!popupRef.current) return
-    const { width, height } = popupRef.current.getBoundingClientRect()
-    let x = pos.x + 14, y = pos.y
-    if (x + width  > window.innerWidth  - 12) x = pos.x - width - 14
-    if (y + height > window.innerHeight - 12) y = window.innerHeight - height - 12
-    if (y < 8) y = 8
-    setAdjPos({ x, y })
-  }, [pos.x, pos.y, showPrep])
-
-  useEffect(() => {
     const fn = (e: MouseEvent) => { if (popupRef.current && !popupRef.current.contains(e.target as Node)) onClose() }
     document.addEventListener('mousedown', fn)
     return () => document.removeEventListener('mousedown', fn)
   }, [onClose])
-
-  // Drag-to-move: track pointer offset from popup top-left while dragging header
-  const dragOffset = useRef<{ dx: number; dy: number } | null>(null)
-  function onHeaderMouseDown(e: React.MouseEvent) {
-    if ((e.target as HTMLElement).closest('button,input,textarea,a')) return
-    e.preventDefault()
-    e.stopPropagation()
-    const rect = popupRef.current!.getBoundingClientRect()
-    dragOffset.current = { dx: e.clientX - rect.left, dy: e.clientY - rect.top }
-    const onMove = (ev: MouseEvent) => {
-      if (!dragOffset.current) return
-      setAdjPos({ x: ev.clientX - dragOffset.current.dx, y: ev.clientY - dragOffset.current.dy })
-    }
-    const onUp = () => {
-      dragOffset.current = null
-      window.removeEventListener('mousemove', onMove)
-      window.removeEventListener('mouseup', onUp)
-    }
-    window.addEventListener('mousemove', onMove)
-    window.addEventListener('mouseup', onUp)
-  }
 
   const isAllDay     = !event.start.dateTime
   const entryPoints  = event.conferenceData?.entryPoints ?? []
@@ -875,15 +843,17 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
   })
 
   return (
+    // Docked on the right like the task detail panel, instead of a window that
+    // floats wherever the pointer happened to be.
     <div ref={popupRef} onClick={e => e.stopPropagation()} onMouseDown={e => e.stopPropagation()} style={{
-      position: 'fixed', top: adjPos.y, left: adjPos.x,
-      width: 330, maxHeight: 'calc(100vh - 24px)', overflowY: 'auto',
-      background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 14,
-      boxShadow: '0 16px 48px rgba(25,23,18,0.2)', zIndex: 1000,
+      position: 'fixed', top: 84, right: 20, bottom: 20,
+      width: 400, overflowY: 'auto',
+      background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 16,
+      boxShadow: '0 24px 56px -22px rgba(25,23,18,0.45)', zIndex: 1000,
     }}>
 
       {/* Header: calendar dot + title + close — draggable */}
-      <div onMouseDown={onHeaderMouseDown} style={{ padding: '14px 14px 10px', display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'grab' }}>
+      <div style={{ padding: '16px 16px 10px', display: 'flex', alignItems: 'flex-start', gap: 10 }}>
         <div style={{ width: 14, height: 14, borderRadius: '50%', background: calColor, flexShrink: 0, marginTop: editMode ? 10 : 3 }} />
         <div style={{ flex: 1, minWidth: 0 }}>
           {editMode ? (
@@ -1655,7 +1625,6 @@ export function CalendarIntelligence() {
 
   // ── Popup + prep state ──────────────────────────────────────────────────────
   const [selectedEvent, setSelectedEvent] = useState<GCalEventExt | null>(null)
-  const [popupPos,      setPopupPos]      = useState<{ x: number; y: number } | null>(null)
   const [prep,          setPrep]          = useState<MeetingPrep | null>(null)
   const [prepLoading,   setPrepLoading]   = useState(false)
   const [prepError,     setPrepError]     = useState<string | null>(null)
@@ -1734,7 +1703,7 @@ export function CalendarIntelligence() {
       if (Math.sqrt((me.clientX - startX) ** 2 + (me.clientY - startY) ** 2) >= 8) {
         started = true; cleanup()
         setCreatingEvt({ dateStr, originMin: minutes, currentMin: minutes })
-        setSelectedEvent(null); setPopupPos(null); setNewEventDraft(null)
+        setSelectedEvent(null); setNewEventDraft(null)
       }
     }
     const onUp = cleanup
@@ -1916,15 +1885,15 @@ export function CalendarIntelligence() {
   // ── Popup + prep ────────────────────────────────────────────────────────────
   function handleEventClick(ev: GCalEventExt, e: React.MouseEvent) {
     e.stopPropagation()
-    if (selectedEvent?.id === ev.id) { setSelectedEvent(null); setPopupPos(null); return }
-    setSelectedEvent(ev); setPopupPos({ x: e.clientX, y: e.clientY })
+    if (selectedEvent?.id === ev.id) { setSelectedEvent(null); return }
+    setSelectedEvent(ev)
     setPrep(null); setPrepError(null)
   }
 
   function handleEventContextMenu(ev: GCalEventExt, e: React.MouseEvent) {
     e.preventDefault()
     e.stopPropagation()
-    setSelectedEvent(null); setPopupPos(null)
+    setSelectedEvent(null)
     setCtxMenu({ event: ev, x: e.clientX, y: e.clientY })
   }
 
@@ -1939,7 +1908,7 @@ export function CalendarIntelligence() {
     const ok = await deleteCalendarEventWithToken(token, ev.calendarId, ev.id)
     if (ok) {
       setEvents(prev => prev.filter(e => e.id !== ev.id))
-      if (selectedEvent?.id === ev.id) { setSelectedEvent(null); setPopupPos(null) }
+      if (selectedEvent?.id === ev.id) setSelectedEvent(null)
     }
   }
 
@@ -2006,7 +1975,7 @@ export function CalendarIntelligence() {
 
   // ── DnD handlers ────────────────────────────────────────────────────────────
   function handleDragStart({ active }: DragStartEvent) {
-    setSelectedEvent(null); setPopupPos(null)
+    setSelectedEvent(null)
     const id = active.id as string
     if (id.startsWith('resize-top:')) {
       const ev = events.find(e => e.id === id.replace('resize-top:', '')) as GCalEventExt | undefined
@@ -2166,7 +2135,7 @@ export function CalendarIntelligence() {
     return () => clearInterval(t)
   }, [])
 
-  function closePopup() { setSelectedEvent(null); setPopupPos(null) }
+  function closePopup() { setSelectedEvent(null) }
 
   async function handleCreateEvent(data: NewEventData) {
     setNewEventDraft(null)
@@ -2280,12 +2249,8 @@ export function CalendarIntelligence() {
                 const date = (e.start?.dateTime ?? e.start?.date ?? '').slice(0,10)
                 return weekStr.includes(date)
               })
-              const meetings = weekEvts.filter(e => detectMeetingType(e) !== 'none')
-              return weekEvts.length > 0 ? (
-                <div style={{ fontSize: 11.5, color: '#9B9180', marginTop: 3 }}>
-                  {weekEvts.length} events · {meetings.length} meetings
-                </div>
-              ) : null
+              void weekEvts
+              return null
             })()}
           </div>
 
@@ -2671,7 +2636,7 @@ export function CalendarIntelligence() {
       )}
 
       {/* Event popup */}
-      {selectedEvent && popupPos && (() => {
+      {selectedEvent && (() => {
         const cal      = allCalendars.find(c => c.id === (selectedEvent as GCalEventExt).calendarId)
         const calName  = cal?.summary ?? 'Calendar'
         const calColor = cal ? calEffectiveColor(cal) : '#7F77DD'
@@ -2684,7 +2649,6 @@ export function CalendarIntelligence() {
             prep={prep}
             prepLoading={prepLoading}
             prepError={prepError}
-            pos={popupPos}
             onClose={closePopup}
             onStatusToggle={s => toggleStatus(selectedEvent.id, s)}
             onPrepRequest={() => void generatePrep(selectedEvent)}
@@ -2707,7 +2671,6 @@ export function CalendarIntelligence() {
           onViewDetails={() => {
             setCtxMenu(null)
             setSelectedEvent(ctxMenu.event)
-            setPopupPos({ x: ctxMenu.x, y: ctxMenu.y })
             setPrep(null); setPrepError(null)
           }}
           onStatusToggle={s => { toggleStatus(ctxMenu.event.id, s); setCtxMenu(null) }}

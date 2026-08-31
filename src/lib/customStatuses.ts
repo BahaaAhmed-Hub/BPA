@@ -14,20 +14,19 @@ export const DEFAULT_STATUSES: CustomStatus[] = [
   { id: 'done',      label: 'Done · this week', color: '#5F7038' },
 ]
 
-const STATUS_PREFERRED_ORDER = [
-  'decide', 'today', 'this-week', 'later', 'done',
-  // legacy ids, kept so existing boards still sort sensibly
-  'planned', 'backlog', 'in-progress', 'blocked', 'delayed',
-]
-
+/** The stored order IS the order — Settings and the board both write it, so
+ *  nothing re-sorts it behind the user's back. */
 export function sortCustomStatuses(statuses: CustomStatus[]): CustomStatus[] {
-  return [...statuses].sort((a, b) => {
-    const ai = STATUS_PREFERRED_ORDER.indexOf(a.id)
-    const bi = STATUS_PREFERRED_ORDER.indexOf(b.id)
-    const av = ai === -1 ? 999 : ai
-    const bv = bi === -1 ? 999 : bi
-    return av - bv
-  })
+  return statuses
+}
+
+/** Move a status one place, for the reorder controls in Settings. */
+export function moveStatus(statuses: CustomStatus[], from: number, to: number): CustomStatus[] {
+  if (to < 0 || to >= statuses.length || from === to) return statuses
+  const next = [...statuses]
+  const [moved] = next.splice(from, 1)
+  next.splice(to, 0, moved)
+  return next
 }
 
 export function loadCustomStatuses(): CustomStatus[] {

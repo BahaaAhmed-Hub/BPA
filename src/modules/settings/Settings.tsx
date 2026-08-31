@@ -29,7 +29,7 @@ import {
   type BlockingRule, type DetailLevel,
   loadCachedCalendars, type CachedCalEntry,
 } from '@/lib/blockingRules'
-import { loadCustomStatuses, saveCustomStatuses, DEFAULT_STATUSES, type CustomStatus } from '@/lib/customStatuses'
+import { loadCustomStatuses, saveCustomStatuses, moveStatus, DEFAULT_STATUSES, type CustomStatus } from '@/lib/customStatuses'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -1088,6 +1088,13 @@ const STATUS_COLORS_PRESETS = ['#6B7280','#3B82F6','#F59E0B','#EF4444','#F97316'
 
 function TaskStatusesSection() {
   const [statuses, setStatuses] = useState<CustomStatus[]>(loadCustomStatuses)
+
+  // The board can rename and reorder statuses too, so pick those changes up
+  useEffect(() => {
+    const h = () => setStatuses(loadCustomStatuses())
+    window.addEventListener('professor:statusesUpdated', h)
+    return () => window.removeEventListener('professor:statusesUpdated', h)
+  }, [])
   const [editIdx, setEditIdx] = useState<number | null>(null)
   const [adding, setAdding] = useState(false)
   const [draft, setDraft] = useState<{ id: string; label: string; color: string }>({ id: '', label: '', color: '#6B7280' })
@@ -1126,6 +1133,11 @@ function TaskStatusesSection() {
   function remove(i: number) {
     persist(statuses.filter((_, idx) => idx !== i))
     if (editIdx === i) setEditIdx(null)
+  }
+
+  function move(from: number, to: number) {
+    persist(moveStatus(statuses, from, to))
+    setEditIdx(null)
   }
 
   function resetDefaults() {
@@ -1196,6 +1208,18 @@ function TaskStatusesSection() {
             <span style={{ fontSize: 10.5, color: '#6C6553', background: '#FAF7EC', padding: '2px 7px', borderRadius: 4, border: '1px solid #E8E1CE' }}>
               {s.id}
             </span>
+            {/* Order here is the order of the columns on the board */}
+            <button onClick={() => move(i, i - 1)} title="Move up" disabled={i === 0}
+              style={{ background: 'none', border: 'none', padding: 2, display: 'flex',
+                cursor: i === 0 ? 'default' : 'pointer', color: i === 0 ? '#E0D6BC' : '#6C6553' }}>
+              <ChevronUp size={14} />
+            </button>
+            <button onClick={() => move(i, i + 1)} title="Move down" disabled={i === statuses.length - 1}
+              style={{ background: 'none', border: 'none', padding: 2, display: 'flex',
+                cursor: i === statuses.length - 1 ? 'default' : 'pointer',
+                color: i === statuses.length - 1 ? '#E0D6BC' : '#6C6553' }}>
+              <ChevronDown size={14} />
+            </button>
             <button onClick={() => startEdit(i)} title="Edit"
               style={{ background: 'none', border: 'none', cursor: 'pointer', color: isEditingRow(i) ? '#F5D14E' : '#6C6553', padding: 4 }}>
               <Pencil size={13} />
