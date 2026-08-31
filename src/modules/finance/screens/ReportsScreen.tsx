@@ -85,66 +85,46 @@ export function ReportsScreen(_props?: any) {
   const lastDay = new Date(reportYear, reportMonth + 1, 0).getDate()
   const dateRangeLabel = `1 ${MONTH_SHORT[reportMonth]} ${reportYear} › ${lastDay} ${MONTH_SHORT[reportMonth]} ${reportYear}`
 
+  const daysInMonth = new Date(reportYear, reportMonth + 1, 0).getDate()
+  const dayRate = TOTAL > 0 ? Math.round(TOTAL / daysInMonth) : 0
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, height: '100%', overflow: 'hidden', background: C.bg }}>
 
       {/* Header */}
       <div style={{
-        height: 64, flexShrink: 0,
+        flexShrink: 0,
         borderBottom: '1px solid #E8E1CE',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '0 30px',
+        padding: '14px 26px 16px',
+        display: 'flex', alignItems: 'flex-end', gap: 20,
       }}>
-        {/* Month navigator */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <button
-            onClick={() => navigateMonth(-1)}
-            style={{ background: 'none', border: 'none', color: C.textMuted, fontSize: 20, cursor: 'pointer', padding: '2px 6px', lineHeight: 1 }}
-          >‹</button>
-          <span style={{ fontSize: 20, fontWeight: 700, color: C.textPri, minWidth: 140, textAlign: 'center' as const }}>
-            {MONTH_NAMES[reportMonth]} {reportYear}
+        <div>
+          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: '#6C6553', display: 'block', marginBottom: 4 }}>MONEY</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <button onClick={() => navigateMonth(-1)} style={{ background: 'none', border: 'none', color: '#6C6553', fontSize: 20, cursor: 'pointer', padding: 0, lineHeight: 1 }}>‹</button>
+            <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 28, fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1, color: '#191712' }}>
+              Reports · {MONTH_SHORT[reportMonth]}
+            </span>
+            <button onClick={() => navigateMonth(1)} style={{ background: 'none', border: 'none', color: '#6C6553', fontSize: 20, cursor: 'pointer', padding: 0, lineHeight: 1 }}>›</button>
+          </div>
+          <span style={{ fontSize: 12, color: '#6C6553', display: 'block', marginTop: 3 }}>
+            {TOTAL > 0 ? `EGP ${dayRate.toLocaleString('en-US')}/day · ${REPORT_DATA.length} categories` : 'No expenses logged this month'}
           </span>
-          <button
-            onClick={() => navigateMonth(1)}
-            style={{ background: 'none', border: 'none', color: C.textMuted, fontSize: 20, cursor: 'pointer', padding: '2px 6px', lineHeight: 1 }}
-          >›</button>
         </div>
-
-        {/* Toggle */}
-        <div style={{
-          display: 'flex',
-          background: C.surface,
-          border: `1px solid ${C.border}`,
-          borderRadius: 9,
-          overflow: 'hidden',
-        }}>
-          {(['donut', 'bars'] as const).map(v => (
-            <button
-              key={v}
-              onClick={() => setReportView(v)}
-              style={{
-                padding: '8px 16px', cursor: 'pointer', fontSize: 12.5,
-                border: 'none', fontFamily: 'inherit',
-                background: reportView === v ? C.amberBg : 'transparent',
-                color: reportView === v ? C.amber : C.textMuted,
-                fontWeight: reportView === v ? 600 : 400,
-              }}
-            >
-              {v === 'donut' ? 'Donut' : 'Bars'}
-            </button>
-          ))}
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8, paddingBottom: 3 }}>
+          {/* View toggle */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 2, padding: 3, borderRadius: 999, background: '#EDE7D9' }}>
+            {(['donut', 'bars'] as const).map(v => (
+              <button key={v} onClick={() => setReportView(v)} style={{
+                height: 28, padding: '0 14px', borderRadius: 999, border: 'none',
+                background: reportView === v ? '#FFFFFF' : 'transparent',
+                color: reportView === v ? '#191712' : '#6C6553',
+                fontSize: 11.5, fontWeight: reportView === v ? 600 : 400, cursor: 'pointer',
+                boxShadow: reportView === v ? '0 1px 3px rgba(25,23,18,0.16)' : 'none',
+              }}>{v === 'donut' ? 'Donut' : 'Bars'}</button>
+            ))}
+          </div>
         </div>
-
-        {/* Export */}
-        <button style={{
-          padding: '8px 14px', borderRadius: 9,
-          border: `1px solid ${C.borderSt}`,
-          background: C.amberBg, color: C.amber,
-          fontSize: 13, fontWeight: 600,
-          cursor: 'pointer', fontFamily: 'inherit',
-        }}>
-          Export
-        </button>
       </div>
 
       {/* Content */}
@@ -203,18 +183,21 @@ export function ReportsScreen(_props?: any) {
                       strokeWidth={1}
                     />
                   </svg>
-                  {/* Center text overlay */}
+                  {/* Center text overlay — per-day rate per 16C design */}
                   <div style={{
                     position: 'absolute', inset: 0,
                     display: 'flex', flexDirection: 'column',
                     alignItems: 'center', justifyContent: 'center',
                     pointerEvents: 'none',
                   }}>
-                    <span style={{ fontSize: 14, fontWeight: 700, color: C.textPri }}>
-                      {TOTAL >= 1000 ? `${(TOTAL / 1000).toFixed(0)}K` : TOTAL.toLocaleString('en-US')}
+                    <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 16, fontWeight: 600, color: '#191712', letterSpacing: '-0.02em', lineHeight: 1 }}>
+                      {dayRate > 0 ? `${dayRate.toLocaleString('en-US')}` : '–'}
                     </span>
-                    <span style={{ fontSize: 10, color: C.textMuted, marginTop: 2, letterSpacing: '0.5px' }}>
-                      EXPENSES
+                    <span style={{ fontSize: 9, color: '#6C6553', marginTop: 2, letterSpacing: '0.08em', fontWeight: 700 }}>
+                      EGP/DAY
+                    </span>
+                    <span style={{ fontSize: 9, color: '#9B9180', marginTop: 4 }}>
+                      {TOTAL > 0 ? `${(TOTAL / 1000).toFixed(0)}K total` : 'no data'}
                     </span>
                   </div>
                 </div>

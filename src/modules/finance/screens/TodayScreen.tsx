@@ -1,32 +1,6 @@
 import { useState, useMemo } from 'react'
-
-// ── Types ─────────────────────────────────────────────────────────────────────
-
-export interface FinanceCategory {
-  id: string
-  name: string
-  icon?: string
-  color?: string
-}
-
-export interface FinanceAccount {
-  id: string
-  name: string
-  emoji?: string
-  color?: string
-}
-
-export interface Transaction {
-  id: string
-  date: string          // 'YYYY-MM-DD'
-  type: 'income' | 'expense' | 'transfer'
-  amount: number        // always positive
-  payee?: string
-  categoryId?: string
-  accountId?: string
-  currency?: string
-  notes?: string
-}
+import { useFinanceStore } from '../financeStore'
+import type { Transaction, Category, Account } from '../types'
 
 // ── Palette ───────────────────────────────────────────────────────────────────
 
@@ -79,8 +53,8 @@ function TxModal({
   onClose,
 }: {
   tx: Transaction
-  categories: FinanceCategory[]
-  accounts: FinanceAccount[]
+  categories: Category[]
+  accounts: Account[]
   onClose: () => void
 }) {
   const cat  = tx.categoryId ? categories.find(c => c.id === tx.categoryId) : null
@@ -128,10 +102,10 @@ function TxModal({
               <div style={{ fontSize: 13, color: C.textDim }}>{acct.emoji ?? ''} {acct.name}</div>
             </div>
           )}
-          {tx.notes && (
+          {tx.note && (
             <div style={{ gridColumn: '1 / -1' }}>
               <div style={{ fontSize: 10, color: C.textMuted, marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Notes</div>
-              <div style={{ fontSize: 13, color: C.textDim }}>{tx.notes}</div>
+              <div style={{ fontSize: 13, color: C.textDim }}>{tx.note}</div>
             </div>
           )}
         </div>
@@ -234,17 +208,8 @@ function MiniCalendar({
 
 // ── Main Screen ───────────────────────────────────────────────────────────────
 
-interface TodayScreenProps {
-  transactions?: Transaction[]
-  categories?: FinanceCategory[]
-  accounts?: FinanceAccount[]
-}
-
-export function TodayScreen({
-  transactions = [],
-  categories   = [],
-  accounts     = [],
-}: TodayScreenProps) {
+export function TodayScreen() {
+  const { transactions, categories, accounts } = useFinanceStore()
   const today      = new Date()
   const todayStr   = today.toISOString().slice(0, 10)
 
@@ -326,12 +291,33 @@ export function TodayScreen({
     )
   }
 
+  const todayTx = transactions.filter(tx => tx.date === todayStr)
+  const todayExp = todayTx.filter(t => t.type === 'expense').reduce((s, t) => s + Math.abs(t.amount), 0)
+  const todayInc = todayTx.filter(t => t.type === 'income').reduce((s, t) => s + Math.abs(t.amount), 0)
+
   return (
-    <div style={{ display: 'flex', height: '100%', background: C.bg }}>
+    <div style={{ display: 'flex', height: '100%', background: C.bg, flexDirection: 'column' }}>
+
+      {/* Header bar */}
+      <div style={{ flexShrink: 0, borderBottom: `1px solid ${C.border}`, padding: '12px 26px 14px', display: 'flex', alignItems: 'flex-end', gap: 20 }}>
+        <div>
+          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: '#6C6553', display: 'block', marginBottom: 3 }}>MONEY</span>
+          <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 26, fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1, color: '#191712' }}>Today</span>
+        </div>
+        {todayTx.length > 0 && (
+          <div style={{ display: 'flex', gap: 16, paddingBottom: 3 }}>
+            <span style={{ fontSize: 12, color: '#B4523A', fontWeight: 600 }}>−EGP {todayExp.toLocaleString('en-US')}</span>
+            <span style={{ fontSize: 12, color: '#5F7038', fontWeight: 600 }}>+EGP {todayInc.toLocaleString('en-US')}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Main content */}
+      <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
       {/* Left panel — calendar */}
       <div style={{
-        width: 360, flexShrink: 0, borderRight: `1px solid ${C.border}`,
-        padding: '24px 24px', overflowY: 'auto',
+        width: 340, flexShrink: 0, borderRight: `1px solid ${C.border}`,
+        padding: '20px 24px', overflowY: 'auto',
       }}>
         <MiniCalendar
           year={viewYear}
@@ -421,6 +407,8 @@ export function TodayScreen({
           )
         })()}
       </div>
+
+      </div>{/* end Main content flex */}
 
       {/* Transaction detail modal */}
       {txModal.open && txModal.tx && (
