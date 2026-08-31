@@ -566,10 +566,12 @@ function FillCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, o
         touchAction: 'none',
       }}
     >
-      {/* Fill flood from bottom (12D) */}
-      <span style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 1 }}>
-        <span style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: `${displayPct}%`, background: `${bgColor}${hasImage ? '4D' : '88'}`, transition: dragRef.current ? 'none' : 'height 0.4s ease', display: 'block' }} />
-      </span>
+      {/* Fill flood from bottom (12D) — a count fills, a yes/no habit does not */}
+      {isQty && (
+        <span style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 1 }}>
+          <span style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: `${displayPct}%`, background: `${bgColor}${hasImage ? '4D' : '88'}`, display: 'block' }} />
+        </span>
+      )}
       {/* Background */}
       <span style={{ position: 'absolute', inset: 0 }}>
         <span style={{ position: 'absolute', inset: 0, background: `linear-gradient(135deg, ${bgColor} 0%, ${bgColor}AA 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -616,10 +618,10 @@ function FillCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, o
               </span>
               <span style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
                 {/* Progress bar */}
-                {(hasGoal || !isQty) && (
+                {hasGoal && (
                   <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     <span style={{ flex: 1, height: 5, borderRadius: 999, background: 'rgba(253,248,231,.24)', overflow: 'hidden', display: 'block' }}>
-                      <span style={{ display: 'block', width: `${displayPct}%`, height: '100%', background: '#F5D14E', borderRadius: 999, transition: dragRef.current ? 'none' : 'width 0.3s' }} />
+                      <span style={{ display: 'block', width: `${displayPct}%`, height: '100%', background: '#F5D14E', borderRadius: 999 }} />
                     </span>
                     <span style={{ fontSize: 9.5, fontWeight: 700, color: '#FDF8E7', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{displayPct}%</span>
                   </span>
@@ -650,10 +652,9 @@ function FillCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, o
 // how it is going, and — for a counter — today's number with its controls.
 
 function HabitDetailPanel({
-  habit, hLogs, qtyToday, today, colors, onClose, onUpdate, onToggleToday, onSetQuantity,
+  habit, hLogs, qtyToday, today, onClose, onUpdate, onToggleToday, onSetQuantity,
 }: {
   habit: Habit
-  colors: string[]
   hLogs: string[]
   qtyToday: number
   today: string
@@ -718,18 +719,9 @@ function HabitDetailPanel({
         </button>
       </div>
 
-      {/* Its look — one icon control, one row of colours */}
+      {/* Its icon — the colour comes with the habit and needs no picker */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <EmojiBtn value={habit.emoji} onSelect={v => onUpdate({ emoji: v })} />
-        <div style={{ flex: 1, minWidth: 0, display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-          {colors.slice(0, 12).map(c => (
-            <button key={c} onClick={() => onUpdate({ color: c })} title={c}
-              style={{
-                width: 16, height: 16, borderRadius: '50%', background: c, cursor: 'pointer', padding: 0,
-                border: habit.color === c ? '2px solid #191712' : '1px solid rgba(25,23,18,.12)',
-              }} />
-          ))}
-        </div>
+        <EmojiBtn value={habit.emoji} onSelect={v => onUpdate({ emoji: v })} size={32} />
       </div>
 
       {/* Today — the one thing you came here to change */}
@@ -1333,7 +1325,6 @@ export function HabitsModule() {
           hLogs={logs[detailHabit.id] ?? []}
           qtyToday={qtyLogs[detailHabit.id]?.[today] ?? 0}
           today={today}
-          colors={HABIT_COLORS}
           onClose={() => setDetailHabitId(null)}
           onUpdate={patch => updateHabit(detailHabit.id, patch)}
           onToggleToday={() => toggleHabit(detailHabit.id, today)}
