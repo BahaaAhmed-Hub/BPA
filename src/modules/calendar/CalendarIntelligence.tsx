@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import {
   ChevronLeft, ChevronRight, ChevronDown, Layers, Calendar, Video,
   Sparkles, MapPin, RefreshCw, X, Eye, EyeOff,
-  CheckCircle2, XCircle, Link, Check, MoreHorizontal, Plus, Pencil, Paperclip, FileText,
+  CheckCircle2, XCircle, Link, Check, Plus, Paperclip, FileText,
   ExternalLink, AlertCircle, Shield, Copy, Trash2,
 } from 'lucide-react'
 import { TimeSelect } from '@/modules/tasks/SchedulePopover'
@@ -740,9 +740,9 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
 // suggestion.
 
 const EV_PILL: React.CSSProperties = {
-  display: 'inline-flex', alignItems: 'center', gap: 6, height: 34, boxSizing: 'border-box',
-  padding: '0 12px', borderRadius: 9, background: '#FFFFFF', border: '1px solid #E8E1CE',
-  color: '#191712', fontSize: 13, fontFamily: 'inherit', cursor: 'pointer', minWidth: 0,
+  display: 'inline-flex', alignItems: 'center', gap: 6, height: 42, boxSizing: 'border-box',
+  padding: '0 14px', borderRadius: 10, background: '#FFFFFF', border: '1px solid #E8E1CE',
+  color: '#191712', fontSize: 13.5, fontFamily: 'inherit', cursor: 'pointer', minWidth: 0,
 }
 const EV_ROUND: React.CSSProperties = {
   width: 30, height: 30, borderRadius: '50%', flexShrink: 0, padding: 0,
@@ -750,10 +750,10 @@ const EV_ROUND: React.CSSProperties = {
   background: '#FFFFFF', border: '1px solid #E8E1CE', color: '#6C6553', cursor: 'pointer',
 }
 const EV_LABEL: React.CSSProperties = {
-  width: 88, flexShrink: 0, fontSize: 12.5, color: '#6C6553', paddingTop: 9,
+  width: 96, flexShrink: 0, fontSize: 13, color: '#6C6553', paddingTop: 12,
 }
 const EV_SECTION: React.CSSProperties = {
-  fontSize: 12.5, color: '#6C6553',
+  fontSize: 13, color: '#6C6553',
 }
 
 /** Google gives a mime type and nothing else — no size, no date. */
@@ -828,8 +828,6 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
   onOpenEvent?: (e: GCalEventExt) => void
 }) {
   const popupRef = useRef<HTMLDivElement>(null)
-  const titleRef = useRef<HTMLInputElement>(null)
-  const [menuOpen, setMenuOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [clashDismissed, setClashDismissed] = useState(false)
@@ -924,7 +922,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
       overflowY: 'auto', scrollbarWidth: 'thin',
       background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 18,
       boxShadow: '0 1px 3px rgba(25,23,18,0.06)',
-      padding: '18px 20px 22px',
+      padding: '20px 22px 24px',
     }}>
 
       {/* ── Which calendar, and the controls ─────────────────────────────── */}
@@ -940,65 +938,37 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
         <span style={{ flex: 1 }} />
 
         <button
-          onClick={() => { titleRef.current?.focus(); titleRef.current?.select() }}
-          title="Edit the title"
-          style={{ ...EV_ROUND, background: '#191712', border: 'none', color: '#FDF8E7' }}
-        ><Pencil size={13} strokeWidth={2} /></button>
-
-        <button
           onClick={() => { if (event.htmlLink) window.open(event.htmlLink, '_blank', 'noopener') }}
           disabled={!event.htmlLink}
           title="Open in Google Calendar"
           style={{ ...EV_ROUND, opacity: event.htmlLink ? 1 : 0.45, cursor: event.htmlLink ? 'pointer' : 'default' }}
-        ><ExternalLink size={13} /></button>
+        ><ExternalLink size={14} /></button>
 
-        <div style={{ position: 'relative', display: 'flex' }}>
-          <button onClick={() => setMenuOpen(o => !o)} title="More" style={EV_ROUND}>
-            <MoreHorizontal size={14} />
-          </button>
-          {menuOpen && (
-            <div style={{
-              position: 'absolute', top: 'calc(100% + 6px)', right: 0, zIndex: 40, width: 200,
-              background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 12, padding: 6,
-              boxShadow: '0 20px 44px -20px rgba(25,23,18,.42)',
-            }}>
-              {[
-                { label: status === 'done' ? 'Mark as not done' : 'Mark as done', run: () => { onStatusToggle('done'); setMenuOpen(false) } },
-                { label: status === 'cancelled' ? 'Restore event' : 'Mark as cancelled', run: () => { onStatusToggle('cancelled'); setMenuOpen(false) } },
-                ...(videoLink ? [] : onAddMeet ? [{ label: 'Add a Meet link', run: () => { void onAddMeet(); setMenuOpen(false) } }] : []),
-                ...(event.htmlLink ? [{ label: 'Copy event link', run: () => { void navigator.clipboard.writeText(event.htmlLink!).catch(() => {}); setMenuOpen(false) } }] : []),
-                ...(liveClashes.length && onOpenEvent ? [{ label: `Open “${liveClashes[0].summary ?? 'the clash'}”`, run: () => { onOpenEvent(liveClashes[0]); setMenuOpen(false) } }] : []),
-              ].map(item => (
-                <button key={item.label} onClick={item.run} style={{
-                  display: 'block', width: '100%', textAlign: 'left', padding: '7px 9px', borderRadius: 8,
-                  background: 'none', border: 'none', cursor: 'pointer', fontSize: 12.5, color: '#191712', fontFamily: 'inherit',
-                }}>{item.label}</button>
-              ))}
-              {onDelete && (
-                <button onClick={() => { onDelete(); setMenuOpen(false) }} style={{
-                  display: 'block', width: '100%', textAlign: 'left', padding: '7px 9px', borderRadius: 8,
-                  background: 'none', border: 'none', cursor: 'pointer', fontSize: 12.5, color: '#B4523A', fontFamily: 'inherit',
-                }}>Delete event</button>
-              )}
-            </div>
-          )}
-        </div>
+        <button
+          onClick={() => onDelete?.()}
+          disabled={!onDelete}
+          title="Delete event"
+          style={{ ...EV_ROUND, color: '#B4523A', borderColor: 'rgba(180,82,58,0.35)', opacity: onDelete ? 1 : 0.45 }}
+        ><Trash2 size={14} /></button>
 
         <button onClick={onClose} title="Close" style={EV_ROUND}><X size={14} /></button>
       </div>
 
       {/* ── Title ────────────────────────────────────────────────────────── */}
-      <input
-        ref={titleRef}
+      {/* A long title wraps rather than scrolling out of its own box */}
+      <textarea
         value={title}
+        rows={1}
         onChange={e => setTitle(e.target.value)}
         onBlur={() => { if (title.trim() && title !== event.summary) void push({ summary: title.trim() }) }}
+        onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur() } }}
+        ref={el => { if (el) { el.style.height = 'auto'; el.style.height = `${el.scrollHeight}px` } }}
         placeholder="Event title"
         style={{
-          width: '100%', boxSizing: 'border-box', marginTop: 14,
+          width: '100%', boxSizing: 'border-box', marginTop: 14, resize: 'none', overflow: 'hidden',
           background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 11,
-          padding: '13px 15px', fontFamily: 'Outfit, sans-serif', fontSize: 21, fontWeight: 600,
-          letterSpacing: '-0.02em', color: '#191712', outline: 'none', textAlign: 'left',
+          padding: '16px 17px', fontFamily: 'Outfit, sans-serif', fontSize: 23, fontWeight: 600,
+          lineHeight: 1.22, letterSpacing: '-0.02em', color: '#191712', outline: 'none', textAlign: 'left',
         }} />
 
       {/* ── When ─────────────────────────────────────────────────────────── */}
@@ -1028,51 +998,53 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
       {/* ── What it runs into ────────────────────────────────────────────── */}
       {liveClashes.length > 0 && !clashDismissed && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 10 }}>
-          <span style={{
-            display: 'inline-flex', alignItems: 'center', height: 32, padding: '0 13px', borderRadius: 9,
-            background: 'rgba(245,209,78,0.24)', border: '1px solid rgba(245,209,78,0.7)',
-            color: '#3D3926', fontSize: 12.5, minWidth: 0,
-            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-          }}>
+          <button
+            onClick={() => onOpenEvent?.(liveClashes[0])}
+            title={`Open “${liveClashes[0].summary ?? 'the clashing event'}”`}
+            style={{
+              display: 'inline-flex', alignItems: 'center', height: 38, padding: '0 14px', borderRadius: 10,
+              background: 'rgba(245,209,78,0.24)', border: '1px solid rgba(245,209,78,0.7)',
+              color: '#3D3926', fontSize: 13, minWidth: 0, fontFamily: 'inherit',
+              cursor: onOpenEvent ? 'pointer' : 'default',
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            }}>
             Clashes with {liveClashes[0].summary ?? 'another event'}
             {liveClashes.length > 1 ? ` +${liveClashes.length - 1}` : ''}
-          </span>
+          </button>
           <button
             onClick={moveClear}
             disabled={!freeAfterClash || saving}
             title={freeAfterClash ? `Move this to ${freeAfterClash}, clear of the clash` : 'Nothing to move to'}
-            style={{ ...EV_ROUND, width: 32, height: 32, borderRadius: 9, opacity: freeAfterClash ? 1 : 0.45 }}>
+            style={{ ...EV_ROUND, width: 38, height: 38, borderRadius: 10, opacity: freeAfterClash ? 1 : 0.45 }}>
             <Check size={13} strokeWidth={2.4} />
           </button>
           <button onClick={() => setClashDismissed(true)} title="Leave it — I know"
-            style={{ ...EV_ROUND, width: 32, height: 32, borderRadius: 9 }}>
-            <X size={13} />
+            style={{ ...EV_ROUND, width: 38, height: 38, borderRadius: 10 }}>
+            <X size={14} />
           </button>
         </div>
       )}
 
-      <div style={{ height: 1, background: '#F0EBDC', margin: '16px 0' }} />
+      <div style={{ height: 1, background: '#F0EBDC', margin: '20px 0' }} />
 
       {/* ── Fields ───────────────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
           <span style={EV_LABEL}>Calendar</span>
-          {writable.length > 1 && onMoveCalendar ? (
-            <span style={{ flex: 1, minWidth: 0, position: 'relative', display: 'flex' }}>
-              <span style={{ ...EV_PILL, flex: 1, justifyContent: 'space-between' }}>
-                <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{calName}</span>
-                <ChevronDown size={13} strokeWidth={2} style={{ color: '#9B9180', flexShrink: 0 }} />
-              </span>
-              <select
-                value={event.calendarId ?? ''}
-                onChange={e => { void onMoveCalendar(e.target.value) }}
-                style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', border: 'none' }}>
-                {writable.map(c => <option key={c.id} value={c.id}>{c.summaryOverride ?? c.summary}</option>)}
-              </select>
+          <span style={{ flex: 1, minWidth: 0, position: 'relative', display: 'flex' }}>
+            <span style={{ ...EV_PILL, flex: 1, justifyContent: 'space-between' }}>
+              <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{calName}</span>
+              <ChevronDown size={14} strokeWidth={2} style={{ color: '#9B9180', flexShrink: 0 }} />
             </span>
-          ) : (
-            <span style={{ ...EV_PILL, flex: 1, cursor: 'default' }}>{calName}</span>
-          )}
+            <select
+              value={event.calendarId ?? ''}
+              onChange={e => { void onMoveCalendar?.(e.target.value) }}
+              disabled={!onMoveCalendar || writable.length === 0}
+              style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', border: 'none' }}>
+              {writable.length === 0 && <option value={event.calendarId ?? ''}>{calName}</option>}
+              {writable.map(c => <option key={c.id} value={c.id}>{c.summaryOverride ?? c.summary}</option>)}
+            </select>
+          </span>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
@@ -1084,12 +1056,42 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
               onBlur={() => { if (location !== (event.location ?? '')) void push({ location: location.trim() }) }}
               placeholder={videoLink ? 'Video call' : 'Add a place'}
               style={{ ...EV_PILL, flex: 1, cursor: 'text', outline: 'none' }} />
-            {videoLink && (
+            {videoLink ? (
               <a href={videoLink} target="_blank" rel="noreferrer"
                 style={{ ...EV_PILL, textDecoration: 'none', color: '#191712', flexShrink: 0 }}>
-                <Video size={13} /> Join
+                <Video size={14} /> Join
               </a>
-            )}
+            ) : onAddMeet ? (
+              <button onClick={() => void onAddMeet()} title="Add a Google Meet link"
+                style={{ ...EV_PILL, flexShrink: 0, color: '#6C6553' }}>
+                <Video size={14} /> Meet
+              </button>
+            ) : null}
+          </span>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+          <span style={EV_LABEL}>Status</span>
+          <span style={{ flex: 1, minWidth: 0, display: 'flex', gap: 6 }}>
+            {([
+              { id: undefined, label: 'Open' },
+              { id: 'done' as const, label: 'Done' },
+              { id: 'cancelled' as const, label: 'Cancelled' },
+            ]).map(o => {
+              const on = status === o.id
+              return (
+                <button
+                  key={o.label}
+                  onClick={() => { if (o.id) onStatusToggle(o.id); else if (status) onStatusToggle(status) }}
+                  style={{
+                    ...EV_PILL, flex: 1, justifyContent: 'center',
+                    background: on ? '#191712' : '#FFFFFF',
+                    border: on ? 'none' : '1px solid #E8E1CE',
+                    color: on ? '#FDF8E7' : '#6C6553',
+                    fontWeight: on ? 600 : 500,
+                  }}>{o.label}</button>
+              )
+            })}
           </span>
         </div>
 
@@ -1121,7 +1123,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
         <p style={{ margin: '8px 0 0', fontSize: 11.5, color: '#B4523A' }}>{prepError}</p>
       )}
 
-      <div style={{ height: 1, background: '#F0EBDC', margin: '16px 0' }} />
+      <div style={{ height: 1, background: '#F0EBDC', margin: '20px 0' }} />
 
       {/* ── Attendees ────────────────────────────────────────────────────── */}
       <div style={{ ...EV_SECTION, marginBottom: 10 }}>Attendees · {attendees.length}</div>
@@ -1178,7 +1180,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
       </div>
 
       {/* ── Attachments ──────────────────────────────────────────────────── */}
-      <div style={{ height: 1, background: '#F0EBDC', margin: '16px 0' }} />
+      <div style={{ height: 1, background: '#F0EBDC', margin: '20px 0' }} />
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
         <span style={EV_SECTION}>Attachments · {files.length}</span>
         <span style={{ flex: 1, minWidth: 0, fontSize: 11.5, color: '#9B9180', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -1242,7 +1244,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
       {/* ── Prep gathered ────────────────────────────────────────────────── */}
       {prepPoints.length > 0 && (
         <>
-          <div style={{ height: 1, background: '#F0EBDC', margin: '16px 0' }} />
+          <div style={{ height: 1, background: '#F0EBDC', margin: '20px 0' }} />
           <div style={{ ...EV_SECTION, marginBottom: 10 }}>Prep gathered</div>
           {prep?.goal && (
             <p style={{ margin: '0 0 10px', fontSize: 12.5, color: '#3D3926', lineHeight: 1.5 }}>{prep.goal}</p>
@@ -1585,7 +1587,7 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
         }}>All day</button>
       </div>
 
-      <div style={{ height: 1, background: '#F0EBDC', margin: '16px 0' }} />
+      <div style={{ height: 1, background: '#F0EBDC', margin: '20px 0' }} />
 
       {/* Fields */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -1630,7 +1632,7 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
         </div>
       </div>
 
-      <div style={{ height: 1, background: '#F0EBDC', margin: '16px 0' }} />
+      <div style={{ height: 1, background: '#F0EBDC', margin: '20px 0' }} />
 
       {/* Attendees */}
       <div style={{ ...EV_SECTION, marginBottom: 10 }}>Attendees · {invitees.length}</div>
@@ -2336,14 +2338,10 @@ export function CalendarIntelligence() {
 
   // ── Render ───────────────────────────────────────────────────────────────────
   return (
-    <div className={creatingEvt ? 'cal-grid-creating' : undefined} style={{ display: 'flex', height: '100%', background: '#F7F4EA', color: '#191712', fontFamily: 'var(--sb-font-ui)', overflow: 'hidden' }}>
-
-      {/* The calendar itself. An open event panel takes width from here rather
-          than covering it, so the two sit side by side. */}
-      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
+    <div className={creatingEvt ? 'cal-grid-creating' : undefined} style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#F7F4EA', color: '#191712', fontFamily: 'var(--sb-font-ui)', overflow: 'hidden' }}>
 
       {/* ── Top bar ─────────────────────────────────────────────────────────── */}
-      <div style={{ padding: '14px 22px 12px', borderBottom: '1px solid #E8E1CE', background: '#FCFAF4', flexShrink: 0 }}>
+      <div style={{ padding: '18px 26px 14px', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           {/* Which stretch of time you are looking at */}
           <div style={{ minWidth: 0 }}>
@@ -2570,9 +2568,21 @@ export function CalendarIntelligence() {
         )}
       </div>
 
+      {/* ── The grid, and whatever panel is open, side by side ───────────────── */}
+      <div style={{ flex: 1, minHeight: 0, display: 'flex', alignItems: 'stretch', gap: 16, padding: '0 26px 22px', minWidth: 0 }}>
+
+      {/* The calendar itself. An open panel takes width from here rather than
+          covering it, and both start at the top of the calendar area. */}
+      <div style={{
+        flex: 1, minWidth: 0, minHeight: 0, position: 'relative',
+        display: 'flex', flexDirection: 'column', overflow: 'hidden',
+        background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 16,
+        boxShadow: '0 1px 3px rgba(25,23,18,0.05)',
+      }}>
+
       {/* ── Month grid ───────────────────────────────────────────────────────── */}
       {calView === 'month' ? (
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'auto', padding: '0 22px 22px' }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'auto', padding: '0 14px 14px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', padding: '10px 0 6px' }}>
             {DAY_LABELS.map(d => (
               <span key={d} style={{ textAlign: 'center', fontSize: 10.5, fontWeight: 700, letterSpacing: '0.08em', color: '#6C6553', textTransform: 'uppercase' }}>
@@ -2583,7 +2593,7 @@ export function CalendarIntelligence() {
           <div style={{
             flex: 1, minHeight: 0, display: 'grid',
             gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', gridAutoRows: 'minmax(96px, 1fr)',
-            background: '#E8E1CE', gap: 1, border: '1px solid #E8E1CE', borderRadius: 14, overflow: 'hidden',
+            background: '#E8E1CE', gap: 1, border: '1px solid #E8E1CE', borderRadius: 12, overflow: 'hidden',
           }}>
             {monthCells.map(day => {
               const ds = localDateStr(day)
@@ -2841,7 +2851,7 @@ export function CalendarIntelligence() {
 
       </div>
 
-      {/* Event panel — a column of its own */}
+      {/* Event panel — a column of its own, beside the grid */}
       {selectedEvent && (() => {
         const cal      = allCalendars.find(c => c.id === (selectedEvent as GCalEventExt).calendarId)
         const calName  = cal?.summary ?? 'Calendar'
@@ -2879,6 +2889,8 @@ export function CalendarIntelligence() {
           />
         )
       })()}
+
+      </div>
 
       {/* Context menu */}
       {ctxMenu && (
