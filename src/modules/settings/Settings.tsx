@@ -6,7 +6,7 @@ import {
   Plus, Trash2, LogIn, LogOut,
   ChevronDown, ChevronUp, User, Clock, Building2, Flame,
   Brain, Bell, Palette, Link, X, RefreshCw, Eye, EyeOff, Shield, Pencil,
-  Hash, CheckSquare, Mail, HardDrive, CalendarDays, Swords, Wand2, CreditCard,
+  Hash, CheckSquare, Mail, HardDrive, CalendarDays, Swords, Wand2, CreditCard, Sparkles,
   ArrowUpRight, Download, Database,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
@@ -222,16 +222,20 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
 
 function FieldRow({ label, sub, children }: { label: string; sub?: string; children: React.ReactNode }) {
   return (
+    // Wraps rather than spills: when the control cannot fit beside the label
+    // it drops to its own line, instead of overflowing onto the next card.
     <div style={{
-      display: 'flex', alignItems: 'flex-start', gap: 12,
-      padding: '7px 0', borderBottom: '1px solid #F0EBDC',
-      breakInside: 'avoid' as const,
+      display: 'flex', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap',
+      padding: '5px 0', borderBottom: '1px solid #F0EBDC',
     }}>
-      <div style={{ width: 140, flexShrink: 0, paddingTop: 2 }}>
+      <div style={{ flex: '1 1 118px', minWidth: 0, maxWidth: 136, paddingTop: 2 }}>
         <span style={{ fontSize: 12.5, color: '#191712' }}>{label}</span>
         {sub && <p style={{ margin: '2px 0 0', fontSize: 10.5, color: '#6C6553', lineHeight: 1.4 }}>{sub}</p>}
       </div>
-      <div style={{ flex: 1, minWidth: 0 }}>{children}</div>
+      <div style={{
+        flex: '1 1 auto', minWidth: 0, display: 'flex',
+        justifyContent: 'flex-end', alignItems: 'center', flexWrap: 'wrap', gap: 6,
+      }}>{children}</div>
     </div>
   )
 }
@@ -299,11 +303,6 @@ function DRow({ label, sub, children, last }: {
       <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 10 }}>{children}</div>
     </div>
   )
-}
-
-/** Flows a card's contents into two columns so it fits without scrolling. */
-function TwoCol({ children, gap = 26 }: { children: ReactNode; gap?: number }) {
-  return <div style={{ columns: 2, columnGap: gap }}>{children}</div>
 }
 
 /** Segmented control — active option is a white pill on a cream track. */
@@ -491,23 +490,23 @@ function ScheduleSection({
       <FieldRow label="Focus window" sub="Deep work block">
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <input type="time" value={s.focusStart} onChange={e => set({ focusStart: e.target.value })}
-            style={{ ...inputStyle, width: 100 }} />
+            style={{ ...inputStyle, width: 118 }} />
           <span style={{ color: '#6C6553', fontSize: 11 }}>to</span>
           <input type="time" value={s.focusEnd} onChange={e => set({ focusEnd: e.target.value })}
-            style={{ ...inputStyle, width: 100 }} />
+            style={{ ...inputStyle, width: 118 }} />
         </div>
       </FieldRow>
       <FieldRow label="Earliest meeting" sub="No calls before">
         <input type="time" value={s.earliestMeeting} onChange={e => set({ earliestMeeting: e.target.value })}
-          style={{ ...inputStyle, width: 110 }} />
+          style={{ ...inputStyle, width: 118 }} />
       </FieldRow>
       <FieldRow label="End of day">
         <input type="time" value={s.endOfDay} onChange={e => set({ endOfDay: e.target.value })}
-          style={{ ...inputStyle, width: 110 }} />
+          style={{ ...inputStyle, width: 118 }} />
       </FieldRow>
       <FieldRow label="Family time">
         <input type="time" value={s.familyStart} onChange={e => set({ familyStart: e.target.value })}
-          style={{ ...inputStyle, width: 110 }} />
+          style={{ ...inputStyle, width: 118 }} />
       </FieldRow>
       <FieldRow label="Meeting buffer" sub="Virtual gap">
         <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
@@ -1524,7 +1523,7 @@ export const GROQ_MODELS = [
   { value: 'mixtral-8x7b-32768',       label: 'Mixtral 8x7B'                  },
 ]
 
-function ProfessorSection({ s, set }: { s: AppSettings; set: (p: Partial<AppSettings>) => void }) {
+function ProfessorSection() {
   const [ai, setAIRaw] = useState<AIConfig>(loadAIConfig)
   const [showKey, setShowKey] = useState(false)
   const [autonomy, setAutonomy] = useState<'suggest' | 'draft' | 'act'>('suggest')
@@ -1532,7 +1531,6 @@ function ProfessorSection({ s, set }: { s: AppSettings; set: (p: Partial<AppSett
   const [matrixSuggest, setMatrixSuggest] = useState(true)
   const [autoBuild, setAutoBuild] = useState(false)
   const [learnEdits, setLearnEdits] = useState(true)
-  const [toneOfVoice, setToneOfVoice] = useState('Direct, no filler')
 
   function setAI(patch: Partial<AIConfig>) {
     const next = { ...ai, ...patch }
@@ -1556,10 +1554,10 @@ function ProfessorSection({ s, set }: { s: AppSettings; set: (p: Partial<AppSett
   }
 
   return (
-    <TwoCol>
+    <div>
       {/* ── Model ── */}
       <FieldRow label="Model" sub="Handles the brief, drafts and matrix suggestions">
-        <div style={{ display: 'flex', gap: 5 }}>
+        <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
           {[
             { v: 'anthropic', l: 'Sonnet 4.5' },
             { v: 'groq',      l: 'Opus 4.1' },
@@ -1592,7 +1590,7 @@ function ProfessorSection({ s, set }: { s: AppSettings; set: (p: Partial<AppSett
 
       {/* ── Autonomy ── */}
       <FieldRow label="Autonomy" sub="How far the assistant may act before asking you">
-        <div style={{ display: 'flex', gap: 5 }}>
+        <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
           <SegBtn val="suggest" cur={autonomy} onClick={() => setAutonomy('suggest')} label="Suggest" />
           <SegBtn val="draft"   cur={autonomy} onClick={() => setAutonomy('draft')}   label="Draft & hold" />
           <SegBtn val="act"     cur={autonomy} onClick={() => setAutonomy('act')}     label="Act" />
@@ -1612,21 +1610,29 @@ function ProfessorSection({ s, set }: { s: AppSettings; set: (p: Partial<AppSett
       <FieldRow label="Learn from my edits" sub="Every correction tunes future drafts and placements">
         <Toggle checked={learnEdits} onChange={setLearnEdits} />
       </FieldRow>
+    </div>
+  )
+}
 
-      {/* ── Tone ── */}
+/** 11B splits out the half of the AI card that is about voice and standing
+ *  instructions, so neither half has to be squeezed into one column. */
+function AIVoiceSection({ s, set }: { s: AppSettings; set: (p: Partial<AppSettings>) => void }) {
+  const [toneOfVoice, setToneOfVoice] = useState('Direct, no filler')
+
+  return (
+    <div>
       <FieldRow label="Tone of voice" sub="Applies to drafts, the brief and the review">
         <select value={toneOfVoice} onChange={e => setToneOfVoice(e.target.value)} style={{ ...selectStyle, minWidth: 160 }}>
           {['Direct, no filler', 'Warm and encouraging', 'Formal', 'Casual'].map(t => <option key={t} value={t}>{t}</option>)}
         </select>
       </FieldRow>
 
-      {/* ── Legacy personality ── */}
       <div style={{ height: 6, borderTop: '1px solid #F0EBDC', marginTop: 12, marginBottom: 12 }} />
       <FieldRow label="Proactive" sub="Offers advice unprompted">
         <Toggle checked={s.proactive} onChange={v => set({ proactive: v })} />
       </FieldRow>
       <FieldRow label="Morning brief time">
-        <input type="time" value={s.briefTime} onChange={e => set({ briefTime: e.target.value })} style={{ ...inputStyle, width: 110 }} />
+        <input type="time" value={s.briefTime} onChange={e => set({ briefTime: e.target.value })} style={{ ...inputStyle, width: 118 }} />
       </FieldRow>
       <FieldRow label="Custom instructions" sub="Personality & priorities">
         <textarea value={s.customInstructions} onChange={e => set({ customInstructions: e.target.value })}
@@ -1635,7 +1641,7 @@ function ProfessorSection({ s, set }: { s: AppSettings; set: (p: Partial<AppSett
       </FieldRow>
 
       <p style={{ margin: '14px 0 0', fontSize: 11, color: '#9B9180' }}>Your mail and tasks are never used to train the model.</p>
-    </TwoCol>
+    </div>
   )
 }
 
@@ -2190,7 +2196,7 @@ function FinanceSection() {
           <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', color: '#6C6553' }}>ENVELOPE STYLE</span>
           <span style={{ fontSize: 11, color: '#6C6553' }}>The budget page opens in this view · you can still switch it per visit</span>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10 }}>
           {STYLES.map(style => {
             const active = envelopeStyle === style.id
             return (
@@ -2856,8 +2862,8 @@ function Card({ icon: Icon, title, sub, children, actions, muted }: {
       alignSelf: 'start',
       transition: 'border-color 0.15s',
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 8, flexShrink: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 11, minWidth: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 10, flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 11, minWidth: 0 }}>
           <div style={{
             width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
             background: '#FAF7EC', border: '1px solid #E8E1CE',
@@ -2867,7 +2873,10 @@ function Card({ icon: Icon, title, sub, children, actions, muted }: {
           </div>
           <div style={{ minWidth: 0 }}>
             <h3 style={{ margin: 0, fontFamily: 'Outfit, sans-serif', fontSize: 15, fontWeight: 600, letterSpacing: '-0.02em', color: '#191712', lineHeight: 1.25 }}>{title}</h3>
-            {sub && <p style={{ margin: '1px 0 0', fontSize: 11.5, color: '#9B9180', lineHeight: 1.35, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sub}</p>}
+            {sub && <p style={{
+              margin: '1px 0 0', fontSize: 11.5, color: '#9B9180', lineHeight: 1.35,
+              display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+            }}>{sub}</p>}
           </div>
         </div>
         {actions && <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 8 }}>{actions}</div>}
@@ -3098,7 +3107,7 @@ export function Settings() {
     // ── YOU page: Profile (left) + Billing (right) ──────────────────────────
     if (page === 'you') return (
       <div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, alignItems: 'start' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 16, alignItems: 'start' }}>
           <SectionCard
             id="profile"
             active={activeSection === 'profile'}
@@ -3134,16 +3143,21 @@ export function Settings() {
     // ── CONNECTED page: Accounts | AI | Schedule rules ──────────────────────
     if (page === 'connected') return (
       <div>
-        <div style={{ display: 'grid', gridTemplateColumns: '0.85fr 1.7fr 1.05fr', gap: 16, alignItems: 'start' }}>
-          <SectionCard id="accounts" active={activeSection === 'accounts'} actions={
-            <button onClick={() => window.dispatchEvent(new CustomEvent('professor:openWizard'))} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 7, background: '#FAF7EC', border: '1px solid #E8E1CE', color: '#6C6553', fontSize: 11, cursor: 'pointer' }}>
-              <Wand2 size={11} /> Wizard
-            </button>
-          }>
-            <CompaniesSection companies={companies} setCompanies={c => { setCompanies(c); saveCompanies(c) }} accounts={allAccounts} />
-          </SectionCard>
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.15fr) minmax(0, 1.45fr) minmax(0, 1.05fr)', gap: 16, alignItems: 'start' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
+            <SectionCard id="accounts" active={activeSection === 'accounts'} actions={
+              <button onClick={() => window.dispatchEvent(new CustomEvent('professor:openWizard'))} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 7, background: '#FAF7EC', border: '1px solid #E8E1CE', color: '#6C6553', fontSize: 11, cursor: 'pointer' }}>
+                <Wand2 size={11} /> Wizard
+              </button>
+            }>
+              <CompaniesSection companies={companies} setCompanies={c => { setCompanies(c); saveCompanies(c) }} accounts={allAccounts} />
+            </SectionCard>
+            <Card icon={Sparkles} title="Voice & instructions" sub="Tone, the morning brief, and what the assistant always knows">
+              <AIVoiceSection s={settings} set={update} />
+            </Card>
+          </div>
           <SectionCard id="professor" active={activeSection === 'professor'} actions={<SaveBtn id="professor" />}>
-            <ProfessorSection s={settings} set={update} />
+            <ProfessorSection />
           </SectionCard>
           <SectionCard id="schedule" active={activeSection === 'schedule'} actions={<SaveBtn id="schedule" />}>
             <ScheduleSection s={settings} set={update} />
@@ -3154,7 +3168,7 @@ export function Settings() {
 
     // ── INTEGRATIONS page ───────────────────────────────────────────────────
     if (page === 'integrations') return (
-      <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr 1.05fr', gap: 16, alignItems: 'start' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.6fr) minmax(0, 1fr) minmax(0, 1.05fr)', gap: 16, alignItems: 'start' }}>
         <SectionCard id="blocking" active={true} sub="Notion, Asana, Trello and Apple Notes">
           <IntegrationsSection />
         </SectionCard>
@@ -3175,7 +3189,7 @@ export function Settings() {
     // ── WORK page: Tasks (left) + Habits (right) ────────────────────────────
     if (page === 'work') return (
       <div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, alignItems: 'start' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 16, alignItems: 'start' }}>
           <SectionCard id="tasks" active={activeSection === 'tasks'}>
             <TaskStatusesSection />
           </SectionCard>
@@ -3189,7 +3203,7 @@ export function Settings() {
     // ── SYSTEM page: Automation | Notifications | Appearance+Behavioral+Privacy ─
     if (page === 'system') return (
       <div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1.15fr 1fr', gap: 16, alignItems: 'start' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.15fr) minmax(0, 1fr)', gap: 16, alignItems: 'start' }}>
           <SectionCard id="automation" active={activeSection === 'automation'}>
             <AutomationSection />
           </SectionCard>
@@ -3202,7 +3216,7 @@ export function Settings() {
 
     // ── LOOK AND LIMITS page ────────────────────────────────────────────────
     if (page === 'display') return (
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, alignItems: 'start' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 16, alignItems: 'start' }}>
         <SectionCard id="appearance" active={activeSection === 'appearance'} actions={<SaveBtn id="appearance" />}>
           <AppearanceSection s={settings} set={update} />
         </SectionCard>
