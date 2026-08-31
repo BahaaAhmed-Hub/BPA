@@ -17,6 +17,7 @@ import { isTaskHidden, loadVisibleCompanies, getAllUsers, TASK_TYPE_META, inferT
 import { scheduleTaskToCalendar } from '@/lib/aiScheduler'
 import { SmartDayPlanner } from './SmartDayPlanner'
 import { TaskListView } from './TaskListView'
+import { TaskBanner } from './TaskBanner'
 import { TASK_TYPE_ICON, TASK_TYPE_ORDER, isCarriedOver } from './taskVisuals'
 
 const QUADRANTS: Quadrant[] = ['do', 'schedule', 'delegate', 'eliminate']
@@ -239,7 +240,6 @@ export function TaskCommand() {
       {/* ── Page header ─────────────────────────────────────────────────────── */}
       <div style={{ padding: '22px 26px 0', display: 'flex', alignItems: 'flex-end', gap: 20 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: '#6C6553' }}>TASK COMMAND</span>
           <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 32, fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1, color: '#191712' }}>
             {active.length} open {active.length === 1 ? 'task' : 'tasks'}
           </span>
@@ -432,6 +432,11 @@ export function TaskCommand() {
       </div>
 
       {/* Main content */}
+      {/* Summary strip */}
+      <div style={{ padding: '16px 26px 18px' }}>
+        <TaskBanner tasks={tasks} />
+      </div>
+
       {viewMode === 'list' ? (
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, minWidth: 0 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -468,6 +473,8 @@ export function TaskCommand() {
         <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
           {/* 9F: the brain dump rail sits to the LEFT of the matrix */}
           <div style={{ display: 'flex', gap: 16, padding: '4px 28px 28px', alignItems: 'flex-start' }}>
+            {/* offset past the matrix's URGENT / NOT URGENT label row */}
+            <div style={{ paddingTop: 41 }}>
             <BrainDumpRail
               tasks={tasks.filter(t =>
                 t.quadrant === null && !t.completed && t.status !== 'done' && t.status !== 'cancelled' &&
@@ -475,6 +482,7 @@ export function TaskCommand() {
               )}
               onOpen={setModalTaskId}
             />
+            </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <EisenhowerBoard onOpen={setModalTaskId} hideCompleted={hideCompleted} groupBy={groupBy} allGroupsExpanded={allGroupsExpanded} filteredTaskIds={filteredTaskIds} onOpenPlanner={() => setShowPlanner(true)} />
             </div>

@@ -3,7 +3,7 @@
 // NOT URGENT across the top and IMPORTANT / NOT IMPORTANT down the side.
 
 import { useState } from 'react'
-import { Plus } from 'lucide-react'
+import { Plus, ChevronDown, ChevronRight } from 'lucide-react'
 import { useDroppable } from '@dnd-kit/core'
 import { useTaskStore } from '@/store/taskStore'
 import type { Quadrant, Task } from '@/types'
@@ -70,6 +70,15 @@ function QuadrantPanel({ spec, tasks, onOpen, onAction, groupBy }: {
   const { setNodeRef, isOver } = useDroppable({ id: spec.id })
   const [adding, setAdding] = useState(false)
   const [draft, setDraft] = useState('')
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
+
+  function toggleGroup(key: string) {
+    setCollapsed(prev => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key); else next.add(key)
+      return next
+    })
+  }
 
   function commit() {
     const title = draft.trim()
@@ -121,18 +130,31 @@ function QuadrantPanel({ spec, tasks, onOpen, onAction, groupBy }: {
 
       {/* Rows */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minHeight: 0 }}>
-        {groups.map(g => (
-          <div key={g.key} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {g.label && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '2px 2px 0' }}>
-                <span style={{ width: 7, height: 7, borderRadius: 999, background: g.color, flexShrink: 0 }} />
-                <span style={{ fontSize: 11.5, fontWeight: 600, color: '#6C6553' }}>{g.label}</span>
-                <span style={{ fontSize: 11, color: '#9B9180' }}>{g.tasks.length}</span>
-              </div>
-            )}
-            {g.tasks.map(t => <TaskRow key={t.id} task={t} onOpen={onOpen} dense />)}
-          </div>
-        ))}
+        {groups.map(g => {
+          const isOpen = !collapsed.has(g.key)
+          return (
+            <div key={g.key} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {g.label && (
+                <button
+                  onClick={() => toggleGroup(g.key)}
+                  title={isOpen ? 'Collapse group' : 'Expand group'}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 7, padding: '3px 4px',
+                    background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                    width: '100%', textAlign: 'left',
+                  }}>
+                  {isOpen
+                    ? <ChevronDown size={12} strokeWidth={2.2} color="#9B9180" />
+                    : <ChevronRight size={12} strokeWidth={2.2} color="#9B9180" />}
+                  <span style={{ width: 7, height: 7, borderRadius: 999, background: g.color, flexShrink: 0 }} />
+                  <span style={{ fontSize: 11.5, fontWeight: 600, color: '#6C6553' }}>{g.label}</span>
+                  <span style={{ fontSize: 11, color: '#9B9180' }}>{g.tasks.length}</span>
+                </button>
+              )}
+              {isOpen && g.tasks.map(t => <TaskRow key={t.id} task={t} onOpen={onOpen} dense />)}
+            </div>
+          )
+        })}
       </div>
 
       {/* Add here */}

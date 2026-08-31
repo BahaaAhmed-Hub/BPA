@@ -2,11 +2,13 @@
 // One line per task: checkbox, title, company, meta — then the same four
 // attributes the 9B card carries, laid out horizontally.
 
-import { Check, Paperclip, CalendarDays } from 'lucide-react'
-import type { Task } from '@/types'
-import { PRIORITY_META } from '@/types'
+import { Check, Paperclip, CalendarDays, Flame } from 'lucide-react'
+import type { Task, TaskType, Priority } from '@/types'
+import { PRIORITY_META, TASK_TYPE_META } from '@/types'
+import { getAllUsers } from '@/types'
 import { useTaskStore } from '@/store/taskStore'
-import { openLabel, resolveTaskVisuals } from './taskVisuals'
+import { openLabel, resolveTaskVisuals, TASK_TYPE_ORDER } from './taskVisuals'
+import { ControlSlot, OverlaySelect, OverlayTime } from './controls'
 
 export function TaskRow({ task, onOpen, dense }: {
   task: Task
@@ -14,7 +16,9 @@ export function TaskRow({ task, onOpen, dense }: {
   /** Matrix rows sit inside a tinted quadrant and drop their own shadow. */
   dense?: boolean
 }) {
-  const { toggleComplete } = useTaskStore()
+  const { toggleComplete, updateTask, toggleUrgent } = useTaskStore()
+  const PRIORITIES: Priority[] = ['P0', 'P1', 'P2', 'P3']
+  const owners = getAllUsers().filter(u => (task.companyId ? u.companyId === task.companyId : true))
   const v = resolveTaskVisuals(task)
   const { TypeIcon } = v
   const attachmentCount = task.attachments?.length ?? 0
@@ -72,29 +76,75 @@ export function TaskRow({ task, onOpen, dense }: {
         </p>
       </div>
 
-      {/* Attributes, in the 9B slot order */}
+      {/* Attributes — each one is its own control, so clicking an icon edits it
+          rather than opening the task */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0, color: '#9B9180' }}>
-        <TypeIcon size={14} strokeWidth={1.9} />
-        <span title={v.scheduled ? 'Scheduled' : 'Not scheduled'}
-          style={{ display: 'flex', color: v.scheduled ? '#5F7038' : '#D8CFB8' }}>
-          <CalendarDays size={14} strokeWidth={1.9} />
-        </span>
-        {task.priority && (
-          <span style={{ fontSize: 11.5, fontWeight: 700, color: PRIORITY_META[task.priority].color }}>
-            {task.priority}
-          </span>
-        )}
-        <span
-          title={v.ownerName ?? 'Unassigned'}
+        <button
+          data-nm
+          onClick={e => { e.stopPropagation(); toggleUrgent(task.id) }}
+          title={task.urgent ? 'On fire — click to clear' : 'Mark as on fire'}
           style={{
-            width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
-            background: v.ownerInitials ? '#191712' : 'transparent',
-            border: v.ownerInitials ? 'none' : '1px dashed #D8CFB8',
-            color: v.ownerInitials ? '#FFFFFF' : '#C9C0A8',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 9, fontWeight: 700, letterSpacing: '0.02em',
-          }}
-        >{v.ownerInitials ?? ''}</span>
+            background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex',
+            color: task.urgent ? '#B4523A' : '#D8CFB8',
+          }}>
+          <Flame size={14} strokeWidth={1.9} fill={task.urgent ? '#B4523A' : 'none'} />
+        </button>
+
+        <ControlSlot size={14}>
+          <TypeIcon size={14} strokeWidth={1.9} />
+          <OverlaySelect
+            title={v.typeLabel}
+            value={v.type}
+            onChange={val => updateTask(task.id, { taskType: val as TaskType })}
+            options={TASK_TYPE_ORDER.map(t => ({ value: t, label: TASK_TYPE_META[t].label }))}
+          />
+        </ControlSlot>
+
+        <ControlSlot size={14}>
+          <span title={v.scheduled ? 'Scheduled' : 'Not scheduled'}
+            style={{ display: 'flex', color: v.scheduled ? '#5F7038' : '#D8CFB8' }}>
+            <CalendarDays size={14} strokeWidth={1.9} />
+          </span>
+          <OverlayTime
+            title={v.scheduled ? `Scheduled ${task.plannedTime ?? ''}`.trim() : 'Set a time'}
+            value={task.plannedTime ?? ''}
+            onChange={val => updateTask(task.id, { plannedTime: val || undefined })}
+          />
+        </ControlSlot>
+
+        <ControlSlot size={22}>
+          <span style={{
+            width: 22, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 11.5, fontWeight: 700,
+            color: task.priority ? PRIORITY_META[task.priority].color : '#D8CFB8',
+          }}>{task.priority ?? '—'}</span>
+          <OverlaySelect
+            title={task.priority ? `Priority ${task.priority}` : 'No priority'}
+            value={task.priority ?? ''}
+            onChange={val => updateTask(task.id, { priority: (val || undefined) as Priority | undefined })}
+            options={[{ value: '', label: 'No priority' }, ...PRIORITIES.map(p => ({ value: p, label: p }))]}
+          />
+        </ControlSlot>
+
+        <ControlSlot size={22}>
+          <span
+            title={v.ownerName ?? 'Unassigned'}
+            style={{
+              width: 22, height: 22, borderRadius: '50%',
+              background: v.ownerInitials ? '#191712' : 'transparent',
+              border: v.ownerInitials ? 'none' : '1px dashed #D8CFB8',
+              color: v.ownerInitials ? '#FFFFFF' : '#C9C0A8',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 9, fontWeight: 700, letterSpacing: '0.02em',
+            }}
+          >{v.ownerInitials ?? ''}</span>
+          <OverlaySelect
+            title={v.ownerName ?? 'Unassigned'}
+            value={task.owner ?? ''}
+            onChange={val => updateTask(task.id, { owner: val || undefined })}
+            options={[{ value: '', label: 'Unassigned' }, ...owners.map(u => ({ value: u.id, label: u.name }))]}
+          />
+        </ControlSlot>
       </div>
     </div>
   )

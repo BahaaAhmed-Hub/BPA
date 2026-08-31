@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { Trash2, Check, Clock, CalendarDays, Paperclip } from 'lucide-react'
+import { Trash2, Check, Clock, CalendarDays, Paperclip, Flame } from 'lucide-react'
 import type { Task, TaskType, Priority } from '@/types'
 import { TASK_TYPE_META, getAllUsers } from '@/types'
 import { useTaskStore } from '@/store/taskStore'
@@ -52,7 +52,7 @@ interface TaskCardProps {
 }
 
 export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
-  const { toggleComplete, deleteTask, updateTask, addTasksBatch } = useTaskStore()
+  const { toggleComplete, deleteTask, updateTask, addTasksBatch, toggleUrgent } = useTaskStore()
   const [hovered, setHovered] = useState(false)
   const [showMeetingPopup, setShowMeetingPopup] = useState(false)
 
@@ -157,6 +157,16 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
               <CalendarDays size={11} />
               {task.plannedTime ?? new Date(task.dueDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
             </span>
+          )}
+          {(task.urgent || hovered) && (
+            <button data-nm onClick={() => toggleUrgent(task.id)}
+              title={task.urgent ? 'On fire — click to clear' : 'Mark as on fire'}
+              style={{
+                background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', flexShrink: 0,
+                color: task.urgent ? '#B4523A' : '#C9C0A8',
+              }}>
+              <Flame size={12} strokeWidth={2} fill={task.urgent ? '#B4523A' : 'none'} />
+            </button>
           )}
           <span style={{ flex: 1 }} />
           {hovered && (
