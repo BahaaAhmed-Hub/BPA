@@ -286,13 +286,47 @@ function LoadingScreen() {
 
 // ─── Top navigation bar — 6B shell ────────────────────────────────────────────
 
+// Nav SVG icons matching the 6B design spec
+const NAV_ICONS: Record<string, React.ReactNode> = {
+  morning: (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M18.4 5.6L17 7M7 17l-1.4 1.4"/>
+    </svg>
+  ),
+  calendar: (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/>
+    </svg>
+  ),
+  tasks: (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="18" height="18" rx="4"/><path d="M8 12.5l2.6 2.5L16 9.5"/>
+    </svg>
+  ),
+  habits: (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1"/>
+    </svg>
+  ),
+  finance: (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="6" width="18" height="13" rx="3"/><path d="M3 10h18"/>
+    </svg>
+  ),
+  settings: (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/>
+    </svg>
+  ),
+}
+
 const NAV_ITEMS = [
-  { id: 'morning',   label: 'Morning'   },
-  { id: 'calendar',  label: 'Calendar'  },
-  { id: 'tasks',     label: 'Tasks'     },
-  { id: 'habits',    label: 'Habits'    },
-  { id: 'finance',   label: 'Finance'   },
-  { id: 'settings',  label: 'Settings'  },
+  { id: 'morning',   label: 'Today'    },
+  { id: 'calendar',  label: 'Calendar' },
+  { id: 'tasks',     label: 'Tasks'    },
+  { id: 'habits',    label: 'Habits'   },
+  { id: 'finance',   label: 'Finance'  },
+  { id: 'settings',  label: 'Settings' },
 ] as const
 
 function TopNav() {
@@ -312,10 +346,10 @@ function TopNav() {
       display: 'flex', alignItems: 'center',
       padding: '0 22px', gap: 16,
     }}>
-      {/* Product mark */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 9, flexShrink: 0 }}>
+      {/* Product mark — left 1/3 */}
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 9, minWidth: 0 }}>
         <div style={{
-          width: 30, height: 30, borderRadius: 8, background: '#191712',
+          width: 30, height: 30, borderRadius: 8, background: '#191712', flexShrink: 0,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
@@ -327,13 +361,14 @@ function TopNav() {
         <span style={{
           fontFamily: "'Outfit', system-ui, sans-serif",
           fontWeight: 700, fontSize: 14.5, color: '#191712', letterSpacing: '-.02em',
+          whiteSpace: 'nowrap',
         }}>
           The Professor
         </span>
       </div>
 
-      {/* Nav pills */}
-      <nav style={{ flex: 1, display: 'flex', justifyContent: 'center', gap: 4 }}>
+      {/* Nav pills — center */}
+      <nav style={{ display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
         {NAV_ITEMS.map(item => {
           const active = activeModule === item.id ||
             (item.id === 'morning' && activeModule === 'dashboard')
@@ -342,43 +377,68 @@ function TopNav() {
               key={item.id}
               onClick={() => setActiveModule(item.id)}
               style={{
-                height: 34, padding: '0 14px', borderRadius: 999,
+                height: 38, padding: '0 15px', borderRadius: 999,
                 border: 'none', cursor: 'pointer',
-                background: active ? '#191712' : 'transparent',
-                color:      active ? '#FDF8E7' : '#8A8272',
+                background: active ? '#FFFFFF' : 'transparent',
+                boxShadow: active ? '0 1px 3px rgba(25,23,18,.16)' : 'none',
+                color:      active ? '#191712' : '#6C6553',
                 fontSize: 13.5, fontWeight: active ? 600 : 500,
                 fontFamily: "'Instrument Sans', system-ui, sans-serif",
-                transition: 'background 140ms ease-out, color 140ms ease-out',
+                transition: 'background 120ms ease-out, color 120ms ease-out, box-shadow 120ms ease-out',
                 whiteSpace: 'nowrap',
+                display: 'flex', alignItems: 'center', gap: 7,
               }}
               onMouseEnter={e => {
-                if (!active) (e.currentTarget as HTMLButtonElement).style.background = '#FAF7EC'
+                if (!active) {
+                  const el = e.currentTarget as HTMLButtonElement
+                  el.style.background = '#FFFFFF'
+                  el.style.boxShadow = '0 1px 3px rgba(25,23,18,.08)'
+                }
               }}
               onMouseLeave={e => {
-                if (!active) (e.currentTarget as HTMLButtonElement).style.background = 'transparent'
+                if (!active) {
+                  const el = e.currentTarget as HTMLButtonElement
+                  el.style.background = 'transparent'
+                  el.style.boxShadow = 'none'
+                }
               }}
             >
+              {NAV_ICONS[item.id]}
               {item.label}
             </button>
           )
         })}
       </nav>
 
-      {/* Right — search + avatar */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+      {/* Right — search + icon buttons + avatar */}
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 9, minWidth: 0 }}>
+        {/* Search */}
         <div style={{
           display: 'flex', alignItems: 'center', gap: 7,
           padding: '6px 12px',
-          background: '#FAF7EC', border: '1px solid #E8E1CE',
-          borderRadius: 9, cursor: 'text',
+          background: '#FFFFFF', border: '1px solid #E8E1CE',
+          borderRadius: 12, cursor: 'text',
         }}>
-          <Search size={13} color="#8A8272" />
-          <span style={{ fontSize: 13, color: '#8A8272', userSelect: 'none' }}>Search</span>
+          <Search size={13} color="#6C6553" />
+          <span style={{ fontSize: 12.5, color: '#8A8272', userSelect: 'none' }}>Search</span>
           <span style={{
             marginLeft: 4,
-            fontSize: 10.5, fontFamily: "'JetBrains Mono', monospace",
+            fontSize: 10, fontFamily: "'JetBrains Mono', monospace",
             color: '#8A8272', opacity: 0.7,
           }}>⌘K</span>
+        </div>
+
+        {/* Bell */}
+        <div style={{
+          width: 34, height: 34, borderRadius: 12,
+          background: '#FFFFFF', border: '1px solid #E8E1CE',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          cursor: 'pointer', flexShrink: 0, color: '#6C6553',
+        }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M18 16V11a6 6 0 1 0-12 0v5l-1.5 2.5h15z"/>
+            <path d="M10 20a2 2 0 0 0 4 0"/>
+          </svg>
         </div>
 
         {/* Avatar */}
