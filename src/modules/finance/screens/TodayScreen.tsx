@@ -327,6 +327,177 @@ function MiniCalendar({
   )
 }
 
+// ── Quick Capture Panel (16E) ─────────────────────────────────────────────────
+
+const KEYPAD_KEYS = ['7','8','9','4','5','6','1','2','3','0','.','⌫'] as const
+
+function QuickCapturePanel({
+  accounts, categories, selectedDay, onSave, onClose,
+}: {
+  accounts: Account[]
+  categories: Category[]
+  selectedDay: string
+  onSave: () => void
+  onClose: () => void
+}) {
+  const { addTransaction } = useFinanceStore()
+  const [amount, setAmount] = useState('')
+  const [txType, setTxType] = useState<'expense' | 'income'>('expense')
+  const [accountId, setAccountId] = useState(accounts[0]?.id ?? '')
+  const [categoryId, setCategoryId] = useState(categories[0]?.id ?? '')
+  const [payee, setPayee] = useState('')
+  const [note, setNote] = useState('')
+  const [date, setDate] = useState(selectedDay)
+
+  const displayAmt = amount === '' ? '0' : amount
+  const numAmt = parseFloat(amount) || 0
+
+  function handleKey(k: string) {
+    if (k === '⌫') { setAmount(a => a.slice(0, -1)); return }
+    if (k === '.' && amount.includes('.')) return
+    if (amount === '0' && k !== '.') { setAmount(k); return }
+    setAmount(a => a + k)
+  }
+
+  function handleSave() {
+    if (numAmt <= 0) return
+    const selectedCat = categories.find(c => c.id === categoryId)
+    addTransaction({
+      type: txType,
+      amount: txType === 'expense' ? -numAmt : numAmt,
+      currency: 'EGP',
+      date,
+      payee: payee.trim() || selectedCat?.name || '',
+      categoryId: categoryId || null,
+      accountId: accountId || null,
+      note: note.trim() || null,
+    } as Parameters<typeof addTransaction>[0])
+    onSave()
+  }
+
+  const RUST = '#B4523A'
+  const OLIVE = '#5F7038'
+  const selAcct = accounts.find(a => a.id === accountId)
+  const selCat  = categories.find(c => c.id === categoryId)
+
+  return (
+    <div style={{
+      width: 320, flexShrink: 0, borderLeft: '1px solid #E8E1CE',
+      display: 'flex', flexDirection: 'column', background: '#FCFAF4',
+      overflow: 'hidden',
+    }}>
+      {/* Panel header */}
+      <div style={{ padding: '16px 18px 12px', borderBottom: '1px solid #E8E1CE', display: 'flex', alignItems: 'center', gap: 10 }}>
+        <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.1em', color: '#6C6553' }}>CAPTURE</span>
+        {/* Expense / Income toggle */}
+        <span style={{ display: 'flex', alignItems: 'center', gap: 1, height: 28, padding: 2, borderRadius: 999, background: '#EDE7D9', marginLeft: 4 }}>
+          {(['expense','income'] as const).map(t => (
+            <button key={t} onClick={() => setTxType(t)} style={{
+              height: 24, padding: '0 11px', borderRadius: 999, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: txType === t ? 600 : 400,
+              background: txType === t ? '#FFFFFF' : 'transparent',
+              color: txType === t ? (t === 'expense' ? RUST : OLIVE) : '#6C6553',
+              boxShadow: txType === t ? '0 1px 2px rgba(25,23,18,.12)' : 'none',
+              textTransform: 'capitalize',
+            }}>{t}</button>
+          ))}
+        </span>
+        <button onClick={onClose} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: '#6C6553', padding: 3, display: 'flex' }}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      {/* Amount display */}
+      <div style={{ padding: '16px 18px 12px', background: '#191712', display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <span style={{ fontSize: 11, color: '#8A8272', fontWeight: 600, letterSpacing: '0.1em' }}>EGP</span>
+        <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 40, fontWeight: 600, letterSpacing: '-0.03em', color: '#FDF8E7', lineHeight: 1, fontVariantNumeric: 'tabular-nums' as const }}>
+          {parseFloat(displayAmt || '0').toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+        </span>
+        {numAmt > 0 && (
+          <span style={{ fontSize: 11, color: txType === 'expense' ? '#E87A65' : '#7EC878', fontWeight: 600 }}>
+            {txType === 'expense' ? '−' : '+'} from {selAcct?.name ?? 'account'}
+          </span>
+        )}
+      </div>
+
+      {/* Form fields */}
+      <div style={{ padding: '12px 18px', borderBottom: '1px solid #E8E1CE', display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {/* PAID FROM */}
+        <div>
+          <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.1em', color: '#6C6553', display: 'block', marginBottom: 3 }}>PAID FROM</span>
+          <select value={accountId} onChange={e => setAccountId(e.target.value)}
+            style={{ width: '100%', background: '#FAF7EC', border: '1px solid #E8E1CE', borderRadius: 7, padding: '6px 9px', fontSize: 12.5, color: '#191712', outline: 'none', cursor: 'pointer' }}>
+            {accounts.map(a => <option key={a.id} value={a.id}>{a.emoji ?? ''} {a.name}</option>)}
+          </select>
+        </div>
+        {/* CATEGORY */}
+        <div>
+          <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.1em', color: '#6C6553', display: 'block', marginBottom: 3 }}>CATEGORY</span>
+          <select value={categoryId} onChange={e => setCategoryId(e.target.value)}
+            style={{ width: '100%', background: '#FAF7EC', border: '1px solid #E8E1CE', borderRadius: 7, padding: '6px 9px', fontSize: 12.5, color: '#191712', outline: 'none', cursor: 'pointer' }}>
+            <option value="">— none —</option>
+            {categories.map(c => <option key={c.id} value={c.id}>{c.icon ?? ''} {c.name}</option>)}
+          </select>
+        </div>
+        {/* Payee */}
+        <div>
+          <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.1em', color: '#6C6553', display: 'block', marginBottom: 3 }}>PAYEE</span>
+          <input value={payee} onChange={e => setPayee(e.target.value)} placeholder={selCat?.name ?? 'Merchant or person…'}
+            style={{ width: '100%', boxSizing: 'border-box', background: '#FAF7EC', border: '1px solid #E8E1CE', borderRadius: 7, padding: '6px 9px', fontSize: 12.5, color: '#191712', outline: 'none' }} />
+        </div>
+        {/* Date */}
+        <div>
+          <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.1em', color: '#6C6553', display: 'block', marginBottom: 3 }}>DATE</span>
+          <input type="date" value={date} onChange={e => setDate(e.target.value)}
+            style={{ width: '100%', boxSizing: 'border-box', background: '#FAF7EC', border: '1px solid #E8E1CE', borderRadius: 7, padding: '6px 9px', fontSize: 12.5, color: '#191712', outline: 'none' }} />
+        </div>
+        {/* Note */}
+        <div>
+          <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.1em', color: '#6C6553', display: 'block', marginBottom: 3 }}>NOTE</span>
+          <input value={note} onChange={e => setNote(e.target.value)} placeholder="Optional note…"
+            style={{ width: '100%', boxSizing: 'border-box', background: '#FAF7EC', border: '1px solid #E8E1CE', borderRadius: 7, padding: '6px 9px', fontSize: 12.5, color: '#191712', outline: 'none' }} />
+        </div>
+      </div>
+
+      {/* Keypad */}
+      <div style={{ padding: '12px 18px', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 5, flex: 1 }}>
+        {KEYPAD_KEYS.map(k => (
+          <button key={k} onClick={() => handleKey(k)}
+            style={{
+              height: 46, borderRadius: 9, border: '1px solid #E8E1CE',
+              background: k === '⌫' ? '#FAF7EC' : '#FFFFFF',
+              color: k === '⌫' ? '#6C6553' : '#191712',
+              fontFamily: k === '⌫' ? 'inherit' : "'Outfit', sans-serif",
+              fontSize: k === '⌫' ? 16 : 18, fontWeight: 600, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 1px 2px rgba(25,23,18,.06)',
+              transition: 'background 0.1s',
+            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#FAF7EC' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = k === '⌫' ? '#FAF7EC' : '#FFFFFF' }}
+          >{k}</button>
+        ))}
+        {/* Type key spans 4th column row 1–3 */}
+        {/* Save button */}
+        <button
+          onClick={handleSave}
+          disabled={numAmt <= 0}
+          style={{
+            gridColumn: '1 / -1',
+            height: 42, borderRadius: 999, border: 'none', cursor: numAmt > 0 ? 'pointer' : 'default',
+            background: numAmt > 0 ? '#F5D14E' : '#EDE7D9',
+            color: numAmt > 0 ? '#191712' : '#8A8272',
+            fontSize: 13.5, fontWeight: 600,
+            boxShadow: numAmt > 0 ? '0 2px 0 rgba(25,23,18,.14)' : 'none',
+            transition: 'all 0.15s',
+          }}
+        >
+          {numAmt > 0 ? `Save EGP ${numAmt.toLocaleString('en-US', { maximumFractionDigits: 2 })}` : 'Enter amount'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 // ── Main Screen ───────────────────────────────────────────────────────────────
 
 export function TodayScreen() {
@@ -338,6 +509,7 @@ export function TodayScreen() {
   const [viewMonth, setViewMonth] = useState(today.getMonth())
   const [selectedDay, setSelectedDay] = useState<string>(todayStr)
   const [txModal, setTxModal] = useState<TxModalState>({ open: false, tx: null })
+  const [captureOpen, setCaptureOpen] = useState(false)
 
   const monthPrefix = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}`
 
@@ -429,6 +601,21 @@ export function TodayScreen() {
             <span style={{ fontSize: 12, color: '#5F7038', fontWeight: 600 }}>+EGP {todayInc.toLocaleString('en-US')}</span>
           </div>
         )}
+        <button
+          onClick={() => setCaptureOpen(v => !v)}
+          style={{
+            marginLeft: 'auto', height: 34, padding: '0 15px', borderRadius: 999,
+            background: captureOpen ? '#191712' : '#F5D14E', border: 'none',
+            color: captureOpen ? '#FDF8E7' : '#191712', fontSize: 12.5, fontWeight: 600,
+            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 7,
+            boxShadow: '0 2px 0 rgba(25,23,18,.14)',
+          }}
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+            {captureOpen ? <path d="M18 6L6 18M6 6l12 12"/> : <path d="M12 5v14M5 12h14"/>}
+          </svg>
+          {captureOpen ? 'Close' : 'Plan a payment'}
+        </button>
       </div>
 
       {/* Main content */}
@@ -480,52 +667,62 @@ export function TodayScreen() {
         )}
       </div>
 
-      {/* Right panel — month list */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '24px 28px' }}>
+      {/* Right panel — Quick Capture OR month list */}
+      {captureOpen ? (
+        <QuickCapturePanel
+          accounts={accounts}
+          categories={categories}
+          selectedDay={selectedDay || todayStr}
+          onSave={() => setCaptureOpen(false)}
+          onClose={() => setCaptureOpen(false)}
+        />
+      ) : (
+        <div style={{ flex: 1, overflowY: 'auto', padding: '24px 28px' }}>
 
-        {/* Month transactions */}
-        {monthTx.length > 0 && (
-          <div style={{ marginBottom: 24 }}>
-            <div style={{ marginBottom: 12 }}>
-              <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: C.textMuted, letterSpacing: '0.8px' }}>
-                {MONTH_NAMES[viewMonth]}
-              </span>
+          {/* Month transactions */}
+          {monthTx.length > 0 && (
+            <div style={{ marginBottom: 24 }}>
+              <div style={{ marginBottom: 12 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: C.textMuted, letterSpacing: '0.8px' }}>
+                  {MONTH_NAMES[viewMonth]}
+                </span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {monthTx.map(tx => renderTxRow(tx))}
+              </div>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {monthTx.map(tx => renderTxRow(tx))}
+          )}
+          {monthTx.length === 0 && (
+            <div style={{ fontSize: 13, color: C.textMuted, textAlign: 'center', padding: '32px 0' }}>
+              No transactions in {MONTH_NAMES[viewMonth]}
             </div>
-          </div>
-        )}
-        {monthTx.length === 0 && (
-          <div style={{ fontSize: 13, color: C.textMuted, textAlign: 'center', padding: '32px 0' }}>
-            No transactions in {MONTH_NAMES[viewMonth]}
-          </div>
-        )}
+          )}
 
-        {/* Net cashflow summary */}
-        {monthTx.length > 0 && (() => {
-          const inc = monthTx.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0)
-          const exp = monthTx.filter(t => t.type === 'expense').reduce((s, t) => s + Math.abs(t.amount), 0)
-          const net = inc - exp
-          return (
-            <div style={{
-              marginTop: 16, paddingTop: 12,
-              borderTop: `1px solid ${C.border}`,
-              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            }}>
-              <span style={{ fontSize: 12, color: RED, fontWeight: 600 }}>
-                −EGP {exp.toLocaleString('en-US')}
-              </span>
-              <span style={{ fontSize: 13, fontWeight: 700, color: net >= 0 ? GREEN : RED }}>
-                Net {net >= 0 ? '+' : ''}EGP {Math.abs(net).toLocaleString('en-US')}
-              </span>
-              <span style={{ fontSize: 12, color: GREEN, fontWeight: 600 }}>
-                +EGP {inc.toLocaleString('en-US')}
-              </span>
-            </div>
-          )
-        })()}
-      </div>
+          {/* Net cashflow summary */}
+          {monthTx.length > 0 && (() => {
+            const inc = monthTx.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0)
+            const exp = monthTx.filter(t => t.type === 'expense').reduce((s, t) => s + Math.abs(t.amount), 0)
+            const net = inc - exp
+            return (
+              <div style={{
+                marginTop: 16, paddingTop: 12,
+                borderTop: `1px solid ${C.border}`,
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              }}>
+                <span style={{ fontSize: 12, color: RED, fontWeight: 600 }}>
+                  −EGP {exp.toLocaleString('en-US')}
+                </span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: net >= 0 ? GREEN : RED }}>
+                  Net {net >= 0 ? '+' : ''}EGP {Math.abs(net).toLocaleString('en-US')}
+                </span>
+                <span style={{ fontSize: 12, color: GREEN, fontWeight: 600 }}>
+                  +EGP {inc.toLocaleString('en-US')}
+                </span>
+              </div>
+            )
+          })()}
+        </div>
+      )}
 
       </div>{/* end Main content flex */}
 
