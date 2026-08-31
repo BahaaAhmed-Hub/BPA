@@ -137,22 +137,32 @@ export function BillsScreen({ onOpenAdd: _onOpenAdd }: Props) {
 
       {/* Header */}
       <div style={{
-        height: 64, flexShrink: 0,
+        flexShrink: 0,
         borderBottom: '1px solid #E8E1CE',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '0 30px',
+        padding: '14px 26px 16px',
+        display: 'flex', alignItems: 'flex-end', gap: 20,
       }}>
-        <span style={{ fontSize: 20, fontWeight: 700, color: C.textPri }}>Bills</span>
+        <div>
+          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: '#6C6553', display: 'block', marginBottom: 4 }}>MONEY</span>
+          <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 28, fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1, color: '#191712', display: 'block' }}>
+            Bills &amp; recurring
+          </span>
+          <span style={{ fontSize: 12, color: '#6C6553', display: 'block', marginTop: 3 }}>
+            Scheduled payments · two dates per transaction
+          </span>
+        </div>
         <button
           onClick={() => setBillModal({ open: true, bill: null })}
           style={{
-            padding: '8px 18px', borderRadius: 9,
-            background: C.amber, border: 'none',
-            color: '#191712', fontSize: 13, fontWeight: 700,
-            cursor: 'pointer', fontFamily: 'inherit',
+            marginLeft: 'auto', height: 34, padding: '0 15px', borderRadius: 999,
+            background: '#F5D14E', border: 'none',
+            color: '#191712', fontSize: 12.5, fontWeight: 600,
+            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
+            boxShadow: '0 2px 0 rgba(25,23,18,0.14)',
           }}
         >
-          + Add bill
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          Add bill
         </button>
       </div>
 
