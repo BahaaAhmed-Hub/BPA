@@ -36,28 +36,6 @@ function badgeFontSize(word: string): number {
   return 5.5
 }
 
-function AxisLabel({ children }: { children: string }) {
-  return (
-    <div style={{
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      writingMode: 'vertical-rl', transform: 'rotate(180deg)',
-      fontSize: 10, fontWeight: 700, letterSpacing: '0.16em',
-      color: '#B5AC98', textTransform: 'uppercase', userSelect: 'none',
-    }}>{children}</div>
-  )
-}
-
-function ColumnLabel({ children }: { children: string }) {
-  return (
-    <div style={{
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      border: '1px solid #E8E1CE', borderRadius: 10, padding: '7px 0',
-      fontSize: 10, fontWeight: 700, letterSpacing: '0.16em',
-      color: '#9B9180', textTransform: 'uppercase', userSelect: 'none',
-    }}>{children}</div>
-  )
-}
-
 function QuadrantPanel({ spec, tasks, onOpen, onAction, groupBy }: {
   spec: QuadrantSpec
   tasks: Task[]
@@ -234,21 +212,11 @@ export function EisenhowerBoard({
   return (
     <div style={{
       display: 'grid',
-      gridTemplateColumns: '30px minmax(0, 1fr) minmax(0, 1fr)',
+      gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
       gap: 12, alignItems: 'stretch',
     }}>
-      {/* Column axis */}
-      <div />
-      <ColumnLabel>Urgent</ColumnLabel>
-      <ColumnLabel>Not urgent</ColumnLabel>
-
-      {/* Important row */}
-      <AxisLabel>Important</AxisLabel>
       <QuadrantPanel spec={urgentImportant} tasks={tasksFor('do')} onOpen={onOpen} onAction={handleAction} groupBy={groupBy} />
       <QuadrantPanel spec={notUrgentImportant} tasks={tasksFor('schedule')} onOpen={onOpen} onAction={handleAction} groupBy={groupBy} />
-
-      {/* Not important row */}
-      <AxisLabel>Not important</AxisLabel>
       <QuadrantPanel spec={urgentNotImportant} tasks={tasksFor('delegate')} onOpen={onOpen} onAction={handleAction} groupBy={groupBy} />
       <QuadrantPanel spec={notUrgentNotImportant} tasks={tasksFor('eliminate')} onOpen={onOpen} onAction={handleAction} groupBy={groupBy} />
     </div>

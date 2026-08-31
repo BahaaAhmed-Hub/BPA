@@ -809,23 +809,27 @@ function App() {
 
   return (
     <div style={{
-      minHeight: '100vh',
+      height: '100dvh',
+      overflow: 'hidden',
       background: '#F7F4EA',
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
       fontFamily: "'Instrument Sans', system-ui, sans-serif",
     }}>
+      {/* The shell owns the viewport: the nav stays put and only the module
+          below it scrolls. */}
       <div style={{
         width: '100%',
         maxWidth: 1560,
         display: 'flex',
         flexDirection: 'column',
-        minHeight: '100vh',
+        height: '100%',
+        minHeight: 0,
         background: '#F7F4EA',
       }}>
         <TopNav />
-        <main style={{ flex: 1, overflow: 'auto', background: '#F7F4EA' }}>
+        <main style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', background: '#F7F4EA' }}>
           <ActiveModule />
         </main>
       </div>

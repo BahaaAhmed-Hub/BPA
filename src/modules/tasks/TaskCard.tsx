@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { Trash2, Check, Clock, CalendarDays, Paperclip, Flame } from 'lucide-react'
@@ -13,6 +13,7 @@ import {
   initials, openLabel, resolveTaskVisuals,
 } from './taskVisuals'
 import { OverlaySelect } from './controls'
+import { SchedulePopover } from './SchedulePopover'
 
 const MEETING_KEYWORDS = ['meeting', 'call', 'sync', 'standup', 'stand-up', '1:1', 'interview', 'check-in', 'debrief', 'catchup', 'catch-up']
 const MEETING_EMOJIS   = ['📞', '💬', '🤝', '📅']
@@ -58,6 +59,16 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
   const { toggleComplete, deleteTask, updateTask, addTasksBatch, toggleUrgent } = useTaskStore()
   const [hovered, setHovered] = useState(false)
   const [showMeetingPopup, setShowMeetingPopup] = useState(false)
+  const [scheduleOpen, setScheduleOpen] = useState(false)
+  const scheduleRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!scheduleOpen) return
+    const h = (e: MouseEvent) => {
+      if (scheduleRef.current && !scheduleRef.current.contains(e.target as Node)) setScheduleOpen(false)
+    }
+    document.addEventListener('mousedown', h)
+    return () => document.removeEventListener('mousedown', h)
+  }, [scheduleOpen])
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id })
 
@@ -209,22 +220,27 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
           </SlotSelect>
         </div>
 
-        {/* Schedule */}
-        <div data-nm style={{ position: 'relative', width: SLOT, height: SLOT }}>
-          <div style={v.scheduled ? slotScheduled : slotEmpty}
-            title={v.scheduled ? `Scheduled ${v.scheduleLabel ?? ''}`.trim() : 'Not scheduled'}>
-            <CalendarDays size={13} strokeWidth={1.9} />
-          </div>
-          <input
-            data-nm type="time" value={task.plannedTime ?? ''}
-            onChange={e => updateTask(task.id, e.target.value
-              ? { plannedTime: e.target.value, duration: task.duration ?? 30 }
-              : { plannedTime: undefined })}
-            onClick={e => e.stopPropagation()}
+        {/* Schedule — our own picker, not the browser's spinner */}
+        <div ref={scheduleRef} data-nm style={{ position: 'relative', width: SLOT, height: SLOT }}>
+          <button
+            data-nm
+            onClick={e => { e.stopPropagation(); setScheduleOpen(o => !o) }}
             onPointerDown={e => e.stopPropagation()}
             onMouseDown={e => e.stopPropagation()}
-            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer', border: 'none', padding: 0 }}
-          />
+            title={v.scheduled ? `Scheduled ${v.scheduleLabel ?? ''}`.trim() : 'Not scheduled'}
+            style={{ ...(v.scheduled ? slotScheduled : slotEmpty), cursor: 'pointer', padding: 0 }}>
+            <CalendarDays size={13} strokeWidth={1.9} />
+          </button>
+          {scheduleOpen && (
+            <SchedulePopover
+              align="right"
+              date={task.dueDate}
+              start={task.plannedTime}
+              duration={task.duration}
+              onApply={patch => updateTask(task.id, patch)}
+              onClose={() => setScheduleOpen(false)}
+            />
+          )}
         </div>
 
         {/* Priority */}

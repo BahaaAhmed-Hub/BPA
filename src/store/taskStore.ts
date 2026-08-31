@@ -6,8 +6,38 @@ import { COMPANY_LABELS, QUADRANT_META, getAllUsers, loadDynamicCompanies } from
 import { saveTasksToDB, loadTasksFromDB } from '@/lib/dbSync'
 import type { TaskRow } from '@/lib/dbSync'
 
+/** Today in the viewer's own timezone. toISOString() reports UTC, which lands
+ *  on the wrong day either side of midnight for anyone not on it. */
+function todayKey(): string {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 function act(taskId: string, type: TaskActivity['type'], description: string): TaskActivity {
   return { id: crypto.randomUUID(), taskId, type, description, timestamp: new Date().toISOString() }
+}
+
+/** Which field an entry is about, ignoring the value it was set to. Typing a
+ *  title writes on every keystroke, and the log should read as one rename. */
+function fieldSignature(description: string): string {
+  return description.split(';').map(part => part.trim().split(/["→]/)[0].trim()).join('|')
+}
+
+/** Appends an entry — or folds it into the previous one when it is the same
+ *  field on the same task, still being edited. */
+const MERGE_WINDOW_MS = 90_000
+function pushActivity(activities: TaskActivity[], entry: TaskActivity): TaskActivity[] {
+  const last = activities[activities.length - 1]
+  if (
+    last &&
+    last.taskId === entry.taskId &&
+    last.type === entry.type &&
+    fieldSignature(last.description) === fieldSignature(entry.description) &&
+    new Date(entry.timestamp).getTime() - new Date(last.timestamp).getTime() < MERGE_WINDOW_MS
+  ) {
+    return [...activities.slice(0, -1), { ...last, description: entry.description, timestamp: entry.timestamp }]
+  }
+  return [...activities, entry]
 }
 
 function toRow(t: Task): TaskRow {
@@ -155,7 +185,7 @@ export const useTaskStore = create<TaskState>()(
           return {
             tasks: next,
             activities: desc.length
-              ? [...s.activities, act(id, 'field_updated', desc.join('; '))]
+              ? pushActivity(s.activities, act(id, 'field_updated', desc.join('; ')))
               : s.activities,
           }
         }),
@@ -272,7 +302,7 @@ export const useTaskStore = create<TaskState>()(
         set(s => {
           const task = s.tasks.find(t => t.id === id)
           const nowDone = !task?.completed
-          const today = new Date().toISOString().slice(0, 10)
+          const today = todayKey()
           const next: Task[] = s.tasks.map(t =>
             t.id === id ? {
               ...t,
@@ -291,7 +321,7 @@ export const useTaskStore = create<TaskState>()(
 
       setStatus: (id, status) =>
         set(s => {
-          const today = new Date().toISOString().slice(0, 10)
+          const today = todayKey()
           const next = s.tasks.map(t =>
             t.id === id ? {
               ...t,

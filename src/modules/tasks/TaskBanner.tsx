@@ -16,6 +16,12 @@ function startOfDay(d: Date): Date {
   const x = new Date(d); x.setHours(0, 0, 0, 0); return x
 }
 
+/** The day a date falls on where the user is. toISOString() reports UTC, so a
+ *  task created this evening east of Greenwich landed on tomorrow's bar. */
+function dayKey(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 function Stat({ label, value, sub, accent, icon: Icon, center }: {
   label: string
   value: string
@@ -86,12 +92,15 @@ export function TaskBanner({ tasks }: { tasks: Task[] }) {
     const days = Array.from({ length: 6 }, (_, i) => {
       const d = new Date(today)
       d.setDate(today.getDate() - (5 - i))
-      const iso = d.toISOString().slice(0, 10)
+      const iso = dayKey(d)
       return {
         iso,
         label: d.toLocaleDateString('en-GB', { weekday: 'short' }),
-        added: tasks.filter(t => t.createdAt.slice(0, 10) === iso).length,
-        closed: tasks.filter(t => t.completed && t.completedAt === iso).length,
+        added: tasks.filter(t => {
+          const at = new Date(t.createdAt)
+          return !Number.isNaN(at.getTime()) && dayKey(at) === iso
+        }).length,
+        closed: tasks.filter(t => t.completed && t.completedAt?.slice(0, 10) === iso).length,
         isToday: i === 5,
       }
     })

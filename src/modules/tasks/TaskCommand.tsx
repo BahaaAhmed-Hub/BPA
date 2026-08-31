@@ -18,7 +18,7 @@ import { scheduleTaskToCalendar } from '@/lib/aiScheduler'
 import { SmartDayPlanner } from './SmartDayPlanner'
 import { TaskListView } from './TaskListView'
 import { TaskBanner } from './TaskBanner'
-import { TASK_TYPE_ICON, TASK_TYPE_ORDER, isCarriedOver } from './taskVisuals'
+import { TASK_TYPE_ICON, TASK_TYPE_ORDER } from './taskVisuals'
 
 const QUADRANTS: Quadrant[] = ['do', 'schedule', 'delegate', 'eliminate']
 const TASKS_CONFIG_KEY = 'task-command-config'
@@ -146,9 +146,6 @@ export function TaskCommand() {
   }, [tasks, searchQuery, filters, allUsers, companies])
 
   const activeFilterCount = [filters.company, filters.type, filters.owner].filter(Boolean).length
-  const isFiltering = !!searchQuery.trim() || activeFilterCount > 0
-  const matchCount  = filteredTaskIds?.size ?? tasks.length
-
   function clearFilters() { setFilters({ company: '', type: '', owner: '' }); setSearchQuery('') }
 
   /** Create a blank task, then open it in the detail panel ready to name.
@@ -166,16 +163,6 @@ export function TaskCommand() {
       completed: false,
     } as Omit<Task, 'id' | 'createdAt'>)
   }
-  const active = tasks.filter(t => t.quadrant !== null && !t.completed)
-  const urgent = tasks.filter(t => t.quadrant === 'do' && !t.completed)
-  const carriedOver = tasks.filter(isCarriedOver)
-
-  // "Closed this week" = completed or done in the last 7 days
-  const closedThisWeek = useMemo(() => {
-    const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000
-    return allTasks.filter(t => t.completed && t.completedAt && new Date(t.completedAt).getTime() >= cutoff).length
-  }, [allTasks])
-
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null)
   const [modalTaskId,  setModalTaskId]  = useState<string | null>(null)
   const [showPlanner,  setShowPlanner]  = useState(false)
@@ -242,19 +229,7 @@ export function TaskCommand() {
         <TaskBanner tasks={tasks} />
       </div>
 
-      <div style={{ padding: '18px 26px 0', display: 'flex', alignItems: 'flex-end', gap: 20 }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-          <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 32, fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1, color: '#191712' }}>
-            {active.length} open {active.length === 1 ? 'task' : 'tasks'}
-          </span>
-          <span style={{ fontSize: 12, color: '#6C6553', paddingTop: 3 }}>
-            {urgent.length} urgent
-            {carriedOver.length > 0 ? ` · ${carriedOver.length} carried over` : ''}
-            {closedThisWeek > 0 ? ` · ${closedThisWeek} closed this week` : ''}
-            {isFiltering ? ` · ${matchCount} match${matchCount !== 1 ? 'es' : ''}` : ''}
-          </span>
-        </div>
-
+      <div style={{ padding: '18px 26px 14px', display: 'flex', alignItems: 'flex-end', gap: 20 }}>
         <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8, paddingBottom: 3 }}>
           {/* Filter button */}
           <div ref={filterRef} style={{ position: 'relative', flexShrink: 0 }}>
@@ -448,7 +423,7 @@ export function TaskCommand() {
             />
           </div>
           {modalTask && (
-            <div style={{ paddingRight: 28, paddingBottom: 28 }}>
+            <div style={{ paddingTop: 4, paddingRight: 28, paddingBottom: 28 }}>
               <TaskDetailPanel key={modalTask.id} task={modalTask} onClose={() => setModalTaskId(null)} />
             </div>
           )}
@@ -463,7 +438,7 @@ export function TaskCommand() {
             />
           </div>
           {modalTask && (
-            <div style={{ paddingRight: 28, paddingBottom: 28 }}>
+            <div style={{ paddingTop: 4, paddingRight: 28, paddingBottom: 28 }}>
               <TaskDetailPanel key={modalTask.id} task={modalTask} onClose={() => setModalTaskId(null)} />
             </div>
           )}
@@ -472,9 +447,7 @@ export function TaskCommand() {
         <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
           {/* 9F: the brain dump rail sits to the LEFT of the matrix */}
           <div style={{ display: 'flex', gap: 16, padding: '4px 28px 28px', alignItems: 'flex-start' }}>
-            {/* offset past the matrix's axis-label row, so the rail, the quadrants
-                and the detail panel share one top edge */}
-            <div style={{ paddingTop: 45 }}>
+            <div>
             <BrainDumpRail
               tasks={tasks.filter(t =>
                 t.quadrant === null && !t.completed && t.status !== 'done' && t.status !== 'cancelled' &&
@@ -487,7 +460,7 @@ export function TaskCommand() {
               <EisenhowerBoard onOpen={setModalTaskId} hideCompleted={hideCompleted} groupBy={groupBy} allGroupsExpanded={allGroupsExpanded} filteredTaskIds={filteredTaskIds} onOpenPlanner={() => setShowPlanner(true)} />
             </div>
             {modalTask && (
-              <div style={{ paddingTop: 45 }}>
+              <div>
                 <TaskDetailPanel key={modalTask.id} task={modalTask} onClose={() => setModalTaskId(null)} />
               </div>
             )}

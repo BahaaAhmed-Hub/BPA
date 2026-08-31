@@ -191,7 +191,7 @@ export function BrainDumpRail({ tasks, onOpen }: {
 
   return (
     <div style={{
-      width: 240, flexShrink: 0, alignSelf: 'start',
+      width: 360, flexShrink: 0, alignSelf: 'start',
       background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 14,
       display: 'flex', flexDirection: 'column',
     }}>

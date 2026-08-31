@@ -7,7 +7,7 @@ import {
   ChevronDown, ChevronUp, User, Clock, Building2, Flame,
   Brain, Bell, Palette, Link, X, RefreshCw, Eye, EyeOff, Shield, Pencil,
   Hash, CheckSquare, Mail, HardDrive, CalendarDays, Swords, Wand2, CreditCard, Sparkles,
-  ArrowUpRight, Download, Database,
+  ArrowUpRight, Download, Database, GripVertical,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { connectAdditionalGoogleAccount, signOut as googleSignOut, disconnectGoogleAccount } from '@/lib/google'
@@ -110,7 +110,11 @@ const WORK_DAYS    = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
 const C_COLORS     = ['#7F77DD','#7F77DD','#1D9E75','#E05252','#888780','#5B9BD5','#E0944A']
 const BUFFER_STEPS = [0,15,30,45,60]
 const PHYS_STEPS   = [0,30,60,90]
-const HABIT_EMOJIS = ['🎯','💪','📚','🏃','💧','🧘','🍎','💤','🌿','✍️','🧠','🔥','🎨','🏋️','🎵']
+const HABIT_EMOJIS = [
+  '🎯','💪','📚','🏃','💧','🧘','🍎','💤','🌿','✍️','🧠','🔥','🎨','🏋️','🎵',
+  '🚴','🏊','🥗','☕','🌅','🛏️','📝','📵','🧹','💊','🦷','🚶','🧴','🌞','🙏',
+  '💰','📈','🗣️','🌍','🐕','👨‍👩‍👧','📞','🎸','♟️','🧊','🥤','🚭','⏱️','📔','🪴',
+]
 const FREQ_OPTS    = ['daily','weekdays','weekly'] as const
 
 const DEFAULTS: AppSettings = {
@@ -899,14 +903,35 @@ function SettingsHabitForm({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 12, padding: 14, background: '#FAF7EC', borderRadius: 10, border: '1px solid #E8E1CE' }}>
-      {/* Emoji picker */}
-      <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-        {HABIT_EMOJIS.map(e => (
-          <button key={e} onClick={() => update({ emoji: e })}
-            style={{ fontSize: 16, width: 34, height: 34, borderRadius: 7, cursor: 'pointer', background: s.emoji === e ? 'rgba(245,209,78,0.12)' : 'transparent', border: `1px solid ${s.emoji === e ? '#F5D14E' : '#E8E1CE'}` }}>
-            {e}
-          </button>
-        ))}
+      {/* Picture — a wide palette, plus anything you care to type */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+          <span style={{
+            width: 52, height: 52, borderRadius: 13, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 27, background: '#FFFFFF', border: '1px solid #E8E1CE',
+          }}>{s.emoji || '🎯'}</span>
+          <input
+            value={s.emoji}
+            onChange={e => update({ emoji: [...e.target.value].slice(-2).join('') })}
+            placeholder="type"
+            title="Type or paste any emoji"
+            style={{
+              width: 52, boxSizing: 'border-box', textAlign: 'center', background: '#FFFFFF',
+              border: '1px solid #E8E1CE', borderRadius: 7, padding: '4px 0', fontSize: 13,
+              color: '#191712', outline: 'none',
+            }} />
+        </div>
+        <div style={{
+          flex: 1, minWidth: 0, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(32px, 1fr))',
+          gap: 5, maxHeight: 110, overflowY: 'auto',
+        }}>
+          {HABIT_EMOJIS.map(e => (
+            <button key={e} onClick={() => update({ emoji: e })}
+              style={{ fontSize: 16, height: 32, borderRadius: 7, cursor: 'pointer', padding: 0, background: s.emoji === e ? 'rgba(245,209,78,0.12)' : '#FFFFFF', border: `1px solid ${s.emoji === e ? '#F5D14E' : '#E8E1CE'}` }}>
+              {e}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Name + frequency */}
@@ -1140,6 +1165,10 @@ function TaskStatusesSection() {
     setEditIdx(null)
   }
 
+  // Drag a row onto another to reorder — the order here is the column order
+  const dragIdx = useRef<number | null>(null)
+  const [overIdx, setOverIdx] = useState<number | null>(null)
+
   function resetDefaults() {
     persist(DEFAULT_STATUSES)
     setEditIdx(null)
@@ -1199,27 +1228,31 @@ function TaskStatusesSection() {
 
       {statuses.map((s, i) => (
         <div key={s.id + i}>
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 10,
-            padding: '9px 0', borderBottom: '1px solid #E8E1CE',
-          }}>
+          <div
+            draggable
+            onDragStart={e => { dragIdx.current = i; e.dataTransfer.effectAllowed = 'move' }}
+            onDragOver={e => { e.preventDefault(); if (dragIdx.current !== null && overIdx !== i) setOverIdx(i) }}
+            onDragLeave={() => setOverIdx(o => (o === i ? null : o))}
+            onDrop={e => {
+              e.preventDefault()
+              if (dragIdx.current !== null && dragIdx.current !== i) move(dragIdx.current, i)
+              dragIdx.current = null
+              setOverIdx(null)
+            }}
+            onDragEnd={() => { dragIdx.current = null; setOverIdx(null) }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 10,
+              padding: '9px 0', borderBottom: '1px solid #E8E1CE',
+              background: overIdx === i ? 'rgba(245,209,78,0.10)' : 'transparent',
+            }}>
+            <span title="Drag to reorder" style={{ display: 'flex', color: '#C9C0A8', cursor: 'grab', flexShrink: 0 }}>
+              <GripVertical size={14} />
+            </span>
             <div style={{ width: 10, height: 10, borderRadius: '50%', background: s.color, flexShrink: 0 }} />
             <span style={{ flex: 1, fontSize: 13.5, color: '#191712' }}>{s.label}</span>
             <span style={{ fontSize: 10.5, color: '#6C6553', background: '#FAF7EC', padding: '2px 7px', borderRadius: 4, border: '1px solid #E8E1CE' }}>
               {s.id}
             </span>
-            {/* Order here is the order of the columns on the board */}
-            <button onClick={() => move(i, i - 1)} title="Move up" disabled={i === 0}
-              style={{ background: 'none', border: 'none', padding: 2, display: 'flex',
-                cursor: i === 0 ? 'default' : 'pointer', color: i === 0 ? '#E0D6BC' : '#6C6553' }}>
-              <ChevronUp size={14} />
-            </button>
-            <button onClick={() => move(i, i + 1)} title="Move down" disabled={i === statuses.length - 1}
-              style={{ background: 'none', border: 'none', padding: 2, display: 'flex',
-                cursor: i === statuses.length - 1 ? 'default' : 'pointer',
-                color: i === statuses.length - 1 ? '#E0D6BC' : '#6C6553' }}>
-              <ChevronDown size={14} />
-            </button>
             <button onClick={() => startEdit(i)} title="Edit"
               style={{ background: 'none', border: 'none', cursor: 'pointer', color: isEditingRow(i) ? '#F5D14E' : '#6C6553', padding: 4 }}>
               <Pencil size={13} />

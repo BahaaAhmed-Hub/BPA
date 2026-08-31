@@ -1,20 +1,20 @@
 // ─── 9D task detail panel ────────────────────────────────────────────────────
 // A docked right-hand panel, not a centred modal: company pill and controls on
-// top, then the title, one row of pickers, the attribute chips, checklist,
+// top, then the title, one row of pickers, the attribute chips, subtasks,
 // notes, attachments and the activity log, over a Cancel / Save footer.
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
-  X, Maximize2, ChevronDown, ChevronLeft, ChevronRight,
+  X, Maximize2, ChevronDown, ChevronRight,
   Plus, Link2, Folder, FileText, Image as ImageIcon, CalendarDays, BarChart3, History, Trash2, Check,
 } from 'lucide-react'
 import type { Task, TaskType, Priority, ChecklistStep, TaskAttachment } from '@/types'
 import { PRIORITY_META, TASK_TYPE_META, getAllUsers, loadVisibleCompanies } from '@/types'
 import { useTaskStore } from '@/store/taskStore'
 import { TASK_TYPE_ORDER, initials, resolveTaskVisuals } from './taskVisuals'
+import { SchedulePopover } from './SchedulePopover'
 
 const PRIORITIES: Priority[] = ['P0', 'P1', 'P2', 'P3']
-const WEEKDAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
 
 function toISODate(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
@@ -29,12 +29,6 @@ function formatDateLabel(iso?: string): string {
   const day = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
   if (iso === today) return `Today, ${day}`
   return `${d.toLocaleDateString('en-GB', { weekday: 'short' })}, ${day}`
-}
-
-function addMinutes(hhmm: string, mins: number): string {
-  const [h, m] = hhmm.split(':').map(Number)
-  const total = (h * 60 + m + mins) % 1440
-  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`
 }
 
 function formatBytes(n: number): string {
@@ -81,122 +75,6 @@ const SECTION_LABEL: React.CSSProperties = {
 }
 
 /** Month grid + start/end, as the artboard's date popover. */
-function DatePopover({ date, start, duration, onApply, onClose }: {
-  date?: string
-  start?: string
-  duration?: number
-  onApply: (patch: { dueDate?: string; plannedTime?: string; duration?: number }) => void
-  onClose: () => void
-}) {
-  const initial = date ? new Date(date + 'T00:00:00') : new Date()
-  const [view, setView] = useState(new Date(initial.getFullYear(), initial.getMonth(), 1))
-  const [picked, setPicked] = useState<string | undefined>(date)
-  const [from, setFrom] = useState(start ?? '09:00')
-  const [to, setTo] = useState(addMinutes(start ?? '09:00', duration ?? 30))
-  // End follows the start by whatever gap is currently showing — 30 minutes to
-  // begin with, or whatever the user last set the end to.
-  const gapRef = useRef(duration ?? 30)
-
-  function changeStart(v: string) {
-    setFrom(v)
-    setTo(addMinutes(v, gapRef.current))
-  }
-
-  function changeEnd(v: string) {
-    setTo(v)
-    const [fh, fm] = from.split(':').map(Number)
-    const [th, tm] = v.split(':').map(Number)
-    const gap = (th * 60 + tm) - (fh * 60 + fm)
-    if (gap > 0) gapRef.current = gap
-  }
-
-  const cells = useMemo(() => {
-    const first = new Date(view.getFullYear(), view.getMonth(), 1)
-    // Monday-first, like the artboard
-    const lead = (first.getDay() + 6) % 7
-    const startCell = new Date(first)
-    startCell.setDate(first.getDate() - lead)
-    return Array.from({ length: 42 }, (_, i) => {
-      const d = new Date(startCell)
-      d.setDate(startCell.getDate() + i)
-      return d
-    })
-  }, [view])
-
-  const minutes = (() => {
-    const [fh, fm] = from.split(':').map(Number)
-    const [th, tm] = to.split(':').map(Number)
-    return Math.max(0, (th * 60 + tm) - (fh * 60 + fm))
-  })()
-
-  return (
-    <div style={{
-      position: 'absolute', top: 'calc(100% + 8px)', left: 0, zIndex: 80, width: 292,
-      background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 14, padding: 14,
-      boxShadow: '0 24px 56px -22px rgba(25,23,18,.45)',
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', marginBottom: 10 }}>
-        <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: '#191712' }}>
-          {view.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}
-        </span>
-        <button onClick={() => setView(v => new Date(v.getFullYear(), v.getMonth() - 1, 1))} style={{ ...ICON_BTN, width: 22, height: 22 }}>
-          <ChevronLeft size={14} />
-        </button>
-        <button onClick={() => setView(v => new Date(v.getFullYear(), v.getMonth() + 1, 1))} style={{ ...ICON_BTN, width: 22, height: 22 }}>
-          <ChevronRight size={14} />
-        </button>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2 }}>
-        {WEEKDAYS.map((w, i) => (
-          <span key={i} style={{ textAlign: 'center', fontSize: 10.5, fontWeight: 600, color: '#9B9180', padding: '2px 0 4px' }}>{w}</span>
-        ))}
-        {cells.map(d => {
-          const iso = toISODate(d)
-          const outside = d.getMonth() !== view.getMonth()
-          const on = iso === picked
-          return (
-            <button key={iso} onClick={() => setPicked(iso)} style={{
-              height: 28, borderRadius: 7, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
-              background: on ? '#191712' : 'transparent',
-              color: on ? '#FFFFFF' : outside ? '#CFC6B0' : '#191712',
-              fontSize: 12, fontWeight: on ? 700 : 500,
-            }}>{d.getDate()}</button>
-          )
-        })}
-      </div>
-
-      <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
-        <label style={{ flex: 1, minWidth: 0 }}>
-          <span style={{ display: 'block', fontSize: 11, color: '#6C6553', marginBottom: 4 }}>Start</span>
-          <input type="time" value={from} onChange={e => changeStart(e.target.value)} style={{
-            width: '100%', boxSizing: 'border-box', background: '#FAF7EC', border: '1px solid #E8E1CE',
-            borderRadius: 8, padding: '7px 9px', fontSize: 12.5, color: '#191712', outline: 'none', fontFamily: 'inherit',
-          }} />
-        </label>
-        <label style={{ flex: 1, minWidth: 0 }}>
-          <span style={{ display: 'block', fontSize: 11, color: '#6C6553', marginBottom: 4 }}>End</span>
-          <input type="time" value={to} onChange={e => changeEnd(e.target.value)} style={{
-            width: '100%', boxSizing: 'border-box', background: '#FAF7EC', border: '1px solid #E8E1CE',
-            borderRadius: 8, padding: '7px 9px', fontSize: 12.5, color: '#191712', outline: 'none', fontFamily: 'inherit',
-          }} />
-        </label>
-      </div>
-
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 12 }}>
-        <span style={{ flex: 1, fontSize: 11.5, color: '#9B9180' }}>
-          {minutes > 0 ? `${minutes}m block at ${from}` : 'End must follow start'}
-        </span>
-        <button
-          onClick={() => { onApply({ dueDate: picked, plannedTime: from, duration: minutes || undefined }); onClose() }}
-          style={{
-            height: 30, padding: '0 14px', borderRadius: 8, border: 'none', cursor: 'pointer',
-            background: '#F5D14E', color: '#191712', fontSize: 12.5, fontWeight: 600, fontFamily: 'inherit',
-          }}>Set block</button>
-      </div>
-    </div>
-  )
-}
 
 // ─── Panel ───────────────────────────────────────────────────────────────────
 
@@ -230,7 +108,6 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
   const owner = draft.owner ? allUsers.find(u => u.id === draft.owner) : undefined
 
   const checklist = draft.checklist ?? []
-  const doneSteps = checklist.filter(s => s.done).length
   const attachments = draft.attachments ?? []
 
   const taskActs = useMemo(
@@ -353,7 +230,7 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
               <ChevronDown size={13} style={{ flexShrink: 0, color: '#9B9180' }} />
             </button>
             {datePickerOpen && (
-              <DatePopover
+              <SchedulePopover
                 date={draft.dueDate} start={draft.plannedTime} duration={draft.duration}
                 onApply={patch}
                 onClose={() => setDatePickerOpen(false)}
@@ -428,9 +305,9 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
           </button>
         </div>
 
-        {/* Checklist */}
+        {/* Subtasks */}
         <div style={{ marginTop: 18 }}>
-          <p style={SECTION_LABEL}>Checklist · {doneSteps} of {checklist.length}</p>
+          <p style={SECTION_LABEL}>Subtasks</p>
           <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 2 }}>
             {checklist.map((s: ChecklistStep) => (
               <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '5px 0' }}>
@@ -445,7 +322,7 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
                   textDecoration: s.done ? 'line-through' : 'none',
                 }}>{s.text}</span>
                 <button onClick={() => patch({ checklist: checklist.filter(x => x.id !== s.id) })}
-                  title="Remove step" style={{ ...ICON_BTN, width: 20, height: 20, color: '#C9C0A8' }}>
+                  title="Remove subtask" style={{ ...ICON_BTN, width: 20, height: 20, color: '#C9C0A8' }}>
                   <X size={12} />
                 </button>
               </div>
@@ -457,7 +334,7 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
                 onChange={e => setNewStep(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') addStep() }}
                 onBlur={addStep}
-                placeholder="Add step"
+                placeholder="Add a subtask"
                 style={{
                   flex: 1, border: 'none', outline: 'none', background: 'transparent',
                   fontSize: 12.5, color: '#191712', fontFamily: 'inherit', padding: 0,
