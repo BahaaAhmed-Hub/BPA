@@ -38,13 +38,15 @@ Typography: `Outfit` headings, system-ui body. Section titles: 28px Outfit 600, 
 | Nav group | Section id | Title shown | Component rendered |
 |---|---|---|---|
 | YOU | `profile` | Profile | `ProfileSection` |
+| YOU | `billing` | Billing | `BillingSection` (plan tile, payment, invoices) |
 | CONNECTED | `accounts` | Accounts & companies | `CompaniesSection` (company cards + people) |
-| CONNECTED | `professor` | AI | `ProfessorSection` |
+| CONNECTED | `professor` | AI | `ProfessorSection` (model, autonomy, toggles, tone) |
 | CONNECTED | `schedule` | Schedule rules | `ScheduleSection` |
-| CONNECTED | `blocking` | Integrations | `AccountsSection` (Google OAuth) + `BlockingRulesSection` |
+| CONNECTED | `blocking` | Integrations | `IntegrationsSection` (Notion/Asana/Trello + Google OAuth + calendar sync) |
 | WORK | `tasks` | Tasks | `TaskStatusesSection` |
 | WORK | `habits` | Habits | `HabitsSection` |
-| SYSTEM | `notifications` | Automation | `AutomationSection` (4 rule cards + Reminders) |
+| SYSTEM | `automation` | Automation | `AutomationSection` (7 rule cards) |
+| SYSTEM | `notifications` | Notifications | `NotificationsMatrixSection` (Push/Mail/Digest per event + quiet hours) |
 | SYSTEM | `appearance` | Appearance | `AppearanceSection` |
 | SYSTEM | `behavioral` | Behavioral OS | `BehavioralSection` |
 | SYSTEM | `companies` | Data & privacy | `DataPrivacySection` |
@@ -55,10 +57,13 @@ Typography: `Outfit` headings, system-ui body. Section titles: 28px Outfit 600, 
 |---|---|---|
 | 9A Task card | ✅ Done | 3-row layout, company dot, owner initials badge, daysOpen() |
 | 10B Habit detail panel | ✅ Done | 272px side panel, heatmap, stats, cadence |
-| 11A Settings profile page | ✅ Done | Outfit 28px title, SETTINGS eyebrow, YOU/CONNECTED/WORK/SYSTEM nav |
+| 11A Profile + Billing | ✅ Done | Profile section + BillingSection with plan/invoices |
 | 11B Accounts & companies | ✅ Done | CompaniesSection mapped to `accounts` id |
-| 11C Tasks settings | ✅ Done | `TaskStatusesSection` |
-| 11F Automation | ✅ Done | `AutomationSection` with 4 rule cards |
+| 11B AI settings | ✅ Done | ProfessorSection with model picker, autonomy, tone |
+| 11C Tasks + Habits | ✅ Done | TaskStatusesSection + HabitsSection |
+| 11D Integrations | ✅ Done | IntegrationsSection with Notion/Asana/Trello/Apple Notes |
+| 11F Automation | ✅ Done | AutomationSection with 7 rule cards + run log |
+| 11F Notifications | ✅ Done | NotificationsMatrixSection Push/Mail/Digest matrix |
 | 11G Finance settings | ✅ Done | FinanceSection with envelope/figures/dates fields |
 | 20E Envelope drill-down | ✅ Done | 520px right overlay, period selector, tx flags |
 
@@ -67,6 +72,9 @@ Typography: `Outfit` headings, system-ui body. Section titles: 28px Outfit 600, 
 2. Draft replies for NEEDS YOU mail · WHEN a thread is marked needs-you and sits over 4 hours
 3. Block focus time for P0 tasks · WHEN a P0 task has no calendar block by 09:00
 4. Distribute the dump · WHEN the brain dump passes 12 tasks
+5. Roll unfinished tasks forward · WHEN a scheduled task ends the day untouched
+6. Archive newsletters · WHEN a thread is promotional and nobody replied in 3 days
+7. Close the week · WHEN Sunday 20:00, if the review has not been opened
 
 ## Common Patterns
 ```tsx
