@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import { useFinanceStore } from '../financeStore'
 import type { Transaction, Category, Account } from '../types'
 
@@ -125,7 +125,128 @@ function TxModal({
   )
 }
 
-// ── Mini Calendar ─────────────────────────────────────────────────────────────
+// ── Money Calendar (16D design) ───────────────────────────────────────────────
+// Each cell shows: day number + net daily amount (olive=income, rust=expense, neutral=zero)
+
+function MoneyCalendar({
+  year, month,
+  selectedDay,
+  transactions,
+  onSelectDay,
+  onPrevMonth,
+  onNextMonth,
+}: {
+  year: number
+  month: number
+  selectedDay: string | null
+  transactions: Transaction[]
+  onSelectDay: (d: string) => void
+  onPrevMonth: () => void
+  onNextMonth: () => void
+}) {
+  const today = new Date()
+  const todayStr = today.toISOString().slice(0, 10)
+
+  const firstDay = new Date(year, month, 1).getDay()
+  const daysInMonth = new Date(year, month + 1, 0).getDate()
+  const monthPrefix = `${year}-${String(month + 1).padStart(2,'0')}`
+
+  // Build per-day net map
+  const dayNetMap = new Map<string, number>()
+  const dayTxMap  = new Map<string, string[]>() // dateStr → payee names
+  transactions.forEach(tx => {
+    if (!tx.date.startsWith(monthPrefix)) return
+    const prev = dayNetMap.get(tx.date) ?? 0
+    const delta = tx.type === 'income' ? Math.abs(tx.amount) : -Math.abs(tx.amount)
+    dayNetMap.set(tx.date, prev + delta)
+    const payees = dayTxMap.get(tx.date) ?? []
+    if (tx.payee?.trim()) payees.push(tx.payee.trim())
+    dayTxMap.set(tx.date, payees)
+  })
+
+  const cells: (number | null)[] = []
+  for (let i = 0; i < firstDay; i++) cells.push(null)
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d)
+  while (cells.length % 7 !== 0) cells.push(null)
+
+  // Monthly totals
+  const monthOut = transactions.filter(t => t.date.startsWith(monthPrefix) && t.type === 'expense').reduce((s, t) => s + Math.abs(t.amount), 0)
+  const monthIn  = transactions.filter(t => t.date.startsWith(monthPrefix) && t.type === 'income').reduce((s, t) => s + Math.abs(t.amount), 0)
+
+  return (
+    <div style={{ userSelect: 'none' as const }}>
+      {/* Month nav + totals */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+        <button onClick={onPrevMonth} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6C6553', fontSize: 16, padding: '0 4px', lineHeight: 1 }}>‹</button>
+        <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 16, fontWeight: 600, color: '#191712', letterSpacing: '-0.02em' }}>
+          {MONTH_NAMES[month]} {year}
+        </span>
+        <button onClick={onNextMonth} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6C6553', fontSize: 16, padding: '0 4px', lineHeight: 1 }}>›</button>
+        <span style={{ marginLeft: 'auto', fontSize: 11, color: '#6C6553', display: 'flex', gap: 12 }}>
+          <span>Out <b style={{ fontFamily: 'Outfit, sans-serif', color: '#B4523A', fontVariantNumeric: 'tabular-nums' }}>
+            {monthOut > 0 ? `EGP ${monthOut.toLocaleString('en-US')}` : '–'}
+          </b></span>
+          <span>In <b style={{ fontFamily: 'Outfit, sans-serif', color: '#5F7038', fontVariantNumeric: 'tabular-nums' }}>
+            {monthIn > 0 ? `EGP ${monthIn.toLocaleString('en-US')}` : '–'}
+          </b></span>
+        </span>
+      </div>
+
+      {/* Calendar grid */}
+      <div style={{ border: '1px solid #E8E1CE', borderRight: 'none', borderBottom: 'none', borderRadius: 14, overflow: 'hidden' }}>
+        {/* Day headers */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)' }}>
+          {['SAT','SUN','MON','TUE','WED','THU','FRI'].map(d => (
+            <div key={d} style={{ padding: '7px', fontSize: 10.5, fontWeight: 700, letterSpacing: '0.08em', color: '#6C6553', borderRight: '1px solid #EFEADB', borderBottom: '1px solid #E8E1CE', boxSizing: 'border-box' as const }}>{d}</div>
+          ))}
+        </div>
+        {/* Cells grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)' }}>
+          {cells.map((day, i) => {
+            if (!day) return (
+              <div key={i} style={{ borderRight: '1px solid #EFEADB', borderBottom: '1px solid #EFEADB', minHeight: 72, boxSizing: 'border-box' as const, background: '#FAF7EC' }} />
+            )
+            const dateStr = `${year}-${String(month + 1).padStart(2,'0')}-${String(day).padStart(2,'0')}`
+            const isToday    = dateStr === todayStr
+            const isSelected = dateStr === selectedDay
+            const net        = dayNetMap.get(dateStr) ?? 0
+            const payees     = dayTxMap.get(dateStr) ?? []
+            const netColor   = net > 0 ? '#5F7038' : net < 0 ? '#B4523A' : '#9B9180'
+            const netSign    = net > 0 ? '+' : ''
+
+            return (
+              <div
+                key={i}
+                onClick={() => onSelectDay(isSelected ? '' : dateStr)}
+                style={{
+                  borderRight: '1px solid #EFEADB', borderBottom: '1px solid #EFEADB',
+                  padding: '6px 7px', display: 'flex', flexDirection: 'column', gap: 3,
+                  minHeight: 72, minWidth: 0, overflow: 'hidden', boxSizing: 'border-box' as const,
+                  background: isSelected ? '#FAF5D6' : isToday ? '#FDF8E7' : 'transparent',
+                  cursor: 'pointer',
+                }}
+              >
+                <span style={{ fontSize: 11.5, fontWeight: isToday ? 700 : 500, color: isToday ? '#191712' : '#4A4438' }}>
+                  {day}
+                </span>
+                {net !== 0 && (
+                  <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 11.5, fontWeight: 600, color: netColor, fontVariantNumeric: 'tabular-nums' }}>
+                    {netSign}{net.toLocaleString('en-US')}
+                  </span>
+                )}
+                {payees.slice(0, 2).map((p, pi) => (
+                  <span key={pi} style={{ fontSize: 9.5, color: '#6C6553', whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' }}>{p}</span>
+                ))}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Legacy Mini Calendar (kept for potential re-use) ──────────────────────────
 
 function MiniCalendar({
   year, month,
@@ -225,8 +346,6 @@ export function TodayScreen() {
     .filter(tx => tx.date.startsWith(monthPrefix))
     .sort((a, b) => a.date.localeCompare(b.date))
 
-  const txDates = useMemo(() => new Set(transactions.map(tx => tx.date)), [transactions])
-
   const selectedDayTx = selectedDay
     ? transactions
         .filter(tx => tx.date === selectedDay)
@@ -319,11 +438,11 @@ export function TodayScreen() {
         width: 340, flexShrink: 0, borderRight: `1px solid ${C.border}`,
         padding: '20px 24px', overflowY: 'auto',
       }}>
-        <MiniCalendar
+        <MoneyCalendar
           year={viewYear}
           month={viewMonth}
           selectedDay={selectedDay}
-          txDates={txDates}
+          transactions={transactions}
           onSelectDay={setSelectedDay}
           onPrevMonth={prevMonth}
           onNextMonth={nextMonth}
