@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { Trash2, Check, Clock, CalendarDays, Paperclip, GripVertical } from 'lucide-react'
+import { Trash2, Check, Clock, CalendarDays, Paperclip } from 'lucide-react'
 import type { Task, TaskType, Priority } from '@/types'
 import { TASK_TYPE_META, getAllUsers } from '@/types'
 import { useTaskStore } from '@/store/taskStore'
@@ -72,6 +72,8 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
   return (
     <div
       ref={setNodeRef}
+      {...listeners}
+      {...attributes}
       onClick={handleCardClick}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
@@ -136,6 +138,9 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
         <div style={{
           display: 'flex', alignItems: 'center', gap: 11, margin: '5px 0 0 25px',
           fontSize: 11.5, color: '#9B9180', minWidth: 0,
+          // a narrow column (panel open) clips the trailing meta rather than
+          // letting it run under the attribute rail
+          overflow: 'hidden', whiteSpace: 'nowrap',
         }}>
           {attachmentCount > 0 && (
             <span style={{ display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
@@ -152,6 +157,13 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
               <CalendarDays size={11} />
               {task.plannedTime ?? new Date(task.dueDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
             </span>
+          )}
+          <span style={{ flex: 1 }} />
+          {hovered && (
+            <button data-nm onClick={() => deleteTask(task.id)} title="Delete task"
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#C9C0A8', padding: 0, display: 'flex', flexShrink: 0 }}>
+              <Trash2 size={12} strokeWidth={2} />
+            </button>
           )}
         </div>
       </div>
@@ -208,20 +220,6 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
           </SlotSelect>
         </div>
       </div>
-
-      {/* Drag handle + delete, revealed on hover so the card stays quiet */}
-      {hovered && (
-        <div data-nm style={{ position: 'absolute', top: 6, right: 6, display: 'flex', alignItems: 'center', gap: 2 }}>
-          <span {...listeners} {...attributes} title="Drag"
-            style={{ cursor: 'grab', color: '#C9C0A8', display: 'flex', padding: 2 }}>
-            <GripVertical size={12} strokeWidth={2} />
-          </span>
-          <button data-nm onClick={() => deleteTask(task.id)} title="Delete task"
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#C9C0A8', padding: 2, display: 'flex' }}>
-            <Trash2 size={11} strokeWidth={2} />
-          </button>
-        </div>
-      )}
 
       {showMeetingPopup && (
         <MeetingFollowUpPopup

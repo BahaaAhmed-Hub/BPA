@@ -136,7 +136,7 @@ function KanbanColumnComp({ column, onOpen, onColDragStart, onColDragOver, onCol
   }
 
   return (
-    <div style={{ flex: '0 0 268px', display: 'flex', flexDirection: 'column', minHeight: 0 }}
+    <div style={{ flex: '1 1 0', minWidth: 208, maxWidth: 300, display: 'flex', flexDirection: 'column', minHeight: 0 }}
       onDragOver={onColDragOver}
       onDrop={() => onColDrop(column.id)}
     >
