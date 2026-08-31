@@ -6,7 +6,7 @@ import {
 } from '@dnd-kit/core'
 import { sortableKeyboardCoordinates } from '@dnd-kit/sortable'
 import { EisenhowerBoard } from './EisenhowerBoard'
-import { UndefinedTasksPanel } from './UndefinedTasksPanel'
+import { BrainDumpRail } from './BrainDumpRail'
 import { KanbanBoard } from './KanbanBoard'
 import { TaskDetailModal } from './TaskDetailModal'
 import { TaskCard } from './TaskCard'
@@ -448,11 +448,18 @@ export function TaskCommand() {
         />
       ) : (
         <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-          <div style={{ display: 'flex', gap: 14, padding: '18px 28px', alignItems: 'flex-start' }}>
+          {/* 9F: the brain dump rail sits to the LEFT of the matrix */}
+          <div style={{ display: 'flex', gap: 16, padding: '4px 28px 28px', alignItems: 'flex-start' }}>
+            <BrainDumpRail
+              tasks={tasks.filter(t =>
+                t.quadrant === null && !t.completed && t.status !== 'done' && t.status !== 'cancelled' &&
+                (!filteredTaskIds || filteredTaskIds.has(t.id))
+              )}
+              onOpen={setModalTaskId}
+            />
             <div style={{ flex: 1, minWidth: 0 }}>
-              <EisenhowerBoard onOpen={setModalTaskId} hideCompleted={hideCompleted} groupBy={groupBy} allGroupsExpanded={allGroupsExpanded} filteredTaskIds={filteredTaskIds} />
+              <EisenhowerBoard onOpen={setModalTaskId} hideCompleted={hideCompleted} groupBy={groupBy} allGroupsExpanded={allGroupsExpanded} filteredTaskIds={filteredTaskIds} onOpenPlanner={() => setShowPlanner(true)} />
             </div>
-            <UndefinedTasksPanel onOpen={setModalTaskId} hideCompleted={hideCompleted} groupBy={groupBy} allGroupsExpanded={allGroupsExpanded} filteredTaskIds={filteredTaskIds} />
           </div>
 
           <DragOverlay>

@@ -2,7 +2,7 @@
 // One line per task: checkbox, title, company, meta — then the same four
 // attributes the 9B card carries, laid out horizontally.
 
-import { Check, Paperclip } from 'lucide-react'
+import { Check, Paperclip, CalendarDays } from 'lucide-react'
 import type { Task } from '@/types'
 import { PRIORITY_META } from '@/types'
 import { useTaskStore } from '@/store/taskStore'
@@ -75,11 +75,10 @@ export function TaskRow({ task, onOpen, dense }: {
       {/* Attributes, in the 9B slot order */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0, color: '#9B9180' }}>
         <TypeIcon size={14} strokeWidth={1.9} />
-        <span title={v.scheduled ? 'Scheduled' : 'Not scheduled'} style={{
-          width: 15, height: 15, borderRadius: 4, boxSizing: 'border-box',
-          border: v.scheduled ? '1.5px solid #5F7038' : '1.5px dashed #D8CFB8',
-          background: v.scheduled ? 'rgba(95,112,56,0.12)' : 'transparent',
-        }} />
+        <span title={v.scheduled ? 'Scheduled' : 'Not scheduled'}
+          style={{ display: 'flex', color: v.scheduled ? '#5F7038' : '#D8CFB8' }}>
+          <CalendarDays size={14} strokeWidth={1.9} />
+        </span>
         {task.priority && (
           <span style={{ fontSize: 11.5, fontWeight: 700, color: PRIORITY_META[task.priority].color }}>
             {task.priority}
