@@ -947,10 +947,9 @@ interface SettingsHabitFormState {
 }
 
 function SettingsHabitForm({
-  initial, colors, onSave, onCancel, saveLabel = 'Add Habit',
+  initial, onSave, onCancel, saveLabel = 'Add Habit',
 }: {
   initial: SettingsHabitFormState
-  colors: string[]
   onSave: (s: SettingsHabitFormState) => void
   onCancel: () => void
   saveLabel?: string
@@ -964,15 +963,6 @@ function SettingsHabitForm({
     display: 'block', fontSize: 10, fontWeight: 700, letterSpacing: '0.12em',
     color: '#6C6553', textTransform: 'uppercase', marginBottom: 7,
   }
-  const SEG = (on: boolean): React.CSSProperties => ({
-    flex: 1, height: 36, boxSizing: 'border-box', padding: '0 14px', borderRadius: 9,
-    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-    background: on ? '#191712' : '#FFFFFF',
-    border: on ? '1px solid #191712' : '1px solid #E8E1CE',
-    color: on ? '#FDF8E7' : '#6C6553',
-    fontSize: 12.5, fontWeight: on ? 600 : 500, fontFamily: 'inherit', cursor: 'pointer',
-    whiteSpace: 'nowrap',
-  })
 
   return (
     <div style={{
@@ -1017,8 +1007,7 @@ function SettingsHabitForm({
           <span style={{ color: '#9B9180', fontSize: 10 }}>Icon</span>
         </div>
 
-        <div style={{ flex: 1, minWidth: 0, alignSelf: 'flex-start' }}>
-          <span style={LABEL}>Habit</span>
+        <div style={{ flex: 1, minWidth: 0 }}>
           <input
             value={s.name}
             onChange={e => update({ name: e.target.value })}
@@ -1036,25 +1025,27 @@ function SettingsHabitForm({
       {/* How it is tracked */}
       <div>
         <span style={LABEL}>Type</span>
-        <div style={{ display: 'flex', gap: 7 }}>
-          {([['boolean', 'Done / not done', CheckSquare], ['quantity', 'Measurable', Hash]] as const).map(([t, label, Icon]) => (
-            <button key={t} onClick={() => update({ type: t })} style={SEG(s.type === t)}>
-              <Icon size={13} /> {label}
-            </button>
-          ))}
-        </div>
+        <Segmented
+          value={s.type}
+          options={[
+            { value: 'boolean' as const, label: 'Done / not done' },
+            { value: 'quantity' as const, label: 'Measurable' },
+          ]}
+          onChange={t => update({ type: t })}
+        />
       </div>
 
       {/* How often */}
       <div>
         <span style={LABEL}>Interval</span>
-        <div style={{ display: 'flex', gap: 7 }}>
-          {FREQ_OPTS.map(f => (
-            <button key={f} onClick={() => update({ freq: f })} style={SEG(s.freq === f)}>
-              {f === 'weekdays' ? 'Weekdays' : f.charAt(0).toUpperCase() + f.slice(1)}
-            </button>
-          ))}
-        </div>
+        <Segmented
+          value={s.freq}
+          options={FREQ_OPTS.map(f => ({
+            value: f,
+            label: f === 'weekdays' ? 'Weekdays' : f.charAt(0).toUpperCase() + f.slice(1),
+          }))}
+          onChange={f => update({ freq: f })}
+        />
       </div>
 
       {/* What counts as a day's worth — a measurable habit only */}
@@ -1079,20 +1070,6 @@ function SettingsHabitForm({
           </div>
         </div>
       )}
-
-      {/* Colour — wraps rather than squashing every swatch into one line */}
-      <div>
-        <span style={LABEL}>Colour</span>
-        <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
-          {colors.map(c => (
-            <button key={c} onClick={() => update({ color: c })} title={c} style={{
-              width: 22, height: 22, borderRadius: '50%', background: c, cursor: 'pointer',
-              flexShrink: 0, padding: 0,
-              border: s.color === c ? '2px solid #191712' : '1px solid rgba(25,23,18,.12)',
-            }} />
-          ))}
-        </div>
-      </div>
 
       {/* Actions */}
       <div style={{ display: 'flex', gap: 8, paddingTop: 2 }}>
@@ -1211,7 +1188,6 @@ function HabitsSection() {
                 goal: h.goal != null ? String(h.goal) : '',
                 unit: h.unit ?? '',
               }}
-              colors={COLORS}
               saveLabel="Save Changes"
               onSave={s => {
                 updateHabit(h.id, {
@@ -1231,8 +1207,7 @@ function HabitsSection() {
 
       {adding ? (
         <SettingsHabitForm
-          initial={{ name: '', emoji: '🎯', color: COLORS[0], freq: 'daily', type: 'boolean', goal: '', unit: '' }}
-          colors={COLORS}
+          initial={{ name: '', emoji: '🎯', color: COLORS[habits.length % COLORS.length], freq: 'daily', type: 'boolean', goal: '', unit: '' }}
           onSave={s => {
             storeAdd({
               name: s.name.trim(), emoji: s.emoji, color: s.color, image: s.image,
