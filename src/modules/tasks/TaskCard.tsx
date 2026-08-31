@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { Trash2, Check, GripVertical, Clock, Calendar, User, CalendarCheck, Zap } from 'lucide-react'
+import { Trash2, Check, GripVertical, Clock, Calendar, CalendarCheck, Zap } from 'lucide-react'
 import type { Task, TaskType } from '@/types'
 import { COMPANY_COLORS, TASK_TYPE_META, inferTaskType, getAllUsers, loadDynamicCompanies } from '@/types'
 import { useTaskStore } from '@/store/taskStore'
@@ -29,6 +29,20 @@ function hexToRgb(hex: string): string {
   const b = parseInt(h.slice(4, 6), 16)
   if (isNaN(r) || isNaN(g) || isNaN(b)) return '25, 23, 18'
   return `${r}, ${g}, ${b}`
+}
+
+/** Get initials from a full name — up to 2 characters */
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/)
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+}
+
+/** Days since an ISO date string */
+function daysOpen(createdAt: string): number {
+  const created = new Date(createdAt).getTime()
+  const now = Date.now()
+  return Math.max(0, Math.floor((now - created) / 86_400_000))
 }
 
 interface TaskCardProps {
@@ -68,6 +82,8 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
   const isSchedule = task.quadrant === 'schedule'
   const isDelegate = task.quadrant === 'delegate'
 
+  const openDays = useMemo(() => daysOpen(task.createdAt), [task.createdAt])
+
   function saveTitle() {
     const trimmed = titleDraft.trim()
     if (trimmed && trimmed !== task.title) updateTask(task.id, { title: trimmed })
@@ -93,6 +109,10 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
     ? `2px solid ${companyColor}`
     : `1px solid rgba(${hexToRgb(companyColor)}, 0.42)`
 
+  const ccRgb = hexToRgb(companyColor.startsWith('#') ? companyColor : '#8C826A')
+  const tt = task.taskType ?? inferTaskType(task.title)
+  const meta = TASK_TYPE_META[tt]
+
   return (
     <div
       ref={setNodeRef}
@@ -104,7 +124,7 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
         border: cardBorder,
         borderRadius: 13,
         padding: '11px 12px',
-        display: 'flex', flexDirection: 'column', gap: 8,
+        display: 'flex', flexDirection: 'column', gap: 7,
         cursor: isDragging ? 'grabbing' : 'pointer',
         overflow: 'hidden',
         boxShadow: hovered ? '0 8px 20px -12px rgba(25,23,18,.4)' : 'none',
@@ -115,11 +135,12 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 9, minWidth: 0 }}>
+      {/* ── Row 1: drag handle + checkbox + title + urgent/delete ── */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, minWidth: 0 }}>
         {/* Drag handle */}
         <div data-nm {...listeners} {...attributes} style={{
           cursor: 'grab', color: hovered ? '#8A8272' : 'transparent',
-          transition: 'color 0.15s', flexShrink: 0, marginTop: 1, display: 'flex',
+          transition: 'color 0.15s', flexShrink: 0, marginTop: 2, display: 'flex',
         }}>
           <GripVertical size={12} strokeWidth={2} />
         </div>
@@ -135,19 +156,18 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
             }
           }}
           style={{
-            width: 17, height: 17, borderRadius: 5, boxSizing: 'border-box',
+            width: 16, height: 16, borderRadius: 5, boxSizing: 'border-box',
             border: task.completed ? '1.5px solid #4E7645' : '1.5px solid rgba(25,23,18,.28)',
             background: task.completed ? '#4E7645' : 'rgba(255,255,255,.75)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            cursor: 'pointer', flexShrink: 0, marginTop: 1, transition: 'all 0.15s ease',
+            cursor: 'pointer', flexShrink: 0, marginTop: 2, transition: 'all 0.15s ease',
           }}
         >
           {task.completed && <Check size={9} color="#fff" strokeWidth={3} />}
         </button>
 
-        {/* Content */}
+        {/* Title */}
         <div style={{ flex: 1, minWidth: 0 }}>
-          {/* Title – click to edit */}
           {editingTitle ? (
             <input
               data-nm
@@ -173,131 +193,13 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
               title={task.completed ? undefined : 'Click to rename'}
               style={{
                 margin: 0, fontSize: 12.5, fontWeight: 600, color: '#191712',
-                lineHeight: 1.32, textDecoration: task.completed ? 'line-through' : 'none',
+                lineHeight: 1.35, textDecoration: task.completed ? 'line-through' : 'none',
                 display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
                 overflow: 'hidden', minWidth: 0,
                 cursor: task.completed ? 'default' : 'text',
               }}
             >{task.title}</p>
           )}
-
-          {/* Meta/chips row */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4, flexWrap: 'wrap', minWidth: 0 }}>
-
-            {/* Task type badge — Sunlit Bento spec: 19px height, 5px radius, semi-white bg with company-color border */}
-            {(() => {
-              const tt = task.taskType ?? inferTaskType(task.title)
-              const meta = TASK_TYPE_META[tt]
-              const ccRgb = hexToRgb(companyColor.startsWith('#') ? companyColor : '#8C826A')
-              return editingType ? (
-                <select
-                  data-nm autoFocus
-                  value={tt}
-                  onChange={e => { updateTask(task.id, { taskType: e.target.value as TaskType }); setEditingType(false) }}
-                  onBlur={() => setEditingType(false)}
-                  style={{ ...fieldInput, fontSize: 10 }}
-                >
-                  {(Object.keys(TASK_TYPE_META) as TaskType[]).map(k => (
-                    <option key={k} value={k}>{TASK_TYPE_META[k].emoji} {TASK_TYPE_META[k].label}</option>
-                  ))}
-                </select>
-              ) : (
-                <span
-                  data-nm onClick={() => setEditingType(true)} title="Change task type"
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 5,
-                    height: 19, boxSizing: 'border-box', padding: '0 7px', borderRadius: 5,
-                    background: `rgba(255,255,255,.78)`, border: `1px solid rgba(${ccRgb},.44)`,
-                    color: companyColor.startsWith('#') ? companyColor : '#8C826A',
-                    fontSize: 10, fontWeight: 700, flexShrink: 0, cursor: 'pointer',
-                  }}
-                >{meta.emoji} {meta.label}</span>
-              )
-            })()}
-
-            {/* Urgent badge */}
-            {task.urgent && (
-              <span style={{ height: 18, boxSizing: 'border-box', padding: '0 6px', borderRadius: 5, background: '#FBEAE4', border: '1px solid #E5BBAC', color: '#B94A2E', fontSize: 9.5, fontWeight: 700, display: 'flex', alignItems: 'center', flexShrink: 0 }}>
-                P0
-              </span>
-            )}
-
-            {/* Company dot + name */}
-            <span
-              data-nm
-              style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, fontWeight: 600, color: companyColor, flexShrink: 0, cursor: 'pointer' }}
-              onClick={() => {
-                // Future: open company picker
-              }}
-            >
-              <span style={{ width: 7, height: 7, borderRadius: 999, background: companyColor, flexShrink: 0 }} />
-              {dynCompany?.name ?? task.company ?? ''}
-            </span>
-
-            {/* Due date chip */}
-            {(task.dueDate || isSchedule) && (
-              editingDate ? (
-                <input data-nm type="date" autoFocus value={task.dueDate ?? ''}
-                  onChange={e => updateTask(task.id, { dueDate: e.target.value || undefined })}
-                  onBlur={() => setEditingDate(false)}
-                  onKeyDown={e => e.key === 'Escape' && setEditingDate(false)}
-                  style={{ ...fieldInput, fontSize: 10 }}
-                />
-              ) : (
-                <span data-nm onClick={() => setEditingDate(true)} title="Set due date"
-                  style={{ display: 'flex', alignItems: 'center', gap: 5, height: 19, boxSizing: 'border-box', padding: '0 7px', borderRadius: 5, background: 'rgba(255,255,255,.7)', border: '1px solid rgba(25,23,18,.1)', color: '#6C6553', fontSize: 10, fontWeight: 600, flexShrink: 0, cursor: 'pointer' }}>
-                  <Calendar size={10} />
-                  {task.dueDate ? new Date(task.dueDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Set date'}
-                </span>
-              )
-            )}
-
-            {/* Planned time chip */}
-            {(task.plannedTime) && (
-              editingTime ? (
-                <input data-nm type="time" autoFocus value={task.plannedTime ?? ''}
-                  onChange={e => updateTask(task.id, { plannedTime: e.target.value || undefined })}
-                  onBlur={() => setEditingTime(false)}
-                  onKeyDown={e => e.key === 'Escape' && setEditingTime(false)}
-                  style={{ ...fieldInput, fontSize: 10 }}
-                />
-              ) : (
-                <span data-nm onClick={() => setEditingTime(true)} title="Set planned time"
-                  style={{ display: 'flex', alignItems: 'center', gap: 5, height: 19, boxSizing: 'border-box', padding: '0 7px', borderRadius: 5, background: 'rgba(255,255,255,.7)', border: '1px solid rgba(25,23,18,.1)', color: '#6C6553', fontSize: 10, fontWeight: 600, flexShrink: 0, cursor: 'pointer' }}>
-                  <Clock size={10} />
-                  {task.plannedTime}
-                </span>
-              )
-            )}
-
-            {/* Calendar scheduled indicator */}
-            {task.gcalEventId && (
-              <span title="Scheduled to Google Calendar"
-                style={{ display: 'flex', alignItems: 'center', gap: 5, height: 19, boxSizing: 'border-box', padding: '0 7px', borderRadius: 5, background: 'rgba(255,255,255,.7)', border: '1px solid rgba(25,23,18,.1)', color: '#4E7645', fontSize: 10, fontWeight: 600, flexShrink: 0 }}>
-                <CalendarCheck size={10} /> Scheduled
-              </span>
-            )}
-
-            {/* Owner chip */}
-            {(task.owner || isDelegate) && (
-              editingOwner ? (
-                <select data-nm autoFocus value={task.owner ?? ''}
-                  onChange={e => { updateTask(task.id, { owner: e.target.value || undefined }); setEditingOwner(false) }}
-                  onBlur={() => setEditingOwner(false)}
-                  style={{ ...fieldInput, fontSize: 10 }}
-                >
-                  <option value="">— none —</option>
-                  {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
-                </select>
-              ) : (
-                <span data-nm onClick={() => setEditingOwner(true)} title="Assign owner"
-                  style={{ display: 'flex', alignItems: 'center', gap: 5, height: 19, boxSizing: 'border-box', padding: '0 7px', borderRadius: 5, background: 'rgba(255,255,255,.7)', border: '1px solid rgba(25,23,18,.1)', color: '#6C6553', fontSize: 10, fontWeight: 600, flexShrink: 0, cursor: 'pointer' }}>
-                  <User size={10} />
-                  {ownerUser ? ownerUser.name : 'Assign'}
-                </span>
-              )
-            )}
-          </div>
         </div>
 
         {/* Urgent toggle + Delete */}
@@ -312,6 +214,142 @@ export function TaskCard({ task, onOpen }: TaskCardProps) {
             </button>
           )}
         </div>
+      </div>
+
+      {/* ── Row 2: company (colored) + task type badge + urgent badge ── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, paddingLeft: 36, flexWrap: 'wrap', minWidth: 0 }}>
+
+        {/* Company colored text */}
+        {(dynCompany?.name || task.company) && (
+          <span style={{
+            fontSize: 10.5, fontWeight: 700, color: companyColor,
+            display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0,
+          }}>
+            <span style={{ width: 6, height: 6, borderRadius: 999, background: companyColor, display: 'inline-block', flexShrink: 0 }} />
+            {dynCompany?.name ?? task.company}
+          </span>
+        )}
+
+        {/* Task type badge */}
+        {editingType ? (
+          <select
+            data-nm autoFocus
+            value={tt}
+            onChange={e => { updateTask(task.id, { taskType: e.target.value as TaskType }); setEditingType(false) }}
+            onBlur={() => setEditingType(false)}
+            style={{ ...fieldInput, fontSize: 10 }}
+          >
+            {(Object.keys(TASK_TYPE_META) as TaskType[]).map(k => (
+              <option key={k} value={k}>{TASK_TYPE_META[k].emoji} {TASK_TYPE_META[k].label}</option>
+            ))}
+          </select>
+        ) : (
+          <span
+            data-nm onClick={() => setEditingType(true)} title="Change task type"
+            style={{
+              display: 'flex', alignItems: 'center', gap: 4,
+              height: 18, boxSizing: 'border-box', padding: '0 6px', borderRadius: 4,
+              background: `rgba(255,255,255,.78)`, border: `1px solid rgba(${ccRgb},.38)`,
+              color: companyColor.startsWith('#') ? companyColor : '#8C826A',
+              fontSize: 9.5, fontWeight: 700, flexShrink: 0, cursor: 'pointer',
+            }}
+          >{meta.emoji} {meta.label}</span>
+        )}
+
+        {/* Urgent badge */}
+        {task.urgent && (
+          <span style={{ height: 17, boxSizing: 'border-box', padding: '0 5px', borderRadius: 4, background: '#FBEAE4', border: '1px solid #E5BBAC', color: '#B94A2E', fontSize: 9, fontWeight: 700, display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+            P0
+          </span>
+        )}
+
+        {/* Calendar scheduled indicator */}
+        {task.gcalEventId && (
+          <span title="Scheduled to Google Calendar"
+            style={{ display: 'flex', alignItems: 'center', gap: 4, height: 17, boxSizing: 'border-box', padding: '0 5px', borderRadius: 4, background: 'rgba(255,255,255,.7)', border: '1px solid rgba(25,23,18,.1)', color: '#4E7645', fontSize: 9, fontWeight: 600, flexShrink: 0 }}>
+            <CalendarCheck size={9} /> Sched
+          </span>
+        )}
+      </div>
+
+      {/* ── Row 3: Xd open · due date · time · owner initials ── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 7, paddingLeft: 36, minWidth: 0 }}>
+
+        {/* Days open */}
+        {!task.completed && (
+          <span style={{ fontSize: 9.5, color: '#8A8272', fontWeight: 500, flexShrink: 0 }}>
+            {openDays === 0 ? 'Today' : `${openDays}d open`}
+          </span>
+        )}
+
+        {/* Due date chip */}
+        {(task.dueDate || isSchedule) && (
+          editingDate ? (
+            <input data-nm type="date" autoFocus value={task.dueDate ?? ''}
+              onChange={e => updateTask(task.id, { dueDate: e.target.value || undefined })}
+              onBlur={() => setEditingDate(false)}
+              onKeyDown={e => e.key === 'Escape' && setEditingDate(false)}
+              style={{ ...fieldInput, fontSize: 9.5 }}
+            />
+          ) : (
+            <span data-nm onClick={() => setEditingDate(true)} title="Set due date"
+              style={{ display: 'flex', alignItems: 'center', gap: 4, height: 17, boxSizing: 'border-box', padding: '0 6px', borderRadius: 4, background: 'rgba(255,255,255,.7)', border: '1px solid rgba(25,23,18,.1)', color: '#6C6553', fontSize: 9.5, fontWeight: 600, flexShrink: 0, cursor: 'pointer' }}>
+              <Calendar size={9} />
+              {task.dueDate ? new Date(task.dueDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Set date'}
+            </span>
+          )
+        )}
+
+        {/* Spacer pushes time + owner to the right */}
+        <span style={{ flex: 1 }} />
+
+        {/* Planned time */}
+        {task.plannedTime && (
+          editingTime ? (
+            <input data-nm type="time" autoFocus value={task.plannedTime ?? ''}
+              onChange={e => updateTask(task.id, { plannedTime: e.target.value || undefined })}
+              onBlur={() => setEditingTime(false)}
+              onKeyDown={e => e.key === 'Escape' && setEditingTime(false)}
+              style={{ ...fieldInput, fontSize: 9.5 }}
+            />
+          ) : (
+            <span data-nm onClick={() => setEditingTime(true)} title="Set planned time"
+              style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 9.5, fontWeight: 600, color: '#6C6553', flexShrink: 0, cursor: 'pointer' }}>
+              <Clock size={9} />
+              {task.plannedTime}
+            </span>
+          )
+        )}
+
+        {/* Owner initials badge */}
+        {(task.owner || isDelegate) && (
+          editingOwner ? (
+            <select data-nm autoFocus value={task.owner ?? ''}
+              onChange={e => { updateTask(task.id, { owner: e.target.value || undefined }); setEditingOwner(false) }}
+              onBlur={() => setEditingOwner(false)}
+              style={{ ...fieldInput, fontSize: 9.5 }}
+            >
+              <option value="">— none —</option>
+              {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+            </select>
+          ) : (
+            <span
+              data-nm
+              onClick={() => setEditingOwner(true)}
+              title={ownerUser ? ownerUser.name : 'Assign owner'}
+              style={{
+                width: 22, height: 22, borderRadius: 999, flexShrink: 0,
+                background: companyColor, color: '#fff',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 8.5, fontWeight: 700, cursor: 'pointer',
+                boxShadow: '0 0 0 1.5px rgba(255,255,255,.7)',
+                letterSpacing: '0.02em',
+              }}
+            >
+              {ownerUser ? getInitials(ownerUser.name) : '?'}
+            </span>
+          )
+        )}
       </div>
 
       {/* Meeting follow-up popup — shown when completing a meeting/call task */}

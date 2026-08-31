@@ -6,6 +6,8 @@ import { BudgetScreen } from './screens/BudgetScreen'
 import { BillsScreen } from './screens/BillsScreen'
 import { ReportsScreen } from './screens/ReportsScreen'
 import { ReflectionScreen } from './screens/ReflectionScreen'
+import { GoalsScreen } from './screens/GoalsScreen'
+import { PlanScreen } from './screens/PlanScreen'
 import { TransactionModal } from './modals/TransactionModal'
 
 // ─── Nav icon SVGs ────────────────────────────────────────────────────────────
@@ -70,6 +72,22 @@ function IconFinancials({ color }: { color: string }) {
 }
 
 
+function IconGoals({ color }: { color: string }) {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 13l18-7-6 15-3-6z"/>
+    </svg>
+  )
+}
+
+function IconPlan({ color }: { color: string }) {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M13 3L5 14h6l-1 7 8-11h-6z"/>
+    </svg>
+  )
+}
+
 function IconPlus({ color }: { color: string }) {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round">
@@ -81,7 +99,7 @@ function IconPlus({ color }: { color: string }) {
 
 // ─── Nav items ────────────────────────────────────────────────────────────────
 
-type FinanceScreen = 'today' | 'balance' | 'budget' | 'bills' | 'reports' | 'reflect'
+type FinanceScreen = 'today' | 'balance' | 'budget' | 'bills' | 'reports' | 'reflect' | 'goals' | 'plan'
 
 const NAV_ITEMS: { id: FinanceScreen; label: string; Icon: (p: { color: string }) => React.ReactElement }[] = [
   { id: 'today',   label: 'Today',      Icon: IconToday },
@@ -90,6 +108,8 @@ const NAV_ITEMS: { id: FinanceScreen; label: string; Icon: (p: { color: string }
   { id: 'bills',   label: 'Bills',      Icon: IconBills },
   { id: 'reports', label: 'Reports',    Icon: IconReports },
   { id: 'reflect', label: 'Financials', Icon: IconFinancials },
+  { id: 'goals',   label: 'Goals',      Icon: IconGoals },
+  { id: 'plan',    label: 'Plan',       Icon: IconPlan },
 ]
 
 // ─── Color map type ───────────────────────────────────────────────────────────
@@ -174,6 +194,8 @@ export function FinanceModule() {
       case 'bills':   return <BillsScreen {...props} />
       case 'reports': return <ReportsScreen {...props} />
       case 'reflect': return <ReflectionScreen {...props} />
+      case 'goals':   return <GoalsScreen />
+      case 'plan':    return <PlanScreen />
     }
   }
 

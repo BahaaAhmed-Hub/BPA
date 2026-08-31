@@ -149,6 +149,12 @@ export function TaskCommand() {
   const urgent = tasks.filter(t => t.quadrant === 'do' && !t.completed)
   const inbox  = tasks.filter(t => t.quadrant === null && t.status !== 'done' && t.status !== 'cancelled' && !t.completed)
 
+  // "Closed this week" = completed or done in the last 7 days
+  const closedThisWeek = useMemo(() => {
+    const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000
+    return allTasks.filter(t => t.completed && t.completedAt && new Date(t.completedAt).getTime() >= cutoff).length
+  }, [allTasks])
+
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null)
   const [modalTaskId,  setModalTaskId]  = useState<string | null>(null)
   const [showPlanner,  setShowPlanner]  = useState(false)
@@ -229,6 +235,7 @@ export function TaskCommand() {
           <span style={{ fontSize: 12, color: '#6C6553', paddingTop: 3 }}>
             {urgent.length} urgent
             {inbox.length > 0 ? ` · ${inbox.length} unassigned` : ''}
+            {closedThisWeek > 0 ? ` · ${closedThisWeek} closed this week` : ''}
             {isFiltering ? ` · ${matchCount} match${matchCount !== 1 ? 'es' : ''}` : ''}
           </span>
         </div>

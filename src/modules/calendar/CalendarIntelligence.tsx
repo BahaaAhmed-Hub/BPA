@@ -109,6 +109,11 @@ function fmtWeekRange(start: Date): string {
   const opts: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' }
   return `${start.toLocaleDateString('en-US', opts)} – ${end.toLocaleDateString('en-US', opts)}`
 }
+function getWeekNumber(d: Date): number {
+  const jan1 = new Date(d.getFullYear(), 0, 1)
+  const days = Math.floor((d.getTime() - jan1.getTime()) / 86400000)
+  return Math.ceil((days + jan1.getDay() + 1) / 7)
+}
 function fmtShort(iso: string): string {
   const d = new Date(iso)
   const h = d.getHours(), m = d.getMinutes()
@@ -2254,12 +2259,34 @@ export function CalendarIntelligence() {
       {/* ── Top bar ─────────────────────────────────────────────────────────── */}
       <div style={{ padding: '14px 20px 10px', borderBottom: '1px solid #E8E1CE', background: '#FCFAF4', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-          {/* Page label + week range */}
+          {/* Page label + week number + date range */}
           <div style={{ flex: 1, minWidth: 160 }}>
             <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.14em', color: '#6C6553', textTransform: 'uppercase', marginBottom: 2, fontFamily: 'var(--sb-font-ui)' }}>CALENDAR</div>
-            <span style={{ fontSize: 20, fontWeight: 700, color: '#191712', fontFamily: 'var(--sb-font-num, "Outfit", sans-serif)', letterSpacing: '-0.02em', lineHeight: 1 }}>
-              {fmtWeekRange(weekStart)}
-            </span>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
+              <span style={{ fontSize: 28, fontWeight: 700, color: '#191712', fontFamily: 'var(--sb-font-num, "Outfit", sans-serif)', letterSpacing: '-0.03em', lineHeight: 1 }}>
+                Week {getWeekNumber(weekStart)}
+              </span>
+              <span style={{ fontSize: 14, color: '#6C6553', fontWeight: 500 }}>
+                {fmtWeekRange(weekStart)}
+              </span>
+            </div>
+            {/* Event stats */}
+            {(() => {
+              const weekStr = [0,1,2,3,4,5,6].map(i => {
+                const d = new Date(weekStart); d.setDate(d.getDate() + i)
+                return localDateStr(d)
+              })
+              const weekEvts = displayedEvents.filter(e => {
+                const date = (e.start?.dateTime ?? e.start?.date ?? '').slice(0,10)
+                return weekStr.includes(date)
+              })
+              const meetings = weekEvts.filter(e => detectMeetingType(e) !== 'none')
+              return weekEvts.length > 0 ? (
+                <div style={{ fontSize: 11.5, color: '#9B9180', marginTop: 3 }}>
+                  {weekEvts.length} events · {meetings.length} meetings
+                </div>
+              ) : null
+            })()}
           </div>
 
           {/* Nav buttons */}

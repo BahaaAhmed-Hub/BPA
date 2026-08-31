@@ -22,6 +22,7 @@ import { saveAccountsToDB, loadCompaniesFromDB, loadRawSettingsFromDB, loadAccou
 import { seedToken, seedFromLocalStorage, clearAllTokens, getGoogleToken } from './lib/tokenManager'
 import { refreshPrimaryToken } from './lib/googleCalendar'
 import { SetupWizard } from './modules/wizard/SetupWizard'
+import { Search } from 'lucide-react'
 
 // ─── Sunlit Bento — Login screen (1A) ────────────────────────────────────────
 
@@ -283,9 +284,41 @@ function LoadingScreen() {
   )
 }
 
-// ─── Top navigation bar — 6B Sunlit Bento shell ──────────────────────────────
-// Design spec: active pill = white bg + shadow lift; inactive = transparent + #6C6553
-// Right side: 3 separate 34×34 bordered icon buttons + 32px avatar
+// ─── Top navigation bar — 6B shell ────────────────────────────────────────────
+
+// Nav SVG icons matching the 6B design spec
+const NAV_ICONS: Record<string, React.ReactNode> = {
+  morning: (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M18.4 5.6L17 7M7 17l-1.4 1.4"/>
+    </svg>
+  ),
+  calendar: (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/>
+    </svg>
+  ),
+  tasks: (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="18" height="18" rx="4"/><path d="M8 12.5l2.6 2.5L16 9.5"/>
+    </svg>
+  ),
+  habits: (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1"/>
+    </svg>
+  ),
+  finance: (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="6" width="18" height="13" rx="3"/><path d="M3 10h18"/>
+    </svg>
+  ),
+  settings: (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/>
+    </svg>
+  ),
+}
 
 const NAV_ITEMS = [
   { id: 'morning',   label: 'Today'    },
@@ -296,29 +329,6 @@ const NAV_ITEMS = [
   { id: 'settings',  label: 'Settings' },
 ] as const
 
-// Icon SVGs matching the design spec
-function IconSearch() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-    </svg>
-  )
-}
-function IconBell() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-    </svg>
-  )
-}
-function IconSettings() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-    </svg>
-  )
-}
-
 function TopNav() {
   const activeModule    = useUIStore(s => s.activeModule)
   const setActiveModule = useUIStore(s => s.setActiveModule)
@@ -328,31 +338,20 @@ function TopNav() {
     ? user.name.split(' ').map((p: string) => p[0]).join('').slice(0, 2).toUpperCase()
     : user?.email?.slice(0, 2).toUpperCase() ?? '?'
 
-  // Icon utility button style — 34×34px, white bg, border, radius 12px
-  const utilBtn: React.CSSProperties = {
-    width: 34, height: 34, borderRadius: 12,
-    background: '#FFFFFF', border: '1px solid #E8E1CE',
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    cursor: 'pointer', color: '#6C6553', flexShrink: 0,
-    padding: 0,
-  }
-
   return (
     <header style={{
       height: 66, flexShrink: 0,
       background: '#FCFAF4',
       borderBottom: '1px solid #E8E1CE',
       display: 'flex', alignItems: 'center',
-      padding: '0 24px', gap: 20,
+      padding: '0 22px', gap: 16,
     }}>
-
-      {/* ── Product mark ────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 9, flexShrink: 0 }}>
+      {/* Product mark — left 1/3 */}
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 9, minWidth: 0 }}>
         <div style={{
-          width: 31, height: 31, borderRadius: 10, background: '#191712',
+          width: 30, height: 30, borderRadius: 8, background: '#191712', flexShrink: 0,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
-          {/* Graduation cap */}
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
             stroke="#FDF8E7" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
             <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
@@ -361,22 +360,15 @@ function TopNav() {
         </div>
         <span style={{
           fontFamily: "'Outfit', system-ui, sans-serif",
-          fontWeight: 600, fontSize: 15, color: '#191712', letterSpacing: '-.01em',
+          fontWeight: 700, fontSize: 14.5, color: '#191712', letterSpacing: '-.02em',
+          whiteSpace: 'nowrap',
         }}>
           The Professor
         </span>
       </div>
 
-      {/* ── Nav pills — active = white bg + shadow lift ──────────────── */}
-      <nav style={{
-        flex: 1, display: 'flex', justifyContent: 'center',
-        gap: 2,
-        background: '#EDE7D9',
-        borderRadius: 999,
-        padding: '4px',
-        maxWidth: 520,
-        margin: '0 auto',
-      }}>
+      {/* Nav pills — center */}
+      <nav style={{ display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
         {NAV_ITEMS.map(item => {
           const active = activeModule === item.id ||
             (item.id === 'morning' && activeModule === 'dashboard')
@@ -385,60 +377,87 @@ function TopNav() {
               key={item.id}
               onClick={() => setActiveModule(item.id)}
               style={{
-                height: 34, padding: '0 14px', borderRadius: 999,
+                height: 38, padding: '0 15px', borderRadius: 999,
                 border: 'none', cursor: 'pointer',
                 background: active ? '#FFFFFF' : 'transparent',
+                boxShadow: active ? '0 1px 3px rgba(25,23,18,.16)' : 'none',
                 color:      active ? '#191712' : '#6C6553',
                 fontSize: 13.5, fontWeight: active ? 600 : 500,
                 fontFamily: "'Instrument Sans', system-ui, sans-serif",
-                boxShadow: active ? '0 1px 3px rgba(25,23,18,.14)' : 'none',
-                transition: 'background 140ms ease-out, color 140ms ease-out, box-shadow 140ms ease-out',
+                transition: 'background 120ms ease-out, color 120ms ease-out, box-shadow 120ms ease-out',
                 whiteSpace: 'nowrap',
+                display: 'flex', alignItems: 'center', gap: 7,
+              }}
+              onMouseEnter={e => {
+                if (!active) {
+                  const el = e.currentTarget as HTMLButtonElement
+                  el.style.background = '#FFFFFF'
+                  el.style.boxShadow = '0 1px 3px rgba(25,23,18,.08)'
+                }
+              }}
+              onMouseLeave={e => {
+                if (!active) {
+                  const el = e.currentTarget as HTMLButtonElement
+                  el.style.background = 'transparent'
+                  el.style.boxShadow = 'none'
+                }
               }}
             >
+              {NAV_ICONS[item.id]}
               {item.label}
             </button>
           )
         })}
       </nav>
 
-      {/* ── Right utility buttons + avatar ───────────────────────────── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+      {/* Right — search + icon buttons + avatar */}
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 9, minWidth: 0 }}>
         {/* Search */}
-        <button style={utilBtn} title="Search (⌘K)">
-          <IconSearch />
-        </button>
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 7,
+          padding: '6px 12px',
+          background: '#FFFFFF', border: '1px solid #E8E1CE',
+          borderRadius: 12, cursor: 'text',
+        }}>
+          <Search size={13} color="#6C6553" />
+          <span style={{ fontSize: 12.5, color: '#8A8272', userSelect: 'none' }}>Search</span>
+          <span style={{
+            marginLeft: 4,
+            fontSize: 10, fontFamily: "'JetBrains Mono', monospace",
+            color: '#8A8272', opacity: 0.7,
+          }}>⌘K</span>
+        </div>
+
         {/* Bell */}
-        <button style={utilBtn} title="Notifications">
-          <IconBell />
-        </button>
-        {/* Settings */}
-        <button
-          style={utilBtn}
-          title="Settings"
-          onClick={() => setActiveModule('settings')}
-        >
-          <IconSettings />
-        </button>
+        <div style={{
+          width: 34, height: 34, borderRadius: 12,
+          background: '#FFFFFF', border: '1px solid #E8E1CE',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          cursor: 'pointer', flexShrink: 0, color: '#6C6553',
+        }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M18 16V11a6 6 0 1 0-12 0v5l-1.5 2.5h15z"/>
+            <path d="M10 20a2 2 0 0 0 4 0"/>
+          </svg>
+        </div>
 
         {/* Avatar */}
         <div style={{
           width: 32, height: 32, borderRadius: '50%',
           background: '#191712',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          cursor: 'pointer', overflow: 'hidden', flexShrink: 0,
-          marginLeft: 4,
+          cursor: 'pointer',
+          overflow: 'hidden', flexShrink: 0,
         }}>
           {user?.avatarUrl ? (
             <img src={user.avatarUrl} alt={initials} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           ) : (
-            <span style={{ fontSize: 11, fontWeight: 700, color: '#FDF8E7', letterSpacing: '0.04em', fontFamily: "'Outfit', sans-serif" }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: '#FDF8E7', letterSpacing: '0.02em' }}>
               {initials}
             </span>
           )}
         </div>
       </div>
-
     </header>
   )
 }
@@ -789,27 +808,21 @@ function App() {
   if (!user)   return <LoginScreen />
 
   return (
-    /* Outer canvas — near-black, matches design canvas bg */
     <div style={{
       minHeight: '100vh',
-      background: '#0D0D11',
+      background: '#F7F4EA',
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
-      padding: '20px 20px 40px',
       fontFamily: "'Instrument Sans', system-ui, sans-serif",
     }}>
-      {/* App frame — warm parchment card floating on dark canvas */}
       <div style={{
         width: '100%',
         maxWidth: 1560,
         display: 'flex',
         flexDirection: 'column',
-        minHeight: 'calc(100vh - 60px)',
+        minHeight: '100vh',
         background: '#F7F4EA',
-        borderRadius: 24,
-        boxShadow: '0 26px 64px -34px rgba(48,40,20,.5)',
-        overflow: 'hidden',
       }}>
         <TopNav />
         <main style={{ flex: 1, overflow: 'auto', background: '#F7F4EA' }}>
