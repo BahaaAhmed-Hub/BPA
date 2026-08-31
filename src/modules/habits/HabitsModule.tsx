@@ -588,6 +588,7 @@ export function HabitsModule() {
   const [view, setView] = useState<'table' | 'wall' | 'fill'>('table')
   const [fillSelected, setFillSelected] = useState<string | null>(null)
   const [wallEditId, setWallEditId] = useState<string | null>(null)
+  const [detailHabitId, setDetailHabitId] = useState<string | null>(null)
 
   // ── Boolean toggle ─────────────────────────────────────────────────────────
   const toggleHabit = useCallback((habitId: string, day: string) => {
@@ -920,7 +921,8 @@ export function HabitsModule() {
       )}
 
       {/* ─── Habits table ───────────────────────────────────────────────────── */}
-      {view === 'table' && <div style={{ flex: 1, background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 18, padding: '14px 16px', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+      {view === 'table' && <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+      <div style={{ flex: 1, minWidth: 0, background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 18, padding: '14px 16px', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
 
         {/* Table header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '0 4px 8px', minWidth: 0 }}>
@@ -1016,9 +1018,14 @@ export function HabitsModule() {
               {/* Emoji icon */}
               <EmojiBtn value={habit.emoji} onSelect={e => updateHabit(habit.id, { emoji: e })} />
 
-              {/* Habit name */}
-              <InlineEdit value={habit.name} onSave={v => updateHabit(habit.id, { name: v })}
-                style={{ flex: 1, fontSize: 13, fontWeight: 600, color: '#191712', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }} />
+              {/* Habit name — click to open detail panel */}
+              <span
+                onClick={() => setDetailHabitId(id => id === habit.id ? null : habit.id)}
+                style={{ flex: 1, minWidth: 0, cursor: 'pointer' }}
+              >
+                <InlineEdit value={habit.name} onSave={v => updateHabit(habit.id, { name: v })}
+                  style={{ fontSize: 13, fontWeight: 600, color: detailHabitId === habit.id ? '#B4853A' : '#191712', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0, width: '100%' }} />
+              </span>
 
               {/* Quantity control for measurable habits */}
               {isQuantity && (
@@ -1108,6 +1115,139 @@ export function HabitsModule() {
             ))}
           </details>
         )}
+      </div>
+
+      {/* ─── 10B: Habit detail panel ──────────────────────────────────────── */}
+      {detailHabitId && (() => {
+        const h = activeHabits.find(x => x.id === detailHabitId)
+        if (!h) return null
+        const hLogs = logs[h.id] ?? []
+        const streak = calcStreak(hLogs)
+        const totalCheckIns = hLogs.length
+        // Best streak: calculate by scanning all log dates
+        function calcBestStreak(logDates: string[]): number {
+          if (logDates.length === 0) return 0
+          const sorted = [...logDates].sort()
+          let best = 1, cur = 1
+          for (let i = 1; i < sorted.length; i++) {
+            const prev = new Date(sorted[i-1] + 'T12:00:00')
+            const curr = new Date(sorted[i]  + 'T12:00:00')
+            const diff = (curr.getTime() - prev.getTime()) / 86400000
+            if (diff === 1) { cur++; if (cur > best) best = cur }
+            else cur = 1
+          }
+          return best
+        }
+        const bestStreak = calcBestStreak(hLogs)
+        // Completion rate for last 30 days
+        const last30 = Array.from({ length: 30 }, (_, i) => offsetDays(today, -i))
+        const completedLast30 = last30.filter(d => hLogs.includes(d)).length
+        const completionRate = Math.round((completedLast30 / 30) * 100)
+        // 6-month heatmap: last 26 weeks (182 days) in a grid
+        const heatmapDays = Array.from({ length: 182 }, (_, i) => offsetDays(today, -(181 - i)))
+        // Recent check-ins: last 7 logged days
+        const recentCheckins = [...hLogs].sort().reverse().slice(0, 7)
+        return (
+          <div style={{
+            width: 272, flexShrink: 0, background: '#FFFFFF', border: '1px solid #E8E1CE',
+            borderRadius: 18, padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 16,
+          }}>
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 30, lineHeight: 1 }}>{h.emoji}</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 14.5, fontWeight: 700, color: '#191712', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{h.name}</div>
+                <div style={{ fontSize: 10.5, color: '#9B9180', marginTop: 2 }}>{h.frequency ?? 'daily'}</div>
+              </div>
+              <button onClick={() => setDetailHabitId(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9B9180', padding: 2, display: 'flex' }}>
+                <X size={14} />
+              </button>
+            </div>
+
+            {/* Stats row */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              {[
+                { label: 'Streak', value: `${streak}d`, color: streak > 0 ? '#5F7038' : '#191712' },
+                { label: 'Best', value: `${bestStreak}d`, color: '#191712' },
+                { label: 'Total', value: `${totalCheckIns}`, color: '#191712' },
+                { label: '30-day', value: `${completionRate}%`, color: completionRate >= 70 ? '#5F7038' : '#191712' },
+              ].map(s => (
+                <div key={s.label} style={{ background: '#FAF7EC', borderRadius: 10, padding: '9px 12px' }}>
+                  <div style={{ fontFamily: 'var(--sb-font-num)', fontSize: 22, fontWeight: 700, letterSpacing: '-0.03em', color: s.color, lineHeight: 1 }}>{s.value}</div>
+                  <div style={{ fontSize: 10, color: '#9B9180', marginTop: 3, fontWeight: 600 }}>{s.label}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* 6-month heatmap */}
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: '#6C6553', marginBottom: 7 }}>6-MONTH HEATMAP</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(26, 1fr)', gap: 2 }}>
+                {heatmapDays.map(d => {
+                  const done = hLogs.includes(d)
+                  const isT = d === today
+                  return (
+                    <div key={d} title={d} style={{
+                      aspectRatio: '1', borderRadius: 2,
+                      background: done ? '#5F7038' : isT ? '#F5D14E22' : '#F0EBDC',
+                      border: isT ? '1px solid #F5D14E' : '1px solid transparent',
+                    }} />
+                  )
+                })}
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 5 }}>
+                <span style={{ fontSize: 9, color: '#9B9180' }}>6 months ago</span>
+                <span style={{ fontSize: 9, color: '#9B9180' }}>Today</span>
+              </div>
+            </div>
+
+            {/* Frequency selector */}
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: '#6C6553', marginBottom: 6 }}>CADENCE</div>
+              <div style={{ display: 'flex', gap: 5 }}>
+                {FREQ_OPTS.map(f => (
+                  <button key={f} onClick={() => updateHabit(h.id, { frequency: f })}
+                    style={{ flex: 1, padding: '5px 0', borderRadius: 7, border: '1px solid #E8E1CE', background: h.frequency === f ? '#191712' : '#FAF7EC', color: h.frequency === f ? '#FDF8E7' : '#6C6553', fontSize: 10, fontWeight: h.frequency === f ? 600 : 400, cursor: 'pointer', whiteSpace: 'nowrap' as const }}>
+                    {f === 'weekdays' ? 'Wkdays' : f.charAt(0).toUpperCase() + f.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Recent check-ins */}
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: '#6C6553', marginBottom: 7 }}>RECENT CHECK-INS</div>
+              {recentCheckins.length === 0 ? (
+                <div style={{ fontSize: 11.5, color: '#9B9180' }}>No logs yet</div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                  {recentCheckins.map(d => (
+                    <div key={d} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0', borderBottom: '1px solid #F0EBDC' }}>
+                      <span style={{ width: 7, height: 7, borderRadius: 999, background: '#5F7038', flexShrink: 0 }} />
+                      <span style={{ fontSize: 12, color: '#191712', fontWeight: 500 }}>
+                        {new Date(d + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Archive / Delete */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <button onClick={() => { updateHabit(h.id, { isActive: false }); setDetailHabitId(null) }}
+                style={{ padding: '7px 0', borderRadius: 8, border: '1px solid #E8E1CE', background: 'transparent', color: '#9B9180', fontSize: 11.5, cursor: 'pointer' }}>
+                Archive habit
+              </button>
+              <button onClick={() => { deleteHabit(h.id); setDetailHabitId(null) }}
+                style={{ padding: '7px 0', borderRadius: 8, border: '1px solid rgba(180,82,58,0.3)', background: 'rgba(180,82,58,0.06)', color: '#B4523A', fontSize: 11.5, cursor: 'pointer' }}>
+                Delete habit
+              </button>
+            </div>
+          </div>
+        )
+      })()}
+
       </div>}
 
       {/* ─── Add habit form ─────────────────────────────────────────────────── */}

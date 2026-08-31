@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useFinanceStore } from '../financeStore'
-import type { Category } from '../types'
+import type { Category, Transaction } from '../types'
 
 // ─── 16G · Budget Builder ─────────────────────────────────────────────────────
 // Categories tree with budget rules: amount, frequency, roll unspent,
@@ -104,6 +104,22 @@ export function BudgetScreen(_props?: any) {
   // Monthly spend for selected category (current month)
   const today = new Date()
   const monthPrefix = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2,'0')}`
+
+  // 20E — Envelope drill-down state
+  const [drillOpen, setDrillOpen] = useState(false)
+  const [drillPeriod, setDrillPeriod] = useState<'month' | '3months' | '6months' | 'year'>('month')
+  // Decision flags: { [txId]: 'approved' | 'review' | 'excluded' }
+  type TxFlag = 'approved' | 'review' | 'excluded'
+  const [txFlags, setTxFlags] = useState<Record<string, TxFlag>>(() => {
+    try { return JSON.parse(localStorage.getItem('finance-tx-flags') ?? '{}') } catch { return {} }
+  })
+  function setFlag(txId: string, flag: TxFlag | null) {
+    const next = { ...txFlags }
+    if (flag === null) delete next[txId]
+    else next[txId] = flag
+    setTxFlags(next)
+    localStorage.setItem('finance-tx-flags', JSON.stringify(next))
+  }
   const monthSpend = useMemo(() => {
     if (!selectedId) return 0
     return transactions
@@ -193,9 +209,19 @@ export function BudgetScreen(_props?: any) {
               <div style={{ marginBottom: 28, background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 12, padding: '14px 18px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
                   <span style={{ fontSize: 12, color: '#6C6553' }}>This month</span>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: overBudget ? RUST : nearBudget ? '#E8A94A' : '#191712', fontFamily: 'Outfit, sans-serif' }}>
-                    EGP {monthSpend.toLocaleString('en-US')} / {budget.toLocaleString('en-US')}
-                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: overBudget ? RUST : nearBudget ? '#E8A94A' : '#191712', fontFamily: 'Outfit, sans-serif' }}>
+                      EGP {monthSpend.toLocaleString('en-US')} / {budget.toLocaleString('en-US')}
+                    </span>
+                    {monthSpend > 0 && (
+                      <button
+                        onClick={() => setDrillOpen(true)}
+                        style={{ fontSize: 11, fontWeight: 600, color: OLIVE, background: '#E9EFD9', border: '1px solid #C8D9A8', borderRadius: 6, padding: '3px 9px', cursor: 'pointer' }}
+                      >
+                        View all →
+                      </button>
+                    )}
+                  </div>
                 </div>
                 <div style={{ height: 8, borderRadius: 999, background: '#EDE7D9', overflow: 'hidden' }}>
                   <div style={{
@@ -332,6 +358,228 @@ export function BudgetScreen(_props?: any) {
           </div>
         )}
       </div>
+
+      {/* ─── 20E · Envelope Drill-Down Overlay ───────────────────────────────── */}
+      {drillOpen && selectedCat && (() => {
+        // Determine date range from drillPeriod
+        const now = new Date()
+        let cutoff: string
+        if (drillPeriod === 'month') {
+          cutoff = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2,'0')}`
+        } else if (drillPeriod === '3months') {
+          const d = new Date(now); d.setMonth(d.getMonth() - 2)
+          cutoff = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2,'0')}`
+        } else if (drillPeriod === '6months') {
+          const d = new Date(now); d.setMonth(d.getMonth() - 5)
+          cutoff = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2,'0')}`
+        } else {
+          const d = new Date(now); d.setMonth(d.getMonth() - 11)
+          cutoff = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2,'0')}`
+        }
+        const thisCatIds = new Set([selectedId!, ...subs(selectedId!).map(s => s.id)])
+        const drillTxs = transactions
+          .filter((tx: Transaction) =>
+            tx.type === 'expense' &&
+            tx.categoryId && thisCatIds.has(tx.categoryId) &&
+            tx.date >= cutoff
+          )
+          .sort((a: Transaction, b: Transaction) => b.date.localeCompare(a.date))
+
+        // Group by sub-category (or parent itself)
+        const subGroups: Record<string, { cat: Category | undefined; txs: Transaction[] }> = {}
+        for (const tx of drillTxs) {
+          const key = tx.categoryId ?? selectedId!
+          if (!subGroups[key]) {
+            const cat = categories.find(c => c.id === key)
+            subGroups[key] = { cat, txs: [] }
+          }
+          subGroups[key].txs.push(tx)
+        }
+
+        const totalSpend = drillTxs.reduce((s: number, tx: Transaction) => s + Math.abs(tx.amount), 0)
+        const excludedSpend = drillTxs
+          .filter((tx: Transaction) => txFlags[tx.id] === 'excluded')
+          .reduce((s: number, tx: Transaction) => s + Math.abs(tx.amount), 0)
+        const netSpend = totalSpend - excludedSpend
+
+        const PERIOD_LABELS: Record<string, string> = {
+          month: 'This month', '3months': 'Last 3 months',
+          '6months': 'Last 6 months', year: 'This year'
+        }
+
+        const FLAG_STYLES: Record<TxFlag, { bg: string; color: string; border: string; label: string }> = {
+          approved: { bg: '#E9EFD9', color: '#5F7038', border: '#C8D9A8', label: '✓ OK' },
+          review:   { bg: '#FEF3C7', color: '#92400E', border: '#FCD34D', label: '⚑ Review' },
+          excluded: { bg: '#FBEAE4', color: '#B4523A', border: '#E5BBAC', label: '✗ Exclude' },
+        }
+
+        return (
+          <div style={{
+            position: 'fixed', inset: 0, zIndex: 200,
+            background: 'rgba(25,23,18,.45)', backdropFilter: 'blur(2px)',
+            display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end',
+          }}
+            onClick={() => setDrillOpen(false)}
+          >
+            <div
+              onClick={e => e.stopPropagation()}
+              style={{
+                width: 520, height: '100%', background: '#F7F4EA',
+                display: 'flex', flexDirection: 'column', overflow: 'hidden',
+                boxShadow: '-8px 0 40px rgba(25,23,18,.15)',
+              }}
+            >
+              {/* Drill header */}
+              <div style={{ flexShrink: 0, borderBottom: '1px solid #E8E1CE', padding: '18px 24px 14px', background: '#FCFAF4' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+                  <span style={{ fontSize: 28 }}>{selectedCat.icon}</span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontFamily: 'Outfit, sans-serif', fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em', color: '#191712' }}>
+                      {selectedCat.name}
+                    </div>
+                    <div style={{ fontSize: 11, color: '#9B9180', marginTop: 1 }}>{drillTxs.length} transactions</div>
+                  </div>
+                  <button onClick={() => setDrillOpen(false)}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6C6553', padding: 4, display: 'flex' }}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                  </button>
+                </div>
+
+                {/* Period selector */}
+                <div style={{ display: 'flex', gap: 5 }}>
+                  {(['month', '3months', '6months', 'year'] as const).map(p => (
+                    <button key={p} onClick={() => setDrillPeriod(p)}
+                      style={{
+                        padding: '5px 11px', borderRadius: 999, border: '1px solid #E8E1CE', cursor: 'pointer',
+                        background: drillPeriod === p ? '#191712' : '#FAF7EC',
+                        color: drillPeriod === p ? '#FDF8E7' : '#6C6553',
+                        fontSize: 11.5, fontWeight: drillPeriod === p ? 600 : 400,
+                      }}
+                    >{PERIOD_LABELS[p]}</button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Sub-category summary row */}
+              {Object.keys(subGroups).length > 1 && (
+                <div style={{ flexShrink: 0, display: 'flex', gap: 8, padding: '12px 24px', borderBottom: '1px solid #E8E1CE', overflowX: 'auto', background: '#F7F4EA' }}>
+                  {Object.entries(subGroups).map(([key, { cat, txs }]) => {
+                    const total = txs.reduce((s: number, tx: Transaction) => s + Math.abs(tx.amount), 0)
+                    return (
+                      <div key={key} style={{ flexShrink: 0, background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 10, padding: '8px 12px', minWidth: 100 }}>
+                        <div style={{ fontSize: 14, marginBottom: 3 }}>{cat?.icon ?? '📂'}</div>
+                        <div style={{ fontSize: 11, color: '#6C6553', marginBottom: 3, whiteSpace: 'nowrap' }}>{cat?.name ?? selectedCat.name}</div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: RUST, fontFamily: 'Outfit, sans-serif' }}>
+                          EGP {total.toLocaleString('en-US')}
+                        </div>
+                        <div style={{ fontSize: 10, color: '#9B9180' }}>{txs.length} txns</div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+
+              {/* Transaction list */}
+              <div style={{ flex: 1, overflowY: 'auto', padding: '8px 24px 16px' }}>
+                {drillTxs.length === 0 ? (
+                  <div style={{ textAlign: 'center', color: '#9B9180', padding: '48px 0', fontSize: 13 }}>
+                    No transactions in this period
+                  </div>
+                ) : (
+                  drillTxs.map((tx: Transaction) => {
+                    const flag = txFlags[tx.id] as TxFlag | undefined
+                    const subCat = tx.categoryId ? categories.find(c => c.id === tx.categoryId) : undefined
+                    return (
+                      <div key={tx.id} style={{
+                        display: 'flex', alignItems: 'center', gap: 10,
+                        padding: '10px 0', borderBottom: '1px solid #F0EBDC',
+                        opacity: flag === 'excluded' ? 0.5 : 1,
+                      }}>
+                        {/* Sub-cat icon */}
+                        <span style={{ fontSize: 18, flexShrink: 0, width: 28, textAlign: 'center' }}>
+                          {subCat?.icon ?? selectedCat.icon}
+                        </span>
+
+                        {/* Main info */}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: '#191712', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textDecoration: flag === 'excluded' ? 'line-through' : 'none' }}>
+                            {tx.payee}
+                          </div>
+                          <div style={{ fontSize: 10.5, color: '#9B9180', marginTop: 1, display: 'flex', gap: 6 }}>
+                            <span>{new Date(tx.date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                            {subCat && subCat.id !== selectedId && <span>· {subCat.name}</span>}
+                            {tx.note && <span>· {tx.note}</span>}
+                          </div>
+                        </div>
+
+                        {/* Amount */}
+                        <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 14, fontWeight: 700, color: flag === 'excluded' ? '#9B9180' : RUST, flexShrink: 0 }}>
+                          EGP {Math.abs(tx.amount).toLocaleString('en-US')}
+                        </span>
+
+                        {/* Decision flags */}
+                        <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                          {(['approved', 'review', 'excluded'] as TxFlag[]).map(f => {
+                            const s = FLAG_STYLES[f]
+                            const active = flag === f
+                            return (
+                              <button key={f} title={f}
+                                onClick={() => setFlag(tx.id, active ? null : f)}
+                                style={{
+                                  padding: '3px 7px', borderRadius: 6, border: `1px solid ${active ? s.border : '#E8E1CE'}`,
+                                  background: active ? s.bg : 'transparent',
+                                  color: active ? s.color : '#C5BCA8',
+                                  fontSize: 10, fontWeight: active ? 700 : 400, cursor: 'pointer',
+                                  transition: 'all 0.12s',
+                                }}>
+                                {s.label}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )
+                  })
+                )}
+              </div>
+
+              {/* Footer summary */}
+              <div style={{ flexShrink: 0, borderTop: '1px solid #E8E1CE', padding: '14px 24px', background: '#FCFAF4', display: 'flex', alignItems: 'center', gap: 20 }}>
+                <div>
+                  <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', color: '#9B9180' }}>TOTAL</div>
+                  <div style={{ fontFamily: 'Outfit, sans-serif', fontSize: 18, fontWeight: 700, color: RUST, letterSpacing: '-0.02em' }}>
+                    EGP {totalSpend.toLocaleString('en-US')}
+                  </div>
+                </div>
+                {excludedSpend > 0 && (
+                  <>
+                    <div style={{ width: 1, alignSelf: 'stretch', background: '#E8E1CE' }} />
+                    <div>
+                      <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', color: '#9B9180' }}>EXCLUDED</div>
+                      <div style={{ fontFamily: 'Outfit, sans-serif', fontSize: 18, fontWeight: 700, color: '#9B9180', letterSpacing: '-0.02em' }}>
+                        − EGP {excludedSpend.toLocaleString('en-US')}
+                      </div>
+                    </div>
+                    <div style={{ width: 1, alignSelf: 'stretch', background: '#E8E1CE' }} />
+                    <div>
+                      <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', color: '#9B9180' }}>NET</div>
+                      <div style={{ fontFamily: 'Outfit, sans-serif', fontSize: 18, fontWeight: 700, color: '#191712', letterSpacing: '-0.02em' }}>
+                        EGP {netSpend.toLocaleString('en-US')}
+                      </div>
+                    </div>
+                  </>
+                )}
+                <span style={{ flex: 1 }} />
+                <div style={{ fontSize: 11, color: '#9B9180', textAlign: 'right' }}>
+                  {drillTxs.filter((tx: Transaction) => txFlags[tx.id] === 'approved').length} approved ·{' '}
+                  {drillTxs.filter((tx: Transaction) => txFlags[tx.id] === 'review').length} to review ·{' '}
+                  {drillTxs.filter((tx: Transaction) => txFlags[tx.id] === 'excluded').length} excluded
+                </div>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }
