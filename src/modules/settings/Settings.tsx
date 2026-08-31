@@ -7,7 +7,7 @@ import {
   ChevronDown, ChevronUp, User, Clock, Building2, Flame,
   Brain, Bell, Palette, Link, X, RefreshCw, Eye, EyeOff, Shield, Pencil,
   Hash, CheckSquare, Mail, HardDrive, CalendarDays, Swords, Wand2, CreditCard, Sparkles,
-  ArrowUpRight, Download, Database, GripVertical,
+  ArrowUpRight, Download, Database, GripVertical, ImagePlus,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { connectAdditionalGoogleAccount, signOut as googleSignOut, disconnectGoogleAccount } from '@/lib/google'
@@ -15,7 +15,7 @@ import { useUIStore } from '@/store/uiStore'
 import { useAuthStore } from '@/store/authStore'
 import { THEMES, getTheme, applyThemeVars } from '@/lib/themes'
 import { useHabitsStore, getHabitColors } from '@/store/habitsStore'
-import { HABIT_VIEWS, loadHabitView, saveHabitView, type HabitView } from '@/modules/habits/HabitsModule'
+import { HABIT_VIEWS, loadHabitView, saveHabitView, EmojiBtn, type HabitView } from '@/modules/habits/HabitsModule'
 import { useBehavioralStore, type BehavioralMode } from '@/store/behavioralStore'
 import { loadAccounts, removeAccount, getProviderTokenForAccount, loadHiddenAccounts, saveHiddenAccounts, loadAccountsFromServer, type ConnectedAccount, type ServerAccount } from '@/lib/multiAccount'
 import {
@@ -111,11 +111,6 @@ const WORK_DAYS    = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
 const C_COLORS     = ['#7F77DD','#7F77DD','#1D9E75','#E05252','#888780','#5B9BD5','#E0944A']
 const BUFFER_STEPS = [0,15,30,45,60]
 const PHYS_STEPS   = [0,30,60,90]
-const HABIT_EMOJIS = [
-  '🎯','💪','📚','🏃','💧','🧘','🍎','💤','🌿','✍️','🧠','🔥','🎨','🏋️','🎵',
-  '🚴','🏊','🥗','☕','🌅','🛏️','📝','📵','🧹','💊','🦷','🚶','🧴','🌞','🙏',
-  '💰','📈','🗣️','🌍','🐕','👨‍👩‍👧','📞','🎸','♟️','🧊','🥤','🚭','⏱️','📔','🪴',
-]
 const FREQ_OPTS    = ['daily','weekdays','weekly'] as const
 
 const DEFAULTS: AppSettings = {
@@ -965,24 +960,41 @@ function SettingsHabitForm({
   const imageRef = useRef<HTMLInputElement>(null)
   const valid = s.name.trim() !== '' && (s.type === 'boolean' || (parseFloat(s.goal) > 0 && s.unit.trim() !== ''))
 
+  const LABEL: React.CSSProperties = {
+    display: 'block', fontSize: 10, fontWeight: 700, letterSpacing: '0.12em',
+    color: '#6C6553', textTransform: 'uppercase', marginBottom: 7,
+  }
+  const SEG = (on: boolean): React.CSSProperties => ({
+    flex: 1, height: 36, boxSizing: 'border-box', padding: '0 14px', borderRadius: 9,
+    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+    background: on ? '#191712' : '#FFFFFF',
+    border: on ? '1px solid #191712' : '1px solid #E8E1CE',
+    color: on ? '#FDF8E7' : '#6C6553',
+    fontSize: 12.5, fontWeight: on ? 600 : 500, fontFamily: 'inherit', cursor: 'pointer',
+    whiteSpace: 'nowrap',
+  })
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 12, padding: 14, background: '#FAF7EC', borderRadius: 10, border: '1px solid #E8E1CE' }}>
-      {/* Picture — a wide palette, plus anything you care to type */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-          {/* The picture the wall and fill cards show; the emoji stands in until one is set */}
+    <div style={{
+      display: 'flex', flexDirection: 'column', gap: 18, marginTop: 12,
+      padding: 18, background: '#FAF7EC', borderRadius: 12, border: '1px solid #E8E1CE',
+    }}>
+
+      {/* Picture, icon, name — the three things that identify a habit */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, flexShrink: 0 }}>
           <button
             type="button"
             onClick={() => imageRef.current?.click()}
             title={s.image ? 'Change picture' : 'Add a picture'}
             style={{
-              width: 52, height: 52, borderRadius: 13, padding: 0, cursor: 'pointer', overflow: 'hidden',
+              width: 46, height: 46, borderRadius: 13, padding: 0, cursor: 'pointer', overflow: 'hidden',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 27, background: '#FFFFFF', border: '1px solid #E8E1CE',
+              fontSize: 20, color: '#C9C0A8', background: '#FFFFFF', border: '1px solid #E8E1CE',
             }}>
             {s.image
               ? <img src={s.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-              : (s.emoji || '🎯')}
+              : <ImagePlus size={18} />}
           </button>
           <input
             ref={imageRef} type="file" accept="image/*" style={{ display: 'none' }}
@@ -995,90 +1007,113 @@ function SettingsHabitForm({
           <button
             type="button"
             onClick={() => { if (s.image) update({ image: undefined }); else imageRef.current?.click() }}
-            style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#9B9180', fontSize: 10.5, fontFamily: 'inherit' }}>
-            {s.image ? 'Remove picture' : 'Add picture'}
+            style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#9B9180', fontSize: 10, fontFamily: 'inherit' }}>
+            {s.image ? 'Remove' : 'Picture'}
           </button>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, flexShrink: 0 }}>
+          <EmojiBtn value={s.emoji || '🎯'} onSelect={v => update({ emoji: v })} size={46} />
+          <span style={{ color: '#9B9180', fontSize: 10 }}>Icon</span>
+        </div>
+
+        <div style={{ flex: 1, minWidth: 0, alignSelf: 'flex-start' }}>
+          <span style={LABEL}>Habit</span>
           <input
-            value={s.emoji}
-            onChange={e => update({ emoji: [...e.target.value].slice(-2).join('') })}
-            placeholder="type"
-            title="Type or paste any emoji"
+            value={s.name}
+            onChange={e => update({ name: e.target.value })}
+            autoFocus
+            placeholder="e.g. Drink water, Walk 5 miles…"
+            onKeyDown={e => { if (e.key === 'Enter' && valid) onSave(s); if (e.key === 'Escape') onCancel() }}
             style={{
-              width: 52, boxSizing: 'border-box', textAlign: 'center', background: '#FFFFFF',
-              border: '1px solid #E8E1CE', borderRadius: 7, padding: '4px 0', fontSize: 13,
-              color: '#191712', outline: 'none',
+              width: '100%', boxSizing: 'border-box', height: 42, padding: '0 14px',
+              background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 10,
+              fontSize: 14, color: '#191712', fontFamily: 'inherit', outline: 'none', textAlign: 'left',
             }} />
         </div>
-        <div style={{
-          flex: 1, minWidth: 0, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(32px, 1fr))',
-          gap: 5, maxHeight: 110, overflowY: 'auto',
-        }}>
-          {HABIT_EMOJIS.map(e => (
-            <button key={e} onClick={() => update({ emoji: e })}
-              style={{ fontSize: 16, height: 32, borderRadius: 7, cursor: 'pointer', padding: 0, background: s.emoji === e ? 'rgba(245,209,78,0.12)' : '#FFFFFF', border: `1px solid ${s.emoji === e ? '#F5D14E' : '#E8E1CE'}` }}>
-              {e}
+      </div>
+
+      {/* How it is tracked */}
+      <div>
+        <span style={LABEL}>Type</span>
+        <div style={{ display: 'flex', gap: 7 }}>
+          {([['boolean', 'Done / not done', CheckSquare], ['quantity', 'Measurable', Hash]] as const).map(([t, label, Icon]) => (
+            <button key={t} onClick={() => update({ type: t })} style={SEG(s.type === t)}>
+              <Icon size={13} /> {label}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Name + frequency */}
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        <input value={s.name} onChange={e => update({ name: e.target.value })} autoFocus
-          placeholder="e.g. Drink water, Walk 5 miles…"
-          style={{ ...inputStyle, flex: 1, minWidth: 160 }}
-          onKeyDown={e => { if (e.key === 'Enter' && valid) onSave(s); if (e.key === 'Escape') onCancel() }} />
-        <select value={s.freq} onChange={e => update({ freq: e.target.value as typeof FREQ_OPTS[number] })}
-          style={{ ...selectStyle, width: 120 }}>
-          {FREQ_OPTS.map(f => <option key={f} value={f}>{f}</option>)}
-        </select>
-      </div>
-
-      {/* Type toggle */}
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-        <span style={{ fontSize: 11, color: '#6C6553', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Type</span>
-        <div style={{ display: 'flex', background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 7, overflow: 'hidden' }}>
-          {([['boolean', '✓ Done / Not done', CheckSquare], ['quantity', '# Measurable', Hash]] as const).map(([t, label, Icon]) => (
-            <button key={t} onClick={() => update({ type: t })}
-              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 12px', fontSize: 12, fontWeight: s.type === t ? 600 : 400, cursor: 'pointer', border: 'none', background: s.type === t ? 'rgba(245,209,78,0.15)' : 'none', color: s.type === t ? '#191712' : '#6C6553' }}>
-              <Icon size={12} />{label}
+      {/* How often */}
+      <div>
+        <span style={LABEL}>Interval</span>
+        <div style={{ display: 'flex', gap: 7 }}>
+          {FREQ_OPTS.map(f => (
+            <button key={f} onClick={() => update({ freq: f })} style={SEG(s.freq === f)}>
+              {f === 'weekdays' ? 'Weekdays' : f.charAt(0).toUpperCase() + f.slice(1)}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Goal + unit (quantity only) */}
+      {/* What counts as a day's worth — a measurable habit only */}
       {s.type === 'quantity' && (
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <span style={{ fontSize: 11, color: '#6C6553', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Goal</span>
-          <input type="number" min={1} value={s.goal} onChange={e => update({ goal: e.target.value })}
-            placeholder="8"
-            style={{ ...inputStyle, width: 72, textAlign: 'center' }} />
-          <input value={s.unit} onChange={e => update({ unit: e.target.value })}
-            placeholder="glasses / miles / min…"
-            style={{ ...inputStyle, flex: 1 }} />
+        <div>
+          <span style={LABEL}>Daily target</span>
+          <div style={{ display: 'flex', gap: 7 }}>
+            <input type="number" min={1} value={s.goal} onChange={e => update({ goal: e.target.value })}
+              placeholder="8"
+              style={{
+                width: 90, boxSizing: 'border-box', height: 36, padding: '0 12px',
+                background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 9,
+                fontSize: 13, color: '#191712', fontFamily: 'inherit', outline: 'none', textAlign: 'left',
+              }} />
+            <input value={s.unit} onChange={e => update({ unit: e.target.value })}
+              placeholder="glasses / miles / minutes…"
+              style={{
+                flex: 1, minWidth: 0, boxSizing: 'border-box', height: 36, padding: '0 12px',
+                background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 9,
+                fontSize: 13, color: '#191712', fontFamily: 'inherit', outline: 'none', textAlign: 'left',
+              }} />
+          </div>
         </div>
       )}
 
-      {/* Color swatches */}
-      <div style={{ display: 'flex', gap: 6 }}>
-        {colors.map(c => (
-          <button key={c} onClick={() => update({ color: c })} style={{
-            width: 22, height: 22, borderRadius: '50%', background: c, border: 'none', cursor: 'pointer',
-            outline: s.color === c ? `2px solid ${c}` : 'none', outlineOffset: 2,
-          }} />
-        ))}
+      {/* Colour — wraps rather than squashing every swatch into one line */}
+      <div>
+        <span style={LABEL}>Colour</span>
+        <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
+          {colors.map(c => (
+            <button key={c} onClick={() => update({ color: c })} title={c} style={{
+              width: 22, height: 22, borderRadius: '50%', background: c, cursor: 'pointer',
+              flexShrink: 0, padding: 0,
+              border: s.color === c ? '2px solid #191712' : '1px solid rgba(25,23,18,.12)',
+            }} />
+          ))}
+        </div>
       </div>
 
       {/* Actions */}
-      <div style={{ display: 'flex', gap: 8 }}>
-        <button onClick={onCancel}
-          style={{ padding: '6px 14px', borderRadius: 7, background: 'transparent', border: '1px solid #E8E1CE', color: '#6C6553', fontSize: 12, cursor: 'pointer', display: 'flex', gap: 5, alignItems: 'center' }}>
-          <X size={11} /> Cancel
-        </button>
+      <div style={{ display: 'flex', gap: 8, paddingTop: 2 }}>
         <button onClick={() => valid && onSave(s)} disabled={!valid}
-          style={{ padding: '6px 16px', borderRadius: 7, background: 'rgba(245,209,78,0.12)', border: '1px solid #F5D14E50', color: '#191712', fontSize: 12, fontWeight: 500, cursor: valid ? 'pointer' : 'default', opacity: valid ? 1 : 0.4, display: 'flex', gap: 5, alignItems: 'center' }}>
-          <Plus size={11} /> {saveLabel}
+          style={{
+            height: 38, padding: '0 18px', borderRadius: 999, border: 'none',
+            background: valid ? '#F5D14E' : '#EDE7D9', color: valid ? '#191712' : '#9B9180',
+            fontSize: 13, fontWeight: 600, fontFamily: 'inherit',
+            cursor: valid ? 'pointer' : 'default',
+            display: 'flex', gap: 6, alignItems: 'center',
+          }}>
+          <Plus size={14} /> {saveLabel}
+        </button>
+        <button onClick={onCancel}
+          style={{
+            height: 38, padding: '0 16px', borderRadius: 999,
+            background: 'transparent', border: '1px solid #E8E1CE', color: '#6C6553',
+            fontSize: 13, fontFamily: 'inherit', cursor: 'pointer',
+            display: 'flex', gap: 6, alignItems: 'center',
+          }}>
+          <X size={13} /> Cancel
         </button>
       </div>
     </div>

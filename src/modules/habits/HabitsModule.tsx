@@ -155,7 +155,12 @@ function HabitImagePicker({ image, emoji, onChange, size = 54 }: {
   )
 }
 
-function EmojiBtn({ value, onSelect }: { value: string; onSelect: (e: string) => void }) {
+export function EmojiBtn({ value, onSelect, size = 24 }: {
+  value: string
+  onSelect: (e: string) => void
+  /** The button's edge; the popover is the same either way. */
+  size?: number
+}) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -167,11 +172,11 @@ function EmojiBtn({ value, onSelect }: { value: string; onSelect: (e: string) =>
   return (
     <div ref={ref} style={{ position: 'relative' }}>
       <button onClick={() => setOpen(o => !o)} title="Change icon"
-        style={{ width: 24, height: 24, borderRadius: 7, background: '#FAF7EC', border: '1px solid #E8E1CE', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13 }}>
+        style={{ width: size, height: size, borderRadius: size >= 40 ? 13 : 7, background: '#FAF7EC', border: '1px solid #E8E1CE', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: Math.round(size * 0.52) }}>
         {value}
       </button>
       {open && (
-        <div style={{ position: 'absolute', top: 30, left: 0, zIndex: 300, background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 10, padding: '8px', display: 'flex', gap: 4, flexWrap: 'wrap', width: 252, maxHeight: 260, overflowY: 'auto', boxShadow: '0 8px 24px rgba(0,0,0,0.15)' }}>
+        <div style={{ position: 'absolute', top: size + 6, left: 0, zIndex: 300, background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 10, padding: '8px', display: 'flex', gap: 4, flexWrap: 'wrap', width: 252, maxHeight: 260, overflowY: 'auto', boxShadow: '0 8px 24px rgba(0,0,0,0.15)' }}>
           {EMOJIS.map(e => (
             <button key={e} onClick={() => { onSelect(e); setOpen(false) }}
               style={{ fontSize: 16, width: 32, height: 32, borderRadius: 7, cursor: 'pointer', border: '1px solid', borderColor: e === value ? '#E8E1CE' : 'transparent', background: e === value ? '#FAF7EC' : 'transparent' }}>{e}</button>
