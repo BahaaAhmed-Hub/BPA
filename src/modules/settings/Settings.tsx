@@ -2372,12 +2372,12 @@ export function Settings() {
                 style={{
                   width: '100%', display: 'flex', alignItems: 'center', gap: 9,
                   padding: '8px 9px', borderRadius: 8, cursor: 'pointer', marginBottom: 1,
-                  background: isActive ? '#F5D14E' : 'transparent',
-                  border: isActive ? '1px solid rgba(25,23,18,0.14)' : '1px solid transparent',
+                  background: isActive ? '#FFFFFF' : 'transparent',
+                  border: isActive ? '1px solid rgba(25,23,18,0.08)' : '1px solid transparent',
                   color: isActive ? '#191712' : '#6C6553',
                   fontSize: 12.5, fontWeight: isActive ? 600 : 400, textAlign: 'left',
                   transition: 'all 0.1s',
-                  boxShadow: isActive ? '0 1px 3px rgba(25,23,18,0.1)' : 'none',
+                  boxShadow: isActive ? '0 1px 3px rgba(25,23,18,0.16)' : 'none',
                 }}
               >
                 <Icon size={13} style={{ flexShrink: 0, opacity: isActive ? 1 : 0.75 }} />

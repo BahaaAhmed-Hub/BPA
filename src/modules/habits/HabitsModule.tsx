@@ -581,10 +581,21 @@ export function HabitsModule() {
   const weekTotal = activeHabits.length * 7
   const weekPct = weekTotal > 0 ? Math.round((weekCheckIns / weekTotal) * 100) : 0
 
-  // Best streak
+  // Current streak (max across active habits) + cold days
   const bestStreak = activeHabits.length > 0
     ? Math.max(...activeHabits.map(h => calcStreak(logs[h.id] ?? [])))
     : 0
+
+  // Cold days: how many days since the best-streaking habit was last logged
+  const coldDays = (() => {
+    if (bestStreak > 0) return 0
+    if (activeHabits.length === 0) return 0
+    const allLogs = activeHabits.flatMap(h => logs[h.id] ?? [])
+    if (allLogs.length === 0) return 0
+    const latest = allLogs.sort().at(-1)!
+    const msOff = new Date(today + 'T00:00:00').getTime() - new Date(latest + 'T00:00:00').getTime()
+    return Math.floor(msOff / 86400000)
+  })()
 
   const isCurrentWeek = weekAnchor === weekStart(today)
 
@@ -607,7 +618,7 @@ export function HabitsModule() {
           </span>
           <span style={{ fontSize: 12, color: '#6C6553', paddingTop: 3 }}>
             {completionPct}% complete
-            {bestStreak > 0 ? ` · ${bestStreak}d streak` : ' · no streak yet'}
+            {bestStreak > 0 ? ` · ${bestStreak}d streak` : coldDays > 0 ? ` · ${coldDays} days cold` : ' · no streak yet'}
             {' · '}{weekPct}% this week
           </span>
         </div>
@@ -695,7 +706,9 @@ export function HabitsModule() {
           <span style={{ display: 'flex', flexDirection: 'column', gap: 1, flexShrink: 0 }}>
             <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 21, fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1, color: '#191712', fontVariantNumeric: 'tabular-nums' }}>{bestStreak}d</span>
             <span style={{ fontSize: 10.5, fontWeight: 600, color: '#4A4438' }}>Current streak</span>
-            <span style={{ fontSize: 9.5, color: '#6C6553' }}>best {bestStreak}d</span>
+            <span style={{ fontSize: 9.5, color: coldDays > 0 ? '#B4523A' : '#6C6553' }}>
+              {coldDays > 0 ? `${coldDays} days cold` : `best ${bestStreak}d`}
+            </span>
           </span>
         </span>
 
