@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import {
-  ChevronLeft, ChevronRight, ChevronDown, Layers, Calendar, Video, Users,
+  ChevronLeft, ChevronRight, ChevronDown, Layers, Calendar, Video,
   Sparkles, MapPin, RefreshCw, X, Eye, EyeOff,
-  CheckCircle2, XCircle, Link, Phone, Repeat,
+  CheckCircle2, XCircle, Link, Check, MoreHorizontal, Plus,
   ExternalLink, AlertCircle, Shield, Copy, Trash2,
 } from 'lucide-react'
+import { TimeSelect } from '@/modules/tasks/SchedulePopover'
 import {
   DndContext, DragOverlay, PointerSensor, useSensor, useSensors,
   useDraggable, useDroppable,
@@ -736,7 +737,69 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
 }
 
 // ─── EventPopup — docked right-hand panel ─────────────────────────────────────
-function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepError, onClose, onStatusToggle, onPrepRequest, onAddMeet, onSave, calendars, calColors, onMoveCalendar }: {
+// ─── Event panel ─────────────────────────────────────────────────────────────
+// Docked on the right, laid out as the artboard: the calendar chip and its
+// controls on top, then the title, the time row, any clash, and the fields —
+// calendar, where, repeats, prep — over attendees, prep and the Professor's
+// suggestion.
+
+const EV_PILL: React.CSSProperties = {
+  display: 'inline-flex', alignItems: 'center', gap: 6, height: 34, boxSizing: 'border-box',
+  padding: '0 12px', borderRadius: 9, background: '#FFFFFF', border: '1px solid #E8E1CE',
+  color: '#191712', fontSize: 13, fontFamily: 'inherit', cursor: 'pointer', minWidth: 0,
+}
+const EV_ROUND: React.CSSProperties = {
+  width: 30, height: 30, borderRadius: '50%', flexShrink: 0, padding: 0,
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  background: '#FFFFFF', border: '1px solid #E8E1CE', color: '#6C6553', cursor: 'pointer',
+}
+const EV_LABEL: React.CSSProperties = {
+  width: 88, flexShrink: 0, fontSize: 12.5, color: '#6C6553', paddingTop: 9,
+}
+const EV_SECTION: React.CSSProperties = {
+  fontSize: 12.5, color: '#6C6553',
+}
+
+/** "AB" from a name or an address, for the attendee circles. */
+function evInitials(name: string | undefined, email: string): string {
+  const src = (name ?? email.split('@')[0]).replace(/[._-]+/g, ' ')
+  return src.split(/\s+/).filter(Boolean).map(w => w[0]).join('').slice(0, 2).toUpperCase() || '?'
+}
+
+/** The organisation an address belongs to, as far as the address can say. */
+function evOrg(email: string): string {
+  const domain = email.split('@')[1] ?? ''
+  const name = domain.split('.')[0] ?? ''
+  return name ? name.charAt(0).toUpperCase() + name.slice(1) : ''
+}
+
+/** "weekly" / "daily" — the one word the calendar chip wants. */
+function recurrenceWord(rules: string[] | undefined): string | null {
+  const rule = rules?.find(r => r.startsWith('RRULE'))
+  if (!rule) return null
+  const freq = /FREQ=(\w+)/.exec(rule)?.[1]
+  return freq === 'DAILY' ? 'daily'
+    : freq === 'WEEKLY' ? 'weekly'
+    : freq === 'MONTHLY' ? 'monthly'
+    : freq === 'YEARLY' ? 'yearly'
+    : 'repeating'
+}
+
+/** "Every Wednesday" out of an RRULE, when it says something that simple. */
+function describeRecurrence(rules: string[] | undefined, start: Date): string | null {
+  const rule = rules?.find(r => r.startsWith('RRULE'))
+  if (!rule) return null
+  const freq = /FREQ=(\w+)/.exec(rule)?.[1]
+  const interval = Number(/INTERVAL=(\d+)/.exec(rule)?.[1] ?? 1)
+  const weekday = start.toLocaleDateString('en-GB', { weekday: 'long' })
+  if (freq === 'DAILY') return interval === 1 ? 'Every day' : `Every ${interval} days`
+  if (freq === 'WEEKLY') return interval === 1 ? `Every ${weekday}` : `Every ${interval} weeks`
+  if (freq === 'MONTHLY') return interval === 1 ? 'Every month' : `Every ${interval} months`
+  if (freq === 'YEARLY') return 'Every year'
+  return 'Repeats'
+}
+
+function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepError, onClose, onStatusToggle, onPrepRequest, onAddMeet, onSave, onDelete, calendars, onMoveCalendar, clashes, onOpenEvent }: {
   event: GCalEventExt
   status: EventStatus | undefined
   calName: string
@@ -749,62 +812,34 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
   onPrepRequest: () => void
   onAddMeet?: () => Promise<void>
   onSave?: (patch: Partial<GCalEventCreate>) => Promise<GCalEvent | null>
+  onDelete?: () => void
   calendars?: CalWithAccount[]
-  calColors?: Record<string, string>
   onMoveCalendar?: (targetCalId: string) => Promise<boolean>
+  /** Events on the same day that overlap this one. */
+  clashes?: GCalEventExt[]
+  onOpenEvent?: (e: GCalEventExt) => void
 }) {
-  const popupRef  = useRef<HTMLDivElement>(null)
-  const [showPrep,    setShowPrep]    = useState(false)
-  const [addingMeet,  setAddingMeet]  = useState(false)
-  const [editMode,    setEditMode]    = useState(false)
-  const [saving,      setSaving]      = useState(false)
-  const [saveError,   setSaveError]   = useState<string | null>(null)
+  const popupRef = useRef<HTMLDivElement>(null)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const [clashDismissed, setClashDismissed] = useState(false)
+  const [addingAttendee, setAddingAttendee] = useState(false)
+  const [attendeeDraft, setAttendeeDraft] = useState('')
+  const [prepChecked, setPrepChecked] = useState<Set<number>>(new Set())
 
-  const isAllDayEvent = !event.start.dateTime
-  const toLocalDateTimeInput = (iso: string) => {
-    const d = new Date(iso)
-    const pad = (n: number) => String(n).padStart(2, '0')
-    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
-  }
-  const toDateInput = (iso: string) => iso.slice(0, 10)
+  const isAllDay = !event.start.dateTime
+  const startDate = new Date(event.start.dateTime ?? (event.start.date + 'T00:00:00'))
+  const endDate = new Date(event.end.dateTime ?? (event.end.date + 'T00:00:00'))
+  const pad = (n: number) => String(n).padStart(2, '0')
 
-  const [editTitle,    setEditTitle]    = useState(event.summary ?? '')
-  const [editCalId,    setEditCalId]    = useState(event.calendarId ?? '')
-  const [editStart,    setEditStart]    = useState(
-    isAllDayEvent ? toDateInput(event.start.date ?? '') : toLocalDateTimeInput(event.start.dateTime!)
+  const [title, setTitle] = useState(event.summary ?? '')
+  const [dateStr, setDateStr] = useState(
+    `${startDate.getFullYear()}-${pad(startDate.getMonth() + 1)}-${pad(startDate.getDate())}`,
   )
-  const [editEnd,      setEditEnd]      = useState(
-    isAllDayEvent ? toDateInput(event.end.date ?? '') : toLocalDateTimeInput(event.end.dateTime!)
-  )
-  const [editLocation, setEditLocation] = useState(event.location ?? '')
-  const [editNotes,    setEditNotes]    = useState(event.description ?? '')
-
-  async function handleSave() {
-    if (!onSave) return
-    setSaving(true); setSaveError(null)
-    try {
-      if (editCalId && editCalId !== event.calendarId && onMoveCalendar) {
-        const moved = await onMoveCalendar(editCalId)
-        if (!moved) { setSaveError('Could not move event to selected calendar.'); return }
-      }
-      const patch: Partial<GCalEventCreate> = {
-        summary: editTitle.trim() || undefined,
-        location: editLocation.trim() || undefined,
-        description: editNotes.trim() || undefined,
-      }
-      if (isAllDayEvent) {
-        patch.start = { date: editStart }
-        patch.end   = { date: editEnd }
-      } else {
-        const tz = event.start.timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone
-        patch.start = { dateTime: new Date(editStart).toISOString(), timeZone: tz }
-        patch.end   = { dateTime: new Date(editEnd).toISOString(),   timeZone: tz }
-      }
-      const updated = await onSave(patch)
-      if (updated) setEditMode(false)
-      else setSaveError('Could not save — check your permissions.')
-    } finally { setSaving(false) }
-  }
+  const [fromTime, setFromTime] = useState(`${pad(startDate.getHours())}:${pad(startDate.getMinutes())}`)
+  const [toTime, setToTime] = useState(`${pad(endDate.getHours())}:${pad(endDate.getMinutes())}`)
+  const [location, setLocation] = useState(event.location ?? '')
 
   useEffect(() => {
     const fn = (e: MouseEvent) => { if (popupRef.current && !popupRef.current.contains(e.target as Node)) onClose() }
@@ -812,362 +847,391 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
     return () => document.removeEventListener('mousedown', fn)
   }, [onClose])
 
-  const isAllDay     = !event.start.dateTime
-  const entryPoints  = event.conferenceData?.entryPoints ?? []
-  const videoLink    = entryPoints.find(ep => ep.entryPointType === 'video')?.uri
-  const phoneEntry   = entryPoints.find(ep => ep.entryPointType === 'phone')
-  const allAttendees = event.attendees ?? []
-  const selfAttendee = allAttendees.find(a => a.self)
-  const others       = allAttendees.filter(a => !a.self)
-  const organizer    = event.organizer
-  const isRecurring  = !!event.recurringEventId || (event.recurrence?.length ?? 0) > 0
-  const isTentative  = event.status === 'tentative'
-  const notes        = event.description?.replace(/<[^>]*>/g, '').trim() ?? ''
+  const entryPoints = event.conferenceData?.entryPoints ?? []
+  const videoLink = entryPoints.find(ep => ep.entryPointType === 'video')?.uri
+  const attendees = event.attendees ?? []
+  const isOrganiser = event.organizer?.self ?? true
+  const recurrence = describeRecurrence(event.recurrence, startDate)
+  const writable = (calendars ?? []).filter(c => c.accessRole === 'owner' || c.accessRole === 'writer')
+  const liveClashes = (clashes ?? []).filter(c => c.id !== event.id)
 
-  const rsvpColor = (s?: string) => s === 'accepted' ? '#1D9E75' : s === 'declined' ? '#E05252' : s === 'tentative' ? '#FF9500' : '#9B9180'
-  const rsvpLabel = (s?: string) => s === 'accepted' ? 'Accepted' : s === 'declined' ? 'Declined' : s === 'tentative' ? 'Maybe' : 'Awaiting'
-
-  function fmtDT(iso: string) {
-    const d = new Date(iso)
-    return {
-      date: d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }),
-      time: d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
-    }
+  /** Every edit writes straight through — no Save button to forget. */
+  async function push(patch: Partial<GCalEventCreate>) {
+    if (!onSave) return
+    setSaving(true); setSaveError(null)
+    try {
+      const updated = await onSave(patch)
+      if (!updated) setSaveError('Could not save — check your permissions.')
+    } finally { setSaving(false) }
   }
-  const startIso = event.start.dateTime ?? (event.start.date + 'T00:00:00')
-  const endIso   = event.end.dateTime   ?? (event.end.date   + 'T00:00:00')
-  const startDT  = isAllDay ? null : fmtDT(startIso)
-  const endDT    = isAllDay ? null : fmtDT(endIso)
 
-  const labelStyle: React.CSSProperties = { width: 84, flexShrink: 0, textAlign: 'right', paddingRight: 14, fontSize: 12.5, color: '#9B9180' }
-  const fieldRow = (label: string, content: React.ReactNode) => (
-    <div style={{ display: 'flex', alignItems: 'center', minHeight: 30, padding: '0 16px' }}>
-      <div style={labelStyle}>{label}</div>
-      <div style={{ flex: 1 }}>{content}</div>
-    </div>
-  )
+  function pushTimes(nextDate: string, nextFrom: string, nextTo: string) {
+    if (isAllDay) { void push({ start: { date: nextDate }, end: { date: nextDate } }); return }
+    const tz = event.start.timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone
+    const [y, m, d] = nextDate.split('-').map(Number)
+    const [fh, fm] = nextFrom.split(':').map(Number)
+    const [th, tm] = nextTo.split(':').map(Number)
+    void push({
+      start: { dateTime: new Date(y, m - 1, d, fh, fm).toISOString(), timeZone: tz },
+      end:   { dateTime: new Date(y, m - 1, d, th, tm).toISOString(), timeZone: tz },
+    })
+  }
 
-  const btn = (active: boolean, color: string): React.CSSProperties => ({
-    display: 'flex', alignItems: 'center', gap: 5,
-    padding: '5px 11px', borderRadius: 7, fontSize: 12, cursor: 'pointer',
-    background: active ? `${color}18` : 'transparent',
-    border: `1px solid ${active ? color : '#E8E1CE'}`,
-    color: active ? color : '#9B9180',
-    transition: 'all 0.12s',
-  })
+  /** The first quarter-hour after every clash ends — where this could move to. */
+  const freeAfterClash = (() => {
+    if (!liveClashes.length || isAllDay) return null
+    const latestEnd = liveClashes
+      .map(c => new Date(c.end.dateTime ?? c.end.date + 'T00:00:00').getTime())
+      .reduce((a, b) => Math.max(a, b), 0)
+    const d = new Date(latestEnd)
+    d.setMinutes(Math.ceil(d.getMinutes() / 15) * 15, 0, 0)
+    return `${pad(d.getHours())}:${pad(d.getMinutes())}`
+  })()
+
+  function moveClear() {
+    if (!freeAfterClash) return
+    const span = (new Date(`2000-01-01T${toTime}`).getTime() - new Date(`2000-01-01T${fromTime}`).getTime()) / 60000
+    const [h, m] = freeAfterClash.split(':').map(Number)
+    const endMins = h * 60 + m + span
+    const nextTo = `${pad(Math.floor(endMins / 60) % 24)}:${pad(endMins % 60)}`
+    setFromTime(freeAfterClash); setToTime(nextTo)
+    pushTimes(dateStr, freeAfterClash, nextTo)
+    setClashDismissed(true)
+  }
+
+  function addAttendee() {
+    const email = attendeeDraft.trim().toLowerCase()
+    setAttendeeDraft(''); setAddingAttendee(false)
+    if (!email.includes('@')) return
+    void push({ attendees: [...attendees.map(a => ({ email: a.email })), { email }] })
+  }
+
+  const prepPoints = prep?.talkingPoints ?? []
 
   return (
-    // Docked on the right like the task detail panel, instead of a window that
-    // floats wherever the pointer happened to be.
     <div ref={popupRef} onClick={e => e.stopPropagation()} onMouseDown={e => e.stopPropagation()} style={{
       position: 'fixed', top: 84, right: 20, bottom: 20,
-      width: 400, overflowY: 'auto',
-      background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 16,
+      width: 440, overflowY: 'auto', scrollbarWidth: 'thin',
+      background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 18,
       boxShadow: '0 24px 56px -22px rgba(25,23,18,0.45)', zIndex: 1000,
+      padding: '18px 20px 22px',
     }}>
 
-      {/* Header: calendar dot + title + close — draggable */}
-      <div style={{ padding: '16px 16px 10px', display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-        <div style={{ width: 14, height: 14, borderRadius: '50%', background: calColor, flexShrink: 0, marginTop: editMode ? 10 : 3 }} />
-        <div style={{ flex: 1, minWidth: 0 }}>
-          {editMode ? (
-            <input
-              value={editTitle}
-              onChange={e => setEditTitle(e.target.value)}
-              placeholder="Event title"
-              autoFocus
-              style={{ width: '100%', fontSize: 17, fontWeight: 700, color: '#191712', background: '#FAF7EC', border: '1px solid #E8E1CE', borderRadius: 6, padding: '5px 8px', boxSizing: 'border-box', outline: 'none' }}
-            />
-          ) : (
-            <div
-              onClick={() => onSave && setEditMode(true)}
-              title={onSave ? 'Click to edit' : undefined}
-              style={{ fontSize: 17, fontWeight: 700, color: '#191712', lineHeight: 1.3, wordBreak: 'break-word', cursor: onSave ? 'text' : 'default' }}
-            >
-              {event.summary ?? '(No title)'}
+      {/* ── Which calendar, and the controls ─────────────────────────────── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{
+          display: 'inline-flex', alignItems: 'center', gap: 6, height: 26, padding: '0 11px',
+          borderRadius: 999, background: '#F1ECDE', color: '#4A4438', fontSize: 12,
+          minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        }}>
+          <span style={{ width: 7, height: 7, borderRadius: 999, background: calColor, flexShrink: 0 }} />
+          {calName}{recurrenceWord(event.recurrence) ? ` · ${recurrenceWord(event.recurrence)}` : ''}
+        </span>
+        <span style={{ flex: 1 }} />
+
+        <button
+          onClick={() => onStatusToggle('done')}
+          title={status === 'done' ? 'Mark as not done' : 'Mark as done'}
+          style={{
+            ...EV_ROUND,
+            background: status === 'done' ? '#5F7038' : '#191712',
+            border: 'none', color: '#FDF8E7',
+          }}><Check size={14} strokeWidth={2.4} /></button>
+
+        <button
+          onClick={() => { if (event.htmlLink) window.open(event.htmlLink, '_blank', 'noopener') }}
+          disabled={!event.htmlLink}
+          title="Open in Google Calendar"
+          style={{ ...EV_ROUND, opacity: event.htmlLink ? 1 : 0.45, cursor: event.htmlLink ? 'pointer' : 'default' }}
+        ><ExternalLink size={13} /></button>
+
+        <div style={{ position: 'relative', display: 'flex' }}>
+          <button onClick={() => setMenuOpen(o => !o)} title="More" style={EV_ROUND}>
+            <MoreHorizontal size={14} />
+          </button>
+          {menuOpen && (
+            <div style={{
+              position: 'absolute', top: 'calc(100% + 6px)', right: 0, zIndex: 40, width: 200,
+              background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 12, padding: 6,
+              boxShadow: '0 20px 44px -20px rgba(25,23,18,.42)',
+            }}>
+              {[
+                { label: status === 'cancelled' ? 'Restore event' : 'Mark as cancelled', run: () => { onStatusToggle('cancelled'); setMenuOpen(false) } },
+                ...(videoLink ? [] : onAddMeet ? [{ label: 'Add a Meet link', run: () => { void onAddMeet(); setMenuOpen(false) } }] : []),
+                ...(event.htmlLink ? [{ label: 'Copy event link', run: () => { void navigator.clipboard.writeText(event.htmlLink!).catch(() => {}); setMenuOpen(false) } }] : []),
+              ].map(item => (
+                <button key={item.label} onClick={item.run} style={{
+                  display: 'block', width: '100%', textAlign: 'left', padding: '7px 9px', borderRadius: 8,
+                  background: 'none', border: 'none', cursor: 'pointer', fontSize: 12.5, color: '#191712', fontFamily: 'inherit',
+                }}>{item.label}</button>
+              ))}
+              {onDelete && (
+                <button onClick={() => { onDelete(); setMenuOpen(false) }} style={{
+                  display: 'block', width: '100%', textAlign: 'left', padding: '7px 9px', borderRadius: 8,
+                  background: 'none', border: 'none', cursor: 'pointer', fontSize: 12.5, color: '#B4523A', fontFamily: 'inherit',
+                }}>Delete event</button>
+              )}
             </div>
           )}
-          <div style={{ display: 'flex', gap: 5, marginTop: 5, flexWrap: 'wrap' }}>
-            {isTentative && (
-              <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 4, background: '#FF950022', color: '#FF9500', border: '1px solid #FF950055' }}>Tentative</span>
-            )}
-            {isRecurring && (
-              <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 4, background: 'rgba(127,119,221,0.1)', color: '#7F77DD', border: '1px solid #7F77DD55', display: 'flex', alignItems: 'center', gap: 3 }}>
-                <Repeat size={9} /> Recurring
-              </span>
-            )}
-            {selfAttendee && (
-              <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 4, background: `${rsvpColor(selfAttendee.responseStatus)}22`, color: rsvpColor(selfAttendee.responseStatus), border: `1px solid ${rsvpColor(selfAttendee.responseStatus)}55` }}>
-                {rsvpLabel(selfAttendee.responseStatus)}
-              </span>
-            )}
-          </div>
         </div>
-        <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9B9180', padding: 0, lineHeight: 1, flexShrink: 0, marginTop: 2 }}>
-          <X size={15} />
-        </button>
+
+        <button onClick={onClose} title="Close" style={EV_ROUND}><X size={14} /></button>
       </div>
 
-      <div style={{ height: 1, background: '#EDE7D9' }} />
+      {/* ── Title ────────────────────────────────────────────────────────── */}
+      <input
+        value={title}
+        onChange={e => setTitle(e.target.value)}
+        onBlur={() => { if (title.trim() && title !== event.summary) void push({ summary: title.trim() }) }}
+        placeholder="Event title"
+        style={{
+          width: '100%', boxSizing: 'border-box', marginTop: 14,
+          background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 11,
+          padding: '13px 15px', fontFamily: 'Outfit, sans-serif', fontSize: 21, fontWeight: 600,
+          letterSpacing: '-0.02em', color: '#191712', outline: 'none', textAlign: 'left',
+        }} />
 
-      {/* Location */}
-      {(event.location || editMode) && (
-        <div
-          style={{ display: 'flex', alignItems: 'center', padding: '8px 14px', gap: 9, cursor: (!editMode && onSave) ? 'text' : 'default' }}
-          onClick={() => !editMode && onSave && setEditMode(true)}
-        >
-          <MapPin size={13} color="#9B9180" style={{ flexShrink: 0 }} />
-          {editMode ? (
-            <input value={editLocation} onChange={e => setEditLocation(e.target.value)} placeholder="Add location"
-              style={{ flex: 1, fontSize: 13, color: '#191712', background: '#FAF7EC', border: '1px solid #E8E1CE', borderRadius: 5, padding: '3px 7px', outline: 'none' }} />
-          ) : (
-            <span style={{ fontSize: 13, color: '#3D3926', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{event.location}</span>
-          )}
-        </div>
-      )}
+      {/* ── When ─────────────────────────────────────────────────────────── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+        <label style={{ ...EV_PILL, position: 'relative' }}>
+          {new Date(dateStr + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}
+          <ChevronDown size={13} strokeWidth={2} style={{ color: '#9B9180' }} />
+          <input
+            type="date" value={dateStr}
+            onChange={e => { setDateStr(e.target.value); pushTimes(e.target.value, fromTime, toTime) }}
+            style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', border: 'none', padding: 0 }} />
+        </label>
+        {!isAllDay && (
+          <>
+            <span style={{ width: 92 }}>
+              <TimeSelect value={fromTime} onChange={v => { setFromTime(v); pushTimes(dateStr, v, toTime) }} />
+            </span>
+            <span style={{ fontSize: 12.5, color: '#6C6553' }}>to</span>
+            <span style={{ width: 92 }}>
+              <TimeSelect value={toTime} onChange={v => { setToTime(v); pushTimes(dateStr, fromTime, v) }} />
+            </span>
+          </>
+        )}
+        {isAllDay && <span style={{ fontSize: 12.5, color: '#6C6553' }}>All day</span>}
+      </div>
 
-      {/* Video / Meet */}
-      {videoLink ? (
-        <div style={{ display: 'flex', alignItems: 'center', padding: '8px 14px', gap: 9 }}>
-          <Video size={13} color="#9B9180" style={{ flexShrink: 0 }} />
-          <a href={videoLink} target="_blank" rel="noopener noreferrer"
-            style={{ fontSize: 13, color: '#7F77DD', textDecoration: 'none', flex: 1, display: 'flex', alignItems: 'center', gap: 4 }}>
-            Join Video Call <ExternalLink size={11} />
-          </a>
-        </div>
-      ) : onAddMeet ? (
-        <div style={{ display: 'flex', alignItems: 'center', padding: '8px 14px', gap: 9 }}>
-          <Video size={13} color="#9B9180" style={{ flexShrink: 0 }} />
-          <button
-            onClick={async () => { setAddingMeet(true); await onAddMeet(); setAddingMeet(false) }}
-            disabled={addingMeet}
-            style={{ background: 'none', border: 'none', cursor: addingMeet ? 'wait' : 'pointer', padding: 0, fontSize: 13, color: '#7F77DD', display: 'flex', alignItems: 'center', gap: 5 }}
-          >
-            {addingMeet ? 'Adding…' : 'Add Google Meet'} <Video size={11} />
+      {/* ── What it runs into ────────────────────────────────────────────── */}
+      {liveClashes.length > 0 && !clashDismissed && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 10 }}>
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', height: 32, padding: '0 13px', borderRadius: 9,
+            background: 'rgba(245,209,78,0.24)', border: '1px solid rgba(245,209,78,0.7)',
+            color: '#3D3926', fontSize: 12.5, minWidth: 0,
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>
+            Clashes with {liveClashes[0].summary ?? 'another event'}
+            {liveClashes.length > 1 ? ` +${liveClashes.length - 1}` : ''}
+          </span>
+          <button onClick={() => setClashDismissed(true)} title="Keep it — I know"
+            style={{ ...EV_ROUND, width: 32, height: 32, borderRadius: 9 }}>
+            <Check size={13} strokeWidth={2.4} />
+          </button>
+          <button onClick={() => onOpenEvent?.(liveClashes[0])} title={`Open ${liveClashes[0].summary ?? 'the clashing event'}`}
+            style={{ ...EV_ROUND, width: 32, height: 32, borderRadius: 9 }}>
+            <ExternalLink size={13} />
           </button>
         </div>
-      ) : null}
-
-      {/* Phone */}
-      {phoneEntry && (
-        <div style={{ display: 'flex', alignItems: 'center', padding: '8px 14px', gap: 9 }}>
-          <Phone size={13} color="#9B9180" style={{ flexShrink: 0 }} />
-          <div style={{ fontSize: 13, color: '#3D3926' }}>
-            <a href={phoneEntry.uri} style={{ color: '#7F77DD', textDecoration: 'none' }}>
-              {phoneEntry.label ?? phoneEntry.uri.replace('tel:', '')}
-            </a>
-            {phoneEntry.pin && <span style={{ color: '#9B9180', marginLeft: 6, fontSize: 12 }}>PIN: {phoneEntry.pin}</span>}
-          </div>
-        </div>
       )}
 
-      {(event.location || videoLink || onAddMeet || phoneEntry) && (
-        <div style={{ height: 1, background: '#E8E1CE' }} />
-      )}
+      <div style={{ height: 1, background: '#F0EBDC', margin: '16px 0' }} />
 
-      {/* Date / time fieldRows */}
-      <div style={{ padding: '6px 0' }}>
-        {editMode ? (
-          <>
-            {fieldRow(isAllDayEvent ? 'Start date' : 'Starts', (
-              <input type={isAllDayEvent ? 'date' : 'datetime-local'} value={editStart} onChange={e => setEditStart(e.target.value)}
-                style={{ fontSize: 12, color: '#191712', background: '#FAF7EC', border: '1px solid #E8E1CE', borderRadius: 5, padding: '3px 7px', outline: 'none',  }} />
-            ))}
-            {fieldRow(isAllDayEvent ? 'End date' : 'Ends', (
-              <input type={isAllDayEvent ? 'date' : 'datetime-local'} value={editEnd} onChange={e => setEditEnd(e.target.value)}
-                style={{ fontSize: 12, color: '#191712', background: '#FAF7EC', border: '1px solid #E8E1CE', borderRadius: 5, padding: '3px 7px', outline: 'none',  }} />
-            ))}
-          </>
-        ) : isAllDay ? (
-          <div onClick={() => onSave && setEditMode(true)} style={{ cursor: onSave ? 'text' : 'default' }}>
-            {fieldRow('All Day', <span style={{ fontSize: 13, color: '#3D3926' }}>{fmtPopupDate(startIso, endIso, true)}</span>)}
-          </div>
-        ) : (
-          <div onClick={() => onSave && setEditMode(true)} style={{ cursor: onSave ? 'text' : 'default' }}>
-            {fieldRow('Starts', (
-              <div style={{ display: 'flex', gap: 8 }}>
-                <span style={{ fontSize: 13, color: '#3D3926' }}>{startDT?.date}</span>
-                <span style={{ fontSize: 13, color: '#6C6553' }}>{startDT?.time}</span>
-              </div>
-            ))}
-            {fieldRow('Ends', (
-              <div style={{ display: 'flex', gap: 8 }}>
-                <span style={{ fontSize: 13, color: '#3D3926' }}>{endDT?.date}</span>
-                <span style={{ fontSize: 13, color: '#6C6553' }}>{endDT?.time}</span>
-              </div>
-            ))}
-          </div>
-        )}
-        {isRecurring && fieldRow('Repeat', <span style={{ fontSize: 13, color: '#3D3926' }}>Recurring</span>)}
-        {fieldRow('Calendar', editMode && onMoveCalendar && calendars && calendars.length > 1 ? (
-          <select
-            value={editCalId}
-            onChange={e => setEditCalId(e.target.value)}
-            style={{ fontSize: 13, color: '#191712', background: '#FAF7EC', border: '1px solid #E8E1CE', borderRadius: 5, padding: '3px 7px', outline: 'none', width: '100%' }}
-          >
-            {calendars.map(c => (
-              <option key={c.id} value={c.id}>{c.summary}</option>
-            ))}
-          </select>
-        ) : (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0, overflow: 'hidden' }}>
-            <div style={{ width: 10, height: 10, borderRadius: '50%', background: calColors?.[editCalId] ?? calColor, flexShrink: 0 }} />
-            <span style={{ fontSize: 13, color: '#3D3926', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{calName}</span>
-          </div>
-        ))}
-      </div>
-
-      {/* Attendees */}
-      {(others.length > 0 || (organizer && !organizer.self)) && (
-        <>
-          <div style={{ height: 1, background: '#E8E1CE' }} />
-          <div style={{ padding: '10px 14px' }}>
-            <div style={{ fontSize: 10, fontWeight: 600, color: '#9B9180', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 8 }}>
-              Attendees
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {organizer && !organizer.self && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#F0EBDC', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600, color: '#6C6553', flexShrink: 0 }}>
-                    {((organizer.displayName ?? organizer.email) ?? '?')[0].toUpperCase()}
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 12.5, color: '#3D3926', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {organizer.displayName ?? organizer.email}
-                    </div>
-                    <div style={{ fontSize: 10.5, color: '#9B9180' }}>organizer</div>
-                  </div>
-                </div>
-              )}
-              {others.slice(0, 6).map(a => (
-                <div key={a.email} style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#F0EBDC', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600, color: '#6C6553', flexShrink: 0 }}>
-                    {(a.displayName ?? a.email)[0].toUpperCase()}
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 12.5, color: '#3D3926', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {a.displayName ?? a.email}
-                    </div>
-                    <div style={{ fontSize: 10.5, color: rsvpColor(a.responseStatus) }}>
-                      {rsvpLabel(a.responseStatus)}
-                    </div>
-                  </div>
-                  <span style={{ fontSize: 13, color: rsvpColor(a.responseStatus), flexShrink: 0 }}>
-                    {a.responseStatus === 'accepted' ? '✓' : a.responseStatus === 'declined' ? '✗' : a.responseStatus === 'tentative' ? '?' : '–'}
-                  </span>
-                </div>
-              ))}
-              {others.length > 6 && (
-                <span style={{ fontSize: 11, color: '#9B9180', paddingLeft: 37 }}>+{others.length - 6} more</span>
-              )}
-            </div>
-          </div>
-        </>
-      )}
-
-      {/* Notes */}
-      {(notes || editMode) && (
-        <>
-          <div style={{ height: 1, background: '#E8E1CE' }} />
-          <div style={{ padding: '10px 14px' }}>
-            <div style={{ fontSize: 10, fontWeight: 600, color: '#9B9180', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 5 }}>Notes</div>
-            {editMode ? (
-              <textarea value={editNotes} onChange={e => setEditNotes(e.target.value)} placeholder="Add notes…" rows={3}
-                style={{ width: '100%', fontSize: 12, color: '#191712', background: '#FAF7EC', border: '1px solid #E8E1CE', borderRadius: 5, padding: '5px 7px', resize: 'vertical', outline: 'none', boxSizing: 'border-box', lineHeight: 1.5 }} />
-            ) : (
-              <div
-                onClick={() => onSave && setEditMode(true)}
-                style={{ fontSize: 12, color: '#6C6553', lineHeight: 1.6, maxHeight: 90, overflowY: 'auto', whiteSpace: 'pre-wrap', wordBreak: 'break-word', cursor: onSave ? 'text' : 'default' }}
-              >
-                {notes.slice(0, 400)}{notes.length > 400 ? '…' : ''}
-              </div>
-            )}
-          </div>
-        </>
-      )}
-
-      {/* Open in GCal link */}
-      {event.htmlLink && (
-        <div style={{ padding: '6px 14px 10px' }}>
-          <a href={event.htmlLink} target="_blank" rel="noopener noreferrer"
-            style={{ fontSize: 12, color: '#6C6553', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
-            <ExternalLink size={11} /> Open in Google Calendar
-          </a>
-        </div>
-      )}
-
-      {/* Action buttons */}
-      <div style={{ padding: '8px 14px 14px', display: 'flex', gap: 6, borderTop: '1px solid #EDE7D9', flexWrap: 'wrap' }}>
-        {editMode ? (
-          <>
-            <button
-              onClick={handleSave} disabled={saving}
-              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 13px', borderRadius: 7, fontSize: 12, cursor: saving ? 'default' : 'pointer', background: '#F5D14E', border: '1px solid rgba(25,23,18,0.18)', color: '#191712', fontWeight: 600, opacity: saving ? 0.6 : 1, boxShadow: '0 2px 0 rgba(25,23,18,0.1)' }}
-            >
-              {saving ? 'Saving…' : 'Save'}
-            </button>
-            <button
-              onClick={() => { setEditMode(false); setSaveError(null) }}
-              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 11px', borderRadius: 7, fontSize: 12, cursor: 'pointer', background: 'transparent', border: '1px solid #E8E1CE', color: '#9B9180' }}
-            >
-              Cancel
-            </button>
-            {saveError && <span style={{ fontSize: 11, color: '#E05252', alignSelf: 'center' }}>{saveError}</span>}
-          </>
-        ) : (
-          <>
-            <button style={btn(status === 'done', '#1D9E75')} onClick={() => onStatusToggle('done')}>
-              <CheckCircle2 size={12} /> Done
-            </button>
-            <button style={btn(status === 'cancelled', '#E05252')} onClick={() => onStatusToggle('cancelled')}>
-              <XCircle size={12} /> Cancel
-            </button>
-            <button
-              style={{ ...btn(showPrep, '#7F77DD'), marginLeft: 'auto' }}
-              onClick={() => { setShowPrep(p => !p); if (!prep && !prepLoading) onPrepRequest() }}
-            >
-              <Sparkles size={12} /> AI Prep
-            </button>
-          </>
-        )}
-      </div>
-
-      {/* AI Prep section */}
-      {showPrep && (
-        <div style={{ borderTop: '1px solid #EDE7D9', padding: '12px 14px 16px' }}>
-          {prepLoading ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-              {[75, 55, 85, 65].map((w, i) => (
-                <div key={i} style={{ height: 9, width: `${w}%`, borderRadius: 3, background: 'linear-gradient(90deg, #FFFFFF 25%, #E8E1CE 50%, #FFFFFF 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.5s infinite' }} />
-              ))}
-            </div>
-          ) : prepError ? (
-            <p style={{ margin: 0, fontSize: 12, color: '#E05252' }}>{prepError}</p>
-          ) : prep ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {prep.goal && (
-                <div>
-                  <div style={{ fontSize: 10, fontWeight: 600, color: '#9B9180', textTransform: 'uppercase', letterSpacing: '0.7px', marginBottom: 4 }}>Goal</div>
-                  <div style={{ fontSize: 12, color: '#3D3926', lineHeight: 1.55 }}>{prep.goal}</div>
-                </div>
-              )}
-              {prep.talkingPoints?.length > 0 && (
-                <div>
-                  <div style={{ fontSize: 10, fontWeight: 600, color: '#9B9180', textTransform: 'uppercase', letterSpacing: '0.7px', marginBottom: 6 }}>Talking Points</div>
-                  {prep.talkingPoints.map((pt, i) => (
-                    <div key={i} style={{ display: 'flex', gap: 7, fontSize: 12, color: '#3D3926', lineHeight: 1.45, marginBottom: 4 }}>
-                      <span style={{ color: '#9B9180', flexShrink: 0 }}>{i+1}.</span>
-                      <span>{pt}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+      {/* ── Fields ───────────────────────────────────────────────────────── */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+          <span style={EV_LABEL}>Calendar</span>
+          {writable.length > 1 && onMoveCalendar ? (
+            <span style={{ flex: 1, minWidth: 0, position: 'relative', display: 'flex' }}>
+              <span style={{ ...EV_PILL, flex: 1, justifyContent: 'space-between' }}>
+                <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{calName}</span>
+                <ChevronDown size={13} strokeWidth={2} style={{ color: '#9B9180', flexShrink: 0 }} />
+              </span>
+              <select
+                value={event.calendarId ?? ''}
+                onChange={e => { void onMoveCalendar(e.target.value) }}
+                style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', border: 'none' }}>
+                {writable.map(c => <option key={c.id} value={c.id}>{c.summaryOverride ?? c.summary}</option>)}
+              </select>
+            </span>
           ) : (
-            <p style={{ margin: 0, fontSize: 12, color: '#9B9180' }}>Generating prep…</p>
+            <span style={{ ...EV_PILL, flex: 1, cursor: 'default' }}>{calName}</span>
           )}
         </div>
+
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+          <span style={EV_LABEL}>Where</span>
+          <span style={{ flex: 1, minWidth: 0, display: 'flex', gap: 7 }}>
+            <input
+              value={location}
+              onChange={e => setLocation(e.target.value)}
+              onBlur={() => { if (location !== (event.location ?? '')) void push({ location: location.trim() }) }}
+              placeholder={videoLink ? 'Video call' : 'Add a place'}
+              style={{ ...EV_PILL, flex: 1, cursor: 'text', outline: 'none' }} />
+            {videoLink && (
+              <a href={videoLink} target="_blank" rel="noreferrer"
+                style={{ ...EV_PILL, textDecoration: 'none', color: '#191712', flexShrink: 0 }}>
+                <Video size={13} /> Join
+              </a>
+            )}
+          </span>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+          <span style={EV_LABEL}>Repeats</span>
+          <span style={{ ...EV_PILL, flex: 1, cursor: 'default', color: recurrence ? '#191712' : '#9B9180' }}>
+            {recurrence ?? 'Does not repeat'}
+          </span>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+          <span style={EV_LABEL}>Prep</span>
+          <span style={{ flex: 1, minWidth: 0 }}>
+            {prep ? (
+              <span style={{ ...EV_PILL, width: '100%', cursor: 'default' }}>
+                {prepPoints.length} point{prepPoints.length === 1 ? '' : 's'} gathered
+              </span>
+            ) : (
+              <button onClick={onPrepRequest} disabled={prepLoading}
+                style={{ ...EV_PILL, width: '100%', justifyContent: 'flex-start', opacity: prepLoading ? 0.6 : 1 }}>
+                <Sparkles size={13} /> {prepLoading ? 'Gathering prep…' : 'Gather prep'}
+              </button>
+            )}
+          </span>
+        </div>
+      </div>
+
+      {prepError && (
+        <p style={{ margin: '8px 0 0', fontSize: 11.5, color: '#B4523A' }}>{prepError}</p>
       )}
+
+      <div style={{ height: 1, background: '#F0EBDC', margin: '16px 0' }} />
+
+      {/* ── Attendees ────────────────────────────────────────────────────── */}
+      <div style={{ ...EV_SECTION, marginBottom: 10 }}>Attendees · {attendees.length}</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        {attendees.map(a => (
+          <div key={a.email} style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '5px 0', minWidth: 0 }}>
+            <span style={{
+              width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: '#F1ECDE', color: '#6C6553', fontSize: 10.5, fontWeight: 700,
+            }}>{evInitials(a.displayName, a.email)}</span>
+            <span style={{ flex: 1, minWidth: 0, fontSize: 13.5, fontWeight: 600, color: '#191712', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {a.displayName ?? a.email}
+            </span>
+            <span style={{ fontSize: 12, color: '#9B9180', flexShrink: 0 }}>
+              {a.responseStatus === 'declined' ? 'Declined'
+                : a.responseStatus === 'tentative' ? 'Maybe'
+                : evOrg(a.email)}
+            </span>
+          </div>
+        ))}
+
+        {addingAttendee ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '5px 0' }}>
+            <span style={{
+              width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              border: '1px dashed #D8CFB8', color: '#C9C0A8',
+            }}><Plus size={14} /></span>
+            <input
+              autoFocus
+              value={attendeeDraft}
+              onChange={e => setAttendeeDraft(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') addAttendee(); if (e.key === 'Escape') { setAttendeeDraft(''); setAddingAttendee(false) } }}
+              onBlur={addAttendee}
+              placeholder="name@company.com"
+              style={{ ...EV_PILL, flex: 1, cursor: 'text', outline: 'none' }} />
+          </div>
+        ) : (
+          <button onClick={() => setAddingAttendee(true)} style={{
+            display: 'flex', alignItems: 'center', gap: 11, padding: '5px 0',
+            background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
+          }}>
+            <span style={{
+              width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              border: '1px dashed #D8CFB8', color: '#C9C0A8',
+            }}><Plus size={14} /></span>
+            <span style={{ fontSize: 13, color: '#9B9180' }}>
+              Add attendee{isOrganiser ? ' · you are organiser' : ''}
+            </span>
+          </button>
+        )}
+      </div>
+
+      {/* ── Prep gathered ────────────────────────────────────────────────── */}
+      {prepPoints.length > 0 && (
+        <>
+          <div style={{ height: 1, background: '#F0EBDC', margin: '16px 0' }} />
+          <div style={{ ...EV_SECTION, marginBottom: 10 }}>Prep gathered</div>
+          {prep?.goal && (
+            <p style={{ margin: '0 0 10px', fontSize: 12.5, color: '#3D3926', lineHeight: 1.5 }}>{prep.goal}</p>
+          )}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {prepPoints.map((pt, i) => {
+              const on = prepChecked.has(i)
+              return (
+                <button key={i} onClick={() => setPrepChecked(prev => {
+                  const next = new Set(prev); if (on) next.delete(i); else next.add(i); return next
+                })} style={{
+                  display: 'flex', alignItems: 'flex-start', gap: 11, padding: '5px 0',
+                  background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit',
+                }}>
+                  <span style={{
+                    width: 19, height: 19, borderRadius: 6, boxSizing: 'border-box', flexShrink: 0, marginTop: 1,
+                    border: on ? '1.5px solid #191712' : '1.5px solid #CFC6B0',
+                    background: on ? '#191712' : '#FFFFFF',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>{on && <Check size={11} color="#fff" strokeWidth={3} />}</span>
+                  <span style={{ fontSize: 13, color: on ? '#9B9180' : '#191712', lineHeight: 1.45, textDecoration: on ? 'line-through' : 'none' }}>
+                    {pt}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </>
+      )}
+
+      {/* ── What the Professor would do about it ─────────────────────────── */}
+      {(liveClashes.length > 0 || videoLink) && (
+        <div style={{
+          marginTop: 18, padding: '14px 15px', borderRadius: 12,
+          background: '#FAF7EC', border: '1px solid #E8E1CE',
+        }}>
+          <p style={{ margin: 0, fontSize: 13, color: '#3D3926', lineHeight: 1.5 }}>
+            {liveClashes.length > 0 && freeAfterClash
+              ? `Professor: move this to ${freeAfterClash} and it stops costing you anything.`
+              : liveClashes.length > 0
+              ? 'Professor: this overlaps something already booked.'
+              : 'Professor: the link is live — join when you are ready.'}
+          </p>
+          <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+            {liveClashes.length > 0 && freeAfterClash && (
+              <button onClick={moveClear} disabled={saving} style={{
+                ...EV_PILL, background: '#191712', border: 'none', color: '#FDF8E7', fontWeight: 600,
+                opacity: saving ? 0.6 : 1,
+              }}>Move to {freeAfterClash}</button>
+            )}
+            {videoLink && (
+              <a href={videoLink} target="_blank" rel="noreferrer"
+                style={{ ...EV_PILL, textDecoration: 'none', color: '#191712' }}>Join</a>
+            )}
+          </div>
+        </div>
+      )}
+
+      {saveError && (
+        <p style={{ margin: '12px 0 0', fontSize: 11.5, color: '#B4523A' }}>{saveError}</p>
+      )}
+      <p style={{ margin: '14px 0 0', fontSize: 11, color: '#9B9180' }}>
+        {saving ? 'Saving…' : 'Every change saves itself.'}
+      </p>
     </div>
   )
 }
@@ -1321,7 +1385,10 @@ function EventContextMenu({
   )
 }
 
-// ─── NewEventForm (macOS Calendar style) ─────────────────────────────────────
+// ─── New event ───────────────────────────────────────────────────────────────
+// The same panel as an existing event, in the state before it exists: title,
+// when, calendar, where, attendees — then Create.
+
 function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
   draft:     NewEventDraft
   calendars: CalWithAccount[]
@@ -1342,40 +1409,30 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
   const [allDay,       setAllDay]       = useState(false)
   const [startDate,    setStartDate]    = useState(draft.dateStr)
   const [startTime,    setStartTime]    = useState(padMin(draft.startMin))
-  const [endDate,      setEndDate]      = useState(draft.dateStr)
   const [endTime,      setEndTime]      = useState(padMin(draft.endMin))
   const [inviteeInput, setInviteeInput] = useState('')
   const [invitees,     setInvitees]     = useState<string[]>([])
   const [addMeet,      setAddMeet]      = useState(false)
-  const [pos,          setPos]          = useState({ x: draft.anchorX + 16, y: draft.anchorY - 40 })
   const ref      = useRef<HTMLDivElement>(null)
   const titleRef = useRef<HTMLInputElement>(null)
 
-  useEffect(() => {
-    titleRef.current?.focus()
-    if (!ref.current) return
-    const { width, height } = ref.current.getBoundingClientRect()
-    let x = draft.anchorX + 16, y = draft.anchorY - 60
-    if (x + width  > window.innerWidth  - 12) x = draft.anchorX - width - 16
-    if (y + height > window.innerHeight - 12) y = window.innerHeight - height - 12
-    if (y < 8) y = 8
-    setPos({ x, y })
-  }, [draft.anchorX, draft.anchorY])
+  useEffect(() => { titleRef.current?.focus() }, [])
 
   useEffect(() => {
-    const fn = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) onCancel()
-    }
+    const fn = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) onCancel() }
     document.addEventListener('mousedown', fn)
     return () => document.removeEventListener('mousedown', fn)
   }, [onCancel])
 
   const calColor = calColors[calId] ?? calendars.find(c => c.id === calId)?.backgroundColor ?? '#7F77DD'
+  const calLabel = (() => {
+    const c = calendars.find(x => x.id === calId)
+    return c ? (c.summaryOverride ?? c.summary) : 'Calendar'
+  })()
 
   function addInvitee(raw: string) {
-    const email = raw.trim().toLowerCase().replace(/,$/,'')
-    if (email && email.includes('@') && !invitees.includes(email))
-      setInvitees(prev => [...prev, email])
+    const email = raw.trim().toLowerCase().replace(/,$/, '')
+    if (email && email.includes('@') && !invitees.includes(email)) setInvitees(prev => [...prev, email])
     setInviteeInput('')
   }
 
@@ -1385,7 +1442,7 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
       title:       title.trim(),
       calId,
       startDate,   startTime: allDay ? '' : startTime,
-      endDate,     endTime:   allDay ? '' : endTime,
+      endDate:     startDate, endTime: allDay ? '' : endTime,
       allDay,
       location:    location.trim() || undefined,
       description: description.trim() || undefined,
@@ -1394,215 +1451,156 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
     })
   }
 
-  const inputBase: React.CSSProperties = {
-    background: 'transparent', border: 'none', outline: 'none',
-    color: '#191712', fontFamily: 'inherit', fontSize: 13,
-    padding: 0, margin: 0, width: '100%',
-  }
-
-  function FieldRow({ label, children }: { label: string; children: React.ReactNode }) {
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', minHeight: 34, padding: '0 16px' }}>
-        <div style={{ width: 90, flexShrink: 0, textAlign: 'right', paddingRight: 14, fontSize: 12.5, color: '#6C6553' }}>
-          {label}
-        </div>
-        <div style={{ flex: 1 }}>{children}</div>
-      </div>
-    )
-  }
-
   return (
-    <div
-      ref={ref}
-      onClick={e => e.stopPropagation()}
-      onContextMenu={e => e.preventDefault()}
-      style={{
-        position: 'fixed', top: pos.y, left: pos.x, width: 340, zIndex: 1100,
-        background: '#FFFFFF',
-        border: '1px solid #E8E1CE',
-        borderRadius: 14,
-        boxShadow: '0 24px 64px rgba(0,0,0,0.75)',
-        overflow: 'hidden',
-      }}
-    >
-      {/* ── Title + Calendar selector ── */}
-      <div style={{ padding: '14px 16px 12px', borderBottom: '1px solid #E8E1CE' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <input
-            ref={titleRef}
-            value={title}
-            onChange={e => setTitle(e.target.value)}
-            onKeyDown={e => {
-              if (e.key === 'Enter' && title.trim()) handleSave()
-              if (e.key === 'Escape') onCancel()
-            }}
-            placeholder="New Event"
-            style={{
-              flex: 1, background: 'transparent', border: 'none', outline: 'none',
-              color: '#191712', fontSize: 17, fontWeight: 700, padding: 0,
-              fontFamily: 'inherit',
-            }}
-          />
-          {/* Calendar dot + picker */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-            <div style={{ width: 13, height: 13, borderRadius: '50%', background: calColor, flexShrink: 0 }} />
-            <select
-              value={calId}
-              onChange={e => setCalId(e.target.value)}
-              style={{
-                background: '#E8E1CE', border: '1px solid #E8E1CE', borderRadius: 6,
-                color: '#3D3926', fontSize: 11, padding: '3px 6px',
-                cursor: 'pointer', outline: 'none', maxWidth: 110,
-              }}
-            >
-              {writable.map(c => <option key={c.id} value={c.id}>{c.summary}</option>)}
-            </select>
-          </div>
-        </div>
-      </div>
+    <div ref={ref} onClick={e => e.stopPropagation()} onMouseDown={e => e.stopPropagation()} style={{
+      position: 'fixed', top: 84, right: 20, bottom: 20,
+      width: 440, overflowY: 'auto', scrollbarWidth: 'thin',
+      background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 18,
+      boxShadow: '0 24px 56px -22px rgba(25,23,18,0.45)', zIndex: 1000,
+      padding: '18px 20px 22px',
+    }}>
 
-      {/* ── Location / Video Call ── */}
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: 10,
-        padding: '9px 16px', borderBottom: '1px solid #E8E1CE',
-      }}>
-        <MapPin size={14} color="#9B9180" style={{ flexShrink: 0 }} />
-        <input
-          value={location}
-          onChange={e => setLocation(e.target.value)}
-          placeholder="Add Location or Video Call"
-          style={{ ...inputBase, color: location ? '#191712' : '#9B9180' }}
-        />
-        <button
-          onClick={() => setAddMeet(v => !v)}
-          title={addMeet ? 'Remove Google Meet' : 'Add Google Meet link'}
-          style={{
-            flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            width: 30, height: 26, borderRadius: 7,
-            background: addMeet ? 'rgba(29,158,117,0.15)' : '#FFFFFF',
-            border: `1px solid ${addMeet ? '#1D9E75' : '#E8E1CE'}`,
-            color: addMeet ? '#1D9E75' : '#9B9180', cursor: 'pointer',
-            transition: 'all 0.15s',
-          }}
-        >
-          <Video size={13} />
-        </button>
-      </div>
-      {addMeet && (
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 7,
-          padding: '6px 16px', borderBottom: '1px solid #E8E1CE',
-          background: 'rgba(29,158,117,0.06)', fontSize: 11.5, color: '#1D9E75',
+      {/* Which calendar, and the way out */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{
+          display: 'inline-flex', alignItems: 'center', gap: 6, height: 26, padding: '0 11px',
+          borderRadius: 999, background: '#F1ECDE', color: '#4A4438', fontSize: 12,
         }}>
-          <Video size={11} />
-          Google Meet link will be created on save
-        </div>
-      )}
-
-      {/* ── Date / Time ── */}
-      <div style={{ padding: '6px 0', borderBottom: '1px solid #E8E1CE' }}>
-        <FieldRow label="All Day:">
-          <input
-            type="checkbox"
-            checked={allDay}
-            onChange={e => setAllDay(e.target.checked)}
-            style={{ width: 15, height: 15, cursor: 'pointer', accentColor: calColor }}
-          />
-        </FieldRow>
-        <FieldRow label="Starts:">
-          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-            <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
-              style={{ ...inputBase, width: 'auto' }} />
-            {!allDay && (
-              <input type="time" value={startTime} onChange={e => setStartTime(e.target.value)}
-                style={{ ...inputBase, width: 'auto', fontWeight: 600 }} />
-            )}
-          </div>
-        </FieldRow>
-        <FieldRow label="Ends:">
-          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-            <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
-              style={{ ...inputBase, width: 'auto' }} />
-            {!allDay && (
-              <input type="time" value={endTime} onChange={e => setEndTime(e.target.value)}
-                style={{ ...inputBase, width: 'auto', fontWeight: 600 }} />
-            )}
-          </div>
-        </FieldRow>
+          <span style={{ width: 7, height: 7, borderRadius: 999, background: calColor, flexShrink: 0 }} />
+          New event
+        </span>
+        <span style={{ flex: 1 }} />
+        <button onClick={onCancel} title="Cancel" style={EV_ROUND}><X size={14} /></button>
       </div>
 
-      {/* ── Invitees ── */}
-      <div style={{ padding: '9px 16px', borderBottom: '1px solid #E8E1CE' }}>
-        {invitees.length > 0 && (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 7 }}>
-            {invitees.map(email => (
-              <div key={email} style={{
-                display: 'flex', alignItems: 'center', gap: 5,
-                background: '#FAF7EC', borderRadius: 20,
-                padding: '3px 8px 3px 10px', fontSize: 11.5, color: '#3D3926',
-              }}>
-                {email}
-                <span
-                  onClick={() => setInvitees(prev => prev.filter(e => e !== email))}
-                  style={{ cursor: 'pointer', color: '#9B9180', fontSize: 14, lineHeight: 1 }}
-                >×</span>
-              </div>
-            ))}
-          </div>
+      {/* Title */}
+      <input
+        ref={titleRef}
+        value={title}
+        onChange={e => setTitle(e.target.value)}
+        onKeyDown={e => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') onCancel() }}
+        placeholder="Event title"
+        style={{
+          width: '100%', boxSizing: 'border-box', marginTop: 14,
+          background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 11,
+          padding: '13px 15px', fontFamily: 'Outfit, sans-serif', fontSize: 21, fontWeight: 600,
+          letterSpacing: '-0.02em', color: '#191712', outline: 'none', textAlign: 'left',
+        }} />
+
+      {/* When */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+        <label style={{ ...EV_PILL, position: 'relative' }}>
+          {new Date(startDate + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}
+          <ChevronDown size={13} strokeWidth={2} style={{ color: '#9B9180' }} />
+          <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
+            style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', border: 'none', padding: 0 }} />
+        </label>
+        {!allDay && (
+          <>
+            <span style={{ width: 92 }}><TimeSelect value={startTime} onChange={setStartTime} /></span>
+            <span style={{ fontSize: 12.5, color: '#6C6553' }}>to</span>
+            <span style={{ width: 92 }}><TimeSelect value={endTime} onChange={setEndTime} /></span>
+          </>
         )}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Users size={14} color="#9B9180" style={{ flexShrink: 0 }} />
+        <button onClick={() => setAllDay(v => !v)} style={{
+          ...EV_PILL,
+          background: allDay ? '#191712' : '#FFFFFF',
+          border: allDay ? 'none' : '1px solid #E8E1CE',
+          color: allDay ? '#FDF8E7' : '#6C6553',
+        }}>All day</button>
+      </div>
+
+      <div style={{ height: 1, background: '#F0EBDC', margin: '16px 0' }} />
+
+      {/* Fields */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+          <span style={EV_LABEL}>Calendar</span>
+          <span style={{ flex: 1, minWidth: 0, position: 'relative', display: 'flex' }}>
+            <span style={{ ...EV_PILL, flex: 1, justifyContent: 'space-between' }}>
+              <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{calLabel}</span>
+              <ChevronDown size={13} strokeWidth={2} style={{ color: '#9B9180', flexShrink: 0 }} />
+            </span>
+            <select value={calId} onChange={e => setCalId(e.target.value)}
+              style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', border: 'none' }}>
+              {writable.map(c => <option key={c.id} value={c.id}>{c.summaryOverride ?? c.summary}</option>)}
+            </select>
+          </span>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+          <span style={EV_LABEL}>Where</span>
+          <span style={{ flex: 1, minWidth: 0, display: 'flex', gap: 7 }}>
+            <input value={location} onChange={e => setLocation(e.target.value)} placeholder="Add a place"
+              style={{ ...EV_PILL, flex: 1, cursor: 'text', outline: 'none' }} />
+            <button onClick={() => setAddMeet(v => !v)} title="Add a Google Meet link" style={{
+              ...EV_PILL, flexShrink: 0,
+              background: addMeet ? '#191712' : '#FFFFFF',
+              border: addMeet ? 'none' : '1px solid #E8E1CE',
+              color: addMeet ? '#FDF8E7' : '#6C6553',
+            }}><Video size={13} /> Meet</button>
+          </span>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+          <span style={EV_LABEL}>Notes</span>
+          <textarea value={description} onChange={e => setDescription(e.target.value)} rows={2}
+            placeholder="Anything worth remembering…"
+            style={{
+              flex: 1, minWidth: 0, boxSizing: 'border-box', resize: 'vertical',
+              background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 9,
+              padding: '9px 12px', fontSize: 13, color: '#191712', fontFamily: 'inherit',
+              outline: 'none', textAlign: 'left',
+            }} />
+        </div>
+      </div>
+
+      <div style={{ height: 1, background: '#F0EBDC', margin: '16px 0' }} />
+
+      {/* Attendees */}
+      <div style={{ ...EV_SECTION, marginBottom: 10 }}>Attendees · {invitees.length}</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        {invitees.map(email => (
+          <div key={email} style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '5px 0', minWidth: 0 }}>
+            <span style={{
+              width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: '#F1ECDE', color: '#6C6553', fontSize: 10.5, fontWeight: 700,
+            }}>{evInitials(undefined, email)}</span>
+            <span style={{ flex: 1, minWidth: 0, fontSize: 13.5, fontWeight: 600, color: '#191712', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {email}
+            </span>
+            <button onClick={() => setInvitees(prev => prev.filter(x => x !== email))} title="Remove"
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#C9C0A8', padding: 2, display: 'flex' }}>
+              <X size={13} />
+            </button>
+          </div>
+        ))}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '5px 0' }}>
+          <span style={{
+            width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            border: '1px dashed #D8CFB8', color: '#C9C0A8',
+          }}><Plus size={14} /></span>
           <input
             value={inviteeInput}
             onChange={e => setInviteeInput(e.target.value)}
-            onKeyDown={e => {
-              if ((e.key === 'Enter' || e.key === ',') && inviteeInput.trim()) {
-                e.preventDefault(); addInvitee(inviteeInput)
-              }
-            }}
-            onBlur={() => { if (inviteeInput.trim()) addInvitee(inviteeInput) }}
-            placeholder="Add invitees..."
-            style={{ ...inputBase, color: inviteeInput ? '#191712' : '#9B9180' }}
-          />
+            onKeyDown={e => { if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addInvitee(inviteeInput) } }}
+            onBlur={() => addInvitee(inviteeInput)}
+            placeholder="name@company.com"
+            style={{ ...EV_PILL, flex: 1, cursor: 'text', outline: 'none' }} />
         </div>
       </div>
 
-      {/* ── Notes ── */}
-      <div style={{ padding: '9px 16px', borderBottom: '1px solid #E8E1CE' }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-          <Repeat size={14} color="#9B9180" style={{ flexShrink: 0, marginTop: 2 }} />
-          <textarea
-            value={description}
-            onChange={e => setDescription(e.target.value)}
-            placeholder="Add notes, URL, or attachments..."
-            rows={2}
-            style={{
-              ...inputBase, resize: 'none', lineHeight: 1.5,
-              color: description ? '#191712' : '#9B9180',
-            }}
-          />
-        </div>
-      </div>
-
-      {/* ── Actions ── */}
-      <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', padding: '10px 16px' }}>
-        <button
-          onClick={onCancel}
-          style={{
-            background: 'transparent', border: '1px solid #E8E1CE', borderRadius: 8,
-            color: '#6C6553', fontSize: 12.5, padding: '6px 18px', cursor: 'pointer',
-          }}
-        >Cancel</button>
-        <button
-          onClick={handleSave}
-          disabled={!title.trim()}
-          style={{
-            background: title.trim() ? calColor : '#FAF7EC', border: 'none', borderRadius: 8,
-            color: title.trim() ? '#191712' : '#9B9180', fontSize: 12.5, fontWeight: 600,
-            padding: '6px 20px', cursor: title.trim() ? 'pointer' : 'default',
-            transition: 'background 0.15s',
-          }}
-        >Done</button>
+      {/* Create */}
+      <div style={{ display: 'flex', gap: 8, marginTop: 18 }}>
+        <button onClick={handleSave} disabled={!title.trim()} style={{
+          ...EV_PILL, flex: 1, justifyContent: 'center', fontWeight: 600,
+          background: title.trim() ? '#191712' : '#EDE7D9',
+          border: 'none', color: title.trim() ? '#FDF8E7' : '#9B9180',
+          cursor: title.trim() ? 'pointer' : 'default',
+        }}>Create event</button>
+        <button onClick={onCancel} style={{ ...EV_PILL, color: '#6C6553' }}>Cancel</button>
       </div>
     </div>
   )
@@ -1734,10 +1732,9 @@ export function CalendarIntelligence() {
   // ── Grid scroll ref (auto-scroll to current time on mount) ──────────────────
   const gridRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
-    if (gridRef.current) {
-      const top = Math.max(0, nowTopPx() - 120)
-      gridRef.current.scrollTo({ top, behavior: 'smooth' })
-    }
+    if (!gridRef.current) return
+    // The day starts at 07:00 — open the grid there, not at midnight
+    gridRef.current.scrollTo({ top: 7 * HOUR_PX, behavior: 'smooth' })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -2538,13 +2535,18 @@ export function CalendarIntelligence() {
                     const rgb = col.startsWith('#') ? hexRgbStr(col) : '127,119,221'
                     const t = e.start.dateTime ? new Date(e.start.dateTime) : null
                     return (
-                      <span key={e.id} title={e.summary} style={{
-                        display: 'flex', alignItems: 'center', gap: 5, minWidth: 0,
-                        padding: '2px 6px', borderRadius: 6,
-                        background: `rgba(${rgb}, 0.16)`, border: `1px solid rgba(${rgb}, 0.4)`,
-                        fontSize: 10.5, color: '#191712',
-                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                      }}>
+                      <span
+                        key={e.id}
+                        title={e.summary}
+                        // The chip opens the event; only the cell around it opens the day
+                        onClick={ev => { ev.stopPropagation(); setSelectedEvent(e as GCalEventExt) }}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 5, minWidth: 0,
+                          padding: '2px 6px', borderRadius: 6, cursor: 'pointer',
+                          background: `rgba(${rgb}, 0.16)`, border: `1px solid rgba(${rgb}, 0.4)`,
+                          fontSize: 10.5, color: '#191712',
+                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                        }}>
                         {t && <span style={{ color: '#6C6553', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>
                           {String(t.getHours()).padStart(2, '0')}:{String(t.getMinutes()).padStart(2, '0')}
                         </span>}
@@ -2777,9 +2779,22 @@ export function CalendarIntelligence() {
             onPrepRequest={() => void generatePrep(selectedEvent)}
             onAddMeet={() => handleAddMeet(selectedEvent)}
             onSave={patch => handleUpdateEvent(selectedEvent, patch)}
+            onDelete={() => void handleDeleteEvent(selectedEvent)}
             calendars={allCalendars.filter(c => c.accessRole === 'owner' || c.accessRole === 'writer')}
-            calColors={calColors}
             onMoveCalendar={targetCalId => handleMoveEvent(selectedEvent, targetCalId)}
+            clashes={(() => {
+              // Anything on the same day whose span overlaps this one
+              if (!selectedEvent.start.dateTime || !selectedEvent.end.dateTime) return []
+              const s0 = new Date(selectedEvent.start.dateTime).getTime()
+              const e0 = new Date(selectedEvent.end.dateTime).getTime()
+              return (displayedEvents as GCalEventExt[]).filter(e => {
+                if (e.id === selectedEvent.id || !e.start.dateTime || !e.end.dateTime) return false
+                const s1 = new Date(e.start.dateTime).getTime()
+                const e1 = new Date(e.end.dateTime).getTime()
+                return s1 < e0 && e1 > s0
+              })
+            })()}
+            onOpenEvent={e => setSelectedEvent(e)}
           />
         )
       })()}

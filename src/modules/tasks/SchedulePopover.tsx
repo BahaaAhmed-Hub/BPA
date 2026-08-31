@@ -47,7 +47,8 @@ const FIELD: React.CSSProperties = {
 export function TimeSelect({ value, onChange, label }: {
   value: string
   onChange: (v: string) => void
-  label: string
+  /** Omit to render the control on its own, with no caption above it. */
+  label?: string
 }) {
   const [open, setOpen] = useState(false)
   const [typed, setTyped] = useState('')
@@ -84,7 +85,7 @@ export function TimeSelect({ value, onChange, label }: {
 
   return (
     <div ref={ref} style={{ flex: 1, minWidth: 0, position: 'relative' }}>
-      <span style={{ display: 'block', fontSize: 11, color: '#6C6553', marginBottom: 4 }}>{label}</span>
+      {label && <span style={{ display: 'block', fontSize: 11, color: '#6C6553', marginBottom: 4 }}>{label}</span>}
       <button type="button" onClick={() => setOpen(o => !o)} style={{
         ...FIELD, borderColor: open ? '#CFC6B0' : '#E8E1CE',
       }}>{formatTime(value)}</button>
