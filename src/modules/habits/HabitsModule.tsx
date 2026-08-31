@@ -54,6 +54,27 @@ function fmtWeekRange(startKey: string): string {
 
 const FREQ_OPTS = ['daily', 'weekdays', 'weekly'] as const
 
+export type HabitView = 'table' | 'wall' | 'fill'
+const HABIT_VIEW_KEY = 'professor-habit-view'
+
+export const HABIT_VIEWS: { id: HabitView; label: string; hint: string }[] = [
+  { id: 'table', label: 'Table',  hint: 'Every habit on one line, a week at a time' },
+  { id: 'wall',  label: 'Wall',   hint: 'A grid of picture cards' },
+  { id: 'fill',  label: 'Fill',   hint: 'Tall cards that fill up as you log' },
+]
+
+/** Which view the Habits page opens on. Changing it on the page sticks. */
+export function loadHabitView(): HabitView {
+  try {
+    const v = localStorage.getItem(HABIT_VIEW_KEY)
+    return v === 'wall' || v === 'fill' || v === 'table' ? v : 'table'
+  } catch { return 'table' }
+}
+export function saveHabitView(v: HabitView): void {
+  try { localStorage.setItem(HABIT_VIEW_KEY, v) } catch { /* private mode */ }
+}
+
+
 // ─── Emoji picker ─────────────────────────────────────────────────────────────
 
 const EMOJIS = [
@@ -321,8 +342,13 @@ function WallCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, p
             ? <img src={habit.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
             : <span style={{ fontSize: 52, opacity: 0.18 }}>{habit.emoji}</span>}
         </span>
-        {/* Dark gradient overlay */}
-        <span style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'linear-gradient(180deg,rgba(25,23,18,.46) 0%,rgba(25,23,18,.10) 40%,rgba(25,23,18,.52) 100%)' }} />
+        {/* Dark gradient overlay — lighter over a real picture, so it stays in colour */}
+        <span style={{
+          position: 'absolute', inset: 0, pointerEvents: 'none',
+          background: habit.image
+            ? 'linear-gradient(180deg,rgba(25,23,18,.30) 0%,rgba(25,23,18,.02) 42%,rgba(25,23,18,.48) 100%)'
+            : 'linear-gradient(180deg,rgba(25,23,18,.46) 0%,rgba(25,23,18,.10) 40%,rgba(25,23,18,.52) 100%)',
+        }} />
         {/* Content overlay */}
         <span style={{ position: 'absolute', inset: 0, pointerEvents: 'none', display: 'flex', flexDirection: 'column', padding: '12px 13px' }}>
           {/* Streak badge */}
@@ -440,9 +466,9 @@ function FillCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, o
 
   const displayPct = dragPct ?? pct
 
-  const filterStyle = pct === 0
-    ? 'saturate(0.06) grayscale(1) brightness(0.82) contrast(0.94)'
-    : pct < 50 ? 'saturate(0.5) brightness(0.9)' : ''
+  // Cards keep their full colour whatever the progress — the flood, the bar and
+  // the numbers say where you are; draining the colour just made them hard to read.
+  const hasImage = !!habit.image
 
   return (
     <div
@@ -465,11 +491,11 @@ function FillCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, o
       }}
     >
       {/* Fill flood from bottom (12D) */}
-      <span style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
-        <span style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: `${displayPct}%`, background: `${bgColor}88`, transition: dragRef.current ? 'none' : 'height 0.4s ease', display: 'block' }} />
+      <span style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 1 }}>
+        <span style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: `${displayPct}%`, background: `${bgColor}${hasImage ? '4D' : '88'}`, transition: dragRef.current ? 'none' : 'height 0.4s ease', display: 'block' }} />
       </span>
       {/* Background */}
-      <span style={{ position: 'absolute', inset: 0, filter: filterStyle, opacity: pct === 0 ? 0.42 : 0.76 }}>
+      <span style={{ position: 'absolute', inset: 0 }}>
         <span style={{ position: 'absolute', inset: 0, background: `linear-gradient(135deg, ${bgColor} 0%, ${bgColor}AA 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           {habit.image
             ? <img src={habit.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
@@ -477,9 +503,14 @@ function FillCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, o
         </span>
       </span>
       {/* Dark gradient */}
-      <span style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'linear-gradient(180deg,rgba(25,23,18,.52) 0%,rgba(25,23,18,.04) 34%,rgba(25,23,18,.30) 62%,rgba(25,23,18,.86) 100%)' }} />
+      <span style={{
+        position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 2,
+        background: hasImage
+          ? 'linear-gradient(180deg,rgba(25,23,18,.34) 0%,rgba(25,23,18,0) 30%,rgba(25,23,18,.14) 58%,rgba(25,23,18,.78) 100%)'
+          : 'linear-gradient(180deg,rgba(25,23,18,.52) 0%,rgba(25,23,18,.04) 34%,rgba(25,23,18,.30) 62%,rgba(25,23,18,.86) 100%)',
+      }} />
       {/* Content */}
-      <span style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', padding: '12px 11px' }}>
+      <span style={{ position: 'absolute', inset: 0, zIndex: 3, display: 'flex', flexDirection: 'column', padding: '12px 11px' }}>
         {/* Top */}
         <span style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
           <span style={{ display: 'flex', alignItems: 'center', gap: 4, height: 19, padding: '0 7px', borderRadius: 999, background: 'rgba(253,248,231,.16)', border: '1px solid rgba(253,248,231,.32)', color: '#FDF8E7', fontSize: 9.5, fontWeight: 700, alignSelf: 'flex-start', fontVariantNumeric: 'tabular-nums' }}>
@@ -822,7 +853,13 @@ export function HabitsModule() {
   const days = weekDays(weekAnchor)
 
   const dragHabitIdx = useRef<number | null>(null)
-  const [view, setView] = useState<'table' | 'wall' | 'fill'>('table')
+  // The view you last chose wins; Settings only decides where a fresh browser starts
+  const [view, setView] = useState<HabitView>(() => loadHabitView())
+  useEffect(() => {
+    const h = () => setView(loadHabitView())
+    window.addEventListener('professor:habitViewUpdated', h)
+    return () => window.removeEventListener('professor:habitViewUpdated', h)
+  }, [])
   const [fillSelected, setFillSelected] = useState<string | null>(null)
   const [wallEditId, setWallEditId] = useState<string | null>(null)
   const [detailHabitId, setDetailHabitId] = useState<string | null>(null)
@@ -954,7 +991,7 @@ export function HabitsModule() {
               { id: 'wall'  as const, label: 'Wall' },
               { id: 'fill'  as const, label: 'Fill' },
             ]).map(v => (
-              <button key={v.id} onClick={() => setView(v.id)} style={{
+              <button key={v.id} onClick={() => { setView(v.id); saveHabitView(v.id) }} style={{
                 height: 28, padding: '0 12px', borderRadius: 999,
                 background: view === v.id ? '#FFFFFF' : 'transparent',
                 boxShadow: view === v.id ? '0 1px 3px rgba(25,23,18,.16)' : 'none',

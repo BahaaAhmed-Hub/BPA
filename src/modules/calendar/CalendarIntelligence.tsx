@@ -615,24 +615,20 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
   const color  = colorOverride ?? event.calendarColor ?? '#7F77DD'
   const isDone = status === 'done'
   const isCancelled = status === 'cancelled'
-  const isPast = !isDragOverlay && new Date(event.end.dateTime ?? event.start.dateTime!).getTime() < Date.now()
   const isTentative = event.status === 'tentative'
 
   // Sunlit Bento event styles
-  // Every event keeps its calendar's colour — that is how you read the grid at a
-  // glance. Past, done and cancelled events say so with a lighter wash and a
-  // struck-through title, not by turning grey.
+  // Only a cancelled event goes grey. Done and simply-past events keep their
+  // calendar's colour — an event you attended is not an event that went away.
   const rgb = color.startsWith('#') ? hexRgbStr(color) : '127,119,221'
-  const evBg    = (isDone || isCancelled || isPast)
-    ? `rgba(${rgb}, 0.07)`
-    : `rgba(${rgb}, 0.16)`
+  const evBg = isCancelled ? '#F1ECDE' : `rgba(${rgb}, 0.16)`
   const evBorder = isTentative
     ? `1.5px dashed ${color}`
     : isSelected
     ? `2px solid ${color}`
-    : `1px solid rgba(${rgb}, ${(isDone || isCancelled || isPast) ? 0.28 : 0.45})`
-  const evInk   = (isDone || isCancelled || isPast) ? '#8A8272' : '#191712'
-  const evTimeInk = (isDone || isCancelled || isPast) ? '#A79D8B' : '#6C6553'
+    : isCancelled ? '1px solid #E0D9C6' : `1px solid rgba(${rgb}, 0.45)`
+  const evInk = isCancelled ? '#8A8272' : '#191712'
+  const evTimeInk = isCancelled ? '#A79D8B' : '#6C6553'
 
   return (
     <div
@@ -655,7 +651,7 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
         padding: '3px 5px 8px',
         overflow: 'hidden',
         cursor: isDragOverlay ? 'grabbing' : 'pointer',
-        opacity: isDragSrc ? 0.35 : (isDone || isCancelled) ? 0.72 : 1,
+        opacity: isDragSrc ? 0.35 : isCancelled ? 0.72 : 1,
         transform: isDragOverlay ? undefined : CSS.Transform.toString(transform),
         transition: isDragging ? 'none' : 'box-shadow 0.12s, opacity 0.12s',
         boxSizing: 'border-box',
@@ -674,7 +670,7 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
         overflow: 'hidden',
         textOverflow: 'ellipsis',
         whiteSpace: height < 36 ? 'nowrap' : 'normal',
-        textDecoration: (isCancelled || isPast) ? 'line-through' : 'none',
+        textDecoration: isCancelled ? 'line-through' : 'none',
         textDecorationColor: 'rgba(25,23,18,0.35)',
       }}>
         {isDone && <span style={{ marginRight: 3, fontSize: 9, color: '#1D9E75' }}>✓</span>}

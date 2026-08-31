@@ -15,6 +15,7 @@ import { useUIStore } from '@/store/uiStore'
 import { useAuthStore } from '@/store/authStore'
 import { THEMES, getTheme, applyThemeVars } from '@/lib/themes'
 import { useHabitsStore, getHabitColors } from '@/store/habitsStore'
+import { HABIT_VIEWS, loadHabitView, saveHabitView, type HabitView } from '@/modules/habits/HabitsModule'
 import { useBehavioralStore, type BehavioralMode } from '@/store/behavioralStore'
 import { loadAccounts, removeAccount, getProviderTokenForAccount, loadHiddenAccounts, saveHiddenAccounts, loadAccountsFromServer, type ConnectedAccount, type ServerAccount } from '@/lib/multiAccount'
 import {
@@ -1054,6 +1055,14 @@ function HabitsSection() {
   const { habits, addHabit: storeAdd, updateHabit, deleteHabit: storeDel } = useHabitsStore()
   const [adding, setAdding] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [habitView, setHabitView] = useState<HabitView>(() => loadHabitView())
+
+  function chooseView(v: HabitView) {
+    setHabitView(v)
+    saveHabitView(v)
+    // The Habits page may already be mounted — let it re-read rather than wait
+    window.dispatchEvent(new Event('professor:habitViewUpdated'))
+  }
 
   function toggle(id: string) {
     const h = habits.find(x => x.id === id)
@@ -1067,6 +1076,23 @@ function HabitsSection() {
       <p style={{ margin: '0 0 14px', fontSize: 12.5, color: '#6C6553' }}>
         Changes here instantly sync with the Habits Tracker page.
       </p>
+
+      {/* Which view the Habits page opens on — switching it there sticks too */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', paddingBottom: 14, marginBottom: 4, borderBottom: '1px solid #E8E1CE' }}>
+        <div style={{ flex: '1 1 150px', minWidth: 0, maxWidth: 200 }}>
+          <div style={{ fontSize: 13, color: '#191712' }}>Default view</div>
+          <div style={{ fontSize: 11.5, color: '#9B9180', marginTop: 2 }}>
+            {HABIT_VIEWS.find(v => v.id === habitView)?.hint}
+          </div>
+        </div>
+        <div style={{ flex: '1 1 auto', display: 'flex', justifyContent: 'flex-end' }}>
+          <Segmented
+            value={habitView}
+            options={HABIT_VIEWS.map(v => ({ value: v.id, label: v.label }))}
+            onChange={chooseView}
+          />
+        </div>
+      </div>
 
       {habits.map(h => (
         <div key={h.id}>
