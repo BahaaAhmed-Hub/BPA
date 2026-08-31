@@ -1,935 +1,348 @@
-import { useState, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { useFinanceStore } from '../financeStore'
-import { CategoryModal } from '../modals/CategoryModal'
-import { TransactionModal } from '../modals/TransactionModal'
-import type { Category, Transaction, Budget, Currency } from '../types'
+import type { Category } from '../types'
 
-const RED    = '#DA4A3E'
-const RED_SB = '#B4523A'      // Sunlit Bento rust
-const GREEN  = '#2FA869'
-const OLIVE  = '#5F7038'      // Sunlit Bento olive
-const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+// ─── 16G · Budget Builder ─────────────────────────────────────────────────────
+// Categories tree with budget rules: amount, frequency, roll unspent,
+// warn at 80%, auto-raise with inflation, guilt-free flag
 
-type EnvelopeStyle = 'dial' | 'mosaic' | 'slip' | 'ring'
+const OLIVE = '#5F7038'
+const RUST  = '#B4523A'
+const AMBER = '#F5D14E'
 
-function loadEnvelopeStyle(): EnvelopeStyle {
-  try { return (localStorage.getItem('finance-envelope-style') as EnvelopeStyle) || 'dial' } catch { return 'dial' }
+type Frequency = 'weekly' | 'monthly' | 'every_2_months' | 'quarterly' | 'yearly'
+
+const FREQ_OPTS: { v: Frequency; label: string }[] = [
+  { v: 'weekly',        label: 'Weekly' },
+  { v: 'monthly',       label: 'Monthly' },
+  { v: 'every_2_months',label: 'Every 2 months' },
+  { v: 'quarterly',     label: 'Quarterly' },
+  { v: 'yearly',        label: 'Yearly' },
+]
+
+interface BudgetRule {
+  amount: number
+  frequency: Frequency
+  rollover: boolean
+  warn80: boolean
+  autoRaise: boolean
+  guiltFree: boolean
+  starts: string   // YYYY-MM
+  fixedType: 'fixed' | 'flexible'
 }
 
-// ─── Conic ring helper ─────────────────────────────────────────────────────
-// Renders a conic-gradient donut ring matching the 16B design spec.
+function defaultRule(): BudgetRule {
+  const d = new Date()
+  const starts = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2,'0')}`
+  return { amount: 0, frequency: 'monthly', rollover: false, warn80: true, autoRaise: false, guiltFree: false, starts, fixedType: 'flexible' }
+}
 
-function EnvelopeRing({
-  cat, actual, budget, selected, onClick, onEdit, hovering, onHoverEnter, onHoverLeave,
-}: {
-  cat: Category; actual: number; budget: number
-  selected: boolean; onClick: () => void; onEdit: () => void
-  hovering: boolean; onHoverEnter: () => void; onHoverLeave: () => void
-}) {
-  const over     = budget > 0 && actual > budget
-  const pct      = budget > 0 ? Math.min(actual / budget, 1) : 0
-  const fillDeg  = pct * 360
-  const fillColor = over ? RED_SB : selected ? '#F5D14E' : OLIVE
-  const trackColor = over ? '#F7E4DE' : '#F0EBDC'
-  const textColor  = over ? RED_SB : selected ? '#191712' : OLIVE
-  const pctLabel   = budget > 0 ? `${Math.round(actual / budget * 100)}%` : '–'
+// ─── Amount display in the left list ─────────────────────────────────────────
 
-  const conicStyle = fillDeg > 0
-    ? `conic-gradient(${fillColor} 0deg ${fillDeg}deg, ${trackColor} ${fillDeg}deg 360deg)`
-    : trackColor
+function fmtAmt(v: number) {
+  if (!v) return '–'
+  return 'EGP ' + v.toLocaleString('en-US')
+}
 
+// ─── Toggle switch ────────────────────────────────────────────────────────────
+
+function Toggle({ on, onChange, label }: { on: boolean; onChange: (v: boolean) => void; label: string }) {
   return (
     <div
-      style={{
-        display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'center',
-        padding: '11px 8px', borderRadius: 14, boxSizing: 'border-box' as const,
-        background: selected ? '#FAF7EC' : '#FFFFFF',
-        border: `1px solid ${over ? '#E8C7BB' : selected ? '#F5D14E' : '#E8E1CE'}`,
-        cursor: 'pointer', position: 'relative', transition: 'all 0.15s',
-        boxShadow: selected ? '0 0 0 2px rgba(245,209,78,0.25)' : 'none',
-      }}
-      onClick={onClick}
-      onMouseEnter={onHoverEnter}
-      onMouseLeave={onHoverLeave}
+      onClick={() => onChange(!on)}
+      style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '8px 0' }}
     >
-      {/* Edit pencil on hover */}
-      {hovering && (
-        <button
-          onClick={e => { e.stopPropagation(); onEdit() }}
-          style={{
-            position: 'absolute', top: -4, right: -4,
-            background: '#FFFFFF', border: '1px solid #E8E1CE',
-            borderRadius: '50%', width: 18, height: 18,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            cursor: 'pointer', fontSize: 9, color: '#6C6553', padding: 0, lineHeight: 1,
-          }}
-        >✏</button>
-      )}
-      {/* Conic ring */}
       <div style={{
-        width: 58, height: 58, borderRadius: '50%',
-        background: conicStyle,
-        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+        width: 36, height: 20, borderRadius: 999, flexShrink: 0,
+        background: on ? '#191712' : '#D8D3C8',
+        position: 'relative', transition: 'background .2s',
       }}>
         <div style={{
-          width: 44, height: 44, borderRadius: '50%', background: '#FAF7EC',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          color: textColor, fontSize: 20,
-        }}>
-          {cat.icon}
-        </div>
+          position: 'absolute', top: 2, left: on ? 18 : 2,
+          width: 16, height: 16, borderRadius: '50%',
+          background: '#FFFFFF', transition: 'left .2s',
+          boxShadow: '0 1px 3px rgba(0,0,0,.25)',
+        }} />
       </div>
-      {/* Name */}
-      <span style={{
-        fontSize: 11.5, fontWeight: 600, color: '#191712',
-        textAlign: 'center' as const, whiteSpace: 'nowrap' as const,
-        overflow: 'hidden', textOverflow: 'ellipsis', width: '100%',
-      }}>{cat.name}</span>
-      {/* Actual + pct */}
-      <span style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-        <span style={{
-          fontFamily: 'Outfit, sans-serif', fontSize: 12.5, fontWeight: 600,
-          color: textColor, fontVariantNumeric: 'tabular-nums',
-        }}>{fmt(actual)}</span>
-        {budget > 0 && (
-          <span style={{ fontSize: 9.5, fontWeight: 700, color: textColor }}>{pctLabel}</span>
-        )}
-      </span>
-      {budget > 0 && (
-        <span style={{ fontSize: 10, color: '#6C6553' }}>of {fmt(budget)}</span>
-      )}
+      <span style={{ fontSize: 13, color: '#191712' }}>{label}</span>
     </div>
   )
 }
 
-function addMonth(ym: string, delta: number): string {
-  const [y, m] = ym.split('-').map(Number)
-  const d = new Date(y, m - 1 + delta, 1)
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-}
+// ─── Main ─────────────────────────────────────────────────────────────────────
 
-function fmt(n: number) {
-  return n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
-}
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function BudgetScreen(_props?: any) {
+  const { categories, transactions } = useFinanceStore()
 
-export function BudgetScreen() {
-
-  const {
-    categories, transactions, accounts, budgets,
-    upsertCategory, removeCategory,
-    upsertBudget, removeBudget,
-    upsertTransaction,
-  } = useFinanceStore()
-
-  const todayDate  = new Date()
-  const currentYear = todayDate.getFullYear()
-
-  const [currentMonth, setCurrentMonth] = useState(() =>
-    `${todayDate.getFullYear()}-${String(todayDate.getMonth() + 1).padStart(2, '0')}`,
+  // Parent categories only (for list)
+  const parents = useMemo(
+    () => categories.filter(c => !c.parentId).sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)),
+    [categories],
   )
-  const [selectedCatId,    setSelectedCatId]    = useState<string | null>(null)
-  const [selectedSubCatId, setSelectedSubCatId] = useState<string | null>(null)
-  const [rightMode,        setRightMode]         = useState<'txns' | 'budget'>('txns')
-  const [budgetEdit,       setBudgetEdit]        = useState<{
-    monthlyAmount: string; currency: Currency; startDate: string; endDate: string; rollover: boolean
-  }>({ monthlyAmount: '', currency: 'EGP', startDate: '', endDate: '', rollover: false })
-  const [hoveredCatId,  setHoveredCatId]  = useState<string | null>(null)
-  const [catModal, setCatModal] = useState<{ open: boolean; category: Category | null }>({ open: false, category: null })
-  const [txModal,  setTxModal]  = useState<{ open: boolean; tx: Transaction | null }>({ open: false, tx: null })
-  const [envelopeStyle, setEnvelopeStyle] = useState<EnvelopeStyle>(loadEnvelopeStyle)
 
-  // Listen for style changes from Settings
-  useEffect(() => {
-    function onStyleChange(e: Event) {
-      const detail = (e as CustomEvent<EnvelopeStyle>).detail
-      setEnvelopeStyle(detail)
-    }
-    window.addEventListener('finance:envelopeStyleChanged', onStyleChange)
-    return () => window.removeEventListener('finance:envelopeStyleChanged', onStyleChange)
-  }, [])
+  // Sub-categories
+  const subs = useMemo(
+    () => (parentId: string) => categories.filter(c => c.parentId === parentId),
+    [categories],
+  )
 
-  // DnD
-  const [draggedCatId, setDraggedCatId] = useState<string | null>(null)
-  const [dropTargetId, setDropTargetId] = useState<string | null>(null)
-
-  // ─── Data helpers ──────────────────────────────────────────────────────
-
-  function subCatsOf(id: string) {
-    return categories.filter(c => c.parentId === id).sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
-  }
-
-  function txsInMonth(catId: string, ym: string) {
-    return transactions.filter(tx => tx.categoryId === catId && tx.date.startsWith(ym))
-  }
-
-  function actualInMonth(catId: string, ym: string): number {
-    const ids = [catId, ...subCatsOf(catId).map(s => s.id)]
-    return transactions
-      .filter(tx => ids.includes(tx.categoryId ?? '') && tx.date.startsWith(ym))
-      .reduce((s, tx) => s + Math.abs(tx.amount), 0)
-  }
-
-  function budgetAmt(catId: string): number {
-    return budgets.find(b => b.categoryId === catId)?.monthlyAmount ?? 0
-  }
-
-  function budgetObj(catId: string): Budget | undefined {
-    return budgets.find(b => b.categoryId === catId)
-  }
-
-  const topExpCats = categories.filter(c => !c.parentId && (c.txType === 'expense' || c.txType === 'both')).sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
-  const topIncCats = categories.filter(c => !c.parentId && (c.txType === 'income'  || c.txType === 'both')).sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
-
-  const totalExpActual = topExpCats.reduce((s, c) => s + actualInMonth(c.id, currentMonth), 0)
-  const totalExpBudget = topExpCats.reduce((s, c) => s + budgetAmt(c.id), 0)
-  const totalIncActual = topIncCats.reduce((s, c) => s + actualInMonth(c.id, currentMonth), 0)
-  const totalIncBudget = topIncCats.reduce((s, c) => s + budgetAmt(c.id), 0)
-
-  // ─── Monthly bars data ─────────────────────────────────────────────────
-  //
-  // Home view (no selection): each bar = net income − expense.  Green if positive, red if negative.
-  // Category selected: each bar = that category's monthly actual.  Coloured by txType.
-
-  const focusCatId = selectedSubCatId ?? selectedCatId
-  const focusCat   = focusCatId ? categories.find(c => c.id === focusCatId) : null
-
-  const barsData: { value: number; color: string }[] = Array.from({ length: 12 }, (_, i) => {
-    const ym = `${currentYear}-${String(i + 1).padStart(2, '0')}`
-    if (focusCatId) {
-      return { value: actualInMonth(focusCatId, ym), color: focusCat?.txType === 'income' ? GREEN : RED }
-    }
-    const inc = transactions.filter(tx => tx.type === 'income'  && tx.date.startsWith(ym)).reduce((s, tx) => s + tx.amount, 0)
-    const exp = transactions.filter(tx => tx.type === 'expense' && tx.date.startsWith(ym)).reduce((s, tx) => s + Math.abs(tx.amount), 0)
-    const net = inc - exp
-    return { value: Math.abs(net), color: net >= 0 ? GREEN : RED }
+  // Budget rules stored locally (keyed by category id)
+  const [rules, setRules] = useState<Record<string, BudgetRule>>(() => {
+    try { return JSON.parse(localStorage.getItem('finance-budget-rules') ?? '{}') } catch { return {} }
   })
-
-  const maxBarVal       = Math.max(...barsData.map(b => b.value), 1)
-  const currentMonthIdx = parseInt(currentMonth.slice(5, 7)) - 1
-
-  // ─── Right panel derived ───────────────────────────────────────────────
-
-  const selectedCat    = selectedCatId    ? categories.find(c => c.id === selectedCatId)    : null
-  const selectedSubCat = selectedSubCatId ? categories.find(c => c.id === selectedSubCatId) : null
-  const activeCat      = selectedSubCat ?? selectedCat
-  const activeCatId    = selectedSubCatId ?? selectedCatId
-
-  const activeActual = activeCatId ? actualInMonth(activeCatId, currentMonth) : 0
-  const activeBudget = activeCatId ? budgetAmt(activeCatId) : 0
-  const panelTxns    = activeCatId ? txsInMonth(activeCatId, currentMonth) : []
-
-  // ─── Budget editor ────────────────────────────────────────────────────
-
-  function openBudget(catId: string) {
-    const ex = budgetObj(catId)
-    setBudgetEdit({
-      monthlyAmount: ex ? String(ex.monthlyAmount) : '',
-      currency:      ex?.currency ?? 'EGP',
-      startDate:     ex?.startDate ?? currentMonth,
-      endDate:       ex?.endDate ?? '',
-      rollover:      ex?.rollover ?? false,
-    })
-    setRightMode('budget')
+  function saveRule(catId: string, rule: BudgetRule) {
+    const next = { ...rules, [catId]: rule }
+    setRules(next)
+    localStorage.setItem('finance-budget-rules', JSON.stringify(next))
   }
 
-  function saveBudget() {
-    if (!activeCatId) return
-    const ex = budgetObj(activeCatId)
-    upsertBudget({
-      id:            ex?.id ?? crypto.randomUUID(),
-      categoryId:    activeCatId,
-      monthlyAmount: parseFloat(budgetEdit.monthlyAmount) || 0,
-      currency:      budgetEdit.currency,
-      startDate:     budgetEdit.startDate || currentMonth,
-      endDate:       budgetEdit.endDate || undefined,
-      rollover:      budgetEdit.rollover,
-    })
-    setRightMode('txns')
-  }
+  const [selectedId, setSelectedId] = useState<string | null>(parents[0]?.id ?? null)
+  const selectedCat = parents.find(p => p.id === selectedId) ?? null
+  const rule = selectedId ? (rules[selectedId] ?? defaultRule()) : null
 
-  // ─── DnD handlers ────────────────────────────────────────────────────
+  // Monthly spend for selected category (current month)
+  const today = new Date()
+  const monthPrefix = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2,'0')}`
+  const monthSpend = useMemo(() => {
+    if (!selectedId) return 0
+    return transactions
+      .filter(tx => tx.type === 'expense' && tx.categoryId === selectedId && tx.date.startsWith(monthPrefix))
+      .reduce((s, tx) => s + Math.abs(tx.amount), 0)
+  }, [transactions, selectedId, monthPrefix])
 
-  function onDragStart(e: React.DragEvent, catId: string) {
-    e.dataTransfer.effectAllowed = 'move'
-    setDraggedCatId(catId)
-  }
-  function onDragEnd() { setDraggedCatId(null); setDropTargetId(null) }
-
-  function onDragOver(e: React.DragEvent, targetId: string) {
-    e.preventDefault()
-    e.dataTransfer.dropEffect = 'move'
-    if (draggedCatId && draggedCatId !== targetId) setDropTargetId(targetId)
-  }
-
-  function onDrop(e: React.DragEvent, targetId: string | null) {
-    e.preventDefault()
-    if (!draggedCatId) return
-    const dragged = categories.find(c => c.id === draggedCatId)
-    if (!dragged) return
-
-    if (targetId === null) {
-      if (dragged.parentId) upsertCategory({ ...dragged, parentId: undefined })
-    } else {
-      if (draggedCatId === targetId) return
-      const target = categories.find(c => c.id === targetId)
-      if (!target) return
-
-      if (dragged.parentId === target.parentId) {
-        // Same level → swap sort orders to reorder
-        const draggedOrder = dragged.sortOrder ?? 0
-        const targetOrder  = target.sortOrder ?? 0
-        upsertCategory({ ...dragged, sortOrder: targetOrder })
-        upsertCategory({ ...target, sortOrder: draggedOrder })
-      } else {
-        // Different level → reparent (guard against dropping parent onto own child)
-        if (target.parentId === draggedCatId) return
-        upsertCategory({ ...dragged, parentId: targetId })
-      }
-    }
-    setDraggedCatId(null); setDropTargetId(null)
-  }
-
-  // ─── Shared envelope renderer — adapts to envelopeStyle ──────────────
-
-  function renderEnvelope(cat: Category, isParent: boolean) {
-    const actual     = actualInMonth(cat.id, currentMonth)
-    const budget     = budgetAmt(cat.id)
-    const over       = actual > budget && budget > 0
-    const isDrag     = draggedCatId === cat.id
-    const isSelected = isParent ? selectedCatId === cat.id : selectedSubCatId === cat.id
-    const isIncome   = cat.txType === 'income'
-    const pct        = budget > 0 ? Math.min(actual / budget, 1) : 0
-
-    function handleClick() {
-      if (isParent) { setSelectedCatId(cat.id); setSelectedSubCatId(null) }
-      else { setSelectedSubCatId(cat.id); setSelectedCatId(cat.parentId ?? null) }
-      setRightMode('txns')
-    }
-
-    // ── Dial + trend (default) ─────────────────────────────────────────
-    if (envelopeStyle === 'dial' || envelopeStyle === 'ring') {
-      return (
-        <div key={cat.id} style={{ opacity: isDrag ? 0.35 : 1 }}
-          draggable onDragStart={e => onDragStart(e, cat.id)} onDragEnd={onDragEnd}
-          onDragOver={e => onDragOver(e, cat.id)}
-          onDragLeave={() => { if (dropTargetId === cat.id) setDropTargetId(null) }}
-          onDrop={e => onDrop(e, cat.id)}
-        >
-          <EnvelopeRing
-            cat={cat} actual={actual} budget={budget}
-            selected={isSelected}
-            onClick={handleClick}
-            onEdit={() => setCatModal({ open: true, category: cat })}
-            hovering={hoveredCatId === cat.id}
-            onHoverEnter={() => setHoveredCatId(cat.id)}
-            onHoverLeave={() => setHoveredCatId(null)}
-          />
-        </div>
-      )
-    }
-
-    // ── Till slips (monospace rows) ────────────────────────────────────
-    if (envelopeStyle === 'slip') {
-      const barPct = pct * 100
-      return (
-        <div key={cat.id}
-          onClick={handleClick}
-          draggable onDragStart={e => onDragStart(e, cat.id)} onDragEnd={onDragEnd}
-          onDragOver={e => onDragOver(e, cat.id)} onDragLeave={() => { if (dropTargetId === cat.id) setDropTargetId(null) }} onDrop={e => onDrop(e, cat.id)}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 10, padding: '8px 14px',
-            borderBottom: '1px solid #E8E1CE', cursor: 'pointer',
-            background: isSelected ? '#FAF7EC' : 'transparent',
-            opacity: isDrag ? 0.35 : 1,
-          }}
-        >
-          <span style={{ fontSize: 20, flexShrink: 0, width: 28, textAlign: 'center' as const }}>{cat.icon}</span>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 6 }}>
-              <span style={{ fontSize: 12.5, fontWeight: 600, color: '#191712', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{cat.name}</span>
-              <span style={{
-                fontFamily: 'JetBrains Mono, monospace', fontSize: 12, fontWeight: 600,
-                color: over ? RED_SB : isIncome ? OLIVE : '#191712', flexShrink: 0,
-              }}>{fmt(actual)}</span>
-            </div>
-            <div style={{ position: 'relative', height: 5, background: '#F0EBDC', borderRadius: 4, marginTop: 5 }}>
-              <div style={{
-                position: 'absolute', left: 0, top: 0, height: '100%', borderRadius: 4,
-                width: `${Math.min(barPct, 100)}%`,
-                background: over ? RED_SB : isIncome ? OLIVE : '#F5D14E',
-              }} />
-            </div>
-            {budget > 0 && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 3 }}>
-                <span style={{ fontSize: 9.5, color: '#9B9180' }}>{Math.round(barPct)}% spent</span>
-                <span style={{ fontSize: 9.5, color: '#9B9180' }}>of {fmt(budget)}</span>
-              </div>
-            )}
-          </div>
-        </div>
-      )
-    }
-
-    // ── Proportional mosaic ────────────────────────────────────────────
-    // (mosaic — box area represents budget size; fallback to dial for now)
-    const size = 64
-    const ringColor = isSelected ? '#F5D14E' : over ? RED_SB : isIncome ? OLIVE : '#E8E1CE'
-    return (
-      <div key={cat.id}
-        style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' as const, width: size + 8, position: 'relative', opacity: isDrag ? 0.35 : 1 }}
-        onMouseEnter={() => setHoveredCatId(cat.id)} onMouseLeave={() => setHoveredCatId(null)}
-        onDragOver={e => onDragOver(e, cat.id)} onDragLeave={() => { if (dropTargetId === cat.id) setDropTargetId(null) }} onDrop={e => onDrop(e, cat.id)}
-      >
-        <div draggable onDragStart={e => onDragStart(e, cat.id)} onDragEnd={onDragEnd} onClick={handleClick}
-          style={{
-            width: size, height: size, borderRadius: '50%', border: `2.5px solid ${ringColor}`,
-            background: isSelected ? '#FFF9E0' : '#FFFFFF',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: Math.round(size * 0.38), cursor: 'grab',
-          }}
-        >{cat.icon}</div>
-        {hoveredCatId === cat.id && (
-          <button onClick={e => { e.stopPropagation(); setCatModal({ open: true, category: cat }) }}
-            style={{ position: 'absolute', top: -4, right: 4, background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: '50%', width: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: 10, color: '#6C6553', lineHeight: 1, padding: 0 }}>✏</button>
-        )}
-        <div style={{ fontSize: 11, color: '#191712', marginTop: 7, lineHeight: 1.2 }}>{cat.name}</div>
-        <div style={{ fontSize: 11, color: over ? RED_SB : isIncome ? OLIVE : '#6C6553', marginTop: 2 }}>{fmt(actual)}</div>
-        <div style={{ fontSize: 10, color: '#9B9180' }}>{fmt(budget)}</div>
-      </div>
-    )
-  }
-
-  // Kept for backward compat in renderSubcatBox
-  function renderCircle(cat: Category, _size: number, isIncome: boolean, isParent: boolean) {
-    return renderEnvelope(cat, isParent)
-    void isIncome
-  }
-
-  // ─── Inline subcat box (below parent circles) ─────────────────────────
-
-  function renderSubcatBox(parentCat: Category) {
-    const subs     = subCatsOf(parentCat.id)
-    const isIncome = parentCat.txType === 'income'
-    const parentActual = actualInMonth(parentCat.id, currentMonth)
-    const parentBudget = budgetAmt(parentCat.id)
-
-    return (
-      <div style={{
-        marginTop: 14,
-        border: `1px solid ${'#E8E1CE'}`,
-        borderRadius: 12,
-        overflow: 'hidden',
-      }}>
-        {/* Box header = parent category */}
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '10px 16px',
-          background: '#FFFFFF',
-          borderBottom: `1px solid ${'#E8E1CE'}`,
-          cursor: 'pointer',
-        }}
-          onClick={() => { setSelectedCatId(parentCat.id); setSelectedSubCatId(null); setRightMode('txns') }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{
-              width: 34, height: 34, borderRadius: '50%',
-              background: '#F7F4EA', border: `2px solid ${isIncome ? GREEN : '#E8E1CE'}`,
-              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0,
-            }}>
-              {parentCat.icon}
-            </div>
-            <span style={{ fontSize: 14, fontWeight: 600, color: '#191712' }}>{parentCat.name}</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 5 }}>
-            <span style={{ fontSize: 14, fontWeight: 700, color: isIncome ? GREEN : (parentActual > parentBudget && parentBudget > 0 ? RED : '#6C6553') }}>
-              {fmt(parentActual)}
-            </span>
-            {parentBudget > 0 && (
-              <span style={{ fontSize: 12, color: '#9B9180' }}>/ {fmt(parentBudget)}</span>
-            )}
-          </div>
-        </div>
-
-        {/* Subcategory circle grid */}
-        <div style={{
-          padding: '14px 12px',
-          background: '#F7F4EA',
-          display: 'flex', flexWrap: 'wrap', gap: '12px 6px',
-        }}>
-          {subs.map(sub => renderCircle(sub, 52, isIncome, false))}
-          {/* + Add subcategory */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: 6 }}>
-            <button
-              onClick={() => setCatModal({ open: true, category: {
-                id: crypto.randomUUID(), name: '', icon: '📁',
-                color: '#F5D14E', parentId: parentCat.id,
-                txType: parentCat.txType, isSystem: false,
-                sortOrder: subCatsOf(parentCat.id).length,
-              }})}
-              style={{
-                width: 34, height: 34, borderRadius: '50%',
-                border: `2px dashed ${'#E8E1CE'}`, background: 'none', cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: '#6C6553', fontSize: 16, lineHeight: 1,
-              }}
-            >+</button>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  // ─── Render ────────────────────────────────────────────────────────────
-
-  const selExpCat = selectedCatId ? topExpCats.find(c => c.id === selectedCatId) ?? null : null
-  const selIncCat = selectedCatId ? topIncCats.find(c => c.id === selectedCatId) ?? null : null
+  const budget = rule?.amount ?? 0
+  const pct = budget > 0 ? Math.min((monthSpend / budget) * 100, 100) : 0
+  const overBudget = budget > 0 && monthSpend > budget
+  const nearBudget = budget > 0 && pct >= 80 && !overBudget
 
   return (
-    <div style={{ display: 'flex', flex: 1, height: '100%', overflow: 'hidden', background: '#F7F4EA' }}>
+    <div style={{ display: 'flex', height: '100%', overflow: 'hidden', background: '#F7F4EA' }}>
 
-      {/* ── LEFT PANEL ── */}
-      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+      {/* Left — categories list */}
+      <div style={{ width: 280, flexShrink: 0, borderRight: '1px solid #E8E1CE', display: 'flex', flexDirection: 'column', background: '#FCFAF4', overflow: 'hidden' }}>
 
-        {/* Header */}
-        <div style={{
-          height: 52, flexShrink: 0,
-          borderBottom: '1px solid #E8E1CE',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '0 20px', gap: 12,
-        }}>
-          {/* Month nav */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-            <button onClick={() => setCurrentMonth(addMonth(currentMonth, -1))}
-              style={{ background: 'none', border: 'none', color: '#6C6553', fontSize: 20, cursor: 'pointer', padding: '2px 6px', lineHeight: 1 }}>‹</button>
-            <span style={{ fontSize: 15, fontWeight: 600, color: '#191712', minWidth: 90, textAlign: 'center' as const, fontFamily: 'Outfit, sans-serif', letterSpacing: '-0.01em' }}>
-              Budget · {MONTHS[parseInt(currentMonth.slice(5, 7)) - 1]}
-            </span>
-            <button onClick={() => setCurrentMonth(addMonth(currentMonth, 1))}
-              style={{ background: 'none', border: 'none', color: '#6C6553', fontSize: 20, cursor: 'pointer', padding: '2px 6px', lineHeight: 1 }}>›</button>
-          </div>
+        {/* Left header */}
+        <div style={{ flexShrink: 0, borderBottom: '1px solid #E8E1CE', padding: '14px 18px 12px' }}>
+          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: '#6C6553', display: 'block', marginBottom: 4 }}>MONEY · SET UP</span>
+          <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em', color: '#191712', display: 'block' }}>Budget builder</span>
+          <span style={{ fontSize: 11.5, color: '#9B9180', display: 'block', marginTop: 2 }}>
+            {parents.length} categories · click to configure
+          </span>
+        </div>
 
-          {/* Envelope style pill switcher */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 2, padding: 3, borderRadius: 999, background: '#EDE7D9', flexShrink: 0 }}>
-            {([['dial','Dial'],['mosaic','Mosaic'],['slip','Slip'],['ring','Rings']] as [EnvelopeStyle, string][]).map(([id, label]) => {
-              const active = envelopeStyle === id
-              return (
-                <button key={id} onClick={() => {
-                  setEnvelopeStyle(id)
-                  try { localStorage.setItem('finance-envelope-style', id) } catch { /* noop */ }
+        {/* List */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '10px 0' }}>
+          {parents.map(cat => {
+            const r = rules[cat.id]
+            const active = selectedId === cat.id
+            const subCount = subs(cat.id).length
+            return (
+              <div
+                key={cat.id}
+                onClick={() => setSelectedId(cat.id)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  padding: '9px 18px', cursor: 'pointer',
+                  background: active ? '#F5D14E22' : 'transparent',
+                  borderLeft: `3px solid ${active ? AMBER : 'transparent'}`,
+                  borderBottom: '1px solid #F0EBDC',
                 }}
-                  style={{
-                    height: 28, padding: '0 12px', borderRadius: 999, border: 'none',
-                    background: active ? '#FFFFFF' : 'transparent',
-                    color: active ? '#191712' : '#6C6553',
-                    fontSize: 11.5, fontWeight: active ? 600 : 400, cursor: 'pointer',
-                    boxShadow: active ? '0 1px 3px rgba(25,23,18,0.16)' : 'none',
-                    transition: 'all 0.15s',
-                  }}
-                >{label}</button>
-              )
-            })}
-          </div>
-
-          {/* New category + set envelopes */}
-          <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-            <button onClick={() => setCatModal({ open: true, category: null })}
-              style={{ height: 34, padding: '0 14px', borderRadius: 999, background: '#FFFFFF', border: '1px solid #E8E1CE', color: '#191712', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>
-              + Category
-            </button>
-          </div>
-        </div>
-
-        {/* Monthly bars — always visible */}
-        <div style={{ padding: '14px 24px 0', flexShrink: 0, borderBottom: `1px solid ${'#E8E1CE'}` }}>
-          <div style={{ fontSize: 11, color: '#9B9180', marginBottom: 8 }}>
-            {focusCat
-              ? `${focusCat.name} · ${currentYear}`
-              : `Net income vs expenses · ${currentYear}`}
-          </div>
-          <div style={{ display: 'flex', gap: 4, height: 116, alignItems: 'flex-end' }}>
-            {barsData.map(({ value, color }, i) => {
-              const isSelected = i === currentMonthIdx
-              const barH = value > 0 ? Math.max(Math.round(value / maxBarVal * 92), 8) : 0
-              return (
-                <div
-                  key={i}
-                  onClick={() => setCurrentMonth(`${currentYear}-${String(i + 1).padStart(2, '0')}`)}
-                  style={{
-                    flex: 1, display: 'flex', flexDirection: 'column',
-                    alignItems: 'center', justifyContent: 'flex-end',
-                    cursor: 'pointer', gap: 5,
-                  }}
-                >
-                  <div style={{
-                    width: '100%', borderRadius: '3px 3px 0 0',
-                    background: isSelected ? color : `${color}44`,
-                    height: barH || 4,
-                    opacity: barH === 0 ? 0.1 : 1,
-                    transition: 'height 0.2s, background 0.15s',
-                    outline: isSelected ? `2px solid ${color}` : 'none',
-                    outlineOffset: 1,
-                  }} />
-                  <div style={{
-                    fontSize: 9, paddingBottom: 5,
-                    color: isSelected ? color : '#9B9180',
-                    fontWeight: isSelected ? 700 : 400,
-                  }}>
-                    {MONTHS[i]}
-                  </div>
+              >
+                <span style={{ fontSize: 18, flexShrink: 0 }}>{cat.icon}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 500, color: '#191712' }}>{cat.name}</div>
+                  {subCount > 0 && (
+                    <div style={{ fontSize: 11, color: '#9B9180', marginTop: 1 }}>{subCount} sub-categories</div>
+                  )}
                 </div>
-              )
-            })}
-          </div>
-        </div>
-
-        {/* Scrollable category content */}
-        <div
-          style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}
-          onDragOver={e => { e.preventDefault(); setDropTargetId('__root__') }}
-          onDragLeave={e => {
-            const t = e.currentTarget as HTMLElement
-            if (!t.contains(e.relatedTarget as Node)) setDropTargetId(null)
-          }}
-          onDrop={e => onDrop(e, null)}
-        >
-
-          {/* ENVELOPES header */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
-            <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', color: '#6C6553' }}>ENVELOPES</span>
-            <span style={{ fontSize: 11, color: '#6C6553' }}>
-              {envelopeStyle === 'dial' ? 'Ring fills as the month is consumed · rust means the envelope is gone' :
-               envelopeStyle === 'slip' ? 'Monospace figures · one eye movement to compare' :
-               envelopeStyle === 'ring' ? 'Two rings: this month vs last month' :
-               'Box area equals money · rust boxes burst'}
-            </span>
-          </div>
-
-          {/* EXPENSES */}
-          <div style={{ marginBottom: 28 }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 14 }}>
-              <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.8px', color: '#6C6553' }}>EXPENSES</span>
-              <div style={{ display: 'flex', gap: 6, alignItems: 'baseline' }}>
-                <span style={{ fontSize: 15, fontWeight: 700, color: RED_SB, fontFamily: 'Outfit, sans-serif', letterSpacing: '-0.02em' }}>{fmt(totalExpActual)}</span>
-                <span style={{ fontSize: 13, color: '#9B9180' }}>/ EGP {fmt(totalExpBudget)}</span>
+                <span style={{ fontSize: 12, color: r?.amount ? '#191712' : '#C5BCA8', fontFamily: 'Outfit, sans-serif', fontWeight: 600, flexShrink: 0 }}>
+                  {r ? fmtAmt(r.amount) : '–'}
+                </span>
               </div>
-            </div>
-
-            {envelopeStyle === 'slip' ? (
-              <div style={{ background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 14, overflow: 'hidden' }}>
-                {topExpCats.map(cat => renderEnvelope(cat, true))}
-                <button onClick={() => setCatModal({ open: true, category: { id: crypto.randomUUID(), name: '', icon: '📁', color: '#F5D14E', txType: 'expense', isSystem: false, sortOrder: categories.filter(c => !c.parentId).length } })}
-                  style={{ width: '100%', padding: '10px 14px', background: 'none', border: 'none', borderTop: '1px dashed #E8E1CE', cursor: 'pointer', color: '#9B9180', fontSize: 12, textAlign: 'left' as const }}>
-                  + Add expense envelope
-                </button>
-              </div>
-            ) : (
-              <>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10 }}>
-                  {topExpCats.map(cat => renderEnvelope(cat, true))}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <button onClick={() => setCatModal({ open: true, category: { id: crypto.randomUUID(), name: '', icon: '📁', color: '#F5D14E', txType: 'expense', isSystem: false, sortOrder: categories.filter(c => !c.parentId).length } })}
-                      style={{ width: 40, height: 40, borderRadius: '50%', border: '2px dashed #E8E1CE', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6C6553', fontSize: 20 }}>+</button>
-                  </div>
-                </div>
-                {selExpCat && subCatsOf(selExpCat.id).length > 0 && renderSubcatBox(selExpCat)}
-              </>
-            )}
-          </div>
-
-          {/* INCOME */}
-          <div style={{ marginBottom: 28 }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 14 }}>
-              <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.8px', color: '#6C6553' }}>INCOME</span>
-              <div style={{ display: 'flex', gap: 6, alignItems: 'baseline' }}>
-                <span style={{ fontSize: 15, fontWeight: 700, color: OLIVE, fontFamily: 'Outfit, sans-serif', letterSpacing: '-0.02em' }}>{fmt(totalIncActual)}</span>
-                <span style={{ fontSize: 13, color: '#9B9180' }}>/ EGP {fmt(totalIncBudget)}</span>
-              </div>
-            </div>
-
-            {envelopeStyle === 'slip' ? (
-              <div style={{ background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 14, overflow: 'hidden' }}>
-                {topIncCats.map(cat => renderEnvelope(cat, true))}
-                <button onClick={() => setCatModal({ open: true, category: { id: crypto.randomUUID(), name: '', icon: '📁', color: '#F5D14E', txType: 'income', isSystem: false, sortOrder: categories.filter(c => !c.parentId).length } })}
-                  style={{ width: '100%', padding: '10px 14px', background: 'none', border: 'none', borderTop: '1px dashed #E8E1CE', cursor: 'pointer', color: '#9B9180', fontSize: 12, textAlign: 'left' as const }}>
-                  + Add income envelope
-                </button>
-              </div>
-            ) : (
-              <>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10 }}>
-                  {topIncCats.map(cat => renderEnvelope(cat, true))}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <button onClick={() => setCatModal({ open: true, category: { id: crypto.randomUUID(), name: '', icon: '📁', color: '#F5D14E', txType: 'income', isSystem: false, sortOrder: categories.filter(c => !c.parentId).length } })}
-                      style={{ width: 40, height: 40, borderRadius: '50%', border: '2px dashed #E8E1CE', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6C6553', fontSize: 20 }}>+</button>
-                  </div>
-                </div>
-                {selIncCat && subCatsOf(selIncCat.id).length > 0 && renderSubcatBox(selIncCat)}
-              </>
-            )}
-          </div>
-
+            )
+          })}
         </div>
       </div>
 
-      {/* ── RIGHT PANEL: transactions + budget editor ── */}
-      {activeCatId && activeCat && (
-        <div style={{
-          width: 340, flexShrink: 0,
-          borderLeft: `1px solid ${'#E8E1CE'}`,
-          display: 'flex', flexDirection: 'column',
-          background: '#FFFFFF', overflow: 'hidden',
-        }}>
-          {rightMode === 'txns' ? (
-            <>
-              {/* Header */}
-              <div style={{
-                height: 48, flexShrink: 0, borderBottom: `1px solid ${'#E8E1CE'}`,
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '0 14px',
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
-                  <button
-                    onClick={() => {
-                      if (selectedSubCatId) setSelectedSubCatId(null)
-                      else setSelectedCatId(null)
-                    }}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6C6553', fontSize: 18, lineHeight: 1, padding: '0 4px 0 0', flexShrink: 0 }}
-                  >‹</button>
-                  {selectedSubCatId && selectedCat && (
-                    <span
-                      onClick={() => setSelectedSubCatId(null)}
-                      style={{ fontSize: 13, color: '#9B9180', cursor: 'pointer', whiteSpace: 'nowrap' as const }}
-                    >
-                      {selectedCat.icon} {selectedCat.name} ›{' '}
-                    </span>
-                  )}
-                  <span style={{ fontSize: 15, fontWeight: 600, color: '#191712', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>
-                    {activeCat.icon} {activeCat.name}
+      {/* Right — budget rule editor */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '28px 36px' }}>
+
+        {!selectedCat || !rule ? (
+          <div style={{ fontSize: 13, color: '#9B9180', textAlign: 'center', marginTop: 60 }}>
+            Select a category to configure its budget
+          </div>
+        ) : (
+          <div style={{ maxWidth: 520 }}>
+
+            {/* Category title */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 28 }}>
+              <span style={{ fontSize: 32 }}>{selectedCat.icon}</span>
+              <div>
+                <div style={{ fontFamily: 'Outfit, sans-serif', fontSize: 24, fontWeight: 600, letterSpacing: '-0.02em', color: '#191712' }}>
+                  {selectedCat.name}
+                </div>
+                <div style={{ fontSize: 12, color: '#9B9180', marginTop: 2 }}>
+                  {subs(selectedCat.id).length} sub-categories
+                </div>
+              </div>
+            </div>
+
+            {/* Spend progress */}
+            {budget > 0 && (
+              <div style={{ marginBottom: 28, background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 12, padding: '14px 18px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
+                  <span style={{ fontSize: 12, color: '#6C6553' }}>This month</span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: overBudget ? RUST : nearBudget ? '#E8A94A' : '#191712', fontFamily: 'Outfit, sans-serif' }}>
+                    EGP {monthSpend.toLocaleString('en-US')} / {budget.toLocaleString('en-US')}
                   </span>
                 </div>
-                <span style={{
-                  fontSize: 13, fontWeight: 700, flexShrink: 0, marginLeft: 8,
-                  color: activeActual > activeBudget && activeBudget > 0 ? RED : '#F5D14E',
-                }}>
-                  {fmt(activeActual)} / EGP {fmt(activeBudget)}
+                <div style={{ height: 8, borderRadius: 999, background: '#EDE7D9', overflow: 'hidden' }}>
+                  <div style={{
+                    height: '100%', borderRadius: 999, transition: 'width .3s',
+                    width: `${pct}%`,
+                    background: overBudget ? RUST : nearBudget ? '#E8A94A' : OLIVE,
+                  }} />
+                </div>
+                {(overBudget || nearBudget) && (
+                  <div style={{ fontSize: 11.5, marginTop: 6, color: overBudget ? RUST : '#E8A94A' }}>
+                    {overBudget
+                      ? `Over budget by EGP ${(monthSpend - budget).toLocaleString('en-US')}`
+                      : `${Math.round(pct)}% used — approaching limit`}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Budget Amount */}
+            <Field label="BUDGET AMOUNT">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: 13, color: '#6C6553', fontWeight: 700 }}>EGP</span>
+                <input
+                  type="number"
+                  value={rule.amount || ''}
+                  onChange={e => saveRule(selectedId!, { ...rule, amount: parseFloat(e.target.value) || 0 })}
+                  placeholder="0"
+                  style={{ flex: 1, background: '#FAF7EC', border: '1px solid #E8E1CE', borderRadius: 8, padding: '8px 12px', fontSize: 20, fontFamily: 'Outfit, sans-serif', fontWeight: 600, color: '#191712', outline: 'none' }}
+                />
+                <span style={{ fontSize: 12, color: '#9B9180' }}>
+                  / {FREQ_OPTS.find(f => f.v === rule.frequency)?.label?.toLowerCase() ?? 'month'}
                 </span>
               </div>
+            </Field>
 
-              {/* Transaction list */}
-              <div style={{ flex: 1, overflowY: 'auto' }}>
-                {panelTxns.length === 0 ? (
-                  <div style={{ padding: 24, textAlign: 'center' as const, color: '#9B9180', fontSize: 13 }}>
-                    No transactions in {MONTHS[parseInt(currentMonth.slice(5, 7)) - 1]}
-                  </div>
-                ) : panelTxns.map(tx => {
-                  const acct  = accounts.find(a => a.id === tx.accountId)
-                  const isExp = tx.type === 'expense'
-                  const txCat = tx.categoryId ? categories.find(c => c.id === tx.categoryId) : null
+            {/* Category type */}
+            <Field label="CATEGORY TYPE">
+              <div style={{ display: 'flex', gap: 8 }}>
+                {(['fixed', 'flexible'] as const).map(t => (
+                  <button key={t} onClick={() => saveRule(selectedId!, { ...rule, fixedType: t })}
+                    style={{
+                      flex: 1, padding: '8px 0', borderRadius: 8, border: '1px solid #E8E1CE', cursor: 'pointer',
+                      background: rule.fixedType === t ? '#191712' : '#FAF7EC',
+                      color: rule.fixedType === t ? '#FDF8E7' : '#6C6553',
+                      fontSize: 12.5, fontWeight: rule.fixedType === t ? 600 : 400,
+                    }}>
+                    {t === 'fixed' ? 'Fixed commitment' : 'Flexible budget'}
+                  </button>
+                ))}
+              </div>
+            </Field>
+
+            {/* Frequency */}
+            <Field label="REPEATS">
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {FREQ_OPTS.map(({ v, label }) => (
+                  <button key={v} onClick={() => saveRule(selectedId!, { ...rule, frequency: v })}
+                    style={{
+                      padding: '6px 12px', borderRadius: 999, border: '1px solid #E8E1CE', cursor: 'pointer',
+                      background: rule.frequency === v ? AMBER : '#FAF7EC',
+                      color: rule.frequency === v ? '#191712' : '#6C6553',
+                      fontSize: 12, fontWeight: rule.frequency === v ? 600 : 400,
+                    }}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </Field>
+
+            {/* Start date */}
+            <Field label="STARTS">
+              <input type="month" value={rule.starts}
+                onChange={e => saveRule(selectedId!, { ...rule, starts: e.target.value })}
+                style={{ background: '#FAF7EC', border: '1px solid #E8E1CE', borderRadius: 8, padding: '7px 12px', fontSize: 13, color: '#191712', outline: 'none' }} />
+            </Field>
+
+            {/* Toggles */}
+            <div style={{ borderTop: '1px solid #E8E1CE', paddingTop: 16, marginBottom: 8 }}>
+              <Toggle on={rule.rollover} onChange={v => saveRule(selectedId!, { ...rule, rollover: v })}
+                label="Roll unspent into next month" />
+              <div style={{ fontSize: 11.5, color: '#9B9180', marginLeft: 46, marginTop: -4, marginBottom: 8 }}>
+                Underspend carries, overspend does not
+              </div>
+
+              <Toggle on={rule.warn80} onChange={v => saveRule(selectedId!, { ...rule, warn80: v })}
+                label="Warn at 80% of the envelope" />
+              <div style={{ fontSize: 11.5, color: '#9B9180', marginLeft: 46, marginTop: -4, marginBottom: 8 }}>
+                A quiet nudge, not a block
+              </div>
+
+              <Toggle on={rule.autoRaise} onChange={v => saveRule(selectedId!, { ...rule, autoRaise: v })}
+                label="Auto-raise with inflation (+10% every Jan)" />
+              <div style={{ fontSize: 11.5, color: '#9B9180', marginLeft: 46, marginTop: -4, marginBottom: 8 }}>
+                {rule.autoRaise && rule.amount > 0
+                  ? `Next January: EGP ${Math.round(rule.amount * 1.1).toLocaleString('en-US')}`
+                  : 'Keeps pace with rising costs automatically'}
+              </div>
+
+              <Toggle on={rule.guiltFree} onChange={v => saveRule(selectedId!, { ...rule, guiltFree: v })}
+                label="Count toward guilt-free spend" />
+              <div style={{ fontSize: 11.5, color: '#9B9180', marginLeft: 46, marginTop: -4, marginBottom: 8 }}>
+                {rule.fixedType === 'fixed' ? 'Excluded — fixed commitment' : 'Included in discretionary totals'}
+              </div>
+            </div>
+
+            {/* Sub-categories */}
+            {subs(selectedId!).length > 0 && (
+              <div style={{ marginTop: 24, paddingTop: 20, borderTop: '1px solid #E8E1CE' }}>
+                <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.1em', color: '#9B9180', marginBottom: 12 }}>
+                  SUB-CATEGORIES OF {selectedCat.name.toUpperCase()}
+                </div>
+                {subs(selectedId!).map(sub => {
+                  const subSpend = transactions
+                    .filter(tx => tx.type === 'expense' && tx.categoryId === sub.id && tx.date.startsWith(monthPrefix))
+                    .reduce((s, tx) => s + Math.abs(tx.amount), 0)
                   return (
-                    <div
-                      key={tx.id}
-                      onClick={() => setTxModal({ open: true, tx })}
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: 12,
-                        padding: '10px 14px', borderBottom: `1px solid ${'#E8E1CE'}`,
-                        cursor: 'pointer',
-                      }}
-                    >
-                      <div style={{
-                        width: 38, height: 38, borderRadius: '50%', flexShrink: 0,
-                        background: acct ? `${acct.color}22` : '#F7F4EA',
-                        border: `1px solid ${acct ? acct.color + '44' : '#E8E1CE'}`,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15,
-                      }}>
-                        {acct?.emoji ?? '🏦'}
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 14, color: '#191712', fontWeight: 500, whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {tx.payee?.trim() || txCat?.name || 'Transaction'}
-                        </div>
-                        <div style={{ fontSize: 12, color: '#9B9180', marginTop: 2, display: 'flex', gap: 6 }}>
-                          <span>{tx.date}</span>
-                          {txCat && tx.payee?.trim() && <span style={{ color: '#6C6553' }}>· {txCat.icon} {txCat.name}</span>}
-                        </div>
-                      </div>
-                      <span style={{
-                        fontSize: 13, fontWeight: 700, flexShrink: 0,
-                        color: isExp ? RED : GREEN,
-                        background: isExp ? `${RED}18` : `${GREEN}18`,
-                        borderRadius: 20, padding: '3px 8px',
-                      }}>
-                        {isExp ? '−' : '+'}{tx.currency} {Math.abs(tx.amount).toLocaleString()}
-                      </span>
+                    <div key={sub.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: '1px solid #F0EBDC' }}>
+                      <span style={{ fontSize: 16 }}>{sub.icon}</span>
+                      <span style={{ flex: 1, fontSize: 13, color: '#191712' }}>{sub.name}</span>
+                      {subSpend > 0 && (
+                        <span style={{ fontSize: 12, color: RUST, fontFamily: 'Outfit, sans-serif', fontWeight: 600 }}>
+                          EGP {subSpend.toLocaleString('en-US')}
+                        </span>
+                      )}
                     </div>
                   )
                 })}
-              </div>
-
-              {/* Footer */}
-              <div style={{ borderTop: `1px solid ${'#E8E1CE'}`, padding: '10px 14px', display: 'flex', gap: 8 }}>
-                <button
-                  onClick={() => setTxModal({ open: true, tx: null })}
-                  style={{
-                    flex: 1, padding: '8px 0',
-                    background: 'rgba(245,209,78,0.12)', border: `1px solid ${'#F5D14E'}44`,
-                    borderRadius: 8, cursor: 'pointer',
-                    fontSize: 13, color: '#191712', fontFamily: 'inherit', fontWeight: 600,
-                  }}
-                >+ Add</button>
-                <button
-                  onClick={() => openBudget(activeCatId)}
-                  style={{
-                    flex: 1, padding: '8px 0',
-                    background: 'transparent', border: `1px solid ${'#E8E1CE'}`,
-                    borderRadius: 8, cursor: 'pointer',
-                    fontSize: 13, fontWeight: 600, color: '#191712', fontFamily: 'inherit',
-                  }}
-                >Budget</button>
-              </div>
-            </>
-          ) : (
-            /* Budget editor */
-            <>
-              <div style={{
-                height: 48, flexShrink: 0, borderBottom: `1px solid ${'#E8E1CE'}`,
-                display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center',
-                padding: '0 16px',
-              }}>
-                <button
-                  onClick={() => setRightMode('txns')}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6C6553', fontSize: 14, textAlign: 'left' as const, fontFamily: 'inherit', padding: 0 }}
-                >Cancel</button>
-                <span style={{ fontSize: 15, fontWeight: 700, color: '#191712' }}>Budget</span>
-                <button
-                  onClick={saveBudget}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#F5D14E', fontSize: 14, fontWeight: 700, textAlign: 'right' as const, fontFamily: 'inherit', padding: 0 }}
-                >Save</button>
-              </div>
-
-              <div style={{ flex: 1, overflowY: 'auto', padding: 16 }}>
-                {activeCat && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-                    <div style={{
-                      width: 40, height: 40, borderRadius: '50%',
-                      background: `${activeCat.color}22`, border: `2px solid ${activeCat.color}44`,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20,
-                    }}>
-                      {activeCat.icon}
-                    </div>
-                    <input
-                      key={activeCat.id}
-                      defaultValue={activeCat.name}
-                      onBlur={e => {
-                        const n = e.target.value.trim()
-                        if (n && n !== activeCat.name) upsertCategory({ ...activeCat, name: n })
-                      }}
-                      style={{
-                        flex: 1, background: 'transparent', border: 'none',
-                        borderBottom: `1px solid ${'#E8E1CE'}`, outline: 'none',
-                        color: '#191712', fontSize: 16, fontWeight: 600,
-                        fontFamily: 'inherit', padding: '4px 0',
-                      }}
-                    />
-                  </div>
-                )}
-
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0', borderBottom: `1px solid ${'#E8E1CE'}` }}>
-                  <span style={{ fontSize: 14, color: '#191712' }}>Every Month</span>
-                  <input
-                    type="number" min={0} value={budgetEdit.monthlyAmount} placeholder="0"
-                    onChange={e => setBudgetEdit(p => ({ ...p, monthlyAmount: e.target.value }))}
-                    style={{ width: 100, textAlign: 'right' as const, background: 'transparent', border: 'none', outline: 'none', color: '#F5D14E', fontSize: 16, fontWeight: 700, fontFamily: 'inherit' }}
-                  />
+                <div style={{ fontSize: 11.5, color: '#9B9180', marginTop: 8 }}>
+                  Any sub can move to another parent — amounts, receipts and history move with it
                 </div>
-
-                <div style={{ display: 'flex', gap: 12, padding: '12px 0', borderBottom: `1px solid ${'#E8E1CE'}` }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 11, color: '#9B9180', marginBottom: 4 }}>Begin</div>
-                    <input
-                      type="month" value={budgetEdit.startDate}
-                      onChange={e => setBudgetEdit(p => ({ ...p, startDate: e.target.value }))}
-                      style={{ background: 'transparent', border: 'none', outline: 'none', color: '#191712', fontSize: 13, fontFamily: 'inherit', cursor: 'pointer' }}
-                    />
-                  </div>
-                  <div style={{ width: 1, background: '#E8E1CE' }} />
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 11, color: '#9B9180', marginBottom: 4 }}>End</div>
-                    {budgetEdit.endDate ? (
-                      <input
-                        type="month" value={budgetEdit.endDate}
-                        onChange={e => setBudgetEdit(p => ({ ...p, endDate: e.target.value }))}
-                        style={{ background: 'transparent', border: 'none', outline: 'none', color: '#191712', fontSize: 13, fontFamily: 'inherit', cursor: 'pointer' }}
-                      />
-                    ) : (
-                      <span
-                        onClick={() => setBudgetEdit(p => ({ ...p, endDate: addMonth(currentMonth, 1) }))}
-                        style={{ fontSize: 13, color: '#9B9180', cursor: 'pointer' }}
-                      >Never</span>
-                    )}
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0', borderBottom: `1px solid ${'#E8E1CE'}` }}>
-                  <span style={{ fontSize: 14, color: '#191712' }}>Currency</span>
-                  <select
-                    value={budgetEdit.currency}
-                    onChange={e => setBudgetEdit(p => ({ ...p, currency: e.target.value as Currency }))}
-                    style={{ background: 'transparent', border: 'none', outline: 'none', color: '#191712', fontSize: 14, fontFamily: 'inherit', cursor: 'pointer' }}
-                  >
-                    <option value="EGP">EGP</option>
-                    <option value="USD">USD</option>
-                    <option value="AED">AED</option>
-                  </select>
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0', borderBottom: `1px solid ${'#E8E1CE'}` }}>
-                  <span style={{ fontSize: 14, color: '#191712' }}>Rollover</span>
-                  <input
-                    type="checkbox" checked={budgetEdit.rollover}
-                    onChange={e => setBudgetEdit(p => ({ ...p, rollover: e.target.checked }))}
-                    style={{ width: 18, height: 18, cursor: 'pointer', accentColor: '#F5D14E' }}
-                  />
-                </div>
-
-                {activeCatId && budgetObj(activeCatId) && (
-                  <button
-                    onClick={() => {
-                      const b = budgetObj(activeCatId)
-                      if (b) { removeBudget(b.id); setRightMode('txns') }
-                    }}
-                    style={{
-                      marginTop: 20, background: 'none', border: 'none', cursor: 'pointer',
-                      color: RED, fontSize: 14, fontFamily: 'inherit', padding: '8px 0',
-                      display: 'block', width: '100%', textAlign: 'center' as const,
-                    }}
-                  >Delete Budget</button>
-                )}
               </div>
-            </>
-          )}
-        </div>
-      )}
+            )}
 
-      {/* Modals */}
-      {catModal.open && (
-        <CategoryModal
-          category={catModal.category}
-          categories={categories}
-          onSave={c => { upsertCategory(c); setCatModal({ open: false, category: null }) }}
-          onDelete={id => { removeCategory(id); setCatModal({ open: false, category: null }) }}
-          onClose={() => setCatModal({ open: false, category: null })}
-        />
-      )}
-      {txModal.open && (
-        <TransactionModal
-          transaction={txModal.tx}
-          accounts={accounts}
-          categories={categories}
-          onSave={tx => { upsertTransaction(tx); setTxModal({ open: false, tx: null }) }}
-          onDelete={id => { useFinanceStore.getState().removeTransaction(id); setTxModal({ open: false, tx: null }) }}
-          onClose={() => setTxModal({ open: false, tx: null })}
-        />
-      )}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ── Helper ────────────────────────────────────────────────────────────────────
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div style={{ marginBottom: 20 }}>
+      <div style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.12em', color: '#9B9180', marginBottom: 7 }}>{label}</div>
+      {children}
     </div>
   )
 }
