@@ -545,17 +545,15 @@ export function AssistantToggle({ open, onClick }: AssistantToggleProps) {
       style={{
         position: 'fixed', bottom: 24, right: open ? 406 : 24,
         width: 48, height: 48, borderRadius: 14, border: 'none', cursor: 'pointer',
-        background: open
-          ? '#FAF7EC'
-          : 'linear-gradient(135deg, #4F46E5 0%, #818CF8 100%)',
+        background: open ? '#FAF7EC' : '#191712',
         boxShadow: open
-          ? '0 2px 12px rgba(0,0,0,0.4), inset 0 0 0 1px rgba(99,102,241,0.3)'
-          : '0 4px 20px rgba(79,70,229,0.45)',
+          ? '0 2px 12px rgba(25,23,18,0.18), inset 0 0 0 1px #E8E1CE'
+          : '0 4px 18px rgba(25,23,18,0.28)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         zIndex: 148,
         transition: 'right 0.25s cubic-bezier(0.4,0,0.2,1), background 0.2s, box-shadow 0.2s',
       }}>
-      {open ? <X size={20} color="#818CF8" /> : <Brain size={22} color="white" />}
+      {open ? <X size={20} color="#6C6553" /> : <Brain size={22} color="#F5D14E" />}
     </button>
   )
 }

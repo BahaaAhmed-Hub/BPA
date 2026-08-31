@@ -2,7 +2,7 @@
 
 ## Stack
 - **React 19 + TypeScript + Vite + Zustand**
-- Branch: `claude/build-professor-ai-app-sDbyz` (push here + main)
+- Branch: `claude/professor-web-app-dev-tnj0uk` (current dev branch; older work was on `claude/build-professor-ai-app-sDbyz`)
 - Always run `npm run build` to verify before pushing (strict `noUnusedLocals`)
 
 ## Design System — Sunlit Bento
@@ -95,12 +95,25 @@ Typography: `Outfit` headings, system-ui body. Section titles: 28px Outfit 600, 
   color: '#6C6553', textTransform: 'uppercase', marginBottom: 4 }}>SETTINGS</div>
 ```
 
+## Settings — 11A artboard primitives
+`Settings.tsx` has a shared set of design primitives used by every artboard-accurate section:
+`PILL_BASE`, `GhostPill`, `PillValue`, `DRow` (label+sub left / control hard-right),
+`Segmented`, `pillSelectStyle`, `VisaBadge`. Prefer these over `FieldRow`/`inputStyle`
+when bringing a section up to the artboards.
+
+Layout: the page header (eyebrow + title + `Setup wizard`/`Export`) spans full width
+**above** the rail. The rail is a floating 250px card; the active nav item is a solid
+black pill (`#191712` bg, white text). Cards use `alignSelf: 'start'` so they size to
+content — the content column scrolls, not each card.
+
+Profile fields **autosave** (1.2s debounce → `saveProfileToDB`); `profileHydrated` ref
+swallows the write-back that DB hydration would otherwise trigger.
+
 ## Git Push Pattern
 ```bash
 git add -A
 git commit -m "feat: ..."
-git push origin main
-git push origin HEAD:claude/build-professor-ai-app-sDbyz
+git push -u origin claude/professor-web-app-dev-tnj0uk
 ```
 
 ## Build Gotchas

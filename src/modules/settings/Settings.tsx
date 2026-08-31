@@ -7,6 +7,7 @@ import {
   ChevronDown, ChevronUp, User, Clock, Building2, Flame,
   Brain, Bell, Palette, Link, X, RefreshCw, Eye, EyeOff, Shield, Pencil,
   Hash, CheckSquare, Mail, HardDrive, CalendarDays, Swords, Wand2, CreditCard,
+  ArrowUpRight, Download, Database,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { connectAdditionalGoogleAccount, signOut as googleSignOut, disconnectGoogleAccount } from '@/lib/google'
@@ -104,11 +105,7 @@ const ALL_TZ = (() => {
   }).sort((a,b) => a.offset - b.offset || a.value.localeCompare(b.value))
 })()
 
-const FRAMEWORKS = [
-  {value:'time_blocking',label:'Time Blocking'},{value:'gtd',label:'GTD'},
-  {value:'deep_work',label:'Deep Work'},{value:'eisenhower',label:'Eisenhower Matrix'},
-  {value:'pomodoro',label:'Pomodoro'},{value:'12_week_year',label:'12-Week Year'},
-]
+// Framework options live in FRAMEWORK_SEGMENTS (11A segmented control).
 const WORK_DAYS    = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
 const C_COLORS     = ['#7F77DD','#7F77DD','#1D9E75','#E05252','#888780','#5B9BD5','#E0944A']
 const BUFFER_STEPS = [0,15,30,45,60]
@@ -239,47 +236,243 @@ function FieldRow({ label, sub, children }: { label: string; sub?: string; child
 }
 
 
+// ─── Design primitives (11A artboard) ────────────────────────────────────────
+
+/** Cream pill used for both read-outs and small actions. */
+const PILL_BASE: React.CSSProperties = {
+  background: '#FAF7EC',
+  border: '1px solid #E8E1CE',
+  borderRadius: 9,
+  color: '#191712',
+  fontSize: 13,
+  fontWeight: 500,
+  padding: '8px 14px',
+  fontFamily: 'inherit',
+  lineHeight: 1.2,
+  whiteSpace: 'nowrap' as const,
+  outline: 'none',
+}
+
+/** Ghost pill button — optional leading icon, optional rust tone. */
+function GhostPill({ icon: Icon, children, onClick, tone, title }: {
+  icon?: React.ElementType
+  children: ReactNode
+  onClick?: () => void
+  tone?: 'default' | 'rust'
+  title?: string
+}) {
+  return (
+    <button onClick={onClick} title={title} style={{
+      ...PILL_BASE,
+      display: 'inline-flex', alignItems: 'center', gap: 6,
+      cursor: 'pointer',
+      color: tone === 'rust' ? '#B4523A' : '#191712',
+      borderColor: tone === 'rust' ? 'rgba(180,82,58,0.35)' : '#E8E1CE',
+      background: tone === 'rust' ? '#FFFFFF' : '#FAF7EC',
+    }}>
+      {Icon && <Icon size={13} strokeWidth={2} />}
+      {children}
+    </button>
+  )
+}
+
+/** Static cream pill for values that are displayed, not edited here. */
+function PillValue({ children }: { children: ReactNode }) {
+  return <span style={{ ...PILL_BASE, display: 'inline-block', color: '#191712' }}>{children}</span>
+}
+
+/** Label (+sub) on the left, control hard-right — the artboard row rhythm. */
+function DRow({ label, sub, children, last }: {
+  label: string; sub?: string; children: ReactNode; last?: boolean
+}) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16,
+      padding: '15px 0',
+      borderBottom: last ? 'none' : '1px solid #F0EBDC',
+    }}>
+      <div style={{ minWidth: 0 }}>
+        <p style={{ margin: 0, fontSize: 13.5, fontWeight: 500, color: '#191712', lineHeight: 1.3 }}>{label}</p>
+        {sub && <p style={{ margin: '2px 0 0', fontSize: 11.5, color: '#9B9180', lineHeight: 1.35 }}>{sub}</p>}
+      </div>
+      <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 10 }}>{children}</div>
+    </div>
+  )
+}
+
+/** Segmented control — active option is a white pill on a cream track. */
+function Segmented<T extends string>({ value, options, onChange }: {
+  value: T
+  options: { value: T; label: string }[]
+  onChange: (v: T) => void
+}) {
+  return (
+    <div style={{
+      display: 'inline-flex', alignItems: 'center', gap: 2, padding: 3,
+      background: '#FAF7EC', border: '1px solid #E8E1CE', borderRadius: 10,
+    }}>
+      {options.map(o => {
+        const on = o.value === value
+        return (
+          <button key={o.value} onClick={() => onChange(o.value)} style={{
+            padding: '6px 14px', borderRadius: 8, fontSize: 12.5, cursor: 'pointer',
+            fontWeight: on ? 600 : 500,
+            fontFamily: 'inherit',
+            background: on ? '#FFFFFF' : 'transparent',
+            border: on ? '1px solid rgba(25,23,18,0.08)' : '1px solid transparent',
+            boxShadow: on ? '0 1px 2px rgba(25,23,18,0.10)' : 'none',
+            color: on ? '#191712' : '#9B9180',
+            transition: 'all 0.12s',
+          }}>{o.label}</button>
+        )
+      })}
+    </div>
+  )
+}
+
+/** Native select dressed as a cream pill (keeps keyboard + full option list). */
+const pillSelectStyle: React.CSSProperties = {
+  ...PILL_BASE,
+  cursor: 'pointer',
+  appearance: 'none' as const,
+  WebkitAppearance: 'none' as const,
+  paddingRight: 14,
+  maxWidth: 260,
+  textOverflow: 'ellipsis',
+}
+
+function VisaBadge() {
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+      width: 30, height: 19, borderRadius: 4, background: '#1A1F71',
+      color: '#FFFFFF', fontSize: 8.5, fontWeight: 700, fontStyle: 'italic',
+      letterSpacing: '0.04em', flexShrink: 0,
+    }}>VISA</span>
+  )
+}
+
 // ─── Sortable Section Shell ────────────────────────────────────────────────────
 
 // SectionShell removed — Settings now uses a left-rail + single-panel layout.
 
 // ─── CHUNK 3: Profile & Schedule sections ────────────────────────────────────
 
+/** Framework options shown as a segmented control on the 11A artboard. */
+const FRAMEWORK_SEGMENTS = [
+  { value: 'time_blocking', label: 'Time blocking' },
+  { value: 'eisenhower',    label: 'Eisenhower' },
+  { value: 'gtd',           label: 'GTD' },
+]
+
+/** "Sunday to Thursday" / "Mon, Wed, Fri" summary of the selected work week. */
+function workWeekSummary(days: string[]): string {
+  const ordered = WORK_DAYS.filter(d => days.includes(d))
+  if (ordered.length === 0) return 'No work days selected'
+  const full: Record<string, string> = {
+    Sun: 'Sunday', Mon: 'Monday', Tue: 'Tuesday', Wed: 'Wednesday',
+    Thu: 'Thursday', Fri: 'Friday', Sat: 'Saturday',
+  }
+  const idx = ordered.map(d => WORK_DAYS.indexOf(d))
+  const contiguous = idx.every((n, i) => i === 0 || n === idx[i - 1] + 1)
+  if (contiguous && ordered.length > 1) return `${full[ordered[0]]} to ${full[ordered[ordered.length - 1]]}`
+  if (ordered.length === 1) return full[ordered[0]]
+  return ordered.join(', ')
+}
+
 function ProfileSection({
-  s, set,
-}: { s: AppSettings; set: (p: Partial<AppSettings>) => void }) {
+  s, set, name, email, avatarUrl, onSignOut, onRefresh, refreshing,
+}: {
+  s: AppSettings
+  set: (p: Partial<AppSettings>) => void
+  name: string
+  email: string
+  avatarUrl?: string
+  onSignOut: () => void
+  onRefresh: () => void
+  refreshing: boolean
+}) {
+  const tzLabel = ALL_TZ.find(t => t.value === s.timezone)?.label ?? s.timezone
+  const initials = (s.fullName || name || 'P').trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase()
+
   return (
     <div>
-      <FieldRow label="Full name">
-        <input value={s.fullName} onChange={e => set({ fullName: e.target.value })}
-          placeholder="Your name" style={inputStyle} />
-      </FieldRow>
-      <FieldRow label="Framework">
-        <select value={s.framework} onChange={e => set({ framework: e.target.value })} style={{ ...selectStyle, width: '100%' }}>
-          {FRAMEWORKS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
-        </select>
-      </FieldRow>
-      <FieldRow label="Timezone">
-        <select value={s.timezone} onChange={e => set({ timezone: e.target.value })} style={{ ...selectStyle, width: '100%' }}>
+      {/* Identity block */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 14,
+        paddingBottom: 18, borderBottom: '1px solid #F0EBDC',
+      }}>
+        {avatarUrl
+          ? <img src={avatarUrl} alt="" style={{ width: 46, height: 46, borderRadius: '50%', border: '1px solid #E8E1CE', flexShrink: 0, objectFit: 'cover' }} />
+          : <div style={{
+              width: 46, height: 46, borderRadius: '50%', flexShrink: 0,
+              background: '#F0EBDC', border: '1px solid #E8E1CE',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 15, fontWeight: 700, color: '#6C6553', letterSpacing: '0.02em',
+            }}>{initials}</div>
+        }
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{
+            margin: 0, fontFamily: 'Outfit, sans-serif', fontSize: 17, fontWeight: 600,
+            letterSpacing: '-0.02em', color: '#191712', lineHeight: 1.25,
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>{s.fullName || name || 'Professor User'}</p>
+          <p style={{
+            margin: '2px 0 0', fontSize: 12, color: '#9B9180', lineHeight: 1.3,
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>{[email, tzLabel].filter(Boolean).join(' · ')}</p>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+          <GhostPill icon={RefreshCw} onClick={onRefresh}>{refreshing ? 'Refreshing…' : 'Refresh'}</GhostPill>
+          <GhostPill tone="rust" onClick={onSignOut}>Sign out</GhostPill>
+        </div>
+      </div>
+
+      {/* Fields */}
+      <DRow label="Full name">
+        <input
+          value={s.fullName}
+          onChange={e => set({ fullName: e.target.value })}
+          placeholder="Your name"
+          style={{ ...PILL_BASE, width: 220, textAlign: 'right' as const }}
+        />
+      </DRow>
+
+      <DRow label="Framework" sub="How the Professor plans your day">
+        <Segmented
+          value={FRAMEWORK_SEGMENTS.some(f => f.value === s.framework) ? s.framework : 'time_blocking'}
+          options={FRAMEWORK_SEGMENTS}
+          onChange={v => set({ framework: v })}
+        />
+      </DRow>
+
+      <DRow label="Timezone">
+        <select value={s.timezone} onChange={e => set({ timezone: e.target.value })} style={pillSelectStyle}>
           {ALL_TZ.map(tz => <option key={tz.value} value={tz.value}>{tz.label}</option>)}
         </select>
-      </FieldRow>
-      <FieldRow label="Work days">
-        <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+      </DRow>
+
+      <DRow label="Work days" sub={workWeekSummary(s.workWeek)} last>
+        <div style={{ display: 'flex', gap: 6 }}>
           {WORK_DAYS.map(d => {
             const on = s.workWeek.includes(d)
             return (
-              <button key={d} onClick={() => set({ workWeek: on ? s.workWeek.filter(x => x !== d) : [...s.workWeek, d] })}
+              <button
+                key={d}
+                onClick={() => set({ workWeek: on ? s.workWeek.filter(x => x !== d) : [...s.workWeek, d] })}
                 style={{
-                  padding: '4px 9px', borderRadius: 6, fontSize: 11.5, cursor: 'pointer', fontWeight: 500,
-                  background: on ? 'rgba(245,209,78,0.12)' : '#FAF7EC',
-                  border: `1px solid ${on ? '#F5D14E' : '#E8E1CE'}`,
-                  color: on ? '#F5D14E' : '#6C6553',
+                  padding: '7px 11px', borderRadius: 8, fontSize: 12.5, cursor: 'pointer',
+                  fontFamily: 'inherit',
+                  fontWeight: on ? 600 : 500,
+                  background: on ? '#191712' : '#FAF7EC',
+                  border: `1px solid ${on ? '#191712' : '#E8E1CE'}`,
+                  color: on ? '#FFFFFF' : '#6C6553',
+                  transition: 'all 0.12s',
                 }}>{d}</button>
             )
           })}
         </div>
-      </FieldRow>
+      </DRow>
     </div>
   )
 }
@@ -2169,70 +2362,74 @@ function BillingSection() {
   return (
     <div>
       {/* Plan tile */}
-      <div style={{ padding: '16px 18px', borderRadius: 12, background: '#FFFBEC', border: '1px solid #E8E1CE', marginBottom: 18 }}>
+      <div style={{ padding: '16px 18px', borderRadius: 12, background: '#FFFBEC', border: '1px solid #F5D14E', marginBottom: 6 }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-              <span style={{ fontSize: 14, fontWeight: 700, color: '#191712' }}>Professor Pro</span>
-              <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.1em', background: '#F5D14E', color: '#191712', padding: '2px 7px', borderRadius: 4 }}>ANNUAL</span>
+              <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 15.5, fontWeight: 600, letterSpacing: '-0.02em', color: '#191712' }}>Professor Pro</span>
+              <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.1em', background: '#F5D14E', color: '#191712', padding: '3px 7px', borderRadius: 5 }}>ANNUAL</span>
             </div>
             <p style={{ margin: 0, fontSize: 11.5, color: '#6C6553', lineHeight: 1.45 }}>Renews 14 March 2027 · all four companies, unlimited AI drafts</p>
           </div>
           <div style={{ textAlign: 'right', flexShrink: 0 }}>
-            <p style={{ margin: 0, fontSize: 20, fontWeight: 700, fontFamily: 'Outfit, sans-serif', color: '#191712' }}>$180</p>
-            <p style={{ margin: 0, fontSize: 11, color: '#9B9180' }}>per year</p>
+            <p style={{ margin: 0, fontSize: 24, fontWeight: 700, fontFamily: 'Outfit, sans-serif', letterSpacing: '-0.03em', color: '#191712', lineHeight: 1 }}>$180</p>
+            <p style={{ margin: '2px 0 0', fontSize: 11, color: '#9B9180' }}>per year</p>
           </div>
         </div>
       </div>
 
       {/* Billing fields */}
-      {[
-        { label: 'Payment method', value: 'Visa ending 4417 · expires 09/28', action: 'Change' },
-        { label: 'Billing email',  value: 'eng.bahaa.a@gmail.com',             action: null, sub: 'Invoices are sent here every renewal' },
-        { label: 'VAT / tax ID',   value: '—',                                 action: 'Add a tax ID', sub: 'Appears on every invoice' },
-        { label: 'Seats',          value: '1 of 1',                            action: null, sub: 'You plus nobody — personal licence' },
-      ].map(row => (
-        <div key={row.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 0', borderBottom: '1px solid #F0EBDC' }}>
-          <div>
-            <p style={{ margin: 0, fontSize: 12.5, fontWeight: 500, color: '#191712' }}>{row.label}</p>
-            {row.sub && <p style={{ margin: '1px 0 0', fontSize: 11, color: '#9B9180' }}>{row.sub}</p>}
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontSize: 12.5, color: '#6C6553' }}>{row.value}</span>
-            {row.action && (
-              <button style={{ fontSize: 11.5, fontWeight: 500, color: '#6C6553', background: '#FAF7EC', border: '1px solid #E8E1CE', borderRadius: 6, padding: '4px 10px', cursor: 'pointer' }}>
-                {row.action}
-              </button>
-            )}
-          </div>
-        </div>
-      ))}
+      <DRow label="Payment method">
+        <span style={{ fontSize: 12.5, color: '#6C6553' }}>Visa ending 4417 · expires 09/28</span>
+        <VisaBadge />
+        <GhostPill>Change</GhostPill>
+      </DRow>
+
+      <DRow label="Billing email" sub="Invoices are sent here every renewal">
+        <PillValue>eng.bahaa.a@gmail.com</PillValue>
+      </DRow>
+
+      <DRow label="VAT / tax ID" sub="Appears on every invoice">
+        <GhostPill>Add a tax ID</GhostPill>
+      </DRow>
+
+      <DRow label="Seats" sub="You plus nobody — this is a personal licence" last>
+        <PillValue>1 of 1</PillValue>
+      </DRow>
 
       {/* Invoices */}
-      <div style={{ marginTop: 20 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-          <p style={{ margin: 0, fontSize: 11.5, fontWeight: 700, letterSpacing: '0.09em', color: '#6C6553', textTransform: 'uppercase' }}>Invoices</p>
-          <button style={{ fontSize: 11.5, color: '#6C6553', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>Download all</button>
+      <div style={{ marginTop: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+          <p style={{ margin: 0, fontSize: 10.5, fontWeight: 700, letterSpacing: '0.14em', color: '#6C6553', textTransform: 'uppercase' }}>Invoices</p>
+          <button style={{ fontSize: 12, color: '#6C6553', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}>Download all</button>
         </div>
-        {INVOICES.map(inv => (
-          <div key={inv.date} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 0', borderBottom: '1px solid #F0EBDC' }}>
-            <div>
-              <p style={{ margin: 0, fontSize: 12.5, color: '#191712' }}>{inv.desc}</p>
-              <p style={{ margin: '1px 0 0', fontSize: 11, color: '#9B9180' }}>{inv.date}</p>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span style={{ fontSize: 12.5, fontFamily: 'Outfit, sans-serif', fontWeight: 600, color: '#191712' }}>{inv.amount}</span>
-              <button style={{ background: '#FAF7EC', border: '1px solid #E8E1CE', borderRadius: 6, padding: '4px 8px', cursor: 'pointer', color: '#6C6553', fontSize: 11 }}>↓</button>
-            </div>
+        {INVOICES.map((inv, i) => (
+          <div key={inv.date} style={{
+            display: 'flex', alignItems: 'center', gap: 16,
+            padding: '13px 0',
+            borderBottom: i === INVOICES.length - 1 ? 'none' : '1px solid #F0EBDC',
+          }}>
+            <span style={{ width: 96, flexShrink: 0, fontSize: 12.5, color: '#6C6553' }}>{inv.date}</span>
+            <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: '#191712', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{inv.desc}</span>
+            <span style={{ fontSize: 13, fontFamily: 'Outfit, sans-serif', fontWeight: 600, color: '#191712', flexShrink: 0 }}>{inv.amount}</span>
+            <button title={`Download ${inv.date} invoice`} style={{
+              background: 'none', border: 'none', cursor: 'pointer', color: '#9B9180',
+              padding: 2, display: 'flex', alignItems: 'center', flexShrink: 0,
+            }}><Download size={14} /></button>
           </div>
         ))}
       </div>
 
       {/* Cancel */}
-      <p style={{ margin: '18px 0 0', fontSize: 11.5, color: '#9B9180' }}>
-        Cancelling keeps your data readable until the term ends. &nbsp;
-        <button style={{ background: 'none', border: 'none', color: '#B4523A', fontSize: 11.5, cursor: 'pointer', padding: 0, textDecoration: 'underline' }}>Cancel plan</button>
-      </p>
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16,
+        marginTop: 18, paddingTop: 16, borderTop: '1px solid #F0EBDC',
+      }}>
+        <p style={{ margin: 0, fontSize: 12, color: '#9B9180', lineHeight: 1.4 }}>
+          Cancelling keeps your data readable until the term ends.
+        </p>
+        <GhostPill tone="rust">Cancel plan</GhostPill>
+      </div>
     </div>
   )
 }
@@ -2633,38 +2830,46 @@ const PAGE_META: Record<PageKey, { title: string; sub: string }> = {
 }
 
 // Card wrapper used in every multi-column page
-function SectionCard({ id, active, children, actions }: {
+function SectionCard({ id, active, children, actions, sub }: {
   id: SectionId
   active: boolean
   children: React.ReactNode
   actions?: React.ReactNode
+  sub?: string
 }) {
   const meta = SECTION_META.find(m => m.id === id)!
+  const Icon = meta.icon
   return (
     <div style={{
       background: '#FFFFFF',
-      border: '1px solid #E8E1CE',
-      borderRadius: 14,
-      padding: '18px 20px 20px',
-      boxShadow: active
-        ? '0 0 0 2px rgba(245,209,78,0.35), 0 2px 8px rgba(25,23,18,0.08)'
-        : '0 1px 3px rgba(25,23,18,0.06)',
+      border: `1px solid ${active ? '#E0D6BC' : '#E8E1CE'}`,
+      borderRadius: 16,
+      padding: '20px 24px 22px',
+      boxShadow: '0 1px 3px rgba(25,23,18,0.06)',
       display: 'flex',
       flexDirection: 'column',
       minWidth: 0,
-      transition: 'box-shadow 0.15s',
-      overflowY: 'auto',
+      alignSelf: 'start',
+      transition: 'border-color 0.15s',
     }}>
       {/* Card heading */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, marginBottom: 14, paddingBottom: 12, borderBottom: '1px solid #F0EBDC', flexShrink: 0 }}>
-        <div>
-          <h3 style={{ margin: 0, fontSize: 13.5, fontWeight: 700, color: '#191712', lineHeight: 1.2 }}>{meta.title}</h3>
-          <p style={{ margin: '2px 0 0', fontSize: 11, color: '#9B9180', lineHeight: 1.35 }}>{meta.description}</p>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 4, flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 11, minWidth: 0 }}>
+          <div style={{
+            width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
+            background: '#FAF7EC', border: '1px solid #E8E1CE',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <Icon size={14} strokeWidth={1.9} color="#6C6553" />
+          </div>
+          <div style={{ minWidth: 0 }}>
+            <h3 style={{ margin: 0, fontFamily: 'Outfit, sans-serif', fontSize: 15, fontWeight: 600, letterSpacing: '-0.02em', color: '#191712', lineHeight: 1.25 }}>{meta.title}</h3>
+            <p style={{ margin: '1px 0 0', fontSize: 11.5, color: '#9B9180', lineHeight: 1.35, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sub ?? meta.description}</p>
+          </div>
         </div>
-        {actions && <div style={{ flexShrink: 0 }}>{actions}</div>}
+        {actions && <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 8 }}>{actions}</div>}
       </div>
-      {/* Card content scrolls independently */}
-      <div style={{ flex: 1, minHeight: 0 }}>
+      <div style={{ minWidth: 0 }}>
         {children}
       </div>
     </div>
@@ -2683,12 +2888,15 @@ export function Settings() {
   })
 
   const [supaOk, setSupaOk]             = useState<boolean | null>(null)
+  const [refreshing, setRefreshing]     = useState(false)
   // Per-section save states + error messages
   const [sectionSaving, setSectionSaving] = useState<Record<string, 'idle'|'saving'|'saved'|'error'>>({})
   const [_sectionError, setSectionError]  = useState<Record<string, string>>({}); void _sectionError
   const authUser = useAuthStore(s => s.user)
   const settingsRef = useRef(settings)
   settingsRef.current = settings
+  // Gate for the profile autosave — false means "swallow the next change"
+  const profileHydrated = useRef(false)
 
   // Primary email: authStore (persisted, instant) with supabase session as fallback
   const [primaryEmail, setPrimaryEmail] = useState<string>(authUser?.email ?? '')
@@ -2716,6 +2924,8 @@ export function Settings() {
       try {
         // Settings
         const dbSettings = await loadSettingsFromDB(DEFAULTS)
+        // Swallow the autosave this hydration would otherwise trigger
+        profileHydrated.current = false
         setSettings(dbSettings)
         saveSettings(dbSettings)
 
@@ -2765,6 +2975,54 @@ export function Settings() {
     })
   }
 
+  // ── Profile autosave — the artboard swaps Save for "Setup wizard", and the
+  //    rail footer promises "Every change saves itself". Debounced so typing
+  //    the full name does not fire a write per keystroke. ────────────────────
+  const profileKey = `${settings.fullName}|${settings.timezone}|${settings.framework}|${settings.workWeek.join(',')}`
+  useEffect(() => {
+    if (!profileHydrated.current) { profileHydrated.current = true; return }
+    const t = setTimeout(() => {
+      setSectionSaving(prev => ({ ...prev, profile: 'saving' }))
+      saveProfileToDB(settingsRef.current)
+        .then(() => {
+          setSectionSaving(prev => ({ ...prev, profile: 'saved' }))
+          setTimeout(() => setSectionSaving(prev => ({ ...prev, profile: 'idle' })), 2000)
+        })
+        .catch((err: unknown) => {
+          console.error('[Settings autosave:profile]', err)
+          setSectionSaving(prev => ({ ...prev, profile: 'error' }))
+          setTimeout(() => setSectionSaving(prev => ({ ...prev, profile: 'idle' })), 5000)
+        })
+    }, 1200)
+    return () => clearTimeout(t)
+  }, [profileKey])
+
+  // ── Pull the authoritative record back down from the DB ─────────────────────
+  async function handleRefresh() {
+    setRefreshing(true)
+    try {
+      const dbSettings = await loadSettingsFromDB(DEFAULTS)
+      profileHydrated.current = false
+      setSettings(dbSettings)
+      saveSettings(dbSettings)
+      const dbAccounts = await loadAccountsFromDB()
+      if (dbAccounts.length > 0) {
+        setAccounts(prev => {
+          const merged = [...prev]
+          for (const dba of dbAccounts) {
+            if (!merged.find(a => a.email === dba.email)) merged.push({ ...dba, providerToken: '' })
+          }
+          return merged
+        })
+      }
+      setSupaOk(await checkSupabase())
+    } catch (err) {
+      console.error('[Settings refresh]', err)
+    } finally {
+      setRefreshing(false)
+    }
+  }
+
   // ── Per-section DB save helper ───────────────────────────────────────────────
   function withSectionSave(sectionId: string, fn: () => Promise<void>) {
     return async () => {
@@ -2787,7 +3045,6 @@ export function Settings() {
   // ── Page renderer (multi-column layout per design artboards) ────────────────
   function renderPage() {
     const page = SECTION_TO_PAGE[activeSection]
-    const pm   = PAGE_META[page]
 
     // Shared accounts list (primary + additional)
     const allAccounts: ConnectedAccount[] = [
@@ -2802,7 +3059,6 @@ export function Settings() {
     // Inline save button for cards that have a DB save
     function SaveBtn({ id }: { id: SectionId }) {
       const fns: Partial<Record<SectionId, () => Promise<void>>> = {
-        profile:  () => saveProfileToDB(settingsRef.current),
         schedule: () => saveProfileToDB(settingsRef.current),
         professor:() => savePrefsToDB(settingsRef.current),
         habits:   async () => { const { habits } = useHabitsStore.getState(); await saveHabitsToDB(habits); await saveHabitLogsToDB(loadLogs()) },
@@ -2823,24 +3079,36 @@ export function Settings() {
       )
     }
 
-    // Page header
-    const pageHeader = (
-      <div style={{ marginBottom: 18, flexShrink: 0 }}>
-        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.16em', color: '#9B9180', textTransform: 'uppercase', marginBottom: 3 }}>SETTINGS</div>
-        <h2 style={{ margin: 0, fontFamily: 'Outfit, sans-serif', fontSize: 26, fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1, color: '#191712' }}>{pm.title}</h2>
-        <p style={{ margin: '4px 0 0', fontSize: 12, color: '#6C6553', lineHeight: 1.4 }}>{pm.sub}</p>
-      </div>
-    )
-
     // ── YOU page: Profile (left) + Billing (right) ──────────────────────────
     if (page === 'you') return (
-      <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-        {pageHeader}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, flex: 1, minHeight: 0 }}>
-          <SectionCard id="profile" active={activeSection === 'profile'} actions={<SaveBtn id="profile" />}>
-            <ProfileSection s={settings} set={update} />
+      <div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, alignItems: 'start' }}>
+          <SectionCard
+            id="profile"
+            active={activeSection === 'profile'}
+            sub={[
+              settings.fullName || authUser?.name || 'Professor User',
+              supaOk === null ? 'Checking Supabase…' : supaOk ? 'Supabase connected' : 'Local only',
+              `${allAccounts.length} account${allAccounts.length === 1 ? '' : 's'}`,
+            ].join(' · ')}
+            actions={
+              <GhostPill icon={ArrowUpRight} onClick={() => window.dispatchEvent(new CustomEvent('professor:openWizard'))}>
+                Setup wizard
+              </GhostPill>
+            }
+          >
+            <ProfileSection
+              s={settings}
+              set={update}
+              name={authUser?.name ?? ''}
+              email={primaryEmail}
+              avatarUrl={authUser?.avatarUrl}
+              onSignOut={() => void handleSignOut()}
+              onRefresh={() => void handleRefresh()}
+              refreshing={refreshing}
+            />
           </SectionCard>
-          <SectionCard id="billing" active={activeSection === 'billing'}>
+          <SectionCard id="billing" active={activeSection === 'billing'} actions={<GhostPill>Manage</GhostPill>}>
             <BillingSection />
           </SectionCard>
         </div>
@@ -2849,9 +3117,8 @@ export function Settings() {
 
     // ── CONNECTED page: Accounts | AI | Schedule rules ──────────────────────
     if (page === 'connected') return (
-      <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-        {pageHeader}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14, flex: 1, minHeight: 0 }}>
+      <div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 20, alignItems: 'start' }}>
           <SectionCard id="accounts" active={activeSection === 'accounts'} actions={
             <button onClick={() => window.dispatchEvent(new CustomEvent('professor:openWizard'))} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 7, background: '#FAF7EC', border: '1px solid #E8E1CE', color: '#6C6553', fontSize: 11, cursor: 'pointer' }}>
               <Wand2 size={11} /> Wizard
@@ -2871,8 +3138,7 @@ export function Settings() {
 
     // ── INTEGRATIONS page ───────────────────────────────────────────────────
     if (page === 'integrations') return (
-      <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-        {pageHeader}
+      <div>
         <SectionCard id="blocking" active={true}>
           <IntegrationsSection accounts={accounts} setAccounts={a => setAccounts(a)} primaryEmail={primaryEmail} />
         </SectionCard>
@@ -2881,9 +3147,8 @@ export function Settings() {
 
     // ── WORK page: Tasks (left) + Habits (right) ────────────────────────────
     if (page === 'work') return (
-      <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-        {pageHeader}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, flex: 1, minHeight: 0 }}>
+      <div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, alignItems: 'start' }}>
           <SectionCard id="tasks" active={activeSection === 'tasks'}>
             <TaskStatusesSection />
           </SectionCard>
@@ -2896,9 +3161,8 @@ export function Settings() {
 
     // ── SYSTEM page: Automation | Notifications | Appearance+Behavioral+Privacy ─
     if (page === 'system') return (
-      <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-        {pageHeader}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14, flex: 1, minHeight: 0 }}>
+      <div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 20, alignItems: 'start' }}>
           <SectionCard id="automation" active={activeSection === 'automation'}>
             <AutomationSection />
           </SectionCard>
@@ -2906,7 +3170,7 @@ export function Settings() {
             <NotificationsMatrixSection />
           </SectionCard>
           {/* Third column: Appearance + Behavioral OS + Data & privacy stacked */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14, minHeight: 0 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             <SectionCard id="appearance" active={activeSection === 'appearance'} actions={<SaveBtn id="appearance" />}>
               <AppearanceSection s={settings} set={update} />
             </SectionCard>
@@ -2923,13 +3187,31 @@ export function Settings() {
 
     // ── FINANCE page ────────────────────────────────────────────────────────
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-        {pageHeader}
+      <div>
         <SectionCard id="finance" active={true}>
           <FinanceSection />
         </SectionCard>
       </div>
     )
+  }
+
+  /** Download every locally-held settings blob as one JSON file. */
+  function exportAllSettings() {
+    const payload = {
+      exportedAt: new Date().toISOString(),
+      settings, companies,
+      // providerToken is a live OAuth credential — never goes in an export
+      accounts: accounts.map(a => ({
+        id: a.id, email: a.email, name: a.name,
+        scopes: a.scopes, connectedAt: a.connectedAt, isPrimary: a.isPrimary,
+      })),
+    }
+    const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }))
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `professor-settings-${new Date().toISOString().slice(0, 10)}.json`
+    a.click()
+    URL.revokeObjectURL(url)
   }
 
   async function handleSignOut() {
@@ -2940,104 +3222,134 @@ export function Settings() {
     const meta = SECTION_META.find(m => m.id === id)!
     const Icon = meta.icon
     const isActive = id === activeSection
-    const page = SECTION_TO_PAGE[id]
-    const isPageActive = SECTION_TO_PAGE[activeSection] === page
+
+    let badge: number | null = null
+    if (id === 'habits') {
+      try {
+        const hs = JSON.parse(localStorage.getItem('professor-habits') ?? '[]')
+        const n  = hs.filter((h: { isActive?: boolean }) => h.isActive !== false).length
+        badge = n > 0 ? n : null
+      } catch { badge = null }
+    } else if (id === 'blocking') {
+      badge = 4
+    }
+
     return (
       <button
         key={id}
         onClick={() => { setActiveSection(id); try { localStorage.setItem('settings-active-section', id) } catch { /* noop */ } }}
         style={{
-          width: '100%', display: 'flex', alignItems: 'center', gap: 8,
-          padding: '5px 8px', borderRadius: 7, cursor: 'pointer', marginBottom: 1,
-          background: isActive ? '#FFFFFF' : isPageActive ? 'rgba(255,255,255,0.5)' : 'transparent',
-          border: isActive ? '1px solid rgba(25,23,18,0.08)' : '1px solid transparent',
-          color: isActive ? '#191712' : isPageActive ? '#3D3928' : '#6C6553',
-          fontSize: 12, fontWeight: isActive ? 600 : 400, textAlign: 'left' as const,
-          transition: 'all 0.1s',
-          boxShadow: isActive ? '0 1px 3px rgba(25,23,18,0.16)' : 'none',
+          width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+          padding: '9px 12px', borderRadius: 10, cursor: 'pointer', marginBottom: 2,
+          background: isActive ? '#191712' : 'transparent',
+          border: '1px solid transparent',
+          color: isActive ? '#FFFFFF' : '#6C6553',
+          fontSize: 13, fontWeight: isActive ? 600 : 500, textAlign: 'left' as const,
+          fontFamily: 'inherit',
+          transition: 'background 0.12s, color 0.12s',
         }}
       >
-        <Icon size={12} style={{ flexShrink: 0, opacity: isActive ? 1 : 0.65 }} />
+        <Icon size={15} strokeWidth={1.9} style={{ flexShrink: 0, opacity: isActive ? 1 : 0.8 }} />
         <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{meta.title}</span>
-        {id === 'habits' && (() => {
-          try {
-            const hs = JSON.parse(localStorage.getItem('professor-habits') ?? '[]')
-            const n  = hs.filter((h: { isActive?: boolean }) => h.isActive !== false).length
-            return n > 0 ? <span style={{ height: 15, minWidth: 15, boxSizing: 'border-box', padding: '0 4px', borderRadius: 999, background: '#EDE7D9', color: '#6C6553', fontSize: 9, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{n}</span> : null
-          } catch { return null }
-        })()}
-        {id === 'blocking' && <span style={{ height: 15, minWidth: 15, boxSizing: 'border-box', padding: '0 4px', borderRadius: 999, background: '#EDE7D9', color: '#6C6553', fontSize: 9, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>4</span>}
+        {badge !== null && (
+          <span style={{
+            height: 17, minWidth: 17, boxSizing: 'border-box', padding: '0 5px', borderRadius: 999,
+            background: isActive ? 'rgba(255,255,255,0.18)' : '#EDE7D9',
+            color: isActive ? '#FFFFFF' : '#6C6553',
+            fontSize: 9.5, fontWeight: 700,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+          }}>{badge}</span>
+        )}
       </button>
     )
   }
 
+  const pm = PAGE_META[SECTION_TO_PAGE[activeSection]]
+
   return (
-    <div style={{ display: 'flex', height: 'calc(100vh - 66px)', overflow: 'hidden', background: '#F7F4EA' }}>
+    <div style={{
+      height: 'calc(100vh - 66px)', overflow: 'hidden', background: '#F7F4EA',
+      display: 'flex', flexDirection: 'column', padding: '26px 36px 0',
+    }}>
 
-      {/* ── LEFT RAIL 200px — compact, no scroll ─────────────────────────── */}
+      {/* ── PAGE HEADER — spans the full width, above the rail ───────────── */}
       <div style={{
-        width: 200, flexShrink: 0, display: 'flex', flexDirection: 'column',
-        background: '#FCFAF4', borderRight: '1px solid #E8E1CE',
-        overflow: 'hidden',
+        display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
+        gap: 20, marginBottom: 20, flexShrink: 0,
       }}>
-        {/* Compact user row */}
-        <div style={{ padding: '10px 12px 8px', borderBottom: '1px solid #EDE7D9', display: 'flex', alignItems: 'center', gap: 9, flexShrink: 0 }}>
-          {authUser?.avatarUrl
-            ? <img src={authUser.avatarUrl} alt="avatar" style={{ width: 28, height: 28, borderRadius: '50%', border: '1.5px solid #E8E1CE', flexShrink: 0 }} />
-            : <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#EDE7D9', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <span style={{ fontSize: 10, fontWeight: 700, color: '#6C6553' }}>
-                  {(authUser?.name ?? 'P').slice(0, 2).toUpperCase()}
-                </span>
-              </div>
-          }
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ margin: 0, fontSize: 11.5, fontWeight: 600, color: '#191712', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {authUser?.name ?? 'Professor User'}
-            </p>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <div style={{ width: 5, height: 5, borderRadius: '50%', background: supaOk === null ? '#9B9180' : supaOk ? '#1D9E75' : '#E05252', flexShrink: 0 }} />
-              <span style={{ fontSize: 10, color: '#9B9180' }}>{supaOk === null ? 'Checking…' : supaOk ? 'Synced' : 'Local only'}</span>
-            </div>
-          </div>
-          <button onClick={() => void handleSignOut()} title="Sign out"
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9B9180', padding: '2px 4px', flexShrink: 0 }}>
-            <LogOut size={13} />
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.14em', color: '#6C6553', textTransform: 'uppercase', marginBottom: 4 }}>SETTINGS</div>
+          <h2 style={{ margin: 0, fontFamily: 'Outfit, sans-serif', fontSize: 28, fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1.05, color: '#191712' }}>{pm.title}</h2>
+          <p style={{ margin: '5px 0 0', fontSize: 12.5, color: '#6C6553', lineHeight: 1.4 }}>{pm.sub}</p>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+          <button
+            onClick={() => window.dispatchEvent(new CustomEvent('professor:openWizard'))}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 7,
+              padding: '10px 18px', borderRadius: 999, cursor: 'pointer',
+              background: '#FFFFFF', border: '1px solid #E8E1CE', color: '#191712',
+              fontSize: 13, fontWeight: 500, fontFamily: 'inherit',
+              boxShadow: '0 1px 3px rgba(25,23,18,0.06)',
+            }}>
+            <ArrowUpRight size={14} strokeWidth={2} /> Setup wizard
           </button>
-        </div>
-
-        {/* Search */}
-        <div style={{ padding: '7px 10px 6px', borderBottom: '1px solid #EDE7D9', flexShrink: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#FAF7EC', border: '1px solid #E8E1CE', borderRadius: 7, padding: '5px 9px', cursor: 'text' }}>
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#9B9180" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-            <span style={{ fontSize: 11, color: '#9B9180', flex: 1, userSelect: 'none' }}>Find a setting</span>
-            <span style={{ fontSize: 9, color: '#9B9180', opacity: 0.7 }}>⌘K</span>
-          </div>
-        </div>
-
-        {/* Grouped nav — no overflow, compact */}
-        <div style={{ padding: '4px 8px', flex: 1 }}>
-          {NAV_GROUPS.map(group => (
-            <div key={group.label} style={{ marginBottom: 2 }}>
-              <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.13em', color: '#B5AC98', padding: '7px 8px 3px', textTransform: 'uppercase' as const }}>
-                {group.label}
-              </div>
-              {group.ids.map(id => navItem(id))}
-            </div>
-          ))}
-        </div>
-
-        {/* Footer */}
-        <div style={{ padding: '8px 12px 10px', borderTop: '1px solid #EDE7D9', flexShrink: 0 }}>
-          <div style={{ fontSize: 10, color: '#B5AC98', display: 'flex', alignItems: 'center', gap: 5 }}>
-            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="M12 8v4l3 3"/></svg>
-            Every change saves itself
-          </div>
+          <button
+            onClick={() => exportAllSettings()}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 7,
+              padding: '10px 18px', borderRadius: 999, cursor: 'pointer',
+              background: '#FFFFFF', border: '1px solid #E8E1CE', color: '#191712',
+              fontSize: 13, fontWeight: 500, fontFamily: 'inherit',
+              boxShadow: '0 1px 3px rgba(25,23,18,0.06)',
+            }}>
+            <Database size={14} strokeWidth={2} /> Export
+          </button>
         </div>
       </div>
 
-      {/* ── RIGHT CONTENT PANEL — fills height, no outer scroll ──────────── */}
-      <div style={{ flex: 1, overflow: 'hidden', padding: '20px 22px', display: 'flex', flexDirection: 'column' }}>
-        {renderPage()}
+      <div style={{ display: 'flex', gap: 22, flex: 1, minHeight: 0, paddingBottom: 26 }}>
+
+        {/* ── LEFT RAIL — floating card ──────────────────────────────────── */}
+        <div style={{
+          width: 250, flexShrink: 0, display: 'flex', flexDirection: 'column',
+          background: '#FCFAF4', border: '1px solid #E8E1CE', borderRadius: 16,
+          boxShadow: '0 1px 3px rgba(25,23,18,0.06)', overflow: 'hidden',
+        }}>
+          {/* Search */}
+          <div style={{ padding: '14px 14px 10px', flexShrink: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#FAF7EC', border: '1px solid #E8E1CE', borderRadius: 10, padding: '9px 12px', cursor: 'text' }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9B9180" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+              <span style={{ fontSize: 12.5, color: '#9B9180', flex: 1, userSelect: 'none' }}>Find a setting</span>
+              <span style={{ fontSize: 10.5, color: '#9B9180', opacity: 0.7 }}>⌘K</span>
+            </div>
+          </div>
+
+          {/* Grouped nav */}
+          <div style={{ padding: '0 12px', flex: 1, overflowY: 'auto' }}>
+            {NAV_GROUPS.map(group => (
+              <div key={group.label} style={{ marginBottom: 6 }}>
+                <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.14em', color: '#B5AC98', padding: '10px 12px 5px', textTransform: 'uppercase' as const }}>
+                  {group.label}
+                </div>
+                {group.ids.map(id => navItem(id))}
+              </div>
+            ))}
+          </div>
+
+          {/* Footer */}
+          <div style={{ padding: '12px 18px 14px', borderTop: '1px solid #F0EBDC', flexShrink: 0 }}>
+            <div style={{ fontSize: 11.5, color: '#9B9180', display: 'flex', alignItems: 'center', gap: 7 }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#5F7038', flexShrink: 0 }} />
+              Every change saves itself
+            </div>
+          </div>
+        </div>
+
+        {/* ── RIGHT CONTENT PANEL ────────────────────────────────────────── */}
+        <div style={{ flex: 1, minWidth: 0, overflowY: 'auto', paddingRight: 2 }}>
+          {renderPage()}
+        </div>
       </div>
     </div>
   )
