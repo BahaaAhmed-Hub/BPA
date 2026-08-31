@@ -60,18 +60,26 @@ type SectionId = typeof SECTION_IDS[number]
 
 interface SectionMeta { id: SectionId; title: string; icon: React.ElementType; description: string }
 const SECTION_META: SectionMeta[] = [
-  { id: 'profile',       title: 'Profile',              icon: User,       description: 'Name, timezone, work week & framework' },
-  { id: 'schedule',      title: 'Schedule Rules',       icon: Clock,      description: 'Focus hours, buffers, meeting protections' },
-  { id: 'companies',     title: 'Companies',            icon: Building2,  description: 'Contexts, colors, calendar & email domain mapping' },
-  { id: 'habits',        title: 'Habits',               icon: Flame,      description: 'Configure daily habits — synced with Habits page' },
-  { id: 'tasks',         title: 'Task Configuration',   icon: CheckSquare, description: 'Custom board statuses & task defaults' },
-  { id: 'accounts',      title: 'Connected Accounts',   icon: Link,       description: 'Google accounts, calendars & Gmail access' },
-  { id: 'professor',     title: 'Professor AI',         icon: Brain,      description: 'Communication style, daily brief & review day' },
-  { id: 'notifications', title: 'Notifications',        icon: Bell,       description: 'Morning reminder, wind-down & weekly review nudges' },
-  { id: 'appearance',    title: 'Appearance',           icon: Palette,    description: 'Theme, density & sidebar default' },
-  { id: 'blocking',      title: 'Productivity Blocking', icon: Shield,    description: 'Block calendar slots across accounts automatically' },
-  { id: 'behavioral',    title: 'Behavioral OS',        icon: Swords,     description: 'Rank system, identity detection & operating mode' },
-  { id: 'finance',       title: 'Finance',              icon: CreditCard, description: 'Envelope style, figures, dates & alerts' },
+  { id: 'profile',       title: 'Profile',              icon: User,        description: 'Name, timezone, work week & framework' },
+  { id: 'accounts',      title: 'Accounts & companies', icon: Building2,   description: 'Google accounts, calendars & Gmail access' },
+  { id: 'professor',     title: 'AI',                   icon: Brain,       description: 'Communication style, daily brief & review day' },
+  { id: 'schedule',      title: 'Schedule rules',       icon: Clock,       description: 'Focus hours, buffers, meeting protections' },
+  { id: 'blocking',      title: 'Integrations',         icon: Link,        description: 'Block calendar slots & productivity connections' },
+  { id: 'tasks',         title: 'Tasks',                icon: CheckSquare, description: 'Custom board statuses & task defaults' },
+  { id: 'habits',        title: 'Habits',               icon: Flame,       description: 'Configure daily habits — synced with Habits page' },
+  { id: 'notifications', title: 'Automation',           icon: Bell,        description: 'Rules, morning reminder, wind-down & weekly review' },
+  { id: 'appearance',    title: 'Appearance',           icon: Palette,     description: 'Theme, density & sidebar default' },
+  { id: 'behavioral',    title: 'Behavioral OS',        icon: Swords,      description: 'Rank system, identity detection & operating mode' },
+  { id: 'companies',     title: 'Data & privacy',       icon: Shield,      description: 'Company contexts, export & data controls' },
+  { id: 'finance',       title: 'Finance',              icon: CreditCard,  description: 'Envelope style, figures, dates & alerts' },
+]
+
+// Grouped nav — matches 11A Sunlit Bento design
+const NAV_GROUPS: { label: string; ids: SectionId[] }[] = [
+  { label: 'YOU',       ids: ['profile'] },
+  { label: 'CONNECTED', ids: ['accounts', 'professor', 'schedule', 'blocking'] },
+  { label: 'WORK',      ids: ['tasks', 'habits'] },
+  { label: 'SYSTEM',    ids: ['notifications', 'appearance', 'behavioral', 'companies', 'finance'] },
 ]
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -1894,6 +1902,14 @@ function FinanceSection() {
   const [showCents, setShowCents]       = useState(() => { try { return localStorage.getItem('finance-show-cents') !== 'false' } catch { return true } })
   const [weekStart, setWeekStart]       = useState(() => { try { return localStorage.getItem('finance-week-start') || 'Mon' } catch { return 'Mon' } })
   const [alertThreshold, setAlertThreshold] = useState(() => { try { return parseFloat(localStorage.getItem('finance-alert-threshold') ?? '0.9') } catch { return 0.9 } })
+  // 11G new fields
+  const [numbersInFull, setNumbersInFull] = useState(() => { try { return localStorage.getItem('finance-numbers-in-full') !== 'false' } catch { return true } })
+  const [roundWhole, setRoundWhole]       = useState(() => { try { return localStorage.getItem('finance-round-whole') === 'true' } catch { return false } })
+  const [countOn, setCountOn]             = useState<'due' | 'paid'>(() => { try { return (localStorage.getItem('finance-count-on') as 'due' | 'paid') || 'paid' } catch { return 'paid' } })
+  const [includePlanned, setIncludePlanned] = useState(() => { try { return localStorage.getItem('finance-include-planned') !== 'false' } catch { return true } })
+  const [categoryOrder, setCategoryOrder] = useState<'spend' | 'budget' | 'alpha' | 'custom'>(() => {
+    try { return (localStorage.getItem('finance-category-order') as 'spend' | 'budget' | 'alpha' | 'custom') || 'spend' } catch { return 'spend' }
+  })
 
   function saveStyle(s: EnvelopeStyle) {
     setEnvelopeStyle(s)
@@ -2035,38 +2051,92 @@ function FinanceSection() {
       {/* ── FIGURES ──────────────────────────────────────────────────────────── */}
       <div style={{ marginBottom: 4 }}>
         <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', color: '#6C6553', display: 'block', marginBottom: 12 }}>FIGURES</span>
-        <FieldRow label="Currency" sub="Used everywhere in Finance">
+        <FieldRow label="Currency" sub="Everything converts to this · foreign accounts keep their own">
           <select
             value={currency}
             onChange={e => { setCurrency(e.target.value); saveField('finance-currency', e.target.value) }}
-            style={{ ...selectStyle, width: 160 }}
+            style={{ ...selectStyle, width: 180 }}
           >
-            {['EGP','USD','EUR','GBP','AED','SAR','KWD','QAR','BHD','OMR','JOD','MAD','TND'].map(c =>
-              <option key={c} value={c}>{c}</option>
-            )}
+            {['EGP · Egyptian pound','USD · US dollar','EUR · Euro','GBP · Pound sterling','AED · UAE dirham','SAR · Saudi riyal','KWD · Kuwaiti dinar','QAR · Qatari riyal'].map(c => {
+              const v = c.split(' · ')[0]
+              return <option key={v} value={v}>{c}</option>
+            })}
           </select>
         </FieldRow>
-        <FieldRow label="Show cents" sub="Display two decimal places on all amounts">
+        <FieldRow label="Write numbers in full" sub={`${currency} 141,000 rather than 141K — abbreviations hide the size of things`}>
+          <Toggle checked={numbersInFull} onChange={v => { setNumbersInFull(v); saveField('finance-numbers-in-full', String(v)) }} />
+        </FieldRow>
+        <FieldRow label="Round to whole units" sub="Piasters / cents dropped from every display">
+          <Toggle checked={roundWhole} onChange={v => { setRoundWhole(v); saveField('finance-round-whole', String(v)) }} />
+        </FieldRow>
+        <FieldRow label="Show cents" sub="Display two decimal places on amounts (overrides round)">
           <Toggle checked={showCents} onChange={v => { setShowCents(v); saveField('finance-show-cents', String(v)) }} />
         </FieldRow>
+
+        {/* Order categories by */}
+        <div style={{ marginTop: 14 }}>
+          <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.1em', color: '#6C6553', marginBottom: 8 }}>ORDER CATEGORIES BY</div>
+          <div style={{ fontSize: 11, color: '#9B9180', marginBottom: 8 }}>Biggest spend first keeps the two problems at the top</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 6 }}>
+            {([
+              { v: 'spend',  label: 'Biggest spend' },
+              { v: 'budget', label: 'Budget size' },
+              { v: 'alpha',  label: 'A–Z' },
+              { v: 'custom', label: 'Custom' },
+            ] as const).map(o => (
+              <button key={o.v} onClick={() => { setCategoryOrder(o.v); saveField('finance-category-order', o.v) }}
+                style={{
+                  padding: '6px 13px', borderRadius: 999, border: '1px solid #E8E1CE', cursor: 'pointer',
+                  background: categoryOrder === o.v ? '#191712' : '#FAF7EC',
+                  color: categoryOrder === o.v ? '#FDF8E7' : '#6C6553',
+                  fontSize: 12, fontWeight: categoryOrder === o.v ? 600 : 400,
+                }}>
+                {o.label}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       <div style={{ height: 1, background: '#EDE7D9', margin: '20px 0' }} />
 
-      {/* ── DATES ────────────────────────────────────────────────────────────── */}
+      {/* ── DATES & COUNTING ─────────────────────────────────────────────────── */}
       <div style={{ marginBottom: 4 }}>
-        <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', color: '#6C6553', display: 'block', marginBottom: 12 }}>DATES</span>
-        <FieldRow label="Month starts on" sub="Day the budget month resets">
+        <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', color: '#6C6553', display: 'block', marginBottom: 12 }}>DATES · COUNTING</span>
+
+        {/* Count on */}
+        <FieldRow label="Count a transaction on" sub="The financials table can show either — this sets the default">
+          <div style={{ display: 'flex', gap: 8 }}>
+            {(['due', 'paid'] as const).map(v => (
+              <button key={v} onClick={() => { setCountOn(v); saveField('finance-count-on', v) }}
+                style={{
+                  padding: '6px 14px', borderRadius: 8, border: '1px solid #E8E1CE', cursor: 'pointer',
+                  background: countOn === v ? '#191712' : '#FAF7EC',
+                  color: countOn === v ? '#FDF8E7' : '#6C6553',
+                  fontSize: 12, fontWeight: countOn === v ? 600 : 400,
+                }}>
+                {v === 'due' ? 'Due date' : 'Date paid'}
+              </button>
+            ))}
+          </div>
+        </FieldRow>
+
+        <FieldRow label="Month starts on" sub="Your salary lands on the 1st">
           <select
             value={monthStart}
             onChange={e => { const v = parseInt(e.target.value); setMonthStart(v); saveField('finance-month-start', String(v)) }}
-            style={{ ...selectStyle, width: 160 }}
+            style={{ ...selectStyle, width: 180 }}
           >
             {Array.from({ length: 28 }, (_, i) => i + 1).map(d => (
               <option key={d} value={d}>{d === 1 ? '1st (calendar month)' : `${d}${d === 2 ? 'nd' : d === 3 ? 'rd' : 'th'}`}</option>
             ))}
           </select>
         </FieldRow>
+
+        <FieldRow label="Include planned months" sub="Future months shown greyed in tables and charts">
+          <Toggle checked={includePlanned} onChange={v => { setIncludePlanned(v); saveField('finance-include-planned', String(v)) }} />
+        </FieldRow>
+
         <FieldRow label="Week starts on" sub="Affects the money calendar view">
           <select
             value={weekStart}
@@ -2244,33 +2314,46 @@ export function Settings() {
     const Icon = meta.icon
     return (
       <div key={id}>
-        {/* Section header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 32, height: 32, borderRadius: 8, background: '#F0EBDC', border: '1px solid #E8E1CE', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <Icon size={15} color="#6C6553" />
-            </div>
+        {/* Section header — 11A design: large Outfit title + description + action buttons */}
+        <div style={{ marginBottom: 22 }}>
+          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16 }}>
             <div>
-              <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#191712', fontFamily: 'var(--sb-font-num, "Outfit", sans-serif)', letterSpacing: '-0.02em' }}>
+              <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.14em', color: '#6C6553', textTransform: 'uppercase', marginBottom: 4 }}>SETTINGS</div>
+              <h2 style={{ margin: 0, fontFamily: 'Outfit, sans-serif', fontSize: 28, fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1, color: '#191712' }}>
                 {meta.title}
               </h2>
-              <p style={{ margin: 0, fontSize: 12, color: '#9B9180' }}>{meta.description}</p>
+              <p style={{ margin: '5px 0 0', fontSize: 12.5, color: '#6C6553', lineHeight: 1.45 }}>{meta.description}</p>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0, paddingBottom: 2 }}>
+              {/* Setup wizard shortcut for profile / accounts / schedule sections */}
+              {(id === 'profile' || id === 'accounts' || id === 'schedule') && (
+                <button onClick={() => window.dispatchEvent(new CustomEvent('professor:openWizard'))}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 13px', borderRadius: 8, background: '#FFFFFF', border: '1px solid #E8E1CE', color: '#6C6553', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>
+                  <Wand2 size={12} /> Setup wizard
+                </button>
+              )}
+              {saveFn && (
+                <button
+                  onClick={withSectionSave(id, saveFn)}
+                  style={{
+                    padding: '7px 16px', borderRadius: 8, fontSize: 12.5, fontWeight: 600, cursor: 'pointer',
+                    background: saveLabel?.includes('✓') ? 'rgba(29,158,117,0.12)' : saveLabel?.includes('✗') ? 'rgba(224,82,82,0.12)' : '#F5D14E',
+                    border: saveLabel?.includes('✓') ? '1px solid #1D9E7560' : saveLabel?.includes('✗') ? '1px solid #E0525260' : '1px solid rgba(25,23,18,0.18)',
+                    color: saveLabel?.includes('✓') ? '#1D9E75' : saveLabel?.includes('✗') ? '#E05252' : '#191712',
+                    boxShadow: '0 2px 0 rgba(25,23,18,0.1)', transition: 'all 0.15s',
+                  }}
+                >
+                  {saveLabel ?? 'Save'}
+                </button>
+              )}
+              {!saveFn && (
+                <span style={{ fontSize: 11, color: '#9B9180', display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="M12 8v4l3 3"/></svg>
+                  Saved automatically
+                </span>
+              )}
             </div>
           </div>
-          {saveFn && (
-            <button
-              onClick={withSectionSave(id, saveFn)}
-              style={{
-                padding: '7px 16px', borderRadius: 8, fontSize: 12.5, fontWeight: 600, cursor: 'pointer',
-                background: saveLabel?.includes('✓') ? 'rgba(29,158,117,0.12)' : saveLabel?.includes('✗') ? 'rgba(224,82,82,0.12)' : '#F5D14E',
-                border: saveLabel?.includes('✓') ? '1px solid #1D9E7560' : saveLabel?.includes('✗') ? '1px solid #E0525260' : '1px solid rgba(25,23,18,0.18)',
-                color: saveLabel?.includes('✓') ? '#1D9E75' : saveLabel?.includes('✗') ? '#E05252' : '#191712',
-                boxShadow: '0 2px 0 rgba(25,23,18,0.1)', transition: 'all 0.15s', flexShrink: 0,
-              }}
-            >
-              {saveLabel ?? 'Save'}
-            </button>
-          )}
         </div>
 
         {/* Error message */}
@@ -2360,39 +2443,78 @@ export function Settings() {
           </div>
         </div>
 
-        {/* Section nav items */}
-        <div style={{ padding: '8px 8px', flex: 1 }}>
-          <div style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.1em', color: '#9B9180', textTransform: 'uppercase', padding: '8px 8px 4px' }}>SETTINGS</div>
-          {SECTION_META.map(({ id, title, icon: Icon }) => {
-            const isActive = id === activeSection
-            return (
-              <button
-                key={id}
-                onClick={() => { setActiveSection(id); try { localStorage.setItem('settings-active-section', id) } catch { /* noop */ } }}
-                style={{
-                  width: '100%', display: 'flex', alignItems: 'center', gap: 9,
-                  padding: '8px 9px', borderRadius: 8, cursor: 'pointer', marginBottom: 1,
-                  background: isActive ? '#FFFFFF' : 'transparent',
-                  border: isActive ? '1px solid rgba(25,23,18,0.08)' : '1px solid transparent',
-                  color: isActive ? '#191712' : '#6C6553',
-                  fontSize: 12.5, fontWeight: isActive ? 600 : 400, textAlign: 'left',
-                  transition: 'all 0.1s',
-                  boxShadow: isActive ? '0 1px 3px rgba(25,23,18,0.16)' : 'none',
-                }}
-              >
-                <Icon size={13} style={{ flexShrink: 0, opacity: isActive ? 1 : 0.75 }} />
-                {title}
-              </button>
-            )
-          })}
+        {/* Search bar */}
+        <div style={{ padding: '10px 10px 8px', borderBottom: '1px solid #EDE7D9' }}>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 7,
+            background: '#FAF7EC', border: '1px solid #E8E1CE',
+            borderRadius: 8, padding: '6px 10px', cursor: 'text',
+          }}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#8A8272" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+            </svg>
+            <span style={{ fontSize: 11.5, color: '#9B9180', flex: 1, userSelect: 'none' }}>Find a setting</span>
+            <span style={{ fontSize: 9.5, color: '#9B9180', fontFamily: 'JetBrains Mono, monospace', opacity: 0.7 }}>⌘K</span>
+          </div>
         </div>
 
-        {/* Setup wizard button */}
-        <div style={{ padding: '10px 8px 16px', borderTop: '1px solid #EDE7D9' }}>
+        {/* Grouped nav */}
+        <div style={{ padding: '6px 8px', flex: 1, overflowY: 'auto' }}>
+          {NAV_GROUPS.map(group => (
+            <div key={group.label} style={{ marginBottom: 4 }}>
+              <div style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.12em', color: '#9B9180', padding: '10px 9px 4px', textTransform: 'uppercase' as const }}>
+                {group.label}
+              </div>
+              {group.ids.map(id => {
+                const meta = SECTION_META.find(m => m.id === id)!
+                const Icon = meta.icon
+                const isActive = id === activeSection
+                return (
+                  <button
+                    key={id}
+                    onClick={() => { setActiveSection(id); try { localStorage.setItem('settings-active-section', id) } catch { /* noop */ } }}
+                    style={{
+                      width: '100%', display: 'flex', alignItems: 'center', gap: 9,
+                      padding: '7px 9px', borderRadius: 8, cursor: 'pointer', marginBottom: 1,
+                      background: isActive ? '#FFFFFF' : 'transparent',
+                      border: isActive ? '1px solid rgba(25,23,18,0.08)' : '1px solid transparent',
+                      color: isActive ? '#191712' : '#6C6553',
+                      fontSize: 12.5, fontWeight: isActive ? 600 : 400, textAlign: 'left' as const,
+                      transition: 'all 0.1s',
+                      boxShadow: isActive ? '0 1px 3px rgba(25,23,18,0.16)' : 'none',
+                    }}
+                  >
+                    <Icon size={13} style={{ flexShrink: 0, opacity: isActive ? 1 : 0.7 }} />
+                    <span style={{ flex: 1, minWidth: 0 }}>{meta.title}</span>
+                    {/* Badge for habits count */}
+                    {id === 'habits' && (() => {
+                      try {
+                        const habits = JSON.parse(localStorage.getItem('professor-habits') ?? '[]')
+                        const active = habits.filter((h: { isActive?: boolean }) => h.isActive !== false).length
+                        return active > 0 ? (
+                          <span style={{ height: 17, minWidth: 17, boxSizing: 'border-box', padding: '0 5px', borderRadius: 999, background: '#EDE7D9', color: '#6C6553', fontSize: 9, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            {active}
+                          </span>
+                        ) : null
+                      } catch { return null }
+                    })()}
+                  </button>
+                )
+              })}
+            </div>
+          ))}
+        </div>
+
+        {/* Bottom: "Every change saves itself" + Setup wizard */}
+        <div style={{ padding: '8px 8px 12px', borderTop: '1px solid #EDE7D9' }}>
+          <div style={{ fontSize: 10.5, color: '#9B9180', padding: '6px 9px 8px', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="M12 8v4l3 3"/></svg>
+            Every change saves itself
+          </div>
           <button
             onClick={() => window.dispatchEvent(new CustomEvent('professor:openWizard'))}
-            style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 7, padding: '8px 9px', borderRadius: 8, background: 'rgba(127,119,221,0.08)', border: '1px solid rgba(127,119,221,0.2)', color: '#7F77DD', fontSize: 12, cursor: 'pointer', fontWeight: 500 }}>
-            <Wand2 size={12} /> Setup Wizard
+            style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 7, padding: '7px 9px', borderRadius: 8, background: 'rgba(127,119,221,0.08)', border: '1px solid rgba(127,119,221,0.2)', color: '#7F77DD', fontSize: 12, cursor: 'pointer', fontWeight: 500 }}>
+            <Wand2 size={12} /> Setup wizard
           </button>
         </div>
       </div>
