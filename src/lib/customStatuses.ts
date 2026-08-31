@@ -4,16 +4,21 @@ export interface CustomStatus {
   color: string
 }
 
+// 9B board columns. Only a fresh install picks these up — anyone who has
+// already customised their columns keeps what they saved.
 export const DEFAULT_STATUSES: CustomStatus[] = [
-  { id: 'planned',     label: 'Planned',     color: '#3B82F6' },
-  { id: 'in-progress', label: 'In Progress', color: '#F59E0B' },
-  { id: 'blocked',     label: 'Blocked',     color: '#EF4444' },
-  { id: 'delayed',     label: 'Delayed',     color: '#F97316' },
-  { id: 'done',        label: 'Done',        color: '#10B981' },
+  { id: 'decide',    label: 'Decide',           color: '#B4523A' },
+  { id: 'today',     label: 'Today',            color: '#F5D14E' },
+  { id: 'this-week', label: 'This week',        color: '#8C826A' },
+  { id: 'later',     label: 'Later',            color: '#B5AC98' },
+  { id: 'done',      label: 'Done · this week', color: '#5F7038' },
 ]
 
-// Preferred order for custom status columns (after predefined Inbox / Do columns)
-const STATUS_PREFERRED_ORDER = ['planned', 'backlog', 'in-progress', 'blocked', 'delayed', 'done']
+const STATUS_PREFERRED_ORDER = [
+  'decide', 'today', 'this-week', 'later', 'done',
+  // legacy ids, kept so existing boards still sort sensibly
+  'planned', 'backlog', 'in-progress', 'blocked', 'delayed',
+]
 
 export function sortCustomStatuses(statuses: CustomStatus[]): CustomStatus[] {
   return [...statuses].sort((a, b) => {
