@@ -2,7 +2,7 @@
 // One line per task: checkbox, title, company, meta — then the same four
 // attributes the 9B card carries, laid out horizontally.
 
-import { Check, Paperclip, CalendarDays, Flame } from 'lucide-react'
+import { Check, Paperclip, CalendarDays, Flame, Trash2 } from 'lucide-react'
 import type { Task, TaskType, Priority } from '@/types'
 import { PRIORITY_META, TASK_TYPE_META } from '@/types'
 import { getAllUsers } from '@/types'
@@ -16,7 +16,7 @@ export function TaskRow({ task, onOpen, dense }: {
   /** Matrix rows sit inside a tinted quadrant and drop their own shadow. */
   dense?: boolean
 }) {
-  const { toggleComplete, updateTask, toggleUrgent } = useTaskStore()
+  const { toggleComplete, updateTask, toggleUrgent, deleteTask } = useTaskStore()
   const PRIORITIES: Priority[] = ['P0', 'P1', 'P2', 'P3']
   const owners = getAllUsers().filter(u => (task.companyId ? u.companyId === task.companyId : true))
   const v = resolveTaskVisuals(task)
@@ -145,6 +145,14 @@ export function TaskRow({ task, onOpen, dense }: {
             options={[{ value: '', label: 'Unassigned' }, ...owners.map(u => ({ value: u.id, label: u.name }))]}
           />
         </ControlSlot>
+
+        <button
+          data-nm
+          onClick={e => { e.stopPropagation(); if (window.confirm(`Delete "${task.title}"?`)) deleteTask(task.id) }}
+          title="Delete task"
+          style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', color: '#D8CFB8' }}>
+          <Trash2 size={14} strokeWidth={1.9} />
+        </button>
       </div>
     </div>
   )

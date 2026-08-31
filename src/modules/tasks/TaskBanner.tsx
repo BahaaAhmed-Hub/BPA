@@ -3,6 +3,7 @@
 // been closing, and what is still burning.
 
 import { useMemo } from 'react'
+import { Flame } from 'lucide-react'
 import type { Task } from '@/types'
 import { isCarriedOver } from './taskVisuals'
 
@@ -15,11 +16,17 @@ function startOfDay(d: Date): Date {
   const x = new Date(d); x.setHours(0, 0, 0, 0); return x
 }
 
-function Stat({ label, value, sub, accent }: {
-  label: string; value: string; sub?: string; accent?: string
+function Stat({ label, value, sub, accent, icon: Icon, center }: {
+  label: string
+  value: string
+  sub?: string
+  accent?: string
+  icon?: typeof Flame
+  /** Counts sit centred under their label; prose stays left aligned. */
+  center?: boolean
 }) {
   return (
-    <div style={{ minWidth: 0 }}>
+    <div style={{ minWidth: 0, textAlign: center ? 'center' : 'left' }}>
       <p style={{
         margin: 0, fontSize: 9.5, fontWeight: 700, letterSpacing: '0.14em',
         color: DIM, textTransform: 'uppercase',
@@ -27,7 +34,12 @@ function Stat({ label, value, sub, accent }: {
       <p style={{
         margin: '5px 0 0', fontFamily: 'Outfit, sans-serif', fontSize: 21, fontWeight: 600,
         letterSpacing: '-0.02em', color: accent ?? '#FFFFFF', lineHeight: 1.1,
-      }}>{value}</p>
+        display: 'flex', alignItems: 'center', gap: 6,
+        justifyContent: center ? 'center' : 'flex-start',
+      }}>
+        {Icon && <Icon size={16} strokeWidth={2} fill={accent ?? 'none'} />}
+        {value}
+      </p>
       {sub && <p style={{ margin: '3px 0 0', fontSize: 11, color: DIM, lineHeight: 1.35 }}>{sub}</p>}
     </div>
   )
@@ -133,8 +145,10 @@ export function TaskBanner({ tasks }: { tasks: Task[] }) {
 
       {/* Pressure */}
       <div style={{ padding: '0 22px', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 26 }}>
-        <Stat label="On fire" value={String(model.onFire)} accent={model.onFire > 0 ? '#E2765C' : undefined} />
-        <Stat label="Carried over" value={String(model.carried)} accent={model.carried > 0 ? AMBER : undefined} />
+        <Stat label="On fire" value={String(model.onFire)} center icon={Flame}
+          accent={model.onFire > 0 ? '#E2765C' : undefined} />
+        <Stat label="Carried over" value={String(model.carried)} center
+          accent={model.carried > 0 ? AMBER : undefined} />
       </div>
     </div>
   )

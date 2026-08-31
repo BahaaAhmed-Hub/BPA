@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { arrayMove } from '@dnd-kit/sortable'
 import type { Task, Quadrant, TaskStatus, TaskActivity, TaskType } from '@/types'
-import { COMPANY_LABELS, QUADRANT_META, getAllUsers } from '@/types'
+import { COMPANY_LABELS, QUADRANT_META, getAllUsers, loadDynamicCompanies } from '@/types'
 import { saveTasksToDB, loadTasksFromDB } from '@/lib/dbSync'
 import type { TaskRow } from '@/lib/dbSync'
 
@@ -128,7 +128,13 @@ export const useTaskStore = create<TaskState>()(
           if (updates.title !== undefined && updates.title !== old.title)
             desc.push(`Renamed to "${updates.title}"`)
           if (updates.company !== undefined && updates.company !== old.company)
-            desc.push(`Company → ${COMPANY_LABELS[updates.company]}`)
+            // Companies are user-created now; COMPANY_LABELS only covers the
+            // four legacy tags, so fall back to the live company list.
+            desc.push(`Company → ${
+              loadDynamicCompanies().find(c => c.id === updates.company)?.name
+              ?? COMPANY_LABELS[updates.company]
+              ?? updates.company
+            }`)
           if ('dueDate' in updates && updates.dueDate !== old.dueDate)
             desc.push(updates.dueDate ? `Due date → ${updates.dueDate}` : 'Due date cleared')
           if ('plannedTime' in updates && updates.plannedTime !== old.plannedTime)

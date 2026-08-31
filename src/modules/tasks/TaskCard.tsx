@@ -174,23 +174,24 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
               {task.plannedTime ?? new Date(task.dueDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
             </span>
           )}
-          {(task.urgent || hovered) && (
-            <button data-nm onClick={() => toggleUrgent(task.id)}
-              title={task.urgent ? 'On fire — click to clear' : 'Mark as on fire'}
-              style={{
-                background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', flexShrink: 0,
-                color: task.urgent ? '#B4523A' : '#C9C0A8',
-              }}>
-              <Flame size={12} strokeWidth={2} fill={task.urgent ? '#B4523A' : 'none'} />
-            </button>
-          )}
           <span style={{ flex: 1 }} />
-          {hovered && (
-            <button data-nm onClick={() => deleteTask(task.id)} title="Delete task"
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#C9C0A8', padding: 0, display: 'flex', flexShrink: 0 }}>
-              <Trash2 size={12} strokeWidth={2} />
-            </button>
-          )}
+          <button data-nm onClick={() => toggleUrgent(task.id)}
+            title={task.urgent ? 'On fire — click to clear' : 'Mark as on fire'}
+            style={{
+              background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', flexShrink: 0,
+              color: task.urgent ? '#B4523A' : hovered ? '#9B9180' : '#D8CFB8',
+            }}>
+            <Flame size={12.5} strokeWidth={2} fill={task.urgent ? '#B4523A' : 'none'} />
+          </button>
+          <button data-nm
+            onClick={() => { if (window.confirm(`Delete "${task.title}"?`)) deleteTask(task.id) }}
+            title="Delete task"
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', flexShrink: 0,
+              color: hovered ? '#B4523A' : '#D8CFB8',
+            }}>
+            <Trash2 size={12.5} strokeWidth={2} />
+          </button>
         </div>
       </div>
 

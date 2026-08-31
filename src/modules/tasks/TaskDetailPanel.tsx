@@ -5,8 +5,8 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
-  X, Pencil, Maximize2, MoreHorizontal, ChevronDown, ChevronLeft, ChevronRight,
-  Plus, Paperclip, Link2, Folder, FileText, Image as ImageIcon, Clock, History, Check,
+  X, Pencil, Maximize2, ChevronDown, ChevronLeft, ChevronRight,
+  Plus, Paperclip, Link2, Folder, FileText, Image as ImageIcon, CalendarDays, BarChart3, History, Trash2, Check,
 } from 'lucide-react'
 import type { Task, TaskType, Priority, ChecklistStep, TaskAttachment } from '@/types'
 import { PRIORITY_META, TASK_TYPE_META, getAllUsers, loadVisibleCompanies } from '@/types'
@@ -51,43 +51,33 @@ function relativeStamp(iso: string): string {
 
 // ─── Small pieces ────────────────────────────────────────────────────────────
 
-const CHIP: React.CSSProperties = {
-  display: 'inline-flex', alignItems: 'center', gap: 6,
-  height: 30, padding: '0 10px', borderRadius: 9,
-  background: '#FAF7EC', border: '1px solid #E8E1CE', color: '#6C6553',
-  fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit',
-  whiteSpace: 'nowrap',
-}
-
 const ICON_BTN: React.CSSProperties = {
   width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
   display: 'flex', alignItems: 'center', justifyContent: 'center',
   background: 'transparent', border: 'none', cursor: 'pointer', color: '#6C6553', padding: 0,
 }
 
-const SECTION_LABEL: React.CSSProperties = {
-  margin: 0, fontSize: 12, fontWeight: 600, color: '#6C6553',
+/** One attribute cell: same height and shape in every state, icon then value. */
+const CELL: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', gap: 8,
+  height: 34, padding: '0 11px', borderRadius: 9, minWidth: 0,
+  background: '#FAF7EC', border: '1px solid #E8E1CE',
+  cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
 }
 
-/** A chip that opens a native select laid invisibly over it. */
-function SelectChip({ value, onChange, children, style, options }: {
-  value: string
-  onChange: (v: string) => void
-  children: React.ReactNode
-  style?: React.CSSProperties
-  options: { value: string; label: string }[]
-}) {
-  return (
-    <span style={{ position: 'relative', display: 'inline-flex' }}>
-      <span style={{ ...CHIP, ...style }}>{children}</span>
-      <select value={value} onChange={e => onChange(e.target.value)} style={{
-        position: 'absolute', inset: 0, width: '100%', height: '100%',
-        opacity: 0, cursor: 'pointer', border: 'none', padding: 0, margin: 0,
-      }}>
-        {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-      </select>
-    </span>
-  )
+const CELL_VALUE: React.CSSProperties = {
+  flex: 1, minWidth: 0, fontSize: 12.5, fontWeight: 500,
+  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+}
+
+/** The native control that actually drives a cell, laid invisibly over it. */
+const CELL_INPUT: React.CSSProperties = {
+  position: 'absolute', inset: 0, width: '100%', height: '100%',
+  opacity: 0, cursor: 'pointer', border: 'none', padding: 0, margin: 0,
+}
+
+const SECTION_LABEL: React.CSSProperties = {
+  margin: 0, fontSize: 12, fontWeight: 600, color: '#6C6553',
 }
 
 /** Month grid + start/end, as the artboard's date popover. */
@@ -233,13 +223,9 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
   )
   const shownActs = fullLog ? taskActs : taskActs.slice(0, 7)
 
-  function patch(p: Partial<Task>) { setDraft(d => ({ ...d, ...p })) }
-
-  function save() {
-    const { id: _id, createdAt: _createdAt, ...rest } = draft
-    void _id; void _createdAt
-    updateTask(task.id, rest)
-    onClose()
+  function patch(p: Partial<Task>) {
+    setDraft(d => ({ ...d, ...p }))
+    updateTask(task.id, p)
   }
 
   function addStep() {
@@ -262,7 +248,16 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
     patch({ attachments: [...attachments, ...added] })
   }
 
-  const timeBlockLabel = `${draft.plannedTime} · ${draft.duration ?? 30}m`
+  const linkCount = draft.links?.length ?? 0
+
+  // Empty is just the affordance; set spells out the date, the time and how long.
+  const scheduleLabel = !draft.dueDate
+    ? 'Add a date'
+    : [
+        formatDateLabel(draft.dueDate),
+        draft.plannedTime,
+        draft.plannedTime ? `${draft.duration ?? 30}m` : null,
+      ].filter(Boolean).join(' · ')
 
   return (
     <aside style={{
@@ -297,7 +292,7 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
         <button title="Editing" style={{ ...ICON_BTN, background: '#191712', color: '#FFFFFF' }}><Pencil size={13} /></button>
         <button title={expanded ? 'Narrow the panel' : 'Widen the panel'} onClick={() => setExpanded(x => !x)} style={ICON_BTN}><Maximize2 size={14} /></button>
         <button title="Delete task" onClick={() => { if (window.confirm('Delete this task?')) { deleteTask(task.id); onClose() } }} style={ICON_BTN}>
-          <MoreHorizontal size={16} />
+          <Trash2 size={15} />
         </button>
         <button title="Close" onClick={onClose} style={ICON_BTN}><X size={16} /></button>
       </div>
@@ -319,11 +314,21 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
           }}
         />
 
-        {/* Pickers */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
-          <div ref={dateRef} style={{ position: 'relative' }}>
-            <button onClick={() => setDatePickerOpen(o => !o)} style={{ ...CHIP, color: '#191712' }}>
-              {formatDateLabel(draft.dueDate)} <ChevronDown size={13} />
+        {/* Attributes — one aligned grid instead of a ragged chip row. Every
+            cell is the same shape and reads icon-then-value, left aligned, so
+            nothing shifts when a value is set or cleared. */}
+        <div style={{
+          display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+          gap: 8, marginTop: 12,
+        }}>
+          {/* Schedule — the widest value, so it takes the full row */}
+          <div ref={dateRef} style={{ gridColumn: '1 / -1', position: 'relative' }}>
+            <button onClick={() => setDatePickerOpen(o => !o)} style={{ ...CELL, width: '100%' }}>
+              <CalendarDays size={14} strokeWidth={1.9} style={{ flexShrink: 0, color: draft.dueDate ? '#5F7038' : '#9B9180' }} />
+              <span style={{ ...CELL_VALUE, color: draft.dueDate ? '#191712' : '#9B9180' }}>
+                {scheduleLabel}
+              </span>
+              <ChevronDown size={13} style={{ flexShrink: 0, color: '#9B9180' }} />
             </button>
             {datePickerOpen && (
               <DatePopover
@@ -334,68 +339,71 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
             )}
           </div>
 
-        </div>
+          {/* Type */}
+          <label style={{ ...CELL, position: 'relative' }}>
+            <TypeIcon size={14} strokeWidth={1.9} style={{ flexShrink: 0, color: '#6C6553' }} />
+            <span style={{ ...CELL_VALUE, color: '#191712' }}>{v.typeLabel}</span>
+            <select value={v.type} onChange={e => patch({ taskType: e.target.value as TaskType })} style={CELL_INPUT}>
+              {TASK_TYPE_ORDER.map(t => <option key={t} value={t}>{TASK_TYPE_META[t].label}</option>)}
+            </select>
+          </label>
 
-        {/* Attribute chips */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
-          <SelectChip
-            value={v.type}
-            onChange={val => patch({ taskType: val as TaskType })}
-            options={TASK_TYPE_ORDER.map(t => ({ value: t, label: TASK_TYPE_META[t].label }))}
-          >
-            <TypeIcon size={13} strokeWidth={1.9} />
-          </SelectChip>
+          {/* Priority */}
+          <label style={{ ...CELL, position: 'relative' }}>
+            <BarChart3 size={14} strokeWidth={1.9} style={{
+              flexShrink: 0, color: draft.priority ? PRIORITY_META[draft.priority].color : '#9B9180',
+            }} />
+            <span style={{ ...CELL_VALUE, color: draft.priority ? '#191712' : '#9B9180' }}>
+              {draft.priority ?? 'No priority'}
+            </span>
+            <select
+              value={draft.priority ?? ''}
+              onChange={e => patch({ priority: (e.target.value || undefined) as Priority | undefined })}
+              style={CELL_INPUT}>
+              <option value="">No priority</option>
+              {PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
+            </select>
+          </label>
 
-          <SelectChip
-            value={draft.priority ?? ''}
-            onChange={val => patch({ priority: (val || undefined) as Priority | undefined })}
-            style={draft.priority ? {
-              background: PRIORITY_META[draft.priority].tint,
-              borderColor: PRIORITY_META[draft.priority].border,
-              color: PRIORITY_META[draft.priority].color,
-            } : undefined}
-            options={[{ value: '', label: 'No priority' }, ...PRIORITIES.map(p => ({ value: p, label: p }))]}
-          >
-            {draft.priority ?? 'Priority'}
-          </SelectChip>
-
-          <SelectChip
-            value={draft.owner ?? ''}
-            onChange={val => patch({ owner: val || undefined })}
-            style={{ color: '#191712' }}
-            options={[{ value: '', label: 'Unassigned' }, ...users.map(u => ({ value: u.id, label: u.name }))]}
-          >
+          {/* Owner */}
+          <label style={{ ...CELL, gridColumn: '1 / -1', position: 'relative' }}>
             <span style={{
-              width: 18, height: 18, borderRadius: '50%', background: owner ? '#191712' : '#E8E1CE',
-              color: owner ? '#FFFFFF' : '#9B9180', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              width: 18, height: 18, borderRadius: '50%', flexShrink: 0,
+              background: owner ? '#191712' : 'transparent',
+              border: owner ? 'none' : '1px dashed #D8CFB8',
+              color: owner ? '#FFFFFF' : '#C9C0A8',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 8, fontWeight: 700,
-            }}>{owner ? initials(owner.name) : '?'}</span>
-            {owner ? owner.name.split(' ')[0] : 'Unassigned'}
-          </SelectChip>
+            }}>{owner ? initials(owner.name) : ''}</span>
+            <span style={{ ...CELL_VALUE, color: owner ? '#191712' : '#9B9180' }}>
+              {owner ? owner.name : 'Unassigned'}
+            </span>
+            <select value={draft.owner ?? ''} onChange={e => patch({ owner: e.target.value || undefined })} style={CELL_INPUT}>
+              <option value="">Unassigned</option>
+              {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+            </select>
+          </label>
 
+          {/* Links */}
           <button
-            title="Attach a link"
             onClick={() => {
               const url = window.prompt('Paste a link (thread, doc, page)')?.trim()
               if (url) patch({ links: [...(draft.links ?? []), url] })
             }}
-            style={CHIP}>
-            <Link2 size={13} />
-            {(draft.links?.length ?? 0) > 0 && <span>{draft.links!.length}</span>}
-          </button>
-          <button title="Add a file" onClick={() => fileRef.current?.click()} style={CHIP}>
-            <Folder size={13} />
-            {attachments.length > 0 && <span>{attachments.length}</span>}
+            style={CELL}>
+            <Link2 size={14} strokeWidth={1.9} style={{ flexShrink: 0, color: linkCount ? '#6C6553' : '#9B9180' }} />
+            <span style={{ ...CELL_VALUE, color: linkCount ? '#191712' : '#9B9180' }}>
+              {linkCount ? `${linkCount} link${linkCount === 1 ? '' : 's'}` : 'Add a link'}
+            </span>
           </button>
 
-          {draft.plannedTime && (
-            <span style={{
-              ...CHIP, cursor: 'default',
-              background: 'rgba(95,112,56,0.10)', borderColor: '#C8DAB0', color: '#5F7038',
-            }}>
-              <Clock size={12} /> {timeBlockLabel}
+          {/* Files */}
+          <button onClick={() => fileRef.current?.click()} style={CELL}>
+            <Folder size={14} strokeWidth={1.9} style={{ flexShrink: 0, color: attachments.length ? '#6C6553' : '#9B9180' }} />
+            <span style={{ ...CELL_VALUE, color: attachments.length ? '#191712' : '#9B9180' }}>
+              {attachments.length ? `${attachments.length} file${attachments.length === 1 ? '' : 's'}` : 'Add a file'}
             </span>
-          )}
+          </button>
         </div>
 
         {/* Checklist */}
@@ -495,8 +503,8 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
                     </p>
                   </div>
                   <button onClick={() => patch({ attachments: attachments.filter(x => x.id !== f.id) })}
-                    title="Remove" style={{ ...ICON_BTN, width: 22, height: 22, color: '#C9C0A8' }}>
-                    <MoreHorizontal size={14} />
+                    title="Remove attachment" style={{ ...ICON_BTN, width: 22, height: 22, color: '#C9C0A8' }}>
+                    <Trash2 size={13} />
                   </button>
                 </div>
               )
@@ -554,7 +562,7 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
                   background: '#FAF7EC', border: '1px solid #E8E1CE',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9B9180',
                 }}>
-                  <Clock size={10} />
+                  <History size={10} />
                 </span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{ margin: 0, fontSize: 12.5, color: '#191712', lineHeight: 1.35 }}>{a.description}</p>
@@ -568,20 +576,10 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
 
       {/* ── Footer ───────────────────────────────────────────────────────── */}
       <div style={{
-        display: 'flex', alignItems: 'center', gap: 10,
-        borderTop: '1px solid #F0EBDC', padding: '11px 14px',
+        display: 'flex', alignItems: 'center',
+        borderTop: '1px solid #F0EBDC', padding: '10px 14px',
       }}>
-        <span style={{ flex: 1, fontSize: 11.5, color: '#9B9180' }}>Editing · click any field</span>
-        <button onClick={onClose} style={{
-          display: 'flex', alignItems: 'center', gap: 6, height: 32, padding: '0 13px', borderRadius: 9,
-          background: '#FFFFFF', border: '1px solid #E8E1CE', color: '#6C6553',
-          fontSize: 12.5, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit',
-        }}><X size={13} /> Cancel</button>
-        <button onClick={save} style={{
-          display: 'flex', alignItems: 'center', gap: 6, height: 32, padding: '0 15px', borderRadius: 9,
-          background: '#F5D14E', border: 'none', color: '#191712',
-          fontSize: 12.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
-        }}><Check size={13} strokeWidth={2.5} /> Save</button>
+        <span style={{ fontSize: 11.5, color: '#9B9180' }}>Every change saves itself</span>
       </div>
     </aside>
   )
