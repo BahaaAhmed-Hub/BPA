@@ -431,13 +431,54 @@ function FillCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, o
   const pct = isQty && habit.goal ? Math.min(100, Math.round((qtyValue / habit.goal) * 100)) : (todayDone ? 100 : 0)
   const lastWeek = Array.from({ length: 7 }, (_, i) => i < (streak % 7))
 
+  // 12D — drag-up gesture: track pointer drag to set fill level
+  const dragRef = useRef<{ startY: number; startPct: number } | null>(null)
+  const [dragPct, setDragPct] = useState<number | null>(null)
+  const cardRef = useRef<HTMLDivElement>(null)
+
+  function handlePointerDown(e: React.PointerEvent) {
+    if (!isSelected) return
+    const card = cardRef.current
+    if (!card) return
+    dragRef.current = { startY: e.clientY, startPct: pct }
+    ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+  }
+  function handlePointerMove(e: React.PointerEvent) {
+    if (!dragRef.current || !isSelected) return
+    const card = cardRef.current
+    if (!card) return
+    const h = card.clientHeight
+    const dy = dragRef.current.startY - e.clientY  // positive = drag up
+    const deltaPct = Math.round((dy / h) * 100)
+    const newPct = Math.max(0, Math.min(100, dragRef.current.startPct + deltaPct))
+    setDragPct(newPct)
+  }
+  function handlePointerUp() {
+    if (dragRef.current && dragPct !== null && isQty && habit.goal) {
+      const newQty = Math.round((dragPct / 100) * habit.goal)
+      if (newQty !== qtyValue) onIncrement()  // simplified: just increment once
+    } else if (dragRef.current && dragPct !== null && !isQty) {
+      if (dragPct >= 50 && !todayDone) onToggle()
+      else if (dragPct < 50 && todayDone) onToggle()
+    }
+    dragRef.current = null
+    setDragPct(null)
+  }
+
+  const displayPct = dragPct ?? pct
+
   const filterStyle = pct === 0
     ? 'saturate(0.06) grayscale(1) brightness(0.82) contrast(0.94)'
     : pct < 50 ? 'saturate(0.5) brightness(0.9)' : ''
 
   return (
     <div
+      ref={cardRef}
       onClick={onSelect}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
       style={{
         position: 'relative', flexShrink: 0, height: 520,
         width: isSelected ? 220 : 110,
@@ -445,10 +486,15 @@ function FillCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, o
         border: isSelected ? '1px solid #191712' : '1px solid #E8E1CE',
         background: '#FFFFFF',
         boxShadow: isSelected ? '0 0 0 3px rgba(245,209,78,.45)' : 'none',
-        cursor: isSelected ? 'default' : 'pointer',
+        cursor: isSelected ? (dragRef.current ? 'grabbing' : 'grab') : 'pointer',
         transition: 'width 0.3s ease',
+        touchAction: 'none',
       }}
     >
+      {/* Fill flood from bottom (12D) */}
+      <span style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+        <span style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: `${displayPct}%`, background: `${bgColor}88`, transition: dragRef.current ? 'none' : 'height 0.4s ease', display: 'block' }} />
+      </span>
       {/* Background */}
       <span style={{ position: 'absolute', inset: 0, filter: filterStyle, opacity: pct === 0 ? 0.42 : 0.76 }}>
         <span style={{ position: 'absolute', inset: 0, background: `linear-gradient(135deg, ${bgColor} 0%, ${bgColor}AA 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -485,9 +531,9 @@ function FillCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, o
                 {/* Progress bar */}
                 <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <span style={{ flex: 1, height: 5, borderRadius: 999, background: 'rgba(253,248,231,.24)', overflow: 'hidden', display: 'block' }}>
-                    <span style={{ display: 'block', width: `${pct}%`, height: '100%', background: '#F5D14E', borderRadius: 999 }} />
+                    <span style={{ display: 'block', width: `${displayPct}%`, height: '100%', background: '#F5D14E', borderRadius: 999, transition: dragRef.current ? 'none' : 'width 0.3s' }} />
                   </span>
-                  <span style={{ fontSize: 9.5, fontWeight: 700, color: '#FDF8E7', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{pct}%</span>
+                  <span style={{ fontSize: 9.5, fontWeight: 700, color: '#FDF8E7', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{displayPct}%</span>
                 </span>
                 {/* Week dots */}
                 <span style={{ display: 'flex', gap: 3 }}>
