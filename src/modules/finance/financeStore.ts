@@ -47,6 +47,10 @@ interface FinanceState {
   upsertBill: (b: Bill) => void
   removeBill: (id: string) => void
 
+  // Goals CRUD
+  upsertGoal: (g: Goal) => void
+  removeGoal: (id: string) => void
+
   // Budgets CRUD
   upsertBudget: (b: Budget) => void
   removeBudget: (id: string) => void
@@ -264,6 +268,15 @@ export const useFinanceStore = create<FinanceState>()(
       })),
 
       removeBill: (id: string) => set(s => ({ bills: s.bills.filter(x => x.id !== id) })),
+
+      // ─── Goals CRUD ─────────────────────────────────────────────────────────
+
+      upsertGoal: (g) => set(s => ({
+        goals: s.goals.some(x => x.id === g.id)
+          ? s.goals.map(x => x.id === g.id ? g : x)
+          : [...s.goals, g],
+      })),
+      removeGoal: (id) => set(s => ({ goals: s.goals.filter(x => x.id !== id) })),
 
       // ─── Budgets CRUD ───────────────────────────────────────────────────────
 
