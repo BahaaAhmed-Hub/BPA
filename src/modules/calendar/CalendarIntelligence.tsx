@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import {
-  ChevronLeft, ChevronRight, ChevronDown, Layers, Calendar, Video,
+  ChevronLeft, ChevronRight, ChevronDown, Layers, Calendar, Video, Clock3,
   Sparkles, MapPin, RefreshCw, X, Eye, EyeOff,
   CheckCircle2, XCircle, Link, Check, Plus, Paperclip, FileText,
   ExternalLink, AlertCircle, Shield, Copy, Trash2,
@@ -97,6 +97,29 @@ const CAL_PILL: React.CSSProperties = {
   padding: '0 14px', borderRadius: 999, flexShrink: 0,
   background: '#FFFFFF', border: '1px solid #E8E1CE', color: '#191712',
   fontSize: 13, fontFamily: 'inherit', cursor: 'pointer',
+}
+
+/** Where an online meeting actually happens, as the host you would recognise:
+ *  "meet.google.com", "teams.microsoft.com", "zoom.us". Google puts it in
+ *  conferenceData when it knows about it, and otherwise it is a link someone
+ *  pasted into the location or the description. */
+const MEETING_HOSTS = /(meet\.google\.com|teams\.(?:microsoft|live)\.com|zoom\.us|whereby\.com|webex\.com|chime\.aws|meet\.jit\.si|gotomeeting\.com|bluejeans\.com|around\.co|discord\.(?:gg|com)|slack\.com)/i
+
+function meetingHost(event: GCalEvent): string | null {
+  const fromConference = event.conferenceData?.entryPoints
+    ?.find(ep => ep.entryPointType === 'video')?.uri
+  const candidates = [fromConference, event.location, event.description]
+  for (const text of candidates) {
+    if (!text) continue
+    const url = /https?:\/\/[^\s<>"')]+/.exec(text)?.[0] ?? text
+    try {
+      const host = new URL(url.startsWith('http') ? url : `https://${url}`).hostname.replace(/^www\./, '')
+      if (MEETING_HOSTS.test(host)) return host
+    } catch { /* not a URL */ }
+    const bare = MEETING_HOSTS.exec(text)?.[0]
+    if (bare) return bare.toLowerCase()
+  }
+  return null
 }
 
 function getWeekStart(date: Date): Date {
@@ -677,13 +700,27 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
         {isCancelled && <span style={{ marginRight: 3, fontSize: 9 }}>✗</span>}
         {event.summary ?? '(No title)'}
       </div>
+      {height >= 50 && (() => {
+        const host = meetingHost(event)
+        return host ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 3, overflow: 'hidden' }}>
+            <Video size={10} color={evTimeInk} style={{ flexShrink: 0 }} />
+            <span style={{ fontSize: 10, color: evTimeInk, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {host}
+            </span>
+          </div>
+        ) : null
+      })()}
       {height >= 38 && (
-        <div style={{ fontSize: 10, color: evTimeInk, marginTop: 2 }}>
-          {fmtShort(event.start.dateTime!)}
-          {event.end.dateTime ? ` – ${fmtShort(event.end.dateTime)}` : ''}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 3 }}>
+          <Clock3 size={10} color={evTimeInk} style={{ flexShrink: 0 }} />
+          <span style={{ fontSize: 10, color: evTimeInk }}>
+            {fmtShort(event.start.dateTime!)}
+            {event.end.dateTime ? ` – ${fmtShort(event.end.dateTime)}` : ''}
+          </span>
         </div>
       )}
-      {height >= 52 && event.location && (
+      {height >= 66 && event.location && !meetingHost(event) && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginTop: 3, overflow: 'hidden' }}>
           <MapPin size={9} color={evTimeInk} style={{ flexShrink: 0 }} />
           <span style={{ fontSize: 10, color: evTimeInk, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -918,7 +955,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
 
   return (
     <div ref={popupRef} onClick={e => e.stopPropagation()} onMouseDown={e => e.stopPropagation()} style={{
-      width: 440, flexShrink: 0, margin: '14px 16px 16px 0',
+      width: 440, flexShrink: 0, alignSelf: 'stretch', minHeight: 0,
       overflowY: 'auto', scrollbarWidth: 'thin',
       background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 18,
       boxShadow: '0 1px 3px rgba(25,23,18,0.06)',
@@ -1529,7 +1566,7 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
 
   return (
     <div ref={ref} onClick={e => e.stopPropagation()} onMouseDown={e => e.stopPropagation()} style={{
-      width: 440, flexShrink: 0, margin: '14px 16px 16px 0',
+      width: 440, flexShrink: 0, alignSelf: 'stretch', minHeight: 0,
       overflowY: 'auto', scrollbarWidth: 'thin',
       background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 18,
       boxShadow: '0 1px 3px rgba(25,23,18,0.06)',
