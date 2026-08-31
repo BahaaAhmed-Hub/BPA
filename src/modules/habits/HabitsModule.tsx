@@ -322,7 +322,16 @@ const WALL_PALETTE = [
   '#DDD8E4','#D8E4E0','#E4DDD8','#D8E0D8',
 ]
 
-function WallCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, paletteIdx }: {
+function FieldRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <div style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.12em', color: '#9B9180', marginBottom: 5 }}>{label}</div>
+      {children}
+    </div>
+  )
+}
+
+function WallCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, paletteIdx, isEditing, onEdit }: {
   habit: { id: string; name: string; emoji: string; type?: string; goal?: number; unit?: string }
   todayDone: boolean
   streak: number
@@ -330,6 +339,8 @@ function WallCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, p
   onToggle: () => void
   onIncrement: () => void
   paletteIdx: number
+  isEditing?: boolean
+  onEdit?: () => void
 }) {
   const bgColor = WALL_PALETTE[paletteIdx % WALL_PALETTE.length]
   const isQty = habit.type === 'quantity'
@@ -385,6 +396,16 @@ function WallCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, p
           <span style={{ fontSize: 11.5, fontWeight: 700, color: '#191712', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>
             {todayDone && !isQty ? 'Logged ✓' : isQty ? `+${habit.unit ?? '1'}` : 'Tap to log'}
           </span>
+          {onEdit && (
+            <button onClick={e => { e.stopPropagation(); onEdit() }}
+              title="Edit habit"
+              style={{
+                marginLeft: 'auto', flexShrink: 0, width: 28, height: 28, borderRadius: 999,
+                background: isEditing ? '#191712' : 'transparent', border: 'none', cursor: 'pointer', color: isEditing ? '#FDF8E7' : '#9B9180', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </button>
+          )}
         </span>
       </span>
     </div>
@@ -520,6 +541,7 @@ export function HabitsModule() {
   const dragHabitIdx = useRef<number | null>(null)
   const [view, setView] = useState<'table' | 'wall' | 'fill'>('table')
   const [fillSelected, setFillSelected] = useState<string | null>(null)
+  const [wallEditId, setWallEditId] = useState<string | null>(null)
 
   // ── Boolean toggle ─────────────────────────────────────────────────────────
   const toggleHabit = useCallback((habitId: string, day: string) => {
@@ -725,31 +747,95 @@ export function HabitsModule() {
 
       {/* ─── Wall view (12A) ────────────────────────────────────────────────── */}
       {view === 'wall' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gridAutoRows: '220px', gap: 14 }}>
-          {activeHabits.map((habit, i) => {
-            const habitLogs   = logs[habit.id] ?? []
-            const todayDoneH  = habitLogs.includes(today)
-            const streak      = calcStreak(habitLogs)
-            const isQuantity  = habit.type === 'quantity'
-            const qtyValue    = isQuantity ? (qtyLogs[habit.id]?.[today] ?? 0) : 0
+        <div style={{ display: 'flex', gap: 14, minHeight: 0 }}>
+          {/* Wall grid — 3 cols, shrinks to 2 when edit panel is open */}
+          <div style={{ flex: 1, display: 'grid', gridTemplateColumns: wallEditId ? 'repeat(2, minmax(0, 1fr))' : 'repeat(3, minmax(0, 1fr))', gridAutoRows: '220px', gap: 14, alignContent: 'start' }}>
+            {activeHabits.map((habit, i) => {
+              const habitLogs   = logs[habit.id] ?? []
+              const todayDoneH  = habitLogs.includes(today)
+              const streak      = calcStreak(habitLogs)
+              const isQuantity  = habit.type === 'quantity'
+              const qtyValue    = isQuantity ? (qtyLogs[habit.id]?.[today] ?? 0) : 0
+              return (
+                <WallCard
+                  key={habit.id}
+                  habit={habit}
+                  todayDone={todayDoneH}
+                  streak={streak}
+                  qtyValue={qtyValue}
+                  paletteIdx={i}
+                  isEditing={wallEditId === habit.id}
+                  onToggle={() => toggleHabit(habit.id, today)}
+                  onIncrement={() => isQuantity && setQuantity(habit.id, habit.goal ?? 1, today, qtyValue + 1)}
+                  onEdit={() => setWallEditId(id => id === habit.id ? null : habit.id)}
+                />
+              )
+            })}
+            {activeHabits.length === 0 && (
+              <div style={{ gridColumn: '1/-1', padding: 32, textAlign: 'center', color: '#6C6553', fontSize: 13 }}>
+                No habits yet. Click "New habit" to get started.
+              </div>
+            )}
+          </div>
+
+          {/* 12C — Edit panel */}
+          {wallEditId && (() => {
+            const h = activeHabits.find(x => x.id === wallEditId)
+            if (!h) return null
             return (
-              <WallCard
-                key={habit.id}
-                habit={habit}
-                todayDone={todayDoneH}
-                streak={streak}
-                qtyValue={qtyValue}
-                paletteIdx={i}
-                onToggle={() => toggleHabit(habit.id, today)}
-                onIncrement={() => isQuantity && setQuantity(habit.id, habit.goal ?? 1, today, qtyValue + 1)}
-              />
+              <div style={{ width: 280, flexShrink: 0, background: '#FCFAF4', border: '1px solid #E8E1CE', borderRadius: 16, padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 14, overflow: 'auto' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ fontSize: 28 }}>{h.emoji}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: '#191712', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{h.name}</div>
+                    <div style={{ fontSize: 11, color: '#9B9180', marginTop: 2 }}>{h.frequency ?? 'daily'}</div>
+                  </div>
+                  <button onClick={() => setWallEditId(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9B9180', padding: 3, display: 'flex' }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                  </button>
+                </div>
+
+                {/* Quick fields */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <FieldRow label="Name">
+                    <input defaultValue={h.name} onBlur={e => updateHabit(h.id, { name: e.target.value })}
+                      style={{ width: '100%', boxSizing: 'border-box', background: '#FAF7EC', border: '1px solid #E8E1CE', borderRadius: 7, padding: '6px 9px', fontSize: 13, color: '#191712', outline: 'none' }} />
+                  </FieldRow>
+                  <FieldRow label="Frequency">
+                    <div style={{ display: 'flex', gap: 5 }}>
+                      {FREQ_OPTS.map(f => (
+                        <button key={f} onClick={() => updateHabit(h.id, { frequency: f })}
+                          style={{ flex: 1, padding: '5px 0', borderRadius: 7, border: '1px solid #E8E1CE', background: h.frequency === f ? '#191712' : '#FAF7EC', color: h.frequency === f ? '#FDF8E7' : '#6C6553', fontSize: 11, fontWeight: h.frequency === f ? 600 : 400, cursor: 'pointer', whiteSpace: 'nowrap' as const }}>
+                          {f === 'weekdays' ? 'Weekdays' : f.charAt(0).toUpperCase() + f.slice(1)}
+                        </button>
+                      ))}
+                    </div>
+                  </FieldRow>
+                  {h.type === 'quantity' && (
+                    <FieldRow label="Daily goal">
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                        <input type="number" defaultValue={h.goal ?? 1} onBlur={e => updateHabit(h.id, { goal: parseInt(e.target.value) || 1 })}
+                          style={{ width: 72, background: '#FAF7EC', border: '1px solid #E8E1CE', borderRadius: 7, padding: '6px 9px', fontSize: 13, color: '#191712', outline: 'none' }} />
+                        <span style={{ fontSize: 12, color: '#9B9180' }}>{h.unit ?? 'times'}</span>
+                      </div>
+                    </FieldRow>
+                  )}
+                </div>
+
+                {/* Archive / delete */}
+                <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <button onClick={() => { updateHabit(h.id, { isActive: false }); setWallEditId(null) }}
+                    style={{ padding: '7px 0', borderRadius: 8, border: '1px solid #E8E1CE', background: 'transparent', color: '#9B9180', fontSize: 12, cursor: 'pointer' }}>
+                    Archive habit
+                  </button>
+                  <button onClick={() => { deleteHabit(h.id); setWallEditId(null) }}
+                    style={{ padding: '7px 0', borderRadius: 8, border: '1px solid rgba(180,82,58,0.3)', background: 'rgba(180,82,58,0.06)', color: '#B4523A', fontSize: 12, cursor: 'pointer' }}>
+                    Delete habit
+                  </button>
+                </div>
+              </div>
             )
-          })}
-          {activeHabits.length === 0 && (
-            <div style={{ gridColumn: '1/-1', padding: 32, textAlign: 'center', color: '#6C6553', fontSize: 13 }}>
-              No habits yet. Click "New habit" to get started.
-            </div>
-          )}
+          })()}
         </div>
       )}
 
