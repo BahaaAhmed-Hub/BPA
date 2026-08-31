@@ -11,19 +11,25 @@ import { KanbanBoard } from './KanbanBoard'
 import { TaskDetailModal } from './TaskDetailModal'
 import { TaskCard } from './TaskCard'
 import { useTaskStore } from '@/store/taskStore'
-import { Search, X, CalendarDays } from 'lucide-react'
-import type { Quadrant } from '@/types'
+import { Search, X, Plus, SlidersHorizontal, LayoutGrid, Target, List as ListIcon } from 'lucide-react'
+import type { Quadrant, Task } from '@/types'
 import { isTaskHidden, loadVisibleCompanies, getAllUsers, TASK_TYPE_META, inferTaskType } from '@/types'
 import { scheduleTaskToCalendar } from '@/lib/aiScheduler'
-import type { TaskType } from '@/types'
 import { SmartDayPlanner } from './SmartDayPlanner'
+import { TaskListView } from './TaskListView'
+import { TASK_TYPE_ICON, TASK_TYPE_ORDER, isCarriedOver } from './taskVisuals'
 
 const QUADRANTS: Quadrant[] = ['do', 'schedule', 'delegate', 'eliminate']
 const TASKS_CONFIG_KEY = 'task-command-config'
 
-type GroupBy = 'none' | 'type' | 'company'
+type GroupBy = 'none' | 'status' | 'type' | 'company' | 'owner'
 interface TaskConfig { hideCompleted: boolean; groupBy: GroupBy; allGroupsExpanded: boolean }
 interface TaskFilters { company: string; type: string; owner: string }
+type ViewMode = 'board' | 'eisenhower' | 'list'
+
+const GROUP_BY_LABEL: Record<GroupBy, string> = {
+  none: 'None', status: 'Status', type: 'Task type', company: 'Company', owner: 'Owner',
+}
 
 function loadTaskConfig(): TaskConfig {
   try { return { hideCompleted: false, groupBy: 'none', allGroupsExpanded: true, ...JSON.parse(localStorage.getItem(TASKS_CONFIG_KEY) ?? '{}') } }
@@ -31,13 +37,13 @@ function loadTaskConfig(): TaskConfig {
 }
 
 export function TaskCommand() {
-  const { tasks: allTasks, moveTask, moveTaskBefore, reorderInbox, reorderQuadrant, updateTask } = useTaskStore()
+  const { tasks: allTasks, moveTask, moveTaskBefore, reorderInbox, reorderQuadrant, updateTask, addTask } = useTaskStore()
   const tasks = allTasks.filter(t => !isTaskHidden(t))
 
-  const [viewMode, setViewMode] = useState<'eisenhower' | 'board'>(() =>
-    (localStorage.getItem('task-view-mode') as 'eisenhower' | 'board') ?? 'eisenhower'
+  const [viewMode, setViewMode] = useState<ViewMode>(() =>
+    (localStorage.getItem('task-view-mode') as ViewMode) ?? 'board'
   )
-  function switchView(mode: 'eisenhower' | 'board') {
+  function switchView(mode: ViewMode) {
     setViewMode(mode)
     localStorage.setItem('task-view-mode', mode)
   }
@@ -97,7 +103,6 @@ export function TaskCommand() {
     return allUsers.filter(u => ids.has(u.id))
   }, [tasks, allUsers])
 
-  const typeOptions = Object.entries(TASK_TYPE_META) as [TaskType, typeof TASK_TYPE_META[TaskType]][]
 
   // ── Compute filtered task IDs ─────────────────────────────────────────────
   const filteredTaskIds = useMemo<Set<string> | null>(() => {
@@ -145,9 +150,24 @@ export function TaskCommand() {
 
   function clearFilters() { setFilters({ company: '', type: '', owner: '' }); setSearchQuery('') }
 
+  /** Create a blank task, then open it in the detail panel ready to name.
+   *  The store mints the id, so the new task is picked up on the next render. */
+  const openNewestRef = useRef(false)
+  function handleNewTask() {
+    const firstCompany = loadVisibleCompanies()[0]
+    openNewestRef.current = true
+    addTask({
+      title: 'New task',
+      quadrant: null,
+      company: (firstCompany?.id ?? 'personal') as Task['company'],
+      companyId: firstCompany?.id,
+      status: 'open',
+      completed: false,
+    } as Omit<Task, 'id' | 'createdAt'>)
+  }
   const active = tasks.filter(t => t.quadrant !== null && !t.completed)
   const urgent = tasks.filter(t => t.quadrant === 'do' && !t.completed)
-  const inbox  = tasks.filter(t => t.quadrant === null && t.status !== 'done' && t.status !== 'cancelled' && !t.completed)
+  const carriedOver = tasks.filter(isCarriedOver)
 
   // "Closed this week" = completed or done in the last 7 days
   const closedThisWeek = useMemo(() => {
@@ -158,6 +178,13 @@ export function TaskCommand() {
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null)
   const [modalTaskId,  setModalTaskId]  = useState<string | null>(null)
   const [showPlanner,  setShowPlanner]  = useState(false)
+
+  useEffect(() => {
+    if (!openNewestRef.current || allTasks.length === 0) return
+    openNewestRef.current = false
+    const newest = [...allTasks].sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0]
+    if (newest) setModalTaskId(newest.id)
+  }, [allTasks])
 
   const activeTask = activeTaskId ? tasks.find(t => t.id === activeTaskId) ?? null : null
   const modalTask  = modalTaskId  ? tasks.find(t => t.id === modalTaskId)  ?? null : null
@@ -207,22 +234,6 @@ export function TaskCommand() {
     }
   }
 
-  // ── Chip helpers ──────────────────────────────────────────────────────────
-  const companyChipLabel = filters.company ? (companies.find(c => c.id === filters.company)?.name ?? filters.company) : ''
-  const typeChipLabel    = filters.type ? (TASK_TYPE_META[filters.type as TaskType]?.label ?? filters.type) : ''
-  const ownerChipLabel   = filters.owner ? (allUsers.find(u => u.id === filters.owner)?.name ?? filters.owner) : ''
-
-  const chipStyle: React.CSSProperties = {
-    display: 'inline-flex', alignItems: 'center', gap: 5,
-    padding: '3px 8px 3px 10px', borderRadius: 20, fontSize: 11.5, fontWeight: 600,
-    background: 'rgba(25,23,18,0.06)', border: '1px solid rgba(127,119,221,0.3)',
-    color: '#3D3926', cursor: 'default',
-  }
-  const chipX: React.CSSProperties = {
-    background: 'none', border: 'none', cursor: 'pointer',
-    color: '#3D3926', padding: 0, display: 'flex', lineHeight: 1,
-  }
-
   return (
     <div>
       {/* ── Page header ─────────────────────────────────────────────────────── */}
@@ -234,27 +245,21 @@ export function TaskCommand() {
           </span>
           <span style={{ fontSize: 12, color: '#6C6553', paddingTop: 3 }}>
             {urgent.length} urgent
-            {inbox.length > 0 ? ` · ${inbox.length} unassigned` : ''}
+            {carriedOver.length > 0 ? ` · ${carriedOver.length} carried over` : ''}
             {closedThisWeek > 0 ? ` · ${closedThisWeek} closed this week` : ''}
             {isFiltering ? ` · ${matchCount} match${matchCount !== 1 ? 'es' : ''}` : ''}
           </span>
         </div>
 
         <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8, paddingBottom: 3 }}>
-          {/* Day Planner button */}
-          <button onClick={() => setShowPlanner(true)}
-            style={{ display: 'flex', alignItems: 'center', gap: 7, height: 34, boxSizing: 'border-box', padding: '0 13px', borderRadius: 999, background: '#FFFFFF', border: '1px solid #E8E1CE', color: '#191712', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>
-            <CalendarDays size={14} /> Day Planner
-          </button>
-
           {/* Filter button */}
           <div ref={filterRef} style={{ position: 'relative', flexShrink: 0 }}>
             <button onClick={() => setFilterOpen(o => !o)}
-              style={{ display: 'flex', alignItems: 'center', gap: 7, height: 34, boxSizing: 'border-box', padding: '0 13px', borderRadius: 999, background: '#FFFFFF', border: `1px solid ${activeFilterCount > 0 ? '#191712' : '#E8E1CE'}`, color: '#191712', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
+              style={{ display: 'flex', alignItems: 'center', gap: 8, height: 38, boxSizing: 'border-box', padding: '0 18px', borderRadius: 999, background: '#FFFFFF', border: '1px solid #E8E1CE', color: '#191712', fontSize: 13, fontWeight: 500, cursor: 'pointer', boxShadow: '0 1px 3px rgba(25,23,18,0.06)' }}>
+              <SlidersHorizontal size={14} strokeWidth={2} />
               Filters
               {activeFilterCount > 0 && (
-                <span style={{ height: 16, minWidth: 16, boxSizing: 'border-box', padding: '0 4px', borderRadius: 999, background: '#191712', color: '#FDF8E7', fontSize: 9, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <span style={{ height: 18, minWidth: 18, boxSizing: 'border-box', padding: '0 5px', borderRadius: 999, background: '#191712', color: '#FDF8E7', fontSize: 10, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   {activeFilterCount}
                 </span>
               )}
@@ -268,6 +273,29 @@ export function TaskCommand() {
                 borderRadius: 16, padding: '8px 16px 14px', width: 308,
                 boxShadow: '0 28px 60px -24px rgba(25,23,18,.4)',
               }}>
+                {/* Search — the artboard has no page-level search bar, so it
+                    lives here rather than being dropped. */}
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center', marginTop: 12 }}>
+                  <Search size={13} color="#9B9180" style={{ position: 'absolute', left: 11, pointerEvents: 'none' }} />
+                  <input
+                    ref={searchRef}
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    placeholder="Search tasks…"
+                    style={{
+                      width: '100%', boxSizing: 'border-box', background: '#FAF7EC',
+                      border: `1px solid ${searchQuery ? '#F5D14E' : '#E8E1CE'}`,
+                      borderRadius: 9, padding: '8px 30px 8px 32px',
+                      color: '#191712', fontSize: 12.5, outline: 'none', fontFamily: 'inherit',
+                    }}
+                  />
+                  {searchQuery && (
+                    <button onClick={() => setSearchQuery('')} style={{ position: 'absolute', right: 9, background: 'none', border: 'none', cursor: 'pointer', color: '#9B9180', display: 'flex', padding: 2 }}>
+                      <X size={12} />
+                    </button>
+                  )}
+                </div>
+
                 {/* Config section */}
                 <span style={{ display: 'block', fontSize: 10, fontWeight: 700, letterSpacing: '.12em', color: '#6C6553', padding: '12px 0 7px' }}>TASK DISPLAY</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '2px 0 10px' }}>
@@ -282,13 +310,13 @@ export function TaskCommand() {
 
                 {/* Group by */}
                 <span style={{ display: 'block', fontSize: 10, fontWeight: 700, letterSpacing: '.12em', color: '#6C6553', padding: '12px 0 7px' }}>GROUP TASKS BY</span>
-                {(['none', 'type', 'company'] as GroupBy[]).map(opt => (
+                {(['none', 'status', 'type', 'company', 'owner'] as GroupBy[]).map(opt => (
                   <div key={opt} onClick={() => setGroupBy(opt)} style={{ display: 'flex', alignItems: 'center', gap: 10, height: 34, padding: '0 9px', borderRadius: 9, background: groupBy === opt ? '#FEF7DE' : 'transparent', cursor: 'pointer' }}>
                     <span style={{ width: 16, height: 16, boxSizing: 'border-box', borderRadius: 999, border: `2px solid ${groupBy === opt ? '#191712' : '#C9C0A8'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                       {groupBy === opt && <span style={{ width: 7, height: 7, borderRadius: 999, background: '#191712' }} />}
                     </span>
                     <span style={{ fontSize: 12.5, fontWeight: groupBy === opt ? 600 : 500, color: groupBy === opt ? '#191712' : '#4A4438' }}>
-                      {opt === 'none' ? 'None' : opt === 'type' ? 'Task type' : 'Company'}
+                      {GROUP_BY_LABEL[opt]}
                     </span>
                   </div>
                 ))}
@@ -323,16 +351,20 @@ export function TaskCommand() {
                 {/* Type filter */}
                 <span style={{ display: 'block', fontSize: 10, fontWeight: 700, letterSpacing: '.12em', color: '#6C6553', padding: '12px 0 7px' }}>TASK TYPE</span>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                  {typeOptions.map(([type, meta]) => (
-                    <button key={type} onClick={() => setFilters(f => ({ ...f, type: f.type === type ? '' : type }))} style={{
-                      display: 'flex', alignItems: 'center', gap: 6, height: 28, boxSizing: 'border-box', padding: '0 11px', borderRadius: 999,
-                      background: filters.type === type ? '#FEF7DE' : '#FFFFFF',
-                      border: `1px solid ${filters.type === type ? '#F5D14E' : '#E8E1CE'}`,
-                      color: '#191712', fontSize: 11.5, fontWeight: filters.type === type ? 600 : 500, cursor: 'pointer',
-                    }}>
-                      <span>{meta.emoji}</span> {meta.label}
-                    </button>
-                  ))}
+                  {TASK_TYPE_ORDER.map(type => {
+                    const Icon = TASK_TYPE_ICON[type]
+                    const on = filters.type === type
+                    return (
+                      <button key={type} onClick={() => setFilters(f => ({ ...f, type: f.type === type ? '' : type }))} style={{
+                        display: 'flex', alignItems: 'center', gap: 6, height: 28, boxSizing: 'border-box', padding: '0 11px', borderRadius: 999,
+                        background: on ? '#FEF7DE' : '#FFFFFF',
+                        border: `1px solid ${on ? '#F5D14E' : '#E8E1CE'}`,
+                        color: '#191712', fontSize: 11.5, fontWeight: on ? 600 : 500, cursor: 'pointer', fontFamily: 'inherit',
+                      }}>
+                        <Icon size={12} strokeWidth={1.9} /> {TASK_TYPE_META[type].label}
+                      </button>
+                    )
+                  })}
                 </div>
 
                 {/* Owner filter */}
@@ -357,102 +389,58 @@ export function TaskCommand() {
                 {activeFilterCount > 0 && (
                   <div style={{ marginTop: 14, paddingTop: 11, borderTop: '1px solid #F0EBDC', display: 'flex', alignItems: 'center', gap: 9 }}>
                     <span style={{ fontSize: 11, color: '#6C6553' }}>{activeFilterCount} filter{activeFilterCount !== 1 ? 's' : ''} active</span>
-                    <button onClick={() => setFilters({ company: '', type: '', owner: '' })} style={{ marginLeft: 'auto', fontSize: 11.5, fontWeight: 600, color: '#191712', background: 'none', border: 'none', cursor: 'pointer' }}>Clear all</button>
+                    <button onClick={clearFilters} style={{ marginLeft: 'auto', fontSize: 11.5, fontWeight: 600, color: '#191712', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Clear all</button>
                   </div>
                 )}
               </div>
             )}
           </div>
 
-          <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 7, fontSize: 11.5, color: '#6C6553' }}>
-            Drag a card onto the calendar to schedule it
+          {/* View switcher — Board | Matrix | List */}
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2, height: 38, boxSizing: 'border-box', padding: 3, borderRadius: 999, background: '#EDE7D9', flexShrink: 0 }}>
+            {([
+              { id: 'board',      label: 'Board',  Icon: LayoutGrid },
+              { id: 'eisenhower', label: 'Matrix', Icon: Target },
+              { id: 'list',       label: 'List',   Icon: ListIcon },
+            ] as { id: ViewMode; label: string; Icon: typeof LayoutGrid }[]).map(v => {
+              const on = viewMode === v.id
+              return (
+                <button key={v.id} onClick={() => switchView(v.id)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 7, height: 32, boxSizing: 'border-box',
+                    padding: '0 16px', borderRadius: 999, border: 'none', cursor: 'pointer',
+                    background: on ? '#FFFFFF' : 'transparent',
+                    boxShadow: on ? '0 1px 3px rgba(25,23,18,.14)' : 'none',
+                    color: on ? '#191712' : '#8A8271',
+                    fontSize: 13, fontWeight: on ? 700 : 500, fontFamily: 'inherit',
+                    transition: 'all .14s', flexShrink: 0,
+                  }}>
+                  <v.Icon size={14} strokeWidth={2} /> {v.label}
+                </button>
+              )
+            })}
           </span>
-
-          <span style={{ width: 1, height: 22, background: '#E8E1CE', margin: '0 4px' }} />
-
-          {/* View toggle — Board / Matrix / List */}
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2, height: 38, boxSizing: 'border-box', padding: 4, borderRadius: 999, background: '#EDE7D9', flexShrink: 0 }}>
-            {[
-              { id: 'board' as const, icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>, label: 'Board' },
-              { id: 'eisenhower' as const, icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1"/></svg>, label: 'Matrix' },
-            ].map(v => (
-              <button key={v.id} onClick={() => switchView(v.id)}
-                style={{ display: 'flex', alignItems: 'center', gap: 7, height: 30, boxSizing: 'border-box', padding: '0 16px', borderRadius: 999, background: viewMode === v.id ? '#FFFFFF' : 'transparent', boxShadow: viewMode === v.id ? '0 1px 3px rgba(25,23,18,.12)' : 'none', color: viewMode === v.id ? '#191712' : '#8A8271', fontSize: 13, fontWeight: viewMode === v.id ? 700 : 500, border: 'none', cursor: 'pointer', transition: 'all .14s', flexShrink: 0 }}>
-                {v.icon} {v.label}
-              </button>
-            ))}
-          </span>
-
-          <span style={{ width: 1, height: 24, background: '#E8E1CE', margin: '0 2px' }} />
 
           {/* New task CTA */}
           <button
-            onClick={() => {
-              // Open add task — find modal or create mechanism
-            }}
-            style={{ display: 'flex', alignItems: 'center', gap: 8, height: 32, boxSizing: 'border-box', padding: '0 14px', borderRadius: 999, background: '#F5D14E', color: '#191712', fontSize: 12.5, fontWeight: 600, border: 'none', cursor: 'pointer', boxShadow: '0 2px 0 rgba(25,23,18,.14)', flexShrink: 0 }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+            onClick={handleNewTask}
+            style={{ display: 'flex', alignItems: 'center', gap: 8, height: 38, boxSizing: 'border-box', padding: '0 18px', borderRadius: 999, background: '#F5D14E', color: '#191712', fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer', boxShadow: '0 1px 3px rgba(25,23,18,0.14)', flexShrink: 0, fontFamily: 'inherit' }}>
+            <Plus size={15} strokeWidth={2.2} />
             New task
           </button>
         </span>
       </div>
 
-      {/* ── Secondary toolbar: search ────────────────────────────────────────── */}
-      <div style={{ padding: '12px 26px 14px', display: 'flex', gap: 10, alignItems: 'center' }}>
-        {/* Search input */}
-        <div style={{ flex: 1, position: 'relative', display: 'flex', alignItems: 'center' }}>
-          <Search size={13} color="#6C6553" style={{ position: 'absolute', left: 10, pointerEvents: 'none' }} />
-          <input
-            ref={searchRef}
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            placeholder='Search tasks… (name, type, owner)  •  Press / to focus'
-            style={{
-              width: '100%', background: '#F7F4EA',
-              border: `1px solid ${searchQuery ? '#F5D14E' : '#E8E1CE'}`,
-              borderRadius: 8, padding: '6px 32px 6px 30px',
-              color: '#191712', fontSize: 12.5, outline: 'none',
-              transition: 'border-color 0.15s',
-            }}
-          />
-          {searchQuery && (
-            <button onClick={() => setSearchQuery('')} style={{ position: 'absolute', right: 8, background: 'none', border: 'none', cursor: 'pointer', color: '#6C6553', display: 'flex', padding: 2 }}>
-              <X size={13} />
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* ── Active filter chips ─────────────────────────────────────────────── */}
-      {(companyChipLabel || typeChipLabel || ownerChipLabel) && (
-        <div style={{ padding: '4px 26px 10px', display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 11, color: '#6C6553', marginRight: 2 }}>Filtered by:</span>
-          {companyChipLabel && (
-            <span style={chipStyle}>
-              🏢 {companyChipLabel}
-              <button style={chipX} onClick={() => setFilters(f => ({ ...f, company: '' }))}><X size={11} /></button>
-            </span>
-          )}
-          {typeChipLabel && (
-            <span style={chipStyle}>
-              {TASK_TYPE_META[filters.type as TaskType]?.emoji} {typeChipLabel}
-              <button style={chipX} onClick={() => setFilters(f => ({ ...f, type: '' }))}><X size={11} /></button>
-            </span>
-          )}
-          {ownerChipLabel && (
-            <span style={chipStyle}>
-              👤 {ownerChipLabel}
-              <button style={chipX} onClick={() => setFilters(f => ({ ...f, owner: '' }))}><X size={11} /></button>
-            </span>
-          )}
-          <button onClick={clearFilters} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: '#6C6553', textDecoration: 'underline', padding: '0 4px', marginLeft: 2 }}>
-            Clear all
-          </button>
-        </div>
-      )}
-
       {/* Main content */}
-      {viewMode === 'board' ? (
+      {viewMode === 'list' ? (
+        <TaskListView
+          tasks={tasks}
+          onOpen={setModalTaskId}
+          hideCompleted={hideCompleted}
+          groupBy={groupBy}
+          filteredTaskIds={filteredTaskIds}
+        />
+      ) : viewMode === 'board' ? (
         <KanbanBoard
           onOpen={setModalTaskId}
           hideCompleted={hideCompleted}

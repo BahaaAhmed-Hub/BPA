@@ -1,4 +1,5 @@
 import { QuadrantColumn } from './QuadrantColumn'
+import type { TaskGroupBy } from './taskVisuals'
 import { useTaskStore } from '@/store/taskStore'
 import type { Quadrant } from '@/types'
 import { isTaskHidden } from '@/types'
@@ -8,7 +9,7 @@ const QUADRANTS: Quadrant[] = ['do', 'schedule', 'delegate', 'eliminate']
 interface EisenhowerBoardProps {
   onOpen: (id: string) => void
   hideCompleted?: boolean
-  groupBy?: 'none' | 'type' | 'company'
+  groupBy?: TaskGroupBy
   allGroupsExpanded?: boolean
   filteredTaskIds?: Set<string> | null
 }

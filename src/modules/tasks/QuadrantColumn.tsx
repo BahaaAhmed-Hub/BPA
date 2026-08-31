@@ -3,47 +3,14 @@ import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { Plus, X, Sparkles, ChevronDown, ChevronRight } from 'lucide-react'
 import { TaskCard } from './TaskCard'
-import type { Task, Quadrant, TaskType } from '@/types'
-import { QUADRANT_META, COMPANY_LABELS, TASK_TYPE_META, inferTaskType, getAllUsers, loadDynamicCompanies } from '@/types'
+import type { Task, Quadrant } from '@/types'
+import { QUADRANT_META, getAllUsers, loadDynamicCompanies } from '@/types'
 import { useTaskStore } from '@/store/taskStore'
 import { analyzeTask } from '@/lib/professor'
+import { buildTaskGroups, type TaskGroupBy } from './taskVisuals'
 import type { TaskAnalysis } from '@/lib/professor'
 
 // ─── Task type grouping helpers ───────────────────────────────────────────────
-
-interface TaskGroup { key: string; label: string; emoji: string; color: string; tasks: Task[] }
-
-function buildGroups(tasks: Task[], groupBy: 'type' | 'company'): TaskGroup[] {
-  if (groupBy === 'type') {
-    const map = new Map<TaskType, Task[]>()
-    for (const t of tasks) {
-      const k = t.taskType ?? inferTaskType(t.title)
-      if (!map.has(k)) map.set(k, [])
-      map.get(k)!.push(t)
-    }
-    return (Object.keys(TASK_TYPE_META) as TaskType[])
-      .filter(k => map.has(k))
-      .map(k => ({
-        key: k, label: TASK_TYPE_META[k].label,
-        emoji: TASK_TYPE_META[k].emoji, color: TASK_TYPE_META[k].color,
-        tasks: map.get(k)!,
-      }))
-  } else {
-    const companies = loadDynamicCompanies()
-    const map = new Map<string, Task[]>()
-    for (const t of tasks) {
-      const k = t.companyId ?? t.company
-      if (!map.has(k)) map.set(k, [])
-      map.get(k)!.push(t)
-    }
-    return [...map.entries()].map(([k, ts]) => {
-      const dynCo = companies.find(c => c.id === k)
-      const label = dynCo?.name ?? COMPANY_LABELS[k as keyof typeof COMPANY_LABELS] ?? k
-      const color = dynCo?.color ?? '#9B9180'
-      return { key: k, label, emoji: '🏢', color, tasks: ts }
-    })
-  }
-}
 
 function GroupHeader({ label, emoji, color, count, expanded, onToggle }: {
   label: string; emoji: string; color: string; count: number; expanded: boolean; onToggle: () => void
@@ -81,7 +48,7 @@ interface QuadrantColumnProps {
   quadrant: Quadrant
   tasks: Task[]
   onOpen: (id: string) => void
-  groupBy?: 'none' | 'type' | 'company'
+  groupBy?: TaskGroupBy
   allGroupsExpanded?: boolean
 }
 
@@ -200,7 +167,7 @@ export function QuadrantColumn({ quadrant, tasks, onOpen, groupBy = 'none', allG
             {activeTasks.map(t => <TaskCard key={t.id} task={t} onOpen={onOpen} />)}
           </SortableContext>
         ) : (() => {
-          const groups = buildGroups(activeTasks, groupBy)
+          const groups = buildTaskGroups(activeTasks, groupBy)
           const orderedIds = groups.flatMap(g => g.tasks.map(t => t.id))
           return (
             <SortableContext items={orderedIds} strategy={verticalListSortingStrategy}>

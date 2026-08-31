@@ -4,7 +4,8 @@ import { useDroppable } from '@dnd-kit/core'
 import { useSortable, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { useTaskStore } from '@/store/taskStore'
-import { getAllUsers, loadDynamicCompanies, isTaskHidden, COMPANY_COLORS, TASK_TYPE_META, inferTaskType, type TaskStatus, type TaskType, type CompanyTag, type Task } from '@/types'
+import { buildTaskGroups, type TaskGroupBy } from './taskVisuals'
+import { getAllUsers, loadDynamicCompanies, isTaskHidden, COMPANY_COLORS, type TaskStatus, type CompanyTag, type Task } from '@/types'
 import { analyzeTask } from '@/lib/professor'
 import type { TaskAnalysis } from '@/lib/professor'
 
@@ -176,7 +177,7 @@ function DraggableInboxCard({ task, accentColor, taskStatus, ownerUser, onOpen, 
 interface Props {
   onOpen: (id: string) => void
   hideCompleted?: boolean
-  groupBy?: 'none' | 'type' | 'company'
+  groupBy?: TaskGroupBy
   allGroupsExpanded?: boolean
   filteredTaskIds?: Set<string> | null
 }
@@ -286,33 +287,6 @@ export function UndefinedTasksPanel({ onOpen, hideCompleted = false, groupBy = '
   const FILTERS: Filter[] = ['all', 'open', 'done', 'cancelled']
 
   // ─── Group helpers ────────────────────────────────────────────────────────
-  function buildInboxGroups(tasks: Task[], gBy: 'type' | 'company') {
-    if (gBy === 'type') {
-      const map = new Map<TaskType, Task[]>()
-      for (const t of tasks) {
-        const k = t.taskType ?? inferTaskType(t.title)
-        if (!map.has(k)) map.set(k, [])
-        map.get(k)!.push(t)
-      }
-      return (Object.keys(TASK_TYPE_META) as TaskType[])
-        .filter(k => map.has(k))
-        .map(k => ({ key: k, label: TASK_TYPE_META[k].label, emoji: TASK_TYPE_META[k].emoji, color: TASK_TYPE_META[k].color, tasks: map.get(k)! }))
-    } else {
-      const map = new Map<string, Task[]>()
-      for (const t of tasks) {
-        const k = t.companyId ?? t.company
-        if (!map.has(k)) map.set(k, [])
-        map.get(k)!.push(t)
-      }
-      return [...map.entries()].map(([k, ts]) => {
-        const dynCo = companies.find(c => c.id === k)
-        const label = dynCo?.name ?? k
-        const color = dynCo?.color ?? '#9B9180'
-        return { key: k, label, emoji: '🏢', color, tasks: ts }
-      })
-    }
-  }
-
   function renderCard(t: Task) {
     const co = companies.find(c => c.id === t.companyId)
     const ownerUser = t.owner ? users.find(u => u.id === t.owner) : undefined
@@ -446,7 +420,7 @@ export function UndefinedTasksPanel({ onOpen, hideCompleted = false, groupBy = '
             {filtered.map(t => renderCard(t))}
           </SortableContext>
         ) : (() => {
-          const groups = buildInboxGroups(filtered, groupBy)
+          const groups = buildTaskGroups(filtered, groupBy)
           const orderedIds = groups.flatMap(g => g.tasks.map(t => t.id))
           return (
             <SortableContext items={orderedIds} strategy={verticalListSortingStrategy}>

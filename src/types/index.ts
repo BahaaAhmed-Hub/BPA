@@ -88,7 +88,7 @@ export const QUADRANT_META: Record<Quadrant, { label: string; sub: string; color
 }
 
 // ─── Task Type ───────────────────────────────────────────────────────────────
-export type TaskType = 'meeting' | 'call' | 'followup' | 'email' | 'research' | 'study' | 'do'
+export type TaskType = 'meeting' | 'call' | 'followup' | 'email' | 'research' | 'study' | 'deepwork' | 'do'
 
 export const TASK_TYPE_META: Record<TaskType, { label: string; emoji: string; color: string }> = {
   meeting:  { label: 'Meeting / Schedule', emoji: '📅', color: '#7F77DD' },
@@ -97,6 +97,7 @@ export const TASK_TYPE_META: Record<TaskType, { label: string; emoji: string; co
   email:    { label: 'Email',              emoji: '✉️', color: '#60A5FA' },
   research: { label: 'Research',           emoji: '🔍', color: '#A78BFA' },
   study:    { label: 'Study',              emoji: '📚', color: '#34D399' },
+  deepwork: { label: 'Deep work',          emoji: '🧠', color: '#7C6BD8' },
   do:       { label: 'Do',                 emoji: '✅', color: '#6B7280' },
 }
 
@@ -115,7 +116,19 @@ export function inferTaskType(title: string): TaskType {
   if (/research|investigate|analy[sz]e|analysis|explore|look into|benchmark|evaluate|compare|audit|assess/.test(t)) return 'research'
   // Study / learning
   if (/\bstudy\b|\blearn\b|\bread\b|reading|course|training|practice|tutorial|docs|documentation|watch.*video|📚/.test(t)) return 'study'
+  // Deep work — focused making, not admin
+  if (/deep work|focus block|write|writing|design|build|implement|refactor|prep(are)? for|draft the|model|plan the/.test(t)) return 'deepwork'
   return 'do'
+}
+
+// ─── Priority ────────────────────────────────────────────────────────────────
+export type Priority = 'P0' | 'P1' | 'P2' | 'P3'
+
+export const PRIORITY_META: Record<Priority, { label: string; color: string; tint: string; border: string }> = {
+  P0: { label: 'P0', color: '#B4523A', tint: 'rgba(180,82,58,0.11)',  border: 'rgba(180,82,58,0.30)' },
+  P1: { label: 'P1', color: '#9A7B1F', tint: 'rgba(245,209,78,0.22)', border: 'rgba(245,209,78,0.55)' },
+  P2: { label: 'P2', color: '#6C6553', tint: '#FAF7EC',               border: '#E8E1CE' },
+  P3: { label: 'P3', color: '#9B9180', tint: '#FAF7EC',               border: '#E8E1CE' },
 }
 
 // ─── Task ────────────────────────────────────────────────────────────────────
@@ -153,6 +166,24 @@ export interface Task {
   urgent?: boolean
   createdAt: string
   completedAt?: string  // YYYY-MM-DD — set when task is marked done, cleared on reopen
+  priority?: Priority        // P0–P3, shown on the card rail and in the matrix
+  checklist?: ChecklistStep[]
+  attachments?: TaskAttachment[]
+  capturedVia?: 'voice' | 'mail' | 'manual'   // brain dump provenance (9F)
+}
+
+export interface ChecklistStep {
+  id: string
+  text: string
+  done: boolean
+}
+
+export interface TaskAttachment {
+  id: string
+  name: string
+  size: number          // bytes
+  source?: string       // "from mail", "pasted", …
+  addedAt: string
 }
 
 // ─── Task Activity Log ───────────────────────────────────────────────────────
