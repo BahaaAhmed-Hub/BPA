@@ -104,11 +104,7 @@ const ALL_TZ = (() => {
   }).sort((a,b) => a.offset - b.offset || a.value.localeCompare(b.value))
 })()
 
-const FRAMEWORKS = [
-  {value:'time_blocking',label:'Time Blocking'},{value:'gtd',label:'GTD'},
-  {value:'deep_work',label:'Deep Work'},{value:'eisenhower',label:'Eisenhower Matrix'},
-  {value:'pomodoro',label:'Pomodoro'},{value:'12_week_year',label:'12-Week Year'},
-]
+// FRAMEWORKS intentionally removed — ProfileSection uses inline FRAMEWORK_CHIPS
 const WORK_DAYS    = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
 const C_COLORS     = ['#7F77DD','#7F77DD','#1D9E75','#E05252','#888780','#5B9BD5','#E0944A']
 const BUFFER_STEPS = [0,15,30,45,60]
@@ -248,23 +244,74 @@ function FieldRow({ label, sub, children }: { label: string; sub?: string; child
 function ProfileSection({
   s, set,
 }: { s: AppSettings; set: (p: Partial<AppSettings>) => void }) {
+  const authUser = useAuthStore(st => st.user)
+
+  // Compute initials for avatar fallback
+  const initials = (authUser?.name ?? s.fullName ?? 'P').trim().split(/\s+/).reduce((acc, part, i, arr) =>
+    i === 0 ? part[0]?.toUpperCase() ?? '' : i === arr.length - 1 ? acc + (part[0]?.toUpperCase() ?? '') : acc, '')
+
+  const tzOffset = (() => { try { return getUtcOffset(s.timezone) } catch { return 'UTC' } })()
+
+  const FRAMEWORK_CHIPS = [
+    { value: 'time_blocking', label: 'Time blocking' },
+    { value: 'eisenhower',    label: 'Eisenhower' },
+    { value: 'gtd',           label: 'GTD' },
+  ]
+
   return (
     <div>
+      {/* Avatar + identity row */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18, paddingBottom: 16, borderBottom: '1px solid #F0EBDC' }}>
+        {authUser?.avatarUrl
+          ? <img src={authUser.avatarUrl} alt="avatar" style={{ width: 44, height: 44, borderRadius: '50%', border: '2px solid #E8E1CE', flexShrink: 0 }} />
+          : <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#EDE7D9', border: '2px solid #E8E1CE', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <span style={{ fontSize: 14, fontWeight: 700, color: '#6C6553' }}>{initials || 'BA'}</span>
+            </div>
+        }
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ margin: 0, fontSize: 13.5, fontWeight: 700, color: '#191712', lineHeight: 1.2 }}>
+            {(authUser?.name ?? s.fullName) || 'Bahaa El-Din Ahmed'}
+          </p>
+          <p style={{ margin: '2px 0 0', fontSize: 11, color: '#9B9180', lineHeight: 1.3 }}>
+            {authUser?.email ?? ''}{authUser?.email ? ' · ' : ''}{tzOffset} {s.timezone}
+          </p>
+        </div>
+        <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+          <button onClick={() => window.location.reload()} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 7, background: '#FAF7EC', border: '1px solid #E8E1CE', color: '#6C6553', fontSize: 11.5, cursor: 'pointer' }}>
+            <RefreshCw size={11} /> Refresh
+          </button>
+          <button onClick={() => import('../../lib/google').then(m => m.signOut())} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 7, background: '#FAF7EC', border: '1px solid #E8E1CE', color: '#6C6553', fontSize: 11.5, cursor: 'pointer' }}>
+            <LogOut size={11} /> Sign out
+          </button>
+        </div>
+      </div>
+
       <FieldRow label="Full name">
         <input value={s.fullName} onChange={e => set({ fullName: e.target.value })}
           placeholder="Your name" style={inputStyle} />
       </FieldRow>
-      <FieldRow label="Framework">
-        <select value={s.framework} onChange={e => set({ framework: e.target.value })} style={{ ...selectStyle, width: '100%' }}>
-          {FRAMEWORKS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
-        </select>
+      {/* Framework — chips matching design (3 main options) */}
+      <FieldRow label="Framework" sub="How the Professor plans your day">
+        <div style={{ display: 'flex', gap: 5 }}>
+          {FRAMEWORK_CHIPS.map(f => {
+            const on = s.framework === f.value
+            return (
+              <button key={f.value} onClick={() => set({ framework: f.value })}
+                style={{
+                  padding: '5px 12px', borderRadius: 7, fontSize: 11.5, cursor: 'pointer', fontWeight: on ? 600 : 400,
+                  background: on ? '#191712' : '#FAF7EC', border: `1px solid ${on ? '#191712' : '#E8E1CE'}`,
+                  color: on ? '#FFFFFF' : '#6C6553', transition: 'all 0.12s',
+                }}>{f.label}</button>
+            )
+          })}
+        </div>
       </FieldRow>
       <FieldRow label="Timezone">
         <select value={s.timezone} onChange={e => set({ timezone: e.target.value })} style={{ ...selectStyle, width: '100%' }}>
           {ALL_TZ.map(tz => <option key={tz.value} value={tz.value}>{tz.label}</option>)}
         </select>
       </FieldRow>
-      <FieldRow label="Work days">
+      <FieldRow label="Work days" sub="Sunday to Thursday by default">
         <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
           {WORK_DAYS.map(d => {
             const on = s.workWeek.includes(d)
@@ -272,9 +319,8 @@ function ProfileSection({
               <button key={d} onClick={() => set({ workWeek: on ? s.workWeek.filter(x => x !== d) : [...s.workWeek, d] })}
                 style={{
                   padding: '4px 9px', borderRadius: 6, fontSize: 11.5, cursor: 'pointer', fontWeight: 500,
-                  background: on ? 'rgba(245,209,78,0.12)' : '#FAF7EC',
-                  border: `1px solid ${on ? '#F5D14E' : '#E8E1CE'}`,
-                  color: on ? '#F5D14E' : '#6C6553',
+                  background: on ? '#191712' : '#FAF7EC', border: `1px solid ${on ? '#191712' : '#E8E1CE'}`,
+                  color: on ? '#FFFFFF' : '#6C6553', transition: 'all 0.12s',
                 }}>{d}</button>
             )
           })}
@@ -287,8 +333,60 @@ function ProfileSection({
 function ScheduleSection({
   s, set,
 }: { s: AppSettings; set: (p: Partial<AppSettings>) => void }) {
+  // Convert HH:MM to decimal hours
+  function toH(t: string) { const [h,m] = t.split(':').map(Number); return h + (m||0)/60 }
+  const DAY_START = 6; const DAY_END = 22; const SPAN = DAY_END - DAY_START
+  function pct(h: number) { return Math.max(0, Math.min(100, (h - DAY_START) / SPAN * 100)) }
+
+  const segments = [
+    { from: DAY_START, to: toH(s.earliestMeeting), color: '#E8D9BD', label: 'Quiet' },
+    { from: toH(s.earliestMeeting), to: toH(s.focusStart), color: '#DFEFDD', label: 'Open' },
+    { from: toH(s.focusStart), to: toH(s.focusEnd), color: '#5F7038', label: 'Focus' },
+    { from: toH(s.focusEnd), to: toH(s.endOfDay), color: '#DFEFDD', label: 'Meetings OK' },
+    { from: toH(s.endOfDay), to: toH(s.familyStart), color: '#FDEFD5', label: 'Wrap-up' },
+    { from: toH(s.familyStart), to: DAY_END, color: '#D8E8F8', label: 'Family' },
+  ].filter(seg => seg.to > seg.from)
+
   return (
     <div>
+      {/* Day-strip visual timeline */}
+      <div style={{ marginBottom: 18 }}>
+        <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.1em', color: '#6C6553', marginBottom: 8 }}>YOUR DAY · {DAY_START}:00 – {DAY_END}:00</div>
+        <div style={{ position: 'relative', height: 28, borderRadius: 7, overflow: 'hidden', background: '#F0EBDC', border: '1px solid #E8E1CE' }}>
+          {segments.map((seg, i) => (
+            <div key={i} title={seg.label} style={{
+              position: 'absolute', top: 0, bottom: 0,
+              left: `${pct(seg.from)}%`, width: `${pct(seg.to) - pct(seg.from)}%`,
+              background: seg.color,
+            }} />
+          ))}
+          {/* Hour tick marks */}
+          {[9,12,15,18,21].map(h => (
+            <div key={h} style={{ position: 'absolute', top: 0, bottom: 0, left: `${pct(h)}%`, width: 1, background: 'rgba(25,23,18,0.1)' }} />
+          ))}
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
+          {['6', '9', '12', '15', '18', '21'].map(h => (
+            <span key={h} style={{ fontSize: 9, color: '#9B9180' }}>{h}</span>
+          ))}
+        </div>
+        {/* Legend */}
+        <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: '4px 10px', marginTop: 8 }}>
+          {[
+            { color: '#E8D9BD', label: 'Quiet' },
+            { color: '#5F7038', label: 'Focus' },
+            { color: '#DFEFDD', label: 'Meetings OK' },
+            { color: '#FDEFD5', label: 'Wrap-up' },
+            { color: '#D8E8F8', label: 'Family' },
+          ].map(l => (
+            <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <div style={{ width: 10, height: 10, borderRadius: 3, background: l.color, border: '1px solid #E8E1CE' }} />
+              <span style={{ fontSize: 10, color: '#6C6553' }}>{l.label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
       <FieldRow label="Focus window" sub="Deep work block">
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <input type="time" value={s.focusStart} onChange={e => set({ focusStart: e.target.value })}
@@ -777,6 +875,9 @@ function HabitsSection() {
   const { habits, addHabit: storeAdd, updateHabit, deleteHabit: storeDel } = useHabitsStore()
   const [adding, setAdding] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [trackerView, setTrackerView] = useState<'cards'|'list'>(() => {
+    try { return (localStorage.getItem('habits-tracker-view') as 'cards'|'list') || 'cards' } catch { return 'cards' }
+  })
 
   function toggle(id: string) {
     const h = habits.find(x => x.id === id)
@@ -787,6 +888,24 @@ function HabitsSection() {
 
   return (
     <div>
+      {/* Tracker view toggle */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, paddingBottom: 14, borderBottom: '1px solid #F0EBDC' }}>
+        <div>
+          <span style={{ fontSize: 12.5, fontWeight: 500, color: '#191712' }}>Tracker view</span>
+          <p style={{ margin: '2px 0 0', fontSize: 11, color: '#9B9180' }}>How habits are displayed on the tracker page</p>
+        </div>
+        <div style={{ display: 'flex', gap: 5 }}>
+          {([{ v:'cards', l:'Cards'}, {v:'list', l:'Vertical list'}] as const).map(o => (
+            <button key={o.v} onClick={() => { setTrackerView(o.v); try { localStorage.setItem('habits-tracker-view', o.v) } catch { /* noop */ } }}
+              style={{
+                padding: '5px 11px', borderRadius: 7, fontSize: 11.5, cursor: 'pointer', fontWeight: trackerView === o.v ? 600 : 400,
+                background: trackerView === o.v ? '#191712' : '#FAF7EC', border: `1px solid ${trackerView === o.v ? '#191712' : '#E8E1CE'}`,
+                color: trackerView === o.v ? '#FFFFFF' : '#6C6553', transition: 'all 0.12s',
+              }}>{o.l}</button>
+          ))}
+        </div>
+      </div>
+
       <p style={{ margin: '0 0 14px', fontSize: 12.5, color: '#6C6553' }}>
         Changes here instantly sync with the Habits Tracker page.
       </p>
@@ -1028,6 +1147,77 @@ function TaskStatusesSection() {
         }}>
           <RefreshCw size={12} /> Reset
         </button>
+      </div>
+
+      {/* Task Types */}
+      <TaskTypesSubSection />
+    </div>
+  )
+}
+
+const DEFAULT_TASK_TYPES = ['Call','Review','Deep work','Admin','Follow-up','Errand','Meeting prep']
+
+function TaskTypesSubSection() {
+  const [types, setTypes] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem('task-types') ?? 'null') ?? DEFAULT_TASK_TYPES } catch { return DEFAULT_TASK_TYPES }
+  })
+  const [adding, setAdding] = useState(false)
+  const [draft, setDraft] = useState('')
+
+  function persist(next: string[]) {
+    setTypes(next)
+    try { localStorage.setItem('task-types', JSON.stringify(next)) } catch { /* noop */ }
+  }
+
+  function addType() {
+    const t = draft.trim()
+    if (t && !types.includes(t)) persist([...types, t])
+    setDraft(''); setAdding(false)
+  }
+
+  return (
+    <div style={{ marginTop: 22, paddingTop: 18, borderTop: '1px solid #E8E1CE' }}>
+      <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.12em', color: '#6C6553', marginBottom: 10 }}>TASK TYPES</div>
+      <p style={{ margin: '0 0 12px', fontSize: 12, color: '#9B9180' }}>
+        Tag a task with a type to filter and report on it. Drag to reorder.
+      </p>
+      <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 7 }}>
+        {types.map(t => (
+          <div key={t} style={{
+            display: 'flex', alignItems: 'center', gap: 4,
+            padding: '5px 11px', borderRadius: 20,
+            background: '#FAF7EC', border: '1px solid #E8E1CE',
+            fontSize: 12, color: '#191712', fontWeight: 500,
+          }}>
+            {t}
+            <button onClick={() => persist(types.filter(x => x !== t))} style={{
+              background: 'none', border: 'none', cursor: 'pointer', color: '#9B9180', padding: 0, display: 'flex', alignItems: 'center',
+            }}>
+              <X size={10} />
+            </button>
+          </div>
+        ))}
+        {adding ? (
+          <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
+            <input
+              autoFocus value={draft} onChange={e => setDraft(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') addType(); if (e.key === 'Escape') { setAdding(false); setDraft('') } }}
+              placeholder="Type name…"
+              style={{ ...inputStyle, width: 110, fontSize: 12, padding: '4px 9px' }}
+            />
+            <button onClick={addType} style={{ padding: '4px 10px', borderRadius: 6, background: '#191712', border: 'none', color: '#FFFFFF', fontSize: 11.5, cursor: 'pointer', fontWeight: 500 }}>Add</button>
+            <button onClick={() => { setAdding(false); setDraft('') }} style={{ padding: '4px 8px', borderRadius: 6, background: 'transparent', border: '1px solid #E8E1CE', color: '#6C6553', fontSize: 11.5, cursor: 'pointer' }}>✕</button>
+          </div>
+        ) : (
+          <button onClick={() => setAdding(true)} style={{
+            padding: '5px 11px', borderRadius: 20,
+            background: 'transparent', border: '1px dashed #E8E1CE',
+            color: '#6C6553', fontSize: 12, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', gap: 4,
+          }}>
+            <Plus size={10} /> Add
+          </button>
+        )}
       </div>
     </div>
   )
@@ -1480,11 +1670,40 @@ function AppearanceSection({ s, set }: { s: AppSettings; set: (p: Partial<AppSet
           })}
         </div>
       </div>
-      <FieldRow label="Sidebar expanded">
-        <Toggle checked={!s.sidebarDefault} onChange={v => set({ sidebarDefault: !v })} />
-      </FieldRow>
-      <FieldRow label="Compact density" sub="Tighter spacing">
+      {/* Mode, Density, Text size, Motion */}
+      {([
+        { label: 'Mode', sub: 'Colour scheme', opts: [{ v: 'light', l: '☀️ Light' }, { v: 'system', l: '🌗 Auto' }, { v: 'dark', l: '🌙 Dark' }], key: 'app-mode' },
+        { label: 'Density', sub: 'Spacing between elements', opts: [{ v: 'compact', l: 'Compact' }, { v: 'cosy', l: 'Cosy' }, { v: 'roomy', l: 'Roomy' }], key: 'app-density' },
+        { label: 'Text size', sub: null, opts: [{ v: 's', l: 'S' }, { v: 'm', l: 'M' }, { v: 'l', l: 'L' }], key: 'app-textsize' },
+      ] as const).map(row => {
+        const [val, setVal] = (() => {
+          const stored = (() => { try { return localStorage.getItem(row.key) ?? '' } catch { return '' } })()
+          const [v, sv] = [stored, (nv: string) => { try { localStorage.setItem(row.key, nv) } catch { /* noop */ } }]
+          return [v, sv]
+        })()
+        return (
+          <FieldRow key={row.key} label={row.label} sub={row.sub ?? undefined}>
+            <div style={{ display: 'flex', gap: 5 }}>
+              {row.opts.map(o => {
+                const active = val === o.v || (!val && o.v === (row.key === 'app-mode' ? 'system' : row.key === 'app-density' ? 'cosy' : 'm'))
+                return (
+                  <button key={o.v} onClick={() => { set({}); setVal(o.v) }}
+                    style={{
+                      padding: '5px 12px', borderRadius: 7, fontSize: 11.5, cursor: 'pointer', fontWeight: active ? 600 : 400,
+                      background: active ? '#191712' : '#FAF7EC', border: `1px solid ${active ? '#191712' : '#E8E1CE'}`,
+                      color: active ? '#FFFFFF' : '#6C6553', transition: 'all 0.12s',
+                    }}>{o.l}</button>
+                )
+              })}
+            </div>
+          </FieldRow>
+        )
+      })}
+      <FieldRow label="Moving background" sub="Animated ambient texture on page bg">
         <Toggle checked={s.compact} onChange={v => set({ compact: v })} />
+      </FieldRow>
+      <FieldRow label="Reduce motion" sub="Disables transitions and animations">
+        <Toggle checked={s.sidebarDefault} onChange={v => set({ sidebarDefault: v })} />
       </FieldRow>
     </div>
   )
@@ -1793,6 +2012,11 @@ function BlockingRulesSection() {
 
 function BehavioralSection() {
   const { enabled, mode, setEnabled, setMode } = useBehavioralStore()
+  const [tone, setToneLocal] = useState<'kind'|'honest'|'brutal'>(() => {
+    try { return (localStorage.getItem('behavioral-tone') as 'kind'|'honest'|'brutal') || 'honest' } catch { return 'honest' }
+  })
+  const [showRank, setShowRank] = useState(() => { try { return localStorage.getItem('behavioral-show-rank') !== 'false' } catch { return true } })
+
   const SB = {
     bg: '#F7F4EA', surface: '#FFFFFF', surface2: '#FAF7EC', border: '#E8E1CE',
     accent: '#F5D14E', accentFill: 'rgba(245,209,78,0.12)', accentBright: '#D4A827',
@@ -1805,34 +2029,60 @@ function BehavioralSection() {
     { id: 'astral',  label: 'Astral',   desc: 'Vision-first. Long-horizon thinking & reflection.',        available: false },
   ]
 
+  const scoreBreakdown = [
+    { label: 'Execution',    pct: 40, color: '#5F7038' },
+    { label: 'Consistency',  pct: 30, color: '#F5D14E' },
+    { label: 'Decisiveness', pct: 20, color: '#6B9FFF' },
+    { label: 'Reflection',   pct: 10, color: '#B4523A' },
+  ]
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      {/* Enable toggle */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', background: SB.surface2, borderRadius: 10, border: `1px solid ${SB.border}` }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+      {/* Rank panel */}
+      <div style={{ borderRadius: 12, background: '#191712', padding: '18px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
         <div>
-          <div style={{ fontSize: 14, fontWeight: 600, color: SB.text }}>Enable Behavioral OS</div>
-          <div style={{ fontSize: 12, color: SB.textDim, marginTop: 2 }}>Activates rank tracking, identity detection & mode-aware AI</div>
+          <div style={{ fontSize: 24, fontWeight: 700, color: '#FFFFFF', fontFamily: 'Outfit, sans-serif', lineHeight: 1.1 }}>33</div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: '#F5D14E', marginTop: 2 }}>Ronin — rank 33</div>
+          <div style={{ fontSize: 11, color: '#9B9180', marginTop: 4, lineHeight: 1.4, maxWidth: 200 }}>
+            Habits are the one number holding you back.
+          </div>
         </div>
-        <button
-          onClick={() => setEnabled(!enabled)}
-          style={{
-            width: 44, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer', flexShrink: 0,
-            background: enabled ? SB.accent : SB.border,
-            position: 'relative', transition: 'background 0.2s',
-          }}
-        >
-          <span style={{
-            position: 'absolute', top: 2, left: enabled ? 22 : 2,
-            width: 20, height: 20, borderRadius: '50%', background: '#fff',
-            transition: 'left 0.2s',
-          }} />
+        <button style={{ padding: '7px 16px', borderRadius: 8, background: 'rgba(245,209,78,0.15)', border: '1px solid rgba(245,209,78,0.3)', color: '#F5D14E', fontSize: 12, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}>
+          Open
         </button>
+      </div>
+
+      {/* Score breakdown */}
+      <div>
+        <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.12em', color: '#6C6553', marginBottom: 10 }}>SCORE BREAKDOWN</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {scoreBreakdown.map(s => (
+            <div key={s.label}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
+                <span style={{ fontSize: 11.5, color: SB.textDim }}>{s.label}</span>
+                <span style={{ fontSize: 11.5, fontWeight: 600, color: SB.text }}>{s.pct}%</span>
+              </div>
+              <div style={{ height: 6, borderRadius: 3, background: '#F0EBDC' }}>
+                <div style={{ height: '100%', width: `${s.pct}%`, borderRadius: 3, background: s.color }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Enable toggle */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: SB.surface2, borderRadius: 10, border: `1px solid ${SB.border}` }}>
+        <div>
+          <div style={{ fontSize: 13.5, fontWeight: 600, color: SB.text }}>Enable Behavioral OS</div>
+          <div style={{ fontSize: 11.5, color: SB.textDim, marginTop: 2 }}>Activates rank tracking, identity detection & mode-aware AI</div>
+        </div>
+        <Toggle checked={enabled} onChange={setEnabled} />
       </div>
 
       {/* Mode selection */}
       {enabled && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: SB.accentBright, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 2 }}>Operating Mode</div>
+          <div style={{ fontSize: 10.5, fontWeight: 700, color: SB.textDim, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 2 }}>Operating Mode</div>
           {modes.map(m => (
             <button
               key={m.id}
@@ -1840,19 +2090,19 @@ function BehavioralSection() {
               onClick={() => m.available && setMode(m.id)}
               style={{
                 display: 'flex', alignItems: 'center', gap: 12,
-                padding: '12px 14px', borderRadius: 10, cursor: m.available ? 'pointer' : 'default',
+                padding: '11px 14px', borderRadius: 10, cursor: m.available ? 'pointer' : 'default',
                 background: mode === m.id ? SB.accentFill : SB.surface2,
                 border: `1px solid ${mode === m.id ? SB.accent : SB.border}`,
                 textAlign: 'left', width: '100%', opacity: m.available ? 1 : 0.5,
               }}
             >
-              <Swords size={16} color={mode === m.id ? SB.accent : SB.textDim} strokeWidth={1.8} style={{ flexShrink: 0 }} />
+              <Swords size={15} color={mode === m.id ? SB.accent : SB.textDim} strokeWidth={1.8} style={{ flexShrink: 0 }} />
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: 13.5, fontWeight: 600, color: SB.text }}>{m.label}</span>
-                  {!m.available && <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 4, background: SB.border, color: SB.textDim, letterSpacing: '0.5px' }}>SOON</span>}
+                  <span style={{ fontSize: 13, fontWeight: 600, color: SB.text }}>{m.label}</span>
+                  {!m.available && <span style={{ fontSize: 9.5, fontWeight: 700, padding: '2px 6px', borderRadius: 4, background: SB.border, color: SB.textDim, letterSpacing: '0.5px' }}>SOON</span>}
                 </div>
-                <div style={{ fontSize: 12, color: SB.textDim, marginTop: 2 }}>{m.desc}</div>
+                <div style={{ fontSize: 11.5, color: SB.textDim, marginTop: 2 }}>{m.desc}</div>
               </div>
               {mode === m.id && <div style={{ width: 8, height: 8, borderRadius: '50%', background: SB.accent, flexShrink: 0 }} />}
             </button>
@@ -1860,15 +2110,24 @@ function BehavioralSection() {
         </div>
       )}
 
-      {/* Samurai info */}
-      {enabled && mode === 'samurai' && (
-        <div style={{ padding: '12px 14px', borderRadius: 10, background: 'rgba(139,26,26,0.08)', border: '1px solid rgba(139,26,26,0.25)' }}>
-          <div style={{ fontSize: 12, color: '#C0392B', fontWeight: 600, marginBottom: 4 }}>Samurai Mode Active</div>
-          <div style={{ fontSize: 12, color: SB.textDim, lineHeight: 1.5 }}>
-            The Behavioral OS page will appear in the sidebar. Your rank (Ronin → Shogun) is calculated from task completion, habit consistency, and planning quality. The AI assistant will adopt a tactical, no-filler communication style.
-          </div>
+      {/* Tone segmented */}
+      <FieldRow label="Tone" sub="How the AI talks to you">
+        <div style={{ display: 'flex', gap: 5 }}>
+          {(['kind','honest','brutal'] as const).map(t => (
+            <button key={t} onClick={() => { setToneLocal(t); try { localStorage.setItem('behavioral-tone', t) } catch { /* noop */ } }}
+              style={{
+                padding: '5px 12px', borderRadius: 7, fontSize: 11.5, cursor: 'pointer', fontWeight: tone === t ? 600 : 400,
+                background: tone === t ? '#191712' : '#FAF7EC', border: `1px solid ${tone === t ? '#191712' : '#E8E1CE'}`,
+                color: tone === t ? '#FFFFFF' : '#6C6553', transition: 'all 0.12s', textTransform: 'capitalize',
+              }}>{t}</button>
+          ))}
         </div>
-      )}
+      </FieldRow>
+
+      {/* Show rank in top bar */}
+      <FieldRow label="Show rank in top bar" sub="Rank badge visible next to your name">
+        <Toggle checked={showRank} onChange={v => { setShowRank(v); try { localStorage.setItem('behavioral-show-rank', String(v)) } catch { /* noop */ } }} />
+      </FieldRow>
     </div>
   )
 }
@@ -2152,6 +2411,18 @@ function FinanceSection() {
           <p style={{ margin: '4px 0 0', fontSize: 10.5, color: '#6C6553' }}>
             {alertThreshold >= 1 ? 'Alert only when over budget' : alertThreshold >= 0.9 ? 'Alert at 90%+ spent (recommended)' : `Alert when ${Math.round(alertThreshold * 100)}%+ of envelope is spent`}
           </p>
+        </FieldRow>
+        <FieldRow label="Flag uncategorised" sub="Highlight transactions with no envelope assigned">
+          <Toggle
+            checked={(() => { try { return localStorage.getItem('finance-flag-uncat') !== 'false' } catch { return true } })()}
+            onChange={v => { try { localStorage.setItem('finance-flag-uncat', String(v)) } catch { /* noop */ } }}
+          />
+        </FieldRow>
+        <FieldRow label="Weekly money summary" sub="Saturday briefing: what you spent vs budget this week">
+          <Toggle
+            checked={(() => { try { return localStorage.getItem('finance-weekly-summary') !== 'false' } catch { return true } })()}
+            onChange={v => { try { localStorage.setItem('finance-weekly-summary', String(v)) } catch { /* noop */ } }}
+          />
         </FieldRow>
       </div>
     </div>
@@ -2535,6 +2806,13 @@ function AutomationSection() {
 
 function DataPrivacySection() {
   const [exportStatus, setExportStatus] = useState<'idle' | 'exporting' | 'done'>('idle')
+  const [retention, setRetention] = useState<'1y'|'3y'|'forever'>(() => {
+    try { return (localStorage.getItem('privacy-retention') as '1y'|'3y'|'forever') || '3y' } catch { return '3y' }
+  })
+  const [storeMailBodies, setStoreMailBodies] = useState(() => {
+    try { return localStorage.getItem('privacy-store-mail') !== 'false' } catch { return true }
+  })
+  const [revokeStatus, setRevokeStatus] = useState<'idle'|'revoking'|'done'>('idle')
 
   async function handleExport() {
     setExportStatus('exporting')
@@ -2543,65 +2821,81 @@ function DataPrivacySection() {
     setTimeout(() => setExportStatus('idle'), 3000)
   }
 
+  async function handleRevoke() {
+    setRevokeStatus('revoking')
+    await new Promise(r => setTimeout(r, 900))
+    setRevokeStatus('done')
+    setTimeout(() => setRevokeStatus('idle'), 3000)
+  }
+
   return (
     <div>
-      {/* Data export card */}
-      <div style={{ marginBottom: 18 }}>
-        <p style={{ margin: '0 0 6px', fontSize: 12, fontWeight: 600, color: '#191712', textTransform: 'uppercase', letterSpacing: '0.09em' }}>Export</p>
-        <div style={{ padding: '14px 16px', borderRadius: 11, background: '#FAF7EC', border: '1px solid #E8E1CE' }}>
-          <p style={{ margin: '0 0 10px', fontSize: 12.5, color: '#6C6553', lineHeight: 1.5 }}>
-            Download a copy of all your data — tasks, habits, companies, finance envelopes & settings.
-          </p>
-          <button onClick={handleExport} style={{
-            display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 8,
-            background: '#FFFFFF', border: '1px solid #E8E1CE',
-            fontSize: 12.5, fontWeight: 500, color: '#191712', cursor: 'pointer',
-          }}>
-            <HardDrive size={13} />
-            {exportStatus === 'exporting' ? 'Preparing…' : exportStatus === 'done' ? 'Downloaded ✓' : 'Export all data'}
-          </button>
+      {/* History retention */}
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.12em', color: '#6C6553', marginBottom: 10 }}>HISTORY RETENTION</div>
+        <div style={{ fontSize: 11.5, color: '#9B9180', marginBottom: 10, lineHeight: 1.4 }}>
+          How long Professor keeps your activity history. Older data is automatically purged.
+        </div>
+        <div style={{ display: 'flex', gap: 6 }}>
+          {([{ v:'1y', l:'1 year'}, {v:'3y', l:'3 years'}, {v:'forever', l:'Forever'}] as const).map(o => (
+            <button key={o.v} onClick={() => { setRetention(o.v); try { localStorage.setItem('privacy-retention', o.v) } catch { /* noop */ } }}
+              style={{
+                padding: '6px 14px', borderRadius: 8, fontSize: 12, cursor: 'pointer', fontWeight: retention === o.v ? 600 : 400,
+                background: retention === o.v ? '#191712' : '#FAF7EC', border: `1px solid ${retention === o.v ? '#191712' : '#E8E1CE'}`,
+                color: retention === o.v ? '#FFFFFF' : '#6C6553', transition: 'all 0.12s',
+              }}>{o.l}</button>
+          ))}
         </div>
       </div>
 
-      {/* Privacy controls */}
-      <div style={{ marginBottom: 18 }}>
-        <p style={{ margin: '0 0 6px', fontSize: 12, fontWeight: 600, color: '#191712', textTransform: 'uppercase', letterSpacing: '0.09em' }}>Privacy</p>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-          {[
-            { label: 'Share usage analytics',  sub: 'Helps improve Professor', key: 'analytics' },
-            { label: 'Crash reporting',         sub: 'Automatic error reports',  key: 'crash' },
-          ].map((item, i, arr) => {
-            const [on, setOn] = useState(true)
-            return (
-              <div key={item.key} style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '11px 0',
-                borderBottom: i < arr.length - 1 ? '1px solid #F0EBDC' : 'none',
-              }}>
-                <div>
-                  <p style={{ margin: 0, fontSize: 13, fontWeight: 500, color: '#191712' }}>{item.label}</p>
-                  <p style={{ margin: '1px 0 0', fontSize: 11.5, color: '#9B9180' }}>{item.sub}</p>
-                </div>
-                <Toggle checked={on} onChange={setOn} />
-              </div>
-            )
-          })}
+      {/* Store mail bodies */}
+      <FieldRow label="Store mail bodies" sub="Encrypted on-device; lets Professor reference thread content">
+        <Toggle checked={storeMailBodies} onChange={v => { setStoreMailBodies(v); try { localStorage.setItem('privacy-store-mail', String(v)) } catch { /* noop */ } }} />
+      </FieldRow>
+
+      {/* Revoke all tokens */}
+      <div style={{ padding: '13px 0', borderBottom: '1px solid #E8E1CE', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div>
+          <p style={{ margin: 0, fontSize: 12.5, fontWeight: 500, color: '#191712' }}>Revoke all tokens</p>
+          <p style={{ margin: '2px 0 0', fontSize: 11, color: '#9B9180' }}>Sign out every Google account & reset OAuth grants</p>
         </div>
+        <button onClick={handleRevoke} style={{
+          padding: '6px 14px', borderRadius: 8, background: '#FAF7EC', border: '1px solid #E8E1CE',
+          color: '#6C6553', fontSize: 12, fontWeight: 500, cursor: 'pointer',
+        }}>
+          {revokeStatus === 'revoking' ? 'Revoking…' : revokeStatus === 'done' ? 'Revoked ✓' : 'Revoke all'}
+        </button>
       </div>
 
-      {/* Account deletion */}
-      <div>
-        <p style={{ margin: '0 0 6px', fontSize: 12, fontWeight: 600, color: '#B4523A', textTransform: 'uppercase', letterSpacing: '0.09em' }}>Danger zone</p>
-        <div style={{ padding: '14px 16px', borderRadius: 11, background: 'rgba(180,82,58,0.04)', border: '1px solid rgba(180,82,58,0.22)' }}>
-          <p style={{ margin: '0 0 10px', fontSize: 12.5, color: '#6C6553', lineHeight: 1.5 }}>
-            Permanently delete your account and all associated data. This cannot be undone.
+      {/* Export */}
+      <div style={{ padding: '13px 0', borderBottom: '1px solid #E8E1CE', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div>
+          <p style={{ margin: 0, fontSize: 12.5, fontWeight: 500, color: '#191712' }}>Export all data</p>
+          <p style={{ margin: '2px 0 0', fontSize: 11, color: '#9B9180' }}>Tasks, habits, companies, finance & settings as JSON</p>
+        </div>
+        <button onClick={handleExport} style={{
+          display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', borderRadius: 8,
+          background: '#FAF7EC', border: '1px solid #E8E1CE',
+          fontSize: 12, fontWeight: 500, color: '#191712', cursor: 'pointer',
+        }}>
+          <HardDrive size={12} />
+          {exportStatus === 'exporting' ? 'Preparing…' : exportStatus === 'done' ? 'Downloaded ✓' : 'Export'}
+        </button>
+      </div>
+
+      {/* Danger zone */}
+      <div style={{ marginTop: 20 }}>
+        <p style={{ margin: '0 0 8px', fontSize: 10.5, fontWeight: 700, color: '#B4523A', textTransform: 'uppercase', letterSpacing: '0.12em' }}>Danger zone</p>
+        <div style={{ padding: '13px 15px', borderRadius: 10, background: 'rgba(180,82,58,0.04)', border: '1px solid rgba(180,82,58,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <p style={{ margin: 0, fontSize: 12, color: '#6C6553', lineHeight: 1.4 }}>
+            Permanently delete your account and all data.
           </p>
           <button style={{
-            display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 8,
+            display: 'flex', alignItems: 'center', gap: 5, padding: '6px 14px', borderRadius: 8,
             background: 'rgba(180,82,58,0.08)', border: '1px solid rgba(180,82,58,0.3)',
-            fontSize: 12.5, fontWeight: 500, color: '#B4523A', cursor: 'pointer',
+            fontSize: 12, fontWeight: 500, color: '#B4523A', cursor: 'pointer', flexShrink: 0,
           }}>
-            <Trash2 size={13} /> Delete account
+            <Trash2 size={12} /> Delete account
           </button>
         </div>
       </div>
