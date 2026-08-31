@@ -18,6 +18,9 @@ export interface Habit {
   type: 'boolean' | 'quantity'
   goal?: number   // target quantity (e.g. 8)
   unit?: string   // display unit (e.g. "glasses", "miles", "min")
+  /** A picture for the habit, as a data URL. The wall and fill cards use it
+   *  in place of the generated colour panel. */
+  image?: string
 }
 
 export interface HabitLogs {
@@ -64,6 +67,7 @@ function parseHabits(raw: string | null): Habit[] {
       type:      h.type      ?? 'boolean',
       goal:      h.goal,
       unit:      h.unit,
+      image:     h.image,
     }))
   } catch { return [] }
 }
@@ -115,7 +119,8 @@ export function getHabitColors(): string[] {
 
 interface HabitsState {
   habits: Habit[]
-  addHabit:     (h: Omit<Habit, 'id' | 'createdAt'>) => void
+  /** Returns the new habit's id, so the caller can open it straight away. */
+  addHabit:     (h: Omit<Habit, 'id' | 'createdAt'>) => string
   updateHabit:  (id: string, patch: Partial<Habit>) => void
   deleteHabit:  (id: string) => void
   reorderHabits:(from: number, to: number) => void
@@ -134,14 +139,12 @@ export const useHabitsStore = create<HabitsState>((set, get) => ({
   habits: loadHabits(),
 
   addHabit(h) {
-    const next = [...get().habits, {
-      ...h,
-      id: crypto.randomUUID(),
-      createdAt: new Date().toISOString(),
-    }]
+    const id = crypto.randomUUID()
+    const next = [...get().habits, { ...h, id, createdAt: new Date().toISOString() }]
     saveHabits(next)
     scheduleHabitsSync(next)
     set({ habits: next })
+    return id
   },
 
   updateHabit(id, patch) {
@@ -192,6 +195,7 @@ export const useHabitsStore = create<HabitsState>((set, get) => ({
             type:      localH?.type ?? 'boolean',
             goal:      localH?.goal,
             unit:      localH?.unit,
+            image:     localH?.image,
           }
           return localH ? { ...base, emoji: localH.emoji, color: localH.color } : base
         })

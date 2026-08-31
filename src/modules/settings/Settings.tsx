@@ -883,7 +883,34 @@ function CompaniesSection({
   )
 }
 
+/** Reads a picked file into a data URL, downscaled so localStorage can hold it. */
+function readHabitImage(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onerror = () => reject(new Error('unreadable'))
+    reader.onload = () => {
+      const img = new Image()
+      img.onerror = () => reject(new Error('not an image'))
+      img.onload = () => {
+        const MAX = 640
+        const scale = Math.min(1, MAX / Math.max(img.width, img.height))
+        const w = Math.round(img.width * scale)
+        const h = Math.round(img.height * scale)
+        const canvas = document.createElement('canvas')
+        canvas.width = w; canvas.height = h
+        const ctx = canvas.getContext('2d')
+        if (!ctx) { resolve(String(reader.result)); return }
+        ctx.drawImage(img, 0, 0, w, h)
+        resolve(canvas.toDataURL('image/jpeg', 0.82))
+      }
+      img.src = String(reader.result)
+    }
+    reader.readAsDataURL(file)
+  })
+}
+
 interface SettingsHabitFormState {
+  image?: string
   name: string; emoji: string; color: string; freq: typeof FREQ_OPTS[number]
   type: 'boolean' | 'quantity'; goal: string; unit: string
 }
@@ -899,6 +926,7 @@ function SettingsHabitForm({
 }) {
   const [s, setS] = useState<SettingsHabitFormState>(initial)
   const update = (patch: Partial<SettingsHabitFormState>) => setS(prev => ({ ...prev, ...patch }))
+  const imageRef = useRef<HTMLInputElement>(null)
   const valid = s.name.trim() !== '' && (s.type === 'boolean' || (parseFloat(s.goal) > 0 && s.unit.trim() !== ''))
 
   return (
@@ -906,10 +934,34 @@ function SettingsHabitForm({
       {/* Picture — a wide palette, plus anything you care to type */}
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-          <span style={{
-            width: 52, height: 52, borderRadius: 13, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 27, background: '#FFFFFF', border: '1px solid #E8E1CE',
-          }}>{s.emoji || '🎯'}</span>
+          {/* The picture the wall and fill cards show; the emoji stands in until one is set */}
+          <button
+            type="button"
+            onClick={() => imageRef.current?.click()}
+            title={s.image ? 'Change picture' : 'Add a picture'}
+            style={{
+              width: 52, height: 52, borderRadius: 13, padding: 0, cursor: 'pointer', overflow: 'hidden',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 27, background: '#FFFFFF', border: '1px solid #E8E1CE',
+            }}>
+            {s.image
+              ? <img src={s.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+              : (s.emoji || '🎯')}
+          </button>
+          <input
+            ref={imageRef} type="file" accept="image/*" style={{ display: 'none' }}
+            onChange={async e => {
+              const file = e.target.files?.[0]
+              e.target.value = ''
+              if (!file) return
+              try { update({ image: await readHabitImage(file) }) } catch { /* not a usable image */ }
+            }} />
+          <button
+            type="button"
+            onClick={() => { if (s.image) update({ image: undefined }); else imageRef.current?.click() }}
+            style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#9B9180', fontSize: 10.5, fontFamily: 'inherit' }}>
+            {s.image ? 'Remove picture' : 'Add picture'}
+          </button>
           <input
             value={s.emoji}
             onChange={e => update({ emoji: [...e.target.value].slice(-2).join('') })}
@@ -1023,7 +1075,9 @@ function HabitsSection() {
             padding: '10px 0', borderBottom: '1px solid #E8E1CE',
             opacity: h.isActive ? 1 : 0.5,
           }}>
-            <span style={{ fontSize: 18, flexShrink: 0 }}>{h.emoji}</span>
+            {h.image
+              ? <img src={h.image} alt="" style={{ width: 24, height: 24, borderRadius: 7, objectFit: 'cover', flexShrink: 0, display: 'block' }} />
+              : <span style={{ fontSize: 18, flexShrink: 0 }}>{h.emoji}</span>}
             <div style={{ width: 10, height: 10, borderRadius: '50%', background: h.color, flexShrink: 0 }} />
             <span style={{ flex: 1, fontSize: 13.5, color: '#191712' }}>{h.name}</span>
             {h.type === 'quantity' && h.goal && h.unit && (
@@ -1053,7 +1107,7 @@ function HabitsSection() {
             <SettingsHabitForm
               key={h.id + '-edit'}
               initial={{
-                name: h.name, emoji: h.emoji, color: h.color,
+                name: h.name, emoji: h.emoji, color: h.color, image: h.image,
                 freq: h.frequency as typeof FREQ_OPTS[number],
                 type: h.type ?? 'boolean',
                 goal: h.goal != null ? String(h.goal) : '',
@@ -1063,7 +1117,7 @@ function HabitsSection() {
               saveLabel="Save Changes"
               onSave={s => {
                 updateHabit(h.id, {
-                  name: s.name.trim(), emoji: s.emoji, color: s.color,
+                  name: s.name.trim(), emoji: s.emoji, color: s.color, image: s.image,
                   frequency: s.freq,
                   type: s.type,
                   goal: s.type === 'quantity' ? parseFloat(s.goal) : undefined,
@@ -1083,7 +1137,7 @@ function HabitsSection() {
           colors={COLORS}
           onSave={s => {
             storeAdd({
-              name: s.name.trim(), emoji: s.emoji, color: s.color,
+              name: s.name.trim(), emoji: s.emoji, color: s.color, image: s.image,
               frequency: s.freq, isActive: true,
               type: s.type,
               goal: s.type === 'quantity' ? parseFloat(s.goal) : undefined,

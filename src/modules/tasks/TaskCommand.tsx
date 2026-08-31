@@ -197,6 +197,12 @@ export function TaskCommand() {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   )
 
+  /** Captured but not yet placed — what the rail and the board's first column show. */
+  const dumpedTasks = tasks.filter(t =>
+    t.quadrant == null && !t.completed && t.status !== 'done' && t.status !== 'cancelled' &&
+    (!filteredTaskIds || filteredTaskIds.has(t.id))
+  )
+
   function handleDragStart({ active }: DragStartEvent) { setActiveTaskId(active.id as string) }
 
   function handleDragEnd({ active, over }: DragEndEvent) {
@@ -412,22 +418,36 @@ export function TaskCommand() {
 
       {/* Main content */}
       {viewMode === 'list' ? (
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, minWidth: 0 }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <TaskListView
-              tasks={tasks}
-              onOpen={setModalTaskId}
-              hideCompleted={hideCompleted}
-              groupBy={groupBy}
-              filteredTaskIds={filteredTaskIds}
-            />
-          </div>
-          {modalTask && (
-            <div style={{ paddingTop: 4, paddingRight: 28, paddingBottom: 28 }}>
-              <TaskDetailPanel key={modalTask.id} task={modalTask} onClose={() => setModalTaskId(null)} />
+        <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+          {/* The list carries the same brain dump rail the matrix does */}
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, minWidth: 0, padding: '4px 0 0 28px' }}>
+            <div>
+              <BrainDumpRail tasks={dumpedTasks} onOpen={setModalTaskId} />
             </div>
-          )}
-        </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <TaskListView
+                tasks={tasks}
+                onOpen={setModalTaskId}
+                hideCompleted={hideCompleted}
+                groupBy={groupBy}
+                filteredTaskIds={filteredTaskIds}
+              />
+            </div>
+            {modalTask && (
+              <div style={{ paddingRight: 28, paddingBottom: 28 }}>
+                <TaskDetailPanel key={modalTask.id} task={modalTask} onClose={() => setModalTaskId(null)} />
+              </div>
+            )}
+          </div>
+
+          <DragOverlay>
+            {activeTask && (
+              <div style={{ transform: 'rotate(1.5deg)', filter: 'drop-shadow(0 8px 24px rgba(0,0,0,0.5))' }}>
+                <TaskCard task={activeTask} onOpen={() => {}} />
+              </div>
+            )}
+          </DragOverlay>
+        </DndContext>
       ) : viewMode === 'board' ? (
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, minWidth: 0 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -448,13 +468,7 @@ export function TaskCommand() {
           {/* 9F: the brain dump rail sits to the LEFT of the matrix */}
           <div style={{ display: 'flex', gap: 16, padding: '4px 28px 28px', alignItems: 'flex-start' }}>
             <div>
-            <BrainDumpRail
-              tasks={tasks.filter(t =>
-                t.quadrant === null && !t.completed && t.status !== 'done' && t.status !== 'cancelled' &&
-                (!filteredTaskIds || filteredTaskIds.has(t.id))
-              )}
-              onOpen={setModalTaskId}
-            />
+            <BrainDumpRail tasks={dumpedTasks} onOpen={setModalTaskId} />
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <EisenhowerBoard onOpen={setModalTaskId} hideCompleted={hideCompleted} groupBy={groupBy} allGroupsExpanded={allGroupsExpanded} filteredTaskIds={filteredTaskIds} onOpenPlanner={() => setShowPlanner(true)} />

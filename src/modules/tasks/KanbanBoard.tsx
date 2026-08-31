@@ -16,9 +16,19 @@ import { loadCustomStatuses, sortCustomStatuses, saveCustomStatuses, moveStatus 
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { TaskCard } from './TaskCard'
 import { sortUrgentFirst } from './taskVisuals'
+import { suggestPlacement } from './BrainDumpRail'
 import { CountBadge } from './controls'
 
 // ── Types ────────────────────────────────────────────────────────────────────
+
+/** The board's own inbox. Pinned first, never renamed, never reordered. */
+const BRAIN_DUMP_ID = '__brain-dump'
+
+/** Uncategorised: captured but not yet placed in a quadrant. Same predicate the
+ *  matrix rail uses, so both views show the same pile. */
+function isDumped(t: Task): boolean {
+  return t.quadrant == null && !t.completed && t.status !== 'done' && t.status !== 'cancelled'
+}
 
 type BoardType = 'status' | 'company' | 'owner' | 'type' | 'scheduled'
 
@@ -133,7 +143,8 @@ function KanbanColumnComp({ column, onOpen, onColDragStart, onColDragOver, onCol
       ...(companies[0] ? { companyId: companies[0].id } : {}),
       status: 'open',
       completed: false,
-      boardStatus: column.id,
+      // A card captured in the dump has no status yet — that is the point
+      ...(column.id === BRAIN_DUMP_ID ? {} : { boardStatus: column.id }),
     })
     setNewTitle('')
     setAdding(false)
@@ -407,20 +418,33 @@ export function KanbanBoard({ onOpen, hideCompleted = false, filteredTaskIds }: 
 
   const columns = useMemo<Column[]>(() => {
     if (boardType === 'status') {
-      // 9B has no Inbox or Do column — the board is the status columns alone.
-      // Uncategorised work falls into the first one, which is where you decide.
+      // The board leads with the brain dump — the same uncategorised tasks the
+      // matrix rail holds — then the status columns. Placed work whose status is
+      // unset or stale falls into the first status, which is where you decide.
       const ordered = sortCustomStatuses(customStatuses)
       const known = new Set(ordered.map(s => s.id))
       const firstId = ordered[0]?.id
-      return ordered.map(st => ({
-        id:    st.id,
-        label: st.label,
-        color: st.color,
-        tasks: sortUrgentFirst(tasks.filter(t =>
-          t.boardStatus === st.id ||
-          (st.id === firstId && (!t.boardStatus || !known.has(t.boardStatus)))
-        )),
-      }))
+      const dumped = tasks.filter(isDumped)
+      const dumpedIds = new Set(dumped.map(t => t.id))
+      return [
+        {
+          id: BRAIN_DUMP_ID,
+          label: 'Brain dump',
+          color: '#C0A03A',
+          tasks: sortUrgentFirst(dumped),
+        },
+        ...ordered.map(st => ({
+          id:    st.id,
+          label: st.label,
+          color: st.color,
+          tasks: sortUrgentFirst(tasks.filter(t =>
+            !dumpedIds.has(t.id) && (
+              t.boardStatus === st.id ||
+              (st.id === firstId && (!t.boardStatus || !known.has(t.boardStatus)))
+            )
+          )),
+        })),
+      ]
     }
 
     if (boardType === 'company') {
@@ -509,7 +533,9 @@ export function KanbanBoard({ onOpen, hideCompleted = false, filteredTaskIds }: 
   function handleColDrop(targetId: string) {
     const fromId = dragColRef.current
     if (!fromId || fromId === targetId) return
-    const order = orderedColumns.map(c => c.id)
+    // The brain dump stays where it is, at the head of the board
+    if (fromId === BRAIN_DUMP_ID || targetId === BRAIN_DUMP_ID) { dragColRef.current = null; return }
+    const order = orderedColumns.filter(c => c.id !== BRAIN_DUMP_ID).map(c => c.id)
     const from = order.indexOf(fromId); const to = order.indexOf(targetId)
     if (from === -1 || to === -1) return
     const next = [...order]; next.splice(from, 1); next.splice(to, 0, fromId)
@@ -544,10 +570,19 @@ export function KanbanBoard({ onOpen, hideCompleted = false, filteredTaskIds }: 
     const task = tasks.find(t => t.id === taskId)
 
     if (boardType === 'status') {
-      if (hasPlannedStatus && columnId === 'planned') {
+      if (columnId === BRAIN_DUMP_ID) {
+        // Back to the pile: it keeps its status, it just loses its placement
+        updateTask(taskId, { quadrant: null })
+      } else if (hasPlannedStatus && columnId === 'planned') {
         setPendingPlanTask({ taskId, title: task?.title ?? '' })
       } else {
-        updateTask(taskId, { boardStatus: columnId })
+        // Leaving the dump means the task gets placed, so give it the quadrant
+        // its own fields imply — the same call the rail's auto-distribute makes.
+        const leaving = task && isDumped(task)
+        updateTask(taskId, {
+          boardStatus: columnId,
+          ...(leaving ? { quadrant: suggestPlacement(task).quadrant } : {}),
+        })
       }
     } else if (boardType === 'company') {
       if (columnId === 'personal') {
@@ -595,7 +630,7 @@ export function KanbanBoard({ onOpen, hideCompleted = false, filteredTaskIds }: 
               onColDrop={handleColDrop}
               boardType={boardType}
               onBoardType={saveBoardType}
-              onRename={boardType === 'status' ? renameStatus : undefined}
+              onRename={boardType === 'status' && col.id !== BRAIN_DUMP_ID ? renameStatus : undefined}
             />
           ))}
         </div>

@@ -53,7 +53,6 @@ function fmtWeekRange(startKey: string): string {
 // ─── Frequency options ────────────────────────────────────────────────────────
 
 const FREQ_OPTS = ['daily', 'weekdays', 'weekly'] as const
-type Freq = typeof FREQ_OPTS[number]
 
 // ─── Emoji picker ─────────────────────────────────────────────────────────────
 
@@ -66,6 +65,74 @@ const EMOJIS = [
   '🌿','☀️','🌙','🧹','🛁','🚿','💤','🌅','🌳','🌸','🪴','🌈','🌊','🏔️','🦋',
   '💎','🌟','⭐','🎁','💫','🙏','❤️','🤝','😊','🧡','💛','💚','💙','💜','🤍',
 ]
+
+/** Reads a picked file into a data URL, downscaled so localStorage can hold it. */
+function readHabitImage(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onerror = () => reject(new Error('unreadable'))
+    reader.onload = () => {
+      const img = new Image()
+      img.onerror = () => reject(new Error('not an image'))
+      img.onload = () => {
+        const MAX = 640
+        const scale = Math.min(1, MAX / Math.max(img.width, img.height))
+        const w = Math.round(img.width * scale)
+        const h = Math.round(img.height * scale)
+        const canvas = document.createElement('canvas')
+        canvas.width = w; canvas.height = h
+        const ctx = canvas.getContext('2d')
+        if (!ctx) { resolve(String(reader.result)); return }
+        ctx.drawImage(img, 0, 0, w, h)
+        resolve(canvas.toDataURL('image/jpeg', 0.82))
+      }
+      img.src = String(reader.result)
+    }
+    reader.readAsDataURL(file)
+  })
+}
+
+/** Picture well: shows the habit's photo, or its emoji until one is picked. */
+function HabitImagePicker({ image, emoji, onChange, size = 54 }: {
+  image?: string
+  emoji: string
+  onChange: (v: string | undefined) => void
+  size?: number
+}) {
+  const ref = useRef<HTMLInputElement>(null)
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, flexShrink: 0 }}>
+      <button
+        type="button"
+        onClick={() => ref.current?.click()}
+        title={image ? 'Change picture' : 'Add a picture'}
+        style={{
+          width: size, height: size, borderRadius: 13, padding: 0, cursor: 'pointer',
+          overflow: 'hidden', background: '#FAF7EC', border: '1px solid #E8E1CE',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: Math.round(size * 0.5), lineHeight: 1,
+        }}>
+        {image
+          ? <img src={image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+          : (emoji || '🎯')}
+      </button>
+      <input
+        ref={ref} type="file" accept="image/*" style={{ display: 'none' }}
+        onChange={async e => {
+          const file = e.target.files?.[0]
+          e.target.value = ''
+          if (!file) return
+          try { onChange(await readHabitImage(file)) } catch { /* not a usable image */ }
+        }} />
+      <button
+        type="button"
+        onClick={() => { if (image) onChange(undefined); else ref.current?.click() }}
+        style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#9B9180', fontSize: 10, fontFamily: 'inherit' }}>
+        {image ? 'Remove' : 'Picture'}
+      </button>
+    </div>
+  )
+}
 
 function EmojiBtn({ value, onSelect }: { value: string; onSelect: (e: string) => void }) {
   const [open, setOpen] = useState(false)
@@ -194,130 +261,6 @@ function QuantityControl({ value, goal, unit, onSet }: { value: number; goal?: n
   )
 }
 
-// ─── Add / Edit habit form ─────────────────────────────────────────────────────
-
-interface HabitFormState {
-  name: string; emoji: string; color: string; freq: Freq
-  type: 'boolean' | 'quantity'; goal: string; unit: string
-}
-
-function HabitForm({ initial, colors, onSave, onCancel, saveLabel }: {
-  initial: HabitFormState; colors: string[]
-  onSave: (s: HabitFormState) => void; onCancel: () => void; saveLabel?: string
-}) {
-  const [s, setS] = useState<HabitFormState>(initial)
-  const update = (patch: Partial<HabitFormState>) => setS(prev => ({ ...prev, ...patch }))
-  const valid = s.name.trim() !== '' && (s.type === 'boolean' || (parseFloat(s.goal) > 0 && s.unit.trim() !== ''))
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      {/* Picture — the palette, or anything you type */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-          <span style={{
-            width: 54, height: 54, borderRadius: 13, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 28, background: '#FAF7EC', border: '1px solid #E8E1CE',
-          }}>{s.emoji || '🎯'}</span>
-          <input
-            value={s.emoji}
-            onChange={e => update({ emoji: [...e.target.value].slice(-2).join('') })}
-            placeholder="type"
-            title="Type or paste any emoji"
-            style={{
-              width: 54, boxSizing: 'border-box', textAlign: 'center', background: '#FAF7EC',
-              border: '1px solid #E8E1CE', borderRadius: 7, padding: '4px 0', fontSize: 13,
-              color: '#191712', outline: 'none',
-            }} />
-        </div>
-        <div style={{
-          flex: 1, minWidth: 0, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(34px, 1fr))',
-          gap: 5, maxHeight: 118, overflowY: 'auto',
-        }}>
-          {EMOJIS.map(e => (
-            <button key={e} onClick={() => update({ emoji: e })}
-              style={{ fontSize: 17, height: 34, padding: 0, background: s.emoji === e ? '#FAF7EC' : 'transparent', border: `1px solid ${s.emoji === e ? '#E8E1CE' : 'transparent'}`, borderRadius: 7, cursor: 'pointer' }}>
-              {e}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Name */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-        <label style={{ fontSize: 11, fontWeight: 600, color: '#6C6553', textTransform: 'uppercase', letterSpacing: '0.8px' }}>Name</label>
-        <input value={s.name} onChange={e => update({ name: e.target.value })} placeholder="e.g. Morning meditation"
-          style={{ background: '#FAF7EC', border: '1px solid #E8E1CE', borderRadius: 8, padding: '8px 11px', fontSize: 13, color: '#191712', outline: 'none' }} />
-      </div>
-
-      {/* Type & Goal */}
-      <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-          <label style={{ fontSize: 11, fontWeight: 600, color: '#6C6553', textTransform: 'uppercase', letterSpacing: '0.8px' }}>Type</label>
-          <div style={{ display: 'flex', gap: 6 }}>
-            {(['boolean', 'quantity'] as const).map(t => (
-              <button key={t} onClick={() => update({ type: t })}
-                style={{ padding: '5px 12px', borderRadius: 7, fontSize: 12, cursor: 'pointer', background: s.type === t ? '#191712' : '#FAF7EC', color: s.type === t ? '#FDF8E7' : '#6C6553', border: `1px solid ${s.type === t ? '#191712' : '#E8E1CE'}` }}>
-                {t === 'boolean' ? 'Done/Undone' : 'Measurable'}
-              </button>
-            ))}
-          </div>
-        </div>
-        {s.type === 'quantity' && (
-          <>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-              <label style={{ fontSize: 11, fontWeight: 600, color: '#6C6553', textTransform: 'uppercase', letterSpacing: '0.8px' }}>Goal</label>
-              <input value={s.goal} onChange={e => update({ goal: e.target.value })} type="number" min={1} placeholder="e.g. 8"
-                style={{ width: 72, background: '#FAF7EC', border: '1px solid #E8E1CE', borderRadius: 8, padding: '8px 11px', fontSize: 13, color: '#191712', outline: 'none' }} />
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-              <label style={{ fontSize: 11, fontWeight: 600, color: '#6C6553', textTransform: 'uppercase', letterSpacing: '0.8px' }}>Unit</label>
-              <input value={s.unit} onChange={e => update({ unit: e.target.value })} placeholder="glasses, km…"
-                style={{ width: 120, background: '#FAF7EC', border: '1px solid #E8E1CE', borderRadius: 8, padding: '8px 11px', fontSize: 13, color: '#191712', outline: 'none' }} />
-            </div>
-          </>
-        )}
-      </div>
-
-      {/* Frequency */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-        <label style={{ fontSize: 11, fontWeight: 600, color: '#6C6553', textTransform: 'uppercase', letterSpacing: '0.8px' }}>Frequency</label>
-        <div style={{ display: 'flex', gap: 6 }}>
-          {FREQ_OPTS.map(f => (
-            <button key={f} onClick={() => update({ freq: f })}
-              style={{ padding: '5px 12px', borderRadius: 7, fontSize: 12, cursor: 'pointer', background: s.freq === f ? '#191712' : '#FAF7EC', color: s.freq === f ? '#FDF8E7' : '#6C6553', border: `1px solid ${s.freq === f ? '#191712' : '#E8E1CE'}` }}>
-              {f}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Color */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-        <label style={{ fontSize: 11, fontWeight: 600, color: '#6C6553', textTransform: 'uppercase', letterSpacing: '0.8px' }}>Accent</label>
-        <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-          {colors.map(c => (
-            <button key={c} onClick={() => update({ color: c })}
-              style={{ width: 22, height: 22, borderRadius: '50%', background: c, border: `2px solid ${s.color === c ? '#191712' : 'transparent'}`, cursor: 'pointer', padding: 0 }} />
-          ))}
-        </div>
-      </div>
-
-      {/* Actions */}
-      <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-        <button onClick={onCancel}
-          style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 14px', borderRadius: 7, background: 'transparent', border: '1px solid #E8E1CE', color: '#6C6553', fontSize: 12, cursor: 'pointer' }}>
-          <X size={12} /> Cancel
-        </button>
-        <button onClick={() => valid && onSave(s)} disabled={!valid}
-          style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 16px', borderRadius: 7, background: valid ? '#F5D14E' : '#FAF7EC', border: 'none', color: valid ? '#191712' : '#6C6553', fontSize: 12, fontWeight: 600, cursor: valid ? 'pointer' : 'default', opacity: valid ? 1 : 0.5 }}>
-          <Plus size={12} /> {saveLabel ?? 'Add Habit'}
-        </button>
-      </div>
-    </div>
-  )
-}
-
-// ─── Progress ring ────────────────────────────────────────────────────────────
 
 function ProgressRing({ done, total }: { done: number; total: number }) {
   const pct = total > 0 ? done / total : 0
@@ -353,7 +296,7 @@ function FieldRow({ label, children }: { label: string; children: React.ReactNod
 }
 
 function WallCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, paletteIdx, isEditing, onEdit }: {
-  habit: { id: string; name: string; emoji: string; type?: string; goal?: number; unit?: string }
+  habit: { id: string; name: string; emoji: string; type?: string; goal?: number; unit?: string; image?: string }
   todayDone: boolean
   streak: number
   qtyValue: number
@@ -374,7 +317,9 @@ function WallCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, p
       <span style={{ position: 'relative', width: '66.6%', flexShrink: 0 }}>
         {/* Warm gradient fill simulating photo */}
         <span style={{ position: 'absolute', inset: 0, background: `linear-gradient(135deg, ${bgColor} 0%, ${bgColor}CC 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <span style={{ fontSize: 52, opacity: 0.18 }}>{habit.emoji}</span>
+          {habit.image
+            ? <img src={habit.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+            : <span style={{ fontSize: 52, opacity: 0.18 }}>{habit.emoji}</span>}
         </span>
         {/* Dark gradient overlay */}
         <span style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'linear-gradient(180deg,rgba(25,23,18,.46) 0%,rgba(25,23,18,.10) 40%,rgba(25,23,18,.52) 100%)' }} />
@@ -436,7 +381,7 @@ function WallCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, p
 // ─── Fill view card (12B) ─────────────────────────────────────────────────────
 
 function FillCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, onDecrement, paletteIdx, isSelected, onSelect }: {
-  habit: { id: string; name: string; emoji: string; type?: string; goal?: number; unit?: string }
+  habit: { id: string; name: string; emoji: string; type?: string; goal?: number; unit?: string; image?: string }
   todayDone: boolean
   streak: number
   qtyValue: number
@@ -526,7 +471,9 @@ function FillCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, o
       {/* Background */}
       <span style={{ position: 'absolute', inset: 0, filter: filterStyle, opacity: pct === 0 ? 0.42 : 0.76 }}>
         <span style={{ position: 'absolute', inset: 0, background: `linear-gradient(135deg, ${bgColor} 0%, ${bgColor}AA 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <span style={{ fontSize: 72, opacity: 0.25 }}>{habit.emoji}</span>
+          {habit.image
+            ? <img src={habit.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+            : <span style={{ fontSize: 72, opacity: 0.25 }}>{habit.emoji}</span>}
         </span>
       </span>
       {/* Dark gradient */}
@@ -606,9 +553,10 @@ function FillCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, o
 // how it is going, and — for a counter — today's number with its controls.
 
 function HabitDetailPanel({
-  habit, hLogs, qtyToday, today, onClose, onUpdate, onDelete, onToggleToday, onSetQuantity,
+  habit, hLogs, qtyToday, today, colors, onClose, onUpdate, onDelete, onToggleToday, onSetQuantity,
 }: {
   habit: Habit
+  colors: string[]
   hLogs: string[]
   qtyToday: number
   today: string
@@ -638,22 +586,35 @@ function HabitDetailPanel({
 
   const last30 = Array.from({ length: 30 }, (_, i) => offsetDays(today, -i))
   const completionRate = Math.round((last30.filter(d => hLogs.includes(d)).length / 30) * 100)
-  const heatmapDays = Array.from({ length: 182 }, (_, i) => offsetDays(today, -(181 - i)))
-  const recentCheckins = [...hLogs].sort().reverse().slice(0, 7)
+  const heatmapDays = Array.from({ length: 91 }, (_, i) => offsetDays(today, -(90 - i)))
+  const recentCheckins = [...hLogs].sort().reverse().slice(0, 3)
 
   const pct = hasGoal ? Math.min(100, Math.round((qtyToday / habit.goal!) * 100)) : 0
 
   return (
     <div style={{
       width: 288, flexShrink: 0, background: '#FFFFFF', border: '1px solid #E8E1CE',
-      borderRadius: 18, padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 16,
+      borderRadius: 18, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 13,
       alignSelf: 'flex-start',
+      // Stay inside the page: the shell scrolls the module, not this card
+      maxHeight: 'calc(100vh - 250px)', overflowY: 'auto', scrollbarWidth: 'thin',
     }}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <span style={{ fontSize: 30, lineHeight: 1 }}>{habit.emoji}</span>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 14.5, fontWeight: 700, color: '#191712', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{habit.name}</div>
+      {/* Header — picture, name, and what the habit is in one line */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+        <HabitImagePicker image={habit.image} emoji={habit.emoji} size={46}
+          onChange={v => onUpdate({ image: v })} />
+        <div style={{ flex: 1, minWidth: 0, paddingTop: 2 }}>
+          <input
+            value={habit.name}
+            onChange={e => onUpdate({ name: e.target.value })}
+            placeholder="Name this habit"
+            style={{
+              width: '100%', boxSizing: 'border-box', background: 'transparent', border: 'none',
+              borderBottom: '1px solid transparent', outline: 'none', padding: '0 0 2px',
+              fontSize: 14.5, fontWeight: 700, color: '#191712', fontFamily: 'inherit', textAlign: 'left',
+            }}
+            onFocus={e => { e.currentTarget.style.borderBottomColor = '#E8E1CE' }}
+            onBlur={e => { e.currentTarget.style.borderBottomColor = 'transparent' }} />
           <div style={{ fontSize: 10.5, color: '#9B9180', marginTop: 2 }}>
             {habit.frequency ?? 'daily'}
             {isQty && ` · ${hasGoal ? `${habit.goal} ${habit.unit ?? 'times'} a day` : `counts ${habit.unit ?? 'times'}, no target`}`}
@@ -662,6 +623,45 @@ function HabitDetailPanel({
         <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9B9180', padding: 2, display: 'flex' }}>
           <X size={14} />
         </button>
+      </div>
+
+      {/* What kind of habit this is */}
+      <div>
+        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: '#6C6553', marginBottom: 6 }}>TRACK AS</div>
+        <div style={{ display: 'flex', gap: 5 }}>
+          {(['boolean', 'quantity'] as const).map(t => (
+            <button key={t} onClick={() => onUpdate({ type: t })}
+              style={{ flex: 1, padding: '5px 0', borderRadius: 7, border: '1px solid #E8E1CE', background: (habit.type ?? 'boolean') === t ? '#191712' : '#FAF7EC', color: (habit.type ?? 'boolean') === t ? '#FDF8E7' : '#6C6553', fontSize: 10, fontWeight: (habit.type ?? 'boolean') === t ? 600 : 400, cursor: 'pointer' }}>
+              {t === 'boolean' ? 'Done / not done' : 'A count'}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Icon and colour — what the wall and fill cards use */}
+      <div>
+        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: '#6C6553', marginBottom: 6 }}>ICON &amp; COLOUR</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <EmojiBtn value={habit.emoji} onSelect={v => onUpdate({ emoji: v })} />
+          <input
+            value={habit.emoji}
+            onChange={e => onUpdate({ emoji: [...e.target.value].slice(-2).join('') })}
+            title="Type or paste any emoji"
+            style={{
+              width: 46, boxSizing: 'border-box', textAlign: 'center', background: '#FAF7EC',
+              border: '1px solid #E8E1CE', borderRadius: 7, padding: '3px 0', fontSize: 12.5,
+              color: '#191712', outline: 'none', fontFamily: 'inherit',
+            }} />
+          <div style={{ flex: 1, minWidth: 0, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+            {colors.slice(0, 12).map(c => (
+              <button key={c} onClick={() => onUpdate({ color: c })} title={c}
+                style={{
+                  width: 15, height: 15, borderRadius: '50%', background: c, cursor: 'pointer', padding: 0,
+                  border: habit.color === c ? '2px solid #191712' : '1px solid rgba(25,23,18,.12)',
+                }} />
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* Today — the one thing you came here to change */}
@@ -701,24 +701,24 @@ function HabitDetailPanel({
       </div>
 
       {/* Stats row */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 6 }}>
         {[
           { label: 'Streak', value: `${streak}d`, color: streak > 0 ? '#5F7038' : '#191712' },
           { label: 'Best', value: `${bestStreak}d`, color: '#191712' },
           { label: 'Total', value: `${totalCheckIns}`, color: '#191712' },
           { label: '30-day', value: `${completionRate}%`, color: completionRate >= 70 ? '#5F7038' : '#191712' },
         ].map(st => (
-          <div key={st.label} style={{ background: '#FAF7EC', borderRadius: 10, padding: '9px 12px' }}>
-            <div style={{ fontFamily: 'var(--sb-font-num)', fontSize: 22, fontWeight: 700, letterSpacing: '-0.03em', color: st.color, lineHeight: 1 }}>{st.value}</div>
-            <div style={{ fontSize: 10, color: '#9B9180', marginTop: 3, fontWeight: 600 }}>{st.label}</div>
+          <div key={st.label} style={{ background: '#FAF7EC', borderRadius: 9, padding: '7px 8px', minWidth: 0 }}>
+            <div style={{ fontFamily: 'var(--sb-font-num)', fontSize: 17, fontWeight: 700, letterSpacing: '-0.03em', color: st.color, lineHeight: 1 }}>{st.value}</div>
+            <div style={{ fontSize: 9, color: '#9B9180', marginTop: 3, fontWeight: 600 }}>{st.label}</div>
           </div>
         ))}
       </div>
 
       {/* 6-month heatmap */}
       <div>
-        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: '#6C6553', marginBottom: 7 }}>6-MONTH HEATMAP</div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(26, 1fr)', gap: 2 }}>
+        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: '#6C6553', marginBottom: 6 }}>LAST 13 WEEKS</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(13, 1fr)', gap: 2 }}>
           {heatmapDays.map(d => {
             const done = hLogs.includes(d)
             const isT = d === today
@@ -732,7 +732,7 @@ function HabitDetailPanel({
           })}
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 5 }}>
-          <span style={{ fontSize: 9, color: '#9B9180' }}>6 months ago</span>
+          <span style={{ fontSize: 9, color: '#9B9180' }}>13 weeks ago</span>
           <span style={{ fontSize: 9, color: '#9B9180' }}>Today</span>
         </div>
       </div>
@@ -795,14 +795,14 @@ function HabitDetailPanel({
       </div>
 
       {/* Archive / Delete */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <div style={{ display: 'flex', gap: 6 }}>
         <button onClick={() => { onUpdate({ isActive: false }); onClose() }}
-          style={{ padding: '7px 0', borderRadius: 8, border: '1px solid #E8E1CE', background: 'transparent', color: '#9B9180', fontSize: 11.5, cursor: 'pointer' }}>
-          Archive habit
+          style={{ flex: 1, padding: '7px 0', borderRadius: 8, border: '1px solid #E8E1CE', background: 'transparent', color: '#9B9180', fontSize: 11.5, cursor: 'pointer' }}>
+          Archive
         </button>
         <button onClick={() => { onDelete(); onClose() }}
-          style={{ padding: '7px 0', borderRadius: 8, border: '1px solid rgba(180,82,58,0.3)', background: 'rgba(180,82,58,0.06)', color: '#B4523A', fontSize: 11.5, cursor: 'pointer' }}>
-          Delete habit
+          style={{ flex: 1, padding: '7px 0', borderRadius: 8, border: '1px solid rgba(180,82,58,0.3)', background: 'rgba(180,82,58,0.06)', color: '#B4523A', fontSize: 11.5, cursor: 'pointer' }}>
+          Delete
         </button>
       </div>
     </div>
@@ -821,7 +821,6 @@ export function HabitsModule() {
   const [weekAnchor, setWeekAnchor] = useState(() => weekStart(today))
   const days = weekDays(weekAnchor)
 
-  const [addingHabit, setAdding] = useState(false)
   const dragHabitIdx = useRef<number | null>(null)
   const [view, setView] = useState<'table' | 'wall' | 'fill'>('table')
   const [fillSelected, setFillSelected] = useState<string | null>(null)
@@ -905,6 +904,22 @@ export function HabitsModule() {
     return Math.floor(msOff / 86400000)
   })()
 
+  /** A new habit is a real habit straight away: a box appears in the view you
+   *  are in, and its record opens on the right for you to fill in. */
+  function createHabit() {
+    const id = storeAdd({
+      name: 'New habit',
+      emoji: '🎯',
+      color: HABIT_COLORS[habits.length % HABIT_COLORS.length],
+      frequency: 'daily',
+      isActive: true,
+      type: 'boolean',
+    })
+    setFillSelected(id)
+    setWallEditId(null)
+    setDetailHabitId(id)
+  }
+
   const isCurrentWeek = weekAnchor === weekStart(today)
 
   // Week bar data: for each day of week, compute completion % across all habits
@@ -950,7 +965,7 @@ export function HabitsModule() {
             ))}
           </span>
           {/* New habit CTA */}
-          <button onClick={() => setAdding(true)}
+          <button onClick={createHabit}
             style={{ display: 'flex', alignItems: 'center', gap: 8, boxSizing: 'border-box', height: 34, padding: '0 15px', borderRadius: 999, background: '#F5D14E', color: '#191712', fontSize: 12.5, fontWeight: 600, border: 'none', cursor: 'pointer', boxShadow: '0 2px 0 rgba(25,23,18,.14)', flexShrink: 0 }}>
             <Plus size={15} />
             New habit
@@ -1210,7 +1225,7 @@ export function HabitsModule() {
         </div>
 
         {/* Empty state */}
-        {activeHabits.length === 0 && !addingHabit && (
+        {activeHabits.length === 0 && (
           <div style={{ padding: 32, textAlign: 'center', color: '#6C6553', fontSize: 13 }}>
             No habits yet. Click "New habit" to get started.
           </div>
@@ -1371,6 +1386,7 @@ export function HabitsModule() {
           hLogs={logs[detailHabit.id] ?? []}
           qtyToday={qtyLogs[detailHabit.id]?.[today] ?? 0}
           today={today}
+          colors={HABIT_COLORS}
           onClose={() => setDetailHabitId(null)}
           onUpdate={patch => updateHabit(detailHabit.id, patch)}
           onDelete={() => deleteHabit(detailHabit.id)}
@@ -1379,28 +1395,6 @@ export function HabitsModule() {
         />
       )}
       </div>
-
-      {/* ─── Add habit form ─────────────────────────────────────────────────── */}
-      {addingHabit && (
-        <div style={{ background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 14, padding: '18px 20px' }}>
-          <p style={{ margin: '0 0 14px', fontSize: 12, fontWeight: 600, color: '#6C6553', textTransform: 'uppercase', letterSpacing: '0.8px' }}>New Habit</p>
-          <HabitForm
-            initial={{ name: '', emoji: '🎯', color: HABIT_COLORS[0], freq: 'daily', type: 'boolean', goal: '', unit: '' }}
-            colors={HABIT_COLORS}
-            onSave={s => {
-              storeAdd({
-                name: s.name.trim(), emoji: s.emoji, color: s.color,
-                frequency: s.freq, isActive: true,
-                type: s.type,
-                goal: s.type === 'quantity' ? parseFloat(s.goal) : undefined,
-                unit: s.type === 'quantity' ? s.unit.trim() : undefined,
-              })
-              setAdding(false)
-            }}
-            onCancel={() => setAdding(false)}
-          />
-        </div>
-      )}
 
       {/* ─── All-done banner ────────────────────────────────────────────────── */}
       {todayDone === totalActive && totalActive > 0 && (
