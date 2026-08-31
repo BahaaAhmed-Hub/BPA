@@ -344,7 +344,7 @@ function WallCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, p
 }) {
   const bgColor = WALL_PALETTE[paletteIdx % WALL_PALETTE.length]
   const isQty = habit.type === 'quantity'
-  const pct = isQty && habit.goal ? Math.min(100, Math.round((qtyValue / habit.goal) * 100)) : (todayDone ? 100 : 0)
+  const _pct2 = isQty && habit.goal ? Math.min(100, Math.round((qtyValue / habit.goal) * 100)) : (todayDone ? 100 : 0); void _pct2
   const weekDots = Array.from({ length: 7 }, (_, i) => i < (streak % 7) ? '#191712' : '')
 
   return (

@@ -57,7 +57,7 @@ export function BalanceScreen() {
   const [txModal, setTxModal] = useState<{ open: boolean; tx: Transaction | null }>({ open: false, tx: null })
   const [hoveredAccountId, setHoveredAccountId] = useState<string | null>(null)
 
-  const netWorth = accounts.reduce((s, a) => s + a.balance, 0)
+  const _netWorth = accounts.reduce((s, a) => s + a.balance, 0); void _netWorth
 
   const paymentAccounts  = accounts.filter(a => a.accountType === 'payment' || a.accountType === 'wallet')
   const creditCards      = accounts.filter(a => a.accountType === 'credit_card')

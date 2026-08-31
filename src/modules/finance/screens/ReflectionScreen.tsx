@@ -244,7 +244,7 @@ export function ReflectionScreen(_props?: any) {
 
 // ── Sub-components ──────────────────────────────────────────────────────────
 
-function SectionHeader({ label, colCount, colWidth, nameWidth, monthTotals, rowTotal }: {
+function SectionHeader({ label, colCount: _colCount, colWidth, nameWidth: _nameWidth, monthTotals, rowTotal }: {
   label: string; colCount: number; colWidth: number; nameWidth: number
   monthTotals: number[]; rowTotal: number
 }) {
@@ -265,7 +265,7 @@ function SectionHeader({ label, colCount, colWidth, nameWidth, monthTotals, rowT
   )
 }
 
-function TotalRow({ label, months, total, sign, COL_W, NAME_W }: {
+function TotalRow({ label, months, total, sign, COL_W, NAME_W: _NAME_W }: {
   label: string; months: number[]; total: number; sign: 1 | -1
   COL_W: number; NAME_W: number
 }) {
@@ -287,7 +287,7 @@ function TotalRow({ label, months, total, sign, COL_W, NAME_W }: {
   )
 }
 
-function NetRow({ label, months, total, COL_W, NAME_W }: {
+function NetRow({ label, months, total, COL_W, NAME_W: _NAME_W2 }: {
   label: string; months: number[]; total: number; COL_W: number; NAME_W: number
 }) {
   return (
@@ -307,7 +307,7 @@ function NetRow({ label, months, total, COL_W, NAME_W }: {
   )
 }
 
-function CumulativeRow({ months, COL_W, NAME_W }: { months: number[]; COL_W: number; NAME_W: number }) {
+function CumulativeRow({ months, COL_W, NAME_W: _NAME_W3 }: { months: number[]; COL_W: number; NAME_W: number }) {
   return (
     <tr style={{ background: '#191712', borderBottom: '1px solid #2C2920' }}>
       <td style={{ padding: '0 14px', height: 40, position: 'sticky', left: 0, background: '#191712', zIndex: 1 }}>

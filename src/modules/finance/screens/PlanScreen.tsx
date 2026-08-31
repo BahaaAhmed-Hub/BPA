@@ -87,7 +87,7 @@ const CHART_BARS = [
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function PlanScreen() {
-  const { accounts } = useFinanceStore()
+  const { accounts: _accounts } = useFinanceStore(); void _accounts
   const [selectedTarget, setSelectedTarget] = useState('cib-world')
   const [tab, setTab] = useState<'Plan' | 'Simulate' | 'History'>('Plan')
   const [strategy, setStrategy] = useState<Strategy>('highest')
@@ -248,7 +248,7 @@ export function PlanScreen() {
               </div>
 
               {/* Rows */}
-              {DEMO_PLAN.map((row, idx) => (
+              {DEMO_PLAN.map((row, _idx) => (
                 <div key={row.month} style={{ display: 'grid', gridTemplateColumns: '64px 1fr 1fr 1fr 1fr 118px 84px 1fr', height: 36, flexShrink: 0, borderTop: `1px solid #F2EDDF`, background: row.rowBg }}>
                   {/* Month */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0 9px' }}>

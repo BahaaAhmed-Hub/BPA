@@ -2174,6 +2174,168 @@ function FinanceSection() {
   )
 }
 
+// ─── Automation Section (11F) ─────────────────────────────────────────────────
+
+interface AutomationRule {
+  id: string
+  action: string
+  trigger: string
+  enabled: boolean
+}
+
+const DEFAULT_AUTOMATION_RULES: AutomationRule[] = [
+  { id: 'morning-brief',  action: 'Write the morning brief',           trigger: 'every day at 06:40, before you wake',               enabled: true },
+  { id: 'draft-replies',  action: 'Draft replies for NEEDS YOU mail',  trigger: 'a thread is marked needs-you and sits over 4 hours',  enabled: true },
+  { id: 'block-focus',    action: 'Block focus time for P0 tasks',     trigger: 'a P0 task has no calendar block by 09:00',            enabled: true },
+  { id: 'distribute-dump',action: 'Distribute the dump',               trigger: 'the brain dump passes 12 tasks',                     enabled: false },
+]
+
+function AutomationSection() {
+  const [rules, setRules] = useState<AutomationRule[]>(() => {
+    try {
+      const saved = localStorage.getItem('professor-automation-rules')
+      return saved ? JSON.parse(saved) : DEFAULT_AUTOMATION_RULES
+    } catch { return DEFAULT_AUTOMATION_RULES }
+  })
+
+  function toggle(id: string) {
+    const next = rules.map(r => r.id === id ? { ...r, enabled: !r.enabled } : r)
+    setRules(next)
+    try { localStorage.setItem('professor-automation-rules', JSON.stringify(next)) } catch { /**/ }
+  }
+
+  return (
+    <div>
+      <p style={{ margin: '0 0 16px', fontSize: 12.5, color: '#6C6553', lineHeight: 1.5 }}>
+        Rules Professor runs automatically in the background — each fires on its trigger and takes action without interrupting you.
+      </p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {rules.map(rule => (
+          <div key={rule.id} style={{
+            display: 'flex', alignItems: 'flex-start', gap: 14,
+            padding: '14px 16px', borderRadius: 12,
+            background: rule.enabled ? '#FAFDF7' : '#FDFCF9',
+            border: `1px solid ${rule.enabled ? '#C8DAB0' : '#E8E1CE'}`,
+            transition: 'all 0.15s',
+          }}>
+            <Toggle checked={rule.enabled} onChange={() => toggle(rule.id)} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: rule.enabled ? '#191712' : '#9B9180', lineHeight: 1.3 }}>
+                {rule.action}
+              </p>
+              <p style={{ margin: '3px 0 0', fontSize: 11.5, color: '#6C6553', lineHeight: 1.4 }}>
+                <span style={{ fontWeight: 600, color: '#5F7038', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em' }}>WHEN</span>
+                &nbsp;{rule.trigger}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+      <button style={{
+        marginTop: 14, display: 'flex', alignItems: 'center', gap: 6,
+        padding: '8px 14px', borderRadius: 9, background: '#FFFFFF',
+        border: '1px solid #E8E1CE', fontSize: 12.5, fontWeight: 500,
+        color: '#6C6553', cursor: 'pointer',
+      }}>
+        <Plus size={13} /> Add rule
+      </button>
+
+      {/* Reminders sub-section (reuses NotificationsSection fields) */}
+      <div style={{ marginTop: 22, paddingTop: 20, borderTop: '1px solid #F0EBDC' }}>
+        <p style={{ margin: '0 0 12px', fontSize: 11.5, fontWeight: 700, letterSpacing: '0.1em', color: '#6C6553', textTransform: 'uppercase' }}>Reminders</p>
+        <_NotificationsReminders />
+      </div>
+    </div>
+  )
+}
+
+// Extracted from old NotificationsSection — shown as a sub-panel inside Automation
+function _NotificationsReminders() {
+  const [s, setS] = useState<AppSettings>(loadSettings)
+  function set(patch: Partial<AppSettings>) {
+    setS(prev => { const next = { ...prev, ...patch }; saveSettings(next); return next })
+  }
+  return <NotificationsSection s={s} set={set} />
+}
+
+// ─── Data & Privacy Section (companies → data & privacy) ─────────────────────
+
+function DataPrivacySection() {
+  const [exportStatus, setExportStatus] = useState<'idle' | 'exporting' | 'done'>('idle')
+
+  async function handleExport() {
+    setExportStatus('exporting')
+    await new Promise(r => setTimeout(r, 1200))
+    setExportStatus('done')
+    setTimeout(() => setExportStatus('idle'), 3000)
+  }
+
+  return (
+    <div>
+      {/* Data export card */}
+      <div style={{ marginBottom: 18 }}>
+        <p style={{ margin: '0 0 6px', fontSize: 12, fontWeight: 600, color: '#191712', textTransform: 'uppercase', letterSpacing: '0.09em' }}>Export</p>
+        <div style={{ padding: '14px 16px', borderRadius: 11, background: '#FAF7EC', border: '1px solid #E8E1CE' }}>
+          <p style={{ margin: '0 0 10px', fontSize: 12.5, color: '#6C6553', lineHeight: 1.5 }}>
+            Download a copy of all your data — tasks, habits, companies, finance envelopes & settings.
+          </p>
+          <button onClick={handleExport} style={{
+            display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 8,
+            background: '#FFFFFF', border: '1px solid #E8E1CE',
+            fontSize: 12.5, fontWeight: 500, color: '#191712', cursor: 'pointer',
+          }}>
+            <HardDrive size={13} />
+            {exportStatus === 'exporting' ? 'Preparing…' : exportStatus === 'done' ? 'Downloaded ✓' : 'Export all data'}
+          </button>
+        </div>
+      </div>
+
+      {/* Privacy controls */}
+      <div style={{ marginBottom: 18 }}>
+        <p style={{ margin: '0 0 6px', fontSize: 12, fontWeight: 600, color: '#191712', textTransform: 'uppercase', letterSpacing: '0.09em' }}>Privacy</p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+          {[
+            { label: 'Share usage analytics',  sub: 'Helps improve Professor', key: 'analytics' },
+            { label: 'Crash reporting',         sub: 'Automatic error reports',  key: 'crash' },
+          ].map((item, i, arr) => {
+            const [on, setOn] = useState(true)
+            return (
+              <div key={item.key} style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '11px 0',
+                borderBottom: i < arr.length - 1 ? '1px solid #F0EBDC' : 'none',
+              }}>
+                <div>
+                  <p style={{ margin: 0, fontSize: 13, fontWeight: 500, color: '#191712' }}>{item.label}</p>
+                  <p style={{ margin: '1px 0 0', fontSize: 11.5, color: '#9B9180' }}>{item.sub}</p>
+                </div>
+                <Toggle checked={on} onChange={setOn} />
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Account deletion */}
+      <div>
+        <p style={{ margin: '0 0 6px', fontSize: 12, fontWeight: 600, color: '#B4523A', textTransform: 'uppercase', letterSpacing: '0.09em' }}>Danger zone</p>
+        <div style={{ padding: '14px 16px', borderRadius: 11, background: 'rgba(180,82,58,0.04)', border: '1px solid rgba(180,82,58,0.22)' }}>
+          <p style={{ margin: '0 0 10px', fontSize: 12.5, color: '#6C6553', lineHeight: 1.5 }}>
+            Permanently delete your account and all associated data. This cannot be undone.
+          </p>
+          <button style={{
+            display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 8,
+            background: 'rgba(180,82,58,0.08)', border: '1px solid rgba(180,82,58,0.3)',
+            fontSize: 12.5, fontWeight: 500, color: '#B4523A', cursor: 'pointer',
+          }}>
+            <Trash2 size={13} /> Delete account
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── CHUNK 7: Main Settings component ────────────────────────────────────────
 
 export function Settings() {
@@ -2311,7 +2473,7 @@ export function Settings() {
 
     const errMsg = sectionError[id]
 
-    const Icon = meta.icon
+    const _Icon = meta.icon; void _Icon
     return (
       <div key={id}>
         {/* Section header — 11A design: large Outfit title + description + action buttons */}
@@ -2367,7 +2529,8 @@ export function Settings() {
         <div style={{ background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 14, padding: '22px 24px 24px', boxShadow: '0 1px 3px rgba(25,23,18,0.06)' }}>
           {id === 'profile'       && <ProfileSection       s={settings} set={update} />}
           {id === 'schedule'      && <ScheduleSection      s={settings} set={update} />}
-          {id === 'companies'     && <CompaniesSection     companies={companies}
+          {/* 11B: Accounts & companies → company cards (CompaniesSection) */}
+          {id === 'accounts'      && <CompaniesSection     companies={companies}
                                         setCompanies={c => { setCompanies(c); saveCompanies(c) }}
                                         accounts={[
                                           ...(primaryEmail ? [{
@@ -2383,14 +2546,22 @@ export function Settings() {
                                         ]} />}
           {id === 'habits'        && <HabitsSection />}
           {id === 'tasks'         && <TaskStatusesSection />}
-          {id === 'accounts'      && <AccountsSection      accounts={accounts}
-                                        setAccounts={a => { setAccounts(a) }}
-                                        primaryEmail={primaryEmail} />}
+          {/* Integrations → Google OAuth connections + calendar blocking rules */}
+          {id === 'blocking'      && <>
+            <AccountsSection accounts={accounts} setAccounts={a => { setAccounts(a) }} primaryEmail={primaryEmail} />
+            <div style={{ marginTop: 22, paddingTop: 20, borderTop: '1px solid #F0EBDC' }}>
+              <p style={{ margin: '0 0 12px', fontSize: 11.5, fontWeight: 700, letterSpacing: '0.1em', color: '#6C6553', textTransform: 'uppercase' }}>Calendar blocking rules</p>
+              <BlockingRulesSection />
+            </div>
+          </>}
           {id === 'professor'     && <ProfessorSection     s={settings} set={update} />}
-          {id === 'notifications' && <NotificationsSection s={settings} set={update} />}
+          {/* 11F: Automation → rule cards */}
+          {id === 'notifications' && <AutomationSection />}
           {id === 'appearance'    && <AppearanceSection    s={settings} set={update} />}
-          {id === 'blocking'      && <BlockingRulesSection />}
+          {/* Calendar blocking rules moved inside BlockingRulesSection; old Integrations slot replaced above */}
           {id === 'behavioral'    && <BehavioralSection />}
+          {/* Data & privacy → DataPrivacySection */}
+          {id === 'companies'     && <DataPrivacySection />}
           {id === 'finance'       && <FinanceSection />}
         </div>
       </div>

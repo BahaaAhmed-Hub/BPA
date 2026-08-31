@@ -62,17 +62,6 @@ const FUNDING_OPTIONS = [
   { id: 'manual',  label: 'Manual only' },
 ]
 
-const GOAL_ICONS: { icon: string; label: string }[] = [
-  { icon: '🏠', label: 'Home' },
-  { icon: '🛫', label: 'Travel' },
-  { icon: '💰', label: 'Savings' },
-  { icon: '📱', label: 'Tech' },
-  { icon: '🎓', label: 'Education' },
-  { icon: '🚗', label: 'Car' },
-  { icon: '🏥', label: 'Health' },
-  { icon: '🌙', label: 'Faith' },
-]
-
 // ─── Goal Card (left panel list) ──────────────────────────────────────────────
 
 function GoalCard({
