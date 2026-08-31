@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import {
-  ChevronLeft, ChevronRight, Calendar, Video, Users,
+  ChevronLeft, ChevronRight, ChevronDown, Layers, Calendar, Video, Users,
   Sparkles, MapPin, RefreshCw, X, Eye, EyeOff,
   CheckCircle2, XCircle, Link, Phone, Repeat,
   ExternalLink, AlertCircle, Shield, Copy, Trash2,
@@ -86,6 +86,18 @@ const MOCK_COMPANIES: DbCompany[] = [
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
 // ─── Date/time helpers ────────────────────────────────────────────────────────
+const CAL_ICON_BTN: React.CSSProperties = {
+  width: 36, height: 36, boxSizing: 'border-box', borderRadius: 10, flexShrink: 0,
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  background: '#FFFFFF', border: '1px solid #E8E1CE', color: '#6C6553', cursor: 'pointer', padding: 0,
+}
+const CAL_PILL: React.CSSProperties = {
+  display: 'inline-flex', alignItems: 'center', gap: 7, height: 36, boxSizing: 'border-box',
+  padding: '0 14px', borderRadius: 999, flexShrink: 0,
+  background: '#FFFFFF', border: '1px solid #E8E1CE', color: '#191712',
+  fontSize: 13, fontFamily: 'inherit', cursor: 'pointer',
+}
+
 function getWeekStart(date: Date): Date {
   const d = new Date(date)
   d.setDate(d.getDate() - d.getDay())
@@ -1601,7 +1613,12 @@ export function CalendarIntelligence() {
   const user = useAuthStore(s => s.user)
 
   // ── Calendar + event state ──────────────────────────────────────────────────
-  const [weekStart,       setWeekStart]       = useState<Date>(() => getWeekStart(new Date()))
+  // The focused day. Week and day views both hang off it; the grid loads by week.
+  const [anchorDate,      setAnchorDate]     = useState<Date>(() => new Date())
+  const [calView,         setCalView]        = useState<'day' | 'week' | 'month'>(() => {
+    try { return (localStorage.getItem('cal-view') as 'day' | 'week' | 'month') ?? 'week' } catch { return 'week' }
+  })
+  const weekStart = useMemo(() => getWeekStart(anchorDate), [anchorDate])
   const [events,          setEvents]          = useState<GCalEvent[]>(() => loadEventsCache(getWeekStart(new Date())))
   const [allCalendars,    setAllCalendars]    = useState<CalWithAccount[]>(() => {
     // Use the last known primary email (saved to localStorage after each successful auth)
@@ -1774,17 +1791,18 @@ export function CalendarIntelligence() {
 
   useEffect(() => { void reloadCalendars() }, [user?.email]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const loadEvents = useCallback(async (start: Date, cals: CalWithAccount[], hidden: Set<string>, hiddenAccts = hiddenAccounts) => {
+  const loadEvents = useCallback(async (start: Date, cals: CalWithAccount[], hidden: Set<string>, hiddenAccts = hiddenAccounts, rangeEnd?: Date) => {
     setFetchError(null)
     // Show spinner only when there's nothing cached for this week; otherwise update silently.
     const alreadyCached = loadEventsCache(start).length > 0
     if (!alreadyCached) setLoadingEvents(true)
     try {
       if (!cals.length) { setNoAuth(true); setEvents([]); return }
-      const end     = getWeekEnd(start)
+      const end     = rangeEnd ?? getWeekEnd(start)
       const fetched = await fetchAllEvents(cals, hidden, hiddenAccts, start, end)
       setEvents(fetched); setNoAuth(false)
-      saveEventsCache(start, fetched)
+      // Only the week cache is keyed by week — a month fetch would poison it
+      if (!rangeEnd) saveEventsCache(start, fetched)
 
       // Auto-apply rules silently in the background
       const autoRules = loadBlockingRules().filter(r => r.enabled && r.autoApply)
@@ -1815,17 +1833,28 @@ export function CalendarIntelligence() {
   // that week so the grid isn't empty while fresh events load.
   const prevWeekKey = useRef(eventsWeekKey(weekStart))
   useEffect(() => {
+    if (calView === 'month') return
     const key = eventsWeekKey(weekStart)
     if (key === prevWeekKey.current) return
     prevWeekKey.current = key
     const cached = loadEventsCache(weekStart)
     if (cached.length) { setEvents(cached); setLoadingEvents(false) }
     else setLoadingEvents(true)
-  }, [weekStart])
+  }, [weekStart, calView])
 
+  // Month draws six weeks at once, so it asks for the whole span it will show
+  const monthStartKey = `${anchorDate.getFullYear()}-${anchorDate.getMonth()}`
   useEffect(() => {
-    if (allCalendars.length) void loadEvents(weekStart, allCalendars, hiddenCals, hiddenAccounts)
-  }, [weekStart, allCalendars, hiddenCals, hiddenAccounts, loadEvents]) // eslint-disable-line react-hooks/exhaustive-deps
+    if (!allCalendars.length) return
+    if (calView === 'month') {
+      const first = new Date(anchorDate.getFullYear(), anchorDate.getMonth(), 1)
+      const gridStart = getWeekStart(first)
+      const gridEnd = new Date(gridStart); gridEnd.setDate(gridEnd.getDate() + 41); gridEnd.setHours(23, 59, 59, 999)
+      void loadEvents(gridStart, allCalendars, hiddenCals, hiddenAccounts, gridEnd)
+    } else {
+      void loadEvents(weekStart, allCalendars, hiddenCals, hiddenAccounts)
+    }
+  }, [weekStart, monthStartKey, calView, allCalendars, hiddenCals, hiddenAccounts, loadEvents]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const handler = () => void reloadCalendars().then(c => { if (c) void loadEvents(weekStart, c, hiddenCals) })
@@ -2080,7 +2109,17 @@ export function CalendarIntelligence() {
   }
 
   // ── Week navigation ──────────────────────────────────────────────────────────
-  const weekDays = Array.from({ length: 7 }, (_, i) => { const d = new Date(weekStart); d.setDate(d.getDate() + i); return d })
+  // Week draws all seven; day draws only the focused one, through the same grid.
+  const weekDays = calView === 'day'
+    ? [new Date(anchorDate.getFullYear(), anchorDate.getMonth(), anchorDate.getDate())]
+    : Array.from({ length: 7 }, (_, i) => { const d = new Date(weekStart); d.setDate(d.getDate() + i); return d })
+
+  // Month view lays out whole weeks, Sunday-first, so the grid stays rectangular
+  const monthCells = useMemo(() => {
+    const first = new Date(anchorDate.getFullYear(), anchorDate.getMonth(), 1)
+    const start = getWeekStart(first)
+    return Array.from({ length: 42 }, (_, i) => { const d = new Date(start); d.setDate(d.getDate() + i); return d })
+  }, [anchorDate])
   // Filter out block-events for rules with hideBlocked=true (or global originalsOnly).
   // Uses two paths: localStorage map (fast) + description marker (cross-device, no Apply needed).
   const displayedEvents = (() => {
@@ -2228,132 +2267,145 @@ export function CalendarIntelligence() {
     <div className={creatingEvt ? 'cal-grid-creating' : undefined} style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#F7F4EA', color: '#191712', fontFamily: 'var(--sb-font-ui)', overflow: 'hidden' }}>
 
       {/* ── Top bar ─────────────────────────────────────────────────────────── */}
-      <div style={{ padding: '14px 20px 10px', borderBottom: '1px solid #E8E1CE', background: '#FCFAF4', flexShrink: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-          {/* Page label + week number + date range */}
-          <div style={{ flex: 1, minWidth: 160 }}>
-            <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.14em', color: '#6C6553', textTransform: 'uppercase', marginBottom: 2, fontFamily: 'var(--sb-font-ui)' }}>CALENDAR</div>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
-              <span style={{ fontSize: 28, fontWeight: 700, color: '#191712', fontFamily: 'var(--sb-font-num, "Outfit", sans-serif)', letterSpacing: '-0.03em', lineHeight: 1 }}>
-                Week {getWeekNumber(weekStart)}
-              </span>
-              <span style={{ fontSize: 14, color: '#6C6553', fontWeight: 500 }}>
-                {fmtWeekRange(weekStart)}
-              </span>
+      <div style={{ padding: '14px 22px 12px', borderBottom: '1px solid #E8E1CE', background: '#FCFAF4', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          {/* Which stretch of time you are looking at */}
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.14em', color: '#6C6553', textTransform: 'uppercase', marginBottom: 3 }}>
+              {calView === 'month' ? anchorDate.toLocaleDateString('en-GB', { year: 'numeric' })
+                : calView === 'day' ? anchorDate.toLocaleDateString('en-GB', { weekday: 'long' })
+                : `Week ${getWeekNumber(weekStart)}`}
             </div>
-            {/* Event stats */}
-            {(() => {
-              const weekStr = [0,1,2,3,4,5,6].map(i => {
-                const d = new Date(weekStart); d.setDate(d.getDate() + i)
-                return localDateStr(d)
-              })
-              const weekEvts = displayedEvents.filter(e => {
-                const date = (e.start?.dateTime ?? e.start?.date ?? '').slice(0,10)
-                return weekStr.includes(date)
-              })
-              void weekEvts
-              return null
-            })()}
+            <div style={{ fontFamily: 'var(--sb-font-num, "Outfit", sans-serif)', fontSize: 27, fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1, color: '#191712' }}>
+              {calView === 'month' ? anchorDate.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
+                : calView === 'day' ? anchorDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })
+                : fmtWeekRange(weekStart)}
+            </div>
+            <div style={{ fontSize: 11.5, color: '#6C6553', marginTop: 5 }}>
+              {(() => {
+                const scope = calView === 'month' ? monthCells : weekDays
+                const keys = new Set(scope.map(localDateStr))
+                const inScope = displayedEvents.filter(e => keys.has((e.start?.dateTime ?? e.start?.date ?? '').slice(0, 10)))
+                const meetings = inScope.filter(e => (e.attendees?.length ?? 0) > 1).length
+                return `${inScope.length} event${inScope.length === 1 ? '' : 's'} · ${meetings} meeting${meetings === 1 ? '' : 's'}`
+              })()}
+            </div>
           </div>
 
-          {/* Nav buttons */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          {/* Step through time, and come back to now */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, alignSelf: 'center' }}>
             <button
-              onClick={() => { const d = new Date(weekStart); d.setDate(d.getDate() - 7); setWeekStart(d) }}
-              style={{ background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 8, cursor: 'pointer', color: '#6C6553', padding: '5px 8px', display: 'flex', alignItems: 'center' }}
-            ><ChevronLeft size={15} /></button>
-
+              onClick={() => setAnchorDate(d => {
+                const n = new Date(d)
+                if (calView === 'day') n.setDate(n.getDate() - 1)
+                else if (calView === 'month') n.setMonth(n.getMonth() - 1)
+                else n.setDate(n.getDate() - 7)
+                return n
+              })}
+              style={{ ...CAL_ICON_BTN }}><ChevronLeft size={15} /></button>
+            <button
+              onClick={() => setAnchorDate(d => {
+                const n = new Date(d)
+                if (calView === 'day') n.setDate(n.getDate() + 1)
+                else if (calView === 'month') n.setMonth(n.getMonth() + 1)
+                else n.setDate(n.getDate() + 7)
+                return n
+              })}
+              style={{ ...CAL_ICON_BTN }}><ChevronRight size={15} /></button>
             {!isThisWeek(weekStart) && (
               <button
-                onClick={() => setWeekStart(getWeekStart(new Date()))}
-                style={{ background: '#F5D14E', border: '1px solid rgba(25,23,18,0.18)', borderRadius: 8, cursor: 'pointer', color: '#191712', padding: '5px 10px', fontSize: 12, fontWeight: 600, boxShadow: '0 2px 0 rgba(25,23,18,0.1)' }}
+                onClick={() => setAnchorDate(new Date())}
+                style={{ ...CAL_PILL, background: '#F5D14E', border: 'none', fontWeight: 600, boxShadow: '0 1px 3px rgba(25,23,18,0.14)' }}
               >Today</button>
             )}
-
-            <button
-              onClick={() => { const d = new Date(weekStart); d.setDate(d.getDate() + 7); setWeekStart(d) }}
-              style={{ background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 8, cursor: 'pointer', color: '#6C6553', padding: '5px 8px', display: 'flex', alignItems: 'center' }}
-            ><ChevronRight size={15} /></button>
-
-            <button
-              onClick={async () => {
-                if (refreshing) return
-                setRefreshing(true)
-                // Clear events cache so the grid shows the loading indicator
-                Object.keys(localStorage).filter(k => k.startsWith(EVENTS_CACHE_PREFIX)).forEach(k => localStorage.removeItem(k))
-                setLoadingEvents(true)
-                try {
-                  const c = await reloadCalendars()
-                  if (c) await loadEvents(weekStart, c, hiddenCals)
-                } finally { setRefreshing(false) }
-              }}
-              disabled={refreshing}
-              style={{ background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 8, cursor: refreshing ? 'default' : 'pointer', color: '#6C6553', padding: '5px 8px', display: 'flex', alignItems: 'center', opacity: refreshing ? 0.6 : 1 }}
-            ><RefreshCw size={13} style={{ animation: refreshing ? 'spin 0.7s linear infinite' : 'none' }} /></button>
-
-            <button
-              onClick={() => void handleApplyRules()}
-              disabled={applyingRules}
-              title="Apply productivity blocking rules"
-              style={{
-                display: 'flex', alignItems: 'center', gap: 5,
-                background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 8,
-                cursor: applyingRules ? 'default' : 'pointer',
-                color: applyingRules ? '#B5AA98' : '#6C6553',
-                padding: '5px 8px', fontSize: 12,
-                opacity: applyingRules ? 0.6 : 1,
-              }}
-            >
-              <Shield size={13} />
-              {applyingRules ? 'Applying…' : 'Apply Rules'}
-            </button>
-
-            <button
-              onClick={() => setOriginalsOnly(v => !v)}
-              title={originalsOnly ? 'Showing originals only — click to show all events' : 'Show originals only (hide created blocks)'}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 5,
-                background: originalsOnly ? '#191712' : '#FFFFFF',
-                border: `1px solid ${originalsOnly ? '#191712' : '#E8E1CE'}`,
-                borderRadius: 8, cursor: 'pointer',
-                color: originalsOnly ? '#FAF7EC' : '#6C6553',
-                padding: '5px 8px', fontSize: 12,
-                transition: 'all 0.14s',
-              }}
-            >
-              {originalsOnly ? <EyeOff size={13} /> : <Eye size={13} />}
-              Originals
-            </button>
-
-            <button
-              onClick={() => {
-                const next = !showCalendars
-                setShowCalendars(next)
-                try { localStorage.setItem('cal-show-calendars', String(next)) } catch { /* noop */ }
-              }}
-              title={showCalendars ? 'Hide calendars list' : 'Show calendars list'}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 5,
-                background: showCalendars ? '#191712' : '#FFFFFF',
-                border: `1px solid ${showCalendars ? '#191712' : '#E8E1CE'}`,
-                borderRadius: 8, cursor: 'pointer',
-                color: showCalendars ? '#FAF7EC' : '#6C6553',
-                padding: '5px 8px', fontSize: 12,
-                transition: 'all 0.14s',
-              }}
-            >
-              <Calendar size={13} />
-              Calendars
-            </button>
           </div>
 
-          {/* Rules result toast */}
-          {rulesResult && (
-            <span style={{ fontSize: 11.5, color: rulesResult.startsWith('Error') ? '#E05252' : '#1D9E75', marginLeft: 4 }}>
-              {rulesResult}
-            </span>
-          )}
+          <span style={{ flex: 1 }} />
+
+          {/* Keep the tools that have no home in the design, quietly */}
+          <button
+            onClick={async () => {
+              if (refreshing) return
+              setRefreshing(true)
+              Object.keys(localStorage).filter(k => k.startsWith(EVENTS_CACHE_PREFIX)).forEach(k => localStorage.removeItem(k))
+              setLoadingEvents(true)
+              try {
+                const c = await reloadCalendars()
+                if (c) await loadEvents(weekStart, c, hiddenCals)
+              } finally { setRefreshing(false) }
+            }}
+            disabled={refreshing}
+            title="Refresh"
+            style={{ ...CAL_ICON_BTN, cursor: refreshing ? 'default' : 'pointer', opacity: refreshing ? 0.6 : 1 }}
+          ><RefreshCw size={14} style={{ animation: refreshing ? 'spin 0.7s linear infinite' : 'none' }} /></button>
+
+          <button
+            onClick={() => void handleApplyRules()}
+            disabled={applyingRules}
+            title={applyingRules ? 'Applying rules…' : 'Apply productivity blocking rules'}
+            style={{ ...CAL_ICON_BTN, cursor: applyingRules ? 'default' : 'pointer', opacity: applyingRules ? 0.6 : 1 }}
+          ><Shield size={14} /></button>
+
+          <button
+            onClick={() => setOriginalsOnly(v => !v)}
+            title={originalsOnly ? 'Showing originals only — click to show all events' : 'Show originals only (hide created blocks)'}
+            style={{
+              ...CAL_ICON_BTN,
+              background: originalsOnly ? '#191712' : '#FFFFFF',
+              borderColor: originalsOnly ? '#191712' : '#E8E1CE',
+              color: originalsOnly ? '#FAF7EC' : '#6C6553',
+            }}
+          >{originalsOnly ? <EyeOff size={14} /> : <Eye size={14} />}</button>
+
+          {/* Calendars */}
+          <button
+            onClick={() => {
+              const next = !showCalendars
+              setShowCalendars(next)
+              try { localStorage.setItem('cal-show-calendars', String(next)) } catch { /* noop */ }
+            }}
+            title={showCalendars ? 'Hide calendars list' : 'Show calendars list'}
+            style={{
+              ...CAL_PILL,
+              background: showCalendars ? '#191712' : '#FFFFFF',
+              border: `1px solid ${showCalendars ? '#191712' : '#E8E1CE'}`,
+              color: showCalendars ? '#FAF7EC' : '#191712',
+            }}
+          >
+            <Layers size={14} strokeWidth={1.9} />
+            Calendars
+            <ChevronDown size={13} strokeWidth={2} style={{ transform: showCalendars ? 'rotate(180deg)' : 'none', transition: 'transform .14s' }} />
+          </button>
+
+          {/* Day · Week · Month */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 2, height: 36, boxSizing: 'border-box', padding: 3, borderRadius: 999, background: '#EDE7D9', flexShrink: 0 }}>
+            {(['day', 'week', 'month'] as const).map(v => {
+              const on = calView === v
+              return (
+                <button
+                  key={v}
+                  onClick={() => { setCalView(v); try { localStorage.setItem('cal-view', v) } catch { /* noop */ } }}
+                  style={{
+                    height: 30, padding: '0 16px', borderRadius: 999, border: 'none', cursor: 'pointer',
+                    background: on ? '#FFFFFF' : 'transparent',
+                    boxShadow: on ? '0 1px 3px rgba(25,23,18,.16)' : 'none',
+                    color: on ? '#191712' : '#8A8271',
+                    fontSize: 13, fontWeight: on ? 700 : 500, fontFamily: 'inherit',
+                    transition: 'all .14s',
+                  }}>
+                  {v[0].toUpperCase() + v.slice(1)}
+                </button>
+              )
+            })}
+          </div>
         </div>
+
+        {/* Rules result toast */}
+        {rulesResult && (
+          <span style={{ display: 'block', marginTop: 8, fontSize: 11.5, color: rulesResult.startsWith('Error') ? '#E05252' : '#1D9E75' }}>
+            {rulesResult}
+          </span>
+        )}
 
         {/* Calendar chips */}
         {allCalendars.length > 0 && showCalendars && (
@@ -2442,7 +2494,75 @@ export function CalendarIntelligence() {
         )}
       </div>
 
-      {/* ── Grid ────────────────────────────────────────────────────────────── */}
+      {/* ── Month grid ───────────────────────────────────────────────────────── */}
+      {calView === 'month' ? (
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'auto', padding: '0 22px 22px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', padding: '10px 0 6px' }}>
+            {DAY_LABELS.map(d => (
+              <span key={d} style={{ textAlign: 'center', fontSize: 10.5, fontWeight: 700, letterSpacing: '0.08em', color: '#6C6553', textTransform: 'uppercase' }}>
+                {d}
+              </span>
+            ))}
+          </div>
+          <div style={{
+            flex: 1, minHeight: 0, display: 'grid',
+            gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', gridAutoRows: 'minmax(96px, 1fr)',
+            background: '#E8E1CE', gap: 1, border: '1px solid #E8E1CE', borderRadius: 14, overflow: 'hidden',
+          }}>
+            {monthCells.map(day => {
+              const ds = localDateStr(day)
+              const isToday = ds === today
+              const outside = day.getMonth() !== anchorDate.getMonth()
+              const dayEvents = (grouped.get(ds) ?? []).slice().sort((a, b) =>
+                (a.start.dateTime ?? a.start.date ?? '').localeCompare(b.start.dateTime ?? b.start.date ?? ''))
+              const shown = dayEvents.slice(0, 3)
+              return (
+                <div
+                  key={ds}
+                  onClick={() => { setAnchorDate(new Date(day)); setCalView('day'); try { localStorage.setItem('cal-view', 'day') } catch { /* noop */ } }}
+                  title="Open this day"
+                  style={{
+                    background: outside ? '#FAF7EC' : '#FFFFFF', padding: '6px 7px',
+                    display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0, cursor: 'pointer',
+                  }}>
+                  <span style={{
+                    alignSelf: 'flex-start', minWidth: 21, height: 21, padding: '0 5px', borderRadius: 999,
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                    background: isToday ? '#F5D14E' : 'transparent',
+                    color: outside ? '#C9C0A8' : '#191712',
+                    fontSize: 11.5, fontWeight: isToday ? 700 : 600, fontVariantNumeric: 'tabular-nums',
+                  }}>{day.getDate()}</span>
+                  {shown.map(e => {
+                    const cal = allCalendars.find(c => c.id === (e as GCalEventExt).calendarId)
+                    const col = cal ? calEffectiveColor(cal) : '#7F77DD'
+                    const rgb = col.startsWith('#') ? hexRgbStr(col) : '127,119,221'
+                    const t = e.start.dateTime ? new Date(e.start.dateTime) : null
+                    return (
+                      <span key={e.id} title={e.summary} style={{
+                        display: 'flex', alignItems: 'center', gap: 5, minWidth: 0,
+                        padding: '2px 6px', borderRadius: 6,
+                        background: `rgba(${rgb}, 0.16)`, border: `1px solid rgba(${rgb}, 0.4)`,
+                        fontSize: 10.5, color: '#191712',
+                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                      }}>
+                        {t && <span style={{ color: '#6C6553', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>
+                          {String(t.getHours()).padStart(2, '0')}:{String(t.getMinutes()).padStart(2, '0')}
+                        </span>}
+                        <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.summary ?? '(no title)'}</span>
+                      </span>
+                    )
+                  })}
+                  {dayEvents.length > shown.length && (
+                    <span style={{ fontSize: 10, color: '#9B9180' }}>+{dayEvents.length - shown.length} more</span>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      ) : (
+
+      /* ── Day / week grid ──────────────────────────────────────────────────── */
       <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
@@ -2617,6 +2737,7 @@ export function CalendarIntelligence() {
           })()}
         </DragOverlay>
       </DndContext>
+      )}
 
       {/* Loading spinner overlay */}
       {loadingEvents && (
