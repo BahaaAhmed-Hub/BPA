@@ -246,7 +246,7 @@ export function BrainDumpRail({ tasks, onOpen }: {
             key={t.id}
             task={t}
             onOpen={onOpen}
-            onDelete={() => { if (window.confirm(`Delete "${t.title}"?`)) deleteTask(t.id) }}
+            onDelete={() => deleteTask(t.id)}
           />
         ))}
       </div>

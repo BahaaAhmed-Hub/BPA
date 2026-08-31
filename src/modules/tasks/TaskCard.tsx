@@ -131,7 +131,7 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
           </button>
 
           <button data-nm
-            onClick={() => { if (window.confirm(`Delete "${task.title}"?`)) deleteTask(task.id) }}
+            onClick={() => deleteTask(task.id)}
             title="Delete task"
             style={{
               background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex',

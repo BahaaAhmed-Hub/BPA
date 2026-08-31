@@ -183,7 +183,7 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
         </span>
 
         <button title={expanded ? 'Narrow the panel' : 'Widen the panel'} onClick={() => setExpanded(x => !x)} style={ICON_BTN}><Maximize2 size={14} /></button>
-        <button title="Delete task" onClick={() => { if (window.confirm('Delete this task?')) { deleteTask(task.id); onClose() } }} style={ICON_BTN}>
+        <button title="Delete task" onClick={() => { deleteTask(task.id); onClose() }} style={ICON_BTN}>
           <Trash2 size={15} />
         </button>
         <button title="Close" onClick={onClose} style={ICON_BTN}><X size={16} /></button>

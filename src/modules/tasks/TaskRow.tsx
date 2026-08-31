@@ -149,7 +149,7 @@ export function TaskRow({ task, onOpen, dense }: {
 
         <button
           data-nm
-          onClick={e => { e.stopPropagation(); if (window.confirm(`Delete "${task.title}"?`)) deleteTask(task.id) }}
+          onClick={e => { e.stopPropagation(); deleteTask(task.id) }}
           title="Delete task"
           style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', color: '#D8CFB8' }}>
           <Trash2 size={14} strokeWidth={1.9} />
