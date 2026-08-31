@@ -55,31 +55,33 @@ interface CompanyRow {
   users: CompanyUser[]
 }
 
-const SECTION_IDS = ['profile','schedule','companies','habits','tasks','accounts','professor','notifications','appearance','blocking','behavioral','finance'] as const
+const SECTION_IDS = ['profile','billing','schedule','companies','habits','tasks','accounts','professor','automation','notifications','appearance','blocking','behavioral','finance'] as const
 type SectionId = typeof SECTION_IDS[number]
 
 interface SectionMeta { id: SectionId; title: string; icon: React.ElementType; description: string }
 const SECTION_META: SectionMeta[] = [
   { id: 'profile',       title: 'Profile',              icon: User,        description: 'Name, timezone, work week & framework' },
-  { id: 'accounts',      title: 'Accounts & companies', icon: Building2,   description: 'Google accounts, calendars & Gmail access' },
-  { id: 'professor',     title: 'AI',                   icon: Brain,       description: 'Communication style, daily brief & review day' },
+  { id: 'billing',       title: 'Billing',              icon: CreditCard,  description: 'Plan, payment method and invoices' },
+  { id: 'accounts',      title: 'Accounts & companies', icon: Building2,   description: 'Work contexts, calendars and their people' },
+  { id: 'professor',     title: 'AI',                   icon: Brain,       description: 'Model, autonomy and what the assistant may write for you' },
   { id: 'schedule',      title: 'Schedule rules',       icon: Clock,       description: 'Focus hours, buffers, meeting protections' },
-  { id: 'blocking',      title: 'Integrations',         icon: Link,        description: 'Block calendar slots & productivity connections' },
-  { id: 'tasks',         title: 'Tasks',                icon: CheckSquare, description: 'Custom board statuses & task defaults' },
+  { id: 'blocking',      title: 'Integrations',         icon: Link,        description: 'Notion, Asana, Trello, Apple Notes and calendar sync' },
+  { id: 'tasks',         title: 'Tasks',                icon: CheckSquare, description: 'Board statuses and task types' },
   { id: 'habits',        title: 'Habits',               icon: Flame,       description: 'Configure daily habits — synced with Habits page' },
-  { id: 'notifications', title: 'Automation',           icon: Bell,        description: 'Rules, morning reminder, wind-down & weekly review' },
-  { id: 'appearance',    title: 'Appearance',           icon: Palette,     description: 'Theme, density & sidebar default' },
-  { id: 'behavioral',    title: 'Behavioral OS',        icon: Swords,      description: 'Rank system, identity detection & operating mode' },
-  { id: 'companies',     title: 'Data & privacy',       icon: Shield,      description: 'Company contexts, export & data controls' },
-  { id: 'finance',       title: 'Finance',              icon: CreditCard,  description: 'Envelope style, figures, dates & alerts' },
+  { id: 'automation',    title: 'Automation',           icon: Swords,      description: 'Rules that run without asking you first' },
+  { id: 'notifications', title: 'Notifications',        icon: Bell,        description: 'What reaches you, where, and when it stays quiet' },
+  { id: 'appearance',    title: 'Appearance',           icon: Palette,     description: 'Theme, density, text size and motion' },
+  { id: 'behavioral',    title: 'Behavioral OS',        icon: Brain,       description: 'Rank scoring, operating mode and tone' },
+  { id: 'companies',     title: 'Data & privacy',       icon: Shield,      description: 'Where your data sits and how long it stays' },
+  { id: 'finance',       title: 'Finance',              icon: Hash,        description: 'Envelope style, figures, dates & alerts' },
 ]
 
 // Grouped nav — matches 11A Sunlit Bento design
 const NAV_GROUPS: { label: string; ids: SectionId[] }[] = [
-  { label: 'YOU',       ids: ['profile'] },
+  { label: 'YOU',       ids: ['profile', 'billing'] },
   { label: 'CONNECTED', ids: ['accounts', 'professor', 'schedule', 'blocking'] },
   { label: 'WORK',      ids: ['tasks', 'habits'] },
-  { label: 'SYSTEM',    ids: ['notifications', 'appearance', 'behavioral', 'companies', 'finance'] },
+  { label: 'SYSTEM',    ids: ['automation', 'notifications', 'appearance', 'behavioral', 'companies', 'finance'] },
 ]
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -1317,7 +1319,7 @@ function AccountsSection({
 
 // ─── CHUNK 6: Professor AI + Notifications + Appearance sections ──────────────
 
-const GROQ_MODELS = [
+export const GROQ_MODELS = [
   { value: 'llama-3.3-70b-versatile',  label: 'LLaMA 3.3 70B (best quality)' },
   { value: 'llama-3.1-8b-instant',     label: 'LLaMA 3.1 8B (fastest)'       },
   { value: 'mixtral-8x7b-32768',       label: 'Mixtral 8x7B'                  },
@@ -1326,6 +1328,12 @@ const GROQ_MODELS = [
 function ProfessorSection({ s, set }: { s: AppSettings; set: (p: Partial<AppSettings>) => void }) {
   const [ai, setAIRaw] = useState<AIConfig>(loadAIConfig)
   const [showKey, setShowKey] = useState(false)
+  const [autonomy, setAutonomy] = useState<'suggest' | 'draft' | 'act'>('suggest')
+  const [mailDrafts, setMailDrafts] = useState(true)
+  const [matrixSuggest, setMatrixSuggest] = useState(true)
+  const [autoBuild, setAutoBuild] = useState(false)
+  const [learnEdits, setLearnEdits] = useState(true)
+  const [toneOfVoice, setToneOfVoice] = useState('Direct, no filler')
 
   function setAI(patch: Partial<AIConfig>) {
     const next = { ...ai, ...patch }
@@ -1335,129 +1343,105 @@ function ProfessorSection({ s, set }: { s: AppSettings; set: (p: Partial<AppSett
 
   const activeKey = ai.provider === 'groq' ? ai.groqKey : ai.anthropicKey
   const keyLabel  = ai.provider === 'groq' ? 'Groq API key' : 'Anthropic API key'
-  const keyHint   = ai.provider === 'groq'
-    ? 'Free at console.groq.com'
-    : 'console.anthropic.com (paid)'
+  const keyHint   = ai.provider === 'groq' ? 'Free at console.groq.com' : 'console.anthropic.com (paid)'
+
+  function SegBtn<T extends string>({ val, cur, onClick, label }: { val: T; cur: T; onClick: () => void; label?: string }) {
+    const active = val === cur
+    return (
+      <button onClick={onClick} style={{
+        padding: '5px 13px', borderRadius: 7, fontSize: 11.5, cursor: 'pointer', fontWeight: active ? 600 : 400,
+        background: active ? '#191712' : '#FAF7EC', border: `1px solid ${active ? '#191712' : '#E8E1CE'}`,
+        color: active ? '#FFFFFF' : '#6C6553', transition: 'all 0.12s',
+      }}>{label ?? val}</button>
+    )
+  }
 
   return (
     <div>
-      {/* ── AI Provider ── */}
-      <FieldRow label="AI Provider" sub="Backend for meeting analysis & AI features">
-        <div style={{ display: 'flex', gap: 6 }}>
-          {(['anthropic', 'groq'] as const).map(p => (
-            <button key={p} onClick={() => setAI({ provider: p })}
+      {/* ── Model ── */}
+      <FieldRow label="Model" sub="Handles the brief, drafts and matrix suggestions">
+        <div style={{ display: 'flex', gap: 5 }}>
+          {[
+            { v: 'anthropic', l: 'Sonnet 4.5' },
+            { v: 'groq',      l: 'Opus 4.1' },
+            { v: 'haiku',     l: 'Haiku' },
+          ].map(({ v, l }) => (
+            <button key={v} onClick={() => setAI({ provider: v as AIConfig['provider'] })}
               style={{
-                padding: '5px 14px', borderRadius: 7, fontSize: 11.5, cursor: 'pointer',
-                fontWeight: 600, textTransform: 'capitalize',
-                background: ai.provider === p ? 'rgba(245,209,78,0.12)' : '#FAF7EC',
-                border: `1px solid ${ai.provider === p ? '#F5D14E' : '#E8E1CE'}`,
-                color: ai.provider === p ? '#F5D14E' : '#6C6553',
-              }}>{p === 'groq' ? 'Groq (free)' : 'Anthropic'}</button>
+                padding: '5px 13px', borderRadius: 7, fontSize: 11.5, cursor: 'pointer', fontWeight: ai.provider === v ? 600 : 400,
+                background: ai.provider === v ? '#191712' : '#FAF7EC', border: `1px solid ${ai.provider === v ? '#191712' : '#E8E1CE'}`,
+                color: ai.provider === v ? '#FFFFFF' : '#6C6553', transition: 'all 0.12s',
+              }}>{l}</button>
           ))}
         </div>
       </FieldRow>
+
+      {/* ── API key ── */}
       <FieldRow label={keyLabel} sub={keyHint}>
         <div style={{ display: 'flex', gap: 6, width: '100%' }}>
-          <input
-            type={showKey ? 'text' : 'password'}
-            value={activeKey}
+          <input type={showKey ? 'text' : 'password'} value={activeKey}
             onChange={e => setAI(ai.provider === 'groq' ? { groqKey: e.target.value } : { anthropicKey: e.target.value })}
             placeholder={ai.provider === 'groq' ? 'gsk_...' : 'sk-ant-...'}
-            style={{ ...inputStyle, flex: 1, fontFamily: 'monospace', fontSize: 11.5 }}
-          />
-          <button onClick={() => setShowKey(v => !v)} style={{
-            background: 'transparent', border: '1px solid #E8E1CE',
-            borderRadius: 6, padding: '4px 8px', cursor: 'pointer', color: '#6C6553',
-            fontSize: 11, flexShrink: 0,
-          }}>{showKey ? 'Hide' : 'Show'}</button>
+            style={{ ...inputStyle, flex: 1, fontFamily: 'monospace', fontSize: 11.5 }} />
+          <button onClick={() => setShowKey(v => !v)} style={{ background: 'transparent', border: '1px solid #E8E1CE', borderRadius: 6, padding: '4px 8px', cursor: 'pointer', color: '#6C6553', fontSize: 11, flexShrink: 0 }}>
+            {showKey ? <EyeOff size={13} /> : <Eye size={13} />}
+          </button>
         </div>
       </FieldRow>
-      {ai.provider === 'groq' && (
-        <FieldRow label="Groq model">
-          <select value={ai.groqModel} onChange={e => setAI({ groqModel: e.target.value })}
-            style={{ ...selectStyle, width: '100%' }}>
-            {GROQ_MODELS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
-          </select>
-        </FieldRow>
-      )}
-      <div style={{ height: 8 }} />
-      {/* ── Professor personality ── */}
-      <FieldRow label="Comm. style" sub="Response verbosity">
-        <div style={{ display: 'flex', gap: 6 }}>
-          {(['brief','balanced','detailed'] as const).map(v => (
-            <button key={v} onClick={() => set({ commStyle: v })}
-              style={{
-                padding: '5px 12px', borderRadius: 7, fontSize: 11.5, cursor: 'pointer', fontWeight: 500, textTransform: 'capitalize',
-                background: s.commStyle === v ? 'rgba(245,209,78,0.12)' : '#FAF7EC',
-                border: `1px solid ${s.commStyle === v ? '#F5D14E' : '#E8E1CE'}`,
-                color: s.commStyle === v ? '#F5D14E' : '#6C6553',
-              }}>{v}</button>
-          ))}
+
+      <div style={{ height: 6, borderTop: '1px solid #F0EBDC', marginTop: 12, marginBottom: 12 }} />
+
+      {/* ── Autonomy ── */}
+      <FieldRow label="Autonomy" sub="How far the assistant may act before asking you">
+        <div style={{ display: 'flex', gap: 5 }}>
+          <SegBtn val="suggest" cur={autonomy} onClick={() => setAutonomy('suggest')} label="Suggest" />
+          <SegBtn val="draft"   cur={autonomy} onClick={() => setAutonomy('draft')}   label="Draft & hold" />
+          <SegBtn val="act"     cur={autonomy} onClick={() => setAutonomy('act')}     label="Act" />
         </div>
       </FieldRow>
+
+      {/* ── Behaviour toggles ── */}
+      <FieldRow label="Write mail drafts" sub="Prepares a reply for every thread that needs one">
+        <Toggle checked={mailDrafts} onChange={setMailDrafts} />
+      </FieldRow>
+      <FieldRow label="Suggest matrix placement" sub="Reads task attributes and fills the missing ones">
+        <Toggle checked={matrixSuggest} onChange={setMatrixSuggest} />
+      </FieldRow>
+      <FieldRow label="Auto-build the day" sub="Turns the brief into calendar blocks without confirmation">
+        <Toggle checked={autoBuild} onChange={setAutoBuild} />
+      </FieldRow>
+      <FieldRow label="Learn from my edits" sub="Every correction tunes future drafts and placements">
+        <Toggle checked={learnEdits} onChange={setLearnEdits} />
+      </FieldRow>
+
+      {/* ── Tone ── */}
+      <FieldRow label="Tone of voice" sub="Applies to drafts, the brief and the review">
+        <select value={toneOfVoice} onChange={e => setToneOfVoice(e.target.value)} style={{ ...selectStyle, minWidth: 160 }}>
+          {['Direct, no filler', 'Warm and encouraging', 'Formal', 'Casual'].map(t => <option key={t} value={t}>{t}</option>)}
+        </select>
+      </FieldRow>
+
+      {/* ── Legacy personality ── */}
+      <div style={{ height: 6, borderTop: '1px solid #F0EBDC', marginTop: 12, marginBottom: 12 }} />
       <FieldRow label="Proactive" sub="Offers advice unprompted">
         <Toggle checked={s.proactive} onChange={v => set({ proactive: v })} />
       </FieldRow>
-      <FieldRow label="Morning brief">
-        <input type="time" value={s.briefTime} onChange={e => set({ briefTime: e.target.value })}
-          style={{ ...inputStyle, width: 110 }} />
+      <FieldRow label="Morning brief time">
+        <input type="time" value={s.briefTime} onChange={e => set({ briefTime: e.target.value })} style={{ ...inputStyle, width: 110 }} />
       </FieldRow>
-      <FieldRow label="Review day">
-        <select value={s.reviewDay} onChange={e => set({ reviewDay: e.target.value })} style={{ ...selectStyle, width: '100%' }}>
-          {['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'].map(d =>
-            <option key={d} value={d}>{d}</option>)}
-        </select>
-      </FieldRow>
-      <FieldRow label="Instructions" sub="Personality & priorities">
+      <FieldRow label="Custom instructions" sub="Personality & priorities">
         <textarea value={s.customInstructions} onChange={e => set({ customInstructions: e.target.value })}
           rows={3} placeholder="e.g. Always be concise. Prioritise Teradix work…"
           style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.5, width: '100%' }} />
       </FieldRow>
+
+      <p style={{ margin: '14px 0 0', fontSize: 11, color: '#9B9180' }}>Your mail and tasks are never used to train the model.</p>
     </div>
   )
 }
 
-function NotificationsSection({ s, set }: { s: AppSettings; set: (p: Partial<AppSettings>) => void }) {
-  return (
-    <div>
-      <FieldRow label="Morning brief">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Toggle checked={s.morningReminderOn} onChange={v => set({ morningReminderOn: v })} />
-          {s.morningReminderOn && (
-            <input type="time" value={s.morningReminderTime} onChange={e => set({ morningReminderTime: e.target.value })}
-              style={{ ...inputStyle, width: 100 }} />
-          )}
-        </div>
-      </FieldRow>
-      <FieldRow label="Wind-down">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Toggle checked={s.windDownOn} onChange={v => set({ windDownOn: v })} />
-          {s.windDownOn && (
-            <input type="time" value={s.windDownTime} onChange={e => set({ windDownTime: e.target.value })}
-              style={{ ...inputStyle, width: 100 }} />
-          )}
-        </div>
-      </FieldRow>
-      <FieldRow label="Follow-up nudges" sub="Delegated/waiting tasks">
-        <Toggle checked={s.followUpNudges} onChange={v => set({ followUpNudges: v })} />
-      </FieldRow>
-      <FieldRow label="Weekly review">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <Toggle checked={s.weeklyReviewOn} onChange={v => set({ weeklyReviewOn: v })} />
-          {s.weeklyReviewOn && (
-            <>
-              <select value={s.weeklyReviewDay} onChange={e => set({ weeklyReviewDay: e.target.value })} style={{ ...selectStyle, width: 100 }}>
-                {['Sunday','Monday','Saturday'].map(d => <option key={d} value={d}>{d}</option>)}
-              </select>
-              <input type="time" value={s.weeklyReviewTime} onChange={e => set({ weeklyReviewTime: e.target.value })}
-                style={{ ...inputStyle, width: 95 }} />
-            </>
-          )}
-        </div>
-      </FieldRow>
-    </div>
-  )
-}
+// NotificationsSection merged into NotificationsMatrixSection (Push/Mail/Digest per event)
+// Legacy reminder fields (morning brief time, wind-down) are now in the AI / Schedule sections.
 
 function AppearanceSection({ s, set }: { s: AppSettings; set: (p: Partial<AppSettings>) => void }) {
   const { setThemeId } = useUIStore()
@@ -2174,6 +2158,301 @@ function FinanceSection() {
   )
 }
 
+// ─── Billing Section (11A right column) ──────────────────────────────────────
+
+function BillingSection() {
+  const INVOICES = [
+    { date: '14 Mar 2026', desc: 'Professor Pro · annual',   amount: '$180.00' },
+    { date: '14 Mar 2025', desc: 'Professor Pro · annual',   amount: '$180.00' },
+    { date: '02 Feb 2025', desc: 'Professor Plus · monthly', amount: '$18.00' },
+  ]
+  return (
+    <div>
+      {/* Plan tile */}
+      <div style={{ padding: '16px 18px', borderRadius: 12, background: '#FFFBEC', border: '1px solid #E8E1CE', marginBottom: 18 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+              <span style={{ fontSize: 14, fontWeight: 700, color: '#191712' }}>Professor Pro</span>
+              <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.1em', background: '#F5D14E', color: '#191712', padding: '2px 7px', borderRadius: 4 }}>ANNUAL</span>
+            </div>
+            <p style={{ margin: 0, fontSize: 11.5, color: '#6C6553', lineHeight: 1.45 }}>Renews 14 March 2027 · all four companies, unlimited AI drafts</p>
+          </div>
+          <div style={{ textAlign: 'right', flexShrink: 0 }}>
+            <p style={{ margin: 0, fontSize: 20, fontWeight: 700, fontFamily: 'Outfit, sans-serif', color: '#191712' }}>$180</p>
+            <p style={{ margin: 0, fontSize: 11, color: '#9B9180' }}>per year</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Billing fields */}
+      {[
+        { label: 'Payment method', value: 'Visa ending 4417 · expires 09/28', action: 'Change' },
+        { label: 'Billing email',  value: 'eng.bahaa.a@gmail.com',             action: null, sub: 'Invoices are sent here every renewal' },
+        { label: 'VAT / tax ID',   value: '—',                                 action: 'Add a tax ID', sub: 'Appears on every invoice' },
+        { label: 'Seats',          value: '1 of 1',                            action: null, sub: 'You plus nobody — personal licence' },
+      ].map(row => (
+        <div key={row.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 0', borderBottom: '1px solid #F0EBDC' }}>
+          <div>
+            <p style={{ margin: 0, fontSize: 12.5, fontWeight: 500, color: '#191712' }}>{row.label}</p>
+            {row.sub && <p style={{ margin: '1px 0 0', fontSize: 11, color: '#9B9180' }}>{row.sub}</p>}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 12.5, color: '#6C6553' }}>{row.value}</span>
+            {row.action && (
+              <button style={{ fontSize: 11.5, fontWeight: 500, color: '#6C6553', background: '#FAF7EC', border: '1px solid #E8E1CE', borderRadius: 6, padding: '4px 10px', cursor: 'pointer' }}>
+                {row.action}
+              </button>
+            )}
+          </div>
+        </div>
+      ))}
+
+      {/* Invoices */}
+      <div style={{ marginTop: 20 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+          <p style={{ margin: 0, fontSize: 11.5, fontWeight: 700, letterSpacing: '0.09em', color: '#6C6553', textTransform: 'uppercase' }}>Invoices</p>
+          <button style={{ fontSize: 11.5, color: '#6C6553', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>Download all</button>
+        </div>
+        {INVOICES.map(inv => (
+          <div key={inv.date} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 0', borderBottom: '1px solid #F0EBDC' }}>
+            <div>
+              <p style={{ margin: 0, fontSize: 12.5, color: '#191712' }}>{inv.desc}</p>
+              <p style={{ margin: '1px 0 0', fontSize: 11, color: '#9B9180' }}>{inv.date}</p>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 12.5, fontFamily: 'Outfit, sans-serif', fontWeight: 600, color: '#191712' }}>{inv.amount}</span>
+              <button style={{ background: '#FAF7EC', border: '1px solid #E8E1CE', borderRadius: 6, padding: '4px 8px', cursor: 'pointer', color: '#6C6553', fontSize: 11 }}>↓</button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Cancel */}
+      <p style={{ margin: '18px 0 0', fontSize: 11.5, color: '#9B9180' }}>
+        Cancelling keeps your data readable until the term ends. &nbsp;
+        <button style={{ background: 'none', border: 'none', color: '#B4523A', fontSize: 11.5, cursor: 'pointer', padding: 0, textDecoration: 'underline' }}>Cancel plan</button>
+      </p>
+    </div>
+  )
+}
+
+// ─── Notifications Matrix Section (11F) ───────────────────────────────────────
+
+type NChannel = 'push' | 'mail' | 'digest'
+interface NEvent { id: string; label: string; sub: string; push: boolean; mail: boolean; digest: boolean }
+
+const DEFAULT_NOTIF_EVENTS: NEvent[] = [
+  { id: 'decision',    label: 'A decision has waited two days',  sub: 'The nudge that keeps decisions from rotting', push: true,  mail: true,  digest: true  },
+  { id: 'needsyou',   label: 'Mail that needs you',             sub: 'Only threads the assistant marks NEEDS YOU',  push: true,  mail: false, digest: true  },
+  { id: 'draft',      label: 'Draft ready to send',             sub: 'When a reply is written and waiting',         push: true,  mail: false, digest: true  },
+  { id: 'conflict',   label: 'Calendar conflict',               sub: 'Two events land on the same hour',            push: true,  mail: true,  digest: false },
+  { id: 'habit',      label: 'Habit not logged',                sub: 'Fires at the reminder time you set per habit',push: true,  mail: false, digest: false },
+  { id: 'review',     label: 'Weekly review is due',            sub: 'Sunday evening, once',                        push: false, mail: true,  digest: true  },
+  { id: 'rank',       label: 'Rank changed',                    sub: 'Behavioral OS moved you up or down',          push: true,  mail: false, digest: true  },
+]
+
+function NotificationsMatrixSection() {
+  const [events, setEvents] = useState<NEvent[]>(() => {
+    try { const s = localStorage.getItem('professor-notif-events'); return s ? JSON.parse(s) : DEFAULT_NOTIF_EVENTS } catch { return DEFAULT_NOTIF_EVENTS }
+  })
+  const [quietOn, setQuietOn]     = useState(true)
+  const [quietStart, setQStart]   = useState('22:30')
+  const [quietEnd,   setQEnd]     = useState('07:00')
+
+  function toggleChannel(id: string, ch: NChannel) {
+    const next = events.map(e => e.id === id ? { ...e, [ch]: !e[ch as keyof NEvent] } : e)
+    setEvents(next)
+    try { localStorage.setItem('professor-notif-events', JSON.stringify(next)) } catch { /**/ }
+  }
+
+  const ChHead = ({ label }: { label: string }) => (
+    <div style={{ width: 44, textAlign: 'center', fontSize: 10, fontWeight: 700, letterSpacing: '0.09em', color: '#9B9180', textTransform: 'uppercase' }}>{label}</div>
+  )
+  const ChToggle = ({ on, onClick }: { on: boolean; onClick: () => void }) => (
+    <div style={{ width: 44, display: 'flex', justifyContent: 'center' }}>
+      <Toggle checked={on} onChange={onClick} />
+    </div>
+  )
+
+  return (
+    <div>
+      {/* Column headers */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 10, borderBottom: '1px solid #E8E1CE', marginBottom: 2 }}>
+        <p style={{ margin: 0, fontSize: 11.5, fontWeight: 700, color: '#6C6553', letterSpacing: '0.06em', textTransform: 'uppercase' }}>EVENT</p>
+        <div style={{ display: 'flex', gap: 0 }}>
+          <ChHead label="Push" />
+          <ChHead label="Mail" />
+          <ChHead label="Digest" />
+        </div>
+      </div>
+
+      {/* Event rows */}
+      {events.map(e => (
+        <div key={e.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 0', borderBottom: '1px solid #F0EBDC' }}>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <p style={{ margin: 0, fontSize: 12.5, fontWeight: 500, color: '#191712', lineHeight: 1.3 }}>{e.label}</p>
+            <p style={{ margin: '1px 0 0', fontSize: 11, color: '#9B9180', lineHeight: 1.3 }}>{e.sub}</p>
+          </div>
+          <div style={{ display: 'flex', gap: 0, flexShrink: 0 }}>
+            <ChToggle on={e.push}   onClick={() => toggleChannel(e.id, 'push')} />
+            <ChToggle on={e.mail}   onClick={() => toggleChannel(e.id, 'mail')} />
+            <ChToggle on={e.digest} onClick={() => toggleChannel(e.id, 'digest')} />
+          </div>
+        </div>
+      ))}
+
+      {/* Quiet hours */}
+      <div style={{ marginTop: 18, padding: '14px 16px', borderRadius: 11, background: '#FAF7EC', border: '1px solid #E8E1CE' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: quietOn ? 10 : 0 }}>
+          <div>
+            <p style={{ margin: 0, fontSize: 12.5, fontWeight: 600, color: '#191712' }}>Quiet hours</p>
+            <p style={{ margin: '1px 0 0', fontSize: 11, color: '#9B9180' }}>Nothing but the morning brief gets through</p>
+          </div>
+          <Toggle checked={quietOn} onChange={setQuietOn} />
+        </div>
+        {quietOn && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <input type="time" value={quietStart} onChange={e => setQStart(e.target.value)} style={{ padding: '5px 10px', borderRadius: 7, border: '1px solid #E8E1CE', background: '#FFFFFF', fontSize: 12.5, color: '#191712' }} />
+            <span style={{ color: '#9B9180', fontSize: 12 }}>to</span>
+            <input type="time" value={quietEnd} onChange={e => setQEnd(e.target.value)} style={{ padding: '5px 10px', borderRadius: 7, border: '1px solid #E8E1CE', background: '#FFFFFF', fontSize: 12.5, color: '#191712' }} />
+          </div>
+        )}
+      </div>
+
+      {/* Mute button */}
+      <button style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 8, background: '#FFFFFF', border: '1px solid #E8E1CE', fontSize: 12.5, fontWeight: 500, color: '#6C6553', cursor: 'pointer' }}>
+        🔕 Mute for 1h
+      </button>
+    </div>
+  )
+}
+
+// ─── Integrations Section (11D) ───────────────────────────────────────────────
+
+interface Integration {
+  id: string; name: string; emoji: string; status: 'connected' | 'disconnected'
+  account: string; tags: string[]; syncMode: 'two-way' | 'import' | 'off'; enabled: boolean
+}
+
+const DEFAULT_INTEGRATIONS: Integration[] = [
+  { id: 'notion',      name: 'Notion',      emoji: '📝', status: 'connected',    account: 'Bahaa · 4 databases',            tags: ['Tasks database', 'Meeting notes', 'Weekly review'], syncMode: 'two-way', enabled: true  },
+  { id: 'asana',       name: 'Asana',       emoji: '🎯', status: 'connected',    account: 'DX Technologies workspace',       tags: ['3 projects', 'My tasks', 'Due dates'],              syncMode: 'import',  enabled: true  },
+  { id: 'trello',      name: 'Trello',      emoji: '📋', status: 'connected',    account: 'Personal board',                  tags: ['Ideas board', 'Cards → dump'],                     syncMode: 'import',  enabled: false },
+  { id: 'apple-notes', name: 'Apple Notes', emoji: '🍎', status: 'disconnected', account: 'iCloud · eng.bahaa.a',            tags: ['Notes → dump', 'Needs iCloud sign-in'],            syncMode: 'off',     enabled: false },
+]
+
+function IntegrationsSection({ accounts, setAccounts, primaryEmail }: { accounts: ConnectedAccount[]; setAccounts: (a: ConnectedAccount[]) => void; primaryEmail: string }) {
+  const [integrations, setIntegrations] = useState<Integration[]>(DEFAULT_INTEGRATIONS)
+
+  function toggleEnabled(id: string) {
+    setIntegrations(prev => prev.map(i => i.id === id ? { ...i, enabled: !i.enabled } : i))
+  }
+
+  return (
+    <div>
+      {/* Third-party tools */}
+      <div style={{ marginBottom: 24 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+          <div>
+            <p style={{ margin: 0, fontSize: 12.5, fontWeight: 700, color: '#191712' }}>Connected tools</p>
+            <p style={{ margin: '1px 0 0', fontSize: 11.5, color: '#9B9180' }}>Tasks and notes flow both ways — nothing is deleted on either side</p>
+          </div>
+          <button style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 13px', borderRadius: 8, background: '#F5D14E', border: '1px solid rgba(25,23,18,0.18)', fontSize: 12, fontWeight: 600, color: '#191712', cursor: 'pointer' }}>
+            <Plus size={12} /> Add integration
+          </button>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {integrations.map(tool => (
+            <div key={tool.id} style={{
+              padding: '14px 16px', borderRadius: 12,
+              background: tool.status === 'disconnected' ? '#FDFCF9' : '#FFFFFF',
+              border: `1px solid ${tool.status === 'disconnected' ? '#E8E1CE' : tool.enabled ? '#C8DAB0' : '#E8E1CE'}`,
+              borderStyle: tool.status === 'disconnected' ? 'dashed' : 'solid',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                <div style={{ width: 36, height: 36, borderRadius: 9, background: '#F7F4EA', border: '1px solid #E8E1CE', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>
+                  {tool.emoji}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: '#191712' }}>{tool.name}</span>
+                    <span style={{
+                      fontSize: 9.5, fontWeight: 700, letterSpacing: '0.08em', padding: '2px 6px', borderRadius: 4,
+                      background: tool.status === 'connected' ? 'rgba(95,112,56,0.1)' : 'rgba(155,145,128,0.12)',
+                      color: tool.status === 'connected' ? '#5F7038' : '#9B9180',
+                      textTransform: 'uppercase',
+                    }}>{tool.status === 'connected' ? 'Connected' : 'Not connected'}</span>
+                  </div>
+                  <p style={{ margin: '0 0 6px', fontSize: 11.5, color: '#6C6553' }}>{tool.account}</p>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                    {tool.tags.map(tag => (
+                      <span key={tag} style={{ fontSize: 10.5, padding: '2px 8px', borderRadius: 20, background: '#F7F4EA', border: '1px solid #E8E1CE', color: '#6C6553' }}>{tag}</span>
+                    ))}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+                  {tool.status === 'connected' && (
+                    <select value={tool.syncMode} onChange={e => setIntegrations(prev => prev.map(i => i.id === tool.id ? { ...i, syncMode: e.target.value as Integration['syncMode'] } : i))}
+                      style={{ fontSize: 11.5, border: '1px solid #E8E1CE', borderRadius: 7, padding: '4px 8px', background: '#FAF7EC', color: '#6C6553', cursor: 'pointer' }}>
+                      <option value="two-way">Two-way</option>
+                      <option value="import">Import only</option>
+                      <option value="off">Off</option>
+                    </select>
+                  )}
+                  {tool.status === 'connected'
+                    ? <Toggle checked={tool.enabled} onChange={() => toggleEnabled(tool.id)} />
+                    : <button style={{ fontSize: 11.5, fontWeight: 500, color: '#6C6553', background: '#F7F4EA', border: '1px solid #E8E1CE', borderRadius: 7, padding: '5px 11px', cursor: 'pointer' }}>Connect</button>
+                  }
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <p style={{ margin: '12px 0 0', fontSize: 11.5, color: '#9B9180', lineHeight: 1.5 }}>
+          Last sync 07:12 — 14 tasks in, 3 completions pushed out. Tokens live on the server.{' '}
+          <button style={{ background: 'none', border: 'none', color: '#5F7038', fontSize: 11.5, cursor: 'pointer', fontWeight: 600, padding: 0 }}>Sync now</button>
+        </p>
+      </div>
+
+      {/* Sync rules */}
+      <div style={{ paddingTop: 20, borderTop: '1px solid #F0EBDC', marginBottom: 20 }}>
+        <p style={{ margin: '0 0 12px', fontSize: 12.5, fontWeight: 700, color: '#191712' }}>Sync rules</p>
+        {[
+          { label: 'Sync frequency',        sub: 'How often connected tools are polled',          value: 'Every 15 min' },
+          { label: 'Imported tasks land in', sub: 'Untriaged work goes to the dump first',        value: 'The dump' },
+          { label: 'Push completions back',  sub: 'Closing a task here closes it there',          value: 'On' },
+          { label: 'Conflict wins',          sub: 'When both sides changed since the last sync',  value: 'Most recent edit' },
+        ].map(row => (
+          <div key={row.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #F0EBDC' }}>
+            <div>
+              <p style={{ margin: 0, fontSize: 12.5, fontWeight: 500, color: '#191712' }}>{row.label}</p>
+              <p style={{ margin: '1px 0 0', fontSize: 11, color: '#9B9180' }}>{row.sub}</p>
+            </div>
+            <select style={{ fontSize: 12, border: '1px solid #E8E1CE', borderRadius: 7, padding: '5px 10px', background: '#FAF7EC', color: '#191712', cursor: 'pointer' }}>
+              <option>{row.value}</option>
+            </select>
+          </div>
+        ))}
+      </div>
+
+      {/* Google OAuth accounts sub-section */}
+      <div style={{ paddingTop: 20, borderTop: '1px solid #F0EBDC' }}>
+        <p style={{ margin: '0 0 12px', fontSize: 12.5, fontWeight: 700, color: '#191712' }}>Google accounts</p>
+        <AccountsSection accounts={accounts} setAccounts={setAccounts} primaryEmail={primaryEmail} />
+      </div>
+
+      {/* Calendar blocking rules sub-section */}
+      <div style={{ marginTop: 20, paddingTop: 20, borderTop: '1px solid #F0EBDC' }}>
+        <p style={{ margin: '0 0 12px', fontSize: 12.5, fontWeight: 700, color: '#191712' }}>Calendar blocking rules</p>
+        <BlockingRulesSection />
+      </div>
+    </div>
+  )
+}
+
 // ─── Automation Section (11F) ─────────────────────────────────────────────────
 
 interface AutomationRule {
@@ -2184,10 +2463,13 @@ interface AutomationRule {
 }
 
 const DEFAULT_AUTOMATION_RULES: AutomationRule[] = [
-  { id: 'morning-brief',  action: 'Write the morning brief',           trigger: 'every day at 06:40, before you wake',               enabled: true },
-  { id: 'draft-replies',  action: 'Draft replies for NEEDS YOU mail',  trigger: 'a thread is marked needs-you and sits over 4 hours',  enabled: true },
-  { id: 'block-focus',    action: 'Block focus time for P0 tasks',     trigger: 'a P0 task has no calendar block by 09:00',            enabled: true },
-  { id: 'distribute-dump',action: 'Distribute the dump',               trigger: 'the brain dump passes 12 tasks',                     enabled: false },
+  { id: 'morning-brief',    action: 'Write the morning brief',             trigger: 'every day at 06:40, before you wake',                        enabled: true  },
+  { id: 'draft-replies',    action: 'Draft replies for NEEDS YOU mail',    trigger: 'a thread is marked needs-you and sits over 4 hours',          enabled: true  },
+  { id: 'block-focus',      action: 'Block focus time for P0 tasks',       trigger: 'a P0 task has no calendar block by 09:00',                    enabled: true  },
+  { id: 'distribute-dump',  action: 'Distribute the dump',                 trigger: 'the brain dump passes 12 tasks',                             enabled: false },
+  { id: 'roll-forward',     action: 'Roll unfinished tasks forward',        trigger: 'a scheduled task ends the day untouched',                    enabled: true  },
+  { id: 'archive-news',     action: 'Archive newsletters',                  trigger: 'a thread is promotional and nobody replied in 3 days',       enabled: true  },
+  { id: 'close-week',       action: 'Close the week',                       trigger: 'Sunday 20:00, if the review has not been opened',            enabled: false },
 ]
 
 function AutomationSection() {
@@ -2237,25 +2519,16 @@ function AutomationSection() {
         border: '1px solid #E8E1CE', fontSize: 12.5, fontWeight: 500,
         color: '#6C6553', cursor: 'pointer',
       }}>
-        <Plus size={13} /> Add rule
+        <Plus size={13} /> New rule
       </button>
 
-      {/* Reminders sub-section (reuses NotificationsSection fields) */}
-      <div style={{ marginTop: 22, paddingTop: 20, borderTop: '1px solid #F0EBDC' }}>
-        <p style={{ margin: '0 0 12px', fontSize: 11.5, fontWeight: 700, letterSpacing: '0.1em', color: '#6C6553', textTransform: 'uppercase' }}>Reminders</p>
-        <_NotificationsReminders />
-      </div>
+      {/* Run log footer */}
+      <p style={{ margin: '14px 0 0', fontSize: 11.5, color: '#9B9180', lineHeight: 1.5 }}>
+        Five rules ran yesterday · 41 actions taken, 2 reverted by you &nbsp;
+        <button style={{ background: 'none', border: 'none', color: '#5F7038', fontSize: 11.5, cursor: 'pointer', fontWeight: 600, padding: 0 }}>Run log</button>
+      </p>
     </div>
   )
-}
-
-// Extracted from old NotificationsSection — shown as a sub-panel inside Automation
-function _NotificationsReminders() {
-  const [s, setS] = useState<AppSettings>(loadSettings)
-  function set(patch: Partial<AppSettings>) {
-    setS(prev => { const next = { ...prev, ...patch }; saveSettings(next); return next })
-  }
-  return <NotificationsSection s={s} set={set} />
 }
 
 // ─── Data & Privacy Section (companies → data & privacy) ─────────────────────
@@ -2466,7 +2739,6 @@ export function Settings() {
       companies:     () => saveCompaniesToDB(companies as DbSyncCompanyRow[]),
       habits:        async () => { const { habits } = useHabitsStore.getState(); await saveHabitsToDB(habits); await saveHabitLogsToDB(loadLogs()) },
       professor:     () => savePrefsToDB(settingsRef.current),
-      notifications: () => savePrefsToDB(settingsRef.current),
       appearance:    () => savePrefsToDB(settingsRef.current),
     }
     const saveFn = saveFns[id]
@@ -2488,7 +2760,7 @@ export function Settings() {
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0, paddingBottom: 2 }}>
               {/* Setup wizard shortcut for profile / accounts / schedule sections */}
-              {(id === 'profile' || id === 'accounts' || id === 'schedule') && (
+              {(id === 'profile' || id === 'billing' || id === 'accounts' || id === 'schedule') && (
                 <button onClick={() => window.dispatchEvent(new CustomEvent('professor:openWizard'))}
                   style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 13px', borderRadius: 8, background: '#FFFFFF', border: '1px solid #E8E1CE', color: '#6C6553', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>
                   <Wand2 size={12} /> Setup wizard
@@ -2528,8 +2800,9 @@ export function Settings() {
         {/* Section content */}
         <div style={{ background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 14, padding: '22px 24px 24px', boxShadow: '0 1px 3px rgba(25,23,18,0.06)' }}>
           {id === 'profile'       && <ProfileSection       s={settings} set={update} />}
+          {id === 'billing'       && <BillingSection />}
           {id === 'schedule'      && <ScheduleSection      s={settings} set={update} />}
-          {/* 11B: Accounts & companies → company cards (CompaniesSection) */}
+          {/* 11B: Accounts & companies → company cards */}
           {id === 'accounts'      && <CompaniesSection     companies={companies}
                                         setCompanies={c => { setCompanies(c); saveCompanies(c) }}
                                         accounts={[
@@ -2546,21 +2819,16 @@ export function Settings() {
                                         ]} />}
           {id === 'habits'        && <HabitsSection />}
           {id === 'tasks'         && <TaskStatusesSection />}
-          {/* Integrations → Google OAuth connections + calendar blocking rules */}
-          {id === 'blocking'      && <>
-            <AccountsSection accounts={accounts} setAccounts={a => { setAccounts(a) }} primaryEmail={primaryEmail} />
-            <div style={{ marginTop: 22, paddingTop: 20, borderTop: '1px solid #F0EBDC' }}>
-              <p style={{ margin: '0 0 12px', fontSize: 11.5, fontWeight: 700, letterSpacing: '0.1em', color: '#6C6553', textTransform: 'uppercase' }}>Calendar blocking rules</p>
-              <BlockingRulesSection />
-            </div>
-          </>}
+          {/* 11D: Integrations → third-party tools (Notion, Asana, Trello…) + Google OAuth + calendar sync */}
+          {id === 'blocking'      && <IntegrationsSection accounts={accounts} setAccounts={a => setAccounts(a)} primaryEmail={primaryEmail} />}
           {id === 'professor'     && <ProfessorSection     s={settings} set={update} />}
           {/* 11F: Automation → rule cards */}
-          {id === 'notifications' && <AutomationSection />}
+          {id === 'automation'    && <AutomationSection />}
+          {/* 11F: Notifications → Push/Mail/Digest matrix */}
+          {id === 'notifications' && <NotificationsMatrixSection />}
           {id === 'appearance'    && <AppearanceSection    s={settings} set={update} />}
-          {/* Calendar blocking rules moved inside BlockingRulesSection; old Integrations slot replaced above */}
           {id === 'behavioral'    && <BehavioralSection />}
-          {/* Data & privacy → DataPrivacySection */}
+          {/* Data & privacy */}
           {id === 'companies'     && <DataPrivacySection />}
           {id === 'finance'       && <FinanceSection />}
         </div>
