@@ -14,7 +14,6 @@ import { useTaskStore } from '@/store/taskStore'
 import { TASK_TYPE_ORDER, initials, resolveTaskVisuals } from './taskVisuals'
 
 const PRIORITIES: Priority[] = ['P0', 'P1', 'P2', 'P3']
-const DURATIONS = [15, 30, 45, 60, 90, 120]
 const WEEKDAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
 
 function toISODate(d: Date): string {
@@ -201,9 +200,11 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
   const [datePickerOpen, setDatePickerOpen] = useState(false)
   const [fullLog, setFullLog] = useState(false)
   const [expanded, setExpanded] = useState(false)
+  const [activityOpen, setActivityOpen] = useState(true)
   const [dropping, setDropping] = useState(false)
   const [newStep, setNewStep] = useState('')
   const dateRef = useRef<HTMLDivElement>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
 
   // Selecting a different task remounts the panel (keyed on task.id by the
   // caller), so the draft starts fresh without an effect syncing it.
@@ -261,9 +262,7 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
     patch({ attachments: [...attachments, ...added] })
   }
 
-  const timeBlockLabel = draft.plannedTime
-    ? `${draft.plannedTime} · ${draft.duration ?? 30}m`
-    : 'No block'
+  const timeBlockLabel = `${draft.plannedTime} · ${draft.duration ?? 30}m`
 
   return (
     <aside style={{
@@ -335,22 +334,6 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
             )}
           </div>
 
-          <span style={{ position: 'relative', display: 'inline-flex' }}>
-            <span style={{ ...CHIP, color: '#191712' }}>{draft.plannedTime ?? '--:--'} <ChevronDown size={13} /></span>
-            <input type="time" value={draft.plannedTime ?? ''} onChange={e => patch({ plannedTime: e.target.value || undefined })}
-              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer', border: 'none', padding: 0 }} />
-          </span>
-
-          <span style={{ fontSize: 12, color: '#9B9180' }}>for</span>
-
-          <SelectChip
-            value={String(draft.duration ?? '')}
-            onChange={val => patch({ duration: val ? Number(val) : undefined })}
-            style={{ color: '#191712' }}
-            options={[{ value: '', label: 'No duration' }, ...DURATIONS.map(d => ({ value: String(d), label: `${d} min` }))]}
-          >
-            {draft.duration ? `${draft.duration} min` : 'No duration'} <ChevronDown size={13} />
-          </SelectChip>
         </div>
 
         {/* Attribute chips */}
@@ -390,17 +373,29 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
             {owner ? owner.name.split(' ')[0] : 'Unassigned'}
           </SelectChip>
 
-          <button title="Linked thread" style={CHIP}><Link2 size={13} /></button>
-          <button title="Files" style={CHIP}><Folder size={13} /></button>
+          <button
+            title="Attach a link"
+            onClick={() => {
+              const url = window.prompt('Paste a link (thread, doc, page)')?.trim()
+              if (url) patch({ links: [...(draft.links ?? []), url] })
+            }}
+            style={CHIP}>
+            <Link2 size={13} />
+            {(draft.links?.length ?? 0) > 0 && <span>{draft.links!.length}</span>}
+          </button>
+          <button title="Add a file" onClick={() => fileRef.current?.click()} style={CHIP}>
+            <Folder size={13} />
+            {attachments.length > 0 && <span>{attachments.length}</span>}
+          </button>
 
-          <span style={{
-            ...CHIP, cursor: 'default',
-            background: draft.plannedTime ? 'rgba(95,112,56,0.10)' : '#FAF7EC',
-            borderColor: draft.plannedTime ? '#C8DAB0' : '#E8E1CE',
-            color: draft.plannedTime ? '#5F7038' : '#9B9180',
-          }}>
-            <Clock size={12} /> {timeBlockLabel}
-          </span>
+          {draft.plannedTime && (
+            <span style={{
+              ...CHIP, cursor: 'default',
+              background: 'rgba(95,112,56,0.10)', borderColor: '#C8DAB0', color: '#5F7038',
+            }}>
+              <Clock size={12} /> {timeBlockLabel}
+            </span>
+          )}
         </div>
 
         {/* Checklist */}
@@ -461,8 +456,27 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
 
         {/* Attachments */}
         <div style={{ marginTop: 18 }}>
-          <p style={SECTION_LABEL}>Attachments · {attachments.length}</p>
+          <p style={SECTION_LABEL}>Attachments · {attachments.length + (draft.links?.length ?? 0)}</p>
           <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {(draft.links ?? []).map((url, i) => (
+              <div key={`${url}-${i}`} style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                border: '1px solid #E8E1CE', borderRadius: 10, padding: '9px 11px',
+              }}>
+                <span style={{
+                  width: 28, height: 28, borderRadius: 8, flexShrink: 0, background: '#FAF7EC',
+                  border: '1px solid #E8E1CE', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6C6553',
+                }}><Link2 size={13} /></span>
+                <a href={url} target="_blank" rel="noreferrer" style={{
+                  flex: 1, minWidth: 0, fontSize: 12.5, color: '#2F6BD8',
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                }}>{url}</a>
+                <button onClick={() => patch({ links: (draft.links ?? []).filter((_, j) => j !== i) })}
+                  title="Remove link" style={{ ...ICON_BTN, width: 22, height: 22, color: '#C9C0A8' }}>
+                  <X size={13} />
+                </button>
+              </div>
+            ))}
             {attachments.map(f => {
               const isImage = /\.(png|jpe?g|gif|webp|svg)$/i.test(f.name)
               return (
@@ -499,7 +513,7 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
                 color: '#9B9180', fontSize: 12.5,
               }}>
               <Paperclip size={13} /> Drop files here
-              <input type="file" multiple onChange={e => acceptFiles(e.target.files)} style={{ display: 'none' }} />
+              <input ref={fileRef} type="file" multiple onChange={e => acceptFiles(e.target.files)} style={{ display: 'none' }} />
             </label>
           </div>
         </div>
@@ -507,8 +521,20 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
         {/* Activity */}
         <div style={{ marginTop: 18, paddingBottom: 14 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <p style={{ ...SECTION_LABEL, flex: 1 }}>Activity · {taskActs.length} event{taskActs.length === 1 ? '' : 's'}</p>
-            {taskActs.length > 7 && (
+            <button
+              onClick={() => setActivityOpen(o => !o)}
+              title={activityOpen ? 'Collapse activity' : 'Expand activity'}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6, flex: 1,
+                background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                fontFamily: 'inherit', textAlign: 'left',
+              }}>
+              {activityOpen
+                ? <ChevronDown size={13} strokeWidth={2.2} color="#9B9180" />
+                : <ChevronRight size={13} strokeWidth={2.2} color="#9B9180" />}
+              <span style={SECTION_LABEL}>Activity</span>
+            </button>
+            {activityOpen && taskActs.length > 7 && (
               <button onClick={() => setFullLog(f => !f)} style={{
                 display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: 'none',
                 cursor: 'pointer', color: '#6C6553', fontSize: 11.5, fontFamily: 'inherit', padding: 0,
@@ -517,7 +543,7 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
               </button>
             )}
           </div>
-          <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ marginTop: 10, display: activityOpen ? 'flex' : 'none', flexDirection: 'column', gap: 10 }}>
             {shownActs.length === 0 && (
               <p style={{ margin: 0, fontSize: 12, color: '#9B9180' }}>Nothing yet.</p>
             )}

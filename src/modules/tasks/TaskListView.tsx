@@ -4,7 +4,7 @@
 
 import type { Task } from '@/types'
 import { TaskRow } from './TaskRow'
-import { buildTaskGroups, type TaskGroupBy } from './taskVisuals'
+import { buildTaskGroups, sortUrgentFirst, type TaskGroupBy } from './taskVisuals'
 
 export function TaskListView({ tasks, onOpen, hideCompleted, groupBy, filteredTaskIds }: {
   tasks: Task[]
@@ -19,7 +19,7 @@ export function TaskListView({ tasks, onOpen, hideCompleted, groupBy, filteredTa
 
   const groups = groupBy && groupBy !== 'none'
     ? buildTaskGroups(visible, groupBy)
-    : [{ key: 'all', label: '', emoji: '', color: '#9B9180', tasks: visible }]
+    : [{ key: 'all', label: '', emoji: '', color: '#9B9180', tasks: sortUrgentFirst(visible) }]
 
   return (
     <div style={{ padding: '4px 28px 28px', display: 'flex', flexDirection: 'column', gap: 18 }}>

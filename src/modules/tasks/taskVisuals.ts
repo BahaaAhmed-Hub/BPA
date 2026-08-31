@@ -129,6 +129,15 @@ export type TaskGroupBy = 'none' | 'status' | 'type' | 'company' | 'owner'
 
 export interface TaskGroup { key: string; label: string; emoji: string; color: string; tasks: Task[] }
 
+/** On fire floats to the top of whatever list it is in; done sinks. */
+export function sortUrgentFirst(tasks: Task[]): Task[] {
+  return [...tasks].sort((a, b) => {
+    if (!!a.completed !== !!b.completed) return a.completed ? 1 : -1
+    if (!!a.urgent !== !!b.urgent) return a.urgent ? -1 : 1
+    return 0
+  })
+}
+
 const STATUS_GROUPS: { key: string; label: string; color: string }[] = [
   { key: 'open',      label: 'Open',      color: '#6C6553' },
   { key: 'done',      label: 'Done',      color: '#5F7038' },
@@ -146,7 +155,7 @@ export function buildTaskGroups(tasks: Task[], groupBy: Exclude<TaskGroupBy, 'no
     }
     return TASK_TYPE_ORDER.filter(k => map.has(k)).map(k => ({
       key: k, label: TASK_TYPE_META[k].label, emoji: TASK_TYPE_META[k].emoji,
-      color: TASK_TYPE_META[k].color, tasks: map.get(k)!,
+      color: TASK_TYPE_META[k].color, tasks: sortUrgentFirst(map.get(k)!),
     }))
   }
 
@@ -158,7 +167,7 @@ export function buildTaskGroups(tasks: Task[], groupBy: Exclude<TaskGroupBy, 'no
       map.get(k)!.push(t)
     }
     return STATUS_GROUPS.filter(g => map.has(g.key))
-      .map(g => ({ key: g.key, label: g.label, emoji: '●', color: g.color, tasks: map.get(g.key)! }))
+      .map(g => ({ key: g.key, label: g.label, emoji: '●', color: g.color, tasks: sortUrgentFirst(map.get(g.key)!) }))
   }
 
   if (groupBy === 'owner') {
@@ -176,7 +185,7 @@ export function buildTaskGroups(tasks: Task[], groupBy: Exclude<TaskGroupBy, 'no
         label: u?.name ?? 'Unassigned',
         emoji: '👤',
         color: u?.companyColor ?? '#9B9180',
-        tasks: ts,
+        tasks: sortUrgentFirst(ts),
       }
     })
   }
@@ -190,6 +199,6 @@ export function buildTaskGroups(tasks: Task[], groupBy: Exclude<TaskGroupBy, 'no
   }
   return [...map.entries()].map(([k, ts]) => {
     const co = companies.find(c => c.id === k)
-    return { key: k, label: co?.name ?? k, emoji: '🏢', color: co?.color ?? '#9B9180', tasks: ts }
+    return { key: k, label: co?.name ?? k, emoji: '🏢', color: co?.color ?? '#9B9180', tasks: sortUrgentFirst(ts) }
   })
 }

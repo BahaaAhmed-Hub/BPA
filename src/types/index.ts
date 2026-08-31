@@ -170,6 +170,7 @@ export interface Task {
   checklist?: ChecklistStep[]
   attachments?: TaskAttachment[]
   capturedVia?: 'voice' | 'mail' | 'manual'   // brain dump provenance (9F)
+  links?: string[]           // threads, docs and pages attached to the task
 }
 
 export interface ChecklistStep {

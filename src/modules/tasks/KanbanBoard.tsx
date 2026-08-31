@@ -15,6 +15,7 @@ import {
 import { loadCustomStatuses, sortCustomStatuses } from '@/lib/customStatuses'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { TaskCard } from './TaskCard'
+import { sortUrgentFirst } from './taskVisuals'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -68,14 +69,6 @@ function bucketToDate(bucket: string): string | undefined {
     return d.toISOString().slice(0, 10)
   }
   return undefined // unscheduled → clear dueDate
-}
-
-function sortByUrgency(tasks: Task[]): Task[] {
-  return [...tasks].sort((a, b) => {
-    if (a.urgent && !b.urgent) return -1
-    if (!a.urgent && b.urgent) return 1
-    return 0
-  })
 }
 
 // ── Card ─────────────────────────────────────────────────────────────────────
@@ -382,7 +375,7 @@ export function KanbanBoard({ onOpen, hideCompleted = false, filteredTaskIds }: 
         id:    st.id,
         label: st.label,
         color: st.color,
-        tasks: sortByUrgency(tasks.filter(t =>
+        tasks: sortUrgentFirst(tasks.filter(t =>
           t.boardStatus === st.id ||
           (st.id === firstId && (!t.boardStatus || !known.has(t.boardStatus)))
         )),
@@ -394,7 +387,7 @@ export function KanbanBoard({ onOpen, hideCompleted = false, filteredTaskIds }: 
         id:    co.id,
         label: co.name,
         color: co.color,
-        tasks: sortByUrgency(tasks.filter(t =>
+        tasks: sortUrgentFirst(tasks.filter(t =>
           t.companyId === co.id ||
           (!t.companyId && t.company?.toLowerCase() === co.name.toLowerCase())
         )),
@@ -404,7 +397,7 @@ export function KanbanBoard({ onOpen, hideCompleted = false, filteredTaskIds }: 
         id:    'personal',
         label: 'Personal',
         color: '#888780',
-        tasks: sortByUrgency(tasks.filter(t => !assigned.has(t.id))),
+        tasks: sortUrgentFirst(tasks.filter(t => !assigned.has(t.id))),
       })
       return cols
     }
@@ -415,13 +408,13 @@ export function KanbanBoard({ onOpen, hideCompleted = false, filteredTaskIds }: 
         id:    u.id,
         label: u.name,
         color: '#7F77DD',
-        tasks: sortByUrgency(tasks.filter(t => t.owner === u.id)),
+        tasks: sortUrgentFirst(tasks.filter(t => t.owner === u.id)),
       }))
       cols.push({
         id:    'unassigned',
         label: 'Unassigned',
         color: '#6B7280',
-        tasks: sortByUrgency(tasks.filter(t => !t.owner)),
+        tasks: sortUrgentFirst(tasks.filter(t => !t.owner)),
       })
       return cols
     }
@@ -431,7 +424,7 @@ export function KanbanBoard({ onOpen, hideCompleted = false, filteredTaskIds }: 
         id:    type,
         label: `${TASK_TYPE_META[type].emoji} ${TASK_TYPE_META[type].label}`,
         color: TASK_TYPE_META[type].color,
-        tasks: sortByUrgency(tasks.filter(t => (t.taskType ?? inferTaskType(t.title)) === type)),
+        tasks: sortUrgentFirst(tasks.filter(t => (t.taskType ?? inferTaskType(t.title)) === type)),
       }))
     }
 
@@ -448,7 +441,7 @@ export function KanbanBoard({ onOpen, hideCompleted = false, filteredTaskIds }: 
         id:    b.id,
         label: b.label,
         color: b.color,
-        tasks: sortByUrgency(tasks.filter(t => getScheduledBucket(t.dueDate) === b.id)),
+        tasks: sortUrgentFirst(tasks.filter(t => getScheduledBucket(t.dueDate) === b.id)),
       }))
     }
 

@@ -3,7 +3,7 @@ import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { Trash2, Check, Clock, CalendarDays, Paperclip, Flame } from 'lucide-react'
 import type { Task, TaskType, Priority } from '@/types'
-import { TASK_TYPE_META, getAllUsers } from '@/types'
+import { TASK_TYPE_META, getAllUsers, loadVisibleCompanies } from '@/types'
 import { useTaskStore } from '@/store/taskStore'
 import { MeetingFollowUpPopup } from './MeetingFollowUpPopup'
 import type { ExtractedTask } from '@/lib/professor'
@@ -12,6 +12,7 @@ import {
   slotFilled, slotEmpty, slotScheduled, slotPriority,
   initials, openLabel, resolveTaskVisuals,
 } from './taskVisuals'
+import { OverlaySelect } from './controls'
 
 const MEETING_KEYWORDS = ['meeting', 'call', 'sync', 'standup', 'stand-up', '1:1', 'interview', 'check-in', 'debrief', 'catchup', 'catch-up']
 const MEETING_EMOJIS   = ['📞', '💬', '🤝', '📅']
@@ -61,6 +62,7 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
   const v = resolveTaskVisuals(task)
   const { TypeIcon } = v
   const allUsers = getAllUsers()
+  const companies = loadVisibleCompanies()
   const users = task.companyId ? allUsers.filter(u => u.companyId === task.companyId) : allUsers
   const attachmentCount = task.attachments?.length ?? 0
 
@@ -125,14 +127,28 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
           >{task.title}</p>
         </div>
 
-        {/* Company — coloured text, the card's only colour */}
-        {v.companyName && (
+        {/* Company — coloured text, the card's only colour, and its own picker */}
+        <div data-nm style={{ position: 'relative', display: 'inline-block', maxWidth: '100%', margin: '5px 0 0 25px' }}>
           <p style={{
-            margin: '5px 0 0 25px', fontSize: 12, fontWeight: 600,
-            color: v.companyColor, lineHeight: 1.3,
+            margin: 0, fontSize: 12, fontWeight: 600,
+            color: v.companyName ? v.companyColor : '#C9C0A8', lineHeight: 1.3,
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-          }}>{v.companyName}</p>
-        )}
+            cursor: 'pointer',
+          }}>{v.companyName || 'No company'}</p>
+          <OverlaySelect
+            title="Change company"
+            value={task.companyId ?? ''}
+            onChange={val => {
+              const co = companies.find(c => c.id === val)
+              updateTask(task.id, {
+                companyId: co?.id,
+                company: (co?.id ?? task.company) as Task['company'],
+                owner: undefined,
+              })
+            }}
+            options={[{ value: '', label: 'No company' }, ...companies.map(c => ({ value: c.id, label: c.name }))]}
+          />
+        </div>
 
         {/* Meta line */}
         <div style={{

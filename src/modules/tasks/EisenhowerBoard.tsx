@@ -9,7 +9,7 @@ import { useTaskStore } from '@/store/taskStore'
 import type { Quadrant, Task } from '@/types'
 import { isTaskHidden, loadVisibleCompanies } from '@/types'
 import { TaskRow } from './TaskRow'
-import { buildTaskGroups, type TaskGroupBy } from './taskVisuals'
+import { buildTaskGroups, sortUrgentFirst, type TaskGroupBy } from './taskVisuals'
 
 interface QuadrantSpec {
   id: Quadrant
@@ -98,7 +98,7 @@ function QuadrantPanel({ spec, tasks, onOpen, onAction, groupBy }: {
 
   const groups = groupBy !== 'none'
     ? buildTaskGroups(tasks, groupBy)
-    : [{ key: 'all', label: '', color: '#9B9180', emoji: '', tasks }]
+    : [{ key: 'all', label: '', color: '#9B9180', emoji: '', tasks: sortUrgentFirst(tasks) }]
 
   return (
     <div ref={setNodeRef} style={{
