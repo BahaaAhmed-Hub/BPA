@@ -1,12 +1,106 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useFinanceStore } from '../financeStore'
 import { CategoryModal } from '../modals/CategoryModal'
 import { TransactionModal } from '../modals/TransactionModal'
 import type { Category, Transaction, Budget, Currency } from '../types'
 
-const RED   = '#DA4A3E'
-const GREEN = '#2FA869'
+const RED    = '#DA4A3E'
+const RED_SB = '#B4523A'      // Sunlit Bento rust
+const GREEN  = '#2FA869'
+const OLIVE  = '#5F7038'      // Sunlit Bento olive
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+
+type EnvelopeStyle = 'dial' | 'mosaic' | 'slip' | 'ring'
+
+function loadEnvelopeStyle(): EnvelopeStyle {
+  try { return (localStorage.getItem('finance-envelope-style') as EnvelopeStyle) || 'dial' } catch { return 'dial' }
+}
+
+// ─── Conic ring helper ─────────────────────────────────────────────────────
+// Renders a conic-gradient donut ring matching the 16B design spec.
+
+function EnvelopeRing({
+  cat, actual, budget, selected, onClick, onEdit, hovering, onHoverEnter, onHoverLeave,
+}: {
+  cat: Category; actual: number; budget: number
+  selected: boolean; onClick: () => void; onEdit: () => void
+  hovering: boolean; onHoverEnter: () => void; onHoverLeave: () => void
+}) {
+  const over     = budget > 0 && actual > budget
+  const pct      = budget > 0 ? Math.min(actual / budget, 1) : 0
+  const fillDeg  = pct * 360
+  const fillColor = over ? RED_SB : selected ? '#F5D14E' : OLIVE
+  const trackColor = over ? '#F7E4DE' : '#F0EBDC'
+  const textColor  = over ? RED_SB : selected ? '#191712' : OLIVE
+  const pctLabel   = budget > 0 ? `${Math.round(actual / budget * 100)}%` : '–'
+
+  const conicStyle = fillDeg > 0
+    ? `conic-gradient(${fillColor} 0deg ${fillDeg}deg, ${trackColor} ${fillDeg}deg 360deg)`
+    : trackColor
+
+  return (
+    <div
+      style={{
+        display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'center',
+        padding: '11px 8px', borderRadius: 14, boxSizing: 'border-box' as const,
+        background: selected ? '#FAF7EC' : '#FFFFFF',
+        border: `1px solid ${over ? '#E8C7BB' : selected ? '#F5D14E' : '#E8E1CE'}`,
+        cursor: 'pointer', position: 'relative', transition: 'all 0.15s',
+        boxShadow: selected ? '0 0 0 2px rgba(245,209,78,0.25)' : 'none',
+      }}
+      onClick={onClick}
+      onMouseEnter={onHoverEnter}
+      onMouseLeave={onHoverLeave}
+    >
+      {/* Edit pencil on hover */}
+      {hovering && (
+        <button
+          onClick={e => { e.stopPropagation(); onEdit() }}
+          style={{
+            position: 'absolute', top: -4, right: -4,
+            background: '#FFFFFF', border: '1px solid #E8E1CE',
+            borderRadius: '50%', width: 18, height: 18,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer', fontSize: 9, color: '#6C6553', padding: 0, lineHeight: 1,
+          }}
+        >✏</button>
+      )}
+      {/* Conic ring */}
+      <div style={{
+        width: 58, height: 58, borderRadius: '50%',
+        background: conicStyle,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+      }}>
+        <div style={{
+          width: 44, height: 44, borderRadius: '50%', background: '#FAF7EC',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          color: textColor, fontSize: 20,
+        }}>
+          {cat.icon}
+        </div>
+      </div>
+      {/* Name */}
+      <span style={{
+        fontSize: 11.5, fontWeight: 600, color: '#191712',
+        textAlign: 'center' as const, whiteSpace: 'nowrap' as const,
+        overflow: 'hidden', textOverflow: 'ellipsis', width: '100%',
+      }}>{cat.name}</span>
+      {/* Actual + pct */}
+      <span style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+        <span style={{
+          fontFamily: 'Outfit, sans-serif', fontSize: 12.5, fontWeight: 600,
+          color: textColor, fontVariantNumeric: 'tabular-nums',
+        }}>{fmt(actual)}</span>
+        {budget > 0 && (
+          <span style={{ fontSize: 9.5, fontWeight: 700, color: textColor }}>{pctLabel}</span>
+        )}
+      </span>
+      {budget > 0 && (
+        <span style={{ fontSize: 10, color: '#6C6553' }}>of {fmt(budget)}</span>
+      )}
+    </div>
+  )
+}
 
 function addMonth(ym: string, delta: number): string {
   const [y, m] = ym.split('-').map(Number)
@@ -42,6 +136,17 @@ export function BudgetScreen() {
   const [hoveredCatId,  setHoveredCatId]  = useState<string | null>(null)
   const [catModal, setCatModal] = useState<{ open: boolean; category: Category | null }>({ open: false, category: null })
   const [txModal,  setTxModal]  = useState<{ open: boolean; tx: Transaction | null }>({ open: false, tx: null })
+  const [envelopeStyle, setEnvelopeStyle] = useState<EnvelopeStyle>(loadEnvelopeStyle)
+
+  // Listen for style changes from Settings
+  useEffect(() => {
+    function onStyleChange(e: Event) {
+      const detail = (e as CustomEvent<EnvelopeStyle>).detail
+      setEnvelopeStyle(detail)
+    }
+    window.addEventListener('finance:envelopeStyleChanged', onStyleChange)
+    return () => window.removeEventListener('finance:envelopeStyleChanged', onStyleChange)
+  }, [])
 
   // DnD
   const [draggedCatId, setDraggedCatId] = useState<string | null>(null)
@@ -184,74 +289,120 @@ export function BudgetScreen() {
     setDraggedCatId(null); setDropTargetId(null)
   }
 
-  // ─── Shared circle renderer (called as function, not component) ────────
+  // ─── Shared envelope renderer — adapts to envelopeStyle ──────────────
 
-  function renderCircle(cat: Category, size: number, isIncome: boolean, isParent: boolean) {
+  function renderEnvelope(cat: Category, isParent: boolean) {
     const actual     = actualInMonth(cat.id, currentMonth)
     const budget     = budgetAmt(cat.id)
     const over       = actual > budget && budget > 0
-    const isDrop     = dropTargetId === cat.id
     const isDrag     = draggedCatId === cat.id
     const isSelected = isParent ? selectedCatId === cat.id : selectedSubCatId === cat.id
-    const ringColor  = isDrop ? '#F5D14E' : isSelected ? '#F5D14E' : over ? RED : isIncome ? GREEN : '#E8E1CE'
+    const isIncome   = cat.txType === 'income'
+    const pct        = budget > 0 ? Math.min(actual / budget, 1) : 0
 
-    return (
-      <div
-        key={cat.id}
-        style={{
-          display: 'flex', flexDirection: 'column', alignItems: 'center',
-          textAlign: 'center' as const, width: size + 8, position: 'relative',
-          opacity: isDrag ? 0.35 : 1,
-        }}
-        onMouseEnter={() => setHoveredCatId(cat.id)}
-        onMouseLeave={() => setHoveredCatId(null)}
-        onDragOver={e => onDragOver(e, cat.id)}
-        onDragLeave={() => { if (dropTargetId === cat.id) setDropTargetId(null) }}
-        onDrop={e => onDrop(e, cat.id)}
-      >
-        <div
-          draggable
-          onDragStart={e => onDragStart(e, cat.id)}
-          onDragEnd={onDragEnd}
-          onClick={() => {
-            if (isParent) {
-              setSelectedCatId(cat.id)
-              setSelectedSubCatId(null)
-            } else {
-              setSelectedSubCatId(cat.id)
-              setSelectedCatId(cat.parentId ?? null)
-            }
-            setRightMode('txns')
-          }}
+    function handleClick() {
+      if (isParent) { setSelectedCatId(cat.id); setSelectedSubCatId(null) }
+      else { setSelectedSubCatId(cat.id); setSelectedCatId(cat.parentId ?? null) }
+      setRightMode('txns')
+    }
+
+    // ── Dial + trend (default) ─────────────────────────────────────────
+    if (envelopeStyle === 'dial' || envelopeStyle === 'ring') {
+      return (
+        <div key={cat.id} style={{ opacity: isDrag ? 0.35 : 1 }}
+          draggable onDragStart={e => onDragStart(e, cat.id)} onDragEnd={onDragEnd}
+          onDragOver={e => onDragOver(e, cat.id)}
+          onDragLeave={() => { if (dropTargetId === cat.id) setDropTargetId(null) }}
+          onDrop={e => onDrop(e, cat.id)}
+        >
+          <EnvelopeRing
+            cat={cat} actual={actual} budget={budget}
+            selected={isSelected}
+            onClick={handleClick}
+            onEdit={() => setCatModal({ open: true, category: cat })}
+            hovering={hoveredCatId === cat.id}
+            onHoverEnter={() => setHoveredCatId(cat.id)}
+            onHoverLeave={() => setHoveredCatId(null)}
+          />
+        </div>
+      )
+    }
+
+    // ── Till slips (monospace rows) ────────────────────────────────────
+    if (envelopeStyle === 'slip') {
+      const barPct = pct * 100
+      return (
+        <div key={cat.id}
+          onClick={handleClick}
+          draggable onDragStart={e => onDragStart(e, cat.id)} onDragEnd={onDragEnd}
+          onDragOver={e => onDragOver(e, cat.id)} onDragLeave={() => { if (dropTargetId === cat.id) setDropTargetId(null) }} onDrop={e => onDrop(e, cat.id)}
           style={{
-            width: size, height: size, borderRadius: '50%',
-            border: `2.5px solid ${ringColor}`,
-            background: isDrop ? `${'#F5D14E'}18` : '#FFFFFF',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: Math.round(size * 0.38), cursor: 'grab',
-            transition: 'border-color 0.15s',
-            boxShadow: isDrop ? `0 0 0 3px ${'#F5D14E'}33` : 'none',
+            display: 'flex', alignItems: 'center', gap: 10, padding: '8px 14px',
+            borderBottom: '1px solid #E8E1CE', cursor: 'pointer',
+            background: isSelected ? '#FAF7EC' : 'transparent',
+            opacity: isDrag ? 0.35 : 1,
           }}
         >
-          {cat.icon}
+          <span style={{ fontSize: 20, flexShrink: 0, width: 28, textAlign: 'center' as const }}>{cat.icon}</span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 6 }}>
+              <span style={{ fontSize: 12.5, fontWeight: 600, color: '#191712', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{cat.name}</span>
+              <span style={{
+                fontFamily: 'JetBrains Mono, monospace', fontSize: 12, fontWeight: 600,
+                color: over ? RED_SB : isIncome ? OLIVE : '#191712', flexShrink: 0,
+              }}>{fmt(actual)}</span>
+            </div>
+            <div style={{ position: 'relative', height: 5, background: '#F0EBDC', borderRadius: 4, marginTop: 5 }}>
+              <div style={{
+                position: 'absolute', left: 0, top: 0, height: '100%', borderRadius: 4,
+                width: `${Math.min(barPct, 100)}%`,
+                background: over ? RED_SB : isIncome ? OLIVE : '#F5D14E',
+              }} />
+            </div>
+            {budget > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 3 }}>
+                <span style={{ fontSize: 9.5, color: '#9B9180' }}>{Math.round(barPct)}% spent</span>
+                <span style={{ fontSize: 9.5, color: '#9B9180' }}>of {fmt(budget)}</span>
+              </div>
+            )}
+          </div>
         </div>
+      )
+    }
+
+    // ── Proportional mosaic ────────────────────────────────────────────
+    // (mosaic — box area represents budget size; fallback to dial for now)
+    const size = 64
+    const ringColor = isSelected ? '#F5D14E' : over ? RED_SB : isIncome ? OLIVE : '#E8E1CE'
+    return (
+      <div key={cat.id}
+        style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' as const, width: size + 8, position: 'relative', opacity: isDrag ? 0.35 : 1 }}
+        onMouseEnter={() => setHoveredCatId(cat.id)} onMouseLeave={() => setHoveredCatId(null)}
+        onDragOver={e => onDragOver(e, cat.id)} onDragLeave={() => { if (dropTargetId === cat.id) setDropTargetId(null) }} onDrop={e => onDrop(e, cat.id)}
+      >
+        <div draggable onDragStart={e => onDragStart(e, cat.id)} onDragEnd={onDragEnd} onClick={handleClick}
+          style={{
+            width: size, height: size, borderRadius: '50%', border: `2.5px solid ${ringColor}`,
+            background: isSelected ? '#FFF9E0' : '#FFFFFF',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: Math.round(size * 0.38), cursor: 'grab',
+          }}
+        >{cat.icon}</div>
         {hoveredCatId === cat.id && (
-          <button
-            onClick={e => { e.stopPropagation(); setCatModal({ open: true, category: cat }) }}
-            style={{
-              position: 'absolute', top: -4, right: 4,
-              background: '#FFFFFF', border: `1px solid ${'#E8E1CE'}`,
-              borderRadius: '50%', width: 18, height: 18,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer', fontSize: 10, color: '#6C6553', lineHeight: 1, padding: 0,
-            }}
-          >✏</button>
+          <button onClick={e => { e.stopPropagation(); setCatModal({ open: true, category: cat }) }}
+            style={{ position: 'absolute', top: -4, right: 4, background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: '50%', width: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: 10, color: '#6C6553', lineHeight: 1, padding: 0 }}>✏</button>
         )}
         <div style={{ fontSize: 11, color: '#191712', marginTop: 7, lineHeight: 1.2 }}>{cat.name}</div>
-        <div style={{ fontSize: 11, color: over ? RED : isIncome ? GREEN : '#6C6553', marginTop: 2 }}>{fmt(actual)}</div>
+        <div style={{ fontSize: 11, color: over ? RED_SB : isIncome ? OLIVE : '#6C6553', marginTop: 2 }}>{fmt(actual)}</div>
         <div style={{ fontSize: 10, color: '#9B9180' }}>{fmt(budget)}</div>
       </div>
     )
+  }
+
+  // Kept for backward compat in renderSubcatBox
+  function renderCircle(cat: Category, _size: number, isIncome: boolean, isParent: boolean) {
+    return renderEnvelope(cat, isParent)
+    void isIncome
   }
 
   // ─── Inline subcat box (below parent circles) ─────────────────────────
@@ -341,31 +492,51 @@ export function BudgetScreen() {
 
         {/* Header */}
         <div style={{
-          height: 48, flexShrink: 0,
-          borderBottom: `1px solid ${'#E8E1CE'}`,
+          height: 52, flexShrink: 0,
+          borderBottom: '1px solid #E8E1CE',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '0 20px',
+          padding: '0 20px', gap: 12,
         }}>
-          <button
-            onClick={() => setCatModal({ open: true, category: null })}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: '#6C6553', padding: '2px 4px', lineHeight: 1 }}
-          >⚙</button>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <button
-              onClick={() => setCurrentMonth(addMonth(currentMonth, -1))}
-              style={{ background: 'none', border: 'none', color: '#6C6553', fontSize: 20, cursor: 'pointer', padding: '2px 6px', lineHeight: 1 }}
-            >‹</button>
-            <span style={{ fontSize: 18, fontWeight: 600, color: '#191712', minWidth: 90, textAlign: 'center' as const }}>
-              {MONTHS[parseInt(currentMonth.slice(5, 7)) - 1]} {currentMonth.slice(0, 4)}
+          {/* Month nav */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+            <button onClick={() => setCurrentMonth(addMonth(currentMonth, -1))}
+              style={{ background: 'none', border: 'none', color: '#6C6553', fontSize: 20, cursor: 'pointer', padding: '2px 6px', lineHeight: 1 }}>‹</button>
+            <span style={{ fontSize: 15, fontWeight: 600, color: '#191712', minWidth: 90, textAlign: 'center' as const, fontFamily: 'Outfit, sans-serif', letterSpacing: '-0.01em' }}>
+              Budget · {MONTHS[parseInt(currentMonth.slice(5, 7)) - 1]}
             </span>
-            <button
-              onClick={() => setCurrentMonth(addMonth(currentMonth, 1))}
-              style={{ background: 'none', border: 'none', color: '#6C6553', fontSize: 20, cursor: 'pointer', padding: '2px 6px', lineHeight: 1 }}
-            >›</button>
+            <button onClick={() => setCurrentMonth(addMonth(currentMonth, 1))}
+              style={{ background: 'none', border: 'none', color: '#6C6553', fontSize: 20, cursor: 'pointer', padding: '2px 6px', lineHeight: 1 }}>›</button>
           </div>
 
-          <div style={{ width: 32 }} />
+          {/* Envelope style pill switcher */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 2, padding: 3, borderRadius: 999, background: '#EDE7D9', flexShrink: 0 }}>
+            {([['dial','Dial'],['mosaic','Mosaic'],['slip','Slip'],['ring','Rings']] as [EnvelopeStyle, string][]).map(([id, label]) => {
+              const active = envelopeStyle === id
+              return (
+                <button key={id} onClick={() => {
+                  setEnvelopeStyle(id)
+                  try { localStorage.setItem('finance-envelope-style', id) } catch { /* noop */ }
+                }}
+                  style={{
+                    height: 28, padding: '0 12px', borderRadius: 999, border: 'none',
+                    background: active ? '#FFFFFF' : 'transparent',
+                    color: active ? '#191712' : '#6C6553',
+                    fontSize: 11.5, fontWeight: active ? 600 : 400, cursor: 'pointer',
+                    boxShadow: active ? '0 1px 3px rgba(25,23,18,0.16)' : 'none',
+                    transition: 'all 0.15s',
+                  }}
+                >{label}</button>
+              )
+            })}
+          </div>
+
+          {/* New category + set envelopes */}
+          <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+            <button onClick={() => setCatModal({ open: true, category: null })}
+              style={{ height: 34, padding: '0 14px', borderRadius: 999, background: '#FFFFFF', border: '1px solid #E8E1CE', color: '#191712', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>
+              + Category
+            </button>
+          </div>
         </div>
 
         {/* Monthly bars — always visible */}
@@ -422,70 +593,79 @@ export function BudgetScreen() {
           onDrop={e => onDrop(e, null)}
         >
 
+          {/* ENVELOPES header */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+            <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', color: '#6C6553' }}>ENVELOPES</span>
+            <span style={{ fontSize: 11, color: '#6C6553' }}>
+              {envelopeStyle === 'dial' ? 'Ring fills as the month is consumed · rust means the envelope is gone' :
+               envelopeStyle === 'slip' ? 'Monospace figures · one eye movement to compare' :
+               envelopeStyle === 'ring' ? 'Two rings: this month vs last month' :
+               'Box area equals money · rust boxes burst'}
+            </span>
+          </div>
+
           {/* EXPENSES */}
           <div style={{ marginBottom: 28 }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 16 }}>
-              <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.8px', color: '#6C6553' }}>
-                EXPENSES
-              </span>
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 14 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.8px', color: '#6C6553' }}>EXPENSES</span>
               <div style={{ display: 'flex', gap: 6, alignItems: 'baseline' }}>
-                <span style={{ fontSize: 16, fontWeight: 700, color: RED }}>{fmt(totalExpActual)}</span>
-                <span style={{ fontSize: 14, color: '#9B9180' }}>/ EGP {fmt(totalExpBudget)}</span>
+                <span style={{ fontSize: 15, fontWeight: 700, color: RED_SB, fontFamily: 'Outfit, sans-serif', letterSpacing: '-0.02em' }}>{fmt(totalExpActual)}</span>
+                <span style={{ fontSize: 13, color: '#9B9180' }}>/ EGP {fmt(totalExpBudget)}</span>
               </div>
             </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '14px 8px' }}>
-              {topExpCats.map(cat => renderCircle(cat, 64, false, true))}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: 12 }}>
-                <button
-                  onClick={() => setCatModal({ open: true, category: {
-                    id: crypto.randomUUID(), name: '', icon: '📁',
-                    color: '#F5D14E', txType: 'expense', isSystem: false,
-                    sortOrder: categories.filter(c => !c.parentId).length,
-                  }})}
-                  style={{
-                    width: 40, height: 40, borderRadius: '50%',
-                    border: `2px dashed ${'#E8E1CE'}`, background: 'none', cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    color: '#6C6553', fontSize: 20, lineHeight: 1,
-                  }}
-                >+</button>
+
+            {envelopeStyle === 'slip' ? (
+              <div style={{ background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 14, overflow: 'hidden' }}>
+                {topExpCats.map(cat => renderEnvelope(cat, true))}
+                <button onClick={() => setCatModal({ open: true, category: { id: crypto.randomUUID(), name: '', icon: '📁', color: '#F5D14E', txType: 'expense', isSystem: false, sortOrder: categories.filter(c => !c.parentId).length } })}
+                  style={{ width: '100%', padding: '10px 14px', background: 'none', border: 'none', borderTop: '1px dashed #E8E1CE', cursor: 'pointer', color: '#9B9180', fontSize: 12, textAlign: 'left' as const }}>
+                  + Add expense envelope
+                </button>
               </div>
-            </div>
-            {/* Inline subcat box — only for selected expense category that has subcats */}
-            {selExpCat && subCatsOf(selExpCat.id).length > 0 && renderSubcatBox(selExpCat)}
+            ) : (
+              <>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10 }}>
+                  {topExpCats.map(cat => renderEnvelope(cat, true))}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <button onClick={() => setCatModal({ open: true, category: { id: crypto.randomUUID(), name: '', icon: '📁', color: '#F5D14E', txType: 'expense', isSystem: false, sortOrder: categories.filter(c => !c.parentId).length } })}
+                      style={{ width: 40, height: 40, borderRadius: '50%', border: '2px dashed #E8E1CE', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6C6553', fontSize: 20 }}>+</button>
+                  </div>
+                </div>
+                {selExpCat && subCatsOf(selExpCat.id).length > 0 && renderSubcatBox(selExpCat)}
+              </>
+            )}
           </div>
 
           {/* INCOME */}
           <div style={{ marginBottom: 28 }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 16 }}>
-              <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.8px', color: '#6C6553' }}>
-                INCOME
-              </span>
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 14 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.8px', color: '#6C6553' }}>INCOME</span>
               <div style={{ display: 'flex', gap: 6, alignItems: 'baseline' }}>
-                <span style={{ fontSize: 16, fontWeight: 700, color: GREEN }}>{fmt(totalIncActual)}</span>
-                <span style={{ fontSize: 14, color: '#9B9180' }}>/ EGP {fmt(totalIncBudget)}</span>
+                <span style={{ fontSize: 15, fontWeight: 700, color: OLIVE, fontFamily: 'Outfit, sans-serif', letterSpacing: '-0.02em' }}>{fmt(totalIncActual)}</span>
+                <span style={{ fontSize: 13, color: '#9B9180' }}>/ EGP {fmt(totalIncBudget)}</span>
               </div>
             </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '14px 8px' }}>
-              {topIncCats.map(cat => renderCircle(cat, 64, true, true))}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: 12 }}>
-                <button
-                  onClick={() => setCatModal({ open: true, category: {
-                    id: crypto.randomUUID(), name: '', icon: '📁',
-                    color: '#F5D14E', txType: 'income', isSystem: false,
-                    sortOrder: categories.filter(c => !c.parentId).length,
-                  }})}
-                  style={{
-                    width: 40, height: 40, borderRadius: '50%',
-                    border: `2px dashed ${'#E8E1CE'}`, background: 'none', cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    color: '#6C6553', fontSize: 20, lineHeight: 1,
-                  }}
-                >+</button>
+
+            {envelopeStyle === 'slip' ? (
+              <div style={{ background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 14, overflow: 'hidden' }}>
+                {topIncCats.map(cat => renderEnvelope(cat, true))}
+                <button onClick={() => setCatModal({ open: true, category: { id: crypto.randomUUID(), name: '', icon: '📁', color: '#F5D14E', txType: 'income', isSystem: false, sortOrder: categories.filter(c => !c.parentId).length } })}
+                  style={{ width: '100%', padding: '10px 14px', background: 'none', border: 'none', borderTop: '1px dashed #E8E1CE', cursor: 'pointer', color: '#9B9180', fontSize: 12, textAlign: 'left' as const }}>
+                  + Add income envelope
+                </button>
               </div>
-            </div>
-            {/* Inline subcat box — only for selected income category that has subcats */}
-            {selIncCat && subCatsOf(selIncCat.id).length > 0 && renderSubcatBox(selIncCat)}
+            ) : (
+              <>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10 }}>
+                  {topIncCats.map(cat => renderEnvelope(cat, true))}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <button onClick={() => setCatModal({ open: true, category: { id: crypto.randomUUID(), name: '', icon: '📁', color: '#F5D14E', txType: 'income', isSystem: false, sortOrder: categories.filter(c => !c.parentId).length } })}
+                      style={{ width: 40, height: 40, borderRadius: '50%', border: '2px dashed #E8E1CE', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6C6553', fontSize: 20 }}>+</button>
+                  </div>
+                </div>
+                {selIncCat && subCatsOf(selIncCat.id).length > 0 && renderSubcatBox(selIncCat)}
+              </>
+            )}
           </div>
 
         </div>
