@@ -6,7 +6,7 @@ import {
   Plus, Trash2, LogIn, LogOut,
   ChevronDown, ChevronUp, User, Clock, Building2, Flame,
   Brain, Bell, Palette, Link, X, RefreshCw, Eye, EyeOff, Shield, Pencil,
-  Hash, CheckSquare, Mail, HardDrive, CalendarDays, Swords, Wand2,
+  Hash, CheckSquare, Mail, HardDrive, CalendarDays, Swords, Wand2, CreditCard,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { connectAdditionalGoogleAccount, signOut as googleSignOut, disconnectGoogleAccount } from '@/lib/google'
@@ -55,7 +55,7 @@ interface CompanyRow {
   users: CompanyUser[]
 }
 
-const SECTION_IDS = ['profile','schedule','companies','habits','tasks','accounts','professor','notifications','appearance','blocking','behavioral'] as const
+const SECTION_IDS = ['profile','schedule','companies','habits','tasks','accounts','professor','notifications','appearance','blocking','behavioral','finance'] as const
 type SectionId = typeof SECTION_IDS[number]
 
 interface SectionMeta { id: SectionId; title: string; icon: React.ElementType; description: string }
@@ -71,6 +71,7 @@ const SECTION_META: SectionMeta[] = [
   { id: 'appearance',    title: 'Appearance',           icon: Palette,    description: 'Theme, density & sidebar default' },
   { id: 'blocking',      title: 'Productivity Blocking', icon: Shield,    description: 'Block calendar slots across accounts automatically' },
   { id: 'behavioral',    title: 'Behavioral OS',        icon: Swords,     description: 'Rank system, identity detection & operating mode' },
+  { id: 'finance',       title: 'Finance',              icon: CreditCard, description: 'Envelope style, figures, dates & alerts' },
 ]
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -1880,6 +1881,229 @@ function BehavioralSection() {
   )
 }
 
+// ─── CHUNK 6c: Finance Settings section ──────────────────────────────────────
+
+type EnvelopeStyle = 'dial' | 'mosaic' | 'slip' | 'ring'
+
+function FinanceSection() {
+  const [envelopeStyle, setEnvelopeStyle] = useState<EnvelopeStyle>(() => {
+    try { return (localStorage.getItem('finance-envelope-style') as EnvelopeStyle) || 'dial' } catch { return 'dial' }
+  })
+  const [currency, setCurrency]         = useState(() => { try { return localStorage.getItem('finance-currency') || 'EGP' } catch { return 'EGP' } })
+  const [monthStart, setMonthStart]     = useState(() => { try { return parseInt(localStorage.getItem('finance-month-start') ?? '1') } catch { return 1 } })
+  const [showCents, setShowCents]       = useState(() => { try { return localStorage.getItem('finance-show-cents') !== 'false' } catch { return true } })
+  const [weekStart, setWeekStart]       = useState(() => { try { return localStorage.getItem('finance-week-start') || 'Mon' } catch { return 'Mon' } })
+  const [alertThreshold, setAlertThreshold] = useState(() => { try { return parseFloat(localStorage.getItem('finance-alert-threshold') ?? '0.9') } catch { return 0.9 } })
+
+  function saveStyle(s: EnvelopeStyle) {
+    setEnvelopeStyle(s)
+    try { localStorage.setItem('finance-envelope-style', s) } catch { /* noop */ }
+    window.dispatchEvent(new CustomEvent('finance:envelopeStyleChanged', { detail: s }))
+  }
+
+  function saveField(key: string, val: string) {
+    try { localStorage.setItem(key, val) } catch { /* noop */ }
+  }
+
+  const STYLES: { id: EnvelopeStyle; label: string; sub: string; preview: React.ReactNode }[] = [
+    {
+      id: 'dial',
+      label: 'Dial + trend',
+      sub: 'This month, plus a seven-day habit line',
+      preview: (
+        <svg viewBox="0 0 80 56" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: 56 }}>
+          {/* Track */}
+          <path d="M14 42 A26 26 0 0 1 66 42" stroke="#E8E1CE" strokeWidth="7" strokeLinecap="round" fill="none"/>
+          {/* Fill (72% of arc) */}
+          <path d="M14 42 A26 26 0 0 1 57.8 19.5" stroke="#F5D14E" strokeWidth="7" strokeLinecap="round" fill="none"/>
+          {/* Needle center */}
+          <circle cx="40" cy="42" r="4" fill="#191712"/>
+          {/* Trend line */}
+          <polyline points="10,50 22,46 34,44 46,41 58,37 70,33" stroke="#5F7038" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+        </svg>
+      ),
+    },
+    {
+      id: 'mosaic',
+      label: 'Proportional mosaic',
+      sub: 'Area equals money · rust boxes burst',
+      preview: (
+        <svg viewBox="0 0 80 56" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: 56 }}>
+          <rect x="4" y="4" width="44" height="28" rx="3" fill="#EDE7D9"/>
+          <rect x="4" y="4" width="44" height="20" rx="3" fill="#F5D14E" opacity="0.7"/>
+          <rect x="52" y="4" width="24" height="44" rx="3" fill="#F7E4DE"/>
+          <rect x="52" y="4" width="24" height="48" rx="3" fill="#8A3B2A" opacity="0.5"/>
+          <rect x="4" y="36" width="20" height="16" rx="3" fill="#EDE7D9"/>
+          <rect x="4" y="36" width="14" height="16" rx="3" fill="#E9EFD9"/>
+          <rect x="28" y="36" width="20" height="16" rx="3" fill="#EDE7D9"/>
+          <rect x="28" y="36" width="10" height="16" rx="3" fill="#F5D14E" opacity="0.5"/>
+        </svg>
+      ),
+    },
+    {
+      id: 'slip',
+      label: 'Till slips',
+      sub: 'Monospace figures · one eye movement to compare',
+      preview: (
+        <svg viewBox="0 0 80 56" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: 56 }}>
+          <rect x="4" y="4" width="72" height="12" rx="3" fill="#FAF7EC"/>
+          <rect x="4" y="4" width="52" height="12" rx="3" fill="#F5D14E" opacity="0.5"/>
+          <rect x="4" y="20" width="72" height="12" rx="3" fill="#FAF7EC"/>
+          <rect x="4" y="20" width="68" height="12" rx="3" fill="#E9EFD9"/>
+          <rect x="4" y="36" width="72" height="12" rx="3" fill="#FAF7EC"/>
+          <rect x="4" y="36" width="76" height="12" rx="3" fill="#F7E4DE"/>
+          <rect x="4" y="36" width="72" height="12" rx="3" fill="#8A3B2A" opacity="0.25"/>
+        </svg>
+      ),
+    },
+    {
+      id: 'ring',
+      label: 'Double rings',
+      sub: 'Two rings: worse than last month · not just over',
+      preview: (
+        <svg viewBox="0 0 80 56" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: 56 }}>
+          {/* outer ring */}
+          <circle cx="22" cy="28" r="16" stroke="#E8E1CE" strokeWidth="4" fill="none"/>
+          <circle cx="22" cy="28" r="16" stroke="#F5D14E" strokeWidth="4" fill="none"
+            strokeDasharray="75.4" strokeDashoffset="20" strokeLinecap="round"/>
+          {/* inner ring */}
+          <circle cx="22" cy="28" r="10" stroke="#EDE7D9" strokeWidth="3" fill="none"/>
+          <circle cx="22" cy="28" r="10" stroke="#5F7038" strokeWidth="3" fill="none"
+            strokeDasharray="62.8" strokeDashoffset="16" strokeLinecap="round"/>
+
+          <circle cx="55" cy="28" r="16" stroke="#E8E1CE" strokeWidth="4" fill="none"/>
+          <circle cx="55" cy="28" r="16" stroke="#8A3B2A" strokeWidth="4" fill="none"
+            strokeDasharray="100.5" strokeDashoffset="-4" strokeLinecap="round"/>
+          <circle cx="55" cy="28" r="10" stroke="#EDE7D9" strokeWidth="3" fill="none"/>
+          <circle cx="55" cy="28" r="10" stroke="#8A3B2A" strokeWidth="3" fill="none" opacity="0.5"
+            strokeDasharray="62.8" strokeDashoffset="-8" strokeLinecap="round"/>
+        </svg>
+      ),
+    },
+  ]
+
+  return (
+    <div>
+      {/* ── ENVELOPE STYLE ───────────────────────────────────────────────────── */}
+      <div style={{ marginBottom: 4 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', color: '#6C6553' }}>ENVELOPE STYLE</span>
+          <span style={{ fontSize: 11, color: '#6C6553' }}>The budget page opens in this view · you can still switch it per visit</span>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          {STYLES.map(style => {
+            const active = envelopeStyle === style.id
+            return (
+              <button
+                key={style.id}
+                onClick={() => saveStyle(style.id)}
+                style={{
+                  background: active ? '#FAF7EC' : '#FFFFFF',
+                  border: `1.5px solid ${active ? '#F5D14E' : '#E8E1CE'}`,
+                  borderRadius: 12, padding: '14px 14px 12px',
+                  cursor: 'pointer', textAlign: 'left',
+                  boxShadow: active ? '0 0 0 2px rgba(245,209,78,0.25)' : 'none',
+                  transition: 'all 0.15s',
+                }}
+              >
+                {/* Visual preview */}
+                <div style={{ background: '#F0EBDC', borderRadius: 8, padding: '8px 10px', marginBottom: 10, overflow: 'hidden' }}>
+                  {style.preview}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                  <div style={{
+                    width: 16, height: 16, borderRadius: '50%', flexShrink: 0, marginTop: 1,
+                    border: `2px solid ${active ? '#F5D14E' : '#E8E1CE'}`,
+                    background: active ? '#F5D14E' : 'transparent',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    {active && <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#191712' }} />}
+                  </div>
+                  <div>
+                    <p style={{ margin: 0, fontSize: 12.5, fontWeight: 600, color: '#191712' }}>{style.label}</p>
+                    <p style={{ margin: '2px 0 0', fontSize: 10.5, color: '#6C6553', lineHeight: 1.3 }}>{style.sub}</p>
+                  </div>
+                </div>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      <div style={{ height: 1, background: '#EDE7D9', margin: '20px 0' }} />
+
+      {/* ── FIGURES ──────────────────────────────────────────────────────────── */}
+      <div style={{ marginBottom: 4 }}>
+        <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', color: '#6C6553', display: 'block', marginBottom: 12 }}>FIGURES</span>
+        <FieldRow label="Currency" sub="Used everywhere in Finance">
+          <select
+            value={currency}
+            onChange={e => { setCurrency(e.target.value); saveField('finance-currency', e.target.value) }}
+            style={{ ...selectStyle, width: 160 }}
+          >
+            {['EGP','USD','EUR','GBP','AED','SAR','KWD','QAR','BHD','OMR','JOD','MAD','TND'].map(c =>
+              <option key={c} value={c}>{c}</option>
+            )}
+          </select>
+        </FieldRow>
+        <FieldRow label="Show cents" sub="Display two decimal places on all amounts">
+          <Toggle checked={showCents} onChange={v => { setShowCents(v); saveField('finance-show-cents', String(v)) }} />
+        </FieldRow>
+      </div>
+
+      <div style={{ height: 1, background: '#EDE7D9', margin: '20px 0' }} />
+
+      {/* ── DATES ────────────────────────────────────────────────────────────── */}
+      <div style={{ marginBottom: 4 }}>
+        <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', color: '#6C6553', display: 'block', marginBottom: 12 }}>DATES</span>
+        <FieldRow label="Month starts on" sub="Day the budget month resets">
+          <select
+            value={monthStart}
+            onChange={e => { const v = parseInt(e.target.value); setMonthStart(v); saveField('finance-month-start', String(v)) }}
+            style={{ ...selectStyle, width: 160 }}
+          >
+            {Array.from({ length: 28 }, (_, i) => i + 1).map(d => (
+              <option key={d} value={d}>{d === 1 ? '1st (calendar month)' : `${d}${d === 2 ? 'nd' : d === 3 ? 'rd' : 'th'}`}</option>
+            ))}
+          </select>
+        </FieldRow>
+        <FieldRow label="Week starts on" sub="Affects the money calendar view">
+          <select
+            value={weekStart}
+            onChange={e => { setWeekStart(e.target.value); saveField('finance-week-start', e.target.value) }}
+            style={{ ...selectStyle, width: 160 }}
+          >
+            {['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(d => <option key={d} value={d}>{d}</option>)}
+          </select>
+        </FieldRow>
+      </div>
+
+      <div style={{ height: 1, background: '#EDE7D9', margin: '20px 0' }} />
+
+      {/* ── ALERTS ───────────────────────────────────────────────────────────── */}
+      <div>
+        <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', color: '#6C6553', display: 'block', marginBottom: 12 }}>ALERTS</span>
+        <FieldRow label="Balance alert" sub="Notify when an envelope is this % spent">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <input
+              type="range" min={0.5} max={1} step={0.05}
+              value={alertThreshold}
+              onChange={e => { const v = parseFloat(e.target.value); setAlertThreshold(v); saveField('finance-alert-threshold', String(v)) }}
+              style={{ flex: 1, accentColor: '#F5D14E', cursor: 'pointer' }}
+            />
+            <span style={{ width: 36, textAlign: 'right', fontSize: 13, fontWeight: 600, color: '#191712', fontFamily: 'JetBrains Mono, monospace' }}>
+              {Math.round(alertThreshold * 100)}%
+            </span>
+          </div>
+          <p style={{ margin: '4px 0 0', fontSize: 10.5, color: '#6C6553' }}>
+            {alertThreshold >= 1 ? 'Alert only when over budget' : alertThreshold >= 0.9 ? 'Alert at 90%+ spent (recommended)' : `Alert when ${Math.round(alertThreshold * 100)}%+ of envelope is spent`}
+          </p>
+        </FieldRow>
+      </div>
+    </div>
+  )
+}
+
 // ─── CHUNK 7: Main Settings component ────────────────────────────────────────
 
 export function Settings() {
@@ -2084,6 +2308,7 @@ export function Settings() {
           {id === 'appearance'    && <AppearanceSection    s={settings} set={update} />}
           {id === 'blocking'      && <BlockingRulesSection />}
           {id === 'behavioral'    && <BehavioralSection />}
+          {id === 'finance'       && <FinanceSection />}
         </div>
       </div>
     )
