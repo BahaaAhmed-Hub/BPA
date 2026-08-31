@@ -606,18 +606,20 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
   const isTentative = event.status === 'tentative'
 
   // Sunlit Bento event styles
-  // past → warm parchment; done/cancelled → muted; normal → color-tinted
+  // Every event keeps its calendar's colour — that is how you read the grid at a
+  // glance. Past, done and cancelled events say so with a lighter wash and a
+  // struck-through title, not by turning grey.
   const rgb = color.startsWith('#') ? hexRgbStr(color) : '127,119,221'
   const evBg    = (isDone || isCancelled || isPast)
-    ? '#F1ECDE'
+    ? `rgba(${rgb}, 0.07)`
     : `rgba(${rgb}, 0.16)`
   const evBorder = isTentative
     ? `1.5px dashed ${color}`
     : isSelected
     ? `2px solid ${color}`
-    : `1px solid rgba(${rgb}, 0.45)`
-  const evInk   = (isDone || isCancelled || isPast) ? '#9B9180' : '#191712'
-  const evTimeInk = (isDone || isCancelled || isPast) ? '#B5AA98' : '#6C6553'
+    : `1px solid rgba(${rgb}, ${(isDone || isCancelled || isPast) ? 0.28 : 0.45})`
+  const evInk   = (isDone || isCancelled || isPast) ? '#8A8272' : '#191712'
+  const evTimeInk = (isDone || isCancelled || isPast) ? '#A79D8B' : '#6C6553'
 
   return (
     <div

@@ -1,10 +1,5 @@
-
-import { MorningBrief } from './MorningBrief'
+import { TodayPage } from './TodayPage'
 
 export function MorningModule() {
-  return (
-    <div>
-      <MorningBrief />
-    </div>
-  )
+  return <TodayPage />
 }

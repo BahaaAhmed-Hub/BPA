@@ -7,6 +7,7 @@ import { InboxModule } from './modules/inbox/InboxModule'
 import { HabitsModule } from './modules/habits/HabitsModule'
 import { ReviewModule } from './modules/review/ReviewModule'
 import { MorningModule } from './modules/morning/MorningModule'
+import { CommandPalette } from './modules/search/CommandPalette'
 import { SettingsModule } from './modules/settings/SettingsModule'
 import { BehavioralOS } from './modules/behavioral/BehavioralOS'
 import { PlanningAssistant } from './modules/planning/PlanningAssistant'
@@ -412,13 +413,16 @@ function TopNav() {
 
       {/* Right — search + icon buttons + avatar */}
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 9, minWidth: 0 }}>
-        {/* Search */}
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 7,
-          padding: '6px 12px',
-          background: '#FFFFFF', border: '1px solid #E8E1CE',
-          borderRadius: 12, cursor: 'text',
-        }}>
+        {/* Search — opens the platform-wide palette */}
+        <div
+          onClick={() => window.dispatchEvent(new Event('professor:openSearch'))}
+          title="Search everything (⌘K)"
+          style={{
+            display: 'flex', alignItems: 'center', gap: 7,
+            padding: '6px 12px',
+            background: '#FFFFFF', border: '1px solid #E8E1CE',
+            borderRadius: 12, cursor: 'pointer',
+          }}>
           <Search size={13} color="#6C6553" />
           <span style={{ fontSize: 12.5, color: '#8A8272', userSelect: 'none' }}>Search</span>
           <span style={{
@@ -788,6 +792,21 @@ function App() {
   }, [user])
 
   const [assistantOpen, setAssistantOpen] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
+
+  // ⌘K / Ctrl-K anywhere, and the magnifier in the nav, open the same palette
+  useEffect(() => {
+    const openIt = () => setSearchOpen(true)
+    function onKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); setSearchOpen(o => !o) }
+    }
+    window.addEventListener('professor:openSearch', openIt)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      window.removeEventListener('professor:openSearch', openIt)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [])
   const [showWizard, setShowWizard] = useState(false)
   const wizardChecked = useRef(false)
 
@@ -833,6 +852,7 @@ function App() {
           <ActiveModule />
         </main>
       </div>
+      <CommandPalette open={searchOpen} onClose={() => setSearchOpen(false)} />
       <AssistantPanel open={assistantOpen} onClose={() => setAssistantOpen(false)} />
       <AssistantToggle open={assistantOpen} onClick={() => setAssistantOpen(o => !o)} />
       {showWizard && <SetupWizard onClose={() => setShowWizard(false)} />}
