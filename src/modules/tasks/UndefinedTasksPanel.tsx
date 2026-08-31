@@ -560,8 +560,8 @@ export function UndefinedTasksPanel({ onOpen, hideCompleted = false, groupBy = '
             <div style={{ display: 'flex', gap: 6 }}>
               <button onClick={handleAdd} disabled={!title.trim()} style={{
                 flex: 1, padding: '6px', borderRadius: 6, fontSize: 12, fontWeight: 500,
-                background: 'rgba(127,119,221,0.1)', border: '1px solid #1E40AF50',
-                color: '#7F77DD', cursor: title.trim() ? 'pointer' : 'not-allowed',
+                background: 'rgba(245,209,78,0.12)', border: '1px solid rgba(245,209,78,0.45)',
+                color: '#191712', cursor: title.trim() ? 'pointer' : 'not-allowed',
                 opacity: title.trim() ? 1 : 0.4,
               }}>Add Task</button>
               <button onClick={reset} style={{

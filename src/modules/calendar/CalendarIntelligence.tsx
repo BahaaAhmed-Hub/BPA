@@ -2635,7 +2635,7 @@ export function CalendarIntelligence() {
 
       {/* No auth state */}
       {noAuth && !loadingEvents && (
-        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-bg, rgba(13,15,30,0.85))', opacity: 0.9, pointerEvents: 'none' }}>
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(247,244,234,0.93)', opacity: 0.9, pointerEvents: 'none' }}>
           <div style={{ textAlign: 'center' }}>
             <Calendar size={36} color="#C8C0AE" />
             <p style={{ margin: '12px 0 0', fontSize: 14, color: '#9B9180' }}>Connect Google Calendar to see your events</p>

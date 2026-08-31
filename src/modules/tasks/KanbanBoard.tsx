@@ -403,9 +403,9 @@ function DatePickerOverlay({
           }}>Cancel</button>
           <button onClick={() => date && onConfirm(date)} disabled={!date} style={{
             padding: '7px 18px', borderRadius: 7,
-            background: 'rgba(59,130,246,0.15)',
-            border: '1px solid rgba(59,130,246,0.4)',
-            color: '#3B82F6', fontSize: 12, fontWeight: 600,
+            background: 'rgba(245,209,78,0.15)',
+            border: '1px solid rgba(245,209,78,0.5)',
+            color: '#191712', fontSize: 12, fontWeight: 600,
             cursor: date ? 'pointer' : 'default', opacity: date ? 1 : 0.5,
           }}>Set Date &amp; Plan</button>
         </div>
@@ -531,9 +531,9 @@ export function KanbanBoard({ onOpen, hideCompleted = false, filteredTaskIds }: 
     if (boardType === 'scheduled') {
       const buckets = [
         { id: 'overdue',     label: 'Overdue',    color: '#EF4444' },
-        { id: 'today',       label: 'Today',      color: '#3B82F6' },
-        { id: 'this-week',   label: 'This Week',  color: '#8B5CF6' },
-        { id: 'next-week',   label: 'Next Week',  color: '#6366F1' },
+        { id: 'today',       label: 'Today',      color: '#F5D14E' },
+        { id: 'this-week',   label: 'This Week',  color: '#7F77DD' },
+        { id: 'next-week',   label: 'Next Week',  color: '#9B9180' },
         { id: 'later',       label: 'Later',      color: '#6B7280' },
         { id: 'unscheduled', label: 'Unscheduled',color: '#9CA3AF' },
       ]
