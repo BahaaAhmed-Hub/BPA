@@ -927,13 +927,30 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
 
       {/* ── Which calendar, and the controls ─────────────────────────────── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{
-          display: 'inline-flex', alignItems: 'center', gap: 6, height: 26, padding: '0 11px',
-          borderRadius: 999, background: '#F1ECDE', color: '#4A4438', fontSize: 12,
-          minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-        }}>
-          <span style={{ width: 7, height: 7, borderRadius: 999, background: calColor, flexShrink: 0 }} />
-          {calName}{recurrenceWord(event.recurrence) ? ` · ${recurrenceWord(event.recurrence)}` : ''}
+        {/* The chip names the calendar and changes it — click to pick another */}
+        <span style={{ position: 'relative', display: 'inline-flex', minWidth: 0, maxWidth: '62%' }}>
+          <span
+            title={onMoveCalendar ? 'Click to move this to another calendar' : calName}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6, height: 28, padding: '0 11px',
+              borderRadius: 999, background: '#F1ECDE', color: '#4A4438', fontSize: 12.5,
+              minWidth: 0, cursor: onMoveCalendar ? 'pointer' : 'default',
+            }}>
+            <span style={{ width: 7, height: 7, borderRadius: 999, background: calColor, flexShrink: 0 }} />
+            <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {calName}{recurrenceWord(event.recurrence) ? ` · ${recurrenceWord(event.recurrence)}` : ''}
+            </span>
+            {onMoveCalendar && <ChevronDown size={12} strokeWidth={2} style={{ color: '#9B9180', flexShrink: 0 }} />}
+          </span>
+          {onMoveCalendar && (
+            <select
+              value={event.calendarId ?? ''}
+              onChange={e => { void onMoveCalendar(e.target.value) }}
+              style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', border: 'none' }}>
+              {writable.length === 0 && <option value={event.calendarId ?? ''}>{calName}</option>}
+              {writable.map(c => <option key={c.id} value={c.id}>{c.summaryOverride ?? c.summary}</option>)}
+            </select>
+          )}
         </span>
         <span style={{ flex: 1 }} />
 
@@ -1029,24 +1046,6 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
 
       {/* ── Fields ───────────────────────────────────────────────────────── */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-          <span style={EV_LABEL}>Calendar</span>
-          <span style={{ flex: 1, minWidth: 0, position: 'relative', display: 'flex' }}>
-            <span style={{ ...EV_PILL, flex: 1, justifyContent: 'space-between' }}>
-              <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{calName}</span>
-              <ChevronDown size={14} strokeWidth={2} style={{ color: '#9B9180', flexShrink: 0 }} />
-            </span>
-            <select
-              value={event.calendarId ?? ''}
-              onChange={e => { void onMoveCalendar?.(e.target.value) }}
-              disabled={!onMoveCalendar || writable.length === 0}
-              style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', border: 'none' }}>
-              {writable.length === 0 && <option value={event.calendarId ?? ''}>{calName}</option>}
-              {writable.map(c => <option key={c.id} value={c.id}>{c.summaryOverride ?? c.summary}</option>)}
-            </select>
-          </span>
-        </div>
-
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
           <span style={EV_LABEL}>Where</span>
           <span style={{ flex: 1, minWidth: 0, display: 'flex', gap: 7 }}>
