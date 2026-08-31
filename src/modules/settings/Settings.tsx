@@ -224,7 +224,8 @@ function FieldRow({ label, sub, children }: { label: string; sub?: string; child
   return (
     <div style={{
       display: 'flex', alignItems: 'flex-start', gap: 12,
-      padding: '10px 0', borderBottom: '1px solid #E8E1CE',
+      padding: '7px 0', borderBottom: '1px solid #F0EBDC',
+      breakInside: 'avoid' as const,
     }}>
       <div style={{ width: 140, flexShrink: 0, paddingTop: 2 }}>
         <span style={{ fontSize: 12.5, color: '#191712' }}>{label}</span>
@@ -288,7 +289,7 @@ function DRow({ label, sub, children, last }: {
   return (
     <div style={{
       display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16,
-      padding: '15px 0',
+      padding: '12px 0',
       borderBottom: last ? 'none' : '1px solid #F0EBDC',
     }}>
       <div style={{ minWidth: 0 }}>
@@ -298,6 +299,11 @@ function DRow({ label, sub, children, last }: {
       <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 10 }}>{children}</div>
     </div>
   )
+}
+
+/** Flows a card's contents into two columns so it fits without scrolling. */
+function TwoCol({ children, gap = 26 }: { children: ReactNode; gap?: number }) {
+  return <div style={{ columns: 2, columnGap: gap }}>{children}</div>
 }
 
 /** Segmented control — active option is a white pill on a cream track. */
@@ -1550,7 +1556,7 @@ function ProfessorSection({ s, set }: { s: AppSettings; set: (p: Partial<AppSett
   }
 
   return (
-    <div>
+    <TwoCol>
       {/* ── Model ── */}
       <FieldRow label="Model" sub="Handles the brief, drafts and matrix suggestions">
         <div style={{ display: 'flex', gap: 5 }}>
@@ -1629,7 +1635,7 @@ function ProfessorSection({ s, set }: { s: AppSettings; set: (p: Partial<AppSett
       </FieldRow>
 
       <p style={{ margin: '14px 0 0', fontSize: 11, color: '#9B9180' }}>Your mail and tasks are never used to train the model.</p>
-    </div>
+    </TwoCol>
   )
 }
 
@@ -2176,7 +2182,8 @@ function FinanceSection() {
   ]
 
   return (
-    <div>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '0 30px', alignItems: 'start' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 22, minWidth: 0 }}>
       {/* ── ENVELOPE STYLE ───────────────────────────────────────────────────── */}
       <div style={{ marginBottom: 4 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
@@ -2223,7 +2230,8 @@ function FinanceSection() {
         </div>
       </div>
 
-      <div style={{ height: 1, background: '#EDE7D9', margin: '20px 0' }} />
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 22, minWidth: 0 }}>
 
       {/* ── FIGURES ──────────────────────────────────────────────────────────── */}
       <div style={{ marginBottom: 4 }}>
@@ -2275,7 +2283,8 @@ function FinanceSection() {
         </div>
       </div>
 
-      <div style={{ height: 1, background: '#EDE7D9', margin: '20px 0' }} />
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 22, minWidth: 0 }}>
 
       {/* ── DATES & COUNTING ─────────────────────────────────────────────────── */}
       <div style={{ marginBottom: 4 }}>
@@ -2325,7 +2334,6 @@ function FinanceSection() {
         </FieldRow>
       </div>
 
-      <div style={{ height: 1, background: '#EDE7D9', margin: '20px 0' }} />
 
       {/* ── ALERTS ───────────────────────────────────────────────────────────── */}
       <div>
@@ -2346,6 +2354,7 @@ function FinanceSection() {
             {alertThreshold >= 1 ? 'Alert only when over budget' : alertThreshold >= 0.9 ? 'Alert at 90%+ spent (recommended)' : `Alert when ${Math.round(alertThreshold * 100)}%+ of envelope is spent`}
           </p>
         </FieldRow>
+      </div>
       </div>
     </div>
   )
@@ -2539,7 +2548,7 @@ const DEFAULT_INTEGRATIONS: Integration[] = [
   { id: 'apple-notes', name: 'Apple Notes', emoji: '🍎', status: 'disconnected', account: 'iCloud · eng.bahaa.a',            tags: ['Notes → dump', 'Needs iCloud sign-in'],            syncMode: 'off',     enabled: false },
 ]
 
-function IntegrationsSection({ accounts, setAccounts, primaryEmail }: { accounts: ConnectedAccount[]; setAccounts: (a: ConnectedAccount[]) => void; primaryEmail: string }) {
+function IntegrationsSection() {
   const [integrations, setIntegrations] = useState<Integration[]>(DEFAULT_INTEGRATIONS)
 
   function toggleEnabled(id: string) {
@@ -2549,21 +2558,21 @@ function IntegrationsSection({ accounts, setAccounts, primaryEmail }: { accounts
   return (
     <div>
       {/* Third-party tools */}
-      <div style={{ marginBottom: 24 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-          <div>
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
             <p style={{ margin: 0, fontSize: 12.5, fontWeight: 700, color: '#191712' }}>Connected tools</p>
             <p style={{ margin: '1px 0 0', fontSize: 11.5, color: '#9B9180' }}>Tasks and notes flow both ways — nothing is deleted on either side</p>
           </div>
-          <button style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 13px', borderRadius: 8, background: '#F5D14E', border: '1px solid rgba(25,23,18,0.18)', fontSize: 12, fontWeight: 600, color: '#191712', cursor: 'pointer' }}>
-            <Plus size={12} /> Add integration
+          <button style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 13px', borderRadius: 8, background: '#F5D14E', border: '1px solid rgba(25,23,18,0.18)', fontSize: 12, fontWeight: 600, color: '#191712', cursor: 'pointer', flexShrink: 0 }}>
+            <Plus size={12} /> <span style={{ whiteSpace: 'nowrap' }}>Add integration</span>
           </button>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
           {integrations.map(tool => (
             <div key={tool.id} style={{
-              padding: '14px 16px', borderRadius: 12,
+              padding: '11px 13px', borderRadius: 11,
               background: tool.status === 'disconnected' ? '#FDFCF9' : '#FFFFFF',
               border: `1px solid ${tool.status === 'disconnected' ? '#E8E1CE' : tool.enabled ? '#C8DAB0' : '#E8E1CE'}`,
               borderStyle: tool.status === 'disconnected' ? 'dashed' : 'solid',
@@ -2608,44 +2617,38 @@ function IntegrationsSection({ accounts, setAccounts, primaryEmail }: { accounts
           ))}
         </div>
 
-        <p style={{ margin: '12px 0 0', fontSize: 11.5, color: '#9B9180', lineHeight: 1.5 }}>
+        <p style={{ margin: '8px 0 0', fontSize: 11.5, color: '#9B9180', lineHeight: 1.5 }}>
           Last sync 07:12 — 14 tasks in, 3 completions pushed out. Tokens live on the server.{' '}
           <button style={{ background: 'none', border: 'none', color: '#5F7038', fontSize: 11.5, cursor: 'pointer', fontWeight: 600, padding: 0 }}>Sync now</button>
         </p>
       </div>
 
-      {/* Sync rules */}
-      <div style={{ paddingTop: 20, borderTop: '1px solid #F0EBDC', marginBottom: 20 }}>
-        <p style={{ margin: '0 0 12px', fontSize: 12.5, fontWeight: 700, color: '#191712' }}>Sync rules</p>
-        {[
-          { label: 'Sync frequency',        sub: 'How often connected tools are polled',          value: 'Every 15 min' },
-          { label: 'Imported tasks land in', sub: 'Untriaged work goes to the dump first',        value: 'The dump' },
-          { label: 'Push completions back',  sub: 'Closing a task here closes it there',          value: 'On' },
-          { label: 'Conflict wins',          sub: 'When both sides changed since the last sync',  value: 'Most recent edit' },
-        ].map(row => (
-          <div key={row.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #F0EBDC' }}>
-            <div>
-              <p style={{ margin: 0, fontSize: 12.5, fontWeight: 500, color: '#191712' }}>{row.label}</p>
-              <p style={{ margin: '1px 0 0', fontSize: 11, color: '#9B9180' }}>{row.sub}</p>
-            </div>
-            <select style={{ fontSize: 12, border: '1px solid #E8E1CE', borderRadius: 7, padding: '5px 10px', background: '#FAF7EC', color: '#191712', cursor: 'pointer' }}>
-              <option>{row.value}</option>
-            </select>
+    </div>
+  )
+}
+
+function SyncRulesSection() {
+  return (
+    <div>
+      {[
+        { label: 'Sync frequency',         sub: 'How often connected tools are polled',         value: 'Every 15 min' },
+        { label: 'Imported tasks land in', sub: 'Untriaged work goes to the dump first',        value: 'The dump' },
+        { label: 'Push completions back',  sub: 'Closing a task here closes it there',          value: 'On' },
+        { label: 'Conflict wins',          sub: 'When both sides changed since the last sync',  value: 'Most recent edit' },
+      ].map((row, i, arr) => (
+        <div key={row.label} style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+          padding: '10px 0', borderBottom: i === arr.length - 1 ? 'none' : '1px solid #F0EBDC',
+        }}>
+          <div style={{ minWidth: 0 }}>
+            <p style={{ margin: 0, fontSize: 12.5, fontWeight: 500, color: '#191712' }}>{row.label}</p>
+            <p style={{ margin: '1px 0 0', fontSize: 11, color: '#9B9180' }}>{row.sub}</p>
           </div>
-        ))}
-      </div>
-
-      {/* Google OAuth accounts sub-section */}
-      <div style={{ paddingTop: 20, borderTop: '1px solid #F0EBDC' }}>
-        <p style={{ margin: '0 0 12px', fontSize: 12.5, fontWeight: 700, color: '#191712' }}>Google accounts</p>
-        <AccountsSection accounts={accounts} setAccounts={setAccounts} primaryEmail={primaryEmail} />
-      </div>
-
-      {/* Calendar blocking rules sub-section */}
-      <div style={{ marginTop: 20, paddingTop: 20, borderTop: '1px solid #F0EBDC' }}>
-        <p style={{ margin: '0 0 12px', fontSize: 12.5, fontWeight: 700, color: '#191712' }}>Calendar blocking rules</p>
-        <BlockingRulesSection />
-      </div>
+          <select style={{ fontSize: 12, border: '1px solid #E8E1CE', borderRadius: 7, padding: '5px 10px', background: '#FAF7EC', color: '#191712', cursor: 'pointer', flexShrink: 0 }}>
+            <option>{row.value}</option>
+          </select>
+        </div>
+      ))}
     </div>
   )
 }
@@ -2688,11 +2691,12 @@ function AutomationSection() {
       <p style={{ margin: '0 0 16px', fontSize: 12.5, color: '#6C6553', lineHeight: 1.5 }}>
         Rules Professor runs automatically in the background — each fires on its trigger and takes action without interrupting you.
       </p>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div style={{ columns: 2, columnGap: 12 }}>
         {rules.map(rule => (
           <div key={rule.id} style={{
-            display: 'flex', alignItems: 'flex-start', gap: 14,
-            padding: '14px 16px', borderRadius: 12,
+            display: 'flex', alignItems: 'flex-start', gap: 12,
+            padding: '11px 13px', borderRadius: 11, marginBottom: 10,
+            breakInside: 'avoid',
             background: rule.enabled ? '#FAFDF7' : '#FDFCF9',
             border: `1px solid ${rule.enabled ? '#C8DAB0' : '#E8E1CE'}`,
             transition: 'all 0.15s',
@@ -2808,15 +2812,15 @@ function DataPrivacySection() {
 
 // ─── Page layout definitions (multi-column pages matching design artboards) ───
 
-type PageKey = 'you' | 'connected' | 'integrations' | 'work' | 'system' | 'finance'
+type PageKey = 'you' | 'connected' | 'integrations' | 'work' | 'system' | 'display' | 'finance'
 
 const SECTION_TO_PAGE: Record<SectionId, PageKey> = {
   profile: 'you',   billing: 'you',
   accounts: 'connected', professor: 'connected', schedule: 'connected',
   blocking: 'integrations',
   tasks: 'work',    habits: 'work',
-  automation: 'system', notifications: 'system', appearance: 'system',
-  behavioral: 'system', companies: 'system',
+  automation: 'system', notifications: 'system',
+  appearance: 'display', behavioral: 'display', companies: 'display',
   finance: 'finance',
 }
 
@@ -2825,26 +2829,26 @@ const PAGE_META: Record<PageKey, { title: string; sub: string }> = {
   connected:    { title: 'System',            sub: 'Accounts, the AI behind the briefs, and everything that interrupts you' },
   integrations: { title: 'Integrations',      sub: 'The tools that already hold your work — what comes in, what goes out, and how often' },
   work:         { title: 'Work',              sub: 'Board statuses, task types and the habits the tracker runs on' },
-  system:       { title: 'System',            sub: 'Rules that run themselves, what interrupts you, and how it all looks' },
+  system:       { title: 'System',            sub: 'Rules that run themselves, and what is allowed to interrupt you' },
+  display:      { title: 'Look and limits',   sub: 'How it all looks, how you are scored, and where your data sits' },
   finance:      { title: 'Finance',           sub: 'How money is displayed and counted — including which envelope style the budget page opens in' },
 }
 
 // Card wrapper used in every multi-column page
-function SectionCard({ id, active, children, actions, sub }: {
-  id: SectionId
-  active: boolean
+function Card({ icon: Icon, title, sub, children, actions, muted }: {
+  icon: React.ElementType
+  title: string
+  sub?: string
   children: React.ReactNode
   actions?: React.ReactNode
-  sub?: string
+  muted?: boolean
 }) {
-  const meta = SECTION_META.find(m => m.id === id)!
-  const Icon = meta.icon
   return (
     <div style={{
       background: '#FFFFFF',
-      border: `1px solid ${active ? '#E0D6BC' : '#E8E1CE'}`,
+      border: `1px solid ${muted ? '#E8E1CE' : '#E0D6BC'}`,
       borderRadius: 16,
-      padding: '20px 24px 22px',
+      padding: '16px 20px 18px',
       boxShadow: '0 1px 3px rgba(25,23,18,0.06)',
       display: 'flex',
       flexDirection: 'column',
@@ -2852,8 +2856,7 @@ function SectionCard({ id, active, children, actions, sub }: {
       alignSelf: 'start',
       transition: 'border-color 0.15s',
     }}>
-      {/* Card heading */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 4, flexShrink: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 8, flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 11, minWidth: 0 }}>
           <div style={{
             width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
@@ -2863,16 +2866,29 @@ function SectionCard({ id, active, children, actions, sub }: {
             <Icon size={14} strokeWidth={1.9} color="#6C6553" />
           </div>
           <div style={{ minWidth: 0 }}>
-            <h3 style={{ margin: 0, fontFamily: 'Outfit, sans-serif', fontSize: 15, fontWeight: 600, letterSpacing: '-0.02em', color: '#191712', lineHeight: 1.25 }}>{meta.title}</h3>
-            <p style={{ margin: '1px 0 0', fontSize: 11.5, color: '#9B9180', lineHeight: 1.35, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sub ?? meta.description}</p>
+            <h3 style={{ margin: 0, fontFamily: 'Outfit, sans-serif', fontSize: 15, fontWeight: 600, letterSpacing: '-0.02em', color: '#191712', lineHeight: 1.25 }}>{title}</h3>
+            {sub && <p style={{ margin: '1px 0 0', fontSize: 11.5, color: '#9B9180', lineHeight: 1.35, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sub}</p>}
           </div>
         </div>
         {actions && <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 8 }}>{actions}</div>}
       </div>
-      <div style={{ minWidth: 0 }}>
-        {children}
-      </div>
+      <div style={{ minWidth: 0 }}>{children}</div>
     </div>
+  )
+}
+
+function SectionCard({ id, active, children, actions, sub }: {
+  id: SectionId
+  active: boolean
+  children: React.ReactNode
+  actions?: React.ReactNode
+  sub?: string
+}) {
+  const meta = SECTION_META.find(m => m.id === id)!
+  return (
+    <Card icon={meta.icon} title={meta.title} sub={sub ?? meta.description} actions={actions} muted={!active}>
+      {children}
+    </Card>
   )
 }
 
@@ -3082,7 +3098,7 @@ export function Settings() {
     // ── YOU page: Profile (left) + Billing (right) ──────────────────────────
     if (page === 'you') return (
       <div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, alignItems: 'start' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, alignItems: 'start' }}>
           <SectionCard
             id="profile"
             active={activeSection === 'profile'}
@@ -3118,7 +3134,7 @@ export function Settings() {
     // ── CONNECTED page: Accounts | AI | Schedule rules ──────────────────────
     if (page === 'connected') return (
       <div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 20, alignItems: 'start' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '0.85fr 1.7fr 1.05fr', gap: 16, alignItems: 'start' }}>
           <SectionCard id="accounts" active={activeSection === 'accounts'} actions={
             <button onClick={() => window.dispatchEvent(new CustomEvent('professor:openWizard'))} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 7, background: '#FAF7EC', border: '1px solid #E8E1CE', color: '#6C6553', fontSize: 11, cursor: 'pointer' }}>
               <Wand2 size={11} /> Wizard
@@ -3138,17 +3154,28 @@ export function Settings() {
 
     // ── INTEGRATIONS page ───────────────────────────────────────────────────
     if (page === 'integrations') return (
-      <div>
-        <SectionCard id="blocking" active={true}>
-          <IntegrationsSection accounts={accounts} setAccounts={a => setAccounts(a)} primaryEmail={primaryEmail} />
+      <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr 1.05fr', gap: 16, alignItems: 'start' }}>
+        <SectionCard id="blocking" active={true} sub="Notion, Asana, Trello and Apple Notes">
+          <IntegrationsSection />
         </SectionCard>
+        <Card icon={Mail} title="Google accounts" sub="Mailboxes and calendars the Professor may read">
+          <AccountsSection accounts={accounts} setAccounts={setAccounts} primaryEmail={primaryEmail} />
+        </Card>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <Card icon={CalendarDays} title="Calendar blocking rules" sub="Which calendars block your focus time">
+            <BlockingRulesSection />
+          </Card>
+          <Card icon={RefreshCw} title="Sync rules" sub="How often, where things land, who wins">
+            <SyncRulesSection />
+          </Card>
+        </div>
       </div>
     )
 
     // ── WORK page: Tasks (left) + Habits (right) ────────────────────────────
     if (page === 'work') return (
       <div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, alignItems: 'start' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, alignItems: 'start' }}>
           <SectionCard id="tasks" active={activeSection === 'tasks'}>
             <TaskStatusesSection />
           </SectionCard>
@@ -3162,26 +3189,29 @@ export function Settings() {
     // ── SYSTEM page: Automation | Notifications | Appearance+Behavioral+Privacy ─
     if (page === 'system') return (
       <div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 20, alignItems: 'start' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1.15fr 1fr', gap: 16, alignItems: 'start' }}>
           <SectionCard id="automation" active={activeSection === 'automation'}>
             <AutomationSection />
           </SectionCard>
           <SectionCard id="notifications" active={activeSection === 'notifications'}>
             <NotificationsMatrixSection />
           </SectionCard>
-          {/* Third column: Appearance + Behavioral OS + Data & privacy stacked */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-            <SectionCard id="appearance" active={activeSection === 'appearance'} actions={<SaveBtn id="appearance" />}>
-              <AppearanceSection s={settings} set={update} />
-            </SectionCard>
-            <SectionCard id="behavioral" active={activeSection === 'behavioral'}>
-              <BehavioralSection />
-            </SectionCard>
-            <SectionCard id="companies" active={activeSection === 'companies'}>
-              <DataPrivacySection />
-            </SectionCard>
-          </div>
         </div>
+      </div>
+    )
+
+    // ── LOOK AND LIMITS page ────────────────────────────────────────────────
+    if (page === 'display') return (
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, alignItems: 'start' }}>
+        <SectionCard id="appearance" active={activeSection === 'appearance'} actions={<SaveBtn id="appearance" />}>
+          <AppearanceSection s={settings} set={update} />
+        </SectionCard>
+        <SectionCard id="behavioral" active={activeSection === 'behavioral'}>
+          <BehavioralSection />
+        </SectionCard>
+        <SectionCard id="companies" active={activeSection === 'companies'}>
+          <DataPrivacySection />
+        </SectionCard>
       </div>
     )
 
@@ -3240,7 +3270,7 @@ export function Settings() {
         onClick={() => { setActiveSection(id); try { localStorage.setItem('settings-active-section', id) } catch { /* noop */ } }}
         style={{
           width: '100%', display: 'flex', alignItems: 'center', gap: 10,
-          padding: '9px 12px', borderRadius: 10, cursor: 'pointer', marginBottom: 2,
+          padding: '5px 12px', borderRadius: 9, cursor: 'pointer', marginBottom: 0,
           background: isActive ? '#191712' : 'transparent',
           border: '1px solid transparent',
           color: isActive ? '#FFFFFF' : '#6C6553',
@@ -3267,8 +3297,11 @@ export function Settings() {
   const pm = PAGE_META[SECTION_TO_PAGE[activeSection]]
 
   return (
+    // Pages are laid out to fit the viewport, so nothing scrolls at a normal
+    // window height. minHeight (not height) means a very short window grows the
+    // page and scrolls it rather than silently clipping a card.
     <div style={{
-      height: 'calc(100vh - 66px)', overflow: 'hidden', background: '#F7F4EA',
+      minHeight: 'calc(100vh - 66px)', background: '#F7F4EA',
       display: 'flex', flexDirection: 'column', padding: '26px 36px 0',
     }}>
 
@@ -3308,7 +3341,7 @@ export function Settings() {
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 22, flex: 1, minHeight: 0, paddingBottom: 26 }}>
+      <div style={{ display: 'flex', gap: 22, flex: 1, alignItems: 'stretch', paddingBottom: 26 }}>
 
         {/* ── LEFT RAIL — floating card ──────────────────────────────────── */}
         <div style={{
@@ -3317,8 +3350,8 @@ export function Settings() {
           boxShadow: '0 1px 3px rgba(25,23,18,0.06)', overflow: 'hidden',
         }}>
           {/* Search */}
-          <div style={{ padding: '14px 14px 10px', flexShrink: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#FAF7EC', border: '1px solid #E8E1CE', borderRadius: 10, padding: '9px 12px', cursor: 'text' }}>
+          <div style={{ padding: '12px 12px 8px', flexShrink: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#FAF7EC', border: '1px solid #E8E1CE', borderRadius: 10, padding: '8px 12px', cursor: 'text' }}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9B9180" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
               <span style={{ fontSize: 12.5, color: '#9B9180', flex: 1, userSelect: 'none' }}>Find a setting</span>
               <span style={{ fontSize: 10.5, color: '#9B9180', opacity: 0.7 }}>⌘K</span>
@@ -3326,10 +3359,10 @@ export function Settings() {
           </div>
 
           {/* Grouped nav */}
-          <div style={{ padding: '0 12px', flex: 1, overflowY: 'auto' }}>
+          <div style={{ padding: '0 12px', flex: 1, minHeight: 0 }}>
             {NAV_GROUPS.map(group => (
-              <div key={group.label} style={{ marginBottom: 6 }}>
-                <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.14em', color: '#B5AC98', padding: '10px 12px 5px', textTransform: 'uppercase' as const }}>
+              <div key={group.label} style={{ marginBottom: 0 }}>
+                <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.14em', color: '#B5AC98', padding: '7px 12px 3px', textTransform: 'uppercase' as const }}>
                   {group.label}
                 </div>
                 {group.ids.map(id => navItem(id))}
@@ -3338,7 +3371,7 @@ export function Settings() {
           </div>
 
           {/* Footer */}
-          <div style={{ padding: '12px 18px 14px', borderTop: '1px solid #F0EBDC', flexShrink: 0 }}>
+          <div style={{ padding: '10px 18px 11px', borderTop: '1px solid #F0EBDC', flexShrink: 0 }}>
             <div style={{ fontSize: 11.5, color: '#9B9180', display: 'flex', alignItems: 'center', gap: 7 }}>
               <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#5F7038', flexShrink: 0 }} />
               Every change saves itself
@@ -3347,7 +3380,7 @@ export function Settings() {
         </div>
 
         {/* ── RIGHT CONTENT PANEL ────────────────────────────────────────── */}
-        <div style={{ flex: 1, minWidth: 0, overflowY: 'auto', paddingRight: 2 }}>
+        <div style={{ flex: 1, minWidth: 0, minHeight: 0 }}>
           {renderPage()}
         </div>
       </div>
