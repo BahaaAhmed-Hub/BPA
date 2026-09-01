@@ -28,9 +28,11 @@ import {
 } from '@/lib/googleCalendar'
 import type { GCalEvent, GCalCalendar, GCalEventCreate } from '@/lib/googleCalendar'
 import { getGoogleToken, seedToken, getGoogleTokenViaSupabaseRefresh } from '@/lib/tokenManager'
+import { loadEventStatuses, saveEventStatuses } from '@/lib/eventStatus'
 import { generateMeetingPrep } from '@/lib/professor'
 import type { MeetingPrep } from '@/lib/professor'
 import { useAuthStore } from '@/store/authStore'
+import { useUIStore } from '@/store/uiStore'
 import { loadAccounts, loadHiddenAccounts } from '@/lib/multiAccount'
 import { loadDynamicCompanies } from '@/types'
 import { connectAdditionalGoogleAccount } from '@/lib/google'
@@ -207,10 +209,6 @@ function loadHiddenIntel(): Set<string> {
 }
 function saveHiddenIntel(s: Set<string>) { localStorage.setItem('cal-intel-hidden', JSON.stringify([...s])) }
 
-function loadEventStatuses(): Record<string, EventStatus> {
-  try { const r = localStorage.getItem('cal-event-statuses'); return r ? JSON.parse(r) as Record<string,EventStatus> : {} } catch { return {} }
-}
-function saveEventStatuses(s: Record<string, EventStatus>) { localStorage.setItem('cal-event-statuses', JSON.stringify(s)) }
 
 function loadCalColors(): Record<string, string> {
   try { const r = localStorage.getItem('cal-intel-colors'); return r ? JSON.parse(r) as Record<string,string> : {} } catch { return {} }
@@ -1841,6 +1839,30 @@ export function CalendarIntelligence() {
     document.addEventListener('mousemove', onMove)
     document.addEventListener('mouseup',   onUp)
   }
+
+  // Something elsewhere — the Today plan — can ask for a particular event to be
+  // open when this page arrives. Land on its day in the week view, then select
+  // it as soon as that week's events are in.
+  const focus = useUIStore(s => s.focus)
+  const clearFocus = useUIStore(s => s.clearFocus)
+  const pendingFocusId = useRef<string | null>(null)
+  useEffect(() => {
+    if (focus?.module !== 'calendar') return
+    if (focus.date) setAnchorDate(new Date(focus.date + 'T12:00:00'))
+    setCalView('week')
+    try { localStorage.setItem('cal-view', 'week') } catch { /* noop */ }
+    pendingFocusId.current = focus.id
+    clearFocus()
+  }, [focus, clearFocus])
+
+  useEffect(() => {
+    const id = pendingFocusId.current
+    if (!id) return
+    const found = events.find(e => e.id === id)
+    if (!found) return
+    setSelectedEvent(found as GCalEventExt)
+    pendingFocusId.current = null
+  }, [events])
 
   // ── Grid scroll ref (auto-scroll to current time on mount) ──────────────────
   const gridRef = useRef<HTMLDivElement>(null)

@@ -11,6 +11,7 @@ import { KanbanBoard } from './KanbanBoard'
 import { TaskDetailPanel } from './TaskDetailPanel'
 import { TaskCard } from './TaskCard'
 import { useTaskStore } from '@/store/taskStore'
+import { useUIStore } from '@/store/uiStore'
 import { Search, X, Plus, SlidersHorizontal, LayoutGrid, Target, List as ListIcon } from 'lucide-react'
 import type { Quadrant, Task } from '@/types'
 import { isTaskHidden, loadVisibleCompanies, getAllUsers, TASK_TYPE_META, inferTaskType } from '@/types'
@@ -165,6 +166,16 @@ export function TaskCommand() {
   }
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null)
   const [modalTaskId,  setModalTaskId]  = useState<string | null>(null)
+
+  // Something elsewhere — the Today plan, the search palette — can ask for a
+  // particular task to be open when this page arrives.
+  const focus = useUIStore(s => s.focus)
+  const clearFocus = useUIStore(s => s.clearFocus)
+  useEffect(() => {
+    if (focus?.module !== 'tasks') return
+    setModalTaskId(focus.id)
+    clearFocus()
+  }, [focus, clearFocus])
   const [showPlanner,  setShowPlanner]  = useState(false)
 
   useEffect(() => {

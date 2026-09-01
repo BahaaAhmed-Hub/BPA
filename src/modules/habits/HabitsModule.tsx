@@ -339,7 +339,7 @@ function HabitLogControl({ isQty, todayDone, qtyValue, unit, tone, onToggle, onI
   const light = tone === 'light'
   const track: React.CSSProperties = {
     display: 'flex', alignItems: 'center', gap: 6, height: 34, boxSizing: 'border-box',
-    padding: 3, borderRadius: 999, minWidth: 0,
+    width: '100%', padding: 3, borderRadius: 999, minWidth: 0,
     background: light ? 'rgba(253,248,231,.16)' : '#FAF7EC',
     border: `1px solid ${light ? 'rgba(253,248,231,.4)' : '#E8E1CE'}`,
     ...(light ? { backdropFilter: 'blur(6px)' } : {}),
@@ -462,7 +462,7 @@ function WallCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, o
           </span>
         </span>
         {/* Log it — the same control the fill cards use */}
-        <span style={{ marginTop: 'auto' }}>
+        <span style={{ marginTop: 'auto', display: 'block' }}>
           <HabitLogControl
             isQty={isQty}
             todayDone={todayDone}
@@ -918,6 +918,20 @@ export function HabitsModule() {
     setDetailHabitId(id)
   }
 
+  // The summary reads one day at a time. Today until you click another bar.
+  const [selectedDay, setSelectedDay] = useState(today)
+  const dayDone = activeHabits.filter(h => (logs[h.id] ?? []).includes(selectedDay)).length
+  const isToday = selectedDay === today
+  const selectedLabel = new Date(selectedDay + 'T12:00:00')
+    .toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' })
+
+  /** Step the week, keeping the same weekday selected. */
+  function stepWeek(delta: number) {
+    const nextAnchor = offsetDays(weekAnchor, delta * 7)
+    setWeekAnchor(nextAnchor)
+    setSelectedDay(offsetDays(selectedDay, delta * 7))
+  }
+
   const isCurrentWeek = weekAnchor === weekStart(today)
 
   // Week bar data: for each day of week, compute completion % across all habits
@@ -973,37 +987,68 @@ export function HabitsModule() {
 
       {/* ─── Summary card ──────────────────────────────────────────────────── */}
       <div style={{ flexShrink: 0, background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 16, padding: '12px 18px', display: 'flex', alignItems: 'center', gap: 18, minWidth: 0 }}>
-        {/* Progress ring */}
-        <ProgressRing done={todayDone} total={totalActive} />
+        {/* Progress ring — for the day you are looking at */}
+        <ProgressRing done={dayDone} total={totalActive} />
 
         {/* Status text */}
-        <span style={{ display: 'flex', flexDirection: 'column', gap: 1, flexShrink: 0 }}>
-          <span style={{ fontSize: 12.5, fontWeight: 600, color: '#191712' }}>
-            {todayDone === 0 ? 'Nothing logged yet today' : todayDone === totalActive ? 'All habits complete! 🎉' : `${todayDone} of ${totalActive} done`}
+        <span style={{ display: 'flex', flexDirection: 'column', gap: 1, flexShrink: 0, minWidth: 0 }}>
+          <span style={{ fontSize: 12.5, fontWeight: 600, color: '#191712', whiteSpace: 'nowrap' }}>
+            {totalActive === 0 ? 'No habits yet'
+              : dayDone === totalActive ? 'All habits complete! 🎉'
+              : dayDone === 0 ? (isToday ? 'Nothing logged yet today' : 'Nothing logged that day')
+              : `${dayDone} of ${totalActive} done`}
           </span>
-          <span style={{ fontSize: 10.5, color: '#6C6553' }}>
-            {totalActive === 0 ? 'Add your first habit below' : `Resets at midnight · ${totalActive - todayDone} remaining`}
+          <span style={{ fontSize: 10.5, color: '#6C6553', whiteSpace: 'nowrap' }}>
+            {totalActive === 0 ? 'Add your first habit below'
+              : isToday ? `Resets at midnight · ${totalActive - dayDone} remaining`
+              : selectedLabel}
           </span>
         </span>
 
         {/* Divider */}
         <span style={{ width: 1, alignSelf: 'stretch', background: '#F0EBDC', margin: '0 4px' }} />
 
-        {/* Week bars */}
-        <span style={{ display: 'flex', alignItems: 'flex-end', gap: 7, flexShrink: 0 }}>
-          {days.map((d, i) => {
-            const pct = weekBars[i]
-            const isT = d === today
-            const dayLabel = ['S','M','T','W','T','F','S'][new Date(d + 'T12:00:00').getDay()]
-            return (
-              <span key={d} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                <span style={{ width: 12, height: 34, borderRadius: 3, background: '#F3EEE0', display: 'flex', alignItems: 'flex-end', overflow: 'hidden' }}>
-                  <span style={{ width: '100%', height: `${Math.round(pct * 100)}%`, background: isT ? '#F5D14E' : '#191712', borderRadius: 3, display: 'block' }} />
-                </span>
-                <span style={{ fontSize: 8.5, color: isT ? '#191712' : '#6C6553', fontWeight: isT ? 700 : 500 }}>{dayLabel}</span>
-              </span>
-            )
-          })}
+        {/* Week bars — click a day to read it, arrows to walk the weeks */}
+        <span style={{ display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0 }}>
+          <button onClick={() => stepWeek(-1)} title="Previous week"
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9B9180', padding: 2, display: 'flex' }}>
+            <ChevronLeft size={14} />
+          </button>
+
+          <span style={{ display: 'flex', alignItems: 'flex-end', gap: 7 }}>
+            {days.map((d, i) => {
+              const pct = weekBars[i]
+              const isT = d === today
+              const on = d === selectedDay
+              const future = d > today
+              const dayLabel = ['S','M','T','W','T','F','S'][new Date(d + 'T12:00:00').getDay()]
+              return (
+                <button
+                  key={d}
+                  onClick={() => setSelectedDay(d)}
+                  title={new Date(d + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
+                  style={{
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+                    background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+                    opacity: future ? 0.45 : 1, fontFamily: 'inherit',
+                  }}>
+                  <span style={{
+                    width: 12, height: 34, borderRadius: 3, background: '#F3EEE0',
+                    display: 'flex', alignItems: 'flex-end', overflow: 'hidden',
+                    outline: on ? '2px solid #191712' : 'none', outlineOffset: 2,
+                  }}>
+                    <span style={{ width: '100%', height: `${Math.round(pct * 100)}%`, background: isT ? '#F5D14E' : '#191712', borderRadius: 3, display: 'block' }} />
+                  </span>
+                  <span style={{ fontSize: 8.5, color: on || isT ? '#191712' : '#6C6553', fontWeight: on || isT ? 700 : 500 }}>{dayLabel}</span>
+                </button>
+              )
+            })}
+          </span>
+
+          <button onClick={() => stepWeek(1)} disabled={isCurrentWeek} title="Next week"
+            style={{ background: 'none', border: 'none', cursor: isCurrentWeek ? 'default' : 'pointer', color: '#9B9180', padding: 2, display: 'flex', opacity: isCurrentWeek ? 0.3 : 1 }}>
+            <ChevronRight size={14} />
+          </button>
         </span>
 
         {/* Divider */}

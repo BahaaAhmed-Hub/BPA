@@ -7,7 +7,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Pencil, RefreshCw, ArrowRight, Zap, Archive, Plus,
-  Clock, Check, Flame, Sun, Quote, CheckSquare,
+  Clock, Check, Flame, Sun, Quote, CheckSquare, X,
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { useTaskStore } from '@/store/taskStore'
@@ -19,7 +19,9 @@ import {
 import { evaluateRank } from '@/lib/behavioralEngine'
 import { fetchVisibleEvents } from '@/lib/calendarEvents'
 import type { GCalEvent } from '@/lib/googleCalendar'
-import { listUnreadThreadIds, getThread, header, extractBody, archiveMessage } from '@/lib/gmail'
+import type { EventStatus } from '@/lib/eventMetadata'
+import { loadEventStatuses, toggleEventStatus } from '@/lib/eventStatus'
+import { listUnreadThreadIds, getThread, header, extractBody, extractHtmlBody, archiveMessage } from '@/lib/gmail'
 import { TASK_TYPE_META, inferTaskType, isTaskHidden } from '@/types'
 import { TASK_TYPE_ICON } from '@/modules/tasks/taskVisuals'
 import type { Task } from '@/types'
@@ -70,6 +72,10 @@ function minutesOf(t: string): number {
 function addMinutes(t: string, mins: number): string {
   const total = (minutesOf(t) + mins + 1440) % 1440
   return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`
+}
+function fmtMins(total: number): string {
+  const m = ((total % 1440) + 1440) % 1440
+  return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
 }
 function fmtHours(mins: number): string {
   if (mins <= 0) return '0m'
@@ -193,14 +199,127 @@ interface MailRow {
   messageId: string
   fromName: string
   fromEmail: string
+  to: string
   subject: string
   snippet: string
+  /** The message as it was sent, when it carried HTML. */
+  html: string | null
+  body: string
   receivedAt: string
   needsYou: boolean
   newsletter: boolean
 }
 
-function MailCard({ rows, loading, error, newsletters, onArchive, onArchiveAll, onOpenInbox, onAddTask }: {
+/** The message itself, in a window that closes when you click away from it. */
+function MailPopup({ row, onClose, onArchive, onAddTask }: {
+  row: MailRow
+  onClose: () => void
+  onArchive: () => void
+  onAddTask: () => void
+}) {
+  const frameRef = useRef<HTMLIFrameElement>(null)
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  // The sender's HTML runs in a sandboxed frame — never in the app's document
+  const doc = `<!DOCTYPE html><html><head><base target="_blank"><meta charset="utf-8"><style>
+    body { margin:0; padding:4px 2px; font-family:-apple-system,system-ui,sans-serif; font-size:14px;
+           line-height:1.6; color:#191712; word-break:break-word; }
+    img { max-width:100%; height:auto; }
+    a { color:#2563EB; }
+    pre, blockquote { white-space:pre-wrap; }
+    blockquote { margin:0 0 0 12px; padding-left:10px; border-left:2px solid #E8E1CE; color:#6C6553; }
+  </style></head><body>${row.html ?? `<pre>${row.body.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c] as string))}</pre>`}</body></html>`
+
+  function fit() {
+    const f = frameRef.current
+    if (!f?.contentWindow) return
+    try { f.style.height = `${Math.max(220, f.contentWindow.document.body.scrollHeight + 24)}px` } catch { /* cross-origin */ }
+  }
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 300,
+        background: 'rgba(25,23,18,0.28)', backdropFilter: 'blur(2px)',
+        display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '8vh 20px 20px',
+      }}>
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          width: '100%', maxWidth: 760, maxHeight: '80vh', display: 'flex', flexDirection: 'column',
+          background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 16, overflow: 'hidden',
+          boxShadow: '0 40px 80px -30px rgba(25,23,18,.55)',
+        }}>
+
+        {/* Who, what, when */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '16px 18px 14px', borderBottom: `1px solid ${HAIR}` }}>
+          <span style={{
+            width: 38, height: 38, borderRadius: '50%', flexShrink: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: '#F1ECDE', color: MUTED, fontSize: 12.5, fontWeight: 700,
+          }}>{initialsOf(row.fromName || row.fromEmail)}</span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <h2 style={{
+              margin: 0, fontFamily: 'Outfit, sans-serif', fontSize: 18, fontWeight: 600,
+              letterSpacing: '-0.02em', color: INK, lineHeight: 1.25,
+            }}>{row.subject}</h2>
+            <p style={{ margin: '5px 0 0', fontSize: 12.5, color: MUTED, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <strong style={{ fontWeight: 600, color: INK }}>{row.fromName || row.fromEmail}</strong>
+              {row.fromName ? ` · ${row.fromEmail}` : ''}
+            </p>
+            <p style={{ margin: '2px 0 0', fontSize: 11.5, color: GHOST }}>
+              {row.to ? `to ${row.to} · ` : ''}
+              {new Date(row.receivedAt).toLocaleString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+            </p>
+          </div>
+          {row.needsYou && (
+            <span style={{
+              flexShrink: 0, height: 20, padding: '0 8px', borderRadius: 6,
+              background: 'rgba(245,209,78,0.28)', border: '1px solid rgba(245,209,78,0.7)',
+              color: '#7A6412', fontSize: 9, fontWeight: 800, letterSpacing: '0.06em',
+              display: 'inline-flex', alignItems: 'center',
+            }}>NEEDS YOU</span>
+          )}
+          <button onClick={onClose} title="Close"
+            style={{ ...ICON_TILE, width: 28, height: 28, borderRadius: '50%', cursor: 'pointer' }}>
+            <X size={14} />
+          </button>
+        </div>
+
+        {/* The message */}
+        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '14px 18px' }}>
+          <iframe
+            ref={frameRef}
+            srcDoc={doc}
+            sandbox="allow-same-origin"
+            onLoad={fit}
+            title={row.subject}
+            style={{ width: '100%', minHeight: 220, border: 'none', display: 'block' }}
+          />
+        </div>
+
+        {/* What to do about it */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 18px', background: FIELD, borderTop: `1px solid ${HAIR}` }}>
+          <span style={{ flex: 1, fontSize: 11.5, color: GHOST }}>Esc, or click away, to close</span>
+          <button onClick={onAddTask} style={{ ...PILL, height: 32 }}>
+            <Plus size={13} /> Add as task
+          </button>
+          <button onClick={onArchive} style={{ ...PILL, height: 32 }}>
+            <Archive size={13} /> Archive
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function MailCard({ rows, loading, error, newsletters, onArchive, onArchiveAll, onOpenInbox, onAddTask, onOpen }: {
   rows: MailRow[]
   loading: boolean
   error: string | null
@@ -209,6 +328,7 @@ function MailCard({ rows, loading, error, newsletters, onArchive, onArchiveAll, 
   onArchiveAll: () => void
   onOpenInbox: () => void
   onAddTask: (row: MailRow) => void
+  onOpen: (row: MailRow) => void
 }) {
   const unread = rows.length + newsletters
   const needsYou = rows.filter(r => r.needsYou).length
@@ -230,7 +350,10 @@ function MailCard({ rows, loading, error, newsletters, onArchive, onArchiveAll, 
       ) : (
         <div>
           {rows.map(r => (
-            <div key={r.id} style={{ padding: '11px 16px', borderBottom: `1px solid ${HAIR}` }}>
+            <div
+              key={r.id}
+              onClick={e => { if (!(e.target as HTMLElement).closest('button')) onOpen(r) }}
+              style={{ padding: '11px 16px', borderBottom: `1px solid ${HAIR}`, cursor: 'pointer' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
                 <span style={{
                   ...ICON_TILE, width: 28, height: 28, fontSize: 10, fontWeight: 700, color: MUTED,
@@ -285,8 +408,6 @@ function MailCard({ rows, loading, error, newsletters, onArchive, onArchiveAll, 
   )
 }
 
-// ─── Plan for today ──────────────────────────────────────────────────────────
-
 interface Block {
   id: string
   kind: 'calendar' | 'proposed'
@@ -294,21 +415,88 @@ interface Block {
   meta: string
   start: string
   end: string
+  /** Set on a proposed block: the task it schedules. */
   taskId?: string
+  /** Set on a calendar block: the event it mirrors, and the day it sits on. */
+  eventId?: string
+  date?: string
 }
 
-function PlanCard({ blocks, freeMinutes, focusMinutes, dirty, onAccept, onAddBlock, onOpenCalendar }: {
+// ─── Plan for today ──────────────────────────────────────────────────────────
+// A real slice of the day rather than a stack: hours down the side, blocks
+// where they actually sit. A proposed block can be dragged to another hour and
+// the time it would take reads live while you move it.
+
+const HOUR_PX = 46
+const SNAP_MIN = 15
+
+function PlanCard({
+  blocks, freeMinutes, focusMinutes, dirty, statuses,
+  onAccept, onAddBlock, onOpenCalendar, onMoveBlock, onOpenBlock, onSetStatus,
+}: {
   blocks: Block[]
   freeMinutes: number
   focusMinutes: number
   dirty: boolean
+  statuses: Record<string, EventStatus>
   onAccept: () => void
   onAddBlock: () => void
   onOpenCalendar: () => void
+  onMoveBlock: (block: Block, startMinutes: number) => void
+  onOpenBlock: (block: Block) => void
+  onSetStatus: (eventId: string, status: EventStatus) => void
 }) {
   const now = new Date()
   const nowMins = now.getHours() * 60 + now.getMinutes()
   const proposed = blocks.filter(b => b.kind === 'proposed').length
+
+  // Drag state: which block, and where it currently sits
+  const [drag, setDrag] = useState<{ id: string; start: number; length: number } | null>(null)
+  const dragRef = useRef<{ id: string; grabOffset: number; length: number } | null>(null)
+  const laneRef = useRef<HTMLDivElement>(null)
+
+  // The window the plan draws: from the hour before the first thing to the hour
+  // after the last, and always wide enough to hold now.
+  const [fromHour, toHour] = (() => {
+    const mins = blocks.flatMap(b => [minutesOf(b.start), minutesOf(b.end)])
+    const lo = Math.min(nowMins, ...(mins.length ? mins : [nowMins]))
+    const hi = Math.max(nowMins + 60, ...(mins.length ? mins : [nowMins + 60]))
+    return [Math.max(0, Math.floor(lo / 60) - 1), Math.min(24, Math.ceil(hi / 60) + 1)]
+  })()
+  const hours = Array.from({ length: Math.max(1, toHour - fromHour) }, (_, i) => fromHour + i)
+  const topOf = (mins: number) => ((mins - fromHour * 60) / 60) * HOUR_PX
+
+  function beginDrag(e: React.PointerEvent, b: Block) {
+    if (b.kind !== 'proposed') return
+    const lane = laneRef.current
+    if (!lane) return
+    const startMins = minutesOf(b.start)
+    const length = Math.max(SNAP_MIN, minutesOf(b.end) - startMins)
+    const pointerMins = ((e.clientY - lane.getBoundingClientRect().top) / HOUR_PX) * 60 + fromHour * 60
+    dragRef.current = { id: b.id, grabOffset: pointerMins - startMins, length }
+    setDrag({ id: b.id, start: startMins, length })
+    ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+  }
+
+  function moveDrag(e: React.PointerEvent) {
+    const d = dragRef.current
+    const lane = laneRef.current
+    if (!d || !lane) return
+    const pointerMins = ((e.clientY - lane.getBoundingClientRect().top) / HOUR_PX) * 60 + fromHour * 60
+    const raw = pointerMins - d.grabOffset
+    const snapped = Math.max(0, Math.min(24 * 60 - d.length, Math.round(raw / SNAP_MIN) * SNAP_MIN))
+    setDrag({ id: d.id, start: snapped, length: d.length })
+  }
+
+  function endDrag() {
+    const d = dragRef.current
+    if (d && drag) {
+      const block = blocks.find(b => b.id === d.id)
+      if (block && minutesOf(block.start) !== drag.start) onMoveBlock(block, drag.start)
+    }
+    dragRef.current = null
+    setDrag(null)
+  }
 
   return (
     <div style={CARD}>
@@ -320,59 +508,122 @@ function PlanCard({ blocks, freeMinutes, focusMinutes, dirty, onAccept, onAddBlo
         </span>
       </CardHead>
 
-      <div style={{ padding: '12px 16px 14px' }}>
-        {/* Now line */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 10 }}>
-          <span style={{ fontSize: 11.5, fontWeight: 700, color: '#B4523A', width: 42, flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>
-            {hhmm(now)}
-          </span>
-          <span style={{ width: 7, height: 7, borderRadius: 999, background: '#B4523A', flexShrink: 0 }} />
-          <span style={{ flex: 1, height: 1, background: 'rgba(180,82,58,0.5)' }} />
-          <span style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: '0.12em', color: '#B4523A', flexShrink: 0 }}>NOW</span>
-        </div>
+      {blocks.length === 0 ? (
+        <p style={{ margin: 0, padding: '18px 16px', fontSize: 12.5, color: GHOST }}>
+          Nothing booked and nothing proposed. Give a task a time and it lands here.
+        </p>
+      ) : (
+        <div style={{ padding: '10px 16px 6px', maxHeight: 360, overflowY: 'auto', scrollbarWidth: 'thin' }}>
+          <div
+            ref={laneRef}
+            onPointerMove={moveDrag}
+            onPointerUp={endDrag}
+            onPointerCancel={endDrag}
+            style={{ position: 'relative', height: hours.length * HOUR_PX, minWidth: 0 }}>
 
-        {blocks.length === 0 ? (
-          <p style={{ margin: '10px 0 0', fontSize: 12.5, color: GHOST }}>
-            Nothing booked and nothing proposed. Give a task a time and it lands here.
-          </p>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+            {/* Hour rules */}
+            {hours.map(h => (
+              <div key={h} style={{ position: 'absolute', top: topOf(h * 60), left: 0, right: 0, height: HOUR_PX }}>
+                <span style={{
+                  position: 'absolute', top: -6, left: 0, width: 40,
+                  fontSize: 10, color: GHOST, fontVariantNumeric: 'tabular-nums',
+                }}>{String(h).padStart(2, '0')}:00</span>
+                <span style={{ position: 'absolute', top: 0, left: 44, right: 0, height: 1, background: HAIR }} />
+              </div>
+            ))}
+
+            {/* Now */}
+            {nowMins >= fromHour * 60 && nowMins <= toHour * 60 && (
+              <div style={{ position: 'absolute', top: topOf(nowMins), left: 0, right: 0, pointerEvents: 'none', zIndex: 3 }}>
+                <span style={{ position: 'absolute', top: -6, left: 0, fontSize: 10, fontWeight: 700, color: '#B4523A', fontVariantNumeric: 'tabular-nums' }}>
+                  {hhmm(now)}
+                </span>
+                <span style={{ position: 'absolute', top: 0, left: 44, right: 0, height: 1, background: '#B4523A' }} />
+                <span style={{ position: 'absolute', top: -2.5, left: 42, width: 6, height: 6, borderRadius: 999, background: '#B4523A' }} />
+              </div>
+            )}
+
+            {/* Blocks */}
             {blocks.map(b => {
-              const past = minutesOf(b.end) < nowMins
+              const dragging = !!drag && drag.id === b.id
+              const startMins = dragging && drag ? drag.start : minutesOf(b.start)
+              const length = dragging && drag ? drag.length : Math.max(SNAP_MIN, minutesOf(b.end) - startMins)
+              const status = b.eventId ? statuses[b.eventId] : undefined
+              const past = startMins + length < nowMins && !dragging
+              const canDrag = b.kind === 'proposed'
               return (
-                <div key={b.id} style={{ display: 'flex', alignItems: 'stretch', gap: 9, minWidth: 0, opacity: past ? 0.55 : 1 }}>
-                  <span style={{ width: 42, flexShrink: 0, paddingTop: 7, fontVariantNumeric: 'tabular-nums' }}>
-                    <span style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: INK }}>{b.start}</span>
-                    <span style={{ display: 'block', fontSize: 10.5, color: GHOST }}>{b.end}</span>
-                  </span>
-                  <span style={{ width: 2, borderRadius: 2, background: b.kind === 'proposed' ? AMBER : '#E0D9C6', flexShrink: 0 }} />
-                  <div style={{
-                    flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 8,
-                    padding: '9px 11px', borderRadius: 10,
-                    background: b.kind === 'proposed' ? 'rgba(245,209,78,0.16)' : FIELD,
-                    border: `1px solid ${b.kind === 'proposed' ? 'rgba(245,209,78,0.55)' : '#E8E1CE'}`,
+                <div
+                  key={b.id}
+                  onPointerDown={e => beginDrag(e, b)}
+                  onClick={() => { if (!dragging) onOpenBlock(b) }}
+                  title={canDrag ? 'Drag to another hour, or click to open' : 'Click to open in the calendar'}
+                  style={{
+                    position: 'absolute', left: 44, right: 0, zIndex: dragging ? 5 : 2,
+                    top: topOf(startMins), height: Math.max(26, (length / 60) * HOUR_PX - 3),
+                    display: 'flex', alignItems: 'center', gap: 8, boxSizing: 'border-box',
+                    padding: '0 10px', borderRadius: 9, minWidth: 0,
+                    background: status === 'cancelled' ? '#F1ECDE'
+                      : b.kind === 'proposed' ? 'rgba(245,209,78,0.20)' : FIELD,
+                    border: `1px solid ${b.kind === 'proposed' ? 'rgba(245,209,78,0.6)' : '#E8E1CE'}`,
+                    borderLeft: `3px solid ${b.kind === 'proposed' ? AMBER : '#D8CFB8'}`,
+                    boxShadow: dragging ? '0 10px 24px -10px rgba(25,23,18,.45)' : 'none',
+                    opacity: past || status === 'cancelled' ? 0.6 : 1,
+                    cursor: canDrag ? (dragging ? 'grabbing' : 'grab') : 'pointer',
+                    touchAction: 'none', userSelect: 'none',
                   }}>
-                    {b.kind === 'proposed'
-                      ? <CheckSquare size={13} strokeWidth={1.9} style={{ flexShrink: 0, color: MUTED }} />
-                      : <Clock size={13} strokeWidth={1.9} style={{ flexShrink: 0, color: MUTED }} />}
-                    <span style={{ fontSize: 12.5, fontWeight: 600, color: INK, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {b.title}
-                    </span>
-                    <span style={{ fontSize: 11.5, color: GHOST, flexShrink: 0 }}>{b.meta}</span>
-                  </div>
+                  {b.kind === 'proposed'
+                    ? <CheckSquare size={13} strokeWidth={1.9} style={{ flexShrink: 0, color: MUTED }} />
+                    : <Clock size={13} strokeWidth={1.9} style={{ flexShrink: 0, color: MUTED }} />}
+                  <span style={{
+                    fontSize: 12.5, fontWeight: 600, color: INK, minWidth: 0,
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    textDecoration: status === 'cancelled' ? 'line-through' : 'none',
+                  }}>{b.title}</span>
+                  <span style={{ fontSize: 11, color: GHOST, flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>
+                    {fmtMins(startMins)}–{fmtMins(startMins + length)}
+                  </span>
+                  <span style={{ flex: 1 }} />
+                  {b.eventId && (
+                    <>
+                      <button
+                        onClick={e => { e.stopPropagation(); onSetStatus(b.eventId!, 'done') }}
+                        onPointerDown={e => e.stopPropagation()}
+                        title={status === 'done' ? 'Not done after all' : 'Mark done'}
+                        style={{
+                          ...ICON_TILE, width: 20, height: 20, borderRadius: 999, cursor: 'pointer', flexShrink: 0,
+                          background: status === 'done' ? '#5F7038' : '#FFFFFF',
+                          borderColor: status === 'done' ? '#5F7038' : '#E8E1CE',
+                          color: status === 'done' ? '#FFFFFF' : MUTED,
+                        }}>
+                        <Check size={11} strokeWidth={2.6} />
+                      </button>
+                      <button
+                        onClick={e => { e.stopPropagation(); onSetStatus(b.eventId!, 'cancelled') }}
+                        onPointerDown={e => e.stopPropagation()}
+                        title={status === 'cancelled' ? 'Restore' : 'Mark cancelled'}
+                        style={{
+                          ...ICON_TILE, width: 20, height: 20, borderRadius: 999, cursor: 'pointer', flexShrink: 0,
+                          background: status === 'cancelled' ? '#B4523A' : '#FFFFFF',
+                          borderColor: status === 'cancelled' ? '#B4523A' : '#E8E1CE',
+                          color: status === 'cancelled' ? '#FFFFFF' : MUTED,
+                        }}>
+                        <X size={11} strokeWidth={2.6} />
+                      </button>
+                    </>
+                  )}
                 </div>
               )
             })}
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 16px 14px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px 14px' }}>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, color: GHOST }}>
           <span style={{ width: 8, height: 8, borderRadius: 2, background: AMBER }} /> Proposed
         </span>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, color: GHOST }}>
-          <span style={{ width: 8, height: 8, borderRadius: 2, background: '#E0D9C6' }} /> Calendar
+          <span style={{ width: 8, height: 8, borderRadius: 2, background: '#D8CFB8' }} /> Calendar
         </span>
         <span style={{ flex: 1 }} />
         <button onClick={onOpenCalendar} style={{ ...PILL, height: 28 }}>Open calendar</button>
@@ -529,6 +780,7 @@ function HabitsCard({ habits, logs, qtyLogs, today, onToggle, onSetQty, onOpenTr
 export function TodayPage() {
   const user = useAuthStore(s => s.user)
   const setActiveModule = useUIStore(s => s.setActiveModule)
+  const focusOn = useUIStore(s => s.focusOn)
   const allTasks = useTaskStore(s => s.tasks)
   const { toggleComplete, updateTask, addTask } = useTaskStore()
   const habitsAll = useHabitsStore(s => s.habits)
@@ -541,16 +793,25 @@ export function TodayPage() {
   const [events, setEvents] = useState<GCalEvent[]>([])
   const [clock, setClock] = useState(() => new Date())
   const [planAccepted, setPlanAccepted] = useState(false)
+  const [eventStatuses, setEventStatuses] = useState(loadEventStatuses)
   const [briefEdit, setBriefEdit] = useState<string | null>(null)
   const [briefSeed, setBriefSeed] = useState(0)
 
   const [mail, setMail] = useState<MailRow[]>([])
   const [newsletters, setNewsletters] = useState(0)
   const [mailLoading, setMailLoading] = useState(true)
+  const [openMail, setOpenMail] = useState<MailRow | null>(null)
   const [mailError, setMailError] = useState<string | null>(null)
 
   const today = dayKey(clock)
   const writtenAt = useRef(new Date())
+
+  // The calendar writes the same map, so pick its changes up
+  useEffect(() => {
+    const h = () => setEventStatuses(loadEventStatuses())
+    window.addEventListener('professor:eventStatusesUpdated', h)
+    return () => window.removeEventListener('professor:eventStatusesUpdated', h)
+  }, [])
 
   // A live clock, to the minute — the NOW line and the header pill both read it
   useEffect(() => {
@@ -587,13 +848,17 @@ export function TodayPage() {
         if (isBulk) { bulk++; continue }
         const to = header(headers, 'To').toLowerCase()
         const me = (user?.email ?? '').toLowerCase()
+        const plain = extractBody(last)
         rows.push({
           id: th.id,
           messageId: last.id,
           fromName: name || email,
           fromEmail: email,
+          to: header(headers, 'To'),
           subject: header(headers, 'Subject') || '(no subject)',
-          snippet: extractBody(last).replace(/\s+/g, ' ').trim().slice(0, 140),
+          snippet: plain.replace(/\s+/g, ' ').trim().slice(0, 140),
+          html: extractHtmlBody(last),
+          body: plain,
           receivedAt: new Date(Number(last.internalDate ?? Date.now())).toISOString(),
           needsYou: !!me && to.includes(me),
           newsletter: false,
@@ -644,6 +909,8 @@ export function TodayPage() {
           meta: e.location ? e.location.split(',')[0] : 'calendar',
           start: hhmm(s),
           end: hhmm(en),
+          eventId: e.id,
+          date: dayKey(s),
         }
       })
     const fromTasks: Block[] = openTasks
@@ -696,6 +963,24 @@ export function TodayPage() {
     })
   }
 
+  /** Dragging a proposed block re-times the task it stands for. */
+  function moveBlock(block: Block, startMinutes: number) {
+    if (block.kind !== 'proposed' || !block.taskId) return
+    const length = Math.max(15, minutesOf(block.end) - minutesOf(block.start))
+    updateTask(block.taskId, {
+      plannedTime: fmtMins(startMinutes),
+      duration: length,
+      dueDate: today,
+    })
+    setPlanAccepted(false)
+  }
+
+  /** A block is a doorway back to whatever it came from. */
+  function openBlock(block: Block) {
+    if (block.eventId) focusOn({ module: 'calendar', id: block.eventId, date: block.date })
+    else if (block.taskId) focusOn({ module: 'tasks', id: block.taskId })
+  }
+
   /** Accepting the plan is not cosmetic: every proposed block keeps its time. */
   function acceptPlan() {
     for (const b of blocks) {
@@ -736,6 +1021,15 @@ export function TodayPage() {
 
   return (
     <div style={{ padding: '0 0 40px' }}>
+
+      {openMail && (
+        <MailPopup
+          row={openMail}
+          onClose={() => setOpenMail(null)}
+          onArchive={() => { void archiveMail(openMail); setOpenMail(null) }}
+          onAddTask={() => { mailToTask(openMail); setOpenMail(null) }}
+        />
+      )}
 
       {/* ── Brief bar ─────────────────────────────────────────────────────── */}
       <div style={{
@@ -813,6 +1107,7 @@ export function TodayPage() {
             onArchiveAll={() => void archiveNewsletters()}
             onOpenInbox={() => setActiveModule('inbox')}
             onAddTask={mailToTask}
+            onOpen={setOpenMail}
           />
         </div>
 
@@ -823,9 +1118,13 @@ export function TodayPage() {
             freeMinutes={freeMinutes}
             focusMinutes={focusMinutes}
             dirty={!planAccepted}
+            statuses={eventStatuses}
             onAccept={acceptPlan}
             onAddBlock={() => setActiveModule('calendar')}
             onOpenCalendar={() => setActiveModule('calendar')}
+            onMoveBlock={moveBlock}
+            onOpenBlock={openBlock}
+            onSetStatus={(id, st) => setEventStatuses(toggleEventStatus(id, st))}
           />
 
           <div style={CARD}>
