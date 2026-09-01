@@ -14,7 +14,7 @@ import { useTaskStore } from '@/store/taskStore'
 import { useUIStore } from '@/store/uiStore'
 import { Search, X, Plus, SlidersHorizontal, LayoutGrid, Target, List as ListIcon } from 'lucide-react'
 import type { Quadrant, Task } from '@/types'
-import { isTaskHidden, loadVisibleCompanies, getAllUsers, TASK_TYPE_META, inferTaskType } from '@/types'
+import { isTaskHidden, loadVisibleCompanies, getVisibleUsers, TASK_TYPE_META, inferTaskType } from '@/types'
 import { scheduleTaskToCalendar } from '@/lib/aiScheduler'
 import { SmartDayPlanner } from './SmartDayPlanner'
 import { TaskListView } from './TaskListView'
@@ -99,7 +99,7 @@ export function TaskCommand() {
 
   // ── Filter options derived from tasks ────────────────────────────────────
   const companies     = loadVisibleCompanies()
-  const allUsers      = getAllUsers()
+  const allUsers      = getVisibleUsers()
   const ownerOptions  = useMemo(() => {
     const ids = new Set(tasks.map(t => t.owner).filter(Boolean) as string[])
     return allUsers.filter(u => ids.has(u.id))

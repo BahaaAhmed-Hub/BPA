@@ -6,7 +6,7 @@ import { Check, Paperclip, CalendarDays, Flame, Trash2, User } from 'lucide-reac
 import { useDraggable } from '@dnd-kit/core'
 import type { Task, TaskType, Priority } from '@/types'
 import { PRIORITY_META, TASK_TYPE_META } from '@/types'
-import { getAllUsers, loadVisibleCompanies } from '@/types'
+import { getVisibleUsers, loadVisibleCompanies } from '@/types'
 import { useTaskStore } from '@/store/taskStore'
 import { openLabel, resolveTaskVisuals, TASK_TYPE_ORDER } from './taskVisuals'
 import { ControlSlot, OverlaySelect, OverlayTime } from './controls'
@@ -22,7 +22,7 @@ export function TaskRow({ task, onOpen, dense }: {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: task.id })
   const { toggleComplete, updateTask, toggleUrgent, deleteTask } = useTaskStore()
   const PRIORITIES: Priority[] = ['P0', 'P1', 'P2', 'P3']
-  const owners = getAllUsers().filter(u => (task.companyId ? u.companyId === task.companyId : true))
+  const owners = getVisibleUsers().filter(u => (task.companyId ? u.companyId === task.companyId : true))
   const companies = loadVisibleCompanies()
   const v = resolveTaskVisuals(task)
   const { TypeIcon } = v
@@ -30,9 +30,7 @@ export function TaskRow({ task, onOpen, dense }: {
 
   const meta = [
     task.completed ? null : `open ${openLabel(task).replace(' open', '')}`,
-    task.plannedTime ? `today ${task.plannedTime}`
-      : task.dueDate ? new Date(task.dueDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-      : 'no date',
+    v.scheduleLabel ?? 'no date',
   ].filter(Boolean).join(' · ')
 
   return (

@@ -57,12 +57,22 @@ export function getAllUsers(): (CompanyUser & { companyId: string; companyName: 
   )
 }
 
+/** People belonging to companies you can see. Use everywhere except Settings,
+ *  which has to show a hidden company's people to let you unhide it. */
+export function getVisibleUsers(): (CompanyUser & { companyId: string; companyName: string; companyColor: string })[] {
+  return loadDynamicCompanies()
+    .filter(co => !co.hidden)
+    .flatMap(co => (co.users ?? []).map(u => ({ ...u, companyId: co.id, companyName: co.name, companyColor: co.color })))
+}
+
 /** Returns only companies that are not hidden. Use everywhere except Settings. */
 export function loadVisibleCompanies(): DynamicCompany[] {
   return loadDynamicCompanies().filter(c => !c.hidden)
 }
 
-/** Returns true if the task belongs to a hidden company and should be excluded from views. */
+/** Returns true if the task belongs to a hidden company and should be excluded
+ *  from views. `company` has held both an id and a name over the life of the
+ *  app, so it is matched against either. */
 export function isTaskHidden(task: { companyId?: string; company?: string }): boolean {
   const companies = loadDynamicCompanies()
   if (task.companyId) {
@@ -70,8 +80,8 @@ export function isTaskHidden(task: { companyId?: string; company?: string }): bo
     if (co) return co.hidden === true
   }
   if (task.company) {
-    const nameLow = task.company.toLowerCase()
-    const co = companies.find(c => c.name.toLowerCase() === nameLow)
+    const tag = task.company.toLowerCase()
+    const co = companies.find(c => c.id.toLowerCase() === tag || c.name.toLowerCase() === tag)
     if (co) return co.hidden === true
   }
   return false

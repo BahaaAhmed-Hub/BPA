@@ -9,27 +9,12 @@ import {
   Plus, Link2, Folder, FileText, Image as ImageIcon, CalendarDays, BarChart3, History, Trash2, Check, User,
 } from 'lucide-react'
 import type { Task, TaskType, Priority, ChecklistStep, TaskAttachment } from '@/types'
-import { PRIORITY_META, TASK_TYPE_META, getAllUsers, loadVisibleCompanies } from '@/types'
+import { PRIORITY_META, TASK_TYPE_META, getVisibleUsers, loadVisibleCompanies } from '@/types'
 import { useTaskStore } from '@/store/taskStore'
-import { TASK_TYPE_ORDER, initials, resolveTaskVisuals } from './taskVisuals'
+import { TASK_TYPE_ORDER, initials, resolveTaskVisuals, formatScheduleLabel } from './taskVisuals'
 import { SchedulePopover } from './SchedulePopover'
 
 const PRIORITIES: Priority[] = ['P0', 'P1', 'P2', 'P3']
-
-function toISODate(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
-
-/** "Today, 29 Aug" / "Thu, 4 Sep" / "No date" */
-function formatDateLabel(iso?: string): string {
-  if (!iso) return 'No date'
-  const d = new Date(iso + 'T00:00:00')
-  if (Number.isNaN(d.getTime())) return 'No date'
-  const today = toISODate(new Date())
-  const day = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
-  if (iso === today) return `Today, ${day}`
-  return `${d.toLocaleDateString('en-GB', { weekday: 'short' })}, ${day}`
-}
 
 function formatBytes(n: number): string {
   if (n < 1024) return `${n} B`
@@ -80,7 +65,6 @@ const SECTION_LABEL: React.CSSProperties = {
 
 export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => void }) {
   const { updateTask, deleteTask, activities } = useTaskStore()
-  const [draft, setDraft] = useState<Task>(task)
   const [datePickerOpen, setDatePickerOpen] = useState(false)
   const [fullLog, setFullLog] = useState(false)
   const [expanded, setExpanded] = useState(false)
@@ -90,9 +74,6 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
   const dateRef = useRef<HTMLDivElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
-  // Selecting a different task remounts the panel (keyed on task.id by the
-  // caller), so the draft starts fresh without an effect syncing it.
-
   useEffect(() => {
     if (!datePickerOpen) return
     const h = (e: MouseEvent) => { if (dateRef.current && !dateRef.current.contains(e.target as Node)) setDatePickerOpen(false) }
@@ -100,15 +81,15 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
     return () => document.removeEventListener('mousedown', h)
   }, [datePickerOpen])
 
-  const v = resolveTaskVisuals(draft)
+  const v = resolveTaskVisuals(task)
   const { TypeIcon } = v
   const companies = loadVisibleCompanies()
-  const allUsers = getAllUsers()
-  const users = draft.companyId ? allUsers.filter(u => u.companyId === draft.companyId) : allUsers
-  const owner = draft.owner ? allUsers.find(u => u.id === draft.owner) : undefined
+  const allUsers = getVisibleUsers()
+  const users = task.companyId ? allUsers.filter(u => u.companyId === task.companyId) : allUsers
+  const owner = task.owner ? allUsers.find(u => u.id === task.owner) : undefined
 
-  const checklist = draft.checklist ?? []
-  const attachments = draft.attachments ?? []
+  const checklist = task.checklist ?? []
+  const attachments = task.attachments ?? []
 
   const taskActs = useMemo(
     () => activities.filter(a => a.taskId === task.id).slice().reverse(),
@@ -116,8 +97,10 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
   )
   const shownActs = fullLog ? taskActs : taskActs.slice(0, 7)
 
+  /** Every edit writes straight to the store, and the panel reads back from it,
+   *  so the card behind the panel shows the same thing without a second copy of
+   *  the task drifting out of date. */
   function patch(p: Partial<Task>) {
-    setDraft(d => ({ ...d, ...p }))
     updateTask(task.id, p)
   }
 
@@ -141,16 +124,10 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
     patch({ attachments: [...attachments, ...added] })
   }
 
-  const linkCount = draft.links?.length ?? 0
+  const linkCount = task.links?.length ?? 0
 
   // Empty is just the affordance; set spells out the date, the time and how long.
-  const scheduleLabel = !draft.dueDate
-    ? 'Add a date'
-    : [
-        formatDateLabel(draft.dueDate),
-        draft.plannedTime,
-        draft.plannedTime ? `${draft.duration ?? 30}m` : null,
-      ].filter(Boolean).join(' · ')
+  const scheduleLabel = formatScheduleLabel(task, { long: true }) ?? 'Add a date'
 
   return (
     <aside style={{
@@ -170,10 +147,10 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}>{v.companyName || 'No company'}</span>
           <select
-            value={draft.companyId ?? ''}
+            value={task.companyId ?? ''}
             onChange={e => {
               const co = companies.find(c => c.id === e.target.value)
-              patch({ companyId: co?.id, company: (co?.id ?? draft.company) as Task['company'], owner: undefined })
+              patch({ companyId: co?.id, company: (co?.id ?? task.company) as Task['company'], owner: undefined })
             }}
             style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer', border: 'none' }}
           >
@@ -200,7 +177,7 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
         }}>
         {/* Title */}
         <textarea
-          value={draft.title}
+          value={task.title}
           onChange={e => patch({ title: e.target.value })}
           onKeyDown={e => { if (e.key === 'Enter') e.preventDefault() }}
           rows={2}
@@ -223,15 +200,15 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
           {/* Schedule — the widest value, so it takes the full row */}
           <div ref={dateRef} style={{ gridColumn: '1 / -1', position: 'relative' }}>
             <button onClick={() => setDatePickerOpen(o => !o)} style={{ ...CELL, width: '100%' }}>
-              <CalendarDays size={14} strokeWidth={1.9} style={{ flexShrink: 0, color: draft.dueDate ? '#5F7038' : '#9B9180' }} />
-              <span style={{ ...CELL_VALUE, color: draft.dueDate ? '#191712' : '#9B9180' }}>
+              <CalendarDays size={14} strokeWidth={1.9} style={{ flexShrink: 0, color: task.dueDate ? '#5F7038' : '#9B9180' }} />
+              <span style={{ ...CELL_VALUE, color: task.dueDate ? '#191712' : '#9B9180' }}>
                 {scheduleLabel}
               </span>
               <ChevronDown size={13} style={{ flexShrink: 0, color: '#9B9180' }} />
             </button>
             {datePickerOpen && (
               <SchedulePopover
-                date={draft.dueDate} start={draft.plannedTime} duration={draft.duration}
+                date={task.dueDate} start={task.plannedTime} duration={task.duration}
                 onApply={patch}
                 onClose={() => setDatePickerOpen(false)}
               />
@@ -250,13 +227,13 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
           {/* Priority */}
           <label style={{ ...CELL, position: 'relative' }}>
             <BarChart3 size={14} strokeWidth={1.9} style={{
-              flexShrink: 0, color: draft.priority ? PRIORITY_META[draft.priority].color : '#9B9180',
+              flexShrink: 0, color: task.priority ? PRIORITY_META[task.priority].color : '#9B9180',
             }} />
-            <span style={{ ...CELL_VALUE, color: draft.priority ? '#191712' : '#9B9180' }}>
-              {draft.priority ?? 'No priority'}
+            <span style={{ ...CELL_VALUE, color: task.priority ? '#191712' : '#9B9180' }}>
+              {task.priority ?? 'No priority'}
             </span>
             <select
-              value={draft.priority ?? ''}
+              value={task.priority ?? ''}
               onChange={e => patch({ priority: (e.target.value || undefined) as Priority | undefined })}
               style={CELL_INPUT}>
               <option value="">No priority</option>
@@ -277,7 +254,7 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
             <span style={{ ...CELL_VALUE, color: owner ? '#191712' : '#9B9180' }}>
               {owner ? owner.name : 'Unassigned'}
             </span>
-            <select value={draft.owner ?? ''} onChange={e => patch({ owner: e.target.value || undefined })} style={CELL_INPUT}>
+            <select value={task.owner ?? ''} onChange={e => patch({ owner: e.target.value || undefined })} style={CELL_INPUT}>
               <option value="">Unassigned</option>
               {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
             </select>
@@ -287,7 +264,7 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
           <button
             onClick={() => {
               const url = window.prompt('Paste a link (thread, doc, page)')?.trim()
-              if (url) patch({ links: [...(draft.links ?? []), url] })
+              if (url) patch({ links: [...(task.links ?? []), url] })
             }}
             style={CELL}>
             <Link2 size={14} strokeWidth={1.9} style={{ flexShrink: 0, color: linkCount ? '#6C6553' : '#9B9180' }} />
@@ -348,7 +325,7 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
         <div style={{ marginTop: 18 }}>
           <p style={SECTION_LABEL}>Notes</p>
           <textarea
-            value={draft.description ?? ''}
+            value={task.description ?? ''}
             onChange={e => patch({ description: e.target.value })}
             rows={3}
             placeholder="Anything worth remembering…"
@@ -366,7 +343,7 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
           <div style={{ marginTop: 18 }}>
             <p style={SECTION_LABEL}>Attachments · {attachments.length + linkCount}</p>
             <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {(draft.links ?? []).map((url, i) => (
+              {(task.links ?? []).map((url, i) => (
                 <div key={`${url}-${i}`} style={{
                   display: 'flex', alignItems: 'center', gap: 10,
                   border: '1px solid #E8E1CE', borderRadius: 10, padding: '9px 11px',
@@ -379,7 +356,7 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
                     flex: 1, minWidth: 0, fontSize: 12.5, color: '#2F6BD8',
                     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                   }}>{url}</a>
-                  <button onClick={() => patch({ links: (draft.links ?? []).filter((_, j) => j !== i) })}
+                  <button onClick={() => patch({ links: (task.links ?? []).filter((_, j) => j !== i) })}
                     title="Remove link" style={{ ...ICON_BTN, width: 22, height: 22, color: '#C9C0A8' }}>
                     <X size={13} />
                   </button>

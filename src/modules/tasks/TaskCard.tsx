@@ -3,7 +3,7 @@ import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { Trash2, Check, Clock, CalendarDays, Paperclip, Flame, User } from 'lucide-react'
 import type { Task, TaskType, Priority } from '@/types'
-import { TASK_TYPE_META, getAllUsers, loadVisibleCompanies } from '@/types'
+import { TASK_TYPE_META, getVisibleUsers, loadVisibleCompanies } from '@/types'
 import { useTaskStore } from '@/store/taskStore'
 import { MeetingFollowUpPopup } from './MeetingFollowUpPopup'
 import type { ExtractedTask } from '@/lib/professor'
@@ -74,7 +74,7 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
 
   const v = resolveTaskVisuals(task)
   const { TypeIcon } = v
-  const allUsers = getAllUsers()
+  const allUsers = getVisibleUsers()
   const companies = loadVisibleCompanies()
   const users = task.companyId ? allUsers.filter(u => u.companyId === task.companyId) : allUsers
   const attachmentCount = task.attachments?.length ?? 0
@@ -202,10 +202,10 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
               <Clock size={11} /> {openLabel(task)}
             </span>
           )}
-          {(task.plannedTime || task.dueDate) && (
+          {v.scheduleLabel && (
             <span style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
               <CalendarDays size={11} />
-              {task.plannedTime ?? new Date(task.dueDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              {v.scheduleLabel}
             </span>
           )}
         </div>

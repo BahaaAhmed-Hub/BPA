@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import {
-  ChevronLeft, ChevronRight, ChevronDown, Layers, Calendar, Video, Clock3,
+  ChevronLeft, ChevronRight, ChevronDown, Layers, Calendar, Video,
   Sparkles, MapPin, RefreshCw, X, Eye, EyeOff,
   CheckCircle2, XCircle, Link, Check, Plus, Paperclip, FileText,
-  ExternalLink, AlertCircle, Shield, Copy, Trash2,
+  ExternalLink, AlertCircle, Shield, Copy, Trash2, Pencil,
 } from 'lucide-react'
 import { TimeSelect } from '@/modules/tasks/SchedulePopover'
 import {
@@ -29,12 +29,13 @@ import {
 import type { GCalEvent, GCalCalendar, GCalEventCreate } from '@/lib/googleCalendar'
 import { getGoogleToken, seedToken, getGoogleTokenViaSupabaseRefresh } from '@/lib/tokenManager'
 import { loadEventStatuses, saveEventStatuses } from '@/lib/eventStatus'
+import { isCalendarHiddenByCompany } from '@/lib/companyVisibility'
+import { loadWeather, weatherGlyph, type WeatherByHour } from '@/lib/weather'
 import { generateMeetingPrep } from '@/lib/professor'
 import type { MeetingPrep } from '@/lib/professor'
 import { useAuthStore } from '@/store/authStore'
 import { useUIStore } from '@/store/uiStore'
 import { loadAccounts, loadHiddenAccounts } from '@/lib/multiAccount'
-import { loadDynamicCompanies } from '@/types'
 import { connectAdditionalGoogleAccount } from '@/lib/google'
 import type { DbUser, DbCompany, DbCalendarEvent } from '@/types/database'
 import {
@@ -122,6 +123,43 @@ function meetingHost(event: GCalEvent): string | null {
     if (bare) return bare.toLowerCase()
   }
   return null
+}
+
+/** What the "Where" of an event actually is, so the field can send you there.
+ *  A pasted or generated link is something you open; anything else is a place
+ *  you can be given directions to. */
+export type WhereTarget =
+  | { kind: 'link';  url: string; label: string }
+  | { kind: 'place'; url: string; label: string }
+  | { kind: 'empty' }
+
+/** The link as you would recognise it: host plus a little of the path,
+ *  not the full query-string tail Google likes to append. */
+function prettyLink(url: string): string {
+  try {
+    const u = new URL(url)
+    const path = u.pathname.replace(/\/$/, '')
+    const shown = `${u.hostname.replace(/^www\./, '')}${path}`
+    return shown.length > 44 ? shown.slice(0, 43) + '…' : shown
+  } catch { return url }
+}
+
+function whereTarget(location: string, videoLink?: string): WhereTarget {
+  const text = location.trim()
+  if (!text) {
+    return videoLink ? { kind: 'link', url: videoLink, label: prettyLink(videoLink) } : { kind: 'empty' }
+  }
+  const inText = /https?:\/\/[^\s<>"')]+/.exec(text)?.[0]
+  if (inText) return { kind: 'link', url: inText, label: prettyLink(inText) }
+  // A bare host someone typed, e.g. "meet.google.com/abc-defg-hij"
+  if (/^[\w-]+(\.[\w-]+)+(\/\S*)?$/.test(text) && !/\s/.test(text)) {
+    return { kind: 'link', url: `https://${text}`, label: prettyLink(`https://${text}`) }
+  }
+  return {
+    kind: 'place',
+    url: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(text)}`,
+    label: text,
+  }
 }
 
 function getWeekStart(date: Date): Date {
@@ -390,22 +428,12 @@ async function loadAllCalendars(primaryEmail: string): Promise<LoadCalendarsResu
   return { calendars, needsReconnect }
 }
 
-function getHiddenCompanyAccountEmails(): Set<string> {
-  const accounts = loadAccounts()
-  return new Set(
-    loadDynamicCompanies()
-      .filter(c => c.hidden && c.accountId)
-      .map(c => accounts.find(a => a.id === c.accountId)?.email)
-      .filter((e): e is string => !!e)
-  )
-}
-
 async function fetchAllEvents(allCals: CalWithAccount[], hidden: Set<string>, hiddenAccts: Set<string>, start: Date, end: Date): Promise<GCalEvent[]> {
   // hiddenAccts applies only to extra accounts (c.accountId set) — primary account is never hidden
-  const hiddenCompanyEmails = getHiddenCompanyAccountEmails()
   const active = allCals.filter(c =>
     !hidden.has(c.id) &&
-    (!c.accountId || (!hiddenAccts.has(c.accountEmail) && !hiddenCompanyEmails.has(c.accountEmail)))
+    !isCalendarHiddenByCompany(c.id, c.accountId ? c.accountEmail : undefined) &&
+    (!c.accountId || !hiddenAccts.has(c.accountEmail))
   )
   if (!active.length) return []
 
@@ -642,13 +670,15 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
   // Only a cancelled event goes grey. Done and simply-past events keep their
   // calendar's colour — an event you attended is not an event that went away.
   const rgb = color.startsWith('#') ? hexRgbStr(color) : '127,119,221'
-  const evBg = isCancelled ? '#F1ECDE' : `rgba(${rgb}, 0.16)`
+  // A soft wash of the calendar's colour over parchment, the way the artboards
+  // draw it — not a saturated slab with a bar down its side.
+  const evBg = isCancelled ? '#F1ECDE' : `rgba(${rgb}, 0.10)`
   const evBorder = isTentative
     ? `1.5px dashed ${color}`
     : isSelected
     ? `2px solid ${color}`
-    : isCancelled ? '1px solid #E0D9C6' : `1px solid rgba(${rgb}, 0.45)`
-  const evInk = isCancelled ? '#8A8272' : '#191712'
+    : isCancelled ? '1px solid #E0D9C6' : `1px solid rgba(${rgb}, 0.34)`
+  const evInk = isDone || isCancelled ? '#8A8272' : '#191712'
   const evTimeInk = isCancelled ? '#A79D8B' : '#6C6553'
 
   return (
@@ -666,10 +696,9 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
         width:  isDragOverlay ? 130 : `${layout.width}%`,
         height: isDragOverlay ? Math.max(38, height) : height,
         background: evBg,
-        borderRadius: 6,
+        borderRadius: 10,
         border: evBorder,
-        borderLeft: `3px solid ${color}`,
-        padding: '3px 5px 8px',
+        padding: '5px 8px 8px',
         overflow: 'hidden',
         cursor: isDragOverlay ? 'grabbing' : 'pointer',
         opacity: isDragSrc ? 0.35 : isCancelled ? 0.72 : 1,
@@ -678,8 +707,8 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
         boxSizing: 'border-box',
         zIndex: isSelected ? 4 : 2,
         boxShadow: isSelected
-          ? `0 0 0 2px ${color}, 0 4px 14px rgba(25,23,18,0.18)`
-          : '0 1px 3px rgba(25,23,18,0.08)',
+          ? `0 0 0 2px ${color}, 0 6px 18px -8px rgba(25,23,18,0.35)`
+          : '0 1px 2px rgba(25,23,18,0.05)',
         userSelect: 'none',
       }}
     >
@@ -691,11 +720,9 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
         overflow: 'hidden',
         textOverflow: 'ellipsis',
         whiteSpace: height < 36 ? 'nowrap' : 'normal',
-        textDecoration: isCancelled ? 'line-through' : 'none',
-        textDecorationColor: 'rgba(25,23,18,0.35)',
+        textDecoration: isDone || isCancelled ? 'line-through' : 'none',
+        textDecorationColor: 'rgba(25,23,18,0.3)',
       }}>
-        {isDone && <span style={{ marginRight: 3, fontSize: 9, color: '#1D9E75' }}>✓</span>}
-        {isCancelled && <span style={{ marginRight: 3, fontSize: 9 }}>✗</span>}
         {event.summary ?? '(No title)'}
       </div>
       {height >= 50 && (() => {
@@ -710,12 +737,9 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
         ) : null
       })()}
       {height >= 38 && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 3 }}>
-          <Clock3 size={10} color={evTimeInk} style={{ flexShrink: 0 }} />
-          <span style={{ fontSize: 10, color: evTimeInk }}>
-            {fmtShort(event.start.dateTime!)}
-            {event.end.dateTime ? ` – ${fmtShort(event.end.dateTime)}` : ''}
-          </span>
+        <div style={{ fontSize: 10, color: evTimeInk, marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
+          {fmtShort(event.start.dateTime!)}
+          {event.end.dateTime ? ` – ${fmtShort(event.end.dateTime)}` : ''}
         </div>
       )}
       {height >= 66 && event.location && !meetingHost(event) && (
@@ -882,6 +906,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
   const [fromTime, setFromTime] = useState(`${pad(startDate.getHours())}:${pad(startDate.getMinutes())}`)
   const [toTime, setToTime] = useState(`${pad(endDate.getHours())}:${pad(endDate.getMinutes())}`)
   const [location, setLocation] = useState(event.location ?? '')
+  const [editingWhere, setEditingWhere] = useState(false)
 
   useEffect(() => {
     const fn = (e: MouseEvent) => { if (popupRef.current && !popupRef.current.contains(e.target as Node)) onClose() }
@@ -891,6 +916,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
 
   const entryPoints = event.conferenceData?.entryPoints ?? []
   const videoLink = entryPoints.find(ep => ep.entryPointType === 'video')?.uri
+  const where = whereTarget(location, videoLink)
   const attendees = event.attendees ?? []
   const isOrganiser = event.organizer?.self ?? true
   const recurrence = describeRecurrence(event.recurrence, startDate)
@@ -1084,23 +1110,49 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
           <span style={EV_LABEL}>Where</span>
           <span style={{ flex: 1, minWidth: 0, display: 'flex', gap: 7 }}>
-            <input
-              value={location}
-              onChange={e => setLocation(e.target.value)}
-              onBlur={() => { if (location !== (event.location ?? '')) void push({ location: location.trim() }) }}
-              placeholder={videoLink ? 'Video call' : 'Add a place'}
-              style={{ ...EV_PILL, flex: 1, cursor: 'text', outline: 'none' }} />
-            {videoLink ? (
+            {where.kind === 'empty' || editingWhere ? (
+              <input
+                autoFocus={editingWhere}
+                value={location}
+                onChange={e => setLocation(e.target.value)}
+                onBlur={() => {
+                  setEditingWhere(false)
+                  if (location !== (event.location ?? '')) void push({ location: location.trim() })
+                }}
+                onKeyDown={e => { if (e.key === 'Enter' || e.key === 'Escape') (e.target as HTMLInputElement).blur() }}
+                placeholder="Add a place or a link"
+                style={{ ...EV_PILL, flex: 1, cursor: 'text', outline: 'none' }} />
+            ) : (
+              <a href={where.url} target="_blank" rel="noreferrer"
+                title={where.kind === 'place' ? 'Open in Google Maps' : where.url}
+                style={{
+                  ...EV_PILL, flex: 1, textDecoration: 'none', color: '#191712',
+                  overflow: 'hidden', whiteSpace: 'nowrap',
+                }}>
+                {where.kind === 'place' ? <MapPin size={14} color="#6C6553" /> : <Link size={14} color="#6C6553" />}
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{where.label}</span>
+                <ExternalLink size={12} color="#9B9180" style={{ marginLeft: 'auto', flexShrink: 0 }} />
+              </a>
+            )}
+            {/* A place is somewhere you go, so it gets directions instead of a
+                Join button. Only an online meeting can be joined. */}
+            {where.kind === 'link' && videoLink ? (
               <a href={videoLink} target="_blank" rel="noreferrer"
                 style={{ ...EV_PILL, textDecoration: 'none', color: '#191712', flexShrink: 0 }}>
                 <Video size={14} /> Join
               </a>
-            ) : onAddMeet ? (
+            ) : !videoLink && onAddMeet ? (
               <button onClick={() => void onAddMeet()} title="Add a Google Meet link"
                 style={{ ...EV_PILL, flexShrink: 0, color: '#6C6553' }}>
                 <Video size={14} /> Meet
               </button>
             ) : null}
+            {where.kind !== 'empty' && !editingWhere && (
+              <button onClick={() => setEditingWhere(true)} title="Change where"
+                style={{ ...EV_ROUND, width: 42, height: 42, borderRadius: 10 }}>
+                <Pencil size={13} />
+              </button>
+            )}
           </span>
         </div>
 
@@ -1864,6 +1916,21 @@ export function CalendarIntelligence() {
     pendingFocusId.current = null
   }, [events])
 
+  // Weather for the gutter. The forecast is fetched once; which day it speaks
+  // for is worked out below, once the visible days are known.
+  const [weather, setWeather] = useState<WeatherByHour>({})
+  useEffect(() => {
+    const refresh = () => { void loadWeather().then(setWeather) }
+    refresh()
+    // The forecast follows the timezone in Settings, so pick up a change to it.
+    window.addEventListener('storage', refresh)
+    window.addEventListener('focus', refresh)
+    return () => {
+      window.removeEventListener('storage', refresh)
+      window.removeEventListener('focus', refresh)
+    }
+  }, [])
+
   // ── Grid scroll ref (auto-scroll to current time on mount) ──────────────────
   const gridRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -2302,6 +2369,11 @@ export function CalendarIntelligence() {
   })()
   const grouped  = groupByDay(displayedEvents)
   const today    = localDateStr(new Date())
+  // Day view speaks for the day on show; a week speaks for today, when today is
+  // one of its days. Any other week has no single day to report.
+  const weatherDay = calView === 'day'
+    ? localDateStr(anchorDate)
+    : weekDays.some(d => localDateStr(d) === today) ? today : ''
   const [nowPx,  setNowPx] = useState(nowTopPx())
   useEffect(() => {
     const t = setInterval(() => setNowPx(nowTopPx()), 60000)
@@ -2544,7 +2616,7 @@ export function CalendarIntelligence() {
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
             {allCalendars.filter(cal => {
               if (cal.accountId && hiddenAccounts.has(cal.accountEmail)) return false
-              if (cal.accountId && getHiddenCompanyAccountEmails().has(cal.accountEmail)) return false
+              if (isCalendarHiddenByCompany(cal.id, cal.accountId ? cal.accountEmail : undefined)) return false
               return true
             }).map(cal => {
               const hidden  = hiddenCals.has(cal.id)
@@ -2718,7 +2790,7 @@ export function CalendarIntelligence() {
           {/* Sticky day headers */}
           <div style={{ display: 'flex', borderBottom: '1px solid #E8E1CE', flexShrink: 0, background: '#FCFAF4' }}>
             {/* Time gutter spacer */}
-            <div style={{ width: 52, flexShrink: 0 }} />
+            <div style={{ width: 58, flexShrink: 0 }} />
             {weekDays.map(day => {
               const ds      = localDateStr(day)
               const isToday = ds === today
@@ -2747,7 +2819,7 @@ export function CalendarIntelligence() {
           {/* All-day events strip — only shown when the week has at least one all-day event */}
           {weekDays.some(day => (grouped.get(localDateStr(day)) ?? []).some(e => !e.start.dateTime)) && (
             <div style={{ display: 'flex', borderBottom: '1px solid #E8E1CE', flexShrink: 0, minHeight: 22 }}>
-              <div style={{ width: 52, flexShrink: 0, display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end', paddingRight: 6, paddingTop: 3, fontSize: 9, color: '#9B9180', letterSpacing: '0.4px' }}>
+              <div style={{ width: 58, flexShrink: 0, display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end', paddingRight: 6, paddingTop: 3, fontSize: 9, color: '#9B9180', letterSpacing: '0.4px' }}>
                 all day
               </div>
               {weekDays.map(day => {
@@ -2788,17 +2860,33 @@ export function CalendarIntelligence() {
           <div ref={gridRef} onClick={closePopup}
             style={{ flex: 1, overflowY: 'auto', display: 'flex', position: 'relative', background: '#FFFFFF' }}
           >
-            {/* Time labels column */}
-            <div style={{ width: 52, flexShrink: 0, position: 'relative', height: GRID_H, background: '#FCFAF4', borderRight: '1px solid #EDE7D9' }}>
-              {Array.from({ length: 24 }, (_, h) => (
-                <div key={h} style={{
-                  position: 'absolute', top: h * HOUR_PX - 7,
-                  right: 8, fontSize: 9.5, color: '#9B9180', whiteSpace: 'nowrap',
-                  fontWeight: 500, letterSpacing: '0.03em',
-                }}>
-                  {fmtHourLabel(h)}
-                </div>
-              ))}
+            {/* Time labels column, with the weather for the day it is showing */}
+            <div style={{ width: 58, flexShrink: 0, position: 'relative', height: GRID_H, background: '#FCFAF4', borderRight: '1px solid #EDE7D9' }}>
+              {Array.from({ length: 24 }, (_, h) => {
+                const w = weather[`${weatherDay}T${String(h).padStart(2, '0')}`]
+                return (
+                  <div key={h} style={{
+                    position: 'absolute', top: h * HOUR_PX - 7, right: 8,
+                    display: 'flex', flexDirection: 'column', alignItems: 'flex-end',
+                    whiteSpace: 'nowrap',
+                  }}>
+                    <span style={{ fontSize: 9.5, color: '#9B9180', fontWeight: 500, letterSpacing: '0.03em' }}>
+                      {fmtHourLabel(h)}
+                    </span>
+                    {w && (
+                      <span
+                        title={`${w.temp}°C`}
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 2, marginTop: 1,
+                          fontSize: 8.5, color: '#B5AA98', fontVariantNumeric: 'tabular-nums',
+                        }}>
+                        <span style={{ fontSize: 8.5, lineHeight: 1 }}>{weatherGlyph(w.code)}</span>
+                        {w.temp}°
+                      </span>
+                    )}
+                  </div>
+                )
+              })}
             </div>
 
             {/* Day columns */}

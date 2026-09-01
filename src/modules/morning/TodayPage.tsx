@@ -23,6 +23,7 @@ import type { EventStatus } from '@/lib/eventMetadata'
 import { loadEventStatuses, toggleEventStatus } from '@/lib/eventStatus'
 import { listUnreadThreadIds, getThread, header, extractBody, extractHtmlBody, archiveMessage } from '@/lib/gmail'
 import { TASK_TYPE_META, inferTaskType, isTaskHidden } from '@/types'
+import { isMailHiddenByCompany } from '@/lib/companyVisibility'
 import { TASK_TYPE_ICON } from '@/modules/tasks/taskVisuals'
 import type { Task } from '@/types'
 
@@ -478,6 +479,29 @@ function PlanCard({
     ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
   }
 
+  /** Two things cannot be done at once, so a dragged block settles in the
+   *  nearest gap rather than landing on top of what is already there. */
+  function avoidOverlap(desired: number, length: number, selfId: string): number {
+    const busy = blocks
+      .filter(b => b.id !== selfId)
+      .map(b => [minutesOf(b.start), Math.max(minutesOf(b.end), minutesOf(b.start) + SNAP_MIN)] as const)
+      .sort((a, b) => a[0] - b[0])
+
+    let start = desired
+    for (let pass = 0; pass < busy.length + 1; pass++) {
+      const clash = busy.find(([s0, e0]) => start < e0 && start + length > s0)
+      if (!clash) return start
+      const before = clash[0] - length
+      const after = clash[1]
+      // Whichever side of the clash the pointer was closer to
+      const pick = Math.abs(desired - before) <= Math.abs(desired - after) ? before : after
+      const next = Math.max(0, Math.min(24 * 60 - length, pick))
+      if (next === start) return start
+      start = next
+    }
+    return start
+  }
+
   function moveDrag(e: React.PointerEvent) {
     const d = dragRef.current
     const lane = laneRef.current
@@ -485,7 +509,7 @@ function PlanCard({
     const pointerMins = ((e.clientY - lane.getBoundingClientRect().top) / HOUR_PX) * 60 + fromHour * 60
     const raw = pointerMins - d.grabOffset
     const snapped = Math.max(0, Math.min(24 * 60 - d.length, Math.round(raw / SNAP_MIN) * SNAP_MIN))
-    setDrag({ id: d.id, start: snapped, length: d.length })
+    setDrag({ id: d.id, start: avoidOverlap(snapped, d.length, d.id), length: d.length })
   }
 
   function endDrag() {
@@ -847,6 +871,8 @@ export function TodayPage() {
         const isBulk = !!header(headers, 'List-Unsubscribe')
         if (isBulk) { bulk++; continue }
         const to = header(headers, 'To').toLowerCase()
+        // A hidden company's mail is hidden too, the same as its tasks and calendars
+        if (isMailHiddenByCompany({ from, to, accountEmail: user?.email })) continue
         const me = (user?.email ?? '').toLowerCase()
         const plain = extractBody(last)
         rows.push({

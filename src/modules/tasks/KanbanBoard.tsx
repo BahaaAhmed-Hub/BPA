@@ -10,7 +10,7 @@ import { useTaskStore } from '@/store/taskStore'
 import type { Task, TaskType } from '@/types'
 import {
   TASK_TYPE_META, inferTaskType,
-  loadVisibleCompanies, getAllUsers, isTaskHidden,
+  loadVisibleCompanies, getVisibleUsers, isTaskHidden,
 } from '@/types'
 import { loadCustomStatuses, sortCustomStatuses, saveCustomStatuses, moveStatus } from '@/lib/customStatuses'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
@@ -391,7 +391,7 @@ export function KanbanBoard({ onOpen, hideCompleted = false, filteredTaskIds }: 
   })
 
   const companies = loadVisibleCompanies()
-  const allUsers  = getAllUsers()
+  const allUsers  = getVisibleUsers()
 
   const tasks = allTasks.filter(t =>
     !isTaskHidden(t) &&

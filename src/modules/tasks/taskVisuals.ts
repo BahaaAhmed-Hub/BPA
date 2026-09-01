@@ -103,12 +103,49 @@ export interface TaskVisuals {
   scheduleLabel?: string
 }
 
+
+// ─── Schedule label ──────────────────────────────────────────────────────────
+// One formatter, so the card, the row and the detail panel never disagree
+// about when a task is happening.
+
+function isoToday(): string {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+/** "18 Sep · 09:00" on a card, "Today, 18 Sep · 09:00 · 30m" in the panel.
+ *  A task with a time but no date is happening today, and says so. */
+export function formatScheduleLabel(
+  task: { dueDate?: string; plannedTime?: string; duration?: number },
+  opts: { long?: boolean } = {},
+): string | undefined {
+  const { dueDate, plannedTime, duration } = task
+  if (!dueDate && !plannedTime) return undefined
+
+  let datePart: string | undefined
+  if (dueDate) {
+    const d = new Date(dueDate + 'T00:00:00')
+    if (!Number.isNaN(d.getTime())) {
+      const day = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+      datePart = dueDate === isoToday()
+        ? (opts.long ? `Today, ${day}` : 'Today')
+        : (opts.long ? `${d.toLocaleDateString('en-GB', { weekday: 'short' })}, ${day}` : day)
+    }
+  } else {
+    datePart = 'Today'
+  }
+
+  const parts = [datePart, plannedTime]
+  if (opts.long && plannedTime) parts.push(`${duration ?? 30}m`)
+  return parts.filter(Boolean).join(' · ')
+}
+
 /** Everything a card needs to draw itself, resolved once. */
 export function resolveTaskVisuals(task: Task): TaskVisuals {
   const company = loadDynamicCompanies().find(c => c.id === task.companyId)
   const owner   = task.owner ? getAllUsers().find(u => u.id === task.owner) : undefined
   const type    = task.taskType ?? inferTaskType(task.title)
-  const scheduled = !!task.plannedTime || !!task.gcalEventId
+  const scheduled = !!task.plannedTime || !!task.dueDate || !!task.gcalEventId
 
   return {
     companyName:  company?.name ?? task.company ?? '',
@@ -119,7 +156,7 @@ export function resolveTaskVisuals(task: Task): TaskVisuals {
     ownerName:    owner?.name,
     ownerInitials: owner ? initials(owner.name) : undefined,
     scheduled,
-    scheduleLabel: task.plannedTime,
+    scheduleLabel: formatScheduleLabel(task),
   }
 }
 

@@ -325,9 +325,11 @@ const WALL_PALETTE = [
 
 /** The one way to log a habit from a card: a done toggle, or − N + for a count.
  *  Wall and fill cards both use it, so logging feels the same wherever you are. */
-function HabitLogControl({ isQty, todayDone, qtyValue, unit, tone, onToggle, onIncrement, onDecrement }: {
+function HabitLogControl({ isQty, todayDone, qtyValue, unit, tone, isToday = true, onToggle, onIncrement, onDecrement }: {
   isQty: boolean
   todayDone: boolean
+  /** False when the card is showing a day other than today. */
+  isToday?: boolean
   qtyValue: number
   unit?: string
   /** 'light' sits on a photo; 'dark' sits on white. */
@@ -362,7 +364,7 @@ function HabitLogControl({ isQty, todayDone, qtyValue, unit, tone, onToggle, onI
           fontSize: 11.5, fontWeight: 700,
         }}>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg>
-        {todayDone ? 'Done today' : 'Mark done'}
+        {todayDone ? (isToday ? 'Done today' : 'Done') : (isToday ? 'Mark done' : 'Mark done')}
       </button>
     )
   }
@@ -399,7 +401,7 @@ function HabitLogControl({ isQty, todayDone, qtyValue, unit, tone, onToggle, onI
   )
 }
 
-function WallCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, onDecrement, paletteIdx, isSelected, onSelect }: {
+function WallCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, onDecrement, paletteIdx, isToday = true, isSelected, onSelect }: {
   habit: { id: string; name: string; emoji: string; type?: string; goal?: number; unit?: string; image?: string }
   todayDone: boolean
   streak: number
@@ -408,6 +410,8 @@ function WallCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, o
   onIncrement: () => void
   onDecrement: () => void
   paletteIdx: number
+  /** False when the view is showing a day other than today. */
+  isToday?: boolean
   isSelected?: boolean
   onSelect?: () => void
 }) {
@@ -458,7 +462,7 @@ function WallCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, o
             {isQty ? `${qtyValue}${habit.unit ? ' ' + habit.unit : ''}` : (todayDone ? 'Done' : '—')}
           </span>
           <span style={{ fontSize: 11, fontWeight: 600, color: '#6C6553', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {isQty && habit.goal ? `of ${habit.goal} ${habit.unit ?? ''}` : (todayDone ? 'logged today' : 'not yet done')}
+            {isQty && habit.goal ? `of ${habit.goal} ${habit.unit ?? ''}` : (todayDone ? (isToday ? 'logged today' : 'logged that day') : 'not yet done')}
           </span>
         </span>
         {/* Log it — the same control the fill cards use */}
@@ -469,6 +473,7 @@ function WallCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, o
             qtyValue={qtyValue}
             unit={habit.unit}
             tone="dark"
+            isToday={isToday}
             onToggle={onToggle}
             onIncrement={onIncrement}
             onDecrement={onDecrement}
@@ -481,9 +486,11 @@ function WallCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, o
 
 // ─── Fill view card (12B) ─────────────────────────────────────────────────────
 
-function FillCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, onDecrement, paletteIdx, isSelected, onSelect }: {
+function FillCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, onDecrement, paletteIdx, isToday = true, isSelected, onSelect }: {
   habit: { id: string; name: string; emoji: string; type?: string; goal?: number; unit?: string; image?: string }
   todayDone: boolean
+  /** False when the view is showing a day other than today. */
+  isToday?: boolean
   streak: number
   qtyValue: number
   onToggle: () => void
@@ -616,7 +623,7 @@ function FillCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, o
               {hasGoal
                 ? `of ${habit.goal} ${habit.unit ?? ''}`.trim()
                 : isQty ? 'no target — count as you go'
-                : todayDone ? 'logged today' : 'nothing yet'}
+                : todayDone ? (isToday ? 'logged today' : 'logged that day') : 'nothing yet'}
             </span>
           </span>
 
@@ -636,6 +643,7 @@ function FillCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, o
               qtyValue={qtyValue}
               unit={habit.unit}
               tone="light"
+              isToday={isToday}
               onToggle={onToggle}
               onIncrement={onIncrement}
               onDecrement={onDecrement}
@@ -728,7 +736,11 @@ function HabitDetailPanel({
 
       {/* Today — the one thing you came here to change */}
       <div style={{ background: '#FAF7EC', border: '1px solid #E8E1CE', borderRadius: 12, padding: '12px 13px' }}>
-        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: '#6C6553', marginBottom: 9 }}>TODAY</div>
+        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: '#6C6553', marginBottom: 9 }}>
+          {today === todayKey()
+            ? 'TODAY'
+            : new Date(today + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' }).toUpperCase()}
+        </div>
         {isQty ? (
           <>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -1100,10 +1112,10 @@ export function HabitsModule() {
           <div style={{ flex: 1, display: 'grid', gridTemplateColumns: detailHabitId ? 'repeat(2, minmax(0, 1fr))' : 'repeat(3, minmax(0, 1fr))', gridAutoRows: '220px', gap: 14, alignContent: 'start' }}>
             {activeHabits.map((habit, i) => {
               const habitLogs   = logs[habit.id] ?? []
-              const todayDoneH  = habitLogs.includes(today)
+              const todayDoneH  = habitLogs.includes(selectedDay)
               const streak      = calcStreak(habitLogs)
               const isQuantity  = habit.type === 'quantity'
-              const qtyValue    = isQuantity ? (qtyLogs[habit.id]?.[today] ?? 0) : 0
+              const qtyValue    = isQuantity ? (qtyLogs[habit.id]?.[selectedDay] ?? 0) : 0
               return (
                 <WallCard
                   key={habit.id}
@@ -1112,11 +1124,12 @@ export function HabitsModule() {
                   streak={streak}
                   qtyValue={qtyValue}
                   paletteIdx={i}
+                  isToday={selectedDay === today}
                   isSelected={detailHabitId === habit.id}
                   onSelect={() => setDetailHabitId(id => id === habit.id ? null : habit.id)}
-                  onToggle={() => toggleHabit(habit.id, today)}
-                  onIncrement={() => isQuantity && setQuantity(habit.id, habit.goal ?? 1, today, qtyValue + 1)}
-                  onDecrement={() => isQuantity && setQuantity(habit.id, habit.goal ?? 1, today, Math.max(0, qtyValue - 1))}
+                  onToggle={() => toggleHabit(habit.id, selectedDay)}
+                  onIncrement={() => isQuantity && setQuantity(habit.id, habit.goal ?? 1, selectedDay, qtyValue + 1)}
+                  onDecrement={() => isQuantity && setQuantity(habit.id, habit.goal ?? 1, selectedDay, Math.max(0, qtyValue - 1))}
                 />
               )
             })}
@@ -1135,10 +1148,10 @@ export function HabitsModule() {
         <div style={{ display: 'flex', gap: 8, minWidth: 0, minHeight: 520, padding: '4px 0 8px' }}>
           {activeHabits.map((habit, i) => {
             const habitLogs   = logs[habit.id] ?? []
-            const todayDoneH  = habitLogs.includes(today)
+            const todayDoneH  = habitLogs.includes(selectedDay)
             const streak      = calcStreak(habitLogs)
             const isQuantity  = habit.type === 'quantity'
-            const qtyValue    = isQuantity ? (qtyLogs[habit.id]?.[today] ?? 0) : 0
+            const qtyValue    = isQuantity ? (qtyLogs[habit.id]?.[selectedDay] ?? 0) : 0
             const isSelected  = (fillSelected ?? activeHabits[0]?.id) === habit.id
             return (
               <FillCard
@@ -1148,11 +1161,12 @@ export function HabitsModule() {
                 streak={streak}
                 qtyValue={qtyValue}
                 paletteIdx={i}
+                isToday={selectedDay === today}
                 isSelected={isSelected}
                 onSelect={() => { setFillSelected(habit.id); setDetailHabitId(habit.id) }}
-                onToggle={() => toggleHabit(habit.id, today)}
-                onIncrement={() => isQuantity && setQuantity(habit.id, habit.goal ?? 1, today, qtyValue + 1)}
-                onDecrement={() => isQuantity && setQuantity(habit.id, habit.goal ?? 1, today, Math.max(0, qtyValue - 1))}
+                onToggle={() => toggleHabit(habit.id, selectedDay)}
+                onIncrement={() => isQuantity && setQuantity(habit.id, habit.goal ?? 1, selectedDay, qtyValue + 1)}
+                onDecrement={() => isQuantity && setQuantity(habit.id, habit.goal ?? 1, selectedDay, Math.max(0, qtyValue - 1))}
               />
             )
           })}
@@ -1220,7 +1234,7 @@ export function HabitsModule() {
         {/* Habit rows */}
         {activeHabits.map((habit, i) => {
           const habitLogs  = logs[habit.id] ?? []
-          const todayDoneH = habitLogs.includes(today)
+          const todayDoneH = habitLogs.includes(selectedDay)
           const streak     = calcStreak(habitLogs)
           const isQuantity = habit.type === 'quantity'
 
@@ -1250,7 +1264,7 @@ export function HabitsModule() {
               </span>
 
               {/* Today done checkbox */}
-              <button onClick={() => toggleHabit(habit.id, today)} title={todayDoneH ? 'Mark undone' : 'Mark done'}
+              <button onClick={() => toggleHabit(habit.id, selectedDay)} title={todayDoneH ? 'Mark undone' : 'Mark done'}
                 style={{ width: 22, height: 22, boxSizing: 'border-box', borderRadius: 7, background: '#FFFFFF', border: '1.5px solid #E8E1CE', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, padding: 0 }}>
                 {todayDoneH && (
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#191712" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
@@ -1274,10 +1288,10 @@ export function HabitsModule() {
               {/* Quantity control for measurable habits */}
               {isQuantity && (
                 <QuantityControl
-                  value={qtyLogs[habit.id]?.[today] ?? 0}
+                  value={qtyLogs[habit.id]?.[selectedDay] ?? 0}
                   goal={habit.goal}
                   unit={habit.unit}
-                  onSet={v => setQuantity(habit.id, habit.goal ?? 1, today, v)}
+                  onSet={v => setQuantity(habit.id, habit.goal ?? 1, selectedDay, v)}
                 />
               )}
 
@@ -1370,12 +1384,12 @@ export function HabitsModule() {
           key={detailHabit.id}
           habit={detailHabit}
           hLogs={logs[detailHabit.id] ?? []}
-          qtyToday={qtyLogs[detailHabit.id]?.[today] ?? 0}
-          today={today}
+          qtyToday={qtyLogs[detailHabit.id]?.[selectedDay] ?? 0}
+          today={selectedDay}
           onClose={() => setDetailHabitId(null)}
           onUpdate={patch => updateHabit(detailHabit.id, patch)}
-          onToggleToday={() => toggleHabit(detailHabit.id, today)}
-          onSetQuantity={v => setQuantity(detailHabit.id, detailHabit.goal ?? 1, today, v)}
+          onToggleToday={() => toggleHabit(detailHabit.id, selectedDay)}
+          onSetQuantity={v => setQuantity(detailHabit.id, detailHabit.goal ?? 1, selectedDay, v)}
         />
       )}
       </div>

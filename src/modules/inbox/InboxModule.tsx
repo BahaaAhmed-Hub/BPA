@@ -8,7 +8,7 @@ import { signInWithGoogle } from '@/lib/google'
 import { useAuthStore } from '@/store/authStore'
 import { useTaskStore } from '@/store/taskStore'
 import type { DbUser } from '@/types/database'
-import { loadDynamicCompanies } from '@/types'
+import { isMailHiddenByCompany } from '@/lib/companyVisibility'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -190,19 +190,10 @@ export function InboxModule() {
     setTimeout(() => { setBulkDone(false); setBulkOpen(false) }, 1400)
   }
 
-  // Domains belonging to hidden companies — emails from these are filtered out
-  const hiddenDomains = useMemo(() => new Set(
-    loadDynamicCompanies()
-      .filter(c => c.hidden && c.emailDomain)
-      .map(c => c.emailDomain!.toLowerCase().replace(/^@/, ''))
-  ), [emails])
-
+  // A hidden company's mail is hidden, matched the same way everywhere else
   const visibleEmails = useMemo(() =>
-    emails.filter(e => {
-      const domain = e.fromEmail.split('@')[1]?.toLowerCase()
-      return !domain || !hiddenDomains.has(domain)
-    })
-  , [emails, hiddenDomains])
+    emails.filter(e => !isMailHiddenByCompany({ from: e.fromEmail, to: e.to, accountEmail: user?.email }))
+  , [emails, user?.email])
 
   const filteredEmails = searchQuery.trim()
     ? visibleEmails.filter(e => {
@@ -212,9 +203,9 @@ export function InboxModule() {
       })
     : visibleEmails
 
-  const selectedEmail  = emails.find(e => e.id === selectedId) ?? null
+  const selectedEmail  = visibleEmails.find(e => e.id === selectedId) ?? null
   const selectedTriage = selectedId ? (triageMap[selectedId] ?? null) : null
-  const triagedCount   = emails.filter(e => triageMap[e.id]?.result).length
+  const triagedCount   = visibleEmails.filter(e => triageMap[e.id]?.result).length
 
   const loadEmails = useCallback(async () => {
     setLoading(true)
@@ -411,7 +402,7 @@ export function InboxModule() {
       )
     }
 
-    if (noAuth || emails.length === 0) return null
+    if (noAuth || visibleEmails.length === 0) return null
 
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -470,7 +461,7 @@ export function InboxModule() {
                 width: '100%', padding: '12px 16px', textAlign: 'left',
                 background: isSelected ? 'rgba(30,64,175,0.06)' : 'transparent',
                 border: 'none',
-                borderBottom: i < emails.length - 1 ? '1px solid #E8E1CE' : 'none',
+                borderBottom: i < visibleEmails.length - 1 ? '1px solid #E8E1CE' : 'none',
                 borderLeft: isSelected ? '3px solid #1E40AF' : '3px solid transparent',
                 cursor: 'pointer',
               }}
@@ -779,7 +770,7 @@ export function InboxModule() {
           <div style={{ display: 'flex', gap: 20, marginBottom: bulkOpen ? 10 : 20, padding: '13px 20px', background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 10, alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
               <Mail size={14} color="#7F77DD" />
-              <span style={{ fontSize: 13, color: '#191712' }}>{loading ? '…' : emails.length} unread</span>
+              <span style={{ fontSize: 13, color: '#191712' }}>{loading ? '…' : visibleEmails.length} unread</span>
             </div>
             <div style={{ width: 1, height: 14, background: '#E8E1CE' }} />
             <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
@@ -896,7 +887,7 @@ export function InboxModule() {
         {noAuth || fetchError ? (
           <div style={{ maxWidth: 520, margin: '40px auto' }}>{renderRight()}</div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: emails.length > 0 ? '360px 1fr' : '1fr', gap: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: visibleEmails.length > 0 ? '360px 1fr' : '1fr', gap: 16 }}>
             {renderLeft()}
             {renderRight()}
           </div>

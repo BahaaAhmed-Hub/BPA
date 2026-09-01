@@ -7,13 +7,14 @@ import {
   ChevronDown, ChevronUp, User, Clock, Building2, Flame,
   Brain, Bell, Palette, Link, X, RefreshCw, Eye, EyeOff, Shield, Pencil,
   Hash, CheckSquare, Mail, HardDrive, CalendarDays, Swords, Wand2, CreditCard, Sparkles,
-  ArrowUpRight, Download, Database, GripVertical, ImagePlus,
+  ArrowUpRight, Download, Database, GripVertical, ImagePlus, LocateFixed,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { connectAdditionalGoogleAccount, signOut as googleSignOut, disconnectGoogleAccount } from '@/lib/google'
 import { useUIStore } from '@/store/uiStore'
 import { useAuthStore } from '@/store/authStore'
 import { THEMES, getTheme, applyThemeVars } from '@/lib/themes'
+import { syncTimezoneFromLocation } from '@/lib/weather'
 import { useHabitsStore, getHabitColors } from '@/store/habitsStore'
 import { HABIT_VIEWS, loadHabitView, saveHabitView, EmojiBtn, type HabitView } from '@/modules/habits/HabitsModule'
 import { useBehavioralStore, type BehavioralMode } from '@/store/behavioralStore'
@@ -398,6 +399,8 @@ function ProfileSection({
   refreshing: boolean
 }) {
   const tzLabel = ALL_TZ.find(t => t.value === s.timezone)?.label ?? s.timezone
+  const [tzSyncing, setTzSyncing] = useState(false)
+  const [tzSyncNote, setTzSyncNote] = useState<string | undefined>(undefined)
   const initials = (s.fullName || name || 'P').trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase()
 
   return (
@@ -451,10 +454,32 @@ function ProfileSection({
         />
       </DRow>
 
-      <DRow label="Timezone">
+      <DRow label="Timezone" sub={tzSyncNote}>
         <select value={s.timezone} onChange={e => set({ timezone: e.target.value })} style={pillSelectStyle}>
           {ALL_TZ.map(tz => <option key={tz.value} value={tz.value}>{tz.label}</option>)}
         </select>
+        {/* Nothing asks for your location until you press this. */}
+        <button
+          onClick={async () => {
+            setTzSyncing(true); setTzSyncNote(undefined)
+            const tz = await syncTimezoneFromLocation()
+            setTzSyncing(false)
+            if (!tz) { setTzSyncNote('Could not read your location — pick a zone above.'); return }
+            const known = ALL_TZ.some(t => t.value === tz)
+            set({ timezone: tz })
+            setTzSyncNote(known ? `Set from your location — ${tz.replace(/_/g, ' ')}` : `Set to ${tz.replace(/_/g, ' ')}`)
+          }}
+          disabled={tzSyncing}
+          title="Set the timezone from where you are"
+          style={{
+            width: 36, height: 36, borderRadius: 9, flexShrink: 0, padding: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: '#FFFFFF', border: '1px solid #E8E1CE',
+            color: tzSyncing ? '#9B9180' : '#6C6553',
+            cursor: tzSyncing ? 'default' : 'pointer',
+          }}>
+          <LocateFixed size={15} style={tzSyncing ? { opacity: 0.5 } : undefined} />
+        </button>
       </DRow>
 
       <DRow label="Work days" sub={workWeekSummary(s.workWeek)} last>

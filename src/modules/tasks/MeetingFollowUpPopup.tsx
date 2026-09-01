@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { X, Sparkles, Plus, Trash2, Check, ChevronDown, ChevronUp } from 'lucide-react'
 import { breakdownMeetingNotes } from '@/lib/professor'
 import type { ExtractedTask } from '@/lib/professor'
-import { loadDynamicCompanies, getAllUsers } from '@/types'
+import { loadDynamicCompanies, getVisibleUsers } from '@/types'
 import type { Task, Quadrant } from '@/types'
 
 // ─── editable task row (draft state) ─────────────────────────────────────────
@@ -15,7 +15,7 @@ interface DraftTask {
   deleted:  boolean
 }
 
-function toDraft(t: ExtractedTask, allUsers: ReturnType<typeof getAllUsers>): DraftTask {
+function toDraft(t: ExtractedTask, allUsers: ReturnType<typeof getVisibleUsers>): DraftTask {
   // Try to match ownerName → user id
   const matched = t.ownerName
     ? allUsers.find(u => u.name.toLowerCase().includes(t.ownerName!.toLowerCase()))
@@ -45,7 +45,7 @@ interface RowProps {
   draft:    DraftTask
   index:    number
   expanded: boolean
-  users:    ReturnType<typeof getAllUsers>
+  users:    ReturnType<typeof getVisibleUsers>
   onToggle: () => void
   onChange: (patch: Partial<DraftTask>) => void
   onDelete: () => void
@@ -240,7 +240,7 @@ export function MeetingFollowUpPopup({ parentTask, onConfirm, onSkip }: Props) {
   const companies    = parentTask.companyId
     ? allCompanies.filter(c => c.id === parentTask.companyId)
     : allCompanies
-  const allUsers     = getAllUsers()
+  const allUsers     = getVisibleUsers()
   const scopedUsers  = parentTask.companyId
     ? allUsers.filter(u => u.companyId === parentTask.companyId)
     : allUsers
