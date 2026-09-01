@@ -3,6 +3,7 @@
 // attributes the 9B card carries, laid out horizontally.
 
 import { Check, Paperclip, CalendarDays, Flame, Trash2, User } from 'lucide-react'
+import { useDraggable } from '@dnd-kit/core'
 import type { Task, TaskType, Priority } from '@/types'
 import { PRIORITY_META, TASK_TYPE_META } from '@/types'
 import { getAllUsers, loadVisibleCompanies } from '@/types'
@@ -16,6 +17,9 @@ export function TaskRow({ task, onOpen, dense }: {
   /** Matrix rows sit inside a tinted quadrant and drop their own shadow. */
   dense?: boolean
 }) {
+  // The row is the drag handle, so a task can be moved to another quadrant
+  // without opening it first. The 5px activation distance keeps a click a click.
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: task.id })
   const { toggleComplete, updateTask, toggleUrgent, deleteTask } = useTaskStore()
   const PRIORITIES: Priority[] = ['P0', 'P1', 'P2', 'P3']
   const owners = getAllUsers().filter(u => (task.companyId ? u.companyId === task.companyId : true))
@@ -33,13 +37,16 @@ export function TaskRow({ task, onOpen, dense }: {
 
   return (
     <div
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
       onClick={e => { if (!(e.target as HTMLElement).closest('[data-nm]')) onOpen(task.id) }}
       style={{
         display: 'flex', alignItems: 'flex-start', gap: 12,
         background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 10,
         padding: dense ? '10px 13px' : '12px 14px',
-        cursor: 'pointer', minWidth: 0,
-        opacity: task.completed ? 0.55 : 1,
+        cursor: 'grab', minWidth: 0, touchAction: 'none',
+        opacity: isDragging ? 0.35 : task.completed ? 0.55 : 1,
       }}
     >
       <button
