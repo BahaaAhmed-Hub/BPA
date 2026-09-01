@@ -86,6 +86,7 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
 
   return (
     <div
+      data-task-node
       ref={setNodeRef}
       {...listeners}
       {...attributes}

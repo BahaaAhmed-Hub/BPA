@@ -229,7 +229,17 @@ export function TaskCommand() {
   }
 
   return (
-    <div>
+    <div
+      // Clicking the page itself — the gaps, the space below the columns — puts
+      // the view back to plain, closing whatever task is open.
+      onClick={e => {
+        const el = e.target as HTMLElement
+        if (!el.closest('[data-task-node], button, select, input, textarea, a, label')) {
+          setModalTaskId(null)
+        }
+      }}
+      style={{ minHeight: '100%' }}
+    >
       {/* ── Summary strip, then the header beneath it ───────────────────────── */}
       <div style={{ padding: '20px 26px 0' }}>
         <TaskBanner tasks={tasks} />
@@ -434,7 +444,7 @@ export function TaskCommand() {
               />
             </div>
             {modalTask && (
-              <div style={{ paddingRight: 28, paddingBottom: 28 }}>
+              <div data-task-node style={{ paddingRight: 28, paddingBottom: 28 }}>
                 <TaskDetailPanel key={modalTask.id} task={modalTask} onClose={() => setModalTaskId(null)} />
               </div>
             )}
@@ -458,7 +468,7 @@ export function TaskCommand() {
             />
           </div>
           {modalTask && (
-            <div style={{ paddingTop: 4, paddingRight: 28, paddingBottom: 28 }}>
+            <div data-task-node style={{ paddingTop: 4, paddingRight: 28, paddingBottom: 28 }}>
               <TaskDetailPanel key={modalTask.id} task={modalTask} onClose={() => setModalTaskId(null)} />
             </div>
           )}
@@ -474,7 +484,7 @@ export function TaskCommand() {
               <EisenhowerBoard onOpen={setModalTaskId} hideCompleted={hideCompleted} groupBy={groupBy} allGroupsExpanded={allGroupsExpanded} filteredTaskIds={filteredTaskIds} onOpenPlanner={() => setShowPlanner(true)} />
             </div>
             {modalTask && (
-              <div>
+              <div data-task-node>
                 <TaskDetailPanel key={modalTask.id} task={modalTask} onClose={() => setModalTaskId(null)} />
               </div>
             )}

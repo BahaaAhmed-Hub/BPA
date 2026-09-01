@@ -85,6 +85,7 @@ function DumpCard({ task, onOpen, onDelete }: {
 
   return (
     <div
+      data-task-node
       ref={setNodeRef}
       onClick={e => { if (!(e.target as HTMLElement).closest('[data-nm]')) onOpen(task.id) }}
       onMouseEnter={() => setHovered(true)}

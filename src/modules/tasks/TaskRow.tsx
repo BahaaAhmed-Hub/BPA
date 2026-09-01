@@ -37,6 +37,7 @@ export function TaskRow({ task, onOpen, dense }: {
 
   return (
     <div
+      data-task-node
       ref={setNodeRef}
       {...listeners}
       {...attributes}
