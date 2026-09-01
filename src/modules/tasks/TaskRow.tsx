@@ -2,10 +2,10 @@
 // One line per task: checkbox, title, company, meta — then the same four
 // attributes the 9B card carries, laid out horizontally.
 
-import { Check, Paperclip, CalendarDays, Flame, Trash2 } from 'lucide-react'
+import { Check, Paperclip, CalendarDays, Flame, Trash2, User } from 'lucide-react'
 import type { Task, TaskType, Priority } from '@/types'
 import { PRIORITY_META, TASK_TYPE_META } from '@/types'
-import { getAllUsers } from '@/types'
+import { getAllUsers, loadVisibleCompanies } from '@/types'
 import { useTaskStore } from '@/store/taskStore'
 import { openLabel, resolveTaskVisuals, TASK_TYPE_ORDER } from './taskVisuals'
 import { ControlSlot, OverlaySelect, OverlayTime } from './controls'
@@ -19,6 +19,7 @@ export function TaskRow({ task, onOpen, dense }: {
   const { toggleComplete, updateTask, toggleUrgent, deleteTask } = useTaskStore()
   const PRIORITIES: Priority[] = ['P0', 'P1', 'P2', 'P3']
   const owners = getAllUsers().filter(u => (task.companyId ? u.companyId === task.companyId : true))
+  const companies = loadVisibleCompanies()
   const v = resolveTaskVisuals(task)
   const { TypeIcon } = v
   const attachmentCount = task.attachments?.length ?? 0
@@ -61,11 +62,26 @@ export function TaskRow({ task, onOpen, dense }: {
           overflowWrap: 'anywhere',
           textDecoration: task.completed ? 'line-through' : 'none',
         }}>{task.title}</p>
-        {v.companyName && (
-          <p style={{ margin: '2px 0 0', fontSize: 12, fontWeight: 600, color: v.companyColor, lineHeight: 1.3 }}>
-            {v.companyName}
-          </p>
-        )}
+        <span data-nm style={{ position: 'relative', display: 'inline-block', maxWidth: '100%', marginTop: 2 }}>
+          <p style={{
+            margin: 0, fontSize: 12, fontWeight: 600, lineHeight: 1.3, cursor: 'pointer',
+            color: v.companyName ? v.companyColor : '#C9C0A8',
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>{v.companyName || 'No company'}</p>
+          <OverlaySelect
+            title="Change company"
+            value={task.companyId ?? ''}
+            onChange={val => {
+              const co = companies.find(c => c.id === val)
+              updateTask(task.id, {
+                companyId: co?.id,
+                company: (co?.id ?? task.company) as Task['company'],
+                owner: undefined,
+              })
+            }}
+            options={[{ value: '', label: 'No company' }, ...companies.map(c => ({ value: c.id, label: c.name }))]}
+          />
+        </span>
         <p style={{ margin: '6px 0 0', fontSize: 11.5, color: '#9B9180', lineHeight: 1.3, display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
           {meta}
           {attachmentCount > 0 && (
@@ -131,14 +147,14 @@ export function TaskRow({ task, onOpen, dense }: {
           <span
             title={v.ownerName ?? 'Unassigned'}
             style={{
-              width: 22, height: 22, borderRadius: '50%',
-              background: v.ownerInitials ? '#191712' : 'transparent',
-              border: v.ownerInitials ? 'none' : '1px dashed #D8CFB8',
-              color: v.ownerInitials ? '#FFFFFF' : '#C9C0A8',
+              width: 22, height: 22, borderRadius: '50%', boxSizing: 'border-box',
+              background: v.ownerInitials ? '#191712' : '#F1ECDE',
+              border: v.ownerInitials ? 'none' : '1px solid #E8E1CE',
+              color: v.ownerInitials ? '#FFFFFF' : '#9B9180',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 9, fontWeight: 700, letterSpacing: '0.02em',
             }}
-          >{v.ownerInitials ?? ''}</span>
+          >{v.ownerInitials ?? <User size={12} strokeWidth={2} />}</span>
           <OverlaySelect
             title={v.ownerName ?? 'Unassigned'}
             value={task.owner ?? ''}

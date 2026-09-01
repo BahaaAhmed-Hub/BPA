@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { Trash2, Check, Clock, CalendarDays, Paperclip, Flame } from 'lucide-react'
+import { Trash2, Check, Clock, CalendarDays, Paperclip, Flame, User } from 'lucide-react'
 import type { Task, TaskType, Priority } from '@/types'
 import { TASK_TYPE_META, getAllUsers, loadVisibleCompanies } from '@/types'
 import { useTaskStore } from '@/store/taskStore'
@@ -264,7 +264,7 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
               borderRadius: '50%',
               fontSize: 9.5, fontWeight: 700, letterSpacing: '0.02em',
             }}
-          >{v.ownerInitials ?? '+'}</div>
+          >{v.ownerInitials ?? <User size={13} strokeWidth={2} />}</div>
           <SlotSelect value={task.owner ?? ''} onChange={val => updateTask(task.id, { owner: val || undefined })}>
             <option value="">Unassigned</option>
             {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}

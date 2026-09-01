@@ -6,7 +6,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   X, Maximize2, ChevronDown, ChevronRight,
-  Plus, Link2, Folder, FileText, Image as ImageIcon, CalendarDays, BarChart3, History, Trash2, Check,
+  Plus, Link2, Folder, FileText, Image as ImageIcon, CalendarDays, BarChart3, History, Trash2, Check, User,
 } from 'lucide-react'
 import type { Task, TaskType, Priority, ChecklistStep, TaskAttachment } from '@/types'
 import { PRIORITY_META, TASK_TYPE_META, getAllUsers, loadVisibleCompanies } from '@/types'
@@ -267,13 +267,13 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
           {/* Owner */}
           <label style={{ ...CELL, gridColumn: '1 / -1', position: 'relative' }}>
             <span style={{
-              width: 18, height: 18, borderRadius: '50%', flexShrink: 0,
-              background: owner ? '#191712' : 'transparent',
-              border: owner ? 'none' : '1px dashed #D8CFB8',
-              color: owner ? '#FFFFFF' : '#C9C0A8',
+              width: 18, height: 18, borderRadius: '50%', flexShrink: 0, boxSizing: 'border-box',
+              background: owner ? '#191712' : '#F1ECDE',
+              border: owner ? 'none' : '1px solid #E8E1CE',
+              color: owner ? '#FFFFFF' : '#9B9180',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 8, fontWeight: 700,
-            }}>{owner ? initials(owner.name) : ''}</span>
+            }}>{owner ? initials(owner.name) : <User size={10} strokeWidth={2} />}</span>
             <span style={{ ...CELL_VALUE, color: owner ? '#191712' : '#9B9180' }}>
               {owner ? owner.name : 'Unassigned'}
             </span>
