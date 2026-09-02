@@ -103,15 +103,49 @@ export function saveQuantityLogs(logs: HabitQuantityLogs): void {
   try { localStorage.setItem(QTY_LOGS_KEY, JSON.stringify(logs)) } catch { /* quota */ }
 }
 
+// ─── Which habits this device has changed since it last pushed ───────────────
+// The merge below needs to answer one question: is this device's copy of a
+// habit newer than the server's? It used to assume yes, always, which is why a
+// habit's icon, colour and type never arrived on a second device — see the
+// comment in loadFromDB. This is the answer: a habit is only newer here if it
+// was edited here and the edit has not been pushed yet.
+
+const DIRTY_KEY = 'professor-habits-dirty'
+
+function loadDirty(): Set<string> {
+  try {
+    const raw = localStorage.getItem(DIRTY_KEY)
+    return new Set(raw ? (JSON.parse(raw) as string[]) : [])
+  } catch { return new Set() }
+}
+
+function saveDirty(ids: Set<string>): void {
+  try { localStorage.setItem(DIRTY_KEY, JSON.stringify([...ids])) } catch { /* quota */ }
+}
+
+function markDirty(...ids: string[]): void {
+  const set = loadDirty()
+  for (const id of ids) set.add(id)
+  saveDirty(set)
+}
+
 let dbSyncTimer: ReturnType<typeof setTimeout> | null = null
 function scheduleHabitsSync(habits: Habit[], logs?: HabitLogs) {
   if (dbSyncTimer) clearTimeout(dbSyncTimer)
   dbSyncTimer = setTimeout(() => {
+    const pushing = loadDirty()
     // Not "offline" — every failure looked like this, including a database
     // that cannot store what it is being sent.
-    void saveHabitsToDB(habits).catch(e => {
-      reportSyncGap('habits', 'error', e instanceof Error ? e.message : String(e))
-    })
+    void saveHabitsToDB(habits)
+      .then(() => {
+        // Landed. These are no longer newer here than they are there.
+        const still = loadDirty()
+        for (const id of pushing) still.delete(id)
+        saveDirty(still)
+      })
+      .catch(e => {
+        reportSyncGap('habits', 'error', e instanceof Error ? e.message : String(e))
+      })
     if (logs) void saveHabitLogsToDB(logs).catch(() => { /* offline */ })
   }, 1500)
 }
@@ -147,6 +181,7 @@ export const useHabitsStore = create<HabitsState>((set, get) => ({
     const id = crypto.randomUUID()
     const next = [...get().habits, { ...h, id, createdAt: new Date().toISOString() }]
     saveHabits(next)
+    markDirty(id)
     scheduleHabitsSync(next)
     set({ habits: next })
     return id
@@ -155,6 +190,7 @@ export const useHabitsStore = create<HabitsState>((set, get) => ({
   updateHabit(id, patch) {
     const next = get().habits.map(h => h.id === id ? { ...h, ...patch } : h)
     saveHabits(next)
+    markDirty(id)
     scheduleHabitsSync(next)
     set({ habits: next })
   },
@@ -162,6 +198,7 @@ export const useHabitsStore = create<HabitsState>((set, get) => ({
   deleteHabit(id) {
     const next = get().habits.filter(h => h.id !== id)
     saveHabits(next)
+    markDirty(id)
     scheduleHabitsSync(next)
     set({ habits: next })
   },
@@ -183,29 +220,50 @@ export const useHabitsStore = create<HabitsState>((set, get) => ({
     try {
       const [dbHabits, logs] = await Promise.all([loadHabitsFromDB(), loadHabitLogsFromDB()])
       if (dbHabits.length > 0) {
-        // Merge: keep locally customised emoji/color/type/goal/unit — these may have
-        // been changed after the last DB sync (debounced 1.5s).
+        // The server wins, except for habits this device has changed and not
+        // yet pushed.
+        //
+        // It used to be the other way round for every field, on the reasoning
+        // that a local edit may be newer than the last (debounced) sync. But a
+        // device invents an emoji, a colour and a type the moment it reads a
+        // habit it has never seen — parseHabits fills in '🎯', a colour by
+        // position and 'boolean'. Those invented values are indistinguishable
+        // from choices, so they outranked the real ones forever: on the second
+        // device a counter stayed a checkbox and every habit wore a placeholder
+        // icon in a colour nobody picked. Only the picture came through, and
+        // only because a device never invents one of those.
+        //
+        // So: unpushed local edits still win — that is what the local-is-newer
+        // rule was actually protecting — and everything else defers.
         const local = get().habits
+        const dirty = loadDirty()
         const merged: Habit[] = dbHabits.map((h, i) => {
           const localH = local.find(l => l.id === h.id)
-          const base: Habit = {
-            id:        h.id,
-            name:      h.name,
-            emoji:     h.emoji     ?? '🎯',
-            color:     h.color     ?? DEFAULT_COLORS[i % DEFAULT_COLORS.length],
-            frequency: h.frequency ?? 'daily',
-            isActive:  h.isActive  ?? true,
-            archived:  localH?.archived ?? false,
-            createdAt: h.createdAt ?? new Date().toISOString(),
-            // What this device knows wins, since it may be newer than the last
-            // sync — but where it knows nothing, the server fills it in. That
-            // last part is what puts a picture on a device that never had one.
-            type:      localH?.type ?? h.type ?? 'boolean',
-            goal:      localH?.goal ?? h.goal,
-            unit:      localH?.unit ?? h.unit,
-            image:     localH?.image ?? h.image,
+          const mine = !!localH && dirty.has(h.id)
+
+          const fromDb: Partial<Habit> = {
+            name: h.name, frequency: h.frequency, isActive: h.isActive,
+            emoji: h.emoji, color: h.color,
+            type: h.type, goal: h.goal, unit: h.unit, image: h.image,
           }
-          return localH ? { ...base, emoji: localH.emoji, color: localH.color } : base
+          const first: Partial<Habit> = mine ? localH : fromDb
+          const then:  Partial<Habit> = mine ? fromDb : (localH ?? {})
+
+          return {
+            id:        h.id,
+            name:      first.name      ?? then.name      ?? h.name,
+            emoji:     first.emoji     ?? then.emoji     ?? '🎯',
+            color:     first.color     ?? then.color     ?? DEFAULT_COLORS[i % DEFAULT_COLORS.length],
+            frequency: first.frequency ?? then.frequency ?? 'daily',
+            isActive:  first.isActive  ?? then.isActive  ?? true,
+            // The server has nowhere to keep this one, so it stays local.
+            archived:  localH?.archived ?? false,
+            createdAt: h.createdAt ?? localH?.createdAt ?? new Date().toISOString(),
+            type:      first.type ?? then.type ?? 'boolean',
+            goal:      first.goal ?? then.goal,
+            unit:      first.unit ?? then.unit,
+            image:     first.image ?? then.image,
+          }
         })
 
         // A habit made on this device and not yet synced is not in dbHabits, so
@@ -213,7 +271,17 @@ export const useHabitsStore = create<HabitsState>((set, get) => ({
         // wrote that shorter list over localStorage.
         const dbIds = new Set(dbHabits.map(h => h.id))
         const localOnly = local.filter(l => !dbIds.has(l.id))
-        const all = [...merged, ...localOnly]
+
+        // Order is the one thing the server cannot answer for: there is no
+        // position column, so the rows arrive in creation order. Hydrating
+        // would therefore undo a manual reorder every time the app opened.
+        // Keep the order this device already has, and put habits it has never
+        // seen after it, in the order the server gave them.
+        const localOrder = new Map(local.map((l, idx) => [l.id, idx]))
+        const known   = merged.filter(h => localOrder.has(h.id))
+                              .sort((a, b) => localOrder.get(a.id)! - localOrder.get(b.id)!)
+        const arrived = merged.filter(h => !localOrder.has(h.id))
+        const all = [...known, ...arrived, ...localOnly]
 
         saveHabits(all)
         saveLogs(logs)

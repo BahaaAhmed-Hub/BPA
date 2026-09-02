@@ -55,7 +55,12 @@ export interface TaskRow {
 const TASK_TYPES = new Set(['meeting', 'call', 'followup', 'email', 'research', 'study', 'deepwork', 'do'])
 
 export interface HabitRow {
-  id: string; name: string; emoji: string; color: string
+  id: string; name: string
+  /** Optional on the way *out* of the database on purpose: a row that has never
+   *  carried an emoji or a colour must be distinguishable from one that carries
+   *  '🎯'. Defaulting them here is what let a device's invented placeholder
+   *  outrank the real value forever. */
+  emoji?: string; color?: string
   frequency: 'daily' | 'weekdays' | 'weekly'; isActive: boolean; createdAt: string
   /** What a habit looks like and how it is counted. These used to live only in
    *  the browser that created the habit, so a second device saw none of them. */
@@ -586,8 +591,11 @@ export async function saveHabitLogsToDB(logs: HabitLogs): Promise<void> {
 export async function loadHabitsFromDB(): Promise<HabitRow[]> {
   const session = await getSession()
   const userId  = session.user.id
+  // Postgres returns rows in no particular order, so without this the habits
+  // came back shuffled on any device that had not set an order of its own.
   const { data, error } = await supabase
     .from('habits').select('*').eq('user_id', userId)
+    .order('created_at', { ascending: true })
   if (error || !data) return []
   type DbHabitFull = DbHabit & {
     emoji?: string; color?: string; created_at?: string
@@ -595,18 +603,18 @@ export async function loadHabitsFromDB(): Promise<HabitRow[]> {
   }
   return (data as DbHabitFull[]).map(r => ({
     id: r.id, name: r.name,
-    // '🎯' is what the rest of the app uses for a habit with no icon. This
-    // defaulted to '✅', so every habit on a device with no local copy came
-    // back looking like it had been completed.
-    emoji:     r.emoji     ?? '🎯',
-    color:     r.color     ?? '#1E40AF',
+    // Passed through as-is, undefined included. The store decides what an
+    // absent icon, colour or type should look like; deciding it here made
+    // every row look like it had an opinion when it had none.
+    emoji:     r.emoji ?? undefined,
+    color:     r.color ?? undefined,
     frequency: (r.frequency as HabitRow['frequency']) ?? 'daily',
     isActive:  r.is_active ?? true,
     createdAt: r.created_at ?? new Date().toISOString(),
-    type:      r.type === 'quantity' ? 'quantity' : 'boolean',
-    goal:      r.goal,
-    unit:      r.unit,
-    image:     r.image,
+    type:      r.type === 'quantity' ? 'quantity' : r.type === 'boolean' ? 'boolean' : undefined,
+    goal:      r.goal      ?? undefined,
+    unit:      r.unit      ?? undefined,
+    image:     r.image     ?? undefined,
   }))
 }
 

@@ -851,6 +851,17 @@ export function HabitsModule() {
     window.addEventListener('professor:habitViewUpdated', h)
     return () => window.removeEventListener('professor:habitViewUpdated', h)
   }, [])
+
+  // Preferences pulled from the server land after this page has already read
+  // localStorage, so without this the counts only appeared on the next reload.
+  useEffect(() => {
+    const h = (e: Event) => {
+      const keys = (e as CustomEvent<string[]>).detail ?? []
+      if (keys.includes('professor-habit-quantity-logs')) setQtyLogs(loadQuantityLogs())
+    }
+    window.addEventListener('professor:prefsRestored', h)
+    return () => window.removeEventListener('professor:prefsRestored', h)
+  }, [])
   const [fillSelected, setFillSelected] = useState<string | null>(null)
   const [detailHabitId, setDetailHabitId] = useState<string | null>(null)
 

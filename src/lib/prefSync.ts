@@ -52,6 +52,27 @@ const SHARED_KEYS = [
 
 const FIELD = 'shared_prefs'
 
+/** Fill-if-missing is right for a preference — one value, and the device in
+ *  front of you knows it best. It is wrong for a *log*: the moment a device
+ *  writes its own copy it stops receiving anyone else's, permanently, and the
+ *  counts you entered on the laptop never reach the iPad. These keys are maps
+ *  that can simply be joined, so join them. Where both sides have the same
+ *  entry this device's wins; where only the server has one, it arrives. */
+const MERGEABLE: Partial<Record<typeof SHARED_KEYS[number], (mine: string, theirs: string) => string>> = {
+  // { habitId: { 'YYYY-MM-DD': count } }
+  'professor-habit-quantity-logs': (mine, theirs) => {
+    try {
+      const a = JSON.parse(mine)   as Record<string, Record<string, number>>
+      const b = JSON.parse(theirs) as Record<string, Record<string, number>>
+      const out: Record<string, Record<string, number>> = { ...b }
+      for (const [habitId, days] of Object.entries(a)) {
+        out[habitId] = { ...(b[habitId] ?? {}), ...days }
+      }
+      return JSON.stringify(out)
+    } catch { return mine }
+  },
+}
+
 async function userId(): Promise<string | null> {
   const { data } = await supabase.auth.getSession()
   return data.session?.user.id ?? null
@@ -94,9 +115,19 @@ export async function pullSharedPrefs(): Promise<string[]> {
 
   const restored: string[] = []
   for (const key of SHARED_KEYS) {
-    if (localStorage.getItem(key) != null) continue   // this device knows better
     const v = bag[key]
     if (typeof v !== 'string') continue
+
+    const mine = localStorage.getItem(key)
+    if (mine != null) {
+      const join = MERGEABLE[key]
+      if (!join) continue                             // this device knows better
+      const joined = join(mine, v)
+      if (joined === mine) continue                   // nothing new arrived
+      try { localStorage.setItem(key, joined); restored.push(key) } catch { /* full */ }
+      continue
+    }
+
     try { localStorage.setItem(key, v); restored.push(key) } catch { /* full */ }
   }
   return restored
