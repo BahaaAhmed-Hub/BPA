@@ -5,6 +5,7 @@ import { Trash2, Check, Clock, CalendarDays, Paperclip, Flame, User } from 'luci
 import type { Task, TaskType, Priority } from '@/types'
 import { TASK_TYPE_META, getVisibleUsers, loadVisibleCompanies } from '@/types'
 import { useTaskStore } from '@/store/taskStore'
+import { useDeliverableGate } from './DeliverablePrompt'
 import { MeetingFollowUpPopup } from './MeetingFollowUpPopup'
 import type { ExtractedTask } from '@/lib/professor'
 import {
@@ -57,6 +58,8 @@ interface TaskCardProps {
 
 export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
   const { toggleComplete, deleteTask, updateTask, addTasksBatch, toggleUrgent } = useTaskStore()
+  // Work that leaves something behind is asked for it before it closes.
+  const { requestComplete, prompt: deliverablePrompt } = useDeliverableGate()
   const [hovered, setHovered] = useState(false)
   const [showMeetingPopup, setShowMeetingPopup] = useState(false)
   const [scheduleOpen, setScheduleOpen] = useState(false)
@@ -117,7 +120,7 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
             data-nm
             onClick={() => {
               if (!task.completed && isMeetingTask(task.title)) setShowMeetingPopup(true)
-              else toggleComplete(task.id)
+              else requestComplete(task)
             }}
             title={task.completed ? 'Reopen' : 'Complete'}
             style={{
@@ -272,6 +275,8 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
           </SlotSelect>
         </div>
       </div>
+
+      {deliverablePrompt}
 
       {showMeetingPopup && (
         <MeetingFollowUpPopup

@@ -7,7 +7,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Pencil, RefreshCw, ArrowRight, Zap, Archive, Plus,
-  Clock, Check, Flame, Sun, Quote, CheckSquare, X,
+  Clock, Check, Flame, Sun, Quote, CheckSquare, X, ChevronDown,
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { useTaskStore } from '@/store/taskStore'
@@ -22,6 +22,7 @@ import type { GCalEvent } from '@/lib/googleCalendar'
 import type { EventStatus } from '@/lib/eventMetadata'
 import { loadEventStatuses, toggleEventStatus } from '@/lib/eventStatus'
 import { listUnreadThreadIds, getThread, header, extractBody, extractHtmlBody, archiveMessage } from '@/lib/gmail'
+import type { GmailHeader } from '@/lib/gmail'
 import { TASK_TYPE_META, inferTaskType, isTaskHidden } from '@/types'
 import { isMailHiddenByCompany } from '@/lib/companyVisibility'
 import { TASK_TYPE_ICON } from '@/modules/tasks/taskVisuals'
@@ -320,19 +321,55 @@ function MailPopup({ row, onClose, onArchive, onAddTask }: {
   )
 }
 
+/** Marketing and newsletters, recognised the several ways they announce
+ *  themselves. A well-behaved sender sets List-Unsubscribe; plenty do not, so
+ *  the sending address, the campaign headers the big platforms stamp on, and an
+ *  unsubscribe line in the body all count too. */
+const BULK_SENDERS = /^(no[-_.]?reply|donotreply|newsletter|news|mailer|mail|marketing|promo|promotions|offers|deals|campaign|updates|update|notification|notifications|info|hello|hi|team|support|community|digest|alerts?|store|shop|club|members?)[+@._-]/i
+
+const ESP_DOMAINS = /(mailchimp|mcsv|mcdlv|sendgrid|sendinblue|brevo|exponea|klaviyo|hubspot|braze|exacttarget|salesforce|mailgun|sparkpost|iterable|customer\.io|sailthru|campaign-archive|cmail\d|createsend|constantcontact|omnisend|drip|activecampaign|convertkit|substack|beehiiv|mailerlite|amazonses|postmark|mandrill)/i
+
+const BULK_SUBDOMAIN = /^(mail|email|e|em|mailer|mailing|news|newsletter|marketing|campaign|send|sender|smtp|notify|notifications|reply|links?|go|click|track|cta|mktg|crm|info)\./i
+
+function looksLikeBulk(headers: GmailHeader[], email: string, body: string): boolean {
+  const h = (n: string) => header(headers, n)
+
+  // The headers a list or campaign is supposed to carry
+  if (h('List-Unsubscribe') || h('List-Id') || h('List-Post') || h('List-Help')) return true
+  if (/\b(bulk|list|junk|marketing)\b/i.test(h('Precedence'))) return true
+  if (h('Feedback-ID') || h('X-Campaign-Id') || h('X-Campaignid') || h('X-Mailer-Campaign')) return true
+  if (h('X-SES-Outgoing') || h('X-Mailgun-Sid') || h('X-SG-EID') || h('X-Report-Abuse')) return true
+  const auto = h('Auto-Submitted')
+  if (auto && auto.toLowerCase() !== 'no') return true
+  if (/csa_complaint|bulk/i.test(h('X-Complaints-To') + h('X-Mailer'))) return true
+
+  // What the address itself says
+  const [local = '', domain = ''] = email.toLowerCase().split('@')
+  if (BULK_SENDERS.test(`${local}@`)) return true
+  if (ESP_DOMAINS.test(domain)) return true
+  if (BULK_SUBDOMAIN.test(domain)) return true
+
+  // And, failing all that, an unsubscribe line in the message
+  return /unsubscribe|opt[- ]?out|manage (your )?(email )?preferences|view (this|it) in (your )?browser|إلغاء الاشتراك/i.test(body.slice(0, 4000))
+}
+
+/** How many of each kind the card shows before it stops. */
+const MAIL_SHOWN = 6
+
 function MailCard({ rows, loading, error, newsletters, onArchive, onArchiveAll, onOpenInbox, onAddTask, onOpen }: {
   rows: MailRow[]
   loading: boolean
   error: string | null
-  newsletters: number
+  newsletters: MailRow[]
   onArchive: (row: MailRow) => void
   onArchiveAll: () => void
   onOpenInbox: () => void
   onAddTask: (row: MailRow) => void
   onOpen: (row: MailRow) => void
 }) {
-  const unread = rows.length + newsletters
+  const unread = rows.length + newsletters.length
   const needsYou = rows.filter(r => r.needsYou).length
+  const [showBulk, setShowBulk] = useState(false)
 
   return (
     <div style={CARD}>
@@ -393,16 +430,52 @@ function MailCard({ rows, loading, error, newsletters, onArchive, onArchiveAll, 
               )}
             </div>
           ))}
+          {/* Suggested archiving — every newsletter and campaign, named rather
+              than counted, so you can see what you are about to sweep away. */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 16px' }}>
-            <span style={{ flex: 1, minWidth: 0, fontSize: 12, color: GHOST }}>
-              {newsletters > 0 ? `${newsletters} newsletter${newsletters === 1 ? '' : 's'} — nothing needs you.` : 'No newsletters waiting.'}
-            </span>
-            {newsletters > 0 && (
+            <button
+              onClick={() => setShowBulk(v => !v)}
+              disabled={newsletters.length === 0}
+              style={{
+                flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 6,
+                background: 'none', border: 'none', padding: 0, textAlign: 'left',
+                fontFamily: 'inherit', fontSize: 12, color: GHOST,
+                cursor: newsletters.length ? 'pointer' : 'default',
+              }}>
+              {newsletters.length > 0 && (
+                <ChevronDown size={13} style={{ flexShrink: 0, transform: showBulk ? undefined : 'rotate(-90deg)', transition: 'transform .12s' }} />
+              )}
+              {newsletters.length > 0
+                ? `${newsletters.length} newsletter${newsletters.length === 1 ? '' : 's'} and marketing — suggested for archiving`
+                : 'No newsletters waiting.'}
+            </button>
+            {newsletters.length > 0 && (
               <button onClick={onArchiveAll} style={{ ...PILL, height: 28 }}>
                 <Archive size={12} /> Archive all
               </button>
             )}
           </div>
+          {showBulk && newsletters.map(n => (
+            <div
+              key={n.id}
+              onClick={e => { if (!(e.target as HTMLElement).closest('button')) onOpen(n) }}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 9, minWidth: 0,
+                padding: '8px 16px 8px 34px', borderTop: `1px solid ${HAIR}`, cursor: 'pointer',
+              }}>
+              <span style={{ fontSize: 12.5, color: MUTED, flexShrink: 0, maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {n.fromName || n.fromEmail}
+              </span>
+              <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: GHOST, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {n.subject}
+              </span>
+              <span style={{ fontSize: 11.5, color: GHOST, flexShrink: 0 }}>{relAge(n.receivedAt)}</span>
+              <button onClick={() => onArchive(n)} title="Archive"
+                style={{ ...ICON_TILE, width: 24, height: 24, cursor: 'pointer' }}>
+                <Archive size={12} strokeWidth={2} />
+              </button>
+            </div>
+          ))}
         </div>
       )}
     </div>
@@ -428,8 +501,67 @@ interface Block {
 // where they actually sit. A proposed block can be dragged to another hour and
 // the time it would take reads live while you move it.
 
-const HOUR_PX = 46
 const SNAP_MIN = 15
+/** The plan draws its whole window at once, so the hour height is whatever
+ *  makes the day fit rather than a fixed number you scroll through. */
+const PLAN_H = 430
+const HOUR_PX_MAX = 46
+const HOUR_PX_MIN = 20
+
+/** Side-by-side columns for anything happening at the same time, the way a
+ *  calendar does it: overlapping blocks form a cluster, every block in the
+ *  cluster is as wide as the cluster's busiest moment allows. */
+interface Slot { col: number; cols: number; span: number }
+
+function layoutBlocks(blocks: Block[]): Map<string, Slot> {
+  const span = (b: Block) => {
+    const s = minutesOf(b.start)
+    return [s, Math.max(minutesOf(b.end), s + SNAP_MIN)] as const
+  }
+  const ordered = [...blocks].sort((a, b) => span(a)[0] - span(b)[0] || span(b)[1] - span(a)[1])
+  const out = new Map<string, Slot>()
+
+  let cluster: Block[] = []
+  let colEnds: number[] = []
+  let clusterEnd = -Infinity
+
+  const flush = () => {
+    const cols = colEnds.length
+    for (const b of cluster) {
+      const me = out.get(b.id)!
+      const [s0, e0] = span(b)
+      // Grow rightwards over any column with nothing in it at this time, so a
+      // block is only as narrow as it has to be — the way a calendar does it.
+      let width = 1
+      for (let c = me.col + 1; c < cols; c++) {
+        const blocked = cluster.some(o => {
+          if (o.id === b.id) return false
+          const oc = out.get(o.id)!.col
+          if (oc !== c) return false
+          const [s1, e1] = span(o)
+          return s0 < e1 && e0 > s1
+        })
+        if (blocked) break
+        width++
+      }
+      out.set(b.id, { ...me, cols, span: width })
+    }
+    cluster = []; colEnds = []; clusterEnd = -Infinity
+  }
+
+  for (const b of ordered) {
+    const [start, end] = span(b)
+    // A gap with nothing running closes the cluster and starts a fresh one.
+    if (start >= clusterEnd) flush()
+    let col = colEnds.findIndex(e => e <= start)
+    if (col === -1) { col = colEnds.length; colEnds.push(end) } else { colEnds[col] = end }
+    out.set(b.id, { col, cols: 1, span: 1 })
+    cluster.push(b)
+    clusterEnd = Math.max(clusterEnd, end)
+  }
+  flush()
+  return out
+}
 
 function PlanCard({
   blocks, freeMinutes, focusMinutes, dirty, statuses,
@@ -465,7 +597,11 @@ function PlanCard({
     return [Math.max(0, Math.floor(lo / 60) - 1), Math.min(24, Math.ceil(hi / 60) + 1)]
   })()
   const hours = Array.from({ length: Math.max(1, toHour - fromHour) }, (_, i) => fromHour + i)
-  const topOf = (mins: number) => ((mins - fromHour * 60) / 60) * HOUR_PX
+  // Squeeze the hours until the whole window fits, rather than hiding half of
+  // the day behind a scrollbar.
+  const hourPx = Math.max(HOUR_PX_MIN, Math.min(HOUR_PX_MAX, PLAN_H / hours.length))
+  const topOf = (mins: number) => ((mins - fromHour * 60) / 60) * hourPx
+  const slots = useMemo(() => layoutBlocks(blocks), [blocks])
 
   function beginDrag(e: React.PointerEvent, b: Block) {
     if (b.kind !== 'proposed') return
@@ -473,7 +609,7 @@ function PlanCard({
     if (!lane) return
     const startMins = minutesOf(b.start)
     const length = Math.max(SNAP_MIN, minutesOf(b.end) - startMins)
-    const pointerMins = ((e.clientY - lane.getBoundingClientRect().top) / HOUR_PX) * 60 + fromHour * 60
+    const pointerMins = ((e.clientY - lane.getBoundingClientRect().top) / hourPx) * 60 + fromHour * 60
     dragRef.current = { id: b.id, grabOffset: pointerMins - startMins, length }
     setDrag({ id: b.id, start: startMins, length })
     ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
@@ -506,7 +642,7 @@ function PlanCard({
     const d = dragRef.current
     const lane = laneRef.current
     if (!d || !lane) return
-    const pointerMins = ((e.clientY - lane.getBoundingClientRect().top) / HOUR_PX) * 60 + fromHour * 60
+    const pointerMins = ((e.clientY - lane.getBoundingClientRect().top) / hourPx) * 60 + fromHour * 60
     const raw = pointerMins - d.grabOffset
     const snapped = Math.max(0, Math.min(24 * 60 - d.length, Math.round(raw / SNAP_MIN) * SNAP_MIN))
     setDrag({ id: d.id, start: avoidOverlap(snapped, d.length, d.id), length: d.length })
@@ -537,17 +673,17 @@ function PlanCard({
           Nothing booked and nothing proposed. Give a task a time and it lands here.
         </p>
       ) : (
-        <div style={{ padding: '10px 16px 6px', maxHeight: 360, overflowY: 'auto', scrollbarWidth: 'thin' }}>
+        <div style={{ padding: '10px 16px 6px' }}>
           <div
             ref={laneRef}
             onPointerMove={moveDrag}
             onPointerUp={endDrag}
             onPointerCancel={endDrag}
-            style={{ position: 'relative', height: hours.length * HOUR_PX, minWidth: 0 }}>
+            style={{ position: 'relative', height: hours.length * hourPx, minWidth: 0 }}>
 
             {/* Hour rules */}
             {hours.map(h => (
-              <div key={h} style={{ position: 'absolute', top: topOf(h * 60), left: 0, right: 0, height: HOUR_PX }}>
+              <div key={h} style={{ position: 'absolute', top: topOf(h * 60), left: 0, right: 0, height: hourPx }}>
                 <span style={{
                   position: 'absolute', top: -6, left: 0, width: 40,
                   fontSize: 10, color: GHOST, fontVariantNumeric: 'tabular-nums',
@@ -575,17 +711,30 @@ function PlanCard({
               const status = b.eventId ? statuses[b.eventId] : undefined
               const past = startMins + length < nowMins && !dragging
               const canDrag = b.kind === 'proposed'
+              // Things happening at once sit beside each other, as they would
+              // on a calendar, instead of one hiding the other.
+              const slot = slots.get(b.id) ?? { col: 0, cols: 1, span: 1 }
+              const colW = 100 / slot.cols
+              const height = Math.max(24, (length / 60) * hourPx - 3)
+              const narrow = slot.span < slot.cols
+              const tall = height >= 44
+              const tight = height < 34 || narrow
               return (
                 <div
                   key={b.id}
                   onPointerDown={e => beginDrag(e, b)}
                   onClick={() => { if (!dragging) onOpenBlock(b) }}
-                  title={canDrag ? 'Drag to another hour, or click to open' : 'Click to open in the calendar'}
+                  title={`${b.title} · ${fmtMins(startMins)}–${fmtMins(startMins + length)}${canDrag ? ' · drag to another hour' : ''}`}
                   style={{
-                    position: 'absolute', left: 44, right: 0, zIndex: dragging ? 5 : 2,
-                    top: topOf(startMins), height: Math.max(26, (length / 60) * HOUR_PX - 3),
-                    display: 'flex', alignItems: 'center', gap: 8, boxSizing: 'border-box',
-                    padding: '0 10px', borderRadius: 9, minWidth: 0,
+                    position: 'absolute',
+                    left: `calc(44px + (100% - 44px) * ${slot.col * colW / 100})`,
+                    width: `calc((100% - 44px) * ${slot.span * colW / 100} - ${slot.span < slot.cols ? 3 : 0}px)`,
+                    zIndex: dragging ? 5 : 2,
+                    top: topOf(startMins), height,
+                    display: 'flex', alignItems: tall ? 'flex-start' : 'center',
+                    gap: tight ? 5 : 8, boxSizing: 'border-box',
+                    padding: tall ? '6px 8px 0' : tight ? '0 7px' : '0 10px',
+                    borderRadius: 9, minWidth: 0, overflow: 'hidden',
                     background: status === 'cancelled' ? '#F1ECDE'
                       : b.kind === 'proposed' ? 'rgba(245,209,78,0.20)' : FIELD,
                     border: `1px solid ${b.kind === 'proposed' ? 'rgba(245,209,78,0.6)' : '#E8E1CE'}`,
@@ -596,17 +745,27 @@ function PlanCard({
                     touchAction: 'none', userSelect: 'none',
                   }}>
                   {b.kind === 'proposed'
-                    ? <CheckSquare size={13} strokeWidth={1.9} style={{ flexShrink: 0, color: MUTED }} />
-                    : <Clock size={13} strokeWidth={1.9} style={{ flexShrink: 0, color: MUTED }} />}
+                    ? <CheckSquare size={12} strokeWidth={1.9} style={{ flexShrink: 0, color: MUTED, marginTop: tall ? 2 : 0 }} />
+                    : <Clock size={12} strokeWidth={1.9} style={{ flexShrink: 0, color: MUTED, marginTop: tall ? 2 : 0 }} />}
+                  {/* Given the height, the title wraps instead of being cut off */}
                   <span style={{
-                    fontSize: 12.5, fontWeight: 600, color: INK, minWidth: 0,
-                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    fontSize: tight ? 11.5 : 12.5, fontWeight: 600, color: INK, minWidth: 0, flex: '0 1 auto',
+                    overflow: 'hidden', lineHeight: 1.3,
+                    ...(tall
+                      ? { display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const }
+                      : { textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }),
                     textDecoration: status === 'cancelled' ? 'line-through' : 'none',
                   }}>{b.title}</span>
-                  <span style={{ fontSize: 11, color: GHOST, flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>
-                    {fmtMins(startMins)}–{fmtMins(startMins + length)}
-                  </span>
-                  <span style={{ flex: 1 }} />
+                  {/* A narrow column has no room for the times as well */}
+                  {!narrow && (
+                    <span style={{
+                      fontSize: 11, color: GHOST, flexShrink: 0, fontVariantNumeric: 'tabular-nums',
+                      marginTop: tall ? 1 : 0,
+                    }}>
+                      {fmtMins(startMins)}–{fmtMins(startMins + length)}
+                    </span>
+                  )}
+                  <span style={{ flex: 1, minWidth: 0 }} />
                   {b.eventId && (
                     <>
                       <button
@@ -822,7 +981,7 @@ export function TodayPage() {
   const [briefSeed, setBriefSeed] = useState(0)
 
   const [mail, setMail] = useState<MailRow[]>([])
-  const [newsletters, setNewsletters] = useState(0)
+  const [newsletters, setNewsletters] = useState<MailRow[]>([])
   const [mailLoading, setMailLoading] = useState(true)
   const [openMail, setOpenMail] = useState<MailRow | null>(null)
   const [mailError, setMailError] = useState<string | null>(null)
@@ -859,7 +1018,7 @@ export function TodayPage() {
       const { ids } = await listUnreadThreadIds(14)
       const threads = await Promise.all(ids.map(id => getThread(id).catch(() => null)))
       const rows: MailRow[] = []
-      let bulk = 0
+      const bulk: MailRow[] = []
       for (const th of threads) {
         const last = th?.messages?.at(-1)
         if (!th || !last) continue
@@ -867,15 +1026,15 @@ export function TodayPage() {
         const from = header(headers, 'From')
         const name = from.replace(/<.*>/, '').replace(/"/g, '').trim()
         const email = from.match(/<(.+)>/)?.[1] ?? from
-        // A newsletter tells you it is one: it carries an unsubscribe header
-        const isBulk = !!header(headers, 'List-Unsubscribe')
-        if (isBulk) { bulk++; continue }
         const to = header(headers, 'To').toLowerCase()
         // A hidden company's mail is hidden too, the same as its tasks and calendars
         if (isMailHiddenByCompany({ from, to, accountEmail: user?.email })) continue
         const me = (user?.email ?? '').toLowerCase()
         const plain = extractBody(last)
-        rows.push({
+        // A campaign addressed to you personally is still a campaign, so bulk
+        // mail never counts as needing you.
+        const isBulk = looksLikeBulk(headers, email, plain)
+        const row: MailRow = {
           id: th.id,
           messageId: last.id,
           fromName: name || email,
@@ -886,13 +1045,16 @@ export function TodayPage() {
           html: extractHtmlBody(last),
           body: plain,
           receivedAt: new Date(Number(last.internalDate ?? Date.now())).toISOString(),
-          needsYou: !!me && to.includes(me),
-          newsletter: false,
-        })
+          needsYou: !isBulk && !!me && to.includes(me),
+          newsletter: isBulk,
+        }
+        ;(isBulk ? bulk : rows).push(row)
       }
-      rows.sort((a, b) => Number(b.needsYou) - Number(a.needsYou))
-      setMail(rows.slice(0, 7))
-      setNewsletters(bulk)
+      rows.sort((a, b) => Number(b.needsYou) - Number(a.needsYou)
+        || b.receivedAt.localeCompare(a.receivedAt))
+      bulk.sort((a, b) => b.receivedAt.localeCompare(a.receivedAt))
+      setMail(rows.slice(0, MAIL_SHOWN))
+      setNewsletters(bulk.slice(0, MAIL_SHOWN))
     } catch {
       setMailError('Mail is not connected — link Google in Settings to see what needs you.')
     } finally {
@@ -1022,11 +1184,16 @@ export function TodayPage() {
 
   async function archiveMail(row: MailRow) {
     setMail(prev => prev.filter(r => r.id !== row.id))
+    setNewsletters(prev => prev.filter(r => r.id !== row.id))
     try { await archiveMessage(row.messageId) } catch { /* it stays archived here either way */ }
   }
 
+  /** Sweeping the newsletters away really archives them in Gmail — it used to
+   *  only clear the count on this page. */
   async function archiveNewsletters() {
-    setNewsletters(0)
+    const going = newsletters
+    setNewsletters([])
+    await Promise.all(going.map(r => archiveMessage(r.messageId).catch(() => null)))
   }
 
   function mailToTask(row: MailRow) {

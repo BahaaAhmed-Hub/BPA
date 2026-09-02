@@ -64,6 +64,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
   const addTask = useTaskStore(s => s.addTask)
   const habits = useHabitsStore(s => s.habits)
   const setActiveModule = useUIStore(s => s.setActiveModule)
+  const focusOn = useUIStore(s => s.focusOn)
 
   useEffect(() => {
     if (!open) return
@@ -99,7 +100,8 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
           t.plannedTime ? `${t.plannedTime} block` : t.priority ?? undefined,
         ].filter(Boolean).join(' · '),
         icon: CheckSquare,
-        run: () => { setActiveModule('tasks'); onClose() },
+        // Not just the page — the task you picked, open in its panel.
+        run: () => { focusOn({ module: 'tasks', id: t.id }); setActiveModule('tasks'); onClose() },
       })
     }
 

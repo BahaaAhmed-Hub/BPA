@@ -8,6 +8,7 @@ import type { Task, TaskType, Priority } from '@/types'
 import { PRIORITY_META, TASK_TYPE_META } from '@/types'
 import { getVisibleUsers, loadVisibleCompanies } from '@/types'
 import { useTaskStore } from '@/store/taskStore'
+import { useDeliverableGate } from './DeliverablePrompt'
 import { openLabel, resolveTaskVisuals, TASK_TYPE_ORDER } from './taskVisuals'
 import { ControlSlot, OverlaySelect, OverlayTime } from './controls'
 
@@ -20,7 +21,8 @@ export function TaskRow({ task, onOpen, dense }: {
   // The row is the drag handle, so a task can be moved to another quadrant
   // without opening it first. The 5px activation distance keeps a click a click.
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: task.id })
-  const { toggleComplete, updateTask, toggleUrgent, deleteTask } = useTaskStore()
+  const { updateTask, toggleUrgent, deleteTask } = useTaskStore()
+  const { requestComplete, prompt: deliverablePrompt } = useDeliverableGate()
   const PRIORITIES: Priority[] = ['P0', 'P1', 'P2', 'P3']
   const owners = getVisibleUsers().filter(u => (task.companyId ? u.companyId === task.companyId : true))
   const companies = loadVisibleCompanies()
@@ -34,6 +36,7 @@ export function TaskRow({ task, onOpen, dense }: {
   ].filter(Boolean).join(' · ')
 
   return (
+    <>
     <div
       data-task-node
       ref={setNodeRef}
@@ -50,7 +53,7 @@ export function TaskRow({ task, onOpen, dense }: {
     >
       <button
         data-nm
-        onClick={() => toggleComplete(task.id)}
+        onClick={() => requestComplete(task)}
         title={task.completed ? 'Reopen' : 'Complete'}
         style={{
           width: 16, height: 16, borderRadius: 5, boxSizing: 'border-box', flexShrink: 0, padding: 0, marginTop: 2,
@@ -179,6 +182,8 @@ export function TaskRow({ task, onOpen, dense }: {
           </span>
         </p>
       </div>
-    </div>
+      </div>
+      {deliverablePrompt}
+    </>
   )
 }
