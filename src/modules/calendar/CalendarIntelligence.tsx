@@ -349,11 +349,16 @@ function rebuildFromCache(cached: CachedCal[]): CalWithAccount[] {
 }
 
 // ─── Multi-account calendar loading ──────────────────────────────────────────
-async function loadAllCalendars(primaryEmail: string): Promise<LoadCalendarsResult> {
+async function loadAllCalendars(
+  primaryEmail: string,
+  /** The cache as it stood before the caller cleared it. An account whose token
+   *  has expired falls back to this, so it keeps its place in the list — and its
+   *  reconnect badge — instead of disappearing with nothing to click. */
+  calCache: CachedCal[] = loadCalIntelCache(),
+): Promise<LoadCalendarsResult> {
   // Ensure primary Google token is as fresh as possible before any API calls
   await refreshPrimaryToken()
 
-  const calCache = loadCalIntelCache()
   const { calendars: primaryCals } = await listCalendars()
   const primaryToken = localStorage.getItem('google_provider_token') ?? ''
 
@@ -2270,9 +2275,12 @@ export function CalendarIntelligence() {
     if (!user?.email) return  // wait for user — prevents concurrent double-call race
     // Persist primary email for the initial-render cache cleanup on next page load
     localStorage.setItem('cal-intel-primary-email', user.email)
-    // Clear stale calendar list cache so newly subscribed/added calendars always appear
+    // Take the cache before clearing it: clearing is what keeps a calendar you
+    // unsubscribed from in Google out of the list, but loadAllCalendars needs
+    // the old contents to fall back on for an account it cannot reach.
+    const cachedBefore = loadCalIntelCache()
     localStorage.removeItem(CAL_INTEL_CACHE_KEY)
-    const { calendars: fresh, needsReconnect } = await loadAllCalendars(user.email)
+    const { calendars: fresh, needsReconnect } = await loadAllCalendars(user.email, cachedBefore)
     setReconnectNeeded(needsReconnect)
 
     if (fresh.length) {
@@ -2934,6 +2942,33 @@ export function CalendarIntelligence() {
           <span style={{ display: 'block', marginTop: 8, fontSize: 11.5, color: rulesResult.startsWith('Error') ? '#E05252' : '#1D9E75' }}>
             {rulesResult}
           </span>
+        )}
+
+        {/* An account the app cannot reach takes its whole calendar with it, so
+            it says so on the page rather than in a badge inside a dropdown. */}
+        {reconnectNeeded.length > 0 && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 10, marginTop: 10,
+            padding: '10px 14px', borderRadius: 11,
+            background: 'rgba(245,209,78,0.20)', border: '1px solid rgba(245,209,78,0.65)',
+          }}>
+            <AlertCircle size={15} color="#8A6D0B" style={{ flexShrink: 0 }} />
+            <span style={{ ...T.body, flex: 1, minWidth: 0, color: '#3D3926' }}>
+              {reconnectNeeded.length === 1
+                ? `${reconnectNeeded[0]} needs reconnecting — its events are missing from this grid.`
+                : `${reconnectNeeded.length} accounts need reconnecting — their events are missing from this grid.`}
+            </span>
+            {reconnectNeeded.map(email => (
+              <button key={email}
+                onClick={() => void connectAdditionalGoogleAccount(email)}
+                style={{
+                  ...T.body, height: 34, padding: '0 14px', borderRadius: 9, flexShrink: 0,
+                  background: '#191712', border: 'none', color: '#FDF8E7', fontWeight: 600, cursor: 'pointer',
+                }}>
+                Reconnect{reconnectNeeded.length > 1 ? ` ${email.split('@')[0]}` : ''}
+              </button>
+            ))}
+          </div>
         )}
 
         {/* Calendar chips */}
