@@ -1,10 +1,14 @@
 name: Deploy to GitHub Pages
 
+# Only main publishes. A development branch used to deploy as well, which meant
+# every change reached the live site the moment it was pushed for safekeeping,
+# and two runs for the same commit raced each other under the concurrency group
+# below — the loser was cancelled, so a push could finish with nothing deployed.
+# Use the Run workflow button to publish another branch deliberately.
 on:
   push:
     branches:
       - main
-      - 'claude/**'
   workflow_dispatch:
 
 permissions:
