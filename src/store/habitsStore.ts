@@ -192,10 +192,13 @@ export const useHabitsStore = create<HabitsState>((set, get) => ({
             isActive:  h.isActive  ?? true,
             archived:  localH?.archived ?? false,
             createdAt: h.createdAt ?? new Date().toISOString(),
-            type:      localH?.type ?? 'boolean',
-            goal:      localH?.goal,
-            unit:      localH?.unit,
-            image:     localH?.image,
+            // What this device knows wins, since it may be newer than the last
+            // sync — but where it knows nothing, the server fills it in. That
+            // last part is what puts a picture on a device that never had one.
+            type:      localH?.type ?? h.type ?? 'boolean',
+            goal:      localH?.goal ?? h.goal,
+            unit:      localH?.unit ?? h.unit,
+            image:     localH?.image ?? h.image,
           }
           return localH ? { ...base, emoji: localH.emoji, color: localH.color } : base
         })

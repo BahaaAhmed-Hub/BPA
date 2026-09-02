@@ -40,6 +40,12 @@ export interface TaskRow {
 export interface HabitRow {
   id: string; name: string; emoji: string; color: string
   frequency: 'daily' | 'weekdays' | 'weekly'; isActive: boolean; createdAt: string
+  /** What a habit looks like and how it is counted. These used to live only in
+   *  the browser that created the habit, so a second device saw none of them. */
+  type?: 'boolean' | 'quantity'
+  goal?: number
+  unit?: string
+  image?: string
 }
 
 export interface HabitLogs { [habitId: string]: string[] }
@@ -427,7 +433,7 @@ export async function saveHabitsToDB(habits: HabitRow[]): Promise<void> {
   }
 
   if (habits.length) {
-    const rows: DbHabit[] = habits.map(h => ({
+    const base = habits.map(h => ({
       id:             h.id,
       user_id:        userId,
       name:           h.name,
@@ -436,9 +442,34 @@ export async function saveHabitsToDB(habits: HabitRow[]): Promise<void> {
       longest_streak: 0,
       is_active:      h.isActive,
     }))
+    const rows = habits.map((h, i) => ({
+      ...base[i],
+      emoji: h.emoji, color: h.color,
+      type:  h.type, goal: h.goal, unit: h.unit,
+      image: h.image,
+    }))
+
     const { error } = await supabase.from('habits').upsert(rows, { onConflict: 'id' })
-    if (error) throw new Error(error.message)
+    if (!error) return
+
+    // The appearance columns arrived in 20260002_habit_appearance.sql. Until
+    // that migration is applied the write is rejected wholesale, which would
+    // take habit saving down with it — so fall back to the columns that have
+    // always existed rather than losing the habit itself.
+    if (isMissingColumn(error)) {
+      const { error: retry } = await supabase.from('habits').upsert(base as DbHabit[], { onConflict: 'id' })
+      if (retry) throw new Error(retry.message)
+      return
+    }
+    throw new Error(error.message)
   }
+}
+
+/** Postgres rejects an unknown column with 42703; PostgREST reports it as
+ *  PGRST204 when its schema cache has no such field. */
+function isMissingColumn(error: { code?: string; message?: string }): boolean {
+  return error.code === '42703' || error.code === 'PGRST204'
+    || /column .* does not exist|could not find the .* column/i.test(error.message ?? '')
 }
 
 // ─── Habit logs ───────────────────────────────────────────────────────────────
@@ -466,13 +497,24 @@ export async function loadHabitsFromDB(): Promise<HabitRow[]> {
   const { data, error } = await supabase
     .from('habits').select('*').eq('user_id', userId)
   if (error || !data) return []
-  return (data as (DbHabit & { emoji?: string; color?: string; created_at?: string })[]).map(r => ({
+  type DbHabitFull = DbHabit & {
+    emoji?: string; color?: string; created_at?: string
+    type?: string; goal?: number; unit?: string; image?: string
+  }
+  return (data as DbHabitFull[]).map(r => ({
     id: r.id, name: r.name,
-    emoji:     r.emoji     ?? '✅',
+    // '🎯' is what the rest of the app uses for a habit with no icon. This
+    // defaulted to '✅', so every habit on a device with no local copy came
+    // back looking like it had been completed.
+    emoji:     r.emoji     ?? '🎯',
     color:     r.color     ?? '#1E40AF',
     frequency: (r.frequency as HabitRow['frequency']) ?? 'daily',
     isActive:  r.is_active ?? true,
     createdAt: r.created_at ?? new Date().toISOString(),
+    type:      r.type === 'quantity' ? 'quantity' : 'boolean',
+    goal:      r.goal,
+    unit:      r.unit,
+    image:     r.image,
   }))
 }
 
