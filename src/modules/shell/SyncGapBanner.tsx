@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react'
 import { AlertCircle, X } from 'lucide-react'
 import { getSyncGaps, onSyncGapsChanged, MIGRATION_FOR, type SyncGap } from '@/lib/syncStatus'
 import { T } from '@/lib/type'
+import { supabaseProjectRef } from '@/lib/supabase'
 
 export function SyncGapBanner() {
   const [gaps, setGaps] = useState<SyncGap[]>(getSyncGaps)
@@ -37,10 +38,13 @@ export function SyncGapBanner() {
         )}
         {stale.length > 0 && (
           <p style={{ ...T.body, margin: missing.length ? '6px 0 0' : 0, color: '#3D3926' }}>
-            The columns for {stale.map(g => g.entity).join(' and ')} exist, but Supabase is still
-            serving the schema it cached before they did — so pictures, notes and attachments are
-            not being stored yet. Run <code style={{ ...T.small, background: 'rgba(25,23,18,0.06)', padding: '1px 5px', borderRadius: 4 }}>
-            notify pgrst, 'reload schema';</code> in the SQL editor, or wait a minute or two, then reload.
+            Supabase will not store everything about {stale.map(g => g.entity).join(' and ')} —
+            pictures, notes and attachments are staying on this device. It reports a missing column
+            and a not-yet-reloaded one the same way, so it is one of three things: the migration has
+            not run, it ran against a different project, or the schema cache is stale. This build
+            talks to project <strong>{supabaseProjectRef}</strong> — check the SQL editor is open on
+            that one, then run <code style={{ ...T.small, background: 'rgba(25,23,18,0.06)', padding: '1px 5px', borderRadius: 4 }}>
+            notify pgrst, 'reload schema';</code>
           </p>
         )}
         {failing.length > 0 && (
