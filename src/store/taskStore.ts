@@ -130,21 +130,25 @@ export const useTaskStore = create<TaskState>()(
         try {
           const rows = await loadTasksFromDB()
           if (rows.length > 0) {
-            set(s => ({
+            let joined: Task[] = []
+            set(s => {
               // Merge: DB data wins on fields, local order is preserved
-              tasks: (() => {
-                const local = s.tasks
-                const dbMap = new Map(rows.map(r => [r.id, fromRow(r)]))
-                // Update local tasks with fresh DB data (preserves drag order)
-                const merged = local.map(t =>
-                  dbMap.has(t.id) ? { ...t, ...dbMap.get(t.id)! } : t
-                )
-                // Append tasks that exist in DB but not locally
-                const localIds = new Set(local.map(t => t.id))
-                const dbOnly = rows.filter(r => !localIds.has(r.id)).map(r => fromRow(r))
-                return [...merged, ...dbOnly]
-              })(),
-            }))
+              const local = s.tasks
+              const dbMap = new Map(rows.map(r => [r.id, fromRow(r)]))
+              // Update local tasks with fresh DB data (preserves drag order)
+              const merged = local.map(t =>
+                dbMap.has(t.id) ? { ...t, ...dbMap.get(t.id)! } : t
+              )
+              // Append tasks that exist in DB but not locally
+              const localIds = new Set(local.map(t => t.id))
+              const dbOnly = rows.filter(r => !localIds.has(r.id)).map(r => fromRow(r))
+              joined = [...merged, ...dbOnly]
+              return { tasks: joined }
+            })
+            // Push the merge back: it is where this device's own fields — notes,
+            // subtasks, links, the calendar event id — meet the server's copy,
+            // and nothing else sends them, since the sync only runs on edits.
+            scheduleDbSync(joined)
           }
         } catch { /* offline — keep local */ }
       },

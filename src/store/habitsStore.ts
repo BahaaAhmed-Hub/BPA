@@ -202,9 +202,23 @@ export const useHabitsStore = create<HabitsState>((set, get) => ({
           }
           return localH ? { ...base, emoji: localH.emoji, color: localH.color } : base
         })
-        saveHabits(merged)
+
+        // A habit made on this device and not yet synced is not in dbHabits, so
+        // building the merge from dbHabits alone quietly dropped it — and then
+        // wrote that shorter list over localStorage.
+        const dbIds = new Set(dbHabits.map(h => h.id))
+        const localOnly = local.filter(l => !dbIds.has(l.id))
+        const all = [...merged, ...localOnly]
+
+        saveHabits(all)
         saveLogs(logs)
-        set({ habits: merged })
+        set({ habits: all })
+
+        // The merge is the moment this device's own data — a picture, an icon,
+        // a target — sits alongside the server's. Nothing else pushes it: the
+        // sync runs on edits, so without this a picture taken on one device
+        // stayed there until someone happened to change that habit.
+        scheduleHabitsSync(all, logs)
       }
     } catch { /* offline — keep local */ }
   },
