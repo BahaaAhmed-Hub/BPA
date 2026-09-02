@@ -1079,10 +1079,10 @@ export function TodayPage() {
     [tasks],
   )
   const urgentCount = openTasks.filter(t => t.urgent).length
-  const carriedCount = openTasks.filter(t => {
-    const days = Math.floor((Date.now() - new Date(t.createdAt).getTime()) / 86400000)
-    return days >= 1 && !!t.plannedTime
-  }).length
+  // Carried over means its day has passed and it is still open. This counted
+  // any task older than a day that had a time on it, so something planned for
+  // next week was reported as carried over from the past.
+  const carriedCount = openTasks.filter(t => !!t.dueDate && t.dueDate < dayKey(new Date())).length
 
   const blocks = useMemo<Block[]>(() => {
     const fromEvents: Block[] = events
@@ -1101,8 +1101,12 @@ export function TodayPage() {
           date: dayKey(s),
         }
       })
+    // The events above are fetched for today alone. Tasks were not filtered by
+    // date at all, so a task planned for 9am next Tuesday was drawn on today's
+    // plan at 9am. A planned time with no date at all still means today.
+    const today = dayKey(new Date())
     const fromTasks: Block[] = openTasks
-      .filter(t => !!t.plannedTime)
+      .filter(t => !!t.plannedTime && (!t.dueDate || t.dueDate === today))
       .map(t => ({
         id: `task-${t.id}`,
         kind: 'proposed' as const,
@@ -1111,6 +1115,7 @@ export function TodayPage() {
         start: t.plannedTime!,
         end: addMinutes(t.plannedTime!, t.duration ?? 30),
         taskId: t.id,
+        date: t.dueDate ?? today,
       }))
     return [...fromEvents, ...fromTasks].sort((a, b) => minutesOf(a.start) - minutesOf(b.start))
   }, [events, openTasks])
