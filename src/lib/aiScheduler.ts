@@ -7,6 +7,8 @@
 import type { Task } from '@/types'
 import type { GCalEventWithCalendar } from '@/lib/googleCalendar'
 import { fetchDayEvents, createCalendarEvent, updateCalendarEvent } from '@/lib/googleCalendar'
+import { taskEventTitle, taskEventDescription } from '@/lib/taskEvent'
+import { forgetDay } from '@/lib/slotConflicts'
 import { call } from '@/lib/professor'
 
 // ─── AI-moved tracking ────────────────────────────────────────────────────────
@@ -84,13 +86,14 @@ export async function scheduleTaskToCalendar(task: Task): Promise<ScheduleResult
     const end   = new Date(start.getTime() + durationMins * 60000)
 
     const result = await createCalendarEvent(calendarId, {
-      summary: task.title,
-      description: task.description,
+      summary: taskEventTitle(task.title),
+      description: taskEventDescription(task),
       start: { dateTime: start.toISOString(), timeZone: tz },
       end:   { dateTime: end.toISOString(),   timeZone: tz },
     })
     if (result.noAuth) return { success: false, error: 'Not signed in to Google.' }
     if (result.error)  return { success: false, error: result.error }
+    forgetDay(task.dueDate)
     return { success: true, gcalEventId: result.event?.id, scheduledTime: task.plannedTime }
   }
 
@@ -177,14 +180,16 @@ Return JSON:
   const end   = new Date(start.getTime() + durationMins * 60000)
 
   const result = await createCalendarEvent(calendarId, {
-    summary: task.title,
-    description: task.description,
+    summary: taskEventTitle(task.title),
+    description: taskEventDescription(task),
     start: { dateTime: start.toISOString(), timeZone: tz },
     end:   { dateTime: end.toISOString(),   timeZone: tz },
   })
   if (result.noAuth) return { success: false, error: 'Not signed in to Google.' }
   if (result.error)  return { success: false, error: result.error }
 
+  // The AI may also have moved things, so the whole day is stale.
+  forgetDay(task.dueDate)
   return {
     success: true,
     gcalEventId: result.event?.id,

@@ -7,6 +7,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight, Check } from 'lucide-react'
 import { T } from '@/lib/type'
+import { useSlotConflicts } from '@/lib/slotConflicts'
 
 const WEEKDAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
 
@@ -135,7 +136,7 @@ export function TimeSelect({ value, onChange, label, size = 'compact' }: {
   )
 }
 
-export function SchedulePopover({ date, start, duration, onApply, onClose, align = 'left' }: {
+export function SchedulePopover({ date, start, duration, onApply, onClose, align = 'left', ignoreEventId }: {
   date?: string
   start?: string
   duration?: number
@@ -143,6 +144,8 @@ export function SchedulePopover({ date, start, duration, onApply, onClose, align
   onClose: () => void
   /** A card near the right edge opens its popover leftwards. */
   align?: 'left' | 'right'
+  /** The event being rescheduled, so it does not count as clashing with itself. */
+  ignoreEventId?: string
 }) {
   const initial = date ? new Date(date + 'T00:00:00') : new Date()
   const [view, setView] = useState(new Date(initial.getFullYear(), initial.getMonth(), 1))
@@ -177,6 +180,7 @@ export function SchedulePopover({ date, start, duration, onApply, onClose, align
   }, [view])
 
   const minutes = Math.max(0, toMinutes(to) - toMinutes(from))
+  const { conflicts, checking } = useSlotConflicts(picked, from, to, ignoreEventId)
   const navBtn: React.CSSProperties = {
     width: 22, height: 22, borderRadius: '50%', border: 'none', background: 'transparent',
     color: '#6C6553', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0,
@@ -228,6 +232,41 @@ export function SchedulePopover({ date, start, duration, onApply, onClose, align
         <TimeSelect label="Start" value={from} onChange={changeStart} />
         <TimeSelect label="End" value={to} onChange={changeEnd} />
       </div>
+
+      {/* What is already in that slot, answered as the time moves rather than
+          after the booking is made. */}
+      {picked && (
+        checking && conflicts === null ? (
+          <p style={{ ...T.small, margin: '9px 0 0', color: '#9B9180' }}>Checking that time…</p>
+        ) : conflicts === null ? null
+        : conflicts.length === 0 ? (
+          <p style={{ ...T.small, margin: '9px 0 0', color: '#5F7038' }}>
+            Nothing else booked then.
+          </p>
+        ) : (
+          <div style={{
+            marginTop: 9, padding: '8px 10px', borderRadius: 9,
+            background: 'rgba(245,209,78,0.22)', border: '1px solid rgba(245,209,78,0.7)',
+          }}>
+            <p style={{ ...T.small, margin: 0, fontWeight: 600, color: '#3D3926' }}>
+              {conflicts.length === 1 ? 'Clashes with' : `Clashes with ${conflicts.length} events`}
+            </p>
+            {conflicts.slice(0, 3).map(c => (
+              <p key={c.id} style={{
+                ...T.small, margin: '3px 0 0', color: '#3D3926',
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              }}>
+                {c.title} · {formatTime(c.from)} – {formatTime(c.to)}
+              </p>
+            ))}
+            {conflicts.length > 3 && (
+              <p style={{ ...T.small, margin: '3px 0 0', color: '#6C6553' }}>
+                and {conflicts.length - 3} more
+              </p>
+            )}
+          </div>
+        )
+      )}
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 12 }}>
         <span style={{ flex: 1, fontSize: 11.5, color: '#9B9180' }}>

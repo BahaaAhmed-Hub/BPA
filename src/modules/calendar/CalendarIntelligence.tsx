@@ -3,7 +3,7 @@ import {
   ChevronLeft, ChevronRight, ChevronDown, Layers, Calendar, Video,
   Sparkles, MapPin, RefreshCw, X, Eye, EyeOff,
   CheckCircle2, XCircle, Link, Check, Plus, Paperclip, FileText,
-  ExternalLink, AlertCircle, Shield, Copy, Trash2, Ban, Calendar as CalendarIcon,
+  ExternalLink, AlertCircle, Shield, Copy, Trash2, Ban, Calendar as CalendarIcon, CheckSquare,
 } from 'lucide-react'
 import { SchedulePopover, TimeSelect, formatTime, addMinutes } from '@/modules/tasks/SchedulePopover'
 import {
@@ -30,6 +30,7 @@ import type { GCalEvent, GCalCalendar, GCalEventCreate } from '@/lib/googleCalen
 import { getGoogleToken, seedToken, getGoogleTokenViaSupabaseRefresh } from '@/lib/tokenManager'
 import { loadEventStatuses, saveEventStatuses } from '@/lib/eventStatus'
 import { isCalendarHiddenByCompany } from '@/lib/companyVisibility'
+import { isTaskEvent, stripTaskMark } from '@/lib/taskEvent'
 import { loadWeather, weatherGlyph, lookupPlaces, type WeatherByHour } from '@/lib/weather'
 import { T, SANS, DISPLAY } from '@/lib/type'
 import { generateMeetingPrep } from '@/lib/professor'
@@ -692,6 +693,7 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
   const isDone = status === 'done'
   const isCancelled = status === 'cancelled'
   const isTentative = event.status === 'tentative'
+  const fromTask = isTaskEvent(event.summary, event.description)
 
   // Sunlit Bento event styles
   // Only a cancelled event goes grey. Done and simply-past events keep their
@@ -784,11 +786,20 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
             style={{ display: 'inline', verticalAlign: '-2px', marginRight: 3 }}
           />
         )}
+        {/* An event this app made from a task gets a drawn icon rather than the
+            emoji it carries for Google's benefit. */}
+        {fromTask && (
+          <CheckSquare
+            size={tiny ? 10 : 11}
+            strokeWidth={2.2}
+            style={{ display: 'inline', verticalAlign: '-1.5px', marginRight: 3, opacity: 0.75 }}
+          />
+        )}
         <span style={{
           textDecoration: isCancelled ? 'line-through' : 'none',
           textDecorationColor: 'rgba(25,23,18,0.45)',
           textDecorationThickness: 1.5,
-        }}>{displayTitle(event.summary)}</span>
+        }}>{displayTitle(fromTask ? stripTaskMark(event.summary) : event.summary)}</span>
       </div>
       {showHost && (() => {
         const host = meetingHost(event)
@@ -1433,6 +1444,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
           </button>
           {whenOpen && (
             <SchedulePopover
+              ignoreEventId={event.id}
               date={dateStr}
               start={isAllDay ? undefined : fromTime}
               duration={Math.max(15, minutesBetween(fromTime, toTime))}

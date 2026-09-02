@@ -14,6 +14,7 @@ import {
   type GCalEvent,
 } from '@/lib/googleCalendar'
 import { fetchVisibleEvents } from '@/lib/calendarEvents'
+import { taskEventTitle, taskEventDescription } from '@/lib/taskEvent'
 import { loadAccounts, getPrimaryToken, type ConnectedAccount } from '@/lib/multiAccount'
 
 const HOUR_PX = 56
@@ -580,8 +581,8 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
     const endISO   = `${todayStr}T${String(Math.min(endHour, 23)).padStart(2, '0')}:00:00`
     try {
       const result = await createCalendarEventWithToken(token, calendarId, {
-        summary:     task.title,
-        description: task.description ?? '',
+        summary:     taskEventTitle(task.title),
+        description: taskEventDescription(task),
         start: { dateTime: startISO, timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone },
         end:   { dateTime: endISO,   timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone },
       })
