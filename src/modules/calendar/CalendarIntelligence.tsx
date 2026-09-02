@@ -3,7 +3,7 @@ import {
   ChevronLeft, ChevronRight, ChevronDown, Layers, Calendar, Video,
   Sparkles, MapPin, RefreshCw, X, Eye, EyeOff,
   CheckCircle2, XCircle, Link, Check, Plus, Paperclip, FileText,
-  ExternalLink, AlertCircle, Shield, Copy, Trash2, Pencil,
+  ExternalLink, AlertCircle, Shield, Copy, Trash2, Pencil, Ban,
 } from 'lucide-react'
 import { TimeSelect } from '@/modules/tasks/SchedulePopover'
 import {
@@ -809,10 +809,86 @@ const EV_ROUND: React.CSSProperties = {
   background: '#FFFFFF', border: '1px solid #E8E1CE', color: '#6C6553', cursor: 'pointer',
 }
 const EV_LABEL: React.CSSProperties = {
-  width: 96, flexShrink: 0, fontSize: 13, color: '#6C6553', paddingTop: 12,
+  width: 98, flexShrink: 0, fontSize: 13.5, color: '#6C6553', fontWeight: 500,
 }
 const EV_SECTION: React.CSSProperties = {
-  fontSize: 13, color: '#6C6553',
+  fontSize: 14, fontWeight: 600, color: '#191712', flexShrink: 0,
+}
+/** Every value in the panel sits in one of these, whether you can type in it,
+ *  pick from it, or only read it. */
+const EV_FIELD: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', gap: 9, height: 48, boxSizing: 'border-box',
+  width: '100%', minWidth: 0, padding: '0 15px', borderRadius: 11,
+  background: '#FFFFFF', border: '1px solid #E8E1CE',
+  color: '#191712', fontSize: 14, fontFamily: 'inherit', textAlign: 'left',
+}
+const EV_GHOST_ICON: React.CSSProperties = {
+  width: 30, height: 30, borderRadius: 8, flexShrink: 0, padding: 0,
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  background: 'none', border: 'none', color: '#9B9180', cursor: 'pointer',
+}
+
+/** How long before the event you want telling, in the steps Google offers. */
+const ALERT_CHOICES = [0, 5, 10, 15, 30, 60, 120, 1440]
+
+function describeAlert(minutes: number | undefined, useDefault: boolean): string {
+  if (useDefault) return 'Calendar default'
+  if (minutes === undefined) return 'No alert'
+  if (minutes === 0) return 'At the time'
+  if (minutes < 60) return `${minutes} mins before`
+  if (minutes < 1440) return `${minutes / 60} hour${minutes === 60 ? '' : 's'} before`
+  return `${minutes / 1440} day${minutes === 1440 ? '' : 's'} before`
+}
+
+function describeResponse(status?: string): string {
+  if (status === 'accepted') return 'Coming'
+  if (status === 'declined') return 'Not coming'
+  if (status === 'tentative') return 'Maybe'
+  return 'No answer yet'
+}
+function responseGlyph(status?: string): string {
+  if (status === 'accepted') return '\u2713'
+  if (status === 'declined') return '\u2715'
+  return '?'
+}
+function responseTone(status?: string): string {
+  if (status === 'accepted') return '#5F7038'
+  if (status === 'declined') return '#B4523A'
+  return '#9B9180'
+}
+
+/** The Google Meet mark, so a Meet link is recognisable at a glance. */
+function MeetMark({ size = 24 }: { size?: number }) {
+  return (
+    <svg width={size} height={size * (72 / 87.5)} viewBox="0 0 87.5 72" aria-hidden focusable="false" style={{ flexShrink: 0 }}>
+      <path fill="#00832d" d="M49.5 36l8.53 9.75 11.47 7.33 2-17.02-2-16.64-11.69 6.44z" />
+      <path fill="#0066da" d="M0 51.5V66c0 3.315 2.685 6 6 6h14.5l3-10.96-3-9.54-9.95-3z" />
+      <path fill="#e94235" d="M20.5 0L0 20.5l10.55 3 9.95-3 2.95-9.41z" />
+      <path fill="#2684fc" d="M20.5 20.5H0v31h20.5z" />
+      <path fill="#00ac47" d="M82.6 8.68L69.5 19.42v33.66l13.16 10.79c1.97 1.54 4.85.135 4.85-2.37V11c0-2.535-2.945-3.925-4.91-2.32zM49.5 36v15.5h-29V72h43c3.315 0 6-2.685 6-6V53.08z" />
+      <path fill="#ffba00" d="M63.5 0h-43v20.5h29V36l20-16.57V6c0-3.315-2.685-6-6-6z" />
+    </svg>
+  )
+}
+
+/** "Google Meet", "Zoom", "Teams" — whose call this is. */
+function meetingBrand(url: string): string {
+  const host = (() => { try { return new URL(url).hostname } catch { return url } })()
+  if (host.includes('meet.google')) return 'Google Meet'
+  if (host.includes('zoom')) return 'Zoom'
+  if (host.includes('teams')) return 'Teams'
+  if (host.includes('webex')) return 'Webex'
+  if (host.includes('whereby')) return 'Whereby'
+  return host.replace(/^www\./, '')
+}
+
+/** The part of the link you would read out loud — "omb-mppj-wyv". */
+function meetingCode(url: string): string {
+  try {
+    const u = new URL(url)
+    const last = u.pathname.split('/').filter(Boolean).pop()
+    return last ?? u.hostname
+  } catch { return url }
 }
 
 /** Google gives a mime type and nothing else — no size, no date. */
@@ -840,17 +916,6 @@ function evOrg(email: string): string {
   return name ? name.charAt(0).toUpperCase() + name.slice(1) : ''
 }
 
-/** "weekly" / "daily" — the one word the calendar chip wants. */
-function recurrenceWord(rules: string[] | undefined): string | null {
-  const rule = rules?.find(r => r.startsWith('RRULE'))
-  if (!rule) return null
-  const freq = /FREQ=(\w+)/.exec(rule)?.[1]
-  return freq === 'DAILY' ? 'daily'
-    : freq === 'WEEKLY' ? 'weekly'
-    : freq === 'MONTHLY' ? 'monthly'
-    : freq === 'YEARLY' ? 'yearly'
-    : 'repeating'
-}
 
 /** "Every Wednesday" out of an RRULE, when it says something that simple. */
 function describeRecurrence(rules: string[] | undefined, start: Date): string | null {
@@ -907,6 +972,8 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
   const [toTime, setToTime] = useState(`${pad(endDate.getHours())}:${pad(endDate.getMinutes())}`)
   const [location, setLocation] = useState(event.location ?? '')
   const [editingWhere, setEditingWhere] = useState(false)
+  const [notes, setNotes] = useState(event.description ?? '')
+  const [meetOpen, setMeetOpen] = useState(false)
 
   useEffect(() => {
     const fn = (e: MouseEvent) => { if (popupRef.current && !popupRef.current.contains(e.target as Node)) onClose() }
@@ -916,9 +983,10 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
 
   const entryPoints = event.conferenceData?.entryPoints ?? []
   const videoLink = entryPoints.find(ep => ep.entryPointType === 'video')?.uri
-  const where = whereTarget(location, videoLink)
+  const phoneEntry = entryPoints.find(ep => ep.entryPointType === 'phone')
+  // The meeting link has its own card above, so Location speaks only about a place.
+  const where = whereTarget(location)
   const attendees = event.attendees ?? []
-  const isOrganiser = event.organizer?.self ?? true
   const recurrence = describeRecurrence(event.recurrence, startDate)
   const writable = (calendars ?? []).filter(c => c.accessRole === 'owner' || c.accessRole === 'writer')
   const liveClashes = (clashes ?? []).filter(c => c.id !== event.id)
@@ -977,31 +1045,45 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
   const files = event.attachments ?? []
   const prepPoints = prep?.talkingPoints ?? []
 
+  const alertMinutes = event.reminders?.useDefault === false
+    ? event.reminders.overrides?.[0]?.minutes
+    : undefined
+
+  function setAlert(v: string) {
+    if (v === 'default') { void push({ reminders: { useDefault: true } }); return }
+    if (v === 'none')    { void push({ reminders: { useDefault: false, overrides: [] } }); return }
+    void push({ reminders: { useDefault: false, overrides: [{ method: 'popup', minutes: Number(v) }] } })
+  }
+
+  function removeAttendee(email: string) {
+    void push({ attendees: attendees.filter(a => a.email !== email).map(a => ({ email: a.email })) })
+  }
+
   return (
     <div ref={popupRef} onClick={e => e.stopPropagation()} onMouseDown={e => e.stopPropagation()} style={{
       width: 440, flexShrink: 0, alignSelf: 'stretch', minHeight: 0,
       overflowY: 'auto', scrollbarWidth: 'thin',
       background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 18,
       boxShadow: '0 1px 3px rgba(25,23,18,0.06)',
-      padding: '20px 22px 24px',
+      padding: '18px 22px 22px',
     }}>
 
-      {/* ── Which calendar, and the controls ─────────────────────────────── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      {/* ── Which calendar, and what to do with the event ────────────────── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
         {/* The chip names the calendar and changes it — click to pick another */}
-        <span style={{ position: 'relative', display: 'inline-flex', minWidth: 0, maxWidth: '62%' }}>
+        <span style={{ position: 'relative', display: 'inline-flex', minWidth: 0, flex: 1 }}>
           <span
             title={onMoveCalendar ? 'Click to move this to another calendar' : calName}
             style={{
-              display: 'inline-flex', alignItems: 'center', gap: 6, height: 28, padding: '0 11px',
-              borderRadius: 999, background: '#F1ECDE', color: '#4A4438', fontSize: 12.5,
-              minWidth: 0, cursor: onMoveCalendar ? 'pointer' : 'default',
+              display: 'inline-flex', alignItems: 'center', gap: 7, height: 34, padding: '0 13px',
+              borderRadius: 999, background: '#F5F1E6', color: '#4A4438', fontSize: 13,
+              minWidth: 0, maxWidth: '100%', cursor: onMoveCalendar ? 'pointer' : 'default',
             }}>
-            <span style={{ width: 7, height: 7, borderRadius: 999, background: calColor, flexShrink: 0 }} />
+            <span style={{ width: 8, height: 8, borderRadius: 999, background: calColor, flexShrink: 0 }} />
             <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {calName}{recurrenceWord(event.recurrence) ? ` · ${recurrenceWord(event.recurrence)}` : ''}
+              {calName}
             </span>
-            {onMoveCalendar && <ChevronDown size={12} strokeWidth={2} style={{ color: '#9B9180', flexShrink: 0 }} />}
+            {onMoveCalendar && <ChevronDown size={13} strokeWidth={2} style={{ color: '#9B9180', flexShrink: 0 }} />}
           </span>
           {onMoveCalendar && (
             <select
@@ -1013,27 +1095,45 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
             </select>
           )}
         </span>
-        <span style={{ flex: 1 }} />
+
+        {/* Done and cancelled are the two things you say about an event that
+            has already happened, so they sit together as the same kind of
+            control — pressed once to set, again to take back. */}
+        <button
+          onClick={() => onStatusToggle('done')}
+          title={status === 'done' ? 'Not done after all' : 'Mark done'}
+          style={{
+            ...EV_ROUND, width: 34, height: 34,
+            background: status === 'done' ? '#5F7038' : '#FFFFFF',
+            borderColor: status === 'done' ? '#5F7038' : '#E8E1CE',
+            color: status === 'done' ? '#FFFFFF' : '#6C6553',
+          }}><Check size={15} strokeWidth={2.2} /></button>
 
         <button
-          onClick={() => { if (event.htmlLink) window.open(event.htmlLink, '_blank', 'noopener') }}
-          disabled={!event.htmlLink}
-          title="Open in Google Calendar"
-          style={{ ...EV_ROUND, opacity: event.htmlLink ? 1 : 0.45, cursor: event.htmlLink ? 'pointer' : 'default' }}
-        ><ExternalLink size={14} /></button>
+          onClick={() => onStatusToggle('cancelled')}
+          title={status === 'cancelled' ? 'Back on' : 'Mark cancelled'}
+          style={{
+            ...EV_ROUND, width: 34, height: 34,
+            background: status === 'cancelled' ? '#6C6553' : '#FFFFFF',
+            borderColor: status === 'cancelled' ? '#6C6553' : '#E8E1CE',
+            color: status === 'cancelled' ? '#FFFFFF' : '#6C6553',
+          }}><Ban size={15} strokeWidth={2} /></button>
 
         <button
           onClick={() => onDelete?.()}
           disabled={!onDelete}
           title="Delete event"
-          style={{ ...EV_ROUND, color: '#B4523A', borderColor: 'rgba(180,82,58,0.35)', opacity: onDelete ? 1 : 0.45 }}
-        ><Trash2 size={14} /></button>
+          style={{
+            ...EV_ROUND, width: 34, height: 34,
+            color: '#B4523A', borderColor: 'rgba(180,82,58,0.35)', opacity: onDelete ? 1 : 0.45,
+          }}><Trash2 size={15} /></button>
 
-        <button onClick={onClose} title="Close" style={EV_ROUND}><X size={14} /></button>
+        <button onClick={onClose} title="Close" style={{ ...EV_ROUND, width: 34, height: 34 }}><X size={15} /></button>
       </div>
 
       {/* ── Title ────────────────────────────────────────────────────────── */}
-      {/* A long title wraps rather than scrolling out of its own box */}
+      {/* The title is the heading of the panel, not a form field, so it has no
+          box around it until you put the cursor in it. */}
       <textarea
         value={title}
         rows={1}
@@ -1043,34 +1143,141 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
         ref={el => { if (el) { el.style.height = 'auto'; el.style.height = `${el.scrollHeight}px` } }}
         placeholder="Event title"
         style={{
-          width: '100%', boxSizing: 'border-box', marginTop: 14, resize: 'none', overflow: 'hidden',
-          background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 11,
-          padding: '16px 17px', fontFamily: 'Outfit, sans-serif', fontSize: 23, fontWeight: 600,
-          lineHeight: 1.22, letterSpacing: '-0.02em', color: '#191712', outline: 'none', textAlign: 'left',
+          width: '100%', boxSizing: 'border-box', margin: '18px 0 0', resize: 'none', overflow: 'hidden',
+          background: 'transparent', border: 'none', padding: 0,
+          fontFamily: 'Outfit, sans-serif', fontSize: 27, fontWeight: 700,
+          lineHeight: 1.18, letterSpacing: '-0.025em', color: '#191712', outline: 'none', textAlign: 'left',
+          textDecoration: status === 'cancelled' ? 'line-through' : 'none',
         }} />
 
+      {/* ── The meeting itself ───────────────────────────────────────────── */}
+      {videoLink ? (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 11, marginTop: 16,
+          height: 58, padding: '0 15px', boxSizing: 'border-box',
+          borderRadius: 12, background: '#FFFFFF', border: '1px solid #E8E1CE',
+        }}>
+          <MeetMark size={24} />
+          <span style={{ fontSize: 14, fontWeight: 600, color: '#191712', flexShrink: 0 }}>
+            {meetingBrand(videoLink)}
+          </span>
+          <a href={videoLink} target="_blank" rel="noreferrer"
+            title={videoLink}
+            style={{
+              flex: 1, minWidth: 0, fontSize: 14.5, color: '#1A73E8', textDecoration: 'none',
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            }}>{meetingCode(videoLink)}</a>
+          <button
+            onClick={() => { void navigator.clipboard?.writeText(videoLink) }}
+            title="Copy the joining link"
+            style={{ ...EV_GHOST_ICON }}><Link size={15} /></button>
+          <button
+            onClick={() => setMeetOpen(o => !o)}
+            title={meetOpen ? 'Hide the details' : 'Show the full link and dial-in'}
+            style={{ ...EV_GHOST_ICON, transform: meetOpen ? 'rotate(180deg)' : undefined }}>
+            <ChevronDown size={16} />
+          </button>
+        </div>
+      ) : onAddMeet ? (
+        <button onClick={() => void onAddMeet()} title="Add a Google Meet link"
+          style={{
+            display: 'flex', alignItems: 'center', gap: 11, marginTop: 16, width: '100%',
+            height: 58, padding: '0 15px', boxSizing: 'border-box', cursor: 'pointer',
+            borderRadius: 12, background: '#FFFFFF', border: '1px dashed #D8CFB8',
+            fontFamily: 'inherit', textAlign: 'left',
+          }}>
+          <MeetMark size={24} />
+          <span style={{ fontSize: 14, color: '#6C6553' }}>Add a Google Meet link</span>
+        </button>
+      ) : null}
+
+      {videoLink && meetOpen && (
+        <div style={{
+          marginTop: 6, padding: '11px 15px', borderRadius: 11,
+          background: '#FAF7EC', border: '1px solid #E8E1CE',
+        }}>
+          <a href={videoLink} target="_blank" rel="noreferrer" style={{
+            display: 'block', fontSize: 12.5, color: '#1A73E8', wordBreak: 'break-all', textDecoration: 'none',
+          }}>{videoLink}</a>
+          {phoneEntry && (
+            <p style={{ margin: '7px 0 0', fontSize: 12.5, color: '#6C6553' }}>
+              Dial in: {phoneEntry.label ?? phoneEntry.uri.replace('tel:', '')}
+              {phoneEntry.pin ? ` · PIN ${phoneEntry.pin}` : ''}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* ── Where ────────────────────────────────────────────────────────── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 14 }}>
+        <span style={EV_LABEL}>Location</span>
+        <span style={{ flex: 1, minWidth: 0, display: 'flex', gap: 7 }}>
+          {where.kind === 'empty' || editingWhere ? (
+            <span style={{ ...EV_FIELD, flex: 1, padding: '0 15px' }}>
+              <MapPin size={15} color="#9B9180" style={{ flexShrink: 0 }} />
+              <input
+                autoFocus={editingWhere}
+                value={location}
+                onChange={e => setLocation(e.target.value)}
+                onBlur={() => {
+                  setEditingWhere(false)
+                  if (location !== (event.location ?? '')) void push({ location: location.trim() })
+                }}
+                onKeyDown={e => { if (e.key === 'Enter' || e.key === 'Escape') (e.target as HTMLInputElement).blur() }}
+                placeholder="Add a place — room, office or address"
+                style={{
+                  flex: 1, minWidth: 0, border: 'none', background: 'transparent', padding: 0,
+                  fontSize: 13.5, fontFamily: 'inherit', color: '#191712', outline: 'none',
+                  textOverflow: 'ellipsis',
+                }} />
+            </span>
+          ) : (
+            /* A place is somewhere you go, so it opens a map. A link is
+               something you open, so it opens itself. */
+            <a href={where.url} target="_blank" rel="noreferrer"
+              title={where.kind === 'place' ? 'Open in Google Maps' : where.url}
+              style={{ ...EV_FIELD, flex: 1, textDecoration: 'none', whiteSpace: 'nowrap' }}>
+              {where.kind === 'place'
+                ? <MapPin size={15} color="#6C6553" style={{ flexShrink: 0 }} />
+                : <Link size={15} color="#6C6553" style={{ flexShrink: 0 }} />}
+              <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>{where.label}</span>
+              <ExternalLink size={13} color="#9B9180" style={{ flexShrink: 0 }} />
+            </a>
+          )}
+          {where.kind !== 'empty' && !editingWhere && (
+            <button onClick={() => setEditingWhere(true)} title="Change the location"
+              style={{ ...EV_ROUND, width: 48, height: 48, borderRadius: 11, flexShrink: 0 }}>
+              <Pencil size={14} />
+            </button>
+          )}
+        </span>
+      </div>
+
+      <div style={{ height: 1, background: '#F0EBDC', margin: '18px 0' }} />
+
       {/* ── When ─────────────────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
-        <label style={{ ...EV_PILL, position: 'relative' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 9, flexWrap: 'wrap' }}>
+        <label style={{ ...EV_FIELD, width: 'auto', position: 'relative', cursor: 'pointer', flexShrink: 0 }}>
           {new Date(dateStr + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}
-          <ChevronDown size={13} strokeWidth={2} style={{ color: '#9B9180' }} />
+          <ChevronDown size={14} strokeWidth={2} style={{ color: '#9B9180' }} />
           <input
             type="date" value={dateStr}
             onChange={e => { setDateStr(e.target.value); pushTimes(e.target.value, fromTime, toTime) }}
             style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', border: 'none', padding: 0 }} />
         </label>
-        {!isAllDay && (
+        {!isAllDay ? (
           <>
-            <span style={{ width: 92 }}>
-              <TimeSelect value={fromTime} onChange={v => { setFromTime(v); pushTimes(dateStr, v, toTime) }} />
+            <span style={{ width: 96 }}>
+              <TimeSelect size="large" value={fromTime} onChange={v => { setFromTime(v); pushTimes(dateStr, v, toTime) }} />
             </span>
-            <span style={{ fontSize: 12.5, color: '#6C6553' }}>to</span>
-            <span style={{ width: 92 }}>
-              <TimeSelect value={toTime} onChange={v => { setToTime(v); pushTimes(dateStr, fromTime, v) }} />
+            <span style={{ fontSize: 13.5, color: '#6C6553' }}>to</span>
+            <span style={{ width: 96 }}>
+              <TimeSelect size="large" value={toTime} onChange={v => { setToTime(v); pushTimes(dateStr, fromTime, v) }} />
             </span>
           </>
+        ) : (
+          <span style={{ ...EV_FIELD, width: 'auto', background: '#FAF7EC', border: '1px solid transparent' }}>All day</span>
         )}
-        {isAllDay && <span style={{ fontSize: 12.5, color: '#6C6553' }}>All day</span>}
       </div>
 
       {/* ── What it runs into ────────────────────────────────────────────── */}
@@ -1080,9 +1287,9 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
             onClick={() => onOpenEvent?.(liveClashes[0])}
             title={`Open “${liveClashes[0].summary ?? 'the clashing event'}”`}
             style={{
-              display: 'inline-flex', alignItems: 'center', height: 38, padding: '0 14px', borderRadius: 10,
+              display: 'inline-flex', alignItems: 'center', height: 42, padding: '0 14px', borderRadius: 11,
               background: 'rgba(245,209,78,0.24)', border: '1px solid rgba(245,209,78,0.7)',
-              color: '#3D3926', fontSize: 13, minWidth: 0, fontFamily: 'inherit',
+              color: '#3D3926', fontSize: 13, minWidth: 0, fontFamily: 'inherit', flex: 1,
               cursor: onOpenEvent ? 'pointer' : 'default',
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             }}>
@@ -1093,112 +1300,56 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
             onClick={moveClear}
             disabled={!freeAfterClash || saving}
             title={freeAfterClash ? `Move this to ${freeAfterClash}, clear of the clash` : 'Nothing to move to'}
-            style={{ ...EV_ROUND, width: 38, height: 38, borderRadius: 10, opacity: freeAfterClash ? 1 : 0.45 }}>
-            <Check size={13} strokeWidth={2.4} />
+            style={{ ...EV_ROUND, width: 42, height: 42, borderRadius: 11, opacity: freeAfterClash ? 1 : 0.45 }}>
+            <Check size={14} strokeWidth={2.4} />
           </button>
           <button onClick={() => setClashDismissed(true)} title="Leave it — I know"
-            style={{ ...EV_ROUND, width: 38, height: 38, borderRadius: 10 }}>
+            style={{ ...EV_ROUND, width: 42, height: 42, borderRadius: 11 }}>
             <X size={14} />
           </button>
         </div>
       )}
 
-      <div style={{ height: 1, background: '#F0EBDC', margin: '20px 0' }} />
-
-      {/* ── Fields ───────────────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-          <span style={EV_LABEL}>Where</span>
-          <span style={{ flex: 1, minWidth: 0, display: 'flex', gap: 7 }}>
-            {where.kind === 'empty' || editingWhere ? (
-              <input
-                autoFocus={editingWhere}
-                value={location}
-                onChange={e => setLocation(e.target.value)}
-                onBlur={() => {
-                  setEditingWhere(false)
-                  if (location !== (event.location ?? '')) void push({ location: location.trim() })
-                }}
-                onKeyDown={e => { if (e.key === 'Enter' || e.key === 'Escape') (e.target as HTMLInputElement).blur() }}
-                placeholder="Add a place or a link"
-                style={{ ...EV_PILL, flex: 1, cursor: 'text', outline: 'none' }} />
-            ) : (
-              <a href={where.url} target="_blank" rel="noreferrer"
-                title={where.kind === 'place' ? 'Open in Google Maps' : where.url}
-                style={{
-                  ...EV_PILL, flex: 1, textDecoration: 'none', color: '#191712',
-                  overflow: 'hidden', whiteSpace: 'nowrap',
-                }}>
-                {where.kind === 'place' ? <MapPin size={14} color="#6C6553" /> : <Link size={14} color="#6C6553" />}
-                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{where.label}</span>
-                <ExternalLink size={12} color="#9B9180" style={{ marginLeft: 'auto', flexShrink: 0 }} />
-              </a>
-            )}
-            {/* A place is somewhere you go, so it gets directions instead of a
-                Join button. Only an online meeting can be joined. */}
-            {where.kind === 'link' && videoLink ? (
-              <a href={videoLink} target="_blank" rel="noreferrer"
-                style={{ ...EV_PILL, textDecoration: 'none', color: '#191712', flexShrink: 0 }}>
-                <Video size={14} /> Join
-              </a>
-            ) : !videoLink && onAddMeet ? (
-              <button onClick={() => void onAddMeet()} title="Add a Google Meet link"
-                style={{ ...EV_PILL, flexShrink: 0, color: '#6C6553' }}>
-                <Video size={14} /> Meet
-              </button>
-            ) : null}
-            {where.kind !== 'empty' && !editingWhere && (
-              <button onClick={() => setEditingWhere(true)} title="Change where"
-                style={{ ...EV_ROUND, width: 42, height: 42, borderRadius: 10 }}>
-                <Pencil size={13} />
-              </button>
-            )}
-          </span>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-          <span style={EV_LABEL}>Status</span>
-          <span style={{ flex: 1, minWidth: 0, display: 'flex', gap: 6 }}>
-            {([
-              { id: undefined, label: 'Open' },
-              { id: 'done' as const, label: 'Done' },
-              { id: 'cancelled' as const, label: 'Cancelled' },
-            ]).map(o => {
-              const on = status === o.id
-              return (
-                <button
-                  key={o.label}
-                  onClick={() => { if (o.id) onStatusToggle(o.id); else if (status) onStatusToggle(status) }}
-                  style={{
-                    ...EV_PILL, flex: 1, justifyContent: 'center',
-                    background: on ? '#191712' : '#FFFFFF',
-                    border: on ? 'none' : '1px solid #E8E1CE',
-                    color: on ? '#FDF8E7' : '#6C6553',
-                    fontWeight: on ? 600 : 500,
-                  }}>{o.label}</button>
-              )
-            })}
-          </span>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+      {/* ── Repeats · Alert · Prep ───────────────────────────────────────── */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <span style={EV_LABEL}>Repeats</span>
-          <span style={{ ...EV_PILL, flex: 1, cursor: 'default', color: recurrence ? '#191712' : '#9B9180' }}>
+          <span style={{ ...EV_FIELD, flex: 1, color: recurrence ? '#191712' : '#9B9180' }}>
             {recurrence ?? 'Does not repeat'}
           </span>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span style={EV_LABEL}>Alert</span>
+          <label style={{ ...EV_FIELD, flex: 1, position: 'relative', cursor: 'pointer' }}>
+            <span style={{ flex: 1, minWidth: 0, color: alertMinutes === undefined ? '#9B9180' : '#191712' }}>
+              {describeAlert(alertMinutes, event.reminders?.useDefault !== false)}
+            </span>
+            <ChevronDown size={14} strokeWidth={2} style={{ color: '#9B9180', flexShrink: 0 }} />
+            <select
+              value={event.reminders?.useDefault !== false ? 'default'
+                : alertMinutes === undefined ? 'none' : String(alertMinutes)}
+              onChange={e => setAlert(e.target.value)}
+              style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', border: 'none' }}>
+              <option value="default">Calendar default</option>
+              <option value="none">No alert</option>
+              {ALERT_CHOICES.map(m => <option key={m} value={m}>{describeAlert(m, false)}</option>)}
+            </select>
+          </label>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <span style={EV_LABEL}>Prep held</span>
           <span style={{ flex: 1, minWidth: 0 }}>
             {prep ? (
-              <span style={{ ...EV_PILL, width: '100%', cursor: 'default' }}>
+              <span style={{ ...EV_FIELD, width: '100%' }}>
+                <Sparkles size={14} color="#6C6553" />
                 {prepPoints.length} point{prepPoints.length === 1 ? '' : 's'} gathered
               </span>
             ) : (
               <button onClick={onPrepRequest} disabled={prepLoading}
-                style={{ ...EV_PILL, width: '100%', justifyContent: 'flex-start', opacity: prepLoading ? 0.6 : 1 }}>
-                <Sparkles size={13} /> {prepLoading ? 'Gathering prep…' : 'Gather prep'}
+                style={{ ...EV_FIELD, width: '100%', cursor: 'pointer', opacity: prepLoading ? 0.6 : 1 }}>
+                <Sparkles size={14} color="#6C6553" /> {prepLoading ? 'Gathering prep…' : 'Gather prep'}
               </button>
             )}
           </span>
@@ -1209,36 +1360,46 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
         <p style={{ margin: '8px 0 0', fontSize: 11.5, color: '#B4523A' }}>{prepError}</p>
       )}
 
-      <div style={{ height: 1, background: '#F0EBDC', margin: '20px 0' }} />
+      <div style={{ height: 1, background: '#F0EBDC', margin: '18px 0' }} />
 
       {/* ── Attendees ────────────────────────────────────────────────────── */}
-      <div style={{ ...EV_SECTION, marginBottom: 10 }}>Attendees · {attendees.length}</div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <div style={{ ...EV_SECTION, marginBottom: 6 }}>Attendees</div>
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
         {attendees.map(a => (
-          <div key={a.email} style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '5px 0', minWidth: 0 }}>
+          <div key={a.email} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '7px 0', minWidth: 0 }}>
             <span style={{
-              width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
+              width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: '#F1ECDE', color: '#6C6553', fontSize: 10.5, fontWeight: 700,
+              background: '#F1ECDE', color: '#6C6553', fontSize: 11, fontWeight: 700,
             }}>{evInitials(a.displayName, a.email)}</span>
-            <span style={{ flex: 1, minWidth: 0, fontSize: 13.5, fontWeight: 600, color: '#191712', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <span style={{ flex: 1, minWidth: 0, fontSize: 14, color: '#191712', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {a.displayName ?? a.email}
             </span>
-            <span style={{ fontSize: 12, color: '#9B9180', flexShrink: 0 }}>
-              {a.responseStatus === 'declined' ? 'Declined'
-                : a.responseStatus === 'tentative' ? 'Maybe'
-                : evOrg(a.email)}
-            </span>
+            <span
+              title={`${describeResponse(a.responseStatus)} · ${evOrg(a.email)}`}
+              style={{
+                ...EV_ROUND, width: 32, height: 32, flexShrink: 0, fontSize: 13, fontWeight: 600,
+                color: responseTone(a.responseStatus),
+                borderColor: a.responseStatus === 'accepted' ? 'rgba(95,112,56,0.4)'
+                  : a.responseStatus === 'declined' ? 'rgba(180,82,58,0.35)' : '#E8E1CE',
+              }}>{responseGlyph(a.responseStatus)}</span>
+            <button
+              onClick={() => removeAttendee(a.email)}
+              disabled={!onSave}
+              title={`Take ${a.displayName ?? a.email} off the invite`}
+              style={{ ...EV_ROUND, width: 32, height: 32, flexShrink: 0, color: '#B4523A', borderColor: 'rgba(180,82,58,0.35)', opacity: onSave ? 1 : 0.45 }}>
+              <Trash2 size={14} />
+            </button>
           </div>
         ))}
 
         {addingAttendee ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '5px 0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '7px 0' }}>
             <span style={{
-              width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
+              width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               border: '1px dashed #D8CFB8', color: '#C9C0A8',
-            }}><Plus size={14} /></span>
+            }}><Plus size={15} /></span>
             <input
               autoFocus
               value={attendeeDraft}
@@ -1246,94 +1407,88 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
               onKeyDown={e => { if (e.key === 'Enter') addAttendee(); if (e.key === 'Escape') { setAttendeeDraft(''); setAddingAttendee(false) } }}
               onBlur={addAttendee}
               placeholder="name@company.com"
-              style={{ ...EV_PILL, flex: 1, cursor: 'text', outline: 'none' }} />
+              style={{ ...EV_FIELD, flex: 1, cursor: 'text', outline: 'none' }} />
           </div>
         ) : (
           <button onClick={() => setAddingAttendee(true)} style={{
-            display: 'flex', alignItems: 'center', gap: 11, padding: '5px 0',
+            display: 'flex', alignItems: 'center', gap: 12, padding: '7px 0',
             background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
           }}>
             <span style={{
-              width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
+              width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               border: '1px dashed #D8CFB8', color: '#C9C0A8',
-            }}><Plus size={14} /></span>
-            <span style={{ fontSize: 13, color: '#9B9180' }}>
-              Add attendee{isOrganiser ? ' · you are organiser' : ''}
-            </span>
+            }}><Plus size={15} /></span>
+            <span style={{ fontSize: 14, color: '#9B9180' }}>Add an invitee</span>
           </button>
         )}
       </div>
 
       {/* ── Attachments ──────────────────────────────────────────────────── */}
-      <div style={{ height: 1, background: '#F0EBDC', margin: '20px 0' }} />
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-        <span style={EV_SECTION}>Attachments · {files.length}</span>
-        <span style={{ flex: 1, minWidth: 0, fontSize: 11.5, color: '#9B9180', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+      <div style={{ height: 1, background: '#F0EBDC', margin: '18px 0' }} />
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <span style={EV_SECTION}>Attachments</span>
+        <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: '#9B9180', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {attendees.length > 0
-            ? `Shared files go to the ${attendees.length} invitee${attendees.length === 1 ? '' : 's'}`
+            ? `Shared with the ${attendees.length} invitee${attendees.length === 1 ? '' : 's'}`
             : 'Only you can see these'}
         </span>
         <button
           onClick={() => { if (event.htmlLink) window.open(event.htmlLink, '_blank', 'noopener') }}
           disabled={!event.htmlLink}
           title="Google Calendar holds the file picker"
-          style={{ ...EV_PILL, height: 30, flexShrink: 0, opacity: event.htmlLink ? 1 : 0.45 }}>
-          <Paperclip size={12} /> Attach
+          style={{ ...EV_FIELD, width: 'auto', height: 40, gap: 8, cursor: 'pointer', flexShrink: 0, opacity: event.htmlLink ? 1 : 0.45 }}>
+          <Paperclip size={14} /> Attach
         </button>
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        {files.map(f => (
-          <a key={f.fileUrl} href={f.fileUrl} target="_blank" rel="noreferrer" style={{
-            display: 'flex', alignItems: 'center', gap: 11, padding: '5px 0', minWidth: 0, textDecoration: 'none',
-          }}>
-            <span style={{
-              width: 30, height: 30, borderRadius: 8, flexShrink: 0,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: '#FAF7EC', border: '1px solid #E8E1CE', color: '#6C6553',
-            }}><FileText size={14} strokeWidth={1.9} /></span>
-            <span style={{ flex: 1, minWidth: 0 }}>
-              <span style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#191712', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {f.title ?? f.fileUrl}
+      {files.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 8 }}>
+          {files.map(f => (
+            <a key={f.fileUrl} href={f.fileUrl} target="_blank" rel="noreferrer" style={{
+              display: 'flex', alignItems: 'center', gap: 12, padding: '6px 0', minWidth: 0, textDecoration: 'none',
+            }}>
+              <span style={{
+                width: 32, height: 32, borderRadius: 9, flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: '#FAF7EC', border: '1px solid #E8E1CE', color: '#6C6553',
+              }}><FileText size={15} strokeWidth={1.9} /></span>
+              <span style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ display: 'block', fontSize: 13.5, color: '#191712', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {f.title ?? f.fileUrl}
+                </span>
+                <span style={{ display: 'block', fontSize: 11.5, color: '#9B9180', marginTop: 2 }}>
+                  {describeMime(f.mimeType)}
+                </span>
               </span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 3 }}>
-                <span style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 4, height: 17, padding: '0 6px', borderRadius: 5,
-                  background: attendees.length ? '#F1ECDE' : 'rgba(245,209,78,0.24)',
-                  border: `1px solid ${attendees.length ? '#E8E1CE' : 'rgba(245,209,78,0.7)'}`,
-                  color: '#6C6553', fontSize: 8.5, fontWeight: 800, letterSpacing: '0.08em',
-                }}>{attendees.length ? 'SHARED' : 'PRIVATE'}</span>
-                <span style={{ fontSize: 11, color: '#9B9180' }}>{describeMime(f.mimeType)}</span>
-              </span>
-            </span>
-          </a>
-        ))}
-        <button
-          onClick={() => { if (event.htmlLink) window.open(event.htmlLink, '_blank', 'noopener') }}
-          disabled={!event.htmlLink}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 11, padding: '5px 0',
-            background: 'none', border: 'none', cursor: event.htmlLink ? 'pointer' : 'default',
-            fontFamily: 'inherit', textAlign: 'left', opacity: event.htmlLink ? 1 : 0.5,
-          }}>
-          <span style={{
-            width: 30, height: 30, borderRadius: 8, flexShrink: 0,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            border: '1px dashed #D8CFB8', color: '#C9C0A8',
-          }}><Plus size={14} /></span>
-          <span style={{ fontSize: 13, color: '#9B9180' }}>
-            Add a file — attachments are shared with everyone invited
-          </span>
-        </button>
-      </div>
+              <ExternalLink size={13} color="#9B9180" style={{ flexShrink: 0 }} />
+            </a>
+          ))}
+        </div>
+      )}
+
+      {/* ── Notes ────────────────────────────────────────────────────────── */}
+      <div style={{ height: 1, background: '#F0EBDC', margin: '18px 0' }} />
+      <div style={{ ...EV_SECTION, marginBottom: 8 }}>Notes</div>
+      <textarea
+        value={notes}
+        onChange={e => setNotes(e.target.value)}
+        onBlur={() => { if (notes !== (event.description ?? '')) void push({ description: notes }) }}
+        placeholder="Add a note — agenda, decisions, anything to remember."
+        rows={3}
+        style={{
+          width: '100%', boxSizing: 'border-box', resize: 'vertical', minHeight: 88,
+          background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 12,
+          padding: '13px 15px', fontFamily: 'inherit', fontSize: 14, lineHeight: 1.5,
+          color: '#191712', outline: 'none',
+        }} />
 
       {/* ── Prep gathered ────────────────────────────────────────────────── */}
       {prepPoints.length > 0 && (
         <>
-          <div style={{ height: 1, background: '#F0EBDC', margin: '20px 0' }} />
-          <div style={{ ...EV_SECTION, marginBottom: 10 }}>Prep gathered</div>
+          <div style={{ height: 1, background: '#F0EBDC', margin: '18px 0' }} />
+          <div style={{ ...EV_SECTION, marginBottom: 8 }}>Prep gathered</div>
           {prep?.goal && (
-            <p style={{ margin: '0 0 10px', fontSize: 12.5, color: '#3D3926', lineHeight: 1.5 }}>{prep.goal}</p>
+            <p style={{ margin: '0 0 10px', fontSize: 13, color: '#3D3926', lineHeight: 1.5 }}>{prep.goal}</p>
           )}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             {prepPoints.map((pt, i) => {
@@ -1362,39 +1517,40 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
       )}
 
       {/* ── What the Professor would do about it ─────────────────────────── */}
-      {(liveClashes.length > 0 || videoLink) && (
+      {liveClashes.length > 0 && (
         <div style={{
           marginTop: 18, padding: '14px 15px', borderRadius: 12,
           background: '#FAF7EC', border: '1px solid #E8E1CE',
         }}>
           <p style={{ margin: 0, fontSize: 13, color: '#3D3926', lineHeight: 1.5 }}>
-            {liveClashes.length > 0 && freeAfterClash
+            {freeAfterClash
               ? `Professor: move this to ${freeAfterClash} and it stops costing you anything.`
-              : liveClashes.length > 0
-              ? 'Professor: this overlaps something already booked.'
-              : 'Professor: the link is live — join when you are ready.'}
+              : 'Professor: this overlaps something already booked.'}
           </p>
-          <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-            {liveClashes.length > 0 && freeAfterClash && (
-              <button onClick={moveClear} disabled={saving} style={{
-                ...EV_PILL, background: '#191712', border: 'none', color: '#FDF8E7', fontWeight: 600,
-                opacity: saving ? 0.6 : 1,
-              }}>Move to {freeAfterClash}</button>
-            )}
-            {videoLink && (
-              <a href={videoLink} target="_blank" rel="noreferrer"
-                style={{ ...EV_PILL, textDecoration: 'none', color: '#191712' }}>Join</a>
-            )}
-          </div>
+          {freeAfterClash && (
+            <button onClick={moveClear} disabled={saving} style={{
+              ...EV_FIELD, width: 'auto', height: 40, marginTop: 12, cursor: 'pointer',
+              background: '#191712', border: 'none', color: '#FDF8E7', fontWeight: 600,
+              opacity: saving ? 0.6 : 1,
+            }}>Move to {freeAfterClash}</button>
+          )}
         </div>
       )}
 
       {saveError && (
         <p style={{ margin: '12px 0 0', fontSize: 11.5, color: '#B4523A' }}>{saveError}</p>
       )}
-      <p style={{ margin: '14px 0 0', fontSize: 11, color: '#9B9180' }}>
-        {saving ? 'Saving…' : 'Every change saves itself.'}
-      </p>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 14 }}>
+        <span style={{ flex: 1, fontSize: 11.5, color: '#9B9180' }}>
+          {saving ? 'Saving…' : 'Every change saves itself.'}
+        </span>
+        {event.htmlLink && (
+          <a href={event.htmlLink} target="_blank" rel="noreferrer"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11.5, color: '#6C6553', textDecoration: 'none', flexShrink: 0 }}>
+            Open in Google Calendar <ExternalLink size={11} />
+          </a>
+        )}
+      </div>
     </div>
   )
 }
@@ -1677,7 +1833,7 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
 
       {/* Fields */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={EV_LABEL}>Calendar</span>
           <span style={{ flex: 1, minWidth: 0, position: 'relative', display: 'flex' }}>
             <span style={{ ...EV_PILL, flex: 1, justifyContent: 'space-between' }}>
@@ -1691,7 +1847,7 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
           </span>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={EV_LABEL}>Where</span>
           <span style={{ flex: 1, minWidth: 0, display: 'flex', gap: 7 }}>
             <input value={location} onChange={e => setLocation(e.target.value)} placeholder="Add a place"
@@ -1706,7 +1862,7 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-          <span style={EV_LABEL}>Notes</span>
+          <span style={{ ...EV_LABEL, paddingTop: 11 }}>Notes</span>
           <textarea value={description} onChange={e => setDescription(e.target.value)} rows={2}
             placeholder="Anything worth remembering…"
             style={{
@@ -1721,7 +1877,7 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
       <div style={{ height: 1, background: '#F0EBDC', margin: '20px 0' }} />
 
       {/* Attendees */}
-      <div style={{ ...EV_SECTION, marginBottom: 10 }}>Attendees · {invitees.length}</div>
+      <div style={{ ...EV_SECTION, marginBottom: 10 }}>Attendees</div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         {invitees.map(email => (
           <div key={email} style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '5px 0', minWidth: 0 }}>

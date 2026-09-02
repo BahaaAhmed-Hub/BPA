@@ -50,6 +50,7 @@ export interface GCalEventCreate {
       conferenceSolutionKey: { type: 'hangoutsMeet' }
     }
   }
+  reminders?: { useDefault: boolean; overrides?: { method: string; minutes: number }[] }
 }
 
 export interface GCalError {

@@ -44,11 +44,13 @@ const FIELD: React.CSSProperties = {
 }
 
 /** A time in quarter-hours, or anything you type. */
-export function TimeSelect({ value, onChange, label }: {
+export function TimeSelect({ value, onChange, label, size = 'compact' }: {
   value: string
   onChange: (v: string) => void
   /** Omit to render the control on its own, with no caption above it. */
   label?: string
+  /** "large" is the event panel's sand time pill; "compact" is everywhere else. */
+  size?: 'compact' | 'large'
 }) {
   const [open, setOpen] = useState(false)
   const [typed, setTyped] = useState('')
@@ -88,6 +90,10 @@ export function TimeSelect({ value, onChange, label }: {
       {label && <span style={{ display: 'block', fontSize: 11, color: '#6C6553', marginBottom: 4 }}>{label}</span>}
       <button type="button" onClick={() => setOpen(o => !o)} style={{
         ...FIELD, borderColor: open ? '#CFC6B0' : '#E8E1CE',
+        ...(size === 'large' ? {
+          height: 48, borderRadius: 11, fontSize: 14.5, fontWeight: 500,
+          border: '1px solid transparent', justifyContent: 'center',
+        } : null),
       }}>{formatTime(value)}</button>
 
       {open && (
