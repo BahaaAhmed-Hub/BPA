@@ -487,11 +487,17 @@ export function TaskCommand() {
       ) : (
         <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
           {/* 9F: the brain dump rail sits to the LEFT of the matrix */}
+          {/* With the panel open, what is left over is shared evenly: the dump
+              takes one share and the matrix two, so its two columns come out
+              the same width as the dump beside them. */}
           <div style={{ display: 'flex', gap: 16, padding: '4px 28px 28px', alignItems: 'flex-start' }}>
-            <div>
-            <BrainDumpRail tasks={dumpedTasks} onOpen={setModalTaskId} />
+            <div style={modalTask ? { flex: 1, minWidth: 0, display: 'flex' } : undefined}>
+              <BrainDumpRail tasks={dumpedTasks} onOpen={setModalTaskId} flexible={!!modalTask} />
             </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
+            {/* The matrix carries its own 12px gap between its two columns, so
+                it starts with that much basis — then all three columns land on
+                exactly the same width. */}
+            <div style={{ flex: modalTask ? '2 1 12px' : 1, minWidth: 0 }}>
               <EisenhowerBoard onOpen={setModalTaskId} hideCompleted={hideCompleted} groupBy={groupBy} allGroupsExpanded={allGroupsExpanded} filteredTaskIds={filteredTaskIds} onOpenPlanner={() => setShowPlanner(true)} />
             </div>
             {modalTask && (

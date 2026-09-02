@@ -40,6 +40,16 @@ function pushActivity(activities: TaskActivity[], entry: TaskActivity): TaskActi
   return [...activities, entry]
 }
 
+/** A link as it reads in the log — the host and a little of the path, not the
+ *  hundred-character share URL OneDrive and Drive hand out. */
+function shortUrl(url: string): string {
+  try {
+    const u = new URL(url)
+    const shown = `${u.hostname.replace(/^www\./, '')}${u.pathname.replace(/\/$/, '')}`
+    return shown.length > 40 ? shown.slice(0, 39) + '…' : shown
+  } catch { return url.length > 40 ? url.slice(0, 39) + '…' : url }
+}
+
 function toRow(t: Task): TaskRow {
   return {
     id: t.id, title: t.title, quadrant: t.quadrant ?? null,
@@ -180,13 +190,39 @@ export const useTaskStore = create<TaskState>()(
             const to = updates.quadrant ? QUADRANT_META[updates.quadrant].label : 'Inbox'
             desc.push(`Moved from ${from} to ${to}`)
           }
+
+          // Files and links are events, not edits: each one is its own line, and
+          // none of them fold into the entry before it.
+          const events: TaskActivity[] = []
+          if ('attachments' in updates) {
+            const before = old.attachments ?? []
+            const after  = updates.attachments ?? []
+            for (const f of after) {
+              if (!before.some(b => b.id === f.id)) events.push(act(id, 'attachment_added', `Attached ${f.name}`))
+            }
+            for (const f of before) {
+              if (!after.some(a => a.id === f.id)) events.push(act(id, 'attachment_removed', `Removed ${f.name}`))
+            }
+          }
+          if ('links' in updates) {
+            const before = old.links ?? []
+            const after  = updates.links ?? []
+            for (const url of after) {
+              if (!before.includes(url)) events.push(act(id, 'link_added', `Link added — ${shortUrl(url)}`))
+            }
+            for (const url of before) {
+              if (!after.includes(url)) events.push(act(id, 'link_removed', `Link removed — ${shortUrl(url)}`))
+            }
+          }
+
           const next = s.tasks.map(t => t.id === id ? { ...t, ...updates } : t)
           scheduleDbSync(next)
+          const merged = desc.length
+            ? pushActivity(s.activities, act(id, 'field_updated', desc.join('; ')))
+            : s.activities
           return {
             tasks: next,
-            activities: desc.length
-              ? pushActivity(s.activities, act(id, 'field_updated', desc.join('; ')))
-              : s.activities,
+            activities: events.length ? [...merged, ...events] : merged,
           }
         }),
 

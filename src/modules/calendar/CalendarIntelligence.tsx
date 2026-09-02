@@ -672,14 +672,16 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
   const rgb = color.startsWith('#') ? hexRgbStr(color) : '127,119,221'
   // A soft wash of the calendar's colour over parchment, the way the artboards
   // draw it — not a saturated slab with a bar down its side.
-  const evBg = isCancelled ? '#F1ECDE' : `rgba(${rgb}, 0.10)`
+  // The card keeps its calendar's colour whether the event is done, cancelled
+  // or neither — the tick and the strike-through say what happened to it.
+  const evBg = `rgba(${rgb}, 0.10)`
   const evBorder = isTentative
     ? `1.5px dashed ${color}`
     : isSelected
     ? `2px solid ${color}`
-    : isCancelled ? '1px solid #E0D9C6' : `1px solid rgba(${rgb}, 0.34)`
-  const evInk = isDone || isCancelled ? '#8A8272' : '#191712'
-  const evTimeInk = isCancelled ? '#A79D8B' : '#6C6553'
+    : `1px solid rgba(${rgb}, 0.34)`
+  const evInk = '#191712'
+  const evTimeInk = '#6C6553'
 
   return (
     <div
@@ -701,7 +703,7 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
         padding: '5px 8px 8px',
         overflow: 'hidden',
         cursor: isDragOverlay ? 'grabbing' : 'pointer',
-        opacity: isDragSrc ? 0.35 : isCancelled ? 0.72 : 1,
+        opacity: isDragSrc ? 0.35 : 1,
         transform: isDragOverlay ? undefined : CSS.Transform.toString(transform),
         transition: isDragging ? 'none' : 'box-shadow 0.12s, opacity 0.12s',
         boxSizing: 'border-box',
@@ -712,6 +714,9 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
         userSelect: 'none',
       }}
     >
+      {/* Done is a tick in front of the name; cancelled strikes the name
+          through. Neither touches the card's colour — that belongs to the
+          calendar the event is on, not to what happened to it. */}
       <div style={{
         fontSize: height < 30 ? 10 : 11,
         fontWeight: 600,
@@ -720,10 +725,19 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
         overflow: 'hidden',
         textOverflow: 'ellipsis',
         whiteSpace: height < 36 ? 'nowrap' : 'normal',
-        textDecoration: isDone || isCancelled ? 'line-through' : 'none',
-        textDecorationColor: 'rgba(25,23,18,0.3)',
       }}>
-        {event.summary ?? '(No title)'}
+        {isDone && (
+          <Check
+            size={height < 30 ? 11 : 12}
+            strokeWidth={3.4}
+            style={{ display: 'inline', verticalAlign: '-2px', marginRight: 3 }}
+          />
+        )}
+        <span style={{
+          textDecoration: isCancelled ? 'line-through' : 'none',
+          textDecorationColor: 'rgba(25,23,18,0.45)',
+          textDecorationThickness: 1.5,
+        }}>{event.summary ?? '(No title)'}</span>
       </div>
       {height >= 50 && (() => {
         const host = meetingHost(event)
@@ -2997,6 +3011,7 @@ export function CalendarIntelligence() {
                     const col = cal ? calEffectiveColor(cal) : '#7F77DD'
                     const rgb = col.startsWith('#') ? hexRgbStr(col) : '127,119,221'
                     const t = e.start.dateTime ? new Date(e.start.dateTime) : null
+                    const st = eventStatuses[e.id]
                     return (
                       <span
                         key={e.id}
@@ -3013,7 +3028,12 @@ export function CalendarIntelligence() {
                         {t && <span style={{ color: '#6C6553', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>
                           {String(t.getHours()).padStart(2, '0')}:{String(t.getMinutes()).padStart(2, '0')}
                         </span>}
-                        <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.summary ?? '(no title)'}</span>
+                        {st === 'done' && <Check size={11} strokeWidth={3.4} style={{ flexShrink: 0 }} />}
+                        <span style={{
+                          minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis',
+                          textDecoration: st === 'cancelled' ? 'line-through' : 'none',
+                          textDecorationThickness: 1.5,
+                        }}>{e.summary ?? '(no title)'}</span>
                       </span>
                     )
                   })}
@@ -3082,15 +3102,17 @@ export function CalendarIntelligence() {
                           onContextMenu={e => handleEventContextMenu(ev as GCalEventExt, e)}
                           style={{
                             fontSize: 10, fontWeight: 600, color: '#fff',
-                            background: `${color}${evStatus ? '66' : 'CC'}`,
+                            background: `${color}CC`,
                             borderLeft: `2px solid ${color}`,
                             borderRadius: 3, padding: '1px 4px',
                             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                            cursor: 'pointer', textDecoration: evStatus === 'cancelled' ? 'line-through' : 'none',
+                            cursor: 'pointer',
                           }}
                         >
-                          {evStatus === 'done' && '✓ '}{evStatus === 'cancelled' && '✗ '}
-                          {ev.summary ?? '(No title)'}
+                          {evStatus === 'done' && <Check size={10} strokeWidth={3.4} style={{ display: 'inline', verticalAlign: '-1px', marginRight: 2 }} />}
+                          <span style={{ textDecoration: evStatus === 'cancelled' ? 'line-through' : 'none', textDecorationThickness: 1.5 }}>
+                            {ev.summary ?? '(No title)'}
+                          </span>
                         </div>
                       )
                     })}

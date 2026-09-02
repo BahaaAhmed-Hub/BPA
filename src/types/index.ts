@@ -198,7 +198,9 @@ export interface TaskAttachment {
 }
 
 // ─── Task Activity Log ───────────────────────────────────────────────────────
-export type TaskActivityType = 'created' | 'moved' | 'status_changed' | 'field_updated'
+export type TaskActivityType =
+  | 'created' | 'moved' | 'status_changed' | 'field_updated'
+  | 'attachment_added' | 'attachment_removed' | 'link_added' | 'link_removed'
 
 export interface TaskActivity {
   id: string

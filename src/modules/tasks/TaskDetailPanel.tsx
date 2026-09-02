@@ -6,9 +6,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   X, Maximize2, ChevronDown, ChevronRight,
-  Plus, Link2, Folder, FileText, Image as ImageIcon, CalendarDays, BarChart3, History, Trash2, Check, User,
+  Plus, Link2, Folder, FileText, Image as ImageIcon, CalendarDays, BarChart3, History, Trash2, Check, User, Paperclip,
 } from 'lucide-react'
-import type { Task, TaskType, Priority, ChecklistStep, TaskAttachment } from '@/types'
+import type { Task, TaskType, Priority, ChecklistStep, TaskAttachment, TaskActivity } from '@/types'
 import { PRIORITY_META, TASK_TYPE_META, getVisibleUsers, loadVisibleCompanies } from '@/types'
 import { useTaskStore } from '@/store/taskStore'
 import { TASK_TYPE_ORDER, initials, resolveTaskVisuals, formatScheduleLabel } from './taskVisuals'
@@ -60,6 +60,14 @@ const SECTION_LABEL: React.CSSProperties = {
 }
 
 /** Month grid + start/end, as the artboard's date popover. */
+
+/** Each kind of entry gets its own glyph, so files and links stand out from
+ *  the ordinary field edits around them. */
+function ActivityIcon({ type }: { type: TaskActivity['type'] }) {
+  if (type === 'attachment_added' || type === 'attachment_removed') return <Paperclip size={10} />
+  if (type === 'link_added' || type === 'link_removed') return <Link2 size={10} />
+  return <History size={10} />
+}
 
 // ─── Panel ───────────────────────────────────────────────────────────────────
 
@@ -427,7 +435,7 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
                   background: '#FAF7EC', border: '1px solid #E8E1CE',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9B9180',
                 }}>
-                  <History size={10} />
+                  <ActivityIcon type={a.type} />
                 </span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{ margin: 0, fontSize: 12.5, color: '#191712', lineHeight: 1.35 }}>{a.description}</p>
