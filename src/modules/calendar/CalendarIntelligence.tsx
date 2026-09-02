@@ -3,7 +3,7 @@ import {
   ChevronLeft, ChevronRight, ChevronDown, Layers, Calendar, Video,
   Sparkles, MapPin, RefreshCw, X, Eye, EyeOff,
   CheckCircle2, XCircle, Link, Check, Plus, Paperclip, FileText,
-  ExternalLink, AlertCircle, Shield, Copy, Trash2, Pencil, Ban,
+  ExternalLink, AlertCircle, Shield, Copy, Trash2, Ban,
 } from 'lucide-react'
 import { TimeSelect } from '@/modules/tasks/SchedulePopover'
 import {
@@ -30,7 +30,7 @@ import type { GCalEvent, GCalCalendar, GCalEventCreate } from '@/lib/googleCalen
 import { getGoogleToken, seedToken, getGoogleTokenViaSupabaseRefresh } from '@/lib/tokenManager'
 import { loadEventStatuses, saveEventStatuses } from '@/lib/eventStatus'
 import { isCalendarHiddenByCompany } from '@/lib/companyVisibility'
-import { loadWeather, weatherGlyph, type WeatherByHour } from '@/lib/weather'
+import { loadWeather, weatherGlyph, lookupPlaces, type WeatherByHour } from '@/lib/weather'
 import { generateMeetingPrep } from '@/lib/professor'
 import type { MeetingPrep } from '@/lib/professor'
 import { useAuthStore } from '@/store/authStore'
@@ -857,37 +857,72 @@ function responseTone(status?: string): string {
   return '#9B9180'
 }
 
-/** The Google Meet mark, so a Meet link is recognisable at a glance. */
-function MeetMark({ size = 24 }: { size?: number }) {
-  return (
-    <svg width={size} height={size * (72 / 87.5)} viewBox="0 0 87.5 72" aria-hidden focusable="false" style={{ flexShrink: 0 }}>
-      <path fill="#00832d" d="M49.5 36l8.53 9.75 11.47 7.33 2-17.02-2-16.64-11.69 6.44z" />
-      <path fill="#0066da" d="M0 51.5V66c0 3.315 2.685 6 6 6h14.5l3-10.96-3-9.54-9.95-3z" />
-      <path fill="#e94235" d="M20.5 0L0 20.5l10.55 3 9.95-3 2.95-9.41z" />
-      <path fill="#2684fc" d="M20.5 20.5H0v31h20.5z" />
-      <path fill="#00ac47" d="M82.6 8.68L69.5 19.42v33.66l13.16 10.79c1.97 1.54 4.85.135 4.85-2.37V11c0-2.535-2.945-3.925-4.91-2.32zM49.5 36v15.5h-29V72h43c3.315 0 6-2.685 6-6V53.08z" />
-      <path fill="#ffba00" d="M63.5 0h-43v20.5h29V36l20-16.57V6c0-3.315-2.685-6-6-6z" />
-    </svg>
-  )
+/** Which video service this calendar makes links with. An event that already
+ *  has a link says so itself; otherwise it comes from the account behind the
+ *  calendar, since a Microsoft-hosted mailbox is a Teams shop and a Google one
+ *  is a Meet shop. */
+type VideoProvider = 'meet' | 'teams' | 'other'
+
+const MS_MAIL_DOMAINS = /(^|\.)(outlook|hotmail|live|msn)\.[a-z.]{2,6}$/i
+
+function providerFromUrl(url: string): VideoProvider {
+  const host = (() => { try { return new URL(url).hostname } catch { return url } })().toLowerCase()
+  if (host.includes('meet.google')) return 'meet'
+  if (host.includes('teams.')) return 'teams'
+  return 'other'
 }
 
-/** "Google Meet", "Zoom", "Teams" — whose call this is. */
-function meetingBrand(url: string): string {
-  const host = (() => { try { return new URL(url).hostname } catch { return url } })()
-  if (host.includes('meet.google')) return 'Google Meet'
-  if (host.includes('zoom')) return 'Zoom'
-  if (host.includes('teams')) return 'Teams'
-  if (host.includes('webex')) return 'Webex'
-  if (host.includes('whereby')) return 'Whereby'
-  return host.replace(/^www\./, '')
+function providerForAccount(email?: string): VideoProvider {
+  const domain = email?.split('@')[1]?.toLowerCase() ?? ''
+  return MS_MAIL_DOMAINS.test(domain) ? 'teams' : 'meet'
 }
 
-/** The part of the link you would read out loud — "omb-mppj-wyv". */
-function meetingCode(url: string): string {
+const PROVIDER_NAME: Record<VideoProvider, string> = {
+  meet: 'Google Meet', teams: 'Microsoft Teams', other: 'Video call',
+}
+
+/** The provider's own mark. Only ever drawn for a link that exists — an event
+ *  with no call carries no branding at all. */
+function ProviderMark({ provider, size = 24 }: { provider: VideoProvider; size?: number }) {
+  if (provider === 'teams') {
+    return (
+      <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden focusable="false" style={{ flexShrink: 0 }}>
+        <circle fill="#5059C9" cx="38.5" cy="11" r="4.5" />
+        <path fill="#5059C9" d="M43.5 18H33v13.5a7 7 0 0 0 7 7h.2a5.3 5.3 0 0 0 5.3-5.3V20a2 2 0 0 0-2-2z" />
+        <circle fill="#7B83EB" cx="27" cy="9.5" r="6.5" />
+        <path fill="#7B83EB" d="M33.2 18H16.8A2.8 2.8 0 0 0 14 20.8v12.4A10.8 10.8 0 0 0 24.8 44h.4A10.8 10.8 0 0 0 36 33.2V20.8a2.8 2.8 0 0 0-2.8-2.8z" />
+        <path fill="#000" opacity=".12" d="M25 15.5V38a2.5 2.5 0 0 1-2.5 2.5H14.4a11 11 0 0 1-.4-3V20.8A2.8 2.8 0 0 1 16.8 18H25z" />
+        <rect fill="#4B53BC" x="2" y="13" width="24" height="24" rx="2.5" />
+        <path fill="#fff" d="M20 19H8v3.1h4.3V33h3.4V22.1H20z" />
+      </svg>
+    )
+  }
+  if (provider === 'meet') {
+    return (
+      <svg width={size} height={size * (72 / 87.5)} viewBox="0 0 87.5 72" aria-hidden focusable="false" style={{ flexShrink: 0 }}>
+        <path fill="#00832d" d="M49.5 36l8.53 9.75 11.47 7.33 2-17.02-2-16.64-11.69 6.44z" />
+        <path fill="#0066da" d="M0 51.5V66c0 3.315 2.685 6 6 6h14.5l3-10.96-3-9.54-9.95-3z" />
+        <path fill="#e94235" d="M20.5 0L0 20.5l10.55 3 9.95-3 2.95-9.41z" />
+        <path fill="#2684fc" d="M20.5 20.5H0v31h20.5z" />
+        <path fill="#00ac47" d="M82.6 8.68L69.5 19.42v33.66l13.16 10.79c1.97 1.54 4.85.135 4.85-2.37V11c0-2.535-2.945-3.925-4.91-2.32zM49.5 36v15.5h-29V72h43c3.315 0 6-2.685 6-6V53.08z" />
+        <path fill="#ffba00" d="M63.5 0h-43v20.5h29V36l20-16.57V6c0-3.315-2.685-6-6-6z" />
+      </svg>
+    )
+  }
+  return <Video size={size - 4} color="#6C6553" style={{ flexShrink: 0 }} />
+}
+
+/** What to show for the link. A Meet code reads out loud — "omb-mppj-wyv" —
+ *  so it is worth showing; a Teams or Zoom join URL is an opaque blob, so the
+ *  host says more than the tail of the path does. */
+function meetingCode(url: string, provider: VideoProvider): string {
   try {
     const u = new URL(url)
-    const last = u.pathname.split('/').filter(Boolean).pop()
-    return last ?? u.hostname
+    if (provider === 'meet') {
+      const last = u.pathname.split('/').filter(Boolean).pop()
+      if (last) return last
+    }
+    return u.hostname.replace(/^www\./, '')
   } catch { return url }
 }
 
@@ -971,9 +1006,11 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
   const [fromTime, setFromTime] = useState(`${pad(startDate.getHours())}:${pad(startDate.getMinutes())}`)
   const [toTime, setToTime] = useState(`${pad(endDate.getHours())}:${pad(endDate.getMinutes())}`)
   const [location, setLocation] = useState(event.location ?? '')
-  const [editingWhere, setEditingWhere] = useState(false)
   const [notes, setNotes] = useState(event.description ?? '')
   const [meetOpen, setMeetOpen] = useState(false)
+  const [places, setPlaces] = useState<string[]>([])
+  const [placeQuery, setPlaceQuery] = useState('')
+  const placeRef = useRef<HTMLSpanElement>(null)
 
   useEffect(() => {
     const fn = (e: MouseEvent) => { if (popupRef.current && !popupRef.current.contains(e.target as Node)) onClose() }
@@ -981,9 +1018,36 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
     return () => document.removeEventListener('mousedown', fn)
   }, [onClose])
 
+  // What you type is looked up as a real place, a moment after you stop typing.
+  // The lookup knows towns and cities, so a street address or a room name comes
+  // back with nothing — it is still kept exactly as typed.
+  useEffect(() => {
+    const q = placeQuery.trim()
+    if (q.length < 3 || /https?:\/\//.test(q)) { setPlaces([]); return }
+    let live = true
+    const t = window.setTimeout(async () => {
+      const found = await lookupPlaces(q)
+      if (live) setPlaces(found.filter(pl => pl.toLowerCase() !== q.toLowerCase()).slice(0, 5))
+    }, 350)
+    return () => { live = false; window.clearTimeout(t) }
+  }, [placeQuery])
+
+  useEffect(() => {
+    if (places.length === 0) return
+    const h = (e: MouseEvent) => { if (placeRef.current && !placeRef.current.contains(e.target as Node)) setPlaces([]) }
+    document.addEventListener('mousedown', h)
+    return () => document.removeEventListener('mousedown', h)
+  }, [places.length])
+
   const entryPoints = event.conferenceData?.entryPoints ?? []
   const videoLink = entryPoints.find(ep => ep.entryPointType === 'video')?.uri
   const phoneEntry = entryPoints.find(ep => ep.entryPointType === 'phone')
+  const accountEmail = (calendars ?? []).find(c => c.id === event.calendarId)?.accountEmail
+  const provider = videoLink ? providerFromUrl(videoLink) : providerForAccount(accountEmail)
+  /** Meet links this app can mint itself, through the Google Calendar it is
+   *  already talking to. A Teams link is made by the Teams add-in inside the
+   *  calendar, so that button opens the event there instead. */
+  const canAddVideo = provider === 'teams' ? !!event.htmlLink : !!onAddMeet
   // The meeting link has its own card above, so Location speaks only about a place.
   const where = whereTarget(location)
   const attendees = event.attendees ?? []
@@ -1053,6 +1117,19 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
     if (v === 'default') { void push({ reminders: { useDefault: true } }); return }
     if (v === 'none')    { void push({ reminders: { useDefault: false, overrides: [] } }); return }
     void push({ reminders: { useDefault: false, overrides: [{ method: 'popup', minutes: Number(v) }] } })
+  }
+
+  function addVideoCall() {
+    if (provider === 'teams') {
+      if (event.htmlLink) window.open(event.htmlLink, '_blank', 'noopener')
+      return
+    }
+    void onAddMeet?.()
+  }
+
+  function commitLocation() {
+    setPlaces([]); setPlaceQuery('')
+    if (location.trim() !== (event.location ?? '')) void push({ location: location.trim() })
   }
 
   function removeAttendee(email: string) {
@@ -1151,22 +1228,24 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
         }} />
 
       {/* ── The meeting itself ───────────────────────────────────────────── */}
-      {videoLink ? (
+      {/* Branding belongs to a link that exists. An event with no call shows
+          nothing here — the way to add one is a plain icon on the row below. */}
+      {videoLink && (
         <div style={{
           display: 'flex', alignItems: 'center', gap: 11, marginTop: 16,
           height: 58, padding: '0 15px', boxSizing: 'border-box',
           borderRadius: 12, background: '#FFFFFF', border: '1px solid #E8E1CE',
         }}>
-          <MeetMark size={24} />
+          <ProviderMark provider={provider} size={24} />
           <span style={{ fontSize: 14, fontWeight: 600, color: '#191712', flexShrink: 0 }}>
-            {meetingBrand(videoLink)}
+            {PROVIDER_NAME[provider]}
           </span>
           <a href={videoLink} target="_blank" rel="noreferrer"
             title={videoLink}
             style={{
               flex: 1, minWidth: 0, fontSize: 14.5, color: '#1A73E8', textDecoration: 'none',
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-            }}>{meetingCode(videoLink)}</a>
+            }}>{meetingCode(videoLink, provider)}</a>
           <button
             onClick={() => { void navigator.clipboard?.writeText(videoLink) }}
             title="Copy the joining link"
@@ -1178,18 +1257,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
             <ChevronDown size={16} />
           </button>
         </div>
-      ) : onAddMeet ? (
-        <button onClick={() => void onAddMeet()} title="Add a Google Meet link"
-          style={{
-            display: 'flex', alignItems: 'center', gap: 11, marginTop: 16, width: '100%',
-            height: 58, padding: '0 15px', boxSizing: 'border-box', cursor: 'pointer',
-            borderRadius: 12, background: '#FFFFFF', border: '1px dashed #D8CFB8',
-            fontFamily: 'inherit', textAlign: 'left',
-          }}>
-          <MeetMark size={24} />
-          <span style={{ fontSize: 14, color: '#6C6553' }}>Add a Google Meet link</span>
-        </button>
-      ) : null}
+      )}
 
       {videoLink && meetOpen && (
         <div style={{
@@ -1209,46 +1277,66 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
       )}
 
       {/* ── Where ────────────────────────────────────────────────────────── */}
+      {/* One field you simply type in. What you type is looked up as you go, so
+          a place can be pinned to a real one; Enter keeps it either way. */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 14 }}>
         <span style={EV_LABEL}>Location</span>
-        <span style={{ flex: 1, minWidth: 0, display: 'flex', gap: 7 }}>
-          {where.kind === 'empty' || editingWhere ? (
-            <span style={{ ...EV_FIELD, flex: 1, padding: '0 15px' }}>
-              <MapPin size={15} color="#9B9180" style={{ flexShrink: 0 }} />
-              <input
-                autoFocus={editingWhere}
-                value={location}
-                onChange={e => setLocation(e.target.value)}
-                onBlur={() => {
-                  setEditingWhere(false)
-                  if (location !== (event.location ?? '')) void push({ location: location.trim() })
-                }}
-                onKeyDown={e => { if (e.key === 'Enter' || e.key === 'Escape') (e.target as HTMLInputElement).blur() }}
-                placeholder="Add a place — room, office or address"
-                style={{
-                  flex: 1, minWidth: 0, border: 'none', background: 'transparent', padding: 0,
-                  fontSize: 13.5, fontFamily: 'inherit', color: '#191712', outline: 'none',
-                  textOverflow: 'ellipsis',
-                }} />
-            </span>
-          ) : (
-            /* A place is somewhere you go, so it opens a map. A link is
-               something you open, so it opens itself. */
-            <a href={where.url} target="_blank" rel="noreferrer"
-              title={where.kind === 'place' ? 'Open in Google Maps' : where.url}
-              style={{ ...EV_FIELD, flex: 1, textDecoration: 'none', whiteSpace: 'nowrap' }}>
-              {where.kind === 'place'
-                ? <MapPin size={15} color="#6C6553" style={{ flexShrink: 0 }} />
-                : <Link size={15} color="#6C6553" style={{ flexShrink: 0 }} />}
-              <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>{where.label}</span>
-              <ExternalLink size={13} color="#9B9180" style={{ flexShrink: 0 }} />
-            </a>
-          )}
-          {where.kind !== 'empty' && !editingWhere && (
-            <button onClick={() => setEditingWhere(true)} title="Change the location"
+        <span ref={placeRef} style={{ flex: 1, minWidth: 0, display: 'flex', gap: 7, position: 'relative' }}>
+          <span style={{ ...EV_FIELD, flex: 1 }}>
+            <MapPin size={15} color={location ? '#6C6553' : '#9B9180'} style={{ flexShrink: 0 }} />
+            <input
+              value={location}
+              onChange={e => { setLocation(e.target.value); setPlaceQuery(e.target.value) }}
+              onFocus={() => { if (location.trim().length >= 3) setPlaceQuery(location) }}
+              onBlur={() => { window.setTimeout(commitLocation, 120) }}
+              onKeyDown={e => {
+                if (e.key === 'Enter') { e.preventDefault(); commitLocation(); (e.target as HTMLInputElement).blur() }
+                if (e.key === 'Escape') { setLocation(event.location ?? ''); setPlaces([]); (e.target as HTMLInputElement).blur() }
+              }}
+              placeholder="Add a place — room, office or address"
+              style={{
+                flex: 1, minWidth: 0, border: 'none', background: 'transparent', padding: 0,
+                fontSize: 13.5, fontFamily: 'inherit', color: '#191712', outline: 'none',
+                textOverflow: 'ellipsis',
+              }} />
+            {where.kind !== 'empty' && (
+              <a href={where.url} target="_blank" rel="noreferrer"
+                title={where.kind === 'place' ? 'Open in Google Maps' : where.url}
+                onMouseDown={e => e.preventDefault()}
+                style={{ ...EV_GHOST_ICON, width: 22, height: 22, textDecoration: 'none' }}>
+                <ExternalLink size={13} />
+              </a>
+            )}
+          </span>
+
+          {/* Adding a call is a plain icon — the provider's own mark only turns
+              up once there is a link to brand. */}
+          {!videoLink && canAddVideo && (
+            <button onClick={addVideoCall} title={`Add a ${PROVIDER_NAME[provider]} link`}
               style={{ ...EV_ROUND, width: 48, height: 48, borderRadius: 11, flexShrink: 0 }}>
-              <Pencil size={14} />
+              <Video size={16} />
             </button>
+          )}
+
+          {places.length > 0 && (
+            <div style={{
+              position: 'absolute', top: 'calc(100% + 5px)', left: 0, right: 0, zIndex: 90,
+              background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 11, padding: 5,
+              boxShadow: '0 18px 40px -18px rgba(25,23,18,.45)',
+            }}>
+              {places.map(pl => (
+                <button key={pl} onMouseDown={e => e.preventDefault()}
+                  onClick={() => { setLocation(pl); setPlaces([]); void push({ location: pl }) }}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 8, width: '100%', height: 32,
+                    padding: '0 9px', borderRadius: 8, border: 'none', background: 'transparent',
+                    color: '#191712', fontSize: 13, fontFamily: 'inherit', cursor: 'pointer', textAlign: 'left',
+                  }}>
+                  <MapPin size={13} color="#9B9180" style={{ flexShrink: 0 }} />
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{pl}</span>
+                </button>
+              ))}
+            </div>
           )}
         </span>
       </div>

@@ -3,12 +3,25 @@
 // and an auto-distribute footer that reads each task's own fields.
 
 import { useState } from 'react'
-import { Plus, Sparkles, GripVertical, Check, AlertTriangle, RotateCcw, Trash2 } from 'lucide-react'
+import { Plus, Sparkles, GripVertical, Check, AlertTriangle, RotateCcw, Trash2, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useDraggable } from '@dnd-kit/core'
 import type { Task, Quadrant } from '@/types'
 import { loadVisibleCompanies } from '@/types'
 import { useTaskStore } from '@/store/taskStore'
 import { CountBadge } from './controls'
+
+// ─── Collapsed or not ────────────────────────────────────────────────────────
+// The rail costs 360px of the board, so whether it is open is worth remembering
+// between visits.
+
+const COLLAPSE_KEY = 'professor-braindump-collapsed'
+
+function loadCollapsed(): boolean {
+  try { return localStorage.getItem(COLLAPSE_KEY) === '1' } catch { return false }
+}
+function saveCollapsed(v: boolean) {
+  try { localStorage.setItem(COLLAPSE_KEY, v ? '1' : '0') } catch { /* private mode */ }
+}
 
 // ─── Suggestion ──────────────────────────────────────────────────────────────
 
@@ -154,6 +167,11 @@ export function BrainDumpRail({ tasks, onOpen }: {
   const [capturing, setCapturing] = useState(false)
   const [draft, setDraft] = useState('')
   const [lastRun, setLastRun] = useState<{ id: string; quadrant: Quadrant | null; boardStatus?: string }[] | null>(null)
+  const [collapsed, setCollapsed] = useState(loadCollapsed)
+
+  function toggleCollapsed() {
+    setCollapsed(c => { saveCollapsed(!c); return !c })
+  }
 
   const missingFields = tasks.filter(t => !t.dueDate || !t.priority).length
 
@@ -190,6 +208,30 @@ export function BrainDumpRail({ tasks, onOpen }: {
     setLastRun(null)
   }
 
+  // Shut, the rail keeps only what you need to decide whether to open it: how
+  // much is waiting in there.
+  if (collapsed) {
+    return (
+      <div style={{
+        width: 44, flexShrink: 0, alignSelf: 'start',
+        background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 14,
+        display: 'flex', flexDirection: 'column', alignItems: 'center',
+        padding: '10px 0 14px', gap: 10,
+      }}>
+        <button onClick={toggleCollapsed} title="Show the brain dump" style={{
+          width: 28, height: 28, borderRadius: 8, padding: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: 'none', border: 'none', color: '#6C6553', cursor: 'pointer',
+        }}><ChevronRight size={16} /></button>
+        <CountBadge value={tasks.length} />
+        <span style={{
+          writingMode: 'vertical-rl', fontSize: 11.5, fontWeight: 600, color: '#9B9180',
+          letterSpacing: '0.08em', textTransform: 'uppercase', userSelect: 'none',
+        }}>Brain dump</span>
+      </div>
+    )
+  }
+
   return (
     <div style={{
       width: 360, flexShrink: 0, alignSelf: 'start',
@@ -202,6 +244,11 @@ export function BrainDumpRail({ tasks, onOpen }: {
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <p style={{ margin: 0, flex: 1, fontSize: 13.5, fontWeight: 600, color: '#191712', lineHeight: 1.3 }}>Brain dump</p>
           <CountBadge value={tasks.length} />
+          <button onClick={toggleCollapsed} title="Hide the brain dump" style={{
+            width: 24, height: 24, borderRadius: 7, padding: 0, flexShrink: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'none', border: 'none', color: '#9B9180', cursor: 'pointer',
+          }}><ChevronLeft size={16} /></button>
         </div>
         <p style={{ margin: '2px 0 0', fontSize: 11.5, color: '#9B9180', lineHeight: 1.35 }}>
           Uncategorised — drag into a quadrant

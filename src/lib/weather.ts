@@ -157,3 +157,23 @@ function askBrowserLocation(): Promise<Coords | null> {
     )
   })
 }
+
+// ─── Places ──────────────────────────────────────────────────────────────────
+
+/** Real places matching what you typed, from Open-Meteo's geocoder — the same
+ *  key-free service the forecast uses. It knows towns and cities, not street
+ *  addresses, so a query it cannot place comes back empty rather than guessed. */
+export async function lookupPlaces(query: string): Promise<string[]> {
+  const q = query.trim()
+  if (q.length < 3) return []
+  try {
+    const url = 'https://geocoding-api.open-meteo.com/v1/search'
+      + `?name=${encodeURIComponent(q)}&count=5&language=en&format=json`
+    const res = await fetch(url)
+    if (!res.ok) return []
+    const json = await res.json() as {
+      results?: { name: string; admin1?: string; country?: string }[]
+    }
+    return (json.results ?? []).map(r => [r.name, r.admin1, r.country].filter(Boolean).join(', '))
+  } catch { return [] }
+}
