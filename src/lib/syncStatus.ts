@@ -10,9 +10,12 @@ export type SyncEntity = 'habits' | 'tasks'
 
 export interface SyncGap {
   entity: SyncEntity
-  /** 'columns' — the write fell back because the database has not been
-   *  migrated. 'error' — it failed outright. */
-  kind: 'columns' | 'error'
+  /** 'columns' — the database really has not been migrated.
+   *  'cache'   — the columns exist, but Supabase's API layer is still serving
+   *              a schema it cached before they did. Different problem, and a
+   *              different fix, so it must not be reported as the first.
+   *  'error'   — it failed outright. */
+  kind: 'columns' | 'cache' | 'error'
   detail?: string
   at: number
 }

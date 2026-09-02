@@ -350,8 +350,14 @@ export async function saveTasksToDB(tasks: TaskRow[]): Promise<void> {
 
   // Before the migration is applied the whole write is rejected, which would
   // stop tasks saving at all — so fall back to the columns that predate it.
-  if (isMissingColumn(error)) {
-    reportSyncGap('tasks', 'columns', error.message)
+  const problem = columnProblem(error)
+  if (problem) {
+    if (problem === 'cache') {
+      await new Promise(r => setTimeout(r, 1500))
+      const { error: second } = await supabase.from('tasks').upsert(full, { onConflict: 'id' })
+      if (!second) { clearSyncGap('tasks'); return }
+    }
+    reportSyncGap('tasks', problem, error.message)
     const { error: retry } = await supabase.from('tasks').upsert(rows, { onConflict: 'id' })
     if (retry) throw new Error(retry.message)
     return
@@ -522,10 +528,18 @@ export async function saveHabitsToDB(habits: HabitRow[]): Promise<void> {
     // that migration is applied the write is rejected wholesale, which would
     // take habit saving down with it — so fall back to the columns that have
     // always existed rather than losing the habit itself.
-    if (isMissingColumn(error)) {
-      // Pictures, icons and targets are silently not saved until the migration
-      // runs, which is exactly the failure that looks like success.
-      reportSyncGap('habits', 'columns', error.message)
+    const problem = columnProblem(error)
+    if (problem) {
+      // A stale schema cache clears itself, so try the full write once more
+      // before giving up on the columns and telling anyone anything.
+      if (problem === 'cache') {
+        await new Promise(r => setTimeout(r, 1500))
+        const { error: second } = await supabase.from('habits').upsert(rows, { onConflict: 'id' })
+        if (!second) { clearSyncGap('habits'); return }
+      }
+      // Pictures, icons and targets are silently not saved until this is fixed,
+      // which is exactly the failure that looks like success.
+      reportSyncGap('habits', problem, error.message)
       const { error: retry } = await supabase.from('habits').upsert(base as DbHabit[], { onConflict: 'id' })
       if (retry) throw new Error(retry.message)
       return
@@ -537,9 +551,17 @@ export async function saveHabitsToDB(habits: HabitRow[]): Promise<void> {
 
 /** Postgres rejects an unknown column with 42703; PostgREST reports it as
  *  PGRST204 when its schema cache has no such field. */
-function isMissingColumn(error: { code?: string; message?: string }): boolean {
-  return error.code === '42703' || error.code === 'PGRST204'
-    || /column .* does not exist|could not find the .* column/i.test(error.message ?? '')
+/** Postgres says 42703 when a column genuinely is not there. PostgREST says
+ *  PGRST204 when it cannot find one *in its cached copy of the schema*, which
+ *  is what you get for minutes after a migration — the column exists and the
+ *  API has not noticed. Telling someone to run a migration they have already
+ *  run is worse than saying nothing. */
+function columnProblem(error: { code?: string; message?: string }): 'columns' | 'cache' | null {
+  const msg = error.message ?? ''
+  if (error.code === 'PGRST204' || /schema cache/i.test(msg)) return 'cache'
+  if (error.code === '42703' || /column .* does not exist/i.test(msg)) return 'columns'
+  if (/could not find the .* column/i.test(msg)) return 'cache'
+  return null
 }
 
 // ─── Habit logs ───────────────────────────────────────────────────────────────

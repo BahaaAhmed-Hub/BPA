@@ -17,6 +17,7 @@ export function SyncGapBanner() {
   if (dismissed || gaps.length === 0) return null
 
   const missing = gaps.filter(g => g.kind === 'columns')
+  const stale   = gaps.filter(g => g.kind === 'cache')
   const failing = gaps.filter(g => g.kind === 'error')
 
   return (
@@ -32,6 +33,14 @@ export function SyncGapBanner() {
             {missing.map(g => g.entity).join(' and ')} are saving, but not everything about them —
             the database is missing columns, so pictures, notes and attachments stay on this device.
             Run {missing.map(g => MIGRATION_FOR[g.entity]).join(' and ')} in Supabase.
+          </p>
+        )}
+        {stale.length > 0 && (
+          <p style={{ ...T.body, margin: missing.length ? '6px 0 0' : 0, color: '#3D3926' }}>
+            The columns for {stale.map(g => g.entity).join(' and ')} exist, but Supabase is still
+            serving the schema it cached before they did — so pictures, notes and attachments are
+            not being stored yet. Run <code style={{ ...T.small, background: 'rgba(25,23,18,0.06)', padding: '1px 5px', borderRadius: 4 }}>
+            notify pgrst, 'reload schema';</code> in the SQL editor, or wait a minute or two, then reload.
           </p>
         )}
         {failing.length > 0 && (
