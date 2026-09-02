@@ -6,6 +6,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight, Check } from 'lucide-react'
+import { T } from '@/lib/type'
 
 const WEEKDAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
 
@@ -39,7 +40,7 @@ const SLOTS: string[] = Array.from({ length: 96 }, (_, i) =>
 const FIELD: React.CSSProperties = {
   width: '100%', boxSizing: 'border-box', height: 32, padding: '0 10px',
   background: '#FAF7EC', border: '1px solid #E8E1CE', borderRadius: 8,
-  fontSize: 12.5, color: '#191712', fontFamily: 'inherit', cursor: 'pointer',
+  ...T.small, color: '#191712', cursor: 'pointer',
   display: 'flex', alignItems: 'center', textAlign: 'left',
 }
 
@@ -91,7 +92,7 @@ export function TimeSelect({ value, onChange, label, size = 'compact' }: {
       <button type="button" onClick={() => setOpen(o => !o)} style={{
         ...FIELD, borderColor: open ? '#CFC6B0' : '#E8E1CE',
         ...(size === 'large' ? {
-          height: 48, borderRadius: 11, fontSize: 14, fontWeight: 500,
+          height: 48, borderRadius: 11, ...T.body,
           border: '1px solid transparent', justifyContent: 'center',
         } : null),
       }}>{formatTime(value)}</button>
@@ -110,7 +111,7 @@ export function TimeSelect({ value, onChange, label, size = 'compact' }: {
             style={{
               width: '100%', boxSizing: 'border-box', height: 28, padding: '0 8px', marginBottom: 5,
               background: '#FAF7EC', border: '1px solid #E8E1CE', borderRadius: 7,
-              fontSize: 12, color: '#191712', fontFamily: 'inherit', outline: 'none', textAlign: 'left',
+              ...T.small, color: '#191712', outline: 'none', textAlign: 'left',
             }} />
           <div ref={listRef} style={{ maxHeight: 196, overflowY: 'auto', scrollbarWidth: 'thin' }}>
             {SLOTS.map(t => {
@@ -119,7 +120,7 @@ export function TimeSelect({ value, onChange, label, size = 'compact' }: {
                 <button key={t} type="button" onClick={() => { onChange(t); setOpen(false) }} style={{
                   width: '100%', height: 28, padding: '0 8px', border: 'none', borderRadius: 7,
                   background: on ? '#191712' : 'transparent', color: on ? '#FFFFFF' : '#191712',
-                  fontSize: 12, fontWeight: on ? 600 : 500, fontFamily: 'inherit', cursor: 'pointer',
+                  ...T.small, fontWeight: on ? 600 : 500, cursor: 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 }}>
                   {formatTime(t)}

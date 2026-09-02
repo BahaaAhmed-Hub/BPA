@@ -31,6 +31,7 @@ import { getGoogleToken, seedToken, getGoogleTokenViaSupabaseRefresh } from '@/l
 import { loadEventStatuses, saveEventStatuses } from '@/lib/eventStatus'
 import { isCalendarHiddenByCompany } from '@/lib/companyVisibility'
 import { loadWeather, weatherGlyph, lookupPlaces, type WeatherByHour } from '@/lib/weather'
+import { T, SANS, DISPLAY } from '@/lib/type'
 import { generateMeetingPrep } from '@/lib/professor'
 import type { MeetingPrep } from '@/lib/professor'
 import { useAuthStore } from '@/store/authStore'
@@ -99,7 +100,7 @@ const CAL_PILL: React.CSSProperties = {
   display: 'inline-flex', alignItems: 'center', gap: 7, height: 36, boxSizing: 'border-box',
   padding: '0 14px', borderRadius: 999, flexShrink: 0,
   background: '#FFFFFF', border: '1px solid #E8E1CE', color: '#191712',
-  fontSize: 13, fontFamily: 'inherit', cursor: 'pointer',
+  fontSize: 13.5, fontFamily: 'inherit', cursor: 'pointer',
 }
 
 /** Where an online meeting actually happens, as the host you would recognise:
@@ -500,6 +501,13 @@ function displayTitle(summary?: string): string {
   return (summary ?? '(No title)').replace(STATUS_EMOJI, ' ').replace(/\s{2,}/g, ' ').trim() || '(No title)'
 }
 
+/** "2:00 pm – 8:00 pm" is mostly repetition; "2:00 – 8:00 pm" is not. */
+function compactRange(from: string, to: string): string {
+  const a = formatTime(from), b = formatTime(to)
+  const [, aMer] = a.split(' '), [, bMer] = b.split(' ')
+  return aMer === bMer ? `${a.replace(` ${aMer}`, '')} – ${b}` : `${a} – ${b}`
+}
+
 function minutesBetween(from: string, to: string): number {
   const m = (t: string) => { const [h, x] = t.split(':').map(Number); return h * 60 + x }
   return m(to) - m(from)
@@ -711,8 +719,10 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
 
   const w = isDragOverlay ? 130 : cardW || 999
   const tiny     = height < 28
-  // Below this the title would wrap one word — or one letter — per line.
-  const canWrap  = w >= 84 && height >= 40
+  // Wrapping needs enough width for a line to be a line. Under that, three
+  // letters and an ellipsis say less than two short wrapped lines do, so the
+  // floor is where a word stops fitting rather than where a card looks tidy.
+  const canWrap  = w >= 52 && height >= 34
   const showTime = w >= 104 && height >= 38
   const showHost = w >= 104 && height >= 56
 
@@ -751,7 +761,7 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
           through. Neither touches the card's colour — that belongs to the
           calendar the event is on, not to what happened to it. */}
       <div style={{
-        fontSize: tiny ? 10 : 11,
+        ...T.micro,
         fontWeight: 600,
         color: evInk,
         lineHeight: 1.25,
@@ -759,7 +769,7 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
         // A card only wraps when it is wide enough for a wrapped line to be a
         // line. In a shared column it stays on one line and trails off.
         ...(canWrap
-          ? { display: '-webkit-box', WebkitLineClamp: height >= 66 ? 3 : 2, WebkitBoxOrient: 'vertical' as const }
+          ? { display: '-webkit-box', WebkitLineClamp: height >= 78 ? 4 : height >= 52 ? 3 : 2, WebkitBoxOrient: 'vertical' as const }
           : { whiteSpace: 'nowrap' as const, textOverflow: 'ellipsis' }),
       }}>
         {isDone && (
@@ -867,7 +877,7 @@ const EV_ROW: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 12,
 }
 const EV_SECTION: React.CSSProperties = {
-  fontSize: 14, fontWeight: 600, color: '#191712', flexShrink: 0,
+  ...T.heading, color: '#191712', flexShrink: 0,
 }
 /** Every value in the panel sits in one of these, whether you can type in it,
  *  pick from it, or only read it. */
@@ -875,7 +885,7 @@ const EV_FIELD: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 9, height: 48, boxSizing: 'border-box',
   width: '100%', minWidth: 0, padding: '0 15px', borderRadius: 11,
   background: '#FFFFFF', border: '1px solid #E8E1CE',
-  color: '#191712', fontSize: 14, fontFamily: 'inherit', textAlign: 'left',
+  color: '#191712', fontSize: 13.5, fontFamily: 'inherit', textAlign: 'left',
 }
 const EV_GHOST_ICON: React.CSSProperties = {
   width: 30, height: 30, borderRadius: 8, flexShrink: 0, padding: 0,
@@ -1210,7 +1220,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
             title={onMoveCalendar ? 'Click to move this to another calendar' : calName}
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 7, height: 34, padding: '0 13px',
-              borderRadius: 999, background: '#F5F1E6', color: '#4A4438', fontSize: 13,
+              borderRadius: 999, background: '#F5F1E6', color: '#4A4438', fontSize: 13.5,
               minWidth: 0, maxWidth: '100%', cursor: onMoveCalendar ? 'pointer' : 'default',
             }}>
             <span style={{ width: 8, height: 8, borderRadius: 999, background: calColor, flexShrink: 0 }} />
@@ -1279,7 +1289,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
         style={{
           width: '100%', boxSizing: 'border-box', margin: '18px 0 0', resize: 'none', overflow: 'hidden',
           background: 'transparent', border: 'none', padding: 0,
-          fontFamily: 'Outfit, sans-serif', fontSize: 27, fontWeight: 700,
+          fontFamily: DISPLAY, fontSize: 27, fontWeight: 700,
           lineHeight: 1.18, letterSpacing: '-0.025em', color: '#191712', outline: 'none', textAlign: 'left',
           textDecoration: status === 'cancelled' ? 'line-through' : 'none',
         }} />
@@ -1294,13 +1304,13 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
           borderRadius: 12, background: '#FFFFFF', border: '1px solid #E8E1CE',
         }}>
           <ProviderMark provider={provider} size={24} />
-          <span style={{ fontSize: 14, fontWeight: 600, color: '#191712', flexShrink: 0 }}>
+          <span style={{ fontSize: 13.5, fontWeight: 600, color: '#191712', flexShrink: 0 }}>
             {PROVIDER_NAME[provider]}
           </span>
           <a href={videoLink} target="_blank" rel="noreferrer"
             title={videoLink}
             style={{
-              flex: 1, minWidth: 0, fontSize: 14.5, color: '#1A73E8', textDecoration: 'none',
+              flex: 1, minWidth: 0, fontSize: 13.5, color: '#1A73E8', textDecoration: 'none',
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             }}>{meetingCode(videoLink, provider)}</a>
           <button
@@ -1322,10 +1332,10 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
           background: '#FAF7EC', border: '1px solid #E8E1CE',
         }}>
           <a href={videoLink} target="_blank" rel="noreferrer" style={{
-            display: 'block', fontSize: 12.5, color: '#1A73E8', wordBreak: 'break-all', textDecoration: 'none',
+            display: 'block', fontSize: 11.5, color: '#1A73E8', wordBreak: 'break-all', textDecoration: 'none',
           }}>{videoLink}</a>
           {phoneEntry && (
-            <p style={{ margin: '7px 0 0', fontSize: 12.5, color: '#6C6553' }}>
+            <p style={{ margin: '7px 0 0', fontSize: 11.5, color: '#6C6553' }}>
               Dial in: {phoneEntry.label ?? phoneEntry.uri.replace('tel:', '')}
               {phoneEntry.pin ? ` · PIN ${phoneEntry.pin}` : ''}
             </p>
@@ -1387,7 +1397,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
                   style={{
                     display: 'flex', alignItems: 'center', gap: 8, width: '100%', height: 32,
                     padding: '0 9px', borderRadius: 8, border: 'none', background: 'transparent',
-                    color: '#191712', fontSize: 13, fontFamily: 'inherit', cursor: 'pointer', textAlign: 'left',
+                    color: '#191712', fontSize: 13.5, fontFamily: 'inherit', cursor: 'pointer', textAlign: 'left',
                   }}>
                   <MapPin size={13} color="#9B9180" style={{ flexShrink: 0 }} />
                   <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{pl}</span>
@@ -1412,7 +1422,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
             <CalendarIcon size={15} color="#6C6553" style={{ flexShrink: 0 }} />
             <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {new Date(dateStr + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}
-              {isAllDay ? ' · All day' : ` · ${formatTime(fromTime)} – ${formatTime(toTime)}`}
+              {isAllDay ? ' · All day' : ` · ${compactRange(fromTime, toTime)}`}
             </span>
             <ChevronDown size={14} strokeWidth={2} style={{ color: '#9B9180', flexShrink: 0 }} />
           </button>
@@ -1529,15 +1539,15 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
             <span style={{
               width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: '#F1ECDE', color: '#6C6553', fontSize: 11, fontWeight: 700,
+              background: '#F1ECDE', color: '#6C6553', fontSize: 10, fontWeight: 700,
             }}>{evInitials(a.displayName, a.email)}</span>
-            <span style={{ flex: 1, minWidth: 0, fontSize: 14, color: '#191712', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <span style={{ flex: 1, minWidth: 0, fontSize: 13.5, color: '#191712', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {a.displayName ?? a.email}
             </span>
             <span
               title={`${describeResponse(a.responseStatus)} · ${evOrg(a.email)}`}
               style={{
-                ...EV_ROUND, width: 32, height: 32, flexShrink: 0, fontSize: 13, fontWeight: 600,
+                ...EV_ROUND, width: 32, height: 32, flexShrink: 0, fontSize: 13.5, fontWeight: 600,
                 color: responseTone(a.responseStatus),
                 borderColor: a.responseStatus === 'accepted' ? 'rgba(95,112,56,0.4)'
                   : a.responseStatus === 'declined' ? 'rgba(180,82,58,0.35)' : '#E8E1CE',
@@ -1578,7 +1588,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               border: '1px dashed #D8CFB8', color: '#C9C0A8',
             }}><Plus size={15} /></span>
-            <span style={{ fontSize: 14, color: '#9B9180' }}>Add an invitee</span>
+            <span style={{ fontSize: 13.5, color: '#9B9180' }}>Add an invitee</span>
           </button>
         )}
       </div>
@@ -1587,7 +1597,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
       <div style={{ height: 1, background: '#F0EBDC', margin: '20px 0' }} />
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <span style={EV_SECTION}>Attachments</span>
-        <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: '#9B9180', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <span style={{ flex: 1, minWidth: 0, fontSize: 11.5, color: '#9B9180', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {attendees.length > 0
             ? `Shared with the ${attendees.length} invitee${attendees.length === 1 ? '' : 's'}`
             : 'Only you can see these'}
@@ -1637,7 +1647,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
         style={{
           width: '100%', boxSizing: 'border-box', resize: 'vertical', minHeight: 88,
           background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 12,
-          padding: '13px 15px', fontFamily: 'inherit', fontSize: 14, lineHeight: 1.5,
+          padding: '13px 15px', fontFamily: 'inherit', fontSize: 13.5, lineHeight: 1.5,
           color: '#191712', outline: 'none',
         }} />
 
@@ -1647,7 +1657,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
           <div style={{ height: 1, background: '#F0EBDC', margin: '20px 0' }} />
           <div style={{ ...EV_SECTION, marginBottom: 8 }}>Prep gathered</div>
           {prep?.goal && (
-            <p style={{ margin: '0 0 10px', fontSize: 13, color: '#3D3926', lineHeight: 1.5 }}>{prep.goal}</p>
+            <p style={{ margin: '0 0 10px', fontSize: 13.5, color: '#3D3926', lineHeight: 1.5 }}>{prep.goal}</p>
           )}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             {prepPoints.map((pt, i) => {
@@ -1665,7 +1675,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
                     background: on ? '#191712' : '#FFFFFF',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>{on && <Check size={11} color="#fff" strokeWidth={3} />}</span>
-                  <span style={{ fontSize: 13, color: on ? '#9B9180' : '#191712', lineHeight: 1.45, textDecoration: on ? 'line-through' : 'none' }}>
+                  <span style={{ fontSize: 13.5, color: on ? '#9B9180' : '#191712', lineHeight: 1.45, textDecoration: on ? 'line-through' : 'none' }}>
                     {pt}
                   </span>
                 </button>
@@ -1681,7 +1691,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
           marginTop: 18, padding: '14px 15px', borderRadius: 12,
           background: '#FAF7EC', border: '1px solid #E8E1CE',
         }}>
-          <p style={{ margin: 0, fontSize: 13, color: '#3D3926', lineHeight: 1.5 }}>
+          <p style={{ margin: 0, fontSize: 13.5, color: '#3D3926', lineHeight: 1.5 }}>
             {freeAfterClash
               ? `Professor: move this to ${freeAfterClash} and it stops costing you anything.`
               : 'Professor: this overlaps something already booked.'}
@@ -1799,7 +1809,7 @@ function EventContextMenu({
         onClick={disabled ? undefined : () => { action?.(); onClose() }}
         style={{
           display: 'flex', alignItems: 'center', gap: 9,
-          padding: '0 12px', height: 32, fontSize: 13,
+          padding: '0 12px', height: 32, fontSize: 13.5,
           color: disabled ? '#4B5268' : destructive ? '#E05252' : '#3D3926',
           cursor: disabled ? 'default' : 'pointer',
           borderRadius: 6, userSelect: 'none',
@@ -1942,7 +1952,7 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <span style={{
           display: 'inline-flex', alignItems: 'center', gap: 6, height: 26, padding: '0 11px',
-          borderRadius: 999, background: '#F1ECDE', color: '#4A4438', fontSize: 12,
+          borderRadius: 999, background: '#F1ECDE', color: '#4A4438', fontSize: 11.5,
         }}>
           <span style={{ width: 7, height: 7, borderRadius: 999, background: calColor, flexShrink: 0 }} />
           New event
@@ -1961,7 +1971,7 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
         style={{
           width: '100%', boxSizing: 'border-box', marginTop: 14,
           background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 11,
-          padding: '13px 15px', fontFamily: 'Outfit, sans-serif', fontSize: 21, fontWeight: 600,
+          padding: '13px 15px', fontFamily: DISPLAY, fontSize: 18, fontWeight: 600,
           letterSpacing: '-0.02em', color: '#191712', outline: 'none', textAlign: 'left',
         }} />
 
@@ -1976,7 +1986,7 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
         {!allDay && (
           <>
             <span style={{ width: 92 }}><TimeSelect value={startTime} onChange={setStartTime} /></span>
-            <span style={{ fontSize: 12.5, color: '#6C6553' }}>to</span>
+            <span style={{ fontSize: 11.5, color: '#6C6553' }}>to</span>
             <span style={{ width: 92 }}><TimeSelect value={endTime} onChange={setEndTime} /></span>
           </>
         )}
@@ -2027,7 +2037,7 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
             style={{
               flex: 1, minWidth: 0, boxSizing: 'border-box', resize: 'vertical',
               background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 9,
-              padding: '9px 12px', fontSize: 13, color: '#191712', fontFamily: 'inherit',
+              padding: '9px 12px', fontSize: 13.5, color: '#191712', fontFamily: 'inherit',
               outline: 'none', textAlign: 'left',
             }} />
         </div>
@@ -2043,7 +2053,7 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
             <span style={{
               width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: '#F1ECDE', color: '#6C6553', fontSize: 10.5, fontWeight: 700,
+              background: '#F1ECDE', color: '#6C6553', fontSize: 10, fontWeight: 700,
             }}>{evInitials(undefined, email)}</span>
             <span style={{ flex: 1, minWidth: 0, fontSize: 13.5, fontWeight: 600, color: '#191712', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {email}
@@ -2783,19 +2793,19 @@ export function CalendarIntelligence() {
 
   // ── Render ───────────────────────────────────────────────────────────────────
   return (
-    <div className={creatingEvt ? 'cal-grid-creating' : undefined} style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#F7F4EA', color: '#191712', fontFamily: 'var(--sb-font-ui)', overflow: 'hidden' }}>
+    <div className={creatingEvt ? 'cal-grid-creating' : undefined} style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#F7F4EA', color: '#191712', fontFamily: SANS, overflow: 'hidden' }}>
 
       {/* ── Top bar ─────────────────────────────────────────────────────────── */}
       <div style={{ padding: '18px 26px 14px', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           {/* Which stretch of time you are looking at */}
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.14em', color: '#6C6553', textTransform: 'uppercase', marginBottom: 3 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.14em', color: '#6C6553', textTransform: 'uppercase', marginBottom: 3 }}>
               {calView === 'month' ? anchorDate.toLocaleDateString('en-GB', { year: 'numeric' })
                 : calView === 'day' ? anchorDate.toLocaleDateString('en-GB', { weekday: 'long' })
                 : `Week ${getWeekNumber(weekStart)}`}
             </div>
-            <div style={{ fontFamily: 'var(--sb-font-num, "Outfit", sans-serif)', fontSize: 27, fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1, color: '#191712' }}>
+            <div style={{ fontFamily: DISPLAY, fontSize: 27, fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1, color: '#191712' }}>
               {calView === 'month' ? anchorDate.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
                 : calView === 'day' ? anchorDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })
                 : fmtWeekRange(weekStart)}
@@ -2909,7 +2919,7 @@ export function CalendarIntelligence() {
                     background: on ? '#FFFFFF' : 'transparent',
                     boxShadow: on ? '0 1px 3px rgba(25,23,18,.16)' : 'none',
                     color: on ? '#191712' : '#8A8271',
-                    fontSize: 13, fontWeight: on ? 700 : 500, fontFamily: 'inherit',
+                    fontSize: 13.5, fontWeight: on ? 700 : 500, fontFamily: 'inherit',
                     transition: 'all .14s',
                   }}>
                   {v[0].toUpperCase() + v.slice(1)}
@@ -2969,7 +2979,7 @@ export function CalendarIntelligence() {
                       style={{
                         background: 'none', border: 'none', cursor: 'pointer',
                         display: 'flex', alignItems: 'center', gap: 4,
-                        padding: '3px 8px 3px 2px', fontSize: 11,
+                        padding: '3px 8px 3px 2px', fontSize: 10,
                         color: hidden ? '#9B9180' : '#3D3926',
                       }}
                     >
@@ -3007,7 +3017,7 @@ export function CalendarIntelligence() {
 
         {/* Fetch error — keep but make subtle */}
         {fetchError && (
-          <div style={{ marginTop: 6, padding: '5px 10px', background: 'rgba(224,82,82,0.08)', border: '1px solid rgba(224,82,82,0.3)', borderRadius: 6, fontSize: 11, color: '#E05252', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div style={{ marginTop: 6, padding: '5px 10px', background: 'rgba(224,82,82,0.08)', border: '1px solid rgba(224,82,82,0.3)', borderRadius: 6, fontSize: 10, color: '#E05252', display: 'flex', alignItems: 'center', gap: 6 }}>
             <AlertCircle size={11} /> {fetchError}
           </div>
         )}
@@ -3030,7 +3040,7 @@ export function CalendarIntelligence() {
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'auto', padding: '0 14px 14px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', padding: '10px 0 6px' }}>
             {DAY_LABELS.map(d => (
-              <span key={d} style={{ textAlign: 'center', fontSize: 10.5, fontWeight: 700, letterSpacing: '0.08em', color: '#6C6553', textTransform: 'uppercase' }}>
+              <span key={d} style={{ textAlign: 'center', fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', color: '#6C6553', textTransform: 'uppercase' }}>
                 {d}
               </span>
             ))}
@@ -3079,7 +3089,7 @@ export function CalendarIntelligence() {
                           display: 'flex', alignItems: 'center', gap: 5, minWidth: 0,
                           padding: '2px 6px', borderRadius: 6, cursor: 'pointer',
                           background: `rgba(${rgb}, 0.16)`, border: `1px solid rgba(${rgb}, 0.4)`,
-                          fontSize: 10.5, color: '#191712',
+                          fontSize: 10, color: '#191712',
                           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                         }}>
                         {t && <span style={{ color: '#6C6553', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>
@@ -3117,7 +3127,7 @@ export function CalendarIntelligence() {
               const isToday = ds === today
               return (
                 <div key={ds} style={{ flex: 1, textAlign: 'center', padding: '9px 4px 8px', minWidth: 0 }}>
-                  <div style={{ fontSize: 10.5, color: isToday ? '#191712' : '#6C6553', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, fontFamily: 'var(--sb-font-ui)' }}>
+                  <div style={{ fontSize: 10, color: isToday ? '#191712' : '#6C6553', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, fontFamily: SANS }}>
                     {DAY_LABELS[day.getDay()]}
                   </div>
                   <div style={{
@@ -3128,7 +3138,7 @@ export function CalendarIntelligence() {
                     borderRadius: isToday ? '50%' : undefined,
                     display: isToday ? 'flex' : undefined, alignItems: isToday ? 'center' : undefined, justifyContent: isToday ? 'center' : undefined,
                     margin: isToday ? '3px auto 0' : undefined,
-                    fontFamily: 'var(--sb-font-num, "Outfit", sans-serif)',
+                    fontFamily: DISPLAY,
                   }}>
                     {day.getDate()}
                   </div>
@@ -3140,7 +3150,7 @@ export function CalendarIntelligence() {
           {/* All-day events strip — only shown when the week has at least one all-day event */}
           {weekDays.some(day => (grouped.get(localDateStr(day)) ?? []).some(e => !e.start.dateTime)) && (
             <div style={{ display: 'flex', borderBottom: '1px solid #E8E1CE', flexShrink: 0, minHeight: 22 }}>
-              <div style={{ width: 58, flexShrink: 0, display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end', paddingRight: 6, paddingTop: 3, fontSize: 9, color: '#9B9180', letterSpacing: '0.4px' }}>
+              <div style={{ width: 58, flexShrink: 0, display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end', paddingRight: 6, paddingTop: 3, fontSize: 10, color: '#9B9180', letterSpacing: '0.4px' }}>
                 all day
               </div>
               {weekDays.map(day => {
@@ -3193,7 +3203,7 @@ export function CalendarIntelligence() {
                     display: 'flex', flexDirection: 'column', alignItems: 'flex-end',
                     whiteSpace: 'nowrap',
                   }}>
-                    <span style={{ fontSize: 9.5, color: '#9B9180', fontWeight: 500, letterSpacing: '0.03em' }}>
+                    <span style={{ fontSize: 10, color: '#9B9180', fontWeight: 500, letterSpacing: '0.03em' }}>
                       {fmtHourLabel(h)}
                     </span>
                     {w && (
@@ -3201,9 +3211,9 @@ export function CalendarIntelligence() {
                         title={`${w.temp}°C`}
                         style={{
                           display: 'inline-flex', alignItems: 'center', gap: 2, marginTop: 1,
-                          fontSize: 8.5, color: '#B5AA98', fontVariantNumeric: 'tabular-nums',
+                          fontSize: 10, color: '#B5AA98', fontVariantNumeric: 'tabular-nums',
                         }}>
-                        <span style={{ fontSize: 8.5, lineHeight: 1 }}>{weatherGlyph(w.code)}</span>
+                        <span style={{ fontSize: 10, lineHeight: 1 }}>{weatherGlyph(w.code)}</span>
                         {w.temp}°
                       </span>
                     )}
@@ -3301,7 +3311,7 @@ export function CalendarIntelligence() {
 
       {/* Loading spinner overlay */}
       {loadingEvents && (
-        <div style={{ position: 'absolute', bottom: 18, right: 22, display: 'flex', alignItems: 'center', gap: 7, fontSize: 12, color: '#9B9180', pointerEvents: 'none' }}>
+        <div style={{ position: 'absolute', bottom: 18, right: 22, display: 'flex', alignItems: 'center', gap: 7, fontSize: 11.5, color: '#9B9180', pointerEvents: 'none' }}>
           <div style={{ width: 14, height: 14, border: '2px solid #E8E1CE', borderTopColor: '#191712', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
           Loading…
         </div>
@@ -3313,7 +3323,7 @@ export function CalendarIntelligence() {
         <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(247,244,234,0.93)', opacity: 0.9, pointerEvents: 'none' }}>
           <div style={{ textAlign: 'center' }}>
             <Calendar size={36} color="#C8C0AE" />
-            <p style={{ margin: '12px 0 0', fontSize: 14, color: '#9B9180' }}>Connect Google Calendar to see your events</p>
+            <p style={{ margin: '12px 0 0', fontSize: 13.5, color: '#9B9180' }}>Connect Google Calendar to see your events</p>
           </div>
         </div>
       )}
