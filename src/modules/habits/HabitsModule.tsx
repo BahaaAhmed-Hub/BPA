@@ -6,12 +6,17 @@ import {
   type HabitLogs, type Habit,
 } from '@/store/habitsStore'
 import { saveHabitLogsToDB } from '@/lib/dbSync'
+import { markLocalWrite } from '@/lib/liveSync'
 
 let logsDbTimer: ReturnType<typeof setTimeout> | null = null
 function scheduleLogsSync(logs: HabitLogs) {
+  markLocalWrite('habits')
   if (logsDbTimer) clearTimeout(logsDbTimer)
   logsDbTimer = setTimeout(() => {
-    void saveHabitLogsToDB(logs).catch(() => { /* offline */ })
+    markLocalWrite('habits')
+    // Read at push time: the quantity map was written synchronously by whoever
+    // scheduled this, so localStorage is the one copy that is certainly current.
+    void saveHabitLogsToDB(logs, loadQuantityLogs()).catch(() => { /* offline */ })
   }, 1500)
 }
 
@@ -862,6 +867,14 @@ export function HabitsModule() {
     window.addEventListener('professor:prefsRestored', h)
     return () => window.removeEventListener('professor:prefsRestored', h)
   }, [])
+
+  // A tick made on the other device arrives through the store, which writes
+  // localStorage — this state was read on mount and would not notice.
+  useEffect(() => {
+    const h = () => { setLogs(loadLogs()); setQtyLogs(loadQuantityLogs()) }
+    window.addEventListener('professor:habitLogsUpdated', h)
+    return () => window.removeEventListener('professor:habitLogsUpdated', h)
+  }, [])
   const [fillSelected, setFillSelected] = useState<string | null>(null)
   const [detailHabitId, setDetailHabitId] = useState<string | null>(null)
 
@@ -888,10 +901,13 @@ export function HabitsModule() {
       const existing = prev[habitId] ?? []
       const met = value >= goal
       const hasDone = existing.includes(day)
-      if (met === hasDone) return prev
-      const updated = met ? [...existing, day] : existing.filter(x => x !== day)
-      const next = { ...prev, [habitId]: updated }
-      saveLogs(next); scheduleLogsSync(next)
+      const next = met === hasDone
+        ? prev
+        : { ...prev, [habitId]: met ? [...existing, day] : existing.filter(x => x !== day) }
+      // Always push. Changing 3 glasses to 4 does not cross the goal and so
+      // did not touch the tick — and used to sync nowhere as a result.
+      if (next !== prev) saveLogs(next)
+      scheduleLogsSync(next)
       return next
     })
   }, [])

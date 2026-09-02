@@ -2,6 +2,7 @@
  * financeDb.ts — Supabase CRUD helpers for all finance tables.
  */
 import { supabase } from '@/lib/supabase'
+import { markLocalWrite } from '@/lib/liveSync'
 
 // ─── Row types ────────────────────────────────────────────────────────────────
 
@@ -105,6 +106,7 @@ export async function loadAccounts(): Promise<AccountRow[]> {
 }
 
 export async function saveAccount(row: AccountRow): Promise<void> {
+  markLocalWrite('finance')
   const { error } = await supabase
     .from('finance_accounts')
     .upsert(row, { onConflict: 'id' })
@@ -112,6 +114,7 @@ export async function saveAccount(row: AccountRow): Promise<void> {
 }
 
 export async function deleteAccount(id: string): Promise<void> {
+  markLocalWrite('finance')
   const { error } = await supabase
     .from('finance_accounts')
     .delete()
@@ -133,6 +136,7 @@ export async function loadCategories(): Promise<CategoryRow[]> {
 }
 
 export async function saveCategory(row: CategoryRow): Promise<void> {
+  markLocalWrite('finance')
   const { error } = await supabase
     .from('finance_categories')
     .upsert(row, { onConflict: 'id' })
@@ -140,6 +144,7 @@ export async function saveCategory(row: CategoryRow): Promise<void> {
 }
 
 export async function deleteCategory(id: string): Promise<void> {
+  markLocalWrite('finance')
   const { error } = await supabase
     .from('finance_categories')
     .delete()
@@ -163,6 +168,7 @@ export async function loadTransactions(year: number): Promise<TransactionRow[]> 
 }
 
 export async function saveTransaction(row: TransactionRow): Promise<void> {
+  markLocalWrite('finance')
   const { error } = await supabase
     .from('finance_transactions')
     .upsert(row, { onConflict: 'id' })
@@ -170,6 +176,7 @@ export async function saveTransaction(row: TransactionRow): Promise<void> {
 }
 
 export async function deleteTransaction(id: string): Promise<void> {
+  markLocalWrite('finance')
   const { error } = await supabase
     .from('finance_transactions')
     .delete()
@@ -196,6 +203,7 @@ export async function savePlan(
   month: number,
   amount: number,
 ): Promise<void> {
+  markLocalWrite('finance')
   const userId = await uid()
   const row: PlanRow = {
     id: crypto.randomUUID(),
@@ -230,6 +238,7 @@ export async function saveActualOverride(
   month: number,
   amount: number,
 ): Promise<void> {
+  markLocalWrite('finance')
   const userId = await uid()
   const row: OverrideRow = {
     id: crypto.randomUUID(),
@@ -250,6 +259,7 @@ export async function deleteActualOverride(
   year: number,
   month: number,
 ): Promise<void> {
+  markLocalWrite('finance')
   const userId = await uid()
   const { error } = await supabase
     .from('finance_actuals_override')
@@ -280,6 +290,7 @@ export async function saveCellComment(
   month: number,
   comment: string,
 ): Promise<void> {
+  markLocalWrite('finance')
   const userId = await uid()
   const row: CommentRow = {
     id: crypto.randomUUID(),
@@ -300,6 +311,7 @@ export async function deleteCellComment(
   year: number,
   month: number,
 ): Promise<void> {
+  markLocalWrite('finance')
   const userId = await uid()
   const { error } = await supabase
     .from('finance_cell_comments')

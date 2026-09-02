@@ -21,6 +21,8 @@ import { signInWithGoogle, getPendingAddAccount, clearPendingAddAccount } from '
 import { addAccount, loadAccounts, saveAccounts } from './lib/multiAccount'
 import { saveAccountsToDB, loadCompaniesFromDB, loadRawSettingsFromDB, loadAccountsFromDB } from './lib/dbSync'
 import { startPrefSync } from './lib/prefSync'
+import { startLiveSync } from './lib/liveSync'
+import { useFinanceStore } from './modules/finance/financeStore'
 import { SyncGapBanner } from './modules/shell/SyncGapBanner'
 import { seedToken, seedFromLocalStorage, clearAllTokens, getGoogleToken } from './lib/tokenManager'
 import { refreshPrimaryToken } from './lib/googleCalendar'
@@ -503,6 +505,10 @@ async function loadAllFromDB(
   await Promise.allSettled([
     loadTasksFn(),
     loadHabitsFn(),
+    // Finance writes through to Supabase on every change but nothing ever read
+    // it back, so a transaction added on the laptop simply did not exist on the
+    // iPad — each device saw only what it had entered itself.
+    useFinanceStore.getState().loadFromDB(),
     // Companies
     loadCompaniesFromDB().then(companies => {
       if (companies.length > 0)
@@ -567,11 +573,23 @@ function App() {
   const { setUser, setLoading, user, loading } = useAuthStore()
   const themeId = useUIStore(s => s.themeId)
   const stopPrefSync = useRef<(() => void) | null>(null)
-  useEffect(() => () => stopPrefSync.current?.(), [])
+  const stopLiveSync = useRef<(() => void) | null>(null)
+  useEffect(() => () => { stopPrefSync.current?.(); stopLiveSync.current?.() }, [])
   const loadTasksFromDB  = useTaskStore(s => s.loadFromDB)
   const clearTasks       = useTaskStore(s => s.clearAll)
   const loadHabitsFromDB = useHabitsStore(s => s.loadFromDB)
   const clearHabits      = useHabitsStore(s => s.clearAll)
+
+  /** Keep this device in step with the others while it is open, rather than
+   *  only at sign-in. Restarting is safe — it tears the previous one down. */
+  function beginLiveSync(userId: string) {
+    stopLiveSync.current?.()
+    stopLiveSync.current = startLiveSync(userId, {
+      habits:  loadHabitsFromDB,
+      tasks:   loadTasksFromDB,
+      finance: () => useFinanceStore.getState().loadFromDB(),
+    })
+  }
 
   // themeId kept in store for backward compat — Sunlit Bento uses CSS tokens only
   void themeId
@@ -692,6 +710,7 @@ function App() {
       setUser(u ? { id: u.id, email: u.email ?? '', name: u.user_metadata?.full_name as string | undefined, avatarUrl: u.user_metadata?.avatar_url as string | undefined } : null)
       if (u) {
         void loadAllFromDB(loadTasksFromDB, loadHabitsFromDB)
+        beginLiveSync(u.id)
         // Preferences that are your work rather than this device's.
         stopPrefSync.current?.()
         stopPrefSync.current = startPrefSync()
@@ -728,6 +747,7 @@ function App() {
               localStorage.setItem('google_provider_token_saved_at', Date.now().toString())
             }
             void loadAllFromDB(loadTasksFromDB, loadHabitsFromDB)
+            beginLiveSync(u.id)
           }
         } else {
           // Normal sign-in: check for user switch
@@ -774,8 +794,11 @@ function App() {
             })()
           }
           void loadAllFromDB(loadTasksFromDB, loadHabitsFromDB)
+          beginLiveSync(u.id)
         }
       } else if (!session) {
+        stopLiveSync.current?.()
+        stopLiveSync.current = null
         localStorage.removeItem('google_provider_token')
         localStorage.removeItem('google_provider_token_saved_at')
         localStorage.removeItem(LAST_USER_KEY)

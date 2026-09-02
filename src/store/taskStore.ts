@@ -4,6 +4,7 @@ import { arrayMove } from '@dnd-kit/sortable'
 import type { Task, Quadrant, TaskStatus, TaskActivity, TaskType } from '@/types'
 import { COMPANY_LABELS, QUADRANT_META, getAllUsers, loadDynamicCompanies } from '@/types'
 import { saveTasksToDB, loadTasksFromDB } from '@/lib/dbSync'
+import { markLocalWrite } from '@/lib/liveSync'
 import type { TaskRow } from '@/lib/dbSync'
 
 /** Today in the viewer's own timezone. toISOString() reports UTC, which lands
@@ -93,12 +94,62 @@ function fromRow(r: TaskRow): Task {
   }
 }
 
+// ─── Which tasks this device has changed since it last pushed ────────────────
+// Only meaningful now that the server can change while the app is open. Two
+// questions need it. A task the server does not have is either one made here a
+// moment ago or one deleted on the other device — and keeping both would make
+// every delete undo itself. A task the server *does* have is only allowed to
+// overwrite what is on screen if nobody here is mid-edit.
+
+const DIRTY_KEY = 'professor-tasks-dirty'
+
+function loadDirtyTasks(): Set<string> {
+  try {
+    const raw = localStorage.getItem(DIRTY_KEY)
+    return new Set(raw ? (JSON.parse(raw) as string[]) : [])
+  } catch { return new Set() }
+}
+
+function saveDirtyTasks(ids: Set<string>): void {
+  try { localStorage.setItem(DIRTY_KEY, JSON.stringify([...ids])) } catch { /* quota */ }
+}
+
+// A device that predates this list gives no way to tell what it has pushed and
+// what it has not. Assume nothing, or the first reload treats every task that
+// never reached the server as one deleted elsewhere and drops it.
+if (localStorage.getItem(DIRTY_KEY) == null) {
+  try {
+    const stored = JSON.parse(localStorage.getItem('professor-tasks') ?? '{}') as
+      { state?: { tasks?: { id: string }[] } }
+    const ids = (stored.state?.tasks ?? []).map(t => t.id)
+    if (ids.length) saveDirtyTasks(new Set(ids))
+  } catch { /* nothing stored, nothing to protect */ }
+}
+
+function markTasksDirty(tasks: Task[]): void {
+  markLocalWrite('tasks')
+  const set = loadDirtyTasks()
+  for (const t of tasks) set.add(t.id)
+  saveDirtyTasks(set)
+}
+
 // Debounced DB push — batches rapid mutations into one write
 let dbTimer: ReturnType<typeof setTimeout> | null = null
 function scheduleDbSync(tasks: Task[]) {
+  // Every caller reaches here after changing something, and the whole list is
+  // what gets written, so this is the one place that has to record it.
+  markTasksDirty(tasks)
   if (dbTimer) clearTimeout(dbTimer)
   dbTimer = setTimeout(() => {
-    saveTasksToDB(tasks.map(toRow)).catch(console.warn)
+    markLocalWrite('tasks')
+    const pushing = loadDirtyTasks()
+    saveTasksToDB(tasks.map(toRow))
+      .then(() => {
+        const still = loadDirtyTasks()
+        for (const id of pushing) still.delete(id)
+        saveDirtyTasks(still)
+      })
+      .catch(console.warn)
   }, 1500)
 }
 
@@ -130,25 +181,42 @@ export const useTaskStore = create<TaskState>()(
         try {
           const rows = await loadTasksFromDB()
           if (rows.length > 0) {
+            const dirty = loadDirtyTasks()
             let joined: Task[] = []
             set(s => {
-              // Merge: DB data wins on fields, local order is preserved
+              // Merge: the server wins on fields, local order is preserved —
+              // except for tasks this device has changed and not yet pushed,
+              // which would otherwise be overwritten mid-edit now that this
+              // runs while the app is open rather than only at sign-in.
               const local = s.tasks
               const dbMap = new Map(rows.map(r => [r.id, fromRow(r)]))
-              // Update local tasks with fresh DB data (preserves drag order)
-              const merged = local.map(t =>
-                dbMap.has(t.id) ? { ...t, ...dbMap.get(t.id)! } : t
-              )
+              const merged = local
+                .filter(t => dbMap.has(t.id) || dirty.has(t.id))
+                .map(t => {
+                  const fromDb = dbMap.get(t.id)
+                  if (!fromDb) return t                       // made here, not pushed yet
+                  return dirty.has(t.id) ? { ...fromDb, ...t } : { ...t, ...fromDb }
+                })
               // Append tasks that exist in DB but not locally
               const localIds = new Set(local.map(t => t.id))
               const dbOnly = rows.filter(r => !localIds.has(r.id)).map(r => fromRow(r))
               joined = [...merged, ...dbOnly]
               return { tasks: joined }
             })
+
             // Push the merge back: it is where this device's own fields — notes,
             // subtasks, links, the calendar event id — meet the server's copy,
             // and nothing else sends them, since the sync only runs on edits.
-            scheduleDbSync(joined)
+            //
+            // Only when it differs, though. An unconditional push writes rows
+            // identical to the ones just read, which is a change event, which
+            // makes the other device reload and push back: two open devices
+            // would trade writes for as long as they were both open.
+            const onServer = new Map(rows.map(r => [r.id, JSON.stringify(toRow(fromRow(r)))]))
+            const changed =
+              joined.length !== rows.length ||
+              joined.some(t => onServer.get(t.id) !== JSON.stringify(toRow(t)))
+            if (changed) scheduleDbSync(joined)
           }
         } catch { /* offline — keep local */ }
       },
@@ -394,7 +462,7 @@ export const useTaskStore = create<TaskState>()(
           }
         }),
 
-      clearAll: () => set({ tasks: [], activities: [] }),
+      clearAll: () => { saveDirtyTasks(new Set()); set({ tasks: [], activities: [] }) },
     }),
     { name: 'professor-tasks' },
   ),

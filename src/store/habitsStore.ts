@@ -6,6 +6,7 @@
 import { create } from 'zustand'
 import { loadHabitsFromDB, loadHabitLogsFromDB, saveHabitsToDB, saveHabitLogsToDB } from '@/lib/dbSync'
 import { reportSyncGap } from '@/lib/syncStatus'
+import { markLocalWrite } from '@/lib/liveSync'
 
 export interface Habit {
   id: string
@@ -127,12 +128,38 @@ function markDirty(...ids: string[]): void {
   const set = loadDirty()
   for (const id of ids) set.add(id)
   saveDirty(set)
+  markLocalWrite('habits')
+}
+
+// A device that predates this list gives no way to tell what it has pushed and
+// what it has not. Assume nothing: a redundant push costs a request, whereas
+// treating a habit that only exists here as one deleted elsewhere loses it.
+if (localStorage.getItem(DIRTY_KEY) == null) {
+  const existing = loadHabits().map(h => h.id)
+  if (existing.length) saveDirty(new Set(existing))
+}
+
+/** The fields that actually travel, in a form two copies can be compared by.
+ *  Hydration pushes its merge back so this device's own data reaches the
+ *  server — but pushing a merge that is already identical to what the server
+ *  just sent makes a change event, which makes the other device reload, which
+ *  makes it push... Two open devices would trade writes forever. */
+function syncedShape(h: {
+  name: string; frequency: string; isActive: boolean
+  emoji?: string; color?: string; type?: string; goal?: number; unit?: string; image?: string
+}): string {
+  return JSON.stringify([
+    h.name, h.frequency, h.isActive,
+    h.emoji ?? null, h.color ?? null, h.type ?? null,
+    h.goal ?? null, h.unit ?? null, h.image ?? null,
+  ])
 }
 
 let dbSyncTimer: ReturnType<typeof setTimeout> | null = null
 function scheduleHabitsSync(habits: Habit[], logs?: HabitLogs) {
   if (dbSyncTimer) clearTimeout(dbSyncTimer)
   dbSyncTimer = setTimeout(() => {
+    markLocalWrite('habits')
     const pushing = loadDirty()
     // Not "offline" — every failure looked like this, including a database
     // that cannot store what it is being sent.
@@ -204,21 +231,24 @@ export const useHabitsStore = create<HabitsState>((set, get) => ({
   },
 
   reorderHabits(from, to) {
+    // Order is not stored server-side, so there is nothing to push — and an
+    // upsert of unchanged rows would only wake the other device for nothing.
     const next = arrayMove(get().habits, from, to)
     saveHabits(next)
-    scheduleHabitsSync(next)
     set({ habits: next })
   },
 
   clearAll() {
     saveHabits([])
     saveLogs({})
+    saveDirty(new Set())
     set({ habits: [] })
   },
 
   async loadFromDB() {
     try {
-      const [dbHabits, logs] = await Promise.all([loadHabitsFromDB(), loadHabitLogsFromDB()])
+      const [dbHabits, logRes] = await Promise.all([loadHabitsFromDB(), loadHabitLogsFromDB()])
+      const { logs, quantities } = logRes
       if (dbHabits.length > 0) {
         // The server wins, except for habits this device has changed and not
         // yet pushed.
@@ -269,8 +299,13 @@ export const useHabitsStore = create<HabitsState>((set, get) => ({
         // A habit made on this device and not yet synced is not in dbHabits, so
         // building the merge from dbHabits alone quietly dropped it — and then
         // wrote that shorter list over localStorage.
+        //
+        // But "missing from the server" has a second meaning now that the
+        // server can change under an open app: deleted on another device. The
+        // dirty list separates them. Keeping both would make a habit deleted on
+        // the laptop reappear on the iPad and then get pushed back up.
         const dbIds = new Set(dbHabits.map(h => h.id))
-        const localOnly = local.filter(l => !dbIds.has(l.id))
+        const localOnly = local.filter(l => !dbIds.has(l.id) && dirty.has(l.id))
 
         // Order is the one thing the server cannot answer for: there is no
         // position column, so the rows arrive in creation order. Hydrating
@@ -285,13 +320,27 @@ export const useHabitsStore = create<HabitsState>((set, get) => ({
 
         saveHabits(all)
         saveLogs(logs)
+        // null means the server has no quantity column yet — leave this
+        // device's numbers alone rather than reading absence as zero.
+        if (quantities) saveQuantityLogs(quantities)
         set({ habits: all })
+        // The Habits page holds the logs in its own state, read once on mount.
+        // Reloading while it is open has to tell it, or the ticks stay stale.
+        window.dispatchEvent(new Event('professor:habitLogsUpdated'))
 
         // The merge is the moment this device's own data — a picture, an icon,
         // a target — sits alongside the server's. Nothing else pushes it: the
         // sync runs on edits, so without this a picture taken on one device
         // stayed there until someone happened to change that habit.
-        scheduleHabitsSync(all, logs)
+        //
+        // Only when it would actually say something new, though — see
+        // syncedShape. The logs are not pushed at all: they came from the
+        // server a moment ago.
+        const onServer = new Map(dbHabits.map(h => [h.id, syncedShape(h)]))
+        const changed =
+          all.length !== dbHabits.length ||
+          all.some(h => onServer.get(h.id) !== syncedShape(h))
+        if (changed) scheduleHabitsSync(all)
       }
     } catch { /* offline — keep local */ }
   },

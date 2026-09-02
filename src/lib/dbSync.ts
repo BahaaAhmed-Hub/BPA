@@ -72,6 +72,12 @@ export interface HabitRow {
 
 export interface HabitLogs { [habitId: string]: string[] }
 
+/** How much, on a day a counter habit was logged. These lived only in
+ *  localStorage, mirrored between devices every five minutes and never pulled
+ *  after start-up, so the number on a counter was the one thing about a habit
+ *  that could not arrive while the app was open. */
+export interface HabitQuantities { [habitId: string]: { [date: string]: number } }
+
 export interface ConnectedAccount {
   id: string; email: string; name: string; avatarUrl?: string
   providerToken: string; scopes: string[]; connectedAt: string; isPrimary: boolean
@@ -571,21 +577,51 @@ function columnProblem(error: { code?: string; message?: string }): 'columns' | 
 
 // ─── Habit logs ───────────────────────────────────────────────────────────────
 
-export async function saveHabitLogsToDB(logs: HabitLogs): Promise<void> {
+export async function saveHabitLogsToDB(logs: HabitLogs, quantities?: HabitQuantities): Promise<void> {
   const session = await getSession()
   const userId  = session.user.id
 
-  const rows: Omit<DbHabitLog, 'id'>[] = []
+  const rows: (Omit<DbHabitLog, 'id'> & { quantity?: number | null })[] = []
+  const keep = new Set<string>()
   for (const [habitId, dates] of Object.entries(logs)) {
     for (const date of dates) {
-      rows.push({ habit_id: habitId, user_id: userId, date, completed: true })
+      rows.push({
+        habit_id: habitId, user_id: userId, date, completed: true,
+        quantity: quantities?.[habitId]?.[date] ?? null,
+      })
+      keep.add(`${habitId}|${date}`)
     }
   }
+
+  // Un-ticking a day only ever removed it locally: this function inserted and
+  // never deleted, so the row stayed on the server and the next load put the
+  // tick straight back. It did not survive a reload, let alone reach the other
+  // device.
+  const { data: existing } = await supabase
+    .from('habit_logs').select('id, habit_id, date').eq('user_id', userId)
+  const stale = (existing ?? [])
+    .filter((r: { habit_id: string; date: string }) => !keep.has(`${r.habit_id}|${r.date}`))
+    .map((r: { id: string }) => r.id)
+  if (stale.length) await supabase.from('habit_logs').delete().in('id', stale)
+
   if (!rows.length) return
 
+  // ignoreDuplicates would keep the row already there and drop the new
+  // quantity, which is the whole point of writing again.
   const { error } = await supabase.from('habit_logs')
-    .upsert(rows as DbHabitLog[], { onConflict: 'habit_id,date', ignoreDuplicates: true })
-  if (error) throw new Error(error.message)
+    .upsert(rows as DbHabitLog[], { onConflict: 'habit_id,date' })
+  if (!error) return
+
+  // The quantity column arrives with 20260004. Without it the tick still has
+  // to be recorded, so drop the number rather than the day.
+  if (columnProblem(error)) {
+    const bare = rows.map(({ quantity: _q, ...r }) => r)
+    const { error: retry } = await supabase.from('habit_logs')
+      .upsert(bare as DbHabitLog[], { onConflict: 'habit_id,date', ignoreDuplicates: true })
+    if (retry) throw new Error(retry.message)
+    return
+  }
+  throw new Error(error.message)
 }
 
 export async function loadHabitsFromDB(): Promise<HabitRow[]> {
@@ -618,16 +654,34 @@ export async function loadHabitsFromDB(): Promise<HabitRow[]> {
   }))
 }
 
-export async function loadHabitLogsFromDB(): Promise<HabitLogs> {
+/** `quantities` is null when the server has nowhere to keep them — the caller
+ *  must then leave whatever this device already has alone, rather than reading
+ *  the absence as "every counter is at zero". */
+export async function loadHabitLogsFromDB(): Promise<{ logs: HabitLogs; quantities: HabitQuantities | null }> {
   const session = await getSession()
   const userId  = session.user.id
-  const { data, error } = await supabase
-    .from('habit_logs').select('habit_id, date').eq('user_id', userId)
-  if (error || !data) return {}
-  const logs: HabitLogs = {}
-  for (const row of data as { habit_id: string; date: string }[]) {
-    if (!logs[row.habit_id]) logs[row.habit_id] = []
-    logs[row.habit_id].push(row.date)
+
+  let withQuantity = true
+  let rows: { habit_id: string; date: string; quantity?: number | null }[] = []
+
+  const full = await supabase
+    .from('habit_logs').select('habit_id, date, quantity').eq('user_id', userId)
+  if (full.error) {
+    if (!columnProblem(full.error)) return { logs: {}, quantities: null }
+    withQuantity = false
+    const bare = await supabase
+      .from('habit_logs').select('habit_id, date').eq('user_id', userId)
+    if (bare.error || !bare.data) return { logs: {}, quantities: null }
+    rows = bare.data
+  } else {
+    rows = full.data ?? []
   }
-  return logs
+
+  const logs: HabitLogs = {}
+  const quantities: HabitQuantities = {}
+  for (const row of rows) {
+    ;(logs[row.habit_id] ??= []).push(row.date)
+    if (row.quantity != null) (quantities[row.habit_id] ??= {})[row.date] = row.quantity
+  }
+  return { logs, quantities: withQuantity ? quantities : null }
 }

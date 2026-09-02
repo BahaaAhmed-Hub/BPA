@@ -33,6 +33,24 @@ Typography: `Outfit` headings, system-ui body. Section titles: 28px Outfit 600, 
 | `src/modules/finance/screens/BudgetScreen.tsx` | Budget + 20E envelope drill-down overlay |
 | `src/App.tsx` | Router / shell |
 | `src/store/`, `src/lib/` | Zustand stores, DB sync, Google OAuth |
+| `src/lib/liveSync.ts` | Cross-device live sync (Realtime push + poll fallback) |
+
+## Cross-device sync
+Habits, tasks and finance stay in step **while both devices are open** — no reload.
+`startLiveSync(userId, handlers)` (App.tsx, 3 auth call sites) asks the owning store to
+reload; it never applies row deltas. Woken by Postgres change events (~1s, needs
+`20260004_realtime.sql`) and by a poll + visibility/focus/online pull (45s alone,
+5 min once Realtime is confirmed). Finance had no `loadFromDB()` caller at all before this.
+
+Three rules any change here must keep:
+- **`markLocalWrite(domain)`** on every write path, or a reload pulls the old row back
+  over an edit in progress. Stores call it; `financeDb.ts` calls it in its 11 helpers.
+- **Dirty sets** (`professor-habits-dirty`, `professor-tasks-dirty`) answer "is this
+  device's copy newer?" A row missing from the server is *deleted elsewhere* unless it
+  is dirty — otherwise every delete undoes itself. Seeded with all local ids on a device
+  that predates the key.
+- **Push the hydration merge back only when it differs from what the server just sent**,
+  or two open devices trade writes forever.
 
 ## Settings — Section → Component Mapping (CONFIRMED CORRECT as of latest commit)
 | Nav group | Section id | Title shown | Component rendered |
