@@ -35,7 +35,23 @@ export interface TaskRow {
   dueDate?: string; duration?: number; plannedTime?: string
   owner?: string; urgent?: boolean; taskType?: string; createdAt: string
   completedAt?: string
+  /** Everything that used to stay in the browser that made the task. */
+  description?: string
+  priority?: string
+  boardStatus?: string
+  calendarId?: string
+  /** The event this task created. Without it a second device believes the task
+   *  is unscheduled and schedules it again. */
+  gcalEventId?: string
+  parentTaskId?: string
+  capturedVia?: string
+  checklist?: unknown[]
+  attachments?: unknown[]
+  links?: string[]
 }
+
+/** The eight values that used to be stored in the description column. */
+const TASK_TYPES = new Set(['meeting', 'call', 'followup', 'email', 'research', 'study', 'deepwork', 'do'])
 
 export interface HabitRow {
   id: string; name: string; emoji: string; color: string
@@ -309,8 +325,36 @@ export async function saveTasksToDB(tasks: TaskRow[]): Promise<void> {
     completed:    t.completed,
   }))
 
-  const { error } = await supabase.from('tasks').upsert(rows, { onConflict: 'id' })
-  if (error) throw new Error(error.message)
+  // Everything from migration 20260003. The description column held the task's
+  // type until then, so both are written: task_type properly, and description
+  // as the task's own notes.
+  const full = tasks.map((t, i) => ({
+    ...rows[i],
+    description:    t.description ?? null,
+    task_type:      t.taskType ?? null,
+    priority:       t.priority ?? null,
+    board_status:   t.boardStatus ?? null,
+    calendar_id:    t.calendarId ?? null,
+    gcal_event_id:  t.gcalEventId ?? null,
+    parent_task_id: t.parentTaskId ?? null,
+    captured_via:   t.capturedVia ?? null,
+    urgent:         t.urgent ?? false,
+    checklist:      t.checklist ?? [],
+    attachments:    t.attachments ?? [],
+    links:          t.links ?? [],
+  }))
+
+  const { error } = await supabase.from('tasks').upsert(full, { onConflict: 'id' })
+  if (!error) return
+
+  // Before the migration is applied the whole write is rejected, which would
+  // stop tasks saving at all — so fall back to the columns that predate it.
+  if (isMissingColumn(error)) {
+    const { error: retry } = await supabase.from('tasks').upsert(rows, { onConflict: 'id' })
+    if (retry) throw new Error(retry.message)
+    return
+  }
+  throw new Error(error.message)
 }
 
 export async function loadTasksFromDB(): Promise<TaskRow[]> {
@@ -339,7 +383,26 @@ export async function loadTasksFromDB(): Promise<TaskRow[]> {
       plannedTime: (r.planned_time as string) ?? undefined,
       owner:       (r.delegated_to as string) ?? (r.owner_id as string) ?? undefined,
       createdAt:   r.created_at as string,
-      ...(r.description ? { taskType: r.description as string } : {}),
+      // task_type is where the type lives now; a row written before the
+      // migration still has it in description, and only there.
+      ...(r.task_type ? { taskType: r.task_type as string }
+        : typeof r.description === 'string' && TASK_TYPES.has(r.description)
+          ? { taskType: r.description }
+          : {}),
+      // …which means description is the task's own notes only when it is not
+      // one of those eight words.
+      ...(typeof r.description === 'string' && !TASK_TYPES.has(r.description)
+        ? { description: r.description } : {}),
+      ...(r.priority       ? { priority:     r.priority as string }       : {}),
+      ...(r.board_status   ? { boardStatus:  r.board_status as string }   : {}),
+      ...(r.calendar_id    ? { calendarId:   r.calendar_id as string }    : {}),
+      ...(r.gcal_event_id  ? { gcalEventId:  r.gcal_event_id as string }  : {}),
+      ...(r.parent_task_id ? { parentTaskId: r.parent_task_id as string } : {}),
+      ...(r.captured_via   ? { capturedVia:  r.captured_via as string }   : {}),
+      ...(r.urgent         ? { urgent: true }                             : {}),
+      ...(Array.isArray(r.checklist)   && r.checklist.length   ? { checklist:   r.checklist }   : {}),
+      ...(Array.isArray(r.attachments) && r.attachments.length ? { attachments: r.attachments } : {}),
+      ...(Array.isArray(r.links)       && r.links.length       ? { links: r.links as string[] } : {}),
     }
   })
 }

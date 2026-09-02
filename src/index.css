@@ -168,6 +168,11 @@ html, body {
   opacity: 1 !important;
 }
 
+/* A touch screen cannot hover, so these would never appear on it at all. */
+@media (hover: none) {
+  .event-actions button { opacity: 1 !important; }
+}
+
 /* ── Responsive overflow guards ───────────────────────────────────────────── */
 table { width: 100%; }
 pre, code { overflow-x: auto; }

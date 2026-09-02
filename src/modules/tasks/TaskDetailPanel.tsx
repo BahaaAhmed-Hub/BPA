@@ -139,7 +139,7 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
 
   return (
     <aside style={{
-      width: expanded ? 560 : 400, flexShrink: 0, alignSelf: 'flex-start',
+      width: expanded ? 'min(560px, 62vw)' : 'clamp(300px, 32vw, 400px)', flexShrink: 0, alignSelf: 'flex-start',
       maxHeight: 'calc(100vh - 212px)',
       background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 16,
       display: 'flex', flexDirection: 'column', minWidth: 0,

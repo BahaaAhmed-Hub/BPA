@@ -20,6 +20,7 @@ import { supabase } from './lib/supabase'
 import { signInWithGoogle, getPendingAddAccount, clearPendingAddAccount } from './lib/google'
 import { addAccount, loadAccounts, saveAccounts } from './lib/multiAccount'
 import { saveAccountsToDB, loadCompaniesFromDB, loadRawSettingsFromDB, loadAccountsFromDB } from './lib/dbSync'
+import { startPrefSync } from './lib/prefSync'
 import { seedToken, seedFromLocalStorage, clearAllTokens, getGoogleToken } from './lib/tokenManager'
 import { refreshPrimaryToken } from './lib/googleCalendar'
 import { SetupWizard } from './modules/wizard/SetupWizard'
@@ -564,6 +565,8 @@ function clearUserData(clearTasks: () => void, clearHabits: () => void) {
 function App() {
   const { setUser, setLoading, user, loading } = useAuthStore()
   const themeId = useUIStore(s => s.themeId)
+  const stopPrefSync = useRef<(() => void) | null>(null)
+  useEffect(() => () => stopPrefSync.current?.(), [])
   const loadTasksFromDB  = useTaskStore(s => s.loadFromDB)
   const clearTasks       = useTaskStore(s => s.clearAll)
   const loadHabitsFromDB = useHabitsStore(s => s.loadFromDB)
@@ -686,7 +689,12 @@ function App() {
         localStorage.setItem(LAST_USER_KEY, u.id)
       }
       setUser(u ? { id: u.id, email: u.email ?? '', name: u.user_metadata?.full_name as string | undefined, avatarUrl: u.user_metadata?.avatar_url as string | undefined } : null)
-      if (u) void loadAllFromDB(loadTasksFromDB, loadHabitsFromDB)
+      if (u) {
+        void loadAllFromDB(loadTasksFromDB, loadHabitsFromDB)
+        // Preferences that are your work rather than this device's.
+        stopPrefSync.current?.()
+        stopPrefSync.current = startPrefSync()
+      }
       setLoading(false)
     })
 

@@ -93,7 +93,7 @@ function DraggableTaskCard({ task, scheduled, creating, gcalDone }: {
         border: `1px solid ${gcalDone ? '#D1FAE5' : '#E5E7EB'}`,
         borderRadius: 10, padding: '10px 12px', marginBottom: 8,
         display: 'flex', alignItems: 'flex-start', gap: 10,
-        cursor: 'grab', boxShadow: isDragging ? 'none' : '0 1px 3px rgba(0,0,0,0.06)',
+        cursor: 'grab', touchAction: 'none', boxShadow: isDragging ? 'none' : '0 1px 3px rgba(0,0,0,0.06)',
         userSelect: 'none',
       }}
       {...attributes} {...listeners}

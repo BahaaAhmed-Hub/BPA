@@ -57,6 +57,12 @@ function toRow(t: Task): TaskRow {
     status: t.status, completed: t.completed, completedAt: t.completedAt,
     dueDate: t.dueDate, duration: t.duration, plannedTime: t.plannedTime,
     owner: t.owner, urgent: t.urgent, taskType: t.taskType, createdAt: t.createdAt,
+    // Everything that used to stop at this browser.
+    description: t.description, priority: t.priority,
+    boardStatus: t.boardStatus, calendarId: t.calendarId,
+    gcalEventId: t.gcalEventId, parentTaskId: t.parentTaskId,
+    capturedVia: t.capturedVia,
+    checklist: t.checklist, attachments: t.attachments, links: t.links,
   }
 }
 
@@ -74,6 +80,16 @@ function fromRow(r: TaskRow): Task {
     ...(r.companyId != null ? { companyId: r.companyId }            : {}),
     ...(r.urgent    != null ? { urgent:    r.urgent    }            : {}),
     ...(r.taskType  != null ? { taskType:  r.taskType as TaskType } : {}),
+    ...(r.description  != null ? { description:  r.description }  : {}),
+    ...(r.priority     != null ? { priority:     r.priority as Task['priority'] } : {}),
+    ...(r.boardStatus  != null ? { boardStatus:  r.boardStatus }  : {}),
+    ...(r.calendarId   != null ? { calendarId:   r.calendarId }   : {}),
+    ...(r.gcalEventId  != null ? { gcalEventId:  r.gcalEventId }  : {}),
+    ...(r.parentTaskId != null ? { parentTaskId: r.parentTaskId } : {}),
+    ...(r.capturedVia  != null ? { capturedVia:  r.capturedVia as Task['capturedVia'] } : {}),
+    ...(r.checklist?.length   ? { checklist:   r.checklist as Task['checklist'] }     : {}),
+    ...(r.attachments?.length ? { attachments: r.attachments as Task['attachments'] } : {}),
+    ...(r.links?.length       ? { links:       r.links }                              : {}),
   }
 }
 

@@ -112,7 +112,7 @@ function DumpCard({ task, onOpen, onDelete }: {
       }}
     >
       <span data-nm {...listeners} {...attributes} title="Drag into a quadrant"
-        style={{ cursor: 'grab', color: '#C9C0A8', display: 'flex', paddingTop: 2, flexShrink: 0 }}>
+        style={{ cursor: 'grab', touchAction: 'none', color: '#C9C0A8', display: 'flex', paddingTop: 2, flexShrink: 0 }}>
         <GripVertical size={12} strokeWidth={2} />
       </span>
       <div style={{ flex: 1, minWidth: 0 }}>
@@ -239,7 +239,7 @@ export function BrainDumpRail({ tasks, onOpen, flexible }: {
     <div style={{
       ...(flexible
         ? { flex: 1, minWidth: 0 }
-        : { width: 360, flexShrink: 0 }),
+        : { width: 'clamp(240px, 26vw, 360px)', flexShrink: 0 }),
       alignSelf: 'start',
       background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 14,
       display: 'flex', flexDirection: 'column',

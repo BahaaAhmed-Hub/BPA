@@ -753,6 +753,8 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
         padding: tiny ? '3px 6px' : '5px 8px 8px',
         overflow: 'hidden',
         cursor: isDragOverlay ? 'grabbing' : 'pointer',
+        // iOS scrolls the grid instead of dragging the event without this.
+        touchAction: 'none',
         opacity: isDragSrc ? 0.35 : 1,
         transform: isDragOverlay ? undefined : CSS.Transform.toString(transform),
         transition: isDragging ? 'none' : 'box-shadow 0.12s, opacity 0.12s',
@@ -841,6 +843,8 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
               background: isDone ? 'rgba(29,158,117,0.9)' : 'rgba(25,23,18,0.12)',
               color: isDone ? '#fff' : '#6C6553',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
+              // Revealed on hover on a mouse; always present on a touch
+              // screen, which has no hover and could not reach them at all.
               opacity: 0, transition: 'opacity 0.12s',
             }}
           >
@@ -1221,7 +1225,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
 
   return (
     <div ref={popupRef} onClick={e => e.stopPropagation()} onMouseDown={e => e.stopPropagation()} style={{
-      width: 440, flexShrink: 0, alignSelf: 'stretch', minHeight: 0,
+      width: 'clamp(320px, 34vw, 440px)', flexShrink: 0, alignSelf: 'stretch', minHeight: 0,
       overflowY: 'auto', scrollbarWidth: 'thin',
       background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 18,
       boxShadow: '0 1px 3px rgba(25,23,18,0.06)',
@@ -1958,7 +1962,7 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
 
   return (
     <div ref={ref} onClick={e => e.stopPropagation()} onMouseDown={e => e.stopPropagation()} style={{
-      width: 440, flexShrink: 0, alignSelf: 'stretch', minHeight: 0,
+      width: 'clamp(320px, 34vw, 440px)', flexShrink: 0, alignSelf: 'stretch', minHeight: 0,
       overflowY: 'auto', scrollbarWidth: 'thin',
       background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 18,
       boxShadow: '0 1px 3px rgba(25,23,18,0.06)',
@@ -3451,6 +3455,9 @@ export function CalendarIntelligence() {
         @keyframes spin    { to { transform: rotate(360deg); } }
         @keyframes shimmer { 0%,100% { background-position: 200% 0; } 50% { background-position: -200% 0; } }
         .event-card:hover .event-actions button { opacity: 1 !important; }
+        @media (hover: none) {
+          .event-actions button { opacity: 1 !important; }
+        }
         .cal-grid-creating, .cal-grid-creating * { cursor: crosshair !important; }
       `}</style>
     </div>

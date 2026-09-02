@@ -109,6 +109,8 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
         borderRadius: 12,
         boxShadow: hovered && !selected ? '0 2px 8px rgba(25,23,18,0.07)' : '0 1px 2px rgba(25,23,18,0.04)',
         cursor: isDragging ? 'grabbing' : 'pointer',
+        // Without this iOS scrolls the page instead of starting the drag.
+        touchAction: 'none',
         display: 'flex', gap: 10, minWidth: 0,
         transition: [transition, 'box-shadow .15s ease'].filter(Boolean).join(', '),
       }}
