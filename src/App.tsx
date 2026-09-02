@@ -21,6 +21,7 @@ import { signInWithGoogle, getPendingAddAccount, clearPendingAddAccount } from '
 import { addAccount, loadAccounts, saveAccounts } from './lib/multiAccount'
 import { saveAccountsToDB, loadCompaniesFromDB, loadRawSettingsFromDB, loadAccountsFromDB } from './lib/dbSync'
 import { startPrefSync } from './lib/prefSync'
+import { SyncGapBanner } from './modules/shell/SyncGapBanner'
 import { seedToken, seedFromLocalStorage, clearAllTokens, getGoogleToken } from './lib/tokenManager'
 import { refreshPrimaryToken } from './lib/googleCalendar'
 import { SetupWizard } from './modules/wizard/SetupWizard'
@@ -856,6 +857,7 @@ function App() {
         background: '#F7F4EA',
       }}>
         <TopNav />
+        <SyncGapBanner />
         <main style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', background: '#F7F4EA' }}>
           <ActiveModule />
         </main>

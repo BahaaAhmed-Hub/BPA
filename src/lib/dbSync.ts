@@ -3,6 +3,7 @@
  * Run supabase/migrations/20240002_extend_schema.sql before deploying.
  */
 import { supabase } from './supabase'
+import { reportSyncGap, clearSyncGap } from './syncStatus'
 import type { DbCompany, DbHabit, DbHabitLog } from '@/types/database'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -345,15 +346,17 @@ export async function saveTasksToDB(tasks: TaskRow[]): Promise<void> {
   }))
 
   const { error } = await supabase.from('tasks').upsert(full, { onConflict: 'id' })
-  if (!error) return
+  if (!error) { clearSyncGap('tasks'); return }
 
   // Before the migration is applied the whole write is rejected, which would
   // stop tasks saving at all — so fall back to the columns that predate it.
   if (isMissingColumn(error)) {
+    reportSyncGap('tasks', 'columns', error.message)
     const { error: retry } = await supabase.from('tasks').upsert(rows, { onConflict: 'id' })
     if (retry) throw new Error(retry.message)
     return
   }
+  reportSyncGap('tasks', 'error', error.message)
   throw new Error(error.message)
 }
 
@@ -513,17 +516,21 @@ export async function saveHabitsToDB(habits: HabitRow[]): Promise<void> {
     }))
 
     const { error } = await supabase.from('habits').upsert(rows, { onConflict: 'id' })
-    if (!error) return
+    if (!error) { clearSyncGap('habits'); return }
 
     // The appearance columns arrived in 20260002_habit_appearance.sql. Until
     // that migration is applied the write is rejected wholesale, which would
     // take habit saving down with it — so fall back to the columns that have
     // always existed rather than losing the habit itself.
     if (isMissingColumn(error)) {
+      // Pictures, icons and targets are silently not saved until the migration
+      // runs, which is exactly the failure that looks like success.
+      reportSyncGap('habits', 'columns', error.message)
       const { error: retry } = await supabase.from('habits').upsert(base as DbHabit[], { onConflict: 'id' })
       if (retry) throw new Error(retry.message)
       return
     }
+    reportSyncGap('habits', 'error', error.message)
     throw new Error(error.message)
   }
 }

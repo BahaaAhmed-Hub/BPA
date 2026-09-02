@@ -5,6 +5,7 @@
  */
 import { create } from 'zustand'
 import { loadHabitsFromDB, loadHabitLogsFromDB, saveHabitsToDB, saveHabitLogsToDB } from '@/lib/dbSync'
+import { reportSyncGap } from '@/lib/syncStatus'
 
 export interface Habit {
   id: string
@@ -106,7 +107,11 @@ let dbSyncTimer: ReturnType<typeof setTimeout> | null = null
 function scheduleHabitsSync(habits: Habit[], logs?: HabitLogs) {
   if (dbSyncTimer) clearTimeout(dbSyncTimer)
   dbSyncTimer = setTimeout(() => {
-    void saveHabitsToDB(habits).catch(() => { /* offline */ })
+    // Not "offline" — every failure looked like this, including a database
+    // that cannot store what it is being sent.
+    void saveHabitsToDB(habits).catch(e => {
+      reportSyncGap('habits', 'error', e instanceof Error ? e.message : String(e))
+    })
     if (logs) void saveHabitLogsToDB(logs).catch(() => { /* offline */ })
   }, 1500)
 }
