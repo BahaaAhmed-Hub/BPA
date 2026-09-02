@@ -91,7 +91,7 @@ export function TimeSelect({ value, onChange, label, size = 'compact' }: {
       <button type="button" onClick={() => setOpen(o => !o)} style={{
         ...FIELD, borderColor: open ? '#CFC6B0' : '#E8E1CE',
         ...(size === 'large' ? {
-          height: 48, borderRadius: 11, fontSize: 14.5, fontWeight: 500,
+          height: 48, borderRadius: 11, fontSize: 14, fontWeight: 500,
           border: '1px solid transparent', justifyContent: 'center',
         } : null),
       }}>{formatTime(value)}</button>

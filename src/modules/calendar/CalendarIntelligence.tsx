@@ -3,9 +3,9 @@ import {
   ChevronLeft, ChevronRight, ChevronDown, Layers, Calendar, Video,
   Sparkles, MapPin, RefreshCw, X, Eye, EyeOff,
   CheckCircle2, XCircle, Link, Check, Plus, Paperclip, FileText,
-  ExternalLink, AlertCircle, Shield, Copy, Trash2, Ban,
+  ExternalLink, AlertCircle, Shield, Copy, Trash2, Ban, Calendar as CalendarIcon,
 } from 'lucide-react'
-import { TimeSelect } from '@/modules/tasks/SchedulePopover'
+import { SchedulePopover, TimeSelect, formatTime, addMinutes } from '@/modules/tasks/SchedulePopover'
 import {
   DndContext, DragOverlay, PointerSensor, useSensor, useSensors,
   useDraggable, useDroppable,
@@ -491,6 +491,20 @@ function snapMinutes(deltaY: number): number {
   const raw = deltaY / HOUR_PX * 60
   return Math.round(raw / SNAP_MIN) * SNAP_MIN
 }
+/** Your own titles often carry a ✅ or a ❌. The card already says done with a
+ *  tick and cancelled with a strike-through, so the glyph is dropped from what
+ *  is drawn — never from the event itself. */
+const STATUS_EMOJI = /(?:^|\s)[\u2705\u274C\u2714\u2716\u274E\u2717\u2718\u2713\uFE0F]+(?=\s|$)/gu
+
+function displayTitle(summary?: string): string {
+  return (summary ?? '(No title)').replace(STATUS_EMOJI, ' ').replace(/\s{2,}/g, ' ').trim() || '(No title)'
+}
+
+function minutesBetween(from: string, to: string): number {
+  const m = (t: string) => { const [h, x] = t.split(':').map(Number); return h * 60 + x }
+  return m(to) - m(from)
+}
+
 function nowTopPx(): number {
   const now = new Date()
   return (now.getHours() + now.getMinutes() / 60) * HOUR_PX
@@ -683,9 +697,28 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
   const evInk = '#191712'
   const evTimeInk = '#6C6553'
 
+  // What a card can say depends on how much of it there is — in pixels, not in
+  // percent, since a third of a day column is a different size on every screen.
+  const [cardW, setCardW] = useState(0)
+  const boxRef = useRef<HTMLDivElement | null>(null)
+  useEffect(() => {
+    const el = boxRef.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(([entry]) => setCardW(entry.contentRect.width))
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
+  const w = isDragOverlay ? 130 : cardW || 999
+  const tiny     = height < 28
+  // Below this the title would wrap one word — or one letter — per line.
+  const canWrap  = w >= 84 && height >= 40
+  const showTime = w >= 104 && height >= 38
+  const showHost = w >= 104 && height >= 56
+
   return (
     <div
-      ref={setNodeRef}
+      ref={node => { setNodeRef(node); boxRef.current = node }}
       {...(isDragOverlay ? {} : listeners)}
       {...(isDragOverlay ? {} : attributes)}
       onClick={onClick}
@@ -700,7 +733,7 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
         background: evBg,
         borderRadius: 10,
         border: evBorder,
-        padding: '5px 8px 8px',
+        padding: tiny ? '3px 6px' : '5px 8px 8px',
         overflow: 'hidden',
         cursor: isDragOverlay ? 'grabbing' : 'pointer',
         opacity: isDragSrc ? 0.35 : 1,
@@ -718,17 +751,20 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
           through. Neither touches the card's colour — that belongs to the
           calendar the event is on, not to what happened to it. */}
       <div style={{
-        fontSize: height < 30 ? 10 : 11,
+        fontSize: tiny ? 10 : 11,
         fontWeight: 600,
         color: evInk,
         lineHeight: 1.25,
         overflow: 'hidden',
-        textOverflow: 'ellipsis',
-        whiteSpace: height < 36 ? 'nowrap' : 'normal',
+        // A card only wraps when it is wide enough for a wrapped line to be a
+        // line. In a shared column it stays on one line and trails off.
+        ...(canWrap
+          ? { display: '-webkit-box', WebkitLineClamp: height >= 66 ? 3 : 2, WebkitBoxOrient: 'vertical' as const }
+          : { whiteSpace: 'nowrap' as const, textOverflow: 'ellipsis' }),
       }}>
         {isDone && (
           <Check
-            size={height < 30 ? 11 : 12}
+            size={tiny ? 11 : 12}
             strokeWidth={3.4}
             style={{ display: 'inline', verticalAlign: '-2px', marginRight: 3 }}
           />
@@ -737,9 +773,9 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
           textDecoration: isCancelled ? 'line-through' : 'none',
           textDecorationColor: 'rgba(25,23,18,0.45)',
           textDecorationThickness: 1.5,
-        }}>{event.summary ?? '(No title)'}</span>
+        }}>{displayTitle(event.summary)}</span>
       </div>
-      {height >= 50 && (() => {
+      {showHost && (() => {
         const host = meetingHost(event)
         return host ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 3, overflow: 'hidden' }}>
@@ -750,13 +786,13 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
           </div>
         ) : null
       })()}
-      {height >= 38 && (
+      {showTime && (
         <div style={{ fontSize: 10, color: evTimeInk, marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
           {fmtShort(event.start.dateTime!)}
           {event.end.dateTime ? ` – ${fmtShort(event.end.dateTime)}` : ''}
         </div>
       )}
-      {height >= 66 && event.location && !meetingHost(event) && (
+      {showHost && height >= 74 && event.location && !meetingHost(event) && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginTop: 3, overflow: 'hidden' }}>
           <MapPin size={9} color={evTimeInk} style={{ flexShrink: 0 }} />
           <span style={{ fontSize: 10, color: evTimeInk, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -822,8 +858,13 @@ const EV_ROUND: React.CSSProperties = {
   display: 'flex', alignItems: 'center', justifyContent: 'center',
   background: '#FFFFFF', border: '1px solid #E8E1CE', color: '#6C6553', cursor: 'pointer',
 }
+/** Four sizes in the whole panel: 27 title, 14 value, 13.5 label, 11.5 caption. */
 const EV_LABEL: React.CSSProperties = {
-  width: 98, flexShrink: 0, fontSize: 13.5, color: '#6C6553', fontWeight: 500,
+  width: 78, flexShrink: 0, fontSize: 13.5, color: '#6C6553', fontWeight: 500,
+}
+/** Every labelled row hangs off the same left edge. */
+const EV_ROW: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', gap: 12,
 }
 const EV_SECTION: React.CSSProperties = {
   fontSize: 14, fontWeight: 600, color: '#191712', flexShrink: 0,
@@ -1022,6 +1063,8 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
   const [location, setLocation] = useState(event.location ?? '')
   const [notes, setNotes] = useState(event.description ?? '')
   const [meetOpen, setMeetOpen] = useState(false)
+  const [whenOpen, setWhenOpen] = useState(false)
+  const whenRef = useRef<HTMLSpanElement>(null)
   const [places, setPlaces] = useState<string[]>([])
   const [placeQuery, setPlaceQuery] = useState('')
   const placeRef = useRef<HTMLSpanElement>(null)
@@ -1293,7 +1336,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
       {/* ── Where ────────────────────────────────────────────────────────── */}
       {/* One field you simply type in. What you type is looked up as you go, so
           a place can be pinned to a real one; Enter keeps it either way. */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 14 }}>
+      <div style={{ ...EV_ROW, marginTop: 16 }}>
         <span style={EV_LABEL}>Location</span>
         <span ref={placeRef} style={{ flex: 1, minWidth: 0, display: 'flex', gap: 7, position: 'relative' }}>
           <span style={{ ...EV_FIELD, flex: 1 }}>
@@ -1355,73 +1398,87 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
         </span>
       </div>
 
-      <div style={{ height: 1, background: '#F0EBDC', margin: '18px 0' }} />
+      <div style={{ height: 1, background: '#F0EBDC', margin: '20px 0' }} />
 
       {/* ── When ─────────────────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 9, flexWrap: 'wrap' }}>
-        <label style={{ ...EV_FIELD, width: 'auto', position: 'relative', cursor: 'pointer', flexShrink: 0 }}>
-          {new Date(dateStr + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}
-          <ChevronDown size={14} strokeWidth={2} style={{ color: '#9B9180' }} />
-          <input
-            type="date" value={dateStr}
-            onChange={e => { setDateStr(e.target.value); pushTimes(e.target.value, fromTime, toTime) }}
-            style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', border: 'none', padding: 0 }} />
-        </label>
-        {!isAllDay ? (
-          <>
-            <span style={{ width: 96 }}>
-              <TimeSelect size="large" value={fromTime} onChange={v => { setFromTime(v); pushTimes(dateStr, v, toTime) }} />
+      {/* One pill, one popover: the date and both times together. Three
+          controls could not share a line with the label column, and a row that
+          breaks its own grid is worse than a row with one control in it. */}
+      <div style={{ ...EV_ROW, position: 'relative' }}>
+        <span style={EV_LABEL}>When</span>
+        <span ref={whenRef} style={{ flex: 1, minWidth: 0, position: 'relative' }}>
+          <button onClick={() => setWhenOpen(o => !o)}
+            style={{ ...EV_FIELD, width: '100%', cursor: 'pointer' }}>
+            <CalendarIcon size={15} color="#6C6553" style={{ flexShrink: 0 }} />
+            <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {new Date(dateStr + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}
+              {isAllDay ? ' · All day' : ` · ${formatTime(fromTime)} – ${formatTime(toTime)}`}
             </span>
-            <span style={{ fontSize: 13.5, color: '#6C6553' }}>to</span>
-            <span style={{ width: 96 }}>
-              <TimeSelect size="large" value={toTime} onChange={v => { setToTime(v); pushTimes(dateStr, fromTime, v) }} />
-            </span>
-          </>
-        ) : (
-          <span style={{ ...EV_FIELD, width: 'auto', background: '#FAF7EC', border: '1px solid transparent' }}>All day</span>
-        )}
+            <ChevronDown size={14} strokeWidth={2} style={{ color: '#9B9180', flexShrink: 0 }} />
+          </button>
+          {whenOpen && (
+            <SchedulePopover
+              date={dateStr}
+              start={isAllDay ? undefined : fromTime}
+              duration={Math.max(15, minutesBetween(fromTime, toTime))}
+              onApply={patch => {
+                const nextDate = patch.dueDate ?? dateStr
+                const nextFrom = patch.plannedTime ?? fromTime
+                const nextTo = addMinutes(nextFrom, patch.duration ?? Math.max(15, minutesBetween(fromTime, toTime)))
+                setDateStr(nextDate); setFromTime(nextFrom); setToTime(nextTo)
+                pushTimes(nextDate, nextFrom, nextTo)
+              }}
+              onClose={() => setWhenOpen(false)}
+            />
+          )}
+        </span>
       </div>
 
       {/* ── What it runs into ────────────────────────────────────────────── */}
       {liveClashes.length > 0 && !clashDismissed && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 10 }}>
-          <button
-            onClick={() => onOpenEvent?.(liveClashes[0])}
-            title={`Open “${liveClashes[0].summary ?? 'the clashing event'}”`}
-            style={{
-              display: 'inline-flex', alignItems: 'center', height: 42, padding: '0 14px', borderRadius: 11,
-              background: 'rgba(245,209,78,0.24)', border: '1px solid rgba(245,209,78,0.7)',
-              color: '#3D3926', fontSize: 13, minWidth: 0, fontFamily: 'inherit', flex: 1,
-              cursor: onOpenEvent ? 'pointer' : 'default',
-              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-            }}>
-            Clashes with {liveClashes[0].summary ?? 'another event'}
-            {liveClashes.length > 1 ? ` +${liveClashes.length - 1}` : ''}
-          </button>
-          <button
-            onClick={moveClear}
-            disabled={!freeAfterClash || saving}
-            title={freeAfterClash ? `Move this to ${freeAfterClash}, clear of the clash` : 'Nothing to move to'}
-            style={{ ...EV_ROUND, width: 42, height: 42, borderRadius: 11, opacity: freeAfterClash ? 1 : 0.45 }}>
-            <Check size={14} strokeWidth={2.4} />
-          </button>
-          <button onClick={() => setClashDismissed(true)} title="Leave it — I know"
-            style={{ ...EV_ROUND, width: 42, height: 42, borderRadius: 11 }}>
-            <X size={14} />
-          </button>
+        <div style={{ ...EV_ROW, marginTop: 12 }}>
+          <span style={EV_LABEL} />
+          <span style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button
+              onClick={() => onOpenEvent?.(liveClashes[0])}
+              title={`Open “${displayTitle(liveClashes[0].summary)}”`}
+              style={{
+                ...EV_FIELD, flex: 1,
+                background: 'rgba(245,209,78,0.24)', border: '1px solid rgba(245,209,78,0.7)',
+                color: '#3D3926', cursor: onOpenEvent ? 'pointer' : 'default',
+                overflow: 'hidden', whiteSpace: 'nowrap',
+              }}>
+              <AlertCircle size={14} style={{ flexShrink: 0 }} />
+              <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                Clashes with {displayTitle(liveClashes[0].summary)}
+                {liveClashes.length > 1 ? ` +${liveClashes.length - 1}` : ''}
+              </span>
+            </button>
+            <button
+              onClick={moveClear}
+              disabled={!freeAfterClash || saving}
+              title={freeAfterClash ? `Move this to ${freeAfterClash}, clear of the clash` : 'Nothing to move to'}
+              style={{ ...EV_ROUND, width: 48, height: 48, borderRadius: 11, opacity: freeAfterClash ? 1 : 0.45 }}>
+              <Check size={15} strokeWidth={2.4} />
+            </button>
+            <button onClick={() => setClashDismissed(true)} title="Leave it — I know"
+              style={{ ...EV_ROUND, width: 48, height: 48, borderRadius: 11 }}>
+              <X size={15} />
+            </button>
+          </span>
         </div>
       )}
 
       {/* ── Repeats · Alert · Prep ───────────────────────────────────────── */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 16 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 12 }}>
+        <div style={EV_ROW}>
           <span style={EV_LABEL}>Repeats</span>
           <span style={{ ...EV_FIELD, flex: 1, color: recurrence ? '#191712' : '#9B9180' }}>
             {recurrence ?? 'Does not repeat'}
           </span>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={EV_ROW}>
           <span style={EV_LABEL}>Alert</span>
           <label style={{ ...EV_FIELD, flex: 1, position: 'relative', cursor: 'pointer' }}>
             <span style={{ flex: 1, minWidth: 0, color: alertMinutes === undefined ? '#9B9180' : '#191712' }}>
@@ -1440,7 +1497,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
           </label>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={EV_ROW}>
           <span style={EV_LABEL}>Prep held</span>
           <span style={{ flex: 1, minWidth: 0 }}>
             {prep ? (
@@ -1462,7 +1519,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
         <p style={{ margin: '8px 0 0', fontSize: 11.5, color: '#B4523A' }}>{prepError}</p>
       )}
 
-      <div style={{ height: 1, background: '#F0EBDC', margin: '18px 0' }} />
+      <div style={{ height: 1, background: '#F0EBDC', margin: '20px 0' }} />
 
       {/* ── Attendees ────────────────────────────────────────────────────── */}
       <div style={{ ...EV_SECTION, marginBottom: 6 }}>Attendees</div>
@@ -1527,7 +1584,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
       </div>
 
       {/* ── Attachments ──────────────────────────────────────────────────── */}
-      <div style={{ height: 1, background: '#F0EBDC', margin: '18px 0' }} />
+      <div style={{ height: 1, background: '#F0EBDC', margin: '20px 0' }} />
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <span style={EV_SECTION}>Attachments</span>
         <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: '#9B9180', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -1569,7 +1626,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
       )}
 
       {/* ── Notes ────────────────────────────────────────────────────────── */}
-      <div style={{ height: 1, background: '#F0EBDC', margin: '18px 0' }} />
+      <div style={{ height: 1, background: '#F0EBDC', margin: '20px 0' }} />
       <div style={{ ...EV_SECTION, marginBottom: 8 }}>Notes</div>
       <textarea
         value={notes}
@@ -1587,7 +1644,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
       {/* ── Prep gathered ────────────────────────────────────────────────── */}
       {prepPoints.length > 0 && (
         <>
-          <div style={{ height: 1, background: '#F0EBDC', margin: '18px 0' }} />
+          <div style={{ height: 1, background: '#F0EBDC', margin: '20px 0' }} />
           <div style={{ ...EV_SECTION, marginBottom: 8 }}>Prep gathered</div>
           {prep?.goal && (
             <p style={{ margin: '0 0 10px', fontSize: 13, color: '#3D3926', lineHeight: 1.5 }}>{prep.goal}</p>
@@ -3033,7 +3090,7 @@ export function CalendarIntelligence() {
                           minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis',
                           textDecoration: st === 'cancelled' ? 'line-through' : 'none',
                           textDecorationThickness: 1.5,
-                        }}>{e.summary ?? '(no title)'}</span>
+                        }}>{displayTitle(e.summary)}</span>
                       </span>
                     )
                   })}
@@ -3111,7 +3168,7 @@ export function CalendarIntelligence() {
                         >
                           {evStatus === 'done' && <Check size={10} strokeWidth={3.4} style={{ display: 'inline', verticalAlign: '-1px', marginRight: 2 }} />}
                           <span style={{ textDecoration: evStatus === 'cancelled' ? 'line-through' : 'none', textDecorationThickness: 1.5 }}>
-                            {ev.summary ?? '(No title)'}
+                            {displayTitle(ev.summary)}
                           </span>
                         </div>
                       )
@@ -3168,8 +3225,8 @@ export function CalendarIntelligence() {
                     {/* Current time indicator */}
                     {isToday && (
                       <>
-                        <div style={{ position: 'absolute', top: nowPx - 5, left: -5, width: 10, height: 10, borderRadius: '50%', background: '#191712', zIndex: 5, pointerEvents: 'none' }} />
-                        <div style={{ position: 'absolute', top: nowPx, left: 0, right: 0, borderTop: '1.5px solid #191712', zIndex: 5, pointerEvents: 'none' }} />
+                        <div style={{ position: 'absolute', top: nowPx - 4, left: -4, width: 8, height: 8, borderRadius: '50%', background: '#B4523A', zIndex: 5, pointerEvents: 'none' }} />
+                        <div style={{ position: 'absolute', top: nowPx, left: 0, right: 0, borderTop: '1px solid #B4523A', zIndex: 5, pointerEvents: 'none' }} />
                       </>
                     )}
 
