@@ -88,6 +88,22 @@ const EMOJIS = [
 ]
 
 /** Reads a picked file into a data URL, downscaled so localStorage can hold it. */
+/** What stands in for a habit's picture when there isn't one.
+ *
+ *  The emoji was drawn straight, which is wrong for the tick and cross people
+ *  use as habit icons: a 52px ✅ behind the words "Not done" reads as a state,
+ *  not as decoration, and on a device that has no pictures every card became a
+ *  wall of green ticks. A status glyph is replaced by the habit's initial. */
+const STATUS_GLYPHS = /[\u2705\u274C\u2714\u2716\u274E\u2717\u2718\u2713\u2611\u2612\uFE0F]/u
+
+function pictureStandIn(habit: { emoji?: string; name: string }): string {
+  const emoji = habit.emoji ?? ''
+  if (!emoji || STATUS_GLYPHS.test(emoji)) {
+    return habit.name.trim().charAt(0).toUpperCase() || '·'
+  }
+  return emoji
+}
+
 function readHabitImage(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
@@ -434,7 +450,7 @@ function WallCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, o
         <span style={{ position: 'absolute', inset: 0, background: `linear-gradient(135deg, ${bgColor} 0%, ${bgColor}CC 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           {habit.image
             ? <img src={habit.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-            : <span style={{ fontSize: 52, opacity: 0.18 }}>{habit.emoji}</span>}
+            : <span style={{ fontSize: 52, opacity: 0.18, fontWeight: 700 }}>{pictureStandIn(habit)}</span>}
         </span>
         {/* Dark gradient overlay — lighter over a real picture, so it stays in colour */}
         <span style={{
@@ -584,7 +600,7 @@ function FillCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, o
         <span style={{ position: 'absolute', inset: 0, background: `linear-gradient(135deg, ${bgColor} 0%, ${bgColor}AA 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           {habit.image
             ? <img src={habit.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-            : <span style={{ fontSize: 72, opacity: 0.25 }}>{habit.emoji}</span>}
+            : <span style={{ fontSize: 72, opacity: 0.25, fontWeight: 700 }}>{pictureStandIn(habit)}</span>}
         </span>
       </span>
       {/* Dark gradient */}
