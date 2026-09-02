@@ -5,10 +5,15 @@
  * Moved-by-AI events are tracked in localStorage: 'cal-ai-moved-events'
  */
 import type { Task } from '@/types'
-import type { GCalEventWithCalendar } from '@/lib/googleCalendar'
-import { fetchDayEvents, createCalendarEvent, updateCalendarEvent } from '@/lib/googleCalendar'
+import type { GCalEvent } from '@/lib/googleCalendar'
+import {
+  fetchDayEvents, createCalendarEvent, updateCalendarEvent,
+  createCalendarEventWithToken, fetchCalendarEventsWithToken,
+} from '@/lib/googleCalendar'
 import { taskEventTitle, taskEventDescription } from '@/lib/taskEvent'
 import { forgetDay } from '@/lib/slotConflicts'
+import { resolveTaskCalendar } from '@/lib/taskCalendar'
+import { getGoogleToken } from '@/lib/tokenManager'
 import { call } from '@/lib/professor'
 
 // ─── AI-moved tracking ────────────────────────────────────────────────────────
@@ -56,16 +61,16 @@ function fromMinutes(mins: number): string {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
 }
 
-function eventDurationMins(ev: GCalEventWithCalendar): number {
+function eventDurationMins(ev: GCalEvent): number {
   if (!ev.start.dateTime || !ev.end.dateTime) return 60
   return (new Date(ev.end.dateTime).getTime() - new Date(ev.start.dateTime).getTime()) / 60000
 }
 
-function hasOtherAttendees(ev: GCalEventWithCalendar): boolean {
+function hasOtherAttendees(ev: GCalEvent): boolean {
   return (ev.attendees ?? []).filter(a => !a.self).length > 0
 }
 
-function isTooCloseToCurrent(ev: GCalEventWithCalendar): boolean {
+function isTooCloseToCurrent(ev: GCalEvent): boolean {
   if (!ev.start.dateTime) return false
   const diffMs = new Date(ev.start.dateTime).getTime() - Date.now()
   return diffMs < 2 * 60 * 60 * 1000  // within 2 hours
@@ -76,7 +81,17 @@ function isTooCloseToCurrent(ev: GCalEventWithCalendar): boolean {
 export async function scheduleTaskToCalendar(task: Task): Promise<ScheduleResult> {
   if (!task.dueDate) return { success: false, error: 'Task has no due date.' }
 
-  const calendarId = task.calendarId ?? 'primary'
+  // The task's own calendar, else its company's, else the default one. This
+  // read only task.calendarId, so a task belonging to a company with its own
+  // calendar was written to the personal one.
+  const target = resolveTaskCalendar(task)
+  const calendarId = target.calendarId
+  // A company bound to a second Google account needs that account's token;
+  // everything else goes through the primary one as before.
+  const accountToken = target.accountEmail ? await getGoogleToken(target.accountEmail) : null
+  if (target.accountEmail && !accountToken) {
+    return { success: false, error: `${target.accountEmail} needs reconnecting before its calendar can be used.` }
+  }
   const durationMins = task.duration ?? 30
   const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
 
@@ -85,12 +100,15 @@ export async function scheduleTaskToCalendar(task: Task): Promise<ScheduleResult
     const start = new Date(`${task.dueDate}T${task.plannedTime}:00`)
     const end   = new Date(start.getTime() + durationMins * 60000)
 
-    const result = await createCalendarEvent(calendarId, {
+    const body = {
       summary: taskEventTitle(task.title),
       description: taskEventDescription(task),
       start: { dateTime: start.toISOString(), timeZone: tz },
       end:   { dateTime: end.toISOString(),   timeZone: tz },
-    })
+    }
+    const result = accountToken
+      ? { ...(await createCalendarEventWithToken(accountToken, calendarId, body)), noAuth: false }
+      : await createCalendarEvent(calendarId, body)
     if (result.noAuth) return { success: false, error: 'Not signed in to Google.' }
     if (result.error)  return { success: false, error: result.error }
     forgetDay(task.dueDate)
@@ -98,7 +116,11 @@ export async function scheduleTaskToCalendar(task: Task): Promise<ScheduleResult
   }
 
   // ── Case 2: date only → AI picks best slot ────────────────────────────────
-  const dayEvents = await fetchDayEvents(calendarId, task.dueDate)
+  const dayEvents = accountToken
+    ? await fetchCalendarEventsWithToken(
+        accountToken, calendarId,
+        new Date(task.dueDate + 'T00:00:00'), new Date(task.dueDate + 'T23:59:59'))
+    : await fetchDayEvents(calendarId, task.dueDate)
   const movable   = dayEvents.filter(ev => ev.start.dateTime && !hasOtherAttendees(ev) && !isTooCloseToCurrent(ev))
 
   const eventsDesc = dayEvents.map(ev => ({
@@ -179,12 +201,15 @@ Return JSON:
   const start = new Date(`${task.dueDate}T${scheduledTime}:00`)
   const end   = new Date(start.getTime() + durationMins * 60000)
 
-  const result = await createCalendarEvent(calendarId, {
+  const createBody = {
     summary: taskEventTitle(task.title),
     description: taskEventDescription(task),
     start: { dateTime: start.toISOString(), timeZone: tz },
     end:   { dateTime: end.toISOString(),   timeZone: tz },
-  })
+  }
+  const result = accountToken
+    ? { ...(await createCalendarEventWithToken(accountToken, calendarId, createBody)), noAuth: false }
+    : await createCalendarEvent(calendarId, createBody)
   if (result.noAuth) return { success: false, error: 'Not signed in to Google.' }
   if (result.error)  return { success: false, error: result.error }
 
@@ -198,7 +223,7 @@ Return JSON:
   }
 }
 
-function findFallbackSlot(events: GCalEventWithCalendar[], durationMins: number): string {
+function findFallbackSlot(events: GCalEvent[], durationMins: number): string {
   const timedEvents = events
     .filter(e => e.start.dateTime)
     .map(e => ({

@@ -15,6 +15,7 @@ import {
 } from '@/lib/googleCalendar'
 import { fetchVisibleEvents } from '@/lib/calendarEvents'
 import { taskEventTitle, taskEventDescription } from '@/lib/taskEvent'
+import { resolveTaskCalendar } from '@/lib/taskCalendar'
 import { loadAccounts, getPrimaryToken, type ConnectedAccount } from '@/lib/multiAccount'
 
 const HOUR_PX = 56
@@ -594,15 +595,16 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
     const companiesWithCal = loadCompaniesWithCal()
     const co = task.companyId ? companiesWithCal.find(c => c.id === task.companyId) : null
 
-    // Find account
-    let token: string | null = null
-    let calendarId = 'primary'
+    // The company's calendar and the company's account are separate facts: a
+    // company calendar can live on the ordinary account, and it used to be
+    // ignored unless an account was linked too.
+    const target = resolveTaskCalendar(task)
+    const calendarId = target.calendarId
 
+    let token: string | null = null
     if (co?.accountId) {
-      const accts = loadAccounts()
-      const acct = accts.find(a => a.id === co.accountId)
+      const acct = loadAccounts().find(a => a.id === co.accountId)
       if (acct) token = acct.providerToken
-      if (co.calendarId) calendarId = co.calendarId
     }
 
     if (!token) token = getPrimaryToken() || null
