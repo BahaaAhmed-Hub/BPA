@@ -1927,10 +1927,22 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
 
   useEffect(() => { titleRef.current?.focus() }, [])
 
+  // Dismiss on a click outside — but not on the one that opened this. A touch
+  // screen replays the tap as a synthetic mousedown a moment after pointerup,
+  // at the same coordinates, which are by definition outside a panel that did
+  // not exist yet: the form appeared and vanished in the same gesture.
   useEffect(() => {
-    const fn = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) onCancel() }
-    document.addEventListener('mousedown', fn)
-    return () => document.removeEventListener('mousedown', fn)
+    const openedAt = Date.now()
+    const fn = (e: Event) => {
+      if (Date.now() - openedAt < 400) return
+      if (ref.current && !ref.current.contains(e.target as Node)) onCancel()
+    }
+    document.addEventListener('pointerdown', fn)
+    document.addEventListener('mousedown',   fn)
+    return () => {
+      document.removeEventListener('pointerdown', fn)
+      document.removeEventListener('mousedown',   fn)
+    }
   }, [onCancel])
 
   const calColor = calColors[calId] ?? calendars.find(c => c.id === calId)?.backgroundColor ?? '#7F77DD'
@@ -2181,7 +2193,7 @@ export function CalendarIntelligence() {
 
   useEffect(() => {
     if (!creatingEvt) return
-    const onMove = (e: MouseEvent) => {
+    const onMove = (e: PointerEvent) => {
       if (!gridRef.current) return
       const rect = gridRef.current.getBoundingClientRect()
       const relY = e.clientY - rect.top + gridRef.current.scrollTop
@@ -2189,7 +2201,7 @@ export function CalendarIntelligence() {
         Math.round((relY / HOUR_PX * 60) / SNAP_MIN) * SNAP_MIN))
       setCreatingEvt(prev => prev ? { ...prev, currentMin: minutes } : null)
     }
-    const onUp = (e: MouseEvent) => {
+    const onUp = (e: PointerEvent) => {
       const cur = creatingRef.current
       setCreatingEvt(null)
       if (!cur) return
@@ -2199,43 +2211,94 @@ export function CalendarIntelligence() {
         setNewEventDraft({ dateStr: cur.dateStr, startMin, endMin, anchorX: e.clientX, anchorY: e.clientY })
       }
     }
-    document.addEventListener('mousemove', onMove)
-    document.addEventListener('mouseup',   onUp)
-    return () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp) }
+    document.addEventListener('pointermove',   onMove)
+    document.addEventListener('pointerup',     onUp)
+    document.addEventListener('pointercancel', onUp)
+    return () => {
+      document.removeEventListener('pointermove',   onMove)
+      document.removeEventListener('pointerup',     onUp)
+      document.removeEventListener('pointercancel', onUp)
+    }
   }, [!!creatingEvt]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  function handleGridMouseDown(e: React.MouseEvent<HTMLDivElement>) {
-    if ((e.target as HTMLElement).closest('.event-card, button, [role="button"], select')) return
+  /** How long an event gets when you just point at an hour rather than drawing
+   *  one. Whatever it is, the form that opens can change it. */
+  const TAP_EVENT_MIN = 60
+
+  // ─── Putting an event on the grid by hand ──────────────────────────────────
+  // This only ever listened for mouse events, and only ever created anything
+  // after an 8px drag — so on a touch screen there was no way to add an event
+  // at all, and even with a mouse a plain click did nothing. A finger cannot
+  // draw here either: a vertical drag has to stay available for scrolling the
+  // day, so touch gets the tap and the mouse keeps the drag as well.
+  function handleGridPointerDown(e: React.PointerEvent<HTMLDivElement>) {
+    if ((e.target as HTMLElement).closest('.event-card, button, [role="button"], select, input, textarea')) return
     if (draggingEvt) return
-    if (!gridRef.current) return
-    const rect   = gridRef.current.getBoundingClientRect()
-    const relX   = e.clientX - rect.left - 52
-    const relY   = e.clientY - rect.top  + gridRef.current.scrollTop
-    if (relX < 0) return
-    const dayIdx = Math.max(0, Math.min(6, Math.floor(relX / ((gridRef.current.clientWidth - 52) / 7))))
-    const day    = weekDays[dayIdx]
+
+    // The columns container, not the scroller: it excludes the time gutter and
+    // its top already moves with the scroll. The old maths measured the
+    // scroller instead, subtracted a gutter width that was wrong by 6px, and
+    // divided by a hardcoded 7 — so in day view, where there is one column,
+    // anything right of the first seventh of the grid resolved to no day at
+    // all and silently did nothing.
+    const cols = e.currentTarget.getBoundingClientRect()
+    const relX = e.clientX - cols.left
+    const relY = e.clientY - cols.top
+    if (relX < 0 || relY < 0) return
+
+    const dayIdx = Math.max(0, Math.min(weekDays.length - 1,
+      Math.floor(relX / (cols.width / Math.max(1, weekDays.length)))))
+    const day = weekDays[dayIdx]
     if (!day) return
-    const minutes = Math.max(0, Math.min(23 * 60, Math.round((relY / HOUR_PX * 60) / SNAP_MIN) * SNAP_MIN))
     const dateStr = localDateStr(day)
+
+    const rawMin  = Math.max(0, Math.min(23 * 60 + 59, (relY / HOUR_PX) * 60))
+    const dragMin = Math.round(rawMin / SNAP_MIN) * SNAP_MIN
+    // A tap means "this hour", so give it the whole hour it landed in rather
+    // than the nearest quarter — tapping the middle of the 3pm band and
+    // getting 3:30 is not what anyone points at an hour for.
+    const tapMin  = Math.floor(rawMin / 60) * 60
+
     const startX = e.clientX, startY = e.clientY
+    const downAt = Date.now()
+    // A finger scrolls; only a mouse draws.
+    const coarse = e.pointerType !== 'mouse'
     let started = false
 
     const cleanup = () => {
-      document.removeEventListener('mousemove', onMove)
-      document.removeEventListener('mouseup',   onUp)
+      document.removeEventListener('pointermove',   onMove)
+      document.removeEventListener('pointerup',     onUp)
+      document.removeEventListener('pointercancel', onCancelled)
     }
-    const onMove = (me: MouseEvent) => {
-      if (started) return
-      if (Math.sqrt((me.clientX - startX) ** 2 + (me.clientY - startY) ** 2) >= 8) {
+    const travelled = (ev: PointerEvent) => Math.hypot(ev.clientX - startX, ev.clientY - startY)
+
+    const onMove = (me: PointerEvent) => {
+      if (started || coarse) return
+      if (travelled(me) >= 8) {
         started = true; cleanup()
-        setCreatingEvt({ dateStr, originMin: minutes, currentMin: minutes })
+        setCreatingEvt({ dateStr, originMin: dragMin, currentMin: dragMin })
         setSelectedEvent(null); setNewEventDraft(null)
       }
     }
-    const onUp = cleanup
+    const onUp = (ue: PointerEvent) => {
+      cleanup()
+      if (started) return
+      if (travelled(ue) > (coarse ? 12 : 4)) return          // a scroll, or a wobble
+      if (coarse && Date.now() - downAt > 700) return        // a long press is not a tap
+      setSelectedEvent(null)
+      setNewEventDraft({
+        dateStr,
+        startMin: tapMin,
+        endMin:   Math.min(24 * 60, tapMin + TAP_EVENT_MIN),
+        anchorX:  ue.clientX, anchorY: ue.clientY,
+      })
+    }
+    // iOS fires this the moment it decides the gesture is a scroll.
+    const onCancelled = () => cleanup()
 
-    document.addEventListener('mousemove', onMove)
-    document.addEventListener('mouseup',   onUp)
+    document.addEventListener('pointermove',   onMove)
+    document.addEventListener('pointerup',     onUp)
+    document.addEventListener('pointercancel', onCancelled)
   }
 
   // Something elsewhere — the Today plan — can ask for a particular event to be
@@ -3274,7 +3337,7 @@ export function CalendarIntelligence() {
             </div>
 
             {/* Day columns */}
-            <div style={{ flex: 1, display: 'flex', position: 'relative' }} onMouseDown={handleGridMouseDown}>
+            <div style={{ flex: 1, display: 'flex', position: 'relative' }} onPointerDown={handleGridPointerDown}>
               {weekDays.map(day => {
                 const ds        = localDateStr(day)
                 const isToday   = ds === today
@@ -3420,6 +3483,20 @@ export function CalendarIntelligence() {
         )
       })()}
 
+      {/* New event form — a column beside the grid, like the event panel.
+          It used to sit outside this row, so opening it stacked a tall form
+          under the calendar in a column layout and squeezed the grid to
+          nothing: the thing you were adding an event to disappeared. */}
+      {newEventDraft && (
+        <NewEventForm
+          draft={newEventDraft}
+          calendars={allCalendars}
+          calColors={calColors}
+          onSave={data => void handleCreateEvent(data)}
+          onCancel={() => setNewEventDraft(null)}
+        />
+      )}
+
       </div>
 
       {/* Context menu */}
@@ -3436,17 +3513,6 @@ export function CalendarIntelligence() {
           }}
           onStatusToggle={s => { toggleStatus(ctxMenu.event.id, s); setCtxMenu(null) }}
           onDelete={() => void handleDeleteEvent(ctxMenu.event)}
-        />
-      )}
-
-      {/* New event form — shown after drag-to-create */}
-      {newEventDraft && (
-        <NewEventForm
-          draft={newEventDraft}
-          calendars={allCalendars}
-          calColors={calColors}
-          onSave={data => void handleCreateEvent(data)}
-          onCancel={() => setNewEventDraft(null)}
         />
       )}
 
