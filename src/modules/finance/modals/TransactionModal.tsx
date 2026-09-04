@@ -1,9 +1,83 @@
 import { useState, useRef } from 'react'
+import { X, ChevronDown, Plus, Paperclip, Check } from 'lucide-react'
 import type { Transaction, Account, Category, Currency, TxType } from '../types'
 
-const RED   = '#DA4A3E'
-const GREEN = '#2FA869'
-const BLUE  = '#3B82F6'
+// ─── The panel's own vocabulary ───────────────────────────────────────────────
+// Same set the calendar's event panel uses: one pill for every value whether
+// you type in it, pick from it or only read it; one label column everything
+// hangs off; a black pill for the one action that commits.
+
+const INK    = '#191712'
+const MUTED  = '#6C6553'
+const GHOST  = '#9B9180'
+const LINE   = '#E8E1CE'
+const HAIR   = '#F0EBDC'
+const OLIVE  = '#5F7038'
+const RUST   = '#B4523A'
+const AMBER  = '#F5D14E'
+const DISPLAY = "'Outfit', system-ui, sans-serif"
+
+const PILL: React.CSSProperties = {
+  display: 'inline-flex', alignItems: 'center', gap: 6, height: 42, boxSizing: 'border-box',
+  padding: '0 14px', borderRadius: 10, background: '#FFFFFF', border: `1px solid ${LINE}`,
+  color: INK, fontSize: 13.5, fontFamily: 'inherit', cursor: 'pointer', minWidth: 0,
+}
+const ROUND: React.CSSProperties = {
+  width: 30, height: 30, borderRadius: '50%', flexShrink: 0, padding: 0,
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  background: '#FFFFFF', border: `1px solid ${LINE}`, color: MUTED, cursor: 'pointer',
+}
+const LABEL: React.CSSProperties = {
+  width: 74, flexShrink: 0, fontSize: 13.5, color: MUTED, fontWeight: 500,
+}
+const ROW: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', gap: 10,
+}
+const SECTION: React.CSSProperties = {
+  fontFamily: DISPLAY, fontSize: 15, fontWeight: 600, letterSpacing: '-0.01em', color: INK,
+}
+const RULE: React.CSSProperties = { height: 1, background: HAIR, margin: '18px 0' }
+
+/** A select you cannot see, sitting exactly on top of a pill you can. The
+ *  browser's own picker is the right control on a phone and an iPad, and it is
+ *  the one the calendar panel uses for the same job. */
+function PillSelect({ value, onChange, children, label }: {
+  value: string
+  onChange: (v: string) => void
+  children: React.ReactNode
+  label: React.ReactNode
+}) {
+  return (
+    <span style={{ flex: 1, minWidth: 0, position: 'relative', display: 'flex' }}>
+      <span style={{ ...PILL, flex: 1, justifyContent: 'space-between' }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {label}
+        </span>
+        <ChevronDown size={13} strokeWidth={2} style={{ color: GHOST, flexShrink: 0 }} />
+      </span>
+      <select value={value} onChange={e => onChange(e.target.value)}
+        style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', border: 'none' }}>
+        {children}
+      </select>
+    </span>
+  )
+}
+
+function AccountGlyph({ account, size = 20 }: { account?: Account; size?: number }) {
+  if (!account) return <span style={{ fontSize: size * 0.75 }}>🏦</span>
+  const isImg = account.emoji.startsWith('data:') || account.emoji.startsWith('http')
+  return (
+    <span style={{
+      width: size, height: size, borderRadius: 6, flexShrink: 0, overflow: 'hidden',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      background: `${account.color}22`,
+    }}>
+      {isImg
+        ? <img src={account.emoji} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        : <span style={{ fontSize: size * 0.62 }}>{account.emoji}</span>}
+    </span>
+  )
+}
 
 interface Props {
   transaction?: Transaction | null
@@ -14,21 +88,18 @@ interface Props {
   onClose: () => void
 }
 
-function AccountIcon({ account }: { account: Account | undefined }) {
-  if (!account) return <span style={{ fontSize: 18 }}>🏦</span>
-  if (account.emoji.startsWith('data:') || account.emoji.startsWith('http')) {
-    return <img src={account.emoji} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-  }
-  return <span style={{ fontSize: 18 }}>{account.emoji}</span>
-}
+const TYPES: { id: TxType; label: string }[] = [
+  { id: 'expense',  label: 'Expense' },
+  { id: 'income',   label: 'Income' },
+  { id: 'transfer', label: 'Transfer' },
+]
 
 export function TransactionModal({ transaction, accounts, categories, onSave, onDelete, onClose }: Props) {
   const isEdit = !!transaction
-
   const todayStr = new Date().toISOString().slice(0, 10)
 
-  const [type,        setType]        = useState<TxType>(transaction?.type       ?? 'expense')
-  const [amountStr,   setAmountStr]   = useState(String(transaction?.amount      ?? ''))
+  const [type,        setType]        = useState<TxType>(transaction?.type        ?? 'expense')
+  const [amountStr,   setAmountStr]   = useState(String(transaction?.amount       ?? ''))
   const [currency,    setCurrency]    = useState<Currency>(transaction?.currency  ?? 'EGP')
   const [payee,       setPayee]       = useState(transaction?.payee               ?? '')
   const [note,        setNote]        = useState(transaction?.note                ?? '')
@@ -39,35 +110,22 @@ export function TransactionModal({ transaction, accounts, categories, onSave, on
   const [attachments, setAttachments] = useState<string[]>(transaction?.attachments ?? [])
   const [tags,        setTags]        = useState<string[]>(transaction?.tags        ?? [])
   const [tagInput,    setTagInput]    = useState('')
-  const [showTagInput, setShowTagInput] = useState(false)
 
-  const [showAccountPicker,  setShowAccountPicker]  = useState(false)
-  const [showCategoryPicker, setShowCategoryPicker] = useState(false)
-  const [editingAmount,      setEditingAmount]      = useState(false)
-
-  const amountRef  = useRef<HTMLInputElement>(null)
-  const payeeRef   = useRef<HTMLInputElement>(null)
-  const noteRef    = useRef<HTMLTextAreaElement>(null)
-  const fileRef    = useRef<HTMLInputElement>(null)
-  const tagInputRef = useRef<HTMLInputElement>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
 
   const selectedAccount  = accounts.find(a => a.id === accountId)
   const selectedCategory = categories.find(c => c.id === categoryId)
 
-  const TYPE_CYCLE: TxType[] = ['expense', 'income', 'transfer']
-  const typeLabel = type === 'expense' ? 'Expense' : type === 'income' ? 'Income' : 'Transfer'
-  const typeColor = type === 'expense' ? RED : type === 'income' ? GREEN : '#F5D14E'
-
-  function cycleType() {
-    const idx = TYPE_CYCLE.indexOf(type)
-    setType(TYPE_CYCLE[(idx + 1) % TYPE_CYCLE.length])
-  }
+  // Rust and olive are the platform's negative and positive. An expense should
+  // still read as money leaving without a second palette to learn.
+  const typeColor = type === 'expense' ? RUST : type === 'income' ? OLIVE : INK
+  const amount = parseFloat(amountStr) || 0
 
   function handleSave() {
     onSave({
       id:          transaction?.id ?? crypto.randomUUID(),
       accountId,
-      amount:      parseFloat(amountStr) || 0,
+      amount,
       currency,
       type,
       payee:       payee.trim(),
@@ -83,17 +141,15 @@ export function TransactionModal({ transaction, accounts, categories, onSave, on
   }
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(e.target.files ?? [])
-    files.forEach(file => {
+    for (const file of Array.from(e.target.files ?? [])) {
       const reader = new FileReader()
       reader.onload = ev => {
         const result = ev.target?.result as string
         if (result) setAttachments(prev => [...prev, result])
       }
       reader.readAsDataURL(file)
-    })
-    // Reset so same file can be re-added
-    e.target.value = ''
+    }
+    e.target.value = ''   // so the same file can be picked again
   }
 
   function addTag(raw: string) {
@@ -102,552 +158,248 @@ export function TransactionModal({ transaction, accounts, categories, onSave, on
     setTagInput('')
   }
 
-  function handleTagKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key === 'Enter' || e.key === ',') {
-      e.preventDefault()
-      addTag(tagInput)
-    }
-    if (e.key === 'Backspace' && tagInput === '' && tags.length > 0) {
-      setTags(prev => prev.slice(0, -1))
-    }
-  }
-
-  const displayAmount = (parseFloat(amountStr) || 0).toLocaleString('en-US', {
-    minimumFractionDigits: 2, maximumFractionDigits: 2,
-  })
-
-  const ROW: React.CSSProperties = {
-    display: 'flex', alignItems: 'center', gap: 12,
-    padding: '13px 20px', borderBottom: `1px solid ${'#E8E1CE'}`,
-    cursor: 'pointer',
-  }
-
-  // Toolbar button — "active" when its section has content
-  function ToolBtn({
-    title, active, onClick, children,
-  }: {
-    title: string; active?: boolean; onClick?: () => void; children: React.ReactNode
-  }) {
-    return (
-      <button
-        title={title}
-        onClick={onClick}
-        style={{
-          background:   active ? 'rgba(245,209,78,0.12)' : 'none',
-          border:       `1.5px solid ${active ? '#F5D14E' : '#E8E1CE'}`,
-          borderRadius: 10,
-          width: 46, height: 46,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          cursor: 'pointer',
-          color: active ? '#191712' : '#6C6553',
-        }}
-      >
-        {children}
-      </button>
-    )
-  }
+  const canSave = amount > 0 && !!accountId
 
   return (
     <div
       onClick={e => { if (e.target === e.currentTarget) onClose() }}
       style={{
-        position: 'fixed', inset: 0,
-        background: 'rgba(0,0,0,0.7)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        zIndex: 1000,
-      }}
-    >
-      {/* Hidden file input */}
-      <input
-        ref={fileRef}
-        type="file"
-        accept="image/*,application/pdf"
-        multiple
-        style={{ display: 'none' }}
-        onChange={handleFileChange}
-      />
-
-      <div style={{
-        width: 400,
-        background: '#FFFFFF',
-        borderRadius: 20,
-        boxShadow: '0 32px 80px rgba(0,0,0,0.6)',
-        overflow: 'hidden',
-        display: 'flex', flexDirection: 'column',
-        maxHeight: '90vh',
-        overflowY: 'auto',
+        position: 'fixed', inset: 0, zIndex: 1000,
+        background: 'rgba(25,23,18,0.45)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 18,
       }}>
 
-        {/* ── Header: Cancel | Type | Save ── */}
-        <div style={{
-          display: 'grid', gridTemplateColumns: '1fr auto 1fr',
-          alignItems: 'center', padding: '15px 20px',
-          borderBottom: `1px solid ${'#E8E1CE'}`,
-        }}>
-          <button
-            onClick={onClose}
-            style={{
-              background: 'none', border: 'none', cursor: 'pointer',
-              fontSize: 15, color: '#6C6553', textAlign: 'left',
-              fontFamily: 'inherit', padding: 0,
-            }}
-          >
-            Cancel
-          </button>
+      <input ref={fileRef} type="file" accept="image/*,application/pdf" multiple
+        style={{ display: 'none' }} onChange={handleFileChange} />
 
-          <button
-            onClick={cycleType}
-            style={{
-              background: 'none', border: 'none', cursor: 'pointer',
-              fontSize: 16, fontWeight: 700, color: typeColor,
-              fontFamily: 'inherit', padding: '4px 10px',
-              display: 'flex', alignItems: 'center', gap: 4,
-            }}
-          >
-            {typeLabel}
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="6 9 12 15 18 9"/>
-            </svg>
-          </button>
+      <div style={{
+        width: 'clamp(320px, 94vw, 460px)', maxHeight: '90vh', overflowY: 'auto',
+        boxSizing: 'border-box', scrollbarWidth: 'thin',
+        background: '#FFFFFF', border: `1px solid ${LINE}`, borderRadius: 18,
+        boxShadow: '0 24px 60px rgba(25,23,18,0.24)',
+        padding: '18px 20px 22px',
+      }}>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 10 }}>
-            {isEdit && onDelete && (
-              <button
-                onClick={() => { onDelete(transaction!.id); onClose() }}
-                style={{
-                  background: 'none', border: 'none', cursor: 'pointer',
-                  fontSize: 13, color: RED, fontFamily: 'inherit', padding: 0,
-                }}
-              >
-                Delete
-              </button>
-            )}
-            <button
-              onClick={handleSave}
-              style={{
-                background: 'none', border: 'none', cursor: 'pointer',
-                fontSize: 15, fontWeight: 700, color: '#191712',
-                fontFamily: 'inherit', padding: 0,
-              }}
-            >
-              Save
-            </button>
-          </div>
-        </div>
-
-        {/* ── Account row ── */}
-        <div
-          onClick={() => { setShowAccountPicker(p => !p); setShowCategoryPicker(false) }}
-          style={ROW}
-        >
-          <div style={{
-            width: 36, height: 36, borderRadius: 10, overflow: 'hidden', flexShrink: 0,
-            background: selectedAccount ? `${selectedAccount.color}22` : '#F7F4EA',
-            border: `1px solid ${selectedAccount ? selectedAccount.color + '44' : '#E8E1CE'}`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
+        {/* Which kind of thing this is, and the way out */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6, height: 26, padding: '0 11px',
+            borderRadius: 999, background: '#F1ECDE', color: '#4A4438', fontSize: 11.5,
           }}>
-            <AccountIcon account={selectedAccount} />
-          </div>
-          <span style={{ flex: 1, fontSize: 15, fontWeight: 500, color: '#191712' }}>
-            {selectedAccount?.name ?? 'No Account'}
+            <span style={{ width: 7, height: 7, borderRadius: 999, background: typeColor, flexShrink: 0 }} />
+            {isEdit ? 'Transaction' : 'New transaction'}
           </span>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={'#6C6553'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="9 18 15 12 9 6"/>
-          </svg>
+          <span style={{ flex: 1 }} />
+          <button onClick={onClose} title="Close" style={ROUND}><X size={14} /></button>
         </div>
 
-        {/* Account picker */}
-        {showAccountPicker && (
-          <div style={{ background: '#F7F4EA', borderBottom: `1px solid ${'#E8E1CE'}`, maxHeight: 180, overflowY: 'auto' }}>
-            {accounts.map(a => (
-              <div
-                key={a.id}
-                onClick={() => { setAccountId(a.id); setShowAccountPicker(false) }}
+        {/* Type — three choices you can see, rather than a title that cycles */}
+        <div style={{
+          display: 'flex', gap: 2, padding: 3, marginTop: 14,
+          borderRadius: 999, background: '#EDE7D9',
+        }}>
+          {TYPES.map(t => {
+            const on = type === t.id
+            return (
+              <button key={t.id} onClick={() => setType(t.id)} aria-pressed={on}
                 style={{
-                  display: 'flex', alignItems: 'center', gap: 10,
-                  padding: '10px 20px', cursor: 'pointer',
-                  background: a.id === accountId ? `${'#F5D14E'}18` : 'transparent',
-                }}
-              >
-                <div style={{
-                  width: 28, height: 28, borderRadius: 7, overflow: 'hidden', flexShrink: 0,
-                  background: `${a.color}22`, border: `1px solid ${a.color}44`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>
-                  {a.emoji.startsWith('data:') || a.emoji.startsWith('http') ? (
-                    <img src={a.emoji} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  ) : <span style={{ fontSize: 15 }}>{a.emoji}</span>}
-                </div>
-                <span style={{ flex: 1, fontSize: 14, color: '#191712' }}>{a.name}</span>
-                {a.id === accountId && (
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={'#F5D14E'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="20 6 9 17 4 12"/>
-                  </svg>
-                )}
-              </div>
-            ))}
-            {accounts.length === 0 && (
-              <div style={{ padding: '10px 20px', fontSize: 13, color: '#6C6553' }}>No accounts yet</div>
-            )}
-          </div>
-        )}
+                  flex: 1, height: 32, borderRadius: 999, border: 'none', fontFamily: 'inherit',
+                  background: on ? INK : 'transparent', color: on ? '#FDF8E7' : MUTED,
+                  fontSize: 12.5, fontWeight: on ? 600 : 500, cursor: 'pointer',
+                }}>{t.label}</button>
+            )
+          })}
+        </div>
 
-        {/* ── Category + Amount row ── */}
-        <div style={{ borderBottom: `1px solid ${'#E8E1CE'}` }}>
-          <div style={{ display: 'flex', alignItems: 'center' }}>
+        {/* The amount is what this panel is about, so it is the biggest thing in it */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 10, marginTop: 12,
+          padding: '0 15px', height: 66, borderRadius: 12,
+          background: '#FAF7EC', border: `1px solid ${LINE}`,
+        }}>
+          <span style={{ position: 'relative', display: 'flex', flexShrink: 0 }}>
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', gap: 4, height: 30, padding: '0 10px',
+              borderRadius: 8, background: '#FFFFFF', border: `1px solid ${LINE}`,
+              fontSize: 12, fontWeight: 600, color: MUTED,
+            }}>
+              {currency}
+              <ChevronDown size={11} strokeWidth={2} style={{ color: GHOST }} />
+            </span>
+            <select value={currency} onChange={e => setCurrency(e.target.value as Currency)}
+              style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', border: 'none' }}>
+              <option value="EGP">EGP</option>
+              <option value="USD">USD</option>
+              <option value="AED">AED</option>
+            </select>
+          </span>
+          <input
+            type="number" min={0} step="0.01" inputMode="decimal"
+            value={amountStr}
+            onChange={e => setAmountStr(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter' && canSave) handleSave() }}
+            placeholder="0.00"
+            style={{
+              flex: 1, minWidth: 0, background: 'transparent', border: 'none', outline: 'none',
+              fontFamily: DISPLAY, fontSize: 30, fontWeight: 700, letterSpacing: '-0.03em',
+              color: amount > 0 ? typeColor : '#C9C0A8', textAlign: 'right',
+              fontVariantNumeric: 'tabular-nums', padding: 0,
+            }} />
+        </div>
 
-            {/* Category side */}
-            <div
-              onClick={() => { setShowCategoryPicker(p => !p); setShowAccountPicker(false) }}
-              style={{
-                flex: 1, display: 'flex', alignItems: 'center', gap: 10,
-                padding: '13px 16px', cursor: 'pointer',
-                borderRight: `1px solid ${'#E8E1CE'}`,
-              }}
-            >
-              {selectedCategory && (
-                <div style={{
-                  width: 28, height: 28, borderRadius: 7, overflow: 'hidden', flexShrink: 0,
-                  background: `${selectedCategory.color}22`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>
-                  <span style={{ fontSize: 15 }}>{selectedCategory.icon}</span>
-                </div>
-              )}
-              <span style={{ fontSize: 14, color: selectedCategory ? '#191712' : '#6C6553' }}>
-                {selectedCategory?.name ?? 'No Category'}
-              </span>
-            </div>
+        <div style={RULE} />
 
-            {/* Amount + currency side */}
-            <div
-              onClick={() => { setEditingAmount(true); setTimeout(() => amountRef.current?.select(), 30) }}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 5,
-                padding: '13px 16px', cursor: 'text', flexShrink: 0,
-              }}
-            >
-              <select
-                value={currency}
-                onChange={e => setCurrency(e.target.value as Currency)}
-                onClick={e => e.stopPropagation()}
-                style={{
-                  background: 'transparent', border: 'none', outline: 'none',
-                  color: '#6C6553', fontSize: 13, fontFamily: 'inherit',
-                  cursor: 'pointer', padding: 0, appearance: 'none' as const,
-                }}
-              >
-                <option value="EGP">EGP</option>
-                <option value="USD">USD</option>
-                <option value="AED">AED</option>
-              </select>
-
-              {editingAmount ? (
-                <input
-                  ref={amountRef}
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  value={amountStr}
-                  onChange={e => setAmountStr(e.target.value)}
-                  onBlur={() => setEditingAmount(false)}
-                  style={{
-                    width: 90, background: 'transparent', border: 'none', outline: 'none',
-                    color: typeColor, fontSize: 16, fontWeight: 700,
-                    fontFamily: 'inherit', textAlign: 'right', padding: 0,
-                  }}
-                />
-              ) : (
-                <span style={{ fontSize: 16, fontWeight: 700, color: typeColor }}>
-                  {displayAmount}
+        {/* Everything else hangs off one label column */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={ROW}>
+            <span style={LABEL}>Account</span>
+            <PillSelect value={accountId} onChange={setAccountId}
+              label={<>
+                <AccountGlyph account={selectedAccount} />
+                <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {selectedAccount?.name ?? 'No account'}
                 </span>
-              )}
-            </div>
+              </>}>
+              {accounts.length === 0 && <option value="">No accounts yet</option>}
+              {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+            </PillSelect>
           </div>
 
-          {/* Category picker */}
-          {showCategoryPicker && (
-            <div style={{ background: '#F7F4EA', borderTop: `1px solid ${'#E8E1CE'}`, maxHeight: 200, overflowY: 'auto' }}>
-              <div
-                onClick={() => { setCategoryId(''); setShowCategoryPicker(false) }}
-                style={{
-                  padding: '10px 20px', cursor: 'pointer', fontSize: 14,
-                  color: !categoryId ? '#F5D14E' : '#6C6553',
-                  background: !categoryId ? `${'#F5D14E'}18` : 'transparent',
-                }}
-              >
-                No Category
-              </div>
-              {categories.map(c => (
-                <div
-                  key={c.id}
-                  onClick={() => { setCategoryId(c.id); setShowCategoryPicker(false) }}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 10,
-                    padding: '10px 20px', cursor: 'pointer',
-                    background: c.id === categoryId ? `${'#F5D14E'}18` : 'transparent',
-                  }}
-                >
-                  <span style={{ fontSize: 15 }}>{c.icon}</span>
-                  <span style={{ flex: 1, fontSize: 14, color: '#191712' }}>{c.name}</span>
-                  {c.id === categoryId && (
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={'#F5D14E'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="20 6 9 17 4 12"/>
-                    </svg>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+          <div style={ROW}>
+            <span style={LABEL}>Category</span>
+            <PillSelect value={categoryId} onChange={setCategoryId}
+              label={<>
+                {selectedCategory && <span style={{ fontSize: 14 }}>{selectedCategory.icon}</span>}
+                <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: selectedCategory ? INK : GHOST }}>
+                  {selectedCategory?.name ?? 'Uncategorised'}
+                </span>
+              </>}>
+              <option value="">Uncategorised</option>
+              {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </PillSelect>
+          </div>
 
-        {/* ── Payee row ── */}
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 10,
-          padding: '13px 20px', borderBottom: `1px solid ${'#E8E1CE'}`,
-        }}>
-          <input
-            ref={payeeRef}
-            type="text"
-            value={payee}
-            onChange={e => setPayee(e.target.value)}
-            placeholder="Payee..."
-            style={{
-              flex: 1, background: 'transparent', border: 'none', outline: 'none',
-              color: '#191712', fontSize: 14, fontFamily: 'inherit',
-            }}
-          />
-          {payee ? (
-            <button
-              onClick={() => setPayee('')}
+          <div style={ROW}>
+            <span style={LABEL}>Payee</span>
+            <input value={payee} onChange={e => setPayee(e.target.value)}
+              placeholder="Who it went to"
+              style={{ ...PILL, flex: 1, cursor: 'text', outline: 'none' }} />
+          </div>
+
+          <div style={ROW}>
+            <span style={LABEL}>When</span>
+            <span style={{ flex: 1, minWidth: 0, display: 'flex', gap: 7 }}>
+              <label style={{ ...PILL, flex: 1, position: 'relative', justifyContent: 'space-between' }}>
+                {new Date(date + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
+                <ChevronDown size={13} strokeWidth={2} style={{ color: GHOST, flexShrink: 0 }} />
+                <input type="date" value={date} onChange={e => setDate(e.target.value)}
+                  style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', border: 'none', padding: 0 }} />
+              </label>
+              <button onClick={() => setIsCleared(v => !v)} title="Money has actually moved"
+                style={{
+                  ...PILL, flexShrink: 0,
+                  background: isCleared ? INK : '#FFFFFF',
+                  border: isCleared ? 'none' : `1px solid ${LINE}`,
+                  color: isCleared ? '#FDF8E7' : MUTED,
+                }}>
+                {isCleared && <Check size={13} strokeWidth={2.5} />} Paid
+              </button>
+            </span>
+          </div>
+
+          <div style={{ ...ROW, alignItems: 'flex-start' }}>
+            <span style={{ ...LABEL, paddingTop: 11 }}>Notes</span>
+            <textarea value={note} onChange={e => setNote(e.target.value)} rows={2}
+              placeholder="Anything worth remembering…"
               style={{
-                background: '#E8E1CE', border: 'none', cursor: 'pointer',
-                borderRadius: '50%', width: 20, height: 20,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: '#6C6553', fontSize: 11, flexShrink: 0, lineHeight: 1,
-              }}
-            >✕</button>
-          ) : (
-            <button
-              onClick={() => payeeRef.current?.focus()}
-              style={{
-                background: 'none', border: `1.5px solid ${'#E8E1CE'}`,
-                borderRadius: '50%', width: 26, height: 26,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer', color: '#6C6553', flexShrink: 0,
-              }}
-            >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                <path d="M12 5v14M5 12h14"/>
-              </svg>
-            </button>
-          )}
+                flex: 1, minWidth: 0, boxSizing: 'border-box', resize: 'vertical',
+                background: '#FFFFFF', border: `1px solid ${LINE}`, borderRadius: 9,
+                padding: '9px 12px', fontSize: 13.5, color: INK, fontFamily: 'inherit',
+                outline: 'none', textAlign: 'left',
+              }} />
+          </div>
         </div>
 
-        {/* ── Note textarea — always visible ── */}
-        <div style={{ borderBottom: `1px solid ${'#E8E1CE'}` }}>
-          <textarea
-            ref={noteRef}
-            value={note}
-            onChange={e => setNote(e.target.value)}
-            placeholder="Description..."
-            rows={3}
-            style={{
-              width: '100%', background: 'transparent', border: 'none', outline: 'none',
-              color: '#191712', fontSize: 13, fontFamily: 'inherit',
-              resize: 'none', padding: '10px 20px', boxSizing: 'border-box',
-            }}
-          />
-        </div>
+        <div style={RULE} />
 
-        {/* ── Attachment thumbnail strip ── */}
-        {attachments.length > 0 && (
-          <div style={{
-            display: 'flex', gap: 8, padding: '10px 20px',
-            borderBottom: `1px solid ${'#E8E1CE'}`,
-            flexWrap: 'wrap',
-          }}>
-            {attachments.map((src, i) => (
-              <div key={i} style={{ position: 'relative', flexShrink: 0 }}>
-                <img
-                  src={src}
-                  alt={`attachment ${i + 1}`}
-                  style={{
-                    width: 40, height: 40, borderRadius: 6,
-                    objectFit: 'cover',
-                    border: `1px solid ${'#E8E1CE'}`,
-                  }}
-                />
-                <button
-                  onClick={() => setAttachments(prev => prev.filter((_, j) => j !== i))}
-                  style={{
-                    position: 'absolute', top: -6, right: -6,
-                    background: RED, border: 'none', borderRadius: '50%',
-                    width: 16, height: 16, cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    color: '#fff', fontSize: 9, lineHeight: 1,
-                  }}
-                >✕</button>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* ── Tags row ── */}
-        {(tags.length > 0 || showTagInput) && (
-          <div style={{
-            display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6,
-            padding: '10px 20px', borderBottom: `1px solid ${'#E8E1CE'}`,
-          }}>
-            {tags.map((tag, i) => (
-              <span
-                key={i}
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 4,
-                  background: 'rgba(245,209,78,0.12)', color: '#3D3926',
-                  border: `1px solid ${'#F5D14E'}44`,
-                  borderRadius: 20, padding: '3px 8px', fontSize: 12,
-                }}
-              >
-                #{tag}
-                <button
-                  onClick={() => setTags(prev => prev.filter((_, j) => j !== i))}
-                  style={{
-                    background: 'none', border: 'none', cursor: 'pointer',
-                    color: '#6C6553', fontSize: 10, padding: 0, lineHeight: 1,
-                    display: 'flex', alignItems: 'center',
-                  }}
-                >✕</button>
-              </span>
-            ))}
-            {showTagInput && (
-              <input
-                ref={tagInputRef}
-                value={tagInput}
-                onChange={e => setTagInput(e.target.value)}
-                onKeyDown={handleTagKeyDown}
-                onBlur={() => { if (tagInput) addTag(tagInput); setShowTagInput(false) }}
-                placeholder="Add tag..."
-                style={{
-                  background: 'transparent', border: 'none', outline: 'none',
-                  color: '#191712', fontSize: 13, fontFamily: 'inherit',
-                  minWidth: 80, flex: 1,
-                }}
-              />
-            )}
-          </div>
-        )}
-
-        {/* ── Date + Paid toggle ── */}
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '13px 20px', borderBottom: `1px solid ${'#E8E1CE'}`,
-        }}>
+        {/* Tags */}
+        <div style={{ ...SECTION, marginBottom: 9 }}>Tags</div>
+        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+          {tags.map(tag => (
+            <span key={tag} style={{
+              display: 'inline-flex', alignItems: 'center', gap: 5, height: 28, padding: '0 6px 0 10px',
+              borderRadius: 999, background: 'rgba(245,209,78,0.16)', border: `1px solid ${AMBER}55`,
+              color: '#3D3926', fontSize: 12,
+            }}>
+              {tag}
+              <button onClick={() => setTags(prev => prev.filter(t => t !== tag))} title="Remove"
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: MUTED, padding: 0, display: 'flex' }}>
+                <X size={12} />
+              </button>
+            </span>
+          ))}
           <input
-            type="date"
-            value={date}
-            onChange={e => setDate(e.target.value)}
-            style={{
-              background: 'transparent', border: 'none', outline: 'none',
-              color: '#191712', fontSize: 14, fontFamily: 'inherit', cursor: 'pointer',
+            value={tagInput}
+            onChange={e => setTagInput(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addTag(tagInput) }
+              if (e.key === 'Backspace' && !tagInput && tags.length) setTags(prev => prev.slice(0, -1))
             }}
-          />
-          <button
-            onClick={() => setIsCleared(p => !p)}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 6,
-              background: 'none', border: 'none', cursor: 'pointer',
-              fontSize: 13, fontWeight: 700, letterSpacing: '0.5px',
-              color: isCleared ? BLUE : '#6C6553',
-              fontFamily: 'inherit',
-            }}
-          >
-            PAID
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              {isCleared ? (
-                <>
-                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                  <polyline points="22 4 12 14.01 9 11.01"/>
-                </>
-              ) : (
-                <circle cx="12" cy="12" r="10"/>
-              )}
-            </svg>
+            onBlur={() => addTag(tagInput)}
+            placeholder={tags.length ? 'Add another' : 'groceries, work…'}
+            style={{ ...PILL, height: 34, flex: 1, minWidth: 120, cursor: 'text', outline: 'none', fontSize: 12.5 }} />
+        </div>
+
+        <div style={RULE} />
+
+        {/* Receipts */}
+        <div style={{ ...SECTION, marginBottom: 9 }}>Receipts</div>
+        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+          {attachments.map((src, i) => (
+            <span key={i} style={{ position: 'relative', flexShrink: 0, display: 'flex' }}>
+              <img src={src} alt={`Receipt ${i + 1}`} style={{
+                width: 46, height: 46, borderRadius: 9, objectFit: 'cover', border: `1px solid ${LINE}`,
+              }} />
+              <button onClick={() => setAttachments(prev => prev.filter((_, j) => j !== i))} title="Remove"
+                style={{
+                  position: 'absolute', top: -6, right: -6, width: 19, height: 19, padding: 0,
+                  borderRadius: '50%', background: '#FFFFFF', border: `1px solid ${LINE}`,
+                  color: MUTED, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  boxShadow: '0 1px 3px rgba(25,23,18,0.14)',
+                }}>
+                <X size={11} />
+              </button>
+            </span>
+          ))}
+          <button onClick={() => fileRef.current?.click()}
+            style={{ ...PILL, height: 46, color: MUTED, gap: 7 }}>
+            {attachments.length ? <Plus size={14} /> : <Paperclip size={14} />}
+            {attachments.length ? 'Add another' : 'Attach a receipt'}
           </button>
         </div>
 
-        {/* ── Bottom toolbar ── */}
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-around',
-          padding: '14px 20px',
-        }}>
-          {/* 💬 Note */}
-          <ToolBtn
-            title="Note"
-            active={note.trim().length > 0}
-            onClick={() => noteRef.current?.focus()}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-            </svg>
-          </ToolBtn>
-
-          {/* 🖼 Attachment */}
-          <ToolBtn
-            title="Attachment"
-            active={attachments.length > 0}
-            onClick={() => fileRef.current?.click()}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-              <circle cx="8.5" cy="8.5" r="1.5"/>
-              <polyline points="21 15 16 10 5 21"/>
-            </svg>
-          </ToolBtn>
-
-          {/* # Tag */}
-          <ToolBtn
-            title="Tag"
-            active={tags.length > 0}
-            onClick={() => {
-              setShowTagInput(true)
-              setTimeout(() => tagInputRef.current?.focus(), 30)
-            }}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
-              <line x1="7" y1="7" x2="7.01" y2="7"/>
-            </svg>
-          </ToolBtn>
-
-          {/* 👤 Payee */}
-          <ToolBtn
-            title="Payee"
-            active={payee.trim().length > 0}
-            onClick={() => payeeRef.current?.focus()}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-              <circle cx="12" cy="7" r="4"/>
-            </svg>
-          </ToolBtn>
-
-          {/* 🗂 Receipt / File */}
-          <ToolBtn
-            title="Receipt"
-            active={attachments.length > 0}
-            onClick={() => fileRef.current?.click()}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-              <polyline points="14 2 14 8 20 8"/>
-              <line x1="16" y1="13" x2="8" y2="13"/>
-              <line x1="16" y1="17" x2="8" y2="17"/>
-              <polyline points="10 9 9 9 8 9"/>
-            </svg>
-          </ToolBtn>
+        {/* The one action that commits, and the ways not to */}
+        <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
+          <button onClick={handleSave} disabled={!canSave} style={{
+            ...PILL, flex: 1, justifyContent: 'center', fontWeight: 600,
+            background: canSave ? INK : '#EDE7D9',
+            border: 'none', color: canSave ? '#FDF8E7' : GHOST,
+            cursor: canSave ? 'pointer' : 'default',
+          }}>{isEdit ? 'Save changes' : 'Add transaction'}</button>
+          <button onClick={onClose} style={{ ...PILL, color: MUTED }}>Cancel</button>
         </div>
 
+        {isEdit && onDelete && (
+          <button
+            onClick={() => { onDelete(transaction.id); onClose() }}
+            style={{
+              marginTop: 12, width: '100%', height: 34, borderRadius: 9,
+              background: 'none', border: 'none', fontFamily: 'inherit',
+              color: RUST, fontSize: 12.5, cursor: 'pointer',
+            }}>
+            Delete this transaction
+          </button>
+        )}
       </div>
     </div>
   )
