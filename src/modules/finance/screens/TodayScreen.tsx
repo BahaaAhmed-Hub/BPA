@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { useFinanceStore } from '../financeStore'
 import { BudgetQuickPay } from '../components/BudgetQuickPay'
 import { CategoryGlyph } from '../components/CategoryGlyph'
-import type { Transaction, Category, Account } from '../types'
+import { TransactionModal } from '../modals/TransactionModal'
+import type { Transaction } from '../types'
 
 // ── Palette ───────────────────────────────────────────────────────────────────
 
@@ -44,88 +45,7 @@ function Pill({ type, amount, currency }: { type: 'income' | 'expense' | 'transf
   )
 }
 
-// ── TxModal ───────────────────────────────────────────────────────────────────
-
 interface TxModalState { open: boolean; tx: Transaction | null }
-
-function TxModal({
-  tx,
-  categories,
-  accounts,
-  onClose,
-}: {
-  tx: Transaction
-  categories: Category[]
-  accounts: Account[]
-  onClose: () => void
-}) {
-  const cat  = tx.categoryId ? categories.find(c => c.id === tx.categoryId) : null
-  const acct = tx.accountId  ? accounts.find(a => a.id === tx.accountId)    : null
-
-  return (
-    <div
-      onClick={onClose}
-      style={{
-        position: 'fixed', inset: 0, zIndex: 1000,
-        background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(3px)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: 24,
-      }}
-    >
-      <div
-        onClick={e => e.stopPropagation()}
-        style={{
-          width: '100%', maxWidth: 400,
-          background: C.surface, border: `1px solid ${C.border}`,
-          borderRadius: 14, padding: 24,
-          boxShadow: '0 24px 80px rgba(0,0,0,0.7)',
-        }}
-      >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
-          <div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: C.textPri, marginBottom: 4 }}>
-              {tx.payee?.trim() || cat?.name || 'Transaction'}
-            </div>
-            <div style={{ fontSize: 12, color: C.textMuted }}>{tx.date}</div>
-          </div>
-          <Pill type={tx.type === 'income' ? 'income' : tx.type === 'transfer' ? 'transfer' : 'expense'} amount={tx.amount} currency={tx.currency} />
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          {cat && (
-            <div>
-              <div style={{ fontSize: 10, color: C.textMuted, marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Category</div>
-              <div style={{ fontSize: 13, color: C.textDim }}>{cat.icon ?? ''} {cat.name}</div>
-            </div>
-          )}
-          {acct && (
-            <div>
-              <div style={{ fontSize: 10, color: C.textMuted, marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Account</div>
-              <div style={{ fontSize: 13, color: C.textDim }}>{acct.emoji ?? ''} {acct.name}</div>
-            </div>
-          )}
-          {tx.note && (
-            <div style={{ gridColumn: '1 / -1' }}>
-              <div style={{ fontSize: 10, color: C.textMuted, marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Notes</div>
-              <div style={{ fontSize: 13, color: C.textDim }}>{tx.note}</div>
-            </div>
-          )}
-        </div>
-
-        <button
-          onClick={onClose}
-          style={{
-            marginTop: 24, width: '100%', padding: '9px 0',
-            background: 'transparent', border: `1px solid ${C.border}`,
-            borderRadius: 8, fontSize: 13, color: C.textMuted, cursor: 'pointer',
-          }}
-        >
-          Close
-        </button>
-      </div>
-    </div>
-  )
-}
 
 // ── Money Calendar (16D design) ───────────────────────────────────────────────
 // Each cell shows: day number + net daily amount (olive=income, rust=expense, neutral=zero)
@@ -252,7 +172,7 @@ function MoneyCalendar({
 // ── Main Screen ───────────────────────────────────────────────────────────────
 
 export function TodayScreen() {
-  const { transactions, categories, accounts } = useFinanceStore()
+  const { transactions, categories, accounts, upsertTransaction, removeTransaction } = useFinanceStore()
   const today      = new Date()
   const todayStr   = today.toISOString().slice(0, 10)
 
@@ -305,7 +225,7 @@ export function TodayScreen() {
           border: `1px solid ${acct ? acct.color + '44' : isExp ? RED + '44' : GREEN + '44'}`,
           display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17,
         }}>
-          {cat ? <CategoryGlyph icon={cat.icon} size={18} /> : (acct?.emoji ?? (isExp ? '💳' : '💼'))}
+          <CategoryGlyph icon={cat?.icon ?? acct?.emoji ?? (isExp ? '💳' : '💼')} size={18} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 14, fontWeight: 500, color: C.textPri, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -394,8 +314,11 @@ export function TodayScreen() {
                     cursor: 'pointer', gap: 8,
                   }}
                 >
-                  <span style={{ fontSize: 12, color: C.textDim, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {cat?.icon ?? (isExp ? '💳' : '💼')} {tx.payee?.trim() || cat?.name || 'Tx'}
+                  <span style={{ fontSize: 12, color: C.textDim, flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <CategoryGlyph icon={cat?.icon ?? (isExp ? '💳' : '💼')} size={13} />
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {tx.payee?.trim() || cat?.name || 'Tx'}
+                    </span>
                   </span>
                   <span style={{ fontSize: 12, fontWeight: 600, color: isExp ? RED : GREEN, flexShrink: 0 }}>
                     {isExp ? '−' : '+'}{(tx.currency ?? 'EGP')} {Math.abs(tx.amount).toLocaleString('en-US')}
@@ -457,11 +380,14 @@ export function TodayScreen() {
       </div>{/* end Main content flex */}
 
       {/* Transaction detail modal */}
-      {txModal.open && txModal.tx && (
-        <TxModal
-          tx={txModal.tx}
-          categories={categories}
+      {txModal.open && (
+        <TransactionModal
+          transaction={txModal.tx}
           accounts={accounts}
+          categories={categories}
+          history={transactions}
+          onSave={tx => { void upsertTransaction(tx); setTxModal({ open: false, tx: null }) }}
+          onDelete={id => { void removeTransaction(id); setTxModal({ open: false, tx: null }) }}
           onClose={() => setTxModal({ open: false, tx: null })}
         />
       )}
