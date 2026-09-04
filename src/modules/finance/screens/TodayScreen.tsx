@@ -47,6 +47,17 @@ function Pill({ type, amount, currency }: { type: 'income' | 'expense' | 'transf
 
 interface TxModalState { open: boolean; tx: Transaction | null }
 
+/** A day cell is about six characters wide. Anything past a hundred thousand
+ *  gets abbreviated rather than clipped — "100k" reads, "+100…" does not. */
+function cellAmount(n: number): string {
+  const a = Math.abs(n)
+  if (a >= 100000) {
+    const k = a / 1000
+    return `${k >= 1000 ? `${(k / 1000).toFixed(k % 1000 === 0 ? 0 : 1)}m` : `${k.toFixed(k % 1 === 0 ? 0 : 1)}k`}`
+  }
+  return a.toLocaleString('en-US')
+}
+
 // ── Money Calendar (16D design) ───────────────────────────────────────────────
 // Each cell shows: day number + net daily amount (olive=income, rust=expense, neutral=zero)
 
@@ -95,39 +106,59 @@ function MoneyCalendar({
   const monthOut = transactions.filter(t => t.date.startsWith(monthPrefix) && t.type === 'expense').reduce((s, t) => s + Math.abs(t.amount), 0)
   const monthIn  = transactions.filter(t => t.date.startsWith(monthPrefix) && t.type === 'income').reduce((s, t) => s + Math.abs(t.amount), 0)
 
+  const ROUND_BTN = {
+    width: 28, height: 28, borderRadius: '50%',
+    background: '#FFFFFF', border: '1px solid #E8E1CE',
+    color: '#6C6553', fontSize: 15, lineHeight: 1, cursor: 'pointer',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    flexShrink: 0,
+  } as const
+
+  const chip = (label: string, value: string, color: string, tint: string) => (
+    <span style={{
+      display: 'inline-flex', alignItems: 'baseline', gap: 5,
+      background: tint, borderRadius: 999, padding: '4px 11px',
+      fontSize: 10.5, fontWeight: 600, letterSpacing: '0.04em',
+      textTransform: 'uppercase' as const, color: '#6C6553',
+    }}>
+      {label}
+      <b style={{ fontFamily: 'Outfit, sans-serif', fontSize: 12.5, letterSpacing: 0, color, fontVariantNumeric: 'tabular-nums' }}>{value}</b>
+    </span>
+  )
+
   return (
     <div style={{ userSelect: 'none' as const }}>
       {/* Month nav + totals */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-        <button onClick={onPrevMonth} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6C6553', fontSize: 16, padding: '0 4px', lineHeight: 1 }}>‹</button>
-        <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 16, fontWeight: 600, color: '#191712', letterSpacing: '-0.02em' }}>
-          {MONTH_NAMES[month]} {year}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, flexWrap: 'wrap' as const }}>
+        <button onClick={onPrevMonth} style={ROUND_BTN} title="Previous month">‹</button>
+        <button onClick={onNextMonth} style={ROUND_BTN} title="Next month">›</button>
+        <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 21, fontWeight: 600, color: '#191712', letterSpacing: '-0.03em' }}>
+          {MONTH_NAMES[month]} <span style={{ color: '#9B9180' }}>{year}</span>
         </span>
-        <button onClick={onNextMonth} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6C6553', fontSize: 16, padding: '0 4px', lineHeight: 1 }}>›</button>
-        <span style={{ marginLeft: 'auto', fontSize: 11, color: '#6C6553', display: 'flex', gap: 12 }}>
-          <span>Out <b style={{ fontFamily: 'Outfit, sans-serif', color: '#B4523A', fontVariantNumeric: 'tabular-nums' }}>
-            {monthOut > 0 ? `EGP ${monthOut.toLocaleString('en-US')}` : '–'}
-          </b></span>
-          <span>In <b style={{ fontFamily: 'Outfit, sans-serif', color: '#5F7038', fontVariantNumeric: 'tabular-nums' }}>
-            {monthIn > 0 ? `EGP ${monthIn.toLocaleString('en-US')}` : '–'}
-          </b></span>
+        <span style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+          {chip('Out', monthOut > 0 ? monthOut.toLocaleString('en-US') : '–', '#B4523A', '#F6EFE2')}
+          {chip('In',  monthIn  > 0 ? monthIn.toLocaleString('en-US')  : '–', '#5F7038', '#F0F1E2')}
         </span>
       </div>
 
-      {/* Calendar grid */}
-      <div style={{ border: '1px solid #E8E1CE', borderRight: 'none', borderBottom: 'none', borderRadius: 14, overflow: 'hidden' }}>
+      {/* Calendar card */}
+      <div style={{
+        background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 20,
+        padding: 14, boxShadow: '0 1px 3px rgba(25,23,18,0.06)',
+      }}>
         {/* Day headers */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 6, marginBottom: 6 }}>
           {['SAT','SUN','MON','TUE','WED','THU','FRI'].map(d => (
-            <div key={d} style={{ padding: '7px', fontSize: 10.5, fontWeight: 700, letterSpacing: '0.08em', color: '#6C6553', borderRight: '1px solid #EFEADB', borderBottom: '1px solid #E8E1CE', boxSizing: 'border-box' as const }}>{d}</div>
+            <div key={d} style={{
+              textAlign: 'center' as const, fontSize: 10, fontWeight: 700,
+              letterSpacing: '0.1em', color: '#9B9180', padding: '2px 0 6px',
+            }}>{d}</div>
           ))}
         </div>
         {/* Cells grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 6 }}>
           {cells.map((day, i) => {
-            if (!day) return (
-              <div key={i} style={{ borderRight: '1px solid #EFEADB', borderBottom: '1px solid #EFEADB', minHeight: 72, boxSizing: 'border-box' as const, background: '#FAF7EC' }} />
-            )
+            if (!day) return <div key={i} style={{ minHeight: 78 }} />
             const dateStr = `${year}-${String(month + 1).padStart(2,'0')}-${String(day).padStart(2,'0')}`
             const isToday    = dateStr === todayStr
             const isSelected = dateStr === selectedDay
@@ -141,23 +172,32 @@ function MoneyCalendar({
                 key={i}
                 onClick={() => onSelectDay(isSelected ? '' : dateStr)}
                 style={{
-                  borderRight: '1px solid #EFEADB', borderBottom: '1px solid #EFEADB',
-                  padding: '6px 7px', display: 'flex', flexDirection: 'column', gap: 3,
-                  minHeight: 72, minWidth: 0, overflow: 'hidden', boxSizing: 'border-box' as const,
-                  background: isSelected ? '#FAF5D6' : isToday ? '#FDF8E7' : 'transparent',
-                  cursor: 'pointer',
+                  borderRadius: 13, padding: '8px 9px 9px',
+                  display: 'flex', flexDirection: 'column', gap: 3,
+                  minHeight: 78, minWidth: 0, overflow: 'hidden', boxSizing: 'border-box' as const,
+                  background: isSelected ? '#FBF3D2' : '#FAF7EC',
+                  border: `1px solid ${isSelected ? '#F5D14E' : '#F3EEE0'}`,
+                  boxShadow: isSelected ? '0 1px 4px rgba(25,23,18,0.10)' : 'none',
+                  cursor: 'pointer', transition: 'background 120ms, border-color 120ms',
                 }}
               >
-                <span style={{ fontSize: 11.5, fontWeight: isToday ? 700 : 500, color: isToday ? '#191712' : '#4A4438' }}>
+                <span style={{
+                  fontFamily: 'Outfit, sans-serif', fontSize: 12.5, fontWeight: 600,
+                  width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  marginLeft: -2,
+                  background: isToday ? '#191712' : 'transparent',
+                  color: isToday ? '#FFFFFF' : '#4A4438',
+                }}>
                   {day}
                 </span>
                 {net !== 0 && (
-                  <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 11.5, fontWeight: 600, color: netColor, fontVariantNumeric: 'tabular-nums' }}>
-                    {netSign}{net.toLocaleString('en-US')}
+                  <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 12.5, fontWeight: 600, color: netColor, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {netSign}{net < 0 ? '−' : ''}{cellAmount(net)}
                   </span>
                 )}
                 {payees.slice(0, 2).map((p, pi) => (
-                  <span key={pi} style={{ fontSize: 9.5, color: '#6C6553', whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' }}>{p}</span>
+                  <span key={pi} style={{ fontSize: 10, color: '#8A8271', whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' }}>{p}</span>
                 ))}
               </div>
             )
@@ -277,8 +317,9 @@ export function TodayScreen() {
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
       {/* Left panel — calendar */}
       <div style={{
-        width: 340, flexShrink: 0, borderRight: `1px solid ${C.border}`,
-        padding: '20px 24px', overflowY: 'auto',
+        flex: '0 1 52%', minWidth: 360, maxWidth: 780,
+        borderRight: `1px solid ${C.border}`,
+        padding: '20px 22px 26px', overflowY: 'auto',
       }}>
         <MoneyCalendar
           year={viewYear}
@@ -331,7 +372,7 @@ export function TodayScreen() {
       </div>
 
       {/* Right panel — the month */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '24px 28px' }}>
+      <div style={{ flex: 1, minWidth: 0, overflowY: 'auto', padding: '24px 28px' }}>
 
           {/* Month transactions */}
           {monthTx.length > 0 && (
