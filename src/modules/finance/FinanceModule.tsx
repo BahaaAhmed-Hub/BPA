@@ -9,6 +9,7 @@ import { ReflectionScreen } from './screens/ReflectionScreen'
 import { GoalsScreen } from './screens/GoalsScreen'
 import { PlanScreen } from './screens/PlanScreen'
 import { TransactionModal } from './modals/TransactionModal'
+import { BulkEntryModal } from './modals/BulkEntryModal'
 
 // ─── Nav icon SVGs ────────────────────────────────────────────────────────────
 
@@ -157,6 +158,7 @@ export function FinanceModule() {
     setScreen(s)
   }
   const [addOpen, setAddOpen] = useState(false)
+  const [bulkOpen, setBulkOpen] = useState(false)
 
   const [navItems, setNavItems] = useState<{ id: FinanceScreen; label: string; Icon: (p: { color: string }) => React.ReactElement }[]>(() => {
     const saved = localStorage.getItem('finance-tab-order')
@@ -250,9 +252,26 @@ export function FinanceModule() {
           })}
         </div>
 
+        {/* Many at once — the same entry, five or fifty times over */}
+        <button
+          onClick={() => setBulkOpen(true)}
+          title="Add several entries at once"
+          style={{
+            height: 30, paddingInline: 12, borderRadius: 8,
+            background: 'transparent', border: '1px solid #E8E1CE', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            flexShrink: 0, gap: 5, marginRight: 7,
+            fontFamily: 'inherit', fontSize: 12, fontWeight: 600, color: '#6C6553',
+          }}
+        >
+          <IconPlus color="#6C6553" />
+          Bulk
+        </button>
+
         {/* Add transaction button */}
         <button
           onClick={() => setAddOpen(true)}
+          title="Add one entry"
           style={{
             height: 30, paddingInline: 14, borderRadius: 8,
             background: '#F5D14E', border: '1px solid rgba(25,23,18,0.18)', cursor: 'pointer',
@@ -268,6 +287,15 @@ export function FinanceModule() {
       <div style={{ flex: 1, overflow: 'hidden' }}>
         {renderScreen()}
       </div>
+
+      {bulkOpen && (
+        <BulkEntryModal
+          accounts={accounts}
+          categories={categories}
+          onSave={txs => { txs.forEach(tx => upsertTransaction(tx)); setBulkOpen(false) }}
+          onClose={() => setBulkOpen(false)}
+        />
+      )}
 
       {addOpen && (
         <TransactionModal
