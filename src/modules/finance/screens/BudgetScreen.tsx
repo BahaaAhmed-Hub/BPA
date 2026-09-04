@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import { useFinanceStore } from '../financeStore'
 import { CategoryModal } from '../modals/CategoryModal'
 import {
-  BudgetRuleModal, defaultRule, monthlyAmount, type BudgetRule,
+  BudgetRuleModal, defaultRule, monthlyAmount, activeIn, type BudgetRule,
 } from '../modals/BudgetRuleModal'
 import type { Category, Transaction } from '../types'
 
@@ -77,6 +77,8 @@ interface EnvelopeRow {
   cat: Category
   actual: number
   planned: number
+  /** What this envelope is kept in, which need not be the app's default. */
+  cur: string
   currencies: string[]
 }
 
@@ -89,14 +91,23 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
   currency: string
   empty: string
 }) {
-  const total = rows.reduce((s, r) => s + r.actual, 0)
+  const inStep = rows.filter(r => r.cur === currency)
+  const total  = inStep.reduce((s, r) => s + r.actual, 0)
+  const aside  = rows.length - inStep.length
   return (
     <div style={{ background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 14, boxShadow: '0 1px 3px rgba(25,23,18,0.06)', padding: '15px 18px 18px' }}>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 14 }}>
         <span style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.12em', color: '#6C6553' }}>{title.toUpperCase()}</span>
         <span style={{ flex: 1 }} />
-        <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 14, fontWeight: 600, color, fontVariantNumeric: 'tabular-nums' }}>
-          {money(total, currency)}
+        <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+          <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 14, fontWeight: 600, color, fontVariantNumeric: 'tabular-nums' }}>
+            {money(total, currency)}
+          </span>
+          {aside > 0 && (
+            <span style={{ fontSize: 10, color: '#9B9180' }}>
+              {aside} kept in another currency, not added in
+            </span>
+          )}
         </span>
       </div>
 
@@ -104,14 +115,16 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
         <div style={{ fontSize: 11.5, color: '#9B9180', lineHeight: 1.6 }}>{empty}</div>
       ) : (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '18px 14px' }}>
-          {rows.map(({ cat, actual, planned, currencies }) => {
+          {rows.map(({ cat, actual, planned, cur, currencies }) => {
             const pct  = planned > 0 ? actual / planned : (actual > 0 ? 1 : 0)
             const over = planned > 0 && actual > planned
             const on   = selectedId === cat.id
-            const mixed = currencies.filter(c => c !== currency)
+            // The badge says what this envelope is in when that is not the
+            // usual thing, and otherwise flags spending it could not count.
+            const mixed = cur !== currency ? [cur] : currencies
             return (
               <button key={cat.id} onClick={() => onPick(cat.id)}
-                title={`${cat.name} — ${money(actual, currency)}${planned > 0 ? ` of ${money(planned, currency)}` : ' · no budget set'}`}
+                title={`${cat.name} — ${money(actual, cur)}${planned > 0 ? ` of ${money(planned, cur)}` : ' · no budget set'}`}
                 style={{
                   width: 92, padding: '8px 2px 6px', border: 'none', borderRadius: 12,
                   background: on ? 'rgba(245,209,78,0.20)' : 'transparent',
@@ -126,7 +139,9 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
                     // Amounts are added up as they were entered; there are no
                     // exchange rates in here. Say so rather than quietly
                     // presenting a total that mixes currencies.
-                    <span title={`Also has transactions in ${mixed.join(', ')} — added at face value`}
+                    <span title={cur !== currency
+                      ? `This envelope is kept in ${cur}`
+                      : `Also has ${mixed.join(', ')} spending, which a ${cur} budget cannot measure`}
                       style={{
                         position: 'absolute', bottom: -2, right: -4, height: 14, padding: '0 4px',
                         borderRadius: 999, background: '#FFFFFF', border: '1px solid #E8E1CE',
@@ -209,6 +224,13 @@ export function BudgetScreen(_props?: any) {
   const [rules, setRules] = useState<Record<string, BudgetRule>>(() => {
     try { return JSON.parse(localStorage.getItem('finance-budget-rules') ?? '{}') } catch { return {} }
   })
+  function deleteRule(catId: string) {
+    const next = { ...rules }
+    delete next[catId]
+    setRules(next)
+    localStorage.setItem('finance-budget-rules', JSON.stringify(next))
+  }
+
   function saveRule(catId: string, rule: BudgetRule) {
     const next = { ...rules, [catId]: rule }
     setRules(next)
@@ -268,6 +290,8 @@ export function BudgetScreen(_props?: any) {
   // "Groceries · Fruit" is money out of the Groceries envelope.
   const envelopes = useMemo(() => {
     const build = (cat: Category) => {
+      const rule = rules[cat.id]
+      const cur  = rule?.currency ?? currency
       const ids = new Set([cat.id, ...categories.filter(c => c.parentId === cat.id).map(c => c.id)])
       const wanted = cat.txType === 'income' ? 'income' : 'expense'
       let actual = 0
@@ -276,26 +300,35 @@ export function BudgetScreen(_props?: any) {
         if (!tx.categoryId || !ids.has(tx.categoryId)) continue
         if (tx.type !== wanted) continue
         if (!tx.date.startsWith(monthKey)) continue
-        actual += Math.abs(tx.amount)
-        currencies.add(tx.currency)
+        // Counted in the budget's own currency. There are no exchange rates in
+        // here, and a total that adds USD to EGP at face value is not a total.
+        if (tx.currency === cur) actual += Math.abs(tx.amount)
+        else currencies.add(tx.currency)
       }
       // Not rules[cat.id].amount: a yearly budget of 12,000 is 1,000 against a
       // month's spending, and comparing it raw made every non-monthly envelope
-      // look untouched.
-      const planned = monthlyAmount(rules[cat.id])
-      return { cat, actual, planned, currencies: [...currencies] }
+      // look untouched. And a budget that has not begun, or has ended, is not
+      // a budget this month — both ends were collected and never consulted.
+      const planned = activeIn(rule, monthKey) ? monthlyAmount(rule) : 0
+      return { cat, actual, planned, cur, currencies: [...currencies] }
     }
     const all = parents.map(build)
     return {
       spending: all.filter(e => e.cat.txType !== 'income'),
       earning:  all.filter(e => e.cat.txType === 'income'),
     }
-  }, [parents, categories, transactions, rules, monthKey])
+  }, [parents, categories, transactions, rules, monthKey, currency])
 
-  const sum = (rows: { actual: number; planned: number }[]) => ({
-    actual:  rows.reduce((s, r) => s + r.actual, 0),
-    planned: rows.reduce((s, r) => s + r.planned, 0),
-  })
+  // Only the envelopes kept in the default currency can be added together —
+  // the rest are counted separately and said out loud rather than folded in.
+  const sum = (rows: { actual: number; planned: number; cur: string }[]) => {
+    const same = rows.filter(r => r.cur === currency)
+    return {
+      actual:  same.reduce((s, r) => s + r.actual, 0),
+      planned: same.reduce((s, r) => s + r.planned, 0),
+      aside:   rows.length - same.length,
+    }
+  }
   const outTotal = sum(envelopes.spending)
   const inTotal  = sum(envelopes.earning)
 
@@ -424,6 +457,13 @@ export function BudgetScreen(_props?: any) {
               planned={inTotal.planned - outTotal.planned}
               color={inTotal.actual - outTotal.actual < 0 ? RUST : '#191712'}
               currency={currency} strong />
+            {(outTotal.aside + inTotal.aside) > 0 && (
+              <div style={{ fontSize: 11.5, color: '#8A6D0B', marginTop: 12, lineHeight: 1.5 }}>
+                {outTotal.aside + inTotal.aside} envelope{outTotal.aside + inTotal.aside === 1 ? ' is' : 's are'} kept
+                in another currency and {outTotal.aside + inTotal.aside === 1 ? 'is' : 'are'} not in these totals —
+                there are no exchange rates here.
+              </div>
+            )}
             <div style={{ fontSize: 11.5, color: '#9B9180', marginTop: 14, lineHeight: 1.55 }}>
               The bold figure is what actually happened this month; the one under it
               is what the envelopes were set to. Pick a category to change its budget.
@@ -443,6 +483,7 @@ export function BudgetScreen(_props?: any) {
           monthKey={monthKey}
           currency={currency}
           onChange={r => saveRule(selectedCat.id, r)}
+          onDelete={() => deleteRule(selectedCat.id)}
           onRename={patch => void upsertCategory({ ...selectedCat, ...patch })}
           onEditCategory={() => setCatModal({ category: selectedCat })}
           onAddSub={() => setCatModal({ category: { id: '', name: '', icon: '📁', color: '#8C8071', parentId: selectedCat.id, isSystem: false, txType: selectedCat.txType } })}

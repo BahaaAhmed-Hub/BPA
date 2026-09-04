@@ -27,7 +27,12 @@ export interface BudgetRule {
   frequency: Frequency
   rollover: boolean
   warn80: boolean
-  starts: string          // YYYY-MM
+  starts: string          // YYYY-MM — the first month it applies to
+  /** The last month it applies to. Absent means it runs on. */
+  ends?: string           // YYYY-MM
+  /** What the amount is denominated in. There are no exchange rates in this
+   *  app, so it is also which transactions the envelope counts. */
+  currency?: string
   fixedType: 'fixed' | 'flexible'
 }
 
@@ -51,6 +56,17 @@ export function defaultRule(): BudgetRule {
     starts: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
     fixedType: 'flexible',
   }
+}
+
+/** Whether this budget is one that applies to the month being looked at.
+ *  Both ends were collected and neither was consulted: a budget starting in
+ *  September was compared against January's spending as readily as
+ *  September's, and one that had ended never stopped. */
+export function activeIn(rule: Pick<BudgetRule, 'starts' | 'ends'> | undefined, monthKey: string): boolean {
+  if (!rule) return false
+  if (rule.starts && monthKey < rule.starts) return false
+  if (rule.ends   && monthKey > rule.ends)   return false
+  return true
 }
 
 /** What this envelope is worth in a single month. The frequency was collected
@@ -159,6 +175,8 @@ interface Props {
   monthKey: string          // YYYY-MM
   currency: string
   onChange: (rule: BudgetRule) => void
+  /** Clear the budget entirely, as opposed to setting it to nothing. */
+  onDelete: () => void
   /** Name and icon are edited here rather than in a second window. */
   onRename: (patch: Partial<Category>) => void
   onEditCategory: () => void
@@ -170,7 +188,7 @@ interface Props {
 
 export function BudgetRuleModal({
   category, rule, subs, transactions, monthKey, currency,
-  onChange, onRename, onEditCategory, onAddSub, onEditSub, onDrill, onClose,
+  onChange, onDelete, onRename, onEditCategory, onAddSub, onEditSub, onDrill, onClose,
 }: Props) {
   const box = useRef<HTMLDivElement>(null)
   // Held locally while it is being typed, so every keystroke is not a write.
@@ -189,19 +207,25 @@ export function BudgetRuleModal({
     return () => { document.removeEventListener('pointerdown', away); document.removeEventListener('keydown', esc) }
   }, [onClose])
 
+  const cur = rule.currency ?? currency
   const wanted = category.txType === 'income' ? 'income' : 'expense'
   const ids = new Set([category.id, ...subs.map(s => s.id)])
-  const spent = transactions
-    .filter(tx => tx.type === wanted && tx.categoryId && ids.has(tx.categoryId) && tx.date.startsWith(monthKey))
-    .reduce((s, tx) => s + Math.abs(tx.amount), 0)
+  const mine = transactions.filter(tx =>
+    tx.type === wanted && tx.categoryId && ids.has(tx.categoryId) && tx.date.startsWith(monthKey))
+  // Only what the budget is denominated in. Adding 117 USD to 64,000 EGP as
+  // though they were the same number is worse than leaving it out and saying so.
+  const spent  = mine.filter(tx => tx.currency === cur).reduce((s, tx) => s + Math.abs(tx.amount), 0)
+  const others = [...new Set(mine.filter(tx => tx.currency !== cur).map(tx => tx.currency))]
 
-  const budget = monthlyAmount(rule)
+  const running = activeIn(rule, monthKey)
+  const budget = running ? monthlyAmount(rule) : 0
   const pct    = budget > 0 ? Math.min(spent / budget, 1) : 0
   const over   = budget > 0 && spent > budget
   const near   = budget > 0 && !over && rule.warn80 && spent / budget >= 0.8
   const tone   = category.txType === 'income' ? OLIVE : RUST
 
   const fmt = (v: number) => v.toLocaleString('en-US', { maximumFractionDigits: 0 })
+  const monthLabel = (m: string) => new Date(m + '-01T12:00:00').toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })
 
   return (
     <div
@@ -274,7 +298,11 @@ export function BudgetRuleModal({
               {fmt(spent)}
             </span>
             <span style={{ fontSize: 12, color: MUTED }}>
-              {budget > 0 ? `of ${currency} ${fmt(budget)} this month` : 'no budget set'}
+              {budget > 0
+                ? `of ${cur} ${fmt(budget)} this month`
+                : rule.amount > 0 && !running
+                  ? `budget not running this month`
+                  : 'no budget set'}
             </span>
             <span style={{ flex: 1 }} />
             {spent > 0 && (
@@ -290,13 +318,20 @@ export function BudgetRuleModal({
                 <div style={{ height: '100%', width: `${pct * 100}%`, background: over ? tone : near ? '#E8A94A' : OLIVE, borderRadius: 999 }} />
               </div>
               <div style={{ fontSize: 11.5, color: over ? tone : near ? '#8A6D0B' : MUTED, marginTop: 7 }}>
-                {over  ? `Over by ${currency} ${fmt(spent - budget)}`
-                 : near ? `${currency} ${fmt(budget - spent)} left — past 80%`
-                        : `${currency} ${fmt(budget - spent)} left`}
+                {over  ? `Over by ${cur} ${fmt(spent - budget)}`
+                 : near ? `${cur} ${fmt(budget - spent)} left — past 80%`
+                        : `${cur} ${fmt(budget - spent)} left`}
               </div>
             </>
           )}
         </div>
+
+        {others.length > 0 && (
+          <div style={{ fontSize: 11.5, color: GHOST, marginTop: 8, lineHeight: 1.5 }}>
+            {others.join(' and ')} spending in this category is not counted — there are no
+            exchange rates here, so only {cur} is measured against a {cur} budget.
+          </div>
+        )}
 
         <div style={{ height: 1, background: HAIR, margin: '18px 0' }} />
 
@@ -309,7 +344,16 @@ export function BudgetRuleModal({
                 ...PILL, flex: 1, cursor: 'text', gap: 8,
                 background: '#FAF7EC',
               }}>
-                <span style={{ fontSize: 11.5, fontWeight: 700, color: MUTED, flexShrink: 0 }}>{currency}</span>
+                <span style={{ position: 'relative', display: 'inline-flex', flexShrink: 0 }}>
+                  <span style={{ fontSize: 11.5, fontWeight: 700, color: MUTED, display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+                    {cur}<ChevronDown size={10} strokeWidth={2.5} style={{ color: GHOST }} />
+                  </span>
+                  <select value={cur} onChange={e => onChange({ ...rule, currency: e.target.value })}
+                    title="What this budget is in"
+                    style={{ position: 'absolute', inset: -6, opacity: 0, width: 'calc(100% + 12px)', height: 'calc(100% + 12px)', cursor: 'pointer', border: 'none' }}>
+                    {['EGP', 'USD', 'AED'].map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </span>
                 <input
                   type="number" min={0} inputMode="decimal"
                   value={rule.amount || ''}
@@ -329,7 +373,7 @@ export function BudgetRuleModal({
             <div style={{ ...ROW, marginTop: -4 }}>
               <span style={LABEL} />
               <span style={{ fontSize: 11.5, color: GHOST }}>
-                {currency} {fmt(budget)} a month, which is what the envelope is measured against
+                {cur} {fmt(budget)} a month, which is what the envelope is measured against
               </span>
             </div>
           )}
@@ -355,13 +399,25 @@ export function BudgetRuleModal({
           </div>
 
           <div style={ROW}>
-            <span style={LABEL}>Starts</span>
-            <label style={{ ...PILL, flex: 1, position: 'relative', justifyContent: 'space-between' }}>
-              {new Date(rule.starts + '-01T12:00:00').toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}
-              <ChevronDown size={13} strokeWidth={2} style={{ color: GHOST, flexShrink: 0 }} />
-              <input type="month" value={rule.starts} onChange={e => onChange({ ...rule, starts: e.target.value })}
-                style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', border: 'none', padding: 0 }} />
-            </label>
+            <span style={LABEL}>Runs</span>
+            <span style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 7 }}>
+              <label style={{ ...PILL, flex: 1, position: 'relative', justifyContent: 'center' }} title="First month this budget applies to">
+                {monthLabel(rule.starts)}
+                <input type="month" value={rule.starts} onChange={e => onChange({ ...rule, starts: e.target.value })}
+                  style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', border: 'none', padding: 0 }} />
+              </label>
+              <span style={{ fontSize: 11.5, color: GHOST, flexShrink: 0 }}>to</span>
+              <label style={{ ...PILL, flex: 1, position: 'relative', justifyContent: 'center' }} title="Last month it applies to">
+                <span style={{ color: rule.ends ? INK : GHOST }}>{rule.ends ? monthLabel(rule.ends) : 'no end'}</span>
+                <input type="month" value={rule.ends ?? ''} min={rule.starts}
+                  onChange={e => onChange({ ...rule, ends: e.target.value || undefined })}
+                  style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', border: 'none', padding: 0 }} />
+              </label>
+              {rule.ends && (
+                <button onClick={() => onChange({ ...rule, ends: undefined })} title="Let it run on"
+                  style={{ ...ROUND, width: 26, height: 26 }}><X size={12} /></button>
+              )}
+            </span>
           </div>
         </div>
 
@@ -416,6 +472,19 @@ export function BudgetRuleModal({
         <div style={{ fontSize: 11, color: GHOST, marginTop: 10, textAlign: 'center' }}>
           Name, icon and budget save as you change them
         </div>
+
+        {rule.amount > 0 && (
+          <button
+            onClick={() => { onDelete(); onClose() }}
+            title="Remove the budget — the category and its transactions stay"
+            style={{
+              marginTop: 12, width: '100%', height: 34, borderRadius: 9,
+              background: 'none', border: 'none', fontFamily: 'inherit',
+              color: RUST, fontSize: 12.5, cursor: 'pointer',
+            }}>
+            Remove this budget
+          </button>
+        )}
       </div>
     </div>
   )
