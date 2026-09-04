@@ -38,13 +38,6 @@ function defaultRule(): BudgetRule {
   return { amount: 0, frequency: 'monthly', rollover: false, warn80: true, autoRaise: false, guiltFree: false, starts, fixedType: 'flexible' }
 }
 
-// ─── Amount display in the left list ─────────────────────────────────────────
-
-function fmtAmt(v: number) {
-  if (!v) return '–'
-  return 'EGP ' + v.toLocaleString('en-US')
-}
-
 // ─── Toggle switch ────────────────────────────────────────────────────────────
 
 function Toggle({ on, onChange, label }: { on: boolean; onChange: (v: boolean) => void; label: string }) {
@@ -73,13 +66,185 @@ function Toggle({ on, onChange, label }: { on: boolean; onChange: (v: boolean) =
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
+// ─── A ring that says how much of an envelope is gone ─────────────────────────
+// The reference draws every category as a circle whose rim fills as it is
+// spent. It reads at a glance in a way a row of bars does not: you see which
+// envelopes are nearly empty without reading a single number.
+
+function Ring({ pct, color, over, size = 58, children }: {
+  pct: number; color: string; over?: boolean; size?: number; children: React.ReactNode
+}) {
+  const stroke = 3.5
+  const r = (size - stroke) / 2
+  const circumference = 2 * Math.PI * r
+  const filled = Math.max(0, Math.min(1, pct))
+  return (
+    <span style={{ position: 'relative', width: size, height: size, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+      <svg width={size} height={size} style={{ position: 'absolute', inset: 0 }}>
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#EDE7D9" strokeWidth={stroke} />
+        {filled > 0 && (
+          <circle
+            cx={size / 2} cy={size / 2} r={r} fill="none"
+            stroke={color} strokeWidth={stroke} strokeLinecap="round"
+            strokeDasharray={circumference}
+            strokeDashoffset={circumference * (1 - filled)}
+            transform={`rotate(-90 ${size / 2} ${size / 2})`}
+          />
+        )}
+        {over && (
+          // Past the budget the rim is full and cannot say more, so say it again
+          // outside it rather than losing the fact.
+          <circle cx={size / 2} cy={size / 2} r={r + 3.5} fill="none" stroke={color} strokeWidth={1} opacity={0.45} />
+        )}
+      </svg>
+      <span style={{
+        width: size - 14, height: size - 14, borderRadius: '50%', overflow: 'hidden',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: '#FCFAF4', fontSize: 20, lineHeight: 1,
+      }}>{children}</span>
+    </span>
+  )
+}
+
+const MONTH_SHORT = ['J','F','M','A','M','J','J','A','S','O','N','D']
+
+function money(v: number, cur: string) {
+  return `${cur} ${v.toLocaleString('en-US', { maximumFractionDigits: 0 })}`
+}
+
+
+function Legend({ swatch, label, line }: { swatch: string; label: string; line?: boolean }) {
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 10.5, color: '#6C6553' }}>
+      <span style={{
+        width: 10, height: line ? 1 : 8, borderRadius: line ? 0 : 2,
+        background: swatch, flexShrink: 0,
+      }} />
+      {label}
+    </span>
+  )
+}
+
+interface EnvelopeRow {
+  cat: Category
+  actual: number
+  planned: number
+  currencies: string[]
+}
+
+function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty }: {
+  title: string
+  rows: EnvelopeRow[]
+  color: string
+  selectedId: string | null
+  onPick: (id: string) => void
+  currency: string
+  empty: string
+}) {
+  const total = rows.reduce((s, r) => s + r.actual, 0)
+  return (
+    <div style={{ background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 14, boxShadow: '0 1px 3px rgba(25,23,18,0.06)', padding: '15px 18px 18px' }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 14 }}>
+        <span style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.12em', color: '#6C6553' }}>{title.toUpperCase()}</span>
+        <span style={{ flex: 1 }} />
+        <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 14, fontWeight: 600, color, fontVariantNumeric: 'tabular-nums' }}>
+          {money(total, currency)}
+        </span>
+      </div>
+
+      {rows.length === 0 ? (
+        <div style={{ fontSize: 11.5, color: '#9B9180', lineHeight: 1.6 }}>{empty}</div>
+      ) : (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '18px 14px' }}>
+          {rows.map(({ cat, actual, planned, currencies }) => {
+            const pct  = planned > 0 ? actual / planned : (actual > 0 ? 1 : 0)
+            const over = planned > 0 && actual > planned
+            const on   = selectedId === cat.id
+            const mixed = currencies.filter(c => c !== currency)
+            return (
+              <button key={cat.id} onClick={() => onPick(cat.id)}
+                title={`${cat.name} — ${money(actual, currency)}${planned > 0 ? ` of ${money(planned, currency)}` : ' · no budget set'}`}
+                style={{
+                  width: 92, padding: '8px 2px 6px', border: 'none', borderRadius: 12,
+                  background: on ? 'rgba(245,209,78,0.20)' : 'transparent',
+                  fontFamily: 'inherit', cursor: 'pointer',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7,
+                }}>
+                <span style={{ position: 'relative', display: 'flex' }}>
+                  <Ring pct={pct} color={color} over={over}>
+                    <span>{cat.icon}</span>
+                  </Ring>
+                  {mixed.length > 0 && (
+                    // Amounts are added up as they were entered; there are no
+                    // exchange rates in here. Say so rather than quietly
+                    // presenting a total that mixes currencies.
+                    <span title={`Also has transactions in ${mixed.join(', ')} — added at face value`}
+                      style={{
+                        position: 'absolute', bottom: -2, right: -4, height: 14, padding: '0 4px',
+                        borderRadius: 999, background: '#FFFFFF', border: '1px solid #E8E1CE',
+                        fontSize: 8, fontWeight: 700, color: '#9B9180', display: 'flex', alignItems: 'center',
+                      }}>{mixed[0]}</span>
+                  )}
+                </span>
+                <span style={{ fontSize: 11, fontWeight: 600, color: '#191712', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {cat.name}
+                </span>
+                <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.3 }}>
+                  <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 12, fontWeight: 600, color: over ? color : '#191712', fontVariantNumeric: 'tabular-nums' }}>
+                    {actual.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                  </span>
+                  <span style={{ fontSize: 10, color: '#9B9180', fontVariantNumeric: 'tabular-nums' }}>
+                    {planned > 0 ? planned.toLocaleString('en-US', { maximumFractionDigits: 0 }) : 'no budget'}
+                  </span>
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function SummaryLine({ label, actual, planned, color, currency, strong }: {
+  label: string; actual: number; planned: number; color: string; currency: string; strong?: boolean
+}) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, padding: '11px 0', borderBottom: strong ? 'none' : '1px solid #F0EBDC' }}>
+      <span style={{ fontSize: strong ? 12.5 : 11.5, fontWeight: strong ? 600 : 500, color: strong ? '#191712' : '#6C6553', letterSpacing: strong ? 0 : '0.02em' }}>
+        {label}
+      </span>
+      <span style={{ flex: 1 }} />
+      <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+        <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: strong ? 20 : 17, fontWeight: 600, letterSpacing: '-0.02em', color, fontVariantNumeric: 'tabular-nums' }}>
+          {actual.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+        </span>
+        <span style={{ fontSize: 10.5, color: '#9B9180', fontVariantNumeric: 'tabular-nums' }}>
+          of {money(planned, currency)}
+        </span>
+      </span>
+    </div>
+  )
+}
+
 export function BudgetScreen(_props?: any) {
   // CategoryModal has existed, finished, since the module was written and was
   // never mounted anywhere — so there was no way to create a category at all,
   // which left this screen with nothing to configure and every transaction
   // uncategorised.
   const { categories, transactions, upsertCategory, removeCategory } = useFinanceStore()
+  const year    = useFinanceStore(s => s.currentYear)
+  const setYear = useFinanceStore(s => s.setYear)
   const [catModal, setCatModal] = useState<{ category: Category | null } | null>(null)
+
+  // Which month the envelopes are about. The year lives in the store because it
+  // decides what gets fetched; the month only decides what is shown.
+  const [monthIdx, setMonthIdx] = useState(() => new Date().getMonth())
+  const monthKey = `${year}-${String(monthIdx + 1).padStart(2, '0')}`
+  const currency = (() => {
+    try { return localStorage.getItem('finance-currency') || 'EGP' } catch { return 'EGP' }
+  })()
 
   // Parent categories only (for list)
   const parents = useMemo(
@@ -103,13 +268,14 @@ export function BudgetScreen(_props?: any) {
     localStorage.setItem('finance-budget-rules', JSON.stringify(next))
   }
 
-  const [selectedId, setSelectedId] = useState<string | null>(parents[0]?.id ?? null)
+  // Nothing selected to begin with: the point of the screen is the month as a
+  // whole, and a category takes the panel only when you ask for one.
+  const [selectedId, setSelectedId] = useState<string | null>(null)
   const selectedCat = parents.find(p => p.id === selectedId) ?? null
   const rule = selectedId ? (rules[selectedId] ?? defaultRule()) : null
 
   // Monthly spend for selected category (current month)
-  const today = new Date()
-  const monthPrefix = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2,'0')}`
+  const monthPrefix = monthKey
 
   // 20E — Envelope drill-down state
   const [drillOpen, setDrillOpen] = useState(false)
@@ -138,94 +304,198 @@ export function BudgetScreen(_props?: any) {
   const overBudget = budget > 0 && monthSpend > budget
   const nearBudget = budget > 0 && pct >= 80 && !overBudget
 
+  // ── The year, month by month ───────────────────────────────────────────────
+  // Income above the line, spending below it, and the balance those two leave
+  // behind running across the top. One picture answers "how is the year going"
+  // before any envelope is read.
+  const months = useMemo(() => {
+    const out = Array.from({ length: 12 }, (_, m) => {
+      const prefix = `${year}-${String(m + 1).padStart(2, '0')}`
+      let income = 0, expense = 0
+      for (const tx of transactions) {
+        if (!tx.date.startsWith(prefix)) continue
+        if (tx.type === 'income')  income  += Math.abs(tx.amount)
+        if (tx.type === 'expense') expense += Math.abs(tx.amount)
+      }
+      return { m, income, expense, balance: 0 }
+    })
+    let running = 0
+    for (const row of out) { running += row.income - row.expense; row.balance = running }
+    return out
+  }, [transactions, year])
+
+  const peak = Math.max(1, ...months.map(x => Math.max(x.income, x.expense)))
+  const balances = months.map(x => x.balance)
+  const balLo = Math.min(0, ...balances)
+  const balHi = Math.max(1, ...balances)
+
+  // ── This month's envelopes ─────────────────────────────────────────────────
+  // A category's own transactions plus its children's — money filed under
+  // "Groceries · Fruit" is money out of the Groceries envelope.
+  const envelopes = useMemo(() => {
+    const build = (cat: Category) => {
+      const ids = new Set([cat.id, ...categories.filter(c => c.parentId === cat.id).map(c => c.id)])
+      const wanted = cat.txType === 'income' ? 'income' : 'expense'
+      let actual = 0
+      const currencies = new Set<string>()
+      for (const tx of transactions) {
+        if (!tx.categoryId || !ids.has(tx.categoryId)) continue
+        if (tx.type !== wanted) continue
+        if (!tx.date.startsWith(monthKey)) continue
+        actual += Math.abs(tx.amount)
+        currencies.add(tx.currency)
+      }
+      const planned = rules[cat.id]?.amount ?? 0
+      return { cat, actual, planned, currencies: [...currencies] }
+    }
+    const all = parents.map(build)
+    return {
+      spending: all.filter(e => e.cat.txType !== 'income'),
+      earning:  all.filter(e => e.cat.txType === 'income'),
+    }
+  }, [parents, categories, transactions, rules, monthKey])
+
+  const sum = (rows: { actual: number; planned: number }[]) => ({
+    actual:  rows.reduce((s, r) => s + r.actual, 0),
+    planned: rows.reduce((s, r) => s + r.planned, 0),
+  })
+  const outTotal = sum(envelopes.spending)
+  const inTotal  = sum(envelopes.earning)
+
+  function stepMonth(by: number) {
+    const d = new Date(year, monthIdx + by, 1)
+    setMonthIdx(d.getMonth())
+    if (d.getFullYear() !== year) void setYear(d.getFullYear())
+  }
+
+  const HEAD_PILL: React.CSSProperties = {
+    height: 32, padding: '0 12px', borderRadius: 999, border: '1px solid #E8E1CE',
+    background: '#FFFFFF', fontFamily: 'inherit', fontSize: 12.5, color: '#191712',
+    display: 'flex', alignItems: 'center', cursor: 'pointer',
+  }
+  const CARD: React.CSSProperties = {
+    background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 14,
+    boxShadow: '0 1px 3px rgba(25,23,18,0.06)',
+  }
+
   return (
-    <div style={{ display: 'flex', height: '100%', overflow: 'hidden', background: '#F7F4EA' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', background: '#F7F4EA' }}>
 
-      {/* Left — categories list */}
-      <div style={{ width: 280, flexShrink: 0, borderRight: '1px solid #E8E1CE', display: 'flex', flexDirection: 'column', background: '#FCFAF4', overflow: 'hidden' }}>
-
-        {/* Left header */}
-        <div style={{ flexShrink: 0, borderBottom: '1px solid #E8E1CE', padding: '14px 18px 12px' }}>
-          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: '#6C6553', display: 'block', marginBottom: 4 }}>MONEY · SET UP</span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em', color: '#191712', flex: 1, minWidth: 0 }}>Budget builder</span>
-            <button
-              onClick={() => setCatModal({ category: null })}
-              title="Add a category"
-              style={{
-                height: 28, padding: '0 12px', borderRadius: 999, flexShrink: 0,
-                background: AMBER, border: 'none', fontFamily: 'inherit',
-                color: '#191712', fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                boxShadow: '0 2px 0 rgba(25,23,18,0.14)',
-              }}>+ Category</button>
-          </div>
-          <span style={{ fontSize: 11.5, color: '#9B9180', display: 'block', marginTop: 3 }}>
-            {parents.length} categor{parents.length === 1 ? 'y' : 'ies'} · click to configure
+      {/* ── Header ─────────────────────────────────────────────────────────── */}
+      <div style={{ flexShrink: 0, borderBottom: '1px solid #E8E1CE', padding: '14px 26px 14px', display: 'flex', alignItems: 'flex-end', gap: 18 }}>
+        <div style={{ minWidth: 0 }}>
+          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: '#6C6553', display: 'block', marginBottom: 4 }}>MONEY · BUDGET</span>
+          <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 30, fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1, color: '#191712', display: 'block' }}>
+            {money(months[11]?.balance ?? 0, currency)}
+          </span>
+          <span style={{ fontSize: 12, color: '#6C6553', display: 'block', marginTop: 3 }}>
+            what {year} leaves behind · {parents.length} categor{parents.length === 1 ? 'y' : 'ies'}
           </span>
         </div>
 
-        {/* List */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '10px 0' }}>
-          {parents.length === 0 && (
-            <div style={{ padding: '22px 18px', fontSize: 12, color: '#9B9180', lineHeight: 1.6 }}>
-              No categories yet. Add one and everything else follows — budgets to
-              set here, and something to file a transaction under.
-            </div>
-          )}
-          {parents.map(cat => {
-            const r = rules[cat.id]
-            const active = selectedId === cat.id
-            const subCount = subs(cat.id).length
-            return (
-              <div
-                key={cat.id}
-                onClick={() => setSelectedId(cat.id)}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 10,
-                  padding: '9px 18px', cursor: 'pointer',
-                  background: active ? '#F5D14E22' : 'transparent',
-                  borderLeft: `3px solid ${active ? AMBER : 'transparent'}`,
-                  borderBottom: '1px solid #F0EBDC',
-                }}
-              >
-                <span style={{ fontSize: 18, flexShrink: 0 }}>{cat.icon}</span>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13.5, fontWeight: 500, color: '#191712' }}>{cat.name}</div>
-                  {subCount > 0 && (
-                    <div style={{ fontSize: 11, color: '#9B9180', marginTop: 1 }}>{subCount} sub-categories</div>
-                  )}
-                </div>
-                <span style={{ fontSize: 12, color: r?.amount ? '#191712' : '#C5BCA8', fontFamily: 'Outfit, sans-serif', fontWeight: 600, flexShrink: 0 }}>
-                  {r ? fmtAmt(r.amount) : '–'}
-                </span>
-              </div>
-            )
-          })}
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8, paddingBottom: 3 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 2, padding: 3, borderRadius: 999, background: '#EDE7D9' }}>
+            <button onClick={() => stepMonth(-1)} title="Previous month"
+              style={{ ...HEAD_PILL, width: 28, padding: 0, justifyContent: 'center', border: 'none', background: 'transparent', color: '#6C6553' }}>‹</button>
+            <span style={{ ...HEAD_PILL, cursor: 'default', boxShadow: '0 1px 3px rgba(25,23,18,0.16)', fontWeight: 600, minWidth: 106, justifyContent: 'center' }}>
+              {new Date(year, monthIdx, 1).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })}
+            </span>
+            <button onClick={() => stepMonth(1)} title="Next month"
+              style={{ ...HEAD_PILL, width: 28, padding: 0, justifyContent: 'center', border: 'none', background: 'transparent', color: '#6C6553' }}>›</button>
+          </div>
+          <button onClick={() => setCatModal({ category: null })} title="Add a category"
+            style={{ height: 34, padding: '0 15px', borderRadius: 999, background: AMBER, border: 'none', color: '#191712', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 2px 0 rgba(25,23,18,0.14)' }}>
+            + Category
+          </button>
         </div>
       </div>
 
-      {/* Right — budget rule editor */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '28px 36px' }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '18px 26px 26px' }}>
 
-        {!selectedCat || !rule ? (
-          <div style={{ fontSize: 13, color: '#9B9180', textAlign: 'center', marginTop: 60 }}>
-            Select a category to configure its budget
+        {/* ── The year ─────────────────────────────────────────────────────── */}
+        <div style={{ ...CARD, padding: '16px 18px 12px' }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 12 }}>
+            <span style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.12em', color: '#6C6553' }}>{year}</span>
+            <span style={{ flex: 1 }} />
+            <Legend swatch={OLIVE} label="In" />
+            <Legend swatch={RUST}  label="Out" />
+            <Legend swatch="#C5BCA8" label="Balance" line />
           </div>
-        ) : (
+
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'stretch', gap: 6, height: 168 }}>
+            {/* The balance, drawn over the columns it comes from */}
+            <svg viewBox="0 0 120 100" preserveAspectRatio="none"
+              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 2 }}>
+              <polyline
+                points={months.map((x, i) =>
+                  `${i * 10 + 5},${100 - ((x.balance - balLo) / (balHi - balLo || 1)) * 88 - 6}`).join(' ')}
+                fill="none" stroke="#9B9180" strokeWidth={1.5} strokeLinejoin="round" strokeLinecap="round"
+                vectorEffect="non-scaling-stroke" />
+            </svg>
+
+            {months.map(x => {
+              const on = x.m === monthIdx
+              const up   = (x.income  / peak) * 56
+              const down = (x.expense / peak) * 56
+              return (
+                <button key={x.m} onClick={() => setMonthIdx(x.m)}
+                  title={`${new Date(year, x.m, 1).toLocaleDateString('en-GB', { month: 'long' })} · in ${money(x.income, currency)} · out ${money(x.expense, currency)}`}
+                  style={{
+                    flex: 1, minWidth: 0, padding: 0, border: 'none', cursor: 'pointer',
+                    background: on ? 'rgba(245,209,78,0.20)' : '#FAF7EC',
+                    borderRadius: 8, position: 'relative', display: 'flex', flexDirection: 'column',
+                    justifyContent: 'flex-end', overflow: 'hidden',
+                  }}>
+                  {/* Income grows up from the middle, spending down from it */}
+                  <span style={{ position: 'absolute', left: 0, right: 0, bottom: '50%', height: up, background: OLIVE, opacity: 0.9 }} />
+                  <span style={{ position: 'absolute', left: 0, right: 0, top: '50%', height: down, background: RUST, opacity: 0.9 }} />
+                  <span style={{ position: 'absolute', left: 0, right: 0, top: '50%', borderTop: '1px solid #E4DCC6' }} />
+                  <span style={{
+                    position: 'relative', padding: '0 0 5px', fontSize: 9.5,
+                    color: on ? '#191712' : '#9B9180', fontWeight: on ? 700 : 500,
+                  }}>{MONTH_SHORT[x.m]}</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* ── Envelopes, and whatever is open beside them ───────────────────── */}
+        <div style={{ display: 'flex', gap: 16, marginTop: 16, alignItems: 'flex-start' }}>
+
+          <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <EnvelopeGroup
+              title="Spending" rows={envelopes.spending} color={RUST}
+              selectedId={selectedId} onPick={setSelectedId} currency={currency}
+              empty="No spending categories yet — add one and its envelope appears here." />
+            <EnvelopeGroup
+              title="Earning" rows={envelopes.earning} color={OLIVE}
+              selectedId={selectedId} onPick={setSelectedId} currency={currency}
+              empty="No income categories yet." />
+          </div>
+
+          <div style={{ width: 360, flexShrink: 0, ...CARD, padding: '18px 20px 20px', alignSelf: 'stretch' }}>
+            {selectedCat && rule ? (
+              <>
+                <button onClick={() => setSelectedId(null)}
+                  style={{ ...HEAD_PILL, marginBottom: 16, color: '#6C6553' }}>‹ Back to the month</button>
+
           <div style={{ maxWidth: 520 }}>
 
             {/* Category title */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 28 }}>
-              <span style={{ fontSize: 32 }}>{selectedCat.icon}</span>
-              <div>
-                <div style={{ fontFamily: 'Outfit, sans-serif', fontSize: 24, fontWeight: 600, letterSpacing: '-0.02em', color: '#191712' }}>
-                  {selectedCat.name}
-                </div>
-                <div style={{ fontSize: 12, color: '#9B9180', marginTop: 2 }}>
-                  {subs(selectedCat.id).length} sub-categories
+            <div style={{ marginBottom: 22 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
+                <span style={{ fontSize: 26, flexShrink: 0 }}>{selectedCat.icon}</span>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontFamily: 'Outfit, sans-serif', fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em', color: '#191712', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {selectedCat.name}
+                  </div>
+                  <div style={{ fontSize: 11.5, color: '#9B9180', marginTop: 1 }}>
+                    {subs(selectedCat.id).length} sub-categories
+                  </div>
                 </div>
               </div>
-              <span style={{ flex: 1 }} />
+              <div style={{ display: 'flex', gap: 7, marginTop: 12 }}>
               <button onClick={() => setCatModal({ category: selectedCat })}
                 style={{
                   height: 32, padding: '0 13px', borderRadius: 999, flexShrink: 0,
@@ -239,14 +509,15 @@ export function BudgetScreen(_props?: any) {
                   background: '#FFFFFF', border: '1px solid #E8E1CE', fontFamily: 'inherit',
                   color: '#6C6553', fontSize: 12.5, cursor: 'pointer',
                 }}>+ Sub-category</button>
+              </div>
             </div>
 
             {/* Spend progress */}
             {budget > 0 && (
               <div style={{ marginBottom: 28, background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 12, padding: '14px 18px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10, flexWrap: 'wrap', gap: 8 }}>
                   <span style={{ fontSize: 12, color: '#6C6553' }}>This month</span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                     <span style={{ fontSize: 13, fontWeight: 700, color: overBudget ? RUST : nearBudget ? '#E8A94A' : '#191712', fontFamily: 'Outfit, sans-serif' }}>
                       EGP {monthSpend.toLocaleString('en-US')} / {budget.toLocaleString('en-US')}
                     </span>
@@ -286,9 +557,9 @@ export function BudgetScreen(_props?: any) {
                   value={rule.amount || ''}
                   onChange={e => saveRule(selectedId!, { ...rule, amount: parseFloat(e.target.value) || 0 })}
                   placeholder="0"
-                  style={{ flex: 1, background: '#FAF7EC', border: '1px solid #E8E1CE', borderRadius: 8, padding: '8px 12px', fontSize: 20, fontFamily: 'Outfit, sans-serif', fontWeight: 600, color: '#191712', outline: 'none' }}
+                  style={{ flex: 1, minWidth: 0, boxSizing: 'border-box', background: '#FAF7EC', border: '1px solid #E8E1CE', borderRadius: 8, padding: '8px 12px', fontSize: 20, fontFamily: 'Outfit, sans-serif', fontWeight: 600, color: '#191712', outline: 'none' }}
                 />
-                <span style={{ fontSize: 12, color: '#9B9180' }}>
+                <span style={{ fontSize: 12, color: '#9B9180', flexShrink: 0, whiteSpace: 'nowrap' }}>
                   / {FREQ_OPTS.find(f => f.v === rule.frequency)?.label?.toLowerCase() ?? 'month'}
                 </span>
               </div>
@@ -396,8 +667,32 @@ export function BudgetScreen(_props?: any) {
             )}
 
           </div>
-        )}
+
+              </>
+            ) : (
+              <>
+                <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.12em', color: '#6C6553', marginBottom: 14 }}>
+                  {new Date(year, monthIdx, 1).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }).toUpperCase()}
+                </div>
+                <SummaryLine label="Expenses" actual={outTotal.actual} planned={outTotal.planned} color={RUST}  currency={currency} />
+                <SummaryLine label="Income"   actual={inTotal.actual}  planned={inTotal.planned}  color={OLIVE} currency={currency} />
+                <div style={{ height: 1, background: '#E8E1CE', margin: '4px 0 0' }} />
+                <SummaryLine
+                  label="Left over"
+                  actual={inTotal.actual - outTotal.actual}
+                  planned={inTotal.planned - outTotal.planned}
+                  color={inTotal.actual - outTotal.actual < 0 ? RUST : '#191712'}
+                  currency={currency} strong />
+                <div style={{ fontSize: 11.5, color: '#9B9180', marginTop: 14, lineHeight: 1.55 }}>
+                  The bold figure is what actually happened this month; the one under it
+                  is what the envelopes were set to. Pick a category to change its budget.
+                </div>
+              </>
+            )}
+          </div>
+        </div>
       </div>
+
 
       {/* ─── 20E · Envelope Drill-Down Overlay ───────────────────────────────── */}
       {catModal && (
