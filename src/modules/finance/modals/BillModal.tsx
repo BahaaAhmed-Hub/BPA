@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { Bill, BillFrequency, Category, Account, Currency } from '../types'
 import { IconPicker } from '../components/IconPicker'
 import { POSITIVE, NEGATIVE } from '../../../lib/moneyColors'
+import { MoneyInput } from '../components/MoneyInput'
 
 const RED   = NEGATIVE
 const GREEN = POSITIVE
@@ -146,13 +147,11 @@ export function BillModal({ bill, categories, accounts, onSave, onDelete, onClos
           {/* Amount */}
           <div style={fieldStyle}>
             <label style={labelStyle}>Amount</label>
-            <input
+            <MoneyInput
               style={inputStyle}
-              type="number"
               min={0}
-              step="0.01"
               value={amount}
-              onChange={e => setAmount(Number(e.target.value))}
+              onChange={setAmount}
             />
           </div>
 

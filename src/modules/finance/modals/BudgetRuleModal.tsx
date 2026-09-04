@@ -3,6 +3,7 @@ import { X, ChevronDown, Check } from 'lucide-react'
 import type { Category, Transaction } from '../types'
 import { IconPicker } from '../components/IconPicker'
 import { CategoryGlyph } from '../components/CategoryGlyph'
+import { MoneyInput } from '../components/MoneyInput'
 
 // ─── What an envelope is set to ──────────────────────────────────────────────
 // This was a whole right-hand column: an amount, a fixed-or-flexible pair, five
@@ -375,10 +376,10 @@ export function BudgetRuleModal({
                     {['EGP', 'USD', 'AED'].map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </span>
-                <input
-                  type="number" min={0} inputMode="decimal"
-                  value={rule.amount || ''}
-                  onChange={e => onChange({ ...rule, amount: parseFloat(e.target.value) || 0 })}
+                <MoneyInput
+                  value={rule.amount || 0}
+                  min={0}
+                  onChange={n => onChange({ ...rule, amount: n })}
                   placeholder="0"
                   style={{
                     flex: 1, minWidth: 0, background: 'transparent', border: 'none', outline: 'none',

@@ -6,6 +6,7 @@ import {
 import type { Transaction, Account, Category, Currency, TxType } from '../types'
 import { knownPayees, matchPayees, rememberPayee } from '../payees'
 import { CategoryGlyph } from '../components/CategoryGlyph'
+import { MoneyInput } from '../components/MoneyInput'
 
 // ─── The panel's own vocabulary ───────────────────────────────────────────────
 // Same set the calendar's event panel uses: one pill for every value whether
@@ -333,12 +334,12 @@ export function TransactionModal({ transaction, accounts, categories, history = 
               <option value="AED">AED</option>
             </select>
           </span>
-          <input
-            type="number" min={0} step="0.01" inputMode="decimal"
-            value={amountStr}
-            onChange={e => setAmountStr(e.target.value)}
+          <MoneyInput
+            value={amount}
+            min={0}
+            onChange={n => setAmountStr(n === 0 ? '' : String(n))}
             onKeyDown={e => { if (e.key === 'Enter' && canSave) handleSave() }}
-            placeholder="0.00"
+            placeholder="0"
             style={{
               flex: 1, minWidth: 0, background: 'transparent', border: 'none', outline: 'none',
               fontFamily: DISPLAY, fontSize: 30, fontWeight: 700, letterSpacing: '-0.03em',

@@ -52,6 +52,19 @@ Three rules any change here must keep:
 - **Push the hydration merge back only when it differs from what the server just sent**,
   or two open devices trade writes forever.
 
+## Finance — how money is written
+`src/modules/finance/format.ts` is the only place that decides this.
+- **Accounting convention.** A negative is bracketed and drops its minus —
+  `(EGP 67,650)`, never `−EGP 67,650` — and a positive never carries a `+`.
+  `acct(n, { currency, zero, decimals })` for a signed figure, `outflow(n)` for a
+  magnitude that is money leaving (the Financials expense rows), `group(n)` for a
+  bare separated number. A labelled magnitude ("48,250 held") stays as it is.
+- **Inputs carry their separators.** `components/MoneyInput.tsx` wraps every money
+  field (transaction, budget rule, account balance, bill, goal target). It holds the
+  *text*, so a half-typed `1,2` survives, and restores the caret by digit count —
+  reformatting on each keystroke otherwise throws it to the end of the line.
+  Don't reach for `<input type="number">` for money; it cannot show separators.
+
 ## Finance persistence
 All nine finance tables are real Postgres (`20260001`, plus `finance_budgets` in `20260005`).
 `financeStore.loadFromDB()` is authoritative — writes go through `financeDb.ts` immediately,

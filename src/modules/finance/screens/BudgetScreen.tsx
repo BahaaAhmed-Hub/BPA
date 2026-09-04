@@ -12,6 +12,7 @@ import {
   BudgetRuleModal, defaultRule, monthlyAmount, activeIn, type BudgetRule,
 } from '../modals/BudgetRuleModal'
 import type { Category, Transaction } from '../types'
+import { acct } from '../format'
 
 // ─── 16G · Budget Builder ─────────────────────────────────────────────────────
 // Categories tree with budget rules: amount, frequency, roll unspent,
@@ -1075,7 +1076,7 @@ export function BudgetScreen(_props?: any) {
                     <div>
                       <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', color: '#9B9180' }}>EXCLUDED</div>
                       <div style={{ fontFamily: 'Outfit, sans-serif', fontSize: 18, fontWeight: 700, color: '#9B9180', letterSpacing: '-0.02em' }}>
-                        − EGP {excludedSpend.toLocaleString('en-US')}
+                        {acct(-excludedSpend, { currency: 'EGP' })}
                       </div>
                     </div>
                     <div style={{ width: 1, alignSelf: 'stretch', background: '#E8E1CE' }} />

@@ -4,6 +4,7 @@ import { BillModal } from '../modals/BillModal'
 import { IconPicker } from '../components/IconPicker'
 import type { Bill } from '../types'
 import { POSITIVE, NEGATIVE } from '../../../lib/moneyColors'
+import { acct } from '../format'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -43,7 +44,7 @@ function Pill({ isIncome, amount, currency }: { isIncome: boolean; amount: numbe
       whiteSpace: 'nowrap' as const,
       flexShrink: 0,
     }}>
-      {isIncome ? '+' : '−'}{currency} {amount.toLocaleString('en-US')}
+      {acct(isIncome ? Math.abs(amount) : -Math.abs(amount), { currency })}
     </span>
   )
 }

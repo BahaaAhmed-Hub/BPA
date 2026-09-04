@@ -3,6 +3,7 @@ import { ChevronDown, ChevronRight, ChevronsUpDown, ChevronsDownUp } from 'lucid
 import { useFinanceStore } from '../financeStore'
 import { CategoryGlyph } from '../components/CategoryGlyph'
 import { toBase, baseCurrency, currenciesNeedingRates } from '../fx'
+import { acct, outflow } from '../format'
 
 // ─── 16F · Financials YTD ─────────────────────────────────────────────────────
 // Spreadsheet-style table: each income/expense category as a row,
@@ -18,12 +19,12 @@ const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct
 const OLIVE = '#0C8140'
 const RUST  = '#C62828'
 
-function fmt(v: number, showSign = false): string {
-  if (v === 0) return '–'
-  const s = Math.abs(v).toLocaleString('en-US')
-  if (showSign) return (v > 0 ? '+' : '−') + s
-  return s
-}
+/** Income reads plain, money leaving reads bracketed, an empty cell reads as a
+ *  dash — the three things a ledger column does. `fmt` takes the figure as it
+ *  is stored (a magnitude for both sections) and `out` says which section it
+ *  belongs to. */
+function fmt(v: number): string { return acct(v, { zero: '–' }) }
+function fmtOut(v: number): string { return v === 0 ? '–' : outflow(v) }
 
 function netColor(v: number) { return v > 0 ? OLIVE : v < 0 ? RUST : '#9B9180' }
 
@@ -296,7 +297,7 @@ export function ReflectionScreen(_props?: any) {
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontSize: 10, letterSpacing: '0.1em', fontWeight: 700, color: '#9B9180' }}>NET THROUGH {throughLabel}</div>
             <div style={{ fontFamily: 'Outfit, sans-serif', fontSize: 20, fontWeight: 700, letterSpacing: '-0.02em', color: netColor(totalNet) }}>
-              {fmt(totalNet, true)} EGP
+              {acct(totalNet, { currency: 'EGP', zero: '–' })}
             </div>
           </div>
         </div>
@@ -356,13 +357,13 @@ export function ReflectionScreen(_props?: any) {
 
             {/* ── EXPENSES section ── */}
             <SectionHeader label="EXPENSES" colCount={12} colWidth={COL_W} nameWidth={NAME_W}
-              monthTotals={monthlyExpense} rowTotal={monthlyExpense.reduce((s, v) => s + v, 0)} />
+              monthTotals={monthlyExpense} rowTotal={monthlyExpense.reduce((s, v) => s + v, 0)} out />
 
             {expenseRows.map(row => (
               <CategoryRows key={row.cat.id} row={row} tone={RUST}
                 open={openIds.has(row.cat.id)} hidden={id => hiddenIds.has(id)}
                 onToggleOpen={toggleOpen} onToggleHide={toggleHide}
-                months={rowMonths(row)} ROW_H={ROW_H} numCell={numCell} fmt={fmt} />
+                months={rowMonths(row)} ROW_H={ROW_H} numCell={numCell} fmt={fmtOut} />
             ))}
 
             {/* Total expenses row */}
@@ -387,10 +388,11 @@ export function ReflectionScreen(_props?: any) {
 
 // ── Sub-components ──────────────────────────────────────────────────────────
 
-function SectionHeader({ label, colCount: _colCount, colWidth, nameWidth: _nameWidth, monthTotals, rowTotal }: {
+function SectionHeader({ label, colCount: _colCount, colWidth, nameWidth: _nameWidth, monthTotals, rowTotal, out }: {
   label: string; colCount: number; colWidth: number; nameWidth: number
-  monthTotals: number[]; rowTotal: number
+  monthTotals: number[]; rowTotal: number; out?: boolean
 }) {
+  const f = out ? fmtOut : fmt
   return (
     <tr style={{ background: '#F0EBDC', borderTop: '1px solid #E8E1CE', borderBottom: '1px solid #E8E1CE' }}>
       <td style={{ padding: '5px 14px', position: 'sticky', left: 0, background: '#F0EBDC', zIndex: 2 }}>
@@ -398,11 +400,11 @@ function SectionHeader({ label, colCount: _colCount, colWidth, nameWidth: _nameW
       </td>
       {monthTotals.map((v, i) => (
         <td key={i} style={{ width: colWidth, textAlign: 'right', padding: '5px 10px', fontFamily: 'Outfit, sans-serif', fontSize: 11, color: v === 0 ? '#C5BCA8' : '#6C6553', fontVariantNumeric: 'tabular-nums' }}>
-          {v > 0 ? v.toLocaleString('en-US') : '–'}
+          {f(v)}
         </td>
       ))}
       <td style={{ width: 100, textAlign: 'right', padding: '5px 14px', fontFamily: 'Outfit, sans-serif', fontSize: 11.5, fontWeight: 700, color: '#6C6553', fontVariantNumeric: 'tabular-nums' }}>
-        {rowTotal > 0 ? rowTotal.toLocaleString('en-US') : '–'}
+        {f(rowTotal)}
       </td>
     </tr>
   )
@@ -420,11 +422,11 @@ function TotalRow({ label, months, total, sign, COL_W, NAME_W: _NAME_W }: {
       </td>
       {months.map((v, mi) => (
         <td key={mi} style={{ width: COL_W, minWidth: COL_W, textAlign: 'right', padding: '0 10px', fontFamily: 'Outfit, sans-serif', fontSize: 13, fontWeight: 700, color: v === 0 ? '#C5BCA8' : col, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
-          {v === 0 ? '–' : (sign === 1 ? '+' : '') + v.toLocaleString('en-US')}
+          {sign === 1 ? fmt(v) : fmtOut(v)}
         </td>
       ))}
       <td style={{ width: 100, textAlign: 'right', padding: '0 14px', fontFamily: 'Outfit, sans-serif', fontSize: 13.5, fontWeight: 700, color: total === 0 ? '#C5BCA8' : col, fontVariantNumeric: 'tabular-nums' }}>
-        {total === 0 ? '–' : (sign === 1 ? '+' : '') + total.toLocaleString('en-US')}
+        {sign === 1 ? fmt(total) : fmtOut(total)}
       </td>
     </tr>
   )
@@ -440,11 +442,11 @@ function NetRow({ label, months, total, COL_W, NAME_W: _NAME_W2 }: {
       </td>
       {months.map((v, mi) => (
         <td key={mi} style={{ width: COL_W, minWidth: COL_W, textAlign: 'right', padding: '0 10px', fontFamily: 'Outfit, sans-serif', fontSize: 13, fontWeight: 700, color: v === 0 ? '#9B9180' : v > 0 ? OLIVE : RUST, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
-          {v === 0 ? '–' : (v > 0 ? '+' : '−') + Math.abs(v).toLocaleString('en-US')}
+          {fmt(v)}
         </td>
       ))}
       <td style={{ width: 100, textAlign: 'right', padding: '0 14px', fontFamily: 'Outfit, sans-serif', fontSize: 13.5, fontWeight: 700, color: total === 0 ? '#9B9180' : total > 0 ? OLIVE : RUST, fontVariantNumeric: 'tabular-nums' }}>
-        {total === 0 ? '–' : (total > 0 ? '+' : '−') + Math.abs(total).toLocaleString('en-US')}
+        {fmt(total)}
       </td>
     </tr>
   )
@@ -458,7 +460,7 @@ function CumulativeRow({ months, COL_W, NAME_W: _NAME_W3 }: { months: number[]; 
       </td>
       {months.map((v, mi) => (
         <td key={mi} style={{ width: COL_W, minWidth: COL_W, textAlign: 'right', padding: '0 10px', fontFamily: 'Outfit, sans-serif', fontSize: 12.5, fontWeight: 700, color: v === 0 ? '#4A4438' : v > 0 ? '#7EC878' : '#E87A65', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
-          {v === 0 ? '–' : (v > 0 ? '+' : '−') + Math.abs(v).toLocaleString('en-US')}
+          {fmt(v)}
         </td>
       ))}
       <td style={{ width: 100, textAlign: 'right', padding: '0 14px', color: '#4A4438', fontSize: 12 }}>

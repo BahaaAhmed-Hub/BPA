@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useFinanceStore } from '../financeStore'
 import type { Goal } from '../types'
+import { MoneyInput } from '../components/MoneyInput'
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 
@@ -218,7 +219,7 @@ export function GoalsScreen() {
   const [autoTransfer, setAutoTransfer] = useState(true)
 
   // New goal form
-  const [newTarget, setNewTarget] = useState('')
+  const [newTarget, setNewTarget] = useState(0)
   const [newBy, setNewBy] = useState('')
   const [newName, setNewName] = useState('')
   const [newIcon, setNewIcon] = useState('🎯')
@@ -226,12 +227,12 @@ export function GoalsScreen() {
   const selected = goals.find(g => g.id === selectedId) ?? goals[0] ?? null
 
   function handleAddGoal() {
-    if (!newName.trim() || !newTarget) return
+    if (!newName.trim() || newTarget <= 0) return
     const g: Goal = {
       id: crypto.randomUUID(),
       name: newName.trim(),
       icon: newIcon,
-      targetAmount: parseFloat(newTarget.replace(/,/g, '')) || 0,
+      targetAmount: newTarget,
       currentAmount: 0,
       color: '#F5D14E',
       sub: newBy || 'No deadline',
@@ -239,7 +240,7 @@ export function GoalsScreen() {
     upsertGoal(g)
     setSelectedId(g.id)
     setNewName('')
-    setNewTarget('')
+    setNewTarget(0)
     setNewBy('')
     setNewIcon('🎯')
   }
@@ -371,10 +372,11 @@ export function GoalsScreen() {
             <div style={{ display: 'flex', gap: 9 }}>
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 5 }}>
                 <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.12em', color: C.ink3, textTransform: 'uppercase' as const }}>Target</span>
-                <input
+                <MoneyInput
                   value={newTarget}
-                  onChange={e => setNewTarget(e.target.value)}
-                  placeholder="EGP 60,000"
+                  min={0}
+                  onChange={setNewTarget}
+                  placeholder="60,000"
                   style={{
                     height: 40, boxSizing: 'border-box' as const, padding: '0 12px',
                     borderRadius: 11, background: C.field, border: `1px solid ${C.border}`,
@@ -456,16 +458,16 @@ export function GoalsScreen() {
             {/* Add button */}
             <button
               onClick={handleAddGoal}
-              disabled={!newName.trim() || !newTarget}
+              disabled={!newName.trim() || newTarget <= 0}
               style={{
                 height: 36, borderRadius: 10,
-                background: newName.trim() && newTarget ? C.accent : C.field,
-                border: `1px solid ${newName.trim() && newTarget ? 'rgba(25,23,18,.18)' : C.border}`,
+                background: newName.trim() && newTarget > 0 ? C.accent : C.field,
+                border: `1px solid ${newName.trim() && newTarget > 0 ? 'rgba(25,23,18,.18)' : C.border}`,
                 color: C.ink1, fontSize: 13, fontWeight: 600,
-                cursor: newName.trim() && newTarget ? 'pointer' : 'default',
-                opacity: newName.trim() && newTarget ? 1 : 0.5,
+                cursor: newName.trim() && newTarget > 0 ? 'pointer' : 'default',
+                opacity: newName.trim() && newTarget > 0 ? 1 : 0.5,
                 fontFamily: 'inherit',
-                boxShadow: newName.trim() && newTarget ? '0 2px 0 rgba(25,23,18,.1)' : 'none',
+                boxShadow: newName.trim() && newTarget > 0 ? '0 2px 0 rgba(25,23,18,.1)' : 'none',
               }}
             >
               Create goal

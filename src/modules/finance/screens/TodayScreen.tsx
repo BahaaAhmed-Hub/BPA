@@ -4,6 +4,7 @@ import { CategoryGlyph } from '../components/CategoryGlyph'
 import { TransactionModal } from '../modals/TransactionModal'
 import type { Transaction } from '../types'
 import { POSITIVE, NEGATIVE, POSITIVE_TINT, NEGATIVE_TINT } from '../../../lib/moneyColors'
+import { acct, group } from '../format'
 
 // ── Palette ───────────────────────────────────────────────────────────────────
 
@@ -32,7 +33,7 @@ function Pill({ type, amount, currency }: { type: 'income' | 'expense' | 'transf
   const isIncome   = type === 'income'
   const isTransfer = type === 'transfer'
   const color = isTransfer ? C.accent : isIncome ? GREEN : RED
-  const sign  = isTransfer ? '↔' : isIncome ? '+' : '−'
+  const signed = isIncome || isTransfer ? Math.abs(amount) : -Math.abs(amount)
   return (
     <span style={{
       fontSize: 13, fontWeight: 700,
@@ -40,7 +41,7 @@ function Pill({ type, amount, currency }: { type: 'income' | 'expense' | 'transf
       whiteSpace: 'nowrap',
       flexShrink: 0,
     }}>
-      {sign}{cur} {Math.abs(amount).toLocaleString('en-US')}
+      {isTransfer ? '↔ ' : ''}{acct(signed, { currency: cur })}
     </span>
   )
 }
@@ -55,7 +56,7 @@ function cellAmount(n: number): string {
     const k = a / 1000
     return `${k >= 1000 ? `${(k / 1000).toFixed(k % 1000 === 0 ? 0 : 1)}m` : `${k.toFixed(k % 1 === 0 ? 0 : 1)}k`}`
   }
-  return a.toLocaleString('en-US')
+  return group(a)
 }
 
 // ── Money Calendar (16D design) ───────────────────────────────────────────────
@@ -136,8 +137,8 @@ function MoneyCalendar({
           {MONTH_NAMES[month]} <span style={{ color: '#9B9180' }}>{year}</span>
         </span>
         <span style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
-          {chip('Out', monthOut > 0 ? monthOut.toLocaleString('en-US') : '–', NEGATIVE, NEGATIVE_TINT)}
-          {chip('In',  monthIn  > 0 ? monthIn.toLocaleString('en-US')  : '–', POSITIVE, POSITIVE_TINT)}
+          {chip('Out', monthOut > 0 ? acct(-monthOut) : '–', NEGATIVE, NEGATIVE_TINT)}
+          {chip('In',  monthIn  > 0 ? acct(monthIn)   : '–', POSITIVE, POSITIVE_TINT)}
         </span>
       </div>
 
@@ -165,7 +166,6 @@ function MoneyCalendar({
             const net        = dayNetMap.get(dateStr) ?? 0
             const payees     = dayTxMap.get(dateStr) ?? []
             const netColor   = net > 0 ? '#0C8140' : net < 0 ? '#C62828' : '#9B9180'
-            const netSign    = net > 0 ? '+' : ''
 
             return (
               <div
@@ -193,7 +193,7 @@ function MoneyCalendar({
                 </span>
                 {net !== 0 && (
                   <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 12.5, fontWeight: 600, color: netColor, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {netSign}{net < 0 ? '−' : ''}{cellAmount(net)}
+                    {net < 0 ? `(${cellAmount(net)})` : cellAmount(net)}
                   </span>
                 )}
                 {payees.slice(0, 2).map((p, pi) => (
@@ -307,8 +307,8 @@ export function TodayScreen() {
         </div>
         {todayTx.length > 0 && (
           <div style={{ display: 'flex', gap: 16, paddingBottom: 3 }}>
-            <span style={{ fontSize: 12, color: '#C62828', fontWeight: 600 }}>−EGP {todayExp.toLocaleString('en-US')}</span>
-            <span style={{ fontSize: 12, color: '#0C8140', fontWeight: 600 }}>+EGP {todayInc.toLocaleString('en-US')}</span>
+            <span style={{ fontSize: 12, color: NEGATIVE, fontWeight: 600 }}>{acct(-todayExp, { currency: 'EGP' })}</span>
+            <span style={{ fontSize: 12, color: POSITIVE, fontWeight: 600 }}>{acct(todayInc, { currency: 'EGP' })}</span>
           </div>
         )}
       </div>
@@ -357,7 +357,7 @@ export function TodayScreen() {
                     </span>
                   </span>
                   <span style={{ fontSize: 12, fontWeight: 600, color: isExp ? RED : GREEN, flexShrink: 0 }}>
-                    {isExp ? '−' : '+'}{(tx.currency ?? 'EGP')} {Math.abs(tx.amount).toLocaleString('en-US')}
+                    {acct(isExp ? -Math.abs(tx.amount) : Math.abs(tx.amount), { currency: tx.currency ?? 'EGP' })}
                   </span>
                 </div>
               )
@@ -400,13 +400,13 @@ export function TodayScreen() {
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
               }}>
                 <span style={{ fontSize: 12, color: RED, fontWeight: 600 }}>
-                  −EGP {exp.toLocaleString('en-US')}
+                  {acct(-exp, { currency: 'EGP' })}
                 </span>
                 <span style={{ fontSize: 13, fontWeight: 700, color: net >= 0 ? GREEN : RED }}>
-                  Net {net >= 0 ? '+' : ''}EGP {Math.abs(net).toLocaleString('en-US')}
+                  Net {acct(net, { currency: 'EGP' })}
                 </span>
                 <span style={{ fontSize: 12, color: GREEN, fontWeight: 600 }}>
-                  +EGP {inc.toLocaleString('en-US')}
+                  {acct(inc, { currency: 'EGP' })}
                 </span>
               </div>
             )

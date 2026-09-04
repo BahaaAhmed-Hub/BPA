@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { Account, AccountType, Currency } from '../types'
 import { IconPicker } from '../components/IconPicker'
 import { POSITIVE, NEGATIVE } from '../../../lib/moneyColors'
+import { MoneyInput } from '../components/MoneyInput'
 
 const RED   = NEGATIVE
 const GREEN = POSITIVE
@@ -177,11 +178,10 @@ export function AccountModal({ account, onSave, onDelete, onClose }: Props) {
           {/* Balance */}
           <div style={fieldStyle}>
             <label style={labelStyle}>Balance</label>
-            <input
+            <MoneyInput
               style={inputStyle}
-              type="number"
               value={balance}
-              onChange={e => setBalance(Number(e.target.value))}
+              onChange={setBalance}
             />
           </div>
 

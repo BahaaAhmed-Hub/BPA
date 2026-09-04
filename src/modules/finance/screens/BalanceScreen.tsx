@@ -15,6 +15,7 @@ import { TransactionModal } from '../modals/TransactionModal'
 import { IconPicker } from '../components/IconPicker'
 import type { Account, AccountType, Transaction } from '../types'
 import { POSITIVE, NEGATIVE } from '../../../lib/moneyColors'
+import { acct } from '../format'
 
 // ─── Pill ─────────────────────────────────────────────────────────────────────
 
@@ -36,7 +37,7 @@ function Pill({ type, amount, currency }: { type: 'expense' | 'income' | 'transf
       color,
       whiteSpace: 'nowrap',
     }}>
-      {type === 'expense' ? '−' : type === 'income' ? '+' : ''}{currency} {amount.toLocaleString('en-US')}
+      {acct(type === 'expense' ? -Math.abs(amount) : Math.abs(amount), { currency })}
     </span>
   )
 }
@@ -62,8 +63,7 @@ const ACCOUNT_FILTERS: Record<AccountFilter, (t: AccountType) => boolean> = {
 // tear down a drag the moment anything else changed. It belongs out here.
 
 function formatBalance(bal: number, currency = 'EGP'): string {
-  if (bal < 0) return `(${currency} ${Math.abs(bal).toLocaleString('en-US')})`
-  return `${currency} ${bal.toLocaleString('en-US')}`
+  return acct(bal, { currency })
 }
 
 function AccountRow({ account, hovered, onHover, onEdit, onIcon }: {
@@ -300,7 +300,7 @@ export function BalanceScreen() {
         <div style={{ flexShrink: 0, width: 240 }}>
           <span style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.14em', opacity: 0.6, display: 'block', marginBottom: 4 }}>NET POSITION</span>
           <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 36, fontWeight: 600, letterSpacing: '-0.04em', lineHeight: 1, fontVariantNumeric: 'tabular-nums', display: 'block' }}>
-            EGP {netPos.toLocaleString('en-US')}
+            {acct(netPos, { currency: 'EGP' })}
           </span>
           <span style={{ fontSize: 11, opacity: 0.65, display: 'block', marginTop: 4 }}>
             EGP {totalHeld.toLocaleString('en-US')} held · EGP {totalOwed.toLocaleString('en-US')} owed
@@ -324,7 +324,7 @@ export function BalanceScreen() {
         <div style={{ width: 160, flexShrink: 0 }}>
           <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', opacity: 0.55, display: 'block', marginBottom: 4 }}>SAFE TO SPEND</span>
           <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 22, fontWeight: 600, letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums', display: 'block' }}>
-            EGP {Math.max(0, netPos - totalOwed * 0.1).toLocaleString('en-US', { maximumFractionDigits: 0 })}
+            {acct(Math.max(0, netPos - totalOwed * 0.1), { currency: 'EGP' })}
           </span>
           <span style={{ fontSize: 10.5, opacity: 0.6, display: 'block', marginTop: 2 }}>After committed bills</span>
         </div>
@@ -342,15 +342,15 @@ export function BalanceScreen() {
         }}>
           {/* ── Account groups ── */}
           {[
-            { label: 'PAYMENT ACCOUNTS', accounts: paymentAccounts, total: paymentTotal, totalColor: '#0C8140' },
-            { label: 'CARDS OWED', accounts: creditCards, total: creditTotal, totalColor: '#C62828' },
-            { label: 'OTHER ASSETS', accounts: otherAssets, total: assetTotal, totalColor: '#191712' },
+            { label: 'PAYMENT ACCOUNTS', accounts: paymentAccounts, total: paymentTotal, totalColor: POSITIVE, owed: false },
+            { label: 'CARDS OWED', accounts: creditCards, total: creditTotal, totalColor: NEGATIVE, owed: true },
+            { label: 'OTHER ASSETS', accounts: otherAssets, total: assetTotal, totalColor: '#191712', owed: false },
           ].map(group => group.accounts.length > 0 && (
             <div key={group.label} style={{ marginBottom: 14 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, height: 30, padding: '0 12px', borderRadius: 10, background: '#EDE7D9', marginBottom: 7, boxSizing: 'border-box' as const }}>
                 <span style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.12em', color: '#6C6553' }}>{group.label}</span>
                 <span style={{ marginLeft: 'auto', fontFamily: 'Outfit, sans-serif', fontSize: 13.5, fontWeight: 600, color: group.totalColor, fontVariantNumeric: 'tabular-nums' }}>
-                  EGP {Math.abs(group.total).toLocaleString('en-US')}
+                  {acct(group.owed ? -Math.abs(group.total) : group.total, { currency: 'EGP' })}
                 </span>
               </div>
               <DndContext
