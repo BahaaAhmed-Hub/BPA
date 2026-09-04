@@ -210,16 +210,18 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
               {children.map(sub => (
                 <Draggable key={sub.id} id={sub.id}>
                   {() => (
-                    <span title={`${sub.name} — inside ${cat.name}. Drag it out to stand on its own.`}
+                    <button onClick={() => onPick(sub.id)}
+                      title={`${sub.name} — inside ${cat.name}. Click to edit it, or drag it out to stand on its own.`}
                       style={{
                         display: 'inline-flex', alignItems: 'center', gap: 5, maxWidth: 104,
-                        height: 24, padding: '0 9px', borderRadius: 999, cursor: 'grab',
-                        background: '#F4EFE1', border: '1px solid #E4DCC6', color: '#4A4438',
-                        fontSize: 11, boxSizing: 'border-box',
+                        height: 24, padding: '0 9px', borderRadius: 999, cursor: 'pointer',
+                        background: selectedId === sub.id ? 'rgba(245,209,78,0.28)' : '#F4EFE1',
+                        border: '1px solid #E4DCC6', color: '#4A4438',
+                        fontSize: 11, boxSizing: 'border-box', fontFamily: 'inherit',
                       }}>
                       <span style={{ display: 'flex', flexShrink: 0 }}><CategoryGlyph icon={sub.icon} size={12} /></span>
                       <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sub.name}</span>
-                    </span>
+                    </button>
                   )}
                 </Draggable>
               ))}
@@ -347,7 +349,9 @@ export function BudgetScreen(_props?: any) {
   // Nothing selected to begin with: the point of the screen is the month as a
   // whole, and a category takes the panel only when you ask for one.
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const selectedCat = parents.find(p => p.id === selectedId) ?? null
+  // Not parents.find: clicking a sub-category did nothing, because only a
+  // top-level one could ever be the selected one.
+  const selectedCat = categories.find(c => c.id === selectedId) ?? null
   const rule = selectedId ? (rules[selectedId] ?? defaultRule()) : null
 
   // Monthly spend for selected category (current month)
@@ -504,6 +508,10 @@ export function BudgetScreen(_props?: any) {
     const open = categories.find(c => c.id === selectedId)
     if (open && !open.name.trim() && !categories.some(c => c.parentId === open.id)) {
       void removeCategory(open.id)
+      // A sub abandoned mid-add came from its parent's window; go back there
+      // rather than dropping the person on the month.
+      setSelectedId(open.parentId ?? null)
+      return
     }
     setSelectedId(null)
   }
@@ -695,6 +703,7 @@ export function BudgetScreen(_props?: any) {
       {selectedCat && (
         <BudgetRuleModal
           category={selectedCat}
+          parent={selectedCat.parentId ? categories.find(c => c.id === selectedCat.parentId) : null}
           rule={rule ?? defaultRule()}
           subs={subs(selectedCat.id)}
           transactions={transactions}
@@ -702,6 +711,7 @@ export function BudgetScreen(_props?: any) {
           currency={currency}
           onChange={r => saveRule(selectedCat.id, r)}
           onDelete={() => deleteRule(selectedCat.id)}
+          onPromote={() => void upsertCategory({ ...selectedCat, parentId: undefined })}
           onRename={patch => {
             const next = { ...selectedCat, ...patch }
             // Named but never given an icon: guess from the name rather than
@@ -712,8 +722,15 @@ export function BudgetScreen(_props?: any) {
             void upsertCategory(next)
           }}
           onEditCategory={() => setCatModal({ category: selectedCat })}
-          onAddSub={() => setCatModal({ category: { id: '', name: '', icon: '📁', color: '#8C8071', parentId: selectedCat.id, isSystem: false, txType: selectedCat.txType } })}
-          onEditSub={sub => setCatModal({ category: sub })}
+          onAddSub={() => {
+            const id = crypto.randomUUID()
+            void upsertCategory({
+              id, name: '', icon: 'lucide:Folder', color: selectedCat.color,
+              parentId: selectedCat.id, isSystem: false, txType: selectedCat.txType,
+            })
+            setSelectedId(id)
+          }}
+          onEditSub={sub => setSelectedId(sub.id)}
           onDrill={() => setDrillOpen(true)}
           onClose={closeCategory}
         />

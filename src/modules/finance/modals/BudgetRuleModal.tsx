@@ -170,6 +170,9 @@ function Switch({ on, onChange, label, sub }: {
 
 interface Props {
   category: Category
+  /** Set when this one sits inside another — it changes what the window is
+   *  for, and gives somewhere to go back to. */
+  parent?: Category | null
   rule: BudgetRule
   subs: Category[]
   transactions: Transaction[]
@@ -178,6 +181,8 @@ interface Props {
   onChange: (rule: BudgetRule) => void
   /** Clear the budget entirely, as opposed to setting it to nothing. */
   onDelete: () => void
+  /** Take it out of its parent and let it stand on its own. */
+  onPromote: () => void
   /** Name and icon are edited here rather than in a second window. */
   onRename: (patch: Partial<Category>) => void
   onEditCategory: () => void
@@ -188,8 +193,8 @@ interface Props {
 }
 
 export function BudgetRuleModal({
-  category, rule, subs, transactions, monthKey, currency,
-  onChange, onDelete, onRename, onEditCategory, onAddSub, onEditSub, onDrill, onClose,
+  category, parent, rule, subs, transactions, monthKey, currency,
+  onChange, onDelete, onPromote, onRename, onEditCategory, onAddSub, onEditSub, onDrill, onClose,
 }: Props) {
   const box = useRef<HTMLDivElement>(null)
   // Held locally while it is being typed, so every keystroke is not a write.
@@ -281,8 +286,17 @@ export function BudgetRuleModal({
               onFocus={e => { e.target.style.background = '#FAF7EC'; e.target.style.borderColor = LINE }}
               onBlurCapture={e => { e.target.style.background = 'transparent'; e.target.style.borderColor = 'transparent' }}
             />
-            <div style={{ fontSize: 11.5, color: GHOST, marginTop: 1 }}>
-              {new Date(monthKey + '-01T12:00:00').toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, color: GHOST, marginTop: 1 }}>
+              <span>{new Date(monthKey + '-01T12:00:00').toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}</span>
+              {parent && (
+                <>
+                  <span>·</span>
+                  <button onClick={onPromote} title="Take it out and let it stand on its own"
+                    style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'inherit', fontSize: 11.5, color: MUTED, textDecoration: 'underline', textUnderlineOffset: 2 }}>
+                    inside {parent.name}
+                  </button>
+                </>
+              )}
             </div>
           </div>
           <button onClick={onClose} title="Close" style={ROUND}><X size={14} /></button>
@@ -447,7 +461,9 @@ export function BudgetRuleModal({
         <Switch on={rule.warn80} onChange={v => onChange({ ...rule, warn80: v })}
           label="Warn at 80%" sub="A quiet nudge here, not a block" />
 
-        {/* Its children, if it has any */}
+        {/* Its children, if it can have any. One level of nesting is all this
+            models, so a sub-category is offered none. */}
+        {!parent && (<>
         <div style={{ height: 1, background: HAIR, margin: '14px 0' }} />
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: subs.length ? 8 : 0 }}>
           <span style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.12em', color: MUTED }}>
@@ -477,6 +493,8 @@ export function BudgetRuleModal({
             </button>
           )
         })}
+
+        </>)}
 
         <div style={{ display: 'flex', gap: 8, marginTop: 18 }}>
           <button onClick={onClose} style={{
