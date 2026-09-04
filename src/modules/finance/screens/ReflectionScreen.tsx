@@ -24,9 +24,14 @@ function netColor(v: number) { return v > 0 ? OLIVE : v < 0 ? RUST : '#9B9180' }
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function ReflectionScreen(_props?: any) {
   const { transactions, categories } = useFinanceStore()
+  // The year lives in the store because it decides what gets fetched. Held
+  // locally, stepping back a year filtered a set of transactions that only
+  // ever contained the current one — so the whole grid came back empty and
+  // looked like a year with nothing in it.
+  const year    = useFinanceStore(s => s.currentYear)
+  const setYear = useFinanceStore(s => s.setYear)
 
   const today = new Date()
-  const [year, setYear] = useState(today.getFullYear())
 
   // Build categoryId → monthly amounts map for given year
   const { incomeRows, expenseRows, monthlyIncome, monthlyExpense } = useMemo(() => {
@@ -116,11 +121,11 @@ export function ReflectionScreen(_props?: any) {
         <div>
           <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: '#6C6553', display: 'block', marginBottom: 4 }}>FINANCE · REFLECT</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <button onClick={() => setYear(y => y - 1)} style={{ background: 'none', border: 'none', color: '#6C6553', fontSize: 20, cursor: 'pointer', padding: 0, lineHeight: 1 }}>‹</button>
+            <button onClick={() => void setYear(year - 1)} style={{ background: 'none', border: 'none', color: '#6C6553', fontSize: 20, cursor: 'pointer', padding: 0, lineHeight: 1 }}>‹</button>
             <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 28, fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1, color: '#191712' }}>
               Financials, {year}
             </span>
-            <button onClick={() => setYear(y => y + 1)} style={{ background: 'none', border: 'none', color: '#6C6553', fontSize: 20, cursor: 'pointer', padding: 0, lineHeight: 1 }}>›</button>
+            <button onClick={() => void setYear(year + 1)} style={{ background: 'none', border: 'none', color: '#6C6553', fontSize: 20, cursor: 'pointer', padding: 0, lineHeight: 1 }}>›</button>
           </div>
           <span style={{ fontSize: 12, color: '#6C6553', marginTop: 3, display: 'block' }}>
             Every income &amp; expense line by month — hide any row and every total recalculates

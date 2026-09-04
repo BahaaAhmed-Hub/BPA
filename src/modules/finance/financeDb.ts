@@ -322,3 +322,131 @@ export async function deleteCellComment(
     .eq('month', month)
   if (error) throw new Error(error.message)
 }
+
+// ─── Bills, goals and budgets ─────────────────────────────────────────────────
+// finance_bills and finance_goals have been in the schema since 20260001 and
+// nothing ever wrote to them: the store's upsertBill and upsertGoal only ever
+// touched local state, so a bill entered on the laptop did not exist anywhere
+// else. finance_budgets did not exist at all until 20260005.
+
+export interface BillRow {
+  id: string
+  user_id: string
+  name: string
+  amount: number
+  currency: string
+  category_id?: string | null
+  account_id?: string | null
+  frequency: string
+  next_due: string
+  is_active: boolean
+  is_income: boolean
+  icon: string
+  created_at?: string
+}
+
+/** null when the read failed — a missing table, or offline. An empty array
+ *  means the table is genuinely empty, which is a different fact and leads to
+ *  a different decision in the store: one keeps what the device has, the other
+ *  is allowed to clear it. */
+export async function loadBills(): Promise<BillRow[] | null> {
+  const userId = await uid()
+  const { data, error } = await supabase
+    .from('finance_bills')
+    .select('*')
+    .eq('user_id', userId)
+    .order('next_due', { ascending: true })
+  if (error) return null
+  return (data ?? []) as BillRow[]
+}
+
+export async function saveBill(row: BillRow): Promise<void> {
+  markLocalWrite('finance')
+  const { error } = await supabase.from('finance_bills').upsert(row, { onConflict: 'id' })
+  if (error) throw new Error(error.message)
+}
+
+export async function deleteBill(id: string): Promise<void> {
+  markLocalWrite('finance')
+  const { error } = await supabase.from('finance_bills').delete().eq('id', id)
+  if (error) throw new Error(error.message)
+}
+
+export interface GoalRow {
+  id: string
+  user_id: string
+  name: string
+  icon: string
+  target_amount: number
+  current_amount: number
+  color: string
+  sub_label?: string | null
+  is_active: boolean
+  created_at?: string
+}
+
+/** null when the read failed — a missing table, or offline. An empty array
+ *  means the table is genuinely empty, which is a different fact and leads to
+ *  a different decision in the store: one keeps what the device has, the other
+ *  is allowed to clear it. */
+export async function loadGoals(): Promise<GoalRow[] | null> {
+  const userId = await uid()
+  const { data, error } = await supabase
+    .from('finance_goals')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: true })
+  if (error) return null
+  return (data ?? []) as GoalRow[]
+}
+
+export async function saveGoal(row: GoalRow): Promise<void> {
+  markLocalWrite('finance')
+  const { error } = await supabase.from('finance_goals').upsert(row, { onConflict: 'id' })
+  if (error) throw new Error(error.message)
+}
+
+export async function deleteGoal(id: string): Promise<void> {
+  markLocalWrite('finance')
+  const { error } = await supabase.from('finance_goals').delete().eq('id', id)
+  if (error) throw new Error(error.message)
+}
+
+export interface BudgetRow {
+  id: string
+  user_id: string
+  category_id: string
+  monthly_amount: number
+  currency: string
+  start_date: string
+  end_date?: string | null
+  rollover: boolean
+  created_at?: string
+}
+
+/** null when the read failed — a missing table, or offline. An empty array
+ *  means the table is genuinely empty, which is a different fact and leads to
+ *  a different decision in the store: one keeps what the device has, the other
+ *  is allowed to clear it. */
+export async function loadBudgets(): Promise<BudgetRow[] | null> {
+  const userId = await uid()
+  const { data, error } = await supabase
+    .from('finance_budgets')
+    .select('*')
+    .eq('user_id', userId)
+    .order('start_date', { ascending: true })
+  if (error) return null
+  return (data ?? []) as BudgetRow[]
+}
+
+export async function saveBudget(row: BudgetRow): Promise<void> {
+  markLocalWrite('finance')
+  const { error } = await supabase.from('finance_budgets').upsert(row, { onConflict: 'id' })
+  if (error) throw new Error(error.message)
+}
+
+export async function deleteBudget(id: string): Promise<void> {
+  markLocalWrite('finance')
+  const { error } = await supabase.from('finance_budgets').delete().eq('id', id)
+  if (error) throw new Error(error.message)
+}

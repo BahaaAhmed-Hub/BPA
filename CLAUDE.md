@@ -52,6 +52,20 @@ Three rules any change here must keep:
 - **Push the hydration merge back only when it differs from what the server just sent**,
   or two open devices trade writes forever.
 
+## Finance persistence
+All nine finance tables are real Postgres (`20260001`, plus `finance_budgets` in `20260005`).
+`financeStore.loadFromDB()` is authoritative — writes go through `financeDb.ts` immediately,
+there is no debounce and no merge.
+- `currentYear` decides what gets fetched. It is **not persisted** (`partialize` + `merge`),
+  because a stored copy meant a store created in one year kept asking for that year forever.
+  `setYear()` is the only way to change it and it reloads.
+- `professor-finance-seeded` guards the one-time adoption of bills/goals/budgets that were
+  local-only before they had DB code. An empty table means "not yet" until the local set is
+  *confirmed* on the server — set it on a started push and the second sign-in load deletes
+  everything the first was still uploading.
+- `loadBills/loadGoals/loadBudgets` return `null` on a failed read and `[]` for a genuinely
+  empty table. The two lead to opposite decisions; don't collapse them.
+
 ## Settings — Section → Component Mapping (CONFIRMED CORRECT as of latest commit)
 | Nav group | Section id | Title shown | Component rendered |
 |---|---|---|---|

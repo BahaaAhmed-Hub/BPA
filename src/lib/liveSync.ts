@@ -35,6 +35,9 @@ const DOMAIN_OF_TABLE: Record<string, LiveDomain> = {
   finance_plans:            'finance',
   finance_actuals_override: 'finance',
   finance_cell_comments:    'finance',
+  finance_bills:            'finance',
+  finance_goals:            'finance',
+  finance_budgets:          'finance',
 }
 
 const DOMAINS = ['habits', 'tasks', 'finance'] as const
