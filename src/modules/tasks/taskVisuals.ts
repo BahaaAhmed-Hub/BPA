@@ -53,9 +53,9 @@ export const slotEmpty: React.CSSProperties = {
 /** Scheduled reads olive — it is the one slot that means "this has a block". */
 export const slotScheduled: React.CSSProperties = {
   ...slotFilled,
-  background: 'rgba(95,112,56,0.10)',
+  background: 'rgba(12,129,64,0.10)',
   border: '1px solid #C8DAB0',
-  color: '#5F7038',
+  color: '#0C8140',
 }
 
 export function slotPriority(p: Priority): React.CSSProperties {
@@ -177,7 +177,7 @@ export function sortUrgentFirst(tasks: Task[]): Task[] {
 
 const STATUS_GROUPS: { key: string; label: string; color: string }[] = [
   { key: 'open',      label: 'Open',      color: '#6C6553' },
-  { key: 'done',      label: 'Done',      color: '#5F7038' },
+  { key: 'done',      label: 'Done',      color: '#0C8140' },
   { key: 'cancelled', label: 'Cancelled', color: '#9B9180' },
 ]
 

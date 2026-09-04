@@ -663,7 +663,7 @@ function PlanCard({
       <CardHead
         title="Plan for today"
         meta={`${blocks.length} block${blocks.length === 1 ? '' : 's'} · ${fmtHours(focusMinutes)} focus · ${fmtHours(freeMinutes)} free`}>
-        <span style={{ fontSize: 11.5, color: dirty ? '#B4523A' : GHOST, flexShrink: 0 }}>
+        <span style={{ fontSize: 11.5, color: dirty ? '#C62828' : GHOST, flexShrink: 0 }}>
           {dirty ? 'draft, not saved' : 'saved'}
         </span>
       </CardHead>
@@ -695,11 +695,11 @@ function PlanCard({
             {/* Now */}
             {nowMins >= fromHour * 60 && nowMins <= toHour * 60 && (
               <div style={{ position: 'absolute', top: topOf(nowMins), left: 0, right: 0, pointerEvents: 'none', zIndex: 3 }}>
-                <span style={{ position: 'absolute', top: -6, left: 0, fontSize: 10, fontWeight: 700, color: '#B4523A', fontVariantNumeric: 'tabular-nums' }}>
+                <span style={{ position: 'absolute', top: -6, left: 0, fontSize: 10, fontWeight: 700, color: '#C62828', fontVariantNumeric: 'tabular-nums' }}>
                   {hhmm(now)}
                 </span>
-                <span style={{ position: 'absolute', top: 0, left: 44, right: 0, height: 1, background: '#B4523A' }} />
-                <span style={{ position: 'absolute', top: -2.5, left: 42, width: 6, height: 6, borderRadius: 999, background: '#B4523A' }} />
+                <span style={{ position: 'absolute', top: 0, left: 44, right: 0, height: 1, background: '#C62828' }} />
+                <span style={{ position: 'absolute', top: -2.5, left: 42, width: 6, height: 6, borderRadius: 999, background: '#C62828' }} />
               </div>
             )}
 
@@ -774,8 +774,8 @@ function PlanCard({
                         title={status === 'done' ? 'Not done after all' : 'Mark done'}
                         style={{
                           ...ICON_TILE, width: 20, height: 20, borderRadius: 999, cursor: 'pointer', flexShrink: 0,
-                          background: status === 'done' ? '#5F7038' : '#FFFFFF',
-                          borderColor: status === 'done' ? '#5F7038' : '#E8E1CE',
+                          background: status === 'done' ? '#0C8140' : '#FFFFFF',
+                          borderColor: status === 'done' ? '#0C8140' : '#E8E1CE',
                           color: status === 'done' ? '#FFFFFF' : MUTED,
                         }}>
                         <Check size={11} strokeWidth={2.6} />
@@ -786,8 +786,8 @@ function PlanCard({
                         title={status === 'cancelled' ? 'Restore' : 'Mark cancelled'}
                         style={{
                           ...ICON_TILE, width: 20, height: 20, borderRadius: 999, cursor: 'pointer', flexShrink: 0,
-                          background: status === 'cancelled' ? '#B4523A' : '#FFFFFF',
-                          borderColor: status === 'cancelled' ? '#B4523A' : '#E8E1CE',
+                          background: status === 'cancelled' ? '#C62828' : '#FFFFFF',
+                          borderColor: status === 'cancelled' ? '#C62828' : '#E8E1CE',
                           color: status === 'cancelled' ? '#FFFFFF' : MUTED,
                         }}>
                         <X size={11} strokeWidth={2.6} />
@@ -860,7 +860,7 @@ function HabitsCard({ habits, logs, qtyLogs, today, onToggle, onSetQty, onOpenTr
         title="Habits"
         meta={`${doneToday} of ${habits.length} today · ${weekPct}% this week · best streak ${best}d`}>
         {coldDays > 0 && (
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11.5, fontWeight: 600, color: '#B4523A', flexShrink: 0 }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11.5, fontWeight: 600, color: '#C62828', flexShrink: 0 }}>
             <Flame size={12} strokeWidth={2} /> {coldDays} days cold
           </span>
         )}
@@ -940,12 +940,12 @@ function HabitsCard({ habits, logs, qtyLogs, today, onToggle, onSetQty, onOpenTr
                     <button onClick={() => onToggle(h.id)} title={done ? 'Undo' : 'Mark done'}
                       style={{
                         ...ICON_TILE, width: 22, height: 22, cursor: 'pointer',
-                        background: done ? '#5F7038' : INK, borderColor: done ? '#5F7038' : INK, color: '#FDF8E7',
+                        background: done ? '#0C8140' : INK, borderColor: done ? '#0C8140' : INK, color: '#FDF8E7',
                       }}>
                       <Check size={12} strokeWidth={2.6} />
                     </button>
                   )}
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2, fontSize: 11, color: streak > 0 ? '#5F7038' : GHOST, width: 30, justifyContent: 'flex-end', flexShrink: 0 }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2, fontSize: 11, color: streak > 0 ? '#0C8140' : GHOST, width: 30, justifyContent: 'flex-end', flexShrink: 0 }}>
                     <Flame size={10} strokeWidth={2} /> {streak}d
                   </span>
                 </span>

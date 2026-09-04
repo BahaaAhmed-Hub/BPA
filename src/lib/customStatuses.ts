@@ -7,11 +7,11 @@ export interface CustomStatus {
 // 9B board columns. Only a fresh install picks these up — anyone who has
 // already customised their columns keeps what they saved.
 export const DEFAULT_STATUSES: CustomStatus[] = [
-  { id: 'decide',    label: 'Decide',           color: '#B4523A' },
+  { id: 'decide',    label: 'Decide',           color: '#C62828' },
   { id: 'today',     label: 'Today',            color: '#F5D14E' },
   { id: 'this-week', label: 'This week',        color: '#8C826A' },
   { id: 'later',     label: 'Later',            color: '#B5AC98' },
-  { id: 'done',      label: 'Done · this week', color: '#5F7038' },
+  { id: 'done',      label: 'Done · this week', color: '#0C8140' },
 ]
 
 /** The stored order IS the order — Settings and the board both write it, so

@@ -18,8 +18,8 @@
 | Muted ink | `#6C6553` |
 | Ghost ink | `#9B9180` |
 | Amber accent | `#F5D14E` |
-| Olive positive | `#5F7038` |
-| Rust negative | `#B4523A` |
+| Positive (green) | `#0C8140` — `POSITIVE` in `src/lib/moneyColors.ts` |
+| Negative (red) | `#C62828` — `NEGATIVE` in `src/lib/moneyColors.ts` |
 | Active nav pill | `#FFFFFF` bg + `box-shadow: 0 1px 3px rgba(25,23,18,.16)` (NOT amber) |
 
 Typography: `Outfit` headings, system-ui body. Section titles: 28px Outfit 600, `letter-spacing: -0.03em`.

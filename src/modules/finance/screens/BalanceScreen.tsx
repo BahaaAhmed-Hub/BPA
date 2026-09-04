@@ -14,11 +14,12 @@ import { AccountModal } from '../modals/AccountModal'
 import { TransactionModal } from '../modals/TransactionModal'
 import { IconPicker } from '../components/IconPicker'
 import type { Account, AccountType, Transaction } from '../types'
+import { POSITIVE, NEGATIVE } from '../../../lib/moneyColors'
 
 // ─── Pill ─────────────────────────────────────────────────────────────────────
 
-const RED = '#DA4A3E'
-const GREEN = '#2FA869'
+const RED   = NEGATIVE
+const GREEN = POSITIVE
 
 function Pill({ type, amount, currency }: { type: 'expense' | 'income' | 'transfer'; amount: number; currency: string }) {
   // Soft pill style: tinted background + matching text (no white text on colored bg)
@@ -141,7 +142,7 @@ function AccountRow({ account, hovered, onHover, onEdit, onIcon }: {
         </span>
       </div>
       <div style={{ marginLeft: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', flexShrink: 0 }}>
-        <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 14.5, fontWeight: 600, color: isNeg ? '#B4523A' : '#191712', fontVariantNumeric: 'tabular-nums' }}>
+        <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 14.5, fontWeight: 600, color: isNeg ? '#C62828' : '#191712', fontVariantNumeric: 'tabular-nums' }}>
           {formatBalance(account.balance, account.currency)}
         </span>
         {account.last4 && <span style={{ fontSize: 10, color: '#6C6553' }}>cleared</span>}
@@ -165,8 +166,8 @@ export function BalanceScreen() {
     textPri:   '#191712',
     textMuted: '#6C6553',
     textDim:   '#9B9180',
-    red:       '#DA4A3E',
-    green:     '#2FA869',
+    red:       '#C62828',
+    green:     '#0C8140',
     cyan:      '#46B6C9',
     purple:    '#7E78DD',
   }
@@ -312,7 +313,7 @@ export function BalanceScreen() {
           </div>
           <div style={{ height: 14, borderRadius: 999, overflow: 'hidden', display: 'flex', background: 'rgba(255,255,255,0.12)' }}>
             <span style={{ width: `${heldPct}%`, background: '#F5D14E', display: 'block' }} />
-            <span style={{ flex: 1, background: '#B4523A', display: 'block' }} />
+            <span style={{ flex: 1, background: '#C62828', display: 'block' }} />
           </div>
           <div style={{ display: 'flex', gap: 16, fontSize: 10.5, opacity: 0.62, marginTop: 6 }}>
             <span>Payment {heldPct}%</span>
@@ -341,8 +342,8 @@ export function BalanceScreen() {
         }}>
           {/* ── Account groups ── */}
           {[
-            { label: 'PAYMENT ACCOUNTS', accounts: paymentAccounts, total: paymentTotal, totalColor: '#5F7038' },
-            { label: 'CARDS OWED', accounts: creditCards, total: creditTotal, totalColor: '#B4523A' },
+            { label: 'PAYMENT ACCOUNTS', accounts: paymentAccounts, total: paymentTotal, totalColor: '#0C8140' },
+            { label: 'CARDS OWED', accounts: creditCards, total: creditTotal, totalColor: '#C62828' },
             { label: 'OTHER ASSETS', accounts: otherAssets, total: assetTotal, totalColor: '#191712' },
           ].map(group => group.accounts.length > 0 && (
             <div key={group.label} style={{ marginBottom: 14 }}>

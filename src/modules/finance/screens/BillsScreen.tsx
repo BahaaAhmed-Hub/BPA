@@ -3,6 +3,7 @@ import { useFinanceStore } from '../financeStore'
 import { BillModal } from '../modals/BillModal'
 import { IconPicker } from '../components/IconPicker'
 import type { Bill } from '../types'
+import { POSITIVE, NEGATIVE } from '../../../lib/moneyColors'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -25,8 +26,8 @@ function formatFrequency(freq: string): string {
 
 // ─── Pill ─────────────────────────────────────────────────────────────────────
 
-const RED = '#DA4A3E'
-const GREEN = '#2FA869'
+const RED   = NEGATIVE
+const GREEN = POSITIVE
 
 function Pill({ isIncome, amount, currency }: { isIncome: boolean; amount: number; currency: string }) {
   return (
@@ -101,8 +102,8 @@ export function BillsScreen({ onOpenAdd: _onOpenAdd }: Props) {
     textPri:   '#191712',
     textMuted: '#6C6553',
     textDim:   '#9B9180',
-    red:       '#DA4A3E',
-    green:     '#2FA869',
+    red:       '#C62828',
+    green:     '#0C8140',
   }
 
   const { bills, accounts, categories, upsertBill, removeBill } = useFinanceStore()

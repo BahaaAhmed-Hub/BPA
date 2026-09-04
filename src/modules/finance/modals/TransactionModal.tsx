@@ -17,8 +17,8 @@ const MUTED  = '#6C6553'
 const GHOST  = '#9B9180'
 const LINE   = '#E8E1CE'
 const HAIR   = '#F0EBDC'
-const OLIVE  = '#5F7038'
-const RUST   = '#B4523A'
+const OLIVE  = '#0C8140'
+const RUST   = '#C62828'
 const AMBER  = '#F5D14E'
 const DISPLAY = "'Outfit', system-ui, sans-serif"
 

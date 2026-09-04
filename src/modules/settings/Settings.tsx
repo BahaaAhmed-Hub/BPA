@@ -273,8 +273,8 @@ function GhostPill({ icon: Icon, children, onClick, tone, title }: {
       ...PILL_BASE,
       display: 'inline-flex', alignItems: 'center', gap: 6,
       cursor: 'pointer',
-      color: tone === 'rust' ? '#B4523A' : '#191712',
-      borderColor: tone === 'rust' ? 'rgba(180,82,58,0.35)' : '#E8E1CE',
+      color: tone === 'rust' ? '#C62828' : '#191712',
+      borderColor: tone === 'rust' ? 'rgba(198,40,40,0.35)' : '#E8E1CE',
       background: tone === 'rust' ? '#FFFFFF' : '#FAF7EC',
     }}>
       {Icon && <Icon size={13} strokeWidth={2} />}
@@ -706,8 +706,8 @@ function CompanyCard({
           style={{
             ...selectStyle, fontSize: 11, padding: '3px 8px', maxWidth: 168, flexShrink: 0,
             borderColor: co.accountId ? '#C8DAB0' : '#E0D6BC',
-            background: co.accountId ? 'rgba(95,112,56,0.08)' : '#FFFFFF',
-            color: co.accountId ? '#5F7038' : '#9B9180',
+            background: co.accountId ? 'rgba(12,129,64,0.08)' : '#FFFFFF',
+            color: co.accountId ? '#0C8140' : '#9B9180',
           }}>
           <option value="">{accounts.length > 0 ? 'Link an account…' : 'No accounts connected'}</option>
           {accounts.map(a => <option key={a.id} value={a.id}>{a.email}</option>)}
@@ -2366,7 +2366,7 @@ function FinanceSection() {
           {/* Needle center */}
           <circle cx="40" cy="42" r="4" fill="#191712"/>
           {/* Trend line */}
-          <polyline points="10,50 22,46 34,44 46,41 58,37 70,33" stroke="#5F7038" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+          <polyline points="10,50 22,46 34,44 46,41 58,37 70,33" stroke="#0C8140" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
         </svg>
       ),
     },
@@ -2378,10 +2378,10 @@ function FinanceSection() {
         <svg viewBox="0 0 80 56" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: 56 }}>
           <rect x="4" y="4" width="44" height="28" rx="3" fill="#EDE7D9"/>
           <rect x="4" y="4" width="44" height="20" rx="3" fill="#F5D14E" opacity="0.7"/>
-          <rect x="52" y="4" width="24" height="44" rx="3" fill="#F7E4DE"/>
-          <rect x="52" y="4" width="24" height="48" rx="3" fill="#8A3B2A" opacity="0.5"/>
+          <rect x="52" y="4" width="24" height="44" rx="3" fill="#FAE3E3"/>
+          <rect x="52" y="4" width="24" height="48" rx="3" fill="#A31C1C" opacity="0.5"/>
           <rect x="4" y="36" width="20" height="16" rx="3" fill="#EDE7D9"/>
-          <rect x="4" y="36" width="14" height="16" rx="3" fill="#E9EFD9"/>
+          <rect x="4" y="36" width="14" height="16" rx="3" fill="#E2F0E7"/>
           <rect x="28" y="36" width="20" height="16" rx="3" fill="#EDE7D9"/>
           <rect x="28" y="36" width="10" height="16" rx="3" fill="#F5D14E" opacity="0.5"/>
         </svg>
@@ -2396,10 +2396,10 @@ function FinanceSection() {
           <rect x="4" y="4" width="72" height="12" rx="3" fill="#FAF7EC"/>
           <rect x="4" y="4" width="52" height="12" rx="3" fill="#F5D14E" opacity="0.5"/>
           <rect x="4" y="20" width="72" height="12" rx="3" fill="#FAF7EC"/>
-          <rect x="4" y="20" width="68" height="12" rx="3" fill="#E9EFD9"/>
+          <rect x="4" y="20" width="68" height="12" rx="3" fill="#E2F0E7"/>
           <rect x="4" y="36" width="72" height="12" rx="3" fill="#FAF7EC"/>
-          <rect x="4" y="36" width="76" height="12" rx="3" fill="#F7E4DE"/>
-          <rect x="4" y="36" width="72" height="12" rx="3" fill="#8A3B2A" opacity="0.25"/>
+          <rect x="4" y="36" width="76" height="12" rx="3" fill="#FAE3E3"/>
+          <rect x="4" y="36" width="72" height="12" rx="3" fill="#A31C1C" opacity="0.25"/>
         </svg>
       ),
     },
@@ -2415,14 +2415,14 @@ function FinanceSection() {
             strokeDasharray="75.4" strokeDashoffset="20" strokeLinecap="round"/>
           {/* inner ring */}
           <circle cx="22" cy="28" r="10" stroke="#EDE7D9" strokeWidth="3" fill="none"/>
-          <circle cx="22" cy="28" r="10" stroke="#5F7038" strokeWidth="3" fill="none"
+          <circle cx="22" cy="28" r="10" stroke="#0C8140" strokeWidth="3" fill="none"
             strokeDasharray="62.8" strokeDashoffset="16" strokeLinecap="round"/>
 
           <circle cx="55" cy="28" r="16" stroke="#E8E1CE" strokeWidth="4" fill="none"/>
-          <circle cx="55" cy="28" r="16" stroke="#8A3B2A" strokeWidth="4" fill="none"
+          <circle cx="55" cy="28" r="16" stroke="#A31C1C" strokeWidth="4" fill="none"
             strokeDasharray="100.5" strokeDashoffset="-4" strokeLinecap="round"/>
           <circle cx="55" cy="28" r="10" stroke="#EDE7D9" strokeWidth="3" fill="none"/>
-          <circle cx="55" cy="28" r="10" stroke="#8A3B2A" strokeWidth="3" fill="none" opacity="0.5"
+          <circle cx="55" cy="28" r="10" stroke="#A31C1C" strokeWidth="3" fill="none" opacity="0.5"
             strokeDasharray="62.8" strokeDashoffset="-8" strokeLinecap="round"/>
         </svg>
       ),
@@ -2872,8 +2872,8 @@ function IntegrationsSection() {
                     <span style={{ fontSize: 13, fontWeight: 600, color: '#191712' }}>{tool.name}</span>
                     <span style={{
                       fontSize: 9.5, fontWeight: 700, letterSpacing: '0.08em', padding: '2px 6px', borderRadius: 4,
-                      background: tool.status === 'connected' ? 'rgba(95,112,56,0.1)' : 'rgba(155,145,128,0.12)',
-                      color: tool.status === 'connected' ? '#5F7038' : '#9B9180',
+                      background: tool.status === 'connected' ? 'rgba(12,129,64,0.1)' : 'rgba(155,145,128,0.12)',
+                      color: tool.status === 'connected' ? '#0C8140' : '#9B9180',
                       textTransform: 'uppercase',
                     }}>{tool.status === 'connected' ? 'Connected' : 'Not connected'}</span>
                   </div>
@@ -2905,7 +2905,7 @@ function IntegrationsSection() {
 
         <p style={{ margin: '8px 0 0', fontSize: 11.5, color: '#9B9180', lineHeight: 1.5 }}>
           Last sync 07:12 — 14 tasks in, 3 completions pushed out. Tokens live on the server.{' '}
-          <button style={{ background: 'none', border: 'none', color: '#5F7038', fontSize: 11.5, cursor: 'pointer', fontWeight: 600, padding: 0 }}>Sync now</button>
+          <button style={{ background: 'none', border: 'none', color: '#0C8140', fontSize: 11.5, cursor: 'pointer', fontWeight: 600, padding: 0 }}>Sync now</button>
         </p>
       </div>
 
@@ -2993,7 +2993,7 @@ function AutomationSection() {
                 {rule.action}
               </p>
               <p style={{ margin: '3px 0 0', fontSize: 11.5, color: '#6C6553', lineHeight: 1.4 }}>
-                <span style={{ fontWeight: 600, color: '#5F7038', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em' }}>WHEN</span>
+                <span style={{ fontWeight: 600, color: '#0C8140', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em' }}>WHEN</span>
                 &nbsp;{rule.trigger}
               </p>
             </div>
@@ -3012,7 +3012,7 @@ function AutomationSection() {
       {/* Run log footer */}
       <p style={{ margin: '14px 0 0', fontSize: 11.5, color: '#9B9180', lineHeight: 1.5 }}>
         Five rules ran yesterday · 41 actions taken, 2 reverted by you &nbsp;
-        <button style={{ background: 'none', border: 'none', color: '#5F7038', fontSize: 11.5, cursor: 'pointer', fontWeight: 600, padding: 0 }}>Run log</button>
+        <button style={{ background: 'none', border: 'none', color: '#0C8140', fontSize: 11.5, cursor: 'pointer', fontWeight: 600, padding: 0 }}>Run log</button>
       </p>
     </div>
   )
@@ -3078,15 +3078,15 @@ function DataPrivacySection() {
 
       {/* Account deletion */}
       <div>
-        <p style={{ margin: '0 0 6px', fontSize: 12, fontWeight: 600, color: '#B4523A', textTransform: 'uppercase', letterSpacing: '0.09em' }}>Danger zone</p>
-        <div style={{ padding: '14px 16px', borderRadius: 11, background: 'rgba(180,82,58,0.04)', border: '1px solid rgba(180,82,58,0.22)' }}>
+        <p style={{ margin: '0 0 6px', fontSize: 12, fontWeight: 600, color: '#C62828', textTransform: 'uppercase', letterSpacing: '0.09em' }}>Danger zone</p>
+        <div style={{ padding: '14px 16px', borderRadius: 11, background: 'rgba(198,40,40,0.04)', border: '1px solid rgba(198,40,40,0.22)' }}>
           <p style={{ margin: '0 0 10px', fontSize: 12.5, color: '#6C6553', lineHeight: 1.5 }}>
             Permanently delete your account and all associated data. This cannot be undone.
           </p>
           <button style={{
             display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 8,
-            background: 'rgba(180,82,58,0.08)', border: '1px solid rgba(180,82,58,0.3)',
-            fontSize: 12.5, fontWeight: 500, color: '#B4523A', cursor: 'pointer',
+            background: 'rgba(198,40,40,0.08)', border: '1px solid rgba(198,40,40,0.3)',
+            fontSize: 12.5, fontWeight: 500, color: '#C62828', cursor: 'pointer',
           }}>
             <Trash2 size={13} /> Delete account
           </button>
@@ -3155,7 +3155,7 @@ function AccountsAndCompaniesSection({
         <Building2 size={13} color="#6C6553" />
         <p style={{ margin: 0, fontSize: 12.5, fontWeight: 700, color: '#191712' }}>Companies</p>
         {unlinked > 0 && (
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, color: '#B4523A', fontWeight: 600 }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, color: '#C62828', fontWeight: 600 }}>
             {unlinked} not linked to an account
           </span>
         )}
@@ -3447,9 +3447,9 @@ export function Settings() {
       return (
         <button onClick={withSectionSave(id, fn)} style={{
           padding: '4px 12px', borderRadius: 7, fontSize: 11.5, fontWeight: 600, cursor: 'pointer',
-          background: saving === 'saved' ? 'rgba(95,112,56,0.12)' : saving === 'error' ? 'rgba(180,82,58,0.1)' : '#F5D14E',
-          border: saving === 'saved' ? '1px solid #C8DAB0' : saving === 'error' ? '1px solid rgba(180,82,58,0.3)' : '1px solid rgba(25,23,18,0.18)',
-          color: saving === 'saved' ? '#5F7038' : saving === 'error' ? '#B4523A' : '#191712',
+          background: saving === 'saved' ? 'rgba(12,129,64,0.12)' : saving === 'error' ? 'rgba(198,40,40,0.1)' : '#F5D14E',
+          border: saving === 'saved' ? '1px solid #C8DAB0' : saving === 'error' ? '1px solid rgba(198,40,40,0.3)' : '1px solid rgba(25,23,18,0.18)',
+          color: saving === 'saved' ? '#0C8140' : saving === 'error' ? '#C62828' : '#191712',
           transition: 'all 0.15s',
         }}>{label}</button>
       )
@@ -3747,7 +3747,7 @@ export function Settings() {
           {/* Footer */}
           <div style={{ padding: '10px 18px 11px', borderTop: '1px solid #F0EBDC', flexShrink: 0 }}>
             <div style={{ fontSize: 11.5, color: '#9B9180', display: 'flex', alignItems: 'center', gap: 7 }}>
-              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#5F7038', flexShrink: 0 }} />
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#0C8140', flexShrink: 0 }} />
               Every change saves itself
             </div>
           </div>

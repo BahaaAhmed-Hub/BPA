@@ -208,7 +208,7 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
           {/* Schedule — the widest value, so it takes the full row */}
           <div ref={dateRef} style={{ gridColumn: '1 / -1', position: 'relative' }}>
             <button onClick={() => setDatePickerOpen(o => !o)} style={{ ...CELL, width: '100%' }}>
-              <CalendarDays size={14} strokeWidth={1.9} style={{ flexShrink: 0, color: task.dueDate ? '#5F7038' : '#9B9180' }} />
+              <CalendarDays size={14} strokeWidth={1.9} style={{ flexShrink: 0, color: task.dueDate ? '#0C8140' : '#9B9180' }} />
               <span style={{ ...CELL_VALUE, color: task.dueDate ? '#191712' : '#9B9180' }}>
                 {scheduleLabel}
               </span>

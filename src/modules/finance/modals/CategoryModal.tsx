@@ -15,8 +15,8 @@ const MUTED = '#6C6553'
 const GHOST = '#9B9180'
 const LINE  = '#E8E1CE'
 const HAIR  = '#F0EBDC'
-const OLIVE = '#5F7038'
-const RUST  = '#B4523A'
+const OLIVE = '#0C8140'
+const RUST  = '#C62828'
 const DISPLAY = "'Outfit', system-ui, sans-serif"
 
 const PILL: React.CSSProperties = {
@@ -35,7 +35,7 @@ const ROW: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 1
 /** Enough colours to tell envelopes apart, without a colour wheel nobody wants
  *  to operate on a tablet. */
 const SWATCHES = [
-  '#B4523A', '#C77A3E', '#C9A227', '#5F7038', '#3F7A6E',
+  '#C62828', '#C77A3E', '#C9A227', '#0C8140', '#3F7A6E',
   '#3E6FA3', '#6357A8', '#9B4F86', '#8C8071', '#4A4438',
 ]
 

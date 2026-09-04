@@ -15,8 +15,8 @@ const HEAD_EDGE: React.CSSProperties = { boxShadow: 'inset 0 -2px 0 #E8E1CE' }
 
 const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
 
-const OLIVE = '#5F7038'
-const RUST  = '#B4523A'
+const OLIVE = '#0C8140'
+const RUST  = '#C62828'
 
 function fmt(v: number, showSign = false): string {
   if (v === 0) return '–'

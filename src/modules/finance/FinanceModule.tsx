@@ -139,8 +139,8 @@ export function FinanceModule() {
     textPri:   '#191712',
     textMuted: '#9B9180',
     textDim:   '#6C6553',
-    red:       '#8A3B2A',
-    green:     '#5F7038',
+    red:       '#A31C1C',
+    green:     '#0C8140',
     cyan:      '#3B7A8A',
     purple:    '#3D3926',
   }

@@ -57,8 +57,8 @@ export function TaskRow({ task, onOpen, dense }: {
         title={task.completed ? 'Reopen' : 'Complete'}
         style={{
           width: 16, height: 16, borderRadius: 5, boxSizing: 'border-box', flexShrink: 0, padding: 0, marginTop: 2,
-          border: task.completed ? '1.5px solid #5F7038' : '1.5px solid #CFC6B0',
-          background: task.completed ? '#5F7038' : '#FFFFFF',
+          border: task.completed ? '1.5px solid #0C8140' : '1.5px solid #CFC6B0',
+          background: task.completed ? '#0C8140' : '#FFFFFF',
           display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
         }}
       >
@@ -109,9 +109,9 @@ export function TaskRow({ task, onOpen, dense }: {
           title={task.urgent ? 'On fire — click to clear' : 'Mark as on fire'}
           style={{
             background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex',
-            color: task.urgent ? '#B4523A' : '#D8CFB8',
+            color: task.urgent ? '#C62828' : '#D8CFB8',
           }}>
-          <Flame size={14} strokeWidth={1.9} fill={task.urgent ? '#B4523A' : 'none'} />
+          <Flame size={14} strokeWidth={1.9} fill={task.urgent ? '#C62828' : 'none'} />
         </button>
 
         <ControlSlot size={14}>
@@ -126,7 +126,7 @@ export function TaskRow({ task, onOpen, dense }: {
 
         <ControlSlot size={14}>
           <span title={v.scheduled ? 'Scheduled' : 'Not scheduled'}
-            style={{ display: 'flex', color: v.scheduled ? '#5F7038' : '#D8CFB8' }}>
+            style={{ display: 'flex', color: v.scheduled ? '#0C8140' : '#D8CFB8' }}>
             <CalendarDays size={14} strokeWidth={1.9} />
           </span>
           <OverlayTime

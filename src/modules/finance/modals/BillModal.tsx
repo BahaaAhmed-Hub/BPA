@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import type { Bill, BillFrequency, Category, Account, Currency } from '../types'
 import { IconPicker } from '../components/IconPicker'
+import { POSITIVE, NEGATIVE } from '../../../lib/moneyColors'
 
-const RED   = '#DA4A3E'
-const GREEN = '#2FA869'
+const RED   = NEGATIVE
+const GREEN = POSITIVE
 void GREEN
 
 interface Props {

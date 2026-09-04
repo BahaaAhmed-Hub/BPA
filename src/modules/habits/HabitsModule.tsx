@@ -379,7 +379,7 @@ function HabitLogControl({ isQty, todayDone, qtyValue, unit, tone, isToday = tru
         onClick={e => { e.stopPropagation(); onToggle() }}
         style={{
           ...track, justifyContent: 'center', gap: 7, cursor: 'pointer', fontFamily: 'inherit',
-          background: todayDone ? (light ? 'rgba(253,248,231,.9)' : '#5F7038') : track.background,
+          background: todayDone ? (light ? 'rgba(253,248,231,.9)' : '#0C8140') : track.background,
           border: todayDone ? '1px solid transparent' : track.border,
           color: todayDone ? (light ? '#191712' : '#FDF8E7') : ink,
           fontSize: 11.5, fontWeight: 700,
@@ -778,7 +778,7 @@ function HabitDetailPanel({
             </div>
             {hasGoal && (
               <div style={{ height: 6, borderRadius: 999, background: '#EDE7D9', marginTop: 11, overflow: 'hidden' }}>
-                <div style={{ width: `${pct}%`, height: '100%', background: pct >= 100 ? '#5F7038' : habit.color, borderRadius: 999 }} />
+                <div style={{ width: `${pct}%`, height: '100%', background: pct >= 100 ? '#0C8140' : habit.color, borderRadius: 999 }} />
               </div>
             )}
           </>
@@ -786,8 +786,8 @@ function HabitDetailPanel({
           <button onClick={onToggleToday}
             style={{
               width: '100%', padding: '9px 0', borderRadius: 9, cursor: 'pointer',
-              border: `1px solid ${doneToday ? '#5F7038' : '#E8E1CE'}`,
-              background: doneToday ? '#5F7038' : '#FFFFFF',
+              border: `1px solid ${doneToday ? '#0C8140' : '#E8E1CE'}`,
+              background: doneToday ? '#0C8140' : '#FFFFFF',
               color: doneToday ? '#FFFFFF' : '#6C6553', fontSize: 12.5, fontWeight: 600,
             }}>
             {doneToday ? 'Done today' : 'Mark done today'}
@@ -798,10 +798,10 @@ function HabitDetailPanel({
       {/* Stats row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 6 }}>
         {[
-          { label: 'Streak', value: `${streak}d`, color: streak > 0 ? '#5F7038' : '#191712' },
+          { label: 'Streak', value: `${streak}d`, color: streak > 0 ? '#0C8140' : '#191712' },
           { label: 'Best', value: `${bestStreak}d`, color: '#191712' },
           { label: 'Total', value: `${totalCheckIns}`, color: '#191712' },
-          { label: '30-day', value: `${completionRate}%`, color: completionRate >= 70 ? '#5F7038' : '#191712' },
+          { label: '30-day', value: `${completionRate}%`, color: completionRate >= 70 ? '#0C8140' : '#191712' },
         ].map(st => (
           <div key={st.label} style={{ background: '#FAF7EC', borderRadius: 9, padding: '7px 8px', minWidth: 0 }}>
             <div style={{ fontFamily: 'var(--sb-font-num)', fontSize: 17, fontWeight: 700, letterSpacing: '-0.03em', color: st.color, lineHeight: 1 }}>{st.value}</div>
@@ -820,7 +820,7 @@ function HabitDetailPanel({
             return (
               <div key={d} title={d} style={{
                 borderRadius: 2,
-                background: done ? '#5F7038' : isT ? '#F5D14E22' : '#F0EBDC',
+                background: done ? '#0C8140' : isT ? '#F5D14E22' : '#F0EBDC',
                 border: isT ? '1px solid #F5D14E' : '1px solid transparent',
               }} />
             )
@@ -1127,7 +1127,7 @@ export function HabitsModule() {
           <span style={{ display: 'flex', flexDirection: 'column', gap: 1, flexShrink: 0 }}>
             <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 21, fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1, color: '#191712', fontVariantNumeric: 'tabular-nums' }}>{bestStreak}d</span>
             <span style={{ fontSize: 10.5, fontWeight: 600, color: '#4A4438' }}>Current streak</span>
-            <span style={{ fontSize: 9.5, color: coldDays > 0 ? '#B4523A' : '#6C6553' }}>
+            <span style={{ fontSize: 9.5, color: coldDays > 0 ? '#C62828' : '#6C6553' }}>
               {coldDays > 0 ? `${coldDays} days cold` : `best ${bestStreak}d`}
             </span>
           </span>

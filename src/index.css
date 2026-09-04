@@ -30,14 +30,15 @@
   --sb-accent-tint2:  #FDF6DE;
   --sb-accent-border: #EFE1B4;
 
-  /* Semantic — olive (positive) */
-  --sb-olive:         #5F7038;
-  --sb-olive-text:    #4A5A2A;
-  --sb-olive-tint:    #E9EFD9;
+  /* Semantic — positive */
+  --sb-positive:      #0C8140;
+  --sb-positive-deep: #0A6B36;
+  --sb-positive-tint: #E2F0E7;
 
-  /* Semantic — rust (negative) */
-  --sb-rust:          #8A3B2A;
-  --sb-rust-tint:     #F7E4DE;
+  /* Semantic — negative */
+  --sb-negative:      #C62828;
+  --sb-negative-deep: #A31C1C;
+  --sb-negative-tint: #FAE3E3;
 
   /* Shadows */
   --sb-shadow-frame:   0 26px 64px -34px rgba(48,40,20,.5);

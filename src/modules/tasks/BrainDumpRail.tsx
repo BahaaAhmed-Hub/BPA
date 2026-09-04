@@ -128,7 +128,7 @@ function DumpCard({ task, onOpen, onDelete }: {
             style={{
               background: 'none', border: 'none', padding: 0, cursor: 'pointer',
               display: 'flex', flexShrink: 0, marginTop: 1,
-              color: hovered ? '#B4523A' : '#D8CFB8',
+              color: hovered ? '#C62828' : '#D8CFB8',
             }}>
             <Trash2 size={12.5} strokeWidth={2} />
           </button>
@@ -336,7 +336,7 @@ export function BrainDumpRail({ tasks, onOpen, flexible }: {
         {missingFields > 0 && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 10, fontSize: 11.5 }}>
             <span style={{ color: '#6C6553', flex: 1 }}>{missingFields} task{missingFields === 1 ? '' : 's'} missing fields</span>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#B4523A', fontWeight: 600, flexShrink: 0 }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#C62828', fontWeight: 600, flexShrink: 0 }}>
               <AlertTriangle size={11} strokeWidth={2} /> AI fills
             </span>
           </div>

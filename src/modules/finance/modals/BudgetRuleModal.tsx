@@ -16,8 +16,8 @@ const MUTED = '#6C6553'
 const GHOST = '#9B9180'
 const LINE  = '#E8E1CE'
 const HAIR  = '#F0EBDC'
-const OLIVE = '#5F7038'
-const RUST  = '#B4523A'
+const OLIVE = '#0C8140'
+const RUST  = '#C62828'
 const AMBER = '#F5D14E'
 const DISPLAY = "'Outfit', system-ui, sans-serif"
 
@@ -328,7 +328,7 @@ export function BudgetRuleModal({
             <span style={{ flex: 1 }} />
             {spent > 0 && (
               <button onClick={onDrill}
-                style={{ height: 26, padding: '0 10px', borderRadius: 7, background: '#E9EFD9', border: '1px solid #C8D9A8', color: OLIVE, fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                style={{ height: 26, padding: '0 10px', borderRadius: 7, background: '#E2F0E7', border: '1px solid #C8D9A8', color: OLIVE, fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
                 View all →
               </button>
             )}

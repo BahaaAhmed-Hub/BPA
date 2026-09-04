@@ -3,11 +3,12 @@ import { useFinanceStore } from '../financeStore'
 import { CategoryGlyph } from '../components/CategoryGlyph'
 import { TransactionModal } from '../modals/TransactionModal'
 import type { Transaction } from '../types'
+import { POSITIVE, NEGATIVE, POSITIVE_TINT, NEGATIVE_TINT } from '../../../lib/moneyColors'
 
 // ── Palette ───────────────────────────────────────────────────────────────────
 
-const RED   = '#E05252'
-const GREEN = '#1D9E75'
+const RED   = NEGATIVE
+const GREEN = POSITIVE
 
 const C = {
   bg:      '#F7F4EA',
@@ -135,8 +136,8 @@ function MoneyCalendar({
           {MONTH_NAMES[month]} <span style={{ color: '#9B9180' }}>{year}</span>
         </span>
         <span style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
-          {chip('Out', monthOut > 0 ? monthOut.toLocaleString('en-US') : '–', '#B4523A', '#F6EFE2')}
-          {chip('In',  monthIn  > 0 ? monthIn.toLocaleString('en-US')  : '–', '#5F7038', '#F0F1E2')}
+          {chip('Out', monthOut > 0 ? monthOut.toLocaleString('en-US') : '–', NEGATIVE, NEGATIVE_TINT)}
+          {chip('In',  monthIn  > 0 ? monthIn.toLocaleString('en-US')  : '–', POSITIVE, POSITIVE_TINT)}
         </span>
       </div>
 
@@ -163,7 +164,7 @@ function MoneyCalendar({
             const isSelected = dateStr === selectedDay
             const net        = dayNetMap.get(dateStr) ?? 0
             const payees     = dayTxMap.get(dateStr) ?? []
-            const netColor   = net > 0 ? '#5F7038' : net < 0 ? '#B4523A' : '#9B9180'
+            const netColor   = net > 0 ? '#0C8140' : net < 0 ? '#C62828' : '#9B9180'
             const netSign    = net > 0 ? '+' : ''
 
             return (
@@ -306,8 +307,8 @@ export function TodayScreen() {
         </div>
         {todayTx.length > 0 && (
           <div style={{ display: 'flex', gap: 16, paddingBottom: 3 }}>
-            <span style={{ fontSize: 12, color: '#B4523A', fontWeight: 600 }}>−EGP {todayExp.toLocaleString('en-US')}</span>
-            <span style={{ fontSize: 12, color: '#5F7038', fontWeight: 600 }}>+EGP {todayInc.toLocaleString('en-US')}</span>
+            <span style={{ fontSize: 12, color: '#C62828', fontWeight: 600 }}>−EGP {todayExp.toLocaleString('en-US')}</span>
+            <span style={{ fontSize: 12, color: '#0C8140', fontWeight: 600 }}>+EGP {todayInc.toLocaleString('en-US')}</span>
           </div>
         )}
       </div>

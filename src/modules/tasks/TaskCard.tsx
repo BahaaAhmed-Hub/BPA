@@ -127,8 +127,8 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
             title={task.completed ? 'Reopen' : 'Complete'}
             style={{
               width: 16, height: 16, borderRadius: 5, boxSizing: 'border-box', marginTop: 1,
-              border: task.completed ? '1.5px solid #5F7038' : '1.5px solid #CFC6B0',
-              background: task.completed ? '#5F7038' : '#FFFFFF',
+              border: task.completed ? '1.5px solid #0C8140' : '1.5px solid #CFC6B0',
+              background: task.completed ? '#0C8140' : '#FFFFFF',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               cursor: 'pointer', flexShrink: 0, padding: 0, transition: 'all .15s',
             }}
@@ -141,7 +141,7 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
             title="Delete task"
             style={{
               background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex',
-              flexShrink: 0, marginTop: 2, color: hovered ? '#B4523A' : '#D8CFB8',
+              flexShrink: 0, marginTop: 2, color: hovered ? '#C62828' : '#D8CFB8',
             }}>
             <Trash2 size={12.5} strokeWidth={2} />
           </button>
@@ -160,9 +160,9 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
             style={{
               background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex',
               flexShrink: 0, marginTop: 2,
-              color: task.urgent ? '#B4523A' : hovered ? '#9B9180' : '#D8CFB8',
+              color: task.urgent ? '#C62828' : hovered ? '#9B9180' : '#D8CFB8',
             }}>
-            <Flame size={12.5} strokeWidth={2} fill={task.urgent ? '#B4523A' : 'none'} />
+            <Flame size={12.5} strokeWidth={2} fill={task.urgent ? '#C62828' : 'none'} />
           </button>
         </div>
 

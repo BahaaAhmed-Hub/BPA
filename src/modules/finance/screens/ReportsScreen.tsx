@@ -46,8 +46,8 @@ export function ReportsScreen(_props?: any) {
     textPri:   '#191712',
     textMuted: '#6C6553',
     textDim:   '#9B9180',
-    red:       '#DA4A3E',
-    green:     '#2FA869',
+    red:       '#C62828',
+    green:     '#0C8140',
   }
 
   const { transactions, categories } = useFinanceStore()

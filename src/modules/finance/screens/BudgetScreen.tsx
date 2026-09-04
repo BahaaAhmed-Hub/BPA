@@ -17,8 +17,8 @@ import type { Category, Transaction } from '../types'
 // Categories tree with budget rules: amount, frequency, roll unspent,
 // warn at 80%, auto-raise with inflation, guilt-free flag
 
-const OLIVE = '#5F7038'
-const RUST  = '#B4523A'
+const OLIVE = '#0C8140'
+const RUST  = '#C62828'
 const AMBER = '#F5D14E'
 
 // ─── A ring that says how much of an envelope is gone ─────────────────────────
@@ -148,7 +148,7 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 14 }}>
         <span style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.12em', color: '#6C6553' }}>{title.toUpperCase()}</span>
         {all > 0 && (
-          <span style={{ fontSize: 10.5, color: withMoney === all ? '#5F7038' : '#9B9180' }}>
+          <span style={{ fontSize: 10.5, color: withMoney === all ? '#0C8140' : '#9B9180' }}>
             {withMoney} of {all} budgeted
           </span>
         )}
@@ -196,8 +196,8 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
                     : ' · no budget set'}`}
                 style={{
                   width: 104, padding: '8px 2px 6px', borderRadius: 12,
-                  background: over ? 'rgba(95,112,56,0.16)' : on ? 'rgba(245,209,78,0.20)' : 'transparent',
-                  border: over ? '1px dashed #5F7038' : '1px solid transparent',
+                  background: over ? 'rgba(12,129,64,0.16)' : on ? 'rgba(245,209,78,0.20)' : 'transparent',
+                  border: over ? '1px dashed #0C8140' : '1px solid transparent',
                   fontFamily: 'inherit', cursor: 'pointer', boxSizing: 'border-box',
                   display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7,
                 }}>
@@ -286,10 +286,10 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
               {over => (
                 <span style={{
                   width: 104, minHeight: 84, borderRadius: 12, boxSizing: 'border-box',
-                  border: `1px dashed ${over ? '#5F7038' : '#D8CFB8'}`,
-                  background: over ? 'rgba(95,112,56,0.16)' : 'transparent',
+                  border: `1px dashed ${over ? '#0C8140' : '#D8CFB8'}`,
+                  background: over ? 'rgba(12,129,64,0.16)' : 'transparent',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  padding: 8, fontSize: 10.5, color: over ? '#5F7038' : '#9B9180',
+                  padding: 8, fontSize: 10.5, color: over ? '#0C8140' : '#9B9180',
                   textAlign: 'center', lineHeight: 1.4,
                 }}>
                   Drop here to stand on its own
@@ -926,9 +926,9 @@ export function BudgetScreen(_props?: any) {
         }
 
         const FLAG_STYLES: Record<TxFlag, { bg: string; color: string; border: string; label: string }> = {
-          approved: { bg: '#E9EFD9', color: '#5F7038', border: '#C8D9A8', label: '✓ OK' },
+          approved: { bg: '#E2F0E7', color: '#0C8140', border: '#C8D9A8', label: '✓ OK' },
           review:   { bg: '#FEF3C7', color: '#92400E', border: '#FCD34D', label: '⚑ Review' },
-          excluded: { bg: '#FBEAE4', color: '#B4523A', border: '#E5BBAC', label: '✗ Exclude' },
+          excluded: { bg: '#FBEAE4', color: '#C62828', border: '#E5BBAC', label: '✗ Exclude' },
         }
 
         return (

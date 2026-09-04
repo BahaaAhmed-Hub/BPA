@@ -18,11 +18,11 @@ const C = {
   accent:   '#F5D14E',
   accentBg: '#FDF6DE',
   accentBr: '#EFE1B4',
-  olive:    '#5F7038',
-  oliveBg:  '#E9EFD9',
+  olive:    '#0C8140',
+  oliveBg:  '#E2F0E7',
   oliveBr:  '#D5E0B4',
-  rust:     '#8A3B2A',
-  rustBg:   '#F7E4DE',
+  rust:     '#A31C1C',
+  rustBg:   '#FAE3E3',
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -157,12 +157,12 @@ function GoalDetail({ goal }: { goal: Goal }) {
             const isEmpty = !c.amount && !c.planned
             return (
               <div key={c.month} style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 5, alignItems: 'center', minWidth: 0 }}>
-                <div style={{ width: '100%', flex: 1, display: 'flex', alignItems: 'flex-end', background: isEmpty ? 'rgba(180,82,58,.08)' : 'transparent', borderRadius: 6 }}>
+                <div style={{ width: '100%', flex: 1, display: 'flex', alignItems: 'flex-end', background: isEmpty ? 'rgba(198,40,40,.08)' : 'transparent', borderRadius: 6 }}>
                   <span style={{
                     width: '100%',
                     height: `${heightPct}%`,
                     minHeight: c.amount || c.planned ? 4 : 0,
-                    background: isEmpty ? '#B4523A' : isPlanned ? '#DCD5C0' : '#191712',
+                    background: isEmpty ? '#C62828' : isPlanned ? '#DCD5C0' : '#191712',
                     borderRadius: '5px 5px 0 0',
                     display: 'block',
                   }} />

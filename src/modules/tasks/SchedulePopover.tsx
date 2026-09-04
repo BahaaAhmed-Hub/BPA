@@ -240,7 +240,7 @@ export function SchedulePopover({ date, start, duration, onApply, onClose, align
           <p style={{ ...T.small, margin: '9px 0 0', color: '#9B9180' }}>Checking that time…</p>
         ) : conflicts === null ? null
         : conflicts.length === 0 ? (
-          <p style={{ ...T.small, margin: '9px 0 0', color: '#5F7038' }}>
+          <p style={{ ...T.small, margin: '9px 0 0', color: '#0C8140' }}>
             Nothing else booked then.
           </p>
         ) : (

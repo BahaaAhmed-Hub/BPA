@@ -937,8 +937,8 @@ function responseGlyph(status?: string): string {
   return '?'
 }
 function responseTone(status?: string): string {
-  if (status === 'accepted') return '#5F7038'
-  if (status === 'declined') return '#B4523A'
+  if (status === 'accepted') return '#0C8140'
+  if (status === 'declined') return '#C62828'
   return '#9B9180'
 }
 
@@ -1268,8 +1268,8 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
           title={status === 'done' ? 'Not done after all' : 'Mark done'}
           style={{
             ...EV_ROUND, width: 34, height: 34,
-            background: status === 'done' ? '#5F7038' : '#FFFFFF',
-            borderColor: status === 'done' ? '#5F7038' : '#E8E1CE',
+            background: status === 'done' ? '#0C8140' : '#FFFFFF',
+            borderColor: status === 'done' ? '#0C8140' : '#E8E1CE',
             color: status === 'done' ? '#FFFFFF' : '#6C6553',
           }}><Check size={15} strokeWidth={2.2} /></button>
 
@@ -1289,7 +1289,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
           title="Delete event"
           style={{
             ...EV_ROUND, width: 34, height: 34,
-            color: '#B4523A', borderColor: 'rgba(180,82,58,0.35)', opacity: onDelete ? 1 : 0.45,
+            color: '#C62828', borderColor: 'rgba(198,40,40,0.35)', opacity: onDelete ? 1 : 0.45,
           }}><Trash2 size={15} /></button>
 
         <button onClick={onClose} title="Close" style={{ ...EV_ROUND, width: 34, height: 34 }}><X size={15} /></button>
@@ -1547,7 +1547,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
       </div>
 
       {prepError && (
-        <p style={{ margin: '8px 0 0', fontSize: 11.5, color: '#B4523A' }}>{prepError}</p>
+        <p style={{ margin: '8px 0 0', fontSize: 11.5, color: '#C62828' }}>{prepError}</p>
       )}
 
       <div style={{ height: 1, background: '#F0EBDC', margin: '20px 0' }} />
@@ -1570,14 +1570,14 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
               style={{
                 ...EV_ROUND, width: 32, height: 32, flexShrink: 0, fontSize: 13.5, fontWeight: 600,
                 color: responseTone(a.responseStatus),
-                borderColor: a.responseStatus === 'accepted' ? 'rgba(95,112,56,0.4)'
-                  : a.responseStatus === 'declined' ? 'rgba(180,82,58,0.35)' : '#E8E1CE',
+                borderColor: a.responseStatus === 'accepted' ? 'rgba(12,129,64,0.4)'
+                  : a.responseStatus === 'declined' ? 'rgba(198,40,40,0.35)' : '#E8E1CE',
               }}>{responseGlyph(a.responseStatus)}</span>
             <button
               onClick={() => removeAttendee(a.email)}
               disabled={!onSave}
               title={`Take ${a.displayName ?? a.email} off the invite`}
-              style={{ ...EV_ROUND, width: 32, height: 32, flexShrink: 0, color: '#B4523A', borderColor: 'rgba(180,82,58,0.35)', opacity: onSave ? 1 : 0.45 }}>
+              style={{ ...EV_ROUND, width: 32, height: 32, flexShrink: 0, color: '#C62828', borderColor: 'rgba(198,40,40,0.35)', opacity: onSave ? 1 : 0.45 }}>
               <Trash2 size={14} />
             </button>
           </div>
@@ -1728,7 +1728,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
       )}
 
       {saveError && (
-        <p style={{ margin: '12px 0 0', fontSize: 11.5, color: '#B4523A' }}>{saveError}</p>
+        <p style={{ margin: '12px 0 0', fontSize: 11.5, color: '#C62828' }}>{saveError}</p>
       )}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 14 }}>
         <span style={{ flex: 1, fontSize: 11.5, color: '#9B9180' }}>
@@ -3349,8 +3349,8 @@ export function CalendarIntelligence() {
                     {/* Current time indicator */}
                     {isToday && (
                       <>
-                        <div style={{ position: 'absolute', top: nowPx - 4, left: -4, width: 8, height: 8, borderRadius: '50%', background: '#B4523A', zIndex: 5, pointerEvents: 'none' }} />
-                        <div style={{ position: 'absolute', top: nowPx, left: 0, right: 0, borderTop: '1px solid #B4523A', zIndex: 5, pointerEvents: 'none' }} />
+                        <div style={{ position: 'absolute', top: nowPx - 4, left: -4, width: 8, height: 8, borderRadius: '50%', background: '#C62828', zIndex: 5, pointerEvents: 'none' }} />
+                        <div style={{ position: 'absolute', top: nowPx, left: 0, right: 0, borderTop: '1px solid #C62828', zIndex: 5, pointerEvents: 'none' }} />
                       </>
                     )}
 
