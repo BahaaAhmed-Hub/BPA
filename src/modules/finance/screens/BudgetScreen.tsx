@@ -1,6 +1,9 @@
 import { useState, useMemo } from 'react'
 import { useFinanceStore } from '../financeStore'
 import { CategoryModal } from '../modals/CategoryModal'
+import {
+  BudgetRuleModal, defaultRule, monthlyAmount, type BudgetRule,
+} from '../modals/BudgetRuleModal'
 import type { Category, Transaction } from '../types'
 
 // ─── 16G · Budget Builder ─────────────────────────────────────────────────────
@@ -10,62 +13,6 @@ import type { Category, Transaction } from '../types'
 const OLIVE = '#5F7038'
 const RUST  = '#B4523A'
 const AMBER = '#F5D14E'
-
-type Frequency = 'weekly' | 'monthly' | 'every_2_months' | 'quarterly' | 'yearly'
-
-const FREQ_OPTS: { v: Frequency; label: string }[] = [
-  { v: 'weekly',        label: 'Weekly' },
-  { v: 'monthly',       label: 'Monthly' },
-  { v: 'every_2_months',label: 'Every 2 months' },
-  { v: 'quarterly',     label: 'Quarterly' },
-  { v: 'yearly',        label: 'Yearly' },
-]
-
-interface BudgetRule {
-  amount: number
-  frequency: Frequency
-  rollover: boolean
-  warn80: boolean
-  autoRaise: boolean
-  guiltFree: boolean
-  starts: string   // YYYY-MM
-  fixedType: 'fixed' | 'flexible'
-}
-
-function defaultRule(): BudgetRule {
-  const d = new Date()
-  const starts = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2,'0')}`
-  return { amount: 0, frequency: 'monthly', rollover: false, warn80: true, autoRaise: false, guiltFree: false, starts, fixedType: 'flexible' }
-}
-
-// ─── Toggle switch ────────────────────────────────────────────────────────────
-
-function Toggle({ on, onChange, label }: { on: boolean; onChange: (v: boolean) => void; label: string }) {
-  return (
-    <div
-      onClick={() => onChange(!on)}
-      style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '8px 0' }}
-    >
-      <div style={{
-        width: 36, height: 20, borderRadius: 999, flexShrink: 0,
-        background: on ? '#191712' : '#D8D3C8',
-        position: 'relative', transition: 'background .2s',
-      }}>
-        <div style={{
-          position: 'absolute', top: 2, left: on ? 18 : 2,
-          width: 16, height: 16, borderRadius: '50%',
-          background: '#FFFFFF', transition: 'left .2s',
-          boxShadow: '0 1px 3px rgba(0,0,0,.25)',
-        }} />
-      </div>
-      <span style={{ fontSize: 13, color: '#191712' }}>{label}</span>
-    </div>
-  )
-}
-
-// ─── Main ─────────────────────────────────────────────────────────────────────
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 
 // ─── A ring that says how much of an envelope is gone ─────────────────────────
 // The reference draws every category as a circle whose rim fills as it is
@@ -275,7 +222,6 @@ export function BudgetScreen(_props?: any) {
   const rule = selectedId ? (rules[selectedId] ?? defaultRule()) : null
 
   // Monthly spend for selected category (current month)
-  const monthPrefix = monthKey
 
   // 20E — Envelope drill-down state
   const [drillOpen, setDrillOpen] = useState(false)
@@ -292,18 +238,6 @@ export function BudgetScreen(_props?: any) {
     setTxFlags(next)
     localStorage.setItem('finance-tx-flags', JSON.stringify(next))
   }
-  const monthSpend = useMemo(() => {
-    if (!selectedId) return 0
-    return transactions
-      .filter(tx => tx.type === 'expense' && tx.categoryId === selectedId && tx.date.startsWith(monthPrefix))
-      .reduce((s, tx) => s + Math.abs(tx.amount), 0)
-  }, [transactions, selectedId, monthPrefix])
-
-  const budget = rule?.amount ?? 0
-  const pct = budget > 0 ? Math.min((monthSpend / budget) * 100, 100) : 0
-  const overBudget = budget > 0 && monthSpend > budget
-  const nearBudget = budget > 0 && pct >= 80 && !overBudget
-
   // ── The year, month by month ───────────────────────────────────────────────
   // Income above the line, spending below it, and the balance those two leave
   // behind running across the top. One picture answers "how is the year going"
@@ -345,7 +279,10 @@ export function BudgetScreen(_props?: any) {
         actual += Math.abs(tx.amount)
         currencies.add(tx.currency)
       }
-      const planned = rules[cat.id]?.amount ?? 0
+      // Not rules[cat.id].amount: a yearly budget of 12,000 is 1,000 against a
+      // month's spending, and comparing it raw made every non-monthly envelope
+      // look untouched.
+      const planned = monthlyAmount(rules[cat.id])
       return { cat, actual, planned, currencies: [...currencies] }
     }
     const all = parents.map(build)
@@ -474,227 +411,46 @@ export function BudgetScreen(_props?: any) {
               empty="No income categories yet." />
           </div>
 
-          <div style={{ width: 360, flexShrink: 0, ...CARD, padding: '18px 20px 20px', alignSelf: 'stretch' }}>
-            {selectedCat && rule ? (
-              <>
-                <button onClick={() => setSelectedId(null)}
-                  style={{ ...HEAD_PILL, marginBottom: 16, color: '#6C6553' }}>‹ Back to the month</button>
-
-          <div style={{ maxWidth: 520 }}>
-
-            {/* Category title */}
-            <div style={{ marginBottom: 22 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
-                <span style={{ fontSize: 26, flexShrink: 0 }}>{selectedCat.icon}</span>
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontFamily: 'Outfit, sans-serif', fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em', color: '#191712', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {selectedCat.name}
-                  </div>
-                  <div style={{ fontSize: 11.5, color: '#9B9180', marginTop: 1 }}>
-                    {subs(selectedCat.id).length} sub-categories
-                  </div>
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: 7, marginTop: 12 }}>
-              <button onClick={() => setCatModal({ category: selectedCat })}
-                style={{
-                  height: 32, padding: '0 13px', borderRadius: 999, flexShrink: 0,
-                  background: '#FFFFFF', border: '1px solid #E8E1CE', fontFamily: 'inherit',
-                  color: '#6C6553', fontSize: 12.5, cursor: 'pointer',
-                }}>Edit</button>
-              <button
-                onClick={() => setCatModal({ category: { id: '', name: '', icon: '📁', color: '#8C8071', parentId: selectedCat.id, isSystem: false, txType: selectedCat.txType } })}
-                style={{
-                  height: 32, padding: '0 13px', borderRadius: 999, flexShrink: 0,
-                  background: '#FFFFFF', border: '1px solid #E8E1CE', fontFamily: 'inherit',
-                  color: '#6C6553', fontSize: 12.5, cursor: 'pointer',
-                }}>+ Sub-category</button>
-              </div>
+          <div style={{ width: 340, flexShrink: 0, ...CARD, padding: '18px 20px 20px', alignSelf: 'stretch' }}>
+            <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.12em', color: '#6C6553', marginBottom: 14 }}>
+              {new Date(year, monthIdx, 1).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }).toUpperCase()}
             </div>
-
-            {/* Spend progress */}
-            {budget > 0 && (
-              <div style={{ marginBottom: 28, background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 12, padding: '14px 18px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10, flexWrap: 'wrap', gap: 8 }}>
-                  <span style={{ fontSize: 12, color: '#6C6553' }}>This month</span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: overBudget ? RUST : nearBudget ? '#E8A94A' : '#191712', fontFamily: 'Outfit, sans-serif' }}>
-                      EGP {monthSpend.toLocaleString('en-US')} / {budget.toLocaleString('en-US')}
-                    </span>
-                    {monthSpend > 0 && (
-                      <button
-                        onClick={() => setDrillOpen(true)}
-                        style={{ fontSize: 11, fontWeight: 600, color: OLIVE, background: '#E9EFD9', border: '1px solid #C8D9A8', borderRadius: 6, padding: '3px 9px', cursor: 'pointer' }}
-                      >
-                        View all →
-                      </button>
-                    )}
-                  </div>
-                </div>
-                <div style={{ height: 8, borderRadius: 999, background: '#EDE7D9', overflow: 'hidden' }}>
-                  <div style={{
-                    height: '100%', borderRadius: 999, transition: 'width .3s',
-                    width: `${pct}%`,
-                    background: overBudget ? RUST : nearBudget ? '#E8A94A' : OLIVE,
-                  }} />
-                </div>
-                {(overBudget || nearBudget) && (
-                  <div style={{ fontSize: 11.5, marginTop: 6, color: overBudget ? RUST : '#E8A94A' }}>
-                    {overBudget
-                      ? `Over budget by EGP ${(monthSpend - budget).toLocaleString('en-US')}`
-                      : `${Math.round(pct)}% used — approaching limit`}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Budget Amount */}
-            <Field label="BUDGET AMOUNT">
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ fontSize: 13, color: '#6C6553', fontWeight: 700 }}>EGP</span>
-                <input
-                  type="number"
-                  value={rule.amount || ''}
-                  onChange={e => saveRule(selectedId!, { ...rule, amount: parseFloat(e.target.value) || 0 })}
-                  placeholder="0"
-                  style={{ flex: 1, minWidth: 0, boxSizing: 'border-box', background: '#FAF7EC', border: '1px solid #E8E1CE', borderRadius: 8, padding: '8px 12px', fontSize: 20, fontFamily: 'Outfit, sans-serif', fontWeight: 600, color: '#191712', outline: 'none' }}
-                />
-                <span style={{ fontSize: 12, color: '#9B9180', flexShrink: 0, whiteSpace: 'nowrap' }}>
-                  / {FREQ_OPTS.find(f => f.v === rule.frequency)?.label?.toLowerCase() ?? 'month'}
-                </span>
-              </div>
-            </Field>
-
-            {/* Category type */}
-            <Field label="CATEGORY TYPE">
-              <div style={{ display: 'flex', gap: 8 }}>
-                {(['fixed', 'flexible'] as const).map(t => (
-                  <button key={t} onClick={() => saveRule(selectedId!, { ...rule, fixedType: t })}
-                    style={{
-                      flex: 1, padding: '8px 0', borderRadius: 8, border: '1px solid #E8E1CE', cursor: 'pointer',
-                      background: rule.fixedType === t ? '#191712' : '#FAF7EC',
-                      color: rule.fixedType === t ? '#FDF8E7' : '#6C6553',
-                      fontSize: 12.5, fontWeight: rule.fixedType === t ? 600 : 400,
-                    }}>
-                    {t === 'fixed' ? 'Fixed commitment' : 'Flexible budget'}
-                  </button>
-                ))}
-              </div>
-            </Field>
-
-            {/* Frequency */}
-            <Field label="REPEATS">
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                {FREQ_OPTS.map(({ v, label }) => (
-                  <button key={v} onClick={() => saveRule(selectedId!, { ...rule, frequency: v })}
-                    style={{
-                      padding: '6px 12px', borderRadius: 999, border: '1px solid #E8E1CE', cursor: 'pointer',
-                      background: rule.frequency === v ? AMBER : '#FAF7EC',
-                      color: rule.frequency === v ? '#191712' : '#6C6553',
-                      fontSize: 12, fontWeight: rule.frequency === v ? 600 : 400,
-                    }}>
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </Field>
-
-            {/* Start date */}
-            <Field label="STARTS">
-              <input type="month" value={rule.starts}
-                onChange={e => saveRule(selectedId!, { ...rule, starts: e.target.value })}
-                style={{ background: '#FAF7EC', border: '1px solid #E8E1CE', borderRadius: 8, padding: '7px 12px', fontSize: 13, color: '#191712', outline: 'none' }} />
-            </Field>
-
-            {/* Toggles */}
-            <div style={{ borderTop: '1px solid #E8E1CE', paddingTop: 16, marginBottom: 8 }}>
-              <Toggle on={rule.rollover} onChange={v => saveRule(selectedId!, { ...rule, rollover: v })}
-                label="Roll unspent into next month" />
-              <div style={{ fontSize: 11.5, color: '#9B9180', marginLeft: 46, marginTop: -4, marginBottom: 8 }}>
-                Underspend carries, overspend does not
-              </div>
-
-              <Toggle on={rule.warn80} onChange={v => saveRule(selectedId!, { ...rule, warn80: v })}
-                label="Warn at 80% of the envelope" />
-              <div style={{ fontSize: 11.5, color: '#9B9180', marginLeft: 46, marginTop: -4, marginBottom: 8 }}>
-                A quiet nudge, not a block
-              </div>
-
-              <Toggle on={rule.autoRaise} onChange={v => saveRule(selectedId!, { ...rule, autoRaise: v })}
-                label="Auto-raise with inflation (+10% every Jan)" />
-              <div style={{ fontSize: 11.5, color: '#9B9180', marginLeft: 46, marginTop: -4, marginBottom: 8 }}>
-                {rule.autoRaise && rule.amount > 0
-                  ? `Next January: EGP ${Math.round(rule.amount * 1.1).toLocaleString('en-US')}`
-                  : 'Keeps pace with rising costs automatically'}
-              </div>
-
-              <Toggle on={rule.guiltFree} onChange={v => saveRule(selectedId!, { ...rule, guiltFree: v })}
-                label="Count toward guilt-free spend" />
-              <div style={{ fontSize: 11.5, color: '#9B9180', marginLeft: 46, marginTop: -4, marginBottom: 8 }}>
-                {rule.fixedType === 'fixed' ? 'Excluded — fixed commitment' : 'Included in discretionary totals'}
-              </div>
+            <SummaryLine label="Expenses" actual={outTotal.actual} planned={outTotal.planned} color={RUST}  currency={currency} />
+            <SummaryLine label="Income"   actual={inTotal.actual}  planned={inTotal.planned}  color={OLIVE} currency={currency} />
+            <div style={{ height: 1, background: '#E8E1CE', margin: '4px 0 0' }} />
+            <SummaryLine
+              label="Left over"
+              actual={inTotal.actual - outTotal.actual}
+              planned={inTotal.planned - outTotal.planned}
+              color={inTotal.actual - outTotal.actual < 0 ? RUST : '#191712'}
+              currency={currency} strong />
+            <div style={{ fontSize: 11.5, color: '#9B9180', marginTop: 14, lineHeight: 1.55 }}>
+              The bold figure is what actually happened this month; the one under it
+              is what the envelopes were set to. Pick a category to change its budget.
             </div>
-
-            {/* Sub-categories */}
-            {subs(selectedId!).length > 0 && (
-              <div style={{ marginTop: 24, paddingTop: 20, borderTop: '1px solid #E8E1CE' }}>
-                <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.1em', color: '#9B9180', marginBottom: 12 }}>
-                  SUB-CATEGORIES OF {selectedCat.name.toUpperCase()}
-                </div>
-                {subs(selectedId!).map(sub => {
-                  const subSpend = transactions
-                    .filter(tx => tx.type === 'expense' && tx.categoryId === sub.id && tx.date.startsWith(monthPrefix))
-                    .reduce((s, tx) => s + Math.abs(tx.amount), 0)
-                  return (
-                    <div key={sub.id}
-                      onClick={() => setCatModal({ category: sub })}
-                      title={`Edit ${sub.name}`}
-                      style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: '1px solid #F0EBDC', cursor: 'pointer' }}>
-                      <span style={{ fontSize: 16 }}>{sub.icon}</span>
-                      <span style={{ flex: 1, fontSize: 13, color: '#191712' }}>{sub.name}</span>
-                      {subSpend > 0 && (
-                        <span style={{ fontSize: 12, color: RUST, fontFamily: 'Outfit, sans-serif', fontWeight: 600 }}>
-                          EGP {subSpend.toLocaleString('en-US')}
-                        </span>
-                      )}
-                    </div>
-                  )
-                })}
-                <div style={{ fontSize: 11.5, color: '#9B9180', marginTop: 8 }}>
-                  Any sub can move to another parent — amounts, receipts and history move with it
-                </div>
-              </div>
-            )}
-
-          </div>
-
-              </>
-            ) : (
-              <>
-                <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.12em', color: '#6C6553', marginBottom: 14 }}>
-                  {new Date(year, monthIdx, 1).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }).toUpperCase()}
-                </div>
-                <SummaryLine label="Expenses" actual={outTotal.actual} planned={outTotal.planned} color={RUST}  currency={currency} />
-                <SummaryLine label="Income"   actual={inTotal.actual}  planned={inTotal.planned}  color={OLIVE} currency={currency} />
-                <div style={{ height: 1, background: '#E8E1CE', margin: '4px 0 0' }} />
-                <SummaryLine
-                  label="Left over"
-                  actual={inTotal.actual - outTotal.actual}
-                  planned={inTotal.planned - outTotal.planned}
-                  color={inTotal.actual - outTotal.actual < 0 ? RUST : '#191712'}
-                  currency={currency} strong />
-                <div style={{ fontSize: 11.5, color: '#9B9180', marginTop: 14, lineHeight: 1.55 }}>
-                  The bold figure is what actually happened this month; the one under it
-                  is what the envelopes were set to. Pick a category to change its budget.
-                </div>
-              </>
-            )}
           </div>
         </div>
       </div>
 
 
       {/* ─── 20E · Envelope Drill-Down Overlay ───────────────────────────────── */}
+      {selectedCat && (
+        <BudgetRuleModal
+          category={selectedCat}
+          rule={rule ?? defaultRule()}
+          subs={subs(selectedCat.id)}
+          transactions={transactions}
+          monthKey={monthKey}
+          currency={currency}
+          onChange={r => saveRule(selectedCat.id, r)}
+          onEditCategory={() => setCatModal({ category: selectedCat })}
+          onAddSub={() => setCatModal({ category: { id: '', name: '', icon: '📁', color: '#8C8071', parentId: selectedCat.id, isSystem: false, txType: selectedCat.txType } })}
+          onEditSub={sub => setCatModal({ category: sub })}
+          onDrill={() => setDrillOpen(true)}
+          onClose={() => setSelectedId(null)}
+        />
+      )}
+
       {catModal && (
         <CategoryModal
           category={catModal.category}
@@ -933,13 +689,3 @@ export function BudgetScreen(_props?: any) {
   )
 }
 
-// ── Helper ────────────────────────────────────────────────────────────────────
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div style={{ marginBottom: 20 }}>
-      <div style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.12em', color: '#9B9180', marginBottom: 7 }}>{label}</div>
-      {children}
-    </div>
-  )
-}
