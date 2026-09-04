@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useFinanceStore } from '../financeStore'
+import { CategoryModal } from '../modals/CategoryModal'
 import type { Category, Transaction } from '../types'
 
 // ─── 16G · Budget Builder ─────────────────────────────────────────────────────
@@ -73,7 +74,12 @@ function Toggle({ on, onChange, label }: { on: boolean; onChange: (v: boolean) =
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function BudgetScreen(_props?: any) {
-  const { categories, transactions } = useFinanceStore()
+  // CategoryModal has existed, finished, since the module was written and was
+  // never mounted anywhere — so there was no way to create a category at all,
+  // which left this screen with nothing to configure and every transaction
+  // uncategorised.
+  const { categories, transactions, upsertCategory, removeCategory } = useFinanceStore()
+  const [catModal, setCatModal] = useState<{ category: Category | null } | null>(null)
 
   // Parent categories only (for list)
   const parents = useMemo(
@@ -141,14 +147,31 @@ export function BudgetScreen(_props?: any) {
         {/* Left header */}
         <div style={{ flexShrink: 0, borderBottom: '1px solid #E8E1CE', padding: '14px 18px 12px' }}>
           <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: '#6C6553', display: 'block', marginBottom: 4 }}>MONEY · SET UP</span>
-          <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em', color: '#191712', display: 'block' }}>Budget builder</span>
-          <span style={{ fontSize: 11.5, color: '#9B9180', display: 'block', marginTop: 2 }}>
-            {parents.length} categories · click to configure
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em', color: '#191712', flex: 1, minWidth: 0 }}>Budget builder</span>
+            <button
+              onClick={() => setCatModal({ category: null })}
+              title="Add a category"
+              style={{
+                height: 28, padding: '0 12px', borderRadius: 999, flexShrink: 0,
+                background: AMBER, border: 'none', fontFamily: 'inherit',
+                color: '#191712', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                boxShadow: '0 2px 0 rgba(25,23,18,0.14)',
+              }}>+ Category</button>
+          </div>
+          <span style={{ fontSize: 11.5, color: '#9B9180', display: 'block', marginTop: 3 }}>
+            {parents.length} categor{parents.length === 1 ? 'y' : 'ies'} · click to configure
           </span>
         </div>
 
         {/* List */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '10px 0' }}>
+          {parents.length === 0 && (
+            <div style={{ padding: '22px 18px', fontSize: 12, color: '#9B9180', lineHeight: 1.6 }}>
+              No categories yet. Add one and everything else follows — budgets to
+              set here, and something to file a transaction under.
+            </div>
+          )}
           {parents.map(cat => {
             const r = rules[cat.id]
             const active = selectedId === cat.id
@@ -202,6 +225,20 @@ export function BudgetScreen(_props?: any) {
                   {subs(selectedCat.id).length} sub-categories
                 </div>
               </div>
+              <span style={{ flex: 1 }} />
+              <button onClick={() => setCatModal({ category: selectedCat })}
+                style={{
+                  height: 32, padding: '0 13px', borderRadius: 999, flexShrink: 0,
+                  background: '#FFFFFF', border: '1px solid #E8E1CE', fontFamily: 'inherit',
+                  color: '#6C6553', fontSize: 12.5, cursor: 'pointer',
+                }}>Edit</button>
+              <button
+                onClick={() => setCatModal({ category: { id: '', name: '', icon: '📁', color: '#8C8071', parentId: selectedCat.id, isSystem: false, txType: selectedCat.txType } })}
+                style={{
+                  height: 32, padding: '0 13px', borderRadius: 999, flexShrink: 0,
+                  background: '#FFFFFF', border: '1px solid #E8E1CE', fontFamily: 'inherit',
+                  color: '#6C6553', fontSize: 12.5, cursor: 'pointer',
+                }}>+ Sub-category</button>
             </div>
 
             {/* Spend progress */}
@@ -338,7 +375,10 @@ export function BudgetScreen(_props?: any) {
                     .filter(tx => tx.type === 'expense' && tx.categoryId === sub.id && tx.date.startsWith(monthPrefix))
                     .reduce((s, tx) => s + Math.abs(tx.amount), 0)
                   return (
-                    <div key={sub.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: '1px solid #F0EBDC' }}>
+                    <div key={sub.id}
+                      onClick={() => setCatModal({ category: sub })}
+                      title={`Edit ${sub.name}`}
+                      style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: '1px solid #F0EBDC', cursor: 'pointer' }}>
                       <span style={{ fontSize: 16 }}>{sub.icon}</span>
                       <span style={{ flex: 1, fontSize: 13, color: '#191712' }}>{sub.name}</span>
                       {subSpend > 0 && (
@@ -360,6 +400,20 @@ export function BudgetScreen(_props?: any) {
       </div>
 
       {/* ─── 20E · Envelope Drill-Down Overlay ───────────────────────────────── */}
+      {catModal && (
+        <CategoryModal
+          category={catModal.category}
+          categories={categories}
+          onSave={c => { void upsertCategory(c); setSelectedId(prev => prev ?? c.id); setCatModal(null) }}
+          onDelete={id => {
+            void removeCategory(id)
+            if (selectedId === id) setSelectedId(null)
+            setCatModal(null)
+          }}
+          onClose={() => setCatModal(null)}
+        />
+      )}
+
       {drillOpen && selectedCat && (() => {
         // Determine date range from drillPeriod
         const now = new Date()
