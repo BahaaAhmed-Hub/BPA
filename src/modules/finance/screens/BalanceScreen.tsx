@@ -65,11 +65,17 @@ function AccountRow({ account, hovered, onHover, onEdit, onIcon }: {
       ref={setNodeRef}
       onMouseEnter={() => onHover(account.id)}
       onMouseLeave={() => onHover(null)}
+      onClick={() => onEdit(account)}
+      role="button"
+      tabIndex={0}
+      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onEdit(account) } }}
+      title={`Open ${account.name}`}
       style={{
         display: 'flex', alignItems: 'center', gap: 11,
         height: 46, padding: '0 12px 0 6px', borderRadius: 12,
-        background: '#FFFFFF', border: '1px solid #EFEADB',
-        boxSizing: 'border-box', position: 'relative',
+        background: hovered ? '#FFFDF7' : '#FFFFFF',
+        border: `1px solid ${hovered ? '#E4DCC6' : '#EFEADB'}`,
+        boxSizing: 'border-box', position: 'relative', cursor: 'pointer',
         transform: CSS.Transform.toString(transform),
         transition,
         opacity: isDragging ? 0.55 : 1,
@@ -83,6 +89,7 @@ function AccountRow({ account, hovered, onHover, onEdit, onIcon }: {
       <button
         {...attributes}
         {...listeners}
+        onClick={e => e.stopPropagation()}
         aria-label={`Reorder ${account.name}`}
         title="Drag to reorder"
         style={{
@@ -123,12 +130,6 @@ function AccountRow({ account, hovered, onHover, onEdit, onIcon }: {
         </span>
         {account.last4 && <span style={{ fontSize: 10, color: '#6C6553' }}>cleared</span>}
       </div>
-      {hovered && !isDragging && (
-        <button onClick={() => onEdit(account)} title="Edit account"
-          style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 6, padding: '3px 6px', cursor: 'pointer', color: '#6C6553', fontSize: 10 }}>
-          Edit
-        </button>
-      )}
     </div>
   )
 }
