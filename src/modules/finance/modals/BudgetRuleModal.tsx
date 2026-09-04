@@ -263,6 +263,7 @@ export function BudgetRuleModal({
           />
           <div style={{ minWidth: 0, flex: 1 }}>
             <input
+              autoFocus={!category.name}
               value={name}
               onChange={e => setName(e.target.value)}
               onBlur={() => { const n = name.trim(); if (n && n !== category.name) onRename({ name: n }); else setName(category.name) }}
@@ -377,6 +378,25 @@ export function BudgetRuleModal({
               </span>
             </div>
           )}
+
+          <div style={ROW}>
+            <span style={LABEL}>Type</span>
+            <span style={{ flex: 1, minWidth: 0, display: 'flex', gap: 7 }}>
+              {([['expense', 'Spending'], ['income', 'Earning']] as const).map(([v, label]) => {
+                const on = (category.txType === 'income') === (v === 'income')
+                return (
+                  <button key={v} onClick={() => onRename({ txType: v })}
+                    style={{
+                      ...PILL, flex: 1, justifyContent: 'center',
+                      background: on ? (v === 'income' ? OLIVE : RUST) : '#FFFFFF',
+                      border: on ? 'none' : `1px solid ${LINE}`,
+                      color: on ? '#FDF8E7' : MUTED,
+                      fontWeight: on ? 600 : 400,
+                    }}>{label}</button>
+                )
+              })}
+            </span>
+          </div>
 
           <div style={ROW}>
             <span style={LABEL}>Kind</span>

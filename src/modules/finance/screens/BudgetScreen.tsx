@@ -186,8 +186,8 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
                       }}>{mixed[0]}</span>
                   )}
                 </span>
-                <span style={{ fontSize: 11, fontWeight: 600, color: '#191712', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {cat.name}
+                <span style={{ fontSize: 11, fontWeight: 600, color: cat.name ? '#191712' : '#9B9180', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {cat.name || 'Untitled'}
                 </span>
                 <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.3 }}>
                   <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 12, fontWeight: 600, color: spentOut ? color : '#191712', fontVariantNumeric: 'tabular-nums' }}>
@@ -462,6 +462,27 @@ export function BudgetScreen(_props?: any) {
   /** Said once, under the envelopes, when a drop could not be honoured. */
   const [note, setNote] = useState<string | null>(null)
 
+  /** Adding a category took two windows: one to name it, and then its own to
+   *  give it a budget — so the first thing a new envelope ever said was "no
+   *  budget". It is made here and opened straight away, and the popup already
+   *  edits everything it has: name, icon, type, budget. */
+  function addCategory() {
+    const id = crypto.randomUUID()
+    void upsertCategory({
+      id, name: '', icon: '📁', color: '#8C8071', isSystem: false, txType: 'expense',
+    })
+    setSelectedId(id)
+  }
+
+  /** Made and then abandoned. Nothing was named, so nothing was meant. */
+  function closeCategory() {
+    const open = categories.find(c => c.id === selectedId)
+    if (open && !open.name.trim() && !categories.some(c => c.parentId === open.id)) {
+      void removeCategory(open.id)
+    }
+    setSelectedId(null)
+  }
+
   function pickCategory(id: string) {
     if (Date.now() - droppedAt.current < 250) return   // that was a drop, not a tap
     setSelectedId(id)
@@ -508,7 +529,7 @@ export function BudgetScreen(_props?: any) {
             <button onClick={() => stepMonth(1)} title="Next month"
               style={{ ...HEAD_PILL, width: 28, padding: 0, justifyContent: 'center', border: 'none', background: 'transparent', color: '#6C6553' }}>›</button>
           </div>
-          <button onClick={() => setCatModal({ category: null })} title="Add a category"
+          <button onClick={addCategory} title="Add a category"
             style={{ height: 34, padding: '0 15px', borderRadius: 999, background: AMBER, border: 'none', color: '#191712', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 2px 0 rgba(25,23,18,0.14)' }}>
             + Category
           </button>
@@ -661,7 +682,7 @@ export function BudgetScreen(_props?: any) {
           onAddSub={() => setCatModal({ category: { id: '', name: '', icon: '📁', color: '#8C8071', parentId: selectedCat.id, isSystem: false, txType: selectedCat.txType } })}
           onEditSub={sub => setCatModal({ category: sub })}
           onDrill={() => setDrillOpen(true)}
-          onClose={() => setSelectedId(null)}
+          onClose={closeCategory}
         />
       )}
 
