@@ -1,4 +1,13 @@
 import { useState } from 'react'
+import { GripVertical } from 'lucide-react'
+import {
+  DndContext, closestCenter, PointerSensor, TouchSensor, useSensor, useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  SortableContext, verticalListSortingStrategy, useSortable, arrayMove,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import { useFinanceStore } from '../financeStore'
 import { AccountModal } from '../modals/AccountModal'
 import { TransactionModal } from '../modals/TransactionModal'
@@ -27,6 +36,100 @@ function Pill({ type, amount, currency }: { type: 'expense' | 'income' | 'transf
     }}>
       {type === 'expense' ? '−' : type === 'income' ? '+' : ''}{currency} {amount.toLocaleString('en-US')}
     </span>
+  )
+}
+
+// ─── One account, draggable ───────────────────────────────────────────────────
+// This lived inside BalanceScreen, which redefined it on every render — React
+// sees a new component type each time and remounts the whole list, which would
+// tear down a drag the moment anything else changed. It belongs out here.
+
+function formatBalance(bal: number, currency = 'EGP'): string {
+  if (bal < 0) return `(${currency} ${Math.abs(bal).toLocaleString('en-US')})`
+  return `${currency} ${bal.toLocaleString('en-US')}`
+}
+
+function AccountRow({ account, hovered, onHover, onEdit, onIcon }: {
+  account: Account
+  hovered: boolean
+  onHover: (id: string | null) => void
+  onEdit:  (a: Account) => void
+  onIcon:  (a: Account, emoji: string) => void
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: account.id })
+  const isNeg = account.balance < 0
+
+  return (
+    <div
+      ref={setNodeRef}
+      onMouseEnter={() => onHover(account.id)}
+      onMouseLeave={() => onHover(null)}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 11,
+        height: 46, padding: '0 12px 0 6px', borderRadius: 12,
+        background: '#FFFFFF', border: '1px solid #EFEADB',
+        boxSizing: 'border-box', position: 'relative',
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.55 : 1,
+        zIndex:  isDragging ? 2 : undefined,
+        boxShadow: isDragging ? '0 6px 16px rgba(25,23,18,0.14)' : undefined,
+      }}
+    >
+      {/* The handle, and only the handle, refuses the browser's touch gestures.
+          Put touch-action: none on the whole row and the list stops scrolling
+          on an iPad — you could reorder but never reach the bottom of it. */}
+      <button
+        {...attributes}
+        {...listeners}
+        aria-label={`Reorder ${account.name}`}
+        title="Drag to reorder"
+        style={{
+          flexShrink: 0, width: 18, height: 30, padding: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: 'none', border: 'none', borderRadius: 6,
+          color: hovered || isDragging ? '#9B9180' : '#D8D0BE',
+          cursor: isDragging ? 'grabbing' : 'grab',
+          touchAction: 'none',
+        }}>
+        <GripVertical size={14} />
+      </button>
+
+      <IconPicker
+        value={account.emoji}
+        onChange={newEmoji => onIcon(account, newEmoji)}
+        trigger={(onClick) => (
+          <div onClick={onClick} title="Click to change icon" style={{
+            width: 28, height: 28, borderRadius: 9, background: '#F0EBDC', color: '#6C6553',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            flexShrink: 0, cursor: 'pointer', overflow: 'hidden', fontSize: 15,
+          }}>
+            {account.emoji.startsWith('data:') || account.emoji.startsWith('http')
+              ? <img src={account.emoji} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              : <span>{account.emoji}</span>}
+          </div>
+        )}
+      />
+      <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+        <span style={{ fontSize: 13, fontWeight: 600, color: '#191712', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{account.name}</span>
+        <span style={{ fontSize: 10.5, color: '#6C6553', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          {account.bank ?? account.accountType}{account.last4 ? ` · ···· ${account.last4}` : ''}
+        </span>
+      </div>
+      <div style={{ marginLeft: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', flexShrink: 0 }}>
+        <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 14.5, fontWeight: 600, color: isNeg ? '#B4523A' : '#191712', fontVariantNumeric: 'tabular-nums' }}>
+          {formatBalance(account.balance, account.currency)}
+        </span>
+        {account.last4 && <span style={{ fontSize: 10, color: '#6C6553' }}>cleared</span>}
+      </div>
+      {hovered && !isDragging && (
+        <button onClick={() => onEdit(account)} title="Edit account"
+          style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 6, padding: '3px 6px', cursor: 'pointer', color: '#6C6553', fontSize: 10 }}>
+          Edit
+        </button>
+      )}
+    </div>
   )
 }
 
@@ -59,9 +162,49 @@ export function BalanceScreen() {
 
   const _netWorth = accounts.reduce((s, a) => s + a.balance, 0); void _netWorth
 
-  const paymentAccounts  = accounts.filter(a => a.accountType === 'payment' || a.accountType === 'wallet')
-  const creditCards      = accounts.filter(a => a.accountType === 'credit_card')
-  const otherAssets      = accounts.filter(a => a.accountType === 'asset')
+  // sortOrder is the order you put them in. Every account has been created
+  // with 0, so until something is dragged this is the order they arrived in —
+  // sort is stable, so equal values keep it.
+  const bySort = (a: Account, b: Account) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)
+  const paymentAccounts  = accounts.filter(a => a.accountType === 'payment' || a.accountType === 'wallet').sort(bySort)
+  const creditCards      = accounts.filter(a => a.accountType === 'credit_card').sort(bySort)
+  const otherAssets      = accounts.filter(a => a.accountType === 'asset').sort(bySort)
+
+  // A mouse drags straight away; a finger has to hold first, or the gesture is
+  // indistinguishable from the scroll it usually is. The handle carries
+  // touch-action: none so the rest of the row still scrolls.
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor,   { activationConstraint: { delay: 180, tolerance: 8 } }),
+  )
+
+  /** Renumber every account in the order they are shown, and send up only the
+   *  ones that actually moved. One sequence across all three groups keeps
+   *  sortOrder meaningful rather than three overlapping runs of 0..n. */
+  function persistOrder(groups: Account[][]) {
+    let i = 0
+    for (const group of groups) {
+      for (const acc of group) {
+        if (acc.sortOrder !== i) void upsertAccount({ ...acc, sortOrder: i })
+        i++
+      }
+    }
+  }
+
+  function reorder(group: Account[], e: DragEndEvent) {
+    const { active, over } = e
+    if (!over || active.id === over.id) return
+    const from = group.findIndex(a => a.id === active.id)
+    const to   = group.findIndex(a => a.id === over.id)
+    // Groups are split by account type, so a card can only move among cards.
+    if (from < 0 || to < 0) return
+    const moved = arrayMove(group, from, to)
+    persistOrder([
+      group === paymentAccounts ? moved : paymentAccounts,
+      group === creditCards     ? moved : creditCards,
+      group === otherAssets     ? moved : otherAssets,
+    ])
+  }
 
   const paymentTotal = paymentAccounts.reduce((s, a) => s + a.balance, 0)
   const creditTotal  = creditCards.reduce((s, a) => s + a.balance, 0)
@@ -69,62 +212,6 @@ export function BalanceScreen() {
 
   // Sorted transactions desc
   const sorted = [...transactions].sort((a, b) => b.date.localeCompare(a.date))
-
-function formatBalance(bal: number, currency = 'EGP'): string {
-    if (bal < 0) return `(${currency} ${Math.abs(bal).toLocaleString('en-US')})`
-    return `${currency} ${bal.toLocaleString('en-US')}`
-  }
-
-  function AccountRow({ account }: { account: typeof accounts[number] }) {
-    const isNeg = account.balance < 0
-    const isHovered = hoveredAccountId === account.id
-    return (
-      <div
-        onMouseEnter={() => setHoveredAccountId(account.id)}
-        onMouseLeave={() => setHoveredAccountId(null)}
-        style={{
-          display: 'flex', alignItems: 'center', gap: 11,
-          height: 46, padding: '0 12px', borderRadius: 12,
-          background: '#FFFFFF', border: '1px solid #EFEADB',
-          boxSizing: 'border-box' as const, position: 'relative',
-        }}
-      >
-        <IconPicker
-          value={account.emoji}
-          onChange={newEmoji => upsertAccount({ ...account, emoji: newEmoji })}
-          trigger={(onClick) => (
-            <div onClick={onClick} title="Click to change icon" style={{
-              width: 28, height: 28, borderRadius: 9, background: '#F0EBDC', color: '#6C6553',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              flexShrink: 0, cursor: 'pointer', overflow: 'hidden', fontSize: 15,
-            }}>
-              {account.emoji.startsWith('data:') || account.emoji.startsWith('http')
-                ? <img src={account.emoji} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                : <span>{account.emoji}</span>}
-            </div>
-          )}
-        />
-        <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-          <span style={{ fontSize: 13, fontWeight: 600, color: '#191712', whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' }}>{account.name}</span>
-          <span style={{ fontSize: 10.5, color: '#6C6553', whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {account.bank ?? account.accountType}{account.last4 ? ` · ···· ${account.last4}` : ''}
-          </span>
-        </div>
-        <div style={{ marginLeft: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', flexShrink: 0 }}>
-          <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 14.5, fontWeight: 600, color: isNeg ? '#B4523A' : '#191712', fontVariantNumeric: 'tabular-nums' }}>
-            {formatBalance(account.balance, account.currency)}
-          </span>
-          {account.last4 && <span style={{ fontSize: 10, color: '#6C6553' }}>cleared</span>}
-        </div>
-        {isHovered && (
-          <button onClick={() => setAccountModal({ open: true, account })} title="Edit account"
-            style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 6, padding: '3px 6px', cursor: 'pointer', color: '#6C6553', fontSize: 10 }}>
-            Edit
-          </button>
-        )}
-      </div>
-    )
-  }
 
   // Held vs owed computations for net position card
   const totalHeld = accounts.filter(a => a.balance > 0).reduce((s, a) => s + a.balance, 0)
@@ -221,9 +308,25 @@ function formatBalance(bal: number, currency = 'EGP'): string {
                   EGP {Math.abs(group.total).toLocaleString('en-US')}
                 </span>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {group.accounts.map(acc => <AccountRow key={acc.id} account={acc} />)}
-              </div>
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={e => reorder(group.accounts, e)}>
+                <SortableContext items={group.accounts.map(a => a.id)} strategy={verticalListSortingStrategy}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {group.accounts.map(acc => (
+                      <AccountRow
+                        key={acc.id}
+                        account={acc}
+                        hovered={hoveredAccountId === acc.id}
+                        onHover={setHoveredAccountId}
+                        onEdit={a => setAccountModal({ open: true, account: a })}
+                        onIcon={(a, emoji) => void upsertAccount({ ...a, emoji })}
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
             </div>
           ))}
         </div>
