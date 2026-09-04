@@ -443,6 +443,7 @@ export function BudgetScreen(_props?: any) {
           monthKey={monthKey}
           currency={currency}
           onChange={r => saveRule(selectedCat.id, r)}
+          onRename={patch => void upsertCategory({ ...selectedCat, ...patch })}
           onEditCategory={() => setCatModal({ category: selectedCat })}
           onAddSub={() => setCatModal({ category: { id: '', name: '', icon: '📁', color: '#8C8071', parentId: selectedCat.id, isSystem: false, txType: selectedCat.txType } })}
           onEditSub={sub => setCatModal({ category: sub })}

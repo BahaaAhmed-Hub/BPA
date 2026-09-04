@@ -1,6 +1,7 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { X, ChevronDown, Check } from 'lucide-react'
 import type { Category, Transaction } from '../types'
+import { IconPicker } from '../components/IconPicker'
 
 // ─── What an envelope is set to ──────────────────────────────────────────────
 // This was a whole right-hand column: an amount, a fixed-or-flexible pair, five
@@ -31,12 +32,17 @@ export interface BudgetRule {
 }
 
 export const FREQ_OPTS: { v: Frequency; label: string; per: number }[] = [
-  { v: 'weekly',         label: 'a week',      per: 52 / 12 },
-  { v: 'monthly',        label: 'a month',     per: 1 },
-  { v: 'every_2_months', label: 'two months',  per: 1 / 2 },
-  { v: 'quarterly',      label: 'a quarter',   per: 1 / 3 },
-  { v: 'yearly',         label: 'a year',      per: 1 / 12 },
+  { v: 'weekly',         label: 'Weekly',        per: 52 / 12 },
+  { v: 'monthly',        label: 'Monthly',       per: 1 },
+  { v: 'every_2_months', label: 'Every 2 months', per: 1 / 2 },
+  { v: 'quarterly',      label: 'Quarterly',     per: 1 / 3 },
+  { v: 'yearly',         label: 'Annual',        per: 1 / 12 },
 ]
+
+/** The four worth offering. Every-2-months stays in the table above so a rule
+ *  already set to it still reads and still divides correctly — it is just not
+ *  something else to scroll past when picking. */
+const FREQ_CHOICES: Frequency[] = ['weekly', 'monthly', 'quarterly', 'yearly']
 
 export function defaultRule(): BudgetRule {
   const d = new Date()
@@ -67,6 +73,57 @@ const ROUND: React.CSSProperties = {
 }
 const LABEL: React.CSSProperties = { width: 74, flexShrink: 0, fontSize: 13.5, color: MUTED, fontWeight: 500 }
 const ROW: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 10 }
+
+/** An honest dropdown. The interval was a native select under a pill, which
+ *  works but does not look like anything you can press. */
+function IntervalPicker({ value, onChange }: { value: Frequency; onChange: (f: Frequency) => void }) {
+  const [open, setOpen] = useState(false)
+  const box = useRef<HTMLSpanElement>(null)
+  const current = FREQ_OPTS.find(f => f.v === value) ?? FREQ_OPTS[1]
+  // Whatever it is set to is always offered, even if it is not one of the four.
+  const choices = FREQ_CHOICES.includes(value) ? FREQ_CHOICES : [...FREQ_CHOICES, value]
+
+  useEffect(() => {
+    if (!open) return
+    const away = (e: Event) => { if (box.current && !box.current.contains(e.target as Node)) setOpen(false) }
+    document.addEventListener('pointerdown', away)
+    return () => document.removeEventListener('pointerdown', away)
+  }, [open])
+
+  return (
+    <span ref={box} style={{ position: 'relative', display: 'flex', flexShrink: 0 }}>
+      <button type="button" onClick={() => setOpen(o => !o)} title="How often this budget renews"
+        style={{ ...PILL, gap: 5, color: MUTED, whiteSpace: 'nowrap' }}>
+        {current.label}
+        <ChevronDown size={13} strokeWidth={2} style={{ color: GHOST }} />
+      </button>
+      {open && (
+        <div style={{
+          position: 'absolute', top: 46, right: 0, minWidth: 168, zIndex: 30, padding: 5,
+          background: '#FFFFFF', border: `1px solid ${LINE}`, borderRadius: 12,
+          boxShadow: '0 12px 32px rgba(25,23,18,0.18)',
+        }}>
+          {choices.map(v => {
+            const opt = FREQ_OPTS.find(f => f.v === v)!
+            const on = v === value
+            return (
+              <button key={v} type="button" onClick={() => { onChange(v); setOpen(false) }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '9px 10px',
+                  border: 'none', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit',
+                  background: on ? 'rgba(245,209,78,0.18)' : 'transparent',
+                  fontSize: 13.5, color: INK, textAlign: 'left',
+                }}>
+                <span style={{ flex: 1 }}>{opt.label}</span>
+                {on && <Check size={14} strokeWidth={2.5} style={{ color: '#8A6D0B' }} />}
+              </button>
+            )
+          })}
+        </div>
+      )}
+    </span>
+  )
+}
 
 function Switch({ on, onChange, label, sub }: {
   on: boolean; onChange: (v: boolean) => void; label: string; sub: string
@@ -102,6 +159,8 @@ interface Props {
   monthKey: string          // YYYY-MM
   currency: string
   onChange: (rule: BudgetRule) => void
+  /** Name and icon are edited here rather than in a second window. */
+  onRename: (patch: Partial<Category>) => void
   onEditCategory: () => void
   onAddSub: () => void
   onEditSub: (sub: Category) => void
@@ -111,9 +170,12 @@ interface Props {
 
 export function BudgetRuleModal({
   category, rule, subs, transactions, monthKey, currency,
-  onChange, onEditCategory, onAddSub, onEditSub, onDrill, onClose,
+  onChange, onRename, onEditCategory, onAddSub, onEditSub, onDrill, onClose,
 }: Props) {
   const box = useRef<HTMLDivElement>(null)
+  // Held locally while it is being typed, so every keystroke is not a write.
+  const [name, setName] = useState(category.name)
+  useEffect(() => { setName(category.name) }, [category.id, category.name])
 
   useEffect(() => {
     const openedAt = Date.now()
@@ -138,7 +200,6 @@ export function BudgetRuleModal({
   const over   = budget > 0 && spent > budget
   const near   = budget > 0 && !over && rule.warn80 && spent / budget >= 0.8
   const tone   = category.txType === 'income' ? OLIVE : RUST
-  const freq   = FREQ_OPTS.find(f => f.v === rule.frequency) ?? FREQ_OPTS[1]
 
   const fmt = (v: number) => v.toLocaleString('en-US', { maximumFractionDigits: 0 })
 
@@ -159,11 +220,43 @@ export function BudgetRuleModal({
 
         {/* Which envelope, and the way out */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: 24, flexShrink: 0 }}>{category.icon}</span>
+          {/* The icon is the picker — a logo you have uploaded, or an emoji */}
+          <IconPicker
+            value={category.icon}
+            onChange={icon => onRename({ icon })}
+            trigger={onClick => (
+              <button onClick={onClick} title="Change the icon"
+                style={{
+                  width: 40, height: 40, borderRadius: 11, flexShrink: 0, padding: 0,
+                  border: `1px solid ${LINE}`, background: '#FAF7EC', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+                }}>
+                {category.icon.startsWith('data:') || category.icon.startsWith('http')
+                  ? <img src={category.icon} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  : <span style={{ fontSize: 21, lineHeight: 1 }}>{category.icon}</span>}
+              </button>
+            )}
+          />
           <div style={{ minWidth: 0, flex: 1 }}>
-            <div style={{ fontFamily: DISPLAY, fontSize: 19, fontWeight: 600, letterSpacing: '-0.02em', color: INK, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {category.name}
-            </div>
+            <input
+              value={name}
+              onChange={e => setName(e.target.value)}
+              onBlur={() => { const n = name.trim(); if (n && n !== category.name) onRename({ name: n }); else setName(category.name) }}
+              onKeyDown={e => {
+                if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+                if (e.key === 'Escape') { setName(category.name); (e.target as HTMLInputElement).blur() }
+              }}
+              placeholder="Name this category"
+              title="Click to rename"
+              style={{
+                width: '100%', boxSizing: 'border-box', padding: '2px 6px', marginLeft: -6,
+                background: 'transparent', border: '1px solid transparent', borderRadius: 7,
+                fontFamily: DISPLAY, fontSize: 19, fontWeight: 600, letterSpacing: '-0.02em',
+                color: INK, outline: 'none',
+              }}
+              onFocus={e => { e.target.style.background = '#FAF7EC'; e.target.style.borderColor = LINE }}
+              onBlurCapture={e => { e.target.style.background = 'transparent'; e.target.style.borderColor = 'transparent' }}
+            />
             <div style={{ fontSize: 11.5, color: GHOST, marginTop: 1 }}>
               {new Date(monthKey + '-01T12:00:00').toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}
             </div>
@@ -228,16 +321,7 @@ export function BudgetRuleModal({
                     textAlign: 'right', fontVariantNumeric: 'tabular-nums', padding: 0,
                   }} />
               </span>
-              <span style={{ position: 'relative', display: 'flex', flexShrink: 0 }}>
-                <span style={{ ...PILL, gap: 5, color: MUTED }}>
-                  {freq.label}
-                  <ChevronDown size={13} strokeWidth={2} style={{ color: GHOST }} />
-                </span>
-                <select value={rule.frequency} onChange={e => onChange({ ...rule, frequency: e.target.value as Frequency })}
-                  style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', border: 'none' }}>
-                  {FREQ_OPTS.map(f => <option key={f.v} value={f.v}>{f.label}</option>)}
-                </select>
-              </span>
+              <IntervalPicker value={rule.frequency} onChange={f => onChange({ ...rule, frequency: f })} />
             </span>
           </div>
 
@@ -326,10 +410,11 @@ export function BudgetRuleModal({
           }}>
             <Check size={14} strokeWidth={2.5} /> Done
           </button>
-          <button onClick={onEditCategory} style={{ ...PILL, color: MUTED }}>Rename…</button>
+          <button onClick={onEditCategory} title="Colour, type, parent, delete"
+            style={{ ...PILL, color: MUTED }}>More…</button>
         </div>
         <div style={{ fontSize: 11, color: GHOST, marginTop: 10, textAlign: 'center' }}>
-          Changes save as you make them
+          Name, icon and budget save as you change them
         </div>
       </div>
     </div>
