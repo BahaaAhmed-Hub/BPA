@@ -115,7 +115,8 @@ interface EnvelopeRow {
   planned: number
   /** What this envelope is kept in, which need not be the app's default. */
   cur: string
-  children: { cat: Category; budgeted: boolean }[]
+  plannedFrom: 'own' | 'parts' | 'none'
+  children: { cat: Category; planned: number; budgeted: boolean }[]
   currencies: string[]
 }
 
@@ -136,7 +137,7 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
   // Counting the children too: a sub-category with a budget is an envelope
   // like any other, it just lives inside one.
   const all       = rows.length + rows.reduce((n, r) => n + r.children.length, 0)
-  const withMoney = rows.filter(r => r.planned > 0).length
+  const withMoney = rows.filter(r => r.plannedFrom === 'own').length
                   + rows.reduce((n, r) => n + r.children.filter(c => c.budgeted).length, 0)
   return (
     <div style={{ background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 14, boxShadow: '0 1px 3px rgba(25,23,18,0.06)', padding: '15px 18px 18px' }}>
@@ -164,7 +165,7 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
         <div style={{ fontSize: 11.5, color: '#9B9180', lineHeight: 1.6 }}>{empty}</div>
       ) : (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '18px 14px' }}>
-          {rows.map(({ cat, actual, planned, cur, children, currencies }) => {
+          {rows.map(({ cat, actual, planned, plannedFrom, cur, children, currencies }) => {
             // Spending with nothing set is not a full envelope. This drew a
             // complete ring for it, which reads as "at its limit" — the one
             // thing it cannot be when no limit exists.
@@ -184,7 +185,10 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
               <Draggable id={cat.id}>
                 {() => (
               <button onClick={() => onPick(cat.id)}
-                title={`${cat.name} — ${money(actual, cur)}${planned > 0 ? ` of ${money(planned, cur)}` : ' · no budget set'}`}
+                title={`${cat.name} — ${money(actual, cur)}${
+                  planned > 0
+                    ? ` of ${money(planned, cur)}${plannedFrom === 'parts' ? ', added up from its sub-categories' : ''}`
+                    : ' · no budget set'}`}
                 style={{
                   width: 104, padding: '8px 2px 6px', borderRadius: 12,
                   background: over ? 'rgba(95,112,56,0.16)' : on ? 'rgba(245,209,78,0.20)' : 'transparent',
@@ -218,7 +222,12 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
                     {actual.toLocaleString('en-US', { maximumFractionDigits: 0 })}
                   </span>
                   {budgeted ? (
-                    <span style={{ fontSize: 10, color: '#9B9180', fontVariantNumeric: 'tabular-nums' }}>
+                    <span style={{
+                      fontSize: 10, color: '#9B9180', fontVariantNumeric: 'tabular-nums',
+                      // Dotted underline where the figure is the sum of its
+                      // parts rather than something set on this category.
+                      borderBottom: plannedFrom === 'parts' ? '1px dotted #C5BCA8' : 'none',
+                    }}>
                       {planned.toLocaleString('en-US', { maximumFractionDigits: 0 })}
                     </span>
                   ) : (
@@ -454,12 +463,28 @@ export function BudgetScreen(_props?: any) {
       // month's spending, and comparing it raw made every non-monthly envelope
       // look untouched. And a budget that has not begun, or has ended, is not
       // a budget this month — both ends were collected and never consulted.
-      const planned = activeIn(rule, monthKey) ? monthlyAmount(rule) : 0
-      const children = categories.filter(c => c.parentId === cat.id).map(child => ({
-        cat: child,
-        budgeted: activeIn(rules[child.id], monthKey) && monthlyAmount(rules[child.id]) > 0,
-      }))
-      return { cat, actual, planned, cur, children, currencies: [...currencies] }
+      const own = activeIn(rule, monthKey) ? monthlyAmount(rule) : 0
+
+      const children = categories.filter(c => c.parentId === cat.id).map(child => {
+        const r = rules[child.id]
+        return {
+          cat: child,
+          planned: activeIn(r, monthKey) ? monthlyAmount(r) : 0,
+          budgeted: activeIn(r, monthKey) && monthlyAmount(r) > 0,
+        }
+      })
+      const fromParts = children.reduce((n, c) => n + c.planned, 0)
+
+      // A budget on a sub-category is a budget. It was counted nowhere: the
+      // envelope showed "set a budget" and the month's total ignored it, so
+      // splitting Groceries into its parts made the whole thing look
+      // unbudgeted. Its own figure wins where there is one — otherwise the
+      // parts add up to it. Never both, or every split would count twice.
+      const planned = own > 0 ? own : fromParts
+      const plannedFrom: 'own' | 'parts' | 'none' =
+        own > 0 ? 'own' : fromParts > 0 ? 'parts' : 'none'
+
+      return { cat, actual, planned, plannedFrom, cur, children, currencies: [...currencies] }
     }
     const all = parents.map(build)
     return {
@@ -741,6 +766,9 @@ export function BudgetScreen(_props?: any) {
         <BudgetRuleModal
           category={selectedCat}
           parent={selectedCat.parentId ? categories.find(c => c.id === selectedCat.parentId) : null}
+          partsBudget={categories
+            .filter(c => c.parentId === selectedCat.id)
+            .reduce((n, c) => n + (activeIn(rules[c.id], monthKey) ? monthlyAmount(rules[c.id]) : 0), 0)}
           rule={rule ?? defaultRule()}
           subs={subs(selectedCat.id)}
           transactions={transactions}

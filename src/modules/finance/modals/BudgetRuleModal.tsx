@@ -173,6 +173,9 @@ interface Props {
   /** Set when this one sits inside another — it changes what the window is
    *  for, and gives somewhere to go back to. */
   parent?: Category | null
+  /** What its sub-categories are budgeted between them, per month. Where this
+   *  one has no figure of its own, that is what it is measured against. */
+  partsBudget?: number
   rule: BudgetRule
   subs: Category[]
   transactions: Transaction[]
@@ -193,7 +196,7 @@ interface Props {
 }
 
 export function BudgetRuleModal({
-  category, parent, rule, subs, transactions, monthKey, currency,
+  category, parent, partsBudget = 0, rule, subs, transactions, monthKey, currency,
   onChange, onDelete, onPromote, onRename, onEditCategory, onAddSub, onEditSub, onDrill, onClose,
 }: Props) {
   const box = useRef<HTMLDivElement>(null)
@@ -224,7 +227,11 @@ export function BudgetRuleModal({
   const others = [...new Set(mine.filter(tx => tx.currency !== cur).map(tx => tx.currency))]
 
   const running = activeIn(rule, monthKey)
-  const budget = running ? monthlyAmount(rule) : 0
+  const own    = running ? monthlyAmount(rule) : 0
+  // Same rule the envelope uses: its own figure where there is one, otherwise
+  // what its parts add up to. Never both — that would count a split twice.
+  const budget = own > 0 ? own : partsBudget
+  const fromParts = own === 0 && partsBudget > 0
   const pct    = budget > 0 ? Math.min(spent / budget, 1) : 0
   const over   = budget > 0 && spent > budget
   const near   = budget > 0 && !over && rule.warn80 && spent / budget >= 0.8
@@ -313,7 +320,7 @@ export function BudgetRuleModal({
             </span>
             <span style={{ fontSize: 12, color: MUTED }}>
               {budget > 0
-                ? `of ${cur} ${fmt(budget)} this month`
+                ? `of ${cur} ${fmt(budget)} this month${fromParts ? ', across its sub-categories' : ''}`
                 : rule.amount > 0 && !running
                   ? `budget not running this month`
                   : 'no budget set'}
@@ -382,6 +389,16 @@ export function BudgetRuleModal({
               <IntervalPicker value={rule.frequency} onChange={f => onChange({ ...rule, frequency: f })} />
             </span>
           </div>
+
+          {fromParts && (
+            <div style={{ ...ROW, marginTop: -4 }}>
+              <span style={LABEL} />
+              <span style={{ fontSize: 11.5, color: GHOST }}>
+                Its sub-categories are budgeted {cur} {fmt(partsBudget)} between them.
+                A figure here replaces that rather than adding to it.
+              </span>
+            </div>
+          )}
 
           {rule.frequency !== 'monthly' && rule.amount > 0 && (
             <div style={{ ...ROW, marginTop: -4 }}>
