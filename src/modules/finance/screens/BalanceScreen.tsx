@@ -9,6 +9,7 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { useFinanceStore } from '../financeStore'
+import { BudgetQuickPay } from '../components/BudgetQuickPay'
 import { toBase, baseCurrency, currenciesNeedingRates } from '../fx'
 import { AccountModal } from '../modals/AccountModal'
 import { TransactionModal } from '../modals/TransactionModal'
@@ -339,6 +340,11 @@ export function BalanceScreen() {
           padding: '22px 26px',
           borderRight: `1px solid #E8E1CE`,
         }}>
+          {/* The envelopes, so paying one does not mean going to find it */}
+          <div style={{ marginBottom: 16 }}>
+            <BudgetQuickPay />
+          </div>
+
           {/* ── Account groups ── */}
           {[
             { label: 'PAYMENT ACCOUNTS', accounts: paymentAccounts, total: paymentTotal, totalColor: '#5F7038' },

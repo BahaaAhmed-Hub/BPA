@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { useFinanceStore } from '../financeStore'
+import { BudgetQuickPay } from '../components/BudgetQuickPay'
+import { CategoryGlyph } from '../components/CategoryGlyph'
 import type { Transaction, Category, Account } from '../types'
 
 // ── Palette ───────────────────────────────────────────────────────────────────
@@ -474,7 +476,7 @@ export function TodayScreen() {
           border: `1px solid ${acct ? acct.color + '44' : isExp ? RED + '44' : GREEN + '44'}`,
           display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17,
         }}>
-          {cat?.icon ?? acct?.emoji ?? (isExp ? '💳' : '💼')}
+          {cat ? <CategoryGlyph icon={cat.icon} size={18} /> : (acct?.emoji ?? (isExp ? '💳' : '💼'))}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 14, fontWeight: 500, color: C.textPri, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -553,6 +555,11 @@ export function TodayScreen() {
           onPrevMonth={prevMonth}
           onNextMonth={nextMonth}
         />
+
+        {/* The envelopes, where the money is actually being looked at */}
+        <div style={{ marginTop: 18 }}>
+          <BudgetQuickPay />
+        </div>
 
         {/* Selected day summary */}
         {selectedDay && selectedDayTx.length > 0 && (

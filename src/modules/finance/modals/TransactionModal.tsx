@@ -5,6 +5,7 @@ import {
 } from 'lucide-react'
 import type { Transaction, Account, Category, Currency, TxType } from '../types'
 import { knownPayees, matchPayees, rememberPayee } from '../payees'
+import { CategoryGlyph } from '../components/CategoryGlyph'
 
 // ─── The panel's own vocabulary ───────────────────────────────────────────────
 // Same set the calendar's event panel uses: one pill for every value whether
@@ -42,9 +43,11 @@ const RULE: React.CSSProperties = { height: 1, background: HAIR, margin: '18px 0
 export interface PickOption {
   id: string
   label: string
-  /** An emoji, or a data/http URL for a real logo. */
+  /** A lucide name, an emoji, or a data/http URL for a real picture. */
   glyph?: string
   tint?: string
+  /** Sits under another entry in the list. */
+  nested?: boolean
 }
 
 /** A list you can put a bank's actual logo in. The native select was the right
@@ -100,7 +103,8 @@ function PillPicker({ value, options, onChange, placeholder }: {
                 onClick={() => { onChange(o.id); setOpen(false) }}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 10, width: '100%',
-                  padding: '9px 10px', border: 'none', borderRadius: 8, cursor: 'pointer',
+                  padding: '9px 10px', paddingLeft: o.nested ? 26 : 10,
+                  border: 'none', borderRadius: 8, cursor: 'pointer',
                   background: on ? 'rgba(245,209,78,0.18)' : 'transparent',
                   fontFamily: 'inherit', fontSize: 13.5, color: INK, textAlign: 'left',
                 }}>
@@ -116,17 +120,19 @@ function PillPicker({ value, options, onChange, placeholder }: {
   )
 }
 
+/** The tinted disc a picker entry sits in. It used to draw the icon itself and
+ *  knew only about pictures and emoji, so once categories moved to line icons
+ *  every one of them rendered the literal text "lucide:ShoppingCart" crushed
+ *  into a 22px box. CategoryGlyph is the one place that knows all three. */
 function Glyph({ glyph, tint, size = 22 }: { glyph?: string; tint?: string; size?: number }) {
-  const isImage = !!glyph && (glyph.startsWith('data:') || glyph.startsWith('http'))
   return (
     <span style={{
       width: size, height: size, borderRadius: 6, flexShrink: 0, overflow: 'hidden',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       background: tint ? `${tint}22` : '#F1ECDE',
+      color: tint ?? '#6C6553',
     }}>
-      {isImage
-        ? <img src={glyph} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-        : <span style={{ fontSize: size * 0.64, lineHeight: 1 }}>{glyph ?? '•'}</span>}
+      <CategoryGlyph icon={glyph} size={Math.round(size * 0.68)} />
     </span>
   )
 }
@@ -137,6 +143,10 @@ interface Props {
   categories: Category[]
   /** Every transaction there is — the payee suggestions are read from them. */
   history?: Transaction[]
+  /** What a new entry should start as. Handed a whole fake transaction instead,
+   *  the form would believe it was editing one that does not exist — offering
+   *  to delete it, and saying "save changes" to something never saved. */
+  initial?: { categoryId?: string; type?: TxType; accountId?: string }
   onSave: (tx: Transaction) => void
   onDelete?: (id: string) => void
   onClose: () => void
@@ -148,17 +158,17 @@ const TYPES: { id: TxType; label: string }[] = [
   { id: 'transfer', label: 'Transfer' },
 ]
 
-export function TransactionModal({ transaction, accounts, categories, history = [], onSave, onDelete, onClose }: Props) {
+export function TransactionModal({ transaction, accounts, categories, history = [], initial, onSave, onDelete, onClose }: Props) {
   const isEdit = !!transaction
   const todayStr = new Date().toISOString().slice(0, 10)
 
-  const [type,        setType]        = useState<TxType>(transaction?.type        ?? 'expense')
+  const [type,        setType]        = useState<TxType>(transaction?.type        ?? initial?.type ?? 'expense')
   const [amountStr,   setAmountStr]   = useState(String(transaction?.amount       ?? ''))
   const [currency,    setCurrency]    = useState<Currency>(transaction?.currency  ?? 'EGP')
   const [payee,       setPayee]       = useState(transaction?.payee               ?? '')
   const [note,        setNote]        = useState(transaction?.note                ?? '')
-  const [accountId,   setAccountId]   = useState(transaction?.accountId           ?? (accounts[0]?.id ?? ''))
-  const [categoryId,  setCategoryId]  = useState(transaction?.categoryId          ?? '')
+  const [accountId,   setAccountId]   = useState(transaction?.accountId           ?? initial?.accountId ?? (accounts[0]?.id ?? ''))
+  const [categoryId,  setCategoryId]  = useState(transaction?.categoryId          ?? initial?.categoryId ?? '')
   const [date,        setDate]        = useState(transaction?.date                ?? todayStr)
   // Two dates, because they are two facts: a bill due on the 1st and paid on
   // the 9th is not the same as one paid the day it landed.
@@ -184,6 +194,14 @@ export function TransactionModal({ transaction, accounts, categories, history = 
   const payeeBox = useRef<HTMLSpanElement>(null)
   const allPayees = useMemo(() => knownPayees(history), [history])
   const payeeHits = useMemo(() => matchPayees(allPayees, payee), [allPayees, payee])
+
+  // Escape closed the title field and nothing else, so the panel itself could
+  // only be dismissed by aiming at Cancel or the backdrop.
+  useEffect(() => {
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', esc)
+    return () => document.removeEventListener('keydown', esc)
+  }, [onClose])
 
   useEffect(() => {
     if (!payeeOpen) return
@@ -349,8 +367,21 @@ export function TransactionModal({ transaction, accounts, categories, history = 
               onChange={setCategoryId}
               placeholder="Uncategorised"
               options={[
-                { id: '', label: 'Uncategorised' },
-                ...categories.map(c => ({ id: c.id, label: c.name, glyph: c.icon, tint: c.color })),
+                { id: '', label: 'Uncategorised', glyph: 'lucide:Folder' },
+                // Parents, each followed by its own children, so a
+                // sub-category reads as one rather than as a stray top-level
+                // entry with a name that means nothing on its own.
+                ...categories.filter(c => !c.parentId).flatMap(parent => [
+                  { id: parent.id, label: parent.name, glyph: parent.icon, tint: parent.color },
+                  ...categories.filter(c => c.parentId === parent.id).map(child => ({
+                    id: child.id, label: `${parent.name} · ${child.name}`,
+                    glyph: child.icon, tint: child.color, nested: true,
+                  })),
+                ]),
+                // Anything whose parent has gone missing still has to be
+                // reachable, or it becomes a category you cannot pick.
+                ...categories.filter(c => c.parentId && !categories.some(p => p.id === c.parentId))
+                  .map(c => ({ id: c.id, label: c.name, glyph: c.icon, tint: c.color })),
               ]} />
           </div>
 
