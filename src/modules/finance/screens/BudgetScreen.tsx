@@ -1,10 +1,12 @@
-import { useState, useMemo, useRef } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import {
   DndContext, pointerWithin, PointerSensor, TouchSensor, useSensor, useSensors,
   useDraggable, useDroppable, DragOverlay, type DragEndEvent, type DragStartEvent,
 } from '@dnd-kit/core'
 import { useFinanceStore } from '../financeStore'
 import { CategoryModal } from '../modals/CategoryModal'
+import { CategoryGlyph } from '../components/CategoryGlyph'
+import { suggestIcon, isPlaceholderIcon, isLucideIcon } from '../categoryIcons'
 import {
   BudgetRuleModal, defaultRule, monthlyAmount, activeIn, type BudgetRule,
 } from '../modals/BudgetRuleModal'
@@ -170,7 +172,7 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
                 }}>
                 <span style={{ position: 'relative', display: 'flex' }}>
                   <Ring pct={pct} color={color} over={spentOut}>
-                    <span>{cat.icon}</span>
+                    <CategoryGlyph icon={cat.icon} size={21} color={color} />
                   </Ring>
                   {mixed.length > 0 && (
                     // Amounts are added up as they were entered; there are no
@@ -215,7 +217,7 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
                         background: '#F4EFE1', border: '1px solid #E4DCC6', color: '#4A4438',
                         fontSize: 11, boxSizing: 'border-box',
                       }}>
-                      <span style={{ fontSize: 11, flexShrink: 0 }}>{sub.icon}</span>
+                      <span style={{ display: 'flex', flexShrink: 0 }}><CategoryGlyph icon={sub.icon} size={12} /></span>
                       <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sub.name}</span>
                     </span>
                   )}
@@ -285,6 +287,29 @@ export function BudgetScreen(_props?: any) {
   // Which month the envelopes are about. The year lives in the store because it
   // decides what gets fetched; the month only decides what is shown.
   const [monthIdx, setMonthIdx] = useState(() => new Date().getMonth())
+
+  // ── One pass over what is already there ────────────────────────────────────
+  // Categories were carrying emoji — a folder for most of them, because that is
+  // what the picker opens on. Each one gets a line icon that means something,
+  // once, and only where the name says what it should be. An uploaded picture
+  // is left alone: somebody went and found that.
+  const reviewed = useRef(false)
+  useEffect(() => {
+    if (reviewed.current || categories.length === 0) return
+    try { if (localStorage.getItem('finance-icons-reviewed') === '1') { reviewed.current = true; return } } catch { /* ignore */ }
+    reviewed.current = true
+
+    for (const cat of categories) {
+      if (cat.icon?.startsWith('data:') || cat.icon?.startsWith('http')) continue
+      if (isLucideIcon(cat.icon)) continue
+      const suggested = suggestIcon(cat.name)
+      // Nothing sensible to say beats saying the wrong thing, unless what is
+      // there is a placeholder — then anything is an improvement.
+      const next = suggested ?? (isPlaceholderIcon(cat.icon) ? 'lucide:Folder' : null)
+      if (next && next !== cat.icon) void upsertCategory({ ...cat, icon: next })
+    }
+    try { localStorage.setItem('finance-icons-reviewed', '1') } catch { /* quota */ }
+  }, [categories, upsertCategory])
   const monthKey = `${year}-${String(monthIdx + 1).padStart(2, '0')}`
   const currency = (() => {
     try { return localStorage.getItem('finance-currency') || 'EGP' } catch { return 'EGP' }
@@ -469,7 +494,7 @@ export function BudgetScreen(_props?: any) {
   function addCategory() {
     const id = crypto.randomUUID()
     void upsertCategory({
-      id, name: '', icon: '📁', color: '#8C8071', isSystem: false, txType: 'expense',
+      id, name: '', icon: 'lucide:Folder', color: '#8C8071', isSystem: false, txType: 'expense',
     })
     setSelectedId(id)
   }
@@ -618,7 +643,7 @@ export function BudgetScreen(_props?: any) {
                     borderRadius: 999, background: '#FFFFFF', border: '1px solid #E8E1CE',
                     boxShadow: '0 8px 20px rgba(25,23,18,0.18)', fontSize: 12.5, color: '#191712',
                   }}>
-                    <span style={{ fontSize: 14 }}>{c.icon}</span>{c.name}
+                    <CategoryGlyph icon={c.icon} size={14} />{c.name}
                   </span>
                 ) : null
               })()}
@@ -677,7 +702,15 @@ export function BudgetScreen(_props?: any) {
           currency={currency}
           onChange={r => saveRule(selectedCat.id, r)}
           onDelete={() => deleteRule(selectedCat.id)}
-          onRename={patch => void upsertCategory({ ...selectedCat, ...patch })}
+          onRename={patch => {
+            const next = { ...selectedCat, ...patch }
+            // Named but never given an icon: guess from the name rather than
+            // leaving a folder on it.
+            if (patch.name && isPlaceholderIcon(next.icon)) {
+              next.icon = suggestIcon(patch.name) ?? next.icon
+            }
+            void upsertCategory(next)
+          }}
           onEditCategory={() => setCatModal({ category: selectedCat })}
           onAddSub={() => setCatModal({ category: { id: '', name: '', icon: '📁', color: '#8C8071', parentId: selectedCat.id, isSystem: false, txType: selectedCat.txType } })}
           onEditSub={sub => setCatModal({ category: sub })}
@@ -772,7 +805,7 @@ export function BudgetScreen(_props?: any) {
               {/* Drill header */}
               <div style={{ flexShrink: 0, borderBottom: '1px solid #E8E1CE', padding: '18px 24px 14px', background: '#FCFAF4' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-                  <span style={{ fontSize: 28 }}>{selectedCat.icon}</span>
+                  <CategoryGlyph icon={selectedCat.icon} size={26} />
                   <div style={{ flex: 1 }}>
                     <div style={{ fontFamily: 'Outfit, sans-serif', fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em', color: '#191712' }}>
                       {selectedCat.name}
@@ -837,7 +870,7 @@ export function BudgetScreen(_props?: any) {
                       }}>
                         {/* Sub-cat icon */}
                         <span style={{ fontSize: 18, flexShrink: 0, width: 28, textAlign: 'center' }}>
-                          {subCat?.icon ?? selectedCat.icon}
+                          <CategoryGlyph icon={subCat?.icon ?? selectedCat.icon} size={14} />
                         </span>
 
                         {/* Main info */}

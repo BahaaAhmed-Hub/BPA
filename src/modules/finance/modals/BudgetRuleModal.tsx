@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { X, ChevronDown, Check } from 'lucide-react'
 import type { Category, Transaction } from '../types'
 import { IconPicker } from '../components/IconPicker'
+import { CategoryGlyph } from '../components/CategoryGlyph'
 
 // ─── What an envelope is set to ──────────────────────────────────────────────
 // This was a whole right-hand column: an amount, a fixed-or-flexible pair, five
@@ -255,9 +256,7 @@ export function BudgetRuleModal({
                   border: `1px solid ${LINE}`, background: '#FAF7EC', cursor: 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
                 }}>
-                {category.icon.startsWith('data:') || category.icon.startsWith('http')
-                  ? <img src={category.icon} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  : <span style={{ fontSize: 21, lineHeight: 1 }}>{category.icon}</span>}
+                <CategoryGlyph icon={category.icon} size={21} color={INK} />
               </button>
             )}
           />
@@ -468,7 +467,7 @@ export function BudgetRuleModal({
                 background: 'none', border: 'none', borderBottom: `1px solid ${HAIR}`,
                 cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
               }}>
-              <span style={{ fontSize: 15 }}>{sub.icon}</span>
+              <CategoryGlyph icon={sub.icon} size={15} color={MUTED} />
               <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: INK, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sub.name}</span>
               {subSpend > 0 && (
                 <span style={{ fontFamily: DISPLAY, fontSize: 12, fontWeight: 600, color: tone, fontVariantNumeric: 'tabular-nums' }}>

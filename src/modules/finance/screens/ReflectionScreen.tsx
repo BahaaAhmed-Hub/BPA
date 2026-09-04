@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useFinanceStore } from '../financeStore'
+import { CategoryGlyph } from '../components/CategoryGlyph'
 
 // ─── 16F · Financials YTD ─────────────────────────────────────────────────────
 // Spreadsheet-style table: each income/expense category as a row,
@@ -182,7 +183,7 @@ export function ReflectionScreen(_props?: any) {
                   <td style={{ padding: '0 14px', height: ROW_H, position: 'sticky', left: 0, background: hidden ? '#FAF7EC' : '#FFFFFF', zIndex: 1 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                       {hidden && <span style={{ fontSize: 10, color: '#9B9180', textDecoration: 'line-through', marginRight: 2 }} />}
-                      <span style={{ fontSize: 12, color: cat.color, marginRight: 2 }}>{cat.icon}</span>
+                      <span style={{ display: 'inline-flex', verticalAlign: '-2px', color: cat.color, marginRight: 4 }}><CategoryGlyph icon={cat.icon} size={12} /></span>
                       <span style={{ fontSize: 13, color: hidden ? '#9B9180' : '#191712', textDecoration: hidden ? 'line-through' : 'none', fontWeight: 500 }}>{cat.name}</span>
                     </div>
                   </td>
@@ -215,7 +216,7 @@ export function ReflectionScreen(_props?: any) {
                 >
                   <td style={{ padding: '0 14px', height: ROW_H, position: 'sticky', left: 0, background: hidden ? '#FAF7EC' : '#FFFFFF', zIndex: 1 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                      <span style={{ fontSize: 12, color: cat.color, marginRight: 2 }}>{cat.icon}</span>
+                      <span style={{ display: 'inline-flex', verticalAlign: '-2px', color: cat.color, marginRight: 4 }}><CategoryGlyph icon={cat.icon} size={12} /></span>
                       <span style={{ fontSize: 13, color: hidden ? '#9B9180' : '#191712', textDecoration: hidden ? 'line-through' : 'none', fontWeight: 500 }}>{cat.name}</span>
                     </div>
                   </td>

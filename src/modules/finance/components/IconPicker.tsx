@@ -1,4 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
+import { Shapes } from 'lucide-react'
+import { LUCIDE_ICONS, LUCIDE_ORDER, LUCIDE_PREFIX } from '../categoryIcons'
 
 // ─── Emoji data ───────────────────────────────────────────────────────────────
 
@@ -59,7 +61,9 @@ interface Props {
 
 export function IconPicker({ value, onChange, size = 44, trigger }: Props) {
   const [open, setOpen] = useState(false)
-  const [tab, setTab] = useState('finance')
+  // Line icons first: they are what the rest of the app draws with, and a row
+  // of them reads as a set of labels rather than a row of small pictures.
+  const [tab, setTab] = useState('line')
   const [search, setSearch] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
@@ -215,6 +219,21 @@ export function IconPicker({ value, onChange, size = 44, trigger }: Props) {
               display: 'flex', overflowX: 'auto', padding: '8px 12px 4px',
               gap: 2, scrollbarWidth: 'none' as const,
             }}>
+              <button
+                type="button"
+                onClick={() => setTab('line')}
+                title="Line icons"
+                style={{
+                  flexShrink: 0, width: 32, height: 28,
+                  borderRadius: 6, border: 'none',
+                  background: tab === 'line' ? 'rgba(245,209,78,0.12)' : 'transparent',
+                  cursor: 'pointer', color: '#6C6553',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  outline: tab === 'line' ? `1px solid ${'#F5D14E'}44` : 'none',
+                }}
+              >
+                <Shapes size={15} strokeWidth={1.75} />
+              </button>
               {GROUPS.map(g => (
                 <button
                   key={g.id}
@@ -241,7 +260,29 @@ export function IconPicker({ value, onChange, size = 44, trigger }: Props) {
             gap: 2, padding: '6px 8px 10px',
             maxHeight: 220, overflowY: 'auto',
           }}>
-            {displayEmojis.map(emoji => (
+            {tab === 'line' && !search && LUCIDE_ORDER.map(name => {
+              const Icon = LUCIDE_ICONS[name]
+              const id = LUCIDE_PREFIX + name
+              if (!Icon) return null
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  title={name.replace(/([a-z])([A-Z0-9])/g, '$1 $2')}
+                  onClick={() => { onChange(id); setOpen(false); setSearch('') }}
+                  style={{
+                    width: 34, height: 34, borderRadius: 6,
+                    border: value === id ? `1px solid ${'#F5D14E'}` : '1px solid transparent',
+                    background: value === id ? 'rgba(245,209,78,0.12)' : 'transparent',
+                    cursor: 'pointer', color: '#4A4438',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}
+                >
+                  <Icon size={18} strokeWidth={1.75} />
+                </button>
+              )
+            })}
+            {(tab !== 'line' || search) && displayEmojis.map(emoji => (
               <button
                 key={emoji}
                 type="button"
@@ -259,7 +300,7 @@ export function IconPicker({ value, onChange, size = 44, trigger }: Props) {
                 {emoji}
               </button>
             ))}
-            {displayEmojis.length === 0 && (
+            {tab !== 'line' && displayEmojis.length === 0 && (
               <div style={{ gridColumn: 'span 8', padding: '16px 0', textAlign: 'center', fontSize: 13, color: '#6C6553' }}>
                 No emojis found
               </div>

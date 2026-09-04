@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { X, ChevronDown, Check } from 'lucide-react'
 import type { Category } from '../types'
 import { IconPicker } from '../components/IconPicker'
+import { CategoryGlyph } from '../components/CategoryGlyph'
 
 // ─── Naming a category ───────────────────────────────────────────────────────
 // The last window still in the old dialect: a bordered form with stacked
@@ -76,8 +77,6 @@ export function CategoryModal({ category, categories, onSave, onDelete, onClose 
     })
   }
 
-  const isImage = icon.startsWith('data:') || icon.startsWith('http')
-
   return (
     <div
       onClick={e => { if (e.target === e.currentTarget) onClose() }}
@@ -117,9 +116,7 @@ export function CategoryModal({ category, categories, onSave, onDelete, onClose 
                   border: `1px solid ${LINE}`, background: '#FAF7EC', cursor: 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
                 }}>
-                {isImage
-                  ? <img src={icon} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  : <span style={{ fontSize: 24, lineHeight: 1 }}>{icon}</span>}
+                <CategoryGlyph icon={icon} size={24} color={INK} />
               </button>
             )}
           />
@@ -169,7 +166,7 @@ export function CategoryModal({ category, categories, onSave, onDelete, onClose 
             <span style={{ flex: 1, minWidth: 0, position: 'relative', display: 'flex' }}>
               <span style={{ ...PILL, flex: 1, justifyContent: 'space-between' }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-                  {parent && <span style={{ fontSize: 15 }}>{parent.icon}</span>}
+                  {parent && <CategoryGlyph icon={parent.icon} size={15} color={MUTED} />}
                   <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: parent ? INK : GHOST }}>
                     {parent ? parent.name : 'Nothing — it stands on its own'}
                   </span>
