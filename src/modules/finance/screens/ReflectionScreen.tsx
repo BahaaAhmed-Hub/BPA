@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { ChevronDown, ChevronRight } from 'lucide-react'
 import { useFinanceStore } from '../financeStore'
 import { CategoryGlyph } from '../components/CategoryGlyph'
 
@@ -22,6 +23,93 @@ function netColor(v: number) { return v > 0 ? OLIVE : v < 0 ? RUST : '#9B9180' }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
+interface Line { cat: { id: string; name: string; icon: string; color: string }; amounts: number[] }
+interface Row extends Line { children: Line[] }
+
+/** One category's line, and — when it is open — its parts underneath. Both
+ *  sections drew this twice, with the same markup and slightly different
+ *  colours, which is how the income rows kept a stray element the expense ones
+ *  did not. */
+function CategoryRows({ row, tone, open, hidden, onToggleOpen, onToggleHide, months, ROW_H, numCell, fmt }: {
+  row: Row
+  tone: string
+  open: boolean
+  hidden: (id: string) => boolean
+  onToggleOpen: (id: string) => void
+  onToggleHide: (id: string) => void
+  months: number[]
+  ROW_H: number
+  numCell: (v: number, isNet?: boolean) => React.CSSProperties
+  fmt: (v: number) => string
+}) {
+  const isHidden = hidden(row.cat.id)
+  const total = months.reduce((s, v) => s + v, 0)
+  const kids = row.children
+
+  return (
+    <>
+      <tr
+        onClick={() => onToggleHide(row.cat.id)}
+        title={isHidden ? 'Click to include in totals' : 'Click to hide from totals'}
+        style={{ borderBottom: '1px solid #F0EBDC', cursor: 'pointer', background: isHidden ? '#FAF7EC' : 'transparent', opacity: isHidden ? 0.45 : 1 }}
+      >
+        <td style={{ padding: '0 14px', height: ROW_H, position: 'sticky', left: 0, background: isHidden ? '#FAF7EC' : '#FFFFFF', zIndex: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+            {/* The arrow opens the row; it must not also hide it. */}
+            {kids.length > 0 ? (
+              <button
+                onClick={e => { e.stopPropagation(); onToggleOpen(row.cat.id) }}
+                title={open ? 'Fold its sub-categories away' : `Show its ${kids.length} sub-categories`}
+                style={{
+                  width: 16, height: 16, padding: 0, flexShrink: 0, borderRadius: 4,
+                  background: 'none', border: 'none', cursor: 'pointer', color: '#9B9180',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                {open ? <ChevronDown size={13} strokeWidth={2.2} /> : <ChevronRight size={13} strokeWidth={2.2} />}
+              </button>
+            ) : <span style={{ width: 16, flexShrink: 0 }} />}
+            <span style={{ display: 'inline-flex', color: row.cat.color }}><CategoryGlyph icon={row.cat.icon} size={12} /></span>
+            <span style={{ fontSize: 13, color: isHidden ? '#9B9180' : '#191712', textDecoration: isHidden ? 'line-through' : 'none', fontWeight: 500 }}>
+              {row.cat.name}
+            </span>
+            {kids.length > 0 && !open && (
+              <span style={{ fontSize: 10, color: '#C5BCA8' }}>+{kids.length}</span>
+            )}
+          </div>
+        </td>
+        {months.map((v, mi) => <td key={mi} style={numCell(v)}>{fmt(v)}</td>)}
+        <td style={{ ...numCell(total), fontWeight: 700, color: total === 0 ? '#C5BCA8' : tone }}>{fmt(total)}</td>
+      </tr>
+
+      {open && kids.map(kid => {
+        const kidHidden = hidden(kid.cat.id) || isHidden
+        const kidTotal = kid.amounts.reduce((s, v) => s + v, 0)
+        return (
+          <tr key={kid.cat.id}
+            onClick={() => onToggleHide(kid.cat.id)}
+            title={hidden(kid.cat.id) ? 'Click to include in totals' : 'Click to hide from totals'}
+            style={{ borderBottom: '1px solid #F5F1E6', cursor: 'pointer', background: kidHidden ? '#FAF7EC' : '#FDFCF7', opacity: kidHidden ? 0.45 : 1 }}
+          >
+            <td style={{ padding: '0 14px', height: ROW_H - 4, position: 'sticky', left: 0, background: kidHidden ? '#FAF7EC' : '#FDFCF7', zIndex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 7, paddingLeft: 23 }}>
+                <span style={{ width: 8, height: 1, background: '#DCD3BF', flexShrink: 0 }} />
+                <span style={{ display: 'inline-flex', color: kid.cat.color }}><CategoryGlyph icon={kid.cat.icon} size={11} /></span>
+                <span style={{ fontSize: 12, color: kidHidden ? '#9B9180' : '#4A4438', textDecoration: hidden(kid.cat.id) ? 'line-through' : 'none' }}>
+                  {kid.cat.name}
+                </span>
+              </div>
+            </td>
+            {kid.amounts.map((v, mi) => (
+              <td key={mi} style={{ ...numCell(v), fontSize: 11.5, color: v === 0 ? '#D8D0BE' : '#6C6553' }}>{fmt(v)}</td>
+            ))}
+            <td style={{ ...numCell(kidTotal), fontSize: 11.5, fontWeight: 600, color: kidTotal === 0 ? '#D8D0BE' : tone, opacity: 0.85 }}>{fmt(kidTotal)}</td>
+          </tr>
+        )
+      })}
+    </>
+  )
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function ReflectionScreen(_props?: any) {
   const { transactions, categories } = useFinanceStore()
@@ -39,25 +127,37 @@ export function ReflectionScreen(_props?: any) {
     // Filter to the selected year
     const yearTx = transactions.filter(tx => tx.date.startsWith(String(year)))
 
-    // Parent categories only for grouping
-    const parentIncome  = categories.filter(c => !c.parentId && (c.txType === 'income' || c.txType === 'both'))
-    const parentExpense = categories.filter(c => !c.parentId && (c.txType === 'expense' || c.txType === 'both'))
+    const wants = (c: { txType: string }, kind: 'income' | 'expense') =>
+      c.txType === kind || c.txType === 'both'
 
-    // Also gather uncategorized
-    function buildRows(catList: typeof categories, types: string[]) {
-      return catList.map(cat => {
-        const amounts = MONTHS_SHORT.map((_, mi) => {
-          const prefix = `${year}-${String(mi + 1).padStart(2,'0')}`
-          return yearTx
-            .filter(tx => types.includes(tx.type) && tx.categoryId === cat.id && tx.date.startsWith(prefix))
-            .reduce((s, tx) => s + Math.abs(tx.amount), 0)
-        })
-        return { cat, amounts }
+    /** A month-by-month row for one category. `ids` is the category plus, for a
+     *  parent, its children — money filed under "Groceries · Fruit" is money
+     *  out of Groceries, and the parent's row said nothing about it before. */
+    function amountsFor(ids: Set<string>, type: 'income' | 'expense') {
+      return MONTHS_SHORT.map((_, mi) => {
+        const prefix = `${year}-${String(mi + 1).padStart(2, '0')}`
+        return yearTx
+          .filter(tx => tx.type === type && tx.categoryId && ids.has(tx.categoryId) && tx.date.startsWith(prefix))
+          .reduce((s, tx) => s + Math.abs(tx.amount), 0)
       })
     }
 
-    const incomeRows  = buildRows(parentIncome,  ['income'])
-    const expenseRows = buildRows(parentExpense, ['expense'])
+    function buildRows(kind: 'income' | 'expense') {
+      return categories
+        .filter(c => !c.parentId && wants(c, kind))
+        .map(cat => {
+          const kids = categories.filter(c => c.parentId === cat.id)
+          return {
+            cat,
+            // The parent's own line covers everything filed beneath it.
+            amounts: amountsFor(new Set([cat.id, ...kids.map(k => k.id)]), kind),
+            children: kids.map(kid => ({ cat: kid, amounts: amountsFor(new Set([kid.id]), kind) })),
+          }
+        })
+    }
+
+    const incomeRows  = buildRows('income')
+    const expenseRows = buildRows('expense')
 
     const monthlyIncome  = MONTHS_SHORT.map((_, mi) => {
       const prefix = `${year}-${String(mi + 1).padStart(2,'0')}`
@@ -81,9 +181,27 @@ export function ReflectionScreen(_props?: any) {
     })
   }
 
+  // Which parents are showing their parts.
+  const [openIds, setOpenIds] = useState<Set<string>>(new Set())
+  function toggleOpen(id: string) {
+    setOpenIds(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+
+  /** A parent's row already includes its children, so a hidden child has to
+   *  come off its parent's line too — otherwise hiding one changes nothing and
+   *  the totals disagree with the rows they are made of. */
+  function rowMonths(row: { cat: { id: string }; amounts: number[]; children: { cat: { id: string }; amounts: number[] }[] }) {
+    return row.amounts.map((v, mi) =>
+      v - row.children.reduce((s, c) => s + (hiddenIds.has(c.cat.id) ? c.amounts[mi] : 0), 0))
+  }
+
   // Visible income / expense sums per month (respecting hidden rows)
-  const visIncome  = MONTHS_SHORT.map((_, mi) => incomeRows.filter(r => !hiddenIds.has(r.cat.id)).reduce((s, r) => s + r.amounts[mi], 0))
-  const visExpense = MONTHS_SHORT.map((_, mi) => expenseRows.filter(r => !hiddenIds.has(r.cat.id)).reduce((s, r) => s + r.amounts[mi], 0))
+  const visIncome  = MONTHS_SHORT.map((_, mi) => incomeRows.filter(r => !hiddenIds.has(r.cat.id)).reduce((s, r) => s + rowMonths(r)[mi], 0))
+  const visExpense = MONTHS_SHORT.map((_, mi) => expenseRows.filter(r => !hiddenIds.has(r.cat.id)).reduce((s, r) => s + rowMonths(r)[mi], 0))
   const netPerMonth = MONTHS_SHORT.map((_, mi) => visIncome[mi] - visExpense[mi])
 
   // Cumulative (running) cash
@@ -171,29 +289,12 @@ export function ReflectionScreen(_props?: any) {
             <SectionHeader label="INCOME" colCount={12} colWidth={COL_W} nameWidth={NAME_W}
               monthTotals={monthlyIncome} rowTotal={monthlyIncome.reduce((s, v) => s + v, 0)} />
 
-            {incomeRows.map(({ cat, amounts }) => {
-              const hidden = hiddenIds.has(cat.id)
-              const total = amounts.reduce((s, v) => s + v, 0)
-              return (
-                <tr key={cat.id}
-                  onClick={() => toggleHide(cat.id)}
-                  title={hidden ? 'Click to include in totals' : 'Click to hide from totals'}
-                  style={{ borderBottom: '1px solid #F0EBDC', cursor: 'pointer', background: hidden ? '#FAF7EC' : 'transparent', opacity: hidden ? 0.45 : 1 }}
-                >
-                  <td style={{ padding: '0 14px', height: ROW_H, position: 'sticky', left: 0, background: hidden ? '#FAF7EC' : '#FFFFFF', zIndex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                      {hidden && <span style={{ fontSize: 10, color: '#9B9180', textDecoration: 'line-through', marginRight: 2 }} />}
-                      <span style={{ display: 'inline-flex', verticalAlign: '-2px', color: cat.color, marginRight: 4 }}><CategoryGlyph icon={cat.icon} size={12} /></span>
-                      <span style={{ fontSize: 13, color: hidden ? '#9B9180' : '#191712', textDecoration: hidden ? 'line-through' : 'none', fontWeight: 500 }}>{cat.name}</span>
-                    </div>
-                  </td>
-                  {amounts.map((v, mi) => (
-                    <td key={mi} style={numCell(v)}>{fmt(v)}</td>
-                  ))}
-                  <td style={{ ...numCell(total), fontWeight: 700, color: total === 0 ? '#C5BCA8' : OLIVE }}>{fmt(total)}</td>
-                </tr>
-              )
-            })}
+            {incomeRows.map(row => (
+              <CategoryRows key={row.cat.id} row={row} tone={OLIVE}
+                open={openIds.has(row.cat.id)} hidden={id => hiddenIds.has(id)}
+                onToggleOpen={toggleOpen} onToggleHide={toggleHide}
+                months={rowMonths(row)} ROW_H={ROW_H} numCell={numCell} fmt={fmt} />
+            ))}
 
             {/* Total income row */}
             <TotalRow label="Total income" months={visIncome} total={totalIncome} sign={1} COL_W={COL_W} NAME_W={NAME_W} />
@@ -205,28 +306,12 @@ export function ReflectionScreen(_props?: any) {
             <SectionHeader label="EXPENSES" colCount={12} colWidth={COL_W} nameWidth={NAME_W}
               monthTotals={monthlyExpense} rowTotal={monthlyExpense.reduce((s, v) => s + v, 0)} />
 
-            {expenseRows.map(({ cat, amounts }) => {
-              const hidden = hiddenIds.has(cat.id)
-              const total = amounts.reduce((s, v) => s + v, 0)
-              return (
-                <tr key={cat.id}
-                  onClick={() => toggleHide(cat.id)}
-                  title={hidden ? 'Click to include in totals' : 'Click to hide from totals'}
-                  style={{ borderBottom: '1px solid #F0EBDC', cursor: 'pointer', background: hidden ? '#FAF7EC' : 'transparent', opacity: hidden ? 0.45 : 1 }}
-                >
-                  <td style={{ padding: '0 14px', height: ROW_H, position: 'sticky', left: 0, background: hidden ? '#FAF7EC' : '#FFFFFF', zIndex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                      <span style={{ display: 'inline-flex', verticalAlign: '-2px', color: cat.color, marginRight: 4 }}><CategoryGlyph icon={cat.icon} size={12} /></span>
-                      <span style={{ fontSize: 13, color: hidden ? '#9B9180' : '#191712', textDecoration: hidden ? 'line-through' : 'none', fontWeight: 500 }}>{cat.name}</span>
-                    </div>
-                  </td>
-                  {amounts.map((v, mi) => (
-                    <td key={mi} style={numCell(v)}>{fmt(v)}</td>
-                  ))}
-                  <td style={{ ...numCell(total), fontWeight: 700, color: total === 0 ? '#C5BCA8' : RUST }}>{fmt(total)}</td>
-                </tr>
-              )
-            })}
+            {expenseRows.map(row => (
+              <CategoryRows key={row.cat.id} row={row} tone={RUST}
+                open={openIds.has(row.cat.id)} hidden={id => hiddenIds.has(id)}
+                onToggleOpen={toggleOpen} onToggleHide={toggleHide}
+                months={rowMonths(row)} ROW_H={ROW_H} numCell={numCell} fmt={fmt} />
+            ))}
 
             {/* Total expenses row */}
             <TotalRow label="Total expenses" months={visExpense} total={totalExpense} sign={-1} COL_W={COL_W} NAME_W={NAME_W} />
