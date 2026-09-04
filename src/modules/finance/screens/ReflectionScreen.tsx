@@ -1,7 +1,8 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import { useFinanceStore } from '../financeStore'
 import { CategoryGlyph } from '../components/CategoryGlyph'
+import { toBase, baseCurrency, currenciesNeedingRates } from '../fx'
 
 // ─── 16F · Financials YTD ─────────────────────────────────────────────────────
 // Spreadsheet-style table: each income/expense category as a row,
@@ -121,6 +122,14 @@ export function ReflectionScreen(_props?: any) {
   const setYear = useFinanceStore(s => s.setYear)
 
   const today = new Date()
+  const base = baseCurrency()
+
+  const [fxTick, setFxTick] = useState(0)
+  useEffect(() => {
+    const h = () => setFxTick(n => n + 1)
+    window.addEventListener('professor:fxRatesChanged', h)
+    return () => window.removeEventListener('professor:fxRatesChanged', h)
+  }, [])
 
   // Build categoryId → monthly amounts map for given year
   const { incomeRows, expenseRows, monthlyIncome, monthlyExpense } = useMemo(() => {
@@ -138,7 +147,10 @@ export function ReflectionScreen(_props?: any) {
         const prefix = `${year}-${String(mi + 1).padStart(2, '0')}`
         return yearTx
           .filter(tx => tx.type === type && tx.categoryId && ids.has(tx.categoryId) && tx.date.startsWith(prefix))
-          .reduce((s, tx) => s + Math.abs(tx.amount), 0)
+          // This added the raw figure whatever it was in, so a salary in USD
+          // was counted as though it were the same number of pounds. Converted
+          // now; something with no rate is left out and said so below.
+          .reduce((s, tx) => s + (toBase(Math.abs(tx.amount), tx.currency, base) ?? 0), 0)
       })
     }
 
@@ -159,17 +171,16 @@ export function ReflectionScreen(_props?: any) {
     const incomeRows  = buildRows('income')
     const expenseRows = buildRows('expense')
 
-    const monthlyIncome  = MONTHS_SHORT.map((_, mi) => {
+    const monthly = (type: 'income' | 'expense') => MONTHS_SHORT.map((_, mi) => {
       const prefix = `${year}-${String(mi + 1).padStart(2,'0')}`
-      return yearTx.filter(tx => tx.type === 'income' && tx.date.startsWith(prefix)).reduce((s, tx) => s + Math.abs(tx.amount), 0)
+      return yearTx.filter(tx => tx.type === type && tx.date.startsWith(prefix))
+        .reduce((s, tx) => s + (toBase(Math.abs(tx.amount), tx.currency, base) ?? 0), 0)
     })
-    const monthlyExpense = MONTHS_SHORT.map((_, mi) => {
-      const prefix = `${year}-${String(mi + 1).padStart(2,'0')}`
-      return yearTx.filter(tx => tx.type === 'expense' && tx.date.startsWith(prefix)).reduce((s, tx) => s + Math.abs(tx.amount), 0)
-    })
+    const monthlyIncome  = monthly('income')
+    const monthlyExpense = monthly('expense')
 
     return { incomeRows, expenseRows, monthlyIncome, monthlyExpense }
-  }, [transactions, categories, year])
+  }, [transactions, categories, year, base, fxTick])
 
   // Hidden rows (by category id) — toggling removes row from totals
   const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set())
@@ -180,6 +191,11 @@ export function ReflectionScreen(_props?: any) {
       return next
     })
   }
+
+  const needRates = useMemo(
+    () => currenciesNeedingRates(transactions.filter(t => t.date.startsWith(String(year))), base),
+    [transactions, year, base, fxTick],
+  )
 
   // Which parents are showing their parts.
   const [openIds, setOpenIds] = useState<Set<string>>(new Set())
@@ -248,6 +264,11 @@ export function ReflectionScreen(_props?: any) {
           </div>
           <span style={{ fontSize: 12, color: '#6C6553', marginTop: 3, display: 'block' }}>
             Every income &amp; expense line by month — hide any row and every total recalculates
+            {needRates.length > 0 && (
+              <span style={{ color: '#8A6D0B' }}>
+                {' · '}{needRates.join(' and ')} left out — no rate set, see Settings → Finance
+              </span>
+            )}
           </span>
         </div>
 

@@ -9,6 +9,7 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { useFinanceStore } from '../financeStore'
+import { toBase, baseCurrency, currenciesNeedingRates } from '../fx'
 import { AccountModal } from '../modals/AccountModal'
 import { TransactionModal } from '../modals/TransactionModal'
 import { IconPicker } from '../components/IconPicker'
@@ -228,16 +229,24 @@ export function BalanceScreen() {
     ])
   }
 
-  const paymentTotal = paymentAccounts.reduce((s, a) => s + a.balance, 0)
-  const creditTotal  = creditCards.reduce((s, a) => s + a.balance, 0)
-  const assetTotal   = otherAssets.reduce((s, a) => s + a.balance, 0)
+  // A USD account's balance is not the same number of pounds. Every total on
+  // this screen added it as though it were; converted now, and an account in a
+  // currency nobody has rated is left out rather than counted wrong.
+  const base = baseCurrency()
+  const inBase = (list: typeof accounts) =>
+    list.reduce((s, a) => s + (toBase(a.balance, a.currency, base) ?? 0), 0)
+  const unrated = currenciesNeedingRates(accounts, base)
+
+  const paymentTotal = inBase(paymentAccounts)
+  const creditTotal  = inBase(creditCards)
+  const assetTotal   = inBase(otherAssets)
 
   // Sorted transactions desc
   const sorted = [...transactions].sort((a, b) => b.date.localeCompare(a.date))
 
   // Held vs owed computations for net position card
-  const totalHeld = accounts.filter(a => a.balance > 0).reduce((s, a) => s + a.balance, 0)
-  const totalOwed = Math.abs(accounts.filter(a => a.balance < 0).reduce((s, a) => s + a.balance, 0))
+  const totalHeld = inBase(accounts.filter(a => a.balance > 0))
+  const totalOwed = Math.abs(inBase(accounts.filter(a => a.balance < 0)))
   const netPos    = totalHeld - totalOwed
   const heldPct   = totalHeld + totalOwed > 0 ? Math.round(totalHeld / (totalHeld + totalOwed) * 100) : 100
 
@@ -254,6 +263,11 @@ export function BalanceScreen() {
           <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: '#6C6553', display: 'block', marginBottom: 4 }}>MONEY</span>
           <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 30, fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1, color: '#191712', display: 'block' }}>Balances</span>
           <span style={{ fontSize: 12, color: '#6C6553', display: 'block', marginTop: 3 }}>
+            {unrated.length > 0 && (
+              <span style={{ color: '#8A6D0B' }}>
+                {unrated.join(' and ')} not in these totals — no rate set ·{' '}
+              </span>
+            )}
             {filter === 'Accounts'
               ? `${shown.length} account${shown.length !== 1 ? 's' : ''} · held vs owed and what's already committed`
               : filter === 'Cards'

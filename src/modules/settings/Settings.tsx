@@ -32,6 +32,7 @@ import {
   loadCachedCalendars, type CachedCalEntry,
 } from '@/lib/blockingRules'
 import { loadCustomStatuses, saveCustomStatuses, moveStatus, DEFAULT_STATUSES, type CustomStatus } from '@/lib/customStatuses'
+import { loadRates, setRate } from '@/modules/finance/fx'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -2339,6 +2340,7 @@ function FinanceSection() {
   const [categoryOrder, setCategoryOrder] = useState<'spend' | 'budget' | 'alpha' | 'custom'>(() => {
     try { return (localStorage.getItem('finance-category-order') as 'spend' | 'budget' | 'alpha' | 'custom') || 'spend' } catch { return 'spend' }
   })
+  const [fxRates, setFxRates] = useState<Record<string, number>>(loadRates)
 
   function saveStyle(s: EnvelopeStyle) {
     setEnvelopeStyle(s)
@@ -2494,6 +2496,44 @@ function FinanceSection() {
             })}
           </select>
         </FieldRow>
+        {/* Rates. "Everything converts to this" above was aspirational: there
+            was nothing to convert by, so foreign money was either added at
+            face value or left out of every total. */}
+        <div style={{ padding: '4px 0 2px' }}>
+          <div style={{ fontSize: 13, color: '#191712', fontWeight: 500 }}>Exchange rates</div>
+          <div style={{ fontSize: 11.5, color: '#9B9180', marginTop: 2, marginBottom: 10, lineHeight: 1.5 }}>
+            What one unit is worth in {currency}. Set by hand — there is no rate feed in here,
+            and a stale one would be its own kind of wrong. A currency left blank stays out of
+            the totals rather than being guessed at.
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {['USD', 'EUR', 'GBP', 'AED', 'SAR', 'KWD', 'QAR', 'EGP']
+              .filter(c => c !== currency)
+              .map(code => (
+                <label key={code} style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 7, height: 34, padding: '0 10px',
+                  borderRadius: 9, border: '1px solid #E8E1CE', background: '#FFFFFF',
+                }}>
+                  <span style={{ fontSize: 11.5, fontWeight: 700, color: '#6C6553' }}>1 {code}</span>
+                  <input
+                    type="number" min={0} step="0.0001" inputMode="decimal"
+                    defaultValue={fxRates[code] ?? ''}
+                    placeholder="—"
+                    onBlur={e => {
+                      const v = parseFloat(e.target.value)
+                      setRate(code, isFinite(v) && v > 0 ? v : null)
+                      setFxRates(loadRates())
+                    }}
+                    style={{
+                      width: 72, background: 'transparent', border: 'none', outline: 'none',
+                      fontFamily: 'inherit', fontSize: 12.5, color: '#191712', textAlign: 'right', padding: 0,
+                    }} />
+                  <span style={{ fontSize: 11, color: '#9B9180' }}>{currency}</span>
+                </label>
+              ))}
+          </div>
+        </div>
+
         <FieldRow label="Write numbers in full" sub={`${currency} 141,000 rather than 141K — abbreviations hide the size of things`}>
           <Toggle checked={numbersInFull} onChange={v => { setNumbersInFull(v); saveField('finance-numbers-in-full', String(v)) }} />
         </FieldRow>

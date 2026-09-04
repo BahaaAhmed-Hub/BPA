@@ -36,6 +36,7 @@ const SHARED_KEYS = [
   'finance-category-order',
   'finance-tab-order',
   'finance-currency',
+  'finance-fx-rates',            // what a dollar is worth, in your terms
   'finance-month-start',
   'finance-week-start',
   'finance-alert-threshold',
