@@ -8,6 +8,11 @@ import { toBase, baseCurrency, currenciesNeedingRates } from '../fx'
 // Spreadsheet-style table: each income/expense category as a row,
 // 12 monthly columns, totals + cumulative running cash at the bottom.
 
+/** A header cell that stays put needs its own bottom edge: with
+ *  border-collapse the row's border belongs to the cells under it, and those
+ *  scroll away. */
+const HEAD_EDGE: React.CSSProperties = { boxShadow: 'inset 0 -2px 0 #E8E1CE' }
+
 const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
 
 const OLIVE = '#5F7038'
@@ -54,7 +59,7 @@ function CategoryRows({ row, tone, open, hidden, onToggleOpen, onToggleHide, mon
         title={isHidden ? 'Click to include in totals' : 'Click to hide from totals'}
         style={{ borderBottom: '1px solid #F0EBDC', cursor: 'pointer', background: isHidden ? '#FAF7EC' : 'transparent', opacity: isHidden ? 0.45 : 1 }}
       >
-        <td style={{ padding: '0 14px', height: ROW_H, position: 'sticky', left: 0, background: isHidden ? '#FAF7EC' : '#FFFFFF', zIndex: 1 }}>
+        <td style={{ padding: '0 14px', height: ROW_H, position: 'sticky', left: 0, background: isHidden ? '#FAF7EC' : '#FFFFFF', zIndex: 2 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
             {/* The arrow opens the row; it must not also hide it. */}
             {kids.length > 0 ? (
@@ -91,7 +96,7 @@ function CategoryRows({ row, tone, open, hidden, onToggleOpen, onToggleHide, mon
             title={hidden(kid.cat.id) ? 'Click to include in totals' : 'Click to hide from totals'}
             style={{ borderBottom: '1px solid #F5F1E6', cursor: 'pointer', background: kidHidden ? '#FAF7EC' : '#FDFCF7', opacity: kidHidden ? 0.45 : 1 }}
           >
-            <td style={{ padding: '0 14px', height: ROW_H - 4, position: 'sticky', left: 0, background: kidHidden ? '#FAF7EC' : '#FDFCF7', zIndex: 1 }}>
+            <td style={{ padding: '0 14px', height: ROW_H - 4, position: 'sticky', left: 0, background: kidHidden ? '#FAF7EC' : '#FDFCF7', zIndex: 2 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 7, paddingLeft: 23 }}>
                 <span style={{ width: 8, height: 1, background: '#DCD3BF', flexShrink: 0 }} />
                 <span style={{ display: 'inline-flex', color: kid.cat.color }}><CategoryGlyph icon={kid.cat.icon} size={11} /></span>
@@ -303,8 +308,8 @@ export function ReflectionScreen(_props?: any) {
 
           {/* Column headers */}
           <thead>
-            <tr style={{ background: '#FCFAF4', borderBottom: '2px solid #E8E1CE' }}>
-              <th style={{ width: NAME_W, minWidth: NAME_W, textAlign: 'left', padding: '8px 14px', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: '#9B9180', position: 'sticky', left: 0, background: '#FCFAF4', zIndex: 2 }}>
+            <tr style={{ background: '#FCFAF4' }}>
+              <th style={{ width: NAME_W, minWidth: NAME_W, textAlign: 'left', padding: '8px 14px', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: '#9B9180', position: 'sticky', top: 0, left: 0, background: '#FCFAF4', zIndex: 4, ...HEAD_EDGE }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                   <span>CATEGORY</span>
                   {foldable.length > 0 && (
@@ -324,9 +329,9 @@ export function ReflectionScreen(_props?: any) {
                 </span>
               </th>
               {MONTHS_SHORT.map(m => (
-                <th key={m} style={{ width: COL_W, minWidth: COL_W, textAlign: 'right', padding: '8px 10px', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: '#9B9180' }}>{m.toUpperCase()}</th>
+                <th key={m} style={{ width: COL_W, minWidth: COL_W, textAlign: 'right', padding: '8px 10px', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: '#9B9180', position: 'sticky', top: 0, background: '#FCFAF4', zIndex: 3, ...HEAD_EDGE }}>{m.toUpperCase()}</th>
               ))}
-              <th style={{ width: 100, textAlign: 'right', padding: '8px 14px', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: '#9B9180' }}>TOTAL</th>
+              <th style={{ width: 100, textAlign: 'right', padding: '8px 14px', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: '#9B9180', position: 'sticky', top: 0, background: '#FCFAF4', zIndex: 3, ...HEAD_EDGE }}>TOTAL</th>
             </tr>
           </thead>
 
@@ -388,7 +393,7 @@ function SectionHeader({ label, colCount: _colCount, colWidth, nameWidth: _nameW
 }) {
   return (
     <tr style={{ background: '#F0EBDC', borderTop: '1px solid #E8E1CE', borderBottom: '1px solid #E8E1CE' }}>
-      <td style={{ padding: '5px 14px', position: 'sticky', left: 0, background: '#F0EBDC', zIndex: 1 }}>
+      <td style={{ padding: '5px 14px', position: 'sticky', left: 0, background: '#F0EBDC', zIndex: 2 }}>
         <span style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.1em', color: '#6C6553' }}>{label}</span>
       </td>
       {monthTotals.map((v, i) => (
@@ -410,7 +415,7 @@ function TotalRow({ label, months, total, sign, COL_W, NAME_W: _NAME_W }: {
   const col = sign === 1 ? OLIVE : RUST
   return (
     <tr style={{ background: '#F7F4EA', borderTop: '2px solid #E8E1CE', borderBottom: '2px solid #E8E1CE' }}>
-      <td style={{ padding: '0 14px', height: 38, position: 'sticky', left: 0, background: '#F7F4EA', zIndex: 1 }}>
+      <td style={{ padding: '0 14px', height: 38, position: 'sticky', left: 0, background: '#F7F4EA', zIndex: 2 }}>
         <span style={{ fontSize: 12.5, fontWeight: 700, color: '#191712' }}>{label}</span>
       </td>
       {months.map((v, mi) => (
@@ -430,7 +435,7 @@ function NetRow({ label, months, total, COL_W, NAME_W: _NAME_W2 }: {
 }) {
   return (
     <tr style={{ background: '#FCFAF4', borderBottom: '1px solid #E8E1CE' }}>
-      <td style={{ padding: '0 14px', height: 38, position: 'sticky', left: 0, background: '#FCFAF4', zIndex: 1 }}>
+      <td style={{ padding: '0 14px', height: 38, position: 'sticky', left: 0, background: '#FCFAF4', zIndex: 2 }}>
         <span style={{ fontSize: 12.5, fontWeight: 700, color: '#191712' }}>{label}</span>
       </td>
       {months.map((v, mi) => (
@@ -448,7 +453,7 @@ function NetRow({ label, months, total, COL_W, NAME_W: _NAME_W2 }: {
 function CumulativeRow({ months, COL_W, NAME_W: _NAME_W3 }: { months: number[]; COL_W: number; NAME_W: number }) {
   return (
     <tr style={{ background: '#191712', borderBottom: '1px solid #2C2920' }}>
-      <td style={{ padding: '0 14px', height: 40, position: 'sticky', left: 0, background: '#191712', zIndex: 1 }}>
+      <td style={{ padding: '0 14px', height: 40, position: 'sticky', left: 0, background: '#191712', zIndex: 2 }}>
         <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', color: '#8A8272' }}>CUMULATIVE CASH</span>
       </td>
       {months.map((v, mi) => (
