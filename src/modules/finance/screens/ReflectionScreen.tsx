@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
-import { ChevronDown, ChevronRight } from 'lucide-react'
+import { ChevronDown, ChevronRight, ChevronsUpDown, ChevronsDownUp } from 'lucide-react'
 import { useFinanceStore } from '../financeStore'
 import { CategoryGlyph } from '../components/CategoryGlyph'
 import { toBase, baseCurrency, currenciesNeedingRates } from '../fx'
@@ -207,6 +207,14 @@ export function ReflectionScreen(_props?: any) {
     })
   }
 
+  // Every row that has anything to open. Opening them one at a time is fine
+  // for two; with a dozen it is the only thing you do before reading anything.
+  const foldable = [...incomeRows, ...expenseRows].filter(r => r.children.length).map(r => r.cat.id)
+  const allOpen  = foldable.length > 0 && foldable.every(id => openIds.has(id))
+  function toggleAll() {
+    setOpenIds(allOpen ? new Set() : new Set(foldable))
+  }
+
   /** A parent's row already includes its children, so a hidden child has to
    *  come off its parent's line too — otherwise hiding one changes nothing and
    *  the totals disagree with the rows they are made of. */
@@ -296,7 +304,25 @@ export function ReflectionScreen(_props?: any) {
           {/* Column headers */}
           <thead>
             <tr style={{ background: '#FCFAF4', borderBottom: '2px solid #E8E1CE' }}>
-              <th style={{ width: NAME_W, minWidth: NAME_W, textAlign: 'left', padding: '8px 14px', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: '#9B9180', position: 'sticky', left: 0, background: '#FCFAF4', zIndex: 2 }}>CATEGORY</th>
+              <th style={{ width: NAME_W, minWidth: NAME_W, textAlign: 'left', padding: '8px 14px', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: '#9B9180', position: 'sticky', left: 0, background: '#FCFAF4', zIndex: 2 }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                  <span>CATEGORY</span>
+                  {foldable.length > 0 && (
+                    <button
+                      onClick={toggleAll}
+                      title={allOpen ? 'Fold every sub-category away' : `Open all ${foldable.length} that have sub-categories`}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 4, height: 20,
+                        padding: '0 7px', borderRadius: 999, cursor: 'pointer',
+                        background: '#FFFFFF', border: '1px solid #E8E1CE', color: '#6C6553',
+                        fontFamily: 'inherit', fontSize: 9.5, fontWeight: 600, letterSpacing: '0.04em',
+                      }}>
+                      {allOpen ? <ChevronsDownUp size={11} strokeWidth={2.2} /> : <ChevronsUpDown size={11} strokeWidth={2.2} />}
+                      {allOpen ? 'COLLAPSE ALL' : 'EXPAND ALL'}
+                    </button>
+                  )}
+                </span>
+              </th>
               {MONTHS_SHORT.map(m => (
                 <th key={m} style={{ width: COL_W, minWidth: COL_W, textAlign: 'right', padding: '8px 10px', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: '#9B9180' }}>{m.toUpperCase()}</th>
               ))}
