@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, Fragment } from 'react'
 import { Shapes } from 'lucide-react'
-import { LUCIDE_ICONS, LUCIDE_ORDER, LUCIDE_PREFIX } from '../categoryIcons'
+import { LUCIDE_ICONS, LUCIDE_SECTIONS, LUCIDE_PREFIX, searchLucide } from '../categoryIcons'
 
 // ─── Emoji data ───────────────────────────────────────────────────────────────
 
@@ -57,6 +57,29 @@ interface Props {
   trigger?: (onClick: (e: React.MouseEvent) => void, isOpen: boolean) => React.ReactNode
 }
 
+function LineCell({ name, value, onPick }: { name: string; value: string; onPick: (id: string) => void }) {
+  const Icon = LUCIDE_ICONS[name]
+  const id = LUCIDE_PREFIX + name
+  if (!Icon) return null
+  const on = value === id
+  return (
+    <button
+      type="button"
+      title={name.replace(/([a-z])([A-Z0-9])/g, '$1 $2')}
+      onClick={() => onPick(id)}
+      style={{
+        width: 34, height: 34, borderRadius: 6,
+        border: on ? `1px solid ${'#F5D14E'}` : '1px solid transparent',
+        background: on ? 'rgba(245,209,78,0.12)' : 'transparent',
+        cursor: 'pointer', color: '#4A4438',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}
+    >
+      <Icon size={18} strokeWidth={1.75} />
+    </button>
+  )
+}
+
 // ─── IconPicker ────────────────────────────────────────────────────────────────
 
 export function IconPicker({ value, onChange, size = 44, trigger }: Props) {
@@ -87,6 +110,9 @@ export function IconPicker({ value, onChange, size = 44, trigger }: Props) {
         GROUPS.some(g => g.emojis.includes(e) && g.title.toLowerCase().includes(search.toLowerCase()))
       ).slice(0, 80)
     : null
+
+  const lineHits = tab === 'line' && search ? searchLucide(search) : []
+  const pickLine = (id: string) => { onChange(id); setOpen(false); setSearch('') }
 
   const currentGroup = GROUPS.find(g => g.id === tab) ?? GROUPS[0]
   const displayEmojis = searchResults ?? currentGroup.emojis
@@ -152,7 +178,7 @@ export function IconPicker({ value, onChange, size = 44, trigger }: Props) {
             <input
               autoFocus
               type="text"
-              placeholder="Search emojis…"
+              placeholder={tab === 'line' ? 'Search icons…' : 'Search emojis…'}
               value={search}
               onChange={e => setSearch(e.target.value)}
               style={{
@@ -260,29 +286,25 @@ export function IconPicker({ value, onChange, size = 44, trigger }: Props) {
             gap: 2, padding: '6px 8px 10px',
             maxHeight: 220, overflowY: 'auto',
           }}>
-            {tab === 'line' && !search && LUCIDE_ORDER.map(name => {
-              const Icon = LUCIDE_ICONS[name]
-              const id = LUCIDE_PREFIX + name
-              if (!Icon) return null
-              return (
-                <button
-                  key={id}
-                  type="button"
-                  title={name.replace(/([a-z])([A-Z0-9])/g, '$1 $2')}
-                  onClick={() => { onChange(id); setOpen(false); setSearch('') }}
-                  style={{
-                    width: 34, height: 34, borderRadius: 6,
-                    border: value === id ? `1px solid ${'#F5D14E'}` : '1px solid transparent',
-                    background: value === id ? 'rgba(245,209,78,0.12)' : 'transparent',
-                    cursor: 'pointer', color: '#4A4438',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}
-                >
-                  <Icon size={18} strokeWidth={1.75} />
-                </button>
-              )
-            })}
-            {(tab !== 'line' || search) && displayEmojis.map(emoji => (
+            {tab === 'line' && (search ? (
+              lineHits.length
+                ? lineHits.map(name => <LineCell key={name} name={name} value={value} onPick={pickLine} />)
+                : <div style={{ gridColumn: '1 / -1', padding: '18px 4px', textAlign: 'center', fontSize: 12, color: '#9B9180' }}>
+                    Nothing called that
+                  </div>
+            ) : (
+              LUCIDE_SECTIONS.map(([title, names]) => (
+                <Fragment key={title}>
+                  <div style={{
+                    gridColumn: '1 / -1', padding: '8px 2px 3px',
+                    fontSize: 9.5, fontWeight: 700, letterSpacing: '0.11em',
+                    color: '#9B9180', textTransform: 'uppercase',
+                  }}>{title}</div>
+                  {names.map(name => <LineCell key={name} name={name} value={value} onPick={pickLine} />)}
+                </Fragment>
+              ))
+            ))}
+            {tab !== 'line' && displayEmojis.map(emoji => (
               <button
                 key={emoji}
                 type="button"
