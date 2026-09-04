@@ -25,8 +25,8 @@ const AMBER = '#F5D14E'
 // spent. It reads at a glance in a way a row of bars does not: you see which
 // envelopes are nearly empty without reading a single number.
 
-function Ring({ pct, color, over, size = 58, children }: {
-  pct: number; color: string; over?: boolean; size?: number; children: React.ReactNode
+function Ring({ pct, color, over, budgeted, size = 58, children }: {
+  pct: number; color: string; over?: boolean; budgeted?: boolean; size?: number; children: React.ReactNode
 }) {
   const stroke = 3.5
   const r = (size - stroke) / 2
@@ -35,7 +35,15 @@ function Ring({ pct, color, over, size = 58, children }: {
   return (
     <span style={{ position: 'relative', width: size, height: size, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
       <svg width={size} height={size} style={{ position: 'absolute', inset: 0 }}>
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#EDE7D9" strokeWidth={stroke} />
+        {/* The rim itself says whether anything was ever set here: a solid
+            track is an envelope with a budget, a broken one is a category
+            that has never been given a limit to be measured against. */}
+        <circle
+          cx={size / 2} cy={size / 2} r={r} fill="none"
+          stroke={budgeted ? '#EDE7D9' : '#DCD3BF'}
+          strokeWidth={budgeted ? stroke : 1.5}
+          strokeDasharray={budgeted ? undefined : '3 4'}
+          strokeLinecap="round" />
         {filled > 0 && (
           <circle
             cx={size / 2} cy={size / 2} r={r} fill="none"
@@ -107,7 +115,7 @@ interface EnvelopeRow {
   planned: number
   /** What this envelope is kept in, which need not be the app's default. */
   cur: string
-  children: Category[]
+  children: { cat: Category; budgeted: boolean }[]
   currencies: string[]
 }
 
@@ -125,10 +133,20 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
   const inStep = rows.filter(r => r.cur === currency)
   const total  = inStep.reduce((s, r) => s + r.actual, 0)
   const aside  = rows.length - inStep.length
+  // Counting the children too: a sub-category with a budget is an envelope
+  // like any other, it just lives inside one.
+  const all       = rows.length + rows.reduce((n, r) => n + r.children.length, 0)
+  const withMoney = rows.filter(r => r.planned > 0).length
+                  + rows.reduce((n, r) => n + r.children.filter(c => c.budgeted).length, 0)
   return (
     <div style={{ background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 14, boxShadow: '0 1px 3px rgba(25,23,18,0.06)', padding: '15px 18px 18px' }}>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 14 }}>
         <span style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.12em', color: '#6C6553' }}>{title.toUpperCase()}</span>
+        {all > 0 && (
+          <span style={{ fontSize: 10.5, color: withMoney === all ? '#5F7038' : '#9B9180' }}>
+            {withMoney} of {all} budgeted
+          </span>
+        )}
         <span style={{ flex: 1 }} />
         <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
           <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 14, fontWeight: 600, color, fontVariantNumeric: 'tabular-nums' }}>
@@ -147,7 +165,11 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
       ) : (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '18px 14px' }}>
           {rows.map(({ cat, actual, planned, cur, children, currencies }) => {
-            const pct  = planned > 0 ? actual / planned : (actual > 0 ? 1 : 0)
+            // Spending with nothing set is not a full envelope. This drew a
+            // complete ring for it, which reads as "at its limit" — the one
+            // thing it cannot be when no limit exists.
+            const budgeted = planned > 0
+            const pct = budgeted ? actual / planned : 0
             // Not `over`: the drop zone's render prop is called that, and this
             // one would quietly lose to it inside the ring.
             const spentOut = planned > 0 && actual > planned
@@ -171,7 +193,7 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
                   display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7,
                 }}>
                 <span style={{ position: 'relative', display: 'flex' }}>
-                  <Ring pct={pct} color={color} over={spentOut}>
+                  <Ring pct={pct} color={color} over={spentOut} budgeted={budgeted}>
                     <CategoryGlyph icon={cat.icon} size={21} color={color} />
                   </Ring>
                   {mixed.length > 0 && (
@@ -195,9 +217,18 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
                   <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 12, fontWeight: 600, color: spentOut ? color : '#191712', fontVariantNumeric: 'tabular-nums' }}>
                     {actual.toLocaleString('en-US', { maximumFractionDigits: 0 })}
                   </span>
-                  <span style={{ fontSize: 10, color: '#9B9180', fontVariantNumeric: 'tabular-nums' }}>
-                    {planned > 0 ? planned.toLocaleString('en-US', { maximumFractionDigits: 0 }) : 'no budget'}
-                  </span>
+                  {budgeted ? (
+                    <span style={{ fontSize: 10, color: '#9B9180', fontVariantNumeric: 'tabular-nums' }}>
+                      {planned.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                    </span>
+                  ) : (
+                    // Not a fact about the category — something to go and do.
+                    <span style={{
+                      display: 'inline-flex', alignItems: 'center', height: 16, padding: '0 7px',
+                      borderRadius: 999, border: '1px dashed #D8CFB8', color: '#9B9180',
+                      fontSize: 9.5, whiteSpace: 'nowrap',
+                    }}>set a budget</span>
+                  )}
                 </span>
               </button>
                 )}
@@ -207,16 +238,19 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
 
               {/* Its children, so the shape is visible and each one can be
                   dragged somewhere else — including out. */}
-              {children.map(sub => (
+              {children.map(({ cat: sub, budgeted: subBudgeted }) => (
                 <Draggable key={sub.id} id={sub.id}>
                   {() => (
                     <button onClick={() => onPick(sub.id)}
-                      title={`${sub.name} — inside ${cat.name}. Click to edit it, or drag it out to stand on its own.`}
+                      title={`${sub.name} — inside ${cat.name}${subBudgeted ? '' : ', with no budget of its own'}. Click to edit it, or drag it out to stand on its own.`}
                       style={{
                         display: 'inline-flex', alignItems: 'center', gap: 5, maxWidth: 104,
                         height: 24, padding: '0 9px', borderRadius: 999, cursor: 'pointer',
-                        background: selectedId === sub.id ? 'rgba(245,209,78,0.28)' : '#F4EFE1',
-                        border: '1px solid #E4DCC6', color: '#4A4438',
+                        background: selectedId === sub.id ? 'rgba(245,209,78,0.28)' : subBudgeted ? '#F4EFE1' : 'transparent',
+                        // Same idea as the rings above: solid means a budget,
+                        // broken means nothing has been set.
+                        border: subBudgeted ? '1px solid #E4DCC6' : '1px dashed #DCD3BF',
+                        color: subBudgeted ? '#4A4438' : '#9B9180',
                         fontSize: 11, boxSizing: 'border-box', fontFamily: 'inherit',
                       }}>
                       <span style={{ display: 'flex', flexShrink: 0 }}><CategoryGlyph icon={sub.icon} size={12} /></span>
@@ -421,7 +455,10 @@ export function BudgetScreen(_props?: any) {
       // look untouched. And a budget that has not begun, or has ended, is not
       // a budget this month — both ends were collected and never consulted.
       const planned = activeIn(rule, monthKey) ? monthlyAmount(rule) : 0
-      const children = categories.filter(c => c.parentId === cat.id)
+      const children = categories.filter(c => c.parentId === cat.id).map(child => ({
+        cat: child,
+        budgeted: activeIn(rules[child.id], monthKey) && monthlyAmount(rules[child.id]) > 0,
+      }))
       return { cat, actual, planned, cur, children, currencies: [...currencies] }
     }
     const all = parents.map(build)
