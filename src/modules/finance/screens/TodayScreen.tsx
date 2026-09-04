@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { useFinanceStore } from '../financeStore'
-import { BudgetQuickPay } from '../components/BudgetQuickPay'
 import { CategoryGlyph } from '../components/CategoryGlyph'
 import { TransactionModal } from '../modals/TransactionModal'
 import type { Transaction } from '../types'
@@ -330,11 +329,6 @@ export function TodayScreen() {
           onPrevMonth={prevMonth}
           onNextMonth={nextMonth}
         />
-
-        {/* The envelopes, where the money is actually being looked at */}
-        <div style={{ marginTop: 18 }}>
-          <BudgetQuickPay />
-        </div>
 
         {/* Selected day summary */}
         {selectedDay && selectedDayTx.length > 0 && (
