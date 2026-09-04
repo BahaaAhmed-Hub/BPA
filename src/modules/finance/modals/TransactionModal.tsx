@@ -1,6 +1,10 @@
-import { useState, useRef } from 'react'
-import { X, ChevronDown, Plus, Paperclip, Check } from 'lucide-react'
+import { useState, useRef, useEffect, useMemo } from 'react'
+import {
+  X, ChevronDown, Plus, Paperclip, Check,
+  MessageSquare, Image as ImageIcon, Hash, User, Repeat,
+} from 'lucide-react'
 import type { Transaction, Account, Category, Currency, TxType } from '../types'
+import { knownPayees, matchPayees, rememberPayee } from '../payees'
 
 // ─── The panel's own vocabulary ───────────────────────────────────────────────
 // Same set the calendar's event panel uses: one pill for every value whether
@@ -33,48 +37,96 @@ const LABEL: React.CSSProperties = {
 const ROW: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 10,
 }
-const SECTION: React.CSSProperties = {
-  fontFamily: DISPLAY, fontSize: 15, fontWeight: 600, letterSpacing: '-0.01em', color: INK,
-}
 const RULE: React.CSSProperties = { height: 1, background: HAIR, margin: '18px 0' }
 
-/** A select you cannot see, sitting exactly on top of a pill you can. The
- *  browser's own picker is the right control on a phone and an iPad, and it is
- *  the one the calendar panel uses for the same job. */
-function PillSelect({ value, onChange, children, label }: {
+export interface PickOption {
+  id: string
+  label: string
+  /** An emoji, or a data/http URL for a real logo. */
+  glyph?: string
+  tint?: string
+}
+
+/** A list you can put a bank's actual logo in. The native select was the right
+ *  call until the accounts needed their marks: an <option> can hold text and
+ *  nothing else, so every account looked the same in the one place you pick
+ *  between them. */
+function PillPicker({ value, options, onChange, placeholder }: {
   value: string
-  onChange: (v: string) => void
-  children: React.ReactNode
-  label: React.ReactNode
+  options: PickOption[]
+  onChange: (id: string) => void
+  placeholder: string
 }) {
+  const [open, setOpen] = useState(false)
+  const box = useRef<HTMLSpanElement>(null)
+  const chosen = options.find(o => o.id === value)
+
+  useEffect(() => {
+    if (!open) return
+    const away = (e: Event) => { if (box.current && !box.current.contains(e.target as Node)) setOpen(false) }
+    const esc  = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false) }
+    document.addEventListener('pointerdown', away)
+    document.addEventListener('keydown', esc)
+    return () => { document.removeEventListener('pointerdown', away); document.removeEventListener('keydown', esc) }
+  }, [open])
+
   return (
-    <span style={{ flex: 1, minWidth: 0, position: 'relative', display: 'flex' }}>
-      <span style={{ ...PILL, flex: 1, justifyContent: 'space-between' }}>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {label}
+    <span ref={box} style={{ flex: 1, minWidth: 0, position: 'relative', display: 'flex' }}>
+      <button type="button" onClick={() => setOpen(o => !o)}
+        style={{ ...PILL, flex: 1, justifyContent: 'space-between' }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+          {chosen ? <Glyph glyph={chosen.glyph} tint={chosen.tint} /> : null}
+          <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: chosen ? INK : GHOST }}>
+            {chosen?.label ?? placeholder}
+          </span>
         </span>
         <ChevronDown size={13} strokeWidth={2} style={{ color: GHOST, flexShrink: 0 }} />
-      </span>
-      <select value={value} onChange={e => onChange(e.target.value)}
-        style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', border: 'none' }}>
-        {children}
-      </select>
+      </button>
+
+      {open && (
+        <div style={{
+          position: 'absolute', top: 46, left: 0, right: 0, zIndex: 20,
+          maxHeight: 244, overflowY: 'auto', padding: 5,
+          background: '#FFFFFF', border: `1px solid ${LINE}`, borderRadius: 12,
+          boxShadow: '0 12px 32px rgba(25,23,18,0.18)',
+        }}>
+          {options.length === 0 && (
+            <div style={{ padding: '10px 12px', fontSize: 12.5, color: GHOST }}>Nothing to choose from yet</div>
+          )}
+          {options.map(o => {
+            const on = o.id === value
+            return (
+              <button key={o.id} type="button"
+                onClick={() => { onChange(o.id); setOpen(false) }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+                  padding: '9px 10px', border: 'none', borderRadius: 8, cursor: 'pointer',
+                  background: on ? 'rgba(245,209,78,0.18)' : 'transparent',
+                  fontFamily: 'inherit', fontSize: 13.5, color: INK, textAlign: 'left',
+                }}>
+                <Glyph glyph={o.glyph} tint={o.tint} />
+                <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.label}</span>
+                {on && <Check size={14} strokeWidth={2.5} style={{ color: '#8A6D0B', flexShrink: 0 }} />}
+              </button>
+            )
+          })}
+        </div>
+      )}
     </span>
   )
 }
 
-function AccountGlyph({ account, size = 20 }: { account?: Account; size?: number }) {
-  if (!account) return <span style={{ fontSize: size * 0.75 }}>🏦</span>
-  const isImg = account.emoji.startsWith('data:') || account.emoji.startsWith('http')
+function Glyph({ glyph, tint, size = 22 }: { glyph?: string; tint?: string; size?: number }) {
+  const isImage = !!glyph && (glyph.startsWith('data:') || glyph.startsWith('http'))
   return (
     <span style={{
       width: size, height: size, borderRadius: 6, flexShrink: 0, overflow: 'hidden',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: `${account.color}22`,
+      background: tint ? `${tint}22` : '#F1ECDE',
     }}>
-      {isImg
-        ? <img src={account.emoji} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-        : <span style={{ fontSize: size * 0.62 }}>{account.emoji}</span>}
+      {isImage
+        ? <img src={glyph} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        : <span style={{ fontSize: size * 0.64, lineHeight: 1 }}>{glyph ?? '•'}</span>}
     </span>
   )
 }
@@ -83,6 +135,8 @@ interface Props {
   transaction?: Transaction | null
   accounts: Account[]
   categories: Category[]
+  /** Every transaction there is — the payee suggestions are read from them. */
+  history?: Transaction[]
   onSave: (tx: Transaction) => void
   onDelete?: (id: string) => void
   onClose: () => void
@@ -94,7 +148,7 @@ const TYPES: { id: TxType; label: string }[] = [
   { id: 'transfer', label: 'Transfer' },
 ]
 
-export function TransactionModal({ transaction, accounts, categories, onSave, onDelete, onClose }: Props) {
+export function TransactionModal({ transaction, accounts, categories, history = [], onSave, onDelete, onClose }: Props) {
   const isEdit = !!transaction
   const todayStr = new Date().toISOString().slice(0, 10)
 
@@ -106,15 +160,39 @@ export function TransactionModal({ transaction, accounts, categories, onSave, on
   const [accountId,   setAccountId]   = useState(transaction?.accountId           ?? (accounts[0]?.id ?? ''))
   const [categoryId,  setCategoryId]  = useState(transaction?.categoryId          ?? '')
   const [date,        setDate]        = useState(transaction?.date                ?? todayStr)
+  // Two dates, because they are two facts: a bill due on the 1st and paid on
+  // the 9th is not the same as one paid the day it landed.
+  const [paidAt,      setPaidAt]      = useState(transaction?.paidAt              ?? '')
   const [isCleared,   setIsCleared]   = useState(transaction?.isCleared           ?? false)
+  const [isRecurring, setIsRecurring] = useState(transaction?.isRecurring         ?? false)
   const [attachments, setAttachments] = useState<string[]>(transaction?.attachments ?? [])
   const [tags,        setTags]        = useState<string[]>(transaction?.tags        ?? [])
   const [tagInput,    setTagInput]    = useState('')
 
-  const fileRef = useRef<HTMLInputElement>(null)
+  // The optional half of the form, folded away until asked for. Anything that
+  // already has something in it stays open — closing a section that holds data
+  // hides the data.
+  const [openPanes, setOpenPanes] = useState<Record<string, boolean>>(() => ({
+    payee:  !!transaction?.payee,
+    note:   !!transaction?.note,
+    tags:   !!transaction?.tags?.length,
+    files:  !!transaction?.attachments?.length,
+    repeat: !!transaction?.isRecurring,
+  }))
 
-  const selectedAccount  = accounts.find(a => a.id === accountId)
-  const selectedCategory = categories.find(c => c.id === categoryId)
+  const [payeeOpen, setPayeeOpen] = useState(false)
+  const payeeBox = useRef<HTMLSpanElement>(null)
+  const allPayees = useMemo(() => knownPayees(history), [history])
+  const payeeHits = useMemo(() => matchPayees(allPayees, payee), [allPayees, payee])
+
+  useEffect(() => {
+    if (!payeeOpen) return
+    const away = (e: Event) => { if (payeeBox.current && !payeeBox.current.contains(e.target as Node)) setPayeeOpen(false) }
+    document.addEventListener('pointerdown', away)
+    return () => document.removeEventListener('pointerdown', away)
+  }, [payeeOpen])
+
+  const fileRef = useRef<HTMLInputElement>(null)
 
   // Rust and olive are the platform's negative and positive. An expense should
   // still read as money leaving without a second palette to learn.
@@ -122,6 +200,9 @@ export function TransactionModal({ transaction, accounts, categories, onSave, on
   const amount = parseFloat(amountStr) || 0
 
   function handleSave() {
+    // Remember who this went to, so it can be offered next time and typed the
+    // same way rather than five slightly different ways.
+    rememberPayee(payee)
     onSave({
       id:          transaction?.id ?? crypto.randomUUID(),
       accountId,
@@ -131,11 +212,12 @@ export function TransactionModal({ transaction, accounts, categories, onSave, on
       payee:       payee.trim(),
       categoryId:  categoryId || undefined,
       date,
+      paidAt:      isCleared ? (paidAt || date) : undefined,
       note:        note.trim() || undefined,
       attachments: attachments.length > 0 ? attachments : undefined,
       tags:        tags.length > 0 ? tags : undefined,
       isCleared,
-      isRecurring: transaction?.isRecurring ?? false,
+      isRecurring,
       createdAt:   transaction?.createdAt   ?? new Date().toISOString(),
     })
   }
@@ -253,41 +335,28 @@ export function TransactionModal({ transaction, accounts, categories, onSave, on
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div style={ROW}>
             <span style={LABEL}>Account</span>
-            <PillSelect value={accountId} onChange={setAccountId}
-              label={<>
-                <AccountGlyph account={selectedAccount} />
-                <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {selectedAccount?.name ?? 'No account'}
-                </span>
-              </>}>
-              {accounts.length === 0 && <option value="">No accounts yet</option>}
-              {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-            </PillSelect>
+            <PillPicker
+              value={accountId}
+              onChange={setAccountId}
+              placeholder="No account"
+              options={accounts.map(a => ({ id: a.id, label: a.name, glyph: a.emoji, tint: a.color }))} />
           </div>
 
           <div style={ROW}>
             <span style={LABEL}>Category</span>
-            <PillSelect value={categoryId} onChange={setCategoryId}
-              label={<>
-                {selectedCategory && <span style={{ fontSize: 14 }}>{selectedCategory.icon}</span>}
-                <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: selectedCategory ? INK : GHOST }}>
-                  {selectedCategory?.name ?? 'Uncategorised'}
-                </span>
-              </>}>
-              <option value="">Uncategorised</option>
-              {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </PillSelect>
+            <PillPicker
+              value={categoryId}
+              onChange={setCategoryId}
+              placeholder="Uncategorised"
+              options={[
+                { id: '', label: 'Uncategorised' },
+                ...categories.map(c => ({ id: c.id, label: c.name, glyph: c.icon, tint: c.color })),
+              ]} />
           </div>
 
+          {/* Due, and — once it is paid — the day it actually left */}
           <div style={ROW}>
-            <span style={LABEL}>Payee</span>
-            <input value={payee} onChange={e => setPayee(e.target.value)}
-              placeholder="Who it went to"
-              style={{ ...PILL, flex: 1, cursor: 'text', outline: 'none' }} />
-          </div>
-
-          <div style={ROW}>
-            <span style={LABEL}>When</span>
+            <span style={LABEL}>Due</span>
             <span style={{ flex: 1, minWidth: 0, display: 'flex', gap: 7 }}>
               <label style={{ ...PILL, flex: 1, position: 'relative', justifyContent: 'space-between' }}>
                 {new Date(date + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
@@ -295,7 +364,15 @@ export function TransactionModal({ transaction, accounts, categories, onSave, on
                 <input type="date" value={date} onChange={e => setDate(e.target.value)}
                   style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', border: 'none', padding: 0 }} />
               </label>
-              <button onClick={() => setIsCleared(v => !v)} title="Money has actually moved"
+              <button
+                onClick={() => {
+                  const next = !isCleared
+                  setIsCleared(next)
+                  // Paid with no day attached is the common case; assume today
+                  // and let it be changed rather than asking twice.
+                  if (next && !paidAt) setPaidAt(todayStr)
+                }}
+                title="Money has actually moved"
                 style={{
                   ...PILL, flexShrink: 0,
                   background: isCleared ? INK : '#FFFFFF',
@@ -307,75 +384,183 @@ export function TransactionModal({ transaction, accounts, categories, onSave, on
             </span>
           </div>
 
-          <div style={{ ...ROW, alignItems: 'flex-start' }}>
-            <span style={{ ...LABEL, paddingTop: 11 }}>Notes</span>
-            <textarea value={note} onChange={e => setNote(e.target.value)} rows={2}
-              placeholder="Anything worth remembering…"
-              style={{
-                flex: 1, minWidth: 0, boxSizing: 'border-box', resize: 'vertical',
-                background: '#FFFFFF', border: `1px solid ${LINE}`, borderRadius: 9,
-                padding: '9px 12px', fontSize: 13.5, color: INK, fontFamily: 'inherit',
-                outline: 'none', textAlign: 'left',
-              }} />
-          </div>
-        </div>
+          {isCleared && (
+            <div style={ROW}>
+              <span style={LABEL}>Paid on</span>
+              <label style={{ ...PILL, flex: 1, position: 'relative', justifyContent: 'space-between' }}>
+                {paidAt
+                  ? new Date(paidAt + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
+                  : <span style={{ color: GHOST }}>Pick the day</span>}
+                <ChevronDown size={13} strokeWidth={2} style={{ color: GHOST, flexShrink: 0 }} />
+                <input type="date" value={paidAt} onChange={e => setPaidAt(e.target.value)}
+                  style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', border: 'none', padding: 0 }} />
+              </label>
+            </div>
+          )}
 
-        <div style={RULE} />
+          {openPanes.payee && (
+            <div style={ROW}>
+              <span style={LABEL}>Payee</span>
+              <span ref={payeeBox} style={{ flex: 1, minWidth: 0, position: 'relative', display: 'flex' }}>
+                <input
+                  value={payee}
+                  onChange={e => { setPayee(e.target.value); setPayeeOpen(true) }}
+                  onFocus={() => setPayeeOpen(true)}
+                  onKeyDown={e => {
+                    if (e.key === 'Escape') setPayeeOpen(false)
+                    if (e.key === 'Enter' && payeeHits.length && payee.trim()) {
+                      e.preventDefault(); setPayee(payeeHits[0]); setPayeeOpen(false)
+                    }
+                  }}
+                  placeholder="Who it went to"
+                  style={{ ...PILL, flex: 1, cursor: 'text', outline: 'none' }} />
 
-        {/* Tags */}
-        <div style={{ ...SECTION, marginBottom: 9 }}>Tags</div>
-        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
-          {tags.map(tag => (
-            <span key={tag} style={{
-              display: 'inline-flex', alignItems: 'center', gap: 5, height: 28, padding: '0 6px 0 10px',
-              borderRadius: 999, background: 'rgba(245,209,78,0.16)', border: `1px solid ${AMBER}55`,
-              color: '#3D3926', fontSize: 12,
-            }}>
-              {tag}
-              <button onClick={() => setTags(prev => prev.filter(t => t !== tag))} title="Remove"
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: MUTED, padding: 0, display: 'flex' }}>
-                <X size={12} />
-              </button>
-            </span>
-          ))}
-          <input
-            value={tagInput}
-            onChange={e => setTagInput(e.target.value)}
-            onKeyDown={e => {
-              if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addTag(tagInput) }
-              if (e.key === 'Backspace' && !tagInput && tags.length) setTags(prev => prev.slice(0, -1))
-            }}
-            onBlur={() => addTag(tagInput)}
-            placeholder={tags.length ? 'Add another' : 'groceries, work…'}
-            style={{ ...PILL, height: 34, flex: 1, minWidth: 120, cursor: 'text', outline: 'none', fontSize: 12.5 }} />
-        </div>
+                {/* Everyone you have paid before, narrowing as you type */}
+                {payeeOpen && payeeHits.length > 0 && (
+                  <div style={{
+                    position: 'absolute', top: 46, left: 0, right: 0, zIndex: 20, padding: 5,
+                    maxHeight: 210, overflowY: 'auto',
+                    background: '#FFFFFF', border: `1px solid ${LINE}`, borderRadius: 12,
+                    boxShadow: '0 12px 32px rgba(25,23,18,0.18)',
+                  }}>
+                    {payeeHits.map(name => (
+                      <button key={name} type="button"
+                        onClick={() => { setPayee(name); setPayeeOpen(false) }}
+                        style={{
+                          display: 'block', width: '100%', padding: '9px 10px', border: 'none',
+                          borderRadius: 8, background: 'transparent', cursor: 'pointer',
+                          fontFamily: 'inherit', fontSize: 13.5, color: INK, textAlign: 'left',
+                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                        }}>{name}</button>
+                    ))}
+                  </div>
+                )}
+              </span>
+            </div>
+          )}
 
-        <div style={RULE} />
-
-        {/* Receipts */}
-        <div style={{ ...SECTION, marginBottom: 9 }}>Receipts</div>
-        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
-          {attachments.map((src, i) => (
-            <span key={i} style={{ position: 'relative', flexShrink: 0, display: 'flex' }}>
-              <img src={src} alt={`Receipt ${i + 1}`} style={{
-                width: 46, height: 46, borderRadius: 9, objectFit: 'cover', border: `1px solid ${LINE}`,
-              }} />
-              <button onClick={() => setAttachments(prev => prev.filter((_, j) => j !== i))} title="Remove"
+          {openPanes.note && (
+            <div style={{ ...ROW, alignItems: 'flex-start' }}>
+              <span style={{ ...LABEL, paddingTop: 11 }}>Notes</span>
+              <textarea value={note} onChange={e => setNote(e.target.value)} rows={2}
+                placeholder="Anything worth remembering…"
                 style={{
-                  position: 'absolute', top: -6, right: -6, width: 19, height: 19, padding: 0,
-                  borderRadius: '50%', background: '#FFFFFF', border: `1px solid ${LINE}`,
-                  color: MUTED, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  boxShadow: '0 1px 3px rgba(25,23,18,0.14)',
+                  flex: 1, minWidth: 0, boxSizing: 'border-box', resize: 'vertical',
+                  background: '#FFFFFF', border: `1px solid ${LINE}`, borderRadius: 9,
+                  padding: '9px 12px', fontSize: 13.5, color: INK, fontFamily: 'inherit',
+                  outline: 'none', textAlign: 'left',
+                }} />
+            </div>
+          )}
+
+          {openPanes.tags && (
+            <div style={{ ...ROW, alignItems: 'flex-start' }}>
+              <span style={{ ...LABEL, paddingTop: 8 }}>Tags</span>
+              <span style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+                {tags.map(tag => (
+                  <span key={tag} style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 5, height: 28, padding: '0 6px 0 10px',
+                    borderRadius: 999, background: 'rgba(245,209,78,0.16)', border: `1px solid ${AMBER}55`,
+                    color: '#3D3926', fontSize: 12,
+                  }}>
+                    {tag}
+                    <button onClick={() => setTags(prev => prev.filter(t => t !== tag))} title="Remove"
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: MUTED, padding: 0, display: 'flex' }}>
+                      <X size={12} />
+                    </button>
+                  </span>
+                ))}
+                <input
+                  value={tagInput}
+                  onChange={e => setTagInput(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addTag(tagInput) }
+                    if (e.key === 'Backspace' && !tagInput && tags.length) setTags(prev => prev.slice(0, -1))
+                  }}
+                  onBlur={() => addTag(tagInput)}
+                  placeholder={tags.length ? 'Add another' : 'groceries, work…'}
+                  style={{ ...PILL, height: 34, flex: 1, minWidth: 110, cursor: 'text', outline: 'none', fontSize: 12.5 }} />
+              </span>
+            </div>
+          )}
+
+          {openPanes.files && (
+            <div style={{ ...ROW, alignItems: 'flex-start' }}>
+              <span style={{ ...LABEL, paddingTop: 14 }}>Receipts</span>
+              <span style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+                {attachments.map((src, i) => (
+                  <span key={i} style={{ position: 'relative', flexShrink: 0, display: 'flex' }}>
+                    <img src={src} alt={`Receipt ${i + 1}`} style={{
+                      width: 46, height: 46, borderRadius: 9, objectFit: 'cover', border: `1px solid ${LINE}`,
+                    }} />
+                    <button onClick={() => setAttachments(prev => prev.filter((_, j) => j !== i))} title="Remove"
+                      style={{
+                        position: 'absolute', top: -6, right: -6, width: 19, height: 19, padding: 0,
+                        borderRadius: '50%', background: '#FFFFFF', border: `1px solid ${LINE}`,
+                        color: MUTED, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        boxShadow: '0 1px 3px rgba(25,23,18,0.14)',
+                      }}>
+                      <X size={11} />
+                    </button>
+                  </span>
+                ))}
+                <button onClick={() => fileRef.current?.click()}
+                  style={{ ...PILL, height: 46, color: MUTED, gap: 7 }}>
+                  {attachments.length ? <Plus size={14} /> : <Paperclip size={14} />}
+                  {attachments.length ? 'Add another' : 'Attach a receipt'}
+                </button>
+              </span>
+            </div>
+          )}
+
+          {openPanes.repeat && (
+            <div style={ROW}>
+              <span style={LABEL}>Repeats</span>
+              <button onClick={() => setIsRecurring(v => !v)}
+                style={{
+                  ...PILL, flex: 1, justifyContent: 'flex-start',
+                  background: isRecurring ? INK : '#FFFFFF',
+                  border: isRecurring ? 'none' : `1px solid ${LINE}`,
+                  color: isRecurring ? '#FDF8E7' : MUTED,
                 }}>
-                <X size={11} />
+                {isRecurring ? <><Check size={13} strokeWidth={2.5} /> This one comes round again</> : 'One-off'}
               </button>
-            </span>
-          ))}
-          <button onClick={() => fileRef.current?.click()}
-            style={{ ...PILL, height: 46, color: MUTED, gap: 7 }}>
-            {attachments.length ? <Plus size={14} /> : <Paperclip size={14} />}
-            {attachments.length ? 'Add another' : 'Attach a receipt'}
-          </button>
+            </div>
+          )}
+        </div>
+
+        <div style={RULE} />
+
+        {/* What else this transaction can carry. Folded away until asked for —
+            an icon lights up once its section holds something. */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+          {([
+            { key: 'payee',  Icon: User,          title: 'Payee',    filled: !!payee.trim() },
+            { key: 'note',   Icon: MessageSquare, title: 'Notes',    filled: !!note.trim() },
+            { key: 'files',  Icon: ImageIcon,     title: 'Receipts', filled: attachments.length > 0 },
+            { key: 'tags',   Icon: Hash,          title: 'Tags',     filled: tags.length > 0 },
+            { key: 'repeat', Icon: Repeat,        title: 'Repeats',  filled: isRecurring },
+          ] as const).map(({ key, Icon, title, filled }) => {
+            const open = !!openPanes[key]
+            return (
+              <button key={key} title={title} aria-pressed={open}
+                onClick={() => {
+                  // A section holding something cannot be folded away — that
+                  // would hide data behind an icon and look like losing it.
+                  if (open && filled) return
+                  setOpenPanes(p => ({ ...p, [key]: !p[key] }))
+                }}
+                style={{
+                  flex: 1, height: 44, borderRadius: 11, cursor: filled && open ? 'default' : 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: filled ? 'rgba(245,209,78,0.18)' : open ? '#FAF7EC' : 'transparent',
+                  border: `1px solid ${filled ? AMBER : LINE}`,
+                  color: filled ? '#191712' : open ? MUTED : GHOST,
+                }}>
+                <Icon size={17} strokeWidth={1.6} />
+              </button>
+            )
+          })}
         </div>
 
         {/* The one action that commits, and the ways not to */}

@@ -218,9 +218,12 @@ export const useFinanceStore = create<FinanceState>()(
             payee: r.payee,
             categoryId: r.category_id,
             date: r.date,
+            paidAt: r.paid_at ?? undefined,
             note: r.note,
             isCleared: r.is_cleared,
             isRecurring: r.is_recurring,
+            tags: r.tags?.length ? r.tags : undefined,
+            attachments: r.attachments?.length ? r.attachments : undefined,
             createdAt: r.created_at,
           }))
 
@@ -356,9 +359,12 @@ export const useFinanceStore = create<FinanceState>()(
           tx_type: tx.type,
           payee: tx.payee,
           date: tx.date,
+          paid_at: tx.paidAt ?? null,
           note: tx.note,
           is_cleared: tx.isCleared,
           is_recurring: tx.isRecurring,
+          tags: tx.tags ?? [],
+          attachments: tx.attachments ?? [],
           created_at: tx.createdAt,
         }
         saveTransaction(row).catch(console.warn)

@@ -489,6 +489,7 @@ export function BalanceScreen() {
           transaction={txModal.tx}
           accounts={accounts}
           categories={categories}
+          history={transactions}
           onSave={tx => { upsertTransaction(tx); setTxModal({ open: false, tx: null }) }}
           onDelete={id => { removeTransaction(id); setTxModal({ open: false, tx: null }) }}
           onClose={() => setTxModal({ open: false, tx: null })}

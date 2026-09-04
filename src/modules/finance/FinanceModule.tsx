@@ -145,7 +145,7 @@ export function FinanceModule() {
     purple:    '#3D3926',
   }
 
-  const { accounts, categories, upsertTransaction } = useFinanceStore()
+  const { accounts, categories, transactions, upsertTransaction } = useFinanceStore()
 
   const [screen, setScreen] = useState<FinanceScreen>(() => {
     const saved = localStorage.getItem('finance-active-screen')
@@ -274,6 +274,7 @@ export function FinanceModule() {
           transaction={null}
           accounts={accounts}
           categories={categories}
+          history={transactions}
           onSave={tx => { upsertTransaction(tx); setAddOpen(false) }}
           onClose={() => setAddOpen(false)}
         />

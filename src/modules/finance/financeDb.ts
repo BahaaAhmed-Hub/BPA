@@ -45,9 +45,12 @@ export interface TransactionRow {
   tx_type: string
   payee: string
   date: string
+  paid_at?: string | null
   note?: string
   is_cleared: boolean
   is_recurring: boolean
+  tags?: string[]
+  attachments?: string[]
   created_at: string
 }
 
@@ -172,7 +175,29 @@ export async function saveTransaction(row: TransactionRow): Promise<void> {
   const { error } = await supabase
     .from('finance_transactions')
     .upsert(row, { onConflict: 'id' })
-  if (error) throw new Error(error.message)
+  if (!error) return
+
+  // paid_at, tags and attachments arrive with 20260006. Until it runs, the
+  // write is rejected whole — and losing the transaction because it carried a
+  // tag is a far worse trade than losing the tag.
+  if (isMissingColumn(error)) {
+    const { paid_at: _p, tags: _t, attachments: _a, ...core } = row
+    const { error: retry } = await supabase
+      .from('finance_transactions')
+      .upsert(core, { onConflict: 'id' })
+    if (retry) throw new Error(retry.message)
+    return
+  }
+  throw new Error(error.message)
+}
+
+/** Postgres says 42703 for a column that is not there; PostgREST says PGRST204
+ *  when its cached copy of the schema has not caught up. Same remedy here. */
+function isMissingColumn(error: { code?: string; message?: string }): boolean {
+  const msg = error.message ?? ''
+  return error.code === 'PGRST204' || error.code === '42703' ||
+    /schema cache/i.test(msg) || /column .* does not exist/i.test(msg) ||
+    /could not find the .* column/i.test(msg)
 }
 
 export async function deleteTransaction(id: string): Promise<void> {

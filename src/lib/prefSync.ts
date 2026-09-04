@@ -32,6 +32,7 @@ const SHARED_KEYS = [
   'task-board-type',
   'finance-budget-rules',
   'finance-tx-flags',
+  'finance-payees',              // who you have paid before
   'finance-category-order',
   'finance-tab-order',
   'finance-currency',
@@ -59,6 +60,23 @@ const FIELD = 'shared_prefs'
  *  that can simply be joined, so join them. Where both sides have the same
  *  entry this device's wins; where only the server has one, it arrives. */
 const MERGEABLE: Partial<Record<typeof SHARED_KEYS[number], (mine: string, theirs: string) => string>> = {
+  // A list of names. Joining keeps a payee typed on the laptop reaching the
+  // iPad; fill-if-missing would have stopped the moment either device saved one.
+  'finance-payees': (mine, theirs) => {
+    try {
+      const a = JSON.parse(mine)   as string[]
+      const b = JSON.parse(theirs) as string[]
+      const out: string[] = []
+      const seen = new Set<string>()
+      for (const name of [...a, ...b]) {
+        const key = name.toLowerCase()
+        if (seen.has(key)) continue
+        seen.add(key); out.push(name)
+      }
+      return JSON.stringify(out.slice(0, 400))
+    } catch { return mine }
+  },
+
   // { habitId: { 'YYYY-MM-DD': count } }
   'professor-habit-quantity-logs': (mine, theirs) => {
     try {

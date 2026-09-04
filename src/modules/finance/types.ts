@@ -35,7 +35,10 @@ export interface Transaction {
   type: TxType
   payee: string
   categoryId?: string
+  /** When the money is owed. */
   date: string
+  /** When it actually left, which is not always the same day. */
+  paidAt?: string
   note?: string
   attachments?: string[]
   tags?: string[]
