@@ -26,6 +26,12 @@ const MONTH_NAMES = [
   'July','August','September','October','November','December',
 ]
 
+/** "Thursday, 4 September" — the eyebrow uppercases it. */
+function dayLabel(iso: string): string {
+  const d = new Date(`${iso}T00:00:00`)
+  return d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })
+}
+
 // ── Pill ──────────────────────────────────────────────────────────────────────
 
 function Pill({ type, amount, currency }: { type: 'income' | 'expense' | 'transfer'; amount: number; currency?: string }) {
@@ -81,7 +87,10 @@ function MoneyCalendar({
   const today = new Date()
   const todayStr = today.toISOString().slice(0, 10)
 
-  const firstDay = new Date(year, month, 1).getDay()
+  // The week runs Saturday-first here, but getDay() counts from Sunday, so the
+  // first of the month landed one column early and every date sat under the
+  // wrong weekday.
+  const firstDay = (new Date(year, month, 1).getDay() + 1) % 7
   const daysInMonth = new Date(year, month + 1, 0).getDate()
   const monthPrefix = `${year}-${String(month + 1).padStart(2,'0')}`
 
@@ -234,6 +243,11 @@ export function TodayScreen() {
         .sort((a, b) => a.date.localeCompare(b.date))
     : []
 
+  // The feed follows the calendar: a day while one is picked in the month on
+  // screen, the whole month otherwise.
+  const showingDay = Boolean(selectedDay) && selectedDay.startsWith(monthPrefix)
+  const feed = showingDay ? selectedDayTx : monthTx
+
   function prevMonth() {
     if (viewMonth === 0) { setViewYear(y => y - 1); setViewMonth(11) }
     else setViewMonth(m => m - 1)
@@ -331,67 +345,45 @@ export function TodayScreen() {
           onNextMonth={nextMonth}
         />
 
-        {/* Selected day summary */}
-        {selectedDay && selectedDayTx.length > 0 && (
-          <div style={{ marginTop: 20, paddingTop: 16, borderTop: `1px solid ${C.border}` }}>
-            <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: C.textMuted, letterSpacing: '0.8px', marginBottom: 10 }}>
-              {selectedDay}
-            </div>
-            {selectedDayTx.map(tx => {
-              const cat = tx.categoryId ? categories.find(c => c.id === tx.categoryId) : null
-              const isExp = tx.type === 'expense'
-              return (
-                <div
-                  key={tx.id}
-                  onClick={() => setTxModal({ open: true, tx })}
-                  style={{
-                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                    padding: '6px 0', borderBottom: `1px solid ${C.border}`,
-                    cursor: 'pointer', gap: 8,
-                  }}
-                >
-                  <span style={{ fontSize: 12, color: C.textDim, flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <CategoryGlyph icon={cat?.icon ?? (isExp ? '💳' : '💼')} size={13} />
-                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {tx.payee?.trim() || cat?.name || 'Tx'}
-                    </span>
-                  </span>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: isExp ? RED : GREEN, flexShrink: 0 }}>
-                    {acct(isExp ? -Math.abs(tx.amount) : Math.abs(tx.amount), { currency: tx.currency ?? 'EGP' })}
-                  </span>
-                </div>
-              )
-            })}
-          </div>
-        )}
       </div>
 
-      {/* Right panel — the month */}
+      {/* Right panel — the day picked on the calendar, or the whole month */}
       <div style={{ flex: 1, minWidth: 0, overflowY: 'auto', padding: '24px 28px' }}>
 
-          {/* Month transactions */}
-          {monthTx.length > 0 && (
-            <div style={{ marginBottom: 24 }}>
-              <div style={{ marginBottom: 12 }}>
-                <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: C.textMuted, letterSpacing: '0.8px' }}>
-                  {MONTH_NAMES[viewMonth]}
-                </span>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                {monthTx.map(tx => renderTxRow(tx))}
-              </div>
+          {/* Which day the calendar is pointing at. A day from another month
+              stops applying the moment the calendar is paged away from it. */}
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 12 }}>
+            <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: C.textMuted, letterSpacing: '0.8px' }}>
+              {showingDay ? dayLabel(selectedDay) : MONTH_NAMES[viewMonth]}
+            </span>
+            {showingDay && (
+              <button
+                onClick={() => setSelectedDay('')}
+                style={{
+                  marginLeft: 'auto', background: 'none', border: 'none', padding: 0,
+                  fontSize: 11.5, color: C.textMuted, cursor: 'pointer', textDecoration: 'underline',
+                }}>
+                All of {MONTH_NAMES[viewMonth]}
+              </button>
+            )}
+          </div>
+
+          {feed.length > 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginBottom: 24 }}>
+              {feed.map(tx => renderTxRow(tx))}
             </div>
-          )}
-          {monthTx.length === 0 && (
+          ) : (
             <div style={{ fontSize: 13, color: C.textMuted, textAlign: 'center', padding: '32px 0' }}>
-              No transactions in {MONTH_NAMES[viewMonth]}
+              {showingDay
+                ? `Nothing on ${dayLabel(selectedDay)}`
+                : `No transactions in ${MONTH_NAMES[viewMonth]}`}
             </div>
           )}
 
-          {/* Net cashflow summary */}
-          {monthTx.length > 0 && (() => {
-            const inc = monthTx.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0)
-            const exp = monthTx.filter(t => t.type === 'expense').reduce((s, t) => s + Math.abs(t.amount), 0)
+          {/* Net cashflow over whatever is being shown */}
+          {feed.length > 0 && (() => {
+            const inc = feed.filter(t => t.type === 'income').reduce((s, t) => s + Math.abs(t.amount), 0)
+            const exp = feed.filter(t => t.type === 'expense').reduce((s, t) => s + Math.abs(t.amount), 0)
             const net = inc - exp
             return (
               <div style={{
