@@ -12,7 +12,7 @@ import { useFinanceStore } from '../financeStore'
 import { AccountModal } from '../modals/AccountModal'
 import { TransactionModal } from '../modals/TransactionModal'
 import { IconPicker } from '../components/IconPicker'
-import type { Account, Transaction } from '../types'
+import type { Account, AccountType, Transaction } from '../types'
 
 // ─── Pill ─────────────────────────────────────────────────────────────────────
 
@@ -37,6 +37,21 @@ function Pill({ type, amount, currency }: { type: 'expense' | 'income' | 'transf
       {type === 'expense' ? '−' : type === 'income' ? '+' : ''}{currency} {amount.toLocaleString('en-US')}
     </span>
   )
+}
+
+// ─── The Accounts / Cards / Cash pills ────────────────────────────────────────
+// Three spans with the active one hardcoded — no state, no handler. Tapping
+// them did nothing at all. They filter by account type, which is the field the
+// group headings are already built from.
+
+type AccountFilter = 'Accounts' | 'Cards' | 'Cash'
+
+const ACCOUNT_FILTERS: Record<AccountFilter, (t: AccountType) => boolean> = {
+  // Everything, which is what the screen showed before — so the default view
+  // is unchanged and the other two only ever narrow it.
+  Accounts: () => true,
+  Cards:    t => t === 'credit_card',
+  Cash:     t => t === 'wallet',
 }
 
 // ─── One account, draggable ───────────────────────────────────────────────────
@@ -163,13 +178,19 @@ export function BalanceScreen() {
 
   const _netWorth = accounts.reduce((s, a) => s + a.balance, 0); void _netWorth
 
+  // Accounts shows the lot, which is what the screen did before this pill row
+  // was anything but decoration. The other two narrow it by account type — the
+  // same field the group headings below are built from.
+  const [filter, setFilter] = useState<AccountFilter>('Accounts')
+
   // sortOrder is the order you put them in. Every account has been created
   // with 0, so until something is dragged this is the order they arrived in —
   // sort is stable, so equal values keep it.
   const bySort = (a: Account, b: Account) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)
-  const paymentAccounts  = accounts.filter(a => a.accountType === 'payment' || a.accountType === 'wallet').sort(bySort)
-  const creditCards      = accounts.filter(a => a.accountType === 'credit_card').sort(bySort)
-  const otherAssets      = accounts.filter(a => a.accountType === 'asset').sort(bySort)
+  const shown = accounts.filter(a => ACCOUNT_FILTERS[filter](a.accountType))
+  const paymentAccounts  = shown.filter(a => a.accountType === 'payment' || a.accountType === 'wallet').sort(bySort)
+  const creditCards      = shown.filter(a => a.accountType === 'credit_card').sort(bySort)
+  const otherAssets      = shown.filter(a => a.accountType === 'asset').sort(bySort)
 
   // A mouse drags straight away; a finger has to hold first, or the gesture is
   // indistinguishable from the scroll it usually is. The handle carries
@@ -233,15 +254,23 @@ export function BalanceScreen() {
           <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: '#6C6553', display: 'block', marginBottom: 4 }}>MONEY</span>
           <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 30, fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1, color: '#191712', display: 'block' }}>Balances</span>
           <span style={{ fontSize: 12, color: '#6C6553', display: 'block', marginTop: 3 }}>
-            {accounts.length} account{accounts.length !== 1 ? 's' : ''} · held vs owed and what's already committed
+            {filter === 'Accounts'
+              ? `${shown.length} account${shown.length !== 1 ? 's' : ''} · held vs owed and what's already committed`
+              : filter === 'Cards'
+                ? `${shown.length} card${shown.length !== 1 ? 's' : ''} of ${accounts.length} accounts`
+                : `${shown.length} cash account${shown.length !== 1 ? 's' : ''} of ${accounts.length}`}
           </span>
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8, paddingBottom: 3 }}>
           {/* Filter pills */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 2, padding: 3, borderRadius: 999, background: '#EDE7D9' }}>
-            {(['Accounts','Cards','Cash'] as const).map(f => (
-              <span key={f} style={{ height: 28, padding: '0 13px', borderRadius: 999, background: f === 'Accounts' ? '#FFFFFF' : 'transparent', color: f === 'Accounts' ? '#191712' : '#6C6553', fontSize: 12, fontWeight: f === 'Accounts' ? 600 : 400, display: 'flex', alignItems: 'center', boxShadow: f === 'Accounts' ? '0 1px 3px rgba(25,23,18,0.16)' : 'none', cursor: 'pointer' }}>{f}</span>
-            ))}
+            {(Object.keys(ACCOUNT_FILTERS) as AccountFilter[]).map(f => {
+              const on = filter === f
+              return (
+                <button key={f} onClick={() => setFilter(f)} aria-pressed={on}
+                  style={{ height: 28, padding: '0 13px', borderRadius: 999, border: 'none', fontFamily: 'inherit', background: on ? '#FFFFFF' : 'transparent', color: on ? '#191712' : '#6C6553', fontSize: 12, fontWeight: on ? 600 : 400, display: 'flex', alignItems: 'center', boxShadow: on ? '0 1px 3px rgba(25,23,18,0.16)' : 'none', cursor: 'pointer' }}>{f}</button>
+              )
+            })}
           </div>
           <button onClick={() => setAccountModal({ open: true, account: null })}
             style={{ height: 34, padding: '0 15px', borderRadius: 999, background: '#F5D14E', border: 'none', color: '#191712', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, boxShadow: '0 2px 0 rgba(25,23,18,0.14)' }}>
@@ -330,6 +359,27 @@ export function BalanceScreen() {
               </DndContext>
             </div>
           ))}
+
+          {/* A filter that quietly shows nothing reads as a broken screen. Say
+              what it was looking for — the type is editable in the account
+              itself, which is a tap away now. */}
+          {shown.length === 0 && (
+            <div style={{
+              padding: '26px 18px', textAlign: 'center', borderRadius: 12,
+              background: '#FCFAF4', border: '1px dashed #E4DCC6',
+            }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: '#191712' }}>
+                No {filter.toLowerCase()} yet
+              </div>
+              <div style={{ fontSize: 11.5, color: '#6C6553', marginTop: 5, lineHeight: 1.5 }}>
+                {accounts.length === 0
+                  ? 'Add an account to get started.'
+                  : filter === 'Cards'
+                    ? `None of your ${accounts.length} accounts are set to Credit Card. Open one to change its type.`
+                    : `None of your ${accounts.length} accounts are set to Wallet. Open one to change its type.`}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* ── Right pane: transactions ── */}
