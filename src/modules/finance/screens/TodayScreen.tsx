@@ -380,26 +380,35 @@ export function TodayScreen() {
             </div>
           )}
 
-          {/* Net cashflow over whatever is being shown */}
+          {/* Net cashflow over whatever is being shown — read down the column:
+              what came in, what went out, what is left. */}
           {feed.length > 0 && (() => {
             const inc = feed.filter(t => t.type === 'income').reduce((s, t) => s + Math.abs(t.amount), 0)
             const exp = feed.filter(t => t.type === 'expense').reduce((s, t) => s + Math.abs(t.amount), 0)
             const net = inc - exp
-            return (
+            const line = (label: string, value: string, color: string, strong = false) => (
               <div style={{
-                marginTop: 16, paddingTop: 12,
-                borderTop: `1px solid ${C.border}`,
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                display: 'flex', alignItems: 'baseline', gap: 12,
+                padding: strong ? '10px 0 0' : '5px 0',
+                borderTop: strong ? `1px solid ${C.border}` : 'none',
+                marginTop: strong ? 6 : 0,
               }}>
-                <span style={{ fontSize: 12, color: RED, fontWeight: 600 }}>
-                  {acct(-exp, { currency: 'EGP' })}
-                </span>
-                <span style={{ fontSize: 13, fontWeight: 700, color: net >= 0 ? GREEN : RED }}>
-                  Net {acct(net, { currency: 'EGP' })}
-                </span>
-                <span style={{ fontSize: 12, color: GREEN, fontWeight: 600 }}>
-                  {acct(inc, { currency: 'EGP' })}
-                </span>
+                <span style={{
+                  fontSize: 10.5, fontWeight: 700, letterSpacing: '0.12em',
+                  textTransform: 'uppercase' as const, color: C.textMuted,
+                }}>{label}</span>
+                <span style={{
+                  marginLeft: 'auto', fontFamily: 'Outfit, sans-serif',
+                  fontSize: strong ? 17 : 14.5, fontWeight: strong ? 700 : 600,
+                  letterSpacing: '-0.02em', color, fontVariantNumeric: 'tabular-nums',
+                }}>{value}</span>
+              </div>
+            )
+            return (
+              <div style={{ marginTop: 16, paddingTop: 12, borderTop: `1px solid ${C.border}` }}>
+                {line('In',  acct(inc, { currency: 'EGP' }), GREEN)}
+                {line('Out', acct(-exp, { currency: 'EGP' }), RED)}
+                {line('Net', acct(net, { currency: 'EGP' }), net >= 0 ? GREEN : RED, true)}
               </div>
             )
           })()}
