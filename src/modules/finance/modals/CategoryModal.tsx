@@ -1,10 +1,42 @@
 import { useState } from 'react'
+import { X, ChevronDown, Check } from 'lucide-react'
 import type { Category } from '../types'
 import { IconPicker } from '../components/IconPicker'
 
-const RED   = '#DA4A3E'
-const GREEN = '#2FA869'
-void GREEN
+// ─── Naming a category ───────────────────────────────────────────────────────
+// The last window still in the old dialect: a bordered form with stacked
+// labels, a raw <input type="color">, and a red Delete block. Same vocabulary
+// as everything else now — an eyebrow pill, one pill per value, a black pill
+// for the action that commits.
+
+const INK   = '#191712'
+const MUTED = '#6C6553'
+const GHOST = '#9B9180'
+const LINE  = '#E8E1CE'
+const HAIR  = '#F0EBDC'
+const OLIVE = '#5F7038'
+const RUST  = '#B4523A'
+const DISPLAY = "'Outfit', system-ui, sans-serif"
+
+const PILL: React.CSSProperties = {
+  display: 'inline-flex', alignItems: 'center', gap: 6, height: 42, boxSizing: 'border-box',
+  padding: '0 14px', borderRadius: 10, background: '#FFFFFF', border: `1px solid ${LINE}`,
+  color: INK, fontSize: 13.5, fontFamily: 'inherit', cursor: 'pointer', minWidth: 0,
+}
+const ROUND: React.CSSProperties = {
+  width: 30, height: 30, borderRadius: '50%', flexShrink: 0, padding: 0,
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  background: '#FFFFFF', border: `1px solid ${LINE}`, color: MUTED, cursor: 'pointer',
+}
+const LABEL: React.CSSProperties = { width: 62, flexShrink: 0, fontSize: 13.5, color: MUTED, fontWeight: 500 }
+const ROW: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 10 }
+
+/** Enough colours to tell envelopes apart, without a colour wheel nobody wants
+ *  to operate on a tablet. */
+const SWATCHES = [
+  '#B4523A', '#C77A3E', '#C9A227', '#5F7038', '#3F7A6E',
+  '#3E6FA3', '#6357A8', '#9B4F86', '#8C8071', '#4A4438',
+]
 
 interface Props {
   category?: Category | null
@@ -15,24 +47,25 @@ interface Props {
 }
 
 export function CategoryModal({ category, categories, onSave, onDelete, onClose }: Props) {
-
-  // A "real edit" is when the category already has a name (exists in store).
-  // Opening from a section "+" button has name='' — it's creation, not editing.
+  // A category opened from a "+" button arrives with no name: that is creation,
+  // not editing, even though it carries a parent and a type already.
   const isEdit = !!(category?.name)
-  // When created from a section button, the txType is pre-determined and should be locked.
   const txTypeLocked = !isEdit && !!category?.txType
 
   const [name,     setName]     = useState(category?.name     ?? '')
   const [icon,     setIcon]     = useState(category?.icon     ?? '📁')
-  const [color,    setColor]    = useState(category?.color    ?? '#8C8071')
+  const [color,    setColor]    = useState(category?.color    ?? SWATCHES[8])
   const [txType,   setTxType]   = useState<Category['txType']>(category?.txType ?? 'expense')
   const [parentId, setParentId] = useState<string>(category?.parentId ?? '')
 
-  const topCategories = categories.filter(c => !c.parentId && c.id !== category?.id)
+  const tops = categories.filter(c => !c.parentId && c.id !== category?.id)
+  const parent = tops.find(c => c.id === parentId)
+  const canSave = !!name.trim()
 
   function handleSave() {
-    const saved: Category = {
-      id:        category?.id ?? crypto.randomUUID(),
+    if (!canSave) return
+    onSave({
+      id:        category?.id || crypto.randomUUID(),
       name:      name.trim(),
       icon:      icon || '📁',
       color,
@@ -40,225 +73,156 @@ export function CategoryModal({ category, categories, onSave, onDelete, onClose 
       isSystem:  category?.isSystem ?? false,
       txType,
       sortOrder: category?.sortOrder,
-    }
-    onSave(saved)
+    })
   }
 
-  const inputStyle: React.CSSProperties = {
-    width: '100%',
-    padding: '10px 12px',
-    borderRadius: 8,
-    border: `1px solid ${'#E8E1CE'}`,
-    background: '#F7F4EA',
-    color: '#191712',
-    fontSize: 14,
-    outline: 'none',
-    boxSizing: 'border-box' as const,
-    fontFamily: 'inherit',
-  }
-
-  const labelStyle: React.CSSProperties = {
-    display: 'block',
-    fontSize: 12,
-    color: '#6C6553',
-    marginBottom: 5,
-    fontWeight: 500,
-  }
-
-  const fieldStyle: React.CSSProperties = {
-    display: 'flex',
-    flexDirection: 'column' as const,
-  }
+  const isImage = icon.startsWith('data:') || icon.startsWith('http')
 
   return (
     <div
       onClick={e => { if (e.target === e.currentTarget) onClose() }}
       style={{
-        position: 'fixed',
-        inset: 0,
-        background: 'rgba(0,0,0,0.6)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 1000,
-      }}
-    >
+        position: 'fixed', inset: 0, zIndex: 1100, padding: 18,
+        background: 'rgba(25,23,18,0.45)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
       <div style={{
-        width: 460,
-        maxHeight: '90vh',
-        overflowY: 'auto',
-        background: '#FFFFFF',
-        borderRadius: 16,
-        boxShadow: '0 24px 60px rgba(0,0,0,0.5)',
-        padding: '24px 28px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 20,
+        width: 'clamp(320px, 94vw, 430px)', maxHeight: '90vh', overflowY: 'auto',
+        boxSizing: 'border-box', scrollbarWidth: 'thin',
+        background: '#FFFFFF', border: `1px solid ${LINE}`, borderRadius: 18,
+        boxShadow: '0 24px 60px rgba(25,23,18,0.24)', padding: '18px 20px 22px',
       }}>
 
-        {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontSize: 18, fontWeight: 700, color: '#191712' }}>
-              {isEdit ? 'Edit Category' : 'New Category'}
-            </span>
-            {txTypeLocked && (
-              <span style={{
-                fontSize: 10, fontWeight: 700, letterSpacing: '0.8px',
-                padding: '3px 8px', borderRadius: 5,
-                background: txType === 'income' ? 'rgba(47,168,105,0.15)' : 'rgba(218,74,62,0.15)',
-                color: txType === 'income' ? '#2FA869' : '#DA4A3E',
-                textTransform: 'uppercase' as const,
-              }}>
-                {txType}
-              </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6, height: 26, padding: '0 11px',
+            borderRadius: 999, background: '#F1ECDE', color: '#4A4438', fontSize: 11.5,
+          }}>
+            <span style={{ width: 7, height: 7, borderRadius: 999, background: color, flexShrink: 0 }} />
+            {isEdit ? 'Category' : txTypeLocked ? 'New sub-category' : 'New category'}
+          </span>
+          <span style={{ flex: 1 }} />
+          <button onClick={onClose} title="Close" style={ROUND}><X size={14} /></button>
+        </div>
+
+        {/* Icon and name, the way they read on the screen itself */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 11, marginTop: 14 }}>
+          <IconPicker
+            value={icon}
+            onChange={setIcon}
+            trigger={onClick => (
+              <button onClick={onClick} title="Pick an icon, or upload one"
+                style={{
+                  width: 46, height: 46, borderRadius: 12, flexShrink: 0, padding: 0,
+                  border: `1px solid ${LINE}`, background: '#FAF7EC', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+                }}>
+                {isImage
+                  ? <img src={icon} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  : <span style={{ fontSize: 24, lineHeight: 1 }}>{icon}</span>}
+              </button>
             )}
-          </div>
-          <button
-            onClick={onClose}
+          />
+          <input
+            autoFocus
+            value={name}
+            onChange={e => setName(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') onClose() }}
+            placeholder="Name it"
             style={{
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              fontSize: 20,
-              color: '#6C6553',
-              lineHeight: 1,
-              padding: '0 4px',
-              fontFamily: 'inherit',
-            }}
-          >
-            ✕
-          </button>
+              flex: 1, minWidth: 0, boxSizing: 'border-box',
+              background: '#FFFFFF', border: `1px solid ${LINE}`, borderRadius: 11,
+              padding: '13px 15px', fontFamily: DISPLAY, fontSize: 18, fontWeight: 600,
+              letterSpacing: '-0.02em', color: INK, outline: 'none',
+            }} />
         </div>
 
-        {/* Form */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={{ height: 1, background: HAIR, margin: '18px 0' }} />
 
-          {/* Name */}
-          <div style={fieldStyle}>
-            <label style={labelStyle}>Name</label>
-            <input
-              style={inputStyle}
-              type="text"
-              value={name}
-              onChange={e => setName(e.target.value)}
-              placeholder="Category name"
-            />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {/* Money out or money in — locked when it was decided by where you clicked */}
+          <div style={ROW}>
+            <span style={LABEL}>Type</span>
+            <span style={{ flex: 1, minWidth: 0, display: 'flex', gap: 7 }}>
+              {([['expense', 'Spending'], ['income', 'Earning']] as const).map(([v, label]) => {
+                const on = txType === v
+                return (
+                  <button key={v} disabled={txTypeLocked}
+                    onClick={() => setTxType(v)}
+                    title={txTypeLocked ? 'Set by the category this sits under' : undefined}
+                    style={{
+                      ...PILL, flex: 1, justifyContent: 'center',
+                      background: on ? (v === 'income' ? OLIVE : RUST) : '#FFFFFF',
+                      border: on ? 'none' : `1px solid ${LINE}`,
+                      color: on ? '#FDF8E7' : MUTED,
+                      fontWeight: on ? 600 : 400,
+                      opacity: txTypeLocked && !on ? 0.45 : 1,
+                      cursor: txTypeLocked ? 'default' : 'pointer',
+                    }}>{label}</button>
+                )
+              })}
+            </span>
           </div>
 
-          {/* Icon */}
-          <div style={fieldStyle}>
-            <label style={labelStyle}>Icon</label>
-            <IconPicker value={icon} onChange={setIcon} size={44} />
-          </div>
-
-          {/* Color */}
-          <div style={fieldStyle}>
-            <label style={labelStyle}>Color</label>
-            <input
-              style={{ ...inputStyle, padding: '6px 12px', height: 40, cursor: 'pointer' }}
-              type="color"
-              value={color}
-              onChange={e => setColor(e.target.value)}
-            />
-          </div>
-
-          {/* Type — locked when creating from a section button */}
-          {!txTypeLocked && (
-            <div style={fieldStyle}>
-              <label style={labelStyle}>Type</label>
-              <select
-                style={inputStyle}
-                value={txType}
-                onChange={e => setTxType(e.target.value as Category['txType'])}
-              >
-                <option value="expense">Expense</option>
-                <option value="income">Income</option>
-                <option value="both">Both</option>
+          <div style={ROW}>
+            <span style={LABEL}>Sits in</span>
+            <span style={{ flex: 1, minWidth: 0, position: 'relative', display: 'flex' }}>
+              <span style={{ ...PILL, flex: 1, justifyContent: 'space-between' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                  {parent && <span style={{ fontSize: 15 }}>{parent.icon}</span>}
+                  <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: parent ? INK : GHOST }}>
+                    {parent ? parent.name : 'Nothing — it stands on its own'}
+                  </span>
+                </span>
+                <ChevronDown size={13} strokeWidth={2} style={{ color: GHOST, flexShrink: 0 }} />
+              </span>
+              <select value={parentId} onChange={e => setParentId(e.target.value)}
+                style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', border: 'none' }}>
+                <option value="">Nothing — it stands on its own</option>
+                {tops.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
-            </div>
-          )}
-
-          {/* Parent Category */}
-          <div style={fieldStyle}>
-            <label style={labelStyle}>Parent Category</label>
-            <select
-              style={inputStyle}
-              value={parentId}
-              onChange={e => setParentId(e.target.value)}
-            >
-              <option value="">None</option>
-              {topCategories.map(c => (
-                <option key={c.id} value={c.id}>
-                  {c.icon} {c.name}
-                </option>
-              ))}
-            </select>
+            </span>
           </div>
 
+          <div style={{ ...ROW, alignItems: 'flex-start' }}>
+            <span style={{ ...LABEL, paddingTop: 9 }}>Colour</span>
+            <span style={{ flex: 1, minWidth: 0, display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+              {SWATCHES.map(c => (
+                <button key={c} onClick={() => setColor(c)} title={c}
+                  style={{
+                    width: 30, height: 30, borderRadius: 9, cursor: 'pointer', padding: 0,
+                    background: c, border: color === c ? '2px solid #191712' : '1px solid rgba(25,23,18,0.12)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                  {color === c && <Check size={14} strokeWidth={3} color="#FFFFFF" />}
+                </button>
+              ))}
+            </span>
+          </div>
         </div>
 
-        {/* Footer */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'flex-end',
-          gap: 8,
-          paddingTop: 8,
-          borderTop: `1px solid ${'#E8E1CE'}`,
-        }}>
-          <button
-            onClick={onClose}
-            style={{
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              fontSize: 14,
-              color: '#6C6553',
-              padding: '8px 14px',
-              fontFamily: 'inherit',
-              borderRadius: 8,
-            }}
-          >
-            Cancel
-          </button>
-
-          {isEdit && onDelete && (
-            <button
-              onClick={() => { onDelete(category!.id); onClose() }}
-              style={{
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: 14,
-                color: RED,
-                padding: '8px 14px',
-                fontFamily: 'inherit',
-                borderRadius: 8,
-              }}
-            >
-              Delete
-            </button>
-          )}
-
-          <button
-            onClick={handleSave}
-            style={{
-              background: '#F5D14E',
-              border: 'none',
-              cursor: 'pointer',
-              fontSize: 14,
-              color: '#191712',
-              padding: '8px 20px',
-              fontFamily: 'inherit',
-              borderRadius: 8,
-              fontWeight: 600,
-            }}
-          >
-            Save
-          </button>
+        <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
+          <button onClick={handleSave} disabled={!canSave} style={{
+            ...PILL, flex: 1, justifyContent: 'center', fontWeight: 600,
+            background: canSave ? INK : '#EDE7D9',
+            border: 'none', color: canSave ? '#FDF8E7' : GHOST,
+            cursor: canSave ? 'pointer' : 'default',
+          }}>{isEdit ? 'Save changes' : 'Add category'}</button>
+          <button onClick={onClose} style={{ ...PILL, color: MUTED }}>Cancel</button>
         </div>
 
+        {isEdit && onDelete && (
+          <button
+            onClick={() => { onDelete(category!.id); onClose() }}
+            title="Its transactions stay; they simply stop being filed here"
+            style={{
+              marginTop: 12, width: '100%', height: 34, borderRadius: 9,
+              background: 'none', border: 'none', fontFamily: 'inherit',
+              color: RUST, fontSize: 12.5, cursor: 'pointer',
+            }}>
+            Delete this category
+          </button>
+        )}
       </div>
     </div>
   )

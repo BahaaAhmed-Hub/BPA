@@ -1,4 +1,8 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef } from 'react'
+import {
+  DndContext, pointerWithin, PointerSensor, TouchSensor, useSensor, useSensors,
+  useDraggable, useDroppable, DragOverlay, type DragEndEvent, type DragStartEvent,
+} from '@dnd-kit/core'
 import { useFinanceStore } from '../financeStore'
 import { CategoryModal } from '../modals/CategoryModal'
 import {
@@ -73,16 +77,39 @@ function Legend({ swatch, label, line }: { swatch: string; label: string; line?:
   )
 }
 
+/** A category you can pick up. The whole envelope is the handle: a tap still
+ *  opens it, because a finger has to hold before dnd-kit calls it a drag. */
+function Draggable({ id, disabled, children }: {
+  id: string; disabled?: boolean; children: (dragging: boolean) => React.ReactNode
+}) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id, disabled })
+  return (
+    <span ref={setNodeRef} {...attributes} {...listeners}
+      style={{ display: 'flex', touchAction: 'none', opacity: isDragging ? 0.4 : 1 }}>
+      {children(isDragging)}
+    </span>
+  )
+}
+
+/** Somewhere to let go. */
+function DropZone({ id, disabled, children }: {
+  id: string; disabled?: boolean; children: (over: boolean) => React.ReactNode
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id, disabled })
+  return <span ref={setNodeRef} style={{ display: 'flex' }}>{children(isOver && !disabled)}</span>
+}
+
 interface EnvelopeRow {
   cat: Category
   actual: number
   planned: number
   /** What this envelope is kept in, which need not be the app's default. */
   cur: string
+  children: Category[]
   currencies: string[]
 }
 
-function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty }: {
+function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty, dragging }: {
   title: string
   rows: EnvelopeRow[]
   color: string
@@ -90,6 +117,8 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
   onPick: (id: string) => void
   currency: string
   empty: string
+  /** The id of whatever is currently being dragged, or null. */
+  dragging: string | null
 }) {
   const inStep = rows.filter(r => r.cur === currency)
   const total  = inStep.reduce((s, r) => s + r.actual, 0)
@@ -115,24 +144,32 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
         <div style={{ fontSize: 11.5, color: '#9B9180', lineHeight: 1.6 }}>{empty}</div>
       ) : (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '18px 14px' }}>
-          {rows.map(({ cat, actual, planned, cur, currencies }) => {
+          {rows.map(({ cat, actual, planned, cur, children, currencies }) => {
             const pct  = planned > 0 ? actual / planned : (actual > 0 ? 1 : 0)
-            const over = planned > 0 && actual > planned
+            // Not `over`: the drop zone's render prop is called that, and this
+            // one would quietly lose to it inside the ring.
+            const spentOut = planned > 0 && actual > planned
             const on   = selectedId === cat.id
             // The badge says what this envelope is in when that is not the
             // usual thing, and otherwise flags spending it could not count.
             const mixed = cur !== currency ? [cur] : currencies
             return (
-              <button key={cat.id} onClick={() => onPick(cat.id)}
+              <span key={cat.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, width: 104 }}>
+              <DropZone id={`in:${cat.id}`} disabled={!dragging || dragging === cat.id}>
+                {over => (
+              <Draggable id={cat.id}>
+                {() => (
+              <button onClick={() => onPick(cat.id)}
                 title={`${cat.name} — ${money(actual, cur)}${planned > 0 ? ` of ${money(planned, cur)}` : ' · no budget set'}`}
                 style={{
-                  width: 92, padding: '8px 2px 6px', border: 'none', borderRadius: 12,
-                  background: on ? 'rgba(245,209,78,0.20)' : 'transparent',
-                  fontFamily: 'inherit', cursor: 'pointer',
+                  width: 104, padding: '8px 2px 6px', borderRadius: 12,
+                  background: over ? 'rgba(95,112,56,0.16)' : on ? 'rgba(245,209,78,0.20)' : 'transparent',
+                  border: over ? '1px dashed #5F7038' : '1px solid transparent',
+                  fontFamily: 'inherit', cursor: 'pointer', boxSizing: 'border-box',
                   display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7,
                 }}>
                 <span style={{ position: 'relative', display: 'flex' }}>
-                  <Ring pct={pct} color={color} over={over}>
+                  <Ring pct={pct} color={color} over={spentOut}>
                     <span>{cat.icon}</span>
                   </Ring>
                   {mixed.length > 0 && (
@@ -153,7 +190,7 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
                   {cat.name}
                 </span>
                 <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.3 }}>
-                  <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 12, fontWeight: 600, color: over ? color : '#191712', fontVariantNumeric: 'tabular-nums' }}>
+                  <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 12, fontWeight: 600, color: spentOut ? color : '#191712', fontVariantNumeric: 'tabular-nums' }}>
                     {actual.toLocaleString('en-US', { maximumFractionDigits: 0 })}
                   </span>
                   <span style={{ fontSize: 10, color: '#9B9180', fontVariantNumeric: 'tabular-nums' }}>
@@ -161,8 +198,53 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
                   </span>
                 </span>
               </button>
+                )}
+              </Draggable>
+                )}
+              </DropZone>
+
+              {/* Its children, so the shape is visible and each one can be
+                  dragged somewhere else — including out. */}
+              {children.map(sub => (
+                <Draggable key={sub.id} id={sub.id}>
+                  {() => (
+                    <span title={`${sub.name} — inside ${cat.name}. Drag it out to stand on its own.`}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 5, maxWidth: 104,
+                        height: 24, padding: '0 9px', borderRadius: 999, cursor: 'grab',
+                        background: '#F4EFE1', border: '1px solid #E4DCC6', color: '#4A4438',
+                        fontSize: 11, boxSizing: 'border-box',
+                      }}>
+                      <span style={{ fontSize: 11, flexShrink: 0 }}>{sub.icon}</span>
+                      <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sub.name}</span>
+                    </span>
+                  )}
+                </Draggable>
+              ))}
+              </span>
             )
           })}
+
+          {/* Only while something is in the air */}
+          {/* One per group, and the id has to say which — two droppables with
+              the same id means only one of them ever registers, and the drop
+              silently goes nowhere. */}
+          {dragging && (
+            <DropZone id={`top-level:${title}`}>
+              {over => (
+                <span style={{
+                  width: 104, minHeight: 84, borderRadius: 12, boxSizing: 'border-box',
+                  border: `1px dashed ${over ? '#5F7038' : '#D8CFB8'}`,
+                  background: over ? 'rgba(95,112,56,0.16)' : 'transparent',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  padding: 8, fontSize: 10.5, color: over ? '#5F7038' : '#9B9180',
+                  textAlign: 'center', lineHeight: 1.4,
+                }}>
+                  Drop here to stand on its own
+                </span>
+              )}
+            </DropZone>
+          )}
         </div>
       )}
     </div>
@@ -310,7 +392,8 @@ export function BudgetScreen(_props?: any) {
       // look untouched. And a budget that has not begun, or has ended, is not
       // a budget this month — both ends were collected and never consulted.
       const planned = activeIn(rule, monthKey) ? monthlyAmount(rule) : 0
-      return { cat, actual, planned, cur, currencies: [...currencies] }
+      const children = categories.filter(c => c.parentId === cat.id)
+      return { cat, actual, planned, cur, children, currencies: [...currencies] }
     }
     const all = parents.map(build)
     return {
@@ -331,6 +414,58 @@ export function BudgetScreen(_props?: any) {
   }
   const outTotal = sum(envelopes.spending)
   const inTotal  = sum(envelopes.earning)
+
+  // ── Re-parenting by hand ───────────────────────────────────────────────────
+  const [dragging, setDragging] = useState<string | null>(null)
+  // A drag ends in a click on whatever was under the finger. Ignore it, or
+  // letting go of a category opens the very popup you were moving it out of.
+  const droppedAt = useRef(0)
+  const dndSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor,   { activationConstraint: { delay: 180, tolerance: 8 } }),
+  )
+
+  function onDragEnd(e: DragEndEvent) {
+    setDragging(null)
+    droppedAt.current = Date.now()
+    const { active, over } = e
+    if (!over) return
+    const moved = categories.find(c => c.id === active.id)
+    if (!moved) return
+
+    if (String(over.id).startsWith('top-level')) {
+      if (moved.parentId) void upsertCategory({ ...moved, parentId: undefined })
+      return
+    }
+
+    const targetId = String(over.id).replace(/^in:/, '')
+    if (targetId === moved.id) return
+    const target = categories.find(c => c.id === targetId)
+    if (!target) return
+
+    // One level of nesting is all this models, so a category with children of
+    // its own cannot itself become a child — its children would need
+    // grandparents, and nothing here knows what those are.
+    if (categories.some(c => c.parentId === moved.id)) {
+      setNote(`${moved.name} has sub-categories of its own — empty it first, or move those instead.`)
+      return
+    }
+    // Spending inside earning would make the totals lie about which is which.
+    if ((target.txType === 'income') !== (moved.txType === 'income')) {
+      setNote(`${moved.name} and ${target.name} are not the same kind of money.`)
+      return
+    }
+    if (moved.parentId === target.id) return
+    void upsertCategory({ ...moved, parentId: target.id, txType: target.txType })
+  }
+
+  /** Said once, under the envelopes, when a drop could not be honoured. */
+  const [note, setNote] = useState<string | null>(null)
+
+  function pickCategory(id: string) {
+    if (Date.now() - droppedAt.current < 250) return   // that was a drop, not a tap
+    setSelectedId(id)
+  }
 
   function stepMonth(by: number) {
     const d = new Date(year, monthIdx + by, 1)
@@ -434,14 +569,51 @@ export function BudgetScreen(_props?: any) {
         <div style={{ display: 'flex', gap: 16, marginTop: 16, alignItems: 'flex-start' }}>
 
           <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <DndContext
+              sensors={dndSensors}
+              // pointerWithin, not closestCenter: the drop targets are wildly
+              // different sizes and what matters is what is under the finger,
+              // not which box centre the dragged pill happens to sit nearest.
+              collisionDetection={pointerWithin}
+              onDragStart={(e: DragStartEvent) => { setNote(null); setDragging(String(e.active.id)) }}
+              onDragCancel={() => setDragging(null)}
+              onDragEnd={onDragEnd}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <EnvelopeGroup
               title="Spending" rows={envelopes.spending} color={RUST}
-              selectedId={selectedId} onPick={setSelectedId} currency={currency}
+              selectedId={selectedId} onPick={pickCategory} currency={currency} dragging={dragging}
               empty="No spending categories yet — add one and its envelope appears here." />
             <EnvelopeGroup
               title="Earning" rows={envelopes.earning} color={OLIVE}
-              selectedId={selectedId} onPick={setSelectedId} currency={currency}
+              selectedId={selectedId} onPick={pickCategory} currency={currency} dragging={dragging}
               empty="No income categories yet." />
+            </div>
+            <DragOverlay dropAnimation={null}>
+              {dragging && (() => {
+                const c = categories.find(x => x.id === dragging)
+                return c ? (
+                  <span style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 7, height: 34, padding: '0 12px',
+                    borderRadius: 999, background: '#FFFFFF', border: '1px solid #E8E1CE',
+                    boxShadow: '0 8px 20px rgba(25,23,18,0.18)', fontSize: 12.5, color: '#191712',
+                  }}>
+                    <span style={{ fontSize: 14 }}>{c.icon}</span>{c.name}
+                  </span>
+                ) : null
+              })()}
+            </DragOverlay>
+            </DndContext>
+
+            {note && (
+              <div style={{
+                display: 'flex', alignItems: 'flex-start', gap: 8, padding: '10px 13px',
+                borderRadius: 10, background: 'rgba(245,209,78,0.20)', border: '1px solid rgba(245,209,78,0.65)',
+                fontSize: 11.5, color: '#3D3926', lineHeight: 1.5,
+              }}>
+                <span style={{ flex: 1 }}>{note}</span>
+                <button onClick={() => setNote(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8A6D0B', padding: 0, fontSize: 13, lineHeight: 1 }}>×</button>
+              </div>
+            )}
           </div>
 
           <div style={{ width: 340, flexShrink: 0, ...CARD, padding: '18px 20px 20px', alignSelf: 'stretch' }}>
