@@ -1,10 +1,13 @@
-import { useState, useMemo, useEffect } from 'react'
-import { ChevronDown, ChevronRight, ChevronsUpDown, ChevronsDownUp } from 'lucide-react'
+import { useState, useMemo, useEffect, Fragment } from 'react'
+import { ChevronDown, ChevronRight, ChevronsUpDown, ChevronsDownUp, X, Trash2 } from 'lucide-react'
 import { useFinanceStore } from '../financeStore'
 import { CategoryGlyph } from '../components/CategoryGlyph'
 import { toBase, baseCurrency, currenciesNeedingRates } from '../fx'
 import { acct, outflow } from '../format'
 import { findDuplicates } from '../duplicates'
+import { DuplicateMark } from '../components/DuplicateMark'
+import { TransactionModal } from '../modals/TransactionModal'
+import type { Transaction } from '../types'
 
 // ─── 16F · Financials YTD ─────────────────────────────────────────────────────
 // Spreadsheet-style table: each income/expense category as a row,
@@ -38,13 +41,15 @@ interface Row extends Line { children: Line[] }
  *  sections drew this twice, with the same markup and slightly different
  *  colours, which is how the income rows kept a stray element the expense ones
  *  did not. */
-function CategoryRows({ row, tone, open, hidden, onToggleOpen, onToggleHide, months, ROW_H, numCell, fmt }: {
+function CategoryRows({ row, tone, open, hidden, onToggleOpen, onToggleHide, onDrill, months, ROW_H, numCell, fmt }: {
   row: Row
   tone: string
   open: boolean
   hidden: (id: string) => boolean
   onToggleOpen: (id: string) => void
   onToggleHide: (id: string) => void
+  /** A figure is a set of entries. `month` is null for the year column. */
+  onDrill: (ids: string[], label: string, month: number | null) => void
   months: number[]
   ROW_H: number
   numCell: (v: number, isNet?: boolean) => React.CSSProperties
@@ -53,6 +58,26 @@ function CategoryRows({ row, tone, open, hidden, onToggleOpen, onToggleHide, mon
   const isHidden = hidden(row.cat.id)
   const total = months.reduce((s, v) => s + v, 0)
   const kids = row.children
+  // A hidden part is taken out of the parent's figure, so it has to be out of
+  // the parent's list too, or the two disagree.
+  const ownIds = [row.cat.id, ...kids.filter(k => !hidden(k.cat.id)).map(k => k.cat.id)]
+
+  /** A figure worth opening is one with something behind it. The click has to
+   *  be stopped here or it reaches the row, whose job is to hide it. */
+  const cell = (v: number, ids: string[], label: string, month: number | null, style: React.CSSProperties) =>
+    v === 0 ? <td style={style}>{fmt(v)}</td> : (
+      <td
+        style={{ ...style, cursor: 'pointer' }}
+        title={`${label} — see the entries`}
+        onClick={e => { e.stopPropagation(); onDrill(ids, label, month) }}
+      >
+        <span style={{ borderBottom: '1px solid transparent', paddingBottom: 1 }}
+          onMouseEnter={e => { e.currentTarget.style.borderBottomColor = '#C5BCA8' }}
+          onMouseLeave={e => { e.currentTarget.style.borderBottomColor = 'transparent' }}>
+          {fmt(v)}
+        </span>
+      </td>
+    )
 
   return (
     <>
@@ -85,8 +110,11 @@ function CategoryRows({ row, tone, open, hidden, onToggleOpen, onToggleHide, mon
             )}
           </div>
         </td>
-        {months.map((v, mi) => <td key={mi} style={numCell(v)}>{fmt(v)}</td>)}
-        <td style={{ ...numCell(total), fontWeight: 700, color: total === 0 ? '#C5BCA8' : tone }}>{fmt(total)}</td>
+        {months.map((v, mi) => (
+          <Fragment key={mi}>{cell(v, ownIds, `${row.cat.name} · ${MONTHS_SHORT[mi]}`, mi, numCell(v))}</Fragment>
+        ))}
+        {cell(total, ownIds, `${row.cat.name} · the year`, null,
+          { ...numCell(total), fontWeight: 700, color: total === 0 ? '#C5BCA8' : tone })}
       </tr>
 
       {open && kids.map(kid => {
@@ -108,9 +136,13 @@ function CategoryRows({ row, tone, open, hidden, onToggleOpen, onToggleHide, mon
               </div>
             </td>
             {kid.amounts.map((v, mi) => (
-              <td key={mi} style={{ ...numCell(v), fontSize: 11.5, color: v === 0 ? '#D8D0BE' : '#6C6553' }}>{fmt(v)}</td>
+              <Fragment key={mi}>
+                {cell(v, [kid.cat.id], `${kid.cat.name} · ${MONTHS_SHORT[mi]}`, mi,
+                  { ...numCell(v), fontSize: 11.5, color: v === 0 ? '#D8D0BE' : '#6C6553' })}
+              </Fragment>
             ))}
-            <td style={{ ...numCell(kidTotal), fontSize: 11.5, fontWeight: 600, color: kidTotal === 0 ? '#D8D0BE' : tone, opacity: 0.85 }}>{fmt(kidTotal)}</td>
+            {cell(kidTotal, [kid.cat.id], `${kid.cat.name} · the year`, null,
+              { ...numCell(kidTotal), fontSize: 11.5, fontWeight: 600, color: kidTotal === 0 ? '#D8D0BE' : tone, opacity: 0.85 })}
           </tr>
         )
       })}
@@ -120,7 +152,7 @@ function CategoryRows({ row, tone, open, hidden, onToggleOpen, onToggleHide, mon
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function ReflectionScreen(_props?: any) {
-  const { transactions, categories } = useFinanceStore()
+  const { transactions, categories, accounts, upsertTransaction, removeTransaction } = useFinanceStore()
   // The year lives in the store because it decides what gets fetched. Held
   // locally, stepping back a year filtered a set of transactions that only
   // ever contained the current one — so the whole grid came back empty and
@@ -218,6 +250,31 @@ export function ReflectionScreen(_props?: any) {
     [transactions, year, base, fxTick],
   )
 
+  // ── What is behind a figure ────────────────────────────────────────────────
+  // Each cell is a sum; this is the list it was summed from, so an entry filed
+  // wrong can be corrected where the wrongness is visible.
+  const [drill, setDrill] = useState<
+    { ids: string[] | null; label: string; month: number | null; kind: 'income' | 'expense' | 'both' } | null
+  >(null)
+  const [editing, setEditing] = useState<Transaction | null>(null)
+
+  function openDrill(ids: string[] | null, label: string, month: number | null, kind: 'income' | 'expense' | 'both') {
+    setDrill({ ids, label, month, kind })
+  }
+
+  const drillTx = useMemo(() => {
+    if (!drill) return []
+    const prefix = drill.month === null
+      ? String(year)
+      : `${year}-${String(drill.month + 1).padStart(2, '0')}`
+    const ids = drill.ids ? new Set(drill.ids) : null
+    const wanted = (t: string) => drill.kind === 'both' ? (t === 'income' || t === 'expense') : t === drill.kind
+    return transactions
+      .filter(tx => wanted(tx.type) && tx.date.startsWith(prefix))
+      .filter(tx => (ids ? !!tx.categoryId && ids.has(tx.categoryId) : true))
+      .sort((a, b) => b.date.localeCompare(a.date))
+  }, [drill, transactions, year])
+
   // Which parents are showing their parts.
   const [openIds, setOpenIds] = useState<Set<string>>(new Set())
   function toggleOpen(id: string) {
@@ -248,6 +305,12 @@ export function ReflectionScreen(_props?: any) {
   const visIncome  = MONTHS_SHORT.map((_, mi) => incomeRows.filter(r => !hiddenIds.has(r.cat.id)).reduce((s, r) => s + rowMonths(r)[mi], 0))
   const visExpense = MONTHS_SHORT.map((_, mi) => expenseRows.filter(r => !hiddenIds.has(r.cat.id)).reduce((s, r) => s + rowMonths(r)[mi], 0))
   const netPerMonth = MONTHS_SHORT.map((_, mi) => visIncome[mi] - visExpense[mi])
+
+  /** The categories a figure covers: a hidden parent is out entirely, a hidden
+   *  part is out of its parent. Same rule the sums above use. */
+  const visibleIds = (rows: { cat: { id: string }; children: { cat: { id: string } }[] }[]) =>
+    rows.filter(r => !hiddenIds.has(r.cat.id))
+      .flatMap(r => [r.cat.id, ...r.children.filter(c => !hiddenIds.has(c.cat.id)).map(c => c.cat.id)])
 
   // Cumulative (running) cash
   const cumulative: number[] = []
@@ -402,40 +465,47 @@ export function ReflectionScreen(_props?: any) {
 
             {/* ── INCOME section ── */}
             <SectionHeader label="INCOME" colCount={12} colWidth={COL_W} nameWidth={NAME_W}
-              monthTotals={monthlyIncome} rowTotal={monthlyIncome.reduce((s, v) => s + v, 0)} />
+              monthTotals={monthlyIncome} rowTotal={monthlyIncome.reduce((s, v) => s + v, 0)}
+              onDrill={(label, month) => openDrill(null, label, month, 'income')} />
 
             {incomeRows.map(row => (
               <CategoryRows key={row.cat.id} row={row} tone={OLIVE}
                 open={openIds.has(row.cat.id)} hidden={id => hiddenIds.has(id)}
                 onToggleOpen={toggleOpen} onToggleHide={toggleHide}
-                months={rowMonths(row)} ROW_H={ROW_H} numCell={numCell} fmt={fmt} />
+                months={rowMonths(row)} ROW_H={ROW_H} numCell={numCell} fmt={fmt}
+                onDrill={(ids, label, month) => openDrill(ids, label, month, 'income')} />
             ))}
 
             {/* Total income row */}
-            <TotalRow label="Total income" months={visIncome} total={totalIncome} sign={1} COL_W={COL_W} NAME_W={NAME_W} />
+            <TotalRow label="Total income" months={visIncome} total={totalIncome} sign={1} COL_W={COL_W} NAME_W={NAME_W}
+              onDrill={(label, month) => openDrill(visibleIds(incomeRows), label, month, 'income')} />
 
             {/* Spacer */}
             <tr style={{ height: 12 }}><td colSpan={14} /></tr>
 
             {/* ── EXPENSES section ── */}
             <SectionHeader label="EXPENSES" colCount={12} colWidth={COL_W} nameWidth={NAME_W}
-              monthTotals={monthlyExpense} rowTotal={monthlyExpense.reduce((s, v) => s + v, 0)} out />
+              monthTotals={monthlyExpense} rowTotal={monthlyExpense.reduce((s, v) => s + v, 0)} out
+              onDrill={(label, month) => openDrill(null, label, month, 'expense')} />
 
             {expenseRows.map(row => (
               <CategoryRows key={row.cat.id} row={row} tone={RUST}
                 open={openIds.has(row.cat.id)} hidden={id => hiddenIds.has(id)}
                 onToggleOpen={toggleOpen} onToggleHide={toggleHide}
-                months={rowMonths(row)} ROW_H={ROW_H} numCell={numCell} fmt={fmtOut} />
+                months={rowMonths(row)} ROW_H={ROW_H} numCell={numCell} fmt={fmtOut}
+                onDrill={(ids, label, month) => openDrill(ids, label, month, 'expense')} />
             ))}
 
             {/* Total expenses row */}
-            <TotalRow label="Total expenses" months={visExpense} total={totalExpense} sign={-1} COL_W={COL_W} NAME_W={NAME_W} />
+            <TotalRow label="Total expenses" months={visExpense} total={totalExpense} sign={-1} COL_W={COL_W} NAME_W={NAME_W}
+              onDrill={(label, month) => openDrill(visibleIds(expenseRows), label, month, 'expense')} />
 
             {/* Spacer */}
             <tr style={{ height: 8 }}><td colSpan={14} /></tr>
 
             {/* Net per month */}
-            <NetRow label="Net by month" months={netPerMonth} total={totalNet} COL_W={COL_W} NAME_W={NAME_W} />
+            <NetRow label="Net by month" months={netPerMonth} total={totalNet} COL_W={COL_W} NAME_W={NAME_W}
+              onDrill={(label, month) => openDrill([...visibleIds(incomeRows), ...visibleIds(expenseRows)], label, month, 'both')} />
 
             {/* Cumulative cash */}
             <CumulativeRow months={cumulative} COL_W={COL_W} NAME_W={NAME_W} />
@@ -444,15 +514,135 @@ export function ReflectionScreen(_props?: any) {
         </table>
       </div>
 
+      {/* What one figure was summed from */}
+      {drill && (
+        <div
+          onClick={() => setDrill(null)}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 900,
+            background: 'rgba(25,23,18,0.28)', display: 'flex', justifyContent: 'flex-end',
+          }}>
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              width: 'min(520px, 100%)', height: '100%', display: 'flex', flexDirection: 'column',
+              background: '#FCFAF4', borderLeft: '1px solid #E8E1CE',
+              boxShadow: '-18px 0 48px rgba(25,23,18,0.18)',
+            }}>
+            <div style={{ flexShrink: 0, padding: '18px 22px 14px', borderBottom: '1px solid #E8E1CE' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 7,
+                  background: '#F3EEE0', borderRadius: 999, padding: '5px 12px',
+                  fontSize: 11.5, fontWeight: 600, color: '#6C6553',
+                }}>
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: drill.kind === 'income' ? OLIVE : drill.kind === 'expense' ? RUST : '#6C6553' }} />
+                  {drill.kind === 'income' ? 'Income' : drill.kind === 'expense' ? 'Spending' : 'In and out'}
+                </span>
+                <button onClick={() => setDrill(null)} title="Close"
+                  style={{
+                    marginLeft: 'auto', width: 30, height: 30, borderRadius: '50%', padding: 0,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: '#FFFFFF', border: '1px solid #E8E1CE', color: '#6C6553', cursor: 'pointer',
+                  }}><X size={14} /></button>
+              </div>
+              <div style={{ fontFamily: 'Outfit, sans-serif', fontSize: 21, fontWeight: 600, letterSpacing: '-0.03em', color: '#191712', marginTop: 12 }}>
+                {drill.label}
+              </div>
+              <div style={{ fontSize: 12, color: '#6C6553', marginTop: 3 }}>
+                {drillTx.length} {drillTx.length === 1 ? 'entry' : 'entries'} ·{' '}
+                {acct(drillTx.reduce((n, t) => {
+                  const v = toBase(Math.abs(t.amount), t.currency, base) ?? 0
+                  return n + (t.type === 'income' ? v : -v)
+                }, 0), { currency: base })}
+              </div>
+            </div>
+
+            <div style={{ flex: 1, overflowY: 'auto', padding: '6px 22px 22px' }}>
+              {drillTx.length === 0 && (
+                <div style={{ fontSize: 13, color: '#9B9180', textAlign: 'center', padding: '40px 0' }}>
+                  Nothing behind this figure any more
+                </div>
+              )}
+              {drillTx.map(tx => {
+                const cat = categories.find(c => c.id === tx.categoryId)
+                return (
+                  <div key={tx.id} style={{
+                    display: 'flex', alignItems: 'center', gap: 11,
+                    padding: '11px 0', borderBottom: '1px solid #F0EBDC',
+                  }}>
+                    <span
+                      onClick={() => setEditing(tx)}
+                      title="Open this entry"
+                      style={{
+                        flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 11, cursor: 'pointer',
+                      }}>
+                      <span style={{
+                        width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        background: '#F1ECDE', color: cat?.color ?? '#6C6553',
+                      }}>
+                        <CategoryGlyph icon={cat?.icon} size={15} />
+                      </span>
+                      <span style={{ flex: 1, minWidth: 0 }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13.5, color: '#191712', fontWeight: 500 }}>
+                          <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {tx.payee?.trim() || cat?.name || 'Entry'}
+                          </span>
+                          <DuplicateMark scope={dupes.get(tx.id)} />
+                        </span>
+                        <span style={{ display: 'block', fontSize: 11.5, color: '#9B9180', marginTop: 1 }}>
+                          {tx.date}{cat && tx.payee?.trim() ? ` · ${cat.name}` : ''}
+                        </span>
+                      </span>
+                      <span style={{
+                        fontFamily: 'Outfit, sans-serif', fontSize: 13.5, fontWeight: 600,
+                        color: tx.type === 'income' ? OLIVE : RUST, fontVariantNumeric: 'tabular-nums', flexShrink: 0,
+                      }}>
+                        {acct(tx.type === 'income' ? Math.abs(tx.amount) : -Math.abs(tx.amount), { currency: tx.currency })}
+                      </span>
+                    </span>
+                    <button
+                      onClick={() => {
+                        if (!window.confirm(`Delete ${tx.payee?.trim() || 'this entry'} of ${acct(Math.abs(tx.amount), { currency: tx.currency })}?`)) return
+                        void removeTransaction(tx.id)
+                      }}
+                      title="Delete this entry"
+                      style={{
+                        width: 28, height: 28, borderRadius: '50%', padding: 0, flexShrink: 0,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        background: '#FFFFFF', border: '1px solid #E8E1CE', color: '#9B9180', cursor: 'pointer',
+                      }}><Trash2 size={13} /></button>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {editing && (
+        <TransactionModal
+          transaction={editing}
+          accounts={accounts}
+          categories={categories}
+          history={transactions}
+          onSave={tx => { void upsertTransaction(tx); setEditing(null) }}
+          onDelete={id => { void removeTransaction(id); setEditing(null) }}
+          onClose={() => setEditing(null)}
+        />
+      )}
+
     </div>
   )
 }
 
 // ── Sub-components ──────────────────────────────────────────────────────────
 
-function SectionHeader({ label, colCount: _colCount, colWidth, nameWidth: _nameWidth, monthTotals, rowTotal, out }: {
+function SectionHeader({ label, colCount: _colCount, colWidth, nameWidth: _nameWidth, monthTotals, rowTotal, out, onDrill }: {
   label: string; colCount: number; colWidth: number; nameWidth: number
   monthTotals: number[]; rowTotal: number; out?: boolean
+  onDrill: (label: string, month: number | null) => void
 }) {
   const f = out ? fmtOut : fmt
   return (
@@ -461,20 +651,25 @@ function SectionHeader({ label, colCount: _colCount, colWidth, nameWidth: _nameW
         <span style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.1em', color: '#6C6553' }}>{label}</span>
       </td>
       {monthTotals.map((v, i) => (
-        <td key={i} style={{ width: colWidth, textAlign: 'right', padding: '5px 10px', fontFamily: 'Outfit, sans-serif', fontSize: 11, color: v === 0 ? '#C5BCA8' : '#6C6553', fontVariantNumeric: 'tabular-nums' }}>
+        <td key={i}
+          onClick={v === 0 ? undefined : () => onDrill(`${label} · ${MONTHS_SHORT[i]}`, i)}
+          style={{ width: colWidth, textAlign: 'right', padding: '5px 10px', fontFamily: 'Outfit, sans-serif', fontSize: 11, color: v === 0 ? '#C5BCA8' : '#6C6553', fontVariantNumeric: 'tabular-nums', cursor: v === 0 ? 'default' : 'pointer' }}>
           {f(v)}
         </td>
       ))}
-      <td style={{ width: 100, textAlign: 'right', padding: '5px 14px', fontFamily: 'Outfit, sans-serif', fontSize: 11.5, fontWeight: 700, color: '#6C6553', fontVariantNumeric: 'tabular-nums' }}>
+      <td
+        onClick={rowTotal === 0 ? undefined : () => onDrill(`${label} · the year`, null)}
+        style={{ width: 100, textAlign: 'right', padding: '5px 14px', fontFamily: 'Outfit, sans-serif', fontSize: 11.5, fontWeight: 700, color: '#6C6553', fontVariantNumeric: 'tabular-nums', cursor: rowTotal === 0 ? 'default' : 'pointer' }}>
         {f(rowTotal)}
       </td>
     </tr>
   )
 }
 
-function TotalRow({ label, months, total, sign, COL_W, NAME_W: _NAME_W }: {
+function TotalRow({ label, months, total, sign, COL_W, NAME_W: _NAME_W, onDrill }: {
   label: string; months: number[]; total: number; sign: 1 | -1
   COL_W: number; NAME_W: number
+  onDrill: (label: string, month: number | null) => void
 }) {
   const col = sign === 1 ? OLIVE : RUST
   return (
@@ -483,19 +678,24 @@ function TotalRow({ label, months, total, sign, COL_W, NAME_W: _NAME_W }: {
         <span style={{ fontSize: 12.5, fontWeight: 700, color: '#191712' }}>{label}</span>
       </td>
       {months.map((v, mi) => (
-        <td key={mi} style={{ width: COL_W, minWidth: COL_W, textAlign: 'right', padding: '0 10px', fontFamily: 'Outfit, sans-serif', fontSize: 13, fontWeight: 700, color: v === 0 ? '#C5BCA8' : col, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+        <td key={mi}
+          onClick={v === 0 ? undefined : () => onDrill(`${label} · ${MONTHS_SHORT[mi]}`, mi)}
+          style={{ width: COL_W, minWidth: COL_W, textAlign: 'right', padding: '0 10px', fontFamily: 'Outfit, sans-serif', fontSize: 13, fontWeight: 700, color: v === 0 ? '#C5BCA8' : col, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', cursor: v === 0 ? 'default' : 'pointer' }}>
           {sign === 1 ? fmt(v) : fmtOut(v)}
         </td>
       ))}
-      <td style={{ width: 100, textAlign: 'right', padding: '0 14px', fontFamily: 'Outfit, sans-serif', fontSize: 13.5, fontWeight: 700, color: total === 0 ? '#C5BCA8' : col, fontVariantNumeric: 'tabular-nums' }}>
+      <td
+        onClick={total === 0 ? undefined : () => onDrill(`${label} · the year`, null)}
+        style={{ width: 100, textAlign: 'right', padding: '0 14px', fontFamily: 'Outfit, sans-serif', fontSize: 13.5, fontWeight: 700, color: total === 0 ? '#C5BCA8' : col, fontVariantNumeric: 'tabular-nums', cursor: total === 0 ? 'default' : 'pointer' }}>
         {sign === 1 ? fmt(total) : fmtOut(total)}
       </td>
     </tr>
   )
 }
 
-function NetRow({ label, months, total, COL_W, NAME_W: _NAME_W2 }: {
+function NetRow({ label, months, total, COL_W, NAME_W: _NAME_W2, onDrill }: {
   label: string; months: number[]; total: number; COL_W: number; NAME_W: number
+  onDrill: (label: string, month: number | null) => void
 }) {
   return (
     <tr style={{ background: '#FCFAF4', borderBottom: '1px solid #E8E1CE' }}>
@@ -503,11 +703,15 @@ function NetRow({ label, months, total, COL_W, NAME_W: _NAME_W2 }: {
         <span style={{ fontSize: 12.5, fontWeight: 700, color: '#191712' }}>{label}</span>
       </td>
       {months.map((v, mi) => (
-        <td key={mi} style={{ width: COL_W, minWidth: COL_W, textAlign: 'right', padding: '0 10px', fontFamily: 'Outfit, sans-serif', fontSize: 13, fontWeight: 700, color: v === 0 ? '#9B9180' : v > 0 ? OLIVE : RUST, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+        <td key={mi}
+          onClick={v === 0 ? undefined : () => onDrill(`${label} · ${MONTHS_SHORT[mi]}`, mi)}
+          style={{ width: COL_W, minWidth: COL_W, textAlign: 'right', padding: '0 10px', fontFamily: 'Outfit, sans-serif', fontSize: 13, fontWeight: 700, color: v === 0 ? '#9B9180' : v > 0 ? OLIVE : RUST, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', cursor: v === 0 ? 'default' : 'pointer' }}>
           {fmt(v)}
         </td>
       ))}
-      <td style={{ width: 100, textAlign: 'right', padding: '0 14px', fontFamily: 'Outfit, sans-serif', fontSize: 13.5, fontWeight: 700, color: total === 0 ? '#9B9180' : total > 0 ? OLIVE : RUST, fontVariantNumeric: 'tabular-nums' }}>
+      <td
+        onClick={total === 0 ? undefined : () => onDrill(`${label} · the year`, null)}
+        style={{ width: 100, textAlign: 'right', padding: '0 14px', fontFamily: 'Outfit, sans-serif', fontSize: 13.5, fontWeight: 700, color: total === 0 ? '#9B9180' : total > 0 ? OLIVE : RUST, fontVariantNumeric: 'tabular-nums', cursor: total === 0 ? 'default' : 'pointer' }}>
         {fmt(total)}
       </td>
     </tr>

@@ -82,6 +82,10 @@ Three rules any change here must keep:
   same thing in a *different* month is a recurring payment and is never flagged.
   Surfaced by `DuplicateMark` in the Today, Balances and drill-down feeds, and as the
   "N to check" chip on Financials. It never edits anything.
+- **Every figure in Financials opens what it was summed from.** A cell click stops
+  propagation (the row's own click hides it) and passes the exact id set the figure
+  used — a hidden part is out of both. The panel deletes and edits through the store,
+  so the table behind it recalculates.
 - **Exchange rates are a setting.** Settings → Finance owns them; screens that find
   unconvertible money say so and link there.
 
