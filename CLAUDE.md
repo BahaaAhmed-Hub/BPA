@@ -90,6 +90,13 @@ Three rules any change here must keep:
   that sets them all. Unpaid means **no `paidAt` at all** — that is what every screen
   reads — and `isCleared` follows it. A line that repeats is paid on each occurrence's
   own day, so a hand-set payment date applies to a single entry only.
+- **An unpaid entry is in no figure.** `settled(txs)` in `unpaid.ts` drops what has
+  no payment date, and every total goes through it: account balances
+  (`balances.ts`, which also returns `pending` per account so a row can say what is
+  waiting), the Today calendar cells and In/Out/Net, the Budget envelopes and year
+  chart, and Reports. The entry is still *listed* everywhere, marked. The one
+  deliberate exception is Financials **when it is due**, whose whole purpose is to
+  count what is owed; its sibling view already left the unpaid out.
 - **Unpaid entries carry a dotted red border.** `unpaid.ts` is the only place that
   decides it: `isUnpaid(tx)` and `unpaidRow(bool)`, spread *after* a row's own style
   (the `border` shorthand has to replace the row's bottom hairline). Used by all four

@@ -8,7 +8,7 @@ import { acct, group } from '../format'
 import { toBase, baseCurrency, currenciesNeedingRates } from '../fx'
 import { findDuplicates } from '../duplicates'
 import { DuplicateMark } from '../components/DuplicateMark'
-import { isUnpaid, unpaidRow, UNPAID_TITLE } from '../unpaid'
+import { isUnpaid, unpaidRow, settled, UNPAID_TITLE } from '../unpaid'
 import { isoDate } from '../dates'
 
 // ── Palette ───────────────────────────────────────────────────────────────────
@@ -106,7 +106,9 @@ function MoneyCalendar({
   const base = baseCurrency()
   const dayNetMap = new Map<string, number>()
   const dayTxMap  = new Map<string, string[]>() // dateStr → payee names
-  transactions.forEach(tx => {
+  // A day's figure is what moved that day. An unpaid entry is still in the
+  // feed below, marked; it just has not happened yet.
+  settled(transactions).forEach(tx => {
     if (!tx.date.startsWith(monthPrefix)) return
     const v = toBase(Math.abs(tx.amount), tx.currency, base)
     if (v === null) return
@@ -125,7 +127,7 @@ function MoneyCalendar({
 
   // Monthly totals
   const inBase = (t: Transaction) => toBase(Math.abs(t.amount), t.currency, base) ?? 0
-  const monthTxs = transactions.filter(t => t.date.startsWith(monthPrefix))
+  const monthTxs = settled(transactions).filter(t => t.date.startsWith(monthPrefix))
   const monthOut = monthTxs.filter(t => t.type === 'expense').reduce((s, t) => s + inBase(t), 0)
   const monthIn  = monthTxs.filter(t => t.type === 'income').reduce((s, t) => s + inBase(t), 0)
   const unrated  = currenciesNeedingRates(monthTxs, base)
@@ -335,7 +337,7 @@ export function TodayScreen() {
     )
   }
 
-  const todayTx = transactions.filter(tx => tx.date === todayStr)
+  const todayTx = settled(transactions).filter(tx => tx.date === todayStr)
   const base = baseCurrency()
   const conv = (t: Transaction) => toBase(Math.abs(t.amount), t.currency, base) ?? 0
   const todayExp = todayTx.filter(t => t.type === 'expense').reduce((s, t) => s + conv(t), 0)
@@ -414,9 +416,11 @@ export function TodayScreen() {
           {/* Net cashflow over whatever is being shown — read down the column:
               what came in, what went out, what is left. */}
           {feed.length > 0 && (() => {
-            const inc = feed.filter(t => t.type === 'income').reduce((s, t) => s + conv(t), 0)
-            const exp = feed.filter(t => t.type === 'expense').reduce((s, t) => s + conv(t), 0)
+            const moved = settled(feed)
+            const inc = moved.filter(t => t.type === 'income').reduce((s, t) => s + conv(t), 0)
+            const exp = moved.filter(t => t.type === 'expense').reduce((s, t) => s + conv(t), 0)
             const net = inc - exp
+            const waiting = feed.length - moved.length
             const line = (label: string, value: string, color: string, strong = false) => (
               <div style={{
                 display: 'flex', alignItems: 'baseline', gap: 12,
@@ -440,6 +444,11 @@ export function TodayScreen() {
                 {line('In',  acct(inc, { currency: base }), GREEN)}
                 {line('Out', acct(-exp, { currency: base }), RED)}
                 {line('Net', acct(net, { currency: base }), net >= 0 ? GREEN : RED, true)}
+                {waiting > 0 && (
+                  <div style={{ fontSize: 10.5, color: RED, marginTop: 7, textAlign: 'right' }}>
+                    {waiting} not paid yet, so not counted
+                  </div>
+                )}
               </div>
             )
           })()}

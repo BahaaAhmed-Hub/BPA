@@ -26,6 +26,20 @@ export function isUnpaid(tx: Pick<Transaction, 'paidAt'>): boolean {
   return columnExists && !tx.paidAt
 }
 
+/** What actually counts towards a figure: money that has moved.
+ *
+ *  An entry with no payment date is money still owed, so it has no business
+ *  in a balance, a day's net, an envelope or a report — those say where things
+ *  stand, and an unpaid bill has not happened yet. The entry is still listed
+ *  in every feed, marked; it is only kept out of the arithmetic.
+ *
+ *  The one deliberate exception is the Financials "when it is due" view, whose
+ *  whole purpose is to file an entry in the month it belongs to whether or not
+ *  it has been paid. Its sibling view already leaves the unpaid out. */
+export function settled<T extends Pick<Transaction, 'paidAt'>>(txs: T[]): T[] {
+  return columnExists ? txs.filter(t => !!t.paidAt) : txs
+}
+
 /** Spread over a feed row's own style, after it: the border shorthand is what
  *  replaces the row's bottom hairline, so it has to be assigned last. */
 export function unpaidRow(unpaid: boolean): CSSProperties {

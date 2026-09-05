@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useFinanceStore } from '../financeStore'
+import { settled } from '../unpaid'
 import { toBase, baseCurrency, currenciesNeedingRates } from '../fx'
 
 // ─── Donut chart helpers ───────────────────────────────────────────────────────
@@ -150,7 +151,9 @@ export function ReportsScreen(_props?: any) {
     (!rangeFrom || tx.date >= rangeFrom) && (!rangeTo || tx.date <= rangeTo)
 
   const base = baseCurrency()
-  const expTxns = transactions.filter(tx => tx.type === 'expense' && inRange(tx))
+  // A report says where the money went. Money that has not moved has not gone
+  // anywhere yet, so an unpaid entry is not in it.
+  const expTxns = settled(transactions).filter(tx => tx.type === 'expense' && inRange(tx))
   const byCategory = new Map<string, number>()
   expTxns.forEach(tx => {
     // A dollar is not a pound. Anything with no rate behind it is left out and

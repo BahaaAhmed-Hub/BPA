@@ -16,7 +16,7 @@ import type { Category, Transaction } from '../types'
 import { acct } from '../format'
 import { findDuplicates } from '../duplicates'
 import { DuplicateMark } from '../components/DuplicateMark'
-import { isUnpaid, unpaidRow, UNPAID_TITLE } from '../unpaid'
+import { isUnpaid, unpaidRow, settled, UNPAID_TITLE } from '../unpaid'
 
 // ─── 16G · Budget Builder ─────────────────────────────────────────────────────
 // Categories tree with budget rules: amount, frequency, roll unspent,
@@ -441,7 +441,9 @@ export function BudgetScreen(_props?: any) {
     const out = Array.from({ length: 12 }, (_, m) => {
       const prefix = `${year}-${String(m + 1).padStart(2, '0')}`
       let income = 0, expense = 0
-      for (const tx of transactions) {
+      // The year chart is money that moved. What is still owed is not a month
+      // that has happened.
+      for (const tx of settled(transactions)) {
         if (!tx.date.startsWith(prefix)) continue
         // Converted, not added at face value: 3,500 USD is not 3,500 EGP, and
         // a rate nobody has given is left out rather than invented.
@@ -478,7 +480,9 @@ export function BudgetScreen(_props?: any) {
       // total and no summary line anywhere.
       let base = 0
       const currencies = new Set<string>()
-      for (const tx of transactions) {
+      // An envelope holds what has been spent out of it. A bill that is only
+      // due has taken nothing out of it yet.
+      for (const tx of settled(transactions)) {
         if (!tx.categoryId || !ids.has(tx.categoryId)) continue
         if (tx.type !== wanted) continue
         if (!tx.date.startsWith(monthKey)) continue
@@ -965,8 +969,8 @@ export function BudgetScreen(_props?: any) {
 
         // Converted, like every other total on this screen.
         const inBase = (tx: Transaction) => toBase(Math.abs(tx.amount), tx.currency, currency) ?? 0
-        const totalSpend = drillTxs.reduce((s: number, tx: Transaction) => s + inBase(tx), 0)
-        const excludedSpend = drillTxs
+        const totalSpend = settled(drillTxs).reduce((s: number, tx: Transaction) => s + inBase(tx), 0)
+        const excludedSpend = settled(drillTxs)
           .filter((tx: Transaction) => txFlags[tx.id] === 'excluded')
           .reduce((s: number, tx: Transaction) => s + inBase(tx), 0)
         const drillUnrated = currenciesNeedingRates(drillTxs, currency)

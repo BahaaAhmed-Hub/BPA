@@ -84,11 +84,15 @@ function formatBalance(bal: number, currency = 'EGP'): string {
   return acct(bal, { currency })
 }
 
-function AccountRow({ account, balance, unconverted, selected, hovered, onSelect, onHover, onEdit, onSettle, onIcon }: {
+function AccountRow({ account, balance, unconverted, pending, selected, hovered, onSelect, onHover, onEdit, onSettle, onIcon }: {
   account: Account
   balance: number
   /** Currencies filed against this account that nothing could convert. */
   unconverted: string[]
+  /** What unpaid entries would do to this account once they are paid. Out of
+   *  the balance — the money has not moved — but said out loud, or an account
+   *  with a fortnight of bills against it looks better off than it is. */
+  pending: number
   selected: boolean
   onSelect: (a: Account) => void
   hovered: boolean
@@ -194,6 +198,12 @@ function AccountRow({ account, balance, unconverted, selected, hovered, onSelect
             title={`Entries here in ${unconverted.join(', ')} with no rate set, so they are not in this balance. Settings → Finance.`}
             style={{ fontSize: 9.5, fontWeight: 700, color: '#C08A2E' }}>
             {unconverted.join(' ')} not counted
+          </span>
+        ) : pending !== 0 ? (
+          <span
+            title="Entries filed here with no payment date. The money has not moved, so it is not in the balance."
+            style={{ fontSize: 9.5, fontWeight: 700, color: NEGATIVE }}>
+            {formatBalance(pending, account.currency)} not paid yet
           </span>
         ) : account.last4 ? (
           <span style={{ fontSize: 10, color: '#6C6553' }}>cleared</span>
@@ -320,6 +330,7 @@ export function BalanceScreen() {
   const live = liveBalances(accounts, transactions)
   const balanceOf = (a: Account) => live.balances.get(a.id) ?? a.balance
   const unratedOn = (a: Account) => [...(live.unconverted.get(a.id) ?? [])]
+  const pendingOn = (a: Account) => live.pending.get(a.id) ?? 0
 
   const inBase = (list: typeof accounts) =>
     list.reduce((s, a) => s + (toBase(balanceOf(a), a.currency, base) ?? 0), 0)
@@ -484,6 +495,7 @@ export function BalanceScreen() {
                         account={acc}
                         balance={balanceOf(acc)}
                         unconverted={unratedOn(acc)}
+                        pending={pendingOn(acc)}
                         selected={focusId === acc.id}
                         onSelect={a => setFocusId(id => (id === a.id ? null : a.id))}
                         hovered={hoveredAccountId === acc.id}

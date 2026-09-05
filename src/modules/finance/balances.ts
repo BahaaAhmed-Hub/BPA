@@ -1,5 +1,6 @@
 import type { Account, Transaction } from './types'
 import { convert } from './fx'
+import { isUnpaid } from './unpaid'
 
 // ─── What an account actually holds ──────────────────────────────────────────
 // The balance on an account row is where it started, not where it is. Nothing
@@ -7,10 +8,15 @@ import { convert } from './fx'
 // for ever — usually zero — while the entries piled up beside it.
 //
 // A live balance is that opening figure plus everything filed against the
-// account. The sign convention is the one the screen already assumes: a
-// positive balance is money held, a negative one is money owed, so spending on
-// a credit card takes it further below zero and paying the card off brings it
-// back towards zero.
+// account that has actually been paid. An entry with no payment date is money
+// that has not moved: the bill is owed, the account still holds what it held.
+// What is waiting comes back separately as `pending`, so a row can say how
+// much is coming without pretending it has gone.
+//
+// The sign convention is the one the screen already assumes: a positive
+// balance is money held, a negative one is money owed, so spending on a credit
+// card takes it further below zero and paying the card off brings it back
+// towards zero.
 
 /** Where the money went for one account, in that account's own currency.
  *
@@ -49,20 +55,29 @@ export function deltaFor(account: Account, tx: Transaction): number | null {
 
 export function liveBalance(account: Account, transactions: Transaction[]): number {
   let n = account.balance
-  for (const tx of transactions) n += deltaFor(account, tx) ?? 0
+  for (const tx of transactions) {
+    if (isUnpaid(tx)) continue
+    n += deltaFor(account, tx) ?? 0
+  }
   return n
 }
 
 /** Every account's live balance in one pass, so a list of eight accounts does
  *  not walk the transactions eight times. `unconverted` names the currencies an
  *  account holds entries in that nothing could convert, so a balance that is
- *  quietly short can say why. */
+ *  quietly short can say why. `pending` is what unpaid entries would do to the
+ *  account once they are paid — kept out of the balance, but not hidden. */
 export function liveBalances(
   accounts: Account[],
   transactions: Transaction[],
-): { balances: Map<string, number>; unconverted: Map<string, Set<string>> } {
+): {
+  balances: Map<string, number>
+  unconverted: Map<string, Set<string>>
+  pending: Map<string, number>
+} {
   const balances = new Map(accounts.map(a => [a.id, a.balance]))
   const unconverted = new Map<string, Set<string>>()
+  const pending = new Map<string, number>()
   const byId = new Map(accounts.map(a => [a.id, a]))
 
   const apply = (a: Account, tx: Transaction) => {
@@ -73,6 +88,7 @@ export function liveBalances(
       unconverted.set(a.id, set)
       return
     }
+    if (isUnpaid(tx)) { pending.set(a.id, (pending.get(a.id) ?? 0) + d); return }
     balances.set(a.id, balances.get(a.id)! + d)
   }
 
@@ -87,5 +103,5 @@ export function liveBalances(
     const a = tx.accountId ? byId.get(tx.accountId) : undefined
     if (a) apply(a, tx)
   }
-  return { balances, unconverted }
+  return { balances, unconverted, pending }
 }
