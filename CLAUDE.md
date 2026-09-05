@@ -65,6 +65,13 @@ Three rules any change here must keep:
   reformatting on each keystroke otherwise throws it to the end of the line.
   Don't reach for `<input type="number">` for money; it cannot show separators.
 
+- **Every total converts first.** `fx.ts` holds a hand-set rate per currency;
+  `toBase(amount, currency)` returns `null` where nobody has given one. Never add
+  `Math.abs(tx.amount)` straight into a total, and never fall back to the raw
+  number when `toBase` is null — drop the row and name the currency on screen.
+  This applies to budget *rules* too: a sub-category budget carries its own
+  currency and has to be converted before it is added to its parent's.
+
 ## Finance persistence
 All nine finance tables are real Postgres (`20260001`, plus `finance_budgets` in `20260005`).
 `financeStore.loadFromDB()` is authoritative — writes go through `financeDb.ts` immediately,

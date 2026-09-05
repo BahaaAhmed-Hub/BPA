@@ -490,15 +490,27 @@ export function BudgetScreen(_props?: any) {
       // a budget this month — both ends were collected and never consulted.
       const own = activeIn(rule, monthKey) ? monthlyAmount(rule) : 0
 
+      // A sub-category keeps its budget in its own currency. Added at face
+      // value, a 250 USD sub-budget put 250 onto a 5,000 EGP parent — so each
+      // one is converted into what the envelope is kept in, and one that
+      // cannot be converted is named rather than counted.
       const children = categories.filter(c => c.parentId === cat.id).map(child => {
         const r = rules[child.id]
+        const own = activeIn(r, monthKey) ? monthlyAmount(r) : 0
+        const childCur = r?.currency ?? cur
+        const inBase = own === 0 ? 0 : toBase(own, childCur, currency)
+        if (own > 0 && (inBase === null || rate === null)) currencies.add(childCur)
         return {
           cat: child,
-          planned: activeIn(r, monthKey) ? monthlyAmount(r) : 0,
-          budgeted: activeIn(r, monthKey) && monthlyAmount(r) > 0,
+          planned: own,
+          cur: childCur,
+          /** The same budget expressed in the envelope's currency, or null when
+           *  there is no rate to get it there. */
+          inEnvelope: inBase === null || rate === null ? null : inBase / rate,
+          budgeted: own > 0,
         }
       })
-      const fromParts = children.reduce((n, c) => n + c.planned, 0)
+      const fromParts = children.reduce((n, c) => n + (c.inEnvelope ?? 0), 0)
 
       // A budget on a sub-category is a budget. It was counted nowhere: the
       // envelope showed "set a budget" and the month's total ignored it, so
@@ -533,8 +545,16 @@ export function BudgetScreen(_props?: any) {
   // Asked of the transactions, not the envelopes: money in a currency can be
   // sitting in a category whose budget is in the base one.
   const needRates = useMemo(
-    () => currenciesNeedingRates(transactions.filter(t => t.date.startsWith(monthKey)), currency),
-    [transactions, monthKey, currency, fxTick],
+    // A budget written in a currency counts as money here even before anything
+    // has been spent in it — otherwise a USD sub-budget silently drops out of
+    // its parent's total with nothing on screen asking for a rate.
+    () => currenciesNeedingRates([
+      ...transactions.filter(t => t.date.startsWith(monthKey)),
+      ...Object.values(rules)
+        .filter(r => r && monthlyAmount(r) > 0)
+        .map(r => ({ currency: r.currency })),
+    ], currency),
+    [transactions, monthKey, currency, rules, fxTick],
   )
 
   const outTotal = sum(envelopes.spending)
@@ -915,10 +935,13 @@ export function BudgetScreen(_props?: any) {
           subGroups[key].txs.push(tx)
         }
 
-        const totalSpend = drillTxs.reduce((s: number, tx: Transaction) => s + Math.abs(tx.amount), 0)
+        // Converted, like every other total on this screen.
+        const inBase = (tx: Transaction) => toBase(Math.abs(tx.amount), tx.currency, currency) ?? 0
+        const totalSpend = drillTxs.reduce((s: number, tx: Transaction) => s + inBase(tx), 0)
         const excludedSpend = drillTxs
           .filter((tx: Transaction) => txFlags[tx.id] === 'excluded')
-          .reduce((s: number, tx: Transaction) => s + Math.abs(tx.amount), 0)
+          .reduce((s: number, tx: Transaction) => s + inBase(tx), 0)
+        const drillUnrated = currenciesNeedingRates(drillTxs, currency)
         const netSpend = totalSpend - excludedSpend
 
         const PERIOD_LABELS: Record<string, string> = {
@@ -983,7 +1006,7 @@ export function BudgetScreen(_props?: any) {
               {Object.keys(subGroups).length > 1 && (
                 <div style={{ flexShrink: 0, display: 'flex', gap: 8, padding: '12px 24px', borderBottom: '1px solid #E8E1CE', overflowX: 'auto', background: '#F7F4EA' }}>
                   {Object.entries(subGroups).map(([key, { cat, txs }]) => {
-                    const total = txs.reduce((s: number, tx: Transaction) => s + Math.abs(tx.amount), 0)
+                    const total = txs.reduce((s: number, tx: Transaction) => s + inBase(tx), 0)
                     return (
                       <div key={key} style={{ flexShrink: 0, background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 10, padding: '8px 12px', minWidth: 100 }}>
                         <div style={{ marginBottom: 3, color: cat?.color ?? '#6C6553' }}>
@@ -1035,7 +1058,7 @@ export function BudgetScreen(_props?: any) {
 
                         {/* Amount */}
                         <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 14, fontWeight: 700, color: flag === 'excluded' ? '#9B9180' : RUST, flexShrink: 0 }}>
-                          EGP {Math.abs(tx.amount).toLocaleString('en-US')}
+                          {tx.currency ?? currency} {Math.abs(tx.amount).toLocaleString('en-US')}
                         </span>
 
                         {/* Decision flags */}
@@ -1067,7 +1090,12 @@ export function BudgetScreen(_props?: any) {
               {/* Footer summary */}
               <div style={{ flexShrink: 0, borderTop: '1px solid #E8E1CE', padding: '14px 24px', background: '#FCFAF4', display: 'flex', alignItems: 'center', gap: 20 }}>
                 <div>
-                  <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', color: '#9B9180' }}>TOTAL</div>
+                  <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', color: '#9B9180' }}>
+                    TOTAL{drillUnrated.length > 0 && (
+                      <span title={`No rate set for ${drillUnrated.join(', ')}, so it is not counted here`}
+                        style={{ marginLeft: 5, color: '#C08A2E' }}>· {drillUnrated.join(' ')}</span>
+                    )}
+                  </div>
                   <div style={{ fontFamily: 'Outfit, sans-serif', fontSize: 18, fontWeight: 700, color: RUST, letterSpacing: '-0.02em' }}>
                     EGP {totalSpend.toLocaleString('en-US')}
                   </div>

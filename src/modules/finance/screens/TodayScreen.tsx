@@ -5,6 +5,7 @@ import { TransactionModal } from '../modals/TransactionModal'
 import type { Transaction } from '../types'
 import { POSITIVE, NEGATIVE, POSITIVE_TINT, NEGATIVE_TINT } from '../../../lib/moneyColors'
 import { acct, group } from '../format'
+import { toBase, baseCurrency, currenciesNeedingRates } from '../fx'
 
 // ── Palette ───────────────────────────────────────────────────────────────────
 
@@ -94,13 +95,19 @@ function MoneyCalendar({
   const daysInMonth = new Date(year, month + 1, 0).getDate()
   const monthPrefix = `${year}-${String(month + 1).padStart(2,'0')}`
 
-  // Build per-day net map
+  // Build per-day net map. Everything is converted into the base currency
+  // first: a day with 250 USD on it is not a day with 250 EGP on it, and a
+  // currency with no rate behind it is left out rather than added at face
+  // value.
+  const base = baseCurrency()
   const dayNetMap = new Map<string, number>()
   const dayTxMap  = new Map<string, string[]>() // dateStr → payee names
   transactions.forEach(tx => {
     if (!tx.date.startsWith(monthPrefix)) return
+    const v = toBase(Math.abs(tx.amount), tx.currency, base)
+    if (v === null) return
     const prev = dayNetMap.get(tx.date) ?? 0
-    const delta = tx.type === 'income' ? Math.abs(tx.amount) : -Math.abs(tx.amount)
+    const delta = tx.type === 'income' ? v : -v
     dayNetMap.set(tx.date, prev + delta)
     const payees = dayTxMap.get(tx.date) ?? []
     if (tx.payee?.trim()) payees.push(tx.payee.trim())
@@ -113,8 +120,11 @@ function MoneyCalendar({
   while (cells.length % 7 !== 0) cells.push(null)
 
   // Monthly totals
-  const monthOut = transactions.filter(t => t.date.startsWith(monthPrefix) && t.type === 'expense').reduce((s, t) => s + Math.abs(t.amount), 0)
-  const monthIn  = transactions.filter(t => t.date.startsWith(monthPrefix) && t.type === 'income').reduce((s, t) => s + Math.abs(t.amount), 0)
+  const inBase = (t: Transaction) => toBase(Math.abs(t.amount), t.currency, base) ?? 0
+  const monthTxs = transactions.filter(t => t.date.startsWith(monthPrefix))
+  const monthOut = monthTxs.filter(t => t.type === 'expense').reduce((s, t) => s + inBase(t), 0)
+  const monthIn  = monthTxs.filter(t => t.type === 'income').reduce((s, t) => s + inBase(t), 0)
+  const unrated  = currenciesNeedingRates(monthTxs, base)
 
   const ROUND_BTN = {
     width: 28, height: 28, borderRadius: '50%',
@@ -148,6 +158,14 @@ function MoneyCalendar({
         <span style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
           {chip('Out', monthOut > 0 ? acct(-monthOut) : '–', NEGATIVE, NEGATIVE_TINT)}
           {chip('In',  monthIn  > 0 ? acct(monthIn)   : '–', POSITIVE, POSITIVE_TINT)}
+          {unrated.length > 0 && (
+            <span title={`No rate set for ${unrated.join(', ')}, so it is not counted in these totals`}
+              style={{
+                display: 'inline-flex', alignItems: 'center', borderRadius: 999,
+                padding: '4px 10px', background: '#FBF1DC', color: '#8A6D0B',
+                fontSize: 10.5, fontWeight: 700, letterSpacing: '0.04em',
+              }}>{unrated.join(' ')} ?</span>
+          )}
         </span>
       </div>
 
@@ -307,8 +325,10 @@ export function TodayScreen() {
   }
 
   const todayTx = transactions.filter(tx => tx.date === todayStr)
-  const todayExp = todayTx.filter(t => t.type === 'expense').reduce((s, t) => s + Math.abs(t.amount), 0)
-  const todayInc = todayTx.filter(t => t.type === 'income').reduce((s, t) => s + Math.abs(t.amount), 0)
+  const base = baseCurrency()
+  const conv = (t: Transaction) => toBase(Math.abs(t.amount), t.currency, base) ?? 0
+  const todayExp = todayTx.filter(t => t.type === 'expense').reduce((s, t) => s + conv(t), 0)
+  const todayInc = todayTx.filter(t => t.type === 'income').reduce((s, t) => s + conv(t), 0)
 
   return (
     <div style={{ display: 'flex', height: '100%', background: C.bg, flexDirection: 'column' }}>
@@ -321,8 +341,8 @@ export function TodayScreen() {
         </div>
         {todayTx.length > 0 && (
           <div style={{ display: 'flex', gap: 16, paddingBottom: 3 }}>
-            <span style={{ fontSize: 12, color: NEGATIVE, fontWeight: 600 }}>{acct(-todayExp, { currency: 'EGP' })}</span>
-            <span style={{ fontSize: 12, color: POSITIVE, fontWeight: 600 }}>{acct(todayInc, { currency: 'EGP' })}</span>
+            <span style={{ fontSize: 12, color: NEGATIVE, fontWeight: 600 }}>{acct(-todayExp, { currency: base })}</span>
+            <span style={{ fontSize: 12, color: POSITIVE, fontWeight: 600 }}>{acct(todayInc, { currency: base })}</span>
           </div>
         )}
       </div>
@@ -383,8 +403,8 @@ export function TodayScreen() {
           {/* Net cashflow over whatever is being shown — read down the column:
               what came in, what went out, what is left. */}
           {feed.length > 0 && (() => {
-            const inc = feed.filter(t => t.type === 'income').reduce((s, t) => s + Math.abs(t.amount), 0)
-            const exp = feed.filter(t => t.type === 'expense').reduce((s, t) => s + Math.abs(t.amount), 0)
+            const inc = feed.filter(t => t.type === 'income').reduce((s, t) => s + conv(t), 0)
+            const exp = feed.filter(t => t.type === 'expense').reduce((s, t) => s + conv(t), 0)
             const net = inc - exp
             const line = (label: string, value: string, color: string, strong = false) => (
               <div style={{
@@ -406,9 +426,9 @@ export function TodayScreen() {
             )
             return (
               <div style={{ marginTop: 16, paddingTop: 12, borderTop: `1px solid ${C.border}` }}>
-                {line('In',  acct(inc, { currency: 'EGP' }), GREEN)}
-                {line('Out', acct(-exp, { currency: 'EGP' }), RED)}
-                {line('Net', acct(net, { currency: 'EGP' }), net >= 0 ? GREEN : RED, true)}
+                {line('In',  acct(inc, { currency: base }), GREEN)}
+                {line('Out', acct(-exp, { currency: base }), RED)}
+                {line('Net', acct(net, { currency: base }), net >= 0 ? GREEN : RED, true)}
               </div>
             )
           })()}

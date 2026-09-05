@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useFinanceStore } from '../financeStore'
+import { toBase, baseCurrency, currenciesNeedingRates } from '../fx'
 
 // ─── Donut chart helpers ───────────────────────────────────────────────────────
 
@@ -59,12 +60,18 @@ export function ReportsScreen(_props?: any) {
 
   const monthPrefix = `${reportYear}-${String(reportMonth + 1).padStart(2, '0')}`
 
+  const base = baseCurrency()
   const expTxns = transactions.filter(tx => tx.type === 'expense' && tx.date.startsWith(monthPrefix))
   const byCategory = new Map<string, number>()
   expTxns.forEach(tx => {
+    // A dollar is not a pound. Anything with no rate behind it is left out and
+    // named under the total rather than added at face value.
+    const v = toBase(Math.abs(tx.amount), tx.currency, base)
+    if (v === null) return
     const key = tx.categoryId ?? '__none__'
-    byCategory.set(key, (byCategory.get(key) ?? 0) + Math.abs(tx.amount))
+    byCategory.set(key, (byCategory.get(key) ?? 0) + v)
   })
+  const reportUnrated = currenciesNeedingRates(expTxns, base)
   const REPORT_DATA = [...byCategory.entries()]
     .map(([catId, amt], i) => {
       const cat = categories.find(c => c.id === catId)
@@ -108,7 +115,11 @@ export function ReportsScreen(_props?: any) {
             <button onClick={() => navigateMonth(1)} style={{ background: 'none', border: 'none', color: '#6C6553', fontSize: 20, cursor: 'pointer', padding: 0, lineHeight: 1 }}>›</button>
           </div>
           <span style={{ fontSize: 12, color: '#6C6553', display: 'block', marginTop: 3 }}>
-            {TOTAL > 0 ? `EGP ${dayRate.toLocaleString('en-US')}/day · ${REPORT_DATA.length} categories` : 'No expenses logged this month'}
+            {TOTAL > 0 ? `${base} ${dayRate.toLocaleString('en-US')}/day · ${REPORT_DATA.length} categories` : 'No expenses logged this month'}
+            {reportUnrated.length > 0 && (
+              <span title={`No rate set for ${reportUnrated.join(', ')}, so it is not counted`}
+                style={{ marginLeft: 6, color: '#C08A2E' }}>· {reportUnrated.join(' ')} not counted</span>
+            )}
           </span>
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8, paddingBottom: 3 }}>

@@ -4,6 +4,7 @@ import type { Category, Transaction } from '../types'
 import { IconPicker } from '../components/IconPicker'
 import { CategoryGlyph } from '../components/CategoryGlyph'
 import { MoneyInput } from '../components/MoneyInput'
+import { toBase } from '../fx'
 
 // ─── What an envelope is set to ──────────────────────────────────────────────
 // This was a whole right-hand column: an amount, a fixed-or-flexible pair, five
@@ -222,10 +223,17 @@ export function BudgetRuleModal({
   const ids = new Set([category.id, ...subs.map(s => s.id)])
   const mine = transactions.filter(tx =>
     tx.type === wanted && tx.categoryId && ids.has(tx.categoryId) && tx.date.startsWith(monthKey))
-  // Only what the budget is denominated in. Adding 117 USD to 64,000 EGP as
-  // though they were the same number is worse than leaving it out and saying so.
-  const spent  = mine.filter(tx => tx.currency === cur).reduce((s, tx) => s + Math.abs(tx.amount), 0)
-  const others = [...new Set(mine.filter(tx => tx.currency !== cur).map(tx => tx.currency))]
+  // Converted into what the budget is written in, so 117 USD counts against an
+  // EGP envelope at what it is actually worth. Anything with no rate behind it
+  // is still left out and named — a guessed rate is worse than a stated gap.
+  let spent = 0
+  const othersSet = new Set<string>()
+  for (const tx of mine) {
+    const v = toBase(Math.abs(tx.amount), tx.currency, cur)
+    if (v === null) othersSet.add(tx.currency)
+    else spent += v
+  }
+  const others = [...othersSet]
 
   const running = activeIn(rule, monthKey)
   const own    = running ? monthlyAmount(rule) : 0
@@ -493,7 +501,7 @@ export function BudgetRuleModal({
         {subs.map(sub => {
           const subSpend = transactions
             .filter(tx => tx.categoryId === sub.id && tx.date.startsWith(monthKey))
-            .reduce((s, tx) => s + Math.abs(tx.amount), 0)
+            .reduce((s, tx) => s + (toBase(Math.abs(tx.amount), tx.currency, cur) ?? 0), 0)
           return (
             <button key={sub.id} onClick={() => onEditSub(sub)}
               style={{
