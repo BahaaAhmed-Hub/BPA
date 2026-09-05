@@ -608,7 +608,7 @@ export function ReflectionScreen(_props?: any) {
               </button>
               {dupesOpen && (
                 <div style={{
-                  position: 'absolute', top: 34, right: 0, zIndex: 30, width: 340,
+                  position: 'absolute', top: 34, right: 0, zIndex: 30, width: 384,
                   maxHeight: 320, overflowY: 'auto', padding: 12,
                   background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 14,
                   boxShadow: '0 16px 40px rgba(25,23,18,0.18)', textAlign: 'left',
@@ -616,23 +616,49 @@ export function ReflectionScreen(_props?: any) {
                   <div style={{ fontSize: 11.5, color: '#6C6553', lineHeight: 1.5, marginBottom: 10 }}>
                     Same amount, account, category and payee. Filed twice on one day is
                     usually a slip; twice in one month may be real. Nothing has been changed —
-                    open one from Today or Balances to fix it.
+                    open one to edit it, or throw the copy away here.
                   </div>
                   {suspects.map(t => (
                     <div key={t.id} style={{
-                      display: 'flex', alignItems: 'baseline', gap: 8,
-                      padding: '6px 0', borderTop: '1px solid #F5F1E6', fontSize: 12,
+                      display: 'flex', alignItems: 'center', gap: 8,
+                      padding: '5px 0', borderTop: '1px solid #F5F1E6', fontSize: 12,
                     }}>
-                      <span style={{ color: '#9B9180', fontVariantNumeric: 'tabular-nums' }}>{t.date}</span>
-                      <span style={{ flex: 1, minWidth: 0, color: '#191712', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {t.payee?.trim() || categories.find(c => c.id === t.categoryId)?.name || 'Entry'}
+                      {/* The whole line opens the entry — this list is where a
+                          duplicate is noticed, so it should also be where it is
+                          dealt with rather than a note telling you to go
+                          elsewhere. The panel closes first, or it floats behind
+                          the editor it just opened. */}
+                      <span
+                        onClick={() => { setDupesOpen(false); setEditing(t) }}
+                        title="Open this entry"
+                        onMouseEnter={e => { e.currentTarget.style.background = '#FAF7EC' }}
+                        onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
+                        style={{
+                          flex: 1, minWidth: 0, display: 'flex', alignItems: 'baseline', gap: 8,
+                          cursor: 'pointer', borderRadius: 7, padding: '4px 6px', margin: '0 -6px',
+                        }}>
+                        <span style={{ color: '#9B9180', fontVariantNumeric: 'tabular-nums' }}>{t.date}</span>
+                        <span style={{ flex: 1, minWidth: 0, color: '#191712', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {t.payee?.trim() || categories.find(c => c.id === t.categoryId)?.name || 'Entry'}
+                        </span>
+                        <span style={{ color: dupes.get(t.id) === 'day' ? '#8A6D0B' : '#B0A488', fontSize: 10, fontWeight: 700 }}>
+                          {dupes.get(t.id) === 'day' ? 'SAME DAY' : 'SAME MONTH'}
+                        </span>
+                        <span style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 600, color: '#3D3926', fontVariantNumeric: 'tabular-nums' }}>
+                          {acct(Math.abs(t.amount), { currency: t.currency })}
+                        </span>
                       </span>
-                      <span style={{ color: dupes.get(t.id) === 'day' ? '#8A6D0B' : '#B0A488', fontSize: 10, fontWeight: 700 }}>
-                        {dupes.get(t.id) === 'day' ? 'SAME DAY' : 'SAME MONTH'}
-                      </span>
-                      <span style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 600, color: '#3D3926', fontVariantNumeric: 'tabular-nums' }}>
-                        {acct(Math.abs(t.amount), { currency: t.currency })}
-                      </span>
+                      <button
+                        onClick={() => {
+                          if (!window.confirm(`Delete ${t.payee?.trim() || 'this entry'} of ${acct(Math.abs(t.amount), { currency: t.currency })} on ${t.date}?`)) return
+                          void removeTransaction(t.id)
+                        }}
+                        title="Delete this entry"
+                        style={{
+                          width: 24, height: 24, borderRadius: '50%', padding: 0, flexShrink: 0,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          background: '#FFFFFF', border: '1px solid #E8E1CE', color: '#9B9180', cursor: 'pointer',
+                        }}><Trash2 size={12} /></button>
                     </div>
                   ))}
                 </div>

@@ -81,7 +81,10 @@ Three rules any change here must keep:
   payee, ignoring the date. Two on one date → `day`; two in one month → `month`; the
   same thing in a *different* month is a recurring payment and is never flagged.
   Surfaced by `DuplicateMark` in the Today, Balances and drill-down feeds, and as the
-  "N to check" chip on Financials. It never edits anything.
+  "N to check" chip on Financials. Detection itself never edits anything, but the
+  chip's list is where a duplicate is dealt with: a row opens the entry (the panel
+  closes first, or it floats behind the editor) and a trash button deletes it after
+  a confirm naming it.
 - **A line says whether it was paid.** `paid` + `paidOn` per line (the payment date
   mirrors `Starts` until touched, like `Ends`), with a batch-level Paid / Not paid
   that sets them all. Unpaid means **no `paidAt` at all** — that is what every screen
