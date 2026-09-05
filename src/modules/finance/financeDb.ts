@@ -112,22 +112,7 @@ export async function loadAccounts(): Promise<AccountRow[]> {
 
 export async function saveAccount(row: AccountRow): Promise<void> {
   markLocalWrite('finance')
-  const { error } = await supabase
-    .from('finance_accounts')
-    .upsert(row, { onConflict: 'id' })
-  if (!error) return
-
-  // credit_limit arrives with 20260008. Losing the account because it carried a
-  // limit would be a far worse trade than losing the limit.
-  if (isMissingColumn(error)) {
-    const { credit_limit: _c, ...core } = row
-    const { error: retry } = await supabase
-      .from('finance_accounts')
-      .upsert(core, { onConflict: 'id' })
-    if (retry) throw new Error(retry.message)
-    return
-  }
-  throw new Error(error.message)
+  await upsertRows('finance_accounts', [row])
 }
 
 export async function deleteAccount(id: string): Promise<void> {
@@ -201,40 +186,90 @@ export async function loadUnpaidTransactions(): Promise<TransactionRow[]> {
 
 export async function saveTransaction(row: TransactionRow): Promise<void> {
   markLocalWrite('finance')
-  const { error } = await supabase
-    .from('finance_transactions')
-    .upsert(row, { onConflict: 'id' })
-  if (!error) return
-
-  // paid_at, tags and attachments arrive with 20260006, to_account_id with
-  // 20260007. Until they run, the write is rejected whole — and losing the
-  // transaction because it carried a tag is a far worse trade than losing the
-  // tag.
-  if (isMissingColumn(error)) {
-    const { paid_at: _p, tags: _t, attachments: _a, to_account_id: _to, ...core } = row
-    const { error: retry } = await supabase
-      .from('finance_transactions')
-      .upsert(core, { onConflict: 'id' })
-    if (retry) throw new Error(retry.message)
-    return
-  }
-  throw new Error(error.message)
+  await upsertRows('finance_transactions', [row])
 }
 
-/** Several rows at once, in chunks, with the same tolerance for columns that a
- *  migration has not added yet. Used by the one-time paid-date backfill, where
- *  writing a few hundred rows one at a time would be a few hundred round trips. */
+/** Several rows at once, in chunks. Writing a few hundred one at a time would
+ *  be a few hundred round trips, and a load landing in the middle of them
+ *  keeps only what has arrived. */
 export async function saveTransactionsBulk(rows: TransactionRow[]): Promise<void> {
   markLocalWrite('finance')
   for (let i = 0; i < rows.length; i += 200) {
-    const chunk = rows.slice(i, i + 200)
-    const { error } = await supabase.from('finance_transactions').upsert(chunk, { onConflict: 'id' })
-    if (!error) continue
-    if (!isMissingColumn(error)) throw new Error(error.message)
-    const core = chunk.map(({ paid_at: _p, tags: _t, attachments: _a, to_account_id: _to, ...rest }) => rest)
-    const { error: retry } = await supabase.from('finance_transactions').upsert(core, { onConflict: 'id' })
-    if (retry) throw new Error(retry.message)
+    await upsertRows('finance_transactions', rows.slice(i, i + 200))
   }
+}
+
+// ─── Writing to a table a migration has not caught up with ───────────────────
+// paid_at, tags and attachments arrive with 20260006, to_account_id with
+// 20260007, credit_limit with 20260008. Until one of those runs the server
+// rejects the whole row, and losing the transaction because it carried a tag
+// is a far worse trade than losing the tag.
+//
+// What it used to do was drop *every* column a migration might add and try
+// again. One missing column therefore threw away three that were perfectly
+// well supported — so on a database with no to_account_id, a payment date
+// could never be written at all: the retry dropped paid_at with it, the server
+// kept whatever it already had, and an entry marked unpaid came back paid on
+// the next load. Nothing said so; the write "succeeded".
+//
+// So drop the column the error actually names, and only that one, asking again
+// until the server takes the row. What is missing is remembered per table, so
+// the next write goes out in a shape that already works.
+
+const OPTIONAL: Record<string, string[]> = {
+  finance_transactions: ['paid_at', 'tags', 'attachments', 'to_account_id'],
+  finance_accounts:     ['credit_limit'],
+}
+
+const absent = new Map<string, Set<string>>()
+
+function absentFor(table: string): Set<string> {
+  let cols = absent.get(table)
+  if (!cols) { cols = new Set(); absent.set(table, cols) }
+  return cols
+}
+
+/** Which column the server says it has not got. PostgREST names it in quotes
+ *  ("Could not find the 'to_account_id' column"), Postgres in double quotes
+ *  (column "to_account_id" of relation …). */
+function missingColumnName(error: { message?: string }): string | null {
+  const msg = error.message ?? ''
+  return msg.match(/'([a-z_]+)' column/i)?.[1]
+      ?? msg.match(/column "([a-z_]+)"/i)?.[1]
+      ?? null
+}
+
+function without<T extends object>(row: T, cols: Set<string>): T {
+  if (cols.size === 0) return row
+  const out: Record<string, unknown> = {}
+  for (const [k, v] of Object.entries(row)) if (!cols.has(k)) out[k] = v
+  return out as T
+}
+
+async function upsertRows(table: string, rows: object[]): Promise<void> {
+  const gone = absentFor(table)
+  let triedAll = false
+  // At most one attempt per optional column, plus the blanket one and a final
+  // pass — enough to converge, and it cannot spin.
+  for (let attempt = 0; attempt <= (OPTIONAL[table]?.length ?? 0) + 2; attempt++) {
+    const { error } = await supabase
+      .from(table)
+      .upsert(rows.map(r => without(r, gone)), { onConflict: 'id' })
+    if (!error) return
+    if (!isMissingColumn(error)) throw new Error(error.message)
+
+    const col = missingColumnName(error)
+    if (col && !gone.has(col)) { gone.add(col); continue }
+    // The error named nothing usable, or named something already dropped:
+    // fall back to the old behaviour once rather than give up on the write.
+    if (!triedAll) {
+      triedAll = true
+      for (const c of OPTIONAL[table] ?? []) gone.add(c)
+      continue
+    }
+    throw new Error(error.message)
+  }
+  throw new Error(`${table}: no column set the server would accept`)
 }
 
 /** Postgres says 42703 for a column that is not there; PostgREST says PGRST204

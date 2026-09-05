@@ -133,7 +133,9 @@ ever writes back to the row. Sign convention: positive is held, negative is owed
 spending on a card takes it below zero, paying it brings it back up.
 A **transfer carries `toAccountId`** (`20260007`): out of `accountId`, into
 `toAccountId`. Without it, paying a card was money leaving and arriving nowhere.
-`saveTransaction` drops the column and retries if the migration has not run — and
+`saveTransaction` drops **only the column the error names** and retries if the
+migration has not run — dropping all four optional columns meant one missing one
+took `paid_at` with it, so a payment date could never be written — and
 `transferTargets.ts` keeps the destination locally so the payment is not lost on the
 next load. `creditLimits.ts` does the same for `credit_limit` (`20260008`). In both
 the server's value wins wherever it has one.
