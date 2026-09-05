@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, Fragment } from 'react'
+import { useState, useMemo, useEffect, useCallback, Fragment } from 'react'
 import { ChevronDown, ChevronRight, ChevronsUpDown, ChevronsDownUp, X, Trash2, Plus } from 'lucide-react'
 import { useFinanceStore } from '../financeStore'
 import { CategoryGlyph } from '../components/CategoryGlyph'
@@ -163,13 +163,44 @@ export function ReflectionScreen(_props?: any) {
   const today = new Date()
   const base = baseCurrency()
 
+  // Two ways to read a year, and they are different years.
+  //
+  //   "due"  — an entry sits in the month it belongs to, whether or not the
+  //            money has moved. September's rent is September's, paid or not.
+  //   "paid" — an entry sits in the month the money actually left, and an entry
+  //            that has not been paid is not in the table at all.
+  //
+  // Settings holds the default; this remembers what was last looked at here.
+  const [basis, setBasis] = useState<'due' | 'paid'>(() => {
+    try {
+      return (localStorage.getItem('finance-financials-basis')
+        ?? localStorage.getItem('finance-count-on')) === 'paid' ? 'paid' : 'due'
+    } catch { return 'due' }
+  })
+  function pickBasis(b: 'due' | 'paid') {
+    setBasis(b)
+    try { localStorage.setItem('finance-financials-basis', b) } catch { /* private mode */ }
+  }
+
+  /** The date a figure is filed under, or null when this basis cannot place it:
+   *  an entry with no payment date has not been paid, and money that has not
+   *  moved does not belong in a table of money that has. */
+  const filedOn = useCallback(
+    (tx: Transaction): string | null => (basis === 'paid' ? tx.paidAt ?? null : tx.date),
+    [basis],
+  )
+  const filedIn = useCallback(
+    (tx: Transaction, prefix: string) => { const d = filedOn(tx); return !!d && d.startsWith(prefix) },
+    [filedOn],
+  )
+
   // Entries that look like they were put in twice, this year. The rows here are
   // monthly sums, so the flag cannot sit on a figure — it sits in the header,
   // with the list of what to go and look at.
   const [dupesOpen, setDupesOpen] = useState(false)
   const yearTx = useMemo(
-    () => transactions.filter(t => t.date.startsWith(String(year))),
-    [transactions, year],
+    () => transactions.filter(t => filedIn(t, String(year))),
+    [transactions, year, filedIn],
   )
   const dupes = useMemo(() => findDuplicates(yearTx), [yearTx])
   const suspects = useMemo(
@@ -187,7 +218,7 @@ export function ReflectionScreen(_props?: any) {
   // Build categoryId → monthly amounts map for given year
   const { incomeRows, expenseRows, monthlyIncome, monthlyExpense } = useMemo(() => {
     // Filter to the selected year
-    const yearTx = transactions.filter(tx => tx.date.startsWith(String(year)))
+    const yearTx = transactions.filter(tx => filedIn(tx, String(year)))
 
     const wants = (c: { txType: string }, kind: 'income' | 'expense') =>
       c.txType === kind || c.txType === 'both'
@@ -199,7 +230,7 @@ export function ReflectionScreen(_props?: any) {
       return MONTHS_SHORT.map((_, mi) => {
         const prefix = `${year}-${String(mi + 1).padStart(2, '0')}`
         return yearTx
-          .filter(tx => tx.type === type && tx.categoryId && ids.has(tx.categoryId) && tx.date.startsWith(prefix))
+          .filter(tx => tx.type === type && tx.categoryId && ids.has(tx.categoryId) && filedIn(tx, prefix))
           // This added the raw figure whatever it was in, so a salary in USD
           // was counted as though it were the same number of pounds. Converted
           // now; something with no rate is left out and said so below.
@@ -226,14 +257,14 @@ export function ReflectionScreen(_props?: any) {
 
     const monthly = (type: 'income' | 'expense') => MONTHS_SHORT.map((_, mi) => {
       const prefix = `${year}-${String(mi + 1).padStart(2,'0')}`
-      return yearTx.filter(tx => tx.type === type && tx.date.startsWith(prefix))
+      return yearTx.filter(tx => tx.type === type && filedIn(tx, prefix))
         .reduce((s, tx) => s + (toBase(Math.abs(tx.amount), tx.currency, base) ?? 0), 0)
     })
     const monthlyIncome  = monthly('income')
     const monthlyExpense = monthly('expense')
 
     return { incomeRows, expenseRows, monthlyIncome, monthlyExpense }
-  }, [transactions, categories, year, base, fxTick])
+  }, [transactions, categories, year, base, fxTick, filedIn])
 
   // Hidden rows (by category id) — toggling removes row from totals
   const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set())
@@ -246,8 +277,8 @@ export function ReflectionScreen(_props?: any) {
   }
 
   const needRates = useMemo(
-    () => currenciesNeedingRates(transactions.filter(t => t.date.startsWith(String(year))), base),
-    [transactions, year, base, fxTick],
+    () => currenciesNeedingRates(transactions.filter(t => filedIn(t, String(year))), base),
+    [transactions, year, base, fxTick, filedIn],
   )
 
   // ── What is behind a figure ────────────────────────────────────────────────
@@ -271,10 +302,10 @@ export function ReflectionScreen(_props?: any) {
     const ids = drill.ids ? new Set(drill.ids) : null
     const wanted = (t: string) => drill.kind === 'both' ? (t === 'income' || t === 'expense') : t === drill.kind
     return transactions
-      .filter(tx => wanted(tx.type) && tx.date.startsWith(prefix))
+      .filter(tx => wanted(tx.type) && filedIn(tx, prefix))
       .filter(tx => (ids ? !!tx.categoryId && ids.has(tx.categoryId) : true))
       .sort((a, b) => b.date.localeCompare(a.date))
-  }, [drill, transactions, year])
+  }, [drill, transactions, year, filedIn])
 
   /** A figure covering exactly one category can say where a new entry goes; one
    *  covering a whole section cannot, so the entry asks. And a month figure
@@ -336,6 +367,12 @@ export function ReflectionScreen(_props?: any) {
   netPerMonth.forEach(n => { cum += n; cumulative.push(cum) })
 
   const currentMonth = today.getMonth() // 0-indexed
+  // Entries the paid view has nothing to place: due this year, never paid.
+  const unpaidThisYear = useMemo(
+    () => transactions.filter(t => !t.paidAt && t.date.startsWith(String(year))).length,
+    [transactions, year],
+  )
+
   const throughLabel = MONTHS_SHORT[Math.min(currentMonth, 11)]
 
   const totalIncome  = visIncome.reduce((s, v) => s + v, 0)
@@ -384,6 +421,28 @@ export function ReflectionScreen(_props?: any) {
 
         {/* Stats bar */}
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 20, paddingBottom: 4, alignItems: 'flex-end' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+            <span style={{ display: 'inline-flex', gap: 2, padding: 3, borderRadius: 999, background: '#EDE7D9' }}>
+              {([
+                ['due',  'When it is due', 'Every entry in the month it belongs to, paid or not'],
+                ['paid', 'When it was paid', 'Only money that has actually moved, in the month it moved'],
+              ] as const).map(([id, label, why]) => (
+                <button key={id} onClick={() => pickBasis(id)} title={why}
+                  style={{
+                    height: 26, padding: '0 12px', borderRadius: 999, border: 'none', cursor: 'pointer',
+                    fontFamily: 'inherit', fontSize: 11.5, fontWeight: basis === id ? 700 : 500,
+                    background: basis === id ? '#FFFFFF' : 'transparent',
+                    color: basis === id ? '#191712' : '#6C6553',
+                    boxShadow: basis === id ? '0 1px 3px rgba(25,23,18,0.16)' : 'none',
+                  }}>{label}</button>
+              ))}
+            </span>
+            {basis === 'paid' && unpaidThisYear > 0 && (
+              <span style={{ fontSize: 10.5, color: '#C08A2E' }}>
+                {unpaidThisYear} not paid yet, so not in this view
+              </span>
+            )}
+          </div>
           {suspects.length > 0 && (
             <span style={{ position: 'relative' }}>
               <button

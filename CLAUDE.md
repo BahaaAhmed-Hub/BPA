@@ -82,6 +82,11 @@ Three rules any change here must keep:
   same thing in a *different* month is a recurring payment and is never flagged.
   Surfaced by `DuplicateMark` in the Today, Balances and drill-down feeds, and as the
   "N to check" chip on Financials. It never edits anything.
+- **Financials reads a year two ways.** *When it is due* files each entry in the month
+  it belongs to, paid or not; *when it was paid* files it in the month the money moved
+  and leaves out anything with no `paidAt` (saying how many). One `filedOn(tx)` decides
+  it for the rows, the totals and the drill-down alike. Settings holds the default,
+  `finance-financials-basis` what was last looked at.
 - **Every figure in Financials opens what it was summed from.** A cell click stops
   propagation (the row's own click hides it) and passes the exact id set the figure
   used — a hidden part is out of both. The panel deletes and edits through the store,
