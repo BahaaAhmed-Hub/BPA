@@ -19,6 +19,7 @@ import { acct } from '../format'
 import { CategoryGlyph } from '../components/CategoryGlyph'
 import { findDuplicates } from '../duplicates'
 import { DuplicateMark } from '../components/DuplicateMark'
+import { liveBalances } from '../balances'
 
 // ─── Pill ─────────────────────────────────────────────────────────────────────
 
@@ -75,8 +76,9 @@ function formatBalance(bal: number, currency = 'EGP'): string {
   return acct(bal, { currency })
 }
 
-function AccountRow({ account, hovered, onHover, onEdit, onIcon }: {
+function AccountRow({ account, balance, hovered, onHover, onEdit, onIcon }: {
   account: Account
+  balance: number
   hovered: boolean
   onHover: (id: string | null) => void
   onEdit:  (a: Account) => void
@@ -84,7 +86,7 @@ function AccountRow({ account, hovered, onHover, onEdit, onIcon }: {
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: account.id })
-  const isNeg = account.balance < 0
+  const isNeg = balance < 0
 
   return (
     <div
@@ -152,7 +154,7 @@ function AccountRow({ account, hovered, onHover, onEdit, onIcon }: {
       </div>
       <div style={{ marginLeft: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', flexShrink: 0 }}>
         <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 14.5, fontWeight: 600, color: isNeg ? '#C62828' : '#191712', fontVariantNumeric: 'tabular-nums' }}>
-          {formatBalance(account.balance, account.currency)}
+          {formatBalance(balance, account.currency)}
         </span>
         {account.last4 && <span style={{ fontSize: 10, color: '#6C6553' }}>cleared</span>}
       </div>
@@ -187,7 +189,6 @@ export function BalanceScreen() {
   const [txModal, setTxModal] = useState<{ open: boolean; tx: Transaction | null }>({ open: false, tx: null })
   const [hoveredAccountId, setHoveredAccountId] = useState<string | null>(null)
 
-  const _netWorth = accounts.reduce((s, a) => s + a.balance, 0); void _netWorth
 
   // Accounts shows the lot, which is what the screen did before this pill row
   // was anything but decoration. The other two narrow it by account type — the
@@ -243,8 +244,15 @@ export function BalanceScreen() {
   // this screen added it as though it were; converted now, and an account in a
   // currency nobody has rated is left out rather than counted wrong.
   const base = baseCurrency()
+
+  // What each account actually holds now: where it started, plus everything
+  // filed against it. The stored figure is only the opening one, and reading it
+  // straight left every account sitting at whatever it was created with.
+  const live = liveBalances(accounts, transactions)
+  const balanceOf = (a: Account) => live.get(a.id) ?? a.balance
+
   const inBase = (list: typeof accounts) =>
-    list.reduce((s, a) => s + (toBase(a.balance, a.currency, base) ?? 0), 0)
+    list.reduce((s, a) => s + (toBase(balanceOf(a), a.currency, base) ?? 0), 0)
   const unrated = currenciesNeedingRates(accounts, base)
 
   const paymentTotal = inBase(paymentAccounts)
@@ -268,8 +276,8 @@ export function BalanceScreen() {
     .sort((a, b) => b.date.localeCompare(a.date))
 
   // Held vs owed computations for net position card
-  const totalHeld = inBase(accounts.filter(a => a.balance > 0))
-  const totalOwed = Math.abs(inBase(accounts.filter(a => a.balance < 0)))
+  const totalHeld = inBase(accounts.filter(a => balanceOf(a) > 0))
+  const totalOwed = Math.abs(inBase(accounts.filter(a => balanceOf(a) < 0)))
   const netPos    = totalHeld - totalOwed
   const heldPct   = totalHeld + totalOwed > 0 ? Math.round(totalHeld / (totalHeld + totalOwed) * 100) : 100
 
@@ -385,6 +393,7 @@ export function BalanceScreen() {
                       <AccountRow
                         key={acc.id}
                         account={acc}
+                        balance={balanceOf(acc)}
                         hovered={hoveredAccountId === acc.id}
                         onHover={setHoveredAccountId}
                         onEdit={a => setAccountModal({ open: true, account: a })}

@@ -89,6 +89,15 @@ Three rules any change here must keep:
 - **Exchange rates are a setting.** Settings → Finance owns them; screens that find
   unconvertible money say so and link there.
 
+## Finance — what an account holds
+`balances.ts` is the only thing that answers this. `account.balance` is the **opening**
+figure; the live one is that plus every entry filed against the account, so nothing
+ever writes back to the row. Sign convention: positive is held, negative is owed —
+spending on a card takes it below zero, paying it brings it back up.
+A **transfer carries `toAccountId`** (`20260007`): out of `accountId`, into
+`toAccountId`. Without it, paying a card was money leaving and arriving nowhere.
+`saveTransaction` drops the column and retries if the migration has not run.
+
 ## Finance persistence
 All nine finance tables are real Postgres (`20260001`, plus `finance_budgets` in `20260005`).
 `financeStore.loadFromDB()` is authoritative — writes go through `financeDb.ts` immediately,

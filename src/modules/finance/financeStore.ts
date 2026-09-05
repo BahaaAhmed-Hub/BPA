@@ -212,6 +212,7 @@ export const useFinanceStore = create<FinanceState>()(
           const mappedTransactions: Transaction[] = transactions.map(r => ({
             id: r.id,
             accountId: r.account_id,
+            toAccountId: r.to_account_id ?? undefined,
             amount: r.amount,
             currency: r.currency as Transaction['currency'],
             type: r.tx_type as Transaction['type'],
@@ -353,6 +354,7 @@ export const useFinanceStore = create<FinanceState>()(
           id: tx.id,
           user_id: userId,
           account_id: tx.accountId,
+          to_account_id: tx.toAccountId ?? null,
           category_id: tx.categoryId,
           amount: tx.amount,
           currency: tx.currency,

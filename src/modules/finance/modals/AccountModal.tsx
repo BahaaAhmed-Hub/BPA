@@ -175,14 +175,21 @@ export function AccountModal({ account, onSave, onDelete, onClose }: Props) {
             </select>
           </div>
 
-          {/* Balance */}
+          {/* What it started at, not what it holds: entries are added to this
+              rather than replacing it, so editing it here does not wipe out a
+              year of transactions. */}
           <div style={fieldStyle}>
-            <label style={labelStyle}>Balance</label>
+            <label style={labelStyle}>Opening balance</label>
             <MoneyInput
               style={inputStyle}
               value={balance}
               onChange={setBalance}
             />
+            <div style={{ fontSize: 11, color: '#9B9180', marginTop: 5, lineHeight: 1.45 }}>
+              Where this account stood before anything was logged. Entries move it from
+              here — a card goes below zero as it is spent on, and back towards zero as
+              it is paid off.
+            </div>
           </div>
 
           {/* Last 4 digits */}

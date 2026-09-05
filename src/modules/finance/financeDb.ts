@@ -39,6 +39,7 @@ export interface TransactionRow {
   id: string
   user_id: string
   account_id: string
+  to_account_id?: string | null
   category_id?: string
   amount: number
   currency: string
@@ -177,11 +178,12 @@ export async function saveTransaction(row: TransactionRow): Promise<void> {
     .upsert(row, { onConflict: 'id' })
   if (!error) return
 
-  // paid_at, tags and attachments arrive with 20260006. Until it runs, the
-  // write is rejected whole — and losing the transaction because it carried a
-  // tag is a far worse trade than losing the tag.
+  // paid_at, tags and attachments arrive with 20260006, to_account_id with
+  // 20260007. Until they run, the write is rejected whole — and losing the
+  // transaction because it carried a tag is a far worse trade than losing the
+  // tag.
   if (isMissingColumn(error)) {
-    const { paid_at: _p, tags: _t, attachments: _a, ...core } = row
+    const { paid_at: _p, tags: _t, attachments: _a, to_account_id: _to, ...core } = row
     const { error: retry } = await supabase
       .from('finance_transactions')
       .upsert(core, { onConflict: 'id' })

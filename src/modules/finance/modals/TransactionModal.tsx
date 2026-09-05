@@ -44,6 +44,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
   const [note,        setNote]        = useState(transaction?.note                ?? '')
   const [accountId,   setAccountId]   = useState(transaction?.accountId           ?? initial?.accountId ?? (accounts[0]?.id ?? ''))
   const [categoryId,  setCategoryId]  = useState(transaction?.categoryId          ?? initial?.categoryId ?? '')
+  const [toAccountId, setToAccountId] = useState(transaction?.toAccountId         ?? '')
   const [date,        setDate]        = useState(transaction?.date                ?? initial?.date ?? todayStr)
   // Two dates, because they are two facts: a bill due on the 1st and paid on
   // the 9th is not the same as one paid the day it landed.
@@ -99,6 +100,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
     onSave({
       id:          transaction?.id ?? crypto.randomUUID(),
       accountId,
+      toAccountId: type === 'transfer' ? (toAccountId || undefined) : undefined,
       amount,
       currency,
       type,
@@ -133,7 +135,9 @@ export function TransactionModal({ transaction, accounts, categories, history = 
     setTagInput('')
   }
 
-  const canSave = amount > 0 && !!accountId
+  // A transfer with no destination is not a transfer; it would take money out
+  // of one account and put it nowhere.
+  const canSave = amount > 0 && !!accountId && (type !== 'transfer' || !!toAccountId)
 
   return (
     <div
@@ -227,13 +231,27 @@ export function TransactionModal({ transaction, accounts, categories, history = 
         {/* Everything else hangs off one label column */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div style={ROW}>
-            <span style={LABEL}>Account</span>
+            <span style={LABEL}>{type === 'transfer' ? 'From' : 'Account'}</span>
             <PillPicker
               value={accountId}
               onChange={setAccountId}
               placeholder="No account"
               options={accounts.map(a => ({ id: a.id, label: a.name, glyph: a.emoji, tint: a.color }))} />
           </div>
+
+          {/* A transfer has two ends. Without the second one, paying a credit
+              card looked the same as money leaving and arriving nowhere. */}
+          {type === 'transfer' && (
+            <div style={ROW}>
+              <span style={LABEL}>To</span>
+              <PillPicker
+                value={toAccountId}
+                onChange={setToAccountId}
+                placeholder="Which account"
+                options={accounts.filter(a => a.id !== accountId)
+                  .map(a => ({ id: a.id, label: a.name, glyph: a.emoji, tint: a.color }))} />
+            </div>
+          )}
 
           <div style={ROW}>
             <span style={LABEL}>Category</span>

@@ -30,6 +30,9 @@ export interface Category {
 export interface Transaction {
   id: string
   accountId: string
+  /** Where a transfer lands. A transfer without one is money leaving and
+   *  arriving nowhere, which is what paying a credit card used to look like. */
+  toAccountId?: string
   amount: number
   currency: Currency
   type: TxType
