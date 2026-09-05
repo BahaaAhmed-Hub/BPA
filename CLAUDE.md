@@ -72,6 +72,19 @@ Three rules any change here must keep:
   This applies to budget *rules* too: a sub-category budget carries its own
   currency and has to be converted before it is added to its parent's.
 
+## Finance — bulk entry and duplicate review
+- `modals/BulkEntryModal.tsx` — a line is **Starts / Ends / Every / payee / category /
+  amount**. `Ends` mirrors `Starts` until it is touched (`toTouched`), and `Every` is
+  empty by default, so a line is one entry unless deliberately made a repeat. The
+  footer counts *entries*, not lines.
+- `duplicates.ts` — same type, amount, currency, account, category and normalised
+  payee, ignoring the date. Two on one date → `day`; two in one month → `month`; the
+  same thing in a *different* month is a recurring payment and is never flagged.
+  Surfaced by `DuplicateMark` in the Today, Balances and drill-down feeds, and as the
+  "N to check" chip on Financials. It never edits anything.
+- **Exchange rates are a setting.** Settings → Finance owns them; screens that find
+  unconvertible money say so and link there.
+
 ## Finance persistence
 All nine finance tables are real Postgres (`20260001`, plus `finance_budgets` in `20260005`).
 `financeStore.loadFromDB()` is authoritative — writes go through `financeDb.ts` immediately,

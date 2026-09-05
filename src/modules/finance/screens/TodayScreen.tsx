@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useFinanceStore } from '../financeStore'
 import { CategoryGlyph } from '../components/CategoryGlyph'
 import { TransactionModal } from '../modals/TransactionModal'
@@ -6,6 +6,8 @@ import type { Transaction } from '../types'
 import { POSITIVE, NEGATIVE, POSITIVE_TINT, NEGATIVE_TINT } from '../../../lib/moneyColors'
 import { acct, group } from '../format'
 import { toBase, baseCurrency, currenciesNeedingRates } from '../fx'
+import { findDuplicates } from '../duplicates'
+import { DuplicateMark } from '../components/DuplicateMark'
 
 // ── Palette ───────────────────────────────────────────────────────────────────
 
@@ -250,6 +252,10 @@ export function TodayScreen() {
 
   const monthPrefix = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}`
 
+  // Entries that look like they were put in twice. Worked out over everything,
+  // not just what is on screen, so a pair split across two views still shows.
+  const dupes = useMemo(() => findDuplicates(transactions), [transactions])
+
   // All transactions for the viewed month, sorted by date asc (earliest first)
   const monthTx = transactions
     .filter(tx => tx.date.startsWith(monthPrefix))
@@ -302,6 +308,7 @@ export function TodayScreen() {
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 14, fontWeight: 500, color: C.textPri, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 6 }}>
             {tx.payee?.trim() || cat?.name || 'Transaction'}
+            <DuplicateMark scope={dupes.get(tx.id)} />
             {isFuture && (
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={C.textMuted} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, opacity: 0.7 }}>
                 <title>Planned (not yet paid)</title>

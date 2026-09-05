@@ -4,6 +4,7 @@ import { useFinanceStore } from '../financeStore'
 import { CategoryGlyph } from '../components/CategoryGlyph'
 import { toBase, baseCurrency, currenciesNeedingRates } from '../fx'
 import { acct, outflow } from '../format'
+import { findDuplicates } from '../duplicates'
 
 // ─── 16F · Financials YTD ─────────────────────────────────────────────────────
 // Spreadsheet-style table: each income/expense category as a row,
@@ -129,6 +130,20 @@ export function ReflectionScreen(_props?: any) {
 
   const today = new Date()
   const base = baseCurrency()
+
+  // Entries that look like they were put in twice, this year. The rows here are
+  // monthly sums, so the flag cannot sit on a figure — it sits in the header,
+  // with the list of what to go and look at.
+  const [dupesOpen, setDupesOpen] = useState(false)
+  const yearTx = useMemo(
+    () => transactions.filter(t => t.date.startsWith(String(year))),
+    [transactions, year],
+  )
+  const dupes = useMemo(() => findDuplicates(yearTx), [yearTx])
+  const suspects = useMemo(
+    () => yearTx.filter(t => dupes.has(t.id)).sort((a, b) => b.date.localeCompare(a.date)),
+    [yearTx, dupes],
+  )
 
   const [fxTick, setFxTick] = useState(0)
   useEffect(() => {
@@ -288,6 +303,53 @@ export function ReflectionScreen(_props?: any) {
 
         {/* Stats bar */}
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 20, paddingBottom: 4, alignItems: 'flex-end' }}>
+          {suspects.length > 0 && (
+            <span style={{ position: 'relative' }}>
+              <button
+                onClick={() => setDupesOpen(o => !o)}
+                title="Identical entries filed twice on one day, or twice in one month"
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6, height: 28,
+                  padding: '0 11px', borderRadius: 999, cursor: 'pointer',
+                  background: dupesOpen ? '#F5D14E' : '#FBEBC8',
+                  border: '1px solid #EFE1B4', color: '#7A5F09',
+                  fontFamily: 'inherit', fontSize: 11.5, fontWeight: 700,
+                }}>
+                {suspects.length} to check
+              </button>
+              {dupesOpen && (
+                <div style={{
+                  position: 'absolute', top: 34, right: 0, zIndex: 30, width: 340,
+                  maxHeight: 320, overflowY: 'auto', padding: 12,
+                  background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 14,
+                  boxShadow: '0 16px 40px rgba(25,23,18,0.18)', textAlign: 'left',
+                }}>
+                  <div style={{ fontSize: 11.5, color: '#6C6553', lineHeight: 1.5, marginBottom: 10 }}>
+                    Same amount, account, category and payee. Filed twice on one day is
+                    usually a slip; twice in one month may be real. Nothing has been changed —
+                    open one from Today or Balances to fix it.
+                  </div>
+                  {suspects.map(t => (
+                    <div key={t.id} style={{
+                      display: 'flex', alignItems: 'baseline', gap: 8,
+                      padding: '6px 0', borderTop: '1px solid #F5F1E6', fontSize: 12,
+                    }}>
+                      <span style={{ color: '#9B9180', fontVariantNumeric: 'tabular-nums' }}>{t.date}</span>
+                      <span style={{ flex: 1, minWidth: 0, color: '#191712', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {t.payee?.trim() || categories.find(c => c.id === t.categoryId)?.name || 'Entry'}
+                      </span>
+                      <span style={{ color: dupes.get(t.id) === 'day' ? '#8A6D0B' : '#B0A488', fontSize: 10, fontWeight: 700 }}>
+                        {dupes.get(t.id) === 'day' ? 'SAME DAY' : 'SAME MONTH'}
+                      </span>
+                      <span style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 600, color: '#3D3926', fontVariantNumeric: 'tabular-nums' }}>
+                        {acct(Math.abs(t.amount), { currency: t.currency })}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </span>
+          )}
           {hiddenIds.size > 0 && (
             <span style={{ fontSize: 11.5, color: '#9B9180', fontStyle: 'italic' }}>
               {hiddenIds.size} row{hiddenIds.size > 1 ? 's' : ''} hidden

@@ -7,12 +7,15 @@ import { useFinanceStore } from '../financeStore'
 import { CategoryModal } from '../modals/CategoryModal'
 import { CategoryGlyph } from '../components/CategoryGlyph'
 import { suggestIcon, isPlaceholderIcon, isLucideIcon } from '../categoryIcons'
-import { toBase, rateFor, currenciesNeedingRates, setRate } from '../fx'
+import { toBase, rateFor, currenciesNeedingRates } from '../fx'
+import { useUIStore } from '@/store/uiStore'
 import {
   BudgetRuleModal, defaultRule, monthlyAmount, activeIn, type BudgetRule,
 } from '../modals/BudgetRuleModal'
 import type { Category, Transaction } from '../types'
 import { acct } from '../format'
+import { findDuplicates } from '../duplicates'
+import { DuplicateMark } from '../components/DuplicateMark'
 
 // ─── 16G · Budget Builder ─────────────────────────────────────────────────────
 // Categories tree with budget rules: amount, frequency, roll unspent,
@@ -326,6 +329,7 @@ function SummaryLine({ label, actual, planned, color, currency, strong }: {
 }
 
 export function BudgetScreen(_props?: any) {
+  const setActiveModule = useUIStore(s => s.setActiveModule)
   // CategoryModal has existed, finished, since the module was written and was
   // never mounted anywhere — so there was no way to create a category at all,
   // which left this screen with nothing to configure and every transaction
@@ -807,33 +811,21 @@ export function BudgetScreen(_props?: any) {
                 <div style={{ fontSize: 11.5, color: '#3D3926', lineHeight: 1.5 }}>
                   There is {needRates.length === 1 ? 'money' : 'money'} here in {needRates.join(' and ')} and
                   nothing to convert {needRates.length === 1 ? 'it' : 'them'} by, so {needRates.length === 1 ? 'it is' : 'they are'} in
-                  none of these totals. Say what one is worth:
+                  none of these totals.
                 </div>
-                {needRates.map(code => (
-                  <div key={code} style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 8 }}>
-                    <span style={{ fontSize: 11.5, color: '#3D3926', fontWeight: 600, width: 34 }}>1 {code}</span>
-                    <span style={{ fontSize: 11.5, color: '#6C6553' }}>=</span>
-                    <input
-                      type="number" min={0} step="0.0001" inputMode="decimal"
-                      placeholder="0.00"
-                      onKeyDown={e => {
-                        if (e.key !== 'Enter') return
-                        const v = parseFloat((e.target as HTMLInputElement).value)
-                        if (v > 0) setRate(code, v)
-                      }}
-                      onBlur={e => {
-                        const v = parseFloat(e.target.value)
-                        if (v > 0) setRate(code, v)
-                      }}
-                      style={{
-                        width: 84, height: 30, boxSizing: 'border-box', padding: '0 9px',
-                        borderRadius: 8, border: '1px solid #E8E1CE', background: '#FFFFFF',
-                        fontFamily: 'inherit', fontSize: 12.5, color: '#191712', outline: 'none',
-                        textAlign: 'right',
-                      }} />
-                    <span style={{ fontSize: 11.5, color: '#6C6553' }}>{currency}</span>
-                  </div>
-                ))}
+                <button
+                  onClick={() => {
+                    // Rates are one setting, not a thing to re-enter per screen.
+                    try { localStorage.setItem('settings-active-section', 'finance') } catch { /* private mode */ }
+                    setActiveModule('settings')
+                  }}
+                  style={{
+                    marginTop: 10, height: 30, padding: '0 13px', borderRadius: 8,
+                    background: '#191712', border: 'none', color: '#FDF8E7',
+                    fontFamily: 'inherit', fontSize: 11.5, fontWeight: 600, cursor: 'pointer',
+                  }}>
+                  Set rates in Settings
+                </button>
               </div>
             )}
             <div style={{ fontSize: 11.5, color: '#9B9180', marginTop: 14, lineHeight: 1.55 }}>
@@ -942,6 +934,7 @@ export function BudgetScreen(_props?: any) {
           .filter((tx: Transaction) => txFlags[tx.id] === 'excluded')
           .reduce((s: number, tx: Transaction) => s + inBase(tx), 0)
         const drillUnrated = currenciesNeedingRates(drillTxs, currency)
+        const dupes = findDuplicates(transactions)
         const netSpend = totalSpend - excludedSpend
 
         const PERIOD_LABELS: Record<string, string> = {
@@ -1046,8 +1039,9 @@ export function BudgetScreen(_props?: any) {
 
                         {/* Main info */}
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 13, fontWeight: 600, color: '#191712', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textDecoration: flag === 'excluded' ? 'line-through' : 'none' }}>
-                            {tx.payee}
+                          <div style={{ fontSize: 13, fontWeight: 600, color: '#191712', display: 'flex', alignItems: 'center', gap: 6, textDecoration: flag === 'excluded' ? 'line-through' : 'none' }}>
+                            <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tx.payee}</span>
+                            <DuplicateMark scope={dupes.get(tx.id)} />
                           </div>
                           <div style={{ fontSize: 10.5, color: '#9B9180', marginTop: 1, display: 'flex', gap: 6 }}>
                             <span>{new Date(tx.date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>

@@ -17,6 +17,8 @@ import type { Account, AccountType, Transaction } from '../types'
 import { POSITIVE, NEGATIVE } from '../../../lib/moneyColors'
 import { acct } from '../format'
 import { CategoryGlyph } from '../components/CategoryGlyph'
+import { findDuplicates } from '../duplicates'
+import { DuplicateMark } from '../components/DuplicateMark'
 
 // ─── Pill ─────────────────────────────────────────────────────────────────────
 
@@ -259,6 +261,8 @@ export function BalanceScreen() {
   const [rangeFrom, setRangeFrom] = useState(monthStart)
   const [rangeTo,   setRangeTo]   = useState(monthEnd)
 
+  const dupes = findDuplicates(transactions)
+
   const sorted = [...transactions]
     .filter(tx => (!rangeFrom || tx.date >= rangeFrom) && (!rangeTo || tx.date <= rangeTo))
     .sort((a, b) => b.date.localeCompare(a.date))
@@ -495,8 +499,12 @@ export function BalanceScreen() {
                     <div style={{
                       fontSize: 14, fontWeight: 500, color: C.textPri,
                       overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                      display: 'flex', alignItems: 'center', gap: 6,
                     }}>
-                      {tx.payee?.trim() || cat?.name || 'Transaction'}
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {tx.payee?.trim() || cat?.name || 'Transaction'}
+                      </span>
+                      <DuplicateMark scope={dupes.get(tx.id)} />
                     </div>
                     <div style={{ fontSize: 12, color: C.textDim, marginTop: 1, display: 'flex', gap: 6 }}>
                       <span>{dateStr}</span>

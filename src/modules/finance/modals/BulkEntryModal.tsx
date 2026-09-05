@@ -11,19 +11,75 @@ import {
 
 /** One line being typed. Everything the whole batch shares — which way the
  *  money went, which account, which currency — lives above the grid, so a line
- *  is only the four things that actually differ between them. */
+ *  is only what actually differs between them.
+ *
+ *  A line can also stand for the same entry repeated: `from` to `to` at
+ *  `every`. `to` follows `from` until it is touched, so a line is a single
+ *  entry unless it is deliberately made otherwise, and `every` starts empty —
+ *  a range with no interval is still one entry, and the count in the footer
+ *  says so before anything is written. */
 interface Draft {
   key: string
-  date: string
+  from: string
+  to: string
+  /** Until the end date is edited it mirrors the start, so moving the start
+   *  moves both rather than leaving an accidental range behind. */
+  toTouched: boolean
+  every: Interval
   payee: string
   categoryId: string
   amount: number
 }
 
+type Interval = '' | 'week' | 'fortnight' | 'month' | 'quarter' | 'year'
+
+const INTERVALS: { id: Interval; label: string }[] = [
+  { id: '',          label: 'once' },
+  { id: 'week',      label: 'week' },
+  { id: 'fortnight', label: '2 weeks' },
+  { id: 'month',     label: 'month' },
+  { id: 'quarter',   label: 'quarter' },
+  { id: 'year',      label: 'year' },
+]
+
 const BLANK_ROWS = 5
 
 function blank(date: string): Draft {
-  return { key: crypto.randomUUID(), date, payee: '', categoryId: '', amount: 0 }
+  return { key: crypto.randomUUID(), from: date, to: date, toTouched: false, every: '', payee: '', categoryId: '', amount: 0 }
+}
+
+/** Adding a month to the 31st has to land somewhere: the last day of the month
+ *  it lands in, so a rent line dated the 31st does not skip February. */
+function step(iso: string, every: Exclude<Interval, ''>, n: number): string {
+  const [y, m, d] = iso.split('-').map(Number)
+  if (every === 'week')      return shiftDays(iso, 7 * n)
+  if (every === 'fortnight') return shiftDays(iso, 14 * n)
+  const months = every === 'month' ? n : every === 'quarter' ? 3 * n : 12 * n
+  const target = new Date(y, m - 1 + months, 1)
+  const last = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate()
+  const day = Math.min(d, last)
+  return `${target.getFullYear()}-${String(target.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+}
+
+function shiftDays(iso: string, days: number): string {
+  const d = new Date(`${iso}T12:00:00`)
+  d.setDate(d.getDate() + days)
+  return d.toISOString().slice(0, 10)
+}
+
+/** Every date one line stands for. No interval means the line is what it looks
+ *  like: one entry, on its start date. */
+export function datesFor(row: Pick<Draft, 'from' | 'to' | 'every'>): string[] {
+  if (!row.from) return []
+  if (!row.every) return [row.from]
+  const end = row.to && row.to >= row.from ? row.to : row.from
+  const out: string[] = []
+  for (let n = 0; n < 400; n++) {
+    const d = step(row.from, row.every, n)
+    if (d > end) break
+    out.push(d)
+  }
+  return out.length > 0 ? out : [row.from]
 }
 
 const CELL: React.CSSProperties = {
@@ -56,36 +112,46 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
   const tone    = kind === 'income' ? OLIVE : RUST
 
   // A line with nothing in it is not an entry, it is an empty row waiting to be
-  // used — only what has an amount gets written.
-  const ready = rows.filter(r => r.amount > 0)
-  const total = ready.reduce((s, r) => s + r.amount, 0)
+  // used — only what has an amount gets written. A line that repeats counts
+  // once per date it stands for.
+  const ready = rows
+    .filter(r => r.amount > 0)
+    .map(r => ({ row: r, dates: datesFor(r) }))
+  const count = ready.reduce((n, r) => n + r.dates.length, 0)
+  const total = ready.reduce((s, r) => s + r.row.amount * r.dates.length, 0)
 
   function patch(key: string, change: Partial<Draft>) {
-    setRows(rs => rs.map(r => (r.key === key ? { ...r, ...change } : r)))
+    setRows(rs => rs.map(r => {
+      if (r.key !== key) return r
+      const next = { ...r, ...change }
+      // The end date follows the start until somebody moves it.
+      if (change.from !== undefined && !r.toTouched) next.to = change.from
+      return next
+    }))
   }
-  function addRow() { setRows(rs => [...rs, blank(rs[rs.length - 1]?.date ?? today)]) }
+  function addRow() { setRows(rs => [...rs, blank(rs[rs.length - 1]?.from ?? today)]) }
   function dropRow(key: string) {
     setRows(rs => (rs.length > 1 ? rs.filter(r => r.key !== key) : [blank(today)]))
   }
 
   function handleSave() {
     const stamp = new Date().toISOString()
-    onSave(ready.map(r => {
-      rememberPayee(r.payee)
-      return {
+    onSave(ready.flatMap(({ row, dates }) => {
+      rememberPayee(row.payee)
+      return dates.map(date => ({
         id:         crypto.randomUUID(),
         accountId,
-        amount:     r.amount,
+        amount:     row.amount,
         currency,
         type:       kind,
-        payee:      r.payee.trim(),
-        categoryId: r.categoryId || undefined,
-        date:       r.date,
-        paidAt:     r.date,
+        payee:      row.payee.trim(),
+        categoryId: row.categoryId || undefined,
+        date,
+        paidAt:     date,
         isCleared:  true,
-        isRecurring: false,
+        isRecurring: dates.length > 1,
         createdAt:  stamp,
-      }
+      }))
     }))
   }
 
@@ -100,7 +166,7 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
       <div
         onClick={e => e.stopPropagation()}
         style={{
-          width: '100%', maxWidth: 820, maxHeight: '88vh', display: 'flex', flexDirection: 'column',
+          width: '100%', maxWidth: 980, maxHeight: '88vh', display: 'flex', flexDirection: 'column',
           background: '#FCFAF4', border: `1px solid ${LINE}`, borderRadius: 20,
           boxShadow: '0 30px 80px rgba(25,23,18,0.28)', padding: '18px 20px 20px',
         }}>
@@ -160,23 +226,51 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
 
         {/* Column heads */}
         <div style={{
-          display: 'grid', gridTemplateColumns: '128px 1fr 190px 118px 30px', gap: 8,
+          display: 'grid', gridTemplateColumns: '118px 118px 104px 1fr 168px 112px 30px', gap: 8,
           fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: GHOST,
           textTransform: 'uppercase', padding: '0 2px 7px',
         }}>
-          <span>Date</span><span>Paid to</span><span>Category</span>
+          <span>Starts</span>
+          <span>Ends</span>
+          <span title="Leave this empty and the line is a single entry on its start date">Every</span>
+          <span>Paid to</span><span>Category</span>
           <span style={{ textAlign: 'right' }}>Amount</span><span />
         </div>
 
         {/* The lines */}
         <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', margin: '0 -2px', padding: '0 2px' }}>
-          {rows.map((r, i) => (
+          {rows.map((r, i) => {
+            const repeats = r.amount > 0 ? datesFor(r).length : datesFor(r).length
+            return (
             <div key={r.key} style={{
-              display: 'grid', gridTemplateColumns: '128px 1fr 190px 118px 30px',
+              display: 'grid', gridTemplateColumns: '118px 118px 104px 1fr 168px 112px 30px',
               gap: 8, alignItems: 'center', marginBottom: 6,
             }}>
-              <input type="date" value={r.date} onChange={e => patch(r.key, { date: e.target.value })}
+              <input type="date" value={r.from} onChange={e => patch(r.key, { from: e.target.value })}
                 style={{ ...CELL, fontFamily: DISPLAY }} />
+              <input type="date" value={r.to} min={r.from}
+                onChange={e => patch(r.key, { to: e.target.value, toTouched: true })}
+                title={r.toTouched ? undefined : 'Following the start date until you change it'}
+                style={{
+                  ...CELL, fontFamily: DISPLAY,
+                  color: r.toTouched ? INK : GHOST,
+                  borderStyle: r.toTouched ? 'solid' : 'dashed',
+                }} />
+              <span style={{ position: 'relative', display: 'flex' }}>
+                <span style={{
+                  ...CELL, display: 'inline-flex', alignItems: 'center', justifyContent: 'space-between',
+                  color: r.every ? INK : GHOST,
+                }}>
+                  {INTERVALS.find(x => x.id === r.every)?.label ?? 'once'}
+                  {repeats > 1 && (
+                    <span style={{ fontSize: 10, fontWeight: 700, color: MUTED }}>×{repeats}</span>
+                  )}
+                </span>
+                <select value={r.every} onChange={e => patch(r.key, { every: e.target.value as Interval })}
+                  style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', cursor: 'pointer', border: 'none' }}>
+                  {INTERVALS.map(o => <option key={o.id || 'once'} value={o.id}>{o.label}</option>)}
+                </select>
+              </span>
               <input value={r.payee} onChange={e => patch(r.key, { payee: e.target.value })}
                 placeholder="Who it went to" style={CELL} />
               <PillPicker value={r.categoryId} onChange={id => patch(r.key, { categoryId: id })}
@@ -197,7 +291,8 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
                 <Trash2 size={13} />
               </button>
             </div>
-          ))}
+            )
+          })}
 
           <button onClick={addRow}
             style={{
@@ -213,11 +308,12 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
         {/* What is about to be written */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <span style={{ fontSize: 12.5, color: MUTED }}>
-            {ready.length === 0
+            {count === 0
               ? 'Nothing to add yet — a line counts once it has an amount'
-              : `${ready.length} ${ready.length === 1 ? 'entry' : 'entries'}`}
+              : `${count} ${count === 1 ? 'entry' : 'entries'}${
+                  count > ready.length ? ` from ${ready.length} ${ready.length === 1 ? 'line' : 'lines'}` : ''}`}
           </span>
-          {ready.length > 0 && (
+          {count > 0 && (
             <span style={{
               fontFamily: DISPLAY, fontSize: 17, fontWeight: 700, color: tone,
               fontVariantNumeric: 'tabular-nums',
@@ -229,15 +325,15 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
           <button onClick={onClose} style={{ ...PILL, height: 38, color: MUTED }}>Cancel</button>
           <button
             onClick={handleSave}
-            disabled={ready.length === 0}
+            disabled={count === 0}
             style={{
               ...PILL, height: 38, paddingInline: 20, fontWeight: 600,
-              background: ready.length ? '#191712' : '#EDE7D9',
-              border: `1px solid ${ready.length ? '#191712' : LINE}`,
-              color: ready.length ? '#FDF8E7' : GHOST,
-              cursor: ready.length ? 'pointer' : 'default',
+              background: count ? '#191712' : '#EDE7D9',
+              border: `1px solid ${count ? '#191712' : LINE}`,
+              color: count ? '#FDF8E7' : GHOST,
+              cursor: count ? 'pointer' : 'default',
             }}>
-            Add {ready.length || ''} {ready.length === 1 ? 'entry' : 'entries'}
+            Add {count || ''} {count === 1 ? 'entry' : 'entries'}
           </button>
         </div>
       </div>
