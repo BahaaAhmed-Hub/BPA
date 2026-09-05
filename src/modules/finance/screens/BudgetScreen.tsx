@@ -16,7 +16,7 @@ import type { Category, Transaction } from '../types'
 import { acct } from '../format'
 import { findDuplicates } from '../duplicates'
 import { DuplicateMark } from '../components/DuplicateMark'
-import { isUnpaid, unpaidRow, settled, UNPAID_TITLE } from '../unpaid'
+import { isUnpaid, unpaidRow, settled, whenPaid, UNPAID_TITLE } from '../unpaid'
 
 // ─── 16G · Budget Builder ─────────────────────────────────────────────────────
 // Categories tree with budget rules: amount, frequency, roll unspent,
@@ -444,7 +444,8 @@ export function BudgetScreen(_props?: any) {
       // The year chart is money that moved. What is still owed is not a month
       // that has happened.
       for (const tx of settled(transactions)) {
-        if (!tx.date.startsWith(prefix)) continue
+        // Filed in the month the money moved, not the month it was owed in.
+        if (!whenPaid(tx).startsWith(prefix)) continue
         // Converted, not added at face value: 3,500 USD is not 3,500 EGP, and
         // a rate nobody has given is left out rather than invented.
         const v = toBase(Math.abs(tx.amount), tx.currency, currency)
@@ -485,7 +486,7 @@ export function BudgetScreen(_props?: any) {
       for (const tx of settled(transactions)) {
         if (!tx.categoryId || !ids.has(tx.categoryId)) continue
         if (tx.type !== wanted) continue
-        if (!tx.date.startsWith(monthKey)) continue
+        if (!whenPaid(tx).startsWith(monthKey)) continue
         const v = toBase(Math.abs(tx.amount), tx.currency, currency)
         if (v === null) currencies.add(tx.currency)   // no rate — say so, never guess
         else base += v
@@ -558,7 +559,7 @@ export function BudgetScreen(_props?: any) {
     // has been spent in it — otherwise a USD sub-budget silently drops out of
     // its parent's total with nothing on screen asking for a rate.
     () => currenciesNeedingRates([
-      ...transactions.filter(t => t.date.startsWith(monthKey)),
+      ...transactions.filter(t => whenPaid(t).startsWith(monthKey)),
       ...Object.values(rules)
         .filter(r => r && monthlyAmount(r) > 0)
         .map(r => ({ currency: r.currency })),
@@ -952,9 +953,9 @@ export function BudgetScreen(_props?: any) {
           .filter((tx: Transaction) =>
             tx.type === 'expense' &&
             tx.categoryId && thisCatIds.has(tx.categoryId) &&
-            tx.date >= cutoff
+            whenPaid(tx) >= cutoff
           )
-          .sort((a: Transaction, b: Transaction) => b.date.localeCompare(a.date))
+          .sort((a: Transaction, b: Transaction) => whenPaid(b).localeCompare(whenPaid(a)))
 
         // Group by sub-category (or parent itself)
         const subGroups: Record<string, { cat: Category | undefined; txs: Transaction[] }> = {}
@@ -1087,7 +1088,9 @@ export function BudgetScreen(_props?: any) {
                             <DuplicateMark scope={dupes.get(tx.id)} />
                           </div>
                           <div style={{ fontSize: 10.5, color: '#9B9180', marginTop: 1, display: 'flex', gap: 6 }}>
-                            <span>{new Date(tx.date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                            <span title={isUnpaid(tx) ? `Due ${tx.date}, not paid` : `Paid ${whenPaid(tx)}`}>
+                              {new Date(whenPaid(tx) + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                            </span>
                             {subCat && subCat.id !== selectedId && <span>· {subCat.name}</span>}
                             {tx.note && <span>· {tx.note}</span>}
                           </div>

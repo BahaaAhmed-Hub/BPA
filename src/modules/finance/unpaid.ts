@@ -40,6 +40,17 @@ export function settled<T extends Pick<Transaction, 'paidAt'>>(txs: T[]): T[] {
   return columnExists ? txs.filter(t => !!t.paidAt) : txs
 }
 
+/** The day an entry's money actually moved, for anything that files entries
+ *  into a month.
+ *
+ *  A bill due on the 28th and paid on the 3rd belongs to the month it was paid
+ *  in, not the one it was owed in — a budget is a record of spending, and the
+ *  spending happened in March. Falls back to the entry's own date only where
+ *  the server cannot hold a payment date at all, so nothing loses its month. */
+export function whenPaid(tx: Pick<Transaction, 'date' | 'paidAt'>): string {
+  return tx.paidAt ?? tx.date
+}
+
 /** Spread over a feed row's own style, after it: the border shorthand is what
  *  replaces the row's bottom hairline, so it has to be assigned last. */
 export function unpaidRow(unpaid: boolean): CSSProperties {
