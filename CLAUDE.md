@@ -101,7 +101,10 @@ ever writes back to the row. Sign convention: positive is held, negative is owed
 spending on a card takes it below zero, paying it brings it back up.
 A **transfer carries `toAccountId`** (`20260007`): out of `accountId`, into
 `toAccountId`. Without it, paying a card was money leaving and arriving nowhere.
-`saveTransaction` drops the column and retries if the migration has not run.
+`saveTransaction` drops the column and retries if the migration has not run — and
+`transferTargets.ts` keeps the destination locally so the payment is not lost on the
+next load. `creditLimits.ts` does the same for `credit_limit` (`20260008`). In both
+the server's value wins wherever it has one.
 
 ## Finance — an entry keeps its own currency
 250 USD is stored, listed and edited as 250 USD. Conversion happens only where the

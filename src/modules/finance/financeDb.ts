@@ -206,6 +206,22 @@ export async function saveTransaction(row: TransactionRow): Promise<void> {
   throw new Error(error.message)
 }
 
+/** Several rows at once, in chunks, with the same tolerance for columns that a
+ *  migration has not added yet. Used by the one-time paid-date backfill, where
+ *  writing a few hundred rows one at a time would be a few hundred round trips. */
+export async function saveTransactionsBulk(rows: TransactionRow[]): Promise<void> {
+  markLocalWrite('finance')
+  for (let i = 0; i < rows.length; i += 200) {
+    const chunk = rows.slice(i, i + 200)
+    const { error } = await supabase.from('finance_transactions').upsert(chunk, { onConflict: 'id' })
+    if (!error) continue
+    if (!isMissingColumn(error)) throw new Error(error.message)
+    const core = chunk.map(({ paid_at: _p, tags: _t, attachments: _a, to_account_id: _to, ...rest }) => rest)
+    const { error: retry } = await supabase.from('finance_transactions').upsert(core, { onConflict: 'id' })
+    if (retry) throw new Error(retry.message)
+  }
+}
+
 /** Postgres says 42703 for a column that is not there; PostgREST says PGRST204
  *  when its cached copy of the schema has not caught up. Same remedy here. */
 function isMissingColumn(error: { code?: string; message?: string }): boolean {

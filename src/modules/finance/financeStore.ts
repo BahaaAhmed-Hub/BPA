@@ -3,10 +3,17 @@ import { persist } from 'zustand/middleware'
 import { supabase } from '@/lib/supabase'
 import type { Account, Category, Transaction, Bill, Goal, Budget } from './types'
 import { rememberLimit, withLocalLimits } from './creditLimits'
+import { rememberTarget, forgetTarget, withLocalTargets } from './transferTargets'
+
+/** One backfill at a time, however many loads are in flight — and a note of
+ *  which rows have been given a payment date, so a load that lands before the
+ *  write does not put them back the way they were. */
+let backfillRunning = false
+const paidAtPatched = new Set<string>()
 import {
   loadAccounts, saveAccount, deleteAccount as dbDeleteAccount,
   loadCategories, saveCategory, deleteCategory as dbDeleteCategory,
-  loadTransactions, saveTransaction, deleteTransaction as dbDeleteTransaction,
+  loadTransactions, saveTransaction, saveTransactionsBulk, deleteTransaction as dbDeleteTransaction,
   loadPlans, savePlan,
   loadActualsOverride, saveActualOverride, deleteActualOverride,
   loadCellComments, saveCellComment, deleteCellComment,
@@ -211,6 +218,12 @@ export const useFinanceStore = create<FinanceState>()(
           }))
 
           // Map DB rows to app Transaction type
+          // An entry records something that happened on a day. Before the two
+          // dates existed only "Paid" set a payment date, so everything logged
+          // before that has none — and the paid view of the Financials could
+          // not place any of it. Anything dated today or earlier is given its
+          // own date as the day the money moved; anything dated ahead is left
+          // alone, because that money genuinely has not moved yet.
           const mappedTransactions: Transaction[] = transactions.map(r => ({
             id: r.id,
             accountId: r.account_id,
@@ -229,6 +242,56 @@ export const useFinanceStore = create<FinanceState>()(
             attachments: r.attachments?.length ? r.attachments : undefined,
             createdAt: r.created_at,
           }))
+
+          const todayISO = new Date().toISOString().slice(0, 10)
+          let backfilled = false
+          try { backfilled = localStorage.getItem('finance-paidat-backfill') === '1' } catch { /* private mode */ }
+
+          // A transfer whose destination the server could not store keeps it
+          // from here, or it lands nowhere and the card stops moving.
+          const withTargets = withLocalTargets(mappedTransactions)
+          mappedTransactions.length = 0
+          mappedTransactions.push(...withTargets)
+
+          // What the screen shows does not wait on the write: anything already
+          // given a date keeps it on every later load, so a load that lands
+          // before the write does not put it back the way it was.
+          const needsDate = mappedTransactions.filter(t => !t.paidAt && t.date <= todayISO)
+          for (const t of needsDate) { t.paidAt = t.date; t.isCleared = true; paidAtPatched.add(t.id) }
+
+          // Sign-in loads more than once and a year change loads again; without
+          // both guards every one of those sent the same rows over again.
+          const toWrite = backfilled || backfillRunning
+            ? [] : needsDate.filter(t => paidAtPatched.has(t.id))
+          // Claimed here, with nothing awaited between the check and the claim:
+          // three loads in flight would otherwise each find the work unclaimed
+          // and send the same rows.
+          if (toWrite.length > 0) {
+            backfillRunning = true
+            try { localStorage.setItem('finance-paidat-backfill', '1') } catch { /* private mode */ }
+          }
+          if (toWrite.length > 0) {
+            const uid = await getUserId()
+            if (!uid) backfillRunning = false
+            if (uid) {
+              saveTransactionsBulk(toWrite.map(t => ({
+                id: t.id, user_id: uid, account_id: t.accountId, to_account_id: t.toAccountId ?? null,
+                category_id: t.categoryId, amount: t.amount, currency: t.currency, tx_type: t.type,
+                payee: t.payee, date: t.date, paid_at: t.paidAt ?? null, note: t.note,
+                is_cleared: true, is_recurring: t.isRecurring,
+                tags: t.tags ?? [], attachments: t.attachments ?? [], created_at: t.createdAt,
+              })))
+                // Put back where it was if it did not land, so the next load
+                // tries again rather than leaving the dates half-written.
+                .catch(err => {
+                  console.warn(err)
+                  try { localStorage.removeItem('finance-paidat-backfill') } catch { /* noop */ }
+                })
+                .finally(() => { backfillRunning = false })
+            }
+          } else if (!backfilled) {
+            try { localStorage.setItem('finance-paidat-backfill', '1') } catch { /* noop */ }
+          }
 
           const prev   = get()
           const seeded = (() => {
@@ -349,6 +412,9 @@ export const useFinanceStore = create<FinanceState>()(
       // ─── Transactions CRUD ───────────────────────────────────────────────────
 
       upsertTransaction: async (tx: Transaction) => {
+        // Held here as well, so a transfer is not left landing nowhere on the
+        // next load when the column it belongs in does not exist yet.
+        rememberTarget(tx.id, tx.type === 'transfer' ? tx.toAccountId : undefined)
         set(s => ({
           transactions: s.transactions.some(x => x.id === tx.id)
             ? s.transactions.map(x => x.id === tx.id ? tx : x)
@@ -379,6 +445,7 @@ export const useFinanceStore = create<FinanceState>()(
       },
 
       removeTransaction: async (id: string) => {
+        forgetTarget(id)
         set(s => ({ transactions: s.transactions.filter(x => x.id !== id) }))
         dbDeleteTransaction(id).catch(console.warn)
       },

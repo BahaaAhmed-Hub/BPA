@@ -33,6 +33,7 @@ const SHARED_KEYS = [
   'finance-budget-rules',
   'finance-money-reminders',
   'finance-credit-limits',
+  'finance-transfer-targets',
   'finance-tx-flags',
   'finance-payees',              // who you have paid before
   'finance-category-order',

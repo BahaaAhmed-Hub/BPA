@@ -61,11 +61,28 @@ export function TransactionModal({ transaction, accounts, categories, history = 
   const [accountId,   setAccountId]   = useState(transaction?.accountId           ?? initial?.accountId ?? (accounts[0]?.id ?? ''))
   const [categoryId,  setCategoryId]  = useState(transaction?.categoryId          ?? initial?.categoryId ?? '')
   const [toAccountId, setToAccountId] = useState(transaction?.toAccountId ?? initial?.toAccountId ?? '')
-  const [date,        setDate]        = useState(transaction?.date                ?? initial?.date ?? todayStr)
+  const [date, setDate] = useState(transaction?.date ?? initial?.date ?? todayStr)
+  function pickDate(next: string) {
+    setDate(next)
+    if (paidTouched) return
+    // Following the due date, and only marked paid once that day has come.
+    setPaidAt(next <= todayStr ? next : '')
+    setIsCleared(next <= todayStr)
+  }
   // Two dates, because they are two facts: a bill due on the 1st and paid on
   // the 9th is not the same as one paid the day it landed.
-  const [paidAt,      setPaidAt]      = useState(transaction?.paidAt              ?? '')
-  const [isCleared,   setIsCleared]   = useState(transaction?.isCleared           ?? false)
+  // An entry usually records something that already happened, so it is paid on
+  // the day it is dated. The payment date follows the due date until it is set
+  // by hand — a bill due on the 1st and paid on the 9th is two facts, but they
+  // are the same fact far more often. A date in the future is the exception:
+  // that money has not moved.
+  const [paidTouched, setPaidTouched] = useState(!!transaction?.paidAt && transaction.paidAt !== transaction.date)
+  const [paidAt, setPaidAt] = useState(
+    transaction?.paidAt ?? (transaction ? '' : (initial?.date ?? todayStr) <= todayStr ? (initial?.date ?? todayStr) : ''),
+  )
+  const [isCleared, setIsCleared] = useState(
+    transaction?.isCleared ?? (initial?.date ?? todayStr) <= todayStr,
+  )
   const [isRecurring, setIsRecurring] = useState(transaction?.isRecurring         ?? false)
   const [attachments, setAttachments] = useState<string[]>(transaction?.attachments ?? [])
   const [tags,        setTags]        = useState<string[]>(transaction?.tags        ?? [])
@@ -363,7 +380,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
               <label style={{ ...PILL, flex: 1, position: 'relative', justifyContent: 'space-between' }}>
                 {new Date(date + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
                 <ChevronDown size={13} strokeWidth={2} style={{ color: GHOST, flexShrink: 0 }} />
-                <input type="date" value={date} onChange={e => setDate(e.target.value)}
+                <input type="date" value={date} onChange={e => pickDate(e.target.value)}
                   style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', border: 'none', padding: 0 }} />
               </label>
               <button
@@ -372,7 +389,8 @@ export function TransactionModal({ transaction, accounts, categories, history = 
                   setIsCleared(next)
                   // Paid with no day attached is the common case; assume today
                   // and let it be changed rather than asking twice.
-                  if (next && !paidAt) setPaidAt(todayStr)
+                  // Marking it paid without saying when means it was paid when it was due.
+                  if (next && !paidAt) setPaidAt(date)
                 }}
                 title="Money has actually moved"
                 style={{
@@ -394,7 +412,8 @@ export function TransactionModal({ transaction, accounts, categories, history = 
                   ? new Date(paidAt + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
                   : <span style={{ color: GHOST }}>Pick the day</span>}
                 <ChevronDown size={13} strokeWidth={2} style={{ color: GHOST, flexShrink: 0 }} />
-                <input type="date" value={paidAt} onChange={e => setPaidAt(e.target.value)}
+                <input type="date" value={paidAt}
+                  onChange={e => { setPaidTouched(true); setPaidAt(e.target.value) }}
                   style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', border: 'none', padding: 0 }} />
               </label>
             </div>
