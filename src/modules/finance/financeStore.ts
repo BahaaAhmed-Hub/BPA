@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { supabase } from '@/lib/supabase'
 import type { Account, Category, Transaction, Bill, Goal, Budget } from './types'
+import { rememberLimit, withLocalLimits } from './creditLimits'
 import {
   loadAccounts, saveAccount, deleteAccount as dbDeleteAccount,
   loadCategories, saveCategory, deleteCategory as dbDeleteCategory,
@@ -253,7 +254,7 @@ export const useFinanceStore = create<FinanceState>()(
           }
 
           set({
-            accounts: mappedAccounts,
+            accounts: withLocalLimits(mappedAccounts),
             categories: mappedCategories,
             transactions: mappedTransactions,
             plans,
@@ -280,6 +281,9 @@ export const useFinanceStore = create<FinanceState>()(
       // ─── Accounts CRUD ──────────────────────────────────────────────────────
 
       upsertAccount: async (a: Account) => {
+        // Held here as well, so a limit is not lost on the next load when the
+        // column it belongs in does not exist yet.
+        rememberLimit(a.id, a.creditLimit)
         // Optimistic update
         set(s => ({
           accounts: s.accounts.some(x => x.id === a.id)

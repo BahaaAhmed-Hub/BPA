@@ -32,6 +32,7 @@ const SHARED_KEYS = [
   'task-board-type',
   'finance-budget-rules',
   'finance-money-reminders',
+  'finance-credit-limits',
   'finance-tx-flags',
   'finance-payees',              // who you have paid before
   'finance-category-order',

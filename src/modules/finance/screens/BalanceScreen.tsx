@@ -26,10 +26,16 @@ import { liveBalances } from '../balances'
 const RED   = NEGATIVE
 const GREEN = POSITIVE
 
-function Pill({ type, amount, currency }: { type: 'expense' | 'income' | 'transfer'; amount: number; currency: string }) {
+function Pill({ type, amount, currency, direction }: {
+  type: 'expense' | 'income' | 'transfer'; amount: number; currency: string
+  /** For a transfer being read from one account's side: out of it, or into it. */
+  direction?: 'out' | 'in'
+}) {
   // Soft pill style: tinted background + matching text (no white text on colored bg)
-  const bg    = type === 'expense' ? `${RED}18`   : type === 'income' ? `${GREEN}18`  : '#EDE7D9'
-  const color = type === 'expense' ? RED           : type === 'income' ? GREEN         : '#6C6553'
+  const out = type === 'expense' || (type === 'transfer' && direction === 'out')
+  const inn = type === 'income'  || (type === 'transfer' && direction === 'in')
+  const bg    = out ? `${RED}18` : inn ? `${GREEN}18` : '#EDE7D9'
+  const color = out ? RED        : inn ? GREEN        : '#6C6553'
   return (
     <span style={{
       display: 'inline-block',
@@ -41,7 +47,7 @@ function Pill({ type, amount, currency }: { type: 'expense' | 'income' | 'transf
       color,
       whiteSpace: 'nowrap',
     }}>
-      {acct(type === 'expense' ? -Math.abs(amount) : Math.abs(amount), { currency })}
+      {acct(out ? -Math.abs(amount) : Math.abs(amount), { currency })}
     </span>
   )
 }
@@ -574,6 +580,17 @@ export function BalanceScreen() {
             {sorted.map(tx => {
               const cat    = tx.categoryId ? categories.find(c => c.id === tx.categoryId) : null
               const glyph  = cat?.icon ?? (tx.type === 'income' ? '💼' : '💳')
+              // A transfer has two ends. Left nameless it read as a stray
+              // "Transaction", which beside the entry that put the money on the
+              // card looked like the same thing recorded twice.
+              const from = tx.accountId   ? accounts.find(a => a.id === tx.accountId)   : null
+              const to   = tx.toAccountId ? accounts.find(a => a.id === tx.toAccountId) : null
+              const isMove = tx.type === 'transfer'
+              const moveDir: 'out' | 'in' | undefined =
+                !isMove || !focusId ? undefined : tx.toAccountId === focusId ? 'in' : 'out'
+              const title = tx.payee?.trim()
+                || (isMove && to ? `Money moved to ${to.name}` : null)
+                || cat?.name || 'Transaction'
               const txDate = new Date(tx.date)
               const dateStr = txDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
               return (
@@ -605,19 +622,22 @@ export function BalanceScreen() {
                       display: 'flex', alignItems: 'center', gap: 6,
                     }}>
                       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {tx.payee?.trim() || cat?.name || 'Transaction'}
+                        {title}
                       </span>
                       <DuplicateMark scope={dupes.get(tx.id)} />
                     </div>
                     <div style={{ fontSize: 12, color: C.textDim, marginTop: 1, display: 'flex', gap: 6 }}>
                       <span>{dateStr}</span>
-                      {cat && tx.payee?.trim() && <span>· {cat.name}</span>}
+                      {isMove && from && to
+                        ? <span>· {from.name} → {to.name}</span>
+                        : cat && tx.payee?.trim() ? <span>· {cat.name}</span> : null}
                     </div>
                   </div>
                   <Pill
                     type={tx.type === 'income' ? 'income' : tx.type === 'transfer' ? 'transfer' : 'expense'}
                     amount={tx.amount}
                     currency={tx.currency}
+                    direction={moveDir}
                   />
                 </div>
               )
