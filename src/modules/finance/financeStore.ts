@@ -282,10 +282,17 @@ export const useFinanceStore = create<FinanceState>()(
           mappedTransactions.length = 0
           mappedTransactions.push(...withTargets)
 
-          // What the screen shows does not wait on the write: anything already
-          // given a date keeps it on every later load, so a load that lands
-          // before the write does not put it back the way it was.
-          const needsDate = mappedTransactions.filter(t => !t.paidAt && t.date <= todayISO)
+          // The one-time repair of entries logged before there were two dates.
+          //
+          // It runs only while it is still outstanding. Once it has been done,
+          // an entry with no payment date is one nobody has paid — bulk entry
+          // writes them deliberately — and giving it one on every load would
+          // make "not paid" impossible to say. `paidAtPatched` keeps this
+          // session's own repairs, so a load landing before the write does not
+          // put them back the way they were.
+          const needsDate = backfilled
+            ? mappedTransactions.filter(t => !t.paidAt && paidAtPatched.has(t.id))
+            : mappedTransactions.filter(t => !t.paidAt && t.date <= todayISO)
           for (const t of needsDate) { t.paidAt = t.date; t.isCleared = true; paidAtPatched.add(t.id) }
 
           // Sign-in loads more than once and a year change loads again; without

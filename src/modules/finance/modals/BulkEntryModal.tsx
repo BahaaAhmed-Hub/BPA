@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { X, Plus, Trash2 } from 'lucide-react'
+import { X, Plus, Trash2, Check } from 'lucide-react'
 import type { Transaction, Account, Category, Currency } from '../types'
 import { MoneyInput } from '../components/MoneyInput'
 import { rememberPayee } from '../payees'
@@ -32,6 +32,14 @@ interface Draft {
   payee: string
   categoryId: string
   amount: number
+  /** Whether the money has actually moved. Unpaid entries carry no payment
+   *  date at all, which is what every screen reads to mark them. */
+  paid: boolean
+  /** The day it was paid. Mirrors the start date until it is touched, the
+   *  same way the end date does — an entry is usually paid on the day it is
+   *  filed, and typing the date twice for every line is a tax. */
+  paidOn: string
+  paidOnTouched: boolean
 }
 
 type Interval = '' | 'week' | 'fortnight' | 'month' | 'quarter' | 'year'
@@ -47,8 +55,11 @@ const INTERVALS: { id: Interval; label: string }[] = [
 
 const BLANK_ROWS = 5
 
-function blank(date: string): Draft {
-  return { key: crypto.randomUUID(), from: date, to: date, toTouched: false, every: '', payee: '', categoryId: '', amount: 0 }
+function blank(date: string, paid: boolean): Draft {
+  return {
+    key: crypto.randomUUID(), from: date, to: date, toTouched: false, every: '',
+    payee: '', categoryId: '', amount: 0, paid, paidOn: date, paidOnTouched: false,
+  }
 }
 
 /** Adding a month to the 31st has to land somewhere: the last day of the month
@@ -95,8 +106,8 @@ const CELL: React.CSSProperties = {
 // The date tracks are sized for the longest thing a browser puts in one:
 // Safari spells it "5 Sep 2026" and adds a picker glyph, where Chromium shows
 // a narrower 09/05/2026.
-const COLS = '142px 142px 100px minmax(140px, 1fr) minmax(158px, 196px) 108px 30px'
-const GRID_MIN = 920
+const COLS = '142px 142px 100px minmax(140px, 1fr) minmax(158px, 196px) 108px 158px 30px'
+const GRID_MIN = 1034
 const CELL_BOX: React.CSSProperties = { minWidth: 0, display: 'flex' }
 
 export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
@@ -119,8 +130,12 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
   const [accountId, setAccountId] = useState(only?.id ?? '')
   const [currency, setCurrency]   = useState<Currency>(
     (only?.currency ?? baseCurrency()) as Currency)
+  // What a new line starts as. Bulk entry is mostly things already paid, so
+  // that is the default — but a batch of bills that are only due is one press
+  // away, and either way a line can be set on its own afterwards.
+  const [batchPaid, setBatchPaid] = useState(true)
   const [rows, setRows]           = useState<Draft[]>(() =>
-    Array.from({ length: BLANK_ROWS }, () => blank(today)))
+    Array.from({ length: BLANK_ROWS }, () => blank(today, true)))
 
   useEffect(() => {
     const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
@@ -139,6 +154,7 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
     .map(r => ({ row: r, dates: datesFor(r) }))
   const count = ready.reduce((n, r) => n + r.dates.length, 0)
   const total = ready.reduce((s, r) => s + r.row.amount * r.dates.length, 0)
+  const unpaid = ready.filter(r => !r.row.paid).reduce((n, r) => n + r.dates.length, 0)
   const account = accounts.find(a => a.id === accountId)
   const canSave = count > 0 && !!account
 
@@ -155,14 +171,21 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
     setRows(rs => rs.map(r => {
       if (r.key !== key) return r
       const next = { ...r, ...change }
-      // The end date follows the start until somebody moves it.
+      // The end date and the payment date both follow the start until
+      // somebody moves them.
       if (change.from !== undefined && !r.toTouched) next.to = change.from
+      if (change.from !== undefined && !r.paidOnTouched) next.paidOn = change.from
       return next
     }))
   }
-  function addRow() { setRows(rs => [...rs, blank(rs[rs.length - 1]?.from ?? today)]) }
+  function addRow() { setRows(rs => [...rs, blank(rs[rs.length - 1]?.from ?? today, batchPaid)]) }
   function dropRow(key: string) {
-    setRows(rs => (rs.length > 1 ? rs.filter(r => r.key !== key) : [blank(today)]))
+    setRows(rs => (rs.length > 1 ? rs.filter(r => r.key !== key) : [blank(today, batchPaid)]))
+  }
+  /** The batch control sets every line; a line can still be changed after. */
+  function setAllPaid(paid: boolean) {
+    setBatchPaid(paid)
+    setRows(rs => rs.map(r => ({ ...r, paid })))
   }
 
   function handleSave() {
@@ -179,8 +202,13 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
         payee:      row.payee.trim(),
         categoryId: row.categoryId || undefined,
         date,
-        paidAt:     date,
-        isCleared:  true,
+        // No payment date is what "not paid" is: every screen reads that, and
+        // an entry without one is money still owed. A line that repeats is
+        // paid on each occurrence's own day — one date cannot stand for
+        // twelve months — so a hand-set payment date applies to a single
+        // entry only.
+        paidAt:     row.paid ? (row.paidOnTouched && dates.length === 1 ? row.paidOn : date) : undefined,
+        isCleared:  row.paid,
         isRecurring: dates.length > 1,
         createdAt:  stamp,
       }))
@@ -198,7 +226,7 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
       <div
         onClick={e => e.stopPropagation()}
         style={{
-          width: '100%', maxWidth: 980, maxHeight: '88vh', display: 'flex', flexDirection: 'column',
+          width: '100%', maxWidth: 1100, maxHeight: '88vh', display: 'flex', flexDirection: 'column',
           background: '#FCFAF4', border: `1px solid ${LINE}`, borderRadius: 20,
           boxShadow: '0 30px 80px rgba(25,23,18,0.28)', padding: '18px 20px 20px',
         }}>
@@ -228,6 +256,21 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
                   color: kind === k ? '#FDF8E7' : MUTED,
                 }}>
                 {k === 'expense' ? 'Expenses' : 'Income'}
+              </button>
+            ))}
+          </span>
+
+          <span style={{ display: 'inline-flex', background: '#F1ECDE', borderRadius: 10, padding: 3, gap: 3 }}
+            title="Sets every line; a line can still be changed on its own">
+            {([true, false] as const).map(p => (
+              <button key={String(p)} onClick={() => setAllPaid(p)}
+                style={{
+                  padding: '0 14px', height: 34, borderRadius: 8, border: 'none', cursor: 'pointer',
+                  fontFamily: 'inherit', fontSize: 12.5, fontWeight: batchPaid === p ? 700 : 500,
+                  background: batchPaid === p ? '#191712' : 'transparent',
+                  color: batchPaid === p ? '#FDF8E7' : MUTED,
+                }}>
+                {p ? 'Paid' : 'Not paid'}
               </button>
             ))}
           </span>
@@ -275,7 +318,9 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
           <span style={{ minWidth: 0 }} title="Leave this empty and the line is a single entry on its start date">Every</span>
           <span style={{ minWidth: 0 }}>Paid to</span>
           <span style={{ minWidth: 0 }}>Category</span>
-          <span style={{ textAlign: 'right', minWidth: 0 }}>Amount</span><span />
+          <span style={{ textAlign: 'right', minWidth: 0 }}>Amount</span>
+          <span style={{ minWidth: 0 }} title="Clear the tick and the entry is money still owed">Paid</span>
+          <span />
         </div>
           {rows.map((r, i) => {
             const repeats = r.amount > 0 ? datesFor(r).length : datesFor(r).length
@@ -334,6 +379,38 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
                   color: r.amount > 0 ? tone : GHOST,
                 }} />
               </span>
+              <span style={{ ...CELL_BOX, alignItems: 'center' }}>
+                <span style={{
+                  ...CELL, display: 'inline-flex', alignItems: 'center', gap: 7, padding: '0 8px',
+                  borderStyle: r.paid ? 'solid' : 'dotted',
+                  borderColor: r.paid ? LINE : RUST,
+                }}>
+                  <button
+                    onClick={() => patch(r.key, { paid: !r.paid })}
+                    title={r.paid ? 'Paid — click if the money has not moved' : 'Not paid — click once it has'}
+                    style={{
+                      width: 17, height: 17, flexShrink: 0, padding: 0, borderRadius: 5, cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      background: r.paid ? INK : 'transparent',
+                      border: `1.5px solid ${r.paid ? INK : RUST}`,
+                      color: '#FDF8E7',
+                    }}>
+                    {r.paid && <Check size={11} strokeWidth={3} />}
+                  </button>
+                  {r.paid ? (
+                    <input type="date" value={r.paidOn}
+                      onChange={e => patch(r.key, { paidOn: e.target.value, paidOnTouched: true })}
+                      title={r.paidOnTouched ? undefined : 'Following the start date until you change it'}
+                      style={{
+                        flex: 1, minWidth: 0, height: 30, padding: 0, border: 'none', background: 'transparent',
+                        fontFamily: DISPLAY, fontSize: 12.5, outline: 'none',
+                        color: r.paidOnTouched ? INK : GHOST,
+                      }} />
+                  ) : (
+                    <span style={{ fontSize: 12.5, color: RUST, fontWeight: 600 }}>Not paid</span>
+                  )}
+                </span>
+              </span>
               <button onClick={() => dropRow(r.key)} title="Remove this line"
                 style={{ ...ROUND, width: 28, height: 28, color: GHOST }}>
                 <Trash2 size={13} />
@@ -363,7 +440,7 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
                 ? `Pick the account these ${count === 1 ? 'goes' : 'go'} to`
                 : `${count} ${count === 1 ? 'entry' : 'entries'}${
                     count > ready.length ? ` from ${ready.length} ${ready.length === 1 ? 'line' : 'lines'}` : ''
-                  } → ${account.name}`}
+                  } → ${account.name}${unpaid > 0 ? `, ${unpaid} not paid` : ''}`}
           </span>
           {elsewhere.length > 0 && account && (
             <span style={{

@@ -7,6 +7,7 @@ import { toBase, baseCurrency, currenciesNeedingRates } from '../fx'
 import { acct, outflow } from '../format'
 import { findDuplicates } from '../duplicates'
 import { DuplicateMark } from '../components/DuplicateMark'
+import { isUnpaid, unpaidRow, UNPAID_TITLE } from '../unpaid'
 import { TransactionModal } from '../modals/TransactionModal'
 import type { Transaction } from '../types'
 import { todayISO } from '../dates'
@@ -802,9 +803,12 @@ export function ReflectionScreen(_props?: any) {
               {drillTx.map(tx => {
                 const cat = categories.find(c => c.id === tx.categoryId)
                 return (
-                  <div key={tx.id} style={{
+                  <div key={tx.id}
+                    title={isUnpaid(tx) ? UNPAID_TITLE : undefined}
+                    style={{
                     display: 'flex', alignItems: 'center', gap: 11,
                     padding: '11px 0', borderBottom: '1px solid #F0EBDC',
+                    ...unpaidRow(isUnpaid(tx)),
                   }}>
                     <span
                       onClick={() => setEditing(tx)}

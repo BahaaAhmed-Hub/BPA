@@ -16,6 +16,7 @@ import type { Category, Transaction } from '../types'
 import { acct } from '../format'
 import { findDuplicates } from '../duplicates'
 import { DuplicateMark } from '../components/DuplicateMark'
+import { isUnpaid, unpaidRow, UNPAID_TITLE } from '../unpaid'
 
 // ─── 16G · Budget Builder ─────────────────────────────────────────────────────
 // Categories tree with budget rules: amount, frequency, roll unspent,
@@ -1062,10 +1063,13 @@ export function BudgetScreen(_props?: any) {
                     const flag = txFlags[tx.id] as TxFlag | undefined
                     const subCat = tx.categoryId ? categories.find(c => c.id === tx.categoryId) : undefined
                     return (
-                      <div key={tx.id} style={{
+                      <div key={tx.id}
+                        title={isUnpaid(tx) ? UNPAID_TITLE : undefined}
+                        style={{
                         display: 'flex', alignItems: 'center', gap: 10,
                         padding: '10px 0', borderBottom: '1px solid #F0EBDC',
                         opacity: flag === 'excluded' ? 0.5 : 1,
+                        ...unpaidRow(isUnpaid(tx)),
                       }}>
                         {/* Sub-cat icon */}
                         <span style={{ fontSize: 18, flexShrink: 0, width: 28, textAlign: 'center' }}>

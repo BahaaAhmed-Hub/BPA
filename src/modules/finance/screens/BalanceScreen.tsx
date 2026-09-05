@@ -19,6 +19,7 @@ import { acct } from '../format'
 import { CategoryGlyph } from '../components/CategoryGlyph'
 import { findDuplicates } from '../duplicates'
 import { DuplicateMark } from '../components/DuplicateMark'
+import { isUnpaid, unpaidRow, UNPAID_TITLE } from '../unpaid'
 import { liveBalances } from '../balances'
 import { todayISO as todayISO_, monthStartISO, monthEndISO } from '../dates'
 
@@ -618,6 +619,7 @@ export function BalanceScreen() {
                 <div
                   key={tx.id}
                   onClick={() => setTxModal({ open: true, tx })}
+                  title={isUnpaid(tx) ? UNPAID_TITLE : undefined}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -625,6 +627,7 @@ export function BalanceScreen() {
                     padding: '11px 0',
                     borderBottom: `1px solid ${C.divFaint}`,
                     cursor: 'pointer',
+                    ...unpaidRow(isUnpaid(tx)),
                   }}
                 >
                   <div style={{

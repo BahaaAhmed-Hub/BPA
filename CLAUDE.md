@@ -82,6 +82,17 @@ Three rules any change here must keep:
   same thing in a *different* month is a recurring payment and is never flagged.
   Surfaced by `DuplicateMark` in the Today, Balances and drill-down feeds, and as the
   "N to check" chip on Financials. It never edits anything.
+- **A line says whether it was paid.** `paid` + `paidOn` per line (the payment date
+  mirrors `Starts` until touched, like `Ends`), with a batch-level Paid / Not paid
+  that sets them all. Unpaid means **no `paidAt` at all** — that is what every screen
+  reads — and `isCleared` follows it. A line that repeats is paid on each occurrence's
+  own day, so a hand-set payment date applies to a single entry only.
+- **Unpaid entries carry a dotted red border.** `unpaid.ts` is the only place that
+  decides it: `isUnpaid(tx)` and `unpaidRow(bool)`, spread *after* a row's own style
+  (the `border` shorthand has to replace the row's bottom hairline). Used by all four
+  feeds — Today, Balances, and the Budget and Financials drill-downs.
+  The paid-date backfill in `loadFromDB` now runs **only while it is still
+  outstanding**; stamping a date on every load made "not paid" impossible to say.
 - **Financials reads a year two ways.** *When it is due* files each entry in the month
   it belongs to, paid or not; *when it was paid* files it in the month the money moved
   and leaves out anything with no `paidAt` (saying how many). One `filedOn(tx)` decides

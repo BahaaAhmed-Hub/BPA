@@ -8,6 +8,7 @@ import { acct, group } from '../format'
 import { toBase, baseCurrency, currenciesNeedingRates } from '../fx'
 import { findDuplicates } from '../duplicates'
 import { DuplicateMark } from '../components/DuplicateMark'
+import { isUnpaid, unpaidRow, UNPAID_TITLE } from '../unpaid'
 import { isoDate } from '../dates'
 
 // ── Palette ───────────────────────────────────────────────────────────────────
@@ -291,11 +292,13 @@ export function TodayScreen() {
       <div
         key={tx.id}
         onClick={() => setTxModal({ open: true, tx })}
+        title={isUnpaid(tx) ? UNPAID_TITLE : undefined}
         style={{
           display: 'flex', alignItems: 'center', gap: 12,
           padding: '10px 0', borderBottom: `1px solid ${C.border}`,
           cursor: 'pointer',
           opacity: isFuture ? 0.75 : 1,
+          ...unpaidRow(isUnpaid(tx)),
         }}
       >
         <div style={{
