@@ -98,8 +98,10 @@ Three rules any change here must keep:
   marked: every row comes back without one and nothing can ever be written, so the
   claim would be about data nobody has. `setPaidAtSupported` on each load decides it,
   and Settings → Finance → PAYMENT DATES names the migration.
-  The old load-time repair is now a button in that same block (`markPastPaid`), for
-  the loaded year, with a count and a confirm.
+  The old load-time repair is now a button in that same block
+  (`markAllPaidOnDueDate`): `loadUnpaidTransactions()` reads every year at once —
+  the normal load's year bound would leave the rest of the ledger untouched — writes
+  `paid_at = date` for each, and reloads the year on screen.
   `loadFromDB` stamps **nothing** paid on the way in. The old repair for entries
   that predated the two dates has done its job, and it read a deliberate "not paid"
   as missing data. Scoping it to devices that had not run it was not enough — the

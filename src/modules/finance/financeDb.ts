@@ -184,6 +184,21 @@ export async function loadTransactions(year: number): Promise<TransactionRow[]> 
   return data as TransactionRow[]
 }
 
+/** Every entry with no payment date, in any year — the year bound the normal
+ *  load uses would leave the rest of the ledger untouched, and a repair that
+ *  fixes one year at a time is one you have to remember to run again. */
+export async function loadUnpaidTransactions(): Promise<TransactionRow[]> {
+  const userId = await uid()
+  const { data, error } = await supabase
+    .from('finance_transactions')
+    .select('*')
+    .eq('user_id', userId)
+    .is('paid_at', null)
+    .order('date', { ascending: true })
+  if (error || !data) return []
+  return data as TransactionRow[]
+}
+
 export async function saveTransaction(row: TransactionRow): Promise<void> {
   markLocalWrite('finance')
   const { error } = await supabase

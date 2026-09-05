@@ -2357,13 +2357,12 @@ function FinanceSection() {
   // were two dates — so the repair is here, as something asked for.
   const finTransactions = useFinanceStore(s => s.transactions)
   const finYear         = useFinanceStore(s => s.currentYear)
-  const markPastPaid    = useFinanceStore(s => s.markPastPaid)
+  const markAllPaid     = useFinanceStore(s => s.markAllPaidOnDueDate)
   const [filling, setFilling] = useState<'idle' | 'working' | number>('idle')
-  const undated = useMemo(() => {
-    const today = new Date()
-    const iso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
-    return finTransactions.filter(t => !t.paidAt && t.date <= iso).length
-  }, [finTransactions])
+  // Only the loaded year can be counted from here — the repair itself covers
+  // every year, so the count is a floor, not the total.
+  const undatedHere = useMemo(
+    () => finTransactions.filter(t => !t.paidAt).length, [finTransactions])
   const [reminders, setReminders] = useState<MoneyReminder[]>(loadReminders)
   const budgetRules = loadRules()
   function putReminders(next: MoneyReminder[]) { setReminders(next); saveReminders(next) }
@@ -2685,29 +2684,28 @@ function FinanceSection() {
             <div style={{ fontSize: 12.5, color: '#6C6553', flex: 1, minWidth: 320, maxWidth: 640, lineHeight: 1.5 }}>
               An entry with no payment date is money that has not moved, and every feed marks it
               with a dotted red border. Entries logged before there were two dates have none
-              either — this gives them their own date back.{' '}
-              {undated === 0
-                ? `Nothing in ${finYear} is waiting.`
-                : `${undated} ${undated === 1 ? 'entry' : 'entries'} in ${finYear} ${undated === 1 ? 'is' : 'are'} dated on or before today with no payment date.`}
+              either — this gives every one of them its due date as the day it was paid, in every
+              year. Anything you meant to leave unpaid will need marking again afterwards.{' '}
+              {undatedHere > 0 && `${undatedHere} ${undatedHere === 1 ? 'is' : 'are'} waiting in ${finYear} alone.`}
             </div>
             <button
-              disabled={undated === 0 || filling === 'working'}
+              disabled={filling === 'working'}
               onClick={async () => {
-                if (!window.confirm(`Mark ${undated} ${undated === 1 ? 'entry' : 'entries'} in ${finYear} as paid on their own date?`)) return
+                if (!window.confirm('Mark every entry with no payment date as paid on its due date, in every year?')) return
                 setFilling('working')
-                setFilling(await markPastPaid())
+                setFilling(await markAllPaid())
               }}
               style={{
-                height: 36, padding: '0 16px', borderRadius: 10, flexShrink: 0, cursor: undated === 0 ? 'default' : 'pointer',
+                height: 36, padding: '0 16px', borderRadius: 10, flexShrink: 0, cursor: 'pointer',
                 fontFamily: 'inherit', fontSize: 13, fontWeight: 600,
-                background: undated === 0 ? '#EDE7D9' : '#191712',
-                border: `1px solid ${undated === 0 ? '#E8E1CE' : '#191712'}`,
-                color: undated === 0 ? '#9B9180' : '#FDF8E7',
+                background: '#191712', border: '1px solid #191712', color: '#FDF8E7',
               }}>
-              {filling === 'working' ? 'Working…' : `Mark ${finYear} paid on their own dates`}
+              {filling === 'working' ? 'Working…' : 'Mark every entry paid on its due date'}
             </button>
             {typeof filling === 'number' && (
-              <span style={{ fontSize: 12, color: '#0C8140', fontWeight: 600 }}>{filling} updated</span>
+              <span style={{ fontSize: 12, color: filling > 0 ? '#0C8140' : '#6C6553', fontWeight: 600 }}>
+                {filling > 0 ? `${filling} updated` : 'nothing was waiting'}
+              </span>
             )}
           </div>
         )}
