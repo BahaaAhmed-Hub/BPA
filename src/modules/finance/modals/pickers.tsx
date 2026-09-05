@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useLayoutEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { ChevronDown, Check } from 'lucide-react'
 import type { Category } from '../types'
 import { CategoryGlyph } from '../components/CategoryGlyph'
@@ -40,6 +41,9 @@ export const RULE: React.CSSProperties = { height: 1, background: HAIR, margin: 
 export interface PickOption {
   id: string
   label: string
+  /** Named on hover only. A sub-category shows its own name; which envelope it
+   *  belongs to is a thing to check, not a thing to read every line. */
+  parent?: string
   /** A lucide name, an emoji, or a data/http URL for a real picture. */
   glyph?: string
   tint?: string
@@ -78,12 +82,47 @@ export function PillPicker({ value, options, onChange, placeholder, compact }: {
 }) {
   const [open, setOpen] = useState(false)
   const box = useRef<HTMLSpanElement>(null)
+  const list = useRef<HTMLDivElement>(null)
   const chosen = options.find(o => o.id === value)
   const h = compact ? 34 : 42
 
+  // The list is drawn into the body, not next to the button. Absolutely
+  // positioned it was clipped by whatever scrolling panel the field happened to
+  // sit in — the bulk grid's own scroller cut it off after four entries.
+  const [place, setPlace] = useState<{ top: number; left: number; width: number; maxHeight: number } | null>(null)
+
+  useLayoutEffect(() => {
+    if (!open) { setPlace(null); return }
+    const put = () => {
+      const b = box.current?.getBoundingClientRect()
+      if (!b) return
+      const gap = 6, margin = 12
+      const below = window.innerHeight - b.bottom - gap - margin
+      const above = b.top - gap - margin
+      const wanted = Math.min(420, window.innerHeight * 0.6)
+      // Below unless there is meaningfully more room above.
+      const dropUp = below < Math.min(wanted, 220) && above > below
+      const maxHeight = Math.max(140, Math.min(wanted, dropUp ? above : below))
+      setPlace({
+        top: dropUp ? b.top - gap - maxHeight : b.bottom + gap,
+        left: b.left,
+        width: b.width,
+        maxHeight,
+      })
+    }
+    put()
+    window.addEventListener('resize', put)
+    window.addEventListener('scroll', put, true)
+    return () => { window.removeEventListener('resize', put); window.removeEventListener('scroll', put, true) }
+  }, [open])
+
   useEffect(() => {
     if (!open) return
-    const away = (e: Event) => { if (box.current && !box.current.contains(e.target as Node)) setOpen(false) }
+    const away = (e: Event) => {
+      const t = e.target as Node
+      if (box.current?.contains(t) || list.current?.contains(t)) return
+      setOpen(false)
+    }
     const esc  = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false) }
     document.addEventListener('pointerdown', away)
     document.addEventListener('keydown', esc)
@@ -94,7 +133,8 @@ export function PillPicker({ value, options, onChange, placeholder, compact }: {
     <span ref={box} style={{ flex: 1, minWidth: 0, position: 'relative', display: 'flex' }}>
       <button type="button" onClick={() => setOpen(o => !o)}
         style={{ ...PILL, height: h, padding: compact ? '0 10px' : '0 14px', fontSize: compact ? 12.5 : 13.5, flex: 1, justifyContent: 'space-between' }}>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+        <span title={chosen?.parent ? `${chosen.label} — inside ${chosen.parent}` : undefined}
+          style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
           {chosen ? <Glyph glyph={chosen.glyph} tint={chosen.tint} size={compact ? 18 : 22} /> : null}
           <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: chosen ? INK : GHOST }}>
             {chosen?.label ?? placeholder}
@@ -103,10 +143,10 @@ export function PillPicker({ value, options, onChange, placeholder, compact }: {
         <ChevronDown size={13} strokeWidth={2} style={{ color: GHOST, flexShrink: 0 }} />
       </button>
 
-      {open && (
-        <div style={{
-          position: 'absolute', top: h + 4, left: 0, right: 0, zIndex: 20,
-          maxHeight: 244, overflowY: 'auto', padding: 5,
+      {open && place && createPortal(
+        <div ref={list} style={{
+          position: 'fixed', top: place.top, left: place.left, width: place.width, zIndex: 2000,
+          maxHeight: place.maxHeight, overflowY: 'auto', padding: 5, boxSizing: 'border-box',
           background: '#FFFFFF', border: `1px solid ${LINE}`, borderRadius: 12,
           boxShadow: '0 12px 32px rgba(25,23,18,0.18)',
         }}>
@@ -117,6 +157,7 @@ export function PillPicker({ value, options, onChange, placeholder, compact }: {
             const on = o.id === value
             return (
               <button key={o.id} type="button"
+                title={o.parent ? `${o.label} — inside ${o.parent}` : o.label}
                 onClick={() => { onChange(o.id); setOpen(false) }}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 10, width: '100%',
@@ -131,16 +172,18 @@ export function PillPicker({ value, options, onChange, placeholder, compact }: {
               </button>
             )
           })}
-        </div>
+        </div>,
+        document.body,
       )}
     </span>
   )
 }
 
-/** Every category as one flat list: each parent followed by its own children,
- *  so a sub-category reads as one rather than as a stray top-level entry with a
- *  name that means nothing on its own. Anything whose parent has gone missing
- *  still has to be reachable, or it becomes a category you cannot pick. */
+/** Every category as one flat list: each parent followed by its own children.
+ *  A child carries its own name only — the indent under its parent is what says
+ *  it is a sub-category, so repeating the parent in every label just made the
+ *  list wider and harder to scan. Anything whose parent has gone missing still
+ *  has to be reachable, or it becomes a category you cannot pick. */
 export function categoryOptions(categories: Category[], kind?: 'expense' | 'income'): PickOption[] {
   const keep = (c: Category) => !kind || c.txType === kind || c.txType === 'both'
   return [
@@ -148,7 +191,7 @@ export function categoryOptions(categories: Category[], kind?: 'expense' | 'inco
     ...categories.filter(c => !c.parentId && keep(c)).flatMap(parent => [
       { id: parent.id, label: parent.name, glyph: parent.icon, tint: parent.color },
       ...categories.filter(c => c.parentId === parent.id).map(child => ({
-        id: child.id, label: `${parent.name} · ${child.name}`,
+        id: child.id, label: child.name, parent: parent.name,
         glyph: child.icon, tint: child.color, nested: true,
       })),
     ]),
