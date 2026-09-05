@@ -52,6 +52,16 @@ export const FREQ_OPTS: { v: Frequency; label: string; per: number }[] = [
  *  something else to scroll past when picking. */
 const FREQ_CHOICES: Frequency[] = ['weekly', 'monthly', 'quarterly', 'yearly']
 
+/** Every category's budget, as the Budget screen keeps them. It reads this
+ *  file's shape, so the reader belongs here rather than being spelt out again
+ *  wherever a budget is needed. */
+export function loadRules(): Record<string, BudgetRule> {
+  try {
+    const parsed = JSON.parse(localStorage.getItem('finance-budget-rules') ?? '{}') as unknown
+    return parsed && typeof parsed === 'object' ? (parsed as Record<string, BudgetRule>) : {}
+  } catch { return {} }
+}
+
 export function defaultRule(): BudgetRule {
   const d = new Date()
   return {

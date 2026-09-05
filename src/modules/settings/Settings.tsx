@@ -33,6 +33,12 @@ import {
 } from '@/lib/blockingRules'
 import { loadCustomStatuses, saveCustomStatuses, moveStatus, DEFAULT_STATUSES, type CustomStatus } from '@/lib/customStatuses'
 import { loadRates, setRate } from '@/modules/finance/fx'
+import { useFinanceStore } from '@/modules/finance/financeStore'
+import { loadRules } from '@/modules/finance/modals/BudgetRuleModal'
+import {
+  loadReminders, saveReminders, defaultReminder, dueDatesFor, reminderTitle,
+  type MoneyReminder,
+} from '@/modules/finance/reminders'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -2342,6 +2348,13 @@ function FinanceSection() {
   })
   const [fxRates, setFxRates] = useState<Record<string, number>>(loadRates)
 
+  // Money reminders: a category, a day of the month, and a task on that date.
+  const { categories: finCategories } = useFinanceStore()
+  const [reminders, setReminders] = useState<MoneyReminder[]>(loadReminders)
+  const budgetRules = loadRules()
+  function putReminders(next: MoneyReminder[]) { setReminders(next); saveReminders(next) }
+  const catById = (id: string) => finCategories.find(c => c.id === id)
+
   function saveStyle(s: EnvelopeStyle) {
     setEnvelopeStyle(s)
     try { localStorage.setItem('finance-envelope-style', s) } catch { /* noop */ }
@@ -2642,6 +2655,120 @@ function FinanceSection() {
         </FieldRow>
       </div>
       </div>
+      <div style={{ gridColumn: '1 / -1', marginTop: 22, paddingTop: 18, borderTop: '1px solid #F0EBDC' }}>
+        <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', color: '#6C6553', display: 'block', marginBottom: 12 }}>MONEY REMINDERS</span>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
+            <div style={{ fontSize: 12.5, color: '#6C6553', flex: 1, maxWidth: 640, lineHeight: 1.5 }}>
+              A budget says how much a category gets in a month; it says nothing about the day the
+              money has to move. Each reminder puts a task on that day, carrying what the category is
+              budgeted, and the task board schedules it onto your calendar like anything else with a
+              date on it. A month too short for the day takes its last day.
+            </div>
+            <button
+              onClick={() => {
+                const first = finCategories[0]
+                if (!first) return
+                putReminders([...reminders, defaultReminder(first.id)])
+              }}
+              disabled={finCategories.length === 0}
+              style={{
+                height: 28, padding: '0 11px', borderRadius: 8, cursor: finCategories.length ? 'pointer' : 'default',
+                background: '#FFFFFF', border: '1px solid #E8E1CE', color: '#6C6553',
+                fontFamily: 'inherit', fontSize: 11.5, fontWeight: 600,
+              }}>+ Add a reminder</button>
+          </div>
+
+          {reminders.length === 0 && (
+            <div style={{ fontSize: 12, color: '#9B9180', padding: '10px 0' }}>
+              Nothing scheduled. Rent on the 1st, school fees on the 5th — that sort of thing.
+            </div>
+          )}
+
+          {reminders.map(r => {
+            const cat = catById(r.categoryId)
+            const nextUp = dueDatesFor(r)[0]
+            return (
+              <div key={r.id} style={{
+                display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' as const,
+                padding: '10px 0', borderTop: '1px solid #F0EBDC',
+              }}>
+                <select
+                  value={r.categoryId}
+                  onChange={e => putReminders(reminders.map(x => x.id === r.id ? { ...x, categoryId: e.target.value } : x))}
+                  style={{
+                    height: 32, minWidth: 168, maxWidth: 240, padding: '0 8px', borderRadius: 8,
+                    border: '1px solid #E8E1CE', background: '#FFFFFF', fontFamily: 'inherit',
+                    fontSize: 12.5, color: '#191712',
+                  }}>
+                  {finCategories.filter(c => !c.parentId).flatMap(parent => [
+                    <option key={parent.id} value={parent.id}>{parent.name}</option>,
+                    ...finCategories.filter(c => c.parentId === parent.id)
+                      .map(child => <option key={child.id} value={child.id}>{`  ${parent.name} · ${child.name}`}</option>),
+                  ])}
+                </select>
+
+                <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#6C6553' }}>
+                  on day
+                  <input
+                    type="number" min={1} max={31}
+                    value={r.day}
+                    onChange={e => putReminders(reminders.map(x => x.id === r.id
+                      ? { ...x, day: Math.min(31, Math.max(1, parseInt(e.target.value) || 1)) } : x))}
+                    style={{
+                      width: 54, height: 32, boxSizing: 'border-box', padding: '0 8px', borderRadius: 8,
+                      border: '1px solid #E8E1CE', background: '#FFFFFF', fontFamily: 'inherit',
+                      fontSize: 12.5, color: '#191712', textAlign: 'right',
+                    }} />
+                </label>
+
+                <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#6C6553' }}>
+                  remind
+                  <input
+                    type="number" min={0} max={30}
+                    value={r.leadDays}
+                    onChange={e => putReminders(reminders.map(x => x.id === r.id
+                      ? { ...x, leadDays: Math.min(30, Math.max(0, parseInt(e.target.value) || 0)) } : x))}
+                    style={{
+                      width: 50, height: 32, boxSizing: 'border-box', padding: '0 8px', borderRadius: 8,
+                      border: '1px solid #E8E1CE', background: '#FFFFFF', fontFamily: 'inherit',
+                      fontSize: 12.5, color: '#191712', textAlign: 'right',
+                    }} />
+                  days early
+                </label>
+
+                <span style={{ flex: 1 }} />
+
+                <span style={{ fontSize: 11, color: '#9B9180', whiteSpace: 'nowrap' as const }}>
+                  {r.enabled && nextUp
+                    ? `next ${new Date(`${nextUp.date}T12:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} · ${reminderTitle(cat, budgetRules[r.categoryId], nextUp.monthKey)}`
+                    : r.enabled ? 'nothing left this year' : 'off'}
+                </span>
+
+                <Toggle checked={r.enabled}
+                  onChange={(v: boolean) => putReminders(reminders.map(x => x.id === r.id ? { ...x, enabled: v } : x))} />
+
+                <button
+                  onClick={() => putReminders(reminders.filter(x => x.id !== r.id))}
+                  title="Remove this reminder"
+                  style={{
+                    width: 28, height: 28, borderRadius: '50%', padding: 0, flexShrink: 0,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: '#FFFFFF', border: '1px solid #E8E1CE', color: '#9B9180', cursor: 'pointer',
+                  }}>×</button>
+              </div>
+            )
+          })}
+          {reminders.some(r => r.enabled) && (
+            <div style={{ fontSize: 11, color: '#9B9180', marginTop: 8 }}>
+              Tasks are made for the next {reminders[0]?.monthsAhead ?? 3} months and topped up as
+              time passes. Deleting one from the board does not bring it back.
+            </div>
+          )}
+        </div>
+
+      </div>
+
     </div>
   )
 }

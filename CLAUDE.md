@@ -98,6 +98,17 @@ A **transfer carries `toAccountId`** (`20260007`): out of `accountId`, into
 `toAccountId`. Without it, paying a card was money leaving and arriving nowhere.
 `saveTransaction` drops the column and retries if the migration has not run.
 
+## Finance — money reminders
+`reminders.ts` turns "this category, this day of the month" into tasks. The task goes
+into the **schedule** quadrant with a `dueDate`, which is what `TaskCommand` already
+pushes to Google Calendar — nothing here knows about calendars.
+- Each task carries `links: ['money-reminder:<ruleId>:<monthKey>']`, so a rule finds
+  the task it made and **moves** it rather than adding a second one.
+- `finance-money-reminders-made` remembers what was ever made, so a task deleted by
+  hand is not put back. A rule turned off deletes its unfinished *future* tasks only.
+- Configured in Settings → Finance (MONEY REMINDERS); `App.tsx` runs it on load, on
+  `professor:moneyRemindersChanged`, and every 12h.
+
 ## Finance persistence
 All nine finance tables are real Postgres (`20260001`, plus `finance_budgets` in `20260005`).
 `financeStore.loadFromDB()` is authoritative — writes go through `financeDb.ts` immediately,

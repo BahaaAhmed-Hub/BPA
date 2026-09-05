@@ -23,6 +23,7 @@ import { saveAccountsToDB, loadCompaniesFromDB, loadRawSettingsFromDB, loadAccou
 import { startPrefSync } from './lib/prefSync'
 import { startLiveSync } from './lib/liveSync'
 import { useFinanceStore } from './modules/finance/financeStore'
+import { runReminders } from './modules/finance/reminders'
 import { SyncGapBanner } from './modules/shell/SyncGapBanner'
 import { seedToken, seedFromLocalStorage, clearAllTokens, getGoogleToken } from './lib/tokenManager'
 import { refreshPrimaryToken } from './lib/googleCalendar'
@@ -822,6 +823,30 @@ function App() {
     const id = setInterval(refresh, 45 * 60 * 1000)
     return () => clearInterval(id)
   }, [user])
+
+  // Money reminders become ordinary tasks: the board pushes anything scheduled
+  // with a date onto the calendar, so nothing here has to know about calendars.
+  // Runs once the categories are in, again whenever the rules change, and daily
+  // for a session left open across midnight.
+  const financeCategories = useFinanceStore(s => s.categories)
+  useEffect(() => {
+    if (!user || financeCategories.length === 0) return
+    // Read the stores at call time rather than subscribing to the task list:
+    // this writes to it, and depending on it would run again on its own output.
+    const run = () => {
+      const ts = useTaskStore.getState()
+      runReminders(financeCategories, ts.tasks, {
+        addTask: ts.addTask, updateTask: ts.updateTask, deleteTask: ts.deleteTask,
+      })
+    }
+    run()
+    window.addEventListener('professor:moneyRemindersChanged', run)
+    const id = setInterval(run, 12 * 60 * 60 * 1000)
+    return () => {
+      window.removeEventListener('professor:moneyRemindersChanged', run)
+      clearInterval(id)
+    }
+  }, [user, financeCategories])
 
   const [assistantOpen, setAssistantOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
