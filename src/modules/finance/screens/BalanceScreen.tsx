@@ -76,9 +76,11 @@ function formatBalance(bal: number, currency = 'EGP'): string {
   return acct(bal, { currency })
 }
 
-function AccountRow({ account, balance, selected, hovered, onSelect, onHover, onEdit, onIcon }: {
+function AccountRow({ account, balance, unconverted, selected, hovered, onSelect, onHover, onEdit, onIcon }: {
   account: Account
   balance: number
+  /** Currencies filed against this account that nothing could convert. */
+  unconverted: string[]
   selected: boolean
   onSelect: (a: Account) => void
   hovered: boolean
@@ -177,7 +179,15 @@ function AccountRow({ account, balance, selected, hovered, onSelect, onHover, on
         <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 14.5, fontWeight: 600, color: isNeg ? '#C62828' : '#191712', fontVariantNumeric: 'tabular-nums' }}>
           {formatBalance(balance, account.currency)}
         </span>
-        {account.last4 && <span style={{ fontSize: 10, color: '#6C6553' }}>cleared</span>}
+        {unconverted.length > 0 ? (
+          <span
+            title={`Entries here in ${unconverted.join(', ')} with no rate set, so they are not in this balance. Settings → Finance.`}
+            style={{ fontSize: 9.5, fontWeight: 700, color: '#C08A2E' }}>
+            {unconverted.join(' ')} not counted
+          </span>
+        ) : account.last4 ? (
+          <span style={{ fontSize: 10, color: '#6C6553' }}>cleared</span>
+        ) : null}
       </div>
 
       {/* The row picks the account; this opens it. One gesture each. */}
@@ -283,7 +293,8 @@ export function BalanceScreen() {
   // filed against it. The stored figure is only the opening one, and reading it
   // straight left every account sitting at whatever it was created with.
   const live = liveBalances(accounts, transactions)
-  const balanceOf = (a: Account) => live.get(a.id) ?? a.balance
+  const balanceOf = (a: Account) => live.balances.get(a.id) ?? a.balance
+  const unratedOn = (a: Account) => [...(live.unconverted.get(a.id) ?? [])]
 
   const inBase = (list: typeof accounts) =>
     list.reduce((s, a) => s + (toBase(balanceOf(a), a.currency, base) ?? 0), 0)
@@ -436,6 +447,7 @@ export function BalanceScreen() {
                         key={acc.id}
                         account={acc}
                         balance={balanceOf(acc)}
+                        unconverted={unratedOn(acc)}
                         selected={focusId === acc.id}
                         onSelect={a => setFocusId(id => (id === a.id ? null : a.id))}
                         hovered={hoveredAccountId === acc.id}

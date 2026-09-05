@@ -59,6 +59,21 @@ export function toBase(amount: number, cur: string | undefined, base = baseCurre
   return rate === null ? null : amount * rate
 }
 
+/** From one currency into another, by way of the base. Rates are held against
+ *  the base, so USD → EGP is a multiply but EGP → USD is a divide, and neither
+ *  is possible unless both ends have a rate. Null means it cannot be known —
+ *  the caller decides what to do about that, and no caller guesses. */
+export function convert(amount: number, from: string | undefined, to: string | undefined): number | null {
+  const base = baseCurrency()
+  const f = (from || base).toUpperCase()
+  const t = (to || base).toUpperCase()
+  if (f === t) return amount
+  const rf = rateFor(f, base)
+  const rt = rateFor(t, base)
+  if (rf === null || rt === null || rt === 0) return null
+  return (amount * rf) / rt
+}
+
 /** Adds up a mixed pile, and reports what it could not add. */
 export function sumInBase(
   rows: { amount: number; currency?: string }[],

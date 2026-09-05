@@ -39,7 +39,16 @@ export function TransactionModal({ transaction, accounts, categories, history = 
 
   const [type,        setType]        = useState<TxType>(transaction?.type        ?? initial?.type ?? 'expense')
   const [amountStr,   setAmountStr]   = useState(String(transaction?.amount       ?? ''))
-  const [currency,    setCurrency]    = useState<Currency>(transaction?.currency  ?? 'EGP')
+  // A new entry is denominated in whatever the account it is filed against is
+  // kept in: picking the USD account and typing 250 means 250 dollars. It stays
+  // that way — nothing here converts it — and follows the account until the
+  // currency is set by hand, after which the choice stands.
+  const [currencyTouched, setCurrencyTouched] = useState(false)
+  const [currency, setCurrency] = useState<Currency>(
+    transaction?.currency
+      ?? accounts.find(a => a.id === (initial?.accountId ?? accounts[0]?.id))?.currency
+      ?? 'EGP',
+  )
   const [payee,       setPayee]       = useState(transaction?.payee               ?? '')
   const [note,        setNote]        = useState(transaction?.note                ?? '')
   const [accountId,   setAccountId]   = useState(transaction?.accountId           ?? initial?.accountId ?? (accounts[0]?.id ?? ''))
@@ -207,7 +216,8 @@ export function TransactionModal({ transaction, accounts, categories, history = 
               {currency}
               <ChevronDown size={11} strokeWidth={2} style={{ color: GHOST }} />
             </span>
-            <select value={currency} onChange={e => setCurrency(e.target.value as Currency)}
+            <select value={currency}
+              onChange={e => { setCurrencyTouched(true); setCurrency(e.target.value as Currency) }}
               style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', border: 'none' }}>
               <option value="EGP">EGP</option>
               <option value="USD">USD</option>
@@ -236,7 +246,12 @@ export function TransactionModal({ transaction, accounts, categories, history = 
             <span style={LABEL}>{type === 'transfer' ? 'From' : 'Account'}</span>
             <PillPicker
               value={accountId}
-              onChange={setAccountId}
+              onChange={id => {
+                setAccountId(id)
+                if (transaction || currencyTouched) return
+                const a = accounts.find(x => x.id === id)
+                if (a) setCurrency(a.currency)
+              }}
               placeholder="No account"
               options={accounts.map(a => ({ id: a.id, label: a.name, glyph: a.emoji, tint: a.color }))} />
           </div>

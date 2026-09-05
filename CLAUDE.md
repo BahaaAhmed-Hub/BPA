@@ -98,6 +98,16 @@ A **transfer carries `toAccountId`** (`20260007`): out of `accountId`, into
 `toAccountId`. Without it, paying a card was money leaving and arriving nowhere.
 `saveTransaction` drops the column and retries if the migration has not run.
 
+## Finance — an entry keeps its own currency
+250 USD is stored, listed and edited as 250 USD. Conversion happens only where the
+figure is added to something denominated differently:
+- `balances.ts` converts into the **account's** currency (`convert(a, from, to)` in
+  `fx.ts`, which goes via the base — rates are held against the base, so EGP→USD is a
+  divide). No rate → the entry is left out and the row says "USD not counted".
+- Financials / Reports / Today convert into the **base** currency.
+- A new entry defaults to the currency of the account picked and follows it, until the
+  currency is set by hand — after which the choice stands.
+
 ## Finance — Balances screen
 - **A card has a ceiling.** `Account.creditLimit` (`20260008`, `credit_limit`) drives the
   usage bar and "X left of Y" on the row. `saveAccount` drops the column and retries if
