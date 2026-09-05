@@ -7,7 +7,6 @@ import type { Transaction, Account, Category, Currency, TxType } from '../types'
 import { knownPayees, matchPayees, rememberPayee } from '../payees'
 import { MoneyInput } from '../components/MoneyInput'
 import { liveBalances } from '../balances'
-import { convert } from '../fx'
 import { acct } from '../format'
 import {
   INK, MUTED, GHOST, LINE, OLIVE, RUST, AMBER, DISPLAY,
@@ -24,7 +23,12 @@ interface Props {
   /** What a new entry should start as. Handed a whole fake transaction instead,
    *  the form would believe it was editing one that does not exist — offering
    *  to delete it, and saying "save changes" to something never saved. */
-  initial?: { categoryId?: string; type?: TxType; accountId?: string; date?: string }
+  initial?: {
+    categoryId?: string; type?: TxType; accountId?: string; date?: string
+    /** Where a transfer lands, and how much — used by Balances to start a card
+     *  settlement off with the figure already in it. */
+    toAccountId?: string; amount?: number; payee?: string
+  }
   onSave: (tx: Transaction) => void
   onDelete?: (id: string) => void
   onClose: () => void
@@ -41,7 +45,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
   const todayStr = new Date().toISOString().slice(0, 10)
 
   const [type,        setType]        = useState<TxType>(transaction?.type        ?? initial?.type ?? 'expense')
-  const [amountStr,   setAmountStr]   = useState(String(transaction?.amount       ?? ''))
+  const [amountStr,   setAmountStr]   = useState(String(transaction?.amount ?? initial?.amount ?? ''))
   // A new entry is denominated in whatever the account it is filed against is
   // kept in: picking the USD account and typing 250 means 250 dollars. It stays
   // that way — nothing here converts it — and follows the account until the
@@ -52,11 +56,11 @@ export function TransactionModal({ transaction, accounts, categories, history = 
       ?? accounts.find(a => a.id === (initial?.accountId ?? accounts[0]?.id))?.currency
       ?? 'EGP',
   )
-  const [payee,       setPayee]       = useState(transaction?.payee               ?? '')
+  const [payee,       setPayee]       = useState(transaction?.payee ?? initial?.payee ?? '')
   const [note,        setNote]        = useState(transaction?.note                ?? '')
   const [accountId,   setAccountId]   = useState(transaction?.accountId           ?? initial?.accountId ?? (accounts[0]?.id ?? ''))
   const [categoryId,  setCategoryId]  = useState(transaction?.categoryId          ?? initial?.categoryId ?? '')
-  const [toAccountId, setToAccountId] = useState(transaction?.toAccountId         ?? '')
+  const [toAccountId, setToAccountId] = useState(transaction?.toAccountId ?? initial?.toAccountId ?? '')
   const [date,        setDate]        = useState(transaction?.date                ?? initial?.date ?? todayStr)
   // Two dates, because they are two facts: a bill due on the 1st and paid on
   // the 9th is not the same as one paid the day it landed.
@@ -74,7 +78,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
   // word of explanation that hiding the field behind an icon meant it mostly
   // did not get written.
   const [openPanes, setOpenPanes] = useState<Record<string, boolean>>(() => ({
-    payee:  !!transaction?.payee,
+    payee:  !!(transaction?.payee ?? initial?.payee),
     tags:   !!transaction?.tags?.length,
     files:  !!transaction?.attachments?.length,
     repeat: !!transaction?.isRecurring,
@@ -172,17 +176,6 @@ export function TransactionModal({ transaction, accounts, categories, history = 
     }
     return `${kind} · ${acct(bal, { currency: a.currency })}`
   }
-
-  const creditTargetId = type === 'transfer' ? toAccountId : accountId
-  const creditTarget = accounts.find(a => a.id === creditTargetId && a.accountType === 'credit_card')
-  // Only money arriving pays a card down: a transfer into it, or income filed
-  // against it. Spending on a card is the other direction.
-  const paysCard = !!creditTarget && (type === 'transfer' || type === 'income')
-  const owedNow = creditTarget ? Math.max(0, -balanceOf(creditTarget.id)) : 0
-  /** The outstanding debt expressed in whatever this entry is denominated in. */
-  const owedHere = creditTarget ? convert(owedNow, creditTarget.currency, currency) : null
-  /** What this entry moves, in the card's currency. */
-  const paidThere = creditTarget ? convert(amount, currency, creditTarget.currency) : null
 
   // Paying a card is a transfer — money moves between two accounts rather than
   // leaving — so which card it lands on is the To field, not the category. But
@@ -292,49 +285,6 @@ export function TransactionModal({ transaction, accounts, categories, history = 
               fontVariantNumeric: 'tabular-nums', padding: 0,
             }} />
         </div>
-
-        {/* What this leaves on the card it is going to */}
-        {paysCard && creditTarget && (
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
-            marginTop: 10, padding: '9px 12px', borderRadius: 10,
-            background: '#F6F1E4', border: `1px solid ${LINE}`,
-          }}>
-            <span style={{ fontSize: 12.5, color: MUTED, flex: 1, minWidth: 0 }}>
-              {owedNow === 0 ? (
-                <><b style={{ color: INK, fontWeight: 600 }}>{creditTarget.name}</b> owes nothing — this puts it in credit.</>
-              ) : owedHere === null ? (
-                <>
-                  <b style={{ color: INK, fontWeight: 600 }}>{creditTarget.name}</b> owes{' '}
-                  {acct(owedNow, { currency: creditTarget.currency })}. No rate between {currency} and{' '}
-                  {creditTarget.currency}, so what this leaves cannot be worked out.
-                </>
-              ) : (
-                <>
-                  <b style={{ color: INK, fontWeight: 600 }}>{creditTarget.name}</b> owes{' '}
-                  {acct(owedNow, { currency: creditTarget.currency })}
-                  {amount > 0 && paidThere !== null && (
-                    <> · after this, {acct(Math.max(0, owedNow - paidThere), { currency: creditTarget.currency })}
-                      {paidThere > owedNow && <> and {acct(paidThere - owedNow, { currency: creditTarget.currency })} in credit</>}
-                    </>
-                  )}
-                </>
-              )}
-            </span>
-            {owedHere !== null && owedHere > 0 && Math.round(amount) !== Math.round(owedHere) && (
-              <button
-                type="button"
-                onClick={() => setAmountStr(String(Math.round(owedHere * 100) / 100))}
-                title={`Set the amount to what ${creditTarget.name} owes`}
-                style={{
-                  ...PILL, height: 30, paddingInline: 12, fontSize: 12, fontWeight: 600,
-                  color: INK, flexShrink: 0,
-                }}>
-                Clear it — {acct(owedHere, { currency })}
-              </button>
-            )}
-          </div>
-        )}
 
         <div style={RULE} />
 

@@ -116,10 +116,11 @@ figure is added to something denominated differently:
   spending it; the Category row is hidden for transfers and `categoryId` is dropped on
   save. Which card it lands on is the **To** field. An expense filed under a card-ish
   category offers the crossing.
-- **Paying a card is shown while it is typed.** The account pickers name what each
-  account holds; with a card on the receiving end (a transfer into it, or income filed
-  against it) the entry panel says what it owes, what the amount leaves, and offers
-  "Clear it" set to the outstanding debt in the entry's own currency.
+- **Settling a card lives here, not in the entry panel.** A card row with a debt gets a
+  **Settle** button that opens a transfer already carrying the outstanding figure, the
+  card as its destination and a payee. The entry panel only records an amount — the
+  account pickers name what each account holds so the right card is picked, and nothing
+  in there previews or clears a debt.
 - **Clicking a row picks the account**, narrowing the feed to it; a transfer belongs to
   *both* ends, so it shows for the account it came from and the one it went to. The
   pencil opens the editor — one gesture each.

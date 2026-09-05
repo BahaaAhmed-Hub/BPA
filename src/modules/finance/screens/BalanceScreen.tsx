@@ -76,7 +76,7 @@ function formatBalance(bal: number, currency = 'EGP'): string {
   return acct(bal, { currency })
 }
 
-function AccountRow({ account, balance, unconverted, selected, hovered, onSelect, onHover, onEdit, onIcon }: {
+function AccountRow({ account, balance, unconverted, selected, hovered, onSelect, onHover, onEdit, onSettle, onIcon }: {
   account: Account
   balance: number
   /** Currencies filed against this account that nothing could convert. */
@@ -86,6 +86,8 @@ function AccountRow({ account, balance, unconverted, selected, hovered, onSelect
   hovered: boolean
   onHover: (id: string | null) => void
   onEdit:  (a: Account) => void
+  /** Cards only: start a payment towards what this one owes. */
+  onSettle: (a: Account, owed: number) => void
   onIcon:  (a: Account, emoji: string) => void
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
@@ -189,6 +191,21 @@ function AccountRow({ account, balance, unconverted, selected, hovered, onSelect
           <span style={{ fontSize: 10, color: '#6C6553' }}>cleared</span>
         ) : null}
       </div>
+
+      {/* Settling a card belongs here, next to what it owes, rather than inside
+          the entry panel — that one records an amount, it does not clear a debt. */}
+      {limit >= 0 && account.accountType === 'credit_card' && owed > 0 && (
+        <button
+          onClick={e => { e.stopPropagation(); onSettle(account, owed) }}
+          title={`Pay ${acct(owed, { currency: account.currency })} off ${account.name}`}
+          style={{
+            height: 26, paddingInline: 10, borderRadius: 999, flexShrink: 0, marginLeft: 8,
+            background: '#191712', border: '1px solid #191712', color: '#FDF8E7',
+            fontFamily: 'inherit', fontSize: 11, fontWeight: 600, cursor: 'pointer',
+          }}>
+          Settle
+        </button>
+      )}
 
       {/* The row picks the account; this opens it. One gesture each. */}
       <button
@@ -313,6 +330,9 @@ export function BalanceScreen() {
     .toISOString().slice(0, 10)
   const [rangeFrom, setRangeFrom] = useState(monthStart)
   const [rangeTo,   setRangeTo]   = useState(monthEnd)
+
+  // Paying a card off starts here, with the figure already in it.
+  const [settling, setSettling] = useState<{ card: Account; owed: number } | null>(null)
 
   const dupes = findDuplicates(transactions)
 
@@ -453,6 +473,7 @@ export function BalanceScreen() {
                         hovered={hoveredAccountId === acc.id}
                         onHover={setHoveredAccountId}
                         onEdit={a => setAccountModal({ open: true, account: a })}
+                        onSettle={(a, owed) => setSettling({ card: a, owed })}
                         onIcon={(a, emoji) => void upsertAccount({ ...a, emoji })}
                       />
                     ))}
@@ -614,6 +635,24 @@ export function BalanceScreen() {
           onClose={() => setAccountModal({ open: false, account: null })}
         />
       )}
+      {settling && (
+        <TransactionModal
+          transaction={null}
+          initial={{
+            type: 'transfer',
+            toAccountId: settling.card.id,
+            amount: Math.round(settling.owed * 100) / 100,
+            payee: `Payment to ${settling.card.name}`,
+            accountId: accounts.find(a => a.accountType === 'payment' && a.id !== settling.card.id)?.id,
+          }}
+          accounts={accounts}
+          categories={categories}
+          history={transactions}
+          onSave={tx => { upsertTransaction(tx); setSettling(null) }}
+          onClose={() => setSettling(null)}
+        />
+      )}
+
       {txModal.open && (
         <TransactionModal
           transaction={txModal.tx}
