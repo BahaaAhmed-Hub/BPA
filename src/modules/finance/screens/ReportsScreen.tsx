@@ -22,17 +22,26 @@ function buildSegments(data: { name: string; amt: number; color: string }[], tot
   })
 }
 
+const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+const monthStart = (d: Date) => iso(new Date(d.getFullYear(), d.getMonth(), 1))
+const monthEnd   = (d: Date) => iso(new Date(d.getFullYear(), d.getMonth() + 1, 0))
+
 function addMonth(year: number, month: number, delta: number): { year: number; month: number } {
   const d = new Date(year, month + delta, 1)
   return { year: d.getFullYear(), month: d.getMonth() }
 }
 
-const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December']
 const MONTH_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
 
 // Ten hues that stay apart from each other and sit on the warm ground the rest
 // of the module is built on. Mid-tone throughout, so a slice carries its label
 // whichever end of the list it comes from.
+const RANGE_FIELD: React.CSSProperties = {
+  border: 'none', background: 'transparent', outline: 'none',
+  fontFamily: "'Outfit', system-ui, sans-serif", fontSize: 13, fontWeight: 500,
+  color: '#191712', padding: 0, width: 118,
+}
+
 const PALETTE = [
   '#C0563C', '#3F7FA6', '#7A8C3A', '#B4577F', '#D99A2B',
   '#2F8C6E', '#7C6BB0', '#8A6A4F', '#5B8C8C', '#A8892B',
@@ -118,14 +127,30 @@ export function ReportsScreen(_props?: any) {
   const { transactions, categories } = useFinanceStore()
 
   const today = new Date()
-  const [reportYear, setReportYear] = useState(today.getFullYear())
-  const [reportMonth, setReportMonth] = useState(today.getMonth()) // 0-indexed
+  // A range, the way the accounts tab keeps one, rather than a month with a
+  // decorative label beside it. The month arrows are still here because a month
+  // at a time is what this is usually read in; they step the range when it is a
+  // whole calendar month and step aside when it is not.
+  const [rangeFrom, setRangeFrom] = useState(monthStart(today))
+  const [rangeTo,   setRangeTo]   = useState(monthEnd(today))
   const [reportView, setReportView] = useState<'donut' | 'bars'>('donut')
 
-  const monthPrefix = `${reportYear}-${String(reportMonth + 1).padStart(2, '0')}`
+  /** The whole calendar month this range covers, or null when it covers
+   *  something else — a fortnight, a quarter, the year. */
+  const wholeMonth = useMemo(() => {
+    if (!rangeFrom || !rangeTo) return null
+    const [y, m, d] = rangeFrom.split('-').map(Number)
+    if (d !== 1) return null
+    const last = `${y}-${String(m).padStart(2, '0')}-${String(new Date(y, m, 0).getDate()).padStart(2, '0')}`
+    return rangeTo === last ? { year: y, month: m - 1 } : null
+  }, [rangeFrom, rangeTo])
+
+  const rangeKey = `${rangeFrom}~${rangeTo}`
+  const inRange = (tx: { date: string }) =>
+    (!rangeFrom || tx.date >= rangeFrom) && (!rangeTo || tx.date <= rangeTo)
 
   const base = baseCurrency()
-  const expTxns = transactions.filter(tx => tx.type === 'expense' && tx.date.startsWith(monthPrefix))
+  const expTxns = transactions.filter(tx => tx.type === 'expense' && inRange(tx))
   const byCategory = new Map<string, number>()
   expTxns.forEach(tx => {
     // A dollar is not a pound. Anything with no rate behind it is left out and
@@ -148,23 +173,44 @@ export function ReportsScreen(_props?: any) {
     // byCategory is rebuilt every render; the month and the data behind it are
     // what actually decide this.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [transactions, categories, monthPrefix, base])
+  }, [transactions, categories, rangeKey, base])
   const TOTAL = REPORT_DATA.reduce((s, d) => s + d.amt, 0)
 
   const segments = TOTAL > 0 ? buildSegments(REPORT_DATA, TOTAL) : []
   const maxAmt   = Math.max(...REPORT_DATA.map(d => d.amt), 1)
 
   function navigateMonth(delta: number) {
-    const { year, month } = addMonth(reportYear, reportMonth, delta)
-    setReportYear(year)
-    setReportMonth(month)
+    if (!wholeMonth) return
+    const { year, month } = addMonth(wholeMonth.year, wholeMonth.month, delta)
+    const first = new Date(year, month, 1)
+    setRangeFrom(monthStart(first))
+    setRangeTo(monthEnd(first))
   }
 
-  const lastDay = new Date(reportYear, reportMonth + 1, 0).getDate()
-  const dateRangeLabel = `1 ${MONTH_SHORT[reportMonth]} ${reportYear} › ${lastDay} ${MONTH_SHORT[reportMonth]} ${reportYear}`
 
-  const daysInMonth = new Date(reportYear, reportMonth + 1, 0).getDate()
-  const dayRate = TOTAL > 0 ? Math.round(TOTAL / daysInMonth) : 0
+  // Per day over the days actually being looked at. With an open end, the days
+  // are the ones the entries themselves span — a per-day rate over "all time"
+  // divided by one day is not a rate, it is the total again.
+  const spanDays = useMemo(() => {
+    const dates = expTxns.map(t => t.date).sort()
+    const from = rangeFrom || dates[0]
+    const to   = rangeTo   || dates[dates.length - 1]
+    if (!from || !to) return 1
+    return Math.max(1, Math.round((Date.parse(`${to}T12:00:00`) - Date.parse(`${from}T12:00:00`)) / 864e5) + 1)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rangeKey, expTxns.length])
+  const dayRate = TOTAL > 0 ? Math.round(TOTAL / spanDays) : 0
+
+  const day = (d: string) => new Date(`${d}T12:00:00`)
+    .toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+  const wholeYear = rangeFrom.endsWith('-01-01') && rangeTo === `${rangeFrom.slice(0, 4)}-12-31`
+  const periodLabel = wholeMonth
+    ? `${MONTH_SHORT[wholeMonth.month]} ${wholeMonth.year}`
+    : !rangeFrom && !rangeTo ? 'everything'
+    : wholeYear ? rangeFrom.slice(0, 4)
+    : !rangeFrom ? `up to ${day(rangeTo)}`
+    : !rangeTo ? `from ${day(rangeFrom)}`
+    : `${day(rangeFrom)} – ${day(rangeTo)}`
 
 
   return (
@@ -198,11 +244,17 @@ export function ReportsScreen(_props?: any) {
         <div>
           <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: '#6C6553', display: 'block', marginBottom: 4 }}>MONEY</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <button onClick={() => navigateMonth(-1)} style={{ background: 'none', border: 'none', color: '#6C6553', fontSize: 20, cursor: 'pointer', padding: 0, lineHeight: 1 }}>‹</button>
+            {wholeMonth && (
+              <button onClick={() => navigateMonth(-1)} title="The month before"
+                style={{ background: 'none', border: 'none', color: '#6C6553', fontSize: 20, cursor: 'pointer', padding: 0, lineHeight: 1 }}>‹</button>
+            )}
             <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 28, fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1, color: '#191712' }}>
-              Reports · {MONTH_SHORT[reportMonth]}
+              Reports · {periodLabel}
             </span>
-            <button onClick={() => navigateMonth(1)} style={{ background: 'none', border: 'none', color: '#6C6553', fontSize: 20, cursor: 'pointer', padding: 0, lineHeight: 1 }}>›</button>
+            {wholeMonth && (
+              <button onClick={() => navigateMonth(1)} title="The month after"
+                style={{ background: 'none', border: 'none', color: '#6C6553', fontSize: 20, cursor: 'pointer', padding: 0, lineHeight: 1 }}>›</button>
+            )}
           </div>
           <span style={{ fontSize: 12, color: '#6C6553', display: 'block', marginTop: 3 }}>
             {TOTAL > 0 ? `${base} ${dayRate.toLocaleString('en-US')}/day · ${REPORT_DATA.length} categories` : 'No expenses logged this month'}
@@ -233,15 +285,41 @@ export function ReportsScreen(_props?: any) {
       {/* Content */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '24px 32px' }}>
 
-        {/* Date range pill */}
+        {/* The same period control the accounts tab keeps, and for the same
+            reason: the dates were a label describing a month you could not
+            change from here. */}
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 24 }}>
-          <span style={{
-            fontSize: 13, color: C.textMuted,
-            background: C.surface, border: `1px solid ${C.border}`,
-            borderRadius: 20, padding: '6px 16px',
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            padding: '5px 8px 5px 12px',
+            background: C.surface, border: `1px solid ${C.border}`, borderRadius: 10,
           }}>
-            {dateRangeLabel}
-          </span>
+            <input type="date" value={rangeFrom} max={rangeTo || undefined}
+              onChange={e => setRangeFrom(e.target.value)} style={RANGE_FIELD} />
+            <span style={{ color: C.textDim }}>›</span>
+            <input type="date" value={rangeTo} min={rangeFrom || undefined}
+              onChange={e => setRangeTo(e.target.value)} style={RANGE_FIELD} />
+            <span style={{ width: 1, alignSelf: 'stretch', background: C.border, margin: '0 2px' }} />
+            {([
+              ['This month', monthStart(today), monthEnd(today)],
+              ['This year', `${today.getFullYear()}-01-01`, `${today.getFullYear()}-12-31`],
+              ['All', '', ''],
+            ] as const).map(([label, from, to]) => {
+              const on = rangeFrom === from && rangeTo === to
+              return (
+                <button key={label}
+                  onClick={() => { setRangeFrom(from); setRangeTo(to) }}
+                  style={{
+                    padding: '4px 9px', borderRadius: 7, border: 'none', cursor: 'pointer',
+                    fontFamily: 'inherit', fontSize: 11.5, fontWeight: on ? 700 : 500,
+                    background: on ? '#191712' : 'transparent',
+                    color: on ? '#FDF8E7' : C.textDim,
+                  }}>
+                  {label}
+                </button>
+              )
+            })}
+          </div>
         </div>
 
         {REPORT_DATA.length === 0 ? (
@@ -249,13 +327,13 @@ export function ReportsScreen(_props?: any) {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             height: 200, color: C.textMuted, fontSize: 14,
           }}>
-            No expense transactions in {MONTH_NAMES[reportMonth]}
+            No expenses in {periodLabel}
           </div>
         ) : (
           <>
             {/* ── Donut view ── */}
             {reportView === 'donut' && (
-              <div key={`donut-${monthPrefix}`} className="report-view" style={{ display: 'flex', gap: 40, alignItems: 'flex-start' }}>
+              <div key={`donut-${rangeKey}`} className="report-view" style={{ display: 'flex', gap: 40, alignItems: 'flex-start' }}>
 
                 {/* SVG Donut */}
                 <div style={{ position: 'relative', flexShrink: 0, width: 280, height: 280 }}>
@@ -330,7 +408,7 @@ export function ReportsScreen(_props?: any) {
 
             {/* ── Bars view ── */}
             {reportView === 'bars' && (
-              <div key={`bars-${monthPrefix}`} className="report-view" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div key={`bars-${rangeKey}`} className="report-view" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 {REPORT_DATA.map((d, i) => (
                   <div key={i}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
