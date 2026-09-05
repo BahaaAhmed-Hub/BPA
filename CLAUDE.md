@@ -94,8 +94,11 @@ Three rules any change here must keep:
   decides it: `isUnpaid(tx)` and `unpaidRow(bool)`, spread *after* a row's own style
   (the `border` shorthand has to replace the row's bottom hairline). Used by all four
   feeds — Today, Balances, and the Budget and Financials drill-downs.
-  The paid-date backfill in `loadFromDB` now runs **only while it is still
-  outstanding**; stamping a date on every load made "not paid" impossible to say.
+  `loadFromDB` stamps **nothing** paid on the way in. The old repair for entries
+  that predated the two dates has done its job, and it read a deliberate "not paid"
+  as missing data. Scoping it to devices that had not run it was not enough — the
+  flag is per-browser, the rows are shared, so a second device stamped an entry
+  someone had just marked unpaid and pushed it back over everybody.
 - **Financials reads a year two ways.** *When it is due* files each entry in the month
   it belongs to, paid or not; *when it was paid* files it in the month the money moved
   and leaves out anything with no `paidAt` (saying how many). One `filedOn(tx)` decides

@@ -4,13 +4,6 @@ import { supabase } from '@/lib/supabase'
 import type { Account, Category, Transaction, Bill, Goal, Budget } from './types'
 import { rememberLimit, withLocalLimits } from './creditLimits'
 import { rememberTarget, forgetTarget, withLocalTargets } from './transferTargets'
-import { todayISO as todayISO_ } from './dates'
-
-/** One backfill at a time, however many loads are in flight — and a note of
- *  which rows have been given a payment date, so a load that lands before the
- *  write does not put them back the way they were. */
-let backfillRunning = false
-const paidAtPatched = new Set<string>()
 import {
   loadAccounts, saveAccount, deleteAccount as dbDeleteAccount,
   loadCategories, saveCategory, deleteCategory as dbDeleteCategory,
@@ -272,62 +265,26 @@ export const useFinanceStore = create<FinanceState>()(
             createdAt: r.created_at,
           }))
 
-          const todayISO = todayISO_()
-          let backfilled = false
-          try { backfilled = localStorage.getItem('finance-paidat-backfill') === '1' } catch { /* private mode */ }
-
           // A transfer whose destination the server could not store keeps it
           // from here, or it lands nowhere and the card stops moving.
           const withTargets = withLocalTargets(mappedTransactions)
           mappedTransactions.length = 0
           mappedTransactions.push(...withTargets)
 
-          // The one-time repair of entries logged before there were two dates.
+          // Nothing is stamped paid on the way in any more.
           //
-          // It runs only while it is still outstanding. Once it has been done,
-          // an entry with no payment date is one nobody has paid — bulk entry
-          // writes them deliberately — and giving it one on every load would
-          // make "not paid" impossible to say. `paidAtPatched` keeps this
-          // session's own repairs, so a load landing before the write does not
-          // put them back the way they were.
-          const needsDate = backfilled
-            ? mappedTransactions.filter(t => !t.paidAt && paidAtPatched.has(t.id))
-            : mappedTransactions.filter(t => !t.paidAt && t.date <= todayISO)
-          for (const t of needsDate) { t.paidAt = t.date; t.isCleared = true; paidAtPatched.add(t.id) }
-
-          // Sign-in loads more than once and a year change loads again; without
-          // both guards every one of those sent the same rows over again.
-          const toWrite = backfilled || backfillRunning
-            ? [] : needsDate.filter(t => paidAtPatched.has(t.id))
-          // Claimed here, with nothing awaited between the check and the claim:
-          // three loads in flight would otherwise each find the work unclaimed
-          // and send the same rows.
-          if (toWrite.length > 0) {
-            backfillRunning = true
-            try { localStorage.setItem('finance-paidat-backfill', '1') } catch { /* private mode */ }
-          }
-          if (toWrite.length > 0) {
-            const uid = await getUserId()
-            if (!uid) backfillRunning = false
-            if (uid) {
-              saveTransactionsBulk(toWrite.map(t => ({
-                id: t.id, user_id: uid, account_id: t.accountId, to_account_id: t.toAccountId ?? null,
-                category_id: t.categoryId, amount: t.amount, currency: t.currency, tx_type: t.type,
-                payee: t.payee, date: t.date, paid_at: t.paidAt ?? null, note: t.note,
-                is_cleared: true, is_recurring: t.isRecurring,
-                tags: t.tags ?? [], attachments: t.attachments ?? [], created_at: t.createdAt,
-              })))
-                // Put back where it was if it did not land, so the next load
-                // tries again rather than leaving the dates half-written.
-                .catch(err => {
-                  console.warn(err)
-                  try { localStorage.removeItem('finance-paidat-backfill') } catch { /* noop */ }
-                })
-                .finally(() => { backfillRunning = false })
-            }
-          } else if (!backfilled) {
-            try { localStorage.setItem('finance-paidat-backfill', '1') } catch { /* noop */ }
-          }
+          // There used to be a repair here for entries logged before there
+          // were two dates: anything dated today or earlier with no payment
+          // date was given its own date. It has done its job — that data has
+          // been through it — and now that "not paid" is something a person
+          // says on purpose, the repair reads deliberate intent as missing
+          // data and undoes it.
+          //
+          // Scoping it to devices that had not run it was not enough: the flag
+          // is per-browser and the rows are shared, so a second device, or one
+          // whose storage was cleared, would stamp an entry someone had just
+          // marked unpaid and push that back over everybody. An entry with no
+          // payment date is now simply one nobody has paid.
 
           const prev   = get()
           const seeded = (() => {
