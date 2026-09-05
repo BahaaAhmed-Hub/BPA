@@ -21,7 +21,7 @@ interface Props {
   /** What a new entry should start as. Handed a whole fake transaction instead,
    *  the form would believe it was editing one that does not exist — offering
    *  to delete it, and saying "save changes" to something never saved. */
-  initial?: { categoryId?: string; type?: TxType; accountId?: string }
+  initial?: { categoryId?: string; type?: TxType; accountId?: string; date?: string }
   onSave: (tx: Transaction) => void
   onDelete?: (id: string) => void
   onClose: () => void
@@ -44,7 +44,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
   const [note,        setNote]        = useState(transaction?.note                ?? '')
   const [accountId,   setAccountId]   = useState(transaction?.accountId           ?? initial?.accountId ?? (accounts[0]?.id ?? ''))
   const [categoryId,  setCategoryId]  = useState(transaction?.categoryId          ?? initial?.categoryId ?? '')
-  const [date,        setDate]        = useState(transaction?.date                ?? todayStr)
+  const [date,        setDate]        = useState(transaction?.date                ?? initial?.date ?? todayStr)
   // Two dates, because they are two facts: a bill due on the 1st and paid on
   // the 9th is not the same as one paid the day it landed.
   const [paidAt,      setPaidAt]      = useState(transaction?.paidAt              ?? '')

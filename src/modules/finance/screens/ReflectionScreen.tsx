@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, Fragment } from 'react'
-import { ChevronDown, ChevronRight, ChevronsUpDown, ChevronsDownUp, X, Trash2 } from 'lucide-react'
+import { ChevronDown, ChevronRight, ChevronsUpDown, ChevronsDownUp, X, Trash2, Plus } from 'lucide-react'
 import { useFinanceStore } from '../financeStore'
 import { CategoryGlyph } from '../components/CategoryGlyph'
 import { toBase, baseCurrency, currenciesNeedingRates } from '../fx'
@@ -257,6 +257,7 @@ export function ReflectionScreen(_props?: any) {
     { ids: string[] | null; label: string; month: number | null; kind: 'income' | 'expense' | 'both' } | null
   >(null)
   const [editing, setEditing] = useState<Transaction | null>(null)
+  const [adding, setAdding] = useState(false)
 
   function openDrill(ids: string[] | null, label: string, month: number | null, kind: 'income' | 'expense' | 'both') {
     setDrill({ ids, label, month, kind })
@@ -274,6 +275,23 @@ export function ReflectionScreen(_props?: any) {
       .filter(tx => (ids ? !!tx.categoryId && ids.has(tx.categoryId) : true))
       .sort((a, b) => b.date.localeCompare(a.date))
   }, [drill, transactions, year])
+
+  /** A figure covering exactly one category can say where a new entry goes; one
+   *  covering a whole section cannot, so the entry asks. And a month figure
+   *  dates it into that month — the 1st, or today when today is inside it. */
+  const addTarget = useMemo(() => {
+    if (!drill || !drill.ids || drill.ids.length === 0) return null
+    const cat = categories.find(c => c.id === drill.ids![0])
+    return cat ? { id: cat.id, name: cat.name } : null
+  }, [drill, categories])
+
+  const addDate = useMemo(() => {
+    if (!drill) return undefined
+    const today = new Date().toISOString().slice(0, 10)
+    if (drill.month === null) return today.startsWith(String(year)) ? today : `${year}-01-01`
+    const prefix = `${year}-${String(drill.month + 1).padStart(2, '0')}`
+    return today.startsWith(prefix) ? today : `${prefix}-01`
+  }, [drill, year])
 
   // Which parents are showing their parts.
   const [openIds, setOpenIds] = useState<Set<string>>(new Set())
@@ -514,39 +532,43 @@ export function ReflectionScreen(_props?: any) {
         </table>
       </div>
 
-      {/* What one figure was summed from */}
+      {/* What one figure was summed from. Same card the other detail panels
+          use — eyebrow pill, round close, a black pill for the one action. */}
       {drill && (
         <div
           onClick={() => setDrill(null)}
           style={{
             position: 'fixed', inset: 0, zIndex: 900,
-            background: 'rgba(25,23,18,0.28)', display: 'flex', justifyContent: 'flex-end',
+            background: 'rgba(25,23,18,0.42)', backdropFilter: 'blur(3px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
           }}>
           <div
             onClick={e => e.stopPropagation()}
             style={{
-              width: 'min(520px, 100%)', height: '100%', display: 'flex', flexDirection: 'column',
-              background: '#FCFAF4', borderLeft: '1px solid #E8E1CE',
-              boxShadow: '-18px 0 48px rgba(25,23,18,0.18)',
+              width: '100%', maxWidth: 560, maxHeight: '84vh', display: 'flex', flexDirection: 'column',
+              background: '#FCFAF4', border: '1px solid #E8E1CE', borderRadius: 20,
+              boxShadow: '0 30px 80px rgba(25,23,18,0.28)', padding: '18px 20px 20px',
             }}>
-            <div style={{ flexShrink: 0, padding: '18px 22px 14px', borderBottom: '1px solid #E8E1CE' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 7,
-                  background: '#F3EEE0', borderRadius: 999, padding: '5px 12px',
-                  fontSize: 11.5, fontWeight: 600, color: '#6C6553',
-                }}>
-                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: drill.kind === 'income' ? OLIVE : drill.kind === 'expense' ? RUST : '#6C6553' }} />
-                  {drill.kind === 'income' ? 'Income' : drill.kind === 'expense' ? 'Spending' : 'In and out'}
-                </span>
-                <button onClick={() => setDrill(null)} title="Close"
-                  style={{
-                    marginLeft: 'auto', width: 30, height: 30, borderRadius: '50%', padding: 0,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    background: '#FFFFFF', border: '1px solid #E8E1CE', color: '#6C6553', cursor: 'pointer',
-                  }}><X size={14} /></button>
-              </div>
-              <div style={{ fontFamily: 'Outfit, sans-serif', fontSize: 21, fontWeight: 600, letterSpacing: '-0.03em', color: '#191712', marginTop: 12 }}>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', gap: 7,
+                background: '#F3EEE0', borderRadius: 999, padding: '5px 12px',
+                fontSize: 11.5, fontWeight: 600, color: '#6C6553',
+              }}>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: drill.kind === 'income' ? OLIVE : drill.kind === 'expense' ? RUST : '#6C6553' }} />
+                {drill.kind === 'income' ? 'Income' : drill.kind === 'expense' ? 'Spending' : 'In and out'}
+              </span>
+              <button onClick={() => setDrill(null)} title="Close"
+                style={{
+                  marginLeft: 'auto', width: 30, height: 30, borderRadius: '50%', padding: 0,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: '#FFFFFF', border: '1px solid #E8E1CE', color: '#6C6553', cursor: 'pointer',
+                }}><X size={14} /></button>
+            </div>
+
+            <div style={{ flexShrink: 0 }}>
+              <div style={{ fontFamily: 'Outfit, sans-serif', fontSize: 21, fontWeight: 600, letterSpacing: '-0.03em', color: '#191712' }}>
                 {drill.label}
               </div>
               <div style={{ fontSize: 12, color: '#6C6553', marginTop: 3 }}>
@@ -558,9 +580,11 @@ export function ReflectionScreen(_props?: any) {
               </div>
             </div>
 
-            <div style={{ flex: 1, overflowY: 'auto', padding: '6px 22px 22px' }}>
+            <div style={{ height: 1, background: '#F0EBDC', margin: '14px 0 2px' }} />
+
+            <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', margin: '0 -2px', padding: '0 2px' }}>
               {drillTx.length === 0 && (
-                <div style={{ fontSize: 13, color: '#9B9180', textAlign: 'center', padding: '40px 0' }}>
+                <div style={{ fontSize: 13, color: '#9B9180', textAlign: 'center', padding: '34px 0' }}>
                   Nothing behind this figure any more
                 </div>
               )}
@@ -574,9 +598,7 @@ export function ReflectionScreen(_props?: any) {
                     <span
                       onClick={() => setEditing(tx)}
                       title="Open this entry"
-                      style={{
-                        flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 11, cursor: 'pointer',
-                      }}>
+                      style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 11, cursor: 'pointer' }}>
                       <span style={{
                         width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -617,8 +639,46 @@ export function ReflectionScreen(_props?: any) {
                 )
               })}
             </div>
+
+            <div style={{ height: 1, background: '#F0EBDC', margin: '14px 0' }} />
+
+            {/* One more of the same thing, already knowing where it goes */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <span style={{ fontSize: 11.5, color: '#9B9180' }}>
+                {addTarget
+                  ? `New entries land in ${addTarget.name}${drill.month === null ? '' : `, ${MONTHS_SHORT[drill.month]}`}`
+                  : 'Pick the category on the entry itself'}
+              </span>
+              <span style={{ flex: 1 }} />
+              <button
+                onClick={() => setAdding(true)}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 7, height: 38,
+                  padding: '0 18px', borderRadius: 10, cursor: 'pointer',
+                  background: '#191712', border: '1px solid #191712', color: '#FDF8E7',
+                  fontFamily: 'inherit', fontSize: 13.5, fontWeight: 600,
+                }}>
+                <Plus size={14} /> Add an entry
+              </button>
+            </div>
           </div>
         </div>
+      )}
+
+      {adding && drill && (
+        <TransactionModal
+          transaction={null}
+          initial={{
+            categoryId: addTarget?.id,
+            type: drill.kind === 'income' ? 'income' : 'expense',
+            date: addDate,
+          }}
+          accounts={accounts}
+          categories={categories}
+          history={transactions}
+          onSave={tx => { void upsertTransaction(tx); setAdding(false) }}
+          onClose={() => setAdding(false)}
+        />
       )}
 
       {editing && (
