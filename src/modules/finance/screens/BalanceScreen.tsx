@@ -421,7 +421,7 @@ export function BalanceScreen() {
           overflowY: 'auto',
           padding: '22px 26px',
         }}>
-          {/* Date range pill + Add button */}
+          {/* Date range */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
             <div style={{
               display: 'inline-flex',
@@ -460,23 +460,6 @@ export function BalanceScreen() {
                 )
               })}
             </div>
-            <button
-              onClick={() => setTxModal({ open: true, tx: null })}
-              style={{
-                padding: '8px 14px',
-                borderRadius: 9,
-                background: C.amber,
-                border: 'none',
-                color: '#191712',
-                fontSize: 13,
-                fontWeight: 700,
-                cursor: 'pointer',
-                fontFamily: 'inherit',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              + Add
-            </button>
           </div>
 
           {/* Transaction feed */}
