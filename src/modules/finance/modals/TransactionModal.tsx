@@ -6,6 +6,9 @@ import {
 import type { Transaction, Account, Category, Currency, TxType } from '../types'
 import { knownPayees, matchPayees, rememberPayee } from '../payees'
 import { MoneyInput } from '../components/MoneyInput'
+import { liveBalances } from '../balances'
+import { convert } from '../fx'
+import { acct } from '../format'
 import {
   INK, MUTED, GHOST, LINE, OLIVE, RUST, AMBER, DISPLAY,
   PILL, ROUND, LABEL, ROW, RULE, PillPicker, categoryOptions,
@@ -148,6 +151,37 @@ export function TransactionModal({ transaction, accounts, categories, history = 
 
   // A transfer with no destination is not a transfer; it would take money out
   // of one account and put it nowhere.
+  // ── The card this is going to ──────────────────────────────────────────────
+  // Money reaching a credit card pays it down. Which card, and how much of the
+  // debt it clears, is the thing to see while typing the amount rather than
+  // after saving — so the picker names what each account holds, and a card on
+  // the receiving end says what it owes and what this leaves.
+  const before = useMemo(
+    () => liveBalances(accounts, history.filter(t => t.id !== transaction?.id)).balances,
+    [accounts, history, transaction],
+  )
+  const balanceOf = (id: string) => before.get(id) ?? accounts.find(a => a.id === id)?.balance ?? 0
+  const accountHint = (a: Account) => {
+    const bal = balanceOf(a.id)
+    const kind = a.accountType === 'credit_card' ? 'Card' : a.accountType === 'wallet' ? 'Cash' : a.bank || 'Account'
+    if (a.accountType === 'credit_card') {
+      const owed = Math.max(0, -bal)
+      return owed > 0 ? `${kind} · owes ${acct(owed, { currency: a.currency })}` : `${kind} · nothing owed`
+    }
+    return `${kind} · ${acct(bal, { currency: a.currency })}`
+  }
+
+  const creditTargetId = type === 'transfer' ? toAccountId : accountId
+  const creditTarget = accounts.find(a => a.id === creditTargetId && a.accountType === 'credit_card')
+  // Only money arriving pays a card down: a transfer into it, or income filed
+  // against it. Spending on a card is the other direction.
+  const paysCard = !!creditTarget && (type === 'transfer' || type === 'income')
+  const owedNow = creditTarget ? Math.max(0, -balanceOf(creditTarget.id)) : 0
+  /** The outstanding debt expressed in whatever this entry is denominated in. */
+  const owedHere = creditTarget ? convert(owedNow, creditTarget.currency, currency) : null
+  /** What this entry moves, in the card's currency. */
+  const paidThere = creditTarget ? convert(amount, currency, creditTarget.currency) : null
+
   const canSave = amount > 0 && !!accountId && (type !== 'transfer' || !!toAccountId)
 
   return (
@@ -238,6 +272,49 @@ export function TransactionModal({ transaction, accounts, categories, history = 
             }} />
         </div>
 
+        {/* What this leaves on the card it is going to */}
+        {paysCard && creditTarget && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+            marginTop: 10, padding: '9px 12px', borderRadius: 10,
+            background: '#F6F1E4', border: `1px solid ${LINE}`,
+          }}>
+            <span style={{ fontSize: 12.5, color: MUTED, flex: 1, minWidth: 0 }}>
+              {owedNow === 0 ? (
+                <><b style={{ color: INK, fontWeight: 600 }}>{creditTarget.name}</b> owes nothing — this puts it in credit.</>
+              ) : owedHere === null ? (
+                <>
+                  <b style={{ color: INK, fontWeight: 600 }}>{creditTarget.name}</b> owes{' '}
+                  {acct(owedNow, { currency: creditTarget.currency })}. No rate between {currency} and{' '}
+                  {creditTarget.currency}, so what this leaves cannot be worked out.
+                </>
+              ) : (
+                <>
+                  <b style={{ color: INK, fontWeight: 600 }}>{creditTarget.name}</b> owes{' '}
+                  {acct(owedNow, { currency: creditTarget.currency })}
+                  {amount > 0 && paidThere !== null && (
+                    <> · after this, {acct(Math.max(0, owedNow - paidThere), { currency: creditTarget.currency })}
+                      {paidThere > owedNow && <> and {acct(paidThere - owedNow, { currency: creditTarget.currency })} in credit</>}
+                    </>
+                  )}
+                </>
+              )}
+            </span>
+            {owedHere !== null && owedHere > 0 && Math.round(amount) !== Math.round(owedHere) && (
+              <button
+                type="button"
+                onClick={() => setAmountStr(String(Math.round(owedHere * 100) / 100))}
+                title={`Set the amount to what ${creditTarget.name} owes`}
+                style={{
+                  ...PILL, height: 30, paddingInline: 12, fontSize: 12, fontWeight: 600,
+                  color: INK, flexShrink: 0,
+                }}>
+                Clear it — {acct(owedHere, { currency })}
+              </button>
+            )}
+          </div>
+        )}
+
         <div style={RULE} />
 
         {/* Everything else hangs off one label column */}
@@ -253,7 +330,9 @@ export function TransactionModal({ transaction, accounts, categories, history = 
                 if (a) setCurrency(a.currency)
               }}
               placeholder="No account"
-              options={accounts.map(a => ({ id: a.id, label: a.name, glyph: a.emoji, tint: a.color }))} />
+              options={accounts.map(a => ({
+                id: a.id, label: a.name, glyph: a.emoji, tint: a.color, hint: accountHint(a),
+              }))} />
           </div>
 
           {/* A transfer has two ends. Without the second one, paying a credit
@@ -266,7 +345,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
                 onChange={setToAccountId}
                 placeholder="Which account"
                 options={accounts.filter(a => a.id !== accountId)
-                  .map(a => ({ id: a.id, label: a.name, glyph: a.emoji, tint: a.color }))} />
+                  .map(a => ({ id: a.id, label: a.name, glyph: a.emoji, tint: a.color, hint: accountHint(a) }))} />
             </div>
           )}
 

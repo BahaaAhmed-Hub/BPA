@@ -49,6 +49,8 @@ export interface PickOption {
   tint?: string
   /** Sits under another entry in the list. */
   nested?: boolean
+  /** A quiet second line: what an account is, and what it currently holds. */
+  hint?: string
 }
 
 /** The tinted disc a picker entry sits in. It used to draw the icon itself and
@@ -167,7 +169,14 @@ export function PillPicker({ value, options, onChange, placeholder, compact }: {
                   fontFamily: 'inherit', fontSize: 13.5, color: INK, textAlign: 'left',
                 }}>
                 <Glyph glyph={o.glyph} tint={o.tint} />
-                <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.label}</span>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.label}</span>
+                  {o.hint && (
+                    <span style={{ display: 'block', fontSize: 11, color: GHOST, marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {o.hint}
+                    </span>
+                  )}
+                </span>
                 {on && <Check size={14} strokeWidth={2.5} style={{ color: '#8A6D0B', flexShrink: 0 }} />}
               </button>
             )
