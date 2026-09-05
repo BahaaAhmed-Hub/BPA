@@ -16,3 +16,12 @@ export function CategoryGlyph({ icon, size = 18, color }: {
   }
   return <span style={{ fontSize: size, lineHeight: 1 }}>{icon || '📁'}</span>
 }
+
+/** The icon as text, for the one place that cannot take a component: an
+ *  <option>. A lucide name or an uploaded picture has no text form, so it
+ *  yields nothing rather than printing "lucide:Home" or a data URL. */
+export function glyphAsText(icon?: string): string {
+  if (!icon) return ''
+  if (icon.startsWith('lucide:') || icon.startsWith('data:') || icon.startsWith('http')) return ''
+  return icon
+}

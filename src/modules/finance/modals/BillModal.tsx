@@ -3,6 +3,7 @@ import type { Bill, BillFrequency, Category, Account, Currency } from '../types'
 import { IconPicker } from '../components/IconPicker'
 import { POSITIVE, NEGATIVE } from '../../../lib/moneyColors'
 import { MoneyInput } from '../components/MoneyInput'
+import { glyphAsText } from '../components/CategoryGlyph'
 
 const RED   = NEGATIVE
 const GREEN = POSITIVE
@@ -247,7 +248,7 @@ export function BillModal({ bill, categories, accounts, onSave, onDelete, onClos
               <option value="">— none —</option>
               {accounts.map(a => (
                 <option key={a.id} value={a.id}>
-                  {a.emoji} {a.name}
+                  {glyphAsText(a.emoji)} {a.name}
                 </option>
               ))}
             </select>

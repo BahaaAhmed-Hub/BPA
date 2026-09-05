@@ -986,7 +986,9 @@ export function BudgetScreen(_props?: any) {
                     const total = txs.reduce((s: number, tx: Transaction) => s + Math.abs(tx.amount), 0)
                     return (
                       <div key={key} style={{ flexShrink: 0, background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 10, padding: '8px 12px', minWidth: 100 }}>
-                        <div style={{ fontSize: 14, marginBottom: 3 }}>{cat?.icon ?? '📂'}</div>
+                        <div style={{ marginBottom: 3, color: cat?.color ?? '#6C6553' }}>
+                          <CategoryGlyph icon={cat?.icon ?? '📂'} size={15} />
+                        </div>
                         <div style={{ fontSize: 11, color: '#6C6553', marginBottom: 3, whiteSpace: 'nowrap' }}>{cat?.name ?? selectedCat.name}</div>
                         <div style={{ fontSize: 13, fontWeight: 700, color: RUST, fontFamily: 'Outfit, sans-serif' }}>
                           EGP {total.toLocaleString('en-US')}

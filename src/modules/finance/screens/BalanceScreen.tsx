@@ -16,6 +16,7 @@ import { IconPicker } from '../components/IconPicker'
 import type { Account, AccountType, Transaction } from '../types'
 import { POSITIVE, NEGATIVE } from '../../../lib/moneyColors'
 import { acct } from '../format'
+import { CategoryGlyph } from '../components/CategoryGlyph'
 
 // ─── Pill ─────────────────────────────────────────────────────────────────────
 
@@ -40,6 +41,12 @@ function Pill({ type, amount, currency }: { type: 'expense' | 'income' | 'transf
       {acct(type === 'expense' ? -Math.abs(amount) : Math.abs(amount), { currency })}
     </span>
   )
+}
+
+const RANGE_FIELD: React.CSSProperties = {
+  border: 'none', background: 'transparent', outline: 'none',
+  fontFamily: "'Outfit', system-ui, sans-serif", fontSize: 13, fontWeight: 500,
+  color: '#191712', padding: 0, width: 118,
 }
 
 // ─── The Accounts / Cards / Cash pills ────────────────────────────────────────
@@ -243,7 +250,18 @@ export function BalanceScreen() {
   const assetTotal   = inBase(otherAssets)
 
   // Sorted transactions desc
-  const sorted = [...transactions].sort((a, b) => b.date.localeCompare(a.date))
+  // The pill above this list used to be two hardcoded dates with nothing behind
+  // them, so it could read "1 Jun – 30 Jun" over a list of September entries.
+  const todayISO   = new Date().toISOString().slice(0, 10)
+  const monthStart = `${todayISO.slice(0, 7)}-01`
+  const monthEnd   = new Date(Number(todayISO.slice(0, 4)), Number(todayISO.slice(5, 7)), 0)
+    .toISOString().slice(0, 10)
+  const [rangeFrom, setRangeFrom] = useState(monthStart)
+  const [rangeTo,   setRangeTo]   = useState(monthEnd)
+
+  const sorted = [...transactions]
+    .filter(tx => (!rangeFrom || tx.date >= rangeFrom) && (!rangeTo || tx.date <= rangeTo))
+    .sort((a, b) => b.date.localeCompare(a.date))
 
   // Held vs owed computations for net position card
   const totalHeld = inBase(accounts.filter(a => a.balance > 0))
@@ -408,16 +426,39 @@ export function BalanceScreen() {
             <div style={{
               display: 'inline-flex',
               alignItems: 'center',
-              gap: 8,
-              padding: '8px 16px',
+              gap: 6,
+              padding: '5px 8px 5px 12px',
               background: C.surface,
               border: `1px solid ${C.border}`,
               borderRadius: 10,
             }}>
-              <span style={{ fontSize: 13, fontWeight: 500, color: C.textPri }}>1 Jun 2026</span>
+              <input type="date" value={rangeFrom} max={rangeTo || undefined}
+                onChange={e => setRangeFrom(e.target.value)}
+                style={RANGE_FIELD} />
               <span style={{ color: C.textDim }}>›</span>
-              <span style={{ fontSize: 13, fontWeight: 500, color: C.textPri }}>30 Jun 2026</span>
-              <span style={{ color: C.textDim, fontSize: 16, letterSpacing: 1 }}>···</span>
+              <input type="date" value={rangeTo} min={rangeFrom || undefined}
+                onChange={e => setRangeTo(e.target.value)}
+                style={RANGE_FIELD} />
+              <span style={{ width: 1, alignSelf: 'stretch', background: C.border, margin: '0 2px' }} />
+              {([
+                ['This month', monthStart, monthEnd],
+                ['This year', `${todayISO.slice(0, 4)}-01-01`, `${todayISO.slice(0, 4)}-12-31`],
+                ['All', '', ''],
+              ] as const).map(([label, from, to]) => {
+                const on = rangeFrom === from && rangeTo === to
+                return (
+                  <button key={label}
+                    onClick={() => { setRangeFrom(from); setRangeTo(to) }}
+                    style={{
+                      padding: '4px 9px', borderRadius: 7, border: 'none', cursor: 'pointer',
+                      fontFamily: 'inherit', fontSize: 11.5, fontWeight: on ? 700 : 500,
+                      background: on ? '#191712' : 'transparent',
+                      color: on ? '#FDF8E7' : C.textDim,
+                    }}>
+                    {label}
+                  </button>
+                )
+              })}
             </div>
             <button
               onClick={() => setTxModal({ open: true, tx: null })}
@@ -442,7 +483,7 @@ export function BalanceScreen() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
             {sorted.map(tx => {
               const cat    = tx.categoryId ? categories.find(c => c.id === tx.categoryId) : null
-              const emoji  = cat?.icon ?? (tx.type === 'income' ? '💼' : '💳')
+              const glyph  = cat?.icon ?? (tx.type === 'income' ? '💼' : '💳')
               const txDate = new Date(tx.date)
               const dateStr = txDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
               return (
@@ -463,8 +504,9 @@ export function BalanceScreen() {
                     background: tx.type === 'income' ? `${C.green}22` : `${C.red}22`,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontSize: 17, flexShrink: 0,
+                    color: tx.type === 'income' ? C.green : C.red,
                   }}>
-                    {emoji}
+                    <CategoryGlyph icon={glyph} size={18} />
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{
@@ -474,7 +516,7 @@ export function BalanceScreen() {
                       {tx.payee?.trim() || cat?.name || 'Transaction'}
                     </div>
                     <div style={{ fontSize: 12, color: C.textDim, marginTop: 1, display: 'flex', gap: 6 }}>
-                      <span style={{ color: C.green }}>{dateStr}</span>
+                      <span>{dateStr}</span>
                       {cat && tx.payee?.trim() && <span>· {cat.name}</span>}
                     </div>
                   </div>
