@@ -88,6 +88,18 @@ const CELL: React.CSSProperties = {
   fontSize: 12.5, fontFamily: 'inherit', outline: 'none', minWidth: 0, width: '100%',
 }
 
+/** The seven tracks, written once so the heads and the lines cannot drift
+ *  apart. A grid item defaults to min-width:auto, which lets a control wider
+ *  than its track paint straight over the next one — a date field spelling out
+ *  "5 Sep 2026" did exactly that — so every cell below sets minWidth: 0 and the
+ *  whole grid scrolls sideways rather than collapsing. */
+// The date tracks are sized for the longest thing a browser puts in one:
+// Safari spells it "5 Sep 2026" and adds a picker glyph, where Chromium shows
+// a narrower 09/05/2026.
+const COLS = '142px 142px 100px minmax(140px, 1fr) minmax(158px, 196px) 108px 30px'
+const GRID_MIN = 920
+const CELL_BOX: React.CSSProperties = { minWidth: 0, display: 'flex' }
+
 export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
   accounts: Account[]
   categories: Category[]
@@ -224,39 +236,44 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
 
         <div style={{ height: 1, background: HAIR, margin: '16px 0 10px' }} />
 
-        {/* Column heads */}
+        {/* Heads and lines share one sideways scroller, so they stay in step */}
+        <div style={{ flex: 1, minHeight: 0, overflow: 'auto', margin: '0 -2px', padding: '0 2px' }}>
+        <div style={{ minWidth: GRID_MIN }}>
         <div style={{
-          display: 'grid', gridTemplateColumns: '118px 118px 104px 1fr 168px 112px 30px', gap: 8,
+          display: 'grid', gridTemplateColumns: COLS, gap: 8,
           fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: GHOST,
           textTransform: 'uppercase', padding: '0 2px 7px',
+          position: 'sticky', top: 0, background: '#FCFAF4', zIndex: 1,
         }}>
-          <span>Starts</span>
-          <span>Ends</span>
-          <span title="Leave this empty and the line is a single entry on its start date">Every</span>
-          <span>Paid to</span><span>Category</span>
-          <span style={{ textAlign: 'right' }}>Amount</span><span />
+          <span style={{ minWidth: 0 }}>Starts</span>
+          <span style={{ minWidth: 0 }}>Ends</span>
+          <span style={{ minWidth: 0 }} title="Leave this empty and the line is a single entry on its start date">Every</span>
+          <span style={{ minWidth: 0 }}>Paid to</span>
+          <span style={{ minWidth: 0 }}>Category</span>
+          <span style={{ textAlign: 'right', minWidth: 0 }}>Amount</span><span />
         </div>
-
-        {/* The lines */}
-        <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', margin: '0 -2px', padding: '0 2px' }}>
           {rows.map((r, i) => {
             const repeats = r.amount > 0 ? datesFor(r).length : datesFor(r).length
             return (
             <div key={r.key} style={{
-              display: 'grid', gridTemplateColumns: '118px 118px 104px 1fr 168px 112px 30px',
+              display: 'grid', gridTemplateColumns: COLS,
               gap: 8, alignItems: 'center', marginBottom: 6,
             }}>
-              <input type="date" value={r.from} onChange={e => patch(r.key, { from: e.target.value })}
-                style={{ ...CELL, fontFamily: DISPLAY }} />
-              <input type="date" value={r.to} min={r.from}
-                onChange={e => patch(r.key, { to: e.target.value, toTouched: true })}
-                title={r.toTouched ? undefined : 'Following the start date until you change it'}
-                style={{
-                  ...CELL, fontFamily: DISPLAY,
-                  color: r.toTouched ? INK : GHOST,
-                  borderStyle: r.toTouched ? 'solid' : 'dashed',
-                }} />
-              <span style={{ position: 'relative', display: 'flex' }}>
+              <span style={CELL_BOX}>
+                <input type="date" value={r.from} onChange={e => patch(r.key, { from: e.target.value })}
+                  style={{ ...CELL, fontFamily: DISPLAY, padding: '0 8px' }} />
+              </span>
+              <span style={CELL_BOX}>
+                <input type="date" value={r.to} min={r.from}
+                  onChange={e => patch(r.key, { to: e.target.value, toTouched: true })}
+                  title={r.toTouched ? undefined : 'Following the start date until you change it'}
+                  style={{
+                    ...CELL, fontFamily: DISPLAY, padding: '0 8px',
+                    color: r.toTouched ? INK : GHOST,
+                    borderStyle: r.toTouched ? 'solid' : 'dashed',
+                  }} />
+              </span>
+              <span style={{ position: 'relative', display: 'flex', minWidth: 0 }}>
                 <span style={{
                   ...CELL, display: 'inline-flex', alignItems: 'center', justifyContent: 'space-between',
                   color: r.every ? INK : GHOST,
@@ -271,10 +288,15 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
                   {INTERVALS.map(o => <option key={o.id || 'once'} value={o.id}>{o.label}</option>)}
                 </select>
               </span>
-              <input value={r.payee} onChange={e => patch(r.key, { payee: e.target.value })}
-                placeholder="Who it went to" style={CELL} />
-              <PillPicker value={r.categoryId} onChange={id => patch(r.key, { categoryId: id })}
-                placeholder="Uncategorised" compact options={options} />
+              <span style={CELL_BOX}>
+                <input value={r.payee} onChange={e => patch(r.key, { payee: e.target.value })}
+                  placeholder="Who it went to" style={CELL} />
+              </span>
+              <span style={CELL_BOX}>
+                <PillPicker value={r.categoryId} onChange={id => patch(r.key, { categoryId: id })}
+                  placeholder="Uncategorised" compact options={options} />
+              </span>
+              <span style={CELL_BOX}>
               <MoneyInput
                 value={r.amount}
                 min={0}
@@ -286,6 +308,7 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
                   fontVariantNumeric: 'tabular-nums',
                   color: r.amount > 0 ? tone : GHOST,
                 }} />
+              </span>
               <button onClick={() => dropRow(r.key)} title="Remove this line"
                 style={{ ...ROUND, width: 28, height: 28, color: GHOST }}>
                 <Trash2 size={13} />
@@ -301,6 +324,7 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
             }}>
             <Plus size={13} /> Another line
           </button>
+        </div>
         </div>
 
         <div style={{ height: 1, background: HAIR, margin: '14px 0' }} />
