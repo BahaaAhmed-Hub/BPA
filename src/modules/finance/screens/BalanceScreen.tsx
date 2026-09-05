@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { GripVertical } from 'lucide-react'
+import { GripVertical, Pencil, X } from 'lucide-react'
 import {
   DndContext, closestCenter, PointerSensor, TouchSensor, useSensor, useSensors,
   type DragEndEvent,
@@ -76,9 +76,11 @@ function formatBalance(bal: number, currency = 'EGP'): string {
   return acct(bal, { currency })
 }
 
-function AccountRow({ account, balance, hovered, onHover, onEdit, onIcon }: {
+function AccountRow({ account, balance, selected, hovered, onSelect, onHover, onEdit, onIcon }: {
   account: Account
   balance: number
+  selected: boolean
+  onSelect: (a: Account) => void
   hovered: boolean
   onHover: (id: string | null) => void
   onEdit:  (a: Account) => void
@@ -87,22 +89,26 @@ function AccountRow({ account, balance, hovered, onHover, onEdit, onIcon }: {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: account.id })
   const isNeg = balance < 0
+  // A card's ceiling: what is owed against what it is allowed to reach.
+  const limit = account.accountType === 'credit_card' ? (account.creditLimit ?? 0) : 0
+  const owed  = Math.max(0, -balance)
+  const used  = limit > 0 ? Math.min(1, owed / limit) : 0
 
   return (
     <div
       ref={setNodeRef}
       onMouseEnter={() => onHover(account.id)}
       onMouseLeave={() => onHover(null)}
-      onClick={() => onEdit(account)}
+      onClick={() => onSelect(account)}
       role="button"
       tabIndex={0}
-      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onEdit(account) } }}
-      title={`Open ${account.name}`}
+      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(account) } }}
+      title={selected ? `Showing ${account.name} — click again for everything` : `Show only ${account.name}`}
       style={{
         display: 'flex', alignItems: 'center', gap: 11,
-        height: 46, padding: '0 12px 0 6px', borderRadius: 12,
-        background: hovered ? '#FFFDF7' : '#FFFFFF',
-        border: `1px solid ${hovered ? '#E4DCC6' : '#EFEADB'}`,
+        minHeight: 46, padding: '0 12px 0 6px', borderRadius: 12,
+        background: selected ? '#FBF3D2' : hovered ? '#FFFDF7' : '#FFFFFF',
+        border: `1px solid ${selected ? '#F5D14E' : hovered ? '#E4DCC6' : '#EFEADB'}`,
         boxSizing: 'border-box', position: 'relative', cursor: 'pointer',
         transform: CSS.Transform.toString(transform),
         transition,
@@ -152,12 +158,40 @@ function AccountRow({ account, balance, hovered, onHover, onEdit, onIcon }: {
           {account.bank ?? account.accountType}{account.last4 ? ` · ···· ${account.last4}` : ''}
         </span>
       </div>
+
+      {limit > 0 && (
+        <div style={{ width: 116, flexShrink: 0, marginLeft: 10 }} title={`${acct(-owed, { currency: account.currency })} of ${account.currency} ${Math.round(limit).toLocaleString('en-US')} used`}>
+          <div style={{ height: 5, borderRadius: 999, background: '#EFEADB', overflow: 'hidden' }}>
+            <div style={{
+              width: `${Math.round(used * 100)}%`, height: '100%', borderRadius: 999,
+              background: used >= 0.9 ? NEGATIVE : used >= 0.7 ? '#C08A2E' : '#5F7038',
+            }} />
+          </div>
+          <span style={{ display: 'block', fontSize: 9.5, color: '#9B9180', marginTop: 3, whiteSpace: 'nowrap' }}>
+            {account.currency} {Math.round(Math.max(0, limit - owed)).toLocaleString('en-US')} left of {Math.round(limit).toLocaleString('en-US')}
+          </span>
+        </div>
+      )}
+
       <div style={{ marginLeft: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', flexShrink: 0 }}>
         <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 14.5, fontWeight: 600, color: isNeg ? '#C62828' : '#191712', fontVariantNumeric: 'tabular-nums' }}>
           {formatBalance(balance, account.currency)}
         </span>
         {account.last4 && <span style={{ fontSize: 10, color: '#6C6553' }}>cleared</span>}
       </div>
+
+      {/* The row picks the account; this opens it. One gesture each. */}
+      <button
+        onClick={e => { e.stopPropagation(); onEdit(account) }}
+        title={`Edit ${account.name}`}
+        style={{
+          width: 26, height: 26, borderRadius: '50%', padding: 0, flexShrink: 0, marginLeft: 4,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: '#FFFFFF', border: '1px solid #E8E1CE',
+          color: hovered || selected ? '#6C6553' : '#D8D0BE', cursor: 'pointer',
+        }}>
+        <Pencil size={12} />
+      </button>
     </div>
   )
 }
@@ -271,8 +305,16 @@ export function BalanceScreen() {
 
   const dupes = findDuplicates(transactions)
 
+  // Picking an account narrows the feed to it. A transfer touches two accounts,
+  // so it belongs to both ends rather than only the one it was filed against.
+  const [focusId, setFocusId] = useState<string | null>(null)
+  const focused = focusId ? accounts.find(a => a.id === focusId) ?? null : null
+  const touches = (tx: Transaction) =>
+    !focusId || tx.accountId === focusId || tx.toAccountId === focusId
+
   const sorted = [...transactions]
     .filter(tx => (!rangeFrom || tx.date >= rangeFrom) && (!rangeTo || tx.date <= rangeTo))
+    .filter(touches)
     .sort((a, b) => b.date.localeCompare(a.date))
 
   // Held vs owed computations for net position card
@@ -394,6 +436,8 @@ export function BalanceScreen() {
                         key={acc.id}
                         account={acc}
                         balance={balanceOf(acc)}
+                        selected={focusId === acc.id}
+                        onSelect={a => setFocusId(id => (id === a.id ? null : a.id))}
                         hovered={hoveredAccountId === acc.id}
                         onHover={setHoveredAccountId}
                         onEdit={a => setAccountModal({ open: true, account: a })}
@@ -473,6 +517,23 @@ export function BalanceScreen() {
                 )
               })}
             </div>
+            {focused && (
+              <button
+                onClick={() => setFocusId(null)}
+                title="Show every account again"
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 7, height: 34,
+                  padding: '0 8px 0 12px', borderRadius: 10, cursor: 'pointer',
+                  background: '#FBF3D2', border: '1px solid #F5D14E', color: '#7A5F09',
+                  fontFamily: 'inherit', fontSize: 12.5, fontWeight: 600,
+                }}>
+                {focused.name}
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  width: 18, height: 18, borderRadius: '50%', background: 'rgba(25,23,18,0.08)',
+                }}><X size={11} /></span>
+              </button>
+            )}
           </div>
 
           {/* Transaction feed */}

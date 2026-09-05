@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
 import {
   X, ChevronDown, Plus, Paperclip, Check,
-  MessageSquare, Image as ImageIcon, Hash, User, Repeat,
+  Image as ImageIcon, Hash, User, Repeat,
 } from 'lucide-react'
 import type { Transaction, Account, Category, Currency, TxType } from '../types'
 import { knownPayees, matchPayees, rememberPayee } from '../payees'
@@ -58,9 +58,11 @@ export function TransactionModal({ transaction, accounts, categories, history = 
   // The optional half of the form, folded away until asked for. Anything that
   // already has something in it stays open — closing a section that holds data
   // hides the data.
+  // Notes are not in here: they are always on the form. Enough entries need a
+  // word of explanation that hiding the field behind an icon meant it mostly
+  // did not get written.
   const [openPanes, setOpenPanes] = useState<Record<string, boolean>>(() => ({
     payee:  !!transaction?.payee,
-    note:   !!transaction?.note,
     tags:   !!transaction?.tags?.length,
     files:  !!transaction?.attachments?.length,
     repeat: !!transaction?.isRecurring,
@@ -347,8 +349,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
             </div>
           )}
 
-          {openPanes.note && (
-            <div style={{ ...ROW, alignItems: 'flex-start' }}>
+          <div style={{ ...ROW, alignItems: 'flex-start' }}>
               <span style={{ ...LABEL, paddingTop: 11 }}>Notes</span>
               <textarea value={note} onChange={e => setNote(e.target.value)} rows={2}
                 placeholder="Anything worth remembering…"
@@ -358,8 +359,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
                   padding: '9px 12px', fontSize: 13.5, color: INK, fontFamily: 'inherit',
                   outline: 'none', textAlign: 'left',
                 }} />
-            </div>
-          )}
+          </div>
 
           {openPanes.tags && (
             <div style={{ ...ROW, alignItems: 'flex-start' }}>
@@ -444,7 +444,6 @@ export function TransactionModal({ transaction, accounts, categories, history = 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
           {([
             { key: 'payee',  Icon: User,          title: 'Payee',    filled: !!payee.trim() },
-            { key: 'note',   Icon: MessageSquare, title: 'Notes',    filled: !!note.trim() },
             { key: 'files',  Icon: ImageIcon,     title: 'Receipts', filled: attachments.length > 0 },
             { key: 'tags',   Icon: Hash,          title: 'Tags',     filled: tags.length > 0 },
             { key: 'repeat', Icon: Repeat,        title: 'Repeats',  filled: isRecurring },

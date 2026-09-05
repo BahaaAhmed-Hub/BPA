@@ -98,6 +98,14 @@ A **transfer carries `toAccountId`** (`20260007`): out of `accountId`, into
 `toAccountId`. Without it, paying a card was money leaving and arriving nowhere.
 `saveTransaction` drops the column and retries if the migration has not run.
 
+## Finance — Balances screen
+- **A card has a ceiling.** `Account.creditLimit` (`20260008`, `credit_limit`) drives the
+  usage bar and "X left of Y" on the row. `saveAccount` drops the column and retries if
+  the migration has not run.
+- **Clicking a row picks the account**, narrowing the feed to it; a transfer belongs to
+  *both* ends, so it shows for the account it came from and the one it went to. The
+  pencil opens the editor — one gesture each.
+
 ## Finance — money reminders
 `reminders.ts` turns "this category, this day of the month" into tasks. The task goes
 into the **schedule** quadrant with a `dueDate`, which is what `TaskCommand` already

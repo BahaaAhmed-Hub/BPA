@@ -23,6 +23,7 @@ export function AccountModal({ account, onSave, onDelete, onClose }: Props) {
   const [accountType, setAccountType] = useState<AccountType>(account?.accountType ?? 'payment')
   const [currency,    setCurrency]    = useState<Currency>(account?.currency ?? 'EGP')
   const [balance,     setBalance]     = useState(account?.balance     ?? 0)
+  const [creditLimit, setCreditLimit] = useState(account?.creditLimit ?? 0)
   const [last4,       setLast4]       = useState(account?.last4       ?? '')
   const [emoji,       setEmoji]       = useState(account?.emoji       ?? '🏦')
   const [color,       setColor]       = useState(account?.color       ?? '#8C8071')
@@ -33,6 +34,7 @@ export function AccountModal({ account, onSave, onDelete, onClose }: Props) {
       name:        name.trim(),
       bank:        bank.trim(),
       accountType,
+      creditLimit: accountType === 'credit_card' && creditLimit > 0 ? creditLimit : undefined,
       currency,
       balance:     Number(balance),
       last4:       last4 || undefined,
@@ -191,6 +193,24 @@ export function AccountModal({ account, onSave, onDelete, onClose }: Props) {
               it is paid off.
             </div>
           </div>
+
+          {/* Only a card has a ceiling. What is left on it is the ceiling less
+              what is owed, which is the figure worth knowing before spending. */}
+          {accountType === 'credit_card' && (
+            <div style={fieldStyle}>
+              <label style={labelStyle}>Credit limit</label>
+              <MoneyInput
+                style={inputStyle}
+                min={0}
+                value={creditLimit}
+                onChange={setCreditLimit}
+              />
+              <div style={{ fontSize: 11, color: '#9B9180', marginTop: 5, lineHeight: 1.45 }}>
+                The card's ceiling. Leave it at nothing and the card simply shows what is
+                owed, with no bar and no figure left.
+              </div>
+            </div>
+          )}
 
           {/* Last 4 digits */}
           <div style={fieldStyle}>

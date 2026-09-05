@@ -15,6 +15,7 @@ export interface AccountRow {
   currency: string
   balance: number
   last4?: string
+  credit_limit?: number | null
   emoji: string
   color: string
   sort_order: number
@@ -114,7 +115,19 @@ export async function saveAccount(row: AccountRow): Promise<void> {
   const { error } = await supabase
     .from('finance_accounts')
     .upsert(row, { onConflict: 'id' })
-  if (error) throw new Error(error.message)
+  if (!error) return
+
+  // credit_limit arrives with 20260008. Losing the account because it carried a
+  // limit would be a far worse trade than losing the limit.
+  if (isMissingColumn(error)) {
+    const { credit_limit: _c, ...core } = row
+    const { error: retry } = await supabase
+      .from('finance_accounts')
+      .upsert(core, { onConflict: 'id' })
+    if (retry) throw new Error(retry.message)
+    return
+  }
+  throw new Error(error.message)
 }
 
 export async function deleteAccount(id: string): Promise<void> {

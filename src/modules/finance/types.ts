@@ -10,6 +10,9 @@ export interface Account {
   accountType: AccountType
   currency: Currency
   balance: number
+  /** Credit cards only: the ceiling the balance is allowed to run down to.
+   *  What is left is the limit less what is owed. */
+  creditLimit?: number
   last4?: string
   emoji: string
   color: string
