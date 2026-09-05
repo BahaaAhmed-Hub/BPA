@@ -90,11 +90,15 @@ Three rules any change here must keep:
   that sets them all. Unpaid means **no `paidAt` at all** — that is what every screen
   reads — and `isCleared` follows it. A line that repeats is paid on each occurrence's
   own day, so a hand-set payment date applies to a single entry only.
-- **Budget files an entry by the day it was paid.** `whenPaid(tx)` in `unpaid.ts`
-  decides the month for the year chart, the envelopes and the drill-down: a bill due
-  on the 28th and paid on the 3rd is spending in the month the money left, not the
-  month it was owed. Today and Reports still file by the entry's own date — the
-  Today calendar and its feed have to agree on which day a row belongs to.
+- **Every figure is filed by the day the money moved.** `whenPaid(tx)` in
+  `unpaid.ts` decides the month or day: the Budget year chart, envelopes and
+  drill-down; the Today calendar cells, its feed and In/Out/Net; the Reports range.
+  A salary due in January and paid in March is March's. The calendar and the feed
+  under it read the same date, or a cell shows a figure and taps through to nothing.
+  Unpaid entries fall back to their own date, so they stay visible where they were
+  filed (and out of every total).
+  **Financials is the exception** — its due/paid toggle is exactly this question,
+  and "when it is due" is the default.
 - **An unpaid entry is in no figure.** `settled(txs)` in `unpaid.ts` drops what has
   no payment date, and every total goes through it: account balances
   (`balances.ts`, which also returns `pending` per account so a row can say what is

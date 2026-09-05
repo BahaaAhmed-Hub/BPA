@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useFinanceStore } from '../financeStore'
-import { settled } from '../unpaid'
+import { settled, whenPaid } from '../unpaid'
 import { toBase, baseCurrency, currenciesNeedingRates } from '../fx'
 
 // ─── Donut chart helpers ───────────────────────────────────────────────────────
@@ -147,8 +147,12 @@ export function ReportsScreen(_props?: any) {
   }, [rangeFrom, rangeTo])
 
   const rangeKey = `${rangeFrom}~${rangeTo}`
-  const inRange = (tx: { date: string }) =>
-    (!rangeFrom || tx.date >= rangeFrom) && (!rangeTo || tx.date <= rangeTo)
+  // A report covers the money that moved in a period, so an entry falls in the
+  // period it was paid in rather than the one it was owed in.
+  const inRange = (tx: { date: string; paidAt?: string }) => {
+    const d = whenPaid(tx)
+    return (!rangeFrom || d >= rangeFrom) && (!rangeTo || d <= rangeTo)
+  }
 
   const base = baseCurrency()
   // A report says where the money went. Money that has not moved has not gone

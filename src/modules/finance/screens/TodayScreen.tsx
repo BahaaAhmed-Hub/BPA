@@ -8,7 +8,7 @@ import { acct, group } from '../format'
 import { toBase, baseCurrency, currenciesNeedingRates } from '../fx'
 import { findDuplicates } from '../duplicates'
 import { DuplicateMark } from '../components/DuplicateMark'
-import { isUnpaid, unpaidRow, settled, UNPAID_TITLE } from '../unpaid'
+import { isUnpaid, unpaidRow, settled, whenPaid, UNPAID_TITLE } from '../unpaid'
 import { isoDate } from '../dates'
 
 // ── Palette ───────────────────────────────────────────────────────────────────
@@ -109,15 +109,20 @@ function MoneyCalendar({
   // A day's figure is what moved that day. An unpaid entry is still in the
   // feed below, marked; it just has not happened yet.
   settled(transactions).forEach(tx => {
-    if (!tx.date.startsWith(monthPrefix)) return
+    // A day on this calendar is a day money moved, so an entry sits on the day
+    // it was paid rather than the day it was owed. The feed below reads the
+    // same date — a cell saying 3,500 with nothing under it when you tap it is
+    // worse than either choice.
+    const day = whenPaid(tx)
+    if (!day.startsWith(monthPrefix)) return
     const v = toBase(Math.abs(tx.amount), tx.currency, base)
     if (v === null) return
-    const prev = dayNetMap.get(tx.date) ?? 0
+    const prev = dayNetMap.get(day) ?? 0
     const delta = tx.type === 'income' ? v : -v
-    dayNetMap.set(tx.date, prev + delta)
-    const payees = dayTxMap.get(tx.date) ?? []
+    dayNetMap.set(day, prev + delta)
+    const payees = dayTxMap.get(day) ?? []
     if (tx.payee?.trim()) payees.push(tx.payee.trim())
-    dayTxMap.set(tx.date, payees)
+    dayTxMap.set(day, payees)
   })
 
   const cells: (number | null)[] = []
@@ -127,7 +132,7 @@ function MoneyCalendar({
 
   // Monthly totals
   const inBase = (t: Transaction) => toBase(Math.abs(t.amount), t.currency, base) ?? 0
-  const monthTxs = settled(transactions).filter(t => t.date.startsWith(monthPrefix))
+  const monthTxs = settled(transactions).filter(t => whenPaid(t).startsWith(monthPrefix))
   const monthOut = monthTxs.filter(t => t.type === 'expense').reduce((s, t) => s + inBase(t), 0)
   const monthIn  = monthTxs.filter(t => t.type === 'income').reduce((s, t) => s + inBase(t), 0)
   const unrated  = currenciesNeedingRates(monthTxs, base)
@@ -262,13 +267,13 @@ export function TodayScreen() {
 
   // All transactions for the viewed month, sorted by date asc (earliest first)
   const monthTx = transactions
-    .filter(tx => tx.date.startsWith(monthPrefix))
-    .sort((a, b) => a.date.localeCompare(b.date))
+    .filter(tx => whenPaid(tx).startsWith(monthPrefix))
+    .sort((a, b) => whenPaid(a).localeCompare(whenPaid(b)))
 
   const selectedDayTx = selectedDay
     ? transactions
-        .filter(tx => tx.date === selectedDay)
-        .sort((a, b) => a.date.localeCompare(b.date))
+        .filter(tx => whenPaid(tx) === selectedDay)
+        .sort((a, b) => whenPaid(a).localeCompare(whenPaid(b)))
     : []
 
   // The feed follows the calendar: a day while one is picked in the month on
@@ -289,7 +294,7 @@ export function TodayScreen() {
     const cat  = tx.categoryId ? categories.find(c => c.id === tx.categoryId) : null
     const acct = tx.accountId  ? accounts.find(a => a.id === tx.accountId)    : null
     const isExp    = tx.type === 'expense'
-    const isFuture = tx.date > todayStr
+    const isFuture = whenPaid(tx) > todayStr
     return (
       <div
         key={tx.id}
@@ -324,7 +329,14 @@ export function TodayScreen() {
             )}
           </div>
           <div style={{ fontSize: 12, color: C.textMuted, marginTop: 2, display: 'flex', gap: 6 }}>
-            <span>{tx.date}</span>
+            {/* The row is filed by the day the money moved, so that is the
+                date it shows. Where the two differ, the due date is on hover. */}
+            <span title={isUnpaid(tx) ? `Due ${tx.date}, not paid` : tx.paidAt && tx.paidAt !== tx.date ? `Due ${tx.date}` : undefined}>
+              {whenPaid(tx)}
+              {tx.paidAt && tx.paidAt !== tx.date && (
+                <span style={{ color: C.textMuted, opacity: 0.75 }}> · due {tx.date}</span>
+              )}
+            </span>
             {cat && tx.payee?.trim() && <span style={{ color: C.textMuted }}>· {cat.name}</span>}
           </div>
         </div>
@@ -337,7 +349,7 @@ export function TodayScreen() {
     )
   }
 
-  const todayTx = settled(transactions).filter(tx => tx.date === todayStr)
+  const todayTx = settled(transactions).filter(tx => whenPaid(tx) === todayStr)
   const base = baseCurrency()
   const conv = (t: Transaction) => toBase(Math.abs(t.amount), t.currency, base) ?? 0
   const todayExp = todayTx.filter(t => t.type === 'expense').reduce((s, t) => s + conv(t), 0)
