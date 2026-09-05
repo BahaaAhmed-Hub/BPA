@@ -5,8 +5,9 @@ import { MoneyInput } from '../components/MoneyInput'
 import { rememberPayee } from '../payees'
 import { acct } from '../format'
 import { todayISO, shiftDaysISO } from '../dates'
+import { baseCurrency } from '../fx'
 import {
-  INK, MUTED, GHOST, LINE, HAIR, OLIVE, RUST, DISPLAY,
+  INK, MUTED, GHOST, LINE, HAIR, OLIVE, RUST, AMBER, DISPLAY,
   PILL, ROUND, PillPicker, categoryOptions,
 } from './pickers'
 
@@ -106,8 +107,16 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
   const today = todayISO()
 
   const [kind, setKind]           = useState<'expense' | 'income'>('expense')
-  const [accountId, setAccountId] = useState(accounts[0]?.id ?? '')
-  const [currency, setCurrency]   = useState<Currency>(accounts[0]?.currency ?? 'EGP')
+  // A batch is written to one account, and which one is not something to
+  // guess. Preselecting the first account in the list filed whole batches
+  // against whatever happened to sort first — the entries were saved, they
+  // were simply nowhere the person who typed them thought to look. So the
+  // field starts empty and the batch cannot be written until it is answered,
+  // unless there is only one account and there is nothing to get wrong.
+  const only = accounts.length === 1 ? accounts[0] : undefined
+  const [accountId, setAccountId] = useState(only?.id ?? '')
+  const [currency, setCurrency]   = useState<Currency>(
+    (only?.currency ?? baseCurrency()) as Currency)
   const [rows, setRows]           = useState<Draft[]>(() =>
     Array.from({ length: BLANK_ROWS }, () => blank(today)))
 
@@ -128,6 +137,8 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
     .map(r => ({ row: r, dates: datesFor(r) }))
   const count = ready.reduce((n, r) => n + r.dates.length, 0)
   const total = ready.reduce((s, r) => s + r.row.amount * r.dates.length, 0)
+  const account = accounts.find(a => a.id === accountId)
+  const canSave = count > 0 && !!account
 
   function patch(key: string, change: Partial<Draft>) {
     setRows(rs => rs.map(r => {
@@ -144,6 +155,7 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
   }
 
   function handleSave() {
+    if (!canSave) return
     const stamp = new Date().toISOString()
     onSave(ready.flatMap(({ row, dates }) => {
       rememberPayee(row.payee)
@@ -209,7 +221,12 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
             ))}
           </span>
 
-          <span style={{ flex: 1, minWidth: 200, display: 'flex' }}>
+          {/* Where the whole batch lands. Unanswered it is outlined and says
+              so, because everything below it is filed against this one field. */}
+          <span style={{
+            flex: 1, minWidth: 200, display: 'flex', borderRadius: 10,
+            boxShadow: account ? 'none' : `0 0 0 2px ${AMBER}`,
+          }}>
             <PillPicker
               value={accountId}
               onChange={id => {
@@ -217,7 +234,7 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
                 const a = accounts.find(x => x.id === id)
                 if (a) setCurrency(a.currency)
               }}
-              placeholder="Account"
+              placeholder="Which account?"
               compact
               options={accounts.map(a => ({ id: a.id, label: a.name, glyph: a.emoji, tint: a.color }))} />
           </span>
@@ -328,13 +345,16 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
 
         {/* What is about to be written */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span style={{ fontSize: 12.5, color: MUTED }}>
+          <span style={{ fontSize: 12.5, color: !account && count > 0 ? INK : MUTED }}>
             {count === 0
               ? 'Nothing to add yet — a line counts once it has an amount'
-              : `${count} ${count === 1 ? 'entry' : 'entries'}${
-                  count > ready.length ? ` from ${ready.length} ${ready.length === 1 ? 'line' : 'lines'}` : ''}`}
+              : !account
+                ? `Pick the account these ${count === 1 ? 'goes' : 'go'} to`
+                : `${count} ${count === 1 ? 'entry' : 'entries'}${
+                    count > ready.length ? ` from ${ready.length} ${ready.length === 1 ? 'line' : 'lines'}` : ''
+                  } → ${account.name}`}
           </span>
-          {count > 0 && (
+          {count > 0 && account && (
             <span style={{
               fontFamily: DISPLAY, fontSize: 17, fontWeight: 700, color: tone,
               fontVariantNumeric: 'tabular-nums',
@@ -346,13 +366,14 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
           <button onClick={onClose} style={{ ...PILL, height: 38, color: MUTED }}>Cancel</button>
           <button
             onClick={handleSave}
-            disabled={count === 0}
+            disabled={!canSave}
+            title={count > 0 && !account ? 'Pick the account this batch is written to' : undefined}
             style={{
               ...PILL, height: 38, paddingInline: 20, fontWeight: 600,
-              background: count ? '#191712' : '#EDE7D9',
-              border: `1px solid ${count ? '#191712' : LINE}`,
-              color: count ? '#FDF8E7' : GHOST,
-              cursor: count ? 'pointer' : 'default',
+              background: canSave ? '#191712' : '#EDE7D9',
+              border: `1px solid ${canSave ? '#191712' : LINE}`,
+              color: canSave ? '#FDF8E7' : GHOST,
+              cursor: canSave ? 'pointer' : 'default',
             }}>
             Add {count || ''} {count === 1 ? 'entry' : 'entries'}
           </button>
