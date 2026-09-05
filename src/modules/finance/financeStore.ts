@@ -57,7 +57,12 @@ interface FinanceState {
 
   // Transactions CRUD
   upsertTransaction: (tx: Transaction) => Promise<void>
+  /** A whole batch, written in one go. */
+  upsertTransactions: (txs: Transaction[]) => Promise<void>
   removeTransaction: (id: string) => Promise<void>
+  /** Move to the year these entries were filed in, if it is not the one on
+   *  screen — otherwise a saved entry is on no screen at all. */
+  followYearOf: (txs: Transaction[]) => Promise<void>
 
   // Bills CRUD
   upsertBill: (b: Bill) => Promise<void>
@@ -85,6 +90,26 @@ interface FinanceState {
   // Legacy — kept for backward compatibility
   addTransaction: (tx: Omit<Transaction, 'id' | 'createdAt'>) => void
 }
+
+const txToRow = (tx: Transaction, userId: string) => ({
+  id: tx.id,
+  user_id: userId,
+  account_id: tx.accountId,
+  to_account_id: tx.toAccountId ?? null,
+  category_id: tx.categoryId,
+  amount: tx.amount,
+  currency: tx.currency,
+  tx_type: tx.type,
+  payee: tx.payee,
+  date: tx.date,
+  paid_at: tx.paidAt ?? null,
+  note: tx.note,
+  is_cleared: tx.isCleared,
+  is_recurring: tx.isRecurring,
+  tags: tx.tags ?? [],
+  attachments: tx.attachments ?? [],
+  created_at: tx.createdAt,
+})
 
 const billToRow = (b: Bill, userId: string): BillRow => ({
   id: b.id, user_id: userId, name: b.name, amount: b.amount,
@@ -428,26 +453,44 @@ export const useFinanceStore = create<FinanceState>()(
         }))
         const userId = await getUserId()
         if (!userId) return
-        const row = {
-          id: tx.id,
-          user_id: userId,
-          account_id: tx.accountId,
-          to_account_id: tx.toAccountId ?? null,
-          category_id: tx.categoryId,
-          amount: tx.amount,
-          currency: tx.currency,
-          tx_type: tx.type,
-          payee: tx.payee,
-          date: tx.date,
-          paid_at: tx.paidAt ?? null,
-          note: tx.note,
-          is_cleared: tx.isCleared,
-          is_recurring: tx.isRecurring,
-          tags: tx.tags ?? [],
-          attachments: tx.attachments ?? [],
-          created_at: tx.createdAt,
-        }
-        saveTransaction(row).catch(console.warn)
+        await saveTransaction(txToRow(tx, userId)).catch(console.warn)
+        await get().followYearOf([tx])
+      },
+
+      /** A batch of entries in one write.
+       *
+       *  Sent one at a time, a batch is a queue of separate round trips, and
+       *  any load that lands in the middle of it — the 45s poll, a year
+       *  change, coming back to the tab — replaces the list with what the
+       *  server has *so far*, dropping every row still in flight. One request
+       *  cannot be caught half-written. */
+      upsertTransactions: async (txs: Transaction[]) => {
+        if (txs.length === 0) return
+        for (const tx of txs) rememberTarget(tx.id, tx.type === 'transfer' ? tx.toAccountId : undefined)
+        const ids = new Set(txs.map(t => t.id))
+        set(s => ({
+          transactions: [...txs, ...s.transactions.filter(x => !ids.has(x.id))],
+        }))
+        const userId = await getUserId()
+        if (!userId) return
+        await saveTransactionsBulk(txs.map(tx => txToRow(tx, userId))).catch(console.warn)
+        await get().followYearOf(txs)
+      },
+
+      /** Go to the year an entry was filed in, when it is not the year on
+       *  screen.
+       *
+       *  Everything here is fetched a year at a time, and a load keeps only
+       *  what it fetched — so an entry dated outside the current year is
+       *  saved, is in the database, and is on no screen in the app. Nothing
+       *  said so: the panel closed and the table did not move, which reads
+       *  exactly like the entry was thrown away. Called after the write, so
+       *  the reload the year change triggers finds the rows already there. */
+      followYearOf: async (txs: Transaction[]) => {
+        const years = [...new Set(txs.map(t => Number(t.date.slice(0, 4))))]
+          .filter(y => Number.isFinite(y) && y > 1970)
+        if (years.length !== 1 || years[0] === get().currentYear) return
+        await get().setYear(years[0])
       },
 
       removeTransaction: async (id: string) => {

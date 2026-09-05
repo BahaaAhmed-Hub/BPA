@@ -151,6 +151,18 @@ pushes to Google Calendar — nothing here knows about calendars.
 - Configured in Settings → Finance (MONEY REMINDERS); `App.tsx` runs it on load, on
   `professor:moneyRemindersChanged`, and every 12h.
 
+## Finance — a year at a time
+`loadTransactions(year)` fetches `date` between Jan 1 and Dec 31 and `loadFromDB`
+**replaces** the list with what it fetched. So an entry dated outside `currentYear`
+is saved, is in Postgres, and is on no screen in the app — the panel closes and
+nothing moves, which reads as though it was thrown away.
+- `followYearOf(txs)` runs **after** the write: one year, not the current one → go
+  there. Both add paths use it, so a saved entry is always somewhere you can see.
+- `upsertTransactions(txs)` writes a whole batch in **one** request. Sent one at a
+  time, any load landing mid-batch (the 45s poll, a year change, the tab coming
+  back) replaces the list with what the server has *so far* and drops the rest.
+- The bulk footer names the years a batch will land in before it is written.
+
 ## Finance persistence
 All nine finance tables are real Postgres (`20260001`, plus `finance_budgets` in `20260005`).
 `financeStore.loadFromDB()` is authoritative — writes go through `financeDb.ts` immediately,

@@ -6,6 +6,7 @@ import { rememberPayee } from '../payees'
 import { acct } from '../format'
 import { todayISO, shiftDaysISO } from '../dates'
 import { baseCurrency } from '../fx'
+import { useFinanceStore } from '../financeStore'
 import {
   INK, MUTED, GHOST, LINE, HAIR, OLIVE, RUST, AMBER, DISPLAY,
   PILL, ROUND, PillPicker, categoryOptions,
@@ -105,6 +106,7 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
   onClose: () => void
 }) {
   const today = todayISO()
+  const year  = useFinanceStore(s => s.currentYear)
 
   const [kind, setKind]           = useState<'expense' | 'income'>('expense')
   // A batch is written to one account, and which one is not something to
@@ -139,6 +141,15 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
   const total = ready.reduce((s, r) => s + r.row.amount * r.dates.length, 0)
   const account = accounts.find(a => a.id === accountId)
   const canSave = count > 0 && !!account
+
+  // Everything in this app is fetched a year at a time. A line dated outside
+  // the year on screen is saved and then shows up nowhere, which reads as
+  // though it was thrown away — so say where the batch is going to land
+  // before it is written. (Saving follows it there; this is the chance to
+  // notice it was not meant.)
+  const elsewhere = [...new Set(
+    ready.flatMap(r => r.dates).map(d => Number(d.slice(0, 4))).filter(y => y !== year),
+  )].sort()
 
   function patch(key: string, change: Partial<Draft>) {
     setRows(rs => rs.map(r => {
@@ -354,6 +365,15 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
                     count > ready.length ? ` from ${ready.length} ${ready.length === 1 ? 'line' : 'lines'}` : ''
                   } → ${account.name}`}
           </span>
+          {elsewhere.length > 0 && account && (
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6, borderRadius: 999,
+              background: '#FBF1D2', border: `1px solid ${AMBER}`, padding: '4px 11px',
+              fontSize: 11.5, color: INK,
+            }}>
+              dated {elsewhere.join(' & ')}, not {year} — saving goes there
+            </span>
+          )}
           {count > 0 && account && (
             <span style={{
               fontFamily: DISPLAY, fontSize: 17, fontWeight: 700, color: tone,

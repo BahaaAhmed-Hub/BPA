@@ -146,7 +146,7 @@ export function FinanceModule() {
     purple:    '#3D3926',
   }
 
-  const { accounts, categories, transactions, upsertTransaction } = useFinanceStore()
+  const { accounts, categories, transactions, upsertTransaction, upsertTransactions } = useFinanceStore()
 
   const [screen, setScreen] = useState<FinanceScreen>(() => {
     const saved = localStorage.getItem('finance-active-screen')
@@ -292,7 +292,7 @@ export function FinanceModule() {
         <BulkEntryModal
           accounts={accounts}
           categories={categories}
-          onSave={txs => { txs.forEach(tx => upsertTransaction(tx)); setBulkOpen(false) }}
+          onSave={txs => { void upsertTransactions(txs); setBulkOpen(false) }}
           onClose={() => setBulkOpen(false)}
         />
       )}
