@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useFinanceStore } from '../financeStore'
 import { toBase, baseCurrency, currenciesNeedingRates } from '../fx'
 
@@ -30,7 +30,71 @@ function addMonth(year: number, month: number, delta: number): { year: number; m
 const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December']
 const MONTH_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
 
-const PALETTE = ['#4CC76B','#2BA37A','#E8C04A','#C0392B','#E8553A','#46C2D6','#4A90E2','#9B59B6','#F39C12']
+// Ten hues that stay apart from each other and sit on the warm ground the rest
+// of the module is built on. Mid-tone throughout, so a slice carries its label
+// whichever end of the list it comes from.
+const PALETTE = [
+  '#C0563C', '#3F7FA6', '#7A8C3A', '#B4577F', '#D99A2B',
+  '#2F8C6E', '#7C6BB0', '#8A6A4F', '#5B8C8C', '#A8892B',
+]
+
+/** The colour every category is seeded with. Two categories the same colour is
+ *  a chart nobody can read, and all of them arrive this one. */
+const SEED_COLOUR = '#8C8071'
+
+function darken(hex: string, amount: number): string {
+  const n = parseInt(hex.slice(1), 16)
+  const mix = (c: number) => Math.round(c * (1 - amount))
+  return `#${[(n >> 16) & 255, (n >> 8) & 255, n & 255].map(c => mix(c).toString(16).padStart(2, '0')).join('')}`
+}
+
+/** A colour per row that never repeats inside one report. A category that has
+ *  been given a colour of its own keeps it, so long as it is not the seed and
+ *  nothing else in this report is wearing it; everything else takes a palette
+ *  slot chosen from its id, so it holds that colour from month to month rather
+ *  than changing every time the ranking does. Past ten, the palette runs again
+ *  a shade darker. */
+function colourFor(rows: { id: string; own?: string }[]): Map<string, string> {
+  const shared = new Set<string>()
+  const seen = new Set<string>()
+  for (const r of rows) {
+    if (!r.own || r.own.toUpperCase() === SEED_COLOUR) continue
+    if (seen.has(r.own)) shared.add(r.own)
+    seen.add(r.own)
+  }
+
+  const out = new Map<string, string>()
+  const taken = new Set<string>()
+  const fromPalette: { id: string }[] = []
+
+  for (const r of rows) {
+    const own = r.own && r.own.toUpperCase() !== SEED_COLOUR && !shared.has(r.own) ? r.own : null
+    if (own) { out.set(r.id, own); taken.add(own.toUpperCase()) }
+    else fromPalette.push(r)
+  }
+
+  const slots = new Set<number>()
+  for (const r of fromPalette) {
+    let h = 0
+    for (let i = 0; i < r.id.length; i++) h = (h * 31 + r.id.charCodeAt(i)) >>> 0
+    let slot = h % PALETTE.length
+    let lap = 0
+    for (let n = 0; n < PALETTE.length * 4; n++) {
+      const key = `${lap}:${slot}`
+      const colour = lap === 0 ? PALETTE[slot] : darken(PALETTE[slot], Math.min(lap * 0.22, 0.6))
+      if (!slots.has(Number(`${lap}${slot}`)) && !taken.has(colour.toUpperCase())) {
+        slots.add(Number(`${lap}${slot}`)); taken.add(colour.toUpperCase())
+        out.set(r.id, colour)
+        break
+      }
+      void key
+      slot = (slot + 1) % PALETTE.length
+      if (slot === h % PALETTE.length) lap++
+    }
+    if (!out.has(r.id)) out.set(r.id, PALETTE[0])
+  }
+  return out
+}
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -72,12 +136,19 @@ export function ReportsScreen(_props?: any) {
     byCategory.set(key, (byCategory.get(key) ?? 0) + v)
   })
   const reportUnrated = currenciesNeedingRates(expTxns, base)
-  const REPORT_DATA = [...byCategory.entries()]
-    .map(([catId, amt], i) => {
+  const REPORT_DATA = useMemo(() => {
+    const rows = [...byCategory.entries()].map(([catId, amt]) => {
       const cat = categories.find(c => c.id === catId)
-      return { name: cat?.name ?? 'Uncategorized', amt, color: cat?.color ?? PALETTE[i % PALETTE.length] }
+      return { id: catId, name: cat?.name ?? 'Uncategorised', amt, own: cat?.color }
     })
-    .sort((a, b) => b.amt - a.amt)
+    const colours = colourFor(rows)
+    return rows
+      .map(r => ({ ...r, color: colours.get(r.id) ?? PALETTE[0] }))
+      .sort((a, b) => b.amt - a.amt)
+    // byCategory is rebuilt every render; the month and the data behind it are
+    // what actually decide this.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [transactions, categories, monthPrefix, base])
   const TOTAL = REPORT_DATA.reduce((s, d) => s + d.amt, 0)
 
   const segments = TOTAL > 0 ? buildSegments(REPORT_DATA, TOTAL) : []
@@ -95,8 +166,27 @@ export function ReportsScreen(_props?: any) {
   const daysInMonth = new Date(reportYear, reportMonth + 1, 0).getDate()
   const dayRate = TOTAL > 0 ? Math.round(TOTAL / daysInMonth) : 0
 
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, height: '100%', overflow: 'hidden', background: C.bg }}>
+      <style>{`
+        /* Animations, not transitions: a mark that has only just mounted has no
+           previous value to transition from, and asking React to paint a zero
+           first showed the finished chart for a frame before it collapsed. */
+        @keyframes reportIn { from { opacity: 0; transform: translateY(8px) } to { opacity: 1; transform: none } }
+        @keyframes reportSweep {
+          from { stroke-dasharray: 0 var(--circ) }
+          to   { stroke-dasharray: var(--dash) var(--gap) }
+        }
+        @keyframes reportGrow { from { transform: scaleX(0) } to { transform: scaleX(1) } }
+        .report-view { animation: reportIn 340ms cubic-bezier(.22,1,.36,1) both }
+        .report-arc  { animation: reportSweep 700ms cubic-bezier(.22,1,.36,1) both }
+        .report-bar  { animation: reportGrow 620ms cubic-bezier(.22,1,.36,1) both;
+                       transform-origin: left center }
+        @media (prefers-reduced-motion: reduce) {
+          .report-view, .report-arc, .report-bar { animation-duration: 1ms; animation-delay: 0ms }
+        }
+      `}</style>
 
       {/* Header */}
       <div style={{
@@ -132,6 +222,8 @@ export function ReportsScreen(_props?: any) {
                 color: reportView === v ? '#191712' : '#6C6553',
                 fontSize: 11.5, fontWeight: reportView === v ? 600 : 400, cursor: 'pointer',
                 boxShadow: reportView === v ? '0 1px 3px rgba(25,23,18,0.16)' : 'none',
+                fontFamily: 'inherit',
+                transition: 'background 220ms ease, color 220ms ease, box-shadow 220ms ease',
               }}>{v === 'donut' ? 'Donut' : 'Bars'}</button>
             ))}
           </div>
@@ -163,7 +255,7 @@ export function ReportsScreen(_props?: any) {
           <>
             {/* ── Donut view ── */}
             {reportView === 'donut' && (
-              <div style={{ display: 'flex', gap: 40, alignItems: 'flex-start' }}>
+              <div key={`donut-${monthPrefix}`} className="report-view" style={{ display: 'flex', gap: 40, alignItems: 'flex-start' }}>
 
                 {/* SVG Donut */}
                 <div style={{ position: 'relative', flexShrink: 0, width: 280, height: 280 }}>
@@ -177,6 +269,7 @@ export function ReportsScreen(_props?: any) {
                     {segments.map((seg, i) => (
                       <circle
                         key={i}
+                        className="report-arc"
                         cx={DONUT_CX} cy={DONUT_CY} r={DONUT_R}
                         fill="none"
                         stroke={seg.color}
@@ -184,6 +277,10 @@ export function ReportsScreen(_props?: any) {
                         strokeDasharray={`${seg.dash} ${seg.gap}`}
                         strokeDashoffset={-seg.offset}
                         transform={`rotate(-90 ${DONUT_CX} ${DONUT_CY})`}
+                        style={{
+                          '--dash': `${seg.dash}`, '--gap': `${seg.gap}`, '--circ': `${CIRC}`,
+                          animationDelay: `${i * 70}ms`,
+                        } as React.CSSProperties}
                       />
                     ))}
                     {/* Center hole */}
@@ -217,7 +314,7 @@ export function ReportsScreen(_props?: any) {
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 10, paddingTop: 8 }}>
                   {segments.map((seg, i) => (
                     <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <div style={{ width: 12, height: 12, borderRadius: 2, background: seg.color, flexShrink: 0 }} />
+                      <div style={{ width: 12, height: 12, borderRadius: 3, background: seg.color, flexShrink: 0 }} />
                       <span style={{ flex: 1, fontSize: 13, color: C.textPri }}>{seg.name}</span>
                       <span style={{ fontSize: 12, color: C.textMuted, marginRight: 8 }}>
                         {Math.round(seg.pct * 100)}%
@@ -233,7 +330,7 @@ export function ReportsScreen(_props?: any) {
 
             {/* ── Bars view ── */}
             {reportView === 'bars' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div key={`bars-${monthPrefix}`} className="report-view" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 {REPORT_DATA.map((d, i) => (
                   <div key={i}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
@@ -249,13 +346,16 @@ export function ReportsScreen(_props?: any) {
                       overflow: 'hidden',
                       border: `1px solid ${C.border}`,
                     }}>
-                      <div style={{
-                        height: '100%',
-                        width: `${Math.max((d.amt / maxAmt) * 100, 42 / (maxAmt / 100))}%`,
-                        minWidth: 42,
-                        background: d.color,
-                        borderRadius: 6,
-                      }} />
+                      <div
+                        className="report-bar"
+                        style={{
+                          height: '100%',
+                          width: `${Math.max((d.amt / maxAmt) * 100, 42 / (maxAmt / 100))}%`,
+                          minWidth: 42,
+                          background: d.color,
+                          borderRadius: 6,
+                          animationDelay: `${i * 60}ms`,
+                        }} />
                     </div>
                   </div>
                 ))}
