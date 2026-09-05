@@ -94,6 +94,12 @@ Three rules any change here must keep:
   decides it: `isUnpaid(tx)` and `unpaidRow(bool)`, spread *after* a row's own style
   (the `border` shorthand has to replace the row's bottom hairline). Used by all four
   feeds — Today, Balances, and the Budget and Financials drill-downs.
+  Where the server has no `paid_at` column at all (`20260006` not run), no entry is
+  marked: every row comes back without one and nothing can ever be written, so the
+  claim would be about data nobody has. `setPaidAtSupported` on each load decides it,
+  and Settings → Finance → PAYMENT DATES names the migration.
+  The old load-time repair is now a button in that same block (`markPastPaid`), for
+  the loaded year, with a count and a confirm.
   `loadFromDB` stamps **nothing** paid on the way in. The old repair for entries
   that predated the two dates has done its job, and it read a deliberate "not paid"
   as missing data. Scoping it to devices that had not run it was not enough — the

@@ -4,6 +4,8 @@ import { supabase } from '@/lib/supabase'
 import type { Account, Category, Transaction, Bill, Goal, Budget } from './types'
 import { rememberLimit, withLocalLimits } from './creditLimits'
 import { rememberTarget, forgetTarget, withLocalTargets } from './transferTargets'
+import { setPaidAtSupported } from './unpaid'
+import { todayISO } from './dates'
 import {
   loadAccounts, saveAccount, deleteAccount as dbDeleteAccount,
   loadCategories, saveCategory, deleteCategory as dbDeleteCategory,
@@ -56,6 +58,9 @@ interface FinanceState {
   /** Move to the year these entries were filed in, if it is not the one on
    *  screen — otherwise a saved entry is on no screen at all. */
   followYearOf: (txs: Transaction[]) => Promise<void>
+  /** Give every loaded entry dated today or earlier its own date as the day it
+   *  was paid, and say how many that was. Asked for, never automatic. */
+  markPastPaid: () => Promise<number>
 
   // Bills CRUD
   upsertBill: (b: Bill) => Promise<void>
@@ -271,6 +276,11 @@ export const useFinanceStore = create<FinanceState>()(
           mappedTransactions.length = 0
           mappedTransactions.push(...withTargets)
 
+          // Whether the server can hold a payment date at all. A row that came
+          // back without the key means the column is not there yet, and no
+          // entry can be said to be unpaid until it is.
+          setPaidAtSupported(transactions.length === 0 || transactions.some(r => 'paid_at' in r))
+
           // Nothing is stamped paid on the way in any more.
           //
           // There used to be a repair here for entries logged before there
@@ -439,6 +449,25 @@ export const useFinanceStore = create<FinanceState>()(
         if (!userId) return
         await saveTransactionsBulk(txs.map(tx => txToRow(tx, userId))).catch(console.warn)
         await get().followYearOf(txs)
+      },
+
+      /** The repair that used to happen on every load, as something a person
+       *  asks for.
+       *
+       *  Entries logged before there were two dates have no payment date, and
+       *  now read as unpaid — which for that data is not what anybody meant.
+       *  This gives them their own date back. It covers the year that is
+       *  loaded, because that is all this store holds. */
+      markPastPaid: async () => {
+        const today = todayISO()
+        const due = get().transactions.filter(t => !t.paidAt && t.date <= today)
+        if (due.length === 0) return 0
+        const patched = due.map(t => ({ ...t, paidAt: t.date, isCleared: true }))
+        const byId = new Map(patched.map(t => [t.id, t]))
+        set(s => ({ transactions: s.transactions.map(t => byId.get(t.id) ?? t) }))
+        const userId = await getUserId()
+        if (userId) await saveTransactionsBulk(patched.map(t => txToRow(t, userId))).catch(console.warn)
+        return patched.length
       },
 
       /** Go to the year an entry was filed in, when it is not the year on

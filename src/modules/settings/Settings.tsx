@@ -1,7 +1,7 @@
 // ─── CHUNK 1: Types, constants, localStorage helpers ─────────────────────────
 // (remaining chunks appended below)
 
-import { useState, useEffect, useRef, type ReactNode } from 'react'
+import { useState, useEffect, useMemo, useRef, type ReactNode } from 'react'
 import {
   Plus, Trash2, LogIn, LogOut,
   ChevronDown, ChevronUp, User, Clock, Building2, Flame,
@@ -10,6 +10,7 @@ import {
   ArrowUpRight, Download, Database, GripVertical, ImagePlus, LocateFixed,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { paidAtSupported } from '../finance/unpaid'
 import { connectAdditionalGoogleAccount, signOut as googleSignOut, disconnectGoogleAccount } from '@/lib/google'
 import { useUIStore } from '@/store/uiStore'
 import { useAuthStore } from '@/store/authStore'
@@ -2350,6 +2351,19 @@ function FinanceSection() {
 
   // Money reminders: a category, a day of the month, and a task on that date.
   const { categories: finCategories } = useFinanceStore()
+
+  // Payment dates. An entry with none reads as unpaid everywhere, which is
+  // right for one somebody left unpaid and wrong for one logged before there
+  // were two dates — so the repair is here, as something asked for.
+  const finTransactions = useFinanceStore(s => s.transactions)
+  const finYear         = useFinanceStore(s => s.currentYear)
+  const markPastPaid    = useFinanceStore(s => s.markPastPaid)
+  const [filling, setFilling] = useState<'idle' | 'working' | number>('idle')
+  const undated = useMemo(() => {
+    const today = new Date()
+    const iso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+    return finTransactions.filter(t => !t.paidAt && t.date <= iso).length
+  }, [finTransactions])
   const [reminders, setReminders] = useState<MoneyReminder[]>(loadReminders)
   const budgetRules = loadRules()
   function putReminders(next: MoneyReminder[]) { setReminders(next); saveReminders(next) }
@@ -2655,6 +2669,50 @@ function FinanceSection() {
         </FieldRow>
       </div>
       </div>
+      <div style={{ gridColumn: '1 / -1', marginTop: 22, paddingTop: 18, borderTop: '1px solid #F0EBDC' }}>
+        <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', color: '#6C6553', display: 'block', marginBottom: 12 }}>PAYMENT DATES</span>
+        {!paidAtSupported() ? (
+          <div style={{
+            fontSize: 12.5, color: '#7A5F09', lineHeight: 1.55, maxWidth: 720,
+            background: '#FBEBC8', border: '1px solid #EFE1B4', borderRadius: 10, padding: '11px 14px',
+          }}>
+            Your database has no payment-date column yet, so nothing can be marked paid or unpaid —
+            run <code style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11.5 }}>supabase/migrations/20260006</code> in
+            the SQL editor and reload.
+          </div>
+        ) : (
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 14, flexWrap: 'wrap' }}>
+            <div style={{ fontSize: 12.5, color: '#6C6553', flex: 1, minWidth: 320, maxWidth: 640, lineHeight: 1.5 }}>
+              An entry with no payment date is money that has not moved, and every feed marks it
+              with a dotted red border. Entries logged before there were two dates have none
+              either — this gives them their own date back.{' '}
+              {undated === 0
+                ? `Nothing in ${finYear} is waiting.`
+                : `${undated} ${undated === 1 ? 'entry' : 'entries'} in ${finYear} ${undated === 1 ? 'is' : 'are'} dated on or before today with no payment date.`}
+            </div>
+            <button
+              disabled={undated === 0 || filling === 'working'}
+              onClick={async () => {
+                if (!window.confirm(`Mark ${undated} ${undated === 1 ? 'entry' : 'entries'} in ${finYear} as paid on their own date?`)) return
+                setFilling('working')
+                setFilling(await markPastPaid())
+              }}
+              style={{
+                height: 36, padding: '0 16px', borderRadius: 10, flexShrink: 0, cursor: undated === 0 ? 'default' : 'pointer',
+                fontFamily: 'inherit', fontSize: 13, fontWeight: 600,
+                background: undated === 0 ? '#EDE7D9' : '#191712',
+                border: `1px solid ${undated === 0 ? '#E8E1CE' : '#191712'}`,
+                color: undated === 0 ? '#9B9180' : '#FDF8E7',
+              }}>
+              {filling === 'working' ? 'Working…' : `Mark ${finYear} paid on their own dates`}
+            </button>
+            {typeof filling === 'number' && (
+              <span style={{ fontSize: 12, color: '#0C8140', fontWeight: 600 }}>{filling} updated</span>
+            )}
+          </div>
+        )}
+      </div>
+
       <div style={{ gridColumn: '1 / -1', marginTop: 22, paddingTop: 18, borderTop: '1px solid #F0EBDC' }}>
         <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', color: '#6C6553', display: 'block', marginBottom: 12 }}>MONEY REMINDERS</span>
         <div>

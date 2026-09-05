@@ -11,8 +11,19 @@ import { NEGATIVE } from '../../lib/moneyColors'
 // Today feed, the account feed on Balances, and the two drill-downs — cannot
 // drift into marking it three different ways.
 
+// The `paid_at` column arrives with migration 20260006. Until it runs the
+// server cannot store a payment date at all: every row comes back without one
+// and `saveTransaction` drops the column and retries, so nothing is ever
+// written either. Reading that as "the whole ledger is unpaid" would be a
+// confident claim about data nobody has — so where the column is missing,
+// nothing is marked. The store says which it is on every load.
+let columnExists = true
+
+export function setPaidAtSupported(yes: boolean): void { columnExists = yes }
+export function paidAtSupported(): boolean { return columnExists }
+
 export function isUnpaid(tx: Pick<Transaction, 'paidAt'>): boolean {
-  return !tx.paidAt
+  return columnExists && !tx.paidAt
 }
 
 /** Spread over a feed row's own style, after it: the border shorthand is what
