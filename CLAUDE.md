@@ -112,6 +112,10 @@ figure is added to something denominated differently:
 - **A card has a ceiling.** `Account.creditLimit` (`20260008`, `credit_limit`) drives the
   usage bar and "X left of Y" on the row. `saveAccount` drops the column and retries if
   the migration has not run.
+- **A transfer has no category.** It moves money between two accounts rather than
+  spending it; the Category row is hidden for transfers and `categoryId` is dropped on
+  save. Which card it lands on is the **To** field. An expense filed under a card-ish
+  category offers the crossing.
 - **Paying a card is shown while it is typed.** The account pickers name what each
   account holds; with a card on the receiving end (a transfer into it, or income filed
   against it) the entry panel says what it owes, what the amount leaves, and offers

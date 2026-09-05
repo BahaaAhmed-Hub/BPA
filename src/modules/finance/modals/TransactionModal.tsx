@@ -119,7 +119,9 @@ export function TransactionModal({ transaction, accounts, categories, history = 
       currency,
       type,
       payee:       payee.trim(),
-      categoryId:  categoryId || undefined,
+      // A transfer is money moving between two accounts. Filing it under a
+      // spending category would count it as spending as well as moving it.
+      categoryId:  type === 'transfer' ? undefined : (categoryId || undefined),
       date,
       paidAt:      isCleared ? (paidAt || date) : undefined,
       note:        note.trim() || undefined,
@@ -182,6 +184,23 @@ export function TransactionModal({ transaction, accounts, categories, history = 
   /** What this entry moves, in the card's currency. */
   const paidThere = creditTarget ? convert(amount, currency, creditTarget.currency) : null
 
+  // Paying a card is a transfer — money moves between two accounts rather than
+  // leaving — so which card it lands on is the To field, not the category. But
+  // "Credit card" is a category people reach for first, and on an expense there
+  // is no destination to pick, so nothing happens and the card never moves.
+  // When the category says card and there is one to pay, offer the way across.
+  const chosenCat = categories.find(c => c.id === categoryId)
+  const cards = accounts.filter(a => a.accountType === 'credit_card')
+  const cardish = /credit\s*card|\bcards?\b|visa|master\s*card|amex/i
+  const suggestedCard = (() => {
+    if (type === 'transfer' || cards.length === 0 || !chosenCat) return null
+    const name = chosenCat.name.toLowerCase()
+    if (!cardish.test(name)) return null
+    // The card whose name the category actually names, where there is one.
+    return cards.find(c => name.includes(c.name.toLowerCase()) || c.name.toLowerCase().includes(name))
+      ?? (cards.length === 1 ? cards[0] : cards[0])
+  })()
+
   const canSave = amount > 0 && !!accountId && (type !== 'transfer' || !!toAccountId)
 
   return (
@@ -225,7 +244,9 @@ export function TransactionModal({ transaction, accounts, categories, history = 
           {TYPES.map(t => {
             const on = type === t.id
             return (
-              <button key={t.id} onClick={() => setType(t.id)} aria-pressed={on}
+              <button key={t.id}
+                onClick={() => { setType(t.id); if (t.id === 'transfer') setCategoryId('') }}
+                aria-pressed={on}
                 style={{
                   flex: 1, height: 32, borderRadius: 999, border: 'none', fontFamily: 'inherit',
                   background: on ? INK : 'transparent', color: on ? '#FDF8E7' : MUTED,
@@ -339,16 +360,17 @@ export function TransactionModal({ transaction, accounts, categories, history = 
               card looked the same as money leaving and arriving nowhere. */}
           {type === 'transfer' && (
             <div style={ROW}>
-              <span style={LABEL}>To</span>
+              <span style={LABEL}>{cards.length > 0 ? 'To card' : 'To'}</span>
               <PillPicker
                 value={toAccountId}
                 onChange={setToAccountId}
-                placeholder="Which account"
+                placeholder={cards.length > 0 ? 'Which card or account' : 'Which account'}
                 options={accounts.filter(a => a.id !== accountId)
                   .map(a => ({ id: a.id, label: a.name, glyph: a.emoji, tint: a.color, hint: accountHint(a) }))} />
             </div>
           )}
 
+          {type !== 'transfer' && (
           <div style={ROW}>
             <span style={LABEL}>Category</span>
             <PillPicker
@@ -357,6 +379,32 @@ export function TransactionModal({ transaction, accounts, categories, history = 
               placeholder="Uncategorised"
               options={categoryOptions(categories)} />
           </div>
+          )}
+
+          {suggestedCard && (
+            <div style={{ ...ROW, alignItems: 'flex-start' }}>
+              <span style={LABEL} />
+              <span style={{
+                flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+                padding: '9px 12px', borderRadius: 10,
+                background: '#FBF3D2', border: '1px solid #EFE1B4',
+              }}>
+                <span style={{ fontSize: 12.5, color: '#7A5F09', flex: 1, minWidth: 140 }}>
+                  Paying a card off? That moves money rather than spending it — switch to
+                  Transfer and pick which card it lands on.
+                </span>
+                <button
+                  type="button"
+                  onClick={() => { setType('transfer'); setToAccountId(suggestedCard.id) }}
+                  style={{
+                    ...PILL, height: 30, paddingInline: 12, fontSize: 12, fontWeight: 600,
+                    color: INK, flexShrink: 0,
+                  }}>
+                  {cards.length === 1 ? `Pay ${suggestedCard.name}` : 'Choose the card'}
+                </button>
+              </span>
+            </div>
+          )}
 
           {/* Due, and — once it is paid — the day it actually left */}
           <div style={ROW}>
