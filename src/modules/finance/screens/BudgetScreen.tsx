@@ -698,13 +698,18 @@ export function BudgetScreen(_props?: any) {
             <span style={{ flex: 1 }} />
             <Legend swatch={OLIVE} label="In" />
             <Legend swatch={RUST}  label="Out" />
+            <Legend swatch="#191712" label="Net" />
             <Legend swatch="#C5BCA8" label="Balance" line />
           </div>
 
-          <div style={{ position: 'relative', display: 'flex', alignItems: 'stretch', gap: 6, height: 168 }}>
+          {/* Rounded bars off a zero line, the way the task strip draws its
+              days: income reaches up from the line, spending down from it, and
+              the month's net rides the same line — above it when the month kept
+              something, below it when it did not. */}
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'stretch', gap: 7, height: 176 }}>
             {/* The balance, drawn over the columns it comes from */}
             <svg viewBox="0 0 120 100" preserveAspectRatio="none"
-              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 2 }}>
+              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 3 }}>
               <polyline
                 points={months.map((x, i) =>
                   `${i * 10 + 5},${100 - ((x.balance - balLo) / (balHi - balLo || 1)) * 88 - 6}`).join(' ')}
@@ -714,21 +719,51 @@ export function BudgetScreen(_props?: any) {
 
             {months.map(x => {
               const on = x.m === monthIdx
-              const up   = (x.income  / peak) * 56
-              const down = (x.expense / peak) * 56
+              const net = x.income - x.expense
+              // Every bar keeps its rounded cap: a two-pixel sliver still reads
+              // as a bar rather than a smudge, which a square one does not.
+              const bar = (v: number) => (v > 0 ? Math.max(4, (v / peak) * 58) : 0)
+              const up   = bar(x.income)
+              const down = bar(x.expense)
+              const netH = bar(Math.abs(net))
+              const netUp = net >= 0
               return (
                 <button key={x.m} onClick={() => setMonthIdx(x.m)}
-                  title={`${new Date(year, x.m, 1).toLocaleDateString('en-GB', { month: 'long' })} · in ${money(x.income, currency)} · out ${money(x.expense, currency)}`}
+                  title={`${new Date(year, x.m, 1).toLocaleDateString('en-GB', { month: 'long' })} · in ${money(x.income, currency)} · out ${money(x.expense, currency)} · net ${money(net, currency)}`}
                   style={{
                     flex: 1, minWidth: 0, padding: 0, border: 'none', cursor: 'pointer',
-                    background: on ? 'rgba(245,209,78,0.20)' : '#FAF7EC',
-                    borderRadius: 8, position: 'relative', display: 'flex', flexDirection: 'column',
-                    justifyContent: 'flex-end', overflow: 'hidden',
+                    background: on ? 'rgba(245,209,78,0.22)' : 'transparent',
+                    borderRadius: 12, position: 'relative', display: 'flex', flexDirection: 'column',
+                    justifyContent: 'flex-end',
                   }}>
-                  {/* Income grows up from the middle, spending down from it */}
-                  <span style={{ position: 'absolute', left: 0, right: 0, bottom: '50%', height: up, background: OLIVE, opacity: 0.9 }} />
-                  <span style={{ position: 'absolute', left: 0, right: 0, top: '50%', height: down, background: RUST, opacity: 0.9 }} />
-                  <span style={{ position: 'absolute', left: 0, right: 0, top: '50%', borderTop: '1px solid #E4DCC6' }} />
+                  {/* The line everything is measured from */}
+                  <span style={{
+                    position: 'absolute', left: 6, right: 6, top: '50%', height: 1,
+                    background: on ? '#E0D5B4' : '#EFEADB',
+                  }} />
+
+                  {/* In above the line and out below it, as one pair; what the
+                      month kept stands beside them rather than over them, so a
+                      net the size of the income does not disappear into it. */}
+                  <span style={{
+                    position: 'absolute', left: 'calc(50% - 13px)', width: 14,
+                    bottom: 'calc(50% + 3px)', height: up,
+                    background: OLIVE, borderRadius: '999px 999px 3px 3px',
+                  }} />
+                  <span style={{
+                    position: 'absolute', left: 'calc(50% - 13px)', width: 14,
+                    top: 'calc(50% + 3px)', height: down,
+                    background: RUST, borderRadius: '3px 3px 999px 999px',
+                  }} />
+                  <span
+                    title={`net ${money(net, currency)}`}
+                    style={{
+                      position: 'absolute', left: 'calc(50% + 5px)', width: 7, height: netH,
+                      [netUp ? 'bottom' : 'top']: 'calc(50% + 3px)',
+                      background: '#191712', opacity: net === 0 ? 0 : 0.8,
+                      borderRadius: netUp ? '999px 999px 3px 3px' : '3px 3px 999px 999px',
+                    } as React.CSSProperties} />
+
                   <span style={{
                     position: 'relative', padding: '0 0 5px', fontSize: 9.5,
                     color: on ? '#191712' : '#9B9180', fontWeight: on ? 700 : 500,
