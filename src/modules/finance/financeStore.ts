@@ -215,6 +215,9 @@ export const useFinanceStore = create<FinanceState>()(
             parentId: r.parent_id,
             isSystem: r.is_system,
             txType: r.tx_type as Category['txType'],
+            // Never read, so every category arrived without an order and the
+            // screens fell back to whatever the query happened to return.
+            sortOrder: r.sort_order,
           }))
 
           // Map DB rows to app Transaction type
@@ -397,7 +400,9 @@ export const useFinanceStore = create<FinanceState>()(
           color: c.color,
           parent_id: c.parentId,
           tx_type: c.txType,
-          sort_order: 0,
+          // Hardcoded to 0, so every edit to a category quietly flattened the
+          // order of all of them — renaming one was enough to reshuffle a list.
+          sort_order: c.sortOrder ?? 0,
           is_system: c.isSystem,
           created_at: new Date().toISOString(),
         }

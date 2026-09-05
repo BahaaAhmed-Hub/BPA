@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useCallback, Fragment } from 'react'
-import { ChevronDown, ChevronRight, ChevronsUpDown, ChevronsDownUp, X, Trash2, Plus } from 'lucide-react'
+import { ChevronDown, ChevronRight, ChevronsUpDown, ChevronsDownUp, ChevronUp, X, Trash2, Plus } from 'lucide-react'
 import { useFinanceStore } from '../financeStore'
+import type { Category } from '../types'
 import { CategoryGlyph } from '../components/CategoryGlyph'
 import { toBase, baseCurrency, currenciesNeedingRates } from '../fx'
 import { acct, outflow } from '../format'
@@ -41,7 +42,27 @@ interface Row extends Line { children: Line[] }
  *  sections drew this twice, with the same markup and slightly different
  *  colours, which is how the income rows kept a stray element the expense ones
  *  did not. */
-function CategoryRows({ row, tone, open, hidden, onToggleOpen, onToggleHide, onDrill, months, ROW_H, numCell, fmt }: {
+/** Two quiet chevrons that move a row past its neighbour. Kept always present
+ *  rather than shown on hover: on a tablet there is no hover to show them with. */
+function MoveRow({ onUp, onDown, canUp, canDown }: {
+  onUp: () => void; onDown: () => void; canUp: boolean; canDown: boolean
+}) {
+  const btn = (on: boolean): React.CSSProperties => ({
+    width: 14, height: 11, padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+    background: 'none', border: 'none', borderRadius: 3,
+    color: on ? '#B0A488' : '#EAE4D4', cursor: on ? 'pointer' : 'default',
+  })
+  return (
+    <span style={{ display: 'inline-flex', flexDirection: 'column', flexShrink: 0, marginLeft: 2 }}>
+      <button disabled={!canUp} onClick={e => { e.stopPropagation(); onUp() }}
+        title="Move up" style={btn(canUp)}><ChevronUp size={11} strokeWidth={2.4} /></button>
+      <button disabled={!canDown} onClick={e => { e.stopPropagation(); onDown() }}
+        title="Move down" style={btn(canDown)}><ChevronDown size={11} strokeWidth={2.4} /></button>
+    </span>
+  )
+}
+
+function CategoryRows({ row, tone, open, hidden, onToggleOpen, onToggleHide, onDrill, onMove, position, months, ROW_H, numCell, fmt }: {
   row: Row
   tone: string
   open: boolean
@@ -50,6 +71,10 @@ function CategoryRows({ row, tone, open, hidden, onToggleOpen, onToggleHide, onD
   onToggleHide: (id: string) => void
   /** A figure is a set of entries. `month` is null for the year column. */
   onDrill: (ids: string[], label: string, month: number | null) => void
+  /** Past the neighbour above or below, among this row's own siblings. */
+  onMove: (cat: Category, dir: -1 | 1) => void
+  /** Where this row sits among its siblings, so the ends know to stop. */
+  position: { first: boolean; last: boolean }
   months: number[]
   ROW_H: number
   numCell: (v: number, isNet?: boolean) => React.CSSProperties
@@ -108,6 +133,11 @@ function CategoryRows({ row, tone, open, hidden, onToggleOpen, onToggleHide, onD
             {kids.length > 0 && !open && (
               <span style={{ fontSize: 10, color: '#C5BCA8' }}>+{kids.length}</span>
             )}
+            <span style={{ flex: 1 }} />
+            <MoveRow
+              canUp={!position.first} canDown={!position.last}
+              onUp={() => onMove(row.cat as Category, -1)}
+              onDown={() => onMove(row.cat as Category, 1)} />
           </div>
         </td>
         {months.map((v, mi) => (
@@ -117,7 +147,7 @@ function CategoryRows({ row, tone, open, hidden, onToggleOpen, onToggleHide, onD
           { ...numCell(total), fontWeight: 700, color: total === 0 ? '#C5BCA8' : tone })}
       </tr>
 
-      {open && kids.map(kid => {
+      {open && kids.map((kid, ki) => {
         const kidHidden = hidden(kid.cat.id) || isHidden
         const kidTotal = kid.amounts.reduce((s, v) => s + v, 0)
         return (
@@ -133,6 +163,11 @@ function CategoryRows({ row, tone, open, hidden, onToggleOpen, onToggleHide, onD
                 <span style={{ fontSize: 12, color: kidHidden ? '#9B9180' : '#4A4438', textDecoration: hidden(kid.cat.id) ? 'line-through' : 'none' }}>
                   {kid.cat.name}
                 </span>
+                <span style={{ flex: 1 }} />
+                <MoveRow
+                  canUp={ki > 0} canDown={ki < kids.length - 1}
+                  onUp={() => onMove(kid.cat as Category, -1)}
+                  onDown={() => onMove(kid.cat as Category, 1)} />
               </div>
             </td>
             {kid.amounts.map((v, mi) => (
@@ -152,7 +187,7 @@ function CategoryRows({ row, tone, open, hidden, onToggleOpen, onToggleHide, onD
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function ReflectionScreen(_props?: any) {
-  const { transactions, categories, accounts, upsertTransaction, removeTransaction } = useFinanceStore()
+  const { transactions, categories, accounts, upsertTransaction, removeTransaction, upsertCategory } = useFinanceStore()
   // The year lives in the store because it decides what gets fetched. Held
   // locally, stepping back a year filtered a set of transactions that only
   // ever contained the current one — so the whole grid came back empty and
@@ -238,11 +273,15 @@ export function ReflectionScreen(_props?: any) {
       })
     }
 
+    const byOrder = (a: Category, b: Category) =>
+      (a.sortOrder ?? 0) - (b.sortOrder ?? 0) || a.name.localeCompare(b.name)
+
     function buildRows(kind: 'income' | 'expense') {
       return categories
         .filter(c => !c.parentId && wants(c, kind))
+        .sort(byOrder)
         .map(cat => {
-          const kids = categories.filter(c => c.parentId === cat.id)
+          const kids = categories.filter(c => c.parentId === cat.id).sort(byOrder)
           return {
             cat,
             // The parent's own line covers everything filed beneath it.
@@ -265,6 +304,30 @@ export function ReflectionScreen(_props?: any) {
 
     return { incomeRows, expenseRows, monthlyIncome, monthlyExpense }
   }, [transactions, categories, year, base, fxTick, filedIn])
+
+  /** Swap a row with the one above or below it, among its own siblings: the
+   *  top-level rows of one section, or the parts of one category. Only the two
+   *  that swapped are written, and the order they end up in is the order every
+   *  other screen reads them in. */
+  function moveRow(cat: Category, dir: -1 | 1, kind: 'income' | 'expense') {
+    const siblings = (cat.parentId
+      ? categories.filter(c => c.parentId === cat.parentId)
+      : categories.filter(c => !c.parentId && (c.txType === kind || c.txType === 'both'))
+    ).slice().sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0) || a.name.localeCompare(b.name))
+
+    const i = siblings.findIndex(c => c.id === cat.id)
+    const j = i + dir
+    if (i < 0 || j < 0 || j >= siblings.length) return
+
+    // Written back as positions rather than whatever numbers were there, so a
+    // list where everything shares one sort order still comes out in an order.
+    const reordered = siblings.slice()
+    ;[reordered[i], reordered[j]] = [reordered[j], reordered[i]]
+    reordered.forEach((c, n) => {
+      if (c.sortOrder === n) return
+      void upsertCategory({ ...c, sortOrder: n })
+    })
+  }
 
   // Hidden rows (by category id) — toggling removes row from totals
   const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set())
@@ -545,8 +608,10 @@ export function ReflectionScreen(_props?: any) {
               monthTotals={monthlyIncome} rowTotal={monthlyIncome.reduce((s, v) => s + v, 0)}
               onDrill={(label, month) => openDrill(null, label, month, 'income')} />
 
-            {incomeRows.map(row => (
+            {incomeRows.map((row, ri) => (
               <CategoryRows key={row.cat.id} row={row} tone={OLIVE}
+                onMove={(c, d) => moveRow(c, d, 'income')}
+                position={{ first: ri === 0, last: ri === incomeRows.length - 1 }}
                 open={openIds.has(row.cat.id)} hidden={id => hiddenIds.has(id)}
                 onToggleOpen={toggleOpen} onToggleHide={toggleHide}
                 months={rowMonths(row)} ROW_H={ROW_H} numCell={numCell} fmt={fmt}
@@ -565,8 +630,10 @@ export function ReflectionScreen(_props?: any) {
               monthTotals={monthlyExpense} rowTotal={monthlyExpense.reduce((s, v) => s + v, 0)} out
               onDrill={(label, month) => openDrill(null, label, month, 'expense')} />
 
-            {expenseRows.map(row => (
+            {expenseRows.map((row, ri) => (
               <CategoryRows key={row.cat.id} row={row} tone={RUST}
+                onMove={(c, d) => moveRow(c, d, 'expense')}
+                position={{ first: ri === 0, last: ri === expenseRows.length - 1 }}
                 open={openIds.has(row.cat.id)} hidden={id => hiddenIds.has(id)}
                 onToggleOpen={toggleOpen} onToggleHide={toggleHide}
                 months={rowMonths(row)} ROW_H={ROW_H} numCell={numCell} fmt={fmtOut}
