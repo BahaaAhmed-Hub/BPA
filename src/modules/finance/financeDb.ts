@@ -219,6 +219,7 @@ export async function saveTransactionsBulk(rows: TransactionRow[]): Promise<void
 const OPTIONAL: Record<string, string[]> = {
   finance_transactions: ['paid_at', 'tags', 'attachments', 'to_account_id'],
   finance_accounts:     ['credit_limit'],
+  finance_goals:        ['rank', 'deadline', 'currency'],
 }
 
 const absent = new Map<string, Set<string>>()
@@ -488,6 +489,10 @@ export interface GoalRow {
   color: string
   sub_label?: string | null
   is_active: boolean
+  /** Planning, from 20260010. Dropped on write until that migration runs. */
+  rank?: number | null
+  deadline?: string | null
+  currency?: string | null
   created_at?: string
 }
 
@@ -508,8 +513,7 @@ export async function loadGoals(): Promise<GoalRow[] | null> {
 
 export async function saveGoal(row: GoalRow): Promise<void> {
   markLocalWrite('finance')
-  const { error } = await supabase.from('finance_goals').upsert(row, { onConflict: 'id' })
-  if (error) throw new Error(error.message)
+  await upsertRows('finance_goals', [row])
 }
 
 export async function deleteGoal(id: string): Promise<void> {

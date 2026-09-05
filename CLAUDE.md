@@ -183,6 +183,25 @@ figure is added to something denominated differently:
   *both* ends, so it shows for the account it came from and the one it went to. The
   pencil opens the editor — one gesture each.
 
+## Finance — goals are planned, not wished
+`goalPlan.ts` turns a target and a date into a plan out of the ledger already there.
+- **`capacityFrom(accounts, txs, bufferMonths)`** answers what there is: `held` (live
+  balances, converted, net of card debt), `buffer` (months of typical spending held
+  back), `free` = held − buffer − what is committed, and a **median** month of income
+  and expense over the last `WINDOW_MONTHS`. Median, not mean — one bonus or one
+  boiler must not reset the plan. Months with nothing in them are dropped, or a
+  ledger that starts halfway through the window halves its own median.
+- **`planGoals(goals, capacity, policy)`** pours it down the ranking. Spare cash goes
+  down the ladder first under both policies — a lump is not a flow to be shared.
+  Then the monthly surplus: **ladder** fills rank 1 before rank 2 sees anything (a
+  goal with a deadline takes only what that deadline asks, so it does not starve the
+  one behind it); **share** splits by 1/rank so everything moves at once.
+- Each goal comes back with `lump`, `monthly`, `required` (to hit its deadline),
+  `eta` and `onTime`, and the screen says which of those is the problem in a sentence.
+- **Rank is stored** (`20260010`: `rank`, `deadline`, `currency`) and set by dragging
+  a row — same pointer-event drag as the Financials table. `goalPlanning.ts` keeps
+  the three locally until the migration runs; the server's value wins.
+
 ## Finance — money reminders
 `reminders.ts` turns "this category, this day of the month" into tasks. The task goes
 into the **schedule** quadrant with a `dueDate`, which is what `TaskCommand` already

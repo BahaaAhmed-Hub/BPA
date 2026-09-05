@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase'
 import type { Account, Category, Transaction, Bill, Goal, Budget } from './types'
 import { rememberLimit, withLocalLimits } from './creditLimits'
 import { rememberTarget, forgetTarget, withLocalTargets } from './transferTargets'
+import { rememberGoalPlanning, forgetGoalPlanning, withLocalPlanning } from './goalPlanning'
 import { setPaidAtSupported } from './unpaid'
 import {
   loadAccounts, saveAccount, deleteAccount as dbDeleteAccount,
@@ -121,6 +122,7 @@ const goalToRow = (g: Goal, userId: string): GoalRow => ({
   id: g.id, user_id: userId, name: g.name, icon: g.icon,
   target_amount: g.targetAmount, current_amount: g.currentAmount,
   color: g.color, sub_label: g.sub || null, is_active: true,
+  rank: g.rank ?? null, deadline: g.deadline ?? null, currency: g.currency ?? null,
 })
 
 const budgetToRow = (b: Budget, userId: string): BudgetRow => ({
@@ -159,6 +161,9 @@ const goalFromRow = (r: GoalRow): Goal => ({
   id: r.id, name: r.name, icon: r.icon,
   targetAmount: r.target_amount, currentAmount: r.current_amount,
   color: r.color, sub: r.sub_label ?? '',
+  rank: r.rank ?? undefined,
+  deadline: r.deadline ?? undefined,
+  currency: (r.currency as Goal['currency']) ?? undefined,
 })
 
 const budgetFromRow = (r: BudgetRow): Budget => ({
@@ -329,8 +334,8 @@ export const useFinanceStore = create<FinanceState>()(
             comments,
             bills:   adopt(bills,   billFromRow,   prev.bills,
                            b => saveBill(billToRow(b, userId!))),
-            goals:   adopt(goals,   goalFromRow,   prev.goals,
-                           g => saveGoal(goalToRow(g, userId!))),
+            goals:   withLocalPlanning(adopt(goals, goalFromRow, prev.goals,
+                           g => saveGoal(goalToRow(g, userId!)))),
             // finance_budgets only exists from 20260005. Until the migration
             // runs, loadBudgets returns empty for a reason that is not "you
             // have no budgets", so nothing is ever dropped here.
@@ -515,6 +520,9 @@ export const useFinanceStore = create<FinanceState>()(
       // ─── Goals CRUD ─────────────────────────────────────────────────────────
 
       upsertGoal: async (g) => {
+        // Held here too, so a rank and a deadline are not lost on the next
+        // load where 20260010 has not run.
+        rememberGoalPlanning(g)
         set(s => ({
           goals: s.goals.some(x => x.id === g.id)
             ? s.goals.map(x => x.id === g.id ? g : x)
@@ -526,6 +534,7 @@ export const useFinanceStore = create<FinanceState>()(
       },
 
       removeGoal: async (id) => {
+        forgetGoalPlanning(id)
         set(s => ({ goals: s.goals.filter(x => x.id !== id) }))
         dbDeleteGoal(id).catch(console.warn)
       },

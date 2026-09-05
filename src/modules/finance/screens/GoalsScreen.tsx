@@ -1,606 +1,615 @@
-import { useState } from 'react'
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
+import { GripVertical, Plus, Trash2, Check } from 'lucide-react'
 import { useFinanceStore } from '../financeStore'
 import type { Goal } from '../types'
 import { MoneyInput } from '../components/MoneyInput'
+import { acct, group } from '../format'
+import { todayISO } from '../dates'
+import {
+  capacityFrom, planGoals, byRank, monthsUntil,
+  DEFAULT_BUFFER_MONTHS, WINDOW_MONTHS,
+  type Policy, type GoalPlan,
+} from '../goalPlan'
 
-// ─── Design tokens ────────────────────────────────────────────────────────────
+// ─── 21 · Goals ───────────────────────────────────────────────────────────────
+// A target and a date are a wish. What makes a plan is knowing what is spare,
+// what a normal month leaves over, and what order things get funded in — all of
+// which the ledger already knows. See goalPlan.ts for the arithmetic; this
+// screen's job is to show its working, because a number nobody can check is
+// worth about as much as the wish was.
 
 const C = {
-  bg:       '#F7F4EA',
-  surface:  '#FFFFFF',
-  field:    '#FAF7EC',
-  border:   '#E8E1CE',
-  hair:     '#F0EBDC',
-  hair2:    '#EFEADB',
-  ink1:     '#191712',
-  ink2:     '#4A4438',
-  ink3:     '#6C6553',
-  ink4:     '#8A8272',
-  accent:   '#F5D14E',
-  accentBg: '#FDF6DE',
-  accentBr: '#EFE1B4',
-  olive:    '#0C8140',
-  oliveBg:  '#E2F0E7',
-  oliveBr:  '#D5E0B4',
-  rust:     '#A31C1C',
-  rustBg:   '#FAE3E3',
+  bg:      '#F7F4EA',
+  surface: '#FFFFFF',
+  field:   '#FAF7EC',
+  border:  '#E8E1CE',
+  hair:    '#F0EBDC',
+  ink1:    '#191712',
+  ink2:    '#4A4438',
+  ink3:    '#6C6553',
+  ink4:    '#9B9180',
+  accent:  '#F5D14E',
+  accentBg:'#FDF6DE',
+  accentBr:'#EFE1B4',
+  green:   '#0C8140',
+  red:     '#C62828',
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+const DISPLAY = 'Outfit, sans-serif'
+const BUFFER_KEY = 'finance-goal-buffer-months'
+const POLICY_KEY = 'finance-goal-policy'
 
-function fmt(n: number) { return n.toLocaleString('en-US') }
-function pctStr(cur: number, tgt: number) { return Math.min(100, Math.round((cur / tgt) * 100)) }
-
-// Derive month ETA from current, target, and monthly contribution rate
-function etaLabel(cur: number, tgt: number, monthlyRate: number): string {
-  if (cur >= tgt) return 'Done'
-  if (monthlyRate <= 0) return 'No schedule'
-  const months = Math.ceil((tgt - cur) / monthlyRate)
-  const d = new Date()
-  d.setMonth(d.getMonth() + months)
-  return d.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })
+const EYEBROW: React.CSSProperties = {
+  fontSize: 10, fontWeight: 700, letterSpacing: '.12em',
+  color: C.ink3, textTransform: 'uppercase',
 }
 
-// ─── Sample contribution history (last 8 months) ──────────────────────────────
-
-const SAMPLE_CONTRIBUTIONS: Record<string, { month: string; amount: number; planned?: number }[]> = {
-  default: [
-    { month: 'Mar', amount: 8000 },
-    { month: 'Apr', amount: 12000 },
-    { month: 'May', amount: 6000 },
-    { month: 'Jun', amount: 14000 },
-    { month: 'Jul', amount: 0 },
-    { month: 'Aug', amount: 11400 },
-    { month: 'Sep', amount: 12000, planned: 12000 },
-    { month: 'Oct', amount: 12000, planned: 12000 },
-  ],
+const FIELD: React.CSSProperties = {
+  height: 38, boxSizing: 'border-box', padding: '0 12px', width: '100%',
+  borderRadius: 10, background: C.field, border: `1px solid ${C.border}`,
+  fontSize: 13, color: C.ink1, outline: 'none', fontFamily: 'inherit',
 }
 
-const FUNDING_OPTIONS = [
-  { id: 'fixed',   label: 'Fixed monthly' },
-  { id: 'rounds',  label: 'Round-ups' },
-  { id: 'surplus', label: 'Share of surplus' },
-  { id: 'manual',  label: 'Manual only' },
-]
+function monthLabel(key: string | null): string {
+  if (!key) return 'never at this rate'
+  const [y, m] = key.split('-').map(Number)
+  return new Date(y, m - 1, 1).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })
+}
 
-// ─── Goal Card (left panel list) ──────────────────────────────────────────────
-
-function GoalCard({
-  goal, selected, onSelect,
-}: {
-  goal: Goal; selected: boolean; onSelect: () => void
+/** A figure with its label under it — the shape every summary tile uses. */
+function Stat({ label, value, tone, sub }: {
+  label: string; value: string; tone?: string; sub?: string
 }) {
-  const pct = pctStr(goal.currentAmount, goal.targetAmount)
-  const isActive = selected
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+      <span style={EYEBROW}>{label}</span>
+      <span style={{
+        fontFamily: DISPLAY, fontSize: 19, fontWeight: 700, letterSpacing: '-.02em',
+        color: tone ?? C.ink1, fontVariantNumeric: 'tabular-nums',
+      }}>{value}</span>
+      {sub && <span style={{ fontSize: 10.5, color: C.ink4 }}>{sub}</span>}
+    </div>
+  )
+}
+
+// ─── One goal in the ranked list ─────────────────────────────────────────────
+
+function GoalRow({ plan, place, selected, lifted, over, onSelect, onGrab, regRow, currency }: {
+  plan: GoalPlan
+  place: number
+  selected: boolean
+  lifted: boolean
+  over: boolean
+  onSelect: () => void
+  onGrab: (e: React.PointerEvent) => void
+  regRow: (el: HTMLDivElement | null) => void
+  currency: string
+}) {
+  const g = plan.goal
+  const pct = g.targetAmount > 0
+    ? Math.min(100, Math.round((g.currentAmount / g.targetAmount) * 100)) : 0
+  // A goal that spare cash already covers is not "September", it is now —
+  // there is nothing to wait for.
+  // Nothing reaching it is the same story whether or not it has a deadline,
+  // so that reading comes first — "never at this rate" and "nothing reaching
+  // it" side by side for two goals in the same position reads as a bug.
+  const verdict = plan.remaining <= 0 ? 'done'
+    : plan.lump >= plan.remaining ? 'now'
+    : plan.eta === null ? 'stalled'
+    : plan.onTime === false ? 'late'
+    : 'ok'
+  const tone = verdict === 'done' || verdict === 'now' ? C.green
+    : verdict === 'late' || verdict === 'stalled' ? C.red : C.ink3
+
   return (
     <div
+      ref={regRow}
       onClick={onSelect}
       style={{
-        display: 'flex', flexDirection: 'column', gap: 8,
-        padding: '12px 13px', borderRadius: 14, cursor: 'pointer',
-        background: isActive ? C.accentBg : C.surface,
-        border: `1px solid ${isActive ? C.accentBr : C.hair2}`,
-        transition: 'all 140ms ease-out',
-        boxSizing: 'border-box' as const,
-      }}
-    >
+        display: 'flex', flexDirection: 'column', gap: 8, cursor: 'pointer',
+        padding: '11px 12px', borderRadius: 13, boxSizing: 'border-box',
+        background: over ? '#FBF1D2' : selected ? C.accentBg : C.surface,
+        border: `1px solid ${over ? C.accent : selected ? C.accentBr : C.hair}`,
+        opacity: lifted ? 0.4 : 1,
+      }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 9, minWidth: 0 }}>
-        <div style={{
-          width: 26, height: 26, borderRadius: 8,
-          background: isActive ? 'rgba(255,255,255,.8)' : C.field,
-          color: C.ink3,
+        <span style={{
+          width: 20, height: 20, borderRadius: 6, flexShrink: 0,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          flexShrink: 0, fontSize: 14,
-        }}>
-          {goal.icon || '🎯'}
-        </div>
-        <span style={{ fontSize: 12.5, fontWeight: 600, color: C.ink1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>
-          {goal.name}
+          background: C.ink1, color: '#FDF8E7', fontSize: 10.5, fontWeight: 700,
+        }}>{place}</span>
+        <span style={{ fontSize: 15, flexShrink: 0 }}>{g.icon}</span>
+        <span style={{
+          fontSize: 13.5, fontWeight: 600, color: C.ink1, minWidth: 0,
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        }}>{g.name}</span>
+        <span style={{ flex: 1 }} />
+        <span style={{ fontSize: 11, color: tone, fontWeight: 600, flexShrink: 0 }}>
+          {verdict === 'done' ? 'Reached'
+            : verdict === 'now' ? 'Fundable now'
+            : verdict === 'stalled' ? 'Nothing reaching it'
+            : monthLabel(plan.eta)}
         </span>
-        <span style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 700, color: C.ink3, flexShrink: 0 }}>{pct}%</span>
+        <span
+          onPointerDown={onGrab}
+          onClick={e => e.stopPropagation()}
+          title="Drag to change its rank"
+          style={{
+            display: 'inline-flex', flexShrink: 0, padding: '2px 0', marginLeft: 2,
+            color: lifted ? C.ink1 : '#CFC7B2', touchAction: 'none',
+            cursor: lifted ? 'grabbing' : 'grab',
+          }}>
+          <GripVertical size={13} strokeWidth={2} />
+        </span>
       </div>
-      <div style={{ height: 8, borderRadius: 999, background: '#F0EBDC', overflow: 'hidden' }}>
-        <span style={{ width: `${pct}%`, height: '100%', background: isActive ? C.ink1 : C.accent, borderRadius: 999, display: 'block', transition: 'width 300ms ease-out' }} />
+
+      <div style={{ height: 5, borderRadius: 999, background: '#EFEADB', overflow: 'hidden' }}>
+        <div style={{
+          width: `${pct}%`, height: '100%', borderRadius: 999,
+          background: verdict === 'done' ? C.green : C.accent,
+        }} />
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12.5, fontWeight: 600, color: C.ink1, fontVariantNumeric: 'tabular-nums' as const }}>
-          EGP {fmt(goal.currentAmount)}
+
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, fontSize: 11, color: C.ink3 }}>
+        <span style={{ fontVariantNumeric: 'tabular-nums' }}>
+          {group(g.currentAmount)} of {group(g.targetAmount)} {g.currency ?? currency}
         </span>
-        <span style={{ fontSize: 10.5, color: C.ink3 }}>of EGP {fmt(goal.targetAmount)}</span>
-        <span style={{ marginLeft: 'auto', fontSize: 10.5, color: C.ink3, flexShrink: 0 }}>
-          {goal.sub || etaLabel(goal.currentAmount, goal.targetAmount, 10000)}
-        </span>
+        <span style={{ flex: 1 }} />
+        {plan.monthly > 0 && (
+          <span style={{ fontVariantNumeric: 'tabular-nums' }}>
+            +{group(Math.round(plan.monthly))}/mo
+          </span>
+        )}
       </div>
     </div>
   )
 }
 
-// ─── Featured Goal Detail (right panel top card — dark) ───────────────────────
+// ─── Screen ───────────────────────────────────────────────────────────────────
 
-function GoalDetail({ goal }: { goal: Goal }) {
-  const pct = pctStr(goal.currentAmount, goal.targetAmount)
-  const contributions = SAMPLE_CONTRIBUTIONS.default
-  const maxAmt = Math.max(...contributions.map(c => c.amount || c.planned || 1))
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function GoalsScreen(_props?: any) {
+  const { goals, accounts, transactions, upsertGoal, removeGoal } = useFinanceStore()
 
-  return (
-    <div style={{
-      flexShrink: 0, background: C.ink1, color: '#FDF8E7',
-      borderRadius: 18, padding: '17px 20px',
-      display: 'flex', gap: 24, alignItems: 'center',
-    }}>
-      {/* Identity */}
-      <div style={{ width: 240, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
-        <span style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '.14em', opacity: .6, textTransform: 'uppercase' as const }}>
-          {goal.name}
-        </span>
-        <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 34, fontWeight: 600, letterSpacing: '-.04em', lineHeight: 1, fontVariantNumeric: 'tabular-nums' as const }}>
-          EGP {fmt(goal.currentAmount)}
-        </span>
-        <span style={{ fontSize: 11, opacity: .65 }}>of EGP {fmt(goal.targetAmount)} · {pct}% cleared</span>
-        <div style={{ marginTop: 7, height: 28, padding: '0 11px', borderRadius: 999, background: 'rgba(245,209,78,.16)', color: '#F5D14E', fontSize: 11.5, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 7, alignSelf: 'flex-start' }}>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4 16l5-5 4 3 7-7"/><path d="M20 7h-4M20 7v4"/></svg>
-          {goal.sub || 'On track'}
-        </div>
-      </div>
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [bufferMonths, setBufferMonths] = useState(() => {
+    try { return Number(localStorage.getItem(BUFFER_KEY) ?? DEFAULT_BUFFER_MONTHS) } catch { return DEFAULT_BUFFER_MONTHS }
+  })
+  const [policy, setPolicy] = useState<Policy>(() => {
+    try { return (localStorage.getItem(POLICY_KEY) as Policy) === 'share' ? 'share' : 'ladder' } catch { return 'ladder' }
+  })
+  function pickPolicy(p: Policy) {
+    setPolicy(p)
+    try { localStorage.setItem(POLICY_KEY, p) } catch { /* private mode */ }
+  }
+  function pickBuffer(n: number) {
+    setBufferMonths(n)
+    try { localStorage.setItem(BUFFER_KEY, String(n)) } catch { /* private mode */ }
+  }
 
-      <div style={{ width: 1, alignSelf: 'stretch', background: 'rgba(255,255,255,.13)', flexShrink: 0 }} />
-
-      {/* Contribution bars */}
-      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 7 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '.12em', opacity: .55, textTransform: 'uppercase' as const }}>Contributed, by month</span>
-          <span style={{ fontSize: 11, opacity: .6 }}>Pale bars are planned</span>
-        </div>
-        <div style={{ height: 96, display: 'flex', gap: 8, alignItems: 'stretch', padding: '6px 10px', borderRadius: 12, background: 'rgba(255,255,255,.05)' }}>
-          {contributions.map(c => {
-            const isPlanned = c.planned && c.amount === c.planned
-            const heightPct = maxAmt > 0 ? Math.max(c.amount || c.planned || 0, 0) / maxAmt * 100 : 0
-            const isEmpty = !c.amount && !c.planned
-            return (
-              <div key={c.month} style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 5, alignItems: 'center', minWidth: 0 }}>
-                <div style={{ width: '100%', flex: 1, display: 'flex', alignItems: 'flex-end', background: isEmpty ? 'rgba(198,40,40,.08)' : 'transparent', borderRadius: 6 }}>
-                  <span style={{
-                    width: '100%',
-                    height: `${heightPct}%`,
-                    minHeight: c.amount || c.planned ? 4 : 0,
-                    background: isEmpty ? '#C62828' : isPlanned ? '#DCD5C0' : '#191712',
-                    borderRadius: '5px 5px 0 0',
-                    display: 'block',
-                  }} />
-                </div>
-                <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 10, fontWeight: 600, color: isPlanned ? '#A8A091' : '#191712', fontVariantNumeric: 'tabular-nums' as const }}>
-                  {c.amount === 0 ? '0' : fmt(c.amount || c.planned || 0)}
-                </span>
-                <span style={{ fontSize: 9.5, color: C.ink3 }}>{c.month}</span>
-              </div>
-            )
-          })}
-        </div>
-      </div>
-
-      <div style={{ width: 1, alignSelf: 'stretch', background: 'rgba(255,255,255,.13)', flexShrink: 0 }} />
-
-      {/* Stats */}
-      <div style={{ width: 150, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 11 }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-          <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.12em', opacity: .55, textTransform: 'uppercase' as const }}>Average month</span>
-          <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 20, fontWeight: 600, letterSpacing: '-.03em', fontVariantNumeric: 'tabular-nums' as const }}>
-            EGP {fmt(Math.round(
-              contributions.filter(c => c.amount > 0).reduce((s, c) => s + c.amount, 0) /
-              Math.max(1, contributions.filter(c => c.amount > 0).length)
-            ))}
-          </span>
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-          <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.12em', opacity: .55, textTransform: 'uppercase' as const }}>Missed months</span>
-          <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 20, fontWeight: 600, letterSpacing: '-.03em', color: '#E8A88E' }}>
-            {contributions.filter(c => c.amount === 0 && !c.planned).length} of {contributions.filter(c => !c.planned).length}
-          </span>
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-          <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.12em', opacity: .55, textTransform: 'uppercase' as const }}>Still needed</span>
-          <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 20, fontWeight: 600, letterSpacing: '-.03em', fontVariantNumeric: 'tabular-nums' as const }}>
-            EGP {fmt(Math.max(0, goal.targetAmount - goal.currentAmount))}
-          </span>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ─── Goals Screen ─────────────────────────────────────────────────────────────
-
-export function GoalsScreen() {
-  const { goals, upsertGoal } = useFinanceStore()
-
-  const [selectedId, setSelectedId] = useState<string | null>(goals[0]?.id ?? null)
-  const [tab, setTab] = useState<'active' | 'reporting' | 'finished'>('reporting')
-  const [fundRule, setFundRule] = useState<string>('fixed')
-  const [autoTransfer, setAutoTransfer] = useState(true)
-
-  // New goal form
+  // New goal
+  const [newName, setNewName]     = useState('')
   const [newTarget, setNewTarget] = useState(0)
-  const [newBy, setNewBy] = useState('')
-  const [newName, setNewName] = useState('')
-  const [newIcon, setNewIcon] = useState('🎯')
+  const [newBy, setNewBy]         = useState('')
+  const [newIcon, setNewIcon]     = useState('🎯')
+  // MoneyInput holds the text you typed, so that a half-typed "1,2" survives.
+  // Setting the value back to 0 does not clear that — the field has to be a
+  // new one, or the amount you just used stays in the form.
+  const [formTick, setFormTick]   = useState(0)
 
-  const selected = goals.find(g => g.id === selectedId) ?? goals[0] ?? null
+  const capacity = useMemo(
+    () => capacityFrom(accounts, transactions, bufferMonths),
+    [accounts, transactions, bufferMonths])
+  const plans = useMemo(
+    () => planGoals(goals, capacity, policy),
+    [goals, capacity, policy])
 
-  function handleAddGoal() {
+  const selected = plans.find(p => p.goal.id === selectedId) ?? plans[0] ?? null
+
+  function addGoal() {
     if (!newName.trim() || newTarget <= 0) return
     const g: Goal = {
       id: crypto.randomUUID(),
       name: newName.trim(),
-      icon: newIcon,
+      icon: newIcon || '🎯',
       targetAmount: newTarget,
       currentAmount: 0,
-      color: '#F5D14E',
-      sub: newBy || 'No deadline',
+      color: C.accent,
+      sub: newBy ? `by ${newBy}` : 'no deadline',
+      // A new goal joins the back of the queue. Nothing already planned for
+      // gets pushed down by something typed in a hurry.
+      rank: goals.length,
+      deadline: newBy || undefined,
+      currency: capacity.currency as Goal['currency'],
     }
-    upsertGoal(g)
+    void upsertGoal(g)
     setSelectedId(g.id)
-    setNewName('')
-    setNewTarget(0)
-    setNewBy('')
-    setNewIcon('🎯')
+    setNewName(''); setNewTarget(0); setNewBy(''); setNewIcon('🎯')
+    setFormTick(n => n + 1)
   }
 
+  // ─── Ranking by drag ───────────────────────────────────────────────────────
+  // Same as the Financials table: pointer events, because dragstart never
+  // fires for a finger and this is a list you reorder on a tablet.
+  const rowEls = useRef(new Map<string, HTMLDivElement>())
+  const [drag, setDrag] = useState<{ id: string; over: string | null } | null>(null)
+  const justDragged = useRef(false)
+
+  const regRow = useCallback((id: string) => (el: HTMLDivElement | null) => {
+    if (el) rowEls.current.set(id, el)
+    else rowEls.current.delete(id)
+  }, [])
+
+  const grab = useCallback((id: string) => (e: React.PointerEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDrag({ id, over: null })
+  }, [])
+
+  useEffect(() => {
+    if (!drag) return
+    const order = byRank(goals).map(g => g.id)
+
+    const move = (e: PointerEvent) => {
+      let over: string | null = null
+      for (const id of order) {
+        const el = rowEls.current.get(id)
+        if (!el) continue
+        const r = el.getBoundingClientRect()
+        if (e.clientY >= r.top && e.clientY <= r.bottom) { over = id; break }
+      }
+      setDrag(d => (d && d.over !== over ? { ...d, over } : d))
+    }
+    const up = () => {
+      const { id, over } = drag
+      if (over && over !== id) {
+        const from = order.indexOf(id)
+        const to = order.indexOf(over)
+        if (from >= 0 && to >= 0) {
+          const next = order.slice()
+          next.splice(to, 0, next.splice(from, 1)[0])
+          // Positions, not whatever numbers were there: a list where nothing
+          // has a rank still comes out in an order.
+          next.forEach((gid, n) => {
+            const g = goals.find(x => x.id === gid)
+            if (!g || g.rank === n) return
+            void upsertGoal({ ...g, rank: n })
+          })
+        }
+      }
+      justDragged.current = true
+      setTimeout(() => { justDragged.current = false }, 0)
+      setDrag(null)
+    }
+    const prevSelect = document.body.style.userSelect
+    document.body.style.userSelect = 'none'
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up)
+    window.addEventListener('pointercancel', up)
+    return () => {
+      document.body.style.userSelect = prevSelect
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', up)
+      window.removeEventListener('pointercancel', up)
+    }
+  }, [drag, goals, upsertGoal])
+
+  const cur = capacity.currency
+  const money = (n: number) => acct(n, { currency: cur })
+  const canAdd = newName.trim().length > 0 && newTarget > 0
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, height: '100%', overflow: 'hidden' }}>
-      {/* Header */}
-      <div style={{
-        height: 64, flexShrink: 0,
-        borderBottom: `1px solid ${C.border}`,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '0 30px',
-      }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.14em', color: C.ink3, textTransform: 'uppercase' as const }}>MONEY · AIM</span>
-          <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 20, fontWeight: 600, letterSpacing: '-.03em', color: C.ink1 }}>Goals</span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-          {/* Tab toggle */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 2, height: 34, boxSizing: 'border-box' as const, padding: 3, borderRadius: 999, background: '#EDE7D9' }}>
-            {(['active', 'reporting', 'finished'] as const).map(t => (
-              <button
-                key={t}
-                onClick={() => setTab(t)}
-                style={{
-                  height: 28, padding: '0 13px', borderRadius: 999,
-                  background: tab === t ? C.surface : 'transparent',
-                  boxShadow: tab === t ? '0 1px 3px rgba(25,23,18,.16)' : 'none',
-                  color: tab === t ? C.ink1 : C.ink3, fontWeight: tab === t ? 600 : 500,
-                  fontSize: 12, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
-                  textTransform: 'capitalize' as const,
-                }}
-              >
-                {t}
-              </button>
-            ))}
-          </div>
-          <button style={{
-            height: 34, padding: '0 14px', borderRadius: 999,
-            background: C.surface, border: `1px solid ${C.border}`,
-            color: C.ink1, fontSize: 12.5, fontWeight: 600,
-            display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontFamily: 'inherit',
-          }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3l3 3-3 3"/><path d="M20 6H8a4 4 0 00-4 4v1"/><path d="M7 21l-3-3 3-3"/><path d="M4 18h12a4 4 0 004-4v-1"/></svg>
-            Funding rules
-          </button>
-          <button style={{
-            height: 34, padding: '0 15px', borderRadius: 999,
-            background: C.accent, border: 'none',
-            color: C.ink1, fontSize: 12.5, fontWeight: 600,
-            display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontFamily: 'inherit',
-            boxShadow: '0 2px 0 rgba(25,23,18,.14)',
-          }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14"/></svg>
-            New goal
-          </button>
-        </div>
-      </div>
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, height: '100%', overflow: 'hidden', background: C.bg }}>
 
-      {/* Content */}
-      <div style={{ flex: 1, display: 'flex', gap: 14, padding: '18px 26px 22px', overflow: 'hidden', minHeight: 0 }}>
-
-        {/* ── Left: Goals list + create form ── */}
+      {/* ── What there is to work with ── */}
+      <div style={{ padding: '18px 26px 0' }}>
+        <div style={{ ...EYEBROW, color: C.ink4 }}>Finance · Goals</div>
         <div style={{
-          width: 430, flexShrink: 0,
+          display: 'flex', alignItems: 'flex-start', gap: 22, flexWrap: 'wrap',
+          marginTop: 8, padding: '15px 18px', borderRadius: 16,
           background: C.surface, border: `1px solid ${C.border}`,
-          borderRadius: 18, padding: '16px 18px',
-          display: 'flex', flexDirection: 'column', gap: 11,
-          overflowY: 'auto', boxSizing: 'border-box' as const,
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-            <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.12em', color: C.ink3, textTransform: 'uppercase' as const }}>Goals</span>
-            <span style={{ marginLeft: 'auto', fontSize: 11, color: C.ink3 }}>
-              {goals.length} active
-            </span>
-          </div>
-
-          {/* Goal cards */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
-            {goals.length === 0 && (
-              <div style={{ textAlign: 'center', padding: '24px 0', color: C.ink3, fontSize: 13 }}>
-                No goals yet. Create one below.
-              </div>
-            )}
-            {goals.map(g => (
-              <GoalCard
-                key={g.id}
-                goal={g}
-                selected={selectedId === g.id}
-                onSelect={() => setSelectedId(g.id)}
-              />
-            ))}
-          </div>
+          <Stat label="Spare now" value={money(capacity.free)}
+            sub={`${group(Math.round(capacity.held))} held, less ${group(Math.round(capacity.buffer))} kept back`} />
+          <Stat label="A normal month" value={money(capacity.surplus)}
+            tone={capacity.surplus >= 0 ? C.green : C.red}
+            sub={capacity.months > 0
+              ? `${group(Math.round(capacity.monthlyIn))} in, ${group(Math.round(capacity.monthlyOut))} out · median of ${capacity.months} month${capacity.months === 1 ? '' : 's'}`
+              : `no paid entries in the last ${WINDOW_MONTHS} months`} />
+          {capacity.committed > 0 && (
+            <Stat label="Already spoken for" value={money(-capacity.committed)} tone={C.red}
+              sub="unpaid entries dated ahead" />
+          )}
 
           <div style={{ flex: 1 }} />
 
-          {/* Create new goal */}
-          <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 7, paddingTop: 2, borderTop: `1px solid ${C.hair2}` }}>
-            <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.12em', color: C.ink3, textTransform: 'uppercase' as const }}>New goal</span>
-
-            <div style={{ display: 'flex', gap: 7 }}>
-              {/* Icon picker */}
-              <div style={{ position: 'relative' as const }}>
-                <div style={{
-                  height: 40, width: 40, borderRadius: 11,
-                  background: C.field, border: `1px solid ${C.border}`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 18, cursor: 'pointer',
-                }}>
-                  {newIcon}
-                </div>
-              </div>
-              {/* Name field */}
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 5 }}>
-                <input
-                  value={newName}
-                  onChange={e => setNewName(e.target.value)}
-                  placeholder="Goal name"
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <span style={EYEBROW}>How to divide it</span>
+            <span style={{ display: 'inline-flex', background: '#F1ECDE', borderRadius: 10, padding: 3, gap: 3 }}>
+              {([['ladder', 'Ladder'], ['share', 'Share']] as const).map(([id, label]) => (
+                <button key={id} onClick={() => pickPolicy(id)}
+                  title={id === 'ladder'
+                    ? 'Rank 1 is filled before rank 2 gets anything — things arrive one after another, each as early as it can'
+                    : 'Every goal moves at once, weighted by rank — nothing arrives as early, nothing sits still'}
                   style={{
-                    height: 40, boxSizing: 'border-box' as const, padding: '0 12px',
-                    borderRadius: 11, background: C.field, border: `1px solid ${C.border}`,
-                    fontSize: 13, color: C.ink1, outline: 'none', fontFamily: 'inherit',
-                    width: '100%',
-                  }}
-                />
-              </div>
-            </div>
+                    padding: '0 14px', height: 32, borderRadius: 8, border: 'none', cursor: 'pointer',
+                    fontFamily: 'inherit', fontSize: 12.5, fontWeight: policy === id ? 700 : 500,
+                    background: policy === id ? C.ink1 : 'transparent',
+                    color: policy === id ? '#FDF8E7' : C.ink3,
+                  }}>{label}</button>
+              ))}
+            </span>
+          </div>
 
-            <div style={{ display: 'flex', gap: 9 }}>
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 5 }}>
-                <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.12em', color: C.ink3, textTransform: 'uppercase' as const }}>Target</span>
-                <MoneyInput
-                  value={newTarget}
-                  min={0}
-                  onChange={setNewTarget}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <span style={EYEBROW}>Keep back</span>
+            <span style={{ display: 'inline-flex', background: '#F1ECDE', borderRadius: 10, padding: 3, gap: 3 }}>
+              {[0, 1, 2, 3, 6].map(n => (
+                <button key={n} onClick={() => pickBuffer(n)}
+                  title={n === 0 ? 'Nothing held back' : `${n} month${n === 1 ? '' : 's'} of typical spending held back before any goal is funded`}
+                  style={{
+                    width: 32, height: 32, borderRadius: 8, border: 'none', cursor: 'pointer',
+                    fontFamily: 'inherit', fontSize: 12.5, fontWeight: bufferMonths === n ? 700 : 500,
+                    background: bufferMonths === n ? C.ink1 : 'transparent',
+                    color: bufferMonths === n ? '#FDF8E7' : C.ink3,
+                  }}>{n}</button>
+              ))}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* ── The goals, and the one that is open ── */}
+      <div style={{ flex: 1, display: 'flex', gap: 14, padding: '14px 26px 22px', overflow: 'hidden', minHeight: 0 }}>
+
+        <div style={{
+          width: 400, flexShrink: 0, background: C.surface, border: `1px solid ${C.border}`,
+          borderRadius: 18, padding: '15px 16px', display: 'flex', flexDirection: 'column',
+          gap: 10, overflowY: 'auto', boxSizing: 'border-box',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={EYEBROW}>In order</span>
+            <span style={{ marginLeft: 'auto', fontSize: 11, color: C.ink4 }}>
+              {goals.length === 0 ? 'none yet' : `${goals.length} goal${goals.length === 1 ? '' : 's'} · drag to re-rank`}
+            </span>
+          </div>
+
+          {plans.length === 0 && (
+            <div style={{ padding: '18px 0', color: C.ink3, fontSize: 12.5, lineHeight: 1.55 }}>
+              Nothing here yet. Add one below — a name and an amount is enough, and a
+              date if it has to be there by one.
+            </div>
+          )}
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {plans.map((p, i) => (
+              <GoalRow
+                key={p.goal.id}
+                plan={p}
+                place={i + 1}
+                currency={cur}
+                selected={selected?.goal.id === p.goal.id}
+                lifted={drag?.id === p.goal.id}
+                over={drag?.over === p.goal.id && drag?.id !== p.goal.id}
+                onSelect={() => { if (!justDragged.current) setSelectedId(p.goal.id) }}
+                onGrab={grab(p.goal.id)}
+                regRow={regRow(p.goal.id)} />
+            ))}
+          </div>
+
+          {/* Add one */}
+          <div style={{
+            marginTop: 'auto', paddingTop: 12, borderTop: `1px solid ${C.hair}`,
+            display: 'flex', flexDirection: 'column', gap: 8,
+          }}>
+            <span style={EYEBROW}>New goal</span>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input
+                value={newIcon}
+                onChange={e => setNewIcon(e.target.value.slice(0, 2))}
+                title="An emoji for it"
+                style={{ ...FIELD, width: 44, textAlign: 'center', padding: 0, flexShrink: 0 }} />
+              <input
+                value={newName}
+                onChange={e => setNewName(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter' && canAdd) addGoal() }}
+                placeholder="What it is for"
+                style={FIELD} />
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <span style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
+                <span style={{ ...EYEBROW, fontSize: 9.5 }}>Target</span>
+                <MoneyInput key={formTick} value={newTarget} min={0} onChange={setNewTarget}
                   placeholder="60,000"
-                  style={{
-                    height: 40, boxSizing: 'border-box' as const, padding: '0 12px',
-                    borderRadius: 11, background: C.field, border: `1px solid ${C.border}`,
-                    fontSize: 13, color: C.ink1, outline: 'none', fontFamily: 'inherit',
-                    width: '100%',
-                  }}
-                />
-              </div>
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 5 }}>
-                <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.12em', color: C.ink3, textTransform: 'uppercase' as const }}>By</span>
-                <input
-                  value={newBy}
+                  style={{ ...FIELD, fontFamily: DISPLAY, fontWeight: 600 }} />
+              </span>
+              <span style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
+                <span style={{ ...EYEBROW, fontSize: 9.5 }}>By (optional)</span>
+                <input type="date" value={newBy} min={todayISO()}
                   onChange={e => setNewBy(e.target.value)}
-                  placeholder="Feb 2027"
-                  style={{
-                    height: 40, boxSizing: 'border-box' as const, padding: '0 12px',
-                    borderRadius: 11, background: C.field, border: `1px solid ${C.border}`,
-                    fontSize: 13, color: C.ink1, outline: 'none', fontFamily: 'inherit',
-                    width: '100%',
-                  }}
-                />
-              </div>
+                  style={{ ...FIELD, fontFamily: DISPLAY }} />
+              </span>
             </div>
-
-            {/* Funding rule pills */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.12em', color: C.ink3, textTransform: 'uppercase' as const }}>Fund it</span>
-              <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 6 }}>
-                {FUNDING_OPTIONS.map(o => (
-                  <button
-                    key={o.id}
-                    onClick={() => setFundRule(o.id)}
-                    style={{
-                      height: 32, padding: '0 12px', borderRadius: 999,
-                      background: fundRule === o.id ? C.ink1 : C.surface,
-                      border: `1px solid ${fundRule === o.id ? C.ink1 : C.border}`,
-                      color: fundRule === o.id ? '#FDF8E7' : C.ink3,
-                      fontSize: 12, fontWeight: fundRule === o.id ? 600 : 500,
-                      cursor: 'pointer', fontFamily: 'inherit',
-                    }}
-                  >
-                    {o.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Auto-transfer row */}
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: 11, height: 46,
-              padding: '0 13px', borderRadius: 12,
-              background: C.field, border: `1px solid ${C.border}`,
-              boxSizing: 'border-box' as const,
-            }}>
-              <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-                <span style={{ fontSize: 12.5, fontWeight: 600, color: C.ink1 }}>
-                  {fundRule === 'fixed' ? 'Move EGP 8,400 on payday' : 'Auto-fund on payday'}
-                </span>
-                <span style={{ fontSize: 10.5, color: C.ink3 }}>From CIB current, the day salary lands</span>
-              </div>
-              <div style={{ marginLeft: 'auto', flexShrink: 0 }}>
-                <button
-                  onClick={() => setAutoTransfer(!autoTransfer)}
-                  style={{
-                    width: 38, height: 22, borderRadius: 999,
-                    background: autoTransfer ? C.ink1 : C.border,
-                    border: 'none', cursor: 'pointer',
-                    display: 'flex', alignItems: 'center',
-                    padding: '0 3px', boxSizing: 'border-box' as const,
-                    justifyContent: autoTransfer ? 'flex-end' : 'flex-start',
-                    transition: 'background 140ms ease-out',
-                  }}
-                >
-                  <span style={{ width: 16, height: 16, borderRadius: 999, background: '#FDF8E7', display: 'block' }} />
-                </button>
-              </div>
-            </div>
-
-            {/* Add button */}
             <button
-              onClick={handleAddGoal}
-              disabled={!newName.trim() || newTarget <= 0}
+              onClick={addGoal}
+              disabled={!canAdd}
               style={{
-                height: 36, borderRadius: 10,
-                background: newName.trim() && newTarget > 0 ? C.accent : C.field,
-                border: `1px solid ${newName.trim() && newTarget > 0 ? 'rgba(25,23,18,.18)' : C.border}`,
-                color: C.ink1, fontSize: 13, fontWeight: 600,
-                cursor: newName.trim() && newTarget > 0 ? 'pointer' : 'default',
-                opacity: newName.trim() && newTarget > 0 ? 1 : 0.5,
-                fontFamily: 'inherit',
-                boxShadow: newName.trim() && newTarget > 0 ? '0 2px 0 rgba(25,23,18,.1)' : 'none',
-              }}
-            >
-              Create goal
+                height: 38, borderRadius: 10, display: 'inline-flex', alignItems: 'center',
+                justifyContent: 'center', gap: 7, cursor: canAdd ? 'pointer' : 'default',
+                background: canAdd ? C.ink1 : '#EDE7D9',
+                border: `1px solid ${canAdd ? C.ink1 : C.border}`,
+                color: canAdd ? '#FDF8E7' : C.ink4,
+                fontFamily: 'inherit', fontSize: 13, fontWeight: 600,
+              }}>
+              <Plus size={14} /> Add goal
             </button>
           </div>
         </div>
 
-        {/* ── Right: Selected goal detail ── */}
-        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 12, overflowY: 'auto' }}>
-          {selected ? (
-            <>
-              <GoalDetail goal={selected} />
-
-              {/* Two-column lower area */}
-              <div style={{ flex: 1, display: 'flex', gap: 12, minHeight: 0 }}>
-
-                {/* Milestones */}
-                <div style={{
-                  flex: 1, background: C.surface, border: `1px solid ${C.border}`,
-                  borderRadius: 18, padding: '16px 18px',
-                  display: 'flex', flexDirection: 'column', gap: 12,
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.12em', color: C.ink3, textTransform: 'uppercase' as const }}>Milestones</span>
-                    <span style={{ marginLeft: 'auto', fontSize: 11, color: C.ink3 }}>Every 25%</span>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-                    {[25, 50, 75, 100].map(milestone => {
-                      const pct = pctStr(selected.currentAmount, selected.targetAmount)
-                      const done = pct >= milestone
-                      const amt = Math.round(selected.targetAmount * milestone / 100)
-                      return (
-                        <div
-                          key={milestone}
-                          style={{
-                            display: 'flex', alignItems: 'center', gap: 10, height: 40,
-                            padding: '0 11px', borderRadius: 11,
-                            background: done ? C.oliveBg : C.field,
-                            border: `1px solid ${done ? C.oliveBr : C.hair2}`,
-                            boxSizing: 'border-box' as const,
-                          }}
-                        >
-                          <div style={{
-                            width: 20, height: 20, borderRadius: 999,
-                            background: done ? C.olive : C.border,
-                            color: '#FDF8E7',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            flexShrink: 0,
-                          }}>
-                            {done && (
-                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg>
-                            )}
-                          </div>
-                          <span style={{ fontSize: 12, fontWeight: 600, color: C.ink1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>
-                            {milestone === 25 ? 'A quarter cleared' : milestone === 50 ? 'Halfway there' : milestone === 75 ? 'Three quarters done' : 'Goal complete'}
-                          </span>
-                          <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 9, flexShrink: 0 }}>
-                            {done && <span style={{ fontSize: 10.5, color: C.ink3 }}>{new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>}
-                            <span style={{ fontFamily: "'Outfit', sans-serif", fontSize: 12, fontWeight: 600, color: C.ink1, fontVariantNumeric: 'tabular-nums' as const }}>
-                              {fmt(amt)}
-                            </span>
-                          </span>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-
-                {/* Funding rules card */}
-                <div style={{
-                  flex: 1, background: C.surface, border: `1px solid ${C.border}`,
-                  borderRadius: 18, padding: '16px 18px',
-                  display: 'flex', flexDirection: 'column', gap: 12,
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.12em', color: C.ink3, textTransform: 'uppercase' as const }}>Funding rules</span>
-                    <button style={{
-                      marginLeft: 'auto', height: 26, padding: '0 10px', borderRadius: 7,
-                      background: 'transparent', border: `1px solid ${C.border}`,
-                      color: C.ink3, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit',
-                    }}>
-                      Edit
-                    </button>
-                  </div>
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {[
-                      { label: 'Fixed monthly transfer', value: 'EGP 8,400', from: 'CIB current', when: 'On payday (1st)' },
-                    ].map((rule, i) => (
-                      <div key={i} style={{
-                        display: 'flex', flexDirection: 'column', gap: 5,
-                        padding: '10px 12px', borderRadius: 11,
-                        background: C.field, border: `1px solid ${C.hair2}`,
-                        boxSizing: 'border-box' as const,
-                      }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <span style={{ fontSize: 12, fontWeight: 600, color: C.ink1 }}>{rule.label}</span>
-                          <span style={{ marginLeft: 'auto', fontFamily: "'Outfit', sans-serif", fontSize: 13, fontWeight: 600, color: C.ink1, fontVariantNumeric: 'tabular-nums' as const }}>{rule.value}</span>
-                        </div>
-                        <div style={{ display: 'flex', gap: 12 }}>
-                          <span style={{ fontSize: 11, color: C.ink3 }}>From: <b style={{ color: C.ink2 }}>{rule.from}</b></span>
-                          <span style={{ fontSize: 11, color: C.ink3 }}>When: <b style={{ color: C.ink2 }}>{rule.when}</b></span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Observation */}
-                  <div style={{
-                    marginTop: 'auto', padding: '10px 12px', borderRadius: 10,
-                    background: pctStr(selected.currentAmount, selected.targetAmount) >= 80 ? C.oliveBg : C.accentBg,
-                    border: `1px solid ${pctStr(selected.currentAmount, selected.targetAmount) >= 80 ? C.oliveBr : C.accentBr}`,
-                  }}>
-                    <span style={{ fontSize: 12, color: C.ink2, lineHeight: 1.55 }}>
-                      {pctStr(selected.currentAmount, selected.targetAmount) >= 80
-                        ? 'Almost there — one or two more contributions and this goal closes.'
-                        : `At this rate you reach ${fmt(selected.targetAmount)} in ${etaLabel(selected.currentAmount, selected.targetAmount, 10000)}.`}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </>
-          ) : (
+        {/* ── What it would take ── */}
+        <div style={{ flex: 1, minWidth: 0, overflowY: 'auto' }}>
+          {selected ? <GoalDetail
+            plan={selected}
+            place={plans.findIndex(p => p.goal.id === selected.goal.id) + 1}
+            policy={policy}
+            currency={cur}
+            surplus={capacity.surplus}
+            onChange={g => void upsertGoal(g)}
+            onDelete={g => {
+              if (!window.confirm(`Delete the goal "${g.name}"?`)) return
+              void removeGoal(g.id)
+              setSelectedId(null)
+            }} /> : (
             <div style={{
-              flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
-              flexDirection: 'column', gap: 12, color: C.ink3,
+              background: C.surface, border: `1px solid ${C.border}`, borderRadius: 18,
+              padding: '28px 26px', color: C.ink3, fontSize: 13, lineHeight: 1.6, maxWidth: 620,
             }}>
-              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d="M3 13l18-7-6 15-3-6z"/></svg>
-              <span style={{ fontSize: 14, fontWeight: 500 }}>Select a goal to see its detail</span>
-              <span style={{ fontSize: 12 }}>Or create your first goal using the form on the left</span>
+              <div style={{ fontFamily: DISPLAY, fontSize: 20, fontWeight: 700, color: C.ink1, letterSpacing: '-.02em', marginBottom: 8 }}>
+                How this plans
+              </div>
+              Add a goal and this works out three things from the ledger you already keep:
+              what is <b>spare now</b> (what the accounts hold, less what you said to keep
+              back and anything unpaid but already due), what a <b>normal month</b> leaves
+              over (the median of the last {WINDOW_MONTHS} months of money that actually
+              moved — the median so one strange month does not reset the plan), and then it
+              pours both down the <b>ranking</b>. Drag a goal up and everything behind it
+              re-plans.
             </div>
           )}
         </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── The open goal ────────────────────────────────────────────────────────────
+
+function GoalDetail({ plan, place, policy, currency, surplus, onChange, onDelete }: {
+  plan: GoalPlan
+  place: number
+  policy: Policy
+  currency: string
+  surplus: number
+  onChange: (g: Goal) => void
+  onDelete: (g: Goal) => void
+}) {
+  const g = plan.goal
+  const money = (n: number) => acct(n, { currency: g.currency ?? currency })
+  const [saved, setSaved] = useState(g.currentAmount)
+  const [target, setTarget] = useState(g.targetAmount)
+  useEffect(() => { setSaved(g.currentAmount); setTarget(g.targetAmount) }, [g.id, g.currentAmount, g.targetAmount])
+
+  const done = plan.remaining <= 0
+  const coveredNow = !done && plan.lump >= plan.remaining
+  const shortfall = plan.required !== null ? plan.required - plan.monthly : 0
+
+  const card: React.CSSProperties = {
+    background: C.surface, border: `1px solid ${C.border}`, borderRadius: 18,
+    padding: '18px 20px', marginBottom: 12,
+  }
+
+  return (
+    <div style={{ maxWidth: 720 }}>
+      <div style={card}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{
+            width: 22, height: 22, borderRadius: 7, flexShrink: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: C.ink1, color: '#FDF8E7', fontSize: 11, fontWeight: 700,
+          }}>{place}</span>
+          <span style={{ fontSize: 20 }}>{g.icon}</span>
+          <span style={{ fontFamily: DISPLAY, fontSize: 22, fontWeight: 700, letterSpacing: '-.03em', color: C.ink1 }}>
+            {g.name}
+          </span>
+          <span style={{ flex: 1 }} />
+          <button
+            onClick={() => onDelete(g)}
+            title="Delete this goal"
+            style={{
+              width: 30, height: 30, borderRadius: '50%', padding: 0, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: C.surface, border: `1px solid ${C.border}`, color: C.ink4,
+            }}><Trash2 size={13} /></button>
+        </div>
+
+        <div style={{ display: 'flex', gap: 26, marginTop: 16, flexWrap: 'wrap' }}>
+          <Stat label="Still to find" value={money(plan.remaining)}
+            tone={done ? C.green : C.ink1}
+            sub={done ? 'reached' : `${group(g.currentAmount)} of ${group(g.targetAmount)} saved`} />
+          <Stat label="From what is spare" value={money(plan.lump)}
+            sub={plan.lump > 0 ? 'available today' : 'nothing spare reaches it'} />
+          <Stat label="Each month" value={money(plan.monthly)}
+            tone={plan.monthly > 0 ? C.green : C.red}
+            sub={policy === 'ladder' ? 'down the ranking' : 'its share of the surplus'} />
+          <Stat label="Lands" value={done ? 'Reached' : coveredNow ? 'Now' : monthLabel(plan.eta)}
+            tone={plan.onTime === false ? C.red : plan.onTime ? C.green : C.ink1}
+            sub={g.deadline
+              ? `wanted by ${monthLabel(g.deadline.slice(0, 7))}`
+              : 'no deadline set'} />
+        </div>
+      </div>
+
+      {/* The verdict, in a sentence */}
+      <div style={{ ...card, background: done || coveredNow ? '#E9F3EC' : plan.onTime === false || plan.eta === null ? '#FBEAEA' : C.accentBg,
+        border: `1px solid ${done || coveredNow ? '#BFDCC8' : plan.onTime === false || plan.eta === null ? '#EFCECE' : C.accentBr}` }}>
+        <div style={{ fontSize: 13.5, color: C.ink1, lineHeight: 1.6 }}>
+          {done
+            ? 'This one is there. Anything ranked below it now gets what it was taking.'
+            : coveredNow
+            ? `There is enough spare today to finish this outright — ${money(plan.remaining)} of the ${money(plan.lump + 0)} it can draw on. Nothing has to be waited for.`
+            : plan.eta === null
+              ? policy === 'ladder'
+                ? `Nothing is reaching this goal. ${surplus <= 0 ? 'A normal month leaves nothing over at all.' : 'Everything a month leaves over is going to the goals ranked above it — move it up, or give the ones above it a deadline so they stop taking more than they need.'}`
+                : 'Nothing is reaching this goal — a normal month leaves nothing over.'
+              : plan.onTime === false
+                ? `At ${money(plan.monthly)} a month this lands in ${monthLabel(plan.eta)}, after the ${monthLabel(g.deadline!.slice(0, 7))} you wanted. It needs ${money(plan.required ?? 0)} a month to be on time — ${money(shortfall)} more than it is getting.`
+                : g.deadline
+                  ? `On track. ${money(plan.required ?? 0)} a month gets there by ${monthLabel(g.deadline.slice(0, 7))}, and it is getting ${money(plan.monthly)}.`
+                  : `At ${money(plan.monthly)} a month this lands in ${monthLabel(plan.eta)}. Give it a date if it has to be sooner.`}
+        </div>
+      </div>
+
+      {/* What can be changed about it */}
+      <div style={card}>
+        <span style={EYEBROW}>The goal itself</span>
+        <div style={{ display: 'flex', gap: 12, marginTop: 10, flexWrap: 'wrap' }}>
+          <span style={{ flex: 1, minWidth: 150, display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <span style={{ ...EYEBROW, fontSize: 9.5 }}>Target</span>
+            <MoneyInput value={target} min={0} onChange={setTarget}
+              style={{ ...FIELD, fontFamily: DISPLAY, fontWeight: 600 }} />
+          </span>
+          <span style={{ flex: 1, minWidth: 150, display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <span style={{ ...EYEBROW, fontSize: 9.5 }}>Saved so far</span>
+            <MoneyInput value={saved} min={0} onChange={setSaved}
+              style={{ ...FIELD, fontFamily: DISPLAY, fontWeight: 600 }} />
+          </span>
+          <span style={{ flex: 1, minWidth: 150, display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <span style={{ ...EYEBROW, fontSize: 9.5 }}>By</span>
+            <input type="date" value={g.deadline ?? ''} min={todayISO()}
+              onChange={e => onChange({ ...g, deadline: e.target.value || undefined, sub: e.target.value ? `by ${e.target.value}` : 'no deadline' })}
+              style={{ ...FIELD, fontFamily: DISPLAY }} />
+          </span>
+          <span style={{ display: 'flex', alignItems: 'flex-end' }}>
+            <button
+              onClick={() => onChange({ ...g, targetAmount: target, currentAmount: saved })}
+              disabled={target === g.targetAmount && saved === g.currentAmount}
+              style={{
+                height: 38, paddingInline: 16, borderRadius: 10, display: 'inline-flex',
+                alignItems: 'center', gap: 7, fontFamily: 'inherit', fontSize: 13, fontWeight: 600,
+                cursor: target === g.targetAmount && saved === g.currentAmount ? 'default' : 'pointer',
+                background: target === g.targetAmount && saved === g.currentAmount ? '#EDE7D9' : C.ink1,
+                border: `1px solid ${target === g.targetAmount && saved === g.currentAmount ? C.border : C.ink1}`,
+                color: target === g.targetAmount && saved === g.currentAmount ? C.ink4 : '#FDF8E7',
+              }}>
+              <Check size={14} /> Save
+            </button>
+          </span>
+        </div>
+        {g.deadline && !done && (
+          <div style={{ fontSize: 11.5, color: C.ink3, marginTop: 10 }}>
+            {monthsUntil(g.deadline)} month{monthsUntil(g.deadline) === 1 ? '' : 's'} to go.
+          </div>
+        )}
       </div>
     </div>
   )

@@ -85,4 +85,13 @@ export interface Goal {
   currentAmount: number
   color: string
   sub: string
+  /** Where this goal sits in the queue. 0 is first. Money is allocated in this
+   *  order, so a rank is a decision about what gets funded when there is not
+   *  enough for everything. */
+  rank?: number
+  /** The day it has to be there by, if there is one. Without it a goal simply
+   *  takes as long as it takes. */
+  deadline?: string
+  /** What it is counted in. Everything else converts into the base. */
+  currency?: Currency
 }
