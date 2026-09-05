@@ -4,6 +4,7 @@ import type { Transaction, Account, Category, Currency } from '../types'
 import { MoneyInput } from '../components/MoneyInput'
 import { rememberPayee } from '../payees'
 import { acct } from '../format'
+import { todayISO, shiftDaysISO } from '../dates'
 import {
   INK, MUTED, GHOST, LINE, HAIR, OLIVE, RUST, DISPLAY,
   PILL, ROUND, PillPicker, categoryOptions,
@@ -61,11 +62,7 @@ function step(iso: string, every: Exclude<Interval, ''>, n: number): string {
   return `${target.getFullYear()}-${String(target.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
 }
 
-function shiftDays(iso: string, days: number): string {
-  const d = new Date(`${iso}T12:00:00`)
-  d.setDate(d.getDate() + days)
-  return d.toISOString().slice(0, 10)
-}
+const shiftDays = shiftDaysISO
 
 /** Every date one line stands for. No interval means the line is what it looks
  *  like: one entry, on its start date. */
@@ -106,7 +103,7 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
   onSave: (txs: Transaction[]) => void
   onClose: () => void
 }) {
-  const today = new Date().toISOString().slice(0, 10)
+  const today = todayISO()
 
   const [kind, setKind]           = useState<'expense' | 'income'>('expense')
   const [accountId, setAccountId] = useState(accounts[0]?.id ?? '')

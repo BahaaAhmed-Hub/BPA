@@ -2,6 +2,7 @@ import type { Task } from '@/types'
 import type { Category } from './types'
 import { loadRules, monthlyAmount, activeIn, type BudgetRule } from './modals/BudgetRuleModal'
 import { group } from './format'
+import { isoDate, shiftDaysISO } from './dates'
 
 // ─── Money that has to be paid on a day ──────────────────────────────────────
 // A budget says how much a category gets in a month. It says nothing about the
@@ -53,17 +54,14 @@ function onDay(year: number, monthIndex: number, day: number): string {
 }
 
 function minusDays(iso: string, days: number): string {
-  if (!days) return iso
-  const d = new Date(`${iso}T12:00:00`)
-  d.setDate(d.getDate() - days)
-  return d.toISOString().slice(0, 10)
+  return days ? shiftDaysISO(iso, -days) : iso
 }
 
 /** The months a reminder still owes a task for: this one and the next few,
  *  skipping any whose day has already gone by. */
 export function dueDatesFor(rule: MoneyReminder, from = new Date()): { monthKey: string; date: string }[] {
   const out: { monthKey: string; date: string }[] = []
-  const today = from.toISOString().slice(0, 10)
+  const today = isoDate(from)
   for (let n = 0; n < Math.max(1, Math.min(12, rule.monthsAhead)); n++) {
     const d = new Date(from.getFullYear(), from.getMonth() + n, 1)
     const due = minusDays(onDay(d.getFullYear(), d.getMonth(), rule.day), rule.leadDays)
@@ -128,7 +126,7 @@ export function runReminders(
   const rules = loadReminders()
   const budgets = loadRules()
   const made = madeKeys()
-  const today = now.toISOString().slice(0, 10)
+  const today = isoDate(now)
   let createdCount = 0, movedCount = 0, droppedCount = 0
 
   const byMarker = new Map<string, Task>()

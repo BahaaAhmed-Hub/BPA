@@ -9,6 +9,7 @@ import { findDuplicates } from '../duplicates'
 import { DuplicateMark } from '../components/DuplicateMark'
 import { TransactionModal } from '../modals/TransactionModal'
 import type { Transaction } from '../types'
+import { todayISO } from '../dates'
 
 // ─── 16F · Financials YTD ─────────────────────────────────────────────────────
 // Spreadsheet-style table: each income/expense category as a row,
@@ -381,7 +382,7 @@ export function ReflectionScreen(_props?: any) {
 
   const addDate = useMemo(() => {
     if (!drill) return undefined
-    const today = new Date().toISOString().slice(0, 10)
+    const today = todayISO()
     if (drill.month === null) return today.startsWith(String(year)) ? today : `${year}-01-01`
     const prefix = `${year}-${String(drill.month + 1).padStart(2, '0')}`
     return today.startsWith(prefix) ? today : `${prefix}-01`

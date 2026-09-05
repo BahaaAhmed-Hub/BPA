@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase'
 import type { Account, Category, Transaction, Bill, Goal, Budget } from './types'
 import { rememberLimit, withLocalLimits } from './creditLimits'
 import { rememberTarget, forgetTarget, withLocalTargets } from './transferTargets'
+import { todayISO as todayISO_ } from './dates'
 
 /** One backfill at a time, however many loads are in flight — and a note of
  *  which rows have been given a payment date, so a load that lands before the
@@ -246,7 +247,7 @@ export const useFinanceStore = create<FinanceState>()(
             createdAt: r.created_at,
           }))
 
-          const todayISO = new Date().toISOString().slice(0, 10)
+          const todayISO = todayISO_()
           let backfilled = false
           try { backfilled = localStorage.getItem('finance-paidat-backfill') === '1' } catch { /* private mode */ }
 

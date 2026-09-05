@@ -8,6 +8,7 @@ import { acct, group } from '../format'
 import { toBase, baseCurrency, currenciesNeedingRates } from '../fx'
 import { findDuplicates } from '../duplicates'
 import { DuplicateMark } from '../components/DuplicateMark'
+import { isoDate } from '../dates'
 
 // ── Palette ───────────────────────────────────────────────────────────────────
 
@@ -88,7 +89,7 @@ function MoneyCalendar({
   onNextMonth: () => void
 }) {
   const today = new Date()
-  const todayStr = today.toISOString().slice(0, 10)
+  const todayStr = isoDate(today)
 
   // The week runs Saturday-first here, but getDay() counts from Sunday, so the
   // first of the month landed one column early and every date sat under the
@@ -243,7 +244,7 @@ function MoneyCalendar({
 export function TodayScreen() {
   const { transactions, categories, accounts, upsertTransaction, removeTransaction } = useFinanceStore()
   const today      = new Date()
-  const todayStr   = today.toISOString().slice(0, 10)
+  const todayStr   = isoDate(today)
 
   const [viewYear,  setViewYear]  = useState(today.getFullYear())
   const [viewMonth, setViewMonth] = useState(today.getMonth())

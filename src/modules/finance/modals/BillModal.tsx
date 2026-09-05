@@ -4,6 +4,7 @@ import { IconPicker } from '../components/IconPicker'
 import { POSITIVE, NEGATIVE } from '../../../lib/moneyColors'
 import { MoneyInput } from '../components/MoneyInput'
 import { glyphAsText } from '../components/CategoryGlyph'
+import { todayISO } from '../dates'
 
 const RED   = NEGATIVE
 const GREEN = POSITIVE
@@ -21,7 +22,7 @@ interface Props {
 export function BillModal({ bill, categories, accounts, onSave, onDelete, onClose }: Props) {
   const isEdit = !!bill
 
-  const todayStr = new Date().toISOString().slice(0, 10)
+  const todayStr = todayISO()
 
   const [name,       setName]       = useState(bill?.name       ?? '')
   const [icon,       setIcon]       = useState(bill?.icon       ?? '🔁')

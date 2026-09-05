@@ -20,6 +20,7 @@ import { CategoryGlyph } from '../components/CategoryGlyph'
 import { findDuplicates } from '../duplicates'
 import { DuplicateMark } from '../components/DuplicateMark'
 import { liveBalances } from '../balances'
+import { todayISO as todayISO_, monthStartISO, monthEndISO } from '../dates'
 
 // ─── Pill ─────────────────────────────────────────────────────────────────────
 
@@ -330,10 +331,9 @@ export function BalanceScreen() {
   // Sorted transactions desc
   // The pill above this list used to be two hardcoded dates with nothing behind
   // them, so it could read "1 Jun – 30 Jun" over a list of September entries.
-  const todayISO   = new Date().toISOString().slice(0, 10)
-  const monthStart = `${todayISO.slice(0, 7)}-01`
-  const monthEnd   = new Date(Number(todayISO.slice(0, 4)), Number(todayISO.slice(5, 7)), 0)
-    .toISOString().slice(0, 10)
+  const todayISO   = todayISO_()
+  const monthStart = monthStartISO()
+  const monthEnd   = monthEndISO()
   const [rangeFrom, setRangeFrom] = useState(monthStart)
   const [rangeTo,   setRangeTo]   = useState(monthEnd)
 
@@ -349,10 +349,19 @@ export function BalanceScreen() {
   const touches = (tx: Transaction) =>
     !focusId || tx.accountId === focusId || tx.toAccountId === focusId
 
+  const inRange = (tx: Transaction) =>
+    (!rangeFrom || tx.date >= rangeFrom) && (!rangeTo || tx.date <= rangeTo)
+
   const sorted = [...transactions]
-    .filter(tx => (!rangeFrom || tx.date >= rangeFrom) && (!rangeTo || tx.date <= rangeTo))
+    .filter(inRange)
     .filter(touches)
     .sort((a, b) => b.date.localeCompare(a.date))
+
+  // A balance covers everything ever filed against an account; the feed covers
+  // a range. A card owing a great deal beside a feed showing one entry is those
+  // two facts, not a missing entry — so say how many the range is holding back.
+  const onFocused = focusId ? transactions.filter(touches).length : 0
+  const hiddenByRange = onFocused - sorted.length
 
   // Held vs owed computations for net position card
   const totalHeld = inBase(accounts.filter(a => balanceOf(a) > 0))
@@ -571,6 +580,18 @@ export function BalanceScreen() {
                   display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                   width: 18, height: 18, borderRadius: '50%', background: 'rgba(25,23,18,0.08)',
                 }}><X size={11} /></span>
+              </button>
+            )}
+            {focused && hiddenByRange > 0 && (
+              <button
+                onClick={() => { setRangeFrom(''); setRangeTo('') }}
+                title={`Show all ${onFocused} entries on ${focused.name}`}
+                style={{
+                  height: 34, padding: '0 11px', borderRadius: 10, cursor: 'pointer',
+                  background: 'transparent', border: '1px dashed #DCD3BF', color: '#6C6553',
+                  fontFamily: 'inherit', fontSize: 11.5, fontWeight: 500, whiteSpace: 'nowrap',
+                }}>
+                {hiddenByRange} more outside this range
               </button>
             )}
           </div>

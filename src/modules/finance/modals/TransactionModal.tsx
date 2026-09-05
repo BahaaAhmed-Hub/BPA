@@ -8,6 +8,7 @@ import { knownPayees, matchPayees, rememberPayee } from '../payees'
 import { MoneyInput } from '../components/MoneyInput'
 import { liveBalances } from '../balances'
 import { acct } from '../format'
+import { todayISO } from '../dates'
 import {
   INK, MUTED, GHOST, LINE, OLIVE, RUST, AMBER, DISPLAY,
   PILL, ROUND, LABEL, ROW, RULE, PillPicker, categoryOptions,
@@ -42,7 +43,7 @@ const TYPES: { id: TxType; label: string }[] = [
 
 export function TransactionModal({ transaction, accounts, categories, history = [], initial, onSave, onDelete, onClose }: Props) {
   const isEdit = !!transaction
-  const todayStr = new Date().toISOString().slice(0, 10)
+  const todayStr = todayISO()
 
   const [type,        setType]        = useState<TxType>(transaction?.type        ?? initial?.type ?? 'expense')
   const [amountStr,   setAmountStr]   = useState(String(transaction?.amount ?? initial?.amount ?? ''))
