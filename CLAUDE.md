@@ -91,6 +91,13 @@ Three rules any change here must keep:
   propagation (the row's own click hides it) and passes the exact id set the figure
   used — a hidden part is out of both. The panel deletes and edits through the store,
   so the table behind it recalculates.
+- **Rows are reordered by dragging them.** The grip at the right of the name column
+  moves a row among *its own siblings* — the top-level rows of one section, or the
+  parts of one category — and the set it may be dropped into is fixed when it is
+  picked up. Pointer events, not HTML5 drag: `dragstart` never fires for a finger,
+  and this table is reordered on an iPad. The drop writes positions (`sortOrder`
+  0..n) for the whole sibling list, and `justDragged` swallows the click that would
+  otherwise hide the row it landed on.
 - **Exchange rates are a setting.** Settings → Finance owns them; screens that find
   unconvertible money say so and link there.
 

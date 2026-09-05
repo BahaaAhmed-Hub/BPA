@@ -1,5 +1,5 @@
-import { useState, useMemo, useEffect, useCallback, Fragment } from 'react'
-import { ChevronDown, ChevronRight, ChevronsUpDown, ChevronsDownUp, ChevronUp, X, Trash2, Plus } from 'lucide-react'
+import { useState, useMemo, useEffect, useCallback, useRef, Fragment } from 'react'
+import { ChevronDown, ChevronRight, ChevronsUpDown, ChevronsDownUp, GripVertical, X, Trash2, Plus } from 'lucide-react'
 import { useFinanceStore } from '../financeStore'
 import type { Category } from '../types'
 import { CategoryGlyph } from '../components/CategoryGlyph'
@@ -43,27 +43,33 @@ interface Row extends Line { children: Line[] }
  *  sections drew this twice, with the same markup and slightly different
  *  colours, which is how the income rows kept a stray element the expense ones
  *  did not. */
-/** Two quiet chevrons that move a row past its neighbour. Kept always present
- *  rather than shown on hover: on a tablet there is no hover to show them with. */
-function MoveRow({ onUp, onDown, canUp, canDown }: {
-  onUp: () => void; onDown: () => void; canUp: boolean; canDown: boolean
-}) {
-  const btn = (on: boolean): React.CSSProperties => ({
-    width: 14, height: 11, padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-    background: 'none', border: 'none', borderRadius: 3,
-    color: on ? '#B0A488' : '#EAE4D4', cursor: on ? 'pointer' : 'default',
-  })
+/** The order every screen reads a category list in. */
+const byOrder = (a: Category, b: Category) =>
+  (a.sortOrder ?? 0) - (b.sortOrder ?? 0) || a.name.localeCompare(b.name)
+
+/** The handle a row is dragged by.
+ *
+ *  Pointer events rather than HTML5 drag-and-drop: this table is reordered on
+ *  a tablet as often as on a desktop, and `dragstart` never fires for a
+ *  finger. `touchAction: none` is what stops the drag from scrolling the page
+ *  instead. */
+function Grip({ onGrab, lifted }: { onGrab: (e: React.PointerEvent) => void; lifted: boolean }) {
   return (
-    <span style={{ display: 'inline-flex', flexDirection: 'column', flexShrink: 0, marginLeft: 2 }}>
-      <button disabled={!canUp} onClick={e => { e.stopPropagation(); onUp() }}
-        title="Move up" style={btn(canUp)}><ChevronUp size={11} strokeWidth={2.4} /></button>
-      <button disabled={!canDown} onClick={e => { e.stopPropagation(); onDown() }}
-        title="Move down" style={btn(canDown)}><ChevronDown size={11} strokeWidth={2.4} /></button>
+    <span
+      onPointerDown={onGrab}
+      onClick={e => e.stopPropagation()}
+      title="Drag to reorder"
+      style={{
+        display: 'inline-flex', flexShrink: 0, marginLeft: 3, padding: '3px 0',
+        color: lifted ? '#191712' : '#CFC7B2',
+        cursor: lifted ? 'grabbing' : 'grab', touchAction: 'none',
+      }}>
+      <GripVertical size={13} strokeWidth={2} />
     </span>
   )
 }
 
-function CategoryRows({ row, tone, open, hidden, onToggleOpen, onToggleHide, onDrill, onMove, position, months, ROW_H, numCell, fmt }: {
+function CategoryRows({ row, tone, open, hidden, onToggleOpen, onToggleHide, onDrill, onGrab, regRow, dragId, overId, months, ROW_H, numCell, fmt }: {
   row: Row
   tone: string
   open: boolean
@@ -72,16 +78,24 @@ function CategoryRows({ row, tone, open, hidden, onToggleOpen, onToggleHide, onD
   onToggleHide: (id: string) => void
   /** A figure is a set of entries. `month` is null for the year column. */
   onDrill: (ids: string[], label: string, month: number | null) => void
-  /** Past the neighbour above or below, among this row's own siblings. */
-  onMove: (cat: Category, dir: -1 | 1) => void
-  /** Where this row sits among its siblings, so the ends know to stop. */
-  position: { first: boolean; last: boolean }
+  /** Picks a row up. It can only be put down among its own siblings. */
+  onGrab: (cat: Category) => (e: React.PointerEvent) => void
+  /** Lends the row's element out, so a drag can tell what it is over. */
+  regRow: (id: string) => (el: HTMLTableRowElement | null) => void
+  /** The row being carried, and the row it is currently over. */
+  dragId: string | null
+  overId: string | null
   months: number[]
   ROW_H: number
   numCell: (v: number, isNet?: boolean) => React.CSSProperties
   fmt: (v: number) => string
 }) {
   const isHidden = hidden(row.cat.id)
+  const lifted  = dragId === row.cat.id
+  const isOver  = overId === row.cat.id && !lifted
+  // A dragged-over row is tinted, and the tint has to reach the sticky name
+  // cell too — it paints its own background over whatever the row has.
+  const bg = isOver ? '#FBF1D2' : isHidden ? '#FAF7EC' : '#FFFFFF'
   const total = months.reduce((s, v) => s + v, 0)
   const kids = row.children
   // A hidden part is taken out of the parent's figure, so it has to be out of
@@ -108,11 +122,16 @@ function CategoryRows({ row, tone, open, hidden, onToggleOpen, onToggleHide, onD
   return (
     <>
       <tr
+        ref={regRow(row.cat.id)}
         onClick={() => onToggleHide(row.cat.id)}
         title={isHidden ? 'Click to include in totals' : 'Click to hide from totals'}
-        style={{ borderBottom: '1px solid #F0EBDC', cursor: 'pointer', background: isHidden ? '#FAF7EC' : 'transparent', opacity: isHidden ? 0.45 : 1 }}
+        style={{
+          borderBottom: '1px solid #F0EBDC', cursor: 'pointer',
+          background: isOver ? '#FBF1D2' : isHidden ? '#FAF7EC' : 'transparent',
+          opacity: lifted ? 0.4 : isHidden ? 0.45 : 1,
+        }}
       >
-        <td style={{ padding: '0 14px', height: ROW_H, position: 'sticky', left: 0, background: isHidden ? '#FAF7EC' : '#FFFFFF', zIndex: 2 }}>
+        <td style={{ padding: '0 14px', height: ROW_H, position: 'sticky', left: 0, background: bg, zIndex: 2 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
             {/* The arrow opens the row; it must not also hide it. */}
             {kids.length > 0 ? (
@@ -135,10 +154,7 @@ function CategoryRows({ row, tone, open, hidden, onToggleOpen, onToggleHide, onD
               <span style={{ fontSize: 10, color: '#C5BCA8' }}>+{kids.length}</span>
             )}
             <span style={{ flex: 1 }} />
-            <MoveRow
-              canUp={!position.first} canDown={!position.last}
-              onUp={() => onMove(row.cat as Category, -1)}
-              onDown={() => onMove(row.cat as Category, 1)} />
+            <Grip lifted={lifted} onGrab={onGrab(row.cat as Category)} />
           </div>
         </td>
         {months.map((v, mi) => (
@@ -148,16 +164,23 @@ function CategoryRows({ row, tone, open, hidden, onToggleOpen, onToggleHide, onD
           { ...numCell(total), fontWeight: 700, color: total === 0 ? '#C5BCA8' : tone })}
       </tr>
 
-      {open && kids.map((kid, ki) => {
+      {open && kids.map(kid => {
         const kidHidden = hidden(kid.cat.id) || isHidden
+        const kidLifted = dragId === kid.cat.id
+        const kidOver   = overId === kid.cat.id && !kidLifted
+        const kidBg = kidOver ? '#FBF1D2' : kidHidden ? '#FAF7EC' : '#FDFCF7'
         const kidTotal = kid.amounts.reduce((s, v) => s + v, 0)
         return (
           <tr key={kid.cat.id}
+            ref={regRow(kid.cat.id)}
             onClick={() => onToggleHide(kid.cat.id)}
             title={hidden(kid.cat.id) ? 'Click to include in totals' : 'Click to hide from totals'}
-            style={{ borderBottom: '1px solid #F5F1E6', cursor: 'pointer', background: kidHidden ? '#FAF7EC' : '#FDFCF7', opacity: kidHidden ? 0.45 : 1 }}
+            style={{
+              borderBottom: '1px solid #F5F1E6', cursor: 'pointer', background: kidBg,
+              opacity: kidLifted ? 0.4 : kidHidden ? 0.45 : 1,
+            }}
           >
-            <td style={{ padding: '0 14px', height: ROW_H - 4, position: 'sticky', left: 0, background: kidHidden ? '#FAF7EC' : '#FDFCF7', zIndex: 2 }}>
+            <td style={{ padding: '0 14px', height: ROW_H - 4, position: 'sticky', left: 0, background: kidBg, zIndex: 2 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 7, paddingLeft: 23 }}>
                 <span style={{ width: 8, height: 1, background: '#DCD3BF', flexShrink: 0 }} />
                 <span style={{ display: 'inline-flex', color: kid.cat.color }}><CategoryGlyph icon={kid.cat.icon} size={11} /></span>
@@ -165,10 +188,7 @@ function CategoryRows({ row, tone, open, hidden, onToggleOpen, onToggleHide, onD
                   {kid.cat.name}
                 </span>
                 <span style={{ flex: 1 }} />
-                <MoveRow
-                  canUp={ki > 0} canDown={ki < kids.length - 1}
-                  onUp={() => onMove(kid.cat as Category, -1)}
-                  onDown={() => onMove(kid.cat as Category, 1)} />
+                <Grip lifted={kidLifted} onGrab={onGrab(kid.cat as Category)} />
               </div>
             </td>
             {kid.amounts.map((v, mi) => (
@@ -274,9 +294,6 @@ export function ReflectionScreen(_props?: any) {
       })
     }
 
-    const byOrder = (a: Category, b: Category) =>
-      (a.sortOrder ?? 0) - (b.sortOrder ?? 0) || a.name.localeCompare(b.name)
-
     function buildRows(kind: 'income' | 'expense') {
       return categories
         .filter(c => !c.parentId && wants(c, kind))
@@ -306,33 +323,100 @@ export function ReflectionScreen(_props?: any) {
     return { incomeRows, expenseRows, monthlyIncome, monthlyExpense }
   }, [transactions, categories, year, base, fxTick, filedIn])
 
-  /** Swap a row with the one above or below it, among its own siblings: the
-   *  top-level rows of one section, or the parts of one category. Only the two
-   *  that swapped are written, and the order they end up in is the order every
-   *  other screen reads them in. */
-  function moveRow(cat: Category, dir: -1 | 1, kind: 'income' | 'expense') {
-    const siblings = (cat.parentId
+  // ─── Dragging a row into place ──────────────────────────────────────────
+  // A row moves among its own siblings and nowhere else: the top-level rows of
+  // one section, or the parts of one category. The set it may be dropped into
+  // is worked out when it is picked up, so a parent can never land inside
+  // somebody else's sub-categories however far the pointer wanders.
+  const rowEls = useRef(new Map<string, HTMLTableRowElement>())
+  const [drag, setDrag] = useState<{ id: string; scope: string[]; over: string | null } | null>(null)
+  // A drag ends in a click on whatever was under the finger. That click would
+  // otherwise hide the row it landed on.
+  const justDragged = useRef(false)
+
+  const regRow = useCallback((id: string) => (el: HTMLTableRowElement | null) => {
+    if (el) rowEls.current.set(id, el)
+    else rowEls.current.delete(id)
+  }, [])
+
+  const grab = useCallback((kind: 'income' | 'expense') => (cat: Category) => (e: React.PointerEvent) => {
+    // Without this the row underneath takes the press as a click, and the
+    // browser starts selecting text across the table as the pointer moves.
+    e.preventDefault()
+    e.stopPropagation()
+    const scope = (cat.parentId
       ? categories.filter(c => c.parentId === cat.parentId)
       : categories.filter(c => !c.parentId && (c.txType === kind || c.txType === 'both'))
-    ).slice().sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0) || a.name.localeCompare(b.name))
+    ).slice().sort(byOrder).map(c => c.id)
+    setDrag({ id: cat.id, scope, over: null })
+  }, [categories])
 
-    const i = siblings.findIndex(c => c.id === cat.id)
-    const j = i + dir
-    if (i < 0 || j < 0 || j >= siblings.length) return
+  useEffect(() => {
+    if (!drag) return
 
-    // Written back as positions rather than whatever numbers were there, so a
-    // list where everything shares one sort order still comes out in an order.
-    const reordered = siblings.slice()
-    ;[reordered[i], reordered[j]] = [reordered[j], reordered[i]]
-    reordered.forEach((c, n) => {
-      if (c.sortOrder === n) return
-      void upsertCategory({ ...c, sortOrder: n })
-    })
-  }
+    /** What a row occupies on screen. An open parent stands over its parts as
+     *  well, so dragging across an expanded neighbour still points at it. */
+    const spanOf = (id: string): { top: number; bottom: number } | null => {
+      const el = rowEls.current.get(id)
+      if (!el) return null
+      const r = el.getBoundingClientRect()
+      let bottom = r.bottom
+      for (const kid of categories.filter(c => c.parentId === id)) {
+        const k = rowEls.current.get(kid.id)
+        if (k) bottom = Math.max(bottom, k.getBoundingClientRect().bottom)
+      }
+      return { top: r.top, bottom }
+    }
+
+    const move = (e: PointerEvent) => {
+      let over: string | null = null
+      for (const id of drag.scope) {
+        const span = spanOf(id)
+        if (span && e.clientY >= span.top && e.clientY <= span.bottom) { over = id; break }
+      }
+      setDrag(d => (d && d.over !== over ? { ...d, over } : d))
+    }
+
+    const up = () => {
+      const { id, over, scope } = drag
+      if (over && over !== id) {
+        const from = scope.indexOf(id)
+        const to   = scope.indexOf(over)
+        if (from >= 0 && to >= 0) {
+          const next = scope.slice()
+          next.splice(to, 0, next.splice(from, 1)[0])
+          // Written back as positions rather than whatever numbers were there,
+          // so a list where everything shares one sort order still comes out
+          // in an order. Only what actually moved is written.
+          next.forEach((cid, n) => {
+            const c = categories.find(x => x.id === cid)
+            if (!c || c.sortOrder === n) return
+            void upsertCategory({ ...c, sortOrder: n })
+          })
+        }
+      }
+      justDragged.current = true
+      setTimeout(() => { justDragged.current = false }, 0)
+      setDrag(null)
+    }
+
+    const prevSelect = document.body.style.userSelect
+    document.body.style.userSelect = 'none'
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up)
+    window.addEventListener('pointercancel', up)
+    return () => {
+      document.body.style.userSelect = prevSelect
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', up)
+      window.removeEventListener('pointercancel', up)
+    }
+  }, [drag, categories, upsertCategory])
 
   // Hidden rows (by category id) — toggling removes row from totals
   const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set())
   function toggleHide(id: string) {
+    if (justDragged.current) return
     setHiddenIds(prev => {
       const next = new Set(prev)
       next.has(id) ? next.delete(id) : next.add(id)
@@ -609,10 +693,10 @@ export function ReflectionScreen(_props?: any) {
               monthTotals={monthlyIncome} rowTotal={monthlyIncome.reduce((s, v) => s + v, 0)}
               onDrill={(label, month) => openDrill(null, label, month, 'income')} />
 
-            {incomeRows.map((row, ri) => (
+            {incomeRows.map(row => (
               <CategoryRows key={row.cat.id} row={row} tone={OLIVE}
-                onMove={(c, d) => moveRow(c, d, 'income')}
-                position={{ first: ri === 0, last: ri === incomeRows.length - 1 }}
+                onGrab={grab('income')} regRow={regRow}
+                dragId={drag?.id ?? null} overId={drag?.over ?? null}
                 open={openIds.has(row.cat.id)} hidden={id => hiddenIds.has(id)}
                 onToggleOpen={toggleOpen} onToggleHide={toggleHide}
                 months={rowMonths(row)} ROW_H={ROW_H} numCell={numCell} fmt={fmt}
@@ -631,10 +715,10 @@ export function ReflectionScreen(_props?: any) {
               monthTotals={monthlyExpense} rowTotal={monthlyExpense.reduce((s, v) => s + v, 0)} out
               onDrill={(label, month) => openDrill(null, label, month, 'expense')} />
 
-            {expenseRows.map((row, ri) => (
+            {expenseRows.map(row => (
               <CategoryRows key={row.cat.id} row={row} tone={RUST}
-                onMove={(c, d) => moveRow(c, d, 'expense')}
-                position={{ first: ri === 0, last: ri === expenseRows.length - 1 }}
+                onGrab={grab('expense')} regRow={regRow}
+                dragId={drag?.id ?? null} overId={drag?.over ?? null}
                 open={openIds.has(row.cat.id)} hidden={id => hiddenIds.has(id)}
                 onToggleOpen={toggleOpen} onToggleHide={toggleHide}
                 months={rowMonths(row)} ROW_H={ROW_H} numCell={numCell} fmt={fmtOut}
