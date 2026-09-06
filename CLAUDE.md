@@ -242,7 +242,13 @@ an overspend cannot run past its own pill. The title says which limit it used.
   the three locally until the migration runs; the server's value wins.
 
 ## Finance — money reminders
-`reminders.ts` turns "this category, this day of the month" into tasks. The task goes
+`reminders.ts` turns "this category, this day of the month" into tasks. A budget
+can carry that day itself (`BudgetRule.dueDay` + `dueLeadDays`, the **Paid on** row):
+`remindersFromBudgets()` turns those into the same `MoneyReminder` shape, keyed
+`budget:<categoryId>`, so one machine makes, moves and drops every task. A
+hand-made reminder for the same category wins — two tasks for one bill is worse
+than either. `putRules` fires `professor:moneyRemindersChanged` so the board keeps
+up without waiting for the next load. The task goes
 into the **schedule** quadrant with a `dueDate`, which is what `TaskCommand` already
 pushes to Google Calendar — nothing here knows about calendars.
 - Each task carries `links: ['money-reminder:<ruleId>:<monthKey>']`, so a rule finds

@@ -37,6 +37,13 @@ export interface BudgetRule {
    *  app, so it is also which transactions the envelope counts. */
   currency?: string
   fixedType: 'fixed' | 'flexible'
+  /** The day of the month the money actually has to move, 1–31, where there is
+   *  one. A budget says how much a category gets; this says when. A month too
+   *  short for the day takes its last day rather than skipping. Absent means
+   *  the budget is a monthly allowance with no particular day to it. */
+  dueDay?: number
+  /** Days before that day to be reminded. 0 is the day itself. */
+  dueLeadDays?: number
 }
 
 export const FREQ_OPTS: { v: Frequency; label: string; per: number }[] = [
@@ -60,6 +67,14 @@ export function loadRules(): Record<string, BudgetRule> {
     const parsed = JSON.parse(localStorage.getItem('finance-budget-rules') ?? '{}') as unknown
     return parsed && typeof parsed === 'object' ? (parsed as Record<string, BudgetRule>) : {}
   } catch { return {} }
+}
+
+/** 1st, 2nd, 3rd, 21st … — a day of the month reads as a day, not a number.
+ *  The teens are the exception every naive version gets wrong. */
+export function ordinal(n: number): string {
+  const teen = n % 100
+  if (teen >= 11 && teen <= 13) return `${n}th`
+  return `${n}${['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'}`
 }
 
 export function defaultRule(): BudgetRule {
@@ -466,6 +481,57 @@ export function BudgetRuleModal({
               })}
             </span>
           </div>
+
+          {/* When the money actually has to move. A budget on its own is an
+              allowance for the month; a rent is a day. */}
+          <div style={ROW}>
+            <span style={LABEL}>Paid on</span>
+            <span style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 7 }}>
+              <label style={{ ...PILL, flex: 1, position: 'relative', justifyContent: 'center' }}
+                title="The day of the month it leaves. A month too short for it takes its last day.">
+                <span style={{ color: rule.dueDay ? INK : GHOST }}>
+                  {rule.dueDay ? `the ${ordinal(rule.dueDay)}` : 'no fixed day'}
+                </span>
+                <select
+                  value={rule.dueDay ?? ''}
+                  onChange={e => onChange({
+                    ...rule,
+                    dueDay: e.target.value ? Number(e.target.value) : undefined,
+                    dueLeadDays: e.target.value ? (rule.dueLeadDays ?? 0) : undefined,
+                  })}
+                  style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', border: 'none' }}>
+                  <option value="">no fixed day</option>
+                  {Array.from({ length: 31 }, (_, i) => i + 1).map(d => (
+                    <option key={d} value={d}>the {ordinal(d)}</option>
+                  ))}
+                </select>
+              </label>
+              {rule.dueDay != null && (
+                <>
+                  <span style={{ fontSize: 11.5, color: GHOST, flexShrink: 0 }}>remind</span>
+                  <label style={{ ...PILL, flex: 1, position: 'relative', justifyContent: 'center' }}
+                    title="How far ahead the task lands on the board">
+                    {(rule.dueLeadDays ?? 0) === 0 ? 'on the day' : `${rule.dueLeadDays} day${rule.dueLeadDays === 1 ? '' : 's'} before`}
+                    <select value={rule.dueLeadDays ?? 0}
+                      onChange={e => onChange({ ...rule, dueLeadDays: Number(e.target.value) })}
+                      style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', border: 'none' }}>
+                      {[0, 1, 2, 3, 5, 7, 14].map(n => (
+                        <option key={n} value={n}>{n === 0 ? 'on the day' : `${n} day${n === 1 ? '' : 's'} before`}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <button onClick={() => onChange({ ...rule, dueDay: undefined, dueLeadDays: undefined })}
+                    title="No particular day" style={{ ...ROUND, width: 26, height: 26 }}><X size={12} /></button>
+                </>
+              )}
+            </span>
+          </div>
+          {rule.dueDay != null && (
+            <div style={{ fontSize: 11, color: MUTED, lineHeight: 1.5, margin: '-2px 0 8px' }}>
+              A task lands on the board — and on your calendar — for that day, every
+              month this budget runs.
+            </div>
+          )}
 
           <div style={ROW}>
             <span style={LABEL}>Runs</span>

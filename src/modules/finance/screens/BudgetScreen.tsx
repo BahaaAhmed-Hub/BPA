@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
+import { CalendarClock } from 'lucide-react'
 import {
   DndContext, pointerWithin, PointerSensor, TouchSensor, useSensor, useSensors,
   useDraggable, useDroppable, DragOverlay, type DragEndEvent, type DragStartEvent,
@@ -10,7 +11,7 @@ import { suggestIcon, isPlaceholderIcon, isLucideIcon } from '../categoryIcons'
 import { toBase, rateFor, currenciesNeedingRates } from '../fx'
 import { useUIStore } from '@/store/uiStore'
 import {
-  BudgetRuleModal, defaultRule, monthlyAmount, activeIn, type BudgetRule,
+  BudgetRuleModal, defaultRule, monthlyAmount, activeIn, ordinal, type BudgetRule,
 } from '../modals/BudgetRuleModal'
 import type { Category, Transaction } from '../types'
 import { acct } from '../format'
@@ -129,9 +130,11 @@ interface EnvelopeRow {
   currencies: string[]
 }
 
-function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty, dragging }: {
+function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty, dragging, rules }: {
   title: string
   rows: EnvelopeRow[]
+  /** Only for the day a budget carries; everything else is on the row. */
+  rules: Record<string, BudgetRule>
   color: string
   selectedId: string | null
   onPick: (id: string) => void
@@ -183,6 +186,9 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
             // Not `over`: the drop zone's render prop is called that, and this
             // one would quietly lose to it inside the ring.
             const spentOut = planned > 0 && actual > planned
+            // A budget with a day on it is a bill: say which day, under the
+            // figure, where the eye already is.
+            const dueDay = rules[cat.id]?.dueDay
             const on   = selectedId === cat.id
             // The badge says what this envelope is kept in when that is not
             // the usual thing, and otherwise names money here that no rate
@@ -198,7 +204,7 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
                 title={`${cat.name} — ${money(actual, cur)}${
                   planned > 0
                     ? ` of ${money(planned, cur)}${plannedFrom === 'parts' ? ', added up from its sub-categories' : ''}`
-                    : ' · no budget set'}`}
+                    : ' · no budget set'}${dueDay ? ` · paid on the ${ordinal(dueDay)}` : ''}`}
                 style={{
                   width: 104, padding: '8px 2px 6px', borderRadius: 12,
                   background: over ? 'rgba(12,129,64,0.16)' : on ? 'rgba(245,209,78,0.20)' : 'transparent',
@@ -248,6 +254,16 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
                       fontSize: 9.5, whiteSpace: 'nowrap',
                     }}>set a budget</span>
                   )}
+                  {dueDay != null && (
+                    <span
+                      title={`The money leaves on the ${ordinal(dueDay)}. A task is on the board for it.`}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 3, marginTop: 2,
+                        fontSize: 9.5, color: '#8A6D0B', whiteSpace: 'nowrap',
+                      }}>
+                      <CalendarClock size={9} strokeWidth={2.2} /> the {ordinal(dueDay)}
+                    </span>
+                  )}
                 </span>
               </button>
                 )}
@@ -272,11 +288,14 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
                 const filled = Math.max(0, Math.min(1, subPct))
                 const subOver = limit > 0 && subActual > limit
                 const spent = subActual > 0
+                // No room for a chip on a 104px pill, so the day it is paid
+                // on is in the title with everything else about it.
+                const subDue = rules[sub.id]?.dueDay
                 return (
                 <Draggable key={sub.id} id={sub.id}>
                   {() => (
                     <button onClick={() => onPick(sub.id)}
-                      title={`${sub.name} — inside ${cat.name}${subBudgeted ? '' : ', with no budget of its own'}. ${
+                      title={`${sub.name} — inside ${cat.name}${subBudgeted ? '' : ', with no budget of its own'}${subDue ? `, paid on the ${ordinal(subDue)}` : ''}. ${
                         spent
                           ? `${money(subActual, cur)} spent this month${
                               limit > 0
@@ -428,17 +447,23 @@ export function BudgetScreen(_props?: any) {
   const [rules, setRules] = useState<Record<string, BudgetRule>>(() => {
     try { return JSON.parse(localStorage.getItem('finance-budget-rules') ?? '{}') } catch { return {} }
   })
+  /** A budget can carry the day its money moves, and that day makes a task.
+   *  Saying so here is what brings the board in line without waiting for the
+   *  next load or the twelve-hour sweep. */
+  function putRules(next: Record<string, BudgetRule>) {
+    setRules(next)
+    localStorage.setItem('finance-budget-rules', JSON.stringify(next))
+    window.dispatchEvent(new Event('professor:moneyRemindersChanged'))
+  }
+
   function deleteRule(catId: string) {
     const next = { ...rules }
     delete next[catId]
-    setRules(next)
-    localStorage.setItem('finance-budget-rules', JSON.stringify(next))
+    putRules(next)
   }
 
   function saveRule(catId: string, rule: BudgetRule) {
-    const next = { ...rules, [catId]: rule }
-    setRules(next)
-    localStorage.setItem('finance-budget-rules', JSON.stringify(next))
+    putRules({ ...rules, [catId]: rule })
   }
 
   // Nothing selected to begin with: the point of the screen is the month as a
@@ -839,10 +864,12 @@ export function BudgetScreen(_props?: any) {
             <EnvelopeGroup
               title="Spending" rows={envelopes.spending} color={RUST}
               selectedId={selectedId} onPick={pickCategory} currency={currency} dragging={dragging}
+              rules={rules}
               empty="No spending categories yet — add one and its envelope appears here." />
             <EnvelopeGroup
               title="Earning" rows={envelopes.earning} color={OLIVE}
               selectedId={selectedId} onPick={pickCategory} currency={currency} dragging={dragging}
+              rules={rules}
               empty="No income categories yet." />
             </div>
             <DragOverlay dropAnimation={null}>
