@@ -51,6 +51,8 @@ export interface GCalEventCreate {
     }
   }
   reminders?: { useDefault: boolean; overrides?: { method: string; minutes: number }[] }
+  /** RRULE lines. Carried when a repeating event is copied to another account. */
+  recurrence?: string[]
 }
 
 export interface GCalError {

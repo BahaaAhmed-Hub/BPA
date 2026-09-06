@@ -25,6 +25,8 @@ import {
   efUpdateEvent,
   moveCalendarEventWithToken,
   efMoveEvent,
+  efCreateEvent,
+  efDeleteEvent,
 } from '@/lib/googleCalendar'
 import type { GCalEvent, GCalCalendar, GCalEventCreate } from '@/lib/googleCalendar'
 import { getGoogleToken, seedToken, getGoogleTokenViaSupabaseRefresh } from '@/lib/tokenManager'
@@ -1145,12 +1147,13 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
   const where = whereTarget(location)
   const attendees = event.attendees ?? []
   const recurrence = describeRecurrence(event.recurrence, startDate)
-  // Only this event's own account: Google moves an event between calendars,
-  // not between accounts, so offering the rest is offering a dead end.
+  // Every writable calendar, across every account. A calendar on another
+  // account is reachable — it just costs the event its identity, which is what
+  // the confirm is for — so it says whose it is rather than being left out.
   const evAccount = (calendars ?? []).find(c => c.id === event.calendarId)?.accountEmail
-  const writable = (calendars ?? []).filter(c =>
-    (c.accessRole === 'owner' || c.accessRole === 'writer') &&
-    (evAccount === undefined || c.accountEmail === evAccount))
+  const writable = (calendars ?? []).filter(c => c.accessRole === 'owner' || c.accessRole === 'writer')
+  const calLabel = (c: CalWithAccount) =>
+    `${c.summaryOverride ?? c.summary}${c.accountEmail && c.accountEmail !== evAccount ? ` — ${c.accountEmail}` : ''}`
   const [moveError, setMoveError] = useState<string | null>(null)
   const liveClashes = (clashes ?? []).filter(c => c.id !== event.id)
 
@@ -1271,7 +1274,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
               }}
               style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', border: 'none' }}>
               {writable.length === 0 && <option value={event.calendarId ?? ''}>{calName}</option>}
-              {writable.map(c => <option key={c.id} value={c.id}>{c.summaryOverride ?? c.summary}</option>)}
+              {writable.map(c => <option key={c.id} value={c.id}>{calLabel(c)}</option>)}
             </select>
           )}
         </span>
@@ -2585,39 +2588,108 @@ export function CalendarIntelligence() {
 
   /** Move an event to another calendar, and say so when it cannot.
    *
-   *  Two things made this quietly do nothing. A connected account's token is
-   *  never in the browser — every other write to one goes through the edge
-   *  function, and this did not, so it asked for a token it could not have and
-   *  gave up. And Google's move is within one account: a destination on
-   *  another account is a 404 whatever the token. Both returned false, nobody
-   *  looked at the false, and the picker snapped back with nothing said. */
+   *  Within one account Google has a /move endpoint: the event keeps its id and
+   *  its guest list, and nothing is sent to anybody. Between two accounts there
+   *  is no such thing — an event belongs to the account that owns it — so the
+   *  only way across is to write it again on the far side and delete the
+   *  original. That is a different event afterwards, which is why it asks
+   *  first.
+   *
+   *  A connected account's token is never in the browser, so each half uses
+   *  whichever route that account has: the edge function, or the primary
+   *  account's own token. */
   async function handleMoveEvent(ev: GCalEventExt, targetCalId: string): Promise<string | null> {
     const srcCal  = allCalendars.find(c => c.id === ev.calendarId)
     const destCal = allCalendars.find(c => c.id === targetCalId)
     if (!srcCal || !destCal || !ev.calendarId) return 'That calendar is not available'
     if (targetCalId === ev.calendarId) return null
-    if ((srcCal.accountEmail ?? '') !== (destCal.accountEmail ?? '')) {
-      return `An event can only move between calendars on the same account (${srcCal.accountEmail ?? 'this one'})`
+
+    const sameAccount = (srcCal.accountEmail ?? '') === (destCal.accountEmail ?? '')
+
+    if (sameAccount) {
+      let moved: GCalEvent | null = null
+      let failure: string | null = null
+      if (srcCal.accountId) {
+        const result = await efMoveEvent(srcCal.accountId, ev.calendarId, ev.id, targetCalId)
+        moved = result.event
+        failure = result.error ?? null
+      } else {
+        const token = await refreshPrimaryToken() || srcCal.accountToken
+        if (!token) return 'Google needs reconnecting before this can move'
+        moved = await moveCalendarEventWithToken(token, ev.calendarId, ev.id, targetCalId)
+        if (!moved) failure = 'Google would not move it'
+      }
+      if (!moved) return failure ?? 'Google would not move it'
+
+      const update = { calendarId: targetCalId, calendarColor: destCal.backgroundColor }
+      setEvents(prev => prev.map(e => e.id === ev.id ? { ...e, ...update } : e))
+      setSelectedEvent(prev => prev?.id === ev.id ? { ...prev, ...update } as GCalEventExt : prev)
+      return null
     }
 
-    let moved: GCalEvent | null = null
-    let failure: string | null = null
+    // ── Across accounts: write it again, then take the old one away ──────────
+    const isSeriesPart = !!ev.recurringEventId && !ev.recurrence?.length
+    const warning = [
+      `Move "${ev.summary || 'this event'}" from ${srcCal.accountEmail} to ${destCal.accountEmail}?`,
+      '',
+      'Google cannot move an event between accounts, so it will be written again',
+      `on ${destCal.summaryOverride ?? destCal.summary} and the original deleted. It becomes a new event:`,
+      `${destCal.accountEmail} organises it, and anything pointing at the old one`,
+      'stops pointing anywhere.',
+      ev.attendees?.length ? `Its ${ev.attendees.length} guest${ev.attendees.length === 1 ? '' : 's'} come across, but their replies do not.` : '',
+      isSeriesPart ? 'This is one occurrence of a repeating event — the copy will be a one-off.' : '',
+    ].filter(Boolean).join('\n')
+    if (!window.confirm(warning)) return null
+
+    const payload: GCalEventCreate = {
+      summary:     ev.summary ?? '(no title)',
+      description: ev.description,
+      location:    ev.location,
+      start:       ev.start,
+      end:         ev.end,
+      attendees:   ev.attendees?.map(a => ({ email: a.email })),
+      reminders:   ev.reminders,
+      // The rule travels with the master; a single occurrence has none, and
+      // becomes what it already looks like — one event.
+      recurrence:  ev.recurrence,
+    }
+
+    let created: GCalEvent | null = null
+    let createError: string | null = null
+    if (destCal.accountId) {
+      const r = await efCreateEvent(destCal.accountId, targetCalId, payload)
+      created = r.event; createError = r.error ?? null
+    } else {
+      const token = await refreshPrimaryToken() || destCal.accountToken
+      if (!token) return `${destCal.accountEmail} needs reconnecting before anything can be written to it`
+      const r = await createCalendarEventWithToken(token, targetCalId, payload)
+      created = r.event; createError = r.error ?? null
+    }
+    if (!created) {
+      return `Could not write it to ${destCal.summaryOverride ?? destCal.summary}${createError ? ` — ${createError}` : ''}. Nothing was changed.`
+    }
+
+    let deleted = false
     if (srcCal.accountId) {
-      const result = await efMoveEvent(srcCal.accountId, ev.calendarId, ev.id, targetCalId)
-      moved = result.event
-      failure = result.error ?? null
+      deleted = await efDeleteEvent(srcCal.accountId, ev.calendarId, ev.id)
     } else {
       const token = await refreshPrimaryToken() || srcCal.accountToken
-      if (!token) return 'Google needs reconnecting before this can move'
-      moved = await moveCalendarEventWithToken(token, ev.calendarId, ev.id, targetCalId)
-      if (!moved) failure = 'Google would not move it'
+      deleted = token ? await deleteCalendarEventWithToken(token, ev.calendarId, ev.id) : false
     }
-    if (!moved) return failure ?? 'Google would not move it'
 
-    const update = { calendarId: targetCalId, calendarColor: destCal.backgroundColor }
-    setEvents(prev => prev.map(e => e.id === ev.id ? { ...e, ...update } : e))
-    setSelectedEvent(prev => prev?.id === ev.id ? { ...prev, ...update } as GCalEventExt : prev)
-    return null
+    // The copy exists either way, so the screen has to show it either way —
+    // the only question left is whether the original went with it.
+    const moved: GCalEventExt = {
+      ...(created as GCalEvent),
+      calendarId: targetCalId,
+      calendarColor: destCal.backgroundColor,
+    } as GCalEventExt
+    setEvents(prev => [...prev.filter(e => e.id !== ev.id && e.id !== moved.id), moved])
+    setSelectedEvent(prev => (prev?.id === ev.id ? moved : prev))
+
+    return deleted
+      ? null
+      : `Copied to ${destCal.summaryOverride ?? destCal.summary}, but the original could not be deleted — it is still on ${srcCal.summaryOverride ?? srcCal.summary}.`
   }
 
   async function handleUpdateEvent(ev: GCalEventExt, patch: Partial<GCalEventCreate>): Promise<GCalEvent | null> {

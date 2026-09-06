@@ -58,8 +58,13 @@ its guest list. Two rules it has to respect, both of which used to fail silently
 - **A connected account's token is never in the browser** — every write to one goes
   through the `google-calendar-write` edge function, `move_event` included
   (`efMoveEvent`). The primary account still uses its own token.
-- **Google moves an event between calendars, not between accounts.** The picker
-  offers only calendars on the event's own account, and says so if asked otherwise.
+- **Google moves an event between calendars, not between accounts.** Within one
+  account it is `/move`; across two the event is written again on the far side and
+  the original deleted, behind a confirm naming what that costs (a new id, a new
+  organiser, guests carried but not their replies, one occurrence of a series
+  becoming a one-off). Each half uses whichever route its own account has. If the
+  write fails nothing is deleted; if the delete fails the panel says both copies
+  exist. The picker labels a calendar with its account when it is not this one's.
 `onMoveCalendar` resolves to `null` on success or to *why not*, and the panel shows
 it — the old boolean was discarded and the picker just snapped back.
 
