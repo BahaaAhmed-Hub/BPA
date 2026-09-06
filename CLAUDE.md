@@ -213,6 +213,15 @@ figure is added to something denominated differently:
   *both* ends, so it shows for the account it came from and the one it went to. The
   pencil opens the editor — one gesture each.
 
+## Finance — a sub-category pill fills as it is spent
+`BudgetScreen` gives each child pill a fill behind its label, the way the ring
+above it works. `byChild` in the envelope build keeps each part's spend apart
+(converted into the envelope's currency, so it compares with the budget written
+beside it). The denominator is the part's **own** budget where it has one, and the
+**envelope's** otherwise — that is the limit its spending actually comes out of.
+Amber under, red over, nothing at all where nothing was spent; capped at 100% so
+an overspend cannot run past its own pill. The title says which limit it used.
+
 ## Finance — goals are planned, not wished
 `goalPlan.ts` turns a target and a date into a plan out of the ledger already there.
 - **`capacityFrom(accounts, txs, bufferMonths)`** answers what there is: `held` (live

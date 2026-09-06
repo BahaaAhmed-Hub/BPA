@@ -125,7 +125,7 @@ interface EnvelopeRow {
   /** Converted into the base currency, or null when there is no rate. */
   actualBase: number | null
   plannedBase: number | null
-  children: { cat: Category; planned: number; budgeted: boolean }[]
+  children: { cat: Category; planned: number; budgeted: boolean; actual: number; inEnvelope: number | null; cur: string }[]
   currencies: string[]
 }
 
@@ -257,27 +257,60 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
 
               {/* Its children, so the shape is visible and each one can be
                   dragged somewhere else — including out. */}
-              {children.map(({ cat: sub, budgeted: subBudgeted }) => (
+              {children.map(({ cat: sub, budgeted: subBudgeted, actual: subActual, inEnvelope: subPlanned }) => {
+                // The pill fills as its money is spent, the way the ring above
+                // it does — a list of names says which parts exist and nothing
+                // about which of them the month has gone into.
+                //
+                // Against its own budget where it has one. Where it has not,
+                // against the envelope it sits in: that is the limit its
+                // spending actually comes out of, and a part with no budget
+                // and no parent budget has nothing to be a fraction of, so it
+                // stays as it was.
+                const limit = subPlanned && subPlanned > 0 ? subPlanned : planned
+                const subPct = limit > 0 ? subActual / limit : 0
+                const filled = Math.max(0, Math.min(1, subPct))
+                const subOver = limit > 0 && subActual > limit
+                const spent = subActual > 0
+                return (
                 <Draggable key={sub.id} id={sub.id}>
                   {() => (
                     <button onClick={() => onPick(sub.id)}
-                      title={`${sub.name} — inside ${cat.name}${subBudgeted ? '' : ', with no budget of its own'}. Click to edit it, or drag it out to stand on its own.`}
+                      title={`${sub.name} — inside ${cat.name}${subBudgeted ? '' : ', with no budget of its own'}. ${
+                        spent
+                          ? `${money(subActual, cur)} spent this month${
+                              limit > 0
+                                ? ` — ${Math.round(subPct * 100)}% of ${money(limit, cur)}${subPlanned && subPlanned > 0 ? '' : ', the envelope it comes out of'}`
+                                : ''}. `
+                          : 'Nothing spent this month. '
+                      }Click to edit it, or drag it out to stand on its own.`}
                       style={{
+                        position: 'relative', overflow: 'hidden',
                         display: 'inline-flex', alignItems: 'center', gap: 5, maxWidth: 104,
                         height: 24, padding: '0 9px', borderRadius: 999, cursor: 'pointer',
                         background: selectedId === sub.id ? 'rgba(245,209,78,0.28)' : subBudgeted ? '#F4EFE1' : 'transparent',
                         // Same idea as the rings above: solid means a budget,
                         // broken means nothing has been set.
                         border: subBudgeted ? '1px solid #E4DCC6' : '1px dashed #DCD3BF',
-                        color: subBudgeted ? '#4A4438' : '#9B9180',
+                        color: subBudgeted || spent ? '#4A4438' : '#9B9180',
                         fontSize: 11, boxSizing: 'border-box', fontFamily: 'inherit',
                       }}>
-                      <span style={{ display: 'flex', flexShrink: 0 }}><CategoryGlyph icon={sub.icon} size={12} /></span>
-                      <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sub.name}</span>
+                      {/* Behind the label, never over it. */}
+                      {filled > 0 && (
+                        <span aria-hidden style={{
+                          position: 'absolute', left: 0, top: 0, bottom: 0,
+                          width: `${filled * 100}%`, borderRadius: 999,
+                          background: subOver ? 'rgba(198,40,40,0.22)' : 'rgba(245,209,78,0.42)',
+                          pointerEvents: 'none',
+                        }} />
+                      )}
+                      <span style={{ position: 'relative', display: 'flex', flexShrink: 0 }}><CategoryGlyph icon={sub.icon} size={12} /></span>
+                      <span style={{ position: 'relative', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sub.name}</span>
                     </button>
                   )}
                 </Draggable>
-              ))}
+                )
+              })}
               </span>
             )
           })}
@@ -480,6 +513,9 @@ export function BudgetScreen(_props?: any) {
       // rest — so a salary paid in dollars landed in no envelope, no group
       // total and no summary line anywhere.
       let base = 0
+      // What each part has spent, kept apart so a sub-category can show its
+      // own filling rather than only counting towards its parent's.
+      const byChild = new Map<string, number>()
       const currencies = new Set<string>()
       // An envelope holds what has been spent out of it. A bill that is only
       // due has taken nothing out of it yet.
@@ -489,7 +525,10 @@ export function BudgetScreen(_props?: any) {
         if (!whenPaid(tx).startsWith(monthKey)) continue
         const v = toBase(Math.abs(tx.amount), tx.currency, currency)
         if (v === null) currencies.add(tx.currency)   // no rate — say so, never guess
-        else base += v
+        else {
+          base += v
+          if (tx.categoryId !== cat.id) byChild.set(tx.categoryId, (byChild.get(tx.categoryId) ?? 0) + v)
+        }
       }
       // ...and back into whatever this envelope is kept in, which is what its
       // budget is written in and therefore what it must be compared against.
@@ -518,6 +557,9 @@ export function BudgetScreen(_props?: any) {
            *  there is no rate to get it there. */
           inEnvelope: inBase === null || rate === null ? null : inBase / rate,
           budgeted: own > 0,
+          /** Spent under this part alone, in the envelope's currency, so it
+           *  can be compared with the budget written beside it. */
+          actual: rate === null ? 0 : (byChild.get(child.id) ?? 0) / rate,
         }
       })
       const fromParts = children.reduce((n, c) => n + (c.inEnvelope ?? 0), 0)
