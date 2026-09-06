@@ -24,6 +24,7 @@ import {
   addMeetingToEvent,
   efUpdateEvent,
   moveCalendarEventWithToken,
+  efMoveEvent,
 } from '@/lib/googleCalendar'
 import type { GCalEvent, GCalCalendar, GCalEventCreate } from '@/lib/googleCalendar'
 import { getGoogleToken, seedToken, getGoogleTokenViaSupabaseRefresh } from '@/lib/tokenManager'
@@ -1070,7 +1071,8 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
   onSave?: (patch: Partial<GCalEventCreate>) => Promise<GCalEvent | null>
   onDelete?: () => void
   calendars?: CalWithAccount[]
-  onMoveCalendar?: (targetCalId: string) => Promise<boolean>
+  /** Resolves to null when the move happened, or to why it did not. */
+  onMoveCalendar?: (targetCalId: string) => Promise<string | null>
   /** Events on the same day that overlap this one. */
   clashes?: GCalEventExt[]
   onOpenEvent?: (e: GCalEventExt) => void
@@ -1143,7 +1145,13 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
   const where = whereTarget(location)
   const attendees = event.attendees ?? []
   const recurrence = describeRecurrence(event.recurrence, startDate)
-  const writable = (calendars ?? []).filter(c => c.accessRole === 'owner' || c.accessRole === 'writer')
+  // Only this event's own account: Google moves an event between calendars,
+  // not between accounts, so offering the rest is offering a dead end.
+  const evAccount = (calendars ?? []).find(c => c.id === event.calendarId)?.accountEmail
+  const writable = (calendars ?? []).filter(c =>
+    (c.accessRole === 'owner' || c.accessRole === 'writer') &&
+    (evAccount === undefined || c.accountEmail === evAccount))
+  const [moveError, setMoveError] = useState<string | null>(null)
   const liveClashes = (clashes ?? []).filter(c => c.id !== event.id)
 
   /** Every edit writes straight through — no Save button to forget. */
@@ -1256,7 +1264,11 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
           {onMoveCalendar && (
             <select
               value={event.calendarId ?? ''}
-              onChange={e => { void onMoveCalendar(e.target.value) }}
+              onChange={async e => {
+                setMoveError(null)
+                const why = await onMoveCalendar(e.target.value)
+                if (why) setMoveError(why)
+              }}
               style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', border: 'none' }}>
               {writable.length === 0 && <option value={event.calendarId ?? ''}>{calName}</option>}
               {writable.map(c => <option key={c.id} value={c.id}>{c.summaryOverride ?? c.summary}</option>)}
@@ -1298,6 +1310,19 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
 
         <button onClick={onClose} title="Close" style={{ ...EV_ROUND, width: 34, height: 34 }}><X size={15} /></button>
       </div>
+
+      {/* A move that did not happen used to say nothing at all — the picker
+          simply snapped back to the calendar it was already on. */}
+      {moveError && (
+        <div style={{
+          display: 'flex', alignItems: 'flex-start', gap: 7, marginTop: 8,
+          padding: '8px 11px', borderRadius: 10, fontSize: 12, lineHeight: 1.45,
+          background: '#FBEAEA', border: '1px solid #EFCECE', color: '#8E2222',
+        }}>
+          <AlertCircle size={13} style={{ flexShrink: 0, marginTop: 1 }} />
+          <span style={{ minWidth: 0 }}>{moveError}</span>
+        </div>
+      )}
 
       {/* ── Title ────────────────────────────────────────────────────────── */}
       {/* The title is the heading of the panel, not a form field, so it has no
@@ -2558,21 +2583,41 @@ export function CalendarIntelligence() {
     }
   }
 
-  async function handleMoveEvent(ev: GCalEventExt, targetCalId: string): Promise<boolean> {
+  /** Move an event to another calendar, and say so when it cannot.
+   *
+   *  Two things made this quietly do nothing. A connected account's token is
+   *  never in the browser — every other write to one goes through the edge
+   *  function, and this did not, so it asked for a token it could not have and
+   *  gave up. And Google's move is within one account: a destination on
+   *  another account is a 404 whatever the token. Both returned false, nobody
+   *  looked at the false, and the picker snapped back with nothing said. */
+  async function handleMoveEvent(ev: GCalEventExt, targetCalId: string): Promise<string | null> {
     const srcCal  = allCalendars.find(c => c.id === ev.calendarId)
     const destCal = allCalendars.find(c => c.id === targetCalId)
-    if (!srcCal || !destCal || !ev.calendarId) return false
-    const token = srcCal.accountId
-      ? await getGoogleToken(srcCal.accountEmail)
-      : (await refreshPrimaryToken() || srcCal.accountToken)
-    if (!token) return false
-    const moved = await moveCalendarEventWithToken(token, ev.calendarId, ev.id, targetCalId)
-    if (moved) {
-      const update = { calendarId: targetCalId, calendarColor: destCal.backgroundColor }
-      setEvents(prev => prev.map(e => e.id === ev.id ? { ...e, ...update } : e))
-      setSelectedEvent(prev => prev?.id === ev.id ? { ...prev, ...update } as GCalEventExt : prev)
+    if (!srcCal || !destCal || !ev.calendarId) return 'That calendar is not available'
+    if (targetCalId === ev.calendarId) return null
+    if ((srcCal.accountEmail ?? '') !== (destCal.accountEmail ?? '')) {
+      return `An event can only move between calendars on the same account (${srcCal.accountEmail ?? 'this one'})`
     }
-    return !!moved
+
+    let moved: GCalEvent | null = null
+    let failure: string | null = null
+    if (srcCal.accountId) {
+      const result = await efMoveEvent(srcCal.accountId, ev.calendarId, ev.id, targetCalId)
+      moved = result.event
+      failure = result.error ?? null
+    } else {
+      const token = await refreshPrimaryToken() || srcCal.accountToken
+      if (!token) return 'Google needs reconnecting before this can move'
+      moved = await moveCalendarEventWithToken(token, ev.calendarId, ev.id, targetCalId)
+      if (!moved) failure = 'Google would not move it'
+    }
+    if (!moved) return failure ?? 'Google would not move it'
+
+    const update = { calendarId: targetCalId, calendarColor: destCal.backgroundColor }
+    setEvents(prev => prev.map(e => e.id === ev.id ? { ...e, ...update } : e))
+    setSelectedEvent(prev => prev?.id === ev.id ? { ...prev, ...update } as GCalEventExt : prev)
+    return null
   }
 
   async function handleUpdateEvent(ev: GCalEventExt, patch: Partial<GCalEventCreate>): Promise<GCalEvent | null> {

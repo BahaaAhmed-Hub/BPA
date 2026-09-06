@@ -630,6 +630,29 @@ export async function moveCalendarEventWithToken(
 // browser. Use accountId (from google_accounts.id) instead of a raw token.
 
 /**
+ * Move an event to another calendar on the same account, via the edge function.
+ * The token for a connected account never reaches the browser, so a move on one
+ * has to go the same way every other write to it does.
+ */
+export async function efMoveEvent(
+  accountId: string,
+  calendarId: string,
+  eventId: string,
+  destination: string,
+): Promise<{ event: GCalEvent | null; error?: string }> {
+  const { data, error } = await supabase.functions.invoke('google-calendar-write', {
+    body: { action: 'move_event', account_id: accountId, calendar_id: calendarId, event_id: eventId, destination },
+  })
+  if (error) return { event: null, error: error.message }
+  if (data?.error === 'reconnect_required') {
+    window.dispatchEvent(new CustomEvent('cal:reconnect-required', { detail: { accountId } }))
+    return { event: null, error: 'This account needs reconnecting' }
+  }
+  if (data?.error) return { event: null, error: String(data.error) }
+  return { event: (data?.event ?? null) as GCalEvent | null }
+}
+
+/**
  * Create an event via the google-calendar-write edge function.
  */
 export async function efCreateEvent(

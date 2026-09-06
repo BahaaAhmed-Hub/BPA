@@ -165,6 +165,7 @@ serve(async (req: Request) => {
       case 'update_event': return await handleUpdate(token, calendarId, body)
       case 'delete_event': return await handleDelete(token, calendarId, body)
       case 'add_meet':     return await handleAddMeet(token, calendarId, body)
+      case 'move_event':   return await handleMove(token, calendarId, body)
       default:             return fail(`Unknown action: ${action}`)
     }
   } catch (e) {
@@ -223,6 +224,26 @@ async function handleDelete(token: string, calendarId: string, body: Record<stri
   if (res.status === 404) return ok({ deleted: true }) // Already gone — treat as success
   const data = await res.json().catch(() => ({}))
   return fail(data?.error?.message ?? 'Google API error', res.status)
+}
+
+/** Move an event to another calendar on the same account. Google keeps the id
+ *  and the guest list; recreating it elsewhere would not. */
+async function handleMove(token: string, calendarId: string, body: Record<string, unknown>) {
+  const eventId     = body.event_id    as string | undefined
+  const destination = body.destination as string | undefined
+  if (!eventId)     return fail('Missing event_id')
+  if (!destination) return fail('Missing destination')
+
+  const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}`
+    + `/events/${encodeURIComponent(eventId)}/move?destination=${encodeURIComponent(destination)}`
+  const res = await fetchWithRetry(url, {
+    method:  'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  })
+
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) return fail(data?.error?.message ?? 'Google API error', res.status)
+  return ok({ event: data })
 }
 
 async function handleAddMeet(token: string, calendarId: string, body: Record<string, unknown>) {

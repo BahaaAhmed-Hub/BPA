@@ -52,6 +52,17 @@ Three rules any change here must keep:
 - **Push the hydration merge back only when it differs from what the server just sent**,
   or two open devices trade writes forever.
 
+## Calendar — moving an event to another calendar
+`handleMoveEvent` uses Google's `/move` endpoint, which keeps the event's id and
+its guest list. Two rules it has to respect, both of which used to fail silently:
+- **A connected account's token is never in the browser** — every write to one goes
+  through the `google-calendar-write` edge function, `move_event` included
+  (`efMoveEvent`). The primary account still uses its own token.
+- **Google moves an event between calendars, not between accounts.** The picker
+  offers only calendars on the event's own account, and says so if asked otherwise.
+`onMoveCalendar` resolves to `null` on success or to *why not*, and the panel shows
+it — the old boolean was discarded and the picker just snapped back.
+
 ## Calendar — dragging an event
 `CalendarIntelligence.tsx` moves events with dnd-kit and a `DragOverlay`. The
 overlay is what follows the pointer, so the source card must **not** take
