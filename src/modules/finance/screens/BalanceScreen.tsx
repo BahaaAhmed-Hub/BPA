@@ -662,11 +662,21 @@ export function BalanceScreen() {
                       </span>
                       <DuplicateMark scope={dupes.get(tx.id)} />
                     </div>
-                    <div style={{ fontSize: 12, color: C.textDim, marginTop: 1, display: 'flex', gap: 6 }}>
-                      <span>{dateStr}</span>
+                    <div
+                      title={tx.note?.trim() || undefined}
+                      style={{
+                        fontSize: 12, color: C.textDim, marginTop: 1, display: 'flex', gap: 6,
+                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                      }}>
+                      <span style={{ flexShrink: 0 }}>{dateStr}</span>
                       {isMove && from && to
-                        ? <span>· {from.name} → {to.name}</span>
-                        : cat && tx.payee?.trim() ? <span>· {cat.name}</span> : null}
+                        ? <span style={{ flexShrink: 0 }}>· {from.name} → {to.name}</span>
+                        : cat && tx.payee?.trim() ? <span style={{ flexShrink: 0 }}>· {cat.name}</span> : null}
+                      {tx.note?.trim() && (
+                        <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          ({tx.note.trim()})
+                        </span>
+                      )}
                     </div>
                   </div>
                   <Pill

@@ -1087,12 +1087,16 @@ export function BudgetScreen(_props?: any) {
                             <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tx.payee}</span>
                             <DuplicateMark scope={dupes.get(tx.id)} />
                           </div>
-                          <div style={{ fontSize: 10.5, color: '#9B9180', marginTop: 1, display: 'flex', gap: 6 }}>
+                          <div style={{ fontSize: 10.5, color: '#9B9180', marginTop: 1, display: 'flex', gap: 6, minWidth: 0 }}>
                             <span title={isUnpaid(tx) ? `Due ${tx.date}, not paid` : `Paid ${whenPaid(tx)}`}>
                               {new Date(whenPaid(tx) + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                             </span>
                             {subCat && subCat.id !== selectedId && <span>· {subCat.name}</span>}
-                            {tx.note && <span>· {tx.note}</span>}
+                            {tx.note?.trim() && (
+                              <span title={tx.note.trim()} style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                ({tx.note.trim()})
+                              </span>
+                            )}
                           </div>
                         </div>
 

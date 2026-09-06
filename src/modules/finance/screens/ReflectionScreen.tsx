@@ -4,7 +4,7 @@ import { useFinanceStore } from '../financeStore'
 import type { Category } from '../types'
 import { CategoryGlyph } from '../components/CategoryGlyph'
 import { toBase, baseCurrency, currenciesNeedingRates } from '../fx'
-import { acct, outflow } from '../format'
+import { acct, outflow, noted } from '../format'
 import { findDuplicates } from '../duplicates'
 import { DuplicateMark } from '../components/DuplicateMark'
 import { isUnpaid, unpaidRow, UNPAID_TITLE } from '../unpaid'
@@ -854,8 +854,13 @@ export function ReflectionScreen(_props?: any) {
                           </span>
                           <DuplicateMark scope={dupes.get(tx.id)} />
                         </span>
-                        <span style={{ display: 'block', fontSize: 11.5, color: '#9B9180', marginTop: 1 }}>
-                          {tx.date}{cat && tx.payee?.trim() ? ` · ${cat.name}` : ''}
+                        <span
+                          title={tx.note?.trim() || undefined}
+                          style={{
+                            display: 'block', fontSize: 11.5, color: '#9B9180', marginTop: 1,
+                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                          }}>
+                          {tx.date}{cat && tx.payee?.trim() ? ` · ${cat.name}` : ''}{noted(tx.note)}
                         </span>
                       </span>
                       <span style={{

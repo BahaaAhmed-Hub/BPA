@@ -39,6 +39,14 @@ export function outflow(n: number, opts: AcctOpts = {}): string {
   return acct(-Math.abs(n), opts)
 }
 
+/** A note, in brackets, ready to sit at the end of a row's second line — or
+ *  nothing at all where there is no note. The brackets are what make it read
+ *  as an aside rather than as another field: "6 Sep · Cafe (with Omar)". */
+export function noted(note: string | undefined | null): string {
+  const t = (note ?? '').trim()
+  return t ? ` (${t})` : ''
+}
+
 /** Type as many digits as you like; the separators keep up. Returns the
  *  grouped string and where the caret should sit afterwards — reformatting
  *  without this jumps the caret to the end on every keystroke. */

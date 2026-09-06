@@ -328,16 +328,26 @@ export function TodayScreen() {
               </svg>
             )}
           </div>
-          <div style={{ fontSize: 12, color: C.textMuted, marginTop: 2, display: 'flex', gap: 6 }}>
+          <div style={{
+            fontSize: 12, color: C.textMuted, marginTop: 2, display: 'flex', gap: 6,
+            minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>
             {/* The row is filed by the day the money moved, so that is the
                 date it shows. Where the two differ, the due date is on hover. */}
-            <span title={isUnpaid(tx) ? `Due ${tx.date}, not paid` : tx.paidAt && tx.paidAt !== tx.date ? `Due ${tx.date}` : undefined}>
+            <span style={{ flexShrink: 0 }}
+              title={isUnpaid(tx) ? `Due ${tx.date}, not paid` : tx.paidAt && tx.paidAt !== tx.date ? `Due ${tx.date}` : undefined}>
               {whenPaid(tx)}
               {tx.paidAt && tx.paidAt !== tx.date && (
                 <span style={{ color: C.textMuted, opacity: 0.75 }}> · due {tx.date}</span>
               )}
             </span>
-            {cat && tx.payee?.trim() && <span style={{ color: C.textMuted }}>· {cat.name}</span>}
+            {cat && tx.payee?.trim() && <span style={{ color: C.textMuted, flexShrink: 0 }}>· {cat.name}</span>}
+            {/* The note is an aside about the entry, so it reads as one. */}
+            {tx.note?.trim() && (
+              <span title={tx.note.trim()} style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                ({tx.note.trim()})
+              </span>
+            )}
           </div>
         </div>
         <Pill

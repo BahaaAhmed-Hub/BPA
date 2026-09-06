@@ -125,6 +125,10 @@ does the moving. Resizing needs no live transform either: it is worked out from
   filed (and out of every total).
   **Financials is the exception** — its due/paid toggle is exactly this question,
   and "when it is due" is the default.
+- **A note shows on the row, in brackets.** `noted(tx.note)` in `format.ts` renders
+  it as an aside on the second line — "6 Sep · Cafe (with Omar)" — in all four
+  feeds, truncated with the whole thing on hover. Brackets are what stop it reading
+  as another field.
 - **An unpaid entry is in no figure.** `settled(txs)` in `unpaid.ts` drops what has
   no payment date, and every total goes through it: account balances
   (`balances.ts`, which also returns `pending` per account so a row can say what is
