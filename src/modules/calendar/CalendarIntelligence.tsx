@@ -11,7 +11,6 @@ import {
   useDraggable, useDroppable,
   type DragEndEvent, type DragStartEvent,
 } from '@dnd-kit/core'
-import { CSS } from '@dnd-kit/utilities'
 import {
   detectMeetingType,
   listCalendars,
@@ -679,7 +678,13 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
   onClick: (e: React.MouseEvent) => void
   onContextMenu?: (e: React.MouseEvent) => void
 }) {
-  const { attributes, listeners, setNodeRef, isDragging, transform } = useDraggable({
+  // `transform` is deliberately not taken. A DragOverlay is what follows the
+  // pointer here, so translating the card in the grid as well drags two copies
+  // of the same event at once — and an absolutely positioned card being
+  // transformed inside the grid's own scroller tears as it goes, which is the
+  // smear of stripes down the column it leaves behind. The card stays where
+  // the event is, dimmed, and the overlay does the moving.
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: event.id,
     disabled: isDragOverlay,
   })
@@ -756,7 +761,6 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
         // iOS scrolls the grid instead of dragging the event without this.
         touchAction: 'none',
         opacity: isDragSrc ? 0.35 : 1,
-        transform: isDragOverlay ? undefined : CSS.Transform.toString(transform),
         transition: isDragging ? 'none' : 'box-shadow 0.12s, opacity 0.12s',
         boxSizing: 'border-box',
         zIndex: isSelected ? 4 : 2,

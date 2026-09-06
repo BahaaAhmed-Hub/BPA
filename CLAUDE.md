@@ -52,6 +52,16 @@ Three rules any change here must keep:
 - **Push the hydration merge back only when it differs from what the server just sent**,
   or two open devices trade writes forever.
 
+## Calendar — dragging an event
+`CalendarIntelligence.tsx` moves events with dnd-kit and a `DragOverlay`. The
+overlay is what follows the pointer, so the source card must **not** take
+`transform` from `useDraggable`. dnd-kit's transform carries a scale reconciling
+the source's rect with the overlay's fixed 130px box — applied to a card sized in
+percent and pixels it came out as `scaleY(24)`, stretching it into a streak down
+its own column. The card stays where the event is, dimmed to 0.35, and the overlay
+does the moving. Resizing needs no live transform either: it is worked out from
+`delta` in `handleDragEnd`.
+
 ## Finance — how money is written
 `src/modules/finance/format.ts` is the only place that decides this.
 - **Accounting convention.** A negative is bracketed and drops its minus —
