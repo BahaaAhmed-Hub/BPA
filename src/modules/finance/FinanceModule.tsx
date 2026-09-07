@@ -10,6 +10,9 @@ import { GoalsScreen } from './screens/GoalsScreen'
 import { PlanScreen } from './screens/PlanScreen'
 import { TransactionModal } from './modals/TransactionModal'
 import { BulkEntryModal } from './modals/BulkEntryModal'
+import { LockGate } from './FinanceLockScreen'
+import { useFinanceLock } from './useFinanceLock'
+import { lockNow } from './lock'
 
 // ─── Nav icon SVGs ────────────────────────────────────────────────────────────
 
@@ -89,6 +92,15 @@ function IconPlan({ color }: { color: string }) {
   )
 }
 
+function IconLock({ color }: { color: string }) {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="4" y="10.5" width="16" height="10.5" rx="2.5"/>
+      <path d="M8 10.5V7.6a4 4 0 0 1 8 0v2.9"/>
+    </svg>
+  )
+}
+
 function IconPlus({ color }: { color: string }) {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round">
@@ -148,6 +160,11 @@ export function FinanceModule() {
 
   const { accounts, categories, transactions, upsertTransaction, upsertTransactions } = useFinanceStore()
 
+  // Nothing on any of these screens is drawn until it is you. The gate is
+  // rendered *instead of* the module, not over it, so a screenshot of the tab
+  // behind it does not exist to be taken.
+  const { locked, config: lockConfig, unlock, relock } = useFinanceLock()
+
   const [screen, setScreen] = useState<FinanceScreen>(() => {
     const saved = localStorage.getItem('finance-active-screen')
     return (NAV_ITEMS.some(n => n.id === saved) ? saved : 'today') as FinanceScreen
@@ -201,6 +218,8 @@ export function FinanceModule() {
     }
   }
 
+  if (locked) return <LockGate onUnlocked={unlock} />
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', background: C.bg }}>
 
@@ -251,6 +270,21 @@ export function FinanceModule() {
             )
           })}
         </div>
+
+        {/* Put it away now, rather than waiting for the idle clock */}
+        {lockConfig.enabled && (
+          <button
+            onClick={() => { lockNow(); relock() }}
+            title="Lock the finances"
+            style={{
+              height: 30, width: 30, borderRadius: 8, marginRight: 7,
+              background: 'transparent', border: '1px solid #E8E1CE', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+            }}
+          >
+            <IconLock color="#6C6553" />
+          </button>
+        )}
 
         {/* Many at once — the same entry, five or fifty times over */}
         <button

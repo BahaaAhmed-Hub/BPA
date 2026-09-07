@@ -49,11 +49,14 @@ const SHARED_KEYS = [
   'finance-numbers-in-full',
   'finance-round-whole',
   'finance-show-cents',
+  'finance-lock',                // whether the finance pages ask who you are
 ] as const
 
 // Deliberately not synced: tokens and caches (google_provider_token,
 // cal-intel-*-cache), and which view you happened to leave open on this
 // device (cal-view, task-view-mode, settings-active-section, professor-ui).
+// Nor `finance-lock-device` — a passkey belongs to one device's secure
+// element, and its id is meaningless on any other.
 
 const FIELD = 'shared_prefs'
 

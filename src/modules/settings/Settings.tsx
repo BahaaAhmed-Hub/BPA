@@ -11,6 +11,12 @@ import {
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { paidAtSupported } from '../finance/unpaid'
+import {
+  biometricsAvailable, biometricName, deviceLabel, forgetPasskey, hashPassword,
+  isLocked, loadLock, loadPasskey, markActive, registerPasskey, saveLock,
+  RELOCK_CHOICES, type DevicePasskey, type LockConfig, type Relock,
+} from '@/modules/finance/lock'
+import { LockGate } from '@/modules/finance/FinanceLockScreen'
 import { connectAdditionalGoogleAccount, signOut as googleSignOut, disconnectGoogleAccount } from '@/lib/google'
 import { useUIStore } from '@/store/uiStore'
 import { useAuthStore } from '@/store/authStore'
@@ -2330,6 +2336,174 @@ function BehavioralSection() {
 
 type EnvelopeStyle = 'dial' | 'mosaic' | 'slip' | 'ring'
 
+// ─── Settings → Finance → Security ───────────────────────────────────────────
+//
+// The lock itself lives in `finance/lock.ts`; this is where it is turned on.
+// Two rules shape the whole block:
+//
+//   * A password is required before the lock can be turned on. A passkey is
+//     held by one device's secure element and cannot travel — turn the lock on
+//     with only a fingerprint and the next device you sign in on has a locked
+//     finance module and no way in.
+//   * These controls are themselves behind the lock. Otherwise the lock is a
+//     toggle anyone holding your open laptop can flip.
+
+function FinanceSecuritySection() {
+  const [cfg, setCfg]         = useState<LockConfig>(loadLock)
+  const [passkey, setPasskey] = useState<DevicePasskey | null>(loadPasskey)
+  const [canBio, setCanBio]   = useState(false)
+  const [open, setOpen]       = useState(() => !isLocked())
+  const [pw1, setPw1]         = useState('')
+  const [pw2, setPw2]         = useState('')
+  const [editing, setEditing] = useState(false)
+  const [note, setNote]       = useState<string | null>(null)
+  const [err, setErr]         = useState<string | null>(null)
+
+  useEffect(() => { void biometricsAvailable().then(setCanBio) }, [])
+
+  function put(next: LockConfig) { setCfg(next); saveLock(next) }
+
+  async function savePassword() {
+    setErr(null); setNote(null)
+    if (pw1.length < 6) { setErr('Six characters at least.'); return }
+    if (pw1 !== pw2)    { setErr('The two do not match.'); return }
+    put({ ...cfg, password: await hashPassword(pw1) })
+    setPw1(''); setPw2(''); setEditing(false)
+    setNote('Password saved.')
+  }
+
+  function toggleLock(on: boolean) {
+    setErr(null); setNote(null)
+    if (on && !cfg.password) { setEditing(true); setErr('Set a password first — it is the way in on a device with no fingerprint.'); return }
+    // Being the one who just turned it on counts as having proved yourself.
+    markActive()
+    put({ ...cfg, enabled: on })
+  }
+
+  async function addPasskey() {
+    setErr(null); setNote(null)
+    try {
+      let name = 'Finance'
+      try { name = localStorage.getItem('professor-display-name') || name } catch { /* noop */ }
+      setPasskey(await registerPasskey(name))
+      setNote(`${deviceLabel()} can now unlock with ${biometricName()}.`)
+    } catch (e) {
+      const n = (e as { name?: string })?.name
+      setErr(n === 'NotAllowedError'
+        ? 'Cancelled, or it timed out.'
+        : 'This browser would not register a passkey. The password still works.')
+    }
+  }
+
+  const pill = {
+    height: 30, padding: '0 12px', borderRadius: 9, cursor: 'pointer',
+    fontFamily: 'inherit', fontSize: 12.5, fontWeight: 600,
+    background: '#FFFFFF', border: '1px solid #E8E1CE', color: '#191712',
+  } as const
+  const solid = { ...pill, background: '#191712', border: '1px solid #191712', color: '#FDF8E7' }
+  const field = {
+    height: 34, width: 180, borderRadius: 9, padding: '0 11px', boxSizing: 'border-box' as const,
+    background: '#FAF7EC', border: '1px solid #E8E1CE',
+    fontFamily: 'inherit', fontSize: 12.5, color: '#191712', outline: 'none',
+  }
+
+  return (
+    <div style={{ gridColumn: '1 / -1', marginTop: 22, paddingTop: 18, borderTop: '1px solid #F0EBDC' }}>
+      <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', color: '#6C6553', display: 'block', marginBottom: 12 }}>SECURITY</span>
+
+      {!open ? (
+        <div style={{ maxWidth: 400 }}>
+          <LockGate
+            compact
+            onUnlocked={() => { markActive(); setOpen(true) }}
+            title="Unlock to change these"
+            note="The lock is on. Prove it is you before turning it off or changing the password."
+          />
+        </div>
+      ) : (
+        <>
+          <p style={{ margin: '0 0 14px', fontSize: 12.5, color: '#6C6553', lineHeight: 1.55, maxWidth: 660 }}>
+            With this on, every finance screen — Today, Balances, Budget, Financials, Goals — asks
+            who you are before it draws anything, and asks again after a stretch of doing nothing.
+            It is a lock on the screen rather than on the data: it stops the person who picks up
+            your open laptop, not somebody with your sign-in.
+          </p>
+
+          <div style={{ maxWidth: 660 }}>
+            <FieldRow label="Lock the finance pages" sub={cfg.enabled ? 'On — a new tab opens locked' : 'Off — anyone at this browser can read them'}>
+              <Toggle checked={cfg.enabled} onChange={toggleLock} />
+            </FieldRow>
+
+            <FieldRow label="Lock again" sub="Measured from the last thing you did anywhere in the app">
+              <select
+                value={String(cfg.relock)}
+                onChange={e => put({ ...cfg, relock: (e.target.value === 'session' ? 'session' : Number(e.target.value)) as Relock })}
+                style={{ ...field, width: 210, cursor: 'pointer' }}
+              >
+                {RELOCK_CHOICES.map(c => (
+                  <option key={String(c.value)} value={String(c.value)}>{c.label}</option>
+                ))}
+              </select>
+            </FieldRow>
+
+            <FieldRow
+              label={`Unlock with ${biometricName()}`}
+              sub={passkey
+                ? `Registered on this ${passkey.label.toLowerCase()} on ${new Date(passkey.addedAt).toLocaleDateString()}`
+                : canBio
+                  ? `Ask this ${deviceLabel().toLowerCase()} to check you, instead of typing`
+                  : 'This browser has no fingerprint, face or passcode unlock to offer'}
+            >
+              {passkey ? (
+                <button style={pill} onClick={() => { forgetPasskey(); setPasskey(null); setNote('Removed. The password still works.') }}>
+                  Remove from this device
+                </button>
+              ) : (
+                <button style={canBio ? solid : { ...pill, color: '#9B9180', cursor: 'default' }}
+                  disabled={!canBio} onClick={() => void addPasskey()}>
+                  Set up on this device
+                </button>
+              )}
+            </FieldRow>
+
+            <FieldRow
+              label="Password"
+              sub={cfg.password ? 'Set. It works on every device you sign in on.' : 'Not set — needed before the lock can be turned on'}
+            >
+              {!editing
+                ? <button style={cfg.password ? pill : solid} onClick={() => { setEditing(true); setErr(null); setNote(null) }}>
+                    {cfg.password ? 'Change' : 'Set a password'}
+                  </button>
+                : (
+                  <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                    <input type="password" autoComplete="new-password" placeholder="New password"
+                      value={pw1} onChange={e => setPw1(e.target.value)} style={field} />
+                    <input type="password" autoComplete="new-password" placeholder="Again"
+                      value={pw2} onChange={e => setPw2(e.target.value)} style={field} />
+                    <button style={solid} onClick={() => void savePassword()}>Save</button>
+                    <button style={pill} onClick={() => { setEditing(false); setPw1(''); setPw2(''); setErr(null) }}>Cancel</button>
+                  </div>
+                )}
+            </FieldRow>
+          </div>
+
+          {(err || note) && (
+            <p style={{ margin: '11px 0 0', fontSize: 12, lineHeight: 1.5, color: err ? '#C62828' : '#0C8140' }}>
+              {err ?? note}
+            </p>
+          )}
+
+          <p style={{ margin: '12px 0 0', fontSize: 11.5, color: '#9B9180', lineHeight: 1.55, maxWidth: 660 }}>
+            The password is stored as a salted hash and never leaves your account. A passkey never
+            leaves the device that made it — each device you use registers its own, and the password
+            is what gets you in on one that has not.
+          </p>
+        </>
+      )}
+    </div>
+  )
+}
+
 function FinanceSection() {
   const [envelopeStyle, setEnvelopeStyle] = useState<EnvelopeStyle>(() => {
     try { return (localStorage.getItem('finance-envelope-style') as EnvelopeStyle) || 'dial' } catch { return 'dial' }
@@ -2668,6 +2842,8 @@ function FinanceSection() {
         </FieldRow>
       </div>
       </div>
+      <FinanceSecuritySection />
+
       <div style={{ gridColumn: '1 / -1', marginTop: 22, paddingTop: 18, borderTop: '1px solid #F0EBDC' }}>
         <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', color: '#6C6553', display: 'block', marginBottom: 12 }}>PAYMENT DATES</span>
         {!paidAtSupported() ? (
