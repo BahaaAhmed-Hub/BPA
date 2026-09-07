@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { paidAtSupported } from '../finance/unpaid'
+import type { EnvelopeStyle as BudgetEnvelopeStyle } from '@/modules/finance/screens/BudgetScreen'
 import {
   biometricsAvailable, biometricName, deviceLabel, forgetPasskey, hashPassword,
   isLocked, loadLock, loadPasskey, markActive, registerPasskey, saveLock,
@@ -2347,7 +2348,8 @@ function BehavioralSection() {
 
 // ─── CHUNK 6c: Finance Settings section ──────────────────────────────────────
 
-type EnvelopeStyle = 'dial' | 'mosaic' | 'slip' | 'ring'
+// The Budget screen is what draws these, so the ids live with it.
+type EnvelopeStyle = BudgetEnvelopeStyle
 
 // ─── Settings → Finance → Security ───────────────────────────────────────────
 //

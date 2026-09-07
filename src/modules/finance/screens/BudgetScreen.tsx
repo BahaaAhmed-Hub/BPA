@@ -34,8 +34,13 @@ const AMBER = '#F5D14E'
 // spent. It reads at a glance in a way a row of bars does not: you see which
 // envelopes are nearly empty without reading a single number.
 
-function Ring({ pct, color, over, budgeted, size = 58, children }: {
-  pct: number; color: string; over?: boolean; budgeted?: boolean; size?: number; children: React.ReactNode
+function Ring({ pct, prevPct, color, over, budgeted, size = 58, children }: {
+  pct: number
+  /** Last month in the same envelope, drawn inside this month's rim. Given, the
+   *  ring answers "worse than last month?" as well as "over?" — which is the
+   *  question a limit alone cannot answer. */
+  prevPct?: number
+  color: string; over?: boolean; budgeted?: boolean; size?: number; children: React.ReactNode
 }) {
   const stroke = 3.5
   const r = (size - stroke) / 2
@@ -67,14 +72,67 @@ function Ring({ pct, color, over, budgeted, size = 58, children }: {
           // outside it rather than losing the fact.
           <circle cx={size / 2} cy={size / 2} r={r + 3.5} fill="none" stroke={color} strokeWidth={1} opacity={0.45} />
         )}
+        {prevPct !== undefined && (
+          <>
+            <circle
+              cx={size / 2} cy={size / 2} r={r - stroke - 1.5} fill="none"
+              stroke="#EDE7D9" strokeWidth={2} />
+            {prevPct > 0 && (
+              <circle
+                cx={size / 2} cy={size / 2} r={r - stroke - 1.5} fill="none"
+                stroke="#B5AC98" strokeWidth={2} strokeLinecap="round"
+                strokeDasharray={2 * Math.PI * (r - stroke - 1.5)}
+                strokeDashoffset={2 * Math.PI * (r - stroke - 1.5) * (1 - Math.max(0, Math.min(1, prevPct)))}
+                transform={`rotate(-90 ${size / 2} ${size / 2})`} />
+            )}
+          </>
+        )}
       </svg>
       <span style={{
-        width: size - 14, height: size - 14, borderRadius: '50%', overflow: 'hidden',
+        width: size - (prevPct !== undefined ? 22 : 14), height: size - (prevPct !== undefined ? 22 : 14),
+        borderRadius: '50%', overflow: 'hidden',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         background: '#FCFAF4', fontSize: 20, lineHeight: 1,
       }}>{children}</span>
     </span>
   )
+}
+
+
+// ─── The last seven days, as a line ──────────────────────────────────────────
+// A dial says how much of the month is gone. It says nothing about whether the
+// spending is slowing down or running away, which is the thing you would act
+// on. Seven points is enough to see that and small enough to sit under a
+// figure. A flat line is a week with nothing spent, not a missing chart.
+function Spark({ days, color, width = 76, height = 16 }: {
+  days: number[]; color: string; width?: number; height?: number
+}) {
+  if (days.length < 2) return null
+  const peak = Math.max(...days)
+  const step = width / (days.length - 1)
+  const y = (v: number) => height - 2 - (peak > 0 ? (v / peak) * (height - 4) : 0)
+  const d = days.map((v, i) => `${i === 0 ? 'M' : 'L'}${(i * step).toFixed(1)} ${y(v).toFixed(1)}`).join(' ')
+  const spent = peak > 0
+  return (
+    <svg width={width} height={height} style={{ display: 'block', overflow: 'visible' }}
+      aria-hidden focusable="false">
+      <line x1={0} y1={height - 1} x2={width} y2={height - 1} stroke="#EDE7D9" strokeWidth={1} />
+      <path d={d} fill="none" stroke={spent ? color : '#D8CFB8'} strokeWidth={1.6}
+        strokeLinecap="round" strokeLinejoin="round" opacity={spent ? 0.85 : 0.6} />
+      {spent && (
+        <circle cx={width} cy={y(days[days.length - 1])} r={2} fill={color} />
+      )}
+    </svg>
+  )
+}
+
+/** "a fifth more than last month", or nothing when there is nothing to compare. */
+function versusLast(actual: number, prev: number): { text: string; worse: boolean } | null {
+  if (prev <= 0) return actual > 0 ? { text: 'nothing last month', worse: true } : null
+  const change = (actual - prev) / prev
+  if (Math.abs(change) < 0.02) return { text: 'as last month', worse: false }
+  const pc = Math.round(Math.abs(change) * 100)
+  return { text: `${pc}% ${change > 0 ? 'more' : 'less'} than last month`, worse: change > 0 }
 }
 
 const MONTH_SHORT = ['J','F','M','A','M','J','J','A','S','O','N','D']
@@ -98,24 +156,38 @@ function Legend({ swatch, label, line }: { swatch: string; label: string; line?:
 
 /** A category you can pick up. The whole envelope is the handle: a tap still
  *  opens it, because a finger has to hold before dnd-kit calls it a drag. */
-function Draggable({ id, disabled, children }: {
-  id: string; disabled?: boolean; children: (dragging: boolean) => React.ReactNode
+function Draggable({ id, disabled, grow, children }: {
+  id: string; disabled?: boolean
+  /** Fill the space its parent gave it, rather than hugging what is inside —
+   *  the mosaic's child strip divides a fixed width between its parts. */
+  grow?: boolean
+  children: (dragging: boolean) => React.ReactNode
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id, disabled })
   return (
     <span ref={setNodeRef} {...attributes} {...listeners}
-      style={{ display: 'flex', touchAction: 'none', opacity: isDragging ? 0.4 : 1 }}>
+      style={{
+        display: 'flex', touchAction: 'none', opacity: isDragging ? 0.4 : 1,
+        ...(grow ? { flex: 1, minWidth: 0 } : {}),
+      }}>
       {children(isDragging)}
     </span>
   )
 }
 
 /** Somewhere to let go. */
-function DropZone({ id, disabled, children }: {
-  id: string; disabled?: boolean; children: (over: boolean) => React.ReactNode
+function DropZone({ id, disabled, grow, children }: {
+  id: string; disabled?: boolean
+  /** Take the width it was given, for the views whose rows span the card. */
+  grow?: boolean
+  children: (over: boolean) => React.ReactNode
 }) {
   const { setNodeRef, isOver } = useDroppable({ id, disabled })
-  return <span ref={setNodeRef} style={{ display: 'flex' }}>{children(isOver && !disabled)}</span>
+  return (
+    <span ref={setNodeRef} style={{ display: 'flex', ...(grow ? { width: '100%' } : {}) }}>
+      {children(isOver && !disabled)}
+    </span>
+  )
 }
 
 interface EnvelopeRow {
@@ -130,11 +202,287 @@ interface EnvelopeRow {
   plannedBase: number | null
   children: { cat: Category; planned: number; budgeted: boolean; actual: number; inEnvelope: number | null; cur: string }[]
   currencies: string[]
+  /** The same envelope last month, for the styles that compare the two. */
+  prev: number
+  /** Spent on each of the last seven days, oldest first. */
+  trend: number[]
 }
 
-function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty, dragging, rules }: {
+// ─── The four ways to look at an envelope ────────────────────────────────────
+//
+// Settings offers four and, until now, drew one. They are not decoration: each
+// answers a different question, and which question you are asking changes month
+// to month.
+//
+//   dial   — how much of the limit is gone, plus the last seven days, so you
+//            can see whether it is slowing down or running away.
+//   ring   — this month against last month, in two rings. "Over" is not the
+//            only bad news; "worse than it was" is the one a limit cannot tell
+//            you.
+//   slip   — a till receipt. Monospace figures in one column, so comparing two
+//            envelopes is one eye movement rather than two circles.
+//   mosaic — area is money. The biggest box is the biggest spend, whatever it
+//            was budgeted, and rust means it burst its envelope.
+//
+// All four keep everything that is not the picture: click to select, drag to
+// re-parent, the day a bill leaves, the currency badge, the sub-categories.
+export type EnvelopeStyle = 'dial' | 'mosaic' | 'slip' | 'ring'
+
+export function loadEnvelopeStyle(): EnvelopeStyle {
+  try {
+    const v = localStorage.getItem('finance-envelope-style')
+    return v === 'mosaic' || v === 'slip' || v === 'ring' ? v : 'dial'
+  } catch { return 'dial' }
+}
+
+/** A budget's own currency badge, or a currency here that no rate could take
+ *  into it. Same sentence in every view. */
+function CurBadge({ mixed, cur, currency, offset }: {
+  mixed: string[]; cur: string; currency: string; offset?: boolean
+}) {
+  if (mixed.length === 0) return null
+  return (
+    <span title={cur !== currency
+      ? `This envelope is kept in ${cur}`
+      : `Has ${mixed.join(', ')} here with no rate set, so it is not counted`}
+      style={{
+        ...(offset ? { position: 'absolute', bottom: -2, right: -4 } : {}),
+        height: 14, padding: '0 4px', borderRadius: 999,
+        background: '#FFFFFF', border: '1px solid #E8E1CE',
+        fontSize: 8, fontWeight: 700, color: '#9B9180',
+        display: 'flex', alignItems: 'center', flexShrink: 0,
+      }}>{mixed[0]}</span>
+  )
+}
+
+/** The day the money leaves, where there is one. */
+function DueChip({ day }: { day: number | undefined }) {
+  if (day == null) return null
+  return (
+    <span title={`The money leaves on the ${ordinal(day)}.`}
+      style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 9.5, color: '#8A6D0B', whiteSpace: 'nowrap' }}>
+      <CalendarClock size={9} strokeWidth={2.2} /> the {ordinal(day)}
+    </span>
+  )
+}
+
+// ─── Till slips ──────────────────────────────────────────────────────────────
+
+function SlipRows({ rows, color, selectedId, onPick, rules, dragging, currency }: {
+  rows: EnvelopeRow[]; color: string; selectedId: string | null
+  onPick: (id: string) => void; rules: Record<string, BudgetRule>; dragging: string | null
+  currency: string
+}) {
+  const MONO = 'JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, monospace'
+  const fig = (n: number) => Math.round(n).toLocaleString('en-US')
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column' }}>
+      {rows.map(row => {
+        const { cat, actual, planned, plannedFrom, cur, children } = row
+        const budgeted = planned > 0
+        const pct  = budgeted ? actual / planned : 0
+        const over = budgeted && actual > planned
+        const on   = selectedId === cat.id
+        const mixed = cur !== currency ? [cur] : row.currencies
+        return (
+          <div key={cat.id}>
+            <DropZone id={`in:${cat.id}`} disabled={!dragging || dragging === cat.id} grow>
+              {isOver => (
+                <Draggable id={cat.id} grow>
+                  {() => (
+                    <button onClick={() => onPick(cat.id)}
+                      title={`${cat.name} — ${money(actual, cur)}${budgeted ? ` of ${money(planned, cur)}` : ' · no budget set'}`}
+                      style={{
+                        width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+                        padding: '7px 8px', borderRadius: 8, cursor: 'pointer', textAlign: 'left',
+                        fontFamily: 'inherit', boxSizing: 'border-box',
+                        background: isOver ? 'rgba(12,129,64,0.16)' : on ? 'rgba(245,209,78,0.20)' : 'transparent',
+                        border: isOver ? '1px dashed #0C8140' : '1px solid transparent',
+                        borderBottom: isOver ? '1px dashed #0C8140' : '1px solid #F4F0E4',
+                      }}>
+                      <CategoryGlyph icon={cat.icon} size={15} color={color} />
+                      <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                          <span style={{ fontSize: 12, fontWeight: 600, color: cat.name ? '#191712' : '#9B9180', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {cat.name || 'Untitled'}
+                          </span>
+                          <DueChip day={rules[cat.id]?.dueDay} />
+                          <CurBadge mixed={mixed} cur={cur} currency={currency} />
+                        </span>
+                        {/* One thin rule under the name — a receipt does not
+                            need a chart, only the proportion. */}
+                        <span style={{ position: 'relative', height: 3, borderRadius: 2, background: budgeted ? '#EDE7D9' : 'transparent', border: budgeted ? 'none' : '1px dashed #E0D8C4', boxSizing: 'border-box' }}>
+                          {budgeted && pct > 0 && (
+                            <span style={{
+                              position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: 2,
+                              width: `${Math.min(1, pct) * 100}%`, background: over ? RUST : color,
+                            }} />
+                          )}
+                        </span>
+                      </span>
+                      {/* The figures, in one column, right aligned — which is
+                          the whole point of this view. */}
+                      <span style={{ fontFamily: MONO, fontSize: 11.5, fontVariantNumeric: 'tabular-nums', textAlign: 'right', flexShrink: 0, lineHeight: 1.45 }}>
+                        <span style={{ display: 'block', fontWeight: 600, color: over ? RUST : '#191712' }}>{fig(actual)}</span>
+                        {budgeted ? (
+                          <span style={{ display: 'block', fontSize: 10.5, color: '#9B9180', borderBottom: plannedFrom === 'parts' ? '1px dotted #C5BCA8' : 'none' }}>
+                            {fig(planned)}
+                          </span>
+                        ) : (
+                          <span style={{ display: 'block', fontSize: 9.5, color: '#9B9180', fontFamily: 'inherit' }}>no budget</span>
+                        )}
+                      </span>
+                    </button>
+                  )}
+                </Draggable>
+              )}
+            </DropZone>
+
+            {children.map(child => {
+              const limit = child.inEnvelope && child.inEnvelope > 0 ? child.inEnvelope : planned
+              const cOver = limit > 0 && child.actual > limit
+              return (
+                <Draggable key={child.cat.id} id={child.cat.id} grow>
+                  {() => (
+                    <button onClick={() => onPick(child.cat.id)}
+                      title={`${child.cat.name} — inside ${cat.name}. ${money(child.actual, cur)} spent this month.`}
+                      style={{
+                        width: '100%', display: 'flex', alignItems: 'center', gap: 8,
+                        padding: '4px 8px 4px 30px', borderRadius: 8, cursor: 'pointer', textAlign: 'left',
+                        fontFamily: 'inherit', boxSizing: 'border-box', border: '1px solid transparent',
+                        background: selectedId === child.cat.id ? 'rgba(245,209,78,0.28)' : 'transparent',
+                      }}>
+                      <CategoryGlyph icon={child.cat.icon} size={12} />
+                      <span style={{ flex: 1, minWidth: 0, fontSize: 11, color: '#6C6553', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {child.cat.name}
+                      </span>
+                      <DueChip day={rules[child.cat.id]?.dueDay} />
+                      <span style={{ fontFamily: MONO, fontSize: 10.5, fontVariantNumeric: 'tabular-nums', color: cOver ? RUST : '#6C6553', flexShrink: 0 }}>
+                        {fig(child.actual)}{child.budgeted ? ` / ${fig(child.inEnvelope ?? child.planned)}` : ''}
+                      </span>
+                    </button>
+                  )}
+                </Draggable>
+              )
+            })}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+// ─── Proportional mosaic ─────────────────────────────────────────────────────
+
+function MosaicBoxes({ rows, color, selectedId, onPick, rules, dragging, currency }: {
+  rows: EnvelopeRow[]; color: string; selectedId: string | null
+  onPick: (id: string) => void; rules: Record<string, BudgetRule>; dragging: string | null
+  currency: string
+}) {
+  const peak = Math.max(...rows.map(r => r.actual), 0)
+  // Area is the message, so the side is the square root of the money. Floored
+  // at something you can still click and read, and capped so one runaway
+  // envelope does not push the rest off the card.
+  const side = (v: number) => {
+    if (peak <= 0 || v <= 0) return 78
+    return Math.round(78 + Math.sqrt(v / peak) * 104)
+  }
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-start' }}>
+      {rows.map(row => {
+        const { cat, actual, planned, cur, children } = row
+        const budgeted = planned > 0
+        const over = budgeted && actual > planned
+        const spent = actual > 0
+        const size = side(actual)
+        const on = selectedId === cat.id
+        // Children take a strip along the bottom, split by what each spent —
+        // the same rule as the box itself, one level down.
+        const childSpend = children.reduce((n, c) => n + c.actual, 0)
+        return (
+          <DropZone key={cat.id} id={`in:${cat.id}`} disabled={!dragging || dragging === cat.id}>
+            {isOver => (
+              <Draggable id={cat.id}>
+                {() => (
+                  <span style={{ display: 'flex', flexDirection: 'column', width: size }}>
+                    <button onClick={() => onPick(cat.id)}
+                      title={`${cat.name} — ${money(actual, cur)}${budgeted ? ` of ${money(planned, cur)}` : ' · no budget set'}`}
+                      style={{
+                        width: size, height: size, boxSizing: 'border-box',
+                        borderRadius: 12, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
+                        padding: 10, display: 'flex', flexDirection: 'column', gap: 4, overflow: 'hidden',
+                        background: isOver ? 'rgba(12,129,64,0.16)'
+                          : over ? 'rgba(198,40,40,0.16)'
+                          : spent ? 'rgba(245,209,78,0.30)' : '#FAF7EC',
+                        border: isOver ? '1px dashed #0C8140'
+                          : over ? `1px solid ${RUST}`
+                          : budgeted ? '1px solid #E8E1CE' : '1px dashed #DCD3BF',
+                        outline: on ? '2px solid #F5D14E' : 'none', outlineOffset: 1,
+                      }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                        <CategoryGlyph icon={cat.icon} size={14} color={over ? RUST : color} />
+                        <CurBadge mixed={cur !== currency ? [cur] : row.currencies} cur={cur} currency={currency} />
+                      </span>
+                      <span style={{ fontSize: 11, fontWeight: 600, color: '#191712', lineHeight: 1.25, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {cat.name || 'Untitled'}
+                      </span>
+                      <span style={{ flex: 1 }} />
+                      <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: size > 110 ? 15 : 12, fontWeight: 600, color: over ? RUST : '#191712', fontVariantNumeric: 'tabular-nums' }}>
+                        {Math.round(actual).toLocaleString('en-US')}
+                      </span>
+                      {budgeted ? (
+                        <span style={{ fontSize: 9.5, color: over ? RUST : '#9B9180', fontVariantNumeric: 'tabular-nums' }}>
+                          of {Math.round(planned).toLocaleString('en-US')}{over ? ' · burst' : ''}
+                        </span>
+                      ) : (
+                        <span style={{ fontSize: 9.5, color: '#9B9180' }}>no budget</span>
+                      )}
+                      <DueChip day={rules[cat.id]?.dueDay} />
+                    </button>
+
+                    {children.length > 0 && (
+                      <span style={{ display: 'flex', gap: 2, marginTop: 3, height: 16 }}>
+                        {children.map(child => {
+                          const share = childSpend > 0 ? child.actual / childSpend : 1 / children.length
+                          const limit = child.inEnvelope && child.inEnvelope > 0 ? child.inEnvelope : planned
+                          const cOver = limit > 0 && child.actual > limit
+                          return (
+                            <span key={child.cat.id}
+                              style={{ flex: `${Math.max(share, 0.06)} 1 0`, minWidth: 6, display: 'flex' }}>
+                              <Draggable id={child.cat.id} grow>
+                                {() => (
+                                  <button onClick={() => onPick(child.cat.id)}
+                                    title={`${child.cat.name} — inside ${cat.name}, ${money(child.actual, cur)} this month`}
+                                    style={{
+                                      width: '100%', height: 16,
+                                      borderRadius: 4, cursor: 'pointer', padding: 0, border: 'none',
+                                      background: cOver ? 'rgba(198,40,40,0.35)'
+                                        : child.actual > 0 ? 'rgba(245,209,78,0.55)' : '#EDE7D9',
+                                      outline: selectedId === child.cat.id ? '2px solid #F5D14E' : 'none',
+                                    }} />
+                                )}
+                              </Draggable>
+                            </span>
+                          )
+                        })}
+                      </span>
+                    )}
+                  </span>
+                )}
+              </Draggable>
+            )}
+          </DropZone>
+        )
+      })}
+    </div>
+  )
+}
+
+function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty, dragging, rules, style }: {
   title: string
   rows: EnvelopeRow[]
+  /** Which of the four views Settings has chosen. */
+  style: EnvelopeStyle
   /** Only for the day a budget carries; everything else is on the row. */
   rules: Record<string, BudgetRule>
   color: string
@@ -177,9 +525,15 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
 
       {rows.length === 0 ? (
         <div style={{ fontSize: 11.5, color: '#9B9180', lineHeight: 1.6 }}>{empty}</div>
+      ) : style === 'slip' ? (
+        <SlipRows rows={rows} color={color} selectedId={selectedId} onPick={onPick}
+          rules={rules} dragging={dragging} currency={currency} />
+      ) : style === 'mosaic' ? (
+        <MosaicBoxes rows={rows} color={color} selectedId={selectedId} onPick={onPick}
+          rules={rules} dragging={dragging} currency={currency} />
       ) : (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '18px 14px' }}>
-          {rows.map(({ cat, actual, planned, plannedFrom, cur, children, currencies }) => {
+          {rows.map(({ cat, actual, planned, plannedFrom, cur, children, currencies, prev, trend }) => {
             // Spending with nothing set is not a full envelope. This drew a
             // complete ring for it, which reads as "at its limit" — the one
             // thing it cannot be when no limit exists.
@@ -215,7 +569,9 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
                   display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7,
                 }}>
                 <span style={{ position: 'relative', display: 'flex' }}>
-                  <Ring pct={pct} color={color} over={spentOut} budgeted={budgeted}>
+                  <Ring pct={pct} color={color} over={spentOut} budgeted={budgeted}
+                    prevPct={style === 'ring' ? (planned > 0 ? prev / planned : 0) : undefined}
+                    size={style === 'ring' ? 64 : 58}>
                     <CategoryGlyph icon={cat.icon} size={21} color={color} />
                   </Ring>
                   {mixed.length > 0 && (
@@ -256,6 +612,20 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
                       fontSize: 9.5, whiteSpace: 'nowrap',
                     }}>set a budget</span>
                   )}
+                  {style === 'dial' && (
+                    <span style={{ marginTop: 3 }} title="What was spent here on each of the last seven days">
+                      <Spark days={trend} color={color} />
+                    </span>
+                  )}
+                  {style === 'ring' && (() => {
+                    const said = versusLast(actual, prev)
+                    return said ? (
+                      <span title={`${money(prev, cur)} last month`}
+                        style={{ marginTop: 2, fontSize: 9.5, lineHeight: 1.3, textAlign: 'center', color: said.worse ? RUST : '#0C8140' }}>
+                        {said.text}
+                      </span>
+                    ) : null
+                  })()}
                   {dueDay != null && (
                     <span
                       title={`The money leaves on the ${ordinal(dueDay)}. A task is on the board for it.`}
@@ -398,6 +768,19 @@ export function BudgetScreen(_props?: any) {
   // decides what gets fetched; the month only decides what is shown.
   const [monthIdx, setMonthIdx] = useState(() => new Date().getMonth())
 
+  // Which of the four views Settings chose. It is a shared preference, so it
+  // arrives from another device too — hence the listener as well as the read.
+  const [envStyle, setEnvStyle] = useState<EnvelopeStyle>(loadEnvelopeStyle)
+  useEffect(() => {
+    const h = () => setEnvStyle(loadEnvelopeStyle())
+    window.addEventListener('finance:envelopeStyleChanged', h)
+    window.addEventListener('storage', h)
+    return () => {
+      window.removeEventListener('finance:envelopeStyleChanged', h)
+      window.removeEventListener('storage', h)
+    }
+  }, [])
+
   // Rates live outside React, so nudge everything that depends on them.
   const [fxTick, setFxTick] = useState(0)
   useEffect(() => {
@@ -529,6 +912,16 @@ export function BudgetScreen(_props?: any) {
   // A category's own transactions plus its children's — money filed under
   // "Groceries · Fruit" is money out of the Groceries envelope.
   const envelopes = useMemo(() => {
+    // The month before the one on screen, and the seven days ending today —
+    // worked out once, not per envelope.
+    const [ky, km] = monthKey.split('-').map(Number)
+    const before = new Date(ky, km - 2, 1)
+    const prevKey = `${before.getFullYear()}-${String(before.getMonth() + 1).padStart(2, '0')}`
+    const dayKeys = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date()
+      d.setDate(d.getDate() - (6 - i))
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    })
     const build = (cat: Category) => {
       const rule = rules[cat.id]
       const cur  = rule?.currency ?? currency
@@ -540,6 +933,12 @@ export function BudgetScreen(_props?: any) {
       // rest — so a salary paid in dollars landed in no envelope, no group
       // total and no summary line anywhere.
       let base = 0
+      // The same envelope last month, and the last seven days one at a time.
+      // Neither changes what an envelope *is*; they are what the other views
+      // are built out of — a limit alone cannot say "worse than last month" or
+      // "slowing down".
+      let prevBase = 0
+      const dayBase = new Array<number>(7).fill(0)
       // What each part has spent, kept apart so a sub-category can show its
       // own filling rather than only counting towards its parent's.
       const byChild = new Map<string, number>()
@@ -549,13 +948,18 @@ export function BudgetScreen(_props?: any) {
       for (const tx of settled(transactions)) {
         if (!tx.categoryId || !ids.has(tx.categoryId)) continue
         if (tx.type !== wanted) continue
-        if (!whenPaid(tx).startsWith(monthKey)) continue
+        const on = whenPaid(tx)
+        const thisMonth = on.startsWith(monthKey)
+        const lastMonth = on.startsWith(prevKey)
+        const dayIndex  = dayKeys.indexOf(on)
+        if (!thisMonth && !lastMonth && dayIndex < 0) continue
         const v = toBase(Math.abs(tx.amount), tx.currency, currency)
-        if (v === null) currencies.add(tx.currency)   // no rate — say so, never guess
-        else {
-          base += v
-          if (tx.categoryId !== cat.id) byChild.set(tx.categoryId, (byChild.get(tx.categoryId) ?? 0) + v)
-        }
+        if (v === null) { if (thisMonth) currencies.add(tx.currency); continue }  // no rate — say so, never guess
+        if (lastMonth) prevBase += v
+        if (dayIndex >= 0) dayBase[dayIndex] += v
+        if (!thisMonth) continue
+        base += v
+        if (tx.categoryId !== cat.id) byChild.set(tx.categoryId, (byChild.get(tx.categoryId) ?? 0) + v)
       }
       // ...and back into whatever this envelope is kept in, which is what its
       // budget is written in and therefore what it must be compared against.
@@ -605,7 +1009,14 @@ export function BudgetScreen(_props?: any) {
       const actualBase  = rate === null ? null : base
       const plannedBase = rate === null ? null : planned * rate
 
-      return { cat, actual, planned, plannedFrom, cur, actualBase, plannedBase, children, currencies: [...currencies] }
+      return {
+        cat, actual, planned, plannedFrom, cur, actualBase, plannedBase, children,
+        currencies: [...currencies],
+        // Back into the envelope's own currency, like `actual`, so the two are
+        // the same kind of number wherever they are shown side by side.
+        prev:  rate === null ? 0 : prevBase / rate,
+        trend: rate === null ? dayBase.map(() => 0) : dayBase.map(v => v / rate),
+      }
     }
     const all = parents.map(build)
     return {
@@ -866,12 +1277,12 @@ export function BudgetScreen(_props?: any) {
             <EnvelopeGroup
               title="Spending" rows={envelopes.spending} color={RUST}
               selectedId={selectedId} onPick={pickCategory} currency={currency} dragging={dragging}
-              rules={rules}
+              rules={rules} style={envStyle}
               empty="No spending categories yet — add one and its envelope appears here." />
             <EnvelopeGroup
               title="Earning" rows={envelopes.earning} color={OLIVE}
               selectedId={selectedId} onPick={pickCategory} currency={currency} dragging={dragging}
-              rules={rules}
+              rules={rules} style={envStyle}
               empty="No income categories yet." />
             </div>
             <DragOverlay dropAnimation={null}>

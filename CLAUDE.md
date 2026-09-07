@@ -227,6 +227,25 @@ figure is added to something denominated differently:
   *both* ends, so it shows for the account it came from and the one it went to. The
   pencil opens the editor — one gesture each.
 
+## Finance — the envelope style is four real views
+`finance-envelope-style` was written by Settings and read by nothing: every
+choice drew the dial. `BudgetScreen` owns all four now (`loadEnvelopeStyle()`,
+re-read on `finance:envelopeStyleChanged` and on `storage`, so another device's
+choice arrives too), and each answers a different question:
+- **dial** — the ring, plus `Spark`: what was spent on each of the last seven
+  days. A limit says how much is gone, not whether it is slowing down.
+- **ring** — `Ring` takes `prevPct` and draws last month inside this month,
+  with "163% more than last month" under the figure. "Over" is not the only bad
+  news.
+- **slip** — `SlipRows`: monospace figures in one right-aligned column, so two
+  envelopes compare in one eye movement.
+- **mosaic** — `MosaicBoxes`: the side is √(spend), so **area is money**; rust
+  and "burst" for an envelope past its budget; children take a strip along the
+  bottom split the same way.
+All four keep click-to-select, drag-to-reparent, the due-day chip and the
+currency badge — `Draggable`/`DropZone` take a `grow` prop for the views whose
+rows span the card. The row build carries `prev` and `trend` for them.
+
 ## Finance — a sub-category pill fills as it is spent
 `BudgetScreen` gives each child pill a fill behind its label, the way the ring
 above it works. `byChild` in the envelope build keeps each part's spend apart
