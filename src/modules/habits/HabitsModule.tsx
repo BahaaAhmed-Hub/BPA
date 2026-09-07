@@ -821,7 +821,7 @@ function HabitDetailPanel({
             const isT = d === today
             return (
               <div key={d} title={d} style={{
-                borderRadius: 2,
+                borderRadius: 'var(--sb-r-chip)',
                 background: done ? 'var(--sb-positive)' : isT ? 'rgba(var(--sb-accent-rgb),0.13)' : 'var(--sb-hairline)',
                 border: isT ? '1px solid var(--sb-accent)' : '1px solid transparent',
               }} />
@@ -1090,11 +1090,11 @@ export function HabitsModule() {
                     opacity: future ? 0.45 : 1, fontFamily: 'inherit',
                   }}>
                   <span style={{
-                    width: 12, height: 34, borderRadius: 3, background: '#F3EEE0',
+                    width: 12, height: 34, borderRadius: 'var(--sb-r-chip)', background: '#F3EEE0',
                     display: 'flex', alignItems: 'flex-end', overflow: 'hidden',
                     outline: on ? '2px solid var(--sb-ink-1)' : 'none', outlineOffset: 2,
                   }}>
-                    <span style={{ width: '100%', height: `${Math.round(pct * 100)}%`, background: isT ? 'var(--sb-accent)' : 'var(--sb-ink-1)', borderRadius: 3, display: 'block' }} />
+                    <span style={{ width: '100%', height: `${Math.round(pct * 100)}%`, background: isT ? 'var(--sb-accent)' : 'var(--sb-ink-1)', borderRadius: 'var(--sb-r-chip)', display: 'block' }} />
                   </span>
                   <span style={{ fontSize: 'var(--sb-t-micro)', color: on || isT ? 'var(--sb-ink-1)' : 'var(--sb-ink-3)', fontWeight: on || isT ? 700 : 500 }}>{dayLabel}</span>
                 </button>

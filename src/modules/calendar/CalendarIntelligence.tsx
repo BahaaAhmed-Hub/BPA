@@ -3611,7 +3611,7 @@ export function CalendarIntelligence() {
                             fontSize: 'var(--sb-t-micro)', fontWeight: 600, color: '#fff',
                             background: `${color}CC`,
                             borderLeft: `var(--sb-border-emphasis) solid ${color}`,
-                            borderRadius: 3, padding: '1px 4px',
+                            borderRadius: 'var(--sb-r-chip)', padding: '1px 4px',
                             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                             cursor: 'pointer',
                           }}

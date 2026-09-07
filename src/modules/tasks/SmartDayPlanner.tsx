@@ -169,7 +169,7 @@ function EventPopup({ event, color, onClose }: { event: GCalEvent; color: string
     }}>
       {/* Color bar + title */}
       <div style={{ borderBottom: '1px solid var(--sb-border)', padding: '14px 16px 12px', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-        <div style={{ width: 4, minHeight: 24, borderRadius: 2, background: color, flexShrink: 0, marginTop: 2 }} />
+        <div style={{ width: 4, minHeight: 24, borderRadius: 'var(--sb-r-chip)', background: color, flexShrink: 0, marginTop: 2 }} />
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 'var(--sb-t-h3)', fontWeight: 700, color: 'var(--sb-ink-1)', lineHeight: 1.3 }}>{event.summary ?? '(No title)'}</div>
           <div style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-4)', marginTop: 3 }}>
@@ -307,7 +307,7 @@ function HourSlot({ hour, block, taskTitle, onRemove, busyEventsAtStart, isBusyC
             {onRemove && (
               <button
                 onClick={e => { e.stopPropagation(); onRemove() }}
-                style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 3, cursor: 'pointer', color: '#fff', padding: '1px 4px', fontSize: 'var(--sb-t-micro)', flexShrink: 0 }}
+                style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 'var(--sb-r-chip)', cursor: 'pointer', color: '#fff', padding: '1px 4px', fontSize: 'var(--sb-t-micro)', flexShrink: 0 }}
               >
                 ×
               </button>

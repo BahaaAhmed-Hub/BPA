@@ -715,7 +715,7 @@ export function InboxModule() {
                       {email.fromName}
                     </span>
                     {classMeta && (
-                      <span style={{ fontSize: 'var(--sb-t-micro)', padding: '1px 6px', borderRadius: 3, flexShrink: 0, background: classMeta.bg, color: classMeta.color, fontWeight: 600 }}>
+                      <span style={{ fontSize: 'var(--sb-t-micro)', padding: '1px 6px', borderRadius: 'var(--sb-r-chip)', flexShrink: 0, background: classMeta.bg, color: classMeta.color, fontWeight: 600 }}>
                         {classMeta.label}
                       </span>
                     )}

@@ -1031,7 +1031,7 @@ export function MorningBrief() {
                       >
                         {/* Colored accent bar */}
                         <div style={{
-                          width: 3, borderRadius: 2, flexShrink: 0,
+                          width: 3, borderRadius: 'var(--sb-r-chip)', flexShrink: 0,
                           background: accentClr, alignSelf: 'stretch', minHeight: 32,
                         }} />
 
@@ -1062,7 +1062,7 @@ export function MorningBrief() {
                             <MeetingTypeIcon type={event.meeting_type} />
                             {event.calendarName && (
                               <span style={{
-                                fontSize: 'var(--sb-t-micro)', padding: '1px 6px', borderRadius: 3,
+                                fontSize: 'var(--sb-t-micro)', padding: '1px 6px', borderRadius: 'var(--sb-r-chip)',
                                 background: `${accentClr}15`, border: `1px solid ${accentClr}30`,
                                 color: accentClr, fontWeight: 500,
                               }}>

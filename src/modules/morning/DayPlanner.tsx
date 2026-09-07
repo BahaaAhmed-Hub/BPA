@@ -505,7 +505,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
 
                             {isDueToday && (
                               <span style={{
-                                fontSize: 'var(--sb-t-micro)', padding: '1px 5px', borderRadius: 3, flexShrink: 0,
+                                fontSize: 'var(--sb-t-micro)', padding: '1px 5px', borderRadius: 'var(--sb-r-chip)', flexShrink: 0,
                                 background: '#EF444418', border: '1px solid #EF444430', color: '#EF4444',
                               }}>
                                 today
@@ -513,7 +513,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                             )}
                             {task.quadrant === 'do' && !isDueToday && (
                               <span style={{
-                                fontSize: 'var(--sb-t-micro)', padding: '1px 5px', borderRadius: 3, flexShrink: 0,
+                                fontSize: 'var(--sb-t-micro)', padding: '1px 5px', borderRadius: 'var(--sb-r-chip)', flexShrink: 0,
                                 background: '#F59E0B15', border: '1px solid #F59E0B30', color: '#F59E0B',
                               }}>
                                 urgent
@@ -548,7 +548,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               {[70, 55, 80].map((w, i) => (
                 <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                  <div style={{ width: 3, height: 28, borderRadius: 2, background: 'var(--sb-border)', flexShrink: 0 }} />
+                  <div style={{ width: 3, height: 28, borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-border)', flexShrink: 0 }} />
                   <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
                     <div style={{ height: 9, width: 38, borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-border)' }} />
                     <div style={{ height: 11, width: `${w}%`, borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-card)' }} />
@@ -566,7 +566,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                 const color = ev.calendarColor ?? '#7F77DD'
                 return (
                   <div key={ev.id} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                    <div style={{ width: 3, height: '100%', minHeight: 28, borderRadius: 2, background: color, flexShrink: 0 }} />
+                    <div style={{ width: 3, height: '100%', minHeight: 28, borderRadius: 'var(--sb-r-chip)', background: color, flexShrink: 0 }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <span style={{ fontSize: 'var(--sb-t-micro)', fontFamily: 'monospace', color: 'var(--sb-ink-4)' }}>
                         {hhmm(ev.start_time)}–{hhmm(ev.end_time)}
@@ -577,7 +577,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                     </div>
                     {ev.calendarName && (
                       <span style={{
-                        fontSize: 'var(--sb-t-micro)', padding: '1px 5px', borderRadius: 3, flexShrink: 0,
+                        fontSize: 'var(--sb-t-micro)', padding: '1px 5px', borderRadius: 'var(--sb-r-chip)', flexShrink: 0,
                         background: `${color}18`, border: `1px solid ${color}30`, color,
                       }}>
                         {ev.calendarName}
@@ -703,7 +703,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                 }}
               >
                 {/* Color bar */}
-                <div style={{ width: 3, borderRadius: 2, background: color, flexShrink: 0, alignSelf: 'stretch', minHeight: 30 }} />
+                <div style={{ width: 3, borderRadius: 'var(--sb-r-chip)', background: color, flexShrink: 0, alignSelf: 'stretch', minHeight: 30 }} />
 
                 {/* Content */}
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -712,7 +712,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                       {start}–{end}
                     </span>
                     <span style={{
-                      fontSize: 'var(--sb-t-micro)', padding: '1px 6px', borderRadius: 3,
+                      fontSize: 'var(--sb-t-micro)', padding: '1px 6px', borderRadius: 'var(--sb-r-chip)',
                       background: `${color}15`, border: `1px solid ${color}25`, color,
                       fontWeight: 600,
                     }}>
@@ -720,7 +720,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                     </span>
                     {slot.isExisting && (
                       <span style={{
-                        fontSize: 'var(--sb-t-micro)', padding: '1px 6px', borderRadius: 3,
+                        fontSize: 'var(--sb-t-micro)', padding: '1px 6px', borderRadius: 'var(--sb-r-chip)',
                         background: '#25283618', border: '1px solid #25283640', color: 'var(--sb-ink-4)',
                       }}>
                         existing
@@ -728,7 +728,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                     )}
                     {slot.action === 'reschedule' && (
                       <span style={{
-                        fontSize: 'var(--sb-t-micro)', padding: '1px 6px', borderRadius: 3,
+                        fontSize: 'var(--sb-t-micro)', padding: '1px 6px', borderRadius: 'var(--sb-r-chip)',
                         background: '#F59E0B15', border: '1px solid #F59E0B30', color: '#F59E0B',
                       }}>
                         move
@@ -736,7 +736,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                     )}
                     {slot.action === 'remove' && (
                       <span style={{
-                        fontSize: 'var(--sb-t-micro)', padding: '1px 6px', borderRadius: 3,
+                        fontSize: 'var(--sb-t-micro)', padding: '1px 6px', borderRadius: 'var(--sb-r-chip)',
                         background: '#EF444415', border: '1px solid #EF444430', color: '#EF4444',
                       }}>
                         remove

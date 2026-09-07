@@ -54,7 +54,7 @@ function Stat({ label, value, sub, accent, icon: Icon, center }: {
 function Legend({ color, label }: { color: string; label: string }) {
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 'var(--sb-t-meta)', color: DIM, whiteSpace: 'nowrap' }}>
-      <span style={{ width: 7, height: 7, borderRadius: 2, background: color, flexShrink: 0 }} />
+      <span style={{ width: 7, height: 7, borderRadius: 'var(--sb-r-chip)', background: color, flexShrink: 0 }} />
       {label}
     </span>
   )

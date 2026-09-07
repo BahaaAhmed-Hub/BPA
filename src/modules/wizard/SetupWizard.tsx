@@ -214,7 +214,7 @@ export function SetupWizard({ onClose }: Props) {
                   const active = n === step
                   const accent = 'var(--sb-accent)'
                   return (
-                    <div key={label} title={label} style={{ flex: 1, height: 4, borderRadius: 2, overflow: 'hidden', background: '#E5E7EB', position: 'relative', transition: 'background 0.3s' }}>
+                    <div key={label} title={label} style={{ flex: 1, height: 4, borderRadius: 'var(--sb-r-chip)', overflow: 'hidden', background: '#E5E7EB', position: 'relative', transition: 'background 0.3s' }}>
                       <div style={{
                         position: 'absolute', inset: 0,
                         background: accent,
@@ -293,7 +293,7 @@ export function SetupWizard({ onClose }: Props) {
 
           {/* Subtle bottom progress indicator */}
           <div style={{ height: 3, background: '#F0F0F4', position: 'relative' }}>
-            <div style={{ position: 'absolute', inset: '0 auto 0 0', width: `${pct}%`, background: 'var(--sb-accent)', transition: 'width 0.4s cubic-bezier(0.4,0,0.2,1)', borderRadius: '0 2px 2px 0' }} />
+            <div style={{ position: 'absolute', inset: '0 auto 0 0', width: `${pct}%`, background: 'var(--sb-accent)', transition: 'width 0.4s cubic-bezier(0.4,0,0.2,1)', borderRadius: '0 var(--sb-r-chip) var(--sb-r-chip) 0' }} />
           </div>
         </div>
       </div>

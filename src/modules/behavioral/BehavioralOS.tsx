@@ -46,9 +46,9 @@ function RankProgressBar({ score }: { score: number }) {
   return (
     <div style={{ marginTop: 20 }}>
       {/* Score bar */}
-      <div style={{ height: 3, background: 'var(--sb-border)', borderRadius: 2, overflow: 'hidden' }}>
+      <div style={{ height: 3, background: 'var(--sb-border)', borderRadius: 'var(--sb-r-chip)', overflow: 'hidden' }}>
         <div style={{
-          height: '100%', borderRadius: 2,
+          height: '100%', borderRadius: 'var(--sb-r-chip)',
           width: `${score}%`,
           background: `linear-gradient(90deg, var(--sb-accent), var(--sb-accent-deep))`,
           transition: 'width 1s cubic-bezier(0.16, 1, 0.3, 1)',
@@ -86,9 +86,9 @@ function ComponentBar({ label, value }: { label: string; value: number }) {
       <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)', letterSpacing: '0.08em', width: 110, flexShrink: 0, textTransform: 'uppercase' }}>
         {label}
       </span>
-      <div style={{ flex: 1, height: 2, background: 'var(--sb-border)', borderRadius: 1 }}>
+      <div style={{ flex: 1, height: 2, background: 'var(--sb-border)', borderRadius: 'var(--sb-r-chip)' }}>
         <div style={{
-          height: '100%', borderRadius: 1,
+          height: '100%', borderRadius: 'var(--sb-r-chip)',
           width: `${value}%`,
           background: value >= 60 ? 'var(--sb-accent)' : value >= 40 ? 'var(--sb-ink-3)' : 'var(--sb-ink-4)',
           transition: 'width 0.8s ease',
@@ -143,7 +143,7 @@ function IdentityCard({ identity }: { identity: IdentityResult }) {
     <div style={{
       padding: '16px 18px',
       border: `1px solid ${identity.stage === 'core' ? 'var(--sb-accent)' : 'var(--sb-border)'}`,
-      borderRadius: 2,
+      borderRadius: 'var(--sb-r-chip)',
       background: identity.stage === 'core' ? `var(--sb-accent)0A` : 'transparent',
       transition: 'border-color 0.2s',
     }}>
@@ -235,7 +235,7 @@ export function BehavioralOS() {
               <span style={{
                 fontSize: 'var(--sb-t-micro)', letterSpacing: '0.18em', fontWeight: 600,
                 color: 'var(--sb-accent)', border: '1px solid var(--sb-accent)',
-                padding: '3px 8px', borderRadius: 1,
+                padding: '3px 8px', borderRadius: 'var(--sb-r-chip)',
               }}>
                 {modeLabel}
               </span>
@@ -250,7 +250,7 @@ export function BehavioralOS() {
             disabled={evaluating}
             style={{
               display: 'flex', alignItems: 'center', gap: 6,
-              background: 'none', border: '1px solid var(--sb-border)', borderRadius: 2,
+              background: 'none', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-chip)',
               padding: '7px 14px', cursor: evaluating ? 'default' : 'pointer',
               color: evaluating ? 'var(--sb-ink-4)' : 'var(--sb-ink-3)', fontSize: 'var(--sb-t-meta)', letterSpacing: '0.06em',
               transition: 'border-color 0.15s, color 0.15s',
@@ -268,7 +268,7 @@ export function BehavioralOS() {
           <div style={{
             padding: '28px 32px 24px',
             border: '1px solid var(--sb-border)',
-            borderRadius: 2,
+            borderRadius: 'var(--sb-r-chip)',
           }}>
             {rank ? (
               <>
@@ -378,7 +378,7 @@ export function BehavioralOS() {
                     </span>
                   )}
                   <div style={{
-                    width: 14, height: 14, borderRadius: 1,
+                    width: 14, height: 14, borderRadius: 'var(--sb-r-chip)',
                     border: `1px solid ${t.quadrant === 'do' ? 'var(--sb-accent)' : 'var(--sb-border)'}`,
                     flexShrink: 0,
                   }} />

@@ -242,8 +242,8 @@ function PillStat({ done, total, label, color }: { done: number; total: number; 
   const pct = total > 0 ? Math.round((done / total) * 100) : 0
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-      <div style={{ height: 4, width: 80, background: 'var(--sb-card)', borderRadius: 2, overflow: 'hidden' }}>
-        <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 2, transition: 'width 0.3s' }} />
+      <div style={{ height: 4, width: 80, background: 'var(--sb-card)', borderRadius: 'var(--sb-r-chip)', overflow: 'hidden' }}>
+        <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 'var(--sb-r-chip)', transition: 'width 0.3s' }} />
       </div>
       <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)' }}>
         <span style={{ color, fontWeight: 600 }}>{done}</span>
@@ -342,7 +342,7 @@ function PieChart({ slices, title }: { slices: PieSlice[]; title: string }) {
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 7, minWidth: 130 }}>
           {active.map((sl, i) => (
             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <div style={{ width: 9, height: 9, borderRadius: 2, background: sl.color, border: '1px solid rgba(255,255,255,0.12)', flexShrink: 0 }} />
+              <div style={{ width: 9, height: 9, borderRadius: 'var(--sb-r-chip)', background: sl.color, border: '1px solid rgba(255,255,255,0.12)', flexShrink: 0 }} />
               <span style={{ fontSize: 'var(--sb-t-meta)', color: '#3D3926', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sl.label}</span>
               <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>{fmt(sl.minutes)}</span>
             </div>

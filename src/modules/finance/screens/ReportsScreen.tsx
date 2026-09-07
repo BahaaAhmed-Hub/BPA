@@ -399,7 +399,7 @@ export function ReportsScreen(_props?: any) {
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 10, paddingTop: 8 }}>
                   {segments.map((seg, i) => (
                     <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <div style={{ width: 12, height: 12, borderRadius: 3, background: seg.color, flexShrink: 0 }} />
+                      <div style={{ width: 12, height: 12, borderRadius: 'var(--sb-r-chip)', background: seg.color, flexShrink: 0 }} />
                       <span style={{ flex: 1, fontSize: 'var(--sb-t-body)', color: C.textPri }}>{seg.name}</span>
                       <span style={{ fontSize: 'var(--sb-t-body-s)', color: C.textMuted, marginRight: 8 }}>
                         {Math.round(seg.pct * 100)}%

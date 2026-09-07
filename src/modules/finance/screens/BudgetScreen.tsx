@@ -383,10 +383,10 @@ function SlipRows({ rows, color, selectedId, onPick, rules, dragging, currency }
                         </span>
                         {/* One thin rule under the name — a receipt does not
                             need a chart, only the proportion. */}
-                        <span style={{ position: 'relative', height: 3, borderRadius: 2, background: budgeted ? 'var(--sb-field)' : 'transparent', border: budgeted ? 'none' : '1px dashed #E0D8C4', boxSizing: 'border-box' }}>
+                        <span style={{ position: 'relative', height: 3, borderRadius: 'var(--sb-r-chip)', background: budgeted ? 'var(--sb-field)' : 'transparent', border: budgeted ? 'none' : '1px dashed #E0D8C4', boxSizing: 'border-box' }}>
                           {budgeted && pct > 0 && (
                             <span style={{
-                              position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: 2,
+                              position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: 'var(--sb-r-chip)',
                               width: `${Math.min(1, pct) * 100}%`, background: over ? RUST : color,
                             }} />
                           )}
@@ -1430,12 +1430,12 @@ export function BudgetScreen(_props?: any) {
                   <span style={{
                     position: 'absolute', left: 'calc(50% - 13px)', width: 14,
                     bottom: 'calc(50% + 3px)', height: up,
-                    background: OLIVE, borderRadius: '999px 999px 3px 3px',
+                    background: OLIVE, borderRadius: 'var(--sb-r-pill) var(--sb-r-pill) var(--sb-r-chip) var(--sb-r-chip)',
                   }} />
                   <span style={{
                     position: 'absolute', left: 'calc(50% - 13px)', width: 14,
                     top: 'calc(50% + 3px)', height: down,
-                    background: RUST, borderRadius: '3px 3px 999px 999px',
+                    background: RUST, borderRadius: 'var(--sb-r-chip) var(--sb-r-chip) var(--sb-r-pill) var(--sb-r-pill)',
                   }} />
                   <span
                     title={`net ${money(net, currency)}`}

@@ -804,10 +804,10 @@ function PlanCard({
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px 14px' }}>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 'var(--sb-t-meta)', color: GHOST }}>
-          <span style={{ width: 8, height: 8, borderRadius: 2, background: AMBER }} /> Proposed
+          <span style={{ width: 8, height: 8, borderRadius: 'var(--sb-r-chip)', background: AMBER }} /> Proposed
         </span>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 'var(--sb-t-meta)', color: GHOST }}>
-          <span style={{ width: 8, height: 8, borderRadius: 2, background: '#D8CFB8' }} /> Calendar
+          <span style={{ width: 8, height: 8, borderRadius: 'var(--sb-r-chip)', background: '#D8CFB8' }} /> Calendar
         </span>
         <span style={{ flex: 1 }} />
         <button onClick={onOpenCalendar} style={{ ...PILL, height: 28 }}>Open calendar</button>

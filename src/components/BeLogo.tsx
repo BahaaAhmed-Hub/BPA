@@ -91,7 +91,7 @@ export function BeLogo({ variant = 'black', size = 148, title }: {
           <span style={{
             width: Math.max(3, Math.round(9 * k)),
             height: Math.max(3, Math.round(9 * k)),
-            borderRadius: 2,
+            borderRadius: 'var(--sb-r-chip)',
             background: v.dot,
             marginLeft: Math.max(1, Math.round(5 * k)),
             marginBottom: Math.max(1, Math.round(4 * k)),
