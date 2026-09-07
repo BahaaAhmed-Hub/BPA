@@ -8,6 +8,9 @@
  *   POST /functions/v1/health-ingest?token=<token>
  *   { "value": 8213, "date": "2026-09-07" }
  *
+ * Add `&dry=1` to check the wiring without writing: it validates the token and
+ * finds the habit, then stops.
+ *
  * `value` may also be sent as a bare body, a form field, or `?value=`, because
  * Shortcuts makes some of those easier than others. `date` defaults to today in
  * the phone's own offset when it sends one, and to UTC otherwise.
@@ -66,7 +69,11 @@ serve(async (req: Request) => {
       }
     }
   }
-  if (value === null) return json({ error: 'No number in the request' }, 400)
+  // `?dry=1` answers "is this wired up?" without writing anything: it checks
+  // the token and finds the habit, and stops there. The settings screen uses it
+  // so "it is not working" can be told apart from "you have not walked yet".
+  const dry = url.searchParams.get('dry') !== null
+  if (value === null && !dry) return json({ error: 'No number in the request' }, 400)
   if (!isDate(date)) date = new Date().toISOString().slice(0, 10)
 
   const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
@@ -79,6 +86,8 @@ serve(async (req: Request) => {
 
   if (!link) return json({ error: 'Unknown token' }, 403)
 
+  if (dry) return json({ ok: true, dry: true, habit_id: link.habit_id, metric: link.metric, date })
+
   // Whether the day counts as done is the habit's own goal, not this
   // function's opinion — 400 steps against a 10,000 goal is a log, not a tick.
   const { data: habit } = await admin
@@ -89,7 +98,7 @@ serve(async (req: Request) => {
     .maybeSingle() as { data: { goal: number | null } | null }
 
   const goal = habit?.goal ?? null
-  const completed = goal && goal > 0 ? value >= goal : value > 0
+  const completed = goal && goal > 0 ? value! >= goal : value! > 0
 
   // One row per habit per day — the table's own unique (habit_id, date). A
   // daily automation sending twice corrects the day rather than doubling it.
@@ -99,7 +108,7 @@ serve(async (req: Request) => {
       user_id:  link.user_id,
       habit_id: link.habit_id,
       date,
-      quantity: value,
+      quantity: value!,
       completed,
     }, { onConflict: 'habit_id,date' })
 

@@ -12,9 +12,9 @@ import {
 import { supabase } from '@/lib/supabase'
 import { paidAtSupported } from '../finance/unpaid'
 import {
-  loadHealthLinks, createHealthLink, deleteHealthLink, ingestUrl,
+  loadHealthLinks, createHealthLink, deleteHealthLink, ingestUrl, checkHealthLink,
   isMovementHabit, suggestMetric, METRIC_LABEL, METRIC_SAMPLE,
-  type HealthLink, type HealthMetric,
+  type HealthLink, type HealthMetric, type LinkCheck,
 } from '@/lib/healthLink'
 import type { EnvelopeStyle as BudgetEnvelopeStyle } from '@/modules/finance/screens/BudgetScreen'
 import {
@@ -1191,6 +1191,7 @@ function AppleHealthBlock({ habits }: { habits: { id: string; name: string; unit
   const [copied, setCopied] = useState<string | null>(null)
   const [err, setErr]       = useState<string | null>(null)
   const [open, setOpen]     = useState<string | null>(null)
+  const [check, setCheck]   = useState<Record<string, LinkCheck | 'checking'>>({})
 
   useEffect(() => { void loadHealthLinks().then(l => { setLinks(l); setReady(true) }) }, [])
 
@@ -1301,11 +1302,30 @@ function AppleHealthBlock({ habits }: { habits: { id: string; name: string; unit
                         flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                         fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: '#6C6553',
                         background: '#FAF7EC', border: '1px solid #E8E1CE', borderRadius: 7, padding: '7px 9px',
-                      }}>{ingestUrl(link.token)}</code>
+                      }}>{ingestUrl(link.token) || 'This build has no Supabase address configured.'}</code>
                       <button style={pill} onClick={() => copy(ingestUrl(link.token), link.id)}>
                         {copied === link.id ? 'Copied' : 'Copy'}
                       </button>
+                      {/* Three things have to be true before a step count can
+                          arrive, and "nothing yet" tells you none of them. */}
+                      <button style={pill}
+                        onClick={async () => {
+                          setCheck(c => ({ ...c, [link.id]: 'checking' }))
+                          setCheck(c => ({ ...c, [link.id]: { ok: false, detail: '' } }))
+                          const result = await checkHealthLink(link.token)
+                          setCheck(c => ({ ...c, [link.id]: result }))
+                        }}>
+                        Check it
+                      </button>
                     </div>
+                    {check[link.id] && check[link.id] !== 'checking' && (check[link.id] as LinkCheck).detail && (
+                      <p style={{
+                        margin: '0 0 10px', fontSize: 12,
+                        color: (check[link.id] as LinkCheck).ok ? '#0C8140' : '#C62828', lineHeight: 1.5,
+                      }}>
+                        {(check[link.id] as LinkCheck).detail}
+                      </p>
+                    )}
                     <ol style={{ margin: 0, paddingLeft: 18, fontSize: 12.5, color: '#6C6553', lineHeight: 1.75 }}>
                       <li>On the iPhone, open <b>Shortcuts</b> → <b>Automation</b> → <b>+</b> → <b>Time of Day</b>,
                         pick a time (10pm catches the whole day) and <b>Run Immediately</b>.</li>

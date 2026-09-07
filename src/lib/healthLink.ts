@@ -100,8 +100,42 @@ export async function deleteHealthLink(id: string): Promise<void> {
   if (error) throw new Error(error.message)
 }
 
-/** The address the Shortcut posts to. */
+/** The address the Shortcut posts to. Empty when this build has no Supabase
+ *  URL — a relative address is worse than none, because it looks right and the
+ *  phone cannot possibly reach it. */
 export function ingestUrl(token: string): string {
   const base = (import.meta.env.VITE_SUPABASE_URL as string ?? '').replace(/\/$/, '')
+  if (!/^https?:\/\//.test(base)) return ''
   return `${base}/functions/v1/health-ingest?token=${token}`
+}
+
+
+// ─── Is it actually wired up? ────────────────────────────────────────────────
+//
+// Three things have to be true before a step count can arrive: the function is
+// deployed, the token is known, and it points at a habit. Each fails
+// differently, and "nothing has arrived" tells you none of it — so ask, without
+// writing anything.
+
+export type LinkCheck =
+  | { ok: true; detail: string }
+  | { ok: false; detail: string }
+
+export async function checkHealthLink(token: string): Promise<LinkCheck> {
+  const url = ingestUrl(token)
+  if (!url) return { ok: false, detail: 'This build has no Supabase address, so there is nowhere for the phone to send to.' }
+  let res: Response
+  try {
+    res = await fetch(`${url}&dry=1`, { method: 'POST' })
+  } catch {
+    return { ok: false, detail: 'Could not reach it at all — check your connection.' }
+  }
+  if (res.status === 404) {
+    return { ok: false, detail: 'The health-ingest function is not deployed yet — deploy it and try again.' }
+  }
+  const body = await res.json().catch(() => ({})) as { ok?: boolean; error?: string; metric?: string }
+  if (res.ok && body.ok) return { ok: true, detail: 'Wired up — the phone can send to this.' }
+  if (res.status === 403) return { ok: false, detail: 'This address is not recognised. Unlink and link again.' }
+  if (res.status === 401) return { ok: false, detail: 'The address is missing its token — copy it again.' }
+  return { ok: false, detail: body.error ?? `It answered ${res.status}.` }
 }

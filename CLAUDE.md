@@ -487,6 +487,11 @@ Time of Day → Find Health Samples → Get Contents of URL).
   sets `completed` from `habits.goal`, so 400 steps against 10,000 is a log, not
   a tick. Upsert on `(habit_id, date)` — the table's own unique — so a daily
   automation sending twice corrects the day.
+- **"Check it" asks without writing.** `?dry=1` validates the token and finds
+  the habit, then stops — so "not deployed", "address not recognised" and
+  "wired up, nothing walked yet" are told apart. `ingestUrl` returns `''` when
+  the build has no Supabase address rather than a relative one the phone could
+  never reach.
 - `20260012_health_links.sql` + the `health-ingest` function must both be
   deployed; the settings block says so when the table is missing.
 
