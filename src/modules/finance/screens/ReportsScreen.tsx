@@ -40,7 +40,7 @@ const MONTH_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct'
 const RANGE_FIELD: React.CSSProperties = {
   border: 'none', background: 'transparent', outline: 'none',
   fontFamily: "'Outfit', system-ui, sans-serif", fontSize: 13, fontWeight: 500,
-  color: '#191712', padding: 0, width: 118,
+  color: 'var(--sb-ink-1)', padding: 0, width: 118,
 }
 
 const PALETTE = [
@@ -111,18 +111,18 @@ function colourFor(rows: { id: string; own?: string }[]): Map<string, string> {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function ReportsScreen(_props?: any) {
   const C = {
-    bg:        '#F7F4EA',
-    surface:   '#FFFFFF',
+    bg:        'var(--sb-page)',
+    surface:   'var(--sb-card)',
     amberBg:   'rgba(var(--sb-accent-rgb),0.12)',
-    border:    '#E8E1CE',
-    borderSt:  '#E8E1CE',
-    divFaint:  '#E8E1CE',
+    border:    'var(--sb-border)',
+    borderSt:  'var(--sb-border)',
+    divFaint:  'var(--sb-border)',
     amber:     'var(--sb-accent)',
-    textPri:   '#191712',
-    textMuted: '#6C6553',
+    textPri:   'var(--sb-ink-1)',
+    textMuted: 'var(--sb-ink-3)',
     textDim:   '#9B9180',
-    red:       '#C62828',
-    green:     '#0C8140',
+    red:       'var(--sb-negative)',
+    green:     'var(--sb-positive)',
   }
 
   const { transactions, categories } = useFinanceStore()
@@ -244,26 +244,26 @@ export function ReportsScreen(_props?: any) {
       {/* Header */}
       <div style={{
         flexShrink: 0,
-        borderBottom: '1px solid #E8E1CE',
+        borderBottom: '1px solid var(--sb-border)',
         padding: '14px 26px 16px',
         display: 'flex', alignItems: 'flex-end', gap: 20,
       }}>
         <div>
-          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: '#6C6553', display: 'block', marginBottom: 4 }}>MONEY</span>
+          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-3)', display: 'block', marginBottom: 4 }}>MONEY</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             {wholeMonth && (
               <button onClick={() => navigateMonth(-1)} title="The month before"
-                style={{ background: 'none', border: 'none', color: '#6C6553', fontSize: 20, cursor: 'pointer', padding: 0, lineHeight: 1 }}>‹</button>
+                style={{ background: 'none', border: 'none', color: 'var(--sb-ink-3)', fontSize: 20, cursor: 'pointer', padding: 0, lineHeight: 1 }}>‹</button>
             )}
-            <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 28, fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1, color: '#191712' }}>
+            <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 28, fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1, color: 'var(--sb-ink-1)' }}>
               Reports · {periodLabel}
             </span>
             {wholeMonth && (
               <button onClick={() => navigateMonth(1)} title="The month after"
-                style={{ background: 'none', border: 'none', color: '#6C6553', fontSize: 20, cursor: 'pointer', padding: 0, lineHeight: 1 }}>›</button>
+                style={{ background: 'none', border: 'none', color: 'var(--sb-ink-3)', fontSize: 20, cursor: 'pointer', padding: 0, lineHeight: 1 }}>›</button>
             )}
           </div>
-          <span style={{ fontSize: 12, color: '#6C6553', display: 'block', marginTop: 3 }}>
+          <span style={{ fontSize: 12, color: 'var(--sb-ink-3)', display: 'block', marginTop: 3 }}>
             {TOTAL > 0 ? `${base} ${dayRate.toLocaleString('en-US')}/day · ${REPORT_DATA.length} categories` : 'No expenses logged this month'}
             {reportUnrated.length > 0 && (
               <span title={`No rate set for ${reportUnrated.join(', ')}, so it is not counted`}
@@ -273,12 +273,12 @@ export function ReportsScreen(_props?: any) {
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8, paddingBottom: 3 }}>
           {/* View toggle */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 2, padding: 3, borderRadius: 999, background: '#EDE7D9' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 2, padding: 3, borderRadius: 999, background: 'var(--sb-field)' }}>
             {(['donut', 'bars'] as const).map(v => (
               <button key={v} onClick={() => setReportView(v)} style={{
                 height: 28, padding: '0 14px', borderRadius: 999, border: 'none',
-                background: reportView === v ? '#FFFFFF' : 'transparent',
-                color: reportView === v ? '#191712' : '#6C6553',
+                background: reportView === v ? 'var(--sb-card)' : 'transparent',
+                color: reportView === v ? 'var(--sb-ink-1)' : 'var(--sb-ink-3)',
                 fontSize: 11.5, fontWeight: reportView === v ? 600 : 400, cursor: 'pointer',
                 boxShadow: reportView === v ? '0 1px 3px rgba(25,23,18,0.16)' : 'none',
                 fontFamily: 'inherit',
@@ -319,8 +319,8 @@ export function ReportsScreen(_props?: any) {
                   style={{
                     padding: '4px 9px', borderRadius: 7, border: 'none', cursor: 'pointer',
                     fontFamily: 'inherit', fontSize: 11.5, fontWeight: on ? 700 : 500,
-                    background: on ? '#191712' : 'transparent',
-                    color: on ? '#FDF8E7' : C.textDim,
+                    background: on ? 'var(--sb-ink-1)' : 'transparent',
+                    color: on ? 'var(--sb-ink-on-dark)' : C.textDim,
                   }}>
                   {label}
                 </button>
@@ -383,10 +383,10 @@ export function ReportsScreen(_props?: any) {
                     alignItems: 'center', justifyContent: 'center',
                     pointerEvents: 'none',
                   }}>
-                    <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 16, fontWeight: 600, color: '#191712', letterSpacing: '-0.02em', lineHeight: 1 }}>
+                    <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 16, fontWeight: 600, color: 'var(--sb-ink-1)', letterSpacing: '-0.02em', lineHeight: 1 }}>
                       {dayRate > 0 ? `${dayRate.toLocaleString('en-US')}` : '–'}
                     </span>
-                    <span style={{ fontSize: 9, color: '#6C6553', marginTop: 2, letterSpacing: '0.08em', fontWeight: 700 }}>
+                    <span style={{ fontSize: 9, color: 'var(--sb-ink-3)', marginTop: 2, letterSpacing: '0.08em', fontWeight: 700 }}>
                       EGP/DAY
                     </span>
                     <span style={{ fontSize: 9, color: '#9B9180', marginTop: 4 }}>
