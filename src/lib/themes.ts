@@ -181,8 +181,12 @@ export const THEMES: AppTheme[] = [
       '--sb-positive': '#4ADE80',                          // derived: concept had no green
       '--sb-positive-deep': '#22C55E',
       '--sb-positive-tint': 'rgba(74,222,128,.16)',
-      '--sb-negative': '#F472B6', '--sb-negative-deep': '#EC4899',
-      '--sb-negative-tint': 'rgba(244,114,182,.18)',
+      // The negative is the Be mark's amber (#E9A23B) rather than the pink it
+      // was specified with: a pink figure on this ground read as decoration
+      // rather than as money going out. Deep is the same hue lifted, for text
+      // on its own tint.
+      '--sb-negative': '#E9A23B', '--sb-negative-deep': '#F0B65C',
+      '--sb-negative-tint': 'rgba(233,162,59,.18)',
       '--sb-shadow-frame':   '0 30px 80px -40px rgba(0,0,0,.75)',
       '--sb-shadow-hover':   '0 6px 18px -8px rgba(0,0,0,.6)',
       '--sb-shadow-control': '0 1px 3px rgba(0,0,0,.5)',

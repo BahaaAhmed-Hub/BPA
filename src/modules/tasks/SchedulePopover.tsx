@@ -4,7 +4,8 @@
 // native <input type="time"> handed the browser's spinner wheel to the user,
 // which looks nothing like the rest of the app.
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Button } from '@/components/ui'
 import { ChevronLeft, ChevronRight, Check } from 'lucide-react'
 import { T, ICON, STROKE } from '@/lib/type'
@@ -35,6 +36,15 @@ export function formatTime(hhmm: string): string {
   const hour = h % 12 === 0 ? 12 : h % 12
   return `${hour}:${String(m).padStart(2, '0')} ${suffix}`
 }
+
+/** The panel's own metrics. It was 292 wide with 14 of padding and 28px day
+ *  cells, which on a board column came to a panel taller than the card it hung
+ *  off and wider than the column it lived in. */
+const PANEL_W = 264
+const CELL_H  = 26
+/** Between the control and the panel, and between the panel and the window. */
+const GAP  = 6
+const EDGE = 8
 
 const SLOTS: string[] = Array.from({ length: 96 }, (_, i) =>
   `${String(Math.floor(i / 4)).padStart(2, '0')}:${String((i % 4) * 15).padStart(2, '0')}`)
@@ -168,17 +178,51 @@ export function SchedulePopover({ date, start, duration, onApply, onClose, align
     if (gap > 0) gapRef.current = gap
   }
 
+  // Six rows always, and most months need five: the sixth was 28px of empty
+  // grid on the bottom of every popover.
   const cells = useMemo(() => {
     const first = new Date(view.getFullYear(), view.getMonth(), 1)
     const lead = (first.getDay() + 6) % 7   // Monday-first, like the artboard
+    const days = new Date(view.getFullYear(), view.getMonth() + 1, 0).getDate()
+    const weeks = Math.ceil((lead + days) / 7)
     const startCell = new Date(first)
     startCell.setDate(first.getDate() - lead)
-    return Array.from({ length: 42 }, (_, i) => {
+    return Array.from({ length: weeks * 7 }, (_, i) => {
       const d = new Date(startCell)
       d.setDate(startCell.getDate() + i)
       return d
     })
   }, [view])
+
+  // Where it lands: under the control that opened it, flipped above when there
+  // is no room below, and always inside the viewport by a margin.
+  const anchorRef = useRef<HTMLSpanElement>(null)
+  const panelRef  = useRef<HTMLDivElement>(null)
+  const [pos, setPos] = useState({ top: 0, left: 0, placed: false })
+
+  useLayoutEffect(() => {
+    function place() {
+      const host = anchorRef.current?.parentElement
+      if (!host) return
+      const a = host.getBoundingClientRect()
+      const h = panelRef.current?.offsetHeight ?? 360
+      const roomBelow = window.innerHeight - a.bottom
+      const top = roomBelow >= h + GAP + EDGE
+        ? a.bottom + GAP
+        : Math.max(EDGE, a.top - GAP - h)
+      const wanted = align === 'right' ? a.right - PANEL_W : a.left
+      const left = Math.min(Math.max(EDGE, wanted), window.innerWidth - PANEL_W - EDGE)
+      setPos({ top, left, placed: true })
+    }
+    place()
+    // Anything that moves the control moves the panel with it.
+    window.addEventListener('resize', place)
+    window.addEventListener('scroll', place, true)
+    return () => {
+      window.removeEventListener('resize', place)
+      window.removeEventListener('scroll', place, true)
+    }
+  }, [align, cells.length])
 
   const minutes = Math.max(0, toMinutes(to) - toMinutes(from))
   const { conflicts, checking } = useSlotConflicts(picked, from, to, ignoreEventId)
@@ -188,17 +232,27 @@ export function SchedulePopover({ date, start, duration, onApply, onClose, align
   }
 
   return (
+    <>
+      {/* A zero-size mark left where the popover used to be, so the panel can
+          be measured against the control that opened it after it has been
+          moved out to the body. */}
+      <span ref={anchorRef} style={{ position: 'absolute', top: 0, left: 0, width: 0, height: 0 }} aria-hidden />
+      {createPortal(
     <div
+      ref={panelRef}
       onClick={e => e.stopPropagation()}
       onPointerDown={e => e.stopPropagation()}
       onMouseDown={e => e.stopPropagation()}
       style={{
-        position: 'absolute', top: 'calc(100% + 8px)', zIndex: 80, width: 292,
-        ...(align === 'right' ? { right: 0 } : { left: 0 }),
-        background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-card)', padding: 14,
+        // Fixed and in the body: a board column scrolls and clips its
+        // children, so an absolutely positioned panel lost its left-hand
+        // columns and its footer to the column's edges.
+        position: 'fixed', zIndex: 80, width: PANEL_W,
+        top: pos.top, left: pos.left, visibility: pos.placed ? 'visible' : 'hidden',
+        background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-card)', padding: 12,
         boxShadow: 'var(--sb-shadow-frame)', textAlign: 'left',
       }}>
-      <div style={{ display: 'flex', alignItems: 'center', marginBottom: 10 }}>
+      <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
         <span style={{ flex: 1, fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>
           {view.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}
         </span>
@@ -220,7 +274,7 @@ export function SchedulePopover({ date, start, duration, onApply, onClose, align
           const on = iso === picked
           return (
             <button key={iso} type="button" onClick={() => setPicked(iso)} style={{
-              height: 28, borderRadius: 'var(--sb-r-chip)', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+              height: CELL_H, borderRadius: 'var(--sb-r-chip)', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
               background: on ? 'var(--sb-ink-1)' : 'transparent',
               color: on ? 'var(--sb-ink-on-dark)' : outside ? 'var(--sb-border)' : 'var(--sb-ink-1)',
               fontSize: 'var(--sb-t-body-s)', fontWeight: on ? 700 : 500,
@@ -229,7 +283,7 @@ export function SchedulePopover({ date, start, duration, onApply, onClose, align
         })}
       </div>
 
-      <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
+      <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
         <TimeSelect label="Start" value={from} onChange={changeStart} />
         <TimeSelect label="End" value={to} onChange={changeEnd} />
       </div>
@@ -246,7 +300,7 @@ export function SchedulePopover({ date, start, duration, onApply, onClose, align
           </p>
         ) : (
           <div style={{
-            marginTop: 9, padding: '8px 10px', borderRadius: 'var(--sb-r-sm)',
+            marginTop: 8, padding: '7px 9px', borderRadius: 'var(--sb-r-sm)',
             background: 'rgba(var(--sb-accent-rgb),0.22)', border: 'var(--sb-border-width) solid rgba(var(--sb-accent-rgb),0.7)',
           }}>
             <p style={{ ...T.meta, margin: 0, fontWeight: 600, color: 'var(--sb-ink-2)' }}>
@@ -269,7 +323,7 @@ export function SchedulePopover({ date, start, duration, onApply, onClose, align
         )
       )}
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10 }}>
         <span style={{ flex: 1, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>
           {minutes > 0 ? `${minutes}m block at ${formatTime(from)}` : 'End must follow start'}
         </span>
@@ -284,6 +338,8 @@ export function SchedulePopover({ date, start, duration, onApply, onClose, align
         )}
         <Button variant="primary" type="button" onClick={() => { onApply({ dueDate: picked, plannedTime: from, duration: minutes || undefined }); onClose() }}>Set block</Button>
       </div>
-    </div>
+    </div>,
+    document.body)}
+    </>
   )
 }
