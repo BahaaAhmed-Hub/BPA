@@ -462,13 +462,13 @@ function NotificationBell() {
                   display: 'block', fontSize: 12.5, color: 'var(--sb-ink-1)', lineHeight: 1.35,
                   overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                 }}>{n.title}</span>
-                <span style={{ display: 'block', fontSize: 11, color: '#9B9180', lineHeight: 1.35 }}>{n.detail}</span>
+                <span style={{ display: 'block', fontSize: 11, color: 'var(--sb-ink-4)', lineHeight: 1.35 }}>{n.detail}</span>
               </span>
             </button>
           ))}
 
           {count === 0 && (
-            <p style={{ margin: 0, padding: '18px 12px', fontSize: 12, color: '#9B9180', lineHeight: 1.5, textAlign: 'center' }}>
+            <p style={{ margin: 0, padding: '18px 12px', fontSize: 12, color: 'var(--sb-ink-4)', lineHeight: 1.5, textAlign: 'center' }}>
               Nothing is waiting for you.
             </p>
           )}
@@ -480,7 +480,7 @@ function NotificationBell() {
           )}
 
           {unwired.length > 0 && (
-            <p style={{ margin: '4px 6px 0', padding: '8px 10px', fontSize: 10.5, color: '#9B9180', lineHeight: 1.45 }}>
+            <p style={{ margin: '4px 6px 0', padding: '8px 10px', fontSize: 10.5, color: 'var(--sb-ink-4)', lineHeight: 1.45 }}>
               {unwired.map(u => u.label).join(', ')} {unwired.length === 1
                 ? 'is switched on but has nothing behind it yet.'
                 : 'are switched on but have nothing behind them yet.'}
@@ -493,7 +493,7 @@ function NotificationBell() {
               padding: '0 10px', borderRadius: 9, border: 'none', background: 'transparent',
               color: 'var(--sb-ink-3)', fontSize: 12, fontFamily: 'inherit', cursor: 'pointer', textAlign: 'left',
             }}>
-            <Settings size={13} color="#9B9180" /> What gets notified
+            <Settings size={13} color="var(--sb-ink-4)" /> What gets notified
           </button>
         </div>
       )}
@@ -639,7 +639,7 @@ function TopNav() {
                   overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                 }}>{user?.name ?? 'Your account'}</p>
                 <p style={{
-                  margin: '2px 0 0', fontSize: 11.5, color: '#9B9180',
+                  margin: '2px 0 0', fontSize: 11.5, color: 'var(--sb-ink-4)',
                   overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                 }}>{user?.email}</p>
               </div>

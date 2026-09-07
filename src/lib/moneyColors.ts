@@ -15,6 +15,6 @@ export const NEGATIVE_DEEP = '#A31C1C'
 export const NEGATIVE_TINT = '#FAE3E3'
 
 /** The colour a signed figure should be drawn in. Zero is neither. */
-export function signColor(n: number, neutral = '#9B9180'): string {
+export function signColor(n: number, neutral = 'var(--sb-ink-4)'): string {
   return n > 0 ? POSITIVE : n < 0 ? NEGATIVE : neutral
 }

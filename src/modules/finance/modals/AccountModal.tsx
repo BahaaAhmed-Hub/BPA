@@ -187,7 +187,7 @@ export function AccountModal({ account, onSave, onDelete, onClose }: Props) {
               value={balance}
               onChange={setBalance}
             />
-            <div style={{ fontSize: 11, color: '#9B9180', marginTop: 5, lineHeight: 1.45 }}>
+            <div style={{ fontSize: 11, color: 'var(--sb-ink-4)', marginTop: 5, lineHeight: 1.45 }}>
               Where this account stood before anything was logged. Entries move it from
               here — a card goes below zero as it is spent on, and back towards zero as
               it is paid off.
@@ -205,7 +205,7 @@ export function AccountModal({ account, onSave, onDelete, onClose }: Props) {
                 value={creditLimit}
                 onChange={setCreditLimit}
               />
-              <div style={{ fontSize: 11, color: '#9B9180', marginTop: 5, lineHeight: 1.45 }}>
+              <div style={{ fontSize: 11, color: 'var(--sb-ink-4)', marginTop: 5, lineHeight: 1.45 }}>
                 The card's ceiling. Leave it at nothing and the card simply shows what is
                 owed, with no bar and no figure left.
               </div>

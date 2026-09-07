@@ -328,7 +328,7 @@ function DRow({ label, sub, children, last }: {
     }}>
       <div style={{ minWidth: 0 }}>
         <p style={{ margin: 0, fontSize: 13.5, fontWeight: 500, color: 'var(--sb-ink-1)', lineHeight: 1.3 }}>{label}</p>
-        {sub && <p style={{ margin: '2px 0 0', fontSize: 11.5, color: '#9B9180', lineHeight: 1.35 }}>{sub}</p>}
+        {sub && <p style={{ margin: '2px 0 0', fontSize: 11.5, color: 'var(--sb-ink-4)', lineHeight: 1.35 }}>{sub}</p>}
       </div>
       <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 10 }}>{children}</div>
     </div>
@@ -356,7 +356,7 @@ function Segmented<T extends string>({ value, options, onChange }: {
             background: on ? 'var(--sb-card)' : 'transparent',
             border: on ? '1px solid rgba(25,23,18,0.08)' : '1px solid transparent',
             boxShadow: on ? '0 1px 2px rgba(25,23,18,0.10)' : 'none',
-            color: on ? 'var(--sb-ink-1)' : '#9B9180',
+            color: on ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)',
             transition: 'all 0.12s',
           }}>{o.label}</button>
         )
@@ -456,7 +456,7 @@ function ProfileSection({
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}>{s.fullName || name || 'Professor User'}</p>
           <p style={{
-            margin: '2px 0 0', fontSize: 12, color: '#9B9180', lineHeight: 1.3,
+            margin: '2px 0 0', fontSize: 12, color: 'var(--sb-ink-4)', lineHeight: 1.3,
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}>{[email, tzLabel].filter(Boolean).join(' · ')}</p>
         </div>
@@ -505,7 +505,7 @@ function ProfileSection({
             width: 36, height: 36, borderRadius: 9, flexShrink: 0, padding: 0,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
-            color: tzSyncing ? '#9B9180' : 'var(--sb-ink-3)',
+            color: tzSyncing ? 'var(--sb-ink-4)' : 'var(--sb-ink-3)',
             cursor: tzSyncing ? 'default' : 'pointer',
           }}>
           <LocateFixed size={15} style={tzSyncing ? { opacity: 0.5 } : undefined} />
@@ -745,7 +745,7 @@ function CompanyCard({
             ...selectStyle, fontSize: 11, padding: '3px 8px', maxWidth: 168, flexShrink: 0,
             borderColor: co.accountId ? '#C8DAB0' : '#E0D6BC',
             background: co.accountId ? 'rgba(12,129,64,0.08)' : 'var(--sb-card)',
-            color: co.accountId ? 'var(--sb-positive)' : '#9B9180',
+            color: co.accountId ? 'var(--sb-positive)' : 'var(--sb-ink-4)',
           }}>
           <option value="">{accounts.length > 0 ? 'Link an account…' : 'No accounts connected'}</option>
           {accounts.map(a => <option key={a.id} value={a.id}>{a.isPrimary ? `${a.email} (this account)` : a.email}</option>)}
@@ -1090,12 +1090,12 @@ function SettingsHabitForm({
               if (!file) return
               try { update({ image: await readHabitImage(file) }) } catch { /* not a usable image */ }
             }} />
-          {!s.image && <span style={{ color: '#9B9180', fontSize: 10 }}>Picture</span>}
+          {!s.image && <span style={{ color: 'var(--sb-ink-4)', fontSize: 10 }}>Picture</span>}
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, flexShrink: 0 }}>
           <EmojiBtn value={s.emoji || '🎯'} onSelect={v => update({ emoji: v })} size={46} />
-          <span style={{ color: '#9B9180', fontSize: 10 }}>Icon</span>
+          <span style={{ color: 'var(--sb-ink-4)', fontSize: 10 }}>Icon</span>
         </div>
 
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -1187,7 +1187,7 @@ function SettingsHabitForm({
         <button onClick={() => valid && onSave(s)} disabled={!valid}
           style={{
             height: 38, padding: '0 18px', borderRadius: 999, border: 'none',
-            background: valid ? 'var(--sb-accent)' : 'var(--sb-field)', color: valid ? 'var(--sb-ink-1)' : '#9B9180',
+            background: valid ? 'var(--sb-accent)' : 'var(--sb-field)', color: valid ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)',
             fontSize: 13, fontWeight: 600, fontFamily: 'inherit',
             cursor: valid ? 'pointer' : 'default',
             display: 'flex', gap: 6, alignItems: 'center',
@@ -1289,12 +1289,12 @@ function AppleHealthBlock({ habits }: { habits: { id: string; name: string; unit
       </p>
 
       {movement.length === 0 ? (
-        <p style={{ margin: 0, fontSize: 12.5, color: '#9B9180', lineHeight: 1.6 }}>
+        <p style={{ margin: 0, fontSize: 12.5, color: 'var(--sb-ink-4)', lineHeight: 1.6 }}>
           Nothing to link yet. Add a habit about walking, running, steps or distance and it appears
           here.
         </p>
       ) : !ready ? (
-        <p style={{ margin: 0, fontSize: 12.5, color: '#9B9180' }}>Looking…</p>
+        <p style={{ margin: 0, fontSize: 12.5, color: 'var(--sb-ink-4)' }}>Looking…</p>
       ) : links === null ? (
         <div style={{
           fontSize: 12.5, color: '#7A5F09', lineHeight: 1.55, maxWidth: 720,
@@ -1315,11 +1315,11 @@ function AppleHealthBlock({ habits }: { habits: { id: string; name: string; unit
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 13px' }}>
                   <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--sb-ink-1)', flex: 1, minWidth: 0 }}>
                     {h.name}
-                    <span style={{ fontWeight: 400, color: '#9B9180' }}> · {METRIC_LABEL[metric]}</span>
+                    <span style={{ fontWeight: 400, color: 'var(--sb-ink-4)' }}> · {METRIC_LABEL[metric]}</span>
                   </span>
                   {link ? (
                     <>
-                      <span style={{ fontSize: 11, color: link.lastSeenAt ? 'var(--sb-positive)' : '#9B9180' }}>
+                      <span style={{ fontSize: 11, color: link.lastSeenAt ? 'var(--sb-positive)' : 'var(--sb-ink-4)' }}>
                         {link.lastSeenAt
                           ? `last sent ${new Date(link.lastSeenAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`
                           : 'nothing sent yet'}
@@ -1380,7 +1380,7 @@ function AppleHealthBlock({ habits }: { habits: { id: string; name: string; unit
                         holding the number from step 2.</li>
                       <li>Run it once by hand. The line above turns green when the first number lands.</li>
                     </ol>
-                    <p style={{ margin: '10px 0 0', fontSize: 11.5, color: '#9B9180', lineHeight: 1.6 }}>
+                    <p style={{ margin: '10px 0 0', fontSize: 11.5, color: 'var(--sb-ink-4)', lineHeight: 1.6 }}>
                       The address is the whole credential and it feeds this one habit — it can read nothing
                       and write nowhere else. Unlink to make it stop working.
                     </p>
@@ -1427,7 +1427,7 @@ function HabitsSection() {
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', paddingBottom: 14, marginBottom: 4, borderBottom: '1px solid var(--sb-border)' }}>
         <div style={{ flex: '1 1 150px', minWidth: 0, maxWidth: 200 }}>
           <div style={{ fontSize: 13, color: 'var(--sb-ink-1)' }}>Default view</div>
-          <div style={{ fontSize: 11.5, color: '#9B9180', marginTop: 2 }}>
+          <div style={{ fontSize: 11.5, color: 'var(--sb-ink-4)', marginTop: 2 }}>
             {HABIT_VIEWS.find(v => v.id === habitView)?.hint}
           </div>
         </div>
@@ -1454,7 +1454,7 @@ function HabitsSection() {
             />
             <div style={{ width: 10, height: 10, borderRadius: '50%', background: h.color, flexShrink: 0 }} />
             <span style={{ flex: 1, fontSize: 13.5, color: 'var(--sb-ink-1)' }}>{h.name}</span>
-            <span style={{ fontSize: 11.5, color: '#9B9180', flexShrink: 0, whiteSpace: 'nowrap' }}>
+            <span style={{ fontSize: 11.5, color: 'var(--sb-ink-4)', flexShrink: 0, whiteSpace: 'nowrap' }}>
               {describeHabit(h)}
             </span>
             <Toggle checked={h.isActive} onChange={() => toggle(h.id)} />
@@ -2144,7 +2144,7 @@ function AIVoiceSection({ s, set }: { s: AppSettings; set: (p: Partial<AppSettin
           style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.5, width: '100%' }} />
       </FieldRow>
 
-      <p style={{ margin: '14px 0 0', fontSize: 11, color: '#9B9180' }}>Your mail and tasks are never used to train the model.</p>
+      <p style={{ margin: '14px 0 0', fontSize: 11, color: 'var(--sb-ink-4)' }}>Your mail and tasks are never used to train the model.</p>
     </div>
   )
 }
@@ -2175,7 +2175,7 @@ function AppearanceSection({ s, set }: { s: AppSettings; set: (p: Partial<AppSet
           today-marker is drawn in it. It changes as you click. */}
       <div style={{ paddingBottom: 16, borderBottom: '1px solid var(--sb-border)', marginBottom: 14 }}>
         <p style={{ margin: '0 0 3px', fontSize: 12.5, fontWeight: 600, color: 'var(--sb-ink-1)' }}>Accent</p>
-        <p style={{ margin: '0 0 11px', fontSize: 11.5, color: '#9B9180', lineHeight: 1.5 }}>
+        <p style={{ margin: '0 0 11px', fontSize: 11.5, color: 'var(--sb-ink-4)', lineHeight: 1.5 }}>
           Every highlight in the app — chips, bars, the ring on today.
         </p>
         <div style={{ display: 'flex', gap: 9, flexWrap: 'wrap' }}>
@@ -2217,7 +2217,7 @@ function AppearanceSection({ s, set }: { s: AppSettings; set: (p: Partial<AppSet
           looks like it changes everything and changes one screen. */}
       <div style={{ paddingTop: 16, borderTop: '1px solid var(--sb-border)', marginTop: 6 }}>
         <p style={{ margin: '0 0 3px', fontSize: 12.5, fontWeight: 600, color: 'var(--sb-ink-1)' }}>Behavioral OS palette</p>
-        <p style={{ margin: '0 0 11px', fontSize: 11.5, color: '#9B9180', lineHeight: 1.5 }}>
+        <p style={{ margin: '0 0 11px', fontSize: 11.5, color: 'var(--sb-ink-4)', lineHeight: 1.5 }}>
           The Behavioral OS screen is drawn dark. This is its palette — the rest of the app keeps the Sunlit design.
         </p>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 7 }}>
@@ -2558,7 +2558,7 @@ function BehavioralSection() {
   const SB = {
     bg: 'var(--sb-page)', surface: 'var(--sb-card)', surface2: 'var(--sb-field)', border: 'var(--sb-border)',
     accent: 'var(--sb-accent)', accentFill: 'rgba(var(--sb-accent-rgb),0.12)', accentBright: '#D4A827',
-    text: 'var(--sb-ink-1)', textDim: 'var(--sb-ink-3)', textMuted: '#9B9180',
+    text: 'var(--sb-ink-1)', textDim: 'var(--sb-ink-3)', textMuted: 'var(--sb-ink-4)',
   }
 
   const modes: { id: BehavioralMode; label: string; desc: string; available: boolean }[] = [
@@ -2763,7 +2763,7 @@ function FinanceSecuritySection() {
                   Remove from this device
                 </button>
               ) : (
-                <button style={canBio ? solid : { ...pill, color: '#9B9180', cursor: 'default' }}
+                <button style={canBio ? solid : { ...pill, color: 'var(--sb-ink-4)', cursor: 'default' }}
                   disabled={!canBio} onClick={() => void addPasskey()}>
                   Set up on this device
                 </button>
@@ -2797,7 +2797,7 @@ function FinanceSecuritySection() {
             </p>
           )}
 
-          <p style={{ margin: '12px 0 0', fontSize: 11.5, color: '#9B9180', lineHeight: 1.55, maxWidth: 660 }}>
+          <p style={{ margin: '12px 0 0', fontSize: 11.5, color: 'var(--sb-ink-4)', lineHeight: 1.55, maxWidth: 660 }}>
             The password is stored as a salted hash and never leaves your account. A passkey never
             leaves the device that made it — each device you use registers its own, and the password
             is what gets you in on one that has not.
@@ -3005,7 +3005,7 @@ function FinanceSection() {
             face value or left out of every total. */}
         <div style={{ padding: '4px 0 2px' }}>
           <div style={{ fontSize: 13, color: 'var(--sb-ink-1)', fontWeight: 500 }}>Exchange rates</div>
-          <div style={{ fontSize: 11.5, color: '#9B9180', marginTop: 2, marginBottom: 10, lineHeight: 1.5 }}>
+          <div style={{ fontSize: 11.5, color: 'var(--sb-ink-4)', marginTop: 2, marginBottom: 10, lineHeight: 1.5 }}>
             What one unit is worth in {currency}. Set by hand — there is no rate feed in here,
             and a stale one would be its own kind of wrong. A currency left blank stays out of
             the totals rather than being guessed at.
@@ -3032,7 +3032,7 @@ function FinanceSection() {
                       width: 72, background: 'transparent', border: 'none', outline: 'none',
                       fontFamily: 'inherit', fontSize: 12.5, color: 'var(--sb-ink-1)', textAlign: 'right', padding: 0,
                     }} />
-                  <span style={{ fontSize: 11, color: '#9B9180' }}>{currency}</span>
+                  <span style={{ fontSize: 11, color: 'var(--sb-ink-4)' }}>{currency}</span>
                 </label>
               ))}
           </div>
@@ -3051,7 +3051,7 @@ function FinanceSection() {
         {/* Order categories by */}
         <div style={{ marginTop: 14 }}>
           <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.1em', color: 'var(--sb-ink-3)', marginBottom: 8 }}>ORDER CATEGORIES BY</div>
-          <div style={{ fontSize: 11, color: '#9B9180', marginBottom: 8 }}>Biggest spend first keeps the two problems at the top</div>
+          <div style={{ fontSize: 11, color: 'var(--sb-ink-4)', marginBottom: 8 }}>Biggest spend first keeps the two problems at the top</div>
           <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 6 }}>
             {([
               { v: 'spend',  label: 'Biggest spend' },
@@ -3216,7 +3216,7 @@ function FinanceSection() {
           </div>
 
           {reminders.length === 0 && (
-            <div style={{ fontSize: 12, color: '#9B9180', padding: '10px 0' }}>
+            <div style={{ fontSize: 12, color: 'var(--sb-ink-4)', padding: '10px 0' }}>
               Nothing scheduled. Rent on the 1st, school fees on the 5th — that sort of thing.
             </div>
           )}
@@ -3275,7 +3275,7 @@ function FinanceSection() {
 
                 <span style={{ flex: 1 }} />
 
-                <span style={{ fontSize: 11, color: '#9B9180', whiteSpace: 'nowrap' as const }}>
+                <span style={{ fontSize: 11, color: 'var(--sb-ink-4)', whiteSpace: 'nowrap' as const }}>
                   {r.enabled && nextUp
                     ? `next ${new Date(`${nextUp.date}T12:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} · ${reminderTitle(cat, budgetRules[r.categoryId], nextUp.monthKey)}`
                     : r.enabled ? 'nothing left this year' : 'off'}
@@ -3290,13 +3290,13 @@ function FinanceSection() {
                   style={{
                     width: 28, height: 28, borderRadius: '50%', padding: 0, flexShrink: 0,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: '#9B9180', cursor: 'pointer',
+                    background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-4)', cursor: 'pointer',
                   }}>×</button>
               </div>
             )
           })}
           {reminders.some(r => r.enabled) && (
-            <div style={{ fontSize: 11, color: '#9B9180', marginTop: 8 }}>
+            <div style={{ fontSize: 11, color: 'var(--sb-ink-4)', marginTop: 8 }}>
               Tasks are made for the next {reminders[0]?.monthsAhead ?? 3} months and topped up as
               time passes. Deleting one from the board does not bring it back.
             </div>
@@ -3335,7 +3335,7 @@ function BillingSection() {
           </div>
           <div style={{ textAlign: 'right', flexShrink: 0 }}>
             <p style={{ margin: 0, fontSize: 24, fontWeight: 700, fontFamily: 'Outfit, sans-serif', letterSpacing: '-0.03em', color: 'var(--sb-ink-1)', lineHeight: 1 }}>$180</p>
-            <p style={{ margin: '2px 0 0', fontSize: 11, color: '#9B9180' }}>per year</p>
+            <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--sb-ink-4)' }}>per year</p>
           </div>
         </div>
       </div>
@@ -3375,7 +3375,7 @@ function BillingSection() {
             <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: 'var(--sb-ink-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{inv.desc}</span>
             <span style={{ fontSize: 13, fontFamily: 'Outfit, sans-serif', fontWeight: 600, color: 'var(--sb-ink-1)', flexShrink: 0 }}>{inv.amount}</span>
             <button title={`Download ${inv.date} invoice`} style={{
-              background: 'none', border: 'none', cursor: 'pointer', color: '#9B9180',
+              background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-4)',
               padding: 2, display: 'flex', alignItems: 'center', flexShrink: 0,
             }}><Download size={14} /></button>
           </div>
@@ -3387,7 +3387,7 @@ function BillingSection() {
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16,
         marginTop: 18, paddingTop: 16, borderTop: '1px solid var(--sb-hairline)',
       }}>
-        <p style={{ margin: 0, fontSize: 12, color: '#9B9180', lineHeight: 1.4 }}>
+        <p style={{ margin: 0, fontSize: 12, color: 'var(--sb-ink-4)', lineHeight: 1.4 }}>
           Cancelling keeps your data readable until the term ends.
         </p>
         <GhostPill tone="rust">Cancel plan</GhostPill>
@@ -3419,7 +3419,7 @@ function NotificationsMatrixSection() {
   }
 
   const ChHead = ({ label }: { label: string }) => (
-    <div style={{ width: 44, textAlign: 'center', fontSize: 10, fontWeight: 700, letterSpacing: '0.09em', color: '#9B9180', textTransform: 'uppercase' }}>{label}</div>
+    <div style={{ width: 44, textAlign: 'center', fontSize: 10, fontWeight: 700, letterSpacing: '0.09em', color: 'var(--sb-ink-4)', textTransform: 'uppercase' }}>{label}</div>
   )
   const ChToggle = ({ on, onClick }: { on: boolean; onClick: () => void }) => (
     <div style={{ width: 44, display: 'flex', justifyContent: 'center' }}>
@@ -3451,7 +3451,7 @@ function NotificationsMatrixSection() {
                   empty for reasons nobody can see. */}
               {!DERIVABLE.includes(e.id) && <Soon text="not wired yet" />}
             </p>
-            <p style={{ margin: '1px 0 0', fontSize: 11, color: '#9B9180', lineHeight: 1.3 }}>{e.sub}</p>
+            <p style={{ margin: '1px 0 0', fontSize: 11, color: 'var(--sb-ink-4)', lineHeight: 1.3 }}>{e.sub}</p>
           </div>
           <div style={{ display: 'flex', gap: 0, flexShrink: 0 }}>
             <ChToggle on={e.push}   onClick={() => toggleChannel(e.id, 'push')} />
@@ -3466,14 +3466,14 @@ function NotificationsMatrixSection() {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: quietOn ? 10 : 0 }}>
           <div>
             <p style={{ margin: 0, fontSize: 12.5, fontWeight: 600, color: 'var(--sb-ink-1)' }}>Quiet hours</p>
-            <p style={{ margin: '1px 0 0', fontSize: 11, color: '#9B9180' }}>Nothing but the morning brief gets through</p>
+            <p style={{ margin: '1px 0 0', fontSize: 11, color: 'var(--sb-ink-4)' }}>Nothing but the morning brief gets through</p>
           </div>
           <Toggle checked={quietOn} onChange={setQuietOn} />
         </div>
         {quietOn && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <input type="time" value={quietStart} onChange={e => setQStart(e.target.value)} style={{ padding: '5px 10px', borderRadius: 7, border: '1px solid var(--sb-border)', background: 'var(--sb-card)', fontSize: 12.5, color: 'var(--sb-ink-1)' }} />
-            <span style={{ color: '#9B9180', fontSize: 12 }}>to</span>
+            <span style={{ color: 'var(--sb-ink-4)', fontSize: 12 }}>to</span>
             <input type="time" value={quietEnd} onChange={e => setQEnd(e.target.value)} style={{ padding: '5px 10px', borderRadius: 7, border: '1px solid var(--sb-border)', background: 'var(--sb-card)', fontSize: 12.5, color: 'var(--sb-ink-1)' }} />
           </div>
         )}
@@ -3519,7 +3519,7 @@ function IntegrationsSection() {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <p style={{ margin: 0, fontSize: 12.5, fontWeight: 700, color: 'var(--sb-ink-1)' }}>Connected tools</p>
-            <p style={{ margin: '1px 0 0', fontSize: 11.5, color: '#9B9180' }}>Tasks and notes flow both ways — nothing is deleted on either side</p>
+            <p style={{ margin: '1px 0 0', fontSize: 11.5, color: 'var(--sb-ink-4)' }}>Tasks and notes flow both ways — nothing is deleted on either side</p>
           </div>
           <button style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 13px', borderRadius: 8, background: 'var(--sb-accent)', border: '1px solid rgba(25,23,18,0.18)', fontSize: 12, fontWeight: 600, color: 'var(--sb-ink-1)', cursor: 'pointer', flexShrink: 0 }}>
             <Plus size={12} /> <span style={{ whiteSpace: 'nowrap' }}>Add integration</span>
@@ -3544,7 +3544,7 @@ function IntegrationsSection() {
                     <span style={{
                       fontSize: 9.5, fontWeight: 700, letterSpacing: '0.08em', padding: '2px 6px', borderRadius: 4,
                       background: tool.status === 'connected' ? 'rgba(12,129,64,0.1)' : 'rgba(155,145,128,0.12)',
-                      color: tool.status === 'connected' ? 'var(--sb-positive)' : '#9B9180',
+                      color: tool.status === 'connected' ? 'var(--sb-positive)' : 'var(--sb-ink-4)',
                       textTransform: 'uppercase',
                     }}>{tool.status === 'connected' ? 'Connected' : 'Not connected'}</span>
                   </div>
@@ -3574,7 +3574,7 @@ function IntegrationsSection() {
           ))}
         </div>
 
-        <p style={{ margin: '8px 0 0', fontSize: 11.5, color: '#9B9180', lineHeight: 1.5 }}>
+        <p style={{ margin: '8px 0 0', fontSize: 11.5, color: 'var(--sb-ink-4)', lineHeight: 1.5 }}>
           Last sync 07:12 — 14 tasks in, 3 completions pushed out. Tokens live on the server.{' '}
           <button style={{ background: 'none', border: 'none', color: 'var(--sb-positive)', fontSize: 11.5, cursor: 'pointer', fontWeight: 600, padding: 0 }}>Sync now</button>
         </p>
@@ -3600,7 +3600,7 @@ function SyncRulesSection() {
         }}>
           <div style={{ minWidth: 0 }}>
             <p style={{ margin: 0, fontSize: 12.5, fontWeight: 500, color: 'var(--sb-ink-1)' }}>{row.label}</p>
-            <p style={{ margin: '1px 0 0', fontSize: 11, color: '#9B9180' }}>{row.sub}</p>
+            <p style={{ margin: '1px 0 0', fontSize: 11, color: 'var(--sb-ink-4)' }}>{row.sub}</p>
           </div>
           <select style={{ fontSize: 12, border: '1px solid var(--sb-border)', borderRadius: 7, padding: '5px 10px', background: 'var(--sb-field)', color: 'var(--sb-ink-1)', cursor: 'pointer', flexShrink: 0 }}>
             <option>{row.value}</option>
@@ -3668,7 +3668,7 @@ function AutomationSection() {
           }}>
             <Toggle checked={rule.enabled} onChange={() => toggle(rule.id)} />
             <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: rule.enabled ? 'var(--sb-ink-1)' : '#9B9180', lineHeight: 1.3 }}>
+              <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: rule.enabled ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)', lineHeight: 1.3 }}>
                 {rule.action}
               </p>
               <p style={{ margin: '3px 0 0', fontSize: 11.5, color: 'var(--sb-ink-3)', lineHeight: 1.4 }}>
@@ -3689,7 +3689,7 @@ function AutomationSection() {
       </button>
 
       {/* Run log footer */}
-      <p style={{ margin: '14px 0 0', fontSize: 11.5, color: '#9B9180', lineHeight: 1.5 }}>
+      <p style={{ margin: '14px 0 0', fontSize: 11.5, color: 'var(--sb-ink-4)', lineHeight: 1.5 }}>
         Five rules ran yesterday · 41 actions taken, 2 reverted by you &nbsp;
         <button style={{ background: 'none', border: 'none', color: 'var(--sb-positive)', fontSize: 11.5, cursor: 'pointer', fontWeight: 600, padding: 0 }}>Run log</button>
       </p>
@@ -3746,7 +3746,7 @@ function DataPrivacySection() {
               }}>
                 <div>
                   <p style={{ margin: 0, fontSize: 13, fontWeight: 500, color: 'var(--sb-ink-1)' }}>{item.label}</p>
-                  <p style={{ margin: '1px 0 0', fontSize: 11.5, color: '#9B9180' }}>{item.sub}</p>
+                  <p style={{ margin: '1px 0 0', fontSize: 11.5, color: 'var(--sb-ink-4)' }}>{item.sub}</p>
                 </div>
                 <Toggle checked={on} onChange={setOn} />
               </div>
@@ -3820,7 +3820,7 @@ function AccountsAndCompaniesSection({
         <Mail size={13} color="var(--sb-ink-3)" />
         <p style={{ margin: 0, fontSize: 12.5, fontWeight: 700, color: 'var(--sb-ink-1)' }}>Google accounts</p>
         {unusedAccounts > 0 && (
-          <span style={{ fontSize: 11, color: '#9B9180' }}>
+          <span style={{ fontSize: 11, color: 'var(--sb-ink-4)' }}>
             {unusedAccounts} not used by any company
           </span>
         )}
@@ -3904,7 +3904,7 @@ function Card({ icon: Icon, title, sub, children, actions, muted }: {
           <div style={{ minWidth: 0 }}>
             <h3 style={{ margin: 0, fontFamily: 'Outfit, sans-serif', fontSize: 15, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--sb-ink-1)', lineHeight: 1.25 }}>{title}</h3>
             {sub && <p style={{
-              margin: '1px 0 0', fontSize: 11.5, color: '#9B9180', lineHeight: 1.35,
+              margin: '1px 0 0', fontSize: 11.5, color: 'var(--sb-ink-4)', lineHeight: 1.35,
               display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
             }}>{sub}</p>}
           </div>
@@ -4405,9 +4405,9 @@ export function Settings() {
           {/* Search */}
           <div style={{ padding: '12px 12px 8px', flexShrink: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--sb-field)', border: '1px solid var(--sb-border)', borderRadius: 10, padding: '8px 12px', cursor: 'text' }}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9B9180" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-              <span style={{ fontSize: 12.5, color: '#9B9180', flex: 1, userSelect: 'none' }}>Find a setting</span>
-              <span style={{ fontSize: 10.5, color: '#9B9180', opacity: 0.7 }}>⌘K</span>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--sb-ink-4)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+              <span style={{ fontSize: 12.5, color: 'var(--sb-ink-4)', flex: 1, userSelect: 'none' }}>Find a setting</span>
+              <span style={{ fontSize: 10.5, color: 'var(--sb-ink-4)', opacity: 0.7 }}>⌘K</span>
             </div>
           </div>
 
@@ -4425,7 +4425,7 @@ export function Settings() {
 
           {/* Footer */}
           <div style={{ padding: '10px 18px 11px', borderTop: '1px solid var(--sb-hairline)', flexShrink: 0 }}>
-            <div style={{ fontSize: 11.5, color: '#9B9180', display: 'flex', alignItems: 'center', gap: 7 }}>
+            <div style={{ fontSize: 11.5, color: 'var(--sb-ink-4)', display: 'flex', alignItems: 'center', gap: 7 }}>
               <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--sb-positive)', flexShrink: 0 }} />
               Every change saves itself
             </div>

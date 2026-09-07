@@ -211,7 +211,7 @@ export function SchedulePopover({ date, start, duration, onApply, onClose, align
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2 }}>
         {WEEKDAYS.map((w, i) => (
-          <span key={i} style={{ textAlign: 'center', fontSize: 10.5, fontWeight: 600, color: '#9B9180', padding: '2px 0 4px' }}>{w}</span>
+          <span key={i} style={{ textAlign: 'center', fontSize: 10.5, fontWeight: 600, color: 'var(--sb-ink-4)', padding: '2px 0 4px' }}>{w}</span>
         ))}
         {cells.map(d => {
           const iso = toISODate(d)
@@ -237,7 +237,7 @@ export function SchedulePopover({ date, start, duration, onApply, onClose, align
           after the booking is made. */}
       {picked && (
         checking && conflicts === null ? (
-          <p style={{ ...T.small, margin: '9px 0 0', color: '#9B9180' }}>Checking that time…</p>
+          <p style={{ ...T.small, margin: '9px 0 0', color: 'var(--sb-ink-4)' }}>Checking that time…</p>
         ) : conflicts === null ? null
         : conflicts.length === 0 ? (
           <p style={{ ...T.small, margin: '9px 0 0', color: 'var(--sb-positive)' }}>
@@ -269,7 +269,7 @@ export function SchedulePopover({ date, start, duration, onApply, onClose, align
       )}
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 12 }}>
-        <span style={{ flex: 1, fontSize: 11.5, color: '#9B9180' }}>
+        <span style={{ flex: 1, fontSize: 11.5, color: 'var(--sb-ink-4)' }}>
           {minutes > 0 ? `${minutes}m block at ${formatTime(from)}` : 'End must follow start'}
         </span>
         {(date || start) && (

@@ -140,7 +140,7 @@ export function Step2Accounts({ data: _data, onChange: _onChange, onBeforeOAuth 
           <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--sb-ink-1)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {user?.name || user?.email || 'You'}
           </div>
-          <div style={{ fontSize: 11, color: '#9B9180', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          <div style={{ fontSize: 11, color: 'var(--sb-ink-4)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {user?.email || ''}
           </div>
         </div>
@@ -166,7 +166,7 @@ export function Step2Accounts({ data: _data, onChange: _onChange, onBeforeOAuth 
       {/* Extra accounts */}
       {extraAccounts.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <div style={{ fontSize: 12, fontWeight: 600, color: '#9B9180', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--sb-ink-4)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
             Additional accounts
           </div>
           {extraAccounts.map(acct => (
@@ -201,7 +201,7 @@ export function Step2Accounts({ data: _data, onChange: _onChange, onBeforeOAuth 
                 <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--sb-ink-1)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {acct.name || acct.email}
                 </div>
-                <div style={{ fontSize: 11, color: '#9B9180', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <div style={{ fontSize: 11, color: 'var(--sb-ink-4)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {acct.email}
                 </div>
               </div>
@@ -216,7 +216,7 @@ export function Step2Accounts({ data: _data, onChange: _onChange, onBeforeOAuth 
 
       {/* Add more accounts */}
       <div>
-        <div style={{ fontSize: 12, fontWeight: 600, color: '#9B9180', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>
+        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--sb-ink-4)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>
           Add more accounts
         </div>
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
@@ -275,7 +275,7 @@ export function Step2Accounts({ data: _data, onChange: _onChange, onBeforeOAuth 
         </div>
       </div>
 
-      <p style={{ fontSize: 12, color: '#9B9180', margin: 0, fontStyle: 'italic' }}>
+      <p style={{ fontSize: 12, color: 'var(--sb-ink-4)', margin: 0, fontStyle: 'italic' }}>
         You can manage accounts anytime in Settings → Accounts.
       </p>
     </div>

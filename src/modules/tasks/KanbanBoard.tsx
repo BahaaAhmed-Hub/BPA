@@ -195,12 +195,12 @@ function KanbanColumnComp({ column, onOpen, onColDragStart, onColDragOver, onCol
         <CountBadge value={column.tasks.length} />
         <span style={{ flex: 1 }} />
         <button onClick={() => setAdding(true)} title="Add a task here"
-          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, display: 'flex', color: '#9B9180' }}>
+          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, display: 'flex', color: 'var(--sb-ink-4)' }}>
           <Plus size={15} strokeWidth={2} />
         </button>
         <div style={{ position: 'relative', display: 'flex' }} ref={menuRef}>
           <button onClick={() => setMenuOpen(o => !o)} title="Column options"
-            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, display: 'flex', color: '#9B9180' }}>
+            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, display: 'flex', color: 'var(--sb-ink-4)' }}>
             <MoreHorizontal size={15} strokeWidth={2} />
           </button>
           {menuOpen && (
@@ -209,7 +209,7 @@ function KanbanColumnComp({ column, onOpen, onColDragStart, onColDragOver, onCol
               background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 12, padding: 6,
               boxShadow: '0 20px 44px -20px rgba(25,23,18,.42)',
             }}>
-              <p style={{ margin: 0, padding: '7px 9px 5px', fontSize: 10, fontWeight: 700, letterSpacing: '.12em', color: '#9B9180' }}>BOARD COLUMNS</p>
+              <p style={{ margin: 0, padding: '7px 9px 5px', fontSize: 10, fontWeight: 700, letterSpacing: '.12em', color: 'var(--sb-ink-4)' }}>BOARD COLUMNS</p>
               {BOARD_TYPE_OPTIONS.map(opt => (
                 <button key={opt.id} onClick={() => { onBoardType(opt.id); setMenuOpen(false) }} style={{
                   width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 8,
@@ -292,7 +292,7 @@ function KanbanColumnComp({ column, onOpen, onColDragStart, onColDragOver, onCol
         style={{
           marginTop: 10, width: '100%', padding: '13px 0', fontSize: 12.5, fontWeight: 500,
           background: 'transparent', border: '1px dashed #DED5BF', borderRadius: 12,
-          color: '#9B9180', cursor: 'pointer', fontFamily: 'inherit',
+          color: 'var(--sb-ink-4)', cursor: 'pointer', fontFamily: 'inherit',
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
           transition: 'all 0.12s',
         }}
@@ -498,7 +498,7 @@ export function KanbanBoard({ onOpen, hideCompleted = false, filteredTaskIds }: 
         { id: 'overdue',     label: 'Overdue',    color: '#EF4444' },
         { id: 'today',       label: 'Today',      color: 'var(--sb-accent)' },
         { id: 'this-week',   label: 'This Week',  color: '#7F77DD' },
-        { id: 'next-week',   label: 'Next Week',  color: '#9B9180' },
+        { id: 'next-week',   label: 'Next Week',  color: 'var(--sb-ink-4)' },
         { id: 'later',       label: 'Later',      color: '#6B7280' },
         { id: 'unscheduled', label: 'Unscheduled',color: '#9CA3AF' },
       ]

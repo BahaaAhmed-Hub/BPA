@@ -289,7 +289,7 @@ export function IconPicker({ value, onChange, size = 44, trigger }: Props) {
             {tab === 'line' && (search ? (
               lineHits.length
                 ? lineHits.map(name => <LineCell key={name} name={name} value={value} onPick={pickLine} />)
-                : <div style={{ gridColumn: '1 / -1', padding: '18px 4px', textAlign: 'center', fontSize: 12, color: '#9B9180' }}>
+                : <div style={{ gridColumn: '1 / -1', padding: '18px 4px', textAlign: 'center', fontSize: 12, color: 'var(--sb-ink-4)' }}>
                     Nothing called that
                   </div>
             ) : (
@@ -298,7 +298,7 @@ export function IconPicker({ value, onChange, size = 44, trigger }: Props) {
                   <div style={{
                     gridColumn: '1 / -1', padding: '8px 2px 3px',
                     fontSize: 9.5, fontWeight: 700, letterSpacing: '0.11em',
-                    color: '#9B9180', textTransform: 'uppercase',
+                    color: 'var(--sb-ink-4)', textTransform: 'uppercase',
                   }}>{title}</div>
                   {names.map(name => <LineCell key={name} name={name} value={value} onPick={pickLine} />)}
                 </Fragment>

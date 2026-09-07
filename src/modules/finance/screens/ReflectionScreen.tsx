@@ -35,7 +35,7 @@ const RUST  = 'var(--sb-negative)'
 function fmt(v: number): string { return acct(v, { zero: '–' }) }
 function fmtOut(v: number): string { return v === 0 ? '–' : outflow(v) }
 
-function netColor(v: number) { return v > 0 ? OLIVE : v < 0 ? RUST : '#9B9180' }
+function netColor(v: number) { return v > 0 ? OLIVE : v < 0 ? RUST : 'var(--sb-ink-4)' }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
@@ -143,14 +143,14 @@ function CategoryRows({ row, tone, open, hidden, onToggleOpen, onToggleHide, onD
                 title={open ? 'Fold its sub-categories away' : `Show its ${kids.length} sub-categories`}
                 style={{
                   width: 16, height: 16, padding: 0, flexShrink: 0, borderRadius: 4,
-                  background: 'none', border: 'none', cursor: 'pointer', color: '#9B9180',
+                  background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-4)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
                 {open ? <ChevronDown size={13} strokeWidth={2.2} /> : <ChevronRight size={13} strokeWidth={2.2} />}
               </button>
             ) : <span style={{ width: 16, flexShrink: 0 }} />}
             <span style={{ display: 'inline-flex', color: row.cat.color }}><CategoryGlyph icon={row.cat.icon} size={12} /></span>
-            <span style={{ fontSize: 13, color: isHidden ? '#9B9180' : 'var(--sb-ink-1)', textDecoration: isHidden ? 'line-through' : 'none', fontWeight: 500 }}>
+            <span style={{ fontSize: 13, color: isHidden ? 'var(--sb-ink-4)' : 'var(--sb-ink-1)', textDecoration: isHidden ? 'line-through' : 'none', fontWeight: 500 }}>
               {row.cat.name}
             </span>
             {kids.length > 0 && !open && (
@@ -187,7 +187,7 @@ function CategoryRows({ row, tone, open, hidden, onToggleOpen, onToggleHide, onD
               <div style={{ display: 'flex', alignItems: 'center', gap: 7, paddingLeft: 23 }}>
                 <span style={{ width: 8, height: 1, background: '#DCD3BF', flexShrink: 0 }} />
                 <span style={{ display: 'inline-flex', color: kid.cat.color }}><CategoryGlyph icon={kid.cat.icon} size={11} /></span>
-                <span style={{ fontSize: 12, color: kidHidden ? '#9B9180' : 'var(--sb-ink-2)', textDecoration: hidden(kid.cat.id) ? 'line-through' : 'none' }}>
+                <span style={{ fontSize: 12, color: kidHidden ? 'var(--sb-ink-4)' : 'var(--sb-ink-2)', textDecoration: hidden(kid.cat.id) ? 'line-through' : 'none' }}>
                   {kid.cat.name}
                 </span>
                 <span style={{ flex: 1 }} />
@@ -639,7 +639,7 @@ export function ReflectionScreen(_props?: any) {
                           flex: 1, minWidth: 0, display: 'flex', alignItems: 'baseline', gap: 8,
                           cursor: 'pointer', borderRadius: 7, padding: '4px 6px', margin: '0 -6px',
                         }}>
-                        <span style={{ color: '#9B9180', fontVariantNumeric: 'tabular-nums' }}>{t.date}</span>
+                        <span style={{ color: 'var(--sb-ink-4)', fontVariantNumeric: 'tabular-nums' }}>{t.date}</span>
                         <span style={{ flex: 1, minWidth: 0, color: 'var(--sb-ink-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {t.payee?.trim() || categories.find(c => c.id === t.categoryId)?.name || 'Entry'}
                         </span>
@@ -659,7 +659,7 @@ export function ReflectionScreen(_props?: any) {
                         style={{
                           width: 24, height: 24, borderRadius: '50%', padding: 0, flexShrink: 0,
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: '#9B9180', cursor: 'pointer',
+                          background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-4)', cursor: 'pointer',
                         }}><Trash2 size={12} /></button>
                     </div>
                   ))}
@@ -668,13 +668,13 @@ export function ReflectionScreen(_props?: any) {
             </span>
           )}
           {hiddenIds.size > 0 && (
-            <span style={{ fontSize: 11.5, color: '#9B9180', fontStyle: 'italic' }}>
+            <span style={{ fontSize: 11.5, color: 'var(--sb-ink-4)', fontStyle: 'italic' }}>
               {hiddenIds.size} row{hiddenIds.size > 1 ? 's' : ''} hidden
               <button onClick={() => setHiddenIds(new Set())} style={{ marginLeft: 8, background: 'none', border: 'none', color: 'var(--sb-ink-3)', cursor: 'pointer', fontSize: 11.5, textDecoration: 'underline', padding: 0 }}>Show all</button>
             </span>
           )}
           <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: 10, letterSpacing: '0.1em', fontWeight: 700, color: '#9B9180' }}>NET THROUGH {throughLabel}</div>
+            <div style={{ fontSize: 10, letterSpacing: '0.1em', fontWeight: 700, color: 'var(--sb-ink-4)' }}>NET THROUGH {throughLabel}</div>
             <div style={{ fontFamily: 'Outfit, sans-serif', fontSize: 20, fontWeight: 700, letterSpacing: '-0.02em', color: netColor(totalNet) }}>
               {acct(totalNet, { currency: 'EGP', zero: '–' })}
             </div>
@@ -689,7 +689,7 @@ export function ReflectionScreen(_props?: any) {
           {/* Column headers */}
           <thead>
             <tr style={{ background: 'var(--sb-header)' }}>
-              <th style={{ width: NAME_W, minWidth: NAME_W, textAlign: 'left', padding: '8px 14px', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: '#9B9180', position: 'sticky', top: 0, left: 0, background: 'var(--sb-header)', zIndex: 4, ...HEAD_EDGE }}>
+              <th style={{ width: NAME_W, minWidth: NAME_W, textAlign: 'left', padding: '8px 14px', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: 'var(--sb-ink-4)', position: 'sticky', top: 0, left: 0, background: 'var(--sb-header)', zIndex: 4, ...HEAD_EDGE }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                   <span>CATEGORY</span>
                   {foldable.length > 0 && (
@@ -709,9 +709,9 @@ export function ReflectionScreen(_props?: any) {
                 </span>
               </th>
               {MONTHS_SHORT.map(m => (
-                <th key={m} style={{ width: COL_W, minWidth: COL_W, textAlign: 'right', padding: '8px 10px', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: '#9B9180', position: 'sticky', top: 0, background: 'var(--sb-header)', zIndex: 3, ...HEAD_EDGE }}>{m.toUpperCase()}</th>
+                <th key={m} style={{ width: COL_W, minWidth: COL_W, textAlign: 'right', padding: '8px 10px', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: 'var(--sb-ink-4)', position: 'sticky', top: 0, background: 'var(--sb-header)', zIndex: 3, ...HEAD_EDGE }}>{m.toUpperCase()}</th>
               ))}
-              <th style={{ width: 100, textAlign: 'right', padding: '8px 14px', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: '#9B9180', position: 'sticky', top: 0, background: 'var(--sb-header)', zIndex: 3, ...HEAD_EDGE }}>TOTAL</th>
+              <th style={{ width: 100, textAlign: 'right', padding: '8px 14px', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: 'var(--sb-ink-4)', position: 'sticky', top: 0, background: 'var(--sb-header)', zIndex: 3, ...HEAD_EDGE }}>TOTAL</th>
             </tr>
           </thead>
 
@@ -824,7 +824,7 @@ export function ReflectionScreen(_props?: any) {
 
             <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', margin: '0 -2px', padding: '0 2px' }}>
               {drillTx.length === 0 && (
-                <div style={{ fontSize: 13, color: '#9B9180', textAlign: 'center', padding: '34px 0' }}>
+                <div style={{ fontSize: 13, color: 'var(--sb-ink-4)', textAlign: 'center', padding: '34px 0' }}>
                   Nothing behind this figure any more
                 </div>
               )}
@@ -860,7 +860,7 @@ export function ReflectionScreen(_props?: any) {
                         <span
                           title={tx.note?.trim() || undefined}
                           style={{
-                            display: 'block', fontSize: 11.5, color: '#9B9180', marginTop: 1,
+                            display: 'block', fontSize: 11.5, color: 'var(--sb-ink-4)', marginTop: 1,
                             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                           }}>
                           {tx.date}{cat && tx.payee?.trim() ? ` · ${cat.name}` : ''}{noted(tx.note)}
@@ -882,7 +882,7 @@ export function ReflectionScreen(_props?: any) {
                       style={{
                         width: 28, height: 28, borderRadius: '50%', padding: 0, flexShrink: 0,
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: '#9B9180', cursor: 'pointer',
+                        background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-4)', cursor: 'pointer',
                       }}><Trash2 size={13} /></button>
                   </div>
                 )
@@ -893,7 +893,7 @@ export function ReflectionScreen(_props?: any) {
 
             {/* One more of the same thing, already knowing where it goes */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <span style={{ fontSize: 11.5, color: '#9B9180' }}>
+              <span style={{ fontSize: 11.5, color: 'var(--sb-ink-4)' }}>
                 {addTarget
                   ? `New entries land in ${addTarget.name}${drill.month === null ? '' : `, ${MONTHS_SHORT[drill.month]}`}`
                   : 'Pick the category on the entry itself'}
@@ -1014,13 +1014,13 @@ function NetRow({ label, months, total, COL_W, NAME_W: _NAME_W2, onDrill }: {
       {months.map((v, mi) => (
         <td key={mi}
           onClick={v === 0 ? undefined : () => onDrill(`${label} · ${MONTHS_SHORT[mi]}`, mi)}
-          style={{ width: COL_W, minWidth: COL_W, textAlign: 'right', padding: '0 10px', fontFamily: 'Outfit, sans-serif', fontSize: 13, fontWeight: 700, color: v === 0 ? '#9B9180' : v > 0 ? OLIVE : RUST, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', cursor: v === 0 ? 'default' : 'pointer' }}>
+          style={{ width: COL_W, minWidth: COL_W, textAlign: 'right', padding: '0 10px', fontFamily: 'Outfit, sans-serif', fontSize: 13, fontWeight: 700, color: v === 0 ? 'var(--sb-ink-4)' : v > 0 ? OLIVE : RUST, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', cursor: v === 0 ? 'default' : 'pointer' }}>
           {fmt(v)}
         </td>
       ))}
       <td
         onClick={total === 0 ? undefined : () => onDrill(`${label} · the year`, null)}
-        style={{ width: 100, textAlign: 'right', padding: '0 14px', fontFamily: 'Outfit, sans-serif', fontSize: 13.5, fontWeight: 700, color: total === 0 ? '#9B9180' : total > 0 ? OLIVE : RUST, fontVariantNumeric: 'tabular-nums', cursor: total === 0 ? 'default' : 'pointer' }}>
+        style={{ width: 100, textAlign: 'right', padding: '0 14px', fontFamily: 'Outfit, sans-serif', fontSize: 13.5, fontWeight: 700, color: total === 0 ? 'var(--sb-ink-4)' : total > 0 ? OLIVE : RUST, fontVariantNumeric: 'tabular-nums', cursor: total === 0 ? 'default' : 'pointer' }}>
         {fmt(total)}
       </td>
     </tr>

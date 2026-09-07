@@ -78,7 +78,7 @@ function QuadrantPanel({ spec, tasks, onOpen, onAction, groupBy }: {
 
   const groups = groupBy !== 'none'
     ? buildTaskGroups(tasks, groupBy)
-    : [{ key: 'all', label: '', color: '#9B9180', emoji: '', tasks: sortUrgentFirst(tasks) }]
+    : [{ key: 'all', label: '', color: 'var(--sb-ink-4)', emoji: '', tasks: sortUrgentFirst(tasks) }]
 
   return (
     <div ref={setNodeRef} style={{
@@ -98,7 +98,7 @@ function QuadrantPanel({ spec, tasks, onOpen, onAction, groupBy }: {
         }}>{spec.badge}</span>
         <div style={{ flex: 1, minWidth: 0 }}>
           <p style={{ margin: 0, fontSize: 13.5, fontWeight: 600, color: 'var(--sb-ink-1)', lineHeight: 1.3 }}>{spec.title}</p>
-          <p style={{ margin: '2px 0 0', fontSize: 11.5, color: '#9B9180', lineHeight: 1.35 }}>{spec.sub}</p>
+          <p style={{ margin: '2px 0 0', fontSize: 11.5, color: 'var(--sb-ink-4)', lineHeight: 1.35 }}>{spec.sub}</p>
         </div>
         <span style={{ paddingTop: 2 }}><CountBadge value={tasks.length} /></span>
         {/* Adding to a quadrant is a small, frequent thing, so it is a small
@@ -157,8 +157,8 @@ function QuadrantPanel({ spec, tasks, onOpen, onAction, groupBy }: {
                     width: '100%', textAlign: 'left',
                   }}>
                   {isOpen
-                    ? <ChevronDown size={12} strokeWidth={2.2} color="#9B9180" />
-                    : <ChevronRight size={12} strokeWidth={2.2} color="#9B9180" />}
+                    ? <ChevronDown size={12} strokeWidth={2.2} color="var(--sb-ink-4)" />
+                    : <ChevronRight size={12} strokeWidth={2.2} color="var(--sb-ink-4)" />}
                   <span style={{ width: 7, height: 7, borderRadius: 999, background: g.color, flexShrink: 0 }} />
                   <span style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--sb-ink-3)' }}>{g.label}</span>
                   <CountBadge value={g.tasks.length} />

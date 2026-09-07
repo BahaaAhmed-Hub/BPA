@@ -154,7 +154,7 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
             style={{
               flex: 1, margin: 0, fontSize: 12.5, fontWeight: 600,
               // An unnamed task reads as unnamed, not as a task called Untitled.
-              color: task.title.trim() ? 'var(--sb-ink-1)' : '#9B9180',
+              color: task.title.trim() ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)',
               fontStyle: task.title.trim() ? 'normal' : 'italic',
               lineHeight: 1.3, minWidth: 0,
               textDecoration: task.completed ? 'line-through' : 'none',
@@ -167,7 +167,7 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
             style={{
               background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex',
               flexShrink: 0, marginTop: 2,
-              color: task.urgent ? 'var(--sb-negative)' : hovered ? '#9B9180' : '#D8CFB8',
+              color: task.urgent ? 'var(--sb-negative)' : hovered ? 'var(--sb-ink-4)' : '#D8CFB8',
             }}>
             <Flame size={11.5} strokeWidth={2} fill={task.urgent ? 'var(--sb-negative)' : 'none'} />
           </button>
@@ -199,7 +199,7 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
         {/* Meta line */}
         <div style={{
           display: 'flex', alignItems: 'center', gap: 9, margin: '3px 0 0 22px',
-          fontSize: 10.5, color: '#9B9180', minWidth: 0,
+          fontSize: 10.5, color: 'var(--sb-ink-4)', minWidth: 0,
           // a narrow column (panel open) clips the trailing meta rather than
           // letting it run under the attribute rail
           overflow: 'hidden', whiteSpace: 'nowrap',

@@ -355,11 +355,11 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
           {/* Schedule — the widest value, so it takes the full row */}
           <div ref={dateRef} style={{ gridColumn: '1 / -1', position: 'relative' }}>
             <button onClick={() => setDatePickerOpen(o => !o)} style={{ ...CELL, width: '100%' }}>
-              <CalendarDays size={14} strokeWidth={1.9} style={{ flexShrink: 0, color: task.dueDate ? 'var(--sb-positive)' : '#9B9180' }} />
-              <span style={{ ...CELL_VALUE, color: task.dueDate ? 'var(--sb-ink-1)' : '#9B9180' }}>
+              <CalendarDays size={14} strokeWidth={1.9} style={{ flexShrink: 0, color: task.dueDate ? 'var(--sb-positive)' : 'var(--sb-ink-4)' }} />
+              <span style={{ ...CELL_VALUE, color: task.dueDate ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)' }}>
                 {scheduleLabel}
               </span>
-              <ChevronDown size={13} style={{ flexShrink: 0, color: '#9B9180' }} />
+              <ChevronDown size={13} style={{ flexShrink: 0, color: 'var(--sb-ink-4)' }} />
             </button>
             {datePickerOpen && (
               <SchedulePopover
@@ -392,7 +392,7 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
                 onClick={() => focusOn({ module: 'calendar', id: task.gcalEventId!, date: (eventWhen ?? task.dueDate)?.slice(0, 10) })}
                 title={eventWhen ? `Blocked ${new Date(eventWhen).toLocaleString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}` : 'Open the day it is blocked on'}
                 style={{ ...CELL, gridColumn: '1 / -1', width: '100%' }}>
-                <CalendarDays size={14} strokeWidth={1.9} style={{ flexShrink: 0, color: eventState === 'checking' ? '#9B9180' : 'var(--sb-positive)' }} />
+                <CalendarDays size={14} strokeWidth={1.9} style={{ flexShrink: 0, color: eventState === 'checking' ? 'var(--sb-ink-4)' : 'var(--sb-positive)' }} />
                 <span style={{ ...CELL_VALUE, color: 'var(--sb-ink-3)' }}>
                   {eventState === 'checking' ? 'Checking the calendar…' : (
                     <>On {calTarget.companyName ? `${calTarget.companyName}'s calendar` : 'your calendar'}
@@ -401,7 +401,7 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
                       : task.plannedTime ? ` · ${task.plannedTime}` : ''}</>
                   )}
                 </span>
-                <ExternalLink size={12} style={{ flexShrink: 0, color: '#9B9180' }} />
+                <ExternalLink size={12} style={{ flexShrink: 0, color: 'var(--sb-ink-4)' }} />
               </button>
               )
             ) : (
@@ -410,7 +410,7 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
                 disabled={pushing}
                 title="Create the Google Calendar event for this task"
                 style={{ ...CELL, gridColumn: '1 / -1', width: '100%' }}>
-                <CalendarDays size={14} strokeWidth={1.9} style={{ flexShrink: 0, color: '#9B9180' }} />
+                <CalendarDays size={14} strokeWidth={1.9} style={{ flexShrink: 0, color: 'var(--sb-ink-4)' }} />
                 <span style={{ ...CELL_VALUE, color: pushError ? 'var(--sb-negative)' : 'var(--sb-ink-3)' }}>
                   {pushing ? 'Adding it…' : pushError ?? `Not on the calendar — add it to ${calWhere}`}
                 </span>
@@ -430,9 +430,9 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
           {/* Priority */}
           <label style={{ ...CELL, position: 'relative' }}>
             <BarChart3 size={14} strokeWidth={1.9} style={{
-              flexShrink: 0, color: task.priority ? PRIORITY_META[task.priority].color : '#9B9180',
+              flexShrink: 0, color: task.priority ? PRIORITY_META[task.priority].color : 'var(--sb-ink-4)',
             }} />
-            <span style={{ ...CELL_VALUE, color: task.priority ? 'var(--sb-ink-1)' : '#9B9180' }}>
+            <span style={{ ...CELL_VALUE, color: task.priority ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)' }}>
               {task.priority ?? 'No priority'}
             </span>
             <select
@@ -450,11 +450,11 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
               width: 18, height: 18, borderRadius: '50%', flexShrink: 0, boxSizing: 'border-box',
               background: owner ? 'var(--sb-ink-1)' : 'var(--sb-field)',
               border: owner ? 'none' : '1px solid var(--sb-border)',
-              color: owner ? 'var(--sb-card)' : '#9B9180',
+              color: owner ? 'var(--sb-card)' : 'var(--sb-ink-4)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 8, fontWeight: 700,
             }}>{owner ? initials(owner.name) : <User size={10} strokeWidth={2} />}</span>
-            <span style={{ ...CELL_VALUE, color: owner ? 'var(--sb-ink-1)' : '#9B9180' }}>
+            <span style={{ ...CELL_VALUE, color: owner ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)' }}>
               {owner ? owner.name : 'Unassigned'}
             </span>
             <select value={task.owner ?? ''} onChange={e => patch({ owner: e.target.value || undefined })} style={CELL_INPUT}>
@@ -470,16 +470,16 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
               if (url) patch({ links: [...(task.links ?? []), url] })
             }}
             style={CELL}>
-            <Link2 size={14} strokeWidth={1.9} style={{ flexShrink: 0, color: linkCount ? 'var(--sb-ink-3)' : '#9B9180' }} />
-            <span style={{ ...CELL_VALUE, color: linkCount ? 'var(--sb-ink-1)' : '#9B9180' }}>
+            <Link2 size={14} strokeWidth={1.9} style={{ flexShrink: 0, color: linkCount ? 'var(--sb-ink-3)' : 'var(--sb-ink-4)' }} />
+            <span style={{ ...CELL_VALUE, color: linkCount ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)' }}>
               {linkCount ? `${linkCount} link${linkCount === 1 ? '' : 's'}` : 'Add a link'}
             </span>
           </button>
 
           {/* Files */}
           <button onClick={() => fileRef.current?.click()} style={CELL}>
-            <Folder size={14} strokeWidth={1.9} style={{ flexShrink: 0, color: attachments.length ? 'var(--sb-ink-3)' : '#9B9180' }} />
-            <span style={{ ...CELL_VALUE, color: attachments.length ? 'var(--sb-ink-1)' : '#9B9180' }}>
+            <Folder size={14} strokeWidth={1.9} style={{ flexShrink: 0, color: attachments.length ? 'var(--sb-ink-3)' : 'var(--sb-ink-4)' }} />
+            <span style={{ ...CELL_VALUE, color: attachments.length ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)' }}>
               {attachments.length ? `${attachments.length} file${attachments.length === 1 ? '' : 's'}` : 'Add a file'}
             </span>
           </button>
@@ -498,7 +498,7 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>{s.done && <Check size={9} color="#fff" strokeWidth={3} />}</button>
                 <span style={{
-                  flex: 1, fontSize: 12.5, color: s.done ? '#9B9180' : 'var(--sb-ink-1)',
+                  flex: 1, fontSize: 12.5, color: s.done ? 'var(--sb-ink-4)' : 'var(--sb-ink-1)',
                   textDecoration: s.done ? 'line-through' : 'none',
                 }}>{s.text}</span>
                 <button onClick={() => patch({ checklist: checklist.filter(x => x.id !== s.id) })}
@@ -578,7 +578,7 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
                     }}>{isImage ? <ImageIcon size={13} /> : <FileText size={13} />}</span>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <p style={{ margin: 0, fontSize: 12.5, fontWeight: 500, color: 'var(--sb-ink-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.name}</p>
-                      <p style={{ margin: '1px 0 0', fontSize: 11, color: '#9B9180' }}>
+                      <p style={{ margin: '1px 0 0', fontSize: 11, color: 'var(--sb-ink-4)' }}>
                         {formatBytes(f.size)}{f.source ? ` · ${f.source}` : ''}
                       </p>
                     </div>
@@ -606,8 +606,8 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
                 fontFamily: 'inherit', textAlign: 'left',
               }}>
               {activityOpen
-                ? <ChevronDown size={13} strokeWidth={2.2} color="#9B9180" />
-                : <ChevronRight size={13} strokeWidth={2.2} color="#9B9180" />}
+                ? <ChevronDown size={13} strokeWidth={2.2} color="var(--sb-ink-4)" />
+                : <ChevronRight size={13} strokeWidth={2.2} color="var(--sb-ink-4)" />}
               <span style={SECTION_LABEL}>Activity</span>
             </button>
             {activityOpen && taskActs.length > 7 && (
@@ -621,20 +621,20 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
           </div>
           <div style={{ marginTop: 10, display: activityOpen ? 'flex' : 'none', flexDirection: 'column', gap: 10 }}>
             {shownActs.length === 0 && (
-              <p style={{ margin: 0, fontSize: 12, color: '#9B9180' }}>Nothing yet.</p>
+              <p style={{ margin: 0, fontSize: 12, color: 'var(--sb-ink-4)' }}>Nothing yet.</p>
             )}
             {shownActs.map(a => (
               <div key={a.id} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                 <span style={{
                   width: 20, height: 20, borderRadius: '50%', flexShrink: 0, marginTop: 1,
                   background: 'var(--sb-field)', border: '1px solid var(--sb-border)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9B9180',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--sb-ink-4)',
                 }}>
                   <ActivityIcon type={a.type} />
                 </span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{ margin: 0, fontSize: 12.5, color: 'var(--sb-ink-1)', lineHeight: 1.35 }}>{a.description}</p>
-                  <p style={{ margin: '1px 0 0', fontSize: 11, color: '#9B9180' }}>{relativeStamp(a.timestamp)}</p>
+                  <p style={{ margin: '1px 0 0', fontSize: 11, color: 'var(--sb-ink-4)' }}>{relativeStamp(a.timestamp)}</p>
                 </div>
               </div>
             ))}
@@ -647,7 +647,7 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
         display: 'flex', alignItems: 'center',
         borderTop: '1px solid var(--sb-hairline)', padding: '10px 14px',
       }}>
-        <span style={{ fontSize: 11.5, color: '#9B9180' }}>Every change saves itself</span>
+        <span style={{ fontSize: 11.5, color: 'var(--sb-ink-4)' }}>Every change saves itself</span>
       </div>
     </aside>
   )

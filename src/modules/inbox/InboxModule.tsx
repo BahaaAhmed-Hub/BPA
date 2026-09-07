@@ -579,7 +579,7 @@ export function InboxModule() {
           style={{
             display: 'flex', alignItems: 'center', gap: 8, height: 30, padding: '0 8px',
             borderRadius: 8, background: 'transparent', border: 'none', cursor: 'pointer',
-            color: '#9B9180', fontFamily: 'inherit', fontSize: 10.5, fontWeight: 700,
+            color: 'var(--sb-ink-4)', fontFamily: 'inherit', fontSize: 10.5, fontWeight: 700,
             letterSpacing: '0.12em', textTransform: 'uppercase',
           }}>
           {railOpen ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
@@ -724,7 +724,7 @@ export function InboxModule() {
                   </div>
                   <p style={{ margin: 0, fontSize: 12, color: isRead ? 'var(--sb-ink-3)' : 'var(--sb-ink-1)', fontWeight: isRead ? 400 : 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.35 }}>
                     {email.subject}
-                    <span style={{ fontWeight: 400, color: '#9B9180' }}> — {email.preview}</span>
+                    <span style={{ fontWeight: 400, color: 'var(--sb-ink-4)' }}> — {email.preview}</span>
                   </p>
                 </div>
                 <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1, flexShrink: 0 }}>
@@ -737,7 +737,7 @@ export function InboxModule() {
                       maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                     }}>{accountLabel(email.account.email, email.account.isPrimary)}</span>
                   )}
-                  <span style={{ fontSize: 10, color: '#9B9180' }}>
+                  <span style={{ fontSize: 10, color: 'var(--sb-ink-4)' }}>
                   {fmtRelTime(email.receivedAt)}
                   </span>
                 </span>
@@ -981,20 +981,20 @@ export function InboxModule() {
 
             <div style={{ display: 'flex', gap: 10, marginBottom: 18 }}>
               <div style={{ flex: 1, padding: '12px 14px', background: CLASS_META[selectedTriage.result.classification].bg, border: `1px solid ${CLASS_META[selectedTriage.result.classification].color}30`, borderRadius: 8 }}>
-                <div style={{ fontSize: 10, color: '#9B9180', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Classification</div>
+                <div style={{ fontSize: 10, color: 'var(--sb-ink-4)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Classification</div>
                 <div style={{ fontSize: 14, fontWeight: 600, color: CLASS_META[selectedTriage.result.classification].color }}>
                   {CLASS_META[selectedTriage.result.classification].label}
                 </div>
               </div>
               <div style={{ flex: 1, padding: '12px 14px', background: 'var(--sb-page)', border: `1px solid ${URGENCY_META[selectedTriage.result.urgency].color}30`, borderRadius: 8 }}>
-                <div style={{ fontSize: 10, color: '#9B9180', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Urgency</div>
+                <div style={{ fontSize: 10, color: 'var(--sb-ink-4)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Urgency</div>
                 <div style={{ fontSize: 14, fontWeight: 600, color: URGENCY_META[selectedTriage.result.urgency].color }}>
                   {URGENCY_META[selectedTriage.result.urgency].label}
                 </div>
               </div>
               {selectedTriage.result.followUpDate && (
                 <div style={{ flex: 1, padding: '12px 14px', background: 'var(--sb-page)', border: '1px solid var(--sb-border)', borderRadius: 8 }}>
-                  <div style={{ fontSize: 10, color: '#9B9180', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Follow Up</div>
+                  <div style={{ fontSize: 10, color: 'var(--sb-ink-4)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Follow Up</div>
                   <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--sb-ink-1)' }}>{selectedTriage.result.followUpDate}</div>
                 </div>
               )}

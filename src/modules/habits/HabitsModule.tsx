@@ -182,7 +182,7 @@ function HabitImagePicker({ image, emoji, onChange, size = 54 }: {
           if (!file) return
           try { onChange(await readHabitImage(file)) } catch { /* not a usable image */ }
         }} />
-      {!image && <span style={{ color: '#9B9180', fontSize: 10 }}>Picture</span>}
+      {!image && <span style={{ color: 'var(--sb-ink-4)', fontSize: 10 }}>Picture</span>}
     </div>
   )
 }
@@ -741,12 +741,12 @@ function HabitDetailPanel({
             }}
             onFocus={e => { e.currentTarget.style.borderBottomColor = 'var(--sb-border)' }}
             onBlur={e => { e.currentTarget.style.borderBottomColor = 'transparent' }} />
-          <div style={{ fontSize: 10.5, color: '#9B9180', marginTop: 2 }}>
+          <div style={{ fontSize: 10.5, color: 'var(--sb-ink-4)', marginTop: 2 }}>
             {habit.frequency ?? 'daily'}
             {isQty && ` · ${hasGoal ? `${habit.goal} ${habit.unit ?? 'times'} a day` : `counts ${habit.unit ?? 'times'}, no target`}`}
           </div>
         </div>
-        <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9B9180', padding: 2, display: 'flex' }}>
+        <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-4)', padding: 2, display: 'flex' }}>
           <X size={14} />
         </button>
       </div>
@@ -770,9 +770,9 @@ function HabitDetailPanel({
                 style={{ width: 30, height: 30, borderRadius: 9, border: '1px solid var(--sb-border)', background: 'var(--sb-card)', color: 'var(--sb-ink-3)', fontSize: 17, lineHeight: 1, cursor: qtyToday === 0 ? 'default' : 'pointer', opacity: qtyToday === 0 ? 0.4 : 1, flexShrink: 0 }}>−</button>
               <div style={{ flex: 1, minWidth: 0, textAlign: 'center' }}>
                 <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 26, fontWeight: 700, letterSpacing: '-0.03em', color: 'var(--sb-ink-1)', lineHeight: 1 }}>
-                  {qtyToday}{hasGoal && <span style={{ fontSize: 15, color: '#9B9180' }}> / {habit.goal}</span>}
+                  {qtyToday}{hasGoal && <span style={{ fontSize: 15, color: 'var(--sb-ink-4)' }}> / {habit.goal}</span>}
                 </span>
-                <div style={{ fontSize: 10.5, color: '#9B9180', marginTop: 2 }}>{habit.unit ?? 'times'}</div>
+                <div style={{ fontSize: 10.5, color: 'var(--sb-ink-4)', marginTop: 2 }}>{habit.unit ?? 'times'}</div>
               </div>
               <button onClick={() => onSetQuantity(qtyToday + 1)}
                 style={{ width: 30, height: 30, borderRadius: 9, border: '1px solid var(--sb-border)', background: 'var(--sb-card)', color: 'var(--sb-ink-1)', fontSize: 17, lineHeight: 1, cursor: 'pointer', flexShrink: 0 }}>+</button>
@@ -806,7 +806,7 @@ function HabitDetailPanel({
         ].map(st => (
           <div key={st.label} style={{ background: 'var(--sb-field)', borderRadius: 9, padding: '7px 8px', minWidth: 0 }}>
             <div style={{ fontFamily: 'var(--sb-font-num)', fontSize: 17, fontWeight: 700, letterSpacing: '-0.03em', color: st.color, lineHeight: 1 }}>{st.value}</div>
-            <div style={{ fontSize: 9, color: '#9B9180', marginTop: 3, fontWeight: 600 }}>{st.label}</div>
+            <div style={{ fontSize: 9, color: 'var(--sb-ink-4)', marginTop: 3, fontWeight: 600 }}>{st.label}</div>
           </div>
         ))}
       </div>
@@ -828,8 +828,8 @@ function HabitDetailPanel({
           })}
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 5 }}>
-          <span style={{ fontSize: 9, color: '#9B9180' }}>13 weeks ago</span>
-          <span style={{ fontSize: 9, color: '#9B9180' }}>Today</span>
+          <span style={{ fontSize: 9, color: 'var(--sb-ink-4)' }}>13 weeks ago</span>
+          <span style={{ fontSize: 9, color: 'var(--sb-ink-4)' }}>Today</span>
         </div>
       </div>
 
@@ -1067,7 +1067,7 @@ export function HabitsModule() {
         {/* Week bars — click a day to read it, arrows to walk the weeks */}
         <span style={{ display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0 }}>
           <button onClick={() => stepWeek(-1)} title="Previous week"
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9B9180', padding: 2, display: 'flex' }}>
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-4)', padding: 2, display: 'flex' }}>
             <ChevronLeft size={14} />
           </button>
 
@@ -1102,7 +1102,7 @@ export function HabitsModule() {
           </span>
 
           <button onClick={() => stepWeek(1)} disabled={isCurrentWeek} title="Next week"
-            style={{ background: 'none', border: 'none', cursor: isCurrentWeek ? 'default' : 'pointer', color: '#9B9180', padding: 2, display: 'flex', opacity: isCurrentWeek ? 0.3 : 1 }}>
+            style={{ background: 'none', border: 'none', cursor: isCurrentWeek ? 'default' : 'pointer', color: 'var(--sb-ink-4)', padding: 2, display: 'flex', opacity: isCurrentWeek ? 0.3 : 1 }}>
             <ChevronRight size={14} />
           </button>
         </span>

@@ -139,7 +139,7 @@ export function Sidebar() {
                   border: 'none',
                   borderRadius: 8,
                   cursor: 'pointer',
-                  color: active ? 'var(--sb-ink-1)' : '#9B9180',
+                  color: active ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)',
                   marginBottom: 2,
                   transition: 'all 0.15s ease',
                 }}
@@ -154,7 +154,7 @@ export function Sidebar() {
                   if (!active) {
                     const el = e.currentTarget as HTMLElement
                     el.style.background = 'transparent'
-                    el.style.color = '#9B9180'
+                    el.style.color = 'var(--sb-ink-4)'
                   }
                 }}
               >
@@ -197,11 +197,11 @@ export function Sidebar() {
                   justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
                   background: active ? 'rgba(var(--sb-accent-rgb),0.15)' : 'transparent',
                   border: 'none', borderRadius: 8, cursor: 'pointer',
-                  color: active ? 'var(--sb-ink-1)' : '#9B9180',
+                  color: active ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)',
                   marginBottom: 2, transition: 'all 0.15s ease',
                 }}
                 onMouseEnter={e => { if (!active) { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(var(--sb-accent-rgb),0.15)'; el.style.color = 'var(--sb-ink-1)' } }}
-                onMouseLeave={e => { if (!active) { const el = e.currentTarget as HTMLElement; el.style.background = 'transparent'; el.style.color = '#9B9180' } }}
+                onMouseLeave={e => { if (!active) { const el = e.currentTarget as HTMLElement; el.style.background = 'transparent'; el.style.color = 'var(--sb-ink-4)' } }}
               >
                 <Swords size={18} strokeWidth={active ? 2.5 : 1.8} style={{ flexShrink: 0 }} />
                 {!sidebarCollapsed && (
@@ -242,7 +242,7 @@ export function Sidebar() {
                   justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
                   background: active ? 'rgba(var(--sb-accent-rgb),0.15)' : 'transparent',
                   border: 'none', borderRadius: 8, cursor: 'pointer',
-                  color: active ? 'var(--sb-ink-1)' : '#9B9180',
+                  color: active ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)',
                   marginBottom: 2, transition: 'all 0.15s ease',
                 }}
                 onMouseEnter={e => {
@@ -256,7 +256,7 @@ export function Sidebar() {
                   if (!active) {
                     const el = e.currentTarget as HTMLElement
                     el.style.background = 'transparent'
-                    el.style.color = '#9B9180'
+                    el.style.color = 'var(--sb-ink-4)'
                   }
                 }}
               >
@@ -288,7 +288,7 @@ export function Sidebar() {
             background: 'transparent',
             border: 'none',
             cursor: 'pointer',
-            color: '#9B9180',
+            color: 'var(--sb-ink-4)',
             borderRadius: 6,
           }}
           title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}

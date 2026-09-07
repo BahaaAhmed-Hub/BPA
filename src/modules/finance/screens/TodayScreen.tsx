@@ -166,7 +166,7 @@ function MoneyCalendar({
         <button onClick={onPrevMonth} style={ROUND_BTN} title="Previous month">‹</button>
         <button onClick={onNextMonth} style={ROUND_BTN} title="Next month">›</button>
         <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 21, fontWeight: 600, color: 'var(--sb-ink-1)', letterSpacing: '-0.03em' }}>
-          {MONTH_NAMES[month]} <span style={{ color: '#9B9180' }}>{year}</span>
+          {MONTH_NAMES[month]} <span style={{ color: 'var(--sb-ink-4)' }}>{year}</span>
         </span>
         <span style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
           {chip('Out', monthOut > 0 ? acct(-monthOut) : '–', NEGATIVE, NEGATIVE_TINT)}
@@ -192,7 +192,7 @@ function MoneyCalendar({
           {['SAT','SUN','MON','TUE','WED','THU','FRI'].map(d => (
             <div key={d} style={{
               textAlign: 'center' as const, fontSize: 10, fontWeight: 700,
-              letterSpacing: '0.1em', color: '#9B9180', padding: '2px 0 6px',
+              letterSpacing: '0.1em', color: 'var(--sb-ink-4)', padding: '2px 0 6px',
             }}>{d}</div>
           ))}
         </div>
@@ -205,7 +205,7 @@ function MoneyCalendar({
             const isSelected = dateStr === selectedDay
             const net        = dayNetMap.get(dateStr) ?? 0
             const payees     = dayTxMap.get(dateStr) ?? []
-            const netColor   = net > 0 ? 'var(--sb-positive)' : net < 0 ? 'var(--sb-negative)' : '#9B9180'
+            const netColor   = net > 0 ? 'var(--sb-positive)' : net < 0 ? 'var(--sb-negative)' : 'var(--sb-ink-4)'
 
             return (
               <div

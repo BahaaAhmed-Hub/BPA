@@ -68,7 +68,7 @@ export function TaskRow({ task, onOpen, dense }: {
       <div style={{ flex: 1, minWidth: 0 }}>
         <p style={{
           margin: 0, fontSize: 13.5, fontWeight: 600, lineHeight: 1.35,
-          color: task.title.trim() ? 'var(--sb-ink-1)' : '#9B9180',
+          color: task.title.trim() ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)',
           fontStyle: task.title.trim() ? 'normal' : 'italic',
           overflowWrap: 'anywhere',
           textDecoration: task.completed ? 'line-through' : 'none',
@@ -93,7 +93,7 @@ export function TaskRow({ task, onOpen, dense }: {
             options={[{ value: '', label: 'No company' }, ...companies.map(c => ({ value: c.id, label: c.name }))]}
           />
         </span>
-        <p style={{ margin: '6px 0 0', fontSize: 11.5, color: '#9B9180', lineHeight: 1.3, display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+        <p style={{ margin: '6px 0 0', fontSize: 11.5, color: 'var(--sb-ink-4)', lineHeight: 1.3, display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
           {meta}
           {attachmentCount > 0 && (
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
@@ -104,7 +104,7 @@ export function TaskRow({ task, onOpen, dense }: {
 
           {/* Attributes — each one is its own control, so clicking an icon edits
               it rather than opening the task */}
-          <span style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0, color: '#9B9180' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0, color: 'var(--sb-ink-4)' }}>
         <button
           data-nm
           onClick={e => { e.stopPropagation(); toggleUrgent(task.id) }}
@@ -161,7 +161,7 @@ export function TaskRow({ task, onOpen, dense }: {
               width: 22, height: 22, borderRadius: '50%', boxSizing: 'border-box',
               background: v.ownerInitials ? 'var(--sb-ink-1)' : 'var(--sb-field)',
               border: v.ownerInitials ? 'none' : '1px solid var(--sb-border)',
-              color: v.ownerInitials ? 'var(--sb-card)' : '#9B9180',
+              color: v.ownerInitials ? 'var(--sb-card)' : 'var(--sb-ink-4)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 9, fontWeight: 700, letterSpacing: '0.02em',
             }}

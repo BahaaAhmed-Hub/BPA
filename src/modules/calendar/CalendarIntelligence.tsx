@@ -929,7 +929,7 @@ const EV_FIELD: React.CSSProperties = {
 const EV_GHOST_ICON: React.CSSProperties = {
   width: 30, height: 30, borderRadius: 8, flexShrink: 0, padding: 0,
   display: 'flex', alignItems: 'center', justifyContent: 'center',
-  background: 'none', border: 'none', color: '#9B9180', cursor: 'pointer',
+  background: 'none', border: 'none', color: 'var(--sb-ink-4)', cursor: 'pointer',
 }
 
 /** How long before the event you want telling, in the steps Google offers. */
@@ -958,7 +958,7 @@ function responseGlyph(status?: string): string {
 function responseTone(status?: string): string {
   if (status === 'accepted') return 'var(--sb-positive)'
   if (status === 'declined') return 'var(--sb-negative)'
-  return '#9B9180'
+  return 'var(--sb-ink-4)'
 }
 
 /** Which video service this calendar makes links with. An event that already
@@ -1295,7 +1295,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
             <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {calName}
             </span>
-            {onMoveCalendar && <ChevronDown size={13} strokeWidth={2} style={{ color: '#9B9180', flexShrink: 0 }} />}
+            {onMoveCalendar && <ChevronDown size={13} strokeWidth={2} style={{ color: 'var(--sb-ink-4)', flexShrink: 0 }} />}
           </span>
           {onMoveCalendar && (
             <select
@@ -1435,7 +1435,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
         <span style={EV_LABEL}>Location</span>
         <span ref={placeRef} style={{ flex: 1, minWidth: 0, display: 'flex', gap: 7, position: 'relative' }}>
           <span style={{ ...EV_FIELD, flex: 1 }}>
-            <MapPin size={15} color={location ? 'var(--sb-ink-3)' : '#9B9180'} style={{ flexShrink: 0 }} />
+            <MapPin size={15} color={location ? 'var(--sb-ink-3)' : 'var(--sb-ink-4)'} style={{ flexShrink: 0 }} />
             <input
               value={location}
               onChange={e => { setLocation(e.target.value); setPlaceQuery(e.target.value) }}
@@ -1484,7 +1484,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
                     padding: '0 9px', borderRadius: 8, border: 'none', background: 'transparent',
                     color: 'var(--sb-ink-1)', fontSize: 13.5, fontFamily: 'inherit', cursor: 'pointer', textAlign: 'left',
                   }}>
-                  <MapPin size={13} color="#9B9180" style={{ flexShrink: 0 }} />
+                  <MapPin size={13} color="var(--sb-ink-4)" style={{ flexShrink: 0 }} />
                   <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{pl}</span>
                 </button>
               ))}
@@ -1509,7 +1509,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
               {new Date(dateStr + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}
               {isAllDay ? ' · All day' : ` · ${compactRange(fromTime, toTime)}`}
             </span>
-            <ChevronDown size={14} strokeWidth={2} style={{ color: '#9B9180', flexShrink: 0 }} />
+            <ChevronDown size={14} strokeWidth={2} style={{ color: 'var(--sb-ink-4)', flexShrink: 0 }} />
           </button>
           {whenOpen && (
             <SchedulePopover
@@ -1573,12 +1573,12 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
             <button onClick={() => setRepeatOpen(o => !o)} disabled={!onSave}
               title={onSave ? 'How often this comes back' : 'You cannot edit this event'}
               style={{ ...EV_FIELD, width: '100%', cursor: onSave ? 'pointer' : 'default',
-                color: recurrence ? 'var(--sb-ink-1)' : '#9B9180', opacity: onSave ? 1 : 0.7 }}>
+                color: recurrence ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)', opacity: onSave ? 1 : 0.7 }}>
               <RefreshCw size={14} color="var(--sb-ink-3)" style={{ flexShrink: 0 }} />
               <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {recurrence ?? 'Does not repeat'}
               </span>
-              <ChevronDown size={14} strokeWidth={2} style={{ color: '#9B9180', flexShrink: 0 }} />
+              <ChevronDown size={14} strokeWidth={2} style={{ color: 'var(--sb-ink-4)', flexShrink: 0 }} />
             </button>
             {repeatOpen && (
               <RepeatPicker
@@ -1597,10 +1597,10 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
         <div style={EV_ROW}>
           <span style={EV_LABEL}>Alert</span>
           <label style={{ ...EV_FIELD, flex: 1, position: 'relative', cursor: 'pointer' }}>
-            <span style={{ flex: 1, minWidth: 0, color: alertMinutes === undefined ? '#9B9180' : 'var(--sb-ink-1)' }}>
+            <span style={{ flex: 1, minWidth: 0, color: alertMinutes === undefined ? 'var(--sb-ink-4)' : 'var(--sb-ink-1)' }}>
               {describeAlert(alertMinutes, event.reminders?.useDefault !== false)}
             </span>
-            <ChevronDown size={14} strokeWidth={2} style={{ color: '#9B9180', flexShrink: 0 }} />
+            <ChevronDown size={14} strokeWidth={2} style={{ color: 'var(--sb-ink-4)', flexShrink: 0 }} />
             <select
               value={event.reminders?.useDefault !== false ? 'default'
                 : alertMinutes === undefined ? 'none' : String(alertMinutes)}
@@ -1697,7 +1697,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               border: '1px dashed #D8CFB8', color: '#C9C0A8',
             }}><Plus size={15} /></span>
-            <span style={{ fontSize: 13.5, color: '#9B9180' }}>Add an invitee</span>
+            <span style={{ fontSize: 13.5, color: 'var(--sb-ink-4)' }}>Add an invitee</span>
           </button>
         )}
       </div>
@@ -1706,7 +1706,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
       <div style={{ height: 1, background: 'var(--sb-hairline)', margin: '20px 0' }} />
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <span style={EV_SECTION}>Attachments</span>
-        <span style={{ flex: 1, minWidth: 0, fontSize: 11.5, color: '#9B9180', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <span style={{ flex: 1, minWidth: 0, fontSize: 11.5, color: 'var(--sb-ink-4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {attendees.length > 0
             ? `Shared with the ${attendees.length} invitee${attendees.length === 1 ? '' : 's'}`
             : 'Only you can see these'}
@@ -1734,11 +1734,11 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
                 <span style={{ display: 'block', fontSize: 13.5, color: 'var(--sb-ink-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {f.title ?? f.fileUrl}
                 </span>
-                <span style={{ display: 'block', fontSize: 11.5, color: '#9B9180', marginTop: 2 }}>
+                <span style={{ display: 'block', fontSize: 11.5, color: 'var(--sb-ink-4)', marginTop: 2 }}>
                   {describeMime(f.mimeType)}
                 </span>
               </span>
-              <ExternalLink size={13} color="#9B9180" style={{ flexShrink: 0 }} />
+              <ExternalLink size={13} color="var(--sb-ink-4)" style={{ flexShrink: 0 }} />
             </a>
           ))}
         </div>
@@ -1784,7 +1784,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
                     background: on ? 'var(--sb-ink-1)' : 'var(--sb-card)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>{on && <Check size={11} color="#fff" strokeWidth={3} />}</span>
-                  <span style={{ fontSize: 13.5, color: on ? '#9B9180' : 'var(--sb-ink-1)', lineHeight: 1.45, textDecoration: on ? 'line-through' : 'none' }}>
+                  <span style={{ fontSize: 13.5, color: on ? 'var(--sb-ink-4)' : 'var(--sb-ink-1)', lineHeight: 1.45, textDecoration: on ? 'line-through' : 'none' }}>
                     {pt}
                   </span>
                 </button>
@@ -1819,7 +1819,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
         <p style={{ margin: '12px 0 0', fontSize: 11.5, color: 'var(--sb-negative)' }}>{saveError}</p>
       )}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 14 }}>
-        <span style={{ flex: 1, fontSize: 11.5, color: '#9B9180' }}>
+        <span style={{ flex: 1, fontSize: 11.5, color: 'var(--sb-ink-4)' }}>
           {saving ? 'Saving…' : 'Every change saves itself.'}
         </span>
         {event.htmlLink && (
@@ -2103,7 +2103,7 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
         <label style={{ ...EV_PILL, position: 'relative' }}>
           {new Date(startDate + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}
-          <ChevronDown size={13} strokeWidth={2} style={{ color: '#9B9180' }} />
+          <ChevronDown size={13} strokeWidth={2} style={{ color: 'var(--sb-ink-4)' }} />
           <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
             style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', border: 'none', padding: 0 }} />
         </label>
@@ -2131,7 +2131,7 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
           <span style={{ flex: 1, minWidth: 0, position: 'relative', display: 'flex' }}>
             <span style={{ ...EV_PILL, flex: 1, justifyContent: 'space-between' }}>
               <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{calLabel}</span>
-              <ChevronDown size={13} strokeWidth={2} style={{ color: '#9B9180', flexShrink: 0 }} />
+              <ChevronDown size={13} strokeWidth={2} style={{ color: 'var(--sb-ink-4)', flexShrink: 0 }} />
             </span>
             <select value={calId} onChange={e => setCalId(e.target.value)}
               style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', border: 'none' }}>
@@ -2159,12 +2159,12 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
           <span style={{ flex: 1, minWidth: 0, position: 'relative', display: 'flex' }}>
             <button onClick={() => setRepeatOpen(o => !o)} style={{
               ...EV_PILL, flex: 1, justifyContent: 'space-between',
-              color: repeat ? 'var(--sb-ink-1)' : '#9B9180',
+              color: repeat ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)',
             }}>
               <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {describeRecur(repeat, new Date(`${startDate}T12:00:00`)) ?? 'Does not repeat'}
               </span>
-              <ChevronDown size={13} strokeWidth={2} style={{ color: '#9B9180', flexShrink: 0 }} />
+              <ChevronDown size={13} strokeWidth={2} style={{ color: 'var(--sb-ink-4)', flexShrink: 0 }} />
             </button>
             {repeatOpen && (
               <RepeatPicker
@@ -2231,7 +2231,7 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
         <button onClick={handleSave} disabled={!title.trim()} style={{
           ...EV_PILL, flex: 1, justifyContent: 'center', fontWeight: 600,
           background: title.trim() ? 'var(--sb-ink-1)' : 'var(--sb-field)',
-          border: 'none', color: title.trim() ? 'var(--sb-ink-on-dark)' : '#9B9180',
+          border: 'none', color: title.trim() ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-4)',
           cursor: title.trim() ? 'pointer' : 'default',
         }}>Create event</button>
         <button onClick={onCancel} style={{ ...EV_PILL, color: 'var(--sb-ink-3)' }}>Cancel</button>
@@ -3417,13 +3417,13 @@ export function CalendarIntelligence() {
                         background: 'none', border: 'none', cursor: 'pointer',
                         display: 'flex', alignItems: 'center', gap: 4,
                         padding: '3px 8px 3px 2px', fontSize: 10,
-                        color: hidden ? '#9B9180' : '#3D3926',
+                        color: hidden ? 'var(--sb-ink-4)' : '#3D3926',
                       }}
                     >
                       <span style={{ maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {cal.summary}
                       </span>
-                      {hidden ? <EyeOff size={10} color="#9B9180" /> : <Eye size={10} color={color} />}
+                      {hidden ? <EyeOff size={10} color="var(--sb-ink-4)" /> : <Eye size={10} color={color} />}
                     </button>
 
                     {/* Subtle reconnect badge — only shown when this account needs reconnect */}
@@ -3542,7 +3542,7 @@ export function CalendarIntelligence() {
                     )
                   })}
                   {dayEvents.length > shown.length && (
-                    <span style={{ fontSize: 10, color: '#9B9180' }}>+{dayEvents.length - shown.length} more</span>
+                    <span style={{ fontSize: 10, color: 'var(--sb-ink-4)' }}>+{dayEvents.length - shown.length} more</span>
                   )}
                 </div>
               )
@@ -3587,7 +3587,7 @@ export function CalendarIntelligence() {
           {/* All-day events strip — only shown when the week has at least one all-day event */}
           {weekDays.some(day => (grouped.get(localDateStr(day)) ?? []).some(e => !e.start.dateTime)) && (
             <div style={{ display: 'flex', borderBottom: '1px solid var(--sb-border)', flexShrink: 0, minHeight: 22 }}>
-              <div style={{ width: 58, flexShrink: 0, display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end', paddingRight: 6, paddingTop: 3, fontSize: 10, color: '#9B9180', letterSpacing: '0.4px' }}>
+              <div style={{ width: 58, flexShrink: 0, display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end', paddingRight: 6, paddingTop: 3, fontSize: 10, color: 'var(--sb-ink-4)', letterSpacing: '0.4px' }}>
                 all day
               </div>
               {weekDays.map(day => {
@@ -3640,7 +3640,7 @@ export function CalendarIntelligence() {
                     display: 'flex', flexDirection: 'column', alignItems: 'flex-end',
                     whiteSpace: 'nowrap',
                   }}>
-                    <span style={{ fontSize: 10, color: '#9B9180', fontWeight: 500, letterSpacing: '0.03em' }}>
+                    <span style={{ fontSize: 10, color: 'var(--sb-ink-4)', fontWeight: 500, letterSpacing: '0.03em' }}>
                       {fmtHourLabel(h)}
                     </span>
                     {w && (
@@ -3748,7 +3748,7 @@ export function CalendarIntelligence() {
 
       {/* Loading spinner overlay */}
       {loadingEvents && (
-        <div style={{ position: 'absolute', bottom: 18, right: 22, display: 'flex', alignItems: 'center', gap: 7, fontSize: 11.5, color: '#9B9180', pointerEvents: 'none' }}>
+        <div style={{ position: 'absolute', bottom: 18, right: 22, display: 'flex', alignItems: 'center', gap: 7, fontSize: 11.5, color: 'var(--sb-ink-4)', pointerEvents: 'none' }}>
           <div style={{ width: 14, height: 14, border: '2px solid var(--sb-border)', borderTopColor: 'var(--sb-ink-1)', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
           Loading…
         </div>
@@ -3760,7 +3760,7 @@ export function CalendarIntelligence() {
         <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(247,244,234,0.93)', opacity: 0.9, pointerEvents: 'none' }}>
           <div style={{ textAlign: 'center' }}>
             <Calendar size={36} color="#C8C0AE" />
-            <p style={{ margin: '12px 0 0', fontSize: 13.5, color: '#9B9180' }}>Connect Google Calendar to see your events</p>
+            <p style={{ margin: '12px 0 0', fontSize: 13.5, color: 'var(--sb-ink-4)' }}>Connect Google Calendar to see your events</p>
           </div>
         </div>
       )}

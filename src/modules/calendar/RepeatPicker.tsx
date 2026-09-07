@@ -28,7 +28,7 @@ const ROW: React.CSSProperties = {
   color: 'var(--sb-ink-1)', fontSize: 13.5, fontFamily: 'inherit', cursor: 'pointer', textAlign: 'left',
 }
 const GROUP_LABEL: React.CSSProperties = {
-  fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', color: '#9B9180',
+  fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', color: 'var(--sb-ink-4)',
   textTransform: 'uppercase', padding: '10px 11px 5px',
 }
 const HAIRLINE: React.CSSProperties = { height: 1, background: 'var(--sb-hairline)', margin: '6px 4px' }
@@ -144,7 +144,7 @@ export function RepeatPicker({ value, start, onApply, onClose }: {
           <button style={ROW} onClick={() => setPane('custom')}>
             <span style={{ flex: 1 }}>Custom</span>
             {preset === 'custom' && <Check size={15} strokeWidth={2.6} color="var(--sb-ink-1)" />}
-            <ChevronRight size={15} color="#9B9180" />
+            <ChevronRight size={15} color="var(--sb-ink-4)" />
           </button>
         </>
       ) : (

@@ -138,7 +138,7 @@ export const PRIORITY_META: Record<Priority, { label: string; color: string; tin
   P0: { label: 'P0', color: 'var(--sb-negative)', tint: 'rgba(198,40,40,0.11)',  border: 'rgba(198,40,40,0.30)' },
   P1: { label: 'P1', color: '#9A7B1F', tint: 'rgba(var(--sb-accent-rgb),0.22)', border: 'rgba(var(--sb-accent-rgb),0.55)' },
   P2: { label: 'P2', color: 'var(--sb-ink-3)', tint: 'var(--sb-field)',               border: 'var(--sb-border)' },
-  P3: { label: 'P3', color: '#9B9180', tint: 'var(--sb-field)',               border: 'var(--sb-border)' },
+  P3: { label: 'P3', color: 'var(--sb-ink-4)', tint: 'var(--sb-field)',               border: 'var(--sb-border)' },
 }
 
 // ─── Task ────────────────────────────────────────────────────────────────────

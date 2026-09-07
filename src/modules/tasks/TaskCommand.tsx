@@ -272,7 +272,7 @@ export function TaskCommand() {
                 {/* Search — the artboard has no page-level search bar, so it
                     lives here rather than being dropped. */}
                 <div style={{ position: 'relative', display: 'flex', alignItems: 'center', marginTop: 12 }}>
-                  <Search size={13} color="#9B9180" style={{ position: 'absolute', left: 11, pointerEvents: 'none' }} />
+                  <Search size={13} color="var(--sb-ink-4)" style={{ position: 'absolute', left: 11, pointerEvents: 'none' }} />
                   <input
                     ref={searchRef}
                     value={searchQuery}
@@ -286,7 +286,7 @@ export function TaskCommand() {
                     }}
                   />
                   {searchQuery && (
-                    <button onClick={() => setSearchQuery('')} style={{ position: 'absolute', right: 9, background: 'none', border: 'none', cursor: 'pointer', color: '#9B9180', display: 'flex', padding: 2 }}>
+                    <button onClick={() => setSearchQuery('')} style={{ position: 'absolute', right: 9, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-4)', display: 'flex', padding: 2 }}>
                       <X size={12} />
                     </button>
                   )}

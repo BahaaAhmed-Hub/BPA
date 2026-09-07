@@ -20,12 +20,12 @@ export function TaskListView({ tasks, onOpen, hideCompleted, groupBy, filteredTa
 
   const groups = groupBy && groupBy !== 'none'
     ? buildTaskGroups(visible, groupBy)
-    : [{ key: 'all', label: '', emoji: '', color: '#9B9180', tasks: sortUrgentFirst(visible) }]
+    : [{ key: 'all', label: '', emoji: '', color: 'var(--sb-ink-4)', tasks: sortUrgentFirst(visible) }]
 
   return (
     <div style={{ padding: '4px 28px 28px', display: 'flex', flexDirection: 'column', gap: 18 }}>
       {visible.length === 0 && (
-        <p style={{ margin: 0, padding: '40px 0', textAlign: 'center', color: '#9B9180', fontSize: 13 }}>
+        <p style={{ margin: 0, padding: '40px 0', textAlign: 'center', color: 'var(--sb-ink-4)', fontSize: 13 }}>
           Nothing here.
         </p>
       )}

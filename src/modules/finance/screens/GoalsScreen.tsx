@@ -27,7 +27,7 @@ const C = {
   ink1:    'var(--sb-ink-1)',
   ink2:    'var(--sb-ink-2)',
   ink3:    'var(--sb-ink-3)',
-  ink4:    '#9B9180',
+  ink4:    'var(--sb-ink-4)',
   accent:  'var(--sb-accent)',
   accentBg:'var(--sb-accent-tint2)',
   accentBr:'var(--sb-accent-border)',

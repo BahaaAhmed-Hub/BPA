@@ -34,7 +34,7 @@ export interface ComposeSeed {
 
 const C = {
   card: 'var(--sb-card)', field: 'var(--sb-field)', border: 'var(--sb-border)', hair: 'var(--sb-hairline)',
-  ink: 'var(--sb-ink-1)', muted: 'var(--sb-ink-3)', ghost: '#9B9180', amber: 'var(--sb-accent)', red: 'var(--sb-negative)',
+  ink: 'var(--sb-ink-1)', muted: 'var(--sb-ink-3)', ghost: 'var(--sb-ink-4)', amber: 'var(--sb-accent)', red: 'var(--sb-negative)',
 }
 
 const LABEL: React.CSSProperties = {

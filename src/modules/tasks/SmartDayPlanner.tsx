@@ -171,11 +171,11 @@ function EventPopup({ event, color, onClose }: { event: GCalEvent; color: string
         <div style={{ width: 4, minHeight: 24, borderRadius: 2, background: color, flexShrink: 0, marginTop: 2 }} />
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--sb-ink-1)', lineHeight: 1.3 }}>{event.summary ?? '(No title)'}</div>
-          <div style={{ fontSize: 12, color: '#9B9180', marginTop: 3 }}>
+          <div style={{ fontSize: 12, color: 'var(--sb-ink-4)', marginTop: 3 }}>
             {isAllDay ? fmtDate(startISO) : `${fmt(startISO)} – ${fmt(endISO)}`}
           </div>
         </div>
-        <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9B9180', padding: 2 }}>
+        <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-4)', padding: 2 }}>
           <X size={15} />
         </button>
       </div>
@@ -193,11 +193,11 @@ function EventPopup({ event, color, onClose }: { event: GCalEvent; color: string
         {attendees.length > 0 && (
           <div style={{ fontSize: 12, color: 'var(--sb-ink-3)' }}>
             👥 {attendees.slice(0, 4).map(a => a.displayName ?? a.email).join(', ')}
-            {attendees.length > 4 && <span style={{ color: '#9B9180' }}> +{attendees.length - 4} more</span>}
+            {attendees.length > 4 && <span style={{ color: 'var(--sb-ink-4)' }}> +{attendees.length - 4} more</span>}
           </div>
         )}
         {notes && (
-          <div style={{ fontSize: 11, color: '#9B9180', lineHeight: 1.5, borderTop: '1px solid var(--sb-border)', paddingTop: 8, whiteSpace: 'pre-wrap' }}>
+          <div style={{ fontSize: 11, color: 'var(--sb-ink-4)', lineHeight: 1.5, borderTop: '1px solid var(--sb-border)', paddingTop: 8, whiteSpace: 'pre-wrap' }}>
             {notes.slice(0, 300)}{notes.length > 300 ? '…' : ''}
           </div>
         )}

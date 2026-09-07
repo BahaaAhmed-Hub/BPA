@@ -16,7 +16,7 @@ import type { Task } from '@/types'
 
 const INK = 'var(--sb-ink-1)'
 const MUTED = 'var(--sb-ink-3)'
-const GHOST = '#9B9180'
+const GHOST = 'var(--sb-ink-4)'
 const FIELD = 'var(--sb-field)'
 
 type Group = 'Tasks' | 'Calendar' | 'Habits' | 'Finance' | 'Settings' | 'Actions'

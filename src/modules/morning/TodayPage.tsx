@@ -36,7 +36,7 @@ const CARD: React.CSSProperties = {
 }
 const INK = 'var(--sb-ink-1)'
 const MUTED = 'var(--sb-ink-3)'
-const GHOST = '#9B9180'
+const GHOST = 'var(--sb-ink-4)'
 const HAIR = 'var(--sb-hairline)'
 const FIELD = 'var(--sb-field)'
 const AMBER = 'var(--sb-accent)'

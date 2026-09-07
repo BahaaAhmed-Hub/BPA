@@ -120,7 +120,7 @@ export function ReportsScreen(_props?: any) {
     amber:     'var(--sb-accent)',
     textPri:   'var(--sb-ink-1)',
     textMuted: 'var(--sb-ink-3)',
-    textDim:   '#9B9180',
+    textDim:   'var(--sb-ink-4)',
     red:       'var(--sb-negative)',
     green:     'var(--sb-positive)',
   }
@@ -389,7 +389,7 @@ export function ReportsScreen(_props?: any) {
                     <span style={{ fontSize: 9, color: 'var(--sb-ink-3)', marginTop: 2, letterSpacing: '0.08em', fontWeight: 700 }}>
                       EGP/DAY
                     </span>
-                    <span style={{ fontSize: 9, color: '#9B9180', marginTop: 4 }}>
+                    <span style={{ fontSize: 9, color: 'var(--sb-ink-4)', marginTop: 4 }}>
                       {TOTAL > 0 ? `${(TOTAL / 1000).toFixed(0)}K total` : 'no data'}
                     </span>
                   </div>

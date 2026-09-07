@@ -217,10 +217,10 @@ export function FinanceModule() {
                   userSelect: 'none', flexShrink: 0,
                 } as React.CSSProperties}
               >
-                <Icon color={active ? 'var(--sb-ink-1)' : '#9B9180'} />
+                <Icon color={active ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)'} />
                 <span style={{
                   fontSize: 12, fontWeight: active ? 600 : 400,
-                  color: active ? 'var(--sb-ink-1)' : '#9B9180',
+                  color: active ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)',
                   whiteSpace: 'nowrap' as const, letterSpacing: '0.1px',
                 }}>
                   {label}

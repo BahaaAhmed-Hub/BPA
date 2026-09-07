@@ -147,7 +147,7 @@ function AccountRow({ account, balance, unconverted, pending, selected, hovered,
           flexShrink: 0, width: 18, height: 30, padding: 0,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           background: 'none', border: 'none', borderRadius: 6,
-          color: hovered || isDragging ? '#9B9180' : '#D8D0BE',
+          color: hovered || isDragging ? 'var(--sb-ink-4)' : '#D8D0BE',
           cursor: isDragging ? 'grabbing' : 'grab',
           touchAction: 'none',
         }}>
@@ -184,7 +184,7 @@ function AccountRow({ account, balance, unconverted, pending, selected, hovered,
               background: used >= 0.9 ? 'var(--sb-negative)' : used >= 0.7 ? '#C08A2E' : '#5F7038',
             }} />
           </div>
-          <span style={{ display: 'block', fontSize: 9.5, color: '#9B9180', marginTop: 3, whiteSpace: 'nowrap' }}>
+          <span style={{ display: 'block', fontSize: 9.5, color: 'var(--sb-ink-4)', marginTop: 3, whiteSpace: 'nowrap' }}>
             {account.currency} {Math.round(Math.max(0, limit - owed)).toLocaleString('en-US')} left of {Math.round(limit).toLocaleString('en-US')}
           </span>
         </div>
