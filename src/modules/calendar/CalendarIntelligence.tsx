@@ -928,6 +928,38 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
  *  the lot, which is the same mechanism the compact density setting uses.
  *  The panel's own box keeps its width: only what is inside it shrinks. */
 const EV_SCALE = 0.75
+/** The box the scale is applied inside. Both panels take it from here. */
+const EV_PANEL_W = 'clamp(240px, 25.5vw, 330px)'
+const EV_PANEL_PAD = '16px 18px 18px'
+
+/** The panel both of the calendar's side panels are drawn in — the one that
+ *  opens on an event and the one that opens on an empty slot. They hold
+ *  different things and save in different ways (one pushes every change, the
+ *  other collects a draft and saves it once), but they are the same object on
+ *  screen and were two copies of one box: same width clamp, same scroll, same
+ *  card and shadow, and then the two drifted a couple of pixels apart on
+ *  padding. This is that box, including the three-quarter scale. */
+function EvPanel({ panelRef, children }: {
+  panelRef?: React.Ref<HTMLDivElement>
+  children: React.ReactNode
+}) {
+  return (
+    <div
+      ref={panelRef}
+      onClick={e => e.stopPropagation()}
+      onMouseDown={e => e.stopPropagation()}
+      style={{
+        width: EV_PANEL_W, flexShrink: 0, alignSelf: 'stretch', minHeight: 0,
+        overflowY: 'auto', scrollbarWidth: 'thin',
+        background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)',
+        borderRadius: 'var(--sb-r-card)', boxShadow: 'var(--sb-shadow-control)',
+      }}>
+      <div style={{ zoom: EV_SCALE, padding: EV_PANEL_PAD }}>
+        {children}
+      </div>
+    </div>
+  )
+}
 
 const EV_PILL: React.CSSProperties = {
   display: 'inline-flex', alignItems: 'center', gap: 6, height: 32, boxSizing: 'border-box',
@@ -1311,15 +1343,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
   }
 
   return (
-    <div ref={popupRef} onClick={e => e.stopPropagation()} onMouseDown={e => e.stopPropagation()} style={{
-      // The box comes down by the same quarter as everything in it, so the
-      // panel keeps its proportions and gives the grid back the width.
-      width: 'clamp(240px, 25.5vw, 330px)', flexShrink: 0, alignSelf: 'stretch', minHeight: 0,
-      overflowY: 'auto', scrollbarWidth: 'thin',
-      background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
-      boxShadow: 'var(--sb-shadow-control)',
-    }}>
-      <div style={{ zoom: EV_SCALE, padding: '16px 18px 18px' }}>
+    <EvPanel panelRef={popupRef}>
 
       {/* ── Which calendar, and what to do with the event ────────────────── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
@@ -1877,8 +1901,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
           </a>
         )}
       </div>
-      </div>
-    </div>
+    </EvPanel>
   )
 }
 
@@ -2113,13 +2136,7 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
   }
 
   return (
-    <div ref={ref} onClick={e => e.stopPropagation()} onMouseDown={e => e.stopPropagation()} style={{
-      width: 'clamp(320px, 34vw, 440px)', flexShrink: 0, alignSelf: 'stretch', minHeight: 0,
-      overflowY: 'auto', scrollbarWidth: 'thin',
-      background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
-      boxShadow: 'var(--sb-shadow-control)',
-      padding: '18px 20px 22px',
-    }}>
+    <EvPanel panelRef={ref}>
 
       {/* Which calendar, and the way out */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -2285,7 +2302,7 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
           style={{ flex: 1 }}>Create event</Button>
         <button onClick={onCancel} style={{ ...EV_PILL, color: 'var(--sb-ink-3)' }}>Cancel</button>
       </div>
-    </div>
+    </EvPanel>
   )
 }
 
