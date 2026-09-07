@@ -19,20 +19,20 @@ import {
 // worth about as much as the wish was.
 
 const C = {
-  bg:      '#F7F4EA',
-  surface: '#FFFFFF',
-  field:   '#FAF7EC',
-  border:  '#E8E1CE',
-  hair:    '#F0EBDC',
-  ink1:    '#191712',
-  ink2:    '#4A4438',
-  ink3:    '#6C6553',
+  bg:      'var(--sb-page)',
+  surface: 'var(--sb-card)',
+  field:   'var(--sb-field)',
+  border:  'var(--sb-border)',
+  hair:    'var(--sb-hairline)',
+  ink1:    'var(--sb-ink-1)',
+  ink2:    'var(--sb-ink-2)',
+  ink3:    'var(--sb-ink-3)',
   ink4:    '#9B9180',
   accent:  'var(--sb-accent)',
   accentBg:'var(--sb-accent-tint2)',
   accentBr:'var(--sb-accent-border)',
-  green:   '#0C8140',
-  red:     '#C62828',
+  green:   'var(--sb-positive)',
+  red:     'var(--sb-negative)',
 }
 
 const DISPLAY = 'Outfit, sans-serif'
@@ -116,7 +116,7 @@ function GoalRow({ plan, place, selected, lifted, over, onSelect, onGrab, regRow
         <span style={{
           width: 20, height: 20, borderRadius: 6, flexShrink: 0,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          background: C.ink1, color: '#FDF8E7', fontSize: 10.5, fontWeight: 700,
+          background: C.ink1, color: 'var(--sb-ink-on-dark)', fontSize: 10.5, fontWeight: 700,
         }}>{place}</span>
         <span style={{ fontSize: 15, flexShrink: 0 }}>{g.icon}</span>
         <span style={{
@@ -325,7 +325,7 @@ export function GoalsScreen(_props?: any) {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             <span style={EYEBROW}>How to divide it</span>
-            <span style={{ display: 'inline-flex', background: '#F1ECDE', borderRadius: 10, padding: 3, gap: 3 }}>
+            <span style={{ display: 'inline-flex', background: 'var(--sb-field)', borderRadius: 10, padding: 3, gap: 3 }}>
               {([['ladder', 'Ladder'], ['share', 'Share']] as const).map(([id, label]) => (
                 <button key={id} onClick={() => pickPolicy(id)}
                   title={id === 'ladder'
@@ -335,7 +335,7 @@ export function GoalsScreen(_props?: any) {
                     padding: '0 14px', height: 32, borderRadius: 8, border: 'none', cursor: 'pointer',
                     fontFamily: 'inherit', fontSize: 12.5, fontWeight: policy === id ? 700 : 500,
                     background: policy === id ? C.ink1 : 'transparent',
-                    color: policy === id ? '#FDF8E7' : C.ink3,
+                    color: policy === id ? 'var(--sb-ink-on-dark)' : C.ink3,
                   }}>{label}</button>
               ))}
             </span>
@@ -343,7 +343,7 @@ export function GoalsScreen(_props?: any) {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             <span style={EYEBROW}>Keep back</span>
-            <span style={{ display: 'inline-flex', background: '#F1ECDE', borderRadius: 10, padding: 3, gap: 3 }}>
+            <span style={{ display: 'inline-flex', background: 'var(--sb-field)', borderRadius: 10, padding: 3, gap: 3 }}>
               {[0, 1, 2, 3, 6].map(n => (
                 <button key={n} onClick={() => pickBuffer(n)}
                   title={n === 0 ? 'Nothing held back' : `${n} month${n === 1 ? '' : 's'} of typical spending held back before any goal is funded`}
@@ -351,7 +351,7 @@ export function GoalsScreen(_props?: any) {
                     width: 32, height: 32, borderRadius: 8, border: 'none', cursor: 'pointer',
                     fontFamily: 'inherit', fontSize: 12.5, fontWeight: bufferMonths === n ? 700 : 500,
                     background: bufferMonths === n ? C.ink1 : 'transparent',
-                    color: bufferMonths === n ? '#FDF8E7' : C.ink3,
+                    color: bufferMonths === n ? 'var(--sb-ink-on-dark)' : C.ink3,
                   }}>{n}</button>
               ))}
             </span>
@@ -436,9 +436,9 @@ export function GoalsScreen(_props?: any) {
               style={{
                 height: 38, borderRadius: 10, display: 'inline-flex', alignItems: 'center',
                 justifyContent: 'center', gap: 7, cursor: canAdd ? 'pointer' : 'default',
-                background: canAdd ? C.ink1 : '#EDE7D9',
+                background: canAdd ? C.ink1 : 'var(--sb-field)',
                 border: `1px solid ${canAdd ? C.ink1 : C.border}`,
-                color: canAdd ? '#FDF8E7' : C.ink4,
+                color: canAdd ? 'var(--sb-ink-on-dark)' : C.ink4,
                 fontFamily: 'inherit', fontSize: 13, fontWeight: 600,
               }}>
               <Plus size={14} /> Add goal
@@ -515,7 +515,7 @@ function GoalDetail({ plan, place, policy, currency, surplus, onChange, onDelete
           <span style={{
             width: 22, height: 22, borderRadius: 7, flexShrink: 0,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: C.ink1, color: '#FDF8E7', fontSize: 11, fontWeight: 700,
+            background: C.ink1, color: 'var(--sb-ink-on-dark)', fontSize: 11, fontWeight: 700,
           }}>{place}</span>
           <span style={{ fontSize: 20 }}>{g.icon}</span>
           <span style={{ fontFamily: DISPLAY, fontSize: 22, fontWeight: 700, letterSpacing: '-.03em', color: C.ink1 }}>
@@ -597,9 +597,9 @@ function GoalDetail({ plan, place, policy, currency, surplus, onChange, onDelete
                 height: 38, paddingInline: 16, borderRadius: 10, display: 'inline-flex',
                 alignItems: 'center', gap: 7, fontFamily: 'inherit', fontSize: 13, fontWeight: 600,
                 cursor: target === g.targetAmount && saved === g.currentAmount ? 'default' : 'pointer',
-                background: target === g.targetAmount && saved === g.currentAmount ? '#EDE7D9' : C.ink1,
+                background: target === g.targetAmount && saved === g.currentAmount ? 'var(--sb-field)' : C.ink1,
                 border: `1px solid ${target === g.targetAmount && saved === g.currentAmount ? C.border : C.ink1}`,
-                color: target === g.targetAmount && saved === g.currentAmount ? C.ink4 : '#FDF8E7',
+                color: target === g.targetAmount && saved === g.currentAmount ? C.ink4 : 'var(--sb-ink-on-dark)',
               }}>
               <Check size={14} /> Save
             </button>
