@@ -13,6 +13,7 @@ import { Step3Companies } from './steps/Step3Companies'
 import { Step4Habits } from './steps/Step4Habits'
 import { Step5Tasks } from './steps/Step5Tasks'
 import { Step6Done } from './steps/Step6Done'
+import { ICON } from '@/lib/type'
 
 // ─── Exported types ────────────────────────────────────────────────────────────
 
@@ -228,7 +229,7 @@ export function SetupWizard({ onClose }: Props) {
               </div>
             </div>
             <button onClick={handleSkip} title="Skip setup" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9CA3AF', padding: '2px 4px', display: 'flex', borderRadius: 'var(--sb-r-chip)', flexShrink: 0, marginTop: -2, transition: 'color 0.15s' }}>
-              <X size={20} />
+              <X size={ICON.lg} />
             </button>
           </div>
 
@@ -254,7 +255,7 @@ export function SetupWizard({ onClose }: Props) {
                 color: '#6B7280', fontSize: 'var(--sb-t-label)', fontWeight: 600, cursor: 'pointer',
                 transition: 'all 0.15s',
               }}>
-                <ChevronLeft size={16} /> Back
+                <ChevronLeft size={ICON.md} /> Back
               </button>
             ) : <div />}
 
@@ -273,7 +274,7 @@ export function SetupWizard({ onClose }: Props) {
                   boxShadow: 'var(--sb-shadow-hover)',
                   transition: 'all 0.15s',
                 }}>
-                  Next <ChevronRight size={16} />
+                  Next <ChevronRight size={ICON.md} />
                 </button>
               ) : (
                 <button onClick={() => void handleFinish()} className="wz-btn-next" style={{
@@ -284,7 +285,7 @@ export function SetupWizard({ onClose }: Props) {
                   boxShadow: 'var(--sb-shadow-hover)',
                   transition: 'all 0.15s',
                 }}>
-                  <Check size={16} /> Finish
+                  <Check size={ICON.md} /> Finish
                 </button>
               )}
             </div>

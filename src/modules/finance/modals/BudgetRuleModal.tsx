@@ -5,6 +5,7 @@ import { IconPicker } from '../components/IconPicker'
 import { CategoryGlyph } from '../components/CategoryGlyph'
 import { MoneyInput } from '../components/MoneyInput'
 import { toBase } from '../fx'
+import { ICON, STROKE } from '@/lib/type'
 
 // ─── What an envelope is set to ──────────────────────────────────────────────
 // This was a whole right-hand column: an amount, a fixed-or-flexible pair, five
@@ -143,7 +144,7 @@ function IntervalPicker({ value, onChange }: { value: Frequency; onChange: (f: F
       <button type="button" onClick={() => setOpen(o => !o)} title="How often this budget renews"
         style={{ ...PILL, gap: 5, color: 'var(--sb-ink-3)', whiteSpace: 'nowrap' }}>
         {current.label}
-        <ChevronDown size={13} strokeWidth={2} style={{ color: 'var(--sb-ink-4)' }} />
+        <ChevronDown size={ICON.sm} strokeWidth={STROKE.rest} style={{ color: 'var(--sb-ink-4)' }} />
       </button>
       {open && (
         <div style={{
@@ -163,7 +164,7 @@ function IntervalPicker({ value, onChange }: { value: Frequency; onChange: (f: F
                   fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)', textAlign: 'left',
                 }}>
                 <span style={{ flex: 1 }}>{opt.label}</span>
-                {on && <Check size={14} strokeWidth={2.5} style={{ color: '#8A6D0B' }} />}
+                {on && <Check size={ICON.sm} strokeWidth={STROKE.active} style={{ color: '#8A6D0B' }} />}
               </button>
             )
           })}
@@ -347,7 +348,7 @@ export function BudgetRuleModal({
               )}
             </div>
           </div>
-          <button onClick={onClose} title="Close" style={ROUND}><X size={14} /></button>
+          <button onClick={onClose} title="Close" style={ROUND}><X size={ICON.sm} /></button>
         </div>
 
         {/* Where it stands this month */}
@@ -408,7 +409,7 @@ export function BudgetRuleModal({
               }}>
                 <span style={{ position: 'relative', display: 'inline-flex', flexShrink: 0 }}>
                   <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, color: 'var(--sb-ink-3)', display: 'inline-flex', alignItems: 'center', gap: 2 }}>
-                    {cur}<ChevronDown size={10} strokeWidth={2.5} style={{ color: 'var(--sb-ink-4)' }} />
+                    {cur}<ChevronDown size={ICON.sm} strokeWidth={STROKE.active} style={{ color: 'var(--sb-ink-4)' }} />
                   </span>
                   <select value={cur} onChange={e => onChange({ ...rule, currency: e.target.value })}
                     title="What this budget is in"
@@ -533,7 +534,7 @@ export function BudgetRuleModal({
                     </select>
                   </label>
                   <button onClick={() => onChange({ ...rule, dueDay: undefined })}
-                    title="No particular day" style={{ ...ROUND, width: 26, height: 26 }}><X size={12} /></button>
+                    title="No particular day" style={{ ...ROUND, width: 26, height: 26 }}><X size={ICON.sm} /></button>
                 </>
               )}
             </span>
@@ -563,7 +564,7 @@ export function BudgetRuleModal({
               </label>
               {rule.ends && (
                 <button onClick={() => onChange({ ...rule, ends: undefined })} title="Let it run on"
-                  style={{ ...ROUND, width: 26, height: 26 }}><X size={12} /></button>
+                  style={{ ...ROUND, width: 26, height: 26 }}><X size={ICON.sm} /></button>
               )}
             </span>
           </div>
@@ -616,7 +617,7 @@ export function BudgetRuleModal({
             ...PILL, flex: 1, justifyContent: 'center', fontWeight: 600,
             background: 'var(--sb-ink-1)', border: 'none', color: 'var(--sb-ink-on-dark)',
           }}>
-            <Check size={14} strokeWidth={2.5} /> Done
+            <Check size={ICON.sm} strokeWidth={STROKE.active} /> Done
           </button>
           <button onClick={onEditCategory} title="Colour, type, parent, delete"
             style={{ ...PILL, color: 'var(--sb-ink-3)' }}>More…</button>

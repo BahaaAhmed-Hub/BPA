@@ -27,6 +27,7 @@ import { TASK_TYPE_META, inferTaskType, isTaskHidden } from '@/types'
 import { isMailHiddenByCompany } from '@/lib/companyVisibility'
 import { TASK_TYPE_ICON } from '@/modules/tasks/taskVisuals'
 import type { Task } from '@/types'
+import { ICON, STROKE } from '@/lib/type'
 
 // ─── Tokens ──────────────────────────────────────────────────────────────────
 
@@ -125,7 +126,7 @@ function LinkOut({ label, onClick }: { label: string; onClick: () => void }) {
     <button onClick={onClick} style={{
       ...GHOST_BTN, gap: 5, color: MUTED, fontSize: 'var(--sb-t-body-s)', fontWeight: 600, fontFamily: 'inherit', flexShrink: 0,
     }}>
-      {label} <ArrowRight size={12} strokeWidth={2.2} />
+      {label} <ArrowRight size={ICON.sm} strokeWidth={STROKE.active} />
     </button>
   )
 }
@@ -290,7 +291,7 @@ function MailPopup({ row, onClose, onArchive, onAddTask }: {
           )}
           <button onClick={onClose} title="Close"
             style={{ ...ICON_TILE, width: 28, height: 28, borderRadius: 'var(--sb-r-pill)', cursor: 'pointer' }}>
-            <X size={14} />
+            <X size={ICON.sm} />
           </button>
         </div>
 
@@ -310,10 +311,10 @@ function MailPopup({ row, onClose, onArchive, onAddTask }: {
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 18px', background: FIELD, borderTop: `1px solid ${HAIR}` }}>
           <span style={{ flex: 1, fontSize: 'var(--sb-t-meta)', color: GHOST }}>Esc, or click away, to close</span>
           <button onClick={onAddTask} style={{ ...PILL, height: 32 }}>
-            <Plus size={13} /> Add as task
+            <Plus size={ICON.sm} /> Add as task
           </button>
           <button onClick={onArchive} style={{ ...PILL, height: 32 }}>
-            <Archive size={13} /> Archive
+            <Archive size={ICON.sm} /> Archive
           </button>
         </div>
       </div>
@@ -413,11 +414,11 @@ function MailCard({ rows, loading, error, newsletters, onArchive, onArchiveAll, 
                 <span style={{ fontSize: 'var(--sb-t-meta)', color: GHOST, flexShrink: 0 }}>{relAge(r.receivedAt)}</span>
                 <button onClick={() => onAddTask(r)} title="Add as a task"
                   style={{ ...ICON_TILE, width: 26, height: 26, cursor: 'pointer' }}>
-                  <Plus size={13} strokeWidth={2} />
+                  <Plus size={ICON.sm} strokeWidth={STROKE.rest} />
                 </button>
                 <button onClick={() => onArchive(r)} title="Archive"
                   style={{ ...ICON_TILE, width: 26, height: 26, cursor: 'pointer' }}>
-                  <Archive size={13} strokeWidth={2} />
+                  <Archive size={ICON.sm} strokeWidth={STROKE.rest} />
                 </button>
               </div>
               {r.snippet && (
@@ -443,7 +444,7 @@ function MailCard({ rows, loading, error, newsletters, onArchive, onArchiveAll, 
                 cursor: newsletters.length ? 'pointer' : 'default',
               }}>
               {newsletters.length > 0 && (
-                <ChevronDown size={13} style={{ flexShrink: 0, transform: showBulk ? undefined : 'rotate(-90deg)', transition: 'transform .12s' }} />
+                <ChevronDown size={ICON.sm} style={{ flexShrink: 0, transform: showBulk ? undefined : 'rotate(-90deg)', transition: 'transform .12s' }} />
               )}
               {newsletters.length > 0
                 ? `${newsletters.length} newsletter${newsletters.length === 1 ? '' : 's'} and marketing — suggested for archiving`
@@ -451,7 +452,7 @@ function MailCard({ rows, loading, error, newsletters, onArchive, onArchiveAll, 
             </button>
             {newsletters.length > 0 && (
               <button onClick={onArchiveAll} style={{ ...PILL, height: 28 }}>
-                <Archive size={12} /> Archive all
+                <Archive size={ICON.sm} /> Archive all
               </button>
             )}
           </div>
@@ -472,7 +473,7 @@ function MailCard({ rows, loading, error, newsletters, onArchive, onArchiveAll, 
               <span style={{ fontSize: 'var(--sb-t-meta)', color: GHOST, flexShrink: 0 }}>{relAge(n.receivedAt)}</span>
               <button onClick={() => onArchive(n)} title="Archive"
                 style={{ ...ICON_TILE, width: 24, height: 24, cursor: 'pointer' }}>
-                <Archive size={12} strokeWidth={2} />
+                <Archive size={ICON.sm} strokeWidth={STROKE.rest} />
               </button>
             </div>
           ))}
@@ -745,8 +746,8 @@ function PlanCard({
                     touchAction: 'none', userSelect: 'none',
                   }}>
                   {b.kind === 'proposed'
-                    ? <CheckSquare size={12} strokeWidth={1.9} style={{ flexShrink: 0, color: MUTED, marginTop: tall ? 2 : 0 }} />
-                    : <Clock size={12} strokeWidth={1.9} style={{ flexShrink: 0, color: MUTED, marginTop: tall ? 2 : 0 }} />}
+                    ? <CheckSquare size={ICON.sm} strokeWidth={STROKE.rest} style={{ flexShrink: 0, color: MUTED, marginTop: tall ? 2 : 0 }} />
+                    : <Clock size={ICON.sm} strokeWidth={STROKE.rest} style={{ flexShrink: 0, color: MUTED, marginTop: tall ? 2 : 0 }} />}
                   {/* Given the height, the title wraps instead of being cut off */}
                   <span style={{
                     fontSize: tight ? 11.5 : 12.5, fontWeight: 600, color: INK, minWidth: 0, flex: '0 1 auto',
@@ -778,7 +779,7 @@ function PlanCard({
                           borderColor: status === 'done' ? 'var(--sb-positive)' : 'var(--sb-border)',
                           color: status === 'done' ? 'var(--sb-card)' : MUTED,
                         }}>
-                        <Check size={11} strokeWidth={2.6} />
+                        <Check size={ICON.sm} strokeWidth={STROKE.active} />
                       </button>
                       <button
                         onClick={e => { e.stopPropagation(); onSetStatus(b.eventId!, 'cancelled') }}
@@ -790,7 +791,7 @@ function PlanCard({
                           borderColor: status === 'cancelled' ? 'var(--sb-negative)' : 'var(--sb-border)',
                           color: status === 'cancelled' ? 'var(--sb-card)' : MUTED,
                         }}>
-                        <X size={11} strokeWidth={2.6} />
+                        <X size={ICON.sm} strokeWidth={STROKE.active} />
                       </button>
                     </>
                   )}
@@ -811,7 +812,7 @@ function PlanCard({
         <span style={{ flex: 1 }} />
         <button onClick={onOpenCalendar} style={{ ...PILL, height: 28 }}>Open calendar</button>
         <button onClick={onAddBlock} style={{ ...PILL, height: 28 }}>
-          <Plus size={12} /> Add block
+          <Plus size={ICON.sm} /> Add block
         </button>
         <button
           onClick={onAccept}
@@ -821,7 +822,7 @@ function PlanCard({
             border: 'none', color: proposed === 0 ? GHOST : 'var(--sb-ink-on-dark)', fontWeight: 600,
             cursor: proposed === 0 ? 'default' : 'pointer',
           }}>
-          <Check size={12} strokeWidth={2.4} /> Accept plan
+          <Check size={ICON.sm} strokeWidth={STROKE.active} /> Accept plan
         </button>
       </div>
     </div>
@@ -861,10 +862,10 @@ function HabitsCard({ habits, logs, qtyLogs, today, onToggle, onSetQty, onOpenTr
         meta={`${doneToday} of ${habits.length} today · ${weekPct}% this week · best streak ${best}d`}>
         {coldDays > 0 && (
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-negative)', flexShrink: 0 }}>
-            <Flame size={12} strokeWidth={2} /> {coldDays} days cold
+            <Flame size={ICON.sm} strokeWidth={STROKE.rest} /> {coldDays} days cold
           </span>
         )}
-        <Sun size={13} strokeWidth={1.9} style={{ color: GHOST, flexShrink: 0 }} />
+        <Sun size={ICON.sm} strokeWidth={STROKE.rest} style={{ color: GHOST, flexShrink: 0 }} />
         <LinkOut label="Tracker" onClick={onOpenTracker} />
       </CardHead>
 
@@ -942,11 +943,11 @@ function HabitsCard({ habits, logs, qtyLogs, today, onToggle, onSetQty, onOpenTr
                         ...ICON_TILE, width: 22, height: 22, cursor: 'pointer',
                         background: done ? 'var(--sb-positive)' : INK, borderColor: done ? 'var(--sb-positive)' : INK, color: 'var(--sb-ink-on-dark)',
                       }}>
-                      <Check size={12} strokeWidth={2.6} />
+                      <Check size={ICON.sm} strokeWidth={STROKE.active} />
                     </button>
                   )}
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2, fontSize: 'var(--sb-t-meta)', color: streak > 0 ? 'var(--sb-positive)' : GHOST, width: 30, justifyContent: 'flex-end', flexShrink: 0 }}>
-                    <Flame size={10} strokeWidth={2} /> {streak}d
+                    <Flame size={ICON.sm} strokeWidth={STROKE.rest} /> {streak}d
                   </span>
                 </span>
               </div>
@@ -1237,19 +1238,19 @@ export function TodayPage() {
         <span style={{ fontSize: 'var(--sb-t-h3)', fontWeight: 700, color: INK, flexShrink: 0 }}>Morning Brief</span>
         <span style={{ fontSize: 'var(--sb-t-body-s)', color: MUTED, flexShrink: 0 }}>{dateLine}</span>
         <span style={{ ...PILL, cursor: 'default', height: 28 }}>
-          <Clock size={12} /> {hhmm(clock)}
+          <Clock size={ICON.sm} /> {hhmm(clock)}
         </span>
         <span style={{ flex: 1 }} />
         <button onClick={() => setBriefEdit(briefEdit === null ? brief.body : null)} style={PILL}>
-          <Pencil size={12} /> {briefEdit === null ? 'Edit' : 'Done'}
+          <Pencil size={ICON.sm} /> {briefEdit === null ? 'Edit' : 'Done'}
         </button>
         <button onClick={() => { setBriefEdit(null); setBriefSeed(n => n + 1); void loadMail() }} style={PILL}>
-          <RefreshCw size={12} /> Regenerate
+          <RefreshCw size={ICON.sm} /> Regenerate
         </button>
         <button
           onClick={() => setActiveModule('tasks')}
           style={{ ...PILL, background: AMBER, border: 'none', fontWeight: 600, boxShadow: 'var(--sb-shadow-control)' }}>
-          <ArrowRight size={13} strokeWidth={2.2} /> Start the day
+          <ArrowRight size={ICON.sm} strokeWidth={STROKE.active} /> Start the day
         </button>
       </div>
 
@@ -1262,7 +1263,7 @@ export function TodayPage() {
         {/* Left */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
           <div style={{ ...CARD, padding: '22px 24px 24px' }}>
-            <Quote size={16} strokeWidth={2} style={{ color: '#D8CFB8' }} />
+            <Quote size={ICON.md} strokeWidth={STROKE.rest} style={{ color: '#D8CFB8' }} />
             <h1 style={{
               margin: '8px 0 0', fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h1)', fontWeight: 600,
               letterSpacing: '-0.03em', lineHeight: 1.2, color: INK,
@@ -1290,7 +1291,7 @@ export function TodayPage() {
                 padding: '11px 13px', borderRadius: 'var(--sb-r-nav)',
                 background: 'rgba(var(--sb-accent-rgb),0.14)', border: '1px solid rgba(var(--sb-accent-rgb),0.5)',
               }}>
-                <Zap size={14} strokeWidth={2} style={{ color: '#9A7B1F', flexShrink: 0 }} />
+                <Zap size={ICON.sm} strokeWidth={STROKE.rest} style={{ color: '#9A7B1F', flexShrink: 0 }} />
                 <span style={{ fontSize: 'var(--sb-t-body-s)', color: '#3D3926' }}>{brief.callout}</span>
               </div>
             )}

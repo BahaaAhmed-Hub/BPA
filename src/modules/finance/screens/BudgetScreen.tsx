@@ -20,6 +20,7 @@ import { DuplicateMark } from '../components/DuplicateMark'
 import { BudgetMark } from '../components/BudgetMark'
 import { isBudgetEntry } from '../budgetEntries'
 import { isUnpaid, unpaidRow, settled, whenPaid, UNPAID_TITLE } from '../unpaid'
+import { ICON, STROKE } from '@/lib/type'
 
 // ─── 16G · Budget Builder ─────────────────────────────────────────────────────
 // Categories tree with budget rules: amount, frequency, roll unspent,
@@ -332,7 +333,7 @@ function DueChip({ day }: { day: number | undefined }) {
   return (
     <span title={`The money leaves on the ${ordinal(day)}.`}
       style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 'var(--sb-t-micro)', color: '#8A6D0B', whiteSpace: 'nowrap' }}>
-      <CalendarClock size={9} strokeWidth={2.2} /> the {ordinal(day)}
+      <CalendarClock size={ICON.sm} strokeWidth={STROKE.active} /> the {ordinal(day)}
     </span>
   )
 }
@@ -821,7 +822,7 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
                         display: 'inline-flex', alignItems: 'center', gap: 3, marginTop: 2,
                         fontSize: 'var(--sb-t-micro)', color: '#8A6D0B', whiteSpace: 'nowrap',
                       }}>
-                      <CalendarClock size={9} strokeWidth={2.2} /> the {ordinal(dueDay)}
+                      <CalendarClock size={ICON.sm} strokeWidth={STROKE.active} /> the {ordinal(dueDay)}
                     </span>
                   )}
                 </span>

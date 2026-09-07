@@ -15,6 +15,7 @@ import {
 } from './taskVisuals'
 import { OverlaySelect } from './controls'
 import { SchedulePopover } from './SchedulePopover'
+import { ICON, STROKE } from '@/lib/type'
 
 const MEETING_KEYWORDS = ['meeting', 'call', 'sync', 'standup', 'stand-up', '1:1', 'interview', 'check-in', 'debrief', 'catchup', 'catch-up']
 const MEETING_EMOJIS   = ['📞', '💬', '🤝', '📅']
@@ -136,7 +137,7 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
                 cursor: 'pointer', flexShrink: 0, padding: 0, transition: 'all .15s',
               }}
             >
-              {task.completed && <Check size={9} color="#fff" strokeWidth={3} />}
+              {task.completed && <Check size={ICON.sm} color="#fff" strokeWidth={STROKE.active} />}
             </button>
 
             <button data-nm
@@ -146,7 +147,7 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
                 background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex',
                 flexShrink: 0, color: hovered ? 'var(--sb-negative)' : '#DCD3BF',
               }}>
-              <Trash2 size={11.5} strokeWidth={2} />
+              <Trash2 size={ICON.sm} strokeWidth={STROKE.rest} />
             </button>
           </div>
 
@@ -169,7 +170,7 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
               flexShrink: 0, marginTop: 2,
               color: task.urgent ? 'var(--sb-negative)' : hovered ? 'var(--sb-ink-4)' : '#D8CFB8',
             }}>
-            <Flame size={11.5} strokeWidth={2} fill={task.urgent ? 'var(--sb-negative)' : 'none'} />
+            <Flame size={ICON.sm} strokeWidth={STROKE.rest} fill={task.urgent ? 'var(--sb-negative)' : 'none'} />
           </button>
         </div>
 
@@ -206,17 +207,17 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
         }}>
           {attachmentCount > 0 && (
             <span style={{ display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
-              <Paperclip size={10} /> {attachmentCount}
+              <Paperclip size={ICON.sm} /> {attachmentCount}
             </span>
           )}
           {!task.completed && (
             <span style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
-              <Clock size={10} /> {openLabel(task)}
+              <Clock size={ICON.sm} /> {openLabel(task)}
             </span>
           )}
           {v.scheduleLabel && (
             <span style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
-              <CalendarDays size={10} />
+              <CalendarDays size={ICON.sm} />
               {v.scheduleLabel}
             </span>
           )}
@@ -248,7 +249,7 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
             onMouseDown={e => e.stopPropagation()}
             title={v.scheduled ? `Scheduled ${v.scheduleLabel ?? ''}`.trim() : 'Not scheduled'}
             style={{ ...(v.scheduled ? slotScheduled : slotEmpty), cursor: 'pointer', padding: 0 }}>
-            <CalendarDays size={12} strokeWidth={1.9} />
+            <CalendarDays size={ICON.sm} strokeWidth={STROKE.rest} />
           </button>
           {scheduleOpen && (
             <SchedulePopover
@@ -283,7 +284,7 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
               borderRadius: 'var(--sb-r-pill)',
               fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.02em',
             }}
-          >{v.ownerInitials ?? <User size={12} strokeWidth={2} />}</div>
+          >{v.ownerInitials ?? <User size={ICON.sm} strokeWidth={STROKE.rest} />}</div>
           <SlotSelect value={task.owner ?? ''} onChange={val => updateTask(task.id, { owner: val || undefined })}>
             <option value="">Unassigned</option>
             {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}

@@ -112,10 +112,13 @@
   /* Surfaces that sit above the page */
   --sb-surface-blur: ;
 
-  /* Icon sizes — P3 */
-  --sb-icon-sm: ;
-  --sb-icon-md: ;
-  --sb-icon-lg: ;
+  /* Icon sizes. Three, and the stroke goes with them: 1.75 at rest, 2.25 when
+     the icon is carrying a state. lucide takes its size as an attribute
+     rather than a style, so lib/type.ts holds the same three as numbers —
+     these are for CSS that draws its own glyphs. */
+  --sb-icon-sm: 14px;
+  --sb-icon-md: 16px;
+  --sb-icon-lg: 18px;
 
   /* A border with something to say: a control whose edge carries its state —
      a checkbox, a radio, a selection ring, the ring around your own face.

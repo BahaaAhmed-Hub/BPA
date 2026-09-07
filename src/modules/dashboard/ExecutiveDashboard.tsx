@@ -8,6 +8,7 @@ import { useUIStore } from '@/store/uiStore'
 import { loadDynamicCompanies, isTaskHidden } from '@/types'
 import { loadHabits, loadLogs, calcStreak } from '@/store/habitsStore'
 import { fetchVisibleEvents } from '@/lib/calendarEvents'
+import { ICON, STROKE } from '@/lib/type'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -119,7 +120,7 @@ function QuickAction({ label, onClick }: { label: string; onClick: () => void })
       }}
     >
       {label}
-      <ArrowRight size={13} color="var(--sb-ink-3)" />
+      <ArrowRight size={ICON.sm} color="var(--sb-ink-3)" />
     </button>
   )
 }
@@ -213,7 +214,7 @@ export function ExecutiveDashboard() {
               color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-label)', fontWeight: 600, cursor: 'pointer',
             }}
           >
-            <CheckSquare size={14} /> Manage Tasks
+            <CheckSquare size={ICON.sm} /> Manage Tasks
           </button>
         </div>
 
@@ -300,7 +301,7 @@ export function ExecutiveDashboard() {
                 Tasks by Company
               </h3>
               <button onClick={() => setModule('tasks')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', display: 'flex', alignItems: 'center', gap: 4, fontSize: 'var(--sb-t-meta)' }}>
-                View all <ArrowRight size={11} />
+                View all <ArrowRight size={ICON.sm} />
               </button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -383,7 +384,7 @@ export function ExecutiveDashboard() {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             flexShrink: 0, marginTop: 1,
           }}>
-            <TrendingUp size={13} color="#7F77DD" strokeWidth={2.5} />
+            <TrendingUp size={ICON.sm} color="#7F77DD" strokeWidth={STROKE.active} />
           </div>
           <div>
             <div style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: '#7F77DD', marginBottom: 4, letterSpacing: '0.3px' }}>

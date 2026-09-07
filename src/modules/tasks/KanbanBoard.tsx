@@ -18,6 +18,7 @@ import { TaskCard } from './TaskCard'
 import { sortUrgentFirst } from './taskVisuals'
 import { suggestPlacement } from './BrainDumpRail'
 import { CountBadge } from './controls'
+import { ICON, STROKE } from '@/lib/type'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -196,12 +197,12 @@ function KanbanColumnComp({ column, onOpen, onColDragStart, onColDragOver, onCol
         <span style={{ flex: 1 }} />
         <button onClick={() => setAdding(true)} title="Add a task here"
           style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, display: 'flex', color: 'var(--sb-ink-4)' }}>
-          <Plus size={15} strokeWidth={2} />
+          <Plus size={ICON.md} strokeWidth={STROKE.rest} />
         </button>
         <div style={{ position: 'relative', display: 'flex' }} ref={menuRef}>
           <button onClick={() => setMenuOpen(o => !o)} title="Column options"
             style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, display: 'flex', color: 'var(--sb-ink-4)' }}>
-            <MoreHorizontal size={15} strokeWidth={2} />
+            <MoreHorizontal size={ICON.md} strokeWidth={STROKE.rest} />
           </button>
           {menuOpen && (
             <div style={{
@@ -254,7 +255,7 @@ function KanbanColumnComp({ column, onOpen, onColDragStart, onColDragOver, onCol
             background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
             fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', padding: '4px 0',
           }}>
-            {hiddenCount} more <ChevronDown size={13} strokeWidth={2} />
+            {hiddenCount} more <ChevronDown size={ICON.sm} strokeWidth={STROKE.rest} />
           </button>
         )}
 
@@ -279,7 +280,7 @@ function KanbanColumnComp({ column, onOpen, onColDragStart, onColDragOver, onCol
                 Add
               </button>
               <button onClick={() => { setAdding(false); setNewTitle('') }} style={{ padding: '4px 8px', fontSize: 'var(--sb-t-meta)', background: 'transparent', color: 'var(--sb-ink-3)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-chip)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
-                <XIcon size={11} />
+                <XIcon size={ICON.sm} />
               </button>
             </div>
           </div>
@@ -297,7 +298,7 @@ function KanbanColumnComp({ column, onOpen, onColDragStart, onColDragOver, onCol
           transition: 'all 0.12s',
         }}
       >
-        <Plus size={13} /> Add task
+        <Plus size={ICON.sm} /> Add task
       </button>
     </div>
   )

@@ -17,6 +17,7 @@ import { fetchVisibleEvents } from '@/lib/calendarEvents'
 import { taskEventTitle, taskEventDescription } from '@/lib/taskEvent'
 import { resolveTaskCalendar } from '@/lib/taskCalendar'
 import { loadAccounts, getPrimaryToken, type ConnectedAccount } from '@/lib/multiAccount'
+import { ICON } from '@/lib/type'
 
 const HOUR_PX = 56
 const HOURS = Array.from({ length: 24 }, (_, i) => i)
@@ -176,7 +177,7 @@ function EventPopup({ event, color, onClose }: { event: GCalEvent; color: string
           </div>
         </div>
         <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-4)', padding: 2 }}>
-          <X size={15} />
+          <X size={ICON.md} />
         </button>
       </div>
       <div style={{ padding: '10px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -741,7 +742,7 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
             <span style={{ fontSize: 'var(--sb-t-h2)' }}>✦</span>
             <span style={{ fontSize: 'var(--sb-t-h2)', fontWeight: 800, color: '#111827', flex: 1 }}>Smart Day Planner</span>
             <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6B7280', padding: 4, display: 'flex', borderRadius: 'var(--sb-r-chip)' }}>
-              <X size={18} />
+              <X size={ICON.lg} />
             </button>
           </div>
 
@@ -778,7 +779,7 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
                     background: generating ? '#F3F4F6' : 'var(--sb-card)', border: '1px solid #E5E7EB',
                     color: '#374151', fontSize: 'var(--sb-t-label)', fontWeight: 600, cursor: generating ? 'wait' : 'pointer',
                   }}>
-                    <RefreshCw size={13} style={{ animation: generating ? 'spin 1s linear infinite' : 'none' }} />
+                    <RefreshCw size={ICON.sm} style={{ animation: generating ? 'spin 1s linear infinite' : 'none' }} />
                     {blocks.length > 0 ? 'Regenerate Plan' : 'Generate Plan'}
                   </button>
                 </div>
@@ -848,7 +849,7 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
 
           {/* Footer */}
           <div style={{ padding: '14px 24px', background: 'var(--sb-card)', borderTop: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-            <CalendarPlus size={14} color="#6B7280" />
+            <CalendarPlus size={ICON.sm} color="#6B7280" />
             <span style={{ fontSize: 'var(--sb-t-body)', color: '#6B7280' }}>
               {blocks.length} task{blocks.length !== 1 ? 's' : ''} · {totalMinutes}m planned
               {blocks.filter(b => b.gcalEventId).length > 0 && (
@@ -867,7 +868,7 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
               color: blocks.length ? '#fff' : '#9CA3AF', fontSize: 'var(--sb-t-label)', fontWeight: 700,
               cursor: blocks.length ? 'pointer' : 'default', transition: 'all 0.15s',
             }}>
-              <Check size={14} /> Apply Plan
+              <Check size={ICON.sm} /> Apply Plan
             </button>
           </div>
         </div>

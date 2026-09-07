@@ -6,7 +6,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight, Check } from 'lucide-react'
-import { T } from '@/lib/type'
+import { T, ICON, STROKE } from '@/lib/type'
 import { useSlotConflicts } from '@/lib/slotConflicts'
 
 const WEEKDAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
@@ -125,7 +125,7 @@ export function TimeSelect({ value, onChange, label, size = 'compact' }: {
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 }}>
                   {formatTime(t)}
-                  {on && <Check size={12} strokeWidth={2.4} />}
+                  {on && <Check size={ICON.sm} strokeWidth={STROKE.active} />}
                 </button>
               )
             })}
@@ -202,10 +202,10 @@ export function SchedulePopover({ date, start, duration, onApply, onClose, align
           {view.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}
         </span>
         <button type="button" onClick={() => setView(v => new Date(v.getFullYear(), v.getMonth() - 1, 1))} style={navBtn}>
-          <ChevronLeft size={14} />
+          <ChevronLeft size={ICON.sm} />
         </button>
         <button type="button" onClick={() => setView(v => new Date(v.getFullYear(), v.getMonth() + 1, 1))} style={navBtn}>
-          <ChevronRight size={14} />
+          <ChevronRight size={ICON.sm} />
         </button>
       </div>
 

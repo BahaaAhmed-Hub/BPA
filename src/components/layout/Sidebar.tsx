@@ -34,6 +34,7 @@ const MODE_ACCENT: Record<string, string> = {
 }
 import { useUIStore } from '@/store/uiStore'
 import { useBehavioralStore } from '@/store/behavioralStore'
+import { ICON } from '@/lib/type'
 
 const NAV_ITEMS = [
   { id: 'dashboard',  label: 'Dashboard',      Icon: LayoutDashboard },
@@ -203,7 +204,7 @@ export function Sidebar() {
                 onMouseEnter={e => { if (!active) { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(var(--sb-accent-rgb),0.15)'; el.style.color = 'var(--sb-ink-1)' } }}
                 onMouseLeave={e => { if (!active) { const el = e.currentTarget as HTMLElement; el.style.background = 'transparent'; el.style.color = 'var(--sb-ink-4)' } }}
               >
-                <Swords size={18} strokeWidth={active ? 2.5 : 1.8} style={{ flexShrink: 0 }} />
+                <Swords size={ICON.lg} strokeWidth={active ? 2.5 : 1.8} style={{ flexShrink: 0 }} />
                 {!sidebarCollapsed && (
                   <span style={{ fontSize: 'var(--sb-t-body)', fontWeight: active ? 600 : 400, letterSpacing: '0.1px', whiteSpace: 'nowrap' }}>
                     Behavioral OS
@@ -294,8 +295,8 @@ export function Sidebar() {
           title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
           {sidebarCollapsed
-            ? <ChevronRight size={16} />
-            : <ChevronLeft size={16} />
+            ? <ChevronRight size={ICON.lg} />
+            : <ChevronLeft size={ICON.lg} />
           }
         </button>
       </div>

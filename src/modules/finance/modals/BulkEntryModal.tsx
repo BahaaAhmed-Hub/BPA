@@ -7,6 +7,7 @@ import { acct } from '../format'
 import { todayISO, shiftDaysISO } from '../dates'
 import { baseCurrency } from '../fx'
 import { useFinanceStore } from '../financeStore'
+import { ICON, STROKE } from '@/lib/type'
 import {
   DISPLAY,
   PILL, ROUND, PillPicker, categoryOptions,
@@ -241,7 +242,7 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
             <span style={{ width: 6, height: 6, borderRadius: 'var(--sb-r-pill)', background: tone }} />
             Bulk entry
           </span>
-          <button onClick={onClose} title="Close" style={{ ...ROUND, marginLeft: 'auto' }}><X size={14} /></button>
+          <button onClick={onClose} title="Close" style={{ ...ROUND, marginLeft: 'auto' }}><X size={ICON.sm} /></button>
         </div>
 
         {/* What the whole batch shares */}
@@ -395,7 +396,7 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
                       border: `var(--sb-border-emphasis) solid ${r.paid ? 'var(--sb-ink-1)' : 'var(--sb-negative)'}`,
                       color: 'var(--sb-ink-on-dark)',
                     }}>
-                    {r.paid && <Check size={11} strokeWidth={3} />}
+                    {r.paid && <Check size={ICON.sm} strokeWidth={STROKE.active} />}
                   </button>
                   {r.paid ? (
                     <input type="date" value={r.paidOn}
@@ -413,7 +414,7 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
               </span>
               <button onClick={() => dropRow(r.key)} title="Remove this line"
                 style={{ ...ROUND, width: 28, height: 28, color: 'var(--sb-ink-4)' }}>
-                <Trash2 size={13} />
+                <Trash2 size={ICON.sm} />
               </button>
             </div>
             )
@@ -424,7 +425,7 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
               ...PILL, height: 34, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', marginTop: 2,
               background: 'transparent', borderStyle: 'dashed',
             }}>
-            <Plus size={13} /> Another line
+            <Plus size={ICON.sm} /> Another line
           </button>
         </div>
         </div>

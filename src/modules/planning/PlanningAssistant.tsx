@@ -9,6 +9,7 @@ import { fetchCalendarEventsWithToken } from '@/lib/googleCalendar'
 import type { GCalEvent } from '@/lib/googleCalendar'
 import { useAuthStore } from '@/store/authStore'
 import { call } from '@/lib/professor'
+import { ICON } from '@/lib/type'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -130,15 +131,15 @@ function ContextMenu({ menu, onClose }: { menu: ContextMenuState; onClose: () =>
         {/* Actions */}
         {[
           {
-            icon: <Copy size={12} />, label: 'Copy title',
+            icon: <Copy size={ICON.sm} />, label: 'Copy title',
             action: () => { navigator.clipboard.writeText(menu.event.summary ?? '').catch(() => {}); onClose() },
           },
           menu.event.htmlLink ? {
-            icon: <ExternalLink size={12} />, label: 'Open in Google Calendar',
+            icon: <ExternalLink size={ICON.sm} />, label: 'Open in Google Calendar',
             action: () => { window.open(menu.event.htmlLink, '_blank'); onClose() },
           } : null,
           {
-            icon: <XIcon size={12} />, label: 'Dismiss',
+            icon: <XIcon size={ICON.sm} />, label: 'Dismiss',
             action: onClose,
           },
         ].filter(Boolean).map((item, i) => item && (
@@ -377,14 +378,14 @@ export function PlanningAssistant() {
                 <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>Plan your schedule with AI</div>
               </div>
               <button onClick={() => { setWeekOffset(0); setEvents([]) }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', display: 'flex', padding: 4, borderRadius: 'var(--sb-r-chip)' }}>
-                <RefreshCw size={14} />
+                <RefreshCw size={ICON.sm} />
               </button>
             </div>
 
             {/* Schedule Insights */}
             <div style={{ marginBottom: 20 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
-                <TrendingUp size={14} color="var(--sb-accent)" />
+                <TrendingUp size={ICON.sm} color="var(--sb-accent)" />
                 <span style={{ fontSize: 'var(--sb-t-label)', fontWeight: 700, color: 'var(--sb-ink-1)' }}>Schedule Insights</span>
               </div>
               {loading ? (
@@ -399,9 +400,9 @@ export function PlanningAssistant() {
                       background: ins.type === 'warning' ? 'rgba(251,191,36,0.08)' : ins.type === 'win' ? 'rgba(52,211,153,0.08)' : 'rgba(127,119,221,0.08)',
                       border: `1px solid ${ins.type === 'warning' ? 'rgba(251,191,36,0.2)' : ins.type === 'win' ? 'rgba(52,211,153,0.2)' : 'rgba(127,119,221,0.2)'}`,
                     }}>
-                      {ins.type === 'warning' && <AlertTriangle size={13} color="#FBBF24" />}
-                      {ins.type === 'tip'     && <Lightbulb size={13} color="#7F77DD" />}
-                      {ins.type === 'win'     && <Trophy size={13} color="#34D399" />}
+                      {ins.type === 'warning' && <AlertTriangle size={ICON.sm} color="#FBBF24" />}
+                      {ins.type === 'tip'     && <Lightbulb size={ICON.sm} color="#7F77DD" />}
+                      {ins.type === 'win'     && <Trophy size={ICON.sm} color="#34D399" />}
                       <span style={{ fontSize: 'var(--sb-t-body-s)', color: '#3D3926', fontWeight: 500 }}>{ins.message}</span>
                     </div>
                   ))}
@@ -487,7 +488,7 @@ export function PlanningAssistant() {
                   }}
                 />
                 <button style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', display: 'flex', padding: 0 }}>
-                  <Mic size={13} />
+                  <Mic size={ICON.sm} />
                 </button>
               </div>
               <button onClick={() => void sendChat()} disabled={!chatInput.trim() || chatLoading} style={{
@@ -496,7 +497,7 @@ export function PlanningAssistant() {
                 color: 'var(--sb-ink-1)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                 transition: 'background 0.15s', flexShrink: 0,
               }}>
-                <Send size={13} />
+                <Send size={ICON.sm} />
               </button>
             </div>
           </div>
@@ -506,10 +507,10 @@ export function PlanningAssistant() {
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
           <div style={{ padding: '10px 20px', borderBottom: '1px solid var(--sb-border)', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
             <button onClick={() => setWeekOffset(o => o - 1)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', display: 'flex', padding: 4, borderRadius: 'var(--sb-r-chip)' }}>
-              <ChevronLeft size={18} />
+              <ChevronLeft size={ICON.lg} />
             </button>
             <button onClick={() => setWeekOffset(o => o + 1)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', display: 'flex', padding: 4, borderRadius: 'var(--sb-r-chip)' }}>
-              <ChevronRight size={18} />
+              <ChevronRight size={ICON.lg} />
             </button>
             <span style={{ fontSize: 'var(--sb-t-label)', fontWeight: 700, color: 'var(--sb-ink-1)', flex: 1 }}>{weekLabel}</span>
             <div style={{ display: 'flex', background: 'var(--sb-page)', borderRadius: 'var(--sb-r-chip)', padding: 2, border: '1px solid var(--sb-border)' }}>

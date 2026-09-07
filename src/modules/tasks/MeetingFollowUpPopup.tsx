@@ -4,6 +4,7 @@ import { breakdownMeetingNotes } from '@/lib/professor'
 import type { ExtractedTask } from '@/lib/professor'
 import { loadDynamicCompanies, getVisibleUsers } from '@/types'
 import type { Task, Quadrant } from '@/types'
+import { ICON, STROKE } from '@/lib/type'
 
 // ─── editable task row (draft state) ─────────────────────────────────────────
 
@@ -118,8 +119,8 @@ function TaskRow({ draft, index, expanded, users, onToggle, onChange, onDelete }
         </div>
 
         {expanded
-          ? <ChevronUp  size={13} color="#6B7280" style={{ flexShrink: 0 }} />
-          : <ChevronDown size={13} color="#6B7280" style={{ flexShrink: 0 }} />
+          ? <ChevronUp  size={ICON.sm} color="#6B7280" style={{ flexShrink: 0 }} />
+          : <ChevronDown size={ICON.sm} color="#6B7280" style={{ flexShrink: 0 }} />
         }
       </div>
 
@@ -201,7 +202,7 @@ function TaskRow({ draft, index, expanded, users, onToggle, onChange, onDelete }
                 fontSize: 'var(--sb-t-meta)', cursor: 'pointer',
               }}
             >
-              <Trash2 size={11} /> Remove
+              <Trash2 size={ICON.sm} /> Remove
             </button>
             <button
               onClick={onToggle}
@@ -322,7 +323,7 @@ export function MeetingFollowUpPopup({ parentTask, onConfirm, onSkip }: Props) {
             background: '#1D9E7518', border: '1px solid #1D9E7530',
             display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
           }}>
-            <Check size={16} color="#1D9E75" strokeWidth={2.5} />
+            <Check size={ICON.md} color="#1D9E75" strokeWidth={STROKE.active} />
           </div>
           <div style={{ flex: 1 }}>
             <h3 style={{ margin: '0 0 2px', fontSize: 'var(--sb-t-h3)', fontWeight: 700, color: 'var(--sb-ink-1)' }}>
@@ -339,7 +340,7 @@ export function MeetingFollowUpPopup({ parentTask, onConfirm, onSkip }: Props) {
             background: 'transparent', border: 'none', cursor: 'pointer',
             color: 'var(--sb-ink-4)', padding: 4, borderRadius: 'var(--sb-r-chip)', flexShrink: 0,
           }}>
-            <X size={15} />
+            <X size={ICON.md} />
           </button>
         </div>
 
@@ -458,7 +459,7 @@ export function MeetingFollowUpPopup({ parentTask, onConfirm, onSkip }: Props) {
                 display: 'flex', alignItems: 'center', gap: 6,
               }}
             >
-              <Sparkles size={12} />
+              <Sparkles size={ICON.sm} />
               {loading ? 'Analyzing…' : notes.trim() ? 'Analyze & Extract' : 'Done (no notes)'}
             </button>
           ) : (
@@ -474,7 +475,7 @@ export function MeetingFollowUpPopup({ parentTask, onConfirm, onSkip }: Props) {
                 display: 'flex', alignItems: 'center', gap: 6,
               }}
             >
-              <Plus size={12} />
+              <Plus size={ICON.sm} />
               Save {activeCount} task{activeCount !== 1 ? 's' : ''} to Inbox
             </button>
           )}

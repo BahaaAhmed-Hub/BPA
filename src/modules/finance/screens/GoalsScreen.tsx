@@ -5,6 +5,7 @@ import type { Goal } from '../types'
 import { MoneyInput } from '../components/MoneyInput'
 import { acct, group } from '../format'
 import { todayISO } from '../dates'
+import { ICON, STROKE } from '@/lib/type'
 import {
   capacityFrom, planGoals, byRank, monthsUntil,
   DEFAULT_BUFFER_MONTHS, WINDOW_MONTHS,
@@ -139,7 +140,7 @@ function GoalRow({ plan, place, selected, lifted, over, onSelect, onGrab, regRow
             color: lifted ? C.ink1 : '#CFC7B2', touchAction: 'none',
             cursor: lifted ? 'grabbing' : 'grab',
           }}>
-          <GripVertical size={13} strokeWidth={2} />
+          <GripVertical size={ICON.sm} strokeWidth={STROKE.rest} />
         </span>
       </div>
 
@@ -441,7 +442,7 @@ export function GoalsScreen(_props?: any) {
                 color: canAdd ? 'var(--sb-ink-on-dark)' : C.ink4,
                 fontFamily: 'inherit', fontSize: 'var(--sb-t-label)', fontWeight: 600,
               }}>
-              <Plus size={14} /> Add goal
+              <Plus size={ICON.sm} /> Add goal
             </button>
           </div>
         </div>
@@ -529,7 +530,7 @@ function GoalDetail({ plan, place, policy, currency, surplus, onChange, onDelete
               width: 30, height: 30, borderRadius: 'var(--sb-r-pill)', padding: 0, cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               background: C.surface, border: `1px solid ${C.border}`, color: C.ink4,
-            }}><Trash2 size={13} /></button>
+            }}><Trash2 size={ICON.sm} /></button>
         </div>
 
         <div style={{ display: 'flex', gap: 26, marginTop: 16, flexWrap: 'wrap' }}>
@@ -601,7 +602,7 @@ function GoalDetail({ plan, place, policy, currency, surplus, onChange, onDelete
                 border: `1px solid ${target === g.targetAmount && saved === g.currentAmount ? C.border : C.ink1}`,
                 color: target === g.targetAmount && saved === g.currentAmount ? C.ink4 : 'var(--sb-ink-on-dark)',
               }}>
-              <Check size={14} /> Save
+              <Check size={ICON.sm} /> Save
             </button>
           </span>
         </div>

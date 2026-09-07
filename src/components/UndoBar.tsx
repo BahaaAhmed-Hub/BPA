@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { RotateCcw } from 'lucide-react'
 import { inTextField, subscribeUndo, topUndo, undoLast, type UndoEntry } from '@/lib/undo'
+import { ICON, STROKE } from '@/lib/type'
 
 // ─── The corner that says what just happened ─────────────────────────────────
 //
@@ -84,7 +85,7 @@ export function UndoBar() {
             background: 'var(--sb-accent)', border: '1px solid rgba(25,23,18,0.18)',
             color: 'var(--sb-ink-1)', fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
           }}>
-          <RotateCcw size={13} strokeWidth={2.2} />
+          <RotateCcw size={ICON.sm} strokeWidth={STROKE.active} />
           Undo
         </button>
       )}

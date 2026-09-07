@@ -9,6 +9,7 @@ import {
   getDecisiveObjectives, RANK_META,
 } from '@/lib/behavioralEngine'
 import type { IdentityResult, Rank, IdentityStage } from '@/store/behavioralStore'
+import { ICON } from '@/lib/type'
 
 // ─── Drawn dark, whatever the app's theme is ─────────────────────────────────
 // This screen being near-black is the mode, not a preference, and it used to
@@ -257,7 +258,7 @@ export function BehavioralOS() {
             onMouseEnter={e => { if (!evaluating) { (e.currentTarget as HTMLElement).style.borderColor = 'var(--sb-ink-3)'; (e.currentTarget as HTMLElement).style.color = 'var(--sb-ink-1)' } }}
             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--sb-border)'; (e.currentTarget as HTMLElement).style.color = 'var(--sb-ink-3)' }}
           >
-            <RefreshCw size={12} style={{ animation: evaluating ? 'spin 1s linear infinite' : 'none' }} />
+            <RefreshCw size={ICON.sm} style={{ animation: evaluating ? 'spin 1s linear infinite' : 'none' }} />
             {evaluating ? 'Evaluating…' : 'Refresh'}
           </button>
         </div>
@@ -321,7 +322,7 @@ export function BehavioralOS() {
                       textTransform: 'uppercase', padding: 0, marginBottom: expandComponents ? 14 : 0,
                     }}
                   >
-                    <ChevronRight size={10} style={{ transform: expandComponents ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }} />
+                    <ChevronRight size={ICON.sm} style={{ transform: expandComponents ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }} />
                     Evaluation Components
                   </button>
                   {expandComponents && (

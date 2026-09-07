@@ -12,6 +12,7 @@ import { isTaskHidden, loadVisibleCompanies } from '@/types'
 import { TaskRow } from './TaskRow'
 import { buildTaskGroups, sortUrgentFirst, type TaskGroupBy } from './taskVisuals'
 import { CountBadge } from './controls'
+import { ICON, STROKE } from '@/lib/type'
 
 interface QuadrantSpec {
   id: Quadrant
@@ -113,7 +114,7 @@ function QuadrantPanel({ spec, tasks, onOpen, onAction, groupBy }: {
             background: adding ? 'var(--sb-ink-1)' : 'var(--sb-card)',
             border: `1px solid ${adding ? 'var(--sb-ink-1)' : 'var(--sb-border)'}`,
             color: adding ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)', cursor: 'pointer',
-          }}><Plus size={14} strokeWidth={2.2} /></button>
+          }}><Plus size={ICON.sm} strokeWidth={STROKE.active} /></button>
         <button onClick={() => onAction(spec, tasks)} style={{
           flexShrink: 0, height: 28, padding: '0 12px', borderRadius: 'var(--sb-r-pill)',
           background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-1)',
@@ -157,8 +158,8 @@ function QuadrantPanel({ spec, tasks, onOpen, onAction, groupBy }: {
                     width: '100%', textAlign: 'left',
                   }}>
                   {isOpen
-                    ? <ChevronDown size={12} strokeWidth={2.2} color="var(--sb-ink-4)" />
-                    : <ChevronRight size={12} strokeWidth={2.2} color="var(--sb-ink-4)" />}
+                    ? <ChevronDown size={ICON.sm} strokeWidth={STROKE.active} color="var(--sb-ink-4)" />
+                    : <ChevronRight size={ICON.sm} strokeWidth={STROKE.active} color="var(--sb-ink-4)" />}
                   <span style={{ width: 7, height: 7, borderRadius: 'var(--sb-r-pill)', background: g.color, flexShrink: 0 }} />
                   <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-ink-3)' }}>{g.label}</span>
                   <CountBadge value={g.tasks.length} />

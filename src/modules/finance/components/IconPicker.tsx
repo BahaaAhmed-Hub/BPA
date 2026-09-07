@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, Fragment } from 'react'
 import { Shapes } from 'lucide-react'
 import { LUCIDE_ICONS, LUCIDE_SECTIONS, LUCIDE_PREFIX, searchLucide } from '../categoryIcons'
+import { ICON, STROKE } from '@/lib/type'
 
 // ─── Emoji data ───────────────────────────────────────────────────────────────
 
@@ -258,7 +259,7 @@ export function IconPicker({ value, onChange, size = 44, trigger }: Props) {
                   outline: tab === 'line' ? '1px solid rgba(var(--sb-accent-rgb),0.27)' : 'none',
                 }}
               >
-                <Shapes size={15} strokeWidth={1.75} />
+                <Shapes size={ICON.md} strokeWidth={STROKE.rest} />
               </button>
               {GROUPS.map(g => (
                 <button

@@ -36,7 +36,7 @@ import { loadEventStatuses, saveEventStatuses } from '@/lib/eventStatus'
 import { isCalendarHiddenByCompany } from '@/lib/companyVisibility'
 import { isTaskEvent, stripTaskMark } from '@/lib/taskEvent'
 import { loadWeather, weatherGlyph, lookupPlaces, type WeatherByHour } from '@/lib/weather'
-import { T, SANS, DISPLAY } from '@/lib/type'
+import { T, SANS, DISPLAY, ICON, STROKE } from '@/lib/type'
 import { generateMeetingPrep } from '@/lib/professor'
 import type { MeetingPrep } from '@/lib/professor'
 import { useAuthStore } from '@/store/authStore'
@@ -806,7 +806,7 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
         {isDone && (
           <Check
             size={tiny ? 11 : 12}
-            strokeWidth={3.4}
+            strokeWidth={STROKE.active}
             style={{ display: 'inline', verticalAlign: '-2px', marginRight: 3 }}
           />
         )}
@@ -815,7 +815,7 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
         {fromTask && (
           <CheckSquare
             size={tiny ? 10 : 11}
-            strokeWidth={2.2}
+            strokeWidth={STROKE.active}
             style={{ display: 'inline', verticalAlign: '-1.5px', marginRight: 3, opacity: 0.75 }}
           />
         )}
@@ -829,7 +829,7 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
         const host = meetingHost(event)
         return host ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 3, overflow: 'hidden' }}>
-            <Video size={10} color={evTimeInk} style={{ flexShrink: 0 }} />
+            <Video size={ICON.sm} color={evTimeInk} style={{ flexShrink: 0 }} />
             <span style={{ fontSize: 'var(--sb-t-micro)', color: evTimeInk, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {host}
             </span>
@@ -844,7 +844,7 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
       )}
       {showHost && height >= 74 && event.location && !meetingHost(event) && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginTop: 3, overflow: 'hidden' }}>
-          <MapPin size={9} color={evTimeInk} style={{ flexShrink: 0 }} />
+          <MapPin size={ICON.sm} color={evTimeInk} style={{ flexShrink: 0 }} />
           <span style={{ fontSize: 'var(--sb-t-micro)', color: evTimeInk, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {event.location}
           </span>
@@ -870,7 +870,7 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
               opacity: 0, transition: 'opacity 0.12s',
             }}
           >
-            <CheckCircle2 size={11} />
+            <CheckCircle2 size={ICON.sm} />
           </button>
           <button
             onClick={e => { e.stopPropagation(); onStatusToggle('cancelled') }}
@@ -883,7 +883,7 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
               opacity: 0, transition: 'opacity 0.12s',
             }}
           >
-            <XCircle size={11} />
+            <XCircle size={ICON.sm} />
           </button>
         </div>
       )}
@@ -1298,7 +1298,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
             <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {calName}
             </span>
-            {onMoveCalendar && <ChevronDown size={13} strokeWidth={2} style={{ color: 'var(--sb-ink-4)', flexShrink: 0 }} />}
+            {onMoveCalendar && <ChevronDown size={ICON.sm} strokeWidth={STROKE.rest} style={{ color: 'var(--sb-ink-4)', flexShrink: 0 }} />}
           </span>
           {onMoveCalendar && (
             <select
@@ -1326,7 +1326,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
             background: status === 'done' ? 'var(--sb-positive)' : 'var(--sb-card)',
             borderColor: status === 'done' ? 'var(--sb-positive)' : 'var(--sb-border)',
             color: status === 'done' ? 'var(--sb-card)' : 'var(--sb-ink-3)',
-          }}><Check size={15} strokeWidth={2.2} /></button>
+          }}><Check size={ICON.md} strokeWidth={STROKE.active} /></button>
 
         <button
           onClick={() => onStatusToggle('cancelled')}
@@ -1336,7 +1336,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
             background: status === 'cancelled' ? 'var(--sb-ink-3)' : 'var(--sb-card)',
             borderColor: status === 'cancelled' ? 'var(--sb-ink-3)' : 'var(--sb-border)',
             color: status === 'cancelled' ? 'var(--sb-card)' : 'var(--sb-ink-3)',
-          }}><Ban size={15} strokeWidth={2} /></button>
+          }}><Ban size={ICON.md} strokeWidth={STROKE.rest} /></button>
 
         <button
           onClick={() => onDelete?.()}
@@ -1345,9 +1345,9 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
           style={{
             ...EV_ROUND, width: 34, height: 34,
             color: 'var(--sb-negative)', borderColor: 'rgba(198,40,40,0.35)', opacity: onDelete ? 1 : 0.45,
-          }}><Trash2 size={15} /></button>
+          }}><Trash2 size={ICON.md} /></button>
 
-        <button onClick={onClose} title="Close" style={{ ...EV_ROUND, width: 34, height: 34 }}><X size={15} /></button>
+        <button onClick={onClose} title="Close" style={{ ...EV_ROUND, width: 34, height: 34 }}><X size={ICON.md} /></button>
       </div>
 
       {/* A move that did not happen used to say nothing at all — the picker
@@ -1358,7 +1358,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
           padding: '8px 11px', borderRadius: 'var(--sb-r-nav)', fontSize: 'var(--sb-t-body-s)', lineHeight: 1.45,
           background: '#FBEAEA', border: '1px solid #EFCECE', color: '#8E2222',
         }}>
-          <AlertCircle size={13} style={{ flexShrink: 0, marginTop: 1 }} />
+          <AlertCircle size={ICON.sm} style={{ flexShrink: 0, marginTop: 1 }} />
           <span style={{ minWidth: 0 }}>{moveError}</span>
         </div>
       )}
@@ -1404,12 +1404,12 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
           <button
             onClick={() => { void navigator.clipboard?.writeText(videoLink) }}
             title="Copy the joining link"
-            style={{ ...EV_GHOST_ICON }}><Link size={15} /></button>
+            style={{ ...EV_GHOST_ICON }}><Link size={ICON.md} /></button>
           <button
             onClick={() => setMeetOpen(o => !o)}
             title={meetOpen ? 'Hide the details' : 'Show the full link and dial-in'}
             style={{ ...EV_GHOST_ICON, transform: meetOpen ? 'rotate(180deg)' : undefined }}>
-            <ChevronDown size={16} />
+            <ChevronDown size={ICON.md} />
           </button>
         </div>
       )}
@@ -1438,7 +1438,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
         <span style={EV_LABEL}>Location</span>
         <span ref={placeRef} style={{ flex: 1, minWidth: 0, display: 'flex', gap: 7, position: 'relative' }}>
           <span style={{ ...EV_FIELD, flex: 1 }}>
-            <MapPin size={15} color={location ? 'var(--sb-ink-3)' : 'var(--sb-ink-4)'} style={{ flexShrink: 0 }} />
+            <MapPin size={ICON.md} color={location ? 'var(--sb-ink-3)' : 'var(--sb-ink-4)'} style={{ flexShrink: 0 }} />
             <input
               value={location}
               onChange={e => { setLocation(e.target.value); setPlaceQuery(e.target.value) }}
@@ -1459,7 +1459,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
                 title={where.kind === 'place' ? 'Open in Google Maps' : where.url}
                 onMouseDown={e => e.preventDefault()}
                 style={{ ...EV_GHOST_ICON, width: 22, height: 22, textDecoration: 'none' }}>
-                <ExternalLink size={13} />
+                <ExternalLink size={ICON.sm} />
               </a>
             )}
           </span>
@@ -1469,7 +1469,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
           {!videoLink && canAddVideo && (
             <button onClick={addVideoCall} title={`Add a ${PROVIDER_NAME[provider]} link`}
               style={{ ...EV_ROUND, width: 48, height: 48, borderRadius: 'var(--sb-r-nav)', flexShrink: 0 }}>
-              <Video size={16} />
+              <Video size={ICON.md} />
             </button>
           )}
 
@@ -1487,7 +1487,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
                     padding: '0 9px', borderRadius: 'var(--sb-r-chip)', border: 'none', background: 'transparent',
                     color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body)', fontFamily: 'inherit', cursor: 'pointer', textAlign: 'left',
                   }}>
-                  <MapPin size={13} color="var(--sb-ink-4)" style={{ flexShrink: 0 }} />
+                  <MapPin size={ICON.sm} color="var(--sb-ink-4)" style={{ flexShrink: 0 }} />
                   <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{pl}</span>
                 </button>
               ))}
@@ -1507,12 +1507,12 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
         <span ref={whenRef} style={{ flex: 1, minWidth: 0, position: 'relative' }}>
           <button onClick={() => setWhenOpen(o => !o)}
             style={{ ...EV_FIELD, width: '100%', cursor: 'pointer' }}>
-            <CalendarIcon size={15} color="var(--sb-ink-3)" style={{ flexShrink: 0 }} />
+            <CalendarIcon size={ICON.md} color="var(--sb-ink-3)" style={{ flexShrink: 0 }} />
             <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {new Date(dateStr + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}
               {isAllDay ? ' · All day' : ` · ${compactRange(fromTime, toTime)}`}
             </span>
-            <ChevronDown size={14} strokeWidth={2} style={{ color: 'var(--sb-ink-4)', flexShrink: 0 }} />
+            <ChevronDown size={ICON.sm} strokeWidth={STROKE.rest} style={{ color: 'var(--sb-ink-4)', flexShrink: 0 }} />
           </button>
           {whenOpen && (
             <SchedulePopover
@@ -1547,7 +1547,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
                 color: '#3D3926', cursor: onOpenEvent ? 'pointer' : 'default',
                 overflow: 'hidden', whiteSpace: 'nowrap',
               }}>
-              <AlertCircle size={14} style={{ flexShrink: 0 }} />
+              <AlertCircle size={ICON.sm} style={{ flexShrink: 0 }} />
               <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 Clashes with {displayTitle(liveClashes[0].summary)}
                 {liveClashes.length > 1 ? ` +${liveClashes.length - 1}` : ''}
@@ -1558,11 +1558,11 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
               disabled={!freeAfterClash || saving}
               title={freeAfterClash ? `Move this to ${freeAfterClash}, clear of the clash` : 'Nothing to move to'}
               style={{ ...EV_ROUND, width: 48, height: 48, borderRadius: 'var(--sb-r-nav)', opacity: freeAfterClash ? 1 : 0.45 }}>
-              <Check size={15} strokeWidth={2.4} />
+              <Check size={ICON.md} strokeWidth={STROKE.active} />
             </button>
             <button onClick={() => setClashDismissed(true)} title="Leave it — I know"
               style={{ ...EV_ROUND, width: 48, height: 48, borderRadius: 'var(--sb-r-nav)' }}>
-              <X size={15} />
+              <X size={ICON.md} />
             </button>
           </span>
         </div>
@@ -1577,11 +1577,11 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
               title={onSave ? 'How often this comes back' : 'You cannot edit this event'}
               style={{ ...EV_FIELD, width: '100%', cursor: onSave ? 'pointer' : 'default',
                 color: recurrence ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)', opacity: onSave ? 1 : 0.7 }}>
-              <RefreshCw size={14} color="var(--sb-ink-3)" style={{ flexShrink: 0 }} />
+              <RefreshCw size={ICON.sm} color="var(--sb-ink-3)" style={{ flexShrink: 0 }} />
               <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {recurrence ?? 'Does not repeat'}
               </span>
-              <ChevronDown size={14} strokeWidth={2} style={{ color: 'var(--sb-ink-4)', flexShrink: 0 }} />
+              <ChevronDown size={ICON.sm} strokeWidth={STROKE.rest} style={{ color: 'var(--sb-ink-4)', flexShrink: 0 }} />
             </button>
             {repeatOpen && (
               <RepeatPicker
@@ -1603,7 +1603,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
             <span style={{ flex: 1, minWidth: 0, color: alertMinutes === undefined ? 'var(--sb-ink-4)' : 'var(--sb-ink-1)' }}>
               {describeAlert(alertMinutes, event.reminders?.useDefault !== false)}
             </span>
-            <ChevronDown size={14} strokeWidth={2} style={{ color: 'var(--sb-ink-4)', flexShrink: 0 }} />
+            <ChevronDown size={ICON.sm} strokeWidth={STROKE.rest} style={{ color: 'var(--sb-ink-4)', flexShrink: 0 }} />
             <select
               value={event.reminders?.useDefault !== false ? 'default'
                 : alertMinutes === undefined ? 'none' : String(alertMinutes)}
@@ -1621,13 +1621,13 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
           <span style={{ flex: 1, minWidth: 0 }}>
             {prep ? (
               <span style={{ ...EV_FIELD, width: '100%' }}>
-                <Sparkles size={14} color="var(--sb-ink-3)" />
+                <Sparkles size={ICON.sm} color="var(--sb-ink-3)" />
                 {prepPoints.length} point{prepPoints.length === 1 ? '' : 's'} gathered
               </span>
             ) : (
               <button onClick={onPrepRequest} disabled={prepLoading}
                 style={{ ...EV_FIELD, width: '100%', cursor: 'pointer', opacity: prepLoading ? 0.6 : 1 }}>
-                <Sparkles size={14} color="var(--sb-ink-3)" /> {prepLoading ? 'Gathering prep…' : 'Gather prep'}
+                <Sparkles size={ICON.sm} color="var(--sb-ink-3)" /> {prepLoading ? 'Gathering prep…' : 'Gather prep'}
               </button>
             )}
           </span>
@@ -1669,7 +1669,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
               disabled={!onSave}
               title={`Take ${a.displayName ?? a.email} off the invite`}
               style={{ ...EV_ROUND, width: 32, height: 32, flexShrink: 0, color: 'var(--sb-negative)', borderColor: 'rgba(198,40,40,0.35)', opacity: onSave ? 1 : 0.45 }}>
-              <Trash2 size={14} />
+              <Trash2 size={ICON.sm} />
             </button>
           </div>
         ))}
@@ -1680,7 +1680,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
               width: 32, height: 32, borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               border: '1px dashed #D8CFB8', color: '#C9C0A8',
-            }}><Plus size={15} /></span>
+            }}><Plus size={ICON.md} /></span>
             <input
               autoFocus
               value={attendeeDraft}
@@ -1699,7 +1699,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
               width: 32, height: 32, borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               border: '1px dashed #D8CFB8', color: '#C9C0A8',
-            }}><Plus size={15} /></span>
+            }}><Plus size={ICON.md} /></span>
             <span style={{ fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-4)' }}>Add an invitee</span>
           </button>
         )}
@@ -1719,7 +1719,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
           disabled={!event.htmlLink}
           title="Google Calendar holds the file picker"
           style={{ ...EV_FIELD, width: 'auto', height: 40, gap: 8, cursor: 'pointer', flexShrink: 0, opacity: event.htmlLink ? 1 : 0.45 }}>
-          <Paperclip size={14} /> Attach
+          <Paperclip size={ICON.sm} /> Attach
         </button>
       </div>
       {files.length > 0 && (
@@ -1732,7 +1732,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
                 width: 32, height: 32, borderRadius: 'var(--sb-r-sm)', flexShrink: 0,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 background: 'var(--sb-field)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-3)',
-              }}><FileText size={15} strokeWidth={1.9} /></span>
+              }}><FileText size={ICON.md} strokeWidth={STROKE.rest} /></span>
               <span style={{ flex: 1, minWidth: 0 }}>
                 <span style={{ display: 'block', fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {f.title ?? f.fileUrl}
@@ -1741,7 +1741,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
                   {describeMime(f.mimeType)}
                 </span>
               </span>
-              <ExternalLink size={13} color="var(--sb-ink-4)" style={{ flexShrink: 0 }} />
+              <ExternalLink size={ICON.sm} color="var(--sb-ink-4)" style={{ flexShrink: 0 }} />
             </a>
           ))}
         </div>
@@ -1786,7 +1786,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
                     border: on ? 'var(--sb-border-emphasis) solid var(--sb-ink-1)' : 'var(--sb-border-emphasis) solid #CFC6B0',
                     background: on ? 'var(--sb-ink-1)' : 'var(--sb-card)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>{on && <Check size={11} color="#fff" strokeWidth={3} />}</span>
+                  }}>{on && <Check size={ICON.sm} color="#fff" strokeWidth={STROKE.active} />}</span>
                   <span style={{ fontSize: 'var(--sb-t-body)', color: on ? 'var(--sb-ink-4)' : 'var(--sb-ink-1)', lineHeight: 1.45, textDecoration: on ? 'line-through' : 'none' }}>
                     {pt}
                   </span>
@@ -1828,7 +1828,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
         {event.htmlLink && (
           <a href={event.htmlLink} target="_blank" rel="noreferrer"
             style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', textDecoration: 'none', flexShrink: 0 }}>
-            Open in Google Calendar <ExternalLink size={11} />
+            Open in Google Calendar <ExternalLink size={ICON.sm} />
           </a>
         )}
       </div>
@@ -1956,31 +1956,31 @@ function EventContextMenu({
       }}
     >
       {/* Group 1: Navigation */}
-      {item('view',   <Eye size={13} />,          'View Details',             onViewDetails)}
-      {item('gcal',   <ExternalLink size={13} />,  'Open in Google Calendar',  event.htmlLink ? () => window.open(event.htmlLink, '_blank') : undefined, { disabled: !event.htmlLink })}
-      {conferenceUrl && item('join', <Video size={13} />, 'Join Meeting', () => window.open(conferenceUrl, '_blank'))}
+      {item('view',   <Eye size={ICON.sm} />,          'View Details',             onViewDetails)}
+      {item('gcal',   <ExternalLink size={ICON.sm} />,  'Open in Google Calendar',  event.htmlLink ? () => window.open(event.htmlLink, '_blank') : undefined, { disabled: !event.htmlLink })}
+      {conferenceUrl && item('join', <Video size={ICON.sm} />, 'Join Meeting', () => window.open(conferenceUrl, '_blank'))}
 
       <div style={sep} />
 
       {/* Group 2: Clipboard */}
-      {item('copy-link',    <Link size={13} />, 'Copy Event Link',
+      {item('copy-link',    <Link size={ICON.sm} />, 'Copy Event Link',
         event.htmlLink ? () => navigator.clipboard.writeText(event.htmlLink!).catch(() => {}) : undefined,
         { disabled: !event.htmlLink })}
-      {item('copy-details', <Copy size={13} />, 'Copy Details',
+      {item('copy-details', <Copy size={ICON.sm} />, 'Copy Details',
         () => navigator.clipboard.writeText(formatCopyDetails()).catch(() => {}))}
 
       <div style={sep} />
 
       {/* Group 3: Status */}
-      {item('done',      <CheckCircle2 size={13} />, isDone      ? 'Unmark Done'      : 'Mark as Done',
+      {item('done',      <CheckCircle2 size={ICON.sm} />, isDone      ? 'Unmark Done'      : 'Mark as Done',
         () => { onStatusToggle('done');      onClose() }, )}
-      {item('cancelled', <XCircle size={13} />,      isCancelled ? 'Restore Event'    : 'Mark as Cancelled',
+      {item('cancelled', <XCircle size={ICON.sm} />,      isCancelled ? 'Restore Event'    : 'Mark as Cancelled',
         () => { onStatusToggle('cancelled'); onClose() }, )}
 
       <div style={sep} />
 
       {/* Group 4: Destructive */}
-      {item('delete', <Trash2 size={13} />, 'Delete Event', onDelete, { destructive: true })}
+      {item('delete', <Trash2 size={ICON.sm} />, 'Delete Event', onDelete, { destructive: true })}
     </div>
   )
 }
@@ -2085,7 +2085,7 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
           New event
         </span>
         <span style={{ flex: 1 }} />
-        <button onClick={onCancel} title="Cancel" style={EV_ROUND}><X size={14} /></button>
+        <button onClick={onCancel} title="Cancel" style={EV_ROUND}><X size={ICON.sm} /></button>
       </div>
 
       {/* Title */}
@@ -2106,7 +2106,7 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
         <label style={{ ...EV_PILL, position: 'relative' }}>
           {new Date(startDate + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}
-          <ChevronDown size={13} strokeWidth={2} style={{ color: 'var(--sb-ink-4)' }} />
+          <ChevronDown size={ICON.sm} strokeWidth={STROKE.rest} style={{ color: 'var(--sb-ink-4)' }} />
           <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
             style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', border: 'none', padding: 0 }} />
         </label>
@@ -2134,7 +2134,7 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
           <span style={{ flex: 1, minWidth: 0, position: 'relative', display: 'flex' }}>
             <span style={{ ...EV_PILL, flex: 1, justifyContent: 'space-between' }}>
               <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{calLabel}</span>
-              <ChevronDown size={13} strokeWidth={2} style={{ color: 'var(--sb-ink-4)', flexShrink: 0 }} />
+              <ChevronDown size={ICON.sm} strokeWidth={STROKE.rest} style={{ color: 'var(--sb-ink-4)', flexShrink: 0 }} />
             </span>
             <select value={calId} onChange={e => setCalId(e.target.value)}
               style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', border: 'none' }}>
@@ -2153,7 +2153,7 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
               background: addMeet ? 'var(--sb-ink-1)' : 'var(--sb-card)',
               border: addMeet ? 'none' : '1px solid var(--sb-border)',
               color: addMeet ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
-            }}><Video size={13} /> Meet</button>
+            }}><Video size={ICON.sm} /> Meet</button>
           </span>
         </div>
 
@@ -2167,7 +2167,7 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
               <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {describeRecur(repeat, new Date(`${startDate}T12:00:00`)) ?? 'Does not repeat'}
               </span>
-              <ChevronDown size={13} strokeWidth={2} style={{ color: 'var(--sb-ink-4)', flexShrink: 0 }} />
+              <ChevronDown size={ICON.sm} strokeWidth={STROKE.rest} style={{ color: 'var(--sb-ink-4)', flexShrink: 0 }} />
             </button>
             {repeatOpen && (
               <RepeatPicker
@@ -2209,7 +2209,7 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
             </span>
             <button onClick={() => setInvitees(prev => prev.filter(x => x !== email))} title="Remove"
               style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#C9C0A8', padding: 2, display: 'flex' }}>
-              <X size={13} />
+              <X size={ICON.sm} />
             </button>
           </div>
         ))}
@@ -2218,7 +2218,7 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
             width: 30, height: 30, borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             border: '1px dashed #D8CFB8', color: '#C9C0A8',
-          }}><Plus size={14} /></span>
+          }}><Plus size={ICON.sm} /></span>
           <input
             value={inviteeInput}
             onChange={e => setInviteeInput(e.target.value)}
@@ -3244,7 +3244,7 @@ export function CalendarIntelligence() {
                 else n.setDate(n.getDate() - 7)
                 return n
               })}
-              style={{ ...CAL_ICON_BTN }}><ChevronLeft size={15} /></button>
+              style={{ ...CAL_ICON_BTN }}><ChevronLeft size={ICON.md} /></button>
             <button
               onClick={() => setAnchorDate(d => {
                 const n = new Date(d)
@@ -3253,7 +3253,7 @@ export function CalendarIntelligence() {
                 else n.setDate(n.getDate() + 7)
                 return n
               })}
-              style={{ ...CAL_ICON_BTN }}><ChevronRight size={15} /></button>
+              style={{ ...CAL_ICON_BTN }}><ChevronRight size={ICON.md} /></button>
             {!isThisWeek(weekStart) && (
               <button
                 onClick={() => setAnchorDate(new Date())}
@@ -3279,14 +3279,14 @@ export function CalendarIntelligence() {
             disabled={refreshing}
             title="Refresh"
             style={{ ...CAL_ICON_BTN, cursor: refreshing ? 'default' : 'pointer', opacity: refreshing ? 0.6 : 1 }}
-          ><RefreshCw size={14} style={{ animation: refreshing ? 'spin 0.7s linear infinite' : 'none' }} /></button>
+          ><RefreshCw size={ICON.sm} style={{ animation: refreshing ? 'spin 0.7s linear infinite' : 'none' }} /></button>
 
           <button
             onClick={() => void handleApplyRules()}
             disabled={applyingRules}
             title={applyingRules ? 'Applying rules…' : 'Apply productivity blocking rules'}
             style={{ ...CAL_ICON_BTN, cursor: applyingRules ? 'default' : 'pointer', opacity: applyingRules ? 0.6 : 1 }}
-          ><Shield size={14} /></button>
+          ><Shield size={ICON.sm} /></button>
 
           <button
             onClick={() => setOriginalsOnly(v => !v)}
@@ -3297,7 +3297,7 @@ export function CalendarIntelligence() {
               borderColor: originalsOnly ? 'var(--sb-ink-1)' : 'var(--sb-border)',
               color: originalsOnly ? 'var(--sb-field)' : 'var(--sb-ink-3)',
             }}
-          >{originalsOnly ? <EyeOff size={14} /> : <Eye size={14} />}</button>
+          >{originalsOnly ? <EyeOff size={ICON.sm} /> : <Eye size={ICON.sm} />}</button>
 
           {/* Calendars */}
           <button
@@ -3314,9 +3314,9 @@ export function CalendarIntelligence() {
               color: showCalendars ? 'var(--sb-field)' : 'var(--sb-ink-1)',
             }}
           >
-            <Layers size={14} strokeWidth={1.9} />
+            <Layers size={ICON.sm} strokeWidth={STROKE.rest} />
             Calendars
-            <ChevronDown size={13} strokeWidth={2} style={{ transform: showCalendars ? 'rotate(180deg)' : 'none', transition: 'transform .14s' }} />
+            <ChevronDown size={ICON.sm} strokeWidth={STROKE.rest} style={{ transform: showCalendars ? 'rotate(180deg)' : 'none', transition: 'transform .14s' }} />
           </button>
 
           {/* Day · Week · Month */}
@@ -3357,7 +3357,7 @@ export function CalendarIntelligence() {
             padding: '10px 14px', borderRadius: 'var(--sb-r-nav)',
             background: 'rgba(var(--sb-accent-rgb),0.20)', border: '1px solid rgba(var(--sb-accent-rgb),0.65)',
           }}>
-            <AlertCircle size={15} color="#8A6D0B" style={{ flexShrink: 0 }} />
+            <AlertCircle size={ICON.md} color="#8A6D0B" style={{ flexShrink: 0 }} />
             <span style={{ ...T.body, flex: 1, minWidth: 0, color: '#3D3926' }}>
               {reconnectNeeded.length === 1
                 ? `${reconnectNeeded[0]} needs reconnecting — its events are missing from this grid.`
@@ -3426,7 +3426,7 @@ export function CalendarIntelligence() {
                       <span style={{ maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {cal.summary}
                       </span>
-                      {hidden ? <EyeOff size={10} color="var(--sb-ink-4)" /> : <Eye size={10} color={color} />}
+                      {hidden ? <EyeOff size={ICON.sm} color="var(--sb-ink-4)" /> : <Eye size={ICON.sm} color={color} />}
                     </button>
 
                     {/* Subtle reconnect badge — only shown when this account needs reconnect */}
@@ -3436,7 +3436,7 @@ export function CalendarIntelligence() {
                         title={`Token expired for ${cal.accountEmail} — click to reconnect`}
                         style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 5px 0 0', display: 'flex', alignItems: 'center', flexShrink: 0 }}
                       >
-                        <AlertCircle size={11} color="#FF9500" />
+                        <AlertCircle size={ICON.sm} color="#FF9500" />
                       </button>
                     )}
                   </div>
@@ -3458,7 +3458,7 @@ export function CalendarIntelligence() {
         {/* Fetch error — keep but make subtle */}
         {fetchError && (
           <div style={{ marginTop: 6, padding: '5px 10px', background: 'rgba(224,82,82,0.08)', border: '1px solid rgba(224,82,82,0.3)', borderRadius: 'var(--sb-r-chip)', fontSize: 'var(--sb-t-micro)', color: 'var(--sb-negative)', display: 'flex', alignItems: 'center', gap: 6 }}>
-            <AlertCircle size={11} /> {fetchError}
+            <AlertCircle size={ICON.sm} /> {fetchError}
           </div>
         )}
       </div>
@@ -3535,7 +3535,7 @@ export function CalendarIntelligence() {
                         {t && <span style={{ color: 'var(--sb-ink-3)', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>
                           {String(t.getHours()).padStart(2, '0')}:{String(t.getMinutes()).padStart(2, '0')}
                         </span>}
-                        {st === 'done' && <Check size={11} strokeWidth={3.4} style={{ flexShrink: 0 }} />}
+                        {st === 'done' && <Check size={ICON.sm} strokeWidth={STROKE.active} style={{ flexShrink: 0 }} />}
                         <span style={{
                           minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis',
                           textDecoration: st === 'cancelled' ? 'line-through' : 'none',
@@ -3616,7 +3616,7 @@ export function CalendarIntelligence() {
                             cursor: 'pointer',
                           }}
                         >
-                          {evStatus === 'done' && <Check size={10} strokeWidth={3.4} style={{ display: 'inline', verticalAlign: '-1px', marginRight: 2 }} />}
+                          {evStatus === 'done' && <Check size={ICON.sm} strokeWidth={STROKE.active} style={{ display: 'inline', verticalAlign: '-1px', marginRight: 2 }} />}
                           <span style={{ textDecoration: evStatus === 'cancelled' ? 'line-through' : 'none', textDecorationThickness: 1.5 }}>
                             {displayTitle(ev.summary)}
                           </span>

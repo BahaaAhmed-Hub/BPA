@@ -3,6 +3,7 @@ import { X, ChevronDown, Check } from 'lucide-react'
 import type { Category } from '../types'
 import { IconPicker } from '../components/IconPicker'
 import { CategoryGlyph } from '../components/CategoryGlyph'
+import { ICON, STROKE } from '@/lib/type'
 
 // ─── Naming a category ───────────────────────────────────────────────────────
 // The last window still in the old dialect: a bordered form with stacked
@@ -93,7 +94,7 @@ export function CategoryModal({ category, categories, onSave, onDelete, onClose 
             {isEdit ? 'Category' : txTypeLocked ? 'New sub-category' : 'New category'}
           </span>
           <span style={{ flex: 1 }} />
-          <button onClick={onClose} title="Close" style={ROUND}><X size={14} /></button>
+          <button onClick={onClose} title="Close" style={ROUND}><X size={ICON.sm} /></button>
         </div>
 
         {/* Icon and name, the way they read on the screen itself */}
@@ -163,7 +164,7 @@ export function CategoryModal({ category, categories, onSave, onDelete, onClose 
                     {parent ? parent.name : 'Nothing — it stands on its own'}
                   </span>
                 </span>
-                <ChevronDown size={13} strokeWidth={2} style={{ color: 'var(--sb-ink-4)', flexShrink: 0 }} />
+                <ChevronDown size={ICON.sm} strokeWidth={STROKE.rest} style={{ color: 'var(--sb-ink-4)', flexShrink: 0 }} />
               </span>
               <select value={parentId} onChange={e => setParentId(e.target.value)}
                 style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', border: 'none' }}>
@@ -183,7 +184,7 @@ export function CategoryModal({ category, categories, onSave, onDelete, onClose 
                     background: c, border: color === c ? '2px solid var(--sb-ink-1)' : '1px solid rgba(25,23,18,0.12)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>
-                  {color === c && <Check size={14} strokeWidth={3} color="var(--sb-card)" />}
+                  {color === c && <Check size={ICON.sm} strokeWidth={STROKE.active} color="var(--sb-card)" />}
                 </button>
               ))}
             </span>

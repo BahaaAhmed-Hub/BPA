@@ -1,5 +1,6 @@
 import { CopyCheck } from 'lucide-react'
 import { duplicateNote, type DuplicateScope } from '../duplicates'
+import { STROKE } from '@/lib/type'
 
 /** The one way this module says "check this one". Amber, never red: it is a
  *  question, not a verdict. */
@@ -14,7 +15,7 @@ export function DuplicateMark({ scope, size = 13 }: { scope?: DuplicateScope; si
         background: scope === 'day' ? '#FBEBC8' : 'transparent',
         color: scope === 'day' ? '#8A6D0B' : '#C0A24E',
       }}>
-      <CopyCheck size={size} strokeWidth={2} />
+      <CopyCheck size={size} strokeWidth={STROKE.rest} />
     </span>
   )
 }

@@ -10,6 +10,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { Check, ChevronLeft, ChevronRight } from 'lucide-react'
+import { ICON, STROKE } from '@/lib/type'
 import {
   PRESETS, RRULE_DAYS, DAY_INITIAL, DAY_LONG, MONTH_SHORT, SET_POS,
   presetOf, presetRecur, summarise,
@@ -137,14 +138,14 @@ export function RepeatPicker({ value, start, onApply, onClose }: {
             <button key={p.value} style={ROW}
               onClick={() => { onApply(p.value === 'never' ? null : presetRecur(p.value, start)); onClose() }}>
               <span style={{ flex: 1 }}>{p.label}</span>
-              {preset === p.value && <Check size={15} strokeWidth={2.6} color="var(--sb-ink-1)" />}
+              {preset === p.value && <Check size={ICON.md} strokeWidth={STROKE.active} color="var(--sb-ink-1)" />}
             </button>
           ))}
           <div style={HAIRLINE} />
           <button style={ROW} onClick={() => setPane('custom')}>
             <span style={{ flex: 1 }}>Custom</span>
-            {preset === 'custom' && <Check size={15} strokeWidth={2.6} color="var(--sb-ink-1)" />}
-            <ChevronRight size={15} color="var(--sb-ink-4)" />
+            {preset === 'custom' && <Check size={ICON.md} strokeWidth={STROKE.active} color="var(--sb-ink-1)" />}
+            <ChevronRight size={ICON.md} color="var(--sb-ink-4)" />
           </button>
         </>
       ) : (
@@ -152,7 +153,7 @@ export function RepeatPicker({ value, start, onApply, onClose }: {
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '2px 4px 6px' }}>
             <button onClick={() => setPane('list')} title="Back"
               style={{ ...ROW, width: 'auto', height: 28, padding: '0 6px', gap: 4, color: 'var(--sb-ink-3)' }}>
-              <ChevronLeft size={15} /> Repeat
+              <ChevronLeft size={ICON.md} /> Repeat
             </button>
             <span style={{ flex: 1 }} />
             <button onClick={() => { onApply(draft); onClose() }} style={{

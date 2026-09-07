@@ -10,6 +10,7 @@ import { loadVisibleCompanies } from '@/types'
 import { useTaskStore } from '@/store/taskStore'
 import { suppressUndo } from '@/lib/undo'
 import { CountBadge } from './controls'
+import { ICON, STROKE } from '@/lib/type'
 
 // ─── Collapsed or not ────────────────────────────────────────────────────────
 // The rail costs 360px of the board, so whether it is open is worth remembering
@@ -114,7 +115,7 @@ function DumpCard({ task, onOpen, onDelete }: {
     >
       <span data-nm {...listeners} {...attributes} title="Drag into a quadrant"
         style={{ cursor: 'grab', touchAction: 'none', color: '#C9C0A8', display: 'flex', paddingTop: 2, flexShrink: 0 }}>
-        <GripVertical size={12} strokeWidth={2} />
+        <GripVertical size={ICON.sm} strokeWidth={STROKE.rest} />
       </span>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, minWidth: 0 }}>
@@ -133,7 +134,7 @@ function DumpCard({ task, onOpen, onDelete }: {
               display: 'flex', flexShrink: 0, marginTop: 1,
               color: hovered ? 'var(--sb-negative)' : '#D8CFB8',
             }}>
-            <Trash2 size={12.5} strokeWidth={2} />
+            <Trash2 size={ICON.sm} strokeWidth={STROKE.rest} />
           </button>
         </div>
         <p style={{ margin: '3px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', lineHeight: 1.3 }}>
@@ -148,8 +149,8 @@ function DumpCard({ task, onOpen, onDelete }: {
             fontSize: 'var(--sb-t-micro)', fontWeight: 600, color: 'var(--sb-ink-3)',
           }}>
             {s.inferred
-              ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}><Sparkles size={10} strokeWidth={2} />AI</span>
-              : <Check size={10} strokeWidth={2.5} />}
+              ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}><Sparkles size={ICON.sm} strokeWidth={STROKE.rest} />AI</span>
+              : <Check size={ICON.sm} strokeWidth={STROKE.active} />}
             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {QUADRANT_BADGE[s.quadrant]} · {s.bucket}
             </span>
@@ -236,7 +237,7 @@ export function BrainDumpRail({ tasks, onOpen, flexible }: {
           width: 28, height: 28, borderRadius: 'var(--sb-r-chip)', padding: 0,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           background: 'none', border: 'none', color: 'var(--sb-ink-3)', cursor: 'pointer',
-        }}><ChevronRight size={16} /></button>
+        }}><ChevronRight size={ICON.md} /></button>
         <CountBadge value={tasks.length} />
         <span style={{
           writingMode: 'vertical-rl', fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-ink-4)',
@@ -265,7 +266,7 @@ export function BrainDumpRail({ tasks, onOpen, flexible }: {
             width: 24, height: 24, borderRadius: 'var(--sb-r-chip)', padding: 0, flexShrink: 0,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             background: 'none', border: 'none', color: 'var(--sb-ink-4)', cursor: 'pointer',
-          }}><ChevronLeft size={16} /></button>
+          }}><ChevronLeft size={ICON.md} /></button>
         </div>
         <p style={{ margin: '2px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', lineHeight: 1.35 }}>
           Uncategorised — drag into a quadrant
@@ -277,7 +278,7 @@ export function BrainDumpRail({ tasks, onOpen, flexible }: {
           background: 'var(--sb-field)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-1)',
           fontSize: 'var(--sb-t-body-s)', fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit',
         }}>
-          <Plus size={13} strokeWidth={2} /> Capture
+          <Plus size={ICON.sm} strokeWidth={STROKE.rest} /> Capture
         </button>
         {capturing && (
           <textarea
@@ -322,7 +323,7 @@ export function BrainDumpRail({ tasks, onOpen, flexible }: {
           margin: 0, display: 'flex', alignItems: 'center', gap: 6,
           fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-3)', textTransform: 'uppercase',
         }}>
-          <Sparkles size={11} strokeWidth={2} /> Auto-distribute
+          <Sparkles size={ICON.sm} strokeWidth={STROKE.rest} /> Auto-distribute
         </p>
         <p style={{ margin: '7px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', lineHeight: 1.45 }}>
           Reads each task's own fields and places it in a quadrant <b style={{ color: 'var(--sb-ink-3)' }}>and</b> a board column in one pass.
@@ -348,7 +349,7 @@ export function BrainDumpRail({ tasks, onOpen, flexible }: {
           <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 10, fontSize: 'var(--sb-t-meta)' }}>
             <span style={{ color: 'var(--sb-ink-3)', flex: 1 }}>{missingFields} task{missingFields === 1 ? '' : 's'} missing fields</span>
             <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: 'var(--sb-negative)', fontWeight: 600, flexShrink: 0 }}>
-              <AlertTriangle size={11} strokeWidth={2} /> AI fills
+              <AlertTriangle size={ICON.sm} strokeWidth={STROKE.rest} /> AI fills
             </span>
           </div>
         )}
@@ -361,7 +362,7 @@ export function BrainDumpRail({ tasks, onOpen, flexible }: {
           cursor: tasks.length === 0 ? 'default' : 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
         }}>
-          <Sparkles size={13} strokeWidth={2} /> Distribute all {tasks.length}
+          <Sparkles size={ICON.sm} strokeWidth={STROKE.rest} /> Distribute all {tasks.length}
         </button>
 
         <button onClick={undoDistribute} disabled={!lastRun} style={{
@@ -370,7 +371,7 @@ export function BrainDumpRail({ tasks, onOpen, flexible }: {
           fontSize: 'var(--sb-t-meta)', color: lastRun ? 'var(--sb-ink-3)' : '#B5AC98', fontFamily: 'inherit',
           cursor: lastRun ? 'pointer' : 'default',
         }}>
-          <RotateCcw size={11} strokeWidth={2} />
+          <RotateCcw size={ICON.sm} strokeWidth={STROKE.rest} />
           {lastRun ? 'Undo the last distribution' : 'Preview, then undo in one click'}
         </button>
       </div>

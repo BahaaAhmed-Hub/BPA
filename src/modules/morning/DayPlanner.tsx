@@ -20,6 +20,7 @@ import {
 } from '@/lib/professor'
 import type { DbCalendarEvent, DbTask } from '@/types/database'
 import { loadVisibleCompanies } from '@/types'
+import { ICON, STROKE } from '@/lib/type'
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -175,7 +176,7 @@ function GeneratingSkeleton() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '4px 0' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-        <RefreshCw size={13} color="#7F77DD" style={{ animation: 'spin 1s linear infinite' }} />
+        <RefreshCw size={ICON.sm} color="#7F77DD" style={{ animation: 'spin 1s linear infinite' }} />
         <span style={{ fontSize: 'var(--sb-t-body-s)', color: '#7F77DD' }}>Analyzing your calendar and tasks…</span>
       </div>
       {[80, 65, 90, 55, 75].map((w, i) => (
@@ -377,14 +378,14 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
             background: 'rgba(127,119,221,0.1)', border: '1px solid #7F77DD30',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            <Sparkles size={13} color="#7F77DD" />
+            <Sparkles size={ICON.sm} color="#7F77DD" />
           </div>
           <div style={{ textAlign: 'left' }}>
             <p style={{ margin: 0, fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>Build My Day</p>
             <p style={{ margin: 0, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>AI-powered time blocking + calendar sync</p>
           </div>
         </div>
-        <ChevronRight size={15} color="#6B7280" />
+        <ChevronRight size={ICON.md} color="#6B7280" />
       </button>
     )
   }
@@ -398,7 +399,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
             borderRadius: 'var(--sb-r-nav)', background: '#FEF3EC', border: '1px solid #92400E30', overflow: 'hidden',
           }}>
             <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '14px 16px', borderBottom: '1px solid #92400E30' }}>
-              <CreditCard size={14} color="#F59E0B" style={{ marginTop: 1, flexShrink: 0 }} />
+              <CreditCard size={ICON.sm} color="#F59E0B" style={{ marginTop: 1, flexShrink: 0 }} />
               <div>
                 <p style={{ margin: '0 0 3px', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: '#B45309' }}>
                   {errorType === 'credit' ? 'API Credit Balance Too Low' : 'Generation Failed'}
@@ -411,7 +412,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
               </div>
             </div>
             <div style={{ padding: '10px 16px', display: 'flex', gap: 8, alignItems: 'center' }}>
-              <AlertTriangle size={10} color="#6B7280" />
+              <AlertTriangle size={ICON.sm} color="#6B7280" />
               <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)' }}>Only AI planning is affected — other features work normally.</span>
             </div>
           </div>
@@ -491,7 +492,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                               border: `1px solid ${isSelected ? group.color : 'var(--sb-ink-4)'}`,
                               display: 'flex', alignItems: 'center', justifyContent: 'center',
                             }}>
-                              {isSelected && <Check size={9} color="#fff" strokeWidth={3} />}
+                              {isSelected && <Check size={ICON.sm} color="#fff" strokeWidth={STROKE.active} />}
                             </div>
 
                             <span style={{
@@ -537,7 +538,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
             </label>
             {eventsLoading && (
               <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                <RefreshCw size={10} style={{ animation: 'spin 1s linear infinite' }} />
+                <RefreshCw size={ICON.sm} style={{ animation: 'spin 1s linear infinite' }} />
                 Loading…
               </span>
             )}
@@ -641,8 +642,8 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
             }}
           >
             {eventsLoading
-              ? <><RefreshCw size={13} style={{ animation: 'spin 1s linear infinite' }} /> Loading calendar…</>
-              : <><Sparkles size={13} /> Generate My Day Plan</>
+              ? <><RefreshCw size={ICON.sm} style={{ animation: 'spin 1s linear infinite' }} /> Loading calendar…</>
+              : <><Sparkles size={ICON.sm} /> Generate My Day Plan</>
             }
           </button>
         </div>
@@ -770,7 +771,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                         color: '#1D9E75', display: 'flex', alignItems: 'center', justifyContent: 'center',
                       }}
                     >
-                      <Check size={12} />
+                      <Check size={ICON.sm} />
                     </button>
                   ) : (
                     <button
@@ -782,7 +783,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                         color: '#1D9E75', display: 'flex', alignItems: 'center', justifyContent: 'center',
                       }}
                     >
-                      <Check size={12} />
+                      <Check size={ICON.sm} />
                     </button>
                   )}
 
@@ -796,7 +797,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                         color: '#EF4444', display: 'flex', alignItems: 'center', justifyContent: 'center',
                       }}
                     >
-                      <X size={12} />
+                      <X size={ICON.sm} />
                     </button>
                   )}
 
@@ -810,7 +811,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                         color: '#F59E0B', display: 'flex', alignItems: 'center', justifyContent: 'center',
                       }}
                     >
-                      <RotateCcw size={11} />
+                      <RotateCcw size={ICON.sm} />
                     </button>
                   )}
                 </div>
@@ -839,7 +840,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                   transition: 'opacity 0.15s',
                 }}
               >
-                <Shield size={14} />
+                <Shield size={ICON.sm} />
                 Apply to Calendar{isReady ? ` (${pendingCount})` : ''}
               </button>
               {!isReady && (
@@ -862,7 +863,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-          <RefreshCw size={13} color="#7F77DD" style={{ animation: 'spin 1s linear infinite' }} />
+          <RefreshCw size={ICON.sm} color="#7F77DD" style={{ animation: 'spin 1s linear infinite' }} />
           <span style={{ fontSize: 'var(--sb-t-body-s)', color: '#7F77DD' }}>Applying changes to your calendar…</span>
         </div>
         {active.map(slot => {
@@ -875,9 +876,9 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                 border: `1px solid ${st === 'done' ? '#1D9E75' : st === 'error' ? '#EF4444' : '#7F77DD'}`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
-                {st === 'done'  && <Check size={9} color="#fff" />}
-                {st === 'error' && <X     size={9} color="#fff" />}
-                {!st && <RefreshCw size={8} color="#7F77DD" style={{ animation: 'spin 1s linear infinite' }} />}
+                {st === 'done'  && <Check size={ICON.sm} color="#fff" />}
+                {st === 'error' && <X     size={ICON.sm} color="#fff" />}
+                {!st && <RefreshCw size={ICON.sm} color="#7F77DD" style={{ animation: 'spin 1s linear infinite' }} />}
               </div>
               <span style={{ fontSize: 'var(--sb-t-body-s)', color: st === 'error' ? '#EF4444' : 'var(--sb-ink-1)' }}>
                 {slot.title}
@@ -910,7 +911,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
             background: '#1D9E7518', border: '1px solid #1D9E7530',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            <Check size={13} color="#1D9E75" />
+            <Check size={ICON.sm} color="#1D9E75" />
           </div>
           <p style={{ margin: 0, fontSize: 'var(--sb-t-label)', fontWeight: 600, color: '#1D9E75' }}>Plan Applied</p>
         </div>

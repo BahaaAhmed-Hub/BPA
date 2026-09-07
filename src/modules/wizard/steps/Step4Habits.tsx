@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Check, X } from 'lucide-react'
+import { ICON, STROKE } from '@/lib/type'
 
 const HABIT_TEMPLATES = [
   { id: 'water',       name: 'Drink Water',   emoji: '💧', color: '#60A5FA', type: 'quantity' as const, goal: 8,     unit: 'glasses', frequency: 'daily' as const },
@@ -89,7 +90,7 @@ export function Step4Habits({ data, onChange }: Props) {
                   position: 'absolute', top: 6, right: 6, width: 16, height: 16, borderRadius: 'var(--sb-r-pill)',
                   background: t.color, display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
-                  <Check size={10} color="#fff" strokeWidth={3} />
+                  <Check size={ICON.sm} color="#fff" strokeWidth={STROKE.active} />
                 </div>
               )}
               <div style={{ fontSize: 'var(--sb-t-h2)', marginBottom: 6 }}>{t.emoji}</div>
@@ -119,7 +120,7 @@ export function Step4Habits({ data, onChange }: Props) {
               <span style={{ flex: 1, fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)' }}>{h.name}</span>
               <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>{h.frequency}</span>
               <button onClick={() => removeCustom(i)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-4)', padding: 2, display: 'flex' }}>
-                <X size={13} />
+                <X size={ICON.sm} />
               </button>
             </div>
           ))}

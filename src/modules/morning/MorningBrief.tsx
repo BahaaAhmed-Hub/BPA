@@ -16,6 +16,7 @@ import type { Task } from '@/types'
 import { isTaskHidden } from '@/types'
 import type { RichMeetingEvent } from './MorningBriefTypes'
 import { DayPlanner } from './DayPlanner'
+import { ICON } from '@/lib/type'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -378,16 +379,16 @@ function EventContextMenu({
         overflow: 'hidden',
       }}
     >
-      {item('view',   <Calendar size={13} />,     'View Details',             onViewDetails)}
-      {item('gcal',   <ExternalLink size={13} />,  'Open in Google Calendar',  event.htmlLink ? () => window.open(event.htmlLink, '_blank') : undefined, !event.htmlLink)}
-      {joinLink && item('join', <Video size={13} />, 'Join Meeting', () => window.open(joinLink, '_blank'))}
+      {item('view',   <Calendar size={ICON.sm} />,     'View Details',             onViewDetails)}
+      {item('gcal',   <ExternalLink size={ICON.sm} />,  'Open in Google Calendar',  event.htmlLink ? () => window.open(event.htmlLink, '_blank') : undefined, !event.htmlLink)}
+      {joinLink && item('join', <Video size={ICON.sm} />, 'Join Meeting', () => window.open(joinLink, '_blank'))}
 
       <div style={sep} />
 
-      {item('copy-link',    <Link size={13} />, 'Copy Event Link',
+      {item('copy-link',    <Link size={ICON.sm} />, 'Copy Event Link',
         event.htmlLink ? () => navigator.clipboard.writeText(event.htmlLink!).catch(() => {}) : undefined,
         !event.htmlLink)}
-      {item('copy-details', <Copy size={13} />, 'Copy Details',
+      {item('copy-details', <Copy size={ICON.sm} />, 'Copy Details',
         () => navigator.clipboard.writeText(formatCopyDetails()).catch(() => {}))}
     </div>
   )
@@ -450,7 +451,7 @@ function EventDetailPanel({ event, onClose }: { event: RichMeetingEvent; onClose
               onClick={onClose}
               style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--sb-ink-3)', flexShrink: 0 }}
             >
-              <X size={16} />
+              <X size={ICON.md} />
             </button>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10 }}>
@@ -487,7 +488,7 @@ function EventDetailPanel({ event, onClose }: { event: RichMeetingEvent; onClose
           {/* Location */}
           {event.location && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <MapPin size={13} color="var(--sb-ink-3)" style={{ flexShrink: 0 }} />
+              <MapPin size={ICON.sm} color="var(--sb-ink-3)" style={{ flexShrink: 0 }} />
               <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)' }}>{event.location}</span>
             </div>
           )}
@@ -506,9 +507,9 @@ function EventDetailPanel({ event, onClose }: { event: RichMeetingEvent; onClose
                 textDecoration: 'none', transition: 'all 0.15s',
               }}
             >
-              <Video size={14} />
+              <Video size={ICON.sm} />
               Join video call
-              <ExternalLink size={11} style={{ marginLeft: 'auto', opacity: 0.6 }} />
+              <ExternalLink size={ICON.sm} style={{ marginLeft: 'auto', opacity: 0.6 }} />
             </a>
           )}
 
@@ -593,7 +594,7 @@ function EventDetailPanel({ event, onClose }: { event: RichMeetingEvent; onClose
                 marginTop: 4,
               }}
             >
-              <ExternalLink size={11} />
+              <ExternalLink size={ICON.sm} />
               Open in Google Calendar
             </a>
           )}
@@ -814,7 +815,7 @@ export function MorningBrief() {
                 opacity: isGenerating ? 0.5 : 1,
               }}
             >
-              <RefreshCw size={13} style={{ animation: isGenerating ? 'spin 1s linear infinite' : 'none' }} />
+              <RefreshCw size={ICON.sm} style={{ animation: isGenerating ? 'spin 1s linear infinite' : 'none' }} />
               Regenerate plan
             </button>
           </div>
@@ -896,7 +897,7 @@ export function MorningBrief() {
                   background: 'rgba(var(--sb-accent-rgb),0.12)', border: '1px solid #7F77DD30',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
-                  <Sparkles size={13} color="#7F77DD" />
+                  <Sparkles size={ICON.sm} color="#7F77DD" />
                 </div>
                 <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: '#7F77DD', letterSpacing: '0.8px', textTransform: 'uppercase' }}>
                   AI Day Planner
@@ -1112,8 +1113,8 @@ export function MorningBrief() {
                     }}
                   >
                     {habit.checked
-                      ? <CheckCircle2 size={15} style={{ flexShrink: 0 }} />
-                      : <Circle size={15} style={{ flexShrink: 0 }} />}
+                      ? <CheckCircle2 size={ICON.md} style={{ flexShrink: 0 }} />
+                      : <Circle size={ICON.md} style={{ flexShrink: 0 }} />}
                     <span style={{ textDecoration: habit.checked ? 'line-through' : 'none', opacity: habit.checked ? 0.75 : 1 }}>
                       {habit.name}
                     </span>

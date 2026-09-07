@@ -10,6 +10,7 @@ import { X, Link2, Paperclip, Plus, Check, FileText } from 'lucide-react'
 import type { Task, TaskAttachment, TaskType } from '@/types'
 import { inferTaskType } from '@/types'
 import { useTaskStore } from '@/store/taskStore'
+import { ICON, STROKE } from '@/lib/type'
 
 /** The kinds of task that produce something you would want to keep. */
 const DELIVERS: TaskType[] = ['do', 'deepwork']
@@ -92,7 +93,7 @@ export function DeliverablePrompt({ task, onComplete, onCancel }: {
             </p>
           </div>
           <button onClick={onCancel} title="Leave it open" style={{ ...ROUND, width: 32, height: 32, borderRadius: 'var(--sb-r-pill)' }}>
-            <X size={14} />
+            <X size={ICON.sm} />
           </button>
         </div>
 
@@ -109,7 +110,7 @@ export function DeliverablePrompt({ task, onComplete, onCancel }: {
             style={{ ...FIELD, flex: 1 }} />
           <button onClick={addLink} disabled={!draft.trim()} title="Add this link"
             style={{ ...ROUND, opacity: draft.trim() ? 1 : 0.45 }}>
-            <Plus size={15} />
+            <Plus size={ICON.md} />
           </button>
         </div>
         {links.length > 0 && (
@@ -120,13 +121,13 @@ export function DeliverablePrompt({ task, onComplete, onCancel }: {
                 height: 36, padding: '0 10px', borderRadius: 'var(--sb-r-sm)',
                 background: 'var(--sb-field)', border: '1px solid var(--sb-border)',
               }}>
-                <Link2 size={13} color="var(--sb-ink-3)" style={{ flexShrink: 0 }} />
+                <Link2 size={ICON.sm} color="var(--sb-ink-3)" style={{ flexShrink: 0 }} />
                 <span style={{ flex: 1, minWidth: 0, fontSize: 'var(--sb-t-body-s)', color: '#1A73E8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {url}
                 </span>
                 <button onClick={() => setLinks(l => l.filter(x => x !== url))} title="Remove"
                   style={{ ...ROUND, width: 22, height: 22, border: 'none', background: 'none', color: 'var(--sb-ink-4)' }}>
-                  <X size={13} />
+                  <X size={ICON.sm} />
                 </button>
               </div>
             ))}
@@ -148,7 +149,7 @@ export function DeliverablePrompt({ task, onComplete, onCancel }: {
             border: `1px dashed ${dropping ? 'var(--sb-accent)' : '#D8CFB8'}`,
             fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)',
           }}>
-          <Paperclip size={14} />
+          <Paperclip size={ICON.sm} />
           Drop files here, or choose several
           <input type="file" multiple onChange={e => addFiles(e.target.files)} style={{ display: 'none' }} />
         </label>
@@ -160,14 +161,14 @@ export function DeliverablePrompt({ task, onComplete, onCancel }: {
                 height: 36, padding: '0 10px', borderRadius: 'var(--sb-r-sm)',
                 background: 'var(--sb-field)', border: '1px solid var(--sb-border)',
               }}>
-                <FileText size={13} color="var(--sb-ink-3)" style={{ flexShrink: 0 }} />
+                <FileText size={ICON.sm} color="var(--sb-ink-3)" style={{ flexShrink: 0 }} />
                 <span style={{ flex: 1, minWidth: 0, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {f.name}
                 </span>
                 <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', flexShrink: 0 }}>{formatBytes(f.size)}</span>
                 <button onClick={() => setFiles(x => x.filter(y => y.id !== f.id))} title="Remove"
                   style={{ ...ROUND, width: 22, height: 22, border: 'none', background: 'none', color: 'var(--sb-ink-4)' }}>
-                  <X size={13} />
+                  <X size={ICON.sm} />
                 </button>
               </div>
             ))}
@@ -189,7 +190,7 @@ export function DeliverablePrompt({ task, onComplete, onCancel }: {
             height: 40, padding: '0 18px', borderRadius: 'var(--sb-r-sm)', cursor: 'pointer',
             background: 'var(--sb-ink-1)', border: 'none', color: 'var(--sb-ink-on-dark)',
             fontSize: 'var(--sb-t-label)', fontWeight: 600, fontFamily: 'inherit',
-          }}><Check size={14} strokeWidth={2.6} /> Complete</button>
+          }}><Check size={ICON.sm} strokeWidth={STROKE.active} /> Complete</button>
         </div>
       </div>
     </div>,

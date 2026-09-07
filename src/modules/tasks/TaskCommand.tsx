@@ -19,6 +19,7 @@ import { SmartDayPlanner } from './SmartDayPlanner'
 import { TaskListView } from './TaskListView'
 import { TaskBanner } from './TaskBanner'
 import { TASK_TYPE_ICON, TASK_TYPE_ORDER } from './taskVisuals'
+import { ICON, STROKE } from '@/lib/type'
 
 const QUADRANTS: Quadrant[] = ['do', 'schedule', 'delegate', 'eliminate']
 const TASKS_CONFIG_KEY = 'task-command-config'
@@ -252,7 +253,7 @@ export function TaskCommand() {
           <div ref={filterRef} style={{ position: 'relative', flexShrink: 0 }}>
             <button onClick={() => setFilterOpen(o => !o)}
               style={{ display: 'flex', alignItems: 'center', gap: 8, height: 38, boxSizing: 'border-box', padding: '0 18px', borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body)', fontWeight: 500, cursor: 'pointer', boxShadow: 'var(--sb-shadow-control)' }}>
-              <SlidersHorizontal size={14} strokeWidth={2} />
+              <SlidersHorizontal size={ICON.sm} strokeWidth={STROKE.rest} />
               Filters
               {activeFilterCount > 0 && (
                 <span style={{ height: 18, minWidth: 18, boxSizing: 'border-box', padding: '0 5px', borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-ink-1)', color: 'var(--sb-ink-on-dark)', fontSize: 'var(--sb-t-micro)', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -272,7 +273,7 @@ export function TaskCommand() {
                 {/* Search — the artboard has no page-level search bar, so it
                     lives here rather than being dropped. */}
                 <div style={{ position: 'relative', display: 'flex', alignItems: 'center', marginTop: 12 }}>
-                  <Search size={13} color="var(--sb-ink-4)" style={{ position: 'absolute', left: 11, pointerEvents: 'none' }} />
+                  <Search size={ICON.sm} color="var(--sb-ink-4)" style={{ position: 'absolute', left: 11, pointerEvents: 'none' }} />
                   <input
                     ref={searchRef}
                     value={searchQuery}
@@ -287,7 +288,7 @@ export function TaskCommand() {
                   />
                   {searchQuery && (
                     <button onClick={() => setSearchQuery('')} style={{ position: 'absolute', right: 9, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-4)', display: 'flex', padding: 2 }}>
-                      <X size={12} />
+                      <X size={ICON.sm} />
                     </button>
                   )}
                 </div>
@@ -421,7 +422,7 @@ export function TaskCommand() {
           <button
             onClick={handleNewTask}
             style={{ display: 'flex', alignItems: 'center', gap: 8, height: 38, boxSizing: 'border-box', padding: '0 18px', borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-accent)', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-label)', fontWeight: 600, border: 'none', cursor: 'pointer', boxShadow: 'var(--sb-shadow-control)', flexShrink: 0, fontFamily: 'inherit' }}>
-            <Plus size={15} strokeWidth={2.2} />
+            <Plus size={ICON.md} strokeWidth={STROKE.active} />
             New task
           </button>
         </span>

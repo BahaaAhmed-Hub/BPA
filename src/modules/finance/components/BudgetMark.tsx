@@ -1,4 +1,5 @@
 import { CalendarClock } from 'lucide-react'
+import { ICON, STROKE } from '@/lib/type'
 
 /** This entry was written by a budget with a day on it, not typed. It is a
  *  plan until it is ticked paid — the dotted red border says that part; this
@@ -10,7 +11,7 @@ export function BudgetMark({ on }: { on: boolean }) {
     <span
       title="Written by its budget. Tick it paid when the money moves."
       style={{ display: 'inline-flex', flexShrink: 0, color: '#C08A2E' }}>
-      <CalendarClock size={11} strokeWidth={2.2} />
+      <CalendarClock size={ICON.sm} strokeWidth={STROKE.active} />
     </span>
   )
 }

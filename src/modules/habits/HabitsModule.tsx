@@ -8,6 +8,7 @@ import {
 } from '@/store/habitsStore'
 import { saveHabitLogsToDB } from '@/lib/dbSync'
 import { markLocalWrite } from '@/lib/liveSync'
+import { ICON, STROKE } from '@/lib/type'
 
 let logsDbTimer: ReturnType<typeof setTimeout> | null = null
 function scheduleLogsSync(logs: HabitLogs) {
@@ -170,7 +171,7 @@ function HabitImagePicker({ image, emoji, onChange, size = 54 }: {
               padding: 0, cursor: 'pointer', background: 'var(--sb-ink-1)', border: 'var(--sb-border-emphasis) solid var(--sb-card)',
               color: 'var(--sb-ink-on-dark)', display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
-            <X size={9} strokeWidth={3} />
+            <X size={ICON.sm} strokeWidth={STROKE.active} />
           </button>
         )}
       </span>
@@ -747,7 +748,7 @@ function HabitDetailPanel({
           </div>
         </div>
         <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-4)', padding: 2, display: 'flex' }}>
-          <X size={14} />
+          <X size={ICON.sm} />
         </button>
       </div>
 
@@ -1035,7 +1036,7 @@ export function HabitsModule() {
           {/* New habit CTA */}
           <button onClick={createHabit}
             style={{ display: 'flex', alignItems: 'center', gap: 8, boxSizing: 'border-box', height: 34, padding: '0 15px', borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-accent)', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, border: 'none', cursor: 'pointer', boxShadow: 'var(--sb-shadow-accent)', flexShrink: 0 }}>
-            <Plus size={15} />
+            <Plus size={ICON.md} />
             New habit
           </button>
         </span>
@@ -1068,7 +1069,7 @@ export function HabitsModule() {
         <span style={{ display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0 }}>
           <button onClick={() => stepWeek(-1)} title="Previous week"
             style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-4)', padding: 2, display: 'flex' }}>
-            <ChevronLeft size={14} />
+            <ChevronLeft size={ICON.sm} />
           </button>
 
           <span style={{ display: 'flex', alignItems: 'flex-end', gap: 7 }}>
@@ -1103,7 +1104,7 @@ export function HabitsModule() {
 
           <button onClick={() => stepWeek(1)} disabled={isCurrentWeek} title="Next week"
             style={{ background: 'none', border: 'none', cursor: isCurrentWeek ? 'default' : 'pointer', color: 'var(--sb-ink-4)', padding: 2, display: 'flex', opacity: isCurrentWeek ? 0.3 : 1 }}>
-            <ChevronRight size={14} />
+            <ChevronRight size={ICON.sm} />
           </button>
         </span>
 
@@ -1240,14 +1241,14 @@ export function HabitsModule() {
           <span style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
             <button onClick={() => setWeekAnchor(d => offsetDays(d, -7))}
               style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', padding: 0, display: 'flex' }}>
-              <ChevronLeft size={13} />
+              <ChevronLeft size={ICON.sm} />
             </button>
             <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: isCurrentWeek ? 'var(--sb-ink-1)' : 'var(--sb-ink-2)', minWidth: 120, textAlign: 'center' }}>
               {isCurrentWeek ? 'This week' : 'Week'} · {fmtWeekRange(weekAnchor)}
             </span>
             <button onClick={() => setWeekAnchor(d => offsetDays(d, 7))} disabled={isCurrentWeek}
               style={{ background: 'none', border: 'none', cursor: isCurrentWeek ? 'default' : 'pointer', color: 'var(--sb-ink-3)', padding: 0, display: 'flex', opacity: isCurrentWeek ? 0.3 : 1 }}>
-              <ChevronRight size={13} />
+              <ChevronRight size={ICON.sm} />
             </button>
           </span>
 
@@ -1386,7 +1387,7 @@ export function HabitsModule() {
                 </button>
                 <button onClick={() => deleteHabit(habit.id)} title="Delete"
                   style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: 'inherit', display: 'flex' }}>
-                  <Trash2 size={13} />
+                  <Trash2 size={ICON.sm} />
                 </button>
               </span>
             </div>
@@ -1411,7 +1412,7 @@ export function HabitsModule() {
                 </button>
                 <button onClick={() => deleteHabit(habit.id)} title="Delete permanently"
                   style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: 'var(--sb-ink-3)' }}>
-                  <Trash2 size={12} />
+                  <Trash2 size={ICON.sm} />
                 </button>
               </div>
             ))}

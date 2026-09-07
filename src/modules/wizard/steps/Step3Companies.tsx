@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { loadAccounts } from '@/lib/multiAccount'
 import { X } from 'lucide-react'
+import { ICON } from '@/lib/type'
 
 const COLORS = [
   '#7F77DD','#60A5FA','#1D9E75','#E05252','#F97316',
@@ -72,7 +73,7 @@ export function Step3Companies({ data, onChange }: Props) {
                 </span>
               )}
               <button onClick={() => remove(co.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-4)', padding: 4, display: 'flex' }}>
-                <X size={13} />
+                <X size={ICON.sm} />
               </button>
             </div>
           )

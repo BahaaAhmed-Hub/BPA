@@ -4,6 +4,7 @@ import { useTaskStore } from '@/store/taskStore'
 import type { Task } from '@/types'
 import { isTaskHidden, loadDynamicCompanies } from '@/types'
 import type { GCalEvent } from '@/lib/googleCalendar'
+import { ICON } from '@/lib/type'
 
 type ExtEvent = GCalEvent & { calendarColor?: string; calendarId?: string }
 
@@ -186,8 +187,8 @@ function EventRow({ event, cancelled }: { event: GCalEvent; cancelled?: boolean 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-page)', border: '1px solid var(--sb-field)', marginBottom: 5 }}>
       {cancelled
-        ? <XCircle size={13} color="#6B7280" style={{ flexShrink: 0 }} />
-        : <CheckCircle2 size={13} color="#1D9E75" style={{ flexShrink: 0 }} />
+        ? <XCircle size={ICON.sm} color="#6B7280" style={{ flexShrink: 0 }} />
+        : <CheckCircle2 size={ICON.sm} color="#1D9E75" style={{ flexShrink: 0 }} />
       }
       {time && (
         <span style={{ fontSize: 'var(--sb-t-meta)', color: cancelled ? 'var(--sb-ink-4)' : '#7F77DD', fontWeight: 600, minWidth: 54, flexShrink: 0 }}>{time}</span>
@@ -220,8 +221,8 @@ function TaskRow({ title, company, cancelled }: { title: string; company?: strin
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-page)', border: '1px solid var(--sb-field)', marginBottom: 5 }}>
       {cancelled
-        ? <XCircle size={13} color="#6B7280" style={{ flexShrink: 0 }} />
-        : <CheckSquare size={13} color="#1D9E75" style={{ flexShrink: 0 }} />
+        ? <XCircle size={ICON.sm} color="#6B7280" style={{ flexShrink: 0 }} />
+        : <CheckSquare size={ICON.sm} color="#1D9E75" style={{ flexShrink: 0 }} />
       }
       <span style={{ fontSize: 'var(--sb-t-body)', color: cancelled ? 'var(--sb-ink-4)' : '#3D3926', flex: 1, textDecoration: cancelled ? 'line-through' : 'none' }}>
         {title}
@@ -507,10 +508,10 @@ export function ReviewModule() {
             <button
               onClick={() => setSelectedDay(d => shiftDay(d, viewMode === 'weekly' ? -7 : -1))}
               style={{ background: 'none', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-chip)', cursor: 'pointer', color: 'var(--sb-ink-3)', padding: '5px 8px', display: 'flex', alignItems: 'center' }}
-            ><ChevronLeft size={15} /></button>
+            ><ChevronLeft size={ICON.md} /></button>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <CalendarDays size={15} color="#7F77DD" />
+              <CalendarDays size={ICON.md} color="#7F77DD" />
               <span style={{ fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>
                 {viewMode === 'daily'
                   ? fmtDayLabel(selectedDay)
@@ -545,7 +546,7 @@ export function ReviewModule() {
             <button
               onClick={() => setSelectedDay(d => shiftDay(d, viewMode === 'weekly' ? +7 : +1))}
               style={{ background: 'none', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-chip)', cursor: 'pointer', color: 'var(--sb-ink-3)', padding: '5px 8px', display: 'flex', alignItems: 'center' }}
-            ><ChevronRight size={15} /></button>
+            ><ChevronRight size={ICON.md} /></button>
           </div>
 
           {/* Analytics bar */}

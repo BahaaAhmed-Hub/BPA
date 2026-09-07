@@ -3,6 +3,7 @@ import {
   Bold, Italic, Underline, Link2, List, Paperclip, Trash2, X, Send, ChevronDown,
 } from 'lucide-react'
 import { sendMail, escapeHtml, type MailAccount, type MailAttachment } from '@/lib/gmail'
+import { ICON } from '@/lib/type'
 
 // ─── Writing one ─────────────────────────────────────────────────────────────
 //
@@ -157,7 +158,7 @@ export function Composer({ seed, accounts, onClose, onSent }: {
       }}>
         <span style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: C.ink }}>{MODE_LABEL[seed.mode]}</span>
         <span style={{ flex: 1 }} />
-        <button onClick={onClose} title="Discard" style={TOOL}><X size={14} /></button>
+        <button onClick={onClose} title="Discard" style={TOOL}><X size={ICON.sm} /></button>
       </div>
 
       <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 7, overflowY: 'auto' }}>
@@ -169,7 +170,7 @@ export function Composer({ seed, accounts, onClose, onSent }: {
           <span style={{ position: 'relative', display: 'flex', flex: 1, minWidth: 0 }}>
             <span style={{ ...INPUT, display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
               <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{from}</span>
-              <ChevronDown size={13} style={{ color: C.ghost, flexShrink: 0 }} />
+              <ChevronDown size={ICON.sm} style={{ color: C.ghost, flexShrink: 0 }} />
             </span>
             <select value={from} onChange={e => setFrom(e.target.value)}
               style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', border: 'none' }}>
@@ -230,11 +231,11 @@ export function Composer({ seed, accounts, onClose, onSent }: {
                 borderRadius: 'var(--sb-r-pill)', background: C.field, border: `1px solid ${C.border}`,
                 fontSize: 'var(--sb-t-meta)', color: C.muted,
               }}>
-                <Paperclip size={11} />
+                <Paperclip size={ICON.sm} />
                 {f.file.name} · {fmtBytes(f.file.size)}
                 <button onClick={() => setFiles(prev => prev.filter((_, j) => j !== i))}
                   title="Remove" style={{ ...TOOL, width: 14, height: 14, color: C.ghost }}>
-                  <X size={11} />
+                  <X size={ICON.sm} />
                 </button>
               </span>
             ))}
@@ -262,23 +263,23 @@ export function Composer({ seed, accounts, onClose, onSent }: {
             color: C.ink, fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
             cursor: sending ? 'default' : 'pointer', boxShadow: 'var(--sb-shadow-accent)',
           }}>
-          <Send size={13} /> {sending ? 'Sending…' : 'Send'}
+          <Send size={ICON.sm} /> {sending ? 'Sending…' : 'Send'}
         </button>
         <span style={{ width: 8 }} />
-        <button onClick={() => cmd('bold')}      title="Bold"      style={TOOL}><Bold size={14} /></button>
-        <button onClick={() => cmd('italic')}    title="Italic"    style={TOOL}><Italic size={14} /></button>
-        <button onClick={() => cmd('underline')} title="Underline" style={TOOL}><Underline size={14} /></button>
-        <button onClick={() => cmd('insertUnorderedList')} title="Bullets" style={TOOL}><List size={14} /></button>
+        <button onClick={() => cmd('bold')}      title="Bold"      style={TOOL}><Bold size={ICON.sm} /></button>
+        <button onClick={() => cmd('italic')}    title="Italic"    style={TOOL}><Italic size={ICON.sm} /></button>
+        <button onClick={() => cmd('underline')} title="Underline" style={TOOL}><Underline size={ICON.sm} /></button>
+        <button onClick={() => cmd('insertUnorderedList')} title="Bullets" style={TOOL}><List size={ICON.sm} /></button>
         <button title="Add a link" style={TOOL}
           onClick={() => { const url = window.prompt('Link to'); if (url) cmd('createLink', url) }}>
-          <Link2 size={14} />
+          <Link2 size={ICON.sm} />
         </button>
         <button onClick={() => fileRef.current?.click()} title="Attach a file" style={TOOL}>
-          <Paperclip size={14} />
+          <Paperclip size={ICON.sm} />
         </button>
         <input ref={fileRef} type="file" multiple hidden onChange={e => { void attach(e.target.files); e.target.value = '' }} />
         <span style={{ flex: 1 }} />
-        <button onClick={onClose} title="Discard" style={{ ...TOOL, color: C.ghost }}><Trash2 size={14} /></button>
+        <button onClick={onClose} title="Discard" style={{ ...TOOL, color: C.ghost }}><Trash2 size={ICON.sm} /></button>
       </div>
     </div>
   )

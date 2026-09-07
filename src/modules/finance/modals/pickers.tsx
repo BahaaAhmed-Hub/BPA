@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { ChevronDown, Check } from 'lucide-react'
 import type { Category } from '../types'
 import { CategoryGlyph } from '../components/CategoryGlyph'
+import { ICON, STROKE } from '@/lib/type'
 
 // ─── The panel vocabulary ─────────────────────────────────────────────────────
 // Same set the calendar's event panel uses: one pill for every value whether
@@ -133,7 +134,7 @@ export function PillPicker({ value, options, onChange, placeholder, compact }: {
             {chosen?.label ?? placeholder}
           </span>
         </span>
-        <ChevronDown size={13} strokeWidth={2} style={{ color: 'var(--sb-ink-4)', flexShrink: 0 }} />
+        <ChevronDown size={ICON.sm} strokeWidth={STROKE.rest} style={{ color: 'var(--sb-ink-4)', flexShrink: 0 }} />
       </button>
 
       {open && place && createPortal(
@@ -168,7 +169,7 @@ export function PillPicker({ value, options, onChange, placeholder, compact }: {
                     </span>
                   )}
                 </span>
-                {on && <Check size={14} strokeWidth={2.5} style={{ color: '#8A6D0B', flexShrink: 0 }} />}
+                {on && <Check size={ICON.sm} strokeWidth={STROKE.active} style={{ color: '#8A6D0B', flexShrink: 0 }} />}
               </button>
             )
           })}

@@ -45,3 +45,15 @@ export const CAPS: React.CSSProperties = T.micro
 
 /** Figures line up column to column, whatever the digits. */
 export const TABULAR: React.CSSProperties = { fontVariantNumeric: 'tabular-nums' }
+
+// ─── Icons ───────────────────────────────────────────────────────────────────
+// Three sizes, mirroring --sb-icon-* in index.css: lucide sets width and height
+// as attributes, and an attribute cannot hold a var(). Two strokes — an icon
+// that is only labelling something, and one that is carrying a state.
+//
+//   sm  14  inside a row, beside text
+//   md  16  a control's own icon
+//   lg  18  chrome — the nav rail, the top bar
+
+export const ICON = { sm: 14, md: 16, lg: 18 } as const
+export const STROKE = { rest: 1.75, active: 2.25 } as const

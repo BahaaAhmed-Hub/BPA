@@ -6,7 +6,7 @@
 import { useEffect, useState } from 'react'
 import { AlertCircle, X } from 'lucide-react'
 import { getSyncGaps, onSyncGapsChanged, MIGRATION_FOR, type SyncGap } from '@/lib/syncStatus'
-import { T } from '@/lib/type'
+import { T, ICON } from '@/lib/type'
 import { supabaseProjectRef } from '@/lib/supabase'
 
 export function SyncGapBanner() {
@@ -27,7 +27,7 @@ export function SyncGapBanner() {
       margin: '0 22px 10px', padding: '11px 14px', borderRadius: 'var(--sb-r-nav)',
       background: 'rgba(var(--sb-accent-rgb),0.20)', border: '1px solid rgba(var(--sb-accent-rgb),0.65)',
     }}>
-      <AlertCircle size={15} color="#8A6D0B" style={{ flexShrink: 0, marginTop: 1 }} />
+      <AlertCircle size={ICON.md} color="#8A6D0B" style={{ flexShrink: 0, marginTop: 1 }} />
       <div style={{ flex: 1, minWidth: 0 }}>
         {missing.length > 0 && (
           <p style={{ ...T.body, margin: 0, color: '#3D3926' }}>
@@ -59,7 +59,7 @@ export function SyncGapBanner() {
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           background: 'none', border: 'none', color: '#8A6D0B', cursor: 'pointer',
         }}>
-        <X size={14} />
+        <X size={ICON.sm} />
       </button>
     </div>
   )

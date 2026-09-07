@@ -13,6 +13,7 @@ import { isUnpaid, unpaidRow, UNPAID_TITLE } from '../unpaid'
 import { TransactionModal } from '../modals/TransactionModal'
 import type { Transaction } from '../types'
 import { todayISO } from '../dates'
+import { ICON, STROKE } from '@/lib/type'
 
 // ─── 16F · Financials YTD ─────────────────────────────────────────────────────
 // Spreadsheet-style table: each income/expense category as a row,
@@ -67,7 +68,7 @@ function Grip({ onGrab, lifted }: { onGrab: (e: React.PointerEvent) => void; lif
         color: lifted ? 'var(--sb-ink-1)' : '#CFC7B2',
         cursor: lifted ? 'grabbing' : 'grab', touchAction: 'none',
       }}>
-      <GripVertical size={13} strokeWidth={2} />
+      <GripVertical size={ICON.sm} strokeWidth={STROKE.rest} />
     </span>
   )
 }
@@ -146,7 +147,7 @@ function CategoryRows({ row, tone, open, hidden, onToggleOpen, onToggleHide, onD
                   background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-4)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
-                {open ? <ChevronDown size={13} strokeWidth={2.2} /> : <ChevronRight size={13} strokeWidth={2.2} />}
+                {open ? <ChevronDown size={ICON.sm} strokeWidth={STROKE.active} /> : <ChevronRight size={ICON.sm} strokeWidth={STROKE.active} />}
               </button>
             ) : <span style={{ width: 16, flexShrink: 0 }} />}
             <span style={{ display: 'inline-flex', color: row.cat.color }}><CategoryGlyph icon={row.cat.icon} size={12} /></span>
@@ -660,7 +661,7 @@ export function ReflectionScreen(_props?: any) {
                           width: 24, height: 24, borderRadius: 'var(--sb-r-pill)', padding: 0, flexShrink: 0,
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-4)', cursor: 'pointer',
-                        }}><Trash2 size={12} /></button>
+                        }}><Trash2 size={ICON.sm} /></button>
                     </div>
                   ))}
                 </div>
@@ -702,7 +703,7 @@ export function ReflectionScreen(_props?: any) {
                         background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-3)',
                         fontFamily: 'inherit', fontSize: 'var(--sb-t-micro)', fontWeight: 600, letterSpacing: '0.04em',
                       }}>
-                      {allOpen ? <ChevronsDownUp size={11} strokeWidth={2.2} /> : <ChevronsUpDown size={11} strokeWidth={2.2} />}
+                      {allOpen ? <ChevronsDownUp size={ICON.sm} strokeWidth={STROKE.active} /> : <ChevronsUpDown size={ICON.sm} strokeWidth={STROKE.active} />}
                       {allOpen ? 'COLLAPSE ALL' : 'EXPAND ALL'}
                     </button>
                   )}
@@ -804,7 +805,7 @@ export function ReflectionScreen(_props?: any) {
                   marginLeft: 'auto', width: 30, height: 30, borderRadius: 'var(--sb-r-pill)', padding: 0,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-3)', cursor: 'pointer',
-                }}><X size={14} /></button>
+                }}><X size={ICON.sm} /></button>
             </div>
 
             <div style={{ flexShrink: 0 }}>
@@ -883,7 +884,7 @@ export function ReflectionScreen(_props?: any) {
                         width: 28, height: 28, borderRadius: 'var(--sb-r-pill)', padding: 0, flexShrink: 0,
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-4)', cursor: 'pointer',
-                      }}><Trash2 size={13} /></button>
+                      }}><Trash2 size={ICON.sm} /></button>
                   </div>
                 )
               })}
@@ -907,7 +908,7 @@ export function ReflectionScreen(_props?: any) {
                   background: 'var(--sb-ink-1)', border: '1px solid var(--sb-ink-1)', color: 'var(--sb-ink-on-dark)',
                   fontFamily: 'inherit', fontSize: 'var(--sb-t-label)', fontWeight: 600,
                 }}>
-                <Plus size={14} /> Add an entry
+                <Plus size={ICON.sm} /> Add an entry
               </button>
             </div>
           </div>

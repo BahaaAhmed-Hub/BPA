@@ -23,6 +23,7 @@ import { isBudgetEntry } from '../budgetEntries'
 import { isUnpaid, unpaidRow, UNPAID_TITLE } from '../unpaid'
 import { liveBalances } from '../balances'
 import { todayISO as todayISO_, monthStartISO, monthEndISO } from '../dates'
+import { ICON } from '@/lib/type'
 
 // ─── Pill ─────────────────────────────────────────────────────────────────────
 
@@ -151,7 +152,7 @@ function AccountRow({ account, balance, unconverted, pending, selected, hovered,
           cursor: isDragging ? 'grabbing' : 'grab',
           touchAction: 'none',
         }}>
-        <GripVertical size={14} />
+        <GripVertical size={ICON.sm} />
       </button>
 
       <IconPicker
@@ -236,7 +237,7 @@ function AccountRow({ account, balance, unconverted, pending, selected, hovered,
           background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
           color: hovered || selected ? 'var(--sb-ink-3)' : '#D8D0BE', cursor: 'pointer',
         }}>
-        <Pencil size={12} />
+        <Pencil size={ICON.sm} />
       </button>
     </div>
   )
@@ -575,7 +576,7 @@ export function BalanceScreen() {
                 <span style={{
                   display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                   width: 18, height: 18, borderRadius: 'var(--sb-r-pill)', background: 'rgba(25,23,18,0.08)',
-                }}><X size={11} /></span>
+                }}><X size={ICON.sm} /></span>
               </button>
             )}
             {focused && hiddenByRange > 0 && (

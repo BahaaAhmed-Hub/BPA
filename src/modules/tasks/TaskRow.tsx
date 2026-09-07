@@ -11,6 +11,7 @@ import { useTaskStore } from '@/store/taskStore'
 import { useDeliverableGate } from './DeliverablePrompt'
 import { openLabel, resolveTaskVisuals, TASK_TYPE_ORDER } from './taskVisuals'
 import { ControlSlot, OverlaySelect, OverlayTime } from './controls'
+import { ICON, STROKE } from '@/lib/type'
 
 export function TaskRow({ task, onOpen, dense }: {
   task: Task
@@ -62,7 +63,7 @@ export function TaskRow({ task, onOpen, dense }: {
           display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
         }}
       >
-        {task.completed && <Check size={9} color="#fff" strokeWidth={3} />}
+        {task.completed && <Check size={ICON.sm} color="#fff" strokeWidth={STROKE.active} />}
       </button>
 
       <div style={{ flex: 1, minWidth: 0 }}>
@@ -97,7 +98,7 @@ export function TaskRow({ task, onOpen, dense }: {
           {meta}
           {attachmentCount > 0 && (
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
-              <Paperclip size={10} /> {attachmentCount}
+              <Paperclip size={ICON.sm} /> {attachmentCount}
             </span>
           )}
           <span style={{ flex: 1 }} />
@@ -113,7 +114,7 @@ export function TaskRow({ task, onOpen, dense }: {
             background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex',
             color: task.urgent ? 'var(--sb-negative)' : '#D8CFB8',
           }}>
-          <Flame size={14} strokeWidth={1.9} fill={task.urgent ? 'var(--sb-negative)' : 'none'} />
+          <Flame size={ICON.sm} strokeWidth={STROKE.rest} fill={task.urgent ? 'var(--sb-negative)' : 'none'} />
         </button>
 
         <ControlSlot size={14}>
@@ -129,7 +130,7 @@ export function TaskRow({ task, onOpen, dense }: {
         <ControlSlot size={14}>
           <span title={v.scheduled ? 'Scheduled' : 'Not scheduled'}
             style={{ display: 'flex', color: v.scheduled ? 'var(--sb-positive)' : '#D8CFB8' }}>
-            <CalendarDays size={14} strokeWidth={1.9} />
+            <CalendarDays size={ICON.sm} strokeWidth={STROKE.rest} />
           </span>
           <OverlayTime
             title={v.scheduled ? `Scheduled ${task.plannedTime ?? ''}`.trim() : 'Set a time'}
@@ -165,7 +166,7 @@ export function TaskRow({ task, onOpen, dense }: {
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.02em',
             }}
-          >{v.ownerInitials ?? <User size={12} strokeWidth={2} />}</span>
+          >{v.ownerInitials ?? <User size={ICON.sm} strokeWidth={STROKE.rest} />}</span>
           <OverlaySelect
             title={v.ownerName ?? 'Unassigned'}
             value={task.owner ?? ''}
@@ -179,7 +180,7 @@ export function TaskRow({ task, onOpen, dense }: {
           onClick={e => { e.stopPropagation(); deleteTask(task.id) }}
           title="Delete task"
           style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', color: '#D8CFB8' }}>
-          <Trash2 size={14} strokeWidth={1.9} />
+          <Trash2 size={ICON.sm} strokeWidth={STROKE.rest} />
         </button>
           </span>
         </p>

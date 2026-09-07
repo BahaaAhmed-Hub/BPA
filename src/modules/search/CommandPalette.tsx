@@ -13,6 +13,7 @@ import { useHabitsStore } from '@/store/habitsStore'
 import { useUIStore } from '@/store/uiStore'
 import { loadVisibleCompanies } from '@/types'
 import type { Task } from '@/types'
+import { ICON, STROKE } from '@/lib/type'
 
 const INK = 'var(--sb-ink-1)'
 const MUTED = 'var(--sb-ink-3)'
@@ -242,7 +243,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
 
         {/* Field */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '16px 18px' }}>
-          <Search size={17} strokeWidth={2} style={{ color: MUTED, flexShrink: 0 }} />
+          <Search size={ICON.lg} strokeWidth={STROKE.rest} style={{ color: MUTED, flexShrink: 0 }} />
           <input
             ref={inputRef}
             value={q}
@@ -301,7 +302,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
                   </span>
                   {on && (
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 'var(--sb-t-meta)', color: MUTED, flexShrink: 0 }}>
-                      <CornerDownLeft size={11} /> open
+                      <CornerDownLeft size={ICON.sm} /> open
                     </span>
                   )}
                 </div>

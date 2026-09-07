@@ -4,6 +4,7 @@ import { Bell, Search, Settings, LogOut } from 'lucide-react'
 import { useUIStore } from '@/store/uiStore'
 import { useAuthStore } from '@/store/authStore'
 import { signOut } from '@/lib/google'
+import { ICON } from '@/lib/type'
 
 interface TopBarProps {
   title: string
@@ -135,7 +136,7 @@ export function TopBar({ title, subtitle }: TopBarProps) {
                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(224,82,82,0.08)' }}
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
               >
-                <LogOut size={14} /> Sign out
+                <LogOut size={ICON.lg} /> Sign out
               </button>
             </div>
           </>

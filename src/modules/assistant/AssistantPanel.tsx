@@ -8,6 +8,7 @@ import { ASSISTANT_TOOLS, executeTool, type ToolContext } from '@/lib/assistantT
 import { loadAIConfig, type AIConfig } from '@/modules/settings/Settings'
 import { loadAccounts } from '@/lib/multiAccount'
 import { useBehavioralStore } from '@/store/behavioralStore'
+import { ICON } from '@/lib/type'
 
 // ─── Groq types (OpenAI-compatible) ──────────────────────────────────────────
 
@@ -114,7 +115,7 @@ function MessageBubble({ msg }: { msg: DisplayMessage }) {
           background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)',
           color: '#818CF8',
         }}>
-          <Wrench size={10} style={{ animation: 'spin 1s linear infinite' }} />
+          <Wrench size={ICON.sm} style={{ animation: 'spin 1s linear infinite' }} />
           {msg.content}
         </span>
       </div>
@@ -145,7 +146,7 @@ function MessageBubble({ msg }: { msg: DisplayMessage }) {
           background: 'linear-gradient(135deg, #4F46E5 0%, #818CF8 100%)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
-          <Brain size={13} color="white" />
+          <Brain size={ICON.sm} color="white" />
         </div>
       )}
       <div style={{
@@ -171,7 +172,7 @@ function ThinkingDot() {
         background: 'linear-gradient(135deg, #4F46E5 0%, #818CF8 100%)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}>
-        <Brain size={13} color="white" />
+        <Brain size={ICON.sm} color="white" />
       </div>
       <div style={{ display: 'flex', gap: 4, padding: '10px 14px', background: 'var(--sb-field)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-chip) var(--sb-r-card) var(--sb-r-card) var(--sb-r-card)' }}>
         {[0, 1, 2].map(i => (
@@ -418,7 +419,7 @@ export function AssistantPanel({ open, onClose }: AssistantPanelProps) {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             boxShadow: 'var(--sb-shadow-menu)',
           }}>
-            <Brain size={16} color="white" />
+            <Brain size={ICON.md} color="white" />
           </div>
           <div style={{ flex: 1 }}>
             <p style={{ margin: 0, fontSize: 'var(--sb-t-label)', fontWeight: 700, color: 'var(--sb-ink-1)' }}>Professor AI</p>
@@ -432,7 +433,7 @@ export function AssistantPanel({ open, onClose }: AssistantPanelProps) {
           )}
           <button onClick={onClose}
             style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', padding: 4, display: 'flex' }}>
-            <X size={16} />
+            <X size={ICON.md} />
           </button>
         </div>
 
@@ -462,7 +463,7 @@ export function AssistantPanel({ open, onClose }: AssistantPanelProps) {
                       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     }}>
                     {s}
-                    <ChevronDown size={13} style={{ transform: 'rotate(-90deg)', color: 'var(--sb-ink-3)', flexShrink: 0 }} />
+                    <ChevronDown size={ICON.sm} style={{ transform: 'rotate(-90deg)', color: 'var(--sb-ink-3)', flexShrink: 0 }} />
                   </button>
                 ))}
               </div>
@@ -514,8 +515,8 @@ export function AssistantPanel({ open, onClose }: AssistantPanelProps) {
                 boxShadow: !input.trim() || thinking ? 'none' : '0 0 10px rgba(99,102,241,0.4)',
               }}>
               {thinking
-                ? <Loader2 size={15} color="#818CF8" style={{ animation: 'spin 1s linear infinite' }} />
-                : <Send size={14} color={!input.trim() ? '#818CF8' : 'white'} />
+                ? <Loader2 size={ICON.md} color="#818CF8" style={{ animation: 'spin 1s linear infinite' }} />
+                : <Send size={ICON.sm} color={!input.trim() ? '#818CF8' : 'white'} />
               }
             </button>
           </div>
@@ -553,7 +554,7 @@ export function AssistantToggle({ open, onClick }: AssistantToggleProps) {
         zIndex: 148,
         transition: 'right 0.25s cubic-bezier(0.4,0,0.2,1), background 0.2s, box-shadow 0.2s',
       }}>
-      {open ? <X size={20} color="var(--sb-ink-3)" /> : <Brain size={22} color="var(--sb-accent)" />}
+      {open ? <X size={ICON.lg} color="var(--sb-ink-3)" /> : <Brain size={ICON.lg} color="var(--sb-accent)" />}
     </button>
   )
 }

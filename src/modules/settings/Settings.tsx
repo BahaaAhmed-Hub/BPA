@@ -57,6 +57,7 @@ import { loadCustomStatuses, saveCustomStatuses, moveStatus, DEFAULT_STATUSES, t
 import { loadRates, setRate } from '@/modules/finance/fx'
 import { useFinanceStore } from '@/modules/finance/financeStore'
 import { loadRules } from '@/modules/finance/modals/BudgetRuleModal'
+import { ICON, STROKE } from '@/lib/type'
 import {
   loadReminders, saveReminders, defaultReminder, dueDatesFor, reminderTitle,
   type MoneyReminder,
@@ -508,7 +509,7 @@ function ProfileSection({
             color: tzSyncing ? 'var(--sb-ink-4)' : 'var(--sb-ink-3)',
             cursor: tzSyncing ? 'default' : 'pointer',
           }}>
-          <LocateFixed size={15} style={tzSyncing ? { opacity: 0.5 } : undefined} />
+          <LocateFixed size={ICON.md} style={tzSyncing ? { opacity: 0.5 } : undefined} />
         </button>
       </DRow>
 
@@ -759,7 +760,7 @@ function CompanyCard({
           color: 'var(--sb-ink-3)',
         }}>
           <span style={{ color: co.color, fontWeight: 600 }}>{users.length}</span>
-          {usersOpen ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
+          {usersOpen ? <ChevronUp size={ICON.sm} /> : <ChevronDown size={ICON.sm} />}
         </button>
 
         <Toggle checked={co.isActive} onChange={v => onUpdate({ isActive: v })} />
@@ -774,12 +775,12 @@ function CompanyCard({
             color: co.hidden ? 'var(--sb-accent)' : 'var(--sb-ink-3)',
           }}
         >
-          {co.hidden ? <EyeOff size={13} /> : <Eye size={13} />}
+          {co.hidden ? <EyeOff size={ICON.sm} /> : <Eye size={ICON.sm} />}
         </button>
 
         <button onClick={onDelete}
           style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', padding: 3, display: 'flex', alignItems: 'center' }}>
-          <Trash2 size={12} />
+          <Trash2 size={ICON.sm} />
         </button>
       </div>
 
@@ -824,7 +825,7 @@ function CompanyCard({
 
                 <button onClick={() => removeUser(u.id)}
                   style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', padding: 2, display: 'flex', alignItems: 'center', flexShrink: 0 }}>
-                  <Trash2 size={10} />
+                  <Trash2 size={ICON.sm} />
                 </button>
               </div>
             )
@@ -832,7 +833,7 @@ function CompanyCard({
 
           {/* Add user row */}
           <div style={{ display: 'flex', gap: 6, marginTop: 8, alignItems: 'center' }}>
-            <Plus size={10} color="#6B7280" style={{ flexShrink: 0 }} />
+            <Plus size={ICON.sm} color="#6B7280" style={{ flexShrink: 0 }} />
             <input value={newUserName} onChange={e => setNewUserName(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') addUser() }}
               placeholder="Name"
@@ -934,11 +935,11 @@ function CompaniesSection({
           <div style={{ display: 'flex', gap: 8 }}>
             <button onClick={() => { setAdding(false); setNewName('') }}
               style={{ padding: '6px 14px', borderRadius: 'var(--sb-r-chip)', background: 'transparent', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body-s)', cursor: 'pointer', display: 'flex', gap: 5, alignItems: 'center' }}>
-              <X size={11} /> Cancel
+              <X size={ICON.sm} /> Cancel
             </button>
             <button onClick={addCompany} disabled={!newName.trim()}
               style={{ padding: '6px 16px', borderRadius: 'var(--sb-r-chip)', background: 'rgba(var(--sb-accent-rgb),0.12)', border: '1px solid rgba(var(--sb-accent-rgb),0.31)', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', fontWeight: 500, cursor: 'pointer', opacity: newName.trim() ? 1 : 0.4, display: 'flex', gap: 5, alignItems: 'center' }}>
-              <Plus size={11} /> Add Company
+              <Plus size={ICON.sm} /> Add Company
             </button>
           </div>
         </div>
@@ -949,7 +950,7 @@ function CompaniesSection({
           border: '1px dashed var(--sb-border)',
           color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body)', cursor: 'pointer',
         }}>
-          <Plus size={13} /> Add a company / context
+          <Plus size={ICON.sm} /> Add a company / context
         </button>
       )}
     </div>
@@ -1066,7 +1067,7 @@ function SettingsHabitForm({
               }}>
               {s.image
                 ? <img src={s.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                : <ImagePlus size={18} />}
+                : <ImagePlus size={ICON.lg} />}
             </button>
             {s.image && (
               <button
@@ -1078,7 +1079,7 @@ function SettingsHabitForm({
                   padding: 0, cursor: 'pointer', background: 'var(--sb-ink-1)', border: 'var(--sb-border-emphasis) solid var(--sb-field)',
                   color: 'var(--sb-ink-on-dark)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
-                <X size={9} strokeWidth={3} />
+                <X size={ICON.sm} strokeWidth={STROKE.active} />
               </button>
             )}
           </span>
@@ -1192,7 +1193,7 @@ function SettingsHabitForm({
             cursor: valid ? 'pointer' : 'default',
             display: 'flex', gap: 6, alignItems: 'center',
           }}>
-          <Plus size={14} /> {saveLabel}
+          <Plus size={ICON.sm} /> {saveLabel}
         </button>
         <button onClick={onCancel}
           style={{
@@ -1201,7 +1202,7 @@ function SettingsHabitForm({
             fontSize: 'var(--sb-t-body)', fontFamily: 'inherit', cursor: 'pointer',
             display: 'flex', gap: 6, alignItems: 'center',
           }}>
-          <X size={13} /> Cancel
+          <X size={ICON.sm} /> Cancel
         </button>
       </div>
     </div>
@@ -1460,11 +1461,11 @@ function HabitsSection() {
             <Toggle checked={h.isActive} onChange={() => toggle(h.id)} />
             <button onClick={() => setEditingId(editingId === h.id ? null : h.id)} title="Edit habit"
               style={{ background: 'none', border: 'none', cursor: 'pointer', color: editingId === h.id ? 'var(--sb-accent)' : 'var(--sb-ink-3)', padding: 4 }}>
-              <Pencil size={13} />
+              <Pencil size={ICON.sm} />
             </button>
             <button onClick={() => { if (editingId === h.id) setEditingId(null); storeDel(h.id) }}
               style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', padding: 4 }}>
-              <Trash2 size={13} />
+              <Trash2 size={ICON.sm} />
             </button>
           </div>
 
@@ -1523,7 +1524,7 @@ function HabitsSection() {
           border: '1px dashed var(--sb-border)',
           color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body)', cursor: 'pointer',
         }}>
-          <Plus size={13} /> Add a habit
+          <Plus size={ICON.sm} /> Add a habit
         </button>
       )}
 
@@ -1636,11 +1637,11 @@ function TaskStatusesSection() {
       <div style={{ display: 'flex', gap: 8 }}>
         <button onClick={() => { setAdding(false); setEditIdx(null) }}
           style={{ padding: '5px 12px', borderRadius: 'var(--sb-r-chip)', background: 'transparent', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body-s)', cursor: 'pointer', display: 'flex', gap: 4, alignItems: 'center' }}>
-          <X size={11} /> Cancel
+          <X size={ICON.sm} /> Cancel
         </button>
         <button onClick={confirmSave}
           style={{ padding: '5px 14px', borderRadius: 'var(--sb-r-chip)', background: 'rgba(var(--sb-accent-rgb),0.12)', border: '1px solid rgba(var(--sb-accent-rgb),0.31)', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', fontWeight: 500, cursor: 'pointer', display: 'flex', gap: 4, alignItems: 'center' }}>
-          <Plus size={11} /> {adding ? 'Add Status' : 'Save'}
+          <Plus size={ICON.sm} /> {adding ? 'Add Status' : 'Save'}
         </button>
       </div>
     </div>
@@ -1672,7 +1673,7 @@ function TaskStatusesSection() {
               background: overIdx === i ? 'rgba(var(--sb-accent-rgb),0.10)' : 'transparent',
             }}>
             <span title="Drag to reorder" style={{ display: 'flex', color: '#C9C0A8', cursor: 'grab', flexShrink: 0 }}>
-              <GripVertical size={14} />
+              <GripVertical size={ICON.sm} />
             </span>
             <div style={{ width: 10, height: 10, borderRadius: 'var(--sb-r-pill)', background: s.color, flexShrink: 0 }} />
             <span style={{ flex: 1, fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)' }}>{s.label}</span>
@@ -1681,11 +1682,11 @@ function TaskStatusesSection() {
             </span>
             <button onClick={() => startEdit(i)} title="Edit"
               style={{ background: 'none', border: 'none', cursor: 'pointer', color: isEditingRow(i) ? 'var(--sb-accent)' : 'var(--sb-ink-3)', padding: 4 }}>
-              <Pencil size={13} />
+              <Pencil size={ICON.sm} />
             </button>
             <button onClick={() => remove(i)} title="Delete"
               style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', padding: 4 }}>
-              <Trash2 size={13} />
+              <Trash2 size={ICON.sm} />
             </button>
           </div>
           {isEditingRow(i) && formEl}
@@ -1701,7 +1702,7 @@ function TaskStatusesSection() {
           border: '1px dashed var(--sb-border)',
           color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body)', cursor: 'pointer',
         }}>
-          <Plus size={13} /> Add a status
+          <Plus size={ICON.sm} /> Add a status
         </button>
         <button onClick={resetDefaults} title="Reset to defaults" style={{
           padding: '11px 14px', borderRadius: 'var(--sb-r-sm)', background: 'transparent',
@@ -1709,7 +1710,7 @@ function TaskStatusesSection() {
           color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body-s)', cursor: 'pointer',
           display: 'flex', alignItems: 'center', gap: 5,
         }}>
-          <RefreshCw size={12} /> Reset
+          <RefreshCw size={ICON.sm} /> Reset
         </button>
       </div>
     </div>
@@ -1850,9 +1851,9 @@ function AccountsSection({
         <div style={{ flex: 1 }}>
           <p style={{ margin: 0, fontSize: 'var(--sb-t-label)', fontWeight: 500, color: 'var(--sb-ink-1)' }}>{primaryEmail || 'Primary Google Account'}</p>
           <div style={{ margin: '5px 0 0', display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-            <IntegrationBadge icon={<CalendarDays size={10} />} label="Calendar" active />
-            <IntegrationBadge icon={<Mail size={10} />} label="Gmail" active />
-            <IntegrationBadge icon={<HardDrive size={10} />} label="Drive" active />
+            <IntegrationBadge icon={<CalendarDays size={ICON.sm} />} label="Calendar" active />
+            <IntegrationBadge icon={<Mail size={ICON.sm} />} label="Gmail" active />
+            <IntegrationBadge icon={<HardDrive size={ICON.sm} />} label="Drive" active />
           </div>
         </div>
         <span style={{ fontSize: 'var(--sb-t-micro)', padding: '3px 10px', borderRadius: 'var(--sb-r-card)', background: 'rgba(29,158,117,0.1)', color: '#1D9E75', border: '1px solid rgba(29,158,117,0.2)' }}>
@@ -1862,13 +1863,13 @@ function AccountsSection({
           <button onClick={() => loadCalendars({ id: 'primary', email: primaryEmail, name: '', providerToken: primaryToken, scopes: [], connectedAt: '', isPrimary: true })}
             style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', padding: 4, display: 'flex', alignItems: 'center', gap: 4, fontSize: 'var(--sb-t-meta)' }}
             title="Load calendars">
-            <RefreshCw size={12} style={{ animation: loadingCals === 'primary' ? 'spin 1s linear infinite' : 'none' }} />
+            <RefreshCw size={ICON.sm} style={{ animation: loadingCals === 'primary' ? 'spin 1s linear infinite' : 'none' }} />
           </button>
         )}
         <button onClick={() => void googleSignOut()}
           style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-negative)', padding: 4, display: 'flex', alignItems: 'center' }}
           title="Sign out">
-          <LogOut size={13} />
+          <LogOut size={ICON.sm} />
         </button>
       </div>
 
@@ -1925,9 +1926,9 @@ function AccountsSection({
                 <p style={{ margin: '2px 0 0', fontSize: 'var(--sb-t-meta)', color: '#E0A524' }}>⚠ Access lost — reconnect to restore</p>
               ) : (
                 <div style={{ margin: '5px 0 0', display: 'flex', gap: 5, flexWrap: 'wrap', alignItems: 'center' }}>
-                  <IntegrationBadge icon={<CalendarDays size={10} />} label="Calendar" active={acc.scopes.some(s => s.includes('calendar'))} />
-                  <IntegrationBadge icon={<Mail size={10} />} label="Gmail" active={acc.scopes.some(s => s.includes('gmail'))} />
-                  <IntegrationBadge icon={<HardDrive size={10} />} label="Drive" active={acc.scopes.some(s => s.includes('drive'))}
+                  <IntegrationBadge icon={<CalendarDays size={ICON.sm} />} label="Calendar" active={acc.scopes.some(s => s.includes('calendar'))} />
+                  <IntegrationBadge icon={<Mail size={ICON.sm} />} label="Gmail" active={acc.scopes.some(s => s.includes('gmail'))} />
+                  <IntegrationBadge icon={<HardDrive size={ICON.sm} />} label="Drive" active={acc.scopes.some(s => s.includes('drive'))}
                     onGrant={!acc.scopes.some(s => s.includes('drive')) ? () => void reconnectAccount(acc) : undefined} />
                 </div>
               )}
@@ -1942,12 +1943,12 @@ function AccountsSection({
                   display: 'flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap',
                 }}
               >
-                <RefreshCw size={11} style={{ animation: isRecon ? 'spin 1s linear infinite' : 'none' }} />
+                <RefreshCw size={ICON.sm} style={{ animation: isRecon ? 'spin 1s linear infinite' : 'none' }} />
                 {isRecon ? 'Redirecting…' : 'Reconnect'}
               </button>
             ) : (
               <button onClick={() => void loadCalendars(acc)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', padding: 4, display: 'flex' }} title="Load calendars">
-                <RefreshCw size={12} style={{ animation: loadingCals === acc.id ? 'spin 1s linear infinite' : 'none' }} />
+                <RefreshCw size={ICON.sm} style={{ animation: loadingCals === acc.id ? 'spin 1s linear infinite' : 'none' }} />
               </button>
             )}
             <button
@@ -1955,10 +1956,10 @@ function AccountsSection({
               title={hiddenAccts.has(acc.email) ? 'Show in Calendar' : 'Hide from Calendar'}
               style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, display: 'flex', color: hiddenAccts.has(acc.email) ? '#4B5268' : 'var(--sb-ink-3)' }}
             >
-              {hiddenAccts.has(acc.email) ? <EyeOff size={13} /> : <Eye size={13} />}
+              {hiddenAccts.has(acc.email) ? <EyeOff size={ICON.sm} /> : <Eye size={ICON.sm} />}
             </button>
             <button onClick={() => removeAcc(acc.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-negative)', padding: 4, display: 'flex' }}>
-              <Trash2 size={13} />
+              <Trash2 size={ICON.sm} />
             </button>
           </div>
         )
@@ -1983,7 +1984,7 @@ function AccountsSection({
             color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body)', fontWeight: 500, cursor: 'pointer',
             opacity: adding ? 0.6 : 1,
           }}>
-          <LogIn size={14} />
+          <LogIn size={ICON.sm} />
           {adding ? 'Connecting…' : '+ Connect another Google account'}
         </button>
 
@@ -2004,7 +2005,7 @@ function AccountsSection({
               whiteSpace: 'nowrap',
             }}
           >
-            <Trash2 size={13} />
+            <Trash2 size={ICON.sm} />
             Remove all
           </button>
         )}
@@ -2085,7 +2086,7 @@ function ProfessorSection() {
             placeholder={ai.provider === 'groq' ? 'gsk_...' : 'sk-ant-...'}
             style={{ ...inputStyle, flex: 1, fontFamily: 'monospace', fontSize: 'var(--sb-t-meta)' }} />
           <button onClick={() => setShowKey(v => !v)} style={{ background: 'transparent', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-chip)', padding: '4px 8px', cursor: 'pointer', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-meta)', flexShrink: 0 }}>
-            {showKey ? <EyeOff size={13} /> : <Eye size={13} />}
+            {showKey ? <EyeOff size={ICON.sm} /> : <Eye size={ICON.sm} />}
           </button>
         </div>
       </FieldRow>
@@ -2197,7 +2198,7 @@ function AppearanceSection({ s, set }: { s: AppSettings; set: (p: Partial<AppSet
                   background: a.hex, border: '1px solid rgba(25,23,18,0.12)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
-                  {on && <Check size={11} strokeWidth={3} color="var(--sb-ink-1)" />}
+                  {on && <Check size={ICON.sm} strokeWidth={STROKE.active} color="var(--sb-ink-1)" />}
                 </span>
                 {a.name}
               </button>
@@ -2411,12 +2412,12 @@ function BlockingRulesSection() {
           <button onClick={() => openEdit(rule)}
             style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', display: 'flex', padding: 4, opacity: 0.7, flexShrink: 0 }}
             title="Edit rule">
-            <Pencil size={13} />
+            <Pencil size={ICON.sm} />
           </button>
           <button onClick={() => deleteRule(rule.id)}
             style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-negative)', display: 'flex', padding: 4, opacity: 0.7, flexShrink: 0 }}
             title="Delete rule">
-            <Trash2 size={14} />
+            <Trash2 size={ICON.sm} />
           </button>
         </div>
       ))}
@@ -2544,7 +2545,7 @@ function BlockingRulesSection() {
             border: '1px solid rgba(var(--sb-accent-rgb),0.25)',
             color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body-s)',
           }}>
-          <Plus size={13} /> Add Rule
+          <Plus size={ICON.sm} /> Add Rule
         </button>
       )}
     </div>
@@ -2608,7 +2609,7 @@ function BehavioralSection() {
                 textAlign: 'left', width: '100%', opacity: m.available ? 1 : 0.5,
               }}
             >
-              <Swords size={16} color={mode === m.id ? SB.accent : SB.textDim} strokeWidth={1.8} style={{ flexShrink: 0 }} />
+              <Swords size={ICON.md} color={mode === m.id ? SB.accent : SB.textDim} strokeWidth={STROKE.rest} style={{ flexShrink: 0 }} />
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span style={{ fontSize: 'var(--sb-t-label)', fontWeight: 600, color: SB.text }}>{m.label}</span>
@@ -3377,7 +3378,7 @@ function BillingSection() {
             <button title={`Download ${inv.date} invoice`} style={{
               background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-4)',
               padding: 2, display: 'flex', alignItems: 'center', flexShrink: 0,
-            }}><Download size={14} /></button>
+            }}><Download size={ICON.sm} /></button>
           </div>
         ))}
       </div>
@@ -3522,7 +3523,7 @@ function IntegrationsSection() {
             <p style={{ margin: '1px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>Tasks and notes flow both ways — nothing is deleted on either side</p>
           </div>
           <button style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 13px', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-accent)', border: '1px solid rgba(25,23,18,0.18)', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-1)', cursor: 'pointer', flexShrink: 0 }}>
-            <Plus size={12} /> <span style={{ whiteSpace: 'nowrap' }}>Add integration</span>
+            <Plus size={ICON.sm} /> <span style={{ whiteSpace: 'nowrap' }}>Add integration</span>
           </button>
         </div>
 
@@ -3685,7 +3686,7 @@ function AutomationSection() {
         border: '1px solid var(--sb-border)', fontSize: 'var(--sb-t-body-s)', fontWeight: 500,
         color: 'var(--sb-ink-3)', cursor: 'pointer',
       }}>
-        <Plus size={13} /> New rule
+        <Plus size={ICON.sm} /> New rule
       </button>
 
       {/* Run log footer */}
@@ -3723,7 +3724,7 @@ function DataPrivacySection() {
             background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
             fontSize: 'var(--sb-t-body-s)', fontWeight: 500, color: 'var(--sb-ink-1)', cursor: 'pointer',
           }}>
-            <HardDrive size={13} />
+            <HardDrive size={ICON.sm} />
             {exportStatus === 'exporting' ? 'Preparing…' : exportStatus === 'done' ? 'Downloaded ✓' : 'Export all data'}
           </button>
         </div>
@@ -3767,7 +3768,7 @@ function DataPrivacySection() {
             background: 'rgba(198,40,40,0.08)', border: '1px solid rgba(198,40,40,0.3)',
             fontSize: 'var(--sb-t-body-s)', fontWeight: 500, color: 'var(--sb-negative)', cursor: 'pointer',
           }}>
-            <Trash2 size={13} /> Delete account
+            <Trash2 size={ICON.sm} /> Delete account
           </button>
         </div>
       </div>
@@ -3817,7 +3818,7 @@ function AccountsAndCompaniesSection({
 
       {/* Accounts */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 10 }}>
-        <Mail size={13} color="var(--sb-ink-3)" />
+        <Mail size={ICON.sm} color="var(--sb-ink-3)" />
         <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', fontWeight: 700, color: 'var(--sb-ink-1)' }}>Google accounts</p>
         {unusedAccounts > 0 && (
           <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>
@@ -3831,7 +3832,7 @@ function AccountsAndCompaniesSection({
 
       {/* Companies */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 10 }}>
-        <Building2 size={13} color="var(--sb-ink-3)" />
+        <Building2 size={ICON.sm} color="var(--sb-ink-3)" />
         <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', fontWeight: 700, color: 'var(--sb-ink-1)' }}>Companies</p>
         {unlinked > 0 && (
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-negative)', fontWeight: 600 }}>
@@ -4176,7 +4177,7 @@ export function Settings() {
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.35fr) minmax(0, 1fr)', gap: 16, alignItems: 'start' }}>
           <SectionCard id="accounts" active={activeSection === 'accounts'} actions={
             <button onClick={() => window.dispatchEvent(new CustomEvent('professor:openWizard'))} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-field)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-meta)', cursor: 'pointer' }}>
-              <Wand2 size={11} /> Wizard
+              <Wand2 size={ICON.sm} /> Wizard
             </button>
           }>
             <AccountsAndCompaniesSection
@@ -4378,7 +4379,7 @@ export function Settings() {
               fontSize: 'var(--sb-t-body)', fontWeight: 500, fontFamily: 'inherit',
               boxShadow: 'var(--sb-shadow-control)',
             }}>
-            <ArrowUpRight size={14} strokeWidth={2} /> Setup wizard
+            <ArrowUpRight size={ICON.sm} strokeWidth={STROKE.rest} /> Setup wizard
           </button>
           <button
             onClick={() => exportAllSettings()}
@@ -4389,7 +4390,7 @@ export function Settings() {
               fontSize: 'var(--sb-t-body)', fontWeight: 500, fontFamily: 'inherit',
               boxShadow: 'var(--sb-shadow-control)',
             }}>
-            <Database size={14} strokeWidth={2} /> Export
+            <Database size={ICON.sm} strokeWidth={STROKE.rest} /> Export
           </button>
         </div>
       </div>

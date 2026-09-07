@@ -17,6 +17,7 @@ import { TASK_TYPE_ORDER, initials, resolveTaskVisuals, formatScheduleLabel } fr
 import { scheduleTaskToCalendar } from '@/lib/aiScheduler'
 import { resolveTaskCalendar, verifyTaskEvent } from '@/lib/taskCalendar'
 import { SchedulePopover } from './SchedulePopover'
+import { ICON, STROKE } from '@/lib/type'
 
 const PRIORITIES: Priority[] = ['P0', 'P1', 'P2', 'P3']
 
@@ -91,9 +92,9 @@ const SECTION_LABEL: React.CSSProperties = {
 /** Each kind of entry gets its own glyph, so files and links stand out from
  *  the ordinary field edits around them. */
 function ActivityIcon({ type }: { type: TaskActivity['type'] }) {
-  if (type === 'attachment_added' || type === 'attachment_removed') return <Paperclip size={10} />
-  if (type === 'link_added' || type === 'link_removed') return <Link2 size={10} />
-  return <History size={10} />
+  if (type === 'attachment_added' || type === 'attachment_removed') return <Paperclip size={ICON.sm} />
+  if (type === 'link_added' || type === 'link_removed') return <Link2 size={ICON.sm} />
+  return <History size={ICON.sm} />
 }
 
 // ─── Panel ───────────────────────────────────────────────────────────────────
@@ -298,7 +299,7 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
             border: `1px solid ${finished ? 'var(--sb-positive)' : 'var(--sb-border)'}`,
             color: finished ? 'var(--sb-card)' : 'var(--sb-ink-3)',
           }}>
-          <Check size={15} />
+          <Check size={ICON.md} />
         </button>
         <button
           title={cancelled ? 'Put it back — it is on again' : 'Not doing it'}
@@ -310,13 +311,13 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
             border: `1px solid ${cancelled ? 'var(--sb-ink-3)' : 'var(--sb-border)'}`,
             color: cancelled ? 'var(--sb-card)' : 'var(--sb-ink-3)',
           }}>
-          <Ban size={14} />
+          <Ban size={ICON.sm} />
         </button>
-        <button title={expanded ? 'Narrow the panel' : 'Widen the panel'} onClick={() => setExpanded(x => !x)} style={ICON_BTN}><Maximize2 size={14} /></button>
+        <button title={expanded ? 'Narrow the panel' : 'Widen the panel'} onClick={() => setExpanded(x => !x)} style={ICON_BTN}><Maximize2 size={ICON.sm} /></button>
         <button title="Delete task" onClick={() => { deleteTask(task.id); onClose() }} style={ICON_BTN}>
-          <Trash2 size={15} />
+          <Trash2 size={ICON.md} />
         </button>
-        <button title="Close" onClick={onClose} style={ICON_BTN}><X size={16} /></button>
+        <button title="Close" onClick={onClose} style={ICON_BTN}><X size={ICON.md} /></button>
       </div>
 
       {/* ── Scrolling body ───────────────────────────────────────────────── */}
@@ -355,11 +356,11 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
           {/* Schedule — the widest value, so it takes the full row */}
           <div ref={dateRef} style={{ gridColumn: '1 / -1', position: 'relative' }}>
             <button onClick={() => setDatePickerOpen(o => !o)} style={{ ...CELL, width: '100%' }}>
-              <CalendarDays size={14} strokeWidth={1.9} style={{ flexShrink: 0, color: task.dueDate ? 'var(--sb-positive)' : 'var(--sb-ink-4)' }} />
+              <CalendarDays size={ICON.sm} strokeWidth={STROKE.rest} style={{ flexShrink: 0, color: task.dueDate ? 'var(--sb-positive)' : 'var(--sb-ink-4)' }} />
               <span style={{ ...CELL_VALUE, color: task.dueDate ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)' }}>
                 {scheduleLabel}
               </span>
-              <ChevronDown size={13} style={{ flexShrink: 0, color: 'var(--sb-ink-4)' }} />
+              <ChevronDown size={ICON.sm} style={{ flexShrink: 0, color: 'var(--sb-ink-4)' }} />
             </button>
             {datePickerOpen && (
               <SchedulePopover
@@ -382,7 +383,7 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
                   disabled={pushing}
                   title="The event this task made is not in Google any more"
                   style={{ ...CELL, gridColumn: '1 / -1', width: '100%', borderColor: '#E7C9C9', background: '#FBF0F0' }}>
-                  <CalendarDays size={14} strokeWidth={1.9} style={{ flexShrink: 0, color: 'var(--sb-negative)' }} />
+                  <CalendarDays size={ICON.sm} strokeWidth={STROKE.rest} style={{ flexShrink: 0, color: 'var(--sb-negative)' }} />
                   <span style={{ ...CELL_VALUE, color: 'var(--sb-negative)' }}>
                     {pushing ? 'Putting it back…' : pushError ?? 'Not in Google any more — put it back'}
                   </span>
@@ -392,7 +393,7 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
                 onClick={() => focusOn({ module: 'calendar', id: task.gcalEventId!, date: (eventWhen ?? task.dueDate)?.slice(0, 10) })}
                 title={eventWhen ? `Blocked ${new Date(eventWhen).toLocaleString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}` : 'Open the day it is blocked on'}
                 style={{ ...CELL, gridColumn: '1 / -1', width: '100%' }}>
-                <CalendarDays size={14} strokeWidth={1.9} style={{ flexShrink: 0, color: eventState === 'checking' ? 'var(--sb-ink-4)' : 'var(--sb-positive)' }} />
+                <CalendarDays size={ICON.sm} strokeWidth={STROKE.rest} style={{ flexShrink: 0, color: eventState === 'checking' ? 'var(--sb-ink-4)' : 'var(--sb-positive)' }} />
                 <span style={{ ...CELL_VALUE, color: 'var(--sb-ink-3)' }}>
                   {eventState === 'checking' ? 'Checking the calendar…' : (
                     <>On {calTarget.companyName ? `${calTarget.companyName}'s calendar` : 'your calendar'}
@@ -401,7 +402,7 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
                       : task.plannedTime ? ` · ${task.plannedTime}` : ''}</>
                   )}
                 </span>
-                <ExternalLink size={12} style={{ flexShrink: 0, color: 'var(--sb-ink-4)' }} />
+                <ExternalLink size={ICON.sm} style={{ flexShrink: 0, color: 'var(--sb-ink-4)' }} />
               </button>
               )
             ) : (
@@ -410,7 +411,7 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
                 disabled={pushing}
                 title="Create the Google Calendar event for this task"
                 style={{ ...CELL, gridColumn: '1 / -1', width: '100%' }}>
-                <CalendarDays size={14} strokeWidth={1.9} style={{ flexShrink: 0, color: 'var(--sb-ink-4)' }} />
+                <CalendarDays size={ICON.sm} strokeWidth={STROKE.rest} style={{ flexShrink: 0, color: 'var(--sb-ink-4)' }} />
                 <span style={{ ...CELL_VALUE, color: pushError ? 'var(--sb-negative)' : 'var(--sb-ink-3)' }}>
                   {pushing ? 'Adding it…' : pushError ?? `Not on the calendar — add it to ${calWhere}`}
                 </span>
@@ -429,7 +430,7 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
 
           {/* Priority */}
           <label style={{ ...CELL, position: 'relative' }}>
-            <BarChart3 size={14} strokeWidth={1.9} style={{
+            <BarChart3 size={ICON.sm} strokeWidth={STROKE.rest} style={{
               flexShrink: 0, color: task.priority ? PRIORITY_META[task.priority].color : 'var(--sb-ink-4)',
             }} />
             <span style={{ ...CELL_VALUE, color: task.priority ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)' }}>
@@ -453,7 +454,7 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
               color: owner ? 'var(--sb-card)' : 'var(--sb-ink-4)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 'var(--sb-t-micro)', fontWeight: 700,
-            }}>{owner ? initials(owner.name) : <User size={10} strokeWidth={2} />}</span>
+            }}>{owner ? initials(owner.name) : <User size={ICON.sm} strokeWidth={STROKE.rest} />}</span>
             <span style={{ ...CELL_VALUE, color: owner ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)' }}>
               {owner ? owner.name : 'Unassigned'}
             </span>
@@ -470,7 +471,7 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
               if (url) patch({ links: [...(task.links ?? []), url] })
             }}
             style={CELL}>
-            <Link2 size={14} strokeWidth={1.9} style={{ flexShrink: 0, color: linkCount ? 'var(--sb-ink-3)' : 'var(--sb-ink-4)' }} />
+            <Link2 size={ICON.sm} strokeWidth={STROKE.rest} style={{ flexShrink: 0, color: linkCount ? 'var(--sb-ink-3)' : 'var(--sb-ink-4)' }} />
             <span style={{ ...CELL_VALUE, color: linkCount ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)' }}>
               {linkCount ? `${linkCount} link${linkCount === 1 ? '' : 's'}` : 'Add a link'}
             </span>
@@ -478,7 +479,7 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
 
           {/* Files */}
           <button onClick={() => fileRef.current?.click()} style={CELL}>
-            <Folder size={14} strokeWidth={1.9} style={{ flexShrink: 0, color: attachments.length ? 'var(--sb-ink-3)' : 'var(--sb-ink-4)' }} />
+            <Folder size={ICON.sm} strokeWidth={STROKE.rest} style={{ flexShrink: 0, color: attachments.length ? 'var(--sb-ink-3)' : 'var(--sb-ink-4)' }} />
             <span style={{ ...CELL_VALUE, color: attachments.length ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)' }}>
               {attachments.length ? `${attachments.length} file${attachments.length === 1 ? '' : 's'}` : 'Add a file'}
             </span>
@@ -496,19 +497,19 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
                   border: s.done ? 'var(--sb-border-emphasis) solid var(--sb-ink-1)' : 'var(--sb-border-emphasis) solid #CFC6B0',
                   background: s.done ? 'var(--sb-ink-1)' : 'var(--sb-card)', cursor: 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>{s.done && <Check size={9} color="#fff" strokeWidth={3} />}</button>
+                }}>{s.done && <Check size={ICON.sm} color="#fff" strokeWidth={STROKE.active} />}</button>
                 <span style={{
                   flex: 1, fontSize: 'var(--sb-t-body-s)', color: s.done ? 'var(--sb-ink-4)' : 'var(--sb-ink-1)',
                   textDecoration: s.done ? 'line-through' : 'none',
                 }}>{s.text}</span>
                 <button onClick={() => patch({ checklist: checklist.filter(x => x.id !== s.id) })}
                   title="Remove subtask" style={{ ...ICON_BTN, width: 20, height: 20, color: '#C9C0A8' }}>
-                  <X size={12} />
+                  <X size={ICON.sm} />
                 </button>
               </div>
             ))}
             <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '5px 0' }}>
-              <Plus size={13} color="#C9C0A8" style={{ flexShrink: 0 }} />
+              <Plus size={ICON.sm} color="#C9C0A8" style={{ flexShrink: 0 }} />
               <input
                 value={newStep}
                 onChange={e => setNewStep(e.target.value)}
@@ -554,14 +555,14 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
                   <span style={{
                     width: 28, height: 28, borderRadius: 'var(--sb-r-chip)', flexShrink: 0, background: 'var(--sb-field)',
                     border: '1px solid var(--sb-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--sb-ink-3)',
-                  }}><Link2 size={13} /></span>
+                  }}><Link2 size={ICON.sm} /></span>
                   <a href={url} target="_blank" rel="noreferrer" style={{
                     flex: 1, minWidth: 0, fontSize: 'var(--sb-t-body-s)', color: '#2F6BD8',
                     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                   }}>{url}</a>
                   <button onClick={() => patch({ links: (task.links ?? []).filter((_, j) => j !== i) })}
                     title="Remove link" style={{ ...ICON_BTN, width: 22, height: 22, color: '#C9C0A8' }}>
-                    <X size={13} />
+                    <X size={ICON.sm} />
                   </button>
                 </div>
               ))}
@@ -575,7 +576,7 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
                     <span style={{
                       width: 28, height: 28, borderRadius: 'var(--sb-r-chip)', flexShrink: 0, background: 'var(--sb-field)',
                       border: '1px solid var(--sb-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--sb-ink-3)',
-                    }}>{isImage ? <ImageIcon size={13} /> : <FileText size={13} />}</span>
+                    }}>{isImage ? <ImageIcon size={ICON.sm} /> : <FileText size={ICON.sm} />}</span>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', fontWeight: 500, color: 'var(--sb-ink-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.name}</p>
                       <p style={{ margin: '1px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>
@@ -584,7 +585,7 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
                     </div>
                     <button onClick={() => patch({ attachments: attachments.filter(x => x.id !== f.id) })}
                       title="Remove attachment" style={{ ...ICON_BTN, width: 22, height: 22, color: '#C9C0A8' }}>
-                      <Trash2 size={13} />
+                      <Trash2 size={ICON.sm} />
                     </button>
                   </div>
                 )
@@ -606,8 +607,8 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
                 fontFamily: 'inherit', textAlign: 'left',
               }}>
               {activityOpen
-                ? <ChevronDown size={13} strokeWidth={2.2} color="var(--sb-ink-4)" />
-                : <ChevronRight size={13} strokeWidth={2.2} color="var(--sb-ink-4)" />}
+                ? <ChevronDown size={ICON.sm} strokeWidth={STROKE.active} color="var(--sb-ink-4)" />
+                : <ChevronRight size={ICON.sm} strokeWidth={STROKE.active} color="var(--sb-ink-4)" />}
               <span style={SECTION_LABEL}>Activity</span>
             </button>
             {activityOpen && taskActs.length > 7 && (
@@ -615,7 +616,7 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
                 display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: 'none',
                 cursor: 'pointer', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-meta)', fontFamily: 'inherit', padding: 0,
               }}>
-                <History size={12} /> {fullLog ? 'Recent only' : 'Full log'}
+                <History size={ICON.sm} /> {fullLog ? 'Recent only' : 'Full log'}
               </button>
             )}
           </div>

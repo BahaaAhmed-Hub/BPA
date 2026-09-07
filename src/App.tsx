@@ -39,6 +39,7 @@ import { seedToken, seedFromLocalStorage, clearAllTokens, getGoogleToken } from 
 import { refreshPrimaryToken } from './lib/googleCalendar'
 import { SetupWizard } from './modules/wizard/SetupWizard'
 import { Search, Settings, LogOut } from 'lucide-react'
+import { ICON } from '@/lib/type'
 
 // ─── Sunlit Bento — Login screen (1A) ────────────────────────────────────────
 
@@ -493,7 +494,7 @@ function NotificationBell() {
               padding: '0 10px', borderRadius: 'var(--sb-r-sm)', border: 'none', background: 'transparent',
               color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body-s)', fontFamily: 'inherit', cursor: 'pointer', textAlign: 'left',
             }}>
-            <Settings size={13} color="var(--sb-ink-4)" /> What gets notified
+            <Settings size={ICON.sm} color="var(--sb-ink-4)" /> What gets notified
           </button>
         </div>
       )}
@@ -595,7 +596,7 @@ function TopNav() {
             background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
             borderRadius: 'var(--sb-r-nav)', cursor: 'pointer',
           }}>
-          <Search size={13} color="var(--sb-ink-3)" />
+          <Search size={ICON.sm} color="var(--sb-ink-3)" />
           <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-4)', userSelect: 'none' }}>Search</span>
           <span style={{
             marginLeft: 4,
@@ -652,7 +653,7 @@ function TopNav() {
                   background: activeModule === 'settings' ? '#F5F1E6' : 'transparent',
                   color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body)', fontFamily: 'inherit', textAlign: 'left',
                 }}>
-                <Settings size={15} color="var(--sb-ink-3)" /> Settings
+                <Settings size={ICON.md} color="var(--sb-ink-3)" /> Settings
               </button>
               <button
                 role="menuitem"
@@ -663,7 +664,7 @@ function TopNav() {
                   background: 'transparent', color: 'var(--sb-negative)', fontSize: 'var(--sb-t-body)',
                   fontFamily: 'inherit', textAlign: 'left',
                 }}>
-                <LogOut size={15} color="var(--sb-negative)" /> Sign out
+                <LogOut size={ICON.md} color="var(--sb-negative)" /> Sign out
               </button>
             </div>
           )}

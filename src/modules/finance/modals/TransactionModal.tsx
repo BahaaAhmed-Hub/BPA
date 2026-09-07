@@ -9,6 +9,7 @@ import { MoneyInput } from '../components/MoneyInput'
 import { liveBalances } from '../balances'
 import { acct } from '../format'
 import { todayISO } from '../dates'
+import { ICON, STROKE } from '@/lib/type'
 import {
   DISPLAY,
   PILL, ROUND, LABEL, ROW, RULE, PillPicker, categoryOptions,
@@ -244,7 +245,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
             {isEdit ? 'Transaction' : 'New transaction'}
           </span>
           <span style={{ flex: 1 }} />
-          <button onClick={onClose} title="Close" style={ROUND}><X size={14} /></button>
+          <button onClick={onClose} title="Close" style={ROUND}><X size={ICON.sm} /></button>
         </div>
 
         {/* Type — three choices you can see, rather than a title that cycles */}
@@ -280,7 +281,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
               fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-3)',
             }}>
               {currency}
-              <ChevronDown size={11} strokeWidth={2} style={{ color: 'var(--sb-ink-4)' }} />
+              <ChevronDown size={ICON.sm} strokeWidth={STROKE.rest} style={{ color: 'var(--sb-ink-4)' }} />
             </span>
             <select value={currency}
               onChange={e => { setCurrencyTouched(true); setCurrency(e.target.value as Currency) }}
@@ -380,7 +381,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
             <span style={{ flex: 1, minWidth: 0, display: 'flex', gap: 7 }}>
               <label style={{ ...PILL, flex: 1, position: 'relative', justifyContent: 'space-between' }}>
                 {new Date(date + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
-                <ChevronDown size={13} strokeWidth={2} style={{ color: 'var(--sb-ink-4)', flexShrink: 0 }} />
+                <ChevronDown size={ICON.sm} strokeWidth={STROKE.rest} style={{ color: 'var(--sb-ink-4)', flexShrink: 0 }} />
                 <input type="date" value={date} onChange={e => pickDate(e.target.value)}
                   style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', border: 'none', padding: 0 }} />
               </label>
@@ -400,7 +401,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
                   border: isCleared ? 'none' : '1px solid var(--sb-border)',
                   color: isCleared ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
                 }}>
-                {isCleared && <Check size={13} strokeWidth={2.5} />} Paid
+                {isCleared && <Check size={ICON.sm} strokeWidth={STROKE.active} />} Paid
               </button>
             </span>
           </div>
@@ -412,7 +413,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
                 {paidAt
                   ? new Date(paidAt + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
                   : <span style={{ color: 'var(--sb-ink-4)' }}>Pick the day</span>}
-                <ChevronDown size={13} strokeWidth={2} style={{ color: 'var(--sb-ink-4)', flexShrink: 0 }} />
+                <ChevronDown size={ICON.sm} strokeWidth={STROKE.rest} style={{ color: 'var(--sb-ink-4)', flexShrink: 0 }} />
                 <input type="date" value={paidAt}
                   onChange={e => { setPaidTouched(true); setPaidAt(e.target.value) }}
                   style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', border: 'none', padding: 0 }} />
@@ -486,7 +487,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
                     {tag}
                     <button onClick={() => setTags(prev => prev.filter(t => t !== tag))} title="Remove"
                       style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', padding: 0, display: 'flex' }}>
-                      <X size={12} />
+                      <X size={ICON.sm} />
                     </button>
                   </span>
                 ))}
@@ -520,13 +521,13 @@ export function TransactionModal({ transaction, accounts, categories, history = 
                         color: 'var(--sb-ink-3)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
                         boxShadow: 'var(--sb-shadow-control)',
                       }}>
-                      <X size={11} />
+                      <X size={ICON.sm} />
                     </button>
                   </span>
                 ))}
                 <button onClick={() => fileRef.current?.click()}
                   style={{ ...PILL, height: 46, color: 'var(--sb-ink-3)', gap: 7 }}>
-                  {attachments.length ? <Plus size={14} /> : <Paperclip size={14} />}
+                  {attachments.length ? <Plus size={ICON.sm} /> : <Paperclip size={ICON.sm} />}
                   {attachments.length ? 'Add another' : 'Attach a receipt'}
                 </button>
               </span>
@@ -543,7 +544,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
                   border: isRecurring ? 'none' : '1px solid var(--sb-border)',
                   color: isRecurring ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
                 }}>
-                {isRecurring ? <><Check size={13} strokeWidth={2.5} /> This one comes round again</> : 'One-off'}
+                {isRecurring ? <><Check size={ICON.sm} strokeWidth={STROKE.active} /> This one comes round again</> : 'One-off'}
               </button>
             </div>
           )}
