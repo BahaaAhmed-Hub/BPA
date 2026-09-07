@@ -303,7 +303,7 @@ export function BrainDumpRail({ tasks, onOpen, flexible }: {
       {/* Cards */}
       <div style={{ padding: '0 12px 12px', display: 'flex', flexDirection: 'column', gap: 9 }}>
         {tasks.length === 0 && (
-          <p style={{ margin: 0, padding: '18px 0', textAlign: 'center', fontSize: 'var(--sb-t-body-s)', color: '#B5AC98' }}>
+          <p style={{ margin: 0, padding: '18px 0', textAlign: 'center', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-4)' }}>
             Nothing uncategorised.
           </p>
         )}
@@ -340,7 +340,7 @@ export function BrainDumpRail({ tasks, onOpen, flexible }: {
               padding: '6px 0', borderBottom: '1px solid #F5F1E5', fontSize: 'var(--sb-t-meta)',
             }}>
               <span style={{ color: 'var(--sb-ink-3)', flex: 1, minWidth: 0 }}>{from}</span>
-              <span style={{ color: '#B5AC98', flexShrink: 0 }}>→ {to}</span>
+              <span style={{ color: 'var(--sb-ink-4)', flexShrink: 0 }}>→ {to}</span>
             </div>
           ))}
         </div>

@@ -1661,7 +1661,7 @@ export function BudgetScreen(_props?: any) {
         }
 
         const FLAG_STYLES: Record<TxFlag, { bg: string; color: string; border: string; label: string }> = {
-          approved: { bg: 'var(--sb-positive-tint)', color: 'var(--sb-positive)', border: '#C8D9A8', label: '✓ OK' },
+          approved: { bg: 'var(--sb-positive-tint)', color: 'var(--sb-positive-deep)', border: '#C8D9A8', label: '✓ OK' },
           review:   { bg: '#FEF3C7', color: '#92400E', border: '#FCD34D', label: '⚑ Review' },
           excluded: { bg: '#FBEAE4', color: 'var(--sb-negative)', border: '#E5BBAC', label: '✗ Exclude' },
         }

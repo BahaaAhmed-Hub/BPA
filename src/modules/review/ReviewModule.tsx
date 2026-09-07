@@ -187,8 +187,8 @@ function EventRow({ event, cancelled }: { event: GCalEvent; cancelled?: boolean 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-page)', border: '1px solid var(--sb-field)', marginBottom: 5 }}>
       {cancelled
-        ? <XCircle size={ICON.sm} color="#6B7280" style={{ flexShrink: 0 }} />
-        : <CheckCircle2 size={ICON.sm} color="#1D9E75" style={{ flexShrink: 0 }} />
+        ? <XCircle size={ICON.sm} color="var(--sb-ink-3)" style={{ flexShrink: 0 }} />
+        : <CheckCircle2 size={ICON.sm} color="#177C5B" style={{ flexShrink: 0 }} />
       }
       {time && (
         <span style={{ fontSize: 'var(--sb-t-meta)', color: cancelled ? 'var(--sb-ink-4)' : '#7F77DD', fontWeight: 600, minWidth: 54, flexShrink: 0 }}>{time}</span>
@@ -221,8 +221,8 @@ function TaskRow({ title, company, cancelled }: { title: string; company?: strin
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-page)', border: '1px solid var(--sb-field)', marginBottom: 5 }}>
       {cancelled
-        ? <XCircle size={ICON.sm} color="#6B7280" style={{ flexShrink: 0 }} />
-        : <CheckSquare size={ICON.sm} color="#1D9E75" style={{ flexShrink: 0 }} />
+        ? <XCircle size={ICON.sm} color="var(--sb-ink-3)" style={{ flexShrink: 0 }} />
+        : <CheckSquare size={ICON.sm} color="#177C5B" style={{ flexShrink: 0 }} />
       }
       <span style={{ fontSize: 'var(--sb-t-body)', color: cancelled ? 'var(--sb-ink-4)' : '#3D3926', flex: 1, textDecoration: cancelled ? 'line-through' : 'none' }}>
         {title}
@@ -309,7 +309,7 @@ function buildPieSlices(
   return [
     { label: 'Sleep', minutes: SLEEP, color: 'var(--sb-ink-3)' },
     ...[...byCalId.values()].filter(v => v.mins > 0).map(v => ({ label: v.label, minutes: v.mins, color: v.color })),
-    ...(taskTotal > 0 ? [{ label: 'Tasks', minutes: taskTotal, color: '#1D9E75' }] : []),
+    ...(taskTotal > 0 ? [{ label: 'Tasks', minutes: taskTotal, color: '#177C5B' }] : []),
     { label: 'Unaccounted', minutes: free, color: 'var(--sb-border)' },
   ]
 }
@@ -386,9 +386,9 @@ function WeeklyDayCard({ dayStr, allEvents, statuses, tasks }: {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
           {isToday && (
-            <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, color: '#7F77DD', background: 'rgba(127,119,221,0.15)', border: '1px solid rgba(127,119,221,0.3)', borderRadius: 'var(--sb-r-chip)', padding: '1px 6px', flexShrink: 0 }}>TODAY</span>
+            <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, color: '#685FD7', background: 'rgba(127,119,221,0.15)', border: '1px solid rgba(127,119,221,0.3)', borderRadius: 'var(--sb-r-chip)', padding: '1px 6px', flexShrink: 0 }}>TODAY</span>
           )}
-          <span style={{ fontSize: 'var(--sb-t-label)', fontWeight: 700, color: isToday ? '#7F77DD' : '#3D3926', whiteSpace: 'nowrap' }}>
+          <span style={{ fontSize: 'var(--sb-t-label)', fontWeight: 700, color: isToday ? '#685FD7' : '#3D3926', whiteSpace: 'nowrap' }}>
             {dayLabel}
           </span>
         </div>
@@ -493,10 +493,10 @@ export function ReviewModule() {
 
         {/* ─── Stats grid ─────────────────────────────────────────────────── */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 14, marginBottom: 28 }}>
-          <StatCard label="Tasks Shipped" value={completedTasks.length} sub="This week" icon={CheckSquare} color="#1D9E75" />
+          <StatCard label="Tasks Shipped" value={completedTasks.length} sub="This week" icon={CheckSquare} color="#177C5B" />
           <StatCard label="Tasks Slipped" value={slipped} sub={slipped > 0 ? 'Past due date' : 'All on track'} icon={TrendingUp} color={slipped > 0 ? 'var(--sb-negative)' : '#1D9E75'} />
-          <StatCard label="Focus Hours" value={focusHours} sub="Click to edit" icon={Clock} color="#7F77DD" editable onChange={v => { setFocusHours(v); saveHours(v, meetingHours) }} />
-          <StatCard label="Meeting Hours" value={meetingHours} sub="Click to edit" icon={Users} color="#7F77DD" editable onChange={v => { setMeetingHours(v); saveHours(focusHours, v) }} />
+          <StatCard label="Focus Hours" value={focusHours} sub="Click to edit" icon={Clock} color="#685FD7" editable onChange={v => { setFocusHours(v); saveHours(v, meetingHours) }} />
+          <StatCard label="Meeting Hours" value={meetingHours} sub="Click to edit" icon={Users} color="#685FD7" editable onChange={v => { setMeetingHours(v); saveHours(focusHours, v) }} />
         </div>
 
         {/* ─── Panel ──────────────────────────────────────────────────────── */}
@@ -511,7 +511,7 @@ export function ReviewModule() {
             ><ChevronLeft size={ICON.md} /></button>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <CalendarDays size={ICON.md} color="#7F77DD" />
+              <CalendarDays size={ICON.md} color="#685FD7" />
               <span style={{ fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>
                 {viewMode === 'daily'
                   ? fmtDayLabel(selectedDay)
@@ -521,7 +521,7 @@ export function ReviewModule() {
               {(viewMode === 'daily' ? selectedDay !== todayStr() : !isCurrentWeek) && (
                 <button
                   onClick={() => setSelectedDay(todayStr())}
-                  style={{ fontSize: 'var(--sb-t-meta)', color: '#7F77DD', background: 'rgba(127,119,221,0.1)', border: '1px solid rgba(127,119,221,0.25)', borderRadius: 'var(--sb-r-chip)', padding: '2px 8px', cursor: 'pointer' }}
+                  style={{ fontSize: 'var(--sb-t-meta)', color: '#685FD7', background: 'rgba(127,119,221,0.1)', border: '1px solid rgba(127,119,221,0.25)', borderRadius: 'var(--sb-r-chip)', padding: '2px 8px', cursor: 'pointer' }}
                 >Today</button>
               )}
             </div>
@@ -553,15 +553,15 @@ export function ReviewModule() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 24, padding: '11px 20px', borderBottom: '1px solid var(--sb-card)', background: 'var(--sb-page)' }}>
             {viewMode === 'daily' ? (
               <>
-                <PillStat done={doneEvents.length} total={dayEvents.length} label="events done" color="#7F77DD" />
+                <PillStat done={doneEvents.length} total={dayEvents.length} label="events done" color="#685FD7" />
                 <div style={{ width: 1, height: 20, background: 'var(--sb-border)' }} />
-                <PillStat done={doneTasks.length} total={dayTasks.length} label="tasks done" color="#1D9E75" />
+                <PillStat done={doneTasks.length} total={dayTasks.length} label="tasks done" color="#177C5B" />
               </>
             ) : (
               <>
-                <PillStat done={weekDoneEvts} total={allWeekEvents.length} label="events done this week" color="#7F77DD" />
+                <PillStat done={weekDoneEvts} total={allWeekEvents.length} label="events done this week" color="#685FD7" />
                 <div style={{ width: 1, height: 20, background: 'var(--sb-border)' }} />
-                <PillStat done={weekDoneTasks} total={weekTasksAll.length} label="tasks done this week" color="#1D9E75" />
+                <PillStat done={weekDoneTasks} total={weekTasksAll.length} label="tasks done this week" color="#177C5B" />
               </>
             )}
           </div>
@@ -585,25 +585,25 @@ export function ReviewModule() {
                 <>
                   {doneEvents.length > 0 && (
                     <div style={{ marginBottom: 18 }}>
-                      <SectionHead label="Events Done" count={doneEvents.length} color="#7F77DD" />
+                      <SectionHead label="Events Done" count={doneEvents.length} color="#685FD7" />
                       {doneEvents.map(e => <EventRow key={e.id} event={e} />)}
                     </div>
                   )}
                   {cancelledEvents.length > 0 && (
                     <div style={{ marginBottom: 18 }}>
-                      <SectionHead label="Events Cancelled" count={cancelledEvents.length} color="#6B7280" />
+                      <SectionHead label="Events Cancelled" count={cancelledEvents.length} color="var(--sb-ink-3)" />
                       {cancelledEvents.map(e => <EventRow key={e.id} event={e} cancelled />)}
                     </div>
                   )}
                   {doneTasks.length > 0 && (
                     <div style={{ marginBottom: 18 }}>
-                      <SectionHead label="Tasks Done" count={doneTasks.length} color="#1D9E75" />
+                      <SectionHead label="Tasks Done" count={doneTasks.length} color="#177C5B" />
                       {doneTasks.map(t => <TaskRow key={t.id} title={t.title} company={resolveCompanyLabel(t)} />)}
                     </div>
                   )}
                   {cancelledTasks.length > 0 && (
                     <div>
-                      <SectionHead label="Tasks Cancelled" count={cancelledTasks.length} color="#6B7280" />
+                      <SectionHead label="Tasks Cancelled" count={cancelledTasks.length} color="var(--sb-ink-3)" />
                       {cancelledTasks.map(t => <TaskRow key={t.id} title={t.title} company={resolveCompanyLabel(t)} cancelled />)}
                     </div>
                   )}

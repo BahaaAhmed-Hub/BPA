@@ -396,7 +396,7 @@ export function PlanningAssistant() {
                       border: `1px solid ${ins.type === 'warning' ? 'rgba(251,191,36,0.2)' : ins.type === 'win' ? 'rgba(52,211,153,0.2)' : 'rgba(127,119,221,0.2)'}`,
                     }}>
                       {ins.type === 'warning' && <AlertTriangle size={ICON.sm} color="#FBBF24" />}
-                      {ins.type === 'tip'     && <Lightbulb size={ICON.sm} color="#7F77DD" />}
+                      {ins.type === 'tip'     && <Lightbulb size={ICON.sm} color="#685FD7" />}
                       {ins.type === 'win'     && <Trophy size={ICON.sm} color="#34D399" />}
                       <span style={{ fontSize: 'var(--sb-t-body-s)', color: '#3D3926', fontWeight: 500 }}>{ins.message}</span>
                     </div>

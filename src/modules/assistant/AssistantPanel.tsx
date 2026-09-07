@@ -113,7 +113,7 @@ function MessageBubble({ msg }: { msg: DisplayMessage }) {
           display: 'inline-flex', alignItems: 'center', gap: 5,
           padding: '3px 10px', borderRadius: 'var(--sb-r-card)', fontSize: 'var(--sb-t-meta)',
           background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)',
-          color: '#818CF8',
+          color: '#685FD7',
         }}>
           <Wrench size={ICON.sm} style={{ animation: 'spin 1s linear infinite' }} />
           {msg.content}
@@ -425,7 +425,7 @@ export function AssistantPanel({ open, onClose }: AssistantPanelProps) {
           </div>
           <div style={{ flex: 1 }}>
             <p style={{ margin: 0, fontSize: 'var(--sb-t-label)', fontWeight: 700, color: 'var(--sb-ink-1)' }}>Professor AI</p>
-            <p style={{ margin: 0, fontSize: 'var(--sb-t-micro)', color: '#818CF8' }}>{providerLabel(cfg)}</p>
+            <p style={{ margin: 0, fontSize: 'var(--sb-t-micro)', color: '#685FD7' }}>{providerLabel(cfg)}</p>
           </div>
           {!isEmpty && (
             <button onClick={clearConversation}
@@ -449,7 +449,7 @@ export function AssistantPanel({ open, onClose }: AssistantPanelProps) {
                 border: '1px solid rgba(99,102,241,0.25)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
-                <Brain size={26} color="#818CF8" />
+                <Brain size={26} color="#685FD7" />
               </div>
               <p style={{ margin: '0 0 6px', fontSize: 'var(--sb-t-h3)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>How can I help?</p>
               <p style={{ margin: '0 0 24px', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', lineHeight: 1.5 }}>
@@ -517,7 +517,7 @@ export function AssistantPanel({ open, onClose }: AssistantPanelProps) {
                 boxShadow: !input.trim() || thinking ? 'none' : '0 0 10px rgba(99,102,241,0.4)',
               }}>
               {thinking
-                ? <Loader2 size={ICON.md} color="#818CF8" style={{ animation: 'spin 1s linear infinite' }} />
+                ? <Loader2 size={ICON.md} color="#685FD7" style={{ animation: 'spin 1s linear infinite' }} />
                 : <Send size={ICON.sm} color={!input.trim() ? '#818CF8' : 'white'} />
               }
             </button>

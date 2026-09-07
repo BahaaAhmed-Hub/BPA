@@ -140,7 +140,7 @@ export function Step1Welcome({ data, onChange }: Props) {
         <h1 style={{ margin: '0 0 8px', fontSize: 'var(--sb-t-h1)', fontWeight: 800, color: '#111827', lineHeight: 1.3 }}>
           Welcome to The Professor 👋
         </h1>
-        <p style={{ margin: 0, fontSize: 'var(--sb-t-h3)', color: '#6B7280', lineHeight: 1.6 }}>
+        <p style={{ margin: 0, fontSize: 'var(--sb-t-h3)', color: 'var(--sb-ink-3)', lineHeight: 1.6 }}>
           Let's set up your AI executive OS in just a few minutes.
         </p>
       </div>
@@ -155,14 +155,14 @@ export function Step1Welcome({ data, onChange }: Props) {
           }}>
             <div style={{ fontSize: 'var(--sb-t-h1)', marginBottom: 8 }}>{f.emoji}</div>
             <div style={{ fontSize: 'var(--sb-t-label)', fontWeight: 700, color: '#111827', marginBottom: 4 }}>{f.title}</div>
-            <div style={{ fontSize: 'var(--sb-t-meta)', color: '#9CA3AF', lineHeight: 1.4 }}>{f.desc}</div>
+            <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', lineHeight: 1.4 }}>{f.desc}</div>
           </div>
         ))}
       </div>
 
       {/* Name field */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <label style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+        <label style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
           What should we call you?
         </label>
         <input
@@ -185,7 +185,7 @@ export function Step1Welcome({ data, onChange }: Props) {
 
       {/* Theme picker (compact) */}
       <div>
-        <label style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 10 }}>
+        <label style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-3)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 10 }}>
           Choose your theme
         </label>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8 }}>
@@ -223,7 +223,7 @@ export function Step1Welcome({ data, onChange }: Props) {
         </div>
       </div>
 
-      <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', color: '#9CA3AF', textAlign: 'center', fontStyle: 'italic' }}>
+      <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-4)', textAlign: 'center', fontStyle: 'italic' }}>
         This will only take about 2 minutes. Let's get started!
       </p>
     </div>

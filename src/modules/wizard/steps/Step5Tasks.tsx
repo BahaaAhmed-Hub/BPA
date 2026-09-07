@@ -106,7 +106,7 @@ export function Step5Tasks({ data, onChange }: Props) {
           {data.todoistToken && !loading && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <div style={{ width: 8, height: 8, borderRadius: 'var(--sb-r-pill)', background: '#1D9E75' }} />
-              <span style={{ fontSize: 'var(--sb-t-body-s)', color: '#1D9E75', fontWeight: 500 }}>Connected · {data.importedTasks.length} tasks found</span>
+              <span style={{ fontSize: 'var(--sb-t-body-s)', color: '#177C5B', fontWeight: 500 }}>Connected · {data.importedTasks.length} tasks found</span>
             </div>
           )}
 

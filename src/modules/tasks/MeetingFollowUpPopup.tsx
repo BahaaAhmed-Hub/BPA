@@ -35,10 +35,10 @@ function toDraft(t: ExtractedTask, allUsers: ReturnType<typeof getVisibleUsers>)
 
 const Q_OPTIONS: { value: Quadrant | null; label: string; color: string }[] = [
   { value: 'do',        label: 'Do',       color: 'var(--sb-negative)' },
-  { value: 'schedule',  label: 'Schedule', color: '#7F77DD' },
-  { value: 'delegate',  label: 'Delegate', color: '#1D9E75' },
+  { value: 'schedule',  label: 'Schedule', color: '#685FD7' },
+  { value: 'delegate',  label: 'Delegate', color: '#177C5B' },
   { value: 'eliminate', label: 'Eliminate',color: '#888780' },
-  { value: null,        label: 'Inbox',    color: '#7F77DD' },
+  { value: null,        label: 'Inbox',    color: '#685FD7' },
 ]
 
 // ─── inline edit row ──────────────────────────────────────────────────────────
@@ -113,15 +113,15 @@ function TaskRow({ draft, index, expanded, users, onToggle, onChange, onDelete }
             </span>
           )}
           {owner && (
-            <span style={{ fontSize: 'var(--sb-t-micro)', color: '#1D9E75', fontWeight: 500 }}>
+            <span style={{ fontSize: 'var(--sb-t-micro)', color: '#177C5B', fontWeight: 500 }}>
               → {owner.name.split(' ')[0]}
             </span>
           )}
         </div>
 
         {expanded
-          ? <ChevronUp  size={ICON.sm} color="#6B7280" style={{ flexShrink: 0 }} />
-          : <ChevronDown size={ICON.sm} color="#6B7280" style={{ flexShrink: 0 }} />
+          ? <ChevronUp  size={ICON.sm} color="var(--sb-ink-3)" style={{ flexShrink: 0 }} />
+          : <ChevronDown size={ICON.sm} color="var(--sb-ink-3)" style={{ flexShrink: 0 }} />
         }
       </div>
 
@@ -312,7 +312,7 @@ export function MeetingFollowUpPopup({ parentTask, onConfirm, onSkip }: Props) {
             background: '#1D9E7518', border: '1px solid #1D9E7530',
             display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
           }}>
-            <Check size={ICON.md} color="#1D9E75" strokeWidth={STROKE.active} />
+            <Check size={ICON.md} color="#177C5B" strokeWidth={STROKE.active} />
           </div>
           <div style={{ flex: 1 }}>
             <h3 style={{ margin: '0 0 2px', fontSize: 'var(--sb-t-h3)', fontWeight: 700, color: 'var(--sb-ink-1)' }}>

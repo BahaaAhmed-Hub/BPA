@@ -35,8 +35,8 @@ export function Step6Done({ data }: Props) {
 
   const stats = [
     { label: 'Accounts',  value: totalAccounts,          color: '#60A5FA', emoji: '🔗' },
-    { label: 'Companies', value: data.companies.length,   color: '#7F77DD', emoji: '🏢' },
-    { label: 'Habits',    value: totalHabits,             color: '#1D9E75', emoji: '🔥' },
+    { label: 'Companies', value: data.companies.length,   color: '#685FD7', emoji: '🏢' },
+    { label: 'Habits',    value: totalHabits,             color: '#177C5B', emoji: '🔥' },
     { label: 'Tasks',     value: totalTasks,              color: '#F97316', emoji: '✅' },
   ]
 

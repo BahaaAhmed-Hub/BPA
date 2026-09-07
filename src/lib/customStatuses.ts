@@ -10,7 +10,7 @@ export const DEFAULT_STATUSES: CustomStatus[] = [
   { id: 'decide',    label: 'Decide',           color: 'var(--sb-negative)' },
   { id: 'today',     label: 'Today',            color: 'var(--sb-accent)' },
   { id: 'this-week', label: 'This week',        color: '#8C826A' },
-  { id: 'later',     label: 'Later',            color: '#B5AC98' },
+  { id: 'later',     label: 'Later',            color: 'var(--sb-ink-4)' },
   { id: 'done',      label: 'Done · this week', color: 'var(--sb-positive)' },
 ]
 
@@ -48,5 +48,5 @@ export function saveCustomStatuses(statuses: CustomStatus[]): void {
 export function getStatusMeta(id: string): { label: string; color: string } {
   const statuses = loadCustomStatuses()
   const found = statuses.find(s => s.id === id)
-  return found ? { label: found.label, color: found.color } : { label: id, color: '#6B7280' }
+  return found ? { label: found.label, color: found.color } : { label: id, color: 'var(--sb-ink-3)' }
 }

@@ -3,7 +3,7 @@ import { useFinanceStore } from '../financeStore'
 import { CategoryGlyph } from '../components/CategoryGlyph'
 import { TransactionModal } from '../modals/TransactionModal'
 import type { Transaction } from '../types'
-import { POSITIVE, NEGATIVE, POSITIVE_TINT, NEGATIVE_TINT } from '../../../lib/moneyColors'
+import { POSITIVE, NEGATIVE, POSITIVE_DEEP, NEGATIVE_DEEP, POSITIVE_TINT, NEGATIVE_TINT } from '../../../lib/moneyColors'
 import { acct, group } from '../format'
 import { toBase, baseCurrency, currenciesNeedingRates } from '../fx'
 import { findDuplicates } from '../duplicates'
@@ -169,8 +169,8 @@ function MoneyCalendar({
           {MONTH_NAMES[month]} <span style={{ color: 'var(--sb-ink-4)' }}>{year}</span>
         </span>
         <span style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
-          {chip('Out', monthOut > 0 ? acct(-monthOut) : '–', NEGATIVE, NEGATIVE_TINT)}
-          {chip('In',  monthIn  > 0 ? acct(monthIn)   : '–', POSITIVE, POSITIVE_TINT)}
+          {chip('Out', monthOut > 0 ? acct(-monthOut) : '–', NEGATIVE_DEEP, NEGATIVE_TINT)}
+          {chip('In',  monthIn  > 0 ? acct(monthIn)   : '–', POSITIVE_DEEP, POSITIVE_TINT)}
           {unrated.length > 0 && (
             <span title={`No rate set for ${unrated.join(', ')}, so it is not counted in these totals`}
               style={{
@@ -237,7 +237,7 @@ function MoneyCalendar({
                   </span>
                 )}
                 {payees.slice(0, 2).map((p, pi) => (
-                  <span key={pi} style={{ fontSize: 'var(--sb-t-micro)', color: '#8A8271', whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' }}>{p}</span>
+                  <span key={pi} style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' }}>{p}</span>
                 ))}
               </div>
             )

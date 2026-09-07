@@ -176,8 +176,8 @@ function GeneratingSkeleton() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '4px 0' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-        <RefreshCw size={ICON.sm} color="#7F77DD" style={{ animation: 'spin 1s linear infinite' }} />
-        <span style={{ fontSize: 'var(--sb-t-body-s)', color: '#7F77DD' }}>Analyzing your calendar and tasks…</span>
+        <RefreshCw size={ICON.sm} color="#685FD7" style={{ animation: 'spin 1s linear infinite' }} />
+        <span style={{ fontSize: 'var(--sb-t-body-s)', color: '#685FD7' }}>Analyzing your calendar and tasks…</span>
       </div>
       {[80, 65, 90, 55, 75].map((w, i) => (
         <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
@@ -378,14 +378,14 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
             background: 'rgba(127,119,221,0.1)', border: '1px solid #7F77DD30',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            <Sparkles size={ICON.sm} color="#7F77DD" />
+            <Sparkles size={ICON.sm} color="#685FD7" />
           </div>
           <div style={{ textAlign: 'left' }}>
             <p style={{ margin: 0, fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>Build My Day</p>
             <p style={{ margin: 0, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>AI-powered time blocking + calendar sync</p>
           </div>
         </div>
-        <ChevronRight size={ICON.md} color="#6B7280" />
+        <ChevronRight size={ICON.md} color="var(--sb-ink-3)" />
       </button>
     )
   }
@@ -412,7 +412,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
               </div>
             </div>
             <div style={{ padding: '10px 16px', display: 'flex', gap: 8, alignItems: 'center' }}>
-              <AlertTriangle size={ICON.sm} color="#6B7280" />
+              <AlertTriangle size={ICON.sm} color="var(--sb-ink-3)" />
               <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)' }}>Only AI planning is affected — other features work normally.</span>
             </div>
           </div>
@@ -436,7 +436,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
             !dynCompanies.some(co => t.company === co.id || t.company === co.name)
           )
           if (uncategorised.length > 0) {
-            groups.push({ id: 'other', name: 'Other', color: '#6B7280', tasks: uncategorised })
+            groups.push({ id: 'other', name: 'Other', color: 'var(--sb-ink-3)', tasks: uncategorised })
           }
 
           return (
@@ -446,7 +446,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                   What must get done today?
                 </label>
                 {selectedTaskIds.size > 0 && (
-                  <span style={{ fontSize: 'var(--sb-t-micro)', color: '#7F77DD' }}>
+                  <span style={{ fontSize: 'var(--sb-t-micro)', color: '#685FD7' }}>
                     {selectedTaskIds.size} selected
                   </span>
                 )}
@@ -768,7 +768,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                       style={{
                         width: 26, height: 26, borderRadius: 'var(--sb-r-chip)', cursor: 'pointer',
                         background: '#1D9E7518', border: '1px solid #1D9E7540',
-                        color: '#1D9E75', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        color: '#177C5B', display: 'flex', alignItems: 'center', justifyContent: 'center',
                       }}
                     >
                       <Check size={ICON.sm} />
@@ -780,7 +780,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                       style={{
                         width: 26, height: 26, borderRadius: 'var(--sb-r-chip)', cursor: 'pointer',
                         background: '#1D9E7530', border: '1px solid #1D9E7560',
-                        color: '#1D9E75', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        color: '#177C5B', display: 'flex', alignItems: 'center', justifyContent: 'center',
                       }}
                     >
                       <Check size={ICON.sm} />
@@ -863,8 +863,8 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-          <RefreshCw size={ICON.sm} color="#7F77DD" style={{ animation: 'spin 1s linear infinite' }} />
-          <span style={{ fontSize: 'var(--sb-t-body-s)', color: '#7F77DD' }}>Applying changes to your calendar…</span>
+          <RefreshCw size={ICON.sm} color="#685FD7" style={{ animation: 'spin 1s linear infinite' }} />
+          <span style={{ fontSize: 'var(--sb-t-body-s)', color: '#685FD7' }}>Applying changes to your calendar…</span>
         </div>
         {active.map(slot => {
           const st = applying[slot.id]
@@ -878,7 +878,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
               }}>
                 {st === 'done'  && <Check size={ICON.sm} color="#fff" />}
                 {st === 'error' && <X     size={ICON.sm} color="#fff" />}
-                {!st && <RefreshCw size={ICON.sm} color="#7F77DD" style={{ animation: 'spin 1s linear infinite' }} />}
+                {!st && <RefreshCw size={ICON.sm} color="#685FD7" style={{ animation: 'spin 1s linear infinite' }} />}
               </div>
               <span style={{ fontSize: 'var(--sb-t-body-s)', color: st === 'error' ? '#EF4444' : 'var(--sb-ink-1)' }}>
                 {slot.title}
@@ -911,9 +911,9 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
             background: '#1D9E7518', border: '1px solid #1D9E7530',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            <Check size={ICON.sm} color="#1D9E75" />
+            <Check size={ICON.sm} color="#177C5B" />
           </div>
-          <p style={{ margin: 0, fontSize: 'var(--sb-t-label)', fontWeight: 600, color: '#1D9E75' }}>Plan Applied</p>
+          <p style={{ margin: 0, fontSize: 'var(--sb-t-label)', fontWeight: 600, color: '#177C5B' }}>Plan Applied</p>
         </div>
         <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
           {created > 0 && <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)' }}>{created} created</span>}

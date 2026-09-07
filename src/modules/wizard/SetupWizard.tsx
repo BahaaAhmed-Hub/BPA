@@ -46,8 +46,8 @@ const HABIT_TEMPLATES = [
   { id: 'water',       name: 'Drink Water',  emoji: '💧', color: '#60A5FA', type: 'quantity' as const, goal: 8,     unit: 'glasses', frequency: 'daily' as const },
   { id: 'exercise',    name: 'Exercise',      emoji: '💪', color: 'var(--sb-negative)', type: 'boolean'  as const,                               frequency: 'daily' as const },
   { id: 'reading',     name: 'Reading',       emoji: '📚', color: '#A855F7', type: 'quantity' as const, goal: 30,   unit: 'min',     frequency: 'daily' as const },
-  { id: 'meditation',  name: 'Meditation',    emoji: '🧘', color: '#1D9E75', type: 'quantity' as const, goal: 10,   unit: 'min',     frequency: 'daily' as const },
-  { id: 'sleep',       name: '8h Sleep',      emoji: '😴', color: '#7F77DD', type: 'boolean'  as const,                               frequency: 'daily' as const },
+  { id: 'meditation',  name: 'Meditation',    emoji: '🧘', color: '#177C5B', type: 'quantity' as const, goal: 10,   unit: 'min',     frequency: 'daily' as const },
+  { id: 'sleep',       name: '8h Sleep',      emoji: '😴', color: '#685FD7', type: 'boolean'  as const,                               frequency: 'daily' as const },
   { id: 'journaling',  name: 'Journaling',    emoji: '📓', color: '#F97316', type: 'boolean'  as const,                               frequency: 'daily' as const },
   { id: 'steps',       name: 'Steps',         emoji: '🚶', color: '#34D399', type: 'quantity' as const, goal: 10000, unit: 'steps',  frequency: 'daily' as const },
   { id: 'cold-shower', name: 'Cold Shower',   emoji: '🚿', color: '#22D3EE', type: 'boolean'  as const,                               frequency: 'daily' as const },
@@ -200,10 +200,10 @@ export function SetupWizard({ onClose }: Props) {
           <div style={{ padding: '22px 28px 0', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
             <div style={{ flex: 1 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-                <span style={{ fontSize: 'var(--sb-t-label)', fontWeight: 600, color: '#6B7280' }}>
+                <span style={{ fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-3)' }}>
                   Step {step} of {TOTAL_STEPS}
                 </span>
-                <span style={{ fontSize: 'var(--sb-t-body-s)', color: '#9CA3AF', display: 'flex', alignItems: 'center', gap: 5 }}>
+                <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-4)', display: 'flex', alignItems: 'center', gap: 5 }}>
                   ✦ The Professor Setup
                 </span>
               </div>
@@ -229,7 +229,7 @@ export function SetupWizard({ onClose }: Props) {
                 })}
               </div>
             </div>
-            <button onClick={handleSkip} title="Skip setup" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9CA3AF', padding: '2px 4px', display: 'flex', borderRadius: 'var(--sb-r-chip)', flexShrink: 0, marginTop: -2, transition: 'color 0.15s' }}>
+            <button onClick={handleSkip} title="Skip setup" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-4)', padding: '2px 4px', display: 'flex', borderRadius: 'var(--sb-r-chip)', flexShrink: 0, marginTop: -2, transition: 'color 0.15s' }}>
               <X size={ICON.lg} />
             </button>
           </div>
@@ -253,7 +253,7 @@ export function SetupWizard({ onClose }: Props) {
                 display: 'flex', alignItems: 'center', gap: 6,
                 padding: '11px 22px', borderRadius: 'var(--sb-r-pill)',
                 background: 'transparent', border: '1px solid #E5E7EB',
-                color: '#6B7280', fontSize: 'var(--sb-t-label)', fontWeight: 600, cursor: 'pointer',
+                color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-label)', fontWeight: 600, cursor: 'pointer',
                 transition: 'all 0.15s',
               }}>
                 <ChevronLeft size={ICON.md} /> Back
@@ -262,7 +262,7 @@ export function SetupWizard({ onClose }: Props) {
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               {step === 1 && (
-                <button onClick={handleSkip} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9CA3AF', fontSize: 'var(--sb-t-body)', padding: '4px 8px' }}>
+                <button onClick={handleSkip} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-4)', fontSize: 'var(--sb-t-body)', padding: '4px 8px' }}>
                   Skip for now
                 </button>
               )}

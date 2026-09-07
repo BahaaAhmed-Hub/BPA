@@ -99,7 +99,7 @@ function DraggableTaskCard({ task, scheduled, creating, gcalDone }: {
       }}
       {...attributes} {...listeners}
     >
-      <span style={{ color: '#9CA3AF', fontSize: 'var(--sb-t-label)', marginTop: 1, flexShrink: 0 }}>⠿</span>
+      <span style={{ color: 'var(--sb-ink-4)', fontSize: 'var(--sb-t-label)', marginTop: 1, flexShrink: 0 }}>⠿</span>
       <div style={{ width: 8, height: 8, borderRadius: 'var(--sb-r-pill)', background: dot, marginTop: 4, flexShrink: 0 }} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 'var(--sb-t-label)', fontWeight: 600, color: '#111827', lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -112,7 +112,7 @@ function DraggableTaskCard({ task, scheduled, creating, gcalDone }: {
             </span>
           )}
           {task.duration && (
-            <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 600, padding: '1px 6px', borderRadius: 'var(--sb-r-chip)', background: '#F3F4F6', color: '#6B7280' }}>
+            <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 600, padding: '1px 6px', borderRadius: 'var(--sb-r-chip)', background: '#F3F4F6', color: 'var(--sb-ink-3)' }}>
               {task.duration}m
             </span>
           )}
@@ -363,7 +363,7 @@ function AccountPickerOverlay({
         <div style={{ fontSize: 'var(--sb-t-h3)', fontWeight: 700, color: '#111827', marginBottom: 4 }}>
           Add to Calendar
         </div>
-        <div style={{ fontSize: 'var(--sb-t-body-s)', color: '#6B7280', marginBottom: 16, lineHeight: 1.5 }}>
+        <div style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', marginBottom: 16, lineHeight: 1.5 }}>
           "{task.title}" — choose which account's calendar to create this event in.
         </div>
 
@@ -387,7 +387,7 @@ function AccountPickerOverlay({
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 'var(--sb-t-label)', fontWeight: 600, color: '#111827', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{acct.name}</div>
-                <div style={{ fontSize: 'var(--sb-t-meta)', color: '#6B7280', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{acct.email}</div>
+                <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{acct.email}</div>
               </div>
               {acct.isPrimary && (
                 <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 600, background: '#D1FAE5', color: '#10B981', borderRadius: 'var(--sb-r-chip)', padding: '1px 6px', flexShrink: 0 }}>Primary</span>
@@ -395,7 +395,7 @@ function AccountPickerOverlay({
             </button>
           ))}
           {allOptions.length === 0 && (
-            <div style={{ fontSize: 'var(--sb-t-body-s)', color: '#6B7280', textAlign: 'center', padding: 12 }}>No Google accounts connected.</div>
+            <div style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', textAlign: 'center', padding: 12 }}>No Google accounts connected.</div>
           )}
         </div>
 
@@ -741,15 +741,15 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
           <div style={{ padding: '18px 24px', background: 'var(--sb-card)', borderBottom: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
             <span style={{ fontSize: 'var(--sb-t-h2)' }}>✦</span>
             <span style={{ fontSize: 'var(--sb-t-h2)', fontWeight: 800, color: '#111827', flex: 1 }}>Smart Day Planner</span>
-            <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6B7280', padding: 4, display: 'flex', borderRadius: 'var(--sb-r-chip)' }}>
+            <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', padding: 4, display: 'flex', borderRadius: 'var(--sb-r-chip)' }}>
               <X size={ICON.lg} />
             </button>
           </div>
 
           {/* Sub-header */}
           <div style={{ padding: '10px 24px', background: 'var(--sb-card)', borderBottom: '1px solid #F3F4F6', display: 'flex', alignItems: 'center', gap: 14, flexShrink: 0, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 'var(--sb-t-label)', color: '#6B7280' }}>📅 {dateLabel}</span>
-            <span style={{ fontSize: 'var(--sb-t-label)', color: '#6B7280' }}>🕐 {timeLabel}</span>
+            <span style={{ fontSize: 'var(--sb-t-label)', color: 'var(--sb-ink-3)' }}>📅 {dateLabel}</span>
+            <span style={{ fontSize: 'var(--sb-t-label)', color: 'var(--sb-ink-3)' }}>🕐 {timeLabel}</span>
             <span style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 600, background: '#F3F4F6', color: '#374151', borderRadius: 'var(--sb-r-card)', padding: '3px 10px' }}>
               {unscheduledCount} unscheduled
             </span>
@@ -813,12 +813,12 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
                     <div style={{ flex: 1 }} />
                     <button onClick={() => setSortBy(s => s === 'priority' ? 'created' : 'priority')} style={{
                       display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none',
-                      cursor: 'pointer', fontSize: 'var(--sb-t-body-s)', color: '#6B7280', fontWeight: 500,
+                      cursor: 'pointer', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', fontWeight: 500,
                     }}>
                       {sortBy === 'priority' ? '🔥 Priority' : '🕐 Newest'} ∨
                     </button>
                   </div>
-                  <p style={{ margin: 0, fontSize: 'var(--sb-t-meta)', color: '#9CA3AF' }}>Drag to schedule · Creates GCal event automatically</p>
+                  <p style={{ margin: 0, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>Drag to schedule · Creates GCal event automatically</p>
                 </div>
                 <div style={{ flex: 1, overflowY: 'auto', padding: '10px 12px' }}>
                   {sortedTasks.map(task => (
@@ -830,7 +830,7 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
                     />
                   ))}
                   {sortedTasks.length === 0 && (
-                    <div style={{ padding: '24px 12px', textAlign: 'center', fontSize: 'var(--sb-t-body)', color: '#9CA3AF' }}>
+                    <div style={{ padding: '24px 12px', textAlign: 'center', fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-4)' }}>
                       No open tasks
                     </div>
                   )}
@@ -849,8 +849,8 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
 
           {/* Footer */}
           <div style={{ padding: '14px 24px', background: 'var(--sb-card)', borderTop: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-            <CalendarPlus size={ICON.sm} color="#6B7280" />
-            <span style={{ fontSize: 'var(--sb-t-body)', color: '#6B7280' }}>
+            <CalendarPlus size={ICON.sm} color="var(--sb-ink-3)" />
+            <span style={{ fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-3)' }}>
               {blocks.length} task{blocks.length !== 1 ? 's' : ''} · {totalMinutes}m planned
               {blocks.filter(b => b.gcalEventId).length > 0 && (
                 <span style={{ color: '#10B981', marginLeft: 8 }}>

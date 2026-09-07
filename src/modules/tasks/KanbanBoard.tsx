@@ -237,7 +237,7 @@ function KanbanColumnComp({ column, onOpen, onColDragStart, onColDragOver, onCol
         }}
       >
         {column.tasks.length === 0 && !adding ? (
-          <div style={{ padding: '20px 12px', textAlign: 'center', fontSize: 'var(--sb-t-body-s)', color: '#B5AC98' }}>
+          <div style={{ padding: '20px 12px', textAlign: 'center', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-4)' }}>
             No tasks
           </div>
         ) : (
@@ -470,13 +470,13 @@ export function KanbanBoard({ onOpen, hideCompleted = false, filteredTaskIds }: 
       const cols: Column[] = allUsers.map(u => ({
         id:    u.id,
         label: u.name,
-        color: '#7F77DD',
+        color: '#685FD7',
         tasks: sortUrgentFirst(tasks.filter(t => t.owner === u.id)),
       }))
       cols.push({
         id:    'unassigned',
         label: 'Unassigned',
-        color: '#6B7280',
+        color: 'var(--sb-ink-3)',
         tasks: sortUrgentFirst(tasks.filter(t => !t.owner)),
       })
       return cols
@@ -495,10 +495,10 @@ export function KanbanBoard({ onOpen, hideCompleted = false, filteredTaskIds }: 
       const buckets = [
         { id: 'overdue',     label: 'Overdue',    color: '#EF4444' },
         { id: 'today',       label: 'Today',      color: 'var(--sb-accent)' },
-        { id: 'this-week',   label: 'This Week',  color: '#7F77DD' },
+        { id: 'this-week',   label: 'This Week',  color: '#685FD7' },
         { id: 'next-week',   label: 'Next Week',  color: 'var(--sb-ink-4)' },
-        { id: 'later',       label: 'Later',      color: '#6B7280' },
-        { id: 'unscheduled', label: 'Unscheduled',color: '#9CA3AF' },
+        { id: 'later',       label: 'Later',      color: 'var(--sb-ink-3)' },
+        { id: 'unscheduled', label: 'Unscheduled',color: 'var(--sb-ink-4)' },
       ]
       return buckets.map(b => ({
         id:    b.id,

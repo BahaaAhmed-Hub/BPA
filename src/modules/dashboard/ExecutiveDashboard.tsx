@@ -68,7 +68,7 @@ function MetricCard({
       </div>
 
       {delta && (
-        <div style={{ fontSize: 'var(--sb-t-meta)', color: deltaPositive ? '#1D9E75' : 'var(--sb-negative)', fontWeight: 500 }}>
+        <div style={{ fontSize: 'var(--sb-t-meta)', color: deltaPositive ? '#177C5B' : 'var(--sb-negative)', fontWeight: 500 }}>
           {delta}
         </div>
       )}
@@ -211,7 +211,7 @@ export function ExecutiveDashboard() {
               padding: '9px 18px', borderRadius: 'var(--sb-r-sm)',
               background: 'rgba(var(--sb-accent-rgb),0.12)',
               border: '1px solid rgba(var(--sb-accent-rgb),0.25)',
-              color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-label)', fontWeight: 600, cursor: 'pointer',
+              color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-label)', fontWeight: 600, cursor: 'pointer',
             }}
           >
             <CheckSquare size={ICON.sm} /> Manage Tasks
@@ -389,10 +389,10 @@ export function ExecutiveDashboard() {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             flexShrink: 0, marginTop: 1,
           }}>
-            <TrendingUp size={ICON.sm} color="#7F77DD" strokeWidth={STROKE.active} />
+            <TrendingUp size={ICON.sm} color="#685FD7" strokeWidth={STROKE.active} />
           </div>
           <div>
-            <div style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: '#7F77DD', marginBottom: 4, letterSpacing: '0.3px' }}>
+            <div style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-1)', marginBottom: 4, letterSpacing: '0.3px' }}>
               THE PROFESSOR
             </div>
             <p style={{ margin: 0, fontSize: 'var(--sb-t-label)', color: 'var(--sb-ink-1)', lineHeight: 1.55 }}>

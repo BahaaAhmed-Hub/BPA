@@ -826,7 +826,7 @@ function CompanyCard({
 
           {/* Add user row */}
           <div style={{ display: 'flex', gap: 6, marginTop: 8, alignItems: 'center' }}>
-            <Plus size={ICON.sm} color="#6B7280" style={{ flexShrink: 0 }} />
+            <Plus size={ICON.sm} color="var(--sb-ink-3)" style={{ flexShrink: 0 }} />
             <input value={newUserName} onChange={e => setNewUserName(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') addUser() }}
               placeholder="Name"
@@ -838,7 +838,7 @@ function CompanyCard({
             <button onClick={addUser} disabled={!newUserName.trim()} style={{
               padding: '3px 10px', borderRadius: 'var(--sb-r-chip)', fontSize: 'var(--sb-t-meta)', fontWeight: 500, cursor: 'pointer',
               background: 'rgba(var(--sb-accent-rgb),0.12)', border: '1px solid #7F77DD50',
-              color: '#7F77DD', opacity: newUserName.trim() ? 1 : 0.4,
+              color: '#685FD7', opacity: newUserName.trim() ? 1 : 0.4,
             }}>Add</button>
           </div>
         </div>
@@ -1541,7 +1541,7 @@ function TaskStatusesSection() {
   }, [])
   const [editIdx, setEditIdx] = useState<number | null>(null)
   const [adding, setAdding] = useState(false)
-  const [draft, setDraft] = useState<{ id: string; label: string; color: string }>({ id: '', label: '', color: '#6B7280' })
+  const [draft, setDraft] = useState<{ id: string; label: string; color: string }>({ id: '', label: '', color: 'var(--sb-ink-3)' })
 
   function persist(next: CustomStatus[]) {
     setStatuses(next)
@@ -1550,7 +1550,7 @@ function TaskStatusesSection() {
 
   function startAdd() {
     setEditIdx(null)
-    setDraft({ id: '', label: '', color: '#6B7280' })
+    setDraft({ id: '', label: '', color: 'var(--sb-ink-3)' })
     setAdding(true)
   }
 
@@ -1720,7 +1720,7 @@ function IntegrationBadge({ icon, label, active, onGrant }: {
       padding: '2px 7px', borderRadius: 'var(--sb-r-card)', fontSize: 'var(--sb-t-micro)', fontWeight: 500,
       background: active ? 'rgba(29,158,117,0.1)' : 'rgba(100,116,139,0.1)',
       border: `1px solid ${active ? 'rgba(29,158,117,0.3)' : 'rgba(100,116,139,0.25)'}`,
-      color: active ? '#1D9E75' : '#64748B',
+      color: active ? '#177C5B' : '#64748B',
     }}>
       {icon}{label}
       {!active && onGrant && (
@@ -1848,7 +1848,7 @@ function AccountsSection({
             <IntegrationBadge icon={<HardDrive size={ICON.sm} />} label="Drive" active />
           </div>
         </div>
-        <span style={{ fontSize: 'var(--sb-t-micro)', padding: '3px 10px', borderRadius: 'var(--sb-r-card)', background: 'rgba(29,158,117,0.1)', color: '#1D9E75', border: '1px solid rgba(29,158,117,0.2)' }}>
+        <span style={{ fontSize: 'var(--sb-t-micro)', padding: '3px 10px', borderRadius: 'var(--sb-r-card)', background: 'rgba(29,158,117,0.1)', color: '#177C5B', border: '1px solid rgba(29,158,117,0.2)' }}>
           Active
         </span>
         {primaryToken && (
@@ -1888,7 +1888,7 @@ function AccountsSection({
             opacity: hiddenAccts.has(acc.email) ? 0.5 : 1,
             transition: 'opacity 0.15s',
           }}>
-            <div style={{ width: 32, height: 32, borderRadius: 'var(--sb-r-pill)', flexShrink: 0, background: 'rgba(var(--sb-accent-rgb),0.12)', border: '1px solid #7F77DD40', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'var(--sb-t-label)', fontWeight: 700, color: '#7F77DD' }}>
+            <div style={{ width: 32, height: 32, borderRadius: 'var(--sb-r-pill)', flexShrink: 0, background: 'rgba(var(--sb-accent-rgb),0.12)', border: '1px solid #7F77DD40', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'var(--sb-t-label)', fontWeight: 700, color: '#685FD7' }}>
               {acc.email ? acc.email[0].toUpperCase() : 'G'}
             </div>
             <div style={{ flex: 1 }}>
@@ -1896,7 +1896,7 @@ function AccountsSection({
               {(() => {
                 const linked = companies.filter(c => c.accountId === acc.id)
                 if (linked.length === 0) {
-                  return <p style={{ margin: '3px 0 0', fontSize: 'var(--sb-t-meta)', color: '#B5AC98' }}>No company uses this account yet</p>
+                  return <p style={{ margin: '3px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>No company uses this account yet</p>
                 }
                 return (
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, margin: '5px 0 0' }}>
@@ -2255,7 +2255,7 @@ const DETAIL_LEVELS: { value: DetailLevel; label: string; desc: string }[] = [
 
 const DETAIL_BADGE: Record<DetailLevel, { bg: string; color: string }> = {
   busy:         { bg: 'rgba(224,82,82,0.12)',   color: 'var(--sb-negative)' },
-  focus_time:   { bg: 'rgba(29,158,117,0.12)',  color: '#1D9E75' },
+  focus_time:   { bg: 'rgba(29,158,117,0.12)',  color: '#177C5B' },
   full_details: { bg: 'rgba(30,64,175,0.12)',   color: '#6B9FFF' },
 }
 
@@ -2385,12 +2385,12 @@ function BlockingRulesSection() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3 }}>
               {badge(rule.detailLevel)}
               {rule.autoApply && (
-                <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 600, padding: '2px 7px', borderRadius: 'var(--sb-r-card)', background: 'rgba(29,158,117,0.12)', color: '#1D9E75' }}>
+                <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 600, padding: '2px 7px', borderRadius: 'var(--sb-r-card)', background: 'rgba(29,158,117,0.12)', color: '#177C5B' }}>
                   Auto
                 </span>
               )}
               {rule.hideBlocked && (
-                <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 600, padding: '2px 7px', borderRadius: 'var(--sb-r-card)', background: 'rgba(127,119,221,0.12)', color: '#7F77DD' }}>
+                <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 600, padding: '2px 7px', borderRadius: 'var(--sb-r-card)', background: 'rgba(127,119,221,0.12)', color: '#685FD7' }}>
                   Originals only
                 </span>
               )}
@@ -4405,7 +4405,7 @@ export function Settings() {
           <div style={{ padding: '0 12px', flex: 1, minHeight: 0 }}>
             {NAV_GROUPS.map(group => (
               <div key={group.label} style={{ marginBottom: 0 }}>
-                <div style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.14em', color: '#B5AC98', padding: '7px 12px 3px', textTransform: 'uppercase' as const }}>
+                <div style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-4)', padding: '7px 12px 3px', textTransform: 'uppercase' as const }}>
                   {group.label}
                 </div>
                 {group.ids.map(id => navItem(id))}

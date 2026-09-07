@@ -92,8 +92,8 @@ export type Quadrant = 'do' | 'schedule' | 'delegate' | 'eliminate'
 
 export const QUADRANT_META: Record<Quadrant, { label: string; sub: string; color: string }> = {
   do:       { label: 'Do',        sub: 'Urgent + Important',         color: '#7C3AED' },
-  schedule: { label: 'Schedule',  sub: 'Not Urgent + Important',     color: '#7F77DD' },
-  delegate: { label: 'Delegate',  sub: 'Urgent + Not Important',     color: '#1D9E75' },
+  schedule: { label: 'Schedule',  sub: 'Not Urgent + Important',     color: '#685FD7' },
+  delegate: { label: 'Delegate',  sub: 'Urgent + Not Important',     color: '#177C5B' },
   eliminate:{ label: 'Eliminate', sub: 'Not Urgent + Not Important', color: '#888780' },
 }
 
@@ -101,14 +101,14 @@ export const QUADRANT_META: Record<Quadrant, { label: string; sub: string; color
 export type TaskType = 'meeting' | 'call' | 'followup' | 'email' | 'research' | 'study' | 'deepwork' | 'do'
 
 export const TASK_TYPE_META: Record<TaskType, { label: string; emoji: string; color: string }> = {
-  meeting:  { label: 'Meeting / Schedule', emoji: '📅', color: '#7F77DD' },
-  call:     { label: 'Call',               emoji: '📞', color: '#1D9E75' },
+  meeting:  { label: 'Meeting / Schedule', emoji: '📅', color: '#685FD7' },
+  call:     { label: 'Call',               emoji: '📞', color: '#177C5B' },
   followup: { label: 'Follow-up',          emoji: '↩️', color: '#E0944A' },
   email:    { label: 'Email',              emoji: '✉️', color: '#60A5FA' },
   research: { label: 'Research',           emoji: '🔍', color: '#A78BFA' },
   study:    { label: 'Study',              emoji: '📚', color: '#34D399' },
   deepwork: { label: 'Deep work',          emoji: '🧠', color: '#7C6BD8' },
-  do:       { label: 'Do',                 emoji: '✅', color: '#6B7280' },
+  do:       { label: 'Do',                 emoji: '✅', color: 'var(--sb-ink-3)' },
 }
 
 /** Keyword-based task type classifier. Used as default when taskType is not manually set. */
@@ -147,7 +147,7 @@ export type TaskStatus = 'open' | 'done' | 'cancelled'
 export type BoardStatus = 'backlog' | 'planned' | 'in-progress' | 'blocked' | 'delayed' | 'done'
 
 export const BOARD_STATUS_META: Record<BoardStatus, { label: string; color: string }> = {
-  backlog:        { label: 'Backlog',      color: '#6B7280' },
+  backlog:        { label: 'Backlog',      color: 'var(--sb-ink-3)' },
   planned:        { label: 'Planned',      color: '#3B82F6' },
   'in-progress':  { label: 'In Progress',  color: '#F59E0B' },
   blocked:        { label: 'Blocked',      color: '#EF4444' },

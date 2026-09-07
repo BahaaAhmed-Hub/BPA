@@ -38,9 +38,9 @@ const ENERGY_META = [
   null,
   { label: 'Depleted', color: '#888780' },
   { label: 'Low',      color: '#888780' },
-  { label: 'Steady',   color: '#7F77DD' },
-  { label: 'Energized',color: '#1D9E75' },
-  { label: 'Peak',     color: '#7F77DD' },
+  { label: 'Steady',   color: '#685FD7' },
+  { label: 'Energized',color: '#177C5B' },
+  { label: 'Peak',     color: '#685FD7' },
 ] as const
 
 const QUADRANT_MAP: Record<string, DbTask['quadrant']> = {
@@ -235,9 +235,9 @@ function PrioritySkeleton() {
 // ─── Meeting icon ──────────────────────────────────────────────────────────────
 
 function MeetingTypeIcon({ type, size = 12 }: { type: string | null; size?: number }) {
-  if (type === 'video')       return <Video    size={size} color="#7F77DD" />
-  if (type === 'one_on_one')  return <Users    size={size} color="#1D9E75" />
-  if (type === 'external')    return <Calendar size={size} color="#7F77DD" />
+  if (type === 'video')       return <Video    size={size} color="#685FD7" />
+  if (type === 'one_on_one')  return <Users    size={size} color="#177C5B" />
+  if (type === 'external')    return <Calendar size={size} color="#685FD7" />
   return                             <Users    size={size} color="var(--sb-ink-3)" />
 }
 
@@ -252,9 +252,9 @@ function MeetingTypeLabel({ type }: { type: string | null }) {
 
 function StatusBadge({ status }: { status: ReturnType<typeof getEventStatus> }) {
   const cfg = {
-    live:     { label: 'Live',     bg: '#1D9E7518', border: '#1D9E7540', color: '#1D9E75', pulse: true  },
+    live:     { label: 'Live',     bg: '#1D9E7518', border: '#1D9E7540', color: '#177C5B', pulse: true  },
     soon:     { label: 'Soon',     bg: '#F59E0B18', border: '#F59E0B40', color: '#F59E0B', pulse: false },
-    upcoming: { label: 'Upcoming', bg: 'rgba(var(--sb-accent-rgb),0.12)', border: 'color-mix(in srgb, #7F77DD 40%, transparent)', color: '#7F77DD', pulse: false },
+    upcoming: { label: 'Upcoming', bg: 'rgba(var(--sb-accent-rgb),0.12)', border: 'color-mix(in srgb, #7F77DD 40%, transparent)', color: '#685FD7', pulse: false },
     past:     { label: 'Done',     bg: '#25283618', border: '#25283640', color: 'var(--sb-ink-3)', pulse: false },
   }[status]
 
@@ -503,7 +503,7 @@ function EventDetailPanel({ event, onClose }: { event: RichMeetingEvent; onClose
                 display: 'flex', alignItems: 'center', gap: 8,
                 padding: '10px 14px', borderRadius: 'var(--sb-r-chip)',
                 background: 'rgba(var(--sb-accent-rgb),0.12)', border: '1px solid #7F77DD40',
-                color: '#7F77DD', fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
+                color: '#685FD7', fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
                 textDecoration: 'none', transition: 'all 0.15s',
               }}
             >
@@ -897,9 +897,9 @@ export function MorningBrief() {
                   background: 'rgba(var(--sb-accent-rgb),0.12)', border: '1px solid #7F77DD30',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
-                  <Sparkles size={ICON.sm} color="#7F77DD" />
+                  <Sparkles size={ICON.sm} color="#685FD7" />
                 </div>
-                <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: '#7F77DD', letterSpacing: '0.8px', textTransform: 'uppercase' }}>
+                <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: '#685FD7', letterSpacing: '0.8px', textTransform: 'uppercase' }}>
                   AI Day Planner
                 </span>
               </div>
@@ -1107,7 +1107,7 @@ export function MorningBrief() {
                       padding: '10px 14px', borderRadius: 'var(--sb-r-sm)', width: '100%',
                       background: habit.checked ? '#1D9E7512' : 'var(--sb-page)',
                       border: `1px solid ${habit.checked ? '#1D9E7540' : 'var(--sb-border)'}`,
-                      color: habit.checked ? '#1D9E75' : 'var(--sb-ink-3)',
+                      color: habit.checked ? '#177C5B' : 'var(--sb-ink-3)',
                       fontSize: 'var(--sb-t-body)', cursor: 'pointer', textAlign: 'left',
                       transition: 'all 0.15s',
                     }}
@@ -1124,7 +1124,7 @@ export function MorningBrief() {
 
               {checkedHabits === habits.length && (
                 <p style={{
-                  margin: '14px 0 0', fontSize: 'var(--sb-t-body-s)', color: '#1D9E75',
+                  margin: '14px 0 0', fontSize: 'var(--sb-t-body-s)', color: '#177C5B',
                   textAlign: 'center', fontWeight: 500,
                 }}>
                   All habits done. Exceptional day ahead. ✓
