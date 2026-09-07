@@ -85,7 +85,10 @@ export function TopBar({ title, subtitle }: TopBarProps) {
             }}
             onMouseEnter={e => {
               const el = e.currentTarget as HTMLElement
-              el.style.background = 'rgba(255,255,255,0.05)'
+              // White at 5% on a white bar is nothing at all — this row of
+              // controls had no hover state for as long as the bar has been
+              // cream. The field colour is what a hovered control sits on.
+              el.style.background = 'var(--sb-field)'
               el.style.borderColor = 'var(--sb-border)'
               el.style.color = 'var(--sb-ink-1)'
             }}
