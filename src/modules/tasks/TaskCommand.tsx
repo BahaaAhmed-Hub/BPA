@@ -150,13 +150,17 @@ export function TaskCommand() {
   function clearFilters() { setFilters({ company: '', type: '', owner: '' }); setSearchQuery('') }
 
   /** Create a blank task, then open it in the detail panel ready to name.
-   *  The store mints the id, so the new task is picked up on the next render. */
+   *  The store mints the id, so the new task is picked up on the next render.
+   *
+   *  Blank means blank: "New task" had to be selected and deleted before the
+   *  real name could be typed. The panel focuses the title, and every list
+   *  falls back to "Untitled" so an unnamed one is still visible. */
   const openNewestRef = useRef(false)
   function handleNewTask() {
     const firstCompany = loadVisibleCompanies()[0]
     openNewestRef.current = true
     addTask({
-      title: 'New task',
+      title: '',
       quadrant: null,
       company: (firstCompany?.id ?? 'personal') as Task['company'],
       companyId: firstCompany?.id,

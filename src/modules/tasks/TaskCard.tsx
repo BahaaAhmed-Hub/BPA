@@ -148,12 +148,15 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
 
           <p
             style={{
-              flex: 1, margin: 0, fontSize: 13.5, fontWeight: 600, color: '#191712',
+              flex: 1, margin: 0, fontSize: 13.5, fontWeight: 600,
+              // An unnamed task reads as unnamed, not as a task called Untitled.
+              color: task.title.trim() ? '#191712' : '#9B9180',
+              fontStyle: task.title.trim() ? 'normal' : 'italic',
               lineHeight: 1.35, minWidth: 0,
               textDecoration: task.completed ? 'line-through' : 'none',
               display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
             }}
-          >{task.title}</p>
+          >{task.title.trim() || 'Untitled'}</p>
 
           <button data-nm onClick={() => toggleUrgent(task.id)}
             title={task.urgent ? 'On fire — click to clear' : 'Mark as on fire'}

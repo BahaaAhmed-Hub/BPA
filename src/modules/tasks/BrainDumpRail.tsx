@@ -118,9 +118,11 @@ function DumpCard({ task, onOpen, onDelete }: {
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, minWidth: 0 }}>
           <p style={{
-            flex: 1, margin: 0, fontSize: 12.5, fontWeight: 600, color: '#191712', lineHeight: 1.3,
+            flex: 1, margin: 0, fontSize: 12.5, fontWeight: 600, lineHeight: 1.3,
+            color: task.title.trim() ? '#191712' : '#9B9180',
+            fontStyle: task.title.trim() ? 'normal' : 'italic',
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-          }}>{task.title}</p>
+          }}>{task.title.trim() || 'Untitled'}</p>
           <button
             data-nm
             onClick={e => { e.stopPropagation(); onDelete() }}

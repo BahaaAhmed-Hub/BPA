@@ -183,13 +183,15 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
           flex: 1, minHeight: 0, overflowY: 'auto', padding: '18px 14px 0',
           outline: dropping ? '2px dashed #F5D14E' : 'none', outlineOffset: -6,
         }}>
-        {/* Title */}
+        {/* Title. A task with no name yet gets the cursor: it was made a
+            moment ago for the express purpose of being named. */}
         <textarea
+          ref={el => { if (el && !task.title && document.activeElement !== el) el.focus() }}
           value={task.title}
           onChange={e => patch({ title: e.target.value })}
           onKeyDown={e => { if (e.key === 'Enter') e.preventDefault() }}
           rows={2}
-          placeholder="Task title"
+          placeholder="What is it?"
           style={{
             width: '100%', boxSizing: 'border-box', resize: 'none', overflow: 'hidden',
             background: '#FAF7EC', border: '1px solid #E8E1CE', borderRadius: 11,

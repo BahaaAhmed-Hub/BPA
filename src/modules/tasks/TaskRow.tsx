@@ -67,10 +67,12 @@ export function TaskRow({ task, onOpen, dense }: {
 
       <div style={{ flex: 1, minWidth: 0 }}>
         <p style={{
-          margin: 0, fontSize: 13.5, fontWeight: 600, color: '#191712', lineHeight: 1.35,
+          margin: 0, fontSize: 13.5, fontWeight: 600, lineHeight: 1.35,
+          color: task.title.trim() ? '#191712' : '#9B9180',
+          fontStyle: task.title.trim() ? 'normal' : 'italic',
           overflowWrap: 'anywhere',
           textDecoration: task.completed ? 'line-through' : 'none',
-        }}>{task.title}</p>
+        }}>{task.title.trim() || 'Untitled'}</p>
         <span data-nm style={{ position: 'relative', display: 'inline-block', maxWidth: '100%', marginTop: 2 }}>
           <p style={{
             margin: 0, fontSize: 12, fontWeight: 600, lineHeight: 1.3, cursor: 'pointer',
