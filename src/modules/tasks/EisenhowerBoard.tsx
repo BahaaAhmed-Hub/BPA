@@ -6,6 +6,7 @@ import { useState } from 'react'
 import { Plus, ChevronDown, ChevronRight } from 'lucide-react'
 import { useDroppable } from '@dnd-kit/core'
 import { useTaskStore } from '@/store/taskStore'
+import { suppressUndo } from '@/lib/undo'
 import type { Quadrant, Task } from '@/types'
 import { isTaskHidden, loadVisibleCompanies } from '@/types'
 import { TaskRow } from './TaskRow'
@@ -210,7 +211,9 @@ export function EisenhowerBoard({
     const open = qTasks.filter(t => !t.completed && t.status !== 'cancelled')
     if (open.length === 0) return
     if (!window.confirm(`Archive ${open.length} task${open.length === 1 ? '' : 's'}?`)) return
-    for (const t of open) updateTask(t.id, { status: 'cancelled' })
+    // One entry for the lot — forty ⌘Zs to undo an archive is not an undo.
+    useTaskStore.getState()._remember(`Archived ${open.length} ${open.length === 1 ? 'task' : 'tasks'}`)
+    suppressUndo(() => { for (const t of open) updateTask(t.id, { status: 'cancelled' }) })
   }
 
   const [urgentImportant, notUrgentImportant, urgentNotImportant, notUrgentNotImportant] = QUADRANT_SPECS

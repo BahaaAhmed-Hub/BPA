@@ -226,7 +226,13 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
     }}>
       {/* ── Top row: company pill + controls ─────────────────────────────── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '14px 14px 0' }}>
-        <span style={{ position: 'relative', display: 'inline-flex', flex: 1, minWidth: 0 }}>
+        {/* The picker is an invisible select laid over the pill, so it has to be
+            the size of the pill. Stretched across the header's spare width it
+            was a company picker over the whole top of the panel: a click on the
+            empty space beside the label opened it. The outer span takes the
+            space and keeps the icons hard right; the inner one hugs the pill. */}
+        <span style={{ flex: '1 1 auto', minWidth: 0, display: 'flex' }}>
+        <span style={{ position: 'relative', display: 'inline-flex', minWidth: 0, maxWidth: '100%' }}>
           <span style={{
             display: 'inline-flex', alignItems: 'center', height: 28, padding: '0 12px',
             borderRadius: 999, border: `1px solid ${v.companyColor}`, color: v.companyColor,
@@ -244,6 +250,7 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
             <option value="">No company</option>
             {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
+        </span>
         </span>
 
         <button title={expanded ? 'Narrow the panel' : 'Widen the panel'} onClick={() => setExpanded(x => !x)} style={ICON_BTN}><Maximize2 size={14} /></button>

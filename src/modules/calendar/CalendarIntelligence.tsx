@@ -38,6 +38,7 @@ import { T, SANS, DISPLAY } from '@/lib/type'
 import { generateMeetingPrep } from '@/lib/professor'
 import type { MeetingPrep } from '@/lib/professor'
 import { useAuthStore } from '@/store/authStore'
+import { pushUndo } from '@/lib/undo'
 import { useUIStore } from '@/store/uiStore'
 import { loadAccounts, loadHiddenAccounts } from '@/lib/multiAccount'
 import { connectAdditionalGoogleAccount } from '@/lib/google'
@@ -2581,9 +2582,43 @@ export function CalendarIntelligence() {
     if (!token) return
     const ok = await deleteCalendarEventWithToken(token, ev.calendarId, ev.id)
     if (ok) {
+      // Google has no undelete, so taking this back means writing the same
+      // event again. It comes back with a new id — which is why the undo says
+      // "put it back" rather than pretending nothing happened.
+      const body: GCalEventCreate = {
+        summary: ev.summary ?? '(No title)',
+        description: ev.description,
+        location: ev.location,
+        start: ev.start,
+        end: ev.end,
+        attendees: ev.attendees?.filter(a => !a.self).map(a => ({ email: a.email })),
+      }
+      const calendarId = ev.calendarId
+      pushUndo(`Deleted "${ev.summary ?? 'an event'}"`, async () => {
+        const back = await createCalendarEventWithToken(token, calendarId, body)
+        if (back.event) setEvents(prev => [...prev, { ...back.event as GCalEvent, calendarId } as GCalEventExt])
+      })
       setEvents(prev => prev.filter(e => e.id !== ev.id))
       if (selectedEvent?.id === ev.id) setSelectedEvent(null)
     }
+  }
+
+  /** Put an event back where it was — on screen and in Google. Registered
+   *  before a drag writes, so the times closed over are the old ones. */
+  function rememberTimes(ev: GCalEventExt, label: string) {
+    const startISO = ev.start.dateTime
+    const endISO   = ev.end.dateTime
+    if (!startISO || !endISO) return
+    const cal = allCalendars.find(c => c.id === ev.calendarId)
+    const calendarId = ev.calendarId
+    if (!cal || !calendarId) return
+    const token = cal.accountToken
+    const id = ev.id
+    pushUndo(label, async () => {
+      applyOptimisticUpdate(id, new Date(startISO), new Date(endISO))
+      const ok = await updateCalendarEventTimes(token, calendarId, id, new Date(startISO), new Date(endISO))
+      if (!ok) revertOptimisticUpdate(id, startISO, endISO)
+    })
   }
 
   /** Move an event to another calendar, and say so when it cannot.
@@ -2787,6 +2822,7 @@ export function CalendarIntelligence() {
       if (newEnd.getTime() - start.getTime() < 15 * 60000) return
       const cal = allCalendars.find(c => c.id === ev.calendarId)
       if (!cal) return
+      rememberTimes(ev, `Resized "${ev.summary ?? 'an event'}"`)
       applyOptimisticUpdate(eventId, start, newEnd)
       const ok = await updateCalendarEventTimes(cal.accountToken, ev.calendarId!, eventId, start, newEnd)
       if (!ok) revertOptimisticUpdate(eventId, ev.start.dateTime, ev.end.dateTime)
@@ -2805,6 +2841,7 @@ export function CalendarIntelligence() {
       if (end.getTime() - newStart.getTime() < 15 * 60000) return
       const cal = allCalendars.find(c => c.id === ev.calendarId)
       if (!cal) return
+      rememberTimes(ev, `Resized "${ev.summary ?? 'an event'}"`)
       applyOptimisticUpdate(eventId, newStart, end)
       const ok = await updateCalendarEventTimes(cal.accountToken, ev.calendarId!, eventId, newStart, end)
       if (!ok) revertOptimisticUpdate(eventId, ev.start.dateTime, ev.end.dateTime)
@@ -2832,6 +2869,8 @@ export function CalendarIntelligence() {
     if (newStart.getTime() === origStart.getTime()) return
     const cal = allCalendars.find(c => c.id === ev.calendarId)
     if (!cal) return
+
+    rememberTimes(ev, `Moved "${ev.summary ?? 'an event'}"`)
 
     // Optimistic update — instant UI feedback
     applyOptimisticUpdate(id, newStart, newEnd)

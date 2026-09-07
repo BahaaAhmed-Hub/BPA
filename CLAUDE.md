@@ -331,6 +331,32 @@ for `quadrant === 'schedule'`, so a dated task in Do has nothing on the calendar
 The panel says which, and `scheduleTaskToCalendar` puts it there on request from
 any quadrant. Nothing anywhere removes an event when a task is completed.
 
+## Undo — taking it back
+`src/lib/undo.ts` holds one stack; `components/UndoBar.tsx` shows the last entry
+in the corner and binds ⌘Z / Ctrl-Z. Three rules:
+- **Register before the change, and store a snapshot, not a diff.** A diff has
+  to be right about every field it does not mention. `taskStore._remember(label)`
+  keeps the whole task list plus activities; the calendar keeps the event's old
+  times; finance keeps the entry itself.
+- **⌘Z never fires over a text field** (`inTextField`) — inside one the
+  browser's own undo knows about the caret. Panel edits that touch only words
+  coalesce under `task-text:<id>` for 2.5s, so one ⌘Z takes back the sentence.
+- **A bulk action is one entry.** `_remember(...)` once, then `suppressUndo(fn)`
+  around the many writes — Distribute all, Archive all. Forty ⌘Zs is not an undo.
+Covered: every task mutation (add, edit, move, reorder, complete, status,
+delete, clear), calendar delete / move / resize, finance entry delete.
+There is **no redo** — it would need an inverse of every inverse.
+`notify(text)` puts a line in the same corner for anything that is not an undo.
+
+## Tasks — a date is a calendar event, from any quadrant
+`TaskCommand`'s auto-push used to require `quadrant === 'schedule'`, so a dated
+task in **Do** — the ordinary case for something urgent — was never pushed and
+nothing said so. It now pushes any task that is **placed** (not still in the
+brain dump), **not finished**, dated **today or later**, and has no
+`gcalEventId`. Older dates are asked for by hand from the panel's calendar row,
+so turning this on does not fill a calendar with history. A failure is one
+`notify()`, not silence.
+
 ## Settings — Section → Component Mapping (CONFIRMED CORRECT as of latest commit)
 | Nav group | Section id | Title shown | Component rendered |
 |---|---|---|---|

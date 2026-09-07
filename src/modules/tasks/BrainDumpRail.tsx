@@ -8,6 +8,7 @@ import { useDraggable } from '@dnd-kit/core'
 import type { Task, Quadrant } from '@/types'
 import { loadVisibleCompanies } from '@/types'
 import { useTaskStore } from '@/store/taskStore'
+import { suppressUndo } from '@/lib/undo'
 import { CountBadge } from './controls'
 
 // ─── Collapsed or not ────────────────────────────────────────────────────────
@@ -202,14 +203,22 @@ export function BrainDumpRail({ tasks, onOpen, flexible }: {
   function distributeAll() {
     if (tasks.length === 0) return
     setLastRun(tasks.map(t => ({ id: t.id, quadrant: t.quadrant, boardStatus: t.boardStatus })))
-    for (const t of tasks) {
-      updateTask(t.id, { quadrant: suggestPlacement(t).quadrant, boardStatus: suggestColumn(t) })
-    }
+    // One action to take back, not one per task: the list is remembered once
+    // and every write inside stays quiet.
+    useTaskStore.getState()._remember(`Distributed ${tasks.length} ${tasks.length === 1 ? 'task' : 'tasks'}`)
+    suppressUndo(() => {
+      for (const t of tasks) {
+        updateTask(t.id, { quadrant: suggestPlacement(t).quadrant, boardStatus: suggestColumn(t) })
+      }
+    })
   }
 
   function undoDistribute() {
     if (!lastRun) return
-    for (const prev of lastRun) updateTask(prev.id, { quadrant: prev.quadrant, boardStatus: prev.boardStatus })
+    useTaskStore.getState()._remember('Put the distribution back')
+    suppressUndo(() => {
+      for (const prev of lastRun) updateTask(prev.id, { quadrant: prev.quadrant, boardStatus: prev.boardStatus })
+    })
     setLastRun(null)
   }
 

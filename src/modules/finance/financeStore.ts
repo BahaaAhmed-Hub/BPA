@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { pushUndo } from '@/lib/undo'
 import { persist } from 'zustand/middleware'
 import { supabase } from '@/lib/supabase'
 import type { Account, Category, Transaction, Bill, Goal, Budget } from './types'
@@ -494,6 +495,13 @@ export const useFinanceStore = create<FinanceState>()(
       },
 
       removeTransaction: async (id: string) => {
+        // Kept whole before it goes, so taking it back is one write of the same
+        // entry rather than a guess at what it held.
+        const gone = get().transactions.find(x => x.id === id)
+        if (gone) {
+          pushUndo(`Deleted ${gone.payee ? `"${gone.payee}"` : 'an entry'}`,
+            () => { void useFinanceStore.getState().upsertTransaction(gone) })
+        }
         forgetTarget(id)
         set(s => ({ transactions: s.transactions.filter(x => x.id !== id) }))
         dbDeleteTransaction(id).catch(console.warn)

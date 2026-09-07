@@ -6,6 +6,7 @@ import type { Task, Quadrant, TaskStatus, TaskActivity, TaskType } from '@/types
 import { COMPANY_LABELS, QUADRANT_META, getAllUsers, loadDynamicCompanies } from '@/types'
 import { saveTasksToDB, loadTasksFromDB } from '@/lib/dbSync'
 import { markLocalWrite } from '@/lib/liveSync'
+import { pushUndo } from '@/lib/undo'
 import type { TaskRow } from '@/lib/dbSync'
 
 /** Today in the viewer's own timezone. toISOString() reports UTC, which lands
@@ -170,13 +171,27 @@ interface TaskState {
   toggleComplete: (id: string) => void
   setStatus: (id: string, status: TaskStatus) => void
   loadFromDB: () => Promise<void>
+  /** Internal: snapshot the list so the last action can be taken back. */
+  _remember: (label: string, coalesceKey?: string) => void
 }
 
 export const useTaskStore = create<TaskState>()(
   persist(
-    (set, _get) => ({
+    (set, get) => ({
       tasks: [],
       activities: [],
+
+      /** Register how to take back whatever is about to happen. A snapshot of
+       *  the list, not a diff — a diff has to be right about every field it
+       *  does not mention, a snapshot only has to be put back. */
+      _remember: (label: string, coalesceKey?: string) => {
+        const tasks = get().tasks
+        const activities = get().activities
+        pushUndo(label, () => {
+          set({ tasks, activities })
+          scheduleDbSync(tasks)
+        }, { coalesceKey })
+      },
 
       loadFromDB: async () => {
         try {
@@ -222,7 +237,8 @@ export const useTaskStore = create<TaskState>()(
         } catch { /* offline — keep local */ }
       },
 
-      addTask: task =>
+      addTask: task => {
+        get()._remember('Added a task')
         set(s => {
           const newTask: Task = {
             ...task,
@@ -239,9 +255,11 @@ export const useTaskStore = create<TaskState>()(
             tasks: next,
             activities: [...s.activities, act(newTask.id, 'created', 'Task created')],
           }
-        }),
+        })
+      },
 
-      addTasksBatch: tasks =>
+      addTasksBatch: tasks => {
+        get()._remember(`Added ${tasks.length} ${tasks.length === 1 ? 'task' : 'tasks'}`)
         set(s => {
           const newTasks: Task[] = tasks.map(t => ({
             ...t, id: crypto.randomUUID(), createdAt: new Date().toISOString(),
@@ -255,9 +273,18 @@ export const useTaskStore = create<TaskState>()(
               ...newTasks.map(t => act(t.id, 'created', 'Task created from meeting notes')),
             ],
           }
-        }),
+        })
+      },
 
-      updateTask: (id, updates) =>
+      updateTask: (id, updates) => {
+        // Typing is one action, not one per letter: an edit that touches only
+        // words folds into the entry before it, so ⌘Z takes back the sentence.
+        const keys = Object.keys(updates)
+        const typing = keys.length > 0 && keys.every(k => k === 'title' || k === 'description')
+        const name = get().tasks.find(t => t.id === id)?.title?.trim()
+        get()._remember(
+          typing ? `Edited ${name ? `"${name}"` : 'a task'}` : `Changed ${name ? `"${name}"` : 'a task'}`,
+          typing ? `task-text:${id}` : undefined)
         set(s => {
           const old = s.tasks.find(t => t.id === id)
           if (!old) return s
@@ -338,9 +365,12 @@ export const useTaskStore = create<TaskState>()(
             tasks: next,
             activities: events.length ? [...merged, ...events] : merged,
           }
-        }),
+        })
+      },
 
-      moveTask: (id, quadrant) =>
+      moveTask: (id, quadrant) => {
+        const name = get().tasks.find(t => t.id === id)?.title?.trim()
+        get()._remember(`Moved ${name ? `"${name}"` : 'a task'} to ${quadrant ? QUADRANT_META[quadrant].label : 'the brain dump'}`)
         set(s => {
           const old = s.tasks.find(t => t.id === id)
           const from = old?.quadrant ? QUADRANT_META[old.quadrant].label : 'Inbox'
@@ -351,9 +381,11 @@ export const useTaskStore = create<TaskState>()(
             tasks: next,
             activities: [...s.activities, act(id, 'moved', `Moved from ${from} to ${to}`)],
           }
-        }),
+        })
+      },
 
-      moveTaskBefore: (activeId, overId) =>
+      moveTaskBefore: (activeId, overId) => {
+        get()._remember('Moved a task')
         set(s => {
           const dragged = s.tasks.find(t => t.id === activeId)
           const target  = s.tasks.find(t => t.id === overId)
@@ -373,9 +405,11 @@ export const useTaskStore = create<TaskState>()(
             tasks: next,
             activities: [...s.activities, act(activeId, 'moved', `Moved from ${from} to ${to}`)],
           }
-        }),
+        })
+      },
 
-      reorderInbox: (activeId, overId) =>
+      reorderInbox: (activeId, overId) => {
+        get()._remember('Reordered the brain dump')
         set(s => {
           const inboxIds = s.tasks.filter(t => t.quadrant === null).map(t => t.id)
           const fromIdx = inboxIds.indexOf(activeId)
@@ -387,9 +421,11 @@ export const useTaskStore = create<TaskState>()(
           const next     = [...others, ...reorderedInbox.map(id => s.tasks.find(t => t.id === id)!)]
           scheduleDbSync(next)
           return { tasks: next }
-        }),
+        })
+      },
 
-      reorderQuadrant: (activeId, overId) =>
+      reorderQuadrant: (activeId, overId) => {
+        get()._remember('Reordered tasks')
         set(s => {
           const dragged = s.tasks.find(t => t.id === activeId)
           const target  = s.tasks.find(t => t.id === overId)
@@ -405,9 +441,11 @@ export const useTaskStore = create<TaskState>()(
           const next = [...others, ...reordered.map(id => s.tasks.find(t => t.id === id)!)]
           scheduleDbSync(next)
           return { tasks: next }
-        }),
+        })
+      },
 
-      toggleUrgent: (id) =>
+      toggleUrgent: (id) => {
+        get()._remember('Changed what is on fire')
         set(s => {
           const task = s.tasks.find(t => t.id === id)
           if (!task) return s
@@ -436,9 +474,12 @@ export const useTaskStore = create<TaskState>()(
           }
           scheduleDbSync(next)
           return { tasks: next }
-        }),
+        })
+      },
 
-      deleteTask: id =>
+      deleteTask: id => {
+        const name = get().tasks.find(t => t.id === id)?.title?.trim()
+        get()._remember(`Deleted ${name ? `"${name}"` : 'a task'}`)
         set(s => {
           const next = s.tasks.filter(t => t.id !== id)
           scheduleDbSync(next)
@@ -446,9 +487,12 @@ export const useTaskStore = create<TaskState>()(
             tasks: next,
             activities: s.activities.filter(a => a.taskId !== id),
           }
-        }),
+        })
+      },
 
-      toggleComplete: id =>
+      toggleComplete: id => {
+        const t = get().tasks.find(x => x.id === id)
+        get()._remember(`${t?.completed ? 'Reopened' : 'Completed'} ${t?.title?.trim() ? `"${t.title.trim()}"` : 'a task'}`)
         set(s => {
           const task = s.tasks.find(t => t.id === id)
           const nowDone = !task?.completed
@@ -467,9 +511,11 @@ export const useTaskStore = create<TaskState>()(
             tasks: next,
             activities: [...s.activities, act(id, 'status_changed', nowDone ? 'Marked as done' : 'Reopened')],
           }
-        }),
+        })
+      },
 
-      setStatus: (id, status) =>
+      setStatus: (id, status) => {
+        get()._remember('Changed a status')
         set(s => {
           const today = todayKey()
           const next = s.tasks.map(t =>
@@ -486,9 +532,14 @@ export const useTaskStore = create<TaskState>()(
             tasks: next,
             activities: [...s.activities, act(id, 'status_changed', `Status → ${status}`)],
           }
-        }),
+        })
+      },
 
-      clearAll: () => { saveDirtyTasks(new Set()); set({ tasks: [], activities: [] }) },
+      clearAll: () => {
+        get()._remember('Cleared every task')
+        saveDirtyTasks(new Set())
+        set({ tasks: [], activities: [] })
+      },
     }),
     { name: 'professor-tasks' },
   ),

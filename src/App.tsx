@@ -27,6 +27,7 @@ import { runReminders } from './modules/finance/reminders'
 import { runBudgetEntries } from './modules/finance/budgetEntries'
 import { loadRules } from './modules/finance/modals/BudgetRuleModal'
 import { SyncGapBanner } from './modules/shell/SyncGapBanner'
+import { UndoBar } from './components/UndoBar'
 import { seedToken, seedFromLocalStorage, clearAllTokens, getGoogleToken } from './lib/tokenManager'
 import { refreshPrimaryToken } from './lib/googleCalendar'
 import { SetupWizard } from './modules/wizard/SetupWizard'
@@ -921,6 +922,7 @@ function App() {
           <ActiveModule />
         </main>
       </div>
+      <UndoBar />
       <CommandPalette open={searchOpen} onClose={() => setSearchOpen(false)} />
       <AssistantPanel open={assistantOpen} onClose={() => setAssistantOpen(false)} />
       <AssistantToggle open={assistantOpen} onClick={() => setAssistantOpen(o => !o)} />
