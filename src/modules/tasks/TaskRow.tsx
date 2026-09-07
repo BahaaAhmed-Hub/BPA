@@ -57,7 +57,7 @@ export function TaskRow({ task, onOpen, dense }: {
         title={task.completed ? 'Reopen' : 'Complete'}
         style={{
           width: 16, height: 16, borderRadius: 'var(--sb-r-chip)', boxSizing: 'border-box', flexShrink: 0, padding: 0, marginTop: 2,
-          border: task.completed ? '1.5px solid var(--sb-positive)' : '1.5px solid #CFC6B0',
+          border: task.completed ? 'var(--sb-border-emphasis) solid var(--sb-positive)' : 'var(--sb-border-emphasis) solid #CFC6B0',
           background: task.completed ? 'var(--sb-positive)' : 'var(--sb-card)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
         }}

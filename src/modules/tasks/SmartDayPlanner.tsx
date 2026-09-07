@@ -371,7 +371,7 @@ function AccountPickerOverlay({
             <button key={acct.id} onClick={() => setSelected(acct.id)} style={{
               padding: '10px 14px', borderRadius: 'var(--sb-r-nav)', cursor: 'pointer', textAlign: 'left',
               background: selected === acct.id ? 'rgba(249,115,22,0.06)' : 'var(--sb-card)',
-              border: `1.5px solid ${selected === acct.id ? '#F97316' : '#E5E7EB'}`,
+              border: `1px solid ${selected === acct.id ? '#F97316' : '#E5E7EB'}`,
               display: 'flex', alignItems: 'center', gap: 10,
             }}>
               <div style={{
@@ -409,7 +409,7 @@ function AccountPickerOverlay({
         <div style={{ display: 'flex', gap: 8 }}>
           <button onClick={onSkip} style={{
             flex: 1, padding: '9px', borderRadius: 'var(--sb-r-chip)', background: 'transparent',
-            border: '1.5px solid #E5E7EB', color: '#374151', fontSize: 'var(--sb-t-body)', cursor: 'pointer',
+            border: '1px solid #E5E7EB', color: '#374151', fontSize: 'var(--sb-t-body)', cursor: 'pointer',
           }}>
             Skip
           </button>
@@ -775,7 +775,7 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
                   <span style={{ fontSize: 'var(--sb-t-label)', fontWeight: 700, color: '#111827' }}>Today's Schedule</span>
                   <button onClick={() => void generatePlan()} disabled={generating} style={{
                     display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 'var(--sb-r-card)',
-                    background: generating ? '#F3F4F6' : 'var(--sb-card)', border: '1.5px solid #E5E7EB',
+                    background: generating ? '#F3F4F6' : 'var(--sb-card)', border: '1px solid #E5E7EB',
                     color: '#374151', fontSize: 'var(--sb-t-label)', fontWeight: 600, cursor: generating ? 'wait' : 'pointer',
                   }}>
                     <RefreshCw size={13} style={{ animation: generating ? 'spin 1s linear infinite' : 'none' }} />
@@ -858,7 +858,7 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
               )}
             </span>
             <div style={{ flex: 1 }} />
-            <button onClick={onClose} style={{ padding: '9px 20px', borderRadius: 'var(--sb-r-card)', background: 'var(--sb-card)', border: '1.5px solid #E5E7EB', color: '#374151', fontSize: 'var(--sb-t-label)', fontWeight: 600, cursor: 'pointer' }}>
+            <button onClick={onClose} style={{ padding: '9px 20px', borderRadius: 'var(--sb-r-card)', background: 'var(--sb-card)', border: '1px solid #E5E7EB', color: '#374151', fontSize: 'var(--sb-t-label)', fontWeight: 600, cursor: 'pointer' }}>
               Cancel
             </button>
             <button onClick={applyPlan} disabled={!blocks.length} style={{

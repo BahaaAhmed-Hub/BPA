@@ -250,7 +250,7 @@ export function SetupWizard({ onClose }: Props) {
               <button onClick={goBack} className="wz-btn-back" style={{
                 display: 'flex', alignItems: 'center', gap: 6,
                 padding: '11px 22px', borderRadius: 'var(--sb-r-pill)',
-                background: 'transparent', border: '1.5px solid #E5E7EB',
+                background: 'transparent', border: '1px solid #E5E7EB',
                 color: '#6B7280', fontSize: 'var(--sb-t-label)', fontWeight: 600, cursor: 'pointer',
                 transition: 'all 0.15s',
               }}>

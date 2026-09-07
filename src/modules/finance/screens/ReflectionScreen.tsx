@@ -982,7 +982,7 @@ function TotalRow({ label, months, total, sign, COL_W, NAME_W: _NAME_W, onDrill 
 }) {
   const col = sign === 1 ? OLIVE : RUST
   return (
-    <tr style={{ background: 'var(--sb-page)', borderTop: '2px solid var(--sb-border)', borderBottom: '2px solid var(--sb-border)' }}>
+    <tr style={{ background: 'var(--sb-page)', borderTop: 'var(--sb-border-emphasis) solid var(--sb-border)', borderBottom: 'var(--sb-border-emphasis) solid var(--sb-border)' }}>
       <td style={{ padding: '0 14px', height: 38, position: 'sticky', left: 0, background: 'var(--sb-page)', zIndex: 2 }}>
         <span style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 700, color: 'var(--sb-ink-1)' }}>{label}</span>
       </td>

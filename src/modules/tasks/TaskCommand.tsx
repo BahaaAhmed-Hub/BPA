@@ -308,7 +308,7 @@ export function TaskCommand() {
                 <span style={{ display: 'block', fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '.12em', color: 'var(--sb-ink-3)', padding: '12px 0 7px' }}>GROUP TASKS BY</span>
                 {(['none', 'status', 'type', 'company', 'owner'] as GroupBy[]).map(opt => (
                   <div key={opt} onClick={() => setGroupBy(opt)} style={{ display: 'flex', alignItems: 'center', gap: 10, height: 34, padding: '0 9px', borderRadius: 'var(--sb-r-sm)', background: groupBy === opt ? 'var(--sb-accent-tint)' : 'transparent', cursor: 'pointer' }}>
-                    <span style={{ width: 16, height: 16, boxSizing: 'border-box', borderRadius: 'var(--sb-r-pill)', border: `2px solid ${groupBy === opt ? 'var(--sb-ink-1)' : '#C9C0A8'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <span style={{ width: 16, height: 16, boxSizing: 'border-box', borderRadius: 'var(--sb-r-pill)', border: `var(--sb-border-emphasis) solid ${groupBy === opt ? 'var(--sb-ink-1)' : '#C9C0A8'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                       {groupBy === opt && <span style={{ width: 7, height: 7, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-ink-1)' }} />}
                     </span>
                     <span style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: groupBy === opt ? 600 : 500, color: groupBy === opt ? 'var(--sb-ink-1)' : 'var(--sb-ink-2)' }}>

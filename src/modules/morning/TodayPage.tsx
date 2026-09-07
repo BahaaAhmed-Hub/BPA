@@ -919,7 +919,7 @@ function HabitsCard({ habits, logs, qtyLogs, today, onToggle, onSetQty, onOpenTr
                       <span key={d} title={d} style={{
                         width: 15, height: 15, borderRadius: 'var(--sb-r-chip)', boxSizing: 'border-box',
                         background: on ? INK : 'var(--sb-field)',
-                        border: isToday ? `1.5px solid ${on ? INK : '#CFC6B0'}` : '1.5px solid transparent',
+                        border: isToday ? `var(--sb-border-emphasis) solid ${on ? INK : '#CFC6B0'}` : 'var(--sb-border-emphasis) solid transparent',
                       }} />
                     )
                   })}
@@ -1349,7 +1349,7 @@ export function TodayPage() {
                         title="Complete"
                         style={{
                           width: 17, height: 17, borderRadius: 'var(--sb-r-chip)', boxSizing: 'border-box', flexShrink: 0, padding: 0,
-                          border: '1.5px solid #CFC6B0', background: 'var(--sb-card)', cursor: 'pointer',
+                          border: '1px solid #CFC6B0', background: 'var(--sb-card)', cursor: 'pointer',
                         }} />
                       <span style={{ flex: 1, minWidth: 0, fontSize: 'var(--sb-t-label)', fontWeight: 600, color: INK, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {t.title}

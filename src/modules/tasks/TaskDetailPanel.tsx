@@ -493,7 +493,7 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
               <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '5px 0' }}>
                 <button onClick={() => toggleStep(s.id)} style={{
                   width: 15, height: 15, borderRadius: 'var(--sb-r-chip)', boxSizing: 'border-box', flexShrink: 0, padding: 0,
-                  border: s.done ? '1.5px solid var(--sb-ink-1)' : '1.5px solid #CFC6B0',
+                  border: s.done ? 'var(--sb-border-emphasis) solid var(--sb-ink-1)' : 'var(--sb-border-emphasis) solid #CFC6B0',
                   background: s.done ? 'var(--sb-ink-1)' : 'var(--sb-card)', cursor: 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>{s.done && <Check size={9} color="#fff" strokeWidth={3} />}</button>

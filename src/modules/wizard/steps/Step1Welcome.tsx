@@ -172,7 +172,7 @@ export function Step1Welcome({ data, onChange }: Props) {
           placeholder="Your name..."
           autoFocus
           style={{
-            background: 'var(--sb-card)', border: '1.5px solid #E5E7EB', borderRadius: 'var(--sb-r-nav)',
+            background: 'var(--sb-card)', border: '1px solid #E5E7EB', borderRadius: 'var(--sb-r-nav)',
             padding: '11px 14px', color: '#111827', fontSize: 'var(--sb-t-body)', outline: 'none',
             width: '100%', boxSizing: 'border-box',
             boxShadow: 'var(--sb-shadow-control)',

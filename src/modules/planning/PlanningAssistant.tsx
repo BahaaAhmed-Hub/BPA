@@ -480,7 +480,7 @@ export function PlanningAssistant() {
                   placeholder="Describe your ideal schedule…"
                   style={{
                     width: '100%', background: 'var(--sb-page)',
-                    border: `1.5px solid ${chatInput ? 'var(--sb-accent)' : 'var(--sb-border)'}`,
+                    border: `1px solid ${chatInput ? 'var(--sb-accent)' : 'var(--sb-border)'}`,
                     borderRadius: 'var(--sb-r-card)', padding: '9px 36px 9px 14px',
                     color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', outline: 'none',
                     boxSizing: 'border-box', transition: 'border-color 0.15s',

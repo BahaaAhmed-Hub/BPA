@@ -338,7 +338,7 @@ export function PlanScreen() {
                     <span style={{
                       width: 17, height: 17, borderRadius: 'var(--sb-r-pill)', flexShrink: 0, boxSizing: 'border-box',
                       background: active ? C.dark : C.surface,
-                      border: `1.5px solid ${active ? C.dark : '#D8D2C0'}`,
+                      border: `1px solid ${active ? C.dark : '#D8D2C0'}`,
                       color: 'var(--sb-ink-on-dark)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}>
                       {active && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg>}

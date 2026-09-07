@@ -392,7 +392,7 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
                       width: 17, height: 17, flexShrink: 0, padding: 0, borderRadius: 'var(--sb-r-chip)', cursor: 'pointer',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       background: r.paid ? 'var(--sb-ink-1)' : 'transparent',
-                      border: `1.5px solid ${r.paid ? 'var(--sb-ink-1)' : 'var(--sb-negative)'}`,
+                      border: `var(--sb-border-emphasis) solid ${r.paid ? 'var(--sb-ink-1)' : 'var(--sb-negative)'}`,
                       color: 'var(--sb-ink-on-dark)',
                     }}>
                     {r.paid && <Check size={11} strokeWidth={3} />}

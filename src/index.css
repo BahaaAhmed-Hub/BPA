@@ -117,8 +117,12 @@
   --sb-icon-md: ;
   --sb-icon-lg: ;
 
-  /* A border with something to say, and the ink that reads on the accent — P2 */
-  --sb-border-emphasis: ;
+  /* A border with something to say: a control whose edge carries its state —
+     a checkbox, a radio, a selection ring, the ring around your own face.
+     Everything else in the app is 1px. */
+  --sb-border-emphasis: 2px;
+
+  /* The ink that reads on the accent — still to be decided */
   --sb-accent-ink: ;
 }
 

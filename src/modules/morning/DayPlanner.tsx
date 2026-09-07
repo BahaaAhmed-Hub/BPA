@@ -488,7 +488,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                             <div style={{
                               width: 14, height: 14, borderRadius: 'var(--sb-r-chip)', flexShrink: 0,
                               background: isSelected ? group.color : 'transparent',
-                              border: `1.5px solid ${isSelected ? group.color : 'var(--sb-ink-4)'}`,
+                              border: `1px solid ${isSelected ? group.color : 'var(--sb-ink-4)'}`,
                               display: 'flex', alignItems: 'center', justifyContent: 'center',
                             }}>
                               {isSelected && <Check size={9} color="#fff" strokeWidth={3} />}

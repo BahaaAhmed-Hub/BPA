@@ -681,7 +681,7 @@ function CompanyCard({
             title="Change color"
             style={{
               width: 18, height: 18, borderRadius: 'var(--sb-r-pill)', background: co.color, cursor: 'pointer',
-              border: `2px solid ${co.color}60`, flexShrink: 0,
+              border: `var(--sb-border-emphasis) solid ${co.color}60`, flexShrink: 0,
             }}
           />
           {colorOpen && (
@@ -1075,7 +1075,7 @@ function SettingsHabitForm({
                 title="Remove picture"
                 style={{
                   position: 'absolute', top: -5, right: -5, width: 18, height: 18, borderRadius: 'var(--sb-r-pill)',
-                  padding: 0, cursor: 'pointer', background: 'var(--sb-ink-1)', border: '2px solid var(--sb-field)',
+                  padding: 0, cursor: 'pointer', background: 'var(--sb-ink-1)', border: 'var(--sb-border-emphasis) solid var(--sb-field)',
                   color: 'var(--sb-ink-on-dark)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
                 <X size={9} strokeWidth={3} />
@@ -2232,7 +2232,7 @@ function AppearanceSection({ s, set }: { s: AppSettings; set: (p: Partial<AppSet
                   padding: '8px 4px', borderRadius: 'var(--sb-r-sm)', cursor: 'pointer', flexDirection: 'column',
                   display: 'flex', alignItems: 'center', gap: 5,
                   background: tk['--sb-card'],
-                  border: `2px solid ${active ? tk['--sb-accent'] : tk['--sb-border']}`,
+                  border: `var(--sb-border-emphasis) solid ${active ? tk['--sb-accent'] : tk['--sb-border']}`,
                   boxShadow: active ? `0 0 10px rgba(${tk['--sb-accent-rgb']},0.25)` : 'none',
                   transition: 'all 0.15s',
                 }}>
@@ -2951,7 +2951,7 @@ function FinanceSection() {
                 onClick={() => saveStyle(style.id)}
                 style={{
                   background: active ? 'var(--sb-field)' : 'var(--sb-card)',
-                  border: `1.5px solid ${active ? 'var(--sb-accent)' : 'var(--sb-border)'}`,
+                  border: `1px solid ${active ? 'var(--sb-accent)' : 'var(--sb-border)'}`,
                   borderRadius: 'var(--sb-r-nav)', padding: '14px 14px 12px',
                   cursor: 'pointer', textAlign: 'left',
                   boxShadow: active ? '0 0 0 2px rgba(var(--sb-accent-rgb),0.25)' : 'none',
@@ -2965,7 +2965,7 @@ function FinanceSection() {
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
                   <div style={{
                     width: 16, height: 16, borderRadius: 'var(--sb-r-pill)', flexShrink: 0, marginTop: 1,
-                    border: `2px solid ${active ? 'var(--sb-accent)' : 'var(--sb-border)'}`,
+                    border: `var(--sb-border-emphasis) solid ${active ? 'var(--sb-accent)' : 'var(--sb-border)'}`,
                     background: active ? 'var(--sb-accent)' : 'transparent',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>

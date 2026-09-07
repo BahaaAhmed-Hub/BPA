@@ -855,7 +855,7 @@ export function MorningBrief() {
                     width: 44, height: 44, borderRadius: 'var(--sb-r-pill)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontSize: 'var(--sb-t-label)', fontWeight: 700,
-                    border: `1.5px solid ${selected ? meta.color : 'var(--sb-border)'}`,
+                    border: `1px solid ${selected ? meta.color : 'var(--sb-border)'}`,
                     background: selected ? `${meta.color}22` : 'transparent',
                     color: selected ? meta.color : 'var(--sb-ink-3)',
                     boxShadow: selected ? `0 0 14px ${meta.color}40` : 'none',

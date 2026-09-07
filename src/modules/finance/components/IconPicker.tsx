@@ -142,7 +142,7 @@ export function IconPicker({ value, onChange, size = 44, trigger }: Props) {
           style={{
             width: size, height: size,
             borderRadius: 'var(--sb-r-nav)',
-            border: `2px solid ${open ? 'var(--sb-accent)' : 'var(--sb-border)'}`,
+            border: `var(--sb-border-emphasis) solid ${open ? 'var(--sb-accent)' : 'var(--sb-border)'}`,
             background: 'var(--sb-card)',
             cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center',

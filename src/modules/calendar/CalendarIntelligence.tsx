@@ -725,7 +725,7 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
   // or neither — the tick and the strike-through say what happened to it.
   const evBg = `rgba(${rgb}, 0.10)`
   const evBorder = isTentative
-    ? `1.5px dashed ${color}`
+    ? `1px dashed ${color}`
     : isSelected
     ? `2px solid ${color}`
     : `1px solid rgba(${rgb}, 0.34)`
@@ -1783,7 +1783,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
                 }}>
                   <span style={{
                     width: 19, height: 19, borderRadius: 'var(--sb-r-chip)', boxSizing: 'border-box', flexShrink: 0, marginTop: 1,
-                    border: on ? '1.5px solid var(--sb-ink-1)' : '1.5px solid #CFC6B0',
+                    border: on ? 'var(--sb-border-emphasis) solid var(--sb-ink-1)' : 'var(--sb-border-emphasis) solid #CFC6B0',
                     background: on ? 'var(--sb-ink-1)' : 'var(--sb-card)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>{on && <Check size={11} color="#fff" strokeWidth={3} />}</span>
@@ -3610,7 +3610,7 @@ export function CalendarIntelligence() {
                           style={{
                             fontSize: 'var(--sb-t-micro)', fontWeight: 600, color: '#fff',
                             background: `${color}CC`,
-                            borderLeft: `2px solid ${color}`,
+                            borderLeft: `var(--sb-border-emphasis) solid ${color}`,
                             borderRadius: 3, padding: '1px 4px',
                             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                             cursor: 'pointer',
@@ -3689,7 +3689,7 @@ export function CalendarIntelligence() {
                       return (
                         <div style={{
                           position: 'absolute', top, left: '1%', right: '1%', height: h, zIndex: 10,
-                          background: 'rgba(var(--sb-accent-rgb),0.35)', border: '2px solid var(--sb-accent)',
+                          background: 'rgba(var(--sb-accent-rgb),0.35)', border: 'var(--sb-border-emphasis) solid var(--sb-accent)',
                           borderRadius: 'var(--sb-r-chip)', pointerEvents: 'none', boxSizing: 'border-box',
                         }}>
                           <div style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-1)', padding: '2px 5px', fontWeight: 600 }}>
@@ -3752,7 +3752,7 @@ export function CalendarIntelligence() {
       {/* Loading spinner overlay */}
       {loadingEvents && (
         <div style={{ position: 'absolute', bottom: 18, right: 22, display: 'flex', alignItems: 'center', gap: 7, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', pointerEvents: 'none' }}>
-          <div style={{ width: 14, height: 14, border: '2px solid var(--sb-border)', borderTopColor: 'var(--sb-ink-1)', borderRadius: 'var(--sb-r-pill)', animation: 'spin 0.7s linear infinite' }} />
+          <div style={{ width: 14, height: 14, border: 'var(--sb-border-emphasis) solid var(--sb-border)', borderTopColor: 'var(--sb-ink-1)', borderRadius: 'var(--sb-r-pill)', animation: 'spin 0.7s linear infinite' }} />
           Loading…
         </div>
       )}

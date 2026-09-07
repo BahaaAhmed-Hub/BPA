@@ -111,9 +111,9 @@ export function TopBar({ title, subtitle }: TopBarProps) {
           style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}
         >
           {user?.avatarUrl ? (
-            <img src={user.avatarUrl} alt={user.name ?? ''} style={{ width: 32, height: 32, borderRadius: 'var(--sb-r-pill)', border: '1.5px solid var(--sb-accent)', objectFit: 'cover' }} />
+            <img src={user.avatarUrl} alt={user.name ?? ''} style={{ width: 32, height: 32, borderRadius: 'var(--sb-r-pill)', border: 'var(--sb-border-emphasis) solid var(--sb-accent)', objectFit: 'cover' }} />
           ) : (
-            <div style={{ width: 32, height: 32, borderRadius: 'var(--sb-r-pill)', background: 'rgba(var(--sb-accent-rgb),0.12)', border: '1.5px solid var(--sb-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: 32, height: 32, borderRadius: 'var(--sb-r-pill)', background: 'rgba(var(--sb-accent-rgb),0.12)', border: 'var(--sb-border-emphasis) solid var(--sb-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <span style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>
                 {user?.name?.[0]?.toUpperCase() ?? 'P'}
               </span>

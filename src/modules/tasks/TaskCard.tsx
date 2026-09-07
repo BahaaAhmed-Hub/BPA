@@ -130,7 +130,7 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
               title={task.completed ? 'Reopen' : 'Complete'}
               style={{
                 width: 15, height: 15, borderRadius: 'var(--sb-r-chip)', boxSizing: 'border-box',
-                border: task.completed ? '1.5px solid var(--sb-positive)' : '1.5px solid #CFC6B0',
+                border: task.completed ? 'var(--sb-border-emphasis) solid var(--sb-positive)' : 'var(--sb-border-emphasis) solid #CFC6B0',
                 background: task.completed ? 'var(--sb-positive)' : 'var(--sb-card)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 cursor: 'pointer', flexShrink: 0, padding: 0, transition: 'all .15s',

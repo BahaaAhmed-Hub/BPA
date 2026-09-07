@@ -167,7 +167,7 @@ function HabitImagePicker({ image, emoji, onChange, size = 54 }: {
             title="Remove picture"
             style={{
               position: 'absolute', top: -5, right: -5, width: 18, height: 18, borderRadius: 'var(--sb-r-pill)',
-              padding: 0, cursor: 'pointer', background: 'var(--sb-ink-1)', border: '2px solid var(--sb-card)',
+              padding: 0, cursor: 'pointer', background: 'var(--sb-ink-1)', border: 'var(--sb-border-emphasis) solid var(--sb-card)',
               color: 'var(--sb-ink-on-dark)', display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
             <X size={9} strokeWidth={3} />
@@ -1309,7 +1309,7 @@ export function HabitsModule() {
 
               {/* Today done checkbox */}
               <button onClick={() => toggleHabit(habit.id, selectedDay)} title={todayDoneH ? 'Mark undone' : 'Mark done'}
-                style={{ width: 22, height: 22, boxSizing: 'border-box', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-card)', border: '1.5px solid var(--sb-border)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, padding: 0 }}>
+                style={{ width: 22, height: 22, boxSizing: 'border-box', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-card)', border: 'var(--sb-border-emphasis) solid var(--sb-border)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, padding: 0 }}>
                 {todayDoneH && (
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--sb-ink-1)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M5 13l4 4L19 7"/>

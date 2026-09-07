@@ -706,7 +706,7 @@ export function InboxModule() {
                     ? <div style={{ width: 26, height: 26, borderRadius: 'var(--sb-r-pill)', background: '#7F77DD', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><CheckCheck size={13} color="#fff" /></div>
                     : <SenderAvatar name={email.fromName} email={email.fromEmail} size={26} />
                   }
-                  {!isRead && !selectedIds.has(email.id) && <div style={{ position: 'absolute', top: -1, right: -1, width: 8, height: 8, borderRadius: 'var(--sb-r-pill)', background: '#7F77DD', border: '2px solid var(--sb-card)' }} />}
+                  {!isRead && !selectedIds.has(email.id) && <div style={{ position: 'absolute', top: -1, right: -1, width: 8, height: 8, borderRadius: 'var(--sb-r-pill)', background: '#7F77DD', border: 'var(--sb-border-emphasis) solid var(--sb-card)' }} />}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 1 }}>
