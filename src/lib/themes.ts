@@ -253,11 +253,13 @@ export const THEMES: AppTheme[] = [
       '--sb-warning':       '#7E5410', '--sb-warning-tint': '#F2EBDC',
       '--sb-shadow-panel':  '-8px 0 40px -12px rgba(19,26,23,.22)',
       '--sb-shadow-accent': '0 2px 0 rgba(8,44,34,.3)',
-      // Shape. Tighter, because it is a working tool.
-      '--sb-r-chip': '6px', '--sb-r-sm': '7px', '--sb-r-nav': '8px',
-      '--sb-r-card': '12px', '--sb-r-frame': '16px',
+      // Shape. Tighter, because it is a working tool — and tighter than the
+      // first pass, which sat two pixels off Sunlit Bento on every height and
+      // was not telling itself apart in greyscale.
+      '--sb-r-chip': '4px', '--sb-r-sm': '7px', '--sb-r-nav': '8px',
+      '--sb-r-card': '10px', '--sb-r-frame': '16px',
       '--sb-border-width': '1px',
-      '--sb-h-pill': '32px', '--sb-h-nav': '34px', '--sb-h-header': '74px',
+      '--sb-h-pill': '30px', '--sb-h-nav': '32px', '--sb-h-header': '72px',
       '--sb-t-h2': '18px', '--sb-t-h1': '26px', '--sb-t-display': '29px',
     },
   },
