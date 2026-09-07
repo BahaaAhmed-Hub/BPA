@@ -26,14 +26,14 @@ function formatBytes(n: number): string {
 
 const FIELD: React.CSSProperties = {
   width: '100%', boxSizing: 'border-box', height: 40, padding: '0 12px',
-  background: '#FAF7EC', border: '1px solid #E8E1CE', borderRadius: 9,
-  fontSize: 13, color: '#191712', fontFamily: 'inherit', outline: 'none',
+  background: 'var(--sb-field)', border: '1px solid var(--sb-border)', borderRadius: 9,
+  fontSize: 13, color: 'var(--sb-ink-1)', fontFamily: 'inherit', outline: 'none',
 }
 
 const ROUND: React.CSSProperties = {
   width: 40, height: 40, borderRadius: 9, flexShrink: 0, padding: 0,
   display: 'flex', alignItems: 'center', justifyContent: 'center',
-  background: '#FFFFFF', border: '1px solid #E8E1CE', color: '#6C6553', cursor: 'pointer',
+  background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-3)', cursor: 'pointer',
 }
 
 export function DeliverablePrompt({ task, onComplete, onCancel }: {
@@ -78,15 +78,15 @@ export function DeliverablePrompt({ task, onComplete, onCancel }: {
       }}>
       <div style={{
         width: 460, maxHeight: '86vh', overflowY: 'auto', boxSizing: 'border-box',
-        background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 16,
+        background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 16,
         boxShadow: '0 24px 60px -20px rgba(25,23,18,0.45)', padding: '20px 22px 18px',
       }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ margin: 0, fontFamily: 'Outfit, sans-serif', fontSize: 19, fontWeight: 600, color: '#191712', letterSpacing: '-0.02em' }}>
+            <p style={{ margin: 0, fontFamily: 'Outfit, sans-serif', fontSize: 19, fontWeight: 600, color: 'var(--sb-ink-1)', letterSpacing: '-0.02em' }}>
               What came out of it?
             </p>
-            <p style={{ margin: '4px 0 0', fontSize: 12.5, color: '#6C6553', lineHeight: 1.45 }}>
+            <p style={{ margin: '4px 0 0', fontSize: 12.5, color: 'var(--sb-ink-3)', lineHeight: 1.45 }}>
               Keep the deliverable with “{task.title}”. Both are optional — you can
               close it with nothing attached.
             </p>
@@ -97,7 +97,7 @@ export function DeliverablePrompt({ task, onComplete, onCancel }: {
         </div>
 
         {/* ── Links ────────────────────────────────────────────────────────── */}
-        <p style={{ margin: '18px 0 8px', fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', color: '#6C6553', textTransform: 'uppercase' }}>
+        <p style={{ margin: '18px 0 8px', fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', color: 'var(--sb-ink-3)', textTransform: 'uppercase' }}>
           Links
         </p>
         <div style={{ display: 'flex', gap: 8 }}>
@@ -118,9 +118,9 @@ export function DeliverablePrompt({ task, onComplete, onCancel }: {
               <div key={url} style={{
                 display: 'flex', alignItems: 'center', gap: 9, minWidth: 0,
                 height: 36, padding: '0 10px', borderRadius: 9,
-                background: '#FAF7EC', border: '1px solid #E8E1CE',
+                background: 'var(--sb-field)', border: '1px solid var(--sb-border)',
               }}>
-                <Link2 size={13} color="#6C6553" style={{ flexShrink: 0 }} />
+                <Link2 size={13} color="var(--sb-ink-3)" style={{ flexShrink: 0 }} />
                 <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: '#1A73E8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {url}
                 </span>
@@ -134,7 +134,7 @@ export function DeliverablePrompt({ task, onComplete, onCancel }: {
         )}
 
         {/* ── Files ────────────────────────────────────────────────────────── */}
-        <p style={{ margin: '18px 0 8px', fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', color: '#6C6553', textTransform: 'uppercase' }}>
+        <p style={{ margin: '18px 0 8px', fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', color: 'var(--sb-ink-3)', textTransform: 'uppercase' }}>
           Files
         </p>
         <label
@@ -144,9 +144,9 @@ export function DeliverablePrompt({ task, onComplete, onCancel }: {
           style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
             height: 62, borderRadius: 11, cursor: 'pointer',
-            background: dropping ? 'rgba(var(--sb-accent-rgb),0.16)' : '#FAF7EC',
+            background: dropping ? 'rgba(var(--sb-accent-rgb),0.16)' : 'var(--sb-field)',
             border: `1px dashed ${dropping ? 'var(--sb-accent)' : '#D8CFB8'}`,
-            fontSize: 12.5, color: '#6C6553',
+            fontSize: 12.5, color: 'var(--sb-ink-3)',
           }}>
           <Paperclip size={14} />
           Drop files here, or choose several
@@ -158,10 +158,10 @@ export function DeliverablePrompt({ task, onComplete, onCancel }: {
               <div key={f.id} style={{
                 display: 'flex', alignItems: 'center', gap: 9, minWidth: 0,
                 height: 36, padding: '0 10px', borderRadius: 9,
-                background: '#FAF7EC', border: '1px solid #E8E1CE',
+                background: 'var(--sb-field)', border: '1px solid var(--sb-border)',
               }}>
-                <FileText size={13} color="#6C6553" style={{ flexShrink: 0 }} />
-                <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: '#191712', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <FileText size={13} color="var(--sb-ink-3)" style={{ flexShrink: 0 }} />
+                <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: 'var(--sb-ink-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {f.name}
                 </span>
                 <span style={{ fontSize: 11, color: '#9B9180', flexShrink: 0 }}>{formatBytes(f.size)}</span>
@@ -181,13 +181,13 @@ export function DeliverablePrompt({ task, onComplete, onCancel }: {
           </span>
           <button onClick={onCancel} style={{
             height: 40, padding: '0 16px', borderRadius: 9, cursor: 'pointer',
-            background: '#FFFFFF', border: '1px solid #E8E1CE', color: '#6C6553',
+            background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-3)',
             fontSize: 13, fontFamily: 'inherit',
           }}>Cancel</button>
           <button onClick={() => onComplete({ links, attachments: files })} style={{
             display: 'flex', alignItems: 'center', gap: 7,
             height: 40, padding: '0 18px', borderRadius: 9, cursor: 'pointer',
-            background: '#191712', border: 'none', color: '#FDF8E7',
+            background: 'var(--sb-ink-1)', border: 'none', color: 'var(--sb-ink-on-dark)',
             fontSize: 13, fontWeight: 600, fontFamily: 'inherit',
           }}><Check size={14} strokeWidth={2.6} /> Complete</button>
         </div>
