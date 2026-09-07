@@ -57,7 +57,7 @@ function Pill({ type, amount, currency, direction }: {
 
 const RANGE_FIELD: React.CSSProperties = {
   border: 'none', background: 'transparent', outline: 'none',
-  fontFamily: "'Outfit', system-ui, sans-serif", fontSize: 13, fontWeight: 500,
+  fontFamily: 'var(--sb-font-num)', fontSize: 13, fontWeight: 500,
   color: 'var(--sb-ink-1)', padding: 0, width: 118,
 }
 
@@ -191,7 +191,7 @@ function AccountRow({ account, balance, unconverted, pending, selected, hovered,
       )}
 
       <div style={{ marginLeft: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', flexShrink: 0 }}>
-        <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 14.5, fontWeight: 600, color: isNeg ? 'var(--sb-negative)' : 'var(--sb-ink-1)', fontVariantNumeric: 'tabular-nums' }}>
+        <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 14.5, fontWeight: 600, color: isNeg ? 'var(--sb-negative)' : 'var(--sb-ink-1)', fontVariantNumeric: 'tabular-nums' }}>
           {formatBalance(balance, account.currency)}
         </span>
         {unconverted.length > 0 ? (
@@ -375,7 +375,7 @@ export function BalanceScreen() {
       }}>
         <div>
           <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-3)', display: 'block', marginBottom: 4 }}>MONEY</span>
-          <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 30, fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1, color: 'var(--sb-ink-1)', display: 'block' }}>Balances</span>
+          <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 30, fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1, color: 'var(--sb-ink-1)', display: 'block' }}>Balances</span>
           <span style={{ fontSize: 12, color: 'var(--sb-ink-3)', display: 'block', marginTop: 3 }}>
             {unrated.length > 0 && (
               <span style={{ color: '#8A6D0B' }}>
@@ -412,7 +412,7 @@ export function BalanceScreen() {
       <div style={{ flexShrink: 0, margin: '14px 26px 0', background: 'var(--sb-ink-1)', borderRadius: 18, padding: '16px 20px', display: 'flex', gap: 22, alignItems: 'center', color: 'var(--sb-ink-on-dark)' }}>
         <div style={{ flexShrink: 0, width: 240 }}>
           <span style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.14em', opacity: 0.6, display: 'block', marginBottom: 4 }}>NET POSITION</span>
-          <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 36, fontWeight: 600, letterSpacing: '-0.04em', lineHeight: 1, fontVariantNumeric: 'tabular-nums', display: 'block' }}>
+          <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 36, fontWeight: 600, letterSpacing: '-0.04em', lineHeight: 1, fontVariantNumeric: 'tabular-nums', display: 'block' }}>
             {acct(netPos, { currency: 'EGP' })}
           </span>
           <span style={{ fontSize: 11, opacity: 0.65, display: 'block', marginTop: 4 }}>
@@ -436,7 +436,7 @@ export function BalanceScreen() {
         {/* Safe to spend */}
         <div style={{ width: 160, flexShrink: 0 }}>
           <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', opacity: 0.55, display: 'block', marginBottom: 4 }}>SAFE TO SPEND</span>
-          <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 22, fontWeight: 600, letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums', display: 'block' }}>
+          <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 22, fontWeight: 600, letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums', display: 'block' }}>
             {acct(Math.max(0, netPos - totalOwed * 0.1), { currency: 'EGP' })}
           </span>
           <span style={{ fontSize: 10.5, opacity: 0.6, display: 'block', marginTop: 2 }}>After committed bills</span>
@@ -462,7 +462,7 @@ export function BalanceScreen() {
             <div key={group.label} style={{ marginBottom: 14 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, height: 30, padding: '0 12px', borderRadius: 10, background: 'var(--sb-field)', marginBottom: 7, boxSizing: 'border-box' as const }}>
                 <span style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.12em', color: 'var(--sb-ink-3)' }}>{group.label}</span>
-                <span style={{ marginLeft: 'auto', fontFamily: 'Outfit, sans-serif', fontSize: 13.5, fontWeight: 600, color: group.totalColor, fontVariantNumeric: 'tabular-nums' }}>
+                <span style={{ marginLeft: 'auto', fontFamily: 'var(--sb-font-num)', fontSize: 13.5, fontWeight: 600, color: group.totalColor, fontVariantNumeric: 'tabular-nums' }}>
                   {acct(group.owed ? -Math.abs(group.total) : group.total, { currency: 'EGP' })}
                 </span>
               </div>

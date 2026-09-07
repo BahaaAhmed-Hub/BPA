@@ -35,7 +35,7 @@ const C = {
   red:     'var(--sb-negative)',
 }
 
-const DISPLAY = 'Outfit, sans-serif'
+const DISPLAY = 'var(--sb-font-num)'
 const BUFFER_KEY = 'finance-goal-buffer-months'
 const POLICY_KEY = 'finance-goal-policy'
 

@@ -155,7 +155,7 @@ function MoneyCalendar({
       textTransform: 'uppercase' as const, color: 'var(--sb-ink-3)',
     }}>
       {label}
-      <b style={{ fontFamily: 'Outfit, sans-serif', fontSize: 12.5, letterSpacing: 0, color, fontVariantNumeric: 'tabular-nums' }}>{value}</b>
+      <b style={{ fontFamily: 'var(--sb-font-num)', fontSize: 12.5, letterSpacing: 0, color, fontVariantNumeric: 'tabular-nums' }}>{value}</b>
     </span>
   )
 
@@ -165,7 +165,7 @@ function MoneyCalendar({
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, flexWrap: 'wrap' as const }}>
         <button onClick={onPrevMonth} style={ROUND_BTN} title="Previous month">‹</button>
         <button onClick={onNextMonth} style={ROUND_BTN} title="Next month">›</button>
-        <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 21, fontWeight: 600, color: 'var(--sb-ink-1)', letterSpacing: '-0.03em' }}>
+        <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 21, fontWeight: 600, color: 'var(--sb-ink-1)', letterSpacing: '-0.03em' }}>
           {MONTH_NAMES[month]} <span style={{ color: 'var(--sb-ink-4)' }}>{year}</span>
         </span>
         <span style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
@@ -222,7 +222,7 @@ function MoneyCalendar({
                 }}
               >
                 <span style={{
-                  fontFamily: 'Outfit, sans-serif', fontSize: 12.5, fontWeight: 600,
+                  fontFamily: 'var(--sb-font-num)', fontSize: 12.5, fontWeight: 600,
                   width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
                   display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                   marginLeft: -2,
@@ -232,7 +232,7 @@ function MoneyCalendar({
                   {day}
                 </span>
                 {net !== 0 && (
-                  <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 12.5, fontWeight: 600, color: netColor, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 12.5, fontWeight: 600, color: netColor, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {net < 0 ? `(${cellAmount(net)})` : cellAmount(net)}
                   </span>
                 )}
@@ -375,7 +375,7 @@ export function TodayScreen() {
       <div style={{ flexShrink: 0, borderBottom: `1px solid ${C.border}`, padding: '12px 26px 14px', display: 'flex', alignItems: 'flex-end', gap: 20 }}>
         <div>
           <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-3)', display: 'block', marginBottom: 3 }}>MONEY</span>
-          <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 26, fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1, color: 'var(--sb-ink-1)' }}>Today</span>
+          <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 26, fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1, color: 'var(--sb-ink-1)' }}>Today</span>
         </div>
         {todayTx.length > 0 && (
           <div style={{ display: 'flex', gap: 16, paddingBottom: 3 }}>
@@ -458,7 +458,7 @@ export function TodayScreen() {
                   textTransform: 'uppercase' as const, color: C.textMuted,
                 }}>{label}</span>
                 <span style={{
-                  marginLeft: 'auto', fontFamily: 'Outfit, sans-serif',
+                  marginLeft: 'auto', fontFamily: 'var(--sb-font-num)',
                   fontSize: strong ? 17 : 14.5, fontWeight: strong ? 700 : 600,
                   letterSpacing: '-0.02em', color, fontVariantNumeric: 'tabular-nums',
                 }}>{value}</span>

@@ -473,14 +473,14 @@ function WallCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, o
             {streak}d
           </span>
           {/* Habit name */}
-          <span style={{ marginTop: 'auto', fontFamily: 'Outfit, sans-serif', fontSize: 18, fontWeight: 700, letterSpacing: '-0.02em', lineHeight: 1.15, color: 'var(--sb-card)', textShadow: '0 1px 10px rgba(25,23,18,.55)' }}>{habit.name}</span>
+          <span style={{ marginTop: 'auto', fontFamily: 'var(--sb-font-num)', fontSize: 18, fontWeight: 700, letterSpacing: '-0.02em', lineHeight: 1.15, color: 'var(--sb-card)', textShadow: '0 1px 10px rgba(25,23,18,.55)' }}>{habit.name}</span>
         </span>
       </span>
       {/* Right: data panel */}
       <span style={{ flex: 1, minWidth: 0, background: 'var(--sb-card)', display: 'flex', flexDirection: 'column', gap: 9, padding: '13px 14px' }}>
         {/* Count / status */}
         <span style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
-          <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 24, fontWeight: 700, letterSpacing: '-0.03em', lineHeight: 1, color: 'var(--sb-ink-1)', fontVariantNumeric: 'tabular-nums' }}>
+          <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 24, fontWeight: 700, letterSpacing: '-0.03em', lineHeight: 1, color: 'var(--sb-ink-1)', fontVariantNumeric: 'tabular-nums' }}>
             {isQty ? `${qtyValue}${habit.unit ? ' ' + habit.unit : ''}` : (todayDone ? 'Done' : '—')}
           </span>
           <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--sb-ink-3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -625,7 +625,7 @@ function FillCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, o
             {streak}d
           </span>
           <span style={{
-            fontFamily: 'Outfit, sans-serif', fontSize: isSelected ? 15 : 12.5, fontWeight: 700,
+            fontFamily: 'var(--sb-font-num)', fontSize: isSelected ? 15 : 12.5, fontWeight: 700,
             letterSpacing: '-0.02em', lineHeight: 1.18, color: 'var(--sb-ink-on-dark)',
             display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
           }}>{habit.name}</span>
@@ -635,7 +635,7 @@ function FillCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, o
         <span style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0 }}>
           <span style={{ display: 'flex', flexDirection: 'column', gap: 1, minWidth: 0 }}>
             <span style={{
-              fontFamily: 'Outfit, sans-serif', fontSize: isSelected ? 24 : 18, fontWeight: 700,
+              fontFamily: 'var(--sb-font-num)', fontSize: isSelected ? 24 : 18, fontWeight: 700,
               letterSpacing: '-0.03em', lineHeight: 1.1, color: 'var(--sb-ink-on-dark)', fontVariantNumeric: 'tabular-nums',
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             }}>

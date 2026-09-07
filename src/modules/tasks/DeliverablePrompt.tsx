@@ -83,7 +83,7 @@ export function DeliverablePrompt({ task, onComplete, onCancel }: {
       }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ margin: 0, fontFamily: 'Outfit, sans-serif', fontSize: 19, fontWeight: 600, color: 'var(--sb-ink-1)', letterSpacing: '-0.02em' }}>
+            <p style={{ margin: 0, fontFamily: 'var(--sb-font-num)', fontSize: 19, fontWeight: 600, color: 'var(--sb-ink-1)', letterSpacing: '-0.02em' }}>
               What came out of it?
             </p>
             <p style={{ margin: '4px 0 0', fontSize: 12.5, color: 'var(--sb-ink-3)', lineHeight: 1.45 }}>

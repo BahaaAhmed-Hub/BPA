@@ -539,7 +539,7 @@ export function ReflectionScreen(_props?: any) {
   function numCell(v: number, isNet = false): React.CSSProperties {
     return {
       width: COL_W, minWidth: COL_W, textAlign: 'right' as const, padding: '0 10px',
-      fontFamily: 'Outfit, sans-serif', fontSize: 12.5, fontWeight: isNet ? 700 : 500,
+      fontFamily: 'var(--sb-font-num)', fontSize: 12.5, fontWeight: isNet ? 700 : 500,
       color: isNet ? netColor(v) : v === 0 ? '#C5BCA8' : 'var(--sb-ink-1)',
       fontVariantNumeric: 'tabular-nums' as const,
       whiteSpace: 'nowrap' as const,
@@ -555,7 +555,7 @@ export function ReflectionScreen(_props?: any) {
           <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-3)', display: 'block', marginBottom: 4 }}>FINANCE · REFLECT</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <button onClick={() => void setYear(year - 1)} style={{ background: 'none', border: 'none', color: 'var(--sb-ink-3)', fontSize: 20, cursor: 'pointer', padding: 0, lineHeight: 1 }}>‹</button>
-            <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 28, fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1, color: 'var(--sb-ink-1)' }}>
+            <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 28, fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1, color: 'var(--sb-ink-1)' }}>
               Financials, {year}
             </span>
             <button onClick={() => void setYear(year + 1)} style={{ background: 'none', border: 'none', color: 'var(--sb-ink-3)', fontSize: 20, cursor: 'pointer', padding: 0, lineHeight: 1 }}>›</button>
@@ -646,7 +646,7 @@ export function ReflectionScreen(_props?: any) {
                         <span style={{ color: dupes.get(t.id) === 'day' ? '#8A6D0B' : '#B0A488', fontSize: 10, fontWeight: 700 }}>
                           {dupes.get(t.id) === 'day' ? 'SAME DAY' : 'SAME MONTH'}
                         </span>
-                        <span style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 600, color: '#3D3926', fontVariantNumeric: 'tabular-nums' }}>
+                        <span style={{ fontFamily: 'var(--sb-font-num)', fontWeight: 600, color: '#3D3926', fontVariantNumeric: 'tabular-nums' }}>
                           {acct(Math.abs(t.amount), { currency: t.currency })}
                         </span>
                       </span>
@@ -675,7 +675,7 @@ export function ReflectionScreen(_props?: any) {
           )}
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontSize: 10, letterSpacing: '0.1em', fontWeight: 700, color: 'var(--sb-ink-4)' }}>NET THROUGH {throughLabel}</div>
-            <div style={{ fontFamily: 'Outfit, sans-serif', fontSize: 20, fontWeight: 700, letterSpacing: '-0.02em', color: netColor(totalNet) }}>
+            <div style={{ fontFamily: 'var(--sb-font-num)', fontSize: 20, fontWeight: 700, letterSpacing: '-0.02em', color: netColor(totalNet) }}>
               {acct(totalNet, { currency: 'EGP', zero: '–' })}
             </div>
           </div>
@@ -808,7 +808,7 @@ export function ReflectionScreen(_props?: any) {
             </div>
 
             <div style={{ flexShrink: 0 }}>
-              <div style={{ fontFamily: 'Outfit, sans-serif', fontSize: 21, fontWeight: 600, letterSpacing: '-0.03em', color: 'var(--sb-ink-1)' }}>
+              <div style={{ fontFamily: 'var(--sb-font-num)', fontSize: 21, fontWeight: 600, letterSpacing: '-0.03em', color: 'var(--sb-ink-1)' }}>
                 {drill.label}
               </div>
               <div style={{ fontSize: 12, color: 'var(--sb-ink-3)', marginTop: 3 }}>
@@ -867,7 +867,7 @@ export function ReflectionScreen(_props?: any) {
                         </span>
                       </span>
                       <span style={{
-                        fontFamily: 'Outfit, sans-serif', fontSize: 13.5, fontWeight: 600,
+                        fontFamily: 'var(--sb-font-num)', fontSize: 13.5, fontWeight: 600,
                         color: tx.type === 'income' ? OLIVE : RUST, fontVariantNumeric: 'tabular-nums', flexShrink: 0,
                       }}>
                         {acct(tx.type === 'income' ? Math.abs(tx.amount) : -Math.abs(tx.amount), { currency: tx.currency })}
@@ -962,13 +962,13 @@ function SectionHeader({ label, colCount: _colCount, colWidth, nameWidth: _nameW
       {monthTotals.map((v, i) => (
         <td key={i}
           onClick={v === 0 ? undefined : () => onDrill(`${label} · ${MONTHS_SHORT[i]}`, i)}
-          style={{ width: colWidth, textAlign: 'right', padding: '5px 10px', fontFamily: 'Outfit, sans-serif', fontSize: 11, color: v === 0 ? '#C5BCA8' : 'var(--sb-ink-3)', fontVariantNumeric: 'tabular-nums', cursor: v === 0 ? 'default' : 'pointer' }}>
+          style={{ width: colWidth, textAlign: 'right', padding: '5px 10px', fontFamily: 'var(--sb-font-num)', fontSize: 11, color: v === 0 ? '#C5BCA8' : 'var(--sb-ink-3)', fontVariantNumeric: 'tabular-nums', cursor: v === 0 ? 'default' : 'pointer' }}>
           {f(v)}
         </td>
       ))}
       <td
         onClick={rowTotal === 0 ? undefined : () => onDrill(`${label} · the year`, null)}
-        style={{ width: 100, textAlign: 'right', padding: '5px 14px', fontFamily: 'Outfit, sans-serif', fontSize: 11.5, fontWeight: 700, color: 'var(--sb-ink-3)', fontVariantNumeric: 'tabular-nums', cursor: rowTotal === 0 ? 'default' : 'pointer' }}>
+        style={{ width: 100, textAlign: 'right', padding: '5px 14px', fontFamily: 'var(--sb-font-num)', fontSize: 11.5, fontWeight: 700, color: 'var(--sb-ink-3)', fontVariantNumeric: 'tabular-nums', cursor: rowTotal === 0 ? 'default' : 'pointer' }}>
         {f(rowTotal)}
       </td>
     </tr>
@@ -989,13 +989,13 @@ function TotalRow({ label, months, total, sign, COL_W, NAME_W: _NAME_W, onDrill 
       {months.map((v, mi) => (
         <td key={mi}
           onClick={v === 0 ? undefined : () => onDrill(`${label} · ${MONTHS_SHORT[mi]}`, mi)}
-          style={{ width: COL_W, minWidth: COL_W, textAlign: 'right', padding: '0 10px', fontFamily: 'Outfit, sans-serif', fontSize: 13, fontWeight: 700, color: v === 0 ? '#C5BCA8' : col, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', cursor: v === 0 ? 'default' : 'pointer' }}>
+          style={{ width: COL_W, minWidth: COL_W, textAlign: 'right', padding: '0 10px', fontFamily: 'var(--sb-font-num)', fontSize: 13, fontWeight: 700, color: v === 0 ? '#C5BCA8' : col, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', cursor: v === 0 ? 'default' : 'pointer' }}>
           {sign === 1 ? fmt(v) : fmtOut(v)}
         </td>
       ))}
       <td
         onClick={total === 0 ? undefined : () => onDrill(`${label} · the year`, null)}
-        style={{ width: 100, textAlign: 'right', padding: '0 14px', fontFamily: 'Outfit, sans-serif', fontSize: 13.5, fontWeight: 700, color: total === 0 ? '#C5BCA8' : col, fontVariantNumeric: 'tabular-nums', cursor: total === 0 ? 'default' : 'pointer' }}>
+        style={{ width: 100, textAlign: 'right', padding: '0 14px', fontFamily: 'var(--sb-font-num)', fontSize: 13.5, fontWeight: 700, color: total === 0 ? '#C5BCA8' : col, fontVariantNumeric: 'tabular-nums', cursor: total === 0 ? 'default' : 'pointer' }}>
         {sign === 1 ? fmt(total) : fmtOut(total)}
       </td>
     </tr>
@@ -1014,13 +1014,13 @@ function NetRow({ label, months, total, COL_W, NAME_W: _NAME_W2, onDrill }: {
       {months.map((v, mi) => (
         <td key={mi}
           onClick={v === 0 ? undefined : () => onDrill(`${label} · ${MONTHS_SHORT[mi]}`, mi)}
-          style={{ width: COL_W, minWidth: COL_W, textAlign: 'right', padding: '0 10px', fontFamily: 'Outfit, sans-serif', fontSize: 13, fontWeight: 700, color: v === 0 ? 'var(--sb-ink-4)' : v > 0 ? OLIVE : RUST, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', cursor: v === 0 ? 'default' : 'pointer' }}>
+          style={{ width: COL_W, minWidth: COL_W, textAlign: 'right', padding: '0 10px', fontFamily: 'var(--sb-font-num)', fontSize: 13, fontWeight: 700, color: v === 0 ? 'var(--sb-ink-4)' : v > 0 ? OLIVE : RUST, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', cursor: v === 0 ? 'default' : 'pointer' }}>
           {fmt(v)}
         </td>
       ))}
       <td
         onClick={total === 0 ? undefined : () => onDrill(`${label} · the year`, null)}
-        style={{ width: 100, textAlign: 'right', padding: '0 14px', fontFamily: 'Outfit, sans-serif', fontSize: 13.5, fontWeight: 700, color: total === 0 ? 'var(--sb-ink-4)' : total > 0 ? OLIVE : RUST, fontVariantNumeric: 'tabular-nums', cursor: total === 0 ? 'default' : 'pointer' }}>
+        style={{ width: 100, textAlign: 'right', padding: '0 14px', fontFamily: 'var(--sb-font-num)', fontSize: 13.5, fontWeight: 700, color: total === 0 ? 'var(--sb-ink-4)' : total > 0 ? OLIVE : RUST, fontVariantNumeric: 'tabular-nums', cursor: total === 0 ? 'default' : 'pointer' }}>
         {fmt(total)}
       </td>
     </tr>
@@ -1034,7 +1034,7 @@ function CumulativeRow({ months, COL_W, NAME_W: _NAME_W3 }: { months: number[]; 
         <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', color: 'var(--sb-ink-4)' }}>CUMULATIVE CASH</span>
       </td>
       {months.map((v, mi) => (
-        <td key={mi} style={{ width: COL_W, minWidth: COL_W, textAlign: 'right', padding: '0 10px', fontFamily: 'Outfit, sans-serif', fontSize: 12.5, fontWeight: 700, color: v === 0 ? 'var(--sb-ink-2)' : v > 0 ? '#7EC878' : '#E87A65', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+        <td key={mi} style={{ width: COL_W, minWidth: COL_W, textAlign: 'right', padding: '0 10px', fontFamily: 'var(--sb-font-num)', fontSize: 12.5, fontWeight: 700, color: v === 0 ? 'var(--sb-ink-2)' : v > 0 ? '#7EC878' : '#E87A65', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
           {fmt(v)}
         </td>
       ))}

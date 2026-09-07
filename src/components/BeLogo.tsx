@@ -79,7 +79,7 @@ export function BeLogo({ variant = 'black', size = 148, title }: {
           caps — without it the mark sits low in its container. */}
       <div style={{ display: 'flex', alignItems: 'flex-end' }}>
         <span style={{
-          fontFamily: "'Instrument Sans', system-ui, sans-serif",
+          fontFamily: 'var(--sb-font-ui)',
           fontSize: Math.round(76 * k),
           fontWeight: 600,
           letterSpacing: '-0.06em',

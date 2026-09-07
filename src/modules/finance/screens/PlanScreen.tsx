@@ -123,7 +123,7 @@ export function PlanScreen() {
       <div style={{ display: 'flex', alignItems: 'flex-end', gap: 20, flexShrink: 0 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: C.ink3 }}>FINANCE · PLAN</span>
-          <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 30, fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1, color: C.ink1 }}>Settle &amp; achieve</span>
+          <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 30, fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1, color: C.ink1 }}>Settle &amp; achieve</span>
           <span style={{ fontSize: 12, color: C.ink3, paddingTop: 3 }}>Built from the forecast: what to pay, from which account, on which date — and what it frees up next</span>
         </div>
         <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 9, paddingBottom: 3, flexShrink: 0 }}>
@@ -195,7 +195,7 @@ export function PlanScreen() {
             {/* Clear date */}
             <div style={{ width: 236, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
               <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.14em', opacity: 0.6 }}>CIB WORLD, CLEARED BY</span>
-              <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 30, fontWeight: 600, letterSpacing: '-0.04em', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>4 October</span>
+              <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 30, fontWeight: 600, letterSpacing: '-0.04em', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>4 October</span>
               <span style={{ fontSize: 11, opacity: 0.65 }}>Two payments · 18 months sooner than the minimum</span>
             </div>
             <div style={{ width: 1, alignSelf: 'stretch', background: 'rgba(255,255,255,.13)', flexShrink: 0 }} />
@@ -212,7 +212,7 @@ export function PlanScreen() {
                     <div style={{ width: '100%', flex: 1, display: 'flex', alignItems: 'flex-end' }}>
                       <span style={{ width: '100%', height: `${b.pct}%`, background: b.color, borderRadius: '5px 5px 0 0', display: 'block' }} />
                     </div>
-                    <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 10, fontWeight: 600, color: 'var(--sb-ink-on-dark)', fontVariantNumeric: 'tabular-nums' }}>{b.val}</span>
+                    <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 10, fontWeight: 600, color: 'var(--sb-ink-on-dark)', fontVariantNumeric: 'tabular-nums' }}>{b.val}</span>
                     <span style={{ fontSize: 9.5, color: C.ink3 }}>{b.label}</span>
                   </div>
                 ))}
@@ -224,11 +224,11 @@ export function PlanScreen() {
             <div style={{ width: 140, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 9 }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                 <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.12em', opacity: 0.55 }}>INTEREST AVOIDED</span>
-                <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 18, fontWeight: 600, letterSpacing: '-0.03em', color: '#D8E0A8', fontVariantNumeric: 'tabular-nums' }}>EGP 9,420</span>
+                <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 18, fontWeight: 600, letterSpacing: '-0.03em', color: '#D8E0A8', fontVariantNumeric: 'tabular-nums' }}>EGP 9,420</span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                 <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.12em', opacity: 0.55 }}>BUFFER KEPT</span>
-                <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 18, fontWeight: 600, letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums' }}>EGP 15,000</span>
+                <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 18, fontWeight: 600, letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums' }}>EGP 15,000</span>
               </div>
             </div>
           </div>
@@ -264,13 +264,13 @@ export function PlanScreen() {
                     {row.isLabel && <span style={{ fontSize: 8.5, fontWeight: 700, letterSpacing: '0.06em', color: '#A8A091' }}>{row.isLabel}</span>}
                   </div>
                   {/* Forecast In */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '0 9px', fontFamily: 'Outfit, sans-serif', fontSize: 11.5, fontWeight: 500, color: C.olive, fontVariantNumeric: 'tabular-nums' }}>{fmt(row.forecastIn)}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '0 9px', fontFamily: 'var(--sb-font-num)', fontSize: 11.5, fontWeight: 500, color: C.olive, fontVariantNumeric: 'tabular-nums' }}>{fmt(row.forecastIn)}</div>
                   {/* Committed */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '0 9px', fontFamily: 'Outfit, sans-serif', fontSize: 11.5, fontWeight: 500, color: C.ink2, fontVariantNumeric: 'tabular-nums' }}>{fmt(row.committed)}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '0 9px', fontFamily: 'var(--sb-font-num)', fontSize: 11.5, fontWeight: 500, color: C.ink2, fontVariantNumeric: 'tabular-nums' }}>{fmt(row.committed)}</div>
                   {/* Free Cash */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '0 9px', fontFamily: 'Outfit, sans-serif', fontSize: 11.5, fontWeight: 600, color: C.ink1, fontVariantNumeric: 'tabular-nums' }}>{fmt(row.freeCash)}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '0 9px', fontFamily: 'var(--sb-font-num)', fontSize: 11.5, fontWeight: 600, color: C.ink1, fontVariantNumeric: 'tabular-nums' }}>{fmt(row.freeCash)}</div>
                   {/* To Card */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '0 9px', fontFamily: 'Outfit, sans-serif', fontSize: 11.5, fontWeight: 600, color: row.toCard ? C.rustDk : C.muted, fontVariantNumeric: 'tabular-nums' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '0 9px', fontFamily: 'var(--sb-font-num)', fontSize: 11.5, fontWeight: 600, color: row.toCard ? C.rustDk : C.muted, fontVariantNumeric: 'tabular-nums' }}>
                     {row.toCard ? fmt(row.toCard) : '—'}
                   </div>
                   {/* From */}
@@ -289,10 +289,10 @@ export function PlanScreen() {
                     {row.closedRow ? (
                       <>
                         <span style={{ height: 19, padding: '0 7px', borderRadius: 5, background: C.olive, color: 'var(--sb-ink-on-dark)', fontSize: 8.5, fontWeight: 700, letterSpacing: '0.06em', display: 'flex', alignItems: 'center' }}>CLOSED</span>
-                        <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 12, fontWeight: 600, color: C.olive, fontVariantNumeric: 'tabular-nums' }}>0</span>
+                        <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 12, fontWeight: 600, color: C.olive, fontVariantNumeric: 'tabular-nums' }}>0</span>
                       </>
                     ) : (
-                      <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 12, fontWeight: 600, color: row.cardLeft === 0 ? C.olive : C.ink1, fontVariantNumeric: 'tabular-nums' }}>{row.cardLeft === 0 ? '0' : fmt(row.cardLeft)}</span>
+                      <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 12, fontWeight: 600, color: row.cardLeft === 0 ? C.olive : C.ink1, fontVariantNumeric: 'tabular-nums' }}>{row.cardLeft === 0 ? '0' : fmt(row.cardLeft)}</span>
                     )}
                   </div>
                 </div>
@@ -303,13 +303,13 @@ export function PlanScreen() {
               {/* Totals row */}
               <div style={{ display: 'grid', gridTemplateColumns: '64px 1fr 1fr 1fr 1fr 118px 84px 1fr', height: 34, flexShrink: 0, borderTop: `1px solid ${C.border}`, background: C.accentBg }}>
                 <div style={{ display: 'flex', alignItems: 'center', padding: '0 9px' }}><span style={{ fontSize: 11, fontWeight: 700, color: C.ink1 }}>TOTAL</span></div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '0 9px', fontFamily: 'Outfit, sans-serif', fontSize: 11.5, fontWeight: 600, color: C.olive, fontVariantNumeric: 'tabular-nums' }}>{fmt(totals.forecastIn)}</div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '0 9px', fontFamily: 'Outfit, sans-serif', fontSize: 11.5, fontWeight: 600, color: C.ink2, fontVariantNumeric: 'tabular-nums' }}>{fmt(totals.committed)}</div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '0 9px', fontFamily: 'Outfit, sans-serif', fontSize: 11.5, fontWeight: 600, color: C.ink1, fontVariantNumeric: 'tabular-nums' }}>{fmt(totals.freeCash)}</div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '0 9px', fontFamily: 'Outfit, sans-serif', fontSize: 11.5, fontWeight: 600, color: C.rustDk, fontVariantNumeric: 'tabular-nums' }}>{fmt(totals.toCard)}</div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '0 9px', fontFamily: 'var(--sb-font-num)', fontSize: 11.5, fontWeight: 600, color: C.olive, fontVariantNumeric: 'tabular-nums' }}>{fmt(totals.forecastIn)}</div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '0 9px', fontFamily: 'var(--sb-font-num)', fontSize: 11.5, fontWeight: 600, color: C.ink2, fontVariantNumeric: 'tabular-nums' }}>{fmt(totals.committed)}</div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '0 9px', fontFamily: 'var(--sb-font-num)', fontSize: 11.5, fontWeight: 600, color: C.ink1, fontVariantNumeric: 'tabular-nums' }}>{fmt(totals.freeCash)}</div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '0 9px', fontFamily: 'var(--sb-font-num)', fontSize: 11.5, fontWeight: 600, color: C.rustDk, fontVariantNumeric: 'tabular-nums' }}>{fmt(totals.toCard)}</div>
                 <div style={{ display: 'flex', alignItems: 'center', padding: '0 9px' }}><span style={{ fontSize: 10, color: '#8A7A4E' }}>2 transfers</span></div>
                 <div />
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '0 9px' }}><span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 12.5, fontWeight: 700, color: C.olive }}>CLEARED</span></div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '0 9px' }}><span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 12.5, fontWeight: 700, color: C.olive }}>CLEARED</span></div>
               </div>
             </div>
           </div>

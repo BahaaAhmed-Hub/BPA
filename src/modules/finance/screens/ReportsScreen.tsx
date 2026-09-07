@@ -39,7 +39,7 @@ const MONTH_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct'
 // whichever end of the list it comes from.
 const RANGE_FIELD: React.CSSProperties = {
   border: 'none', background: 'transparent', outline: 'none',
-  fontFamily: "'Outfit', system-ui, sans-serif", fontSize: 13, fontWeight: 500,
+  fontFamily: 'var(--sb-font-num)', fontSize: 13, fontWeight: 500,
   color: 'var(--sb-ink-1)', padding: 0, width: 118,
 }
 
@@ -255,7 +255,7 @@ export function ReportsScreen(_props?: any) {
               <button onClick={() => navigateMonth(-1)} title="The month before"
                 style={{ background: 'none', border: 'none', color: 'var(--sb-ink-3)', fontSize: 20, cursor: 'pointer', padding: 0, lineHeight: 1 }}>‹</button>
             )}
-            <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 28, fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1, color: 'var(--sb-ink-1)' }}>
+            <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 28, fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1, color: 'var(--sb-ink-1)' }}>
               Reports · {periodLabel}
             </span>
             {wholeMonth && (
@@ -383,7 +383,7 @@ export function ReportsScreen(_props?: any) {
                     alignItems: 'center', justifyContent: 'center',
                     pointerEvents: 'none',
                   }}>
-                    <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 16, fontWeight: 600, color: 'var(--sb-ink-1)', letterSpacing: '-0.02em', lineHeight: 1 }}>
+                    <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 16, fontWeight: 600, color: 'var(--sb-ink-1)', letterSpacing: '-0.02em', lineHeight: 1 }}>
                       {dayRate > 0 ? `${dayRate.toLocaleString('en-US')}` : '–'}
                     </span>
                     <span style={{ fontSize: 9, color: 'var(--sb-ink-3)', marginTop: 2, letterSpacing: '0.08em', fontWeight: 700 }}>

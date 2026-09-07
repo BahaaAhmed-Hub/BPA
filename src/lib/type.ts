@@ -14,8 +14,8 @@
 // The step from heading to body is a change of face as well as size, so 15 → 13.5
 // reads as a real level rather than the half-pixel it looks like on paper.
 
-export const SANS = "'Instrument Sans', system-ui, sans-serif"
-export const DISPLAY = "'Outfit', system-ui, sans-serif"
+export const SANS = 'var(--sb-font-ui)'
+export const DISPLAY = 'var(--sb-font-num)'
 
 export const T = {
   display: { fontFamily: DISPLAY, fontSize: 27, fontWeight: 700, letterSpacing: '-0.03em', lineHeight: 1.12 },

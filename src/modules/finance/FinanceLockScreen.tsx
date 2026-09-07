@@ -92,7 +92,7 @@ export function LockGate({ onUnlocked, compact = false, title, note }: LockGateP
         </div>
       )}
       <h2 style={{
-        margin: 0, fontFamily: 'Outfit, system-ui, sans-serif',
+        margin: 0, fontFamily: 'var(--sb-font-num)',
         fontSize: compact ? 17 : 23, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--sb-ink-1)',
       }}>
         {title ?? 'Your finances are locked'}

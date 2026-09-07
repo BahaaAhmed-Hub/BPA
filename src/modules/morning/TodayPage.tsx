@@ -268,7 +268,7 @@ function MailPopup({ row, onClose, onArchive, onAddTask }: {
           }}>{initialsOf(row.fromName || row.fromEmail)}</span>
           <div style={{ flex: 1, minWidth: 0 }}>
             <h2 style={{
-              margin: 0, fontFamily: 'Outfit, sans-serif', fontSize: 18, fontWeight: 600,
+              margin: 0, fontFamily: 'var(--sb-font-num)', fontSize: 18, fontWeight: 600,
               letterSpacing: '-0.02em', color: INK, lineHeight: 1.25,
             }}>{row.subject}</h2>
             <p style={{ margin: '5px 0 0', fontSize: 12.5, color: MUTED, overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -1264,7 +1264,7 @@ export function TodayPage() {
           <div style={{ ...CARD, padding: '22px 24px 24px' }}>
             <Quote size={16} strokeWidth={2} style={{ color: '#D8CFB8' }} />
             <h1 style={{
-              margin: '8px 0 0', fontFamily: 'Outfit, sans-serif', fontSize: 26, fontWeight: 600,
+              margin: '8px 0 0', fontFamily: 'var(--sb-font-num)', fontSize: 26, fontWeight: 600,
               letterSpacing: '-0.03em', lineHeight: 1.2, color: INK,
             }}>{brief.headline}</h1>
             <p style={{ margin: '9px 0 0', fontSize: 12, color: GHOST }}>

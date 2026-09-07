@@ -67,7 +67,7 @@ function LoginScreen() {
       alignItems: 'center',
       justifyContent: 'center',
       padding: '32px 24px',
-      fontFamily: "'Instrument Sans', system-ui, sans-serif",
+      fontFamily: 'var(--sb-font-ui)',
     }}>
       {/* Main card */}
       <div style={{
@@ -100,7 +100,7 @@ function LoginScreen() {
           <div style={{ flex: 1 }}>
             <h1 style={{
               margin: '0 0 16px',
-              fontFamily: "'Outfit', system-ui, sans-serif",
+              fontFamily: 'var(--sb-font-num)',
               fontWeight: 700, fontSize: 42, lineHeight: 1.06,
               color: 'var(--sb-ink-1)', letterSpacing: '-.03em',
             }}>
@@ -119,7 +119,7 @@ function LoginScreen() {
               {LIVE_STATS.map(s => (
                 <div key={s.label}>
                   <div style={{
-                    fontFamily: "'Outfit', system-ui, sans-serif",
+                    fontFamily: 'var(--sb-font-num)',
                     fontWeight: 700, fontSize: 26, color: 'var(--sb-ink-1)', letterSpacing: '-.02em',
                     fontVariantNumeric: 'tabular-nums',
                   }}>{s.value}</div>
@@ -140,7 +140,7 @@ function LoginScreen() {
         }}>
           <h2 style={{
             margin: '0 0 6px',
-            fontFamily: "'Outfit', system-ui, sans-serif",
+            fontFamily: 'var(--sb-font-num)',
             fontWeight: 600, fontSize: 22, color: 'var(--sb-ink-1)', letterSpacing: '-.02em',
           }}>
             Sign in
@@ -162,7 +162,7 @@ function LoginScreen() {
               color: 'var(--sb-ink-on-dark)',
               fontSize: 14, fontWeight: 600,
               cursor: signing ? 'wait' : 'pointer',
-              fontFamily: "'Instrument Sans', system-ui, sans-serif",
+              fontFamily: 'var(--sb-font-ui)',
               transition: 'background 140ms ease-out, box-shadow 140ms ease-out',
               boxShadow: '0 2px 0 rgba(120,92,0,.10)',
             }}
@@ -258,7 +258,7 @@ function LoadingScreen() {
       minHeight: '100vh',
       background: 'linear-gradient(160deg, var(--sb-page) 0%, #EEE8D0 100%)',
       gap: 16,
-      fontFamily: "'Instrument Sans', system-ui, sans-serif",
+      fontFamily: 'var(--sb-font-ui)',
     }}>
       <div style={{
         width: 44, height: 44, borderRadius: 11,
@@ -556,7 +556,7 @@ function TopNav() {
                 boxShadow: active ? '0 1px 3px rgba(25,23,18,.16)' : 'none',
                 color:      active ? 'var(--sb-ink-1)' : 'var(--sb-ink-3)',
                 fontSize: 13.5, fontWeight: active ? 600 : 500,
-                fontFamily: "'Instrument Sans', system-ui, sans-serif",
+                fontFamily: 'var(--sb-font-ui)',
                 transition: 'background 120ms ease-out, color 120ms ease-out, box-shadow 120ms ease-out',
                 whiteSpace: 'nowrap',
                 display: 'flex', alignItems: 'center', gap: 7,
@@ -599,7 +599,7 @@ function TopNav() {
           <span style={{ fontSize: 12.5, color: 'var(--sb-ink-4)', userSelect: 'none' }}>Search</span>
           <span style={{
             marginLeft: 4,
-            fontSize: 10, fontFamily: "'JetBrains Mono', monospace",
+            fontSize: 10, fontFamily: 'var(--sb-font-mono)',
             color: 'var(--sb-ink-4)', opacity: 0.7,
           }}>⌘K</span>
         </div>
@@ -1122,7 +1122,7 @@ function App() {
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
-      fontFamily: "'Instrument Sans', system-ui, sans-serif",
+      fontFamily: 'var(--sb-font-ui)',
     }}>
       {/* The shell owns the viewport: the nav stays put and only the module
           below it scrolls. */}

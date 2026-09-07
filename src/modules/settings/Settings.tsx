@@ -451,7 +451,7 @@ function ProfileSection({
         }
         <div style={{ flex: 1, minWidth: 0 }}>
           <p style={{
-            margin: 0, fontFamily: 'Outfit, sans-serif', fontSize: 17, fontWeight: 600,
+            margin: 0, fontFamily: 'var(--sb-font-num)', fontSize: 17, fontWeight: 600,
             letterSpacing: '-0.02em', color: 'var(--sb-ink-1)', lineHeight: 1.25,
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}>{s.fullName || name || 'Professor User'}</p>
@@ -1301,8 +1301,8 @@ function AppleHealthBlock({ habits }: { habits: { id: string; name: string; unit
           background: '#FBEBC8', border: '1px solid var(--sb-accent-border)', borderRadius: 10, padding: '11px 14px',
         }}>
           Your database has nowhere to keep these yet — run{' '}
-          <code style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11.5 }}>supabase/migrations/20260012</code>{' '}
-          and deploy the <code style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11.5 }}>health-ingest</code> function,
+          <code style={{ fontFamily: 'var(--sb-font-mono)', fontSize: 11.5 }}>supabase/migrations/20260012</code>{' '}
+          and deploy the <code style={{ fontFamily: 'var(--sb-font-mono)', fontSize: 11.5 }}>health-ingest</code> function,
           then reload.
         </div>
       ) : (
@@ -1343,7 +1343,7 @@ function AppleHealthBlock({ habits }: { habits: { id: string; name: string; unit
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 10 }}>
                       <code style={{
                         flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                        fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: 'var(--sb-ink-3)',
+                        fontFamily: 'var(--sb-font-mono)', fontSize: 11, color: 'var(--sb-ink-3)',
                         background: 'var(--sb-field)', border: '1px solid var(--sb-border)', borderRadius: 7, padding: '7px 9px',
                       }}>{ingestUrl(link.token) || 'This build has no Supabase address configured.'}</code>
                       <button style={pill} onClick={() => copy(ingestUrl(link.token), link.id)}>
@@ -1376,7 +1376,7 @@ function AppleHealthBlock({ habits }: { habits: { id: string; name: string; unit
                         Start Date, and <b>Calculate Statistics</b> → <b>Sum</b> over <b>Today</b>.</li>
                       <li>Add <b>Get Contents of URL</b>, paste the address above, set <b>Method</b> to
                         <b> POST</b>, <b>Request Body</b> to <b>JSON</b>, and one field named{' '}
-                        <code style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11 }}>value</code>{' '}
+                        <code style={{ fontFamily: 'var(--sb-font-mono)', fontSize: 11 }}>value</code>{' '}
                         holding the number from step 2.</li>
                       <li>Run it once by hand. The line above turns green when the first number lands.</li>
                     </ol>
@@ -3136,7 +3136,7 @@ function FinanceSection() {
               onChange={e => { const v = parseFloat(e.target.value); setAlertThreshold(v); saveField('finance-alert-threshold', String(v)) }}
               style={{ flex: 1, accentColor: 'var(--sb-accent)', cursor: 'pointer' }}
             />
-            <span style={{ width: 36, textAlign: 'right', fontSize: 13, fontWeight: 600, color: 'var(--sb-ink-1)', fontFamily: 'JetBrains Mono, monospace' }}>
+            <span style={{ width: 36, textAlign: 'right', fontSize: 13, fontWeight: 600, color: 'var(--sb-ink-1)', fontFamily: 'var(--sb-font-mono)' }}>
               {Math.round(alertThreshold * 100)}%
             </span>
           </div>
@@ -3156,7 +3156,7 @@ function FinanceSection() {
             background: '#FBEBC8', border: '1px solid var(--sb-accent-border)', borderRadius: 10, padding: '11px 14px',
           }}>
             Your database has no payment-date column yet, so nothing can be marked paid or unpaid —
-            run <code style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11.5 }}>supabase/migrations/20260006</code> in
+            run <code style={{ fontFamily: 'var(--sb-font-mono)', fontSize: 11.5 }}>supabase/migrations/20260006</code> in
             the SQL editor and reload.
           </div>
         ) : (
@@ -3328,13 +3328,13 @@ function BillingSection() {
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-              <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 15.5, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--sb-ink-1)' }}>Professor Pro</span>
+              <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 15.5, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--sb-ink-1)' }}>Professor Pro</span>
               <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.1em', background: 'var(--sb-accent)', color: 'var(--sb-ink-1)', padding: '3px 7px', borderRadius: 5 }}>ANNUAL</span>
             </div>
             <p style={{ margin: 0, fontSize: 11.5, color: 'var(--sb-ink-3)', lineHeight: 1.45 }}>Renews 14 March 2027 · all four companies, unlimited AI drafts</p>
           </div>
           <div style={{ textAlign: 'right', flexShrink: 0 }}>
-            <p style={{ margin: 0, fontSize: 24, fontWeight: 700, fontFamily: 'Outfit, sans-serif', letterSpacing: '-0.03em', color: 'var(--sb-ink-1)', lineHeight: 1 }}>$180</p>
+            <p style={{ margin: 0, fontSize: 24, fontWeight: 700, fontFamily: 'var(--sb-font-num)', letterSpacing: '-0.03em', color: 'var(--sb-ink-1)', lineHeight: 1 }}>$180</p>
             <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--sb-ink-4)' }}>per year</p>
           </div>
         </div>
@@ -3373,7 +3373,7 @@ function BillingSection() {
           }}>
             <span style={{ width: 96, flexShrink: 0, fontSize: 12.5, color: 'var(--sb-ink-3)' }}>{inv.date}</span>
             <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: 'var(--sb-ink-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{inv.desc}</span>
-            <span style={{ fontSize: 13, fontFamily: 'Outfit, sans-serif', fontWeight: 600, color: 'var(--sb-ink-1)', flexShrink: 0 }}>{inv.amount}</span>
+            <span style={{ fontSize: 13, fontFamily: 'var(--sb-font-num)', fontWeight: 600, color: 'var(--sb-ink-1)', flexShrink: 0 }}>{inv.amount}</span>
             <button title={`Download ${inv.date} invoice`} style={{
               background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-4)',
               padding: 2, display: 'flex', alignItems: 'center', flexShrink: 0,
@@ -3902,7 +3902,7 @@ function Card({ icon: Icon, title, sub, children, actions, muted }: {
             <Icon size={14} strokeWidth={1.9} color="var(--sb-ink-3)" />
           </div>
           <div style={{ minWidth: 0 }}>
-            <h3 style={{ margin: 0, fontFamily: 'Outfit, sans-serif', fontSize: 15, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--sb-ink-1)', lineHeight: 1.25 }}>{title}</h3>
+            <h3 style={{ margin: 0, fontFamily: 'var(--sb-font-num)', fontSize: 15, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--sb-ink-1)', lineHeight: 1.25 }}>{title}</h3>
             {sub && <p style={{
               margin: '1px 0 0', fontSize: 11.5, color: 'var(--sb-ink-4)', lineHeight: 1.35,
               display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
@@ -4365,7 +4365,7 @@ export function Settings() {
       }}>
         <div style={{ minWidth: 0 }}>
           <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-3)', textTransform: 'uppercase', marginBottom: 4 }}>SETTINGS</div>
-          <h2 style={{ margin: 0, fontFamily: 'Outfit, sans-serif', fontSize: 28, fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1.05, color: 'var(--sb-ink-1)' }}>{pm.title}</h2>
+          <h2 style={{ margin: 0, fontFamily: 'var(--sb-font-num)', fontSize: 28, fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1.05, color: 'var(--sb-ink-1)' }}>{pm.title}</h2>
           <p style={{ margin: '5px 0 0', fontSize: 12.5, color: 'var(--sb-ink-3)', lineHeight: 1.4 }}>{pm.sub}</p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>

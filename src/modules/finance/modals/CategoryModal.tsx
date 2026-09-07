@@ -9,7 +9,7 @@ import { CategoryGlyph } from '../components/CategoryGlyph'
 // labels, a raw <input type="color">, and a red Delete block. Same vocabulary
 // as everything else now — an eyebrow pill, one pill per value, a black pill
 // for the action that commits.
-const DISPLAY = "'Outfit', system-ui, sans-serif"
+const DISPLAY = 'var(--sb-font-num)'
 
 const PILL: React.CSSProperties = {
   display: 'inline-flex', alignItems: 'center', gap: 6, height: 42, boxSizing: 'border-box',

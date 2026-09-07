@@ -9,7 +9,7 @@ import { CategoryGlyph } from '../components/CategoryGlyph'
 // you type in it, pick from it or only read it; one label column everything
 // hangs off; a black pill for the one action that commits. It lives here
 // rather than inside a modal so a second panel does not have to copy it.
-export const DISPLAY = "'Outfit', system-ui, sans-serif"
+export const DISPLAY = 'var(--sb-font-num)'
 
 export const PILL: React.CSSProperties = {
   display: 'inline-flex', alignItems: 'center', gap: 6, height: 42, boxSizing: 'border-box',

@@ -12,7 +12,7 @@ import { toBase } from '../fx'
 // auto-raise with inflation, and count toward guilt-free spend — were never
 // read by anything. They remembered their own position and that was the whole
 // of what they did, so they are gone.
-const DISPLAY = "'Outfit', system-ui, sans-serif"
+const DISPLAY = 'var(--sb-font-num)'
 
 export type Frequency = 'weekly' | 'monthly' | 'every_2_months' | 'quarterly' | 'yearly'
 

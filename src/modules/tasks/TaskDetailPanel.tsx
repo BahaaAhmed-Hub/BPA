@@ -340,7 +340,7 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
           style={{
             width: '100%', boxSizing: 'border-box', resize: 'none', overflow: 'hidden',
             background: 'var(--sb-field)', border: '1px solid var(--sb-border)', borderRadius: 11,
-            padding: '12px 14px', outline: 'none', fontFamily: 'Outfit, sans-serif',
+            padding: '12px 14px', outline: 'none', fontFamily: 'var(--sb-font-num)',
             fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--sb-ink-1)', lineHeight: 1.25,
           }}
         />
