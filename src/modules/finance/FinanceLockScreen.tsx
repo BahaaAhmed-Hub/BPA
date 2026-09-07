@@ -10,9 +10,9 @@ import {
 // passkey belongs to one device, and this may not be that device.
 
 const C = {
-  bg: '#F7F4EA', card: '#FFFFFF', field: '#FAF7EC', border: '#E8E1CE',
-  ink: '#191712', muted: '#6C6553', ghost: '#9B9180', amber: 'var(--sb-accent)',
-  red: '#C62828',
+  bg: 'var(--sb-page)', card: 'var(--sb-card)', field: 'var(--sb-field)', border: 'var(--sb-border)',
+  ink: 'var(--sb-ink-1)', muted: 'var(--sb-ink-3)', ghost: '#9B9180', amber: 'var(--sb-accent)',
+  red: 'var(--sb-negative)',
 }
 
 function IconShield({ size = 30 }: { size?: number }) {
@@ -115,12 +115,12 @@ export function LockGate({ onUnlocked, compact = false, title, note }: LockGateP
           disabled={busy !== null}
           style={{
             width: '100%', height: 42, borderRadius: 11, marginBottom: 12,
-            background: C.ink, border: `1px solid ${C.ink}`, color: '#FDF8E7',
+            background: C.ink, border: `1px solid ${C.ink}`, color: 'var(--sb-ink-on-dark)',
             cursor: busy ? 'default' : 'pointer', fontFamily: 'inherit',
             fontSize: 13.5, fontWeight: 600,
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
           }}>
-          <IconFingerprint color="#FDF8E7" />
+          <IconFingerprint color="var(--sb-ink-on-dark)" />
           {busy === 'bio' ? 'Waiting for you…' : `Unlock with ${biometricName()}`}
         </button>
       )}
@@ -129,9 +129,9 @@ export function LockGate({ onUnlocked, compact = false, title, note }: LockGateP
         <form onSubmit={usePassword}>
           {passkey && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '0 0 12px' }}>
-              <div style={{ flex: 1, height: 1, background: '#F0EBDC' }} />
+              <div style={{ flex: 1, height: 1, background: 'var(--sb-hairline)' }} />
               <span style={{ fontSize: 10.5, letterSpacing: '0.1em', color: C.ghost, fontWeight: 600 }}>OR</span>
-              <div style={{ flex: 1, height: 1, background: '#F0EBDC' }} />
+              <div style={{ flex: 1, height: 1, background: 'var(--sb-hairline)' }} />
             </div>
           )}
           <input
