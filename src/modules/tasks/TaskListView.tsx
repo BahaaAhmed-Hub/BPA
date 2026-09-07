@@ -34,7 +34,7 @@ export function TaskListView({ tasks, onOpen, hideCompleted, groupBy, filteredTa
           {g.label && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 2px' }}>
               <span style={{ width: 8, height: 8, borderRadius: 999, background: g.color, flexShrink: 0 }} />
-              <span style={{ fontSize: 13, fontWeight: 600, color: '#191712' }}>{g.label}</span>
+              <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--sb-ink-1)' }}>{g.label}</span>
               <CountBadge value={g.tasks.length} />
             </div>
           )}
