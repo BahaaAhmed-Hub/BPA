@@ -55,7 +55,7 @@ interface Email {
 const ICON_ACTION: React.CSSProperties = {
   width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
   display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-  background: 'transparent', border: '1px solid #E8E1CE', color: '#6C6553',
+  background: 'transparent', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-3)',
   cursor: 'pointer', padding: 0,
 }
 
@@ -76,7 +76,7 @@ const CLASS_META = {
 } as const
 
 const URGENCY_META = {
-  high:   { label: 'High',   color: '#E05252' },
+  high:   { label: 'High',   color: 'var(--sb-negative)' },
   medium: { label: 'Medium', color: '#7F77DD' },
   low:    { label: 'Low',    color: '#888780' },
 } as const
@@ -232,7 +232,7 @@ function quoteOf(email: Email): string {
   })
   const head = `On ${when}, ${escapeHtml(email.fromName)} &lt;${escapeHtml(email.fromEmail)}&gt; wrote:`
   const body = email.htmlBody ?? `<div>${escapeHtml(email.body).replace(/\n/g, '<br>')}</div>`
-  return `<div style="font-size:12px;color:#6C6553;margin-bottom:8px">${head}</div>${body}`
+  return `<div style="font-size:12px;color:var(--sb-ink-3);margin-bottom:8px">${head}</div>${body}`
 }
 
 function composeSeed(email: Email, mode: ComposeMode, accounts: MailAccount[]): ComposeSeed {
@@ -570,7 +570,7 @@ export function InboxModule() {
     const ORDER: MailFolder[] = ['unread', 'inbox', 'sent', 'drafts', 'starred', 'archive']
     return (
       <nav style={{
-        background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 12,
+        background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 12,
         padding: 6, alignSelf: 'start', display: 'flex', flexDirection: 'column', gap: 2,
       }}>
         <button
@@ -600,8 +600,8 @@ export function InboxModule() {
                 height: 32, padding: railOpen ? '0 10px' : 0,
                 justifyContent: railOpen ? 'flex-start' : 'center',
                 borderRadius: 8, cursor: 'pointer', border: 'none',
-                background: on ? '#191712' : 'transparent',
-                color: on ? '#FDF8E7' : '#6C6553',
+                background: on ? 'var(--sb-ink-1)' : 'transparent',
+                color: on ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
                 fontFamily: 'inherit', fontSize: 12.5, fontWeight: on ? 600 : 500,
                 whiteSpace: 'nowrap',
               }}>
@@ -617,11 +617,11 @@ export function InboxModule() {
   function renderLeft() {
     if (loading) {
       return (
-        <div style={{ background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 12, overflow: 'hidden' }}>
+        <div style={{ background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 12, overflow: 'hidden' }}>
           {[0,1,2,3].map(i => (
-            <div key={i} style={{ padding: '16px 18px', borderBottom: i < 3 ? '1px solid #E8E1CE' : 'none' }}>
-              <div style={{ height: 12, borderRadius: 6, background: 'linear-gradient(90deg, #E8E1CE 25%, var(--sb-accent-border) 50%, #E8E1CE 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.6s infinite', marginBottom: 8, width: '60%' }} />
-              <div style={{ height: 10, borderRadius: 6, background: 'linear-gradient(90deg, #E8E1CE 25%, var(--sb-accent-border) 50%, #E8E1CE 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.6s infinite', width: '80%' }} />
+            <div key={i} style={{ padding: '16px 18px', borderBottom: i < 3 ? '1px solid var(--sb-border)' : 'none' }}>
+              <div style={{ height: 12, borderRadius: 6, background: 'linear-gradient(90deg, var(--sb-border) 25%, var(--sb-accent-border) 50%, var(--sb-border) 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.6s infinite', marginBottom: 8, width: '60%' }} />
+              <div style={{ height: 10, borderRadius: 6, background: 'linear-gradient(90deg, var(--sb-border) 25%, var(--sb-accent-border) 50%, var(--sb-border) 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.6s infinite', width: '80%' }} />
             </div>
           ))}
         </div>
@@ -634,15 +634,15 @@ export function InboxModule() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {/* Search */}
         <div style={{ position: 'relative' }}>
-          <Search size={13} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#6C6553', pointerEvents: 'none' }} />
+          <Search size={13} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--sb-ink-3)', pointerEvents: 'none' }} />
           <input
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             placeholder="Search emails…"
-            style={{ width: '100%', boxSizing: 'border-box', padding: '8px 32px 8px 30px', borderRadius: 8, background: '#FFFFFF', border: '1px solid #E8E1CE', color: '#191712', fontSize: 12.5, outline: 'none' }}
+            style={{ width: '100%', boxSizing: 'border-box', padding: '8px 32px 8px 30px', borderRadius: 8, background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-1)', fontSize: 12.5, outline: 'none' }}
           />
           {searchQuery && (
-            <button onClick={() => setSearchQuery('')} style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#6C6553', padding: 2, display: 'flex' }}>
+            <button onClick={() => setSearchQuery('')} style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', padding: 2, display: 'flex' }}>
               <XIcon size={12} />
             </button>
           )}
@@ -657,15 +657,15 @@ export function InboxModule() {
               <Archive size={11} /> Archive all
             </button>
             <button onClick={() => setSelectedIds(new Set())}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6C6553', padding: 2, display: 'flex' }}>
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', padding: 2, display: 'flex' }}>
               <XIcon size={13} />
             </button>
           </div>
         )}
 
-        <div style={{ background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 12, overflow: 'hidden' }}>
+        <div style={{ background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 12, overflow: 'hidden' }}>
         {filteredEmails.length === 0 && searchQuery ? (
-          <div style={{ padding: '24px 16px', textAlign: 'center', color: '#6C6553', fontSize: 12.5 }}>
+          <div style={{ padding: '24px 16px', textAlign: 'center', color: 'var(--sb-ink-3)', fontSize: 12.5 }}>
             No emails match "{searchQuery}"
           </div>
         ) : filteredEmails.map((email, i) => {
@@ -689,7 +689,7 @@ export function InboxModule() {
                 width: '100%', padding: '7px 11px', textAlign: 'left',
                 background: isSelected ? 'rgba(30,64,175,0.06)' : 'transparent',
                 border: 'none',
-                borderBottom: i < visibleEmails.length - 1 ? '1px solid #F0EBDC' : 'none',
+                borderBottom: i < visibleEmails.length - 1 ? '1px solid var(--sb-hairline)' : 'none',
                 // The bar is the mailbox when several are merged, and the
                 // selection when only one is on screen.
                 borderLeft: `3px solid ${
@@ -706,11 +706,11 @@ export function InboxModule() {
                     ? <div style={{ width: 26, height: 26, borderRadius: '50%', background: '#7F77DD', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><CheckCheck size={13} color="#fff" /></div>
                     : <SenderAvatar name={email.fromName} email={email.fromEmail} size={26} />
                   }
-                  {!isRead && !selectedIds.has(email.id) && <div style={{ position: 'absolute', top: -1, right: -1, width: 8, height: 8, borderRadius: '50%', background: '#7F77DD', border: '2px solid #FFFFFF' }} />}
+                  {!isRead && !selectedIds.has(email.id) && <div style={{ position: 'absolute', top: -1, right: -1, width: 8, height: 8, borderRadius: '50%', background: '#7F77DD', border: '2px solid var(--sb-card)' }} />}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 1 }}>
-                    <span style={{ fontSize: 12, fontWeight: isRead ? 400 : 700, color: isRead ? '#6C6553' : '#191712', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '62%' }}>
+                    <span style={{ fontSize: 12, fontWeight: isRead ? 400 : 700, color: isRead ? 'var(--sb-ink-3)' : 'var(--sb-ink-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '62%' }}>
                       {email.fromName}
                     </span>
                     {classMeta && (
@@ -722,7 +722,7 @@ export function InboxModule() {
                       <RefreshCw size={10} color="#7F77DD" style={{ animation: 'spin 1s linear infinite', flexShrink: 0 }} />
                     )}
                   </div>
-                  <p style={{ margin: 0, fontSize: 12, color: isRead ? '#6C6553' : '#191712', fontWeight: isRead ? 400 : 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.35 }}>
+                  <p style={{ margin: 0, fontSize: 12, color: isRead ? 'var(--sb-ink-3)' : 'var(--sb-ink-1)', fontWeight: isRead ? 400 : 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.35 }}>
                     {email.subject}
                     <span style={{ fontWeight: 400, color: '#9B9180' }}> — {email.preview}</span>
                   </p>
@@ -751,7 +751,7 @@ export function InboxModule() {
           <button
             onClick={() => void handleLoadMore()}
             disabled={loadingMore}
-            style={{ width: '100%', padding: '9px', borderRadius: 8, background: 'transparent', border: '1px dashed #E8E1CE', color: '#6C6553', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: loadingMore ? 0.5 : 1 }}
+            style={{ width: '100%', padding: '9px', borderRadius: 8, background: 'transparent', border: '1px dashed var(--sb-border)', color: 'var(--sb-ink-3)', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: loadingMore ? 0.5 : 1 }}
           >
             <RefreshCw size={12} style={{ animation: loadingMore ? 'spin 1s linear infinite' : 'none' }} />
             {loadingMore ? 'Loading…' : 'Load more emails'}
@@ -765,7 +765,7 @@ export function InboxModule() {
     if (noAuth) {
       return (
         <div style={{
-          background: '#FFFFFF', border: '1px dashed #E8E1CE',
+          background: 'var(--sb-card)', border: '1px dashed var(--sb-border)',
           borderRadius: 12, padding: '48px 32px',
           display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16,
           textAlign: 'center',
@@ -774,10 +774,10 @@ export function InboxModule() {
             <WifiOff size={22} color="#7F77DD" />
           </div>
           <div>
-            <p style={{ margin: '0 0 6px', fontSize: 16, fontWeight: 700, color: '#191712', fontFamily: "'Cabinet Grotesk', sans-serif" }}>
+            <p style={{ margin: '0 0 6px', fontSize: 16, fontWeight: 700, color: 'var(--sb-ink-1)', fontFamily: "'Cabinet Grotesk', sans-serif" }}>
               Connect Gmail
             </p>
-            <p style={{ margin: 0, fontSize: 13, color: '#6C6553', lineHeight: 1.6, maxWidth: 320 }}>
+            <p style={{ margin: 0, fontSize: 13, color: 'var(--sb-ink-3)', lineHeight: 1.6, maxWidth: 320 }}>
               Sign in with Google to load your real unread emails and triage them with AI.
             </p>
           </div>
@@ -798,8 +798,8 @@ export function InboxModule() {
 
     if (fetchError) {
       return (
-        <div style={{ background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 12, padding: '32px', textAlign: 'center' }}>
-          <p style={{ margin: '0 0 14px', fontSize: 13, color: '#191712' }}>{fetchError}</p>
+        <div style={{ background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 12, padding: '32px', textAlign: 'center' }}>
+          <p style={{ margin: '0 0 14px', fontSize: 13, color: 'var(--sb-ink-1)' }}>{fetchError}</p>
           <button onClick={() => void loadEmails()} style={{ padding: '7px 18px', borderRadius: 8, background: 'rgba(var(--sb-accent-rgb),0.12)', border: '1px solid #1E40AF30', color: '#7F77DD', fontSize: 12, cursor: 'pointer' }}>
             Retry
           </button>
@@ -812,12 +812,12 @@ export function InboxModule() {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         {/* Email body */}
-        <div style={{ background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 12, padding: '18px 22px' }}>
+        <div style={{ background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 12, padding: '18px 22px' }}>
           {/* Subject on the left, everything you can do to the message on the
               right — as icons, the way the task panel does it. Four words in
               four pills was a row of buttons the width of the card. */}
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 6 }}>
-            <p style={{ margin: 0, flex: 1, minWidth: 0, fontSize: 18, fontWeight: 700, color: '#191712', fontFamily: "'Cabinet Grotesk', sans-serif", letterSpacing: '-0.3px', lineHeight: 1.25 }}>
+            <p style={{ margin: 0, flex: 1, minWidth: 0, fontSize: 18, fontWeight: 700, color: 'var(--sb-ink-1)', fontFamily: "'Cabinet Grotesk', sans-serif", letterSpacing: '-0.3px', lineHeight: 1.25 }}>
               {selectedEmail.subject}
             </p>
             <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
@@ -833,9 +833,9 @@ export function InboxModule() {
                     title={label} aria-label={label} aria-pressed={on}
                     style={{
                       ...ICON_ACTION,
-                      background: on ? '#191712' : 'transparent',
-                      border: `1px solid ${on ? '#191712' : '#E8E1CE'}`,
-                      color: on ? '#FDF8E7' : '#6C6553',
+                      background: on ? 'var(--sb-ink-1)' : 'transparent',
+                      border: `1px solid ${on ? 'var(--sb-ink-1)' : 'var(--sb-border)'}`,
+                      color: on ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
                     }}>
                     <Icon size={14} />
                   </button>
@@ -852,8 +852,8 @@ export function InboxModule() {
                 style={{
                   ...ICON_ACTION,
                   background: drafting === selectedEmail.id ? 'var(--sb-accent)' : 'transparent',
-                  border: `1px solid ${drafting === selectedEmail.id ? 'var(--sb-accent)' : '#E8E1CE'}`,
-                  color: drafting === selectedEmail.id ? '#191712' : '#6C6553',
+                  border: `1px solid ${drafting === selectedEmail.id ? 'var(--sb-accent)' : 'var(--sb-border)'}`,
+                  color: drafting === selectedEmail.id ? 'var(--sb-ink-1)' : 'var(--sb-ink-3)',
                 }}>
                 <Sparkles size={14} />
               </button>
@@ -868,7 +868,7 @@ export function InboxModule() {
           </div>
           {draftError && (
             <p style={{
-              margin: '0 0 8px', fontSize: 11.5, lineHeight: 1.5, color: '#C62828',
+              margin: '0 0 8px', fontSize: 11.5, lineHeight: 1.5, color: 'var(--sb-negative)',
               background: 'rgba(198,40,40,0.06)', border: '1px solid rgba(198,40,40,0.25)',
               borderRadius: 8, padding: '7px 10px',
             }}>{draftError}</p>
@@ -876,30 +876,30 @@ export function InboxModule() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginBottom: 10 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
               <span style={{ fontSize: 12.5, color: '#7F77DD', fontWeight: 600 }}>{selectedEmail.fromName}</span>
-              <span style={{ fontSize: 12, color: '#6C6553' }}>{`<${selectedEmail.fromEmail}>`}</span>
-              <span style={{ fontSize: 11, color: '#6C6553', marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+              <span style={{ fontSize: 12, color: 'var(--sb-ink-3)' }}>{`<${selectedEmail.fromEmail}>`}</span>
+              <span style={{ fontSize: 11, color: 'var(--sb-ink-3)', marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
                 <Clock size={10} />{fmtRelTime(selectedEmail.receivedAt)}
               </span>
               {accounts.length > 1 && (
                 <span title={`In ${selectedEmail.account.email}`}
                   style={{
                     display: 'inline-flex', alignItems: 'center', height: 20, padding: '0 8px',
-                    borderRadius: 999, background: '#FAF7EC', border: '1px solid #E8E1CE',
-                    fontSize: 10.5, color: '#6C6553', flexShrink: 0,
+                    borderRadius: 999, background: 'var(--sb-field)', border: '1px solid var(--sb-border)',
+                    fontSize: 10.5, color: 'var(--sb-ink-3)', flexShrink: 0,
                   }}>{accountLabel(selectedEmail.account.email, selectedEmail.account.isPrimary)}</span>
               )}
 
             </div>
             {selectedEmail.to && (
               <div style={{ display: 'flex', gap: 6, alignItems: 'baseline', lineHeight: 1.35 }}>
-                <span style={{ fontSize: 10.5, fontWeight: 600, color: '#6C6553', minWidth: 18 }}>To</span>
-                <span style={{ fontSize: 11.5, color: '#6C6553', wordBreak: 'break-word' }}>{selectedEmail.to}</span>
+                <span style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--sb-ink-3)', minWidth: 18 }}>To</span>
+                <span style={{ fontSize: 11.5, color: 'var(--sb-ink-3)', wordBreak: 'break-word' }}>{selectedEmail.to}</span>
               </div>
             )}
             {selectedEmail.cc && (
               <div style={{ display: 'flex', gap: 6, alignItems: 'baseline' }}>
-                <span style={{ fontSize: 10.5, fontWeight: 600, color: '#6C6553', minWidth: 18 }}>CC</span>
-                <span style={{ fontSize: 11.5, color: '#6C6553', wordBreak: 'break-word' }}>{selectedEmail.cc}</span>
+                <span style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--sb-ink-3)', minWidth: 18 }}>CC</span>
+                <span style={{ fontSize: 11.5, color: 'var(--sb-ink-3)', wordBreak: 'break-word' }}>{selectedEmail.cc}</span>
               </div>
             )}
           </div>
@@ -920,21 +920,21 @@ export function InboxModule() {
             <div style={{ marginBottom: 14 }}>
               <button
                 onClick={() => setExpandedThread(v => v === selectedEmail.id ? null : selectedEmail.id)}
-                style={{ fontSize: 11.5, color: '#6C6553', background: '#FAF7EC', border: '1px solid #E8E1CE', borderRadius: 6, padding: '4px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}
+                style={{ fontSize: 11.5, color: 'var(--sb-ink-3)', background: 'var(--sb-field)', border: '1px solid var(--sb-border)', borderRadius: 6, padding: '4px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}
               >
                 {expandedThread === selectedEmail.id ? '▲' : '▼'} {selectedEmail.threadMessages.length} earlier message{selectedEmail.threadMessages.length > 1 ? 's' : ''} in thread
               </button>
               {expandedThread === selectedEmail.id && (
                 <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {selectedEmail.threadMessages.map(m => (
-                    <div key={m.id} style={{ borderLeft: '3px solid #E8E1CE', paddingLeft: 14 }}>
+                    <div key={m.id} style={{ borderLeft: '3px solid var(--sb-border)', paddingLeft: 14 }}>
                       <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6 }}>
                         <span style={{ fontSize: 12, fontWeight: 600, color: '#7F77DD' }}>{m.fromName}</span>
-                        <span style={{ fontSize: 11, color: '#6C6553' }}>{fmtRelTime(m.receivedAt)}</span>
+                        <span style={{ fontSize: 11, color: 'var(--sb-ink-3)' }}>{fmtRelTime(m.receivedAt)}</span>
                       </div>
                       {m.htmlBody
                         ? <EmailBodyFrame html={m.htmlBody} messageId={m.id} account={selectedEmail.account} />
-                        : <p style={{ margin: 0, fontSize: 12.5, color: '#6C6553', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{m.body}</p>
+                        : <p style={{ margin: 0, fontSize: 12.5, color: 'var(--sb-ink-3)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{m.body}</p>
                       }
                     </div>
                   ))}
@@ -943,11 +943,11 @@ export function InboxModule() {
             </div>
           )}
 
-          <div style={{ height: 1, background: '#E8E1CE', marginBottom: 16 }} />
+          <div style={{ height: 1, background: 'var(--sb-border)', marginBottom: 16 }} />
           {selectedEmail.htmlBody ? (
             <EmailBodyFrame html={selectedEmail.htmlBody} messageId={selectedEmail.id} account={selectedEmail.account} />
           ) : (
-            <p style={{ margin: 0, fontSize: 13.5, color: '#191712', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
+            <p style={{ margin: 0, fontSize: 13.5, color: 'var(--sb-ink-1)', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
               {selectedEmail.body}
             </p>
           )}
@@ -955,14 +955,14 @@ export function InboxModule() {
 
         {/* Triage panel */}
         {selectedTriage?.loading ? (
-          <div style={{ background: '#FFFFFF', border: '1px solid rgba(30,64,175,0.2)', borderRadius: 12, padding: '22px 24px', display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ background: 'var(--sb-card)', border: '1px solid rgba(30,64,175,0.2)', borderRadius: 12, padding: '22px 24px', display: 'flex', alignItems: 'center', gap: 12 }}>
             <RefreshCw size={15} color="#7F77DD" style={{ animation: 'spin 1s linear infinite' }} />
             <span style={{ fontSize: 13, color: '#7F77DD' }}>The Professor is analyzing this email…</span>
           </div>
 
         ) : selectedTriage?.error ? (
-          <div style={{ background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 12, padding: '20px 24px' }}>
-            <p style={{ margin: '0 0 12px', fontSize: 13, color: '#191712' }}>{selectedTriage.error}</p>
+          <div style={{ background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 12, padding: '20px 24px' }}>
+            <p style={{ margin: '0 0 12px', fontSize: 13, color: 'var(--sb-ink-1)' }}>{selectedTriage.error}</p>
             <button onClick={() => void handleTriage(selectedEmail)} style={{ padding: '7px 14px', borderRadius: 7, background: 'rgba(var(--sb-accent-rgb),0.12)', border: '1px solid #1E40AF30', color: '#7F77DD', fontSize: 12, cursor: 'pointer' }}>
               Try again
             </button>
@@ -986,16 +986,16 @@ export function InboxModule() {
                   {CLASS_META[selectedTriage.result.classification].label}
                 </div>
               </div>
-              <div style={{ flex: 1, padding: '12px 14px', background: '#F7F4EA', border: `1px solid ${URGENCY_META[selectedTriage.result.urgency].color}30`, borderRadius: 8 }}>
+              <div style={{ flex: 1, padding: '12px 14px', background: 'var(--sb-page)', border: `1px solid ${URGENCY_META[selectedTriage.result.urgency].color}30`, borderRadius: 8 }}>
                 <div style={{ fontSize: 10, color: '#9B9180', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Urgency</div>
                 <div style={{ fontSize: 14, fontWeight: 600, color: URGENCY_META[selectedTriage.result.urgency].color }}>
                   {URGENCY_META[selectedTriage.result.urgency].label}
                 </div>
               </div>
               {selectedTriage.result.followUpDate && (
-                <div style={{ flex: 1, padding: '12px 14px', background: '#F7F4EA', border: '1px solid #E8E1CE', borderRadius: 8 }}>
+                <div style={{ flex: 1, padding: '12px 14px', background: 'var(--sb-page)', border: '1px solid var(--sb-border)', borderRadius: 8 }}>
                   <div style={{ fontSize: 10, color: '#9B9180', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Follow Up</div>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: '#191712' }}>{selectedTriage.result.followUpDate}</div>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--sb-ink-1)' }}>{selectedTriage.result.followUpDate}</div>
                 </div>
               )}
             </div>
@@ -1004,14 +1004,14 @@ export function InboxModule() {
               const draft = replyText[selectedEmail.id] ?? selectedTriage.result.suggestedReply
               const isSent = sentIds.has(selectedEmail.id)
               return (
-                <div style={{ background: '#F7F4EA', border: '1px solid #E8E1CE', borderRadius: 8, padding: '14px 16px' }}>
+                <div style={{ background: 'var(--sb-page)', border: '1px solid var(--sb-border)', borderRadius: 8, padding: '14px 16px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                    <span style={{ fontSize: 11, fontWeight: 600, color: '#6C6553', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--sb-ink-3)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                       Reply to {selectedEmail.fromName}
                     </span>
                     <button
                       onClick={() => handleCopyReply(selectedEmail.id, draft)}
-                      style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 9px', borderRadius: 5, background: 'transparent', border: '1px solid #E8E1CE', color: '#6C6553', fontSize: 11, cursor: 'pointer' }}
+                      style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 9px', borderRadius: 5, background: 'transparent', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-3)', fontSize: 11, cursor: 'pointer' }}
                     >
                       {selectedTriage.copied ? <><CheckCheck size={10} /><span>Copied</span></> : <><Copy size={10} /><span>Copy</span></>}
                     </button>
@@ -1020,7 +1020,7 @@ export function InboxModule() {
                     value={draft}
                     onChange={e => setReplyText(prev => ({ ...prev, [selectedEmail.id]: e.target.value }))}
                     rows={6}
-                    style={{ width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 6, resize: 'vertical', background: '#FFFFFF', border: '1px solid #E8E1CE', color: '#191712', fontSize: 13, lineHeight: 1.65, fontFamily: 'inherit', outline: 'none' }}
+                    style={{ width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 6, resize: 'vertical', background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-1)', fontSize: 13, lineHeight: 1.65, fontFamily: 'inherit', outline: 'none' }}
                   />
                   <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10 }}>
                     {isSent ? (
@@ -1045,13 +1045,13 @@ export function InboxModule() {
           </div>
 
         ) : (
-          <div style={{ background: '#FFFFFF', border: '1px dashed #E8E1CE', borderRadius: 12, padding: '36px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
+          <div style={{ background: 'var(--sb-card)', border: '1px dashed var(--sb-border)', borderRadius: 12, padding: '36px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
             <div style={{ width: 44, height: 44, borderRadius: 10, background: 'rgba(30,64,175,0.08)', border: '1px solid rgba(30,64,175,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Zap size={18} color="#7F77DD" />
             </div>
             <div style={{ textAlign: 'center' }}>
-              <p style={{ margin: '0 0 5px', fontSize: 14, color: '#191712', fontWeight: 500 }}>Let The Professor triage this</p>
-              <p style={{ margin: 0, fontSize: 12.5, color: '#6C6553' }}>Get classification, urgency level, and a ready-to-send reply</p>
+              <p style={{ margin: '0 0 5px', fontSize: 14, color: 'var(--sb-ink-1)', fontWeight: 500 }}>Let The Professor triage this</p>
+              <p style={{ margin: 0, fontSize: 12.5, color: 'var(--sb-ink-3)' }}>Get classification, urgency level, and a ready-to-send reply</p>
             </div>
             <button
               onClick={() => void handleTriage(selectedEmail)}
@@ -1079,25 +1079,25 @@ export function InboxModule() {
 
         {/* Stats bar */}
         {!noAuth && (
-          <div style={{ display: 'flex', gap: 20, marginBottom: bulkOpen ? 10 : 20, padding: '13px 20px', background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 10, alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: 20, marginBottom: bulkOpen ? 10 : 20, padding: '13px 20px', background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 10, alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
               <Mail size={14} color="#7F77DD" />
-              <span style={{ fontSize: 13, color: '#191712' }}>{loading ? '…' : visibleEmails.length} unread</span>
+              <span style={{ fontSize: 13, color: 'var(--sb-ink-1)' }}>{loading ? '…' : visibleEmails.length} unread</span>
             </div>
-            <div style={{ width: 1, height: 14, background: '#E8E1CE' }} />
+            <div style={{ width: 1, height: 14, background: 'var(--sb-border)' }} />
             <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
               <Zap size={14} color="#1D9E75" />
-              <span style={{ fontSize: 13, color: '#191712' }}>{triagedCount} triaged</span>
+              <span style={{ fontSize: 13, color: 'var(--sb-ink-1)' }}>{triagedCount} triaged</span>
             </div>
             {accounts.length > 1 && (
               <>
-                <div style={{ width: 1, height: 14, background: '#E8E1CE' }} />
+                <div style={{ width: 1, height: 14, background: 'var(--sb-border)' }} />
                 {/* All of them, or one. A merged inbox is the useful default —
                     the question "what is waiting for me" does not stop at an
                     account boundary — but answering it must not hide which
                     mailbox a message is in. */}
                 <div role="group" aria-label="Which mailbox"
-                  style={{ display: 'flex', alignItems: 'center', gap: 2, padding: 3, borderRadius: 999, background: '#EDE7D9' }}>
+                  style={{ display: 'flex', alignItems: 'center', gap: 2, padding: 3, borderRadius: 999, background: 'var(--sb-field)' }}>
                   {[{ id: 'all', label: 'All' }, ...accounts.map(a => ({ id: a.email, label: accountLabel(a.email, a.isPrimary) }))].map(opt => {
                     const on = view === opt.id
                     return (
@@ -1107,7 +1107,7 @@ export function InboxModule() {
                         style={{
                           height: 24, padding: '0 10px', borderRadius: 999, border: 'none', cursor: 'pointer',
                           fontFamily: 'inherit', fontSize: 11.5, fontWeight: on ? 600 : 500,
-                          background: on ? '#FFFFFF' : 'transparent', color: on ? '#191712' : '#6C6553',
+                          background: on ? 'var(--sb-card)' : 'transparent', color: on ? 'var(--sb-ink-1)' : 'var(--sb-ink-3)',
                           boxShadow: on ? '0 1px 3px rgba(25,23,18,0.16)' : 'none',
                           maxWidth: 190, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                         }}>
@@ -1124,20 +1124,20 @@ export function InboxModule() {
                   const box = viewed[0] ?? accounts[0]
                   if (box) setCompose({ mode: 'new', account: box, to: '', subject: '' })
                 }}
-                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 7, background: compose?.mode === 'new' ? 'rgba(30,64,175,0.12)' : 'transparent', border: `1px solid ${compose?.mode === 'new' ? 'rgba(30,64,175,0.3)' : '#E8E1CE'}`, color: compose?.mode === 'new' ? '#7F77DD' : '#6C6553', fontSize: 12, cursor: 'pointer' }}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 7, background: compose?.mode === 'new' ? 'rgba(30,64,175,0.12)' : 'transparent', border: `1px solid ${compose?.mode === 'new' ? 'rgba(30,64,175,0.3)' : 'var(--sb-border)'}`, color: compose?.mode === 'new' ? '#7F77DD' : 'var(--sb-ink-3)', fontSize: 12, cursor: 'pointer' }}
               >
                 <PenSquare size={12} /> Compose
               </button>
               <button
                 onClick={() => { setBulkOpen(o => !o); setBulkText(''); setBulkDone(false); setTimeout(() => bulkRef.current?.focus(), 50) }}
-                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 7, background: bulkOpen ? 'rgba(29,158,117,0.12)' : 'transparent', border: `1px solid ${bulkOpen ? 'rgba(29,158,117,0.3)' : '#E8E1CE'}`, color: bulkOpen ? '#1D9E75' : '#6C6553', fontSize: 12, cursor: 'pointer' }}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 7, background: bulkOpen ? 'rgba(29,158,117,0.12)' : 'transparent', border: `1px solid ${bulkOpen ? 'rgba(29,158,117,0.3)' : 'var(--sb-border)'}`, color: bulkOpen ? '#1D9E75' : 'var(--sb-ink-3)', fontSize: 12, cursor: 'pointer' }}
               >
                 <ListPlus size={12} /> Bulk add tasks
               </button>
               <button
                 onClick={() => void loadEmails()}
                 disabled={loading}
-                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 7, background: 'transparent', border: '1px solid #E8E1CE', color: '#6C6553', fontSize: 12, cursor: 'pointer', opacity: loading ? 0.5 : 1 }}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 7, background: 'transparent', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-3)', fontSize: 12, cursor: 'pointer', opacity: loading ? 0.5 : 1 }}
               >
                 <RefreshCw size={12} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} />
                 Refresh
@@ -1171,8 +1171,8 @@ export function InboxModule() {
 
         {/* Bulk task input panel */}
         {bulkOpen && (
-          <div style={{ marginBottom: 20, padding: '16px 20px', background: '#FFFFFF', border: '1px solid rgba(29,158,117,0.25)', borderRadius: 10 }}>
-            <p style={{ margin: '0 0 10px', fontSize: 12.5, color: '#6C6553' }}>
+          <div style={{ marginBottom: 20, padding: '16px 20px', background: 'var(--sb-card)', border: '1px solid rgba(29,158,117,0.25)', borderRadius: 10 }}>
+            <p style={{ margin: '0 0 10px', fontSize: 12.5, color: 'var(--sb-ink-3)' }}>
               Paste or type tasks — one per line. All land in your task inbox.
             </p>
             <textarea
@@ -1185,19 +1185,19 @@ export function InboxModule() {
               style={{
                 width: '100%', boxSizing: 'border-box',
                 padding: '10px 12px', borderRadius: 8, resize: 'vertical',
-                background: '#F7F4EA', border: '1px solid #E8E1CE',
-                color: '#191712', fontSize: 13, lineHeight: 1.6,
+                background: 'var(--sb-page)', border: '1px solid var(--sb-border)',
+                color: 'var(--sb-ink-1)', fontSize: 13, lineHeight: 1.6,
                 fontFamily: 'inherit', outline: 'none',
               }}
             />
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
-              <span style={{ fontSize: 12, color: '#6C6553' }}>
+              <span style={{ fontSize: 12, color: 'var(--sb-ink-3)' }}>
                 {bulkLines.length > 0 ? `${bulkLines.length} task${bulkLines.length > 1 ? 's' : ''} ready` : 'Paste or type tasks above'}
               </span>
               <div style={{ display: 'flex', gap: 8 }}>
                 <button
                   onClick={() => { setBulkOpen(false); setBulkText('') }}
-                  style={{ padding: '7px 14px', borderRadius: 7, background: 'transparent', border: '1px solid #E8E1CE', color: '#6C6553', fontSize: 12, cursor: 'pointer' }}
+                  style={{ padding: '7px 14px', borderRadius: 7, background: 'transparent', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-3)', fontSize: 12, cursor: 'pointer' }}
                 >
                   Cancel
                 </button>
