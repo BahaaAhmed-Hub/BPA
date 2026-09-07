@@ -38,8 +38,8 @@ function Pill({ type, amount, currency, direction }: {
   // Soft pill style: tinted background + matching text (no white text on colored bg)
   const out = type === 'expense' || (type === 'transfer' && direction === 'out')
   const inn = type === 'income'  || (type === 'transfer' && direction === 'in')
-  const bg    = out ? `${RED}18` : inn ? `${GREEN}18` : '#EDE7D9'
-  const color = out ? RED        : inn ? GREEN        : '#6C6553'
+  const bg    = out ? `${RED}18` : inn ? `${GREEN}18` : 'var(--sb-field)'
+  const color = out ? RED        : inn ? GREEN        : 'var(--sb-ink-3)'
   return (
     <span style={{
       display: 'inline-block',
@@ -59,7 +59,7 @@ function Pill({ type, amount, currency, direction }: {
 const RANGE_FIELD: React.CSSProperties = {
   border: 'none', background: 'transparent', outline: 'none',
   fontFamily: "'Outfit', system-ui, sans-serif", fontSize: 13, fontWeight: 500,
-  color: '#191712', padding: 0, width: 118,
+  color: 'var(--sb-ink-1)', padding: 0, width: 118,
 }
 
 // ─── The Accounts / Cards / Cash pills ────────────────────────────────────────
@@ -125,7 +125,7 @@ function AccountRow({ account, balance, unconverted, pending, selected, hovered,
       style={{
         display: 'flex', alignItems: 'center', gap: 11,
         minHeight: 46, padding: '0 12px 0 6px', borderRadius: 12,
-        background: selected ? '#FBF3D2' : hovered ? '#FFFDF7' : '#FFFFFF',
+        background: selected ? '#FBF3D2' : hovered ? '#FFFDF7' : 'var(--sb-card)',
         border: `1px solid ${selected ? 'var(--sb-accent)' : hovered ? '#E4DCC6' : '#EFEADB'}`,
         boxSizing: 'border-box', position: 'relative', cursor: 'pointer',
         transform: CSS.Transform.toString(transform),
@@ -160,7 +160,7 @@ function AccountRow({ account, balance, unconverted, pending, selected, hovered,
         onChange={newEmoji => onIcon(account, newEmoji)}
         trigger={(onClick) => (
           <div onClick={onClick} title="Click to change icon" style={{
-            width: 28, height: 28, borderRadius: 9, background: '#F0EBDC', color: '#6C6553',
+            width: 28, height: 28, borderRadius: 9, background: 'var(--sb-hairline)', color: 'var(--sb-ink-3)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             flexShrink: 0, cursor: 'pointer', overflow: 'hidden', fontSize: 15,
           }}>
@@ -171,8 +171,8 @@ function AccountRow({ account, balance, unconverted, pending, selected, hovered,
         )}
       />
       <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-        <span style={{ fontSize: 13, fontWeight: 600, color: '#191712', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{account.name}</span>
-        <span style={{ fontSize: 10.5, color: '#6C6553', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--sb-ink-1)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{account.name}</span>
+        <span style={{ fontSize: 10.5, color: 'var(--sb-ink-3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {account.bank ?? account.accountType}{account.last4 ? ` · ···· ${account.last4}` : ''}
         </span>
       </div>
@@ -192,7 +192,7 @@ function AccountRow({ account, balance, unconverted, pending, selected, hovered,
       )}
 
       <div style={{ marginLeft: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', flexShrink: 0 }}>
-        <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 14.5, fontWeight: 600, color: isNeg ? '#C62828' : '#191712', fontVariantNumeric: 'tabular-nums' }}>
+        <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 14.5, fontWeight: 600, color: isNeg ? 'var(--sb-negative)' : 'var(--sb-ink-1)', fontVariantNumeric: 'tabular-nums' }}>
           {formatBalance(balance, account.currency)}
         </span>
         {unconverted.length > 0 ? (
@@ -208,7 +208,7 @@ function AccountRow({ account, balance, unconverted, pending, selected, hovered,
             {formatBalance(pending, account.currency)} not paid yet
           </span>
         ) : account.last4 ? (
-          <span style={{ fontSize: 10, color: '#6C6553' }}>cleared</span>
+          <span style={{ fontSize: 10, color: 'var(--sb-ink-3)' }}>cleared</span>
         ) : null}
       </div>
 
@@ -220,7 +220,7 @@ function AccountRow({ account, balance, unconverted, pending, selected, hovered,
           title={`Pay ${acct(owed, { currency: account.currency })} off ${account.name}`}
           style={{
             height: 26, paddingInline: 10, borderRadius: 999, flexShrink: 0, marginLeft: 8,
-            background: '#191712', border: '1px solid #191712', color: '#FDF8E7',
+            background: 'var(--sb-ink-1)', border: '1px solid var(--sb-ink-1)', color: 'var(--sb-ink-on-dark)',
             fontFamily: 'inherit', fontSize: 11, fontWeight: 600, cursor: 'pointer',
           }}>
           Settle
@@ -234,8 +234,8 @@ function AccountRow({ account, balance, unconverted, pending, selected, hovered,
         style={{
           width: 26, height: 26, borderRadius: '50%', padding: 0, flexShrink: 0, marginLeft: 4,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          background: '#FFFFFF', border: '1px solid #E8E1CE',
-          color: hovered || selected ? '#6C6553' : '#D8D0BE', cursor: 'pointer',
+          background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
+          color: hovered || selected ? 'var(--sb-ink-3)' : '#D8D0BE', cursor: 'pointer',
         }}>
         <Pencil size={12} />
       </button>
@@ -247,16 +247,16 @@ function AccountRow({ account, balance, unconverted, pending, selected, hovered,
 
 export function BalanceScreen() {
   const C = {
-    bg:        '#F7F4EA',
-    surface:   '#FFFFFF',
-    surfaceEl: '#FAF7EC',
+    bg:        'var(--sb-page)',
+    surface:   'var(--sb-card)',
+    surfaceEl: 'var(--sb-field)',
     amberBg:   'rgba(var(--sb-accent-rgb),0.12)',
-    border:    '#E8E1CE',
-    divFaint:  '#E8E1CE',
+    border:    'var(--sb-border)',
+    divFaint:  'var(--sb-border)',
     amber:     'var(--sb-accent)',
     amberSoft: '#D4A827',
-    textPri:   '#191712',
-    textMuted: '#6C6553',
+    textPri:   'var(--sb-ink-1)',
+    textMuted: 'var(--sb-ink-3)',
     textDim:   '#9B9180',
     red:       '#C62828',
     green:     '#0C8140',
@@ -393,9 +393,9 @@ export function BalanceScreen() {
         display: 'flex', alignItems: 'flex-end', gap: 20,
       }}>
         <div>
-          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: '#6C6553', display: 'block', marginBottom: 4 }}>MONEY</span>
-          <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 30, fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1, color: '#191712', display: 'block' }}>Balances</span>
-          <span style={{ fontSize: 12, color: '#6C6553', display: 'block', marginTop: 3 }}>
+          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-3)', display: 'block', marginBottom: 4 }}>MONEY</span>
+          <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 30, fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1, color: 'var(--sb-ink-1)', display: 'block' }}>Balances</span>
+          <span style={{ fontSize: 12, color: 'var(--sb-ink-3)', display: 'block', marginTop: 3 }}>
             {unrated.length > 0 && (
               <span style={{ color: '#8A6D0B' }}>
                 {unrated.join(' and ')} not in these totals — no rate set ·{' '}
@@ -410,17 +410,17 @@ export function BalanceScreen() {
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8, paddingBottom: 3 }}>
           {/* Filter pills */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 2, padding: 3, borderRadius: 999, background: '#EDE7D9' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 2, padding: 3, borderRadius: 999, background: 'var(--sb-field)' }}>
             {(Object.keys(ACCOUNT_FILTERS) as AccountFilter[]).map(f => {
               const on = filter === f
               return (
                 <button key={f} onClick={() => setFilter(f)} aria-pressed={on}
-                  style={{ height: 28, padding: '0 13px', borderRadius: 999, border: 'none', fontFamily: 'inherit', background: on ? '#FFFFFF' : 'transparent', color: on ? '#191712' : '#6C6553', fontSize: 12, fontWeight: on ? 600 : 400, display: 'flex', alignItems: 'center', boxShadow: on ? '0 1px 3px rgba(25,23,18,0.16)' : 'none', cursor: 'pointer' }}>{f}</button>
+                  style={{ height: 28, padding: '0 13px', borderRadius: 999, border: 'none', fontFamily: 'inherit', background: on ? 'var(--sb-card)' : 'transparent', color: on ? 'var(--sb-ink-1)' : 'var(--sb-ink-3)', fontSize: 12, fontWeight: on ? 600 : 400, display: 'flex', alignItems: 'center', boxShadow: on ? '0 1px 3px rgba(25,23,18,0.16)' : 'none', cursor: 'pointer' }}>{f}</button>
               )
             })}
           </div>
           <button onClick={() => setAccountModal({ open: true, account: null })}
-            style={{ height: 34, padding: '0 15px', borderRadius: 999, background: 'var(--sb-accent)', border: 'none', color: '#191712', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, boxShadow: '0 2px 0 rgba(25,23,18,0.14)' }}>
+            style={{ height: 34, padding: '0 15px', borderRadius: 999, background: 'var(--sb-accent)', border: 'none', color: 'var(--sb-ink-1)', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, boxShadow: '0 2px 0 rgba(25,23,18,0.14)' }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
             Add account
           </button>
@@ -428,7 +428,7 @@ export function BalanceScreen() {
       </div>
 
       {/* Dark net position hero card */}
-      <div style={{ flexShrink: 0, margin: '14px 26px 0', background: '#191712', borderRadius: 18, padding: '16px 20px', display: 'flex', gap: 22, alignItems: 'center', color: '#FDF8E7' }}>
+      <div style={{ flexShrink: 0, margin: '14px 26px 0', background: 'var(--sb-ink-1)', borderRadius: 18, padding: '16px 20px', display: 'flex', gap: 22, alignItems: 'center', color: 'var(--sb-ink-on-dark)' }}>
         <div style={{ flexShrink: 0, width: 240 }}>
           <span style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.14em', opacity: 0.6, display: 'block', marginBottom: 4 }}>NET POSITION</span>
           <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 36, fontWeight: 600, letterSpacing: '-0.04em', lineHeight: 1, fontVariantNumeric: 'tabular-nums', display: 'block' }}>
@@ -445,7 +445,7 @@ export function BalanceScreen() {
           </div>
           <div style={{ height: 14, borderRadius: 999, overflow: 'hidden', display: 'flex', background: 'rgba(255,255,255,0.12)' }}>
             <span style={{ width: `${heldPct}%`, background: 'var(--sb-accent)', display: 'block' }} />
-            <span style={{ flex: 1, background: '#C62828', display: 'block' }} />
+            <span style={{ flex: 1, background: 'var(--sb-negative)', display: 'block' }} />
           </div>
           <div style={{ display: 'flex', gap: 16, fontSize: 10.5, opacity: 0.62, marginTop: 6 }}>
             <span>Payment {heldPct}%</span>
@@ -470,17 +470,17 @@ export function BalanceScreen() {
           flex: 1,
           overflowY: 'auto',
           padding: '22px 26px',
-          borderRight: `1px solid #E8E1CE`,
+          borderRight: `1px solid var(--sb-border)`,
         }}>
           {/* ── Account groups ── */}
           {[
             { label: 'PAYMENT ACCOUNTS', accounts: paymentAccounts, total: paymentTotal, totalColor: POSITIVE, owed: false },
             { label: 'CARDS OWED', accounts: creditCards, total: creditTotal, totalColor: NEGATIVE, owed: true },
-            { label: 'OTHER ASSETS', accounts: otherAssets, total: assetTotal, totalColor: '#191712', owed: false },
+            { label: 'OTHER ASSETS', accounts: otherAssets, total: assetTotal, totalColor: 'var(--sb-ink-1)', owed: false },
           ].map(group => group.accounts.length > 0 && (
             <div key={group.label} style={{ marginBottom: 14 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, height: 30, padding: '0 12px', borderRadius: 10, background: '#EDE7D9', marginBottom: 7, boxSizing: 'border-box' as const }}>
-                <span style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.12em', color: '#6C6553' }}>{group.label}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, height: 30, padding: '0 12px', borderRadius: 10, background: 'var(--sb-field)', marginBottom: 7, boxSizing: 'border-box' as const }}>
+                <span style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.12em', color: 'var(--sb-ink-3)' }}>{group.label}</span>
                 <span style={{ marginLeft: 'auto', fontFamily: 'Outfit, sans-serif', fontSize: 13.5, fontWeight: 600, color: group.totalColor, fontVariantNumeric: 'tabular-nums' }}>
                   {acct(group.owed ? -Math.abs(group.total) : group.total, { currency: 'EGP' })}
                 </span>
@@ -519,12 +519,12 @@ export function BalanceScreen() {
           {shown.length === 0 && (
             <div style={{
               padding: '26px 18px', textAlign: 'center', borderRadius: 12,
-              background: '#FCFAF4', border: '1px dashed #E4DCC6',
+              background: 'var(--sb-header)', border: '1px dashed #E4DCC6',
             }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: '#191712' }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--sb-ink-1)' }}>
                 No {filter.toLowerCase()} yet
               </div>
-              <div style={{ fontSize: 11.5, color: '#6C6553', marginTop: 5, lineHeight: 1.5 }}>
+              <div style={{ fontSize: 11.5, color: 'var(--sb-ink-3)', marginTop: 5, lineHeight: 1.5 }}>
                 {accounts.length === 0
                   ? 'Add an account to get started.'
                   : filter === 'Cards'
@@ -572,8 +572,8 @@ export function BalanceScreen() {
                     style={{
                       padding: '4px 9px', borderRadius: 7, border: 'none', cursor: 'pointer',
                       fontFamily: 'inherit', fontSize: 11.5, fontWeight: on ? 700 : 500,
-                      background: on ? '#191712' : 'transparent',
-                      color: on ? '#FDF8E7' : C.textDim,
+                      background: on ? 'var(--sb-ink-1)' : 'transparent',
+                      color: on ? 'var(--sb-ink-on-dark)' : C.textDim,
                     }}>
                     {label}
                   </button>
@@ -603,7 +603,7 @@ export function BalanceScreen() {
                 title={`Show all ${onFocused} entries on ${focused.name}`}
                 style={{
                   height: 34, padding: '0 11px', borderRadius: 10, cursor: 'pointer',
-                  background: 'transparent', border: '1px dashed #DCD3BF', color: '#6C6553',
+                  background: 'transparent', border: '1px dashed #DCD3BF', color: 'var(--sb-ink-3)',
                   fontFamily: 'inherit', fontSize: 11.5, fontWeight: 500, whiteSpace: 'nowrap',
                 }}>
                 {hiddenByRange} more outside this range
