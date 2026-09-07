@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
-import { Button } from '@/components/ui'
+import { Button, Card } from '@/components/ui'
 import {
   DndContext, DragOverlay, closestCenter,
   PointerSensor, useSensor, useSensors,
@@ -323,11 +323,7 @@ function DatePickerOverlay({
       position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 9999,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
     }}>
-      <div style={{
-        background: 'var(--sb-card)', borderRadius: 'var(--sb-r-card)',
-        padding: 24, width: 320, border: '1px solid var(--sb-border)',
-        boxShadow: 'var(--sb-shadow-frame)',
-      }}>
+      <Card style={{ padding: 24, width: 320 }}>
         <div style={{ fontSize: 'var(--sb-t-h3)', fontWeight: 700, color: 'var(--sb-ink-1)', marginBottom: 6 }}>
           Plan this task
         </div>
@@ -367,7 +363,7 @@ function DatePickerOverlay({
             cursor: date ? 'pointer' : 'default', opacity: date ? 1 : 0.5,
           }}>Set Date &amp; Plan</button>
         </div>
-      </div>
+      </Card>
     </div>
   )
 }

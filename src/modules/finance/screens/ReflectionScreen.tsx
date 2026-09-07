@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback, useRef, Fragment } from 'react'
-import { Button } from '@/components/ui'
+import { Button, Card } from '@/components/ui'
 import { ChevronDown, ChevronRight, ChevronsUpDown, ChevronsDownUp, GripVertical, X, Trash2, Plus } from 'lucide-react'
 import { useFinanceStore } from '../financeStore'
 import type { Category } from '../types'
@@ -609,12 +609,7 @@ export function ReflectionScreen(_props?: any) {
                 {suspects.length} to check
               </button>
               {dupesOpen && (
-                <div style={{
-                  position: 'absolute', top: 34, right: 0, zIndex: 30, width: 384,
-                  maxHeight: 320, overflowY: 'auto', padding: 12,
-                  background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
-                  boxShadow: 'var(--sb-shadow-frame)', textAlign: 'left',
-                }}>
+                <Card style={{ position: 'absolute', top: 34, right: 0, zIndex: 30, width: 384, maxHeight: 320, overflowY: 'auto', padding: 12, textAlign: 'left' }}>
                   <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.5, marginBottom: 10 }}>
                     Same amount, account, category and payee. Filed twice on one day is
                     usually a slip; twice in one month may be real. Nothing has been changed —
@@ -662,7 +657,7 @@ export function ReflectionScreen(_props?: any) {
                         }}><Trash2 size={ICON.sm} /></button>
                     </div>
                   ))}
-                </div>
+                </Card>
               )}
             </span>
           )}

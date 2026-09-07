@@ -2,7 +2,7 @@
 // (remaining chunks appended below)
 
 import { useState, useEffect, useMemo, useRef, type ReactNode } from 'react'
-import { Button } from '@/components/ui'
+import { Button, Pill } from '@/components/ui'
 import { NAV_H } from '@/App'
 import {
   Plus, Trash2, LogIn, LogOut,
@@ -351,16 +351,8 @@ function Segmented<T extends string>({ value, options, onChange }: {
       {options.map(o => {
         const on = o.value === value
         return (
-          <button key={o.value} onClick={() => onChange(o.value)} style={{
-            padding: '6px 14px', borderRadius: 'var(--sb-r-chip)', fontSize: 'var(--sb-t-body-s)', cursor: 'pointer',
-            fontWeight: on ? 600 : 500,
-            fontFamily: 'inherit',
-            background: on ? 'var(--sb-card)' : 'transparent',
-            border: on ? '1px solid rgba(25,23,18,0.08)' : '1px solid transparent',
-            boxShadow: on ? '0 1px 2px rgba(25,23,18,0.10)' : 'none',
-            color: on ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)',
-            transition: 'all 0.12s',
-          }}>{o.label}</button>
+          <Pill key={o.value} on={on} onClick={() => onChange(o.value)}
+            style={{ height: 28, padding: '0 14px', border: 'none' }}>{o.label}</Pill>
         )
       })}
     </div>

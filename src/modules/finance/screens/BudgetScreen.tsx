@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
-import { Button } from '@/components/ui'
+import { Button, Card } from '@/components/ui'
 import { CalendarClock } from 'lucide-react'
 import {
   DndContext, pointerWithin, PointerSensor, TouchSensor, useSensor, useSensors,
@@ -692,7 +692,7 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
   const withMoney = rows.filter(r => r.plannedFrom === 'own').length
                   + rows.reduce((n, r) => n + r.children.filter(c => c.budgeted).length, 0)
   return (
-    <div style={{ background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-card)', boxShadow: 'var(--sb-shadow-control)', padding: '15px 18px 18px' }}>
+    <Card style={{ padding: '15px 18px 18px' }}>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 14 }}>
         <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--sb-ink-3)' }}>{title.toUpperCase()}</span>
         {all > 0 && (
@@ -918,7 +918,7 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
           )}
         </div>
       )}
-    </div>
+    </Card>
   )
 }
 

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Button } from '@/components/ui'
+import { Button, Pill } from '@/components/ui'
 import { GripVertical, Pencil, X } from 'lucide-react'
 import {
   DndContext, closestCenter, PointerSensor, TouchSensor, useSensor, useSensors,
@@ -29,7 +29,7 @@ import { ICON } from '@/lib/type'
 // ─── Pill ─────────────────────────────────────────────────────────────────────
 
 
-function Pill({ type, amount, currency, direction }: {
+function AmountPill({ type, amount, currency, direction }: {
   type: 'expense' | 'income' | 'transfer'; amount: number; currency: string
   /** For a transfer being read from one account's side: out of it, or into it. */
   direction?: 'out' | 'in'
@@ -390,8 +390,7 @@ export function BalanceScreen() {
             {(Object.keys(ACCOUNT_FILTERS) as AccountFilter[]).map(f => {
               const on = filter === f
               return (
-                <button key={f} onClick={() => setFilter(f)} aria-pressed={on}
-                  style={{ height: 28, padding: '0 13px', borderRadius: 'var(--sb-r-pill)', border: 'none', fontFamily: 'inherit', background: on ? 'var(--sb-card)' : 'transparent', color: on ? 'var(--sb-ink-1)' : 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body-s)', fontWeight: on ? 600 : 400, display: 'flex', alignItems: 'center', boxShadow: on ? '0 1px 3px rgba(25,23,18,0.16)' : 'none', cursor: 'pointer' }}>{f}</button>
+                <Pill key={f} on={on} onClick={() => setFilter(f)} style={{ height: 28 }}>{f}</Pill>
               )
             })}
           </div>
@@ -542,16 +541,10 @@ export function BalanceScreen() {
               ] as const).map(([label, from, to]) => {
                 const on = rangeFrom === from && rangeTo === to
                 return (
-                  <button key={label}
-                    onClick={() => { setRangeFrom(from); setRangeTo(to) }}
-                    style={{
-                      padding: '4px 9px', borderRadius: 'var(--sb-r-chip)', border: 'none', cursor: 'pointer',
-                      fontFamily: 'inherit', fontSize: 'var(--sb-t-meta)', fontWeight: on ? 700 : 500,
-                      background: on ? 'var(--sb-ink-1)' : 'transparent',
-                      color: on ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-4)',
-                    }}>
+                  <Pill key={label} on={on} onClick={() => { setRangeFrom(from); setRangeTo(to) }}
+                    style={{ height: 26, padding: '0 10px', fontSize: 'var(--sb-t-meta)' }}>
                     {label}
-                  </button>
+                  </Pill>
                 )
               })}
             </div>
@@ -659,8 +652,7 @@ export function BalanceScreen() {
                       )}
                     </div>
                   </div>
-                  <Pill
-                    type={tx.type === 'income' ? 'income' : tx.type === 'transfer' ? 'transfer' : 'expense'}
+                  <AmountPill type={tx.type === 'income' ? 'income' : tx.type === 'transfer' ? 'transfer' : 'expense'}
                     amount={tx.amount}
                     currency={tx.currency}
                     direction={moveDir}

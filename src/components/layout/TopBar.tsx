@@ -1,6 +1,6 @@
 
 import { useState } from 'react'
-import { Button } from '@/components/ui'
+import { Button, Card } from '@/components/ui'
 import { Bell, Search, Settings, LogOut } from 'lucide-react'
 import { useUIStore } from '@/store/uiStore'
 import { useAuthStore } from '@/store/authStore'
@@ -100,7 +100,7 @@ export function TopBar({ title, subtitle }: TopBarProps) {
         {menuOpen && (
           <>
             <div onClick={() => setMenuOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 40 }} />
-            <div style={{ position: 'absolute', right: 0, top: 40, zIndex: 50, background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-card)', padding: 8, minWidth: 200, boxShadow: 'var(--sb-shadow-menu)' }}>
+            <Card style={{ position: 'absolute', right: 0, top: 40, zIndex: 50, padding: 8, minWidth: 200 }}>
               <div style={{ padding: '8px 12px 10px', borderBottom: '1px solid var(--sb-border)', marginBottom: 6 }}>
                 <p style={{ margin: 0, fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>{user?.name ?? 'User'}</p>
                 <p style={{ margin: '2px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>{user?.email}</p>
@@ -113,7 +113,7 @@ export function TopBar({ title, subtitle }: TopBarProps) {
               >
                 <LogOut size={ICON.lg} /> Sign out
               </Button>
-            </div>
+            </Card>
           </>
         )}
       </div>

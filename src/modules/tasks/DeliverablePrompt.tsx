@@ -5,7 +5,7 @@
 // what is not optional is that Cancel leaves the task open.
 
 import { useState } from 'react'
-import { Button } from '@/components/ui'
+import { Button, Card } from '@/components/ui'
 import { createPortal } from 'react-dom'
 import { X, Link2, Paperclip, Plus, Check, FileText } from 'lucide-react'
 import type { Task, TaskAttachment, TaskType } from '@/types'
@@ -78,11 +78,7 @@ export function DeliverablePrompt({ task, onComplete, onCancel }: {
         background: 'rgba(25,23,18,0.34)', backdropFilter: 'blur(2px)',
         display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
       }}>
-      <div style={{
-        width: 460, maxHeight: '86vh', overflowY: 'auto', boxSizing: 'border-box',
-        background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
-        boxShadow: 'var(--sb-shadow-frame)', padding: '20px 22px 18px',
-      }}>
+      <Card style={{ width: 460, maxHeight: '86vh', overflowY: 'auto', boxSizing: 'border-box', padding: '20px 22px 18px' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <p style={{ margin: 0, fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h2)', fontWeight: 600, color: 'var(--sb-ink-1)', letterSpacing: '-0.02em' }}>
@@ -188,7 +184,7 @@ export function DeliverablePrompt({ task, onComplete, onCancel }: {
           }}>Cancel</button>
           <Button variant="primary" onClick={() => onComplete({ links, attachments: files })}><Check size={ICON.sm} strokeWidth={STROKE.active} /> Complete</Button>
         </div>
-      </div>
+      </Card>
     </div>,
     document.body,
   )

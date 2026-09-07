@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Card } from '@/components/ui'
 import { X, Sparkles, Plus, Trash2, Check, ChevronDown, ChevronUp } from 'lucide-react'
 import { breakdownMeetingNotes } from '@/lib/professor'
 import type { ExtractedTask } from '@/lib/professor'
@@ -298,19 +299,7 @@ export function MeetingFollowUpPopup({ parentTask, onConfirm, onSkip }: Props) {
       />
 
       {/* Modal */}
-      <div style={{
-        position: 'fixed', top: '50%', left: '50%',
-        transform: 'translate(-50%, -50%)',
-        zIndex: 1001,
-        width: 560, maxWidth: 'calc(100vw - 32px)',
-        maxHeight: 'calc(100vh - 64px)',
-        background: 'var(--sb-card)',
-        border: '1px solid var(--sb-border)',
-        borderRadius: 'var(--sb-r-card)',
-        display: 'flex', flexDirection: 'column',
-        overflow: 'hidden',
-        boxShadow: 'var(--sb-shadow-frame)',
-      }}>
+      <Card style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 1001, width: 560, maxWidth: 'calc(100vw - 32px)', maxHeight: 'calc(100vh - 64px)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
         {/* Header */}
         <div style={{
@@ -480,7 +469,7 @@ export function MeetingFollowUpPopup({ parentTask, onConfirm, onSkip }: Props) {
             </button>
           )}
         </div>
-      </div>
+      </Card>
     </>
   )
 }
