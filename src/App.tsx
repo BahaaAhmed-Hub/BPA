@@ -28,6 +28,7 @@ import { runBudgetEntries } from './modules/finance/budgetEntries'
 import { loadRules } from './modules/finance/modals/BudgetRuleModal'
 import { SyncGapBanner } from './modules/shell/SyncGapBanner'
 import { UndoBar } from './components/UndoBar'
+import { useTaskCalendarPush } from './lib/taskAutoSchedule'
 import { seedToken, seedFromLocalStorage, clearAllTokens, getGoogleToken } from './lib/tokenManager'
 import { refreshPrimaryToken } from './lib/googleCalendar'
 import { SetupWizard } from './modules/wizard/SetupWizard'
@@ -861,6 +862,10 @@ function App() {
   }, [user, financeCategories])
 
   const [assistantOpen, setAssistantOpen] = useState(false)
+  // A dated task belongs on the calendar wherever it was given its date — the
+  // Today screen, the palette, the planner — not only while the board is open.
+  useTaskCalendarPush()
+
   const [searchOpen, setSearchOpen] = useState(false)
 
   // ⌘K / Ctrl-K anywhere, and the magnifier in the nav, open the same palette

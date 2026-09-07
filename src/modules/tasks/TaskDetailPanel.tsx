@@ -14,6 +14,7 @@ import { useTaskStore } from '@/store/taskStore'
 import { TASK_TYPE_ORDER, initials, resolveTaskVisuals, formatScheduleLabel } from './taskVisuals'
 import { loadCustomStatuses } from '@/lib/customStatuses'
 import { scheduleTaskToCalendar } from '@/lib/aiScheduler'
+import { resolveTaskCalendar } from '@/lib/taskCalendar'
 import { SchedulePopover } from './SchedulePopover'
 
 const PRIORITIES: Priority[] = ['P0', 'P1', 'P2', 'P3']
@@ -149,6 +150,12 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
   // whichever quadrant it is in.
   const [pushing, setPushing] = useState(false)
   const [pushError, setPushError] = useState<string | null>(null)
+  // Which calendar it is aimed at, named on the row. A task carrying a company
+  // goes to that company's calendar on that company's account — and when that
+  // account has to be reconnected, the failure has to say so rather than the
+  // row quietly reading "not on your calendar" forever.
+  const calTarget = resolveTaskCalendar(task)
+  const calWhere = calTarget.companyName ?? (calTarget.source === 'task' ? 'the chosen calendar' : 'your calendar')
 
   async function pushToCalendar() {
     if (!task.dueDate || pushing) return
@@ -316,7 +323,9 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
             task.gcalEventId ? (
               <div style={{ ...CELL, gridColumn: '1 / -1', cursor: 'default' }}>
                 <CalendarDays size={14} strokeWidth={1.9} style={{ flexShrink: 0, color: '#0C8140' }} />
-                <span style={{ ...CELL_VALUE, color: '#6C6553' }}>On your calendar</span>
+                <span style={{ ...CELL_VALUE, color: '#6C6553' }}>
+                  On {calTarget.companyName ? `${calTarget.companyName}'s calendar` : 'your calendar'}
+                </span>
               </div>
             ) : (
               <button
@@ -326,7 +335,7 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
                 style={{ ...CELL, gridColumn: '1 / -1', width: '100%' }}>
                 <CalendarDays size={14} strokeWidth={1.9} style={{ flexShrink: 0, color: '#9B9180' }} />
                 <span style={{ ...CELL_VALUE, color: pushError ? '#C62828' : '#6C6553' }}>
-                  {pushing ? 'Adding it…' : pushError ?? 'Not on your calendar — add it'}
+                  {pushing ? 'Adding it…' : pushError ?? `Not on the calendar — add it to ${calWhere}`}
                 </span>
               </button>
             )

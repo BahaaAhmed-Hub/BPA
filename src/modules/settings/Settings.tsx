@@ -723,7 +723,7 @@ function CompanyCard({
             color: co.accountId ? '#0C8140' : '#9B9180',
           }}>
           <option value="">{accounts.length > 0 ? 'Link an account…' : 'No accounts connected'}</option>
-          {accounts.map(a => <option key={a.id} value={a.id}>{a.email}</option>)}
+          {accounts.map(a => <option key={a.id} value={a.id}>{a.isPrimary ? `${a.email} (this account)` : a.email}</option>)}
         </select>
 
         {/* Users expand toggle */}
@@ -829,12 +829,25 @@ function CompanyCard({
 }
 
 function CompaniesSection({
-  companies, setCompanies, accounts,
+  companies, setCompanies, accounts, primaryEmail,
 }: {
   companies: CompanyRow[]
   setCompanies: (c: CompanyRow[]) => void
   accounts: ConnectedAccount[]
+  primaryEmail: string
 }) {
+  // The account you signed in with is not in `professor-connected-accounts` —
+  // that list is the *additional* ones — so it was missing from this picker
+  // entirely, and a company living on your own Google account could not be
+  // linked to it. It is offered here under the id `primary`, which everything
+  // downstream already understands: no entry in the accounts list means the
+  // primary token, which is exactly what writing to your own calendar needs.
+  const linkable: ConnectedAccount[] = primaryEmail
+    ? [{
+        id: 'primary', email: primaryEmail, name: '', providerToken: '',
+        scopes: [], connectedAt: '', isPrimary: true,
+      }, ...accounts]
+    : accounts
   const [adding, setAdding] = useState(false)
   const [newName, setNewName] = useState('')
   const [newColor, setNewColor] = useState(C_COLORS[0])
@@ -868,7 +881,7 @@ function CompaniesSection({
   return (
     <div>
       {companies.map(co => (
-        <CompanyCard key={co.id} co={co} accounts={accounts}
+        <CompanyCard key={co.id} co={co} accounts={linkable}
           onUpdate={patch => updateCompany(co.id, patch)}
           onDelete={() => deleteCompany(co.id)} />
       ))}
@@ -880,10 +893,10 @@ function CompaniesSection({
               style={{ ...inputStyle, width: 160 }} autoFocus />
             <input value={newDomain} onChange={e => setNewDomain(e.target.value)} placeholder="@domain.com"
               style={{ ...inputStyle, width: 170 }} />
-            {accounts.length > 0 && (
+            {linkable.length > 0 && (
               <select value={newAccountId} onChange={e => setNewAccountId(e.target.value)} style={{ ...selectStyle, width: 180 }}>
                 <option value="">No account</option>
-                {accounts.map(a => <option key={a.id} value={a.id}>{a.email}</option>)}
+                {linkable.map(a => <option key={a.id} value={a.id}>{a.isPrimary ? `${a.email} (this account)` : a.email}</option>)}
               </select>
             )}
           </div>
@@ -3519,7 +3532,7 @@ function AccountsAndCompaniesSection({
           </span>
         )}
       </div>
-      <CompaniesSection companies={companies} setCompanies={setCompanies} accounts={accounts} />
+      <CompaniesSection companies={companies} setCompanies={setCompanies} accounts={accounts} primaryEmail={primaryEmail} />
     </div>
   )
 }

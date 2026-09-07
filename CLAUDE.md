@@ -349,13 +349,25 @@ There is **no redo** — it would need an inverse of every inverse.
 `notify(text)` puts a line in the same corner for anything that is not an undo.
 
 ## Tasks — a date is a calendar event, from any quadrant
-`TaskCommand`'s auto-push used to require `quadrant === 'schedule'`, so a dated
-task in **Do** — the ordinary case for something urgent — was never pushed and
-nothing said so. It now pushes any task that is **placed** (not still in the
-brain dump), **not finished**, dated **today or later**, and has no
-`gcalEventId`. Older dates are asked for by hand from the panel's calendar row,
-so turning this on does not fill a calendar with history. A failure is one
-`notify()`, not silence.
+`useTaskCalendarPush()` (`lib/taskAutoSchedule.ts`, called in **App**, not in the
+Tasks page — a date given from Today, the palette or the planner counts too).
+It used to require `quadrant === 'schedule'` *and* the board to be open, so a
+dated task in **Do** was never pushed and nothing said so. It now pushes any
+task that is **placed** (not still in the brain dump), **not finished**, dated
+**today or later**, and has no `gcalEventId`. Older dates are asked for by hand
+from the panel's calendar row, so turning this on does not fill a calendar with
+history.
+- **A failure is one `notify()` per reason**, never silence. The usual one is
+  real: a company linked to a connected account whose token cannot be refreshed
+  — "<email> needs reconnecting before its calendar can be used".
+- The panel's row **names where it is going** (`resolveTaskCalendar`): "add it
+  to Teradix", "On Teradix's calendar". A task with a company goes to that
+  company's calendar on that company's account.
+- **The account you signed in with is not in `professor-connected-accounts`** —
+  that key holds the *additional* accounts — so it was missing from Settings →
+  Accounts & companies, and a company could not be linked to your own Google
+  account. It is offered as the id `primary`, which every consumer already
+  reads as "use the primary token" by finding no account with that id.
 
 ## Settings — Section → Component Mapping (CONFIRMED CORRECT as of latest commit)
 | Nav group | Section id | Title shown | Component rendered |

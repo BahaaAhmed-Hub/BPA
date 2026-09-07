@@ -15,8 +15,6 @@ import { useUIStore } from '@/store/uiStore'
 import { Search, X, Plus, SlidersHorizontal, LayoutGrid, Target, List as ListIcon } from 'lucide-react'
 import type { Quadrant, Task } from '@/types'
 import { isTaskHidden, loadVisibleCompanies, getVisibleUsers, TASK_TYPE_META, inferTaskType } from '@/types'
-import { scheduleTaskToCalendar } from '@/lib/aiScheduler'
-import { notify } from '@/lib/undo'
 import { SmartDayPlanner } from './SmartDayPlanner'
 import { TaskListView } from './TaskListView'
 import { TaskBanner } from './TaskBanner'
@@ -193,41 +191,7 @@ export function TaskCommand() {
   const activeTask = activeTaskId ? tasks.find(t => t.id === activeTaskId) ?? null : null
   const modalTask  = modalTaskId  ? tasks.find(t => t.id === modalTaskId)  ?? null : null
 
-  // ─── A date on a task is an event on the calendar ─────────────────────────
-  //
-  // This used to ask for the Schedule quadrant, which meant a task in Do with a
-  // date on it — the ordinary case for something urgent — was never put on the
-  // calendar at all, and nothing said so. What matters is the date, not which
-  // box the task sits in.
-  //
-  // Two limits keep it from filling a calendar with history: it has to be
-  // placed (something still in the brain dump has not been decided about), and
-  // the day has to be today or later. Anything older is asked for by hand, from
-  // the row in the task panel.
-  const schedulingRef = useRef<Set<string>>(new Set())
-  useEffect(() => {
-    const today = new Date()
-    const todayISO = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
-    const candidates = tasks.filter(t =>
-      t.quadrant != null && t.dueDate && t.dueDate >= todayISO &&
-      !t.completed && t.status !== 'done' && t.status !== 'cancelled' &&
-      !t.gcalEventId && !schedulingRef.current.has(t.id))
-    // One complaint, however many failed: the reason is the same every time.
-    let complained = false
-    for (const task of candidates) {
-      schedulingRef.current.add(task.id)
-      scheduleTaskToCalendar(task)
-        .then(res => {
-          if (res.success && res.gcalEventId) updateTask(task.id, { gcalEventId: res.gcalEventId })
-          else if (!complained) {
-            complained = true
-            notify(`Could not put "${task.title || 'a task'}" on your calendar — ${res.error ?? 'Google refused it'}`)
-          }
-        })
-        .catch(() => {})
-        .finally(() => schedulingRef.current.delete(task.id))
-    }
-  }, [tasks, updateTask])
+
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
