@@ -9,27 +9,19 @@ import { CategoryGlyph } from '../components/CategoryGlyph'
 // labels, a raw <input type="color">, and a red Delete block. Same vocabulary
 // as everything else now — an eyebrow pill, one pill per value, a black pill
 // for the action that commits.
-
-const INK   = 'var(--sb-ink-1)'
-const MUTED = 'var(--sb-ink-3)'
-const GHOST = '#9B9180'
-const LINE  = 'var(--sb-border)'
-const HAIR  = 'var(--sb-hairline)'
-const OLIVE = 'var(--sb-positive)'
-const RUST  = 'var(--sb-negative)'
 const DISPLAY = "'Outfit', system-ui, sans-serif"
 
 const PILL: React.CSSProperties = {
   display: 'inline-flex', alignItems: 'center', gap: 6, height: 42, boxSizing: 'border-box',
-  padding: '0 14px', borderRadius: 10, background: 'var(--sb-card)', border: `1px solid ${LINE}`,
-  color: INK, fontSize: 13.5, fontFamily: 'inherit', cursor: 'pointer', minWidth: 0,
+  padding: '0 14px', borderRadius: 10, background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
+  color: 'var(--sb-ink-1)', fontSize: 13.5, fontFamily: 'inherit', cursor: 'pointer', minWidth: 0,
 }
 const ROUND: React.CSSProperties = {
   width: 30, height: 30, borderRadius: '50%', flexShrink: 0, padding: 0,
   display: 'flex', alignItems: 'center', justifyContent: 'center',
-  background: 'var(--sb-card)', border: `1px solid ${LINE}`, color: MUTED, cursor: 'pointer',
+  background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-3)', cursor: 'pointer',
 }
-const LABEL: React.CSSProperties = { width: 62, flexShrink: 0, fontSize: 13.5, color: MUTED, fontWeight: 500 }
+const LABEL: React.CSSProperties = { width: 62, flexShrink: 0, fontSize: 13.5, color: 'var(--sb-ink-3)', fontWeight: 500 }
 const ROW: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 10 }
 
 /** Enough colours to tell envelopes apart, without a colour wheel nobody wants
@@ -88,7 +80,7 @@ export function CategoryModal({ category, categories, onSave, onDelete, onClose 
       <div style={{
         width: 'clamp(320px, 94vw, 430px)', maxHeight: '90vh', overflowY: 'auto',
         boxSizing: 'border-box', scrollbarWidth: 'thin',
-        background: 'var(--sb-card)', border: `1px solid ${LINE}`, borderRadius: 18,
+        background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 18,
         boxShadow: '0 24px 60px rgba(25,23,18,0.24)', padding: '18px 20px 22px',
       }}>
 
@@ -113,10 +105,10 @@ export function CategoryModal({ category, categories, onSave, onDelete, onClose 
               <button onClick={onClick} title="Pick an icon, or upload one"
                 style={{
                   width: 46, height: 46, borderRadius: 12, flexShrink: 0, padding: 0,
-                  border: `1px solid ${LINE}`, background: 'var(--sb-field)', cursor: 'pointer',
+                  border: '1px solid var(--sb-border)', background: 'var(--sb-field)', cursor: 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
                 }}>
-                <CategoryGlyph icon={icon} size={24} color={INK} />
+                <CategoryGlyph icon={icon} size={24} color={'var(--sb-ink-1)'} />
               </button>
             )}
           />
@@ -128,13 +120,13 @@ export function CategoryModal({ category, categories, onSave, onDelete, onClose 
             placeholder="Name it"
             style={{
               flex: 1, minWidth: 0, boxSizing: 'border-box',
-              background: 'var(--sb-card)', border: `1px solid ${LINE}`, borderRadius: 11,
+              background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 11,
               padding: '13px 15px', fontFamily: DISPLAY, fontSize: 18, fontWeight: 600,
-              letterSpacing: '-0.02em', color: INK, outline: 'none',
+              letterSpacing: '-0.02em', color: 'var(--sb-ink-1)', outline: 'none',
             }} />
         </div>
 
-        <div style={{ height: 1, background: HAIR, margin: '18px 0' }} />
+        <div style={{ height: 1, background: 'var(--sb-hairline)', margin: '18px 0' }} />
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {/* Money out or money in — locked when it was decided by where you clicked */}
@@ -149,9 +141,9 @@ export function CategoryModal({ category, categories, onSave, onDelete, onClose 
                     title={txTypeLocked ? 'Set by the category this sits under' : undefined}
                     style={{
                       ...PILL, flex: 1, justifyContent: 'center',
-                      background: on ? (v === 'income' ? OLIVE : RUST) : 'var(--sb-card)',
-                      border: on ? 'none' : `1px solid ${LINE}`,
-                      color: on ? 'var(--sb-ink-on-dark)' : MUTED,
+                      background: on ? (v === 'income' ? 'var(--sb-positive)' : 'var(--sb-negative)') : 'var(--sb-card)',
+                      border: on ? 'none' : '1px solid var(--sb-border)',
+                      color: on ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
                       fontWeight: on ? 600 : 400,
                       opacity: txTypeLocked && !on ? 0.45 : 1,
                       cursor: txTypeLocked ? 'default' : 'pointer',
@@ -166,12 +158,12 @@ export function CategoryModal({ category, categories, onSave, onDelete, onClose 
             <span style={{ flex: 1, minWidth: 0, position: 'relative', display: 'flex' }}>
               <span style={{ ...PILL, flex: 1, justifyContent: 'space-between' }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-                  {parent && <CategoryGlyph icon={parent.icon} size={15} color={MUTED} />}
-                  <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: parent ? INK : GHOST }}>
+                  {parent && <CategoryGlyph icon={parent.icon} size={15} color={'var(--sb-ink-3)'} />}
+                  <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: parent ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)' }}>
                     {parent ? parent.name : 'Nothing — it stands on its own'}
                   </span>
                 </span>
-                <ChevronDown size={13} strokeWidth={2} style={{ color: GHOST, flexShrink: 0 }} />
+                <ChevronDown size={13} strokeWidth={2} style={{ color: 'var(--sb-ink-4)', flexShrink: 0 }} />
               </span>
               <select value={parentId} onChange={e => setParentId(e.target.value)}
                 style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', border: 'none' }}>
@@ -201,11 +193,11 @@ export function CategoryModal({ category, categories, onSave, onDelete, onClose 
         <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
           <button onClick={handleSave} disabled={!canSave} style={{
             ...PILL, flex: 1, justifyContent: 'center', fontWeight: 600,
-            background: canSave ? INK : 'var(--sb-field)',
-            border: 'none', color: canSave ? 'var(--sb-ink-on-dark)' : GHOST,
+            background: canSave ? 'var(--sb-ink-1)' : 'var(--sb-field)',
+            border: 'none', color: canSave ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-4)',
             cursor: canSave ? 'pointer' : 'default',
           }}>{isEdit ? 'Save changes' : 'Add category'}</button>
-          <button onClick={onClose} style={{ ...PILL, color: MUTED }}>Cancel</button>
+          <button onClick={onClose} style={{ ...PILL, color: 'var(--sb-ink-3)' }}>Cancel</button>
         </div>
 
         {isEdit && onDelete && (
@@ -215,7 +207,7 @@ export function CategoryModal({ category, categories, onSave, onDelete, onClose 
             style={{
               marginTop: 12, width: '100%', height: 34, borderRadius: 9,
               background: 'none', border: 'none', fontFamily: 'inherit',
-              color: RUST, fontSize: 12.5, cursor: 'pointer',
+              color: 'var(--sb-negative)', fontSize: 12.5, cursor: 'pointer',
             }}>
             Delete this category
           </button>
