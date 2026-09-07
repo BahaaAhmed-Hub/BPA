@@ -14,7 +14,6 @@ import { AccountModal } from '../modals/AccountModal'
 import { TransactionModal } from '../modals/TransactionModal'
 import { IconPicker } from '../components/IconPicker'
 import type { Account, AccountType, Transaction } from '../types'
-import { POSITIVE, NEGATIVE } from '../../../lib/moneyColors'
 import { acct } from '../format'
 import { CategoryGlyph } from '../components/CategoryGlyph'
 import { findDuplicates } from '../duplicates'
@@ -27,8 +26,6 @@ import { todayISO as todayISO_, monthStartISO, monthEndISO } from '../dates'
 
 // ─── Pill ─────────────────────────────────────────────────────────────────────
 
-const RED   = NEGATIVE
-const GREEN = POSITIVE
 
 function Pill({ type, amount, currency, direction }: {
   type: 'expense' | 'income' | 'transfer'; amount: number; currency: string
@@ -38,8 +35,10 @@ function Pill({ type, amount, currency, direction }: {
   // Soft pill style: tinted background + matching text (no white text on colored bg)
   const out = type === 'expense' || (type === 'transfer' && direction === 'out')
   const inn = type === 'income'  || (type === 'transfer' && direction === 'in')
-  const bg    = out ? `${RED}18` : inn ? `${GREEN}18` : 'var(--sb-field)'
-  const color = out ? RED        : inn ? GREEN        : 'var(--sb-ink-3)'
+  const bg    = out ? 'color-mix(in srgb, var(--sb-negative) 9.4%, transparent)'
+                  : inn ? 'color-mix(in srgb, var(--sb-positive) 9.4%, transparent)'
+                  : 'var(--sb-field)'
+  const color = out ? 'var(--sb-negative)' : inn ? 'var(--sb-positive)' : 'var(--sb-ink-3)'
   return (
     <span style={{
       display: 'inline-block',
@@ -182,7 +181,7 @@ function AccountRow({ account, balance, unconverted, pending, selected, hovered,
           <div style={{ height: 5, borderRadius: 999, background: '#EFEADB', overflow: 'hidden' }}>
             <div style={{
               width: `${Math.round(used * 100)}%`, height: '100%', borderRadius: 999,
-              background: used >= 0.9 ? NEGATIVE : used >= 0.7 ? '#C08A2E' : '#5F7038',
+              background: used >= 0.9 ? 'var(--sb-negative)' : used >= 0.7 ? '#C08A2E' : '#5F7038',
             }} />
           </div>
           <span style={{ display: 'block', fontSize: 9.5, color: '#9B9180', marginTop: 3, whiteSpace: 'nowrap' }}>
@@ -204,7 +203,7 @@ function AccountRow({ account, balance, unconverted, pending, selected, hovered,
         ) : pending !== 0 ? (
           <span
             title="Entries filed here with no payment date. The money has not moved, so it is not in the balance."
-            style={{ fontSize: 9.5, fontWeight: 700, color: NEGATIVE }}>
+            style={{ fontSize: 9.5, fontWeight: 700, color: 'var(--sb-negative)' }}>
             {formatBalance(pending, account.currency)} not paid yet
           </span>
         ) : account.last4 ? (
@@ -246,24 +245,6 @@ function AccountRow({ account, balance, unconverted, pending, selected, hovered,
 // ─── Balance Screen ───────────────────────────────────────────────────────────
 
 export function BalanceScreen() {
-  const C = {
-    bg:        'var(--sb-page)',
-    surface:   'var(--sb-card)',
-    surfaceEl: 'var(--sb-field)',
-    amberBg:   'rgba(var(--sb-accent-rgb),0.12)',
-    border:    'var(--sb-border)',
-    divFaint:  'var(--sb-border)',
-    amber:     'var(--sb-accent)',
-    amberSoft: '#D4A827',
-    textPri:   'var(--sb-ink-1)',
-    textMuted: 'var(--sb-ink-3)',
-    textDim:   '#9B9180',
-    red:       '#C62828',
-    green:     '#0C8140',
-    cyan:      '#46B6C9',
-    purple:    '#7E78DD',
-  }
-
   const { accounts, transactions, categories, upsertAccount, removeAccount, upsertTransaction, removeTransaction } = useFinanceStore()
 
   const [accountModal, setAccountModal] = useState<{ open: boolean; account: Account | null }>({ open: false, account: null })
@@ -388,7 +369,7 @@ export function BalanceScreen() {
       {/* Header */}
       <div style={{
         flexShrink: 0,
-        borderBottom: `1px solid ${C.border}`,
+        borderBottom: '1px solid var(--sb-border)',
         padding: '14px 26px 16px',
         display: 'flex', alignItems: 'flex-end', gap: 20,
       }}>
@@ -470,12 +451,12 @@ export function BalanceScreen() {
           flex: 1,
           overflowY: 'auto',
           padding: '22px 26px',
-          borderRight: `1px solid var(--sb-border)`,
+          borderRight: '1px solid var(--sb-border)',
         }}>
           {/* ── Account groups ── */}
           {[
-            { label: 'PAYMENT ACCOUNTS', accounts: paymentAccounts, total: paymentTotal, totalColor: POSITIVE, owed: false },
-            { label: 'CARDS OWED', accounts: creditCards, total: creditTotal, totalColor: NEGATIVE, owed: true },
+            { label: 'PAYMENT ACCOUNTS', accounts: paymentAccounts, total: paymentTotal, totalColor: 'var(--sb-positive)', owed: false },
+            { label: 'CARDS OWED', accounts: creditCards, total: creditTotal, totalColor: 'var(--sb-negative)', owed: true },
             { label: 'OTHER ASSETS', accounts: otherAssets, total: assetTotal, totalColor: 'var(--sb-ink-1)', owed: false },
           ].map(group => group.accounts.length > 0 && (
             <div key={group.label} style={{ marginBottom: 14 }}>
@@ -548,18 +529,18 @@ export function BalanceScreen() {
               alignItems: 'center',
               gap: 6,
               padding: '5px 8px 5px 12px',
-              background: C.surface,
-              border: `1px solid ${C.border}`,
+              background: 'var(--sb-card)',
+              border: '1px solid var(--sb-border)',
               borderRadius: 10,
             }}>
               <input type="date" value={rangeFrom} max={rangeTo || undefined}
                 onChange={e => setRangeFrom(e.target.value)}
                 style={RANGE_FIELD} />
-              <span style={{ color: C.textDim }}>›</span>
+              <span style={{ color: 'var(--sb-ink-4)' }}>›</span>
               <input type="date" value={rangeTo} min={rangeFrom || undefined}
                 onChange={e => setRangeTo(e.target.value)}
                 style={RANGE_FIELD} />
-              <span style={{ width: 1, alignSelf: 'stretch', background: C.border, margin: '0 2px' }} />
+              <span style={{ width: 1, alignSelf: 'stretch', background: 'var(--sb-border)', margin: '0 2px' }} />
               {([
                 ['This month', monthStart, monthEnd],
                 ['This year', `${todayISO.slice(0, 4)}-01-01`, `${todayISO.slice(0, 4)}-12-31`],
@@ -573,7 +554,7 @@ export function BalanceScreen() {
                       padding: '4px 9px', borderRadius: 7, border: 'none', cursor: 'pointer',
                       fontFamily: 'inherit', fontSize: 11.5, fontWeight: on ? 700 : 500,
                       background: on ? 'var(--sb-ink-1)' : 'transparent',
-                      color: on ? 'var(--sb-ink-on-dark)' : C.textDim,
+                      color: on ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-4)',
                     }}>
                     {label}
                   </button>
@@ -639,23 +620,25 @@ export function BalanceScreen() {
                     alignItems: 'center',
                     gap: 12,
                     padding: '11px 0',
-                    borderBottom: `1px solid ${C.divFaint}`,
+                    borderBottom: '1px solid var(--sb-border)',
                     cursor: 'pointer',
                     ...unpaidRow(isUnpaid(tx)),
                   }}
                 >
                   <div style={{
                     width: 40, height: 40, borderRadius: '50%',
-                    background: tx.type === 'income' ? `${C.green}22` : `${C.red}22`,
+                    background: tx.type === 'income'
+                      ? 'color-mix(in srgb, var(--sb-positive) 13.3%, transparent)'
+                      : 'color-mix(in srgb, var(--sb-negative) 13.3%, transparent)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontSize: 17, flexShrink: 0,
-                    color: tx.type === 'income' ? C.green : C.red,
+                    color: tx.type === 'income' ? 'var(--sb-positive)' : 'var(--sb-negative)',
                   }}>
                     <CategoryGlyph icon={glyph} size={18} />
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{
-                      fontSize: 14, fontWeight: 500, color: C.textPri,
+                      fontSize: 14, fontWeight: 500, color: 'var(--sb-ink-1)',
                       overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                       display: 'flex', alignItems: 'center', gap: 6,
                     }}>
@@ -668,7 +651,7 @@ export function BalanceScreen() {
                     <div
                       title={tx.note?.trim() || undefined}
                       style={{
-                        fontSize: 12, color: C.textDim, marginTop: 1, display: 'flex', gap: 6,
+                        fontSize: 12, color: 'var(--sb-ink-4)', marginTop: 1, display: 'flex', gap: 6,
                         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                       }}>
                       <span style={{ flexShrink: 0 }}>{dateStr}</span>

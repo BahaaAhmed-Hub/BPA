@@ -642,4 +642,3 @@ export function BudgetRuleModal({
   )
 }
 
-export { 'var(--sb-accent)' }
