@@ -377,7 +377,7 @@ function VisaBadge() {
     <span style={{
       display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
       width: 30, height: 19, borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-info)',
-      color: 'var(--sb-card)', fontSize: 'var(--sb-t-micro)', fontWeight: 700, fontStyle: 'italic',
+      color: 'var(--sb-ink-on-dark)', fontSize: 'var(--sb-t-micro)', fontWeight: 700, fontStyle: 'italic',
       letterSpacing: '0.04em', flexShrink: 0,
     }}>VISA</span>
   )
@@ -531,7 +531,7 @@ function ProfileSection({
                   fontWeight: on ? 600 : 500,
                   background: on ? 'var(--sb-ink-1)' : 'var(--sb-field)',
                   border: `1px solid ${on ? 'var(--sb-ink-1)' : 'var(--sb-border)'}`,
-                  color: on ? 'var(--sb-card)' : 'var(--sb-ink-3)',
+                  color: on ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
                   transition: 'all 0.12s',
                 }}>{d}</button>
             )
@@ -2046,7 +2046,7 @@ function ProfessorSection() {
       <button onClick={onClick} style={{
         padding: '5px 13px', borderRadius: 'var(--sb-r-chip)', fontSize: 'var(--sb-t-meta)', cursor: 'pointer', fontWeight: active ? 600 : 400,
         background: active ? 'var(--sb-ink-1)' : 'var(--sb-field)', border: `1px solid ${active ? 'var(--sb-ink-1)' : 'var(--sb-border)'}`,
-        color: active ? 'var(--sb-card)' : 'var(--sb-ink-3)', transition: 'all 0.12s',
+        color: active ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)', transition: 'all 0.12s',
       }}>{label ?? val}</button>
     )
   }
@@ -2065,7 +2065,7 @@ function ProfessorSection() {
               style={{
                 padding: '5px 13px', borderRadius: 'var(--sb-r-chip)', fontSize: 'var(--sb-t-meta)', cursor: 'pointer', fontWeight: ai.provider === v ? 600 : 400,
                 background: ai.provider === v ? 'var(--sb-ink-1)' : 'var(--sb-field)', border: `1px solid ${ai.provider === v ? 'var(--sb-ink-1)' : 'var(--sb-border)'}`,
-                color: ai.provider === v ? 'var(--sb-card)' : 'var(--sb-ink-3)', transition: 'all 0.12s',
+                color: ai.provider === v ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)', transition: 'all 0.12s',
               }}>{l}</button>
           ))}
         </div>
@@ -4360,7 +4360,7 @@ export function Settings() {
           padding: '5px 12px', borderRadius: 'var(--sb-r-sm)', cursor: 'pointer', marginBottom: 0,
           background: isActive ? 'var(--sb-ink-1)' : 'transparent',
           border: '1px solid transparent',
-          color: isActive ? 'var(--sb-card)' : 'var(--sb-ink-3)',
+          color: isActive ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
           fontSize: 'var(--sb-t-body)', fontWeight: isActive ? 600 : 500, textAlign: 'left' as const,
           fontFamily: 'inherit',
           transition: 'background 0.12s, color 0.12s',

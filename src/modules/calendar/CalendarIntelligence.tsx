@@ -1323,7 +1323,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
             ...EV_ROUND, width: 34, height: 34,
             background: status === 'done' ? 'var(--sb-positive)' : 'var(--sb-card)',
             borderColor: status === 'done' ? 'var(--sb-positive)' : 'var(--sb-border)',
-            color: status === 'done' ? 'var(--sb-card)' : 'var(--sb-ink-3)',
+            color: status === 'done' ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
           }}><Check size={ICON.md} strokeWidth={STROKE.active} /></button>
 
         <button
@@ -1333,7 +1333,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
             ...EV_ROUND, width: 34, height: 34,
             background: status === 'cancelled' ? 'var(--sb-ink-3)' : 'var(--sb-card)',
             borderColor: status === 'cancelled' ? 'var(--sb-ink-3)' : 'var(--sb-border)',
-            color: status === 'cancelled' ? 'var(--sb-card)' : 'var(--sb-ink-3)',
+            color: status === 'cancelled' ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
           }}><Ban size={ICON.md} strokeWidth={STROKE.rest} /></button>
 
         <button
@@ -3286,7 +3286,7 @@ export function CalendarIntelligence() {
               ...CAL_ICON_BTN,
               background: originalsOnly ? 'var(--sb-ink-1)' : 'var(--sb-card)',
               borderColor: originalsOnly ? 'var(--sb-ink-1)' : 'var(--sb-border)',
-              color: originalsOnly ? 'var(--sb-field)' : 'var(--sb-ink-3)',
+              color: originalsOnly ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
             }}
           >{originalsOnly ? <EyeOff size={ICON.sm} /> : <Eye size={ICON.sm} />}</button>
 
@@ -3302,7 +3302,7 @@ export function CalendarIntelligence() {
               ...CAL_PILL,
               background: showCalendars ? 'var(--sb-ink-1)' : 'var(--sb-card)',
               border: `1px solid ${showCalendars ? 'var(--sb-ink-1)' : 'var(--sb-border)'}`,
-              color: showCalendars ? 'var(--sb-field)' : 'var(--sb-ink-1)',
+              color: showCalendars ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-1)',
             }}
           >
             <Layers size={ICON.sm} strokeWidth={STROKE.rest} />

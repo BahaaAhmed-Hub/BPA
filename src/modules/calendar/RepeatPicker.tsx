@@ -65,7 +65,7 @@ function Cell({ on, label, onClick, wide }: { on: boolean; label: string; onClic
     <button onClick={onClick} style={{
       height: 30, minWidth: 0, width: '100%', borderRadius: wide ? 8 : '50%',
       border: `1px solid ${on ? 'var(--sb-ink-1)' : 'var(--sb-border)'}`,
-      background: on ? 'var(--sb-ink-1)' : 'var(--sb-field)', color: on ? 'var(--sb-card)' : 'var(--sb-ink-3)',
+      background: on ? 'var(--sb-ink-1)' : 'var(--sb-field)', color: on ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
       fontSize: 'var(--sb-t-body-s)', fontWeight: on ? 700 : 500, fontFamily: 'inherit', cursor: 'pointer', padding: 0,
     }}>{label}</button>
   )

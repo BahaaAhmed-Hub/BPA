@@ -297,7 +297,7 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
             ...ICON_BTN,
             background: finished ? 'var(--sb-positive)' : 'transparent',
             border: `1px solid ${finished ? 'var(--sb-positive)' : 'var(--sb-border)'}`,
-            color: finished ? 'var(--sb-card)' : 'var(--sb-ink-3)',
+            color: finished ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
           }}>
           <Check size={ICON.md} />
         </button>
@@ -309,7 +309,7 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
             ...ICON_BTN,
             background: cancelled ? 'var(--sb-ink-3)' : 'transparent',
             border: `1px solid ${cancelled ? 'var(--sb-ink-3)' : 'var(--sb-border)'}`,
-            color: cancelled ? 'var(--sb-card)' : 'var(--sb-ink-3)',
+            color: cancelled ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
           }}>
           <Ban size={ICON.sm} />
         </button>
@@ -451,7 +451,7 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
               width: 18, height: 18, borderRadius: 'var(--sb-r-pill)', flexShrink: 0, boxSizing: 'border-box',
               background: owner ? 'var(--sb-ink-1)' : 'var(--sb-field)',
               border: owner ? 'none' : '1px solid var(--sb-border)',
-              color: owner ? 'var(--sb-card)' : 'var(--sb-ink-4)',
+              color: owner ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-4)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 'var(--sb-t-micro)', fontWeight: 700,
             }}>{owner ? initials(owner.name) : <User size={ICON.sm} strokeWidth={STROKE.rest} />}</span>

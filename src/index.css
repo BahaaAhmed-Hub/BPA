@@ -31,7 +31,7 @@
   --sb-ink-1:         #191712;
   --sb-ink-2:         #4A4438;
   --sb-ink-3:         #6C6553;
-  --sb-ink-4:         #756F60;
+  --sb-ink-4:         #7C7565;
   /* The ink that reads on an --sb-ink-1 *fill*: the primary button, the
      inverted panel, the solid pill. Near-white here because that fill is
      near-black; in a dark theme the fill is light and this is dark. */

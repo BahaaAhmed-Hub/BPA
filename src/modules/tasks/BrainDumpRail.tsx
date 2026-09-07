@@ -357,7 +357,7 @@ export function BrainDumpRail({ tasks, onOpen, flexible }: {
         <button onClick={distributeAll} disabled={tasks.length === 0} style={{
           width: '100%', marginTop: 12, height: 38, borderRadius: 'var(--sb-r-nav)', border: 'none',
           background: tasks.length === 0 ? 'var(--sb-border)' : 'var(--sb-ink-1)',
-          color: tasks.length === 0 ? 'var(--sb-ink-4)' : 'var(--sb-card)',
+          color: tasks.length === 0 ? 'var(--sb-ink-4)' : 'var(--sb-ink-on-dark)',
           fontSize: 'var(--sb-t-body-s)', fontWeight: 600, fontFamily: 'inherit',
           cursor: tasks.length === 0 ? 'default' : 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,

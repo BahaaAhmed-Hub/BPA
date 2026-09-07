@@ -121,7 +121,7 @@ export function TimeSelect({ value, onChange, label, size = 'compact' }: {
               return (
                 <button key={t} type="button" onClick={() => { onChange(t); setOpen(false) }} style={{
                   width: '100%', height: 28, padding: '0 8px', border: 'none', borderRadius: 'var(--sb-r-chip)',
-                  background: on ? 'var(--sb-ink-1)' : 'transparent', color: on ? 'var(--sb-card)' : 'var(--sb-ink-1)',
+                  background: on ? 'var(--sb-ink-1)' : 'transparent', color: on ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-1)',
                   ...T.meta, fontWeight: on ? 600 : 500, cursor: 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 }}>
@@ -222,7 +222,7 @@ export function SchedulePopover({ date, start, duration, onApply, onClose, align
             <button key={iso} type="button" onClick={() => setPicked(iso)} style={{
               height: 28, borderRadius: 'var(--sb-r-chip)', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
               background: on ? 'var(--sb-ink-1)' : 'transparent',
-              color: on ? 'var(--sb-card)' : outside ? 'var(--sb-border)' : 'var(--sb-ink-1)',
+              color: on ? 'var(--sb-ink-on-dark)' : outside ? 'var(--sb-border)' : 'var(--sb-ink-1)',
               fontSize: 'var(--sb-t-body-s)', fontWeight: on ? 700 : 500,
             }}>{d.getDate()}</button>
           )

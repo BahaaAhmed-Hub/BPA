@@ -44,7 +44,7 @@ function Stat({ label, value, sub, accent, icon: Icon, center }: {
       }}>{label}</p>
       <p style={{
         margin: '5px 0 0', fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h2)', fontWeight: 600,
-        letterSpacing: '-0.02em', color: accent ?? 'var(--sb-card)', lineHeight: 1.1,
+        letterSpacing: '-0.02em', color: accent ?? 'var(--sb-ink-on-dark)', lineHeight: 1.1,
         display: 'flex', alignItems: 'center', gap: 6,
         justifyContent: center ? 'center' : 'flex-start',
       }}>

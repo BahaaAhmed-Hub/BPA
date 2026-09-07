@@ -467,12 +467,12 @@ function WallCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, o
         {/* Content overlay */}
         <span style={{ position: 'absolute', inset: 0, pointerEvents: 'none', display: 'flex', flexDirection: 'column', padding: '12px 13px' }}>
           {/* Streak badge */}
-          <span style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto', height: 20, padding: '0 8px', borderRadius: 'var(--sb-r-pill)', background: 'color-mix(in srgb, var(--sb-ink-1) 42.0%, transparent)', border: '1px solid rgba(255,255,255,.36)', color: 'var(--sb-card)', fontSize: 'var(--sb-t-micro)', fontWeight: 700, flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto', height: 20, padding: '0 8px', borderRadius: 'var(--sb-r-pill)', background: 'color-mix(in srgb, var(--sb-ink-1) 42.0%, transparent)', border: '1px solid rgba(255,255,255,.36)', color: 'rgba(255,255,255,.96)', fontSize: 'var(--sb-t-micro)', fontWeight: 700, flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3c3 4 5 6 5 9a5 5 0 0 1-10 0c0-2 1-3.5 2.5-5"/></svg>
             {streak}d
           </span>
           {/* Habit name */}
-          <span style={{ marginTop: 'auto', fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h2)', fontWeight: 700, letterSpacing: '-0.02em', lineHeight: 1.15, color: 'var(--sb-card)', textShadow: '0 1px 10px color-mix(in srgb, var(--sb-ink-1) 55.0%, transparent)' }}>{habit.name}</span>
+          <span style={{ marginTop: 'auto', fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h2)', fontWeight: 700, letterSpacing: '-0.02em', lineHeight: 1.15, color: 'rgba(255,255,255,.96)', textShadow: '0 1px 10px color-mix(in srgb, var(--sb-ink-1) 55.0%, transparent)' }}>{habit.name}</span>
         </span>
       </span>
       {/* Right: data panel */}
@@ -788,7 +788,7 @@ function HabitDetailPanel({
               width: '100%', padding: '9px 0', borderRadius: 'var(--sb-r-sm)', cursor: 'pointer',
               border: `1px solid ${doneToday ? 'var(--sb-positive)' : 'var(--sb-border)'}`,
               background: doneToday ? 'var(--sb-positive)' : 'var(--sb-card)',
-              color: doneToday ? 'var(--sb-card)' : 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
+              color: doneToday ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
             }}>
             {doneToday ? 'Done today' : 'Mark done today'}
           </button>

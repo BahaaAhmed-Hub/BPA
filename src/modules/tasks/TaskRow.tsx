@@ -162,7 +162,7 @@ export function TaskRow({ task, onOpen, dense }: {
               width: 22, height: 22, borderRadius: 'var(--sb-r-pill)', boxSizing: 'border-box',
               background: v.ownerInitials ? 'var(--sb-ink-1)' : 'var(--sb-field)',
               border: v.ownerInitials ? 'none' : '1px solid var(--sb-border)',
-              color: v.ownerInitials ? 'var(--sb-card)' : 'var(--sb-ink-4)',
+              color: v.ownerInitials ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-4)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.02em',
             }}

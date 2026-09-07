@@ -97,7 +97,7 @@ function QuadrantPanel({ spec, tasks, onOpen, onAction, groupBy }: {
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, minWidth: 0 }}>
         <span style={{
           width: 22, height: 22, borderRadius: 'var(--sb-r-chip)', flexShrink: 0,
-          background: 'var(--sb-ink-1)', color: 'var(--sb-card)',
+          background: 'var(--sb-ink-1)', color: 'var(--sb-ink-on-dark)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontSize: badgeFontSize(spec.badge), fontWeight: 700, letterSpacing: '0.04em',
           overflow: 'hidden',

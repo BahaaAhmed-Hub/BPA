@@ -228,7 +228,7 @@ function MoneyCalendar({
                   display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                   marginLeft: -2,
                   background: isToday ? 'var(--sb-ink-1)' : 'transparent',
-                  color: isToday ? 'var(--sb-card)' : 'var(--sb-ink-2)',
+                  color: isToday ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-2)',
                 }}>
                   {day}
                 </span>

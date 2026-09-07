@@ -777,7 +777,7 @@ function PlanCard({
                           ...ICON_TILE, width: 20, height: 20, borderRadius: 'var(--sb-r-pill)', cursor: 'pointer', flexShrink: 0,
                           background: status === 'done' ? 'var(--sb-positive)' : 'var(--sb-card)',
                           borderColor: status === 'done' ? 'var(--sb-positive)' : 'var(--sb-border)',
-                          color: status === 'done' ? 'var(--sb-card)' : MUTED,
+                          color: status === 'done' ? 'var(--sb-ink-on-dark)' : MUTED,
                         }}>
                         <Check size={ICON.sm} strokeWidth={STROKE.active} />
                       </button>
@@ -789,7 +789,7 @@ function PlanCard({
                           ...ICON_TILE, width: 20, height: 20, borderRadius: 'var(--sb-r-pill)', cursor: 'pointer', flexShrink: 0,
                           background: status === 'cancelled' ? 'var(--sb-negative)' : 'var(--sb-card)',
                           borderColor: status === 'cancelled' ? 'var(--sb-negative)' : 'var(--sb-border)',
-                          color: status === 'cancelled' ? 'var(--sb-card)' : MUTED,
+                          color: status === 'cancelled' ? 'var(--sb-ink-on-dark)' : MUTED,
                         }}>
                         <X size={ICON.sm} strokeWidth={STROKE.active} />
                       </button>

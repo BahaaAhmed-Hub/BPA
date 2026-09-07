@@ -421,7 +421,7 @@ function NotificationBell() {
         {count > 0 && !quiet && (
           <span style={{
             position: 'absolute', top: -4, right: -4, minWidth: 17, height: 17, padding: '0 4px',
-            borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-negative)', color: 'var(--sb-card)',
+            borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-negative)', color: 'var(--sb-ink-on-fill)',
             fontSize: 'var(--sb-t-micro)', fontWeight: 700, lineHeight: '17px', textAlign: 'center',
             boxShadow: '0 0 0 2px var(--sb-header)',
           }}>{count > 9 ? '9+' : count}</span>
