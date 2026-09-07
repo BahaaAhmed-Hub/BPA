@@ -324,6 +324,11 @@ const NAV_ICONS: Record<string, React.ReactNode> = {
       <rect x="3" y="6" width="18" height="13" rx="3"/><path d="M3 10h18"/>
     </svg>
   ),
+  inbox: (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3.5 7.5l8.5 6 8.5-6"/>
+    </svg>
+  ),
   settings: (
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/>
@@ -334,6 +339,9 @@ const NAV_ICONS: Record<string, React.ReactNode> = {
 const NAV_ITEMS = [
   { id: 'morning',   label: 'Today'    },
   { id: 'calendar',  label: 'Calendar' },
+  // The mail module has existed since the beginning and had no way in: it was
+  // reachable only by something else setting the module for you.
+  { id: 'inbox',     label: 'Mail'     },
   { id: 'tasks',     label: 'Tasks'    },
   { id: 'habits',    label: 'Habits'   },
   { id: 'finance',   label: 'Finance'  },

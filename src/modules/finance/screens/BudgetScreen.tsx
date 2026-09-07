@@ -444,105 +444,222 @@ function SlipRows({ rows, color, selectedId, onPick, rules, dragging, currency }
 }
 
 // ─── Proportional mosaic ─────────────────────────────────────────────────────
+//
+// A treemap, as the artboard draws it: the card is tiled edge to edge, and the
+// share of it a category takes **is** the share of the money it took. Squares
+// in a row could not do that — they leave gaps, and a gap is space that means
+// nothing. The squarified layout keeps cells close to square so their areas
+// stay comparable by eye, which is the whole reason for drawing them.
+//
+// Inside each cell, the envelope fills from the bottom as its budget is spent —
+// so a big cell that is nearly empty (a lot of money, well within its limit)
+// reads differently from a big cell brimming over. Past the limit the cell is
+// rust and says "burst".
+
+interface Tile { id: string; area: number }
+interface Placed { id: string; x: number; y: number; w: number; h: number }
+
+/** Squarified treemap (Bruls, Huizing & van Wijk). Lays the biggest first,
+ *  filling whichever way keeps the cells nearest to square. */
+function squarify(items: Tile[], W: number, H: number): Placed[] {
+  const out: Placed[] = []
+  if (W <= 0 || H <= 0 || items.length === 0) return out
+  const total = items.reduce((s, i) => s + i.area, 0) || 1
+  const rest = items
+    .map(i => ({ id: i.id, area: (i.area / total) * W * H }))
+    .sort((a, b) => b.area - a.area)
+
+  let x = 0, y = 0, w = W, h = H
+  let row: { id: string; area: number }[] = []
+
+  const worst = (r: { area: number }[], side: number) => {
+    if (r.length === 0 || side <= 0) return Infinity
+    const sum = r.reduce((s, i) => s + i.area, 0)
+    if (sum <= 0) return Infinity
+    const mx = Math.max(...r.map(i => i.area))
+    const mn = Math.min(...r.map(i => i.area))
+    return Math.max((side * side * mx) / (sum * sum), (sum * sum) / (side * side * mn))
+  }
+
+  const place = (r: { id: string; area: number }[]) => {
+    const sum = r.reduce((s, i) => s + i.area, 0)
+    if (sum <= 0) return
+    if (w >= h) {
+      const colW = sum / h
+      let cy = y
+      for (const it of r) { const ih = it.area / colW; out.push({ id: it.id, x, y: cy, w: colW, h: ih }); cy += ih }
+      x += colW; w -= colW
+    } else {
+      const rowH = sum / w
+      let cx = x
+      for (const it of r) { const iw = it.area / rowH; out.push({ id: it.id, x: cx, y, w: iw, h: rowH }); cx += iw }
+      y += rowH; h -= rowH
+    }
+  }
+
+  while (rest.length > 0) {
+    const next = rest[0]
+    const side = Math.min(w, h)
+    if (row.length === 0 || worst([...row, next], side) <= worst(row, side)) {
+      row.push(next); rest.shift()
+    } else {
+      place(row); row = []
+    }
+  }
+  if (row.length > 0) place(row)
+  return out
+}
+
+/** The card's own width, so the tiling has real proportions to work with. */
+function useMeasuredWidth() {
+  const ref = useRef<HTMLDivElement | null>(null)
+  const [width, setWidth] = useState(0)
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    setWidth(el.getBoundingClientRect().width)
+    const ro = new ResizeObserver(entries => setWidth(entries[0].contentRect.width))
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+  return [ref, width] as const
+}
 
 function MosaicBoxes({ rows, color, selectedId, onPick, rules, dragging, currency }: {
   rows: EnvelopeRow[]; color: string; selectedId: string | null
   onPick: (id: string) => void; rules: Record<string, BudgetRule>; dragging: string | null
   currency: string
 }) {
-  const peak = Math.max(...rows.map(r => r.actual), 0)
-  // Area is the message, so the side is the square root of the money. Floored
-  // at something you can still click and read, and capped so one runaway
-  // envelope does not push the rest off the card.
-  const side = (v: number) => {
-    if (peak <= 0 || v <= 0) return 78
-    return Math.round(78 + Math.sqrt(v / peak) * 104)
-  }
+  const [ref, width] = useMeasuredWidth()
+  const spend = rows.reduce((s, r) => s + Math.max(0, r.actual), 0)
+  // An envelope with nothing spent still exists and still has to be clickable,
+  // so it takes a small floor rather than no area at all.
+  const floor = Math.max(spend * 0.02, 1)
+  const tiles: Tile[] = rows.map(r => ({ id: r.cat.id, area: Math.max(r.actual, floor) }))
+  // Tall enough for the biggest cell to hold its figures, short enough to see
+  // the whole month without scrolling.
+  const height = Math.max(240, Math.min(430, Math.round(width * 0.46)))
+  const placed = new Map(squarify(tiles, width, height).map(p => [p.id, p]))
+  const byId = new Map(rows.map(r => [r.cat.id, r]))
+
   return (
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-start' }}>
-      {rows.map(row => {
+    <div ref={ref} style={{ position: 'relative', width: '100%', height, minHeight: 240 }}>
+      {width > 0 && [...placed.entries()].map(([id, box]) => {
+        const row = byId.get(id)
+        if (!row) return null
         const { cat, actual, planned, cur, children } = row
         const budgeted = planned > 0
-        const over = budgeted && actual > planned
+        const over  = budgeted && actual > planned
         const spent = actual > 0
-        const size = side(actual)
-        const on = selectedId === cat.id
-        // Children take a strip along the bottom, split by what each spent —
-        // the same rule as the box itself, one level down.
-        const childSpend = children.reduce((n, c) => n + c.actual, 0)
+        const fill  = budgeted ? Math.max(0, Math.min(1, actual / planned)) : 0
+        const on    = selectedId === cat.id
+        // What fits. A sliver gets its glyph and its tooltip and nothing else,
+        // rather than three lines of clipped text.
+        const roomy  = box.w >= 118 && box.h >= 96
+        const middle = box.w >= 78  && box.h >= 58
+        const childSpend = children.reduce((n, c) => n + Math.max(0, c.actual), 0)
+        const showChildren = children.length > 0 && box.h >= 104 && box.w >= 96
         return (
-          <DropZone key={cat.id} id={`in:${cat.id}`} disabled={!dragging || dragging === cat.id}>
-            {isOver => (
-              <Draggable id={cat.id}>
-                {() => (
-                  <span style={{ display: 'flex', flexDirection: 'column', width: size }}>
+          <span key={id} style={{
+            position: 'absolute', left: box.x, top: box.y, width: box.w, height: box.h,
+            padding: 3, boxSizing: 'border-box', display: 'flex',
+          }}>
+            <DropZone id={`in:${cat.id}`} disabled={!dragging || dragging === cat.id} grow>
+              {isOver => (
+                <Draggable id={cat.id} grow>
+                  {() => (
                     <button onClick={() => onPick(cat.id)}
-                      title={`${cat.name} — ${money(actual, cur)}${budgeted ? ` of ${money(planned, cur)}` : ' · no budget set'}`}
+                      title={`${cat.name} — ${money(actual, cur)}${
+                        budgeted ? ` of ${money(planned, cur)}${over ? ', over it' : ` · ${Math.round(fill * 100)}% of it gone`}`
+                                 : ' · no budget set'}`}
                       style={{
-                        width: size, height: size, boxSizing: 'border-box',
-                        borderRadius: 12, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
-                        padding: 10, display: 'flex', flexDirection: 'column', gap: 4, overflow: 'hidden',
-                        background: isOver ? 'rgba(12,129,64,0.16)'
-                          : over ? 'rgba(198,40,40,0.16)'
-                          : spent ? 'rgba(245,209,78,0.30)' : '#FAF7EC',
+                        position: 'relative', overflow: 'hidden',
+                        width: '100%', height: '100%', boxSizing: 'border-box',
+                        borderRadius: 10, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
+                        padding: middle ? '9px 10px' : 5,
+                        display: 'flex', flexDirection: 'column', gap: 3,
+                        background: isOver ? 'rgba(12,129,64,0.16)' : over ? '#FAE3E3' : budgeted ? '#EDE7D9' : '#FAF7EC',
                         border: isOver ? '1px dashed #0C8140'
-                          : over ? `1px solid ${RUST}`
-                          : budgeted ? '1px solid #E8E1CE' : '1px dashed #DCD3BF',
-                        outline: on ? '2px solid #F5D14E' : 'none', outlineOffset: 1,
+                          : over ? '1px solid rgba(163,28,28,0.55)'
+                          : budgeted ? '1px solid #E4DCC6' : '1px dashed #DCD3BF',
+                        outline: on ? '2px solid #F5D14E' : 'none', outlineOffset: -1,
                       }}>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                        <CategoryGlyph icon={cat.icon} size={14} color={over ? RUST : color} />
-                        <CurBadge mixed={cur !== currency ? [cur] : row.currencies} cur={cur} currency={currency} />
-                      </span>
-                      <span style={{ fontSize: 11, fontWeight: 600, color: '#191712', lineHeight: 1.25, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {cat.name || 'Untitled'}
-                      </span>
-                      <span style={{ flex: 1 }} />
-                      <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: size > 110 ? 15 : 12, fontWeight: 600, color: over ? RUST : '#191712', fontVariantNumeric: 'tabular-nums' }}>
-                        {acct(actual)}
-                      </span>
-                      {budgeted ? (
-                        <span style={{ fontSize: 9.5, color: over ? RUST : '#9B9180', fontVariantNumeric: 'tabular-nums' }}>
-                          of {acct(planned)}{over ? ' · burst' : ''}
-                        </span>
-                      ) : (
-                        <span style={{ fontSize: 9.5, color: '#9B9180' }}>no budget</span>
+                      {/* The envelope filling up, behind everything else. */}
+                      {(fill > 0 || over) && (
+                        <span aria-hidden style={{
+                          position: 'absolute', left: 0, right: 0, bottom: 0,
+                          height: `${(over ? 1 : fill) * 100}%`,
+                          background: over ? 'rgba(163,28,28,0.42)' : 'rgba(245,209,78,0.72)',
+                          pointerEvents: 'none',
+                        }} />
                       )}
-                      <DueChip day={rules[cat.id]?.dueDay} />
-                    </button>
 
-                    {children.length > 0 && (
-                      <span style={{ display: 'flex', gap: 2, marginTop: 3, height: 16 }}>
-                        {children.map(child => {
-                          const share = childSpend > 0 ? child.actual / childSpend : 1 / children.length
-                          const limit = child.inEnvelope && child.inEnvelope > 0 ? child.inEnvelope : planned
-                          const cOver = limit > 0 && child.actual > limit
-                          return (
-                            <span key={child.cat.id}
-                              style={{ flex: `${Math.max(share, 0.06)} 1 0`, minWidth: 6, display: 'flex' }}>
-                              <Draggable id={child.cat.id} grow>
-                                {() => (
-                                  <button onClick={() => onPick(child.cat.id)}
-                                    title={`${child.cat.name} — inside ${cat.name}, ${money(child.actual, cur)} this month`}
-                                    style={{
-                                      width: '100%', height: 16,
-                                      borderRadius: 4, cursor: 'pointer', padding: 0, border: 'none',
-                                      background: cOver ? 'rgba(198,40,40,0.35)'
-                                        : child.actual > 0 ? 'rgba(245,209,78,0.55)' : '#EDE7D9',
-                                      outline: selectedId === child.cat.id ? '2px solid #F5D14E' : 'none',
-                                    }} />
-                                )}
-                              </Draggable>
-                            </span>
-                          )
-                        })}
+                      <span style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 5, minWidth: 0 }}>
+                        <CategoryGlyph icon={cat.icon} size={middle ? 14 : 12} color={over ? RUST : color} />
+                        {middle && <CurBadge mixed={cur !== currency ? [cur] : row.currencies} cur={cur} currency={currency} />}
                       </span>
-                    )}
-                  </span>
-                )}
-              </Draggable>
-            )}
-          </DropZone>
+
+                      {middle && (
+                        <span style={{
+                          position: 'relative', fontSize: roomy ? 11.5 : 10.5, fontWeight: 600, color: '#191712',
+                          lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                        }}>{cat.name || 'Untitled'}</span>
+                      )}
+
+                      <span style={{ flex: 1 }} />
+
+                      {middle && (
+                        <span style={{
+                          position: 'relative', fontFamily: 'Outfit, sans-serif',
+                          fontSize: roomy ? 16 : 12.5, fontWeight: 600,
+                          color: over ? '#8E1B1B' : '#191712', fontVariantNumeric: 'tabular-nums', lineHeight: 1.1,
+                        }}>{acct(actual)}</span>
+                      )}
+                      {roomy && (
+                        budgeted ? (
+                          <span style={{ position: 'relative', fontSize: 10, color: over ? '#8E1B1B' : '#6C6553', fontVariantNumeric: 'tabular-nums' }}>
+                            of {acct(planned)}{over ? ' · burst' : ''}
+                          </span>
+                        ) : spent ? (
+                          <span style={{ position: 'relative', fontSize: 10, color: '#9B9180' }}>no budget</span>
+                        ) : null
+                      )}
+                      {roomy && <span style={{ position: 'relative' }}><DueChip day={rules[cat.id]?.dueDay} /></span>}
+
+                      {/* Its parts, along the bottom, split the same way. */}
+                      {showChildren && (
+                        <span style={{ position: 'relative', display: 'flex', gap: 2, marginTop: 4, height: 14 }}>
+                          {children.map(child => {
+                            const share = childSpend > 0 ? Math.max(0, child.actual) / childSpend : 1 / children.length
+                            const limit = child.inEnvelope && child.inEnvelope > 0 ? child.inEnvelope : planned
+                            const cOver = limit > 0 && child.actual > limit
+                            return (
+                              <span key={child.cat.id}
+                                style={{ flex: `${Math.max(share, 0.06)} 1 0`, minWidth: 5, display: 'flex' }}>
+                                <Draggable id={child.cat.id} grow>
+                                  {() => (
+                                    <button onClick={e => { e.stopPropagation(); onPick(child.cat.id) }}
+                                      title={`${child.cat.name} — inside ${cat.name}, ${money(child.actual, cur)} this month`}
+                                      style={{
+                                        width: '100%', height: 14, borderRadius: 4, cursor: 'pointer',
+                                        padding: 0, border: 'none',
+                                        background: cOver ? 'rgba(163,28,28,0.5)'
+                                          : child.actual > 0 ? 'rgba(25,23,18,0.16)' : 'rgba(25,23,18,0.07)',
+                                        outline: selectedId === child.cat.id ? '2px solid #F5D14E' : 'none',
+                                      }} />
+                                  )}
+                                </Draggable>
+                              </span>
+                            )
+                          })}
+                        </span>
+                      )}
+                    </button>
+                  )}
+                </Draggable>
+              )}
+            </DropZone>
+          </span>
         )
       })}
     </div>

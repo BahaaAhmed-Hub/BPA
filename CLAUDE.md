@@ -31,7 +31,7 @@ Typography: `Outfit` headings, system-ui body. Section titles: 28px Outfit 600, 
 | `src/modules/tasks/TaskCard.tsx` | 3-row task card (9A design) |
 | `src/modules/habits/HabitsModule.tsx` | Habits table + 10B side detail panel |
 | `src/modules/finance/screens/BudgetScreen.tsx` | Budget + 20E envelope drill-down overlay |
-| `src/App.tsx` | Router / shell |
+| `src/App.tsx` | Router / shell — `NAV_ITEMS` is the top menu (Mail included) |
 | `src/store/`, `src/lib/` | Zustand stores, DB sync, Google OAuth |
 | `src/lib/liveSync.ts` | Cross-device live sync (Realtime push + poll fallback) |
 
@@ -253,9 +253,13 @@ choice arrives too), and each answers a different question:
   news.
 - **slip** — `SlipRows`: monospace figures in one right-aligned column, so two
   envelopes compare in one eye movement.
-- **mosaic** — `MosaicBoxes`: the side is √(spend), so **area is money**; rust
-  and "burst" for an envelope past its budget; children take a strip along the
-  bottom split the same way.
+- **mosaic** — `MosaicBoxes`: a **squarified treemap** (`squarify()`), so the
+  card is tiled edge to edge and a cell's share of it is that category's share
+  of the money. Wrapped squares could not do that — they leave gaps, and a gap
+  means nothing. Inside each cell the envelope fills from the bottom as its
+  budget is spent; past it the cell is rust and says "burst". Children take a
+  strip along the bottom split the same way. Cells too small for text keep
+  their glyph and their tooltip.
 `StylePicker` in the Budget header changes it on the fly and writes the same
 key and event as Settings, so the two never disagree.
 All four keep click-to-select, drag-to-reparent, the due-day chip and the
