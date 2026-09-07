@@ -849,19 +849,28 @@ function App() {
   // Runs once the categories are in, again whenever the rules change, and daily
   // for a session left open across midnight.
   const financeCategories = useFinanceStore(s => s.categories)
+  // Depend on *which* categories there are, not on the array. `loadFromDB`
+  // replaces the list on every sync, so the identity changes every 45 seconds —
+  // and this effect wrote a month of budget entries each time it did, against a
+  // ledger the reload had just emptied. That is how one rent became four.
+  const categoryKey = financeCategories.map(c => c.id).sort().join('|')
+  const financeLoading = useFinanceStore(s => s.loading)
   useEffect(() => {
-    if (!user || financeCategories.length === 0) return
+    if (!user || categoryKey === '' || financeLoading) return
     // Read the stores at call time rather than subscribing to the task list:
     // this writes to it, and depending on it would run again on its own output.
     const run = () => {
       const ts = useTaskStore.getState()
-      runReminders(financeCategories, ts.tasks, {
+      runReminders(useFinanceStore.getState().categories, ts.tasks, {
         addTask: ts.addTask, updateTask: ts.updateTask, deleteTask: ts.deleteTask,
       })
       // A budget with a day on it writes the entry itself, unpaid, rather than
       // a task about it. Read at call time for the same reason: this writes to
       // the ledger it is looking at.
       const fs = useFinanceStore.getState()
+      // A load in flight means the list on hand is about to be replaced;
+      // deciding what is missing from it now is deciding from stale data.
+      if (fs.loading) return
       runBudgetEntries(
         fs.categories, loadRules(), fs.transactions,
         fs.accounts[0]?.id, fs.currentYear,
@@ -875,7 +884,7 @@ function App() {
       window.removeEventListener('professor:moneyRemindersChanged', run)
       clearInterval(id)
     }
-  }, [user, financeCategories])
+  }, [user, categoryKey, financeLoading])
 
   const [assistantOpen, setAssistantOpen] = useState(false)
   // A dated task belongs on the calendar wherever it was given its date — the

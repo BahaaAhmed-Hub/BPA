@@ -87,6 +87,44 @@ export interface EntryApi {
 }
 
 /**
+ *  What this session has already written, as `${categoryId}|${date}`.
+ *
+ *  The ledger is the real check, but it is a *loaded* ledger: writing an entry
+ *  is asynchronous, and a reload replaces the list with whatever the server had
+ *  a moment ago. Two runs close together — the load, then the sync that follows
+ *  it — both looked at a list without the entry and both wrote one. That is
+ *  where the duplicates came from, and why deleting them did not help: the next
+ *  pass made them again, in pairs.
+ */
+const writtenThisSession = new Set<string>()
+
+/** Only for tests, and for a device that has just been told the ledger changed
+ *  underneath it. */
+export function forgetWrittenEntries(): void { writtenThisSession.clear() }
+
+/**
+ *  Budget entries that say the same thing twice: same category, same day, both
+ *  unpaid, both made by a budget. Returns the ids to remove, keeping the oldest
+ *  of each set — the one every other screen has been pointing at.
+ *
+ *  A paid entry is never touched. Two rents genuinely paid on the same day are
+ *  two payments, and this has no business deciding otherwise.
+ */
+export function duplicateBudgetEntries(transactions: Transaction[]): string[] {
+  const seen = new Map<string, Transaction>()
+  const extra: string[] = []
+  const ordered = [...transactions].sort((a, b) =>
+    (a.createdAt ?? '').localeCompare(b.createdAt ?? '') || a.id.localeCompare(b.id))
+  for (const tx of ordered) {
+    if (!isBudgetEntry(tx) || !tx.categoryId || tx.paidAt) continue
+    const key = `${tx.categoryId}|${tx.date}|${tx.amount}`
+    if (seen.has(key)) extra.push(tx.id)
+    else seen.set(key, tx)
+  }
+  return extra
+}
+
+/**
  *  Bring the ledger in line with the budgets that carry a day.
  *
  *  What stops a second copy is the ledger itself: an entry already filed
@@ -117,8 +155,12 @@ export function runBudgetEntries(
   const fresh: Transaction[] = []
   const stamp = new Date().toISOString()
 
-  const filed = new Set(
-    transactions.filter(t => t.categoryId).map(t => `${t.categoryId}|${t.date}`))
+  // The ledger, plus what this session has already written and may not have
+  // read back yet.
+  const filed = new Set([
+    ...transactions.filter(t => t.categoryId).map(t => `${t.categoryId}|${t.date}`),
+    ...writtenThisSession,
+  ])
 
   for (const [categoryId, rule] of Object.entries(rules)) {
     if (!rule || rule.dueDay == null || !(rule.amount > 0)) continue
@@ -134,6 +176,7 @@ export function runBudgetEntries(
       wanted.add(key)
       if (filed.has(key)) continue
       filed.add(key)
+      writtenThisSession.add(key)
       fresh.push({
         id: crypto.randomUUID(),
         accountId,
@@ -163,6 +206,14 @@ export function runBudgetEntries(
     if (tx.date < today) continue
     if (wanted.has(`${tx.categoryId}|${tx.date}`)) continue
     api.remove(tx.id)
+    dropped++
+  }
+
+  // Anything an earlier pass wrote twice. Doing it here rather than in a repair
+  // button is deliberate: the duplicates were made silently, and clearing them
+  // up should be silent too.
+  for (const id of duplicateBudgetEntries(transactions)) {
+    api.remove(id)
     dropped++
   }
 
