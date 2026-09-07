@@ -2223,22 +2223,26 @@ function AppearanceSection({ s, set }: { s: AppSettings; set: (p: Partial<AppSet
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 7 }}>
           {THEMES.map(t => {
             const active = s.theme === t.id
+            // The swatch is the theme's own tokens, read through the same
+            // contract everything else will read them through.
+            const tk = t.tokens
             return (
               <button key={t.id} onClick={() => pickTheme(t.id)}
                 style={{
                   padding: '8px 4px', borderRadius: 9, cursor: 'pointer', flexDirection: 'column',
                   display: 'flex', alignItems: 'center', gap: 5,
-                  background: t.surface, border: `2px solid ${active ? t.accent : t.border}`,
-                  boxShadow: active ? `0 0 10px ${t.accent}40` : 'none',
+                  background: tk['--sb-card'],
+                  border: `2px solid ${active ? tk['--sb-accent'] : tk['--sb-border']}`,
+                  boxShadow: active ? `0 0 10px rgba(${tk['--sb-accent-rgb']},0.25)` : 'none',
                   transition: 'all 0.15s',
                 }}>
                 <div style={{ display: 'flex', gap: 3 }}>
-                  {[t.accent, t.accentFill ? t.accentBright : t.textDim, t.textMuted].map((c, i) => (
+                  {[tk['--sb-accent'], tk['--sb-accent-deep'], tk['--sb-ink-4']].map((c, i) => (
                     <div key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: c }} />
                   ))}
                 </div>
                 <span style={{ fontSize: 13 }}>{t.emoji}</span>
-                <span style={{ fontSize: 9.5, color: t.text, fontWeight: active ? 700 : 400, whiteSpace: 'nowrap' }}>{t.name}</span>
+                <span style={{ fontSize: 9.5, color: tk['--sb-ink-1'], fontWeight: active ? 700 : 400, whiteSpace: 'nowrap' }}>{t.name}</span>
               </button>
             )
           })}

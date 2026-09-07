@@ -191,27 +191,29 @@ export function Step1Welcome({ data, onChange }: Props) {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8 }}>
           {THEMES.map(theme => {
             const active = data.themeId === theme.id
+            // Same contract as everywhere else: a theme is its tokens.
+            const tk = theme.tokens
             return (
               <button key={theme.id} className="wz-theme-card" onClick={() => {
                 applyThemeVars(getTheme(theme.id))
                 onChange({ themeId: theme.id })
               }} style={{
-                padding: 0, border: active ? `2.5px solid ${theme.accent}` : '2.5px solid transparent',
+                padding: 0, border: active ? `2.5px solid ${tk['--sb-accent']}` : '2.5px solid transparent',
                 borderRadius: 10, background: 'transparent', cursor: 'pointer', outline: 'none',
-                boxShadow: active ? `0 0 0 3px ${theme.accent}33` : 'none',
+                boxShadow: active ? `0 0 0 3px rgba(${tk['--sb-accent-rgb']},0.2)` : 'none',
                 transition: 'all 0.15s',
               }}>
-                <div style={{ height: 42, background: theme.bg, borderRadius: '7px 7px 0 0', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-                  <div style={{ width: 12, height: 12, borderRadius: '50%', background: theme.accent, boxShadow: `0 0 6px ${theme.accent}99` }} />
-                  <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 10, background: theme.surface, borderTop: `1px solid ${theme.border}` }} />
+                <div style={{ height: 42, background: tk['--sb-page'], borderRadius: '7px 7px 0 0', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+                  <div style={{ width: 12, height: 12, borderRadius: '50%', background: tk['--sb-accent'], boxShadow: `0 0 6px rgba(${tk['--sb-accent-rgb']},0.6)` }} />
+                  <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 10, background: tk['--sb-card'], borderTop: `1px solid ${tk['--sb-border']}` }} />
                   {active && (
-                    <div style={{ position: 'absolute', top: 3, right: 3, width: 13, height: 13, borderRadius: '50%', background: theme.accent, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ position: 'absolute', top: 3, right: 3, width: 13, height: 13, borderRadius: '50%', background: tk['--sb-accent'], display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <svg width="7" height="7" viewBox="0 0 7 7"><polyline points="1,3.5 2.8,5.2 6,1.5" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/></svg>
                     </div>
                   )}
                 </div>
                 <div style={{ padding: '4px 3px 5px', background: '#F8F8FC', borderRadius: '0 0 7px 7px', borderTop: '1px solid #EBEBF0' }}>
-                  <div style={{ fontSize: 10, color: active ? theme.accent : '#6B7280', fontWeight: active ? 700 : 500, textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <div style={{ fontSize: 10, color: active ? tk['--sb-accent'] : '#6B7280', fontWeight: active ? 700 : 500, textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {theme.emoji} {theme.name}
                   </div>
                 </div>

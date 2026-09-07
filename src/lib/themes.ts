@@ -1,139 +1,366 @@
-// ─── Theme definitions & CSS variable applicator ─────────────────────────────
+// ─── Themes: one token contract ──────────────────────────────────────────────
+// A theme used to be a bag of colour fields with names of its own — bg,
+// surface2, accentFill, sidebarBg — which `applyThemeVars` then wrote out under
+// three different variable prefixes (`--color-*`, `--bg-*`, `--accent`). The
+// app's actual design tokens are the `--sb-*` set in index.css, so there were
+// two vocabularies for one idea and no way to tell which one a component meant.
+//
+// A theme is now a map from `--sb-*` names to values, and nothing else. Adding
+// a token means adding it to `SbToken`; every theme then has to answer for it,
+// which is the point of a contract.
+
+/** Every `--sb-*` token a theme owns. The rest of the `--sb-*` set — radii,
+ *  type, control heights, shadows — does not vary by theme and stays in
+ *  index.css's `:root`. */
+export type SbToken =
+  | '--sb-page'
+  | '--sb-header'
+  | '--sb-card'
+  | '--sb-field'
+  | '--sb-border'
+  | '--sb-hairline'
+  | '--sb-ink-1'
+  | '--sb-ink-2'
+  | '--sb-ink-3'
+  | '--sb-ink-4'
+  | '--sb-ink-on-dark'
+  | '--sb-accent'
+  /** Components, not values: `rgba(var(--sb-accent-rgb), .2)`. */
+  | '--sb-accent-rgb'
+  | '--sb-accent-tint'
+  | '--sb-accent-tint2'
+  | '--sb-accent-border'
+  /** The accent at text weight against its own tint — deeper on a light theme,
+   *  brighter on a dark one. */
+  | '--sb-accent-deep'
+  | '--sb-positive'
+  | '--sb-positive-deep'
+  | '--sb-positive-tint'
+  | '--sb-negative'
+  | '--sb-negative-deep'
+  | '--sb-negative-tint'
 
 export interface AppTheme {
   id: string
   name: string
+  /** How the theme is picked out of a grid — not a colour, so it stays. */
   emoji: string
-  bg: string
-  surface: string
-  surface2: string
-  border: string
-  /** Bright accent — used for text/icons on dark backgrounds */
-  accent: string
-  /** Dimmer accent fill — used as button/badge backgrounds */
-  accentFill: string
-  /** Even lighter accent — labels, secondary accents */
-  accentBright: string
-  text: string
-  textDim: string
-  textMuted: string
-  sidebarBg: string
   isDark: boolean
+  tokens: Record<SbToken, string>
 }
 
 export const THEMES: AppTheme[] = [
   {
-    id: 'navy-night', name: 'Navy Night', emoji: '🌃',
-    bg: '#0D0F1A', surface: '#161929', surface2: '#0D0F1A',
-    border: '#252A3E',
-    accent: '#60A5FA', accentFill: 'rgba(59,130,246,0.18)', accentBright: '#93C5FD',
-    text: '#E8EAF6', textDim: '#94A3B8', textMuted: '#4B5563',
-    sidebarBg: '#161929', isDark: true,
+    id: 'navy-night', name: 'Navy Night', emoji: '🌃', isDark: true,
+    tokens: {
+      '--sb-page': '#0D0F1A',
+      '--sb-header': '#161929',
+      '--sb-card': '#161929',
+      '--sb-field': '#0D0F1A',
+      '--sb-border': '#252A3E',
+      '--sb-hairline': '#1A1E2E',
+      '--sb-ink-1': '#E8EAF6',
+      '--sb-ink-2': '#94A3B8',
+      '--sb-ink-3': '#94A3B8',
+      '--sb-ink-4': '#4B5563',
+      '--sb-ink-on-dark': '#E8EAF6',
+      '--sb-accent': '#60A5FA',
+      '--sb-accent-rgb': '96,165,250',
+      '--sb-accent-tint': '#23324F',
+      '--sb-accent-tint2': '#263857',
+      '--sb-accent-border': '#375887',
+      '--sb-accent-deep': '#93C5FD',
+      '--sb-positive': '#4ADE80',
+      '--sb-positive-deep': '#22C55E',
+      '--sb-positive-tint': '#1F3C39',
+      '--sb-negative': '#F87171',
+      '--sb-negative-deep': '#EF4444',
+      '--sb-negative-tint': '#3F2936',
+    },
   },
   {
-    id: 'midnight', name: 'Midnight', emoji: '🌑',
-    bg: '#07090F', surface: '#0E1117', surface2: '#07090F',
-    border: '#1C2030',
-    accent: '#818CF8', accentFill: 'rgba(129,140,248,0.18)', accentBright: '#A5B4FC',
-    text: '#F1F5F9', textDim: '#94A3B8', textMuted: '#4B5563',
-    sidebarBg: '#0E1117', isDark: true,
+    id: 'midnight', name: 'Midnight', emoji: '🌑', isDark: true,
+    tokens: {
+      '--sb-page': '#07090F',
+      '--sb-header': '#0E1117',
+      '--sb-card': '#0E1117',
+      '--sb-field': '#07090F',
+      '--sb-border': '#1C2030',
+      '--sb-hairline': '#131621',
+      '--sb-ink-1': '#F1F5F9',
+      '--sb-ink-2': '#94A3B8',
+      '--sb-ink-3': '#94A3B8',
+      '--sb-ink-4': '#4B5563',
+      '--sb-ink-on-dark': '#F1F5F9',
+      '--sb-accent': '#818CF8',
+      '--sb-accent-rgb': '129,140,248',
+      '--sb-accent-tint': '#232740',
+      '--sb-accent-tint2': '#272C48',
+      '--sb-accent-border': '#42487C',
+      '--sb-accent-deep': '#A5B4FC',
+      '--sb-positive': '#4ADE80',
+      '--sb-positive-deep': '#22C55E',
+      '--sb-positive-tint': '#19362A',
+      '--sb-negative': '#F87171',
+      '--sb-negative-deep': '#EF4444',
+      '--sb-negative-tint': '#382227',
+    },
   },
   {
-    id: 'obsidian', name: 'Obsidian', emoji: '⬛',
-    bg: '#0A0A0D', surface: '#111115', surface2: '#0A0A0D',
-    border: '#1E1E2E',
-    accent: '#A78BFA', accentFill: 'rgba(167,139,250,0.18)', accentBright: '#C4B5FD',
-    text: '#EDE9FE', textDim: '#A78BFA', textMuted: '#4B5563',
-    sidebarBg: '#111115', isDark: true,
+    id: 'obsidian', name: 'Obsidian', emoji: '⬛', isDark: true,
+    tokens: {
+      '--sb-page': '#0A0A0D',
+      '--sb-header': '#111115',
+      '--sb-card': '#111115',
+      '--sb-field': '#0A0A0D',
+      '--sb-border': '#1E1E2E',
+      '--sb-hairline': '#15151F',
+      '--sb-ink-1': '#EDE9FE',
+      '--sb-ink-2': '#A78BFA',
+      '--sb-ink-3': '#A78BFA',
+      '--sb-ink-4': '#4B5563',
+      '--sb-ink-on-dark': '#EDE9FE',
+      '--sb-accent': '#A78BFA',
+      '--sb-accent-rgb': '167,139,250',
+      '--sb-accent-tint': '#2C273E',
+      '--sb-accent-tint2': '#322C47',
+      '--sb-accent-border': '#54487C',
+      '--sb-accent-deep': '#C4B5FD',
+      '--sb-positive': '#4ADE80',
+      '--sb-positive-deep': '#22C55E',
+      '--sb-positive-tint': '#1B3628',
+      '--sb-negative': '#F87171',
+      '--sb-negative-deep': '#EF4444',
+      '--sb-negative-tint': '#3B2226',
+    },
   },
   {
-    id: 'forest', name: 'Forest', emoji: '🌲',
-    bg: '#091410', surface: '#101E18', surface2: '#091410',
-    border: '#163524',
-    accent: '#34D399', accentFill: 'rgba(52,211,153,0.18)', accentBright: '#6EE7B7',
-    text: '#ECFDF5', textDim: '#6EE7B7', textMuted: '#374151',
-    sidebarBg: '#101E18', isDark: true,
+    id: 'forest', name: 'Forest', emoji: '🌲', isDark: true,
+    tokens: {
+      '--sb-page': '#091410',
+      '--sb-header': '#101E18',
+      '--sb-card': '#101E18',
+      '--sb-field': '#091410',
+      '--sb-border': '#163524',
+      '--sb-hairline': '#10261B',
+      '--sb-ink-1': '#ECFDF5',
+      '--sb-ink-2': '#6EE7B7',
+      '--sb-ink-3': '#6EE7B7',
+      '--sb-ink-4': '#374151',
+      '--sb-ink-on-dark': '#ECFDF5',
+      '--sb-accent': '#34D399',
+      '--sb-accent-rgb': '52,211,153',
+      '--sb-accent-tint': '#163F2F',
+      '--sb-accent-tint2': '#184634',
+      '--sb-accent-border': '#206F52',
+      '--sb-accent-deep': '#6EE7B7',
+      '--sb-positive': '#4ADE80',
+      '--sb-positive-deep': '#22C55E',
+      '--sb-positive-tint': '#1A412B',
+      '--sb-negative': '#F87171',
+      '--sb-negative-deep': '#EF4444',
+      '--sb-negative-tint': '#3A2D28',
+    },
   },
   {
-    id: 'crimson', name: 'Crimson', emoji: '🔴',
-    bg: '#130A0A', surface: '#1C0F0F', surface2: '#130A0A',
-    border: '#351515',
-    accent: '#F87171', accentFill: 'rgba(248,113,113,0.18)', accentBright: '#FCA5A5',
-    text: '#FEF2F2', textDim: '#FCA5A5', textMuted: '#4B5563',
-    sidebarBg: '#1C0F0F', isDark: true,
+    id: 'crimson', name: 'Crimson', emoji: '🔴', isDark: true,
+    tokens: {
+      '--sb-page': '#130A0A',
+      '--sb-header': '#1C0F0F',
+      '--sb-card': '#1C0F0F',
+      '--sb-field': '#130A0A',
+      '--sb-border': '#351515',
+      '--sb-hairline': '#261010',
+      '--sb-ink-1': '#FEF2F2',
+      '--sb-ink-2': '#FCA5A5',
+      '--sb-ink-3': '#FCA5A5',
+      '--sb-ink-4': '#4B5563',
+      '--sb-ink-on-dark': '#FEF2F2',
+      '--sb-accent': '#F87171',
+      '--sb-accent-rgb': '248,113,113',
+      '--sb-accent-tint': '#442121',
+      '--sb-accent-tint2': '#4C2525',
+      '--sb-accent-border': '#7F3B3B',
+      '--sb-accent-deep': '#FCA5A5',
+      '--sb-positive': '#4ADE80',
+      '--sb-positive-deep': '#22C55E',
+      '--sb-positive-tint': '#243423',
+      '--sb-negative': '#F87171',
+      '--sb-negative-deep': '#EF4444',
+      '--sb-negative-tint': '#442121',
+    },
   },
   {
-    id: 'violet', name: 'Violet', emoji: '💜',
-    bg: '#0D091A', surface: '#150F24', surface2: '#0D091A',
-    border: '#261840',
-    accent: '#A78BFA', accentFill: 'rgba(167,139,250,0.18)', accentBright: '#C4B5FD',
-    text: '#EDE9FE', textDim: '#C4B5FD', textMuted: '#4B5563',
-    sidebarBg: '#150F24', isDark: true,
+    id: 'violet', name: 'Violet', emoji: '💜', isDark: true,
+    tokens: {
+      '--sb-page': '#0D091A',
+      '--sb-header': '#150F24',
+      '--sb-card': '#150F24',
+      '--sb-field': '#0D091A',
+      '--sb-border': '#261840',
+      '--sb-hairline': '#1B112F',
+      '--sb-ink-1': '#EDE9FE',
+      '--sb-ink-2': '#C4B5FD',
+      '--sb-ink-3': '#C4B5FD',
+      '--sb-ink-4': '#4B5563',
+      '--sb-ink-on-dark': '#EDE9FE',
+      '--sb-accent': '#A78BFA',
+      '--sb-accent-rgb': '167,139,250',
+      '--sb-accent-tint': '#2F254B',
+      '--sb-accent-tint2': '#352A53',
+      '--sb-accent-border': '#574784',
+      '--sb-accent-deep': '#C4B5FD',
+      '--sb-positive': '#4ADE80',
+      '--sb-positive-deep': '#22C55E',
+      '--sb-positive-tint': '#1F3435',
+      '--sb-negative': '#F87171',
+      '--sb-negative-deep': '#EF4444',
+      '--sb-negative-tint': '#3E2132',
+    },
   },
   {
-    id: 'amber', name: 'Amber', emoji: '🌅',
-    bg: '#150E04', surface: '#1F1607', surface2: '#150E04',
-    border: '#382208',
-    accent: '#FCD34D', accentFill: 'rgba(252,211,77,0.18)', accentBright: '#FDE68A',
-    text: '#FFFBEB', textDim: '#FDE68A', textMuted: '#6B5E3A',
-    sidebarBg: '#1F1607', isDark: true,
+    id: 'amber', name: 'Amber', emoji: '🌅', isDark: true,
+    tokens: {
+      '--sb-page': '#150E04',
+      '--sb-header': '#1F1607',
+      '--sb-card': '#1F1607',
+      '--sb-field': '#150E04',
+      '--sb-border': '#382208',
+      '--sb-hairline': '#281906',
+      '--sb-ink-1': '#FFFBEB',
+      '--sb-ink-2': '#FDE68A',
+      '--sb-ink-3': '#FDE68A',
+      '--sb-ink-4': '#6B5E3A',
+      '--sb-ink-on-dark': '#FFFBEB',
+      '--sb-accent': '#FCD34D',
+      '--sb-accent-rgb': '252,211,77',
+      '--sb-accent-tint': '#473814',
+      '--sb-accent-tint2': '#504016',
+      '--sb-accent-border': '#826B26',
+      '--sb-accent-deep': '#FDE68A',
+      '--sb-positive': '#4ADE80',
+      '--sb-positive-deep': '#22C55E',
+      '--sb-positive-tint': '#273A1D',
+      '--sb-negative': '#F87171',
+      '--sb-negative-deep': '#EF4444',
+      '--sb-negative-tint': '#46261A',
+    },
   },
   {
-    id: 'teal', name: 'Teal', emoji: '🌊',
-    bg: '#051210', surface: '#0B1C1A', surface2: '#051210',
-    border: '#0E2E2A',
-    accent: '#2DD4BF', accentFill: 'rgba(45,212,191,0.18)', accentBright: '#5EEAD4',
-    text: '#F0FDFA', textDim: '#5EEAD4', textMuted: '#374151',
-    sidebarBg: '#0B1C1A', isDark: true,
+    id: 'teal', name: 'Teal', emoji: '🌊', isDark: true,
+    tokens: {
+      '--sb-page': '#051210',
+      '--sb-header': '#0B1C1A',
+      '--sb-card': '#0B1C1A',
+      '--sb-field': '#051210',
+      '--sb-border': '#0E2E2A',
+      '--sb-hairline': '#0A211E',
+      '--sb-ink-1': '#F0FDFA',
+      '--sb-ink-2': '#5EEAD4',
+      '--sb-ink-3': '#5EEAD4',
+      '--sb-ink-4': '#374151',
+      '--sb-ink-on-dark': '#F0FDFA',
+      '--sb-accent': '#2DD4BF',
+      '--sb-accent-rgb': '45,212,191',
+      '--sb-accent-tint': '#113D38',
+      '--sb-accent-tint2': '#12443E',
+      '--sb-accent-border': '#1A6F64',
+      '--sb-accent-deep': '#5EEAD4',
+      '--sb-positive': '#4ADE80',
+      '--sb-positive-deep': '#22C55E',
+      '--sb-positive-tint': '#163F2C',
+      '--sb-negative': '#F87171',
+      '--sb-negative-deep': '#EF4444',
+      '--sb-negative-tint': '#362B2A',
+    },
   },
   {
-    id: 'rose', name: 'Rose', emoji: '🌸',
-    bg: '#130810', surface: '#1D0E18', surface2: '#130810',
-    border: '#37102E',
-    accent: '#FB7185', accentFill: 'rgba(251,113,133,0.18)', accentBright: '#FDA4AF',
-    text: '#FFF1F2', textDim: '#FDA4AF', textMuted: '#4B5563',
-    sidebarBg: '#1D0E18', isDark: true,
+    id: 'rose', name: 'Rose', emoji: '🌸', isDark: true,
+    tokens: {
+      '--sb-page': '#130810',
+      '--sb-header': '#1D0E18',
+      '--sb-card': '#1D0E18',
+      '--sb-field': '#130810',
+      '--sb-border': '#37102E',
+      '--sb-hairline': '#270C20',
+      '--sb-ink-1': '#FFF1F2',
+      '--sb-ink-2': '#FDA4AF',
+      '--sb-ink-3': '#FDA4AF',
+      '--sb-ink-4': '#4B5563',
+      '--sb-ink-on-dark': '#FFF1F2',
+      '--sb-accent': '#FB7185',
+      '--sb-accent-rgb': '251,113,133',
+      '--sb-accent-tint': '#45202C',
+      '--sb-accent-tint2': '#4E2430',
+      '--sb-accent-border': '#813B49',
+      '--sb-accent-deep': '#FDA4AF',
+      '--sb-positive': '#4ADE80',
+      '--sb-positive-deep': '#22C55E',
+      '--sb-positive-tint': '#25332B',
+      '--sb-negative': '#F87171',
+      '--sb-negative-deep': '#EF4444',
+      '--sb-negative-tint': '#442028',
+    },
   },
   {
-    id: 'light', name: 'Light', emoji: '☀️',
-    bg: '#F8FAFC', surface: '#FFFFFF', surface2: '#F1F5F9',
-    border: '#E2E8F0',
-    accent: '#1E40AF', accentFill: 'rgba(30,64,175,0.1)', accentBright: '#3B82F6',
-    text: '#0F172A', textDim: '#475569', textMuted: '#64748B',
-    sidebarBg: '#F1F5F9', isDark: false,
+    id: 'light', name: 'Light', emoji: '☀️', isDark: false,
+    tokens: {
+      '--sb-page': '#F8FAFC',
+      '--sb-header': '#F1F5F9',
+      '--sb-card': '#FFFFFF',
+      '--sb-field': '#F1F5F9',
+      '--sb-border': '#E2E8F0',
+      '--sb-hairline': '#F0F4F8',
+      '--sb-ink-1': '#0F172A',
+      '--sb-ink-2': '#475569',
+      '--sb-ink-3': '#475569',
+      '--sb-ink-4': '#64748B',
+      '--sb-ink-on-dark': '#F8FAFC',
+      '--sb-accent': '#1E40AF',
+      '--sb-accent-rgb': '30,64,175',
+      '--sb-accent-tint': '#E0E4F4',
+      '--sb-accent-tint2': '#D9DFF1',
+      '--sb-accent-border': '#9AA9DB',
+      '--sb-accent-deep': '#3B82F6',
+      '--sb-positive': '#0C8140',
+      '--sb-positive-deep': '#0A6B36',
+      '--sb-positive-tint': '#DDEDE4',
+      '--sb-negative': '#C62828',
+      '--sb-negative-deep': '#A31C1C',
+      '--sb-negative-tint': '#F7E1E1',
+    },
   },
   {
-    id: 'sunlit-bento', name: 'Sunlit Bento', emoji: '🌤️',
-    bg: '#F7F4EA', surface: '#FFFFFF', surface2: '#FAF7EC',
-    border: '#E8E1CE',
-    accent: '#F5D14E', accentFill: 'rgba(245,209,78,0.12)', accentBright: '#D4A827',
-    text: '#191712', textDim: '#6C6553', textMuted: '#9B9180',
-    sidebarBg: '#FCFAF4', isDark: false,
+    id: 'sunlit-bento', name: 'Sunlit Bento', emoji: '🌤️', isDark: false,
+    // Verbatim from index.css's :root — applying the default theme has to be a
+    // no-op, or the app would repaint itself on the way in.
+    tokens: {
+      '--sb-page': '#F7F4EA',
+      '--sb-header': '#FCFAF4',
+      '--sb-card': '#FFFFFF',
+      '--sb-field': '#FAF7EC',
+      '--sb-border': '#E8E1CE',
+      '--sb-hairline': '#F0EBDC',
+      '--sb-ink-1': '#191712',
+      '--sb-ink-2': '#4A4438',
+      '--sb-ink-3': '#6C6553',
+      '--sb-ink-4': '#8A8272',
+      '--sb-ink-on-dark': '#FDF8E7',
+      '--sb-accent': '#F5D14E',
+      '--sb-accent-rgb': '245,209,78',
+      '--sb-accent-tint': '#FEF7DE',
+      '--sb-accent-tint2': '#FDF6DE',
+      '--sb-accent-border': '#EFE1B4',
+      '--sb-accent-deep': '#7A5F09',
+      '--sb-positive': '#0C8140',
+      '--sb-positive-deep': '#0A6B36',
+      '--sb-positive-tint': '#E2F0E7',
+      '--sb-negative': '#C62828',
+      '--sb-negative-deep': '#A31C1C',
+      '--sb-negative-tint': '#FAE3E3',
+    },
   },
 ]
-
-export function applySamuraiModeOverride(): void {
-  const s = document.documentElement.style
-  s.setProperty('--color-bg',           '#0C0B09')
-  s.setProperty('--color-surface',      '#131210')
-  s.setProperty('--color-surface2',     '#0C0B09')
-  s.setProperty('--color-border',       '#1E1C18')
-  s.setProperty('--color-accent',       '#8B1A1A')
-  s.setProperty('--color-accent-fill',  'rgba(139,26,26,0.15)')
-  s.setProperty('--color-accent-bright','#C0392B')
-  s.setProperty('--color-text',         '#EDE4D3')
-  s.setProperty('--color-text-dim',     '#7A6E5E')
-  s.setProperty('--color-text-muted',   '#3C3530')
-  s.setProperty('--color-sidebar',      '#131210')
-  s.setProperty('--bg-base',            '#0C0B09')
-  s.setProperty('--bg-surface',         '#131210')
-  s.setProperty('--border-color',       '#1E1C18')
-  s.setProperty('--text-primary',       '#EDE4D3')
-  s.setProperty('--accent',             '#8B1A1A')
-  document.documentElement.setAttribute('data-theme', 'dark')
-  document.body.style.background = '#0C0B09'
-  document.body.style.color = '#EDE4D3'
-}
 
 export const DEFAULT_THEME_ID = 'sunlit-bento'
 
@@ -152,30 +379,15 @@ export function getTheme(id: string): AppTheme {
   return THEMES.find(t => t.id === resolved) ?? THEMES[0]
 }
 
+/** The whole of theming: write the tokens. `html, body` already read
+ *  `var(--sb-page)` and `var(--sb-ink-1)`, so there is nothing to paint by
+ *  hand, and no second vocabulary to keep in step. */
 export function applyThemeVars(theme: AppTheme): void {
-  const s = document.documentElement.style
-  // New CSS variable names (used by components via var())
-  s.setProperty('--color-bg',           theme.bg)
-  s.setProperty('--color-surface',      theme.surface)
-  s.setProperty('--color-surface2',     theme.surface2)
-  s.setProperty('--color-border',       theme.border)
-  s.setProperty('--color-accent',       theme.accent)
-  s.setProperty('--color-accent-fill',  theme.accentFill)
-  s.setProperty('--color-accent-bright',theme.accentBright)
-  s.setProperty('--color-text',         theme.text)
-  s.setProperty('--color-text-dim',     theme.textDim)
-  s.setProperty('--color-text-muted',   theme.textMuted)
-  s.setProperty('--color-sidebar',      theme.sidebarBg)
-  // Legacy CSS variable names (used in older CSS rules)
-  s.setProperty('--bg-base',      theme.bg)
-  s.setProperty('--bg-surface',   theme.surface)
-  s.setProperty('--bg-surface2',  theme.surface2)
-  s.setProperty('--border-color', theme.border)
-  s.setProperty('--text-primary', theme.text)
-  s.setProperty('--text-muted',   theme.textMuted)
-  s.setProperty('--accent',       theme.accent)
-  // Set data-theme for CSS selector-based overrides
+  const style = document.documentElement.style
+  for (const [token, value] of Object.entries(theme.tokens)) {
+    style.setProperty(token, value)
+  }
+  // Not a colour write: the one hook a CSS rule has for asking which way round
+  // the theme is. Nothing reads it yet.
   document.documentElement.setAttribute('data-theme', theme.isDark ? 'dark' : 'light')
-  document.body.style.background = theme.bg
-  document.body.style.color = theme.text
 }
