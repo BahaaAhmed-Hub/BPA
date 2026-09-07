@@ -62,7 +62,7 @@ function LoginScreen() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(160deg, #F7F4EA 0%, #EEE8D0 100%)',
+      background: 'linear-gradient(160deg, var(--sb-page) 0%, #EEE8D0 100%)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -76,15 +76,15 @@ function LoginScreen() {
         display: 'grid',
         gridTemplateColumns: '1fr 400px',
         gap: 0,
-        background: '#FFFFFF',
+        background: 'var(--sb-card)',
         borderRadius: 24,
         boxShadow: '0 26px 64px -34px rgba(48,40,20,.5)',
         overflow: 'hidden',
-        border: '1px solid #E8E1CE',
+        border: '1px solid var(--sb-border)',
       }}>
         {/* Left — promise */}
         <div style={{
-          background: 'linear-gradient(160deg, #F7F4EA 0%, #EEE8D0 100%)',
+          background: 'linear-gradient(160deg, var(--sb-page) 0%, #EEE8D0 100%)',
           padding: '60px 56px',
           display: 'flex',
           flexDirection: 'column',
@@ -102,13 +102,13 @@ function LoginScreen() {
               margin: '0 0 16px',
               fontFamily: "'Outfit', system-ui, sans-serif",
               fontWeight: 700, fontSize: 42, lineHeight: 1.06,
-              color: '#191712', letterSpacing: '-.03em',
+              color: 'var(--sb-ink-1)', letterSpacing: '-.03em',
             }}>
               Your personal<br />operating system.
             </h1>
             <p style={{
               margin: '0 0 48px',
-              fontSize: 15, color: '#6C6553', lineHeight: 1.7, maxWidth: 380,
+              fontSize: 15, color: 'var(--sb-ink-3)', lineHeight: 1.7, maxWidth: 380,
             }}>
               Reads your calendar, tasks, habits and finances — then tells you
               exactly what to do next, in plain sentences, with the numbers behind them.
@@ -120,10 +120,10 @@ function LoginScreen() {
                 <div key={s.label}>
                   <div style={{
                     fontFamily: "'Outfit', system-ui, sans-serif",
-                    fontWeight: 700, fontSize: 26, color: '#191712', letterSpacing: '-.02em',
+                    fontWeight: 700, fontSize: 26, color: 'var(--sb-ink-1)', letterSpacing: '-.02em',
                     fontVariantNumeric: 'tabular-nums',
                   }}>{s.value}</div>
-                  <div style={{ fontSize: 11.5, color: '#8A8272', marginTop: 2 }}>{s.label}</div>
+                  <div style={{ fontSize: 11.5, color: 'var(--sb-ink-4)', marginTop: 2 }}>{s.label}</div>
                 </div>
               ))}
             </div>
@@ -136,16 +136,16 @@ function LoginScreen() {
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'center',
-          background: '#FFFFFF',
+          background: 'var(--sb-card)',
         }}>
           <h2 style={{
             margin: '0 0 6px',
             fontFamily: "'Outfit', system-ui, sans-serif",
-            fontWeight: 600, fontSize: 22, color: '#191712', letterSpacing: '-.02em',
+            fontWeight: 600, fontSize: 22, color: 'var(--sb-ink-1)', letterSpacing: '-.02em',
           }}>
             Sign in
           </h2>
-          <p style={{ margin: '0 0 32px', fontSize: 13, color: '#6C6553' }}>
+          <p style={{ margin: '0 0 32px', fontSize: 13, color: 'var(--sb-ink-3)' }}>
             Continue to your operating system.
           </p>
 
@@ -157,9 +157,9 @@ function LoginScreen() {
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
               width: '100%', padding: '13px 20px',
               borderRadius: 10,
-              background: signing ? '#FAF7EC' : '#191712',
-              border: '1px solid #191712',
-              color: '#FDF8E7',
+              background: signing ? 'var(--sb-field)' : 'var(--sb-ink-1)',
+              border: '1px solid var(--sb-ink-1)',
+              color: 'var(--sb-ink-on-dark)',
               fontSize: 14, fontWeight: 600,
               cursor: signing ? 'wait' : 'pointer',
               fontFamily: "'Instrument Sans', system-ui, sans-serif",
@@ -169,13 +169,13 @@ function LoginScreen() {
           >
             {/* Google G mark */}
             <svg width="18" height="18" viewBox="0 0 18 18">
-              <path fill={signing ? '#8A8272' : 'var(--sb-accent-tint)'} fillOpacity=".9"
+              <path fill={signing ? 'var(--sb-ink-4)' : 'var(--sb-accent-tint)'} fillOpacity=".9"
                 d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.716v2.259h2.908C16.658 14.076 17.64 11.768 17.64 9.2z"/>
-              <path fill={signing ? '#8A8272' : 'var(--sb-accent-tint)'} fillOpacity=".75"
+              <path fill={signing ? 'var(--sb-ink-4)' : 'var(--sb-accent-tint)'} fillOpacity=".75"
                 d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/>
-              <path fill={signing ? '#8A8272' : 'var(--sb-accent-tint)'} fillOpacity=".6"
+              <path fill={signing ? 'var(--sb-ink-4)' : 'var(--sb-accent-tint)'} fillOpacity=".6"
                 d="M3.964 10.706A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.706V4.962H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.038l3.007-2.332z"/>
-              <path fill={signing ? '#8A8272' : 'var(--sb-accent-tint)'} fillOpacity=".9"
+              <path fill={signing ? 'var(--sb-ink-4)' : 'var(--sb-accent-tint)'} fillOpacity=".9"
                 d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.962L3.964 6.294C4.672 4.169 6.656 3.58 9 3.58z"/>
             </svg>
             {signing ? 'Redirecting…' : 'Continue with Google'}
@@ -183,14 +183,14 @@ function LoginScreen() {
 
           {/* Divider */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '24px 0' }}>
-            <div style={{ flex: 1, height: 1, background: '#E8E1CE' }} />
-            <span style={{ fontSize: 11.5, color: '#8A8272' }}>or</span>
-            <div style={{ flex: 1, height: 1, background: '#E8E1CE' }} />
+            <div style={{ flex: 1, height: 1, background: 'var(--sb-border)' }} />
+            <span style={{ fontSize: 11.5, color: 'var(--sb-ink-4)' }}>or</span>
+            <div style={{ flex: 1, height: 1, background: 'var(--sb-border)' }} />
           </div>
 
           {/* Email (passive — redirects to Google OAuth anyway) */}
           <div style={{ marginBottom: 12 }}>
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#4A4438', marginBottom: 5 }}>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--sb-ink-2)', marginBottom: 5 }}>
               Email
             </label>
             <input
@@ -199,15 +199,15 @@ function LoginScreen() {
               disabled
               style={{
                 width: '100%', padding: '11px 14px', borderRadius: 9,
-                background: '#FAF7EC', border: '1px solid #E8E1CE',
-                color: '#8A8272', fontSize: 13,
+                background: 'var(--sb-field)', border: '1px solid var(--sb-border)',
+                color: 'var(--sb-ink-4)', fontSize: 13,
                 outline: 'none', cursor: 'not-allowed',
                 fontFamily: 'inherit', boxSizing: 'border-box',
               }}
             />
           </div>
           <div style={{ marginBottom: 20 }}>
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#4A4438', marginBottom: 5 }}>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--sb-ink-2)', marginBottom: 5 }}>
               Password
             </label>
             <input
@@ -216,8 +216,8 @@ function LoginScreen() {
               disabled
               style={{
                 width: '100%', padding: '11px 14px', borderRadius: 9,
-                background: '#FAF7EC', border: '1px solid #E8E1CE',
-                color: '#8A8272', fontSize: 13,
+                background: 'var(--sb-field)', border: '1px solid var(--sb-border)',
+                color: 'var(--sb-ink-4)', fontSize: 13,
                 outline: 'none', cursor: 'not-allowed',
                 fontFamily: 'inherit', boxSizing: 'border-box',
               }}
@@ -229,19 +229,19 @@ function LoginScreen() {
             style={{
               width: '100%', padding: '12px',
               borderRadius: 10,
-              background: '#FAF7EC', border: '1px solid #E8E1CE',
-              color: '#8A8272', fontSize: 14, fontWeight: 600,
+              background: 'var(--sb-field)', border: '1px solid var(--sb-border)',
+              color: 'var(--sb-ink-4)', fontSize: 14, fontWeight: 600,
               cursor: 'not-allowed', fontFamily: 'inherit',
             }}
           >
             Log in
           </button>
 
-          <p style={{ margin: '24px 0 0', fontSize: 11.5, color: '#8A8272', textAlign: 'center', lineHeight: 1.65 }}>
+          <p style={{ margin: '24px 0 0', fontSize: 11.5, color: 'var(--sb-ink-4)', textAlign: 'center', lineHeight: 1.65 }}>
             By continuing, you agree to our{' '}
-            <span style={{ color: '#4A4438', textDecoration: 'underline', cursor: 'pointer' }}>Terms</span>
+            <span style={{ color: 'var(--sb-ink-2)', textDecoration: 'underline', cursor: 'pointer' }}>Terms</span>
             {' '}and{' '}
-            <span style={{ color: '#4A4438', textDecoration: 'underline', cursor: 'pointer' }}>Privacy Policy</span>.
+            <span style={{ color: 'var(--sb-ink-2)', textDecoration: 'underline', cursor: 'pointer' }}>Privacy Policy</span>.
           </p>
         </div>
       </div>
@@ -256,23 +256,23 @@ function LoadingScreen() {
     <div style={{
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
       minHeight: '100vh',
-      background: 'linear-gradient(160deg, #F7F4EA 0%, #EEE8D0 100%)',
+      background: 'linear-gradient(160deg, var(--sb-page) 0%, #EEE8D0 100%)',
       gap: 16,
       fontFamily: "'Instrument Sans', system-ui, sans-serif",
     }}>
       <div style={{
         width: 44, height: 44, borderRadius: 11,
-        background: '#191712',
+        background: 'var(--sb-ink-1)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         animation: 'sbPulse 1.6s ease-in-out infinite',
       }}>
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
-          stroke="#FDF8E7" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          stroke="var(--sb-ink-on-dark)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
           <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
           <path d="M6 12v5c3.333 2 8.667 2 12 0v-5"/>
         </svg>
       </div>
-      <span style={{ fontSize: 13, color: '#6C6553', fontWeight: 500 }}>Loading your system…</span>
+      <span style={{ fontSize: 13, color: 'var(--sb-ink-3)', fontWeight: 500 }}>Loading your system…</span>
       <style>{`
         @keyframes sbPulse {
           0%, 100% { opacity: 1; transform: scale(1); }
@@ -407,9 +407,9 @@ function NotificationBell() {
         aria-expanded={open}
         style={{
           width: 34, height: 34, borderRadius: 12, padding: 0,
-          background: '#FFFFFF', border: '1px solid #E8E1CE',
+          background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          cursor: 'pointer', color: '#6C6553', position: 'relative',
+          cursor: 'pointer', color: 'var(--sb-ink-3)', position: 'relative',
         }}>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
           <path d="M18 16V11a6 6 0 1 0-12 0v5l-1.5 2.5h15z"/>
@@ -419,9 +419,9 @@ function NotificationBell() {
         {count > 0 && !quiet && (
           <span style={{
             position: 'absolute', top: -4, right: -4, minWidth: 17, height: 17, padding: '0 4px',
-            borderRadius: 999, background: '#C62828', color: '#FFFFFF',
+            borderRadius: 999, background: 'var(--sb-negative)', color: 'var(--sb-card)',
             fontSize: 10, fontWeight: 700, lineHeight: '17px', textAlign: 'center',
-            boxShadow: '0 0 0 2px #FCFAF4',
+            boxShadow: '0 0 0 2px var(--sb-header)',
           }}>{count > 9 ? '9+' : count}</span>
         )}
       </button>
@@ -430,18 +430,18 @@ function NotificationBell() {
         <div role="menu" style={{
           position: 'absolute', top: 'calc(100% + 8px)', right: 0, zIndex: 120,
           width: 340, maxHeight: 460, overflowY: 'auto', scrollbarWidth: 'thin',
-          background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 14, padding: 6,
+          background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 14, padding: 6,
           boxShadow: '0 22px 48px -20px rgba(25,23,18,.45)',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px 10px', borderBottom: '1px solid #F0EBDC' }}>
-            <p style={{ margin: 0, flex: 1, fontSize: 13, fontWeight: 600, color: '#191712' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px 10px', borderBottom: '1px solid var(--sb-hairline)' }}>
+            <p style={{ margin: 0, flex: 1, fontSize: 13, fontWeight: 600, color: 'var(--sb-ink-1)' }}>
               Notifications{count ? ` · ${count}` : ''}
             </p>
             {count > 0 && (
               <button onClick={() => { markSeen(items.map(i => i.id)); setItems([]) }}
                 style={{
                   background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
-                  fontSize: 11.5, color: '#6C6553', padding: 0,
+                  fontSize: 11.5, color: 'var(--sb-ink-3)', padding: 0,
                 }}>Clear all</button>
             )}
           </div>
@@ -459,7 +459,7 @@ function NotificationBell() {
               }} />
               <span style={{ flex: 1, minWidth: 0 }}>
                 <span style={{
-                  display: 'block', fontSize: 12.5, color: '#191712', lineHeight: 1.35,
+                  display: 'block', fontSize: 12.5, color: 'var(--sb-ink-1)', lineHeight: 1.35,
                   overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                 }}>{n.title}</span>
                 <span style={{ display: 'block', fontSize: 11, color: '#9B9180', lineHeight: 1.35 }}>{n.detail}</span>
@@ -474,7 +474,7 @@ function NotificationBell() {
           )}
 
           {quiet && (
-            <p style={{ margin: '4px 6px 0', padding: '8px 10px', borderRadius: 9, background: '#FAF7EC', fontSize: 11, color: '#6C6553', lineHeight: 1.45 }}>
+            <p style={{ margin: '4px 6px 0', padding: '8px 10px', borderRadius: 9, background: 'var(--sb-field)', fontSize: 11, color: 'var(--sb-ink-3)', lineHeight: 1.45 }}>
               Quiet hours — you are not being interrupted, but nothing is hidden.
             </p>
           )}
@@ -491,7 +491,7 @@ function NotificationBell() {
             style={{
               display: 'flex', alignItems: 'center', gap: 8, width: '100%', height: 34, marginTop: 4,
               padding: '0 10px', borderRadius: 9, border: 'none', background: 'transparent',
-              color: '#6C6553', fontSize: 12, fontFamily: 'inherit', cursor: 'pointer', textAlign: 'left',
+              color: 'var(--sb-ink-3)', fontSize: 12, fontFamily: 'inherit', cursor: 'pointer', textAlign: 'left',
             }}>
             <Settings size={13} color="#9B9180" /> What gets notified
           </button>
@@ -502,7 +502,7 @@ function NotificationBell() {
 }
 
 const KIND_COLOR: Record<string, string> = {
-  decision: '#C62828', conflict: '#D68F6A', habit: '#0C8140', review: 'var(--sb-accent)',
+  decision: 'var(--sb-negative)', conflict: '#D68F6A', habit: 'var(--sb-positive)', review: 'var(--sb-accent)',
 }
 
 function TopNav() {
@@ -528,8 +528,8 @@ function TopNav() {
   return (
     <header style={{
       height: NAV_H, flexShrink: 0,
-      background: '#FCFAF4',
-      borderBottom: '1px solid #E8E1CE',
+      background: 'var(--sb-header)',
+      borderBottom: '1px solid var(--sb-border)',
       display: 'flex', alignItems: 'center',
       padding: '0 22px', gap: 16,
     }}>
@@ -552,9 +552,9 @@ function TopNav() {
               style={{
                 height: 38, padding: '0 15px', borderRadius: 999,
                 border: 'none', cursor: 'pointer',
-                background: active ? '#FFFFFF' : 'transparent',
+                background: active ? 'var(--sb-card)' : 'transparent',
                 boxShadow: active ? '0 1px 3px rgba(25,23,18,.16)' : 'none',
-                color:      active ? '#191712' : '#6C6553',
+                color:      active ? 'var(--sb-ink-1)' : 'var(--sb-ink-3)',
                 fontSize: 13.5, fontWeight: active ? 600 : 500,
                 fontFamily: "'Instrument Sans', system-ui, sans-serif",
                 transition: 'background 120ms ease-out, color 120ms ease-out, box-shadow 120ms ease-out',
@@ -564,7 +564,7 @@ function TopNav() {
               onMouseEnter={e => {
                 if (!active) {
                   const el = e.currentTarget as HTMLButtonElement
-                  el.style.background = '#FFFFFF'
+                  el.style.background = 'var(--sb-card)'
                   el.style.boxShadow = '0 1px 3px rgba(25,23,18,.08)'
                 }
               }}
@@ -592,15 +592,15 @@ function TopNav() {
           style={{
             display: 'flex', alignItems: 'center', gap: 7,
             padding: '6px 12px',
-            background: '#FFFFFF', border: '1px solid #E8E1CE',
+            background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
             borderRadius: 12, cursor: 'pointer',
           }}>
-          <Search size={13} color="#6C6553" />
-          <span style={{ fontSize: 12.5, color: '#8A8272', userSelect: 'none' }}>Search</span>
+          <Search size={13} color="var(--sb-ink-3)" />
+          <span style={{ fontSize: 12.5, color: 'var(--sb-ink-4)', userSelect: 'none' }}>Search</span>
           <span style={{
             marginLeft: 4,
             fontSize: 10, fontFamily: "'JetBrains Mono', monospace",
-            color: '#8A8272', opacity: 0.7,
+            color: 'var(--sb-ink-4)', opacity: 0.7,
           }}>⌘K</span>
         </div>
 
@@ -615,14 +615,14 @@ function TopNav() {
             aria-expanded={menuOpen}
             style={{
               width: 32, height: 32, borderRadius: '50%', padding: 0,
-              background: '#191712', border: 'none',
+              background: 'var(--sb-ink-1)', border: 'none',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               cursor: 'pointer', overflow: 'hidden',
             }}>
             {user?.avatarUrl ? (
               <img src={user.avatarUrl} alt={initials} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             ) : (
-              <span style={{ fontSize: 12, fontWeight: 600, color: '#FDF8E7', letterSpacing: '0.02em' }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--sb-ink-on-dark)', letterSpacing: '0.02em' }}>
                 {initials}
               </span>
             )}
@@ -630,12 +630,12 @@ function TopNav() {
           {menuOpen && (
             <div role="menu" style={{
               position: 'absolute', top: 'calc(100% + 8px)', right: 0, zIndex: 120, minWidth: 216,
-              background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 14, padding: 6,
+              background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 14, padding: 6,
               boxShadow: '0 22px 48px -20px rgba(25,23,18,.45)',
             }}>
-              <div style={{ padding: '8px 10px 10px', borderBottom: '1px solid #F0EBDC', marginBottom: 5 }}>
+              <div style={{ padding: '8px 10px 10px', borderBottom: '1px solid var(--sb-hairline)', marginBottom: 5 }}>
                 <p style={{
-                  margin: 0, fontSize: 13, fontWeight: 600, color: '#191712',
+                  margin: 0, fontSize: 13, fontWeight: 600, color: 'var(--sb-ink-1)',
                   overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                 }}>{user?.name ?? 'Your account'}</p>
                 <p style={{
@@ -650,9 +650,9 @@ function TopNav() {
                   display: 'flex', alignItems: 'center', gap: 9, width: '100%', height: 36,
                   padding: '0 10px', borderRadius: 9, border: 'none', cursor: 'pointer',
                   background: activeModule === 'settings' ? '#F5F1E6' : 'transparent',
-                  color: '#191712', fontSize: 13.5, fontFamily: 'inherit', textAlign: 'left',
+                  color: 'var(--sb-ink-1)', fontSize: 13.5, fontFamily: 'inherit', textAlign: 'left',
                 }}>
-                <Settings size={15} color="#6C6553" /> Settings
+                <Settings size={15} color="var(--sb-ink-3)" /> Settings
               </button>
               <button
                 role="menuitem"
@@ -660,10 +660,10 @@ function TopNav() {
                 style={{
                   display: 'flex', alignItems: 'center', gap: 9, width: '100%', height: 36,
                   padding: '0 10px', borderRadius: 9, border: 'none', cursor: 'pointer',
-                  background: 'transparent', color: '#C62828', fontSize: 13.5,
+                  background: 'transparent', color: 'var(--sb-negative)', fontSize: 13.5,
                   fontFamily: 'inherit', textAlign: 'left',
                 }}>
-                <LogOut size={15} color="#C62828" /> Sign out
+                <LogOut size={15} color="var(--sb-negative)" /> Sign out
               </button>
             </div>
           )}
@@ -1118,7 +1118,7 @@ function App() {
     <div style={{
       height: '100dvh',
       overflow: 'hidden',
-      background: '#F7F4EA',
+      background: 'var(--sb-page)',
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
@@ -1133,11 +1133,11 @@ function App() {
         flexDirection: 'column',
         height: '100%',
         minHeight: 0,
-        background: '#F7F4EA',
+        background: 'var(--sb-page)',
       }}>
         <TopNav />
         <SyncGapBanner />
-        <main style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', background: '#F7F4EA' }}>
+        <main style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', background: 'var(--sb-page)' }}>
           <ActiveModule />
         </main>
       </div>
