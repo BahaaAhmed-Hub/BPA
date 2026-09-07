@@ -244,7 +244,7 @@ function WeekCalendar({ events, weekStart, viewMode, selectedDay, onSelectDay, o
                       background: color, borderRadius: 'var(--sb-r-chip)',
                       padding: '2px 5px', overflow: 'hidden', cursor: 'context-menu',
                     }}>
-                    <div style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, color: '#fff', lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                    <div style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, color: 'var(--sb-ink-on-fill)', lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
                       {evt.summary ?? 'Event'}
                     </div>
                   </div>

@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { WALL_PALETTE } from '@/lib/palettes'
-import { Button } from '@/components/ui'
+import { Button, Segmented } from '@/components/ui'
 import { stepFor } from '@/lib/habitSteps'
 import { Plus, Trash2, X, ChevronLeft, ChevronRight } from 'lucide-react'
 import {
@@ -12,6 +12,7 @@ import { saveHabitLogsToDB } from '@/lib/dbSync'
 import { markLocalWrite } from '@/lib/liveSync'
 import { ICON, STROKE } from '@/lib/type'
 import { alpha } from '@/lib/alpha'
+import { dayProgress, dayTotals, spanTotals } from '@/lib/habitProgress'
 
 let logsDbTimer: ReturnType<typeof setTimeout> | null = null
 function scheduleLogsSync(logs: HabitLogs) {
@@ -324,8 +325,11 @@ function QuantityControl({ value, goal, unit, onSet }: { value: number; goal?: n
 }
 
 
-function ProgressRing({ done, total }: { done: number; total: number }) {
-  const pct = total > 0 ? done / total : 0
+/** The ring fills with *progress* — six glasses of eight is three quarters of
+ *  that habit's day — and the figure inside it stays the count of habits
+ *  actually finished, which is a different question. */
+function ProgressRing({ done, total, progress }: { done: number; total: number; progress?: number }) {
+  const pct = total > 0 ? (progress ?? done) / total : 0
   const deg = Math.round(pct * 360)
   return (
     <span style={{
@@ -683,10 +687,13 @@ function FillCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, o
 // how it is going, and — for a counter — today's number with its controls.
 
 function HabitDetailPanel({
-  habit, hLogs, qtyToday, today, onClose, onUpdate, onToggleToday, onSetQuantity,
+  habit, hLogs, hQty, qtyToday, today, onClose, onUpdate, onToggleToday, onSetQuantity,
 }: {
   habit: Habit
   hLogs: string[]
+  /** Every day's quantity for this habit, so the record can shade a part-day
+   *  rather than pretending nothing happened. */
+  hQty: Record<string, number>
   qtyToday: number
   today: string
   onClose: () => void
@@ -713,7 +720,12 @@ function HabitDetailPanel({
   })()
 
   const last30 = Array.from({ length: 30 }, (_, i) => offsetDays(today, -i))
-  const completionRate = Math.round((last30.filter(d => hLogs.includes(d)).length / 30) * 100)
+  // A part-day counts for its part — the whole reason a measurable habit has a
+  // goal is that it is done by degrees.
+  const oneLogs = { [habit.id]: hLogs }
+  const oneQty  = { [habit.id]: hQty }
+  const completionRate = Math.round(
+    (last30.reduce((n, d) => n + dayProgress(habit, d, oneLogs, oneQty), 0) / 30) * 100)
   const heatmapDays = Array.from({ length: 91 }, (_, i) => offsetDays(today, -(90 - i)))
 
   const pct = hasGoal ? Math.min(100, Math.round((qtyToday / habit.goal!) * 100)) : 0
@@ -815,12 +827,16 @@ function HabitDetailPanel({
         <div style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.1em', color: 'var(--sb-ink-3)', marginBottom: 6 }}>LAST 13 WEEKS</div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(13, 1fr)', gridAutoRows: 11, gap: 2 }}>
           {heatmapDays.map(d => {
-            const done = hLogs.includes(d)
+            const p = dayProgress(habit, d, oneLogs, oneQty)
             const isT = d === today
             return (
-              <div key={d} title={d} style={{
+              <div key={d} title={p > 0 && p < 1 ? `${d} · ${Math.round(p * 100)}%` : d} style={{
                 borderRadius: 'var(--sb-r-chip)',
-                background: done ? 'var(--sb-positive)' : isT ? 'rgba(var(--sb-accent-rgb),0.13)' : 'var(--sb-hairline)',
+                // A day shades in proportion to how much of it was done, so a
+                // run of half-days reads as a run rather than as nothing.
+                background: p > 0
+                  ? `color-mix(in srgb, var(--sb-positive) ${Math.round(p * 100)}%, var(--sb-hairline))`
+                  : isT ? 'rgba(var(--sb-accent-rgb),0.13)' : 'var(--sb-hairline)',
                 border: isT ? '1px solid var(--sb-accent)' : '1px solid transparent',
               }} />
             )
@@ -929,18 +945,19 @@ export function HabitsModule() {
   const activeHabits = habits.filter(h => h.isActive)
   const detailHabit = detailHabitId ? activeHabits.find(h => h.id === detailHabitId) ?? null : null
 
-  // Today's completion stats
-  const todayDone = activeHabits.filter(h => (logs[h.id] ?? []).includes(today)).length
+  // Today's completion stats. Every percentage counts part-days — six glasses
+  // of eight moves it — while "done" stays the number actually finished.
   const totalActive = activeHabits.length
-  const completionPct = totalActive > 0 ? Math.round((todayDone / totalActive) * 100) : 0
+  const todayTotals = dayTotals(activeHabits, today, logs, qtyLogs)
+  const todayDone = todayTotals.done
+  const completionPct = todayTotals.pct
 
   // Week completion stats
   const weekDayKeys = days
-  const weekCheckIns = activeHabits.reduce((sum, h) => {
-    return sum + weekDayKeys.filter(d => (logs[h.id] ?? []).includes(d)).length
-  }, 0)
+  const weekTotals = spanTotals(activeHabits, weekDayKeys, logs, qtyLogs)
+  const weekCheckIns = weekTotals.done
   const weekTotal = activeHabits.length * 7
-  const weekPct = weekTotal > 0 ? Math.round((weekCheckIns / weekTotal) * 100) : 0
+  const weekPct = weekTotals.pct
 
   // Current streak (max across active habits) + cold days
   const bestStreak = activeHabits.length > 0
@@ -975,7 +992,8 @@ export function HabitsModule() {
 
   // The summary reads one day at a time. Today until you click another bar.
   const [selectedDay, setSelectedDay] = useState(today)
-  const dayDone = activeHabits.filter(h => (logs[h.id] ?? []).includes(selectedDay)).length
+  const dayTotal = dayTotals(activeHabits, selectedDay, logs, qtyLogs)
+  const dayDone = dayTotal.done
   const isToday = selectedDay === today
   const selectedLabel = new Date(selectedDay + 'T12:00:00')
     .toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' })
@@ -990,11 +1008,7 @@ export function HabitsModule() {
   const isCurrentWeek = weekAnchor === weekStart(today)
 
   // Week bar data: for each day of week, compute completion % across all habits
-  const weekBars = days.map(d => {
-    if (totalActive === 0) return 0
-    const done = activeHabits.filter(h => (logs[h.id] ?? []).includes(d)).length
-    return done / totalActive
-  })
+  const weekBars = days.map(d => dayTotals(activeHabits, d, logs, qtyLogs).fraction)
 
   return (
     <div style={{ padding: '22px 26px 60px', display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -1015,22 +1029,16 @@ export function HabitsModule() {
 
         <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 9, paddingBottom: 3 }}>
           {/* View toggle */}
-          <span style={{ display: 'flex', alignItems: 'center', gap: 2, height: 34, boxSizing: 'border-box', padding: 3, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-field)' }}>
-            {([
-              { id: 'table' as const, label: 'Table' },
-              { id: 'wall'  as const, label: 'Wall' },
-              { id: 'fill'  as const, label: 'Fill' },
-            ]).map(v => (
-              <button key={v.id} onClick={() => { setView(v.id); saveHabitView(v.id) }} style={{
-                height: 28, padding: '0 12px', borderRadius: 'var(--sb-r-pill)',
-                background: view === v.id ? 'var(--sb-card)' : 'transparent',
-                boxShadow: view === v.id ? '0 1px 3px color-mix(in srgb, var(--sb-ink-1) 16.0%, transparent)' : 'none',
-                color: view === v.id ? 'var(--sb-ink-1)' : 'var(--sb-ink-3)',
-                fontWeight: view === v.id ? 600 : 500, fontSize: 'var(--sb-t-body-s)',
-                border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center',
-              }}>{v.label}</button>
-            ))}
-          </span>
+          <Segmented
+            aria-label="Habits view"
+            value={view}
+            onChange={v => { setView(v); saveHabitView(v) }}
+            options={[
+              { value: 'table' as const, label: 'Table' },
+              { value: 'wall'  as const, label: 'Wall' },
+              { value: 'fill'  as const, label: 'Fill' },
+            ]}
+          />
           {/* New habit CTA */}
           <Button variant="accent" onClick={createHabit} style={{ boxSizing: 'border-box', flexShrink: 0 }}>
             <Plus size={ICON.md} />
@@ -1042,7 +1050,7 @@ export function HabitsModule() {
       {/* ─── Summary card ──────────────────────────────────────────────────── */}
       <div style={{ flexShrink: 0, background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-card)', padding: '12px 18px', display: 'flex', alignItems: 'center', gap: 18, minWidth: 0 }}>
         {/* Progress ring — for the day you are looking at */}
-        <ProgressRing done={dayDone} total={totalActive} />
+        <ProgressRing done={dayDone} total={totalActive} progress={dayTotal.progress} />
 
         {/* Status text */}
         <span style={{ display: 'flex', flexDirection: 'column', gap: 1, flexShrink: 0, minWidth: 0 }}>
@@ -1426,6 +1434,7 @@ export function HabitsModule() {
           key={detailHabit.id}
           habit={detailHabit}
           hLogs={logs[detailHabit.id] ?? []}
+          hQty={qtyLogs[detailHabit.id] ?? {}}
           qtyToday={qtyLogs[detailHabit.id]?.[selectedDay] ?? 0}
           today={selectedDay}
           onClose={() => setDetailHabitId(null)}

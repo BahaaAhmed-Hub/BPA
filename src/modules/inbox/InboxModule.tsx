@@ -20,6 +20,7 @@ import type { DbUser } from '@/types/database'
 import { isMailHiddenByCompany } from '@/lib/companyVisibility'
 import { ICON, STROKE } from '@/lib/type'
 import { alpha } from '@/lib/alpha'
+import { Segmented } from '@/components/ui'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -111,7 +112,7 @@ function SenderAvatar({ name, email, size = 34 }: { name: string; email: string;
   const initials = name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || '?'
   const bg = avatarColor(email)
   return (
-    <div style={{ width: size, height: size, borderRadius: 'var(--sb-r-pill)', background: bg, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size < 30 ? 10 : 12, fontWeight: 700, color: '#fff', letterSpacing: '0.02em' }}>
+    <div style={{ width: size, height: size, borderRadius: 'var(--sb-r-pill)', background: bg, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size < 30 ? 10 : 12, fontWeight: 700, color: 'var(--sb-ink-on-fill)', letterSpacing: '0.02em' }}>
       {initials}
     </div>
   )
@@ -1106,24 +1107,17 @@ export function InboxModule() {
                     account boundary — but answering it must not hide which
                     mailbox a message is in. */}
                 <div role="group" aria-label="Which mailbox"
-                  style={{ display: 'flex', alignItems: 'center', gap: 2, padding: 3, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-field)' }}>
-                  {[{ id: 'all', label: 'All' }, ...accounts.map(a => ({ id: a.email, label: accountLabel(a.email, a.isPrimary) }))].map(opt => {
-                    const on = view === opt.id
-                    return (
-                      <button key={opt.id}
-                        onClick={() => { setView(opt.id); saveMailView(opt.id); setSelectedId(null) }}
-                        title={opt.id === 'all' ? 'Every account at once' : opt.id}
-                        style={{
-                          height: 24, padding: '0 10px', borderRadius: 'var(--sb-r-pill)', border: 'none', cursor: 'pointer',
-                          fontFamily: 'inherit', fontSize: 'var(--sb-t-meta)', fontWeight: on ? 600 : 500,
-                          background: on ? 'var(--sb-card)' : 'transparent', color: on ? 'var(--sb-ink-1)' : 'var(--sb-ink-3)',
-                          boxShadow: on ? '0 1px 3px color-mix(in srgb, var(--sb-ink-1) 16.0%, transparent)' : 'none',
-                          maxWidth: 190, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                        }}>
-                        {opt.label}
-                      </button>
-                    )
-                  })}
+                  style={{ display: 'contents' }}>
+                  <Segmented
+                    size="sm"
+                    aria-label="Which mailbox"
+                    value={view}
+                    onChange={v => { setView(v); saveMailView(v); setSelectedId(null) }}
+                    options={[
+                      { value: 'all', label: 'All', title: 'Every account at once' },
+                      ...accounts.map(a => ({ value: a.email, label: accountLabel(a.email, a.isPrimary), title: a.email })),
+                    ]}
+                  />
                 </div>
               </>
             )}

@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useMemo, useRef, type ReactNode } from 'react'
 import { C_COLORS, STATUS_COLORS_PRESETS } from '@/lib/palettes'
-import { Button, Pill } from '@/components/ui'
+import { Button, Segmented } from '@/components/ui'
 import { NAV_H } from '@/App'
 import {
   Plus, Trash2, LogIn, LogOut,
@@ -335,28 +335,6 @@ function DRow({ label, sub, children, last }: {
         {sub && <p style={{ margin: '2px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', lineHeight: 1.35 }}>{sub}</p>}
       </div>
       <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 10 }}>{children}</div>
-    </div>
-  )
-}
-
-/** Segmented control — active option is a white pill on a cream track. */
-function Segmented<T extends string>({ value, options, onChange }: {
-  value: T
-  options: { value: T; label: string }[]
-  onChange: (v: T) => void
-}) {
-  return (
-    <div style={{
-      display: 'inline-flex', alignItems: 'center', gap: 2, padding: 3,
-      background: 'var(--sb-field)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
-    }}>
-      {options.map(o => {
-        const on = o.value === value
-        return (
-          <Pill key={o.value} on={on} onClick={() => onChange(o.value)}
-            style={{ height: 28, padding: '0 14px', border: 'none' }}>{o.label}</Pill>
-        )
-      })}
     </div>
   )
 }
@@ -2040,35 +2018,21 @@ function ProfessorSection() {
   const keyLabel  = ai.provider === 'groq' ? 'Groq API key' : 'Anthropic API key'
   const keyHint   = ai.provider === 'groq' ? 'Free at console.groq.com' : 'console.anthropic.com (paid)'
 
-  function SegBtn<T extends string>({ val, cur, onClick, label }: { val: T; cur: T; onClick: () => void; label?: string }) {
-    const active = val === cur
-    return (
-      <button onClick={onClick} style={{
-        padding: '5px 13px', borderRadius: 'var(--sb-r-chip)', fontSize: 'var(--sb-t-meta)', cursor: 'pointer', fontWeight: active ? 600 : 400,
-        background: active ? 'var(--sb-ink-1)' : 'var(--sb-field)', border: `1px solid ${active ? 'var(--sb-ink-1)' : 'var(--sb-border)'}`,
-        color: active ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)', transition: 'all 0.12s',
-      }}>{label ?? val}</button>
-    )
-  }
-
   return (
     <div>
       {/* ── Model ── */}
       <FieldRow label="Model" sub="Handles the brief, drafts and matrix suggestions">
-        <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-          {[
-            { v: 'anthropic', l: 'Sonnet 4.5' },
-            { v: 'groq',      l: 'Opus 4.1' },
-            { v: 'haiku',     l: 'Haiku' },
-          ].map(({ v, l }) => (
-            <button key={v} onClick={() => setAI({ provider: v as AIConfig['provider'] })}
-              style={{
-                padding: '5px 13px', borderRadius: 'var(--sb-r-chip)', fontSize: 'var(--sb-t-meta)', cursor: 'pointer', fontWeight: ai.provider === v ? 600 : 400,
-                background: ai.provider === v ? 'var(--sb-ink-1)' : 'var(--sb-field)', border: `1px solid ${ai.provider === v ? 'var(--sb-ink-1)' : 'var(--sb-border)'}`,
-                color: ai.provider === v ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)', transition: 'all 0.12s',
-              }}>{l}</button>
-          ))}
-        </div>
+        <Segmented
+          size="sm"
+          aria-label="Model"
+          value={ai.provider}
+          onChange={v => setAI({ provider: v as AIConfig['provider'] })}
+          options={[
+            { value: 'anthropic', label: 'Sonnet 4.5' },
+            { value: 'groq',      label: 'Opus 4.1' },
+            { value: 'haiku',     label: 'Haiku' },
+          ]}
+        />
       </FieldRow>
 
       {/* ── API key ── */}
@@ -2088,11 +2052,17 @@ function ProfessorSection() {
 
       {/* ── Autonomy ── */}
       <FieldRow label="Autonomy" sub="How far the assistant may act before asking you">
-        <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-          <SegBtn val="suggest" cur={autonomy} onClick={() => setAutonomy('suggest')} label="Suggest" />
-          <SegBtn val="draft"   cur={autonomy} onClick={() => setAutonomy('draft')}   label="Draft & hold" />
-          <SegBtn val="act"     cur={autonomy} onClick={() => setAutonomy('act')}     label="Act" />
-        </div>
+        <Segmented
+          size="sm"
+          aria-label="Autonomy"
+          value={autonomy}
+          onChange={setAutonomy}
+          options={[
+            { value: 'suggest' as const, label: 'Suggest' },
+            { value: 'draft'   as const, label: 'Draft & hold' },
+            { value: 'act'     as const, label: 'Act' },
+          ]}
+        />
       </FieldRow>
 
       {/* ── Behaviour toggles ── */}

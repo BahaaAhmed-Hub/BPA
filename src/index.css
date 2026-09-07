@@ -59,6 +59,16 @@
   --sb-negative:      #C62828;
   --sb-negative-deep: #A31C1C;
   --sb-negative-tint: #FAE3E3;
+  /* A categorical ramp: six colours whose only job is to stay apart from each
+     other — the task types, and anything else that is a set rather than a
+     scale of meaning. Each clears 4.5:1 on this theme's card. */
+  --sb-cat-1:         #685FD7;
+  --sb-cat-2:         #177C5B;
+  --sb-cat-3:         #C77A3E;
+  --sb-cat-4:         #3E6FA3;
+  --sb-cat-5:         #8B5FA8;
+  --sb-cat-6:         #2F8C6E;
+
   --sb-info:          #685FD7;
   --sb-info-tint:     #EDEBFA;
   --sb-warning:       #B26A00;
@@ -379,6 +389,49 @@ html, body {
   color: var(--sb-ink-on-dark);
   font-weight: 600;
 }
+
+/* Segmented ---------------------------------------------------------------- */
+.sb-segmented {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+  padding: 3px;
+  box-sizing: border-box;
+  border-radius: var(--sb-r-pill);
+  background: var(--sb-field);
+}
+.sb-segmented[data-block] { display: flex; width: 100%; }
+.sb-segmented[data-block] .sb-segmented-opt { flex: 1; justify-content: center; }
+
+.sb-segmented-opt {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 12px;
+  border: none;
+  border-radius: var(--sb-r-pill);
+  background: transparent;
+  color: var(--sb-ink-3);
+  font-family: var(--sb-font-ui);
+  font-size: var(--sb-t-body-s);
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 120ms ease-out, color 120ms ease-out;
+}
+.sb-segmented-opt:hover:not([data-active]):not(:disabled) { color: var(--sb-ink-1); }
+.sb-segmented-opt[data-active] {
+  background: var(--sb-card);
+  color: var(--sb-ink-1);
+  font-weight: 600;
+  box-shadow: var(--sb-shadow-control);
+}
+.sb-segmented-opt:disabled { color: var(--sb-ink-4); cursor: default; }
+
+.sb-segmented[data-size="sm"] .sb-segmented-opt { height: 24px; padding: 0 10px; font-size: var(--sb-t-meta); gap: 5px; }
+.sb-segmented[data-size="lg"] .sb-segmented-opt { height: 30px; padding: 0 14px; font-size: var(--sb-t-body); }
 
 /* Two hovers that are not a primitive: a figure that underlines to say it can
    be opened, and a row that tints. Both were mouse handlers writing styles. */

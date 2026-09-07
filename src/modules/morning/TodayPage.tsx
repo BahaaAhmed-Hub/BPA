@@ -28,6 +28,7 @@ import { isMailHiddenByCompany } from '@/lib/companyVisibility'
 import { TASK_TYPE_ICON } from '@/modules/tasks/taskVisuals'
 import type { Task } from '@/types'
 import { ICON, STROKE } from '@/lib/type'
+import { dayTotals, spanTotals } from '@/lib/habitProgress'
 
 // ─── Tokens ──────────────────────────────────────────────────────────────────
 
@@ -844,9 +845,10 @@ function HabitsCard({ habits, logs, qtyLogs, today, onToggle, onSetQty, onOpenTr
 }) {
   // The seven days ending today, so the last column is always now
   const week = Array.from({ length: 7 }, (_, i) => offsetDays(today, -(6 - i)))
-  const doneToday = habits.filter(h => (logs[h.id] ?? []).includes(today)).length
-  const weekDone = habits.reduce((n, h) => n + week.filter(d => (logs[h.id] ?? []).includes(d)).length, 0)
-  const weekPct = habits.length ? Math.round((weekDone / (habits.length * 7)) * 100) : 0
+  // Part-days count: a measurable habit half done is half a day done.
+  const todayTotals = dayTotals(habits, today, logs, qtyLogs)
+  const doneToday = todayTotals.done
+  const weekPct = spanTotals(habits, week, logs, qtyLogs).pct
   const best = habits.length ? Math.max(...habits.map(h => calcStreak(logs[h.id] ?? []))) : 0
 
   const allLogged = habits.flatMap(h => logs[h.id] ?? []).sort()

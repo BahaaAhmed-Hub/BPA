@@ -3,6 +3,7 @@ import { PALETTE } from '@/lib/palettes'
 import { useFinanceStore } from '../financeStore'
 import { settled, whenPaid } from '../unpaid'
 import { toBase, baseCurrency, currenciesNeedingRates } from '../fx'
+import { Segmented } from '@/components/ui'
 
 // ─── Donut chart helpers ───────────────────────────────────────────────────────
 
@@ -270,19 +271,15 @@ export function ReportsScreen(_props?: any) {
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8, paddingBottom: 3 }}>
           {/* View toggle */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 2, padding: 3, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-field)' }}>
-            {(['donut', 'bars'] as const).map(v => (
-              <button key={v} onClick={() => setReportView(v)} style={{
-                height: 28, padding: '0 14px', borderRadius: 'var(--sb-r-pill)', border: 'none',
-                background: reportView === v ? 'var(--sb-card)' : 'transparent',
-                color: reportView === v ? 'var(--sb-ink-1)' : 'var(--sb-ink-3)',
-                fontSize: 'var(--sb-t-meta)', fontWeight: reportView === v ? 600 : 400, cursor: 'pointer',
-                boxShadow: reportView === v ? '0 1px 3px color-mix(in srgb, var(--sb-ink-1) 16.0%, transparent)' : 'none',
-                fontFamily: 'inherit',
-                transition: 'background 220ms ease, color 220ms ease, box-shadow 220ms ease',
-              }}>{v === 'donut' ? 'Donut' : 'Bars'}</button>
-            ))}
-          </div>
+          <Segmented
+            aria-label="How to draw the report"
+            value={reportView}
+            onChange={setReportView}
+            options={[
+              { value: 'donut' as const, label: 'Donut' },
+              { value: 'bars'  as const, label: 'Bars' },
+            ]}
+          />
         </div>
       </div>
 

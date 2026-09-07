@@ -6,10 +6,11 @@ import {
 import { useTaskStore } from '@/store/taskStore'
 import { useUIStore } from '@/store/uiStore'
 import { loadDynamicCompanies, isTaskHidden } from '@/types'
-import { loadHabits, loadLogs, calcStreak } from '@/store/habitsStore'
+import { loadHabits, loadLogs, loadQuantityLogs, calcStreak } from '@/store/habitsStore'
 import { fetchVisibleEvents } from '@/lib/calendarEvents'
 import { ICON, STROKE } from '@/lib/type'
 import { alpha } from '@/lib/alpha'
+import { dayTotals } from '@/lib/habitProgress'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -134,7 +135,7 @@ export function ExecutiveDashboard() {
 
   const [todayMeetings, setTodayMeetings] = useState(0)
   const [habitStreak,   setHabitStreak]   = useState(0)
-  const [habitProgress, setHabitProgress] = useState({ done: 0, total: 0 })
+  const [habitProgress, setHabitProgress] = useState({ done: 0, total: 0, pct: 0 })
 
   const activeTasks    = tasks.filter(t => !t.completed)
   const urgentTasks    = tasks.filter(t => t.quadrant === 'do' && !t.completed)
@@ -164,9 +165,10 @@ export function ExecutiveDashboard() {
     const habits  = loadHabits().filter(h => h.isActive)
     const logs    = loadLogs()
     const today   = todayKey()
-    const done    = habits.filter(h => (logs[h.id] ?? []).includes(today)).length
+    // The percentage counts part-days: three of eight glasses is not nothing.
+    const totals  = dayTotals(habits, today, logs, loadQuantityLogs())
     const best    = Math.max(0, ...habits.map(h => calcStreak(logs[h.id] ?? [])))
-    setHabitProgress({ done, total: habits.length })
+    setHabitProgress({ done: totals.done, total: habits.length, pct: totals.pct })
     setHabitStreak(best)
   }, [])
 
@@ -263,7 +265,9 @@ export function ExecutiveDashboard() {
           <MetricCard
             label="Today's Habits"
             value={`${habitProgress.done}/${habitProgress.total}`}
-            delta={habitProgress.done === habitProgress.total && habitProgress.total > 0 ? 'All done!' : habitProgress.total === 0 ? 'No habits set' : `${habitProgress.total - habitProgress.done} remaining`}
+            delta={habitProgress.done === habitProgress.total && habitProgress.total > 0 ? 'All done!'
+              : habitProgress.total === 0 ? 'No habits set'
+              : `${habitProgress.pct}% of today · ${habitProgress.total - habitProgress.done} to finish`}
             deltaPositive={habitProgress.done === habitProgress.total}
             icon={Target}
             accentColor="var(--sb-positive)"

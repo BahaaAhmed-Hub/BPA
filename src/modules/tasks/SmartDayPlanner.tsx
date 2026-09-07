@@ -298,7 +298,7 @@ function HourSlot({ hour, block, taskTitle, onRemove, busyEventsAtStart, isBusyC
             }}
           >
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <div style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-ink-on-fill)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {taskTitle}
               </div>
               {block.gcalEventId && (
@@ -308,7 +308,7 @@ function HourSlot({ hour, block, taskTitle, onRemove, busyEventsAtStart, isBusyC
             {onRemove && (
               <button
                 onClick={e => { e.stopPropagation(); onRemove() }}
-                style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 'var(--sb-r-chip)', cursor: 'pointer', color: '#fff', padding: '1px 4px', fontSize: 'var(--sb-t-micro)', flexShrink: 0 }}
+                style={{ background: 'color-mix(in srgb, var(--sb-ink-on-fill) 20%, transparent)', border: 'none', borderRadius: 'var(--sb-r-chip)', cursor: 'pointer', color: 'var(--sb-ink-on-fill)', padding: '1px 4px', fontSize: 'var(--sb-t-micro)', flexShrink: 0 }}
               >
                 ×
               </button>
@@ -762,7 +762,7 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
             <div style={{ flex: 1 }} />
             <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
               <div onClick={() => setIncludeBreaks(b => !b)} style={{ width: 40, height: 22, borderRadius: 'var(--sb-r-nav)', background: includeBreaks ? 'var(--sb-warning)' : 'var(--sb-ink-4)', position: 'relative', cursor: 'pointer', transition: 'background 0.15s' }}>
-                <div style={{ position: 'absolute', top: 3, left: includeBreaks ? 21 : 3, width: 16, height: 16, borderRadius: 'var(--sb-r-pill)', background: '#fff', transition: 'left 0.15s', boxShadow: 'var(--sb-shadow-control)' }} />
+                <div style={{ position: 'absolute', top: 3, left: includeBreaks ? 21 : 3, width: 16, height: 16, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-card)', transition: 'left 0.15s', boxShadow: 'var(--sb-shadow-control)' }} />
               </div>
               <span style={{ fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-2)', fontWeight: 500 }}>Include breaks</span>
             </label>

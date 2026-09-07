@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback, useRef, Fragment } from 'react'
-import { Button, Card } from '@/components/ui'
+import { Button, Card, Segmented } from '@/components/ui'
 import { ChevronDown, ChevronRight, ChevronsUpDown, ChevronsDownUp, GripVertical, X, Trash2, Plus } from 'lucide-react'
 import { useFinanceStore } from '../financeStore'
 import type { Category } from '../types'
@@ -575,21 +575,16 @@ export function ReflectionScreen(_props?: any) {
         {/* Stats bar */}
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 20, paddingBottom: 4, alignItems: 'flex-end' }}>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
-            <span style={{ display: 'inline-flex', gap: 2, padding: 3, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-field)' }}>
-              {([
-                ['due',  'When it is due', 'Every entry in the month it belongs to, paid or not'],
-                ['paid', 'When it was paid', 'Only money that has actually moved, in the month it moved'],
-              ] as const).map(([id, label, why]) => (
-                <button key={id} onClick={() => pickBasis(id)} title={why}
-                  style={{
-                    height: 26, padding: '0 12px', borderRadius: 'var(--sb-r-pill)', border: 'none', cursor: 'pointer',
-                    fontFamily: 'inherit', fontSize: 'var(--sb-t-meta)', fontWeight: basis === id ? 700 : 500,
-                    background: basis === id ? 'var(--sb-card)' : 'transparent',
-                    color: basis === id ? 'var(--sb-ink-1)' : 'var(--sb-ink-3)',
-                    boxShadow: basis === id ? '0 1px 3px color-mix(in srgb, var(--sb-ink-1) 16.0%, transparent)' : 'none',
-                  }}>{label}</button>
-              ))}
-            </span>
+            <Segmented
+              size="sm"
+              aria-label="Which date a figure is filed under"
+              value={basis}
+              onChange={pickBasis}
+              options={[
+                { value: 'due'  as const, label: 'When it is due',  title: 'Every entry in the month it belongs to, paid or not' },
+                { value: 'paid' as const, label: 'When it was paid', title: 'Only money that has actually moved, in the month it moved' },
+              ]}
+            />
             {basis === 'paid' && unpaidThisYear > 0 && (
               <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-warning)' }}>
                 {unpaidThisYear} not paid yet, so not in this view

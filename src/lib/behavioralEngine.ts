@@ -7,6 +7,8 @@
 
 import type { Task } from '@/types'
 import type { Habit, HabitLogs } from '@/store/habitsStore'
+import { loadQuantityLogs } from '@/store/habitsStore'
+import { dayProgress } from '@/lib/habitProgress'
 import type { RankResult, IdentityResult, Rank, IdentityStage } from '@/store/behavioralStore'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -58,8 +60,11 @@ function calcHabitConsistency(habits: Habit[], logs: HabitLogs): number {
   const active = habits.filter(h => h.isActive)
   if (active.length === 0) return 50
   const keys = last14Keys()
+  // A part-day counts for its part: consistency is how much of the habit was
+  // done, not how many days cleared the bar exactly.
+  const qty = loadQuantityLogs()
   const rates = active.map(h => {
-    const logged = (logs[h.id] ?? []).filter(d => keys.includes(d)).length
+    const logged = keys.reduce((n, d) => n + dayProgress(h, d, logs, qty), 0)
     const expected = h.frequency === 'weekdays'
       ? keys.filter(k => { const day = new Date(k).getDay(); return day > 0 && day < 6 }).length
       : h.frequency === 'weekly' ? 2
@@ -200,8 +205,9 @@ export function detectIdentities(tasks: Task[], habits: Habit[], logs: HabitLogs
     )
     let habitSignal = 0
     if (matchingHabits.length > 0) {
+      const qty30 = loadQuantityLogs()
       const rates = matchingHabits.map(h => {
-        const logged = (logs[h.id] ?? []).filter(d => keys30.includes(d)).length
+        const logged = keys30.reduce((n, d) => n + dayProgress(h, d, logs, qty30), 0)
         return clamp(Math.round((logged / 30) * 100))
       })
       habitSignal = Math.max(...rates)

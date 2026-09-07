@@ -90,24 +90,31 @@ export function isTaskHidden(task: { companyId?: string; company?: string }): bo
 // ─── Eisenhower Quadrants ───────────────────────────────────────────────────
 export type Quadrant = 'do' | 'schedule' | 'delegate' | 'eliminate'
 
+// Each quadrant's colour is a *meaning* — do it now, plan it, hand it over,
+// drop it — so it comes from the semantic tokens rather than a hue somebody
+// liked, and it moves with the theme.
 export const QUADRANT_META: Record<Quadrant, { label: string; sub: string; color: string }> = {
-  do:       { label: 'Do',        sub: 'Urgent + Important',         color: '#7C3AED' },
-  schedule: { label: 'Schedule',  sub: 'Not Urgent + Important',     color: '#685FD7' },
-  delegate: { label: 'Delegate',  sub: 'Urgent + Not Important',     color: '#177C5B' },
-  eliminate:{ label: 'Eliminate', sub: 'Not Urgent + Not Important', color: '#888780' },
+  do:       { label: 'Do',        sub: 'Urgent + Important',         color: 'var(--sb-negative)' },
+  schedule: { label: 'Schedule',  sub: 'Not Urgent + Important',     color: 'var(--sb-info)' },
+  delegate: { label: 'Delegate',  sub: 'Urgent + Not Important',     color: 'var(--sb-positive)' },
+  eliminate:{ label: 'Eliminate', sub: 'Not Urgent + Not Important', color: 'var(--sb-ink-4)' },
 }
 
 // ─── Task Type ───────────────────────────────────────────────────────────────
 export type TaskType = 'meeting' | 'call' | 'followup' | 'email' | 'research' | 'study' | 'deepwork' | 'do'
 
+// These seven are a *set*: no one of them means anything on its own, they only
+// have to stay apart from each other. So they come from the categorical ramp
+// (--sb-cat-1..6), which every theme answers for, rather than from the
+// semantic tokens — none of which would keep seven things distinguishable.
 export const TASK_TYPE_META: Record<TaskType, { label: string; emoji: string; color: string }> = {
-  meeting:  { label: 'Meeting / Schedule', emoji: '📅', color: '#685FD7' },
-  call:     { label: 'Call',               emoji: '📞', color: '#177C5B' },
-  followup: { label: 'Follow-up',          emoji: '↩️', color: '#E0944A' },
-  email:    { label: 'Email',              emoji: '✉️', color: '#60A5FA' },
-  research: { label: 'Research',           emoji: '🔍', color: '#A78BFA' },
-  study:    { label: 'Study',              emoji: '📚', color: '#34D399' },
-  deepwork: { label: 'Deep work',          emoji: '🧠', color: '#7C6BD8' },
+  meeting:  { label: 'Meeting / Schedule', emoji: '📅', color: 'var(--sb-cat-1)' },
+  call:     { label: 'Call',               emoji: '📞', color: 'var(--sb-cat-2)' },
+  followup: { label: 'Follow-up',          emoji: '↩️', color: 'var(--sb-cat-3)' },
+  email:    { label: 'Email',              emoji: '✉️', color: 'var(--sb-cat-4)' },
+  research: { label: 'Research',           emoji: '🔍', color: 'var(--sb-cat-5)' },
+  study:    { label: 'Study',              emoji: '📚', color: 'var(--sb-cat-6)' },
+  deepwork: { label: 'Deep work',          emoji: '🧠', color: 'var(--sb-cat-1)' },
   do:       { label: 'Do',                 emoji: '✅', color: 'var(--sb-ink-3)' },
 }
 
@@ -136,7 +143,7 @@ export type Priority = 'P0' | 'P1' | 'P2' | 'P3'
 
 export const PRIORITY_META: Record<Priority, { label: string; color: string; tint: string; border: string }> = {
   P0: { label: 'P0', color: 'var(--sb-negative)', tint: 'rgba(198,40,40,0.11)',  border: 'rgba(198,40,40,0.30)' },
-  P1: { label: 'P1', color: '#9A7B1F', tint: 'rgba(var(--sb-accent-rgb),0.22)', border: 'rgba(var(--sb-accent-rgb),0.55)' },
+  P1: { label: 'P1', color: 'var(--sb-accent-deep)', tint: 'rgba(var(--sb-accent-rgb),0.22)', border: 'rgba(var(--sb-accent-rgb),0.55)' },
   P2: { label: 'P2', color: 'var(--sb-ink-3)', tint: 'var(--sb-field)',               border: 'var(--sb-border)' },
   P3: { label: 'P3', color: 'var(--sb-ink-4)', tint: 'var(--sb-field)',               border: 'var(--sb-border)' },
 }
@@ -146,13 +153,15 @@ export type TaskStatus = 'open' | 'done' | 'cancelled'
 
 export type BoardStatus = 'backlog' | 'planned' | 'in-progress' | 'blocked' | 'delayed' | 'done'
 
+// Where a card stands is a meaning too: not started, planned, moving, stuck,
+// late, finished.
 export const BOARD_STATUS_META: Record<BoardStatus, { label: string; color: string }> = {
-  backlog:        { label: 'Backlog',      color: 'var(--sb-ink-3)' },
-  planned:        { label: 'Planned',      color: '#3B82F6' },
-  'in-progress':  { label: 'In Progress',  color: '#F59E0B' },
-  blocked:        { label: 'Blocked',      color: '#EF4444' },
-  delayed:        { label: 'Delayed',      color: '#F97316' },
-  done:           { label: 'Done',         color: '#10B981' },
+  backlog:        { label: 'Backlog',      color: 'var(--sb-ink-4)' },
+  planned:        { label: 'Planned',      color: 'var(--sb-info)' },
+  'in-progress':  { label: 'In Progress',  color: 'var(--sb-accent)' },
+  blocked:        { label: 'Blocked',      color: 'var(--sb-negative)' },
+  delayed:        { label: 'Delayed',      color: 'var(--sb-warning)' },
+  done:           { label: 'Done',         color: 'var(--sb-positive)' },
 }
 
 export interface Task {

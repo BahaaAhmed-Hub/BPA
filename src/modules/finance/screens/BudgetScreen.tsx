@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
-import { Button, Card } from '@/components/ui'
+import { Button, Card, Segmented } from '@/components/ui'
 import { CalendarClock } from 'lucide-react'
 import {
   DndContext, pointerWithin, PointerSensor, TouchSensor, useSensor, useSensors,
@@ -257,27 +257,18 @@ const STYLE_PICKS: { id: EnvelopeStyle; label: string; hint: string; icon: React
 
 function StylePicker({ value, onChange }: { value: EnvelopeStyle; onChange: (s: EnvelopeStyle) => void }) {
   return (
-    <div role="group" aria-label="How to draw the envelopes"
-      style={{ display: 'flex', alignItems: 'center', gap: 2, padding: 3, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-field)' }}>
-      {STYLE_PICKS.map(pick => {
-        const on = value === pick.id
-        return (
-          <button key={pick.id} onClick={() => onChange(pick.id)} title={pick.hint} aria-pressed={on}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 5, height: 28, padding: '0 10px',
-              borderRadius: 'var(--sb-r-pill)', cursor: 'pointer', border: 'none', fontFamily: 'inherit',
-              fontSize: 'var(--sb-t-body-s)', fontWeight: on ? 600 : 500,
-              background: on ? 'var(--sb-card)' : 'transparent',
-              color: on ? 'var(--sb-ink-1)' : 'var(--sb-ink-3)',
-              boxShadow: on ? '0 1px 3px color-mix(in srgb, var(--sb-ink-1) 16.0%, transparent)' : 'none',
-            }}>
-            {pick.icon}
-            <span style={{ display: 'none' }} />
-            {on && pick.label}
-          </button>
-        )
-      })}
-    </div>
+    <Segmented<EnvelopeStyle>
+      aria-label="How to draw the envelopes"
+      value={value}
+      onChange={onChange}
+      options={STYLE_PICKS.map(pick => ({
+        value: pick.id,
+        title: pick.hint,
+        // The glyph always; the word only on the one in force, so the row of
+        // four stays the width of one label.
+        label: <>{pick.icon}{value === pick.id && pick.label}</>,
+      }))}
+    />
   )
 }
 

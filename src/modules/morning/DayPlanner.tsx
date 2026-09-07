@@ -493,7 +493,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                               border: `1px solid ${isSelected ? group.color : 'var(--sb-ink-4)'}`,
                               display: 'flex', alignItems: 'center', justifyContent: 'center',
                             }}>
-                              {isSelected && <Check size={ICON.sm} color="#fff" strokeWidth={STROKE.active} />}
+                              {isSelected && <Check size={ICON.sm} color="var(--sb-ink-on-fill)" strokeWidth={STROKE.active} />}
                             </div>
 
                             <span style={{

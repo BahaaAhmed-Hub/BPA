@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { acct } from '../format'
 import { useFinanceStore } from '../financeStore'
 import { NotYet } from '@/components/ComingSoon'
+import { Segmented } from '@/components/ui'
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 
@@ -128,18 +129,16 @@ export function PlanScreen() {
         </div>
         <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 9, paddingBottom: 3, flexShrink: 0 }}>
           {/* Tab switcher */}
-          <span style={{ display: 'flex', alignItems: 'center', gap: 2, height: 34, boxSizing: 'border-box', padding: 3, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-field)' }}>
-            {(['Plan', 'Simulate', 'History'] as const).map(t => (
-              <button key={t} onClick={() => setTab(t)} style={{
-                height: 28, padding: '0 13px', borderRadius: 'var(--sb-r-pill)',
-                background: tab === t ? C.surface : 'transparent',
-                boxShadow: tab === t ? '0 1px 3px color-mix(in srgb, var(--sb-ink-1) 16.0%, transparent)' : 'none',
-                color: tab === t ? C.ink1 : C.ink3,
-                fontWeight: tab === t ? 600 : 500, fontSize: 'var(--sb-t-body-s)',
-                border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center',
-              }}>{t}</button>
-            ))}
-          </span>
+          <Segmented
+            aria-label="Plan view"
+            value={tab}
+            onChange={setTab}
+            options={[
+              { value: 'Plan'     as const, label: 'Plan' },
+              { value: 'Simulate' as const, label: 'Simulate' },
+              { value: 'History'  as const, label: 'History' },
+            ]}
+          />
           <button style={{ height: 34, padding: '0 14px', borderRadius: 'var(--sb-r-pill)', background: C.surface, border: `1px solid ${C.border}`, color: C.ink1, fontSize: 'var(--sb-t-body-s)', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
             Change forecast

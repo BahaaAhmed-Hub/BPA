@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { CAL_COLORS } from '@/lib/palettes'
-import { Button } from '@/components/ui'
+import { Button, Segmented } from '@/components/ui'
 import {
   ChevronLeft, ChevronRight, ChevronDown, Layers, Calendar, Video,
   Sparkles, MapPin, RefreshCw, X, Eye, EyeOff,
@@ -630,7 +630,14 @@ function ColorPickerPopover({ current, onPick, onClose }: { current: string; onP
     }}>
       {CAL_COLORS.map(c => (
         <button key={c} onClick={() => { onPick(c); onClose() }}
-          style={{ width: 22, height: 22, borderRadius: 'var(--sb-r-pill)', background: c, border: c === current ? '2px solid #fff' : '2px solid transparent', cursor: 'pointer', padding: 0, flexShrink: 0 }}
+          style={{
+            width: 22, height: 22, borderRadius: 'var(--sb-r-pill)', background: c, cursor: 'pointer', padding: 0, flexShrink: 0,
+            // The ring sits on a colour nobody here chose, so it needs an edge
+            // at both ends: a light gap inside, an ink hairline outside. White
+            // alone disappears on a pale swatch.
+            border: c === current ? '2px solid var(--sb-card)' : '2px solid transparent',
+            boxShadow: c === current ? '0 0 0 1px var(--sb-ink-1)' : 'none',
+          }}
         />
       ))}
     </div>
@@ -3311,26 +3318,17 @@ export function CalendarIntelligence() {
           </button>
 
           {/* Day · Week · Month */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 2, height: 36, boxSizing: 'border-box', padding: 3, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-field)', flexShrink: 0 }}>
-            {(['day', 'week', 'month'] as const).map(v => {
-              const on = calView === v
-              return (
-                <button
-                  key={v}
-                  onClick={() => { setCalView(v); try { localStorage.setItem('cal-view', v) } catch { /* noop */ } }}
-                  style={{
-                    height: 30, padding: '0 16px', borderRadius: 'var(--sb-r-pill)', border: 'none', cursor: 'pointer',
-                    background: on ? 'var(--sb-card)' : 'transparent',
-                    boxShadow: on ? '0 1px 3px color-mix(in srgb, var(--sb-ink-1) 16.0%, transparent)' : 'none',
-                    color: on ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)',
-                    fontSize: 'var(--sb-t-body)', fontWeight: on ? 700 : 500, fontFamily: 'inherit',
-                    transition: 'all .14s',
-                  }}>
-                  {v[0].toUpperCase() + v.slice(1)}
-                </button>
-              )
-            })}
-          </div>
+          <Segmented
+            size="lg"
+            aria-label="Calendar range"
+            value={calView}
+            onChange={v => { setCalView(v); try { localStorage.setItem('cal-view', v) } catch { /* noop */ } }}
+            options={[
+              { value: 'day' as const,   label: 'Day' },
+              { value: 'week' as const,  label: 'Week' },
+              { value: 'month' as const, label: 'Month' },
+            ]}
+          />
         </div>
 
         {/* Rules result toast */}
@@ -3598,7 +3596,7 @@ export function CalendarIntelligence() {
                           onClick={e => handleEventClick(ev as GCalEventExt, e)}
                           onContextMenu={e => handleEventContextMenu(ev as GCalEventExt, e)}
                           style={{
-                            fontSize: 'var(--sb-t-micro)', fontWeight: 600, color: '#fff',
+                            fontSize: 'var(--sb-t-micro)', fontWeight: 600, color: 'var(--sb-ink-on-fill)',
                             background: alpha(color, 80.0),
                             borderLeft: `var(--sb-border-emphasis) solid ${color}`,
                             borderRadius: 'var(--sb-r-chip)', padding: '1px 4px',

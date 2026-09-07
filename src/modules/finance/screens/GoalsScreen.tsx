@@ -11,6 +11,7 @@ import {
   DEFAULT_BUFFER_MONTHS, WINDOW_MONTHS,
   type Policy, type GoalPlan,
 } from '../goalPlan'
+import { Segmented } from '@/components/ui'
 
 // ─── 21 · Goals ───────────────────────────────────────────────────────────────
 // A target and a date are a wish. What makes a plan is knowing what is spare,
@@ -328,36 +329,29 @@ export function GoalsScreen(_props?: any) {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             <span style={EYEBROW}>How to divide it</span>
-            <span style={{ display: 'inline-flex', background: 'var(--sb-field)', borderRadius: 'var(--sb-r-nav)', padding: 3, gap: 3 }}>
-              {([['ladder', 'Ladder'], ['share', 'Share']] as const).map(([id, label]) => (
-                <button key={id} onClick={() => pickPolicy(id)}
-                  title={id === 'ladder'
-                    ? 'Rank 1 is filled before rank 2 gets anything — things arrive one after another, each as early as it can'
-                    : 'Every goal moves at once, weighted by rank — nothing arrives as early, nothing sits still'}
-                  style={{
-                    padding: '0 14px', height: 32, borderRadius: 'var(--sb-r-chip)', border: 'none', cursor: 'pointer',
-                    fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', fontWeight: policy === id ? 700 : 500,
-                    background: policy === id ? C.ink1 : 'transparent',
-                    color: policy === id ? 'var(--sb-ink-on-dark)' : C.ink3,
-                  }}>{label}</button>
-              ))}
-            </span>
+            <Segmented
+              aria-label="How to divide it"
+              value={policy}
+              onChange={pickPolicy}
+              options={[
+                { value: 'ladder' as const, label: 'Ladder', title: 'Rank 1 is filled before rank 2 gets anything — things arrive one after another, each as early as it can' },
+                { value: 'share'  as const, label: 'Share',  title: 'Every goal moves at once, weighted by rank — nothing arrives as early, nothing sits still' },
+              ]}
+            />
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             <span style={EYEBROW}>Keep back</span>
-            <span style={{ display: 'inline-flex', background: 'var(--sb-field)', borderRadius: 'var(--sb-r-nav)', padding: 3, gap: 3 }}>
-              {[0, 1, 2, 3, 6].map(n => (
-                <button key={n} onClick={() => pickBuffer(n)}
-                  title={n === 0 ? 'Nothing held back' : `${n} month${n === 1 ? '' : 's'} of typical spending held back before any goal is funded`}
-                  style={{
-                    width: 32, height: 32, borderRadius: 'var(--sb-r-chip)', border: 'none', cursor: 'pointer',
-                    fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', fontWeight: bufferMonths === n ? 700 : 500,
-                    background: bufferMonths === n ? C.ink1 : 'transparent',
-                    color: bufferMonths === n ? 'var(--sb-ink-on-dark)' : C.ink3,
-                  }}>{n}</button>
-              ))}
-            </span>
+            <Segmented
+              aria-label="Keep back"
+              value={String(bufferMonths)}
+              onChange={v => pickBuffer(Number(v))}
+              options={[0, 1, 2, 3, 6].map(n => ({
+                value: String(n),
+                label: String(n),
+                title: n === 0 ? 'Nothing held back' : `${n} month${n === 1 ? '' : 's'} of typical spending held back before any goal is funded`,
+              }))}
+            />
           </div>
         </div>
       </div>

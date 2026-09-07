@@ -343,7 +343,7 @@ export async function loadCompaniesFromDB(): Promise<CompanyRow[]> {
   return (data as DbCompanyExtended[]).map(r => ({
     id:          r.id,
     name:        r.name,
-    color:       r.color_tag ?? '#6B7280',
+    color:       r.color_tag ?? 'var(--sb-ink-4)',
     calendarId:  r.calendar_id ?? '',
     emailDomain: r.email_domain ?? '',
     accountId:   r.account_id ?? '',

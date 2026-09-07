@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Button, Pill } from '@/components/ui'
+import { Button, Segmented } from '@/components/ui'
 import { GripVertical, Pencil, X } from 'lucide-react'
 import {
   DndContext, closestCenter, PointerSensor, TouchSensor, useSensor, useSensors,
@@ -386,14 +386,12 @@ export function BalanceScreen() {
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8, paddingBottom: 3 }}>
           {/* Filter pills */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 2, padding: 3, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-field)' }}>
-            {(Object.keys(ACCOUNT_FILTERS) as AccountFilter[]).map(f => {
-              const on = filter === f
-              return (
-                <Pill key={f} on={on} onClick={() => setFilter(f)} style={{ height: 28 }}>{f}</Pill>
-              )
-            })}
-          </div>
+          <Segmented<AccountFilter>
+            aria-label="Which accounts"
+            value={filter}
+            onChange={setFilter}
+            options={(Object.keys(ACCOUNT_FILTERS) as AccountFilter[]).map(f => ({ value: f, label: f }))}
+          />
           <Button variant="accent" onClick={() => setAccountModal({ open: true, account: null })}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
             Add account
@@ -534,19 +532,26 @@ export function BalanceScreen() {
                 onChange={e => setRangeTo(e.target.value)}
                 style={RANGE_FIELD} />
               <span style={{ width: 1, alignSelf: 'stretch', background: 'var(--sb-border)', margin: '0 2px' }} />
-              {([
-                ['This month', monthStart, monthEnd],
-                ['This year', `${todayISO.slice(0, 4)}-01-01`, `${todayISO.slice(0, 4)}-12-31`],
-                ['All', '', ''],
-              ] as const).map(([label, from, to]) => {
-                const on = rangeFrom === from && rangeTo === to
+              {(() => {
+                const shortcuts = [
+                  { value: 'month' as const, label: 'This month', from: monthStart, to: monthEnd },
+                  { value: 'year'  as const, label: 'This year',  from: `${todayISO.slice(0, 4)}-01-01`, to: `${todayISO.slice(0, 4)}-12-31` },
+                  { value: 'all'   as const, label: 'All',        from: '', to: '' },
+                ]
+                const current = shortcuts.find(o => o.from === rangeFrom && o.to === rangeTo)
                 return (
-                  <Pill key={label} on={on} onClick={() => { setRangeFrom(from); setRangeTo(to) }}
-                    style={{ height: 26, padding: '0 10px', fontSize: 'var(--sb-t-meta)' }}>
-                    {label}
-                  </Pill>
+                  <Segmented
+                    size="sm"
+                    aria-label="Range"
+                    value={current?.value ?? ''}
+                    onChange={v => {
+                      const pick = shortcuts.find(o => o.value === v)
+                      if (pick) { setRangeFrom(pick.from); setRangeTo(pick.to) }
+                    }}
+                    options={shortcuts.map(({ value, label }) => ({ value, label }))}
+                  />
                 )
-              })}
+              })()}
             </div>
             {focused && (
               <button

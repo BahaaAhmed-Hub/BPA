@@ -12,6 +12,7 @@ import {
   DISPLAY,
   PILL, ROUND, PillPicker, categoryOptions,
 } from './pickers'
+import { Segmented } from '@/components/ui'
 
 /** One line being typed. Everything the whole batch shares — which way the
  *  money went, which account, which currency — lives above the grid, so a line
@@ -247,34 +248,27 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
 
         {/* What the whole batch shares */}
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-          <span style={{ display: 'inline-flex', background: 'var(--sb-field)', borderRadius: 'var(--sb-r-nav)', padding: 3, gap: 3 }}>
-            {(['expense', 'income'] as const).map(k => (
-              <button key={k} onClick={() => setKind(k)}
-                style={{
-                  padding: '0 16px', height: 34, borderRadius: 'var(--sb-r-chip)', border: 'none', cursor: 'pointer',
-                  fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', fontWeight: kind === k ? 700 : 500,
-                  background: kind === k ? 'var(--sb-ink-1)' : 'transparent',
-                  color: kind === k ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
-                }}>
-                {k === 'expense' ? 'Expenses' : 'Income'}
-              </button>
-            ))}
-          </span>
+          <Segmented
+            size="lg"
+            aria-label="What this batch is"
+            value={kind}
+            onChange={setKind}
+            options={[
+              { value: 'expense' as const, label: 'Expenses' },
+              { value: 'income'  as const, label: 'Income' },
+            ]}
+          />
 
-          <span style={{ display: 'inline-flex', background: 'var(--sb-field)', borderRadius: 'var(--sb-r-nav)', padding: 3, gap: 3 }}
-            title="Sets every line; a line can still be changed on its own">
-            {([true, false] as const).map(p => (
-              <button key={String(p)} onClick={() => setAllPaid(p)}
-                style={{
-                  padding: '0 14px', height: 34, borderRadius: 'var(--sb-r-chip)', border: 'none', cursor: 'pointer',
-                  fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', fontWeight: batchPaid === p ? 700 : 500,
-                  background: batchPaid === p ? 'var(--sb-ink-1)' : 'transparent',
-                  color: batchPaid === p ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
-                }}>
-                {p ? 'Paid' : 'Not paid'}
-              </button>
-            ))}
-          </span>
+          <Segmented
+            size="lg"
+            aria-label="Whether the batch is paid"
+            value={batchPaid === true ? 'paid' : batchPaid === false ? 'unpaid' : ''}
+            onChange={v => setAllPaid(v === 'paid')}
+            options={[
+              { value: 'paid'   as const, label: 'Paid',     title: 'Sets every line; a line can still be changed on its own' },
+              { value: 'unpaid' as const, label: 'Not paid', title: 'Sets every line; a line can still be changed on its own' },
+            ]}
+          />
 
           {/* Where the whole batch lands. Unanswered it is outlined and says
               so, because everything below it is filed against this one field. */}

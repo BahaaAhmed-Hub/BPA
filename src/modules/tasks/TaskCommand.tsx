@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
-import { Button } from '@/components/ui'
+import { Button, Segmented } from '@/components/ui'
 import {
   DndContext, DragOverlay, closestCorners,
   KeyboardSensor, PointerSensor, useSensor, useSensors,
@@ -395,29 +395,17 @@ export function TaskCommand() {
           </div>
 
           {/* View switcher — Board | Matrix | List */}
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2, height: 38, boxSizing: 'border-box', padding: 3, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-field)', flexShrink: 0 }}>
-            {([
-              { id: 'board',      label: 'Board',  Icon: LayoutGrid },
-              { id: 'eisenhower', label: 'Matrix', Icon: Target },
-              { id: 'list',       label: 'List',   Icon: ListIcon },
-            ] as { id: ViewMode; label: string; Icon: typeof LayoutGrid }[]).map(v => {
-              const on = viewMode === v.id
-              return (
-                <button key={v.id} onClick={() => switchView(v.id)}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 7, height: 32, boxSizing: 'border-box',
-                    padding: '0 16px', borderRadius: 'var(--sb-r-pill)', border: 'none', cursor: 'pointer',
-                    background: on ? 'var(--sb-card)' : 'transparent',
-                    boxShadow: on ? '0 1px 3px color-mix(in srgb, var(--sb-ink-1) 14.0%, transparent)' : 'none',
-                    color: on ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)',
-                    fontSize: 'var(--sb-t-body)', fontWeight: on ? 700 : 500, fontFamily: 'inherit',
-                    transition: 'all .14s', flexShrink: 0,
-                  }}>
-                  <v.Icon size={14} strokeWidth={2} /> {v.label}
-                </button>
-              )
-            })}
-          </span>
+          <Segmented<ViewMode>
+            size="lg"
+            aria-label="View"
+            value={viewMode}
+            onChange={switchView}
+            options={[
+              { value: 'board',      label: <><LayoutGrid size={ICON.sm} strokeWidth={STROKE.active} /> Board</> },
+              { value: 'eisenhower', label: <><Target size={ICON.sm} strokeWidth={STROKE.active} /> Matrix</> },
+              { value: 'list',       label: <><ListIcon size={ICON.sm} strokeWidth={STROKE.active} /> List</> },
+            ]}
+          />
 
           {/* New task CTA */}
           <Button variant="accent" onClick={handleNewTask} style={{ boxSizing: 'border-box', flexShrink: 0 }}>

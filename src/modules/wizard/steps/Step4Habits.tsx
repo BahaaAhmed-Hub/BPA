@@ -92,7 +92,7 @@ export function Step4Habits({ data, onChange }: Props) {
                   position: 'absolute', top: 6, right: 6, width: 16, height: 16, borderRadius: 'var(--sb-r-pill)',
                   background: t.color, display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
-                  <Check size={ICON.sm} color="#fff" strokeWidth={STROKE.active} />
+                  <Check size={ICON.sm} color="var(--sb-ink-on-fill)" strokeWidth={STROKE.active} />
                 </div>
               )}
               <div style={{ fontSize: 'var(--sb-t-h2)', marginBottom: 6 }}>{t.emoji}</div>

@@ -34,6 +34,11 @@ export type SbToken =
   | '--sb-accent-deep'
   | '--sb-positive' | '--sb-positive-deep' | '--sb-positive-tint'
   | '--sb-negative' | '--sb-negative-deep' | '--sb-negative-tint'
+  /** Six colours that only have to stay apart from each other — the task
+   *  types, and anything else that is a set rather than a scale of meaning.
+   *  Each is at or above 4.5:1 on its theme's --sb-card. */
+  | '--sb-cat-1' | '--sb-cat-2' | '--sb-cat-3'
+  | '--sb-cat-4' | '--sb-cat-5' | '--sb-cat-6'
   | '--sb-info' | '--sb-info-tint'
   | '--sb-warning' | '--sb-warning-tint'
   | '--sb-shadow-frame' | '--sb-shadow-hover' | '--sb-shadow-control'
@@ -83,6 +88,12 @@ export const THEMES: AppTheme[] = [
       '--sb-ink-on-fill':   '#FFFFFF',
       '--sb-accent-rgb':    '245,209,78',
       '--sb-accent-deep':   '#7A5F09',
+      '--sb-cat-1':       '#685FD7',
+      '--sb-cat-2':       '#177C5B',
+      '--sb-cat-3':       '#C77A3E',
+      '--sb-cat-4':       '#3E6FA3',
+      '--sb-cat-5':       '#8B5FA8',
+      '--sb-cat-6':       '#2F8C6E',
       '--sb-info':          '#685FD7', '--sb-info-tint':    '#EDEBFA',
       '--sb-warning':       '#B26A00', '--sb-warning-tint': '#FBEEDC',
       '--sb-shadow-panel':  '-8px 0 40px -12px rgba(48,40,20,.28)',
@@ -116,6 +127,14 @@ export const THEMES: AppTheme[] = [
       '--sb-ink-on-fill':   '#FFFFFF',
       '--sb-accent-rgb':    '196,99,63',
       '--sb-accent-deep':   '#8E4227',   // 5.71:1 on its own tint
+      // Warm Minimal was not given a ramp: these are the Sunlit six pulled
+      // towards its warmer ground, each still at or above 4.5:1 on white.
+      '--sb-cat-1':       '#5A51C4',
+      '--sb-cat-2':       '#3C5A46',
+      '--sb-cat-3':       '#B2622F',
+      '--sb-cat-4':       '#3B6797',
+      '--sb-cat-5':       '#80569B',
+      '--sb-cat-6':       '#2C7F63',
       '--sb-info':          '#4A5BA8', '--sb-info-tint':    '#E8EAF3',
       '--sb-warning':       '#7E5410', '--sb-warning-tint': '#F3EADC',
       '--sb-shadow-panel':  '-8px 0 40px -12px rgba(40,34,20,.24)',
@@ -155,6 +174,12 @@ export const THEMES: AppTheme[] = [
       '--sb-ink-on-fill':   '#12101C',
       '--sb-accent-rgb':    '167,139,250',
       '--sb-accent-deep':   '#C4B5FD',
+      '--sb-cat-1':       '#9AACFF',
+      '--sb-cat-2':       '#4ADE95',
+      '--sb-cat-3':       '#E8B24C',
+      '--sb-cat-4':       '#6BA8FF',
+      '--sb-cat-5':       '#C79BFF',
+      '--sb-cat-6':       '#55D6C0',
       '--sb-info':          '#9AACFF', '--sb-info-tint':    'rgba(154,172,255,.16)',
       '--sb-warning':       '#E8B24C', '--sb-warning-tint': 'rgba(232,178,76,.16)',
       '--sb-shadow-panel':  '-8px 0 44px -12px rgba(0,0,0,.7)',
@@ -188,6 +213,12 @@ export const THEMES: AppTheme[] = [
       '--sb-ink-on-fill':   '#FFFFFF',
       '--sb-accent-rgb':    '21,94,75',
       '--sb-accent-deep':   '#0E4437',
+      '--sb-cat-1':       '#2A5DA8',
+      '--sb-cat-2':       '#155E4B',
+      '--sb-cat-3':       '#8A5A12',
+      '--sb-cat-4':       '#3F7A6E',
+      '--sb-cat-5':       '#6357A8',
+      '--sb-cat-6':       '#4A7A34',
       '--sb-info':          '#3F5AA6', '--sb-info-tint':    '#E7EBF4',
       '--sb-warning':       '#7E5410', '--sb-warning-tint': '#F2EBDC',
       '--sb-shadow-panel':  '-8px 0 40px -12px rgba(19,26,23,.22)',
