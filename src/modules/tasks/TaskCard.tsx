@@ -102,8 +102,8 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
         zIndex: isDragging ? 50 : 'auto',
         position: 'relative',
         // 9B: neutral card. Company shows as coloured text, not as a tinted card.
-        background: '#FFFFFF',
-        border: selected ? '2px solid #191712' : '1px solid #E8E1CE',
+        background: 'var(--sb-card)',
+        border: selected ? '2px solid var(--sb-ink-1)' : '1px solid var(--sb-border)',
         // keep the geometry identical whether or not the ink border is on
         padding: selected ? '8px 9px' : '9px 10px',
         borderRadius: 10,
@@ -130,8 +130,8 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
               title={task.completed ? 'Reopen' : 'Complete'}
               style={{
                 width: 15, height: 15, borderRadius: 5, boxSizing: 'border-box',
-                border: task.completed ? '1.5px solid #0C8140' : '1.5px solid #CFC6B0',
-                background: task.completed ? '#0C8140' : '#FFFFFF',
+                border: task.completed ? '1.5px solid var(--sb-positive)' : '1.5px solid #CFC6B0',
+                background: task.completed ? 'var(--sb-positive)' : 'var(--sb-card)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 cursor: 'pointer', flexShrink: 0, padding: 0, transition: 'all .15s',
               }}
@@ -144,7 +144,7 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
               title="Delete task"
               style={{
                 background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex',
-                flexShrink: 0, color: hovered ? '#C62828' : '#DCD3BF',
+                flexShrink: 0, color: hovered ? 'var(--sb-negative)' : '#DCD3BF',
               }}>
               <Trash2 size={11.5} strokeWidth={2} />
             </button>
@@ -154,7 +154,7 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
             style={{
               flex: 1, margin: 0, fontSize: 12.5, fontWeight: 600,
               // An unnamed task reads as unnamed, not as a task called Untitled.
-              color: task.title.trim() ? '#191712' : '#9B9180',
+              color: task.title.trim() ? 'var(--sb-ink-1)' : '#9B9180',
               fontStyle: task.title.trim() ? 'normal' : 'italic',
               lineHeight: 1.3, minWidth: 0,
               textDecoration: task.completed ? 'line-through' : 'none',
@@ -167,9 +167,9 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
             style={{
               background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex',
               flexShrink: 0, marginTop: 2,
-              color: task.urgent ? '#C62828' : hovered ? '#9B9180' : '#D8CFB8',
+              color: task.urgent ? 'var(--sb-negative)' : hovered ? '#9B9180' : '#D8CFB8',
             }}>
-            <Flame size={11.5} strokeWidth={2} fill={task.urgent ? '#C62828' : 'none'} />
+            <Flame size={11.5} strokeWidth={2} fill={task.urgent ? 'var(--sb-negative)' : 'none'} />
           </button>
         </div>
 
