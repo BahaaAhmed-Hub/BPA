@@ -18,20 +18,20 @@ import {
 
 const CARD: React.CSSProperties = {
   position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0, zIndex: 95,
-  background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 14,
+  background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 14,
   boxShadow: '0 22px 48px -20px rgba(25,23,18,.45)',
   padding: 6, maxHeight: 'min(62vh, 460px)', overflowY: 'auto', scrollbarWidth: 'thin',
 }
 const ROW: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 10, width: '100%', height: 38,
   padding: '0 11px', borderRadius: 9, border: 'none', background: 'transparent',
-  color: '#191712', fontSize: 13.5, fontFamily: 'inherit', cursor: 'pointer', textAlign: 'left',
+  color: 'var(--sb-ink-1)', fontSize: 13.5, fontFamily: 'inherit', cursor: 'pointer', textAlign: 'left',
 }
 const GROUP_LABEL: React.CSSProperties = {
   fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', color: '#9B9180',
   textTransform: 'uppercase', padding: '10px 11px 5px',
 }
-const HAIRLINE: React.CSSProperties = { height: 1, background: '#F0EBDC', margin: '6px 4px' }
+const HAIRLINE: React.CSSProperties = { height: 1, background: 'var(--sb-hairline)', margin: '6px 4px' }
 
 /** One pill in a segmented row — the same shape the settings pages use. */
 function Seg<T extends string | number>({ value, options, onChange }: {
@@ -46,9 +46,9 @@ function Seg<T extends string | number>({ value, options, onChange }: {
         return (
           <button key={String(o.value)} onClick={() => onChange(o.value)} style={{
             flex: 1, height: 28, borderRadius: 7, border: 'none', cursor: 'pointer',
-            background: on ? '#FFFFFF' : 'transparent',
+            background: on ? 'var(--sb-card)' : 'transparent',
             boxShadow: on ? '0 1px 3px rgba(25,23,18,.16)' : 'none',
-            color: on ? '#191712' : '#6C6553', fontSize: 12.5, fontWeight: on ? 600 : 500,
+            color: on ? 'var(--sb-ink-1)' : 'var(--sb-ink-3)', fontSize: 12.5, fontWeight: on ? 600 : 500,
             fontFamily: 'inherit', whiteSpace: 'nowrap', padding: '0 8px',
           }}>{o.label}</button>
         )
@@ -62,16 +62,16 @@ function Cell({ on, label, onClick, wide }: { on: boolean; label: string; onClic
   return (
     <button onClick={onClick} style={{
       height: 30, minWidth: 0, width: '100%', borderRadius: wide ? 8 : '50%',
-      border: `1px solid ${on ? '#191712' : '#E8E1CE'}`,
-      background: on ? '#191712' : '#FAF7EC', color: on ? '#FFFFFF' : '#6C6553',
+      border: `1px solid ${on ? 'var(--sb-ink-1)' : 'var(--sb-border)'}`,
+      background: on ? 'var(--sb-ink-1)' : 'var(--sb-field)', color: on ? 'var(--sb-card)' : 'var(--sb-ink-3)',
       fontSize: 12, fontWeight: on ? 700 : 500, fontFamily: 'inherit', cursor: 'pointer', padding: 0,
     }}>{label}</button>
   )
 }
 
 const selectStyle: React.CSSProperties = {
-  height: 32, borderRadius: 8, border: '1px solid #E8E1CE', background: '#FAF7EC',
-  color: '#191712', fontSize: 12.5, fontFamily: 'inherit', padding: '0 8px', cursor: 'pointer',
+  height: 32, borderRadius: 8, border: '1px solid var(--sb-border)', background: 'var(--sb-field)',
+  color: 'var(--sb-ink-1)', fontSize: 12.5, fontFamily: 'inherit', padding: '0 8px', cursor: 'pointer',
 }
 
 export function RepeatPicker({ value, start, onApply, onClose }: {
@@ -137,13 +137,13 @@ export function RepeatPicker({ value, start, onApply, onClose }: {
             <button key={p.value} style={ROW}
               onClick={() => { onApply(p.value === 'never' ? null : presetRecur(p.value, start)); onClose() }}>
               <span style={{ flex: 1 }}>{p.label}</span>
-              {preset === p.value && <Check size={15} strokeWidth={2.6} color="#191712" />}
+              {preset === p.value && <Check size={15} strokeWidth={2.6} color="var(--sb-ink-1)" />}
             </button>
           ))}
           <div style={HAIRLINE} />
           <button style={ROW} onClick={() => setPane('custom')}>
             <span style={{ flex: 1 }}>Custom</span>
-            {preset === 'custom' && <Check size={15} strokeWidth={2.6} color="#191712" />}
+            {preset === 'custom' && <Check size={15} strokeWidth={2.6} color="var(--sb-ink-1)" />}
             <ChevronRight size={15} color="#9B9180" />
           </button>
         </>
@@ -151,13 +151,13 @@ export function RepeatPicker({ value, start, onApply, onClose }: {
         <>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '2px 4px 6px' }}>
             <button onClick={() => setPane('list')} title="Back"
-              style={{ ...ROW, width: 'auto', height: 28, padding: '0 6px', gap: 4, color: '#6C6553' }}>
+              style={{ ...ROW, width: 'auto', height: 28, padding: '0 6px', gap: 4, color: 'var(--sb-ink-3)' }}>
               <ChevronLeft size={15} /> Repeat
             </button>
             <span style={{ flex: 1 }} />
             <button onClick={() => { onApply(draft); onClose() }} style={{
               height: 28, padding: '0 14px', borderRadius: 999, border: 'none', cursor: 'pointer',
-              background: '#191712', color: '#FFFFFF', fontSize: 12.5, fontWeight: 600, fontFamily: 'inherit',
+              background: 'var(--sb-ink-1)', color: 'var(--sb-card)', fontSize: 12.5, fontWeight: 600, fontFamily: 'inherit',
             }}>Done</button>
           </div>
 
@@ -176,7 +176,7 @@ export function RepeatPicker({ value, start, onApply, onClose }: {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 8px' }}>
             <button onClick={() => setDraft({ ...draft, interval: Math.max(1, draft.interval - 1) })}
               style={{ ...selectStyle, width: 32, textAlign: 'center', fontSize: 16, lineHeight: '28px', padding: 0 }}>−</button>
-            <span style={{ minWidth: 108, textAlign: 'center', fontSize: 13.5, color: '#191712' }}>
+            <span style={{ minWidth: 108, textAlign: 'center', fontSize: 13.5, color: 'var(--sb-ink-1)' }}>
               {draft.interval === 1 ? `Every ${unit}` : `${draft.interval} ${unit}s`}
             </span>
             <button onClick={() => setDraft({ ...draft, interval: Math.min(99, draft.interval + 1) })}
@@ -260,7 +260,7 @@ export function RepeatPicker({ value, start, onApply, onClose }: {
             </div>
           )}
 
-          <p style={{ margin: '12px 10px 6px', fontSize: 11.5, lineHeight: 1.45, color: '#6C6553' }}>
+          <p style={{ margin: '12px 10px 6px', fontSize: 11.5, lineHeight: 1.45, color: 'var(--sb-ink-3)' }}>
             {summarise(draft, start)}
           </p>
         </>
