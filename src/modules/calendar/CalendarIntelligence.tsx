@@ -38,7 +38,7 @@ import { T, SANS, DISPLAY } from '@/lib/type'
 import { generateMeetingPrep } from '@/lib/professor'
 import type { MeetingPrep } from '@/lib/professor'
 import { useAuthStore } from '@/store/authStore'
-import { pushUndo } from '@/lib/undo'
+import { pushUndo, notify } from '@/lib/undo'
 import { useUIStore } from '@/store/uiStore'
 import { loadAccounts, loadHiddenAccounts } from '@/lib/multiAccount'
 import { connectAdditionalGoogleAccount } from '@/lib/google'
@@ -2734,6 +2734,8 @@ export function CalendarIntelligence() {
     if (cal.accountId) {
       const result = await efUpdateEvent(cal.accountId, ev.calendarId, ev.id, patch)
       updated = result.event
+      // An edit that did not stick has to say why, or the panel just snaps back.
+      if (!updated && result.error) notify(`Could not save that change — ${result.error}`)
     } else {
       const token = await refreshPrimaryToken() || cal.accountToken
       if (!token) return null

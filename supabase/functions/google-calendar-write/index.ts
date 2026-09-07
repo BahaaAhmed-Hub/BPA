@@ -7,6 +7,10 @@
  * Actions (POST body: { action, account_id, calendar_id, ...payload }):
  *
  *   create_event   — Creates a new event. Body: { calendar_id, account_id, event: {...} }
+ *
+ * `account_id` is the google_accounts row id. Clients also send `account_email`,
+ * which is used when the id does not resolve — the browser keeps its own id for
+ * the same account, and only the address is common to both.
  *   update_event   — Patches an existing event. Body: { calendar_id, account_id, event_id, patch: {...} }
  *   delete_event   — Deletes an event. Body: { calendar_id, account_id, event_id }
  *   add_meet       — Adds Google Meet to an existing event (PATCH conferenceDataVersion=1).
@@ -142,21 +146,39 @@ serve(async (req: Request) => {
   const accountId  = body.account_id  as string | undefined
   const calendarId = body.calendar_id as string | undefined
 
+  // A connected account has two ids: the one this row was given here, and the
+  // one the browser minted when it was connected. Clients send the address too,
+  // so an account written down under the other id still resolves.
+  const accountEmail = body.account_email as string | undefined
+
   if (!action)     return fail('Missing action')
-  if (!accountId)  return fail('Missing account_id')
+  if (!accountId && !accountEmail) return fail('Missing account_id')
   if (!calendarId) return fail('Missing calendar_id')
 
   // Verify account belongs to user
-  const { data: acct } = await adminClient
-    .from('google_accounts')
-    .select('id')
-    .eq('id', accountId)
-    .eq('user_id', user.id)
-    .maybeSingle()
+  let acct: { id: string } | null = null
+  if (accountId) {
+    const { data } = await adminClient
+      .from('google_accounts')
+      .select('id')
+      .eq('id', accountId)
+      .eq('user_id', user.id)
+      .maybeSingle()
+    acct = data as { id: string } | null
+  }
+  if (!acct && accountEmail) {
+    const { data } = await adminClient
+      .from('google_accounts')
+      .select('id')
+      .eq('email', accountEmail)
+      .eq('user_id', user.id)
+      .maybeSingle()
+    acct = data as { id: string } | null
+  }
 
   if (!acct) return fail('Account not found or not owned by user', 403)
 
-  const token = await resolveToken(adminClient, user.id, accountId)
+  const token = await resolveToken(adminClient, user.id, acct.id)
   if (!token) return ok({ error: 'reconnect_required' })
 
   try {

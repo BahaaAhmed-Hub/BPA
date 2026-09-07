@@ -68,6 +68,20 @@ its guest list. Two rules it has to respect, both of which used to fail silently
 `onMoveCalendar` resolves to `null` on success or to *why not*, and the panel shows
 it — the old boolean was discarded and the picker just snapped back.
 
+**A connected account has two ids**, and only one of them works. The browser
+mints its own uuid in `professor-connected-accounts` when you connect an
+account; `google_accounts.id` is the row's. The edge function looks the account
+up by id, so every write sent with the browser's got `403 Account not found or
+not owned by user` — reads went through because they use a token, writes did
+not. `serverAccountId()` in `googleCalendar.ts` maps one to the other by
+address (cached, cleared on `professor:accountsUpdated`), and every `ef*` call
+sends `account_email` as well so the function can resolve it either way.
+
+**supabase-js throws the reason away.** Any non-2xx from a function becomes
+"Edge Function returned a non-2xx status code"; the body — which names the
+calendar, the account, or what Google objected to — is on `error.context`.
+`efFailure()` reads it, so a failed write says what happened.
+
 ## Calendar — dragging an event
 `CalendarIntelligence.tsx` moves events with dnd-kit and a `DragOverlay`. The
 overlay is what follows the pointer, so the source card must **not** take

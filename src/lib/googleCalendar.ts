@@ -1,5 +1,6 @@
 import { supabase } from './supabase'
 import { getGoogleTokenViaSupabaseRefresh } from './tokenManager'
+import { loadAccounts, loadAccountsFromServer } from './multiAccount'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -636,6 +637,73 @@ export async function moveCalendarEventWithToken(
  * The token for a connected account never reaches the browser, so a move on one
  * has to go the same way every other write to it does.
  */
+// ─── The two ids an account has ──────────────────────────────────────────────
+//
+// A connected account is written down twice: once in this browser, where the id
+// is a uuid minted here when you connected it, and once in `google_accounts`,
+// where the id is the row's. They are different values, and the edge function
+// only knows the second one — it looks the account up by id and refuses with
+// "Account not found or not owned by user" when the id is the browser's.
+//
+// That is why every write to a connected account failed while reads went
+// through: reads use a token, writes use this id. Resolve it by the one thing
+// both copies agree on — the address.
+let serverIdByEmail: Map<string, string> | null = null
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('professor:accountsUpdated', () => { serverIdByEmail = null })
+}
+
+async function serverAccountId(accountId: string): Promise<string> {
+  const local = loadAccounts().find(a => a.id === accountId)
+  // Not one of this browser's — it is already a server id, or something else's.
+  if (!local) return accountId
+  if (!serverIdByEmail) {
+    const rows = await loadAccountsFromServer()
+    if (rows) serverIdByEmail = new Map(rows.map(r => [r.email.toLowerCase(), r.id]))
+  }
+  return serverIdByEmail?.get(local.email.toLowerCase()) ?? accountId
+}
+
+/** What to send: the id the server knows, and the address it can fall back to. */
+async function efAccount(accountId: string): Promise<{ account_id: string; account_email?: string }> {
+  const email = loadAccounts().find(a => a.id === accountId)?.email
+  return { account_id: await serverAccountId(accountId), ...(email ? { account_email: email } : {}) }
+}
+
+// ─── What the edge function actually said ────────────────────────────────────
+//
+// supabase-js turns any non-2xx from a function into one sentence — "Edge
+// Function returned a non-2xx status code" — and throws the body away. The body
+// is where the reason lives: which calendar, which account, what Google
+// objected to. Read it, or every failure here reads as an outage.
+async function efFailure(accountId: string, error: unknown): Promise<string> {
+  const res = (error as { context?: unknown }).context as Response | undefined
+  if (!res || typeof res.text !== 'function') {
+    return (error as Error)?.message || 'The write was refused'
+  }
+  let raw = ''
+  try { raw = await (typeof res.clone === 'function' ? res.clone() : res).text() } catch { /* body gone */ }
+  let msg = ''
+  try {
+    const body = JSON.parse(raw) as { error?: string; message?: string }
+    msg = body.error ?? body.message ?? ''
+  } catch { msg = raw.slice(0, 180) }
+
+  if (msg === 'reconnect_required') {
+    window.dispatchEvent(new CustomEvent('cal:reconnect-required', { detail: { accountId } }))
+    return 'this account needs reconnecting — Settings → Accounts'
+  }
+  // The server holds its own copy of your connected accounts; when the two have
+  // drifted the account has to be connected again, and saying "not owned by
+  // user" to a person who owns it explains nothing.
+  if (/account not found/i.test(msg)) {
+    return 'this account is not connected on the server — reconnect it in Settings → Accounts'
+  }
+  if (msg) return `${msg}${res.status ? ` (HTTP ${res.status})` : ''}`
+  return `Google refused it (HTTP ${res.status})`
+}
+
 export async function efMoveEvent(
   accountId: string,
   calendarId: string,
@@ -643,9 +711,9 @@ export async function efMoveEvent(
   destination: string,
 ): Promise<{ event: GCalEvent | null; error?: string }> {
   const { data, error } = await supabase.functions.invoke('google-calendar-write', {
-    body: { action: 'move_event', account_id: accountId, calendar_id: calendarId, event_id: eventId, destination },
+    body: { action: 'move_event', ...(await efAccount(accountId)), calendar_id: calendarId, event_id: eventId, destination },
   })
-  if (error) return { event: null, error: error.message }
+  if (error) return { event: null, error: await efFailure(accountId, error) }
   if (data?.error === 'reconnect_required') {
     window.dispatchEvent(new CustomEvent('cal:reconnect-required', { detail: { accountId } }))
     return { event: null, error: 'This account needs reconnecting' }
@@ -663,12 +731,12 @@ export async function efCreateEvent(
   event: GCalEventCreate,
 ): Promise<{ event: GCalEvent | null; error?: string }> {
   const { data, error } = await supabase.functions.invoke('google-calendar-write', {
-    body: { action: 'create_event', account_id: accountId, calendar_id: calendarId, event },
+    body: { action: 'create_event', ...(await efAccount(accountId)), calendar_id: calendarId, event },
   })
-  if (error) return { event: null, error: error.message }
+  if (error) return { event: null, error: await efFailure(accountId, error) }
   if (data?.error === 'reconnect_required') {
     window.dispatchEvent(new CustomEvent('cal:reconnect-required', { detail: { accountId } }))
-    return { event: null, error: 'reconnect_required' }
+    return { event: null, error: 'this account needs reconnecting — Settings → Accounts' }
   }
   return { event: data?.event ?? null, error: data?.error }
 }
@@ -683,12 +751,12 @@ export async function efUpdateEvent(
   patch: Partial<GCalEventCreate>,
 ): Promise<{ event: GCalEvent | null; error?: string }> {
   const { data, error } = await supabase.functions.invoke('google-calendar-write', {
-    body: { action: 'update_event', account_id: accountId, calendar_id: calendarId, event_id: eventId, patch },
+    body: { action: 'update_event', ...(await efAccount(accountId)), calendar_id: calendarId, event_id: eventId, patch },
   })
-  if (error) return { event: null, error: error.message }
+  if (error) return { event: null, error: await efFailure(accountId, error) }
   if (data?.error === 'reconnect_required') {
     window.dispatchEvent(new CustomEvent('cal:reconnect-required', { detail: { accountId } }))
-    return { event: null, error: 'reconnect_required' }
+    return { event: null, error: 'this account needs reconnecting — Settings → Accounts' }
   }
   return { event: data?.event ?? null, error: data?.error }
 }
@@ -702,9 +770,9 @@ export async function efDeleteEvent(
   eventId: string,
 ): Promise<boolean> {
   const { data, error } = await supabase.functions.invoke('google-calendar-write', {
-    body: { action: 'delete_event', account_id: accountId, calendar_id: calendarId, event_id: eventId },
+    body: { action: 'delete_event', ...(await efAccount(accountId)), calendar_id: calendarId, event_id: eventId },
   })
-  if (error) { console.warn('[efDeleteEvent]', error); return false }
+  if (error) { console.warn('[efDeleteEvent]', await efFailure(accountId, error)); return false }
   if (data?.error === 'reconnect_required') {
     window.dispatchEvent(new CustomEvent('cal:reconnect-required', { detail: { accountId } }))
     return false
@@ -721,9 +789,9 @@ export async function efAddMeet(
   eventId: string,
 ): Promise<GCalEvent | null> {
   const { data, error } = await supabase.functions.invoke('google-calendar-write', {
-    body: { action: 'add_meet', account_id: accountId, calendar_id: calendarId, event_id: eventId },
+    body: { action: 'add_meet', ...(await efAccount(accountId)), calendar_id: calendarId, event_id: eventId },
   })
-  if (error) { console.warn('[efAddMeet]', error); return null }
+  if (error) { console.warn('[efAddMeet]', await efFailure(accountId, error)); return null }
   if (data?.error === 'reconnect_required') {
     window.dispatchEvent(new CustomEvent('cal:reconnect-required', { detail: { accountId } }))
     return null
