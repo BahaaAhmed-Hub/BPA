@@ -61,8 +61,8 @@ export function Sidebar() {
       style={{
         width: sidebarCollapsed ? 64 : 220,
         minWidth: sidebarCollapsed ? 64 : 220,
-        background: '#FCFAF4',
-        borderRight: `1px solid ${'#E8E1CE'}`,
+        background: 'var(--sb-header)',
+        borderRight: `1px solid ${'var(--sb-border)'}`,
         height: '100vh',
         display: 'flex',
         flexDirection: 'column',
@@ -78,7 +78,7 @@ export function Sidebar() {
         style={{
           height: 64, flexShrink: 0,
           padding: sidebarCollapsed ? '0' : '0 20px',
-          borderBottom: `1px solid ${'#E8E1CE'}`,
+          borderBottom: `1px solid ${'var(--sb-border)'}`,
           display: 'flex',
           alignItems: 'center',
           gap: 10,
@@ -98,7 +98,7 @@ export function Sidebar() {
               flexShrink: 0,
               transition: 'background 0.3s ease',
             }}>
-              <LogoIcon size={18} color="#FFFFFF" strokeWidth={2.5} />
+              <LogoIcon size={18} color="var(--sb-card)" strokeWidth={2.5} />
             </div>
           )
         })()}
@@ -108,7 +108,7 @@ export function Sidebar() {
               fontFamily: "'Cabinet Grotesk', sans-serif",
               fontWeight: 700,
               fontSize: 16,
-              color: '#191712',
+              color: 'var(--sb-ink-1)',
               letterSpacing: '-0.3px',
               whiteSpace: 'nowrap',
             }}
@@ -139,7 +139,7 @@ export function Sidebar() {
                   border: 'none',
                   borderRadius: 8,
                   cursor: 'pointer',
-                  color: active ? '#191712' : '#9B9180',
+                  color: active ? 'var(--sb-ink-1)' : '#9B9180',
                   marginBottom: 2,
                   transition: 'all 0.15s ease',
                 }}
@@ -147,7 +147,7 @@ export function Sidebar() {
                   if (!active) {
                     const el = e.currentTarget as HTMLElement
                     el.style.background = 'rgba(var(--sb-accent-rgb),0.15)'
-                    el.style.color = '#191712'
+                    el.style.color = 'var(--sb-ink-1)'
                   }
                 }}
                 onMouseLeave={e => {
@@ -178,7 +178,7 @@ export function Sidebar() {
           const active = activeModule === id
           const modeLabel = behavioralMode === 'samurai' ? 'SAMURAI' : behavioralMode === 'pharaoh' ? 'PHARAOH' : 'ASTRAL'
           return (
-            <div style={{ borderTop: `1px solid ${'#E8E1CE'}`, paddingTop: 10, marginTop: 4 }}>
+            <div style={{ borderTop: `1px solid ${'var(--sb-border)'}`, paddingTop: 10, marginTop: 4 }}>
               {!sidebarCollapsed && (
                 <span style={{
                   display: 'block', padding: '4px 12px 6px',
@@ -197,10 +197,10 @@ export function Sidebar() {
                   justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
                   background: active ? 'rgba(var(--sb-accent-rgb),0.15)' : 'transparent',
                   border: 'none', borderRadius: 8, cursor: 'pointer',
-                  color: active ? '#191712' : '#9B9180',
+                  color: active ? 'var(--sb-ink-1)' : '#9B9180',
                   marginBottom: 2, transition: 'all 0.15s ease',
                 }}
-                onMouseEnter={e => { if (!active) { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(var(--sb-accent-rgb),0.15)'; el.style.color = '#191712' } }}
+                onMouseEnter={e => { if (!active) { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(var(--sb-accent-rgb),0.15)'; el.style.color = 'var(--sb-ink-1)' } }}
                 onMouseLeave={e => { if (!active) { const el = e.currentTarget as HTMLElement; el.style.background = 'transparent'; el.style.color = '#9B9180' } }}
               >
                 <Swords size={18} strokeWidth={active ? 2.5 : 1.8} style={{ flexShrink: 0 }} />
@@ -218,7 +218,7 @@ export function Sidebar() {
         })()}
 
         {/* System section */}
-        <div style={{ borderTop: `1px solid ${'#E8E1CE'}`, paddingTop: 10, marginTop: 4 }}>
+        <div style={{ borderTop: `1px solid ${'var(--sb-border)'}`, paddingTop: 10, marginTop: 4 }}>
           {!sidebarCollapsed && (
             <span style={{
               display: 'block', padding: '4px 12px 6px',
@@ -242,14 +242,14 @@ export function Sidebar() {
                   justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
                   background: active ? 'rgba(var(--sb-accent-rgb),0.15)' : 'transparent',
                   border: 'none', borderRadius: 8, cursor: 'pointer',
-                  color: active ? '#191712' : '#9B9180',
+                  color: active ? 'var(--sb-ink-1)' : '#9B9180',
                   marginBottom: 2, transition: 'all 0.15s ease',
                 }}
                 onMouseEnter={e => {
                   if (!active) {
                     const el = e.currentTarget as HTMLElement
                     el.style.background = 'rgba(var(--sb-accent-rgb),0.15)'
-                    el.style.color = '#191712'
+                    el.style.color = 'var(--sb-ink-1)'
                   }
                 }}
                 onMouseLeave={e => {
@@ -276,7 +276,7 @@ export function Sidebar() {
       </nav>
 
       {/* Collapse toggle */}
-      <div style={{ padding: '12px 8px', borderTop: `1px solid ${'#E8E1CE'}` }}>
+      <div style={{ padding: '12px 8px', borderTop: `1px solid ${'var(--sb-border)'}` }}>
         <button
           onClick={toggleSidebar}
           style={{
