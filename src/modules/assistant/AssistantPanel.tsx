@@ -417,7 +417,9 @@ export function AssistantPanel({ open, onClose }: AssistantPanelProps) {
             width: 32, height: 32, borderRadius: 'var(--sb-r-sm)',
             background: 'linear-gradient(135deg, #4F46E5 0%, #818CF8 100%)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: 'var(--sb-shadow-menu)',
+            // The indigo glow belongs to the gradient under it — a colour, not
+            // a height, and the reason this is not one of the shadow tokens.
+            boxShadow: '0 0 12px rgba(99,102,241,0.35)',
           }}>
             <Brain size={ICON.md} color="white" />
           </div>

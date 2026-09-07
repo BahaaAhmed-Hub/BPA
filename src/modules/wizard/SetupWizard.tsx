@@ -271,7 +271,10 @@ export function SetupWizard({ onClose }: Props) {
                   padding: '11px 26px', borderRadius: 'var(--sb-r-pill)',
                   background: 'var(--sb-accent)', border: 'none',
                   color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-label)', fontWeight: 700, cursor: 'pointer',
-                  boxShadow: 'var(--sb-shadow-hover)',
+                  // A glow, not a height: the button lifts in its own colour.
+                  // The height tokens are neutral by design, so this is one of
+                  // three shadows in the app that carries a colour on purpose.
+                  boxShadow: '0 4px 14px -2px rgba(var(--sb-accent-rgb),0.35)',
                   transition: 'all 0.15s',
                 }}>
                   Next <ChevronRight size={ICON.md} />
@@ -282,7 +285,8 @@ export function SetupWizard({ onClose }: Props) {
                   padding: '11px 26px', borderRadius: 'var(--sb-r-pill)',
                   background: '#1D9E75', border: 'none',
                   color: '#fff', fontSize: 'var(--sb-t-label)', fontWeight: 700, cursor: 'pointer',
-                  boxShadow: 'var(--sb-shadow-hover)',
+                  // The finish button's own green, glowing under it.
+                  boxShadow: '0 4px 14px -2px rgba(29,158,117,0.35)',
                   transition: 'all 0.15s',
                 }}>
                   <Check size={ICON.md} /> Finish
