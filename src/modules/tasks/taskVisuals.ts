@@ -32,11 +32,14 @@ export const TASK_TYPE_ORDER: TaskType[] = [
 
 // ─── Slot tokens ─────────────────────────────────────────────────────────────
 
-export const SLOT = 26
+// The card is a list item, not a poster: four slots at 26px each made a rail
+// taller than the text beside it, and a column that fitted five cards on a
+// screen. 22 keeps them comfortably tappable and gives the height back.
+export const SLOT = 22
 
 /** A set attribute: cream chip. */
 export const slotFilled: React.CSSProperties = {
-  width: SLOT, height: SLOT, borderRadius: 8, flexShrink: 0,
+  width: SLOT, height: SLOT, borderRadius: 7, flexShrink: 0,
   background: '#FAF7EC', border: '1px solid #E8E1CE', color: '#6C6553',
   display: 'flex', alignItems: 'center', justifyContent: 'center',
   cursor: 'pointer', padding: 0,

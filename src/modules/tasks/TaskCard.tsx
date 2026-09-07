@@ -105,54 +105,58 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
         background: '#FFFFFF',
         border: selected ? '2px solid #191712' : '1px solid #E8E1CE',
         // keep the geometry identical whether or not the ink border is on
-        padding: selected ? '12px 13px' : '13px 14px',
-        borderRadius: 12,
+        padding: selected ? '8px 9px' : '9px 10px',
+        borderRadius: 10,
         boxShadow: hovered && !selected ? '0 2px 8px rgba(25,23,18,0.07)' : '0 1px 2px rgba(25,23,18,0.04)',
         cursor: isDragging ? 'grabbing' : 'pointer',
         // Without this iOS scrolls the page instead of starting the drag.
         touchAction: 'none',
-        display: 'flex', gap: 10, minWidth: 0,
+        display: 'flex', gap: 8, minWidth: 0,
         transition: [transition, 'box-shadow .15s ease'].filter(Boolean).join(', '),
       }}
     >
       {/* ── Left column: checkbox + title, company, meta ────────────────── */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 7, minWidth: 0 }}>
-          <button
-            data-nm
-            onClick={() => {
-              if (!task.completed && isMeetingTask(task.title)) setShowMeetingPopup(true)
-              else requestComplete(task)
-            }}
-            title={task.completed ? 'Reopen' : 'Complete'}
-            style={{
-              width: 16, height: 16, borderRadius: 5, boxSizing: 'border-box', marginTop: 1,
-              border: task.completed ? '1.5px solid #0C8140' : '1.5px solid #CFC6B0',
-              background: task.completed ? '#0C8140' : '#FFFFFF',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer', flexShrink: 0, padding: 0, transition: 'all .15s',
-            }}
-          >
-            {task.completed && <Check size={9} color="#fff" strokeWidth={3} />}
-          </button>
+          {/* The tick and the bin, stacked: they are both about the card as a
+              whole, and side by side they pushed the title into two lines. */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, flexShrink: 0, paddingTop: 1 }}>
+            <button
+              data-nm
+              onClick={() => {
+                if (!task.completed && isMeetingTask(task.title)) setShowMeetingPopup(true)
+                else requestComplete(task)
+              }}
+              title={task.completed ? 'Reopen' : 'Complete'}
+              style={{
+                width: 15, height: 15, borderRadius: 5, boxSizing: 'border-box',
+                border: task.completed ? '1.5px solid #0C8140' : '1.5px solid #CFC6B0',
+                background: task.completed ? '#0C8140' : '#FFFFFF',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', flexShrink: 0, padding: 0, transition: 'all .15s',
+              }}
+            >
+              {task.completed && <Check size={9} color="#fff" strokeWidth={3} />}
+            </button>
 
-          <button data-nm
-            onClick={() => deleteTask(task.id)}
-            title="Delete task"
-            style={{
-              background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex',
-              flexShrink: 0, marginTop: 2, color: hovered ? '#C62828' : '#D8CFB8',
-            }}>
-            <Trash2 size={12.5} strokeWidth={2} />
-          </button>
+            <button data-nm
+              onClick={() => deleteTask(task.id)}
+              title="Delete task"
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex',
+                flexShrink: 0, color: hovered ? '#C62828' : '#DCD3BF',
+              }}>
+              <Trash2 size={11.5} strokeWidth={2} />
+            </button>
+          </div>
 
           <p
             style={{
-              flex: 1, margin: 0, fontSize: 13.5, fontWeight: 600,
+              flex: 1, margin: 0, fontSize: 12.5, fontWeight: 600,
               // An unnamed task reads as unnamed, not as a task called Untitled.
               color: task.title.trim() ? '#191712' : '#9B9180',
               fontStyle: task.title.trim() ? 'normal' : 'italic',
-              lineHeight: 1.35, minWidth: 0,
+              lineHeight: 1.3, minWidth: 0,
               textDecoration: task.completed ? 'line-through' : 'none',
               display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
             }}
@@ -165,14 +169,14 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
               flexShrink: 0, marginTop: 2,
               color: task.urgent ? '#C62828' : hovered ? '#9B9180' : '#D8CFB8',
             }}>
-            <Flame size={12.5} strokeWidth={2} fill={task.urgent ? '#C62828' : 'none'} />
+            <Flame size={11.5} strokeWidth={2} fill={task.urgent ? '#C62828' : 'none'} />
           </button>
         </div>
 
         {/* Company — coloured text, the card's only colour, and its own picker */}
-        <div data-nm style={{ position: 'relative', display: 'inline-block', maxWidth: '100%', margin: '5px 0 0 37px' }}>
+        <div data-nm style={{ position: 'relative', display: 'inline-block', maxWidth: '100%', margin: '3px 0 0 22px' }}>
           <p style={{
-            margin: 0, fontSize: 12, fontWeight: 600,
+            margin: 0, fontSize: 11, fontWeight: 600,
             color: v.companyName ? v.companyColor : '#C9C0A8', lineHeight: 1.3,
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             cursor: 'pointer',
@@ -194,25 +198,25 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
 
         {/* Meta line */}
         <div style={{
-          display: 'flex', alignItems: 'center', gap: 11, margin: '5px 0 0 37px',
-          fontSize: 11.5, color: '#9B9180', minWidth: 0,
+          display: 'flex', alignItems: 'center', gap: 9, margin: '3px 0 0 22px',
+          fontSize: 10.5, color: '#9B9180', minWidth: 0,
           // a narrow column (panel open) clips the trailing meta rather than
           // letting it run under the attribute rail
           overflow: 'hidden', whiteSpace: 'nowrap',
         }}>
           {attachmentCount > 0 && (
             <span style={{ display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
-              <Paperclip size={11} /> {attachmentCount}
+              <Paperclip size={10} /> {attachmentCount}
             </span>
           )}
           {!task.completed && (
             <span style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
-              <Clock size={11} /> {openLabel(task)}
+              <Clock size={10} /> {openLabel(task)}
             </span>
           )}
           {v.scheduleLabel && (
             <span style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
-              <CalendarDays size={11} />
+              <CalendarDays size={10} />
               {v.scheduleLabel}
             </span>
           )}
@@ -220,10 +224,16 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
       </div>
 
       {/* ── Right rail: the four attribute slots ────────────────────────── */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0, width: SLOT }}>
+      {/* Two by two rather than a column of four: stacked, the rail was 100px
+          of chrome on a card whose words needed sixty, and it set the height of
+          every card on the board. */}
+      <div style={{
+        display: 'grid', gridTemplateColumns: `repeat(2, ${SLOT}px)`,
+        gap: 4, flexShrink: 0, alignContent: 'start',
+      }}>
         {/* Type */}
         <div data-nm style={{ position: 'relative', width: SLOT, height: SLOT }}>
-          <div style={slotFilled} title={v.typeLabel}><TypeIcon size={13} strokeWidth={1.9} /></div>
+          <div style={slotFilled} title={v.typeLabel}><TypeIcon size={12} strokeWidth={1.9} /></div>
           <SlotSelect value={v.type} onChange={val => updateTask(task.id, { taskType: val as TaskType })}>
             {TASK_TYPE_ORDER.map(t => <option key={t} value={t}>{TASK_TYPE_META[t].label}</option>)}
           </SlotSelect>
@@ -238,7 +248,7 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
             onMouseDown={e => e.stopPropagation()}
             title={v.scheduled ? `Scheduled ${v.scheduleLabel ?? ''}`.trim() : 'Not scheduled'}
             style={{ ...(v.scheduled ? slotScheduled : slotEmpty), cursor: 'pointer', padding: 0 }}>
-            <CalendarDays size={13} strokeWidth={1.9} />
+            <CalendarDays size={12} strokeWidth={1.9} />
           </button>
           {scheduleOpen && (
             <SchedulePopover
@@ -256,7 +266,7 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
         <div data-nm style={{ position: 'relative', width: SLOT, height: SLOT }}>
           <div style={task.priority ? slotPriority(task.priority) : slotEmpty}
             title={task.priority ? `Priority ${task.priority}` : 'No priority'}>
-            <PRIORITY_ICON size={13} strokeWidth={1.9} />
+            <PRIORITY_ICON size={12} strokeWidth={1.9} />
           </div>
           <SlotSelect value={task.priority ?? ''} onChange={val => updateTask(task.id, { priority: (val || undefined) as Priority | undefined })}>
             <option value="">No priority</option>
@@ -271,9 +281,9 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
             style={{
               ...(v.ownerInitials ? slotFilled : slotEmpty),
               borderRadius: '50%',
-              fontSize: 9.5, fontWeight: 700, letterSpacing: '0.02em',
+              fontSize: 9, fontWeight: 700, letterSpacing: '0.02em',
             }}
-          >{v.ownerInitials ?? <User size={13} strokeWidth={2} />}</div>
+          >{v.ownerInitials ?? <User size={12} strokeWidth={2} />}</div>
           <SlotSelect value={task.owner ?? ''} onChange={val => updateTask(task.id, { owner: val || undefined })}>
             <option value="">Unassigned</option>
             {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
