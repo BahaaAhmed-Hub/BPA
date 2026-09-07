@@ -58,7 +58,7 @@ function relativeStamp(iso: string): string {
 // ─── Small pieces ────────────────────────────────────────────────────────────
 
 const ICON_BTN: React.CSSProperties = {
-  width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
+  width: 28, height: 28, borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
   display: 'flex', alignItems: 'center', justifyContent: 'center',
   background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', padding: 0,
 }
@@ -66,7 +66,7 @@ const ICON_BTN: React.CSSProperties = {
 /** One attribute cell: same height and shape in every state, icon then value. */
 const CELL: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 8,
-  height: 34, padding: '0 11px', borderRadius: 9, minWidth: 0,
+  height: 34, padding: '0 11px', borderRadius: 'var(--sb-r-sm)', minWidth: 0,
   background: 'var(--sb-field)', border: '1px solid var(--sb-border)',
   cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
 }
@@ -248,7 +248,7 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
     <aside style={{
       width: expanded ? 'min(560px, 62vw)' : 'clamp(300px, 32vw, 400px)', flexShrink: 0, alignSelf: 'flex-start',
       maxHeight: 'calc(100vh - 212px)',
-      background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 16,
+      background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
       display: 'flex', flexDirection: 'column', minWidth: 0,
       boxShadow: '0 1px 3px rgba(25,23,18,0.06)',
     }}>
@@ -263,7 +263,7 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
         <span style={{ position: 'relative', display: 'inline-flex', minWidth: 0, maxWidth: '100%' }}>
           <span style={{
             display: 'inline-flex', alignItems: 'center', height: 28, padding: '0 12px',
-            borderRadius: 999, border: `1px solid ${v.companyColor}`, color: v.companyColor,
+            borderRadius: 'var(--sb-r-pill)', border: `1px solid ${v.companyColor}`, color: v.companyColor,
             fontSize: 'var(--sb-t-body-s)', fontWeight: 600, maxWidth: '100%',
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}>{v.companyName || 'No company'}</span>
@@ -339,7 +339,7 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
           placeholder="What is it?"
           style={{
             width: '100%', boxSizing: 'border-box', resize: 'none', overflow: 'hidden',
-            background: 'var(--sb-field)', border: '1px solid var(--sb-border)', borderRadius: 11,
+            background: 'var(--sb-field)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
             padding: '12px 14px', outline: 'none', fontFamily: 'var(--sb-font-num)',
             fontSize: 'var(--sb-t-h2)', fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--sb-ink-1)', lineHeight: 1.25,
           }}
@@ -447,7 +447,7 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
           {/* Owner */}
           <label style={{ ...CELL, gridColumn: '1 / -1', position: 'relative' }}>
             <span style={{
-              width: 18, height: 18, borderRadius: '50%', flexShrink: 0, boxSizing: 'border-box',
+              width: 18, height: 18, borderRadius: 'var(--sb-r-pill)', flexShrink: 0, boxSizing: 'border-box',
               background: owner ? 'var(--sb-ink-1)' : 'var(--sb-field)',
               border: owner ? 'none' : '1px solid var(--sb-border)',
               color: owner ? 'var(--sb-card)' : 'var(--sb-ink-4)',
@@ -492,7 +492,7 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
             {checklist.map((s: ChecklistStep) => (
               <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '5px 0' }}>
                 <button onClick={() => toggleStep(s.id)} style={{
-                  width: 15, height: 15, borderRadius: 4, boxSizing: 'border-box', flexShrink: 0, padding: 0,
+                  width: 15, height: 15, borderRadius: 'var(--sb-r-chip)', boxSizing: 'border-box', flexShrink: 0, padding: 0,
                   border: s.done ? '1.5px solid var(--sb-ink-1)' : '1.5px solid #CFC6B0',
                   background: s.done ? 'var(--sb-ink-1)' : 'var(--sb-card)', cursor: 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -534,7 +534,7 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
             placeholder="Anything worth remembering…"
             style={{
               width: '100%', boxSizing: 'border-box', marginTop: 8, resize: 'vertical',
-              background: 'var(--sb-field)', border: '1px solid var(--sb-border)', borderRadius: 10,
+              background: 'var(--sb-field)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
               padding: '10px 12px', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)', outline: 'none',
               fontFamily: 'inherit', lineHeight: 1.5,
             }}
@@ -549,10 +549,10 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
               {(task.links ?? []).map((url, i) => (
                 <div key={`${url}-${i}`} style={{
                   display: 'flex', alignItems: 'center', gap: 10,
-                  border: '1px solid var(--sb-border)', borderRadius: 10, padding: '9px 11px',
+                  border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', padding: '9px 11px',
                 }}>
                   <span style={{
-                    width: 28, height: 28, borderRadius: 8, flexShrink: 0, background: 'var(--sb-field)',
+                    width: 28, height: 28, borderRadius: 'var(--sb-r-chip)', flexShrink: 0, background: 'var(--sb-field)',
                     border: '1px solid var(--sb-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--sb-ink-3)',
                   }}><Link2 size={13} /></span>
                   <a href={url} target="_blank" rel="noreferrer" style={{
@@ -570,10 +570,10 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
                 return (
                   <div key={f.id} style={{
                     display: 'flex', alignItems: 'center', gap: 10,
-                    border: '1px solid var(--sb-border)', borderRadius: 10, padding: '9px 11px',
+                    border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', padding: '9px 11px',
                   }}>
                     <span style={{
-                      width: 28, height: 28, borderRadius: 8, flexShrink: 0, background: 'var(--sb-field)',
+                      width: 28, height: 28, borderRadius: 'var(--sb-r-chip)', flexShrink: 0, background: 'var(--sb-field)',
                       border: '1px solid var(--sb-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--sb-ink-3)',
                     }}>{isImage ? <ImageIcon size={13} /> : <FileText size={13} />}</span>
                     <div style={{ flex: 1, minWidth: 0 }}>
@@ -626,7 +626,7 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
             {shownActs.map(a => (
               <div key={a.id} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                 <span style={{
-                  width: 20, height: 20, borderRadius: '50%', flexShrink: 0, marginTop: 1,
+                  width: 20, height: 20, borderRadius: 'var(--sb-r-pill)', flexShrink: 0, marginTop: 1,
                   background: 'var(--sb-field)', border: '1px solid var(--sb-border)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--sb-ink-4)',
                 }}>

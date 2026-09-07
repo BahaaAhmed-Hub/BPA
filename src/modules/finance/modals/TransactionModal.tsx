@@ -229,7 +229,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
       <div style={{
         width: 'clamp(320px, 94vw, 460px)', maxHeight: '90vh', overflowY: 'auto',
         boxSizing: 'border-box', scrollbarWidth: 'thin',
-        background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 18,
+        background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
         boxShadow: '0 24px 60px rgba(25,23,18,0.24)',
         padding: '18px 20px 22px',
       }}>
@@ -238,9 +238,9 @@ export function TransactionModal({ transaction, accounts, categories, history = 
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{
             display: 'inline-flex', alignItems: 'center', gap: 6, height: 26, padding: '0 11px',
-            borderRadius: 999, background: 'var(--sb-field)', color: 'var(--sb-ink-2)', fontSize: 'var(--sb-t-meta)',
+            borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-field)', color: 'var(--sb-ink-2)', fontSize: 'var(--sb-t-meta)',
           }}>
-            <span style={{ width: 7, height: 7, borderRadius: 999, background: typeColor, flexShrink: 0 }} />
+            <span style={{ width: 7, height: 7, borderRadius: 'var(--sb-r-pill)', background: typeColor, flexShrink: 0 }} />
             {isEdit ? 'Transaction' : 'New transaction'}
           </span>
           <span style={{ flex: 1 }} />
@@ -250,7 +250,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
         {/* Type — three choices you can see, rather than a title that cycles */}
         <div style={{
           display: 'flex', gap: 2, padding: 3, marginTop: 14,
-          borderRadius: 999, background: 'var(--sb-field)',
+          borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-field)',
         }}>
           {TYPES.map(t => {
             const on = type === t.id
@@ -259,7 +259,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
                 onClick={() => { setType(t.id); if (t.id === 'transfer') setCategoryId('') }}
                 aria-pressed={on}
                 style={{
-                  flex: 1, height: 32, borderRadius: 999, border: 'none', fontFamily: 'inherit',
+                  flex: 1, height: 32, borderRadius: 'var(--sb-r-pill)', border: 'none', fontFamily: 'inherit',
                   background: on ? 'var(--sb-ink-1)' : 'transparent', color: on ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
                   fontSize: 'var(--sb-t-body-s)', fontWeight: on ? 600 : 500, cursor: 'pointer',
                 }}>{t.label}</button>
@@ -270,13 +270,13 @@ export function TransactionModal({ transaction, accounts, categories, history = 
         {/* The amount is what this panel is about, so it is the biggest thing in it */}
         <div style={{
           display: 'flex', alignItems: 'center', gap: 10, marginTop: 12,
-          padding: '0 15px', height: 66, borderRadius: 12,
+          padding: '0 15px', height: 66, borderRadius: 'var(--sb-r-nav)',
           background: 'var(--sb-field)', border: '1px solid var(--sb-border)',
         }}>
           <span style={{ position: 'relative', display: 'flex', flexShrink: 0 }}>
             <span style={{
               display: 'inline-flex', alignItems: 'center', gap: 4, height: 30, padding: '0 10px',
-              borderRadius: 8, background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
+              borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
               fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-3)',
             }}>
               {currency}
@@ -354,7 +354,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
               <span style={LABEL} />
               <span style={{
                 flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
-                padding: '9px 12px', borderRadius: 10,
+                padding: '9px 12px', borderRadius: 'var(--sb-r-nav)',
                 background: '#FBF3D2', border: '1px solid var(--sb-accent-border)',
               }}>
                 <span style={{ fontSize: 'var(--sb-t-body-s)', color: '#7A5F09', flex: 1, minWidth: 140 }}>
@@ -442,7 +442,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
                   <div style={{
                     position: 'absolute', top: 46, left: 0, right: 0, zIndex: 20, padding: 5,
                     maxHeight: 210, overflowY: 'auto',
-                    background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 12,
+                    background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
                     boxShadow: '0 12px 32px rgba(25,23,18,0.18)',
                   }}>
                     {payeeHits.map(name => (
@@ -450,7 +450,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
                         onClick={() => { setPayee(name); setPayeeOpen(false) }}
                         style={{
                           display: 'block', width: '100%', padding: '9px 10px', border: 'none',
-                          borderRadius: 8, background: 'transparent', cursor: 'pointer',
+                          borderRadius: 'var(--sb-r-chip)', background: 'transparent', cursor: 'pointer',
                           fontFamily: 'inherit', fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)', textAlign: 'left',
                           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                         }}>{name}</button>
@@ -467,7 +467,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
                 placeholder="Anything worth remembering…"
                 style={{
                   flex: 1, minWidth: 0, boxSizing: 'border-box', resize: 'vertical',
-                  background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 9,
+                  background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-sm)',
                   padding: '9px 12px', fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)', fontFamily: 'inherit',
                   outline: 'none', textAlign: 'left',
                 }} />
@@ -480,7 +480,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
                 {tags.map(tag => (
                   <span key={tag} style={{
                     display: 'inline-flex', alignItems: 'center', gap: 5, height: 28, padding: '0 6px 0 10px',
-                    borderRadius: 999, background: 'rgba(var(--sb-accent-rgb),0.16)', border: '1px solid rgba(var(--sb-accent-rgb),0.33)',
+                    borderRadius: 'var(--sb-r-pill)', background: 'rgba(var(--sb-accent-rgb),0.16)', border: '1px solid rgba(var(--sb-accent-rgb),0.33)',
                     color: '#3D3926', fontSize: 'var(--sb-t-body-s)',
                   }}>
                     {tag}
@@ -511,12 +511,12 @@ export function TransactionModal({ transaction, accounts, categories, history = 
                 {attachments.map((src, i) => (
                   <span key={i} style={{ position: 'relative', flexShrink: 0, display: 'flex' }}>
                     <img src={src} alt={`Receipt ${i + 1}`} style={{
-                      width: 46, height: 46, borderRadius: 9, objectFit: 'cover', border: '1px solid var(--sb-border)',
+                      width: 46, height: 46, borderRadius: 'var(--sb-r-sm)', objectFit: 'cover', border: '1px solid var(--sb-border)',
                     }} />
                     <button onClick={() => setAttachments(prev => prev.filter((_, j) => j !== i))} title="Remove"
                       style={{
                         position: 'absolute', top: -6, right: -6, width: 19, height: 19, padding: 0,
-                        borderRadius: '50%', background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
+                        borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
                         color: 'var(--sb-ink-3)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
                         boxShadow: '0 1px 3px rgba(25,23,18,0.14)',
                       }}>
@@ -570,7 +570,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
                   setOpenPanes(p => ({ ...p, [key]: !p[key] }))
                 }}
                 style={{
-                  flex: 1, height: 44, borderRadius: 11, cursor: filled && open ? 'default' : 'pointer',
+                  flex: 1, height: 44, borderRadius: 'var(--sb-r-nav)', cursor: filled && open ? 'default' : 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   background: filled ? 'rgba(var(--sb-accent-rgb),0.18)' : open ? 'var(--sb-field)' : 'transparent',
                   border: `1px solid ${filled ? 'var(--sb-accent)' : 'var(--sb-border)'}`,
@@ -597,7 +597,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
           <button
             onClick={() => { onDelete(transaction.id); onClose() }}
             style={{
-              marginTop: 12, width: '100%', height: 34, borderRadius: 9,
+              marginTop: 12, width: '100%', height: 34, borderRadius: 'var(--sb-r-sm)',
               background: 'none', border: 'none', fontFamily: 'inherit',
               color: 'var(--sb-negative)', fontSize: 'var(--sb-t-body-s)', cursor: 'pointer',
             }}>

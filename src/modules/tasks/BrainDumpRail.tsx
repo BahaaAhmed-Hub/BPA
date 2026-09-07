@@ -107,7 +107,7 @@ function DumpCard({ task, onOpen, onDelete }: {
       style={{
         background: s.inferred ? '#FFFCF0' : 'var(--sb-card)',
         border: `1px solid ${s.inferred ? '#F0DFA8' : 'var(--sb-border)'}`,
-        borderRadius: 11, padding: '10px 11px',
+        borderRadius: 'var(--sb-r-nav)', padding: '10px 11px',
         display: 'flex', gap: 8, cursor: 'pointer', minWidth: 0,
         opacity: isDragging ? 0.4 : 1,
       }}
@@ -142,7 +142,7 @@ function DumpCard({ task, onOpen, onDelete }: {
         <div style={{ display: 'flex', alignItems: 'center', marginTop: 7, minWidth: 0 }}>
           <span style={{
             display: 'inline-flex', alignItems: 'center', gap: 5, minWidth: 0,
-            padding: '3px 8px', borderRadius: 999,
+            padding: '3px 8px', borderRadius: 'var(--sb-r-pill)',
             background: s.inferred ? '#FDF3CE' : '#F4F1E6',
             border: `1px solid ${s.inferred ? '#EBD79A' : '#E4DDC9'}`,
             fontSize: 'var(--sb-t-micro)', fontWeight: 600, color: 'var(--sb-ink-3)',
@@ -228,12 +228,12 @@ export function BrainDumpRail({ tasks, onOpen, flexible }: {
     return (
       <div style={{
         width: 44, flexShrink: 0, alignSelf: 'start',
-        background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 14,
+        background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
         display: 'flex', flexDirection: 'column', alignItems: 'center',
         padding: '10px 0 14px', gap: 10,
       }}>
         <button onClick={toggleCollapsed} title="Show the brain dump" style={{
-          width: 28, height: 28, borderRadius: 8, padding: 0,
+          width: 28, height: 28, borderRadius: 'var(--sb-r-chip)', padding: 0,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           background: 'none', border: 'none', color: 'var(--sb-ink-3)', cursor: 'pointer',
         }}><ChevronRight size={16} /></button>
@@ -252,7 +252,7 @@ export function BrainDumpRail({ tasks, onOpen, flexible }: {
         ? { flex: 1, minWidth: 0 }
         : { width: 'clamp(240px, 26vw, 360px)', flexShrink: 0 }),
       alignSelf: 'start',
-      background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 14,
+      background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
       display: 'flex', flexDirection: 'column',
     }}>
       {/* Header */}
@@ -262,7 +262,7 @@ export function BrainDumpRail({ tasks, onOpen, flexible }: {
           <p style={{ margin: 0, flex: 1, fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-1)', lineHeight: 1.3 }}>Brain dump</p>
           <CountBadge value={tasks.length} />
           <button onClick={toggleCollapsed} title="Hide the brain dump" style={{
-            width: 24, height: 24, borderRadius: 7, padding: 0, flexShrink: 0,
+            width: 24, height: 24, borderRadius: 'var(--sb-r-chip)', padding: 0, flexShrink: 0,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             background: 'none', border: 'none', color: 'var(--sb-ink-4)', cursor: 'pointer',
           }}><ChevronLeft size={16} /></button>
@@ -273,7 +273,7 @@ export function BrainDumpRail({ tasks, onOpen, flexible }: {
         <button onClick={() => setCapturing(c => !c)} style={{
           width: '100%', marginTop: 11,
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-          height: 32, borderRadius: 9,
+          height: 32, borderRadius: 'var(--sb-r-sm)',
           background: 'var(--sb-field)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-1)',
           fontSize: 'var(--sb-t-body-s)', fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit',
         }}>
@@ -291,7 +291,7 @@ export function BrainDumpRail({ tasks, onOpen, flexible }: {
             placeholder={'One per line…'}
             style={{
               width: '100%', boxSizing: 'border-box', marginTop: 9, resize: 'vertical',
-              background: 'var(--sb-field)', border: '1px solid var(--sb-accent)', borderRadius: 9,
+              background: 'var(--sb-field)', border: '1px solid var(--sb-accent)', borderRadius: 'var(--sb-r-sm)',
               padding: '8px 10px', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)', outline: 'none',
               fontFamily: 'inherit', lineHeight: 1.5,
             }}
@@ -354,7 +354,7 @@ export function BrainDumpRail({ tasks, onOpen, flexible }: {
         )}
 
         <button onClick={distributeAll} disabled={tasks.length === 0} style={{
-          width: '100%', marginTop: 12, height: 38, borderRadius: 10, border: 'none',
+          width: '100%', marginTop: 12, height: 38, borderRadius: 'var(--sb-r-nav)', border: 'none',
           background: tasks.length === 0 ? 'var(--sb-border)' : 'var(--sb-ink-1)',
           color: tasks.length === 0 ? 'var(--sb-ink-4)' : 'var(--sb-card)',
           fontSize: 'var(--sb-t-body-s)', fontWeight: 600, fontFamily: 'inherit',

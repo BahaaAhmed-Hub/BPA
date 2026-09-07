@@ -93,7 +93,7 @@ export function datesFor(row: Pick<Draft, 'from' | 'to' | 'every'>): string[] {
 }
 
 const CELL: React.CSSProperties = {
-  height: 34, boxSizing: 'border-box', padding: '0 10px', borderRadius: 9,
+  height: 34, boxSizing: 'border-box', padding: '0 10px', borderRadius: 'var(--sb-r-sm)',
   background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-1)',
   fontSize: 'var(--sb-t-body-s)', fontFamily: 'inherit', outline: 'none', minWidth: 0, width: '100%',
 }
@@ -227,7 +227,7 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
         onClick={e => e.stopPropagation()}
         style={{
           width: '100%', maxWidth: 1100, maxHeight: '88vh', display: 'flex', flexDirection: 'column',
-          background: 'var(--sb-header)', border: '1px solid var(--sb-border)', borderRadius: 20,
+          background: 'var(--sb-header)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
           boxShadow: '0 30px 80px rgba(25,23,18,0.28)', padding: '18px 20px 20px',
         }}>
 
@@ -235,10 +235,10 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
           <span style={{
             display: 'inline-flex', alignItems: 'center', gap: 7,
-            background: '#F3EEE0', borderRadius: 999, padding: '5px 12px',
+            background: '#F3EEE0', borderRadius: 'var(--sb-r-pill)', padding: '5px 12px',
             fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-ink-3)',
           }}>
-            <span style={{ width: 6, height: 6, borderRadius: '50%', background: tone }} />
+            <span style={{ width: 6, height: 6, borderRadius: 'var(--sb-r-pill)', background: tone }} />
             Bulk entry
           </span>
           <button onClick={onClose} title="Close" style={{ ...ROUND, marginLeft: 'auto' }}><X size={14} /></button>
@@ -246,11 +246,11 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
 
         {/* What the whole batch shares */}
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-          <span style={{ display: 'inline-flex', background: 'var(--sb-field)', borderRadius: 10, padding: 3, gap: 3 }}>
+          <span style={{ display: 'inline-flex', background: 'var(--sb-field)', borderRadius: 'var(--sb-r-nav)', padding: 3, gap: 3 }}>
             {(['expense', 'income'] as const).map(k => (
               <button key={k} onClick={() => setKind(k)}
                 style={{
-                  padding: '0 16px', height: 34, borderRadius: 8, border: 'none', cursor: 'pointer',
+                  padding: '0 16px', height: 34, borderRadius: 'var(--sb-r-chip)', border: 'none', cursor: 'pointer',
                   fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', fontWeight: kind === k ? 700 : 500,
                   background: kind === k ? 'var(--sb-ink-1)' : 'transparent',
                   color: kind === k ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
@@ -260,12 +260,12 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
             ))}
           </span>
 
-          <span style={{ display: 'inline-flex', background: 'var(--sb-field)', borderRadius: 10, padding: 3, gap: 3 }}
+          <span style={{ display: 'inline-flex', background: 'var(--sb-field)', borderRadius: 'var(--sb-r-nav)', padding: 3, gap: 3 }}
             title="Sets every line; a line can still be changed on its own">
             {([true, false] as const).map(p => (
               <button key={String(p)} onClick={() => setAllPaid(p)}
                 style={{
-                  padding: '0 14px', height: 34, borderRadius: 8, border: 'none', cursor: 'pointer',
+                  padding: '0 14px', height: 34, borderRadius: 'var(--sb-r-chip)', border: 'none', cursor: 'pointer',
                   fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', fontWeight: batchPaid === p ? 700 : 500,
                   background: batchPaid === p ? 'var(--sb-ink-1)' : 'transparent',
                   color: batchPaid === p ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
@@ -278,7 +278,7 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
           {/* Where the whole batch lands. Unanswered it is outlined and says
               so, because everything below it is filed against this one field. */}
           <span style={{
-            flex: 1, minWidth: 200, display: 'flex', borderRadius: 10,
+            flex: 1, minWidth: 200, display: 'flex', borderRadius: 'var(--sb-r-nav)',
             boxShadow: account ? 'none' : `0 0 0 2px var(--sb-accent)`,
           }}>
             <PillPicker
@@ -389,7 +389,7 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
                     onClick={() => patch(r.key, { paid: !r.paid })}
                     title={r.paid ? 'Paid — click if the money has not moved' : 'Not paid — click once it has'}
                     style={{
-                      width: 17, height: 17, flexShrink: 0, padding: 0, borderRadius: 5, cursor: 'pointer',
+                      width: 17, height: 17, flexShrink: 0, padding: 0, borderRadius: 'var(--sb-r-chip)', cursor: 'pointer',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       background: r.paid ? 'var(--sb-ink-1)' : 'transparent',
                       border: `1.5px solid ${r.paid ? 'var(--sb-ink-1)' : 'var(--sb-negative)'}`,
@@ -444,7 +444,7 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
           </span>
           {elsewhere.length > 0 && account && (
             <span style={{
-              display: 'inline-flex', alignItems: 'center', gap: 6, borderRadius: 999,
+              display: 'inline-flex', alignItems: 'center', gap: 6, borderRadius: 'var(--sb-r-pill)',
               background: '#FBF1D2', border: '1px solid var(--sb-accent)', padding: '4px 11px',
               fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-1)',
             }}>

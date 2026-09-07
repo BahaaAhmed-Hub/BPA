@@ -33,7 +33,7 @@ function MetricCard({
       style={{
         background: 'var(--sb-card)',
         border: '1px solid var(--sb-border)',
-        borderRadius: 12, padding: '20px 22px',
+        borderRadius: 'var(--sb-r-nav)', padding: '20px 22px',
         display: 'flex', flexDirection: 'column', gap: 12,
         position: 'relative', overflow: 'hidden',
         cursor: onClick ? 'pointer' : 'default',
@@ -41,7 +41,7 @@ function MetricCard({
       }}
     >
       <div style={{
-        width: 36, height: 36, borderRadius: 8,
+        width: 36, height: 36, borderRadius: 'var(--sb-r-chip)',
         // The tile is the card's colour at a fraction of itself. An eight-digit
         // hex could only ever say that about a hex, and one of these colours is
         // now a token — 24/255 and 48/255, the two alphas that were there.
@@ -75,7 +75,7 @@ function MetricCard({
       <div style={{
         position: 'absolute', top: 0, left: 0,
         width: 3, height: '100%', background: color,
-        borderRadius: '12px 0 0 12px',
+        borderRadius: 'var(--sb-r-nav) 0 0 var(--sb-r-nav)',
       }} />
     </div>
   )
@@ -87,15 +87,15 @@ function CompanyBadge({ name, color, count }: { name: string; color: string; cou
       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       padding: '10px 14px',
       background: 'var(--sb-field)',
-      borderRadius: 8, border: '1px solid var(--sb-border)',
+      borderRadius: 'var(--sb-r-chip)', border: '1px solid var(--sb-border)',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <div style={{ width: 8, height: 8, borderRadius: '50%', background: color }} />
+        <div style={{ width: 8, height: 8, borderRadius: 'var(--sb-r-pill)', background: color }} />
         <span style={{ fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)', fontWeight: 400 }}>
           {name}
         </span>
       </div>
-      <span style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color, background: `${color}18`, padding: '2px 8px', borderRadius: 4 }}>
+      <span style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color, background: `${color}18`, padding: '2px 8px', borderRadius: 'var(--sb-r-chip)' }}>
         {count}
       </span>
     </div>
@@ -112,7 +112,7 @@ function QuickAction({ label, onClick }: { label: string; onClick: () => void })
         width: '100%', padding: '12px 16px',
         background: 'var(--sb-field)',
         border: '1px solid var(--sb-border)',
-        borderRadius: 9, cursor: 'pointer', gap: 10,
+        borderRadius: 'var(--sb-r-sm)', cursor: 'pointer', gap: 10,
         color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body)', fontWeight: 500,
         transition: 'border-color 0.15s',
         textAlign: 'left',
@@ -207,7 +207,7 @@ export function ExecutiveDashboard() {
             onClick={() => setModule('tasks')}
             style={{
               display: 'flex', alignItems: 'center', gap: 7,
-              padding: '9px 18px', borderRadius: 9,
+              padding: '9px 18px', borderRadius: 'var(--sb-r-sm)',
               background: 'rgba(var(--sb-accent-rgb),0.12)',
               border: '1px solid rgba(var(--sb-accent-rgb),0.25)',
               color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-label)', fontWeight: 600, cursor: 'pointer',
@@ -293,7 +293,7 @@ export function ExecutiveDashboard() {
           <div style={{
             background: 'var(--sb-card)',
             border: '1px solid var(--sb-border)',
-            borderRadius: 12, padding: '20px 22px',
+            borderRadius: 'var(--sb-r-nav)', padding: '20px 22px',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
               <h3 style={{ margin: 0, fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-3)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
@@ -318,7 +318,7 @@ export function ExecutiveDashboard() {
             <div style={{
               background: 'var(--sb-card)',
               border: '1px solid var(--sb-border)',
-              borderRadius: 12, padding: '20px 22px',
+              borderRadius: 'var(--sb-r-nav)', padding: '20px 22px',
             }}>
               <h3 style={{ margin: '0 0 14px', fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-3)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
                 Eisenhower Matrix
@@ -336,7 +336,7 @@ export function ExecutiveDashboard() {
                       style={{
                         background: 'var(--sb-field)',
                         border: `1px solid ${color}30`,
-                        borderRadius: 8, padding: '12px 14px',
+                        borderRadius: 'var(--sb-r-chip)', padding: '12px 14px',
                         display: 'flex', flexDirection: 'column', gap: 4,
                         cursor: 'pointer',
                       }}>
@@ -354,7 +354,7 @@ export function ExecutiveDashboard() {
             <div style={{
               background: 'var(--sb-card)',
               border: '1px solid var(--sb-border)',
-              borderRadius: 12, padding: '16px 18px',
+              borderRadius: 'var(--sb-r-nav)', padding: '16px 18px',
             }}>
               <h3 style={{ margin: '0 0 12px', fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-ink-3)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
                 Quick Access
@@ -374,11 +374,11 @@ export function ExecutiveDashboard() {
           marginTop: 14,
           background: 'rgba(30,64,175,0.06)',
           border: '1px solid rgba(30,64,175,0.2)',
-          borderRadius: 12, padding: '16px 20px',
+          borderRadius: 'var(--sb-r-nav)', padding: '16px 20px',
           display: 'flex', gap: 14, alignItems: 'flex-start',
         }}>
           <div style={{
-            width: 28, height: 28, borderRadius: 6,
+            width: 28, height: 28, borderRadius: 'var(--sb-r-chip)',
             background: 'rgba(30,64,175,0.15)', border: '1px solid rgba(30,64,175,0.3)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             flexShrink: 0, marginTop: 1,

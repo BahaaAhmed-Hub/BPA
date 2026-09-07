@@ -223,7 +223,7 @@ async function checkSupabase(): Promise<boolean> {
 const inputStyle: React.CSSProperties = {
   background: 'var(--sb-field)',
   border: '1px solid var(--sb-border)',
-  borderRadius: 7, color: 'var(--sb-ink-1)',
+  borderRadius: 'var(--sb-r-chip)', color: 'var(--sb-ink-1)',
   fontSize: 'var(--sb-t-body)', padding: '7px 11px', outline: 'none',
   fontFamily: 'var(--sb-font-ui)', width: '100%', boxSizing: 'border-box' as const,
 }
@@ -236,13 +236,13 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
   return (
     <button role="switch" aria-checked={checked} onClick={() => onChange(!checked)}
       style={{
-        width: 42, height: 24, borderRadius: 12, flexShrink: 0,
+        width: 42, height: 24, borderRadius: 'var(--sb-r-nav)', flexShrink: 0,
         background: checked ? accent : 'var(--sb-border)',
         border: 'none', cursor: 'pointer', position: 'relative', padding: 0, transition: 'background 0.2s',
       }}>
       <span style={{
         position: 'absolute', top: 4, left: checked ? 22 : 4,
-        width: 16, height: 16, borderRadius: '50%', display: 'block',
+        width: 16, height: 16, borderRadius: 'var(--sb-r-pill)', display: 'block',
         background: checked ? 'var(--sb-card)' : 'var(--sb-ink-3)',
         transition: 'left 0.2s',
       }} />
@@ -277,7 +277,7 @@ function FieldRow({ label, sub, children }: { label: string; sub?: string; child
 const PILL_BASE: React.CSSProperties = {
   background: 'var(--sb-field)',
   border: '1px solid var(--sb-border)',
-  borderRadius: 9,
+  borderRadius: 'var(--sb-r-sm)',
   color: 'var(--sb-ink-1)',
   fontSize: 'var(--sb-t-body)',
   fontWeight: 500,
@@ -344,13 +344,13 @@ function Segmented<T extends string>({ value, options, onChange }: {
   return (
     <div style={{
       display: 'inline-flex', alignItems: 'center', gap: 2, padding: 3,
-      background: 'var(--sb-field)', border: '1px solid var(--sb-border)', borderRadius: 10,
+      background: 'var(--sb-field)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
     }}>
       {options.map(o => {
         const on = o.value === value
         return (
           <button key={o.value} onClick={() => onChange(o.value)} style={{
-            padding: '6px 14px', borderRadius: 8, fontSize: 'var(--sb-t-body-s)', cursor: 'pointer',
+            padding: '6px 14px', borderRadius: 'var(--sb-r-chip)', fontSize: 'var(--sb-t-body-s)', cursor: 'pointer',
             fontWeight: on ? 600 : 500,
             fontFamily: 'inherit',
             background: on ? 'var(--sb-card)' : 'transparent',
@@ -380,7 +380,7 @@ function VisaBadge() {
   return (
     <span style={{
       display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-      width: 30, height: 19, borderRadius: 4, background: '#1A1F71',
+      width: 30, height: 19, borderRadius: 'var(--sb-r-chip)', background: '#1A1F71',
       color: 'var(--sb-card)', fontSize: 'var(--sb-t-micro)', fontWeight: 700, fontStyle: 'italic',
       letterSpacing: '0.04em', flexShrink: 0,
     }}>VISA</span>
@@ -441,9 +441,9 @@ function ProfileSection({
         paddingBottom: 18, borderBottom: '1px solid var(--sb-hairline)',
       }}>
         {avatarUrl
-          ? <img src={avatarUrl} alt="" style={{ width: 46, height: 46, borderRadius: '50%', border: '1px solid var(--sb-border)', flexShrink: 0, objectFit: 'cover' }} />
+          ? <img src={avatarUrl} alt="" style={{ width: 46, height: 46, borderRadius: 'var(--sb-r-pill)', border: '1px solid var(--sb-border)', flexShrink: 0, objectFit: 'cover' }} />
           : <div style={{
-              width: 46, height: 46, borderRadius: '50%', flexShrink: 0,
+              width: 46, height: 46, borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
               background: 'var(--sb-hairline)', border: '1px solid var(--sb-border)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 'var(--sb-t-h3)', fontWeight: 700, color: 'var(--sb-ink-3)', letterSpacing: '0.02em',
@@ -502,7 +502,7 @@ function ProfileSection({
           disabled={tzSyncing}
           title="Set the timezone from where you are"
           style={{
-            width: 36, height: 36, borderRadius: 9, flexShrink: 0, padding: 0,
+            width: 36, height: 36, borderRadius: 'var(--sb-r-sm)', flexShrink: 0, padding: 0,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
             color: tzSyncing ? 'var(--sb-ink-4)' : 'var(--sb-ink-3)',
@@ -530,7 +530,7 @@ function ProfileSection({
                 key={d}
                 onClick={() => set({ workWeek: on ? s.workWeek.filter(x => x !== d) : [...s.workWeek, d] })}
                 style={{
-                  padding: '7px 11px', borderRadius: 8, fontSize: 'var(--sb-t-body-s)', cursor: 'pointer',
+                  padding: '7px 11px', borderRadius: 'var(--sb-r-chip)', fontSize: 'var(--sb-t-body-s)', cursor: 'pointer',
                   fontFamily: 'inherit',
                   fontWeight: on ? 600 : 500,
                   background: on ? 'var(--sb-ink-1)' : 'var(--sb-field)',
@@ -577,7 +577,7 @@ function ScheduleSection({
           {BUFFER_STEPS.map(n => (
             <button key={n} onClick={() => set({ bufferMins: n })}
               style={{
-                padding: '4px 10px', borderRadius: 6, fontSize: 'var(--sb-t-meta)', cursor: 'pointer', fontWeight: 500,
+                padding: '4px 10px', borderRadius: 'var(--sb-r-chip)', fontSize: 'var(--sb-t-meta)', cursor: 'pointer', fontWeight: 500,
                 background: s.bufferMins === n ? 'rgba(var(--sb-accent-rgb),0.12)' : 'var(--sb-field)',
                 border: `1px solid ${s.bufferMins === n ? 'var(--sb-accent)' : 'var(--sb-border)'}`,
                 color: s.bufferMins === n ? 'var(--sb-accent)' : 'var(--sb-ink-3)',
@@ -590,7 +590,7 @@ function ScheduleSection({
           {PHYS_STEPS.map(n => (
             <button key={n} onClick={() => set({ physicalBufferMins: n })}
               style={{
-                padding: '4px 10px', borderRadius: 6, fontSize: 'var(--sb-t-meta)', cursor: 'pointer', fontWeight: 500,
+                padding: '4px 10px', borderRadius: 'var(--sb-r-chip)', fontSize: 'var(--sb-t-meta)', cursor: 'pointer', fontWeight: 500,
                 background: s.physicalBufferMins === n ? 'rgba(var(--sb-accent-rgb),0.12)' : 'var(--sb-field)',
                 border: `1px solid ${s.physicalBufferMins === n ? 'var(--sb-accent)' : 'var(--sb-border)'}`,
                 color: s.physicalBufferMins === n ? 'var(--sb-accent)' : 'var(--sb-ink-3)',
@@ -670,7 +670,7 @@ function CompanyCard({
   }
 
   return (
-    <div style={{ background: 'var(--sb-page)', border: '1px solid var(--sb-border)', borderRadius: 10, marginBottom: 8, overflow: 'visible', opacity: co.hidden ? 0.55 : 1, transition: 'opacity 0.15s' }}>
+    <div style={{ background: 'var(--sb-page)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', marginBottom: 8, overflow: 'visible', opacity: co.hidden ? 0.55 : 1, transition: 'opacity 0.15s' }}>
       {/* Company header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px' }}>
 
@@ -680,21 +680,21 @@ function CompanyCard({
             onClick={() => setColorOpen(o => !o)}
             title="Change color"
             style={{
-              width: 18, height: 18, borderRadius: '50%', background: co.color, cursor: 'pointer',
+              width: 18, height: 18, borderRadius: 'var(--sb-r-pill)', background: co.color, cursor: 'pointer',
               border: `2px solid ${co.color}60`, flexShrink: 0,
             }}
           />
           {colorOpen && (
             <div style={{
               position: 'absolute', top: 24, left: 0, zIndex: 200,
-              background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 10,
+              background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
               padding: '7px 8px', display: 'flex', gap: 5,
               boxShadow: '0 6px 20px rgba(0,0,0,0.5)',
             }}>
               {C_COLORS.map(c => (
                 <button key={c} onClick={() => { onUpdate({ color: c }); setColorOpen(false) }}
                   style={{
-                    width: 16, height: 16, borderRadius: '50%', background: c,
+                    width: 16, height: 16, borderRadius: 'var(--sb-r-pill)', background: c,
                     border: 'none', cursor: 'pointer', flexShrink: 0,
                     boxShadow: co.color === c ? `0 0 0 2px var(--sb-card), 0 0 0 3.5px ${c}` : 'none',
                     transform: co.color === c ? 'scale(1.2)' : 'scale(1)',
@@ -754,7 +754,7 @@ function CompanyCard({
         {/* Users expand toggle */}
         <button onClick={() => setUsersOpen(o => !o)} title={usersOpen ? 'Collapse members' : 'Expand members'} style={{
           display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0,
-          padding: '2px 7px', borderRadius: 5, fontSize: 'var(--sb-t-micro)', cursor: 'pointer',
+          padding: '2px 7px', borderRadius: 'var(--sb-r-chip)', fontSize: 'var(--sb-t-micro)', cursor: 'pointer',
           background: 'transparent', border: '1px solid var(--sb-border)',
           color: 'var(--sb-ink-3)',
         }}>
@@ -795,7 +795,7 @@ function CompanyCard({
             const draft = userDrafts[u.id]
             return (
               <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0', borderBottom: '1px solid var(--sb-border)' }}>
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: co.color, flexShrink: 0 }} />
+                <span style={{ width: 6, height: 6, borderRadius: 'var(--sb-r-pill)', background: co.color, flexShrink: 0 }} />
 
                 {isEditing ? (
                   <>
@@ -842,7 +842,7 @@ function CompanyCard({
               placeholder="Email (optional)"
               style={{ ...inputStyle, fontSize: 'var(--sb-t-meta)', padding: '3px 7px', flex: 1 }} />
             <button onClick={addUser} disabled={!newUserName.trim()} style={{
-              padding: '3px 10px', borderRadius: 5, fontSize: 'var(--sb-t-meta)', fontWeight: 500, cursor: 'pointer',
+              padding: '3px 10px', borderRadius: 'var(--sb-r-chip)', fontSize: 'var(--sb-t-meta)', fontWeight: 500, cursor: 'pointer',
               background: 'rgba(var(--sb-accent-rgb),0.12)', border: '1px solid #7F77DD50',
               color: '#7F77DD', opacity: newUserName.trim() ? 1 : 0.4,
             }}>Add</button>
@@ -912,7 +912,7 @@ function CompaniesSection({
       ))}
 
       {adding ? (
-        <div style={{ marginTop: 14, padding: '14px', background: 'var(--sb-field)', borderRadius: 10, border: '1px solid var(--sb-border)' }}>
+        <div style={{ marginTop: 14, padding: '14px', background: 'var(--sb-field)', borderRadius: 'var(--sb-r-nav)', border: '1px solid var(--sb-border)' }}>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
             <input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Company name"
               style={{ ...inputStyle, width: 160 }} autoFocus />
@@ -928,16 +928,16 @@ function CompaniesSection({
           <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
             {C_COLORS.map(c => (
               <button key={c} onClick={() => setNewColor(c)}
-                style={{ width: 22, height: 22, borderRadius: '50%', background: c, border: 'none', cursor: 'pointer', outline: newColor === c ? `2px solid ${c}` : 'none', outlineOffset: 2 }} />
+                style={{ width: 22, height: 22, borderRadius: 'var(--sb-r-pill)', background: c, border: 'none', cursor: 'pointer', outline: newColor === c ? `2px solid ${c}` : 'none', outlineOffset: 2 }} />
             ))}
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
             <button onClick={() => { setAdding(false); setNewName('') }}
-              style={{ padding: '6px 14px', borderRadius: 7, background: 'transparent', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body-s)', cursor: 'pointer', display: 'flex', gap: 5, alignItems: 'center' }}>
+              style={{ padding: '6px 14px', borderRadius: 'var(--sb-r-chip)', background: 'transparent', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body-s)', cursor: 'pointer', display: 'flex', gap: 5, alignItems: 'center' }}>
               <X size={11} /> Cancel
             </button>
             <button onClick={addCompany} disabled={!newName.trim()}
-              style={{ padding: '6px 16px', borderRadius: 7, background: 'rgba(var(--sb-accent-rgb),0.12)', border: '1px solid rgba(var(--sb-accent-rgb),0.31)', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', fontWeight: 500, cursor: 'pointer', opacity: newName.trim() ? 1 : 0.4, display: 'flex', gap: 5, alignItems: 'center' }}>
+              style={{ padding: '6px 16px', borderRadius: 'var(--sb-r-chip)', background: 'rgba(var(--sb-accent-rgb),0.12)', border: '1px solid rgba(var(--sb-accent-rgb),0.31)', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', fontWeight: 500, cursor: 'pointer', opacity: newName.trim() ? 1 : 0.4, display: 'flex', gap: 5, alignItems: 'center' }}>
               <Plus size={11} /> Add Company
             </button>
           </div>
@@ -945,7 +945,7 @@ function CompaniesSection({
       ) : (
         <button onClick={() => setAdding(true)} style={{
           marginTop: 12, display: 'flex', alignItems: 'center', gap: 7, width: '100%',
-          padding: '11px 16px', borderRadius: 9, background: 'transparent',
+          padding: '11px 16px', borderRadius: 'var(--sb-r-sm)', background: 'transparent',
           border: '1px dashed var(--sb-border)',
           color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body)', cursor: 'pointer',
         }}>
@@ -997,7 +997,7 @@ function HabitRowImage({ image, emoji, onChange }: {
         onContextMenu={e => { if (image) { e.preventDefault(); onChange(undefined) } }}
         title={image ? 'Click to change the picture · right-click to remove it' : 'Click to add a picture'}
         style={{
-          width: 30, height: 30, borderRadius: 8, flexShrink: 0, padding: 0, overflow: 'hidden',
+          width: 30, height: 30, borderRadius: 'var(--sb-r-chip)', flexShrink: 0, padding: 0, overflow: 'hidden',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           background: 'var(--sb-field)', border: '1px solid var(--sb-border)', cursor: 'pointer', fontSize: 'var(--sb-t-h3)',
         }}>
@@ -1048,7 +1048,7 @@ function SettingsHabitForm({
   return (
     <div style={{
       display: 'flex', flexDirection: 'column', gap: 18, marginTop: 12,
-      padding: 18, background: 'var(--sb-field)', borderRadius: 12, border: '1px solid var(--sb-border)',
+      padding: 18, background: 'var(--sb-field)', borderRadius: 'var(--sb-r-nav)', border: '1px solid var(--sb-border)',
     }}>
 
       {/* Picture, icon, name — the three things that identify a habit */}
@@ -1060,7 +1060,7 @@ function SettingsHabitForm({
               onClick={() => imageRef.current?.click()}
               title={s.image ? 'Change picture' : 'Add a picture'}
               style={{
-                width: 46, height: 46, borderRadius: 13, padding: 0, cursor: 'pointer', overflow: 'hidden',
+                width: 46, height: 46, borderRadius: 'var(--sb-r-nav)', padding: 0, cursor: 'pointer', overflow: 'hidden',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: 'var(--sb-t-h2)', color: '#C9C0A8', background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
               }}>
@@ -1074,7 +1074,7 @@ function SettingsHabitForm({
                 onClick={() => update({ image: undefined })}
                 title="Remove picture"
                 style={{
-                  position: 'absolute', top: -5, right: -5, width: 18, height: 18, borderRadius: '50%',
+                  position: 'absolute', top: -5, right: -5, width: 18, height: 18, borderRadius: 'var(--sb-r-pill)',
                   padding: 0, cursor: 'pointer', background: 'var(--sb-ink-1)', border: '2px solid var(--sb-field)',
                   color: 'var(--sb-ink-on-dark)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
@@ -1107,7 +1107,7 @@ function SettingsHabitForm({
             onKeyDown={e => { if (e.key === 'Enter' && valid) onSave(s); if (e.key === 'Escape') onCancel() }}
             style={{
               width: '100%', boxSizing: 'border-box', height: 42, padding: '0 14px',
-              background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 10,
+              background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
               fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)', fontFamily: 'inherit', outline: 'none', textAlign: 'left',
             }} />
         </div>
@@ -1148,14 +1148,14 @@ function SettingsHabitForm({
               placeholder="8"
               style={{
                 width: 90, boxSizing: 'border-box', height: 36, padding: '0 12px',
-                background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 9,
+                background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-sm)',
                 fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)', fontFamily: 'inherit', outline: 'none', textAlign: 'left',
               }} />
             <input value={s.unit} onChange={e => update({ unit: e.target.value })}
               placeholder="glasses / ml / minutes…"
               style={{
                 flex: 1, minWidth: 0, boxSizing: 'border-box', height: 36, padding: '0 12px',
-                background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 9,
+                background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-sm)',
                 fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)', fontFamily: 'inherit', outline: 'none', textAlign: 'left',
               }} />
           </div>
@@ -1170,7 +1170,7 @@ function SettingsHabitForm({
                 placeholder={String(stepFor({ id: s.id ?? '', goal: Number(s.goal) || 0, unit: s.unit }))}
                 style={{
                   width: 90, boxSizing: 'border-box', height: 36, padding: '0 12px',
-                  background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 9,
+                  background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-sm)',
                   fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)', fontFamily: 'inherit', outline: 'none', textAlign: 'left',
                 }} />
               <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)' }}>
@@ -1186,7 +1186,7 @@ function SettingsHabitForm({
       <div style={{ display: 'flex', gap: 8, paddingTop: 2 }}>
         <button onClick={() => valid && onSave(s)} disabled={!valid}
           style={{
-            height: 38, padding: '0 18px', borderRadius: 999, border: 'none',
+            height: 38, padding: '0 18px', borderRadius: 'var(--sb-r-pill)', border: 'none',
             background: valid ? 'var(--sb-accent)' : 'var(--sb-field)', color: valid ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)',
             fontSize: 'var(--sb-t-label)', fontWeight: 600, fontFamily: 'inherit',
             cursor: valid ? 'pointer' : 'default',
@@ -1196,7 +1196,7 @@ function SettingsHabitForm({
         </button>
         <button onClick={onCancel}
           style={{
-            height: 38, padding: '0 16px', borderRadius: 999,
+            height: 38, padding: '0 16px', borderRadius: 'var(--sb-r-pill)',
             background: 'transparent', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-3)',
             fontSize: 'var(--sb-t-body)', fontFamily: 'inherit', cursor: 'pointer',
             display: 'flex', gap: 6, alignItems: 'center',
@@ -1271,7 +1271,7 @@ function AppleHealthBlock({ habits }: { habits: { id: string; name: string; unit
   }
 
   const pill = {
-    height: 28, padding: '0 11px', borderRadius: 8, cursor: 'pointer',
+    height: 28, padding: '0 11px', borderRadius: 'var(--sb-r-chip)', cursor: 'pointer',
     fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
     background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-1)',
   } as const
@@ -1298,7 +1298,7 @@ function AppleHealthBlock({ habits }: { habits: { id: string; name: string; unit
       ) : links === null ? (
         <div style={{
           fontSize: 'var(--sb-t-body-s)', color: '#7A5F09', lineHeight: 1.55, maxWidth: 720,
-          background: '#FBEBC8', border: '1px solid var(--sb-accent-border)', borderRadius: 10, padding: '11px 14px',
+          background: '#FBEBC8', border: '1px solid var(--sb-accent-border)', borderRadius: 'var(--sb-r-nav)', padding: '11px 14px',
         }}>
           Your database has nowhere to keep these yet — run{' '}
           <code style={{ fontFamily: 'var(--sb-font-mono)', fontSize: 'var(--sb-t-meta)' }}>supabase/migrations/20260012</code>{' '}
@@ -1311,7 +1311,7 @@ function AppleHealthBlock({ habits }: { habits: { id: string; name: string; unit
             const link = links.find(l => l.habitId === h.id)
             const metric = link?.metric ?? suggestMetric(h.name, h.unit)
             return (
-              <div key={h.id} style={{ border: '1px solid var(--sb-border)', borderRadius: 10, background: 'var(--sb-card)' }}>
+              <div key={h.id} style={{ border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', background: 'var(--sb-card)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 13px' }}>
                   <span style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-1)', flex: 1, minWidth: 0 }}>
                     {h.name}
@@ -1344,7 +1344,7 @@ function AppleHealthBlock({ habits }: { habits: { id: string; name: string; unit
                       <code style={{
                         flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                         fontFamily: 'var(--sb-font-mono)', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)',
-                        background: 'var(--sb-field)', border: '1px solid var(--sb-border)', borderRadius: 7, padding: '7px 9px',
+                        background: 'var(--sb-field)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-chip)', padding: '7px 9px',
                       }}>{ingestUrl(link.token) || 'This build has no Supabase address configured.'}</code>
                       <button style={pill} onClick={() => copy(ingestUrl(link.token), link.id)}>
                         {copied === link.id ? 'Copied' : 'Copy'}
@@ -1452,7 +1452,7 @@ function HabitsSection() {
               emoji={h.emoji}
               onChange={img => updateHabit(h.id, { image: img })}
             />
-            <div style={{ width: 10, height: 10, borderRadius: '50%', background: h.color, flexShrink: 0 }} />
+            <div style={{ width: 10, height: 10, borderRadius: 'var(--sb-r-pill)', background: h.color, flexShrink: 0 }} />
             <span style={{ flex: 1, fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)' }}>{h.name}</span>
             <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', flexShrink: 0, whiteSpace: 'nowrap' }}>
               {describeHabit(h)}
@@ -1519,7 +1519,7 @@ function HabitsSection() {
       ) : (
         <button onClick={() => { setEditingId(null); setAdding(true) }} style={{
           marginTop: 12, display: 'flex', alignItems: 'center', gap: 7, width: '100%',
-          padding: '11px 16px', borderRadius: 9, background: 'transparent',
+          padding: '11px 16px', borderRadius: 'var(--sb-r-sm)', background: 'transparent',
           border: '1px dashed var(--sb-border)',
           color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body)', cursor: 'pointer',
         }}>
@@ -1604,7 +1604,7 @@ function TaskStatusesSection() {
   const isEditingRow = (i: number) => editIdx === i && !adding
 
   const formEl = (
-    <div style={{ padding: '10px 14px', background: 'var(--sb-field)', borderRadius: 8, border: '1px solid var(--sb-border)', marginTop: 4, display: 'flex', flexDirection: 'column', gap: 10 }}>
+    <div style={{ padding: '10px 14px', background: 'var(--sb-field)', borderRadius: 'var(--sb-r-chip)', border: '1px solid var(--sb-border)', marginTop: 4, display: 'flex', flexDirection: 'column', gap: 10 }}>
       <div style={{ display: 'flex', gap: 8 }}>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', marginBottom: 4, fontWeight: 600 }}>Label</div>
@@ -1625,21 +1625,21 @@ function TaskStatusesSection() {
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           {STATUS_COLORS_PRESETS.map(c => (
             <button key={c} onClick={() => setDraft(p => ({ ...p, color: c }))} style={{
-              width: 22, height: 22, borderRadius: '50%', background: c, border: 'none', cursor: 'pointer',
+              width: 22, height: 22, borderRadius: 'var(--sb-r-pill)', background: c, border: 'none', cursor: 'pointer',
               outline: draft.color === c ? `2px solid ${c}` : 'none', outlineOffset: 2,
             }} />
           ))}
           <input type="color" value={draft.color} onChange={e => setDraft(p => ({ ...p, color: e.target.value }))}
-            style={{ width: 22, height: 22, border: 'none', borderRadius: '50%', padding: 0, cursor: 'pointer', background: 'transparent' }} />
+            style={{ width: 22, height: 22, border: 'none', borderRadius: 'var(--sb-r-pill)', padding: 0, cursor: 'pointer', background: 'transparent' }} />
         </div>
       </div>
       <div style={{ display: 'flex', gap: 8 }}>
         <button onClick={() => { setAdding(false); setEditIdx(null) }}
-          style={{ padding: '5px 12px', borderRadius: 6, background: 'transparent', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body-s)', cursor: 'pointer', display: 'flex', gap: 4, alignItems: 'center' }}>
+          style={{ padding: '5px 12px', borderRadius: 'var(--sb-r-chip)', background: 'transparent', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body-s)', cursor: 'pointer', display: 'flex', gap: 4, alignItems: 'center' }}>
           <X size={11} /> Cancel
         </button>
         <button onClick={confirmSave}
-          style={{ padding: '5px 14px', borderRadius: 6, background: 'rgba(var(--sb-accent-rgb),0.12)', border: '1px solid rgba(var(--sb-accent-rgb),0.31)', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', fontWeight: 500, cursor: 'pointer', display: 'flex', gap: 4, alignItems: 'center' }}>
+          style={{ padding: '5px 14px', borderRadius: 'var(--sb-r-chip)', background: 'rgba(var(--sb-accent-rgb),0.12)', border: '1px solid rgba(var(--sb-accent-rgb),0.31)', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', fontWeight: 500, cursor: 'pointer', display: 'flex', gap: 4, alignItems: 'center' }}>
           <Plus size={11} /> {adding ? 'Add Status' : 'Save'}
         </button>
       </div>
@@ -1674,9 +1674,9 @@ function TaskStatusesSection() {
             <span title="Drag to reorder" style={{ display: 'flex', color: '#C9C0A8', cursor: 'grab', flexShrink: 0 }}>
               <GripVertical size={14} />
             </span>
-            <div style={{ width: 10, height: 10, borderRadius: '50%', background: s.color, flexShrink: 0 }} />
+            <div style={{ width: 10, height: 10, borderRadius: 'var(--sb-r-pill)', background: s.color, flexShrink: 0 }} />
             <span style={{ flex: 1, fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)' }}>{s.label}</span>
-            <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)', background: 'var(--sb-field)', padding: '2px 7px', borderRadius: 4, border: '1px solid var(--sb-border)' }}>
+            <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)', background: 'var(--sb-field)', padding: '2px 7px', borderRadius: 'var(--sb-r-chip)', border: '1px solid var(--sb-border)' }}>
               {s.id}
             </span>
             <button onClick={() => startEdit(i)} title="Edit"
@@ -1697,14 +1697,14 @@ function TaskStatusesSection() {
       <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
         <button onClick={startAdd} style={{
           flex: 1, display: 'flex', alignItems: 'center', gap: 7,
-          padding: '11px 16px', borderRadius: 9, background: 'transparent',
+          padding: '11px 16px', borderRadius: 'var(--sb-r-sm)', background: 'transparent',
           border: '1px dashed var(--sb-border)',
           color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body)', cursor: 'pointer',
         }}>
           <Plus size={13} /> Add a status
         </button>
         <button onClick={resetDefaults} title="Reset to defaults" style={{
-          padding: '11px 14px', borderRadius: 9, background: 'transparent',
+          padding: '11px 14px', borderRadius: 'var(--sb-r-sm)', background: 'transparent',
           border: '1px solid var(--sb-border)',
           color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body-s)', cursor: 'pointer',
           display: 'flex', alignItems: 'center', gap: 5,
@@ -1724,7 +1724,7 @@ function IntegrationBadge({ icon, label, active, onGrant }: {
   return (
     <span style={{
       display: 'inline-flex', alignItems: 'center', gap: 4,
-      padding: '2px 7px', borderRadius: 20, fontSize: 'var(--sb-t-micro)', fontWeight: 500,
+      padding: '2px 7px', borderRadius: 'var(--sb-r-card)', fontSize: 'var(--sb-t-micro)', fontWeight: 500,
       background: active ? 'rgba(29,158,117,0.1)' : 'rgba(100,116,139,0.1)',
       border: `1px solid ${active ? 'rgba(29,158,117,0.3)' : 'rgba(100,116,139,0.25)'}`,
       color: active ? '#1D9E75' : '#64748B',
@@ -1836,12 +1836,12 @@ function AccountsSection({
       {/* Primary account */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 12,
-        padding: '12px 14px', borderRadius: 10, marginBottom: 10,
+        padding: '12px 14px', borderRadius: 'var(--sb-r-nav)', marginBottom: 10,
         background: 'var(--sb-field)',
         border: '1px solid rgba(var(--sb-accent-rgb),0.19)',
       }}>
         <div style={{
-          width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
+          width: 32, height: 32, borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
           background: 'rgba(var(--sb-accent-rgb),0.12)', border: '1px solid rgba(var(--sb-accent-rgb),0.25)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'var(--sb-t-label)', fontWeight: 700, color: 'var(--sb-ink-1)',
         }}>
@@ -1855,7 +1855,7 @@ function AccountsSection({
             <IntegrationBadge icon={<HardDrive size={10} />} label="Drive" active />
           </div>
         </div>
-        <span style={{ fontSize: 'var(--sb-t-micro)', padding: '3px 10px', borderRadius: 20, background: 'rgba(29,158,117,0.1)', color: '#1D9E75', border: '1px solid rgba(29,158,117,0.2)' }}>
+        <span style={{ fontSize: 'var(--sb-t-micro)', padding: '3px 10px', borderRadius: 'var(--sb-r-card)', background: 'rgba(29,158,117,0.1)', color: '#1D9E75', border: '1px solid rgba(29,158,117,0.2)' }}>
           Active
         </span>
         {primaryToken && (
@@ -1874,7 +1874,7 @@ function AccountsSection({
 
       {/* Show primary calendars */}
       {calendars['primary'] && (
-        <div style={{ marginBottom: 12, padding: '8px 14px', background: 'var(--sb-field)', borderRadius: 8, border: '1px solid var(--sb-border)' }}>
+        <div style={{ marginBottom: 12, padding: '8px 14px', background: 'var(--sb-field)', borderRadius: 'var(--sb-r-chip)', border: '1px solid var(--sb-border)' }}>
           <p style={{ margin: '0 0 6px', fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-ink-3)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>Calendars in this account</p>
           {calendars['primary'].map(name => (
             <p key={name} style={{ margin: '3px 0', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)' }}>• {name}</p>
@@ -1889,13 +1889,13 @@ function AccountsSection({
         return (
           <div key={acc.id} style={{
             display: 'flex', alignItems: 'center', gap: 12,
-            padding: '12px 14px', borderRadius: 10, marginBottom: 8,
+            padding: '12px 14px', borderRadius: 'var(--sb-r-nav)', marginBottom: 8,
             background: 'var(--sb-field)',
             border: `1px solid ${isStale ? 'rgba(224,165,36,0.35)' : 'var(--sb-border)'}`,
             opacity: hiddenAccts.has(acc.email) ? 0.5 : 1,
             transition: 'opacity 0.15s',
           }}>
-            <div style={{ width: 32, height: 32, borderRadius: '50%', flexShrink: 0, background: 'rgba(var(--sb-accent-rgb),0.12)', border: '1px solid #7F77DD40', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'var(--sb-t-label)', fontWeight: 700, color: '#7F77DD' }}>
+            <div style={{ width: 32, height: 32, borderRadius: 'var(--sb-r-pill)', flexShrink: 0, background: 'rgba(var(--sb-accent-rgb),0.12)', border: '1px solid #7F77DD40', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'var(--sb-t-label)', fontWeight: 700, color: '#7F77DD' }}>
               {acc.email ? acc.email[0].toUpperCase() : 'G'}
             </div>
             <div style={{ flex: 1 }}>
@@ -1910,11 +1910,11 @@ function AccountsSection({
                     {linked.map(c => (
                       <span key={c.id} style={{
                         display: 'inline-flex', alignItems: 'center', gap: 5,
-                        padding: '2px 8px', borderRadius: 999,
+                        padding: '2px 8px', borderRadius: 'var(--sb-r-pill)',
                         background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
                         fontSize: 'var(--sb-t-micro)', fontWeight: 600, color: 'var(--sb-ink-3)',
                       }}>
-                        <span style={{ width: 6, height: 6, borderRadius: 999, background: c.color }} />
+                        <span style={{ width: 6, height: 6, borderRadius: 'var(--sb-r-pill)', background: c.color }} />
                         {c.name}
                       </span>
                     ))}
@@ -1937,7 +1937,7 @@ function AccountsSection({
                 onClick={() => void reconnectAccount(acc)}
                 disabled={isRecon}
                 style={{
-                  padding: '4px 10px', borderRadius: 8, fontSize: 'var(--sb-t-meta)', fontWeight: 600, cursor: isRecon ? 'wait' : 'pointer',
+                  padding: '4px 10px', borderRadius: 'var(--sb-r-chip)', fontSize: 'var(--sb-t-meta)', fontWeight: 600, cursor: isRecon ? 'wait' : 'pointer',
                   background: 'rgba(224,165,36,0.12)', border: '1px solid rgba(224,165,36,0.4)', color: '#E0A524',
                   display: 'flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap',
                 }}
@@ -1966,7 +1966,7 @@ function AccountsSection({
 
       {/* Show calendars for additional accounts */}
       {accounts.map(acc => calendars[acc.id] ? (
-        <div key={`${acc.id}-cals`} style={{ marginBottom: 8, padding: '8px 14px', background: 'var(--sb-field)', borderRadius: 8, border: '1px solid var(--sb-border)' }}>
+        <div key={`${acc.id}-cals`} style={{ marginBottom: 8, padding: '8px 14px', background: 'var(--sb-field)', borderRadius: 'var(--sb-r-chip)', border: '1px solid var(--sb-border)' }}>
           <p style={{ margin: '0 0 6px', fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-ink-3)', textTransform: 'uppercase' }}>{acc.email} calendars</p>
           {calendars[acc.id].map(name => <p key={name} style={{ margin: '3px 0', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)' }}>• {name}</p>)}
         </div>
@@ -1977,7 +1977,7 @@ function AccountsSection({
         <button onClick={() => void connectAdditional()} disabled={adding}
           style={{
             flex: 1, display: 'flex', alignItems: 'center', gap: 8,
-            padding: '12px 16px', borderRadius: 9,
+            padding: '12px 16px', borderRadius: 'var(--sb-r-sm)',
             background: 'var(--sb-field)',
             border: '1px dashed var(--sb-border)',
             color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body)', fontWeight: 500, cursor: 'pointer',
@@ -1997,7 +1997,7 @@ function AccountsSection({
             }}
             style={{
               display: 'flex', alignItems: 'center', gap: 6,
-              padding: '12px 14px', borderRadius: 9,
+              padding: '12px 14px', borderRadius: 'var(--sb-r-sm)',
               background: 'rgba(224,82,82,0.06)',
               border: '1px solid rgba(224,82,82,0.25)',
               color: 'var(--sb-negative)', fontSize: 'var(--sb-t-body-s)', fontWeight: 500, cursor: 'pointer',
@@ -2050,7 +2050,7 @@ function ProfessorSection() {
     const active = val === cur
     return (
       <button onClick={onClick} style={{
-        padding: '5px 13px', borderRadius: 7, fontSize: 'var(--sb-t-meta)', cursor: 'pointer', fontWeight: active ? 600 : 400,
+        padding: '5px 13px', borderRadius: 'var(--sb-r-chip)', fontSize: 'var(--sb-t-meta)', cursor: 'pointer', fontWeight: active ? 600 : 400,
         background: active ? 'var(--sb-ink-1)' : 'var(--sb-field)', border: `1px solid ${active ? 'var(--sb-ink-1)' : 'var(--sb-border)'}`,
         color: active ? 'var(--sb-card)' : 'var(--sb-ink-3)', transition: 'all 0.12s',
       }}>{label ?? val}</button>
@@ -2069,7 +2069,7 @@ function ProfessorSection() {
           ].map(({ v, l }) => (
             <button key={v} onClick={() => setAI({ provider: v as AIConfig['provider'] })}
               style={{
-                padding: '5px 13px', borderRadius: 7, fontSize: 'var(--sb-t-meta)', cursor: 'pointer', fontWeight: ai.provider === v ? 600 : 400,
+                padding: '5px 13px', borderRadius: 'var(--sb-r-chip)', fontSize: 'var(--sb-t-meta)', cursor: 'pointer', fontWeight: ai.provider === v ? 600 : 400,
                 background: ai.provider === v ? 'var(--sb-ink-1)' : 'var(--sb-field)', border: `1px solid ${ai.provider === v ? 'var(--sb-ink-1)' : 'var(--sb-border)'}`,
                 color: ai.provider === v ? 'var(--sb-card)' : 'var(--sb-ink-3)', transition: 'all 0.12s',
               }}>{l}</button>
@@ -2084,7 +2084,7 @@ function ProfessorSection() {
             onChange={e => setAI(ai.provider === 'groq' ? { groqKey: e.target.value } : { anthropicKey: e.target.value })}
             placeholder={ai.provider === 'groq' ? 'gsk_...' : 'sk-ant-...'}
             style={{ ...inputStyle, flex: 1, fontFamily: 'monospace', fontSize: 'var(--sb-t-meta)' }} />
-          <button onClick={() => setShowKey(v => !v)} style={{ background: 'transparent', border: '1px solid var(--sb-border)', borderRadius: 6, padding: '4px 8px', cursor: 'pointer', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-meta)', flexShrink: 0 }}>
+          <button onClick={() => setShowKey(v => !v)} style={{ background: 'transparent', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-chip)', padding: '4px 8px', cursor: 'pointer', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-meta)', flexShrink: 0 }}>
             {showKey ? <EyeOff size={13} /> : <Eye size={13} />}
           </button>
         </div>
@@ -2186,14 +2186,14 @@ function AppearanceSection({ s, set }: { s: AppSettings; set: (p: Partial<AppSet
                 aria-pressed={on}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 8, height: 38, padding: '0 14px 0 10px',
-                  borderRadius: 999, cursor: 'pointer', fontFamily: 'inherit',
+                  borderRadius: 'var(--sb-r-pill)', cursor: 'pointer', fontFamily: 'inherit',
                   background: on ? 'var(--sb-card)' : 'var(--sb-field)',
                   border: `1px solid ${on ? 'var(--sb-ink-1)' : 'var(--sb-border)'}`,
                   boxShadow: on ? '0 1px 3px rgba(25,23,18,.16)' : 'none',
                   color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', fontWeight: on ? 600 : 500,
                 }}>
                 <span style={{
-                  width: 18, height: 18, borderRadius: '50%', flexShrink: 0,
+                  width: 18, height: 18, borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
                   background: a.hex, border: '1px solid rgba(25,23,18,0.12)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
@@ -2229,7 +2229,7 @@ function AppearanceSection({ s, set }: { s: AppSettings; set: (p: Partial<AppSet
             return (
               <button key={t.id} onClick={() => pickTheme(t.id)}
                 style={{
-                  padding: '8px 4px', borderRadius: 9, cursor: 'pointer', flexDirection: 'column',
+                  padding: '8px 4px', borderRadius: 'var(--sb-r-sm)', cursor: 'pointer', flexDirection: 'column',
                   display: 'flex', alignItems: 'center', gap: 5,
                   background: tk['--sb-card'],
                   border: `2px solid ${active ? tk['--sb-accent'] : tk['--sb-border']}`,
@@ -2238,7 +2238,7 @@ function AppearanceSection({ s, set }: { s: AppSettings; set: (p: Partial<AppSet
                 }}>
                 <div style={{ display: 'flex', gap: 3 }}>
                   {[tk['--sb-accent'], tk['--sb-accent-deep'], tk['--sb-ink-4']].map((c, i) => (
-                    <div key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: c }} />
+                    <div key={i} style={{ width: 8, height: 8, borderRadius: 'var(--sb-r-pill)', background: c }} />
                   ))}
                 </div>
                 <span style={{ fontSize: 'var(--sb-t-body)' }}>{t.emoji}</span>
@@ -2354,7 +2354,7 @@ function BlockingRulesSection() {
     const { bg, color } = DETAIL_BADGE[level]
     const label = DETAIL_LEVELS.find(d => d.value === level)?.label ?? level
     return (
-      <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: bg, color }}>
+      <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 600, padding: '2px 8px', borderRadius: 'var(--sb-r-card)', background: bg, color }}>
         {label}
       </span>
     )
@@ -2377,7 +2377,7 @@ function BlockingRulesSection() {
       {rules.map(rule => (
         <div key={rule.id} style={{
           display: 'flex', alignItems: 'center', gap: 10,
-          padding: '10px 14px', borderRadius: 10, marginBottom: 8,
+          padding: '10px 14px', borderRadius: 'var(--sb-r-nav)', marginBottom: 8,
           background: 'var(--sb-field)',
           border: `1px solid ${rule.enabled ? 'rgba(var(--sb-accent-rgb),0.19)' : 'var(--sb-border)'}`,
           opacity: rule.enabled ? 1 : 0.6,
@@ -2392,12 +2392,12 @@ function BlockingRulesSection() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3 }}>
               {badge(rule.detailLevel)}
               {rule.autoApply && (
-                <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 600, padding: '2px 7px', borderRadius: 20, background: 'rgba(29,158,117,0.12)', color: '#1D9E75' }}>
+                <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 600, padding: '2px 7px', borderRadius: 'var(--sb-r-card)', background: 'rgba(29,158,117,0.12)', color: '#1D9E75' }}>
                   Auto
                 </span>
               )}
               {rule.hideBlocked && (
-                <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 600, padding: '2px 7px', borderRadius: 20, background: 'rgba(127,119,221,0.12)', color: '#7F77DD' }}>
+                <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 600, padding: '2px 7px', borderRadius: 'var(--sb-r-card)', background: 'rgba(127,119,221,0.12)', color: '#7F77DD' }}>
                   Originals only
                 </span>
               )}
@@ -2424,7 +2424,7 @@ function BlockingRulesSection() {
       {/* Add rule form */}
       {showForm ? (
         <div style={{
-          padding: '14px 16px', borderRadius: 10, marginTop: 8,
+          padding: '14px 16px', borderRadius: 'var(--sb-r-nav)', marginTop: 8,
           background: 'var(--sb-field)',
           border: '1px solid rgba(var(--sb-accent-rgb),0.25)',
         }}>
@@ -2466,7 +2466,7 @@ function BlockingRulesSection() {
                 {DETAIL_LEVELS.map(d => (
                   <button key={d.value} onClick={() => setDetail(d.value)}
                     style={{
-                      flex: 1, padding: '7px 6px', borderRadius: 8, cursor: 'pointer', textAlign: 'center',
+                      flex: 1, padding: '7px 6px', borderRadius: 'var(--sb-r-chip)', cursor: 'pointer', textAlign: 'center',
                       background: detail === d.value ? DETAIL_BADGE[d.value].bg : 'var(--sb-card)',
                       border: `1px solid ${detail === d.value ? DETAIL_BADGE[d.value].color + '80' : 'var(--sb-border)'}`,
                       color: detail === d.value ? DETAIL_BADGE[d.value].color : 'var(--sb-ink-3)',
@@ -2480,7 +2480,7 @@ function BlockingRulesSection() {
             </div>
             <div style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: '10px 12px', borderRadius: 8,
+              padding: '10px 12px', borderRadius: 'var(--sb-r-chip)',
               background: autoApply ? 'rgba(29,158,117,0.07)' : 'var(--sb-card)',
               border: `1px solid ${autoApply ? 'rgba(29,158,117,0.3)' : 'var(--sb-border)'}`,
               transition: 'all 0.15s',
@@ -2497,7 +2497,7 @@ function BlockingRulesSection() {
             </div>
             <div style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: '10px 12px', borderRadius: 8,
+              padding: '10px 12px', borderRadius: 'var(--sb-r-chip)',
               background: hideBlocked ? 'rgba(127,119,221,0.07)' : 'var(--sb-card)',
               border: `1px solid ${hideBlocked ? 'rgba(127,119,221,0.3)' : 'var(--sb-border)'}`,
               transition: 'all 0.15s',
@@ -2517,7 +2517,7 @@ function BlockingRulesSection() {
             <button onClick={saveForm}
               disabled={!srcCal || !tgtCal || srcCal === tgtCal}
               style={{
-                flex: 1, padding: '8px 0', borderRadius: 8, cursor: 'pointer',
+                flex: 1, padding: '8px 0', borderRadius: 'var(--sb-r-chip)', cursor: 'pointer',
                 background: (!srcCal || !tgtCal || srcCal === tgtCal) ? 'var(--sb-card)' : 'rgba(var(--sb-accent-rgb),0.12)',
                 border: '1px solid rgba(var(--sb-accent-rgb),0.31)',
                 color: (!srcCal || !tgtCal || srcCal === tgtCal) ? 'var(--sb-ink-3)' : 'var(--sb-accent)',
@@ -2527,7 +2527,7 @@ function BlockingRulesSection() {
             </button>
             <button onClick={resetForm}
               style={{
-                padding: '8px 16px', borderRadius: 8, cursor: 'pointer',
+                padding: '8px 16px', borderRadius: 'var(--sb-r-chip)', cursor: 'pointer',
                 background: 'transparent', border: '1px solid var(--sb-border)',
                 color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body-s)',
               }}>
@@ -2539,7 +2539,7 @@ function BlockingRulesSection() {
         <button onClick={() => { setCals(loadCachedCalendars()); setEditingRule(null); setShowForm(true) }}
           style={{
             display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px',
-            borderRadius: 8, cursor: 'pointer', marginTop: 4,
+            borderRadius: 'var(--sb-r-chip)', cursor: 'pointer', marginTop: 4,
             background: 'rgba(var(--sb-accent-rgb),0.10)',
             border: '1px solid rgba(var(--sb-accent-rgb),0.25)',
             color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body-s)',
@@ -2570,7 +2570,7 @@ function BehavioralSection() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       {/* Enable toggle */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', background: SB.surface2, borderRadius: 10, border: `1px solid ${SB.border}` }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', background: SB.surface2, borderRadius: 'var(--sb-r-nav)', border: `1px solid ${SB.border}` }}>
         <div>
           <div style={{ fontSize: 'var(--sb-t-label)', fontWeight: 600, color: SB.text }}>Enable Behavioral OS</div>
           <div style={{ fontSize: 'var(--sb-t-body-s)', color: SB.textDim, marginTop: 2 }}>Activates rank tracking, identity detection & mode-aware AI</div>
@@ -2578,14 +2578,14 @@ function BehavioralSection() {
         <button
           onClick={() => setEnabled(!enabled)}
           style={{
-            width: 44, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer', flexShrink: 0,
+            width: 44, height: 24, borderRadius: 'var(--sb-r-nav)', border: 'none', cursor: 'pointer', flexShrink: 0,
             background: enabled ? SB.accent : SB.border,
             position: 'relative', transition: 'background 0.2s',
           }}
         >
           <span style={{
             position: 'absolute', top: 2, left: enabled ? 22 : 2,
-            width: 20, height: 20, borderRadius: '50%', background: '#fff',
+            width: 20, height: 20, borderRadius: 'var(--sb-r-pill)', background: '#fff',
             transition: 'left 0.2s',
           }} />
         </button>
@@ -2602,7 +2602,7 @@ function BehavioralSection() {
               onClick={() => m.available && setMode(m.id)}
               style={{
                 display: 'flex', alignItems: 'center', gap: 12,
-                padding: '12px 14px', borderRadius: 10, cursor: m.available ? 'pointer' : 'default',
+                padding: '12px 14px', borderRadius: 'var(--sb-r-nav)', cursor: m.available ? 'pointer' : 'default',
                 background: mode === m.id ? SB.accentFill : SB.surface2,
                 border: `1px solid ${mode === m.id ? SB.accent : SB.border}`,
                 textAlign: 'left', width: '100%', opacity: m.available ? 1 : 0.5,
@@ -2612,11 +2612,11 @@ function BehavioralSection() {
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span style={{ fontSize: 'var(--sb-t-label)', fontWeight: 600, color: SB.text }}>{m.label}</span>
-                  {!m.available && <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, padding: '2px 6px', borderRadius: 4, background: SB.border, color: SB.textDim, letterSpacing: '0.5px' }}>SOON</span>}
+                  {!m.available && <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, padding: '2px 6px', borderRadius: 'var(--sb-r-chip)', background: SB.border, color: SB.textDim, letterSpacing: '0.5px' }}>SOON</span>}
                 </div>
                 <div style={{ fontSize: 'var(--sb-t-body-s)', color: SB.textDim, marginTop: 2 }}>{m.desc}</div>
               </div>
-              {mode === m.id && <div style={{ width: 8, height: 8, borderRadius: '50%', background: SB.accent, flexShrink: 0 }} />}
+              {mode === m.id && <div style={{ width: 8, height: 8, borderRadius: 'var(--sb-r-pill)', background: SB.accent, flexShrink: 0 }} />}
             </button>
           ))}
         </div>
@@ -2624,7 +2624,7 @@ function BehavioralSection() {
 
       {/* Samurai info */}
       {enabled && mode === 'samurai' && (
-        <div style={{ padding: '12px 14px', borderRadius: 10, background: 'rgba(139,26,26,0.08)', border: '1px solid rgba(139,26,26,0.25)' }}>
+        <div style={{ padding: '12px 14px', borderRadius: 'var(--sb-r-nav)', background: 'rgba(139,26,26,0.08)', border: '1px solid rgba(139,26,26,0.25)' }}>
           <div style={{ fontSize: 'var(--sb-t-body-s)', color: '#C0392B', fontWeight: 600, marginBottom: 4 }}>Samurai Mode Active</div>
           <div style={{ fontSize: 'var(--sb-t-body-s)', color: SB.textDim, lineHeight: 1.5 }}>
             The Behavioral OS page will appear in the sidebar. Your rank (Ronin → Shogun) is calculated from task completion, habit consistency, and planning quality. The AI assistant will adopt a tactical, no-filler communication style.
@@ -2700,13 +2700,13 @@ function FinanceSecuritySection() {
   }
 
   const pill = {
-    height: 30, padding: '0 12px', borderRadius: 9, cursor: 'pointer',
+    height: 30, padding: '0 12px', borderRadius: 'var(--sb-r-sm)', cursor: 'pointer',
     fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
     background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-1)',
   } as const
   const solid = { ...pill, background: 'var(--sb-ink-1)', border: '1px solid var(--sb-ink-1)', color: 'var(--sb-ink-on-dark)' }
   const field = {
-    height: 34, width: 180, borderRadius: 9, padding: '0 11px', boxSizing: 'border-box' as const,
+    height: 34, width: 180, borderRadius: 'var(--sb-r-sm)', padding: '0 11px', boxSizing: 'border-box' as const,
     background: 'var(--sb-field)', border: '1px solid var(--sb-border)',
     fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)', outline: 'none',
   }
@@ -2952,24 +2952,24 @@ function FinanceSection() {
                 style={{
                   background: active ? 'var(--sb-field)' : 'var(--sb-card)',
                   border: `1.5px solid ${active ? 'var(--sb-accent)' : 'var(--sb-border)'}`,
-                  borderRadius: 12, padding: '14px 14px 12px',
+                  borderRadius: 'var(--sb-r-nav)', padding: '14px 14px 12px',
                   cursor: 'pointer', textAlign: 'left',
                   boxShadow: active ? '0 0 0 2px rgba(var(--sb-accent-rgb),0.25)' : 'none',
                   transition: 'all 0.15s',
                 }}
               >
                 {/* Visual preview */}
-                <div style={{ background: 'var(--sb-hairline)', borderRadius: 8, padding: '8px 10px', marginBottom: 10, overflow: 'hidden' }}>
+                <div style={{ background: 'var(--sb-hairline)', borderRadius: 'var(--sb-r-chip)', padding: '8px 10px', marginBottom: 10, overflow: 'hidden' }}>
                   {style.preview}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
                   <div style={{
-                    width: 16, height: 16, borderRadius: '50%', flexShrink: 0, marginTop: 1,
+                    width: 16, height: 16, borderRadius: 'var(--sb-r-pill)', flexShrink: 0, marginTop: 1,
                     border: `2px solid ${active ? 'var(--sb-accent)' : 'var(--sb-border)'}`,
                     background: active ? 'var(--sb-accent)' : 'transparent',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>
-                    {active && <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--sb-ink-1)' }} />}
+                    {active && <div style={{ width: 6, height: 6, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-ink-1)' }} />}
                   </div>
                   <div>
                     <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>{style.label}</p>
@@ -3016,7 +3016,7 @@ function FinanceSection() {
               .map(code => (
                 <label key={code} style={{
                   display: 'inline-flex', alignItems: 'center', gap: 7, height: 34, padding: '0 10px',
-                  borderRadius: 9, border: '1px solid var(--sb-border)', background: 'var(--sb-card)',
+                  borderRadius: 'var(--sb-r-sm)', border: '1px solid var(--sb-border)', background: 'var(--sb-card)',
                 }}>
                   <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, color: 'var(--sb-ink-3)' }}>1 {code}</span>
                   <input
@@ -3061,7 +3061,7 @@ function FinanceSection() {
             ] as const).map(o => (
               <button key={o.v} onClick={() => { setCategoryOrder(o.v); saveField('finance-category-order', o.v) }}
                 style={{
-                  padding: '6px 13px', borderRadius: 999, border: '1px solid var(--sb-border)', cursor: 'pointer',
+                  padding: '6px 13px', borderRadius: 'var(--sb-r-pill)', border: '1px solid var(--sb-border)', cursor: 'pointer',
                   background: categoryOrder === o.v ? 'var(--sb-ink-1)' : 'var(--sb-field)',
                   color: categoryOrder === o.v ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
                   fontSize: 'var(--sb-t-body-s)', fontWeight: categoryOrder === o.v ? 600 : 400,
@@ -3086,7 +3086,7 @@ function FinanceSection() {
             {(['due', 'paid'] as const).map(v => (
               <button key={v} onClick={() => { setCountOn(v); saveField('finance-count-on', v) }}
                 style={{
-                  padding: '6px 14px', borderRadius: 8, border: '1px solid var(--sb-border)', cursor: 'pointer',
+                  padding: '6px 14px', borderRadius: 'var(--sb-r-chip)', border: '1px solid var(--sb-border)', cursor: 'pointer',
                   background: countOn === v ? 'var(--sb-ink-1)' : 'var(--sb-field)',
                   color: countOn === v ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
                   fontSize: 'var(--sb-t-body-s)', fontWeight: countOn === v ? 600 : 400,
@@ -3153,7 +3153,7 @@ function FinanceSection() {
         {!paidAtSupported() ? (
           <div style={{
             fontSize: 'var(--sb-t-body-s)', color: '#7A5F09', lineHeight: 1.55, maxWidth: 720,
-            background: '#FBEBC8', border: '1px solid var(--sb-accent-border)', borderRadius: 10, padding: '11px 14px',
+            background: '#FBEBC8', border: '1px solid var(--sb-accent-border)', borderRadius: 'var(--sb-r-nav)', padding: '11px 14px',
           }}>
             Your database has no payment-date column yet, so nothing can be marked paid or unpaid —
             run <code style={{ fontFamily: 'var(--sb-font-mono)', fontSize: 'var(--sb-t-meta)' }}>supabase/migrations/20260006</code> in
@@ -3176,7 +3176,7 @@ function FinanceSection() {
                 setFilling(await markAllPaid())
               }}
               style={{
-                height: 36, padding: '0 16px', borderRadius: 10, flexShrink: 0, cursor: 'pointer',
+                height: 36, padding: '0 16px', borderRadius: 'var(--sb-r-nav)', flexShrink: 0, cursor: 'pointer',
                 fontFamily: 'inherit', fontSize: 'var(--sb-t-label)', fontWeight: 600,
                 background: 'var(--sb-ink-1)', border: '1px solid var(--sb-ink-1)', color: 'var(--sb-ink-on-dark)',
               }}>
@@ -3209,7 +3209,7 @@ function FinanceSection() {
               }}
               disabled={finCategories.length === 0}
               style={{
-                height: 28, padding: '0 11px', borderRadius: 8, cursor: finCategories.length ? 'pointer' : 'default',
+                height: 28, padding: '0 11px', borderRadius: 'var(--sb-r-chip)', cursor: finCategories.length ? 'pointer' : 'default',
                 background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-3)',
                 fontFamily: 'inherit', fontSize: 'var(--sb-t-meta)', fontWeight: 600,
               }}>+ Add a reminder</button>
@@ -3233,7 +3233,7 @@ function FinanceSection() {
                   value={r.categoryId}
                   onChange={e => putReminders(reminders.map(x => x.id === r.id ? { ...x, categoryId: e.target.value } : x))}
                   style={{
-                    height: 32, minWidth: 168, maxWidth: 240, padding: '0 8px', borderRadius: 8,
+                    height: 32, minWidth: 168, maxWidth: 240, padding: '0 8px', borderRadius: 'var(--sb-r-chip)',
                     border: '1px solid var(--sb-border)', background: 'var(--sb-card)', fontFamily: 'inherit',
                     fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)',
                   }}>
@@ -3252,7 +3252,7 @@ function FinanceSection() {
                     onChange={e => putReminders(reminders.map(x => x.id === r.id
                       ? { ...x, day: Math.min(31, Math.max(1, parseInt(e.target.value) || 1)) } : x))}
                     style={{
-                      width: 54, height: 32, boxSizing: 'border-box', padding: '0 8px', borderRadius: 8,
+                      width: 54, height: 32, boxSizing: 'border-box', padding: '0 8px', borderRadius: 'var(--sb-r-chip)',
                       border: '1px solid var(--sb-border)', background: 'var(--sb-card)', fontFamily: 'inherit',
                       fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)', textAlign: 'right',
                     }} />
@@ -3266,7 +3266,7 @@ function FinanceSection() {
                     onChange={e => putReminders(reminders.map(x => x.id === r.id
                       ? { ...x, leadDays: Math.min(30, Math.max(0, parseInt(e.target.value) || 0)) } : x))}
                     style={{
-                      width: 50, height: 32, boxSizing: 'border-box', padding: '0 8px', borderRadius: 8,
+                      width: 50, height: 32, boxSizing: 'border-box', padding: '0 8px', borderRadius: 'var(--sb-r-chip)',
                       border: '1px solid var(--sb-border)', background: 'var(--sb-card)', fontFamily: 'inherit',
                       fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)', textAlign: 'right',
                     }} />
@@ -3288,7 +3288,7 @@ function FinanceSection() {
                   onClick={() => putReminders(reminders.filter(x => x.id !== r.id))}
                   title="Remove this reminder"
                   style={{
-                    width: 28, height: 28, borderRadius: '50%', padding: 0, flexShrink: 0,
+                    width: 28, height: 28, borderRadius: 'var(--sb-r-pill)', padding: 0, flexShrink: 0,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-4)', cursor: 'pointer',
                   }}>×</button>
@@ -3324,12 +3324,12 @@ function BillingSection() {
     <NotYet text="Billing coming soon">
     <div>
       {/* Plan tile */}
-      <div style={{ padding: '16px 18px', borderRadius: 12, background: '#FFFBEC', border: '1px solid var(--sb-accent)', marginBottom: 6 }}>
+      <div style={{ padding: '16px 18px', borderRadius: 'var(--sb-r-nav)', background: '#FFFBEC', border: '1px solid var(--sb-accent)', marginBottom: 6 }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
               <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h3)', fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--sb-ink-1)' }}>Professor Pro</span>
-              <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.1em', background: 'var(--sb-accent)', color: 'var(--sb-ink-1)', padding: '3px 7px', borderRadius: 5 }}>ANNUAL</span>
+              <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.1em', background: 'var(--sb-accent)', color: 'var(--sb-ink-1)', padding: '3px 7px', borderRadius: 'var(--sb-r-chip)' }}>ANNUAL</span>
             </div>
             <p style={{ margin: 0, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.45 }}>Renews 14 March 2027 · all four companies, unlimited AI drafts</p>
           </div>
@@ -3462,7 +3462,7 @@ function NotificationsMatrixSection() {
       ))}
 
       {/* Quiet hours */}
-      <div style={{ marginTop: 18, padding: '14px 16px', borderRadius: 11, background: 'var(--sb-field)', border: '1px solid var(--sb-border)' }}>
+      <div style={{ marginTop: 18, padding: '14px 16px', borderRadius: 'var(--sb-r-nav)', background: 'var(--sb-field)', border: '1px solid var(--sb-border)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: quietOn ? 10 : 0 }}>
           <div>
             <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>Quiet hours</p>
@@ -3472,15 +3472,15 @@ function NotificationsMatrixSection() {
         </div>
         {quietOn && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <input type="time" value={quietStart} onChange={e => setQStart(e.target.value)} style={{ padding: '5px 10px', borderRadius: 7, border: '1px solid var(--sb-border)', background: 'var(--sb-card)', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)' }} />
+            <input type="time" value={quietStart} onChange={e => setQStart(e.target.value)} style={{ padding: '5px 10px', borderRadius: 'var(--sb-r-chip)', border: '1px solid var(--sb-border)', background: 'var(--sb-card)', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)' }} />
             <span style={{ color: 'var(--sb-ink-4)', fontSize: 'var(--sb-t-body-s)' }}>to</span>
-            <input type="time" value={quietEnd} onChange={e => setQEnd(e.target.value)} style={{ padding: '5px 10px', borderRadius: 7, border: '1px solid var(--sb-border)', background: 'var(--sb-card)', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)' }} />
+            <input type="time" value={quietEnd} onChange={e => setQEnd(e.target.value)} style={{ padding: '5px 10px', borderRadius: 'var(--sb-r-chip)', border: '1px solid var(--sb-border)', background: 'var(--sb-card)', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)' }} />
           </div>
         )}
       </div>
 
       {/* Mute button */}
-      <button style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 8, background: 'var(--sb-card)', border: '1px solid var(--sb-border)', fontSize: 'var(--sb-t-body-s)', fontWeight: 500, color: 'var(--sb-ink-3)', cursor: 'pointer' }}>
+      <button style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-card)', border: '1px solid var(--sb-border)', fontSize: 'var(--sb-t-body-s)', fontWeight: 500, color: 'var(--sb-ink-3)', cursor: 'pointer' }}>
         🔕 Mute for 1h
       </button>
     </div>
@@ -3521,7 +3521,7 @@ function IntegrationsSection() {
             <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', fontWeight: 700, color: 'var(--sb-ink-1)' }}>Connected tools</p>
             <p style={{ margin: '1px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>Tasks and notes flow both ways — nothing is deleted on either side</p>
           </div>
-          <button style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 13px', borderRadius: 8, background: 'var(--sb-accent)', border: '1px solid rgba(25,23,18,0.18)', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-1)', cursor: 'pointer', flexShrink: 0 }}>
+          <button style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 13px', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-accent)', border: '1px solid rgba(25,23,18,0.18)', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-1)', cursor: 'pointer', flexShrink: 0 }}>
             <Plus size={12} /> <span style={{ whiteSpace: 'nowrap' }}>Add integration</span>
           </button>
         </div>
@@ -3529,20 +3529,20 @@ function IntegrationsSection() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
           {integrations.map(tool => (
             <div key={tool.id} style={{
-              padding: '11px 13px', borderRadius: 11,
+              padding: '11px 13px', borderRadius: 'var(--sb-r-nav)',
               background: tool.status === 'disconnected' ? '#FDFCF9' : 'var(--sb-card)',
               border: `1px solid ${tool.status === 'disconnected' ? 'var(--sb-border)' : tool.enabled ? '#C8DAB0' : 'var(--sb-border)'}`,
               borderStyle: tool.status === 'disconnected' ? 'dashed' : 'solid',
             }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-                <div style={{ width: 36, height: 36, borderRadius: 9, background: 'var(--sb-page)', border: '1px solid var(--sb-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'var(--sb-t-h2)', flexShrink: 0 }}>
+                <div style={{ width: 36, height: 36, borderRadius: 'var(--sb-r-sm)', background: 'var(--sb-page)', border: '1px solid var(--sb-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'var(--sb-t-h2)', flexShrink: 0 }}>
                   {tool.emoji}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
                     <span style={{ fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>{tool.name}</span>
                     <span style={{
-                      fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.08em', padding: '2px 6px', borderRadius: 4,
+                      fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.08em', padding: '2px 6px', borderRadius: 'var(--sb-r-chip)',
                       background: tool.status === 'connected' ? 'rgba(12,129,64,0.1)' : 'rgba(155,145,128,0.12)',
                       color: tool.status === 'connected' ? 'var(--sb-positive)' : 'var(--sb-ink-4)',
                       textTransform: 'uppercase',
@@ -3551,14 +3551,14 @@ function IntegrationsSection() {
                   <p style={{ margin: '0 0 6px', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>{tool.account}</p>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
                     {tool.tags.map(tag => (
-                      <span key={tag} style={{ fontSize: 'var(--sb-t-micro)', padding: '2px 8px', borderRadius: 20, background: 'var(--sb-page)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-3)' }}>{tag}</span>
+                      <span key={tag} style={{ fontSize: 'var(--sb-t-micro)', padding: '2px 8px', borderRadius: 'var(--sb-r-card)', background: 'var(--sb-page)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-3)' }}>{tag}</span>
                     ))}
                   </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
                   {tool.status === 'connected' && (
                     <select value={tool.syncMode} onChange={e => setIntegrations(prev => prev.map(i => i.id === tool.id ? { ...i, syncMode: e.target.value as Integration['syncMode'] } : i))}
-                      style={{ fontSize: 'var(--sb-t-meta)', border: '1px solid var(--sb-border)', borderRadius: 7, padding: '4px 8px', background: 'var(--sb-field)', color: 'var(--sb-ink-3)', cursor: 'pointer' }}>
+                      style={{ fontSize: 'var(--sb-t-meta)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-chip)', padding: '4px 8px', background: 'var(--sb-field)', color: 'var(--sb-ink-3)', cursor: 'pointer' }}>
                       <option value="two-way">Two-way</option>
                       <option value="import">Import only</option>
                       <option value="off">Off</option>
@@ -3566,7 +3566,7 @@ function IntegrationsSection() {
                   )}
                   {tool.status === 'connected'
                     ? <Toggle checked={tool.enabled} onChange={() => toggleEnabled(tool.id)} />
-                    : <button style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 500, color: 'var(--sb-ink-3)', background: 'var(--sb-page)', border: '1px solid var(--sb-border)', borderRadius: 7, padding: '5px 11px', cursor: 'pointer' }}>Connect</button>
+                    : <button style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 500, color: 'var(--sb-ink-3)', background: 'var(--sb-page)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-chip)', padding: '5px 11px', cursor: 'pointer' }}>Connect</button>
                   }
                 </div>
               </div>
@@ -3602,7 +3602,7 @@ function SyncRulesSection() {
             <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', fontWeight: 500, color: 'var(--sb-ink-1)' }}>{row.label}</p>
             <p style={{ margin: '1px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>{row.sub}</p>
           </div>
-          <select style={{ fontSize: 'var(--sb-t-body-s)', border: '1px solid var(--sb-border)', borderRadius: 7, padding: '5px 10px', background: 'var(--sb-field)', color: 'var(--sb-ink-1)', cursor: 'pointer', flexShrink: 0 }}>
+          <select style={{ fontSize: 'var(--sb-t-body-s)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-chip)', padding: '5px 10px', background: 'var(--sb-field)', color: 'var(--sb-ink-1)', cursor: 'pointer', flexShrink: 0 }}>
             <option>{row.value}</option>
           </select>
         </div>
@@ -3660,7 +3660,7 @@ function AutomationSection() {
         {rules.map(rule => (
           <div key={rule.id} style={{
             display: 'flex', alignItems: 'flex-start', gap: 12,
-            padding: '11px 13px', borderRadius: 11, marginBottom: 10,
+            padding: '11px 13px', borderRadius: 'var(--sb-r-nav)', marginBottom: 10,
             breakInside: 'avoid',
             background: rule.enabled ? '#FAFDF7' : '#FDFCF9',
             border: `1px solid ${rule.enabled ? '#C8DAB0' : 'var(--sb-border)'}`,
@@ -3681,7 +3681,7 @@ function AutomationSection() {
       </div>
       <button style={{
         marginTop: 14, display: 'flex', alignItems: 'center', gap: 6,
-        padding: '8px 14px', borderRadius: 9, background: 'var(--sb-card)',
+        padding: '8px 14px', borderRadius: 'var(--sb-r-sm)', background: 'var(--sb-card)',
         border: '1px solid var(--sb-border)', fontSize: 'var(--sb-t-body-s)', fontWeight: 500,
         color: 'var(--sb-ink-3)', cursor: 'pointer',
       }}>
@@ -3714,12 +3714,12 @@ function DataPrivacySection() {
       {/* Data export card */}
       <div style={{ marginBottom: 18 }}>
         <p style={{ margin: '0 0 6px', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-1)', textTransform: 'uppercase', letterSpacing: '0.09em' }}>Export</p>
-        <div style={{ padding: '14px 16px', borderRadius: 11, background: 'var(--sb-field)', border: '1px solid var(--sb-border)' }}>
+        <div style={{ padding: '14px 16px', borderRadius: 'var(--sb-r-nav)', background: 'var(--sb-field)', border: '1px solid var(--sb-border)' }}>
           <p style={{ margin: '0 0 10px', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', lineHeight: 1.5 }}>
             Download a copy of all your data — tasks, habits, companies, finance envelopes & settings.
           </p>
           <button onClick={handleExport} style={{
-            display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 8,
+            display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 'var(--sb-r-chip)',
             background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
             fontSize: 'var(--sb-t-body-s)', fontWeight: 500, color: 'var(--sb-ink-1)', cursor: 'pointer',
           }}>
@@ -3758,12 +3758,12 @@ function DataPrivacySection() {
       {/* Account deletion */}
       <div>
         <p style={{ margin: '0 0 6px', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-negative)', textTransform: 'uppercase', letterSpacing: '0.09em' }}>Danger zone</p>
-        <div style={{ padding: '14px 16px', borderRadius: 11, background: 'rgba(198,40,40,0.04)', border: '1px solid rgba(198,40,40,0.22)' }}>
+        <div style={{ padding: '14px 16px', borderRadius: 'var(--sb-r-nav)', background: 'rgba(198,40,40,0.04)', border: '1px solid rgba(198,40,40,0.22)' }}>
           <p style={{ margin: '0 0 10px', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', lineHeight: 1.5 }}>
             Permanently delete your account and all associated data. This cannot be undone.
           </p>
           <button style={{
-            display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 8,
+            display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 'var(--sb-r-chip)',
             background: 'rgba(198,40,40,0.08)', border: '1px solid rgba(198,40,40,0.3)',
             fontSize: 'var(--sb-t-body-s)', fontWeight: 500, color: 'var(--sb-negative)', cursor: 'pointer',
           }}>
@@ -3798,7 +3798,7 @@ function AccountsAndCompaniesSection({
       <div style={{
         display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
         padding: '9px 12px', marginBottom: 12,
-        background: 'var(--sb-field)', border: '1px solid var(--sb-border)', borderRadius: 10,
+        background: 'var(--sb-field)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
       }}>
         <p style={{ margin: 0, flex: 1, minWidth: 180, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.45 }}>
           Connect a Google account, then point a company at it. Mail, calendars and
@@ -3806,10 +3806,10 @@ function AccountsAndCompaniesSection({
           tagged, coloured and assigned.
         </p>
         <span style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-          <span style={{ padding: '3px 9px', borderRadius: 999, background: 'var(--sb-card)', border: '1px solid var(--sb-border)', fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-ink-3)' }}>
+          <span style={{ padding: '3px 9px', borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-card)', border: '1px solid var(--sb-border)', fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-ink-3)' }}>
             {accountCount} account{accountCount === 1 ? '' : 's'}
           </span>
-          <span style={{ padding: '3px 9px', borderRadius: 999, background: 'var(--sb-card)', border: '1px solid var(--sb-border)', fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-ink-3)' }}>
+          <span style={{ padding: '3px 9px', borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-card)', border: '1px solid var(--sb-border)', fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-ink-3)' }}>
             {companies.length} compan{companies.length === 1 ? 'y' : 'ies'}
           </span>
         </span>
@@ -3883,7 +3883,7 @@ function Card({ icon: Icon, title, sub, children, actions, muted }: {
     <div style={{
       background: 'var(--sb-card)',
       border: `1px solid ${muted ? 'var(--sb-border)' : '#E0D6BC'}`,
-      borderRadius: 16,
+      borderRadius: 'var(--sb-r-card)',
       padding: '16px 20px 18px',
       boxShadow: '0 1px 3px rgba(25,23,18,0.06)',
       display: 'flex',
@@ -3895,7 +3895,7 @@ function Card({ icon: Icon, title, sub, children, actions, muted }: {
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 10, flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 11, minWidth: 0 }}>
           <div style={{
-            width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
+            width: 30, height: 30, borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
             background: 'var(--sb-field)', border: '1px solid var(--sb-border)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
@@ -4125,7 +4125,7 @@ export function Settings() {
       const label  = saving === 'saving' ? 'Saving…' : saving === 'saved' ? '✓ Saved' : saving === 'error' ? '✗ Error' : 'Save'
       return (
         <button onClick={withSectionSave(id, fn)} style={{
-          padding: '4px 12px', borderRadius: 7, fontSize: 'var(--sb-t-meta)', fontWeight: 600, cursor: 'pointer',
+          padding: '4px 12px', borderRadius: 'var(--sb-r-chip)', fontSize: 'var(--sb-t-meta)', fontWeight: 600, cursor: 'pointer',
           background: saving === 'saved' ? 'rgba(12,129,64,0.12)' : saving === 'error' ? 'rgba(198,40,40,0.1)' : 'var(--sb-accent)',
           border: saving === 'saved' ? '1px solid #C8DAB0' : saving === 'error' ? '1px solid rgba(198,40,40,0.3)' : '1px solid rgba(25,23,18,0.18)',
           color: saving === 'saved' ? 'var(--sb-positive)' : saving === 'error' ? 'var(--sb-negative)' : 'var(--sb-ink-1)',
@@ -4175,7 +4175,7 @@ export function Settings() {
       <div>
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.35fr) minmax(0, 1fr)', gap: 16, alignItems: 'start' }}>
           <SectionCard id="accounts" active={activeSection === 'accounts'} actions={
-            <button onClick={() => window.dispatchEvent(new CustomEvent('professor:openWizard'))} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 7, background: 'var(--sb-field)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-meta)', cursor: 'pointer' }}>
+            <button onClick={() => window.dispatchEvent(new CustomEvent('professor:openWizard'))} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-field)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-meta)', cursor: 'pointer' }}>
               <Wand2 size={11} /> Wizard
             </button>
           }>
@@ -4323,7 +4323,7 @@ export function Settings() {
         onClick={() => { setActiveSection(id); try { localStorage.setItem('settings-active-section', id) } catch { /* noop */ } }}
         style={{
           width: '100%', display: 'flex', alignItems: 'center', gap: 10,
-          padding: '5px 12px', borderRadius: 9, cursor: 'pointer', marginBottom: 0,
+          padding: '5px 12px', borderRadius: 'var(--sb-r-sm)', cursor: 'pointer', marginBottom: 0,
           background: isActive ? 'var(--sb-ink-1)' : 'transparent',
           border: '1px solid transparent',
           color: isActive ? 'var(--sb-card)' : 'var(--sb-ink-3)',
@@ -4336,7 +4336,7 @@ export function Settings() {
         <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{meta.title}</span>
         {badge !== null && (
           <span style={{
-            height: 17, minWidth: 17, boxSizing: 'border-box', padding: '0 5px', borderRadius: 999,
+            height: 17, minWidth: 17, boxSizing: 'border-box', padding: '0 5px', borderRadius: 'var(--sb-r-pill)',
             background: isActive ? 'rgba(255,255,255,0.18)' : 'var(--sb-field)',
             color: isActive ? 'var(--sb-card)' : 'var(--sb-ink-3)',
             fontSize: 'var(--sb-t-micro)', fontWeight: 700,
@@ -4373,7 +4373,7 @@ export function Settings() {
             onClick={() => window.dispatchEvent(new CustomEvent('professor:openWizard'))}
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 7,
-              padding: '10px 18px', borderRadius: 999, cursor: 'pointer',
+              padding: '10px 18px', borderRadius: 'var(--sb-r-pill)', cursor: 'pointer',
               background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-1)',
               fontSize: 'var(--sb-t-body)', fontWeight: 500, fontFamily: 'inherit',
               boxShadow: '0 1px 3px rgba(25,23,18,0.06)',
@@ -4384,7 +4384,7 @@ export function Settings() {
             onClick={() => exportAllSettings()}
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 7,
-              padding: '10px 18px', borderRadius: 999, cursor: 'pointer',
+              padding: '10px 18px', borderRadius: 'var(--sb-r-pill)', cursor: 'pointer',
               background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-1)',
               fontSize: 'var(--sb-t-body)', fontWeight: 500, fontFamily: 'inherit',
               boxShadow: '0 1px 3px rgba(25,23,18,0.06)',
@@ -4399,12 +4399,12 @@ export function Settings() {
         {/* ── LEFT RAIL — floating card ──────────────────────────────────── */}
         <div style={{
           width: 250, flexShrink: 0, display: 'flex', flexDirection: 'column',
-          background: 'var(--sb-header)', border: '1px solid var(--sb-border)', borderRadius: 16,
+          background: 'var(--sb-header)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
           boxShadow: '0 1px 3px rgba(25,23,18,0.06)', overflow: 'hidden',
         }}>
           {/* Search */}
           <div style={{ padding: '12px 12px 8px', flexShrink: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--sb-field)', border: '1px solid var(--sb-border)', borderRadius: 10, padding: '8px 12px', cursor: 'text' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--sb-field)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', padding: '8px 12px', cursor: 'text' }}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--sb-ink-4)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
               <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-4)', flex: 1, userSelect: 'none' }}>Find a setting</span>
               <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', opacity: 0.7 }}>⌘K</span>
@@ -4426,7 +4426,7 @@ export function Settings() {
           {/* Footer */}
           <div style={{ padding: '10px 18px 11px', borderTop: '1px solid var(--sb-hairline)', flexShrink: 0 }}>
             <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', display: 'flex', alignItems: 'center', gap: 7 }}>
-              <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--sb-positive)', flexShrink: 0 }} />
+              <span style={{ width: 6, height: 6, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-positive)', flexShrink: 0 }} />
               Every change saves itself
             </div>
           </div>

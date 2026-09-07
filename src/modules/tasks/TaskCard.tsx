@@ -106,7 +106,7 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
         border: selected ? '2px solid var(--sb-ink-1)' : '1px solid var(--sb-border)',
         // keep the geometry identical whether or not the ink border is on
         padding: selected ? '8px 9px' : '9px 10px',
-        borderRadius: 10,
+        borderRadius: 'var(--sb-r-nav)',
         boxShadow: hovered && !selected ? '0 2px 8px rgba(25,23,18,0.07)' : '0 1px 2px rgba(25,23,18,0.04)',
         cursor: isDragging ? 'grabbing' : 'pointer',
         // Without this iOS scrolls the page instead of starting the drag.
@@ -129,7 +129,7 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
               }}
               title={task.completed ? 'Reopen' : 'Complete'}
               style={{
-                width: 15, height: 15, borderRadius: 5, boxSizing: 'border-box',
+                width: 15, height: 15, borderRadius: 'var(--sb-r-chip)', boxSizing: 'border-box',
                 border: task.completed ? '1.5px solid var(--sb-positive)' : '1.5px solid #CFC6B0',
                 background: task.completed ? 'var(--sb-positive)' : 'var(--sb-card)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -280,7 +280,7 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
             title={v.ownerName ?? 'Unassigned'}
             style={{
               ...(v.ownerInitials ? slotFilled : slotEmpty),
-              borderRadius: '50%',
+              borderRadius: 'var(--sb-r-pill)',
               fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.02em',
             }}
           >{v.ownerInitials ?? <User size={12} strokeWidth={2} />}</div>

@@ -163,7 +163,7 @@ async function resolveCalendar(
 function Skel({ w = '100%', h = 12 }: { w?: string | number; h?: number }) {
   return (
     <div style={{
-      width: w, height: h, borderRadius: 6,
+      width: w, height: h, borderRadius: 'var(--sb-r-chip)',
       background: 'linear-gradient(90deg, var(--sb-border) 25%, var(--sb-border) 50%, var(--sb-border) 75%)',
       backgroundSize: '200% 100%',
       animation: 'shimmer 1.6s infinite',
@@ -368,12 +368,12 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
           width: '100%', padding: '14px 18px',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           background: 'var(--sb-page)', border: '1px dashed #7F77DD40',
-          borderRadius: 12, cursor: 'pointer', transition: 'all 0.15s',
+          borderRadius: 'var(--sb-r-nav)', cursor: 'pointer', transition: 'all 0.15s',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{
-            width: 28, height: 28, borderRadius: 7,
+            width: 28, height: 28, borderRadius: 'var(--sb-r-chip)',
             background: 'rgba(127,119,221,0.1)', border: '1px solid #7F77DD30',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
@@ -395,7 +395,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
         {error && (
           <div style={{
-            borderRadius: 10, background: '#FEF3EC', border: '1px solid #92400E30', overflow: 'hidden',
+            borderRadius: 'var(--sb-r-nav)', background: '#FEF3EC', border: '1px solid #92400E30', overflow: 'hidden',
           }}>
             <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '14px 16px', borderBottom: '1px solid #92400E30' }}>
               <CreditCard size={14} color="#F59E0B" style={{ marginTop: 1, flexShrink: 0 }} />
@@ -456,7 +456,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                   <div key={group.id}>
                     {/* Company header */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-                      <div style={{ width: 6, height: 6, borderRadius: '50%', background: group.color, flexShrink: 0 }} />
+                      <div style={{ width: 6, height: 6, borderRadius: 'var(--sb-r-pill)', background: group.color, flexShrink: 0 }} />
                       <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 600, color: group.color, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                         {group.name}
                       </span>
@@ -477,7 +477,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                             })}
                             style={{
                               display: 'flex', alignItems: 'center', gap: 9,
-                              padding: '8px 10px', borderRadius: 7,
+                              padding: '8px 10px', borderRadius: 'var(--sb-r-chip)',
                               background: isSelected ? `${group.color}12` : 'var(--sb-page)',
                               border: `1px solid ${isSelected ? `${group.color}40` : 'var(--sb-border)'}`,
                               cursor: 'pointer', textAlign: 'left',
@@ -486,7 +486,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                           >
                             {/* Checkbox */}
                             <div style={{
-                              width: 14, height: 14, borderRadius: 4, flexShrink: 0,
+                              width: 14, height: 14, borderRadius: 'var(--sb-r-chip)', flexShrink: 0,
                               background: isSelected ? group.color : 'transparent',
                               border: `1.5px solid ${isSelected ? group.color : 'var(--sb-ink-4)'}`,
                               display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -549,8 +549,8 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                 <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                   <div style={{ width: 3, height: 28, borderRadius: 2, background: 'var(--sb-border)', flexShrink: 0 }} />
                   <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    <div style={{ height: 9, width: 38, borderRadius: 4, background: 'var(--sb-border)' }} />
-                    <div style={{ height: 11, width: `${w}%`, borderRadius: 4, background: 'var(--sb-card)' }} />
+                    <div style={{ height: 9, width: 38, borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-border)' }} />
+                    <div style={{ height: 11, width: `${w}%`, borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-card)' }} />
                   </div>
                 </div>
               ))}
@@ -600,7 +600,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                 key={opt}
                 onClick={() => setDeepWork(opt)}
                 style={{
-                  flex: 1, padding: '9px 0', borderRadius: 8, cursor: 'pointer',
+                  flex: 1, padding: '9px 0', borderRadius: 'var(--sb-r-chip)', cursor: 'pointer',
                   fontSize: 'var(--sb-t-body-s)', fontWeight: deepWork === opt ? 600 : 400,
                   background: deepWork === opt ? 'rgba(127,119,221,0.1)' : 'var(--sb-page)',
                   border: `1px solid ${deepWork === opt ? 'color-mix(in srgb, #7F77DD 40%, transparent)' : 'var(--sb-border)'}`,
@@ -620,7 +620,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
           <button
             onClick={() => { setPhase('idle'); setError(null); setSelectedTaskIds(new Set()) }}
             style={{
-              padding: '9px 16px', borderRadius: 8, cursor: 'pointer',
+              padding: '9px 16px', borderRadius: 'var(--sb-r-chip)', cursor: 'pointer',
               background: 'transparent', border: '1px solid var(--sb-border)',
               color: 'var(--sb-ink-4)', fontSize: 'var(--sb-t-body-s)',
             }}
@@ -632,7 +632,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
             disabled={eventsLoading}
             title={eventsLoading ? 'Waiting for calendar to load…' : undefined}
             style={{
-              flex: 1, padding: '10px 0', borderRadius: 8, cursor: eventsLoading ? 'not-allowed' : 'pointer',
+              flex: 1, padding: '10px 0', borderRadius: 'var(--sb-r-chip)', cursor: eventsLoading ? 'not-allowed' : 'pointer',
               background: '#7F77DD', border: 'none',
               color: '#fff', fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
@@ -694,7 +694,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                 key={slot.id}
                 style={{
                   display: 'flex', gap: 10, alignItems: 'stretch',
-                  padding: '10px 12px', borderRadius: 10,
+                  padding: '10px 12px', borderRadius: 'var(--sb-r-nav)',
                   background: isPast ? 'var(--sb-field)' : 'var(--sb-page)',
                   border: `1px solid ${slot.decision === 'confirmed' ? `${color}30` : 'var(--sb-border)'}`,
                   opacity: isPast ? 0.45 : 1,
@@ -765,7 +765,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                       onClick={() => decide(slot.id, 'confirmed')}
                       title="Confirm"
                       style={{
-                        width: 26, height: 26, borderRadius: 6, cursor: 'pointer',
+                        width: 26, height: 26, borderRadius: 'var(--sb-r-chip)', cursor: 'pointer',
                         background: '#1D9E7518', border: '1px solid #1D9E7540',
                         color: '#1D9E75', display: 'flex', alignItems: 'center', justifyContent: 'center',
                       }}
@@ -777,7 +777,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                       onClick={() => decide(slot.id, 'pending')}
                       title="Unconfirm"
                       style={{
-                        width: 26, height: 26, borderRadius: 6, cursor: 'pointer',
+                        width: 26, height: 26, borderRadius: 'var(--sb-r-chip)', cursor: 'pointer',
                         background: '#1D9E7530', border: '1px solid #1D9E7560',
                         color: '#1D9E75', display: 'flex', alignItems: 'center', justifyContent: 'center',
                       }}
@@ -791,7 +791,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                       onClick={() => decide(slot.id, 'skipped')}
                       title="Skip"
                       style={{
-                        width: 26, height: 26, borderRadius: 6, cursor: 'pointer',
+                        width: 26, height: 26, borderRadius: 'var(--sb-r-chip)', cursor: 'pointer',
                         background: '#EF444418', border: '1px solid #EF444430',
                         color: '#EF4444', display: 'flex', alignItems: 'center', justifyContent: 'center',
                       }}
@@ -805,7 +805,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                       onClick={() => reschedule(slot.id)}
                       title="Find next free slot"
                       style={{
-                        width: 26, height: 26, borderRadius: 6, cursor: 'pointer',
+                        width: 26, height: 26, borderRadius: 'var(--sb-r-chip)', cursor: 'pointer',
                         background: '#F59E0B18', border: '1px solid #F59E0B30',
                         color: '#F59E0B', display: 'flex', alignItems: 'center', justifyContent: 'center',
                       }}
@@ -831,7 +831,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                 disabled={!isReady}
                 title={isReady ? `Apply ${pendingCount} change${pendingCount > 1 ? 's' : ''} to Google Calendar` : unconfirmed > 0 ? `Confirm ${unconfirmed} slot${unconfirmed > 1 ? 's' : ''} above to enable` : 'No calendar changes to apply'}
                 style={{
-                  padding: '12px 0', borderRadius: 10, cursor: isReady ? 'pointer' : 'not-allowed',
+                  padding: '12px 0', borderRadius: 'var(--sb-r-nav)', cursor: isReady ? 'pointer' : 'not-allowed',
                   background: '#7F77DD', border: 'none',
                   color: '#fff', fontSize: 'var(--sb-t-label)', fontWeight: 600,
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
@@ -870,7 +870,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
           return (
             <div key={slot.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <div style={{
-                width: 16, height: 16, borderRadius: '50%', flexShrink: 0,
+                width: 16, height: 16, borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
                 background: st === 'done' ? '#1D9E75' : st === 'error' ? '#EF4444' : 'var(--sb-field)',
                 border: `1px solid ${st === 'done' ? '#1D9E75' : st === 'error' ? '#EF4444' : '#7F77DD'}`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -901,12 +901,12 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <div style={{
-        padding: '16px 18px', borderRadius: 12,
+        padding: '16px 18px', borderRadius: 'var(--sb-r-nav)',
         background: '#F0FAF5', border: '1px solid #1D9E7540',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
           <div style={{
-            width: 28, height: 28, borderRadius: 7, flexShrink: 0,
+            width: 28, height: 28, borderRadius: 'var(--sb-r-chip)', flexShrink: 0,
             background: '#1D9E7518', border: '1px solid #1D9E7530',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
@@ -934,7 +934,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
       <button
         onClick={() => { setPhase('idle'); setSlots([]); setResults([]); setApplying({}) }}
         style={{
-          padding: '9px 0', borderRadius: 8, cursor: 'pointer',
+          padding: '9px 0', borderRadius: 'var(--sb-r-chip)', cursor: 'pointer',
           background: 'transparent', border: '1px solid var(--sb-border)',
           color: 'var(--sb-ink-4)', fontSize: 'var(--sb-t-body-s)',
         }}

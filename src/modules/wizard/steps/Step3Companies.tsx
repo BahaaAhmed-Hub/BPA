@@ -19,7 +19,7 @@ interface Props {
 const inp: React.CSSProperties = {
   background: 'var(--sb-page)',
   border: '1px solid var(--sb-border)',
-  borderRadius: 7, padding: '8px 12px',
+  borderRadius: 'var(--sb-r-chip)', padding: '8px 12px',
   color: 'var(--sb-ink-1)',
   fontSize: 'var(--sb-t-body)', outline: 'none', width: '100%', boxSizing: 'border-box',
 }
@@ -57,17 +57,17 @@ export function Step3Companies({ data, onChange }: Props) {
           return (
             <div key={co.id} style={{
               display: 'flex', alignItems: 'center', gap: 10,
-              padding: '10px 14px', borderRadius: 10,
+              padding: '10px 14px', borderRadius: 'var(--sb-r-nav)',
               background: 'var(--sb-card)',
               border: '1px solid var(--sb-border)',
             }}>
-              <div style={{ width: 14, height: 14, borderRadius: '50%', background: co.color, flexShrink: 0 }} />
+              <div style={{ width: 14, height: 14, borderRadius: 'var(--sb-r-pill)', background: co.color, flexShrink: 0 }} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <span style={{ fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>{co.name}</span>
                 {co.emailDomain && <span style={{ marginLeft: 8, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>{co.emailDomain}</span>}
               </div>
               {acc && (
-                <span style={{ fontSize: 'var(--sb-t-meta)', padding: '2px 8px', borderRadius: 20, background: 'rgba(127,119,221,0.12)', color: '#9B94E8', flexShrink: 0 }}>
+                <span style={{ fontSize: 'var(--sb-t-meta)', padding: '2px 8px', borderRadius: 'var(--sb-r-card)', background: 'rgba(127,119,221,0.12)', color: '#9B94E8', flexShrink: 0 }}>
                   {acc.email.split('@')[0]}
                 </span>
               )}
@@ -80,7 +80,7 @@ export function Step3Companies({ data, onChange }: Props) {
       </div>
 
       {adding ? (
-        <div style={{ padding: '16px', borderRadius: 10, background: 'var(--sb-card)', border: '1px solid var(--sb-border)', marginBottom: 12 }}>
+        <div style={{ padding: '16px', borderRadius: 'var(--sb-r-nav)', background: 'var(--sb-card)', border: '1px solid var(--sb-border)', marginBottom: 12 }}>
           <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
             <input value={name} onChange={e => setName(e.target.value)} placeholder="Company name" style={inp} onKeyDown={e => e.key === 'Enter' && addCompany()} autoFocus />
             <input value={domain} onChange={e => setDomain(e.target.value)} placeholder="e.g. acme.com" style={{ ...inp, width: 160 }} />
@@ -88,7 +88,7 @@ export function Step3Companies({ data, onChange }: Props) {
           <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
             {COLORS.map(c => (
               <button key={c} onClick={() => setColor(c)} style={{
-                width: 22, height: 22, borderRadius: '50%', background: c, border: 'none', cursor: 'pointer',
+                width: 22, height: 22, borderRadius: 'var(--sb-r-pill)', background: c, border: 'none', cursor: 'pointer',
                 outline: color === c ? `2px solid ${c}` : 'none', outlineOffset: 2,
                 transform: color === c ? 'scale(1.2)' : 'scale(1)', transition: 'transform 0.1s',
               }} />
@@ -101,7 +101,7 @@ export function Step3Companies({ data, onChange }: Props) {
             </select>
           )}
           <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={addCompany} style={{ padding: '8px 18px', borderRadius: 8, background: 'var(--sb-accent)', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-label)', fontWeight: 600, border: 'none', cursor: 'pointer' }}>
+            <button onClick={addCompany} style={{ padding: '8px 18px', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-accent)', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-label)', fontWeight: 600, border: 'none', cursor: 'pointer' }}>
               Add
             </button>
             <button onClick={() => setAdding(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-4)', fontSize: 'var(--sb-t-label)' }}>
@@ -111,7 +111,7 @@ export function Step3Companies({ data, onChange }: Props) {
         </div>
       ) : (
         <button onClick={() => setAdding(true)} style={{
-          display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 8,
+          display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 'var(--sb-r-chip)',
           background: 'transparent', border: '1px dashed var(--sb-border)',
           color: 'var(--sb-ink-4)', fontSize: 'var(--sb-t-body)', cursor: 'pointer',
           width: '100%', justifyContent: 'center',

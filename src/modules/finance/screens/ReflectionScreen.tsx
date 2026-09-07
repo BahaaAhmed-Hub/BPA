@@ -142,7 +142,7 @@ function CategoryRows({ row, tone, open, hidden, onToggleOpen, onToggleHide, onD
                 onClick={e => { e.stopPropagation(); onToggleOpen(row.cat.id) }}
                 title={open ? 'Fold its sub-categories away' : `Show its ${kids.length} sub-categories`}
                 style={{
-                  width: 16, height: 16, padding: 0, flexShrink: 0, borderRadius: 4,
+                  width: 16, height: 16, padding: 0, flexShrink: 0, borderRadius: 'var(--sb-r-chip)',
                   background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-4)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
@@ -573,14 +573,14 @@ export function ReflectionScreen(_props?: any) {
         {/* Stats bar */}
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 20, paddingBottom: 4, alignItems: 'flex-end' }}>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
-            <span style={{ display: 'inline-flex', gap: 2, padding: 3, borderRadius: 999, background: 'var(--sb-field)' }}>
+            <span style={{ display: 'inline-flex', gap: 2, padding: 3, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-field)' }}>
               {([
                 ['due',  'When it is due', 'Every entry in the month it belongs to, paid or not'],
                 ['paid', 'When it was paid', 'Only money that has actually moved, in the month it moved'],
               ] as const).map(([id, label, why]) => (
                 <button key={id} onClick={() => pickBasis(id)} title={why}
                   style={{
-                    height: 26, padding: '0 12px', borderRadius: 999, border: 'none', cursor: 'pointer',
+                    height: 26, padding: '0 12px', borderRadius: 'var(--sb-r-pill)', border: 'none', cursor: 'pointer',
                     fontFamily: 'inherit', fontSize: 'var(--sb-t-meta)', fontWeight: basis === id ? 700 : 500,
                     background: basis === id ? 'var(--sb-card)' : 'transparent',
                     color: basis === id ? 'var(--sb-ink-1)' : 'var(--sb-ink-3)',
@@ -601,7 +601,7 @@ export function ReflectionScreen(_props?: any) {
                 title="Identical entries filed twice on one day, or twice in one month"
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 6, height: 28,
-                  padding: '0 11px', borderRadius: 999, cursor: 'pointer',
+                  padding: '0 11px', borderRadius: 'var(--sb-r-pill)', cursor: 'pointer',
                   background: dupesOpen ? 'var(--sb-accent)' : '#FBEBC8',
                   border: '1px solid var(--sb-accent-border)', color: '#7A5F09',
                   fontFamily: 'inherit', fontSize: 'var(--sb-t-meta)', fontWeight: 700,
@@ -612,7 +612,7 @@ export function ReflectionScreen(_props?: any) {
                 <div style={{
                   position: 'absolute', top: 34, right: 0, zIndex: 30, width: 384,
                   maxHeight: 320, overflowY: 'auto', padding: 12,
-                  background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 14,
+                  background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
                   boxShadow: '0 16px 40px rgba(25,23,18,0.18)', textAlign: 'left',
                 }}>
                   <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.5, marginBottom: 10 }}>
@@ -637,7 +637,7 @@ export function ReflectionScreen(_props?: any) {
                         onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
                         style={{
                           flex: 1, minWidth: 0, display: 'flex', alignItems: 'baseline', gap: 8,
-                          cursor: 'pointer', borderRadius: 7, padding: '4px 6px', margin: '0 -6px',
+                          cursor: 'pointer', borderRadius: 'var(--sb-r-chip)', padding: '4px 6px', margin: '0 -6px',
                         }}>
                         <span style={{ color: 'var(--sb-ink-4)', fontVariantNumeric: 'tabular-nums' }}>{t.date}</span>
                         <span style={{ flex: 1, minWidth: 0, color: 'var(--sb-ink-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -657,7 +657,7 @@ export function ReflectionScreen(_props?: any) {
                         }}
                         title="Delete this entry"
                         style={{
-                          width: 24, height: 24, borderRadius: '50%', padding: 0, flexShrink: 0,
+                          width: 24, height: 24, borderRadius: 'var(--sb-r-pill)', padding: 0, flexShrink: 0,
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-4)', cursor: 'pointer',
                         }}><Trash2 size={12} /></button>
@@ -698,7 +698,7 @@ export function ReflectionScreen(_props?: any) {
                       title={allOpen ? 'Fold every sub-category away' : `Open all ${foldable.length} that have sub-categories`}
                       style={{
                         display: 'inline-flex', alignItems: 'center', gap: 4, height: 20,
-                        padding: '0 7px', borderRadius: 999, cursor: 'pointer',
+                        padding: '0 7px', borderRadius: 'var(--sb-r-pill)', cursor: 'pointer',
                         background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-3)',
                         fontFamily: 'inherit', fontSize: 'var(--sb-t-micro)', fontWeight: 600, letterSpacing: '0.04em',
                       }}>
@@ -786,22 +786,22 @@ export function ReflectionScreen(_props?: any) {
             onClick={e => e.stopPropagation()}
             style={{
               width: '100%', maxWidth: 560, maxHeight: '84vh', display: 'flex', flexDirection: 'column',
-              background: 'var(--sb-header)', border: '1px solid var(--sb-border)', borderRadius: 20,
+              background: 'var(--sb-header)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
               boxShadow: '0 30px 80px rgba(25,23,18,0.28)', padding: '18px 20px 20px',
             }}>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
               <span style={{
                 display: 'inline-flex', alignItems: 'center', gap: 7,
-                background: '#F3EEE0', borderRadius: 999, padding: '5px 12px',
+                background: '#F3EEE0', borderRadius: 'var(--sb-r-pill)', padding: '5px 12px',
                 fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-ink-3)',
               }}>
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: drill.kind === 'income' ? OLIVE : drill.kind === 'expense' ? RUST : 'var(--sb-ink-3)' }} />
+                <span style={{ width: 6, height: 6, borderRadius: 'var(--sb-r-pill)', background: drill.kind === 'income' ? OLIVE : drill.kind === 'expense' ? RUST : 'var(--sb-ink-3)' }} />
                 {drill.kind === 'income' ? 'Income' : drill.kind === 'expense' ? 'Spending' : 'In and out'}
               </span>
               <button onClick={() => setDrill(null)} title="Close"
                 style={{
-                  marginLeft: 'auto', width: 30, height: 30, borderRadius: '50%', padding: 0,
+                  marginLeft: 'auto', width: 30, height: 30, borderRadius: 'var(--sb-r-pill)', padding: 0,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-3)', cursor: 'pointer',
                 }}><X size={14} /></button>
@@ -843,7 +843,7 @@ export function ReflectionScreen(_props?: any) {
                       title="Open this entry"
                       style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 11, cursor: 'pointer' }}>
                       <span style={{
-                        width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
+                        width: 32, height: 32, borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         background: 'var(--sb-field)', color: cat?.color ?? 'var(--sb-ink-3)',
                       }}>
@@ -880,7 +880,7 @@ export function ReflectionScreen(_props?: any) {
                       }}
                       title="Delete this entry"
                       style={{
-                        width: 28, height: 28, borderRadius: '50%', padding: 0, flexShrink: 0,
+                        width: 28, height: 28, borderRadius: 'var(--sb-r-pill)', padding: 0, flexShrink: 0,
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-4)', cursor: 'pointer',
                       }}><Trash2 size={13} /></button>
@@ -903,7 +903,7 @@ export function ReflectionScreen(_props?: any) {
                 onClick={() => setAdding(true)}
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 7, height: 38,
-                  padding: '0 18px', borderRadius: 10, cursor: 'pointer',
+                  padding: '0 18px', borderRadius: 'var(--sb-r-nav)', cursor: 'pointer',
                   background: 'var(--sb-ink-1)', border: '1px solid var(--sb-ink-1)', color: 'var(--sb-ink-on-dark)',
                   fontFamily: 'inherit', fontSize: 'var(--sb-t-label)', fontWeight: 600,
                 }}>

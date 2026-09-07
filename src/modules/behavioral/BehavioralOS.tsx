@@ -110,7 +110,7 @@ function RankArtwork({ rank, rankMeta }: { rank: Rank; rankMeta: { label: string
 
   return (
     <div style={{
-      width: 88, height: 88, borderRadius: 8, flexShrink: 0,
+      width: 88, height: 88, borderRadius: 'var(--sb-r-chip)', flexShrink: 0,
       overflow: 'hidden',
       border: '1px solid #3a0808',
       background: 'linear-gradient(135deg, #1a0a0a, #0c0b09)',

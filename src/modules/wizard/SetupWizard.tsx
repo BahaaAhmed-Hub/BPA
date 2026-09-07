@@ -185,7 +185,7 @@ export function SetupWizard({ onClose }: Props) {
         <div style={{
           ...LIGHT_VARS,
           background: 'var(--sb-card)',
-          borderRadius: 20,
+          borderRadius: 'var(--sb-r-card)',
           width: '100%', maxWidth: 640,
           maxHeight: '88vh',
           display: 'flex', flexDirection: 'column',
@@ -227,7 +227,7 @@ export function SetupWizard({ onClose }: Props) {
                 })}
               </div>
             </div>
-            <button onClick={handleSkip} title="Skip setup" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9CA3AF', padding: '2px 4px', display: 'flex', borderRadius: 8, flexShrink: 0, marginTop: -2, transition: 'color 0.15s' }}>
+            <button onClick={handleSkip} title="Skip setup" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9CA3AF', padding: '2px 4px', display: 'flex', borderRadius: 'var(--sb-r-chip)', flexShrink: 0, marginTop: -2, transition: 'color 0.15s' }}>
               <X size={20} />
             </button>
           </div>
@@ -249,7 +249,7 @@ export function SetupWizard({ onClose }: Props) {
             {step > 1 && step < TOTAL_STEPS ? (
               <button onClick={goBack} className="wz-btn-back" style={{
                 display: 'flex', alignItems: 'center', gap: 6,
-                padding: '11px 22px', borderRadius: 100,
+                padding: '11px 22px', borderRadius: 'var(--sb-r-pill)',
                 background: 'transparent', border: '1.5px solid #E5E7EB',
                 color: '#6B7280', fontSize: 'var(--sb-t-label)', fontWeight: 600, cursor: 'pointer',
                 transition: 'all 0.15s',
@@ -267,7 +267,7 @@ export function SetupWizard({ onClose }: Props) {
               {step < TOTAL_STEPS ? (
                 <button onClick={goNext} className="wz-btn-next" style={{
                   display: 'flex', alignItems: 'center', gap: 6,
-                  padding: '11px 26px', borderRadius: 100,
+                  padding: '11px 26px', borderRadius: 'var(--sb-r-pill)',
                   background: 'var(--sb-accent)', border: 'none',
                   color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-label)', fontWeight: 700, cursor: 'pointer',
                   boxShadow: '0 4px 14px rgba(127,119,221,0.35)',
@@ -278,7 +278,7 @@ export function SetupWizard({ onClose }: Props) {
               ) : (
                 <button onClick={() => void handleFinish()} className="wz-btn-next" style={{
                   display: 'flex', alignItems: 'center', gap: 6,
-                  padding: '11px 26px', borderRadius: 100,
+                  padding: '11px 26px', borderRadius: 'var(--sb-r-pill)',
                   background: '#1D9E75', border: 'none',
                   color: '#fff', fontSize: 'var(--sb-t-label)', fontWeight: 700, cursor: 'pointer',
                   boxShadow: '0 4px 14px rgba(29,158,117,0.35)',

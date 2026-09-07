@@ -9,7 +9,7 @@ interface Props {
 // Hero SVG illustration — warm landscape with sunrise, trees and a person
 function HeroIllustration() {
   return (
-    <svg width="100%" viewBox="0 0 560 220" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block', borderRadius: 14 }}>
+    <svg width="100%" viewBox="0 0 560 220" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block', borderRadius: 'var(--sb-r-card)' }}>
       <defs>
         <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%"   stopColor="#FEF3C7" />
@@ -131,7 +131,7 @@ export function Step1Welcome({ data, onChange }: Props) {
       `}</style>
 
       {/* Hero illustration */}
-      <div style={{ borderRadius: 14, overflow: 'hidden', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
+      <div style={{ borderRadius: 'var(--sb-r-card)', overflow: 'hidden', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
         <HeroIllustration />
       </div>
 
@@ -149,7 +149,7 @@ export function Step1Welcome({ data, onChange }: Props) {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10 }}>
         {FEATURES.map(f => (
           <div key={f.title} className="wz-feature-card" style={{
-            padding: '14px 12px', borderRadius: 12, textAlign: 'center',
+            padding: '14px 12px', borderRadius: 'var(--sb-r-nav)', textAlign: 'center',
             background: '#F8F8FC', border: '1px solid #EBEBF0',
             boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
           }}>
@@ -172,7 +172,7 @@ export function Step1Welcome({ data, onChange }: Props) {
           placeholder="Your name..."
           autoFocus
           style={{
-            background: 'var(--sb-card)', border: '1.5px solid #E5E7EB', borderRadius: 10,
+            background: 'var(--sb-card)', border: '1.5px solid #E5E7EB', borderRadius: 'var(--sb-r-nav)',
             padding: '11px 14px', color: '#111827', fontSize: 'var(--sb-t-body)', outline: 'none',
             width: '100%', boxSizing: 'border-box',
             boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
@@ -199,20 +199,20 @@ export function Step1Welcome({ data, onChange }: Props) {
                 onChange({ themeId: theme.id })
               }} style={{
                 padding: 0, border: active ? `2.5px solid ${tk['--sb-accent']}` : '2.5px solid transparent',
-                borderRadius: 10, background: 'transparent', cursor: 'pointer', outline: 'none',
+                borderRadius: 'var(--sb-r-nav)', background: 'transparent', cursor: 'pointer', outline: 'none',
                 boxShadow: active ? `0 0 0 3px rgba(${tk['--sb-accent-rgb']},0.2)` : 'none',
                 transition: 'all 0.15s',
               }}>
-                <div style={{ height: 42, background: tk['--sb-page'], borderRadius: '7px 7px 0 0', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-                  <div style={{ width: 12, height: 12, borderRadius: '50%', background: tk['--sb-accent'], boxShadow: `0 0 6px rgba(${tk['--sb-accent-rgb']},0.6)` }} />
+                <div style={{ height: 42, background: tk['--sb-page'], borderRadius: 'var(--sb-r-chip) var(--sb-r-chip) 0 0', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+                  <div style={{ width: 12, height: 12, borderRadius: 'var(--sb-r-pill)', background: tk['--sb-accent'], boxShadow: `0 0 6px rgba(${tk['--sb-accent-rgb']},0.6)` }} />
                   <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 10, background: tk['--sb-card'], borderTop: `1px solid ${tk['--sb-border']}` }} />
                   {active && (
-                    <div style={{ position: 'absolute', top: 3, right: 3, width: 13, height: 13, borderRadius: '50%', background: tk['--sb-accent'], display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ position: 'absolute', top: 3, right: 3, width: 13, height: 13, borderRadius: 'var(--sb-r-pill)', background: tk['--sb-accent'], display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <svg width="7" height="7" viewBox="0 0 7 7"><polyline points="1,3.5 2.8,5.2 6,1.5" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/></svg>
                     </div>
                   )}
                 </div>
-                <div style={{ padding: '4px 3px 5px', background: '#F8F8FC', borderRadius: '0 0 7px 7px', borderTop: '1px solid #EBEBF0' }}>
+                <div style={{ padding: '4px 3px 5px', background: '#F8F8FC', borderRadius: '0 0 var(--sb-r-chip) var(--sb-r-chip)', borderTop: '1px solid #EBEBF0' }}>
                   <div style={{ fontSize: 'var(--sb-t-micro)', color: active ? tk['--sb-accent'] : '#6B7280', fontWeight: active ? 700 : 500, textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {theme.emoji} {theme.name}
                   </div>

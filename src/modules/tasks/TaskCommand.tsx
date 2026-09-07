@@ -251,11 +251,11 @@ export function TaskCommand() {
           {/* Filter button */}
           <div ref={filterRef} style={{ position: 'relative', flexShrink: 0 }}>
             <button onClick={() => setFilterOpen(o => !o)}
-              style={{ display: 'flex', alignItems: 'center', gap: 8, height: 38, boxSizing: 'border-box', padding: '0 18px', borderRadius: 999, background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body)', fontWeight: 500, cursor: 'pointer', boxShadow: '0 1px 3px rgba(25,23,18,0.06)' }}>
+              style={{ display: 'flex', alignItems: 'center', gap: 8, height: 38, boxSizing: 'border-box', padding: '0 18px', borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body)', fontWeight: 500, cursor: 'pointer', boxShadow: '0 1px 3px rgba(25,23,18,0.06)' }}>
               <SlidersHorizontal size={14} strokeWidth={2} />
               Filters
               {activeFilterCount > 0 && (
-                <span style={{ height: 18, minWidth: 18, boxSizing: 'border-box', padding: '0 5px', borderRadius: 999, background: 'var(--sb-ink-1)', color: 'var(--sb-ink-on-dark)', fontSize: 'var(--sb-t-micro)', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <span style={{ height: 18, minWidth: 18, boxSizing: 'border-box', padding: '0 5px', borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-ink-1)', color: 'var(--sb-ink-on-dark)', fontSize: 'var(--sb-t-micro)', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   {activeFilterCount}
                 </span>
               )}
@@ -266,7 +266,7 @@ export function TaskCommand() {
               <div style={{
                 position: 'absolute', top: 'calc(100% + 8px)', right: 0, zIndex: 100,
                 background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
-                borderRadius: 16, padding: '8px 16px 14px', width: 308,
+                borderRadius: 'var(--sb-r-card)', padding: '8px 16px 14px', width: 308,
                 boxShadow: '0 28px 60px -24px rgba(25,23,18,.4)',
               }}>
                 {/* Search — the artboard has no page-level search bar, so it
@@ -281,7 +281,7 @@ export function TaskCommand() {
                     style={{
                       width: '100%', boxSizing: 'border-box', background: 'var(--sb-field)',
                       border: `1px solid ${searchQuery ? 'var(--sb-accent)' : 'var(--sb-border)'}`,
-                      borderRadius: 9, padding: '8px 30px 8px 32px',
+                      borderRadius: 'var(--sb-r-sm)', padding: '8px 30px 8px 32px',
                       color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', outline: 'none', fontFamily: 'inherit',
                     }}
                   />
@@ -297,8 +297,8 @@ export function TaskCommand() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '2px 0 10px' }}>
                   <span style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 500, color: 'var(--sb-ink-1)' }}>Hide completed tasks</span>
                   <span style={{ marginLeft: 'auto' }}>
-                    <div onClick={() => setHideCompleted(!hideCompleted)} style={{ width: 38, height: 22, boxSizing: 'border-box', borderRadius: 999, background: hideCompleted ? 'var(--sb-ink-1)' : 'var(--sb-border)', display: 'flex', alignItems: 'center', padding: 2, justifyContent: hideCompleted ? 'flex-end' : 'flex-start', cursor: 'pointer', transition: 'all .15s' }}>
-                      <div style={{ width: 18, height: 18, borderRadius: 999, background: 'var(--sb-card)' }} />
+                    <div onClick={() => setHideCompleted(!hideCompleted)} style={{ width: 38, height: 22, boxSizing: 'border-box', borderRadius: 'var(--sb-r-pill)', background: hideCompleted ? 'var(--sb-ink-1)' : 'var(--sb-border)', display: 'flex', alignItems: 'center', padding: 2, justifyContent: hideCompleted ? 'flex-end' : 'flex-start', cursor: 'pointer', transition: 'all .15s' }}>
+                      <div style={{ width: 18, height: 18, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-card)' }} />
                     </div>
                   </span>
                 </div>
@@ -307,9 +307,9 @@ export function TaskCommand() {
                 {/* Group by */}
                 <span style={{ display: 'block', fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '.12em', color: 'var(--sb-ink-3)', padding: '12px 0 7px' }}>GROUP TASKS BY</span>
                 {(['none', 'status', 'type', 'company', 'owner'] as GroupBy[]).map(opt => (
-                  <div key={opt} onClick={() => setGroupBy(opt)} style={{ display: 'flex', alignItems: 'center', gap: 10, height: 34, padding: '0 9px', borderRadius: 9, background: groupBy === opt ? 'var(--sb-accent-tint)' : 'transparent', cursor: 'pointer' }}>
-                    <span style={{ width: 16, height: 16, boxSizing: 'border-box', borderRadius: 999, border: `2px solid ${groupBy === opt ? 'var(--sb-ink-1)' : '#C9C0A8'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      {groupBy === opt && <span style={{ width: 7, height: 7, borderRadius: 999, background: 'var(--sb-ink-1)' }} />}
+                  <div key={opt} onClick={() => setGroupBy(opt)} style={{ display: 'flex', alignItems: 'center', gap: 10, height: 34, padding: '0 9px', borderRadius: 'var(--sb-r-sm)', background: groupBy === opt ? 'var(--sb-accent-tint)' : 'transparent', cursor: 'pointer' }}>
+                    <span style={{ width: 16, height: 16, boxSizing: 'border-box', borderRadius: 'var(--sb-r-pill)', border: `2px solid ${groupBy === opt ? 'var(--sb-ink-1)' : '#C9C0A8'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      {groupBy === opt && <span style={{ width: 7, height: 7, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-ink-1)' }} />}
                     </span>
                     <span style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: groupBy === opt ? 600 : 500, color: groupBy === opt ? 'var(--sb-ink-1)' : 'var(--sb-ink-2)' }}>
                       {GROUP_BY_LABEL[opt]}
@@ -317,7 +317,7 @@ export function TaskCommand() {
                   </div>
                 ))}
                 {groupBy !== 'none' && (
-                  <button onClick={() => setAllGroupsExpanded(!allGroupsExpanded)} style={{ marginTop: 8, height: 36, width: '100%', borderRadius: 10, border: '1px solid var(--sb-border)', background: 'var(--sb-field)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-1)', cursor: 'pointer' }}>
+                  <button onClick={() => setAllGroupsExpanded(!allGroupsExpanded)} style={{ marginTop: 8, height: 36, width: '100%', borderRadius: 'var(--sb-r-nav)', border: '1px solid var(--sb-border)', background: 'var(--sb-field)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-1)', cursor: 'pointer' }}>
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18M9 21V9"/></svg>
                     {allGroupsExpanded ? 'Collapse all groups' : 'Expand all groups'}
                   </button>
@@ -331,12 +331,12 @@ export function TaskCommand() {
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                       {companies.map(co => (
                         <button key={co.id} onClick={() => setFilters(f => ({ ...f, company: f.company === co.id ? '' : co.id }))} style={{
-                          display: 'flex', alignItems: 'center', gap: 6, height: 28, boxSizing: 'border-box', padding: '0 11px', borderRadius: 999,
+                          display: 'flex', alignItems: 'center', gap: 6, height: 28, boxSizing: 'border-box', padding: '0 11px', borderRadius: 'var(--sb-r-pill)',
                           background: filters.company === co.id ? 'var(--sb-accent-tint)' : 'var(--sb-card)',
                           border: `1px solid ${filters.company === co.id ? 'var(--sb-accent)' : 'var(--sb-border)'}`,
                           color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-meta)', fontWeight: filters.company === co.id ? 600 : 500, cursor: 'pointer',
                         }}>
-                          <span style={{ width: 8, height: 8, borderRadius: 999, background: co.color, flexShrink: 0 }} />
+                          <span style={{ width: 8, height: 8, borderRadius: 'var(--sb-r-pill)', background: co.color, flexShrink: 0 }} />
                           {co.name}
                         </button>
                       ))}
@@ -352,7 +352,7 @@ export function TaskCommand() {
                     const on = filters.type === type
                     return (
                       <button key={type} onClick={() => setFilters(f => ({ ...f, type: f.type === type ? '' : type }))} style={{
-                        display: 'flex', alignItems: 'center', gap: 6, height: 28, boxSizing: 'border-box', padding: '0 11px', borderRadius: 999,
+                        display: 'flex', alignItems: 'center', gap: 6, height: 28, boxSizing: 'border-box', padding: '0 11px', borderRadius: 'var(--sb-r-pill)',
                         background: on ? 'var(--sb-accent-tint)' : 'var(--sb-card)',
                         border: `1px solid ${on ? 'var(--sb-accent)' : 'var(--sb-border)'}`,
                         color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-meta)', fontWeight: on ? 600 : 500, cursor: 'pointer', fontFamily: 'inherit',
@@ -370,7 +370,7 @@ export function TaskCommand() {
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                       {ownerOptions.map(u => (
                         <button key={u.id} onClick={() => setFilters(f => ({ ...f, owner: f.owner === u.id ? '' : u.id }))} style={{
-                          display: 'flex', alignItems: 'center', gap: 6, height: 28, boxSizing: 'border-box', padding: '0 11px', borderRadius: 999,
+                          display: 'flex', alignItems: 'center', gap: 6, height: 28, boxSizing: 'border-box', padding: '0 11px', borderRadius: 'var(--sb-r-pill)',
                           background: filters.owner === u.id ? 'var(--sb-accent-tint)' : 'var(--sb-card)',
                           border: `1px solid ${filters.owner === u.id ? 'var(--sb-accent)' : 'var(--sb-border)'}`,
                           color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-meta)', fontWeight: filters.owner === u.id ? 600 : 500, cursor: 'pointer',
@@ -393,7 +393,7 @@ export function TaskCommand() {
           </div>
 
           {/* View switcher — Board | Matrix | List */}
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2, height: 38, boxSizing: 'border-box', padding: 3, borderRadius: 999, background: 'var(--sb-field)', flexShrink: 0 }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2, height: 38, boxSizing: 'border-box', padding: 3, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-field)', flexShrink: 0 }}>
             {([
               { id: 'board',      label: 'Board',  Icon: LayoutGrid },
               { id: 'eisenhower', label: 'Matrix', Icon: Target },
@@ -404,7 +404,7 @@ export function TaskCommand() {
                 <button key={v.id} onClick={() => switchView(v.id)}
                   style={{
                     display: 'flex', alignItems: 'center', gap: 7, height: 32, boxSizing: 'border-box',
-                    padding: '0 16px', borderRadius: 999, border: 'none', cursor: 'pointer',
+                    padding: '0 16px', borderRadius: 'var(--sb-r-pill)', border: 'none', cursor: 'pointer',
                     background: on ? 'var(--sb-card)' : 'transparent',
                     boxShadow: on ? '0 1px 3px rgba(25,23,18,.14)' : 'none',
                     color: on ? 'var(--sb-ink-1)' : '#8A8271',
@@ -420,7 +420,7 @@ export function TaskCommand() {
           {/* New task CTA */}
           <button
             onClick={handleNewTask}
-            style={{ display: 'flex', alignItems: 'center', gap: 8, height: 38, boxSizing: 'border-box', padding: '0 18px', borderRadius: 999, background: 'var(--sb-accent)', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-label)', fontWeight: 600, border: 'none', cursor: 'pointer', boxShadow: '0 1px 3px rgba(25,23,18,0.14)', flexShrink: 0, fontFamily: 'inherit' }}>
+            style={{ display: 'flex', alignItems: 'center', gap: 8, height: 38, boxSizing: 'border-box', padding: '0 18px', borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-accent)', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-label)', fontWeight: 600, border: 'none', cursor: 'pointer', boxShadow: '0 1px 3px rgba(25,23,18,0.14)', flexShrink: 0, fontFamily: 'inherit' }}>
             <Plus size={15} strokeWidth={2.2} />
             New task
           </button>

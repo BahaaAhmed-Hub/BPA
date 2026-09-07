@@ -46,7 +46,7 @@ const EYEBROW: React.CSSProperties = {
 
 const FIELD: React.CSSProperties = {
   height: 38, boxSizing: 'border-box', padding: '0 12px', width: '100%',
-  borderRadius: 10, background: C.field, border: `1px solid ${C.border}`,
+  borderRadius: 'var(--sb-r-nav)', background: C.field, border: `1px solid ${C.border}`,
   fontSize: 'var(--sb-t-label)', color: C.ink1, outline: 'none', fontFamily: 'inherit',
 }
 
@@ -107,14 +107,14 @@ function GoalRow({ plan, place, selected, lifted, over, onSelect, onGrab, regRow
       onClick={onSelect}
       style={{
         display: 'flex', flexDirection: 'column', gap: 8, cursor: 'pointer',
-        padding: '11px 12px', borderRadius: 13, boxSizing: 'border-box',
+        padding: '11px 12px', borderRadius: 'var(--sb-r-nav)', boxSizing: 'border-box',
         background: over ? '#FBF1D2' : selected ? C.accentBg : C.surface,
         border: `1px solid ${over ? C.accent : selected ? C.accentBr : C.hair}`,
         opacity: lifted ? 0.4 : 1,
       }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 9, minWidth: 0 }}>
         <span style={{
-          width: 20, height: 20, borderRadius: 6, flexShrink: 0,
+          width: 20, height: 20, borderRadius: 'var(--sb-r-chip)', flexShrink: 0,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           background: C.ink1, color: 'var(--sb-ink-on-dark)', fontSize: 'var(--sb-t-micro)', fontWeight: 700,
         }}>{place}</span>
@@ -143,9 +143,9 @@ function GoalRow({ plan, place, selected, lifted, over, onSelect, onGrab, regRow
         </span>
       </div>
 
-      <div style={{ height: 5, borderRadius: 999, background: '#EFEADB', overflow: 'hidden' }}>
+      <div style={{ height: 5, borderRadius: 'var(--sb-r-pill)', background: '#EFEADB', overflow: 'hidden' }}>
         <div style={{
-          width: `${pct}%`, height: '100%', borderRadius: 999,
+          width: `${pct}%`, height: '100%', borderRadius: 'var(--sb-r-pill)',
           background: verdict === 'done' ? C.green : C.accent,
         }} />
       </div>
@@ -306,7 +306,7 @@ export function GoalsScreen(_props?: any) {
         <div style={{ ...EYEBROW, color: C.ink4 }}>Finance · Goals</div>
         <div style={{
           display: 'flex', alignItems: 'flex-start', gap: 22, flexWrap: 'wrap',
-          marginTop: 8, padding: '15px 18px', borderRadius: 16,
+          marginTop: 8, padding: '15px 18px', borderRadius: 'var(--sb-r-card)',
           background: C.surface, border: `1px solid ${C.border}`,
         }}>
           <Stat label="Spare now" value={money(capacity.free)}
@@ -325,14 +325,14 @@ export function GoalsScreen(_props?: any) {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             <span style={EYEBROW}>How to divide it</span>
-            <span style={{ display: 'inline-flex', background: 'var(--sb-field)', borderRadius: 10, padding: 3, gap: 3 }}>
+            <span style={{ display: 'inline-flex', background: 'var(--sb-field)', borderRadius: 'var(--sb-r-nav)', padding: 3, gap: 3 }}>
               {([['ladder', 'Ladder'], ['share', 'Share']] as const).map(([id, label]) => (
                 <button key={id} onClick={() => pickPolicy(id)}
                   title={id === 'ladder'
                     ? 'Rank 1 is filled before rank 2 gets anything — things arrive one after another, each as early as it can'
                     : 'Every goal moves at once, weighted by rank — nothing arrives as early, nothing sits still'}
                   style={{
-                    padding: '0 14px', height: 32, borderRadius: 8, border: 'none', cursor: 'pointer',
+                    padding: '0 14px', height: 32, borderRadius: 'var(--sb-r-chip)', border: 'none', cursor: 'pointer',
                     fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', fontWeight: policy === id ? 700 : 500,
                     background: policy === id ? C.ink1 : 'transparent',
                     color: policy === id ? 'var(--sb-ink-on-dark)' : C.ink3,
@@ -343,12 +343,12 @@ export function GoalsScreen(_props?: any) {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             <span style={EYEBROW}>Keep back</span>
-            <span style={{ display: 'inline-flex', background: 'var(--sb-field)', borderRadius: 10, padding: 3, gap: 3 }}>
+            <span style={{ display: 'inline-flex', background: 'var(--sb-field)', borderRadius: 'var(--sb-r-nav)', padding: 3, gap: 3 }}>
               {[0, 1, 2, 3, 6].map(n => (
                 <button key={n} onClick={() => pickBuffer(n)}
                   title={n === 0 ? 'Nothing held back' : `${n} month${n === 1 ? '' : 's'} of typical spending held back before any goal is funded`}
                   style={{
-                    width: 32, height: 32, borderRadius: 8, border: 'none', cursor: 'pointer',
+                    width: 32, height: 32, borderRadius: 'var(--sb-r-chip)', border: 'none', cursor: 'pointer',
                     fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', fontWeight: bufferMonths === n ? 700 : 500,
                     background: bufferMonths === n ? C.ink1 : 'transparent',
                     color: bufferMonths === n ? 'var(--sb-ink-on-dark)' : C.ink3,
@@ -364,7 +364,7 @@ export function GoalsScreen(_props?: any) {
 
         <div style={{
           width: 400, flexShrink: 0, background: C.surface, border: `1px solid ${C.border}`,
-          borderRadius: 18, padding: '15px 16px', display: 'flex', flexDirection: 'column',
+          borderRadius: 'var(--sb-r-card)', padding: '15px 16px', display: 'flex', flexDirection: 'column',
           gap: 10, overflowY: 'auto', boxSizing: 'border-box',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -434,7 +434,7 @@ export function GoalsScreen(_props?: any) {
               onClick={addGoal}
               disabled={!canAdd}
               style={{
-                height: 38, borderRadius: 10, display: 'inline-flex', alignItems: 'center',
+                height: 38, borderRadius: 'var(--sb-r-nav)', display: 'inline-flex', alignItems: 'center',
                 justifyContent: 'center', gap: 7, cursor: canAdd ? 'pointer' : 'default',
                 background: canAdd ? C.ink1 : 'var(--sb-field)',
                 border: `1px solid ${canAdd ? C.ink1 : C.border}`,
@@ -461,7 +461,7 @@ export function GoalsScreen(_props?: any) {
               setSelectedId(null)
             }} /> : (
             <div style={{
-              background: C.surface, border: `1px solid ${C.border}`, borderRadius: 18,
+              background: C.surface, border: `1px solid ${C.border}`, borderRadius: 'var(--sb-r-card)',
               padding: '28px 26px', color: C.ink3, fontSize: 'var(--sb-t-label)', lineHeight: 1.6, maxWidth: 620,
             }}>
               <div style={{ fontFamily: DISPLAY, fontSize: 'var(--sb-t-h2)', fontWeight: 700, color: C.ink1, letterSpacing: '-.02em', marginBottom: 8 }}>
@@ -504,7 +504,7 @@ function GoalDetail({ plan, place, policy, currency, surplus, onChange, onDelete
   const shortfall = plan.required !== null ? plan.required - plan.monthly : 0
 
   const card: React.CSSProperties = {
-    background: C.surface, border: `1px solid ${C.border}`, borderRadius: 18,
+    background: C.surface, border: `1px solid ${C.border}`, borderRadius: 'var(--sb-r-card)',
     padding: '18px 20px', marginBottom: 12,
   }
 
@@ -513,7 +513,7 @@ function GoalDetail({ plan, place, policy, currency, surplus, onChange, onDelete
       <div style={card}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{
-            width: 22, height: 22, borderRadius: 7, flexShrink: 0,
+            width: 22, height: 22, borderRadius: 'var(--sb-r-chip)', flexShrink: 0,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             background: C.ink1, color: 'var(--sb-ink-on-dark)', fontSize: 'var(--sb-t-meta)', fontWeight: 700,
           }}>{place}</span>
@@ -526,7 +526,7 @@ function GoalDetail({ plan, place, policy, currency, surplus, onChange, onDelete
             onClick={() => onDelete(g)}
             title="Delete this goal"
             style={{
-              width: 30, height: 30, borderRadius: '50%', padding: 0, cursor: 'pointer',
+              width: 30, height: 30, borderRadius: 'var(--sb-r-pill)', padding: 0, cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               background: C.surface, border: `1px solid ${C.border}`, color: C.ink4,
             }}><Trash2 size={13} /></button>
@@ -594,7 +594,7 @@ function GoalDetail({ plan, place, policy, currency, surplus, onChange, onDelete
               onClick={() => onChange({ ...g, targetAmount: target, currentAmount: saved })}
               disabled={target === g.targetAmount && saved === g.currentAmount}
               style={{
-                height: 38, paddingInline: 16, borderRadius: 10, display: 'inline-flex',
+                height: 38, paddingInline: 16, borderRadius: 'var(--sb-r-nav)', display: 'inline-flex',
                 alignItems: 'center', gap: 7, fontFamily: 'inherit', fontSize: 'var(--sb-t-label)', fontWeight: 600,
                 cursor: target === g.targetAmount && saved === g.currentAmount ? 'default' : 'pointer',
                 background: target === g.targetAmount && saved === g.currentAmount ? 'var(--sb-field)' : C.ink1,

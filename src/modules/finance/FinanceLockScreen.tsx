@@ -79,13 +79,13 @@ export function LockGate({ onUnlocked, compact = false, title, note }: LockGateP
   const body = (
     <div style={{
       width: compact ? '100%' : 380, maxWidth: '100%',
-      background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 16,
+      background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
       padding: compact ? '18px 20px 20px' : '30px 30px 26px',
       boxShadow: compact ? 'none' : '0 1px 3px rgba(25,23,18,0.06)',
     }}>
       {!compact && (
         <div style={{
-          width: 54, height: 54, borderRadius: 15, background: 'var(--sb-accent)',
+          width: 54, height: 54, borderRadius: 'var(--sb-r-card)', background: 'var(--sb-accent)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16,
         }}>
           <IconShield />
@@ -108,7 +108,7 @@ export function LockGate({ onUnlocked, compact = false, title, note }: LockGateP
           onClick={useBiometrics}
           disabled={busy !== null}
           style={{
-            width: '100%', height: 42, borderRadius: 11, marginBottom: 12,
+            width: '100%', height: 42, borderRadius: 'var(--sb-r-nav)', marginBottom: 12,
             background: 'var(--sb-ink-1)', border: '1px solid var(--sb-ink-1)', color: 'var(--sb-ink-on-dark)',
             cursor: busy ? 'default' : 'pointer', fontFamily: 'inherit',
             fontSize: 'var(--sb-t-label)', fontWeight: 600,
@@ -136,7 +136,7 @@ export function LockGate({ onUnlocked, compact = false, title, note }: LockGateP
             placeholder="Password"
             onChange={e => { setPassword(e.target.value); setError(null) }}
             style={{
-              width: '100%', height: 42, borderRadius: 11, boxSizing: 'border-box',
+              width: '100%', height: 42, borderRadius: 'var(--sb-r-nav)', boxSizing: 'border-box',
               padding: '0 13px', background: 'var(--sb-field)',
               border: `1px solid ${error ? 'var(--sb-negative)' : 'var(--sb-border)'}`,
               fontFamily: 'inherit', fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)', outline: 'none',
@@ -146,7 +146,7 @@ export function LockGate({ onUnlocked, compact = false, title, note }: LockGateP
             type="submit"
             disabled={busy !== null || !password}
             style={{
-              width: '100%', height: 42, borderRadius: 11, marginTop: 10,
+              width: '100%', height: 42, borderRadius: 'var(--sb-r-nav)', marginTop: 10,
               background: password ? 'var(--sb-accent)' : 'var(--sb-field)',
               border: `1px solid ${password ? 'rgba(25,23,18,0.18)' : 'var(--sb-border)'}`,
               color: password ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)',

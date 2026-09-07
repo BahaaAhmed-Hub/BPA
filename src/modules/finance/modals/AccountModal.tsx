@@ -48,7 +48,7 @@ export function AccountModal({ account, onSave, onDelete, onClose }: Props) {
   const inputStyle: React.CSSProperties = {
     width: '100%',
     padding: '10px 12px',
-    borderRadius: 8,
+    borderRadius: 'var(--sb-r-chip)',
     border: `1px solid ${'var(--sb-border)'}`,
     background: 'var(--sb-page)',
     color: 'var(--sb-ink-1)',
@@ -91,7 +91,7 @@ export function AccountModal({ account, onSave, onDelete, onClose }: Props) {
         maxHeight: '90vh',
         overflowY: 'auto',
         background: 'var(--sb-card)',
-        borderRadius: 16,
+        borderRadius: 'var(--sb-r-card)',
         boxShadow: '0 24px 60px rgba(0,0,0,0.5)',
         padding: '24px 28px',
         display: 'flex',
@@ -264,7 +264,7 @@ export function AccountModal({ account, onSave, onDelete, onClose }: Props) {
               color: 'var(--sb-ink-3)',
               padding: '8px 14px',
               fontFamily: 'inherit',
-              borderRadius: 8,
+              borderRadius: 'var(--sb-r-chip)',
             }}
           >
             Cancel
@@ -282,7 +282,7 @@ export function AccountModal({ account, onSave, onDelete, onClose }: Props) {
                 color: RED,
                 padding: '8px 14px',
                 fontFamily: 'inherit',
-                borderRadius: 8,
+                borderRadius: 'var(--sb-r-chip)',
               }}
             >
               Delete
@@ -300,7 +300,7 @@ export function AccountModal({ account, onSave, onDelete, onClose }: Props) {
               color: 'var(--sb-ink-1)',
               padding: '8px 20px',
               fontFamily: 'inherit',
-              borderRadius: 8,
+              borderRadius: 'var(--sb-r-chip)',
               fontWeight: 600,
             }}
           >

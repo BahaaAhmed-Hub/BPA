@@ -67,7 +67,7 @@ function Bar({ value, peak, color, title }: { value: number; peak: number; color
       <div title={title} style={{
         width: '100%',
         height: `${Math.max(14, Math.round((value / peak) * 100))}%`,
-        borderRadius: 4,
+        borderRadius: 'var(--sb-r-chip)',
         background: value === 0 ? 'rgba(255,255,255,0.09)' : color,
       }} />
     </div>
@@ -122,7 +122,7 @@ export function TaskBanner({ tasks }: { tasks: Task[] }) {
   return (
     <div style={{
       display: 'flex', alignItems: 'stretch', gap: 0,
-      background: INK, borderRadius: 14, overflow: 'hidden',
+      background: INK, borderRadius: 'var(--sb-r-card)', overflow: 'hidden',
       padding: '14px 0', minWidth: 0,
     }}>
       {/* Next deadline */}

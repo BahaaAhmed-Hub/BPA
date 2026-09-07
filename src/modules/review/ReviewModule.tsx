@@ -146,9 +146,9 @@ function StatCard({
   return (
     <div style={{
       background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
-      borderRadius: 12, padding: '18px 20px', position: 'relative', overflow: 'hidden',
+      borderRadius: 'var(--sb-r-nav)', padding: '18px 20px', position: 'relative', overflow: 'hidden',
     }}>
-      <div style={{ position: 'absolute', top: 0, left: 0, width: 3, height: '100%', background: color, borderRadius: '12px 0 0 12px' }} />
+      <div style={{ position: 'absolute', top: 0, left: 0, width: 3, height: '100%', background: color, borderRadius: 'var(--sb-r-nav) 0 0 var(--sb-r-nav)' }} />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
           {editable && onChange ? (
@@ -160,7 +160,7 @@ function StatCard({
           <div style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-4)', marginTop: 4 }}>{label}</div>
           <div style={{ fontSize: 'var(--sb-t-meta)', color, marginTop: 6, fontWeight: 500 }}>{sub}</div>
         </div>
-        <div style={{ width: 34, height: 34, borderRadius: 8, background: `${color}18`, border: `1px solid ${color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+        <div style={{ width: 34, height: 34, borderRadius: 'var(--sb-r-chip)', background: `${color}18`, border: `1px solid ${color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
           <Icon size={15} color={color} />
         </div>
       </div>
@@ -174,7 +174,7 @@ function SectionHead({ label, count, color }: { label: string; count: number; co
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
       <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, color, textTransform: 'uppercase', letterSpacing: '0.07em' }}>{label}</span>
-      <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', background: 'var(--sb-card)', borderRadius: 10, padding: '0 6px', fontWeight: 600 }}>{count}</span>
+      <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', background: 'var(--sb-card)', borderRadius: 'var(--sb-r-nav)', padding: '0 6px', fontWeight: 600 }}>{count}</span>
     </div>
   )
 }
@@ -184,7 +184,7 @@ function SectionHead({ label, count, color }: { label: string; count: number; co
 function EventRow({ event, cancelled }: { event: GCalEvent; cancelled?: boolean }) {
   const time = fmtEventTime(event)
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 8, background: 'var(--sb-page)', border: '1px solid var(--sb-field)', marginBottom: 5 }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-page)', border: '1px solid var(--sb-field)', marginBottom: 5 }}>
       {cancelled
         ? <XCircle size={13} color="#6B7280" style={{ flexShrink: 0 }} />
         : <CheckCircle2 size={13} color="#1D9E75" style={{ flexShrink: 0 }} />
@@ -218,7 +218,7 @@ function resolveCompanyLabel(task: Task): string | undefined {
 
 function TaskRow({ title, company, cancelled }: { title: string; company?: string; cancelled?: boolean }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 8, background: 'var(--sb-page)', border: '1px solid var(--sb-field)', marginBottom: 5 }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-page)', border: '1px solid var(--sb-field)', marginBottom: 5 }}>
       {cancelled
         ? <XCircle size={13} color="#6B7280" style={{ flexShrink: 0 }} />
         : <CheckSquare size={13} color="#1D9E75" style={{ flexShrink: 0 }} />
@@ -227,7 +227,7 @@ function TaskRow({ title, company, cancelled }: { title: string; company?: strin
         {title}
       </span>
       {company && (
-        <span style={{ fontSize: 'var(--sb-t-micro)', padding: '1px 6px', borderRadius: 4, flexShrink: 0, color: COMPANY_COLORS[company] ?? '#6B7280', background: `${COMPANY_COLORS[company] ?? '#6B7280'}18`, fontWeight: 500 }}>
+        <span style={{ fontSize: 'var(--sb-t-micro)', padding: '1px 6px', borderRadius: 'var(--sb-r-chip)', flexShrink: 0, color: COMPANY_COLORS[company] ?? '#6B7280', background: `${COMPANY_COLORS[company] ?? '#6B7280'}18`, fontWeight: 500 }}>
           {company}
         </span>
       )}
@@ -330,7 +330,7 @@ function PieChart({ slices, title }: { slices: PieSlice[]; title: string }) {
   const fmt = (m: number) => m >= 60 ? `${(m / 60).toFixed(1)}h` : `${Math.round(m)}m`
 
   return (
-    <div style={{ background: 'var(--sb-page)', border: '1px solid var(--sb-field)', borderRadius: 12, padding: '14px 18px', marginBottom: 20 }}>
+    <div style={{ background: 'var(--sb-page)', border: '1px solid var(--sb-field)', borderRadius: 'var(--sb-r-nav)', padding: '14px 18px', marginBottom: 20 }}>
       <div style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, color: 'var(--sb-ink-4)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 14 }}>{title}</div>
       <div style={{ display: 'flex', gap: 20, alignItems: 'center', flexWrap: 'wrap' }}>
         <svg width={136} height={136} style={{ flexShrink: 0 }}>
@@ -385,7 +385,7 @@ function WeeklyDayCard({ dayStr, allEvents, statuses, tasks }: {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
           {isToday && (
-            <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, color: '#7F77DD', background: 'rgba(127,119,221,0.15)', border: '1px solid rgba(127,119,221,0.3)', borderRadius: 4, padding: '1px 6px', flexShrink: 0 }}>TODAY</span>
+            <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, color: '#7F77DD', background: 'rgba(127,119,221,0.15)', border: '1px solid rgba(127,119,221,0.3)', borderRadius: 'var(--sb-r-chip)', padding: '1px 6px', flexShrink: 0 }}>TODAY</span>
           )}
           <span style={{ fontSize: 'var(--sb-t-label)', fontWeight: 700, color: isToday ? '#7F77DD' : '#3D3926', whiteSpace: 'nowrap' }}>
             {dayLabel}
@@ -499,14 +499,14 @@ export function ReviewModule() {
         </div>
 
         {/* ─── Panel ──────────────────────────────────────────────────────── */}
-        <div style={{ background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 14, overflow: 'hidden' }}>
+        <div style={{ background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-card)', overflow: 'hidden' }}>
 
           {/* Navigation header */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', borderBottom: '1px solid var(--sb-border)' }}>
 
             <button
               onClick={() => setSelectedDay(d => shiftDay(d, viewMode === 'weekly' ? -7 : -1))}
-              style={{ background: 'none', border: '1px solid var(--sb-border)', borderRadius: 7, cursor: 'pointer', color: 'var(--sb-ink-3)', padding: '5px 8px', display: 'flex', alignItems: 'center' }}
+              style={{ background: 'none', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-chip)', cursor: 'pointer', color: 'var(--sb-ink-3)', padding: '5px 8px', display: 'flex', alignItems: 'center' }}
             ><ChevronLeft size={15} /></button>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -520,14 +520,14 @@ export function ReviewModule() {
               {(viewMode === 'daily' ? selectedDay !== todayStr() : !isCurrentWeek) && (
                 <button
                   onClick={() => setSelectedDay(todayStr())}
-                  style={{ fontSize: 'var(--sb-t-meta)', color: '#7F77DD', background: 'rgba(127,119,221,0.1)', border: '1px solid rgba(127,119,221,0.25)', borderRadius: 5, padding: '2px 8px', cursor: 'pointer' }}
+                  style={{ fontSize: 'var(--sb-t-meta)', color: '#7F77DD', background: 'rgba(127,119,221,0.1)', border: '1px solid rgba(127,119,221,0.25)', borderRadius: 'var(--sb-r-chip)', padding: '2px 8px', cursor: 'pointer' }}
                 >Today</button>
               )}
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               {/* Daily / Weekly toggle */}
-              <div style={{ display: 'flex', background: 'var(--sb-page)', border: '1px solid var(--sb-border)', borderRadius: 7, overflow: 'hidden' }}>
+              <div style={{ display: 'flex', background: 'var(--sb-page)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-chip)', overflow: 'hidden' }}>
                 {(['daily', 'weekly'] as const).map(mode => (
                   <button
                     key={mode}
@@ -544,7 +544,7 @@ export function ReviewModule() {
             </div>
             <button
               onClick={() => setSelectedDay(d => shiftDay(d, viewMode === 'weekly' ? +7 : +1))}
-              style={{ background: 'none', border: '1px solid var(--sb-border)', borderRadius: 7, cursor: 'pointer', color: 'var(--sb-ink-3)', padding: '5px 8px', display: 'flex', alignItems: 'center' }}
+              style={{ background: 'none', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-chip)', cursor: 'pointer', color: 'var(--sb-ink-3)', padding: '5px 8px', display: 'flex', alignItems: 'center' }}
             ><ChevronRight size={15} /></button>
           </div>
 

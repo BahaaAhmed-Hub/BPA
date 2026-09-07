@@ -56,7 +56,7 @@ export function whenPaid(tx: Pick<Transaction, 'date' | 'paidAt'>): string {
 export function unpaidRow(unpaid: boolean): CSSProperties {
   return unpaid ? {
     border: `1px dotted ${NEGATIVE}`,
-    borderRadius: 10,
+    borderRadius: 'var(--sb-r-nav)',
     paddingLeft: 10,
     paddingRight: 10,
     background: `${NEGATIVE}0A`,

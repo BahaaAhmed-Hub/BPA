@@ -43,7 +43,7 @@ function Pill({ type, amount, currency, direction }: {
     <span style={{
       display: 'inline-block',
       padding: '6px 13px',
-      borderRadius: 9,
+      borderRadius: 'var(--sb-r-sm)',
       fontSize: 'var(--sb-t-label)',
       fontWeight: 600,
       background: bg,
@@ -123,7 +123,7 @@ function AccountRow({ account, balance, unconverted, pending, selected, hovered,
       title={selected ? `Showing ${account.name} — click again for everything` : `Show only ${account.name}`}
       style={{
         display: 'flex', alignItems: 'center', gap: 11,
-        minHeight: 46, padding: '0 12px 0 6px', borderRadius: 12,
+        minHeight: 46, padding: '0 12px 0 6px', borderRadius: 'var(--sb-r-nav)',
         background: selected ? '#FBF3D2' : hovered ? '#FFFDF7' : 'var(--sb-card)',
         border: `1px solid ${selected ? 'var(--sb-accent)' : hovered ? '#E4DCC6' : '#EFEADB'}`,
         boxSizing: 'border-box', position: 'relative', cursor: 'pointer',
@@ -146,7 +146,7 @@ function AccountRow({ account, balance, unconverted, pending, selected, hovered,
         style={{
           flexShrink: 0, width: 18, height: 30, padding: 0,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          background: 'none', border: 'none', borderRadius: 6,
+          background: 'none', border: 'none', borderRadius: 'var(--sb-r-chip)',
           color: hovered || isDragging ? 'var(--sb-ink-4)' : '#D8D0BE',
           cursor: isDragging ? 'grabbing' : 'grab',
           touchAction: 'none',
@@ -159,7 +159,7 @@ function AccountRow({ account, balance, unconverted, pending, selected, hovered,
         onChange={newEmoji => onIcon(account, newEmoji)}
         trigger={(onClick) => (
           <div onClick={onClick} title="Click to change icon" style={{
-            width: 28, height: 28, borderRadius: 9, background: 'var(--sb-hairline)', color: 'var(--sb-ink-3)',
+            width: 28, height: 28, borderRadius: 'var(--sb-r-sm)', background: 'var(--sb-hairline)', color: 'var(--sb-ink-3)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             flexShrink: 0, cursor: 'pointer', overflow: 'hidden', fontSize: 'var(--sb-t-h3)',
           }}>
@@ -178,9 +178,9 @@ function AccountRow({ account, balance, unconverted, pending, selected, hovered,
 
       {limit > 0 && (
         <div style={{ width: 116, flexShrink: 0, marginLeft: 10 }} title={`${acct(-owed, { currency: account.currency })} of ${account.currency} ${Math.round(limit).toLocaleString('en-US')} used`}>
-          <div style={{ height: 5, borderRadius: 999, background: '#EFEADB', overflow: 'hidden' }}>
+          <div style={{ height: 5, borderRadius: 'var(--sb-r-pill)', background: '#EFEADB', overflow: 'hidden' }}>
             <div style={{
-              width: `${Math.round(used * 100)}%`, height: '100%', borderRadius: 999,
+              width: `${Math.round(used * 100)}%`, height: '100%', borderRadius: 'var(--sb-r-pill)',
               background: used >= 0.9 ? 'var(--sb-negative)' : used >= 0.7 ? '#C08A2E' : '#5F7038',
             }} />
           </div>
@@ -218,7 +218,7 @@ function AccountRow({ account, balance, unconverted, pending, selected, hovered,
           onClick={e => { e.stopPropagation(); onSettle(account, owed) }}
           title={`Pay ${acct(owed, { currency: account.currency })} off ${account.name}`}
           style={{
-            height: 26, paddingInline: 10, borderRadius: 999, flexShrink: 0, marginLeft: 8,
+            height: 26, paddingInline: 10, borderRadius: 'var(--sb-r-pill)', flexShrink: 0, marginLeft: 8,
             background: 'var(--sb-ink-1)', border: '1px solid var(--sb-ink-1)', color: 'var(--sb-ink-on-dark)',
             fontFamily: 'inherit', fontSize: 'var(--sb-t-meta)', fontWeight: 600, cursor: 'pointer',
           }}>
@@ -231,7 +231,7 @@ function AccountRow({ account, balance, unconverted, pending, selected, hovered,
         onClick={e => { e.stopPropagation(); onEdit(account) }}
         title={`Edit ${account.name}`}
         style={{
-          width: 26, height: 26, borderRadius: '50%', padding: 0, flexShrink: 0, marginLeft: 4,
+          width: 26, height: 26, borderRadius: 'var(--sb-r-pill)', padding: 0, flexShrink: 0, marginLeft: 4,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
           color: hovered || selected ? 'var(--sb-ink-3)' : '#D8D0BE', cursor: 'pointer',
@@ -391,17 +391,17 @@ export function BalanceScreen() {
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8, paddingBottom: 3 }}>
           {/* Filter pills */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 2, padding: 3, borderRadius: 999, background: 'var(--sb-field)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 2, padding: 3, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-field)' }}>
             {(Object.keys(ACCOUNT_FILTERS) as AccountFilter[]).map(f => {
               const on = filter === f
               return (
                 <button key={f} onClick={() => setFilter(f)} aria-pressed={on}
-                  style={{ height: 28, padding: '0 13px', borderRadius: 999, border: 'none', fontFamily: 'inherit', background: on ? 'var(--sb-card)' : 'transparent', color: on ? 'var(--sb-ink-1)' : 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body-s)', fontWeight: on ? 600 : 400, display: 'flex', alignItems: 'center', boxShadow: on ? '0 1px 3px rgba(25,23,18,0.16)' : 'none', cursor: 'pointer' }}>{f}</button>
+                  style={{ height: 28, padding: '0 13px', borderRadius: 'var(--sb-r-pill)', border: 'none', fontFamily: 'inherit', background: on ? 'var(--sb-card)' : 'transparent', color: on ? 'var(--sb-ink-1)' : 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body-s)', fontWeight: on ? 600 : 400, display: 'flex', alignItems: 'center', boxShadow: on ? '0 1px 3px rgba(25,23,18,0.16)' : 'none', cursor: 'pointer' }}>{f}</button>
               )
             })}
           </div>
           <button onClick={() => setAccountModal({ open: true, account: null })}
-            style={{ height: 34, padding: '0 15px', borderRadius: 999, background: 'var(--sb-accent)', border: 'none', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, boxShadow: '0 2px 0 rgba(25,23,18,0.14)' }}>
+            style={{ height: 34, padding: '0 15px', borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-accent)', border: 'none', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, boxShadow: '0 2px 0 rgba(25,23,18,0.14)' }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
             Add account
           </button>
@@ -409,7 +409,7 @@ export function BalanceScreen() {
       </div>
 
       {/* Dark net position hero card */}
-      <div style={{ flexShrink: 0, margin: '14px 26px 0', background: 'var(--sb-ink-1)', borderRadius: 18, padding: '16px 20px', display: 'flex', gap: 22, alignItems: 'center', color: 'var(--sb-ink-on-dark)' }}>
+      <div style={{ flexShrink: 0, margin: '14px 26px 0', background: 'var(--sb-ink-1)', borderRadius: 'var(--sb-r-card)', padding: '16px 20px', display: 'flex', gap: 22, alignItems: 'center', color: 'var(--sb-ink-on-dark)' }}>
         <div style={{ flexShrink: 0, width: 240 }}>
           <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.14em', opacity: 0.6, display: 'block', marginBottom: 4 }}>NET POSITION</span>
           <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 36, fontWeight: 600, letterSpacing: '-0.04em', lineHeight: 1, fontVariantNumeric: 'tabular-nums', display: 'block' }}>
@@ -424,7 +424,7 @@ export function BalanceScreen() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 'var(--sb-t-micro)', opacity: 0.55, marginBottom: 8 }}>
             <span>HELD</span><span style={{ marginLeft: 'auto' }}>OWED</span>
           </div>
-          <div style={{ height: 14, borderRadius: 999, overflow: 'hidden', display: 'flex', background: 'rgba(255,255,255,0.12)' }}>
+          <div style={{ height: 14, borderRadius: 'var(--sb-r-pill)', overflow: 'hidden', display: 'flex', background: 'rgba(255,255,255,0.12)' }}>
             <span style={{ width: `${heldPct}%`, background: 'var(--sb-accent)', display: 'block' }} />
             <span style={{ flex: 1, background: 'var(--sb-negative)', display: 'block' }} />
           </div>
@@ -460,7 +460,7 @@ export function BalanceScreen() {
             { label: 'OTHER ASSETS', accounts: otherAssets, total: assetTotal, totalColor: 'var(--sb-ink-1)', owed: false },
           ].map(group => group.accounts.length > 0 && (
             <div key={group.label} style={{ marginBottom: 14 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, height: 30, padding: '0 12px', borderRadius: 10, background: 'var(--sb-field)', marginBottom: 7, boxSizing: 'border-box' as const }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, height: 30, padding: '0 12px', borderRadius: 'var(--sb-r-nav)', background: 'var(--sb-field)', marginBottom: 7, boxSizing: 'border-box' as const }}>
                 <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--sb-ink-3)' }}>{group.label}</span>
                 <span style={{ marginLeft: 'auto', fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-label)', fontWeight: 600, color: group.totalColor, fontVariantNumeric: 'tabular-nums' }}>
                   {acct(group.owed ? -Math.abs(group.total) : group.total, { currency: 'EGP' })}
@@ -499,7 +499,7 @@ export function BalanceScreen() {
               itself, which is a tap away now. */}
           {shown.length === 0 && (
             <div style={{
-              padding: '26px 18px', textAlign: 'center', borderRadius: 12,
+              padding: '26px 18px', textAlign: 'center', borderRadius: 'var(--sb-r-nav)',
               background: 'var(--sb-header)', border: '1px dashed #E4DCC6',
             }}>
               <div style={{ fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>
@@ -531,7 +531,7 @@ export function BalanceScreen() {
               padding: '5px 8px 5px 12px',
               background: 'var(--sb-card)',
               border: '1px solid var(--sb-border)',
-              borderRadius: 10,
+              borderRadius: 'var(--sb-r-nav)',
             }}>
               <input type="date" value={rangeFrom} max={rangeTo || undefined}
                 onChange={e => setRangeFrom(e.target.value)}
@@ -551,7 +551,7 @@ export function BalanceScreen() {
                   <button key={label}
                     onClick={() => { setRangeFrom(from); setRangeTo(to) }}
                     style={{
-                      padding: '4px 9px', borderRadius: 7, border: 'none', cursor: 'pointer',
+                      padding: '4px 9px', borderRadius: 'var(--sb-r-chip)', border: 'none', cursor: 'pointer',
                       fontFamily: 'inherit', fontSize: 'var(--sb-t-meta)', fontWeight: on ? 700 : 500,
                       background: on ? 'var(--sb-ink-1)' : 'transparent',
                       color: on ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-4)',
@@ -567,14 +567,14 @@ export function BalanceScreen() {
                 title="Show every account again"
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 7, height: 34,
-                  padding: '0 8px 0 12px', borderRadius: 10, cursor: 'pointer',
+                  padding: '0 8px 0 12px', borderRadius: 'var(--sb-r-nav)', cursor: 'pointer',
                   background: '#FBF3D2', border: '1px solid var(--sb-accent)', color: '#7A5F09',
                   fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
                 }}>
                 {focused.name}
                 <span style={{
                   display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                  width: 18, height: 18, borderRadius: '50%', background: 'rgba(25,23,18,0.08)',
+                  width: 18, height: 18, borderRadius: 'var(--sb-r-pill)', background: 'rgba(25,23,18,0.08)',
                 }}><X size={11} /></span>
               </button>
             )}
@@ -583,7 +583,7 @@ export function BalanceScreen() {
                 onClick={() => { setRangeFrom(''); setRangeTo('') }}
                 title={`Show all ${onFocused} entries on ${focused.name}`}
                 style={{
-                  height: 34, padding: '0 11px', borderRadius: 10, cursor: 'pointer',
+                  height: 34, padding: '0 11px', borderRadius: 'var(--sb-r-nav)', cursor: 'pointer',
                   background: 'transparent', border: '1px dashed #DCD3BF', color: 'var(--sb-ink-3)',
                   fontFamily: 'inherit', fontSize: 'var(--sb-t-meta)', fontWeight: 500, whiteSpace: 'nowrap',
                 }}>
@@ -626,7 +626,7 @@ export function BalanceScreen() {
                   }}
                 >
                   <div style={{
-                    width: 40, height: 40, borderRadius: '50%',
+                    width: 40, height: 40, borderRadius: 'var(--sb-r-pill)',
                     background: tx.type === 'income'
                       ? 'color-mix(in srgb, var(--sb-positive) 13.3%, transparent)'
                       : 'color-mix(in srgb, var(--sb-negative) 13.3%, transparent)',

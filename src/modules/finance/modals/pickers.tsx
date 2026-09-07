@@ -13,11 +13,11 @@ export const DISPLAY = 'var(--sb-font-num)'
 
 export const PILL: React.CSSProperties = {
   display: 'inline-flex', alignItems: 'center', gap: 6, height: 42, boxSizing: 'border-box',
-  padding: '0 14px', borderRadius: 10, background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
+  padding: '0 14px', borderRadius: 'var(--sb-r-nav)', background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
   color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body)', fontFamily: 'inherit', cursor: 'pointer', minWidth: 0,
 }
 export const ROUND: React.CSSProperties = {
-  width: 30, height: 30, borderRadius: '50%', flexShrink: 0, padding: 0,
+  width: 30, height: 30, borderRadius: 'var(--sb-r-pill)', flexShrink: 0, padding: 0,
   display: 'flex', alignItems: 'center', justifyContent: 'center',
   background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-3)', cursor: 'pointer',
 }
@@ -51,7 +51,7 @@ export interface PickOption {
 export function Glyph({ glyph, tint, size = 22 }: { glyph?: string; tint?: string; size?: number }) {
   return (
     <span style={{
-      width: size, height: size, borderRadius: 6, flexShrink: 0, overflow: 'hidden',
+      width: size, height: size, borderRadius: 'var(--sb-r-chip)', flexShrink: 0, overflow: 'hidden',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       background: tint ? `${tint}22` : 'var(--sb-field)',
       color: tint ?? 'var(--sb-ink-3)',
@@ -140,7 +140,7 @@ export function PillPicker({ value, options, onChange, placeholder, compact }: {
         <div ref={list} style={{
           position: 'fixed', top: place.top, left: place.left, width: place.width, zIndex: 2000,
           maxHeight: place.maxHeight, overflowY: 'auto', padding: 5, boxSizing: 'border-box',
-          background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 12,
+          background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
           boxShadow: '0 12px 32px rgba(25,23,18,0.18)',
         }}>
           {options.length === 0 && (
@@ -155,7 +155,7 @@ export function PillPicker({ value, options, onChange, placeholder, compact }: {
                 style={{
                   display: 'flex', alignItems: 'center', gap: 10, width: '100%',
                   padding: '9px 10px', paddingLeft: o.nested ? 26 : 10,
-                  border: 'none', borderRadius: 8, cursor: 'pointer',
+                  border: 'none', borderRadius: 'var(--sb-r-chip)', cursor: 'pointer',
                   background: on ? 'rgba(var(--sb-accent-rgb),0.18)' : 'transparent',
                   fontFamily: 'inherit', fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)', textAlign: 'left',
                 }}>

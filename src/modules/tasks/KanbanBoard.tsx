@@ -163,7 +163,7 @@ function KanbanColumnComp({ column, onOpen, onColDragStart, onColDragOver, onCol
         onDrop={() => onColDrop(column.id)}
         style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '0 4px 10px', flexShrink: 0, cursor: 'grab' }}
       >
-        <span style={{ width: 8, height: 8, borderRadius: '50%', background: column.color, flexShrink: 0 }} />
+        <span style={{ width: 8, height: 8, borderRadius: 'var(--sb-r-pill)', background: column.color, flexShrink: 0 }} />
         {renaming ? (
           <input
             autoFocus
@@ -176,7 +176,7 @@ function KanbanColumnComp({ column, onOpen, onColDragStart, onColDragOver, onCol
             }}
             style={{
               flex: 1, minWidth: 0, background: 'var(--sb-card)', border: '1px solid var(--sb-accent)',
-              borderRadius: 7, padding: '2px 7px', outline: 'none',
+              borderRadius: 'var(--sb-r-chip)', padding: '2px 7px', outline: 'none',
               fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-1)', fontFamily: 'inherit',
             }}
           />
@@ -206,14 +206,14 @@ function KanbanColumnComp({ column, onOpen, onColDragStart, onColDragOver, onCol
           {menuOpen && (
             <div style={{
               position: 'absolute', top: 'calc(100% + 6px)', right: 0, zIndex: 60, width: 190,
-              background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 12, padding: 6,
+              background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', padding: 6,
               boxShadow: '0 20px 44px -20px rgba(25,23,18,.42)',
             }}>
               <p style={{ margin: 0, padding: '7px 9px 5px', fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '.12em', color: 'var(--sb-ink-4)' }}>BOARD COLUMNS</p>
               {BOARD_TYPE_OPTIONS.map(opt => (
                 <button key={opt.id} onClick={() => { onBoardType(opt.id); setMenuOpen(false) }} style={{
                   width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 8,
-                  padding: '7px 9px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                  padding: '7px 9px', borderRadius: 'var(--sb-r-chip)', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
                   background: boardType === opt.id ? 'var(--sb-accent-tint)' : 'transparent',
                   color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', fontWeight: boardType === opt.id ? 600 : 500,
                 }}>{opt.label}</button>
@@ -230,7 +230,7 @@ function KanbanColumnComp({ column, onOpen, onColDragStart, onColDragOver, onCol
           flex: 1, overflowY: 'auto', padding: '4px 2px',
           minHeight: 80,
           background: isOver ? 'rgba(var(--sb-accent-rgb),0.06)' : 'transparent',
-          borderRadius: 10,
+          borderRadius: 'var(--sb-r-nav)',
           transition: 'background 0.15s',
         }}
       >
@@ -270,15 +270,15 @@ function KanbanColumnComp({ column, onOpen, onColDragStart, onColDragOver, onCol
               style={{
                 width: '100%', boxSizing: 'border-box',
                 background: 'var(--sb-page)', border: '1px solid var(--sb-accent)',
-                borderRadius: 6, padding: '6px 8px', fontSize: 'var(--sb-t-body-s)',
+                borderRadius: 'var(--sb-r-chip)', padding: '6px 8px', fontSize: 'var(--sb-t-body-s)',
                 color: 'var(--sb-ink-1)', outline: 'none', fontFamily: 'inherit',
               }}
             />
             <div style={{ display: 'flex', gap: 5, marginTop: 5 }}>
-              <button onClick={commitAdd} style={{ flex: 1, padding: '4px 0', fontSize: 'var(--sb-t-meta)', fontWeight: 600, background: 'var(--sb-accent)', color: 'var(--sb-ink-1)', border: 'none', borderRadius: 5, cursor: 'pointer' }}>
+              <button onClick={commitAdd} style={{ flex: 1, padding: '4px 0', fontSize: 'var(--sb-t-meta)', fontWeight: 600, background: 'var(--sb-accent)', color: 'var(--sb-ink-1)', border: 'none', borderRadius: 'var(--sb-r-chip)', cursor: 'pointer' }}>
                 Add
               </button>
-              <button onClick={() => { setAdding(false); setNewTitle('') }} style={{ padding: '4px 8px', fontSize: 'var(--sb-t-meta)', background: 'transparent', color: 'var(--sb-ink-3)', border: '1px solid var(--sb-border)', borderRadius: 5, cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+              <button onClick={() => { setAdding(false); setNewTitle('') }} style={{ padding: '4px 8px', fontSize: 'var(--sb-t-meta)', background: 'transparent', color: 'var(--sb-ink-3)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-chip)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
                 <XIcon size={11} />
               </button>
             </div>
@@ -291,7 +291,7 @@ function KanbanColumnComp({ column, onOpen, onColDragStart, onColDragOver, onCol
         onClick={() => setAdding(true)}
         style={{
           marginTop: 10, width: '100%', padding: '13px 0', fontSize: 'var(--sb-t-body-s)', fontWeight: 500,
-          background: 'transparent', border: '1px dashed #DED5BF', borderRadius: 12,
+          background: 'transparent', border: '1px dashed #DED5BF', borderRadius: 'var(--sb-r-nav)',
           color: 'var(--sb-ink-4)', cursor: 'pointer', fontFamily: 'inherit',
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
           transition: 'all 0.12s',
@@ -322,7 +322,7 @@ function DatePickerOverlay({
       display: 'flex', alignItems: 'center', justifyContent: 'center',
     }}>
       <div style={{
-        background: 'var(--sb-card)', borderRadius: 14,
+        background: 'var(--sb-card)', borderRadius: 'var(--sb-r-card)',
         padding: 24, width: 320, border: '1px solid var(--sb-border)',
         boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
       }}>
@@ -345,7 +345,7 @@ function DatePickerOverlay({
               width: '100%', boxSizing: 'border-box',
               background: 'var(--sb-page)',
               border: '1px solid var(--sb-border)',
-              borderRadius: 6, padding: '7px 10px',
+              borderRadius: 'var(--sb-r-chip)', padding: '7px 10px',
               fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)',
               outline: 'none', fontFamily: 'inherit',
             }}
@@ -353,12 +353,12 @@ function DatePickerOverlay({
         </div>
         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
           <button onClick={onCancel} style={{
-            padding: '7px 16px', borderRadius: 7, background: 'transparent',
+            padding: '7px 16px', borderRadius: 'var(--sb-r-chip)', background: 'transparent',
             border: '1px solid var(--sb-border)',
             color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body-s)', cursor: 'pointer',
           }}>Cancel</button>
           <button onClick={() => date && onConfirm(date)} disabled={!date} style={{
-            padding: '7px 18px', borderRadius: 7,
+            padding: '7px 18px', borderRadius: 'var(--sb-r-chip)',
             background: 'rgba(var(--sb-accent-rgb),0.15)',
             border: '1px solid rgba(var(--sb-accent-rgb),0.5)',
             color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', fontWeight: 600,

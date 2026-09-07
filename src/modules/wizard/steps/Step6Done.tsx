@@ -68,7 +68,7 @@ export function Step6Done({ data }: Props) {
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 32 }}>
         {stats.map(s => (
-          <div key={s.label} style={{ padding: '16px 8px', borderRadius: 12, background: 'var(--sb-card)', border: '1px solid var(--sb-border)' }}>
+          <div key={s.label} style={{ padding: '16px 8px', borderRadius: 'var(--sb-r-nav)', background: 'var(--sb-card)', border: '1px solid var(--sb-border)' }}>
             <div style={{ fontSize: 'var(--sb-t-h2)', marginBottom: 6 }}>{s.emoji}</div>
             <div style={{ fontSize: 'var(--sb-t-h1)', fontWeight: 800, color: s.color, lineHeight: 1 }}>
               <CountUp target={s.value} />
@@ -78,7 +78,7 @@ export function Step6Done({ data }: Props) {
         ))}
       </div>
 
-      <div style={{ padding: '14px 20px', borderRadius: 10, background: 'rgba(127,119,221,0.06)', border: '1px solid rgba(127,119,221,0.15)', marginBottom: 16 }}>
+      <div style={{ padding: '14px 20px', borderRadius: 'var(--sb-r-nav)', background: 'rgba(127,119,221,0.06)', border: '1px solid rgba(127,119,221,0.15)', marginBottom: 16 }}>
         <p style={{ margin: 0, fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-3)', lineHeight: 1.6 }}>
           All your data syncs automatically. You can adjust everything in <strong style={{ color: 'var(--sb-ink-1)' }}>Settings</strong> at any time.
         </p>

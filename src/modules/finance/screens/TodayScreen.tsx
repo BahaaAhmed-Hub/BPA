@@ -140,7 +140,7 @@ function MoneyCalendar({
   const unrated  = currenciesNeedingRates(monthTxs, base)
 
   const ROUND_BTN = {
-    width: 28, height: 28, borderRadius: '50%',
+    width: 28, height: 28, borderRadius: 'var(--sb-r-pill)',
     background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
     color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-h3)', lineHeight: 1, cursor: 'pointer',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -150,7 +150,7 @@ function MoneyCalendar({
   const chip = (label: string, value: string, color: string, tint: string) => (
     <span style={{
       display: 'inline-flex', alignItems: 'baseline', gap: 5,
-      background: tint, borderRadius: 999, padding: '4px 11px',
+      background: tint, borderRadius: 'var(--sb-r-pill)', padding: '4px 11px',
       fontSize: 'var(--sb-t-micro)', fontWeight: 600, letterSpacing: '0.04em',
       textTransform: 'uppercase' as const, color: 'var(--sb-ink-3)',
     }}>
@@ -174,7 +174,7 @@ function MoneyCalendar({
           {unrated.length > 0 && (
             <span title={`No rate set for ${unrated.join(', ')}, so it is not counted in these totals`}
               style={{
-                display: 'inline-flex', alignItems: 'center', borderRadius: 999,
+                display: 'inline-flex', alignItems: 'center', borderRadius: 'var(--sb-r-pill)',
                 padding: '4px 10px', background: '#FBF1DC', color: '#8A6D0B',
                 fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.04em',
               }}>{unrated.join(' ')} ?</span>
@@ -184,7 +184,7 @@ function MoneyCalendar({
 
       {/* Calendar card */}
       <div style={{
-        background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 20,
+        background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
         padding: 14, boxShadow: '0 1px 3px rgba(25,23,18,0.06)',
       }}>
         {/* Day headers */}
@@ -212,7 +212,7 @@ function MoneyCalendar({
                 key={i}
                 onClick={() => onSelectDay(isSelected ? '' : dateStr)}
                 style={{
-                  borderRadius: 13, padding: '8px 9px 9px',
+                  borderRadius: 'var(--sb-r-nav)', padding: '8px 9px 9px',
                   display: 'flex', flexDirection: 'column', gap: 3,
                   minHeight: 78, minWidth: 0, overflow: 'hidden', boxSizing: 'border-box' as const,
                   background: isSelected ? '#FBF3D2' : 'var(--sb-field)',
@@ -223,7 +223,7 @@ function MoneyCalendar({
               >
                 <span style={{
                   fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
-                  width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
+                  width: 22, height: 22, borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
                   display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                   marginLeft: -2,
                   background: isToday ? 'var(--sb-ink-1)' : 'transparent',
@@ -311,7 +311,7 @@ export function TodayScreen() {
         }}
       >
         <div style={{
-          width: 40, height: 40, borderRadius: '50%', flexShrink: 0,
+          width: 40, height: 40, borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
           background: acct ? `${acct.color}22` : `${isExp ? RED : GREEN}18`,
           border: `1px solid ${acct ? acct.color + '44' : isExp ? RED + '44' : GREEN + '44'}`,
           display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'var(--sb-t-h2)',

@@ -77,7 +77,7 @@ function LoginScreen() {
         gridTemplateColumns: '1fr 400px',
         gap: 0,
         background: 'var(--sb-card)',
-        borderRadius: 24,
+        borderRadius: 'var(--sb-r-frame)',
         boxShadow: '0 26px 64px -34px rgba(48,40,20,.5)',
         overflow: 'hidden',
         border: '1px solid var(--sb-border)',
@@ -156,7 +156,7 @@ function LoginScreen() {
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
               width: '100%', padding: '13px 20px',
-              borderRadius: 10,
+              borderRadius: 'var(--sb-r-nav)',
               background: signing ? 'var(--sb-field)' : 'var(--sb-ink-1)',
               border: '1px solid var(--sb-ink-1)',
               color: 'var(--sb-ink-on-dark)',
@@ -198,7 +198,7 @@ function LoginScreen() {
               placeholder="you@example.com"
               disabled
               style={{
-                width: '100%', padding: '11px 14px', borderRadius: 9,
+                width: '100%', padding: '11px 14px', borderRadius: 'var(--sb-r-sm)',
                 background: 'var(--sb-field)', border: '1px solid var(--sb-border)',
                 color: 'var(--sb-ink-4)', fontSize: 'var(--sb-t-body)',
                 outline: 'none', cursor: 'not-allowed',
@@ -215,7 +215,7 @@ function LoginScreen() {
               placeholder="••••••••"
               disabled
               style={{
-                width: '100%', padding: '11px 14px', borderRadius: 9,
+                width: '100%', padding: '11px 14px', borderRadius: 'var(--sb-r-sm)',
                 background: 'var(--sb-field)', border: '1px solid var(--sb-border)',
                 color: 'var(--sb-ink-4)', fontSize: 'var(--sb-t-body)',
                 outline: 'none', cursor: 'not-allowed',
@@ -228,7 +228,7 @@ function LoginScreen() {
             disabled
             style={{
               width: '100%', padding: '12px',
-              borderRadius: 10,
+              borderRadius: 'var(--sb-r-nav)',
               background: 'var(--sb-field)', border: '1px solid var(--sb-border)',
               color: 'var(--sb-ink-4)', fontSize: 'var(--sb-t-label)', fontWeight: 600,
               cursor: 'not-allowed', fontFamily: 'inherit',
@@ -261,7 +261,7 @@ function LoadingScreen() {
       fontFamily: 'var(--sb-font-ui)',
     }}>
       <div style={{
-        width: 44, height: 44, borderRadius: 11,
+        width: 44, height: 44, borderRadius: 'var(--sb-r-nav)',
         background: 'var(--sb-ink-1)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         animation: 'sbPulse 1.6s ease-in-out infinite',
@@ -406,7 +406,7 @@ function NotificationBell() {
         aria-label="Notifications"
         aria-expanded={open}
         style={{
-          width: 34, height: 34, borderRadius: 12, padding: 0,
+          width: 34, height: 34, borderRadius: 'var(--sb-r-nav)', padding: 0,
           background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           cursor: 'pointer', color: 'var(--sb-ink-3)', position: 'relative',
@@ -419,7 +419,7 @@ function NotificationBell() {
         {count > 0 && !quiet && (
           <span style={{
             position: 'absolute', top: -4, right: -4, minWidth: 17, height: 17, padding: '0 4px',
-            borderRadius: 999, background: 'var(--sb-negative)', color: 'var(--sb-card)',
+            borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-negative)', color: 'var(--sb-card)',
             fontSize: 'var(--sb-t-micro)', fontWeight: 700, lineHeight: '17px', textAlign: 'center',
             boxShadow: '0 0 0 2px var(--sb-header)',
           }}>{count > 9 ? '9+' : count}</span>
@@ -430,7 +430,7 @@ function NotificationBell() {
         <div role="menu" style={{
           position: 'absolute', top: 'calc(100% + 8px)', right: 0, zIndex: 120,
           width: 340, maxHeight: 460, overflowY: 'auto', scrollbarWidth: 'thin',
-          background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 14, padding: 6,
+          background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-card)', padding: 6,
           boxShadow: '0 22px 48px -20px rgba(25,23,18,.45)',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px 10px', borderBottom: '1px solid var(--sb-hairline)' }}>
@@ -450,11 +450,11 @@ function NotificationBell() {
             <button key={n.id} role="menuitem" onClick={() => goTo(n)}
               style={{
                 display: 'flex', alignItems: 'flex-start', gap: 9, width: '100%',
-                padding: '9px 10px', borderRadius: 9, border: 'none', background: 'transparent',
+                padding: '9px 10px', borderRadius: 'var(--sb-r-sm)', border: 'none', background: 'transparent',
                 cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
               }}>
               <span style={{
-                width: 7, height: 7, borderRadius: '50%', flexShrink: 0, marginTop: 5,
+                width: 7, height: 7, borderRadius: 'var(--sb-r-pill)', flexShrink: 0, marginTop: 5,
                 background: KIND_COLOR[n.kind] ?? 'var(--sb-accent)',
               }} />
               <span style={{ flex: 1, minWidth: 0 }}>
@@ -474,7 +474,7 @@ function NotificationBell() {
           )}
 
           {quiet && (
-            <p style={{ margin: '4px 6px 0', padding: '8px 10px', borderRadius: 9, background: 'var(--sb-field)', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.45 }}>
+            <p style={{ margin: '4px 6px 0', padding: '8px 10px', borderRadius: 'var(--sb-r-sm)', background: 'var(--sb-field)', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.45 }}>
               Quiet hours — you are not being interrupted, but nothing is hidden.
             </p>
           )}
@@ -490,7 +490,7 @@ function NotificationBell() {
           <button onClick={() => { setOpen(false); setActiveModule('settings') }}
             style={{
               display: 'flex', alignItems: 'center', gap: 8, width: '100%', height: 34, marginTop: 4,
-              padding: '0 10px', borderRadius: 9, border: 'none', background: 'transparent',
+              padding: '0 10px', borderRadius: 'var(--sb-r-sm)', border: 'none', background: 'transparent',
               color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body-s)', fontFamily: 'inherit', cursor: 'pointer', textAlign: 'left',
             }}>
             <Settings size={13} color="var(--sb-ink-4)" /> What gets notified
@@ -550,7 +550,7 @@ function TopNav() {
               key={item.id}
               onClick={() => setActiveModule(item.id)}
               style={{
-                height: 38, padding: '0 15px', borderRadius: 999,
+                height: 38, padding: '0 15px', borderRadius: 'var(--sb-r-pill)',
                 border: 'none', cursor: 'pointer',
                 background: active ? 'var(--sb-card)' : 'transparent',
                 boxShadow: active ? '0 1px 3px rgba(25,23,18,.16)' : 'none',
@@ -593,7 +593,7 @@ function TopNav() {
             display: 'flex', alignItems: 'center', gap: 7,
             padding: '6px 12px',
             background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
-            borderRadius: 12, cursor: 'pointer',
+            borderRadius: 'var(--sb-r-nav)', cursor: 'pointer',
           }}>
           <Search size={13} color="var(--sb-ink-3)" />
           <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-4)', userSelect: 'none' }}>Search</span>
@@ -614,7 +614,7 @@ function TopNav() {
             aria-haspopup="menu"
             aria-expanded={menuOpen}
             style={{
-              width: 32, height: 32, borderRadius: '50%', padding: 0,
+              width: 32, height: 32, borderRadius: 'var(--sb-r-pill)', padding: 0,
               background: 'var(--sb-ink-1)', border: 'none',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               cursor: 'pointer', overflow: 'hidden',
@@ -630,7 +630,7 @@ function TopNav() {
           {menuOpen && (
             <div role="menu" style={{
               position: 'absolute', top: 'calc(100% + 8px)', right: 0, zIndex: 120, minWidth: 216,
-              background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 14, padding: 6,
+              background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-card)', padding: 6,
               boxShadow: '0 22px 48px -20px rgba(25,23,18,.45)',
             }}>
               <div style={{ padding: '8px 10px 10px', borderBottom: '1px solid var(--sb-hairline)', marginBottom: 5 }}>
@@ -648,7 +648,7 @@ function TopNav() {
                 onClick={() => { setMenuOpen(false); setActiveModule('settings') }}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 9, width: '100%', height: 36,
-                  padding: '0 10px', borderRadius: 9, border: 'none', cursor: 'pointer',
+                  padding: '0 10px', borderRadius: 'var(--sb-r-sm)', border: 'none', cursor: 'pointer',
                   background: activeModule === 'settings' ? '#F5F1E6' : 'transparent',
                   color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body)', fontFamily: 'inherit', textAlign: 'left',
                 }}>
@@ -659,7 +659,7 @@ function TopNav() {
                 onClick={() => { setMenuOpen(false); void googleSignOut() }}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 9, width: '100%', height: 36,
-                  padding: '0 10px', borderRadius: 9, border: 'none', cursor: 'pointer',
+                  padding: '0 10px', borderRadius: 'var(--sb-r-sm)', border: 'none', cursor: 'pointer',
                   background: 'transparent', color: 'var(--sb-negative)', fontSize: 'var(--sb-t-body)',
                   fontFamily: 'inherit', textAlign: 'left',
                 }}>

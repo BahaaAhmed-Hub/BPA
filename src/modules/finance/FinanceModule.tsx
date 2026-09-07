@@ -209,7 +209,7 @@ export function FinanceModule() {
                 onClick={() => handleSetScreen(id)}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 5,
-                  padding: '4px 10px', borderRadius: 7, cursor: 'grab',
+                  padding: '4px 10px', borderRadius: 'var(--sb-r-chip)', cursor: 'grab',
                   background: active ? 'var(--sb-accent)' : 'transparent',
                   border: `1px solid ${isDropTarget ? 'var(--sb-accent)' : active ? 'rgba(25,23,18,0.18)' : 'transparent'}`,
                   boxShadow: active ? '0 2px 0 rgba(25,23,18,0.1)' : 'none',
@@ -236,7 +236,7 @@ export function FinanceModule() {
             onClick={() => { lockNow(); relock() }}
             title="Lock the finances"
             style={{
-              height: 30, width: 30, borderRadius: 8, marginRight: 7,
+              height: 30, width: 30, borderRadius: 'var(--sb-r-chip)', marginRight: 7,
               background: 'transparent', border: '1px solid var(--sb-border)', cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
             }}
@@ -250,7 +250,7 @@ export function FinanceModule() {
           onClick={() => setBulkOpen(true)}
           title="Add several entries at once"
           style={{
-            height: 30, paddingInline: 12, borderRadius: 8,
+            height: 30, paddingInline: 12, borderRadius: 'var(--sb-r-chip)',
             background: 'transparent', border: '1px solid var(--sb-border)', cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             flexShrink: 0, gap: 5, marginRight: 7,
@@ -266,7 +266,7 @@ export function FinanceModule() {
           onClick={() => setAddOpen(true)}
           title="Add one entry"
           style={{
-            height: 30, paddingInline: 14, borderRadius: 8,
+            height: 30, paddingInline: 14, borderRadius: 'var(--sb-r-chip)',
             background: 'var(--sb-accent)', border: '1px solid rgba(25,23,18,0.18)', cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             flexShrink: 0, gap: 5, boxShadow: '0 2px 0 rgba(25,23,18,0.1)',

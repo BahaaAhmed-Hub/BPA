@@ -78,7 +78,7 @@ export function TopBar({ title, subtitle }: TopBarProps) {
               justifyContent: 'center',
               background: 'transparent',
               border: '1px solid transparent',
-              borderRadius: 7,
+              borderRadius: 'var(--sb-r-chip)',
               cursor: 'pointer',
               color: 'var(--sb-ink-3)',
               transition: 'all 0.15s ease',
@@ -108,9 +108,9 @@ export function TopBar({ title, subtitle }: TopBarProps) {
           style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}
         >
           {user?.avatarUrl ? (
-            <img src={user.avatarUrl} alt={user.name ?? ''} style={{ width: 32, height: 32, borderRadius: '50%', border: '1.5px solid var(--sb-accent)', objectFit: 'cover' }} />
+            <img src={user.avatarUrl} alt={user.name ?? ''} style={{ width: 32, height: 32, borderRadius: 'var(--sb-r-pill)', border: '1.5px solid var(--sb-accent)', objectFit: 'cover' }} />
           ) : (
-            <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgba(var(--sb-accent-rgb),0.12)', border: '1.5px solid var(--sb-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: 32, height: 32, borderRadius: 'var(--sb-r-pill)', background: 'rgba(var(--sb-accent-rgb),0.12)', border: '1.5px solid var(--sb-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <span style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>
                 {user?.name?.[0]?.toUpperCase() ?? 'P'}
               </span>
@@ -121,14 +121,14 @@ export function TopBar({ title, subtitle }: TopBarProps) {
         {menuOpen && (
           <>
             <div onClick={() => setMenuOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 40 }} />
-            <div style={{ position: 'absolute', right: 0, top: 40, zIndex: 50, background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 10, padding: 8, minWidth: 200, boxShadow: '0 8px 24px rgba(0,0,0,0.5)' }}>
+            <div style={{ position: 'absolute', right: 0, top: 40, zIndex: 50, background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-card)', padding: 8, minWidth: 200, boxShadow: '0 8px 24px rgba(0,0,0,0.5)' }}>
               <div style={{ padding: '8px 12px 10px', borderBottom: '1px solid var(--sb-border)', marginBottom: 6 }}>
                 <p style={{ margin: 0, fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>{user?.name ?? 'User'}</p>
                 <p style={{ margin: '2px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>{user?.email}</p>
               </div>
               <button
                 onClick={() => { setMenuOpen(false); void signOut() }}
-                style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'transparent', border: 'none', borderRadius: 7, color: 'var(--sb-negative)', fontSize: 'var(--sb-t-body)', cursor: 'pointer', textAlign: 'left' }}
+                style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'transparent', border: 'none', borderRadius: 'var(--sb-r-chip)', color: 'var(--sb-negative)', fontSize: 'var(--sb-t-body)', cursor: 'pointer', textAlign: 'left' }}
                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(224,82,82,0.08)' }}
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
               >

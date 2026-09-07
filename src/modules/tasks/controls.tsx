@@ -66,7 +66,7 @@ export function CountBadge({ value, tone }: { value: number; tone?: 'dark' }) {
   return (
     <span style={{
       minWidth: 20, height: 20, boxSizing: 'border-box', padding: '0 6px',
-      borderRadius: 999, flexShrink: 0,
+      borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
       background: tone === 'dark' ? 'rgba(255,255,255,0.14)' : 'var(--sb-field)',
       color: tone === 'dark' ? 'var(--sb-card)' : 'var(--sb-ink-3)',
       fontSize: 'var(--sb-t-micro)', fontWeight: 700, fontVariantNumeric: 'tabular-nums',

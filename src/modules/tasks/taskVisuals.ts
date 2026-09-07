@@ -39,7 +39,7 @@ export const SLOT = 22
 
 /** A set attribute: cream chip. */
 export const slotFilled: React.CSSProperties = {
-  width: SLOT, height: SLOT, borderRadius: 7, flexShrink: 0,
+  width: SLOT, height: SLOT, borderRadius: 'var(--sb-r-chip)', flexShrink: 0,
   background: 'var(--sb-field)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-3)',
   display: 'flex', alignItems: 'center', justifyContent: 'center',
   cursor: 'pointer', padding: 0,

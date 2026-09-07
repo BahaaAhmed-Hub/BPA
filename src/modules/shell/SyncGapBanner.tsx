@@ -24,7 +24,7 @@ export function SyncGapBanner() {
   return (
     <div style={{
       display: 'flex', alignItems: 'flex-start', gap: 10,
-      margin: '0 22px 10px', padding: '11px 14px', borderRadius: 11,
+      margin: '0 22px 10px', padding: '11px 14px', borderRadius: 'var(--sb-r-nav)',
       background: 'rgba(var(--sb-accent-rgb),0.20)', border: '1px solid rgba(var(--sb-accent-rgb),0.65)',
     }}>
       <AlertCircle size={15} color="#8A6D0B" style={{ flexShrink: 0, marginTop: 1 }} />
@@ -43,7 +43,7 @@ export function SyncGapBanner() {
             and a not-yet-reloaded one the same way, so it is one of three things: the migration has
             not run, it ran against a different project, or the schema cache is stale. This build
             talks to project <strong>{supabaseProjectRef}</strong> — check the SQL editor is open on
-            that one, then run <code style={{ ...T.meta, background: 'rgba(25,23,18,0.06)', padding: '1px 5px', borderRadius: 4 }}>
+            that one, then run <code style={{ ...T.meta, background: 'rgba(25,23,18,0.06)', padding: '1px 5px', borderRadius: 'var(--sb-r-chip)' }}>
             notify pgrst, 'reload schema';</code>
           </p>
         )}
@@ -55,7 +55,7 @@ export function SyncGapBanner() {
       </div>
       <button onClick={() => setDismissed(true)} title="Hide until next time"
         style={{
-          width: 26, height: 26, borderRadius: 7, flexShrink: 0, padding: 0,
+          width: 26, height: 26, borderRadius: 'var(--sb-r-chip)', flexShrink: 0, padding: 0,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           background: 'none', border: 'none', color: '#8A6D0B', cursor: 'pointer',
         }}>

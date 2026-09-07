@@ -10,7 +10,7 @@ export function DuplicateMark({ scope, size = 13 }: { scope?: DuplicateScope; si
       title={duplicateNote(scope)}
       style={{
         display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-        flexShrink: 0, borderRadius: 999, padding: 2,
+        flexShrink: 0, borderRadius: 'var(--sb-r-pill)', padding: 2,
         background: scope === 'day' ? '#FBEBC8' : 'transparent',
         color: scope === 'day' ? '#8A6D0B' : '#C0A24E',
       }}>

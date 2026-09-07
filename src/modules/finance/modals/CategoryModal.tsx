@@ -13,11 +13,11 @@ const DISPLAY = 'var(--sb-font-num)'
 
 const PILL: React.CSSProperties = {
   display: 'inline-flex', alignItems: 'center', gap: 6, height: 42, boxSizing: 'border-box',
-  padding: '0 14px', borderRadius: 10, background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
+  padding: '0 14px', borderRadius: 'var(--sb-r-nav)', background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
   color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body)', fontFamily: 'inherit', cursor: 'pointer', minWidth: 0,
 }
 const ROUND: React.CSSProperties = {
-  width: 30, height: 30, borderRadius: '50%', flexShrink: 0, padding: 0,
+  width: 30, height: 30, borderRadius: 'var(--sb-r-pill)', flexShrink: 0, padding: 0,
   display: 'flex', alignItems: 'center', justifyContent: 'center',
   background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-3)', cursor: 'pointer',
 }
@@ -80,16 +80,16 @@ export function CategoryModal({ category, categories, onSave, onDelete, onClose 
       <div style={{
         width: 'clamp(320px, 94vw, 430px)', maxHeight: '90vh', overflowY: 'auto',
         boxSizing: 'border-box', scrollbarWidth: 'thin',
-        background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 18,
+        background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
         boxShadow: '0 24px 60px rgba(25,23,18,0.24)', padding: '18px 20px 22px',
       }}>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{
             display: 'inline-flex', alignItems: 'center', gap: 6, height: 26, padding: '0 11px',
-            borderRadius: 999, background: 'var(--sb-field)', color: 'var(--sb-ink-2)', fontSize: 'var(--sb-t-meta)',
+            borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-field)', color: 'var(--sb-ink-2)', fontSize: 'var(--sb-t-meta)',
           }}>
-            <span style={{ width: 7, height: 7, borderRadius: 999, background: color, flexShrink: 0 }} />
+            <span style={{ width: 7, height: 7, borderRadius: 'var(--sb-r-pill)', background: color, flexShrink: 0 }} />
             {isEdit ? 'Category' : txTypeLocked ? 'New sub-category' : 'New category'}
           </span>
           <span style={{ flex: 1 }} />
@@ -104,7 +104,7 @@ export function CategoryModal({ category, categories, onSave, onDelete, onClose 
             trigger={onClick => (
               <button onClick={onClick} title="Pick an icon, or upload one"
                 style={{
-                  width: 46, height: 46, borderRadius: 12, flexShrink: 0, padding: 0,
+                  width: 46, height: 46, borderRadius: 'var(--sb-r-nav)', flexShrink: 0, padding: 0,
                   border: '1px solid var(--sb-border)', background: 'var(--sb-field)', cursor: 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
                 }}>
@@ -120,7 +120,7 @@ export function CategoryModal({ category, categories, onSave, onDelete, onClose 
             placeholder="Name it"
             style={{
               flex: 1, minWidth: 0, boxSizing: 'border-box',
-              background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 11,
+              background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
               padding: '13px 15px', fontFamily: DISPLAY, fontSize: 'var(--sb-t-h2)', fontWeight: 600,
               letterSpacing: '-0.02em', color: 'var(--sb-ink-1)', outline: 'none',
             }} />
@@ -179,7 +179,7 @@ export function CategoryModal({ category, categories, onSave, onDelete, onClose 
               {SWATCHES.map(c => (
                 <button key={c} onClick={() => setColor(c)} title={c}
                   style={{
-                    width: 30, height: 30, borderRadius: 9, cursor: 'pointer', padding: 0,
+                    width: 30, height: 30, borderRadius: 'var(--sb-r-sm)', cursor: 'pointer', padding: 0,
                     background: c, border: color === c ? '2px solid var(--sb-ink-1)' : '1px solid rgba(25,23,18,0.12)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>
@@ -205,7 +205,7 @@ export function CategoryModal({ category, categories, onSave, onDelete, onClose 
             onClick={() => { onDelete(category!.id); onClose() }}
             title="Its transactions stay; they simply stop being filed here"
             style={{
-              marginTop: 12, width: '100%', height: 34, borderRadius: 9,
+              marginTop: 12, width: '100%', height: 34, borderRadius: 'var(--sb-r-sm)',
               background: 'none', border: 'none', fontFamily: 'inherit',
               color: 'var(--sb-negative)', fontSize: 'var(--sb-t-body-s)', cursor: 'pointer',
             }}>

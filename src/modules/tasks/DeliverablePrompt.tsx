@@ -26,12 +26,12 @@ function formatBytes(n: number): string {
 
 const FIELD: React.CSSProperties = {
   width: '100%', boxSizing: 'border-box', height: 40, padding: '0 12px',
-  background: 'var(--sb-field)', border: '1px solid var(--sb-border)', borderRadius: 9,
+  background: 'var(--sb-field)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-sm)',
   fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)', fontFamily: 'inherit', outline: 'none',
 }
 
 const ROUND: React.CSSProperties = {
-  width: 40, height: 40, borderRadius: 9, flexShrink: 0, padding: 0,
+  width: 40, height: 40, borderRadius: 'var(--sb-r-sm)', flexShrink: 0, padding: 0,
   display: 'flex', alignItems: 'center', justifyContent: 'center',
   background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-3)', cursor: 'pointer',
 }
@@ -78,7 +78,7 @@ export function DeliverablePrompt({ task, onComplete, onCancel }: {
       }}>
       <div style={{
         width: 460, maxHeight: '86vh', overflowY: 'auto', boxSizing: 'border-box',
-        background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 16,
+        background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
         boxShadow: '0 24px 60px -20px rgba(25,23,18,0.45)', padding: '20px 22px 18px',
       }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
@@ -91,7 +91,7 @@ export function DeliverablePrompt({ task, onComplete, onCancel }: {
               close it with nothing attached.
             </p>
           </div>
-          <button onClick={onCancel} title="Leave it open" style={{ ...ROUND, width: 32, height: 32, borderRadius: '50%' }}>
+          <button onClick={onCancel} title="Leave it open" style={{ ...ROUND, width: 32, height: 32, borderRadius: 'var(--sb-r-pill)' }}>
             <X size={14} />
           </button>
         </div>
@@ -117,7 +117,7 @@ export function DeliverablePrompt({ task, onComplete, onCancel }: {
             {links.map(url => (
               <div key={url} style={{
                 display: 'flex', alignItems: 'center', gap: 9, minWidth: 0,
-                height: 36, padding: '0 10px', borderRadius: 9,
+                height: 36, padding: '0 10px', borderRadius: 'var(--sb-r-sm)',
                 background: 'var(--sb-field)', border: '1px solid var(--sb-border)',
               }}>
                 <Link2 size={13} color="var(--sb-ink-3)" style={{ flexShrink: 0 }} />
@@ -143,7 +143,7 @@ export function DeliverablePrompt({ task, onComplete, onCancel }: {
           onDrop={e => { e.preventDefault(); setDropping(false); addFiles(e.dataTransfer.files) }}
           style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            height: 62, borderRadius: 11, cursor: 'pointer',
+            height: 62, borderRadius: 'var(--sb-r-nav)', cursor: 'pointer',
             background: dropping ? 'rgba(var(--sb-accent-rgb),0.16)' : 'var(--sb-field)',
             border: `1px dashed ${dropping ? 'var(--sb-accent)' : '#D8CFB8'}`,
             fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)',
@@ -157,7 +157,7 @@ export function DeliverablePrompt({ task, onComplete, onCancel }: {
             {files.map(f => (
               <div key={f.id} style={{
                 display: 'flex', alignItems: 'center', gap: 9, minWidth: 0,
-                height: 36, padding: '0 10px', borderRadius: 9,
+                height: 36, padding: '0 10px', borderRadius: 'var(--sb-r-sm)',
                 background: 'var(--sb-field)', border: '1px solid var(--sb-border)',
               }}>
                 <FileText size={13} color="var(--sb-ink-3)" style={{ flexShrink: 0 }} />
@@ -180,13 +180,13 @@ export function DeliverablePrompt({ task, onComplete, onCancel }: {
             {count === 0 ? 'Nothing attached yet' : `${count} attached`}
           </span>
           <button onClick={onCancel} style={{
-            height: 40, padding: '0 16px', borderRadius: 9, cursor: 'pointer',
+            height: 40, padding: '0 16px', borderRadius: 'var(--sb-r-sm)', cursor: 'pointer',
             background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-3)',
             fontSize: 'var(--sb-t-body)', fontFamily: 'inherit',
           }}>Cancel</button>
           <button onClick={() => onComplete({ links, attachments: files })} style={{
             display: 'flex', alignItems: 'center', gap: 7,
-            height: 40, padding: '0 18px', borderRadius: 9, cursor: 'pointer',
+            height: 40, padding: '0 18px', borderRadius: 'var(--sb-r-sm)', cursor: 'pointer',
             background: 'var(--sb-ink-1)', border: 'none', color: 'var(--sb-ink-on-dark)',
             fontSize: 'var(--sb-t-label)', fontWeight: 600, fontFamily: 'inherit',
           }}><Check size={14} strokeWidth={2.6} /> Complete</button>

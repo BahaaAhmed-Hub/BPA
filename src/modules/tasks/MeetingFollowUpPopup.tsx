@@ -56,14 +56,14 @@ function TaskRow({ draft, index, expanded, users, onToggle, onChange, onDelete }
   const q        = Q_OPTIONS.find(o => o.value === draft.quadrant)
 
   const inp: React.CSSProperties = {
-    background: 'var(--sb-page)', border: '1px solid var(--sb-border)', borderRadius: 6,
+    background: 'var(--sb-page)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-chip)',
     color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', padding: '5px 8px', outline: 'none',
     fontFamily: 'inherit',
   }
 
   return (
     <div style={{
-      borderRadius: 10,
+      borderRadius: 'var(--sb-r-nav)',
       border: `1px solid ${expanded ? '#353A60' : 'var(--sb-border)'}`,
       background: expanded ? 'var(--sb-field)' : 'var(--sb-card)',
       overflow: 'hidden',
@@ -80,7 +80,7 @@ function TaskRow({ draft, index, expanded, users, onToggle, onChange, onDelete }
       >
         {/* Row number */}
         <span style={{
-          width: 18, height: 18, borderRadius: '50%', flexShrink: 0,
+          width: 18, height: 18, borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
           background: 'var(--sb-field)', fontSize: 'var(--sb-t-micro)', fontWeight: 700,
           color: 'var(--sb-ink-4)', display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
@@ -99,7 +99,7 @@ function TaskRow({ draft, index, expanded, users, onToggle, onChange, onDelete }
         <div style={{ display: 'flex', gap: 5, alignItems: 'center', flexShrink: 0 }}>
           {q && (
             <span style={{
-              fontSize: 'var(--sb-t-micro)', padding: '1px 7px', borderRadius: 4, fontWeight: 600,
+              fontSize: 'var(--sb-t-micro)', padding: '1px 7px', borderRadius: 'var(--sb-r-chip)', fontWeight: 600,
               background: `${q.color}18`, color: q.color,
             }}>
               {q.label}
@@ -150,7 +150,7 @@ function TaskRow({ draft, index, expanded, users, onToggle, onChange, onDelete }
                     key={String(opt.value)}
                     onClick={() => onChange({ quadrant: opt.value })}
                     style={{
-                      padding: '4px 10px', borderRadius: 6, fontSize: 'var(--sb-t-meta)', fontWeight: active ? 700 : 500,
+                      padding: '4px 10px', borderRadius: 'var(--sb-r-chip)', fontSize: 'var(--sb-t-meta)', fontWeight: active ? 700 : 500,
                       background: active ? `${opt.color}22` : 'transparent',
                       border: `1px solid ${active ? opt.color + '60' : 'var(--sb-border)'}`,
                       color: active ? opt.color : 'var(--sb-ink-4)',
@@ -197,7 +197,7 @@ function TaskRow({ draft, index, expanded, users, onToggle, onChange, onDelete }
               style={{
                 display: 'flex', alignItems: 'center', gap: 5,
                 background: 'transparent', border: '1px solid var(--sb-border)',
-                borderRadius: 6, padding: '4px 10px', color: 'var(--sb-ink-4)',
+                borderRadius: 'var(--sb-r-chip)', padding: '4px 10px', color: 'var(--sb-ink-4)',
                 fontSize: 'var(--sb-t-meta)', cursor: 'pointer',
               }}
             >
@@ -207,7 +207,7 @@ function TaskRow({ draft, index, expanded, users, onToggle, onChange, onDelete }
               onClick={onToggle}
               style={{
                 background: 'rgba(var(--sb-accent-rgb),0.12)', border: '1px solid rgba(var(--sb-accent-rgb),0.45)',
-                borderRadius: 6, padding: '4px 14px', color: 'var(--sb-ink-1)',
+                borderRadius: 'var(--sb-r-chip)', padding: '4px 14px', color: 'var(--sb-ink-1)',
                 fontSize: 'var(--sb-t-meta)', fontWeight: 600, cursor: 'pointer',
               }}
             >
@@ -305,7 +305,7 @@ export function MeetingFollowUpPopup({ parentTask, onConfirm, onSkip }: Props) {
         maxHeight: 'calc(100vh - 64px)',
         background: 'var(--sb-card)',
         border: '1px solid var(--sb-border)',
-        borderRadius: 16,
+        borderRadius: 'var(--sb-r-card)',
         display: 'flex', flexDirection: 'column',
         overflow: 'hidden',
         boxShadow: '0 24px 64px rgba(0,0,0,0.6)',
@@ -318,7 +318,7 @@ export function MeetingFollowUpPopup({ parentTask, onConfirm, onSkip }: Props) {
           display: 'flex', alignItems: 'flex-start', gap: 10,
         }}>
           <div style={{
-            width: 34, height: 34, borderRadius: 10,
+            width: 34, height: 34, borderRadius: 'var(--sb-r-nav)',
             background: '#1D9E7518', border: '1px solid #1D9E7530',
             display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
           }}>
@@ -337,7 +337,7 @@ export function MeetingFollowUpPopup({ parentTask, onConfirm, onSkip }: Props) {
           </div>
           <button onClick={onSkip} style={{
             background: 'transparent', border: 'none', cursor: 'pointer',
-            color: 'var(--sb-ink-4)', padding: 4, borderRadius: 6, flexShrink: 0,
+            color: 'var(--sb-ink-4)', padding: 4, borderRadius: 'var(--sb-r-chip)', flexShrink: 0,
           }}>
             <X size={15} />
           </button>
@@ -359,7 +359,7 @@ export function MeetingFollowUpPopup({ parentTask, onConfirm, onSkip }: Props) {
                 placeholder={'- Follow up with Ali on the API proposal\n- Schedule deep dive on Q3 metrics\n- John to send updated deck by Friday'}
                 style={{
                   width: '100%', minHeight: 140, resize: 'vertical',
-                  background: 'var(--sb-page)', border: '1px solid var(--sb-border)', borderRadius: 8,
+                  background: 'var(--sb-page)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-chip)',
                   color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', padding: '10px 12px',
                   outline: 'none', fontFamily: 'inherit', lineHeight: 1.5,
                   boxSizing: 'border-box',
@@ -373,7 +373,7 @@ export function MeetingFollowUpPopup({ parentTask, onConfirm, onSkip }: Props) {
               </p>
               {error && (
                 <div style={{
-                  marginTop: 10, padding: '8px 12px', borderRadius: 8,
+                  marginTop: 10, padding: '8px 12px', borderRadius: 'var(--sb-r-chip)',
                   background: '#E0525218', border: '1px solid #E0525240',
                   color: 'var(--sb-negative)', fontSize: 'var(--sb-t-meta)', lineHeight: 1.4,
                 }}>
@@ -438,7 +438,7 @@ export function MeetingFollowUpPopup({ parentTask, onConfirm, onSkip }: Props) {
           display: 'flex', gap: 8, justifyContent: 'flex-end', alignItems: 'center',
         }}>
           <button onClick={onSkip} style={{
-            padding: '7px 16px', borderRadius: 8, fontSize: 'var(--sb-t-body-s)',
+            padding: '7px 16px', borderRadius: 'var(--sb-r-chip)', fontSize: 'var(--sb-t-body-s)',
             background: 'transparent', border: '1px solid var(--sb-border)',
             color: 'var(--sb-ink-4)', cursor: 'pointer',
           }}>
@@ -450,7 +450,7 @@ export function MeetingFollowUpPopup({ parentTask, onConfirm, onSkip }: Props) {
               onClick={() => void handleAnalyze()}
               disabled={loading}
               style={{
-                padding: '7px 16px', borderRadius: 8, fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
+                padding: '7px 16px', borderRadius: 'var(--sb-r-chip)', fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
                 background: loading ? 'var(--sb-field)' : 'rgba(127,119,221,0.1)',
                 border: '1px solid #7F77DD50',
                 color: loading ? 'var(--sb-ink-4)' : '#7F77DD',
@@ -466,7 +466,7 @@ export function MeetingFollowUpPopup({ parentTask, onConfirm, onSkip }: Props) {
               onClick={handleSave}
               disabled={activeCount === 0}
               style={{
-                padding: '7px 18px', borderRadius: 8, fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
+                padding: '7px 18px', borderRadius: 'var(--sb-r-chip)', fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
                 background: activeCount > 0 ? '#1D9E7522' : 'var(--sb-field)',
                 border: `1px solid ${activeCount > 0 ? '#1D9E7550' : 'var(--sb-border)'}`,
                 color: activeCount > 0 ? '#1D9E75' : 'var(--sb-ink-4)',

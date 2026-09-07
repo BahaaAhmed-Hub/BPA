@@ -18,13 +18,13 @@ import {
 
 const CARD: React.CSSProperties = {
   position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0, zIndex: 95,
-  background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 14,
+  background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
   boxShadow: '0 22px 48px -20px rgba(25,23,18,.45)',
   padding: 6, maxHeight: 'min(62vh, 460px)', overflowY: 'auto', scrollbarWidth: 'thin',
 }
 const ROW: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 10, width: '100%', height: 38,
-  padding: '0 11px', borderRadius: 9, border: 'none', background: 'transparent',
+  padding: '0 11px', borderRadius: 'var(--sb-r-sm)', border: 'none', background: 'transparent',
   color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-label)', fontFamily: 'inherit', cursor: 'pointer', textAlign: 'left',
 }
 const GROUP_LABEL: React.CSSProperties = {
@@ -40,12 +40,12 @@ function Seg<T extends string | number>({ value, options, onChange }: {
   onChange: (v: T) => void
 }) {
   return (
-    <div style={{ display: 'flex', gap: 4, background: '#F5F1E6', borderRadius: 9, padding: 3 }}>
+    <div style={{ display: 'flex', gap: 4, background: '#F5F1E6', borderRadius: 'var(--sb-r-sm)', padding: 3 }}>
       {options.map(o => {
         const on = o.value === value
         return (
           <button key={String(o.value)} onClick={() => onChange(o.value)} style={{
-            flex: 1, height: 28, borderRadius: 7, border: 'none', cursor: 'pointer',
+            flex: 1, height: 28, borderRadius: 'var(--sb-r-chip)', border: 'none', cursor: 'pointer',
             background: on ? 'var(--sb-card)' : 'transparent',
             boxShadow: on ? '0 1px 3px rgba(25,23,18,.16)' : 'none',
             color: on ? 'var(--sb-ink-1)' : 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body-s)', fontWeight: on ? 600 : 500,
@@ -70,7 +70,7 @@ function Cell({ on, label, onClick, wide }: { on: boolean; label: string; onClic
 }
 
 const selectStyle: React.CSSProperties = {
-  height: 32, borderRadius: 8, border: '1px solid var(--sb-border)', background: 'var(--sb-field)',
+  height: 32, borderRadius: 'var(--sb-r-chip)', border: '1px solid var(--sb-border)', background: 'var(--sb-field)',
   color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', fontFamily: 'inherit', padding: '0 8px', cursor: 'pointer',
 }
 
@@ -156,7 +156,7 @@ export function RepeatPicker({ value, start, onApply, onClose }: {
             </button>
             <span style={{ flex: 1 }} />
             <button onClick={() => { onApply(draft); onClose() }} style={{
-              height: 28, padding: '0 14px', borderRadius: 999, border: 'none', cursor: 'pointer',
+              height: 28, padding: '0 14px', borderRadius: 'var(--sb-r-pill)', border: 'none', cursor: 'pointer',
               background: 'var(--sb-ink-1)', color: 'var(--sb-card)', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, fontFamily: 'inherit',
             }}>Done</button>
           </div>

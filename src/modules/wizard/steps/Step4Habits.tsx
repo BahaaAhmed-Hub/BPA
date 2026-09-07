@@ -31,7 +31,7 @@ interface Props {
 
 const inp: React.CSSProperties = {
   background: 'var(--sb-page)', border: '1px solid var(--sb-border)',
-  borderRadius: 7, padding: '8px 12px', color: 'var(--sb-ink-1)',
+  borderRadius: 'var(--sb-r-chip)', padding: '8px 12px', color: 'var(--sb-ink-1)',
   fontSize: 'var(--sb-t-body)', outline: 'none', boxSizing: 'border-box',
 }
 
@@ -79,14 +79,14 @@ export function Step4Habits({ data, onChange }: Props) {
           const selected = data.selectedTemplates.includes(t.id)
           return (
             <button key={t.id} onClick={() => toggleTemplate(t.id)} style={{
-              padding: '12px 10px', borderRadius: 10, cursor: 'pointer', position: 'relative',
+              padding: '12px 10px', borderRadius: 'var(--sb-r-nav)', cursor: 'pointer', position: 'relative',
               background: selected ? `${t.color}18` : 'var(--sb-card)',
               border: `1.5px solid ${selected ? t.color : 'var(--sb-border)'}`,
               textAlign: 'left', transition: 'all 0.15s',
             }}>
               {selected && (
                 <div style={{
-                  position: 'absolute', top: 6, right: 6, width: 16, height: 16, borderRadius: '50%',
+                  position: 'absolute', top: 6, right: 6, width: 16, height: 16, borderRadius: 'var(--sb-r-pill)',
                   background: t.color, display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
                   <Check size={10} color="#fff" strokeWidth={3} />
@@ -113,9 +113,9 @@ export function Step4Habits({ data, onChange }: Props) {
       {data.customHabits.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
           {data.customHabits.map((h, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 8, background: 'var(--sb-card)', border: '1px solid var(--sb-border)' }}>
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-card)', border: '1px solid var(--sb-border)' }}>
               <span style={{ fontSize: 'var(--sb-t-h2)' }}>{h.emoji}</span>
-              <div style={{ width: 10, height: 10, borderRadius: '50%', background: h.color, flexShrink: 0 }} />
+              <div style={{ width: 10, height: 10, borderRadius: 'var(--sb-r-pill)', background: h.color, flexShrink: 0 }} />
               <span style={{ flex: 1, fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)' }}>{h.name}</span>
               <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>{h.frequency}</span>
               <button onClick={() => removeCustom(i)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-4)', padding: 2, display: 'flex' }}>
@@ -127,16 +127,16 @@ export function Step4Habits({ data, onChange }: Props) {
       )}
 
       {addingCustom ? (
-        <div style={{ padding: 16, borderRadius: 10, background: 'var(--sb-card)', border: '1px solid var(--sb-border)' }}>
+        <div style={{ padding: 16, borderRadius: 'var(--sb-r-nav)', background: 'var(--sb-card)', border: '1px solid var(--sb-border)' }}>
           <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
             <input value={cEmoji} onChange={e => setCEmoji(e.target.value)} placeholder="💡" style={{ ...inp, width: 56, textAlign: 'center', fontSize: 'var(--sb-t-h2)' }} />
             <input value={cName} onChange={e => setCName(e.target.value)} placeholder="Habit name" style={{ ...inp, flex: 1 }} autoFocus />
           </div>
           <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-            <button onClick={() => setCType('boolean')} style={{ flex: 1, padding: '7px', borderRadius: 7, border: `1.5px solid ${cType === 'boolean' ? 'var(--sb-accent)' : 'var(--sb-border)'}`, background: cType === 'boolean' ? 'rgba(127,119,221,0.1)' : 'transparent', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', cursor: 'pointer' }}>
+            <button onClick={() => setCType('boolean')} style={{ flex: 1, padding: '7px', borderRadius: 'var(--sb-r-chip)', border: `1.5px solid ${cType === 'boolean' ? 'var(--sb-accent)' : 'var(--sb-border)'}`, background: cType === 'boolean' ? 'rgba(127,119,221,0.1)' : 'transparent', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', cursor: 'pointer' }}>
               ✓ Boolean
             </button>
-            <button onClick={() => setCType('quantity')} style={{ flex: 1, padding: '7px', borderRadius: 7, border: `1.5px solid ${cType === 'quantity' ? 'var(--sb-accent)' : 'var(--sb-border)'}`, background: cType === 'quantity' ? 'rgba(127,119,221,0.1)' : 'transparent', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', cursor: 'pointer' }}>
+            <button onClick={() => setCType('quantity')} style={{ flex: 1, padding: '7px', borderRadius: 'var(--sb-r-chip)', border: `1.5px solid ${cType === 'quantity' ? 'var(--sb-accent)' : 'var(--sb-border)'}`, background: cType === 'quantity' ? 'rgba(127,119,221,0.1)' : 'transparent', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', cursor: 'pointer' }}>
               # Quantity
             </button>
           </div>
@@ -148,24 +148,24 @@ export function Step4Habits({ data, onChange }: Props) {
           )}
           <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
             {(['daily','weekdays','weekly'] as const).map(f => (
-              <button key={f} onClick={() => setCFreq(f)} style={{ flex: 1, padding: '6px', borderRadius: 7, border: `1.5px solid ${cFreq === f ? 'var(--sb-accent)' : 'var(--sb-border)'}`, background: cFreq === f ? 'rgba(127,119,221,0.1)' : 'transparent', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', cursor: 'pointer', textTransform: 'capitalize' }}>
+              <button key={f} onClick={() => setCFreq(f)} style={{ flex: 1, padding: '6px', borderRadius: 'var(--sb-r-chip)', border: `1.5px solid ${cFreq === f ? 'var(--sb-accent)' : 'var(--sb-border)'}`, background: cFreq === f ? 'rgba(127,119,221,0.1)' : 'transparent', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', cursor: 'pointer', textTransform: 'capitalize' }}>
                 {f}
               </button>
             ))}
           </div>
           <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
             {COLORS.map(c => (
-              <button key={c} onClick={() => setCColor(c)} style={{ width: 22, height: 22, borderRadius: '50%', background: c, border: 'none', cursor: 'pointer', outline: cColor === c ? `2px solid ${c}` : 'none', outlineOffset: 2, transform: cColor === c ? 'scale(1.2)' : 'scale(1)', transition: 'transform 0.1s' }} />
+              <button key={c} onClick={() => setCColor(c)} style={{ width: 22, height: 22, borderRadius: 'var(--sb-r-pill)', background: c, border: 'none', cursor: 'pointer', outline: cColor === c ? `2px solid ${c}` : 'none', outlineOffset: 2, transform: cColor === c ? 'scale(1.2)' : 'scale(1)', transition: 'transform 0.1s' }} />
             ))}
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={addCustom} style={{ padding: '8px 18px', borderRadius: 8, background: 'var(--sb-accent)', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-label)', fontWeight: 600, border: 'none', cursor: 'pointer' }}>Add</button>
+            <button onClick={addCustom} style={{ padding: '8px 18px', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-accent)', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-label)', fontWeight: 600, border: 'none', cursor: 'pointer' }}>Add</button>
             <button onClick={() => setAddingCustom(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-4)', fontSize: 'var(--sb-t-label)' }}>Cancel</button>
           </div>
         </div>
       ) : (
         <button onClick={() => setAddingCustom(true)} style={{
-          display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 8,
+          display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 'var(--sb-r-chip)',
           background: 'transparent', border: '1px dashed var(--sb-border)',
           color: 'var(--sb-ink-4)', fontSize: 'var(--sb-t-body)', cursor: 'pointer',
           width: '100%', justifyContent: 'center',

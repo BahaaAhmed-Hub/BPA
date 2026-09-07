@@ -220,7 +220,7 @@ function PrioritySkeleton() {
           style={{
             display: 'flex', alignItems: 'center', gap: 14,
             background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
-            borderRadius: 12, padding: '14px 16px',
+            borderRadius: 'var(--sb-r-nav)', padding: '14px 16px',
           }}
         >
           <Skel w={32} h={32} radius={50} />
@@ -261,12 +261,12 @@ function StatusBadge({ status }: { status: ReturnType<typeof getEventStatus> }) 
     <span style={{
       display: 'inline-flex', alignItems: 'center', gap: 4,
       fontSize: 'var(--sb-t-micro)', fontWeight: 600, letterSpacing: '0.5px',
-      padding: '2px 7px', borderRadius: 4,
+      padding: '2px 7px', borderRadius: 'var(--sb-r-chip)',
       background: cfg.bg, border: `1px solid ${cfg.border}`, color: cfg.color,
     }}>
       {cfg.pulse && (
         <span style={{
-          width: 5, height: 5, borderRadius: '50%', background: cfg.color,
+          width: 5, height: 5, borderRadius: 'var(--sb-r-pill)', background: cfg.color,
           animation: 'livePulse 1.5s ease-in-out infinite',
           display: 'inline-block',
         }} />
@@ -349,7 +349,7 @@ function EventContextMenu({
           padding: '0 12px', height: 32, fontSize: 'var(--sb-t-body)',
           color: disabled ? '#4B5268' : '#3D3926',
           cursor: disabled ? 'default' : 'pointer',
-          borderRadius: 6, userSelect: 'none',
+          borderRadius: 'var(--sb-r-chip)', userSelect: 'none',
           background: hovered ? 'rgba(127,119,221,0.12)' : 'transparent',
           transition: 'background 0.08s',
         }}
@@ -371,7 +371,7 @@ function EventContextMenu({
         width: 210,
         background: 'var(--sb-card)',
         border: '1px solid var(--sb-border)',
-        borderRadius: 10,
+        borderRadius: 'var(--sb-r-nav)',
         boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
         zIndex: 9100,
         padding: '4px 0',
@@ -433,7 +433,7 @@ function EventDetailPanel({ event, onClose }: { event: RichMeetingEvent; onClose
           background: 'var(--sb-card)',
           border: `1px solid ${accentColor}40`,
           borderTop: `3px solid ${accentColor}`,
-          borderRadius: 16,
+          borderRadius: 'var(--sb-r-card)',
           display: 'flex', flexDirection: 'column',
           overflow: 'hidden',
           boxShadow: `0 24px 64px rgba(0,0,0,0.6), 0 0 0 1px ${accentColor}20`,
@@ -468,7 +468,7 @@ function EventDetailPanel({ event, onClose }: { event: RichMeetingEvent; onClose
           {/* Calendar chip */}
           {event.calendarName && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <div style={{ width: 8, height: 8, borderRadius: '50%', background: accentColor, flexShrink: 0 }} />
+              <div style={{ width: 8, height: 8, borderRadius: 'var(--sb-r-pill)', background: accentColor, flexShrink: 0 }} />
               <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)' }}>{event.calendarName}</span>
               {event.accountEmail && (
                 <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)' }}>· {event.accountEmail}</span>
@@ -500,7 +500,7 @@ function EventDetailPanel({ event, onClose }: { event: RichMeetingEvent; onClose
               rel="noopener noreferrer"
               style={{
                 display: 'flex', alignItems: 'center', gap: 8,
-                padding: '10px 14px', borderRadius: 8,
+                padding: '10px 14px', borderRadius: 'var(--sb-r-chip)',
                 background: 'rgba(var(--sb-accent-rgb),0.12)', border: '1px solid #7F77DD40',
                 color: '#7F77DD', fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
                 textDecoration: 'none', transition: 'all 0.15s',
@@ -515,7 +515,7 @@ function EventDetailPanel({ event, onClose }: { event: RichMeetingEvent; onClose
           {/* Description */}
           {event.description && (
             <div style={{
-              padding: '12px 14px', borderRadius: 8,
+              padding: '12px 14px', borderRadius: 'var(--sb-r-chip)',
               background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
             }}>
               <p style={{ margin: '0 0 6px', fontSize: 'var(--sb-t-micro)', fontWeight: 600, color: 'var(--sb-ink-3)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
@@ -545,7 +545,7 @@ function EventDetailPanel({ event, onClose }: { event: RichMeetingEvent; onClose
                   return (
                     <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <div style={{
-                        width: 26, height: 26, borderRadius: '50%', flexShrink: 0,
+                        width: 26, height: 26, borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
                         background: `${accentColor}22`, border: `1px solid ${accentColor}40`,
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         fontSize: 'var(--sb-t-micro)', fontWeight: 700, color: accentColor,
@@ -806,7 +806,7 @@ export function MorningBrief() {
               title="Regenerate plan"
               style={{
                 display: 'flex', alignItems: 'center', gap: 7,
-                padding: '8px 14px', borderRadius: 8,
+                padding: '8px 14px', borderRadius: 'var(--sb-r-chip)',
                 background: 'transparent',
                 border: '1px solid var(--sb-border)',
                 color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', cursor: 'pointer',
@@ -832,7 +832,7 @@ export function MorningBrief() {
           marginBottom: 36,
           background: 'var(--sb-card)',
           border: '1px solid var(--sb-border)',
-          borderRadius: 14,
+          borderRadius: 'var(--sb-r-card)',
           padding: '20px 24px',
         }}>
           <p style={{ margin: '0 0 16px', fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)' }}>
@@ -852,7 +852,7 @@ export function MorningBrief() {
                   }}
                 >
                   <span style={{
-                    width: 44, height: 44, borderRadius: '50%',
+                    width: 44, height: 44, borderRadius: 'var(--sb-r-pill)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontSize: 'var(--sb-t-label)', fontWeight: 700,
                     border: `1.5px solid ${selected ? meta.color : 'var(--sb-border)'}`,
@@ -886,13 +886,13 @@ export function MorningBrief() {
             <div className="brief-section" style={{
               background: 'var(--sb-card)',
               border: '1px solid var(--sb-border)',
-              borderRadius: 14,
+              borderRadius: 'var(--sb-r-nav)',
               padding: '24px 26px',
               borderLeft: '3px solid #7F77DD50',
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 20 }}>
                 <div style={{
-                  width: 26, height: 26, borderRadius: 6,
+                  width: 26, height: 26, borderRadius: 'var(--sb-r-chip)',
                   background: 'rgba(var(--sb-accent-rgb),0.12)', border: '1px solid #7F77DD30',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
@@ -918,7 +918,7 @@ export function MorningBrief() {
             <div className="brief-section" style={{
               background: 'var(--sb-card)',
               border: '1px solid var(--sb-border)',
-              borderRadius: 14,
+              borderRadius: 'var(--sb-r-card)',
               padding: '24px 26px',
             }}>
               <SectionLabel>Top 3 Priorities</SectionLabel>
@@ -935,12 +935,12 @@ export function MorningBrief() {
                         display: 'flex', alignItems: 'center', gap: 14,
                         background: 'var(--sb-page)',
                         border: `1px solid ${i === 0 ? 'rgba(var(--sb-accent-rgb),0.12)' : 'var(--sb-border)'}`,
-                        borderRadius: 12, padding: '13px 16px',
+                        borderRadius: 'var(--sb-r-nav)', padding: '13px 16px',
                         position: 'relative', overflow: 'hidden',
                       }}>
                         {/* Rank badge */}
                         <span style={{
-                          width: 28, height: 28, borderRadius: '50%',
+                          width: 28, height: 28, borderRadius: 'var(--sb-r-pill)',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           fontSize: 'var(--sb-t-body-s)', fontWeight: 700, flexShrink: 0,
                           background: i === 0 ? '#1E40AF20' : 'var(--sb-field)',
@@ -955,7 +955,7 @@ export function MorningBrief() {
 
                         {co && (
                           <span style={{
-                            fontSize: 'var(--sb-t-micro)', padding: '2px 8px', borderRadius: 4, flexShrink: 0,
+                            fontSize: 'var(--sb-t-micro)', padding: '2px 8px', borderRadius: 'var(--sb-r-chip)', flexShrink: 0,
                             color, background: `${color}18`, fontWeight: 500,
                           }}>
                             {CO_NAME[co]}
@@ -967,7 +967,7 @@ export function MorningBrief() {
                           <div style={{
                             position: 'absolute', top: 0, left: 0,
                             width: 3, height: '100%', background: '#7F77DD',
-                            borderRadius: '12px 0 0 12px',
+                            borderRadius: 'var(--sb-r-nav) 0 0 var(--sb-r-nav)',
                           }} />
                         )}
                       </div>
@@ -989,7 +989,7 @@ export function MorningBrief() {
             <div className="brief-section" style={{
               background: 'var(--sb-card)',
               border: '1px solid var(--sb-border)',
-              borderRadius: 14,
+              borderRadius: 'var(--sb-r-card)',
               padding: '24px 22px',
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 14 }}>
@@ -1020,7 +1020,7 @@ export function MorningBrief() {
                         style={{
                           display: 'flex', gap: 10, alignItems: 'stretch',
                           padding: '10px 12px',
-                          borderRadius: 10,
+                          borderRadius: 'var(--sb-r-nav)',
                           background: 'var(--sb-page)',
                           border: '1px solid var(--sb-border)',
                           opacity: isPast ? 0.5 : 1,
@@ -1086,7 +1086,7 @@ export function MorningBrief() {
             <div className="brief-section" style={{
               background: 'var(--sb-card)',
               border: '1px solid var(--sb-border)',
-              borderRadius: 14,
+              borderRadius: 'var(--sb-r-card)',
               padding: '24px 22px',
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 14 }}>
@@ -1103,7 +1103,7 @@ export function MorningBrief() {
                     onClick={() => handleHabitToggle(habit.id)}
                     style={{
                       display: 'flex', alignItems: 'center', gap: 10,
-                      padding: '10px 14px', borderRadius: 9, width: '100%',
+                      padding: '10px 14px', borderRadius: 'var(--sb-r-sm)', width: '100%',
                       background: habit.checked ? '#1D9E7512' : 'var(--sb-page)',
                       border: `1px solid ${habit.checked ? '#1D9E7540' : 'var(--sb-border)'}`,
                       color: habit.checked ? '#1D9E75' : 'var(--sb-ink-3)',

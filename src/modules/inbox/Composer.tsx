@@ -41,12 +41,12 @@ const LABEL: React.CSSProperties = {
   width: 46, flexShrink: 0, fontSize: 'var(--sb-t-meta)', color: C.ghost, paddingTop: 7,
 }
 const INPUT: React.CSSProperties = {
-  flex: 1, minWidth: 0, height: 30, padding: '0 9px', borderRadius: 7, boxSizing: 'border-box',
+  flex: 1, minWidth: 0, height: 30, padding: '0 9px', borderRadius: 'var(--sb-r-chip)', boxSizing: 'border-box',
   background: C.field, border: `1px solid ${C.border}`,
   fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', color: C.ink, outline: 'none',
 }
 const TOOL: React.CSSProperties = {
-  width: 26, height: 26, borderRadius: 6, display: 'flex', alignItems: 'center',
+  width: 26, height: 26, borderRadius: 'var(--sb-r-chip)', display: 'flex', alignItems: 'center',
   justifyContent: 'center', background: 'transparent', border: 'none',
   color: C.muted, cursor: 'pointer', padding: 0,
 }
@@ -146,7 +146,7 @@ export function Composer({ seed, accounts, onClose, onSent }: {
 
   return (
     <div style={{
-      background: C.card, border: `1px solid ${C.border}`, borderRadius: 12,
+      background: C.card, border: `1px solid ${C.border}`, borderRadius: 'var(--sb-r-nav)',
       boxShadow: '0 6px 24px rgba(25,23,18,0.10)', overflow: 'hidden',
       display: 'flex', flexDirection: 'column', maxHeight: '68vh',
     }}>
@@ -216,7 +216,7 @@ export function Composer({ seed, accounts, onClose, onSent }: {
           }}
           style={{
             minHeight: 150, maxHeight: '32vh', overflowY: 'auto', marginTop: 3,
-            padding: '10px 11px', borderRadius: 8, background: C.field,
+            padding: '10px 11px', borderRadius: 'var(--sb-r-chip)', background: C.field,
             border: `1px solid ${C.border}`, outline: 'none',
             fontFamily: 'inherit', fontSize: 'var(--sb-t-body)', lineHeight: 1.55, color: C.ink,
           }}
@@ -227,7 +227,7 @@ export function Composer({ seed, accounts, onClose, onSent }: {
             {files.map((f, i) => (
               <span key={i} style={{
                 display: 'inline-flex', alignItems: 'center', gap: 6, height: 24, padding: '0 8px',
-                borderRadius: 999, background: C.field, border: `1px solid ${C.border}`,
+                borderRadius: 'var(--sb-r-pill)', background: C.field, border: `1px solid ${C.border}`,
                 fontSize: 'var(--sb-t-meta)', color: C.muted,
               }}>
                 <Paperclip size={11} />
@@ -258,7 +258,7 @@ export function Composer({ seed, accounts, onClose, onSent }: {
         <button onClick={() => void send()} disabled={sending}
           style={{
             display: 'flex', alignItems: 'center', gap: 6, height: 32, padding: '0 15px',
-            borderRadius: 9, background: C.amber, border: '1px solid rgba(25,23,18,0.18)',
+            borderRadius: 'var(--sb-r-sm)', background: C.amber, border: '1px solid rgba(25,23,18,0.18)',
             color: C.ink, fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
             cursor: sending ? 'default' : 'pointer', boxShadow: '0 2px 0 rgba(25,23,18,0.12)',
           }}>

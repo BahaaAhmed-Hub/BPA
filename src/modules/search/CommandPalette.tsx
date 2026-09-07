@@ -32,7 +32,7 @@ interface Hit {
 
 const CHIP: React.CSSProperties = {
   display: 'inline-flex', alignItems: 'center', gap: 4, height: 22, padding: '0 8px',
-  borderRadius: 6, background: FIELD, border: '1px solid var(--sb-border)',
+  borderRadius: 'var(--sb-r-chip)', background: FIELD, border: '1px solid var(--sb-border)',
   fontSize: 'var(--sb-t-micro)', color: MUTED, fontFamily: 'inherit', flexShrink: 0,
 }
 
@@ -235,7 +235,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
         onClick={e => e.stopPropagation()}
         style={{
           width: '100%', maxWidth: 700, background: 'var(--sb-card)',
-          border: '1px solid var(--sb-border)', borderRadius: 16, overflow: 'hidden',
+          border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-card)', overflow: 'hidden',
           boxShadow: '0 40px 80px -30px rgba(25,23,18,.55)',
           display: 'flex', flexDirection: 'column', maxHeight: '72vh',
         }}>
@@ -283,11 +283,11 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
                   onClick={hit.run}
                   style={{
                     display: 'flex', alignItems: 'center', gap: 11, minWidth: 0,
-                    margin: '0 8px', padding: '8px 10px', borderRadius: 10, cursor: 'pointer',
+                    margin: '0 8px', padding: '8px 10px', borderRadius: 'var(--sb-r-nav)', cursor: 'pointer',
                     background: on ? FIELD : 'transparent',
                   }}>
                   <span style={{
-                    width: 28, height: 28, borderRadius: 8, flexShrink: 0,
+                    width: 28, height: 28, borderRadius: 'var(--sb-r-chip)', flexShrink: 0,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     background: FIELD, border: '1px solid var(--sb-border)', color: MUTED,
                   }}>

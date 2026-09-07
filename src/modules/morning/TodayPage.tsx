@@ -31,7 +31,7 @@ import type { Task } from '@/types'
 // ─── Tokens ──────────────────────────────────────────────────────────────────
 
 const CARD: React.CSSProperties = {
-  background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 16,
+  background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
   boxShadow: '0 1px 3px rgba(25,23,18,0.05)', minWidth: 0,
 }
 const INK = 'var(--sb-ink-1)'
@@ -43,7 +43,7 @@ const AMBER = 'var(--sb-accent)'
 
 const PILL: React.CSSProperties = {
   display: 'inline-flex', alignItems: 'center', gap: 6, height: 30, padding: '0 12px',
-  borderRadius: 999, background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
+  borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
   color: INK, fontSize: 'var(--sb-t-body-s)', fontFamily: 'inherit', cursor: 'pointer',
 }
 const GHOST_BTN: React.CSSProperties = {
@@ -51,7 +51,7 @@ const GHOST_BTN: React.CSSProperties = {
   color: GHOST, display: 'flex', alignItems: 'center',
 }
 const ICON_TILE: React.CSSProperties = {
-  width: 26, height: 26, borderRadius: 8, flexShrink: 0,
+  width: 26, height: 26, borderRadius: 'var(--sb-r-chip)', flexShrink: 0,
   display: 'flex', alignItems: 'center', justifyContent: 'center',
   background: FIELD, border: '1px solid var(--sb-border)', color: MUTED,
 }
@@ -255,14 +255,14 @@ function MailPopup({ row, onClose, onArchive, onAddTask }: {
         onClick={e => e.stopPropagation()}
         style={{
           width: '100%', maxWidth: 760, maxHeight: '80vh', display: 'flex', flexDirection: 'column',
-          background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 16, overflow: 'hidden',
+          background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-card)', overflow: 'hidden',
           boxShadow: '0 40px 80px -30px rgba(25,23,18,.55)',
         }}>
 
         {/* Who, what, when */}
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '16px 18px 14px', borderBottom: `1px solid ${HAIR}` }}>
           <span style={{
-            width: 38, height: 38, borderRadius: '50%', flexShrink: 0,
+            width: 38, height: 38, borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             background: 'var(--sb-field)', color: MUTED, fontSize: 'var(--sb-t-body-s)', fontWeight: 700,
           }}>{initialsOf(row.fromName || row.fromEmail)}</span>
@@ -282,14 +282,14 @@ function MailPopup({ row, onClose, onArchive, onAddTask }: {
           </div>
           {row.needsYou && (
             <span style={{
-              flexShrink: 0, height: 20, padding: '0 8px', borderRadius: 6,
+              flexShrink: 0, height: 20, padding: '0 8px', borderRadius: 'var(--sb-r-chip)',
               background: 'rgba(var(--sb-accent-rgb),0.28)', border: '1px solid rgba(var(--sb-accent-rgb),0.7)',
               color: '#7A6412', fontSize: 'var(--sb-t-micro)', fontWeight: 800, letterSpacing: '0.06em',
               display: 'inline-flex', alignItems: 'center',
             }}>NEEDS YOU</span>
           )}
           <button onClick={onClose} title="Close"
-            style={{ ...ICON_TILE, width: 28, height: 28, borderRadius: '50%', cursor: 'pointer' }}>
+            style={{ ...ICON_TILE, width: 28, height: 28, borderRadius: 'var(--sb-r-pill)', cursor: 'pointer' }}>
             <X size={14} />
           </button>
         </div>
@@ -401,7 +401,7 @@ function MailCard({ rows, loading, error, newsletters, onArchive, onArchiveAll, 
                 </span>
                 {r.needsYou && (
                   <span style={{
-                    flexShrink: 0, height: 18, padding: '0 7px', borderRadius: 5,
+                    flexShrink: 0, height: 18, padding: '0 7px', borderRadius: 'var(--sb-r-chip)',
                     background: 'rgba(var(--sb-accent-rgb),0.28)', border: '1px solid rgba(var(--sb-accent-rgb),0.7)',
                     color: '#7A6412', fontSize: 'var(--sb-t-micro)', fontWeight: 800, letterSpacing: '0.06em',
                     display: 'inline-flex', alignItems: 'center',
@@ -422,7 +422,7 @@ function MailCard({ rows, loading, error, newsletters, onArchive, onArchiveAll, 
               </div>
               {r.snippet && (
                 <div style={{
-                  marginTop: 7, marginLeft: 38, padding: '7px 10px', borderRadius: 8,
+                  marginTop: 7, marginLeft: 38, padding: '7px 10px', borderRadius: 'var(--sb-r-chip)',
                   background: FIELD, border: `1px solid ${HAIR}`,
                   fontSize: 'var(--sb-t-body-s)', color: MUTED, lineHeight: 1.45,
                   overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
@@ -699,7 +699,7 @@ function PlanCard({
                   {hhmm(now)}
                 </span>
                 <span style={{ position: 'absolute', top: 0, left: 44, right: 0, height: 1, background: 'var(--sb-negative)' }} />
-                <span style={{ position: 'absolute', top: -2.5, left: 42, width: 6, height: 6, borderRadius: 999, background: 'var(--sb-negative)' }} />
+                <span style={{ position: 'absolute', top: -2.5, left: 42, width: 6, height: 6, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-negative)' }} />
               </div>
             )}
 
@@ -734,7 +734,7 @@ function PlanCard({
                     display: 'flex', alignItems: tall ? 'flex-start' : 'center',
                     gap: tight ? 5 : 8, boxSizing: 'border-box',
                     padding: tall ? '6px 8px 0' : tight ? '0 7px' : '0 10px',
-                    borderRadius: 9, minWidth: 0, overflow: 'hidden',
+                    borderRadius: 'var(--sb-r-sm)', minWidth: 0, overflow: 'hidden',
                     background: status === 'cancelled' ? 'var(--sb-field)'
                       : b.kind === 'proposed' ? 'rgba(var(--sb-accent-rgb),0.20)' : FIELD,
                     border: `1px solid ${b.kind === 'proposed' ? 'rgba(var(--sb-accent-rgb),0.6)' : 'var(--sb-border)'}`,
@@ -773,7 +773,7 @@ function PlanCard({
                         onPointerDown={e => e.stopPropagation()}
                         title={status === 'done' ? 'Not done after all' : 'Mark done'}
                         style={{
-                          ...ICON_TILE, width: 20, height: 20, borderRadius: 999, cursor: 'pointer', flexShrink: 0,
+                          ...ICON_TILE, width: 20, height: 20, borderRadius: 'var(--sb-r-pill)', cursor: 'pointer', flexShrink: 0,
                           background: status === 'done' ? 'var(--sb-positive)' : 'var(--sb-card)',
                           borderColor: status === 'done' ? 'var(--sb-positive)' : 'var(--sb-border)',
                           color: status === 'done' ? 'var(--sb-card)' : MUTED,
@@ -785,7 +785,7 @@ function PlanCard({
                         onPointerDown={e => e.stopPropagation()}
                         title={status === 'cancelled' ? 'Restore' : 'Mark cancelled'}
                         style={{
-                          ...ICON_TILE, width: 20, height: 20, borderRadius: 999, cursor: 'pointer', flexShrink: 0,
+                          ...ICON_TILE, width: 20, height: 20, borderRadius: 'var(--sb-r-pill)', cursor: 'pointer', flexShrink: 0,
                           background: status === 'cancelled' ? 'var(--sb-negative)' : 'var(--sb-card)',
                           borderColor: status === 'cancelled' ? 'var(--sb-negative)' : 'var(--sb-border)',
                           color: status === 'cancelled' ? 'var(--sb-card)' : MUTED,
@@ -917,7 +917,7 @@ function HabitsCard({ habits, logs, qtyLogs, today, onToggle, onSetQty, onOpenTr
                     const isToday = d === today
                     return (
                       <span key={d} title={d} style={{
-                        width: 15, height: 15, borderRadius: 4, boxSizing: 'border-box',
+                        width: 15, height: 15, borderRadius: 'var(--sb-r-chip)', boxSizing: 'border-box',
                         background: on ? INK : 'var(--sb-field)',
                         border: isToday ? `1.5px solid ${on ? INK : '#CFC6B0'}` : '1.5px solid transparent',
                       }} />
@@ -1280,14 +1280,14 @@ export function TodayPage() {
                 rows={4}
                 style={{
                   width: '100%', boxSizing: 'border-box', marginTop: 14, resize: 'vertical',
-                  background: FIELD, border: '1px solid var(--sb-border)', borderRadius: 10, padding: '10px 12px',
+                  background: FIELD, border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', padding: '10px 12px',
                   fontSize: 'var(--sb-t-body)', color: INK, fontFamily: 'inherit', lineHeight: 1.6, outline: 'none', textAlign: 'left',
                 }} />
             )}
             {brief.callout && (
               <div style={{
                 display: 'flex', alignItems: 'center', gap: 9, marginTop: 16,
-                padding: '11px 13px', borderRadius: 10,
+                padding: '11px 13px', borderRadius: 'var(--sb-r-nav)',
                 background: 'rgba(var(--sb-accent-rgb),0.14)', border: '1px solid rgba(var(--sb-accent-rgb),0.5)',
               }}>
                 <Zap size={14} strokeWidth={2} style={{ color: '#9A7B1F', flexShrink: 0 }} />
@@ -1348,7 +1348,7 @@ export function TodayPage() {
                         onClick={() => toggleComplete(t.id)}
                         title="Complete"
                         style={{
-                          width: 17, height: 17, borderRadius: 5, boxSizing: 'border-box', flexShrink: 0, padding: 0,
+                          width: 17, height: 17, borderRadius: 'var(--sb-r-chip)', boxSizing: 'border-box', flexShrink: 0, padding: 0,
                           border: '1.5px solid #CFC6B0', background: 'var(--sb-card)', cursor: 'pointer',
                         }} />
                       <span style={{ flex: 1, minWidth: 0, fontSize: 'var(--sb-t-label)', fontWeight: 600, color: INK, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

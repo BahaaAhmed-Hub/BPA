@@ -84,13 +84,13 @@ function QuadrantPanel({ spec, tasks, onOpen, onAction, groupBy }: {
     <div ref={setNodeRef} style={{
       background: isOver ? '#FDF6DC' : spec.accent ? '#FFFCF0' : '#FDFCF8',
       border: `1px solid ${isOver ? 'var(--sb-accent)' : spec.accent ? '#F0DFA8' : 'var(--sb-border)'}`,
-      borderRadius: 14, padding: 14, transition: 'background .12s, border-color .12s',
+      borderRadius: 'var(--sb-r-nav)', padding: 14, transition: 'background .12s, border-color .12s',
       display: 'flex', flexDirection: 'column', gap: 10, minWidth: 0,
     }}>
       {/* Quadrant header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, minWidth: 0 }}>
         <span style={{
-          width: 22, height: 22, borderRadius: 6, flexShrink: 0,
+          width: 22, height: 22, borderRadius: 'var(--sb-r-chip)', flexShrink: 0,
           background: 'var(--sb-ink-1)', color: 'var(--sb-card)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontSize: badgeFontSize(spec.badge), fontWeight: 700, letterSpacing: '0.04em',
@@ -108,14 +108,14 @@ function QuadrantPanel({ spec, tasks, onOpen, onAction, groupBy }: {
           onClick={() => setAdding(true)}
           title={`Add a task to ${spec.title}`}
           style={{
-            flexShrink: 0, width: 26, height: 26, padding: 0, borderRadius: '50%',
+            flexShrink: 0, width: 26, height: 26, padding: 0, borderRadius: 'var(--sb-r-pill)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             background: adding ? 'var(--sb-ink-1)' : 'var(--sb-card)',
             border: `1px solid ${adding ? 'var(--sb-ink-1)' : 'var(--sb-border)'}`,
             color: adding ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)', cursor: 'pointer',
           }}><Plus size={14} strokeWidth={2.2} /></button>
         <button onClick={() => onAction(spec, tasks)} style={{
-          flexShrink: 0, height: 28, padding: '0 12px', borderRadius: 999,
+          flexShrink: 0, height: 28, padding: '0 12px', borderRadius: 'var(--sb-r-pill)',
           background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-1)',
           fontSize: 'var(--sb-t-body-s)', fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit',
         }}>{spec.action}</button>
@@ -135,7 +135,7 @@ function QuadrantPanel({ spec, tasks, onOpen, onAction, groupBy }: {
           placeholder="What is it?"
           style={{
             width: '100%', boxSizing: 'border-box', background: 'var(--sb-card)',
-            border: '1px solid var(--sb-accent)', borderRadius: 10, padding: '11px 13px',
+            border: '1px solid var(--sb-accent)', borderRadius: 'var(--sb-r-nav)', padding: '11px 13px',
             fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)', outline: 'none', fontFamily: 'inherit',
           }}
         />
@@ -159,7 +159,7 @@ function QuadrantPanel({ spec, tasks, onOpen, onAction, groupBy }: {
                   {isOpen
                     ? <ChevronDown size={12} strokeWidth={2.2} color="var(--sb-ink-4)" />
                     : <ChevronRight size={12} strokeWidth={2.2} color="var(--sb-ink-4)" />}
-                  <span style={{ width: 7, height: 7, borderRadius: 999, background: g.color, flexShrink: 0 }} />
+                  <span style={{ width: 7, height: 7, borderRadius: 'var(--sb-r-pill)', background: g.color, flexShrink: 0 }} />
                   <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-ink-3)' }}>{g.label}</span>
                   <CountBadge value={g.tasks.length} />
                 </button>

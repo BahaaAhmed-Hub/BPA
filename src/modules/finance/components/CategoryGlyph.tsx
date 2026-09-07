@@ -12,7 +12,7 @@ export function CategoryGlyph({ icon, size = 18, color }: {
   if (Line) return <Line size={size} strokeWidth={1.75} color={color ?? 'currentColor'} />
 
   if (icon && (icon.startsWith('data:') || icon.startsWith('http'))) {
-    return <img src={icon} alt="" style={{ width: size, height: size, objectFit: 'cover', borderRadius: 5 }} />
+    return <img src={icon} alt="" style={{ width: size, height: size, objectFit: 'cover', borderRadius: 'var(--sb-r-chip)' }} />
   }
   return <span style={{ fontSize: size, lineHeight: 1 }}>{icon || '📁'}</span>
 }

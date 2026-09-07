@@ -40,7 +40,7 @@ const SLOTS: string[] = Array.from({ length: 96 }, (_, i) =>
 
 const FIELD: React.CSSProperties = {
   width: '100%', boxSizing: 'border-box', height: 32, padding: '0 10px',
-  background: 'var(--sb-field)', border: '1px solid var(--sb-border)', borderRadius: 8,
+  background: 'var(--sb-field)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-chip)',
   ...T.meta, color: 'var(--sb-ink-1)', cursor: 'pointer',
   display: 'flex', alignItems: 'center', textAlign: 'left',
 }
@@ -93,7 +93,7 @@ export function TimeSelect({ value, onChange, label, size = 'compact' }: {
       <button type="button" onClick={() => setOpen(o => !o)} style={{
         ...FIELD, borderColor: open ? '#CFC6B0' : 'var(--sb-border)',
         ...(size === 'large' ? {
-          height: 48, borderRadius: 11, ...T.body,
+          height: 48, borderRadius: 'var(--sb-r-nav)', ...T.body,
           border: '1px solid transparent', justifyContent: 'center',
         } : null),
       }}>{formatTime(value)}</button>
@@ -101,7 +101,7 @@ export function TimeSelect({ value, onChange, label, size = 'compact' }: {
       {open && (
         <div style={{
           position: 'absolute', top: 'calc(100% + 5px)', left: 0, zIndex: 90, width: '100%', minWidth: 124,
-          background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 10, padding: 6,
+          background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', padding: 6,
           boxShadow: '0 18px 40px -18px rgba(25,23,18,.45)',
         }}>
           <input
@@ -111,7 +111,7 @@ export function TimeSelect({ value, onChange, label, size = 'compact' }: {
             placeholder="type e.g. 9:45"
             style={{
               width: '100%', boxSizing: 'border-box', height: 28, padding: '0 8px', marginBottom: 5,
-              background: 'var(--sb-field)', border: '1px solid var(--sb-border)', borderRadius: 7,
+              background: 'var(--sb-field)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-chip)',
               ...T.meta, color: 'var(--sb-ink-1)', outline: 'none', textAlign: 'left',
             }} />
           <div ref={listRef} style={{ maxHeight: 196, overflowY: 'auto', scrollbarWidth: 'thin' }}>
@@ -119,7 +119,7 @@ export function TimeSelect({ value, onChange, label, size = 'compact' }: {
               const on = t === value
               return (
                 <button key={t} type="button" onClick={() => { onChange(t); setOpen(false) }} style={{
-                  width: '100%', height: 28, padding: '0 8px', border: 'none', borderRadius: 7,
+                  width: '100%', height: 28, padding: '0 8px', border: 'none', borderRadius: 'var(--sb-r-chip)',
                   background: on ? 'var(--sb-ink-1)' : 'transparent', color: on ? 'var(--sb-card)' : 'var(--sb-ink-1)',
                   ...T.meta, fontWeight: on ? 600 : 500, cursor: 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -182,7 +182,7 @@ export function SchedulePopover({ date, start, duration, onApply, onClose, align
   const minutes = Math.max(0, toMinutes(to) - toMinutes(from))
   const { conflicts, checking } = useSlotConflicts(picked, from, to, ignoreEventId)
   const navBtn: React.CSSProperties = {
-    width: 22, height: 22, borderRadius: '50%', border: 'none', background: 'transparent',
+    width: 22, height: 22, borderRadius: 'var(--sb-r-pill)', border: 'none', background: 'transparent',
     color: 'var(--sb-ink-3)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0,
   }
 
@@ -194,7 +194,7 @@ export function SchedulePopover({ date, start, duration, onApply, onClose, align
       style={{
         position: 'absolute', top: 'calc(100% + 8px)', zIndex: 80, width: 292,
         ...(align === 'right' ? { right: 0 } : { left: 0 }),
-        background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 14, padding: 14,
+        background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-card)', padding: 14,
         boxShadow: '0 24px 56px -22px rgba(25,23,18,.45)', textAlign: 'left',
       }}>
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: 10 }}>
@@ -219,7 +219,7 @@ export function SchedulePopover({ date, start, duration, onApply, onClose, align
           const on = iso === picked
           return (
             <button key={iso} type="button" onClick={() => setPicked(iso)} style={{
-              height: 28, borderRadius: 7, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+              height: 28, borderRadius: 'var(--sb-r-chip)', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
               background: on ? 'var(--sb-ink-1)' : 'transparent',
               color: on ? 'var(--sb-card)' : outside ? '#CFC6B0' : 'var(--sb-ink-1)',
               fontSize: 'var(--sb-t-body-s)', fontWeight: on ? 700 : 500,
@@ -245,7 +245,7 @@ export function SchedulePopover({ date, start, duration, onApply, onClose, align
           </p>
         ) : (
           <div style={{
-            marginTop: 9, padding: '8px 10px', borderRadius: 9,
+            marginTop: 9, padding: '8px 10px', borderRadius: 'var(--sb-r-sm)',
             background: 'rgba(var(--sb-accent-rgb),0.22)', border: '1px solid rgba(var(--sb-accent-rgb),0.7)',
           }}>
             <p style={{ ...T.meta, margin: 0, fontWeight: 600, color: '#3D3926' }}>
@@ -277,7 +277,7 @@ export function SchedulePopover({ date, start, duration, onApply, onClose, align
             type="button"
             onClick={() => { onApply({ dueDate: undefined, plannedTime: undefined, duration: undefined }); onClose() }}
             style={{
-              height: 30, padding: '0 12px', borderRadius: 8, border: '1px solid var(--sb-border)', cursor: 'pointer',
+              height: 30, padding: '0 12px', borderRadius: 'var(--sb-r-chip)', border: '1px solid var(--sb-border)', cursor: 'pointer',
               background: 'transparent', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body-s)', fontWeight: 500, fontFamily: 'inherit',
             }}>Clear</button>
         )}
@@ -285,7 +285,7 @@ export function SchedulePopover({ date, start, duration, onApply, onClose, align
           type="button"
           onClick={() => { onApply({ dueDate: picked, plannedTime: from, duration: minutes || undefined }); onClose() }}
           style={{
-            height: 30, padding: '0 14px', borderRadius: 8, border: 'none', cursor: 'pointer',
+            height: 30, padding: '0 14px', borderRadius: 'var(--sb-r-chip)', border: 'none', cursor: 'pointer',
             background: 'var(--sb-accent)', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, fontFamily: 'inherit',
           }}>Set block</button>
       </div>

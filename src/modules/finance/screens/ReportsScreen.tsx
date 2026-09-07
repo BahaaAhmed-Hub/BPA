@@ -273,10 +273,10 @@ export function ReportsScreen(_props?: any) {
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8, paddingBottom: 3 }}>
           {/* View toggle */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 2, padding: 3, borderRadius: 999, background: 'var(--sb-field)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 2, padding: 3, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-field)' }}>
             {(['donut', 'bars'] as const).map(v => (
               <button key={v} onClick={() => setReportView(v)} style={{
-                height: 28, padding: '0 14px', borderRadius: 999, border: 'none',
+                height: 28, padding: '0 14px', borderRadius: 'var(--sb-r-pill)', border: 'none',
                 background: reportView === v ? 'var(--sb-card)' : 'transparent',
                 color: reportView === v ? 'var(--sb-ink-1)' : 'var(--sb-ink-3)',
                 fontSize: 'var(--sb-t-meta)', fontWeight: reportView === v ? 600 : 400, cursor: 'pointer',
@@ -299,7 +299,7 @@ export function ReportsScreen(_props?: any) {
           <div style={{
             display: 'inline-flex', alignItems: 'center', gap: 6,
             padding: '5px 8px 5px 12px',
-            background: C.surface, border: `1px solid ${C.border}`, borderRadius: 10,
+            background: C.surface, border: `1px solid ${C.border}`, borderRadius: 'var(--sb-r-nav)',
           }}>
             <input type="date" value={rangeFrom} max={rangeTo || undefined}
               onChange={e => setRangeFrom(e.target.value)} style={RANGE_FIELD} />
@@ -317,7 +317,7 @@ export function ReportsScreen(_props?: any) {
                 <button key={label}
                   onClick={() => { setRangeFrom(from); setRangeTo(to) }}
                   style={{
-                    padding: '4px 9px', borderRadius: 7, border: 'none', cursor: 'pointer',
+                    padding: '4px 9px', borderRadius: 'var(--sb-r-chip)', border: 'none', cursor: 'pointer',
                     fontFamily: 'inherit', fontSize: 'var(--sb-t-meta)', fontWeight: on ? 700 : 500,
                     background: on ? 'var(--sb-ink-1)' : 'transparent',
                     color: on ? 'var(--sb-ink-on-dark)' : C.textDim,
@@ -426,7 +426,7 @@ export function ReportsScreen(_props?: any) {
                     </div>
                     <div style={{
                       height: 30,
-                      borderRadius: 6,
+                      borderRadius: 'var(--sb-r-chip)',
                       background: C.surface,
                       overflow: 'hidden',
                       border: `1px solid ${C.border}`,
@@ -438,7 +438,7 @@ export function ReportsScreen(_props?: any) {
                           width: `${Math.max((d.amt / maxAmt) * 100, 42 / (maxAmt / 100))}%`,
                           minWidth: 42,
                           background: d.color,
-                          borderRadius: 6,
+                          borderRadius: 'var(--sb-r-chip)',
                           animationDelay: `${i * 60}ms`,
                         }} />
                     </div>

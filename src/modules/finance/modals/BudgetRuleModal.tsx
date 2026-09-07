@@ -111,11 +111,11 @@ export function monthlyAmount(rule?: Pick<BudgetRule, 'amount' | 'frequency'>): 
 
 const PILL: React.CSSProperties = {
   display: 'inline-flex', alignItems: 'center', gap: 6, height: 42, boxSizing: 'border-box',
-  padding: '0 14px', borderRadius: 10, background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
+  padding: '0 14px', borderRadius: 'var(--sb-r-nav)', background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
   color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body)', fontFamily: 'inherit', cursor: 'pointer', minWidth: 0,
 }
 const ROUND: React.CSSProperties = {
-  width: 30, height: 30, borderRadius: '50%', flexShrink: 0, padding: 0,
+  width: 30, height: 30, borderRadius: 'var(--sb-r-pill)', flexShrink: 0, padding: 0,
   display: 'flex', alignItems: 'center', justifyContent: 'center',
   background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-3)', cursor: 'pointer',
 }
@@ -148,7 +148,7 @@ function IntervalPicker({ value, onChange }: { value: Frequency; onChange: (f: F
       {open && (
         <div style={{
           position: 'absolute', top: 46, right: 0, minWidth: 168, zIndex: 30, padding: 5,
-          background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 12,
+          background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
           boxShadow: '0 12px 32px rgba(25,23,18,0.18)',
         }}>
           {choices.map(v => {
@@ -158,7 +158,7 @@ function IntervalPicker({ value, onChange }: { value: Frequency; onChange: (f: F
               <button key={v} type="button" onClick={() => { onChange(v); setOpen(false) }}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '9px 10px',
-                  border: 'none', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit',
+                  border: 'none', borderRadius: 'var(--sb-r-chip)', cursor: 'pointer', fontFamily: 'inherit',
                   background: on ? 'rgba(var(--sb-accent-rgb),0.18)' : 'transparent',
                   fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)', textAlign: 'left',
                 }}>
@@ -183,11 +183,11 @@ function Switch({ on, onChange, label, sub }: {
         background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit',
       }}>
       <span style={{
-        width: 34, height: 20, borderRadius: 999, flexShrink: 0, marginTop: 1,
+        width: 34, height: 20, borderRadius: 'var(--sb-r-pill)', flexShrink: 0, marginTop: 1,
         background: on ? 'var(--sb-ink-1)' : '#E4DCC6', position: 'relative', transition: 'background .15s',
       }}>
         <span style={{
-          position: 'absolute', top: 2, left: on ? 16 : 2, width: 16, height: 16, borderRadius: '50%',
+          position: 'absolute', top: 2, left: on ? 16 : 2, width: 16, height: 16, borderRadius: 'var(--sb-r-pill)',
           background: 'var(--sb-card)', boxShadow: '0 1px 2px rgba(25,23,18,0.2)', transition: 'left .15s',
         }} />
       </span>
@@ -292,7 +292,7 @@ export function BudgetRuleModal({
       <div ref={box} style={{
         width: 'clamp(320px, 94vw, 440px)', maxHeight: '90vh', overflowY: 'auto',
         boxSizing: 'border-box', scrollbarWidth: 'thin',
-        background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 18,
+        background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
         boxShadow: '0 24px 60px rgba(25,23,18,0.24)', padding: '18px 20px 22px',
       }}>
 
@@ -305,7 +305,7 @@ export function BudgetRuleModal({
             trigger={onClick => (
               <button onClick={onClick} title="Change the icon"
                 style={{
-                  width: 40, height: 40, borderRadius: 11, flexShrink: 0, padding: 0,
+                  width: 40, height: 40, borderRadius: 'var(--sb-r-nav)', flexShrink: 0, padding: 0,
                   border: '1px solid var(--sb-border)', background: 'var(--sb-field)', cursor: 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
                 }}>
@@ -327,7 +327,7 @@ export function BudgetRuleModal({
               title="Click to rename"
               style={{
                 width: '100%', boxSizing: 'border-box', padding: '2px 6px', marginLeft: -6,
-                background: 'transparent', border: '1px solid transparent', borderRadius: 7,
+                background: 'transparent', border: '1px solid transparent', borderRadius: 'var(--sb-r-chip)',
                 fontFamily: DISPLAY, fontSize: 'var(--sb-t-h2)', fontWeight: 600, letterSpacing: '-0.02em',
                 color: 'var(--sb-ink-1)', outline: 'none',
               }}
@@ -352,7 +352,7 @@ export function BudgetRuleModal({
 
         {/* Where it stands this month */}
         <div style={{
-          marginTop: 14, padding: '13px 15px', borderRadius: 12,
+          marginTop: 14, padding: '13px 15px', borderRadius: 'var(--sb-r-nav)',
           background: 'var(--sb-field)', border: '1px solid var(--sb-border)',
         }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
@@ -369,15 +369,15 @@ export function BudgetRuleModal({
             <span style={{ flex: 1 }} />
             {spent > 0 && (
               <button onClick={onDrill}
-                style={{ height: 26, padding: '0 10px', borderRadius: 7, background: 'var(--sb-positive-tint)', border: '1px solid #C8D9A8', color: 'var(--sb-positive)', fontSize: 'var(--sb-t-meta)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                style={{ height: 26, padding: '0 10px', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-positive-tint)', border: '1px solid #C8D9A8', color: 'var(--sb-positive)', fontSize: 'var(--sb-t-meta)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
                 View all →
               </button>
             )}
           </div>
           {budget > 0 && (
             <>
-              <div style={{ height: 6, borderRadius: 999, background: 'var(--sb-field)', marginTop: 10, overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: `${pct * 100}%`, background: over ? tone : near ? '#E8A94A' : 'var(--sb-positive)', borderRadius: 999 }} />
+              <div style={{ height: 6, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-field)', marginTop: 10, overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${pct * 100}%`, background: over ? tone : near ? '#E8A94A' : 'var(--sb-positive)', borderRadius: 'var(--sb-r-pill)' }} />
               </div>
               <div style={{ fontSize: 'var(--sb-t-meta)', color: over ? tone : near ? '#8A6D0B' : 'var(--sb-ink-3)', marginTop: 7 }}>
                 {over  ? `Over by ${cur} ${fmt(spent - budget)}`
@@ -630,7 +630,7 @@ export function BudgetRuleModal({
             onClick={() => { onDelete(); onClose() }}
             title="Remove the budget — the category and its transactions stay"
             style={{
-              marginTop: 12, width: '100%', height: 34, borderRadius: 9,
+              marginTop: 12, width: '100%', height: 34, borderRadius: 'var(--sb-r-sm)',
               background: 'none', border: 'none', fontFamily: 'inherit',
               color: 'var(--sb-negative)', fontSize: 'var(--sb-t-body-s)', cursor: 'pointer',
             }}>

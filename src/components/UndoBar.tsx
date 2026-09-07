@@ -68,7 +68,7 @@ export function UndoBar() {
     <div style={{
       position: 'fixed', left: '50%', bottom: 26, transform: 'translateX(-50%)',
       zIndex: 4000, display: 'flex', alignItems: 'center', gap: 12,
-      background: 'var(--sb-ink-1)', color: 'var(--sb-ink-on-dark)', borderRadius: 12,
+      background: 'var(--sb-ink-1)', color: 'var(--sb-ink-on-dark)', borderRadius: 'var(--sb-r-nav)',
       padding: isFlash ? '11px 18px' : '9px 9px 9px 18px',
       boxShadow: '0 6px 24px rgba(25,23,18,0.24)',
       fontFamily: 'inherit', fontSize: 'var(--sb-t-body)', maxWidth: 'min(560px, 92vw)',
@@ -80,7 +80,7 @@ export function UndoBar() {
           title="Undo — ⌘Z"
           style={{
             display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0,
-            height: 30, padding: '0 12px', borderRadius: 9, cursor: 'pointer',
+            height: 30, padding: '0 12px', borderRadius: 'var(--sb-r-sm)', cursor: 'pointer',
             background: 'var(--sb-accent)', border: '1px solid rgba(25,23,18,0.18)',
             color: 'var(--sb-ink-1)', fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
           }}>

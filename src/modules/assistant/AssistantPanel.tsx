@@ -110,7 +110,7 @@ function MessageBubble({ msg }: { msg: DisplayMessage }) {
       <div style={{ display: 'flex', justifyContent: 'center', margin: '4px 0' }}>
         <span style={{
           display: 'inline-flex', alignItems: 'center', gap: 5,
-          padding: '3px 10px', borderRadius: 20, fontSize: 'var(--sb-t-meta)',
+          padding: '3px 10px', borderRadius: 'var(--sb-r-card)', fontSize: 'var(--sb-t-meta)',
           background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)',
           color: '#818CF8',
         }}>
@@ -125,7 +125,7 @@ function MessageBubble({ msg }: { msg: DisplayMessage }) {
     return (
       <div style={{ margin: '8px 12px' }}>
         <div style={{
-          padding: '10px 12px', borderRadius: 10, fontSize: 'var(--sb-t-body-s)', lineHeight: 1.55,
+          padding: '10px 12px', borderRadius: 'var(--sb-r-nav)', fontSize: 'var(--sb-t-body-s)', lineHeight: 1.55,
           background: 'rgba(224,82,82,0.1)', border: '1px solid rgba(224,82,82,0.2)',
           color: '#F87171',
         }}>
@@ -141,7 +141,7 @@ function MessageBubble({ msg }: { msg: DisplayMessage }) {
     <div style={{ display: 'flex', justifyContent: isUser ? 'flex-end' : 'flex-start', margin: '6px 12px' }}>
       {!isUser && (
         <div style={{
-          width: 26, height: 26, borderRadius: '50%', flexShrink: 0, marginRight: 8, marginTop: 2,
+          width: 26, height: 26, borderRadius: 'var(--sb-r-pill)', flexShrink: 0, marginRight: 8, marginTop: 2,
           background: 'linear-gradient(135deg, #4F46E5 0%, #818CF8 100%)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
@@ -167,15 +167,15 @@ function ThinkingDot() {
   return (
     <div style={{ display: 'flex', justifyContent: 'flex-start', margin: '6px 12px', alignItems: 'center', gap: 8 }}>
       <div style={{
-        width: 26, height: 26, borderRadius: '50%', flexShrink: 0,
+        width: 26, height: 26, borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
         background: 'linear-gradient(135deg, #4F46E5 0%, #818CF8 100%)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}>
         <Brain size={13} color="white" />
       </div>
-      <div style={{ display: 'flex', gap: 4, padding: '10px 14px', background: 'var(--sb-field)', border: '1px solid var(--sb-border)', borderRadius: '4px 14px 14px 14px' }}>
+      <div style={{ display: 'flex', gap: 4, padding: '10px 14px', background: 'var(--sb-field)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-chip) var(--sb-r-card) var(--sb-r-card) var(--sb-r-card)' }}>
         {[0, 1, 2].map(i => (
-          <div key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: '#818CF8', animation: `bounce 1.2s ease-in-out ${i * 0.2}s infinite` }} />
+          <div key={i} style={{ width: 6, height: 6, borderRadius: 'var(--sb-r-pill)', background: '#818CF8', animation: `bounce 1.2s ease-in-out ${i * 0.2}s infinite` }} />
         ))}
       </div>
     </div>
@@ -413,7 +413,7 @@ export function AssistantPanel({ open, onClose }: AssistantPanelProps) {
           padding: '14px 16px', borderBottom: '1px solid var(--sb-border)', flexShrink: 0,
         }}>
           <div style={{
-            width: 32, height: 32, borderRadius: 9,
+            width: 32, height: 32, borderRadius: 'var(--sb-r-sm)',
             background: 'linear-gradient(135deg, #4F46E5 0%, #818CF8 100%)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             boxShadow: '0 0 12px rgba(99,102,241,0.35)',
@@ -441,7 +441,7 @@ export function AssistantPanel({ open, onClose }: AssistantPanelProps) {
           {isEmpty ? (
             <div style={{ padding: '32px 20px', textAlign: 'center' }}>
               <div style={{
-                width: 56, height: 56, borderRadius: 16, margin: '0 auto 16px',
+                width: 56, height: 56, borderRadius: 'var(--sb-r-card)', margin: '0 auto 16px',
                 background: 'linear-gradient(135deg, rgba(79,70,229,0.2) 0%, rgba(129,140,248,0.1) 100%)',
                 border: '1px solid rgba(99,102,241,0.25)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -456,7 +456,7 @@ export function AssistantPanel({ open, onClose }: AssistantPanelProps) {
                 {SUGGESTIONS.map(s => (
                   <button key={s} onClick={() => void sendMessage(s)}
                     style={{
-                      padding: '9px 14px', borderRadius: 10, fontSize: 'var(--sb-t-body-s)', textAlign: 'left',
+                      padding: '9px 14px', borderRadius: 'var(--sb-r-nav)', fontSize: 'var(--sb-t-body-s)', textAlign: 'left',
                       background: 'var(--sb-field)', border: '1px solid var(--sb-border)',
                       color: 'var(--sb-ink-1)', cursor: 'pointer',
                       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -482,7 +482,7 @@ export function AssistantPanel({ open, onClose }: AssistantPanelProps) {
             display: 'flex', alignItems: 'flex-end', gap: 8,
             background: 'var(--sb-field)',
             border: '1px solid var(--sb-border)',
-            borderRadius: 12, padding: '10px 12px',
+            borderRadius: 'var(--sb-r-nav)', padding: '10px 12px',
           }}>
             <textarea
               ref={inputRef}
@@ -507,7 +507,7 @@ export function AssistantPanel({ open, onClose }: AssistantPanelProps) {
               onClick={() => void sendMessage(input)}
               disabled={!input.trim() || thinking}
               style={{
-                width: 32, height: 32, borderRadius: 9, border: 'none', cursor: 'pointer',
+                width: 32, height: 32, borderRadius: 'var(--sb-r-sm)', border: 'none', cursor: 'pointer',
                 background: !input.trim() || thinking ? 'rgba(99,102,241,0.2)' : 'linear-gradient(135deg, #4F46E5 0%, #818CF8 100%)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
                 transition: 'background 0.15s',
@@ -544,7 +544,7 @@ export function AssistantToggle({ open, onClick }: AssistantToggleProps) {
       title={open ? 'Close Assistant' : 'Open Professor AI'}
       style={{
         position: 'fixed', bottom: 24, right: open ? 406 : 24,
-        width: 48, height: 48, borderRadius: 14, border: 'none', cursor: 'pointer',
+        width: 48, height: 48, borderRadius: 'var(--sb-r-card)', border: 'none', cursor: 'pointer',
         background: open ? 'var(--sb-field)' : 'var(--sb-ink-1)',
         boxShadow: open
           ? '0 2px 12px rgba(25,23,18,0.18), inset 0 0 0 1px var(--sb-border)'

@@ -45,7 +45,7 @@ export function TaskRow({ task, onOpen, dense }: {
       onClick={e => { if (!(e.target as HTMLElement).closest('[data-nm]')) onOpen(task.id) }}
       style={{
         display: 'flex', alignItems: 'flex-start', gap: 12,
-        background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 10,
+        background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
         padding: dense ? '10px 13px' : '12px 14px',
         cursor: 'grab', minWidth: 0, touchAction: 'none',
         opacity: isDragging ? 0.35 : task.completed ? 0.55 : 1,
@@ -56,7 +56,7 @@ export function TaskRow({ task, onOpen, dense }: {
         onClick={() => requestComplete(task)}
         title={task.completed ? 'Reopen' : 'Complete'}
         style={{
-          width: 16, height: 16, borderRadius: 5, boxSizing: 'border-box', flexShrink: 0, padding: 0, marginTop: 2,
+          width: 16, height: 16, borderRadius: 'var(--sb-r-chip)', boxSizing: 'border-box', flexShrink: 0, padding: 0, marginTop: 2,
           border: task.completed ? '1.5px solid var(--sb-positive)' : '1.5px solid #CFC6B0',
           background: task.completed ? 'var(--sb-positive)' : 'var(--sb-card)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
@@ -158,7 +158,7 @@ export function TaskRow({ task, onOpen, dense }: {
           <span
             title={v.ownerName ?? 'Unassigned'}
             style={{
-              width: 22, height: 22, borderRadius: '50%', boxSizing: 'border-box',
+              width: 22, height: 22, borderRadius: 'var(--sb-r-pill)', boxSizing: 'border-box',
               background: v.ownerInitials ? 'var(--sb-ink-1)' : 'var(--sb-field)',
               border: v.ownerInitials ? 'none' : '1px solid var(--sb-border)',
               color: v.ownerInitials ? 'var(--sb-card)' : 'var(--sb-ink-4)',

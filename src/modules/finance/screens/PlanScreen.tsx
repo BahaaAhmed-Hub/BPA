@@ -128,10 +128,10 @@ export function PlanScreen() {
         </div>
         <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 9, paddingBottom: 3, flexShrink: 0 }}>
           {/* Tab switcher */}
-          <span style={{ display: 'flex', alignItems: 'center', gap: 2, height: 34, boxSizing: 'border-box', padding: 3, borderRadius: 999, background: 'var(--sb-field)' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 2, height: 34, boxSizing: 'border-box', padding: 3, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-field)' }}>
             {(['Plan', 'Simulate', 'History'] as const).map(t => (
               <button key={t} onClick={() => setTab(t)} style={{
-                height: 28, padding: '0 13px', borderRadius: 999,
+                height: 28, padding: '0 13px', borderRadius: 'var(--sb-r-pill)',
                 background: tab === t ? C.surface : 'transparent',
                 boxShadow: tab === t ? '0 1px 3px rgba(25,23,18,.16)' : 'none',
                 color: tab === t ? C.ink1 : C.ink3,
@@ -140,11 +140,11 @@ export function PlanScreen() {
               }}>{t}</button>
             ))}
           </span>
-          <button style={{ height: 34, padding: '0 14px', borderRadius: 999, background: C.surface, border: `1px solid ${C.border}`, color: C.ink1, fontSize: 'var(--sb-t-body-s)', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button style={{ height: 34, padding: '0 14px', borderRadius: 'var(--sb-r-pill)', background: C.surface, border: `1px solid ${C.border}`, color: C.ink1, fontSize: 'var(--sb-t-body-s)', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
             Change forecast
           </button>
-          <button style={{ height: 34, padding: '0 15px', borderRadius: 999, background: C.accent, color: C.ink1, fontSize: 'var(--sb-t-body-s)', fontWeight: 600, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, boxShadow: '0 2px 0 rgba(25,23,18,.14)' }}>
+          <button style={{ height: 34, padding: '0 15px', borderRadius: 'var(--sb-r-pill)', background: C.accent, color: C.ink1, fontSize: 'var(--sb-t-body-s)', fontWeight: 600, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, boxShadow: '0 2px 0 rgba(25,23,18,.14)' }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M13 3L5 14h6l-1 7 8-11h-6z"/></svg>
             Automate this plan
           </button>
@@ -164,12 +164,12 @@ export function PlanScreen() {
               return (
                 <button key={t.id} onClick={() => setSelectedTarget(t.id)} style={{
                   flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 9,
-                  padding: '10px 11px', borderRadius: 13,
+                  padding: '10px 11px', borderRadius: 'var(--sb-r-nav)',
                   background: active ? C.dark : C.surface,
                   border: `1px solid ${active ? C.dark : C.border}`,
                   cursor: 'pointer', boxSizing: 'border-box',
                 }}>
-                  <span style={{ width: 26, height: 26, borderRadius: 8, background: active ? 'rgba(253,248,231,.14)' : '#F5F1E4', color: active ? C.accent : C.ink3, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 'var(--sb-t-label)' }}>
+                  <span style={{ width: 26, height: 26, borderRadius: 'var(--sb-r-chip)', background: active ? 'rgba(253,248,231,.14)' : '#F5F1E4', color: active ? C.accent : C.ink3, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 'var(--sb-t-label)' }}>
                     {t.icon}
                   </span>
                   <span style={{ display: 'flex', flexDirection: 'column', minWidth: 0, textAlign: 'left' }}>
@@ -185,13 +185,13 @@ export function PlanScreen() {
               )
             })}
             {/* Add target button */}
-            <button style={{ flexShrink: 0, width: 44, borderRadius: 13, border: `1px dashed ${C.hair}`, background: C.field, color: C.ink3, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+            <button style={{ flexShrink: 0, width: 44, borderRadius: 'var(--sb-r-nav)', border: `1px dashed ${C.hair}`, background: C.field, color: C.ink3, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14"/></svg>
             </button>
           </div>
 
           {/* Dark summary card */}
-          <div style={{ flexShrink: 0, background: C.dark, color: 'var(--sb-ink-on-dark)', borderRadius: 18, padding: '14px 18px', display: 'flex', gap: 20, alignItems: 'center' }}>
+          <div style={{ flexShrink: 0, background: C.dark, color: 'var(--sb-ink-on-dark)', borderRadius: 'var(--sb-r-card)', padding: '14px 18px', display: 'flex', gap: 20, alignItems: 'center' }}>
             {/* Clear date */}
             <div style={{ width: 236, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
               <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.14em', opacity: 0.6 }}>CIB WORLD, CLEARED BY</span>
@@ -210,7 +210,7 @@ export function PlanScreen() {
                 {CHART_BARS.map(b => (
                   <div key={b.label} style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'center', minWidth: 0 }}>
                     <div style={{ width: '100%', flex: 1, display: 'flex', alignItems: 'flex-end' }}>
-                      <span style={{ width: '100%', height: `${b.pct}%`, background: b.color, borderRadius: '5px 5px 0 0', display: 'block' }} />
+                      <span style={{ width: '100%', height: `${b.pct}%`, background: b.color, borderRadius: 'var(--sb-r-chip) var(--sb-r-chip) 0 0', display: 'block' }} />
                     </div>
                     <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-micro)', fontWeight: 600, color: 'var(--sb-ink-on-dark)', fontVariantNumeric: 'tabular-nums' }}>{b.val}</span>
                     <span style={{ fontSize: 'var(--sb-t-micro)', color: C.ink3 }}>{b.label}</span>
@@ -234,7 +234,7 @@ export function PlanScreen() {
           </div>
 
           {/* Month-by-month plan table */}
-          <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 18, padding: '15px 17px', display: 'flex', flexDirection: 'column', gap: 11, boxSizing: 'border-box', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+          <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 'var(--sb-r-card)', padding: '15px 17px', display: 'flex', flexDirection: 'column', gap: 11, boxSizing: 'border-box', flex: 1, minHeight: 0, overflow: 'hidden' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 11, flexShrink: 0 }}>
               <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.12em', color: C.ink3 }}>THE PLAN, MONTH BY MONTH</span>
               <span style={{ fontSize: 'var(--sb-t-meta)', color: C.ink3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>Free cash is forecast income minus everything already committed — the plan never spends money you need</span>
@@ -245,7 +245,7 @@ export function PlanScreen() {
             </div>
 
             {/* Table */}
-            <div style={{ flex: 1, minHeight: 0, border: `1px solid ${C.border}`, borderRadius: 14, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ flex: 1, minHeight: 0, border: `1px solid ${C.border}`, borderRadius: 'var(--sb-r-nav)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
               {/* Header */}
               <div style={{ display: 'grid', gridTemplateColumns: '64px 1fr 1fr 1fr 1fr 118px 84px 1fr', height: 28, flexShrink: 0, background: '#F7F3E7', borderBottom: `1px solid ${C.border}` }}>
                 {['', 'FORECAST IN', 'COMMITTED', 'FREE CASH', 'TO THE CARD', 'FROM', 'ON', 'CARD LEFT'].map((h, i) => (
@@ -288,7 +288,7 @@ export function PlanScreen() {
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 7, padding: '0 9px' }}>
                     {row.closedRow ? (
                       <>
-                        <span style={{ height: 19, padding: '0 7px', borderRadius: 5, background: C.olive, color: 'var(--sb-ink-on-dark)', fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.06em', display: 'flex', alignItems: 'center' }}>CLOSED</span>
+                        <span style={{ height: 19, padding: '0 7px', borderRadius: 'var(--sb-r-chip)', background: C.olive, color: 'var(--sb-ink-on-dark)', fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.06em', display: 'flex', alignItems: 'center' }}>CLOSED</span>
                         <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: C.olive, fontVariantNumeric: 'tabular-nums' }}>0</span>
                       </>
                     ) : (
@@ -319,7 +319,7 @@ export function PlanScreen() {
         <div style={{ width: 346, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 11 }}>
 
           {/* Strategy card */}
-          <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 18, padding: '15px 17px', display: 'flex', flexDirection: 'column', gap: 11, boxSizing: 'border-box', flexShrink: 0 }}>
+          <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 'var(--sb-r-card)', padding: '15px 17px', display: 'flex', flexDirection: 'column', gap: 11, boxSizing: 'border-box', flexShrink: 0 }}>
             <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.12em', color: C.ink3 }}>HOW TO ATTACK IT</span>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
               {([
@@ -331,12 +331,12 @@ export function PlanScreen() {
                 return (
                   <button key={s.id} onClick={() => setStrategy(s.id)} style={{
                     display: 'flex', alignItems: 'center', gap: 9, padding: '10px 11px',
-                    borderRadius: 12, background: active ? C.accentBg : C.field,
+                    borderRadius: 'var(--sb-r-nav)', background: active ? C.accentBg : C.field,
                     border: `1px solid ${active ? C.accentBr : C.border}`,
                     cursor: 'pointer', boxSizing: 'border-box', textAlign: 'left',
                   }}>
                     <span style={{
-                      width: 17, height: 17, borderRadius: 999, flexShrink: 0, boxSizing: 'border-box',
+                      width: 17, height: 17, borderRadius: 'var(--sb-r-pill)', flexShrink: 0, boxSizing: 'border-box',
                       background: active ? C.dark : C.surface,
                       border: `1.5px solid ${active ? C.dark : '#D8D2C0'}`,
                       color: 'var(--sb-ink-on-dark)', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -352,7 +352,7 @@ export function PlanScreen() {
               })}
             </div>
             {/* AI note */}
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '10px 11px', borderRadius: 11, background: C.field, border: `1px solid ${C.border}` }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '10px 11px', borderRadius: 'var(--sb-r-nav)', background: C.field, border: `1px solid ${C.border}` }}>
               <span style={{ color: C.ink3, display: 'flex', flexShrink: 0, paddingTop: 1 }}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5a3 3 0 00-3 3 3 3 0 00-2 5.3A3 3 0 009 19h6a3 3 0 002-5.7A3 3 0 0015 8a3 3 0 00-3-3z"/></svg>
               </span>
@@ -361,14 +361,14 @@ export function PlanScreen() {
           </div>
 
           {/* Automations card */}
-          <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 18, padding: '15px 17px', display: 'flex', flexDirection: 'column', gap: 11, boxSizing: 'border-box', flexShrink: 0 }}>
+          <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 'var(--sb-r-card)', padding: '15px 17px', display: 'flex', flexDirection: 'column', gap: 11, boxSizing: 'border-box', flexShrink: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 9, flexShrink: 0 }}>
               <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.12em', color: C.ink3 }}>WHAT GETS AUTOMATED</span>
               <span style={{ marginLeft: 'auto', fontSize: 'var(--sb-t-micro)', color: C.ink3 }}>{automations.filter(a => a.active).length} of {automations.length} on</span>
             </div>
             <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 7 }}>
               {automations.map(a => (
-                <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 10, height: 42, flexShrink: 0, padding: '0 12px', borderRadius: 11, background: C.field, border: `1px solid ${C.border}`, boxSizing: 'border-box' }}>
+                <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 10, height: 42, flexShrink: 0, padding: '0 12px', borderRadius: 'var(--sb-r-nav)', background: C.field, border: `1px solid ${C.border}`, boxSizing: 'border-box' }}>
                   <span style={{ color: a.active ? C.olive : '#B7AE92', display: 'flex', flexShrink: 0 }}>
                     {a.icon === '⚡'
                       ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M13 3L5 14h6l-1 7 8-11h-6z"/></svg>
@@ -381,14 +381,14 @@ export function PlanScreen() {
                   </span>
                   {/* Toggle */}
                   <button onClick={() => toggleAuto(a.id)} style={{
-                    marginLeft: 'auto', width: 36, height: 20, borderRadius: 999,
+                    marginLeft: 'auto', width: 36, height: 20, borderRadius: 'var(--sb-r-pill)',
                     background: a.active ? C.dark : '#DED8C6',
                     display: 'flex', alignItems: 'center',
                     justifyContent: a.active ? 'flex-end' : 'flex-start',
                     padding: '0 3px', boxSizing: 'border-box', flexShrink: 0,
                     border: 'none', cursor: 'pointer',
                   }}>
-                    <span style={{ width: 14, height: 14, borderRadius: 999, background: 'var(--sb-ink-on-dark)', display: 'block' }} />
+                    <span style={{ width: 14, height: 14, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-ink-on-dark)', display: 'block' }} />
                   </button>
                 </div>
               ))}
@@ -396,11 +396,11 @@ export function PlanScreen() {
           </div>
 
           {/* Risk/scenario card */}
-          <div style={{ flex: 1, minHeight: 0, background: C.accentBg, border: `1px solid ${C.accentBr}`, borderRadius: 18, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ flex: 1, minHeight: 0, background: C.accentBg, border: `1px solid ${C.accentBr}`, borderRadius: 'var(--sb-r-card)', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
             <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.14em', color: '#8A6A1E' }}>IF THE PAYROLL SLIPS AGAIN</span>
             <span style={{ fontSize: 'var(--sb-t-label)', fontWeight: 600, letterSpacing: '-0.015em', lineHeight: 1.35, color: C.ink1 }}>October's clearance needs the DX salary. If it misses, the plan pays the minimum and closes the card on 4 November instead.</span>
             <span style={{ marginTop: 2, display: 'flex', gap: 8 }}>
-              <button style={{ height: 30, padding: '0 12px', borderRadius: 999, background: C.dark, color: 'var(--sb-ink-on-dark)', fontSize: 'var(--sb-t-meta)', fontWeight: 600, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>See that version</button>
+              <button style={{ height: 30, padding: '0 12px', borderRadius: 'var(--sb-r-pill)', background: C.dark, color: 'var(--sb-ink-on-dark)', fontSize: 'var(--sb-t-meta)', fontWeight: 600, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>See that version</button>
             </span>
           </div>
 

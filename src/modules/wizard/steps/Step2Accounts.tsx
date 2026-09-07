@@ -45,7 +45,7 @@ const providerTileStyle: React.CSSProperties = {
   height: 80,
   background: 'var(--sb-card)',
   border: '1px solid var(--sb-border)',
-  borderRadius: 10,
+  borderRadius: 'var(--sb-r-nav)',
   display: 'flex',
   flexDirection: 'column',
   alignItems: 'center',
@@ -114,7 +114,7 @@ export function Step2Accounts({ data: _data, onChange: _onChange, onBeforeOAuth 
         background: 'var(--sb-card)',
         border: '1px solid var(--sb-border)',
         borderLeft: '3px solid var(--sb-accent)',
-        borderRadius: 10,
+        borderRadius: 'var(--sb-r-nav)',
         padding: '14px 16px',
         display: 'flex',
         alignItems: 'center',
@@ -124,7 +124,7 @@ export function Step2Accounts({ data: _data, onChange: _onChange, onBeforeOAuth 
         <div style={{
           width: 36,
           height: 36,
-          borderRadius: '50%',
+          borderRadius: 'var(--sb-r-pill)',
           background: 'var(--sb-accent)',
           display: 'flex',
           alignItems: 'center',
@@ -150,7 +150,7 @@ export function Step2Accounts({ data: _data, onChange: _onChange, onBeforeOAuth 
             fontWeight: 600,
             background: 'rgba(52,211,153,0.12)',
             color: '#34D399',
-            borderRadius: 4,
+            borderRadius: 'var(--sb-r-chip)',
             padding: '2px 7px',
             letterSpacing: '0.04em',
           }}>
@@ -173,19 +173,19 @@ export function Step2Accounts({ data: _data, onChange: _onChange, onBeforeOAuth 
             <div key={acct.id} style={{
               background: 'var(--sb-card)',
               border: '1px solid var(--sb-border)',
-              borderRadius: 10,
+              borderRadius: 'var(--sb-r-nav)',
               padding: '12px 16px',
               display: 'flex',
               alignItems: 'center',
               gap: 12,
             }}>
               {acct.avatarUrl ? (
-                <img src={acct.avatarUrl} alt={acct.name} style={{ width: 32, height: 32, borderRadius: '50%', flexShrink: 0 }} />
+                <img src={acct.avatarUrl} alt={acct.name} style={{ width: 32, height: 32, borderRadius: 'var(--sb-r-pill)', flexShrink: 0 }} />
               ) : (
                 <div style={{
                   width: 32,
                   height: 32,
-                  borderRadius: '50%',
+                  borderRadius: 'var(--sb-r-pill)',
                   background: 'var(--sb-border)',
                   display: 'flex',
                   alignItems: 'center',
@@ -245,7 +245,7 @@ export function Step2Accounts({ data: _data, onChange: _onChange, onBeforeOAuth 
               fontWeight: 700,
               background: 'rgba(251,191,36,0.18)',
               color: '#FBBF24',
-              borderRadius: 4,
+              borderRadius: 'var(--sb-r-chip)',
               padding: '1px 5px',
               letterSpacing: '0.04em',
             }}>
@@ -265,7 +265,7 @@ export function Step2Accounts({ data: _data, onChange: _onChange, onBeforeOAuth 
               fontWeight: 700,
               background: 'rgba(251,191,36,0.18)',
               color: '#FBBF24',
-              borderRadius: 4,
+              borderRadius: 'var(--sb-r-chip)',
               padding: '1px 5px',
               letterSpacing: '0.04em',
             }}>

@@ -93,7 +93,7 @@ export function Sidebar() {
             <div style={{
               width: 32, height: 32,
               background: logoBg,
-              borderRadius: behavioralMode === 'samurai' && behavioralEnabled ? 4 : 6,
+              borderRadius: 'var(--sb-r-chip)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               flexShrink: 0,
               transition: 'background 0.3s ease',
@@ -137,7 +137,7 @@ export function Sidebar() {
                   justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
                   background: active ? 'rgba(var(--sb-accent-rgb),0.15)' : 'transparent',
                   border: 'none',
-                  borderRadius: 8,
+                  borderRadius: 'var(--sb-r-chip)',
                   cursor: 'pointer',
                   color: active ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)',
                   marginBottom: 2,
@@ -165,7 +165,7 @@ export function Sidebar() {
                   </span>
                 )}
                 {active && !sidebarCollapsed && (
-                  <div style={{ marginLeft: 'auto', width: 4, height: 4, borderRadius: '50%', background: 'var(--sb-accent)' }} />
+                  <div style={{ marginLeft: 'auto', width: 4, height: 4, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-accent)' }} />
                 )}
               </button>
             )
@@ -196,7 +196,7 @@ export function Sidebar() {
                   padding: sidebarCollapsed ? '10px 0' : '10px 12px',
                   justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
                   background: active ? 'rgba(var(--sb-accent-rgb),0.15)' : 'transparent',
-                  border: 'none', borderRadius: 8, cursor: 'pointer',
+                  border: 'none', borderRadius: 'var(--sb-r-chip)', cursor: 'pointer',
                   color: active ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)',
                   marginBottom: 2, transition: 'all 0.15s ease',
                 }}
@@ -210,7 +210,7 @@ export function Sidebar() {
                   </span>
                 )}
                 {active && !sidebarCollapsed && (
-                  <div style={{ marginLeft: 'auto', width: 4, height: 4, borderRadius: '50%', background: 'var(--sb-accent)' }} />
+                  <div style={{ marginLeft: 'auto', width: 4, height: 4, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-accent)' }} />
                 )}
               </button>
             </div>
@@ -241,7 +241,7 @@ export function Sidebar() {
                   padding: sidebarCollapsed ? '10px 0' : '10px 12px',
                   justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
                   background: active ? 'rgba(var(--sb-accent-rgb),0.15)' : 'transparent',
-                  border: 'none', borderRadius: 8, cursor: 'pointer',
+                  border: 'none', borderRadius: 'var(--sb-r-chip)', cursor: 'pointer',
                   color: active ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)',
                   marginBottom: 2, transition: 'all 0.15s ease',
                 }}
@@ -267,7 +267,7 @@ export function Sidebar() {
                   </span>
                 )}
                 {active && !sidebarCollapsed && (
-                  <div style={{ marginLeft: 'auto', width: 4, height: 4, borderRadius: '50%', background: 'var(--sb-accent)' }} />
+                  <div style={{ marginLeft: 'auto', width: 4, height: 4, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-accent)' }} />
                 )}
               </button>
             )
@@ -289,7 +289,7 @@ export function Sidebar() {
             border: 'none',
             cursor: 'pointer',
             color: 'var(--sb-ink-4)',
-            borderRadius: 6,
+            borderRadius: 'var(--sb-r-chip)',
           }}
           title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
