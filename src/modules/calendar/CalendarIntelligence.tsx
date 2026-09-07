@@ -1312,7 +1312,9 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
 
   return (
     <div ref={popupRef} onClick={e => e.stopPropagation()} onMouseDown={e => e.stopPropagation()} style={{
-      width: 'clamp(320px, 34vw, 440px)', flexShrink: 0, alignSelf: 'stretch', minHeight: 0,
+      // The box comes down by the same quarter as everything in it, so the
+      // panel keeps its proportions and gives the grid back the width.
+      width: 'clamp(240px, 25.5vw, 330px)', flexShrink: 0, alignSelf: 'stretch', minHeight: 0,
       overflowY: 'auto', scrollbarWidth: 'thin',
       background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
       boxShadow: 'var(--sb-shadow-control)',
