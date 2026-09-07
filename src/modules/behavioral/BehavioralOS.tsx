@@ -65,7 +65,7 @@ function RankProgressBar({ score }: { score: number }) {
           <span key={r} style={{
             position: 'absolute',
             left: `${thresholds[i]}%`,
-            fontSize: 9,
+            fontSize: 'var(--sb-t-micro)',
             letterSpacing: '0.08em',
             color: score >= thresholds[i] ? 'var(--sb-ink-3)' : 'var(--sb-ink-4)',
             textTransform: 'uppercase',
@@ -82,7 +82,7 @@ function RankProgressBar({ score }: { score: number }) {
 function ComponentBar({ label, value }: { label: string; value: number }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-      <span style={{ fontSize: 10, color: 'var(--sb-ink-3)', letterSpacing: '0.08em', width: 110, flexShrink: 0, textTransform: 'uppercase' }}>
+      <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)', letterSpacing: '0.08em', width: 110, flexShrink: 0, textTransform: 'uppercase' }}>
         {label}
       </span>
       <div style={{ flex: 1, height: 2, background: 'var(--sb-border)', borderRadius: 1 }}>
@@ -93,7 +93,7 @@ function ComponentBar({ label, value }: { label: string; value: number }) {
           transition: 'width 0.8s ease',
         }} />
       </div>
-      <span style={{ fontSize: 10, color: 'var(--sb-ink-3)', width: 26, textAlign: 'right' }}>{value}</span>
+      <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)', width: 26, textAlign: 'right' }}>{value}</span>
     </div>
   )
 }
@@ -127,7 +127,7 @@ function RankArtwork({ rank, rankMeta }: { rank: Rank; rankMeta: { label: string
         <div style={{
           width: '100%', height: '100%',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 28, fontWeight: 900, color: '#8B1A1A', opacity: 0.25,
+          fontSize: 'var(--sb-t-h1)', fontWeight: 900, color: '#8B1A1A', opacity: 0.25,
           fontFamily: 'serif', letterSpacing: '-0.03em',
         }}>
           {rankMeta?.label?.[0]}
@@ -147,19 +147,19 @@ function IdentityCard({ identity }: { identity: IdentityResult }) {
       transition: 'border-color 0.2s',
     }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 8 }}>
-        <span style={{ fontSize: 15, lineHeight: 1 }}>{identity.emoji}</span>
+        <span style={{ fontSize: 'var(--sb-t-h3)', lineHeight: 1 }}>{identity.emoji}</span>
         <span style={{
-          fontSize: 8, letterSpacing: '0.12em', textTransform: 'uppercase',
+          fontSize: 'var(--sb-t-micro)', letterSpacing: '0.12em', textTransform: 'uppercase',
           color: STAGE_COLOR[identity.stage],
           fontWeight: 500,
         }}>
           {STAGE_LABEL[identity.stage]}
         </span>
       </div>
-      <div style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--sb-ink-1)', letterSpacing: '0.03em', marginBottom: 4 }}>
+      <div style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 500, color: 'var(--sb-ink-1)', letterSpacing: '0.03em', marginBottom: 4 }}>
         {identity.name}
       </div>
-      <div style={{ fontSize: 10.5, color: 'var(--sb-ink-3)', lineHeight: 1.5 }}>
+      <div style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)', lineHeight: 1.5 }}>
         {identity.description}
       </div>
       {/* Score bar */}
@@ -226,20 +226,20 @@ export function BehavioralOS() {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
               <h1 style={{
-                margin: 0, fontSize: 22, fontWeight: 600, letterSpacing: '-0.02em',
+                margin: 0, fontSize: 'var(--sb-t-h2)', fontWeight: 600, letterSpacing: '-0.02em',
                 color: 'var(--sb-ink-1)',
               }}>
                 Behavioral OS
               </h1>
               <span style={{
-                fontSize: 9, letterSpacing: '0.18em', fontWeight: 600,
+                fontSize: 'var(--sb-t-micro)', letterSpacing: '0.18em', fontWeight: 600,
                 color: 'var(--sb-accent)', border: '1px solid var(--sb-accent)',
                 padding: '3px 8px', borderRadius: 1,
               }}>
                 {modeLabel}
               </span>
             </div>
-            <p style={{ margin: 0, fontSize: 12, color: 'var(--sb-ink-3)', letterSpacing: '0.02em' }}>
+            <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', letterSpacing: '0.02em' }}>
               Adaptive discipline framework — 14-day evaluation window
             </p>
           </div>
@@ -251,7 +251,7 @@ export function BehavioralOS() {
               display: 'flex', alignItems: 'center', gap: 6,
               background: 'none', border: '1px solid var(--sb-border)', borderRadius: 2,
               padding: '7px 14px', cursor: evaluating ? 'default' : 'pointer',
-              color: evaluating ? 'var(--sb-ink-4)' : 'var(--sb-ink-3)', fontSize: 11, letterSpacing: '0.06em',
+              color: evaluating ? 'var(--sb-ink-4)' : 'var(--sb-ink-3)', fontSize: 'var(--sb-t-meta)', letterSpacing: '0.06em',
               transition: 'border-color 0.15s, color 0.15s',
             }}
             onMouseEnter={e => { if (!evaluating) { (e.currentTarget as HTMLElement).style.borderColor = 'var(--sb-ink-3)'; (e.currentTarget as HTMLElement).style.color = 'var(--sb-ink-1)' } }}
@@ -274,7 +274,7 @@ export function BehavioralOS() {
                 <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 4 }}>
                   <div>
                     <div style={{
-                      fontSize: 9, letterSpacing: '0.2em', textTransform: 'uppercase',
+                      fontSize: 'var(--sb-t-micro)', letterSpacing: '0.2em', textTransform: 'uppercase',
                       color: 'var(--sb-ink-3)', marginBottom: 10,
                     }}>
                       Your Rank
@@ -285,7 +285,7 @@ export function BehavioralOS() {
                     }}>
                       {rankMeta?.label.toUpperCase()}
                     </div>
-                    <div style={{ fontSize: 12, color: 'var(--sb-ink-3)', marginTop: 8, letterSpacing: '0.02em' }}>
+                    <div style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', marginTop: 8, letterSpacing: '0.02em' }}>
                       {rankMeta?.philosophy}
                     </div>
                   </div>
@@ -295,7 +295,7 @@ export function BehavioralOS() {
                       <div style={{ fontSize: 36, fontWeight: 300, color: rank.score >= 60 ? 'var(--sb-accent)' : 'var(--sb-ink-3)', lineHeight: 1 }}>
                         {rank.score}
                       </div>
-                      <div style={{ fontSize: 9, color: 'var(--sb-ink-4)', letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: 4 }}>
+                      <div style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: 4 }}>
                         /&nbsp;100
                       </div>
                     </div>
@@ -305,7 +305,7 @@ export function BehavioralOS() {
                 <RankProgressBar score={rank.score} />
 
                 {nextRank && (
-                  <div style={{ marginTop: 20, fontSize: 10.5, color: 'var(--sb-ink-3)', letterSpacing: '0.03em' }}>
+                  <div style={{ marginTop: 20, fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)', letterSpacing: '0.03em' }}>
                     Next threshold: {nextRank.label} at {nextRank.threshold}
                   </div>
                 )}
@@ -317,7 +317,7 @@ export function BehavioralOS() {
                     style={{
                       display: 'flex', alignItems: 'center', gap: 6,
                       background: 'none', border: 'none', cursor: 'pointer',
-                      color: 'var(--sb-ink-3)', fontSize: 10, letterSpacing: '0.1em',
+                      color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-micro)', letterSpacing: '0.1em',
                       textTransform: 'uppercase', padding: 0, marginBottom: expandComponents ? 14 : 0,
                     }}
                   >
@@ -334,7 +334,7 @@ export function BehavioralOS() {
                 </div>
               </>
             ) : (
-              <div style={{ textAlign: 'center', padding: '24px 0', color: 'var(--sb-ink-3)', fontSize: 12 }}>
+              <div style={{ textAlign: 'center', padding: '24px 0', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body-s)' }}>
                 {evaluating ? 'Evaluating your behavioral patterns…' : 'No evaluation data. Click Refresh.'}
               </div>
             )}
@@ -344,14 +344,14 @@ export function BehavioralOS() {
         {/* ── Decisive Objectives ────────────────────────────────────────── */}
         <section style={{ marginBottom: 48 }}>
           <div style={{
-            fontSize: 9, letterSpacing: '0.2em', textTransform: 'uppercase',
+            fontSize: 'var(--sb-t-micro)', letterSpacing: '0.2em', textTransform: 'uppercase',
             color: 'var(--sb-ink-3)', marginBottom: 16,
           }}>
             Decisive Objectives
           </div>
 
           {objectives.length === 0 ? (
-            <div style={{ fontSize: 12, color: 'var(--sb-ink-4)', padding: '16px 0', borderTop: '1px solid var(--sb-border)' }}>
+            <div style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-4)', padding: '16px 0', borderTop: '1px solid var(--sb-border)' }}>
               No open objectives. The field is clear.
             </div>
           ) : (
@@ -363,16 +363,16 @@ export function BehavioralOS() {
                   borderBottom: '1px solid var(--sb-border)',
                 }}>
                   <span style={{
-                    fontSize: 9, letterSpacing: '0.1em', color: 'var(--sb-ink-4)',
+                    fontSize: 'var(--sb-t-micro)', letterSpacing: '0.1em', color: 'var(--sb-ink-4)',
                     width: 18, flexShrink: 0,
                   }}>
                     {String(i + 1).padStart(2, '0')}
                   </span>
-                  <span style={{ flex: 1, fontSize: 13, color: 'var(--sb-ink-1)', letterSpacing: '0.01em', lineHeight: 1.4 }}>
+                  <span style={{ flex: 1, fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)', letterSpacing: '0.01em', lineHeight: 1.4 }}>
                     {t.title}
                   </span>
                   {t.dueDate && (
-                    <span style={{ fontSize: 10, color: 'var(--sb-ink-3)', flexShrink: 0 }}>
+                    <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)', flexShrink: 0 }}>
                       {new Date(t.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                     </span>
                   )}
@@ -391,7 +391,7 @@ export function BehavioralOS() {
         {cachedIdentities.length > 0 && (
           <section style={{ marginBottom: 48 }}>
             <div style={{
-              fontSize: 9, letterSpacing: '0.2em', textTransform: 'uppercase',
+              fontSize: 'var(--sb-t-micro)', letterSpacing: '0.2em', textTransform: 'uppercase',
               color: 'var(--sb-ink-3)', marginBottom: 16,
             }}>
               Behavioral Patterns
@@ -405,7 +405,7 @@ export function BehavioralOS() {
                 <IdentityCard key={identity.id} identity={identity} />
               ))}
             </div>
-            <p style={{ marginTop: 14, fontSize: 10.5, color: 'var(--sb-ink-4)', lineHeight: 1.6 }}>
+            <p style={{ marginTop: 14, fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', lineHeight: 1.6 }}>
               Identities are inferred from repeated behavior over 30 days. They are not assigned — they are earned.
             </p>
           </section>
@@ -415,14 +415,14 @@ export function BehavioralOS() {
         {cachedInsights.length > 0 && (
           <section style={{ marginBottom: 48 }}>
             <div style={{
-              fontSize: 9, letterSpacing: '0.2em', textTransform: 'uppercase',
+              fontSize: 'var(--sb-t-micro)', letterSpacing: '0.2em', textTransform: 'uppercase',
               color: 'var(--sb-ink-3)', marginBottom: 16,
             }}>
               System Insights
             </div>
             <div style={{ borderLeft: '1px solid var(--sb-border)', paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 18 }}>
               {cachedInsights.map((insight, i) => (
-                <p key={i} style={{ margin: 0, fontSize: 13, color: 'var(--sb-ink-1)', lineHeight: 1.7, letterSpacing: '0.01em' }}>
+                <p key={i} style={{ margin: 0, fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)', lineHeight: 1.7, letterSpacing: '0.01em' }}>
                   {insight}
                 </p>
               ))}
@@ -432,7 +432,7 @@ export function BehavioralOS() {
 
         {/* ── Last evaluated ─────────────────────────────────────────────── */}
         {lastEvaluated && (
-          <div style={{ fontSize: 10, color: 'var(--sb-ink-4)', letterSpacing: '0.05em' }}>
+          <div style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', letterSpacing: '0.05em' }}>
             Last evaluated {new Date(lastEvaluated).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
           </div>
         )}

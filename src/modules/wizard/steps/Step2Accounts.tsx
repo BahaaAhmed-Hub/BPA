@@ -36,7 +36,7 @@ function MicrosoftIcon() {
 
 function AppleIcon() {
   return (
-    <span style={{ fontSize: 20, lineHeight: 1 }}>🍎</span>
+    <span style={{ fontSize: 'var(--sb-t-h2)', lineHeight: 1 }}>🍎</span>
   )
 }
 
@@ -101,10 +101,10 @@ export function Step2Accounts({ data: _data, onChange: _onChange, onBeforeOAuth 
       `}</style>
 
       <div style={{ animation: 'step2-fadein 0.35s ease' }}>
-        <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--sb-ink-1)', margin: 0 }}>
+        <h2 style={{ fontSize: 'var(--sb-t-h2)', fontWeight: 700, color: 'var(--sb-ink-1)', margin: 0 }}>
           Connect your accounts
         </h2>
-        <p style={{ fontSize: 13, color: 'var(--sb-ink-3)', margin: '6px 0 0', lineHeight: 1.6 }}>
+        <p style={{ fontSize: 'var(--sb-t-label)', color: 'var(--sb-ink-3)', margin: '6px 0 0', lineHeight: 1.6 }}>
           Your primary Google account is already connected. Add more to manage multiple calendars and inboxes.
         </p>
       </div>
@@ -129,7 +129,7 @@ export function Step2Accounts({ data: _data, onChange: _onChange, onBeforeOAuth 
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          fontSize: 14,
+          fontSize: 'var(--sb-t-label)',
           fontWeight: 700,
           color: '#fff',
           flexShrink: 0,
@@ -137,16 +137,16 @@ export function Step2Accounts({ data: _data, onChange: _onChange, onBeforeOAuth 
           {user?.name ? user.name[0].toUpperCase() : user?.email?.[0]?.toUpperCase() ?? '?'}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--sb-ink-1)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          <div style={{ fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-1)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {user?.name || user?.email || 'You'}
           </div>
-          <div style={{ fontSize: 11, color: 'var(--sb-ink-4)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {user?.email || ''}
           </div>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
           <span style={{
-            fontSize: 10,
+            fontSize: 'var(--sb-t-micro)',
             fontWeight: 600,
             background: 'rgba(52,211,153,0.12)',
             color: '#34D399',
@@ -157,8 +157,8 @@ export function Step2Accounts({ data: _data, onChange: _onChange, onBeforeOAuth 
             Primary · Connected
           </span>
           <div style={{ display: 'flex', gap: 8 }}>
-            <span style={{ fontSize: 11, color: '#34D399' }}>✉ Mail</span>
-            <span style={{ fontSize: 11, color: '#34D399' }}>📅 Calendar</span>
+            <span style={{ fontSize: 'var(--sb-t-meta)', color: '#34D399' }}>✉ Mail</span>
+            <span style={{ fontSize: 'var(--sb-t-meta)', color: '#34D399' }}>📅 Calendar</span>
           </div>
         </div>
       </div>
@@ -166,7 +166,7 @@ export function Step2Accounts({ data: _data, onChange: _onChange, onBeforeOAuth 
       {/* Extra accounts */}
       {extraAccounts.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--sb-ink-4)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+          <div style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-4)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
             Additional accounts
           </div>
           {extraAccounts.map(acct => (
@@ -190,7 +190,7 @@ export function Step2Accounts({ data: _data, onChange: _onChange, onBeforeOAuth 
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: 13,
+                  fontSize: 'var(--sb-t-body)',
                   color: 'var(--sb-ink-3)',
                   flexShrink: 0,
                 }}>
@@ -198,16 +198,16 @@ export function Step2Accounts({ data: _data, onChange: _onChange, onBeforeOAuth 
                 </div>
               )}
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--sb-ink-1)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <div style={{ fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-1)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {acct.name || acct.email}
                 </div>
-                <div style={{ fontSize: 11, color: 'var(--sb-ink-4)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {acct.email}
                 </div>
               </div>
               <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                <span style={{ fontSize: 11, color: '#34D399' }}>✉</span>
-                <span style={{ fontSize: 11, color: '#34D399' }}>📅</span>
+                <span style={{ fontSize: 'var(--sb-t-meta)', color: '#34D399' }}>✉</span>
+                <span style={{ fontSize: 'var(--sb-t-meta)', color: '#34D399' }}>📅</span>
               </div>
             </div>
           ))}
@@ -216,7 +216,7 @@ export function Step2Accounts({ data: _data, onChange: _onChange, onBeforeOAuth 
 
       {/* Add more accounts */}
       <div>
-        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--sb-ink-4)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>
+        <div style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-4)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>
           Add more accounts
         </div>
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
@@ -228,7 +228,7 @@ export function Step2Accounts({ data: _data, onChange: _onChange, onBeforeOAuth 
             style={{ ...providerTileStyle, cursor: connecting ? 'wait' : 'pointer' }}
           >
             <GoogleIcon />
-            <span style={{ fontSize: 12, color: 'var(--sb-ink-3)', fontWeight: 500 }}>
+            <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', fontWeight: 500 }}>
               {connecting ? 'Connecting…' : 'Google'}
             </span>
           </button>
@@ -236,12 +236,12 @@ export function Step2Accounts({ data: _data, onChange: _onChange, onBeforeOAuth 
           {/* Outlook tile */}
           <div style={{ ...providerTileStyle, opacity: 0.6, cursor: 'not-allowed' }}>
             <MicrosoftIcon />
-            <span style={{ fontSize: 12, color: 'var(--sb-ink-3)', fontWeight: 500 }}>Outlook</span>
+            <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', fontWeight: 500 }}>Outlook</span>
             <span style={{
               position: 'absolute',
               top: 6,
               right: 6,
-              fontSize: 9,
+              fontSize: 'var(--sb-t-micro)',
               fontWeight: 700,
               background: 'rgba(251,191,36,0.18)',
               color: '#FBBF24',
@@ -256,12 +256,12 @@ export function Step2Accounts({ data: _data, onChange: _onChange, onBeforeOAuth 
           {/* iCloud tile */}
           <div style={{ ...providerTileStyle, opacity: 0.6, cursor: 'not-allowed' }}>
             <AppleIcon />
-            <span style={{ fontSize: 12, color: 'var(--sb-ink-3)', fontWeight: 500 }}>iCloud</span>
+            <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', fontWeight: 500 }}>iCloud</span>
             <span style={{
               position: 'absolute',
               top: 6,
               right: 6,
-              fontSize: 9,
+              fontSize: 'var(--sb-t-micro)',
               fontWeight: 700,
               background: 'rgba(251,191,36,0.18)',
               color: '#FBBF24',
@@ -275,7 +275,7 @@ export function Step2Accounts({ data: _data, onChange: _onChange, onBeforeOAuth 
         </div>
       </div>
 
-      <p style={{ fontSize: 12, color: 'var(--sb-ink-4)', margin: 0, fontStyle: 'italic' }}>
+      <p style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-4)', margin: 0, fontStyle: 'italic' }}>
         You can manage accounts anytime in Settings → Accounts.
       </p>
     </div>

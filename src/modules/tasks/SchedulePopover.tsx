@@ -41,7 +41,7 @@ const SLOTS: string[] = Array.from({ length: 96 }, (_, i) =>
 const FIELD: React.CSSProperties = {
   width: '100%', boxSizing: 'border-box', height: 32, padding: '0 10px',
   background: 'var(--sb-field)', border: '1px solid var(--sb-border)', borderRadius: 8,
-  ...T.small, color: 'var(--sb-ink-1)', cursor: 'pointer',
+  ...T.meta, color: 'var(--sb-ink-1)', cursor: 'pointer',
   display: 'flex', alignItems: 'center', textAlign: 'left',
 }
 
@@ -89,7 +89,7 @@ export function TimeSelect({ value, onChange, label, size = 'compact' }: {
 
   return (
     <div ref={ref} style={{ flex: 1, minWidth: 0, position: 'relative' }}>
-      {label && <span style={{ display: 'block', fontSize: 11, color: 'var(--sb-ink-3)', marginBottom: 4 }}>{label}</span>}
+      {label && <span style={{ display: 'block', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', marginBottom: 4 }}>{label}</span>}
       <button type="button" onClick={() => setOpen(o => !o)} style={{
         ...FIELD, borderColor: open ? '#CFC6B0' : 'var(--sb-border)',
         ...(size === 'large' ? {
@@ -112,7 +112,7 @@ export function TimeSelect({ value, onChange, label, size = 'compact' }: {
             style={{
               width: '100%', boxSizing: 'border-box', height: 28, padding: '0 8px', marginBottom: 5,
               background: 'var(--sb-field)', border: '1px solid var(--sb-border)', borderRadius: 7,
-              ...T.small, color: 'var(--sb-ink-1)', outline: 'none', textAlign: 'left',
+              ...T.meta, color: 'var(--sb-ink-1)', outline: 'none', textAlign: 'left',
             }} />
           <div ref={listRef} style={{ maxHeight: 196, overflowY: 'auto', scrollbarWidth: 'thin' }}>
             {SLOTS.map(t => {
@@ -121,7 +121,7 @@ export function TimeSelect({ value, onChange, label, size = 'compact' }: {
                 <button key={t} type="button" onClick={() => { onChange(t); setOpen(false) }} style={{
                   width: '100%', height: 28, padding: '0 8px', border: 'none', borderRadius: 7,
                   background: on ? 'var(--sb-ink-1)' : 'transparent', color: on ? 'var(--sb-card)' : 'var(--sb-ink-1)',
-                  ...T.small, fontWeight: on ? 600 : 500, cursor: 'pointer',
+                  ...T.meta, fontWeight: on ? 600 : 500, cursor: 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 }}>
                   {formatTime(t)}
@@ -198,7 +198,7 @@ export function SchedulePopover({ date, start, duration, onApply, onClose, align
         boxShadow: '0 24px 56px -22px rgba(25,23,18,.45)', textAlign: 'left',
       }}>
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: 10 }}>
-        <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: 'var(--sb-ink-1)' }}>
+        <span style={{ flex: 1, fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>
           {view.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}
         </span>
         <button type="button" onClick={() => setView(v => new Date(v.getFullYear(), v.getMonth() - 1, 1))} style={navBtn}>
@@ -211,7 +211,7 @@ export function SchedulePopover({ date, start, duration, onApply, onClose, align
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2 }}>
         {WEEKDAYS.map((w, i) => (
-          <span key={i} style={{ textAlign: 'center', fontSize: 10.5, fontWeight: 600, color: 'var(--sb-ink-4)', padding: '2px 0 4px' }}>{w}</span>
+          <span key={i} style={{ textAlign: 'center', fontSize: 'var(--sb-t-micro)', fontWeight: 600, color: 'var(--sb-ink-4)', padding: '2px 0 4px' }}>{w}</span>
         ))}
         {cells.map(d => {
           const iso = toISODate(d)
@@ -222,7 +222,7 @@ export function SchedulePopover({ date, start, duration, onApply, onClose, align
               height: 28, borderRadius: 7, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
               background: on ? 'var(--sb-ink-1)' : 'transparent',
               color: on ? 'var(--sb-card)' : outside ? '#CFC6B0' : 'var(--sb-ink-1)',
-              fontSize: 12, fontWeight: on ? 700 : 500,
+              fontSize: 'var(--sb-t-body-s)', fontWeight: on ? 700 : 500,
             }}>{d.getDate()}</button>
           )
         })}
@@ -237,10 +237,10 @@ export function SchedulePopover({ date, start, duration, onApply, onClose, align
           after the booking is made. */}
       {picked && (
         checking && conflicts === null ? (
-          <p style={{ ...T.small, margin: '9px 0 0', color: 'var(--sb-ink-4)' }}>Checking that time…</p>
+          <p style={{ ...T.meta, margin: '9px 0 0', color: 'var(--sb-ink-4)' }}>Checking that time…</p>
         ) : conflicts === null ? null
         : conflicts.length === 0 ? (
-          <p style={{ ...T.small, margin: '9px 0 0', color: 'var(--sb-positive)' }}>
+          <p style={{ ...T.meta, margin: '9px 0 0', color: 'var(--sb-positive)' }}>
             Nothing else booked then.
           </p>
         ) : (
@@ -248,19 +248,19 @@ export function SchedulePopover({ date, start, duration, onApply, onClose, align
             marginTop: 9, padding: '8px 10px', borderRadius: 9,
             background: 'rgba(var(--sb-accent-rgb),0.22)', border: '1px solid rgba(var(--sb-accent-rgb),0.7)',
           }}>
-            <p style={{ ...T.small, margin: 0, fontWeight: 600, color: '#3D3926' }}>
+            <p style={{ ...T.meta, margin: 0, fontWeight: 600, color: '#3D3926' }}>
               {conflicts.length === 1 ? 'Clashes with' : `Clashes with ${conflicts.length} events`}
             </p>
             {conflicts.slice(0, 3).map(c => (
               <p key={c.id} style={{
-                ...T.small, margin: '3px 0 0', color: '#3D3926',
+                ...T.meta, margin: '3px 0 0', color: '#3D3926',
                 overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
               }}>
                 {c.title} · {formatTime(c.from)} – {formatTime(c.to)}
               </p>
             ))}
             {conflicts.length > 3 && (
-              <p style={{ ...T.small, margin: '3px 0 0', color: 'var(--sb-ink-3)' }}>
+              <p style={{ ...T.meta, margin: '3px 0 0', color: 'var(--sb-ink-3)' }}>
                 and {conflicts.length - 3} more
               </p>
             )}
@@ -269,7 +269,7 @@ export function SchedulePopover({ date, start, duration, onApply, onClose, align
       )}
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 12 }}>
-        <span style={{ flex: 1, fontSize: 11.5, color: 'var(--sb-ink-4)' }}>
+        <span style={{ flex: 1, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>
           {minutes > 0 ? `${minutes}m block at ${formatTime(from)}` : 'End must follow start'}
         </span>
         {(date || start) && (
@@ -278,7 +278,7 @@ export function SchedulePopover({ date, start, duration, onApply, onClose, align
             onClick={() => { onApply({ dueDate: undefined, plannedTime: undefined, duration: undefined }); onClose() }}
             style={{
               height: 30, padding: '0 12px', borderRadius: 8, border: '1px solid var(--sb-border)', cursor: 'pointer',
-              background: 'transparent', color: 'var(--sb-ink-3)', fontSize: 12.5, fontWeight: 500, fontFamily: 'inherit',
+              background: 'transparent', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body-s)', fontWeight: 500, fontFamily: 'inherit',
             }}>Clear</button>
         )}
         <button
@@ -286,7 +286,7 @@ export function SchedulePopover({ date, start, duration, onApply, onClose, align
           onClick={() => { onApply({ dueDate: picked, plannedTime: from, duration: minutes || undefined }); onClose() }}
           style={{
             height: 30, padding: '0 14px', borderRadius: 8, border: 'none', cursor: 'pointer',
-            background: 'var(--sb-accent)', color: 'var(--sb-ink-1)', fontSize: 12.5, fontWeight: 600, fontFamily: 'inherit',
+            background: 'var(--sb-accent)', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, fontFamily: 'inherit',
           }}>Set block</button>
       </div>
     </div>

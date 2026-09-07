@@ -153,12 +153,12 @@ function StatCard({
         <div>
           {editable && onChange ? (
             <input type="number" min={0} max={168} value={value} onChange={e => onChange(parseFloat(e.target.value) || 0)}
-              style={{ fontSize: 28, fontWeight: 700, color: 'var(--sb-ink-1)', fontFamily: 'var(--sb-font-num)', letterSpacing: '-0.5px', background: 'none', border: 'none', outline: 'none', width: 80, padding: 0 }} />
+              style={{ fontSize: 'var(--sb-t-h1)', fontWeight: 700, color: 'var(--sb-ink-1)', fontFamily: 'var(--sb-font-num)', letterSpacing: '-0.5px', background: 'none', border: 'none', outline: 'none', width: 80, padding: 0 }} />
           ) : (
-            <div style={{ fontSize: 28, fontWeight: 700, color: 'var(--sb-ink-1)', fontFamily: 'var(--sb-font-num)', letterSpacing: '-0.5px', lineHeight: 1 }}>{value}</div>
+            <div style={{ fontSize: 'var(--sb-t-h1)', fontWeight: 700, color: 'var(--sb-ink-1)', fontFamily: 'var(--sb-font-num)', letterSpacing: '-0.5px', lineHeight: 1 }}>{value}</div>
           )}
-          <div style={{ fontSize: 12.5, color: 'var(--sb-ink-4)', marginTop: 4 }}>{label}</div>
-          <div style={{ fontSize: 11, color, marginTop: 6, fontWeight: 500 }}>{sub}</div>
+          <div style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-4)', marginTop: 4 }}>{label}</div>
+          <div style={{ fontSize: 'var(--sb-t-meta)', color, marginTop: 6, fontWeight: 500 }}>{sub}</div>
         </div>
         <div style={{ width: 34, height: 34, borderRadius: 8, background: `${color}18`, border: `1px solid ${color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
           <Icon size={15} color={color} />
@@ -173,8 +173,8 @@ function StatCard({
 function SectionHead({ label, count, color }: { label: string; count: number; color: string }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-      <span style={{ fontSize: 10.5, fontWeight: 700, color, textTransform: 'uppercase', letterSpacing: '0.07em' }}>{label}</span>
-      <span style={{ fontSize: 10.5, color: 'var(--sb-ink-4)', background: 'var(--sb-card)', borderRadius: 10, padding: '0 6px', fontWeight: 600 }}>{count}</span>
+      <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, color, textTransform: 'uppercase', letterSpacing: '0.07em' }}>{label}</span>
+      <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', background: 'var(--sb-card)', borderRadius: 10, padding: '0 6px', fontWeight: 600 }}>{count}</span>
     </div>
   )
 }
@@ -190,9 +190,9 @@ function EventRow({ event, cancelled }: { event: GCalEvent; cancelled?: boolean 
         : <CheckCircle2 size={13} color="#1D9E75" style={{ flexShrink: 0 }} />
       }
       {time && (
-        <span style={{ fontSize: 11, color: cancelled ? 'var(--sb-ink-4)' : '#7F77DD', fontWeight: 600, minWidth: 54, flexShrink: 0 }}>{time}</span>
+        <span style={{ fontSize: 'var(--sb-t-meta)', color: cancelled ? 'var(--sb-ink-4)' : '#7F77DD', fontWeight: 600, minWidth: 54, flexShrink: 0 }}>{time}</span>
       )}
-      <span style={{ fontSize: 13, color: cancelled ? 'var(--sb-ink-4)' : '#3D3926', flex: 1, textDecoration: cancelled ? 'line-through' : 'none' }}>
+      <span style={{ fontSize: 'var(--sb-t-label)', color: cancelled ? 'var(--sb-ink-4)' : '#3D3926', flex: 1, textDecoration: cancelled ? 'line-through' : 'none' }}>
         {event.summary ?? '(No title)'}
       </span>
     </div>
@@ -223,11 +223,11 @@ function TaskRow({ title, company, cancelled }: { title: string; company?: strin
         ? <XCircle size={13} color="#6B7280" style={{ flexShrink: 0 }} />
         : <CheckSquare size={13} color="#1D9E75" style={{ flexShrink: 0 }} />
       }
-      <span style={{ fontSize: 13, color: cancelled ? 'var(--sb-ink-4)' : '#3D3926', flex: 1, textDecoration: cancelled ? 'line-through' : 'none' }}>
+      <span style={{ fontSize: 'var(--sb-t-body)', color: cancelled ? 'var(--sb-ink-4)' : '#3D3926', flex: 1, textDecoration: cancelled ? 'line-through' : 'none' }}>
         {title}
       </span>
       {company && (
-        <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 4, flexShrink: 0, color: COMPANY_COLORS[company] ?? '#6B7280', background: `${COMPANY_COLORS[company] ?? '#6B7280'}18`, fontWeight: 500 }}>
+        <span style={{ fontSize: 'var(--sb-t-micro)', padding: '1px 6px', borderRadius: 4, flexShrink: 0, color: COMPANY_COLORS[company] ?? '#6B7280', background: `${COMPANY_COLORS[company] ?? '#6B7280'}18`, fontWeight: 500 }}>
           {company}
         </span>
       )}
@@ -244,7 +244,7 @@ function PillStat({ done, total, label, color }: { done: number; total: number; 
       <div style={{ height: 4, width: 80, background: 'var(--sb-card)', borderRadius: 2, overflow: 'hidden' }}>
         <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 2, transition: 'width 0.3s' }} />
       </div>
-      <span style={{ fontSize: 12, color: 'var(--sb-ink-3)' }}>
+      <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)' }}>
         <span style={{ color, fontWeight: 600 }}>{done}</span>
         <span style={{ color: 'var(--sb-ink-4)' }}>/{total}</span>
         <span style={{ marginLeft: 4 }}>{label}</span>
@@ -331,7 +331,7 @@ function PieChart({ slices, title }: { slices: PieSlice[]; title: string }) {
 
   return (
     <div style={{ background: 'var(--sb-page)', border: '1px solid var(--sb-field)', borderRadius: 12, padding: '14px 18px', marginBottom: 20 }}>
-      <div style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--sb-ink-4)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 14 }}>{title}</div>
+      <div style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, color: 'var(--sb-ink-4)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 14 }}>{title}</div>
       <div style={{ display: 'flex', gap: 20, alignItems: 'center', flexWrap: 'wrap' }}>
         <svg width={136} height={136} style={{ flexShrink: 0 }}>
           {paths.map((p, i) => (
@@ -342,8 +342,8 @@ function PieChart({ slices, title }: { slices: PieSlice[]; title: string }) {
           {active.map((sl, i) => (
             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <div style={{ width: 9, height: 9, borderRadius: 2, background: sl.color, border: '1px solid rgba(255,255,255,0.12)', flexShrink: 0 }} />
-              <span style={{ fontSize: 11.5, color: '#3D3926', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sl.label}</span>
-              <span style={{ fontSize: 11, color: 'var(--sb-ink-3)', fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>{fmt(sl.minutes)}</span>
+              <span style={{ fontSize: 'var(--sb-t-meta)', color: '#3D3926', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sl.label}</span>
+              <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>{fmt(sl.minutes)}</span>
             </div>
           ))}
         </div>
@@ -385,26 +385,26 @@ function WeeklyDayCard({ dayStr, allEvents, statuses, tasks }: {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
           {isToday && (
-            <span style={{ fontSize: 9, fontWeight: 700, color: '#7F77DD', background: 'rgba(127,119,221,0.15)', border: '1px solid rgba(127,119,221,0.3)', borderRadius: 4, padding: '1px 6px', flexShrink: 0 }}>TODAY</span>
+            <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, color: '#7F77DD', background: 'rgba(127,119,221,0.15)', border: '1px solid rgba(127,119,221,0.3)', borderRadius: 4, padding: '1px 6px', flexShrink: 0 }}>TODAY</span>
           )}
-          <span style={{ fontSize: 13, fontWeight: 700, color: isToday ? '#7F77DD' : '#3D3926', whiteSpace: 'nowrap' }}>
+          <span style={{ fontSize: 'var(--sb-t-label)', fontWeight: 700, color: isToday ? '#7F77DD' : '#3D3926', whiteSpace: 'nowrap' }}>
             {dayLabel}
           </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexShrink: 0 }}>
-          <span style={{ fontSize: 11.5, color: doneEvts.length > 0 ? '#7F77DD' : '#3A3F55', display: 'flex', alignItems: 'center', gap: 4 }}>
+          <span style={{ fontSize: 'var(--sb-t-meta)', color: doneEvts.length > 0 ? '#7F77DD' : '#3A3F55', display: 'flex', alignItems: 'center', gap: 4 }}>
             <span style={{ fontWeight: 600, color: doneEvts.length > 0 ? '#7F77DD' : '#3A3F55' }}>{doneEvts.length}</span>
             <span style={{ color: '#3A3F55' }}>/ {events.length}</span>
             <span style={{ color: '#3A3F55' }}>events</span>
           </span>
           <div style={{ width: 1, height: 12, background: 'var(--sb-border)' }} />
-          <span style={{ fontSize: 11.5, color: doneTasks.length > 0 ? '#1D9E75' : '#3A3F55', display: 'flex', alignItems: 'center', gap: 4 }}>
+          <span style={{ fontSize: 'var(--sb-t-meta)', color: doneTasks.length > 0 ? '#1D9E75' : '#3A3F55', display: 'flex', alignItems: 'center', gap: 4 }}>
             <span style={{ fontWeight: 600, color: doneTasks.length > 0 ? '#1D9E75' : '#3A3F55' }}>{doneTasks.length}</span>
             <span style={{ color: '#3A3F55' }}>/ {dayTasks.length}</span>
             <span style={{ color: '#3A3F55' }}>tasks</span>
           </span>
           {!hasActivity && (
-            <span style={{ fontSize: 11, color: '#3A3F55' }}>No activity</span>
+            <span style={{ fontSize: 'var(--sb-t-meta)', color: '#3A3F55' }}>No activity</span>
           )}
         </div>
       </div>
@@ -485,7 +485,7 @@ export function ReviewModule() {
 
         {/* ─── Week label ─────────────────────────────────────────────────── */}
         <div style={{ marginBottom: 24 }}>
-          <h2 style={{ margin: '0 0 3px', fontSize: 20, fontWeight: 700, color: 'var(--sb-ink-1)', fontFamily: 'var(--sb-font-num)', letterSpacing: '-0.3px' }}>
+          <h2 style={{ margin: '0 0 3px', fontSize: 'var(--sb-t-h2)', fontWeight: 700, color: 'var(--sb-ink-1)', fontFamily: 'var(--sb-font-num)', letterSpacing: '-0.3px' }}>
             Week of {new Date(getMonday() + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
           </h2>
         </div>
@@ -511,7 +511,7 @@ export function ReviewModule() {
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <CalendarDays size={15} color="#7F77DD" />
-              <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--sb-ink-1)' }}>
+              <span style={{ fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>
                 {viewMode === 'daily'
                   ? fmtDayLabel(selectedDay)
                   : `Week of ${fmtWeekRange(weekStart)}`
@@ -520,7 +520,7 @@ export function ReviewModule() {
               {(viewMode === 'daily' ? selectedDay !== todayStr() : !isCurrentWeek) && (
                 <button
                   onClick={() => setSelectedDay(todayStr())}
-                  style={{ fontSize: 11, color: '#7F77DD', background: 'rgba(127,119,221,0.1)', border: '1px solid rgba(127,119,221,0.25)', borderRadius: 5, padding: '2px 8px', cursor: 'pointer' }}
+                  style={{ fontSize: 'var(--sb-t-meta)', color: '#7F77DD', background: 'rgba(127,119,221,0.1)', border: '1px solid rgba(127,119,221,0.25)', borderRadius: 5, padding: '2px 8px', cursor: 'pointer' }}
                 >Today</button>
               )}
             </div>
@@ -533,7 +533,7 @@ export function ReviewModule() {
                     key={mode}
                     onClick={() => setViewMode(mode)}
                     style={{
-                      padding: '5px 14px', fontSize: 11.5, fontWeight: 600, cursor: 'pointer', border: 'none',
+                      padding: '5px 14px', fontSize: 'var(--sb-t-meta)', fontWeight: 600, cursor: 'pointer', border: 'none',
                       background: viewMode === mode ? '#7F77DD' : 'none',
                       color: viewMode === mode ? '#fff' : 'var(--sb-ink-3)',
                       textTransform: 'capitalize',
@@ -575,9 +575,9 @@ export function ReviewModule() {
               {isDailyEmpty ? (
                 <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--sb-ink-4)' }}>
                   <CalendarDays size={28} style={{ opacity: 0.4, marginBottom: 10 }} />
-                  <p style={{ margin: 0, fontSize: 13 }}>No events or tasks recorded for this day.</p>
+                  <p style={{ margin: 0, fontSize: 'var(--sb-t-body)' }}>No events or tasks recorded for this day.</p>
                   {dayEvents.length === 0 && (
-                    <p style={{ margin: '6px 0 0', fontSize: 11, color: '#3A3F55' }}>Events load from the current week's cache — open Cal Intel to load another week.</p>
+                    <p style={{ margin: '6px 0 0', fontSize: 'var(--sb-t-meta)', color: '#3A3F55' }}>Events load from the current week's cache — open Cal Intel to load another week.</p>
                   )}
                 </div>
               ) : (

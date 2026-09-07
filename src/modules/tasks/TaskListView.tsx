@@ -25,7 +25,7 @@ export function TaskListView({ tasks, onOpen, hideCompleted, groupBy, filteredTa
   return (
     <div style={{ padding: '4px 28px 28px', display: 'flex', flexDirection: 'column', gap: 18 }}>
       {visible.length === 0 && (
-        <p style={{ margin: 0, padding: '40px 0', textAlign: 'center', color: 'var(--sb-ink-4)', fontSize: 13 }}>
+        <p style={{ margin: 0, padding: '40px 0', textAlign: 'center', color: 'var(--sb-ink-4)', fontSize: 'var(--sb-t-body)' }}>
           Nothing here.
         </p>
       )}
@@ -34,7 +34,7 @@ export function TaskListView({ tasks, onOpen, hideCompleted, groupBy, filteredTa
           {g.label && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 2px' }}>
               <span style={{ width: 8, height: 8, borderRadius: 999, background: g.color, flexShrink: 0 }} />
-              <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--sb-ink-1)' }}>{g.label}</span>
+              <span style={{ fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>{g.label}</span>
               <CountBadge value={g.tasks.length} />
             </div>
           )}

@@ -38,12 +38,12 @@ const C = {
 }
 
 const LABEL: React.CSSProperties = {
-  width: 46, flexShrink: 0, fontSize: 11.5, color: C.ghost, paddingTop: 7,
+  width: 46, flexShrink: 0, fontSize: 'var(--sb-t-meta)', color: C.ghost, paddingTop: 7,
 }
 const INPUT: React.CSSProperties = {
   flex: 1, minWidth: 0, height: 30, padding: '0 9px', borderRadius: 7, boxSizing: 'border-box',
   background: C.field, border: `1px solid ${C.border}`,
-  fontFamily: 'inherit', fontSize: 12.5, color: C.ink, outline: 'none',
+  fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', color: C.ink, outline: 'none',
 }
 const TOOL: React.CSSProperties = {
   width: 26, height: 26, borderRadius: 6, display: 'flex', alignItems: 'center',
@@ -155,7 +155,7 @@ export function Composer({ seed, accounts, onClose, onSent }: {
         display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px',
         borderBottom: `1px solid ${C.hair}`, background: 'var(--sb-header)',
       }}>
-        <span style={{ fontSize: 12, fontWeight: 600, color: C.ink }}>{MODE_LABEL[seed.mode]}</span>
+        <span style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: C.ink }}>{MODE_LABEL[seed.mode]}</span>
         <span style={{ flex: 1 }} />
         <button onClick={onClose} title="Discard" style={TOOL}><X size={14} /></button>
       </div>
@@ -181,8 +181,8 @@ export function Composer({ seed, accounts, onClose, onSent }: {
         <div style={{ display: 'flex', gap: 8 }}>
           <span style={LABEL}>To</span>
           <input value={to} onChange={e => setTo(e.target.value)} placeholder="name@example.com" style={INPUT} />
-          {!showCc  && <button onClick={() => setShowCc(true)}  style={{ ...TOOL, width: 'auto', padding: '0 7px', fontSize: 11.5, fontFamily: 'inherit' }}>Cc</button>}
-          {!showBcc && <button onClick={() => setShowBcc(true)} style={{ ...TOOL, width: 'auto', padding: '0 7px', fontSize: 11.5, fontFamily: 'inherit' }}>Bcc</button>}
+          {!showCc  && <button onClick={() => setShowCc(true)}  style={{ ...TOOL, width: 'auto', padding: '0 7px', fontSize: 'var(--sb-t-meta)', fontFamily: 'inherit' }}>Cc</button>}
+          {!showBcc && <button onClick={() => setShowBcc(true)} style={{ ...TOOL, width: 'auto', padding: '0 7px', fontSize: 'var(--sb-t-meta)', fontFamily: 'inherit' }}>Bcc</button>}
         </div>
 
         {showCc && (
@@ -218,7 +218,7 @@ export function Composer({ seed, accounts, onClose, onSent }: {
             minHeight: 150, maxHeight: '32vh', overflowY: 'auto', marginTop: 3,
             padding: '10px 11px', borderRadius: 8, background: C.field,
             border: `1px solid ${C.border}`, outline: 'none',
-            fontFamily: 'inherit', fontSize: 13, lineHeight: 1.55, color: C.ink,
+            fontFamily: 'inherit', fontSize: 'var(--sb-t-body)', lineHeight: 1.55, color: C.ink,
           }}
         />
 
@@ -228,7 +228,7 @@ export function Composer({ seed, accounts, onClose, onSent }: {
               <span key={i} style={{
                 display: 'inline-flex', alignItems: 'center', gap: 6, height: 24, padding: '0 8px',
                 borderRadius: 999, background: C.field, border: `1px solid ${C.border}`,
-                fontSize: 11, color: C.muted,
+                fontSize: 'var(--sb-t-meta)', color: C.muted,
               }}>
                 <Paperclip size={11} />
                 {f.file.name} · {fmtBytes(f.file.size)}
@@ -240,14 +240,14 @@ export function Composer({ seed, accounts, onClose, onSent }: {
             ))}
             {/* Google's own limit, and worth saying before the send fails. */}
             {total > 24 * 1024 * 1024 && (
-              <span style={{ fontSize: 11, color: C.red, alignSelf: 'center' }}>
+              <span style={{ fontSize: 'var(--sb-t-meta)', color: C.red, alignSelf: 'center' }}>
                 Over 25 MB — Gmail will refuse it. Send a link instead.
               </span>
             )}
           </div>
         )}
 
-        {error && <p style={{ margin: 0, fontSize: 12, color: C.red, lineHeight: 1.5 }}>{error}</p>}
+        {error && <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', color: C.red, lineHeight: 1.5 }}>{error}</p>}
       </div>
 
       {/* Send, and the handful of things worth doing to the words first */}
@@ -259,7 +259,7 @@ export function Composer({ seed, accounts, onClose, onSent }: {
           style={{
             display: 'flex', alignItems: 'center', gap: 6, height: 32, padding: '0 15px',
             borderRadius: 9, background: C.amber, border: '1px solid rgba(25,23,18,0.18)',
-            color: C.ink, fontFamily: 'inherit', fontSize: 12.5, fontWeight: 600,
+            color: C.ink, fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
             cursor: sending ? 'default' : 'pointer', boxShadow: '0 2px 0 rgba(25,23,18,0.12)',
           }}>
           <Send size={13} /> {sending ? 'Sending…' : 'Send'}

@@ -176,7 +176,7 @@ function GeneratingSkeleton() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '4px 0' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
         <RefreshCw size={13} color="#7F77DD" style={{ animation: 'spin 1s linear infinite' }} />
-        <span style={{ fontSize: 12, color: '#7F77DD' }}>Analyzing your calendar and tasks…</span>
+        <span style={{ fontSize: 'var(--sb-t-body-s)', color: '#7F77DD' }}>Analyzing your calendar and tasks…</span>
       </div>
       {[80, 65, 90, 55, 75].map((w, i) => (
         <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
@@ -380,8 +380,8 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
             <Sparkles size={13} color="#7F77DD" />
           </div>
           <div style={{ textAlign: 'left' }}>
-            <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: 'var(--sb-ink-1)' }}>Build My Day</p>
-            <p style={{ margin: 0, fontSize: 11, color: 'var(--sb-ink-4)' }}>AI-powered time blocking + calendar sync</p>
+            <p style={{ margin: 0, fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>Build My Day</p>
+            <p style={{ margin: 0, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>AI-powered time blocking + calendar sync</p>
           </div>
         </div>
         <ChevronRight size={15} color="#6B7280" />
@@ -400,10 +400,10 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
             <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '14px 16px', borderBottom: '1px solid #92400E30' }}>
               <CreditCard size={14} color="#F59E0B" style={{ marginTop: 1, flexShrink: 0 }} />
               <div>
-                <p style={{ margin: '0 0 3px', fontSize: 12.5, fontWeight: 600, color: '#B45309' }}>
+                <p style={{ margin: '0 0 3px', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: '#B45309' }}>
                   {errorType === 'credit' ? 'API Credit Balance Too Low' : 'Generation Failed'}
                 </p>
-                <p style={{ margin: 0, fontSize: 12, color: 'var(--sb-ink-3)', lineHeight: 1.5 }}>
+                <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', lineHeight: 1.5 }}>
                   {errorType === 'credit'
                     ? 'Top up at console.anthropic.com → Billing, then try again.'
                     : error}
@@ -412,7 +412,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
             </div>
             <div style={{ padding: '10px 16px', display: 'flex', gap: 8, alignItems: 'center' }}>
               <AlertTriangle size={10} color="#6B7280" />
-              <span style={{ fontSize: 10.5, color: 'var(--sb-ink-4)' }}>Only AI planning is affected — other features work normally.</span>
+              <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)' }}>Only AI planning is affected — other features work normally.</span>
             </div>
           </div>
         )}
@@ -441,11 +441,11 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
           return (
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
-                <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--sb-ink-3)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                <label style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-ink-3)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                   What must get done today?
                 </label>
                 {selectedTaskIds.size > 0 && (
-                  <span style={{ fontSize: 10.5, color: '#7F77DD' }}>
+                  <span style={{ fontSize: 'var(--sb-t-micro)', color: '#7F77DD' }}>
                     {selectedTaskIds.size} selected
                   </span>
                 )}
@@ -457,7 +457,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                     {/* Company header */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
                       <div style={{ width: 6, height: 6, borderRadius: '50%', background: group.color, flexShrink: 0 }} />
-                      <span style={{ fontSize: 10, fontWeight: 600, color: group.color, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 600, color: group.color, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                         {group.name}
                       </span>
                     </div>
@@ -495,7 +495,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                             </div>
 
                             <span style={{
-                              flex: 1, fontSize: 12, color: 'var(--sb-ink-1)',
+                              flex: 1, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)',
                               lineHeight: 1.3,
                               textDecoration: 'none',
                             }}>
@@ -504,7 +504,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
 
                             {isDueToday && (
                               <span style={{
-                                fontSize: 9.5, padding: '1px 5px', borderRadius: 3, flexShrink: 0,
+                                fontSize: 'var(--sb-t-micro)', padding: '1px 5px', borderRadius: 3, flexShrink: 0,
                                 background: '#EF444418', border: '1px solid #EF444430', color: '#EF4444',
                               }}>
                                 today
@@ -512,7 +512,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                             )}
                             {task.quadrant === 'do' && !isDueToday && (
                               <span style={{
-                                fontSize: 9.5, padding: '1px 5px', borderRadius: 3, flexShrink: 0,
+                                fontSize: 'var(--sb-t-micro)', padding: '1px 5px', borderRadius: 3, flexShrink: 0,
                                 background: '#F59E0B15', border: '1px solid #F59E0B30', color: '#F59E0B',
                               }}>
                                 urgent
@@ -532,11 +532,11 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
         {/* Today's fixed meetings — so you know what the AI will work around */}
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
-            <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--sb-ink-3)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            <label style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-ink-3)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
               Today's calendar
             </label>
             {eventsLoading && (
-              <span style={{ fontSize: 10.5, color: 'var(--sb-ink-4)', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', display: 'flex', alignItems: 'center', gap: 4 }}>
                 <RefreshCw size={10} style={{ animation: 'spin 1s linear infinite' }} />
                 Loading…
               </span>
@@ -556,7 +556,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
               ))}
             </div>
           ) : todayEvents.length === 0 ? (
-            <p style={{ margin: 0, fontSize: 12, color: 'var(--sb-ink-4)', fontStyle: 'italic' }}>
+            <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-4)', fontStyle: 'italic' }}>
               No meetings today — AI will fill your entire day.
             </p>
           ) : (
@@ -567,16 +567,16 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                   <div key={ev.id} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                     <div style={{ width: 3, height: '100%', minHeight: 28, borderRadius: 2, background: color, flexShrink: 0 }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <span style={{ fontSize: 10, fontFamily: 'monospace', color: 'var(--sb-ink-4)' }}>
+                      <span style={{ fontSize: 'var(--sb-t-micro)', fontFamily: 'monospace', color: 'var(--sb-ink-4)' }}>
                         {hhmm(ev.start_time)}–{hhmm(ev.end_time)}
                       </span>
-                      <p style={{ margin: '1px 0 0', fontSize: 12, color: 'var(--sb-ink-1)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <p style={{ margin: '1px 0 0', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {ev.title}
                       </p>
                     </div>
                     {ev.calendarName && (
                       <span style={{
-                        fontSize: 9.5, padding: '1px 5px', borderRadius: 3, flexShrink: 0,
+                        fontSize: 'var(--sb-t-micro)', padding: '1px 5px', borderRadius: 3, flexShrink: 0,
                         background: `${color}18`, border: `1px solid ${color}30`, color,
                       }}>
                         {ev.calendarName}
@@ -591,7 +591,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
 
         {/* Q2 — Deep work pref */}
         <div>
-          <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--sb-ink-3)', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: 8 }}>
+          <label style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-ink-3)', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: 8 }}>
             When do you prefer deep work?
           </label>
           <div style={{ display: 'flex', gap: 8 }}>
@@ -601,7 +601,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                 onClick={() => setDeepWork(opt)}
                 style={{
                   flex: 1, padding: '9px 0', borderRadius: 8, cursor: 'pointer',
-                  fontSize: 12, fontWeight: deepWork === opt ? 600 : 400,
+                  fontSize: 'var(--sb-t-body-s)', fontWeight: deepWork === opt ? 600 : 400,
                   background: deepWork === opt ? 'rgba(127,119,221,0.1)' : 'var(--sb-page)',
                   border: `1px solid ${deepWork === opt ? 'color-mix(in srgb, #7F77DD 40%, transparent)' : 'var(--sb-border)'}`,
                   color: deepWork === opt ? '#7F77DD' : 'var(--sb-ink-4)',
@@ -622,7 +622,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
             style={{
               padding: '9px 16px', borderRadius: 8, cursor: 'pointer',
               background: 'transparent', border: '1px solid var(--sb-border)',
-              color: 'var(--sb-ink-4)', fontSize: 12,
+              color: 'var(--sb-ink-4)', fontSize: 'var(--sb-t-body-s)',
             }}
           >
             Cancel
@@ -634,7 +634,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
             style={{
               flex: 1, padding: '10px 0', borderRadius: 8, cursor: eventsLoading ? 'not-allowed' : 'pointer',
               background: '#7F77DD', border: 'none',
-              color: '#fff', fontSize: 12.5, fontWeight: 600,
+              color: '#fff', fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
               opacity: eventsLoading ? 0.45 : 1,
               transition: 'opacity 0.15s',
@@ -665,8 +665,8 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: 'var(--sb-ink-1)' }}>Review Your Day Plan</p>
-            <p style={{ margin: '2px 0 0', fontSize: 10.5, color: 'var(--sb-ink-4)' }}>
+            <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>Review Your Day Plan</p>
+            <p style={{ margin: '2px 0 0', fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)' }}>
               {confirmed} confirmed
               {toCreate > 0 && ` · ${toCreate} to create`}
               {toUpdate > 0 && ` · ${toUpdate} to reschedule`}
@@ -675,7 +675,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
           </div>
           <button
             onClick={() => setPhase('qa')}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-4)', fontSize: 11, padding: '4px 8px' }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-4)', fontSize: 'var(--sb-t-meta)', padding: '4px 8px' }}
           >
             ← Edit preferences
           </button>
@@ -707,11 +707,11 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                 {/* Content */}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: 11, fontFamily: 'monospace', color: color, whiteSpace: 'nowrap' }}>
+                    <span style={{ fontSize: 'var(--sb-t-meta)', fontFamily: 'monospace', color: color, whiteSpace: 'nowrap' }}>
                       {start}–{end}
                     </span>
                     <span style={{
-                      fontSize: 9.5, padding: '1px 6px', borderRadius: 3,
+                      fontSize: 'var(--sb-t-micro)', padding: '1px 6px', borderRadius: 3,
                       background: `${color}15`, border: `1px solid ${color}25`, color,
                       fontWeight: 600,
                     }}>
@@ -719,7 +719,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                     </span>
                     {slot.isExisting && (
                       <span style={{
-                        fontSize: 9.5, padding: '1px 6px', borderRadius: 3,
+                        fontSize: 'var(--sb-t-micro)', padding: '1px 6px', borderRadius: 3,
                         background: '#25283618', border: '1px solid #25283640', color: 'var(--sb-ink-4)',
                       }}>
                         existing
@@ -727,7 +727,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                     )}
                     {slot.action === 'reschedule' && (
                       <span style={{
-                        fontSize: 9.5, padding: '1px 6px', borderRadius: 3,
+                        fontSize: 'var(--sb-t-micro)', padding: '1px 6px', borderRadius: 3,
                         background: '#F59E0B15', border: '1px solid #F59E0B30', color: '#F59E0B',
                       }}>
                         move
@@ -735,7 +735,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                     )}
                     {slot.action === 'remove' && (
                       <span style={{
-                        fontSize: 9.5, padding: '1px 6px', borderRadius: 3,
+                        fontSize: 'var(--sb-t-micro)', padding: '1px 6px', borderRadius: 3,
                         background: '#EF444415', border: '1px solid #EF444430', color: '#EF4444',
                       }}>
                         remove
@@ -743,16 +743,16 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                     )}
                   </div>
 
-                  <p style={{ margin: '4px 0 0', fontSize: 12.5, color: 'var(--sb-ink-1)', fontWeight: 500, lineHeight: 1.3 }}>
+                  <p style={{ margin: '4px 0 0', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)', fontWeight: 500, lineHeight: 1.3 }}>
                     {slot.title}
                   </p>
 
                   {slot.company && (
-                    <p style={{ margin: '3px 0 0', fontSize: 10.5, color: 'var(--sb-ink-4)' }}>{slot.company}</p>
+                    <p style={{ margin: '3px 0 0', fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)' }}>{slot.company}</p>
                   )}
 
                   {slot.note && (
-                    <p style={{ margin: '4px 0 0', fontSize: 10.5, color: 'var(--sb-ink-4)', fontStyle: 'italic', lineHeight: 1.4 }}>
+                    <p style={{ margin: '4px 0 0', fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', fontStyle: 'italic', lineHeight: 1.4 }}>
                       {slot.note}
                     </p>
                   )}
@@ -833,7 +833,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                 style={{
                   padding: '12px 0', borderRadius: 10, cursor: isReady ? 'pointer' : 'not-allowed',
                   background: '#7F77DD', border: 'none',
-                  color: '#fff', fontSize: 13, fontWeight: 600,
+                  color: '#fff', fontSize: 'var(--sb-t-label)', fontWeight: 600,
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                   opacity: isReady ? 1 : 0.4,
                   transition: 'opacity 0.15s',
@@ -843,7 +843,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                 Apply to Calendar{isReady ? ` (${pendingCount})` : ''}
               </button>
               {!isReady && (
-                <p style={{ margin: 0, textAlign: 'center', fontSize: 11, color: 'var(--sb-ink-4)' }}>
+                <p style={{ margin: 0, textAlign: 'center', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>
                   {unconfirmed > 0
                     ? `Confirm ${unconfirmed} pending slot${unconfirmed > 1 ? 's' : ''} above to enable`
                     : 'No new calendar changes — all events are already scheduled'}
@@ -863,7 +863,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
           <RefreshCw size={13} color="#7F77DD" style={{ animation: 'spin 1s linear infinite' }} />
-          <span style={{ fontSize: 12, color: '#7F77DD' }}>Applying changes to your calendar…</span>
+          <span style={{ fontSize: 'var(--sb-t-body-s)', color: '#7F77DD' }}>Applying changes to your calendar…</span>
         </div>
         {active.map(slot => {
           const st = applying[slot.id]
@@ -879,10 +879,10 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                 {st === 'error' && <X     size={9} color="#fff" />}
                 {!st && <RefreshCw size={8} color="#7F77DD" style={{ animation: 'spin 1s linear infinite' }} />}
               </div>
-              <span style={{ fontSize: 12, color: st === 'error' ? '#EF4444' : 'var(--sb-ink-1)' }}>
+              <span style={{ fontSize: 'var(--sb-t-body-s)', color: st === 'error' ? '#EF4444' : 'var(--sb-ink-1)' }}>
                 {slot.title}
               </span>
-              <span style={{ fontSize: 10.5, color: 'var(--sb-ink-4)', marginLeft: 'auto' }}>
+              <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', marginLeft: 'auto' }}>
                 {slot.action === 'create' ? 'Creating' : slot.action === 'reschedule' ? 'Moving' : slot.action === 'remove' ? 'Removing' : 'Keeping'}…
               </span>
             </div>
@@ -912,18 +912,18 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
           }}>
             <Check size={13} color="#1D9E75" />
           </div>
-          <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#1D9E75' }}>Plan Applied</p>
+          <p style={{ margin: 0, fontSize: 'var(--sb-t-label)', fontWeight: 600, color: '#1D9E75' }}>Plan Applied</p>
         </div>
         <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-          {created > 0 && <span style={{ fontSize: 12, color: 'var(--sb-ink-1)' }}>{created} created</span>}
-          {updated > 0 && <span style={{ fontSize: 12, color: 'var(--sb-ink-1)' }}>{updated} rescheduled</span>}
-          {deleted > 0 && <span style={{ fontSize: 12, color: 'var(--sb-ink-1)' }}>{deleted} removed</span>}
-          {errored.length > 0 && <span style={{ fontSize: 12, color: '#EF4444' }}>{errored.length} failed</span>}
+          {created > 0 && <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)' }}>{created} created</span>}
+          {updated > 0 && <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)' }}>{updated} rescheduled</span>}
+          {deleted > 0 && <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)' }}>{deleted} removed</span>}
+          {errored.length > 0 && <span style={{ fontSize: 'var(--sb-t-body-s)', color: '#EF4444' }}>{errored.length} failed</span>}
         </div>
         {errored.length > 0 && (
           <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 4 }}>
             {errored.map(r => (
-              <p key={r.slotId} style={{ margin: 0, fontSize: 11, color: '#EF4444' }}>
+              <p key={r.slotId} style={{ margin: 0, fontSize: 'var(--sb-t-meta)', color: '#EF4444' }}>
                 ✗ {r.title}{r.error ? `: ${r.error}` : ''}
               </p>
             ))}
@@ -936,7 +936,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
         style={{
           padding: '9px 0', borderRadius: 8, cursor: 'pointer',
           background: 'transparent', border: '1px solid var(--sb-border)',
-          color: 'var(--sb-ink-4)', fontSize: 12,
+          color: 'var(--sb-ink-4)', fontSize: 'var(--sb-t-body-s)',
         }}
       >
         Build another plan

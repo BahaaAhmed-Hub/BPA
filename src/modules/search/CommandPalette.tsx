@@ -33,7 +33,7 @@ interface Hit {
 const CHIP: React.CSSProperties = {
   display: 'inline-flex', alignItems: 'center', gap: 4, height: 22, padding: '0 8px',
   borderRadius: 6, background: FIELD, border: '1px solid var(--sb-border)',
-  fontSize: 10.5, color: MUTED, fontFamily: 'inherit', flexShrink: 0,
+  fontSize: 'var(--sb-t-micro)', color: MUTED, fontFamily: 'inherit', flexShrink: 0,
 }
 
 /** Every settings page the palette can jump to, by the words you'd search for. */
@@ -250,7 +250,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
             placeholder="Search tasks, calendar, habits, finance and settings"
             style={{
               flex: 1, minWidth: 0, border: 'none', outline: 'none', background: 'transparent',
-              fontSize: 17, color: INK, fontFamily: 'inherit', padding: 0, textAlign: 'left',
+              fontSize: 'var(--sb-t-h2)', color: INK, fontFamily: 'inherit', padding: 0, textAlign: 'left',
             }} />
           <span style={CHIP}>Everything</span>
           <span style={CHIP}>esc</span>
@@ -259,11 +259,11 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
         {/* Results */}
         <div ref={listRef} style={{ flex: 1, minHeight: 0, overflowY: 'auto', borderTop: '1px solid var(--sb-hairline)', padding: '8px 0' }}>
           {!query ? (
-            <p style={{ margin: 0, padding: '18px 18px 22px', fontSize: 12.5, color: GHOST }}>
+            <p style={{ margin: 0, padding: '18px 18px 22px', fontSize: 'var(--sb-t-body-s)', color: GHOST }}>
               Type to search across the platform.
             </p>
           ) : rows.length === 0 ? (
-            <p style={{ margin: 0, padding: '18px 18px 22px', fontSize: 12.5, color: GHOST }}>
+            <p style={{ margin: 0, padding: '18px 18px 22px', fontSize: 'var(--sb-t-body-s)', color: GHOST }}>
               Nothing matches “{q.trim()}”.
             </p>
           ) : rows.map(({ hit, idx, heading }) => {
@@ -273,7 +273,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
               <div key={hit.id}>
                 {heading && (
                   <div style={{
-                    padding: '10px 18px 5px', fontSize: 9.5, fontWeight: 800,
+                    padding: '10px 18px 5px', fontSize: 'var(--sb-t-micro)', fontWeight: 800,
                     letterSpacing: '0.14em', color: GHOST, textTransform: 'uppercase',
                   }}>{heading}</div>
                 )}
@@ -293,14 +293,14 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
                   }}>
                     <Icon size={14} strokeWidth={1.9} />
                   </span>
-                  <span style={{ fontSize: 13.5, fontWeight: 700, color: INK, flexShrink: 0, maxWidth: '52%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <span style={{ fontSize: 'var(--sb-t-label)', fontWeight: 700, color: INK, flexShrink: 0, maxWidth: '52%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {hit.title}
                   </span>
-                  <span style={{ flex: 1, minWidth: 0, fontSize: 12, color: GHOST, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <span style={{ flex: 1, minWidth: 0, fontSize: 'var(--sb-t-body-s)', color: GHOST, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {hit.meta}
                   </span>
                   {on && (
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, color: MUTED, flexShrink: 0 }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 'var(--sb-t-meta)', color: MUTED, flexShrink: 0 }}>
                       <CornerDownLeft size={11} /> open
                     </span>
                   )}
@@ -313,7 +313,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
         {/* Footer */}
         <div style={{
           display: 'flex', alignItems: 'center', gap: 14, padding: '10px 18px',
-          background: FIELD, borderTop: '1px solid var(--sb-hairline)', fontSize: 11, color: GHOST,
+          background: FIELD, borderTop: '1px solid var(--sb-hairline)', fontSize: 'var(--sb-t-meta)', color: GHOST,
         }}>
           <span>↑↓ navigate</span>
           <span>↵ open</span>

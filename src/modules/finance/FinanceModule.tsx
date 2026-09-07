@@ -219,7 +219,7 @@ export function FinanceModule() {
               >
                 <Icon color={active ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)'} />
                 <span style={{
-                  fontSize: 12, fontWeight: active ? 600 : 400,
+                  fontSize: 'var(--sb-t-body-s)', fontWeight: active ? 600 : 400,
                   color: active ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)',
                   whiteSpace: 'nowrap' as const, letterSpacing: '0.1px',
                 }}>
@@ -254,7 +254,7 @@ export function FinanceModule() {
             background: 'transparent', border: '1px solid var(--sb-border)', cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             flexShrink: 0, gap: 5, marginRight: 7,
-            fontFamily: 'inherit', fontSize: 12, fontWeight: 600, color: 'var(--sb-ink-3)',
+            fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-3)',
           }}
         >
           <IconPlus color="var(--sb-ink-3)" />

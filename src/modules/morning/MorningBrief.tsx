@@ -260,7 +260,7 @@ function StatusBadge({ status }: { status: ReturnType<typeof getEventStatus> }) 
   return (
     <span style={{
       display: 'inline-flex', alignItems: 'center', gap: 4,
-      fontSize: 9.5, fontWeight: 600, letterSpacing: '0.5px',
+      fontSize: 'var(--sb-t-micro)', fontWeight: 600, letterSpacing: '0.5px',
       padding: '2px 7px', borderRadius: 4,
       background: cfg.bg, border: `1px solid ${cfg.border}`, color: cfg.color,
     }}>
@@ -346,7 +346,7 @@ function EventContextMenu({
         onClick={disabled ? undefined : () => { action?.(); onClose() }}
         style={{
           display: 'flex', alignItems: 'center', gap: 9,
-          padding: '0 12px', height: 32, fontSize: 13,
+          padding: '0 12px', height: 32, fontSize: 'var(--sb-t-body)',
           color: disabled ? '#4B5268' : '#3D3926',
           cursor: disabled ? 'default' : 'pointer',
           borderRadius: 6, userSelect: 'none',
@@ -443,7 +443,7 @@ function EventDetailPanel({ event, onClose }: { event: RichMeetingEvent; onClose
         {/* Header */}
         <div style={{ padding: '20px 22px 16px', borderBottom: '1px solid var(--sb-border)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
-            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--sb-ink-1)', lineHeight: 1.35, flex: 1 }}>
+            <h3 style={{ margin: 0, fontSize: 'var(--sb-t-h3)', fontWeight: 700, color: 'var(--sb-ink-1)', lineHeight: 1.35, flex: 1 }}>
               {event.title}
             </h3>
             <button
@@ -455,7 +455,7 @@ function EventDetailPanel({ event, onClose }: { event: RichMeetingEvent; onClose
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10 }}>
             <StatusBadge status={status} />
-            <span style={{ fontSize: 11, color: 'var(--sb-ink-1)' }}>
+            <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-1)' }}>
               {fmtTime(event.start_time)} – {fmtTime(event.end_time)}
               <span style={{ marginLeft: 6, color: 'var(--sb-ink-3)' }}>({fmtDuration(event.start_time, event.end_time)})</span>
             </span>
@@ -469,9 +469,9 @@ function EventDetailPanel({ event, onClose }: { event: RichMeetingEvent; onClose
           {event.calendarName && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <div style={{ width: 8, height: 8, borderRadius: '50%', background: accentColor, flexShrink: 0 }} />
-              <span style={{ fontSize: 12, color: 'var(--sb-ink-1)' }}>{event.calendarName}</span>
+              <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)' }}>{event.calendarName}</span>
               {event.accountEmail && (
-                <span style={{ fontSize: 10.5, color: 'var(--sb-ink-3)' }}>· {event.accountEmail}</span>
+                <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)' }}>· {event.accountEmail}</span>
               )}
             </div>
           )}
@@ -479,7 +479,7 @@ function EventDetailPanel({ event, onClose }: { event: RichMeetingEvent; onClose
           {/* Meeting type */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <MeetingTypeIcon type={event.meeting_type} size={13} />
-            <span style={{ fontSize: 12, color: 'var(--sb-ink-1)' }}>
+            <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)' }}>
               <MeetingTypeLabel type={event.meeting_type} />
             </span>
           </div>
@@ -488,7 +488,7 @@ function EventDetailPanel({ event, onClose }: { event: RichMeetingEvent; onClose
           {event.location && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <MapPin size={13} color="var(--sb-ink-3)" style={{ flexShrink: 0 }} />
-              <span style={{ fontSize: 12, color: 'var(--sb-ink-1)' }}>{event.location}</span>
+              <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)' }}>{event.location}</span>
             </div>
           )}
 
@@ -502,7 +502,7 @@ function EventDetailPanel({ event, onClose }: { event: RichMeetingEvent; onClose
                 display: 'flex', alignItems: 'center', gap: 8,
                 padding: '10px 14px', borderRadius: 8,
                 background: 'rgba(var(--sb-accent-rgb),0.12)', border: '1px solid #7F77DD40',
-                color: '#7F77DD', fontSize: 12.5, fontWeight: 600,
+                color: '#7F77DD', fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
                 textDecoration: 'none', transition: 'all 0.15s',
               }}
             >
@@ -518,11 +518,11 @@ function EventDetailPanel({ event, onClose }: { event: RichMeetingEvent; onClose
               padding: '12px 14px', borderRadius: 8,
               background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
             }}>
-              <p style={{ margin: '0 0 6px', fontSize: 10, fontWeight: 600, color: 'var(--sb-ink-3)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              <p style={{ margin: '0 0 6px', fontSize: 'var(--sb-t-micro)', fontWeight: 600, color: 'var(--sb-ink-3)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 Description
               </p>
               <p style={{
-                margin: 0, fontSize: 12, color: 'var(--sb-ink-1)', lineHeight: 1.6,
+                margin: 0, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)', lineHeight: 1.6,
                 maxHeight: 100, overflowY: 'auto',
                 whiteSpace: 'pre-wrap', wordBreak: 'break-word',
               }}>
@@ -534,7 +534,7 @@ function EventDetailPanel({ event, onClose }: { event: RichMeetingEvent; onClose
           {/* Attendees */}
           {attendees.length > 0 && (
             <div>
-              <p style={{ margin: '0 0 10px', fontSize: 10, fontWeight: 600, color: 'var(--sb-ink-3)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              <p style={{ margin: '0 0 10px', fontSize: 'var(--sb-t-micro)', fontWeight: 600, color: 'var(--sb-ink-3)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 Attendees ({attendees.length})
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -548,23 +548,23 @@ function EventDetailPanel({ event, onClose }: { event: RichMeetingEvent; onClose
                         width: 26, height: 26, borderRadius: '50%', flexShrink: 0,
                         background: `${accentColor}22`, border: `1px solid ${accentColor}40`,
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: 9.5, fontWeight: 700, color: accentColor,
+                        fontSize: 'var(--sb-t-micro)', fontWeight: 700, color: accentColor,
                       }}>
                         {initials}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={{ margin: 0, fontSize: 12, color: 'var(--sb-ink-1)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {att.displayName ?? att.email}
-                          {att.self && <span style={{ fontSize: 10, color: 'var(--sb-ink-3)', marginLeft: 5 }}>(you)</span>}
+                          {att.self && <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)', marginLeft: 5 }}>(you)</span>}
                         </p>
                         {att.displayName && (
-                          <p style={{ margin: 0, fontSize: 10, color: 'var(--sb-ink-3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          <p style={{ margin: 0, fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {att.email}
                           </p>
                         )}
                       </div>
                       <span style={{
-                        fontSize: 10, fontWeight: 700, color: rc,
+                        fontSize: 'var(--sb-t-micro)', fontWeight: 700, color: rc,
                         width: 16, textAlign: 'center', flexShrink: 0,
                       }} title={att.responseStatus ?? 'No response'}>
                         {rs}
@@ -573,7 +573,7 @@ function EventDetailPanel({ event, onClose }: { event: RichMeetingEvent; onClose
                   )
                 })}
                 {attendees.length > 8 && (
-                  <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--sb-ink-3)' }}>
+                  <p style={{ margin: '4px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>
                     +{attendees.length - 8} more attendees
                   </p>
                 )}
@@ -589,7 +589,7 @@ function EventDetailPanel({ event, onClose }: { event: RichMeetingEvent; onClose
               rel="noopener noreferrer"
               style={{
                 display: 'flex', alignItems: 'center', gap: 6,
-                fontSize: 11, color: 'var(--sb-ink-3)', textDecoration: 'none',
+                fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', textDecoration: 'none',
                 marginTop: 4,
               }}
             >
@@ -609,7 +609,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
     <p style={{
       margin: '0 0 14px',
-      fontSize: 11,
+      fontSize: 'var(--sb-t-meta)',
       fontWeight: 600,
       color: 'var(--sb-ink-1)',
       textTransform: 'uppercase',
@@ -781,7 +781,7 @@ export function MorningBrief() {
         <div className="brief-section" style={{ marginBottom: 32 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
-              <p style={{ margin: '0 0 2px', fontSize: 15, color: 'var(--sb-ink-1)', fontWeight: 400 }}>
+              <p style={{ margin: '0 0 2px', fontSize: 'var(--sb-t-h3)', color: 'var(--sb-ink-1)', fontWeight: 400 }}>
                 Good morning,
               </p>
               <h1 style={{
@@ -795,7 +795,7 @@ export function MorningBrief() {
               }}>
                 {firstName}.
               </h1>
-              <p style={{ margin: '10px 0 0', fontSize: 13, color: 'var(--sb-ink-1)' }}>
+              <p style={{ margin: '10px 0 0', fontSize: 'var(--sb-t-label)', color: 'var(--sb-ink-1)' }}>
                 {dateStr}
               </p>
             </div>
@@ -809,7 +809,7 @@ export function MorningBrief() {
                 padding: '8px 14px', borderRadius: 8,
                 background: 'transparent',
                 border: '1px solid var(--sb-border)',
-                color: 'var(--sb-ink-1)', fontSize: 12, cursor: 'pointer',
+                color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', cursor: 'pointer',
                 transition: 'all 0.15s',
                 opacity: isGenerating ? 0.5 : 1,
               }}
@@ -835,7 +835,7 @@ export function MorningBrief() {
           borderRadius: 14,
           padding: '20px 24px',
         }}>
-          <p style={{ margin: '0 0 16px', fontSize: 13, color: 'var(--sb-ink-1)' }}>
+          <p style={{ margin: '0 0 16px', fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)' }}>
             How's your energy this morning?
           </p>
           <div style={{ display: 'flex', gap: 14 }}>
@@ -854,7 +854,7 @@ export function MorningBrief() {
                   <span style={{
                     width: 44, height: 44, borderRadius: '50%',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 14, fontWeight: 700,
+                    fontSize: 'var(--sb-t-label)', fontWeight: 700,
                     border: `1.5px solid ${selected ? meta.color : 'var(--sb-border)'}`,
                     background: selected ? `${meta.color}22` : 'transparent',
                     color: selected ? meta.color : 'var(--sb-ink-3)',
@@ -864,7 +864,7 @@ export function MorningBrief() {
                     {level}
                   </span>
                   <span style={{
-                    fontSize: 10, color: selected ? meta.color : 'var(--sb-ink-3)',
+                    fontSize: 'var(--sb-t-micro)', color: selected ? meta.color : 'var(--sb-ink-3)',
                     fontWeight: selected ? 600 : 400, transition: 'color 0.15s',
                     whiteSpace: 'nowrap',
                   }}>
@@ -898,7 +898,7 @@ export function MorningBrief() {
                 }}>
                   <Sparkles size={13} color="#7F77DD" />
                 </div>
-                <span style={{ fontSize: 11, fontWeight: 600, color: '#7F77DD', letterSpacing: '0.8px', textTransform: 'uppercase' }}>
+                <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: '#7F77DD', letterSpacing: '0.8px', textTransform: 'uppercase' }}>
                   AI Day Planner
                 </span>
               </div>
@@ -942,20 +942,20 @@ export function MorningBrief() {
                         <span style={{
                           width: 28, height: 28, borderRadius: '50%',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontSize: 12, fontWeight: 700, flexShrink: 0,
+                          fontSize: 'var(--sb-t-body-s)', fontWeight: 700, flexShrink: 0,
                           background: i === 0 ? '#1E40AF20' : 'var(--sb-field)',
                           color: i === 0 ? '#7F77DD' : 'var(--sb-ink-3)',
                         }}>
                           {i + 1}
                         </span>
 
-                        <p style={{ margin: 0, flex: 1, fontSize: 13.5, color: 'var(--sb-ink-1)', fontWeight: 500 }}>
+                        <p style={{ margin: 0, flex: 1, fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)', fontWeight: 500 }}>
                           {title}
                         </p>
 
                         {co && (
                           <span style={{
-                            fontSize: 10.5, padding: '2px 8px', borderRadius: 4, flexShrink: 0,
+                            fontSize: 'var(--sb-t-micro)', padding: '2px 8px', borderRadius: 4, flexShrink: 0,
                             color, background: `${color}18`, fontWeight: 500,
                           }}>
                             {CO_NAME[co]}
@@ -975,7 +975,7 @@ export function MorningBrief() {
                   })}
                 </div>
               ) : (
-                <p style={{ margin: 0, fontSize: 13, color: 'var(--sb-ink-1)' }}>
+                <p style={{ margin: 0, fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)' }}>
                   Priorities will appear once the plan is generated.
                 </p>
               )}
@@ -995,14 +995,14 @@ export function MorningBrief() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 14 }}>
                 <SectionLabel>Today's Meetings</SectionLabel>
                 {todayEvents.length > 0 && (
-                  <span style={{ fontSize: 11, color: 'var(--sb-ink-3)' }}>
+                  <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>
                     {todayEvents.filter(e => getEventStatus(e.start_time, e.end_time) !== 'past').length} remaining
                   </span>
                 )}
               </div>
 
               {todayEvents.length === 0 ? (
-                <p style={{ margin: 0, fontSize: 13, color: 'var(--sb-ink-1)' }}>
+                <p style={{ margin: 0, fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)' }}>
                   No meetings today — or connect Google Calendar to see them.
                 </p>
               ) : (
@@ -1036,10 +1036,10 @@ export function MorningBrief() {
 
                         {/* Time column */}
                         <div style={{ width: 50, flexShrink: 0, textAlign: 'right', paddingTop: 2 }}>
-                          <p style={{ margin: 0, fontSize: 11, color: 'var(--sb-ink-1)', fontWeight: 500 }}>
+                          <p style={{ margin: 0, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-1)', fontWeight: 500 }}>
                             {fmtTime(event.start_time)}
                           </p>
-                          <p style={{ margin: '1px 0 0', fontSize: 10, color: 'var(--sb-ink-3)' }}>
+                          <p style={{ margin: '1px 0 0', fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)' }}>
                             {fmtTime(event.end_time)}
                           </p>
                         </div>
@@ -1048,7 +1048,7 @@ export function MorningBrief() {
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
                             <p style={{
-                              margin: 0, fontSize: 12.5, color: 'var(--sb-ink-1)',
+                              margin: 0, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)',
                               fontWeight: 500, lineHeight: 1.3,
                               whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                               maxWidth: 160,
@@ -1061,7 +1061,7 @@ export function MorningBrief() {
                             <MeetingTypeIcon type={event.meeting_type} />
                             {event.calendarName && (
                               <span style={{
-                                fontSize: 10, padding: '1px 6px', borderRadius: 3,
+                                fontSize: 'var(--sb-t-micro)', padding: '1px 6px', borderRadius: 3,
                                 background: `${accentClr}15`, border: `1px solid ${accentClr}30`,
                                 color: accentClr, fontWeight: 500,
                               }}>
@@ -1069,7 +1069,7 @@ export function MorningBrief() {
                               </span>
                             )}
                             {event.attendees && event.attendees.length > 0 && (
-                              <span style={{ fontSize: 10, color: 'var(--sb-ink-3)' }}>
+                              <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)' }}>
                                 {event.attendees.length} attendee{event.attendees.length !== 1 ? 's' : ''}
                               </span>
                             )}
@@ -1091,7 +1091,7 @@ export function MorningBrief() {
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 14 }}>
                 <SectionLabel>Today's Habits</SectionLabel>
-                <span style={{ fontSize: 11, color: checkedHabits === habits.length ? '#1D9E75' : 'var(--sb-ink-3)' }}>
+                <span style={{ fontSize: 'var(--sb-t-meta)', color: checkedHabits === habits.length ? '#1D9E75' : 'var(--sb-ink-3)' }}>
                   {checkedHabits}/{habits.length}
                 </span>
               </div>
@@ -1107,7 +1107,7 @@ export function MorningBrief() {
                       background: habit.checked ? '#1D9E7512' : 'var(--sb-page)',
                       border: `1px solid ${habit.checked ? '#1D9E7540' : 'var(--sb-border)'}`,
                       color: habit.checked ? '#1D9E75' : 'var(--sb-ink-3)',
-                      fontSize: 13, cursor: 'pointer', textAlign: 'left',
+                      fontSize: 'var(--sb-t-body)', cursor: 'pointer', textAlign: 'left',
                       transition: 'all 0.15s',
                     }}
                   >
@@ -1123,7 +1123,7 @@ export function MorningBrief() {
 
               {checkedHabits === habits.length && (
                 <p style={{
-                  margin: '14px 0 0', fontSize: 12, color: '#1D9E75',
+                  margin: '14px 0 0', fontSize: 'var(--sb-t-body-s)', color: '#1D9E75',
                   textAlign: 'center', fontWeight: 500,
                 }}>
                   All habits done. Exceptional day ahead. ✓

@@ -107,7 +107,7 @@ export function Sidebar() {
             style={{
               fontFamily: 'var(--sb-font-num)',
               fontWeight: 700,
-              fontSize: 16,
+              fontSize: 'var(--sb-t-h3)',
               color: 'var(--sb-ink-1)',
               letterSpacing: '-0.3px',
               whiteSpace: 'nowrap',
@@ -160,7 +160,7 @@ export function Sidebar() {
               >
                 <Icon size={18} strokeWidth={active ? 2.5 : 1.8} style={{ flexShrink: 0 }} />
                 {!sidebarCollapsed && (
-                  <span style={{ fontSize: 13.5, fontWeight: active ? 600 : 400, letterSpacing: '0.1px', whiteSpace: 'nowrap' }}>
+                  <span style={{ fontSize: 'var(--sb-t-body)', fontWeight: active ? 600 : 400, letterSpacing: '0.1px', whiteSpace: 'nowrap' }}>
                     {label}
                   </span>
                 )}
@@ -182,7 +182,7 @@ export function Sidebar() {
               {!sidebarCollapsed && (
                 <span style={{
                   display: 'block', padding: '4px 12px 6px',
-                  fontSize: 9.5, fontWeight: 700, color: '#D4A827',
+                  fontSize: 'var(--sb-t-micro)', fontWeight: 700, color: '#D4A827',
                   textTransform: 'uppercase', letterSpacing: '1.2px',
                 }}>
                   {modeLabel} MODE
@@ -205,7 +205,7 @@ export function Sidebar() {
               >
                 <Swords size={18} strokeWidth={active ? 2.5 : 1.8} style={{ flexShrink: 0 }} />
                 {!sidebarCollapsed && (
-                  <span style={{ fontSize: 13.5, fontWeight: active ? 600 : 400, letterSpacing: '0.1px', whiteSpace: 'nowrap' }}>
+                  <span style={{ fontSize: 'var(--sb-t-body)', fontWeight: active ? 600 : 400, letterSpacing: '0.1px', whiteSpace: 'nowrap' }}>
                     Behavioral OS
                   </span>
                 )}
@@ -222,7 +222,7 @@ export function Sidebar() {
           {!sidebarCollapsed && (
             <span style={{
               display: 'block', padding: '4px 12px 6px',
-              fontSize: 9.5, fontWeight: 700, color: '#D4A827',
+              fontSize: 'var(--sb-t-micro)', fontWeight: 700, color: '#D4A827',
               textTransform: 'uppercase', letterSpacing: '1.2px',
             }}>
               System
@@ -262,7 +262,7 @@ export function Sidebar() {
               >
                 <Icon size={18} strokeWidth={active ? 2.5 : 1.8} style={{ flexShrink: 0 }} />
                 {!sidebarCollapsed && (
-                  <span style={{ fontSize: 13.5, fontWeight: active ? 600 : 400, letterSpacing: '0.1px', whiteSpace: 'nowrap' }}>
+                  <span style={{ fontSize: 'var(--sb-t-body)', fontWeight: active ? 600 : 400, letterSpacing: '0.1px', whiteSpace: 'nowrap' }}>
                     {label}
                   </span>
                 )}

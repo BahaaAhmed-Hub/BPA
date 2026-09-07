@@ -52,10 +52,10 @@ export function Step5Tasks({ data, onChange }: Props) {
 
   return (
     <div>
-      <h2 style={{ margin: '0 0 6px', fontSize: 22, fontWeight: 800, color: 'var(--sb-ink-1)' }}>
+      <h2 style={{ margin: '0 0 6px', fontSize: 'var(--sb-t-h2)', fontWeight: 800, color: 'var(--sb-ink-1)' }}>
         Import your tasks
       </h2>
-      <p style={{ margin: '0 0 24px', fontSize: 13.5, color: 'var(--sb-ink-3)', lineHeight: 1.6 }}>
+      <p style={{ margin: '0 0 24px', fontSize: 'var(--sb-t-label)', color: 'var(--sb-ink-3)', lineHeight: 1.6 }}>
         Pull in existing tasks. All imports land in your Inbox for you to prioritize.
       </p>
 
@@ -63,17 +63,17 @@ export function Step5Tasks({ data, onChange }: Props) {
         {/* Todoist tile */}
         <div style={{ flex: 1, padding: 20, borderRadius: 12, background: 'var(--sb-card)', border: '1px solid var(--sb-border)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-            <div style={{ width: 36, height: 36, borderRadius: 8, background: '#DB4035', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 18 }}>✓</div>
+            <div style={{ width: 36, height: 36, borderRadius: 8, background: '#DB4035', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 'var(--sb-t-h2)' }}>✓</div>
             <div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--sb-ink-1)' }}>Todoist</div>
-              <div style={{ fontSize: 11, color: 'var(--sb-ink-4)' }}>Task manager</div>
+              <div style={{ fontSize: 'var(--sb-t-label)', fontWeight: 700, color: 'var(--sb-ink-1)' }}>Todoist</div>
+              <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>Task manager</div>
             </div>
           </div>
 
           {!TODOIST_CONFIGURED && !data.todoistToken && (
             <div style={{ marginBottom: 12 }}>
               <div style={{ padding: '8px 12px', borderRadius: 8, background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.2)', marginBottom: 10 }}>
-                <p style={{ margin: 0, fontSize: 11.5, color: '#FBBF24' }}>
+                <p style={{ margin: 0, fontSize: 'var(--sb-t-meta)', color: '#FBBF24' }}>
                   Set <code style={{ fontFamily: 'monospace' }}>VITE_TODOIST_CLIENT_ID</code> in .env to enable OAuth.
                 </p>
               </div>
@@ -81,12 +81,12 @@ export function Step5Tasks({ data, onChange }: Props) {
                 value={manualToken}
                 onChange={e => setManualToken(e.target.value)}
                 placeholder="Paste API token to test..."
-                style={{ background: 'var(--sb-page)', border: '1px solid var(--sb-border)', borderRadius: 7, padding: '8px 12px', color: 'var(--sb-ink-1)', fontSize: 12, outline: 'none', width: '100%', boxSizing: 'border-box', marginBottom: 8 }}
+                style={{ background: 'var(--sb-page)', border: '1px solid var(--sb-border)', borderRadius: 7, padding: '8px 12px', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', outline: 'none', width: '100%', boxSizing: 'border-box', marginBottom: 8 }}
               />
               <button
                 onClick={() => manualToken.trim() && loadTasks(manualToken.trim())}
                 disabled={!manualToken.trim() || loading}
-                style={{ width: '100%', padding: '8px', borderRadius: 8, background: 'var(--sb-accent)', color: 'var(--sb-ink-1)', fontSize: 13, fontWeight: 600, border: 'none', cursor: !manualToken.trim() ? 'not-allowed' : 'pointer', opacity: !manualToken.trim() ? 0.5 : 1 }}
+                style={{ width: '100%', padding: '8px', borderRadius: 8, background: 'var(--sb-accent)', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-label)', fontWeight: 600, border: 'none', cursor: !manualToken.trim() ? 'not-allowed' : 'pointer', opacity: !manualToken.trim() ? 0.5 : 1 }}
               >
                 {loading ? 'Loading…' : 'Load tasks →'}
               </button>
@@ -94,13 +94,13 @@ export function Step5Tasks({ data, onChange }: Props) {
           )}
 
           {TODOIST_CONFIGURED && !data.todoistToken && !loading && (
-            <button onClick={handleConnect} disabled={connecting} style={{ width: '100%', padding: '10px', borderRadius: 8, background: '#DB4035', color: '#fff', fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer', opacity: connecting ? 0.7 : 1 }}>
+            <button onClick={handleConnect} disabled={connecting} style={{ width: '100%', padding: '10px', borderRadius: 8, background: '#DB4035', color: '#fff', fontSize: 'var(--sb-t-label)', fontWeight: 600, border: 'none', cursor: 'pointer', opacity: connecting ? 0.7 : 1 }}>
               {connecting ? 'Connecting…' : 'Connect Todoist'}
             </button>
           )}
 
           {loading && (
-            <div style={{ textAlign: 'center', padding: '20px 0', color: 'var(--sb-ink-4)', fontSize: 13 }}>
+            <div style={{ textAlign: 'center', padding: '20px 0', color: 'var(--sb-ink-4)', fontSize: 'var(--sb-t-body)' }}>
               <div style={{ animation: 'spin 1s linear infinite', display: 'inline-block', marginRight: 8 }}>⟳</div>
               Fetching tasks…
             </div>
@@ -109,26 +109,26 @@ export function Step5Tasks({ data, onChange }: Props) {
           {data.todoistToken && !loading && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#1D9E75' }} />
-              <span style={{ fontSize: 12, color: '#1D9E75', fontWeight: 500 }}>Connected · {data.importedTasks.length} tasks found</span>
+              <span style={{ fontSize: 'var(--sb-t-body-s)', color: '#1D9E75', fontWeight: 500 }}>Connected · {data.importedTasks.length} tasks found</span>
             </div>
           )}
 
-          {error && <p style={{ margin: '8px 0 0', fontSize: 12, color: 'var(--sb-negative)' }}>{error}</p>}
+          {error && <p style={{ margin: '8px 0 0', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-negative)' }}>{error}</p>}
         </div>
 
         {/* Trello tile */}
         <div style={{ flex: 1, padding: 20, borderRadius: 12, background: 'var(--sb-card)', border: '1px solid var(--sb-border)', opacity: 0.6 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-            <div style={{ width: 36, height: 36, borderRadius: 8, background: '#0052CC', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 16 }}>T</div>
+            <div style={{ width: 36, height: 36, borderRadius: 8, background: '#0052CC', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 'var(--sb-t-h3)' }}>T</div>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--sb-ink-1)' }}>Trello</span>
-                <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 20, background: 'rgba(251,191,36,0.12)', color: '#FBBF24', border: '1px solid rgba(251,191,36,0.25)' }}>Coming Soon</span>
+                <span style={{ fontSize: 'var(--sb-t-label)', fontWeight: 700, color: 'var(--sb-ink-1)' }}>Trello</span>
+                <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, padding: '2px 7px', borderRadius: 20, background: 'rgba(251,191,36,0.12)', color: '#FBBF24', border: '1px solid rgba(251,191,36,0.25)' }}>Coming Soon</span>
               </div>
-              <div style={{ fontSize: 11, color: 'var(--sb-ink-4)' }}>Project boards</div>
+              <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>Project boards</div>
             </div>
           </div>
-          <div style={{ padding: '10px 12px', borderRadius: 8, background: 'rgba(251,191,36,0.06)', border: '1px solid rgba(251,191,36,0.15)', fontSize: 12, color: 'var(--sb-ink-4)' }}>
+          <div style={{ padding: '10px 12px', borderRadius: 8, background: 'rgba(251,191,36,0.06)', border: '1px solid rgba(251,191,36,0.15)', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-4)' }}>
             Trello integration is coming soon. Stay tuned!
           </div>
         </div>
@@ -138,12 +138,12 @@ export function Step5Tasks({ data, onChange }: Props) {
       {hasTasks && (
         <div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--sb-ink-1)' }}>
+            <span style={{ fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>
               {data.importedTasks.length} tasks found — select which to import:
             </span>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={selectAll} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-accent)', fontSize: 12 }}>Select all</button>
-              <button onClick={deselectAll} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-4)', fontSize: 12 }}>Deselect all</button>
+              <button onClick={selectAll} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-accent)', fontSize: 'var(--sb-t-body-s)' }}>Select all</button>
+              <button onClick={deselectAll} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-4)', fontSize: 'var(--sb-t-body-s)' }}>Deselect all</button>
             </div>
           </div>
           <div style={{ maxHeight: 260, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4, paddingRight: 4 }}>
@@ -151,18 +151,18 @@ export function Step5Tasks({ data, onChange }: Props) {
               <label key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 8, background: 'var(--sb-card)', border: '1px solid var(--sb-border)', cursor: 'pointer' }}>
                 <input type="checkbox" checked={data.selectedTaskIds.has(t.id)} onChange={() => toggleTask(t.id)} style={{ accentColor: 'var(--sb-accent)', width: 14, height: 14, flexShrink: 0 }} />
                 {t.priority > 1 && <div style={{ width: 8, height: 8, borderRadius: '50%', background: PRIORITY_COLORS[t.priority], flexShrink: 0 }} />}
-                <span style={{ flex: 1, fontSize: 13, color: 'var(--sb-ink-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.content}</span>
-                {t.due && <span style={{ fontSize: 11, color: 'var(--sb-ink-4)', flexShrink: 0 }}>{t.due}</span>}
+                <span style={{ flex: 1, fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.content}</span>
+                {t.due && <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', flexShrink: 0 }}>{t.due}</span>}
               </label>
             ))}
           </div>
-          <p style={{ margin: '10px 0 0', fontSize: 11.5, color: 'var(--sb-ink-4)' }}>
+          <p style={{ margin: '10px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>
             {data.selectedTaskIds.size} task{data.selectedTaskIds.size !== 1 ? 's' : ''} will be imported to your Inbox, tagged as "todoist".
           </p>
         </div>
       )}
 
-      <p style={{ margin: '16px 0 0', fontSize: 11.5, color: 'var(--sb-ink-4)', fontStyle: 'italic' }}>
+      <p style={{ margin: '16px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', fontStyle: 'italic' }}>
         You can skip this step and import tasks manually later.
       </p>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>

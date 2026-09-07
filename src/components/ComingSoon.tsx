@@ -23,7 +23,7 @@ export function Soon({ text = 'Coming soon', style }: { text?: string; style?: R
       display: 'inline-flex', alignItems: 'center', gap: 5, flexShrink: 0,
       height: 18, padding: '0 8px', borderRadius: 999,
       background: AMBER_BG, border: `1px solid ${AMBER_EDGE}`, color: AMBER_INK,
-      fontFamily: 'inherit', fontSize: 9.5, fontWeight: 700,
+      fontFamily: 'inherit', fontSize: 'var(--sb-t-micro)', fontWeight: 700,
       letterSpacing: '0.06em', textTransform: 'uppercase', whiteSpace: 'nowrap',
       ...style,
     }}>

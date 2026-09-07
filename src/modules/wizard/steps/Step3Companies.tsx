@@ -21,7 +21,7 @@ const inp: React.CSSProperties = {
   border: '1px solid var(--sb-border)',
   borderRadius: 7, padding: '8px 12px',
   color: 'var(--sb-ink-1)',
-  fontSize: 13, outline: 'none', width: '100%', boxSizing: 'border-box',
+  fontSize: 'var(--sb-t-body)', outline: 'none', width: '100%', boxSizing: 'border-box',
 }
 
 export function Step3Companies({ data, onChange }: Props) {
@@ -44,10 +44,10 @@ export function Step3Companies({ data, onChange }: Props) {
 
   return (
     <div>
-      <h2 style={{ margin: '0 0 6px', fontSize: 22, fontWeight: 800, color: 'var(--sb-ink-1)' }}>
+      <h2 style={{ margin: '0 0 6px', fontSize: 'var(--sb-t-h2)', fontWeight: 800, color: 'var(--sb-ink-1)' }}>
         Your companies &amp; clients
       </h2>
-      <p style={{ margin: '0 0 24px', fontSize: 13.5, color: 'var(--sb-ink-3)', lineHeight: 1.6 }}>
+      <p style={{ margin: '0 0 24px', fontSize: 'var(--sb-t-label)', color: 'var(--sb-ink-3)', lineHeight: 1.6 }}>
         Add the organizations you work with. Each can be linked to a connected account.
       </p>
 
@@ -63,11 +63,11 @@ export function Step3Companies({ data, onChange }: Props) {
             }}>
               <div style={{ width: 14, height: 14, borderRadius: '50%', background: co.color, flexShrink: 0 }} />
               <div style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--sb-ink-1)' }}>{co.name}</span>
-                {co.emailDomain && <span style={{ marginLeft: 8, fontSize: 11, color: 'var(--sb-ink-4)' }}>{co.emailDomain}</span>}
+                <span style={{ fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>{co.name}</span>
+                {co.emailDomain && <span style={{ marginLeft: 8, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>{co.emailDomain}</span>}
               </div>
               {acc && (
-                <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 20, background: 'rgba(127,119,221,0.12)', color: '#9B94E8', flexShrink: 0 }}>
+                <span style={{ fontSize: 'var(--sb-t-meta)', padding: '2px 8px', borderRadius: 20, background: 'rgba(127,119,221,0.12)', color: '#9B94E8', flexShrink: 0 }}>
                   {acc.email.split('@')[0]}
                 </span>
               )}
@@ -101,10 +101,10 @@ export function Step3Companies({ data, onChange }: Props) {
             </select>
           )}
           <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={addCompany} style={{ padding: '8px 18px', borderRadius: 8, background: 'var(--sb-accent)', color: 'var(--sb-ink-1)', fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer' }}>
+            <button onClick={addCompany} style={{ padding: '8px 18px', borderRadius: 8, background: 'var(--sb-accent)', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-label)', fontWeight: 600, border: 'none', cursor: 'pointer' }}>
               Add
             </button>
-            <button onClick={() => setAdding(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-4)', fontSize: 13 }}>
+            <button onClick={() => setAdding(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-4)', fontSize: 'var(--sb-t-label)' }}>
               Cancel
             </button>
           </div>
@@ -113,14 +113,14 @@ export function Step3Companies({ data, onChange }: Props) {
         <button onClick={() => setAdding(true)} style={{
           display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 8,
           background: 'transparent', border: '1px dashed var(--sb-border)',
-          color: 'var(--sb-ink-4)', fontSize: 13, cursor: 'pointer',
+          color: 'var(--sb-ink-4)', fontSize: 'var(--sb-t-body)', cursor: 'pointer',
           width: '100%', justifyContent: 'center',
         }}>
           + Add company
         </button>
       )}
 
-      <p style={{ margin: '16px 0 0', fontSize: 11.5, color: 'var(--sb-ink-4)', fontStyle: 'italic' }}>
+      <p style={{ margin: '16px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', fontStyle: 'italic' }}>
         You can add more companies anytime in Settings.
       </p>
     </div>

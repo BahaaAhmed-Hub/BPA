@@ -44,7 +44,7 @@ function Pill({ type, amount, currency, direction }: {
       display: 'inline-block',
       padding: '6px 13px',
       borderRadius: 9,
-      fontSize: 13,
+      fontSize: 'var(--sb-t-label)',
       fontWeight: 600,
       background: bg,
       color,
@@ -57,7 +57,7 @@ function Pill({ type, amount, currency, direction }: {
 
 const RANGE_FIELD: React.CSSProperties = {
   border: 'none', background: 'transparent', outline: 'none',
-  fontFamily: 'var(--sb-font-num)', fontSize: 13, fontWeight: 500,
+  fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-body)', fontWeight: 500,
   color: 'var(--sb-ink-1)', padding: 0, width: 118,
 }
 
@@ -161,7 +161,7 @@ function AccountRow({ account, balance, unconverted, pending, selected, hovered,
           <div onClick={onClick} title="Click to change icon" style={{
             width: 28, height: 28, borderRadius: 9, background: 'var(--sb-hairline)', color: 'var(--sb-ink-3)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            flexShrink: 0, cursor: 'pointer', overflow: 'hidden', fontSize: 15,
+            flexShrink: 0, cursor: 'pointer', overflow: 'hidden', fontSize: 'var(--sb-t-h3)',
           }}>
             {account.emoji.startsWith('data:') || account.emoji.startsWith('http')
               ? <img src={account.emoji} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -170,8 +170,8 @@ function AccountRow({ account, balance, unconverted, pending, selected, hovered,
         )}
       />
       <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-        <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--sb-ink-1)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{account.name}</span>
-        <span style={{ fontSize: 10.5, color: 'var(--sb-ink-3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        <span style={{ fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-1)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{account.name}</span>
+        <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {account.bank ?? account.accountType}{account.last4 ? ` · ···· ${account.last4}` : ''}
         </span>
       </div>
@@ -184,30 +184,30 @@ function AccountRow({ account, balance, unconverted, pending, selected, hovered,
               background: used >= 0.9 ? 'var(--sb-negative)' : used >= 0.7 ? '#C08A2E' : '#5F7038',
             }} />
           </div>
-          <span style={{ display: 'block', fontSize: 9.5, color: 'var(--sb-ink-4)', marginTop: 3, whiteSpace: 'nowrap' }}>
+          <span style={{ display: 'block', fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', marginTop: 3, whiteSpace: 'nowrap' }}>
             {account.currency} {Math.round(Math.max(0, limit - owed)).toLocaleString('en-US')} left of {Math.round(limit).toLocaleString('en-US')}
           </span>
         </div>
       )}
 
       <div style={{ marginLeft: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', flexShrink: 0 }}>
-        <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 14.5, fontWeight: 600, color: isNeg ? 'var(--sb-negative)' : 'var(--sb-ink-1)', fontVariantNumeric: 'tabular-nums' }}>
+        <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h3)', fontWeight: 600, color: isNeg ? 'var(--sb-negative)' : 'var(--sb-ink-1)', fontVariantNumeric: 'tabular-nums' }}>
           {formatBalance(balance, account.currency)}
         </span>
         {unconverted.length > 0 ? (
           <span
             title={`Entries here in ${unconverted.join(', ')} with no rate set, so they are not in this balance. Settings → Finance.`}
-            style={{ fontSize: 9.5, fontWeight: 700, color: '#C08A2E' }}>
+            style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, color: '#C08A2E' }}>
             {unconverted.join(' ')} not counted
           </span>
         ) : pending !== 0 ? (
           <span
             title="Entries filed here with no payment date. The money has not moved, so it is not in the balance."
-            style={{ fontSize: 9.5, fontWeight: 700, color: 'var(--sb-negative)' }}>
+            style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, color: 'var(--sb-negative)' }}>
             {formatBalance(pending, account.currency)} not paid yet
           </span>
         ) : account.last4 ? (
-          <span style={{ fontSize: 10, color: 'var(--sb-ink-3)' }}>cleared</span>
+          <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)' }}>cleared</span>
         ) : null}
       </div>
 
@@ -220,7 +220,7 @@ function AccountRow({ account, balance, unconverted, pending, selected, hovered,
           style={{
             height: 26, paddingInline: 10, borderRadius: 999, flexShrink: 0, marginLeft: 8,
             background: 'var(--sb-ink-1)', border: '1px solid var(--sb-ink-1)', color: 'var(--sb-ink-on-dark)',
-            fontFamily: 'inherit', fontSize: 11, fontWeight: 600, cursor: 'pointer',
+            fontFamily: 'inherit', fontSize: 'var(--sb-t-meta)', fontWeight: 600, cursor: 'pointer',
           }}>
           Settle
         </button>
@@ -374,9 +374,9 @@ export function BalanceScreen() {
         display: 'flex', alignItems: 'flex-end', gap: 20,
       }}>
         <div>
-          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-3)', display: 'block', marginBottom: 4 }}>MONEY</span>
-          <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 30, fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1, color: 'var(--sb-ink-1)', display: 'block' }}>Balances</span>
-          <span style={{ fontSize: 12, color: 'var(--sb-ink-3)', display: 'block', marginTop: 3 }}>
+          <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-3)', display: 'block', marginBottom: 4 }}>MONEY</span>
+          <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-display)', fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1, color: 'var(--sb-ink-1)', display: 'block' }}>Balances</span>
+          <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', display: 'block', marginTop: 3 }}>
             {unrated.length > 0 && (
               <span style={{ color: '#8A6D0B' }}>
                 {unrated.join(' and ')} not in these totals — no rate set ·{' '}
@@ -396,12 +396,12 @@ export function BalanceScreen() {
               const on = filter === f
               return (
                 <button key={f} onClick={() => setFilter(f)} aria-pressed={on}
-                  style={{ height: 28, padding: '0 13px', borderRadius: 999, border: 'none', fontFamily: 'inherit', background: on ? 'var(--sb-card)' : 'transparent', color: on ? 'var(--sb-ink-1)' : 'var(--sb-ink-3)', fontSize: 12, fontWeight: on ? 600 : 400, display: 'flex', alignItems: 'center', boxShadow: on ? '0 1px 3px rgba(25,23,18,0.16)' : 'none', cursor: 'pointer' }}>{f}</button>
+                  style={{ height: 28, padding: '0 13px', borderRadius: 999, border: 'none', fontFamily: 'inherit', background: on ? 'var(--sb-card)' : 'transparent', color: on ? 'var(--sb-ink-1)' : 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body-s)', fontWeight: on ? 600 : 400, display: 'flex', alignItems: 'center', boxShadow: on ? '0 1px 3px rgba(25,23,18,0.16)' : 'none', cursor: 'pointer' }}>{f}</button>
               )
             })}
           </div>
           <button onClick={() => setAccountModal({ open: true, account: null })}
-            style={{ height: 34, padding: '0 15px', borderRadius: 999, background: 'var(--sb-accent)', border: 'none', color: 'var(--sb-ink-1)', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, boxShadow: '0 2px 0 rgba(25,23,18,0.14)' }}>
+            style={{ height: 34, padding: '0 15px', borderRadius: 999, background: 'var(--sb-accent)', border: 'none', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, boxShadow: '0 2px 0 rgba(25,23,18,0.14)' }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
             Add account
           </button>
@@ -411,35 +411,35 @@ export function BalanceScreen() {
       {/* Dark net position hero card */}
       <div style={{ flexShrink: 0, margin: '14px 26px 0', background: 'var(--sb-ink-1)', borderRadius: 18, padding: '16px 20px', display: 'flex', gap: 22, alignItems: 'center', color: 'var(--sb-ink-on-dark)' }}>
         <div style={{ flexShrink: 0, width: 240 }}>
-          <span style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.14em', opacity: 0.6, display: 'block', marginBottom: 4 }}>NET POSITION</span>
+          <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.14em', opacity: 0.6, display: 'block', marginBottom: 4 }}>NET POSITION</span>
           <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 36, fontWeight: 600, letterSpacing: '-0.04em', lineHeight: 1, fontVariantNumeric: 'tabular-nums', display: 'block' }}>
             {acct(netPos, { currency: 'EGP' })}
           </span>
-          <span style={{ fontSize: 11, opacity: 0.65, display: 'block', marginTop: 4 }}>
+          <span style={{ fontSize: 'var(--sb-t-meta)', opacity: 0.65, display: 'block', marginTop: 4 }}>
             EGP {totalHeld.toLocaleString('en-US')} held · EGP {totalOwed.toLocaleString('en-US')} owed
           </span>
         </div>
         {/* Held/Owed bar */}
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 10.5, opacity: 0.55, marginBottom: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 'var(--sb-t-micro)', opacity: 0.55, marginBottom: 8 }}>
             <span>HELD</span><span style={{ marginLeft: 'auto' }}>OWED</span>
           </div>
           <div style={{ height: 14, borderRadius: 999, overflow: 'hidden', display: 'flex', background: 'rgba(255,255,255,0.12)' }}>
             <span style={{ width: `${heldPct}%`, background: 'var(--sb-accent)', display: 'block' }} />
             <span style={{ flex: 1, background: 'var(--sb-negative)', display: 'block' }} />
           </div>
-          <div style={{ display: 'flex', gap: 16, fontSize: 10.5, opacity: 0.62, marginTop: 6 }}>
+          <div style={{ display: 'flex', gap: 16, fontSize: 'var(--sb-t-micro)', opacity: 0.62, marginTop: 6 }}>
             <span>Payment {heldPct}%</span>
             <span>Cards {100 - heldPct}%</span>
           </div>
         </div>
         {/* Safe to spend */}
         <div style={{ width: 160, flexShrink: 0 }}>
-          <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', opacity: 0.55, display: 'block', marginBottom: 4 }}>SAFE TO SPEND</span>
-          <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 22, fontWeight: 600, letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums', display: 'block' }}>
+          <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.12em', opacity: 0.55, display: 'block', marginBottom: 4 }}>SAFE TO SPEND</span>
+          <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h2)', fontWeight: 600, letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums', display: 'block' }}>
             {acct(Math.max(0, netPos - totalOwed * 0.1), { currency: 'EGP' })}
           </span>
-          <span style={{ fontSize: 10.5, opacity: 0.6, display: 'block', marginTop: 2 }}>After committed bills</span>
+          <span style={{ fontSize: 'var(--sb-t-micro)', opacity: 0.6, display: 'block', marginTop: 2 }}>After committed bills</span>
         </div>
       </div>
 
@@ -461,8 +461,8 @@ export function BalanceScreen() {
           ].map(group => group.accounts.length > 0 && (
             <div key={group.label} style={{ marginBottom: 14 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, height: 30, padding: '0 12px', borderRadius: 10, background: 'var(--sb-field)', marginBottom: 7, boxSizing: 'border-box' as const }}>
-                <span style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.12em', color: 'var(--sb-ink-3)' }}>{group.label}</span>
-                <span style={{ marginLeft: 'auto', fontFamily: 'var(--sb-font-num)', fontSize: 13.5, fontWeight: 600, color: group.totalColor, fontVariantNumeric: 'tabular-nums' }}>
+                <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--sb-ink-3)' }}>{group.label}</span>
+                <span style={{ marginLeft: 'auto', fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-label)', fontWeight: 600, color: group.totalColor, fontVariantNumeric: 'tabular-nums' }}>
                   {acct(group.owed ? -Math.abs(group.total) : group.total, { currency: 'EGP' })}
                 </span>
               </div>
@@ -502,10 +502,10 @@ export function BalanceScreen() {
               padding: '26px 18px', textAlign: 'center', borderRadius: 12,
               background: 'var(--sb-header)', border: '1px dashed #E4DCC6',
             }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--sb-ink-1)' }}>
+              <div style={{ fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>
                 No {filter.toLowerCase()} yet
               </div>
-              <div style={{ fontSize: 11.5, color: 'var(--sb-ink-3)', marginTop: 5, lineHeight: 1.5 }}>
+              <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', marginTop: 5, lineHeight: 1.5 }}>
                 {accounts.length === 0
                   ? 'Add an account to get started.'
                   : filter === 'Cards'
@@ -552,7 +552,7 @@ export function BalanceScreen() {
                     onClick={() => { setRangeFrom(from); setRangeTo(to) }}
                     style={{
                       padding: '4px 9px', borderRadius: 7, border: 'none', cursor: 'pointer',
-                      fontFamily: 'inherit', fontSize: 11.5, fontWeight: on ? 700 : 500,
+                      fontFamily: 'inherit', fontSize: 'var(--sb-t-meta)', fontWeight: on ? 700 : 500,
                       background: on ? 'var(--sb-ink-1)' : 'transparent',
                       color: on ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-4)',
                     }}>
@@ -569,7 +569,7 @@ export function BalanceScreen() {
                   display: 'inline-flex', alignItems: 'center', gap: 7, height: 34,
                   padding: '0 8px 0 12px', borderRadius: 10, cursor: 'pointer',
                   background: '#FBF3D2', border: '1px solid var(--sb-accent)', color: '#7A5F09',
-                  fontFamily: 'inherit', fontSize: 12.5, fontWeight: 600,
+                  fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
                 }}>
                 {focused.name}
                 <span style={{
@@ -585,7 +585,7 @@ export function BalanceScreen() {
                 style={{
                   height: 34, padding: '0 11px', borderRadius: 10, cursor: 'pointer',
                   background: 'transparent', border: '1px dashed #DCD3BF', color: 'var(--sb-ink-3)',
-                  fontFamily: 'inherit', fontSize: 11.5, fontWeight: 500, whiteSpace: 'nowrap',
+                  fontFamily: 'inherit', fontSize: 'var(--sb-t-meta)', fontWeight: 500, whiteSpace: 'nowrap',
                 }}>
                 {hiddenByRange} more outside this range
               </button>
@@ -631,14 +631,14 @@ export function BalanceScreen() {
                       ? 'color-mix(in srgb, var(--sb-positive) 13.3%, transparent)'
                       : 'color-mix(in srgb, var(--sb-negative) 13.3%, transparent)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 17, flexShrink: 0,
+                    fontSize: 'var(--sb-t-h2)', flexShrink: 0,
                     color: tx.type === 'income' ? 'var(--sb-positive)' : 'var(--sb-negative)',
                   }}>
                     <CategoryGlyph icon={glyph} size={18} />
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{
-                      fontSize: 14, fontWeight: 500, color: 'var(--sb-ink-1)',
+                      fontSize: 'var(--sb-t-body)', fontWeight: 500, color: 'var(--sb-ink-1)',
                       overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                       display: 'flex', alignItems: 'center', gap: 6,
                     }}>
@@ -651,7 +651,7 @@ export function BalanceScreen() {
                     <div
                       title={tx.note?.trim() || undefined}
                       style={{
-                        fontSize: 12, color: 'var(--sb-ink-4)', marginTop: 1, display: 'flex', gap: 6,
+                        fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-4)', marginTop: 1, display: 'flex', gap: 6,
                         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                       }}>
                       <span style={{ flexShrink: 0 }}>{dateStr}</span>

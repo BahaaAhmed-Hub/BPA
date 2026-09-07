@@ -67,7 +67,7 @@ export function TaskRow({ task, onOpen, dense }: {
 
       <div style={{ flex: 1, minWidth: 0 }}>
         <p style={{
-          margin: 0, fontSize: 13.5, fontWeight: 600, lineHeight: 1.35,
+          margin: 0, fontSize: 'var(--sb-t-label)', fontWeight: 600, lineHeight: 1.35,
           color: task.title.trim() ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)',
           fontStyle: task.title.trim() ? 'normal' : 'italic',
           overflowWrap: 'anywhere',
@@ -75,7 +75,7 @@ export function TaskRow({ task, onOpen, dense }: {
         }}>{task.title.trim() || 'Untitled'}</p>
         <span data-nm style={{ position: 'relative', display: 'inline-block', maxWidth: '100%', marginTop: 2 }}>
           <p style={{
-            margin: 0, fontSize: 12, fontWeight: 600, lineHeight: 1.3, cursor: 'pointer',
+            margin: 0, fontSize: 'var(--sb-t-body-s)', fontWeight: 600, lineHeight: 1.3, cursor: 'pointer',
             color: v.companyName ? v.companyColor : '#C9C0A8',
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}>{v.companyName || 'No company'}</p>
@@ -93,7 +93,7 @@ export function TaskRow({ task, onOpen, dense }: {
             options={[{ value: '', label: 'No company' }, ...companies.map(c => ({ value: c.id, label: c.name }))]}
           />
         </span>
-        <p style={{ margin: '6px 0 0', fontSize: 11.5, color: 'var(--sb-ink-4)', lineHeight: 1.3, display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+        <p style={{ margin: '6px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', lineHeight: 1.3, display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
           {meta}
           {attachmentCount > 0 && (
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
@@ -143,7 +143,7 @@ export function TaskRow({ task, onOpen, dense }: {
         <ControlSlot size={22}>
           <span style={{
             width: 22, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 11.5, fontWeight: 700,
+            fontSize: 'var(--sb-t-meta)', fontWeight: 700,
             color: task.priority ? PRIORITY_META[task.priority].color : '#D8CFB8',
           }}>{task.priority ?? '—'}</span>
           <OverlaySelect
@@ -163,7 +163,7 @@ export function TaskRow({ task, onOpen, dense }: {
               border: v.ownerInitials ? 'none' : '1px solid var(--sb-border)',
               color: v.ownerInitials ? 'var(--sb-card)' : 'var(--sb-ink-4)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 9, fontWeight: 700, letterSpacing: '0.02em',
+              fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.02em',
             }}
           >{v.ownerInitials ?? <User size={12} strokeWidth={2} />}</span>
           <OverlaySelect

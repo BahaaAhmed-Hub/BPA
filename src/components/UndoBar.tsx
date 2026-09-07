@@ -71,7 +71,7 @@ export function UndoBar() {
       background: 'var(--sb-ink-1)', color: 'var(--sb-ink-on-dark)', borderRadius: 12,
       padding: isFlash ? '11px 18px' : '9px 9px 9px 18px',
       boxShadow: '0 6px 24px rgba(25,23,18,0.24)',
-      fontFamily: 'inherit', fontSize: 13, maxWidth: 'min(560px, 92vw)',
+      fontFamily: 'inherit', fontSize: 'var(--sb-t-body)', maxWidth: 'min(560px, 92vw)',
     }}>
       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{visible}</span>
       {!isFlash && (
@@ -82,7 +82,7 @@ export function UndoBar() {
             display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0,
             height: 30, padding: '0 12px', borderRadius: 9, cursor: 'pointer',
             background: 'var(--sb-accent)', border: '1px solid rgba(25,23,18,0.18)',
-            color: 'var(--sb-ink-1)', fontFamily: 'inherit', fontSize: 12.5, fontWeight: 600,
+            color: 'var(--sb-ink-1)', fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
           }}>
           <RotateCcw size={13} strokeWidth={2.2} />
           Undo

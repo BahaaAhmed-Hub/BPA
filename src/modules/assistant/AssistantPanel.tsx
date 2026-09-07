@@ -110,7 +110,7 @@ function MessageBubble({ msg }: { msg: DisplayMessage }) {
       <div style={{ display: 'flex', justifyContent: 'center', margin: '4px 0' }}>
         <span style={{
           display: 'inline-flex', alignItems: 'center', gap: 5,
-          padding: '3px 10px', borderRadius: 20, fontSize: 11,
+          padding: '3px 10px', borderRadius: 20, fontSize: 'var(--sb-t-meta)',
           background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)',
           color: '#818CF8',
         }}>
@@ -125,7 +125,7 @@ function MessageBubble({ msg }: { msg: DisplayMessage }) {
     return (
       <div style={{ margin: '8px 12px' }}>
         <div style={{
-          padding: '10px 12px', borderRadius: 10, fontSize: 12.5, lineHeight: 1.55,
+          padding: '10px 12px', borderRadius: 10, fontSize: 'var(--sb-t-body-s)', lineHeight: 1.55,
           background: 'rgba(224,82,82,0.1)', border: '1px solid rgba(224,82,82,0.2)',
           color: '#F87171',
         }}>
@@ -153,7 +153,7 @@ function MessageBubble({ msg }: { msg: DisplayMessage }) {
         borderRadius: isUser ? '14px 14px 4px 14px' : '4px 14px 14px 14px',
         background: isUser ? 'var(--sb-accent)' : 'var(--sb-field)',
         border: isUser ? 'none' : '1px solid var(--sb-border)',
-        fontSize: 13, lineHeight: 1.6,
+        fontSize: 'var(--sb-t-body)', lineHeight: 1.6,
         color: isUser ? 'var(--sb-ink-1)' : 'var(--sb-ink-1)',
         whiteSpace: 'pre-wrap', wordBreak: 'break-word',
       }}>
@@ -421,12 +421,12 @@ export function AssistantPanel({ open, onClose }: AssistantPanelProps) {
             <Brain size={16} color="white" />
           </div>
           <div style={{ flex: 1 }}>
-            <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: 'var(--sb-ink-1)' }}>Professor AI</p>
-            <p style={{ margin: 0, fontSize: 10.5, color: '#818CF8' }}>{providerLabel(cfg)}</p>
+            <p style={{ margin: 0, fontSize: 'var(--sb-t-label)', fontWeight: 700, color: 'var(--sb-ink-1)' }}>Professor AI</p>
+            <p style={{ margin: 0, fontSize: 'var(--sb-t-micro)', color: '#818CF8' }}>{providerLabel(cfg)}</p>
           </div>
           {!isEmpty && (
             <button onClick={clearConversation}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', padding: 4, fontSize: 11 }}>
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', padding: 4, fontSize: 'var(--sb-t-meta)' }}>
               Clear
             </button>
           )}
@@ -448,15 +448,15 @@ export function AssistantPanel({ open, onClose }: AssistantPanelProps) {
               }}>
                 <Brain size={26} color="#818CF8" />
               </div>
-              <p style={{ margin: '0 0 6px', fontSize: 15, fontWeight: 600, color: 'var(--sb-ink-1)' }}>How can I help?</p>
-              <p style={{ margin: '0 0 24px', fontSize: 12.5, color: 'var(--sb-ink-3)', lineHeight: 1.5 }}>
+              <p style={{ margin: '0 0 6px', fontSize: 'var(--sb-t-h3)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>How can I help?</p>
+              <p style={{ margin: '0 0 24px', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', lineHeight: 1.5 }}>
                 I can read your emails, check your calendar, manage tasks, and search Drive files.
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {SUGGESTIONS.map(s => (
                   <button key={s} onClick={() => void sendMessage(s)}
                     style={{
-                      padding: '9px 14px', borderRadius: 10, fontSize: 12.5, textAlign: 'left',
+                      padding: '9px 14px', borderRadius: 10, fontSize: 'var(--sb-t-body-s)', textAlign: 'left',
                       background: 'var(--sb-field)', border: '1px solid var(--sb-border)',
                       color: 'var(--sb-ink-1)', cursor: 'pointer',
                       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -494,7 +494,7 @@ export function AssistantPanel({ open, onClose }: AssistantPanelProps) {
               rows={1}
               style={{
                 flex: 1, background: 'none', border: 'none', outline: 'none', resize: 'none',
-                color: 'var(--sb-ink-1)', fontSize: 13, lineHeight: 1.5,
+                color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body)', lineHeight: 1.5,
                 maxHeight: 120, overflowY: 'auto', fontFamily: 'inherit',
               }}
               onInput={e => {
@@ -519,7 +519,7 @@ export function AssistantPanel({ open, onClose }: AssistantPanelProps) {
               }
             </button>
           </div>
-          <p style={{ margin: '6px 0 0', fontSize: 10, color: 'var(--sb-ink-3)', textAlign: 'center' }}>
+          <p style={{ margin: '6px 0 0', fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)', textAlign: 'center' }}>
             Enter to send · Shift+Enter for new line · Actions are real
           </p>
         </div>

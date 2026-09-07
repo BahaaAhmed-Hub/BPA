@@ -238,7 +238,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{
             display: 'inline-flex', alignItems: 'center', gap: 6, height: 26, padding: '0 11px',
-            borderRadius: 999, background: 'var(--sb-field)', color: 'var(--sb-ink-2)', fontSize: 11.5,
+            borderRadius: 999, background: 'var(--sb-field)', color: 'var(--sb-ink-2)', fontSize: 'var(--sb-t-meta)',
           }}>
             <span style={{ width: 7, height: 7, borderRadius: 999, background: typeColor, flexShrink: 0 }} />
             {isEdit ? 'Transaction' : 'New transaction'}
@@ -261,7 +261,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
                 style={{
                   flex: 1, height: 32, borderRadius: 999, border: 'none', fontFamily: 'inherit',
                   background: on ? 'var(--sb-ink-1)' : 'transparent', color: on ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
-                  fontSize: 12.5, fontWeight: on ? 600 : 500, cursor: 'pointer',
+                  fontSize: 'var(--sb-t-body-s)', fontWeight: on ? 600 : 500, cursor: 'pointer',
                 }}>{t.label}</button>
             )
           })}
@@ -277,7 +277,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
             <span style={{
               display: 'inline-flex', alignItems: 'center', gap: 4, height: 30, padding: '0 10px',
               borderRadius: 8, background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
-              fontSize: 12, fontWeight: 600, color: 'var(--sb-ink-3)',
+              fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-3)',
             }}>
               {currency}
               <ChevronDown size={11} strokeWidth={2} style={{ color: 'var(--sb-ink-4)' }} />
@@ -298,7 +298,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
             placeholder="0"
             style={{
               flex: 1, minWidth: 0, background: 'transparent', border: 'none', outline: 'none',
-              fontFamily: DISPLAY, fontSize: 30, fontWeight: 700, letterSpacing: '-0.03em',
+              fontFamily: DISPLAY, fontSize: 'var(--sb-t-display)', fontWeight: 700, letterSpacing: '-0.03em',
               color: amount > 0 ? typeColor : '#C9C0A8', textAlign: 'right',
               fontVariantNumeric: 'tabular-nums', padding: 0,
             }} />
@@ -357,7 +357,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
                 padding: '9px 12px', borderRadius: 10,
                 background: '#FBF3D2', border: '1px solid var(--sb-accent-border)',
               }}>
-                <span style={{ fontSize: 12.5, color: '#7A5F09', flex: 1, minWidth: 140 }}>
+                <span style={{ fontSize: 'var(--sb-t-body-s)', color: '#7A5F09', flex: 1, minWidth: 140 }}>
                   Paying a card off? That moves money rather than spending it — switch to
                   Transfer and pick which card it lands on.
                 </span>
@@ -365,7 +365,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
                   type="button"
                   onClick={() => { setType('transfer'); setToAccountId(suggestedCard.id) }}
                   style={{
-                    ...PILL, height: 30, paddingInline: 12, fontSize: 12, fontWeight: 600,
+                    ...PILL, height: 30, paddingInline: 12, fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
                     color: 'var(--sb-ink-1)', flexShrink: 0,
                   }}>
                   {cards.length === 1 ? `Pay ${suggestedCard.name}` : 'Choose the card'}
@@ -451,7 +451,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
                         style={{
                           display: 'block', width: '100%', padding: '9px 10px', border: 'none',
                           borderRadius: 8, background: 'transparent', cursor: 'pointer',
-                          fontFamily: 'inherit', fontSize: 13.5, color: 'var(--sb-ink-1)', textAlign: 'left',
+                          fontFamily: 'inherit', fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)', textAlign: 'left',
                           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                         }}>{name}</button>
                     ))}
@@ -468,7 +468,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
                 style={{
                   flex: 1, minWidth: 0, boxSizing: 'border-box', resize: 'vertical',
                   background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 9,
-                  padding: '9px 12px', fontSize: 13.5, color: 'var(--sb-ink-1)', fontFamily: 'inherit',
+                  padding: '9px 12px', fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)', fontFamily: 'inherit',
                   outline: 'none', textAlign: 'left',
                 }} />
           </div>
@@ -481,7 +481,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
                   <span key={tag} style={{
                     display: 'inline-flex', alignItems: 'center', gap: 5, height: 28, padding: '0 6px 0 10px',
                     borderRadius: 999, background: 'rgba(var(--sb-accent-rgb),0.16)', border: '1px solid rgba(var(--sb-accent-rgb),0.33)',
-                    color: '#3D3926', fontSize: 12,
+                    color: '#3D3926', fontSize: 'var(--sb-t-body-s)',
                   }}>
                     {tag}
                     <button onClick={() => setTags(prev => prev.filter(t => t !== tag))} title="Remove"
@@ -499,7 +499,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
                   }}
                   onBlur={() => addTag(tagInput)}
                   placeholder={tags.length ? 'Add another' : 'groceries, work…'}
-                  style={{ ...PILL, height: 34, flex: 1, minWidth: 110, cursor: 'text', outline: 'none', fontSize: 12.5 }} />
+                  style={{ ...PILL, height: 34, flex: 1, minWidth: 110, cursor: 'text', outline: 'none', fontSize: 'var(--sb-t-body-s)' }} />
               </span>
             </div>
           )}
@@ -599,7 +599,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
             style={{
               marginTop: 12, width: '100%', height: 34, borderRadius: 9,
               background: 'none', border: 'none', fontFamily: 'inherit',
-              color: 'var(--sb-negative)', fontSize: 12.5, cursor: 'pointer',
+              color: 'var(--sb-negative)', fontSize: 'var(--sb-t-body-s)', cursor: 'pointer',
             }}>
             Delete this transaction
           </button>

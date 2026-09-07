@@ -58,10 +58,10 @@ export function Step6Done({ data }: Props) {
         </svg>
       </div>
 
-      <h2 style={{ margin: '0 0 8px', fontSize: 26, fontWeight: 800, color: 'var(--sb-ink-1)' }}>
+      <h2 style={{ margin: '0 0 8px', fontSize: 'var(--sb-t-h1)', fontWeight: 800, color: 'var(--sb-ink-1)' }}>
         You're all set! 🎉
       </h2>
-      <p style={{ margin: '0 0 32px', fontSize: 14, color: 'var(--sb-ink-3)', lineHeight: 1.6 }}>
+      <p style={{ margin: '0 0 32px', fontSize: 'var(--sb-t-label)', color: 'var(--sb-ink-3)', lineHeight: 1.6 }}>
         Here's what we've set up for you:
       </p>
 
@@ -69,22 +69,22 @@ export function Step6Done({ data }: Props) {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 32 }}>
         {stats.map(s => (
           <div key={s.label} style={{ padding: '16px 8px', borderRadius: 12, background: 'var(--sb-card)', border: '1px solid var(--sb-border)' }}>
-            <div style={{ fontSize: 22, marginBottom: 6 }}>{s.emoji}</div>
-            <div style={{ fontSize: 28, fontWeight: 800, color: s.color, lineHeight: 1 }}>
+            <div style={{ fontSize: 'var(--sb-t-h2)', marginBottom: 6 }}>{s.emoji}</div>
+            <div style={{ fontSize: 'var(--sb-t-h1)', fontWeight: 800, color: s.color, lineHeight: 1 }}>
               <CountUp target={s.value} />
             </div>
-            <div style={{ fontSize: 11.5, color: 'var(--sb-ink-4)', marginTop: 4 }}>{s.label}</div>
+            <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', marginTop: 4 }}>{s.label}</div>
           </div>
         ))}
       </div>
 
       <div style={{ padding: '14px 20px', borderRadius: 10, background: 'rgba(127,119,221,0.06)', border: '1px solid rgba(127,119,221,0.15)', marginBottom: 16 }}>
-        <p style={{ margin: 0, fontSize: 13, color: 'var(--sb-ink-3)', lineHeight: 1.6 }}>
+        <p style={{ margin: 0, fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-3)', lineHeight: 1.6 }}>
           All your data syncs automatically. You can adjust everything in <strong style={{ color: 'var(--sb-ink-1)' }}>Settings</strong> at any time.
         </p>
       </div>
 
-      <p style={{ margin: 0, fontSize: 12, color: 'var(--sb-ink-4)' }}>
+      <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-4)' }}>
         Click <strong style={{ color: 'var(--sb-ink-1)' }}>Finish</strong> below to enter your workspace.
       </p>
 

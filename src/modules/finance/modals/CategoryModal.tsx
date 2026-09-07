@@ -14,14 +14,14 @@ const DISPLAY = 'var(--sb-font-num)'
 const PILL: React.CSSProperties = {
   display: 'inline-flex', alignItems: 'center', gap: 6, height: 42, boxSizing: 'border-box',
   padding: '0 14px', borderRadius: 10, background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
-  color: 'var(--sb-ink-1)', fontSize: 13.5, fontFamily: 'inherit', cursor: 'pointer', minWidth: 0,
+  color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body)', fontFamily: 'inherit', cursor: 'pointer', minWidth: 0,
 }
 const ROUND: React.CSSProperties = {
   width: 30, height: 30, borderRadius: '50%', flexShrink: 0, padding: 0,
   display: 'flex', alignItems: 'center', justifyContent: 'center',
   background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-3)', cursor: 'pointer',
 }
-const LABEL: React.CSSProperties = { width: 62, flexShrink: 0, fontSize: 13.5, color: 'var(--sb-ink-3)', fontWeight: 500 }
+const LABEL: React.CSSProperties = { width: 62, flexShrink: 0, fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-3)', fontWeight: 500 }
 const ROW: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 10 }
 
 /** Enough colours to tell envelopes apart, without a colour wheel nobody wants
@@ -87,7 +87,7 @@ export function CategoryModal({ category, categories, onSave, onDelete, onClose 
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{
             display: 'inline-flex', alignItems: 'center', gap: 6, height: 26, padding: '0 11px',
-            borderRadius: 999, background: 'var(--sb-field)', color: 'var(--sb-ink-2)', fontSize: 11.5,
+            borderRadius: 999, background: 'var(--sb-field)', color: 'var(--sb-ink-2)', fontSize: 'var(--sb-t-meta)',
           }}>
             <span style={{ width: 7, height: 7, borderRadius: 999, background: color, flexShrink: 0 }} />
             {isEdit ? 'Category' : txTypeLocked ? 'New sub-category' : 'New category'}
@@ -121,7 +121,7 @@ export function CategoryModal({ category, categories, onSave, onDelete, onClose 
             style={{
               flex: 1, minWidth: 0, boxSizing: 'border-box',
               background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 11,
-              padding: '13px 15px', fontFamily: DISPLAY, fontSize: 18, fontWeight: 600,
+              padding: '13px 15px', fontFamily: DISPLAY, fontSize: 'var(--sb-t-h2)', fontWeight: 600,
               letterSpacing: '-0.02em', color: 'var(--sb-ink-1)', outline: 'none',
             }} />
         </div>
@@ -207,7 +207,7 @@ export function CategoryModal({ category, categories, onSave, onDelete, onClose 
             style={{
               marginTop: 12, width: '100%', height: 34, borderRadius: 9,
               background: 'none', border: 'none', fontFamily: 'inherit',
-              color: 'var(--sb-negative)', fontSize: 12.5, cursor: 'pointer',
+              color: 'var(--sb-negative)', fontSize: 'var(--sb-t-body-s)', cursor: 'pointer',
             }}>
             Delete this category
           </button>

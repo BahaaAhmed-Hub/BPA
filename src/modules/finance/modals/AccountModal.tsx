@@ -52,7 +52,7 @@ export function AccountModal({ account, onSave, onDelete, onClose }: Props) {
     border: `1px solid ${'var(--sb-border)'}`,
     background: 'var(--sb-page)',
     color: 'var(--sb-ink-1)',
-    fontSize: 14,
+    fontSize: 'var(--sb-t-body)',
     outline: 'none',
     boxSizing: 'border-box' as const,
     fontFamily: 'inherit',
@@ -60,7 +60,7 @@ export function AccountModal({ account, onSave, onDelete, onClose }: Props) {
 
   const labelStyle: React.CSSProperties = {
     display: 'block',
-    fontSize: 12,
+    fontSize: 'var(--sb-t-body-s)',
     color: 'var(--sb-ink-3)',
     marginBottom: 5,
     fontWeight: 500,
@@ -101,7 +101,7 @@ export function AccountModal({ account, onSave, onDelete, onClose }: Props) {
 
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: 18, fontWeight: 700, color: 'var(--sb-ink-1)' }}>
+          <span style={{ fontSize: 'var(--sb-t-h2)', fontWeight: 700, color: 'var(--sb-ink-1)' }}>
             {isEdit ? 'Edit Account' : 'New Account'}
           </span>
           <button
@@ -110,7 +110,7 @@ export function AccountModal({ account, onSave, onDelete, onClose }: Props) {
               background: 'none',
               border: 'none',
               cursor: 'pointer',
-              fontSize: 20,
+              fontSize: 'var(--sb-t-h2)',
               color: 'var(--sb-ink-3)',
               lineHeight: 1,
               padding: '0 4px',
@@ -187,7 +187,7 @@ export function AccountModal({ account, onSave, onDelete, onClose }: Props) {
               value={balance}
               onChange={setBalance}
             />
-            <div style={{ fontSize: 11, color: 'var(--sb-ink-4)', marginTop: 5, lineHeight: 1.45 }}>
+            <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', marginTop: 5, lineHeight: 1.45 }}>
               Where this account stood before anything was logged. Entries move it from
               here — a card goes below zero as it is spent on, and back towards zero as
               it is paid off.
@@ -205,7 +205,7 @@ export function AccountModal({ account, onSave, onDelete, onClose }: Props) {
                 value={creditLimit}
                 onChange={setCreditLimit}
               />
-              <div style={{ fontSize: 11, color: 'var(--sb-ink-4)', marginTop: 5, lineHeight: 1.45 }}>
+              <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', marginTop: 5, lineHeight: 1.45 }}>
                 The card's ceiling. Leave it at nothing and the card simply shows what is
                 owed, with no bar and no figure left.
               </div>
@@ -260,7 +260,7 @@ export function AccountModal({ account, onSave, onDelete, onClose }: Props) {
               background: 'none',
               border: 'none',
               cursor: 'pointer',
-              fontSize: 14,
+              fontSize: 'var(--sb-t-body)',
               color: 'var(--sb-ink-3)',
               padding: '8px 14px',
               fontFamily: 'inherit',
@@ -278,7 +278,7 @@ export function AccountModal({ account, onSave, onDelete, onClose }: Props) {
                 background: 'none',
                 border: 'none',
                 cursor: 'pointer',
-                fontSize: 14,
+                fontSize: 'var(--sb-t-body)',
                 color: RED,
                 padding: '8px 14px',
                 fontFamily: 'inherit',
@@ -296,7 +296,7 @@ export function AccountModal({ account, onSave, onDelete, onClose }: Props) {
               background: 'var(--sb-accent)',
               border: 'none',
               cursor: 'pointer',
-              fontSize: 14,
+              fontSize: 'var(--sb-t-label)',
               color: 'var(--sb-ink-1)',
               padding: '8px 20px',
               fontFamily: 'inherit',

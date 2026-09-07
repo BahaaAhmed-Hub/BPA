@@ -40,14 +40,14 @@ const BUFFER_KEY = 'finance-goal-buffer-months'
 const POLICY_KEY = 'finance-goal-policy'
 
 const EYEBROW: React.CSSProperties = {
-  fontSize: 10, fontWeight: 700, letterSpacing: '.12em',
+  fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '.12em',
   color: C.ink3, textTransform: 'uppercase',
 }
 
 const FIELD: React.CSSProperties = {
   height: 38, boxSizing: 'border-box', padding: '0 12px', width: '100%',
   borderRadius: 10, background: C.field, border: `1px solid ${C.border}`,
-  fontSize: 13, color: C.ink1, outline: 'none', fontFamily: 'inherit',
+  fontSize: 'var(--sb-t-label)', color: C.ink1, outline: 'none', fontFamily: 'inherit',
 }
 
 function monthLabel(key: string | null): string {
@@ -64,10 +64,10 @@ function Stat({ label, value, tone, sub }: {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
       <span style={EYEBROW}>{label}</span>
       <span style={{
-        fontFamily: DISPLAY, fontSize: 19, fontWeight: 700, letterSpacing: '-.02em',
+        fontFamily: DISPLAY, fontSize: 'var(--sb-t-h2)', fontWeight: 700, letterSpacing: '-.02em',
         color: tone ?? C.ink1, fontVariantNumeric: 'tabular-nums',
       }}>{value}</span>
-      {sub && <span style={{ fontSize: 10.5, color: C.ink4 }}>{sub}</span>}
+      {sub && <span style={{ fontSize: 'var(--sb-t-micro)', color: C.ink4 }}>{sub}</span>}
     </div>
   )
 }
@@ -116,15 +116,15 @@ function GoalRow({ plan, place, selected, lifted, over, onSelect, onGrab, regRow
         <span style={{
           width: 20, height: 20, borderRadius: 6, flexShrink: 0,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          background: C.ink1, color: 'var(--sb-ink-on-dark)', fontSize: 10.5, fontWeight: 700,
+          background: C.ink1, color: 'var(--sb-ink-on-dark)', fontSize: 'var(--sb-t-micro)', fontWeight: 700,
         }}>{place}</span>
-        <span style={{ fontSize: 15, flexShrink: 0 }}>{g.icon}</span>
+        <span style={{ fontSize: 'var(--sb-t-h3)', flexShrink: 0 }}>{g.icon}</span>
         <span style={{
-          fontSize: 13.5, fontWeight: 600, color: C.ink1, minWidth: 0,
+          fontSize: 'var(--sb-t-label)', fontWeight: 600, color: C.ink1, minWidth: 0,
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         }}>{g.name}</span>
         <span style={{ flex: 1 }} />
-        <span style={{ fontSize: 11, color: tone, fontWeight: 600, flexShrink: 0 }}>
+        <span style={{ fontSize: 'var(--sb-t-meta)', color: tone, fontWeight: 600, flexShrink: 0 }}>
           {verdict === 'done' ? 'Reached'
             : verdict === 'now' ? 'Fundable now'
             : verdict === 'stalled' ? 'Nothing reaching it'
@@ -150,7 +150,7 @@ function GoalRow({ plan, place, selected, lifted, over, onSelect, onGrab, regRow
         }} />
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, fontSize: 11, color: C.ink3 }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, fontSize: 'var(--sb-t-meta)', color: C.ink3 }}>
         <span style={{ fontVariantNumeric: 'tabular-nums' }}>
           {group(g.currentAmount)} of {group(g.targetAmount)} {g.currency ?? currency}
         </span>
@@ -333,7 +333,7 @@ export function GoalsScreen(_props?: any) {
                     : 'Every goal moves at once, weighted by rank — nothing arrives as early, nothing sits still'}
                   style={{
                     padding: '0 14px', height: 32, borderRadius: 8, border: 'none', cursor: 'pointer',
-                    fontFamily: 'inherit', fontSize: 12.5, fontWeight: policy === id ? 700 : 500,
+                    fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', fontWeight: policy === id ? 700 : 500,
                     background: policy === id ? C.ink1 : 'transparent',
                     color: policy === id ? 'var(--sb-ink-on-dark)' : C.ink3,
                   }}>{label}</button>
@@ -349,7 +349,7 @@ export function GoalsScreen(_props?: any) {
                   title={n === 0 ? 'Nothing held back' : `${n} month${n === 1 ? '' : 's'} of typical spending held back before any goal is funded`}
                   style={{
                     width: 32, height: 32, borderRadius: 8, border: 'none', cursor: 'pointer',
-                    fontFamily: 'inherit', fontSize: 12.5, fontWeight: bufferMonths === n ? 700 : 500,
+                    fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', fontWeight: bufferMonths === n ? 700 : 500,
                     background: bufferMonths === n ? C.ink1 : 'transparent',
                     color: bufferMonths === n ? 'var(--sb-ink-on-dark)' : C.ink3,
                   }}>{n}</button>
@@ -369,13 +369,13 @@ export function GoalsScreen(_props?: any) {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <span style={EYEBROW}>In order</span>
-            <span style={{ marginLeft: 'auto', fontSize: 11, color: C.ink4 }}>
+            <span style={{ marginLeft: 'auto', fontSize: 'var(--sb-t-meta)', color: C.ink4 }}>
               {goals.length === 0 ? 'none yet' : `${goals.length} goal${goals.length === 1 ? '' : 's'} · drag to re-rank`}
             </span>
           </div>
 
           {plans.length === 0 && (
-            <div style={{ padding: '18px 0', color: C.ink3, fontSize: 12.5, lineHeight: 1.55 }}>
+            <div style={{ padding: '18px 0', color: C.ink3, fontSize: 'var(--sb-t-body-s)', lineHeight: 1.55 }}>
               Nothing here yet. Add one below — a name and an amount is enough, and a
               date if it has to be there by one.
             </div>
@@ -418,13 +418,13 @@ export function GoalsScreen(_props?: any) {
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
               <span style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
-                <span style={{ ...EYEBROW, fontSize: 9.5 }}>Target</span>
+                <span style={{ ...EYEBROW, fontSize: 'var(--sb-t-micro)' }}>Target</span>
                 <MoneyInput key={formTick} value={newTarget} min={0} onChange={setNewTarget}
                   placeholder="60,000"
                   style={{ ...FIELD, fontFamily: DISPLAY, fontWeight: 600 }} />
               </span>
               <span style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
-                <span style={{ ...EYEBROW, fontSize: 9.5 }}>By (optional)</span>
+                <span style={{ ...EYEBROW, fontSize: 'var(--sb-t-micro)' }}>By (optional)</span>
                 <input type="date" value={newBy} min={todayISO()}
                   onChange={e => setNewBy(e.target.value)}
                   style={{ ...FIELD, fontFamily: DISPLAY }} />
@@ -439,7 +439,7 @@ export function GoalsScreen(_props?: any) {
                 background: canAdd ? C.ink1 : 'var(--sb-field)',
                 border: `1px solid ${canAdd ? C.ink1 : C.border}`,
                 color: canAdd ? 'var(--sb-ink-on-dark)' : C.ink4,
-                fontFamily: 'inherit', fontSize: 13, fontWeight: 600,
+                fontFamily: 'inherit', fontSize: 'var(--sb-t-label)', fontWeight: 600,
               }}>
               <Plus size={14} /> Add goal
             </button>
@@ -462,9 +462,9 @@ export function GoalsScreen(_props?: any) {
             }} /> : (
             <div style={{
               background: C.surface, border: `1px solid ${C.border}`, borderRadius: 18,
-              padding: '28px 26px', color: C.ink3, fontSize: 13, lineHeight: 1.6, maxWidth: 620,
+              padding: '28px 26px', color: C.ink3, fontSize: 'var(--sb-t-label)', lineHeight: 1.6, maxWidth: 620,
             }}>
-              <div style={{ fontFamily: DISPLAY, fontSize: 20, fontWeight: 700, color: C.ink1, letterSpacing: '-.02em', marginBottom: 8 }}>
+              <div style={{ fontFamily: DISPLAY, fontSize: 'var(--sb-t-h2)', fontWeight: 700, color: C.ink1, letterSpacing: '-.02em', marginBottom: 8 }}>
                 How this plans
               </div>
               Add a goal and this works out three things from the ledger you already keep:
@@ -515,10 +515,10 @@ function GoalDetail({ plan, place, policy, currency, surplus, onChange, onDelete
           <span style={{
             width: 22, height: 22, borderRadius: 7, flexShrink: 0,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: C.ink1, color: 'var(--sb-ink-on-dark)', fontSize: 11, fontWeight: 700,
+            background: C.ink1, color: 'var(--sb-ink-on-dark)', fontSize: 'var(--sb-t-meta)', fontWeight: 700,
           }}>{place}</span>
-          <span style={{ fontSize: 20 }}>{g.icon}</span>
-          <span style={{ fontFamily: DISPLAY, fontSize: 22, fontWeight: 700, letterSpacing: '-.03em', color: C.ink1 }}>
+          <span style={{ fontSize: 'var(--sb-t-h2)' }}>{g.icon}</span>
+          <span style={{ fontFamily: DISPLAY, fontSize: 'var(--sb-t-h2)', fontWeight: 700, letterSpacing: '-.03em', color: C.ink1 }}>
             {g.name}
           </span>
           <span style={{ flex: 1 }} />
@@ -552,7 +552,7 @@ function GoalDetail({ plan, place, policy, currency, surplus, onChange, onDelete
       {/* The verdict, in a sentence */}
       <div style={{ ...card, background: done || coveredNow ? '#E9F3EC' : plan.onTime === false || plan.eta === null ? '#FBEAEA' : C.accentBg,
         border: `1px solid ${done || coveredNow ? '#BFDCC8' : plan.onTime === false || plan.eta === null ? '#EFCECE' : C.accentBr}` }}>
-        <div style={{ fontSize: 13.5, color: C.ink1, lineHeight: 1.6 }}>
+        <div style={{ fontSize: 'var(--sb-t-body)', color: C.ink1, lineHeight: 1.6 }}>
           {done
             ? 'This one is there. Anything ranked below it now gets what it was taking.'
             : coveredNow
@@ -574,17 +574,17 @@ function GoalDetail({ plan, place, policy, currency, surplus, onChange, onDelete
         <span style={EYEBROW}>The goal itself</span>
         <div style={{ display: 'flex', gap: 12, marginTop: 10, flexWrap: 'wrap' }}>
           <span style={{ flex: 1, minWidth: 150, display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <span style={{ ...EYEBROW, fontSize: 9.5 }}>Target</span>
+            <span style={{ ...EYEBROW, fontSize: 'var(--sb-t-micro)' }}>Target</span>
             <MoneyInput value={target} min={0} onChange={setTarget}
               style={{ ...FIELD, fontFamily: DISPLAY, fontWeight: 600 }} />
           </span>
           <span style={{ flex: 1, minWidth: 150, display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <span style={{ ...EYEBROW, fontSize: 9.5 }}>Saved so far</span>
+            <span style={{ ...EYEBROW, fontSize: 'var(--sb-t-micro)' }}>Saved so far</span>
             <MoneyInput value={saved} min={0} onChange={setSaved}
               style={{ ...FIELD, fontFamily: DISPLAY, fontWeight: 600 }} />
           </span>
           <span style={{ flex: 1, minWidth: 150, display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <span style={{ ...EYEBROW, fontSize: 9.5 }}>By</span>
+            <span style={{ ...EYEBROW, fontSize: 'var(--sb-t-micro)' }}>By</span>
             <input type="date" value={g.deadline ?? ''} min={todayISO()}
               onChange={e => onChange({ ...g, deadline: e.target.value || undefined, sub: e.target.value ? `by ${e.target.value}` : 'no deadline' })}
               style={{ ...FIELD, fontFamily: DISPLAY }} />
@@ -595,7 +595,7 @@ function GoalDetail({ plan, place, policy, currency, surplus, onChange, onDelete
               disabled={target === g.targetAmount && saved === g.currentAmount}
               style={{
                 height: 38, paddingInline: 16, borderRadius: 10, display: 'inline-flex',
-                alignItems: 'center', gap: 7, fontFamily: 'inherit', fontSize: 13, fontWeight: 600,
+                alignItems: 'center', gap: 7, fontFamily: 'inherit', fontSize: 'var(--sb-t-label)', fontWeight: 600,
                 cursor: target === g.targetAmount && saved === g.currentAmount ? 'default' : 'pointer',
                 background: target === g.targetAmount && saved === g.currentAmount ? 'var(--sb-field)' : C.ink1,
                 border: `1px solid ${target === g.targetAmount && saved === g.currentAmount ? C.border : C.ink1}`,
@@ -606,7 +606,7 @@ function GoalDetail({ plan, place, policy, currency, surplus, onChange, onDelete
           </span>
         </div>
         {g.deadline && !done && (
-          <div style={{ fontSize: 11.5, color: C.ink3, marginTop: 10 }}>
+          <div style={{ fontSize: 'var(--sb-t-meta)', color: C.ink3, marginTop: 10 }}>
             {monthsUntil(g.deadline)} month{monthsUntil(g.deadline) === 1 ? '' : 's'} to go.
           </div>
         )}

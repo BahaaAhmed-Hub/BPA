@@ -108,7 +108,7 @@ function LoginScreen() {
             </h1>
             <p style={{
               margin: '0 0 48px',
-              fontSize: 15, color: 'var(--sb-ink-3)', lineHeight: 1.7, maxWidth: 380,
+              fontSize: 'var(--sb-t-h3)', color: 'var(--sb-ink-3)', lineHeight: 1.7, maxWidth: 380,
             }}>
               Reads your calendar, tasks, habits and finances — then tells you
               exactly what to do next, in plain sentences, with the numbers behind them.
@@ -120,10 +120,10 @@ function LoginScreen() {
                 <div key={s.label}>
                   <div style={{
                     fontFamily: 'var(--sb-font-num)',
-                    fontWeight: 700, fontSize: 26, color: 'var(--sb-ink-1)', letterSpacing: '-.02em',
+                    fontWeight: 700, fontSize: 'var(--sb-t-h1)', color: 'var(--sb-ink-1)', letterSpacing: '-.02em',
                     fontVariantNumeric: 'tabular-nums',
                   }}>{s.value}</div>
-                  <div style={{ fontSize: 11.5, color: 'var(--sb-ink-4)', marginTop: 2 }}>{s.label}</div>
+                  <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', marginTop: 2 }}>{s.label}</div>
                 </div>
               ))}
             </div>
@@ -141,11 +141,11 @@ function LoginScreen() {
           <h2 style={{
             margin: '0 0 6px',
             fontFamily: 'var(--sb-font-num)',
-            fontWeight: 600, fontSize: 22, color: 'var(--sb-ink-1)', letterSpacing: '-.02em',
+            fontWeight: 600, fontSize: 'var(--sb-t-h2)', color: 'var(--sb-ink-1)', letterSpacing: '-.02em',
           }}>
             Sign in
           </h2>
-          <p style={{ margin: '0 0 32px', fontSize: 13, color: 'var(--sb-ink-3)' }}>
+          <p style={{ margin: '0 0 32px', fontSize: 'var(--sb-t-label)', color: 'var(--sb-ink-3)' }}>
             Continue to your operating system.
           </p>
 
@@ -160,7 +160,7 @@ function LoginScreen() {
               background: signing ? 'var(--sb-field)' : 'var(--sb-ink-1)',
               border: '1px solid var(--sb-ink-1)',
               color: 'var(--sb-ink-on-dark)',
-              fontSize: 14, fontWeight: 600,
+              fontSize: 'var(--sb-t-label)', fontWeight: 600,
               cursor: signing ? 'wait' : 'pointer',
               fontFamily: 'var(--sb-font-ui)',
               transition: 'background 140ms ease-out, box-shadow 140ms ease-out',
@@ -184,13 +184,13 @@ function LoginScreen() {
           {/* Divider */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '24px 0' }}>
             <div style={{ flex: 1, height: 1, background: 'var(--sb-border)' }} />
-            <span style={{ fontSize: 11.5, color: 'var(--sb-ink-4)' }}>or</span>
+            <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>or</span>
             <div style={{ flex: 1, height: 1, background: 'var(--sb-border)' }} />
           </div>
 
           {/* Email (passive — redirects to Google OAuth anyway) */}
           <div style={{ marginBottom: 12 }}>
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--sb-ink-2)', marginBottom: 5 }}>
+            <label style={{ display: 'block', fontSize: 'var(--sb-t-body-s)', fontWeight: 500, color: 'var(--sb-ink-2)', marginBottom: 5 }}>
               Email
             </label>
             <input
@@ -200,14 +200,14 @@ function LoginScreen() {
               style={{
                 width: '100%', padding: '11px 14px', borderRadius: 9,
                 background: 'var(--sb-field)', border: '1px solid var(--sb-border)',
-                color: 'var(--sb-ink-4)', fontSize: 13,
+                color: 'var(--sb-ink-4)', fontSize: 'var(--sb-t-body)',
                 outline: 'none', cursor: 'not-allowed',
                 fontFamily: 'inherit', boxSizing: 'border-box',
               }}
             />
           </div>
           <div style={{ marginBottom: 20 }}>
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--sb-ink-2)', marginBottom: 5 }}>
+            <label style={{ display: 'block', fontSize: 'var(--sb-t-body-s)', fontWeight: 500, color: 'var(--sb-ink-2)', marginBottom: 5 }}>
               Password
             </label>
             <input
@@ -217,7 +217,7 @@ function LoginScreen() {
               style={{
                 width: '100%', padding: '11px 14px', borderRadius: 9,
                 background: 'var(--sb-field)', border: '1px solid var(--sb-border)',
-                color: 'var(--sb-ink-4)', fontSize: 13,
+                color: 'var(--sb-ink-4)', fontSize: 'var(--sb-t-body)',
                 outline: 'none', cursor: 'not-allowed',
                 fontFamily: 'inherit', boxSizing: 'border-box',
               }}
@@ -230,14 +230,14 @@ function LoginScreen() {
               width: '100%', padding: '12px',
               borderRadius: 10,
               background: 'var(--sb-field)', border: '1px solid var(--sb-border)',
-              color: 'var(--sb-ink-4)', fontSize: 14, fontWeight: 600,
+              color: 'var(--sb-ink-4)', fontSize: 'var(--sb-t-label)', fontWeight: 600,
               cursor: 'not-allowed', fontFamily: 'inherit',
             }}
           >
             Log in
           </button>
 
-          <p style={{ margin: '24px 0 0', fontSize: 11.5, color: 'var(--sb-ink-4)', textAlign: 'center', lineHeight: 1.65 }}>
+          <p style={{ margin: '24px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', textAlign: 'center', lineHeight: 1.65 }}>
             By continuing, you agree to our{' '}
             <span style={{ color: 'var(--sb-ink-2)', textDecoration: 'underline', cursor: 'pointer' }}>Terms</span>
             {' '}and{' '}
@@ -272,7 +272,7 @@ function LoadingScreen() {
           <path d="M6 12v5c3.333 2 8.667 2 12 0v-5"/>
         </svg>
       </div>
-      <span style={{ fontSize: 13, color: 'var(--sb-ink-3)', fontWeight: 500 }}>Loading your system…</span>
+      <span style={{ fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-3)', fontWeight: 500 }}>Loading your system…</span>
       <style>{`
         @keyframes sbPulse {
           0%, 100% { opacity: 1; transform: scale(1); }
@@ -420,7 +420,7 @@ function NotificationBell() {
           <span style={{
             position: 'absolute', top: -4, right: -4, minWidth: 17, height: 17, padding: '0 4px',
             borderRadius: 999, background: 'var(--sb-negative)', color: 'var(--sb-card)',
-            fontSize: 10, fontWeight: 700, lineHeight: '17px', textAlign: 'center',
+            fontSize: 'var(--sb-t-micro)', fontWeight: 700, lineHeight: '17px', textAlign: 'center',
             boxShadow: '0 0 0 2px var(--sb-header)',
           }}>{count > 9 ? '9+' : count}</span>
         )}
@@ -434,14 +434,14 @@ function NotificationBell() {
           boxShadow: '0 22px 48px -20px rgba(25,23,18,.45)',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px 10px', borderBottom: '1px solid var(--sb-hairline)' }}>
-            <p style={{ margin: 0, flex: 1, fontSize: 13, fontWeight: 600, color: 'var(--sb-ink-1)' }}>
+            <p style={{ margin: 0, flex: 1, fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>
               Notifications{count ? ` · ${count}` : ''}
             </p>
             {count > 0 && (
               <button onClick={() => { markSeen(items.map(i => i.id)); setItems([]) }}
                 style={{
                   background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
-                  fontSize: 11.5, color: 'var(--sb-ink-3)', padding: 0,
+                  fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', padding: 0,
                 }}>Clear all</button>
             )}
           </div>
@@ -459,28 +459,28 @@ function NotificationBell() {
               }} />
               <span style={{ flex: 1, minWidth: 0 }}>
                 <span style={{
-                  display: 'block', fontSize: 12.5, color: 'var(--sb-ink-1)', lineHeight: 1.35,
+                  display: 'block', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)', lineHeight: 1.35,
                   overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                 }}>{n.title}</span>
-                <span style={{ display: 'block', fontSize: 11, color: 'var(--sb-ink-4)', lineHeight: 1.35 }}>{n.detail}</span>
+                <span style={{ display: 'block', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', lineHeight: 1.35 }}>{n.detail}</span>
               </span>
             </button>
           ))}
 
           {count === 0 && (
-            <p style={{ margin: 0, padding: '18px 12px', fontSize: 12, color: 'var(--sb-ink-4)', lineHeight: 1.5, textAlign: 'center' }}>
+            <p style={{ margin: 0, padding: '18px 12px', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-4)', lineHeight: 1.5, textAlign: 'center' }}>
               Nothing is waiting for you.
             </p>
           )}
 
           {quiet && (
-            <p style={{ margin: '4px 6px 0', padding: '8px 10px', borderRadius: 9, background: 'var(--sb-field)', fontSize: 11, color: 'var(--sb-ink-3)', lineHeight: 1.45 }}>
+            <p style={{ margin: '4px 6px 0', padding: '8px 10px', borderRadius: 9, background: 'var(--sb-field)', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.45 }}>
               Quiet hours — you are not being interrupted, but nothing is hidden.
             </p>
           )}
 
           {unwired.length > 0 && (
-            <p style={{ margin: '4px 6px 0', padding: '8px 10px', fontSize: 10.5, color: 'var(--sb-ink-4)', lineHeight: 1.45 }}>
+            <p style={{ margin: '4px 6px 0', padding: '8px 10px', fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', lineHeight: 1.45 }}>
               {unwired.map(u => u.label).join(', ')} {unwired.length === 1
                 ? 'is switched on but has nothing behind it yet.'
                 : 'are switched on but have nothing behind them yet.'}
@@ -491,7 +491,7 @@ function NotificationBell() {
             style={{
               display: 'flex', alignItems: 'center', gap: 8, width: '100%', height: 34, marginTop: 4,
               padding: '0 10px', borderRadius: 9, border: 'none', background: 'transparent',
-              color: 'var(--sb-ink-3)', fontSize: 12, fontFamily: 'inherit', cursor: 'pointer', textAlign: 'left',
+              color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body-s)', fontFamily: 'inherit', cursor: 'pointer', textAlign: 'left',
             }}>
             <Settings size={13} color="var(--sb-ink-4)" /> What gets notified
           </button>
@@ -555,7 +555,7 @@ function TopNav() {
                 background: active ? 'var(--sb-card)' : 'transparent',
                 boxShadow: active ? '0 1px 3px rgba(25,23,18,.16)' : 'none',
                 color:      active ? 'var(--sb-ink-1)' : 'var(--sb-ink-3)',
-                fontSize: 13.5, fontWeight: active ? 600 : 500,
+                fontSize: 'var(--sb-t-body)', fontWeight: active ? 600 : 500,
                 fontFamily: 'var(--sb-font-ui)',
                 transition: 'background 120ms ease-out, color 120ms ease-out, box-shadow 120ms ease-out',
                 whiteSpace: 'nowrap',
@@ -596,10 +596,10 @@ function TopNav() {
             borderRadius: 12, cursor: 'pointer',
           }}>
           <Search size={13} color="var(--sb-ink-3)" />
-          <span style={{ fontSize: 12.5, color: 'var(--sb-ink-4)', userSelect: 'none' }}>Search</span>
+          <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-4)', userSelect: 'none' }}>Search</span>
           <span style={{
             marginLeft: 4,
-            fontSize: 10, fontFamily: 'var(--sb-font-mono)',
+            fontSize: 'var(--sb-t-micro)', fontFamily: 'var(--sb-font-mono)',
             color: 'var(--sb-ink-4)', opacity: 0.7,
           }}>⌘K</span>
         </div>
@@ -622,7 +622,7 @@ function TopNav() {
             {user?.avatarUrl ? (
               <img src={user.avatarUrl} alt={initials} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             ) : (
-              <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--sb-ink-on-dark)', letterSpacing: '0.02em' }}>
+              <span style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-on-dark)', letterSpacing: '0.02em' }}>
                 {initials}
               </span>
             )}
@@ -635,11 +635,11 @@ function TopNav() {
             }}>
               <div style={{ padding: '8px 10px 10px', borderBottom: '1px solid var(--sb-hairline)', marginBottom: 5 }}>
                 <p style={{
-                  margin: 0, fontSize: 13, fontWeight: 600, color: 'var(--sb-ink-1)',
+                  margin: 0, fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-1)',
                   overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                 }}>{user?.name ?? 'Your account'}</p>
                 <p style={{
-                  margin: '2px 0 0', fontSize: 11.5, color: 'var(--sb-ink-4)',
+                  margin: '2px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)',
                   overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                 }}>{user?.email}</p>
               </div>
@@ -650,7 +650,7 @@ function TopNav() {
                   display: 'flex', alignItems: 'center', gap: 9, width: '100%', height: 36,
                   padding: '0 10px', borderRadius: 9, border: 'none', cursor: 'pointer',
                   background: activeModule === 'settings' ? '#F5F1E6' : 'transparent',
-                  color: 'var(--sb-ink-1)', fontSize: 13.5, fontFamily: 'inherit', textAlign: 'left',
+                  color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body)', fontFamily: 'inherit', textAlign: 'left',
                 }}>
                 <Settings size={15} color="var(--sb-ink-3)" /> Settings
               </button>
@@ -660,7 +660,7 @@ function TopNav() {
                 style={{
                   display: 'flex', alignItems: 'center', gap: 9, width: '100%', height: 36,
                   padding: '0 10px', borderRadius: 9, border: 'none', cursor: 'pointer',
-                  background: 'transparent', color: 'var(--sb-negative)', fontSize: 13.5,
+                  background: 'transparent', color: 'var(--sb-negative)', fontSize: 'var(--sb-t-body)',
                   fontFamily: 'inherit', textAlign: 'left',
                 }}>
                 <LogOut size={15} color="var(--sb-negative)" /> Sign out

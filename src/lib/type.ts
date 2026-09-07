@@ -1,32 +1,47 @@
 // ─── Type scale ──────────────────────────────────────────────────────────────
-// Sunlit Bento runs on two faces and six sizes. Outfit sets things that name a
-// screen or a section; Instrument Sans says everything else. Anything picking a
-// size or a face by hand drifts, which is how one file ended up with sixteen
-// sizes and four family declarations.
+// Nine steps and nothing between them. The sizes are tokens (`--sb-t-*` in
+// index.css) so a step can be moved once; the weight, tracking and case that
+// go with a step live here, because a style object is what a call site can
+// actually spread.
 //
-//   display  27  Outfit    the page's own name, an event's title
-//   title    18  Outfit    a day number, a form's heading
-//   heading  15  Outfit    a section within a panel — Attendees, Notes
-//   body   13.5  Instrument Sans   field values, labels, names, buttons
-//   small  11.5  Instrument Sans   meta beside or beneath body — times, notes
-//   micro    10  Instrument Sans   the gutter, a card's time, capsed captions
+//   micro    10    700  .12em  uppercase   gutters, capsed captions
+//   meta     11.5  500                     times, notes, the second line
+//   body-s   12.5  400                     dense body — rows, feeds
+//   body     13.5  400                     the default
+//   label    13.5  600                     a value's name, a button
+//   h3       15    600                     a section inside a panel
+//   h2       18    600  -.02em             a form's heading, a day number
+//   h1       27    600  -.03em             a page's own name
+//   display  30    600  -.03em             the one figure a screen is about
 //
-// The step from heading to body is a change of face as well as size, so 15 → 13.5
-// reads as a real level rather than the half-pixel it looks like on paper.
+// Two faces: Outfit sets anything that names a screen, a section or a figure;
+// Instrument Sans says everything else. The step from h3 to label is a change
+// of face as well as size, so 15 → 13.5 reads as a level rather than the
+// pixel and a half it looks like on paper.
+//
+// A call site that spreads a level and then sets its own weight is overriding
+// it deliberately — that is allowed, and it is why weight is not folded into
+// the size token.
 
 export const SANS = 'var(--sb-font-ui)'
 export const DISPLAY = 'var(--sb-font-num)'
+export const MONO = 'var(--sb-font-mono)'
 
 export const T = {
-  display: { fontFamily: DISPLAY, fontSize: 27, fontWeight: 700, letterSpacing: '-0.03em', lineHeight: 1.12 },
-  title:   { fontFamily: DISPLAY, fontSize: 18, fontWeight: 600, letterSpacing: '-0.02em', lineHeight: 1.2 },
-  heading: { fontFamily: DISPLAY, fontSize: 15, fontWeight: 600, letterSpacing: '-0.01em', lineHeight: 1.3 },
-  body:    { fontFamily: SANS,    fontSize: 13.5, fontWeight: 500, lineHeight: 1.4 },
-  small:   { fontFamily: SANS,    fontSize: 11.5, fontWeight: 500, lineHeight: 1.4 },
-  micro:   { fontFamily: SANS,    fontSize: 10,   fontWeight: 500, lineHeight: 1.35 },
+  micro:   { fontFamily: SANS,    fontSize: 'var(--sb-t-micro)',   fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', lineHeight: 1.35 },
+  meta:    { fontFamily: SANS,    fontSize: 'var(--sb-t-meta)',    fontWeight: 500, lineHeight: 1.4 },
+  bodyS:   { fontFamily: SANS,    fontSize: 'var(--sb-t-body-s)',  fontWeight: 400, lineHeight: 1.45 },
+  body:    { fontFamily: SANS,    fontSize: 'var(--sb-t-body)',    fontWeight: 400, lineHeight: 1.5 },
+  label:   { fontFamily: SANS,    fontSize: 'var(--sb-t-label)',   fontWeight: 600, lineHeight: 1.4 },
+  h3:      { fontFamily: DISPLAY, fontSize: 'var(--sb-t-h3)',      fontWeight: 600, letterSpacing: '-0.01em', lineHeight: 1.3 },
+  h2:      { fontFamily: DISPLAY, fontSize: 'var(--sb-t-h2)',      fontWeight: 600, letterSpacing: '-0.02em', lineHeight: 1.25 },
+  h1:      { fontFamily: DISPLAY, fontSize: 'var(--sb-t-h1)',      fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1.15 },
+  display: { fontFamily: DISPLAY, fontSize: 'var(--sb-t-display)', fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1.1 },
 } as const satisfies Record<string, React.CSSProperties>
 
-/** A capsed caption — the eyebrow over a section, a day name in a header. */
-export const CAPS: React.CSSProperties = {
-  ...T.micro, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase',
-}
+/** A capsed caption — the eyebrow over a section, a day name in a header. It
+ *  is the micro level, which is capsed by definition. */
+export const CAPS: React.CSSProperties = T.micro
+
+/** Figures line up column to column, whatever the digits. */
+export const TABULAR: React.CSSProperties = { fontVariantNumeric: 'tabular-nums' }

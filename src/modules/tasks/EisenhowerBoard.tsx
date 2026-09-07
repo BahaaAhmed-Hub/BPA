@@ -97,8 +97,8 @@ function QuadrantPanel({ spec, tasks, onOpen, onAction, groupBy }: {
           overflow: 'hidden',
         }}>{spec.badge}</span>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ margin: 0, fontSize: 13.5, fontWeight: 600, color: 'var(--sb-ink-1)', lineHeight: 1.3 }}>{spec.title}</p>
-          <p style={{ margin: '2px 0 0', fontSize: 11.5, color: 'var(--sb-ink-4)', lineHeight: 1.35 }}>{spec.sub}</p>
+          <p style={{ margin: 0, fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-1)', lineHeight: 1.3 }}>{spec.title}</p>
+          <p style={{ margin: '2px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', lineHeight: 1.35 }}>{spec.sub}</p>
         </div>
         <span style={{ paddingTop: 2 }}><CountBadge value={tasks.length} /></span>
         {/* Adding to a quadrant is a small, frequent thing, so it is a small
@@ -117,7 +117,7 @@ function QuadrantPanel({ spec, tasks, onOpen, onAction, groupBy }: {
         <button onClick={() => onAction(spec, tasks)} style={{
           flexShrink: 0, height: 28, padding: '0 12px', borderRadius: 999,
           background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-1)',
-          fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit',
+          fontSize: 'var(--sb-t-body-s)', fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit',
         }}>{spec.action}</button>
       </div>
 
@@ -136,7 +136,7 @@ function QuadrantPanel({ spec, tasks, onOpen, onAction, groupBy }: {
           style={{
             width: '100%', boxSizing: 'border-box', background: 'var(--sb-card)',
             border: '1px solid var(--sb-accent)', borderRadius: 10, padding: '11px 13px',
-            fontSize: 13, color: 'var(--sb-ink-1)', outline: 'none', fontFamily: 'inherit',
+            fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)', outline: 'none', fontFamily: 'inherit',
           }}
         />
       )}
@@ -160,7 +160,7 @@ function QuadrantPanel({ spec, tasks, onOpen, onAction, groupBy }: {
                     ? <ChevronDown size={12} strokeWidth={2.2} color="var(--sb-ink-4)" />
                     : <ChevronRight size={12} strokeWidth={2.2} color="var(--sb-ink-4)" />}
                   <span style={{ width: 7, height: 7, borderRadius: 999, background: g.color, flexShrink: 0 }} />
-                  <span style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--sb-ink-3)' }}>{g.label}</span>
+                  <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-ink-3)' }}>{g.label}</span>
                   <CountBadge value={g.tasks.length} />
                 </button>
               )}

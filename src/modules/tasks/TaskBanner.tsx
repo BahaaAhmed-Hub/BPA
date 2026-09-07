@@ -34,11 +34,11 @@ function Stat({ label, value, sub, accent, icon: Icon, center }: {
   return (
     <div style={{ minWidth: 0, textAlign: center ? 'center' : 'left' }}>
       <p style={{
-        margin: 0, fontSize: 9.5, fontWeight: 700, letterSpacing: '0.14em',
+        margin: 0, fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.14em',
         color: DIM, textTransform: 'uppercase',
       }}>{label}</p>
       <p style={{
-        margin: '5px 0 0', fontFamily: 'var(--sb-font-num)', fontSize: 21, fontWeight: 600,
+        margin: '5px 0 0', fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h2)', fontWeight: 600,
         letterSpacing: '-0.02em', color: accent ?? 'var(--sb-card)', lineHeight: 1.1,
         display: 'flex', alignItems: 'center', gap: 6,
         justifyContent: center ? 'center' : 'flex-start',
@@ -46,14 +46,14 @@ function Stat({ label, value, sub, accent, icon: Icon, center }: {
         {Icon && <Icon size={16} strokeWidth={2} fill={accent ?? 'none'} />}
         {value}
       </p>
-      {sub && <p style={{ margin: '3px 0 0', fontSize: 11, color: DIM, lineHeight: 1.35 }}>{sub}</p>}
+      {sub && <p style={{ margin: '3px 0 0', fontSize: 'var(--sb-t-meta)', color: DIM, lineHeight: 1.35 }}>{sub}</p>}
     </div>
   )
 }
 
 function Legend({ color, label }: { color: string; label: string }) {
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, color: DIM, whiteSpace: 'nowrap' }}>
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 'var(--sb-t-meta)', color: DIM, whiteSpace: 'nowrap' }}>
       <span style={{ width: 7, height: 7, borderRadius: 2, background: color, flexShrink: 0 }} />
       {label}
     </span>
@@ -142,7 +142,7 @@ export function TaskBanner({ tasks }: { tasks: Task[] }) {
       <div style={{ flex: 1, minWidth: 0, padding: '0 22px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <p style={{
-            margin: 0, fontSize: 9.5, fontWeight: 700, letterSpacing: '0.14em',
+            margin: 0, fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.14em',
             color: DIM, textTransform: 'uppercase',
           }}>Last six days</p>
           <Legend color={AMBER} label={`${model.added} added`} />
@@ -159,7 +159,7 @@ export function TaskBanner({ tasks }: { tasks: Task[] }) {
         <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
           {model.days.map(d => (
             <span key={d.iso} style={{
-              flex: 1, minWidth: 0, textAlign: 'center', fontSize: 10,
+              flex: 1, minWidth: 0, textAlign: 'center', fontSize: 'var(--sb-t-micro)',
               color: d.isToday ? 'var(--sb-card)' : DIM,
             }}>{d.label}</span>
           ))}

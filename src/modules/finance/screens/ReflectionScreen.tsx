@@ -150,11 +150,11 @@ function CategoryRows({ row, tone, open, hidden, onToggleOpen, onToggleHide, onD
               </button>
             ) : <span style={{ width: 16, flexShrink: 0 }} />}
             <span style={{ display: 'inline-flex', color: row.cat.color }}><CategoryGlyph icon={row.cat.icon} size={12} /></span>
-            <span style={{ fontSize: 13, color: isHidden ? 'var(--sb-ink-4)' : 'var(--sb-ink-1)', textDecoration: isHidden ? 'line-through' : 'none', fontWeight: 500 }}>
+            <span style={{ fontSize: 'var(--sb-t-body)', color: isHidden ? 'var(--sb-ink-4)' : 'var(--sb-ink-1)', textDecoration: isHidden ? 'line-through' : 'none', fontWeight: 500 }}>
               {row.cat.name}
             </span>
             {kids.length > 0 && !open && (
-              <span style={{ fontSize: 10, color: '#C5BCA8' }}>+{kids.length}</span>
+              <span style={{ fontSize: 'var(--sb-t-micro)', color: '#C5BCA8' }}>+{kids.length}</span>
             )}
             <span style={{ flex: 1 }} />
             <Grip lifted={lifted} onGrab={onGrab(row.cat as Category)} />
@@ -187,7 +187,7 @@ function CategoryRows({ row, tone, open, hidden, onToggleOpen, onToggleHide, onD
               <div style={{ display: 'flex', alignItems: 'center', gap: 7, paddingLeft: 23 }}>
                 <span style={{ width: 8, height: 1, background: '#DCD3BF', flexShrink: 0 }} />
                 <span style={{ display: 'inline-flex', color: kid.cat.color }}><CategoryGlyph icon={kid.cat.icon} size={11} /></span>
-                <span style={{ fontSize: 12, color: kidHidden ? 'var(--sb-ink-4)' : 'var(--sb-ink-2)', textDecoration: hidden(kid.cat.id) ? 'line-through' : 'none' }}>
+                <span style={{ fontSize: 'var(--sb-t-body-s)', color: kidHidden ? 'var(--sb-ink-4)' : 'var(--sb-ink-2)', textDecoration: hidden(kid.cat.id) ? 'line-through' : 'none' }}>
                   {kid.cat.name}
                 </span>
                 <span style={{ flex: 1 }} />
@@ -197,11 +197,11 @@ function CategoryRows({ row, tone, open, hidden, onToggleOpen, onToggleHide, onD
             {kid.amounts.map((v, mi) => (
               <Fragment key={mi}>
                 {cell(v, [kid.cat.id], `${kid.cat.name} · ${MONTHS_SHORT[mi]}`, mi,
-                  { ...numCell(v), fontSize: 11.5, color: v === 0 ? '#D8D0BE' : 'var(--sb-ink-3)' })}
+                  { ...numCell(v), fontSize: 'var(--sb-t-meta)', color: v === 0 ? '#D8D0BE' : 'var(--sb-ink-3)' })}
               </Fragment>
             ))}
             {cell(kidTotal, [kid.cat.id], `${kid.cat.name} · the year`, null,
-              { ...numCell(kidTotal), fontSize: 11.5, fontWeight: 600, color: kidTotal === 0 ? '#D8D0BE' : tone, opacity: 0.85 })}
+              { ...numCell(kidTotal), fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: kidTotal === 0 ? '#D8D0BE' : tone, opacity: 0.85 })}
           </tr>
         )
       })}
@@ -539,7 +539,7 @@ export function ReflectionScreen(_props?: any) {
   function numCell(v: number, isNet = false): React.CSSProperties {
     return {
       width: COL_W, minWidth: COL_W, textAlign: 'right' as const, padding: '0 10px',
-      fontFamily: 'var(--sb-font-num)', fontSize: 12.5, fontWeight: isNet ? 700 : 500,
+      fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-body-s)', fontWeight: isNet ? 700 : 500,
       color: isNet ? netColor(v) : v === 0 ? '#C5BCA8' : 'var(--sb-ink-1)',
       fontVariantNumeric: 'tabular-nums' as const,
       whiteSpace: 'nowrap' as const,
@@ -552,15 +552,15 @@ export function ReflectionScreen(_props?: any) {
       {/* Header */}
       <div style={{ flexShrink: 0, borderBottom: '1px solid var(--sb-border)', padding: '14px 26px 14px', display: 'flex', alignItems: 'flex-end', gap: 20 }}>
         <div>
-          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-3)', display: 'block', marginBottom: 4 }}>FINANCE · REFLECT</span>
+          <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-3)', display: 'block', marginBottom: 4 }}>FINANCE · REFLECT</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <button onClick={() => void setYear(year - 1)} style={{ background: 'none', border: 'none', color: 'var(--sb-ink-3)', fontSize: 20, cursor: 'pointer', padding: 0, lineHeight: 1 }}>‹</button>
-            <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 28, fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1, color: 'var(--sb-ink-1)' }}>
+            <button onClick={() => void setYear(year - 1)} style={{ background: 'none', border: 'none', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-h2)', cursor: 'pointer', padding: 0, lineHeight: 1 }}>‹</button>
+            <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h1)', fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1, color: 'var(--sb-ink-1)' }}>
               Financials, {year}
             </span>
-            <button onClick={() => void setYear(year + 1)} style={{ background: 'none', border: 'none', color: 'var(--sb-ink-3)', fontSize: 20, cursor: 'pointer', padding: 0, lineHeight: 1 }}>›</button>
+            <button onClick={() => void setYear(year + 1)} style={{ background: 'none', border: 'none', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-h2)', cursor: 'pointer', padding: 0, lineHeight: 1 }}>›</button>
           </div>
-          <span style={{ fontSize: 12, color: 'var(--sb-ink-3)', marginTop: 3, display: 'block' }}>
+          <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', marginTop: 3, display: 'block' }}>
             Every income &amp; expense line by month — hide any row and every total recalculates
             {needRates.length > 0 && (
               <span style={{ color: '#8A6D0B' }}>
@@ -581,7 +581,7 @@ export function ReflectionScreen(_props?: any) {
                 <button key={id} onClick={() => pickBasis(id)} title={why}
                   style={{
                     height: 26, padding: '0 12px', borderRadius: 999, border: 'none', cursor: 'pointer',
-                    fontFamily: 'inherit', fontSize: 11.5, fontWeight: basis === id ? 700 : 500,
+                    fontFamily: 'inherit', fontSize: 'var(--sb-t-meta)', fontWeight: basis === id ? 700 : 500,
                     background: basis === id ? 'var(--sb-card)' : 'transparent',
                     color: basis === id ? 'var(--sb-ink-1)' : 'var(--sb-ink-3)',
                     boxShadow: basis === id ? '0 1px 3px rgba(25,23,18,0.16)' : 'none',
@@ -589,7 +589,7 @@ export function ReflectionScreen(_props?: any) {
               ))}
             </span>
             {basis === 'paid' && unpaidThisYear > 0 && (
-              <span style={{ fontSize: 10.5, color: '#C08A2E' }}>
+              <span style={{ fontSize: 'var(--sb-t-micro)', color: '#C08A2E' }}>
                 {unpaidThisYear} not paid yet, so not in this view
               </span>
             )}
@@ -604,7 +604,7 @@ export function ReflectionScreen(_props?: any) {
                   padding: '0 11px', borderRadius: 999, cursor: 'pointer',
                   background: dupesOpen ? 'var(--sb-accent)' : '#FBEBC8',
                   border: '1px solid var(--sb-accent-border)', color: '#7A5F09',
-                  fontFamily: 'inherit', fontSize: 11.5, fontWeight: 700,
+                  fontFamily: 'inherit', fontSize: 'var(--sb-t-meta)', fontWeight: 700,
                 }}>
                 {suspects.length} to check
               </button>
@@ -615,7 +615,7 @@ export function ReflectionScreen(_props?: any) {
                   background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 14,
                   boxShadow: '0 16px 40px rgba(25,23,18,0.18)', textAlign: 'left',
                 }}>
-                  <div style={{ fontSize: 11.5, color: 'var(--sb-ink-3)', lineHeight: 1.5, marginBottom: 10 }}>
+                  <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.5, marginBottom: 10 }}>
                     Same amount, account, category and payee. Filed twice on one day is
                     usually a slip; twice in one month may be real. Nothing has been changed —
                     open one to edit it, or throw the copy away here.
@@ -623,7 +623,7 @@ export function ReflectionScreen(_props?: any) {
                   {suspects.map(t => (
                     <div key={t.id} style={{
                       display: 'flex', alignItems: 'center', gap: 8,
-                      padding: '5px 0', borderTop: '1px solid #F5F1E6', fontSize: 12,
+                      padding: '5px 0', borderTop: '1px solid #F5F1E6', fontSize: 'var(--sb-t-body-s)',
                     }}>
                       {/* The whole line opens the entry — this list is where a
                           duplicate is noticed, so it should also be where it is
@@ -643,7 +643,7 @@ export function ReflectionScreen(_props?: any) {
                         <span style={{ flex: 1, minWidth: 0, color: 'var(--sb-ink-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {t.payee?.trim() || categories.find(c => c.id === t.categoryId)?.name || 'Entry'}
                         </span>
-                        <span style={{ color: dupes.get(t.id) === 'day' ? '#8A6D0B' : '#B0A488', fontSize: 10, fontWeight: 700 }}>
+                        <span style={{ color: dupes.get(t.id) === 'day' ? '#8A6D0B' : '#B0A488', fontSize: 'var(--sb-t-micro)', fontWeight: 700 }}>
                           {dupes.get(t.id) === 'day' ? 'SAME DAY' : 'SAME MONTH'}
                         </span>
                         <span style={{ fontFamily: 'var(--sb-font-num)', fontWeight: 600, color: '#3D3926', fontVariantNumeric: 'tabular-nums' }}>
@@ -668,14 +668,14 @@ export function ReflectionScreen(_props?: any) {
             </span>
           )}
           {hiddenIds.size > 0 && (
-            <span style={{ fontSize: 11.5, color: 'var(--sb-ink-4)', fontStyle: 'italic' }}>
+            <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', fontStyle: 'italic' }}>
               {hiddenIds.size} row{hiddenIds.size > 1 ? 's' : ''} hidden
-              <button onClick={() => setHiddenIds(new Set())} style={{ marginLeft: 8, background: 'none', border: 'none', color: 'var(--sb-ink-3)', cursor: 'pointer', fontSize: 11.5, textDecoration: 'underline', padding: 0 }}>Show all</button>
+              <button onClick={() => setHiddenIds(new Set())} style={{ marginLeft: 8, background: 'none', border: 'none', color: 'var(--sb-ink-3)', cursor: 'pointer', fontSize: 'var(--sb-t-meta)', textDecoration: 'underline', padding: 0 }}>Show all</button>
             </span>
           )}
           <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: 10, letterSpacing: '0.1em', fontWeight: 700, color: 'var(--sb-ink-4)' }}>NET THROUGH {throughLabel}</div>
-            <div style={{ fontFamily: 'var(--sb-font-num)', fontSize: 20, fontWeight: 700, letterSpacing: '-0.02em', color: netColor(totalNet) }}>
+            <div style={{ fontSize: 'var(--sb-t-micro)', letterSpacing: '0.1em', fontWeight: 700, color: 'var(--sb-ink-4)' }}>NET THROUGH {throughLabel}</div>
+            <div style={{ fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h2)', fontWeight: 700, letterSpacing: '-0.02em', color: netColor(totalNet) }}>
               {acct(totalNet, { currency: 'EGP', zero: '–' })}
             </div>
           </div>
@@ -689,7 +689,7 @@ export function ReflectionScreen(_props?: any) {
           {/* Column headers */}
           <thead>
             <tr style={{ background: 'var(--sb-header)' }}>
-              <th style={{ width: NAME_W, minWidth: NAME_W, textAlign: 'left', padding: '8px 14px', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: 'var(--sb-ink-4)', position: 'sticky', top: 0, left: 0, background: 'var(--sb-header)', zIndex: 4, ...HEAD_EDGE }}>
+              <th style={{ width: NAME_W, minWidth: NAME_W, textAlign: 'left', padding: '8px 14px', fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.1em', color: 'var(--sb-ink-4)', position: 'sticky', top: 0, left: 0, background: 'var(--sb-header)', zIndex: 4, ...HEAD_EDGE }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                   <span>CATEGORY</span>
                   {foldable.length > 0 && (
@@ -700,7 +700,7 @@ export function ReflectionScreen(_props?: any) {
                         display: 'inline-flex', alignItems: 'center', gap: 4, height: 20,
                         padding: '0 7px', borderRadius: 999, cursor: 'pointer',
                         background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-3)',
-                        fontFamily: 'inherit', fontSize: 9.5, fontWeight: 600, letterSpacing: '0.04em',
+                        fontFamily: 'inherit', fontSize: 'var(--sb-t-micro)', fontWeight: 600, letterSpacing: '0.04em',
                       }}>
                       {allOpen ? <ChevronsDownUp size={11} strokeWidth={2.2} /> : <ChevronsUpDown size={11} strokeWidth={2.2} />}
                       {allOpen ? 'COLLAPSE ALL' : 'EXPAND ALL'}
@@ -709,9 +709,9 @@ export function ReflectionScreen(_props?: any) {
                 </span>
               </th>
               {MONTHS_SHORT.map(m => (
-                <th key={m} style={{ width: COL_W, minWidth: COL_W, textAlign: 'right', padding: '8px 10px', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: 'var(--sb-ink-4)', position: 'sticky', top: 0, background: 'var(--sb-header)', zIndex: 3, ...HEAD_EDGE }}>{m.toUpperCase()}</th>
+                <th key={m} style={{ width: COL_W, minWidth: COL_W, textAlign: 'right', padding: '8px 10px', fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.1em', color: 'var(--sb-ink-4)', position: 'sticky', top: 0, background: 'var(--sb-header)', zIndex: 3, ...HEAD_EDGE }}>{m.toUpperCase()}</th>
               ))}
-              <th style={{ width: 100, textAlign: 'right', padding: '8px 14px', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: 'var(--sb-ink-4)', position: 'sticky', top: 0, background: 'var(--sb-header)', zIndex: 3, ...HEAD_EDGE }}>TOTAL</th>
+              <th style={{ width: 100, textAlign: 'right', padding: '8px 14px', fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.1em', color: 'var(--sb-ink-4)', position: 'sticky', top: 0, background: 'var(--sb-header)', zIndex: 3, ...HEAD_EDGE }}>TOTAL</th>
             </tr>
           </thead>
 
@@ -794,7 +794,7 @@ export function ReflectionScreen(_props?: any) {
               <span style={{
                 display: 'inline-flex', alignItems: 'center', gap: 7,
                 background: '#F3EEE0', borderRadius: 999, padding: '5px 12px',
-                fontSize: 11.5, fontWeight: 600, color: 'var(--sb-ink-3)',
+                fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-ink-3)',
               }}>
                 <span style={{ width: 6, height: 6, borderRadius: '50%', background: drill.kind === 'income' ? OLIVE : drill.kind === 'expense' ? RUST : 'var(--sb-ink-3)' }} />
                 {drill.kind === 'income' ? 'Income' : drill.kind === 'expense' ? 'Spending' : 'In and out'}
@@ -808,10 +808,10 @@ export function ReflectionScreen(_props?: any) {
             </div>
 
             <div style={{ flexShrink: 0 }}>
-              <div style={{ fontFamily: 'var(--sb-font-num)', fontSize: 21, fontWeight: 600, letterSpacing: '-0.03em', color: 'var(--sb-ink-1)' }}>
+              <div style={{ fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h2)', fontWeight: 600, letterSpacing: '-0.03em', color: 'var(--sb-ink-1)' }}>
                 {drill.label}
               </div>
-              <div style={{ fontSize: 12, color: 'var(--sb-ink-3)', marginTop: 3 }}>
+              <div style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', marginTop: 3 }}>
                 {drillTx.length} {drillTx.length === 1 ? 'entry' : 'entries'} ·{' '}
                 {acct(drillTx.reduce((n, t) => {
                   const v = toBase(Math.abs(t.amount), t.currency, base) ?? 0
@@ -824,7 +824,7 @@ export function ReflectionScreen(_props?: any) {
 
             <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', margin: '0 -2px', padding: '0 2px' }}>
               {drillTx.length === 0 && (
-                <div style={{ fontSize: 13, color: 'var(--sb-ink-4)', textAlign: 'center', padding: '34px 0' }}>
+                <div style={{ fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-4)', textAlign: 'center', padding: '34px 0' }}>
                   Nothing behind this figure any more
                 </div>
               )}
@@ -850,7 +850,7 @@ export function ReflectionScreen(_props?: any) {
                         <CategoryGlyph icon={cat?.icon} size={15} />
                       </span>
                       <span style={{ flex: 1, minWidth: 0 }}>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13.5, color: 'var(--sb-ink-1)', fontWeight: 500 }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)', fontWeight: 500 }}>
                           <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {tx.payee?.trim() || cat?.name || 'Entry'}
                           </span>
@@ -860,14 +860,14 @@ export function ReflectionScreen(_props?: any) {
                         <span
                           title={tx.note?.trim() || undefined}
                           style={{
-                            display: 'block', fontSize: 11.5, color: 'var(--sb-ink-4)', marginTop: 1,
+                            display: 'block', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', marginTop: 1,
                             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                           }}>
                           {tx.date}{cat && tx.payee?.trim() ? ` · ${cat.name}` : ''}{noted(tx.note)}
                         </span>
                       </span>
                       <span style={{
-                        fontFamily: 'var(--sb-font-num)', fontSize: 13.5, fontWeight: 600,
+                        fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-label)', fontWeight: 600,
                         color: tx.type === 'income' ? OLIVE : RUST, fontVariantNumeric: 'tabular-nums', flexShrink: 0,
                       }}>
                         {acct(tx.type === 'income' ? Math.abs(tx.amount) : -Math.abs(tx.amount), { currency: tx.currency })}
@@ -893,7 +893,7 @@ export function ReflectionScreen(_props?: any) {
 
             {/* One more of the same thing, already knowing where it goes */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <span style={{ fontSize: 11.5, color: 'var(--sb-ink-4)' }}>
+              <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>
                 {addTarget
                   ? `New entries land in ${addTarget.name}${drill.month === null ? '' : `, ${MONTHS_SHORT[drill.month]}`}`
                   : 'Pick the category on the entry itself'}
@@ -905,7 +905,7 @@ export function ReflectionScreen(_props?: any) {
                   display: 'inline-flex', alignItems: 'center', gap: 7, height: 38,
                   padding: '0 18px', borderRadius: 10, cursor: 'pointer',
                   background: 'var(--sb-ink-1)', border: '1px solid var(--sb-ink-1)', color: 'var(--sb-ink-on-dark)',
-                  fontFamily: 'inherit', fontSize: 13.5, fontWeight: 600,
+                  fontFamily: 'inherit', fontSize: 'var(--sb-t-label)', fontWeight: 600,
                 }}>
                 <Plus size={14} /> Add an entry
               </button>
@@ -957,18 +957,18 @@ function SectionHeader({ label, colCount: _colCount, colWidth, nameWidth: _nameW
   return (
     <tr style={{ background: 'var(--sb-hairline)', borderTop: '1px solid var(--sb-border)', borderBottom: '1px solid var(--sb-border)' }}>
       <td style={{ padding: '5px 14px', position: 'sticky', left: 0, background: 'var(--sb-hairline)', zIndex: 2 }}>
-        <span style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.1em', color: 'var(--sb-ink-3)' }}>{label}</span>
+        <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.1em', color: 'var(--sb-ink-3)' }}>{label}</span>
       </td>
       {monthTotals.map((v, i) => (
         <td key={i}
           onClick={v === 0 ? undefined : () => onDrill(`${label} · ${MONTHS_SHORT[i]}`, i)}
-          style={{ width: colWidth, textAlign: 'right', padding: '5px 10px', fontFamily: 'var(--sb-font-num)', fontSize: 11, color: v === 0 ? '#C5BCA8' : 'var(--sb-ink-3)', fontVariantNumeric: 'tabular-nums', cursor: v === 0 ? 'default' : 'pointer' }}>
+          style={{ width: colWidth, textAlign: 'right', padding: '5px 10px', fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-meta)', color: v === 0 ? '#C5BCA8' : 'var(--sb-ink-3)', fontVariantNumeric: 'tabular-nums', cursor: v === 0 ? 'default' : 'pointer' }}>
           {f(v)}
         </td>
       ))}
       <td
         onClick={rowTotal === 0 ? undefined : () => onDrill(`${label} · the year`, null)}
-        style={{ width: 100, textAlign: 'right', padding: '5px 14px', fontFamily: 'var(--sb-font-num)', fontSize: 11.5, fontWeight: 700, color: 'var(--sb-ink-3)', fontVariantNumeric: 'tabular-nums', cursor: rowTotal === 0 ? 'default' : 'pointer' }}>
+        style={{ width: 100, textAlign: 'right', padding: '5px 14px', fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-meta)', fontWeight: 700, color: 'var(--sb-ink-3)', fontVariantNumeric: 'tabular-nums', cursor: rowTotal === 0 ? 'default' : 'pointer' }}>
         {f(rowTotal)}
       </td>
     </tr>
@@ -984,18 +984,18 @@ function TotalRow({ label, months, total, sign, COL_W, NAME_W: _NAME_W, onDrill 
   return (
     <tr style={{ background: 'var(--sb-page)', borderTop: '2px solid var(--sb-border)', borderBottom: '2px solid var(--sb-border)' }}>
       <td style={{ padding: '0 14px', height: 38, position: 'sticky', left: 0, background: 'var(--sb-page)', zIndex: 2 }}>
-        <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--sb-ink-1)' }}>{label}</span>
+        <span style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 700, color: 'var(--sb-ink-1)' }}>{label}</span>
       </td>
       {months.map((v, mi) => (
         <td key={mi}
           onClick={v === 0 ? undefined : () => onDrill(`${label} · ${MONTHS_SHORT[mi]}`, mi)}
-          style={{ width: COL_W, minWidth: COL_W, textAlign: 'right', padding: '0 10px', fontFamily: 'var(--sb-font-num)', fontSize: 13, fontWeight: 700, color: v === 0 ? '#C5BCA8' : col, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', cursor: v === 0 ? 'default' : 'pointer' }}>
+          style={{ width: COL_W, minWidth: COL_W, textAlign: 'right', padding: '0 10px', fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-label)', fontWeight: 700, color: v === 0 ? '#C5BCA8' : col, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', cursor: v === 0 ? 'default' : 'pointer' }}>
           {sign === 1 ? fmt(v) : fmtOut(v)}
         </td>
       ))}
       <td
         onClick={total === 0 ? undefined : () => onDrill(`${label} · the year`, null)}
-        style={{ width: 100, textAlign: 'right', padding: '0 14px', fontFamily: 'var(--sb-font-num)', fontSize: 13.5, fontWeight: 700, color: total === 0 ? '#C5BCA8' : col, fontVariantNumeric: 'tabular-nums', cursor: total === 0 ? 'default' : 'pointer' }}>
+        style={{ width: 100, textAlign: 'right', padding: '0 14px', fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-label)', fontWeight: 700, color: total === 0 ? '#C5BCA8' : col, fontVariantNumeric: 'tabular-nums', cursor: total === 0 ? 'default' : 'pointer' }}>
         {sign === 1 ? fmt(total) : fmtOut(total)}
       </td>
     </tr>
@@ -1009,18 +1009,18 @@ function NetRow({ label, months, total, COL_W, NAME_W: _NAME_W2, onDrill }: {
   return (
     <tr style={{ background: 'var(--sb-header)', borderBottom: '1px solid var(--sb-border)' }}>
       <td style={{ padding: '0 14px', height: 38, position: 'sticky', left: 0, background: 'var(--sb-header)', zIndex: 2 }}>
-        <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--sb-ink-1)' }}>{label}</span>
+        <span style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 700, color: 'var(--sb-ink-1)' }}>{label}</span>
       </td>
       {months.map((v, mi) => (
         <td key={mi}
           onClick={v === 0 ? undefined : () => onDrill(`${label} · ${MONTHS_SHORT[mi]}`, mi)}
-          style={{ width: COL_W, minWidth: COL_W, textAlign: 'right', padding: '0 10px', fontFamily: 'var(--sb-font-num)', fontSize: 13, fontWeight: 700, color: v === 0 ? 'var(--sb-ink-4)' : v > 0 ? OLIVE : RUST, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', cursor: v === 0 ? 'default' : 'pointer' }}>
+          style={{ width: COL_W, minWidth: COL_W, textAlign: 'right', padding: '0 10px', fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-label)', fontWeight: 700, color: v === 0 ? 'var(--sb-ink-4)' : v > 0 ? OLIVE : RUST, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', cursor: v === 0 ? 'default' : 'pointer' }}>
           {fmt(v)}
         </td>
       ))}
       <td
         onClick={total === 0 ? undefined : () => onDrill(`${label} · the year`, null)}
-        style={{ width: 100, textAlign: 'right', padding: '0 14px', fontFamily: 'var(--sb-font-num)', fontSize: 13.5, fontWeight: 700, color: total === 0 ? 'var(--sb-ink-4)' : total > 0 ? OLIVE : RUST, fontVariantNumeric: 'tabular-nums', cursor: total === 0 ? 'default' : 'pointer' }}>
+        style={{ width: 100, textAlign: 'right', padding: '0 14px', fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-label)', fontWeight: 700, color: total === 0 ? 'var(--sb-ink-4)' : total > 0 ? OLIVE : RUST, fontVariantNumeric: 'tabular-nums', cursor: total === 0 ? 'default' : 'pointer' }}>
         {fmt(total)}
       </td>
     </tr>
@@ -1031,14 +1031,14 @@ function CumulativeRow({ months, COL_W, NAME_W: _NAME_W3 }: { months: number[]; 
   return (
     <tr style={{ background: 'var(--sb-ink-1)', borderBottom: '1px solid #2C2920' }}>
       <td style={{ padding: '0 14px', height: 40, position: 'sticky', left: 0, background: 'var(--sb-ink-1)', zIndex: 2 }}>
-        <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', color: 'var(--sb-ink-4)' }}>CUMULATIVE CASH</span>
+        <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.1em', color: 'var(--sb-ink-4)' }}>CUMULATIVE CASH</span>
       </td>
       {months.map((v, mi) => (
-        <td key={mi} style={{ width: COL_W, minWidth: COL_W, textAlign: 'right', padding: '0 10px', fontFamily: 'var(--sb-font-num)', fontSize: 12.5, fontWeight: 700, color: v === 0 ? 'var(--sb-ink-2)' : v > 0 ? '#7EC878' : '#E87A65', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+        <td key={mi} style={{ width: COL_W, minWidth: COL_W, textAlign: 'right', padding: '0 10px', fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-body-s)', fontWeight: 700, color: v === 0 ? 'var(--sb-ink-2)' : v > 0 ? '#7EC878' : '#E87A65', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
           {fmt(v)}
         </td>
       ))}
-      <td style={{ width: 100, textAlign: 'right', padding: '0 14px', color: 'var(--sb-ink-2)', fontSize: 12 }}>
+      <td style={{ width: 100, textAlign: 'right', padding: '0 14px', color: 'var(--sb-ink-2)', fontSize: 'var(--sb-t-body-s)' }}>
         YTD
       </td>
     </tr>

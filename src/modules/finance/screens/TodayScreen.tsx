@@ -49,7 +49,7 @@ function Pill({ type, amount, currency }: { type: 'income' | 'expense' | 'transf
   const signed = isIncome || isTransfer ? Math.abs(amount) : -Math.abs(amount)
   return (
     <span style={{
-      fontSize: 13, fontWeight: 700,
+      fontSize: 'var(--sb-t-label)', fontWeight: 700,
       color,
       whiteSpace: 'nowrap',
       flexShrink: 0,
@@ -142,7 +142,7 @@ function MoneyCalendar({
   const ROUND_BTN = {
     width: 28, height: 28, borderRadius: '50%',
     background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
-    color: 'var(--sb-ink-3)', fontSize: 15, lineHeight: 1, cursor: 'pointer',
+    color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-h3)', lineHeight: 1, cursor: 'pointer',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     flexShrink: 0,
   } as const
@@ -151,11 +151,11 @@ function MoneyCalendar({
     <span style={{
       display: 'inline-flex', alignItems: 'baseline', gap: 5,
       background: tint, borderRadius: 999, padding: '4px 11px',
-      fontSize: 10.5, fontWeight: 600, letterSpacing: '0.04em',
+      fontSize: 'var(--sb-t-micro)', fontWeight: 600, letterSpacing: '0.04em',
       textTransform: 'uppercase' as const, color: 'var(--sb-ink-3)',
     }}>
       {label}
-      <b style={{ fontFamily: 'var(--sb-font-num)', fontSize: 12.5, letterSpacing: 0, color, fontVariantNumeric: 'tabular-nums' }}>{value}</b>
+      <b style={{ fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-body-s)', letterSpacing: 0, color, fontVariantNumeric: 'tabular-nums' }}>{value}</b>
     </span>
   )
 
@@ -165,7 +165,7 @@ function MoneyCalendar({
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, flexWrap: 'wrap' as const }}>
         <button onClick={onPrevMonth} style={ROUND_BTN} title="Previous month">‹</button>
         <button onClick={onNextMonth} style={ROUND_BTN} title="Next month">›</button>
-        <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 21, fontWeight: 600, color: 'var(--sb-ink-1)', letterSpacing: '-0.03em' }}>
+        <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h2)', fontWeight: 600, color: 'var(--sb-ink-1)', letterSpacing: '-0.03em' }}>
           {MONTH_NAMES[month]} <span style={{ color: 'var(--sb-ink-4)' }}>{year}</span>
         </span>
         <span style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
@@ -176,7 +176,7 @@ function MoneyCalendar({
               style={{
                 display: 'inline-flex', alignItems: 'center', borderRadius: 999,
                 padding: '4px 10px', background: '#FBF1DC', color: '#8A6D0B',
-                fontSize: 10.5, fontWeight: 700, letterSpacing: '0.04em',
+                fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.04em',
               }}>{unrated.join(' ')} ?</span>
           )}
         </span>
@@ -191,7 +191,7 @@ function MoneyCalendar({
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 6, marginBottom: 6 }}>
           {['SAT','SUN','MON','TUE','WED','THU','FRI'].map(d => (
             <div key={d} style={{
-              textAlign: 'center' as const, fontSize: 10, fontWeight: 700,
+              textAlign: 'center' as const, fontSize: 'var(--sb-t-micro)', fontWeight: 700,
               letterSpacing: '0.1em', color: 'var(--sb-ink-4)', padding: '2px 0 6px',
             }}>{d}</div>
           ))}
@@ -222,7 +222,7 @@ function MoneyCalendar({
                 }}
               >
                 <span style={{
-                  fontFamily: 'var(--sb-font-num)', fontSize: 12.5, fontWeight: 600,
+                  fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
                   width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
                   display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                   marginLeft: -2,
@@ -232,12 +232,12 @@ function MoneyCalendar({
                   {day}
                 </span>
                 {net !== 0 && (
-                  <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 12.5, fontWeight: 600, color: netColor, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: netColor, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {net < 0 ? `(${cellAmount(net)})` : cellAmount(net)}
                   </span>
                 )}
                 {payees.slice(0, 2).map((p, pi) => (
-                  <span key={pi} style={{ fontSize: 10, color: '#8A8271', whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' }}>{p}</span>
+                  <span key={pi} style={{ fontSize: 'var(--sb-t-micro)', color: '#8A8271', whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' }}>{p}</span>
                 ))}
               </div>
             )
@@ -314,12 +314,12 @@ export function TodayScreen() {
           width: 40, height: 40, borderRadius: '50%', flexShrink: 0,
           background: acct ? `${acct.color}22` : `${isExp ? RED : GREEN}18`,
           border: `1px solid ${acct ? acct.color + '44' : isExp ? RED + '44' : GREEN + '44'}`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'var(--sb-t-h2)',
         }}>
           <CategoryGlyph icon={cat?.icon ?? acct?.emoji ?? (isExp ? '💳' : '💼')} size={18} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 14, fontWeight: 500, color: C.textPri, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div style={{ fontSize: 'var(--sb-t-body)', fontWeight: 500, color: C.textPri, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 6 }}>
             {tx.payee?.trim() || cat?.name || 'Transaction'}
             <DuplicateMark scope={dupes.get(tx.id)} />
             <BudgetMark on={isBudgetEntry(tx)} />
@@ -332,7 +332,7 @@ export function TodayScreen() {
             )}
           </div>
           <div style={{
-            fontSize: 12, color: C.textMuted, marginTop: 2, display: 'flex', gap: 6,
+            fontSize: 'var(--sb-t-body-s)', color: C.textMuted, marginTop: 2, display: 'flex', gap: 6,
             minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}>
             {/* The row is filed by the day the money moved, so that is the
@@ -374,13 +374,13 @@ export function TodayScreen() {
       {/* Header bar */}
       <div style={{ flexShrink: 0, borderBottom: `1px solid ${C.border}`, padding: '12px 26px 14px', display: 'flex', alignItems: 'flex-end', gap: 20 }}>
         <div>
-          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-3)', display: 'block', marginBottom: 3 }}>MONEY</span>
-          <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 26, fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1, color: 'var(--sb-ink-1)' }}>Today</span>
+          <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-3)', display: 'block', marginBottom: 3 }}>MONEY</span>
+          <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h1)', fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1, color: 'var(--sb-ink-1)' }}>Today</span>
         </div>
         {todayTx.length > 0 && (
           <div style={{ display: 'flex', gap: 16, paddingBottom: 3 }}>
-            <span style={{ fontSize: 12, color: NEGATIVE, fontWeight: 600 }}>{acct(-todayExp, { currency: base })}</span>
-            <span style={{ fontSize: 12, color: POSITIVE, fontWeight: 600 }}>{acct(todayInc, { currency: base })}</span>
+            <span style={{ fontSize: 'var(--sb-t-body-s)', color: NEGATIVE, fontWeight: 600 }}>{acct(-todayExp, { currency: base })}</span>
+            <span style={{ fontSize: 'var(--sb-t-body-s)', color: POSITIVE, fontWeight: 600 }}>{acct(todayInc, { currency: base })}</span>
           </div>
         )}
       </div>
@@ -411,7 +411,7 @@ export function TodayScreen() {
           {/* Which day the calendar is pointing at. A day from another month
               stops applying the moment the calendar is paged away from it. */}
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 12 }}>
-            <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: C.textMuted, letterSpacing: '0.8px' }}>
+            <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, textTransform: 'uppercase', color: C.textMuted, letterSpacing: '0.8px' }}>
               {showingDay ? dayLabel(selectedDay) : MONTH_NAMES[viewMonth]}
             </span>
             {showingDay && (
@@ -419,7 +419,7 @@ export function TodayScreen() {
                 onClick={() => setSelectedDay('')}
                 style={{
                   marginLeft: 'auto', background: 'none', border: 'none', padding: 0,
-                  fontSize: 11.5, color: C.textMuted, cursor: 'pointer', textDecoration: 'underline',
+                  fontSize: 'var(--sb-t-meta)', color: C.textMuted, cursor: 'pointer', textDecoration: 'underline',
                 }}>
                 All of {MONTH_NAMES[viewMonth]}
               </button>
@@ -431,7 +431,7 @@ export function TodayScreen() {
               {feed.map(tx => renderTxRow(tx))}
             </div>
           ) : (
-            <div style={{ fontSize: 13, color: C.textMuted, textAlign: 'center', padding: '32px 0' }}>
+            <div style={{ fontSize: 'var(--sb-t-body)', color: C.textMuted, textAlign: 'center', padding: '32px 0' }}>
               {showingDay
                 ? `Nothing on ${dayLabel(selectedDay)}`
                 : `No transactions in ${MONTH_NAMES[viewMonth]}`}
@@ -454,7 +454,7 @@ export function TodayScreen() {
                 marginTop: strong ? 6 : 0,
               }}>
                 <span style={{
-                  fontSize: 10.5, fontWeight: 700, letterSpacing: '0.12em',
+                  fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.12em',
                   textTransform: 'uppercase' as const, color: C.textMuted,
                 }}>{label}</span>
                 <span style={{
@@ -470,7 +470,7 @@ export function TodayScreen() {
                 {line('Out', acct(-exp, { currency: base }), RED)}
                 {line('Net', acct(net, { currency: base }), net >= 0 ? GREEN : RED, true)}
                 {waiting > 0 && (
-                  <div style={{ fontSize: 10.5, color: RED, marginTop: 7, textAlign: 'right' }}>
+                  <div style={{ fontSize: 'var(--sb-t-micro)', color: RED, marginTop: 7, textAlign: 'right' }}>
                     {waiting} not paid yet, so not counted
                   </div>
                 )}

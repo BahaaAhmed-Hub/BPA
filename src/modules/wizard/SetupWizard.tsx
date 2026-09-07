@@ -198,10 +198,10 @@ export function SetupWizard({ onClose }: Props) {
           <div style={{ padding: '22px 28px 0', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
             <div style={{ flex: 1 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-                <span style={{ fontSize: 13, fontWeight: 600, color: '#6B7280' }}>
+                <span style={{ fontSize: 'var(--sb-t-label)', fontWeight: 600, color: '#6B7280' }}>
                   Step {step} of {TOTAL_STEPS}
                 </span>
-                <span style={{ fontSize: 12, color: '#9CA3AF', display: 'flex', alignItems: 'center', gap: 5 }}>
+                <span style={{ fontSize: 'var(--sb-t-body-s)', color: '#9CA3AF', display: 'flex', alignItems: 'center', gap: 5 }}>
                   ✦ The Professor Setup
                 </span>
               </div>
@@ -251,7 +251,7 @@ export function SetupWizard({ onClose }: Props) {
                 display: 'flex', alignItems: 'center', gap: 6,
                 padding: '11px 22px', borderRadius: 100,
                 background: 'transparent', border: '1.5px solid #E5E7EB',
-                color: '#6B7280', fontSize: 14, fontWeight: 600, cursor: 'pointer',
+                color: '#6B7280', fontSize: 'var(--sb-t-label)', fontWeight: 600, cursor: 'pointer',
                 transition: 'all 0.15s',
               }}>
                 <ChevronLeft size={16} /> Back
@@ -260,7 +260,7 @@ export function SetupWizard({ onClose }: Props) {
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               {step === 1 && (
-                <button onClick={handleSkip} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9CA3AF', fontSize: 13, padding: '4px 8px' }}>
+                <button onClick={handleSkip} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9CA3AF', fontSize: 'var(--sb-t-body)', padding: '4px 8px' }}>
                   Skip for now
                 </button>
               )}
@@ -269,7 +269,7 @@ export function SetupWizard({ onClose }: Props) {
                   display: 'flex', alignItems: 'center', gap: 6,
                   padding: '11px 26px', borderRadius: 100,
                   background: 'var(--sb-accent)', border: 'none',
-                  color: 'var(--sb-ink-1)', fontSize: 14, fontWeight: 700, cursor: 'pointer',
+                  color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-label)', fontWeight: 700, cursor: 'pointer',
                   boxShadow: '0 4px 14px rgba(127,119,221,0.35)',
                   transition: 'all 0.15s',
                 }}>
@@ -280,7 +280,7 @@ export function SetupWizard({ onClose }: Props) {
                   display: 'flex', alignItems: 'center', gap: 6,
                   padding: '11px 26px', borderRadius: 100,
                   background: '#1D9E75', border: 'none',
-                  color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer',
+                  color: '#fff', fontSize: 'var(--sb-t-label)', fontWeight: 700, cursor: 'pointer',
                   boxShadow: '0 4px 14px rgba(29,158,117,0.35)',
                   transition: 'all 0.15s',
                 }}>

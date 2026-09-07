@@ -25,10 +25,10 @@ const CARD: React.CSSProperties = {
 const ROW: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 10, width: '100%', height: 38,
   padding: '0 11px', borderRadius: 9, border: 'none', background: 'transparent',
-  color: 'var(--sb-ink-1)', fontSize: 13.5, fontFamily: 'inherit', cursor: 'pointer', textAlign: 'left',
+  color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-label)', fontFamily: 'inherit', cursor: 'pointer', textAlign: 'left',
 }
 const GROUP_LABEL: React.CSSProperties = {
-  fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', color: 'var(--sb-ink-4)',
+  fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--sb-ink-4)',
   textTransform: 'uppercase', padding: '10px 11px 5px',
 }
 const HAIRLINE: React.CSSProperties = { height: 1, background: 'var(--sb-hairline)', margin: '6px 4px' }
@@ -48,7 +48,7 @@ function Seg<T extends string | number>({ value, options, onChange }: {
             flex: 1, height: 28, borderRadius: 7, border: 'none', cursor: 'pointer',
             background: on ? 'var(--sb-card)' : 'transparent',
             boxShadow: on ? '0 1px 3px rgba(25,23,18,.16)' : 'none',
-            color: on ? 'var(--sb-ink-1)' : 'var(--sb-ink-3)', fontSize: 12.5, fontWeight: on ? 600 : 500,
+            color: on ? 'var(--sb-ink-1)' : 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body-s)', fontWeight: on ? 600 : 500,
             fontFamily: 'inherit', whiteSpace: 'nowrap', padding: '0 8px',
           }}>{o.label}</button>
         )
@@ -64,14 +64,14 @@ function Cell({ on, label, onClick, wide }: { on: boolean; label: string; onClic
       height: 30, minWidth: 0, width: '100%', borderRadius: wide ? 8 : '50%',
       border: `1px solid ${on ? 'var(--sb-ink-1)' : 'var(--sb-border)'}`,
       background: on ? 'var(--sb-ink-1)' : 'var(--sb-field)', color: on ? 'var(--sb-card)' : 'var(--sb-ink-3)',
-      fontSize: 12, fontWeight: on ? 700 : 500, fontFamily: 'inherit', cursor: 'pointer', padding: 0,
+      fontSize: 'var(--sb-t-body-s)', fontWeight: on ? 700 : 500, fontFamily: 'inherit', cursor: 'pointer', padding: 0,
     }}>{label}</button>
   )
 }
 
 const selectStyle: React.CSSProperties = {
   height: 32, borderRadius: 8, border: '1px solid var(--sb-border)', background: 'var(--sb-field)',
-  color: 'var(--sb-ink-1)', fontSize: 12.5, fontFamily: 'inherit', padding: '0 8px', cursor: 'pointer',
+  color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', fontFamily: 'inherit', padding: '0 8px', cursor: 'pointer',
 }
 
 export function RepeatPicker({ value, start, onApply, onClose }: {
@@ -157,7 +157,7 @@ export function RepeatPicker({ value, start, onApply, onClose }: {
             <span style={{ flex: 1 }} />
             <button onClick={() => { onApply(draft); onClose() }} style={{
               height: 28, padding: '0 14px', borderRadius: 999, border: 'none', cursor: 'pointer',
-              background: 'var(--sb-ink-1)', color: 'var(--sb-card)', fontSize: 12.5, fontWeight: 600, fontFamily: 'inherit',
+              background: 'var(--sb-ink-1)', color: 'var(--sb-card)', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, fontFamily: 'inherit',
             }}>Done</button>
           </div>
 
@@ -175,12 +175,12 @@ export function RepeatPicker({ value, start, onApply, onClose }: {
           <div style={GROUP_LABEL}>Every</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 8px' }}>
             <button onClick={() => setDraft({ ...draft, interval: Math.max(1, draft.interval - 1) })}
-              style={{ ...selectStyle, width: 32, textAlign: 'center', fontSize: 16, lineHeight: '28px', padding: 0 }}>−</button>
-            <span style={{ minWidth: 108, textAlign: 'center', fontSize: 13.5, color: 'var(--sb-ink-1)' }}>
+              style={{ ...selectStyle, width: 32, textAlign: 'center', fontSize: 'var(--sb-t-h3)', lineHeight: '28px', padding: 0 }}>−</button>
+            <span style={{ minWidth: 108, textAlign: 'center', fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)' }}>
               {draft.interval === 1 ? `Every ${unit}` : `${draft.interval} ${unit}s`}
             </span>
             <button onClick={() => setDraft({ ...draft, interval: Math.min(99, draft.interval + 1) })}
-              style={{ ...selectStyle, width: 32, textAlign: 'center', fontSize: 16, lineHeight: '28px', padding: 0 }}>+</button>
+              style={{ ...selectStyle, width: 32, textAlign: 'center', fontSize: 'var(--sb-t-h3)', lineHeight: '28px', padding: 0 }}>+</button>
           </div>
 
           {draft.freq === 'WEEKLY' && (
@@ -260,7 +260,7 @@ export function RepeatPicker({ value, start, onApply, onClose }: {
             </div>
           )}
 
-          <p style={{ margin: '12px 10px 6px', fontSize: 11.5, lineHeight: 1.45, color: 'var(--sb-ink-3)' }}>
+          <p style={{ margin: '12px 10px 6px', fontSize: 'var(--sb-t-meta)', lineHeight: 1.45, color: 'var(--sb-ink-3)' }}>
             {summarise(draft, start)}
           </p>
         </>

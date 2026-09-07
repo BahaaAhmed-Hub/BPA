@@ -152,7 +152,7 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
 
           <p
             style={{
-              flex: 1, margin: 0, fontSize: 12.5, fontWeight: 600,
+              flex: 1, margin: 0, fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
               // An unnamed task reads as unnamed, not as a task called Untitled.
               color: task.title.trim() ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)',
               fontStyle: task.title.trim() ? 'normal' : 'italic',
@@ -176,7 +176,7 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
         {/* Company — coloured text, the card's only colour, and its own picker */}
         <div data-nm style={{ position: 'relative', display: 'inline-block', maxWidth: '100%', margin: '3px 0 0 22px' }}>
           <p style={{
-            margin: 0, fontSize: 11, fontWeight: 600,
+            margin: 0, fontSize: 'var(--sb-t-meta)', fontWeight: 600,
             color: v.companyName ? v.companyColor : '#C9C0A8', lineHeight: 1.3,
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             cursor: 'pointer',
@@ -199,7 +199,7 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
         {/* Meta line */}
         <div style={{
           display: 'flex', alignItems: 'center', gap: 9, margin: '3px 0 0 22px',
-          fontSize: 10.5, color: 'var(--sb-ink-4)', minWidth: 0,
+          fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', minWidth: 0,
           // a narrow column (panel open) clips the trailing meta rather than
           // letting it run under the attribute rail
           overflow: 'hidden', whiteSpace: 'nowrap',
@@ -281,7 +281,7 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
             style={{
               ...(v.ownerInitials ? slotFilled : slotEmpty),
               borderRadius: '50%',
-              fontSize: 9, fontWeight: 700, letterSpacing: '0.02em',
+              fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.02em',
             }}
           >{v.ownerInitials ?? <User size={12} strokeWidth={2} />}</div>
           <SlotSelect value={task.owner ?? ''} onChange={val => updateTask(task.id, { owner: val || undefined })}>

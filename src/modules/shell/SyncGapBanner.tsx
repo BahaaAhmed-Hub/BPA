@@ -43,7 +43,7 @@ export function SyncGapBanner() {
             and a not-yet-reloaded one the same way, so it is one of three things: the migration has
             not run, it ran against a different project, or the schema cache is stale. This build
             talks to project <strong>{supabaseProjectRef}</strong> — check the SQL editor is open on
-            that one, then run <code style={{ ...T.small, background: 'rgba(25,23,18,0.06)', padding: '1px 5px', borderRadius: 4 }}>
+            that one, then run <code style={{ ...T.meta, background: 'rgba(25,23,18,0.06)', padding: '1px 5px', borderRadius: 4 }}>
             notify pgrst, 'reload schema';</code>
           </p>
         )}

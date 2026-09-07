@@ -14,7 +14,7 @@ export const DISPLAY = 'var(--sb-font-num)'
 export const PILL: React.CSSProperties = {
   display: 'inline-flex', alignItems: 'center', gap: 6, height: 42, boxSizing: 'border-box',
   padding: '0 14px', borderRadius: 10, background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
-  color: 'var(--sb-ink-1)', fontSize: 13.5, fontFamily: 'inherit', cursor: 'pointer', minWidth: 0,
+  color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body)', fontFamily: 'inherit', cursor: 'pointer', minWidth: 0,
 }
 export const ROUND: React.CSSProperties = {
   width: 30, height: 30, borderRadius: '50%', flexShrink: 0, padding: 0,
@@ -22,7 +22,7 @@ export const ROUND: React.CSSProperties = {
   background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-3)', cursor: 'pointer',
 }
 export const LABEL: React.CSSProperties = {
-  width: 74, flexShrink: 0, fontSize: 13.5, color: 'var(--sb-ink-3)', fontWeight: 500,
+  width: 74, flexShrink: 0, fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-3)', fontWeight: 500,
 }
 export const ROW: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 10,
@@ -144,7 +144,7 @@ export function PillPicker({ value, options, onChange, placeholder, compact }: {
           boxShadow: '0 12px 32px rgba(25,23,18,0.18)',
         }}>
           {options.length === 0 && (
-            <div style={{ padding: '10px 12px', fontSize: 12.5, color: 'var(--sb-ink-4)' }}>Nothing to choose from yet</div>
+            <div style={{ padding: '10px 12px', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-4)' }}>Nothing to choose from yet</div>
           )}
           {options.map(o => {
             const on = o.id === value
@@ -157,13 +157,13 @@ export function PillPicker({ value, options, onChange, placeholder, compact }: {
                   padding: '9px 10px', paddingLeft: o.nested ? 26 : 10,
                   border: 'none', borderRadius: 8, cursor: 'pointer',
                   background: on ? 'rgba(var(--sb-accent-rgb),0.18)' : 'transparent',
-                  fontFamily: 'inherit', fontSize: 13.5, color: 'var(--sb-ink-1)', textAlign: 'left',
+                  fontFamily: 'inherit', fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)', textAlign: 'left',
                 }}>
                 <Glyph glyph={o.glyph} tint={o.tint} />
                 <span style={{ flex: 1, minWidth: 0 }}>
                   <span style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.label}</span>
                   {o.hint && (
-                    <span style={{ display: 'block', fontSize: 11, color: 'var(--sb-ink-4)', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <span style={{ display: 'block', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {o.hint}
                     </span>
                   )}

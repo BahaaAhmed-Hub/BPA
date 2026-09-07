@@ -137,10 +137,10 @@ export function Step1Welcome({ data, onChange }: Props) {
 
       {/* Heading */}
       <div style={{ textAlign: 'center' }}>
-        <h1 style={{ margin: '0 0 8px', fontSize: 24, fontWeight: 800, color: '#111827', lineHeight: 1.3 }}>
+        <h1 style={{ margin: '0 0 8px', fontSize: 'var(--sb-t-h1)', fontWeight: 800, color: '#111827', lineHeight: 1.3 }}>
           Welcome to The Professor 👋
         </h1>
-        <p style={{ margin: 0, fontSize: 14.5, color: '#6B7280', lineHeight: 1.6 }}>
+        <p style={{ margin: 0, fontSize: 'var(--sb-t-h3)', color: '#6B7280', lineHeight: 1.6 }}>
           Let's set up your AI executive OS in just a few minutes.
         </p>
       </div>
@@ -153,16 +153,16 @@ export function Step1Welcome({ data, onChange }: Props) {
             background: '#F8F8FC', border: '1px solid #EBEBF0',
             boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
           }}>
-            <div style={{ fontSize: 26, marginBottom: 8 }}>{f.emoji}</div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: '#111827', marginBottom: 4 }}>{f.title}</div>
-            <div style={{ fontSize: 11.5, color: '#9CA3AF', lineHeight: 1.4 }}>{f.desc}</div>
+            <div style={{ fontSize: 'var(--sb-t-h1)', marginBottom: 8 }}>{f.emoji}</div>
+            <div style={{ fontSize: 'var(--sb-t-label)', fontWeight: 700, color: '#111827', marginBottom: 4 }}>{f.title}</div>
+            <div style={{ fontSize: 'var(--sb-t-meta)', color: '#9CA3AF', lineHeight: 1.4 }}>{f.desc}</div>
           </div>
         ))}
       </div>
 
       {/* Name field */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <label style={{ fontSize: 12, fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+        <label style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
           What should we call you?
         </label>
         <input
@@ -173,7 +173,7 @@ export function Step1Welcome({ data, onChange }: Props) {
           autoFocus
           style={{
             background: 'var(--sb-card)', border: '1.5px solid #E5E7EB', borderRadius: 10,
-            padding: '11px 14px', color: '#111827', fontSize: 14, outline: 'none',
+            padding: '11px 14px', color: '#111827', fontSize: 'var(--sb-t-body)', outline: 'none',
             width: '100%', boxSizing: 'border-box',
             boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
             transition: 'border-color 0.15s',
@@ -185,7 +185,7 @@ export function Step1Welcome({ data, onChange }: Props) {
 
       {/* Theme picker (compact) */}
       <div>
-        <label style={{ fontSize: 12, fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 10 }}>
+        <label style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 10 }}>
           Choose your theme
         </label>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8 }}>
@@ -213,7 +213,7 @@ export function Step1Welcome({ data, onChange }: Props) {
                   )}
                 </div>
                 <div style={{ padding: '4px 3px 5px', background: '#F8F8FC', borderRadius: '0 0 7px 7px', borderTop: '1px solid #EBEBF0' }}>
-                  <div style={{ fontSize: 10, color: active ? tk['--sb-accent'] : '#6B7280', fontWeight: active ? 700 : 500, textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <div style={{ fontSize: 'var(--sb-t-micro)', color: active ? tk['--sb-accent'] : '#6B7280', fontWeight: active ? 700 : 500, textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {theme.emoji} {theme.name}
                   </div>
                 </div>
@@ -223,7 +223,7 @@ export function Step1Welcome({ data, onChange }: Props) {
         </div>
       </div>
 
-      <p style={{ margin: 0, fontSize: 12, color: '#9CA3AF', textAlign: 'center', fontStyle: 'italic' }}>
+      <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', color: '#9CA3AF', textAlign: 'center', fontStyle: 'italic' }}>
         This will only take about 2 minutes. Let's get started!
       </p>
     </div>

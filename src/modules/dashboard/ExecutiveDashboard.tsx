@@ -54,20 +54,20 @@ function MetricCard({
 
       <div>
         <div style={{
-          fontSize: 28, fontWeight: 700,
+          fontSize: 'var(--sb-t-h1)', fontWeight: 700,
           color: 'var(--sb-ink-1)',
           fontFamily: 'var(--sb-font-num)',
           letterSpacing: '-0.5px', lineHeight: 1,
         }}>
           {value}
         </div>
-        <div style={{ fontSize: 12.5, color: 'var(--sb-ink-3)', marginTop: 4, fontWeight: 400 }}>
+        <div style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', marginTop: 4, fontWeight: 400 }}>
           {label}
         </div>
       </div>
 
       {delta && (
-        <div style={{ fontSize: 11.5, color: deltaPositive ? '#1D9E75' : 'var(--sb-negative)', fontWeight: 500 }}>
+        <div style={{ fontSize: 'var(--sb-t-meta)', color: deltaPositive ? '#1D9E75' : 'var(--sb-negative)', fontWeight: 500 }}>
           {delta}
         </div>
       )}
@@ -91,11 +91,11 @@ function CompanyBadge({ name, color, count }: { name: string; color: string; cou
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <div style={{ width: 8, height: 8, borderRadius: '50%', background: color }} />
-        <span style={{ fontSize: 13, color: 'var(--sb-ink-1)', fontWeight: 400 }}>
+        <span style={{ fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)', fontWeight: 400 }}>
           {name}
         </span>
       </div>
-      <span style={{ fontSize: 12, fontWeight: 600, color, background: `${color}18`, padding: '2px 8px', borderRadius: 4 }}>
+      <span style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color, background: `${color}18`, padding: '2px 8px', borderRadius: 4 }}>
         {count}
       </span>
     </div>
@@ -113,7 +113,7 @@ function QuickAction({ label, onClick }: { label: string; onClick: () => void })
         background: 'var(--sb-field)',
         border: '1px solid var(--sb-border)',
         borderRadius: 9, cursor: 'pointer', gap: 10,
-        color: 'var(--sb-ink-1)', fontSize: 13, fontWeight: 500,
+        color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body)', fontWeight: 500,
         transition: 'border-color 0.15s',
         textAlign: 'left',
       }}
@@ -193,13 +193,13 @@ export function ExecutiveDashboard() {
         <div style={{ marginBottom: 28, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
           <div>
             <h2 style={{
-              margin: 0, fontSize: 22, fontWeight: 700,
+              margin: 0, fontSize: 'var(--sb-t-h2)', fontWeight: 700,
               color: 'var(--sb-ink-1)',
               fontFamily: 'var(--sb-font-num)', letterSpacing: '-0.4px',
             }}>
               {greeting}
             </h2>
-            <p style={{ margin: '4px 0 0', fontSize: 13.5, color: 'var(--sb-ink-3)' }}>
+            <p style={{ margin: '4px 0 0', fontSize: 'var(--sb-t-label)', color: 'var(--sb-ink-3)' }}>
               Here's what demands your attention today.
             </p>
           </div>
@@ -210,7 +210,7 @@ export function ExecutiveDashboard() {
               padding: '9px 18px', borderRadius: 9,
               background: 'rgba(var(--sb-accent-rgb),0.12)',
               border: '1px solid rgba(var(--sb-accent-rgb),0.25)',
-              color: 'var(--sb-ink-3)', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+              color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-label)', fontWeight: 600, cursor: 'pointer',
             }}
           >
             <CheckSquare size={14} /> Manage Tasks
@@ -296,16 +296,16 @@ export function ExecutiveDashboard() {
             borderRadius: 12, padding: '20px 22px',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-              <h3 style={{ margin: 0, fontSize: 13, fontWeight: 600, color: 'var(--sb-ink-3)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+              <h3 style={{ margin: 0, fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-3)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
                 Tasks by Company
               </h3>
-              <button onClick={() => setModule('tasks')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', display: 'flex', alignItems: 'center', gap: 4, fontSize: 11 }}>
+              <button onClick={() => setModule('tasks')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', display: 'flex', alignItems: 'center', gap: 4, fontSize: 'var(--sb-t-meta)' }}>
                 View all <ArrowRight size={11} />
               </button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {tasksByCompany.length === 0
-                ? <p style={{ margin: 0, fontSize: 12.5, color: 'var(--sb-ink-3)' }}>No companies set up yet — add them in Settings.</p>
+                ? <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)' }}>No companies set up yet — add them in Settings.</p>
                 : tasksByCompany.map(co => (
                     <CompanyBadge key={co.id} name={co.name} color={co.color} count={co.count} />
                   ))
@@ -320,7 +320,7 @@ export function ExecutiveDashboard() {
               border: '1px solid var(--sb-border)',
               borderRadius: 12, padding: '20px 22px',
             }}>
-              <h3 style={{ margin: '0 0 14px', fontSize: 13, fontWeight: 600, color: 'var(--sb-ink-3)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+              <h3 style={{ margin: '0 0 14px', fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-3)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
                 Eisenhower Matrix
               </h3>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
@@ -340,10 +340,10 @@ export function ExecutiveDashboard() {
                         display: 'flex', flexDirection: 'column', gap: 4,
                         cursor: 'pointer',
                       }}>
-                      <div style={{ fontSize: 22, fontWeight: 700, color, fontFamily: 'var(--sb-font-num)' }}>
+                      <div style={{ fontSize: 'var(--sb-t-h2)', fontWeight: 700, color, fontFamily: 'var(--sb-font-num)' }}>
                         {count}
                       </div>
-                      <div style={{ fontSize: 11.5, color: 'var(--sb-ink-3)' }}>{label}</div>
+                      <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>{label}</div>
                     </div>
                   )
                 })}
@@ -356,7 +356,7 @@ export function ExecutiveDashboard() {
               border: '1px solid var(--sb-border)',
               borderRadius: 12, padding: '16px 18px',
             }}>
-              <h3 style={{ margin: '0 0 12px', fontSize: 11, fontWeight: 600, color: 'var(--sb-ink-3)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+              <h3 style={{ margin: '0 0 12px', fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-ink-3)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
                 Quick Access
               </h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -386,10 +386,10 @@ export function ExecutiveDashboard() {
             <TrendingUp size={13} color="#7F77DD" strokeWidth={2.5} />
           </div>
           <div>
-            <div style={{ fontSize: 12, fontWeight: 600, color: '#7F77DD', marginBottom: 4, letterSpacing: '0.3px' }}>
+            <div style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: '#7F77DD', marginBottom: 4, letterSpacing: '0.3px' }}>
               THE PROFESSOR
             </div>
-            <p style={{ margin: 0, fontSize: 13.5, color: 'var(--sb-ink-1)', lineHeight: 1.55 }}>
+            <p style={{ margin: 0, fontSize: 'var(--sb-t-label)', color: 'var(--sb-ink-1)', lineHeight: 1.55 }}>
               {urgentTasks.length > 0
                 ? `You have ${urgentTasks.length} urgent & important task${urgentTasks.length !== 1 ? 's' : ''} requiring your direct attention. Consider blocking deep-work time to address ${urgentTasks[0]?.title ? `"${urgentTasks[0].title}"` : 'the top priority'} first.`
                 : activeTasks.length === 0

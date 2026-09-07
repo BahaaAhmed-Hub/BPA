@@ -63,6 +63,34 @@
   --sb-font-num:  'Outfit', system-ui, sans-serif;
   --sb-font-mono: 'JetBrains Mono', ui-monospace, monospace;
 
+  /* ── Type scale ──────────────────────────────────────────────────────────
+     Nine steps, and nothing between them. Each token is the step's *size*;
+     its weight, tracking and case are the level's own and are set with it —
+     see lib/type.ts, where the same nine are style objects to spread.
+
+       micro    10    700  .12em  uppercase   gutters, capsed captions
+       meta     11.5  500                     times, notes, the second line
+       body-s   12.5  400                     dense body — rows, feeds
+       body     13.5  400                     the default
+       label    13.5  600                     a value's name, a button
+       h3       15    600                     a section inside a panel
+       h2       18    600  -.02em             a form's heading, a day number
+       h1       27    600  -.03em             a page's own name
+       display  30    600  -.03em  Outfit     the one figure a screen is about
+
+     Sizes are tokens so a step can move once; weights are not folded into
+     them, because a call site that wants 600 at meta is saying something
+     about that line, not about the level.                                   */
+  --sb-t-micro:   10px;
+  --sb-t-meta:    11.5px;
+  --sb-t-body-s:  12.5px;
+  --sb-t-body:    13.5px;
+  --sb-t-label:   13.5px;
+  --sb-t-h3:      15px;
+  --sb-t-h2:      18px;
+  --sb-t-h1:      27px;
+  --sb-t-display: 30px;
+
   /* Control heights */
   --sb-h-pill:   34px;
   --sb-h-nav:    36px;
@@ -72,13 +100,6 @@
      A custom property with an empty value is valid and resolves to nothing;
      none of these is read yet. Each is filled by the step named beside it. */
 
-  /* Type scale — P4 */
-  --sb-t-display: ;
-  --sb-t-title: ;
-  --sb-t-heading: ;
-  --sb-t-body: ;
-  --sb-t-label: ;
-  --sb-t-caption: ;
 
   /* Surfaces that sit above the page — P2 */
   --sb-shadow-menu: ;

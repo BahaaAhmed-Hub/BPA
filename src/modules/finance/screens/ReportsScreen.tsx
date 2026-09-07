@@ -39,7 +39,7 @@ const MONTH_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct'
 // whichever end of the list it comes from.
 const RANGE_FIELD: React.CSSProperties = {
   border: 'none', background: 'transparent', outline: 'none',
-  fontFamily: 'var(--sb-font-num)', fontSize: 13, fontWeight: 500,
+  fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-body)', fontWeight: 500,
   color: 'var(--sb-ink-1)', padding: 0, width: 118,
 }
 
@@ -249,21 +249,21 @@ export function ReportsScreen(_props?: any) {
         display: 'flex', alignItems: 'flex-end', gap: 20,
       }}>
         <div>
-          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-3)', display: 'block', marginBottom: 4 }}>MONEY</span>
+          <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-3)', display: 'block', marginBottom: 4 }}>MONEY</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             {wholeMonth && (
               <button onClick={() => navigateMonth(-1)} title="The month before"
-                style={{ background: 'none', border: 'none', color: 'var(--sb-ink-3)', fontSize: 20, cursor: 'pointer', padding: 0, lineHeight: 1 }}>‹</button>
+                style={{ background: 'none', border: 'none', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-h2)', cursor: 'pointer', padding: 0, lineHeight: 1 }}>‹</button>
             )}
-            <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 28, fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1, color: 'var(--sb-ink-1)' }}>
+            <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h1)', fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1, color: 'var(--sb-ink-1)' }}>
               Reports · {periodLabel}
             </span>
             {wholeMonth && (
               <button onClick={() => navigateMonth(1)} title="The month after"
-                style={{ background: 'none', border: 'none', color: 'var(--sb-ink-3)', fontSize: 20, cursor: 'pointer', padding: 0, lineHeight: 1 }}>›</button>
+                style={{ background: 'none', border: 'none', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-h2)', cursor: 'pointer', padding: 0, lineHeight: 1 }}>›</button>
             )}
           </div>
-          <span style={{ fontSize: 12, color: 'var(--sb-ink-3)', display: 'block', marginTop: 3 }}>
+          <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', display: 'block', marginTop: 3 }}>
             {TOTAL > 0 ? `${base} ${dayRate.toLocaleString('en-US')}/day · ${REPORT_DATA.length} categories` : 'No expenses logged this month'}
             {reportUnrated.length > 0 && (
               <span title={`No rate set for ${reportUnrated.join(', ')}, so it is not counted`}
@@ -279,7 +279,7 @@ export function ReportsScreen(_props?: any) {
                 height: 28, padding: '0 14px', borderRadius: 999, border: 'none',
                 background: reportView === v ? 'var(--sb-card)' : 'transparent',
                 color: reportView === v ? 'var(--sb-ink-1)' : 'var(--sb-ink-3)',
-                fontSize: 11.5, fontWeight: reportView === v ? 600 : 400, cursor: 'pointer',
+                fontSize: 'var(--sb-t-meta)', fontWeight: reportView === v ? 600 : 400, cursor: 'pointer',
                 boxShadow: reportView === v ? '0 1px 3px rgba(25,23,18,0.16)' : 'none',
                 fontFamily: 'inherit',
                 transition: 'background 220ms ease, color 220ms ease, box-shadow 220ms ease',
@@ -318,7 +318,7 @@ export function ReportsScreen(_props?: any) {
                   onClick={() => { setRangeFrom(from); setRangeTo(to) }}
                   style={{
                     padding: '4px 9px', borderRadius: 7, border: 'none', cursor: 'pointer',
-                    fontFamily: 'inherit', fontSize: 11.5, fontWeight: on ? 700 : 500,
+                    fontFamily: 'inherit', fontSize: 'var(--sb-t-meta)', fontWeight: on ? 700 : 500,
                     background: on ? 'var(--sb-ink-1)' : 'transparent',
                     color: on ? 'var(--sb-ink-on-dark)' : C.textDim,
                   }}>
@@ -332,7 +332,7 @@ export function ReportsScreen(_props?: any) {
         {REPORT_DATA.length === 0 ? (
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            height: 200, color: C.textMuted, fontSize: 14,
+            height: 200, color: C.textMuted, fontSize: 'var(--sb-t-body)',
           }}>
             No expenses in {periodLabel}
           </div>
@@ -383,13 +383,13 @@ export function ReportsScreen(_props?: any) {
                     alignItems: 'center', justifyContent: 'center',
                     pointerEvents: 'none',
                   }}>
-                    <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 16, fontWeight: 600, color: 'var(--sb-ink-1)', letterSpacing: '-0.02em', lineHeight: 1 }}>
+                    <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h3)', fontWeight: 600, color: 'var(--sb-ink-1)', letterSpacing: '-0.02em', lineHeight: 1 }}>
                       {dayRate > 0 ? `${dayRate.toLocaleString('en-US')}` : '–'}
                     </span>
-                    <span style={{ fontSize: 9, color: 'var(--sb-ink-3)', marginTop: 2, letterSpacing: '0.08em', fontWeight: 700 }}>
+                    <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)', marginTop: 2, letterSpacing: '0.08em', fontWeight: 700 }}>
                       EGP/DAY
                     </span>
-                    <span style={{ fontSize: 9, color: 'var(--sb-ink-4)', marginTop: 4 }}>
+                    <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', marginTop: 4 }}>
                       {TOTAL > 0 ? `${(TOTAL / 1000).toFixed(0)}K total` : 'no data'}
                     </span>
                   </div>
@@ -400,11 +400,11 @@ export function ReportsScreen(_props?: any) {
                   {segments.map((seg, i) => (
                     <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <div style={{ width: 12, height: 12, borderRadius: 3, background: seg.color, flexShrink: 0 }} />
-                      <span style={{ flex: 1, fontSize: 13, color: C.textPri }}>{seg.name}</span>
-                      <span style={{ fontSize: 12, color: C.textMuted, marginRight: 8 }}>
+                      <span style={{ flex: 1, fontSize: 'var(--sb-t-body)', color: C.textPri }}>{seg.name}</span>
+                      <span style={{ fontSize: 'var(--sb-t-body-s)', color: C.textMuted, marginRight: 8 }}>
                         {Math.round(seg.pct * 100)}%
                       </span>
-                      <span style={{ fontSize: 13, color: C.textPri, fontWeight: 600, minWidth: 72, textAlign: 'right' }}>
+                      <span style={{ fontSize: 'var(--sb-t-label)', color: C.textPri, fontWeight: 600, minWidth: 72, textAlign: 'right' }}>
                         {seg.amt.toLocaleString('en-US')}
                       </span>
                     </div>
@@ -419,8 +419,8 @@ export function ReportsScreen(_props?: any) {
                 {REPORT_DATA.map((d, i) => (
                   <div key={i}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                      <span style={{ fontSize: 13, color: C.textPri }}>{d.name}</span>
-                      <span style={{ fontSize: 13, color: C.textPri, fontWeight: 600 }}>
+                      <span style={{ fontSize: 'var(--sb-t-label)', color: C.textPri }}>{d.name}</span>
+                      <span style={{ fontSize: 'var(--sb-t-label)', color: C.textPri, fontWeight: 600 }}>
                         {d.amt.toLocaleString('en-US')}
                       </span>
                     </div>

@@ -44,7 +44,7 @@ const AMBER = 'var(--sb-accent)'
 const PILL: React.CSSProperties = {
   display: 'inline-flex', alignItems: 'center', gap: 6, height: 30, padding: '0 12px',
   borderRadius: 999, background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
-  color: INK, fontSize: 12.5, fontFamily: 'inherit', cursor: 'pointer',
+  color: INK, fontSize: 'var(--sb-t-body-s)', fontFamily: 'inherit', cursor: 'pointer',
 }
 const GHOST_BTN: React.CSSProperties = {
   background: 'none', border: 'none', padding: 0, cursor: 'pointer',
@@ -107,10 +107,10 @@ function CardHead({ title, meta, children }: {
       display: 'flex', alignItems: 'center', gap: 10, minWidth: 0,
       padding: '14px 16px 12px', borderBottom: `1px solid ${HAIR}`,
     }}>
-      <span style={{ fontSize: 13, fontWeight: 700, color: INK, flexShrink: 0 }}>{title}</span>
+      <span style={{ fontSize: 'var(--sb-t-label)', fontWeight: 700, color: INK, flexShrink: 0 }}>{title}</span>
       {meta && (
         <span style={{
-          fontSize: 11.5, color: GHOST, minWidth: 0,
+          fontSize: 'var(--sb-t-meta)', color: GHOST, minWidth: 0,
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         }}>{meta}</span>
       )}
@@ -123,7 +123,7 @@ function CardHead({ title, meta, children }: {
 function LinkOut({ label, onClick }: { label: string; onClick: () => void }) {
   return (
     <button onClick={onClick} style={{
-      ...GHOST_BTN, gap: 5, color: MUTED, fontSize: 12, fontWeight: 600, fontFamily: 'inherit', flexShrink: 0,
+      ...GHOST_BTN, gap: 5, color: MUTED, fontSize: 'var(--sb-t-body-s)', fontWeight: 600, fontFamily: 'inherit', flexShrink: 0,
     }}>
       {label} <ArrowRight size={12} strokeWidth={2.2} />
     </button>
@@ -264,18 +264,18 @@ function MailPopup({ row, onClose, onArchive, onAddTask }: {
           <span style={{
             width: 38, height: 38, borderRadius: '50%', flexShrink: 0,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: 'var(--sb-field)', color: MUTED, fontSize: 12.5, fontWeight: 700,
+            background: 'var(--sb-field)', color: MUTED, fontSize: 'var(--sb-t-body-s)', fontWeight: 700,
           }}>{initialsOf(row.fromName || row.fromEmail)}</span>
           <div style={{ flex: 1, minWidth: 0 }}>
             <h2 style={{
-              margin: 0, fontFamily: 'var(--sb-font-num)', fontSize: 18, fontWeight: 600,
+              margin: 0, fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h2)', fontWeight: 600,
               letterSpacing: '-0.02em', color: INK, lineHeight: 1.25,
             }}>{row.subject}</h2>
-            <p style={{ margin: '5px 0 0', fontSize: 12.5, color: MUTED, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <p style={{ margin: '5px 0 0', fontSize: 'var(--sb-t-body-s)', color: MUTED, overflow: 'hidden', textOverflow: 'ellipsis' }}>
               <strong style={{ fontWeight: 600, color: INK }}>{row.fromName || row.fromEmail}</strong>
               {row.fromName ? ` · ${row.fromEmail}` : ''}
             </p>
-            <p style={{ margin: '2px 0 0', fontSize: 11.5, color: GHOST }}>
+            <p style={{ margin: '2px 0 0', fontSize: 'var(--sb-t-meta)', color: GHOST }}>
               {row.to ? `to ${row.to} · ` : ''}
               {new Date(row.receivedAt).toLocaleString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
             </p>
@@ -284,7 +284,7 @@ function MailPopup({ row, onClose, onArchive, onAddTask }: {
             <span style={{
               flexShrink: 0, height: 20, padding: '0 8px', borderRadius: 6,
               background: 'rgba(var(--sb-accent-rgb),0.28)', border: '1px solid rgba(var(--sb-accent-rgb),0.7)',
-              color: '#7A6412', fontSize: 9, fontWeight: 800, letterSpacing: '0.06em',
+              color: '#7A6412', fontSize: 'var(--sb-t-micro)', fontWeight: 800, letterSpacing: '0.06em',
               display: 'inline-flex', alignItems: 'center',
             }}>NEEDS YOU</span>
           )}
@@ -308,7 +308,7 @@ function MailPopup({ row, onClose, onArchive, onAddTask }: {
 
         {/* What to do about it */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 18px', background: FIELD, borderTop: `1px solid ${HAIR}` }}>
-          <span style={{ flex: 1, fontSize: 11.5, color: GHOST }}>Esc, or click away, to close</span>
+          <span style={{ flex: 1, fontSize: 'var(--sb-t-meta)', color: GHOST }}>Esc, or click away, to close</span>
           <button onClick={onAddTask} style={{ ...PILL, height: 32 }}>
             <Plus size={13} /> Add as task
           </button>
@@ -380,11 +380,11 @@ function MailCard({ rows, loading, error, newsletters, onArchive, onArchiveAll, 
       </CardHead>
 
       {error ? (
-        <div style={{ padding: '18px 16px', fontSize: 12.5, color: GHOST }}>{error}</div>
+        <div style={{ padding: '18px 16px', fontSize: 'var(--sb-t-body-s)', color: GHOST }}>{error}</div>
       ) : loading ? (
-        <div style={{ padding: '18px 16px', fontSize: 12.5, color: GHOST }}>Reading your inbox…</div>
+        <div style={{ padding: '18px 16px', fontSize: 'var(--sb-t-body-s)', color: GHOST }}>Reading your inbox…</div>
       ) : rows.length === 0 ? (
-        <div style={{ padding: '18px 16px', fontSize: 12.5, color: GHOST }}>Nothing unread needs you.</div>
+        <div style={{ padding: '18px 16px', fontSize: 'var(--sb-t-body-s)', color: GHOST }}>Nothing unread needs you.</div>
       ) : (
         <div>
           {rows.map(r => (
@@ -394,23 +394,23 @@ function MailCard({ rows, loading, error, newsletters, onArchive, onArchiveAll, 
               style={{ padding: '11px 16px', borderBottom: `1px solid ${HAIR}`, cursor: 'pointer' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
                 <span style={{
-                  ...ICON_TILE, width: 28, height: 28, fontSize: 10, fontWeight: 700, color: MUTED,
+                  ...ICON_TILE, width: 28, height: 28, fontSize: 'var(--sb-t-micro)', fontWeight: 700, color: MUTED,
                 }}>{initialsOf(r.fromName || r.fromEmail)}</span>
-                <span style={{ fontSize: 13, fontWeight: 700, color: INK, flexShrink: 0, maxWidth: 170, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <span style={{ fontSize: 'var(--sb-t-label)', fontWeight: 700, color: INK, flexShrink: 0, maxWidth: 170, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {r.fromName || r.fromEmail}
                 </span>
                 {r.needsYou && (
                   <span style={{
                     flexShrink: 0, height: 18, padding: '0 7px', borderRadius: 5,
                     background: 'rgba(var(--sb-accent-rgb),0.28)', border: '1px solid rgba(var(--sb-accent-rgb),0.7)',
-                    color: '#7A6412', fontSize: 9, fontWeight: 800, letterSpacing: '0.06em',
+                    color: '#7A6412', fontSize: 'var(--sb-t-micro)', fontWeight: 800, letterSpacing: '0.06em',
                     display: 'inline-flex', alignItems: 'center',
                   }}>NEEDS YOU</span>
                 )}
-                <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: MUTED, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <span style={{ flex: 1, minWidth: 0, fontSize: 'var(--sb-t-body-s)', color: MUTED, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {r.subject}
                 </span>
-                <span style={{ fontSize: 11.5, color: GHOST, flexShrink: 0 }}>{relAge(r.receivedAt)}</span>
+                <span style={{ fontSize: 'var(--sb-t-meta)', color: GHOST, flexShrink: 0 }}>{relAge(r.receivedAt)}</span>
                 <button onClick={() => onAddTask(r)} title="Add as a task"
                   style={{ ...ICON_TILE, width: 26, height: 26, cursor: 'pointer' }}>
                   <Plus size={13} strokeWidth={2} />
@@ -424,7 +424,7 @@ function MailCard({ rows, loading, error, newsletters, onArchive, onArchiveAll, 
                 <div style={{
                   marginTop: 7, marginLeft: 38, padding: '7px 10px', borderRadius: 8,
                   background: FIELD, border: `1px solid ${HAIR}`,
-                  fontSize: 12, color: MUTED, lineHeight: 1.45,
+                  fontSize: 'var(--sb-t-body-s)', color: MUTED, lineHeight: 1.45,
                   overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                 }}>{r.snippet}</div>
               )}
@@ -439,7 +439,7 @@ function MailCard({ rows, loading, error, newsletters, onArchive, onArchiveAll, 
               style={{
                 flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 6,
                 background: 'none', border: 'none', padding: 0, textAlign: 'left',
-                fontFamily: 'inherit', fontSize: 12, color: GHOST,
+                fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', color: GHOST,
                 cursor: newsletters.length ? 'pointer' : 'default',
               }}>
               {newsletters.length > 0 && (
@@ -463,13 +463,13 @@ function MailCard({ rows, loading, error, newsletters, onArchive, onArchiveAll, 
                 display: 'flex', alignItems: 'center', gap: 9, minWidth: 0,
                 padding: '8px 16px 8px 34px', borderTop: `1px solid ${HAIR}`, cursor: 'pointer',
               }}>
-              <span style={{ fontSize: 12.5, color: MUTED, flexShrink: 0, maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <span style={{ fontSize: 'var(--sb-t-body-s)', color: MUTED, flexShrink: 0, maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {n.fromName || n.fromEmail}
               </span>
-              <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: GHOST, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <span style={{ flex: 1, minWidth: 0, fontSize: 'var(--sb-t-body-s)', color: GHOST, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {n.subject}
               </span>
-              <span style={{ fontSize: 11.5, color: GHOST, flexShrink: 0 }}>{relAge(n.receivedAt)}</span>
+              <span style={{ fontSize: 'var(--sb-t-meta)', color: GHOST, flexShrink: 0 }}>{relAge(n.receivedAt)}</span>
               <button onClick={() => onArchive(n)} title="Archive"
                 style={{ ...ICON_TILE, width: 24, height: 24, cursor: 'pointer' }}>
                 <Archive size={12} strokeWidth={2} />
@@ -663,13 +663,13 @@ function PlanCard({
       <CardHead
         title="Plan for today"
         meta={`${blocks.length} block${blocks.length === 1 ? '' : 's'} · ${fmtHours(focusMinutes)} focus · ${fmtHours(freeMinutes)} free`}>
-        <span style={{ fontSize: 11.5, color: dirty ? 'var(--sb-negative)' : GHOST, flexShrink: 0 }}>
+        <span style={{ fontSize: 'var(--sb-t-meta)', color: dirty ? 'var(--sb-negative)' : GHOST, flexShrink: 0 }}>
           {dirty ? 'draft, not saved' : 'saved'}
         </span>
       </CardHead>
 
       {blocks.length === 0 ? (
-        <p style={{ margin: 0, padding: '18px 16px', fontSize: 12.5, color: GHOST }}>
+        <p style={{ margin: 0, padding: '18px 16px', fontSize: 'var(--sb-t-body-s)', color: GHOST }}>
           Nothing booked and nothing proposed. Give a task a time and it lands here.
         </p>
       ) : (
@@ -686,7 +686,7 @@ function PlanCard({
               <div key={h} style={{ position: 'absolute', top: topOf(h * 60), left: 0, right: 0, height: hourPx }}>
                 <span style={{
                   position: 'absolute', top: -6, left: 0, width: 40,
-                  fontSize: 10, color: GHOST, fontVariantNumeric: 'tabular-nums',
+                  fontSize: 'var(--sb-t-micro)', color: GHOST, fontVariantNumeric: 'tabular-nums',
                 }}>{String(h).padStart(2, '0')}:00</span>
                 <span style={{ position: 'absolute', top: 0, left: 44, right: 0, height: 1, background: HAIR }} />
               </div>
@@ -695,7 +695,7 @@ function PlanCard({
             {/* Now */}
             {nowMins >= fromHour * 60 && nowMins <= toHour * 60 && (
               <div style={{ position: 'absolute', top: topOf(nowMins), left: 0, right: 0, pointerEvents: 'none', zIndex: 3 }}>
-                <span style={{ position: 'absolute', top: -6, left: 0, fontSize: 10, fontWeight: 700, color: 'var(--sb-negative)', fontVariantNumeric: 'tabular-nums' }}>
+                <span style={{ position: 'absolute', top: -6, left: 0, fontSize: 'var(--sb-t-micro)', fontWeight: 700, color: 'var(--sb-negative)', fontVariantNumeric: 'tabular-nums' }}>
                   {hhmm(now)}
                 </span>
                 <span style={{ position: 'absolute', top: 0, left: 44, right: 0, height: 1, background: 'var(--sb-negative)' }} />
@@ -759,7 +759,7 @@ function PlanCard({
                   {/* A narrow column has no room for the times as well */}
                   {!narrow && (
                     <span style={{
-                      fontSize: 11, color: GHOST, flexShrink: 0, fontVariantNumeric: 'tabular-nums',
+                      fontSize: 'var(--sb-t-meta)', color: GHOST, flexShrink: 0, fontVariantNumeric: 'tabular-nums',
                       marginTop: tall ? 1 : 0,
                     }}>
                       {fmtMins(startMins)}–{fmtMins(startMins + length)}
@@ -802,10 +802,10 @@ function PlanCard({
       )}
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px 14px' }}>
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, color: GHOST }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 'var(--sb-t-meta)', color: GHOST }}>
           <span style={{ width: 8, height: 8, borderRadius: 2, background: AMBER }} /> Proposed
         </span>
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, color: GHOST }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 'var(--sb-t-meta)', color: GHOST }}>
           <span style={{ width: 8, height: 8, borderRadius: 2, background: '#D8CFB8' }} /> Calendar
         </span>
         <span style={{ flex: 1 }} />
@@ -860,7 +860,7 @@ function HabitsCard({ habits, logs, qtyLogs, today, onToggle, onSetQty, onOpenTr
         title="Habits"
         meta={`${doneToday} of ${habits.length} today · ${weekPct}% this week · best streak ${best}d`}>
         {coldDays > 0 && (
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11.5, fontWeight: 600, color: 'var(--sb-negative)', flexShrink: 0 }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-negative)', flexShrink: 0 }}>
             <Flame size={12} strokeWidth={2} /> {coldDays} days cold
           </span>
         )}
@@ -869,7 +869,7 @@ function HabitsCard({ habits, logs, qtyLogs, today, onToggle, onSetQty, onOpenTr
       </CardHead>
 
       {habits.length === 0 ? (
-        <div style={{ padding: '18px 16px', fontSize: 12.5, color: GHOST }}>No habits yet.</div>
+        <div style={{ padding: '18px 16px', fontSize: 'var(--sb-t-body-s)', color: GHOST }}>No habits yet.</div>
       ) : (
         <div style={{ padding: '10px 16px 14px' }}>
           {/* Column heads */}
@@ -878,12 +878,12 @@ function HabitsCard({ habits, logs, qtyLogs, today, onToggle, onSetQty, onOpenTr
             <span style={{ flex: 1, minWidth: 0 }} />
             <span style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
               {week.map(d => (
-                <span key={d} style={{ width: 15, textAlign: 'center', fontSize: 9, fontWeight: 700, color: GHOST }}>
+                <span key={d} style={{ width: 15, textAlign: 'center', fontSize: 'var(--sb-t-micro)', fontWeight: 700, color: GHOST }}>
                   {DAY_LETTERS[new Date(d + 'T12:00:00').getDay()]}
                 </span>
               ))}
             </span>
-            <span style={{ width: 168, textAlign: 'right', fontSize: 8.5, fontWeight: 700, letterSpacing: '0.07em', color: GHOST, flexShrink: 0, whiteSpace: 'nowrap' }}>
+            <span style={{ width: 168, textAlign: 'right', fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.07em', color: GHOST, flexShrink: 0, whiteSpace: 'nowrap' }}>
               TODAY · QUICK LOG · STREAK
             </span>
           </div>
@@ -897,16 +897,16 @@ function HabitsCard({ habits, logs, qtyLogs, today, onToggle, onSetQty, onOpenTr
             const streak = calcStreak(hLogs)
             return (
               <div key={h.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 0', borderTop: `1px solid ${HAIR}` }}>
-                <span style={{ ...ICON_TILE, overflow: 'hidden', fontSize: 13 }}>
+                <span style={{ ...ICON_TILE, overflow: 'hidden', fontSize: 'var(--sb-t-body)' }}>
                   {h.image
                     ? <img src={h.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                     : h.emoji}
                 </span>
                 <span style={{ flex: 1, minWidth: 0 }}>
-                  <span style={{ display: 'block', fontSize: 12.5, fontWeight: 600, color: INK, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <span style={{ display: 'block', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: INK, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {h.name}
                   </span>
-                  <span style={{ display: 'block', fontSize: 10.5, color: GHOST }}>
+                  <span style={{ display: 'block', fontSize: 'var(--sb-t-micro)', color: GHOST }}>
                     {h.frequency}{hasGoal ? ` · ${h.goal} ${h.unit ?? ''}`.trimEnd() : ''}
                   </span>
                 </span>
@@ -926,15 +926,15 @@ function HabitsCard({ habits, logs, qtyLogs, today, onToggle, onSetQty, onOpenTr
                 </span>
 
                 <span style={{ width: 168, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6, flexShrink: 0 }}>
-                  <span style={{ fontSize: 11, color: GHOST, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+                  <span style={{ fontSize: 'var(--sb-t-meta)', color: GHOST, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
                     {isQty ? (hasGoal ? `${qty}/${h.goal}${h.unit ? ` ${h.unit}` : ''}` : `${qty}${h.unit ? ` ${h.unit}` : ''}`) : (done ? 'done' : '—')}
                   </span>
                   {isQty ? (
                     <>
                       <button onClick={() => onSetQty(h, Math.max(0, qty - 1))} disabled={qty === 0}
-                        style={{ ...ICON_TILE, width: 22, height: 22, cursor: qty === 0 ? 'default' : 'pointer', opacity: qty === 0 ? 0.4 : 1, fontSize: 13 }}>−</button>
+                        style={{ ...ICON_TILE, width: 22, height: 22, cursor: qty === 0 ? 'default' : 'pointer', opacity: qty === 0 ? 0.4 : 1, fontSize: 'var(--sb-t-body)' }}>−</button>
                       <button onClick={() => onSetQty(h, qty + 1)}
-                        style={{ ...ICON_TILE, width: 22, height: 22, cursor: 'pointer', background: INK, borderColor: INK, color: 'var(--sb-ink-on-dark)', fontSize: 13 }}>+</button>
+                        style={{ ...ICON_TILE, width: 22, height: 22, cursor: 'pointer', background: INK, borderColor: INK, color: 'var(--sb-ink-on-dark)', fontSize: 'var(--sb-t-body)' }}>+</button>
                     </>
                   ) : (
                     <button onClick={() => onToggle(h.id)} title={done ? 'Undo' : 'Mark done'}
@@ -945,7 +945,7 @@ function HabitsCard({ habits, logs, qtyLogs, today, onToggle, onSetQty, onOpenTr
                       <Check size={12} strokeWidth={2.6} />
                     </button>
                   )}
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2, fontSize: 11, color: streak > 0 ? 'var(--sb-positive)' : GHOST, width: 30, justifyContent: 'flex-end', flexShrink: 0 }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2, fontSize: 'var(--sb-t-meta)', color: streak > 0 ? 'var(--sb-positive)' : GHOST, width: 30, justifyContent: 'flex-end', flexShrink: 0 }}>
                     <Flame size={10} strokeWidth={2} /> {streak}d
                   </span>
                 </span>
@@ -1234,8 +1234,8 @@ export function TodayPage() {
         display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
         padding: '14px 26px', borderBottom: '1px solid var(--sb-border)', background: 'var(--sb-header)',
       }}>
-        <span style={{ fontSize: 14.5, fontWeight: 700, color: INK, flexShrink: 0 }}>Morning Brief</span>
-        <span style={{ fontSize: 12, color: MUTED, flexShrink: 0 }}>{dateLine}</span>
+        <span style={{ fontSize: 'var(--sb-t-h3)', fontWeight: 700, color: INK, flexShrink: 0 }}>Morning Brief</span>
+        <span style={{ fontSize: 'var(--sb-t-body-s)', color: MUTED, flexShrink: 0 }}>{dateLine}</span>
         <span style={{ ...PILL, cursor: 'default', height: 28 }}>
           <Clock size={12} /> {hhmm(clock)}
         </span>
@@ -1264,15 +1264,15 @@ export function TodayPage() {
           <div style={{ ...CARD, padding: '22px 24px 24px' }}>
             <Quote size={16} strokeWidth={2} style={{ color: '#D8CFB8' }} />
             <h1 style={{
-              margin: '8px 0 0', fontFamily: 'var(--sb-font-num)', fontSize: 26, fontWeight: 600,
+              margin: '8px 0 0', fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h1)', fontWeight: 600,
               letterSpacing: '-0.03em', lineHeight: 1.2, color: INK,
             }}>{brief.headline}</h1>
-            <p style={{ margin: '9px 0 0', fontSize: 12, color: GHOST }}>
+            <p style={{ margin: '9px 0 0', fontSize: 'var(--sb-t-body-s)', color: GHOST }}>
               {tasks.filter(t => t.completed).length} closed all time · rank {rank.score} / 100 ·{' '}
               {events.filter(e => !!e.start.dateTime).length} meetings today
             </p>
             {briefEdit === null ? (
-              <p style={{ margin: '14px 0 0', fontSize: 13.5, color: '#3D3926', lineHeight: 1.65 }}>{brief.body}</p>
+              <p style={{ margin: '14px 0 0', fontSize: 'var(--sb-t-body)', color: '#3D3926', lineHeight: 1.65 }}>{brief.body}</p>
             ) : (
               <textarea
                 value={briefEdit}
@@ -1281,7 +1281,7 @@ export function TodayPage() {
                 style={{
                   width: '100%', boxSizing: 'border-box', marginTop: 14, resize: 'vertical',
                   background: FIELD, border: '1px solid var(--sb-border)', borderRadius: 10, padding: '10px 12px',
-                  fontSize: 13.5, color: INK, fontFamily: 'inherit', lineHeight: 1.6, outline: 'none', textAlign: 'left',
+                  fontSize: 'var(--sb-t-body)', color: INK, fontFamily: 'inherit', lineHeight: 1.6, outline: 'none', textAlign: 'left',
                 }} />
             )}
             {brief.callout && (
@@ -1291,7 +1291,7 @@ export function TodayPage() {
                 background: 'rgba(var(--sb-accent-rgb),0.14)', border: '1px solid rgba(var(--sb-accent-rgb),0.5)',
               }}>
                 <Zap size={14} strokeWidth={2} style={{ color: '#9A7B1F', flexShrink: 0 }} />
-                <span style={{ fontSize: 12.5, color: '#3D3926' }}>{brief.callout}</span>
+                <span style={{ fontSize: 'var(--sb-t-body-s)', color: '#3D3926' }}>{brief.callout}</span>
               </div>
             )}
           </div>
@@ -1332,7 +1332,7 @@ export function TodayPage() {
               <LinkOut label="Board" onClick={() => setActiveModule('tasks')} />
             </CardHead>
             {openTasks.length === 0 ? (
-              <div style={{ padding: '18px 16px', fontSize: 12.5, color: GHOST }}>Nothing open. Enjoy it.</div>
+              <div style={{ padding: '18px 16px', fontSize: 'var(--sb-t-body-s)', color: GHOST }}>Nothing open. Enjoy it.</div>
             ) : (
               <div style={{ padding: '4px 16px 12px' }}>
                 {openTasks.slice(0, 8).map(t => {
@@ -1351,10 +1351,10 @@ export function TodayPage() {
                           width: 17, height: 17, borderRadius: 5, boxSizing: 'border-box', flexShrink: 0, padding: 0,
                           border: '1.5px solid #CFC6B0', background: 'var(--sb-card)', cursor: 'pointer',
                         }} />
-                      <span style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 600, color: INK, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <span style={{ flex: 1, minWidth: 0, fontSize: 'var(--sb-t-label)', fontWeight: 600, color: INK, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {t.title}
                       </span>
-                      <span style={{ fontSize: 11.5, color: GHOST, flexShrink: 0 }}>{meta}</span>
+                      <span style={{ fontSize: 'var(--sb-t-meta)', color: GHOST, flexShrink: 0 }}>{meta}</span>
                       {(() => {
                         const TypeIcon = TASK_TYPE_ICON[type]
                         return (
