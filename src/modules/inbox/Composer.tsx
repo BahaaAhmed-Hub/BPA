@@ -33,8 +33,8 @@ export interface ComposeSeed {
 }
 
 const C = {
-  card: '#FFFFFF', field: '#FAF7EC', border: '#E8E1CE', hair: '#F0EBDC',
-  ink: '#191712', muted: '#6C6553', ghost: '#9B9180', amber: 'var(--sb-accent)', red: '#C62828',
+  card: 'var(--sb-card)', field: 'var(--sb-field)', border: 'var(--sb-border)', hair: 'var(--sb-hairline)',
+  ink: 'var(--sb-ink-1)', muted: 'var(--sb-ink-3)', ghost: '#9B9180', amber: 'var(--sb-accent)', red: 'var(--sb-negative)',
 }
 
 const LABEL: React.CSSProperties = {
@@ -94,7 +94,7 @@ export function Composer({ seed, accounts, onClose, onSent }: {
     const el = bodyRef.current
     if (!el) return
     el.innerHTML = `${seed.draft ?? '<div><br></div>'}${seed.quoted
-      ? `<div style="color:#6C6553;border-left:2px solid #E8E1CE;padding-left:10px;margin-top:14px">${seed.quoted}</div>`
+      ? `<div style="color:var(--sb-ink-3);border-left:2px solid var(--sb-border);padding-left:10px;margin-top:14px">${seed.quoted}</div>`
       : ''}`
     el.focus()
     const range = document.createRange()
@@ -153,7 +153,7 @@ export function Composer({ seed, accounts, onClose, onSent }: {
       {/* Which of the four this is, and a way out */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px',
-        borderBottom: `1px solid ${C.hair}`, background: '#FCFAF4',
+        borderBottom: `1px solid ${C.hair}`, background: 'var(--sb-header)',
       }}>
         <span style={{ fontSize: 12, fontWeight: 600, color: C.ink }}>{MODE_LABEL[seed.mode]}</span>
         <span style={{ flex: 1 }} />
@@ -253,7 +253,7 @@ export function Composer({ seed, accounts, onClose, onSent }: {
       {/* Send, and the handful of things worth doing to the words first */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 4, padding: '9px 12px',
-        borderTop: `1px solid ${C.hair}`, background: '#FCFAF4',
+        borderTop: `1px solid ${C.hair}`, background: 'var(--sb-header)',
       }}>
         <button onClick={() => void send()} disabled={sending}
           style={{
