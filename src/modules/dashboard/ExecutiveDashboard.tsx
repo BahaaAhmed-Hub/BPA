@@ -42,7 +42,11 @@ function MetricCard({
     >
       <div style={{
         width: 36, height: 36, borderRadius: 8,
-        background: `${color}18`, border: `1px solid ${color}30`,
+        // The tile is the card's colour at a fraction of itself. An eight-digit
+        // hex could only ever say that about a hex, and one of these colours is
+        // now a token — 24/255 and 48/255, the two alphas that were there.
+        background: `color-mix(in srgb, ${color} 9.4%, transparent)`,
+        border: `1px solid color-mix(in srgb, ${color} 18.8%, transparent)`,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}>
         <Icon size={16} color={color} strokeWidth={2} />
