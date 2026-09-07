@@ -17,10 +17,10 @@ interface Props {
 }
 
 const inp: React.CSSProperties = {
-  background: '#F7F4EA',
-  border: '1px solid #E8E1CE',
+  background: 'var(--sb-page)',
+  border: '1px solid var(--sb-border)',
   borderRadius: 7, padding: '8px 12px',
-  color: '#191712',
+  color: 'var(--sb-ink-1)',
   fontSize: 13, outline: 'none', width: '100%', boxSizing: 'border-box',
 }
 
@@ -44,10 +44,10 @@ export function Step3Companies({ data, onChange }: Props) {
 
   return (
     <div>
-      <h2 style={{ margin: '0 0 6px', fontSize: 22, fontWeight: 800, color: '#191712' }}>
+      <h2 style={{ margin: '0 0 6px', fontSize: 22, fontWeight: 800, color: 'var(--sb-ink-1)' }}>
         Your companies &amp; clients
       </h2>
-      <p style={{ margin: '0 0 24px', fontSize: 13.5, color: '#6C6553', lineHeight: 1.6 }}>
+      <p style={{ margin: '0 0 24px', fontSize: 13.5, color: 'var(--sb-ink-3)', lineHeight: 1.6 }}>
         Add the organizations you work with. Each can be linked to a connected account.
       </p>
 
@@ -58,12 +58,12 @@ export function Step3Companies({ data, onChange }: Props) {
             <div key={co.id} style={{
               display: 'flex', alignItems: 'center', gap: 10,
               padding: '10px 14px', borderRadius: 10,
-              background: '#FFFFFF',
-              border: '1px solid #E8E1CE',
+              background: 'var(--sb-card)',
+              border: '1px solid var(--sb-border)',
             }}>
               <div style={{ width: 14, height: 14, borderRadius: '50%', background: co.color, flexShrink: 0 }} />
               <div style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ fontSize: 13.5, fontWeight: 600, color: '#191712' }}>{co.name}</span>
+                <span style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--sb-ink-1)' }}>{co.name}</span>
                 {co.emailDomain && <span style={{ marginLeft: 8, fontSize: 11, color: '#9B9180' }}>{co.emailDomain}</span>}
               </div>
               {acc && (
@@ -80,7 +80,7 @@ export function Step3Companies({ data, onChange }: Props) {
       </div>
 
       {adding ? (
-        <div style={{ padding: '16px', borderRadius: 10, background: '#FFFFFF', border: '1px solid #E8E1CE', marginBottom: 12 }}>
+        <div style={{ padding: '16px', borderRadius: 10, background: 'var(--sb-card)', border: '1px solid var(--sb-border)', marginBottom: 12 }}>
           <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
             <input value={name} onChange={e => setName(e.target.value)} placeholder="Company name" style={inp} onKeyDown={e => e.key === 'Enter' && addCompany()} autoFocus />
             <input value={domain} onChange={e => setDomain(e.target.value)} placeholder="e.g. acme.com" style={{ ...inp, width: 160 }} />
@@ -101,7 +101,7 @@ export function Step3Companies({ data, onChange }: Props) {
             </select>
           )}
           <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={addCompany} style={{ padding: '8px 18px', borderRadius: 8, background: 'var(--sb-accent)', color: '#191712', fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer' }}>
+            <button onClick={addCompany} style={{ padding: '8px 18px', borderRadius: 8, background: 'var(--sb-accent)', color: 'var(--sb-ink-1)', fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer' }}>
               Add
             </button>
             <button onClick={() => setAdding(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9B9180', fontSize: 13 }}>
@@ -112,7 +112,7 @@ export function Step3Companies({ data, onChange }: Props) {
       ) : (
         <button onClick={() => setAdding(true)} style={{
           display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 8,
-          background: 'transparent', border: '1px dashed #E8E1CE',
+          background: 'transparent', border: '1px dashed var(--sb-border)',
           color: '#9B9180', fontSize: 13, cursor: 'pointer',
           width: '100%', justifyContent: 'center',
         }}>
