@@ -29,6 +29,7 @@ const SHARED_KEYS = [
   'professor-review-hours',
   'professor-ai-config',
   'professor-display-name',
+  'professor-week-start',        // which day your week starts on
   'task-board-col-order',
   'task-board-type',
   'finance-budget-rules',

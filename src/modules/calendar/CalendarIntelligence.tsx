@@ -27,6 +27,8 @@ import {
   efMoveEvent,
   efCreateEvent,
   efDeleteEvent,
+  lookUpEvent,
+  efLookUpEvent,
 } from '@/lib/googleCalendar'
 import type { GCalEvent, GCalCalendar, GCalEventCreate } from '@/lib/googleCalendar'
 import { getGoogleToken, seedToken, getGoogleTokenViaSupabaseRefresh } from '@/lib/tokenManager'
@@ -38,8 +40,11 @@ import { T, SANS, DISPLAY } from '@/lib/type'
 import { generateMeetingPrep } from '@/lib/professor'
 import type { MeetingPrep } from '@/lib/professor'
 import { useAuthStore } from '@/store/authStore'
-import { pushUndo, notify } from '@/lib/undo'
+import { pushUndo, notify, inTextField } from '@/lib/undo'
+import { loadWeekStart, useWeekStart, rotateDays, type Weekday } from '@/lib/weekStart'
 import { syncTaskToEvent } from '@/lib/taskEventLink'
+import { RepeatPicker } from './RepeatPicker'
+import { parseRecurrence, describeRecur, toRecurrence, type Recur } from './recurrence'
 import { useUIStore } from '@/store/uiStore'
 import { loadAccounts, loadHiddenAccounts } from '@/lib/multiAccount'
 import { connectAdditionalGoogleAccount } from '@/lib/google'
@@ -73,6 +78,8 @@ interface NewEventData {
   description?: string
   invitees:     { email: string }[]
   addMeet:      boolean
+  /** RRULE lines — an event can repeat from the moment it is written. */
+  recurrence?:  string[]
 }
 
 interface CalWithAccount extends GCalCalendar {
@@ -168,9 +175,12 @@ function whereTarget(location: string, videoLink?: string): WhereTarget {
   }
 }
 
-function getWeekStart(date: Date): Date {
+/** The week starts on whichever day Settings → Profile says — Sunday until
+ *  somebody says otherwise. Every grid here goes through this one function, so
+ *  the week strip, the month sheet and "is this this week?" cannot disagree. */
+function getWeekStart(date: Date, first: Weekday = loadWeekStart()): Date {
   const d = new Date(date)
-  d.setDate(d.getDate() - d.getDay())
+  d.setDate(d.getDate() - ((d.getDay() - first + 7) % 7))
   d.setHours(0, 0, 0, 0)
   return d
 }
@@ -1046,21 +1056,8 @@ function evOrg(email: string): string {
 }
 
 
-/** "Every Wednesday" out of an RRULE, when it says something that simple. */
-function describeRecurrence(rules: string[] | undefined, start: Date): string | null {
-  const rule = rules?.find(r => r.startsWith('RRULE'))
-  if (!rule) return null
-  const freq = /FREQ=(\w+)/.exec(rule)?.[1]
-  const interval = Number(/INTERVAL=(\d+)/.exec(rule)?.[1] ?? 1)
-  const weekday = start.toLocaleDateString('en-GB', { weekday: 'long' })
-  if (freq === 'DAILY') return interval === 1 ? 'Every day' : `Every ${interval} days`
-  if (freq === 'WEEKLY') return interval === 1 ? `Every ${weekday}` : `Every ${interval} weeks`
-  if (freq === 'MONTHLY') return interval === 1 ? 'Every month' : `Every ${interval} months`
-  if (freq === 'YEARLY') return 'Every year'
-  return 'Repeats'
-}
 
-function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepError, onClose, onStatusToggle, onPrepRequest, onAddMeet, onSave, onDelete, calendars, onMoveCalendar, clashes, onOpenEvent }: {
+function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepError, onClose, onStatusToggle, onPrepRequest, onAddMeet, onSave, onDelete, calendars, onMoveCalendar, clashes, onOpenEvent, onLoadSeries }: {
   event: GCalEventExt
   status: EventStatus | undefined
   calName: string
@@ -1080,12 +1077,15 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
   /** Events on the same day that overlap this one. */
   clashes?: GCalEventExt[]
   onOpenEvent?: (e: GCalEventExt) => void
+  /** The RRULE lines of a series, for an event that is one of its occurrences. */
+  onLoadSeries?: (seriesId: string) => Promise<string[] | null>
 }) {
   const popupRef = useRef<HTMLDivElement>(null)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [clashDismissed, setClashDismissed] = useState(false)
   const [addingAttendee, setAddingAttendee] = useState(false)
+  const [pendingAttendees, setPendingAttendees] = useState<GCalEvent['attendees'] | null>(null)
   const [attendeeDraft, setAttendeeDraft] = useState('')
   const [prepChecked, setPrepChecked] = useState<Set<number>>(new Set())
 
@@ -1147,8 +1147,32 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
   const canAddVideo = provider === 'teams' ? !!event.htmlLink : !!onAddMeet
   // The meeting link has its own card above, so Location speaks only about a place.
   const where = whereTarget(location)
-  const attendees = event.attendees ?? []
-  const recurrence = describeRecurrence(event.recurrence, startDate)
+  // An invitee appears the moment you type them, not when Google gets round to
+  // saying so — the round trip is seconds long, and watching a name you just
+  // added vanish and come back reads as a failure. The list Google returns wins
+  // as soon as it arrives, and a save that fails takes the optimistic row with
+  // it (the error line above says why).
+  const attendees = pendingAttendees ?? event.attendees ?? []
+  // An occurrence of a series carries no RRULE of its own — the rule lives on
+  // the series — so the sheet would have opened on "Never" for exactly the
+  // events that do repeat. Ask for the series and read it from there.
+  const [seriesRule, setSeriesRule] = useState<string[] | undefined>(undefined)
+  const ownRule = event.recurrence?.length ? event.recurrence : undefined
+  // The parent hands a fresh closure down every render, so it is held in a ref
+  // rather than watched — as a dependency it would fetch the series for ever.
+  const loadSeriesRef = useRef(onLoadSeries)
+  loadSeriesRef.current = onLoadSeries
+  const seriesId = ownRule ? undefined : event.recurringEventId
+  useEffect(() => {
+    setSeriesRule(undefined)
+    if (!seriesId || !loadSeriesRef.current) return
+    let live = true
+    void loadSeriesRef.current(seriesId).then(rules => { if (live) setSeriesRule(rules ?? undefined) })
+    return () => { live = false }
+  }, [event.id, seriesId])
+  const recur = useMemo(() => parseRecurrence(ownRule ?? seriesRule), [ownRule, seriesRule])
+  const recurrence = describeRecur(recur, startDate)
+  const [repeatOpen, setRepeatOpen] = useState(false)
   // Every writable calendar, across every account. A calendar on another
   // account is reachable — it just costs the event its identity, which is what
   // the confirm is for — so it says whose it is rather than being left out.
@@ -1207,7 +1231,11 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
     const email = attendeeDraft.trim().toLowerCase()
     setAttendeeDraft(''); setAddingAttendee(false)
     if (!email.includes('@')) return
-    void push({ attendees: [...attendees.map(a => ({ email: a.email })), { email }] })
+    if (attendees.some(a => a.email.toLowerCase() === email)) return
+    const next = [...attendees, { email, responseStatus: 'needsAction' }]
+    setPendingAttendees(next)
+    void push({ attendees: next.map(a => ({ email: a.email })) })
+      .finally(() => setPendingAttendees(null))
   }
 
   const files = event.attachments ?? []
@@ -1237,7 +1265,10 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
   }
 
   function removeAttendee(email: string) {
-    void push({ attendees: attendees.filter(a => a.email !== email).map(a => ({ email: a.email })) })
+    const next = attendees.filter(a => a.email !== email)
+    setPendingAttendees(next)
+    void push({ attendees: next.map(a => ({ email: a.email })) })
+      .finally(() => setPendingAttendees(null))
   }
 
   return (
@@ -1536,10 +1567,30 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
 
       {/* ── Repeats · Alert · Prep ───────────────────────────────────────── */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 12 }}>
-        <div style={EV_ROW}>
+        <div style={{ ...EV_ROW, position: 'relative' }}>
           <span style={EV_LABEL}>Repeats</span>
-          <span style={{ ...EV_FIELD, flex: 1, color: recurrence ? '#191712' : '#9B9180' }}>
-            {recurrence ?? 'Does not repeat'}
+          <span style={{ flex: 1, minWidth: 0, position: 'relative' }}>
+            <button onClick={() => setRepeatOpen(o => !o)} disabled={!onSave}
+              title={onSave ? 'How often this comes back' : 'You cannot edit this event'}
+              style={{ ...EV_FIELD, width: '100%', cursor: onSave ? 'pointer' : 'default',
+                color: recurrence ? '#191712' : '#9B9180', opacity: onSave ? 1 : 0.7 }}>
+              <RefreshCw size={14} color="#6C6553" style={{ flexShrink: 0 }} />
+              <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {recurrence ?? 'Does not repeat'}
+              </span>
+              <ChevronDown size={14} strokeWidth={2} style={{ color: '#9B9180', flexShrink: 0 }} />
+            </button>
+            {repeatOpen && (
+              <RepeatPicker
+                value={recur}
+                start={startDate}
+                onApply={(r: Recur | null) => {
+                  // Google clears a rule with an empty array, not a missing key.
+                  setSeriesRule(toRecurrence(r))
+                  void push({ recurrence: toRecurrence(r) })
+                }}
+                onClose={() => setRepeatOpen(false)} />
+            )}
           </span>
         </div>
 
@@ -1590,7 +1641,10 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
       <div style={{ ...EV_SECTION, marginBottom: 6 }}>Attendees</div>
       <div style={{ display: 'flex', flexDirection: 'column' }}>
         {attendees.map(a => (
-          <div key={a.email} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '7px 0', minWidth: 0 }}>
+          <div key={a.email} style={{
+            display: 'flex', alignItems: 'center', gap: 12, padding: '7px 0', minWidth: 0,
+            opacity: pendingAttendees ? 0.6 : 1, transition: 'opacity 0.15s',
+          }}>
             <span style={{
               width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -1956,6 +2010,8 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
   const [inviteeInput, setInviteeInput] = useState('')
   const [invitees,     setInvitees]     = useState<string[]>([])
   const [addMeet,      setAddMeet]      = useState(false)
+  const [repeat,       setRepeat]       = useState<Recur | null>(null)
+  const [repeatOpen,   setRepeatOpen]   = useState(false)
   const ref      = useRef<HTMLDivElement>(null)
   const titleRef = useRef<HTMLInputElement>(null)
 
@@ -2003,6 +2059,7 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
       description: description.trim() || undefined,
       invitees:    invitees.map(email => ({ email })),
       addMeet,
+      ...(repeat ? { recurrence: toRecurrence(repeat) } : {}),
     })
   }
 
@@ -2097,6 +2154,28 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
           </span>
         </div>
 
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, position: 'relative' }}>
+          <span style={EV_LABEL}>Repeats</span>
+          <span style={{ flex: 1, minWidth: 0, position: 'relative', display: 'flex' }}>
+            <button onClick={() => setRepeatOpen(o => !o)} style={{
+              ...EV_PILL, flex: 1, justifyContent: 'space-between',
+              color: repeat ? '#191712' : '#9B9180',
+            }}>
+              <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {describeRecur(repeat, new Date(`${startDate}T12:00:00`)) ?? 'Does not repeat'}
+              </span>
+              <ChevronDown size={13} strokeWidth={2} style={{ color: '#9B9180', flexShrink: 0 }} />
+            </button>
+            {repeatOpen && (
+              <RepeatPicker
+                value={repeat}
+                start={new Date(`${startDate}T12:00:00`)}
+                onApply={setRepeat}
+                onClose={() => setRepeatOpen(false)} />
+            )}
+          </span>
+        </div>
+
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
           <span style={{ ...EV_LABEL, paddingTop: 11 }}>Notes</span>
           <textarea value={description} onChange={e => setDescription(e.target.value)} rows={2}
@@ -2172,7 +2251,8 @@ export function CalendarIntelligence() {
   const [calView,         setCalView]        = useState<'day' | 'week' | 'month'>(() => {
     try { return (localStorage.getItem('cal-view') as 'day' | 'week' | 'month') ?? 'week' } catch { return 'week' }
   })
-  const weekStart = useMemo(() => getWeekStart(anchorDate), [anchorDate])
+  const firstDow  = useWeekStart()
+  const weekStart = useMemo(() => getWeekStart(anchorDate, firstDow), [anchorDate, firstDow])
   const [events,          setEvents]          = useState<GCalEvent[]>(() => loadEventsCache(getWeekStart(new Date())))
   const [allCalendars,    setAllCalendars]    = useState<CalWithAccount[]>(() => {
     // Use the last known primary email (saved to localStorage after each successful auth)
@@ -2489,7 +2569,7 @@ export function CalendarIntelligence() {
     if (!allCalendars.length) return
     if (calView === 'month') {
       const first = new Date(anchorDate.getFullYear(), anchorDate.getMonth(), 1)
-      const gridStart = getWeekStart(first)
+      const gridStart = getWeekStart(first, firstDow)
       const gridEnd = new Date(gridStart); gridEnd.setDate(gridEnd.getDate() + 41); gridEnd.setHours(23, 59, 59, 999)
       void loadEvents(gridStart, allCalendars, hiddenCals, hiddenAccounts, gridEnd)
     } else {
@@ -2604,6 +2684,24 @@ export function CalendarIntelligence() {
       if (selectedEvent?.id === ev.id) setSelectedEvent(null)
     }
   }
+
+  // ── Delete, from the keyboard ───────────────────────────────────────────────
+  // The selected event is the one the key means, the same as in the Mac and iOS
+  // calendars. Backspace counts too, and neither does anything while you are
+  // typing — into a field, a note or a search box — or the key that should have
+  // rubbed out a character would take the event with it.
+  useEffect(() => {
+    if (!selectedEvent) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Delete' && e.key !== 'Backspace') return
+      if (e.metaKey || e.ctrlKey || e.altKey) return
+      if (inTextField(document.activeElement)) return
+      e.preventDefault()
+      void handleDeleteEvent(selectedEvent)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [selectedEvent]) // eslint-disable-line react-hooks/exhaustive-deps
 
   /** Put an event back where it was — on screen and in Google. Registered
    *  before a drag writes, so the times closed over are the old ones. */
@@ -2732,23 +2830,55 @@ export function CalendarIntelligence() {
   async function handleUpdateEvent(ev: GCalEventExt, patch: Partial<GCalEventCreate>): Promise<GCalEvent | null> {
     const cal = allCalendars.find(c => c.id === ev.calendarId)
     if (!cal || !ev.calendarId) return null
+    // How often something comes back is a fact about the series, not about the
+    // occurrence you happened to click: Google rejects `recurrence` on an
+    // occurrence, so the write goes to the series and the week is re-read
+    // afterwards (every other copy on screen has just changed too).
+    const toSeries = !!patch.recurrence && !!ev.recurringEventId
+    const targetId = toSeries ? ev.recurringEventId! : ev.id
     let updated: GCalEvent | null = null
     if (cal.accountId) {
-      const result = await efUpdateEvent(cal.accountId, ev.calendarId, ev.id, patch)
+      const result = await efUpdateEvent(cal.accountId, ev.calendarId, targetId, patch)
       updated = result.event
       // An edit that did not stick has to say why, or the panel just snaps back.
       if (!updated && result.error) notify(`Could not save that change — ${result.error}`)
     } else {
       const token = await refreshPrimaryToken() || cal.accountToken
       if (!token) return null
-      const result = await updateCalendarEvent(ev.calendarId, ev.id, patch)
+      const result = await updateCalendarEvent(ev.calendarId, targetId, patch)
       updated = result.event
+      if (!updated && result.error) notify(`Could not save that change — ${result.error}`)
+    }
+    if (updated && toSeries) {
+      // The series answered, not this occurrence — keep the panel's own event
+      // and pull the week again so the new pattern is what is drawn.
+      const rule = updated.recurrence
+      setSelectedEvent(prev => prev?.id === ev.id ? { ...prev, recurrence: rule } as GCalEventExt : prev)
+      void loadEvents(weekStart, allCalendars, hiddenCals, hiddenAccounts)
+      return updated
     }
     if (updated) {
       setEvents(prev => prev.map(e => e.id === ev.id ? { ...e, ...updated } : e))
       setSelectedEvent(prev => prev?.id === ev.id ? { ...prev, ...updated } as GCalEventExt : prev)
+      if (patch.recurrence) void loadEvents(weekStart, allCalendars, hiddenCals, hiddenAccounts)
     }
     return updated
+  }
+
+  /** The RRULE lines of the series an occurrence belongs to. */
+  async function handleLoadSeries(ev: GCalEventExt, seriesId: string): Promise<string[] | null> {
+    const cal = allCalendars.find(c => c.id === ev.calendarId)
+    if (!cal || !ev.calendarId) return null
+    try {
+      if (cal.accountId) {
+        const series = await efLookUpEvent(cal.accountId, ev.calendarId, seriesId)
+        return series?.recurrence ?? null
+      }
+      const token = await refreshPrimaryToken() || cal.accountToken
+      if (!token) return null
+      const series = await lookUpEvent(token, ev.calendarId, seriesId)
+      return series?.recurrence ?? null
+    } catch { return null }
   }
 
   async function handleAddMeet(ev: GCalEventExt) {
@@ -2892,9 +3022,9 @@ export function CalendarIntelligence() {
   // Month view lays out whole weeks, Sunday-first, so the grid stays rectangular
   const monthCells = useMemo(() => {
     const first = new Date(anchorDate.getFullYear(), anchorDate.getMonth(), 1)
-    const start = getWeekStart(first)
+    const start = getWeekStart(first, firstDow)
     return Array.from({ length: 42 }, (_, i) => { const d = new Date(start); d.setDate(d.getDate() + i); return d })
-  }, [anchorDate])
+  }, [anchorDate, firstDow])
   // Filter out block-events for rules with hideBlocked=true (or global originalsOnly).
   // Uses two paths: localStorage map (fast) + description marker (cross-device, no Apply needed).
   const displayedEvents = (() => {
@@ -3010,6 +3140,7 @@ export function CalendarIntelligence() {
       ...(data.location    && { location:    data.location }),
       ...(data.description && { description: data.description }),
       ...(data.invitees.length && { attendees: data.invitees }),
+      ...(data.recurrence?.length && { recurrence: data.recurrence }),
       ...(data.addMeet && {
         conferenceData: {
           createRequest: {
@@ -3345,7 +3476,7 @@ export function CalendarIntelligence() {
       {calView === 'month' ? (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'auto', padding: '0 14px 14px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', padding: '10px 0 6px' }}>
-            {DAY_LABELS.map(d => (
+            {rotateDays(DAY_LABELS, firstDow).map(d => (
               <span key={d} style={{ textAlign: 'center', fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', color: '#6C6553', textTransform: 'uppercase' }}>
                 {d}
               </span>
@@ -3671,6 +3802,7 @@ export function CalendarIntelligence() {
               })
             })()}
             onOpenEvent={e => setSelectedEvent(e)}
+            onLoadSeries={seriesId => handleLoadSeries(selectedEvent, seriesId)}
           />
         )
       })()}

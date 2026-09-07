@@ -34,7 +34,7 @@ import { useTaskCalendarPush } from './lib/taskAutoSchedule'
 import { seedToken, seedFromLocalStorage, clearAllTokens, getGoogleToken } from './lib/tokenManager'
 import { refreshPrimaryToken } from './lib/googleCalendar'
 import { SetupWizard } from './modules/wizard/SetupWizard'
-import { Search } from 'lucide-react'
+import { Search, Settings } from 'lucide-react'
 
 // ─── Sunlit Bento — Login screen (1A) ────────────────────────────────────────
 
@@ -334,7 +334,11 @@ const NAV_ITEMS = [
   { id: 'tasks',     label: 'Tasks'    },
   { id: 'habits',    label: 'Habits'   },
   { id: 'finance',   label: 'Finance'  },
-  { id: 'settings',  label: 'Settings' },
+  // The dashboard was the module the app opened on and the one place with no
+  // way back to it — Today's pill lit up for it instead, which named the wrong
+  // screen. Settings left the row for the avatar menu, where the things about
+  // *you* rather than about your work belong.
+  { id: 'dashboard', label: 'Dashboard' },
 ] as const
 
 function TopNav() {
@@ -345,6 +349,17 @@ function TopNav() {
   const initials = user?.name
     ? user.name.split(' ').map((p: string) => p[0]).join('').slice(0, 2).toUpperCase()
     : user?.email?.slice(0, 2).toUpperCase() ?? '?'
+
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!menuOpen) return
+    const away = (e: MouseEvent) => { if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false) }
+    const esc  = (e: KeyboardEvent) => { if (e.key === 'Escape') setMenuOpen(false) }
+    document.addEventListener('mousedown', away)
+    document.addEventListener('keydown', esc)
+    return () => { document.removeEventListener('mousedown', away); document.removeEventListener('keydown', esc) }
+  }, [menuOpen])
 
   return (
     <header style={{
@@ -365,8 +380,7 @@ function TopNav() {
       {/* Nav pills — center */}
       <nav style={{ display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
         {NAV_ITEMS.map(item => {
-          const active = activeModule === item.id ||
-            (item.id === 'morning' && activeModule === 'dashboard')
+          const active = activeModule === item.id
           return (
             <button
               key={item.id}
@@ -439,20 +453,55 @@ function TopNav() {
           </svg>
         </div>
 
-        {/* Avatar */}
-        <div style={{
-          width: 32, height: 32, borderRadius: '50%',
-          background: '#191712',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          cursor: 'pointer',
-          overflow: 'hidden', flexShrink: 0,
-        }}>
-          {user?.avatarUrl ? (
-            <img src={user.avatarUrl} alt={initials} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-          ) : (
-            <span style={{ fontSize: 12, fontWeight: 600, color: '#FDF8E7', letterSpacing: '0.02em' }}>
-              {initials}
-            </span>
+        {/* Avatar — and what is behind it */}
+        <div ref={menuRef} style={{ position: 'relative', flexShrink: 0 }}>
+          <button
+            onClick={() => setMenuOpen(o => !o)}
+            title={user?.email ?? 'Your account'}
+            aria-haspopup="menu"
+            aria-expanded={menuOpen}
+            style={{
+              width: 32, height: 32, borderRadius: '50%', padding: 0,
+              background: '#191712', border: 'none',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', overflow: 'hidden',
+            }}>
+            {user?.avatarUrl ? (
+              <img src={user.avatarUrl} alt={initials} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+              <span style={{ fontSize: 12, fontWeight: 600, color: '#FDF8E7', letterSpacing: '0.02em' }}>
+                {initials}
+              </span>
+            )}
+          </button>
+          {menuOpen && (
+            <div role="menu" style={{
+              position: 'absolute', top: 'calc(100% + 8px)', right: 0, zIndex: 120, minWidth: 216,
+              background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 14, padding: 6,
+              boxShadow: '0 22px 48px -20px rgba(25,23,18,.45)',
+            }}>
+              <div style={{ padding: '8px 10px 10px', borderBottom: '1px solid #F0EBDC', marginBottom: 5 }}>
+                <p style={{
+                  margin: 0, fontSize: 13, fontWeight: 600, color: '#191712',
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                }}>{user?.name ?? 'Your account'}</p>
+                <p style={{
+                  margin: '2px 0 0', fontSize: 11.5, color: '#9B9180',
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                }}>{user?.email}</p>
+              </div>
+              <button
+                role="menuitem"
+                onClick={() => { setMenuOpen(false); setActiveModule('settings') }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 9, width: '100%', height: 36,
+                  padding: '0 10px', borderRadius: 9, border: 'none', cursor: 'pointer',
+                  background: activeModule === 'settings' ? '#F5F1E6' : 'transparent',
+                  color: '#191712', fontSize: 13.5, fontFamily: 'inherit', textAlign: 'left',
+                }}>
+                <Settings size={15} color="#6C6553" /> Settings
+              </button>
+            </div>
           )}
         </div>
       </div>

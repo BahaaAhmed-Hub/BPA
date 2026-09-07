@@ -26,6 +26,8 @@ export interface ComposeSeed {
   subject: string
   /** The original, quoted underneath what you write. */
   quoted?: string
+  /** HTML the body opens on — an AI draft, rather than a blank line. */
+  draft?: string
   threadId?: string
   inReplyTo?: string
 }
@@ -91,7 +93,7 @@ export function Composer({ seed, accounts, onClose, onSent }: {
   useEffect(() => {
     const el = bodyRef.current
     if (!el) return
-    el.innerHTML = `<div><br></div>${seed.quoted
+    el.innerHTML = `${seed.draft ?? '<div><br></div>'}${seed.quoted
       ? `<div style="color:#6C6553;border-left:2px solid #E8E1CE;padding-left:10px;margin-top:14px">${seed.quoted}</div>`
       : ''}`
     el.focus()

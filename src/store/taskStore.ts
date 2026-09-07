@@ -488,8 +488,15 @@ export const useTaskStore = create<TaskState>()(
       },
 
       deleteTask: id => {
-        const name = get().tasks.find(t => t.id === id)?.title?.trim()
+        const doomed = get().tasks.find(t => t.id === id)
+        const name = doomed?.title?.trim()
         get()._remember(`Deleted ${name ? `"${name}"` : 'a task'}`)
+        // The block this task put on the calendar goes with it — otherwise the
+        // hour stays booked for something that no longer exists, and nothing in
+        // the app can reach the event any more to clear it.
+        if (doomed?.gcalEventId) {
+          void import('@/lib/taskCalendar').then(m => m.removeTaskEvent(doomed))
+        }
         set(s => {
           const next = s.tasks.filter(t => t.id !== id)
           scheduleDbSync(next)

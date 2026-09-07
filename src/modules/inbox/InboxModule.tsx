@@ -1,16 +1,16 @@
 
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
-import { Mail, Zap, Clock, Copy, CheckCheck, RefreshCw, ArrowRight, WifiOff, ListPlus, Plus, Archive, Search, X as XIcon, PenSquare, Reply, ReplyAll, Forward, ChevronDown, ChevronRight, Inbox, Send, FileEdit, Star, MailOpen } from 'lucide-react'
+import { Mail, Zap, Clock, Copy, CheckCheck, RefreshCw, ArrowRight, WifiOff, ListPlus, Plus, Archive, Search, X as XIcon, PenSquare, Reply, ReplyAll, Forward, ChevronDown, ChevronRight, Inbox, Send, FileEdit, Star, MailOpen, Sparkles } from 'lucide-react'
 
 /** One glyph each, so the rail still says what it is when it is folded up. */
 const FOLDER_ICON: Record<MailFolder, typeof Mail> = {
   unread: MailOpen, inbox: Inbox, sent: Send, drafts: FileEdit,
   starred: Star, archive: Archive, spam: Mail, trash: Mail,
 }
-import { triageEmail } from '@/lib/professor'
+import { triageEmail, call as askModel } from '@/lib/professor'
 import type { EmailTriage, EmailData } from '@/lib/professor'
-import { listUnreadThreadIds, getThread, extractBody, extractHtmlBody, header, markAsRead, archiveMessage, sendReply, escapeHtml, FOLDER_QUERY, FOLDER_LABEL, FOLDER_SHOWS_RECIPIENT, type MailAccount, type MailFolder } from '@/lib/gmail'
-import { mailAccounts, loadMailView, saveMailView, accountsFor, shortAddress, type MailView } from './mailAccounts'
+import { listUnreadThreadIds, getThread, getMessage, loadInlineImages, applyInlineImages, tidyDataUris, extractBody, extractHtmlBody, header, markAsRead, archiveMessage, sendReply, escapeHtml, FOLDER_QUERY, FOLDER_LABEL, FOLDER_SHOWS_RECIPIENT, type MailAccount, type MailFolder } from '@/lib/gmail'
+import { mailAccounts, loadMailView, saveMailView, accountsFor, accountLabel, type MailView } from './mailAccounts'
 import { Composer, type ComposeSeed, type ComposeMode } from './Composer'
 import { signInWithGoogle } from '@/lib/google'
 import { useAuthStore } from '@/store/authStore'
@@ -134,8 +134,33 @@ function buildMockUser(user: { id: string; email: string; name?: string } | null
 
 // ─── HTML email renderer ──────────────────────────────────────────────────────
 
-function EmailBodyFrame({ html }: { html: string }) {
+function EmailBodyFrame({ html, messageId, account }: {
+  html: string
+  /** With these two the frame can fetch the pictures the HTML refers to by
+   *  cid — a signature's logo is an attachment, not part of the body. */
+  messageId?: string
+  account?: MailAccount
+}) {
   const ref = useRef<HTMLIFrameElement>(null)
+  const [images, setImages] = useState<Record<string, string> | null>(null)
+
+  // Asked for only when the message is actually on screen: a list of forty
+  // would otherwise fetch four signatures apiece before you read one.
+  useEffect(() => {
+    if (!messageId || !/src\s*=\s*["']?\s*cid:/i.test(html)) { setImages(null); return }
+    let live = true
+    void (async () => {
+      const msg = await getMessage(messageId, account).catch(() => null)
+      if (!live || !msg) { if (live) setImages({}); return }
+      const found = await loadInlineImages(msg, account)
+      if (live) setImages(found)
+    })()
+    return () => { live = false }
+  }, [messageId, account, html])
+
+  // Until the pictures arrive the cid images are left alone — dropping them
+  // first would make the body jump as each one landed.
+  const body = images ? applyInlineImages(tidyDataUris(html), images) : tidyDataUris(html)
 
   // Inject base tag so relative links open in new tab, and a minimal reset
   const doc = `<!DOCTYPE html><html><head>
@@ -147,14 +172,27 @@ function EmailBodyFrame({ html }: { html: string }) {
   a { color: #1E40AF; }
   pre, blockquote { white-space: pre-wrap; }
 </style>
-</head><body>${html}</body></html>`
+</head><body>${body}</body></html>`
 
   function onLoad() {
     const iframe = ref.current
     if (!iframe?.contentWindow) return
     try {
-      const h = iframe.contentWindow.document.body.scrollHeight
-      iframe.style.height = `${Math.max(200, h + 24)}px`
+      const doc = iframe.contentWindow.document
+      // A picture that will not load shows a broken glyph and its own alt text,
+      // which in a mail client's signature is a run of base64. Nothing is
+      // better than that.
+      const hideBroken = () => {
+        for (const img of Array.from(doc.images)) {
+          if (img.complete && img.naturalWidth === 0) { img.alt = ''; img.style.display = 'none' }
+        }
+        iframe.style.height = `${Math.max(200, doc.body.scrollHeight + 24)}px`
+      }
+      for (const img of Array.from(doc.images)) {
+        img.addEventListener('error', hideBroken)
+        img.addEventListener('load', hideBroken)
+      }
+      hideBroken()
     } catch { /* cross-origin fallback */ }
   }
 
@@ -229,6 +267,8 @@ export function InboxModule() {
   const [triageMap,  setTriageMap]  = useState<Record<string, TriageState>>({})
   const [readIds,    setReadIds]    = useState<Set<string>>(new Set())
   const [archiving,  setArchiving]  = useState<string | null>(null)
+  const [drafting,   setDrafting]   = useState<string | null>(null)
+  const [draftError, setDraftError] = useState<string | null>(null)
   const [replyText,  setReplyText]  = useState<Record<string, string>>({})
   const [sending,    setSending]    = useState<string | null>(null)
   const [sentIds,    setSentIds]    = useState<Set<string>>(new Set())
@@ -408,6 +448,36 @@ export function InboxModule() {
       }, 2000)
     })
   }
+
+  // ── A reply, already written ────────────────────────────────────────────────
+  // The Professor reads the message that is open — the whole thread where there
+  // is one — and writes the reply you would have had to start from a blank
+  // line. It lands in the composer as a draft: the address, the subject and the
+  // quote are the ordinary reply's, and nothing is sent.
+  const draftWithAI = useCallback(async (email: Email) => {
+    setDrafting(email.id); setDraftError(null)
+    try {
+      const thread = [...email.threadMessages]
+        .map(m => `${m.fromName} <${m.fromEmail}>:\n${m.body}`)
+        .concat(`${email.fromName} <${email.fromEmail}>:\n${email.body}`)
+        .join('\n\n---\n\n')
+        .slice(0, 6000)
+      const written = await askModel(
+        'You are drafting a reply on behalf of the account holder. Write only the reply body — '
+        + 'no subject line, no "Subject:", no greeting placeholders like [Name], no sign-off block. '
+        + 'Match the tone of the message you are answering, keep it short, and answer what was actually asked. '
+        + 'Plain sentences and paragraphs, no markdown.',
+        `Reply to this message${email.subject ? ` (subject: ${email.subject})` : ''}:\n\n${thread}`,
+      )
+      const html = escapeHtml(written.trim())
+        .split(/\n{2,}/).map(p => `<div>${p.replace(/\n/g, '<br>')}</div>`).join('<div><br></div>')
+      setCompose({ ...composeSeed(email, 'reply', accounts), draft: html })
+    } catch (e) {
+      // A missing key must not blank the message you were reading: the error
+      // belongs beside the button that caused it.
+      setDraftError(e instanceof Error ? e.message : 'The Professor could not write that draft.')
+    } finally { setDrafting(null) }
+  }, [accounts])
 
   const handleArchive = useCallback(async (email: Email) => {
     setArchiving(email.id)
@@ -665,7 +735,7 @@ export function InboxModule() {
                     <span title={email.account.email} style={{
                       fontSize: 9, fontWeight: 600, color: accountColor(email.account.email),
                       maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                    }}>{shortAddress(email.account.email)}</span>
+                    }}>{accountLabel(email.account.email, email.account.isPrimary)}</span>
                   )}
                   <span style={{ fontSize: 10, color: '#9B9180' }}>
                   {fmtRelTime(email.receivedAt)}
@@ -771,6 +841,22 @@ export function InboxModule() {
                   </button>
                 )
               })}
+              {/* A reply the Professor has already written — you open the
+                  composer on a draft rather than on a blank line. It is a
+                  draft, not a send: nothing leaves until you press Send. */}
+              <button
+                onClick={() => void draftWithAI(selectedEmail)}
+                disabled={drafting === selectedEmail.id}
+                title={drafting === selectedEmail.id ? 'Writing a draft…' : 'Draft a reply with AI'}
+                aria-label="Draft a reply with AI"
+                style={{
+                  ...ICON_ACTION,
+                  background: drafting === selectedEmail.id ? '#F5D14E' : 'transparent',
+                  border: `1px solid ${drafting === selectedEmail.id ? '#F5D14E' : '#E8E1CE'}`,
+                  color: drafting === selectedEmail.id ? '#191712' : '#6C6553',
+                }}>
+                <Sparkles size={14} />
+              </button>
               <button
                 onClick={() => void handleArchive(selectedEmail)}
                 disabled={archiving === selectedEmail.id}
@@ -780,6 +866,13 @@ export function InboxModule() {
               </button>
             </div>
           </div>
+          {draftError && (
+            <p style={{
+              margin: '0 0 8px', fontSize: 11.5, lineHeight: 1.5, color: '#C62828',
+              background: 'rgba(198,40,40,0.06)', border: '1px solid rgba(198,40,40,0.25)',
+              borderRadius: 8, padding: '7px 10px',
+            }}>{draftError}</p>
+          )}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginBottom: 10 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
               <span style={{ fontSize: 12.5, color: '#7F77DD', fontWeight: 600 }}>{selectedEmail.fromName}</span>
@@ -793,7 +886,7 @@ export function InboxModule() {
                     display: 'inline-flex', alignItems: 'center', height: 20, padding: '0 8px',
                     borderRadius: 999, background: '#FAF7EC', border: '1px solid #E8E1CE',
                     fontSize: 10.5, color: '#6C6553', flexShrink: 0,
-                  }}>{shortAddress(selectedEmail.account.email)}</span>
+                  }}>{accountLabel(selectedEmail.account.email, selectedEmail.account.isPrimary)}</span>
               )}
 
             </div>
@@ -840,7 +933,7 @@ export function InboxModule() {
                         <span style={{ fontSize: 11, color: '#6C6553' }}>{fmtRelTime(m.receivedAt)}</span>
                       </div>
                       {m.htmlBody
-                        ? <EmailBodyFrame html={m.htmlBody} />
+                        ? <EmailBodyFrame html={m.htmlBody} messageId={m.id} account={selectedEmail.account} />
                         : <p style={{ margin: 0, fontSize: 12.5, color: '#6C6553', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{m.body}</p>
                       }
                     </div>
@@ -852,7 +945,7 @@ export function InboxModule() {
 
           <div style={{ height: 1, background: '#E8E1CE', marginBottom: 16 }} />
           {selectedEmail.htmlBody ? (
-            <EmailBodyFrame html={selectedEmail.htmlBody} />
+            <EmailBodyFrame html={selectedEmail.htmlBody} messageId={selectedEmail.id} account={selectedEmail.account} />
           ) : (
             <p style={{ margin: 0, fontSize: 13.5, color: '#191712', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
               {selectedEmail.body}
@@ -1005,7 +1098,7 @@ export function InboxModule() {
                     mailbox a message is in. */}
                 <div role="group" aria-label="Which mailbox"
                   style={{ display: 'flex', alignItems: 'center', gap: 2, padding: 3, borderRadius: 999, background: '#EDE7D9' }}>
-                  {[{ id: 'all', label: 'All' }, ...accounts.map(a => ({ id: a.email, label: shortAddress(a.email) }))].map(opt => {
+                  {[{ id: 'all', label: 'All' }, ...accounts.map(a => ({ id: a.email, label: accountLabel(a.email, a.isPrimary) }))].map(opt => {
                     const on = view === opt.id
                     return (
                       <button key={opt.id}

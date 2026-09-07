@@ -94,3 +94,34 @@ export async function verifyTaskEvent(
     return { found: true, when: null }
   }
 }
+
+
+// ─── Deleting the task takes the event with it ───────────────────────────────
+//
+// A task that put a block on your calendar owns that block: deleting the task
+// and leaving the hour booked is the worst of both — the calendar goes on
+// saying you are busy for something that no longer exists, and nothing in the
+// app can reach the event any more to clear it.
+//
+// The undo puts the *task* back, not the event: Google has no undelete, and the
+// restored task still carries its old `gcalEventId`, which the detail panel
+// already checks (`verifyTaskEvent`) and offers to put back.
+
+export async function removeTaskEvent(
+  task: { gcalEventId?: string; calendarId?: string; companyId?: string; company?: string },
+): Promise<boolean> {
+  if (!task.gcalEventId) return false
+  const target = resolveTaskCalendar(task)
+  try {
+    const { deleteCalendarEventWithToken, efDeleteEvent, refreshPrimaryToken } =
+      await import('@/lib/googleCalendar')
+    if (target.accountId) {
+      return await efDeleteEvent(target.accountId, target.calendarId, task.gcalEventId)
+    }
+    const token = await refreshPrimaryToken() || localStorage.getItem('google_provider_token')
+    if (!token) return false
+    return await deleteCalendarEventWithToken(token, target.calendarId, task.gcalEventId)
+  } catch {
+    return false
+  }
+}

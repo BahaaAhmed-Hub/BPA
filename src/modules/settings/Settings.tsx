@@ -13,6 +13,7 @@ import {
 import { supabase } from '@/lib/supabase'
 import { paidAtSupported } from '../finance/unpaid'
 import { stepFor, setHabitStep, loadHabitSteps } from '@/lib/habitSteps'
+import { loadWeekStart, saveWeekStart, WEEKDAY_NAMES, type Weekday } from '@/lib/weekStart'
 import {
   loadHealthLinks, createHealthLink, deleteHealthLink, ingestUrl, checkHealthLink,
   isMovementHabit, suggestMetric, METRIC_LABEL, METRIC_SAMPLE,
@@ -425,6 +426,7 @@ function ProfileSection({
   const [tzSyncing, setTzSyncing] = useState(false)
   const [tzSyncNote, setTzSyncNote] = useState<string | undefined>(undefined)
   const initials = (s.fullName || name || 'P').trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase()
+  const [weekStartDay, setWeekStartDay] = useState<Weekday>(() => loadWeekStart())
 
   return (
     <div>
@@ -503,6 +505,15 @@ function ProfileSection({
           }}>
           <LocateFixed size={15} style={tzSyncing ? { opacity: 0.5 } : undefined} />
         </button>
+      </DRow>
+
+      <DRow label="Week starts on" sub={`Every calendar draws its week from ${WEEKDAY_NAMES[weekStartDay]}`}>
+        <select
+          value={weekStartDay}
+          onChange={e => { const d = Number(e.target.value) as Weekday; setWeekStartDay(d); saveWeekStart(d) }}
+          style={pillSelectStyle}>
+          {WEEKDAY_NAMES.map((d, i) => <option key={d} value={i}>{d}</option>)}
+        </select>
       </DRow>
 
       <DRow label="Work days" sub={workWeekSummary(s.workWeek)} last>

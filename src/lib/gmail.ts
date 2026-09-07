@@ -7,7 +7,11 @@ export interface GmailHeader { name: string; value: string }
 
 export interface GmailPart {
   mimeType: string
-  body: { data?: string; size: number }
+  /** Present on parts Gmail keeps out of the message body — attachments and
+   *  the images a signature refers to. The bytes are fetched separately. */
+  body: { data?: string; size: number; attachmentId?: string }
+  filename?: string
+  headers?: GmailHeader[]
   parts?: GmailPart[]
 }
 
@@ -206,6 +210,11 @@ export async function getThread(threadId: string, account?: MailAccount): Promis
   return gFetch<GmailThread>(`/users/me/threads/${threadId}?format=full`, undefined, account)
 }
 
+/** One message in full — the payload the body and its pictures come out of. */
+export async function getMessage(messageId: string, account?: MailAccount): Promise<GmailMessage> {
+  return gFetch<GmailMessage>(`/users/me/messages/${messageId}?format=full`, undefined, account)
+}
+
 /** Mark a message as read (remove UNREAD label). Requires gmail.modify scope. */
 export async function markAsRead(messageId: string, account?: MailAccount): Promise<void> {
   await gFetch(`/users/me/messages/${messageId}/modify`, {
@@ -364,4 +373,85 @@ export async function sendReply(opts: {
 
 export function escapeHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
+
+
+// ─── The images inside a message ─────────────────────────────────────────────
+//
+// A signature's logo is not in the HTML: the HTML says `src="cid:image001@…"`
+// and the bytes are an attachment part carrying that Content-ID. Nothing in a
+// browser resolves a cid — the frame showed a broken-image glyph and whatever
+// the sender put in `alt`, which for a mail client that inlined a picture is a
+// run of base64. So the parts are fetched and put back where they belong.
+
+export interface InlinePart {
+  /** The Content-ID with its angle brackets stripped. */
+  cid: string
+  attachmentId: string
+  mimeType: string
+  size: number
+}
+
+/** Every image part this message refers to by cid. No network. */
+export function inlineParts(msg: GmailMessage): InlinePart[] {
+  const found: InlinePart[] = []
+  const walk = (parts: GmailPart[] | undefined) => {
+    for (const part of parts ?? []) {
+      const cidHeader = part.headers?.find(h => h.name.toLowerCase() === 'content-id')?.value
+      const cid = cidHeader?.trim().replace(/^<|>$/g, '')
+      if (cid && part.body.attachmentId && part.mimeType.startsWith('image/')) {
+        found.push({ cid, attachmentId: part.body.attachmentId, mimeType: part.mimeType, size: part.body.size })
+      }
+      walk(part.parts)
+    }
+  }
+  walk(msg.payload.parts)
+  return found
+}
+
+/** The bytes of one attachment part, base64url as Gmail stores them. */
+export async function fetchAttachment(
+  messageId: string, attachmentId: string, account?: MailAccount,
+): Promise<string | null> {
+  try {
+    const data = await gFetch<{ data?: string }>(
+      `/users/me/messages/${messageId}/attachments/${attachmentId}`, undefined, account)
+    return data.data ?? null
+  } catch { return null }
+}
+
+/** Each cid image as a data URI. Skips anything too big to be a signature. */
+export async function loadInlineImages(
+  msg: GmailMessage, account?: MailAccount, limit = 8, maxBytes = 2_000_000,
+): Promise<Record<string, string>> {
+  const parts = inlineParts(msg).filter(p => p.size <= maxBytes).slice(0, limit)
+  const out: Record<string, string> = {}
+  await Promise.all(parts.map(async p => {
+    const data = await fetchAttachment(msg.id, p.attachmentId, account)
+    if (!data) return
+    out[p.cid] = `data:${p.mimeType};base64,${data.replace(/-/g, '+').replace(/_/g, '/')}`
+  }))
+  return out
+}
+
+/** Put the images back, and take out what is left over. An `<img>` whose
+ *  source never resolved draws a broken glyph and its own alt text, which is
+ *  worse than the space it was in. */
+export function applyInlineImages(html: string, images: Record<string, string>): string {
+  const resolved = html.replace(
+    /src\s*=\s*(["'])\s*cid:([^"']+)\1/gi,
+    (whole, quote: string, cid: string) => {
+      const uri = images[cid.trim()] ?? images[cid.trim().replace(/^<|>$/g, '')]
+      return uri ? `src=${quote}${uri}${quote}` : whole
+    })
+  // Whatever is still a cid — an image too large to fetch, or one the account
+  // can no longer read — goes, tag and all.
+  return resolved.replace(/<img\b[^>]*src\s*=\s*["']?\s*cid:[^>]*>/gi, '')
+}
+
+/** A data URI split across lines by the sending client is not a URI any more.
+ *  Whitespace inside one is never meaningful, so it comes out. */
+export function tidyDataUris(html: string): string {
+  return html.replace(/(["'])(data:[^"']*base64,)([^"']*)\1/gi,
+    (_m, quote: string, head: string, payload: string) => `${quote}${head}${payload.replace(/\s+/g, '')}${quote}`)
 }
