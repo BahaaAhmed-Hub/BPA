@@ -3,7 +3,7 @@ import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import { Mail, Zap, Clock, Copy, CheckCheck, RefreshCw, ArrowRight, WifiOff, ListPlus, Plus, Archive, Search, X as XIcon, PenSquare, Reply, ReplyAll, Forward } from 'lucide-react'
 import { triageEmail } from '@/lib/professor'
 import type { EmailTriage, EmailData } from '@/lib/professor'
-import { listUnreadThreadIds, getThread, extractBody, extractHtmlBody, header, markAsRead, archiveMessage, sendReply, escapeHtml, type MailAccount } from '@/lib/gmail'
+import { listUnreadThreadIds, getThread, extractBody, extractHtmlBody, header, markAsRead, archiveMessage, sendReply, escapeHtml, FOLDER_QUERY, FOLDER_LABEL, FOLDER_SHOWS_RECIPIENT, type MailAccount, type MailFolder } from '@/lib/gmail'
 import { mailAccounts, loadMailView, saveMailView, accountsFor, shortAddress, type MailView } from './mailAccounts'
 import { Composer, type ComposeSeed, type ComposeMode } from './Composer'
 import { signInWithGoogle } from '@/lib/google'
@@ -216,6 +216,12 @@ export function InboxModule() {
   // ── Bulk task state ──────────────────────────────────────────────────────────
   // Which mailbox, or all of them at once.
   const [view, setView] = useState<MailView>(loadMailView)
+  // Which folder. Unread-in-inbox is what this module was, and stays the
+  // default — it is the question the page exists to answer — but the rest of
+  // the mailbox was simply unreachable.
+  const [folder, setFolder] = useState<MailFolder>(() => {
+    try { return (localStorage.getItem('mail-folder') as MailFolder) || 'unread' } catch { return 'unread' }
+  })
   const [compose, setCompose] = useState<ComposeSeed | null>(null)
   const [bulkOpen,   setBulkOpen]   = useState(false)
   const [bulkText,   setBulkText]   = useState('')
@@ -269,7 +275,7 @@ export function InboxModule() {
       // others down with it — it says which, and the rest still arrive.
       const perBox = await Promise.all(boxes.map(async account => {
         try {
-          const { ids, nextPageToken } = await listUnreadThreadIds(20, undefined, account)
+          const { ids, nextPageToken } = await listUnreadThreadIds(20, undefined, account, FOLDER_QUERY[folder])
           const threads = await Promise.all(ids.map(id => getThread(id, account)))
           return { account, threads, nextPageToken, error: null as string | null }
         } catch (e) {
@@ -285,7 +291,11 @@ export function InboxModule() {
       const parsed: Email[] = perBox.flatMap(({ account, threads }) => threads.map(thread => {
         const msg     = thread.messages[thread.messages.length - 1]
         const headers = msg.payload.headers
-        const from    = header(headers, 'from')
+        // In Sent and Drafts the interesting party is the recipient — a list of
+        // your own name is not a mailbox view.
+        const from    = FOLDER_SHOWS_RECIPIENT[folder]
+          ? (header(headers, 'to') || header(headers, 'from'))
+          : header(headers, 'from')
         const nameMatch = from.match(/^"?([^"<]+)"?\s*</)
         return {
           id:          msg.id,
@@ -328,7 +338,7 @@ export function InboxModule() {
     } finally {
       setLoading(false)
     }
-  }, [view, user?.email])
+  }, [view, folder, user?.email])
 
   useEffect(() => { void loadEmails() }, [loadEmails])
 
@@ -404,7 +414,7 @@ export function InboxModule() {
       // A page token belongs to one mailbox; when several are open, more
       // arrives from the one that had more to give.
       const box = viewed.length === 1 ? viewed[0] : (emails[emails.length - 1]?.account ?? viewed[0])
-      const { ids, nextPageToken: npt } = await listUnreadThreadIds(20, nextPageToken, box)
+      const { ids, nextPageToken: npt } = await listUnreadThreadIds(20, nextPageToken, box, FOLDER_QUERY[folder])
       setNextPageToken(npt)
       const threads = await Promise.all(ids.map(id => getThread(id, box)))
       const parsed: Email[] = threads.map(thread => {
@@ -433,7 +443,7 @@ export function InboxModule() {
       setEmails(prev => [...prev, ...parsed])
     } catch { /* offline */ }
     finally { setLoadingMore(false) }
-  }, [nextPageToken, loadingMore, viewed, emails])
+  }, [nextPageToken, loadingMore, viewed, emails, folder])
 
   async function handleBatchArchive() {
     if (!selectedIds.size || batchArchiving) return
@@ -471,6 +481,30 @@ export function InboxModule() {
 
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {/* The rest of the mailbox. Gmail has no folders — it has labels and a
+            query language — so these are names for the searches people mean. */}
+        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+          {(['unread', 'inbox', 'sent', 'drafts', 'starred', 'archive'] as MailFolder[]).map(f => {
+            const on = folder === f
+            return (
+              <button key={f}
+                onClick={() => {
+                  setFolder(f); setSelectedId(null)
+                  try { localStorage.setItem('mail-folder', f) } catch { /* quota */ }
+                }}
+                style={{
+                  height: 26, padding: '0 11px', borderRadius: 999, cursor: 'pointer',
+                  fontFamily: 'inherit', fontSize: 11.5, fontWeight: on ? 600 : 500,
+                  background: on ? '#191712' : '#FFFFFF',
+                  border: `1px solid ${on ? '#191712' : '#E8E1CE'}`,
+                  color: on ? '#FDF8E7' : '#6C6553',
+                }}>
+                {FOLDER_LABEL[f]}
+              </button>
+            )
+          })}
+        </div>
+
         {/* Search */}
         <div style={{ position: 'relative' }}>
           <Search size={13} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#6C6553', pointerEvents: 'none' }} />

@@ -2167,6 +2167,7 @@ export function CalendarIntelligence() {
   // ── Calendar + event state ──────────────────────────────────────────────────
   // The focused day. Week and day views both hang off it; the grid loads by week.
   const [anchorDate,      setAnchorDate]     = useState<Date>(() => new Date())
+
   const [calView,         setCalView]        = useState<'day' | 'week' | 'month'>(() => {
     try { return (localStorage.getItem('cal-view') as 'day' | 'week' | 'month') ?? 'week' } catch { return 'week' }
   })
@@ -2375,12 +2376,7 @@ export function CalendarIntelligence() {
 
   // ── Grid scroll ref (auto-scroll to current time on mount) ──────────────────
   const gridRef = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    if (!gridRef.current) return
-    // The day starts at 07:00 — open the grid there, not at midnight
-    gridRef.current.scrollTo({ top: 7 * HOUR_PX, behavior: 'smooth' })
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  const scrolledFor = useRef<string>('')
 
   // ── Calendar loading ────────────────────────────────────────────────────────
   const reloadCalendars = useCallback(async () => {
@@ -2943,6 +2939,34 @@ export function CalendarIntelligence() {
   })()
   const grouped  = groupByDay(displayedEvents)
   const today    = localDateStr(new Date())
+
+  // ── Where the grid opens ────────────────────────────────────────────────────
+  //
+  // It used to open at 07:00 always, which quietly hid anything earlier: a task
+  // blocked at 04:00 was on the calendar, drawn, and above the fold — so the
+  // honest reading of the screen was "it never got scheduled". The grid opens
+  // at the earliest thing on show instead, and only falls back to 07:00 when
+  // nothing starts before it.
+  const earliestHour = (() => {
+    let earliest = 7
+    for (const day of weekDays) {
+      for (const ev of grouped.get(localDateStr(day)) ?? []) {
+        if (!ev.start.dateTime) continue
+        const d = new Date(ev.start.dateTime)
+        earliest = Math.min(earliest, d.getHours() + d.getMinutes() / 60)
+      }
+    }
+    return Math.max(0, earliest)
+  })()
+  useEffect(() => {
+    if (!gridRef.current) return
+    // Once per day-range: re-running on every event change would yank the grid
+    // back while you are reading it.
+    const key = `${weekDays[0] ? localDateStr(weekDays[0]) : ''}|${calView}|${earliestHour}`
+    if (scrolledFor.current === key) return
+    scrolledFor.current = key
+    gridRef.current.scrollTo({ top: Math.max(0, (earliestHour - 0.25) * HOUR_PX), behavior: 'smooth' })
+  }, [earliestHour, calView, weekDays])
   // Day view speaks for the day on show; a week speaks for today, when today is
   // one of its days. Any other week has no single day to report.
   const weatherDay = calView === 'day'

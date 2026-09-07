@@ -379,14 +379,22 @@ locks again after a stretch of doing nothing (Settings → Finance → SECURITY)
 
 ## Tasks — where a task stands
 Two different things were called status and neither could be changed from the
-task itself. `TaskDetailPanel` now shows both in one cell:
-- **Its own state** — Open / Done / Cancelled, prefixed `__` in the select so it
-  cannot collide with a column of yours called Done.
-- **Its column** — one of `loadCustomStatuses()`, written to `boardStatus`.
+task itself. `TaskDetailPanel` shows both, as **buttons, not a select** — three
+states is not a menu, and a menu you must open to see what is possible is the
+wrong shape for either:
+- **Its own state** — Open / Done / Cancelled, as a segmented row; plus a tick
+  in the panel header that finishes it (and turns into a reopen).
+- **Its column** — one of `loadCustomStatuses()`, as chips, written to
+  `boardStatus`.
 Choosing a column on a finished task *is* the reopen: `completed: false`,
 `status: 'open'`, `completedAt` cleared. The tick could only toggle and the
 board hides what is finished, so a task done by accident had nowhere to go back
 to. `updateTask` logs which happened.
+
+**The grid opens at the earliest thing on it**, not at a fixed 07:00 —
+a task blocked at 04:00 was drawn, above the fold, and read as never scheduled.
+The panel's "On your calendar" row is a button: it sends you to that day with
+the event selected (`focusOn({module:'calendar', id, date})`).
 
 **A date on a task is not an event in Google.** The board's auto-push only fires
 for `quadrant === 'schedule'`, so a dated task in Do has nothing on the calendar.
@@ -447,6 +455,11 @@ here is "the app's mail" any more — it is always *an account's*.
   only in the fields. It does Cc/Bcc, HTML with a plain-text alternative,
   attachments (`multipart/mixed`), `In-Reply-To`/`References`, and RFC 2047
   headers so a non-ASCII subject survives.
+- **Folders are queries.** Gmail has labels and a search language, so
+  `FOLDER_QUERY` names the searches people mean — Unread / Inbox / Sent /
+  Drafts / Starred / Archived — and `mail-folder` remembers the last one. Sent
+  and Drafts show the *recipient* on the row; a list of your own name is not a
+  mailbox view.
 - **`Composer.tsx`** is that panel. From defaults to the mailbox the message
   arrived in. Reply-all drops **every** address of yours, not just that mailbox.
   A forward leaves the thread (no `threadId`, no `In-Reply-To`).

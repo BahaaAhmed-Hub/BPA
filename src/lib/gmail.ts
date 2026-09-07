@@ -164,11 +164,41 @@ export function extractBody(msg: GmailMessage): string {
 
 /** Return unread thread IDs and an optional nextPageToken for pagination. */
 export async function listUnreadThreadIds(
-  max = 20, pageToken?: string, account?: MailAccount,
+  max = 20, pageToken?: string, account?: MailAccount, query = 'is:unread in:inbox',
 ): Promise<{ ids: string[]; nextPageToken?: string }> {
-  const qs = `/users/me/threads?q=is:unread in:inbox&maxResults=${max}${pageToken ? `&pageToken=${pageToken}` : ''}`
+  const qs = `/users/me/threads?q=${encodeURIComponent(query)}&maxResults=${max}${pageToken ? `&pageToken=${pageToken}` : ''}`
   const data = await gFetch<{ threads?: { id: string }[]; nextPageToken?: string }>(qs, undefined, account)
   return { ids: (data.threads ?? []).map(t => t.id), nextPageToken: data.nextPageToken }
+}
+
+// ─── The folders ─────────────────────────────────────────────────────────────
+//
+// Gmail has no folders, it has labels and a search language — which is better,
+// because "sent" and "unread" and "starred" are then the same kind of thing.
+// These are the queries behind the names people actually use.
+
+export type MailFolder = 'unread' | 'inbox' | 'sent' | 'drafts' | 'starred' | 'archive' | 'spam' | 'trash'
+
+export const FOLDER_QUERY: Record<MailFolder, string> = {
+  unread:  'is:unread in:inbox',
+  inbox:   'in:inbox',
+  sent:    'in:sent',
+  drafts:  'in:drafts',
+  starred: 'is:starred',
+  archive: '-in:inbox -in:sent -in:drafts -in:trash -in:spam',
+  spam:    'in:spam',
+  trash:   'in:trash',
+}
+
+export const FOLDER_LABEL: Record<MailFolder, string> = {
+  unread: 'Unread', inbox: 'Inbox', sent: 'Sent', drafts: 'Drafts',
+  starred: 'Starred', archive: 'Archived', spam: 'Spam', trash: 'Bin',
+}
+
+/** A sent message is one you wrote: what matters on the row is who it went to,
+ *  not who it came from. */
+export const FOLDER_SHOWS_RECIPIENT: Partial<Record<MailFolder, boolean>> = {
+  sent: true, drafts: true,
 }
 
 /** Fetch a full thread (all messages). */

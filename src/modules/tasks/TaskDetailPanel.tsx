@@ -7,10 +7,12 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   X, Maximize2, ChevronDown, ChevronRight,
   Plus, Link2, Folder, FileText, Image as ImageIcon, CalendarDays, BarChart3, History, Trash2, Check, User, Paperclip,
+  RotateCcw, ExternalLink, Ban, Circle,
 } from 'lucide-react'
 import type { Task, TaskType, Priority, ChecklistStep, TaskAttachment, TaskActivity } from '@/types'
 import { PRIORITY_META, TASK_TYPE_META, getVisibleUsers, loadVisibleCompanies } from '@/types'
 import { useTaskStore } from '@/store/taskStore'
+import { useUIStore } from '@/store/uiStore'
 import { TASK_TYPE_ORDER, initials, resolveTaskVisuals, formatScheduleLabel } from './taskVisuals'
 import { loadCustomStatuses } from '@/lib/customStatuses'
 import { scheduleTaskToCalendar } from '@/lib/aiScheduler'
@@ -130,16 +132,11 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
 
   // Your columns, from Settings. Read on every render so renaming one in
   // another tab shows here without a reload.
+  const focusOn = useUIStore(s => s.focusOn)
   const columns = loadCustomStatuses()
   const finished  = task.completed || task.status === 'done'
   const cancelled = task.status === 'cancelled'
   const statusValue = finished ? '__done' : cancelled ? '__cancelled' : (task.boardStatus ?? '__open')
-  const statusLabel = finished ? 'Done'
-    : cancelled ? 'Cancelled'
-    : columns.find(c => c.id === task.boardStatus)?.label ?? 'Open'
-  const statusColor = finished ? '#0C8140'
-    : cancelled ? '#9B9180'
-    : columns.find(c => c.id === task.boardStatus)?.color ?? '#6C6553'
 
   // ─── Is it actually on the calendar? ───────────────────────────────────────
   //
@@ -260,6 +257,21 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
         </span>
         </span>
 
+        {/* Finishing something is one gesture, and so is deciding it is not
+            finished after all. The cell below says where the task stands; this
+            is the button you reach for without reading it. */}
+        <button
+          title={finished ? 'Not done after all — reopen it' : 'Mark it done'}
+          aria-pressed={finished}
+          onClick={() => setTaskStatus(finished ? '__open' : '__done')}
+          style={{
+            ...ICON_BTN,
+            background: finished ? '#0C8140' : 'transparent',
+            border: finished ? '1px solid #0C8140' : '1px solid #E8E1CE',
+            color: finished ? '#FFFFFF' : '#6C6553',
+          }}>
+          {finished ? <RotateCcw size={14} /> : <Check size={15} />}
+        </button>
         <button title={expanded ? 'Narrow the panel' : 'Widen the panel'} onClick={() => setExpanded(x => !x)} style={ICON_BTN}><Maximize2 size={14} /></button>
         <button title="Delete task" onClick={() => { deleteTask(task.id); onClose() }} style={ICON_BTN}>
           <Trash2 size={15} />
@@ -321,12 +333,17 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
           {/* On the calendar, or not — and the way to put it there */}
           {task.dueDate && (
             task.gcalEventId ? (
-              <div style={{ ...CELL, gridColumn: '1 / -1', cursor: 'default' }}>
+              <button
+                onClick={() => focusOn({ module: 'calendar', id: task.gcalEventId!, date: task.dueDate })}
+                title="Open the day it is blocked on"
+                style={{ ...CELL, gridColumn: '1 / -1', width: '100%' }}>
                 <CalendarDays size={14} strokeWidth={1.9} style={{ flexShrink: 0, color: '#0C8140' }} />
                 <span style={{ ...CELL_VALUE, color: '#6C6553' }}>
                   On {calTarget.companyName ? `${calTarget.companyName}'s calendar` : 'your calendar'}
+                  {task.plannedTime ? ` · ${task.plannedTime}` : ''}
                 </span>
-              </div>
+                <ExternalLink size={12} style={{ flexShrink: 0, color: '#9B9180' }} />
+              </button>
             ) : (
               <button
                 onClick={() => void pushToCalendar()}
@@ -341,27 +358,62 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
             )
           )}
 
-          {/* Where it stands — its own state, or one of your columns */}
-          <label style={{ ...CELL, gridColumn: '1 / -1', position: 'relative' }}>
-            <span style={{
-              width: 9, height: 9, borderRadius: '50%', flexShrink: 0, background: statusColor,
-            }} />
-            <span style={{ ...CELL_VALUE, color: '#191712' }}>{statusLabel}</span>
+          {/* Where it stands. Two rows of buttons, not a select: the state of a
+              task is three choices and its column is a handful, and a menu you
+              have to open to see what is even possible is the wrong shape for
+              either. What it is now reads off the screen. */}
+          <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div style={{ display: 'flex', gap: 6 }}>
+              {STATE_OPTIONS.map(o => {
+                const on = statusValue === o.value
+                const Icon = o.value === '__done' ? Check : o.value === '__cancelled' ? Ban : Circle
+                return (
+                  <button key={o.value} onClick={() => setTaskStatus(o.value)} aria-pressed={on}
+                    title={o.value === '__done' ? 'Finished' : o.value === '__cancelled' ? 'Not doing it' : 'Still to do'}
+                    style={{
+                      ...CELL, flex: 1, justifyContent: 'center', gap: 6, cursor: 'pointer',
+                      background: on ? (o.value === '__done' ? 'rgba(12,129,64,0.14)' : o.value === '__cancelled' ? 'rgba(155,145,128,0.18)' : 'rgba(245,209,78,0.22)') : '#FAF7EC',
+                      border: `1px solid ${on ? (o.value === '__done' ? '#0C8140' : o.value === '__cancelled' ? '#9B9180' : '#E0CE8A') : '#E8E1CE'}`,
+                      color: on ? '#191712' : '#6C6553',
+                      fontWeight: on ? 600 : 500, fontSize: 12.5,
+                    }}>
+                    <Icon size={13} strokeWidth={2} style={{ flexShrink: 0, color: on && o.value === '__done' ? '#0C8140' : 'currentColor' }} />
+                    {o.label}
+                  </button>
+                )
+              })}
+            </div>
+
+            {columns.length > 0 && (
+              <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+                {columns.map(c => {
+                  const on = !finished && !cancelled && task.boardStatus === c.id
+                  return (
+                    <button key={c.id} onClick={() => setTaskStatus(c.id)}
+                      title={finished ? `Reopen it in ${c.label}` : `Move it to ${c.label}`}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 5,
+                        height: 24, padding: '0 10px', borderRadius: 999, cursor: 'pointer',
+                        fontFamily: 'inherit', fontSize: 11, fontWeight: on ? 600 : 500,
+                        background: on ? '#191712' : '#FAF7EC',
+                        border: `1px solid ${on ? '#191712' : '#E8E1CE'}`,
+                        color: on ? '#FDF8E7' : '#6C6553',
+                      }}>
+                      <span style={{ width: 7, height: 7, borderRadius: '50%', background: c.color, flexShrink: 0 }} />
+                      {c.label}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+
             {finished && task.completedAt && (
-              <span style={{ fontSize: 11.5, color: '#9B9180', flexShrink: 0 }}>
-                {new Date(task.completedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+              <span style={{ fontSize: 11, color: '#9B9180' }}>
+                Done {new Date(task.completedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                {' · '}pick a column to reopen it
               </span>
             )}
-            <ChevronDown size={13} style={{ flexShrink: 0, color: '#9B9180' }} />
-            <select value={statusValue} onChange={e => setTaskStatus(e.target.value)} style={CELL_INPUT}>
-              <optgroup label="State">
-                {STATE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-              </optgroup>
-              <optgroup label="Column">
-                {columns.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
-              </optgroup>
-            </select>
-          </label>
+          </div>
 
           {/* Type */}
           <label style={{ ...CELL, position: 'relative' }}>
