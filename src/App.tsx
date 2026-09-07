@@ -329,7 +329,10 @@ const NAV_ICONS: Record<string, React.ReactNode> = {
 /** The top bar's height. The mark sets it: 60px of logo needs somewhere to sit
  *  with air around it, and everything that fills the rest of the window
  *  measures itself against this. */
-export const NAV_H = 76
+/** The shell's own height, as a CSS length rather than a number: it is
+ *  --sb-h-header, which a theme moves, and the two screens that size
+ *  themselves against it read it the same way. */
+export const NAV_H = 'var(--sb-h-header)'
 
 const NAV_ITEMS = [
   { id: 'morning',   label: 'Today'    },

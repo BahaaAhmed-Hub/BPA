@@ -111,7 +111,11 @@
 
   --sb-h-pill:   34px;
   --sb-h-nav:    36px;
-  --sb-h-header: 66px;
+  /* The shell's own height. 76px and not the 66 this token used to claim:
+     App.tsx drew 76 and nothing read the token, so 66 was a number that had
+     never been true. The other themes are scaled from their own column by the
+     same ratio, so the default stays exactly where it was. */
+  --sb-h-header: 76px;
 
   --sb-t-h2:      18px;
   --sb-t-h1:      27px;
@@ -263,10 +267,10 @@ html, body {
   transition: background 120ms ease-out, color 120ms ease-out,
               border-color 120ms ease-out, box-shadow 120ms ease-out;
 }
-.sb-btn[data-size="sm"] { height: 28px; padding: 0 12px; font-size: var(--sb-t-body-s); gap: 6px; }
+.sb-btn[data-size="sm"] { height: calc(var(--sb-h-pill) - 6px); padding: 0 12px; font-size: var(--sb-t-body-s); gap: 6px; }
 .sb-btn[data-block]     { width: 100%; }
 .sb-btn[data-icon-only] { width: var(--sb-h-pill); padding: 0; }
-.sb-btn[data-icon-only][data-size="sm"] { width: 28px; }
+.sb-btn[data-icon-only][data-size="sm"] { width: calc(var(--sb-h-pill) - 6px); }
 /* A disabled control is still text somebody has to read. Half-opacity grey on
    cream is 2.2:1, and it was the only signal that the control was off; muted
    ink on the field colour is 4.7:1, and aria-disabled says it out loud. */
@@ -423,7 +427,9 @@ html, body {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 28px;
+  /* Inside a 3px track, so the control it sits in is --sb-h-pill tall and
+     moves with the theme like every other control. */
+  height: calc(var(--sb-h-pill) - 6px);
   padding: 0 12px;
   border: none;
   border-radius: var(--sb-r-pill);
@@ -445,8 +451,8 @@ html, body {
 }
 .sb-segmented-opt:disabled { color: var(--sb-ink-4); cursor: default; }
 
-.sb-segmented[data-size="sm"] .sb-segmented-opt { height: 24px; padding: 0 10px; font-size: var(--sb-t-meta); gap: 5px; }
-.sb-segmented[data-size="lg"] .sb-segmented-opt { height: 30px; padding: 0 14px; font-size: var(--sb-t-body); }
+.sb-segmented[data-size="sm"] .sb-segmented-opt { height: calc(var(--sb-h-pill) - 10px); padding: 0 10px; font-size: var(--sb-t-meta); gap: 5px; }
+.sb-segmented[data-size="lg"] .sb-segmented-opt { height: calc(var(--sb-h-pill) - 4px); padding: 0 14px; font-size: var(--sb-t-body); }
 
 /* Two hovers that are not a primitive: a figure that underlines to say it can
    be opened, and a row that tints. Both were mouse handlers writing styles. */
