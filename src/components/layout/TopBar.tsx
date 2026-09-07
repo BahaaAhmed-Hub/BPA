@@ -47,7 +47,7 @@ export function TopBar({ title, subtitle }: TopBarProps) {
             color: 'var(--sb-ink-1)',
             letterSpacing: '-0.3px',
             lineHeight: 1,
-            fontFamily: "'Cabinet Grotesk', sans-serif",
+            fontFamily: 'var(--sb-font-num)',
           }}
         >
           {title}

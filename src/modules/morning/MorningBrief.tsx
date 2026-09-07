@@ -789,7 +789,7 @@ export function MorningBrief() {
                 fontSize: 48,
                 fontWeight: 800,
                 color: 'var(--sb-ink-1)',
-                fontFamily: "'Cabinet Grotesk', sans-serif",
+                fontFamily: 'var(--sb-font-num)',
                 letterSpacing: '-1.5px',
                 lineHeight: 1.05,
               }}>

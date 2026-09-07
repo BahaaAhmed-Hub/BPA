@@ -774,7 +774,7 @@ export function InboxModule() {
             <WifiOff size={22} color="#7F77DD" />
           </div>
           <div>
-            <p style={{ margin: '0 0 6px', fontSize: 16, fontWeight: 700, color: 'var(--sb-ink-1)', fontFamily: "'Cabinet Grotesk', sans-serif" }}>
+            <p style={{ margin: '0 0 6px', fontSize: 16, fontWeight: 700, color: 'var(--sb-ink-1)', fontFamily: 'var(--sb-font-num)' }}>
               Connect Gmail
             </p>
             <p style={{ margin: 0, fontSize: 13, color: 'var(--sb-ink-3)', lineHeight: 1.6, maxWidth: 320 }}>
@@ -817,7 +817,7 @@ export function InboxModule() {
               right — as icons, the way the task panel does it. Four words in
               four pills was a row of buttons the width of the card. */}
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 6 }}>
-            <p style={{ margin: 0, flex: 1, minWidth: 0, fontSize: 18, fontWeight: 700, color: 'var(--sb-ink-1)', fontFamily: "'Cabinet Grotesk', sans-serif", letterSpacing: '-0.3px', lineHeight: 1.25 }}>
+            <p style={{ margin: 0, flex: 1, minWidth: 0, fontSize: 18, fontWeight: 700, color: 'var(--sb-ink-1)', fontFamily: 'var(--sb-font-num)', letterSpacing: '-0.3px', lineHeight: 1.25 }}>
               {selectedEmail.subject}
             </p>
             <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>

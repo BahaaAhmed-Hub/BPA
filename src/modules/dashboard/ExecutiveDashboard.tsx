@@ -56,7 +56,7 @@ function MetricCard({
         <div style={{
           fontSize: 28, fontWeight: 700,
           color: 'var(--sb-ink-1)',
-          fontFamily: "'Cabinet Grotesk', sans-serif",
+          fontFamily: 'var(--sb-font-num)',
           letterSpacing: '-0.5px', lineHeight: 1,
         }}>
           {value}
@@ -195,7 +195,7 @@ export function ExecutiveDashboard() {
             <h2 style={{
               margin: 0, fontSize: 22, fontWeight: 700,
               color: 'var(--sb-ink-1)',
-              fontFamily: "'Cabinet Grotesk', sans-serif", letterSpacing: '-0.4px',
+              fontFamily: 'var(--sb-font-num)', letterSpacing: '-0.4px',
             }}>
               {greeting}
             </h2>
@@ -340,7 +340,7 @@ export function ExecutiveDashboard() {
                         display: 'flex', flexDirection: 'column', gap: 4,
                         cursor: 'pointer',
                       }}>
-                      <div style={{ fontSize: 22, fontWeight: 700, color, fontFamily: "'Cabinet Grotesk', sans-serif" }}>
+                      <div style={{ fontSize: 22, fontWeight: 700, color, fontFamily: 'var(--sb-font-num)' }}>
                         {count}
                       </div>
                       <div style={{ fontSize: 11.5, color: 'var(--sb-ink-3)' }}>{label}</div>

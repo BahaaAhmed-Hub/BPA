@@ -216,7 +216,7 @@ export function BehavioralOS() {
       flex: 1, overflowY: 'auto',
       background: 'var(--sb-page)',
       color: 'var(--sb-ink-1)',
-      fontFamily: "'DM Sans', sans-serif",
+      fontFamily: 'var(--sb-font-ui)',
       minHeight: '100vh',
     }}>
       <div style={{ maxWidth: 760, margin: '0 auto', padding: '36px 32px 80px' }}>

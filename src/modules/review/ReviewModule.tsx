@@ -153,9 +153,9 @@ function StatCard({
         <div>
           {editable && onChange ? (
             <input type="number" min={0} max={168} value={value} onChange={e => onChange(parseFloat(e.target.value) || 0)}
-              style={{ fontSize: 28, fontWeight: 700, color: 'var(--sb-ink-1)', fontFamily: "'Cabinet Grotesk', sans-serif", letterSpacing: '-0.5px', background: 'none', border: 'none', outline: 'none', width: 80, padding: 0 }} />
+              style={{ fontSize: 28, fontWeight: 700, color: 'var(--sb-ink-1)', fontFamily: 'var(--sb-font-num)', letterSpacing: '-0.5px', background: 'none', border: 'none', outline: 'none', width: 80, padding: 0 }} />
           ) : (
-            <div style={{ fontSize: 28, fontWeight: 700, color: 'var(--sb-ink-1)', fontFamily: "'Cabinet Grotesk', sans-serif", letterSpacing: '-0.5px', lineHeight: 1 }}>{value}</div>
+            <div style={{ fontSize: 28, fontWeight: 700, color: 'var(--sb-ink-1)', fontFamily: 'var(--sb-font-num)', letterSpacing: '-0.5px', lineHeight: 1 }}>{value}</div>
           )}
           <div style={{ fontSize: 12.5, color: 'var(--sb-ink-4)', marginTop: 4 }}>{label}</div>
           <div style={{ fontSize: 11, color, marginTop: 6, fontWeight: 500 }}>{sub}</div>
@@ -485,7 +485,7 @@ export function ReviewModule() {
 
         {/* ─── Week label ─────────────────────────────────────────────────── */}
         <div style={{ marginBottom: 24 }}>
-          <h2 style={{ margin: '0 0 3px', fontSize: 20, fontWeight: 700, color: 'var(--sb-ink-1)', fontFamily: "'Cabinet Grotesk', sans-serif", letterSpacing: '-0.3px' }}>
+          <h2 style={{ margin: '0 0 3px', fontSize: 20, fontWeight: 700, color: 'var(--sb-ink-1)', fontFamily: 'var(--sb-font-num)', letterSpacing: '-0.3px' }}>
             Week of {new Date(getMonday() + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
           </h2>
         </div>

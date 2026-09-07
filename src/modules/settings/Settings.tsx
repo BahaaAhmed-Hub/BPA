@@ -225,7 +225,7 @@ const inputStyle: React.CSSProperties = {
   border: '1px solid var(--sb-border)',
   borderRadius: 7, color: 'var(--sb-ink-1)',
   fontSize: 13.5, padding: '7px 11px', outline: 'none',
-  fontFamily: 'DM Sans, sans-serif', width: '100%', boxSizing: 'border-box' as const,
+  fontFamily: 'var(--sb-font-ui)', width: '100%', boxSizing: 'border-box' as const,
 }
 const selectStyle: React.CSSProperties = {
   ...inputStyle, cursor: 'pointer', width: 'auto',

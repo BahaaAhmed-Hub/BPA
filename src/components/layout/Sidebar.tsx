@@ -105,7 +105,7 @@ export function Sidebar() {
         {!sidebarCollapsed && (
           <span
             style={{
-              fontFamily: "'Cabinet Grotesk', sans-serif",
+              fontFamily: 'var(--sb-font-num)',
               fontWeight: 700,
               fontSize: 16,
               color: 'var(--sb-ink-1)',
