@@ -106,12 +106,12 @@ const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 const CAL_ICON_BTN: React.CSSProperties = {
   width: 36, height: 36, boxSizing: 'border-box', borderRadius: 10, flexShrink: 0,
   display: 'flex', alignItems: 'center', justifyContent: 'center',
-  background: '#FFFFFF', border: '1px solid #E8E1CE', color: '#6C6553', cursor: 'pointer', padding: 0,
+  background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-3)', cursor: 'pointer', padding: 0,
 }
 const CAL_PILL: React.CSSProperties = {
   display: 'inline-flex', alignItems: 'center', gap: 7, height: 36, boxSizing: 'border-box',
   padding: '0 14px', borderRadius: 999, flexShrink: 0,
-  background: '#FFFFFF', border: '1px solid #E8E1CE', color: '#191712',
+  background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-1)',
   fontSize: 13.5, fontFamily: 'inherit', cursor: 'pointer',
 }
 
@@ -626,7 +626,7 @@ function ColorPickerPopover({ current, onPick, onClose }: { current: string; onP
   return (
     <div ref={ref} onClick={e => e.stopPropagation()} style={{
       position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 200,
-      background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 10,
+      background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 10,
       padding: '10px 10px 8px', boxShadow: '0 8px 28px rgba(25,23,18,0.18)',
       display: 'flex', flexWrap: 'wrap', gap: 7, width: 152,
     }}>
@@ -645,17 +645,17 @@ function DayColumn({ dateStr, isToday, children }: { dateStr: string; isToday: b
   return (
     <div ref={setNodeRef} style={{
       flex: 1, position: 'relative', height: GRID_H,
-      borderRight: '1px solid #E8E1CE',
+      borderRight: '1px solid var(--sb-border)',
       background: isToday ? 'rgba(var(--sb-accent-rgb),0.045)' : isOver ? 'rgba(var(--sb-accent-rgb),0.09)' : 'transparent',
       transition: 'background 0.1s', minWidth: 0,
     }}>
       {/* Hour lines */}
       {Array.from({ length: 24 }, (_, h) => (
-        <div key={h} style={{ position: 'absolute', top: h * HOUR_PX, left: 0, right: 0, borderTop: '1px solid #EDE7D9', pointerEvents: 'none' }} />
+        <div key={h} style={{ position: 'absolute', top: h * HOUR_PX, left: 0, right: 0, borderTop: '1px solid var(--sb-field)', pointerEvents: 'none' }} />
       ))}
       {/* Half-hour lines */}
       {Array.from({ length: 24 }, (_, h) => (
-        <div key={`h${h}`} style={{ position: 'absolute', top: h * HOUR_PX + HOUR_PX / 2, left: 0, right: 0, borderTop: '1px dashed #EDE7D9', opacity: 0.6, pointerEvents: 'none' }} />
+        <div key={`h${h}`} style={{ position: 'absolute', top: h * HOUR_PX + HOUR_PX / 2, left: 0, right: 0, borderTop: '1px dashed var(--sb-field)', opacity: 0.6, pointerEvents: 'none' }} />
       ))}
       {children}
     </div>
@@ -729,8 +729,8 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
     : isSelected
     ? `2px solid ${color}`
     : `1px solid rgba(${rgb}, 0.34)`
-  const evInk = '#191712'
-  const evTimeInk = '#6C6553'
+  const evInk = 'var(--sb-ink-1)'
+  const evTimeInk = 'var(--sb-ink-3)'
 
   // What a card can say depends on how much of it there is — in pixels, not in
   // percent, since a third of a day column is a different size on every screen.
@@ -860,7 +860,7 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
             style={{
               width: 18, height: 18, borderRadius: '50%', cursor: 'pointer', border: 'none', padding: 0,
               background: isDone ? 'rgba(29,158,117,0.9)' : 'rgba(25,23,18,0.12)',
-              color: isDone ? '#fff' : '#6C6553',
+              color: isDone ? '#fff' : 'var(--sb-ink-3)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               // Revealed on hover on a mouse; always present on a touch
               // screen, which has no hover and could not reach them at all.
@@ -875,7 +875,7 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
             style={{
               width: 18, height: 18, borderRadius: '50%', cursor: 'pointer', border: 'none', padding: 0,
               background: isCancelled ? 'rgba(224,82,82,0.9)' : 'rgba(25,23,18,0.12)',
-              color: isCancelled ? '#fff' : '#6C6553',
+              color: isCancelled ? '#fff' : 'var(--sb-ink-3)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               opacity: 0, transition: 'opacity 0.12s',
             }}
@@ -899,32 +899,32 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
 
 const EV_PILL: React.CSSProperties = {
   display: 'inline-flex', alignItems: 'center', gap: 6, height: 42, boxSizing: 'border-box',
-  padding: '0 14px', borderRadius: 10, background: '#FFFFFF', border: '1px solid #E8E1CE',
-  color: '#191712', fontSize: 13.5, fontFamily: 'inherit', cursor: 'pointer', minWidth: 0,
+  padding: '0 14px', borderRadius: 10, background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
+  color: 'var(--sb-ink-1)', fontSize: 13.5, fontFamily: 'inherit', cursor: 'pointer', minWidth: 0,
 }
 const EV_ROUND: React.CSSProperties = {
   width: 30, height: 30, borderRadius: '50%', flexShrink: 0, padding: 0,
   display: 'flex', alignItems: 'center', justifyContent: 'center',
-  background: '#FFFFFF', border: '1px solid #E8E1CE', color: '#6C6553', cursor: 'pointer',
+  background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-3)', cursor: 'pointer',
 }
 /** Four sizes in the whole panel: 27 title, 14 value, 13.5 label, 11.5 caption. */
 const EV_LABEL: React.CSSProperties = {
-  width: 78, flexShrink: 0, fontSize: 13.5, color: '#6C6553', fontWeight: 500,
+  width: 78, flexShrink: 0, fontSize: 13.5, color: 'var(--sb-ink-3)', fontWeight: 500,
 }
 /** Every labelled row hangs off the same left edge. */
 const EV_ROW: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 12,
 }
 const EV_SECTION: React.CSSProperties = {
-  ...T.heading, color: '#191712', flexShrink: 0,
+  ...T.heading, color: 'var(--sb-ink-1)', flexShrink: 0,
 }
 /** Every value in the panel sits in one of these, whether you can type in it,
  *  pick from it, or only read it. */
 const EV_FIELD: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 9, height: 48, boxSizing: 'border-box',
   width: '100%', minWidth: 0, padding: '0 15px', borderRadius: 11,
-  background: '#FFFFFF', border: '1px solid #E8E1CE',
-  color: '#191712', fontSize: 13.5, fontFamily: 'inherit', textAlign: 'left',
+  background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
+  color: 'var(--sb-ink-1)', fontSize: 13.5, fontFamily: 'inherit', textAlign: 'left',
 }
 const EV_GHOST_ICON: React.CSSProperties = {
   width: 30, height: 30, borderRadius: 8, flexShrink: 0, padding: 0,
@@ -956,8 +956,8 @@ function responseGlyph(status?: string): string {
   return '?'
 }
 function responseTone(status?: string): string {
-  if (status === 'accepted') return '#0C8140'
-  if (status === 'declined') return '#C62828'
+  if (status === 'accepted') return 'var(--sb-positive)'
+  if (status === 'declined') return 'var(--sb-negative)'
   return '#9B9180'
 }
 
@@ -1013,7 +1013,7 @@ function ProviderMark({ provider, size = 24 }: { provider: VideoProvider; size?:
       </svg>
     )
   }
-  return <Video size={size - 4} color="#6C6553" style={{ flexShrink: 0 }} />
+  return <Video size={size - 4} color="var(--sb-ink-3)" style={{ flexShrink: 0 }} />
 }
 
 /** What to show for the link. A Meet code reads out loud — "omb-mppj-wyv" —
@@ -1275,7 +1275,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
     <div ref={popupRef} onClick={e => e.stopPropagation()} onMouseDown={e => e.stopPropagation()} style={{
       width: 'clamp(320px, 34vw, 440px)', flexShrink: 0, alignSelf: 'stretch', minHeight: 0,
       overflowY: 'auto', scrollbarWidth: 'thin',
-      background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 18,
+      background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 18,
       boxShadow: '0 1px 3px rgba(25,23,18,0.06)',
       padding: '18px 22px 22px',
     }}>
@@ -1288,7 +1288,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
             title={onMoveCalendar ? 'Click to move this to another calendar' : calName}
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 7, height: 34, padding: '0 13px',
-              borderRadius: 999, background: '#F5F1E6', color: '#4A4438', fontSize: 13.5,
+              borderRadius: 999, background: '#F5F1E6', color: 'var(--sb-ink-2)', fontSize: 13.5,
               minWidth: 0, maxWidth: '100%', cursor: onMoveCalendar ? 'pointer' : 'default',
             }}>
             <span style={{ width: 8, height: 8, borderRadius: 999, background: calColor, flexShrink: 0 }} />
@@ -1320,9 +1320,9 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
           title={status === 'done' ? 'Not done after all' : 'Mark done'}
           style={{
             ...EV_ROUND, width: 34, height: 34,
-            background: status === 'done' ? '#0C8140' : '#FFFFFF',
-            borderColor: status === 'done' ? '#0C8140' : '#E8E1CE',
-            color: status === 'done' ? '#FFFFFF' : '#6C6553',
+            background: status === 'done' ? 'var(--sb-positive)' : 'var(--sb-card)',
+            borderColor: status === 'done' ? 'var(--sb-positive)' : 'var(--sb-border)',
+            color: status === 'done' ? 'var(--sb-card)' : 'var(--sb-ink-3)',
           }}><Check size={15} strokeWidth={2.2} /></button>
 
         <button
@@ -1330,9 +1330,9 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
           title={status === 'cancelled' ? 'Back on' : 'Mark cancelled'}
           style={{
             ...EV_ROUND, width: 34, height: 34,
-            background: status === 'cancelled' ? '#6C6553' : '#FFFFFF',
-            borderColor: status === 'cancelled' ? '#6C6553' : '#E8E1CE',
-            color: status === 'cancelled' ? '#FFFFFF' : '#6C6553',
+            background: status === 'cancelled' ? 'var(--sb-ink-3)' : 'var(--sb-card)',
+            borderColor: status === 'cancelled' ? 'var(--sb-ink-3)' : 'var(--sb-border)',
+            color: status === 'cancelled' ? 'var(--sb-card)' : 'var(--sb-ink-3)',
           }}><Ban size={15} strokeWidth={2} /></button>
 
         <button
@@ -1341,7 +1341,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
           title="Delete event"
           style={{
             ...EV_ROUND, width: 34, height: 34,
-            color: '#C62828', borderColor: 'rgba(198,40,40,0.35)', opacity: onDelete ? 1 : 0.45,
+            color: 'var(--sb-negative)', borderColor: 'rgba(198,40,40,0.35)', opacity: onDelete ? 1 : 0.45,
           }}><Trash2 size={15} /></button>
 
         <button onClick={onClose} title="Close" style={{ ...EV_ROUND, width: 34, height: 34 }}><X size={15} /></button>
@@ -1375,7 +1375,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
           width: '100%', boxSizing: 'border-box', margin: '18px 0 0', resize: 'none', overflow: 'hidden',
           background: 'transparent', border: 'none', padding: 0,
           fontFamily: DISPLAY, fontSize: 27, fontWeight: 700,
-          lineHeight: 1.18, letterSpacing: '-0.025em', color: '#191712', outline: 'none', textAlign: 'left',
+          lineHeight: 1.18, letterSpacing: '-0.025em', color: 'var(--sb-ink-1)', outline: 'none', textAlign: 'left',
           textDecoration: status === 'cancelled' ? 'line-through' : 'none',
         }} />
 
@@ -1386,10 +1386,10 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
         <div style={{
           display: 'flex', alignItems: 'center', gap: 11, marginTop: 16,
           height: 58, padding: '0 15px', boxSizing: 'border-box',
-          borderRadius: 12, background: '#FFFFFF', border: '1px solid #E8E1CE',
+          borderRadius: 12, background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
         }}>
           <ProviderMark provider={provider} size={24} />
-          <span style={{ fontSize: 13.5, fontWeight: 600, color: '#191712', flexShrink: 0 }}>
+          <span style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--sb-ink-1)', flexShrink: 0 }}>
             {PROVIDER_NAME[provider]}
           </span>
           <a href={videoLink} target="_blank" rel="noreferrer"
@@ -1414,13 +1414,13 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
       {videoLink && meetOpen && (
         <div style={{
           marginTop: 6, padding: '11px 15px', borderRadius: 11,
-          background: '#FAF7EC', border: '1px solid #E8E1CE',
+          background: 'var(--sb-field)', border: '1px solid var(--sb-border)',
         }}>
           <a href={videoLink} target="_blank" rel="noreferrer" style={{
             display: 'block', fontSize: 11.5, color: '#1A73E8', wordBreak: 'break-all', textDecoration: 'none',
           }}>{videoLink}</a>
           {phoneEntry && (
-            <p style={{ margin: '7px 0 0', fontSize: 11.5, color: '#6C6553' }}>
+            <p style={{ margin: '7px 0 0', fontSize: 11.5, color: 'var(--sb-ink-3)' }}>
               Dial in: {phoneEntry.label ?? phoneEntry.uri.replace('tel:', '')}
               {phoneEntry.pin ? ` · PIN ${phoneEntry.pin}` : ''}
             </p>
@@ -1435,7 +1435,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
         <span style={EV_LABEL}>Location</span>
         <span ref={placeRef} style={{ flex: 1, minWidth: 0, display: 'flex', gap: 7, position: 'relative' }}>
           <span style={{ ...EV_FIELD, flex: 1 }}>
-            <MapPin size={15} color={location ? '#6C6553' : '#9B9180'} style={{ flexShrink: 0 }} />
+            <MapPin size={15} color={location ? 'var(--sb-ink-3)' : '#9B9180'} style={{ flexShrink: 0 }} />
             <input
               value={location}
               onChange={e => { setLocation(e.target.value); setPlaceQuery(e.target.value) }}
@@ -1448,7 +1448,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
               placeholder="Add a place — room, office or address"
               style={{
                 flex: 1, minWidth: 0, border: 'none', background: 'transparent', padding: 0,
-                fontSize: 13.5, fontFamily: 'inherit', color: '#191712', outline: 'none',
+                fontSize: 13.5, fontFamily: 'inherit', color: 'var(--sb-ink-1)', outline: 'none',
                 textOverflow: 'ellipsis',
               }} />
             {where.kind !== 'empty' && (
@@ -1473,7 +1473,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
           {places.length > 0 && (
             <div style={{
               position: 'absolute', top: 'calc(100% + 5px)', left: 0, right: 0, zIndex: 90,
-              background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 11, padding: 5,
+              background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 11, padding: 5,
               boxShadow: '0 18px 40px -18px rgba(25,23,18,.45)',
             }}>
               {places.map(pl => (
@@ -1482,7 +1482,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
                   style={{
                     display: 'flex', alignItems: 'center', gap: 8, width: '100%', height: 32,
                     padding: '0 9px', borderRadius: 8, border: 'none', background: 'transparent',
-                    color: '#191712', fontSize: 13.5, fontFamily: 'inherit', cursor: 'pointer', textAlign: 'left',
+                    color: 'var(--sb-ink-1)', fontSize: 13.5, fontFamily: 'inherit', cursor: 'pointer', textAlign: 'left',
                   }}>
                   <MapPin size={13} color="#9B9180" style={{ flexShrink: 0 }} />
                   <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{pl}</span>
@@ -1493,7 +1493,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
         </span>
       </div>
 
-      <div style={{ height: 1, background: '#F0EBDC', margin: '20px 0' }} />
+      <div style={{ height: 1, background: 'var(--sb-hairline)', margin: '20px 0' }} />
 
       {/* ── When ─────────────────────────────────────────────────────────── */}
       {/* One pill, one popover: the date and both times together. Three
@@ -1504,7 +1504,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
         <span ref={whenRef} style={{ flex: 1, minWidth: 0, position: 'relative' }}>
           <button onClick={() => setWhenOpen(o => !o)}
             style={{ ...EV_FIELD, width: '100%', cursor: 'pointer' }}>
-            <CalendarIcon size={15} color="#6C6553" style={{ flexShrink: 0 }} />
+            <CalendarIcon size={15} color="var(--sb-ink-3)" style={{ flexShrink: 0 }} />
             <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {new Date(dateStr + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}
               {isAllDay ? ' · All day' : ` · ${compactRange(fromTime, toTime)}`}
@@ -1573,8 +1573,8 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
             <button onClick={() => setRepeatOpen(o => !o)} disabled={!onSave}
               title={onSave ? 'How often this comes back' : 'You cannot edit this event'}
               style={{ ...EV_FIELD, width: '100%', cursor: onSave ? 'pointer' : 'default',
-                color: recurrence ? '#191712' : '#9B9180', opacity: onSave ? 1 : 0.7 }}>
-              <RefreshCw size={14} color="#6C6553" style={{ flexShrink: 0 }} />
+                color: recurrence ? 'var(--sb-ink-1)' : '#9B9180', opacity: onSave ? 1 : 0.7 }}>
+              <RefreshCw size={14} color="var(--sb-ink-3)" style={{ flexShrink: 0 }} />
               <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {recurrence ?? 'Does not repeat'}
               </span>
@@ -1597,7 +1597,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
         <div style={EV_ROW}>
           <span style={EV_LABEL}>Alert</span>
           <label style={{ ...EV_FIELD, flex: 1, position: 'relative', cursor: 'pointer' }}>
-            <span style={{ flex: 1, minWidth: 0, color: alertMinutes === undefined ? '#9B9180' : '#191712' }}>
+            <span style={{ flex: 1, minWidth: 0, color: alertMinutes === undefined ? '#9B9180' : 'var(--sb-ink-1)' }}>
               {describeAlert(alertMinutes, event.reminders?.useDefault !== false)}
             </span>
             <ChevronDown size={14} strokeWidth={2} style={{ color: '#9B9180', flexShrink: 0 }} />
@@ -1618,13 +1618,13 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
           <span style={{ flex: 1, minWidth: 0 }}>
             {prep ? (
               <span style={{ ...EV_FIELD, width: '100%' }}>
-                <Sparkles size={14} color="#6C6553" />
+                <Sparkles size={14} color="var(--sb-ink-3)" />
                 {prepPoints.length} point{prepPoints.length === 1 ? '' : 's'} gathered
               </span>
             ) : (
               <button onClick={onPrepRequest} disabled={prepLoading}
                 style={{ ...EV_FIELD, width: '100%', cursor: 'pointer', opacity: prepLoading ? 0.6 : 1 }}>
-                <Sparkles size={14} color="#6C6553" /> {prepLoading ? 'Gathering prep…' : 'Gather prep'}
+                <Sparkles size={14} color="var(--sb-ink-3)" /> {prepLoading ? 'Gathering prep…' : 'Gather prep'}
               </button>
             )}
           </span>
@@ -1632,10 +1632,10 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
       </div>
 
       {prepError && (
-        <p style={{ margin: '8px 0 0', fontSize: 11.5, color: '#C62828' }}>{prepError}</p>
+        <p style={{ margin: '8px 0 0', fontSize: 11.5, color: 'var(--sb-negative)' }}>{prepError}</p>
       )}
 
-      <div style={{ height: 1, background: '#F0EBDC', margin: '20px 0' }} />
+      <div style={{ height: 1, background: 'var(--sb-hairline)', margin: '20px 0' }} />
 
       {/* ── Attendees ────────────────────────────────────────────────────── */}
       <div style={{ ...EV_SECTION, marginBottom: 6 }}>Attendees</div>
@@ -1648,9 +1648,9 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
             <span style={{
               width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: '#F1ECDE', color: '#6C6553', fontSize: 10, fontWeight: 700,
+              background: 'var(--sb-field)', color: 'var(--sb-ink-3)', fontSize: 10, fontWeight: 700,
             }}>{evInitials(a.displayName, a.email)}</span>
-            <span style={{ flex: 1, minWidth: 0, fontSize: 13.5, color: '#191712', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <span style={{ flex: 1, minWidth: 0, fontSize: 13.5, color: 'var(--sb-ink-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {a.displayName ?? a.email}
             </span>
             <span
@@ -1659,13 +1659,13 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
                 ...EV_ROUND, width: 32, height: 32, flexShrink: 0, fontSize: 13.5, fontWeight: 600,
                 color: responseTone(a.responseStatus),
                 borderColor: a.responseStatus === 'accepted' ? 'rgba(12,129,64,0.4)'
-                  : a.responseStatus === 'declined' ? 'rgba(198,40,40,0.35)' : '#E8E1CE',
+                  : a.responseStatus === 'declined' ? 'rgba(198,40,40,0.35)' : 'var(--sb-border)',
               }}>{responseGlyph(a.responseStatus)}</span>
             <button
               onClick={() => removeAttendee(a.email)}
               disabled={!onSave}
               title={`Take ${a.displayName ?? a.email} off the invite`}
-              style={{ ...EV_ROUND, width: 32, height: 32, flexShrink: 0, color: '#C62828', borderColor: 'rgba(198,40,40,0.35)', opacity: onSave ? 1 : 0.45 }}>
+              style={{ ...EV_ROUND, width: 32, height: 32, flexShrink: 0, color: 'var(--sb-negative)', borderColor: 'rgba(198,40,40,0.35)', opacity: onSave ? 1 : 0.45 }}>
               <Trash2 size={14} />
             </button>
           </div>
@@ -1703,7 +1703,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
       </div>
 
       {/* ── Attachments ──────────────────────────────────────────────────── */}
-      <div style={{ height: 1, background: '#F0EBDC', margin: '20px 0' }} />
+      <div style={{ height: 1, background: 'var(--sb-hairline)', margin: '20px 0' }} />
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <span style={EV_SECTION}>Attachments</span>
         <span style={{ flex: 1, minWidth: 0, fontSize: 11.5, color: '#9B9180', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -1728,10 +1728,10 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
               <span style={{
                 width: 32, height: 32, borderRadius: 9, flexShrink: 0,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: '#FAF7EC', border: '1px solid #E8E1CE', color: '#6C6553',
+                background: 'var(--sb-field)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-3)',
               }}><FileText size={15} strokeWidth={1.9} /></span>
               <span style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ display: 'block', fontSize: 13.5, color: '#191712', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <span style={{ display: 'block', fontSize: 13.5, color: 'var(--sb-ink-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {f.title ?? f.fileUrl}
                 </span>
                 <span style={{ display: 'block', fontSize: 11.5, color: '#9B9180', marginTop: 2 }}>
@@ -1745,7 +1745,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
       )}
 
       {/* ── Notes ────────────────────────────────────────────────────────── */}
-      <div style={{ height: 1, background: '#F0EBDC', margin: '20px 0' }} />
+      <div style={{ height: 1, background: 'var(--sb-hairline)', margin: '20px 0' }} />
       <div style={{ ...EV_SECTION, marginBottom: 8 }}>Notes</div>
       <textarea
         value={notes}
@@ -1755,15 +1755,15 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
         rows={3}
         style={{
           width: '100%', boxSizing: 'border-box', resize: 'vertical', minHeight: 88,
-          background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 12,
+          background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 12,
           padding: '13px 15px', fontFamily: 'inherit', fontSize: 13.5, lineHeight: 1.5,
-          color: '#191712', outline: 'none',
+          color: 'var(--sb-ink-1)', outline: 'none',
         }} />
 
       {/* ── Prep gathered ────────────────────────────────────────────────── */}
       {prepPoints.length > 0 && (
         <>
-          <div style={{ height: 1, background: '#F0EBDC', margin: '20px 0' }} />
+          <div style={{ height: 1, background: 'var(--sb-hairline)', margin: '20px 0' }} />
           <div style={{ ...EV_SECTION, marginBottom: 8 }}>Prep gathered</div>
           {prep?.goal && (
             <p style={{ margin: '0 0 10px', fontSize: 13.5, color: '#3D3926', lineHeight: 1.5 }}>{prep.goal}</p>
@@ -1780,11 +1780,11 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
                 }}>
                   <span style={{
                     width: 19, height: 19, borderRadius: 6, boxSizing: 'border-box', flexShrink: 0, marginTop: 1,
-                    border: on ? '1.5px solid #191712' : '1.5px solid #CFC6B0',
-                    background: on ? '#191712' : '#FFFFFF',
+                    border: on ? '1.5px solid var(--sb-ink-1)' : '1.5px solid #CFC6B0',
+                    background: on ? 'var(--sb-ink-1)' : 'var(--sb-card)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>{on && <Check size={11} color="#fff" strokeWidth={3} />}</span>
-                  <span style={{ fontSize: 13.5, color: on ? '#9B9180' : '#191712', lineHeight: 1.45, textDecoration: on ? 'line-through' : 'none' }}>
+                  <span style={{ fontSize: 13.5, color: on ? '#9B9180' : 'var(--sb-ink-1)', lineHeight: 1.45, textDecoration: on ? 'line-through' : 'none' }}>
                     {pt}
                   </span>
                 </button>
@@ -1798,7 +1798,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
       {liveClashes.length > 0 && (
         <div style={{
           marginTop: 18, padding: '14px 15px', borderRadius: 12,
-          background: '#FAF7EC', border: '1px solid #E8E1CE',
+          background: 'var(--sb-field)', border: '1px solid var(--sb-border)',
         }}>
           <p style={{ margin: 0, fontSize: 13.5, color: '#3D3926', lineHeight: 1.5 }}>
             {freeAfterClash
@@ -1808,7 +1808,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
           {freeAfterClash && (
             <button onClick={moveClear} disabled={saving} style={{
               ...EV_FIELD, width: 'auto', height: 40, marginTop: 12, cursor: 'pointer',
-              background: '#191712', border: 'none', color: '#FDF8E7', fontWeight: 600,
+              background: 'var(--sb-ink-1)', border: 'none', color: 'var(--sb-ink-on-dark)', fontWeight: 600,
               opacity: saving ? 0.6 : 1,
             }}>Move to {freeAfterClash}</button>
           )}
@@ -1816,7 +1816,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
       )}
 
       {saveError && (
-        <p style={{ margin: '12px 0 0', fontSize: 11.5, color: '#C62828' }}>{saveError}</p>
+        <p style={{ margin: '12px 0 0', fontSize: 11.5, color: 'var(--sb-negative)' }}>{saveError}</p>
       )}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 14 }}>
         <span style={{ flex: 1, fontSize: 11.5, color: '#9B9180' }}>
@@ -1824,7 +1824,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
         </span>
         {event.htmlLink && (
           <a href={event.htmlLink} target="_blank" rel="noreferrer"
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11.5, color: '#6C6553', textDecoration: 'none', flexShrink: 0 }}>
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11.5, color: 'var(--sb-ink-3)', textDecoration: 'none', flexShrink: 0 }}>
             Open in Google Calendar <ExternalLink size={11} />
           </a>
         )}
@@ -1899,7 +1899,7 @@ function EventContextMenu({
     return lines.join('\n')
   }
 
-  const sep: React.CSSProperties = { height: 1, background: '#E8E1CE', margin: '3px 8px' }
+  const sep: React.CSSProperties = { height: 1, background: 'var(--sb-border)', margin: '3px 8px' }
 
   function item(
     id: string,
@@ -1919,7 +1919,7 @@ function EventContextMenu({
         style={{
           display: 'flex', alignItems: 'center', gap: 9,
           padding: '0 12px', height: 32, fontSize: 13.5,
-          color: disabled ? '#4B5268' : destructive ? '#E05252' : '#3D3926',
+          color: disabled ? '#4B5268' : destructive ? 'var(--sb-negative)' : '#3D3926',
           cursor: disabled ? 'default' : 'pointer',
           borderRadius: 6, userSelect: 'none',
           background: hovered
@@ -1943,8 +1943,8 @@ function EventContextMenu({
         position: 'fixed',
         top: adjPos.y, left: adjPos.x,
         width: 210,
-        background: '#FFFFFF',
-        border: '1px solid #E8E1CE',
+        background: 'var(--sb-card)',
+        border: '1px solid var(--sb-border)',
         borderRadius: 10,
         boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
         zIndex: 1100,
@@ -2067,7 +2067,7 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
     <div ref={ref} onClick={e => e.stopPropagation()} onMouseDown={e => e.stopPropagation()} style={{
       width: 'clamp(320px, 34vw, 440px)', flexShrink: 0, alignSelf: 'stretch', minHeight: 0,
       overflowY: 'auto', scrollbarWidth: 'thin',
-      background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 18,
+      background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 18,
       boxShadow: '0 1px 3px rgba(25,23,18,0.06)',
       padding: '18px 20px 22px',
     }}>
@@ -2076,7 +2076,7 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <span style={{
           display: 'inline-flex', alignItems: 'center', gap: 6, height: 26, padding: '0 11px',
-          borderRadius: 999, background: '#F1ECDE', color: '#4A4438', fontSize: 11.5,
+          borderRadius: 999, background: 'var(--sb-field)', color: 'var(--sb-ink-2)', fontSize: 11.5,
         }}>
           <span style={{ width: 7, height: 7, borderRadius: 999, background: calColor, flexShrink: 0 }} />
           New event
@@ -2094,9 +2094,9 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
         placeholder="Event title"
         style={{
           width: '100%', boxSizing: 'border-box', marginTop: 14,
-          background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 11,
+          background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 11,
           padding: '13px 15px', fontFamily: DISPLAY, fontSize: 18, fontWeight: 600,
-          letterSpacing: '-0.02em', color: '#191712', outline: 'none', textAlign: 'left',
+          letterSpacing: '-0.02em', color: 'var(--sb-ink-1)', outline: 'none', textAlign: 'left',
         }} />
 
       {/* When */}
@@ -2110,19 +2110,19 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
         {!allDay && (
           <>
             <span style={{ width: 92 }}><TimeSelect value={startTime} onChange={setStartTime} /></span>
-            <span style={{ fontSize: 11.5, color: '#6C6553' }}>to</span>
+            <span style={{ fontSize: 11.5, color: 'var(--sb-ink-3)' }}>to</span>
             <span style={{ width: 92 }}><TimeSelect value={endTime} onChange={setEndTime} /></span>
           </>
         )}
         <button onClick={() => setAllDay(v => !v)} style={{
           ...EV_PILL,
-          background: allDay ? '#191712' : '#FFFFFF',
-          border: allDay ? 'none' : '1px solid #E8E1CE',
-          color: allDay ? '#FDF8E7' : '#6C6553',
+          background: allDay ? 'var(--sb-ink-1)' : 'var(--sb-card)',
+          border: allDay ? 'none' : '1px solid var(--sb-border)',
+          color: allDay ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
         }}>All day</button>
       </div>
 
-      <div style={{ height: 1, background: '#F0EBDC', margin: '20px 0' }} />
+      <div style={{ height: 1, background: 'var(--sb-hairline)', margin: '20px 0' }} />
 
       {/* Fields */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -2147,9 +2147,9 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
               style={{ ...EV_PILL, flex: 1, cursor: 'text', outline: 'none' }} />
             <button onClick={() => setAddMeet(v => !v)} title="Add a Google Meet link" style={{
               ...EV_PILL, flexShrink: 0,
-              background: addMeet ? '#191712' : '#FFFFFF',
-              border: addMeet ? 'none' : '1px solid #E8E1CE',
-              color: addMeet ? '#FDF8E7' : '#6C6553',
+              background: addMeet ? 'var(--sb-ink-1)' : 'var(--sb-card)',
+              border: addMeet ? 'none' : '1px solid var(--sb-border)',
+              color: addMeet ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
             }}><Video size={13} /> Meet</button>
           </span>
         </div>
@@ -2159,7 +2159,7 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
           <span style={{ flex: 1, minWidth: 0, position: 'relative', display: 'flex' }}>
             <button onClick={() => setRepeatOpen(o => !o)} style={{
               ...EV_PILL, flex: 1, justifyContent: 'space-between',
-              color: repeat ? '#191712' : '#9B9180',
+              color: repeat ? 'var(--sb-ink-1)' : '#9B9180',
             }}>
               <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {describeRecur(repeat, new Date(`${startDate}T12:00:00`)) ?? 'Does not repeat'}
@@ -2182,14 +2182,14 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
             placeholder="Anything worth remembering…"
             style={{
               flex: 1, minWidth: 0, boxSizing: 'border-box', resize: 'vertical',
-              background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 9,
-              padding: '9px 12px', fontSize: 13.5, color: '#191712', fontFamily: 'inherit',
+              background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 9,
+              padding: '9px 12px', fontSize: 13.5, color: 'var(--sb-ink-1)', fontFamily: 'inherit',
               outline: 'none', textAlign: 'left',
             }} />
         </div>
       </div>
 
-      <div style={{ height: 1, background: '#F0EBDC', margin: '20px 0' }} />
+      <div style={{ height: 1, background: 'var(--sb-hairline)', margin: '20px 0' }} />
 
       {/* Attendees */}
       <div style={{ ...EV_SECTION, marginBottom: 10 }}>Attendees</div>
@@ -2199,9 +2199,9 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
             <span style={{
               width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: '#F1ECDE', color: '#6C6553', fontSize: 10, fontWeight: 700,
+              background: 'var(--sb-field)', color: 'var(--sb-ink-3)', fontSize: 10, fontWeight: 700,
             }}>{evInitials(undefined, email)}</span>
-            <span style={{ flex: 1, minWidth: 0, fontSize: 13.5, fontWeight: 600, color: '#191712', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <span style={{ flex: 1, minWidth: 0, fontSize: 13.5, fontWeight: 600, color: 'var(--sb-ink-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {email}
             </span>
             <button onClick={() => setInvitees(prev => prev.filter(x => x !== email))} title="Remove"
@@ -2230,11 +2230,11 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
       <div style={{ display: 'flex', gap: 8, marginTop: 18 }}>
         <button onClick={handleSave} disabled={!title.trim()} style={{
           ...EV_PILL, flex: 1, justifyContent: 'center', fontWeight: 600,
-          background: title.trim() ? '#191712' : '#EDE7D9',
-          border: 'none', color: title.trim() ? '#FDF8E7' : '#9B9180',
+          background: title.trim() ? 'var(--sb-ink-1)' : 'var(--sb-field)',
+          border: 'none', color: title.trim() ? 'var(--sb-ink-on-dark)' : '#9B9180',
           cursor: title.trim() ? 'pointer' : 'default',
         }}>Create event</button>
-        <button onClick={onCancel} style={{ ...EV_PILL, color: '#6C6553' }}>Cancel</button>
+        <button onClick={onCancel} style={{ ...EV_PILL, color: 'var(--sb-ink-3)' }}>Cancel</button>
       </div>
     </div>
   )
@@ -3203,24 +3203,24 @@ export function CalendarIntelligence() {
 
   // ── Render ───────────────────────────────────────────────────────────────────
   return (
-    <div className={creatingEvt ? 'cal-grid-creating' : undefined} style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#F7F4EA', color: '#191712', fontFamily: SANS, overflow: 'hidden' }}>
+    <div className={creatingEvt ? 'cal-grid-creating' : undefined} style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--sb-page)', color: 'var(--sb-ink-1)', fontFamily: SANS, overflow: 'hidden' }}>
 
       {/* ── Top bar ─────────────────────────────────────────────────────────── */}
       <div style={{ padding: '18px 26px 14px', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           {/* Which stretch of time you are looking at */}
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.14em', color: '#6C6553', textTransform: 'uppercase', marginBottom: 3 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-3)', textTransform: 'uppercase', marginBottom: 3 }}>
               {calView === 'month' ? anchorDate.toLocaleDateString('en-GB', { year: 'numeric' })
                 : calView === 'day' ? anchorDate.toLocaleDateString('en-GB', { weekday: 'long' })
                 : `Week ${getWeekNumber(weekStart)}`}
             </div>
-            <div style={{ fontFamily: DISPLAY, fontSize: 27, fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1, color: '#191712' }}>
+            <div style={{ fontFamily: DISPLAY, fontSize: 27, fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1, color: 'var(--sb-ink-1)' }}>
               {calView === 'month' ? anchorDate.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
                 : calView === 'day' ? anchorDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })
                 : fmtWeekRange(weekStart)}
             </div>
-            <div style={{ fontSize: 11.5, color: '#6C6553', marginTop: 5 }}>
+            <div style={{ fontSize: 11.5, color: 'var(--sb-ink-3)', marginTop: 5 }}>
               {(() => {
                 const scope = calView === 'month' ? monthCells : weekDays
                 const keys = new Set(scope.map(localDateStr))
@@ -3290,9 +3290,9 @@ export function CalendarIntelligence() {
             title={originalsOnly ? 'Showing originals only — click to show all events' : 'Show originals only (hide created blocks)'}
             style={{
               ...CAL_ICON_BTN,
-              background: originalsOnly ? '#191712' : '#FFFFFF',
-              borderColor: originalsOnly ? '#191712' : '#E8E1CE',
-              color: originalsOnly ? '#FAF7EC' : '#6C6553',
+              background: originalsOnly ? 'var(--sb-ink-1)' : 'var(--sb-card)',
+              borderColor: originalsOnly ? 'var(--sb-ink-1)' : 'var(--sb-border)',
+              color: originalsOnly ? 'var(--sb-field)' : 'var(--sb-ink-3)',
             }}
           >{originalsOnly ? <EyeOff size={14} /> : <Eye size={14} />}</button>
 
@@ -3306,9 +3306,9 @@ export function CalendarIntelligence() {
             title={showCalendars ? 'Hide calendars list' : 'Show calendars list'}
             style={{
               ...CAL_PILL,
-              background: showCalendars ? '#191712' : '#FFFFFF',
-              border: `1px solid ${showCalendars ? '#191712' : '#E8E1CE'}`,
-              color: showCalendars ? '#FAF7EC' : '#191712',
+              background: showCalendars ? 'var(--sb-ink-1)' : 'var(--sb-card)',
+              border: `1px solid ${showCalendars ? 'var(--sb-ink-1)' : 'var(--sb-border)'}`,
+              color: showCalendars ? 'var(--sb-field)' : 'var(--sb-ink-1)',
             }}
           >
             <Layers size={14} strokeWidth={1.9} />
@@ -3317,7 +3317,7 @@ export function CalendarIntelligence() {
           </button>
 
           {/* Day · Week · Month */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 2, height: 36, boxSizing: 'border-box', padding: 3, borderRadius: 999, background: '#EDE7D9', flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 2, height: 36, boxSizing: 'border-box', padding: 3, borderRadius: 999, background: 'var(--sb-field)', flexShrink: 0 }}>
             {(['day', 'week', 'month'] as const).map(v => {
               const on = calView === v
               return (
@@ -3326,9 +3326,9 @@ export function CalendarIntelligence() {
                   onClick={() => { setCalView(v); try { localStorage.setItem('cal-view', v) } catch { /* noop */ } }}
                   style={{
                     height: 30, padding: '0 16px', borderRadius: 999, border: 'none', cursor: 'pointer',
-                    background: on ? '#FFFFFF' : 'transparent',
+                    background: on ? 'var(--sb-card)' : 'transparent',
                     boxShadow: on ? '0 1px 3px rgba(25,23,18,.16)' : 'none',
-                    color: on ? '#191712' : '#8A8271',
+                    color: on ? 'var(--sb-ink-1)' : '#8A8271',
                     fontSize: 13.5, fontWeight: on ? 700 : 500, fontFamily: 'inherit',
                     transition: 'all .14s',
                   }}>
@@ -3341,7 +3341,7 @@ export function CalendarIntelligence() {
 
         {/* Rules result toast */}
         {rulesResult && (
-          <span style={{ display: 'block', marginTop: 8, fontSize: 11.5, color: rulesResult.startsWith('Error') ? '#E05252' : '#1D9E75' }}>
+          <span style={{ display: 'block', marginTop: 8, fontSize: 11.5, color: rulesResult.startsWith('Error') ? 'var(--sb-negative)' : '#1D9E75' }}>
             {rulesResult}
           </span>
         )}
@@ -3365,7 +3365,7 @@ export function CalendarIntelligence() {
                 onClick={() => void connectAdditionalGoogleAccount(email)}
                 style={{
                   ...T.body, height: 34, padding: '0 14px', borderRadius: 9, flexShrink: 0,
-                  background: '#191712', border: 'none', color: '#FDF8E7', fontWeight: 600, cursor: 'pointer',
+                  background: 'var(--sb-ink-1)', border: 'none', color: 'var(--sb-ink-on-dark)', fontWeight: 600, cursor: 'pointer',
                 }}>
                 Reconnect{reconnectNeeded.length > 1 ? ` ${email.split('@')[0]}` : ''}
               </button>
@@ -3391,8 +3391,8 @@ export function CalendarIntelligence() {
                     style={{
                       display: 'flex', alignItems: 'center', gap: 0,
                       borderRadius: 20, overflow: 'visible',
-                      border: `1px solid ${hidden ? '#E8E1CE' : color}`,
-                      background: hidden ? '#F7F4EA' : `${color}18`,
+                      border: `1px solid ${hidden ? 'var(--sb-border)' : color}`,
+                      background: hidden ? 'var(--sb-page)' : `${color}18`,
                       transition: 'all 0.12s',
                     }}
                   >
@@ -3454,7 +3454,7 @@ export function CalendarIntelligence() {
 
         {/* Fetch error — keep but make subtle */}
         {fetchError && (
-          <div style={{ marginTop: 6, padding: '5px 10px', background: 'rgba(224,82,82,0.08)', border: '1px solid rgba(224,82,82,0.3)', borderRadius: 6, fontSize: 10, color: '#E05252', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div style={{ marginTop: 6, padding: '5px 10px', background: 'rgba(224,82,82,0.08)', border: '1px solid rgba(224,82,82,0.3)', borderRadius: 6, fontSize: 10, color: 'var(--sb-negative)', display: 'flex', alignItems: 'center', gap: 6 }}>
             <AlertCircle size={11} /> {fetchError}
           </div>
         )}
@@ -3468,7 +3468,7 @@ export function CalendarIntelligence() {
       <div style={{
         flex: 1, minWidth: 0, minHeight: 0, position: 'relative',
         display: 'flex', flexDirection: 'column', overflow: 'hidden',
-        background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 16,
+        background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 16,
         boxShadow: '0 1px 3px rgba(25,23,18,0.05)',
       }}>
 
@@ -3477,7 +3477,7 @@ export function CalendarIntelligence() {
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'auto', padding: '0 14px 14px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', padding: '10px 0 6px' }}>
             {rotateDays(DAY_LABELS, firstDow).map(d => (
-              <span key={d} style={{ textAlign: 'center', fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', color: '#6C6553', textTransform: 'uppercase' }}>
+              <span key={d} style={{ textAlign: 'center', fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', color: 'var(--sb-ink-3)', textTransform: 'uppercase' }}>
                 {d}
               </span>
             ))}
@@ -3485,7 +3485,7 @@ export function CalendarIntelligence() {
           <div style={{
             flex: 1, minHeight: 0, display: 'grid',
             gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', gridAutoRows: 'minmax(96px, 1fr)',
-            background: '#E8E1CE', gap: 1, border: '1px solid #E8E1CE', borderRadius: 12, overflow: 'hidden',
+            background: 'var(--sb-border)', gap: 1, border: '1px solid var(--sb-border)', borderRadius: 12, overflow: 'hidden',
           }}>
             {monthCells.map(day => {
               const ds = localDateStr(day)
@@ -3500,14 +3500,14 @@ export function CalendarIntelligence() {
                   onClick={() => { setAnchorDate(new Date(day)); setCalView('day'); try { localStorage.setItem('cal-view', 'day') } catch { /* noop */ } }}
                   title="Open this day"
                   style={{
-                    background: outside ? '#FAF7EC' : '#FFFFFF', padding: '6px 7px',
+                    background: outside ? 'var(--sb-field)' : 'var(--sb-card)', padding: '6px 7px',
                     display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0, cursor: 'pointer',
                   }}>
                   <span style={{
                     alignSelf: 'flex-start', minWidth: 21, height: 21, padding: '0 5px', borderRadius: 999,
                     display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                     background: isToday ? 'var(--sb-accent)' : 'transparent',
-                    color: outside ? '#C9C0A8' : '#191712',
+                    color: outside ? '#C9C0A8' : 'var(--sb-ink-1)',
                     fontSize: 11.5, fontWeight: isToday ? 700 : 600, fontVariantNumeric: 'tabular-nums',
                   }}>{day.getDate()}</span>
                   {shown.map(e => {
@@ -3526,10 +3526,10 @@ export function CalendarIntelligence() {
                           display: 'flex', alignItems: 'center', gap: 5, minWidth: 0,
                           padding: '2px 6px', borderRadius: 6, cursor: 'pointer',
                           background: `rgba(${rgb}, 0.16)`, border: `1px solid rgba(${rgb}, 0.4)`,
-                          fontSize: 10, color: '#191712',
+                          fontSize: 10, color: 'var(--sb-ink-1)',
                           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                         }}>
-                        {t && <span style={{ color: '#6C6553', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>
+                        {t && <span style={{ color: 'var(--sb-ink-3)', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>
                           {String(t.getHours()).padStart(2, '0')}:{String(t.getMinutes()).padStart(2, '0')}
                         </span>}
                         {st === 'done' && <Check size={11} strokeWidth={3.4} style={{ flexShrink: 0 }} />}
@@ -3556,7 +3556,7 @@ export function CalendarIntelligence() {
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
           {/* Sticky day headers */}
-          <div style={{ display: 'flex', borderBottom: '1px solid #E8E1CE', flexShrink: 0, background: '#FCFAF4' }}>
+          <div style={{ display: 'flex', borderBottom: '1px solid var(--sb-border)', flexShrink: 0, background: 'var(--sb-header)' }}>
             {/* Time gutter spacer */}
             <div style={{ width: 58, flexShrink: 0 }} />
             {weekDays.map(day => {
@@ -3564,12 +3564,12 @@ export function CalendarIntelligence() {
               const isToday = ds === today
               return (
                 <div key={ds} style={{ flex: 1, textAlign: 'center', padding: '9px 4px 8px', minWidth: 0 }}>
-                  <div style={{ fontSize: 10, color: isToday ? '#191712' : '#6C6553', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, fontFamily: SANS }}>
+                  <div style={{ fontSize: 10, color: isToday ? 'var(--sb-ink-1)' : 'var(--sb-ink-3)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, fontFamily: SANS }}>
                     {DAY_LABELS[day.getDay()]}
                   </div>
                   <div style={{
                     fontSize: 18, fontWeight: 700, lineHeight: 1.2, marginTop: 3,
-                    color: isToday ? '#191712' : '#191712',
+                    color: isToday ? 'var(--sb-ink-1)' : 'var(--sb-ink-1)',
                     background: isToday ? 'var(--sb-accent)' : 'transparent',
                     width: isToday ? 32 : undefined, height: isToday ? 32 : undefined,
                     borderRadius: isToday ? '50%' : undefined,
@@ -3586,7 +3586,7 @@ export function CalendarIntelligence() {
 
           {/* All-day events strip — only shown when the week has at least one all-day event */}
           {weekDays.some(day => (grouped.get(localDateStr(day)) ?? []).some(e => !e.start.dateTime)) && (
-            <div style={{ display: 'flex', borderBottom: '1px solid #E8E1CE', flexShrink: 0, minHeight: 22 }}>
+            <div style={{ display: 'flex', borderBottom: '1px solid var(--sb-border)', flexShrink: 0, minHeight: 22 }}>
               <div style={{ width: 58, flexShrink: 0, display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end', paddingRight: 6, paddingTop: 3, fontSize: 10, color: '#9B9180', letterSpacing: '0.4px' }}>
                 all day
               </div>
@@ -3594,7 +3594,7 @@ export function CalendarIntelligence() {
                 const ds = localDateStr(day)
                 const allDayEvts = (grouped.get(ds) ?? []).filter(e => !e.start.dateTime)
                 return (
-                  <div key={ds} style={{ flex: 1, padding: '2px 2px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1, borderRight: '1px solid #E8E1CE', maxHeight: 68, overflowY: 'auto' }}>
+                  <div key={ds} style={{ flex: 1, padding: '2px 2px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1, borderRight: '1px solid var(--sb-border)', maxHeight: 68, overflowY: 'auto' }}>
                     {allDayEvts.map(ev => {
                       const cal   = allCalendars.find(c => c.id === (ev as GCalEventExt).calendarId)
                       const color = cal ? calEffectiveColor(cal) : '#7F77DD'
@@ -3628,10 +3628,10 @@ export function CalendarIntelligence() {
 
           {/* Scrollable time grid */}
           <div ref={gridRef} onClick={closePopup}
-            style={{ flex: 1, overflowY: 'auto', display: 'flex', position: 'relative', background: '#FFFFFF' }}
+            style={{ flex: 1, overflowY: 'auto', display: 'flex', position: 'relative', background: 'var(--sb-card)' }}
           >
             {/* Time labels column, with the weather for the day it is showing */}
-            <div style={{ width: 58, flexShrink: 0, position: 'relative', height: GRID_H, background: '#FCFAF4', borderRight: '1px solid #EDE7D9' }}>
+            <div style={{ width: 58, flexShrink: 0, position: 'relative', height: GRID_H, background: 'var(--sb-header)', borderRight: '1px solid var(--sb-field)' }}>
               {Array.from({ length: 24 }, (_, h) => {
                 const w = weather[`${weatherDay}T${String(h).padStart(2, '0')}`]
                 return (
@@ -3672,8 +3672,8 @@ export function CalendarIntelligence() {
                     {/* Current time indicator */}
                     {isToday && (
                       <>
-                        <div style={{ position: 'absolute', top: nowPx - 4, left: -4, width: 8, height: 8, borderRadius: '50%', background: '#C62828', zIndex: 5, pointerEvents: 'none' }} />
-                        <div style={{ position: 'absolute', top: nowPx, left: 0, right: 0, borderTop: '1px solid #C62828', zIndex: 5, pointerEvents: 'none' }} />
+                        <div style={{ position: 'absolute', top: nowPx - 4, left: -4, width: 8, height: 8, borderRadius: '50%', background: 'var(--sb-negative)', zIndex: 5, pointerEvents: 'none' }} />
+                        <div style={{ position: 'absolute', top: nowPx, left: 0, right: 0, borderTop: '1px solid var(--sb-negative)', zIndex: 5, pointerEvents: 'none' }} />
                       </>
                     )}
 
@@ -3689,7 +3689,7 @@ export function CalendarIntelligence() {
                           background: 'rgba(var(--sb-accent-rgb),0.35)', border: '2px solid var(--sb-accent)',
                           borderRadius: 6, pointerEvents: 'none', boxSizing: 'border-box',
                         }}>
-                          <div style={{ fontSize: 10, color: '#191712', padding: '2px 5px', fontWeight: 600 }}>
+                          <div style={{ fontSize: 10, color: 'var(--sb-ink-1)', padding: '2px 5px', fontWeight: 600 }}>
                             {fmtShort(minToIso(ds, sMin))} – {fmtShort(minToIso(ds, eMin))}
                           </div>
                         </div>
@@ -3749,7 +3749,7 @@ export function CalendarIntelligence() {
       {/* Loading spinner overlay */}
       {loadingEvents && (
         <div style={{ position: 'absolute', bottom: 18, right: 22, display: 'flex', alignItems: 'center', gap: 7, fontSize: 11.5, color: '#9B9180', pointerEvents: 'none' }}>
-          <div style={{ width: 14, height: 14, border: '2px solid #E8E1CE', borderTopColor: '#191712', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+          <div style={{ width: 14, height: 14, border: '2px solid var(--sb-border)', borderTopColor: 'var(--sb-ink-1)', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
           Loading…
         </div>
       )}
