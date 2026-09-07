@@ -39,7 +39,7 @@ const MUTED = '#6C6553'
 const GHOST = '#9B9180'
 const HAIR = '#F0EBDC'
 const FIELD = '#FAF7EC'
-const AMBER = '#F5D14E'
+const AMBER = 'var(--sb-accent)'
 
 const PILL: React.CSSProperties = {
   display: 'inline-flex', alignItems: 'center', gap: 6, height: 30, padding: '0 12px',
@@ -283,7 +283,7 @@ function MailPopup({ row, onClose, onArchive, onAddTask }: {
           {row.needsYou && (
             <span style={{
               flexShrink: 0, height: 20, padding: '0 8px', borderRadius: 6,
-              background: 'rgba(245,209,78,0.28)', border: '1px solid rgba(245,209,78,0.7)',
+              background: 'rgba(var(--sb-accent-rgb),0.28)', border: '1px solid rgba(var(--sb-accent-rgb),0.7)',
               color: '#7A6412', fontSize: 9, fontWeight: 800, letterSpacing: '0.06em',
               display: 'inline-flex', alignItems: 'center',
             }}>NEEDS YOU</span>
@@ -402,7 +402,7 @@ function MailCard({ rows, loading, error, newsletters, onArchive, onArchiveAll, 
                 {r.needsYou && (
                   <span style={{
                     flexShrink: 0, height: 18, padding: '0 7px', borderRadius: 5,
-                    background: 'rgba(245,209,78,0.28)', border: '1px solid rgba(245,209,78,0.7)',
+                    background: 'rgba(var(--sb-accent-rgb),0.28)', border: '1px solid rgba(var(--sb-accent-rgb),0.7)',
                     color: '#7A6412', fontSize: 9, fontWeight: 800, letterSpacing: '0.06em',
                     display: 'inline-flex', alignItems: 'center',
                   }}>NEEDS YOU</span>
@@ -736,8 +736,8 @@ function PlanCard({
                     padding: tall ? '6px 8px 0' : tight ? '0 7px' : '0 10px',
                     borderRadius: 9, minWidth: 0, overflow: 'hidden',
                     background: status === 'cancelled' ? '#F1ECDE'
-                      : b.kind === 'proposed' ? 'rgba(245,209,78,0.20)' : FIELD,
-                    border: `1px solid ${b.kind === 'proposed' ? 'rgba(245,209,78,0.6)' : '#E8E1CE'}`,
+                      : b.kind === 'proposed' ? 'rgba(var(--sb-accent-rgb),0.20)' : FIELD,
+                    border: `1px solid ${b.kind === 'proposed' ? 'rgba(var(--sb-accent-rgb),0.6)' : '#E8E1CE'}`,
                     borderLeft: `3px solid ${b.kind === 'proposed' ? AMBER : '#D8CFB8'}`,
                     boxShadow: dragging ? '0 10px 24px -10px rgba(25,23,18,.45)' : 'none',
                     opacity: past || status === 'cancelled' ? 0.6 : 1,
@@ -1288,7 +1288,7 @@ export function TodayPage() {
               <div style={{
                 display: 'flex', alignItems: 'center', gap: 9, marginTop: 16,
                 padding: '11px 13px', borderRadius: 10,
-                background: 'rgba(245,209,78,0.14)', border: '1px solid rgba(245,209,78,0.5)',
+                background: 'rgba(var(--sb-accent-rgb),0.14)', border: '1px solid rgba(var(--sb-accent-rgb),0.5)',
               }}>
                 <Zap size={14} strokeWidth={2} style={{ color: '#9A7B1F', flexShrink: 0 }} />
                 <span style={{ fontSize: 12.5, color: '#3D3926' }}>{brief.callout}</span>

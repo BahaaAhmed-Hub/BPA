@@ -30,6 +30,8 @@ const SHARED_KEYS = [
   'professor-ai-config',
   'professor-display-name',
   'professor-week-start',        // which day your week starts on
+  'professor-accent',            // the colour every highlight is drawn in
+  'professor-compact',
   'task-board-col-order',
   'task-board-type',
   'finance-budget-rules',

@@ -83,7 +83,7 @@ function QuadrantPanel({ spec, tasks, onOpen, onAction, groupBy }: {
   return (
     <div ref={setNodeRef} style={{
       background: isOver ? '#FDF6DC' : spec.accent ? '#FFFCF0' : '#FDFCF8',
-      border: `1px solid ${isOver ? '#F5D14E' : spec.accent ? '#F0DFA8' : '#E8E1CE'}`,
+      border: `1px solid ${isOver ? 'var(--sb-accent)' : spec.accent ? '#F0DFA8' : '#E8E1CE'}`,
       borderRadius: 14, padding: 14, transition: 'background .12s, border-color .12s',
       display: 'flex', flexDirection: 'column', gap: 10, minWidth: 0,
     }}>
@@ -135,7 +135,7 @@ function QuadrantPanel({ spec, tasks, onOpen, onAction, groupBy }: {
           placeholder="What is it?"
           style={{
             width: '100%', boxSizing: 'border-box', background: '#FFFFFF',
-            border: '1px solid #F5D14E', borderRadius: 10, padding: '11px 13px',
+            border: '1px solid var(--sb-accent)', borderRadius: 10, padding: '11px 13px',
             fontSize: 13, color: '#191712', outline: 'none', fontFamily: 'inherit',
           }}
         />

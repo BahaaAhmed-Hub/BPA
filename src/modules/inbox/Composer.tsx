@@ -34,7 +34,7 @@ export interface ComposeSeed {
 
 const C = {
   card: '#FFFFFF', field: '#FAF7EC', border: '#E8E1CE', hair: '#F0EBDC',
-  ink: '#191712', muted: '#6C6553', ghost: '#9B9180', amber: '#F5D14E', red: '#C62828',
+  ink: '#191712', muted: '#6C6553', ghost: '#9B9180', amber: 'var(--sb-accent)', red: '#C62828',
 }
 
 const LABEL: React.CSSProperties = {

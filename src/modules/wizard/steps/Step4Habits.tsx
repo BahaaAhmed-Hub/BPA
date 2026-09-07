@@ -133,10 +133,10 @@ export function Step4Habits({ data, onChange }: Props) {
             <input value={cName} onChange={e => setCName(e.target.value)} placeholder="Habit name" style={{ ...inp, flex: 1 }} autoFocus />
           </div>
           <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-            <button onClick={() => setCType('boolean')} style={{ flex: 1, padding: '7px', borderRadius: 7, border: `1.5px solid ${cType === 'boolean' ? '#F5D14E' : '#E8E1CE'}`, background: cType === 'boolean' ? 'rgba(127,119,221,0.1)' : 'transparent', color: '#191712', fontSize: 12.5, cursor: 'pointer' }}>
+            <button onClick={() => setCType('boolean')} style={{ flex: 1, padding: '7px', borderRadius: 7, border: `1.5px solid ${cType === 'boolean' ? 'var(--sb-accent)' : '#E8E1CE'}`, background: cType === 'boolean' ? 'rgba(127,119,221,0.1)' : 'transparent', color: '#191712', fontSize: 12.5, cursor: 'pointer' }}>
               ✓ Boolean
             </button>
-            <button onClick={() => setCType('quantity')} style={{ flex: 1, padding: '7px', borderRadius: 7, border: `1.5px solid ${cType === 'quantity' ? '#F5D14E' : '#E8E1CE'}`, background: cType === 'quantity' ? 'rgba(127,119,221,0.1)' : 'transparent', color: '#191712', fontSize: 12.5, cursor: 'pointer' }}>
+            <button onClick={() => setCType('quantity')} style={{ flex: 1, padding: '7px', borderRadius: 7, border: `1.5px solid ${cType === 'quantity' ? 'var(--sb-accent)' : '#E8E1CE'}`, background: cType === 'quantity' ? 'rgba(127,119,221,0.1)' : 'transparent', color: '#191712', fontSize: 12.5, cursor: 'pointer' }}>
               # Quantity
             </button>
           </div>
@@ -148,7 +148,7 @@ export function Step4Habits({ data, onChange }: Props) {
           )}
           <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
             {(['daily','weekdays','weekly'] as const).map(f => (
-              <button key={f} onClick={() => setCFreq(f)} style={{ flex: 1, padding: '6px', borderRadius: 7, border: `1.5px solid ${cFreq === f ? '#F5D14E' : '#E8E1CE'}`, background: cFreq === f ? 'rgba(127,119,221,0.1)' : 'transparent', color: '#191712', fontSize: 12, cursor: 'pointer', textTransform: 'capitalize' }}>
+              <button key={f} onClick={() => setCFreq(f)} style={{ flex: 1, padding: '6px', borderRadius: 7, border: `1.5px solid ${cFreq === f ? 'var(--sb-accent)' : '#E8E1CE'}`, background: cFreq === f ? 'rgba(127,119,221,0.1)' : 'transparent', color: '#191712', fontSize: 12, cursor: 'pointer', textTransform: 'capitalize' }}>
                 {f}
               </button>
             ))}
@@ -159,7 +159,7 @@ export function Step4Habits({ data, onChange }: Props) {
             ))}
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={addCustom} style={{ padding: '8px 18px', borderRadius: 8, background: '#F5D14E', color: '#191712', fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer' }}>Add</button>
+            <button onClick={addCustom} style={{ padding: '8px 18px', borderRadius: 8, background: 'var(--sb-accent)', color: '#191712', fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer' }}>Add</button>
             <button onClick={() => setAddingCustom(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9B9180', fontSize: 13 }}>Cancel</button>
           </div>
         </div>

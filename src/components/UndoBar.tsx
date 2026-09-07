@@ -81,7 +81,7 @@ export function UndoBar() {
           style={{
             display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0,
             height: 30, padding: '0 12px', borderRadius: 9, cursor: 'pointer',
-            background: '#F5D14E', border: '1px solid rgba(25,23,18,0.18)',
+            background: 'var(--sb-accent)', border: '1px solid rgba(25,23,18,0.18)',
             color: '#191712', fontFamily: 'inherit', fontSize: 12.5, fontWeight: 600,
           }}>
           <RotateCcw size={13} strokeWidth={2.2} />

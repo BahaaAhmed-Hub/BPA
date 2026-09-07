@@ -95,7 +95,7 @@ export function Step2Accounts({ data: _data, onChange: _onChange, onBeforeOAuth 
           to   { opacity: 1; transform: translateY(0); }
         }
         .step2-google-tile:hover {
-          border-color: #F5D14E !important;
+          border-color: var(--sb-accent) !important;
           transform: translateY(-1px);
         }
       `}</style>
@@ -113,7 +113,7 @@ export function Step2Accounts({ data: _data, onChange: _onChange, onBeforeOAuth 
       <div style={{
         background: '#FFFFFF',
         border: '1px solid #E8E1CE',
-        borderLeft: '3px solid #F5D14E',
+        borderLeft: '3px solid var(--sb-accent)',
         borderRadius: 10,
         padding: '14px 16px',
         display: 'flex',
@@ -125,7 +125,7 @@ export function Step2Accounts({ data: _data, onChange: _onChange, onBeforeOAuth 
           width: 36,
           height: 36,
           borderRadius: '50%',
-          background: '#F5D14E',
+          background: 'var(--sb-accent)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',

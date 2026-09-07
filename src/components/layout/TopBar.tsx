@@ -108,9 +108,9 @@ export function TopBar({ title, subtitle }: TopBarProps) {
           style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}
         >
           {user?.avatarUrl ? (
-            <img src={user.avatarUrl} alt={user.name ?? ''} style={{ width: 32, height: 32, borderRadius: '50%', border: '1.5px solid #F5D14E', objectFit: 'cover' }} />
+            <img src={user.avatarUrl} alt={user.name ?? ''} style={{ width: 32, height: 32, borderRadius: '50%', border: '1.5px solid var(--sb-accent)', objectFit: 'cover' }} />
           ) : (
-            <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgba(245,209,78,0.12)', border: '1.5px solid #F5D14E', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgba(var(--sb-accent-rgb),0.12)', border: '1.5px solid var(--sb-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <span style={{ fontSize: 12, fontWeight: 600, color: '#191712' }}>
                 {user?.name?.[0]?.toUpperCase() ?? 'P'}
               </span>

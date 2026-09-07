@@ -88,7 +88,7 @@ export function Sidebar() {
         {(() => {
           const modeKey = behavioralEnabled ? behavioralMode : 'default'
           const LogoIcon = MODE_ICONS[modeKey] ?? GraduationCap
-          const logoBg = (behavioralEnabled && MODE_ACCENT[behavioralMode]) ? MODE_ACCENT[behavioralMode] : '#F5D14E'
+          const logoBg = (behavioralEnabled && MODE_ACCENT[behavioralMode]) ? MODE_ACCENT[behavioralMode] : 'var(--sb-accent)'
           return (
             <div style={{
               width: 32, height: 32,
@@ -135,7 +135,7 @@ export function Sidebar() {
                   gap: 10,
                   padding: sidebarCollapsed ? '10px 0' : '10px 12px',
                   justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
-                  background: active ? 'rgba(245,209,78,0.15)' : 'transparent',
+                  background: active ? 'rgba(var(--sb-accent-rgb),0.15)' : 'transparent',
                   border: 'none',
                   borderRadius: 8,
                   cursor: 'pointer',
@@ -146,7 +146,7 @@ export function Sidebar() {
                 onMouseEnter={e => {
                   if (!active) {
                     const el = e.currentTarget as HTMLElement
-                    el.style.background = 'rgba(245,209,78,0.15)'
+                    el.style.background = 'rgba(var(--sb-accent-rgb),0.15)'
                     el.style.color = '#191712'
                   }
                 }}
@@ -165,7 +165,7 @@ export function Sidebar() {
                   </span>
                 )}
                 {active && !sidebarCollapsed && (
-                  <div style={{ marginLeft: 'auto', width: 4, height: 4, borderRadius: '50%', background: '#F5D14E' }} />
+                  <div style={{ marginLeft: 'auto', width: 4, height: 4, borderRadius: '50%', background: 'var(--sb-accent)' }} />
                 )}
               </button>
             )
@@ -195,12 +195,12 @@ export function Sidebar() {
                   width: '100%', display: 'flex', alignItems: 'center', gap: 10,
                   padding: sidebarCollapsed ? '10px 0' : '10px 12px',
                   justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
-                  background: active ? 'rgba(245,209,78,0.15)' : 'transparent',
+                  background: active ? 'rgba(var(--sb-accent-rgb),0.15)' : 'transparent',
                   border: 'none', borderRadius: 8, cursor: 'pointer',
                   color: active ? '#191712' : '#9B9180',
                   marginBottom: 2, transition: 'all 0.15s ease',
                 }}
-                onMouseEnter={e => { if (!active) { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(245,209,78,0.15)'; el.style.color = '#191712' } }}
+                onMouseEnter={e => { if (!active) { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(var(--sb-accent-rgb),0.15)'; el.style.color = '#191712' } }}
                 onMouseLeave={e => { if (!active) { const el = e.currentTarget as HTMLElement; el.style.background = 'transparent'; el.style.color = '#9B9180' } }}
               >
                 <Swords size={18} strokeWidth={active ? 2.5 : 1.8} style={{ flexShrink: 0 }} />
@@ -210,7 +210,7 @@ export function Sidebar() {
                   </span>
                 )}
                 {active && !sidebarCollapsed && (
-                  <div style={{ marginLeft: 'auto', width: 4, height: 4, borderRadius: '50%', background: '#F5D14E' }} />
+                  <div style={{ marginLeft: 'auto', width: 4, height: 4, borderRadius: '50%', background: 'var(--sb-accent)' }} />
                 )}
               </button>
             </div>
@@ -240,7 +240,7 @@ export function Sidebar() {
                   display: 'flex', alignItems: 'center', gap: 10,
                   padding: sidebarCollapsed ? '10px 0' : '10px 12px',
                   justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
-                  background: active ? 'rgba(245,209,78,0.15)' : 'transparent',
+                  background: active ? 'rgba(var(--sb-accent-rgb),0.15)' : 'transparent',
                   border: 'none', borderRadius: 8, cursor: 'pointer',
                   color: active ? '#191712' : '#9B9180',
                   marginBottom: 2, transition: 'all 0.15s ease',
@@ -248,7 +248,7 @@ export function Sidebar() {
                 onMouseEnter={e => {
                   if (!active) {
                     const el = e.currentTarget as HTMLElement
-                    el.style.background = 'rgba(245,209,78,0.15)'
+                    el.style.background = 'rgba(var(--sb-accent-rgb),0.15)'
                     el.style.color = '#191712'
                   }
                 }}
@@ -267,7 +267,7 @@ export function Sidebar() {
                   </span>
                 )}
                 {active && !sidebarCollapsed && (
-                  <div style={{ marginLeft: 'auto', width: 4, height: 4, borderRadius: '50%', background: '#F5D14E' }} />
+                  <div style={{ marginLeft: 'auto', width: 4, height: 4, borderRadius: '50%', background: 'var(--sb-accent)' }} />
                 )}
               </button>
             )

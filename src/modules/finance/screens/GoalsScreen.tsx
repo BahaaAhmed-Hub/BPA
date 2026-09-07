@@ -28,9 +28,9 @@ const C = {
   ink2:    '#4A4438',
   ink3:    '#6C6553',
   ink4:    '#9B9180',
-  accent:  '#F5D14E',
-  accentBg:'#FDF6DE',
-  accentBr:'#EFE1B4',
+  accent:  'var(--sb-accent)',
+  accentBg:'var(--sb-accent-tint2)',
+  accentBr:'var(--sb-accent-border)',
   green:   '#0C8140',
   red:     '#C62828',
 }

@@ -13,7 +13,7 @@ import type { ReactNode } from 'react'
 // out of the tab order, and stops clicks reaching what is underneath.
 
 const AMBER_INK = '#7A5F09'
-const AMBER_BG  = 'rgba(245,209,78,0.22)'
+const AMBER_BG  = 'rgba(var(--sb-accent-rgb),0.22)'
 const AMBER_EDGE = 'rgba(197,163,44,0.45)'
 
 /** The label on its own — for a row or a card that has its own layout. */

@@ -151,7 +151,7 @@ function MessageBubble({ msg }: { msg: DisplayMessage }) {
       <div style={{
         maxWidth: '80%', padding: '9px 12px',
         borderRadius: isUser ? '14px 14px 4px 14px' : '4px 14px 14px 14px',
-        background: isUser ? '#F5D14E' : '#FAF7EC',
+        background: isUser ? 'var(--sb-accent)' : '#FAF7EC',
         border: isUser ? 'none' : '1px solid #E8E1CE',
         fontSize: 13, lineHeight: 1.6,
         color: isUser ? '#191712' : '#191712',
@@ -553,7 +553,7 @@ export function AssistantToggle({ open, onClick }: AssistantToggleProps) {
         zIndex: 148,
         transition: 'right 0.25s cubic-bezier(0.4,0,0.2,1), background 0.2s, box-shadow 0.2s',
       }}>
-      {open ? <X size={20} color="#6C6553" /> : <Brain size={22} color="#F5D14E" />}
+      {open ? <X size={20} color="#6C6553" /> : <Brain size={22} color="var(--sb-accent)" />}
     </button>
   )
 }

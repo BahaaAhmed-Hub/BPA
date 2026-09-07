@@ -291,7 +291,7 @@ export function BrainDumpRail({ tasks, onOpen, flexible }: {
             placeholder={'One per line…'}
             style={{
               width: '100%', boxSizing: 'border-box', marginTop: 9, resize: 'vertical',
-              background: '#FAF7EC', border: '1px solid #F5D14E', borderRadius: 9,
+              background: '#FAF7EC', border: '1px solid var(--sb-accent)', borderRadius: 9,
               padding: '8px 10px', fontSize: 12, color: '#191712', outline: 'none',
               fontFamily: 'inherit', lineHeight: 1.5,
             }}

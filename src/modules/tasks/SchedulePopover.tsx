@@ -246,7 +246,7 @@ export function SchedulePopover({ date, start, duration, onApply, onClose, align
         ) : (
           <div style={{
             marginTop: 9, padding: '8px 10px', borderRadius: 9,
-            background: 'rgba(245,209,78,0.22)', border: '1px solid rgba(245,209,78,0.7)',
+            background: 'rgba(var(--sb-accent-rgb),0.22)', border: '1px solid rgba(var(--sb-accent-rgb),0.7)',
           }}>
             <p style={{ ...T.small, margin: 0, fontWeight: 600, color: '#3D3926' }}>
               {conflicts.length === 1 ? 'Clashes with' : `Clashes with ${conflicts.length} events`}
@@ -286,7 +286,7 @@ export function SchedulePopover({ date, start, duration, onApply, onClose, align
           onClick={() => { onApply({ dueDate: picked, plannedTime: from, duration: minutes || undefined }); onClose() }}
           style={{
             height: 30, padding: '0 14px', borderRadius: 8, border: 'none', cursor: 'pointer',
-            background: '#F5D14E', color: '#191712', fontSize: 12.5, fontWeight: 600, fontFamily: 'inherit',
+            background: 'var(--sb-accent)', color: '#191712', fontSize: 12.5, fontWeight: 600, fontFamily: 'inherit',
           }}>Set block</button>
       </div>
     </div>

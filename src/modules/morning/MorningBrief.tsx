@@ -253,7 +253,7 @@ function StatusBadge({ status }: { status: ReturnType<typeof getEventStatus> }) 
   const cfg = {
     live:     { label: 'Live',     bg: '#1D9E7518', border: '#1D9E7540', color: '#1D9E75', pulse: true  },
     soon:     { label: 'Soon',     bg: '#F59E0B18', border: '#F59E0B40', color: '#F59E0B', pulse: false },
-    upcoming: { label: 'Upcoming', bg: 'rgba(245,209,78,0.12)', border: 'color-mix(in srgb, #7F77DD 40%, transparent)', color: '#7F77DD', pulse: false },
+    upcoming: { label: 'Upcoming', bg: 'rgba(var(--sb-accent-rgb),0.12)', border: 'color-mix(in srgb, #7F77DD 40%, transparent)', color: '#7F77DD', pulse: false },
     past:     { label: 'Done',     bg: '#25283618', border: '#25283640', color: '#6C6553', pulse: false },
   }[status]
 
@@ -501,7 +501,7 @@ function EventDetailPanel({ event, onClose }: { event: RichMeetingEvent; onClose
               style={{
                 display: 'flex', alignItems: 'center', gap: 8,
                 padding: '10px 14px', borderRadius: 8,
-                background: 'rgba(245,209,78,0.12)', border: '1px solid #7F77DD40',
+                background: 'rgba(var(--sb-accent-rgb),0.12)', border: '1px solid #7F77DD40',
                 color: '#7F77DD', fontSize: 12.5, fontWeight: 600,
                 textDecoration: 'none', transition: 'all 0.15s',
               }}
@@ -893,7 +893,7 @@ export function MorningBrief() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 20 }}>
                 <div style={{
                   width: 26, height: 26, borderRadius: 6,
-                  background: 'rgba(245,209,78,0.12)', border: '1px solid #7F77DD30',
+                  background: 'rgba(var(--sb-accent-rgb),0.12)', border: '1px solid #7F77DD30',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
                   <Sparkles size={13} color="#7F77DD" />
@@ -934,7 +934,7 @@ export function MorningBrief() {
                       <div key={i} style={{
                         display: 'flex', alignItems: 'center', gap: 14,
                         background: '#F7F4EA',
-                        border: `1px solid ${i === 0 ? 'rgba(245,209,78,0.12)' : '#E8E1CE'}`,
+                        border: `1px solid ${i === 0 ? 'rgba(var(--sb-accent-rgb),0.12)' : '#E8E1CE'}`,
                         borderRadius: 12, padding: '13px 16px',
                         position: 'relative', overflow: 'hidden',
                       }}>

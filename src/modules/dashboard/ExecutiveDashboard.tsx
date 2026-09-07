@@ -204,8 +204,8 @@ export function ExecutiveDashboard() {
             style={{
               display: 'flex', alignItems: 'center', gap: 7,
               padding: '9px 18px', borderRadius: 9,
-              background: 'rgba(245,209,78,0.12)',
-              border: '1px solid #F5D14E40',
+              background: 'rgba(var(--sb-accent-rgb),0.12)',
+              border: '1px solid rgba(var(--sb-accent-rgb),0.25)',
               color: '#6C6553', fontSize: 13, fontWeight: 600, cursor: 'pointer',
             }}
           >

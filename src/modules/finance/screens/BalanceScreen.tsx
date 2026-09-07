@@ -126,7 +126,7 @@ function AccountRow({ account, balance, unconverted, pending, selected, hovered,
         display: 'flex', alignItems: 'center', gap: 11,
         minHeight: 46, padding: '0 12px 0 6px', borderRadius: 12,
         background: selected ? '#FBF3D2' : hovered ? '#FFFDF7' : '#FFFFFF',
-        border: `1px solid ${selected ? '#F5D14E' : hovered ? '#E4DCC6' : '#EFEADB'}`,
+        border: `1px solid ${selected ? 'var(--sb-accent)' : hovered ? '#E4DCC6' : '#EFEADB'}`,
         boxSizing: 'border-box', position: 'relative', cursor: 'pointer',
         transform: CSS.Transform.toString(transform),
         transition,
@@ -250,10 +250,10 @@ export function BalanceScreen() {
     bg:        '#F7F4EA',
     surface:   '#FFFFFF',
     surfaceEl: '#FAF7EC',
-    amberBg:   'rgba(245,209,78,0.12)',
+    amberBg:   'rgba(var(--sb-accent-rgb),0.12)',
     border:    '#E8E1CE',
     divFaint:  '#E8E1CE',
-    amber:     '#F5D14E',
+    amber:     'var(--sb-accent)',
     amberSoft: '#D4A827',
     textPri:   '#191712',
     textMuted: '#6C6553',
@@ -420,7 +420,7 @@ export function BalanceScreen() {
             })}
           </div>
           <button onClick={() => setAccountModal({ open: true, account: null })}
-            style={{ height: 34, padding: '0 15px', borderRadius: 999, background: '#F5D14E', border: 'none', color: '#191712', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, boxShadow: '0 2px 0 rgba(25,23,18,0.14)' }}>
+            style={{ height: 34, padding: '0 15px', borderRadius: 999, background: 'var(--sb-accent)', border: 'none', color: '#191712', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, boxShadow: '0 2px 0 rgba(25,23,18,0.14)' }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
             Add account
           </button>
@@ -444,7 +444,7 @@ export function BalanceScreen() {
             <span>HELD</span><span style={{ marginLeft: 'auto' }}>OWED</span>
           </div>
           <div style={{ height: 14, borderRadius: 999, overflow: 'hidden', display: 'flex', background: 'rgba(255,255,255,0.12)' }}>
-            <span style={{ width: `${heldPct}%`, background: '#F5D14E', display: 'block' }} />
+            <span style={{ width: `${heldPct}%`, background: 'var(--sb-accent)', display: 'block' }} />
             <span style={{ flex: 1, background: '#C62828', display: 'block' }} />
           </div>
           <div style={{ display: 'flex', gap: 16, fontSize: 10.5, opacity: 0.62, marginTop: 6 }}>
@@ -587,7 +587,7 @@ export function BalanceScreen() {
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 7, height: 34,
                   padding: '0 8px 0 12px', borderRadius: 10, cursor: 'pointer',
-                  background: '#FBF3D2', border: '1px solid #F5D14E', color: '#7A5F09',
+                  background: '#FBF3D2', border: '1px solid var(--sb-accent)', color: '#7A5F09',
                   fontFamily: 'inherit', fontSize: 12.5, fontWeight: 600,
                 }}>
                 {focused.name}

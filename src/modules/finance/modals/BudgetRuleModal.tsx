@@ -20,7 +20,7 @@ const LINE  = '#E8E1CE'
 const HAIR  = '#F0EBDC'
 const OLIVE = '#0C8140'
 const RUST  = '#C62828'
-const AMBER = '#F5D14E'
+const AMBER = 'var(--sb-accent)'
 const DISPLAY = "'Outfit', system-ui, sans-serif"
 
 export type Frequency = 'weekly' | 'monthly' | 'every_2_months' | 'quarterly' | 'yearly'
@@ -168,7 +168,7 @@ function IntervalPicker({ value, onChange }: { value: Frequency; onChange: (f: F
                 style={{
                   display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '9px 10px',
                   border: 'none', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit',
-                  background: on ? 'rgba(245,209,78,0.18)' : 'transparent',
+                  background: on ? 'rgba(var(--sb-accent-rgb),0.18)' : 'transparent',
                   fontSize: 13.5, color: INK, textAlign: 'left',
                 }}>
                 <span style={{ flex: 1 }}>{opt.label}</span>

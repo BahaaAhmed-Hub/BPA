@@ -280,7 +280,7 @@ export function TaskCommand() {
                     placeholder="Search tasks…"
                     style={{
                       width: '100%', boxSizing: 'border-box', background: '#FAF7EC',
-                      border: `1px solid ${searchQuery ? '#F5D14E' : '#E8E1CE'}`,
+                      border: `1px solid ${searchQuery ? 'var(--sb-accent)' : '#E8E1CE'}`,
                       borderRadius: 9, padding: '8px 30px 8px 32px',
                       color: '#191712', fontSize: 12.5, outline: 'none', fontFamily: 'inherit',
                     }}
@@ -307,7 +307,7 @@ export function TaskCommand() {
                 {/* Group by */}
                 <span style={{ display: 'block', fontSize: 10, fontWeight: 700, letterSpacing: '.12em', color: '#6C6553', padding: '12px 0 7px' }}>GROUP TASKS BY</span>
                 {(['none', 'status', 'type', 'company', 'owner'] as GroupBy[]).map(opt => (
-                  <div key={opt} onClick={() => setGroupBy(opt)} style={{ display: 'flex', alignItems: 'center', gap: 10, height: 34, padding: '0 9px', borderRadius: 9, background: groupBy === opt ? '#FEF7DE' : 'transparent', cursor: 'pointer' }}>
+                  <div key={opt} onClick={() => setGroupBy(opt)} style={{ display: 'flex', alignItems: 'center', gap: 10, height: 34, padding: '0 9px', borderRadius: 9, background: groupBy === opt ? 'var(--sb-accent-tint)' : 'transparent', cursor: 'pointer' }}>
                     <span style={{ width: 16, height: 16, boxSizing: 'border-box', borderRadius: 999, border: `2px solid ${groupBy === opt ? '#191712' : '#C9C0A8'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                       {groupBy === opt && <span style={{ width: 7, height: 7, borderRadius: 999, background: '#191712' }} />}
                     </span>
@@ -332,8 +332,8 @@ export function TaskCommand() {
                       {companies.map(co => (
                         <button key={co.id} onClick={() => setFilters(f => ({ ...f, company: f.company === co.id ? '' : co.id }))} style={{
                           display: 'flex', alignItems: 'center', gap: 6, height: 28, boxSizing: 'border-box', padding: '0 11px', borderRadius: 999,
-                          background: filters.company === co.id ? '#FEF7DE' : '#FFFFFF',
-                          border: `1px solid ${filters.company === co.id ? '#F5D14E' : '#E8E1CE'}`,
+                          background: filters.company === co.id ? 'var(--sb-accent-tint)' : '#FFFFFF',
+                          border: `1px solid ${filters.company === co.id ? 'var(--sb-accent)' : '#E8E1CE'}`,
                           color: '#191712', fontSize: 11.5, fontWeight: filters.company === co.id ? 600 : 500, cursor: 'pointer',
                         }}>
                           <span style={{ width: 8, height: 8, borderRadius: 999, background: co.color, flexShrink: 0 }} />
@@ -353,8 +353,8 @@ export function TaskCommand() {
                     return (
                       <button key={type} onClick={() => setFilters(f => ({ ...f, type: f.type === type ? '' : type }))} style={{
                         display: 'flex', alignItems: 'center', gap: 6, height: 28, boxSizing: 'border-box', padding: '0 11px', borderRadius: 999,
-                        background: on ? '#FEF7DE' : '#FFFFFF',
-                        border: `1px solid ${on ? '#F5D14E' : '#E8E1CE'}`,
+                        background: on ? 'var(--sb-accent-tint)' : '#FFFFFF',
+                        border: `1px solid ${on ? 'var(--sb-accent)' : '#E8E1CE'}`,
                         color: '#191712', fontSize: 11.5, fontWeight: on ? 600 : 500, cursor: 'pointer', fontFamily: 'inherit',
                       }}>
                         <Icon size={12} strokeWidth={1.9} /> {TASK_TYPE_META[type].label}
@@ -371,8 +371,8 @@ export function TaskCommand() {
                       {ownerOptions.map(u => (
                         <button key={u.id} onClick={() => setFilters(f => ({ ...f, owner: f.owner === u.id ? '' : u.id }))} style={{
                           display: 'flex', alignItems: 'center', gap: 6, height: 28, boxSizing: 'border-box', padding: '0 11px', borderRadius: 999,
-                          background: filters.owner === u.id ? '#FEF7DE' : '#FFFFFF',
-                          border: `1px solid ${filters.owner === u.id ? '#F5D14E' : '#E8E1CE'}`,
+                          background: filters.owner === u.id ? 'var(--sb-accent-tint)' : '#FFFFFF',
+                          border: `1px solid ${filters.owner === u.id ? 'var(--sb-accent)' : '#E8E1CE'}`,
                           color: '#191712', fontSize: 11.5, fontWeight: filters.owner === u.id ? 600 : 500, cursor: 'pointer',
                         }}>
                           {u.name}
@@ -420,7 +420,7 @@ export function TaskCommand() {
           {/* New task CTA */}
           <button
             onClick={handleNewTask}
-            style={{ display: 'flex', alignItems: 'center', gap: 8, height: 38, boxSizing: 'border-box', padding: '0 18px', borderRadius: 999, background: '#F5D14E', color: '#191712', fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer', boxShadow: '0 1px 3px rgba(25,23,18,0.14)', flexShrink: 0, fontFamily: 'inherit' }}>
+            style={{ display: 'flex', alignItems: 'center', gap: 8, height: 38, boxSizing: 'border-box', padding: '0 18px', borderRadius: 999, background: 'var(--sb-accent)', color: '#191712', fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer', boxShadow: '0 1px 3px rgba(25,23,18,0.14)', flexShrink: 0, fontFamily: 'inherit' }}>
             <Plus size={15} strokeWidth={2.2} />
             New task
           </button>

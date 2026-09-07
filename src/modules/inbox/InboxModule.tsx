@@ -800,7 +800,7 @@ export function InboxModule() {
       return (
         <div style={{ background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 12, padding: '32px', textAlign: 'center' }}>
           <p style={{ margin: '0 0 14px', fontSize: 13, color: '#191712' }}>{fetchError}</p>
-          <button onClick={() => void loadEmails()} style={{ padding: '7px 18px', borderRadius: 8, background: 'rgba(245,209,78,0.12)', border: '1px solid #1E40AF30', color: '#7F77DD', fontSize: 12, cursor: 'pointer' }}>
+          <button onClick={() => void loadEmails()} style={{ padding: '7px 18px', borderRadius: 8, background: 'rgba(var(--sb-accent-rgb),0.12)', border: '1px solid #1E40AF30', color: '#7F77DD', fontSize: 12, cursor: 'pointer' }}>
             Retry
           </button>
         </div>
@@ -851,8 +851,8 @@ export function InboxModule() {
                 aria-label="Draft a reply with AI"
                 style={{
                   ...ICON_ACTION,
-                  background: drafting === selectedEmail.id ? '#F5D14E' : 'transparent',
-                  border: `1px solid ${drafting === selectedEmail.id ? '#F5D14E' : '#E8E1CE'}`,
+                  background: drafting === selectedEmail.id ? 'var(--sb-accent)' : 'transparent',
+                  border: `1px solid ${drafting === selectedEmail.id ? 'var(--sb-accent)' : '#E8E1CE'}`,
                   color: drafting === selectedEmail.id ? '#191712' : '#6C6553',
                 }}>
                 <Sparkles size={14} />
@@ -963,7 +963,7 @@ export function InboxModule() {
         ) : selectedTriage?.error ? (
           <div style={{ background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 12, padding: '20px 24px' }}>
             <p style={{ margin: '0 0 12px', fontSize: 13, color: '#191712' }}>{selectedTriage.error}</p>
-            <button onClick={() => void handleTriage(selectedEmail)} style={{ padding: '7px 14px', borderRadius: 7, background: 'rgba(245,209,78,0.12)', border: '1px solid #1E40AF30', color: '#7F77DD', fontSize: 12, cursor: 'pointer' }}>
+            <button onClick={() => void handleTriage(selectedEmail)} style={{ padding: '7px 14px', borderRadius: 7, background: 'rgba(var(--sb-accent-rgb),0.12)', border: '1px solid #1E40AF30', color: '#7F77DD', fontSize: 12, cursor: 'pointer' }}>
               Try again
             </button>
           </div>

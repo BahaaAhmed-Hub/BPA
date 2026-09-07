@@ -113,11 +113,11 @@ export function ReportsScreen(_props?: any) {
   const C = {
     bg:        '#F7F4EA',
     surface:   '#FFFFFF',
-    amberBg:   'rgba(245,209,78,0.12)',
+    amberBg:   'rgba(var(--sb-accent-rgb),0.12)',
     border:    '#E8E1CE',
     borderSt:  '#E8E1CE',
     divFaint:  '#E8E1CE',
-    amber:     '#F5D14E',
+    amber:     'var(--sb-accent)',
     textPri:   '#191712',
     textMuted: '#6C6553',
     textDim:   '#9B9180',

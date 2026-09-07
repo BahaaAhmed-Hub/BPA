@@ -17,7 +17,7 @@ import { useAuthStore } from './store/authStore'
 import { useTaskStore } from './store/taskStore'
 import { useHabitsStore } from './store/habitsStore'
 import { supabase } from './lib/supabase'
-import { signInWithGoogle, getPendingAddAccount, clearPendingAddAccount } from './lib/google'
+import { signInWithGoogle, signOut as googleSignOut, getPendingAddAccount, clearPendingAddAccount } from './lib/google'
 import { addAccount, loadAccounts, saveAccounts } from './lib/multiAccount'
 import { saveAccountsToDB, loadCompaniesFromDB, loadRawSettingsFromDB, loadAccountsFromDB, mergeCompanies } from './lib/dbSync'
 import type { CompanyRow } from './lib/dbSync'
@@ -34,7 +34,7 @@ import { useTaskCalendarPush } from './lib/taskAutoSchedule'
 import { seedToken, seedFromLocalStorage, clearAllTokens, getGoogleToken } from './lib/tokenManager'
 import { refreshPrimaryToken } from './lib/googleCalendar'
 import { SetupWizard } from './modules/wizard/SetupWizard'
-import { Search, Settings } from 'lucide-react'
+import { Search, Settings, LogOut } from 'lucide-react'
 
 // ─── Sunlit Bento — Login screen (1A) ────────────────────────────────────────
 
@@ -165,13 +165,13 @@ function LoginScreen() {
           >
             {/* Google G mark */}
             <svg width="18" height="18" viewBox="0 0 18 18">
-              <path fill={signing ? '#8A8272' : '#FEF7DE'} fillOpacity=".9"
+              <path fill={signing ? '#8A8272' : 'var(--sb-accent-tint)'} fillOpacity=".9"
                 d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.716v2.259h2.908C16.658 14.076 17.64 11.768 17.64 9.2z"/>
-              <path fill={signing ? '#8A8272' : '#FEF7DE'} fillOpacity=".75"
+              <path fill={signing ? '#8A8272' : 'var(--sb-accent-tint)'} fillOpacity=".75"
                 d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/>
-              <path fill={signing ? '#8A8272' : '#FEF7DE'} fillOpacity=".6"
+              <path fill={signing ? '#8A8272' : 'var(--sb-accent-tint)'} fillOpacity=".6"
                 d="M3.964 10.706A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.706V4.962H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.038l3.007-2.332z"/>
-              <path fill={signing ? '#8A8272' : '#FEF7DE'} fillOpacity=".9"
+              <path fill={signing ? '#8A8272' : 'var(--sb-accent-tint)'} fillOpacity=".9"
                 d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.962L3.964 6.294C4.672 4.169 6.656 3.58 9 3.58z"/>
             </svg>
             {signing ? 'Redirecting…' : 'Continue with Google'}
@@ -500,6 +500,17 @@ function TopNav() {
                   color: '#191712', fontSize: 13.5, fontFamily: 'inherit', textAlign: 'left',
                 }}>
                 <Settings size={15} color="#6C6553" /> Settings
+              </button>
+              <button
+                role="menuitem"
+                onClick={() => { setMenuOpen(false); void googleSignOut() }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 9, width: '100%', height: 36,
+                  padding: '0 10px', borderRadius: 9, border: 'none', cursor: 'pointer',
+                  background: 'transparent', color: '#C62828', fontSize: 13.5,
+                  fontFamily: 'inherit', textAlign: 'left',
+                }}>
+                <LogOut size={15} color="#C62828" /> Sign out
               </button>
             </div>
           )}

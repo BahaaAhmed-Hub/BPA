@@ -17,7 +17,7 @@ export const LINE   = '#E8E1CE'
 export const HAIR   = '#F0EBDC'
 export const OLIVE  = '#0C8140'
 export const RUST   = '#C62828'
-export const AMBER  = '#F5D14E'
+export const AMBER  = 'var(--sb-accent)'
 export const DISPLAY = "'Outfit', system-ui, sans-serif"
 
 export const PILL: React.CSSProperties = {
@@ -165,7 +165,7 @@ export function PillPicker({ value, options, onChange, placeholder, compact }: {
                   display: 'flex', alignItems: 'center', gap: 10, width: '100%',
                   padding: '9px 10px', paddingLeft: o.nested ? 26 : 10,
                   border: 'none', borderRadius: 8, cursor: 'pointer',
-                  background: on ? 'rgba(245,209,78,0.18)' : 'transparent',
+                  background: on ? 'rgba(var(--sb-accent-rgb),0.18)' : 'transparent',
                   fontFamily: 'inherit', fontSize: 13.5, color: INK, textAlign: 'left',
                 }}>
                 <Glyph glyph={o.glyph} tint={o.tint} />

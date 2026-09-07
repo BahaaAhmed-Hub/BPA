@@ -293,7 +293,7 @@ export function AccountModal({ account, onSave, onDelete, onClose }: Props) {
           <button
             onClick={handleSave}
             style={{
-              background: '#F5D14E',
+              background: 'var(--sb-accent)',
               border: 'none',
               cursor: 'pointer',
               fontSize: 14,

@@ -326,7 +326,7 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
         onDrop={e => { e.preventDefault(); setDropping(false); acceptFiles(e.dataTransfer.files) }}
         style={{
           flex: 1, minHeight: 0, overflowY: 'auto', padding: '18px 14px 0',
-          outline: dropping ? '2px dashed #F5D14E' : 'none', outlineOffset: -6,
+          outline: dropping ? '2px dashed var(--sb-accent)' : 'none', outlineOffset: -6,
         }}>
         {/* Title. A task with no name yet gets the cursor: it was made a
             moment ago for the express purpose of being named. */}

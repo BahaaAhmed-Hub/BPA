@@ -86,7 +86,7 @@ export function Step5Tasks({ data, onChange }: Props) {
               <button
                 onClick={() => manualToken.trim() && loadTasks(manualToken.trim())}
                 disabled={!manualToken.trim() || loading}
-                style={{ width: '100%', padding: '8px', borderRadius: 8, background: '#F5D14E', color: '#191712', fontSize: 13, fontWeight: 600, border: 'none', cursor: !manualToken.trim() ? 'not-allowed' : 'pointer', opacity: !manualToken.trim() ? 0.5 : 1 }}
+                style={{ width: '100%', padding: '8px', borderRadius: 8, background: 'var(--sb-accent)', color: '#191712', fontSize: 13, fontWeight: 600, border: 'none', cursor: !manualToken.trim() ? 'not-allowed' : 'pointer', opacity: !manualToken.trim() ? 0.5 : 1 }}
               >
                 {loading ? 'Loading…' : 'Load tasks →'}
               </button>
@@ -142,14 +142,14 @@ export function Step5Tasks({ data, onChange }: Props) {
               {data.importedTasks.length} tasks found — select which to import:
             </span>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={selectAll} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#F5D14E', fontSize: 12 }}>Select all</button>
+              <button onClick={selectAll} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-accent)', fontSize: 12 }}>Select all</button>
               <button onClick={deselectAll} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9B9180', fontSize: 12 }}>Deselect all</button>
             </div>
           </div>
           <div style={{ maxHeight: 260, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4, paddingRight: 4 }}>
             {data.importedTasks.map(t => (
               <label key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 8, background: '#FFFFFF', border: '1px solid #E8E1CE', cursor: 'pointer' }}>
-                <input type="checkbox" checked={data.selectedTaskIds.has(t.id)} onChange={() => toggleTask(t.id)} style={{ accentColor: '#F5D14E', width: 14, height: 14, flexShrink: 0 }} />
+                <input type="checkbox" checked={data.selectedTaskIds.has(t.id)} onChange={() => toggleTask(t.id)} style={{ accentColor: 'var(--sb-accent)', width: 14, height: 14, flexShrink: 0 }} />
                 {t.priority > 1 && <div style={{ width: 8, height: 8, borderRadius: '50%', background: PRIORITY_COLORS[t.priority], flexShrink: 0 }} />}
                 <span style={{ flex: 1, fontSize: 13, color: '#191712', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.content}</span>
                 {t.due && <span style={{ fontSize: 11, color: '#9B9180', flexShrink: 0 }}>{t.due}</span>}

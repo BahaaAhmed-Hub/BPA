@@ -206,7 +206,7 @@ function TaskRow({ draft, index, expanded, users, onToggle, onChange, onDelete }
             <button
               onClick={onToggle}
               style={{
-                background: 'rgba(245,209,78,0.12)', border: '1px solid rgba(245,209,78,0.45)',
+                background: 'rgba(var(--sb-accent-rgb),0.12)', border: '1px solid rgba(var(--sb-accent-rgb),0.45)',
                 borderRadius: 6, padding: '4px 14px', color: '#191712',
                 fontSize: 11.5, fontWeight: 600, cursor: 'pointer',
               }}

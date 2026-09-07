@@ -8,12 +8,13 @@ import {
   ChevronDown, ChevronUp, User, Clock, Building2, Flame,
   Brain, Bell, Palette, Link, X, RefreshCw, Eye, EyeOff, Shield, Pencil,
   Hash, CheckSquare, Mail, HardDrive, CalendarDays, Swords, Wand2, CreditCard, Sparkles,
-  ArrowUpRight, Download, Database, GripVertical, ImagePlus, LocateFixed,
+  ArrowUpRight, Download, Database, GripVertical, ImagePlus, LocateFixed, Check,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { paidAtSupported } from '../finance/unpaid'
 import { stepFor, setHabitStep, loadHabitSteps } from '@/lib/habitSteps'
 import { loadWeekStart, saveWeekStart, WEEKDAY_NAMES, type Weekday } from '@/lib/weekStart'
+import { ACCENTS, loadAccent, saveAccent, loadCompact, saveCompact, COMPACT_SCALE } from '@/lib/accent'
 import {
   loadHealthLinks, createHealthLink, deleteHealthLink, ingestUrl, checkHealthLink,
   isMovementHabit, suggestMetric, METRIC_LABEL, METRIC_SAMPLE,
@@ -97,7 +98,7 @@ const SECTION_META: SectionMeta[] = [
   { id: 'habits',        title: 'Habits',               icon: Flame,       description: 'Configure daily habits — synced with Habits page' },
   { id: 'automation',    title: 'Automation',           icon: Swords,      description: 'Rules that run without asking you first' },
   { id: 'notifications', title: 'Notifications',        icon: Bell,        description: 'What reaches you, where, and when it stays quiet' },
-  { id: 'appearance',    title: 'Appearance',           icon: Palette,     description: 'Theme, density, text size and motion' },
+  { id: 'appearance',    title: 'Appearance',           icon: Palette,     description: 'The accent colour, and how much fits on screen' },
   { id: 'behavioral',    title: 'Behavioral OS',        icon: Brain,       description: 'Rank scoring, operating mode and tone' },
   { id: 'companies',     title: 'Data & privacy',       icon: Shield,      description: 'Where your data sits and how long it stays' },
   { id: 'finance',       title: 'Finance',              icon: Hash,        description: 'Envelope style, figures, dates & alerts' },
@@ -227,7 +228,7 @@ const selectStyle: React.CSSProperties = {
 }
 
 function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
-  const accent = '#F5D14E'
+  const accent = 'var(--sb-accent)'
   return (
     <button role="switch" aria-checked={checked} onClick={() => onChange(!checked)}
       style={{
@@ -573,9 +574,9 @@ function ScheduleSection({
             <button key={n} onClick={() => set({ bufferMins: n })}
               style={{
                 padding: '4px 10px', borderRadius: 6, fontSize: 11.5, cursor: 'pointer', fontWeight: 500,
-                background: s.bufferMins === n ? 'rgba(245,209,78,0.12)' : '#FAF7EC',
-                border: `1px solid ${s.bufferMins === n ? '#F5D14E' : '#E8E1CE'}`,
-                color: s.bufferMins === n ? '#F5D14E' : '#6C6553',
+                background: s.bufferMins === n ? 'rgba(var(--sb-accent-rgb),0.12)' : '#FAF7EC',
+                border: `1px solid ${s.bufferMins === n ? 'var(--sb-accent)' : '#E8E1CE'}`,
+                color: s.bufferMins === n ? 'var(--sb-accent)' : '#6C6553',
               }}>{n === 0 ? 'None' : `${n}m`}</button>
           ))}
         </div>
@@ -586,9 +587,9 @@ function ScheduleSection({
             <button key={n} onClick={() => set({ physicalBufferMins: n })}
               style={{
                 padding: '4px 10px', borderRadius: 6, fontSize: 11.5, cursor: 'pointer', fontWeight: 500,
-                background: s.physicalBufferMins === n ? 'rgba(245,209,78,0.12)' : '#FAF7EC',
-                border: `1px solid ${s.physicalBufferMins === n ? '#F5D14E' : '#E8E1CE'}`,
-                color: s.physicalBufferMins === n ? '#F5D14E' : '#6C6553',
+                background: s.physicalBufferMins === n ? 'rgba(var(--sb-accent-rgb),0.12)' : '#FAF7EC',
+                border: `1px solid ${s.physicalBufferMins === n ? 'var(--sb-accent)' : '#E8E1CE'}`,
+                color: s.physicalBufferMins === n ? 'var(--sb-accent)' : '#6C6553',
               }}>{n === 0 ? 'None' : `${n}m`}</button>
           ))}
         </div>
@@ -766,7 +767,7 @@ function CompanyCard({
           style={{
             background: 'none', border: 'none', cursor: 'pointer', padding: 3,
             display: 'flex', alignItems: 'center',
-            color: co.hidden ? '#F5D14E' : '#6C6553',
+            color: co.hidden ? 'var(--sb-accent)' : '#6C6553',
           }}
         >
           {co.hidden ? <EyeOff size={13} /> : <Eye size={13} />}
@@ -838,7 +839,7 @@ function CompanyCard({
               style={{ ...inputStyle, fontSize: 11, padding: '3px 7px', flex: 1 }} />
             <button onClick={addUser} disabled={!newUserName.trim()} style={{
               padding: '3px 10px', borderRadius: 5, fontSize: 11, fontWeight: 500, cursor: 'pointer',
-              background: 'rgba(245,209,78,0.12)', border: '1px solid #7F77DD50',
+              background: 'rgba(var(--sb-accent-rgb),0.12)', border: '1px solid #7F77DD50',
               color: '#7F77DD', opacity: newUserName.trim() ? 1 : 0.4,
             }}>Add</button>
           </div>
@@ -932,7 +933,7 @@ function CompaniesSection({
               <X size={11} /> Cancel
             </button>
             <button onClick={addCompany} disabled={!newName.trim()}
-              style={{ padding: '6px 16px', borderRadius: 7, background: 'rgba(245,209,78,0.12)', border: '1px solid #F5D14E50', color: '#191712', fontSize: 12, fontWeight: 500, cursor: 'pointer', opacity: newName.trim() ? 1 : 0.4, display: 'flex', gap: 5, alignItems: 'center' }}>
+              style={{ padding: '6px 16px', borderRadius: 7, background: 'rgba(var(--sb-accent-rgb),0.12)', border: '1px solid rgba(var(--sb-accent-rgb),0.31)', color: '#191712', fontSize: 12, fontWeight: 500, cursor: 'pointer', opacity: newName.trim() ? 1 : 0.4, display: 'flex', gap: 5, alignItems: 'center' }}>
               <Plus size={11} /> Add Company
             </button>
           </div>
@@ -1182,7 +1183,7 @@ function SettingsHabitForm({
         <button onClick={() => valid && onSave(s)} disabled={!valid}
           style={{
             height: 38, padding: '0 18px', borderRadius: 999, border: 'none',
-            background: valid ? '#F5D14E' : '#EDE7D9', color: valid ? '#191712' : '#9B9180',
+            background: valid ? 'var(--sb-accent)' : '#EDE7D9', color: valid ? '#191712' : '#9B9180',
             fontSize: 13, fontWeight: 600, fontFamily: 'inherit',
             cursor: valid ? 'pointer' : 'default',
             display: 'flex', gap: 6, alignItems: 'center',
@@ -1293,7 +1294,7 @@ function AppleHealthBlock({ habits }: { habits: { id: string; name: string; unit
       ) : links === null ? (
         <div style={{
           fontSize: 12.5, color: '#7A5F09', lineHeight: 1.55, maxWidth: 720,
-          background: '#FBEBC8', border: '1px solid #EFE1B4', borderRadius: 10, padding: '11px 14px',
+          background: '#FBEBC8', border: '1px solid var(--sb-accent-border)', borderRadius: 10, padding: '11px 14px',
         }}>
           Your database has nowhere to keep these yet — run{' '}
           <code style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11.5 }}>supabase/migrations/20260012</code>{' '}
@@ -1454,7 +1455,7 @@ function HabitsSection() {
             </span>
             <Toggle checked={h.isActive} onChange={() => toggle(h.id)} />
             <button onClick={() => setEditingId(editingId === h.id ? null : h.id)} title="Edit habit"
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: editingId === h.id ? '#F5D14E' : '#6C6553', padding: 4 }}>
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: editingId === h.id ? 'var(--sb-accent)' : '#6C6553', padding: 4 }}>
               <Pencil size={13} />
             </button>
             <button onClick={() => { if (editingId === h.id) setEditingId(null); storeDel(h.id) }}
@@ -1634,7 +1635,7 @@ function TaskStatusesSection() {
           <X size={11} /> Cancel
         </button>
         <button onClick={confirmSave}
-          style={{ padding: '5px 14px', borderRadius: 6, background: 'rgba(245,209,78,0.12)', border: '1px solid #F5D14E50', color: '#191712', fontSize: 12, fontWeight: 500, cursor: 'pointer', display: 'flex', gap: 4, alignItems: 'center' }}>
+          style={{ padding: '5px 14px', borderRadius: 6, background: 'rgba(var(--sb-accent-rgb),0.12)', border: '1px solid rgba(var(--sb-accent-rgb),0.31)', color: '#191712', fontSize: 12, fontWeight: 500, cursor: 'pointer', display: 'flex', gap: 4, alignItems: 'center' }}>
           <Plus size={11} /> {adding ? 'Add Status' : 'Save'}
         </button>
       </div>
@@ -1664,7 +1665,7 @@ function TaskStatusesSection() {
             style={{
               display: 'flex', alignItems: 'center', gap: 10,
               padding: '9px 0', borderBottom: '1px solid #E8E1CE',
-              background: overIdx === i ? 'rgba(245,209,78,0.10)' : 'transparent',
+              background: overIdx === i ? 'rgba(var(--sb-accent-rgb),0.10)' : 'transparent',
             }}>
             <span title="Drag to reorder" style={{ display: 'flex', color: '#C9C0A8', cursor: 'grab', flexShrink: 0 }}>
               <GripVertical size={14} />
@@ -1675,7 +1676,7 @@ function TaskStatusesSection() {
               {s.id}
             </span>
             <button onClick={() => startEdit(i)} title="Edit"
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: isEditingRow(i) ? '#F5D14E' : '#6C6553', padding: 4 }}>
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: isEditingRow(i) ? 'var(--sb-accent)' : '#6C6553', padding: 4 }}>
               <Pencil size={13} />
             </button>
             <button onClick={() => remove(i)} title="Delete"
@@ -1833,11 +1834,11 @@ function AccountsSection({
         display: 'flex', alignItems: 'center', gap: 12,
         padding: '12px 14px', borderRadius: 10, marginBottom: 10,
         background: '#FAF7EC',
-        border: '1px solid #F5D14E30',
+        border: '1px solid rgba(var(--sb-accent-rgb),0.19)',
       }}>
         <div style={{
           width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
-          background: 'rgba(245,209,78,0.12)', border: '1px solid #F5D14E40',
+          background: 'rgba(var(--sb-accent-rgb),0.12)', border: '1px solid rgba(var(--sb-accent-rgb),0.25)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: '#191712',
         }}>
           {primaryEmail ? primaryEmail[0].toUpperCase() : 'G'}
@@ -1890,7 +1891,7 @@ function AccountsSection({
             opacity: hiddenAccts.has(acc.email) ? 0.5 : 1,
             transition: 'opacity 0.15s',
           }}>
-            <div style={{ width: 32, height: 32, borderRadius: '50%', flexShrink: 0, background: 'rgba(245,209,78,0.12)', border: '1px solid #7F77DD40', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: '#7F77DD' }}>
+            <div style={{ width: 32, height: 32, borderRadius: '50%', flexShrink: 0, background: 'rgba(var(--sb-accent-rgb),0.12)', border: '1px solid #7F77DD40', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: '#7F77DD' }}>
               {acc.email ? acc.email[0].toUpperCase() : 'G'}
             </div>
             <div style={{ flex: 1 }}>
@@ -2149,6 +2150,8 @@ function AIVoiceSection({ s, set }: { s: AppSettings; set: (p: Partial<AppSettin
 
 function AppearanceSection({ s, set }: { s: AppSettings; set: (p: Partial<AppSettings>) => void }) {
   const { setThemeId } = useUIStore()
+  const [accent, setAccent] = useState(() => loadAccent())
+  const [compact, setCompact] = useState(() => loadCompact())
 
   function pickTheme(id: string) {
     set({ theme: id })
@@ -2156,10 +2159,63 @@ function AppearanceSection({ s, set }: { s: AppSettings; set: (p: Partial<AppSet
     applyThemeVars(getTheme(id))
   }
 
+  function pickAccent(id: string) {
+    setAccent(id)
+    saveAccent(id)          // written, applied and announced in one gesture
+  }
+
   return (
     <div>
-      <div style={{ paddingBottom: 12, borderBottom: '1px solid #E8E1CE', marginBottom: 4 }}>
-        <p style={{ margin: '0 0 10px', fontSize: 12, fontWeight: 500, color: '#191712' }}>Theme</p>
+      {/* ── Accent ───────────────────────────────────────────────────────────
+          The one colour the whole app shares: every chip, bar, highlight and
+          today-marker is drawn in it. It changes as you click. */}
+      <div style={{ paddingBottom: 16, borderBottom: '1px solid #E8E1CE', marginBottom: 14 }}>
+        <p style={{ margin: '0 0 3px', fontSize: 12.5, fontWeight: 600, color: '#191712' }}>Accent</p>
+        <p style={{ margin: '0 0 11px', fontSize: 11.5, color: '#9B9180', lineHeight: 1.5 }}>
+          Every highlight in the app — chips, bars, the ring on today.
+        </p>
+        <div style={{ display: 'flex', gap: 9, flexWrap: 'wrap' }}>
+          {ACCENTS.map(a => {
+            const on = accent === a.id
+            return (
+              <button key={a.id} onClick={() => pickAccent(a.id)} title={a.name}
+                aria-pressed={on}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 8, height: 38, padding: '0 14px 0 10px',
+                  borderRadius: 999, cursor: 'pointer', fontFamily: 'inherit',
+                  background: on ? '#FFFFFF' : '#FAF7EC',
+                  border: `1px solid ${on ? '#191712' : '#E8E1CE'}`,
+                  boxShadow: on ? '0 1px 3px rgba(25,23,18,.16)' : 'none',
+                  color: '#191712', fontSize: 12.5, fontWeight: on ? 600 : 500,
+                }}>
+                <span style={{
+                  width: 18, height: 18, borderRadius: '50%', flexShrink: 0,
+                  background: a.hex, border: '1px solid rgba(25,23,18,0.12)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  {on && <Check size={11} strokeWidth={3} color="#191712" />}
+                </span>
+                {a.name}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      <FieldRow label="Compact density" sub={`Everything ${Math.round((1 - COMPACT_SCALE) * 100)}% smaller, so more fits on screen`}>
+        <Toggle checked={compact} onChange={v => { setCompact(v); saveCompact(v); set({ compact: v }) }} />
+      </FieldRow>
+
+      {/* ── Behavioral OS palette ────────────────────────────────────────────
+          These five are the old dark theme, and the Behavioral OS screen is
+          the only thing still painted from them — the rest of the app is the
+          Sunlit design, in fixed colours. Saying so is better than a grid that
+          looks like it changes everything and changes one screen. */}
+      <div style={{ paddingTop: 16, borderTop: '1px solid #E8E1CE', marginTop: 6 }}>
+        <p style={{ margin: '0 0 3px', fontSize: 12.5, fontWeight: 600, color: '#191712' }}>Behavioral OS palette</p>
+        <p style={{ margin: '0 0 11px', fontSize: 11.5, color: '#9B9180', lineHeight: 1.5 }}>
+          The Behavioral OS screen is drawn dark. This is its palette — the rest of the app keeps the Sunlit design.
+        </p>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 7 }}>
           {THEMES.map(t => {
             const active = s.theme === t.id
@@ -2184,12 +2240,6 @@ function AppearanceSection({ s, set }: { s: AppSettings; set: (p: Partial<AppSet
           })}
         </div>
       </div>
-      <FieldRow label="Sidebar expanded">
-        <Toggle checked={!s.sidebarDefault} onChange={v => set({ sidebarDefault: !v })} />
-      </FieldRow>
-      <FieldRow label="Compact density" sub="Tighter spacing">
-        <Toggle checked={s.compact} onChange={v => set({ compact: v })} />
-      </FieldRow>
     </div>
   )
 }
@@ -2321,7 +2371,7 @@ function BlockingRulesSection() {
           display: 'flex', alignItems: 'center', gap: 10,
           padding: '10px 14px', borderRadius: 10, marginBottom: 8,
           background: '#FAF7EC',
-          border: `1px solid ${rule.enabled ? '#F5D14E30' : '#E8E1CE'}`,
+          border: `1px solid ${rule.enabled ? 'rgba(var(--sb-accent-rgb),0.19)' : '#E8E1CE'}`,
           opacity: rule.enabled ? 1 : 0.6,
         }}>
           <Toggle checked={rule.enabled} onChange={() => toggleRule(rule.id)} />
@@ -2368,7 +2418,7 @@ function BlockingRulesSection() {
         <div style={{
           padding: '14px 16px', borderRadius: 10, marginTop: 8,
           background: '#FAF7EC',
-          border: '1px solid #F5D14E40',
+          border: '1px solid rgba(var(--sb-accent-rgb),0.25)',
         }}>
           <p style={{ margin: '0 0 12px', fontSize: 12.5, fontWeight: 600, color: '#191712' }}>
             {editingRule ? 'Edit blocking rule' : 'New blocking rule'}
@@ -2460,9 +2510,9 @@ function BlockingRulesSection() {
               disabled={!srcCal || !tgtCal || srcCal === tgtCal}
               style={{
                 flex: 1, padding: '8px 0', borderRadius: 8, cursor: 'pointer',
-                background: (!srcCal || !tgtCal || srcCal === tgtCal) ? '#FFFFFF' : 'rgba(245,209,78,0.12)',
-                border: '1px solid #F5D14E50',
-                color: (!srcCal || !tgtCal || srcCal === tgtCal) ? '#6C6553' : '#F5D14E',
+                background: (!srcCal || !tgtCal || srcCal === tgtCal) ? '#FFFFFF' : 'rgba(var(--sb-accent-rgb),0.12)',
+                border: '1px solid rgba(var(--sb-accent-rgb),0.31)',
+                color: (!srcCal || !tgtCal || srcCal === tgtCal) ? '#6C6553' : 'var(--sb-accent)',
                 fontSize: 12.5, fontWeight: 600,
               }}>
               {editingRule ? 'Update Rule' : 'Add Rule'}
@@ -2482,8 +2532,8 @@ function BlockingRulesSection() {
           style={{
             display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px',
             borderRadius: 8, cursor: 'pointer', marginTop: 4,
-            background: 'rgba(245,209,78,0.10)',
-            border: '1px solid #F5D14E40',
+            background: 'rgba(var(--sb-accent-rgb),0.10)',
+            border: '1px solid rgba(var(--sb-accent-rgb),0.25)',
             color: '#6C6553', fontSize: 12.5,
           }}>
           <Plus size={13} /> Add Rule
@@ -2499,7 +2549,7 @@ function BehavioralSection() {
   const { enabled, mode, setEnabled, setMode } = useBehavioralStore()
   const SB = {
     bg: '#F7F4EA', surface: '#FFFFFF', surface2: '#FAF7EC', border: '#E8E1CE',
-    accent: '#F5D14E', accentFill: 'rgba(245,209,78,0.12)', accentBright: '#D4A827',
+    accent: 'var(--sb-accent)', accentFill: 'rgba(var(--sb-accent-rgb),0.12)', accentBright: '#D4A827',
     text: '#191712', textDim: '#6C6553', textMuted: '#9B9180',
   }
 
@@ -2808,7 +2858,7 @@ function FinanceSection() {
           {/* Track */}
           <path d="M14 42 A26 26 0 0 1 66 42" stroke="#E8E1CE" strokeWidth="7" strokeLinecap="round" fill="none"/>
           {/* Fill (72% of arc) */}
-          <path d="M14 42 A26 26 0 0 1 57.8 19.5" stroke="#F5D14E" strokeWidth="7" strokeLinecap="round" fill="none"/>
+          <path d="M14 42 A26 26 0 0 1 57.8 19.5" stroke="var(--sb-accent)" strokeWidth="7" strokeLinecap="round" fill="none"/>
           {/* Needle center */}
           <circle cx="40" cy="42" r="4" fill="#191712"/>
           {/* Trend line */}
@@ -2823,13 +2873,13 @@ function FinanceSection() {
       preview: (
         <svg viewBox="0 0 80 56" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: 56 }}>
           <rect x="4" y="4" width="44" height="28" rx="3" fill="#EDE7D9"/>
-          <rect x="4" y="4" width="44" height="20" rx="3" fill="#F5D14E" opacity="0.7"/>
+          <rect x="4" y="4" width="44" height="20" rx="3" fill="var(--sb-accent)" opacity="0.7"/>
           <rect x="52" y="4" width="24" height="44" rx="3" fill="#FAE3E3"/>
           <rect x="52" y="4" width="24" height="48" rx="3" fill="#A31C1C" opacity="0.5"/>
           <rect x="4" y="36" width="20" height="16" rx="3" fill="#EDE7D9"/>
           <rect x="4" y="36" width="14" height="16" rx="3" fill="#E2F0E7"/>
           <rect x="28" y="36" width="20" height="16" rx="3" fill="#EDE7D9"/>
-          <rect x="28" y="36" width="10" height="16" rx="3" fill="#F5D14E" opacity="0.5"/>
+          <rect x="28" y="36" width="10" height="16" rx="3" fill="var(--sb-accent)" opacity="0.5"/>
         </svg>
       ),
     },
@@ -2840,7 +2890,7 @@ function FinanceSection() {
       preview: (
         <svg viewBox="0 0 80 56" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: 56 }}>
           <rect x="4" y="4" width="72" height="12" rx="3" fill="#FAF7EC"/>
-          <rect x="4" y="4" width="52" height="12" rx="3" fill="#F5D14E" opacity="0.5"/>
+          <rect x="4" y="4" width="52" height="12" rx="3" fill="var(--sb-accent)" opacity="0.5"/>
           <rect x="4" y="20" width="72" height="12" rx="3" fill="#FAF7EC"/>
           <rect x="4" y="20" width="68" height="12" rx="3" fill="#E2F0E7"/>
           <rect x="4" y="36" width="72" height="12" rx="3" fill="#FAF7EC"/>
@@ -2857,7 +2907,7 @@ function FinanceSection() {
         <svg viewBox="0 0 80 56" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: 56 }}>
           {/* outer ring */}
           <circle cx="22" cy="28" r="16" stroke="#E8E1CE" strokeWidth="4" fill="none"/>
-          <circle cx="22" cy="28" r="16" stroke="#F5D14E" strokeWidth="4" fill="none"
+          <circle cx="22" cy="28" r="16" stroke="var(--sb-accent)" strokeWidth="4" fill="none"
             strokeDasharray="75.4" strokeDashoffset="20" strokeLinecap="round"/>
           {/* inner ring */}
           <circle cx="22" cy="28" r="10" stroke="#EDE7D9" strokeWidth="3" fill="none"/>
@@ -2893,10 +2943,10 @@ function FinanceSection() {
                 onClick={() => saveStyle(style.id)}
                 style={{
                   background: active ? '#FAF7EC' : '#FFFFFF',
-                  border: `1.5px solid ${active ? '#F5D14E' : '#E8E1CE'}`,
+                  border: `1.5px solid ${active ? 'var(--sb-accent)' : '#E8E1CE'}`,
                   borderRadius: 12, padding: '14px 14px 12px',
                   cursor: 'pointer', textAlign: 'left',
-                  boxShadow: active ? '0 0 0 2px rgba(245,209,78,0.25)' : 'none',
+                  boxShadow: active ? '0 0 0 2px rgba(var(--sb-accent-rgb),0.25)' : 'none',
                   transition: 'all 0.15s',
                 }}
               >
@@ -2907,8 +2957,8 @@ function FinanceSection() {
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
                   <div style={{
                     width: 16, height: 16, borderRadius: '50%', flexShrink: 0, marginTop: 1,
-                    border: `2px solid ${active ? '#F5D14E' : '#E8E1CE'}`,
-                    background: active ? '#F5D14E' : 'transparent',
+                    border: `2px solid ${active ? 'var(--sb-accent)' : '#E8E1CE'}`,
+                    background: active ? 'var(--sb-accent)' : 'transparent',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>
                     {active && <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#191712' }} />}
@@ -3076,7 +3126,7 @@ function FinanceSection() {
               type="range" min={0.5} max={1} step={0.05}
               value={alertThreshold}
               onChange={e => { const v = parseFloat(e.target.value); setAlertThreshold(v); saveField('finance-alert-threshold', String(v)) }}
-              style={{ flex: 1, accentColor: '#F5D14E', cursor: 'pointer' }}
+              style={{ flex: 1, accentColor: 'var(--sb-accent)', cursor: 'pointer' }}
             />
             <span style={{ width: 36, textAlign: 'right', fontSize: 13, fontWeight: 600, color: '#191712', fontFamily: 'JetBrains Mono, monospace' }}>
               {Math.round(alertThreshold * 100)}%
@@ -3095,7 +3145,7 @@ function FinanceSection() {
         {!paidAtSupported() ? (
           <div style={{
             fontSize: 12.5, color: '#7A5F09', lineHeight: 1.55, maxWidth: 720,
-            background: '#FBEBC8', border: '1px solid #EFE1B4', borderRadius: 10, padding: '11px 14px',
+            background: '#FBEBC8', border: '1px solid var(--sb-accent-border)', borderRadius: 10, padding: '11px 14px',
           }}>
             Your database has no payment-date column yet, so nothing can be marked paid or unpaid —
             run <code style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11.5 }}>supabase/migrations/20260006</code> in
@@ -3266,12 +3316,12 @@ function BillingSection() {
     <NotYet text="Billing coming soon">
     <div>
       {/* Plan tile */}
-      <div style={{ padding: '16px 18px', borderRadius: 12, background: '#FFFBEC', border: '1px solid #F5D14E', marginBottom: 6 }}>
+      <div style={{ padding: '16px 18px', borderRadius: 12, background: '#FFFBEC', border: '1px solid var(--sb-accent)', marginBottom: 6 }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
               <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 15.5, fontWeight: 600, letterSpacing: '-0.02em', color: '#191712' }}>Professor Pro</span>
-              <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.1em', background: '#F5D14E', color: '#191712', padding: '3px 7px', borderRadius: 5 }}>ANNUAL</span>
+              <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.1em', background: 'var(--sb-accent)', color: '#191712', padding: '3px 7px', borderRadius: 5 }}>ANNUAL</span>
             </div>
             <p style={{ margin: 0, fontSize: 11.5, color: '#6C6553', lineHeight: 1.45 }}>Renews 14 March 2027 · all four companies, unlimited AI drafts</p>
           </div>
@@ -3464,7 +3514,7 @@ function IntegrationsSection() {
             <p style={{ margin: 0, fontSize: 12.5, fontWeight: 700, color: '#191712' }}>Connected tools</p>
             <p style={{ margin: '1px 0 0', fontSize: 11.5, color: '#9B9180' }}>Tasks and notes flow both ways — nothing is deleted on either side</p>
           </div>
-          <button style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 13px', borderRadius: 8, background: '#F5D14E', border: '1px solid rgba(25,23,18,0.18)', fontSize: 12, fontWeight: 600, color: '#191712', cursor: 'pointer', flexShrink: 0 }}>
+          <button style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 13px', borderRadius: 8, background: 'var(--sb-accent)', border: '1px solid rgba(25,23,18,0.18)', fontSize: 12, fontWeight: 600, color: '#191712', cursor: 'pointer', flexShrink: 0 }}>
             <Plus size={12} /> <span style={{ whiteSpace: 'nowrap' }}>Add integration</span>
           </button>
         </div>
@@ -4069,7 +4119,7 @@ export function Settings() {
       return (
         <button onClick={withSectionSave(id, fn)} style={{
           padding: '4px 12px', borderRadius: 7, fontSize: 11.5, fontWeight: 600, cursor: 'pointer',
-          background: saving === 'saved' ? 'rgba(12,129,64,0.12)' : saving === 'error' ? 'rgba(198,40,40,0.1)' : '#F5D14E',
+          background: saving === 'saved' ? 'rgba(12,129,64,0.12)' : saving === 'error' ? 'rgba(198,40,40,0.1)' : 'var(--sb-accent)',
           border: saving === 'saved' ? '1px solid #C8DAB0' : saving === 'error' ? '1px solid rgba(198,40,40,0.3)' : '1px solid rgba(25,23,18,0.18)',
           color: saving === 'saved' ? '#0C8140' : saving === 'error' ? '#C62828' : '#191712',
           transition: 'all 0.15s',

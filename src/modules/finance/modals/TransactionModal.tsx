@@ -355,7 +355,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
               <span style={{
                 flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
                 padding: '9px 12px', borderRadius: 10,
-                background: '#FBF3D2', border: '1px solid #EFE1B4',
+                background: '#FBF3D2', border: '1px solid var(--sb-accent-border)',
               }}>
                 <span style={{ fontSize: 12.5, color: '#7A5F09', flex: 1, minWidth: 140 }}>
                   Paying a card off? That moves money rather than spending it — switch to
@@ -480,7 +480,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
                 {tags.map(tag => (
                   <span key={tag} style={{
                     display: 'inline-flex', alignItems: 'center', gap: 5, height: 28, padding: '0 6px 0 10px',
-                    borderRadius: 999, background: 'rgba(245,209,78,0.16)', border: `1px solid ${AMBER}55`,
+                    borderRadius: 999, background: 'rgba(var(--sb-accent-rgb),0.16)', border: '1px solid rgba(var(--sb-accent-rgb),0.33)',
                     color: '#3D3926', fontSize: 12,
                   }}>
                     {tag}
@@ -572,7 +572,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
                 style={{
                   flex: 1, height: 44, borderRadius: 11, cursor: filled && open ? 'default' : 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  background: filled ? 'rgba(245,209,78,0.18)' : open ? '#FAF7EC' : 'transparent',
+                  background: filled ? 'rgba(var(--sb-accent-rgb),0.18)' : open ? '#FAF7EC' : 'transparent',
                   border: `1px solid ${filled ? AMBER : LINE}`,
                   color: filled ? '#191712' : open ? MUTED : GHOST,
                 }}>

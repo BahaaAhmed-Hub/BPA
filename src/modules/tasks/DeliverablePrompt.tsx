@@ -144,8 +144,8 @@ export function DeliverablePrompt({ task, onComplete, onCancel }: {
           style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
             height: 62, borderRadius: 11, cursor: 'pointer',
-            background: dropping ? 'rgba(245,209,78,0.16)' : '#FAF7EC',
-            border: `1px dashed ${dropping ? '#F5D14E' : '#D8CFB8'}`,
+            background: dropping ? 'rgba(var(--sb-accent-rgb),0.16)' : '#FAF7EC',
+            border: `1px dashed ${dropping ? 'var(--sb-accent)' : '#D8CFB8'}`,
             fontSize: 12.5, color: '#6C6553',
           }}>
           <Paperclip size={14} />

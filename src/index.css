@@ -26,6 +26,10 @@
 
   /* Accent — warm amber */
   --sb-accent:        #F5D14E;
+  /* The accent as components, so a style can ask for it at any opacity. Both
+     are rewritten by lib/accent.ts when another accent is chosen. */
+  --sb-accent-rgb:    245,209,78;
+  --sb-accent-deep:   #7A5F09;
   --sb-accent-tint:   #FEF7DE;
   --sb-accent-tint2:  #FDF6DE;
   --sb-accent-border: #EFE1B4;

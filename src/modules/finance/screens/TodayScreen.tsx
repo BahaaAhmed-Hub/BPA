@@ -216,7 +216,7 @@ function MoneyCalendar({
                   display: 'flex', flexDirection: 'column', gap: 3,
                   minHeight: 78, minWidth: 0, overflow: 'hidden', boxSizing: 'border-box' as const,
                   background: isSelected ? '#FBF3D2' : '#FAF7EC',
-                  border: `1px solid ${isSelected ? '#F5D14E' : '#F3EEE0'}`,
+                  border: `1px solid ${isSelected ? 'var(--sb-accent)' : '#F3EEE0'}`,
                   boxShadow: isSelected ? '0 1px 4px rgba(25,23,18,0.10)' : 'none',
                   cursor: 'pointer', transition: 'background 120ms, border-color 120ms',
                 }}

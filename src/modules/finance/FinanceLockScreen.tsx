@@ -11,7 +11,7 @@ import {
 
 const C = {
   bg: '#F7F4EA', card: '#FFFFFF', field: '#FAF7EC', border: '#E8E1CE',
-  ink: '#191712', muted: '#6C6553', ghost: '#9B9180', amber: '#F5D14E',
+  ink: '#191712', muted: '#6C6553', ghost: '#9B9180', amber: 'var(--sb-accent)',
   red: '#C62828',
 }
 

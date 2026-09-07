@@ -602,8 +602,8 @@ export function ReflectionScreen(_props?: any) {
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 6, height: 28,
                   padding: '0 11px', borderRadius: 999, cursor: 'pointer',
-                  background: dupesOpen ? '#F5D14E' : '#FBEBC8',
-                  border: '1px solid #EFE1B4', color: '#7A5F09',
+                  background: dupesOpen ? 'var(--sb-accent)' : '#FBEBC8',
+                  border: '1px solid var(--sb-accent-border)', color: '#7A5F09',
                   fontFamily: 'inherit', fontSize: 11.5, fontWeight: 700,
                 }}>
                 {suspects.length} to check

@@ -646,7 +646,7 @@ function DayColumn({ dateStr, isToday, children }: { dateStr: string; isToday: b
     <div ref={setNodeRef} style={{
       flex: 1, position: 'relative', height: GRID_H,
       borderRight: '1px solid #E8E1CE',
-      background: isToday ? 'rgba(245,209,78,0.045)' : isOver ? 'rgba(245,209,78,0.09)' : 'transparent',
+      background: isToday ? 'rgba(var(--sb-accent-rgb),0.045)' : isOver ? 'rgba(var(--sb-accent-rgb),0.09)' : 'transparent',
       transition: 'background 0.1s', minWidth: 0,
     }}>
       {/* Hour lines */}
@@ -1540,7 +1540,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
               title={`Open “${displayTitle(liveClashes[0].summary)}”`}
               style={{
                 ...EV_FIELD, flex: 1,
-                background: 'rgba(245,209,78,0.24)', border: '1px solid rgba(245,209,78,0.7)',
+                background: 'rgba(var(--sb-accent-rgb),0.24)', border: '1px solid rgba(var(--sb-accent-rgb),0.7)',
                 color: '#3D3926', cursor: onOpenEvent ? 'pointer' : 'default',
                 overflow: 'hidden', whiteSpace: 'nowrap',
               }}>
@@ -3254,7 +3254,7 @@ export function CalendarIntelligence() {
             {!isThisWeek(weekStart) && (
               <button
                 onClick={() => setAnchorDate(new Date())}
-                style={{ ...CAL_PILL, background: '#F5D14E', border: 'none', fontWeight: 600, boxShadow: '0 1px 3px rgba(25,23,18,0.14)' }}
+                style={{ ...CAL_PILL, background: 'var(--sb-accent)', border: 'none', fontWeight: 600, boxShadow: '0 1px 3px rgba(25,23,18,0.14)' }}
               >Today</button>
             )}
           </div>
@@ -3352,7 +3352,7 @@ export function CalendarIntelligence() {
           <div style={{
             display: 'flex', alignItems: 'center', gap: 10, marginTop: 10,
             padding: '10px 14px', borderRadius: 11,
-            background: 'rgba(245,209,78,0.20)', border: '1px solid rgba(245,209,78,0.65)',
+            background: 'rgba(var(--sb-accent-rgb),0.20)', border: '1px solid rgba(var(--sb-accent-rgb),0.65)',
           }}>
             <AlertCircle size={15} color="#8A6D0B" style={{ flexShrink: 0 }} />
             <span style={{ ...T.body, flex: 1, minWidth: 0, color: '#3D3926' }}>
@@ -3506,7 +3506,7 @@ export function CalendarIntelligence() {
                   <span style={{
                     alignSelf: 'flex-start', minWidth: 21, height: 21, padding: '0 5px', borderRadius: 999,
                     display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                    background: isToday ? '#F5D14E' : 'transparent',
+                    background: isToday ? 'var(--sb-accent)' : 'transparent',
                     color: outside ? '#C9C0A8' : '#191712',
                     fontSize: 11.5, fontWeight: isToday ? 700 : 600, fontVariantNumeric: 'tabular-nums',
                   }}>{day.getDate()}</span>
@@ -3570,7 +3570,7 @@ export function CalendarIntelligence() {
                   <div style={{
                     fontSize: 18, fontWeight: 700, lineHeight: 1.2, marginTop: 3,
                     color: isToday ? '#191712' : '#191712',
-                    background: isToday ? '#F5D14E' : 'transparent',
+                    background: isToday ? 'var(--sb-accent)' : 'transparent',
                     width: isToday ? 32 : undefined, height: isToday ? 32 : undefined,
                     borderRadius: isToday ? '50%' : undefined,
                     display: isToday ? 'flex' : undefined, alignItems: isToday ? 'center' : undefined, justifyContent: isToday ? 'center' : undefined,
@@ -3686,7 +3686,7 @@ export function CalendarIntelligence() {
                       return (
                         <div style={{
                           position: 'absolute', top, left: '1%', right: '1%', height: h, zIndex: 10,
-                          background: 'rgba(245,209,78,0.35)', border: '2px solid #F5D14E',
+                          background: 'rgba(var(--sb-accent-rgb),0.35)', border: '2px solid var(--sb-accent)',
                           borderRadius: 6, pointerEvents: 'none', boxSizing: 'border-box',
                         }}>
                           <div style={{ fontSize: 10, color: '#191712', padding: '2px 5px', fontWeight: 600 }}>

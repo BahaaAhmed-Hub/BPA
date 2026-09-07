@@ -447,7 +447,7 @@ function WallCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, o
       style={{
         display: 'flex', minWidth: 0, minHeight: 0, borderRadius: 18, overflow: 'hidden',
         border: isSelected ? '1px solid #191712' : '1px solid #E8E1CE', background: '#FFFFFF',
-        boxShadow: isSelected ? '0 0 0 3px rgba(245,209,78,.45)' : 'none',
+        boxShadow: isSelected ? '0 0 0 3px rgba(var(--sb-accent-rgb),.45)' : 'none',
         cursor: onSelect ? 'pointer' : 'default',
       }}>
       {/* Left: photo-style colored panel with gradient overlay */}
@@ -589,7 +589,7 @@ function FillCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, o
         borderRadius: 16, overflow: 'hidden',
         border: isSelected ? '1px solid #191712' : '1px solid #E8E1CE',
         background: '#FFFFFF',
-        boxShadow: isSelected ? '0 0 0 3px rgba(245,209,78,.45)' : 'none',
+        boxShadow: isSelected ? '0 0 0 3px rgba(var(--sb-accent-rgb),.45)' : 'none',
         cursor: isSelected ? (dragRef.current ? 'grabbing' : 'grab') : 'pointer',
         transition: 'flex 0.3s ease, min-width 0.3s ease',
         touchAction: 'none',
@@ -652,7 +652,7 @@ function FillCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, o
           {hasGoal && (
             <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <span style={{ flex: 1, height: 5, borderRadius: 999, background: 'rgba(253,248,231,.24)', overflow: 'hidden', display: 'block' }}>
-                <span style={{ display: 'block', width: `${displayPct}%`, height: '100%', background: '#F5D14E', borderRadius: 999 }} />
+                <span style={{ display: 'block', width: `${displayPct}%`, height: '100%', background: 'var(--sb-accent)', borderRadius: 999 }} />
               </span>
               <span style={{ fontSize: 9.5, fontWeight: 700, color: '#FDF8E7', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{displayPct}%</span>
             </span>
@@ -821,8 +821,8 @@ function HabitDetailPanel({
             return (
               <div key={d} title={d} style={{
                 borderRadius: 2,
-                background: done ? '#0C8140' : isT ? '#F5D14E22' : '#F0EBDC',
-                border: isT ? '1px solid #F5D14E' : '1px solid transparent',
+                background: done ? '#0C8140' : isT ? 'rgba(var(--sb-accent-rgb),0.13)' : '#F0EBDC',
+                border: isT ? '1px solid var(--sb-accent)' : '1px solid transparent',
               }} />
             )
           })}
@@ -1034,7 +1034,7 @@ export function HabitsModule() {
           </span>
           {/* New habit CTA */}
           <button onClick={createHabit}
-            style={{ display: 'flex', alignItems: 'center', gap: 8, boxSizing: 'border-box', height: 34, padding: '0 15px', borderRadius: 999, background: '#F5D14E', color: '#191712', fontSize: 12.5, fontWeight: 600, border: 'none', cursor: 'pointer', boxShadow: '0 2px 0 rgba(25,23,18,.14)', flexShrink: 0 }}>
+            style={{ display: 'flex', alignItems: 'center', gap: 8, boxSizing: 'border-box', height: 34, padding: '0 15px', borderRadius: 999, background: 'var(--sb-accent)', color: '#191712', fontSize: 12.5, fontWeight: 600, border: 'none', cursor: 'pointer', boxShadow: '0 2px 0 rgba(25,23,18,.14)', flexShrink: 0 }}>
             <Plus size={15} />
             New habit
           </button>
@@ -1093,7 +1093,7 @@ export function HabitsModule() {
                     display: 'flex', alignItems: 'flex-end', overflow: 'hidden',
                     outline: on ? '2px solid #191712' : 'none', outlineOffset: 2,
                   }}>
-                    <span style={{ width: '100%', height: `${Math.round(pct * 100)}%`, background: isT ? '#F5D14E' : '#191712', borderRadius: 3, display: 'block' }} />
+                    <span style={{ width: '100%', height: `${Math.round(pct * 100)}%`, background: isT ? 'var(--sb-accent)' : '#191712', borderRadius: 3, display: 'block' }} />
                   </span>
                   <span style={{ fontSize: 8.5, color: on || isT ? '#191712' : '#6C6553', fontWeight: on || isT ? 700 : 500 }}>{dayLabel}</span>
                 </button>

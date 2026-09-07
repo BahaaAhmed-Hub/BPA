@@ -27,7 +27,7 @@ import { isUnpaid, unpaidRow, settled, whenPaid, UNPAID_TITLE } from '../unpaid'
 
 const OLIVE = '#0C8140'
 const RUST  = '#C62828'
-const AMBER = '#F5D14E'
+const AMBER = 'var(--sb-accent)'
 
 // ─── A ring that says how much of an envelope is gone ─────────────────────────
 // The reference draws every category as a circle whose rim fills as it is
@@ -367,7 +367,7 @@ function SlipRows({ rows, color, selectedId, onPick, rules, dragging, currency }
                         width: '100%', display: 'flex', alignItems: 'center', gap: 10,
                         padding: '7px 8px', borderRadius: 8, cursor: 'pointer', textAlign: 'left',
                         fontFamily: 'inherit', boxSizing: 'border-box',
-                        background: isOver ? 'rgba(12,129,64,0.16)' : on ? 'rgba(245,209,78,0.20)' : 'transparent',
+                        background: isOver ? 'rgba(12,129,64,0.16)' : on ? 'rgba(var(--sb-accent-rgb),0.20)' : 'transparent',
                         border: isOver ? '1px dashed #0C8140' : '1px solid transparent',
                         borderBottom: isOver ? '1px dashed #0C8140' : '1px solid #F4F0E4',
                       }}>
@@ -421,7 +421,7 @@ function SlipRows({ rows, color, selectedId, onPick, rules, dragging, currency }
                         width: '100%', display: 'flex', alignItems: 'center', gap: 8,
                         padding: '4px 8px 4px 30px', borderRadius: 8, cursor: 'pointer', textAlign: 'left',
                         fontFamily: 'inherit', boxSizing: 'border-box', border: '1px solid transparent',
-                        background: selectedId === child.cat.id ? 'rgba(245,209,78,0.28)' : 'transparent',
+                        background: selectedId === child.cat.id ? 'rgba(var(--sb-accent-rgb),0.28)' : 'transparent',
                       }}>
                       <CategoryGlyph icon={child.cat.icon} size={12} />
                       <span style={{ flex: 1, minWidth: 0, fontSize: 11, color: '#6C6553', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -582,14 +582,14 @@ function MosaicBoxes({ rows, color, selectedId, onPick, rules, dragging, currenc
                         border: isOver ? '1px dashed #0C8140'
                           : over ? '1px solid rgba(163,28,28,0.55)'
                           : budgeted ? '1px solid #E4DCC6' : '1px dashed #DCD3BF',
-                        outline: on ? '2px solid #F5D14E' : 'none', outlineOffset: -1,
+                        outline: on ? '2px solid var(--sb-accent)' : 'none', outlineOffset: -1,
                       }}>
                       {/* The envelope filling up, behind everything else. */}
                       {(fill > 0 || over) && (
                         <span aria-hidden style={{
                           position: 'absolute', left: 0, right: 0, bottom: 0,
                           height: `${(over ? 1 : fill) * 100}%`,
-                          background: over ? 'rgba(163,28,28,0.42)' : 'rgba(245,209,78,0.72)',
+                          background: over ? 'rgba(163,28,28,0.42)' : 'rgba(var(--sb-accent-rgb),0.72)',
                           pointerEvents: 'none',
                         }} />
                       )}
@@ -645,7 +645,7 @@ function MosaicBoxes({ rows, color, selectedId, onPick, rules, dragging, currenc
                                         padding: 0, border: 'none',
                                         background: cOver ? 'rgba(163,28,28,0.5)'
                                           : child.actual > 0 ? 'rgba(25,23,18,0.16)' : 'rgba(25,23,18,0.07)',
-                                        outline: selectedId === child.cat.id ? '2px solid #F5D14E' : 'none',
+                                        outline: selectedId === child.cat.id ? '2px solid var(--sb-accent)' : 'none',
                                       }} />
                                   )}
                                 </Draggable>
@@ -751,7 +751,7 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
                     : ' · no budget set'}${dueDay ? ` · paid on the ${ordinal(dueDay)}` : ''}`}
                 style={{
                   width: 104, padding: '8px 2px 6px', borderRadius: 12,
-                  background: over ? 'rgba(12,129,64,0.16)' : on ? 'rgba(245,209,78,0.20)' : 'transparent',
+                  background: over ? 'rgba(12,129,64,0.16)' : on ? 'rgba(var(--sb-accent-rgb),0.20)' : 'transparent',
                   border: over ? '1px dashed #0C8140' : '1px solid transparent',
                   fontFamily: 'inherit', cursor: 'pointer', boxSizing: 'border-box',
                   display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7,
@@ -867,7 +867,7 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
                         position: 'relative', overflow: 'hidden',
                         display: 'inline-flex', alignItems: 'center', gap: 5, maxWidth: 104,
                         height: 24, padding: '0 9px', borderRadius: 999, cursor: 'pointer',
-                        background: selectedId === sub.id ? 'rgba(245,209,78,0.28)' : subBudgeted ? '#F4EFE1' : 'transparent',
+                        background: selectedId === sub.id ? 'rgba(var(--sb-accent-rgb),0.28)' : subBudgeted ? '#F4EFE1' : 'transparent',
                         // Same idea as the rings above: solid means a budget,
                         // broken means nothing has been set.
                         border: subBudgeted ? '1px solid #E4DCC6' : '1px dashed #DCD3BF',
@@ -879,7 +879,7 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
                         <span aria-hidden style={{
                           position: 'absolute', left: 0, top: 0, bottom: 0,
                           width: `${filled * 100}%`, borderRadius: 999,
-                          background: subOver ? 'rgba(198,40,40,0.22)' : 'rgba(245,209,78,0.42)',
+                          background: subOver ? 'rgba(198,40,40,0.22)' : 'rgba(var(--sb-accent-rgb),0.42)',
                           pointerEvents: 'none',
                         }} />
                       )}
@@ -1413,7 +1413,7 @@ export function BudgetScreen(_props?: any) {
                   title={`${new Date(year, x.m, 1).toLocaleDateString('en-GB', { month: 'long' })} · in ${money(x.income, currency)} · out ${money(x.expense, currency)} · net ${money(net, currency)}`}
                   style={{
                     flex: 1, minWidth: 0, padding: 0, border: 'none', cursor: 'pointer',
-                    background: on ? 'rgba(245,209,78,0.22)' : 'transparent',
+                    background: on ? 'rgba(var(--sb-accent-rgb),0.22)' : 'transparent',
                     borderRadius: 12, position: 'relative', display: 'flex', flexDirection: 'column',
                     justifyContent: 'flex-end',
                   }}>
@@ -1499,7 +1499,7 @@ export function BudgetScreen(_props?: any) {
             {note && (
               <div style={{
                 display: 'flex', alignItems: 'flex-start', gap: 8, padding: '10px 13px',
-                borderRadius: 10, background: 'rgba(245,209,78,0.20)', border: '1px solid rgba(245,209,78,0.65)',
+                borderRadius: 10, background: 'rgba(var(--sb-accent-rgb),0.20)', border: '1px solid rgba(var(--sb-accent-rgb),0.65)',
                 fontSize: 11.5, color: '#3D3926', lineHeight: 1.5,
               }}>
                 <span style={{ flex: 1 }}>{note}</span>
@@ -1524,7 +1524,7 @@ export function BudgetScreen(_props?: any) {
             {needRates.length > 0 && (
               <div style={{
                 marginTop: 12, padding: '11px 13px', borderRadius: 10,
-                background: 'rgba(245,209,78,0.20)', border: '1px solid rgba(245,209,78,0.65)',
+                background: 'rgba(var(--sb-accent-rgb),0.20)', border: '1px solid rgba(var(--sb-accent-rgb),0.65)',
               }}>
                 <div style={{ fontSize: 11.5, color: '#3D3926', lineHeight: 1.5 }}>
                   There is {needRates.length === 1 ? 'money' : 'money'} here in {needRates.join(' and ')} and

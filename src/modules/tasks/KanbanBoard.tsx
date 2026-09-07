@@ -175,7 +175,7 @@ function KanbanColumnComp({ column, onOpen, onColDragStart, onColDragOver, onCol
               if (e.key === 'Escape') { setNameDraft(column.label); setRenaming(false) }
             }}
             style={{
-              flex: 1, minWidth: 0, background: '#FFFFFF', border: '1px solid #F5D14E',
+              flex: 1, minWidth: 0, background: '#FFFFFF', border: '1px solid var(--sb-accent)',
               borderRadius: 7, padding: '2px 7px', outline: 'none',
               fontSize: 13.5, fontWeight: 600, color: '#191712', fontFamily: 'inherit',
             }}
@@ -214,7 +214,7 @@ function KanbanColumnComp({ column, onOpen, onColDragStart, onColDragOver, onCol
                 <button key={opt.id} onClick={() => { onBoardType(opt.id); setMenuOpen(false) }} style={{
                   width: '100%', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 8,
                   padding: '7px 9px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
-                  background: boardType === opt.id ? '#FEF7DE' : 'transparent',
+                  background: boardType === opt.id ? 'var(--sb-accent-tint)' : 'transparent',
                   color: '#191712', fontSize: 12.5, fontWeight: boardType === opt.id ? 600 : 500,
                 }}>{opt.label}</button>
               ))}
@@ -229,7 +229,7 @@ function KanbanColumnComp({ column, onOpen, onColDragStart, onColDragOver, onCol
         style={{
           flex: 1, overflowY: 'auto', padding: '4px 2px',
           minHeight: 80,
-          background: isOver ? 'rgba(245,209,78,0.06)' : 'transparent',
+          background: isOver ? 'rgba(var(--sb-accent-rgb),0.06)' : 'transparent',
           borderRadius: 10,
           transition: 'background 0.15s',
         }}
@@ -269,13 +269,13 @@ function KanbanColumnComp({ column, onOpen, onColDragStart, onColDragOver, onCol
               placeholder="Task title…"
               style={{
                 width: '100%', boxSizing: 'border-box',
-                background: '#F7F4EA', border: '1px solid #F5D14E',
+                background: '#F7F4EA', border: '1px solid var(--sb-accent)',
                 borderRadius: 6, padding: '6px 8px', fontSize: 12,
                 color: '#191712', outline: 'none', fontFamily: 'inherit',
               }}
             />
             <div style={{ display: 'flex', gap: 5, marginTop: 5 }}>
-              <button onClick={commitAdd} style={{ flex: 1, padding: '4px 0', fontSize: 11, fontWeight: 600, background: '#F5D14E', color: '#191712', border: 'none', borderRadius: 5, cursor: 'pointer' }}>
+              <button onClick={commitAdd} style={{ flex: 1, padding: '4px 0', fontSize: 11, fontWeight: 600, background: 'var(--sb-accent)', color: '#191712', border: 'none', borderRadius: 5, cursor: 'pointer' }}>
                 Add
               </button>
               <button onClick={() => { setAdding(false); setNewTitle('') }} style={{ padding: '4px 8px', fontSize: 11, background: 'transparent', color: '#6C6553', border: '1px solid #E8E1CE', borderRadius: 5, cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
@@ -359,8 +359,8 @@ function DatePickerOverlay({
           }}>Cancel</button>
           <button onClick={() => date && onConfirm(date)} disabled={!date} style={{
             padding: '7px 18px', borderRadius: 7,
-            background: 'rgba(245,209,78,0.15)',
-            border: '1px solid rgba(245,209,78,0.5)',
+            background: 'rgba(var(--sb-accent-rgb),0.15)',
+            border: '1px solid rgba(var(--sb-accent-rgb),0.5)',
             color: '#191712', fontSize: 12, fontWeight: 600,
             cursor: date ? 'pointer' : 'default', opacity: date ? 1 : 0.5,
           }}>Set Date &amp; Plan</button>
@@ -496,7 +496,7 @@ export function KanbanBoard({ onOpen, hideCompleted = false, filteredTaskIds }: 
     if (boardType === 'scheduled') {
       const buckets = [
         { id: 'overdue',     label: 'Overdue',    color: '#EF4444' },
-        { id: 'today',       label: 'Today',      color: '#F5D14E' },
+        { id: 'today',       label: 'Today',      color: 'var(--sb-accent)' },
         { id: 'this-week',   label: 'This Week',  color: '#7F77DD' },
         { id: 'next-week',   label: 'Next Week',  color: '#9B9180' },
         { id: 'later',       label: 'Later',      color: '#6B7280' },

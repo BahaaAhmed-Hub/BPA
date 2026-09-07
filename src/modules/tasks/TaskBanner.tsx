@@ -9,7 +9,7 @@ import { isCarriedOver } from './taskVisuals'
 
 const INK = '#1E1A13'
 const DIM = '#A69C86'
-const AMBER = '#F5D14E'
+const AMBER = 'var(--sb-accent)'
 const OLIVE = '#7C8F4F'
 
 function startOfDay(d: Date): Date {

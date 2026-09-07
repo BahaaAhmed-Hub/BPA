@@ -69,8 +69,8 @@ function LineCell({ name, value, onPick }: { name: string; value: string; onPick
       onClick={() => onPick(id)}
       style={{
         width: 34, height: 34, borderRadius: 6,
-        border: on ? `1px solid ${'#F5D14E'}` : '1px solid transparent',
-        background: on ? 'rgba(245,209,78,0.12)' : 'transparent',
+        border: on ? `1px solid ${'var(--sb-accent)'}` : '1px solid transparent',
+        background: on ? 'rgba(var(--sb-accent-rgb),0.12)' : 'transparent',
         cursor: 'pointer', color: '#4A4438',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}
@@ -142,7 +142,7 @@ export function IconPicker({ value, onChange, size = 44, trigger }: Props) {
           style={{
             width: size, height: size,
             borderRadius: 12,
-            border: `2px solid ${open ? '#F5D14E' : '#E8E1CE'}`,
+            border: `2px solid ${open ? 'var(--sb-accent)' : '#E8E1CE'}`,
             background: '#FFFFFF',
             cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -199,8 +199,8 @@ export function IconPicker({ value, onChange, size = 44, trigger }: Props) {
                 display: 'flex', alignItems: 'center', gap: 5,
                 padding: '7px 11px',
                 borderRadius: 8,
-                border: `1px solid ${'#F5D14E'}`,
-                background: 'rgba(245,209,78,0.12)',
+                border: `1px solid ${'var(--sb-accent)'}`,
+                background: 'rgba(var(--sb-accent-rgb),0.12)',
                 color: '#191712',
                 fontSize: 12, fontWeight: 600,
                 cursor: 'pointer', fontFamily: 'inherit',
@@ -252,10 +252,10 @@ export function IconPicker({ value, onChange, size = 44, trigger }: Props) {
                 style={{
                   flexShrink: 0, width: 32, height: 28,
                   borderRadius: 6, border: 'none',
-                  background: tab === 'line' ? 'rgba(245,209,78,0.12)' : 'transparent',
+                  background: tab === 'line' ? 'rgba(var(--sb-accent-rgb),0.12)' : 'transparent',
                   cursor: 'pointer', color: '#6C6553',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  outline: tab === 'line' ? `1px solid ${'#F5D14E'}44` : 'none',
+                  outline: tab === 'line' ? '1px solid rgba(var(--sb-accent-rgb),0.27)' : 'none',
                 }}
               >
                 <Shapes size={15} strokeWidth={1.75} />
@@ -269,9 +269,9 @@ export function IconPicker({ value, onChange, size = 44, trigger }: Props) {
                   style={{
                     flexShrink: 0, width: 32, height: 28,
                     borderRadius: 6, border: 'none',
-                    background: tab === g.id ? 'rgba(245,209,78,0.12)' : 'transparent',
+                    background: tab === g.id ? 'rgba(var(--sb-accent-rgb),0.12)' : 'transparent',
                     cursor: 'pointer', fontSize: 16,
-                    outline: tab === g.id ? `1px solid ${'#F5D14E'}44` : 'none',
+                    outline: tab === g.id ? '1px solid rgba(var(--sb-accent-rgb),0.27)' : 'none',
                   }}
                 >
                   {g.label}
@@ -311,8 +311,8 @@ export function IconPicker({ value, onChange, size = 44, trigger }: Props) {
                 onClick={() => { onChange(emoji); setOpen(false); setSearch('') }}
                 style={{
                   width: 34, height: 34, borderRadius: 6,
-                  border: value === emoji ? `1px solid ${'#F5D14E'}` : '1px solid transparent',
-                  background: value === emoji ? 'rgba(245,209,78,0.12)' : 'transparent',
+                  border: value === emoji ? `1px solid ${'var(--sb-accent)'}` : '1px solid transparent',
+                  background: value === emoji ? 'rgba(var(--sb-accent-rgb),0.12)' : 'transparent',
                   cursor: 'pointer', fontSize: 20,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   transition: 'background 0.1s',

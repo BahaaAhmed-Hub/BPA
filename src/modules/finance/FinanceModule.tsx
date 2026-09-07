@@ -133,7 +133,7 @@ export function FinanceModule() {
     panel:     '#FFFFFF',
     surface:   '#FFFFFF',
     surfaceEl: '#FAF7EC',
-    amberBg:   'rgba(245,209,78,0.12)',
+    amberBg:   'rgba(var(--sb-accent-rgb),0.12)',
     border:    '#E8E1CE',
     borderSt:  '#E8E1CE',
     divFaint:  '#EDE7D9',
@@ -240,8 +240,8 @@ export function FinanceModule() {
                 style={{
                   display: 'flex', alignItems: 'center', gap: 5,
                   padding: '4px 10px', borderRadius: 7, cursor: 'grab',
-                  background: active ? '#F5D14E' : 'transparent',
-                  border: `1px solid ${isDropTarget ? '#F5D14E' : active ? 'rgba(25,23,18,0.18)' : 'transparent'}`,
+                  background: active ? 'var(--sb-accent)' : 'transparent',
+                  border: `1px solid ${isDropTarget ? 'var(--sb-accent)' : active ? 'rgba(25,23,18,0.18)' : 'transparent'}`,
                   boxShadow: active ? '0 2px 0 rgba(25,23,18,0.1)' : 'none',
                   opacity: isDragging ? 0.35 : 1,
                   userSelect: 'none', flexShrink: 0,
@@ -297,7 +297,7 @@ export function FinanceModule() {
           title="Add one entry"
           style={{
             height: 30, paddingInline: 14, borderRadius: 8,
-            background: '#F5D14E', border: '1px solid rgba(25,23,18,0.18)', cursor: 'pointer',
+            background: 'var(--sb-accent)', border: '1px solid rgba(25,23,18,0.18)', cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             flexShrink: 0, gap: 5, boxShadow: '0 2px 0 rgba(25,23,18,0.1)',
           }}
