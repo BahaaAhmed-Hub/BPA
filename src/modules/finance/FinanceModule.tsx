@@ -115,39 +115,9 @@ const NAV_ITEMS: { id: FinanceScreen; label: string; Icon: (p: { color: string }
   { id: 'plan',    label: 'Plan',       Icon: IconPlan },
 ]
 
-// ─── Color map type ───────────────────────────────────────────────────────────
-
-interface ColorMap {
-  bg: string; rail: string; panel: string; surface: string; surfaceEl: string
-  amberBg: string; border: string; borderSt: string; divFaint: string
-  amber: string; amberSoft: string; textPri: string; textMuted: string
-  textDim: string; red: string; green: string; cyan: string; purple: string
-}
-
 // ─── Finance Module ───────────────────────────────────────────────────────────
 
 export function FinanceModule() {
-  const C: ColorMap = {
-    bg:        'var(--sb-page)',
-    rail:      'var(--sb-header)',
-    panel:     'var(--sb-card)',
-    surface:   'var(--sb-card)',
-    surfaceEl: 'var(--sb-field)',
-    amberBg:   'rgba(var(--sb-accent-rgb),0.12)',
-    border:    'var(--sb-border)',
-    borderSt:  'var(--sb-border)',
-    divFaint:  'var(--sb-field)',
-    amber:     'var(--sb-ink-1)',
-    amberSoft: '#3D3926',
-    textPri:   'var(--sb-ink-1)',
-    textMuted: '#9B9180',
-    textDim:   'var(--sb-ink-3)',
-    red:       '#A31C1C',
-    green:     'var(--sb-positive)',
-    cyan:      '#3B7A8A',
-    purple:    '#3D3926',
-  }
-
   const { accounts, categories, transactions, upsertTransaction, upsertTransactions } = useFinanceStore()
 
   // Nothing on any of these screens is drawn until it is you. The gate is
@@ -210,15 +180,15 @@ export function FinanceModule() {
   if (locked) return <LockGate onUnlocked={unlock} />
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', background: C.bg }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', background: 'var(--sb-page)' }}>
 
       {/* Layer 1 — main app header (64px): aligns with sidebar logo */}
 
       {/* Layer 2 — Finance sub-nav (44px): module-specific tabs */}
       <div style={{
         height: 44, flexShrink: 0,
-        background: C.rail,
-        borderBottom: `1px solid ${C.border}`,
+        background: 'var(--sb-header)',
+        borderBottom: '1px solid var(--sb-border)',
         display: 'flex', alignItems: 'center',
         padding: '0 12px', gap: 2,
       }}>
