@@ -155,6 +155,20 @@ html, body {
   outline-offset: 2px;
 }
 
+/* ── What data-theme is for ───────────────────────────────────────────────────
+   applyThemeVars sets data-theme on <html>, and until now nothing read it —
+   every colour arrives as a --sb-* variable, so CSS never needed to ask which
+   way round the theme is. One thing does need asking, and it cannot be said
+   with a variable: the browser paints its own controls. The 25 native date and
+   time inputs in this app, their calendar popups and spinners, the default
+   scrollbars, the autofill wash and the focus ring are all drawn by the UA,
+   and they follow color-scheme rather than anything we declare.
+
+   So the attribute keeps exactly one job. Without it a dark theme leaves a
+   white calendar popup hanging off a dark field.                             */
+:root[data-theme="dark"]  { color-scheme: dark; }
+:root[data-theme="light"] { color-scheme: light; }
+
 /* Custom scrollbar — thin, warm */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
