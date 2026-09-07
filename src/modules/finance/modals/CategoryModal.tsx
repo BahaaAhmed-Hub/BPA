@@ -108,7 +108,7 @@ export function CategoryModal({ category, categories, onSave, onDelete, onClose 
                   border: '1px solid var(--sb-border)', background: 'var(--sb-field)', cursor: 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
                 }}>
-                <CategoryGlyph icon={icon} size={24} color={'var(--sb-ink-1)'} />
+                <CategoryGlyph icon={icon} size={24} color="var(--sb-ink-1)" />
               </button>
             )}
           />
@@ -158,7 +158,7 @@ export function CategoryModal({ category, categories, onSave, onDelete, onClose 
             <span style={{ flex: 1, minWidth: 0, position: 'relative', display: 'flex' }}>
               <span style={{ ...PILL, flex: 1, justifyContent: 'space-between' }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-                  {parent && <CategoryGlyph icon={parent.icon} size={15} color={'var(--sb-ink-3)'} />}
+                  {parent && <CategoryGlyph icon={parent.icon} size={15} color="var(--sb-ink-3)" />}
                   <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: parent ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)' }}>
                     {parent ? parent.name : 'Nothing — it stands on its own'}
                   </span>

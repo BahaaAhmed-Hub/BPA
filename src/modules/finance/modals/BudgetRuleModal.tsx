@@ -309,7 +309,7 @@ export function BudgetRuleModal({
                   border: '1px solid var(--sb-border)', background: 'var(--sb-field)', cursor: 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
                 }}>
-                <CategoryGlyph icon={category.icon} size={21} color={'var(--sb-ink-1)'} />
+                <CategoryGlyph icon={category.icon} size={21} color="var(--sb-ink-1)" />
               </button>
             )}
           />
@@ -598,7 +598,7 @@ export function BudgetRuleModal({
                 background: 'none', border: 'none', borderBottom: '1px solid var(--sb-hairline)',
                 cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
               }}>
-              <CategoryGlyph icon={sub.icon} size={15} color={'var(--sb-ink-3)'} />
+              <CategoryGlyph icon={sub.icon} size={15} color="var(--sb-ink-3)" />
               <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: 'var(--sb-ink-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sub.name}</span>
               {subSpend > 0 && (
                 <span style={{ fontFamily: DISPLAY, fontSize: 12, fontWeight: 600, color: tone, fontVariantNumeric: 'tabular-nums' }}>

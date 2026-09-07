@@ -9,23 +9,17 @@ import {
 // ones this device has rather than offering a button that cannot work — a
 // passkey belongs to one device, and this may not be that device.
 
-const C = {
-  bg: 'var(--sb-page)', card: 'var(--sb-card)', field: 'var(--sb-field)', border: 'var(--sb-border)',
-  ink: 'var(--sb-ink-1)', muted: 'var(--sb-ink-3)', ghost: '#9B9180', amber: 'var(--sb-accent)',
-  red: 'var(--sb-negative)',
-}
-
 function IconShield({ size = 30 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
-      stroke={C.ink} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      stroke="var(--sb-ink-1)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
       <path d="M12 2.6l7.2 2.9v5.7c0 4.6-3 8.3-7.2 10.2-4.2-1.9-7.2-5.6-7.2-10.2V5.5z"/>
       <path d="M9.3 12.1l2 2 3.4-3.9"/>
     </svg>
   )
 }
 
-function IconFingerprint({ color = C.ink }: { color?: string }) {
+function IconFingerprint({ color = 'var(--sb-ink-1)' }: { color?: string }) {
   return (
     <svg width="17" height="17" viewBox="0 0 24 24" fill="none"
       stroke={color} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
@@ -85,13 +79,13 @@ export function LockGate({ onUnlocked, compact = false, title, note }: LockGateP
   const body = (
     <div style={{
       width: compact ? '100%' : 380, maxWidth: '100%',
-      background: C.card, border: `1px solid ${C.border}`, borderRadius: 16,
+      background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 16,
       padding: compact ? '18px 20px 20px' : '30px 30px 26px',
       boxShadow: compact ? 'none' : '0 1px 3px rgba(25,23,18,0.06)',
     }}>
       {!compact && (
         <div style={{
-          width: 54, height: 54, borderRadius: 15, background: C.amber,
+          width: 54, height: 54, borderRadius: 15, background: 'var(--sb-accent)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16,
         }}>
           <IconShield />
@@ -99,11 +93,11 @@ export function LockGate({ onUnlocked, compact = false, title, note }: LockGateP
       )}
       <h2 style={{
         margin: 0, fontFamily: 'Outfit, system-ui, sans-serif',
-        fontSize: compact ? 17 : 23, fontWeight: 600, letterSpacing: '-0.02em', color: C.ink,
+        fontSize: compact ? 17 : 23, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--sb-ink-1)',
       }}>
         {title ?? 'Your finances are locked'}
       </h2>
-      <p style={{ margin: '7px 0 18px', fontSize: 12.5, lineHeight: 1.55, color: C.muted }}>
+      <p style={{ margin: '7px 0 18px', fontSize: 12.5, lineHeight: 1.55, color: 'var(--sb-ink-3)' }}>
         {note ?? (passkey
           ? `Confirm it is you with ${biometricName()}, or type your password.`
           : 'Type your password to open them. This device has no fingerprint or face unlock set up for the finances.')}
@@ -115,7 +109,7 @@ export function LockGate({ onUnlocked, compact = false, title, note }: LockGateP
           disabled={busy !== null}
           style={{
             width: '100%', height: 42, borderRadius: 11, marginBottom: 12,
-            background: C.ink, border: `1px solid ${C.ink}`, color: 'var(--sb-ink-on-dark)',
+            background: 'var(--sb-ink-1)', border: '1px solid var(--sb-ink-1)', color: 'var(--sb-ink-on-dark)',
             cursor: busy ? 'default' : 'pointer', fontFamily: 'inherit',
             fontSize: 13.5, fontWeight: 600,
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
@@ -130,7 +124,7 @@ export function LockGate({ onUnlocked, compact = false, title, note }: LockGateP
           {passkey && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '0 0 12px' }}>
               <div style={{ flex: 1, height: 1, background: 'var(--sb-hairline)' }} />
-              <span style={{ fontSize: 10.5, letterSpacing: '0.1em', color: C.ghost, fontWeight: 600 }}>OR</span>
+              <span style={{ fontSize: 10.5, letterSpacing: '0.1em', color: 'var(--sb-ink-4)', fontWeight: 600 }}>OR</span>
               <div style={{ flex: 1, height: 1, background: 'var(--sb-hairline)' }} />
             </div>
           )}
@@ -143,9 +137,9 @@ export function LockGate({ onUnlocked, compact = false, title, note }: LockGateP
             onChange={e => { setPassword(e.target.value); setError(null) }}
             style={{
               width: '100%', height: 42, borderRadius: 11, boxSizing: 'border-box',
-              padding: '0 13px', background: C.field,
-              border: `1px solid ${error ? C.red : C.border}`,
-              fontFamily: 'inherit', fontSize: 13.5, color: C.ink, outline: 'none',
+              padding: '0 13px', background: 'var(--sb-field)',
+              border: `1px solid ${error ? 'var(--sb-negative)' : 'var(--sb-border)'}`,
+              fontFamily: 'inherit', fontSize: 13.5, color: 'var(--sb-ink-1)', outline: 'none',
             }}
           />
           <button
@@ -153,9 +147,9 @@ export function LockGate({ onUnlocked, compact = false, title, note }: LockGateP
             disabled={busy !== null || !password}
             style={{
               width: '100%', height: 42, borderRadius: 11, marginTop: 10,
-              background: password ? C.amber : C.field,
-              border: `1px solid ${password ? 'rgba(25,23,18,0.18)' : C.border}`,
-              color: password ? C.ink : C.ghost,
+              background: password ? 'var(--sb-accent)' : 'var(--sb-field)',
+              border: `1px solid ${password ? 'rgba(25,23,18,0.18)' : 'var(--sb-border)'}`,
+              color: password ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)',
               cursor: password && !busy ? 'pointer' : 'default',
               fontFamily: 'inherit', fontSize: 13.5, fontWeight: 600,
             }}>
@@ -165,14 +159,14 @@ export function LockGate({ onUnlocked, compact = false, title, note }: LockGateP
       )}
 
       {!cfg.password && !passkey && (
-        <p style={{ margin: 0, fontSize: 12.5, color: C.red, lineHeight: 1.5 }}>
+        <p style={{ margin: 0, fontSize: 12.5, color: 'var(--sb-negative)', lineHeight: 1.5 }}>
           The lock is on but nothing was set to open it. Turn it off in
           Settings → Finance → Security.
         </p>
       )}
 
       {error && (
-        <p style={{ margin: '11px 0 0', fontSize: 12, color: C.red, lineHeight: 1.5 }}>{error}</p>
+        <p style={{ margin: '11px 0 0', fontSize: 12, color: 'var(--sb-negative)', lineHeight: 1.5 }}>{error}</p>
       )}
     </div>
   )
@@ -180,7 +174,7 @@ export function LockGate({ onUnlocked, compact = false, title, note }: LockGateP
   if (compact) return body
   return (
     <div style={{
-      height: '100%', background: C.bg, display: 'flex',
+      height: '100%', background: 'var(--sb-page)', display: 'flex',
       alignItems: 'center', justifyContent: 'center', padding: 24, overflow: 'auto',
     }}>
       {body}
