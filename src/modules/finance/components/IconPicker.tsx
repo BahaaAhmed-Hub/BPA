@@ -71,7 +71,7 @@ function LineCell({ name, value, onPick }: { name: string; value: string; onPick
         width: 34, height: 34, borderRadius: 6,
         border: on ? `1px solid ${'var(--sb-accent)'}` : '1px solid transparent',
         background: on ? 'rgba(var(--sb-accent-rgb),0.12)' : 'transparent',
-        cursor: 'pointer', color: '#4A4438',
+        cursor: 'pointer', color: 'var(--sb-ink-2)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}
     >
@@ -142,8 +142,8 @@ export function IconPicker({ value, onChange, size = 44, trigger }: Props) {
           style={{
             width: size, height: size,
             borderRadius: 12,
-            border: `2px solid ${open ? 'var(--sb-accent)' : '#E8E1CE'}`,
-            background: '#FFFFFF',
+            border: `2px solid ${open ? 'var(--sb-accent)' : 'var(--sb-border)'}`,
+            background: 'var(--sb-card)',
             cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             overflow: 'hidden',
@@ -166,8 +166,8 @@ export function IconPicker({ value, onChange, size = 44, trigger }: Props) {
           left: 0,
           zIndex: 200,
           width: 320,
-          background: '#FFFFFF',
-          border: `1px solid ${'#E8E1CE'}`,
+          background: 'var(--sb-card)',
+          border: `1px solid ${'var(--sb-border)'}`,
           borderRadius: 14,
           boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
           overflow: 'hidden',
@@ -183,8 +183,8 @@ export function IconPicker({ value, onChange, size = 44, trigger }: Props) {
               onChange={e => setSearch(e.target.value)}
               style={{
                 flex: 1, padding: '7px 10px',
-                borderRadius: 8, border: `1px solid ${'#E8E1CE'}`,
-                background: '#F7F4EA', color: '#191712',
+                borderRadius: 8, border: `1px solid ${'var(--sb-border)'}`,
+                background: 'var(--sb-page)', color: 'var(--sb-ink-1)',
                 fontSize: 13, outline: 'none', boxSizing: 'border-box' as const,
                 fontFamily: 'inherit',
               }}
@@ -201,7 +201,7 @@ export function IconPicker({ value, onChange, size = 44, trigger }: Props) {
                 borderRadius: 8,
                 border: `1px solid ${'var(--sb-accent)'}`,
                 background: 'rgba(var(--sb-accent-rgb),0.12)',
-                color: '#191712',
+                color: 'var(--sb-ink-1)',
                 fontSize: 12, fontWeight: 600,
                 cursor: 'pointer', fontFamily: 'inherit',
                 whiteSpace: 'nowrap' as const,
@@ -223,17 +223,17 @@ export function IconPicker({ value, onChange, size = 44, trigger }: Props) {
               margin: '8px 12px 0',
               padding: '6px 10px',
               borderRadius: 8,
-              background: '#F7F4EA',
-              border: `1px solid ${'#E8E1CE'}`,
+              background: 'var(--sb-page)',
+              border: `1px solid ${'var(--sb-border)'}`,
             }}>
               <img src={value} alt="current" style={{ width: 28, height: 28, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }} />
-              <span style={{ fontSize: 12, color: '#6C6553', flex: 1 }}>Current image</span>
+              <span style={{ fontSize: 12, color: 'var(--sb-ink-3)', flex: 1 }}>Current image</span>
               <button
                 type="button"
                 onClick={() => onChange('📁')}
                 style={{
                   background: 'none', border: 'none', cursor: 'pointer',
-                  color: '#6C6553', fontSize: 12, padding: 0, lineHeight: 1,
+                  color: 'var(--sb-ink-3)', fontSize: 12, padding: 0, lineHeight: 1,
                 }}
               >✕</button>
             </div>
@@ -253,7 +253,7 @@ export function IconPicker({ value, onChange, size = 44, trigger }: Props) {
                   flexShrink: 0, width: 32, height: 28,
                   borderRadius: 6, border: 'none',
                   background: tab === 'line' ? 'rgba(var(--sb-accent-rgb),0.12)' : 'transparent',
-                  cursor: 'pointer', color: '#6C6553',
+                  cursor: 'pointer', color: 'var(--sb-ink-3)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   outline: tab === 'line' ? '1px solid rgba(var(--sb-accent-rgb),0.27)' : 'none',
                 }}
@@ -323,7 +323,7 @@ export function IconPicker({ value, onChange, size = 44, trigger }: Props) {
               </button>
             ))}
             {tab !== 'line' && displayEmojis.length === 0 && (
-              <div style={{ gridColumn: 'span 8', padding: '16px 0', textAlign: 'center', fontSize: 13, color: '#6C6553' }}>
+              <div style={{ gridColumn: 'span 8', padding: '16px 0', textAlign: 'center', fontSize: 13, color: 'var(--sb-ink-3)' }}>
                 No emojis found
               </div>
             )}
