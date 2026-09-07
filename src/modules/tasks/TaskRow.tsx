@@ -45,7 +45,7 @@ export function TaskRow({ task, onOpen, dense }: {
       onClick={e => { if (!(e.target as HTMLElement).closest('[data-nm]')) onOpen(task.id) }}
       style={{
         display: 'flex', alignItems: 'flex-start', gap: 12,
-        background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 10,
+        background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 10,
         padding: dense ? '10px 13px' : '12px 14px',
         cursor: 'grab', minWidth: 0, touchAction: 'none',
         opacity: isDragging ? 0.35 : task.completed ? 0.55 : 1,
@@ -57,8 +57,8 @@ export function TaskRow({ task, onOpen, dense }: {
         title={task.completed ? 'Reopen' : 'Complete'}
         style={{
           width: 16, height: 16, borderRadius: 5, boxSizing: 'border-box', flexShrink: 0, padding: 0, marginTop: 2,
-          border: task.completed ? '1.5px solid #0C8140' : '1.5px solid #CFC6B0',
-          background: task.completed ? '#0C8140' : '#FFFFFF',
+          border: task.completed ? '1.5px solid var(--sb-positive)' : '1.5px solid #CFC6B0',
+          background: task.completed ? 'var(--sb-positive)' : 'var(--sb-card)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
         }}
       >
@@ -68,7 +68,7 @@ export function TaskRow({ task, onOpen, dense }: {
       <div style={{ flex: 1, minWidth: 0 }}>
         <p style={{
           margin: 0, fontSize: 13.5, fontWeight: 600, lineHeight: 1.35,
-          color: task.title.trim() ? '#191712' : '#9B9180',
+          color: task.title.trim() ? 'var(--sb-ink-1)' : '#9B9180',
           fontStyle: task.title.trim() ? 'normal' : 'italic',
           overflowWrap: 'anywhere',
           textDecoration: task.completed ? 'line-through' : 'none',
@@ -111,9 +111,9 @@ export function TaskRow({ task, onOpen, dense }: {
           title={task.urgent ? 'On fire — click to clear' : 'Mark as on fire'}
           style={{
             background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex',
-            color: task.urgent ? '#C62828' : '#D8CFB8',
+            color: task.urgent ? 'var(--sb-negative)' : '#D8CFB8',
           }}>
-          <Flame size={14} strokeWidth={1.9} fill={task.urgent ? '#C62828' : 'none'} />
+          <Flame size={14} strokeWidth={1.9} fill={task.urgent ? 'var(--sb-negative)' : 'none'} />
         </button>
 
         <ControlSlot size={14}>
@@ -128,7 +128,7 @@ export function TaskRow({ task, onOpen, dense }: {
 
         <ControlSlot size={14}>
           <span title={v.scheduled ? 'Scheduled' : 'Not scheduled'}
-            style={{ display: 'flex', color: v.scheduled ? '#0C8140' : '#D8CFB8' }}>
+            style={{ display: 'flex', color: v.scheduled ? 'var(--sb-positive)' : '#D8CFB8' }}>
             <CalendarDays size={14} strokeWidth={1.9} />
           </span>
           <OverlayTime
@@ -159,9 +159,9 @@ export function TaskRow({ task, onOpen, dense }: {
             title={v.ownerName ?? 'Unassigned'}
             style={{
               width: 22, height: 22, borderRadius: '50%', boxSizing: 'border-box',
-              background: v.ownerInitials ? '#191712' : '#F1ECDE',
-              border: v.ownerInitials ? 'none' : '1px solid #E8E1CE',
-              color: v.ownerInitials ? '#FFFFFF' : '#9B9180',
+              background: v.ownerInitials ? 'var(--sb-ink-1)' : 'var(--sb-field)',
+              border: v.ownerInitials ? 'none' : '1px solid var(--sb-border)',
+              color: v.ownerInitials ? 'var(--sb-card)' : '#9B9180',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 9, fontWeight: 700, letterSpacing: '0.02em',
             }}
