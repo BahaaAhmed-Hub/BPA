@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { getStatusMeta } from '@/lib/customStatuses'
 import { persist } from 'zustand/middleware'
 import { arrayMove } from '@dnd-kit/sortable'
 import type { Task, Quadrant, TaskStatus, TaskActivity, TaskType } from '@/types'
@@ -281,6 +282,14 @@ export const useTaskStore = create<TaskState>()(
             const user = updates.owner ? getAllUsers().find(u => u.id === updates.owner) : undefined
             desc.push(user ? `Assigned to ${user.name}` : 'Owner removed')
           }
+          if ('status' in updates && updates.status !== old.status) {
+            desc.push(
+              updates.status === 'done' ? 'Marked as done'
+              : old.status === 'done' || old.completed ? 'Reopened'
+              : `Status → ${updates.status}`)
+          }
+          if ('boardStatus' in updates && updates.boardStatus !== old.boardStatus && updates.boardStatus)
+            desc.push(`Moved to ${getStatusMeta(updates.boardStatus).label}`)
           if ('quadrant' in updates && updates.quadrant !== old.quadrant) {
             const from = old.quadrant ? QUADRANT_META[old.quadrant].label : 'Inbox'
             const to = updates.quadrant ? QUADRANT_META[updates.quadrant].label : 'Inbox'

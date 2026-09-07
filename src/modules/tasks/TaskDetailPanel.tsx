@@ -12,9 +12,40 @@ import type { Task, TaskType, Priority, ChecklistStep, TaskAttachment, TaskActiv
 import { PRIORITY_META, TASK_TYPE_META, getVisibleUsers, loadVisibleCompanies } from '@/types'
 import { useTaskStore } from '@/store/taskStore'
 import { TASK_TYPE_ORDER, initials, resolveTaskVisuals, formatScheduleLabel } from './taskVisuals'
+import { loadCustomStatuses } from '@/lib/customStatuses'
+import { scheduleTaskToCalendar } from '@/lib/aiScheduler'
 import { SchedulePopover } from './SchedulePopover'
 
 const PRIORITIES: Priority[] = ['P0', 'P1', 'P2', 'P3']
+
+// ─── Where a task stands ─────────────────────────────────────────────────────
+//
+// Two different things are called "status" here and the panel has to show both
+// as one control, because to the person reading it there is only one question.
+//
+//   * **Done / cancelled / open** is the task's own state. It is what a tick
+//     sets, what hides it from the board, and what stops it counting.
+//   * **The column** is one of your own statuses from Settings — Decide, Today,
+//     This week — and it is where the task sits while it is open.
+//
+// A finished task that gets picked up again has to be able to go back to a
+// column, and choosing one is exactly that gesture: it is open again, in that
+// column, and its completion date is gone. Nothing else in the app could say
+// so — the tick could only toggle, and the board hides what is finished, so a
+// task marked done by accident had nowhere to be put back to.
+//
+// The three states are prefixed so they cannot collide with a status of your
+// own called "done".
+const STATE_OPTIONS = [
+  { value: '__open',      label: 'Open' },
+  { value: '__done',      label: 'Done' },
+  { value: '__cancelled', label: 'Cancelled' },
+] as const
+
+const todayKey = () => {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
 
 function formatBytes(n: number): string {
   if (n < 1024) return `${n} B`
@@ -95,6 +126,54 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
   const allUsers = getVisibleUsers()
   const users = task.companyId ? allUsers.filter(u => u.companyId === task.companyId) : allUsers
   const owner = task.owner ? allUsers.find(u => u.id === task.owner) : undefined
+
+  // Your columns, from Settings. Read on every render so renaming one in
+  // another tab shows here without a reload.
+  const columns = loadCustomStatuses()
+  const finished  = task.completed || task.status === 'done'
+  const cancelled = task.status === 'cancelled'
+  const statusValue = finished ? '__done' : cancelled ? '__cancelled' : (task.boardStatus ?? '__open')
+  const statusLabel = finished ? 'Done'
+    : cancelled ? 'Cancelled'
+    : columns.find(c => c.id === task.boardStatus)?.label ?? 'Open'
+  const statusColor = finished ? '#0C8140'
+    : cancelled ? '#9B9180'
+    : columns.find(c => c.id === task.boardStatus)?.color ?? '#6C6553'
+
+  // ─── Is it actually on the calendar? ───────────────────────────────────────
+  //
+  // A date on a task is not an event in Google. The board pushes one for a task
+  // it puts in Schedule, and that is the only thing that ever did — so a dated
+  // task sitting in Do had nothing on the calendar and no way to say so. This
+  // row answers the question on the task itself and puts it there on request,
+  // whichever quadrant it is in.
+  const [pushing, setPushing] = useState(false)
+  const [pushError, setPushError] = useState<string | null>(null)
+
+  async function pushToCalendar() {
+    if (!task.dueDate || pushing) return
+    setPushing(true); setPushError(null)
+    try {
+      const res = await scheduleTaskToCalendar(task)
+      if (res.success && res.gcalEventId) patch({ gcalEventId: res.gcalEventId })
+      else setPushError(res.error ?? 'Google would not take it.')
+    } catch {
+      setPushError('Google would not take it.')
+    } finally { setPushing(false) }
+  }
+
+  function setTaskStatus(value: string) {
+    if (value === '__done') {
+      patch({ status: 'done', completed: true, completedAt: task.completedAt ?? todayKey() })
+    } else if (value === '__cancelled') {
+      patch({ status: 'cancelled', completed: false, completedAt: undefined })
+    } else if (value === '__open') {
+      patch({ status: 'open', completed: false, completedAt: undefined })
+    } else {
+      // Putting a finished task in a column is how it comes back to life.
+      patch({ boardStatus: value, status: 'open', completed: false, completedAt: undefined })
+    }
+  }
 
   const checklist = task.checklist ?? []
   const attachments = task.attachments ?? []
@@ -224,6 +303,49 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
               />
             )}
           </div>
+
+          {/* On the calendar, or not — and the way to put it there */}
+          {task.dueDate && (
+            task.gcalEventId ? (
+              <div style={{ ...CELL, gridColumn: '1 / -1', cursor: 'default' }}>
+                <CalendarDays size={14} strokeWidth={1.9} style={{ flexShrink: 0, color: '#0C8140' }} />
+                <span style={{ ...CELL_VALUE, color: '#6C6553' }}>On your calendar</span>
+              </div>
+            ) : (
+              <button
+                onClick={() => void pushToCalendar()}
+                disabled={pushing}
+                title="Create the Google Calendar event for this task"
+                style={{ ...CELL, gridColumn: '1 / -1', width: '100%' }}>
+                <CalendarDays size={14} strokeWidth={1.9} style={{ flexShrink: 0, color: '#9B9180' }} />
+                <span style={{ ...CELL_VALUE, color: pushError ? '#C62828' : '#6C6553' }}>
+                  {pushing ? 'Adding it…' : pushError ?? 'Not on your calendar — add it'}
+                </span>
+              </button>
+            )
+          )}
+
+          {/* Where it stands — its own state, or one of your columns */}
+          <label style={{ ...CELL, gridColumn: '1 / -1', position: 'relative' }}>
+            <span style={{
+              width: 9, height: 9, borderRadius: '50%', flexShrink: 0, background: statusColor,
+            }} />
+            <span style={{ ...CELL_VALUE, color: '#191712' }}>{statusLabel}</span>
+            {finished && task.completedAt && (
+              <span style={{ fontSize: 11.5, color: '#9B9180', flexShrink: 0 }}>
+                {new Date(task.completedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+              </span>
+            )}
+            <ChevronDown size={13} style={{ flexShrink: 0, color: '#9B9180' }} />
+            <select value={statusValue} onChange={e => setTaskStatus(e.target.value)} style={CELL_INPUT}>
+              <optgroup label="State">
+                {STATE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </optgroup>
+              <optgroup label="Column">
+                {columns.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+              </optgroup>
+            </select>
+          </label>
 
           {/* Type */}
           <label style={{ ...CELL, position: 'relative' }}>
