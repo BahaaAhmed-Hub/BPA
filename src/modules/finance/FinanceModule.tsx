@@ -128,22 +128,22 @@ interface ColorMap {
 
 export function FinanceModule() {
   const C: ColorMap = {
-    bg:        '#F7F4EA',
-    rail:      '#FCFAF4',
-    panel:     '#FFFFFF',
-    surface:   '#FFFFFF',
-    surfaceEl: '#FAF7EC',
+    bg:        'var(--sb-page)',
+    rail:      'var(--sb-header)',
+    panel:     'var(--sb-card)',
+    surface:   'var(--sb-card)',
+    surfaceEl: 'var(--sb-field)',
     amberBg:   'rgba(var(--sb-accent-rgb),0.12)',
-    border:    '#E8E1CE',
-    borderSt:  '#E8E1CE',
-    divFaint:  '#EDE7D9',
-    amber:     '#191712',
+    border:    'var(--sb-border)',
+    borderSt:  'var(--sb-border)',
+    divFaint:  'var(--sb-field)',
+    amber:     'var(--sb-ink-1)',
     amberSoft: '#3D3926',
-    textPri:   '#191712',
+    textPri:   'var(--sb-ink-1)',
     textMuted: '#9B9180',
-    textDim:   '#6C6553',
+    textDim:   'var(--sb-ink-3)',
     red:       '#A31C1C',
-    green:     '#0C8140',
+    green:     'var(--sb-positive)',
     cyan:      '#3B7A8A',
     purple:    '#3D3926',
   }
@@ -247,10 +247,10 @@ export function FinanceModule() {
                   userSelect: 'none', flexShrink: 0,
                 } as React.CSSProperties}
               >
-                <Icon color={active ? '#191712' : '#9B9180'} />
+                <Icon color={active ? 'var(--sb-ink-1)' : '#9B9180'} />
                 <span style={{
                   fontSize: 12, fontWeight: active ? 600 : 400,
-                  color: active ? '#191712' : '#9B9180',
+                  color: active ? 'var(--sb-ink-1)' : '#9B9180',
                   whiteSpace: 'nowrap' as const, letterSpacing: '0.1px',
                 }}>
                   {label}
@@ -267,11 +267,11 @@ export function FinanceModule() {
             title="Lock the finances"
             style={{
               height: 30, width: 30, borderRadius: 8, marginRight: 7,
-              background: 'transparent', border: '1px solid #E8E1CE', cursor: 'pointer',
+              background: 'transparent', border: '1px solid var(--sb-border)', cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
             }}
           >
-            <IconLock color="#6C6553" />
+            <IconLock color="var(--sb-ink-3)" />
           </button>
         )}
 
@@ -281,13 +281,13 @@ export function FinanceModule() {
           title="Add several entries at once"
           style={{
             height: 30, paddingInline: 12, borderRadius: 8,
-            background: 'transparent', border: '1px solid #E8E1CE', cursor: 'pointer',
+            background: 'transparent', border: '1px solid var(--sb-border)', cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             flexShrink: 0, gap: 5, marginRight: 7,
-            fontFamily: 'inherit', fontSize: 12, fontWeight: 600, color: '#6C6553',
+            fontFamily: 'inherit', fontSize: 12, fontWeight: 600, color: 'var(--sb-ink-3)',
           }}
         >
-          <IconPlus color="#6C6553" />
+          <IconPlus color="var(--sb-ink-3)" />
           Bulk
         </button>
 
@@ -302,7 +302,7 @@ export function FinanceModule() {
             flexShrink: 0, gap: 5, boxShadow: '0 2px 0 rgba(25,23,18,0.1)',
           }}
         >
-          <IconPlus color="#191712" />
+          <IconPlus color="var(--sb-ink-1)" />
         </button>
       </div>
 
