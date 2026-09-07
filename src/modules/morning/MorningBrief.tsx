@@ -108,7 +108,7 @@ function responseColor(status?: string): string {
   if (status === 'accepted')  return '#1D9E75'
   if (status === 'declined')  return '#EF4444'
   if (status === 'tentative') return '#F59E0B'
-  return '#6C6553'
+  return 'var(--sb-ink-3)'
 }
 
 function responseSymbol(status?: string): string {
@@ -202,7 +202,7 @@ function Skel({ w = '100%', h = 14, radius = 8 }: { w?: string | number; h?: num
         width: w,
         height: h,
         borderRadius: radius,
-        background: 'linear-gradient(90deg, #E8E1CE 25%, #E8E1CE 50%, #E8E1CE 75%)',
+        background: 'linear-gradient(90deg, var(--sb-border) 25%, var(--sb-border) 50%, var(--sb-border) 75%)',
         backgroundSize: '200% 100%',
         animation: 'shimmer 1.6s infinite',
         flexShrink: 0,
@@ -219,7 +219,7 @@ function PrioritySkeleton() {
           key={i}
           style={{
             display: 'flex', alignItems: 'center', gap: 14,
-            background: '#FFFFFF', border: '1px solid #E8E1CE',
+            background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
             borderRadius: 12, padding: '14px 16px',
           }}
         >
@@ -237,7 +237,7 @@ function MeetingTypeIcon({ type, size = 12 }: { type: string | null; size?: numb
   if (type === 'video')       return <Video    size={size} color="#7F77DD" />
   if (type === 'one_on_one')  return <Users    size={size} color="#1D9E75" />
   if (type === 'external')    return <Calendar size={size} color="#7F77DD" />
-  return                             <Users    size={size} color="#6C6553" />
+  return                             <Users    size={size} color="var(--sb-ink-3)" />
 }
 
 function MeetingTypeLabel({ type }: { type: string | null }) {
@@ -254,7 +254,7 @@ function StatusBadge({ status }: { status: ReturnType<typeof getEventStatus> }) 
     live:     { label: 'Live',     bg: '#1D9E7518', border: '#1D9E7540', color: '#1D9E75', pulse: true  },
     soon:     { label: 'Soon',     bg: '#F59E0B18', border: '#F59E0B40', color: '#F59E0B', pulse: false },
     upcoming: { label: 'Upcoming', bg: 'rgba(var(--sb-accent-rgb),0.12)', border: 'color-mix(in srgb, #7F77DD 40%, transparent)', color: '#7F77DD', pulse: false },
-    past:     { label: 'Done',     bg: '#25283618', border: '#25283640', color: '#6C6553', pulse: false },
+    past:     { label: 'Done',     bg: '#25283618', border: '#25283640', color: 'var(--sb-ink-3)', pulse: false },
   }[status]
 
   return (
@@ -328,7 +328,7 @@ function EventContextMenu({
     return lines.join('\n')
   }
 
-  const sep: React.CSSProperties = { height: 1, background: '#E8E1CE', margin: '3px 8px' }
+  const sep: React.CSSProperties = { height: 1, background: 'var(--sb-border)', margin: '3px 8px' }
 
   function item(
     id: string,
@@ -369,8 +369,8 @@ function EventContextMenu({
         position: 'fixed',
         top: adjPos.y, left: adjPos.x,
         width: 210,
-        background: '#FFFFFF',
-        border: '1px solid #E8E1CE',
+        background: 'var(--sb-card)',
+        border: '1px solid var(--sb-border)',
         borderRadius: 10,
         boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
         zIndex: 9100,
@@ -430,7 +430,7 @@ function EventDetailPanel({ event, onClose }: { event: RichMeetingEvent; onClose
         ref={panelRef}
         style={{
           width: 420, maxHeight: '80vh',
-          background: '#FFFFFF',
+          background: 'var(--sb-card)',
           border: `1px solid ${accentColor}40`,
           borderTop: `3px solid ${accentColor}`,
           borderRadius: 16,
@@ -441,23 +441,23 @@ function EventDetailPanel({ event, onClose }: { event: RichMeetingEvent; onClose
         }}
       >
         {/* Header */}
-        <div style={{ padding: '20px 22px 16px', borderBottom: '1px solid #E8E1CE' }}>
+        <div style={{ padding: '20px 22px 16px', borderBottom: '1px solid var(--sb-border)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
-            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#191712', lineHeight: 1.35, flex: 1 }}>
+            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--sb-ink-1)', lineHeight: 1.35, flex: 1 }}>
               {event.title}
             </h3>
             <button
               onClick={onClose}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: '#6C6553', flexShrink: 0 }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--sb-ink-3)', flexShrink: 0 }}
             >
               <X size={16} />
             </button>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10 }}>
             <StatusBadge status={status} />
-            <span style={{ fontSize: 11, color: '#191712' }}>
+            <span style={{ fontSize: 11, color: 'var(--sb-ink-1)' }}>
               {fmtTime(event.start_time)} – {fmtTime(event.end_time)}
-              <span style={{ marginLeft: 6, color: '#6C6553' }}>({fmtDuration(event.start_time, event.end_time)})</span>
+              <span style={{ marginLeft: 6, color: 'var(--sb-ink-3)' }}>({fmtDuration(event.start_time, event.end_time)})</span>
             </span>
           </div>
         </div>
@@ -469,9 +469,9 @@ function EventDetailPanel({ event, onClose }: { event: RichMeetingEvent; onClose
           {event.calendarName && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <div style={{ width: 8, height: 8, borderRadius: '50%', background: accentColor, flexShrink: 0 }} />
-              <span style={{ fontSize: 12, color: '#191712' }}>{event.calendarName}</span>
+              <span style={{ fontSize: 12, color: 'var(--sb-ink-1)' }}>{event.calendarName}</span>
               {event.accountEmail && (
-                <span style={{ fontSize: 10.5, color: '#6C6553' }}>· {event.accountEmail}</span>
+                <span style={{ fontSize: 10.5, color: 'var(--sb-ink-3)' }}>· {event.accountEmail}</span>
               )}
             </div>
           )}
@@ -479,7 +479,7 @@ function EventDetailPanel({ event, onClose }: { event: RichMeetingEvent; onClose
           {/* Meeting type */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <MeetingTypeIcon type={event.meeting_type} size={13} />
-            <span style={{ fontSize: 12, color: '#191712' }}>
+            <span style={{ fontSize: 12, color: 'var(--sb-ink-1)' }}>
               <MeetingTypeLabel type={event.meeting_type} />
             </span>
           </div>
@@ -487,8 +487,8 @@ function EventDetailPanel({ event, onClose }: { event: RichMeetingEvent; onClose
           {/* Location */}
           {event.location && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <MapPin size={13} color="#6C6553" style={{ flexShrink: 0 }} />
-              <span style={{ fontSize: 12, color: '#191712' }}>{event.location}</span>
+              <MapPin size={13} color="var(--sb-ink-3)" style={{ flexShrink: 0 }} />
+              <span style={{ fontSize: 12, color: 'var(--sb-ink-1)' }}>{event.location}</span>
             </div>
           )}
 
@@ -516,13 +516,13 @@ function EventDetailPanel({ event, onClose }: { event: RichMeetingEvent; onClose
           {event.description && (
             <div style={{
               padding: '12px 14px', borderRadius: 8,
-              background: '#FFFFFF', border: '1px solid #E8E1CE',
+              background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
             }}>
-              <p style={{ margin: '0 0 6px', fontSize: 10, fontWeight: 600, color: '#6C6553', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              <p style={{ margin: '0 0 6px', fontSize: 10, fontWeight: 600, color: 'var(--sb-ink-3)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 Description
               </p>
               <p style={{
-                margin: 0, fontSize: 12, color: '#191712', lineHeight: 1.6,
+                margin: 0, fontSize: 12, color: 'var(--sb-ink-1)', lineHeight: 1.6,
                 maxHeight: 100, overflowY: 'auto',
                 whiteSpace: 'pre-wrap', wordBreak: 'break-word',
               }}>
@@ -534,7 +534,7 @@ function EventDetailPanel({ event, onClose }: { event: RichMeetingEvent; onClose
           {/* Attendees */}
           {attendees.length > 0 && (
             <div>
-              <p style={{ margin: '0 0 10px', fontSize: 10, fontWeight: 600, color: '#6C6553', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              <p style={{ margin: '0 0 10px', fontSize: 10, fontWeight: 600, color: 'var(--sb-ink-3)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 Attendees ({attendees.length})
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -553,12 +553,12 @@ function EventDetailPanel({ event, onClose }: { event: RichMeetingEvent; onClose
                         {initials}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={{ margin: 0, fontSize: 12, color: '#191712', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        <p style={{ margin: 0, fontSize: 12, color: 'var(--sb-ink-1)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {att.displayName ?? att.email}
-                          {att.self && <span style={{ fontSize: 10, color: '#6C6553', marginLeft: 5 }}>(you)</span>}
+                          {att.self && <span style={{ fontSize: 10, color: 'var(--sb-ink-3)', marginLeft: 5 }}>(you)</span>}
                         </p>
                         {att.displayName && (
-                          <p style={{ margin: 0, fontSize: 10, color: '#6C6553', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          <p style={{ margin: 0, fontSize: 10, color: 'var(--sb-ink-3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {att.email}
                           </p>
                         )}
@@ -573,7 +573,7 @@ function EventDetailPanel({ event, onClose }: { event: RichMeetingEvent; onClose
                   )
                 })}
                 {attendees.length > 8 && (
-                  <p style={{ margin: '4px 0 0', fontSize: 11, color: '#6C6553' }}>
+                  <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--sb-ink-3)' }}>
                     +{attendees.length - 8} more attendees
                   </p>
                 )}
@@ -589,7 +589,7 @@ function EventDetailPanel({ event, onClose }: { event: RichMeetingEvent; onClose
               rel="noopener noreferrer"
               style={{
                 display: 'flex', alignItems: 'center', gap: 6,
-                fontSize: 11, color: '#6C6553', textDecoration: 'none',
+                fontSize: 11, color: 'var(--sb-ink-3)', textDecoration: 'none',
                 marginTop: 4,
               }}
             >
@@ -611,7 +611,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
       margin: '0 0 14px',
       fontSize: 11,
       fontWeight: 600,
-      color: '#191712',
+      color: 'var(--sb-ink-1)',
       textTransform: 'uppercase',
       letterSpacing: '1px',
     }}>
@@ -772,7 +772,7 @@ export function MorningBrief() {
           50%       { opacity: 0.4; transform: scale(0.7); }
         }
         .brief-section { animation: fadeIn 0.35s ease both; }
-        .event-row:hover { background: #FFFFFF !important; cursor: pointer; }
+        .event-row:hover { background: var(--sb-card) !important; cursor: pointer; }
       `}</style>
 
       <div style={{ padding: '36px 32px 60px', maxWidth: 1080, margin: '0 auto' }}>
@@ -781,21 +781,21 @@ export function MorningBrief() {
         <div className="brief-section" style={{ marginBottom: 32 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
-              <p style={{ margin: '0 0 2px', fontSize: 15, color: '#191712', fontWeight: 400 }}>
+              <p style={{ margin: '0 0 2px', fontSize: 15, color: 'var(--sb-ink-1)', fontWeight: 400 }}>
                 Good morning,
               </p>
               <h1 style={{
                 margin: 0,
                 fontSize: 48,
                 fontWeight: 800,
-                color: '#191712',
+                color: 'var(--sb-ink-1)',
                 fontFamily: "'Cabinet Grotesk', sans-serif",
                 letterSpacing: '-1.5px',
                 lineHeight: 1.05,
               }}>
                 {firstName}.
               </h1>
-              <p style={{ margin: '10px 0 0', fontSize: 13, color: '#191712' }}>
+              <p style={{ margin: '10px 0 0', fontSize: 13, color: 'var(--sb-ink-1)' }}>
                 {dateStr}
               </p>
             </div>
@@ -808,8 +808,8 @@ export function MorningBrief() {
                 display: 'flex', alignItems: 'center', gap: 7,
                 padding: '8px 14px', borderRadius: 8,
                 background: 'transparent',
-                border: '1px solid #E8E1CE',
-                color: '#191712', fontSize: 12, cursor: 'pointer',
+                border: '1px solid var(--sb-border)',
+                color: 'var(--sb-ink-1)', fontSize: 12, cursor: 'pointer',
                 transition: 'all 0.15s',
                 opacity: isGenerating ? 0.5 : 1,
               }}
@@ -823,19 +823,19 @@ export function MorningBrief() {
           <div style={{
             marginTop: 24,
             height: 1,
-            background: 'linear-gradient(90deg, #1E40AF40 0%, #E8E1CE 60%, transparent 100%)',
+            background: 'linear-gradient(90deg, #1E40AF40 0%, var(--sb-border) 60%, transparent 100%)',
           }} />
         </div>
 
         {/* ─── Energy check-in ───────────────────────────────────────────── */}
         <div className="brief-section" style={{
           marginBottom: 36,
-          background: '#FFFFFF',
-          border: '1px solid #E8E1CE',
+          background: 'var(--sb-card)',
+          border: '1px solid var(--sb-border)',
           borderRadius: 14,
           padding: '20px 24px',
         }}>
-          <p style={{ margin: '0 0 16px', fontSize: 13, color: '#191712' }}>
+          <p style={{ margin: '0 0 16px', fontSize: 13, color: 'var(--sb-ink-1)' }}>
             How's your energy this morning?
           </p>
           <div style={{ display: 'flex', gap: 14 }}>
@@ -855,16 +855,16 @@ export function MorningBrief() {
                     width: 44, height: 44, borderRadius: '50%',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontSize: 14, fontWeight: 700,
-                    border: `1.5px solid ${selected ? meta.color : '#E8E1CE'}`,
+                    border: `1.5px solid ${selected ? meta.color : 'var(--sb-border)'}`,
                     background: selected ? `${meta.color}22` : 'transparent',
-                    color: selected ? meta.color : '#6C6553',
+                    color: selected ? meta.color : 'var(--sb-ink-3)',
                     boxShadow: selected ? `0 0 14px ${meta.color}40` : 'none',
                     transition: 'all 0.15s',
                   }}>
                     {level}
                   </span>
                   <span style={{
-                    fontSize: 10, color: selected ? meta.color : '#6C6553',
+                    fontSize: 10, color: selected ? meta.color : 'var(--sb-ink-3)',
                     fontWeight: selected ? 600 : 400, transition: 'color 0.15s',
                     whiteSpace: 'nowrap',
                   }}>
@@ -884,8 +884,8 @@ export function MorningBrief() {
 
             {/* ─── 2. AI Day Planner ───────────────────────────────────── */}
             <div className="brief-section" style={{
-              background: '#FFFFFF',
-              border: '1px solid #E8E1CE',
+              background: 'var(--sb-card)',
+              border: '1px solid var(--sb-border)',
               borderRadius: 14,
               padding: '24px 26px',
               borderLeft: '3px solid #7F77DD50',
@@ -916,8 +916,8 @@ export function MorningBrief() {
 
             {/* ─── 3. Top 3 Priorities ─────────────────────────────────── */}
             <div className="brief-section" style={{
-              background: '#FFFFFF',
-              border: '1px solid #E8E1CE',
+              background: 'var(--sb-card)',
+              border: '1px solid var(--sb-border)',
               borderRadius: 14,
               padding: '24px 26px',
             }}>
@@ -933,8 +933,8 @@ export function MorningBrief() {
                     return (
                       <div key={i} style={{
                         display: 'flex', alignItems: 'center', gap: 14,
-                        background: '#F7F4EA',
-                        border: `1px solid ${i === 0 ? 'rgba(var(--sb-accent-rgb),0.12)' : '#E8E1CE'}`,
+                        background: 'var(--sb-page)',
+                        border: `1px solid ${i === 0 ? 'rgba(var(--sb-accent-rgb),0.12)' : 'var(--sb-border)'}`,
                         borderRadius: 12, padding: '13px 16px',
                         position: 'relative', overflow: 'hidden',
                       }}>
@@ -943,13 +943,13 @@ export function MorningBrief() {
                           width: 28, height: 28, borderRadius: '50%',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           fontSize: 12, fontWeight: 700, flexShrink: 0,
-                          background: i === 0 ? '#1E40AF20' : '#FAF7EC',
-                          color: i === 0 ? '#7F77DD' : '#6C6553',
+                          background: i === 0 ? '#1E40AF20' : 'var(--sb-field)',
+                          color: i === 0 ? '#7F77DD' : 'var(--sb-ink-3)',
                         }}>
                           {i + 1}
                         </span>
 
-                        <p style={{ margin: 0, flex: 1, fontSize: 13.5, color: '#191712', fontWeight: 500 }}>
+                        <p style={{ margin: 0, flex: 1, fontSize: 13.5, color: 'var(--sb-ink-1)', fontWeight: 500 }}>
                           {title}
                         </p>
 
@@ -975,7 +975,7 @@ export function MorningBrief() {
                   })}
                 </div>
               ) : (
-                <p style={{ margin: 0, fontSize: 13, color: '#191712' }}>
+                <p style={{ margin: 0, fontSize: 13, color: 'var(--sb-ink-1)' }}>
                   Priorities will appear once the plan is generated.
                 </p>
               )}
@@ -987,22 +987,22 @@ export function MorningBrief() {
 
             {/* ─── 4. Today's Meetings ─────────────────────────────────── */}
             <div className="brief-section" style={{
-              background: '#FFFFFF',
-              border: '1px solid #E8E1CE',
+              background: 'var(--sb-card)',
+              border: '1px solid var(--sb-border)',
               borderRadius: 14,
               padding: '24px 22px',
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 14 }}>
                 <SectionLabel>Today's Meetings</SectionLabel>
                 {todayEvents.length > 0 && (
-                  <span style={{ fontSize: 11, color: '#6C6553' }}>
+                  <span style={{ fontSize: 11, color: 'var(--sb-ink-3)' }}>
                     {todayEvents.filter(e => getEventStatus(e.start_time, e.end_time) !== 'past').length} remaining
                   </span>
                 )}
               </div>
 
               {todayEvents.length === 0 ? (
-                <p style={{ margin: 0, fontSize: 13, color: '#191712' }}>
+                <p style={{ margin: 0, fontSize: 13, color: 'var(--sb-ink-1)' }}>
                   No meetings today — or connect Google Calendar to see them.
                 </p>
               ) : (
@@ -1021,8 +1021,8 @@ export function MorningBrief() {
                           display: 'flex', gap: 10, alignItems: 'stretch',
                           padding: '10px 12px',
                           borderRadius: 10,
-                          background: '#F7F4EA',
-                          border: '1px solid #E8E1CE',
+                          background: 'var(--sb-page)',
+                          border: '1px solid var(--sb-border)',
                           opacity: isPast ? 0.5 : 1,
                           transition: 'background 0.15s',
                           cursor: 'pointer',
@@ -1036,10 +1036,10 @@ export function MorningBrief() {
 
                         {/* Time column */}
                         <div style={{ width: 50, flexShrink: 0, textAlign: 'right', paddingTop: 2 }}>
-                          <p style={{ margin: 0, fontSize: 11, color: '#191712', fontWeight: 500 }}>
+                          <p style={{ margin: 0, fontSize: 11, color: 'var(--sb-ink-1)', fontWeight: 500 }}>
                             {fmtTime(event.start_time)}
                           </p>
-                          <p style={{ margin: '1px 0 0', fontSize: 10, color: '#6C6553' }}>
+                          <p style={{ margin: '1px 0 0', fontSize: 10, color: 'var(--sb-ink-3)' }}>
                             {fmtTime(event.end_time)}
                           </p>
                         </div>
@@ -1048,7 +1048,7 @@ export function MorningBrief() {
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
                             <p style={{
-                              margin: 0, fontSize: 12.5, color: '#191712',
+                              margin: 0, fontSize: 12.5, color: 'var(--sb-ink-1)',
                               fontWeight: 500, lineHeight: 1.3,
                               whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                               maxWidth: 160,
@@ -1069,7 +1069,7 @@ export function MorningBrief() {
                               </span>
                             )}
                             {event.attendees && event.attendees.length > 0 && (
-                              <span style={{ fontSize: 10, color: '#6C6553' }}>
+                              <span style={{ fontSize: 10, color: 'var(--sb-ink-3)' }}>
                                 {event.attendees.length} attendee{event.attendees.length !== 1 ? 's' : ''}
                               </span>
                             )}
@@ -1084,14 +1084,14 @@ export function MorningBrief() {
 
             {/* ─── 5. Habit Status ─────────────────────────────────────── */}
             <div className="brief-section" style={{
-              background: '#FFFFFF',
-              border: '1px solid #E8E1CE',
+              background: 'var(--sb-card)',
+              border: '1px solid var(--sb-border)',
               borderRadius: 14,
               padding: '24px 22px',
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 14 }}>
                 <SectionLabel>Today's Habits</SectionLabel>
-                <span style={{ fontSize: 11, color: checkedHabits === habits.length ? '#1D9E75' : '#6C6553' }}>
+                <span style={{ fontSize: 11, color: checkedHabits === habits.length ? '#1D9E75' : 'var(--sb-ink-3)' }}>
                   {checkedHabits}/{habits.length}
                 </span>
               </div>
@@ -1104,9 +1104,9 @@ export function MorningBrief() {
                     style={{
                       display: 'flex', alignItems: 'center', gap: 10,
                       padding: '10px 14px', borderRadius: 9, width: '100%',
-                      background: habit.checked ? '#1D9E7512' : '#F7F4EA',
-                      border: `1px solid ${habit.checked ? '#1D9E7540' : '#E8E1CE'}`,
-                      color: habit.checked ? '#1D9E75' : '#6C6553',
+                      background: habit.checked ? '#1D9E7512' : 'var(--sb-page)',
+                      border: `1px solid ${habit.checked ? '#1D9E7540' : 'var(--sb-border)'}`,
+                      color: habit.checked ? '#1D9E75' : 'var(--sb-ink-3)',
                       fontSize: 13, cursor: 'pointer', textAlign: 'left',
                       transition: 'all 0.15s',
                     }}
