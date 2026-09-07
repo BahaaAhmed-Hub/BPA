@@ -92,7 +92,7 @@ export function AccountModal({ account, onSave, onDelete, onClose }: Props) {
         overflowY: 'auto',
         background: 'var(--sb-card)',
         borderRadius: 'var(--sb-r-card)',
-        boxShadow: '0 24px 60px rgba(0,0,0,0.5)',
+        boxShadow: 'var(--sb-shadow-frame)',
         padding: '24px 28px',
         display: 'flex',
         flexDirection: 'column',

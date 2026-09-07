@@ -689,7 +689,7 @@ function CompanyCard({
               position: 'absolute', top: 24, left: 0, zIndex: 200,
               background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
               padding: '7px 8px', display: 'flex', gap: 5,
-              boxShadow: '0 6px 20px rgba(0,0,0,0.5)',
+              boxShadow: 'var(--sb-shadow-hover)',
             }}>
               {C_COLORS.map(c => (
                 <button key={c} onClick={() => { onUpdate({ color: c }); setColorOpen(false) }}
@@ -3885,7 +3885,7 @@ function Card({ icon: Icon, title, sub, children, actions, muted }: {
       border: `1px solid ${muted ? 'var(--sb-border)' : '#E0D6BC'}`,
       borderRadius: 'var(--sb-r-card)',
       padding: '16px 20px 18px',
-      boxShadow: '0 1px 3px rgba(25,23,18,0.06)',
+      boxShadow: 'var(--sb-shadow-control)',
       display: 'flex',
       flexDirection: 'column',
       minWidth: 0,
@@ -4376,7 +4376,7 @@ export function Settings() {
               padding: '10px 18px', borderRadius: 'var(--sb-r-pill)', cursor: 'pointer',
               background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-1)',
               fontSize: 'var(--sb-t-body)', fontWeight: 500, fontFamily: 'inherit',
-              boxShadow: '0 1px 3px rgba(25,23,18,0.06)',
+              boxShadow: 'var(--sb-shadow-control)',
             }}>
             <ArrowUpRight size={14} strokeWidth={2} /> Setup wizard
           </button>
@@ -4387,7 +4387,7 @@ export function Settings() {
               padding: '10px 18px', borderRadius: 'var(--sb-r-pill)', cursor: 'pointer',
               background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-1)',
               fontSize: 'var(--sb-t-body)', fontWeight: 500, fontFamily: 'inherit',
-              boxShadow: '0 1px 3px rgba(25,23,18,0.06)',
+              boxShadow: 'var(--sb-shadow-control)',
             }}>
             <Database size={14} strokeWidth={2} /> Export
           </button>
@@ -4400,7 +4400,7 @@ export function Settings() {
         <div style={{
           width: 250, flexShrink: 0, display: 'flex', flexDirection: 'column',
           background: 'var(--sb-header)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
-          boxShadow: '0 1px 3px rgba(25,23,18,0.06)', overflow: 'hidden',
+          boxShadow: 'var(--sb-shadow-control)', overflow: 'hidden',
         }}>
           {/* Search */}
           <div style={{ padding: '12px 12px 8px', flexShrink: 0 }}>

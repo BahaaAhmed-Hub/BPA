@@ -106,7 +106,7 @@ function ContextMenu({ menu, onClose }: { menu: ContextMenuState; onClose: () =>
         background: 'var(--sb-card)',
         border: '1px solid var(--sb-border)',
         borderRadius: 'var(--sb-r-nav)', overflow: 'hidden',
-        boxShadow: '0 8px 32px rgba(0,0,0,0.4)', minWidth: 220,
+        boxShadow: 'var(--sb-shadow-menu)', minWidth: 220,
       }}>
         {/* Event info header */}
         <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--sb-border)' }}>

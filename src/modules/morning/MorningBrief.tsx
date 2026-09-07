@@ -372,7 +372,7 @@ function EventContextMenu({
         background: 'var(--sb-card)',
         border: '1px solid var(--sb-border)',
         borderRadius: 'var(--sb-r-nav)',
-        boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
+        boxShadow: 'var(--sb-shadow-menu)',
         zIndex: 9100,
         padding: '4px 0',
         overflow: 'hidden',

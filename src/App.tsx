@@ -78,7 +78,7 @@ function LoginScreen() {
         gap: 0,
         background: 'var(--sb-card)',
         borderRadius: 'var(--sb-r-frame)',
-        boxShadow: '0 26px 64px -34px rgba(48,40,20,.5)',
+        boxShadow: 'var(--sb-shadow-frame)',
         overflow: 'hidden',
         border: '1px solid var(--sb-border)',
       }}>
@@ -164,7 +164,7 @@ function LoginScreen() {
               cursor: signing ? 'wait' : 'pointer',
               fontFamily: 'var(--sb-font-ui)',
               transition: 'background 140ms ease-out, box-shadow 140ms ease-out',
-              boxShadow: '0 2px 0 rgba(120,92,0,.10)',
+              boxShadow: 'var(--sb-shadow-accent)',
             }}
           >
             {/* Google G mark */}
@@ -431,7 +431,7 @@ function NotificationBell() {
           position: 'absolute', top: 'calc(100% + 8px)', right: 0, zIndex: 120,
           width: 340, maxHeight: 460, overflowY: 'auto', scrollbarWidth: 'thin',
           background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-card)', padding: 6,
-          boxShadow: '0 22px 48px -20px rgba(25,23,18,.45)',
+          boxShadow: 'var(--sb-shadow-frame)',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px 10px', borderBottom: '1px solid var(--sb-hairline)' }}>
             <p style={{ margin: 0, flex: 1, fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>
@@ -631,7 +631,7 @@ function TopNav() {
             <div role="menu" style={{
               position: 'absolute', top: 'calc(100% + 8px)', right: 0, zIndex: 120, minWidth: 216,
               background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-card)', padding: 6,
-              boxShadow: '0 22px 48px -20px rgba(25,23,18,.45)',
+              boxShadow: 'var(--sb-shadow-frame)',
             }}>
               <div style={{ padding: '8px 10px 10px', borderBottom: '1px solid var(--sb-hairline)', marginBottom: 5 }}>
                 <p style={{

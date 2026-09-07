@@ -102,7 +102,7 @@ export function TimeSelect({ value, onChange, label, size = 'compact' }: {
         <div style={{
           position: 'absolute', top: 'calc(100% + 5px)', left: 0, zIndex: 90, width: '100%', minWidth: 124,
           background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', padding: 6,
-          boxShadow: '0 18px 40px -18px rgba(25,23,18,.45)',
+          boxShadow: 'var(--sb-shadow-frame)',
         }}>
           <input
             value={typed}
@@ -195,7 +195,7 @@ export function SchedulePopover({ date, start, duration, onApply, onClose, align
         position: 'absolute', top: 'calc(100% + 8px)', zIndex: 80, width: 292,
         ...(align === 'right' ? { right: 0 } : { left: 0 }),
         background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-card)', padding: 14,
-        boxShadow: '0 24px 56px -22px rgba(25,23,18,.45)', textAlign: 'left',
+        boxShadow: 'var(--sb-shadow-frame)', textAlign: 'left',
       }}>
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: 10 }}>
         <span style={{ flex: 1, fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>

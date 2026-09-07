@@ -230,7 +230,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
         width: 'clamp(320px, 94vw, 460px)', maxHeight: '90vh', overflowY: 'auto',
         boxSizing: 'border-box', scrollbarWidth: 'thin',
         background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
-        boxShadow: '0 24px 60px rgba(25,23,18,0.24)',
+        boxShadow: 'var(--sb-shadow-frame)',
         padding: '18px 20px 22px',
       }}>
 
@@ -443,7 +443,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
                     position: 'absolute', top: 46, left: 0, right: 0, zIndex: 20, padding: 5,
                     maxHeight: 210, overflowY: 'auto',
                     background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
-                    boxShadow: '0 12px 32px rgba(25,23,18,0.18)',
+                    boxShadow: 'var(--sb-shadow-menu)',
                   }}>
                     {payeeHits.map(name => (
                       <button key={name} type="button"
@@ -518,7 +518,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
                         position: 'absolute', top: -6, right: -6, width: 19, height: 19, padding: 0,
                         borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
                         color: 'var(--sb-ink-3)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        boxShadow: '0 1px 3px rgba(25,23,18,0.14)',
+                        boxShadow: 'var(--sb-shadow-control)',
                       }}>
                       <X size={11} />
                     </button>

@@ -690,7 +690,7 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
   const withMoney = rows.filter(r => r.plannedFrom === 'own').length
                   + rows.reduce((n, r) => n + r.children.filter(c => c.budgeted).length, 0)
   return (
-    <div style={{ background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-card)', boxShadow: '0 1px 3px rgba(25,23,18,0.06)', padding: '15px 18px 18px' }}>
+    <div style={{ background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-card)', boxShadow: 'var(--sb-shadow-control)', padding: '15px 18px 18px' }}>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 14 }}>
         <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--sb-ink-3)' }}>{title.toUpperCase()}</span>
         {all > 0 && (
@@ -1334,7 +1334,7 @@ export function BudgetScreen(_props?: any) {
   }
   const CARD: React.CSSProperties = {
     background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
-    boxShadow: '0 1px 3px rgba(25,23,18,0.06)',
+    boxShadow: 'var(--sb-shadow-control)',
   }
 
   return (
@@ -1356,7 +1356,7 @@ export function BudgetScreen(_props?: any) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 2, padding: 3, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-field)' }}>
             <button onClick={() => stepMonth(-1)} title="Previous month"
               style={{ ...HEAD_PILL, width: 28, padding: 0, justifyContent: 'center', border: 'none', background: 'transparent', color: 'var(--sb-ink-3)' }}>‹</button>
-            <span style={{ ...HEAD_PILL, cursor: 'default', boxShadow: '0 1px 3px rgba(25,23,18,0.16)', fontWeight: 600, minWidth: 106, justifyContent: 'center' }}>
+            <span style={{ ...HEAD_PILL, cursor: 'default', boxShadow: 'var(--sb-shadow-control)', fontWeight: 600, minWidth: 106, justifyContent: 'center' }}>
               {new Date(year, monthIdx, 1).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })}
             </span>
             <button onClick={() => stepMonth(1)} title="Next month"
@@ -1364,7 +1364,7 @@ export function BudgetScreen(_props?: any) {
           </div>
           <StylePicker value={envStyle} onChange={pickStyle} />
           <button onClick={addCategory} title="Add a category"
-            style={{ height: 34, padding: '0 15px', borderRadius: 'var(--sb-r-pill)', background: AMBER, border: 'none', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 2px 0 rgba(25,23,18,0.14)' }}>
+            style={{ height: 34, padding: '0 15px', borderRadius: 'var(--sb-r-pill)', background: AMBER, border: 'none', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', boxShadow: 'var(--sb-shadow-accent)' }}>
             + Category
           </button>
         </div>
@@ -1487,7 +1487,7 @@ export function BudgetScreen(_props?: any) {
                   <span style={{
                     display: 'inline-flex', alignItems: 'center', gap: 7, height: 34, padding: '0 12px',
                     borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
-                    boxShadow: '0 8px 20px rgba(25,23,18,0.18)', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)',
+                    boxShadow: 'var(--sb-shadow-menu)', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)',
                   }}>
                     <CategoryGlyph icon={c.icon} size={14} />{c.name}
                   </span>
@@ -1680,7 +1680,7 @@ export function BudgetScreen(_props?: any) {
               style={{
                 width: 520, height: '100%', background: 'var(--sb-page)',
                 display: 'flex', flexDirection: 'column', overflow: 'hidden',
-                boxShadow: '-8px 0 40px rgba(25,23,18,.15)',
+                boxShadow: 'var(--sb-shadow-panel)',
               }}
             >
               {/* Drill header */}

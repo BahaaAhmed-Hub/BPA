@@ -189,7 +189,7 @@ export function SetupWizard({ onClose }: Props) {
           width: '100%', maxWidth: 640,
           maxHeight: '88vh',
           display: 'flex', flexDirection: 'column',
-          boxShadow: '0 32px 80px rgba(0,0,0,0.28), 0 0 0 1px rgba(0,0,0,0.06)',
+          boxShadow: 'var(--sb-shadow-frame)',
           animation: 'wz-modal 0.35s cubic-bezier(0.16,1,0.3,1)',
           overflow: 'hidden',
         }}>
@@ -270,7 +270,7 @@ export function SetupWizard({ onClose }: Props) {
                   padding: '11px 26px', borderRadius: 'var(--sb-r-pill)',
                   background: 'var(--sb-accent)', border: 'none',
                   color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-label)', fontWeight: 700, cursor: 'pointer',
-                  boxShadow: '0 4px 14px rgba(127,119,221,0.35)',
+                  boxShadow: 'var(--sb-shadow-hover)',
                   transition: 'all 0.15s',
                 }}>
                   Next <ChevronRight size={16} />
@@ -281,7 +281,7 @@ export function SetupWizard({ onClose }: Props) {
                   padding: '11px 26px', borderRadius: 'var(--sb-r-pill)',
                   background: '#1D9E75', border: 'none',
                   color: '#fff', fontSize: 'var(--sb-t-label)', fontWeight: 700, cursor: 'pointer',
-                  boxShadow: '0 4px 14px rgba(29,158,117,0.35)',
+                  boxShadow: 'var(--sb-shadow-hover)',
                   transition: 'all 0.15s',
                 }}>
                   <Check size={16} /> Finish

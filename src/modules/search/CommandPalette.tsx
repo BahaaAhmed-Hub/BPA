@@ -236,7 +236,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
         style={{
           width: '100%', maxWidth: 700, background: 'var(--sb-card)',
           border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-card)', overflow: 'hidden',
-          boxShadow: '0 40px 80px -30px rgba(25,23,18,.55)',
+          boxShadow: 'var(--sb-shadow-frame)',
           display: 'flex', flexDirection: 'column', maxHeight: '72vh',
         }}>
 

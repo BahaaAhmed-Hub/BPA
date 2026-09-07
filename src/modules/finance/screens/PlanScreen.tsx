@@ -144,7 +144,7 @@ export function PlanScreen() {
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
             Change forecast
           </button>
-          <button style={{ height: 34, padding: '0 15px', borderRadius: 'var(--sb-r-pill)', background: C.accent, color: C.ink1, fontSize: 'var(--sb-t-body-s)', fontWeight: 600, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, boxShadow: '0 2px 0 rgba(25,23,18,.14)' }}>
+          <button style={{ height: 34, padding: '0 15px', borderRadius: 'var(--sb-r-pill)', background: C.accent, color: C.ink1, fontSize: 'var(--sb-t-body-s)', fontWeight: 600, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, boxShadow: 'var(--sb-shadow-accent)' }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M13 3L5 14h6l-1 7 8-11h-6z"/></svg>
             Automate this plan
           </button>

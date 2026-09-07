@@ -147,7 +147,7 @@ export function Composer({ seed, accounts, onClose, onSent }: {
   return (
     <div style={{
       background: C.card, border: `1px solid ${C.border}`, borderRadius: 'var(--sb-r-nav)',
-      boxShadow: '0 6px 24px rgba(25,23,18,0.10)', overflow: 'hidden',
+      boxShadow: 'var(--sb-shadow-menu)', overflow: 'hidden',
       display: 'flex', flexDirection: 'column', maxHeight: '68vh',
     }}>
       {/* Which of the four this is, and a way out */}
@@ -260,7 +260,7 @@ export function Composer({ seed, accounts, onClose, onSent }: {
             display: 'flex', alignItems: 'center', gap: 6, height: 32, padding: '0 15px',
             borderRadius: 'var(--sb-r-sm)', background: C.amber, border: '1px solid rgba(25,23,18,0.18)',
             color: C.ink, fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
-            cursor: sending ? 'default' : 'pointer', boxShadow: '0 2px 0 rgba(25,23,18,0.12)',
+            cursor: sending ? 'default' : 'pointer', boxShadow: 'var(--sb-shadow-accent)',
           }}>
           <Send size={13} /> {sending ? 'Sending…' : 'Send'}
         </button>

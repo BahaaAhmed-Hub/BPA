@@ -250,7 +250,7 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
       maxHeight: 'calc(100vh - 212px)',
       background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
       display: 'flex', flexDirection: 'column', minWidth: 0,
-      boxShadow: '0 1px 3px rgba(25,23,18,0.06)',
+      boxShadow: 'var(--sb-shadow-control)',
     }}>
       {/* ── Top row: company pill + controls ─────────────────────────────── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '14px 14px 0' }}>

@@ -131,7 +131,7 @@ export function Step1Welcome({ data, onChange }: Props) {
       `}</style>
 
       {/* Hero illustration */}
-      <div style={{ borderRadius: 'var(--sb-r-card)', overflow: 'hidden', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>
+      <div style={{ borderRadius: 'var(--sb-r-card)', overflow: 'hidden', boxShadow: 'var(--sb-shadow-hover)' }}>
         <HeroIllustration />
       </div>
 
@@ -151,7 +151,7 @@ export function Step1Welcome({ data, onChange }: Props) {
           <div key={f.title} className="wz-feature-card" style={{
             padding: '14px 12px', borderRadius: 'var(--sb-r-nav)', textAlign: 'center',
             background: '#F8F8FC', border: '1px solid #EBEBF0',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+            boxShadow: 'var(--sb-shadow-control)',
           }}>
             <div style={{ fontSize: 'var(--sb-t-h1)', marginBottom: 8 }}>{f.emoji}</div>
             <div style={{ fontSize: 'var(--sb-t-label)', fontWeight: 700, color: '#111827', marginBottom: 4 }}>{f.title}</div>
@@ -175,7 +175,7 @@ export function Step1Welcome({ data, onChange }: Props) {
             background: 'var(--sb-card)', border: '1.5px solid #E5E7EB', borderRadius: 'var(--sb-r-nav)',
             padding: '11px 14px', color: '#111827', fontSize: 'var(--sb-t-body)', outline: 'none',
             width: '100%', boxSizing: 'border-box',
-            boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
+            boxShadow: 'var(--sb-shadow-control)',
             transition: 'border-color 0.15s',
           }}
           onFocus={e => { e.target.style.borderColor = 'var(--sb-accent)' }}

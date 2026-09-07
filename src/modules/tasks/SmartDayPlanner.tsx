@@ -164,7 +164,7 @@ function EventPopup({ event, color, onClose }: { event: GCalEvent; color: string
       background: 'var(--sb-card)',
       border: '1px solid var(--sb-border)',
       borderRadius: 'var(--sb-r-card)', width: 340, maxHeight: '80vh', overflowY: 'auto',
-      boxShadow: '0 24px 80px rgba(0,0,0,0.6)',
+      boxShadow: 'var(--sb-shadow-frame)',
     }}>
       {/* Color bar + title */}
       <div style={{ borderBottom: '1px solid var(--sb-border)', padding: '14px 16px 12px', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
@@ -358,7 +358,7 @@ function AccountPickerOverlay({
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.72)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-      <div style={{ background: '#F9FAFB', borderRadius: 'var(--sb-r-card)', padding: 24, width: 360, maxWidth: '100%', boxShadow: '0 24px 60px rgba(0,0,0,0.3)' }}>
+      <div style={{ background: '#F9FAFB', borderRadius: 'var(--sb-r-card)', padding: 24, width: 360, maxWidth: '100%', boxShadow: 'var(--sb-shadow-frame)' }}>
         <div style={{ fontSize: 'var(--sb-t-h3)', fontWeight: 700, color: '#111827', marginBottom: 4 }}>
           Add to Calendar
         </div>
@@ -733,7 +733,7 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
         <div style={{
           background: '#F9FAFB', borderRadius: 'var(--sb-r-card)', width: '100%', maxWidth: 1000, maxHeight: '90vh',
           display: 'flex', flexDirection: 'column',
-          boxShadow: '0 32px 80px rgba(0,0,0,0.22), 0 0 0 1px rgba(0,0,0,0.06)',
+          boxShadow: 'var(--sb-shadow-frame)',
           animation: 'sdp-in 0.3s cubic-bezier(0.16,1,0.3,1)', overflow: 'hidden',
         }}>
           {/* Header */}
@@ -760,7 +760,7 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
             <div style={{ flex: 1 }} />
             <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
               <div onClick={() => setIncludeBreaks(b => !b)} style={{ width: 40, height: 22, borderRadius: 'var(--sb-r-nav)', background: includeBreaks ? '#F97316' : '#D1D5DB', position: 'relative', cursor: 'pointer', transition: 'background 0.15s' }}>
-                <div style={{ position: 'absolute', top: 3, left: includeBreaks ? 21 : 3, width: 16, height: 16, borderRadius: 'var(--sb-r-pill)', background: '#fff', transition: 'left 0.15s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+                <div style={{ position: 'absolute', top: 3, left: includeBreaks ? 21 : 3, width: 16, height: 16, borderRadius: 'var(--sb-r-pill)', background: '#fff', transition: 'left 0.15s', boxShadow: 'var(--sb-shadow-control)' }} />
               </div>
               <span style={{ fontSize: 'var(--sb-t-body)', color: '#374151', fontWeight: 500 }}>Include breaks</span>
             </label>

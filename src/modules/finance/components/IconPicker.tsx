@@ -169,7 +169,7 @@ export function IconPicker({ value, onChange, size = 44, trigger }: Props) {
           background: 'var(--sb-card)',
           border: `1px solid ${'var(--sb-border)'}`,
           borderRadius: 'var(--sb-r-card)',
-          boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+          boxShadow: 'var(--sb-shadow-frame)',
           overflow: 'hidden',
         }}>
 

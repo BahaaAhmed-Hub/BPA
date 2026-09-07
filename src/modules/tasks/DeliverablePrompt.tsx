@@ -79,7 +79,7 @@ export function DeliverablePrompt({ task, onComplete, onCancel }: {
       <div style={{
         width: 460, maxHeight: '86vh', overflowY: 'auto', boxSizing: 'border-box',
         background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
-        boxShadow: '0 24px 60px -20px rgba(25,23,18,0.45)', padding: '20px 22px 18px',
+        boxShadow: 'var(--sb-shadow-frame)', padding: '20px 22px 18px',
       }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
           <div style={{ flex: 1, minWidth: 0 }}>

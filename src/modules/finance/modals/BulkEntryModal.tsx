@@ -228,7 +228,7 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
         style={{
           width: '100%', maxWidth: 1100, maxHeight: '88vh', display: 'flex', flexDirection: 'column',
           background: 'var(--sb-header)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
-          boxShadow: '0 30px 80px rgba(25,23,18,0.28)', padding: '18px 20px 20px',
+          boxShadow: 'var(--sb-shadow-frame)', padding: '18px 20px 20px',
         }}>
 
         {/* Eyebrow + close */}

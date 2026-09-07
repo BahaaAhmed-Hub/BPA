@@ -613,7 +613,7 @@ export function ReflectionScreen(_props?: any) {
                   position: 'absolute', top: 34, right: 0, zIndex: 30, width: 384,
                   maxHeight: 320, overflowY: 'auto', padding: 12,
                   background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
-                  boxShadow: '0 16px 40px rgba(25,23,18,0.18)', textAlign: 'left',
+                  boxShadow: 'var(--sb-shadow-frame)', textAlign: 'left',
                 }}>
                   <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.5, marginBottom: 10 }}>
                     Same amount, account, category and payee. Filed twice on one day is
@@ -787,7 +787,7 @@ export function ReflectionScreen(_props?: any) {
             style={{
               width: '100%', maxWidth: 560, maxHeight: '84vh', display: 'flex', flexDirection: 'column',
               background: 'var(--sb-header)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
-              boxShadow: '0 30px 80px rgba(25,23,18,0.28)', padding: '18px 20px 20px',
+              boxShadow: 'var(--sb-shadow-frame)', padding: '18px 20px 20px',
             }}>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>

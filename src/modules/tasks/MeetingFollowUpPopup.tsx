@@ -308,7 +308,7 @@ export function MeetingFollowUpPopup({ parentTask, onConfirm, onSkip }: Props) {
         borderRadius: 'var(--sb-r-card)',
         display: 'flex', flexDirection: 'column',
         overflow: 'hidden',
-        boxShadow: '0 24px 64px rgba(0,0,0,0.6)',
+        boxShadow: 'var(--sb-shadow-frame)',
       }}>
 
         {/* Header */}

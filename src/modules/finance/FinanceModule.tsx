@@ -269,7 +269,7 @@ export function FinanceModule() {
             height: 30, paddingInline: 14, borderRadius: 'var(--sb-r-chip)',
             background: 'var(--sb-accent)', border: '1px solid rgba(25,23,18,0.18)', cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            flexShrink: 0, gap: 5, boxShadow: '0 2px 0 rgba(25,23,18,0.1)',
+            flexShrink: 0, gap: 5, boxShadow: 'var(--sb-shadow-accent)',
           }}
         >
           <IconPlus color="var(--sb-ink-1)" />

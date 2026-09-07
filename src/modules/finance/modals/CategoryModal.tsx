@@ -81,7 +81,7 @@ export function CategoryModal({ category, categories, onSave, onDelete, onClose 
         width: 'clamp(320px, 94vw, 430px)', maxHeight: '90vh', overflowY: 'auto',
         boxSizing: 'border-box', scrollbarWidth: 'thin',
         background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
-        boxShadow: '0 24px 60px rgba(25,23,18,0.24)', padding: '18px 20px 22px',
+        boxShadow: 'var(--sb-shadow-frame)', padding: '18px 20px 22px',
       }}>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

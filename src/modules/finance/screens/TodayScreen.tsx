@@ -185,7 +185,7 @@ function MoneyCalendar({
       {/* Calendar card */}
       <div style={{
         background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
-        padding: 14, boxShadow: '0 1px 3px rgba(25,23,18,0.06)',
+        padding: 14, boxShadow: 'var(--sb-shadow-control)',
       }}>
         {/* Day headers */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 6, marginBottom: 6 }}>

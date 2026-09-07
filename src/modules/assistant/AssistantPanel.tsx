@@ -416,7 +416,7 @@ export function AssistantPanel({ open, onClose }: AssistantPanelProps) {
             width: 32, height: 32, borderRadius: 'var(--sb-r-sm)',
             background: 'linear-gradient(135deg, #4F46E5 0%, #818CF8 100%)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 0 12px rgba(99,102,241,0.35)',
+            boxShadow: 'var(--sb-shadow-menu)',
           }}>
             <Brain size={16} color="white" />
           </div>

@@ -32,7 +32,7 @@ import type { Task } from '@/types'
 
 const CARD: React.CSSProperties = {
   background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
-  boxShadow: '0 1px 3px rgba(25,23,18,0.05)', minWidth: 0,
+  boxShadow: 'var(--sb-shadow-control)', minWidth: 0,
 }
 const INK = 'var(--sb-ink-1)'
 const MUTED = 'var(--sb-ink-3)'
@@ -256,7 +256,7 @@ function MailPopup({ row, onClose, onArchive, onAddTask }: {
         style={{
           width: '100%', maxWidth: 760, maxHeight: '80vh', display: 'flex', flexDirection: 'column',
           background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-card)', overflow: 'hidden',
-          boxShadow: '0 40px 80px -30px rgba(25,23,18,.55)',
+          boxShadow: 'var(--sb-shadow-frame)',
         }}>
 
         {/* Who, what, when */}
@@ -1248,7 +1248,7 @@ export function TodayPage() {
         </button>
         <button
           onClick={() => setActiveModule('tasks')}
-          style={{ ...PILL, background: AMBER, border: 'none', fontWeight: 600, boxShadow: '0 1px 3px rgba(25,23,18,0.14)' }}>
+          style={{ ...PILL, background: AMBER, border: 'none', fontWeight: 600, boxShadow: 'var(--sb-shadow-control)' }}>
           <ArrowRight size={13} strokeWidth={2.2} /> Start the day
         </button>
       </div>

@@ -251,7 +251,7 @@ export function TaskCommand() {
           {/* Filter button */}
           <div ref={filterRef} style={{ position: 'relative', flexShrink: 0 }}>
             <button onClick={() => setFilterOpen(o => !o)}
-              style={{ display: 'flex', alignItems: 'center', gap: 8, height: 38, boxSizing: 'border-box', padding: '0 18px', borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body)', fontWeight: 500, cursor: 'pointer', boxShadow: '0 1px 3px rgba(25,23,18,0.06)' }}>
+              style={{ display: 'flex', alignItems: 'center', gap: 8, height: 38, boxSizing: 'border-box', padding: '0 18px', borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body)', fontWeight: 500, cursor: 'pointer', boxShadow: 'var(--sb-shadow-control)' }}>
               <SlidersHorizontal size={14} strokeWidth={2} />
               Filters
               {activeFilterCount > 0 && (
@@ -267,7 +267,7 @@ export function TaskCommand() {
                 position: 'absolute', top: 'calc(100% + 8px)', right: 0, zIndex: 100,
                 background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
                 borderRadius: 'var(--sb-r-card)', padding: '8px 16px 14px', width: 308,
-                boxShadow: '0 28px 60px -24px rgba(25,23,18,.4)',
+                boxShadow: 'var(--sb-shadow-frame)',
               }}>
                 {/* Search — the artboard has no page-level search bar, so it
                     lives here rather than being dropped. */}
@@ -420,7 +420,7 @@ export function TaskCommand() {
           {/* New task CTA */}
           <button
             onClick={handleNewTask}
-            style={{ display: 'flex', alignItems: 'center', gap: 8, height: 38, boxSizing: 'border-box', padding: '0 18px', borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-accent)', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-label)', fontWeight: 600, border: 'none', cursor: 'pointer', boxShadow: '0 1px 3px rgba(25,23,18,0.14)', flexShrink: 0, fontFamily: 'inherit' }}>
+            style={{ display: 'flex', alignItems: 'center', gap: 8, height: 38, boxSizing: 'border-box', padding: '0 18px', borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-accent)', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-label)', fontWeight: 600, border: 'none', cursor: 'pointer', boxShadow: 'var(--sb-shadow-control)', flexShrink: 0, fontFamily: 'inherit' }}>
             <Plus size={15} strokeWidth={2.2} />
             New task
           </button>

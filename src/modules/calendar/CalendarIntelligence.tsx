@@ -627,7 +627,7 @@ function ColorPickerPopover({ current, onPick, onClose }: { current: string; onP
     <div ref={ref} onClick={e => e.stopPropagation()} style={{
       position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 200,
       background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
-      padding: '10px 10px 8px', boxShadow: '0 8px 28px rgba(25,23,18,0.18)',
+      padding: '10px 10px 8px', boxShadow: 'var(--sb-shadow-menu)',
       display: 'flex', flexWrap: 'wrap', gap: 7, width: 152,
     }}>
       {CAL_COLORS.map(c => (
@@ -1279,7 +1279,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
       width: 'clamp(320px, 34vw, 440px)', flexShrink: 0, alignSelf: 'stretch', minHeight: 0,
       overflowY: 'auto', scrollbarWidth: 'thin',
       background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
-      boxShadow: '0 1px 3px rgba(25,23,18,0.06)',
+      boxShadow: 'var(--sb-shadow-control)',
       padding: '18px 22px 22px',
     }}>
 
@@ -1477,7 +1477,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
             <div style={{
               position: 'absolute', top: 'calc(100% + 5px)', left: 0, right: 0, zIndex: 90,
               background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', padding: 5,
-              boxShadow: '0 18px 40px -18px rgba(25,23,18,.45)',
+              boxShadow: 'var(--sb-shadow-frame)',
             }}>
               {places.map(pl => (
                 <button key={pl} onMouseDown={e => e.preventDefault()}
@@ -1949,7 +1949,7 @@ function EventContextMenu({
         background: 'var(--sb-card)',
         border: '1px solid var(--sb-border)',
         borderRadius: 'var(--sb-r-nav)',
-        boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
+        boxShadow: 'var(--sb-shadow-menu)',
         zIndex: 1100,
         padding: '4px 0',
         overflow: 'hidden',
@@ -2071,7 +2071,7 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
       width: 'clamp(320px, 34vw, 440px)', flexShrink: 0, alignSelf: 'stretch', minHeight: 0,
       overflowY: 'auto', scrollbarWidth: 'thin',
       background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
-      boxShadow: '0 1px 3px rgba(25,23,18,0.06)',
+      boxShadow: 'var(--sb-shadow-control)',
       padding: '18px 20px 22px',
     }}>
 
@@ -3257,7 +3257,7 @@ export function CalendarIntelligence() {
             {!isThisWeek(weekStart) && (
               <button
                 onClick={() => setAnchorDate(new Date())}
-                style={{ ...CAL_PILL, background: 'var(--sb-accent)', border: 'none', fontWeight: 600, boxShadow: '0 1px 3px rgba(25,23,18,0.14)' }}
+                style={{ ...CAL_PILL, background: 'var(--sb-accent)', border: 'none', fontWeight: 600, boxShadow: 'var(--sb-shadow-control)' }}
               >Today</button>
             )}
           </div>
@@ -3472,7 +3472,7 @@ export function CalendarIntelligence() {
         flex: 1, minWidth: 0, minHeight: 0, position: 'relative',
         display: 'flex', flexDirection: 'column', overflow: 'hidden',
         background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
-        boxShadow: '0 1px 3px rgba(25,23,18,0.05)',
+        boxShadow: 'var(--sb-shadow-control)',
       }}>
 
       {/* ── Month grid ───────────────────────────────────────────────────────── */}

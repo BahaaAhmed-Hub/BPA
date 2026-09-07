@@ -149,7 +149,7 @@ function IntervalPicker({ value, onChange }: { value: Frequency; onChange: (f: F
         <div style={{
           position: 'absolute', top: 46, right: 0, minWidth: 168, zIndex: 30, padding: 5,
           background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
-          boxShadow: '0 12px 32px rgba(25,23,18,0.18)',
+          boxShadow: 'var(--sb-shadow-menu)',
         }}>
           {choices.map(v => {
             const opt = FREQ_OPTS.find(f => f.v === v)!
@@ -188,7 +188,7 @@ function Switch({ on, onChange, label, sub }: {
       }}>
         <span style={{
           position: 'absolute', top: 2, left: on ? 16 : 2, width: 16, height: 16, borderRadius: 'var(--sb-r-pill)',
-          background: 'var(--sb-card)', boxShadow: '0 1px 2px rgba(25,23,18,0.2)', transition: 'left .15s',
+          background: 'var(--sb-card)', boxShadow: 'var(--sb-shadow-control)', transition: 'left .15s',
         }} />
       </span>
       <span style={{ minWidth: 0 }}>
@@ -293,7 +293,7 @@ export function BudgetRuleModal({
         width: 'clamp(320px, 94vw, 440px)', maxHeight: '90vh', overflowY: 'auto',
         boxSizing: 'border-box', scrollbarWidth: 'thin',
         background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
-        boxShadow: '0 24px 60px rgba(25,23,18,0.24)', padding: '18px 20px 22px',
+        boxShadow: 'var(--sb-shadow-frame)', padding: '18px 20px 22px',
       }}>
 
         {/* Which envelope, and the way out */}

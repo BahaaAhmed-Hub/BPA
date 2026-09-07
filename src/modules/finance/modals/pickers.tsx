@@ -141,7 +141,7 @@ export function PillPicker({ value, options, onChange, placeholder, compact }: {
           position: 'fixed', top: place.top, left: place.left, width: place.width, zIndex: 2000,
           maxHeight: place.maxHeight, overflowY: 'auto', padding: 5, boxSizing: 'border-box',
           background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
-          boxShadow: '0 12px 32px rgba(25,23,18,0.18)',
+          boxShadow: 'var(--sb-shadow-menu)',
         }}>
           {options.length === 0 && (
             <div style={{ padding: '10px 12px', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-4)' }}>Nothing to choose from yet</div>

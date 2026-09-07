@@ -207,7 +207,7 @@ function KanbanColumnComp({ column, onOpen, onColDragStart, onColDragOver, onCol
             <div style={{
               position: 'absolute', top: 'calc(100% + 6px)', right: 0, zIndex: 60, width: 190,
               background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', padding: 6,
-              boxShadow: '0 20px 44px -20px rgba(25,23,18,.42)',
+              boxShadow: 'var(--sb-shadow-frame)',
             }}>
               <p style={{ margin: 0, padding: '7px 9px 5px', fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '.12em', color: 'var(--sb-ink-4)' }}>BOARD COLUMNS</p>
               {BOARD_TYPE_OPTIONS.map(opt => (
@@ -324,7 +324,7 @@ function DatePickerOverlay({
       <div style={{
         background: 'var(--sb-card)', borderRadius: 'var(--sb-r-card)',
         padding: 24, width: 320, border: '1px solid var(--sb-border)',
-        boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+        boxShadow: 'var(--sb-shadow-frame)',
       }}>
         <div style={{ fontSize: 'var(--sb-t-h3)', fontWeight: 700, color: 'var(--sb-ink-1)', marginBottom: 6 }}>
           Plan this task
