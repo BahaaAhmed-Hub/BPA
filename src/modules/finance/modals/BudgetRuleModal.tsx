@@ -13,13 +13,13 @@ import { toBase } from '../fx'
 // read by anything. They remembered their own position and that was the whole
 // of what they did, so they are gone.
 
-const INK   = '#191712'
-const MUTED = '#6C6553'
+const INK   = 'var(--sb-ink-1)'
+const MUTED = 'var(--sb-ink-3)'
 const GHOST = '#9B9180'
-const LINE  = '#E8E1CE'
-const HAIR  = '#F0EBDC'
-const OLIVE = '#0C8140'
-const RUST  = '#C62828'
+const LINE  = 'var(--sb-border)'
+const HAIR  = 'var(--sb-hairline)'
+const OLIVE = 'var(--sb-positive)'
+const RUST  = 'var(--sb-negative)'
 const AMBER = 'var(--sb-accent)'
 const DISPLAY = "'Outfit', system-ui, sans-serif"
 
@@ -120,13 +120,13 @@ export function monthlyAmount(rule?: Pick<BudgetRule, 'amount' | 'frequency'>): 
 
 const PILL: React.CSSProperties = {
   display: 'inline-flex', alignItems: 'center', gap: 6, height: 42, boxSizing: 'border-box',
-  padding: '0 14px', borderRadius: 10, background: '#FFFFFF', border: `1px solid ${LINE}`,
+  padding: '0 14px', borderRadius: 10, background: 'var(--sb-card)', border: `1px solid ${LINE}`,
   color: INK, fontSize: 13.5, fontFamily: 'inherit', cursor: 'pointer', minWidth: 0,
 }
 const ROUND: React.CSSProperties = {
   width: 30, height: 30, borderRadius: '50%', flexShrink: 0, padding: 0,
   display: 'flex', alignItems: 'center', justifyContent: 'center',
-  background: '#FFFFFF', border: `1px solid ${LINE}`, color: MUTED, cursor: 'pointer',
+  background: 'var(--sb-card)', border: `1px solid ${LINE}`, color: MUTED, cursor: 'pointer',
 }
 const LABEL: React.CSSProperties = { width: 74, flexShrink: 0, fontSize: 13.5, color: MUTED, fontWeight: 500 }
 const ROW: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 10 }
@@ -157,7 +157,7 @@ function IntervalPicker({ value, onChange }: { value: Frequency; onChange: (f: F
       {open && (
         <div style={{
           position: 'absolute', top: 46, right: 0, minWidth: 168, zIndex: 30, padding: 5,
-          background: '#FFFFFF', border: `1px solid ${LINE}`, borderRadius: 12,
+          background: 'var(--sb-card)', border: `1px solid ${LINE}`, borderRadius: 12,
           boxShadow: '0 12px 32px rgba(25,23,18,0.18)',
         }}>
           {choices.map(v => {
@@ -197,7 +197,7 @@ function Switch({ on, onChange, label, sub }: {
       }}>
         <span style={{
           position: 'absolute', top: 2, left: on ? 16 : 2, width: 16, height: 16, borderRadius: '50%',
-          background: '#FFFFFF', boxShadow: '0 1px 2px rgba(25,23,18,0.2)', transition: 'left .15s',
+          background: 'var(--sb-card)', boxShadow: '0 1px 2px rgba(25,23,18,0.2)', transition: 'left .15s',
         }} />
       </span>
       <span style={{ minWidth: 0 }}>
@@ -301,7 +301,7 @@ export function BudgetRuleModal({
       <div ref={box} style={{
         width: 'clamp(320px, 94vw, 440px)', maxHeight: '90vh', overflowY: 'auto',
         boxSizing: 'border-box', scrollbarWidth: 'thin',
-        background: '#FFFFFF', border: `1px solid ${LINE}`, borderRadius: 18,
+        background: 'var(--sb-card)', border: `1px solid ${LINE}`, borderRadius: 18,
         boxShadow: '0 24px 60px rgba(25,23,18,0.24)', padding: '18px 20px 22px',
       }}>
 
@@ -315,7 +315,7 @@ export function BudgetRuleModal({
               <button onClick={onClick} title="Change the icon"
                 style={{
                   width: 40, height: 40, borderRadius: 11, flexShrink: 0, padding: 0,
-                  border: `1px solid ${LINE}`, background: '#FAF7EC', cursor: 'pointer',
+                  border: `1px solid ${LINE}`, background: 'var(--sb-field)', cursor: 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
                 }}>
                 <CategoryGlyph icon={category.icon} size={21} color={INK} />
@@ -340,7 +340,7 @@ export function BudgetRuleModal({
                 fontFamily: DISPLAY, fontSize: 19, fontWeight: 600, letterSpacing: '-0.02em',
                 color: INK, outline: 'none',
               }}
-              onFocus={e => { e.target.style.background = '#FAF7EC'; e.target.style.borderColor = LINE }}
+              onFocus={e => { e.target.style.background = 'var(--sb-field)'; e.target.style.borderColor = LINE }}
               onBlurCapture={e => { e.target.style.background = 'transparent'; e.target.style.borderColor = 'transparent' }}
             />
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, color: GHOST, marginTop: 1 }}>
@@ -362,7 +362,7 @@ export function BudgetRuleModal({
         {/* Where it stands this month */}
         <div style={{
           marginTop: 14, padding: '13px 15px', borderRadius: 12,
-          background: '#FAF7EC', border: `1px solid ${LINE}`,
+          background: 'var(--sb-field)', border: `1px solid ${LINE}`,
         }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
             <span style={{ fontFamily: DISPLAY, fontSize: 22, fontWeight: 700, letterSpacing: '-0.03em', color: over ? tone : INK, fontVariantNumeric: 'tabular-nums' }}>
@@ -378,14 +378,14 @@ export function BudgetRuleModal({
             <span style={{ flex: 1 }} />
             {spent > 0 && (
               <button onClick={onDrill}
-                style={{ height: 26, padding: '0 10px', borderRadius: 7, background: '#E2F0E7', border: '1px solid #C8D9A8', color: OLIVE, fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                style={{ height: 26, padding: '0 10px', borderRadius: 7, background: 'var(--sb-positive-tint)', border: '1px solid #C8D9A8', color: OLIVE, fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
                 View all →
               </button>
             )}
           </div>
           {budget > 0 && (
             <>
-              <div style={{ height: 6, borderRadius: 999, background: '#EDE7D9', marginTop: 10, overflow: 'hidden' }}>
+              <div style={{ height: 6, borderRadius: 999, background: 'var(--sb-field)', marginTop: 10, overflow: 'hidden' }}>
                 <div style={{ height: '100%', width: `${pct * 100}%`, background: over ? tone : near ? '#E8A94A' : OLIVE, borderRadius: 999 }} />
               </div>
               <div style={{ fontSize: 11.5, color: over ? tone : near ? '#8A6D0B' : MUTED, marginTop: 7 }}>
@@ -413,7 +413,7 @@ export function BudgetRuleModal({
             <span style={{ flex: 1, minWidth: 0, display: 'flex', gap: 7 }}>
               <span style={{
                 ...PILL, flex: 1, cursor: 'text', gap: 8,
-                background: '#FAF7EC',
+                background: 'var(--sb-field)',
               }}>
                 <span style={{ position: 'relative', display: 'inline-flex', flexShrink: 0 }}>
                   <span style={{ fontSize: 11.5, fontWeight: 700, color: MUTED, display: 'inline-flex', alignItems: 'center', gap: 2 }}>
@@ -468,9 +468,9 @@ export function BudgetRuleModal({
                   <button key={v} onClick={() => onRename({ txType: v })}
                     style={{
                       ...PILL, flex: 1, justifyContent: 'center',
-                      background: on ? (v === 'income' ? OLIVE : RUST) : '#FFFFFF',
+                      background: on ? (v === 'income' ? OLIVE : RUST) : 'var(--sb-card)',
                       border: on ? 'none' : `1px solid ${LINE}`,
-                      color: on ? '#FDF8E7' : MUTED,
+                      color: on ? 'var(--sb-ink-on-dark)' : MUTED,
                       fontWeight: on ? 600 : 400,
                     }}>{label}</button>
                 )
@@ -488,9 +488,9 @@ export function BudgetRuleModal({
                     title={t === 'fixed' ? 'A commitment you cannot move' : 'Spending you can steer'}
                     style={{
                       ...PILL, flex: 1, justifyContent: 'center', whiteSpace: 'nowrap',
-                      background: on ? INK : '#FFFFFF',
+                      background: on ? INK : 'var(--sb-card)',
                       border: on ? 'none' : `1px solid ${LINE}`,
-                      color: on ? '#FDF8E7' : MUTED,
+                      color: on ? 'var(--sb-ink-on-dark)' : MUTED,
                       fontWeight: on ? 600 : 400,
                     }}>{t === 'fixed' ? 'Fixed' : 'Flexible'}</button>
                 )
@@ -623,7 +623,7 @@ export function BudgetRuleModal({
         <div style={{ display: 'flex', gap: 8, marginTop: 18 }}>
           <button onClick={onClose} style={{
             ...PILL, flex: 1, justifyContent: 'center', fontWeight: 600,
-            background: INK, border: 'none', color: '#FDF8E7',
+            background: INK, border: 'none', color: 'var(--sb-ink-on-dark)',
           }}>
             <Check size={14} strokeWidth={2.5} /> Done
           </button>
