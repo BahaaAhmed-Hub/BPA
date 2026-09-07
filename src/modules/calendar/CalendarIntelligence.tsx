@@ -39,6 +39,7 @@ import { generateMeetingPrep } from '@/lib/professor'
 import type { MeetingPrep } from '@/lib/professor'
 import { useAuthStore } from '@/store/authStore'
 import { pushUndo, notify } from '@/lib/undo'
+import { syncTaskToEvent } from '@/lib/taskEventLink'
 import { useUIStore } from '@/store/uiStore'
 import { loadAccounts, loadHiddenAccounts } from '@/lib/multiAccount'
 import { connectAdditionalGoogleAccount } from '@/lib/google'
@@ -2540,7 +2541,12 @@ export function CalendarIntelligence() {
     setEventStatuses(prev => {
       const next = { ...prev }
       if (next[eventId] === status) delete next[eventId]; else next[eventId] = status
-      saveEventStatuses(next); return next
+      saveEventStatuses(next)
+      // A block that came from a task is that task's hour. Ticking it here
+      // finishes the task too, or the board goes on asking for work that is
+      // done.
+      syncTaskToEvent(eventId, next[eventId] ?? null)
+      return next
     })
   }
 

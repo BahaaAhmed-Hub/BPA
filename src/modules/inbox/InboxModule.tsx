@@ -1,6 +1,12 @@
 
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
-import { Mail, Zap, Clock, Copy, CheckCheck, RefreshCw, ArrowRight, WifiOff, ListPlus, Plus, Archive, Search, X as XIcon, PenSquare, Reply, ReplyAll, Forward } from 'lucide-react'
+import { Mail, Zap, Clock, Copy, CheckCheck, RefreshCw, ArrowRight, WifiOff, ListPlus, Plus, Archive, Search, X as XIcon, PenSquare, Reply, ReplyAll, Forward, ChevronDown, ChevronRight, Inbox, Send, FileEdit, Star, MailOpen } from 'lucide-react'
+
+/** One glyph each, so the rail still says what it is when it is folded up. */
+const FOLDER_ICON: Record<MailFolder, typeof Mail> = {
+  unread: MailOpen, inbox: Inbox, sent: Send, drafts: FileEdit,
+  starred: Star, archive: Archive, spam: Mail, trash: Mail,
+}
 import { triageEmail } from '@/lib/professor'
 import type { EmailTriage, EmailData } from '@/lib/professor'
 import { listUnreadThreadIds, getThread, extractBody, extractHtmlBody, header, markAsRead, archiveMessage, sendReply, escapeHtml, FOLDER_QUERY, FOLDER_LABEL, FOLDER_SHOWS_RECIPIENT, type MailAccount, type MailFolder } from '@/lib/gmail'
@@ -41,6 +47,16 @@ interface Email {
   receivedAt: string
   inReplyTo?: string
   threadMessages: EmailMessage[]
+}
+
+/** Every action on an open message is the same shape — a pill. Archive used to
+ *  be a small square box beside three pills, which made it read as a different
+ *  kind of thing than Reply. */
+const ACTION_PILL: React.CSSProperties = {
+  display: 'inline-flex', alignItems: 'center', gap: 6,
+  height: 30, padding: '0 14px', borderRadius: 999, flexShrink: 0,
+  background: '#FFFFFF', border: '1px solid #E8E1CE', color: '#191712',
+  fontFamily: 'inherit', fontSize: 12.5, cursor: 'pointer',
 }
 
 interface TriageState {
@@ -219,6 +235,9 @@ export function InboxModule() {
   // Which folder. Unread-in-inbox is what this module was, and stays the
   // default — it is the question the page exists to answer — but the rest of
   // the mailbox was simply unreachable.
+  const [railOpen, setRailOpen] = useState(() => {
+    try { return localStorage.getItem('mail-rail-open') !== 'false' } catch { return true }
+  })
   const [folder, setFolder] = useState<MailFolder>(() => {
     try { return (localStorage.getItem('mail-folder') as MailFolder) || 'unread' } catch { return 'unread' }
   })
@@ -463,6 +482,58 @@ export function InboxModule() {
 
   // ─── Render helpers ──────────────────────────────────────────────────────
 
+
+  /** The folders, as a list down the left rather than a row of pills: it is a
+   *  place you go, and a place is a menu item. It folds away to its icons on a
+   *  narrow screen, or when you would rather have the width. */
+  function renderFolders() {
+    const ORDER: MailFolder[] = ['unread', 'inbox', 'sent', 'drafts', 'starred', 'archive']
+    return (
+      <nav style={{
+        background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 12,
+        padding: 6, alignSelf: 'start', display: 'flex', flexDirection: 'column', gap: 2,
+      }}>
+        <button
+          onClick={() => { const v = !railOpen; setRailOpen(v); try { localStorage.setItem('mail-rail-open', String(v)) } catch { /* quota */ } }}
+          title={railOpen ? 'Collapse' : 'Expand'}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 8, height: 30, padding: '0 8px',
+            borderRadius: 8, background: 'transparent', border: 'none', cursor: 'pointer',
+            color: '#9B9180', fontFamily: 'inherit', fontSize: 10.5, fontWeight: 700,
+            letterSpacing: '0.12em', textTransform: 'uppercase',
+          }}>
+          {railOpen ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+          {railOpen && 'Folders'}
+        </button>
+        {ORDER.map(f => {
+          const on = folder === f
+          const Icon = FOLDER_ICON[f]
+          return (
+            <button key={f}
+              onClick={() => {
+                setFolder(f); setSelectedId(null)
+                try { localStorage.setItem('mail-folder', f) } catch { /* quota */ }
+              }}
+              title={FOLDER_LABEL[f]}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 9,
+                height: 32, padding: railOpen ? '0 10px' : 0,
+                justifyContent: railOpen ? 'flex-start' : 'center',
+                borderRadius: 8, cursor: 'pointer', border: 'none',
+                background: on ? '#191712' : 'transparent',
+                color: on ? '#FDF8E7' : '#6C6553',
+                fontFamily: 'inherit', fontSize: 12.5, fontWeight: on ? 600 : 500,
+                whiteSpace: 'nowrap',
+              }}>
+              <Icon size={14} strokeWidth={1.9} style={{ flexShrink: 0 }} />
+              {railOpen && FOLDER_LABEL[f]}
+            </button>
+          )
+        })}
+      </nav>
+    )
+  }
+
   function renderLeft() {
     if (loading) {
       return (
@@ -481,30 +552,6 @@ export function InboxModule() {
 
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {/* The rest of the mailbox. Gmail has no folders — it has labels and a
-            query language — so these are names for the searches people mean. */}
-        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-          {(['unread', 'inbox', 'sent', 'drafts', 'starred', 'archive'] as MailFolder[]).map(f => {
-            const on = folder === f
-            return (
-              <button key={f}
-                onClick={() => {
-                  setFolder(f); setSelectedId(null)
-                  try { localStorage.setItem('mail-folder', f) } catch { /* quota */ }
-                }}
-                style={{
-                  height: 26, padding: '0 11px', borderRadius: 999, cursor: 'pointer',
-                  fontFamily: 'inherit', fontSize: 11.5, fontWeight: on ? 600 : 500,
-                  background: on ? '#191712' : '#FFFFFF',
-                  border: `1px solid ${on ? '#191712' : '#E8E1CE'}`,
-                  color: on ? '#FDF8E7' : '#6C6553',
-                }}>
-                {FOLDER_LABEL[f]}
-              </button>
-            )
-          })}
-        </div>
-
         {/* Search */}
         <div style={{ position: 'relative' }}>
           <Search size={13} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#6C6553', pointerEvents: 'none' }} />
@@ -680,11 +727,11 @@ export function InboxModule() {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         {/* Email body */}
-        <div style={{ background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 12, padding: '22px 24px' }}>
-          <p style={{ margin: '0 0 8px', fontSize: 18, fontWeight: 700, color: '#191712', fontFamily: "'Cabinet Grotesk', sans-serif", letterSpacing: '-0.3px' }}>
+        <div style={{ background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 12, padding: '18px 22px' }}>
+          <p style={{ margin: '0 0 6px', fontSize: 18, fontWeight: 700, color: '#191712', fontFamily: "'Cabinet Grotesk', sans-serif", letterSpacing: '-0.3px', lineHeight: 1.25 }}>
             {selectedEmail.subject}
           </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 14 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginBottom: 10 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
               <span style={{ fontSize: 12.5, color: '#7F77DD', fontWeight: 600 }}>{selectedEmail.fromName}</span>
               <span style={{ fontSize: 12, color: '#6C6553' }}>{`<${selectedEmail.fromEmail}>`}</span>
@@ -703,13 +750,13 @@ export function InboxModule() {
                 onClick={() => void handleArchive(selectedEmail)}
                 disabled={archiving === selectedEmail.id}
                 title="Archive"
-                style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 6, background: 'transparent', border: '1px solid #E8E1CE', color: '#6C6553', fontSize: 11.5, cursor: 'pointer', opacity: archiving === selectedEmail.id ? 0.5 : 1 }}
+                style={{ ...ACTION_PILL, opacity: archiving === selectedEmail.id ? 0.5 : 1 }}
               >
-                <Archive size={12} /> Archive
+                <Archive size={13} /> Archive
               </button>
             </div>
             {selectedEmail.to && (
-              <div style={{ display: 'flex', gap: 6, alignItems: 'baseline' }}>
+              <div style={{ display: 'flex', gap: 6, alignItems: 'baseline', lineHeight: 1.35 }}>
                 <span style={{ fontSize: 10.5, fontWeight: 600, color: '#6C6553', minWidth: 18 }}>To</span>
                 <span style={{ fontSize: 11.5, color: '#6C6553', wordBreak: 'break-word' }}>{selectedEmail.to}</span>
               </div>
@@ -723,7 +770,7 @@ export function InboxModule() {
           </div>
 
           {/* The three ways of answering, and the composer they open. */}
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
+          <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginBottom: 12 }}>
             {([
               { mode: 'reply'    as ComposeMode, label: 'Reply',    Icon: Reply },
               { mode: 'replyAll' as ComposeMode, label: 'Reply all', Icon: ReplyAll },
@@ -734,8 +781,7 @@ export function InboxModule() {
                 <button key={mode}
                   onClick={() => setCompose(on ? null : composeSeed(selectedEmail, mode, accounts))}
                   style={{
-                    display: 'flex', alignItems: 'center', gap: 6, height: 30, padding: '0 14px',
-                    borderRadius: 999, cursor: 'pointer', fontFamily: 'inherit', fontSize: 12.5,
+                    ...ACTION_PILL,
                     background: on ? '#191712' : '#FFFFFF',
                     border: `1px solid ${on ? '#191712' : '#E8E1CE'}`,
                     color: on ? '#FDF8E7' : '#191712',
@@ -1062,7 +1108,11 @@ export function InboxModule() {
         {noAuth || fetchError ? (
           <div style={{ maxWidth: 520, margin: '40px auto' }}>{renderRight()}</div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: visibleEmails.length > 0 ? '360px 1fr' : '1fr', gap: 16 }}>
+          <div style={{
+            display: 'grid', gap: 16,
+            gridTemplateColumns: `${railOpen ? 156 : 46}px ${visibleEmails.length > 0 ? '360px ' : ''}1fr`,
+          }}>
+            {renderFolders()}
             {renderLeft()}
             {renderRight()}
           </div>

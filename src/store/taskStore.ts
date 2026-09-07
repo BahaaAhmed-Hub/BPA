@@ -7,6 +7,7 @@ import { COMPANY_LABELS, QUADRANT_META, getAllUsers, loadDynamicCompanies } from
 import { saveTasksToDB, loadTasksFromDB } from '@/lib/dbSync'
 import { markLocalWrite } from '@/lib/liveSync'
 import { pushUndo } from '@/lib/undo'
+import { syncEventToTask } from '@/lib/taskEventLink'
 import type { TaskRow } from '@/lib/dbSync'
 
 /** Today in the viewer's own timezone. toISOString() reports UTC, which lands
@@ -309,6 +310,15 @@ export const useTaskStore = create<TaskState>()(
             const user = updates.owner ? getAllUsers().find(u => u.id === updates.owner) : undefined
             desc.push(user ? `Assigned to ${user.name}` : 'Owner removed')
           }
+          // The panel changes state through here, not through setStatus, so the
+          // block has to be told from here too.
+          if (('status' in updates || 'completed' in updates) && old.gcalEventId) {
+            const nextStatus = updates.status ?? (updates.completed ? 'done' : old.status)
+            if (nextStatus !== old.status || updates.completed !== old.completed) {
+              syncEventToTask(old.gcalEventId,
+                nextStatus === 'done' ? 'done' : nextStatus === 'cancelled' ? 'cancelled' : 'open')
+            }
+          }
           if ('status' in updates && updates.status !== old.status) {
             desc.push(
               updates.status === 'done' ? 'Marked as done'
@@ -505,6 +515,8 @@ export const useTaskStore = create<TaskState>()(
               completedAt: t.completed ? undefined : today,
             } : t
           )
+          // The block this task made is the same hour: keep the two in step.
+          if (task?.gcalEventId) syncEventToTask(task.gcalEventId, nowDone ? 'done' : 'open')
           // Save immediately — debouncing risks losing the change if user refreshes
           saveTasksToDB(next.map(toRow)).catch(console.warn)
           return {
@@ -526,6 +538,8 @@ export const useTaskStore = create<TaskState>()(
               completedAt: status === 'done' ? (t.completedAt ?? today) : undefined,
             } : t
           )
+          const t = s.tasks.find(x => x.id === id)
+          if (t?.gcalEventId) syncEventToTask(t.gcalEventId, status === 'done' ? 'done' : status === 'cancelled' ? 'cancelled' : 'open')
           // Save immediately for status changes so completion date persists through refresh
           saveTasksToDB(next.map(toRow)).catch(console.warn)
           return {
