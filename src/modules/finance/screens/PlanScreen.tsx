@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { acct } from '../format'
 import { useFinanceStore } from '../financeStore'
+import { NotYet } from '@/components/ComingSoon'
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 
@@ -106,7 +107,12 @@ export function PlanScreen() {
     toCard:     DEMO_PLAN.reduce((s, r) => s + (r.toCard ?? 0), 0),
   }
 
+  // Every figure on this screen is illustrative — DEMO_TARGETS and DEMO_PLAN,
+  // not your ledger — and the switches on it reach nothing. It stays because
+  // the shape is the design; it is dimmed and labelled so no one reads a
+  // forecast off it.
   return (
+    <NotYet text="Plan coming soon" style={{ height: '100%' }}>
     <div style={{
       padding: '20px 26px 24px',
       display: 'flex', flexDirection: 'column', gap: 12,
@@ -401,5 +407,6 @@ export function PlanScreen() {
         </div>
       </div>
     </div>
+    </NotYet>
   )
 }

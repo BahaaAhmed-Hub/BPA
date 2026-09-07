@@ -25,6 +25,7 @@ import {
   RELOCK_CHOICES, type DevicePasskey, type LockConfig, type Relock,
 } from '@/modules/finance/lock'
 import { LockGate } from '@/modules/finance/FinanceLockScreen'
+import { NotYet, Soon } from '@/components/ComingSoon'
 import { connectAdditionalGoogleAccount, signOut as googleSignOut, disconnectGoogleAccount } from '@/lib/google'
 import { useUIStore } from '@/store/uiStore'
 import { useAuthStore } from '@/store/authStore'
@@ -3247,7 +3248,11 @@ function BillingSection() {
     { date: '14 Mar 2025', desc: 'Professor Pro · annual',   amount: '$180.00' },
     { date: '02 Feb 2025', desc: 'Professor Plus · monthly', amount: '$18.00' },
   ]
+  // Nothing in here is connected to anything: no plan is read, no card is
+  // stored, and none of the eight buttons had a handler. It stays on screen
+  // because the shape of it is the design, and it says what it is.
   return (
+    <NotYet text="Billing coming soon">
     <div>
       {/* Plan tile */}
       <div style={{ padding: '16px 18px', borderRadius: 12, background: '#FFFBEC', border: '1px solid #F5D14E', marginBottom: 6 }}>
@@ -3319,6 +3324,7 @@ function BillingSection() {
         <GhostPill tone="rust">Cancel plan</GhostPill>
       </div>
     </div>
+    </NotYet>
   )
 }
 
@@ -3436,7 +3442,11 @@ function IntegrationsSection() {
 
   return (
     <div>
-      {/* Third-party tools */}
+      {/* Notion, Asana, Trello and Apple Notes: the accounts named on these
+          cards are illustrative and the switches reach nothing — no task has
+          ever crossed between this app and any of them. Google, below, is the
+          one that is real, so only this half is marked. */}
+      <NotYet text="Integrations coming soon">
       <div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -3501,6 +3511,7 @@ function IntegrationsSection() {
           <button style={{ background: 'none', border: 'none', color: '#0C8140', fontSize: 11.5, cursor: 'pointer', fontWeight: 600, padding: 0 }}>Sync now</button>
         </p>
       </div>
+      </NotYet>
 
     </div>
   )
@@ -3567,9 +3578,16 @@ function AutomationSection() {
 
   return (
     <div>
-      <p style={{ margin: '0 0 16px', fontSize: 12.5, color: '#6C6553', lineHeight: 1.5 }}>
-        Rules Professor runs automatically in the background — each fires on its trigger and takes action without interrupting you.
-      </p>
+      {/* These are written down and they follow you between devices; nothing
+          reads them back and acts yet. The old copy said they run in the
+          background, which is the one thing they do not do. */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '0 0 16px' }}>
+        <p style={{ margin: 0, flex: 1, fontSize: 12.5, color: '#6C6553', lineHeight: 1.5 }}>
+          What Professor will run for you, once each rule has an engine behind it. Set them up now —
+          the choices are saved and follow you between devices.
+        </p>
+        <Soon />
+      </div>
       <div style={{ columns: 2, columnGap: 12 }}>
         {rules.map(rule => (
           <div key={rule.id} style={{

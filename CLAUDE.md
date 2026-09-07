@@ -554,6 +554,23 @@ does it (and `addTask`, for one created with a date already on it), so every pat
 gets it: the detail panel, the planner, the palette. Only from the dump — a task
 already in Do stays in Do — and clearing the date sends nothing back.
 
+## What is drawn but not wired
+`components/ComingSoon.tsx`. A control that looks live and does nothing is
+worse than no control. `NotYet` wraps a block — half opacity, `pointer-events:
+none`, `aria-hidden`, a label top-right — and `Soon` is the label on its own.
+Four places carry it, found by sweeping every module for elements with no React
+click handler (that found the eight Billing buttons) and by reading for screens
+built on sample data:
+- **Settings → Billing** — no plan is read, no card stored; all eight buttons
+  were handler-less.
+- **Settings → Integrations** — Notion/Asana/Trello/Apple Notes accounts are
+  illustrative and the switches reach nothing. Google, in the same section, is
+  real and is *not* marked.
+- **Settings → Automation** — the rules are saved and synced; nothing reads them
+  back. The copy used to claim they run in the background.
+- **Finance → Plan** — `DEMO_TARGETS` / `DEMO_PLAN`, not your ledger.
+Everything else in all seven modules has a live handler.
+
 ## Common Patterns
 ```tsx
 // Toggle component (used everywhere in Settings)
