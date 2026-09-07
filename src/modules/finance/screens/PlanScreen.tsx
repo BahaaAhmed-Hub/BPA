@@ -6,25 +6,25 @@ import { NotYet } from '@/components/ComingSoon'
 // ─── Design tokens ────────────────────────────────────────────────────────────
 
 const C = {
-  bg:      '#F7F4EA',
-  surface: '#FFFFFF',
-  field:   '#FAF7EC',
-  border:  '#E8E1CE',
-  hair:    '#F0EBDC',
-  ink1:    '#191712',
-  ink2:    '#4A4438',
-  ink3:    '#6C6553',
-  ink4:    '#8A8272',
+  bg:      'var(--sb-page)',
+  surface: 'var(--sb-card)',
+  field:   'var(--sb-field)',
+  border:  'var(--sb-border)',
+  hair:    'var(--sb-hairline)',
+  ink1:    'var(--sb-ink-1)',
+  ink2:    'var(--sb-ink-2)',
+  ink3:    'var(--sb-ink-3)',
+  ink4:    'var(--sb-ink-4)',
   accent:  'var(--sb-accent)',
   accentBg:'var(--sb-accent-tint2)',
   accentBr:'var(--sb-accent-border)',
-  olive:   '#0C8140',
+  olive:   'var(--sb-positive)',
   oliveBg: '#EAF0D8',
   oliveTxt:'#7A8C5A',
   rust:    '#A31C1C',
   rustDk:  '#8E3E28',
   muted:   '#C4BDA8',
-  dark:    '#191712',
+  dark:    'var(--sb-ink-1)',
   darkSrf: 'rgba(253,248,231,0.14)',
 }
 
@@ -128,7 +128,7 @@ export function PlanScreen() {
         </div>
         <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 9, paddingBottom: 3, flexShrink: 0 }}>
           {/* Tab switcher */}
-          <span style={{ display: 'flex', alignItems: 'center', gap: 2, height: 34, boxSizing: 'border-box', padding: 3, borderRadius: 999, background: '#EDE7D9' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 2, height: 34, boxSizing: 'border-box', padding: 3, borderRadius: 999, background: 'var(--sb-field)' }}>
             {(['Plan', 'Simulate', 'History'] as const).map(t => (
               <button key={t} onClick={() => setTab(t)} style={{
                 height: 28, padding: '0 13px', borderRadius: 999,
@@ -173,7 +173,7 @@ export function PlanScreen() {
                     {t.icon}
                   </span>
                   <span style={{ display: 'flex', flexDirection: 'column', minWidth: 0, textAlign: 'left' }}>
-                    <span style={{ fontSize: 12, fontWeight: 600, color: active ? '#FDF8E7' : C.ink1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.name}</span>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: active ? 'var(--sb-ink-on-dark)' : C.ink1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.name}</span>
                     <span style={{ fontSize: 10, color: active ? 'rgba(253,248,231,.65)' : C.ink3, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.sub}</span>
                   </span>
                   {active && (
@@ -191,7 +191,7 @@ export function PlanScreen() {
           </div>
 
           {/* Dark summary card */}
-          <div style={{ flexShrink: 0, background: C.dark, color: '#FDF8E7', borderRadius: 18, padding: '14px 18px', display: 'flex', gap: 20, alignItems: 'center' }}>
+          <div style={{ flexShrink: 0, background: C.dark, color: 'var(--sb-ink-on-dark)', borderRadius: 18, padding: '14px 18px', display: 'flex', gap: 20, alignItems: 'center' }}>
             {/* Clear date */}
             <div style={{ width: 236, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
               <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.14em', opacity: 0.6 }}>CIB WORLD, CLEARED BY</span>
@@ -212,7 +212,7 @@ export function PlanScreen() {
                     <div style={{ width: '100%', flex: 1, display: 'flex', alignItems: 'flex-end' }}>
                       <span style={{ width: '100%', height: `${b.pct}%`, background: b.color, borderRadius: '5px 5px 0 0', display: 'block' }} />
                     </div>
-                    <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 10, fontWeight: 600, color: '#FDF8E7', fontVariantNumeric: 'tabular-nums' }}>{b.val}</span>
+                    <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 10, fontWeight: 600, color: 'var(--sb-ink-on-dark)', fontVariantNumeric: 'tabular-nums' }}>{b.val}</span>
                     <span style={{ fontSize: 9.5, color: C.ink3 }}>{b.label}</span>
                   </div>
                 ))}
@@ -288,7 +288,7 @@ export function PlanScreen() {
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 7, padding: '0 9px' }}>
                     {row.closedRow ? (
                       <>
-                        <span style={{ height: 19, padding: '0 7px', borderRadius: 5, background: C.olive, color: '#FDF8E7', fontSize: 8.5, fontWeight: 700, letterSpacing: '0.06em', display: 'flex', alignItems: 'center' }}>CLOSED</span>
+                        <span style={{ height: 19, padding: '0 7px', borderRadius: 5, background: C.olive, color: 'var(--sb-ink-on-dark)', fontSize: 8.5, fontWeight: 700, letterSpacing: '0.06em', display: 'flex', alignItems: 'center' }}>CLOSED</span>
                         <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 12, fontWeight: 600, color: C.olive, fontVariantNumeric: 'tabular-nums' }}>0</span>
                       </>
                     ) : (
@@ -339,7 +339,7 @@ export function PlanScreen() {
                       width: 17, height: 17, borderRadius: 999, flexShrink: 0, boxSizing: 'border-box',
                       background: active ? C.dark : C.surface,
                       border: `1.5px solid ${active ? C.dark : '#D8D2C0'}`,
-                      color: '#FDF8E7', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      color: 'var(--sb-ink-on-dark)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}>
                       {active && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg>}
                     </span>
@@ -388,7 +388,7 @@ export function PlanScreen() {
                     padding: '0 3px', boxSizing: 'border-box', flexShrink: 0,
                     border: 'none', cursor: 'pointer',
                   }}>
-                    <span style={{ width: 14, height: 14, borderRadius: 999, background: '#FDF8E7', display: 'block' }} />
+                    <span style={{ width: 14, height: 14, borderRadius: 999, background: 'var(--sb-ink-on-dark)', display: 'block' }} />
                   </button>
                 </div>
               ))}
@@ -400,7 +400,7 @@ export function PlanScreen() {
             <span style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.14em', color: '#8A6A1E' }}>IF THE PAYROLL SLIPS AGAIN</span>
             <span style={{ fontSize: 13, fontWeight: 600, letterSpacing: '-0.015em', lineHeight: 1.35, color: C.ink1 }}>October's clearance needs the DX salary. If it misses, the plan pays the minimum and closes the card on 4 November instead.</span>
             <span style={{ marginTop: 2, display: 'flex', gap: 8 }}>
-              <button style={{ height: 30, padding: '0 12px', borderRadius: 999, background: C.dark, color: '#FDF8E7', fontSize: 11.5, fontWeight: 600, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>See that version</button>
+              <button style={{ height: 30, padding: '0 12px', borderRadius: 999, background: C.dark, color: 'var(--sb-ink-on-dark)', fontSize: 11.5, fontWeight: 600, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>See that version</button>
             </span>
           </div>
 
