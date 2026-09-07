@@ -30,8 +30,3 @@ export const T = {
 export const CAPS: React.CSSProperties = {
   ...T.micro, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase',
 }
-
-/** Ink, in the three weights the palette gives you. */
-export const INK = 'var(--sb-ink-1)'
-export const MUTED = 'var(--sb-ink-3)'
-export const GHOST = '#9B9180'
