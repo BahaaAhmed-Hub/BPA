@@ -135,10 +135,10 @@ export function inferTaskType(title: string): TaskType {
 export type Priority = 'P0' | 'P1' | 'P2' | 'P3'
 
 export const PRIORITY_META: Record<Priority, { label: string; color: string; tint: string; border: string }> = {
-  P0: { label: 'P0', color: '#C62828', tint: 'rgba(198,40,40,0.11)',  border: 'rgba(198,40,40,0.30)' },
+  P0: { label: 'P0', color: 'var(--sb-negative)', tint: 'rgba(198,40,40,0.11)',  border: 'rgba(198,40,40,0.30)' },
   P1: { label: 'P1', color: '#9A7B1F', tint: 'rgba(var(--sb-accent-rgb),0.22)', border: 'rgba(var(--sb-accent-rgb),0.55)' },
-  P2: { label: 'P2', color: '#6C6553', tint: '#FAF7EC',               border: '#E8E1CE' },
-  P3: { label: 'P3', color: '#9B9180', tint: '#FAF7EC',               border: '#E8E1CE' },
+  P2: { label: 'P2', color: 'var(--sb-ink-3)', tint: 'var(--sb-field)',               border: 'var(--sb-border)' },
+  P3: { label: 'P3', color: '#9B9180', tint: 'var(--sb-field)',               border: 'var(--sb-border)' },
 }
 
 // ─── Task ────────────────────────────────────────────────────────────────────
