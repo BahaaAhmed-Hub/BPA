@@ -19,13 +19,13 @@ const RED   = NEGATIVE
 const GREEN = POSITIVE
 
 const C = {
-  bg:      '#F7F4EA',
-  surface: '#FFFFFF',
-  border:  '#E8E1CE',
-  textPri: '#191712',
+  bg:      'var(--sb-page)',
+  surface: 'var(--sb-card)',
+  border:  'var(--sb-border)',
+  textPri: 'var(--sb-ink-1)',
   textDim: '#3D3926',
-  textMuted: '#6C6553',
-  accent:  '#191712',
+  textMuted: 'var(--sb-ink-3)',
+  accent:  'var(--sb-ink-1)',
 }
 
 const MONTH_NAMES = [
@@ -141,8 +141,8 @@ function MoneyCalendar({
 
   const ROUND_BTN = {
     width: 28, height: 28, borderRadius: '50%',
-    background: '#FFFFFF', border: '1px solid #E8E1CE',
-    color: '#6C6553', fontSize: 15, lineHeight: 1, cursor: 'pointer',
+    background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
+    color: 'var(--sb-ink-3)', fontSize: 15, lineHeight: 1, cursor: 'pointer',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     flexShrink: 0,
   } as const
@@ -152,7 +152,7 @@ function MoneyCalendar({
       display: 'inline-flex', alignItems: 'baseline', gap: 5,
       background: tint, borderRadius: 999, padding: '4px 11px',
       fontSize: 10.5, fontWeight: 600, letterSpacing: '0.04em',
-      textTransform: 'uppercase' as const, color: '#6C6553',
+      textTransform: 'uppercase' as const, color: 'var(--sb-ink-3)',
     }}>
       {label}
       <b style={{ fontFamily: 'Outfit, sans-serif', fontSize: 12.5, letterSpacing: 0, color, fontVariantNumeric: 'tabular-nums' }}>{value}</b>
@@ -165,7 +165,7 @@ function MoneyCalendar({
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, flexWrap: 'wrap' as const }}>
         <button onClick={onPrevMonth} style={ROUND_BTN} title="Previous month">‹</button>
         <button onClick={onNextMonth} style={ROUND_BTN} title="Next month">›</button>
-        <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 21, fontWeight: 600, color: '#191712', letterSpacing: '-0.03em' }}>
+        <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 21, fontWeight: 600, color: 'var(--sb-ink-1)', letterSpacing: '-0.03em' }}>
           {MONTH_NAMES[month]} <span style={{ color: '#9B9180' }}>{year}</span>
         </span>
         <span style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
@@ -184,7 +184,7 @@ function MoneyCalendar({
 
       {/* Calendar card */}
       <div style={{
-        background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 20,
+        background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 20,
         padding: 14, boxShadow: '0 1px 3px rgba(25,23,18,0.06)',
       }}>
         {/* Day headers */}
@@ -205,7 +205,7 @@ function MoneyCalendar({
             const isSelected = dateStr === selectedDay
             const net        = dayNetMap.get(dateStr) ?? 0
             const payees     = dayTxMap.get(dateStr) ?? []
-            const netColor   = net > 0 ? '#0C8140' : net < 0 ? '#C62828' : '#9B9180'
+            const netColor   = net > 0 ? 'var(--sb-positive)' : net < 0 ? 'var(--sb-negative)' : '#9B9180'
 
             return (
               <div
@@ -215,7 +215,7 @@ function MoneyCalendar({
                   borderRadius: 13, padding: '8px 9px 9px',
                   display: 'flex', flexDirection: 'column', gap: 3,
                   minHeight: 78, minWidth: 0, overflow: 'hidden', boxSizing: 'border-box' as const,
-                  background: isSelected ? '#FBF3D2' : '#FAF7EC',
+                  background: isSelected ? '#FBF3D2' : 'var(--sb-field)',
                   border: `1px solid ${isSelected ? 'var(--sb-accent)' : '#F3EEE0'}`,
                   boxShadow: isSelected ? '0 1px 4px rgba(25,23,18,0.10)' : 'none',
                   cursor: 'pointer', transition: 'background 120ms, border-color 120ms',
@@ -226,8 +226,8 @@ function MoneyCalendar({
                   width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
                   display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                   marginLeft: -2,
-                  background: isToday ? '#191712' : 'transparent',
-                  color: isToday ? '#FFFFFF' : '#4A4438',
+                  background: isToday ? 'var(--sb-ink-1)' : 'transparent',
+                  color: isToday ? 'var(--sb-card)' : 'var(--sb-ink-2)',
                 }}>
                   {day}
                 </span>
@@ -374,8 +374,8 @@ export function TodayScreen() {
       {/* Header bar */}
       <div style={{ flexShrink: 0, borderBottom: `1px solid ${C.border}`, padding: '12px 26px 14px', display: 'flex', alignItems: 'flex-end', gap: 20 }}>
         <div>
-          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: '#6C6553', display: 'block', marginBottom: 3 }}>MONEY</span>
-          <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 26, fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1, color: '#191712' }}>Today</span>
+          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-3)', display: 'block', marginBottom: 3 }}>MONEY</span>
+          <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 26, fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1, color: 'var(--sb-ink-1)' }}>Today</span>
         </div>
         {todayTx.length > 0 && (
           <div style={{ display: 'flex', gap: 16, paddingBottom: 3 }}>
