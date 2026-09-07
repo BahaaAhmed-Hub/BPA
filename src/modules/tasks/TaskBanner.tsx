@@ -39,7 +39,7 @@ function Stat({ label, value, sub, accent, icon: Icon, center }: {
       }}>{label}</p>
       <p style={{
         margin: '5px 0 0', fontFamily: 'Outfit, sans-serif', fontSize: 21, fontWeight: 600,
-        letterSpacing: '-0.02em', color: accent ?? '#FFFFFF', lineHeight: 1.1,
+        letterSpacing: '-0.02em', color: accent ?? 'var(--sb-card)', lineHeight: 1.1,
         display: 'flex', alignItems: 'center', gap: 6,
         justifyContent: center ? 'center' : 'flex-start',
       }}>
@@ -160,7 +160,7 @@ export function TaskBanner({ tasks }: { tasks: Task[] }) {
           {model.days.map(d => (
             <span key={d.iso} style={{
               flex: 1, minWidth: 0, textAlign: 'center', fontSize: 10,
-              color: d.isToday ? '#FFFFFF' : DIM,
+              color: d.isToday ? 'var(--sb-card)' : DIM,
             }}>{d.label}</span>
           ))}
         </div>
