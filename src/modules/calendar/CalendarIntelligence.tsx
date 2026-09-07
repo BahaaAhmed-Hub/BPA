@@ -1680,7 +1680,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
             <span style={{
               width: 32, height: 32, borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              border: '1px dashed #D8CFB8', color: '#C9C0A8',
+              border: '1px dashed #D8CFB8', color: 'var(--sb-ink-4)',
             }}><Plus size={ICON.md} /></span>
             <input
               autoFocus
@@ -1699,7 +1699,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
             <span style={{
               width: 32, height: 32, borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              border: '1px dashed #D8CFB8', color: '#C9C0A8',
+              border: '1px dashed #D8CFB8', color: 'var(--sb-ink-4)',
             }}><Plus size={ICON.md} /></span>
             <span style={{ fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-4)' }}>Add an invitee</span>
           </button>
@@ -2205,7 +2205,7 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
               {email}
             </span>
             <button onClick={() => setInvitees(prev => prev.filter(x => x !== email))} title="Remove"
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#C9C0A8', padding: 2, display: 'flex' }}>
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-4)', padding: 2, display: 'flex' }}>
               <X size={ICON.sm} />
             </button>
           </div>
@@ -2214,7 +2214,7 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
           <span style={{
             width: 30, height: 30, borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            border: '1px dashed #D8CFB8', color: '#C9C0A8',
+            border: '1px dashed #D8CFB8', color: 'var(--sb-ink-4)',
           }}><Plus size={ICON.sm} /></span>
           <input
             value={inviteeInput}
@@ -2228,12 +2228,12 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
 
       {/* Create */}
       <div style={{ display: 'flex', gap: 8, marginTop: 18 }}>
-        <button onClick={handleSave} disabled={!title.trim()} style={{
-          ...EV_PILL, flex: 1, justifyContent: 'center', fontWeight: 600,
-          background: title.trim() ? 'var(--sb-ink-1)' : 'var(--sb-field)',
-          border: 'none', color: title.trim() ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-4)',
-          cursor: title.trim() ? 'pointer' : 'default',
-        }}>Create event</button>
+        {/* Disabled is muted ink on the field colour, at full strength — the
+            faint ink on the disabled fill was 2.2:1, and being hard to read was
+            the only thing saying the button was off. */}
+        <Button variant="primary" onClick={handleSave} disabled={!title.trim()}
+          aria-disabled={!title.trim()}
+          style={{ flex: 1 }}>Create event</Button>
         <button onClick={onCancel} style={{ ...EV_PILL, color: 'var(--sb-ink-3)' }}>Cancel</button>
       </div>
     </div>
@@ -3499,8 +3499,10 @@ export function CalendarIntelligence() {
                     alignSelf: 'flex-start', minWidth: 21, height: 21, padding: '0 5px', borderRadius: 'var(--sb-r-pill)',
                     display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                     background: isToday ? 'var(--sb-accent)' : 'transparent',
-                    color: outside ? '#C9C0A8' : 'var(--sb-ink-1)',
-                    fontSize: 'var(--sb-t-meta)', fontWeight: isToday ? 700 : 600, fontVariantNumeric: 'tabular-nums',
+                    // A day outside this month is lighter in weight, not in
+                    // contrast: #C9C0A8 was 1.7:1, which is a date nobody can read.
+                    color: outside ? 'var(--sb-ink-4)' : 'var(--sb-ink-1)',
+                    fontSize: 'var(--sb-t-meta)', fontWeight: isToday ? 700 : outside ? 400 : 600, fontVariantNumeric: 'tabular-nums',
                   }}>{day.getDate()}</span>
                   {shown.map(e => {
                     const cal = allCalendars.find(c => c.id === (e as GCalEventExt).calendarId)

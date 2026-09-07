@@ -344,7 +344,7 @@ export const THEMES: AppTheme[] = [
       '--sb-ink-1': '#191712',
       '--sb-ink-2': '#4A4438',
       '--sb-ink-3': '#6C6553',
-      '--sb-ink-4': '#8A8272',
+      '--sb-ink-4': '#756F60',
       '--sb-ink-on-dark': '#FDF8E7',
       '--sb-accent': '#F5D14E',
       '--sb-accent-rgb': '245,209,78',

@@ -21,7 +21,7 @@
   --sb-ink-1:         #191712;   /* primary */
   --sb-ink-2:         #4A4438;   /* secondary */
   --sb-ink-3:         #6C6553;   /* muted */
-  --sb-ink-4:         #8A8272;   /* faint */
+  --sb-ink-4:         #756F60;   /* faint */
   --sb-ink-on-dark:   #FDF8E7;
 
   /* Accent — warm amber */
@@ -151,10 +151,14 @@ html, body {
   font-variant-numeric: tabular-nums;
 }
 
-/* Focus ring — 2px amber at 2px offset on every interactive element */
+/* ── Focus ────────────────────────────────────────────────────────────────────
+   Amber on a white card is 1.5:1 — a ring you cannot see is not a focus state.
+   Ink draws the ring and carries the contrast (17.9:1 on a card); the amber
+   halo outside it carries the brand and marks the ring as ours.             */
 :focus-visible {
-  outline: 2px solid var(--sb-accent);
+  outline: 2px solid var(--sb-ink-1);
   outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--sb-accent-tint);
 }
 
 /* ── What data-theme is for ───────────────────────────────────────────────────
@@ -231,7 +235,17 @@ html, body {
 .sb-btn[data-block]     { width: 100%; }
 .sb-btn[data-icon-only] { width: var(--sb-h-pill); padding: 0; }
 .sb-btn[data-icon-only][data-size="sm"] { width: 28px; }
-.sb-btn:disabled { opacity: 0.45; cursor: default; }
+/* A disabled control is still text somebody has to read. Half-opacity grey on
+   cream is 2.2:1, and it was the only signal that the control was off; muted
+   ink on the field colour is 4.7:1, and aria-disabled says it out loud. */
+.sb-btn:disabled,
+.sb-btn[aria-disabled="true"] {
+  background: var(--sb-field);
+  border-color: var(--sb-border);
+  color: var(--sb-ink-3);
+  box-shadow: none;
+  cursor: default;
+}
 
 .sb-btn[data-variant="primary"] {
   background: var(--sb-ink-1);

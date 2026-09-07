@@ -1,6 +1,6 @@
 
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
-import { Mail, Zap, Clock, Copy, CheckCheck, RefreshCw, ArrowRight, WifiOff, ListPlus, Plus, Archive, Search, X as XIcon, PenSquare, Reply, ReplyAll, Forward, ChevronDown, ChevronRight, Inbox, Send, FileEdit, Star, MailOpen, Sparkles } from 'lucide-react'
+import { Mail, Zap, Clock, Copy, CheckCheck, RefreshCw, ArrowRight, WifiOff, ListPlus, Plus, Archive, Search, X as XIcon, PenSquare, Reply, ReplyAll, Forward, ChevronDown, ChevronRight, Inbox, Send, FileEdit, Star, MailOpen, Sparkles, AlertTriangle, GitBranch, Info, UserPlus, Minus } from 'lucide-react'
 
 /** One glyph each, so the rail still says what it is when it is folded up. */
 const FOLDER_ICON: Record<MailFolder, typeof Mail> = {
@@ -17,7 +17,7 @@ import { useAuthStore } from '@/store/authStore'
 import { useTaskStore } from '@/store/taskStore'
 import type { DbUser } from '@/types/database'
 import { isMailHiddenByCompany } from '@/lib/companyVisibility'
-import { ICON } from '@/lib/type'
+import { ICON, STROKE } from '@/lib/type'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -69,17 +69,21 @@ interface TriageState {
 
 // ─── Meta ─────────────────────────────────────────────────────────────────────
 
+// A colour is not a signal on its own — somebody who cannot separate these
+// hues, or is reading this in a bad light, gets the word and the glyph. The
+// hues themselves were 3.3-3.4:1 as text, which is under AA at this size, so
+// each one is darkened to the point where the label can be read.
 const CLASS_META = {
-  decision: { label: 'Decision Needed', color: '#7F77DD', bg: 'rgba(30,64,175,0.1)' },
-  fyi:      { label: 'FYI',             color: '#7F77DD', bg: 'rgba(127,119,221,0.1)' },
-  waiting:  { label: 'Waiting',         color: '#888780', bg: 'rgba(136,135,128,0.1)' },
-  delegate: { label: 'Delegate',        color: '#1D9E75', bg: 'rgba(29,158,117,0.1)'  },
+  decision: { label: 'Decision Needed', color: '#685FD7',           bg: 'rgba(104,95,215,0.10)', Icon: GitBranch },
+  fyi:      { label: 'FYI',             color: '#685FD7',           bg: 'rgba(104,95,215,0.10)', Icon: Info },
+  waiting:  { label: 'Waiting',         color: 'var(--sb-ink-3)',   bg: 'var(--sb-field)',       Icon: Clock },
+  delegate: { label: 'Delegate',        color: '#177C5B',           bg: 'rgba(23,124,91,0.10)',  Icon: UserPlus },
 } as const
 
 const URGENCY_META = {
-  high:   { label: 'High',   color: 'var(--sb-negative)' },
-  medium: { label: 'Medium', color: '#7F77DD' },
-  low:    { label: 'Low',    color: '#888780' },
+  high:   { label: 'High',   color: 'var(--sb-negative)', Icon: AlertTriangle },
+  medium: { label: 'Medium', color: '#685FD7',            Icon: ArrowRight },
+  low:    { label: 'Low',    color: 'var(--sb-ink-3)',    Icon: Minus },
 } as const
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -715,7 +719,8 @@ export function InboxModule() {
                       {email.fromName}
                     </span>
                     {classMeta && (
-                      <span style={{ fontSize: 'var(--sb-t-micro)', padding: '1px 6px', borderRadius: 'var(--sb-r-chip)', flexShrink: 0, background: classMeta.bg, color: classMeta.color, fontWeight: 600 }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 'var(--sb-t-micro)', padding: '1px 6px', borderRadius: 'var(--sb-r-chip)', flexShrink: 0, background: classMeta.bg, color: classMeta.color, fontWeight: 600 }}>
+                        <classMeta.Icon size={10} strokeWidth={STROKE.active} />
                         {classMeta.label}
                       </span>
                     )}
@@ -983,13 +988,15 @@ export function InboxModule() {
             <div style={{ display: 'flex', gap: 10, marginBottom: 18 }}>
               <div style={{ flex: 1, padding: '12px 14px', background: CLASS_META[selectedTriage.result.classification].bg, border: `1px solid ${CLASS_META[selectedTriage.result.classification].color}30`, borderRadius: 'var(--sb-r-chip)' }}>
                 <div style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Classification</div>
-                <div style={{ fontSize: 'var(--sb-t-label)', fontWeight: 600, color: CLASS_META[selectedTriage.result.classification].color }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 'var(--sb-t-label)', fontWeight: 600, color: CLASS_META[selectedTriage.result.classification].color }}>
+                  {(() => { const C = CLASS_META[selectedTriage.result.classification].Icon; return <C size={ICON.sm} strokeWidth={STROKE.active} /> })()}
                   {CLASS_META[selectedTriage.result.classification].label}
                 </div>
               </div>
               <div style={{ flex: 1, padding: '12px 14px', background: 'var(--sb-page)', border: `1px solid ${URGENCY_META[selectedTriage.result.urgency].color}30`, borderRadius: 'var(--sb-r-chip)' }}>
                 <div style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Urgency</div>
-                <div style={{ fontSize: 'var(--sb-t-label)', fontWeight: 600, color: URGENCY_META[selectedTriage.result.urgency].color }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 'var(--sb-t-label)', fontWeight: 600, color: URGENCY_META[selectedTriage.result.urgency].color }}>
+                  {(() => { const U = URGENCY_META[selectedTriage.result.urgency].Icon; return <U size={ICON.sm} strokeWidth={STROKE.active} /> })()}
                   {URGENCY_META[selectedTriage.result.urgency].label}
                 </div>
               </div>

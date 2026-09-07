@@ -50,7 +50,7 @@ export const slotEmpty: React.CSSProperties = {
   ...slotFilled,
   background: 'transparent',
   border: '1px dashed #E0D6BC',
-  color: '#C9C0A8',
+  color: 'var(--sb-ink-4)',
 }
 
 /** Scheduled reads olive — it is the one slot that means "this has a block". */

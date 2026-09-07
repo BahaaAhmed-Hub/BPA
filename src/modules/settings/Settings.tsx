@@ -1056,7 +1056,7 @@ function SettingsHabitForm({
               style={{
                 width: 46, height: 46, borderRadius: 'var(--sb-r-nav)', padding: 0, cursor: 'pointer', overflow: 'hidden',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 'var(--sb-t-h2)', color: '#C9C0A8', background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
+                fontSize: 'var(--sb-t-h2)', color: 'var(--sb-ink-4)', background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
               }}>
               {s.image
                 ? <img src={s.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
@@ -1664,7 +1664,7 @@ function TaskStatusesSection() {
               padding: '9px 0', borderBottom: '1px solid var(--sb-border)',
               background: overIdx === i ? 'rgba(var(--sb-accent-rgb),0.10)' : 'transparent',
             }}>
-            <span title="Drag to reorder" style={{ display: 'flex', color: '#C9C0A8', cursor: 'grab', flexShrink: 0 }}>
+            <span title="Drag to reorder" style={{ display: 'flex', color: 'var(--sb-ink-4)', cursor: 'grab', flexShrink: 0 }}>
               <GripVertical size={ICON.sm} />
             </span>
             <div style={{ width: 10, height: 10, borderRadius: 'var(--sb-r-pill)', background: s.color, flexShrink: 0 }} />

@@ -300,7 +300,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
             style={{
               flex: 1, minWidth: 0, background: 'transparent', border: 'none', outline: 'none',
               fontFamily: DISPLAY, fontSize: 'var(--sb-t-display)', fontWeight: 700, letterSpacing: '-0.03em',
-              color: amount > 0 ? typeColor : '#C9C0A8', textAlign: 'right',
+              color: amount > 0 ? typeColor : 'var(--sb-ink-4)', textAlign: 'right',
               fontVariantNumeric: 'tabular-nums', padding: 0,
             }} />
         </div>

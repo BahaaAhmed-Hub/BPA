@@ -503,13 +503,13 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
                   textDecoration: s.done ? 'line-through' : 'none',
                 }}>{s.text}</span>
                 <button onClick={() => patch({ checklist: checklist.filter(x => x.id !== s.id) })}
-                  title="Remove subtask" style={{ ...ICON_BTN, width: 20, height: 20, color: '#C9C0A8' }}>
+                  title="Remove subtask" style={{ ...ICON_BTN, width: 20, height: 20, color: 'var(--sb-ink-4)' }}>
                   <X size={ICON.sm} />
                 </button>
               </div>
             ))}
             <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '5px 0' }}>
-              <Plus size={ICON.sm} color="#C9C0A8" style={{ flexShrink: 0 }} />
+              <Plus size={ICON.sm} color="var(--sb-ink-4)" style={{ flexShrink: 0 }} />
               <input
                 value={newStep}
                 onChange={e => setNewStep(e.target.value)}
@@ -561,7 +561,7 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
                     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                   }}>{url}</a>
                   <button onClick={() => patch({ links: (task.links ?? []).filter((_, j) => j !== i) })}
-                    title="Remove link" style={{ ...ICON_BTN, width: 22, height: 22, color: '#C9C0A8' }}>
+                    title="Remove link" style={{ ...ICON_BTN, width: 22, height: 22, color: 'var(--sb-ink-4)' }}>
                     <X size={ICON.sm} />
                   </button>
                 </div>
@@ -584,7 +584,7 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
                       </p>
                     </div>
                     <button onClick={() => patch({ attachments: attachments.filter(x => x.id !== f.id) })}
-                      title="Remove attachment" style={{ ...ICON_BTN, width: 22, height: 22, color: '#C9C0A8' }}>
+                      title="Remove attachment" style={{ ...ICON_BTN, width: 22, height: 22, color: 'var(--sb-ink-4)' }}>
                       <Trash2 size={ICON.sm} />
                     </button>
                   </div>

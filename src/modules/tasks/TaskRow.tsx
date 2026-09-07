@@ -77,7 +77,7 @@ export function TaskRow({ task, onOpen, dense }: {
         <span data-nm style={{ position: 'relative', display: 'inline-block', maxWidth: '100%', marginTop: 2 }}>
           <p style={{
             margin: 0, fontSize: 'var(--sb-t-body-s)', fontWeight: 600, lineHeight: 1.3, cursor: 'pointer',
-            color: v.companyName ? v.companyColor : '#C9C0A8',
+            color: v.companyName ? v.companyColor : 'var(--sb-ink-4)',
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}>{v.companyName || 'No company'}</p>
           <OverlaySelect

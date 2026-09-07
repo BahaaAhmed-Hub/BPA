@@ -114,7 +114,7 @@ function DumpCard({ task, onOpen, onDelete }: {
       }}
     >
       <span data-nm {...listeners} {...attributes} title="Drag into a quadrant"
-        style={{ cursor: 'grab', touchAction: 'none', color: '#C9C0A8', display: 'flex', paddingTop: 2, flexShrink: 0 }}>
+        style={{ cursor: 'grab', touchAction: 'none', color: 'var(--sb-ink-4)', display: 'flex', paddingTop: 2, flexShrink: 0 }}>
         <GripVertical size={ICON.sm} strokeWidth={STROKE.rest} />
       </span>
       <div style={{ flex: 1, minWidth: 0 }}>
