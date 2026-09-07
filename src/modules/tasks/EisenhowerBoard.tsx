@@ -83,7 +83,7 @@ function QuadrantPanel({ spec, tasks, onOpen, onAction, groupBy }: {
   return (
     <div ref={setNodeRef} style={{
       background: isOver ? '#FDF6DC' : spec.accent ? '#FFFCF0' : '#FDFCF8',
-      border: `1px solid ${isOver ? 'var(--sb-accent)' : spec.accent ? '#F0DFA8' : '#E8E1CE'}`,
+      border: `1px solid ${isOver ? 'var(--sb-accent)' : spec.accent ? '#F0DFA8' : 'var(--sb-border)'}`,
       borderRadius: 14, padding: 14, transition: 'background .12s, border-color .12s',
       display: 'flex', flexDirection: 'column', gap: 10, minWidth: 0,
     }}>
@@ -91,13 +91,13 @@ function QuadrantPanel({ spec, tasks, onOpen, onAction, groupBy }: {
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, minWidth: 0 }}>
         <span style={{
           width: 22, height: 22, borderRadius: 6, flexShrink: 0,
-          background: '#191712', color: '#FFFFFF',
+          background: 'var(--sb-ink-1)', color: 'var(--sb-card)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontSize: badgeFontSize(spec.badge), fontWeight: 700, letterSpacing: '0.04em',
           overflow: 'hidden',
         }}>{spec.badge}</span>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ margin: 0, fontSize: 13.5, fontWeight: 600, color: '#191712', lineHeight: 1.3 }}>{spec.title}</p>
+          <p style={{ margin: 0, fontSize: 13.5, fontWeight: 600, color: 'var(--sb-ink-1)', lineHeight: 1.3 }}>{spec.title}</p>
           <p style={{ margin: '2px 0 0', fontSize: 11.5, color: '#9B9180', lineHeight: 1.35 }}>{spec.sub}</p>
         </div>
         <span style={{ paddingTop: 2 }}><CountBadge value={tasks.length} /></span>
@@ -110,13 +110,13 @@ function QuadrantPanel({ spec, tasks, onOpen, onAction, groupBy }: {
           style={{
             flexShrink: 0, width: 26, height: 26, padding: 0, borderRadius: '50%',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: adding ? '#191712' : '#FFFFFF',
-            border: `1px solid ${adding ? '#191712' : '#E8E1CE'}`,
-            color: adding ? '#FDF8E7' : '#6C6553', cursor: 'pointer',
+            background: adding ? 'var(--sb-ink-1)' : 'var(--sb-card)',
+            border: `1px solid ${adding ? 'var(--sb-ink-1)' : 'var(--sb-border)'}`,
+            color: adding ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)', cursor: 'pointer',
           }}><Plus size={14} strokeWidth={2.2} /></button>
         <button onClick={() => onAction(spec, tasks)} style={{
           flexShrink: 0, height: 28, padding: '0 12px', borderRadius: 999,
-          background: '#FFFFFF', border: '1px solid #E8E1CE', color: '#191712',
+          background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-1)',
           fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit',
         }}>{spec.action}</button>
       </div>
@@ -134,9 +134,9 @@ function QuadrantPanel({ spec, tasks, onOpen, onAction, groupBy }: {
           }}
           placeholder="What is it?"
           style={{
-            width: '100%', boxSizing: 'border-box', background: '#FFFFFF',
+            width: '100%', boxSizing: 'border-box', background: 'var(--sb-card)',
             border: '1px solid var(--sb-accent)', borderRadius: 10, padding: '11px 13px',
-            fontSize: 13, color: '#191712', outline: 'none', fontFamily: 'inherit',
+            fontSize: 13, color: 'var(--sb-ink-1)', outline: 'none', fontFamily: 'inherit',
           }}
         />
       )}
@@ -160,7 +160,7 @@ function QuadrantPanel({ spec, tasks, onOpen, onAction, groupBy }: {
                     ? <ChevronDown size={12} strokeWidth={2.2} color="#9B9180" />
                     : <ChevronRight size={12} strokeWidth={2.2} color="#9B9180" />}
                   <span style={{ width: 7, height: 7, borderRadius: 999, background: g.color, flexShrink: 0 }} />
-                  <span style={{ fontSize: 11.5, fontWeight: 600, color: '#6C6553' }}>{g.label}</span>
+                  <span style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--sb-ink-3)' }}>{g.label}</span>
                   <CountBadge value={g.tasks.length} />
                 </button>
               )}
