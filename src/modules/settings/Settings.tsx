@@ -16,6 +16,10 @@ import { stepFor, setHabitStep, loadHabitSteps } from '@/lib/habitSteps'
 import { loadWeekStart, saveWeekStart, WEEKDAY_NAMES, type Weekday } from '@/lib/weekStart'
 import { ACCENTS, loadAccent, saveAccent, loadCompact, saveCompact, COMPACT_SCALE } from '@/lib/accent'
 import {
+  loadNotifSettings, saveNotifSettings, loadQuietHours, saveQuietHours, DERIVABLE,
+  type NotifSetting, type NotifChannel,
+} from '@/lib/notifications'
+import {
   loadHealthLinks, createHealthLink, deleteHealthLink, ingestUrl, checkHealthLink,
   isMovementHabit, suggestMetric, METRIC_LABEL, METRIC_SAMPLE,
   type HealthLink, type HealthMetric, type LinkCheck,
@@ -3391,31 +3395,23 @@ function BillingSection() {
 
 // ─── Notifications Matrix Section (11F) ───────────────────────────────────────
 
-type NChannel = 'push' | 'mail' | 'digest'
-interface NEvent { id: string; label: string; sub: string; push: boolean; mail: boolean; digest: boolean }
-
-const DEFAULT_NOTIF_EVENTS: NEvent[] = [
-  { id: 'decision',    label: 'A decision has waited two days',  sub: 'The nudge that keeps decisions from rotting', push: true,  mail: true,  digest: true  },
-  { id: 'needsyou',   label: 'Mail that needs you',             sub: 'Only threads the assistant marks NEEDS YOU',  push: true,  mail: false, digest: true  },
-  { id: 'draft',      label: 'Draft ready to send',             sub: 'When a reply is written and waiting',         push: true,  mail: false, digest: true  },
-  { id: 'conflict',   label: 'Calendar conflict',               sub: 'Two events land on the same hour',            push: true,  mail: true,  digest: false },
-  { id: 'habit',      label: 'Habit not logged',                sub: 'Fires at the reminder time you set per habit',push: true,  mail: false, digest: false },
-  { id: 'review',     label: 'Weekly review is due',            sub: 'Sunday evening, once',                        push: false, mail: true,  digest: true  },
-  { id: 'rank',       label: 'Rank changed',                    sub: 'Behavioral OS moved you up or down',          push: true,  mail: false, digest: true  },
-]
+type NChannel = NotifChannel
+type NEvent = NotifSetting
 
 function NotificationsMatrixSection() {
-  const [events, setEvents] = useState<NEvent[]>(() => {
-    try { const s = localStorage.getItem('professor-notif-events'); return s ? JSON.parse(s) : DEFAULT_NOTIF_EVENTS } catch { return DEFAULT_NOTIF_EVENTS }
-  })
-  const [quietOn, setQuietOn]     = useState(true)
-  const [quietStart, setQStart]   = useState('22:30')
-  const [quietEnd,   setQEnd]     = useState('07:00')
+  const [events, setEvents] = useState<NEvent[]>(() => loadNotifSettings())
+  // Quiet hours used to live in three pieces of component state — set them,
+  // reload, and they were back at 22:30. The bell reads them, so they are kept.
+  const [quiet, setQuiet] = useState(() => loadQuietHours())
+  const quietOn = quiet.on, quietStart = quiet.start, quietEnd = quiet.end
+  const setQuietOn = (on: boolean) => { const q = { ...quiet, on }; setQuiet(q); saveQuietHours(q) }
+  const setQStart  = (start: string) => { const q = { ...quiet, start }; setQuiet(q); saveQuietHours(q) }
+  const setQEnd    = (end: string) => { const q = { ...quiet, end }; setQuiet(q); saveQuietHours(q) }
 
   function toggleChannel(id: string, ch: NChannel) {
     const next = events.map(e => e.id === id ? { ...e, [ch]: !e[ch as keyof NEvent] } : e)
     setEvents(next)
-    try { localStorage.setItem('professor-notif-events', JSON.stringify(next)) } catch { /**/ }
+    saveNotifSettings(next)
   }
 
   const ChHead = ({ label }: { label: string }) => (
@@ -3443,7 +3439,14 @@ function NotificationsMatrixSection() {
       {events.map(e => (
         <div key={e.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 0', borderBottom: '1px solid #F0EBDC' }}>
           <div style={{ minWidth: 0, flex: 1 }}>
-            <p style={{ margin: 0, fontSize: 12.5, fontWeight: 500, color: '#191712', lineHeight: 1.3 }}>{e.label}</p>
+            <p style={{ margin: 0, fontSize: 12.5, fontWeight: 500, color: '#191712', lineHeight: 1.3, display: 'flex', alignItems: 'center', gap: 7 }}>
+              {e.label}
+              {/* Push is the channel this app delivers — a list under the bell.
+                  Three of these kinds need a triage or a ranking engine that
+                  reports nothing yet, and saying so beats a bell that stays
+                  empty for reasons nobody can see. */}
+              {!DERIVABLE.includes(e.id) && <Soon text="not wired yet" />}
+            </p>
             <p style={{ margin: '1px 0 0', fontSize: 11, color: '#9B9180', lineHeight: 1.3 }}>{e.sub}</p>
           </div>
           <div style={{ display: 'flex', gap: 0, flexShrink: 0 }}>

@@ -13,6 +13,10 @@ import { BehavioralOS } from './modules/behavioral/BehavioralOS'
 import { PlanningAssistant } from './modules/planning/PlanningAssistant'
 import { FinanceModule } from './modules/finance/FinanceModule'
 import { useUIStore } from './store/uiStore'
+import {
+  collect, loadNotifSettings, inQuietHours, markSeen, unwiredKinds, NOTIF_EVENT,
+  type Notification, type NotifSetting,
+} from './lib/notifications'
 import { useAuthStore } from './store/authStore'
 import { useTaskStore } from './store/taskStore'
 import { useHabitsStore } from './store/habitsStore'
@@ -341,6 +345,166 @@ const NAV_ITEMS = [
   { id: 'dashboard', label: 'Dashboard' },
 ] as const
 
+
+// ─── The bell ────────────────────────────────────────────────────────────────
+// What is under it is decided by Settings → Notifications: a kind with its Push
+// switch off is never listed, and quiet hours hold the count back rather than
+// the list — you can always look, you are just not tapped on the shoulder.
+
+function NotificationBell() {
+  const focusOn = useUIStore(s => s.focusOn)
+  const setActiveModule = useUIStore(s => s.setActiveModule)
+  const [open, setOpen] = useState(false)
+  const [settings, setSettings] = useState<NotifSetting[]>(() => loadNotifSettings())
+  const [items, setItems] = useState<Notification[]>(() => collect(loadNotifSettings()))
+  const ref = useRef<HTMLDivElement>(null)
+
+  // Re-read on any change to the matrix or to what it is derived from, and on
+  // a slow tick so "not logged today" and Sunday evening arrive on their own.
+  useEffect(() => {
+    const refresh = () => {
+      const next = loadNotifSettings()
+      setSettings(next)
+      setItems(collect(next))
+    }
+    refresh()
+    const id = window.setInterval(refresh, 120_000)
+    for (const ev of [NOTIF_EVENT, 'storage', 'focus']) window.addEventListener(ev, refresh)
+    return () => {
+      window.clearInterval(id)
+      for (const ev of [NOTIF_EVENT, 'storage', 'focus']) window.removeEventListener(ev, refresh)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!open) return
+    const away = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false) }
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false) }
+    document.addEventListener('mousedown', away)
+    document.addEventListener('keydown', esc)
+    return () => { document.removeEventListener('mousedown', away); document.removeEventListener('keydown', esc) }
+  }, [open])
+
+  const quiet = inQuietHours()
+  const unwired = unwiredKinds(settings)
+  const count = items.length
+
+  function goTo(n: Notification) {
+    setOpen(false)
+    markSeen([n.id])
+    setItems(prev => prev.filter(x => x.id !== n.id))
+    if (!n.go) return
+    if (n.go.id) focusOn({ module: n.go.module, id: n.go.id, ...(n.go.date ? { date: n.go.date } : {}) })
+    else setActiveModule(n.go.module)
+  }
+
+  return (
+    <div ref={ref} style={{ position: 'relative', flexShrink: 0 }}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        title={count ? `${count} thing${count === 1 ? '' : 's'} waiting` : 'Nothing waiting'}
+        aria-label="Notifications"
+        aria-expanded={open}
+        style={{
+          width: 34, height: 34, borderRadius: 12, padding: 0,
+          background: '#FFFFFF', border: '1px solid #E8E1CE',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          cursor: 'pointer', color: '#6C6553', position: 'relative',
+        }}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M18 16V11a6 6 0 1 0-12 0v5l-1.5 2.5h15z"/>
+          <path d="M10 20a2 2 0 0 0 4 0"/>
+        </svg>
+        {/* Quiet hours mean you are not interrupted — the list is still there. */}
+        {count > 0 && !quiet && (
+          <span style={{
+            position: 'absolute', top: -4, right: -4, minWidth: 17, height: 17, padding: '0 4px',
+            borderRadius: 999, background: '#C62828', color: '#FFFFFF',
+            fontSize: 10, fontWeight: 700, lineHeight: '17px', textAlign: 'center',
+            boxShadow: '0 0 0 2px #FCFAF4',
+          }}>{count > 9 ? '9+' : count}</span>
+        )}
+      </button>
+
+      {open && (
+        <div role="menu" style={{
+          position: 'absolute', top: 'calc(100% + 8px)', right: 0, zIndex: 120,
+          width: 340, maxHeight: 460, overflowY: 'auto', scrollbarWidth: 'thin',
+          background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 14, padding: 6,
+          boxShadow: '0 22px 48px -20px rgba(25,23,18,.45)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px 10px', borderBottom: '1px solid #F0EBDC' }}>
+            <p style={{ margin: 0, flex: 1, fontSize: 13, fontWeight: 600, color: '#191712' }}>
+              Notifications{count ? ` · ${count}` : ''}
+            </p>
+            {count > 0 && (
+              <button onClick={() => { markSeen(items.map(i => i.id)); setItems([]) }}
+                style={{
+                  background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                  fontSize: 11.5, color: '#6C6553', padding: 0,
+                }}>Clear all</button>
+            )}
+          </div>
+
+          {items.map(n => (
+            <button key={n.id} role="menuitem" onClick={() => goTo(n)}
+              style={{
+                display: 'flex', alignItems: 'flex-start', gap: 9, width: '100%',
+                padding: '9px 10px', borderRadius: 9, border: 'none', background: 'transparent',
+                cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
+              }}>
+              <span style={{
+                width: 7, height: 7, borderRadius: '50%', flexShrink: 0, marginTop: 5,
+                background: KIND_COLOR[n.kind] ?? 'var(--sb-accent)',
+              }} />
+              <span style={{ flex: 1, minWidth: 0 }}>
+                <span style={{
+                  display: 'block', fontSize: 12.5, color: '#191712', lineHeight: 1.35,
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                }}>{n.title}</span>
+                <span style={{ display: 'block', fontSize: 11, color: '#9B9180', lineHeight: 1.35 }}>{n.detail}</span>
+              </span>
+            </button>
+          ))}
+
+          {count === 0 && (
+            <p style={{ margin: 0, padding: '18px 12px', fontSize: 12, color: '#9B9180', lineHeight: 1.5, textAlign: 'center' }}>
+              Nothing is waiting for you.
+            </p>
+          )}
+
+          {quiet && (
+            <p style={{ margin: '4px 6px 0', padding: '8px 10px', borderRadius: 9, background: '#FAF7EC', fontSize: 11, color: '#6C6553', lineHeight: 1.45 }}>
+              Quiet hours — you are not being interrupted, but nothing is hidden.
+            </p>
+          )}
+
+          {unwired.length > 0 && (
+            <p style={{ margin: '4px 6px 0', padding: '8px 10px', fontSize: 10.5, color: '#9B9180', lineHeight: 1.45 }}>
+              {unwired.map(u => u.label).join(', ')} {unwired.length === 1
+                ? 'is switched on but has nothing behind it yet.'
+                : 'are switched on but have nothing behind them yet.'}
+            </p>
+          )}
+
+          <button onClick={() => { setOpen(false); setActiveModule('settings') }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 8, width: '100%', height: 34, marginTop: 4,
+              padding: '0 10px', borderRadius: 9, border: 'none', background: 'transparent',
+              color: '#6C6553', fontSize: 12, fontFamily: 'inherit', cursor: 'pointer', textAlign: 'left',
+            }}>
+            <Settings size={13} color="#9B9180" /> What gets notified
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+const KIND_COLOR: Record<string, string> = {
+  decision: '#C62828', conflict: '#D68F6A', habit: '#0C8140', review: 'var(--sb-accent)',
+}
+
 function TopNav() {
   const activeModule    = useUIStore(s => s.activeModule)
   const setActiveModule = useUIStore(s => s.setActiveModule)
@@ -440,18 +604,7 @@ function TopNav() {
           }}>⌘K</span>
         </div>
 
-        {/* Bell */}
-        <div style={{
-          width: 34, height: 34, borderRadius: 12,
-          background: '#FFFFFF', border: '1px solid #E8E1CE',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          cursor: 'pointer', flexShrink: 0, color: '#6C6553',
-        }}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M18 16V11a6 6 0 1 0-12 0v5l-1.5 2.5h15z"/>
-            <path d="M10 20a2 2 0 0 0 4 0"/>
-          </svg>
-        </div>
+        <NotificationBell />
 
         {/* Avatar — and what is behind it */}
         <div ref={menuRef} style={{ position: 'relative', flexShrink: 0 }}>
