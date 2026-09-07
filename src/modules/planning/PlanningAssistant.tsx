@@ -148,7 +148,7 @@ function ContextMenu({ menu, onClose }: { menu: ContextMenuState; onClose: () =>
             fontSize: 'var(--sb-t-body)', color: '#3D3926', textAlign: 'left',
             borderBottom: i < 1 ? '1px solid var(--sb-border)' : 'none',
           }}
-            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.05)')}
+            onMouseEnter={e => (e.currentTarget.style.background = 'var(--sb-field)')}
             onMouseLeave={e => (e.currentTarget.style.background = 'none')}
           >
             {item.icon} {item.label}
