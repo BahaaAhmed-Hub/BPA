@@ -17,9 +17,17 @@ export const HABIT_COLORS = ['#7F77DD','#60A5FA','#1D9E75','#E05252','#F97316','
 
 
 /** Step3Companies.tsx */
+/** Twelve hues at two weights, so a person with a dozen companies still gets a
+ *  colour they can tell from the others. Every one of them is legible as a dot
+ *  or a chip on both a cream ground and a dark one, which is why the deep row
+ *  is not simply the bright row darkened. */
 export const COMPANY_COLOR_CHOICES = [
-  '#7F77DD','#60A5FA','#1D9E75','#E05252','#F97316',
-  '#A855F7','#EC4899','#FBBF24','#22D3EE','#6366F1','#10B981','#EF4444',
+  // deep
+  '#B03A3A', '#C2622B', '#B07C12', '#7F8B1E', '#3F7A34', '#1D8A6A',
+  '#1F7A96', '#2F63A8', '#4A54B8', '#6B4BB0', '#96409A', '#B03A73',
+  // bright
+  '#E05252', '#F0863C', '#E8B028', '#B6C63C', '#4FB05A', '#2FBF9C',
+  '#35A9CC', '#4E8FE0', '#7B84E8', '#A276E0', '#C664CC', '#E062A0',
 ]
 
 
@@ -38,10 +46,17 @@ export const PALETTE = [
 
 
 /** CalendarIntelligence.tsx */
+/** Google's own eleven, and then a deeper row of the same hues: the bright
+ *  set is what Google hands back, and a calendar drawn in it is a pale block
+ *  whichever way its card is tinted. Twenty-two is also enough that a person
+ *  with a dozen calendars is not reusing one. */
 export const CAL_COLORS = [
   '#FF3B30', '#FF9500', '#FFCC00', '#34C759',
   '#5AC8FA', '#007AFF', '#5856D6', '#AF52DE',
   '#FF2D55', '#A2845E', '#8E8E93',
+  '#B0342B', '#B4651A', '#A6820D', '#237D3C',
+  '#2E7EA6', '#0B4F9E', '#3B3A94', '#7A369B',
+  '#B01F42', '#6E5A41', '#5C5C60',
 ]
 
 
@@ -60,8 +75,10 @@ export const WALL_PALETTE = [
 
 
 
-/** Settings.tsx */
-export const C_COLORS     = ['#7F77DD','#7F77DD','#1D9E75','#E05252','#888780','#5B9BD5','#E0944A']
+/** Settings.tsx — the company picker. Seven swatches, one of which was the
+ *  same violet twice, so it was six; it is the full set now, shared with the
+ *  wizard's picker so a company gets the same choice wherever it is made. */
+export const C_COLORS = COMPANY_COLOR_CHOICES
 
 /** Settings.tsx */
 export const STATUS_COLORS_PRESETS = ['#6B7280','#3B82F6','#F59E0B','#EF4444','#F97316','#10B981','#8B5CF6','#EC4899','#14B8A6','#F97316']

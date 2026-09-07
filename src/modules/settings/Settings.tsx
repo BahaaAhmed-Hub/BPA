@@ -662,7 +662,10 @@ function CompanyCard({
             <div style={{
               position: 'absolute', top: 24, left: 0, zIndex: 200,
               background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
-              padding: '7px 8px', display: 'flex', gap: 5,
+              // Two rows of twelve rather than one row of seven: a wrapping
+              // grid keeps the popover the width of a dozen swatches however
+              // many the list grows to.
+              padding: '8px 9px', display: 'grid', gridTemplateColumns: 'repeat(12, 16px)', gap: 6,
               boxShadow: 'var(--sb-shadow-hover)',
             }}>
               {C_COLORS.map(c => (

@@ -615,7 +615,7 @@ function ColorPickerPopover({ current, onPick, onClose }: { current: string; onP
       position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 200,
       background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
       padding: '10px 10px 8px', boxShadow: 'var(--sb-shadow-menu)',
-      display: 'flex', flexWrap: 'wrap', gap: 7, width: 152,
+      display: 'grid', gridTemplateColumns: 'repeat(11, 22px)', gap: 7,
     }}>
       {CAL_COLORS.map(c => (
         <button key={c} onClick={() => { onPick(c); onClose() }}
@@ -739,13 +739,13 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
 
   const evBg   = inverted
     ? 'var(--sb-ink-1)'
-    : `color-mix(in srgb, ${color} 15%, var(--sb-card))`
+    : `color-mix(in srgb, ${color} 26%, var(--sb-card))`
   const evInk  = inverted
     ? 'var(--sb-ink-on-dark)'
-    : `color-mix(in srgb, ${color} 70%, var(--sb-ink-1))`
+    : `color-mix(in srgb, ${color} 55%, var(--sb-ink-1))`
   const evTimeInk = inverted
     ? 'color-mix(in srgb, var(--sb-ink-on-dark) 76%, transparent)'
-    : `color-mix(in srgb, ${color} 32%, var(--sb-ink-3))`
+    : `color-mix(in srgb, ${color} 30%, var(--sb-ink-2))`
   // No outline in the ordinary case: a solid fill already has an edge. What is
   // left is the two states an edge is the only way to say — a tentative event,
   // and the one you have selected.
@@ -3534,10 +3534,10 @@ export function CalendarIntelligence() {
                           // Solid, like the week grid: the same tint of the
                           // calendar's colour, and its name in that colour
                           // taken down to text weight.
-                          background: `color-mix(in srgb, ${col} 15%, var(--sb-card))`,
+                          background: `color-mix(in srgb, ${col} 26%, var(--sb-card))`,
                           border: 'var(--sb-border-width) solid transparent',
                           fontSize: 'var(--sb-t-micro)', fontWeight: 700,
-                          color: `color-mix(in srgb, ${col} 70%, var(--sb-ink-1))`,
+                          color: `color-mix(in srgb, ${col} 55%, var(--sb-ink-1))`,
                           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                         }}>
                         {t && <span style={{ color: 'var(--sb-ink-3)', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>
@@ -3617,8 +3617,8 @@ export function CalendarIntelligence() {
                           onContextMenu={e => handleEventContextMenu(ev as GCalEventExt, e)}
                           style={{
                             fontSize: 'var(--sb-t-micro)', fontWeight: 700,
-                            color: `color-mix(in srgb, ${color} 70%, var(--sb-ink-1))`,
-                            background: `color-mix(in srgb, ${color} 15%, var(--sb-card))`,
+                            color: `color-mix(in srgb, ${color} 55%, var(--sb-ink-1))`,
+                            background: `color-mix(in srgb, ${color} 26%, var(--sb-card))`,
                             borderLeft: `var(--sb-border-emphasis) solid ${color}`,
                             borderRadius: 'var(--sb-r-chip)', padding: '1px 4px',
                             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
