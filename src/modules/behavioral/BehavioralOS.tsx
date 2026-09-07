@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { getTheme } from '@/lib/themes'
 import { RefreshCw, ChevronRight } from 'lucide-react'
 import { useBehavioralStore } from '@/store/behavioralStore'
 import { useTaskStore } from '@/store/taskStore'
@@ -9,18 +10,17 @@ import {
 } from '@/lib/behavioralEngine'
 import type { IdentityResult, Rank, IdentityStage } from '@/store/behavioralStore'
 
-// ─── Samurai palette (applied over current theme when mode is samurai) ────────
+// ─── Drawn dark, whatever the app's theme is ─────────────────────────────────
+// This screen being near-black is the mode, not a preference, and it used to
+// say so by keeping eight colours of its own — reading the retired --color-*
+// names with dark hexes as fallbacks, which is how it survived P1 at all.
+//
+// It says the same thing through the token contract now: a dark theme's tokens,
+// scoped to this subtree. Every element below still reads var(--sb-*), so
+// nothing here holds a colour, and the values are a theme's rather than this
+// file's opinion of one.
 
-const S: Record<string, string> = {
-  bg:        'var(--color-bg, #0C0B09)',
-  surface:   'var(--color-surface, #131210)',
-  border:    'var(--sb-border)',
-  accent:    'var(--color-accent, #8B1A1A)',
-  accentFg:  'var(--color-accent-bright, #C0392B)',
-  text:      'var(--color-text, #EDE4D3)',
-  dim:       'var(--color-text-dim, #7A6E5E)',
-  muted:     'var(--color-text-muted, #3C3530)',
-}
+const DARK_SCOPE = getTheme('crimson').tokens as React.CSSProperties
 
 // ─── Micro-components ─────────────────────────────────────────────────────────
 
@@ -32,10 +32,10 @@ const STAGE_LABEL: Record<IdentityStage, string> = {
 }
 
 const STAGE_COLOR: Record<IdentityStage, string> = {
-  emerging:    S.muted,
-  developing:  S.dim,
-  established: S.dim,
-  core:        S.accentFg,
+  emerging:    'var(--sb-ink-4)',
+  developing:  'var(--sb-ink-3)',
+  established: 'var(--sb-ink-3)',
+  core:        'var(--sb-accent-deep)',
 }
 
 const RANK_ORDER: Rank[] = ['ronin', 'samurai', 'daimyo', 'shogun']
@@ -45,11 +45,11 @@ function RankProgressBar({ score }: { score: number }) {
   return (
     <div style={{ marginTop: 20 }}>
       {/* Score bar */}
-      <div style={{ height: 3, background: S.border, borderRadius: 2, overflow: 'hidden' }}>
+      <div style={{ height: 3, background: 'var(--sb-border)', borderRadius: 2, overflow: 'hidden' }}>
         <div style={{
           height: '100%', borderRadius: 2,
           width: `${score}%`,
-          background: `linear-gradient(90deg, ${S.accent}, ${S.accentFg})`,
+          background: `linear-gradient(90deg, var(--sb-accent), var(--sb-accent-deep))`,
           transition: 'width 1s cubic-bezier(0.16, 1, 0.3, 1)',
         }} />
       </div>
@@ -58,7 +58,7 @@ function RankProgressBar({ score }: { score: number }) {
         {thresholds.slice(1, -1).map(t => (
           <div key={t} style={{
             position: 'absolute', left: `${t}%`,
-            width: 1, height: 6, background: S.muted, top: 0,
+            width: 1, height: 6, background: 'var(--sb-ink-4)', top: 0,
           }} />
         ))}
         {RANK_ORDER.map((r, i) => (
@@ -67,7 +67,7 @@ function RankProgressBar({ score }: { score: number }) {
             left: `${thresholds[i]}%`,
             fontSize: 9,
             letterSpacing: '0.08em',
-            color: score >= thresholds[i] ? S.dim : S.muted,
+            color: score >= thresholds[i] ? 'var(--sb-ink-3)' : 'var(--sb-ink-4)',
             textTransform: 'uppercase',
             whiteSpace: 'nowrap',
           }}>
@@ -82,18 +82,18 @@ function RankProgressBar({ score }: { score: number }) {
 function ComponentBar({ label, value }: { label: string; value: number }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-      <span style={{ fontSize: 10, color: S.dim, letterSpacing: '0.08em', width: 110, flexShrink: 0, textTransform: 'uppercase' }}>
+      <span style={{ fontSize: 10, color: 'var(--sb-ink-3)', letterSpacing: '0.08em', width: 110, flexShrink: 0, textTransform: 'uppercase' }}>
         {label}
       </span>
-      <div style={{ flex: 1, height: 2, background: S.border, borderRadius: 1 }}>
+      <div style={{ flex: 1, height: 2, background: 'var(--sb-border)', borderRadius: 1 }}>
         <div style={{
           height: '100%', borderRadius: 1,
           width: `${value}%`,
-          background: value >= 60 ? S.accent : value >= 40 ? S.dim : S.muted,
+          background: value >= 60 ? 'var(--sb-accent)' : value >= 40 ? 'var(--sb-ink-3)' : 'var(--sb-ink-4)',
           transition: 'width 0.8s ease',
         }} />
       </div>
-      <span style={{ fontSize: 10, color: S.dim, width: 26, textAlign: 'right' }}>{value}</span>
+      <span style={{ fontSize: 10, color: 'var(--sb-ink-3)', width: 26, textAlign: 'right' }}>{value}</span>
     </div>
   )
 }
@@ -141,9 +141,9 @@ function IdentityCard({ identity }: { identity: IdentityResult }) {
   return (
     <div style={{
       padding: '16px 18px',
-      border: `1px solid ${identity.stage === 'core' ? S.accent : S.border}`,
+      border: `1px solid ${identity.stage === 'core' ? 'var(--sb-accent)' : 'var(--sb-border)'}`,
       borderRadius: 2,
-      background: identity.stage === 'core' ? `${S.accent}0A` : 'transparent',
+      background: identity.stage === 'core' ? `var(--sb-accent)0A` : 'transparent',
       transition: 'border-color 0.2s',
     }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 8 }}>
@@ -156,17 +156,17 @@ function IdentityCard({ identity }: { identity: IdentityResult }) {
           {STAGE_LABEL[identity.stage]}
         </span>
       </div>
-      <div style={{ fontSize: 12.5, fontWeight: 500, color: S.text, letterSpacing: '0.03em', marginBottom: 4 }}>
+      <div style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--sb-ink-1)', letterSpacing: '0.03em', marginBottom: 4 }}>
         {identity.name}
       </div>
-      <div style={{ fontSize: 10.5, color: S.dim, lineHeight: 1.5 }}>
+      <div style={{ fontSize: 10.5, color: 'var(--sb-ink-3)', lineHeight: 1.5 }}>
         {identity.description}
       </div>
       {/* Score bar */}
-      <div style={{ marginTop: 12, height: 1, background: S.border }}>
+      <div style={{ marginTop: 12, height: 1, background: 'var(--sb-border)' }}>
         <div style={{
           height: '100%', width: `${identity.score}%`,
-          background: identity.stage === 'core' ? S.accent : S.dim,
+          background: identity.stage === 'core' ? 'var(--sb-accent)' : 'var(--sb-ink-3)',
         }} />
       </div>
     </div>
@@ -212,9 +212,10 @@ export function BehavioralOS() {
 
   return (
     <div style={{
+      ...DARK_SCOPE,
       flex: 1, overflowY: 'auto',
-      background: S.bg,
-      color: S.text,
+      background: 'var(--sb-page)',
+      color: 'var(--sb-ink-1)',
       fontFamily: "'DM Sans', sans-serif",
       minHeight: '100vh',
     }}>
@@ -226,19 +227,19 @@ export function BehavioralOS() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
               <h1 style={{
                 margin: 0, fontSize: 22, fontWeight: 600, letterSpacing: '-0.02em',
-                color: S.text,
+                color: 'var(--sb-ink-1)',
               }}>
                 Behavioral OS
               </h1>
               <span style={{
                 fontSize: 9, letterSpacing: '0.18em', fontWeight: 600,
-                color: S.accent, border: `1px solid ${S.accent}`,
+                color: 'var(--sb-accent)', border: '1px solid var(--sb-accent)',
                 padding: '3px 8px', borderRadius: 1,
               }}>
                 {modeLabel}
               </span>
             </div>
-            <p style={{ margin: 0, fontSize: 12, color: S.dim, letterSpacing: '0.02em' }}>
+            <p style={{ margin: 0, fontSize: 12, color: 'var(--sb-ink-3)', letterSpacing: '0.02em' }}>
               Adaptive discipline framework — 14-day evaluation window
             </p>
           </div>
@@ -248,13 +249,13 @@ export function BehavioralOS() {
             disabled={evaluating}
             style={{
               display: 'flex', alignItems: 'center', gap: 6,
-              background: 'none', border: `1px solid ${S.border}`, borderRadius: 2,
+              background: 'none', border: '1px solid var(--sb-border)', borderRadius: 2,
               padding: '7px 14px', cursor: evaluating ? 'default' : 'pointer',
-              color: evaluating ? S.muted : S.dim, fontSize: 11, letterSpacing: '0.06em',
+              color: evaluating ? 'var(--sb-ink-4)' : 'var(--sb-ink-3)', fontSize: 11, letterSpacing: '0.06em',
               transition: 'border-color 0.15s, color 0.15s',
             }}
-            onMouseEnter={e => { if (!evaluating) { (e.currentTarget as HTMLElement).style.borderColor = S.dim; (e.currentTarget as HTMLElement).style.color = S.text } }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = S.border; (e.currentTarget as HTMLElement).style.color = S.dim }}
+            onMouseEnter={e => { if (!evaluating) { (e.currentTarget as HTMLElement).style.borderColor = 'var(--sb-ink-3)'; (e.currentTarget as HTMLElement).style.color = 'var(--sb-ink-1)' } }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--sb-border)'; (e.currentTarget as HTMLElement).style.color = 'var(--sb-ink-3)' }}
           >
             <RefreshCw size={12} style={{ animation: evaluating ? 'spin 1s linear infinite' : 'none' }} />
             {evaluating ? 'Evaluating…' : 'Refresh'}
@@ -265,7 +266,7 @@ export function BehavioralOS() {
         <section style={{ marginBottom: 48 }}>
           <div style={{
             padding: '28px 32px 24px',
-            border: `1px solid ${S.border}`,
+            border: '1px solid var(--sb-border)',
             borderRadius: 2,
           }}>
             {rank ? (
@@ -274,27 +275,27 @@ export function BehavioralOS() {
                   <div>
                     <div style={{
                       fontSize: 9, letterSpacing: '0.2em', textTransform: 'uppercase',
-                      color: S.dim, marginBottom: 10,
+                      color: 'var(--sb-ink-3)', marginBottom: 10,
                     }}>
                       Your Rank
                     </div>
                     <div style={{
                       fontSize: 38, fontWeight: 700, letterSpacing: '-0.03em',
-                      color: S.text, lineHeight: 1,
+                      color: 'var(--sb-ink-1)', lineHeight: 1,
                     }}>
                       {rankMeta?.label.toUpperCase()}
                     </div>
-                    <div style={{ fontSize: 12, color: S.dim, marginTop: 8, letterSpacing: '0.02em' }}>
+                    <div style={{ fontSize: 12, color: 'var(--sb-ink-3)', marginTop: 8, letterSpacing: '0.02em' }}>
                       {rankMeta?.philosophy}
                     </div>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 10 }}>
                     {mode === 'samurai' && <RankArtwork rank={rank.rank} rankMeta={rankMeta} />}
                     <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: 36, fontWeight: 300, color: rank.score >= 60 ? S.accent : S.dim, lineHeight: 1 }}>
+                      <div style={{ fontSize: 36, fontWeight: 300, color: rank.score >= 60 ? 'var(--sb-accent)' : 'var(--sb-ink-3)', lineHeight: 1 }}>
                         {rank.score}
                       </div>
-                      <div style={{ fontSize: 9, color: S.muted, letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: 4 }}>
+                      <div style={{ fontSize: 9, color: 'var(--sb-ink-4)', letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: 4 }}>
                         /&nbsp;100
                       </div>
                     </div>
@@ -304,19 +305,19 @@ export function BehavioralOS() {
                 <RankProgressBar score={rank.score} />
 
                 {nextRank && (
-                  <div style={{ marginTop: 20, fontSize: 10.5, color: S.dim, letterSpacing: '0.03em' }}>
+                  <div style={{ marginTop: 20, fontSize: 10.5, color: 'var(--sb-ink-3)', letterSpacing: '0.03em' }}>
                     Next threshold: {nextRank.label} at {nextRank.threshold}
                   </div>
                 )}
 
                 {/* Component breakdown — expandable */}
-                <div style={{ marginTop: 20, borderTop: `1px solid ${S.border}`, paddingTop: 16 }}>
+                <div style={{ marginTop: 20, borderTop: '1px solid var(--sb-border)', paddingTop: 16 }}>
                   <button
                     onClick={() => setExpandComponents(v => !v)}
                     style={{
                       display: 'flex', alignItems: 'center', gap: 6,
                       background: 'none', border: 'none', cursor: 'pointer',
-                      color: S.dim, fontSize: 10, letterSpacing: '0.1em',
+                      color: 'var(--sb-ink-3)', fontSize: 10, letterSpacing: '0.1em',
                       textTransform: 'uppercase', padding: 0, marginBottom: expandComponents ? 14 : 0,
                     }}
                   >
@@ -333,7 +334,7 @@ export function BehavioralOS() {
                 </div>
               </>
             ) : (
-              <div style={{ textAlign: 'center', padding: '24px 0', color: S.dim, fontSize: 12 }}>
+              <div style={{ textAlign: 'center', padding: '24px 0', color: 'var(--sb-ink-3)', fontSize: 12 }}>
                 {evaluating ? 'Evaluating your behavioral patterns…' : 'No evaluation data. Click Refresh.'}
               </div>
             )}
@@ -344,40 +345,40 @@ export function BehavioralOS() {
         <section style={{ marginBottom: 48 }}>
           <div style={{
             fontSize: 9, letterSpacing: '0.2em', textTransform: 'uppercase',
-            color: S.dim, marginBottom: 16,
+            color: 'var(--sb-ink-3)', marginBottom: 16,
           }}>
             Decisive Objectives
           </div>
 
           {objectives.length === 0 ? (
-            <div style={{ fontSize: 12, color: S.muted, padding: '16px 0', borderTop: `1px solid ${S.border}` }}>
+            <div style={{ fontSize: 12, color: 'var(--sb-ink-4)', padding: '16px 0', borderTop: '1px solid var(--sb-border)' }}>
               No open objectives. The field is clear.
             </div>
           ) : (
-            <div style={{ borderTop: `1px solid ${S.border}` }}>
+            <div style={{ borderTop: '1px solid var(--sb-border)' }}>
               {objectives.map((t, i) => (
                 <div key={t.id} style={{
                   display: 'flex', alignItems: 'center', gap: 16,
                   padding: '14px 0',
-                  borderBottom: `1px solid ${S.border}`,
+                  borderBottom: '1px solid var(--sb-border)',
                 }}>
                   <span style={{
-                    fontSize: 9, letterSpacing: '0.1em', color: S.muted,
+                    fontSize: 9, letterSpacing: '0.1em', color: 'var(--sb-ink-4)',
                     width: 18, flexShrink: 0,
                   }}>
                     {String(i + 1).padStart(2, '0')}
                   </span>
-                  <span style={{ flex: 1, fontSize: 13, color: S.text, letterSpacing: '0.01em', lineHeight: 1.4 }}>
+                  <span style={{ flex: 1, fontSize: 13, color: 'var(--sb-ink-1)', letterSpacing: '0.01em', lineHeight: 1.4 }}>
                     {t.title}
                   </span>
                   {t.dueDate && (
-                    <span style={{ fontSize: 10, color: S.dim, flexShrink: 0 }}>
+                    <span style={{ fontSize: 10, color: 'var(--sb-ink-3)', flexShrink: 0 }}>
                       {new Date(t.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                     </span>
                   )}
                   <div style={{
                     width: 14, height: 14, borderRadius: 1,
-                    border: `1px solid ${t.quadrant === 'do' ? S.accent : S.border}`,
+                    border: `1px solid ${t.quadrant === 'do' ? 'var(--sb-accent)' : 'var(--sb-border)'}`,
                     flexShrink: 0,
                   }} />
                 </div>
@@ -391,7 +392,7 @@ export function BehavioralOS() {
           <section style={{ marginBottom: 48 }}>
             <div style={{
               fontSize: 9, letterSpacing: '0.2em', textTransform: 'uppercase',
-              color: S.dim, marginBottom: 16,
+              color: 'var(--sb-ink-3)', marginBottom: 16,
             }}>
               Behavioral Patterns
             </div>
@@ -404,7 +405,7 @@ export function BehavioralOS() {
                 <IdentityCard key={identity.id} identity={identity} />
               ))}
             </div>
-            <p style={{ marginTop: 14, fontSize: 10.5, color: S.muted, lineHeight: 1.6 }}>
+            <p style={{ marginTop: 14, fontSize: 10.5, color: 'var(--sb-ink-4)', lineHeight: 1.6 }}>
               Identities are inferred from repeated behavior over 30 days. They are not assigned — they are earned.
             </p>
           </section>
@@ -415,13 +416,13 @@ export function BehavioralOS() {
           <section style={{ marginBottom: 48 }}>
             <div style={{
               fontSize: 9, letterSpacing: '0.2em', textTransform: 'uppercase',
-              color: S.dim, marginBottom: 16,
+              color: 'var(--sb-ink-3)', marginBottom: 16,
             }}>
               System Insights
             </div>
-            <div style={{ borderLeft: `1px solid ${S.border}`, paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 18 }}>
+            <div style={{ borderLeft: '1px solid var(--sb-border)', paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 18 }}>
               {cachedInsights.map((insight, i) => (
-                <p key={i} style={{ margin: 0, fontSize: 13, color: S.text, lineHeight: 1.7, letterSpacing: '0.01em' }}>
+                <p key={i} style={{ margin: 0, fontSize: 13, color: 'var(--sb-ink-1)', lineHeight: 1.7, letterSpacing: '0.01em' }}>
                   {insight}
                 </p>
               ))}
@@ -431,7 +432,7 @@ export function BehavioralOS() {
 
         {/* ── Last evaluated ─────────────────────────────────────────────── */}
         {lastEvaluated && (
-          <div style={{ fontSize: 10, color: S.muted, letterSpacing: '0.05em' }}>
+          <div style={{ fontSize: 10, color: 'var(--sb-ink-4)', letterSpacing: '0.05em' }}>
             Last evaluated {new Date(lastEvaluated).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
           </div>
         )}
