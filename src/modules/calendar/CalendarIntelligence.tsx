@@ -921,6 +921,14 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
 // calendar, where, repeats, prep — over attendees, prep and the Professor's
 // suggestion.
 
+/** The whole detail panel is drawn at three quarters. Every size in it — type,
+ *  icons, control heights, padding, the gaps between rows — comes from tokens
+ *  or from the constants below, and scaling them one at a time would be forty
+ *  numbers that drift apart the first time one of them changes. `zoom` takes
+ *  the lot, which is the same mechanism the compact density setting uses.
+ *  The panel's own box keeps its width: only what is inside it shrinks. */
+const EV_SCALE = 0.75
+
 const EV_PILL: React.CSSProperties = {
   display: 'inline-flex', alignItems: 'center', gap: 6, height: 32, boxSizing: 'border-box',
   padding: '0 12px', borderRadius: 'var(--sb-r-nav)', background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)',
@@ -1308,8 +1316,8 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
       overflowY: 'auto', scrollbarWidth: 'thin',
       background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
       boxShadow: 'var(--sb-shadow-control)',
-      padding: '16px 18px 18px',
     }}>
+      <div style={{ zoom: EV_SCALE, padding: '16px 18px 18px' }}>
 
       {/* ── Which calendar, and what to do with the event ────────────────── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
@@ -1866,6 +1874,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
             Open in Google Calendar <ExternalLink size={ICON.sm} />
           </a>
         )}
+      </div>
       </div>
     </div>
   )
