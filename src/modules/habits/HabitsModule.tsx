@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
+import { stepFor } from '@/lib/habitSteps'
 import { Plus, Trash2, X, ChevronLeft, ChevronRight } from 'lucide-react'
 import {
   useHabitsStore, loadLogs, saveLogs, loadQuantityLogs, saveQuantityLogs,
@@ -1171,8 +1172,8 @@ export function HabitsModule() {
                   isSelected={detailHabitId === habit.id}
                   onSelect={() => setDetailHabitId(id => id === habit.id ? null : habit.id)}
                   onToggle={() => toggleHabit(habit.id, selectedDay)}
-                  onIncrement={() => isQuantity && setQuantity(habit.id, habit.goal ?? 1, selectedDay, qtyValue + 1)}
-                  onDecrement={() => isQuantity && setQuantity(habit.id, habit.goal ?? 1, selectedDay, Math.max(0, qtyValue - 1))}
+                  onIncrement={() => isQuantity && setQuantity(habit.id, habit.goal ?? 1, selectedDay, qtyValue + stepFor(habit))}
+                  onDecrement={() => isQuantity && setQuantity(habit.id, habit.goal ?? 1, selectedDay, Math.max(0, qtyValue - stepFor(habit)))}
                 />
               )
             })}
@@ -1208,8 +1209,8 @@ export function HabitsModule() {
                 isSelected={isSelected}
                 onSelect={() => { setFillSelected(habit.id); setDetailHabitId(habit.id) }}
                 onToggle={() => toggleHabit(habit.id, selectedDay)}
-                onIncrement={() => isQuantity && setQuantity(habit.id, habit.goal ?? 1, selectedDay, qtyValue + 1)}
-                onDecrement={() => isQuantity && setQuantity(habit.id, habit.goal ?? 1, selectedDay, Math.max(0, qtyValue - 1))}
+                onIncrement={() => isQuantity && setQuantity(habit.id, habit.goal ?? 1, selectedDay, qtyValue + stepFor(habit))}
+                onDecrement={() => isQuantity && setQuantity(habit.id, habit.goal ?? 1, selectedDay, Math.max(0, qtyValue - stepFor(habit)))}
               />
             )
           })}

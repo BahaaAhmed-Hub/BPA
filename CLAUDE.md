@@ -472,6 +472,16 @@ here is "the app's mail" any more — it is always *an account's*.
   arrived in. Reply-all drops **every** address of yours, not just that mailbox.
   A forward leaves the thread (no `threadId`, no `In-Reply-To`).
 
+## Habits — what one tap adds
+`lib/habitSteps.ts`. A measurable habit was counted one at a time, which is
+right for glasses and wrong for anything in real units: 200 ml at 1 ml a tap is
+two hundred taps. `stepFor(habit)` answers it — the number set in Settings →
+Habits ("Each tap adds"), or a guess from the unit and the target (200 ml → 100,
+2,000 ml → 250, 10,000 steps → 1,000, 180 minutes → 15, anything ≤ 20 → 1).
+Stored beside the habits in `professor-habit-steps` (a prefSync shared key)
+because the `habits` table has no column for it, and a habit that cannot be
+saved is worse than one that counts in ones.
+
 ## Habits — Apple Health, the only way it can work
 A web page cannot read Apple Health: HealthKit is native to iOS, with no web
 API and no OAuth. So the phone pushes. `lib/healthLink.ts` + Settings → Habits →

@@ -24,6 +24,7 @@ const SHARED_KEYS = [
   'professor-automation-rules',  // the rules that run for you
   'professor-company-users',     // people, per company
   'professor-habit-quantity-logs', // how much, not just whether
+  'professor-habit-steps',         // what one tap adds
   'professor-notif-events',
   'professor-review-hours',
   'professor-ai-config',

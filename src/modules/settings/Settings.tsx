@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { paidAtSupported } from '../finance/unpaid'
+import { stepFor, setHabitStep, loadHabitSteps } from '@/lib/habitSteps'
 import {
   loadHealthLinks, createHealthLink, deleteHealthLink, ingestUrl, checkHealthLink,
   isMovementHabit, suggestMetric, METRIC_LABEL, METRIC_SAMPLE,
@@ -1000,8 +1001,12 @@ function HabitRowImage({ image, emoji, onChange }: {
 
 interface SettingsHabitFormState {
   image?: string
+  /** Set while editing an existing habit, so its step can be read and written. */
+  id?: string
   name: string; emoji: string; color: string; freq: typeof FREQ_OPTS[number]
   type: 'boolean' | 'quantity'; goal: string; unit: string
+  /** What one press adds. Blank means the sensible guess for the unit. */
+  step: string
 }
 
 function SettingsHabitForm({
@@ -1129,12 +1134,32 @@ function SettingsHabitForm({
                 fontSize: 13, color: '#191712', fontFamily: 'inherit', outline: 'none', textAlign: 'left',
               }} />
             <input value={s.unit} onChange={e => update({ unit: e.target.value })}
-              placeholder="glasses / miles / minutes…"
+              placeholder="glasses / ml / minutes…"
               style={{
                 flex: 1, minWidth: 0, boxSizing: 'border-box', height: 36, padding: '0 12px',
                 background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 9,
                 fontSize: 13, color: '#191712', fontFamily: 'inherit', outline: 'none', textAlign: 'left',
               }} />
+          </div>
+
+          {/* What one tap is worth. 200 ml counted one millilitre at a time is
+              two hundred taps — nobody sets a habit up meaning that. */}
+          <div style={{ marginTop: 10 }}>
+            <span style={LABEL}>Each tap adds</span>
+            <div style={{ display: 'flex', gap: 7, alignItems: 'center' }}>
+              <input type="number" min={1} value={s.step}
+                onChange={e => update({ step: e.target.value })}
+                placeholder={String(stepFor({ id: s.id ?? '', goal: Number(s.goal) || 0, unit: s.unit }))}
+                style={{
+                  width: 90, boxSizing: 'border-box', height: 36, padding: '0 12px',
+                  background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 9,
+                  fontSize: 13, color: '#191712', fontFamily: 'inherit', outline: 'none', textAlign: 'left',
+                }} />
+              <span style={{ fontSize: 12.5, color: '#6C6553' }}>
+                {s.unit || 'units'} per press
+                {!s.step && ` · ${stepFor({ id: s.id ?? '', goal: Number(s.goal) || 0, unit: s.unit })} unless you say otherwise`}
+              </span>
+            </div>
           </div>
         </div>
       )}
@@ -1430,11 +1455,13 @@ function HabitsSection() {
             <SettingsHabitForm
               key={h.id + '-edit'}
               initial={{
+                id: h.id,
                 name: h.name, emoji: h.emoji, color: h.color, image: h.image,
                 freq: h.frequency as typeof FREQ_OPTS[number],
                 type: h.type ?? 'boolean',
                 goal: h.goal != null ? String(h.goal) : '',
                 unit: h.unit ?? '',
+                step: loadHabitSteps()[h.id] != null ? String(loadHabitSteps()[h.id]) : '',
               }}
               saveLabel="Save Changes"
               onSave={s => {
@@ -1445,6 +1472,7 @@ function HabitsSection() {
                   goal: s.type === 'quantity' ? parseFloat(s.goal) : undefined,
                   unit: s.type === 'quantity' ? s.unit.trim() : undefined,
                 })
+                setHabitStep(h.id, s.type === 'quantity' && parseFloat(s.step) > 0 ? parseFloat(s.step) : null)
                 setEditingId(null)
               }}
               onCancel={() => setEditingId(null)}
@@ -1455,15 +1483,17 @@ function HabitsSection() {
 
       {adding ? (
         <SettingsHabitForm
-          initial={{ name: '', emoji: '🎯', color: COLORS[habits.length % COLORS.length], freq: 'daily', type: 'boolean', goal: '', unit: '' }}
+          initial={{ name: '', emoji: '🎯', color: COLORS[habits.length % COLORS.length], freq: 'daily', type: 'boolean', goal: '', unit: '', step: '' }}
           onSave={s => {
-            storeAdd({
+            const made = storeAdd({
               name: s.name.trim(), emoji: s.emoji, color: s.color, image: s.image,
               frequency: s.freq, isActive: true,
               type: s.type,
               goal: s.type === 'quantity' ? parseFloat(s.goal) : undefined,
               unit: s.type === 'quantity' ? s.unit.trim() : undefined,
             })
+            // addHabit hands back the new id, which is what the step is filed under.
+            if (made && s.type === 'quantity' && parseFloat(s.step) > 0) setHabitStep(made, parseFloat(s.step))
             setAdding(false)
           }}
           onCancel={() => setAdding(false)}
