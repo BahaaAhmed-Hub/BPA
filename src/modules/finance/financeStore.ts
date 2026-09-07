@@ -22,7 +22,7 @@ import {
   type BillRow, type GoalRow, type BudgetRow,
 } from './financeDb'
 
-type FinanceScreen = 'today' | 'balance' | 'budget' | 'bills' | 'reports' | 'reflect'
+type FinanceScreen = 'today' | 'balance' | 'budget' | 'reports' | 'reflect'
 
 interface FinanceState {
   screen: FinanceScreen

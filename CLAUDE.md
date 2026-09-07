@@ -294,6 +294,15 @@ an overspend cannot run past its own pill. The title says which limit it used.
   a row — same pointer-event drag as the Financials table. `goalPlanning.ts` keeps
   the three locally until the migration runs; the server's value wins.
 
+## Finance — Bills is gone
+There were two places to write down a recurring payment and only one of them
+did anything. A budget rule with a `dueDay` says what leaves and when **and**
+puts the unpaid entry in the ledger, where every balance, envelope and feed
+already knows what to do with it; the Bills screen kept its own list that
+nothing else read. Tab, screen and modal removed. The `finance_bills` rows and
+the store's CRUD are untouched — the data is still there if the screen is ever
+wanted back.
+
 ## Finance — a budget with a day writes the entry
 `budgetEntries.ts`. `BudgetRule.dueDay` + `dueAccountId` (the **Paid on** row) means
 the money leaves on that day, so the entry goes in the ledger on that day, **unpaid**

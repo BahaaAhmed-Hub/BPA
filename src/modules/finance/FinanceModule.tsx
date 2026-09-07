@@ -3,7 +3,6 @@ import { useFinanceStore } from './financeStore'
 import { TodayScreen } from './screens/TodayScreen'
 import { BalanceScreen } from './screens/BalanceScreen'
 import { BudgetScreen } from './screens/BudgetScreen'
-import { BillsScreen } from './screens/BillsScreen'
 import { ReportsScreen } from './screens/ReportsScreen'
 import { ReflectionScreen } from './screens/ReflectionScreen'
 import { GoalsScreen } from './screens/GoalsScreen'
@@ -42,17 +41,6 @@ function IconBudget({ color }: { color: string }) {
       <rect x="3" y="6" width="18" height="13" rx="2.5"/>
       <path d="M3 10.5h18"/>
       <circle cx="16.5" cy="14.5" r="1.3" fill={color} stroke="none"/>
-    </svg>
-  )
-}
-
-function IconBills({ color }: { color: string }) {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M17 2l3.5 3.5L17 9"/>
-      <path d="M3.5 10.5V9a3.5 3.5 0 0 1 3.5-3.5h13"/>
-      <path d="M7 22l-3.5-3.5L7 15"/>
-      <path d="M20.5 13.5V15a3.5 3.5 0 0 1-3.5 3.5H4"/>
     </svg>
   )
 }
@@ -112,13 +100,15 @@ function IconPlus({ color }: { color: string }) {
 
 // ─── Nav items ────────────────────────────────────────────────────────────────
 
-type FinanceScreen = 'today' | 'balance' | 'budget' | 'bills' | 'reports' | 'reflect' | 'goals' | 'plan'
+// Bills was a second place to write down a recurring payment, and it wrote to
+// nothing: a budget rule with a day on it already says what leaves and when,
+// and puts the entry in the ledger where every total can see it.
+type FinanceScreen = 'today' | 'balance' | 'budget' | 'reports' | 'reflect' | 'goals' | 'plan'
 
 const NAV_ITEMS: { id: FinanceScreen; label: string; Icon: (p: { color: string }) => React.ReactElement }[] = [
   { id: 'today',   label: 'Today',      Icon: IconToday },
   { id: 'balance', label: 'Balance',    Icon: IconBalance },
   { id: 'budget',  label: 'Budget',     Icon: IconBudget },
-  { id: 'bills',   label: 'Bills',      Icon: IconBills },
   { id: 'reports', label: 'Reports',    Icon: IconReports },
   { id: 'reflect', label: 'Financials', Icon: IconFinancials },
   { id: 'goals',   label: 'Goals',      Icon: IconGoals },
@@ -210,7 +200,6 @@ export function FinanceModule() {
       case 'today':   return <TodayScreen />
       case 'balance': return <BalanceScreen />
       case 'budget':  return <BudgetScreen />
-      case 'bills':   return <BillsScreen {...props} />
       case 'reports': return <ReportsScreen {...props} />
       case 'reflect': return <ReflectionScreen {...props} />
       case 'goals':   return <GoalsScreen />
