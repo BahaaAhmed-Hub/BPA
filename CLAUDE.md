@@ -294,6 +294,43 @@ there is no debounce and no merge.
 - `loadBills/loadGoals/loadBudgets` return `null` on a failed read and `[]` for a genuinely
   empty table. The two lead to opposite decisions; don't collapse them.
 
+## Finance — the pages ask who you are first
+`lock.ts` is the whole policy; `FinanceLockScreen.tsx` is the door;
+`useFinanceLock.ts` decides when it is shut. A fresh tab opens locked and it
+locks again after a stretch of doing nothing (Settings → Finance → SECURITY).
+- **Two ways through.** The device — WebAuthn, *platform* authenticator,
+  `userVerification: 'required'`, so the browser will not assert without
+  checking the person in front of it. Or a password, PBKDF2-SHA256 over 210k
+  rounds with a random salt, hashed here and sent nowhere.
+- **The lock cannot be turned on without a password.** A passkey lives in one
+  device's secure element and cannot travel; a lock set with only a fingerprint
+  would leave the next device signed in, locked, and with no way in.
+- **The policy travels, the passkey does not.** `finance-lock` is a prefSync
+  shared key; `finance-lock-device` never syncs — a credential id means nothing
+  on another device. Each device registers its own.
+- **Being unlocked is per tab** (`sessionStorage`), so a new tab starts locked
+  and a closed browser leaves nothing behind. The gate renders *instead of* the
+  module, not over it — there is no ledger behind it to screenshot.
+- The settings that control it sit behind the same lock, or it is a toggle
+  anyone holding the open laptop can flip. It is a lock on the screen, not on
+  the data: it stops that person, not somebody with your sign-in.
+
+## Tasks — where a task stands
+Two different things were called status and neither could be changed from the
+task itself. `TaskDetailPanel` now shows both in one cell:
+- **Its own state** — Open / Done / Cancelled, prefixed `__` in the select so it
+  cannot collide with a column of yours called Done.
+- **Its column** — one of `loadCustomStatuses()`, written to `boardStatus`.
+Choosing a column on a finished task *is* the reopen: `completed: false`,
+`status: 'open'`, `completedAt` cleared. The tick could only toggle and the
+board hides what is finished, so a task done by accident had nowhere to go back
+to. `updateTask` logs which happened.
+
+**A date on a task is not an event in Google.** The board's auto-push only fires
+for `quadrant === 'schedule'`, so a dated task in Do has nothing on the calendar.
+The panel says which, and `scheduleTaskToCalendar` puts it there on request from
+any quadrant. Nothing anywhere removes an event when a task is completed.
+
 ## Settings — Section → Component Mapping (CONFIRMED CORRECT as of latest commit)
 | Nav group | Section id | Title shown | Component rendered |
 |---|---|---|---|
