@@ -40,8 +40,8 @@ const SLOTS: string[] = Array.from({ length: 96 }, (_, i) =>
 
 const FIELD: React.CSSProperties = {
   width: '100%', boxSizing: 'border-box', height: 32, padding: '0 10px',
-  background: '#FAF7EC', border: '1px solid #E8E1CE', borderRadius: 8,
-  ...T.small, color: '#191712', cursor: 'pointer',
+  background: 'var(--sb-field)', border: '1px solid var(--sb-border)', borderRadius: 8,
+  ...T.small, color: 'var(--sb-ink-1)', cursor: 'pointer',
   display: 'flex', alignItems: 'center', textAlign: 'left',
 }
 
@@ -89,9 +89,9 @@ export function TimeSelect({ value, onChange, label, size = 'compact' }: {
 
   return (
     <div ref={ref} style={{ flex: 1, minWidth: 0, position: 'relative' }}>
-      {label && <span style={{ display: 'block', fontSize: 11, color: '#6C6553', marginBottom: 4 }}>{label}</span>}
+      {label && <span style={{ display: 'block', fontSize: 11, color: 'var(--sb-ink-3)', marginBottom: 4 }}>{label}</span>}
       <button type="button" onClick={() => setOpen(o => !o)} style={{
-        ...FIELD, borderColor: open ? '#CFC6B0' : '#E8E1CE',
+        ...FIELD, borderColor: open ? '#CFC6B0' : 'var(--sb-border)',
         ...(size === 'large' ? {
           height: 48, borderRadius: 11, ...T.body,
           border: '1px solid transparent', justifyContent: 'center',
@@ -101,7 +101,7 @@ export function TimeSelect({ value, onChange, label, size = 'compact' }: {
       {open && (
         <div style={{
           position: 'absolute', top: 'calc(100% + 5px)', left: 0, zIndex: 90, width: '100%', minWidth: 124,
-          background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 10, padding: 6,
+          background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 10, padding: 6,
           boxShadow: '0 18px 40px -18px rgba(25,23,18,.45)',
         }}>
           <input
@@ -111,8 +111,8 @@ export function TimeSelect({ value, onChange, label, size = 'compact' }: {
             placeholder="type e.g. 9:45"
             style={{
               width: '100%', boxSizing: 'border-box', height: 28, padding: '0 8px', marginBottom: 5,
-              background: '#FAF7EC', border: '1px solid #E8E1CE', borderRadius: 7,
-              ...T.small, color: '#191712', outline: 'none', textAlign: 'left',
+              background: 'var(--sb-field)', border: '1px solid var(--sb-border)', borderRadius: 7,
+              ...T.small, color: 'var(--sb-ink-1)', outline: 'none', textAlign: 'left',
             }} />
           <div ref={listRef} style={{ maxHeight: 196, overflowY: 'auto', scrollbarWidth: 'thin' }}>
             {SLOTS.map(t => {
@@ -120,7 +120,7 @@ export function TimeSelect({ value, onChange, label, size = 'compact' }: {
               return (
                 <button key={t} type="button" onClick={() => { onChange(t); setOpen(false) }} style={{
                   width: '100%', height: 28, padding: '0 8px', border: 'none', borderRadius: 7,
-                  background: on ? '#191712' : 'transparent', color: on ? '#FFFFFF' : '#191712',
+                  background: on ? 'var(--sb-ink-1)' : 'transparent', color: on ? 'var(--sb-card)' : 'var(--sb-ink-1)',
                   ...T.small, fontWeight: on ? 600 : 500, cursor: 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 }}>
@@ -183,7 +183,7 @@ export function SchedulePopover({ date, start, duration, onApply, onClose, align
   const { conflicts, checking } = useSlotConflicts(picked, from, to, ignoreEventId)
   const navBtn: React.CSSProperties = {
     width: 22, height: 22, borderRadius: '50%', border: 'none', background: 'transparent',
-    color: '#6C6553', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0,
+    color: 'var(--sb-ink-3)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0,
   }
 
   return (
@@ -194,11 +194,11 @@ export function SchedulePopover({ date, start, duration, onApply, onClose, align
       style={{
         position: 'absolute', top: 'calc(100% + 8px)', zIndex: 80, width: 292,
         ...(align === 'right' ? { right: 0 } : { left: 0 }),
-        background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 14, padding: 14,
+        background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 14, padding: 14,
         boxShadow: '0 24px 56px -22px rgba(25,23,18,.45)', textAlign: 'left',
       }}>
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: 10 }}>
-        <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: '#191712' }}>
+        <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: 'var(--sb-ink-1)' }}>
           {view.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}
         </span>
         <button type="button" onClick={() => setView(v => new Date(v.getFullYear(), v.getMonth() - 1, 1))} style={navBtn}>
@@ -220,8 +220,8 @@ export function SchedulePopover({ date, start, duration, onApply, onClose, align
           return (
             <button key={iso} type="button" onClick={() => setPicked(iso)} style={{
               height: 28, borderRadius: 7, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
-              background: on ? '#191712' : 'transparent',
-              color: on ? '#FFFFFF' : outside ? '#CFC6B0' : '#191712',
+              background: on ? 'var(--sb-ink-1)' : 'transparent',
+              color: on ? 'var(--sb-card)' : outside ? '#CFC6B0' : 'var(--sb-ink-1)',
               fontSize: 12, fontWeight: on ? 700 : 500,
             }}>{d.getDate()}</button>
           )
@@ -240,7 +240,7 @@ export function SchedulePopover({ date, start, duration, onApply, onClose, align
           <p style={{ ...T.small, margin: '9px 0 0', color: '#9B9180' }}>Checking that time…</p>
         ) : conflicts === null ? null
         : conflicts.length === 0 ? (
-          <p style={{ ...T.small, margin: '9px 0 0', color: '#0C8140' }}>
+          <p style={{ ...T.small, margin: '9px 0 0', color: 'var(--sb-positive)' }}>
             Nothing else booked then.
           </p>
         ) : (
@@ -260,7 +260,7 @@ export function SchedulePopover({ date, start, duration, onApply, onClose, align
               </p>
             ))}
             {conflicts.length > 3 && (
-              <p style={{ ...T.small, margin: '3px 0 0', color: '#6C6553' }}>
+              <p style={{ ...T.small, margin: '3px 0 0', color: 'var(--sb-ink-3)' }}>
                 and {conflicts.length - 3} more
               </p>
             )}
@@ -277,8 +277,8 @@ export function SchedulePopover({ date, start, duration, onApply, onClose, align
             type="button"
             onClick={() => { onApply({ dueDate: undefined, plannedTime: undefined, duration: undefined }); onClose() }}
             style={{
-              height: 30, padding: '0 12px', borderRadius: 8, border: '1px solid #E8E1CE', cursor: 'pointer',
-              background: 'transparent', color: '#6C6553', fontSize: 12.5, fontWeight: 500, fontFamily: 'inherit',
+              height: 30, padding: '0 12px', borderRadius: 8, border: '1px solid var(--sb-border)', cursor: 'pointer',
+              background: 'transparent', color: 'var(--sb-ink-3)', fontSize: 12.5, fontWeight: 500, fontFamily: 'inherit',
             }}>Clear</button>
         )}
         <button
@@ -286,7 +286,7 @@ export function SchedulePopover({ date, start, duration, onApply, onClose, align
           onClick={() => { onApply({ dueDate: picked, plannedTime: from, duration: minutes || undefined }); onClose() }}
           style={{
             height: 30, padding: '0 14px', borderRadius: 8, border: 'none', cursor: 'pointer',
-            background: 'var(--sb-accent)', color: '#191712', fontSize: 12.5, fontWeight: 600, fontFamily: 'inherit',
+            background: 'var(--sb-accent)', color: 'var(--sb-ink-1)', fontSize: 12.5, fontWeight: 600, fontFamily: 'inherit',
           }}>Set block</button>
       </div>
     </div>
