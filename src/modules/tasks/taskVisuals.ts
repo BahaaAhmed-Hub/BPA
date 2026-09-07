@@ -49,15 +49,15 @@ export const slotFilled: React.CSSProperties = {
 export const slotEmpty: React.CSSProperties = {
   ...slotFilled,
   background: 'transparent',
-  border: '1px dashed #E0D6BC',
+  border: '1px dashed var(--sb-border)',
   color: 'var(--sb-ink-4)',
 }
 
 /** Scheduled reads olive — it is the one slot that means "this has a block". */
 export const slotScheduled: React.CSSProperties = {
   ...slotFilled,
-  background: 'rgba(12,129,64,0.10)',
-  border: '1px solid #C8DAB0',
+  background: 'color-mix(in srgb, var(--sb-positive) 10%, transparent)',
+  border: '1px solid color-mix(in srgb, var(--sb-positive) 35%, transparent)',
   color: 'var(--sb-positive)',
 }
 

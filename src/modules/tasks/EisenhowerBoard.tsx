@@ -83,8 +83,13 @@ function QuadrantPanel({ spec, tasks, onOpen, onAction, groupBy }: {
 
   return (
     <div ref={setNodeRef} style={{
-      background: isOver ? '#FDF6DC' : spec.accent ? '#FFFCF0' : '#FDFCF8',
-      border: `1px solid ${isOver ? 'var(--sb-accent)' : spec.accent ? '#F0DFA8' : 'var(--sb-border)'}`,
+      // Three grounds, not one: the quadrant being dragged into, the two the
+      // week is decided in, and the other two. Collapsing them to a single
+      // tint is losing the distinction the board is for.
+      background: isOver ? 'var(--sb-accent-tint2)'
+        : spec.accent ? 'color-mix(in srgb, var(--sb-accent) 6%, var(--sb-card))'
+        : 'var(--sb-header)',
+      border: `1px solid ${isOver ? 'var(--sb-accent)' : spec.accent ? 'var(--sb-accent-border)' : 'var(--sb-border)'}`,
       borderRadius: 'var(--sb-r-nav)', padding: 14, transition: 'background .12s, border-color .12s',
       display: 'flex', flexDirection: 'column', gap: 10, minWidth: 0,
     }}>

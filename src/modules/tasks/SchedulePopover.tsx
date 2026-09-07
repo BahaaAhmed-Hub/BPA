@@ -92,7 +92,7 @@ export function TimeSelect({ value, onChange, label, size = 'compact' }: {
     <div ref={ref} style={{ flex: 1, minWidth: 0, position: 'relative' }}>
       {label && <span style={{ display: 'block', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', marginBottom: 4 }}>{label}</span>}
       <button type="button" onClick={() => setOpen(o => !o)} style={{
-        ...FIELD, borderColor: open ? '#CFC6B0' : 'var(--sb-border)',
+        ...FIELD, borderColor: open ? 'var(--sb-border)' : 'var(--sb-border)',
         ...(size === 'large' ? {
           height: 48, borderRadius: 'var(--sb-r-nav)', ...T.body,
           border: '1px solid transparent', justifyContent: 'center',
@@ -222,7 +222,7 @@ export function SchedulePopover({ date, start, duration, onApply, onClose, align
             <button key={iso} type="button" onClick={() => setPicked(iso)} style={{
               height: 28, borderRadius: 'var(--sb-r-chip)', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
               background: on ? 'var(--sb-ink-1)' : 'transparent',
-              color: on ? 'var(--sb-card)' : outside ? '#CFC6B0' : 'var(--sb-ink-1)',
+              color: on ? 'var(--sb-card)' : outside ? 'var(--sb-border)' : 'var(--sb-ink-1)',
               fontSize: 'var(--sb-t-body-s)', fontWeight: on ? 700 : 500,
             }}>{d.getDate()}</button>
           )
@@ -249,12 +249,12 @@ export function SchedulePopover({ date, start, duration, onApply, onClose, align
             marginTop: 9, padding: '8px 10px', borderRadius: 'var(--sb-r-sm)',
             background: 'rgba(var(--sb-accent-rgb),0.22)', border: '1px solid rgba(var(--sb-accent-rgb),0.7)',
           }}>
-            <p style={{ ...T.meta, margin: 0, fontWeight: 600, color: '#3D3926' }}>
+            <p style={{ ...T.meta, margin: 0, fontWeight: 600, color: 'var(--sb-ink-2)' }}>
               {conflicts.length === 1 ? 'Clashes with' : `Clashes with ${conflicts.length} events`}
             </p>
             {conflicts.slice(0, 3).map(c => (
               <p key={c.id} style={{
-                ...T.meta, margin: '3px 0 0', color: '#3D3926',
+                ...T.meta, margin: '3px 0 0', color: 'var(--sb-ink-2)',
                 overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
               }}>
                 {c.title} · {formatTime(c.from)} – {formatTime(c.to)}

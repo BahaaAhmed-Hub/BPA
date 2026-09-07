@@ -7,10 +7,15 @@ import { Flame } from 'lucide-react'
 import type { Task } from '@/types'
 import { isCarriedOver } from './taskVisuals'
 
-const INK = '#1E1A13'
-const DIM = '#A69C86'
+// The banner is an inverted panel: it is drawn on an --sb-ink-1 fill, so
+// everything on it comes from the ink that reads on that fill rather than from
+// the page's own ramp. --sb-border was a light grey that happened to sit well
+// on near-black — in a theme whose ink-1 is near-white it was invisible.
+const INK = 'var(--sb-ink-1)'
+const DIM = 'color-mix(in srgb, var(--sb-ink-on-dark) 88%, transparent)'
+const HAIR = 'color-mix(in srgb, var(--sb-ink-on-dark) 10%, transparent)'
 const AMBER = 'var(--sb-accent)'
-const OLIVE = '#7C8F4F'
+const OLIVE = 'var(--sb-positive)'
 
 function startOfDay(d: Date): Date {
   const x = new Date(d); x.setHours(0, 0, 0, 0); return x
@@ -68,7 +73,7 @@ function Bar({ value, peak, color, title }: { value: number; peak: number; color
         width: '100%',
         height: `${Math.max(14, Math.round((value / peak) * 100))}%`,
         borderRadius: 'var(--sb-r-chip)',
-        background: value === 0 ? 'rgba(255,255,255,0.09)' : color,
+        background: value === 0 ? HAIR : color,
       }} />
     </div>
   )
@@ -136,7 +141,7 @@ export function TaskBanner({ tasks }: { tasks: Task[] }) {
         />
       </div>
 
-      <span style={{ width: 1, background: 'rgba(255,255,255,0.10)', flexShrink: 0 }} />
+      <span style={{ width: 1, background: HAIR, flexShrink: 0 }} />
 
       {/* Six days of closures */}
       <div style={{ flex: 1, minWidth: 0, padding: '0 22px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
@@ -160,18 +165,18 @@ export function TaskBanner({ tasks }: { tasks: Task[] }) {
           {model.days.map(d => (
             <span key={d.iso} style={{
               flex: 1, minWidth: 0, textAlign: 'center', fontSize: 'var(--sb-t-micro)',
-              color: d.isToday ? 'var(--sb-card)' : DIM,
+              color: d.isToday ? 'var(--sb-ink-on-dark)' : DIM,
             }}>{d.label}</span>
           ))}
         </div>
       </div>
 
-      <span style={{ width: 1, background: 'rgba(255,255,255,0.10)', flexShrink: 0 }} />
+      <span style={{ width: 1, background: HAIR, flexShrink: 0 }} />
 
       {/* Pressure */}
       <div style={{ padding: '0 22px', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 26 }}>
         <Stat label="On fire" value={String(model.onFire)} center icon={Flame}
-          accent={model.onFire > 0 ? '#E2765C' : undefined} />
+          accent={model.onFire > 0 ? 'var(--sb-negative)' : undefined} />
         <Stat label="Carried over" value={String(model.carried)} center
           accent={model.carried > 0 ? AMBER : undefined} />
       </div>

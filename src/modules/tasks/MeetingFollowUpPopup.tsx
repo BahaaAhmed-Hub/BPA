@@ -6,6 +6,7 @@ import type { ExtractedTask } from '@/lib/professor'
 import { loadDynamicCompanies, getVisibleUsers } from '@/types'
 import type { Task, Quadrant } from '@/types'
 import { ICON, STROKE } from '@/lib/type'
+import { alpha } from '@/lib/alpha'
 
 // ─── editable task row (draft state) ─────────────────────────────────────────
 
@@ -35,10 +36,10 @@ function toDraft(t: ExtractedTask, allUsers: ReturnType<typeof getVisibleUsers>)
 
 const Q_OPTIONS: { value: Quadrant | null; label: string; color: string }[] = [
   { value: 'do',        label: 'Do',       color: 'var(--sb-negative)' },
-  { value: 'schedule',  label: 'Schedule', color: '#685FD7' },
-  { value: 'delegate',  label: 'Delegate', color: '#177C5B' },
-  { value: 'eliminate', label: 'Eliminate',color: '#888780' },
-  { value: null,        label: 'Inbox',    color: '#685FD7' },
+  { value: 'schedule',  label: 'Schedule', color: 'var(--sb-info)' },
+  { value: 'delegate',  label: 'Delegate', color: 'var(--sb-positive)' },
+  { value: 'eliminate', label: 'Eliminate',color: 'var(--sb-ink-4)' },
+  { value: null,        label: 'Inbox',    color: 'var(--sb-info)' },
 ]
 
 // ─── inline edit row ──────────────────────────────────────────────────────────
@@ -66,7 +67,7 @@ function TaskRow({ draft, index, expanded, users, onToggle, onChange, onDelete }
   return (
     <div style={{
       borderRadius: 'var(--sb-r-nav)',
-      border: `1px solid ${expanded ? '#353A60' : 'var(--sb-border)'}`,
+      border: `1px solid ${expanded ? 'var(--sb-ink-2)' : 'var(--sb-border)'}`,
       background: expanded ? 'var(--sb-field)' : 'var(--sb-card)',
       overflow: 'hidden',
       transition: 'all 0.15s',
@@ -102,7 +103,7 @@ function TaskRow({ draft, index, expanded, users, onToggle, onChange, onDelete }
           {q && (
             <span style={{
               fontSize: 'var(--sb-t-micro)', padding: '1px 7px', borderRadius: 'var(--sb-r-chip)', fontWeight: 600,
-              background: `${q.color}18`, color: q.color,
+              background: alpha(q.color, 9.4), color: q.color,
             }}>
               {q.label}
             </span>
@@ -113,7 +114,7 @@ function TaskRow({ draft, index, expanded, users, onToggle, onChange, onDelete }
             </span>
           )}
           {owner && (
-            <span style={{ fontSize: 'var(--sb-t-micro)', color: '#177C5B', fontWeight: 500 }}>
+            <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-positive)', fontWeight: 500 }}>
               → {owner.name.split(' ')[0]}
             </span>
           )}
@@ -142,7 +143,7 @@ function TaskRow({ draft, index, expanded, users, onToggle, onChange, onDelete }
           {/* Quadrant selector */}
           <div>
             <label style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', display: 'block', marginBottom: 6 }}>
-              Eisenhower box <span style={{ color: '#404560' }}>(leave as Inbox to decide later)</span>
+              Eisenhower box <span style={{ color: 'var(--sb-ink-2)' }}>(leave as Inbox to decide later)</span>
             </label>
             <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
               {Q_OPTIONS.map(opt => {
@@ -153,7 +154,7 @@ function TaskRow({ draft, index, expanded, users, onToggle, onChange, onDelete }
                     onClick={() => onChange({ quadrant: opt.value })}
                     style={{
                       padding: '4px 10px', borderRadius: 'var(--sb-r-chip)', fontSize: 'var(--sb-t-meta)', fontWeight: active ? 700 : 500,
-                      background: active ? `${opt.color}22` : 'transparent',
+                      background: active ? alpha(opt.color, 13.3) : 'transparent',
                       border: `1px solid ${active ? opt.color + '60' : 'var(--sb-border)'}`,
                       color: active ? opt.color : 'var(--sb-ink-4)',
                       cursor: 'pointer', transition: 'all 0.1s',
@@ -309,10 +310,10 @@ export function MeetingFollowUpPopup({ parentTask, onConfirm, onSkip }: Props) {
         }}>
           <div style={{
             width: 34, height: 34, borderRadius: 'var(--sb-r-nav)',
-            background: '#1D9E7518', border: '1px solid #1D9E7530',
+            background: 'color-mix(in srgb, var(--sb-positive) 9.4%, transparent)', border: '1px solid color-mix(in srgb, var(--sb-positive) 18.8%, transparent)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
           }}>
-            <Check size={ICON.md} color="#177C5B" strokeWidth={STROKE.active} />
+            <Check size={ICON.md} color="var(--sb-positive)" strokeWidth={STROKE.active} />
           </div>
           <div style={{ flex: 1 }}>
             <h3 style={{ margin: '0 0 2px', fontSize: 'var(--sb-t-h3)', fontWeight: 700, color: 'var(--sb-ink-1)' }}>
@@ -364,7 +365,7 @@ export function MeetingFollowUpPopup({ parentTask, onConfirm, onSkip }: Props) {
               {error && (
                 <div style={{
                   marginTop: 10, padding: '8px 12px', borderRadius: 'var(--sb-r-chip)',
-                  background: '#E0525218', border: '1px solid #E0525240',
+                  background: 'color-mix(in srgb, var(--sb-negative) 9.4%, transparent)', border: '1px solid color-mix(in srgb, var(--sb-negative) 25.1%, transparent)',
                   color: 'var(--sb-negative)', fontSize: 'var(--sb-t-meta)', lineHeight: 1.4,
                 }}>
                   {error}
@@ -441,9 +442,9 @@ export function MeetingFollowUpPopup({ parentTask, onConfirm, onSkip }: Props) {
               disabled={loading}
               style={{
                 padding: '7px 16px', borderRadius: 'var(--sb-r-chip)', fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
-                background: loading ? 'var(--sb-field)' : 'rgba(127,119,221,0.1)',
-                border: '1px solid #7F77DD50',
-                color: loading ? 'var(--sb-ink-4)' : '#7F77DD',
+                background: loading ? 'var(--sb-field)' : 'color-mix(in srgb, var(--sb-info) 10.0%, transparent)',
+                border: '1px solid color-mix(in srgb, var(--sb-info) 31.4%, transparent)',
+                color: loading ? 'var(--sb-ink-4)' : 'var(--sb-info)',
                 cursor: loading ? 'not-allowed' : 'pointer',
                 display: 'flex', alignItems: 'center', gap: 6,
               }}
@@ -457,9 +458,9 @@ export function MeetingFollowUpPopup({ parentTask, onConfirm, onSkip }: Props) {
               disabled={activeCount === 0}
               style={{
                 padding: '7px 18px', borderRadius: 'var(--sb-r-chip)', fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
-                background: activeCount > 0 ? '#1D9E7522' : 'var(--sb-field)',
-                border: `1px solid ${activeCount > 0 ? '#1D9E7550' : 'var(--sb-border)'}`,
-                color: activeCount > 0 ? '#1D9E75' : 'var(--sb-ink-4)',
+                background: activeCount > 0 ? 'color-mix(in srgb, var(--sb-positive) 13.3%, transparent)' : 'var(--sb-field)',
+                border: `1px solid ${activeCount > 0 ? 'color-mix(in srgb, var(--sb-positive) 31.4%, transparent)' : 'var(--sb-border)'}`,
+                color: activeCount > 0 ? 'var(--sb-positive)' : 'var(--sb-ink-4)',
                 cursor: activeCount > 0 ? 'pointer' : 'not-allowed',
                 display: 'flex', alignItems: 'center', gap: 6,
               }}

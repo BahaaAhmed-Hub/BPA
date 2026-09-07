@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
+import { WALL_PALETTE } from '@/lib/palettes'
 import { Button } from '@/components/ui'
 import { stepFor } from '@/lib/habitSteps'
 import { Plus, Trash2, X, ChevronLeft, ChevronRight } from 'lucide-react'
@@ -10,6 +11,7 @@ import {
 import { saveHabitLogsToDB } from '@/lib/dbSync'
 import { markLocalWrite } from '@/lib/liveSync'
 import { ICON, STROKE } from '@/lib/type'
+import { alpha } from '@/lib/alpha'
 
 let logsDbTimer: ReturnType<typeof setTimeout> | null = null
 function scheduleLogsSync(logs: HabitLogs) {
@@ -210,7 +212,7 @@ export function EmojiBtn({ value, onSelect, size = 24 }: {
         {value}
       </button>
       {open && (
-        <div style={{ position: 'absolute', top: size + 6, left: 0, zIndex: 300, background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', padding: '8px', display: 'flex', gap: 4, flexWrap: 'wrap', width: 252, maxHeight: 260, overflowY: 'auto', boxShadow: 'var(--sb-shadow-menu)' }}>
+        <div className="sb-blur-surface" style={{ position: 'absolute', top: size + 6, left: 0, zIndex: 300, background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', padding: '8px', display: 'flex', gap: 4, flexWrap: 'wrap', width: 252, maxHeight: 260, overflowY: 'auto', boxShadow: 'var(--sb-shadow-menu)' }}>
           {EMOJIS.map(e => (
             <button key={e} onClick={() => { onSelect(e); setOpen(false) }}
               style={{ fontSize: 'var(--sb-t-h3)', width: 32, height: 32, borderRadius: 'var(--sb-r-chip)', cursor: 'pointer', border: '1px solid', borderColor: e === value ? 'var(--sb-border)' : 'transparent', background: e === value ? 'var(--sb-field)' : 'transparent' }}>{e}</button>
@@ -250,12 +252,12 @@ function WeekCell({
 }: {
   done: boolean; isToday: boolean; isFuture: boolean; onToggle: () => void
 }) {
-  let bg = '#F3EEE0'
+  let bg = 'var(--sb-accent-tint)'
   let border = '1px solid var(--sb-border)'
   let content = null
 
   if (isFuture) {
-    bg = '#F3EEE0'; border = '1px solid var(--sb-border)'
+    bg = 'var(--sb-accent-tint)'; border = '1px solid var(--sb-border)'
   } else if (done) {
     bg = 'var(--sb-ink-1)'; border = '1px solid var(--sb-ink-1)'
     content = (
@@ -328,7 +330,7 @@ function ProgressRing({ done, total }: { done: number; total: number }) {
   return (
     <span style={{
       position: 'relative', width: 52, height: 52, flexShrink: 0, borderRadius: 'var(--sb-r-pill)',
-      background: `conic-gradient(var(--sb-ink-1) 0deg, var(--sb-ink-1) ${deg}deg, #EFE7D4 ${deg}deg)`,
+      background: `conic-gradient(var(--sb-ink-1) 0deg, var(--sb-ink-1) ${deg}deg, var(--sb-accent-tint) ${deg}deg)`,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
     }}>
       <span style={{ position: 'absolute', inset: 6, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-card)', border: '1px solid var(--sb-border)' }} />
@@ -340,11 +342,6 @@ function ProgressRing({ done, total }: { done: number; total: number }) {
 }
 
 // ─── Wall view card (12A) ─────────────────────────────────────────────────────
-
-const WALL_PALETTE = [
-  '#E8E4D8','#D9E4C8','#D8E0E4','#E4D9D8','#E4E0D8',
-  '#DDD8E4','#D8E4E0','#E4DDD8','#D8E0D8',
-]
 
 
 /** The one way to log a habit from a card: a done toggle, or − N + for a count.
@@ -366,8 +363,8 @@ function HabitLogControl({ isQty, todayDone, qtyValue, unit, tone, isToday = tru
   const track: React.CSSProperties = {
     display: 'flex', alignItems: 'center', gap: 6, height: 34, boxSizing: 'border-box',
     width: '100%', padding: 3, borderRadius: 'var(--sb-r-pill)', minWidth: 0,
-    background: light ? 'rgba(253,248,231,.16)' : 'var(--sb-field)',
-    border: `1px solid ${light ? 'rgba(253,248,231,.4)' : 'var(--sb-border)'}`,
+    background: light ? 'color-mix(in srgb, var(--sb-accent-tint) 16.0%, transparent)' : 'var(--sb-field)',
+    border: `1px solid ${light ? 'color-mix(in srgb, var(--sb-accent-tint) 40.0%, transparent)' : 'var(--sb-border)'}`,
     ...(light ? { backdropFilter: 'blur(6px)' } : {}),
   }
   const round: React.CSSProperties = {
@@ -382,7 +379,7 @@ function HabitLogControl({ isQty, todayDone, qtyValue, unit, tone, isToday = tru
         onClick={e => { e.stopPropagation(); onToggle() }}
         style={{
           ...track, justifyContent: 'center', gap: 7, cursor: 'pointer', fontFamily: 'inherit',
-          background: todayDone ? (light ? 'rgba(253,248,231,.9)' : 'var(--sb-positive)') : track.background,
+          background: todayDone ? (light ? 'color-mix(in srgb, var(--sb-accent-tint) 90.0%, transparent)' : 'var(--sb-positive)') : track.background,
           border: todayDone ? '1px solid transparent' : track.border,
           color: todayDone ? (light ? 'var(--sb-ink-1)' : 'var(--sb-ink-on-dark)') : ink,
           fontSize: 'var(--sb-t-meta)', fontWeight: 700,
@@ -400,8 +397,8 @@ function HabitLogControl({ isQty, todayDone, qtyValue, unit, tone, isToday = tru
         disabled={qtyValue === 0}
         style={{
           ...round,
-          background: light ? 'rgba(253,248,231,.2)' : 'var(--sb-card)',
-          border: `1px solid ${light ? 'rgba(253,248,231,.34)' : 'var(--sb-border)'}`,
+          background: light ? 'color-mix(in srgb, var(--sb-accent-tint) 20.0%, transparent)' : 'var(--sb-card)',
+          border: `1px solid ${light ? 'color-mix(in srgb, var(--sb-accent-tint) 34.0%, transparent)' : 'var(--sb-border)'}`,
           color: ink, opacity: qtyValue === 0 ? 0.45 : 1,
           cursor: qtyValue === 0 ? 'default' : 'pointer',
         }}>
@@ -455,7 +452,7 @@ function WallCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, o
       {/* Left: photo-style colored panel with gradient overlay */}
       <span style={{ position: 'relative', width: '66.6%', flexShrink: 0 }}>
         {/* Warm gradient fill simulating photo */}
-        <span style={{ position: 'absolute', inset: 0, background: `linear-gradient(135deg, ${bgColor} 0%, ${bgColor}CC 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <span style={{ position: 'absolute', inset: 0, background: `linear-gradient(135deg, ${bgColor} 0%, ${alpha(bgColor, 80.0)} 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           {habit.image
             ? <img src={habit.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
             : <span style={{ fontSize: 52, opacity: 0.18, fontWeight: 700 }}>{pictureStandIn(habit)}</span>}
@@ -464,18 +461,18 @@ function WallCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, o
         <span style={{
           position: 'absolute', inset: 0, pointerEvents: 'none',
           background: habit.image
-            ? 'linear-gradient(180deg,rgba(25,23,18,.30) 0%,rgba(25,23,18,.02) 42%,rgba(25,23,18,.48) 100%)'
-            : 'linear-gradient(180deg,rgba(25,23,18,.46) 0%,rgba(25,23,18,.10) 40%,rgba(25,23,18,.52) 100%)',
+            ? 'linear-gradient(180deg,color-mix(in srgb, var(--sb-ink-1) 30.0%, transparent) 0%,color-mix(in srgb, var(--sb-ink-1) 2.0%, transparent) 42%,color-mix(in srgb, var(--sb-ink-1) 48.0%, transparent) 100%)'
+            : 'linear-gradient(180deg,color-mix(in srgb, var(--sb-ink-1) 46.0%, transparent) 0%,color-mix(in srgb, var(--sb-ink-1) 10.0%, transparent) 40%,color-mix(in srgb, var(--sb-ink-1) 52.0%, transparent) 100%)',
         }} />
         {/* Content overlay */}
         <span style={{ position: 'absolute', inset: 0, pointerEvents: 'none', display: 'flex', flexDirection: 'column', padding: '12px 13px' }}>
           {/* Streak badge */}
-          <span style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto', height: 20, padding: '0 8px', borderRadius: 'var(--sb-r-pill)', background: 'rgba(25,23,18,.42)', border: '1px solid rgba(255,255,255,.36)', color: 'var(--sb-card)', fontSize: 'var(--sb-t-micro)', fontWeight: 700, flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto', height: 20, padding: '0 8px', borderRadius: 'var(--sb-r-pill)', background: 'color-mix(in srgb, var(--sb-ink-1) 42.0%, transparent)', border: '1px solid rgba(255,255,255,.36)', color: 'var(--sb-card)', fontSize: 'var(--sb-t-micro)', fontWeight: 700, flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3c3 4 5 6 5 9a5 5 0 0 1-10 0c0-2 1-3.5 2.5-5"/></svg>
             {streak}d
           </span>
           {/* Habit name */}
-          <span style={{ marginTop: 'auto', fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h2)', fontWeight: 700, letterSpacing: '-0.02em', lineHeight: 1.15, color: 'var(--sb-card)', textShadow: '0 1px 10px rgba(25,23,18,.55)' }}>{habit.name}</span>
+          <span style={{ marginTop: 'auto', fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h2)', fontWeight: 700, letterSpacing: '-0.02em', lineHeight: 1.15, color: 'var(--sb-card)', textShadow: '0 1px 10px color-mix(in srgb, var(--sb-ink-1) 55.0%, transparent)' }}>{habit.name}</span>
         </span>
       </span>
       {/* Right: data panel */}
@@ -605,7 +602,7 @@ function FillCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, o
       )}
       {/* Background */}
       <span style={{ position: 'absolute', inset: 0 }}>
-        <span style={{ position: 'absolute', inset: 0, background: `linear-gradient(135deg, ${bgColor} 0%, ${bgColor}AA 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <span style={{ position: 'absolute', inset: 0, background: `linear-gradient(135deg, ${bgColor} 0%, ${alpha(bgColor, 66.7)} 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           {habit.image
             ? <img src={habit.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
             : <span style={{ fontSize: 72, opacity: 0.25, fontWeight: 700 }}>{pictureStandIn(habit)}</span>}
@@ -615,14 +612,14 @@ function FillCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, o
       <span style={{
         position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 2,
         background: hasImage
-          ? 'linear-gradient(180deg,rgba(25,23,18,.34) 0%,rgba(25,23,18,0) 30%,rgba(25,23,18,.14) 58%,rgba(25,23,18,.78) 100%)'
-          : 'linear-gradient(180deg,rgba(25,23,18,.52) 0%,rgba(25,23,18,.04) 34%,rgba(25,23,18,.30) 62%,rgba(25,23,18,.86) 100%)',
+          ? 'linear-gradient(180deg,color-mix(in srgb, var(--sb-ink-1) 34.0%, transparent) 0%,color-mix(in srgb, var(--sb-ink-1) 0.0%, transparent) 30%,color-mix(in srgb, var(--sb-ink-1) 14.0%, transparent) 58%,color-mix(in srgb, var(--sb-ink-1) 78.0%, transparent) 100%)'
+          : 'linear-gradient(180deg,color-mix(in srgb, var(--sb-ink-1) 52.0%, transparent) 0%,color-mix(in srgb, var(--sb-ink-1) 4.0%, transparent) 34%,color-mix(in srgb, var(--sb-ink-1) 30.0%, transparent) 62%,color-mix(in srgb, var(--sb-ink-1) 86.0%, transparent) 100%)',
       }} />
       {/* Content */}
       <span style={{ position: 'absolute', inset: 0, zIndex: 3, display: 'flex', flexDirection: 'column', padding: '12px 11px' }}>
         {/* Top */}
         <span style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: 4, height: 19, padding: '0 7px', borderRadius: 'var(--sb-r-pill)', background: 'rgba(253,248,231,.16)', border: '1px solid rgba(253,248,231,.32)', color: 'var(--sb-ink-on-dark)', fontSize: 'var(--sb-t-micro)', fontWeight: 700, alignSelf: 'flex-start', fontVariantNumeric: 'tabular-nums' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 4, height: 19, padding: '0 7px', borderRadius: 'var(--sb-r-pill)', background: 'color-mix(in srgb, var(--sb-accent-tint) 16.0%, transparent)', border: '1px solid color-mix(in srgb, var(--sb-accent-tint) 32.0%, transparent)', color: 'var(--sb-ink-on-dark)', fontSize: 'var(--sb-t-micro)', fontWeight: 700, alignSelf: 'flex-start', fontVariantNumeric: 'tabular-nums' }}>
             <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3c3 4 5 6 5 9a5 5 0 0 1-10 0c0-2 1-3.5 2.5-5"/></svg>
             {streak}d
           </span>
@@ -643,7 +640,7 @@ function FillCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, o
             }}>
               {isQty ? `${qtyValue}${habit.unit ? ' ' + habit.unit : ''}` : (todayDone ? 'Done' : 'Not done')}
             </span>
-            <span style={{ fontSize: 'var(--sb-t-micro)', color: 'rgba(253,248,231,.78)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <span style={{ fontSize: 'var(--sb-t-micro)', color: 'color-mix(in srgb, var(--sb-accent-tint) 78.0%, transparent)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {hasGoal
                 ? `of ${habit.goal} ${habit.unit ?? ''}`.trim()
                 : isQty ? 'no target — count as you go'
@@ -653,7 +650,7 @@ function FillCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, o
 
           {hasGoal && (
             <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ flex: 1, height: 5, borderRadius: 'var(--sb-r-pill)', background: 'rgba(253,248,231,.24)', overflow: 'hidden', display: 'block' }}>
+              <span style={{ flex: 1, height: 5, borderRadius: 'var(--sb-r-pill)', background: 'color-mix(in srgb, var(--sb-accent-tint) 24.0%, transparent)', overflow: 'hidden', display: 'block' }}>
                 <span style={{ display: 'block', width: `${displayPct}%`, height: '100%', background: 'var(--sb-accent)', borderRadius: 'var(--sb-r-pill)' }} />
               </span>
               <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, color: 'var(--sb-ink-on-dark)', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{displayPct}%</span>
@@ -1027,7 +1024,7 @@ export function HabitsModule() {
               <button key={v.id} onClick={() => { setView(v.id); saveHabitView(v.id) }} style={{
                 height: 28, padding: '0 12px', borderRadius: 'var(--sb-r-pill)',
                 background: view === v.id ? 'var(--sb-card)' : 'transparent',
-                boxShadow: view === v.id ? '0 1px 3px rgba(25,23,18,.16)' : 'none',
+                boxShadow: view === v.id ? '0 1px 3px color-mix(in srgb, var(--sb-ink-1) 16.0%, transparent)' : 'none',
                 color: view === v.id ? 'var(--sb-ink-1)' : 'var(--sb-ink-3)',
                 fontWeight: view === v.id ? 600 : 500, fontSize: 'var(--sb-t-body-s)',
                 border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center',
@@ -1090,7 +1087,7 @@ export function HabitsModule() {
                     opacity: future ? 0.45 : 1, fontFamily: 'inherit',
                   }}>
                   <span style={{
-                    width: 12, height: 34, borderRadius: 'var(--sb-r-chip)', background: '#F3EEE0',
+                    width: 12, height: 34, borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-accent-tint)',
                     display: 'flex', alignItems: 'flex-end', overflow: 'hidden',
                     outline: on ? '2px solid var(--sb-ink-1)' : 'none', outlineOffset: 2,
                   }}>
@@ -1301,7 +1298,7 @@ export function HabitsModule() {
               {/* Drag handle */}
               <span draggable onDragStart={() => { dragHabitIdx.current = i }}
                 title="Drag to reorder"
-                style={{ color: '#CFC7B2', flexShrink: 0, cursor: 'grab', display: 'flex' }}>
+                style={{ color: 'var(--sb-border)', flexShrink: 0, cursor: 'grab', display: 'flex' }}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="9" cy="6" r="1.2"/><circle cx="9" cy="12" r="1.2"/><circle cx="9" cy="18" r="1.2"/>
                   <circle cx="15" cy="6" r="1.2"/><circle cx="15" cy="12" r="1.2"/><circle cx="15" cy="18" r="1.2"/>
@@ -1327,7 +1324,7 @@ export function HabitsModule() {
                 style={{ flex: 1, minWidth: 0, cursor: 'pointer' }}
               >
                 <InlineEdit value={habit.name} onSave={v => updateHabit(habit.id, { name: v })}
-                  style={{ fontSize: 'var(--sb-t-label)', fontWeight: 600, color: detailHabitId === habit.id ? '#B4853A' : 'var(--sb-ink-1)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0, width: '100%' }} />
+                  style={{ fontSize: 'var(--sb-t-label)', fontWeight: 600, color: detailHabitId === habit.id ? 'var(--sb-warning)' : 'var(--sb-ink-1)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0, width: '100%' }} />
               </span>
 
               {/* Quantity control for measurable habits */}
@@ -1372,7 +1369,7 @@ export function HabitsModule() {
               </span>
 
               {/* Streak */}
-              <span style={{ display: 'flex', alignItems: 'center', gap: 4, width: 48, justifyContent: 'flex-end', flexShrink: 0, fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: streak > 0 ? '#4E7645' : 'var(--sb-ink-3)', fontVariantNumeric: 'tabular-nums' }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 4, width: 48, justifyContent: 'flex-end', flexShrink: 0, fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: streak > 0 ? 'var(--sb-ink-3)' : 'var(--sb-ink-3)', fontVariantNumeric: 'tabular-nums' }}>
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3c3 4 5 6 5 9a5 5 0 0 1-10 0c0-2 1-3.5 2.5-5"/></svg>
                 {streak > 0 ? `${streak}d` : '0d'}
               </span>
@@ -1441,9 +1438,9 @@ export function HabitsModule() {
 
       {/* ─── All-done banner ────────────────────────────────────────────────── */}
       {todayDone === totalActive && totalActive > 0 && (
-        <div style={{ padding: '14px 18px', borderRadius: 'var(--sb-r-nav)', background: 'rgba(78,118,69,0.08)', border: '1px solid rgba(78,118,69,0.2)', display: 'flex', alignItems: 'center', gap: 10 }}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4E7645" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3c3 4 5 6 5 9a5 5 0 0 1-10 0c0-2 1-3.5 2.5-5"/></svg>
-          <p style={{ margin: 0, fontSize: 'var(--sb-t-body)', color: '#4E7645', fontWeight: 500 }}>
+        <div style={{ padding: '14px 18px', borderRadius: 'var(--sb-r-nav)', background: 'color-mix(in srgb, var(--sb-ink-3) 8.0%, transparent)', border: '1px solid color-mix(in srgb, var(--sb-ink-3) 20.0%, transparent)', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--sb-ink-3)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3c3 4 5 6 5 9a5 5 0 0 1-10 0c0-2 1-3.5 2.5-5"/></svg>
+          <p style={{ margin: 0, fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-3)', fontWeight: 500 }}>
             All habits complete for today. Exceptional discipline — keep the streak alive.
           </p>
         </div>

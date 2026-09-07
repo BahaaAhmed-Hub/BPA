@@ -233,7 +233,7 @@ function MailPopup({ row, onClose, onArchive, onAddTask }: {
     body { margin:0; padding:4px 2px; font-family:-apple-system,system-ui,sans-serif; font-size:14px;
            line-height:1.6; color:var(--sb-ink-1); word-break:break-word; }
     img { max-width:100%; height:auto; }
-    a { color:#2563EB; }
+    a { color:var(--sb-info); }
     pre, blockquote { white-space:pre-wrap; }
     blockquote { margin:0 0 0 12px; padding-left:10px; border-left:2px solid var(--sb-border); color:var(--sb-ink-3); }
   </style></head><body>${row.html ?? `<pre>${row.body.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c] as string))}</pre>`}</body></html>`
@@ -249,7 +249,7 @@ function MailPopup({ row, onClose, onArchive, onAddTask }: {
       onClick={onClose}
       style={{
         position: 'fixed', inset: 0, zIndex: 300,
-        background: 'rgba(25,23,18,0.28)', backdropFilter: 'blur(2px)',
+        background: 'color-mix(in srgb, var(--sb-ink-1) 28.0%, transparent)', backdropFilter: 'blur(2px)',
         display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '8vh 20px 20px',
       }}>
       <div
@@ -285,7 +285,7 @@ function MailPopup({ row, onClose, onArchive, onAddTask }: {
             <span style={{
               flexShrink: 0, height: 20, padding: '0 8px', borderRadius: 'var(--sb-r-chip)',
               background: 'rgba(var(--sb-accent-rgb),0.28)', border: '1px solid rgba(var(--sb-accent-rgb),0.7)',
-              color: '#7A6412', fontSize: 'var(--sb-t-micro)', fontWeight: 800, letterSpacing: '0.06em',
+              color: 'var(--sb-accent-deep)', fontSize: 'var(--sb-t-micro)', fontWeight: 800, letterSpacing: '0.06em',
               display: 'inline-flex', alignItems: 'center',
             }}>NEEDS YOU</span>
           )}
@@ -404,7 +404,7 @@ function MailCard({ rows, loading, error, newsletters, onArchive, onArchiveAll, 
                   <span style={{
                     flexShrink: 0, height: 18, padding: '0 7px', borderRadius: 'var(--sb-r-chip)',
                     background: 'rgba(var(--sb-accent-rgb),0.28)', border: '1px solid rgba(var(--sb-accent-rgb),0.7)',
-                    color: '#7A6412', fontSize: 'var(--sb-t-micro)', fontWeight: 800, letterSpacing: '0.06em',
+                    color: 'var(--sb-accent-deep)', fontSize: 'var(--sb-t-micro)', fontWeight: 800, letterSpacing: '0.06em',
                     display: 'inline-flex', alignItems: 'center',
                   }}>NEEDS YOU</span>
                 )}
@@ -739,8 +739,8 @@ function PlanCard({
                     background: status === 'cancelled' ? 'var(--sb-field)'
                       : b.kind === 'proposed' ? 'rgba(var(--sb-accent-rgb),0.20)' : FIELD,
                     border: `1px solid ${b.kind === 'proposed' ? 'rgba(var(--sb-accent-rgb),0.6)' : 'var(--sb-border)'}`,
-                    borderLeft: `3px solid ${b.kind === 'proposed' ? AMBER : '#D8CFB8'}`,
-                    boxShadow: dragging ? '0 10px 24px -10px rgba(25,23,18,.45)' : 'none',
+                    borderLeft: `3px solid ${b.kind === 'proposed' ? AMBER : 'var(--sb-border)'}`,
+                    boxShadow: dragging ? '0 10px 24px -10px color-mix(in srgb, var(--sb-ink-1) 45.0%, transparent)' : 'none',
                     opacity: past || status === 'cancelled' ? 0.6 : 1,
                     cursor: canDrag ? (dragging ? 'grabbing' : 'grab') : 'pointer',
                     touchAction: 'none', userSelect: 'none',
@@ -807,7 +807,7 @@ function PlanCard({
           <span style={{ width: 8, height: 8, borderRadius: 'var(--sb-r-chip)', background: AMBER }} /> Proposed
         </span>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 'var(--sb-t-meta)', color: GHOST }}>
-          <span style={{ width: 8, height: 8, borderRadius: 'var(--sb-r-chip)', background: '#D8CFB8' }} /> Calendar
+          <span style={{ width: 8, height: 8, borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-border)' }} /> Calendar
         </span>
         <span style={{ flex: 1 }} />
         <button onClick={onOpenCalendar} style={{ ...PILL, height: 28 }}>Open calendar</button>
@@ -920,7 +920,7 @@ function HabitsCard({ habits, logs, qtyLogs, today, onToggle, onSetQty, onOpenTr
                       <span key={d} title={d} style={{
                         width: 15, height: 15, borderRadius: 'var(--sb-r-chip)', boxSizing: 'border-box',
                         background: on ? INK : 'var(--sb-field)',
-                        border: isToday ? `var(--sb-border-emphasis) solid ${on ? INK : '#CFC6B0'}` : 'var(--sb-border-emphasis) solid transparent',
+                        border: isToday ? `var(--sb-border-emphasis) solid ${on ? INK : 'var(--sb-border)'}` : 'var(--sb-border-emphasis) solid transparent',
                       }} />
                     )
                   })}
@@ -1249,7 +1249,9 @@ export function TodayPage() {
         </button>
         <button
           onClick={() => setActiveModule('tasks')}
-          style={{ ...PILL, background: AMBER, border: 'none', fontWeight: 600, boxShadow: 'var(--sb-shadow-control)' }}>
+          // A filled accent pill takes the ink the accent carries, which is
+          // pale wherever the accent is darker than the ink midpoint.
+          style={{ ...PILL, background: AMBER, color: 'var(--sb-accent-ink)', border: 'none', fontWeight: 600, boxShadow: 'var(--sb-shadow-control)' }}>
           <ArrowRight size={ICON.sm} strokeWidth={STROKE.active} /> Start the day
         </button>
       </div>
@@ -1263,7 +1265,7 @@ export function TodayPage() {
         {/* Left */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
           <div style={{ ...CARD, padding: '22px 24px 24px' }}>
-            <Quote size={ICON.md} strokeWidth={STROKE.rest} style={{ color: '#D8CFB8' }} />
+            <Quote size={ICON.md} strokeWidth={STROKE.rest} style={{ color: 'var(--sb-border)' }} />
             <h1 style={{
               margin: '8px 0 0', fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h1)', fontWeight: 600,
               letterSpacing: '-0.03em', lineHeight: 1.2, color: INK,
@@ -1273,7 +1275,7 @@ export function TodayPage() {
               {events.filter(e => !!e.start.dateTime).length} meetings today
             </p>
             {briefEdit === null ? (
-              <p style={{ margin: '14px 0 0', fontSize: 'var(--sb-t-body)', color: '#3D3926', lineHeight: 1.65 }}>{brief.body}</p>
+              <p style={{ margin: '14px 0 0', fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-2)', lineHeight: 1.65 }}>{brief.body}</p>
             ) : (
               <textarea
                 value={briefEdit}
@@ -1291,8 +1293,8 @@ export function TodayPage() {
                 padding: '11px 13px', borderRadius: 'var(--sb-r-nav)',
                 background: 'rgba(var(--sb-accent-rgb),0.14)', border: '1px solid rgba(var(--sb-accent-rgb),0.5)',
               }}>
-                <Zap size={ICON.sm} strokeWidth={STROKE.rest} style={{ color: '#9A7B1F', flexShrink: 0 }} />
-                <span style={{ fontSize: 'var(--sb-t-body-s)', color: '#3D3926' }}>{brief.callout}</span>
+                <Zap size={ICON.sm} strokeWidth={STROKE.rest} style={{ color: 'var(--sb-warning)', flexShrink: 0 }} />
+                <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-2)' }}>{brief.callout}</span>
               </div>
             )}
           </div>
@@ -1350,7 +1352,7 @@ export function TodayPage() {
                         title="Complete"
                         style={{
                           width: 17, height: 17, borderRadius: 'var(--sb-r-chip)', boxSizing: 'border-box', flexShrink: 0, padding: 0,
-                          border: '1px solid #CFC6B0', background: 'var(--sb-card)', cursor: 'pointer',
+                          border: '1px solid var(--sb-border)', background: 'var(--sb-card)', cursor: 'pointer',
                         }} />
                       <span style={{ flex: 1, minWidth: 0, fontSize: 'var(--sb-t-label)', fontWeight: 600, color: INK, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {t.title}

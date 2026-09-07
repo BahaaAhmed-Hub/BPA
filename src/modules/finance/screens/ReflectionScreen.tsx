@@ -66,7 +66,7 @@ function Grip({ onGrab, lifted }: { onGrab: (e: React.PointerEvent) => void; lif
       title="Drag to reorder"
       style={{
         display: 'inline-flex', flexShrink: 0, marginLeft: 3, padding: '3px 0',
-        color: lifted ? 'var(--sb-ink-1)' : '#CFC7B2',
+        color: lifted ? 'var(--sb-ink-1)' : 'var(--sb-border)',
         cursor: lifted ? 'grabbing' : 'grab', touchAction: 'none',
       }}>
       <GripVertical size={ICON.sm} strokeWidth={STROKE.rest} />
@@ -100,7 +100,7 @@ function CategoryRows({ row, tone, open, hidden, onToggleOpen, onToggleHide, onD
   const isOver  = overId === row.cat.id && !lifted
   // A dragged-over row is tinted, and the tint has to reach the sticky name
   // cell too — it paints its own background over whatever the row has.
-  const bg = isOver ? '#FBF1D2' : isHidden ? 'var(--sb-field)' : 'var(--sb-card)'
+  const bg = isOver ? 'var(--sb-accent-tint)' : isHidden ? 'var(--sb-field)' : 'var(--sb-card)'
   const total = months.reduce((s, v) => s + v, 0)
   const kids = row.children
   // A hidden part is taken out of the parent's figure, so it has to be out of
@@ -130,7 +130,7 @@ function CategoryRows({ row, tone, open, hidden, onToggleOpen, onToggleHide, onD
         title={isHidden ? 'Click to include in totals' : 'Click to hide from totals'}
         style={{
           borderBottom: '1px solid var(--sb-hairline)', cursor: 'pointer',
-          background: isOver ? '#FBF1D2' : isHidden ? 'var(--sb-field)' : 'transparent',
+          background: isOver ? 'var(--sb-accent-tint)' : isHidden ? 'var(--sb-field)' : 'transparent',
           opacity: lifted ? 0.4 : isHidden ? 0.45 : 1,
         }}
       >
@@ -154,7 +154,7 @@ function CategoryRows({ row, tone, open, hidden, onToggleOpen, onToggleHide, onD
               {row.cat.name}
             </span>
             {kids.length > 0 && !open && (
-              <span style={{ fontSize: 'var(--sb-t-micro)', color: '#C5BCA8' }}>+{kids.length}</span>
+              <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-border)' }}>+{kids.length}</span>
             )}
             <span style={{ flex: 1 }} />
             <Grip lifted={lifted} onGrab={onGrab(row.cat as Category)} />
@@ -164,14 +164,14 @@ function CategoryRows({ row, tone, open, hidden, onToggleOpen, onToggleHide, onD
           <Fragment key={mi}>{cell(v, ownIds, `${row.cat.name} · ${MONTHS_SHORT[mi]}`, mi, numCell(v))}</Fragment>
         ))}
         {cell(total, ownIds, `${row.cat.name} · the year`, null,
-          { ...numCell(total), fontWeight: 700, color: total === 0 ? '#C5BCA8' : tone })}
+          { ...numCell(total), fontWeight: 700, color: total === 0 ? 'var(--sb-border)' : tone })}
       </tr>
 
       {open && kids.map(kid => {
         const kidHidden = hidden(kid.cat.id) || isHidden
         const kidLifted = dragId === kid.cat.id
         const kidOver   = overId === kid.cat.id && !kidLifted
-        const kidBg = kidOver ? '#FBF1D2' : kidHidden ? 'var(--sb-field)' : '#FDFCF7'
+        const kidBg = kidOver ? 'var(--sb-accent-tint)' : kidHidden ? 'var(--sb-field)' : 'var(--sb-accent-tint)'
         const kidTotal = kid.amounts.reduce((s, v) => s + v, 0)
         return (
           <tr key={kid.cat.id}
@@ -179,13 +179,13 @@ function CategoryRows({ row, tone, open, hidden, onToggleOpen, onToggleHide, onD
             onClick={() => onToggleHide(kid.cat.id)}
             title={hidden(kid.cat.id) ? 'Click to include in totals' : 'Click to hide from totals'}
             style={{
-              borderBottom: '1px solid #F5F1E6', cursor: 'pointer', background: kidBg,
+              borderBottom: '1px solid var(--sb-accent-tint)', cursor: 'pointer', background: kidBg,
               opacity: kidLifted ? 0.4 : kidHidden ? 0.45 : 1,
             }}
           >
             <td style={{ padding: '0 14px', height: ROW_H - 4, position: 'sticky', left: 0, background: kidBg, zIndex: 2 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 7, paddingLeft: 23 }}>
-                <span style={{ width: 8, height: 1, background: '#DCD3BF', flexShrink: 0 }} />
+                <span style={{ width: 8, height: 1, background: 'var(--sb-border)', flexShrink: 0 }} />
                 <span style={{ display: 'inline-flex', color: kid.cat.color }}><CategoryGlyph icon={kid.cat.icon} size={11} /></span>
                 <span style={{ fontSize: 'var(--sb-t-body-s)', color: kidHidden ? 'var(--sb-ink-4)' : 'var(--sb-ink-2)', textDecoration: hidden(kid.cat.id) ? 'line-through' : 'none' }}>
                   {kid.cat.name}
@@ -197,11 +197,11 @@ function CategoryRows({ row, tone, open, hidden, onToggleOpen, onToggleHide, onD
             {kid.amounts.map((v, mi) => (
               <Fragment key={mi}>
                 {cell(v, [kid.cat.id], `${kid.cat.name} · ${MONTHS_SHORT[mi]}`, mi,
-                  { ...numCell(v), fontSize: 'var(--sb-t-meta)', color: v === 0 ? '#D8D0BE' : 'var(--sb-ink-3)' })}
+                  { ...numCell(v), fontSize: 'var(--sb-t-meta)', color: v === 0 ? 'var(--sb-border)' : 'var(--sb-ink-3)' })}
               </Fragment>
             ))}
             {cell(kidTotal, [kid.cat.id], `${kid.cat.name} · the year`, null,
-              { ...numCell(kidTotal), fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: kidTotal === 0 ? '#D8D0BE' : tone, opacity: 0.85 })}
+              { ...numCell(kidTotal), fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: kidTotal === 0 ? 'var(--sb-border)' : tone, opacity: 0.85 })}
           </tr>
         )
       })}
@@ -403,13 +403,15 @@ export function ReflectionScreen(_props?: any) {
       setDrag(null)
     }
 
-    const prevSelect = document.body.style.userSelect
-    document.body.style.userSelect = 'none'
+    // A class rather than a style write: the document's inline style belongs
+    // to lib/themes.ts, and this is a state ("something is being dragged")
+    // rather than a value.
+    document.body.classList.add('sb-dragging')
     window.addEventListener('pointermove', move)
     window.addEventListener('pointerup', up)
     window.addEventListener('pointercancel', up)
     return () => {
-      document.body.style.userSelect = prevSelect
+      document.body.classList.remove('sb-dragging')
       window.removeEventListener('pointermove', move)
       window.removeEventListener('pointerup', up)
       window.removeEventListener('pointercancel', up)
@@ -540,7 +542,7 @@ export function ReflectionScreen(_props?: any) {
     return {
       width: COL_W, minWidth: COL_W, textAlign: 'right' as const, padding: '0 10px',
       fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-body-s)', fontWeight: isNet ? 700 : 500,
-      color: isNet ? netColor(v) : v === 0 ? '#C5BCA8' : 'var(--sb-ink-1)',
+      color: isNet ? netColor(v) : v === 0 ? 'var(--sb-border)' : 'var(--sb-ink-1)',
       fontVariantNumeric: 'tabular-nums' as const,
       whiteSpace: 'nowrap' as const,
     }
@@ -563,7 +565,7 @@ export function ReflectionScreen(_props?: any) {
           <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', marginTop: 3, display: 'block' }}>
             Every income &amp; expense line by month — hide any row and every total recalculates
             {needRates.length > 0 && (
-              <span style={{ color: '#8A6D0B' }}>
+              <span style={{ color: 'var(--sb-accent-deep)' }}>
                 {' · '}{needRates.join(' and ')} left out — no rate set, see Settings → Finance
               </span>
             )}
@@ -584,12 +586,12 @@ export function ReflectionScreen(_props?: any) {
                     fontFamily: 'inherit', fontSize: 'var(--sb-t-meta)', fontWeight: basis === id ? 700 : 500,
                     background: basis === id ? 'var(--sb-card)' : 'transparent',
                     color: basis === id ? 'var(--sb-ink-1)' : 'var(--sb-ink-3)',
-                    boxShadow: basis === id ? '0 1px 3px rgba(25,23,18,0.16)' : 'none',
+                    boxShadow: basis === id ? '0 1px 3px color-mix(in srgb, var(--sb-ink-1) 16.0%, transparent)' : 'none',
                   }}>{label}</button>
               ))}
             </span>
             {basis === 'paid' && unpaidThisYear > 0 && (
-              <span style={{ fontSize: 'var(--sb-t-micro)', color: '#C08A2E' }}>
+              <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-warning)' }}>
                 {unpaidThisYear} not paid yet, so not in this view
               </span>
             )}
@@ -602,8 +604,9 @@ export function ReflectionScreen(_props?: any) {
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 6, height: 28,
                   padding: '0 11px', borderRadius: 'var(--sb-r-pill)', cursor: 'pointer',
-                  background: dupesOpen ? 'var(--sb-accent)' : '#FBEBC8',
-                  border: '1px solid var(--sb-accent-border)', color: '#7A5F09',
+                  background: dupesOpen ? 'var(--sb-accent)' : 'var(--sb-accent-tint)',
+                  border: '1px solid var(--sb-accent-border)',
+                  color: dupesOpen ? 'var(--sb-accent-ink)' : 'var(--sb-accent-deep)',
                   fontFamily: 'inherit', fontSize: 'var(--sb-t-meta)', fontWeight: 700,
                 }}>
                 {suspects.length} to check
@@ -618,7 +621,7 @@ export function ReflectionScreen(_props?: any) {
                   {suspects.map(t => (
                     <div key={t.id} style={{
                       display: 'flex', alignItems: 'center', gap: 8,
-                      padding: '5px 0', borderTop: '1px solid #F5F1E6', fontSize: 'var(--sb-t-body-s)',
+                      padding: '5px 0', borderTop: '1px solid var(--sb-accent-tint)', fontSize: 'var(--sb-t-body-s)',
                     }}>
                       {/* The whole line opens the entry — this list is where a
                           duplicate is noticed, so it should also be where it is
@@ -637,10 +640,10 @@ export function ReflectionScreen(_props?: any) {
                         <span style={{ flex: 1, minWidth: 0, color: 'var(--sb-ink-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {t.payee?.trim() || categories.find(c => c.id === t.categoryId)?.name || 'Entry'}
                         </span>
-                        <span style={{ color: dupes.get(t.id) === 'day' ? '#8A6D0B' : '#B0A488', fontSize: 'var(--sb-t-micro)', fontWeight: 700 }}>
+                        <span style={{ color: dupes.get(t.id) === 'day' ? 'var(--sb-accent-deep)' : 'var(--sb-border)', fontSize: 'var(--sb-t-micro)', fontWeight: 700 }}>
                           {dupes.get(t.id) === 'day' ? 'SAME DAY' : 'SAME MONTH'}
                         </span>
-                        <span style={{ fontFamily: 'var(--sb-font-num)', fontWeight: 600, color: '#3D3926', fontVariantNumeric: 'tabular-nums' }}>
+                        <span style={{ fontFamily: 'var(--sb-font-num)', fontWeight: 600, color: 'var(--sb-ink-2)', fontVariantNumeric: 'tabular-nums' }}>
                           {acct(Math.abs(t.amount), { currency: t.currency })}
                         </span>
                       </span>
@@ -773,7 +776,7 @@ export function ReflectionScreen(_props?: any) {
           onClick={() => setDrill(null)}
           style={{
             position: 'fixed', inset: 0, zIndex: 900,
-            background: 'rgba(25,23,18,0.42)', backdropFilter: 'blur(3px)',
+            background: 'color-mix(in srgb, var(--sb-ink-1) 42.0%, transparent)', backdropFilter: 'blur(3px)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
           }}>
           <div
@@ -787,7 +790,7 @@ export function ReflectionScreen(_props?: any) {
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
               <span style={{
                 display: 'inline-flex', alignItems: 'center', gap: 7,
-                background: '#F3EEE0', borderRadius: 'var(--sb-r-pill)', padding: '5px 12px',
+                background: 'var(--sb-accent-tint)', borderRadius: 'var(--sb-r-pill)', padding: '5px 12px',
                 fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-ink-3)',
               }}>
                 <span style={{ width: 6, height: 6, borderRadius: 'var(--sb-r-pill)', background: drill.kind === 'income' ? OLIVE : drill.kind === 'expense' ? RUST : 'var(--sb-ink-3)' }} />
@@ -949,7 +952,7 @@ function SectionHeader({ label, colCount: _colCount, colWidth, nameWidth: _nameW
       {monthTotals.map((v, i) => (
         <td key={i}
           onClick={v === 0 ? undefined : () => onDrill(`${label} · ${MONTHS_SHORT[i]}`, i)}
-          style={{ width: colWidth, textAlign: 'right', padding: '5px 10px', fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-meta)', color: v === 0 ? '#C5BCA8' : 'var(--sb-ink-3)', fontVariantNumeric: 'tabular-nums', cursor: v === 0 ? 'default' : 'pointer' }}>
+          style={{ width: colWidth, textAlign: 'right', padding: '5px 10px', fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-meta)', color: v === 0 ? 'var(--sb-border)' : 'var(--sb-ink-3)', fontVariantNumeric: 'tabular-nums', cursor: v === 0 ? 'default' : 'pointer' }}>
           {f(v)}
         </td>
       ))}
@@ -976,13 +979,13 @@ function TotalRow({ label, months, total, sign, COL_W, NAME_W: _NAME_W, onDrill 
       {months.map((v, mi) => (
         <td key={mi}
           onClick={v === 0 ? undefined : () => onDrill(`${label} · ${MONTHS_SHORT[mi]}`, mi)}
-          style={{ width: COL_W, minWidth: COL_W, textAlign: 'right', padding: '0 10px', fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-label)', fontWeight: 700, color: v === 0 ? '#C5BCA8' : col, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', cursor: v === 0 ? 'default' : 'pointer' }}>
+          style={{ width: COL_W, minWidth: COL_W, textAlign: 'right', padding: '0 10px', fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-label)', fontWeight: 700, color: v === 0 ? 'var(--sb-border)' : col, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', cursor: v === 0 ? 'default' : 'pointer' }}>
           {sign === 1 ? fmt(v) : fmtOut(v)}
         </td>
       ))}
       <td
         onClick={total === 0 ? undefined : () => onDrill(`${label} · the year`, null)}
-        style={{ width: 100, textAlign: 'right', padding: '0 14px', fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-label)', fontWeight: 700, color: total === 0 ? '#C5BCA8' : col, fontVariantNumeric: 'tabular-nums', cursor: total === 0 ? 'default' : 'pointer' }}>
+        style={{ width: 100, textAlign: 'right', padding: '0 14px', fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-label)', fontWeight: 700, color: total === 0 ? 'var(--sb-border)' : col, fontVariantNumeric: 'tabular-nums', cursor: total === 0 ? 'default' : 'pointer' }}>
         {sign === 1 ? fmt(total) : fmtOut(total)}
       </td>
     </tr>
@@ -1016,12 +1019,12 @@ function NetRow({ label, months, total, COL_W, NAME_W: _NAME_W2, onDrill }: {
 
 function CumulativeRow({ months, COL_W, NAME_W: _NAME_W3 }: { months: number[]; COL_W: number; NAME_W: number }) {
   return (
-    <tr style={{ background: 'var(--sb-ink-1)', borderBottom: '1px solid #2C2920' }}>
+    <tr style={{ background: 'var(--sb-ink-1)', borderBottom: '1px solid var(--sb-ink-1)' }}>
       <td style={{ padding: '0 14px', height: 40, position: 'sticky', left: 0, background: 'var(--sb-ink-1)', zIndex: 2 }}>
         <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.1em', color: 'var(--sb-ink-4)' }}>CUMULATIVE CASH</span>
       </td>
       {months.map((v, mi) => (
-        <td key={mi} style={{ width: COL_W, minWidth: COL_W, textAlign: 'right', padding: '0 10px', fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-body-s)', fontWeight: 700, color: v === 0 ? 'var(--sb-ink-2)' : v > 0 ? '#7EC878' : '#E87A65', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+        <td key={mi} style={{ width: COL_W, minWidth: COL_W, textAlign: 'right', padding: '0 10px', fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-body-s)', fontWeight: 700, color: v === 0 ? 'var(--sb-ink-2)' : v > 0 ? 'var(--sb-positive-tint)' : 'var(--sb-negative)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
           {fmt(v)}
         </td>
       ))}

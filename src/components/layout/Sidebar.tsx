@@ -26,15 +26,9 @@ const MODE_ICONS: Record<string, LucideIcon> = {
   astral:  Sparkles,
 }
 
-const MODE_ACCENT: Record<string, string> = {
-  default: '',
-  samurai: '#8B1A1A',
-  pharaoh: '#C9A227',
-  astral:  '#7C3AED',
-}
 import { useUIStore } from '@/store/uiStore'
 import { useBehavioralStore } from '@/store/behavioralStore'
-import { ICON } from '@/lib/type'
+import { ICON, STROKE } from '@/lib/type'
 import { NavRow } from '@/components/ui'
 
 const NAV_ITEMS = [
@@ -60,6 +54,7 @@ export function Sidebar() {
 
   return (
     <aside
+      className="sb-blur-surface"
       style={{
         width: sidebarCollapsed ? 64 : 220,
         minWidth: sidebarCollapsed ? 64 : 220,
@@ -90,17 +85,20 @@ export function Sidebar() {
         {(() => {
           const modeKey = behavioralEnabled ? behavioralMode : 'default'
           const LogoIcon = MODE_ICONS[modeKey] ?? GraduationCap
-          const logoBg = (behavioralEnabled && MODE_ACCENT[behavioralMode]) ? MODE_ACCENT[behavioralMode] : 'var(--sb-accent)'
+          // A behavioural mode moves `--sb-accent` itself (lib/themes.ts), so
+          // the mark is drawn in the accent whatever mode it is — and its
+          // glyph in whatever that accent takes, which on a dark accent is
+          // pale rather than the card colour it used to assume.
           return (
             <div style={{
               width: 32, height: 32,
-              background: logoBg,
+              background: 'var(--sb-accent)',
               borderRadius: 'var(--sb-r-chip)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               flexShrink: 0,
               transition: 'background 0.3s ease',
             }}>
-              <LogoIcon size={18} color="var(--sb-card)" strokeWidth={2.5} />
+              <LogoIcon size={ICON.lg} color="var(--sb-accent-ink)" strokeWidth={STROKE.active} />
             </div>
           )
         })()}
@@ -149,7 +147,7 @@ export function Sidebar() {
               {!sidebarCollapsed && (
                 <span style={{
                   display: 'block', padding: '4px 12px 6px',
-                  fontSize: 'var(--sb-t-micro)', fontWeight: 700, color: '#D4A827',
+                  fontSize: 'var(--sb-t-micro)', fontWeight: 700, color: 'var(--sb-warning)',
                   textTransform: 'uppercase', letterSpacing: '1.2px',
                 }}>
                   {modeLabel} MODE
@@ -172,7 +170,7 @@ export function Sidebar() {
           {!sidebarCollapsed && (
             <span style={{
               display: 'block', padding: '4px 12px 6px',
-              fontSize: 'var(--sb-t-micro)', fontWeight: 700, color: '#D4A827',
+              fontSize: 'var(--sb-t-micro)', fontWeight: 700, color: 'var(--sb-warning)',
               textTransform: 'uppercase', letterSpacing: '1.2px',
             }}>
               System

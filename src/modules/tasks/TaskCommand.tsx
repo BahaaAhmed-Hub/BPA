@@ -408,7 +408,7 @@ export function TaskCommand() {
                     display: 'flex', alignItems: 'center', gap: 7, height: 32, boxSizing: 'border-box',
                     padding: '0 16px', borderRadius: 'var(--sb-r-pill)', border: 'none', cursor: 'pointer',
                     background: on ? 'var(--sb-card)' : 'transparent',
-                    boxShadow: on ? '0 1px 3px rgba(25,23,18,.14)' : 'none',
+                    boxShadow: on ? '0 1px 3px color-mix(in srgb, var(--sb-ink-1) 14.0%, transparent)' : 'none',
                     color: on ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)',
                     fontSize: 'var(--sb-t-body)', fontWeight: on ? 700 : 500, fontFamily: 'inherit',
                     transition: 'all .14s', flexShrink: 0,

@@ -42,14 +42,14 @@ function Seg<T extends string | number>({ value, options, onChange }: {
   onChange: (v: T) => void
 }) {
   return (
-    <div style={{ display: 'flex', gap: 4, background: '#F5F1E6', borderRadius: 'var(--sb-r-sm)', padding: 3 }}>
+    <div style={{ display: 'flex', gap: 4, background: 'var(--sb-accent-tint)', borderRadius: 'var(--sb-r-sm)', padding: 3 }}>
       {options.map(o => {
         const on = o.value === value
         return (
           <button key={String(o.value)} onClick={() => onChange(o.value)} style={{
             flex: 1, height: 28, borderRadius: 'var(--sb-r-chip)', border: 'none', cursor: 'pointer',
             background: on ? 'var(--sb-card)' : 'transparent',
-            boxShadow: on ? '0 1px 3px rgba(25,23,18,.16)' : 'none',
+            boxShadow: on ? '0 1px 3px color-mix(in srgb, var(--sb-ink-1) 16.0%, transparent)' : 'none',
             color: on ? 'var(--sb-ink-1)' : 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body-s)', fontWeight: on ? 600 : 500,
             fontFamily: 'inherit', whiteSpace: 'nowrap', padding: '0 8px',
           }}>{o.label}</button>

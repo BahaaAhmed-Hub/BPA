@@ -5,7 +5,7 @@ import { useUIStore } from '@/store/uiStore'
 import { useAuthStore } from '@/store/authStore'
 import { useHabitsStore } from '@/store/habitsStore'
 import { useTaskStore } from '@/store/taskStore'
-import { getTheme, applyThemeVars } from '@/lib/themes'
+import { applyAppearance } from '@/lib/themes'
 import { saveCompaniesToDB } from '@/lib/dbSync'
 import type { CompanyRow } from '@/lib/dbSync'
 import { Step1Welcome } from './steps/Step1Welcome'
@@ -43,18 +43,18 @@ export interface WizardData {
 // ─── Habit templates (mirrored in Step4 for apply logic) ─────────────────────
 
 const HABIT_TEMPLATES = [
-  { id: 'water',       name: 'Drink Water',  emoji: '💧', color: '#60A5FA', type: 'quantity' as const, goal: 8,     unit: 'glasses', frequency: 'daily' as const },
+  { id: 'water',       name: 'Drink Water',  emoji: '💧', color: 'var(--sb-info)', type: 'quantity' as const, goal: 8,     unit: 'glasses', frequency: 'daily' as const },
   { id: 'exercise',    name: 'Exercise',      emoji: '💪', color: 'var(--sb-negative)', type: 'boolean'  as const,                               frequency: 'daily' as const },
-  { id: 'reading',     name: 'Reading',       emoji: '📚', color: '#A855F7', type: 'quantity' as const, goal: 30,   unit: 'min',     frequency: 'daily' as const },
-  { id: 'meditation',  name: 'Meditation',    emoji: '🧘', color: '#177C5B', type: 'quantity' as const, goal: 10,   unit: 'min',     frequency: 'daily' as const },
-  { id: 'sleep',       name: '8h Sleep',      emoji: '😴', color: '#685FD7', type: 'boolean'  as const,                               frequency: 'daily' as const },
-  { id: 'journaling',  name: 'Journaling',    emoji: '📓', color: '#F97316', type: 'boolean'  as const,                               frequency: 'daily' as const },
-  { id: 'steps',       name: 'Steps',         emoji: '🚶', color: '#34D399', type: 'quantity' as const, goal: 10000, unit: 'steps',  frequency: 'daily' as const },
-  { id: 'cold-shower', name: 'Cold Shower',   emoji: '🚿', color: '#22D3EE', type: 'boolean'  as const,                               frequency: 'daily' as const },
-  { id: 'no-phone-am', name: 'No Phone (AM)', emoji: '📵', color: '#6366F1', type: 'boolean'  as const,                               frequency: 'daily' as const },
-  { id: 'vitamins',    name: 'Vitamins',      emoji: '💊', color: '#EC4899', type: 'boolean'  as const,                               frequency: 'daily' as const },
-  { id: 'prayer',      name: 'Prayer',        emoji: '🤲', color: '#FBBF24', type: 'boolean'  as const,                               frequency: 'daily' as const },
-  { id: 'no-sugar',    name: 'No Sugar',      emoji: '🚫', color: '#E0944A', type: 'boolean'  as const,                               frequency: 'daily' as const },
+  { id: 'reading',     name: 'Reading',       emoji: '📚', color: 'var(--sb-info)', type: 'quantity' as const, goal: 30,   unit: 'min',     frequency: 'daily' as const },
+  { id: 'meditation',  name: 'Meditation',    emoji: '🧘', color: 'var(--sb-positive)', type: 'quantity' as const, goal: 10,   unit: 'min',     frequency: 'daily' as const },
+  { id: 'sleep',       name: '8h Sleep',      emoji: '😴', color: 'var(--sb-info)', type: 'boolean'  as const,                               frequency: 'daily' as const },
+  { id: 'journaling',  name: 'Journaling',    emoji: '📓', color: 'var(--sb-warning)', type: 'boolean'  as const,                               frequency: 'daily' as const },
+  { id: 'steps',       name: 'Steps',         emoji: '🚶', color: 'var(--sb-positive)', type: 'quantity' as const, goal: 10000, unit: 'steps',  frequency: 'daily' as const },
+  { id: 'cold-shower', name: 'Cold Shower',   emoji: '🚿', color: 'var(--sb-info)', type: 'boolean'  as const,                               frequency: 'daily' as const },
+  { id: 'no-phone-am', name: 'No Phone (AM)', emoji: '📵', color: 'var(--sb-info)', type: 'boolean'  as const,                               frequency: 'daily' as const },
+  { id: 'vitamins',    name: 'Vitamins',      emoji: '💊', color: 'var(--sb-negative)', type: 'boolean'  as const,                               frequency: 'daily' as const },
+  { id: 'prayer',      name: 'Prayer',        emoji: '🤲', color: 'var(--sb-accent)', type: 'boolean'  as const,                               frequency: 'daily' as const },
+  { id: 'no-sugar',    name: 'No Sugar',      emoji: '🚫', color: 'var(--sb-accent)', type: 'boolean'  as const,                               frequency: 'daily' as const },
 ]
 
 const STEP_LABELS = ['Welcome', 'Accounts', 'Companies', 'Habits', 'Import', 'Done']
@@ -62,12 +62,12 @@ const TOTAL_STEPS = 6
 
 // Light-theme CSS variable overrides — applied inside the modal
 const LIGHT_VARS: React.CSSProperties = {
-  '--color-bg':         '#F4F4F8',
+  '--color-bg':         'var(--sb-info-tint)',
   '--color-surface':    'var(--sb-card)',
-  '--color-border':     '#E5E5EA',
-  '--color-text':       '#111827',
-  '--color-text-dim':   '#374151',
-  '--color-text-muted': '#9CA3AF',
+  '--color-border':     'var(--sb-hairline)',
+  '--color-text':       'var(--sb-ink-1)',
+  '--color-text-dim':   'var(--sb-ink-2)',
+  '--color-text-muted': 'var(--sb-ink-4)',
 } as React.CSSProperties
 
 // ─── SetupWizard ──────────────────────────────────────────────────────────────
@@ -122,7 +122,7 @@ export function SetupWizard({ onClose }: Props) {
 
   async function handleFinish() {
     useUIStore.getState().setThemeId(data.themeId)
-    applyThemeVars(getTheme(data.themeId))
+    applyAppearance({ themeId: data.themeId })
     if (data.displayName) localStorage.setItem('professor-display-name', data.displayName)
 
     if (data.companies.length > 0) {
@@ -169,7 +169,7 @@ export function SetupWizard({ onClose }: Props) {
         @keyframes wz-modal    { from{opacity:0;transform:translateY(28px) scale(0.98)} to{opacity:1;transform:translateY(0) scale(1)} }
         @keyframes wz-fwd      { from{opacity:0;transform:translateX(32px)} to{opacity:1;transform:translateX(0)} }
         @keyframes wz-back     { from{opacity:0;transform:translateX(-32px)} to{opacity:1;transform:translateX(0)} }
-        .wz-btn-back:hover  { background:#F3F4F6!important; border-color:#D1D5DB!important; }
+        .wz-btn-back:hover  { background:var(--sb-info-tint)!important; border-color:var(--sb-ink-4)!important; }
         .wz-btn-next:hover  { filter:brightness(1.08); transform:translateY(-1px); box-shadow:0 6px 20px rgba(0,0,0,0.18)!important; }
         .wz-btn-next:active { filter:brightness(0.96); transform:translateY(0); }
       `}</style>
@@ -215,7 +215,7 @@ export function SetupWizard({ onClose }: Props) {
                   const active = n === step
                   const accent = 'var(--sb-accent)'
                   return (
-                    <div key={label} title={label} style={{ flex: 1, height: 4, borderRadius: 'var(--sb-r-chip)', overflow: 'hidden', background: '#E5E7EB', position: 'relative', transition: 'background 0.3s' }}>
+                    <div key={label} title={label} style={{ flex: 1, height: 4, borderRadius: 'var(--sb-r-chip)', overflow: 'hidden', background: 'var(--sb-hairline)', position: 'relative', transition: 'background 0.3s' }}>
                       <div style={{
                         position: 'absolute', inset: 0,
                         background: accent,
@@ -247,12 +247,12 @@ export function SetupWizard({ onClose }: Props) {
           </div>
 
           {/* ── Footer nav ───────────────────────────────────────────────── */}
-          <div style={{ padding: '18px 28px', borderTop: '1px solid #F0F0F0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          <div style={{ padding: '18px 28px', borderTop: '1px solid var(--sb-page)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
             {step > 1 && step < TOTAL_STEPS ? (
               <button onClick={goBack} className="wz-btn-back" style={{
                 display: 'flex', alignItems: 'center', gap: 6,
                 padding: '11px 22px', borderRadius: 'var(--sb-r-pill)',
-                background: 'transparent', border: '1px solid #E5E7EB',
+                background: 'transparent', border: '1px solid var(--sb-hairline)',
                 color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-label)', fontWeight: 600, cursor: 'pointer',
                 transition: 'all 0.15s',
               }}>
@@ -277,10 +277,10 @@ export function SetupWizard({ onClose }: Props) {
                 <button onClick={() => void handleFinish()} className="wz-btn-next" style={{
                   display: 'flex', alignItems: 'center', gap: 6,
                   padding: '11px 26px', borderRadius: 'var(--sb-r-pill)',
-                  background: '#1D9E75', border: 'none',
-                  color: '#fff', fontSize: 'var(--sb-t-label)', fontWeight: 700, cursor: 'pointer',
+                  background: 'var(--sb-positive)', border: 'none',
+                  color: 'var(--sb-ink-on-fill)', fontSize: 'var(--sb-t-label)', fontWeight: 700, cursor: 'pointer',
                   // The finish button's own green, glowing under it.
-                  boxShadow: '0 4px 14px -2px rgba(29,158,117,0.35)',
+                  boxShadow: '0 4px 14px -2px color-mix(in srgb, var(--sb-positive) 35.0%, transparent)',
                   transition: 'all 0.15s',
                 }}>
                   <Check size={ICON.md} /> Finish
@@ -290,7 +290,7 @@ export function SetupWizard({ onClose }: Props) {
           </div>
 
           {/* Subtle bottom progress indicator */}
-          <div style={{ height: 3, background: '#F0F0F4', position: 'relative' }}>
+          <div style={{ height: 3, background: 'var(--sb-info-tint)', position: 'relative' }}>
             <div style={{ position: 'absolute', inset: '0 auto 0 0', width: `${pct}%`, background: 'var(--sb-accent)', transition: 'width 0.4s cubic-bezier(0.4,0,0.2,1)', borderRadius: '0 var(--sb-r-chip) var(--sb-r-chip) 0' }} />
           </div>
         </div>

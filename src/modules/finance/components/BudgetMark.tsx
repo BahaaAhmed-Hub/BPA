@@ -10,7 +10,7 @@ export function BudgetMark({ on }: { on: boolean }) {
   return (
     <span
       title="Written by its budget. Tick it paid when the money moves."
-      style={{ display: 'inline-flex', flexShrink: 0, color: '#C08A2E' }}>
+      style={{ display: 'inline-flex', flexShrink: 0, color: 'var(--sb-warning)' }}>
       <CalendarClock size={ICON.sm} strokeWidth={STROKE.active} />
     </span>
   )

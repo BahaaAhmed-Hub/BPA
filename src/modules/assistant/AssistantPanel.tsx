@@ -112,8 +112,8 @@ function MessageBubble({ msg }: { msg: DisplayMessage }) {
         <span style={{
           display: 'inline-flex', alignItems: 'center', gap: 5,
           padding: '3px 10px', borderRadius: 'var(--sb-r-card)', fontSize: 'var(--sb-t-meta)',
-          background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)',
-          color: '#685FD7',
+          background: 'color-mix(in srgb, var(--sb-info) 10.0%, transparent)', border: '1px solid color-mix(in srgb, var(--sb-info) 20.0%, transparent)',
+          color: 'var(--sb-info)',
         }}>
           <Wrench size={ICON.sm} style={{ animation: 'spin 1s linear infinite' }} />
           {msg.content}
@@ -127,8 +127,8 @@ function MessageBubble({ msg }: { msg: DisplayMessage }) {
       <div style={{ margin: '8px 12px' }}>
         <div style={{
           padding: '10px 12px', borderRadius: 'var(--sb-r-nav)', fontSize: 'var(--sb-t-body-s)', lineHeight: 1.55,
-          background: 'rgba(224,82,82,0.1)', border: '1px solid rgba(224,82,82,0.2)',
-          color: '#F87171',
+          background: 'color-mix(in srgb, var(--sb-negative) 10.0%, transparent)', border: '1px solid color-mix(in srgb, var(--sb-negative) 20.0%, transparent)',
+          color: 'var(--sb-negative-tint)',
         }}>
           {msg.content}
         </div>
@@ -143,10 +143,10 @@ function MessageBubble({ msg }: { msg: DisplayMessage }) {
       {!isUser && (
         <div style={{
           width: 26, height: 26, borderRadius: 'var(--sb-r-pill)', flexShrink: 0, marginRight: 8, marginTop: 2,
-          background: 'linear-gradient(135deg, #4F46E5 0%, #818CF8 100%)',
+          background: 'linear-gradient(135deg, var(--sb-info) 0%, color-mix(in srgb, var(--sb-info) 58%, var(--sb-ink-on-fill)) 100%)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
-          <Brain size={ICON.sm} color="white" />
+          <Brain size={ICON.sm} color="var(--sb-ink-on-fill)" />
         </div>
       )}
       <div style={{
@@ -155,7 +155,7 @@ function MessageBubble({ msg }: { msg: DisplayMessage }) {
         background: isUser ? 'var(--sb-accent)' : 'var(--sb-field)',
         border: isUser ? 'none' : '1px solid var(--sb-border)',
         fontSize: 'var(--sb-t-body)', lineHeight: 1.6,
-        color: isUser ? 'var(--sb-ink-1)' : 'var(--sb-ink-1)',
+        color: isUser ? 'var(--sb-accent-ink)' : 'var(--sb-ink-1)',
         whiteSpace: 'pre-wrap', wordBreak: 'break-word',
       }}>
         {msg.content}
@@ -169,14 +169,14 @@ function ThinkingDot() {
     <div style={{ display: 'flex', justifyContent: 'flex-start', margin: '6px 12px', alignItems: 'center', gap: 8 }}>
       <div style={{
         width: 26, height: 26, borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
-        background: 'linear-gradient(135deg, #4F46E5 0%, #818CF8 100%)',
+        background: 'linear-gradient(135deg, var(--sb-info) 0%, color-mix(in srgb, var(--sb-info) 58%, var(--sb-ink-on-fill)) 100%)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}>
-        <Brain size={ICON.sm} color="white" />
+        <Brain size={ICON.sm} color="var(--sb-ink-on-fill)" />
       </div>
       <div style={{ display: 'flex', gap: 4, padding: '10px 14px', background: 'var(--sb-field)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-chip) var(--sb-r-card) var(--sb-r-card) var(--sb-r-card)' }}>
         {[0, 1, 2].map(i => (
-          <div key={i} style={{ width: 6, height: 6, borderRadius: 'var(--sb-r-pill)', background: '#818CF8', animation: `bounce 1.2s ease-in-out ${i * 0.2}s infinite` }} />
+          <div key={i} style={{ width: 6, height: 6, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-info)', animation: `bounce 1.2s ease-in-out ${i * 0.2}s infinite` }} />
         ))}
       </div>
     </div>
@@ -415,17 +415,17 @@ export function AssistantPanel({ open, onClose }: AssistantPanelProps) {
         }}>
           <div style={{
             width: 32, height: 32, borderRadius: 'var(--sb-r-sm)',
-            background: 'linear-gradient(135deg, #4F46E5 0%, #818CF8 100%)',
+            background: 'linear-gradient(135deg, var(--sb-info) 0%, color-mix(in srgb, var(--sb-info) 58%, var(--sb-ink-on-fill)) 100%)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             // The indigo glow belongs to the gradient under it — a colour, not
             // a height, and the reason this is not one of the shadow tokens.
-            boxShadow: '0 0 12px rgba(99,102,241,0.35)',
+            boxShadow: '0 0 12px color-mix(in srgb, var(--sb-info) 35.0%, transparent)',
           }}>
-            <Brain size={ICON.md} color="white" />
+            <Brain size={ICON.md} color="var(--sb-ink-on-fill)" />
           </div>
           <div style={{ flex: 1 }}>
             <p style={{ margin: 0, fontSize: 'var(--sb-t-label)', fontWeight: 700, color: 'var(--sb-ink-1)' }}>Professor AI</p>
-            <p style={{ margin: 0, fontSize: 'var(--sb-t-micro)', color: '#685FD7' }}>{providerLabel(cfg)}</p>
+            <p style={{ margin: 0, fontSize: 'var(--sb-t-micro)', color: 'var(--sb-info)' }}>{providerLabel(cfg)}</p>
           </div>
           {!isEmpty && (
             <button onClick={clearConversation}
@@ -445,11 +445,11 @@ export function AssistantPanel({ open, onClose }: AssistantPanelProps) {
             <div style={{ padding: '32px 20px', textAlign: 'center' }}>
               <div style={{
                 width: 56, height: 56, borderRadius: 'var(--sb-r-card)', margin: '0 auto 16px',
-                background: 'linear-gradient(135deg, rgba(79,70,229,0.2) 0%, rgba(129,140,248,0.1) 100%)',
-                border: '1px solid rgba(99,102,241,0.25)',
+                background: 'linear-gradient(135deg, color-mix(in srgb, var(--sb-info) 20.0%, transparent) 0%, color-mix(in srgb, var(--sb-info) 10.0%, transparent) 100%)',
+                border: '1px solid color-mix(in srgb, var(--sb-info) 25.0%, transparent)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
-                <Brain size={26} color="#685FD7" />
+                <Brain size={26} color="var(--sb-info)" />
               </div>
               <p style={{ margin: '0 0 6px', fontSize: 'var(--sb-t-h3)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>How can I help?</p>
               <p style={{ margin: '0 0 24px', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', lineHeight: 1.5 }}>
@@ -511,14 +511,14 @@ export function AssistantPanel({ open, onClose }: AssistantPanelProps) {
               disabled={!input.trim() || thinking}
               style={{
                 width: 32, height: 32, borderRadius: 'var(--sb-r-sm)', border: 'none', cursor: 'pointer',
-                background: !input.trim() || thinking ? 'rgba(99,102,241,0.2)' : 'linear-gradient(135deg, #4F46E5 0%, #818CF8 100%)',
+                background: !input.trim() || thinking ? 'color-mix(in srgb, var(--sb-info) 20.0%, transparent)' : 'linear-gradient(135deg, var(--sb-info) 0%, color-mix(in srgb, var(--sb-info) 58%, var(--sb-ink-on-fill)) 100%)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
                 transition: 'background 0.15s',
-                boxShadow: !input.trim() || thinking ? 'none' : '0 0 10px rgba(99,102,241,0.4)',
+                boxShadow: !input.trim() || thinking ? 'none' : '0 0 10px color-mix(in srgb, var(--sb-info) 40.0%, transparent)',
               }}>
               {thinking
-                ? <Loader2 size={ICON.md} color="#685FD7" style={{ animation: 'spin 1s linear infinite' }} />
-                : <Send size={ICON.sm} color={!input.trim() ? '#818CF8' : 'white'} />
+                ? <Loader2 size={ICON.md} color="var(--sb-info)" style={{ animation: 'spin 1s linear infinite' }} />
+                : <Send size={ICON.sm} color={!input.trim() ? 'var(--sb-info)' : 'var(--sb-ink-on-fill)'} />
               }
             </button>
           </div>
@@ -550,8 +550,8 @@ export function AssistantToggle({ open, onClick }: AssistantToggleProps) {
         width: 48, height: 48, borderRadius: 'var(--sb-r-card)', border: 'none', cursor: 'pointer',
         background: open ? 'var(--sb-field)' : 'var(--sb-ink-1)',
         boxShadow: open
-          ? '0 2px 12px rgba(25,23,18,0.18), inset 0 0 0 1px var(--sb-border)'
-          : '0 4px 18px rgba(25,23,18,0.28)',
+          ? '0 2px 12px color-mix(in srgb, var(--sb-ink-1) 18.0%, transparent), inset 0 0 0 1px var(--sb-border)'
+          : '0 4px 18px color-mix(in srgb, var(--sb-ink-1) 28.0%, transparent)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         zIndex: 148,
         transition: 'right 0.25s cubic-bezier(0.4,0,0.2,1), background 0.2s, box-shadow 0.2s',

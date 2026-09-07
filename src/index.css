@@ -1,15 +1,25 @@
-/* ─── Sunlit Bento — Design Token System ─────────────────────────────────────
-   All values lifted verbatim from the Professor design handoff README.
-   Modules read these via var(--sb-*) names. The old var(--color-*) aliases
-   are kept below for backward compat during the progressive migration.
+/* ─── The token system ───────────────────────────────────────────────────────
+   Two halves, and the line between them is the whole point.
+
+   THEME-DEPENDENT — surfaces, the ink ramp, the accent, the semantics, the
+   shadows, the faces and the surface blur. Every one of these is written by
+   lib/themes.ts when a theme is applied, and the values below are Sunlit
+   Bento's: the defaults, so the app is themed before any JavaScript runs.
+
+   FIXED — radii, the type scale, control heights, icon sizes, border weights.
+   These are the shape of the app rather than its colour, and no theme changes
+   them. They are declared once, here, and never written at runtime.
    ─────────────────────────────────────────────────────────────────────────── */
 
-@import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Outfit:wght@400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
 @import "tailwindcss";
 
-/* ── Surfaces ─────────────────────────────────────────────────────────────── */
 :root {
+  /* ══ THEME-DEPENDENT ═════════════════════════════════════════════════════
+     Sunlit Bento's values. lib/themes.ts writes all of these, and only these. */
+
+  /* Surfaces */
   --sb-page:          #F7F4EA;
   --sb-header:        #FCFAF4;
   --sb-card:          #FFFFFF;
@@ -17,46 +27,64 @@
   --sb-border:        #E8E1CE;
   --sb-hairline:      #F0EBDC;
 
-  /* Ink */
-  --sb-ink-1:         #191712;   /* primary */
-  --sb-ink-2:         #4A4438;   /* secondary */
-  --sb-ink-3:         #6C6553;   /* muted */
-  --sb-ink-4:         #756F60;   /* faint */
+  /* Ink ramp */
+  --sb-ink-1:         #191712;
+  --sb-ink-2:         #4A4438;
+  --sb-ink-3:         #6C6553;
+  --sb-ink-4:         #756F60;
+  /* The ink that reads on an --sb-ink-1 *fill*: the primary button, the
+     inverted panel, the solid pill. Near-white here because that fill is
+     near-black; in a dark theme the fill is light and this is dark. */
   --sb-ink-on-dark:   #FDF8E7;
+  /* What a label on a solid *semantic* fill is drawn in — a tick on green, a
+     count on red. Near-white on a light theme, whose semantics are saturated
+     and dark; near-black on Glass & Depth, whose semantics are bright. */
+  --sb-ink-on-fill:   #FFFFFF;
 
-  /* Accent — warm amber */
+  /* Accent. -rgb is the same colour as components, so a style can ask for it
+     at any opacity; -ink is what a label on a solid accent fill is drawn in,
+     which is not always dark — see Evergreen. */
   --sb-accent:        #F5D14E;
-  /* The accent as components, so a style can ask for it at any opacity. Both
-     are rewritten by lib/accent.ts when another accent is chosen. */
   --sb-accent-rgb:    245,209,78;
+  --sb-accent-ink:    #191712;
   --sb-accent-deep:   #7A5F09;
   --sb-accent-tint:   #FEF7DE;
   --sb-accent-tint2:  #FDF6DE;
   --sb-accent-border: #EFE1B4;
 
-  /* Semantic — positive */
+  /* Semantics */
   --sb-positive:      #0C8140;
   --sb-positive-deep: #0A6B36;
   --sb-positive-tint: #E2F0E7;
-
-  /* Semantic — negative */
   --sb-negative:      #C62828;
   --sb-negative-deep: #A31C1C;
   --sb-negative-tint: #FAE3E3;
+  --sb-info:          #685FD7;
+  --sb-info-tint:     #EDEBFA;
+  --sb-warning:       #B26A00;
+  --sb-warning-tint:  #FBEEDC;
 
-  /* ── Shadows ─────────────────────────────────────────────────────────────
-     Four heights and nothing between them: a control sitting on the page, a
-     control under the pointer, a surface floating over it, and a frame. The
-     accent shadow is the hard 2px under an amber pill, which is a shape
-     rather than a height.                                                   */
+  /* Shadows — four heights, a sideways one for panels, and the hard 2px under
+     an accent pill, which is a shape rather than a height. */
   --sb-shadow-control: 0 1px 3px rgba(25,23,18,.14);
   --sb-shadow-hover:   0 4px 12px -6px rgba(48,40,20,.4);
   --sb-shadow-menu:    0 12px 32px -12px rgba(48,40,20,.28);
   --sb-shadow-frame:   0 26px 64px -34px rgba(48,40,20,.5);
-  /* A panel that slides in from the edge is separated sideways, not from
-     above — the only shadow in the set that is not cast downward. */
   --sb-shadow-panel:  -8px 0 40px -12px rgba(48,40,20,.28);
   --sb-shadow-accent:  0 2px 0 rgba(120,92,0,.25);
+
+  /* Faces. A theme owns the two it speaks in; the mono face is in the fixed
+     half, because a figure lining up with the figure above it is not a matter
+     of taste. */
+  --sb-font-ui:   'Instrument Sans', system-ui, sans-serif;
+  --sb-font-num:  'Outfit', system-ui, sans-serif;
+
+  /* How much the surfaces blur what is behind them. 0 on an opaque theme —
+     a no-op the browser can skip. */
+  --sb-surface-blur: 0px;
+
+  /* ══ FIXED ═══════════════════════════════════════════════════════════════
+     The shape of the app. No theme writes these.                            */
 
   /* Radii */
   --sb-r-chip:   8px;
@@ -65,11 +93,6 @@
   --sb-r-card:   18px;
   --sb-r-frame:  24px;
   --sb-r-pill:   999px;
-
-  /* Typography */
-  --sb-font-ui:   'Instrument Sans', system-ui, sans-serif;
-  --sb-font-num:  'Outfit', system-ui, sans-serif;
-  --sb-font-mono: 'JetBrains Mono', ui-monospace, monospace;
 
   /* ── Type scale ──────────────────────────────────────────────────────────
      Nine steps, and nothing between them. Each token is the step's *size*;
@@ -84,11 +107,7 @@
        h3       15    600                     a section inside a panel
        h2       18    600  -.02em             a form's heading, a day number
        h1       27    600  -.03em             a page's own name
-       display  30    600  -.03em  Outfit     the one figure a screen is about
-
-     Sizes are tokens so a step can move once; weights are not folded into
-     them, because a call site that wants 600 at meta is saying something
-     about that line, not about the level.                                   */
+       display  30    600  -.03em             the one figure a screen is about */
   --sb-t-micro:   10px;
   --sb-t-meta:    11.5px;
   --sb-t-body-s:  12.5px;
@@ -104,31 +123,19 @@
   --sb-h-nav:    36px;
   --sb-h-header: 66px;
 
-  /* ── Reserved — declared empty so later steps have somewhere to land ─────
-     A custom property with an empty value is valid and resolves to nothing;
-     none of these is read yet. Each is filled by the step named beside it. */
-
-
-  /* Surfaces that sit above the page */
-  --sb-surface-blur: ;
-
-  /* Icon sizes. Three, and the stroke goes with them: 1.75 at rest, 2.25 when
-     the icon is carrying a state. lucide takes its size as an attribute
-     rather than a style, so lib/type.ts holds the same three as numbers —
-     these are for CSS that draws its own glyphs. */
+  /* Icon sizes. lucide takes its size as an attribute rather than a style, so
+     lib/type.ts holds the same three as numbers; these are for CSS that draws
+     its own glyphs. */
   --sb-icon-sm: 14px;
   --sb-icon-md: 16px;
   --sb-icon-lg: 18px;
 
-  /* A border with something to say: a control whose edge carries its state —
-     a checkbox, a radio, a selection ring, the ring around your own face.
+  /* The one face no theme moves. */
+  --sb-font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  /* A border with something to say: a control whose edge carries its state.
      Everything else in the app is 1px. */
   --sb-border-emphasis: 2px;
-
-  /* The ink that reads on a solid accent fill. Every accent in the set is
-     light enough to carry the dark ink; a theme with a dark accent overrides
-     it. (--sb-accent-deep is the other one: accent-coloured *text*, on tint.) */
-  --sb-accent-ink: var(--sb-ink-1);
 }
 
 /* ── Global resets ────────────────────────────────────────────────────────── */
@@ -324,6 +331,18 @@ html, body {
   border-radius: var(--sb-r-card);
   box-shadow: var(--sb-shadow-control);
 }
+/* Glass & Depth's surfaces are washes over the page rather than colours of
+   their own, so what is behind them has to be blurred or the whole app reads
+   as a smear. `--sb-surface-blur` says how much; the attribute says whether at
+   all, and it is a gate rather than a `blur(0)` because even a no-op
+   backdrop-filter makes a containing block — which would trap a fixed-position
+   child inside whatever card it happened to be drawn in. */
+:root[data-theme="dark"] .sb-card-surface,
+:root[data-theme="dark"] .sb-blur-surface {
+  -webkit-backdrop-filter: blur(var(--sb-surface-blur));
+  backdrop-filter: blur(var(--sb-surface-blur));
+}
+
 .sb-card-surface[data-variant="interactive"] {
   cursor: pointer;
   transition: box-shadow 140ms ease-out, transform 140ms ease-out;
@@ -365,6 +384,9 @@ html, body {
    be opened, and a row that tints. Both were mouse handlers writing styles. */
 .sb-underline-hover { border-bottom: 1px solid transparent; padding-bottom: 1px; }
 .sb-underline-hover:hover { border-bottom-color: var(--sb-ink-4); }
+
+/* A row being dragged: stop the pointer selecting the text it passes over. */
+body.sb-dragging { user-select: none; }
 
 .sb-row-hover { transition: background 120ms ease-out; }
 .sb-row-hover:hover { background: var(--sb-field); }

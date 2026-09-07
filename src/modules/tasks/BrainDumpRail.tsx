@@ -106,8 +106,8 @@ function DumpCard({ task, onOpen, onDelete }: {
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        background: s.inferred ? '#FFFCF0' : 'var(--sb-card)',
-        border: `1px solid ${s.inferred ? '#F0DFA8' : 'var(--sb-border)'}`,
+        background: s.inferred ? 'var(--sb-accent-tint)' : 'var(--sb-card)',
+        border: `1px solid ${s.inferred ? 'var(--sb-accent-tint)' : 'var(--sb-border)'}`,
         borderRadius: 'var(--sb-r-nav)', padding: '10px 11px',
         display: 'flex', gap: 8, cursor: 'pointer', minWidth: 0,
         opacity: isDragging ? 0.4 : 1,
@@ -132,7 +132,7 @@ function DumpCard({ task, onOpen, onDelete }: {
             style={{
               background: 'none', border: 'none', padding: 0, cursor: 'pointer',
               display: 'flex', flexShrink: 0, marginTop: 1,
-              color: hovered ? 'var(--sb-negative)' : '#D8CFB8',
+              color: hovered ? 'var(--sb-negative)' : 'var(--sb-border)',
             }}>
             <Trash2 size={ICON.sm} strokeWidth={STROKE.rest} />
           </button>
@@ -144,8 +144,8 @@ function DumpCard({ task, onOpen, onDelete }: {
           <span style={{
             display: 'inline-flex', alignItems: 'center', gap: 5, minWidth: 0,
             padding: '3px 8px', borderRadius: 'var(--sb-r-pill)',
-            background: s.inferred ? '#FDF3CE' : '#F4F1E6',
-            border: `1px solid ${s.inferred ? '#EBD79A' : '#E4DDC9'}`,
+            background: s.inferred ? 'var(--sb-accent-tint)' : 'var(--sb-page)',
+            border: `1px solid ${s.inferred ? 'var(--sb-accent)' : 'var(--sb-border)'}`,
             fontSize: 'var(--sb-t-micro)', fontWeight: 600, color: 'var(--sb-ink-3)',
           }}>
             {s.inferred
@@ -337,7 +337,7 @@ export function BrainDumpRail({ tasks, onOpen, flexible }: {
           ].map(([from, to]) => (
             <div key={from} style={{
               display: 'flex', alignItems: 'center', gap: 8,
-              padding: '6px 0', borderBottom: '1px solid #F5F1E5', fontSize: 'var(--sb-t-meta)',
+              padding: '6px 0', borderBottom: '1px solid var(--sb-accent-tint)', fontSize: 'var(--sb-t-meta)',
             }}>
               <span style={{ color: 'var(--sb-ink-3)', flex: 1, minWidth: 0 }}>{from}</span>
               <span style={{ color: 'var(--sb-ink-4)', flexShrink: 0 }}>→ {to}</span>
@@ -368,7 +368,7 @@ export function BrainDumpRail({ tasks, onOpen, flexible }: {
         <button onClick={undoDistribute} disabled={!lastRun} style={{
           width: '100%', marginTop: 8, background: 'none', border: 'none', padding: 0,
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-          fontSize: 'var(--sb-t-meta)', color: lastRun ? 'var(--sb-ink-3)' : '#B5AC98', fontFamily: 'inherit',
+          fontSize: 'var(--sb-t-meta)', color: lastRun ? 'var(--sb-ink-3)' : 'var(--sb-border)', fontFamily: 'inherit',
           cursor: lastRun ? 'pointer' : 'default',
         }}>
           <RotateCcw size={ICON.sm} strokeWidth={STROKE.rest} />

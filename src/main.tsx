@@ -2,20 +2,13 @@ import { StrictMode } from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
 import './index.css'
-import { getTheme, applyThemeVars, DEFAULT_THEME_ID } from './lib/themes'
-import { applyAccent, applyCompact } from './lib/accent'
+import { initAppearance } from './lib/themes'
 
-// Apply the persisted theme before React renders to prevent any flash of wrong colors.
-// Zustand's persist stores state as { state: { ... }, version: 0 } in localStorage.
-try {
-  const raw = localStorage.getItem('professor-ui')
-  const themeId = raw ? (JSON.parse(raw)?.state?.themeId ?? DEFAULT_THEME_ID) : DEFAULT_THEME_ID
-  applyThemeVars(getTheme(themeId))
-} catch { /* ignore parse errors */ }
-
-// The accent and the density, before the first paint for the same reason.
-applyAccent()
-applyCompact()
+// The theme, the accent, the behavioural mode and the density are one set of
+// values written once, before React renders, so there is no flash of a theme
+// nobody chose. `initAppearance` also subscribes to the three things that can
+// move them afterwards.
+initAppearance()
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <StrictMode>

@@ -27,7 +27,7 @@ export function AccountModal({ account, onSave, onDelete, onClose }: Props) {
   const [creditLimit, setCreditLimit] = useState(account?.creditLimit ?? 0)
   const [last4,       setLast4]       = useState(account?.last4       ?? '')
   const [emoji,       setEmoji]       = useState(account?.emoji       ?? '🏦')
-  const [color,       setColor]       = useState(account?.color       ?? '#8C8071')
+  const [color,       setColor]       = useState(account?.color       ?? 'var(--sb-ink-4)')
 
   function handleSave() {
     const saved: Account = {

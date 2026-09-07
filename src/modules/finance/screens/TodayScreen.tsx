@@ -12,6 +12,7 @@ import { BudgetMark } from '../components/BudgetMark'
 import { isBudgetEntry } from '../budgetEntries'
 import { isUnpaid, unpaidRow, settled, whenPaid, UNPAID_TITLE } from '../unpaid'
 import { isoDate } from '../dates'
+import { alpha } from '@/lib/alpha'
 
 // ── Palette ───────────────────────────────────────────────────────────────────
 
@@ -23,7 +24,7 @@ const C = {
   surface: 'var(--sb-card)',
   border:  'var(--sb-border)',
   textPri: 'var(--sb-ink-1)',
-  textDim: '#3D3926',
+  textDim: 'var(--sb-ink-2)',
   textMuted: 'var(--sb-ink-3)',
   accent:  'var(--sb-ink-1)',
 }
@@ -175,7 +176,7 @@ function MoneyCalendar({
             <span title={`No rate set for ${unrated.join(', ')}, so it is not counted in these totals`}
               style={{
                 display: 'inline-flex', alignItems: 'center', borderRadius: 'var(--sb-r-pill)',
-                padding: '4px 10px', background: '#FBF1DC', color: '#8A6D0B',
+                padding: '4px 10px', background: 'var(--sb-accent-tint)', color: 'var(--sb-accent-deep)',
                 fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.04em',
               }}>{unrated.join(' ')} ?</span>
           )}
@@ -215,9 +216,9 @@ function MoneyCalendar({
                   borderRadius: 'var(--sb-r-nav)', padding: '8px 9px 9px',
                   display: 'flex', flexDirection: 'column', gap: 3,
                   minHeight: 78, minWidth: 0, overflow: 'hidden', boxSizing: 'border-box' as const,
-                  background: isSelected ? '#FBF3D2' : 'var(--sb-field)',
-                  border: `1px solid ${isSelected ? 'var(--sb-accent)' : '#F3EEE0'}`,
-                  boxShadow: isSelected ? '0 1px 4px rgba(25,23,18,0.10)' : 'none',
+                  background: isSelected ? 'var(--sb-accent-tint)' : 'var(--sb-field)',
+                  border: `1px solid ${isSelected ? 'var(--sb-accent)' : 'var(--sb-accent-tint)'}`,
+                  boxShadow: isSelected ? '0 1px 4px color-mix(in srgb, var(--sb-ink-1) 10.0%, transparent)' : 'none',
                   cursor: 'pointer', transition: 'background 120ms, border-color 120ms',
                 }}
               >
@@ -312,7 +313,7 @@ export function TodayScreen() {
       >
         <div style={{
           width: 40, height: 40, borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
-          background: acct ? `${acct.color}22` : `${isExp ? RED : GREEN}18`,
+          background: acct ? alpha(acct.color, 13.3) : alpha(isExp ? RED : GREEN, 9.4),
           border: `1px solid ${acct ? acct.color + '44' : isExp ? RED + '44' : GREEN + '44'}`,
           display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'var(--sb-t-h2)',
         }}>

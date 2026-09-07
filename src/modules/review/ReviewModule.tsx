@@ -5,6 +5,7 @@ import type { Task } from '@/types'
 import { isTaskHidden, loadDynamicCompanies } from '@/types'
 import type { GCalEvent } from '@/lib/googleCalendar'
 import { ICON } from '@/lib/type'
+import { alpha } from '@/lib/alpha'
 
 type ExtEvent = GCalEvent & { calendarColor?: string; calendarId?: string }
 
@@ -161,7 +162,7 @@ function StatCard({
           <div style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-4)', marginTop: 4 }}>{label}</div>
           <div style={{ fontSize: 'var(--sb-t-meta)', color, marginTop: 6, fontWeight: 500 }}>{sub}</div>
         </div>
-        <div style={{ width: 34, height: 34, borderRadius: 'var(--sb-r-chip)', background: `${color}18`, border: `1px solid ${color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+        <div style={{ width: 34, height: 34, borderRadius: 'var(--sb-r-chip)', background: alpha(color, 9.4), border: `1px solid ${alpha(color, 18.8)}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
           <Icon size={15} color={color} />
         </div>
       </div>
@@ -188,12 +189,12 @@ function EventRow({ event, cancelled }: { event: GCalEvent; cancelled?: boolean 
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-page)', border: '1px solid var(--sb-field)', marginBottom: 5 }}>
       {cancelled
         ? <XCircle size={ICON.sm} color="var(--sb-ink-3)" style={{ flexShrink: 0 }} />
-        : <CheckCircle2 size={ICON.sm} color="#177C5B" style={{ flexShrink: 0 }} />
+        : <CheckCircle2 size={ICON.sm} color="var(--sb-positive)" style={{ flexShrink: 0 }} />
       }
       {time && (
-        <span style={{ fontSize: 'var(--sb-t-meta)', color: cancelled ? 'var(--sb-ink-4)' : '#7F77DD', fontWeight: 600, minWidth: 54, flexShrink: 0 }}>{time}</span>
+        <span style={{ fontSize: 'var(--sb-t-meta)', color: cancelled ? 'var(--sb-ink-4)' : 'var(--sb-info)', fontWeight: 600, minWidth: 54, flexShrink: 0 }}>{time}</span>
       )}
-      <span style={{ fontSize: 'var(--sb-t-label)', color: cancelled ? 'var(--sb-ink-4)' : '#3D3926', flex: 1, textDecoration: cancelled ? 'line-through' : 'none' }}>
+      <span style={{ fontSize: 'var(--sb-t-label)', color: cancelled ? 'var(--sb-ink-4)' : 'var(--sb-ink-2)', flex: 1, textDecoration: cancelled ? 'line-through' : 'none' }}>
         {event.summary ?? '(No title)'}
       </span>
     </div>
@@ -222,13 +223,13 @@ function TaskRow({ title, company, cancelled }: { title: string; company?: strin
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-page)', border: '1px solid var(--sb-field)', marginBottom: 5 }}>
       {cancelled
         ? <XCircle size={ICON.sm} color="var(--sb-ink-3)" style={{ flexShrink: 0 }} />
-        : <CheckSquare size={ICON.sm} color="#177C5B" style={{ flexShrink: 0 }} />
+        : <CheckSquare size={ICON.sm} color="var(--sb-positive)" style={{ flexShrink: 0 }} />
       }
-      <span style={{ fontSize: 'var(--sb-t-body)', color: cancelled ? 'var(--sb-ink-4)' : '#3D3926', flex: 1, textDecoration: cancelled ? 'line-through' : 'none' }}>
+      <span style={{ fontSize: 'var(--sb-t-body)', color: cancelled ? 'var(--sb-ink-4)' : 'var(--sb-ink-2)', flex: 1, textDecoration: cancelled ? 'line-through' : 'none' }}>
         {title}
       </span>
       {company && (
-        <span style={{ fontSize: 'var(--sb-t-micro)', padding: '1px 6px', borderRadius: 'var(--sb-r-chip)', flexShrink: 0, color: COMPANY_COLORS[company] ?? '#6B7280', background: `${COMPANY_COLORS[company] ?? '#6B7280'}18`, fontWeight: 500 }}>
+        <span style={{ fontSize: 'var(--sb-t-micro)', padding: '1px 6px', borderRadius: 'var(--sb-r-chip)', flexShrink: 0, color: COMPANY_COLORS[company] ?? 'var(--sb-ink-4)', background: alpha(COMPANY_COLORS[company] ?? 'var(--sb-ink-4)', 9.4), fontWeight: 500 }}>
           {company}
         </span>
       )}
@@ -263,7 +264,7 @@ function loadCalNames(): Map<string, { name: string; color: string }> {
     const raw = localStorage.getItem('cal-intel-cals-cache')
     if (!raw) return new Map()
     const cals = JSON.parse(raw) as { id: string; summary?: string; backgroundColor?: string }[]
-    return new Map(cals.map(c => [c.id, { name: c.summary ?? 'Calendar', color: c.backgroundColor ?? '#7F77DD' }]))
+    return new Map(cals.map(c => [c.id, { name: c.summary ?? 'Calendar', color: c.backgroundColor ?? 'var(--sb-info)' }]))
   } catch { return new Map() }
 }
 
@@ -291,7 +292,7 @@ function buildPieSlices(
     const ext = e as ExtEvent
     const id  = ext.calendarId ?? '__primary__'
     const info = ext.calendarId ? calMap.get(ext.calendarId) : null
-    const color = info?.color ?? ext.calendarColor ?? '#7F77DD'
+    const color = info?.color ?? ext.calendarColor ?? 'var(--sb-info)'
     const label = info?.name  ?? 'Calendar'
     const m = eventMins(e)
     evtTotal += m
@@ -309,7 +310,7 @@ function buildPieSlices(
   return [
     { label: 'Sleep', minutes: SLEEP, color: 'var(--sb-ink-3)' },
     ...[...byCalId.values()].filter(v => v.mins > 0).map(v => ({ label: v.label, minutes: v.mins, color: v.color })),
-    ...(taskTotal > 0 ? [{ label: 'Tasks', minutes: taskTotal, color: '#177C5B' }] : []),
+    ...(taskTotal > 0 ? [{ label: 'Tasks', minutes: taskTotal, color: 'var(--sb-positive)' }] : []),
     { label: 'Unaccounted', minutes: free, color: 'var(--sb-border)' },
   ]
 }
@@ -343,7 +344,7 @@ function PieChart({ slices, title }: { slices: PieSlice[]; title: string }) {
           {active.map((sl, i) => (
             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <div style={{ width: 9, height: 9, borderRadius: 'var(--sb-r-chip)', background: sl.color, border: '1px solid rgba(255,255,255,0.12)', flexShrink: 0 }} />
-              <span style={{ fontSize: 'var(--sb-t-meta)', color: '#3D3926', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sl.label}</span>
+              <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-2)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sl.label}</span>
               <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>{fmt(sl.minutes)}</span>
             </div>
           ))}
@@ -382,30 +383,30 @@ function WeeklyDayCard({ dayStr, allEvents, statuses, tasks }: {
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '12px 20px', gap: 12,
-        background: isToday ? 'rgba(127,119,221,0.05)' : undefined,
+        background: isToday ? 'color-mix(in srgb, var(--sb-info) 5.0%, transparent)' : undefined,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
           {isToday && (
-            <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, color: '#685FD7', background: 'rgba(127,119,221,0.15)', border: '1px solid rgba(127,119,221,0.3)', borderRadius: 'var(--sb-r-chip)', padding: '1px 6px', flexShrink: 0 }}>TODAY</span>
+            <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, color: 'var(--sb-info)', background: 'color-mix(in srgb, var(--sb-info) 15.0%, transparent)', border: '1px solid color-mix(in srgb, var(--sb-info) 30.0%, transparent)', borderRadius: 'var(--sb-r-chip)', padding: '1px 6px', flexShrink: 0 }}>TODAY</span>
           )}
-          <span style={{ fontSize: 'var(--sb-t-label)', fontWeight: 700, color: isToday ? '#685FD7' : '#3D3926', whiteSpace: 'nowrap' }}>
+          <span style={{ fontSize: 'var(--sb-t-label)', fontWeight: 700, color: isToday ? 'var(--sb-info)' : 'var(--sb-ink-2)', whiteSpace: 'nowrap' }}>
             {dayLabel}
           </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexShrink: 0 }}>
-          <span style={{ fontSize: 'var(--sb-t-meta)', color: doneEvts.length > 0 ? '#7F77DD' : '#3A3F55', display: 'flex', alignItems: 'center', gap: 4 }}>
-            <span style={{ fontWeight: 600, color: doneEvts.length > 0 ? '#7F77DD' : '#3A3F55' }}>{doneEvts.length}</span>
-            <span style={{ color: '#3A3F55' }}>/ {events.length}</span>
-            <span style={{ color: '#3A3F55' }}>events</span>
+          <span style={{ fontSize: 'var(--sb-t-meta)', color: doneEvts.length > 0 ? 'var(--sb-info)' : 'var(--sb-ink-2)', display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span style={{ fontWeight: 600, color: doneEvts.length > 0 ? 'var(--sb-info)' : 'var(--sb-ink-2)' }}>{doneEvts.length}</span>
+            <span style={{ color: 'var(--sb-ink-2)' }}>/ {events.length}</span>
+            <span style={{ color: 'var(--sb-ink-2)' }}>events</span>
           </span>
           <div style={{ width: 1, height: 12, background: 'var(--sb-border)' }} />
-          <span style={{ fontSize: 'var(--sb-t-meta)', color: doneTasks.length > 0 ? '#1D9E75' : '#3A3F55', display: 'flex', alignItems: 'center', gap: 4 }}>
-            <span style={{ fontWeight: 600, color: doneTasks.length > 0 ? '#1D9E75' : '#3A3F55' }}>{doneTasks.length}</span>
-            <span style={{ color: '#3A3F55' }}>/ {dayTasks.length}</span>
-            <span style={{ color: '#3A3F55' }}>tasks</span>
+          <span style={{ fontSize: 'var(--sb-t-meta)', color: doneTasks.length > 0 ? 'var(--sb-positive)' : 'var(--sb-ink-2)', display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span style={{ fontWeight: 600, color: doneTasks.length > 0 ? 'var(--sb-positive)' : 'var(--sb-ink-2)' }}>{doneTasks.length}</span>
+            <span style={{ color: 'var(--sb-ink-2)' }}>/ {dayTasks.length}</span>
+            <span style={{ color: 'var(--sb-ink-2)' }}>tasks</span>
           </span>
           {!hasActivity && (
-            <span style={{ fontSize: 'var(--sb-t-meta)', color: '#3A3F55' }}>No activity</span>
+            <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-2)' }}>No activity</span>
           )}
         </div>
       </div>
@@ -493,10 +494,10 @@ export function ReviewModule() {
 
         {/* ─── Stats grid ─────────────────────────────────────────────────── */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 14, marginBottom: 28 }}>
-          <StatCard label="Tasks Shipped" value={completedTasks.length} sub="This week" icon={CheckSquare} color="#177C5B" />
-          <StatCard label="Tasks Slipped" value={slipped} sub={slipped > 0 ? 'Past due date' : 'All on track'} icon={TrendingUp} color={slipped > 0 ? 'var(--sb-negative)' : '#1D9E75'} />
-          <StatCard label="Focus Hours" value={focusHours} sub="Click to edit" icon={Clock} color="#685FD7" editable onChange={v => { setFocusHours(v); saveHours(v, meetingHours) }} />
-          <StatCard label="Meeting Hours" value={meetingHours} sub="Click to edit" icon={Users} color="#685FD7" editable onChange={v => { setMeetingHours(v); saveHours(focusHours, v) }} />
+          <StatCard label="Tasks Shipped" value={completedTasks.length} sub="This week" icon={CheckSquare} color="var(--sb-positive)" />
+          <StatCard label="Tasks Slipped" value={slipped} sub={slipped > 0 ? 'Past due date' : 'All on track'} icon={TrendingUp} color={slipped > 0 ? 'var(--sb-negative)' : 'var(--sb-positive)'} />
+          <StatCard label="Focus Hours" value={focusHours} sub="Click to edit" icon={Clock} color="var(--sb-info)" editable onChange={v => { setFocusHours(v); saveHours(v, meetingHours) }} />
+          <StatCard label="Meeting Hours" value={meetingHours} sub="Click to edit" icon={Users} color="var(--sb-info)" editable onChange={v => { setMeetingHours(v); saveHours(focusHours, v) }} />
         </div>
 
         {/* ─── Panel ──────────────────────────────────────────────────────── */}
@@ -511,7 +512,7 @@ export function ReviewModule() {
             ><ChevronLeft size={ICON.md} /></button>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <CalendarDays size={ICON.md} color="#685FD7" />
+              <CalendarDays size={ICON.md} color="var(--sb-info)" />
               <span style={{ fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>
                 {viewMode === 'daily'
                   ? fmtDayLabel(selectedDay)
@@ -521,7 +522,7 @@ export function ReviewModule() {
               {(viewMode === 'daily' ? selectedDay !== todayStr() : !isCurrentWeek) && (
                 <button
                   onClick={() => setSelectedDay(todayStr())}
-                  style={{ fontSize: 'var(--sb-t-meta)', color: '#685FD7', background: 'rgba(127,119,221,0.1)', border: '1px solid rgba(127,119,221,0.25)', borderRadius: 'var(--sb-r-chip)', padding: '2px 8px', cursor: 'pointer' }}
+                  style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-info)', background: 'color-mix(in srgb, var(--sb-info) 10.0%, transparent)', border: '1px solid color-mix(in srgb, var(--sb-info) 25.0%, transparent)', borderRadius: 'var(--sb-r-chip)', padding: '2px 8px', cursor: 'pointer' }}
                 >Today</button>
               )}
             </div>
@@ -535,8 +536,8 @@ export function ReviewModule() {
                     onClick={() => setViewMode(mode)}
                     style={{
                       padding: '5px 14px', fontSize: 'var(--sb-t-meta)', fontWeight: 600, cursor: 'pointer', border: 'none',
-                      background: viewMode === mode ? '#7F77DD' : 'none',
-                      color: viewMode === mode ? '#fff' : 'var(--sb-ink-3)',
+                      background: viewMode === mode ? 'var(--sb-info)' : 'none',
+                      color: viewMode === mode ? 'var(--sb-ink-on-fill)' : 'var(--sb-ink-3)',
                       textTransform: 'capitalize',
                     }}
                   >{mode}</button>
@@ -553,15 +554,15 @@ export function ReviewModule() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 24, padding: '11px 20px', borderBottom: '1px solid var(--sb-card)', background: 'var(--sb-page)' }}>
             {viewMode === 'daily' ? (
               <>
-                <PillStat done={doneEvents.length} total={dayEvents.length} label="events done" color="#685FD7" />
+                <PillStat done={doneEvents.length} total={dayEvents.length} label="events done" color="var(--sb-info)" />
                 <div style={{ width: 1, height: 20, background: 'var(--sb-border)' }} />
-                <PillStat done={doneTasks.length} total={dayTasks.length} label="tasks done" color="#177C5B" />
+                <PillStat done={doneTasks.length} total={dayTasks.length} label="tasks done" color="var(--sb-positive)" />
               </>
             ) : (
               <>
-                <PillStat done={weekDoneEvts} total={allWeekEvents.length} label="events done this week" color="#685FD7" />
+                <PillStat done={weekDoneEvts} total={allWeekEvents.length} label="events done this week" color="var(--sb-info)" />
                 <div style={{ width: 1, height: 20, background: 'var(--sb-border)' }} />
-                <PillStat done={weekDoneTasks} total={weekTasksAll.length} label="tasks done this week" color="#177C5B" />
+                <PillStat done={weekDoneTasks} total={weekTasksAll.length} label="tasks done this week" color="var(--sb-positive)" />
               </>
             )}
           </div>
@@ -578,14 +579,14 @@ export function ReviewModule() {
                   <CalendarDays size={28} style={{ opacity: 0.4, marginBottom: 10 }} />
                   <p style={{ margin: 0, fontSize: 'var(--sb-t-body)' }}>No events or tasks recorded for this day.</p>
                   {dayEvents.length === 0 && (
-                    <p style={{ margin: '6px 0 0', fontSize: 'var(--sb-t-meta)', color: '#3A3F55' }}>Events load from the current week's cache — open Cal Intel to load another week.</p>
+                    <p style={{ margin: '6px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-2)' }}>Events load from the current week's cache — open Cal Intel to load another week.</p>
                   )}
                 </div>
               ) : (
                 <>
                   {doneEvents.length > 0 && (
                     <div style={{ marginBottom: 18 }}>
-                      <SectionHead label="Events Done" count={doneEvents.length} color="#685FD7" />
+                      <SectionHead label="Events Done" count={doneEvents.length} color="var(--sb-info)" />
                       {doneEvents.map(e => <EventRow key={e.id} event={e} />)}
                     </div>
                   )}
@@ -597,7 +598,7 @@ export function ReviewModule() {
                   )}
                   {doneTasks.length > 0 && (
                     <div style={{ marginBottom: 18 }}>
-                      <SectionHead label="Tasks Done" count={doneTasks.length} color="#177C5B" />
+                      <SectionHead label="Tasks Done" count={doneTasks.length} color="var(--sb-positive)" />
                       {doneTasks.map(t => <TaskRow key={t.id} title={t.title} company={resolveCompanyLabel(t)} />)}
                     </div>
                   )}

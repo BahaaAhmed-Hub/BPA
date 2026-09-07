@@ -21,6 +21,7 @@ import {
 import type { DbCalendarEvent, DbTask } from '@/types/database'
 import { loadVisibleCompanies } from '@/types'
 import { ICON, STROKE } from '@/lib/type'
+import { alpha } from '@/lib/alpha'
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -53,12 +54,12 @@ export interface DayPlannerProps {
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
 const BLOCK_COLORS: Record<BlockType, string> = {
-  focus:   '#7F77DD',
-  meeting: '#7F77DD',
-  task:    '#1D9E75',
-  buffer:  '#6B7280',
-  break:   '#F59E0B',
-  admin:   '#0891B2',
+  focus:   'var(--sb-info)',
+  meeting: 'var(--sb-info)',
+  task:    'var(--sb-positive)',
+  buffer:  'var(--sb-ink-4)',
+  break:   'var(--sb-warning)',
+  admin:   'var(--sb-info)',
 }
 
 const BLOCK_LABELS: Record<BlockType, string> = {
@@ -176,8 +177,8 @@ function GeneratingSkeleton() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '4px 0' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-        <RefreshCw size={ICON.sm} color="#685FD7" style={{ animation: 'spin 1s linear infinite' }} />
-        <span style={{ fontSize: 'var(--sb-t-body-s)', color: '#685FD7' }}>Analyzing your calendar and tasks…</span>
+        <RefreshCw size={ICON.sm} color="var(--sb-info)" style={{ animation: 'spin 1s linear infinite' }} />
+        <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-info)' }}>Analyzing your calendar and tasks…</span>
       </div>
       {[80, 65, 90, 55, 75].map((w, i) => (
         <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
@@ -368,17 +369,17 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
         style={{
           width: '100%', padding: '14px 18px',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          background: 'var(--sb-page)', border: '1px dashed #7F77DD40',
+          background: 'var(--sb-page)', border: '1px dashed color-mix(in srgb, var(--sb-info) 25.1%, transparent)',
           borderRadius: 'var(--sb-r-nav)', cursor: 'pointer', transition: 'all 0.15s',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{
             width: 28, height: 28, borderRadius: 'var(--sb-r-chip)',
-            background: 'rgba(127,119,221,0.1)', border: '1px solid #7F77DD30',
+            background: 'color-mix(in srgb, var(--sb-info) 10.0%, transparent)', border: '1px solid color-mix(in srgb, var(--sb-info) 18.8%, transparent)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            <Sparkles size={ICON.sm} color="#685FD7" />
+            <Sparkles size={ICON.sm} color="var(--sb-info)" />
           </div>
           <div style={{ textAlign: 'left' }}>
             <p style={{ margin: 0, fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>Build My Day</p>
@@ -396,12 +397,12 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
         {error && (
           <div style={{
-            borderRadius: 'var(--sb-r-nav)', background: '#FEF3EC', border: '1px solid #92400E30', overflow: 'hidden',
+            borderRadius: 'var(--sb-r-nav)', background: 'var(--sb-accent-tint)', border: '1px solid color-mix(in srgb, var(--sb-warning) 18.8%, transparent)', overflow: 'hidden',
           }}>
-            <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '14px 16px', borderBottom: '1px solid #92400E30' }}>
-              <CreditCard size={ICON.sm} color="#F59E0B" style={{ marginTop: 1, flexShrink: 0 }} />
+            <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '14px 16px', borderBottom: '1px solid color-mix(in srgb, var(--sb-warning) 18.8%, transparent)' }}>
+              <CreditCard size={ICON.sm} color="var(--sb-warning)" style={{ marginTop: 1, flexShrink: 0 }} />
               <div>
-                <p style={{ margin: '0 0 3px', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: '#B45309' }}>
+                <p style={{ margin: '0 0 3px', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-warning)' }}>
                   {errorType === 'credit' ? 'API Credit Balance Too Low' : 'Generation Failed'}
                 </p>
                 <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', lineHeight: 1.5 }}>
@@ -446,7 +447,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                   What must get done today?
                 </label>
                 {selectedTaskIds.size > 0 && (
-                  <span style={{ fontSize: 'var(--sb-t-micro)', color: '#685FD7' }}>
+                  <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-info)' }}>
                     {selectedTaskIds.size} selected
                   </span>
                 )}
@@ -479,7 +480,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                             style={{
                               display: 'flex', alignItems: 'center', gap: 9,
                               padding: '8px 10px', borderRadius: 'var(--sb-r-chip)',
-                              background: isSelected ? `${group.color}12` : 'var(--sb-page)',
+                              background: isSelected ? alpha(group.color, 7.1) : 'var(--sb-page)',
                               border: `1px solid ${isSelected ? `${group.color}40` : 'var(--sb-border)'}`,
                               cursor: 'pointer', textAlign: 'left',
                               transition: 'all 0.12s',
@@ -506,7 +507,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                             {isDueToday && (
                               <span style={{
                                 fontSize: 'var(--sb-t-micro)', padding: '1px 5px', borderRadius: 'var(--sb-r-chip)', flexShrink: 0,
-                                background: '#EF444418', border: '1px solid #EF444430', color: '#EF4444',
+                                background: 'color-mix(in srgb, var(--sb-negative) 9.4%, transparent)', border: '1px solid color-mix(in srgb, var(--sb-negative) 18.8%, transparent)', color: 'var(--sb-negative)',
                               }}>
                                 today
                               </span>
@@ -514,7 +515,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                             {task.quadrant === 'do' && !isDueToday && (
                               <span style={{
                                 fontSize: 'var(--sb-t-micro)', padding: '1px 5px', borderRadius: 'var(--sb-r-chip)', flexShrink: 0,
-                                background: '#F59E0B15', border: '1px solid #F59E0B30', color: '#F59E0B',
+                                background: 'color-mix(in srgb, var(--sb-warning) 8.2%, transparent)', border: '1px solid color-mix(in srgb, var(--sb-warning) 18.8%, transparent)', color: 'var(--sb-warning)',
                               }}>
                                 urgent
                               </span>
@@ -563,7 +564,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
               {todayEvents.map(ev => {
-                const color = ev.calendarColor ?? '#7F77DD'
+                const color = ev.calendarColor ?? 'var(--sb-info)'
                 return (
                   <div key={ev.id} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                     <div style={{ width: 3, height: '100%', minHeight: 28, borderRadius: 'var(--sb-r-chip)', background: color, flexShrink: 0 }} />
@@ -578,7 +579,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                     {ev.calendarName && (
                       <span style={{
                         fontSize: 'var(--sb-t-micro)', padding: '1px 5px', borderRadius: 'var(--sb-r-chip)', flexShrink: 0,
-                        background: `${color}18`, border: `1px solid ${color}30`, color,
+                        background: alpha(color, 9.4), border: `1px solid ${alpha(color, 18.8)}`, color,
                       }}>
                         {ev.calendarName}
                       </span>
@@ -603,9 +604,9 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                 style={{
                   flex: 1, padding: '9px 0', borderRadius: 'var(--sb-r-chip)', cursor: 'pointer',
                   fontSize: 'var(--sb-t-body-s)', fontWeight: deepWork === opt ? 600 : 400,
-                  background: deepWork === opt ? 'rgba(127,119,221,0.1)' : 'var(--sb-page)',
-                  border: `1px solid ${deepWork === opt ? 'color-mix(in srgb, #7F77DD 40%, transparent)' : 'var(--sb-border)'}`,
-                  color: deepWork === opt ? '#7F77DD' : 'var(--sb-ink-4)',
+                  background: deepWork === opt ? 'color-mix(in srgb, var(--sb-info) 10.0%, transparent)' : 'var(--sb-page)',
+                  border: `1px solid ${deepWork === opt ? 'color-mix(in srgb, var(--sb-info) 40%, transparent)' : 'var(--sb-border)'}`,
+                  color: deepWork === opt ? 'var(--sb-info)' : 'var(--sb-ink-4)',
                   transition: 'all 0.15s',
                   textTransform: 'capitalize',
                 }}
@@ -634,8 +635,8 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
             title={eventsLoading ? 'Waiting for calendar to load…' : undefined}
             style={{
               flex: 1, padding: '10px 0', borderRadius: 'var(--sb-r-chip)', cursor: eventsLoading ? 'not-allowed' : 'pointer',
-              background: '#7F77DD', border: 'none',
-              color: '#fff', fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
+              background: 'var(--sb-info)', border: 'none',
+              color: 'var(--sb-ink-on-fill)', fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
               opacity: eventsLoading ? 0.45 : 1,
               transition: 'opacity 0.15s',
@@ -713,7 +714,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                     </span>
                     <span style={{
                       fontSize: 'var(--sb-t-micro)', padding: '1px 6px', borderRadius: 'var(--sb-r-chip)',
-                      background: `${color}15`, border: `1px solid ${color}25`, color,
+                      background: alpha(color, 8.2), border: `1px solid ${alpha(color, 14.5)}`, color,
                       fontWeight: 600,
                     }}>
                       {BLOCK_LABELS[slot.type]}
@@ -721,7 +722,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                     {slot.isExisting && (
                       <span style={{
                         fontSize: 'var(--sb-t-micro)', padding: '1px 6px', borderRadius: 'var(--sb-r-chip)',
-                        background: '#25283618', border: '1px solid #25283640', color: 'var(--sb-ink-4)',
+                        background: 'color-mix(in srgb, var(--sb-ink-2) 9.4%, transparent)', border: '1px solid color-mix(in srgb, var(--sb-ink-2) 25.1%, transparent)', color: 'var(--sb-ink-4)',
                       }}>
                         existing
                       </span>
@@ -729,7 +730,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                     {slot.action === 'reschedule' && (
                       <span style={{
                         fontSize: 'var(--sb-t-micro)', padding: '1px 6px', borderRadius: 'var(--sb-r-chip)',
-                        background: '#F59E0B15', border: '1px solid #F59E0B30', color: '#F59E0B',
+                        background: 'color-mix(in srgb, var(--sb-warning) 8.2%, transparent)', border: '1px solid color-mix(in srgb, var(--sb-warning) 18.8%, transparent)', color: 'var(--sb-warning)',
                       }}>
                         move
                       </span>
@@ -737,7 +738,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                     {slot.action === 'remove' && (
                       <span style={{
                         fontSize: 'var(--sb-t-micro)', padding: '1px 6px', borderRadius: 'var(--sb-r-chip)',
-                        background: '#EF444415', border: '1px solid #EF444430', color: '#EF4444',
+                        background: 'color-mix(in srgb, var(--sb-negative) 8.2%, transparent)', border: '1px solid color-mix(in srgb, var(--sb-negative) 18.8%, transparent)', color: 'var(--sb-negative)',
                       }}>
                         remove
                       </span>
@@ -767,8 +768,8 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                       title="Confirm"
                       style={{
                         width: 26, height: 26, borderRadius: 'var(--sb-r-chip)', cursor: 'pointer',
-                        background: '#1D9E7518', border: '1px solid #1D9E7540',
-                        color: '#177C5B', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        background: 'color-mix(in srgb, var(--sb-positive) 9.4%, transparent)', border: '1px solid color-mix(in srgb, var(--sb-positive) 25.1%, transparent)',
+                        color: 'var(--sb-positive)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                       }}
                     >
                       <Check size={ICON.sm} />
@@ -779,8 +780,8 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                       title="Unconfirm"
                       style={{
                         width: 26, height: 26, borderRadius: 'var(--sb-r-chip)', cursor: 'pointer',
-                        background: '#1D9E7530', border: '1px solid #1D9E7560',
-                        color: '#177C5B', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        background: 'color-mix(in srgb, var(--sb-positive) 18.8%, transparent)', border: '1px solid color-mix(in srgb, var(--sb-positive) 37.6%, transparent)',
+                        color: 'var(--sb-positive)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                       }}
                     >
                       <Check size={ICON.sm} />
@@ -793,8 +794,8 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                       title="Skip"
                       style={{
                         width: 26, height: 26, borderRadius: 'var(--sb-r-chip)', cursor: 'pointer',
-                        background: '#EF444418', border: '1px solid #EF444430',
-                        color: '#EF4444', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        background: 'color-mix(in srgb, var(--sb-negative) 9.4%, transparent)', border: '1px solid color-mix(in srgb, var(--sb-negative) 18.8%, transparent)',
+                        color: 'var(--sb-negative)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                       }}
                     >
                       <X size={ICON.sm} />
@@ -807,8 +808,8 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                       title="Find next free slot"
                       style={{
                         width: 26, height: 26, borderRadius: 'var(--sb-r-chip)', cursor: 'pointer',
-                        background: '#F59E0B18', border: '1px solid #F59E0B30',
-                        color: '#F59E0B', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        background: 'color-mix(in srgb, var(--sb-warning) 9.4%, transparent)', border: '1px solid color-mix(in srgb, var(--sb-warning) 18.8%, transparent)',
+                        color: 'var(--sb-warning)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                       }}
                     >
                       <RotateCcw size={ICON.sm} />
@@ -833,8 +834,8 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                 title={isReady ? `Apply ${pendingCount} change${pendingCount > 1 ? 's' : ''} to Google Calendar` : unconfirmed > 0 ? `Confirm ${unconfirmed} slot${unconfirmed > 1 ? 's' : ''} above to enable` : 'No calendar changes to apply'}
                 style={{
                   padding: '12px 0', borderRadius: 'var(--sb-r-nav)', cursor: isReady ? 'pointer' : 'not-allowed',
-                  background: '#7F77DD', border: 'none',
-                  color: '#fff', fontSize: 'var(--sb-t-label)', fontWeight: 600,
+                  background: 'var(--sb-info)', border: 'none',
+                  color: 'var(--sb-ink-on-fill)', fontSize: 'var(--sb-t-label)', fontWeight: 600,
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                   opacity: isReady ? 1 : 0.4,
                   transition: 'opacity 0.15s',
@@ -863,8 +864,8 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-          <RefreshCw size={ICON.sm} color="#685FD7" style={{ animation: 'spin 1s linear infinite' }} />
-          <span style={{ fontSize: 'var(--sb-t-body-s)', color: '#685FD7' }}>Applying changes to your calendar…</span>
+          <RefreshCw size={ICON.sm} color="var(--sb-info)" style={{ animation: 'spin 1s linear infinite' }} />
+          <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-info)' }}>Applying changes to your calendar…</span>
         </div>
         {active.map(slot => {
           const st = applying[slot.id]
@@ -872,15 +873,15 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
             <div key={slot.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <div style={{
                 width: 16, height: 16, borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
-                background: st === 'done' ? '#1D9E75' : st === 'error' ? '#EF4444' : 'var(--sb-field)',
-                border: `1px solid ${st === 'done' ? '#1D9E75' : st === 'error' ? '#EF4444' : '#7F77DD'}`,
+                background: st === 'done' ? 'var(--sb-positive)' : st === 'error' ? 'var(--sb-negative)' : 'var(--sb-field)',
+                border: `1px solid ${st === 'done' ? 'var(--sb-positive)' : st === 'error' ? 'var(--sb-negative)' : 'var(--sb-info)'}`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
-                {st === 'done'  && <Check size={ICON.sm} color="#fff" />}
-                {st === 'error' && <X     size={ICON.sm} color="#fff" />}
-                {!st && <RefreshCw size={ICON.sm} color="#685FD7" style={{ animation: 'spin 1s linear infinite' }} />}
+                {st === 'done'  && <Check size={ICON.sm} color="var(--sb-ink-on-fill)" />}
+                {st === 'error' && <X     size={ICON.sm} color="var(--sb-ink-on-fill)" />}
+                {!st && <RefreshCw size={ICON.sm} color="var(--sb-info)" style={{ animation: 'spin 1s linear infinite' }} />}
               </div>
-              <span style={{ fontSize: 'var(--sb-t-body-s)', color: st === 'error' ? '#EF4444' : 'var(--sb-ink-1)' }}>
+              <span style={{ fontSize: 'var(--sb-t-body-s)', color: st === 'error' ? 'var(--sb-negative)' : 'var(--sb-ink-1)' }}>
                 {slot.title}
               </span>
               <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', marginLeft: 'auto' }}>
@@ -903,28 +904,28 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <div style={{
         padding: '16px 18px', borderRadius: 'var(--sb-r-nav)',
-        background: '#F0FAF5', border: '1px solid #1D9E7540',
+        background: 'var(--sb-positive-tint)', border: '1px solid color-mix(in srgb, var(--sb-positive) 25.1%, transparent)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
           <div style={{
             width: 28, height: 28, borderRadius: 'var(--sb-r-chip)', flexShrink: 0,
-            background: '#1D9E7518', border: '1px solid #1D9E7530',
+            background: 'color-mix(in srgb, var(--sb-positive) 9.4%, transparent)', border: '1px solid color-mix(in srgb, var(--sb-positive) 18.8%, transparent)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            <Check size={ICON.sm} color="#177C5B" />
+            <Check size={ICON.sm} color="var(--sb-positive)" />
           </div>
-          <p style={{ margin: 0, fontSize: 'var(--sb-t-label)', fontWeight: 600, color: '#177C5B' }}>Plan Applied</p>
+          <p style={{ margin: 0, fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-positive)' }}>Plan Applied</p>
         </div>
         <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
           {created > 0 && <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)' }}>{created} created</span>}
           {updated > 0 && <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)' }}>{updated} rescheduled</span>}
           {deleted > 0 && <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)' }}>{deleted} removed</span>}
-          {errored.length > 0 && <span style={{ fontSize: 'var(--sb-t-body-s)', color: '#EF4444' }}>{errored.length} failed</span>}
+          {errored.length > 0 && <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-negative)' }}>{errored.length} failed</span>}
         </div>
         {errored.length > 0 && (
           <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 4 }}>
             {errored.map(r => (
-              <p key={r.slotId} style={{ margin: 0, fontSize: 'var(--sb-t-meta)', color: '#EF4444' }}>
+              <p key={r.slotId} style={{ margin: 0, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-negative)' }}>
                 ✗ {r.title}{r.error ? `: ${r.error}` : ''}
               </p>
             ))}

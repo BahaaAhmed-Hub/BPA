@@ -58,12 +58,12 @@ export function TaskRow({ task, onOpen, dense }: {
         title={task.completed ? 'Reopen' : 'Complete'}
         style={{
           width: 16, height: 16, borderRadius: 'var(--sb-r-chip)', boxSizing: 'border-box', flexShrink: 0, padding: 0, marginTop: 2,
-          border: task.completed ? 'var(--sb-border-emphasis) solid var(--sb-positive)' : 'var(--sb-border-emphasis) solid #CFC6B0',
+          border: task.completed ? 'var(--sb-border-emphasis) solid var(--sb-positive)' : 'var(--sb-border-emphasis) solid var(--sb-border)',
           background: task.completed ? 'var(--sb-positive)' : 'var(--sb-card)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
         }}
       >
-        {task.completed && <Check size={ICON.sm} color="#fff" strokeWidth={STROKE.active} />}
+        {task.completed && <Check size={ICON.sm} color="var(--sb-ink-on-fill)" strokeWidth={STROKE.active} />}
       </button>
 
       <div style={{ flex: 1, minWidth: 0 }}>
@@ -112,7 +112,7 @@ export function TaskRow({ task, onOpen, dense }: {
           title={task.urgent ? 'On fire — click to clear' : 'Mark as on fire'}
           style={{
             background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex',
-            color: task.urgent ? 'var(--sb-negative)' : '#D8CFB8',
+            color: task.urgent ? 'var(--sb-negative)' : 'var(--sb-border)',
           }}>
           <Flame size={ICON.sm} strokeWidth={STROKE.rest} fill={task.urgent ? 'var(--sb-negative)' : 'none'} />
         </button>
@@ -129,7 +129,7 @@ export function TaskRow({ task, onOpen, dense }: {
 
         <ControlSlot size={14}>
           <span title={v.scheduled ? 'Scheduled' : 'Not scheduled'}
-            style={{ display: 'flex', color: v.scheduled ? 'var(--sb-positive)' : '#D8CFB8' }}>
+            style={{ display: 'flex', color: v.scheduled ? 'var(--sb-positive)' : 'var(--sb-border)' }}>
             <CalendarDays size={ICON.sm} strokeWidth={STROKE.rest} />
           </span>
           <OverlayTime
@@ -145,7 +145,7 @@ export function TaskRow({ task, onOpen, dense }: {
           <span style={{
             width: 22, display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: 'var(--sb-t-meta)', fontWeight: 700,
-            color: task.priority ? PRIORITY_META[task.priority].color : '#D8CFB8',
+            color: task.priority ? PRIORITY_META[task.priority].color : 'var(--sb-border)',
           }}>{task.priority ?? '—'}</span>
           <OverlaySelect
             title={task.priority ? `Priority ${task.priority}` : 'No priority'}
@@ -179,7 +179,7 @@ export function TaskRow({ task, onOpen, dense }: {
           data-nm
           onClick={e => { e.stopPropagation(); deleteTask(task.id) }}
           title="Delete task"
-          style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', color: '#D8CFB8' }}>
+          style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', color: 'var(--sb-border)' }}>
           <Trash2 size={ICON.sm} strokeWidth={STROKE.rest} />
         </button>
           </span>

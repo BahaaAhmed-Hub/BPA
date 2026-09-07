@@ -1,13 +1,10 @@
 import { useState } from 'react'
+import { COMPANY_COLOR_CHOICES } from '@/lib/palettes'
 import { Button } from '@/components/ui'
 import { loadAccounts } from '@/lib/multiAccount'
 import { X } from 'lucide-react'
 import { ICON } from '@/lib/type'
 
-const COLORS = [
-  '#7F77DD','#60A5FA','#1D9E75','#E05252','#F97316',
-  '#A855F7','#EC4899','#FBBF24','#22D3EE','#6366F1','#10B981','#EF4444',
-]
 
 interface CompanyDraft {
   id: string; name: string; color: string; emailDomain: string; accountId: string
@@ -30,14 +27,14 @@ export function Step3Companies({ data, onChange }: Props) {
   const accounts = loadAccounts()
   const [adding, setAdding] = useState(false)
   const [name, setName]     = useState('')
-  const [color, setColor]   = useState(COLORS[0])
+  const [color, setColor]   = useState(COMPANY_COLOR_CHOICES[0])
   const [domain, setDomain] = useState('')
   const [accountId, setAccountId] = useState('')
 
   function addCompany() {
     if (!name.trim()) return
     onChange({ companies: [...data.companies, { id: crypto.randomUUID(), name: name.trim(), color, emailDomain: domain.trim(), accountId }] })
-    setName(''); setColor(COLORS[0]); setDomain(''); setAccountId(''); setAdding(false)
+    setName(''); setColor(COMPANY_COLOR_CHOICES[0]); setDomain(''); setAccountId(''); setAdding(false)
   }
 
   function remove(id: string) {
@@ -69,7 +66,7 @@ export function Step3Companies({ data, onChange }: Props) {
                 {co.emailDomain && <span style={{ marginLeft: 8, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>{co.emailDomain}</span>}
               </div>
               {acc && (
-                <span style={{ fontSize: 'var(--sb-t-meta)', padding: '2px 8px', borderRadius: 'var(--sb-r-card)', background: 'rgba(127,119,221,0.12)', color: '#9B94E8', flexShrink: 0 }}>
+                <span style={{ fontSize: 'var(--sb-t-meta)', padding: '2px 8px', borderRadius: 'var(--sb-r-card)', background: 'color-mix(in srgb, var(--sb-info) 12.0%, transparent)', color: 'var(--sb-info)', flexShrink: 0 }}>
                   {acc.email.split('@')[0]}
                 </span>
               )}
@@ -88,7 +85,7 @@ export function Step3Companies({ data, onChange }: Props) {
             <input value={domain} onChange={e => setDomain(e.target.value)} placeholder="e.g. acme.com" style={{ ...inp, width: 160 }} />
           </div>
           <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
-            {COLORS.map(c => (
+            {COMPANY_COLOR_CHOICES.map(c => (
               <button key={c} onClick={() => setColor(c)} style={{
                 width: 22, height: 22, borderRadius: 'var(--sb-r-pill)', background: c, border: 'none', cursor: 'pointer',
                 outline: color === c ? `2px solid ${c}` : 'none', outlineOffset: 2,

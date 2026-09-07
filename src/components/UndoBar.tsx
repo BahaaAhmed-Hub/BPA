@@ -67,7 +67,7 @@ export function UndoBar() {
   const isFlash = flash !== null
 
   return (
-    <div style={{
+    <div className="sb-blur-surface" style={{
       position: 'fixed', left: '50%', bottom: 26, transform: 'translateX(-50%)',
       zIndex: 4000, display: 'flex', alignItems: 'center', gap: 12,
       background: 'var(--sb-ink-1)', color: 'var(--sb-ink-on-dark)', borderRadius: 'var(--sb-r-nav)',

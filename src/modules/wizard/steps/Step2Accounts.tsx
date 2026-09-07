@@ -14,10 +14,10 @@ interface Props {
 function GoogleIcon() {
   return (
     <svg width="20" height="20" viewBox="0 0 48 48" fill="none">
-      <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.07 17.74 9.5 24 9.5z"/>
-      <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-      <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
-      <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-3.57-13.46-8.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+      <path fill="var(--sb-negative)" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.07 17.74 9.5 24 9.5z"/>
+      <path fill="var(--sb-info)" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+      <path fill="var(--sb-warning)" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+      <path fill="var(--sb-positive)" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-3.57-13.46-8.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
       <path fill="none" d="M0 0h48v48H0z"/>
     </svg>
   )
@@ -26,10 +26,10 @@ function GoogleIcon() {
 function MicrosoftIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 21 21" fill="none">
-      <rect x="0" y="0" width="10" height="10" fill="#F25022"/>
-      <rect x="11" y="0" width="10" height="10" fill="#7FBA00"/>
-      <rect x="0" y="11" width="10" height="10" fill="#00A4EF"/>
-      <rect x="11" y="11" width="10" height="10" fill="#FFB900"/>
+      <rect x="0" y="0" width="10" height="10" fill="var(--sb-negative)"/>
+      <rect x="11" y="0" width="10" height="10" fill="var(--sb-positive)"/>
+      <rect x="0" y="11" width="10" height="10" fill="var(--sb-info)"/>
+      <rect x="11" y="11" width="10" height="10" fill="var(--sb-warning)"/>
     </svg>
   )
 }
@@ -131,7 +131,7 @@ export function Step2Accounts({ data: _data, onChange: _onChange, onBeforeOAuth 
           justifyContent: 'center',
           fontSize: 'var(--sb-t-label)',
           fontWeight: 700,
-          color: '#fff',
+          color: 'var(--sb-accent-ink)',
           flexShrink: 0,
         }}>
           {user?.name ? user.name[0].toUpperCase() : user?.email?.[0]?.toUpperCase() ?? '?'}
@@ -148,8 +148,8 @@ export function Step2Accounts({ data: _data, onChange: _onChange, onBeforeOAuth 
           <span style={{
             fontSize: 'var(--sb-t-micro)',
             fontWeight: 600,
-            background: 'rgba(52,211,153,0.12)',
-            color: '#34D399',
+            background: 'color-mix(in srgb, var(--sb-positive) 12.0%, transparent)',
+            color: 'var(--sb-positive)',
             borderRadius: 'var(--sb-r-chip)',
             padding: '2px 7px',
             letterSpacing: '0.04em',
@@ -157,8 +157,8 @@ export function Step2Accounts({ data: _data, onChange: _onChange, onBeforeOAuth 
             Primary · Connected
           </span>
           <div style={{ display: 'flex', gap: 8 }}>
-            <span style={{ fontSize: 'var(--sb-t-meta)', color: '#34D399' }}>✉ Mail</span>
-            <span style={{ fontSize: 'var(--sb-t-meta)', color: '#34D399' }}>📅 Calendar</span>
+            <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-positive)' }}>✉ Mail</span>
+            <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-positive)' }}>📅 Calendar</span>
           </div>
         </div>
       </div>
@@ -206,8 +206,8 @@ export function Step2Accounts({ data: _data, onChange: _onChange, onBeforeOAuth 
                 </div>
               </div>
               <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                <span style={{ fontSize: 'var(--sb-t-meta)', color: '#34D399' }}>✉</span>
-                <span style={{ fontSize: 'var(--sb-t-meta)', color: '#34D399' }}>📅</span>
+                <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-positive)' }}>✉</span>
+                <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-positive)' }}>📅</span>
               </div>
             </div>
           ))}
@@ -243,8 +243,8 @@ export function Step2Accounts({ data: _data, onChange: _onChange, onBeforeOAuth 
               right: 6,
               fontSize: 'var(--sb-t-micro)',
               fontWeight: 700,
-              background: 'rgba(251,191,36,0.18)',
-              color: '#FBBF24',
+              background: 'color-mix(in srgb, var(--sb-accent) 18.0%, transparent)',
+              color: 'var(--sb-accent)',
               borderRadius: 'var(--sb-r-chip)',
               padding: '1px 5px',
               letterSpacing: '0.04em',
@@ -263,8 +263,8 @@ export function Step2Accounts({ data: _data, onChange: _onChange, onBeforeOAuth 
               right: 6,
               fontSize: 'var(--sb-t-micro)',
               fontWeight: 700,
-              background: 'rgba(251,191,36,0.18)',
-              color: '#FBBF24',
+              background: 'color-mix(in srgb, var(--sb-accent) 18.0%, transparent)',
+              color: 'var(--sb-accent)',
               borderRadius: 'var(--sb-r-chip)',
               padding: '1px 5px',
               letterSpacing: '0.04em',

@@ -13,7 +13,7 @@ import {
 function IconShield({ size = 30 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
-      stroke="var(--sb-ink-1)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      stroke="var(--sb-accent-ink)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
       <path d="M12 2.6l7.2 2.9v5.7c0 4.6-3 8.3-7.2 10.2-4.2-1.9-7.2-5.6-7.2-10.2V5.5z"/>
       <path d="M9.3 12.1l2 2 3.4-3.9"/>
     </svg>
@@ -82,7 +82,7 @@ export function LockGate({ onUnlocked, compact = false, title, note }: LockGateP
       width: compact ? '100%' : 380, maxWidth: '100%',
       background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
       padding: compact ? '18px 20px 20px' : '30px 30px 26px',
-      boxShadow: compact ? 'none' : '0 1px 3px rgba(25,23,18,0.06)',
+      boxShadow: compact ? 'none' : '0 1px 3px color-mix(in srgb, var(--sb-ink-1) 6.0%, transparent)',
     }}>
       {!compact && (
         <div style={{
@@ -140,8 +140,8 @@ export function LockGate({ onUnlocked, compact = false, title, note }: LockGateP
             style={{
               width: '100%', height: 42, borderRadius: 'var(--sb-r-nav)', marginTop: 10,
               background: password ? 'var(--sb-accent)' : 'var(--sb-field)',
-              border: `1px solid ${password ? 'rgba(25,23,18,0.18)' : 'var(--sb-border)'}`,
-              color: password ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)',
+              border: `1px solid ${password ? 'color-mix(in srgb, var(--sb-ink-1) 18.0%, transparent)' : 'var(--sb-border)'}`,
+              color: password ? 'var(--sb-accent-ink)' : 'var(--sb-ink-4)',
               cursor: password && !busy ? 'pointer' : 'default',
               fontFamily: 'inherit', fontSize: 'var(--sb-t-label)', fontWeight: 600,
             }}>

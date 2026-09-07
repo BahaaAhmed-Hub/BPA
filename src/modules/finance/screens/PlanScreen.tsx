@@ -19,13 +19,13 @@ const C = {
   accentBg:'var(--sb-accent-tint2)',
   accentBr:'var(--sb-accent-border)',
   olive:   'var(--sb-positive)',
-  oliveBg: '#EAF0D8',
-  oliveTxt:'#7A8C5A',
-  rust:    '#A31C1C',
-  rustDk:  '#8E3E28',
-  muted:   '#C4BDA8',
+  oliveBg: 'var(--sb-positive-tint)',
+  oliveTxt:'var(--sb-positive)',
+  rust:    'var(--sb-negative-deep)',
+  rustDk:  'var(--sb-negative-deep)',
+  muted:   'var(--sb-border)',
   dark:    'var(--sb-ink-1)',
-  darkSrf: 'rgba(253,248,231,0.14)',
+  darkSrf: 'color-mix(in srgb, var(--sb-accent-tint) 14.0%, transparent)',
 }
 
 function fmt(n: number) {
@@ -62,9 +62,9 @@ const DEMO_PLAN: MonthRow[] = [
   { month: 'Sep', forecastIn: 228000, committed: 193000, freeCash: 35000, toCard: 20000, from: 'CIB current', on: '3 Sep', cardLeft: 26057, rowBg: C.accentBg },
   { month: 'Oct', forecastIn: 240000, committed: 193000, freeCash: 47000, toCard: 26057, from: 'CIB current', on: '4 Oct', cardLeft: 0,     rowBg: C.oliveBg, closedRow: true },
   { month: 'Nov', isLabel: 'PLAN', forecastIn: 228000, committed: 173000, freeCash: 55000, toCard: null,  from: '—', on: '—', cardLeft: 0, rowBg: C.surface },
-  { month: 'Dec', isLabel: 'PLAN', forecastIn: 228000, committed: 173000, freeCash: 55000, toCard: null,  from: '—', on: '—', cardLeft: 0, rowBg: '#FCFAF3' },
+  { month: 'Dec', isLabel: 'PLAN', forecastIn: 228000, committed: 173000, freeCash: 55000, toCard: null,  from: '—', on: '—', cardLeft: 0, rowBg: 'var(--sb-accent-tint)' },
   { month: 'Jan', isLabel: 'PLAN', forecastIn: 228000, committed: 168000, freeCash: 60000, toCard: null,  from: '—', on: '—', cardLeft: 0, rowBg: C.surface },
-  { month: 'Feb', isLabel: 'PLAN', forecastIn: 228000, committed: 168000, freeCash: 60000, toCard: null,  from: '—', on: '—', cardLeft: 0, rowBg: '#FCFAF3' },
+  { month: 'Feb', isLabel: 'PLAN', forecastIn: 228000, committed: 168000, freeCash: 60000, toCard: null,  from: '—', on: '—', cardLeft: 0, rowBg: 'var(--sb-accent-tint)' },
 ]
 
 type Strategy = 'highest' | 'smallest' | 'split'
@@ -133,7 +133,7 @@ export function PlanScreen() {
               <button key={t} onClick={() => setTab(t)} style={{
                 height: 28, padding: '0 13px', borderRadius: 'var(--sb-r-pill)',
                 background: tab === t ? C.surface : 'transparent',
-                boxShadow: tab === t ? '0 1px 3px rgba(25,23,18,.16)' : 'none',
+                boxShadow: tab === t ? '0 1px 3px color-mix(in srgb, var(--sb-ink-1) 16.0%, transparent)' : 'none',
                 color: tab === t ? C.ink1 : C.ink3,
                 fontWeight: tab === t ? 600 : 500, fontSize: 'var(--sb-t-body-s)',
                 border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center',
@@ -169,12 +169,12 @@ export function PlanScreen() {
                   border: `1px solid ${active ? C.dark : C.border}`,
                   cursor: 'pointer', boxSizing: 'border-box',
                 }}>
-                  <span style={{ width: 26, height: 26, borderRadius: 'var(--sb-r-chip)', background: active ? 'rgba(253,248,231,.14)' : '#F5F1E4', color: active ? C.accent : C.ink3, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 'var(--sb-t-label)' }}>
+                  <span style={{ width: 26, height: 26, borderRadius: 'var(--sb-r-chip)', background: active ? 'color-mix(in srgb, var(--sb-accent-tint) 14.0%, transparent)' : 'var(--sb-accent-tint)', color: active ? C.accent : C.ink3, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 'var(--sb-t-label)' }}>
                     {t.icon}
                   </span>
                   <span style={{ display: 'flex', flexDirection: 'column', minWidth: 0, textAlign: 'left' }}>
                     <span style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: active ? 'var(--sb-ink-on-dark)' : C.ink1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.name}</span>
-                    <span style={{ fontSize: 'var(--sb-t-micro)', color: active ? 'rgba(253,248,231,.65)' : C.ink3, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.sub}</span>
+                    <span style={{ fontSize: 'var(--sb-t-micro)', color: active ? 'color-mix(in srgb, var(--sb-accent-tint) 65.0%, transparent)' : C.ink3, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.sub}</span>
                   </span>
                   {active && (
                     <span style={{ marginLeft: 'auto', color: C.accent, display: 'flex', flexShrink: 0 }}>
@@ -198,7 +198,7 @@ export function PlanScreen() {
               <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-display)', fontWeight: 600, letterSpacing: '-0.04em', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>4 October</span>
               <span style={{ fontSize: 'var(--sb-t-meta)', opacity: 0.65 }}>Two payments · 18 months sooner than the minimum</span>
             </div>
-            <div style={{ width: 1, alignSelf: 'stretch', background: 'rgba(255,255,255,.13)', flexShrink: 0 }} />
+            <div style={{ width: 1, alignSelf: 'stretch', background: 'color-mix(in srgb, var(--sb-ink-on-dark) 13%, transparent)', flexShrink: 0 }} />
 
             {/* Bar chart */}
             <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -218,13 +218,13 @@ export function PlanScreen() {
                 ))}
               </div>
             </div>
-            <div style={{ width: 1, alignSelf: 'stretch', background: 'rgba(255,255,255,.13)', flexShrink: 0 }} />
+            <div style={{ width: 1, alignSelf: 'stretch', background: 'color-mix(in srgb, var(--sb-ink-on-dark) 13%, transparent)', flexShrink: 0 }} />
 
             {/* Stats */}
             <div style={{ width: 140, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 9 }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                 <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.12em', opacity: 0.55 }}>INTEREST AVOIDED</span>
-                <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h2)', fontWeight: 600, letterSpacing: '-0.03em', color: '#D8E0A8', fontVariantNumeric: 'tabular-nums' }}>EGP 9,420</span>
+                <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h2)', fontWeight: 600, letterSpacing: '-0.03em', color: 'var(--sb-accent)', fontVariantNumeric: 'tabular-nums' }}>EGP 9,420</span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                 <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.12em', opacity: 0.55 }}>BUFFER KEPT</span>
@@ -247,7 +247,7 @@ export function PlanScreen() {
             {/* Table */}
             <div style={{ flex: 1, minHeight: 0, border: `1px solid ${C.border}`, borderRadius: 'var(--sb-r-nav)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
               {/* Header */}
-              <div style={{ display: 'grid', gridTemplateColumns: '64px 1fr 1fr 1fr 1fr 118px 84px 1fr', height: 28, flexShrink: 0, background: '#F7F3E7', borderBottom: `1px solid ${C.border}` }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '64px 1fr 1fr 1fr 1fr 118px 84px 1fr', height: 28, flexShrink: 0, background: 'var(--sb-accent-tint)', borderBottom: `1px solid ${C.border}` }}>
                 {['', 'FORECAST IN', 'COMMITTED', 'FREE CASH', 'TO THE CARD', 'FROM', 'ON', 'CARD LEFT'].map((h, i) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: i > 0 && i < 5 ? 'flex-end' : 'flex-start', padding: '0 9px' }}>
                     <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.12em', color: C.ink3 }}>{h}</span>
@@ -257,11 +257,11 @@ export function PlanScreen() {
 
               {/* Rows */}
               {DEMO_PLAN.map((row, _idx) => (
-                <div key={row.month} style={{ display: 'grid', gridTemplateColumns: '64px 1fr 1fr 1fr 1fr 118px 84px 1fr', height: 36, flexShrink: 0, borderTop: `1px solid #F2EDDF`, background: row.rowBg }}>
+                <div key={row.month} style={{ display: 'grid', gridTemplateColumns: '64px 1fr 1fr 1fr 1fr 118px 84px 1fr', height: 36, flexShrink: 0, borderTop: `1px solid var(--sb-accent-tint)`, background: row.rowBg }}>
                   {/* Month */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0 9px' }}>
                     <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, color: C.ink1 }}>{row.month}</span>
-                    {row.isLabel && <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.06em', color: '#A8A091' }}>{row.isLabel}</span>}
+                    {row.isLabel && <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.06em', color: 'var(--sb-ink-4)' }}>{row.isLabel}</span>}
                   </div>
                   {/* Forecast In */}
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '0 9px', fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-meta)', fontWeight: 500, color: C.olive, fontVariantNumeric: 'tabular-nums' }}>{fmt(row.forecastIn)}</div>
@@ -307,7 +307,7 @@ export function PlanScreen() {
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '0 9px', fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: C.ink2, fontVariantNumeric: 'tabular-nums' }}>{fmt(totals.committed)}</div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '0 9px', fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: C.ink1, fontVariantNumeric: 'tabular-nums' }}>{fmt(totals.freeCash)}</div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '0 9px', fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: C.rustDk, fontVariantNumeric: 'tabular-nums' }}>{fmt(totals.toCard)}</div>
-                <div style={{ display: 'flex', alignItems: 'center', padding: '0 9px' }}><span style={{ fontSize: 'var(--sb-t-micro)', color: '#8A7A4E' }}>2 transfers</span></div>
+                <div style={{ display: 'flex', alignItems: 'center', padding: '0 9px' }}><span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-warning)' }}>2 transfers</span></div>
                 <div />
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '0 9px' }}><span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-body-s)', fontWeight: 700, color: C.olive }}>CLEARED</span></div>
               </div>
@@ -338,7 +338,7 @@ export function PlanScreen() {
                     <span style={{
                       width: 17, height: 17, borderRadius: 'var(--sb-r-pill)', flexShrink: 0, boxSizing: 'border-box',
                       background: active ? C.dark : C.surface,
-                      border: `1px solid ${active ? C.dark : '#D8D2C0'}`,
+                      border: `1px solid ${active ? C.dark : 'var(--sb-border)'}`,
                       color: 'var(--sb-ink-on-dark)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}>
                       {active && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg>}
@@ -369,7 +369,7 @@ export function PlanScreen() {
             <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 7 }}>
               {automations.map(a => (
                 <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 10, height: 42, flexShrink: 0, padding: '0 12px', borderRadius: 'var(--sb-r-nav)', background: C.field, border: `1px solid ${C.border}`, boxSizing: 'border-box' }}>
-                  <span style={{ color: a.active ? C.olive : '#B7AE92', display: 'flex', flexShrink: 0 }}>
+                  <span style={{ color: a.active ? C.olive : 'var(--sb-border)', display: 'flex', flexShrink: 0 }}>
                     {a.icon === '⚡'
                       ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M13 3L5 14h6l-1 7 8-11h-6z"/></svg>
                       : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 8v4.5l3 1.8"/></svg>
@@ -382,7 +382,7 @@ export function PlanScreen() {
                   {/* Toggle */}
                   <button onClick={() => toggleAuto(a.id)} style={{
                     marginLeft: 'auto', width: 36, height: 20, borderRadius: 'var(--sb-r-pill)',
-                    background: a.active ? C.dark : '#DED8C6',
+                    background: a.active ? C.dark : 'var(--sb-border)',
                     display: 'flex', alignItems: 'center',
                     justifyContent: a.active ? 'flex-end' : 'flex-start',
                     padding: '0 3px', boxSizing: 'border-box', flexShrink: 0,
@@ -397,7 +397,7 @@ export function PlanScreen() {
 
           {/* Risk/scenario card */}
           <div style={{ flex: 1, minHeight: 0, background: C.accentBg, border: `1px solid ${C.accentBr}`, borderRadius: 'var(--sb-r-card)', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.14em', color: '#8A6A1E' }}>IF THE PAYROLL SLIPS AGAIN</span>
+            <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-warning)' }}>IF THE PAYROLL SLIPS AGAIN</span>
             <span style={{ fontSize: 'var(--sb-t-label)', fontWeight: 600, letterSpacing: '-0.015em', lineHeight: 1.35, color: C.ink1 }}>October's clearance needs the DX salary. If it misses, the plan pays the minimum and closes the card on 4 November instead.</span>
             <span style={{ marginTop: 2, display: 'flex', gap: 8 }}>
               <button style={{ height: 30, padding: '0 12px', borderRadius: 'var(--sb-r-pill)', background: C.dark, color: 'var(--sb-ink-on-dark)', fontSize: 'var(--sb-t-meta)', fontWeight: 600, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>See that version</button>

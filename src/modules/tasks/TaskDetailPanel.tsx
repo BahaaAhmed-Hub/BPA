@@ -382,7 +382,7 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
                   onClick={() => void remakeEvent()}
                   disabled={pushing}
                   title="The event this task made is not in Google any more"
-                  style={{ ...CELL, gridColumn: '1 / -1', width: '100%', borderColor: '#E7C9C9', background: '#FBF0F0' }}>
+                  style={{ ...CELL, gridColumn: '1 / -1', width: '100%', borderColor: 'color-mix(in srgb, var(--sb-negative) 24%, transparent)', background: 'var(--sb-negative-tint)' }}>
                   <CalendarDays size={ICON.sm} strokeWidth={STROKE.rest} style={{ flexShrink: 0, color: 'var(--sb-negative)' }} />
                   <span style={{ ...CELL_VALUE, color: 'var(--sb-negative)' }}>
                     {pushing ? 'Putting it back…' : pushError ?? 'Not in Google any more — put it back'}
@@ -494,10 +494,10 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
               <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '5px 0' }}>
                 <button onClick={() => toggleStep(s.id)} style={{
                   width: 15, height: 15, borderRadius: 'var(--sb-r-chip)', boxSizing: 'border-box', flexShrink: 0, padding: 0,
-                  border: s.done ? 'var(--sb-border-emphasis) solid var(--sb-ink-1)' : 'var(--sb-border-emphasis) solid #CFC6B0',
+                  border: s.done ? 'var(--sb-border-emphasis) solid var(--sb-ink-1)' : 'var(--sb-border-emphasis) solid var(--sb-border)',
                   background: s.done ? 'var(--sb-ink-1)' : 'var(--sb-card)', cursor: 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>{s.done && <Check size={ICON.sm} color="#fff" strokeWidth={STROKE.active} />}</button>
+                }}>{s.done && <Check size={ICON.sm} color="var(--sb-ink-on-dark)" strokeWidth={STROKE.active} />}</button>
                 <span style={{
                   flex: 1, fontSize: 'var(--sb-t-body-s)', color: s.done ? 'var(--sb-ink-4)' : 'var(--sb-ink-1)',
                   textDecoration: s.done ? 'line-through' : 'none',
@@ -557,7 +557,7 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
                     border: '1px solid var(--sb-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--sb-ink-3)',
                   }}><Link2 size={ICON.sm} /></span>
                   <a href={url} target="_blank" rel="noreferrer" style={{
-                    flex: 1, minWidth: 0, fontSize: 'var(--sb-t-body-s)', color: '#2F6BD8',
+                    flex: 1, minWidth: 0, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-info)',
                     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                   }}>{url}</a>
                   <button onClick={() => patch({ links: (task.links ?? []).filter((_, j) => j !== i) })}

@@ -9,6 +9,7 @@ import { loadDynamicCompanies, isTaskHidden } from '@/types'
 import { loadHabits, loadLogs, calcStreak } from '@/store/habitsStore'
 import { fetchVisibleEvents } from '@/lib/calendarEvents'
 import { ICON, STROKE } from '@/lib/type'
+import { alpha } from '@/lib/alpha'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -27,7 +28,7 @@ function MetricCard({
   accentColor?: string
   onClick?: () => void
 }) {
-  const color = accentColor ?? '#7F77DD'
+  const color = accentColor ?? 'var(--sb-info)'
   return (
     <div
       onClick={onClick}
@@ -68,7 +69,7 @@ function MetricCard({
       </div>
 
       {delta && (
-        <div style={{ fontSize: 'var(--sb-t-meta)', color: deltaPositive ? '#177C5B' : 'var(--sb-negative)', fontWeight: 500 }}>
+        <div style={{ fontSize: 'var(--sb-t-meta)', color: deltaPositive ? 'var(--sb-positive)' : 'var(--sb-negative)', fontWeight: 500 }}>
           {delta}
         </div>
       )}
@@ -96,7 +97,7 @@ function CompanyBadge({ name, color, count }: { name: string; color: string; cou
           {name}
         </span>
       </div>
-      <span style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color, background: `${color}18`, padding: '2px 8px', borderRadius: 'var(--sb-r-chip)' }}>
+      <span style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color, background: alpha(color, 9.4), padding: '2px 8px', borderRadius: 'var(--sb-r-chip)' }}>
         {count}
       </span>
     </div>
@@ -226,7 +227,7 @@ export function ExecutiveDashboard() {
             delta={addedThisWeek > 0 ? `${addedThisWeek} added this week` : undefined}
             deltaPositive={false}
             icon={CheckSquare}
-            accentColor="#7F77DD"
+            accentColor="var(--sb-info)"
             onClick={() => setModule('tasks')}
           />
           <MetricCard
@@ -244,7 +245,7 @@ export function ExecutiveDashboard() {
             delta={completedTasks.length > 0 ? 'Tasks shipped' : undefined}
             deltaPositive={true}
             icon={Award}
-            accentColor="#1D9E75"
+            accentColor="var(--sb-positive)"
           />
           <MetricCard
             label="Meetings Today"
@@ -252,7 +253,7 @@ export function ExecutiveDashboard() {
             delta={todayMeetings > 0 ? 'From calendar' : 'Connect calendar'}
             deltaPositive={todayMeetings === 0}
             icon={Calendar}
-            accentColor="#7F77DD"
+            accentColor="var(--sb-info)"
             onClick={() => setModule('calendar')}
           />
         </div>
@@ -265,7 +266,7 @@ export function ExecutiveDashboard() {
             delta={habitProgress.done === habitProgress.total && habitProgress.total > 0 ? 'All done!' : habitProgress.total === 0 ? 'No habits set' : `${habitProgress.total - habitProgress.done} remaining`}
             deltaPositive={habitProgress.done === habitProgress.total}
             icon={Target}
-            accentColor="#1D9E75"
+            accentColor="var(--sb-positive)"
             onClick={() => setModule('habits')}
           />
           <MetricCard
@@ -274,7 +275,7 @@ export function ExecutiveDashboard() {
             delta={habitStreak >= 7 ? 'On fire! 🔥' : habitStreak > 0 ? 'Keep going' : 'Start today'}
             deltaPositive={habitStreak > 0}
             icon={Award}
-            accentColor="#1D9E75"
+            accentColor="var(--sb-positive)"
             onClick={() => setModule('habits')}
           />
           <MetricCard
@@ -283,7 +284,7 @@ export function ExecutiveDashboard() {
             delta="Connect Gmail"
             deltaPositive={false}
             icon={Inbox}
-            accentColor="#7F77DD"
+            accentColor="var(--sb-info)"
             onClick={() => setModule('inbox')}
           />
         </div>
@@ -330,9 +331,9 @@ export function ExecutiveDashboard() {
                     was never telling them apart. The figures are darkened to
                     clear 3:1 at their size. */}
                 {([
-                  { key: 'do',       label: 'Do Now',    color: '#685FD7',         Icon: Zap },
+                  { key: 'do',       label: 'Do Now',    color: 'var(--sb-info)',         Icon: Zap },
                   { key: 'schedule', label: 'Schedule',  color: 'var(--sb-ink-2)', Icon: Calendar },
-                  { key: 'delegate', label: 'Delegate',  color: '#177C5B',         Icon: ArrowRight },
+                  { key: 'delegate', label: 'Delegate',  color: 'var(--sb-positive)',         Icon: ArrowRight },
                   { key: 'eliminate',label: 'Eliminate', color: 'var(--sb-ink-3)', Icon: Ban },
                 ] as const).map(({ key, label, color, Icon }) => {
                   const count = activeTasks.filter(t => t.quadrant === key).length
@@ -340,7 +341,7 @@ export function ExecutiveDashboard() {
                     <div key={key} onClick={() => setModule('tasks')}
                       style={{
                         background: 'var(--sb-field)',
-                        border: `1px solid ${color}30`,
+                        border: `1px solid ${alpha(color, 18.8)}`,
                         borderRadius: 'var(--sb-r-chip)', padding: '12px 14px',
                         display: 'flex', flexDirection: 'column', gap: 4,
                         cursor: 'pointer',
@@ -378,18 +379,18 @@ export function ExecutiveDashboard() {
         {/* Professor Insight */}
         <div style={{
           marginTop: 14,
-          background: 'rgba(30,64,175,0.06)',
-          border: '1px solid rgba(30,64,175,0.2)',
+          background: 'color-mix(in srgb, var(--sb-info) 6.0%, transparent)',
+          border: '1px solid color-mix(in srgb, var(--sb-info) 20.0%, transparent)',
           borderRadius: 'var(--sb-r-nav)', padding: '16px 20px',
           display: 'flex', gap: 14, alignItems: 'flex-start',
         }}>
           <div style={{
             width: 28, height: 28, borderRadius: 'var(--sb-r-chip)',
-            background: 'rgba(30,64,175,0.15)', border: '1px solid rgba(30,64,175,0.3)',
+            background: 'color-mix(in srgb, var(--sb-info) 15.0%, transparent)', border: '1px solid color-mix(in srgb, var(--sb-info) 30.0%, transparent)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             flexShrink: 0, marginTop: 1,
           }}>
-            <TrendingUp size={ICON.sm} color="#685FD7" strokeWidth={STROKE.active} />
+            <TrendingUp size={ICON.sm} color="var(--sb-info)" strokeWidth={STROKE.active} />
           </div>
           <div>
             <div style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-1)', marginBottom: 4, letterSpacing: '0.3px' }}>

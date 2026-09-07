@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { SWATCHES } from '@/lib/palettes'
 import { X, ChevronDown, Check } from 'lucide-react'
 import type { Category } from '../types'
 import { IconPicker } from '../components/IconPicker'
@@ -27,10 +28,6 @@ const ROW: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 1
 
 /** Enough colours to tell envelopes apart, without a colour wheel nobody wants
  *  to operate on a tablet. */
-const SWATCHES = [
-  '#C62828', '#C77A3E', '#C9A227', '#0C8140', '#3F7A6E',
-  '#3E6FA3', '#6357A8', '#9B4F86', '#8C8071', '#4A4438',
-]
 
 interface Props {
   category?: Category | null
@@ -75,7 +72,7 @@ export function CategoryModal({ category, categories, onSave, onDelete, onClose 
       onClick={e => { if (e.target === e.currentTarget) onClose() }}
       style={{
         position: 'fixed', inset: 0, zIndex: 1100, padding: 18,
-        background: 'rgba(25,23,18,0.45)',
+        background: 'color-mix(in srgb, var(--sb-ink-1) 45.0%, transparent)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}>
       <div style={{
@@ -181,7 +178,7 @@ export function CategoryModal({ category, categories, onSave, onDelete, onClose 
                 <button key={c} onClick={() => setColor(c)} title={c}
                   style={{
                     width: 30, height: 30, borderRadius: 'var(--sb-r-sm)', cursor: 'pointer', padding: 0,
-                    background: c, border: color === c ? '2px solid var(--sb-ink-1)' : '1px solid rgba(25,23,18,0.12)',
+                    background: c, border: color === c ? '2px solid var(--sb-ink-1)' : '1px solid color-mix(in srgb, var(--sb-ink-1) 12.0%, transparent)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>
                   {color === c && <Check size={ICON.sm} strokeWidth={STROKE.active} color="var(--sb-card)" />}

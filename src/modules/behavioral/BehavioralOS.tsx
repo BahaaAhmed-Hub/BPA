@@ -11,6 +11,7 @@ import {
 } from '@/lib/behavioralEngine'
 import type { IdentityResult, Rank, IdentityStage } from '@/store/behavioralStore'
 import { ICON } from '@/lib/type'
+import { alpha } from '@/lib/alpha'
 
 // ─── Drawn dark, whatever the app's theme is ─────────────────────────────────
 // This screen being near-black is the mode, not a preference, and it used to
@@ -22,7 +23,7 @@ import { ICON } from '@/lib/type'
 // nothing here holds a colour, and the values are a theme's rather than this
 // file's opinion of one.
 
-const DARK_SCOPE = getTheme('crimson').tokens as React.CSSProperties
+const DARK_SCOPE = getTheme('glass-depth').tokens as React.CSSProperties
 
 // ─── Micro-components ─────────────────────────────────────────────────────────
 
@@ -114,8 +115,8 @@ function RankArtwork({ rank, rankMeta }: { rank: Rank; rankMeta: { label: string
     <div style={{
       width: 88, height: 88, borderRadius: 'var(--sb-r-chip)', flexShrink: 0,
       overflow: 'hidden',
-      border: '1px solid #3a0808',
-      background: 'linear-gradient(135deg, #1a0a0a, #0c0b09)',
+      border: '1px solid var(--sb-negative-deep)',
+      background: 'var(--sb-page)',
       position: 'relative',
     }}>
       {imgOk ? (
@@ -129,7 +130,7 @@ function RankArtwork({ rank, rankMeta }: { rank: Rank; rankMeta: { label: string
         <div style={{
           width: '100%', height: '100%',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 'var(--sb-t-h1)', fontWeight: 900, color: '#8B1A1A', opacity: 0.25,
+          fontSize: 'var(--sb-t-h1)', fontWeight: 900, color: 'var(--sb-negative-deep)', opacity: 0.25,
           fontFamily: 'serif', letterSpacing: '-0.03em',
         }}>
           {rankMeta?.label?.[0]}
@@ -145,7 +146,7 @@ function IdentityCard({ identity }: { identity: IdentityResult }) {
       padding: '16px 18px',
       border: `1px solid ${identity.stage === 'core' ? 'var(--sb-accent)' : 'var(--sb-border)'}`,
       borderRadius: 'var(--sb-r-chip)',
-      background: identity.stage === 'core' ? `var(--sb-accent)0A` : 'transparent',
+      background: identity.stage === 'core' ? alpha('var(--sb-accent)', 3.9) : 'transparent',
       transition: 'border-color 0.2s',
     }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 8 }}>

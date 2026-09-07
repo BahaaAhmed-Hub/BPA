@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { CAL_COLORS } from '@/lib/palettes'
 import { Button } from '@/components/ui'
 import {
   ChevronLeft, ChevronRight, ChevronDown, Layers, Calendar, Video,
@@ -54,6 +55,7 @@ import {
   loadBlockingRules, applyBlockingRules, cleanupStaleBlocks,
   loadApplied, saveApplied, type AppliedBlocksMap, type SourceEvent,
 } from '@/lib/blockingRules'
+import { alpha } from '@/lib/alpha'
 
 // ─── Grid constants ───────────────────────────────────────────────────────────
 const HOUR_PX  = 54     // pixels per hour (Sunlit Bento: 54px/hr)
@@ -95,10 +97,10 @@ interface LoadCalendarsResult {
 
 // ─── Mock data for AI prep ────────────────────────────────────────────────────
 const MOCK_COMPANIES: DbCompany[] = [
-  { id: 'teradix',    user_id: 'demo', name: 'Teradix',    color_tag: '#7F77DD', calendar_id: null, is_active: true },
-  { id: 'dxtech',     user_id: 'demo', name: 'DX Tech',    color_tag: '#7F77DD', calendar_id: null, is_active: true },
-  { id: 'consulting', user_id: 'demo', name: 'Consulting', color_tag: '#1D9E75', calendar_id: null, is_active: true },
-  { id: 'personal',   user_id: 'demo', name: 'Personal',   color_tag: '#888780', calendar_id: null, is_active: true },
+  { id: 'teradix',    user_id: 'demo', name: 'Teradix',    color_tag: 'var(--sb-info)', calendar_id: null, is_active: true },
+  { id: 'dxtech',     user_id: 'demo', name: 'DX Tech',    color_tag: 'var(--sb-info)', calendar_id: null, is_active: true },
+  { id: 'consulting', user_id: 'demo', name: 'Consulting', color_tag: 'var(--sb-positive)', calendar_id: null, is_active: true },
+  { id: 'personal',   user_id: 'demo', name: 'Personal',   color_tag: 'var(--sb-ink-4)', calendar_id: null, is_active: true },
 ]
 
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -610,11 +612,6 @@ function hexRgbStr(hex: string): string {
 }
 
 // ─── Calendar color palette (macOS Calendar colors) ──────────────────────────
-const CAL_COLORS = [
-  '#FF3B30', '#FF9500', '#FFCC00', '#34C759',
-  '#5AC8FA', '#007AFF', '#5856D6', '#AF52DE',
-  '#FF2D55', '#A2845E', '#8E8E93',
-]
 
 // ─── Inline color picker for calendar chips ───────────────────────────────────
 function ColorPickerPopover({ current, onPick, onClose }: { current: string; onPick: (c: string) => void; onClose: () => void }) {
@@ -625,7 +622,7 @@ function ColorPickerPopover({ current, onPick, onClose }: { current: string; onP
     return () => document.removeEventListener('mousedown', fn)
   }, [onClose])
   return (
-    <div ref={ref} onClick={e => e.stopPropagation()} style={{
+    <div className="sb-blur-surface" ref={ref} onClick={e => e.stopPropagation()} style={{
       position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 200,
       background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
       padding: '10px 10px 8px', boxShadow: 'var(--sb-shadow-menu)',
@@ -710,7 +707,7 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
 
   const top    = eventTopPx(event.start.dateTime!)
   const height = eventHeightPx(event.start.dateTime!, event.end.dateTime ?? event.start.dateTime!)
-  const color  = colorOverride ?? event.calendarColor ?? '#7F77DD'
+  const color  = colorOverride ?? event.calendarColor ?? 'var(--sb-info)'
   const isDone = status === 'done'
   const isCancelled = status === 'cancelled'
   const isTentative = event.status === 'tentative'
@@ -781,8 +778,8 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
         boxSizing: 'border-box',
         zIndex: isSelected ? 4 : 2,
         boxShadow: isSelected
-          ? `0 0 0 2px ${color}, 0 6px 18px -8px rgba(25,23,18,0.35)`
-          : '0 1px 2px rgba(25,23,18,0.05)',
+          ? `0 0 0 2px ${color}, 0 6px 18px -8px color-mix(in srgb, var(--sb-ink-1) 35.0%, transparent)`
+          : '0 1px 2px color-mix(in srgb, var(--sb-ink-1) 5.0%, transparent)',
         userSelect: 'none',
       }}
     >
@@ -822,7 +819,7 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
         )}
         <span style={{
           textDecoration: isCancelled ? 'line-through' : 'none',
-          textDecorationColor: 'rgba(25,23,18,0.45)',
+          textDecorationColor: 'color-mix(in srgb, var(--sb-ink-1) 45.0%, transparent)',
           textDecorationThickness: 1.5,
         }}>{displayTitle(fromTask ? stripTaskMark(event.summary) : event.summary)}</span>
       </div>
@@ -863,8 +860,8 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
             title="Mark done"
             style={{
               width: 18, height: 18, borderRadius: 'var(--sb-r-pill)', cursor: 'pointer', border: 'none', padding: 0,
-              background: isDone ? 'rgba(29,158,117,0.9)' : 'rgba(25,23,18,0.12)',
-              color: isDone ? '#fff' : 'var(--sb-ink-3)',
+              background: isDone ? 'color-mix(in srgb, var(--sb-positive) 90.0%, transparent)' : 'color-mix(in srgb, var(--sb-ink-1) 12.0%, transparent)',
+              color: isDone ? 'var(--sb-ink-on-fill)' : 'var(--sb-ink-3)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               // Revealed on hover on a mouse; always present on a touch
               // screen, which has no hover and could not reach them at all.
@@ -878,8 +875,8 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
             title="Cancel"
             style={{
               width: 18, height: 18, borderRadius: 'var(--sb-r-pill)', cursor: 'pointer', border: 'none', padding: 0,
-              background: isCancelled ? 'rgba(224,82,82,0.9)' : 'rgba(25,23,18,0.12)',
-              color: isCancelled ? '#fff' : 'var(--sb-ink-3)',
+              background: isCancelled ? 'color-mix(in srgb, var(--sb-negative) 90.0%, transparent)' : 'color-mix(in srgb, var(--sb-ink-1) 12.0%, transparent)',
+              color: isCancelled ? 'var(--sb-ink-on-fill)' : 'var(--sb-ink-3)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               opacity: 0, transition: 'opacity 0.12s',
             }}
@@ -995,12 +992,12 @@ function ProviderMark({ provider, size = 24 }: { provider: VideoProvider; size?:
   if (provider === 'teams') {
     return (
       <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden focusable="false" style={{ flexShrink: 0 }}>
-        <circle fill="#5059C9" cx="38.5" cy="11" r="4.5" />
-        <path fill="#5059C9" d="M43.5 18H33v13.5a7 7 0 0 0 7 7h.2a5.3 5.3 0 0 0 5.3-5.3V20a2 2 0 0 0-2-2z" />
-        <circle fill="#7B83EB" cx="27" cy="9.5" r="6.5" />
-        <path fill="#7B83EB" d="M33.2 18H16.8A2.8 2.8 0 0 0 14 20.8v12.4A10.8 10.8 0 0 0 24.8 44h.4A10.8 10.8 0 0 0 36 33.2V20.8a2.8 2.8 0 0 0-2.8-2.8z" />
+        <circle fill="var(--sb-info)" cx="38.5" cy="11" r="4.5" />
+        <path fill="var(--sb-info)" d="M43.5 18H33v13.5a7 7 0 0 0 7 7h.2a5.3 5.3 0 0 0 5.3-5.3V20a2 2 0 0 0-2-2z" />
+        <circle fill="var(--sb-info)" cx="27" cy="9.5" r="6.5" />
+        <path fill="var(--sb-info)" d="M33.2 18H16.8A2.8 2.8 0 0 0 14 20.8v12.4A10.8 10.8 0 0 0 24.8 44h.4A10.8 10.8 0 0 0 36 33.2V20.8a2.8 2.8 0 0 0-2.8-2.8z" />
         <path fill="#000" opacity=".12" d="M25 15.5V38a2.5 2.5 0 0 1-2.5 2.5H14.4a11 11 0 0 1-.4-3V20.8A2.8 2.8 0 0 1 16.8 18H25z" />
-        <rect fill="#4B53BC" x="2" y="13" width="24" height="24" rx="2.5" />
+        <rect fill="var(--sb-info)" x="2" y="13" width="24" height="24" rx="2.5" />
         <path fill="#fff" d="M20 19H8v3.1h4.3V33h3.4V22.1H20z" />
       </svg>
     )
@@ -1008,12 +1005,12 @@ function ProviderMark({ provider, size = 24 }: { provider: VideoProvider; size?:
   if (provider === 'meet') {
     return (
       <svg width={size} height={size * (72 / 87.5)} viewBox="0 0 87.5 72" aria-hidden focusable="false" style={{ flexShrink: 0 }}>
-        <path fill="#00832d" d="M49.5 36l8.53 9.75 11.47 7.33 2-17.02-2-16.64-11.69 6.44z" />
-        <path fill="#0066da" d="M0 51.5V66c0 3.315 2.685 6 6 6h14.5l3-10.96-3-9.54-9.95-3z" />
-        <path fill="#e94235" d="M20.5 0L0 20.5l10.55 3 9.95-3 2.95-9.41z" />
-        <path fill="#2684fc" d="M20.5 20.5H0v31h20.5z" />
-        <path fill="#00ac47" d="M82.6 8.68L69.5 19.42v33.66l13.16 10.79c1.97 1.54 4.85.135 4.85-2.37V11c0-2.535-2.945-3.925-4.91-2.32zM49.5 36v15.5h-29V72h43c3.315 0 6-2.685 6-6V53.08z" />
-        <path fill="#ffba00" d="M63.5 0h-43v20.5h29V36l20-16.57V6c0-3.315-2.685-6-6-6z" />
+        <path fill="var(--sb-positive)" d="M49.5 36l8.53 9.75 11.47 7.33 2-17.02-2-16.64-11.69 6.44z" />
+        <path fill="var(--sb-info)" d="M0 51.5V66c0 3.315 2.685 6 6 6h14.5l3-10.96-3-9.54-9.95-3z" />
+        <path fill="var(--sb-negative)" d="M20.5 0L0 20.5l10.55 3 9.95-3 2.95-9.41z" />
+        <path fill="var(--sb-info)" d="M20.5 20.5H0v31h20.5z" />
+        <path fill="var(--sb-positive)" d="M82.6 8.68L69.5 19.42v33.66l13.16 10.79c1.97 1.54 4.85.135 4.85-2.37V11c0-2.535-2.945-3.925-4.91-2.32zM49.5 36v15.5h-29V72h43c3.315 0 6-2.685 6-6V53.08z" />
+        <path fill="var(--sb-warning)" d="M63.5 0h-43v20.5h29V36l20-16.57V6c0-3.315-2.685-6-6-6z" />
       </svg>
     )
   }
@@ -1292,7 +1289,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
             title={onMoveCalendar ? 'Click to move this to another calendar' : calName}
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 7, height: 34, padding: '0 13px',
-              borderRadius: 'var(--sb-r-pill)', background: '#F5F1E6', color: 'var(--sb-ink-2)', fontSize: 'var(--sb-t-body)',
+              borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-accent-tint)', color: 'var(--sb-ink-2)', fontSize: 'var(--sb-t-body)',
               minWidth: 0, maxWidth: '100%', cursor: onMoveCalendar ? 'pointer' : 'default',
             }}>
             <span style={{ width: 8, height: 8, borderRadius: 'var(--sb-r-pill)', background: calColor, flexShrink: 0 }} />
@@ -1345,7 +1342,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
           title="Delete event"
           style={{
             ...EV_ROUND, width: 34, height: 34,
-            color: 'var(--sb-negative)', borderColor: 'rgba(198,40,40,0.35)', opacity: onDelete ? 1 : 0.45,
+            color: 'var(--sb-negative)', borderColor: 'color-mix(in srgb, var(--sb-negative) 35.0%, transparent)', opacity: onDelete ? 1 : 0.45,
           }}><Trash2 size={ICON.md} /></button>
 
         <button onClick={onClose} title="Close" style={{ ...EV_ROUND, width: 34, height: 34 }}><X size={ICON.md} /></button>
@@ -1357,7 +1354,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
         <div style={{
           display: 'flex', alignItems: 'flex-start', gap: 7, marginTop: 8,
           padding: '8px 11px', borderRadius: 'var(--sb-r-nav)', fontSize: 'var(--sb-t-body-s)', lineHeight: 1.45,
-          background: '#FBEAEA', border: '1px solid #EFCECE', color: '#8E2222',
+          background: 'var(--sb-negative-tint)', border: '1px solid color-mix(in srgb, var(--sb-negative) 26%, transparent)', color: 'var(--sb-negative-deep)',
         }}>
           <AlertCircle size={ICON.sm} style={{ flexShrink: 0, marginTop: 1 }} />
           <span style={{ minWidth: 0 }}>{moveError}</span>
@@ -1399,7 +1396,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
           <a href={videoLink} target="_blank" rel="noreferrer"
             title={videoLink}
             style={{
-              flex: 1, minWidth: 0, fontSize: 'var(--sb-t-label)', color: '#1A73E8', textDecoration: 'none',
+              flex: 1, minWidth: 0, fontSize: 'var(--sb-t-label)', color: 'var(--sb-info)', textDecoration: 'none',
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             }}>{meetingCode(videoLink, provider)}</a>
           <button
@@ -1421,7 +1418,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
           background: 'var(--sb-field)', border: '1px solid var(--sb-border)',
         }}>
           <a href={videoLink} target="_blank" rel="noreferrer" style={{
-            display: 'block', fontSize: 'var(--sb-t-meta)', color: '#1A73E8', wordBreak: 'break-all', textDecoration: 'none',
+            display: 'block', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-info)', wordBreak: 'break-all', textDecoration: 'none',
           }}>{videoLink}</a>
           {phoneEntry && (
             <p style={{ margin: '7px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>
@@ -1545,7 +1542,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
               style={{
                 ...EV_FIELD, flex: 1,
                 background: 'rgba(var(--sb-accent-rgb),0.24)', border: '1px solid rgba(var(--sb-accent-rgb),0.7)',
-                color: '#3D3926', cursor: onOpenEvent ? 'pointer' : 'default',
+                color: 'var(--sb-ink-2)', cursor: onOpenEvent ? 'pointer' : 'default',
                 overflow: 'hidden', whiteSpace: 'nowrap',
               }}>
               <AlertCircle size={ICON.sm} style={{ flexShrink: 0 }} />
@@ -1662,14 +1659,14 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
               style={{
                 ...EV_ROUND, width: 32, height: 32, flexShrink: 0, fontSize: 'var(--sb-t-label)', fontWeight: 600,
                 color: responseTone(a.responseStatus),
-                borderColor: a.responseStatus === 'accepted' ? 'rgba(12,129,64,0.4)'
-                  : a.responseStatus === 'declined' ? 'rgba(198,40,40,0.35)' : 'var(--sb-border)',
+                borderColor: a.responseStatus === 'accepted' ? 'color-mix(in srgb, var(--sb-positive) 40.0%, transparent)'
+                  : a.responseStatus === 'declined' ? 'color-mix(in srgb, var(--sb-negative) 35.0%, transparent)' : 'var(--sb-border)',
               }}>{responseGlyph(a.responseStatus)}</span>
             <button
               onClick={() => removeAttendee(a.email)}
               disabled={!onSave}
               title={`Take ${a.displayName ?? a.email} off the invite`}
-              style={{ ...EV_ROUND, width: 32, height: 32, flexShrink: 0, color: 'var(--sb-negative)', borderColor: 'rgba(198,40,40,0.35)', opacity: onSave ? 1 : 0.45 }}>
+              style={{ ...EV_ROUND, width: 32, height: 32, flexShrink: 0, color: 'var(--sb-negative)', borderColor: 'color-mix(in srgb, var(--sb-negative) 35.0%, transparent)', opacity: onSave ? 1 : 0.45 }}>
               <Trash2 size={ICON.sm} />
             </button>
           </div>
@@ -1680,7 +1677,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
             <span style={{
               width: 32, height: 32, borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              border: '1px dashed #D8CFB8', color: 'var(--sb-ink-4)',
+              border: '1px dashed var(--sb-border)', color: 'var(--sb-ink-4)',
             }}><Plus size={ICON.md} /></span>
             <input
               autoFocus
@@ -1699,7 +1696,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
             <span style={{
               width: 32, height: 32, borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              border: '1px dashed #D8CFB8', color: 'var(--sb-ink-4)',
+              border: '1px dashed var(--sb-border)', color: 'var(--sb-ink-4)',
             }}><Plus size={ICON.md} /></span>
             <span style={{ fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-4)' }}>Add an invitee</span>
           </button>
@@ -1770,7 +1767,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
           <div style={{ height: 1, background: 'var(--sb-hairline)', margin: '20px 0' }} />
           <div style={{ ...EV_SECTION, marginBottom: 8 }}>Prep gathered</div>
           {prep?.goal && (
-            <p style={{ margin: '0 0 10px', fontSize: 'var(--sb-t-body)', color: '#3D3926', lineHeight: 1.5 }}>{prep.goal}</p>
+            <p style={{ margin: '0 0 10px', fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-2)', lineHeight: 1.5 }}>{prep.goal}</p>
           )}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             {prepPoints.map((pt, i) => {
@@ -1784,10 +1781,10 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
                 }}>
                   <span style={{
                     width: 19, height: 19, borderRadius: 'var(--sb-r-chip)', boxSizing: 'border-box', flexShrink: 0, marginTop: 1,
-                    border: on ? 'var(--sb-border-emphasis) solid var(--sb-ink-1)' : 'var(--sb-border-emphasis) solid #CFC6B0',
+                    border: on ? 'var(--sb-border-emphasis) solid var(--sb-ink-1)' : 'var(--sb-border-emphasis) solid var(--sb-border)',
                     background: on ? 'var(--sb-ink-1)' : 'var(--sb-card)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>{on && <Check size={ICON.sm} color="#fff" strokeWidth={STROKE.active} />}</span>
+                  }}>{on && <Check size={ICON.sm} color="var(--sb-ink-on-dark)" strokeWidth={STROKE.active} />}</span>
                   <span style={{ fontSize: 'var(--sb-t-body)', color: on ? 'var(--sb-ink-4)' : 'var(--sb-ink-1)', lineHeight: 1.45, textDecoration: on ? 'line-through' : 'none' }}>
                     {pt}
                   </span>
@@ -1804,7 +1801,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
           marginTop: 18, padding: '14px 15px', borderRadius: 'var(--sb-r-nav)',
           background: 'var(--sb-field)', border: '1px solid var(--sb-border)',
         }}>
-          <p style={{ margin: 0, fontSize: 'var(--sb-t-body)', color: '#3D3926', lineHeight: 1.5 }}>
+          <p style={{ margin: 0, fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-2)', lineHeight: 1.5 }}>
             {freeAfterClash
               ? `Professor: move this to ${freeAfterClash} and it stops costing you anything.`
               : 'Professor: this overlaps something already booked.'}
@@ -1919,11 +1916,11 @@ function EventContextMenu({
         style={{
           display: 'flex', alignItems: 'center', gap: 9,
           padding: '0 12px', height: 32, fontSize: 'var(--sb-t-body)',
-          color: disabled ? '#4B5268' : destructive ? 'var(--sb-negative)' : '#3D3926',
+          color: disabled ? 'var(--sb-ink-3)' : destructive ? 'var(--sb-negative)' : 'var(--sb-ink-2)',
           cursor: disabled ? 'default' : 'pointer',
           borderRadius: 'var(--sb-r-chip)', userSelect: 'none',
           background: hovered
-            ? (destructive ? 'rgba(224,82,82,0.1)' : 'rgba(127,119,221,0.12)')
+            ? (destructive ? 'color-mix(in srgb, var(--sb-negative) 10.0%, transparent)' : 'color-mix(in srgb, var(--sb-info) 12.0%, transparent)')
             : 'transparent',
           transition: 'background 0.08s',
         }}
@@ -1935,7 +1932,7 @@ function EventContextMenu({
   }
 
   return (
-    <div
+    <div className="sb-blur-surface"
       ref={menuRef}
       onClick={e => e.stopPropagation()}
       onContextMenu={e => e.preventDefault()}
@@ -2035,7 +2032,7 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
     }
   }, [onCancel])
 
-  const calColor = calColors[calId] ?? calendars.find(c => c.id === calId)?.backgroundColor ?? '#7F77DD'
+  const calColor = calColors[calId] ?? calendars.find(c => c.id === calId)?.backgroundColor ?? 'var(--sb-info)'
   const calLabel = (() => {
     const c = calendars.find(x => x.id === calId)
     return c ? (c.summaryOverride ?? c.summary) : 'Calendar'
@@ -2214,7 +2211,7 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
           <span style={{
             width: 30, height: 30, borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            border: '1px dashed #D8CFB8', color: 'var(--sb-ink-4)',
+            border: '1px dashed var(--sb-border)', color: 'var(--sb-ink-4)',
           }}><Plus size={ICON.sm} /></span>
           <input
             value={inviteeInput}
@@ -2292,7 +2289,7 @@ export function CalendarIntelligence() {
 
   // Effective color: custom override > google color > fallback
   function calEffectiveColor(cal: CalWithAccount): string {
-    return calColors[cal.id] ?? cal.backgroundColor ?? '#7F77DD'
+    return calColors[cal.id] ?? cal.backgroundColor ?? 'var(--sb-info)'
   }
 
   // ── DnD state ───────────────────────────────────────────────────────────────
@@ -3130,7 +3127,7 @@ export function CalendarIntelligence() {
       id: tempId, summary: data.title,
       start: data.allDay ? { date: data.startDate } : { dateTime: startIso },
       end:   data.allDay ? { date: data.endDate }   : { dateTime: endIso },
-      calendarId: data.calId, calendarColor: cal ? calEffectiveColor(cal) : '#7F77DD',
+      calendarId: data.calId, calendarColor: cal ? calEffectiveColor(cal) : 'var(--sb-info)',
     } as GCalEventExt])
 
     const eventBody: GCalEventCreate = {
@@ -3324,7 +3321,7 @@ export function CalendarIntelligence() {
                   style={{
                     height: 30, padding: '0 16px', borderRadius: 'var(--sb-r-pill)', border: 'none', cursor: 'pointer',
                     background: on ? 'var(--sb-card)' : 'transparent',
-                    boxShadow: on ? '0 1px 3px rgba(25,23,18,.16)' : 'none',
+                    boxShadow: on ? '0 1px 3px color-mix(in srgb, var(--sb-ink-1) 16.0%, transparent)' : 'none',
                     color: on ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)',
                     fontSize: 'var(--sb-t-body)', fontWeight: on ? 700 : 500, fontFamily: 'inherit',
                     transition: 'all .14s',
@@ -3338,7 +3335,7 @@ export function CalendarIntelligence() {
 
         {/* Rules result toast */}
         {rulesResult && (
-          <span style={{ display: 'block', marginTop: 8, fontSize: 'var(--sb-t-meta)', color: rulesResult.startsWith('Error') ? 'var(--sb-negative)' : '#1D9E75' }}>
+          <span style={{ display: 'block', marginTop: 8, fontSize: 'var(--sb-t-meta)', color: rulesResult.startsWith('Error') ? 'var(--sb-negative)' : 'var(--sb-positive)' }}>
             {rulesResult}
           </span>
         )}
@@ -3351,8 +3348,8 @@ export function CalendarIntelligence() {
             padding: '10px 14px', borderRadius: 'var(--sb-r-nav)',
             background: 'rgba(var(--sb-accent-rgb),0.20)', border: '1px solid rgba(var(--sb-accent-rgb),0.65)',
           }}>
-            <AlertCircle size={ICON.md} color="#8A6D0B" style={{ flexShrink: 0 }} />
-            <span style={{ ...T.body, flex: 1, minWidth: 0, color: '#3D3926' }}>
+            <AlertCircle size={ICON.md} color="var(--sb-accent-deep)" style={{ flexShrink: 0 }} />
+            <span style={{ ...T.body, flex: 1, minWidth: 0, color: 'var(--sb-ink-2)' }}>
               {reconnectNeeded.length === 1
                 ? `${reconnectNeeded[0]} needs reconnecting — its events are missing from this grid.`
                 : `${reconnectNeeded.length} accounts need reconnecting — their events are missing from this grid.`}
@@ -3384,7 +3381,7 @@ export function CalendarIntelligence() {
                       display: 'flex', alignItems: 'center', gap: 0,
                       borderRadius: 'var(--sb-r-card)', overflow: 'visible',
                       border: `1px solid ${hidden ? 'var(--sb-border)' : color}`,
-                      background: hidden ? 'var(--sb-page)' : `${color}18`,
+                      background: hidden ? 'var(--sb-page)' : alpha(color, 9.4),
                       transition: 'all 0.12s',
                     }}
                   >
@@ -3399,7 +3396,7 @@ export function CalendarIntelligence() {
                         flexShrink: 0,
                       }}
                     >
-                      <div style={{ width: 10, height: 10, borderRadius: 'var(--sb-r-pill)', background: hidden ? '#C8C0AE' : color, border: '1px solid rgba(25,23,18,0.12)' }} />
+                      <div style={{ width: 10, height: 10, borderRadius: 'var(--sb-r-pill)', background: hidden ? 'var(--sb-border)' : color, border: '1px solid color-mix(in srgb, var(--sb-ink-1) 12.0%, transparent)' }} />
                     </button>
 
                     {/* Name + eye toggle */}
@@ -3409,7 +3406,7 @@ export function CalendarIntelligence() {
                         background: 'none', border: 'none', cursor: 'pointer',
                         display: 'flex', alignItems: 'center', gap: 4,
                         padding: '3px 8px 3px 2px', fontSize: 'var(--sb-t-micro)',
-                        color: hidden ? 'var(--sb-ink-4)' : '#3D3926',
+                        color: hidden ? 'var(--sb-ink-4)' : 'var(--sb-ink-2)',
                       }}
                     >
                       <span style={{ maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -3425,7 +3422,7 @@ export function CalendarIntelligence() {
                         title={`Token expired for ${cal.accountEmail} — click to reconnect`}
                         style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 5px 0 0', display: 'flex', alignItems: 'center', flexShrink: 0 }}
                       >
-                        <AlertCircle size={ICON.sm} color="#FF9500" />
+                        <AlertCircle size={ICON.sm} color="var(--sb-warning)" />
                       </button>
                     )}
                   </div>
@@ -3446,7 +3443,7 @@ export function CalendarIntelligence() {
 
         {/* Fetch error — keep but make subtle */}
         {fetchError && (
-          <div style={{ marginTop: 6, padding: '5px 10px', background: 'rgba(224,82,82,0.08)', border: '1px solid rgba(224,82,82,0.3)', borderRadius: 'var(--sb-r-chip)', fontSize: 'var(--sb-t-micro)', color: 'var(--sb-negative)', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div style={{ marginTop: 6, padding: '5px 10px', background: 'color-mix(in srgb, var(--sb-negative) 8.0%, transparent)', border: '1px solid color-mix(in srgb, var(--sb-negative) 30.0%, transparent)', borderRadius: 'var(--sb-r-chip)', fontSize: 'var(--sb-t-micro)', color: 'var(--sb-negative)', display: 'flex', alignItems: 'center', gap: 6 }}>
             <AlertCircle size={ICON.sm} /> {fetchError}
           </div>
         )}
@@ -3500,13 +3497,15 @@ export function CalendarIntelligence() {
                     display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                     background: isToday ? 'var(--sb-accent)' : 'transparent',
                     // A day outside this month is lighter in weight, not in
-                    // contrast: #C9C0A8 was 1.7:1, which is a date nobody can read.
-                    color: outside ? 'var(--sb-ink-4)' : 'var(--sb-ink-1)',
+                    // contrast: var(--sb-border) was 1.7:1, which is a date nobody can read.
+                    // Today's number sits on the accent, so it takes whatever
+                    // that accent carries — pale on Evergreen's green.
+                    color: isToday ? 'var(--sb-accent-ink)' : outside ? 'var(--sb-ink-4)' : 'var(--sb-ink-1)',
                     fontSize: 'var(--sb-t-meta)', fontWeight: isToday ? 700 : outside ? 400 : 600, fontVariantNumeric: 'tabular-nums',
                   }}>{day.getDate()}</span>
                   {shown.map(e => {
                     const cal = allCalendars.find(c => c.id === (e as GCalEventExt).calendarId)
-                    const col = cal ? calEffectiveColor(cal) : '#7F77DD'
+                    const col = cal ? calEffectiveColor(cal) : 'var(--sb-info)'
                     const rgb = col.startsWith('#') ? hexRgbStr(col) : '127,119,221'
                     const t = e.start.dateTime ? new Date(e.start.dateTime) : null
                     const st = eventStatuses[e.id]
@@ -3563,7 +3562,7 @@ export function CalendarIntelligence() {
                   </div>
                   <div style={{
                     fontSize: 'var(--sb-t-h2)', fontWeight: 700, lineHeight: 1.2, marginTop: 3,
-                    color: isToday ? 'var(--sb-ink-1)' : 'var(--sb-ink-1)',
+                    color: isToday ? 'var(--sb-accent-ink)' : 'var(--sb-ink-1)',
                     background: isToday ? 'var(--sb-accent)' : 'transparent',
                     width: isToday ? 32 : undefined, height: isToday ? 32 : undefined,
                     borderRadius: isToday ? '50%' : undefined,
@@ -3591,7 +3590,7 @@ export function CalendarIntelligence() {
                   <div key={ds} style={{ flex: 1, padding: '2px 2px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1, borderRight: '1px solid var(--sb-border)', maxHeight: 68, overflowY: 'auto' }}>
                     {allDayEvts.map(ev => {
                       const cal   = allCalendars.find(c => c.id === (ev as GCalEventExt).calendarId)
-                      const color = cal ? calEffectiveColor(cal) : '#7F77DD'
+                      const color = cal ? calEffectiveColor(cal) : 'var(--sb-info)'
                       const evStatus = eventStatuses[ev.id]
                       return (
                         <div
@@ -3600,7 +3599,7 @@ export function CalendarIntelligence() {
                           onContextMenu={e => handleEventContextMenu(ev as GCalEventExt, e)}
                           style={{
                             fontSize: 'var(--sb-t-micro)', fontWeight: 600, color: '#fff',
-                            background: `${color}CC`,
+                            background: alpha(color, 80.0),
                             borderLeft: `var(--sb-border-emphasis) solid ${color}`,
                             borderRadius: 'var(--sb-r-chip)', padding: '1px 4px',
                             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
@@ -3642,7 +3641,7 @@ export function CalendarIntelligence() {
                         title={`${w.temp}°C`}
                         style={{
                           display: 'inline-flex', alignItems: 'center', gap: 2, marginTop: 1,
-                          fontSize: 'var(--sb-t-micro)', color: '#B5AA98', fontVariantNumeric: 'tabular-nums',
+                          fontSize: 'var(--sb-t-micro)', color: 'var(--sb-border)', fontVariantNumeric: 'tabular-nums',
                         }}>
                         <span style={{ fontSize: 'var(--sb-t-micro)', lineHeight: 1 }}>{weatherGlyph(w.code)}</span>
                         {w.temp}°
@@ -3751,9 +3750,9 @@ export function CalendarIntelligence() {
 
       {/* No auth state */}
       {noAuth && !loadingEvents && (
-        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(247,244,234,0.93)', opacity: 0.9, pointerEvents: 'none' }}>
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'color-mix(in srgb, var(--sb-accent-tint) 93.0%, transparent)', opacity: 0.9, pointerEvents: 'none' }}>
           <div style={{ textAlign: 'center' }}>
-            <Calendar size={36} color="#C8C0AE" />
+            <Calendar size={36} color="var(--sb-border)" />
             <p style={{ margin: '12px 0 0', fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-4)' }}>Connect Google Calendar to see your events</p>
           </div>
         </div>
@@ -3765,7 +3764,7 @@ export function CalendarIntelligence() {
       {selectedEvent && (() => {
         const cal      = allCalendars.find(c => c.id === (selectedEvent as GCalEventExt).calendarId)
         const calName  = cal?.summary ?? 'Calendar'
-        const calColor = cal ? calEffectiveColor(cal) : '#7F77DD'
+        const calColor = cal ? calEffectiveColor(cal) : 'var(--sb-info)'
         return (
           <EventPopup
             event={selectedEvent}

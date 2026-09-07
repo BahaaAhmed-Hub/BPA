@@ -56,7 +56,7 @@ function Ring({ pct, prevPct, color, over, budgeted, size = 58, children }: {
             that has never been given a limit to be measured against. */}
         <circle
           cx={size / 2} cy={size / 2} r={r} fill="none"
-          stroke={budgeted ? 'var(--sb-field)' : '#DCD3BF'}
+          stroke={budgeted ? 'var(--sb-field)' : 'var(--sb-border)'}
           strokeWidth={budgeted ? stroke : 1.5}
           strokeDasharray={budgeted ? undefined : '3 4'}
           strokeLinecap="round" />
@@ -82,7 +82,7 @@ function Ring({ pct, prevPct, color, over, budgeted, size = 58, children }: {
             {prevPct > 0 && (
               <circle
                 cx={size / 2} cy={size / 2} r={r - stroke - 1.5} fill="none"
-                stroke="#B5AC98" strokeWidth={2} strokeLinecap="round"
+                stroke="var(--sb-border)" strokeWidth={2} strokeLinecap="round"
                 strokeDasharray={2 * Math.PI * (r - stroke - 1.5)}
                 strokeDashoffset={2 * Math.PI * (r - stroke - 1.5) * (1 - Math.max(0, Math.min(1, prevPct)))}
                 transform={`rotate(-90 ${size / 2} ${size / 2})`} />
@@ -119,7 +119,7 @@ function Spark({ days, color, width = 76, height = 16 }: {
     <svg width={width} height={height} style={{ display: 'block', overflow: 'visible' }}
       aria-hidden focusable="false">
       <line x1={0} y1={height - 1} x2={width} y2={height - 1} stroke="var(--sb-field)" strokeWidth={1} />
-      <path d={d} fill="none" stroke={spent ? color : '#D8CFB8'} strokeWidth={1.6}
+      <path d={d} fill="none" stroke={spent ? color : 'var(--sb-border)'} strokeWidth={1.6}
         strokeLinecap="round" strokeLinejoin="round" opacity={spent ? 0.85 : 0.6} />
       {spent && (
         <circle cx={width} cy={y(days[days.length - 1])} r={2} fill={color} />
@@ -269,7 +269,7 @@ function StylePicker({ value, onChange }: { value: EnvelopeStyle; onChange: (s: 
               fontSize: 'var(--sb-t-body-s)', fontWeight: on ? 600 : 500,
               background: on ? 'var(--sb-card)' : 'transparent',
               color: on ? 'var(--sb-ink-1)' : 'var(--sb-ink-3)',
-              boxShadow: on ? '0 1px 3px rgba(25,23,18,0.16)' : 'none',
+              boxShadow: on ? '0 1px 3px color-mix(in srgb, var(--sb-ink-1) 16.0%, transparent)' : 'none',
             }}>
             {pick.icon}
             <span style={{ display: 'none' }} />
@@ -333,7 +333,7 @@ function DueChip({ day }: { day: number | undefined }) {
   if (day == null) return null
   return (
     <span title={`The money leaves on the ${ordinal(day)}.`}
-      style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 'var(--sb-t-micro)', color: '#8A6D0B', whiteSpace: 'nowrap' }}>
+      style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 'var(--sb-t-micro)', color: 'var(--sb-accent-deep)', whiteSpace: 'nowrap' }}>
       <CalendarClock size={ICON.sm} strokeWidth={STROKE.active} /> the {ordinal(day)}
     </span>
   )
@@ -369,9 +369,9 @@ function SlipRows({ rows, color, selectedId, onPick, rules, dragging, currency }
                         width: '100%', display: 'flex', alignItems: 'center', gap: 10,
                         padding: '7px 8px', borderRadius: 'var(--sb-r-chip)', cursor: 'pointer', textAlign: 'left',
                         fontFamily: 'inherit', boxSizing: 'border-box',
-                        background: isOver ? 'rgba(12,129,64,0.16)' : on ? 'rgba(var(--sb-accent-rgb),0.20)' : 'transparent',
+                        background: isOver ? 'color-mix(in srgb, var(--sb-positive) 16.0%, transparent)' : on ? 'rgba(var(--sb-accent-rgb),0.20)' : 'transparent',
                         border: isOver ? '1px dashed var(--sb-positive)' : '1px solid transparent',
-                        borderBottom: isOver ? '1px dashed var(--sb-positive)' : '1px solid #F4F0E4',
+                        borderBottom: isOver ? '1px dashed var(--sb-positive)' : '1px solid var(--sb-accent-tint)',
                       }}>
                       <CategoryGlyph icon={cat.icon} size={15} color={color} />
                       <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
@@ -384,7 +384,7 @@ function SlipRows({ rows, color, selectedId, onPick, rules, dragging, currency }
                         </span>
                         {/* One thin rule under the name — a receipt does not
                             need a chart, only the proportion. */}
-                        <span style={{ position: 'relative', height: 3, borderRadius: 'var(--sb-r-chip)', background: budgeted ? 'var(--sb-field)' : 'transparent', border: budgeted ? 'none' : '1px dashed #E0D8C4', boxSizing: 'border-box' }}>
+                        <span style={{ position: 'relative', height: 3, borderRadius: 'var(--sb-r-chip)', background: budgeted ? 'var(--sb-field)' : 'transparent', border: budgeted ? 'none' : '1px dashed var(--sb-border)', boxSizing: 'border-box' }}>
                           {budgeted && pct > 0 && (
                             <span style={{
                               position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: 'var(--sb-r-chip)',
@@ -398,7 +398,7 @@ function SlipRows({ rows, color, selectedId, onPick, rules, dragging, currency }
                       <span style={{ fontFamily: MONO, fontSize: 'var(--sb-t-meta)', fontVariantNumeric: 'tabular-nums', textAlign: 'right', flexShrink: 0, lineHeight: 1.45 }}>
                         <span style={{ display: 'block', fontWeight: 600, color: over ? RUST : 'var(--sb-ink-1)' }}>{fig(actual)}</span>
                         {budgeted ? (
-                          <span style={{ display: 'block', fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', borderBottom: plannedFrom === 'parts' ? '1px dotted #C5BCA8' : 'none' }}>
+                          <span style={{ display: 'block', fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', borderBottom: plannedFrom === 'parts' ? '1px dotted var(--sb-border)' : 'none' }}>
                             {fig(planned)}
                           </span>
                         ) : (
@@ -580,10 +580,10 @@ function MosaicBoxes({ rows, color, selectedId, onPick, rules, dragging, currenc
                         borderRadius: 'var(--sb-r-nav)', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
                         padding: middle ? '9px 10px' : 5,
                         display: 'flex', flexDirection: 'column', gap: 3,
-                        background: isOver ? 'rgba(12,129,64,0.16)' : over ? 'var(--sb-negative-tint)' : budgeted ? 'var(--sb-field)' : 'var(--sb-field)',
+                        background: isOver ? 'color-mix(in srgb, var(--sb-positive) 16.0%, transparent)' : over ? 'var(--sb-negative-tint)' : budgeted ? 'var(--sb-field)' : 'var(--sb-field)',
                         border: isOver ? '1px dashed var(--sb-positive)'
-                          : over ? '1px solid rgba(163,28,28,0.55)'
-                          : budgeted ? '1px solid #E4DCC6' : '1px dashed #DCD3BF',
+                          : over ? '1px solid color-mix(in srgb, var(--sb-negative-deep) 55.0%, transparent)'
+                          : budgeted ? '1px solid var(--sb-border)' : '1px dashed var(--sb-border)',
                         outline: on ? '2px solid var(--sb-accent)' : 'none', outlineOffset: -1,
                       }}>
                       {/* The envelope filling up, behind everything else. */}
@@ -591,7 +591,7 @@ function MosaicBoxes({ rows, color, selectedId, onPick, rules, dragging, currenc
                         <span aria-hidden style={{
                           position: 'absolute', left: 0, right: 0, bottom: 0,
                           height: `${(over ? 1 : fill) * 100}%`,
-                          background: over ? 'rgba(163,28,28,0.42)' : 'rgba(var(--sb-accent-rgb),0.72)',
+                          background: over ? 'color-mix(in srgb, var(--sb-negative-deep) 42.0%, transparent)' : 'rgba(var(--sb-accent-rgb),0.72)',
                           pointerEvents: 'none',
                         }} />
                       )}
@@ -645,8 +645,8 @@ function MosaicBoxes({ rows, color, selectedId, onPick, rules, dragging, currenc
                                       style={{
                                         width: '100%', height: 14, borderRadius: 'var(--sb-r-chip)', cursor: 'pointer',
                                         padding: 0, border: 'none',
-                                        background: cOver ? 'rgba(163,28,28,0.5)'
-                                          : child.actual > 0 ? 'rgba(25,23,18,0.16)' : 'rgba(25,23,18,0.07)',
+                                        background: cOver ? 'color-mix(in srgb, var(--sb-negative-deep) 50.0%, transparent)'
+                                          : child.actual > 0 ? 'color-mix(in srgb, var(--sb-ink-1) 16.0%, transparent)' : 'color-mix(in srgb, var(--sb-ink-1) 7.0%, transparent)',
                                         outline: selectedId === child.cat.id ? '2px solid var(--sb-accent)' : 'none',
                                       }} />
                                   )}
@@ -706,7 +706,7 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
             {money(total, currency)}
           </span>
           {stranded.length > 0 && (
-            <span style={{ fontSize: 'var(--sb-t-micro)', color: '#8A6D0B' }}>
+            <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-accent-deep)' }}>
               {stranded.join(' and ')} not added in — no rate set
             </span>
           )}
@@ -753,7 +753,7 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
                     : ' · no budget set'}${dueDay ? ` · paid on the ${ordinal(dueDay)}` : ''}`}
                 style={{
                   width: 104, padding: '8px 2px 6px', borderRadius: 'var(--sb-r-nav)',
-                  background: over ? 'rgba(12,129,64,0.16)' : on ? 'rgba(var(--sb-accent-rgb),0.20)' : 'transparent',
+                  background: over ? 'color-mix(in srgb, var(--sb-positive) 16.0%, transparent)' : on ? 'rgba(var(--sb-accent-rgb),0.20)' : 'transparent',
                   border: over ? '1px dashed var(--sb-positive)' : '1px solid transparent',
                   fontFamily: 'inherit', cursor: 'pointer', boxSizing: 'border-box',
                   display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7,
@@ -790,7 +790,7 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
                       fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', fontVariantNumeric: 'tabular-nums',
                       // Dotted underline where the figure is the sum of its
                       // parts rather than something set on this category.
-                      borderBottom: plannedFrom === 'parts' ? '1px dotted #C5BCA8' : 'none',
+                      borderBottom: plannedFrom === 'parts' ? '1px dotted var(--sb-border)' : 'none',
                     }}>
                       {acct(planned)}
                     </span>
@@ -798,7 +798,7 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
                     // Not a fact about the category — something to go and do.
                     <span style={{
                       display: 'inline-flex', alignItems: 'center', height: 16, padding: '0 7px',
-                      borderRadius: 'var(--sb-r-pill)', border: '1px dashed #D8CFB8', color: 'var(--sb-ink-4)',
+                      borderRadius: 'var(--sb-r-pill)', border: '1px dashed var(--sb-border)', color: 'var(--sb-ink-4)',
                       fontSize: 'var(--sb-t-micro)', whiteSpace: 'nowrap',
                     }}>set a budget</span>
                   )}
@@ -821,7 +821,7 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
                       title={`The money leaves on the ${ordinal(dueDay)}. A task is on the board for it.`}
                       style={{
                         display: 'inline-flex', alignItems: 'center', gap: 3, marginTop: 2,
-                        fontSize: 'var(--sb-t-micro)', color: '#8A6D0B', whiteSpace: 'nowrap',
+                        fontSize: 'var(--sb-t-micro)', color: 'var(--sb-accent-deep)', whiteSpace: 'nowrap',
                       }}>
                       <CalendarClock size={ICON.sm} strokeWidth={STROKE.active} /> the {ordinal(dueDay)}
                     </span>
@@ -869,10 +869,10 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
                         position: 'relative', overflow: 'hidden',
                         display: 'inline-flex', alignItems: 'center', gap: 5, maxWidth: 104,
                         height: 24, padding: '0 9px', borderRadius: 'var(--sb-r-pill)', cursor: 'pointer',
-                        background: selectedId === sub.id ? 'rgba(var(--sb-accent-rgb),0.28)' : subBudgeted ? '#F4EFE1' : 'transparent',
+                        background: selectedId === sub.id ? 'rgba(var(--sb-accent-rgb),0.28)' : subBudgeted ? 'var(--sb-accent-tint)' : 'transparent',
                         // Same idea as the rings above: solid means a budget,
                         // broken means nothing has been set.
-                        border: subBudgeted ? '1px solid #E4DCC6' : '1px dashed #DCD3BF',
+                        border: subBudgeted ? '1px solid var(--sb-border)' : '1px dashed var(--sb-border)',
                         color: subBudgeted || spent ? 'var(--sb-ink-2)' : 'var(--sb-ink-4)',
                         fontSize: 'var(--sb-t-meta)', boxSizing: 'border-box', fontFamily: 'inherit',
                       }}>
@@ -881,7 +881,7 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
                         <span aria-hidden style={{
                           position: 'absolute', left: 0, top: 0, bottom: 0,
                           width: `${filled * 100}%`, borderRadius: 'var(--sb-r-pill)',
-                          background: subOver ? 'rgba(198,40,40,0.22)' : 'rgba(var(--sb-accent-rgb),0.42)',
+                          background: subOver ? 'color-mix(in srgb, var(--sb-negative) 22.0%, transparent)' : 'rgba(var(--sb-accent-rgb),0.42)',
                           pointerEvents: 'none',
                         }} />
                       )}
@@ -905,8 +905,8 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
               {over => (
                 <span style={{
                   width: 104, minHeight: 84, borderRadius: 'var(--sb-r-nav)', boxSizing: 'border-box',
-                  border: `1px dashed ${over ? 'var(--sb-positive)' : '#D8CFB8'}`,
-                  background: over ? 'rgba(12,129,64,0.16)' : 'transparent',
+                  border: `1px dashed ${over ? 'var(--sb-positive)' : 'var(--sb-border)'}`,
+                  background: over ? 'color-mix(in srgb, var(--sb-positive) 16.0%, transparent)' : 'transparent',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   padding: 8, fontSize: 'var(--sb-t-micro)', color: over ? 'var(--sb-positive)' : 'var(--sb-ink-4)',
                   textAlign: 'center', lineHeight: 1.4,
@@ -1300,7 +1300,7 @@ export function BudgetScreen(_props?: any) {
   function addCategory() {
     const id = crypto.randomUUID()
     void upsertCategory({
-      id, name: '', icon: 'lucide:Folder', color: '#8C8071', isSystem: false, txType: 'expense',
+      id, name: '', icon: 'lucide:Folder', color: 'var(--sb-ink-4)', isSystem: false, txType: 'expense',
     })
     setSelectedId(id)
   }
@@ -1382,7 +1382,7 @@ export function BudgetScreen(_props?: any) {
             <Legend swatch={OLIVE} label="In" />
             <Legend swatch={RUST}  label="Out" />
             <Legend swatch="var(--sb-ink-1)" label="Net" />
-            <Legend swatch="#C5BCA8" label="Balance" line />
+            <Legend swatch="var(--sb-border)" label="Balance" line />
           </div>
 
           {/* Rounded bars off a zero line, the way the task strip draws its
@@ -1422,7 +1422,7 @@ export function BudgetScreen(_props?: any) {
                   {/* The line everything is measured from */}
                   <span style={{
                     position: 'absolute', left: 6, right: 6, top: '50%', height: 1,
-                    background: on ? '#E0D5B4' : '#EFEADB',
+                    background: on ? 'var(--sb-accent-tint)' : 'var(--sb-hairline)',
                   }} />
 
                   {/* In above the line and out below it, as one pair; what the
@@ -1486,7 +1486,7 @@ export function BudgetScreen(_props?: any) {
               {dragging && (() => {
                 const c = categories.find(x => x.id === dragging)
                 return c ? (
-                  <span style={{
+                  <span className="sb-blur-surface" style={{
                     display: 'inline-flex', alignItems: 'center', gap: 7, height: 34, padding: '0 12px',
                     borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
                     boxShadow: 'var(--sb-shadow-menu)', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)',
@@ -1502,10 +1502,10 @@ export function BudgetScreen(_props?: any) {
               <div style={{
                 display: 'flex', alignItems: 'flex-start', gap: 8, padding: '10px 13px',
                 borderRadius: 'var(--sb-r-nav)', background: 'rgba(var(--sb-accent-rgb),0.20)', border: '1px solid rgba(var(--sb-accent-rgb),0.65)',
-                fontSize: 'var(--sb-t-meta)', color: '#3D3926', lineHeight: 1.5,
+                fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-2)', lineHeight: 1.5,
               }}>
                 <span style={{ flex: 1 }}>{note}</span>
-                <button onClick={() => setNote(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8A6D0B', padding: 0, fontSize: 'var(--sb-t-label)', lineHeight: 1 }}>×</button>
+                <button onClick={() => setNote(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-accent-deep)', padding: 0, fontSize: 'var(--sb-t-label)', lineHeight: 1 }}>×</button>
               </div>
             )}
           </div>
@@ -1528,7 +1528,7 @@ export function BudgetScreen(_props?: any) {
                 marginTop: 12, padding: '11px 13px', borderRadius: 'var(--sb-r-nav)',
                 background: 'rgba(var(--sb-accent-rgb),0.20)', border: '1px solid rgba(var(--sb-accent-rgb),0.65)',
               }}>
-                <div style={{ fontSize: 'var(--sb-t-meta)', color: '#3D3926', lineHeight: 1.5 }}>
+                <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-2)', lineHeight: 1.5 }}>
                   There is {needRates.length === 1 ? 'money' : 'money'} here in {needRates.join(' and ')} and
                   nothing to convert {needRates.length === 1 ? 'it' : 'them'} by, so {needRates.length === 1 ? 'it is' : 'they are'} in
                   none of these totals.
@@ -1661,15 +1661,15 @@ export function BudgetScreen(_props?: any) {
         }
 
         const FLAG_STYLES: Record<TxFlag, { bg: string; color: string; border: string; label: string }> = {
-          approved: { bg: 'var(--sb-positive-tint)', color: 'var(--sb-positive-deep)', border: '#C8D9A8', label: '✓ OK' },
-          review:   { bg: '#FEF3C7', color: '#92400E', border: '#FCD34D', label: '⚑ Review' },
-          excluded: { bg: '#FBEAE4', color: 'var(--sb-negative)', border: '#E5BBAC', label: '✗ Exclude' },
+          approved: { bg: 'var(--sb-positive-tint)', color: 'var(--sb-positive-deep)', border: 'var(--sb-positive-tint)', label: '✓ OK' },
+          review:   { bg: 'var(--sb-accent-tint)', color: 'var(--sb-warning)', border: 'var(--sb-accent)', label: '⚑ Review' },
+          excluded: { bg: 'var(--sb-negative-tint)', color: 'var(--sb-negative)', border: 'var(--sb-negative-tint)', label: '✗ Exclude' },
         }
 
         return (
           <div style={{
             position: 'fixed', inset: 0, zIndex: 200,
-            background: 'rgba(25,23,18,.45)', backdropFilter: 'blur(2px)',
+            background: 'color-mix(in srgb, var(--sb-ink-1) 45.0%, transparent)', backdropFilter: 'blur(2px)',
             display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end',
           }}
             onClick={() => setDrillOpen(false)}
@@ -1794,7 +1794,7 @@ export function BudgetScreen(_props?: any) {
                                 style={{
                                   padding: '3px 7px', borderRadius: 'var(--sb-r-chip)', border: `1px solid ${active ? s.border : 'var(--sb-border)'}`,
                                   background: active ? s.bg : 'transparent',
-                                  color: active ? s.color : '#C5BCA8',
+                                  color: active ? s.color : 'var(--sb-border)',
                                   fontSize: 'var(--sb-t-micro)', fontWeight: active ? 700 : 400, cursor: 'pointer',
                                   transition: 'all 0.12s',
                                 }}>
@@ -1815,7 +1815,7 @@ export function BudgetScreen(_props?: any) {
                   <div style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.08em', color: 'var(--sb-ink-4)' }}>
                     TOTAL{drillUnrated.length > 0 && (
                       <span title={`No rate set for ${drillUnrated.join(', ')}, so it is not counted here`}
-                        style={{ marginLeft: 5, color: '#C08A2E' }}>· {drillUnrated.join(' ')}</span>
+                        style={{ marginLeft: 5, color: 'var(--sb-warning)' }}>· {drillUnrated.join(' ')}</span>
                     )}
                   </div>
                   <div style={{ fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h2)', fontWeight: 700, color: RUST, letterSpacing: '-0.02em' }}>

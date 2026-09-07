@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { PALETTE } from '@/lib/palettes'
 import { useFinanceStore } from '../financeStore'
 import { settled, whenPaid } from '../unpaid'
 import { toBase, baseCurrency, currenciesNeedingRates } from '../fx'
@@ -43,14 +44,10 @@ const RANGE_FIELD: React.CSSProperties = {
   color: 'var(--sb-ink-1)', padding: 0, width: 118,
 }
 
-const PALETTE = [
-  '#C0563C', '#3F7FA6', '#7A8C3A', '#B4577F', '#D99A2B',
-  '#2F8C6E', '#7C6BB0', '#8A6A4F', '#5B8C8C', '#A8892B',
-]
 
 /** The colour every category is seeded with. Two categories the same colour is
  *  a chart nobody can read, and all of them arrive this one. */
-const SEED_COLOUR = '#8C8071'
+const SEED_COLOUR = 'var(--sb-ink-4)'
 
 function darken(hex: string, amount: number): string {
   const n = parseInt(hex.slice(1), 16)
@@ -267,7 +264,7 @@ export function ReportsScreen(_props?: any) {
             {TOTAL > 0 ? `${base} ${dayRate.toLocaleString('en-US')}/day · ${REPORT_DATA.length} categories` : 'No expenses logged this month'}
             {reportUnrated.length > 0 && (
               <span title={`No rate set for ${reportUnrated.join(', ')}, so it is not counted`}
-                style={{ marginLeft: 6, color: '#C08A2E' }}>· {reportUnrated.join(' ')} not counted</span>
+                style={{ marginLeft: 6, color: 'var(--sb-warning)' }}>· {reportUnrated.join(' ')} not counted</span>
             )}
           </span>
         </div>
@@ -280,7 +277,7 @@ export function ReportsScreen(_props?: any) {
                 background: reportView === v ? 'var(--sb-card)' : 'transparent',
                 color: reportView === v ? 'var(--sb-ink-1)' : 'var(--sb-ink-3)',
                 fontSize: 'var(--sb-t-meta)', fontWeight: reportView === v ? 600 : 400, cursor: 'pointer',
-                boxShadow: reportView === v ? '0 1px 3px rgba(25,23,18,0.16)' : 'none',
+                boxShadow: reportView === v ? '0 1px 3px color-mix(in srgb, var(--sb-ink-1) 16.0%, transparent)' : 'none',
                 fontFamily: 'inherit',
                 transition: 'background 220ms ease, color 220ms ease, box-shadow 220ms ease',
               }}>{v === 'donut' ? 'Donut' : 'Bars'}</button>

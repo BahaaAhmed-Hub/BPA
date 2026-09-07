@@ -12,9 +12,9 @@ import type { ReactNode } from 'react'
 // a block that is on screen for the shape of it: it dims the block, takes it
 // out of the tab order, and stops clicks reaching what is underneath.
 
-const AMBER_INK = '#7A5F09'
+const AMBER_INK = 'var(--sb-accent-deep)'
 const AMBER_BG  = 'rgba(var(--sb-accent-rgb),0.22)'
-const AMBER_EDGE = 'rgba(197,163,44,0.45)'
+const AMBER_EDGE = 'color-mix(in srgb, var(--sb-accent) 45.0%, transparent)'
 
 /** The label on its own — for a row or a card that has its own layout. */
 export function Soon({ text = 'Coming soon', style }: { text?: string; style?: React.CSSProperties }) {

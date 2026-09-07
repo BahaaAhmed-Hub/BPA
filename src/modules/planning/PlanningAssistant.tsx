@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
+import { CALENDAR_COLORS } from '@/lib/palettes'
 import {
   ChevronLeft, ChevronRight, RefreshCw,
   AlertTriangle, TrendingUp, Lightbulb, Trophy,
@@ -77,10 +78,6 @@ function fmtTime(dateTime: string): string {
   return `${h12}:${m} ${suffix}`
 }
 
-const CALENDAR_COLORS = [
-  '#E53935','#8E24AA','#3949AB','#039BE5',
-  '#0B8043','#E4C441','#F4511E','#616161',
-]
 
 function getEventColor(_e: GCalEvent, i: number): string {
   return CALENDAR_COLORS[i % CALENDAR_COLORS.length]
@@ -102,7 +99,7 @@ function ContextMenu({ menu, onClose }: { menu: ContextMenuState; onClose: () =>
     <>
       {/* Dismiss backdrop */}
       <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 8000 }} />
-      <div style={{
+      <div className="sb-blur-surface" style={{
         position: 'fixed', left: menu.x, top: menu.y, zIndex: 8001,
         background: 'var(--sb-card)',
         border: '1px solid var(--sb-border)',
@@ -191,10 +188,10 @@ function WeekCalendar({ events, weekStart, viewMode, selectedDay, onSelectDay, o
               </div>
               <div style={{
                 width: 28, height: 28, borderRadius: 'var(--sb-r-pill)', margin: '4px auto 0',
-                background: isToday ? '#F97316' : 'transparent',
+                background: isToday ? 'var(--sb-warning)' : 'transparent',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
-                <span style={{ fontSize: 'var(--sb-t-body)', fontWeight: isToday ? 700 : 500, color: isToday ? '#fff' : 'var(--sb-ink-1)' }}>
+                <span style={{ fontSize: 'var(--sb-t-body)', fontWeight: isToday ? 700 : 500, color: isToday ? 'var(--sb-ink-on-fill)' : 'var(--sb-ink-1)' }}>
                   {d.getDate()}
                 </span>
               </div>
@@ -392,19 +389,19 @@ export function PlanningAssistant() {
                   {insights.map((ins, i) => (
                     <div key={i} onClick={() => setChatInput(`Help me with: ${ins.message}`)} style={{
                       display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', borderRadius: 'var(--sb-r-chip)', marginBottom: 6, cursor: 'pointer',
-                      background: ins.type === 'warning' ? 'rgba(251,191,36,0.08)' : ins.type === 'win' ? 'rgba(52,211,153,0.08)' : 'rgba(127,119,221,0.08)',
-                      border: `1px solid ${ins.type === 'warning' ? 'rgba(251,191,36,0.2)' : ins.type === 'win' ? 'rgba(52,211,153,0.2)' : 'rgba(127,119,221,0.2)'}`,
+                      background: ins.type === 'warning' ? 'color-mix(in srgb, var(--sb-accent) 8.0%, transparent)' : ins.type === 'win' ? 'color-mix(in srgb, var(--sb-positive) 8.0%, transparent)' : 'color-mix(in srgb, var(--sb-info) 8.0%, transparent)',
+                      border: `1px solid ${ins.type === 'warning' ? 'color-mix(in srgb, var(--sb-accent) 20.0%, transparent)' : ins.type === 'win' ? 'color-mix(in srgb, var(--sb-positive) 20.0%, transparent)' : 'color-mix(in srgb, var(--sb-info) 20.0%, transparent)'}`,
                     }}>
-                      {ins.type === 'warning' && <AlertTriangle size={ICON.sm} color="#FBBF24" />}
-                      {ins.type === 'tip'     && <Lightbulb size={ICON.sm} color="#685FD7" />}
-                      {ins.type === 'win'     && <Trophy size={ICON.sm} color="#34D399" />}
-                      <span style={{ fontSize: 'var(--sb-t-body-s)', color: '#3D3926', fontWeight: 500 }}>{ins.message}</span>
+                      {ins.type === 'warning' && <AlertTriangle size={ICON.sm} color="var(--sb-accent)" />}
+                      {ins.type === 'tip'     && <Lightbulb size={ICON.sm} color="var(--sb-info)" />}
+                      {ins.type === 'win'     && <Trophy size={ICON.sm} color="var(--sb-positive)" />}
+                      <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-2)', fontWeight: 500 }}>{ins.message}</span>
                     </div>
                   ))}
                   <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
-                    {warnings.length > 0 && <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 600, padding: '2px 8px', borderRadius: 'var(--sb-r-nav)', background: 'rgba(251,191,36,0.12)', color: '#FBBF24' }}>{warnings.length} warning{warnings.length > 1 ? 's' : ''}</span>}
-                    {tips.length > 0    && <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 600, padding: '2px 8px', borderRadius: 'var(--sb-r-nav)', background: 'rgba(127,119,221,0.12)', color: '#9B94E8' }}>{tips.length} tip{tips.length > 1 ? 's' : ''}</span>}
-                    {wins.length > 0    && <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 600, padding: '2px 8px', borderRadius: 'var(--sb-r-nav)', background: 'rgba(52,211,153,0.12)', color: '#34D399' }}>{wins.length} win{wins.length > 1 ? 's' : ''}</span>}
+                    {warnings.length > 0 && <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 600, padding: '2px 8px', borderRadius: 'var(--sb-r-nav)', background: 'color-mix(in srgb, var(--sb-accent) 12.0%, transparent)', color: 'var(--sb-accent)' }}>{warnings.length} warning{warnings.length > 1 ? 's' : ''}</span>}
+                    {tips.length > 0    && <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 600, padding: '2px 8px', borderRadius: 'var(--sb-r-nav)', background: 'color-mix(in srgb, var(--sb-info) 12.0%, transparent)', color: 'var(--sb-info)' }}>{tips.length} tip{tips.length > 1 ? 's' : ''}</span>}
+                    {wins.length > 0    && <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 600, padding: '2px 8px', borderRadius: 'var(--sb-r-nav)', background: 'color-mix(in srgb, var(--sb-positive) 12.0%, transparent)', color: 'var(--sb-positive)' }}>{wins.length} win{wins.length > 1 ? 's' : ''}</span>}
                   </div>
                   <p style={{ margin: '8px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', fontStyle: 'italic' }}>Click an insight to get help</p>
                 </>
@@ -424,7 +421,7 @@ export function PlanningAssistant() {
                   <button key={i} onClick={() => setChatInput(s)} style={{
                     padding: '8px 12px', borderRadius: 'var(--sb-r-chip)', textAlign: 'left', cursor: 'pointer', fontSize: 'var(--sb-t-body-s)',
                     background: 'var(--sb-page)', border: '1px solid var(--sb-border)',
-                    color: '#3D3926', fontWeight: 400,
+                    color: 'var(--sb-ink-2)', fontWeight: 400,
                   }}>
                     {s}
                   </button>
@@ -450,7 +447,7 @@ export function PlanningAssistant() {
               <div key={i} style={{
                 padding: '8px 11px', borderRadius: 'var(--sb-r-chip)', fontSize: 'var(--sb-t-body-s)', lineHeight: 1.5,
                 background: m.role === 'user' ? 'var(--sb-accent)' : 'var(--sb-page)',
-                color: m.role === 'user' ? 'var(--sb-ink-1)' : '#3D3926',
+                color: m.role === 'user' ? 'var(--sb-accent-ink)' : 'var(--sb-ink-2)',
                 alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start',
                 maxWidth: '85%',
                 border: m.role === 'assistant' ? '1px solid var(--sb-border)' : 'none',
@@ -489,7 +486,7 @@ export function PlanningAssistant() {
               <button onClick={() => void sendChat()} disabled={!chatInput.trim() || chatLoading} style={{
                 width: 36, height: 36, borderRadius: 'var(--sb-r-pill)', border: 'none', cursor: chatInput.trim() ? 'pointer' : 'default',
                 background: chatInput.trim() ? 'var(--sb-accent)' : 'var(--sb-border)',
-                color: 'var(--sb-ink-1)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: chatInput.trim() ? 'var(--sb-accent-ink)' : 'var(--sb-ink-3)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                 transition: 'background 0.15s', flexShrink: 0,
               }}>
                 <Send size={ICON.sm} />

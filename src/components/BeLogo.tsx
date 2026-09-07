@@ -1,3 +1,4 @@
+import { BE_COLOURWAYS } from '@/lib/palettes'
 // ─── The Be mark ─────────────────────────────────────────────────────────────
 //
 // Built from the design handoff (`design_handoff_be_logo`): the wordmark **Be**
@@ -29,11 +30,11 @@ interface Colourway {
 /** The three approved pairings. The dot is the only element allowed to differ
  *  from the ground and the word, and each pairing is contrast-checked — so
  *  these are not to be mixed. */
-export const BE_VARIANTS: Record<BeVariant, Colourway> = {
-  white: { bg: '#FAF6F6', border: '#E8E8EE', word: '#000000', dot: '#FAD10C', radius: 14 },
-  black: { bg: '#000000', border: '#E8E8EE', word: '#E8E8EE', dot: '#F8D31E', radius: 14 },
-  amber: { bg: '#E9A23B', border: null,      word: '#050505', dot: '#F2F2F8', radius: 16 },
-}
+// The mark is brand artwork: its three colourways are fixed values that have
+// been contrast-checked against each other, not tokens that follow a theme —
+// a logo that changes hue with the wallpaper is not a logo. They live with the
+// other chosen-colour data in lib/palettes.ts.
+export const BE_VARIANTS: Record<BeVariant, Colourway> = BE_COLOURWAYS
 
 /**
  *  The one measurement the scale factor gets wrong.

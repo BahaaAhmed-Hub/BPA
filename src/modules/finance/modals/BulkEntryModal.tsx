@@ -221,7 +221,7 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
       onClick={onClose}
       style={{
         position: 'fixed', inset: 0, zIndex: 1000,
-        background: 'rgba(25,23,18,0.42)', backdropFilter: 'blur(3px)',
+        background: 'color-mix(in srgb, var(--sb-ink-1) 42.0%, transparent)', backdropFilter: 'blur(3px)',
         display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
       }}>
       <div
@@ -236,7 +236,7 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
           <span style={{
             display: 'inline-flex', alignItems: 'center', gap: 7,
-            background: '#F3EEE0', borderRadius: 'var(--sb-r-pill)', padding: '5px 12px',
+            background: 'var(--sb-accent-tint)', borderRadius: 'var(--sb-r-pill)', padding: '5px 12px',
             fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-ink-3)',
           }}>
             <span style={{ width: 6, height: 6, borderRadius: 'var(--sb-r-pill)', background: tone }} />
@@ -446,7 +446,7 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
           {elsewhere.length > 0 && account && (
             <span style={{
               display: 'inline-flex', alignItems: 'center', gap: 6, borderRadius: 'var(--sb-r-pill)',
-              background: '#FBF1D2', border: '1px solid var(--sb-accent)', padding: '4px 11px',
+              background: 'var(--sb-accent-tint)', border: '1px solid var(--sb-accent)', padding: '4px 11px',
               fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-1)',
             }}>
               dated {elsewhere.join(' & ')}, not {year} — saving goes there

@@ -229,7 +229,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
       onClick={onClose}
       style={{
         position: 'fixed', inset: 0, zIndex: 400,
-        background: 'rgba(25,23,18,0.28)', backdropFilter: 'blur(2px)',
+        background: 'color-mix(in srgb, var(--sb-ink-1) 28.0%, transparent)', backdropFilter: 'blur(2px)',
         display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '12vh 20px 20px',
       }}>
       <div

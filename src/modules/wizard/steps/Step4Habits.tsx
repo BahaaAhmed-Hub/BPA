@@ -1,24 +1,25 @@
 import { useState } from 'react'
+import { HABIT_COLORS } from '@/lib/palettes'
 import { Button } from '@/components/ui'
 import { Check, X } from 'lucide-react'
 import { ICON, STROKE } from '@/lib/type'
+import { alpha } from '@/lib/alpha'
 
 const HABIT_TEMPLATES = [
-  { id: 'water',       name: 'Drink Water',   emoji: '💧', color: '#60A5FA', type: 'quantity' as const, goal: 8,     unit: 'glasses', frequency: 'daily' as const },
+  { id: 'water',       name: 'Drink Water',   emoji: '💧', color: 'var(--sb-info)', type: 'quantity' as const, goal: 8,     unit: 'glasses', frequency: 'daily' as const },
   { id: 'exercise',    name: 'Exercise',       emoji: '💪', color: 'var(--sb-negative)', type: 'boolean'  as const, frequency: 'daily' as const },
-  { id: 'reading',     name: 'Reading',        emoji: '📚', color: '#A855F7', type: 'quantity' as const, goal: 30,   unit: 'min',     frequency: 'daily' as const },
-  { id: 'meditation',  name: 'Meditation',     emoji: '🧘', color: '#177C5B', type: 'quantity' as const, goal: 10,   unit: 'min',     frequency: 'daily' as const },
-  { id: 'sleep',       name: '8h Sleep',       emoji: '😴', color: '#685FD7', type: 'boolean'  as const, frequency: 'daily' as const },
-  { id: 'journaling',  name: 'Journaling',     emoji: '📓', color: '#F97316', type: 'boolean'  as const, frequency: 'daily' as const },
-  { id: 'steps',       name: 'Steps',          emoji: '🚶', color: '#34D399', type: 'quantity' as const, goal: 10000, unit: 'steps',  frequency: 'daily' as const },
-  { id: 'cold-shower', name: 'Cold Shower',    emoji: '🚿', color: '#22D3EE', type: 'boolean'  as const, frequency: 'daily' as const },
-  { id: 'no-phone-am', name: 'No Phone (AM)',  emoji: '📵', color: '#6366F1', type: 'boolean'  as const, frequency: 'daily' as const },
-  { id: 'vitamins',    name: 'Vitamins',       emoji: '💊', color: '#EC4899', type: 'boolean'  as const, frequency: 'daily' as const },
-  { id: 'prayer',      name: 'Prayer',         emoji: '🤲', color: '#FBBF24', type: 'boolean'  as const, frequency: 'daily' as const },
-  { id: 'no-sugar',    name: 'No Sugar',       emoji: '🚫', color: '#E0944A', type: 'boolean'  as const, frequency: 'daily' as const },
+  { id: 'reading',     name: 'Reading',        emoji: '📚', color: 'var(--sb-info)', type: 'quantity' as const, goal: 30,   unit: 'min',     frequency: 'daily' as const },
+  { id: 'meditation',  name: 'Meditation',     emoji: '🧘', color: 'var(--sb-positive)', type: 'quantity' as const, goal: 10,   unit: 'min',     frequency: 'daily' as const },
+  { id: 'sleep',       name: '8h Sleep',       emoji: '😴', color: 'var(--sb-info)', type: 'boolean'  as const, frequency: 'daily' as const },
+  { id: 'journaling',  name: 'Journaling',     emoji: '📓', color: 'var(--sb-warning)', type: 'boolean'  as const, frequency: 'daily' as const },
+  { id: 'steps',       name: 'Steps',          emoji: '🚶', color: 'var(--sb-positive)', type: 'quantity' as const, goal: 10000, unit: 'steps',  frequency: 'daily' as const },
+  { id: 'cold-shower', name: 'Cold Shower',    emoji: '🚿', color: 'var(--sb-info)', type: 'boolean'  as const, frequency: 'daily' as const },
+  { id: 'no-phone-am', name: 'No Phone (AM)',  emoji: '📵', color: 'var(--sb-info)', type: 'boolean'  as const, frequency: 'daily' as const },
+  { id: 'vitamins',    name: 'Vitamins',       emoji: '💊', color: 'var(--sb-negative)', type: 'boolean'  as const, frequency: 'daily' as const },
+  { id: 'prayer',      name: 'Prayer',         emoji: '🤲', color: 'var(--sb-accent)', type: 'boolean'  as const, frequency: 'daily' as const },
+  { id: 'no-sugar',    name: 'No Sugar',       emoji: '🚫', color: 'var(--sb-accent)', type: 'boolean'  as const, frequency: 'daily' as const },
 ] as const
 
-const COLORS = ['#7F77DD','#60A5FA','#1D9E75','#E05252','#F97316','#A855F7','#EC4899','#FBBF24']
 
 interface CustomHabitDraft {
   name: string; emoji: string; color: string
@@ -41,7 +42,7 @@ export function Step4Habits({ data, onChange }: Props) {
   const [addingCustom, setAddingCustom] = useState(false)
   const [cName,  setCName]  = useState('')
   const [cEmoji, setCEmoji] = useState('💡')
-  const [cColor, setCColor] = useState(COLORS[0])
+  const [cColor, setCColor] = useState(HABIT_COLORS[0])
   const [cType,  setCType]  = useState<'boolean' | 'quantity'>('boolean')
   const [cGoal,  setCGoal]  = useState('')
   const [cUnit,  setCUnit]  = useState('')
@@ -59,7 +60,7 @@ export function Step4Habits({ data, onChange }: Props) {
       ...(cType === 'quantity' && { goal: parseInt(cGoal) || 1, unit: cUnit.trim() || 'times' }),
     }
     onChange({ customHabits: [...data.customHabits, h] })
-    setCName(''); setCEmoji('💡'); setCColor(COLORS[0]); setCType('boolean'); setCGoal(''); setCUnit(''); setAddingCustom(false)
+    setCName(''); setCEmoji('💡'); setCColor(HABIT_COLORS[0]); setCType('boolean'); setCGoal(''); setCUnit(''); setAddingCustom(false)
   }
 
   function removeCustom(idx: number) {
@@ -82,7 +83,7 @@ export function Step4Habits({ data, onChange }: Props) {
           return (
             <button key={t.id} onClick={() => toggleTemplate(t.id)} style={{
               padding: '12px 10px', borderRadius: 'var(--sb-r-nav)', cursor: 'pointer', position: 'relative',
-              background: selected ? `${t.color}18` : 'var(--sb-card)',
+              background: selected ? alpha(t.color, 9.4) : 'var(--sb-card)',
               border: `1px solid ${selected ? t.color : 'var(--sb-border)'}`,
               textAlign: 'left', transition: 'all 0.15s',
             }}>
@@ -135,10 +136,10 @@ export function Step4Habits({ data, onChange }: Props) {
             <input value={cName} onChange={e => setCName(e.target.value)} placeholder="Habit name" style={{ ...inp, flex: 1 }} autoFocus />
           </div>
           <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-            <button onClick={() => setCType('boolean')} style={{ flex: 1, padding: '7px', borderRadius: 'var(--sb-r-chip)', border: `1px solid ${cType === 'boolean' ? 'var(--sb-accent)' : 'var(--sb-border)'}`, background: cType === 'boolean' ? 'rgba(127,119,221,0.1)' : 'transparent', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', cursor: 'pointer' }}>
+            <button onClick={() => setCType('boolean')} style={{ flex: 1, padding: '7px', borderRadius: 'var(--sb-r-chip)', border: `1px solid ${cType === 'boolean' ? 'var(--sb-accent)' : 'var(--sb-border)'}`, background: cType === 'boolean' ? 'color-mix(in srgb, var(--sb-info) 10.0%, transparent)' : 'transparent', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', cursor: 'pointer' }}>
               ✓ Boolean
             </button>
-            <button onClick={() => setCType('quantity')} style={{ flex: 1, padding: '7px', borderRadius: 'var(--sb-r-chip)', border: `1px solid ${cType === 'quantity' ? 'var(--sb-accent)' : 'var(--sb-border)'}`, background: cType === 'quantity' ? 'rgba(127,119,221,0.1)' : 'transparent', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', cursor: 'pointer' }}>
+            <button onClick={() => setCType('quantity')} style={{ flex: 1, padding: '7px', borderRadius: 'var(--sb-r-chip)', border: `1px solid ${cType === 'quantity' ? 'var(--sb-accent)' : 'var(--sb-border)'}`, background: cType === 'quantity' ? 'color-mix(in srgb, var(--sb-info) 10.0%, transparent)' : 'transparent', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', cursor: 'pointer' }}>
               # Quantity
             </button>
           </div>
@@ -150,13 +151,13 @@ export function Step4Habits({ data, onChange }: Props) {
           )}
           <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
             {(['daily','weekdays','weekly'] as const).map(f => (
-              <button key={f} onClick={() => setCFreq(f)} style={{ flex: 1, padding: '6px', borderRadius: 'var(--sb-r-chip)', border: `1px solid ${cFreq === f ? 'var(--sb-accent)' : 'var(--sb-border)'}`, background: cFreq === f ? 'rgba(127,119,221,0.1)' : 'transparent', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', cursor: 'pointer', textTransform: 'capitalize' }}>
+              <button key={f} onClick={() => setCFreq(f)} style={{ flex: 1, padding: '6px', borderRadius: 'var(--sb-r-chip)', border: `1px solid ${cFreq === f ? 'var(--sb-accent)' : 'var(--sb-border)'}`, background: cFreq === f ? 'color-mix(in srgb, var(--sb-info) 10.0%, transparent)' : 'transparent', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', cursor: 'pointer', textTransform: 'capitalize' }}>
                 {f}
               </button>
             ))}
           </div>
           <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
-            {COLORS.map(c => (
+            {HABIT_COLORS.map(c => (
               <button key={c} onClick={() => setCColor(c)} style={{ width: 22, height: 22, borderRadius: 'var(--sb-r-pill)', background: c, border: 'none', cursor: 'pointer', outline: cColor === c ? `2px solid ${c}` : 'none', outlineOffset: 2, transform: cColor === c ? 'scale(1.2)' : 'scale(1)', transition: 'transform 0.1s' }} />
             ))}
           </div>

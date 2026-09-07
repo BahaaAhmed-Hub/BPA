@@ -34,10 +34,10 @@ export function Step6Done({ data }: Props) {
   const totalTasks    = data.selectedTaskIds.size
 
   const stats = [
-    { label: 'Accounts',  value: totalAccounts,          color: '#60A5FA', emoji: '🔗' },
-    { label: 'Companies', value: data.companies.length,   color: '#685FD7', emoji: '🏢' },
-    { label: 'Habits',    value: totalHabits,             color: '#177C5B', emoji: '🔥' },
-    { label: 'Tasks',     value: totalTasks,              color: '#F97316', emoji: '✅' },
+    { label: 'Accounts',  value: totalAccounts,          color: 'var(--sb-info)', emoji: '🔗' },
+    { label: 'Companies', value: data.companies.length,   color: 'var(--sb-info)', emoji: '🏢' },
+    { label: 'Habits',    value: totalHabits,             color: 'var(--sb-positive)', emoji: '🔥' },
+    { label: 'Tasks',     value: totalTasks,              color: 'var(--sb-warning)', emoji: '✅' },
   ]
 
   return (
@@ -45,12 +45,12 @@ export function Step6Done({ data }: Props) {
       {/* Animated checkmark */}
       <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 24 }}>
         <svg width="72" height="72" viewBox="0 0 72 72">
-          <circle cx="36" cy="36" r="32" fill="none" stroke="rgba(127,119,221,0.2)" strokeWidth="3" />
-          <circle cx="36" cy="36" r="32" fill="none" stroke="#7F77DD" strokeWidth="3"
+          <circle cx="36" cy="36" r="32" fill="none" stroke="color-mix(in srgb, var(--sb-info) 20.0%, transparent)" strokeWidth="3" />
+          <circle cx="36" cy="36" r="32" fill="none" stroke="var(--sb-info)" strokeWidth="3"
             strokeDasharray="201" strokeDashoffset="0"
             style={{ animation: 'circleIn 0.6s ease forwards', transformOrigin: '36px 36px', transform: 'rotate(-90deg)' }}
           />
-          <polyline points="22,36 32,46 50,28" fill="none" stroke="#7F77DD" strokeWidth="3.5"
+          <polyline points="22,36 32,46 50,28" fill="none" stroke="var(--sb-info)" strokeWidth="3.5"
             strokeLinecap="round" strokeLinejoin="round"
             strokeDasharray="40" strokeDashoffset="0"
             style={{ animation: 'checkIn 0.4s 0.4s ease forwards' }}
@@ -78,7 +78,7 @@ export function Step6Done({ data }: Props) {
         ))}
       </div>
 
-      <div style={{ padding: '14px 20px', borderRadius: 'var(--sb-r-nav)', background: 'rgba(127,119,221,0.06)', border: '1px solid rgba(127,119,221,0.15)', marginBottom: 16 }}>
+      <div style={{ padding: '14px 20px', borderRadius: 'var(--sb-r-nav)', background: 'color-mix(in srgb, var(--sb-info) 6.0%, transparent)', border: '1px solid color-mix(in srgb, var(--sb-info) 15.0%, transparent)', marginBottom: 16 }}>
         <p style={{ margin: 0, fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-3)', lineHeight: 1.6 }}>
           All your data syncs automatically. You can adjust everything in <strong style={{ color: 'var(--sb-ink-1)' }}>Settings</strong> at any time.
         </p>

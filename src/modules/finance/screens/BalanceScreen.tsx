@@ -126,14 +126,14 @@ function AccountRow({ account, balance, unconverted, pending, selected, hovered,
       style={{
         display: 'flex', alignItems: 'center', gap: 11,
         minHeight: 46, padding: '0 12px 0 6px', borderRadius: 'var(--sb-r-nav)',
-        background: selected ? '#FBF3D2' : hovered ? '#FFFDF7' : 'var(--sb-card)',
-        border: `1px solid ${selected ? 'var(--sb-accent)' : hovered ? '#E4DCC6' : '#EFEADB'}`,
+        background: selected ? 'var(--sb-accent-tint)' : hovered ? 'var(--sb-accent-tint)' : 'var(--sb-card)',
+        border: `1px solid ${selected ? 'var(--sb-accent)' : hovered ? 'var(--sb-border)' : 'var(--sb-hairline)'}`,
         boxSizing: 'border-box', position: 'relative', cursor: 'pointer',
         transform: CSS.Transform.toString(transform),
         transition,
         opacity: isDragging ? 0.55 : 1,
         zIndex:  isDragging ? 2 : undefined,
-        boxShadow: isDragging ? '0 6px 16px rgba(25,23,18,0.14)' : undefined,
+        boxShadow: isDragging ? '0 6px 16px color-mix(in srgb, var(--sb-ink-1) 14.0%, transparent)' : undefined,
       }}
     >
       {/* The handle, and only the handle, refuses the browser's touch gestures.
@@ -149,7 +149,7 @@ function AccountRow({ account, balance, unconverted, pending, selected, hovered,
           flexShrink: 0, width: 18, height: 30, padding: 0,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           background: 'none', border: 'none', borderRadius: 'var(--sb-r-chip)',
-          color: hovered || isDragging ? 'var(--sb-ink-4)' : '#D8D0BE',
+          color: hovered || isDragging ? 'var(--sb-ink-4)' : 'var(--sb-border)',
           cursor: isDragging ? 'grabbing' : 'grab',
           touchAction: 'none',
         }}>
@@ -180,10 +180,10 @@ function AccountRow({ account, balance, unconverted, pending, selected, hovered,
 
       {limit > 0 && (
         <div style={{ width: 116, flexShrink: 0, marginLeft: 10 }} title={`${acct(-owed, { currency: account.currency })} of ${account.currency} ${Math.round(limit).toLocaleString('en-US')} used`}>
-          <div style={{ height: 5, borderRadius: 'var(--sb-r-pill)', background: '#EFEADB', overflow: 'hidden' }}>
+          <div style={{ height: 5, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-hairline)', overflow: 'hidden' }}>
             <div style={{
               width: `${Math.round(used * 100)}%`, height: '100%', borderRadius: 'var(--sb-r-pill)',
-              background: used >= 0.9 ? 'var(--sb-negative)' : used >= 0.7 ? '#C08A2E' : '#5F7038',
+              background: used >= 0.9 ? 'var(--sb-negative)' : used >= 0.7 ? 'var(--sb-warning)' : 'var(--sb-ink-3)',
             }} />
           </div>
           <span style={{ display: 'block', fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', marginTop: 3, whiteSpace: 'nowrap' }}>
@@ -199,7 +199,7 @@ function AccountRow({ account, balance, unconverted, pending, selected, hovered,
         {unconverted.length > 0 ? (
           <span
             title={`Entries here in ${unconverted.join(', ')} with no rate set, so they are not in this balance. Settings → Finance.`}
-            style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, color: '#C08A2E' }}>
+            style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, color: 'var(--sb-warning)' }}>
             {unconverted.join(' ')} not counted
           </span>
         ) : pending !== 0 ? (
@@ -229,7 +229,7 @@ function AccountRow({ account, balance, unconverted, pending, selected, hovered,
           width: 26, height: 26, borderRadius: 'var(--sb-r-pill)', padding: 0, flexShrink: 0, marginLeft: 4,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
-          color: hovered || selected ? 'var(--sb-ink-3)' : '#D8D0BE', cursor: 'pointer',
+          color: hovered || selected ? 'var(--sb-ink-3)' : 'var(--sb-border)', cursor: 'pointer',
         }}>
         <Pencil size={ICON.sm} />
       </button>
@@ -373,7 +373,7 @@ export function BalanceScreen() {
           <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-display)', fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1, color: 'var(--sb-ink-1)', display: 'block' }}>Balances</span>
           <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', display: 'block', marginTop: 3 }}>
             {unrated.length > 0 && (
-              <span style={{ color: '#8A6D0B' }}>
+              <span style={{ color: 'var(--sb-accent-deep)' }}>
                 {unrated.join(' and ')} not in these totals — no rate set ·{' '}
               </span>
             )}
@@ -417,7 +417,7 @@ export function BalanceScreen() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 'var(--sb-t-micro)', opacity: 0.55, marginBottom: 8 }}>
             <span>HELD</span><span style={{ marginLeft: 'auto' }}>OWED</span>
           </div>
-          <div style={{ height: 14, borderRadius: 'var(--sb-r-pill)', overflow: 'hidden', display: 'flex', background: 'rgba(255,255,255,0.12)' }}>
+          <div style={{ height: 14, borderRadius: 'var(--sb-r-pill)', overflow: 'hidden', display: 'flex', background: 'color-mix(in srgb, var(--sb-ink-on-dark) 12%, transparent)' }}>
             <span style={{ width: `${heldPct}%`, background: 'var(--sb-accent)', display: 'block' }} />
             <span style={{ flex: 1, background: 'var(--sb-negative)', display: 'block' }} />
           </div>
@@ -493,7 +493,7 @@ export function BalanceScreen() {
           {shown.length === 0 && (
             <div style={{
               padding: '26px 18px', textAlign: 'center', borderRadius: 'var(--sb-r-nav)',
-              background: 'var(--sb-header)', border: '1px dashed #E4DCC6',
+              background: 'var(--sb-header)', border: '1px dashed var(--sb-border)',
             }}>
               <div style={{ fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>
                 No {filter.toLowerCase()} yet
@@ -555,13 +555,13 @@ export function BalanceScreen() {
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 7, height: 34,
                   padding: '0 8px 0 12px', borderRadius: 'var(--sb-r-nav)', cursor: 'pointer',
-                  background: '#FBF3D2', border: '1px solid var(--sb-accent)', color: '#7A5F09',
+                  background: 'var(--sb-accent-tint)', border: '1px solid var(--sb-accent)', color: 'var(--sb-accent-deep)',
                   fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
                 }}>
                 {focused.name}
                 <span style={{
                   display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                  width: 18, height: 18, borderRadius: 'var(--sb-r-pill)', background: 'rgba(25,23,18,0.08)',
+                  width: 18, height: 18, borderRadius: 'var(--sb-r-pill)', background: 'color-mix(in srgb, var(--sb-ink-1) 8.0%, transparent)',
                 }}><X size={ICON.sm} /></span>
               </button>
             )}
@@ -571,7 +571,7 @@ export function BalanceScreen() {
                 title={`Show all ${onFocused} entries on ${focused.name}`}
                 style={{
                   height: 34, padding: '0 11px', borderRadius: 'var(--sb-r-nav)', cursor: 'pointer',
-                  background: 'transparent', border: '1px dashed #DCD3BF', color: 'var(--sb-ink-3)',
+                  background: 'transparent', border: '1px dashed var(--sb-border)', color: 'var(--sb-ink-3)',
                   fontFamily: 'inherit', fontSize: 'var(--sb-t-meta)', fontWeight: 500, whiteSpace: 'nowrap',
                 }}>
                 {hiddenByRange} more outside this range

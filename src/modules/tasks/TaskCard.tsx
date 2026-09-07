@@ -108,7 +108,7 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
         // keep the geometry identical whether or not the ink border is on
         padding: selected ? '8px 9px' : '9px 10px',
         borderRadius: 'var(--sb-r-nav)',
-        boxShadow: hovered && !selected ? '0 2px 8px rgba(25,23,18,0.07)' : '0 1px 2px rgba(25,23,18,0.04)',
+        boxShadow: hovered && !selected ? '0 2px 8px color-mix(in srgb, var(--sb-ink-1) 7.0%, transparent)' : '0 1px 2px color-mix(in srgb, var(--sb-ink-1) 4.0%, transparent)',
         cursor: isDragging ? 'grabbing' : 'pointer',
         // Without this iOS scrolls the page instead of starting the drag.
         touchAction: 'none',
@@ -131,13 +131,13 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
               title={task.completed ? 'Reopen' : 'Complete'}
               style={{
                 width: 15, height: 15, borderRadius: 'var(--sb-r-chip)', boxSizing: 'border-box',
-                border: task.completed ? 'var(--sb-border-emphasis) solid var(--sb-positive)' : 'var(--sb-border-emphasis) solid #CFC6B0',
+                border: task.completed ? 'var(--sb-border-emphasis) solid var(--sb-positive)' : 'var(--sb-border-emphasis) solid var(--sb-border)',
                 background: task.completed ? 'var(--sb-positive)' : 'var(--sb-card)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 cursor: 'pointer', flexShrink: 0, padding: 0, transition: 'all .15s',
               }}
             >
-              {task.completed && <Check size={ICON.sm} color="#fff" strokeWidth={STROKE.active} />}
+              {task.completed && <Check size={ICON.sm} color="var(--sb-ink-on-fill)" strokeWidth={STROKE.active} />}
             </button>
 
             <button data-nm
@@ -145,7 +145,7 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
               title="Delete task"
               style={{
                 background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex',
-                flexShrink: 0, color: hovered ? 'var(--sb-negative)' : '#DCD3BF',
+                flexShrink: 0, color: hovered ? 'var(--sb-negative)' : 'var(--sb-border)',
               }}>
               <Trash2 size={ICON.sm} strokeWidth={STROKE.rest} />
             </button>
@@ -168,7 +168,7 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
             style={{
               background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex',
               flexShrink: 0, marginTop: 2,
-              color: task.urgent ? 'var(--sb-negative)' : hovered ? 'var(--sb-ink-4)' : '#D8CFB8',
+              color: task.urgent ? 'var(--sb-negative)' : hovered ? 'var(--sb-ink-4)' : 'var(--sb-border)',
             }}>
             <Flame size={ICON.sm} strokeWidth={STROKE.rest} fill={task.urgent ? 'var(--sb-negative)' : 'none'} />
           </button>

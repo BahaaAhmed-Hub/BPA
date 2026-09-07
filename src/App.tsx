@@ -64,7 +64,7 @@ function LoginScreen() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(160deg, var(--sb-page) 0%, #EEE8D0 100%)',
+      background: 'linear-gradient(160deg, var(--sb-page) 0%, var(--sb-accent-tint) 100%)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -86,7 +86,7 @@ function LoginScreen() {
       }}>
         {/* Left — promise */}
         <div style={{
-          background: 'linear-gradient(160deg, var(--sb-page) 0%, #EEE8D0 100%)',
+          background: 'linear-gradient(160deg, var(--sb-page) 0%, var(--sb-accent-tint) 100%)',
           padding: '60px 56px',
           display: 'flex',
           flexDirection: 'column',
@@ -258,7 +258,7 @@ function LoadingScreen() {
     <div style={{
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
       minHeight: '100vh',
-      background: 'linear-gradient(160deg, var(--sb-page) 0%, #EEE8D0 100%)',
+      background: 'linear-gradient(160deg, var(--sb-page) 0%, var(--sb-accent-tint) 100%)',
       gap: 16,
       fontFamily: 'var(--sb-font-ui)',
     }}>
@@ -504,7 +504,7 @@ function NotificationBell() {
 }
 
 const KIND_COLOR: Record<string, string> = {
-  decision: 'var(--sb-negative)', conflict: '#D68F6A', habit: 'var(--sb-positive)', review: 'var(--sb-accent)',
+  decision: 'var(--sb-negative)', conflict: 'var(--sb-accent)', habit: 'var(--sb-positive)', review: 'var(--sb-accent)',
 }
 
 function TopNav() {
@@ -626,7 +626,7 @@ function TopNav() {
                 style={{
                   display: 'flex', alignItems: 'center', gap: 9, width: '100%', height: 36,
                   padding: '0 10px', borderRadius: 'var(--sb-r-sm)', border: 'none', cursor: 'pointer',
-                  background: activeModule === 'settings' ? '#F5F1E6' : 'transparent',
+                  background: activeModule === 'settings' ? 'var(--sb-accent-tint)' : 'transparent',
                   color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body)', fontFamily: 'inherit', textAlign: 'left',
                 }}>
                 <Settings size={ICON.md} color="var(--sb-ink-3)" /> Settings

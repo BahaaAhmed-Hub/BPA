@@ -148,7 +148,7 @@ function IntervalPicker({ value, onChange }: { value: Frequency; onChange: (f: F
         <ChevronDown size={ICON.sm} strokeWidth={STROKE.rest} style={{ color: 'var(--sb-ink-4)' }} />
       </button>
       {open && (
-        <div style={{
+        <div className="sb-blur-surface" style={{
           position: 'absolute', top: 46, right: 0, minWidth: 168, zIndex: 30, padding: 5,
           background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
           boxShadow: 'var(--sb-shadow-menu)',
@@ -165,7 +165,7 @@ function IntervalPicker({ value, onChange }: { value: Frequency; onChange: (f: F
                   fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)', textAlign: 'left',
                 }}>
                 <span style={{ flex: 1 }}>{opt.label}</span>
-                {on && <Check size={ICON.sm} strokeWidth={STROKE.active} style={{ color: '#8A6D0B' }} />}
+                {on && <Check size={ICON.sm} strokeWidth={STROKE.active} style={{ color: 'var(--sb-accent-deep)' }} />}
               </button>
             )
           })}
@@ -186,7 +186,7 @@ function Switch({ on, onChange, label, sub }: {
       }}>
       <span style={{
         width: 34, height: 20, borderRadius: 'var(--sb-r-pill)', flexShrink: 0, marginTop: 1,
-        background: on ? 'var(--sb-ink-1)' : '#E4DCC6', position: 'relative', transition: 'background .15s',
+        background: on ? 'var(--sb-ink-1)' : 'var(--sb-border)', position: 'relative', transition: 'background .15s',
       }}>
         <span style={{
           position: 'absolute', top: 2, left: on ? 16 : 2, width: 16, height: 16, borderRadius: 'var(--sb-r-pill)',
@@ -288,7 +288,7 @@ export function BudgetRuleModal({
       onClick={e => { if (e.target === e.currentTarget) onClose() }}
       style={{
         position: 'fixed', inset: 0, zIndex: 1000, padding: 18,
-        background: 'rgba(25,23,18,0.45)',
+        background: 'color-mix(in srgb, var(--sb-ink-1) 45.0%, transparent)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}>
       <div ref={box} style={{
@@ -371,7 +371,7 @@ export function BudgetRuleModal({
             <span style={{ flex: 1 }} />
             {spent > 0 && (
               <button onClick={onDrill}
-                style={{ height: 26, padding: '0 10px', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-positive-tint)', border: '1px solid #C8D9A8', color: 'var(--sb-positive)', fontSize: 'var(--sb-t-meta)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                style={{ height: 26, padding: '0 10px', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-positive-tint)', border: '1px solid var(--sb-positive-tint)', color: 'var(--sb-positive)', fontSize: 'var(--sb-t-meta)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
                 View all →
               </button>
             )}
@@ -379,9 +379,9 @@ export function BudgetRuleModal({
           {budget > 0 && (
             <>
               <div style={{ height: 6, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-field)', marginTop: 10, overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: `${pct * 100}%`, background: over ? tone : near ? '#E8A94A' : 'var(--sb-positive)', borderRadius: 'var(--sb-r-pill)' }} />
+                <div style={{ height: '100%', width: `${pct * 100}%`, background: over ? tone : near ? 'var(--sb-accent)' : 'var(--sb-positive)', borderRadius: 'var(--sb-r-pill)' }} />
               </div>
-              <div style={{ fontSize: 'var(--sb-t-meta)', color: over ? tone : near ? '#8A6D0B' : 'var(--sb-ink-3)', marginTop: 7 }}>
+              <div style={{ fontSize: 'var(--sb-t-meta)', color: over ? tone : near ? 'var(--sb-accent-deep)' : 'var(--sb-ink-3)', marginTop: 7 }}>
                 {over  ? `Over by ${cur} ${fmt(spent - budget)}`
                  : near ? `${cur} ${fmt(budget - spent)} left — past 80%`
                         : `${cur} ${fmt(budget - spent)} left`}

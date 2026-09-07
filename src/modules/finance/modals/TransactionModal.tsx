@@ -220,7 +220,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
       onClick={e => { if (e.target === e.currentTarget) onClose() }}
       style={{
         position: 'fixed', inset: 0, zIndex: 1000,
-        background: 'rgba(25,23,18,0.45)',
+        background: 'color-mix(in srgb, var(--sb-ink-1) 45.0%, transparent)',
         display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 18,
       }}>
 
@@ -356,9 +356,9 @@ export function TransactionModal({ transaction, accounts, categories, history = 
               <span style={{
                 flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
                 padding: '9px 12px', borderRadius: 'var(--sb-r-nav)',
-                background: '#FBF3D2', border: '1px solid var(--sb-accent-border)',
+                background: 'var(--sb-accent-tint)', border: '1px solid var(--sb-accent-border)',
               }}>
-                <span style={{ fontSize: 'var(--sb-t-body-s)', color: '#7A5F09', flex: 1, minWidth: 140 }}>
+                <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-accent-deep)', flex: 1, minWidth: 140 }}>
                   Paying a card off? That moves money rather than spending it — switch to
                   Transfer and pick which card it lands on.
                 </span>
@@ -440,7 +440,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
 
                 {/* Everyone you have paid before, narrowing as you type */}
                 {payeeOpen && payeeHits.length > 0 && (
-                  <div style={{
+                  <div className="sb-blur-surface" style={{
                     position: 'absolute', top: 46, left: 0, right: 0, zIndex: 20, padding: 5,
                     maxHeight: 210, overflowY: 'auto',
                     background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
@@ -482,7 +482,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
                   <span key={tag} style={{
                     display: 'inline-flex', alignItems: 'center', gap: 5, height: 28, padding: '0 6px 0 10px',
                     borderRadius: 'var(--sb-r-pill)', background: 'rgba(var(--sb-accent-rgb),0.16)', border: '1px solid rgba(var(--sb-accent-rgb),0.33)',
-                    color: '#3D3926', fontSize: 'var(--sb-t-body-s)',
+                    color: 'var(--sb-ink-2)', fontSize: 'var(--sb-t-body-s)',
                   }}>
                     {tag}
                     <button onClick={() => setTags(prev => prev.filter(t => t !== tag))} title="Remove"

@@ -4,6 +4,7 @@ import { ChevronDown, Check } from 'lucide-react'
 import type { Category } from '../types'
 import { CategoryGlyph } from '../components/CategoryGlyph'
 import { ICON, STROKE } from '@/lib/type'
+import { alpha } from '@/lib/alpha'
 
 // ─── The panel vocabulary ─────────────────────────────────────────────────────
 // Same set the calendar's event panel uses: one pill for every value whether
@@ -54,7 +55,7 @@ export function Glyph({ glyph, tint, size = 22 }: { glyph?: string; tint?: strin
     <span style={{
       width: size, height: size, borderRadius: 'var(--sb-r-chip)', flexShrink: 0, overflow: 'hidden',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: tint ? `${tint}22` : 'var(--sb-field)',
+      background: tint ? alpha(tint, 13.3) : 'var(--sb-field)',
       color: tint ?? 'var(--sb-ink-3)',
     }}>
       <CategoryGlyph icon={glyph} size={Math.round(size * 0.68)} />
@@ -138,7 +139,7 @@ export function PillPicker({ value, options, onChange, placeholder, compact }: {
       </button>
 
       {open && place && createPortal(
-        <div ref={list} style={{
+        <div className="sb-blur-surface" ref={list} style={{
           position: 'fixed', top: place.top, left: place.left, width: place.width, zIndex: 2000,
           maxHeight: place.maxHeight, overflowY: 'auto', padding: 5, boxSizing: 'border-box',
           background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
@@ -169,7 +170,7 @@ export function PillPicker({ value, options, onChange, placeholder, compact }: {
                     </span>
                   )}
                 </span>
-                {on && <Check size={ICON.sm} strokeWidth={STROKE.active} style={{ color: '#8A6D0B', flexShrink: 0 }} />}
+                {on && <Check size={ICON.sm} strokeWidth={STROKE.active} style={{ color: 'var(--sb-accent-deep)', flexShrink: 0 }} />}
               </button>
             )
           })}

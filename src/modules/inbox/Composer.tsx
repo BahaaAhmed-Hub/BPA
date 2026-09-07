@@ -146,7 +146,7 @@ export function Composer({ seed, accounts, onClose, onSent }: {
   const total = files.reduce((n, f) => n + f.file.size, 0)
 
   return (
-    <div style={{
+    <div className="sb-blur-surface" style={{
       background: C.card, border: `1px solid ${C.border}`, borderRadius: 'var(--sb-r-nav)',
       boxShadow: 'var(--sb-shadow-menu)', overflow: 'hidden',
       display: 'flex', flexDirection: 'column', maxHeight: '68vh',
@@ -259,7 +259,7 @@ export function Composer({ seed, accounts, onClose, onSent }: {
         <button onClick={() => void send()} disabled={sending}
           style={{
             display: 'flex', alignItems: 'center', gap: 6, height: 32, padding: '0 15px',
-            borderRadius: 'var(--sb-r-sm)', background: C.amber, border: '1px solid rgba(25,23,18,0.18)',
+            borderRadius: 'var(--sb-r-sm)', background: C.amber, border: '1px solid color-mix(in srgb, var(--sb-ink-1) 18.0%, transparent)',
             color: C.ink, fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
             cursor: sending ? 'default' : 'pointer', boxShadow: 'var(--sb-shadow-accent)',
           }}>

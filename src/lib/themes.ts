@@ -1,373 +1,307 @@
 // ─── Themes: one token contract ──────────────────────────────────────────────
-// A theme used to be a bag of colour fields with names of its own — bg,
-// surface2, accentFill, sidebarBg — which `applyThemeVars` then wrote out under
-// three different variable prefixes (`--color-*`, `--bg-*`, `--accent`). The
-// app's actual design tokens are the `--sb-*` set in index.css, so there were
-// two vocabularies for one idea and no way to tell which one a component meant.
-//
-// A theme is now a map from `--sb-*` names to values, and nothing else. Adding
-// a token means adding it to `SbToken`; every theme then has to answer for it,
+// A theme is a map from `--sb-*` names to values, and nothing else. Adding a
+// token means adding it to `SbToken`; every theme then has to answer for it,
 // which is the point of a contract.
+//
+// The set below is exactly the THEME-DEPENDENT half of index.css's `:root` —
+// surfaces, the ink ramp, the accent, the semantics, the shadows, the two
+// faces and the surface blur. The other half of that block (radii, the type
+// scale, control heights, icon sizes, border weights, the mono face) is the
+// shape of the app rather than its colour: no theme writes it, so it is not
+// here.
+//
+// This file is also the only thing in the app that writes to
+// `document.documentElement.style`. Two writers meant the accent picker could
+// win against the theme and a behavioural mode could win against both, in an
+// order that depended on which one happened to run last.
 
-/** Every `--sb-*` token a theme owns. The rest of the `--sb-*` set — radii,
- *  type, control heights, shadows — does not vary by theme and stays in
- *  index.css's `:root`. */
+import { accentById, accentTokens, loadAccent, loadCompact, COMPACT_SCALE } from './accent'
+import { useBehavioralStore, type BehavioralMode } from '@/store/behavioralStore'
+
+/** Every `--sb-*` token a theme owns. */
 export type SbToken =
+  // Surfaces
   | '--sb-page'
   | '--sb-header'
   | '--sb-card'
   | '--sb-field'
   | '--sb-border'
   | '--sb-hairline'
+  // Ink ramp
   | '--sb-ink-1'
   | '--sb-ink-2'
   | '--sb-ink-3'
   | '--sb-ink-4'
+  /** The ink that reads on an `--sb-ink-1` *fill* — the primary button, the
+   *  inverted panel, the solid pill. On a light theme that fill is near-black
+   *  and this is near-white; on a dark one the fill is near-white and this is
+   *  near-black. It is named for the light-theme case it was born in. */
   | '--sb-ink-on-dark'
+  /** What a label on a solid *semantic* fill is drawn in — a tick on green, a
+   *  count on red. Near-white where the semantics are saturated and dark,
+   *  near-black on Glass & Depth, where they are bright. */
+  | '--sb-ink-on-fill'
+  // Accent
   | '--sb-accent'
-  /** Components, not values: `rgba(var(--sb-accent-rgb), .2)`. */
+  /** Components, not a colour: `rgba(var(--sb-accent-rgb), .2)`. */
   | '--sb-accent-rgb'
-  | '--sb-accent-tint'
-  | '--sb-accent-tint2'
-  | '--sb-accent-border'
+  /** What a label on a solid accent fill is drawn in. Dark on a bright accent,
+   *  light on a dark one — see Evergreen, whose accent is darker than the ink
+   *  midpoint and whose buttons therefore carry pale text. */
+  | '--sb-accent-ink'
   /** The accent at text weight against its own tint — deeper on a light theme,
    *  brighter on a dark one. */
   | '--sb-accent-deep'
+  | '--sb-accent-tint'
+  | '--sb-accent-tint2'
+  | '--sb-accent-border'
+  // Semantics
   | '--sb-positive'
   | '--sb-positive-deep'
   | '--sb-positive-tint'
   | '--sb-negative'
   | '--sb-negative-deep'
   | '--sb-negative-tint'
+  | '--sb-info'
+  | '--sb-info-tint'
+  | '--sb-warning'
+  | '--sb-warning-tint'
+  // Shadows — four heights, a sideways one for panels, and the hard offset
+  // under an accent pill, which is a shape rather than a height.
+  | '--sb-shadow-control'
+  | '--sb-shadow-hover'
+  | '--sb-shadow-menu'
+  | '--sb-shadow-frame'
+  | '--sb-shadow-panel'
+  | '--sb-shadow-accent'
+  // Faces. The mono face is fixed across themes and lives in index.css.
+  | '--sb-font-ui'
+  | '--sb-font-num'
+  /** How much the surfaces blur what is behind them. `0px` on an opaque theme,
+   *  which the browser can skip entirely. */
+  | '--sb-surface-blur'
 
 export interface AppTheme {
   id: string
   name: string
-  /** How the theme is picked out of a grid — not a colour, so it stays. */
-  emoji: string
   isDark: boolean
   tokens: Record<SbToken, string>
 }
 
 export const THEMES: AppTheme[] = [
+  // ── Sunlit Bento ──────────────────────────────────────────────────────────
+  // The default, and verbatim index.css's `:root` — applying it has to be a
+  // no-op, or the app would repaint itself on the way in.
   {
-    id: 'navy-night', name: 'Navy Night', emoji: '🌃', isDark: true,
+    id: 'sunlit-bento', name: 'Sunlit Bento', isDark: false,
     tokens: {
-      '--sb-page': '#0D0F1A',
-      '--sb-header': '#161929',
-      '--sb-card': '#161929',
-      '--sb-field': '#0D0F1A',
-      '--sb-border': '#252A3E',
-      '--sb-hairline': '#1A1E2E',
-      '--sb-ink-1': '#E8EAF6',
-      '--sb-ink-2': '#94A3B8',
-      '--sb-ink-3': '#94A3B8',
-      '--sb-ink-4': '#4B5563',
-      '--sb-ink-on-dark': '#E8EAF6',
-      '--sb-accent': '#60A5FA',
-      '--sb-accent-rgb': '96,165,250',
-      '--sb-accent-tint': '#23324F',
-      '--sb-accent-tint2': '#263857',
-      '--sb-accent-border': '#375887',
-      '--sb-accent-deep': '#93C5FD',
-      '--sb-positive': '#4ADE80',
-      '--sb-positive-deep': '#22C55E',
-      '--sb-positive-tint': '#1F3C39',
-      '--sb-negative': '#F87171',
-      '--sb-negative-deep': '#EF4444',
-      '--sb-negative-tint': '#3F2936',
-    },
-  },
-  {
-    id: 'midnight', name: 'Midnight', emoji: '🌑', isDark: true,
-    tokens: {
-      '--sb-page': '#07090F',
-      '--sb-header': '#0E1117',
-      '--sb-card': '#0E1117',
-      '--sb-field': '#07090F',
-      '--sb-border': '#1C2030',
-      '--sb-hairline': '#131621',
-      '--sb-ink-1': '#F1F5F9',
-      '--sb-ink-2': '#94A3B8',
-      '--sb-ink-3': '#94A3B8',
-      '--sb-ink-4': '#4B5563',
-      '--sb-ink-on-dark': '#F1F5F9',
-      '--sb-accent': '#818CF8',
-      '--sb-accent-rgb': '129,140,248',
-      '--sb-accent-tint': '#232740',
-      '--sb-accent-tint2': '#272C48',
-      '--sb-accent-border': '#42487C',
-      '--sb-accent-deep': '#A5B4FC',
-      '--sb-positive': '#4ADE80',
-      '--sb-positive-deep': '#22C55E',
-      '--sb-positive-tint': '#19362A',
-      '--sb-negative': '#F87171',
-      '--sb-negative-deep': '#EF4444',
-      '--sb-negative-tint': '#382227',
-    },
-  },
-  {
-    id: 'obsidian', name: 'Obsidian', emoji: '⬛', isDark: true,
-    tokens: {
-      '--sb-page': '#0A0A0D',
-      '--sb-header': '#111115',
-      '--sb-card': '#111115',
-      '--sb-field': '#0A0A0D',
-      '--sb-border': '#1E1E2E',
-      '--sb-hairline': '#15151F',
-      '--sb-ink-1': '#EDE9FE',
-      '--sb-ink-2': '#A78BFA',
-      '--sb-ink-3': '#A78BFA',
-      '--sb-ink-4': '#4B5563',
-      '--sb-ink-on-dark': '#EDE9FE',
-      '--sb-accent': '#A78BFA',
-      '--sb-accent-rgb': '167,139,250',
-      '--sb-accent-tint': '#2C273E',
-      '--sb-accent-tint2': '#322C47',
-      '--sb-accent-border': '#54487C',
-      '--sb-accent-deep': '#C4B5FD',
-      '--sb-positive': '#4ADE80',
-      '--sb-positive-deep': '#22C55E',
-      '--sb-positive-tint': '#1B3628',
-      '--sb-negative': '#F87171',
-      '--sb-negative-deep': '#EF4444',
-      '--sb-negative-tint': '#3B2226',
-    },
-  },
-  {
-    id: 'forest', name: 'Forest', emoji: '🌲', isDark: true,
-    tokens: {
-      '--sb-page': '#091410',
-      '--sb-header': '#101E18',
-      '--sb-card': '#101E18',
-      '--sb-field': '#091410',
-      '--sb-border': '#163524',
-      '--sb-hairline': '#10261B',
-      '--sb-ink-1': '#ECFDF5',
-      '--sb-ink-2': '#6EE7B7',
-      '--sb-ink-3': '#6EE7B7',
-      '--sb-ink-4': '#374151',
-      '--sb-ink-on-dark': '#ECFDF5',
-      '--sb-accent': '#34D399',
-      '--sb-accent-rgb': '52,211,153',
-      '--sb-accent-tint': '#163F2F',
-      '--sb-accent-tint2': '#184634',
-      '--sb-accent-border': '#206F52',
-      '--sb-accent-deep': '#6EE7B7',
-      '--sb-positive': '#4ADE80',
-      '--sb-positive-deep': '#22C55E',
-      '--sb-positive-tint': '#1A412B',
-      '--sb-negative': '#F87171',
-      '--sb-negative-deep': '#EF4444',
-      '--sb-negative-tint': '#3A2D28',
-    },
-  },
-  {
-    id: 'crimson', name: 'Crimson', emoji: '🔴', isDark: true,
-    tokens: {
-      '--sb-page': '#130A0A',
-      '--sb-header': '#1C0F0F',
-      '--sb-card': '#1C0F0F',
-      '--sb-field': '#130A0A',
-      '--sb-border': '#351515',
-      '--sb-hairline': '#261010',
-      '--sb-ink-1': '#FEF2F2',
-      '--sb-ink-2': '#FCA5A5',
-      '--sb-ink-3': '#FCA5A5',
-      '--sb-ink-4': '#4B5563',
-      '--sb-ink-on-dark': '#FEF2F2',
-      '--sb-accent': '#F87171',
-      '--sb-accent-rgb': '248,113,113',
-      '--sb-accent-tint': '#442121',
-      '--sb-accent-tint2': '#4C2525',
-      '--sb-accent-border': '#7F3B3B',
-      '--sb-accent-deep': '#FCA5A5',
-      '--sb-positive': '#4ADE80',
-      '--sb-positive-deep': '#22C55E',
-      '--sb-positive-tint': '#243423',
-      '--sb-negative': '#F87171',
-      '--sb-negative-deep': '#EF4444',
-      '--sb-negative-tint': '#442121',
-    },
-  },
-  {
-    id: 'violet', name: 'Violet', emoji: '💜', isDark: true,
-    tokens: {
-      '--sb-page': '#0D091A',
-      '--sb-header': '#150F24',
-      '--sb-card': '#150F24',
-      '--sb-field': '#0D091A',
-      '--sb-border': '#261840',
-      '--sb-hairline': '#1B112F',
-      '--sb-ink-1': '#EDE9FE',
-      '--sb-ink-2': '#C4B5FD',
-      '--sb-ink-3': '#C4B5FD',
-      '--sb-ink-4': '#4B5563',
-      '--sb-ink-on-dark': '#EDE9FE',
-      '--sb-accent': '#A78BFA',
-      '--sb-accent-rgb': '167,139,250',
-      '--sb-accent-tint': '#2F254B',
-      '--sb-accent-tint2': '#352A53',
-      '--sb-accent-border': '#574784',
-      '--sb-accent-deep': '#C4B5FD',
-      '--sb-positive': '#4ADE80',
-      '--sb-positive-deep': '#22C55E',
-      '--sb-positive-tint': '#1F3435',
-      '--sb-negative': '#F87171',
-      '--sb-negative-deep': '#EF4444',
-      '--sb-negative-tint': '#3E2132',
-    },
-  },
-  {
-    id: 'amber', name: 'Amber', emoji: '🌅', isDark: true,
-    tokens: {
-      '--sb-page': '#150E04',
-      '--sb-header': '#1F1607',
-      '--sb-card': '#1F1607',
-      '--sb-field': '#150E04',
-      '--sb-border': '#382208',
-      '--sb-hairline': '#281906',
-      '--sb-ink-1': '#FFFBEB',
-      '--sb-ink-2': '#FDE68A',
-      '--sb-ink-3': '#FDE68A',
-      '--sb-ink-4': '#6B5E3A',
-      '--sb-ink-on-dark': '#FFFBEB',
-      '--sb-accent': '#FCD34D',
-      '--sb-accent-rgb': '252,211,77',
-      '--sb-accent-tint': '#473814',
-      '--sb-accent-tint2': '#504016',
-      '--sb-accent-border': '#826B26',
-      '--sb-accent-deep': '#FDE68A',
-      '--sb-positive': '#4ADE80',
-      '--sb-positive-deep': '#22C55E',
-      '--sb-positive-tint': '#273A1D',
-      '--sb-negative': '#F87171',
-      '--sb-negative-deep': '#EF4444',
-      '--sb-negative-tint': '#46261A',
-    },
-  },
-  {
-    id: 'teal', name: 'Teal', emoji: '🌊', isDark: true,
-    tokens: {
-      '--sb-page': '#051210',
-      '--sb-header': '#0B1C1A',
-      '--sb-card': '#0B1C1A',
-      '--sb-field': '#051210',
-      '--sb-border': '#0E2E2A',
-      '--sb-hairline': '#0A211E',
-      '--sb-ink-1': '#F0FDFA',
-      '--sb-ink-2': '#5EEAD4',
-      '--sb-ink-3': '#5EEAD4',
-      '--sb-ink-4': '#374151',
-      '--sb-ink-on-dark': '#F0FDFA',
-      '--sb-accent': '#2DD4BF',
-      '--sb-accent-rgb': '45,212,191',
-      '--sb-accent-tint': '#113D38',
-      '--sb-accent-tint2': '#12443E',
-      '--sb-accent-border': '#1A6F64',
-      '--sb-accent-deep': '#5EEAD4',
-      '--sb-positive': '#4ADE80',
-      '--sb-positive-deep': '#22C55E',
-      '--sb-positive-tint': '#163F2C',
-      '--sb-negative': '#F87171',
-      '--sb-negative-deep': '#EF4444',
-      '--sb-negative-tint': '#362B2A',
-    },
-  },
-  {
-    id: 'rose', name: 'Rose', emoji: '🌸', isDark: true,
-    tokens: {
-      '--sb-page': '#130810',
-      '--sb-header': '#1D0E18',
-      '--sb-card': '#1D0E18',
-      '--sb-field': '#130810',
-      '--sb-border': '#37102E',
-      '--sb-hairline': '#270C20',
-      '--sb-ink-1': '#FFF1F2',
-      '--sb-ink-2': '#FDA4AF',
-      '--sb-ink-3': '#FDA4AF',
-      '--sb-ink-4': '#4B5563',
-      '--sb-ink-on-dark': '#FFF1F2',
-      '--sb-accent': '#FB7185',
-      '--sb-accent-rgb': '251,113,133',
-      '--sb-accent-tint': '#45202C',
-      '--sb-accent-tint2': '#4E2430',
-      '--sb-accent-border': '#813B49',
-      '--sb-accent-deep': '#FDA4AF',
-      '--sb-positive': '#4ADE80',
-      '--sb-positive-deep': '#22C55E',
-      '--sb-positive-tint': '#25332B',
-      '--sb-negative': '#F87171',
-      '--sb-negative-deep': '#EF4444',
-      '--sb-negative-tint': '#442028',
-    },
-  },
-  {
-    id: 'light', name: 'Light', emoji: '☀️', isDark: false,
-    tokens: {
-      '--sb-page': '#F8FAFC',
-      '--sb-header': '#F1F5F9',
-      '--sb-card': '#FFFFFF',
-      '--sb-field': '#F1F5F9',
-      '--sb-border': '#E2E8F0',
-      '--sb-hairline': '#F0F4F8',
-      '--sb-ink-1': '#0F172A',
-      '--sb-ink-2': '#475569',
-      '--sb-ink-3': '#475569',
-      '--sb-ink-4': '#64748B',
-      '--sb-ink-on-dark': '#F8FAFC',
-      '--sb-accent': '#1E40AF',
-      '--sb-accent-rgb': '30,64,175',
-      '--sb-accent-tint': '#E0E4F4',
-      '--sb-accent-tint2': '#D9DFF1',
-      '--sb-accent-border': '#9AA9DB',
-      '--sb-accent-deep': '#3B82F6',
-      '--sb-positive': '#0C8140',
-      '--sb-positive-deep': '#0A6B36',
-      '--sb-positive-tint': '#DDEDE4',
-      '--sb-negative': '#C62828',
-      '--sb-negative-deep': '#A31C1C',
-      '--sb-negative-tint': '#F7E1E1',
-    },
-  },
-  {
-    id: 'sunlit-bento', name: 'Sunlit Bento', emoji: '🌤️', isDark: false,
-    // Verbatim from index.css's :root — applying the default theme has to be a
-    // no-op, or the app would repaint itself on the way in.
-    tokens: {
-      '--sb-page': '#F7F4EA',
-      '--sb-header': '#FCFAF4',
-      '--sb-card': '#FFFFFF',
-      '--sb-field': '#FAF7EC',
-      '--sb-border': '#E8E1CE',
-      '--sb-hairline': '#F0EBDC',
-      '--sb-ink-1': '#191712',
-      '--sb-ink-2': '#4A4438',
-      '--sb-ink-3': '#6C6553',
-      '--sb-ink-4': '#756F60',
-      '--sb-ink-on-dark': '#FDF8E7',
-      '--sb-accent': '#F5D14E',
-      '--sb-accent-rgb': '245,209,78',
-      '--sb-accent-tint': '#FEF7DE',
-      '--sb-accent-tint2': '#FDF6DE',
+      '--sb-page':          '#F7F4EA',
+      '--sb-header':        '#FCFAF4',
+      '--sb-card':          '#FFFFFF',
+      '--sb-field':         '#FAF7EC',
+      '--sb-border':        '#E8E1CE',
+      '--sb-hairline':      '#F0EBDC',
+      '--sb-ink-1':         '#191712',
+      '--sb-ink-2':         '#4A4438',
+      '--sb-ink-3':         '#6C6553',
+      '--sb-ink-4':         '#756F60',
+      '--sb-ink-on-dark':   '#FDF8E7',
+      '--sb-ink-on-fill':   '#FFFFFF',
+      '--sb-accent':        '#F5D14E',
+      '--sb-accent-rgb':    '245,209,78',
+      '--sb-accent-ink':    '#191712',
+      '--sb-accent-deep':   '#7A5F09',
+      '--sb-accent-tint':   '#FEF7DE',
+      '--sb-accent-tint2':  '#FDF6DE',
       '--sb-accent-border': '#EFE1B4',
-      '--sb-accent-deep': '#7A5F09',
-      '--sb-positive': '#0C8140',
+      '--sb-positive':      '#0C8140',
       '--sb-positive-deep': '#0A6B36',
       '--sb-positive-tint': '#E2F0E7',
-      '--sb-negative': '#C62828',
+      '--sb-negative':      '#C62828',
       '--sb-negative-deep': '#A31C1C',
       '--sb-negative-tint': '#FAE3E3',
+      '--sb-info':          '#685FD7',
+      '--sb-info-tint':     '#EDEBFA',
+      '--sb-warning':       '#B26A00',
+      '--sb-warning-tint':  '#FBEEDC',
+      '--sb-shadow-control': '0 1px 3px rgba(25,23,18,.14)',
+      '--sb-shadow-hover':   '0 4px 12px -6px rgba(48,40,20,.4)',
+      '--sb-shadow-menu':    '0 12px 32px -12px rgba(48,40,20,.28)',
+      '--sb-shadow-frame':   '0 26px 64px -34px rgba(48,40,20,.5)',
+      '--sb-shadow-panel':  '-8px 0 40px -12px rgba(48,40,20,.28)',
+      '--sb-shadow-accent':  '0 2px 0 rgba(120,92,0,.25)',
+      '--sb-font-ui':       "'Instrument Sans', system-ui, sans-serif",
+      '--sb-font-num':      "'Outfit', system-ui, sans-serif",
+      '--sb-surface-blur':  '0px',
+    },
+  },
+
+  // ── Glass & Depth ─────────────────────────────────────────────────────────
+  // The only dark theme, and the only one whose surfaces are translucent: the
+  // card, the header and the fields are washes over the page rather than
+  // colours of their own, so `--sb-surface-blur` has something to do. Every
+  // tint is an rgba for the same reason — a solid tint over a translucent card
+  // would read as a hole in it.
+  {
+    id: 'glass-depth', name: 'Glass & Depth', isDark: true,
+    tokens: {
+      '--sb-page':          '#0E1116',
+      '--sb-header':        'rgba(23,28,36,.72)',
+      '--sb-card':          'rgba(26,32,41,.66)',
+      '--sb-field':         'rgba(9,12,17,.55)',
+      '--sb-border':        'rgba(233,240,252,.12)',
+      '--sb-hairline':      'rgba(233,240,252,.07)',
+      '--sb-ink-1':         '#F2F5FA',
+      '--sb-ink-2':         '#C6CEDA',
+      '--sb-ink-3':         '#A7B1BF',
+      '--sb-ink-4':         '#939DAC',
+      '--sb-ink-on-dark':   '#0B0F14',
+      '--sb-ink-on-fill':   '#08121C',
+      '--sb-accent':        '#6BA8FF',
+      '--sb-accent-rgb':    '107,168,255',
+      '--sb-accent-ink':    '#07121F',
+      '--sb-accent-deep':   '#A6C9FF',
+      '--sb-accent-tint':   'rgba(107,168,255,.16)',
+      '--sb-accent-tint2':  'rgba(107,168,255,.22)',
+      '--sb-accent-border': 'rgba(107,168,255,.42)',
+      '--sb-positive':      '#4ADE95',
+      '--sb-positive-deep': '#84EFB8',
+      '--sb-positive-tint': 'rgba(74,222,149,.16)',
+      '--sb-negative':      '#FF7B7B',
+      '--sb-negative-deep': '#FFA9A9',
+      '--sb-negative-tint': 'rgba(255,123,123,.16)',
+      '--sb-info':          '#9AACFF',
+      '--sb-info-tint':     'rgba(154,172,255,.16)',
+      '--sb-warning':       '#E8B24C',
+      '--sb-warning-tint':  'rgba(232,178,76,.16)',
+      '--sb-shadow-control': '0 1px 3px rgba(0,0,0,.55)',
+      '--sb-shadow-hover':   '0 4px 14px -6px rgba(0,0,0,.7)',
+      '--sb-shadow-menu':    '0 12px 36px -12px rgba(0,0,0,.75)',
+      '--sb-shadow-frame':   '0 26px 70px -34px rgba(0,0,0,.85)',
+      '--sb-shadow-panel':  '-8px 0 44px -12px rgba(0,0,0,.7)',
+      '--sb-shadow-accent':  '0 2px 0 rgba(7,18,31,.45)',
+      '--sb-font-ui':       "'Plus Jakarta Sans', system-ui, sans-serif",
+      '--sb-font-num':      "'Plus Jakarta Sans', system-ui, sans-serif",
+      '--sb-surface-blur':  '18px',
+    },
+  },
+
+  // ── Evergreen ─────────────────────────────────────────────────────────────
+  // A light theme whose accent is *darker* than the ink midpoint, which
+  // inverts the polarity every accent fill in the app assumed: a label on
+  // green has to be pale. `--sb-accent-ink` is what says so.
+  {
+    id: 'evergreen', name: 'Evergreen', isDark: false,
+    tokens: {
+      '--sb-page':          '#F1F5F1',
+      '--sb-header':        '#F8FBF7',
+      '--sb-card':          '#FFFFFF',
+      '--sb-field':         '#F3F8F2',
+      '--sb-border':        '#DBE5D9',
+      '--sb-hairline':      '#EBF1E9',
+      '--sb-ink-1':         '#101E19',
+      '--sb-ink-2':         '#33453D',
+      '--sb-ink-3':         '#4F6259',
+      '--sb-ink-4':         '#546960',
+      '--sb-ink-on-dark':   '#F1F8F3',
+      '--sb-ink-on-fill':   '#FFFFFF',
+      '--sb-accent':        '#155E4B',
+      '--sb-accent-rgb':    '21,94,75',
+      '--sb-accent-ink':    '#F1F8F3',
+      '--sb-accent-deep':   '#0E4437',
+      '--sb-accent-tint':   '#E2EFEA',
+      '--sb-accent-tint2':  '#D8E9E2',
+      '--sb-accent-border': '#B0CFC3',
+      '--sb-positive':      '#0C8140',
+      '--sb-positive-deep': '#0A6B36',
+      '--sb-positive-tint': '#E0F0E6',
+      '--sb-negative':      '#B4302A',
+      '--sb-negative-deep': '#93211C',
+      '--sb-negative-tint': '#F7E2E1',
+      '--sb-info':          '#2A5DA8',
+      '--sb-info-tint':     '#E4EBF6',
+      '--sb-warning':       '#8A5A12',
+      '--sb-warning-tint':  '#F3EBDC',
+      '--sb-shadow-control': '0 1px 3px rgba(16,30,25,.14)',
+      '--sb-shadow-hover':   '0 4px 12px -6px rgba(16,44,34,.4)',
+      '--sb-shadow-menu':    '0 12px 32px -12px rgba(16,44,34,.28)',
+      '--sb-shadow-frame':   '0 26px 64px -34px rgba(16,44,34,.5)',
+      '--sb-shadow-panel':  '-8px 0 40px -12px rgba(16,44,34,.28)',
+      '--sb-shadow-accent':  '0 2px 0 rgba(8,44,34,.3)',
+      '--sb-font-ui':       "'Instrument Sans', system-ui, sans-serif",
+      '--sb-font-num':      "'Plus Jakarta Sans', system-ui, sans-serif",
+      '--sb-surface-blur':  '0px',
+    },
+  },
+
+  // ── Ink & Paper ───────────────────────────────────────────────────────────
+  // Nothing warm and nothing coloured but the accent, which is also darker
+  // than the ink midpoint — the second theme that inverts accent polarity, and
+  // the reason that is a token rather than a special case.
+  {
+    id: 'ink-paper', name: 'Ink & Paper', isDark: false,
+    tokens: {
+      '--sb-page':          '#F5F5F3',
+      '--sb-header':        '#FBFBFA',
+      '--sb-card':          '#FFFFFF',
+      '--sb-field':         '#F3F3F1',
+      '--sb-border':        '#E2E2DE',
+      '--sb-hairline':      '#EFEFEC',
+      '--sb-ink-1':         '#14161A',
+      '--sb-ink-2':         '#3B4048',
+      '--sb-ink-3':         '#585E67',
+      '--sb-ink-4':         '#5D636B',
+      '--sb-ink-on-dark':   '#F7F7F5',
+      '--sb-ink-on-fill':   '#FFFFFF',
+      '--sb-accent':        '#1F3A8A',
+      '--sb-accent-rgb':    '31,58,138',
+      '--sb-accent-ink':    '#F7F8FC',
+      '--sb-accent-deep':   '#172C69',
+      '--sb-accent-tint':   '#E7EAF4',
+      '--sb-accent-tint2':  '#DDE2F0',
+      '--sb-accent-border': '#B6C0E0',
+      '--sb-positive':      '#0A7439',
+      '--sb-positive-deep': '#0A6B36',
+      '--sb-positive-tint': '#E1EFE7',
+      '--sb-negative':      '#C62828',
+      '--sb-negative-deep': '#A31C1C',
+      '--sb-negative-tint': '#F8E3E3',
+      '--sb-info':          '#2A5DA8',
+      '--sb-info-tint':     '#E4EAF5',
+      '--sb-warning':       '#8A5A12',
+      '--sb-warning-tint':  '#F2EBDD',
+      '--sb-shadow-control': '0 1px 3px rgba(20,22,26,.14)',
+      '--sb-shadow-hover':   '0 4px 12px -6px rgba(20,22,26,.4)',
+      '--sb-shadow-menu':    '0 12px 32px -12px rgba(20,22,26,.26)',
+      '--sb-shadow-frame':   '0 26px 64px -34px rgba(20,22,26,.5)',
+      '--sb-shadow-panel':  '-8px 0 40px -12px rgba(20,22,26,.26)',
+      '--sb-shadow-accent':  '0 2px 0 rgba(12,20,48,.3)',
+      '--sb-font-ui':       "'Outfit', system-ui, sans-serif",
+      '--sb-font-num':      "'Outfit', system-ui, sans-serif",
+      '--sb-surface-blur':  '0px',
     },
   },
 ]
 
 export const DEFAULT_THEME_ID = 'sunlit-bento'
 
-// Migrate old theme IDs saved before the 10-theme update
+// Every theme that came before this one was a set of dark background values
+// sitting behind cards and text painted in fixed light-theme hexes, so all
+// eleven of them rendered as an unreadable mixture. There is nothing in them
+// worth migrating to: whatever was saved, the answer is the default.
 const LEGACY_MAP: Record<string, string> = {
-  'dark-warm': 'navy-night',
-  'dark-cool': 'midnight',
+  'dark-warm': DEFAULT_THEME_ID,
+  'dark-cool': DEFAULT_THEME_ID,
+  'navy-night': DEFAULT_THEME_ID,
+  'midnight': DEFAULT_THEME_ID,
+  'obsidian': DEFAULT_THEME_ID,
+  'forest': DEFAULT_THEME_ID,
+  'crimson': DEFAULT_THEME_ID,
+  'violet': DEFAULT_THEME_ID,
+  'amber': DEFAULT_THEME_ID,
+  'teal': DEFAULT_THEME_ID,
+  'rose': DEFAULT_THEME_ID,
+  'light': DEFAULT_THEME_ID,
 }
 
 export function resolveThemeId(id: string): string {
@@ -379,15 +313,106 @@ export function getTheme(id: string): AppTheme {
   return THEMES.find(t => t.id === resolved) ?? THEMES[0]
 }
 
+// ─── The one writer ──────────────────────────────────────────────────────────
+
+/** A behavioural mode moves the accent and nothing else. It is a token overlay
+ *  merged before the write, not a second thing that paints the document after
+ *  the theme has — which is what it used to be, in a component, as a hard-coded
+ *  logo background that no other accent-coloured thing on screen agreed with. */
+const MODE_ACCENT: Record<BehavioralMode, string> = {
+  samurai: '#A32320',
+  pharaoh: '#C89B25',
+  astral:  '#6659D8',
+}
+
+export type TokenOverlay = Partial<Record<SbToken, string>>
+
 /** The whole of theming: write the tokens. `html, body` already read
  *  `var(--sb-page)` and `var(--sb-ink-1)`, so there is nothing to paint by
  *  hand, and no second vocabulary to keep in step. */
-export function applyThemeVars(theme: AppTheme): void {
+export function applyThemeVars(theme: AppTheme, overlay?: TokenOverlay): void {
   const style = document.documentElement.style
-  for (const [token, value] of Object.entries(theme.tokens)) {
+  const tokens = overlay ? { ...theme.tokens, ...overlay } : theme.tokens
+  for (const [token, value] of Object.entries(tokens)) {
     style.setProperty(token, value)
   }
-  // Not a colour write: the one hook a CSS rule has for asking which way round
-  // the theme is. Nothing reads it yet.
+  // Not a colour write: `color-scheme` is how the native date pickers,
+  // scrollbars and autofill find out which way round the theme is.
   document.documentElement.setAttribute('data-theme', theme.isDark ? 'dark' : 'light')
+}
+
+function persistedThemeId(): string {
+  // Zustand's persist keeps `{ state: {...}, version }`; read it directly so
+  // the theme is on the document before React — and before the store — exists.
+  try {
+    const raw = localStorage.getItem('professor-ui')
+    return raw ? (JSON.parse(raw)?.state?.themeId ?? DEFAULT_THEME_ID) : DEFAULT_THEME_ID
+  } catch { return DEFAULT_THEME_ID }
+}
+
+function persistedBehavioral(): { enabled: boolean; mode: BehavioralMode } {
+  try {
+    const raw = localStorage.getItem('professor-behavioral')
+    const s = raw ? JSON.parse(raw)?.state : null
+    return { enabled: !!s?.enabled, mode: (s?.mode as BehavioralMode) ?? 'samurai' }
+  } catch { return { enabled: false, mode: 'samurai' } }
+}
+
+export interface Appearance {
+  themeId?: string
+  accentId?: string
+  /** `null` for none — which is what leaving a mode has to pass, or the base
+   *  theme's own accent never comes back. */
+  mode?: BehavioralMode | null
+}
+
+/** Compose the theme, the accent and the behavioural mode into one set of
+ *  values and write it once. Anything not passed is read from where it was
+ *  persisted, so this is also what runs before the first paint. */
+export function applyAppearance(a: Appearance = {}): void {
+  const theme = getTheme(a.themeId ?? persistedThemeId())
+
+  const behavioral = persistedBehavioral()
+  const mode = a.mode !== undefined ? a.mode : (behavioral.enabled ? behavioral.mode : null)
+
+  // A mode's accent outranks a picked one — it is the louder statement, and it
+  // goes back the moment the mode does. With neither, the theme's own accent
+  // stands: an unpicked accent is not amber, it is nothing to say.
+  const accentId = a.accentId ?? loadAccent()
+  const hex = mode ? MODE_ACCENT[mode] : accentById(accentId)?.hex
+
+  const overlay: TokenOverlay =
+    !hex || hex.toUpperCase() === theme.tokens['--sb-accent'].toUpperCase()
+      ? {}
+      : accentTokens(hex, theme.isDark)
+
+  applyThemeVars(theme, overlay)
+  applyDensity()
+}
+
+/** Density is a page zoom rather than a token — every spacing in this app is a
+ *  pixel inside a style object — but it is still a write to the document, and
+ *  those all live here. */
+export function applyDensity(on: boolean = loadCompact()): void {
+  // `zoom` and not `transform`: a transform would take the fixed-position
+  // panels and the popovers out of alignment with what they are anchored to.
+  document.documentElement.style.zoom = on ? String(COMPACT_SCALE) : ''
+}
+
+/** Keep the document in step with the three things that move it. Called once,
+ *  from main.tsx. */
+export function initAppearance(): void {
+  applyAppearance()
+  window.addEventListener('professor:accentChanged', () => applyAppearance())
+  window.addEventListener('professor:densityChanged', () => applyDensity())
+  // The mode is passed rather than re-read: persist writes the store to
+  // localStorage from the same set(), and a listener that read it back could
+  // arrive first and paint the mode you just left.
+  let last = ''
+  useBehavioralStore.subscribe(s => {
+    const key = `${s.enabled}:${s.mode}`
+    if (key === last) return
+    last = key
+    applyAppearance({ mode: s.enabled ? s.mode : null })
+  })
 }

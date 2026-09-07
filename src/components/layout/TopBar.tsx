@@ -26,6 +26,7 @@ export function TopBar({ title, subtitle }: TopBarProps) {
 
   return (
     <header
+      className="sb-blur-surface"
       style={{
         height: 64,
         background: 'var(--sb-card)',

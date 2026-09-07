@@ -2,17 +2,18 @@
  *  "good/bad" signal read from here so there is one red and one green, not the
  *  four near-misses this file replaced.
  *
- *  Both are chosen to clear 4.5:1 against the page ground (#F7F4EA) at the small
- *  bold sizes figures are usually set in, and to carry white text when used as a
- *  fill. The tints are for chip and row backgrounds. */
+ *  These are the tokens, not values: a theme decides what its green and red
+ *  are, and the tints have to move with the surfaces they sit on. Held as
+ *  fixed hexes they were Sunlit's — a pale cream-pink chip under a dark
+ *  theme, with dark-theme ink on it. */
 
-export const POSITIVE      = '#0C8140'
-export const POSITIVE_DEEP = '#0A6B36'
-export const POSITIVE_TINT = '#E2F0E7'
+export const POSITIVE      = 'var(--sb-positive)'
+export const POSITIVE_DEEP = 'var(--sb-positive-deep)'
+export const POSITIVE_TINT = 'var(--sb-positive-tint)'
 
-export const NEGATIVE      = '#C62828'
-export const NEGATIVE_DEEP = '#A31C1C'
-export const NEGATIVE_TINT = '#FAE3E3'
+export const NEGATIVE      = 'var(--sb-negative)'
+export const NEGATIVE_DEEP = 'var(--sb-negative-deep)'
+export const NEGATIVE_TINT = 'var(--sb-negative-tint)'
 
 /** The colour a signed figure should be drawn in. Zero is neither. */
 export function signColor(n: number, neutral = 'var(--sb-ink-4)'): string {

@@ -75,7 +75,7 @@ export function DeliverablePrompt({ task, onComplete, onCancel }: {
       onMouseDown={e => { if (e.target === e.currentTarget) onCancel() }}
       style={{
         position: 'fixed', inset: 0, zIndex: 300,
-        background: 'rgba(25,23,18,0.34)', backdropFilter: 'blur(2px)',
+        background: 'color-mix(in srgb, var(--sb-ink-1) 34.0%, transparent)', backdropFilter: 'blur(2px)',
         display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
       }}>
       <Card style={{ width: 460, maxHeight: '86vh', overflowY: 'auto', boxSizing: 'border-box', padding: '20px 22px 18px' }}>
@@ -119,7 +119,7 @@ export function DeliverablePrompt({ task, onComplete, onCancel }: {
                 background: 'var(--sb-field)', border: '1px solid var(--sb-border)',
               }}>
                 <Link2 size={ICON.sm} color="var(--sb-ink-3)" style={{ flexShrink: 0 }} />
-                <span style={{ flex: 1, minWidth: 0, fontSize: 'var(--sb-t-body-s)', color: '#1A73E8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <span style={{ flex: 1, minWidth: 0, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-info)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {url}
                 </span>
                 <button onClick={() => setLinks(l => l.filter(x => x !== url))} title="Remove"
@@ -143,7 +143,7 @@ export function DeliverablePrompt({ task, onComplete, onCancel }: {
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
             height: 62, borderRadius: 'var(--sb-r-nav)', cursor: 'pointer',
             background: dropping ? 'rgba(var(--sb-accent-rgb),0.16)' : 'var(--sb-field)',
-            border: `1px dashed ${dropping ? 'var(--sb-accent)' : '#D8CFB8'}`,
+            border: `1px dashed ${dropping ? 'var(--sb-accent)' : 'var(--sb-border)'}`,
             fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)',
           }}>
           <Paperclip size={ICON.sm} />

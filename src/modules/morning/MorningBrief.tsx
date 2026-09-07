@@ -17,14 +17,15 @@ import { isTaskHidden } from '@/types'
 import type { RichMeetingEvent } from './MorningBriefTypes'
 import { DayPlanner } from './DayPlanner'
 import { ICON } from '@/lib/type'
+import { alpha } from '@/lib/alpha'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const CO_COLOR: Record<string, string> = {
-  teradix:    '#7F77DD',
-  dxtech:     '#7F77DD',
-  consulting: '#1D9E75',
-  personal:   '#888780',
+  teradix:    'var(--sb-info)',
+  dxtech:     'var(--sb-info)',
+  consulting: 'var(--sb-positive)',
+  personal:   'var(--sb-ink-4)',
 }
 
 const CO_NAME: Record<string, string> = {
@@ -36,11 +37,11 @@ const CO_NAME: Record<string, string> = {
 
 const ENERGY_META = [
   null,
-  { label: 'Depleted', color: '#888780' },
-  { label: 'Low',      color: '#888780' },
-  { label: 'Steady',   color: '#685FD7' },
-  { label: 'Energized',color: '#177C5B' },
-  { label: 'Peak',     color: '#685FD7' },
+  { label: 'Depleted', color: 'var(--sb-ink-4)' },
+  { label: 'Low',      color: 'var(--sb-ink-4)' },
+  { label: 'Steady',   color: 'var(--sb-info)' },
+  { label: 'Energized',color: 'var(--sb-positive)' },
+  { label: 'Peak',     color: 'var(--sb-info)' },
 ] as const
 
 const QUADRANT_MAP: Record<string, DbTask['quadrant']> = {
@@ -51,10 +52,10 @@ const QUADRANT_MAP: Record<string, DbTask['quadrant']> = {
 }
 
 const MOCK_COMPANIES: DbCompany[] = [
-  { id: 'teradix',    user_id: 'demo', name: 'Teradix',    color_tag: '#7F77DD', calendar_id: null, is_active: true },
-  { id: 'dxtech',     user_id: 'demo', name: 'DX Tech',    color_tag: '#7F77DD', calendar_id: null, is_active: true },
-  { id: 'consulting', user_id: 'demo', name: 'Consulting', color_tag: '#1D9E75', calendar_id: null, is_active: true },
-  { id: 'personal',   user_id: 'demo', name: 'Personal',   color_tag: '#888780', calendar_id: null, is_active: true },
+  { id: 'teradix',    user_id: 'demo', name: 'Teradix',    color_tag: 'var(--sb-info)', calendar_id: null, is_active: true },
+  { id: 'dxtech',     user_id: 'demo', name: 'DX Tech',    color_tag: 'var(--sb-info)', calendar_id: null, is_active: true },
+  { id: 'consulting', user_id: 'demo', name: 'Consulting', color_tag: 'var(--sb-positive)', calendar_id: null, is_active: true },
+  { id: 'personal',   user_id: 'demo', name: 'Personal',   color_tag: 'var(--sb-ink-4)', calendar_id: null, is_active: true },
 ]
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -106,9 +107,9 @@ function avatarInitials(name?: string, email?: string): string {
 }
 
 function responseColor(status?: string): string {
-  if (status === 'accepted')  return '#1D9E75'
-  if (status === 'declined')  return '#EF4444'
-  if (status === 'tentative') return '#F59E0B'
+  if (status === 'accepted')  return 'var(--sb-positive)'
+  if (status === 'declined')  return 'var(--sb-negative)'
+  if (status === 'tentative') return 'var(--sb-warning)'
   return 'var(--sb-ink-3)'
 }
 
@@ -235,9 +236,9 @@ function PrioritySkeleton() {
 // ─── Meeting icon ──────────────────────────────────────────────────────────────
 
 function MeetingTypeIcon({ type, size = 12 }: { type: string | null; size?: number }) {
-  if (type === 'video')       return <Video    size={size} color="#685FD7" />
-  if (type === 'one_on_one')  return <Users    size={size} color="#177C5B" />
-  if (type === 'external')    return <Calendar size={size} color="#685FD7" />
+  if (type === 'video')       return <Video    size={size} color="var(--sb-info)" />
+  if (type === 'one_on_one')  return <Users    size={size} color="var(--sb-positive)" />
+  if (type === 'external')    return <Calendar size={size} color="var(--sb-info)" />
   return                             <Users    size={size} color="var(--sb-ink-3)" />
 }
 
@@ -252,10 +253,10 @@ function MeetingTypeLabel({ type }: { type: string | null }) {
 
 function StatusBadge({ status }: { status: ReturnType<typeof getEventStatus> }) {
   const cfg = {
-    live:     { label: 'Live',     bg: '#1D9E7518', border: '#1D9E7540', color: '#177C5B', pulse: true  },
-    soon:     { label: 'Soon',     bg: '#F59E0B18', border: '#F59E0B40', color: '#F59E0B', pulse: false },
-    upcoming: { label: 'Upcoming', bg: 'rgba(var(--sb-accent-rgb),0.12)', border: 'color-mix(in srgb, #7F77DD 40%, transparent)', color: '#685FD7', pulse: false },
-    past:     { label: 'Done',     bg: '#25283618', border: '#25283640', color: 'var(--sb-ink-3)', pulse: false },
+    live:     { label: 'Live',     bg: 'color-mix(in srgb, var(--sb-positive) 9.4%, transparent)', border: 'color-mix(in srgb, var(--sb-positive) 25.1%, transparent)', color: 'var(--sb-positive)', pulse: true  },
+    soon:     { label: 'Soon',     bg: 'color-mix(in srgb, var(--sb-warning) 9.4%, transparent)', border: 'color-mix(in srgb, var(--sb-warning) 25.1%, transparent)', color: 'var(--sb-warning)', pulse: false },
+    upcoming: { label: 'Upcoming', bg: 'rgba(var(--sb-accent-rgb),0.12)', border: 'color-mix(in srgb, var(--sb-info) 40%, transparent)', color: 'var(--sb-info)', pulse: false },
+    past:     { label: 'Done',     bg: 'color-mix(in srgb, var(--sb-ink-2) 9.4%, transparent)', border: 'color-mix(in srgb, var(--sb-ink-2) 25.1%, transparent)', color: 'var(--sb-ink-3)', pulse: false },
   }[status]
 
   return (
@@ -348,10 +349,10 @@ function EventContextMenu({
         style={{
           display: 'flex', alignItems: 'center', gap: 9,
           padding: '0 12px', height: 32, fontSize: 'var(--sb-t-body)',
-          color: disabled ? '#4B5268' : '#3D3926',
+          color: disabled ? 'var(--sb-ink-3)' : 'var(--sb-ink-2)',
           cursor: disabled ? 'default' : 'pointer',
           borderRadius: 'var(--sb-r-chip)', userSelect: 'none',
-          background: hovered ? 'rgba(127,119,221,0.12)' : 'transparent',
+          background: hovered ? 'color-mix(in srgb, var(--sb-info) 12.0%, transparent)' : 'transparent',
           transition: 'background 0.08s',
         }}
       >
@@ -362,7 +363,7 @@ function EventContextMenu({
   }
 
   return (
-    <div
+    <div className="sb-blur-surface"
       ref={menuRef}
       onClick={e => e.stopPropagation()}
       onContextMenu={e => e.preventDefault()}
@@ -417,7 +418,7 @@ function EventDetailPanel({ event, onClose }: { event: RichMeetingEvent; onClose
     return () => document.removeEventListener('keydown', handleKey)
   }, [onClose])
 
-  const accentColor = event.calendarColor ?? '#7F77DD'
+  const accentColor = event.calendarColor ?? 'var(--sb-info)'
   const attendees   = event.attendees ?? []
 
   return (
@@ -432,12 +433,12 @@ function EventDetailPanel({ event, onClose }: { event: RichMeetingEvent; onClose
         style={{
           width: 420, maxHeight: '80vh',
           background: 'var(--sb-card)',
-          border: `1px solid ${accentColor}40`,
+          border: `1px solid ${alpha(accentColor, 25.1)}`,
           borderTop: `3px solid ${accentColor}`,
           borderRadius: 'var(--sb-r-card)',
           display: 'flex', flexDirection: 'column',
           overflow: 'hidden',
-          boxShadow: `0 24px 64px rgba(0,0,0,0.6), 0 0 0 1px ${accentColor}20`,
+          boxShadow: `0 24px 64px rgba(0,0,0,0.6), 0 0 0 1px ${alpha(accentColor, 12.5)}`,
           animation: 'slideUp 0.22s ease both',
         }}
       >
@@ -502,8 +503,8 @@ function EventDetailPanel({ event, onClose }: { event: RichMeetingEvent; onClose
               style={{
                 display: 'flex', alignItems: 'center', gap: 8,
                 padding: '10px 14px', borderRadius: 'var(--sb-r-chip)',
-                background: 'rgba(var(--sb-accent-rgb),0.12)', border: '1px solid #7F77DD40',
-                color: '#685FD7', fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
+                background: 'rgba(var(--sb-accent-rgb),0.12)', border: '1px solid color-mix(in srgb, var(--sb-info) 25.1%, transparent)',
+                color: 'var(--sb-info)', fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
                 textDecoration: 'none', transition: 'all 0.15s',
               }}
             >
@@ -547,7 +548,7 @@ function EventDetailPanel({ event, onClose }: { event: RichMeetingEvent; onClose
                     <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <div style={{
                         width: 26, height: 26, borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
-                        background: `${accentColor}22`, border: `1px solid ${accentColor}40`,
+                        background: alpha(accentColor, 13.3), border: `1px solid ${alpha(accentColor, 25.1)}`,
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         fontSize: 'var(--sb-t-micro)', fontWeight: 700, color: accentColor,
                       }}>
@@ -824,7 +825,7 @@ export function MorningBrief() {
           <div style={{
             marginTop: 24,
             height: 1,
-            background: 'linear-gradient(90deg, #1E40AF40 0%, var(--sb-border) 60%, transparent 100%)',
+            background: 'linear-gradient(90deg, color-mix(in srgb, var(--sb-info) 25.1%, transparent) 0%, var(--sb-border) 60%, transparent 100%)',
           }} />
         </div>
 
@@ -857,9 +858,9 @@ export function MorningBrief() {
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontSize: 'var(--sb-t-label)', fontWeight: 700,
                     border: `1px solid ${selected ? meta.color : 'var(--sb-border)'}`,
-                    background: selected ? `${meta.color}22` : 'transparent',
+                    background: selected ? alpha(meta.color, 13.3) : 'transparent',
                     color: selected ? meta.color : 'var(--sb-ink-3)',
-                    boxShadow: selected ? `0 0 14px ${meta.color}40` : 'none',
+                    boxShadow: selected ? `0 0 14px ${alpha(meta.color, 25.1)}` : 'none',
                     transition: 'all 0.15s',
                   }}>
                     {level}
@@ -889,17 +890,17 @@ export function MorningBrief() {
               border: '1px solid var(--sb-border)',
               borderRadius: 'var(--sb-r-nav)',
               padding: '24px 26px',
-              borderLeft: '3px solid #7F77DD50',
+              borderLeft: '3px solid color-mix(in srgb, var(--sb-info) 31.4%, transparent)',
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 20 }}>
                 <div style={{
                   width: 26, height: 26, borderRadius: 'var(--sb-r-chip)',
-                  background: 'rgba(var(--sb-accent-rgb),0.12)', border: '1px solid #7F77DD30',
+                  background: 'rgba(var(--sb-accent-rgb),0.12)', border: '1px solid color-mix(in srgb, var(--sb-info) 18.8%, transparent)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
-                  <Sparkles size={ICON.sm} color="#685FD7" />
+                  <Sparkles size={ICON.sm} color="var(--sb-info)" />
                 </div>
-                <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: '#685FD7', letterSpacing: '0.8px', textTransform: 'uppercase' }}>
+                <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-info)', letterSpacing: '0.8px', textTransform: 'uppercase' }}>
                   AI Day Planner
                 </span>
               </div>
@@ -930,7 +931,7 @@ export function MorningBrief() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {plan.top3.map((title, i) => {
                     const co    = matchCompany(title, tasks)
-                    const color = co ? (CO_COLOR[co] ?? '#6C6553') : '#6C6553'
+                    const color = co ? (CO_COLOR[co] ?? 'var(--sb-ink-3)') : 'var(--sb-ink-3)'
                     return (
                       <div key={i} style={{
                         display: 'flex', alignItems: 'center', gap: 14,
@@ -944,8 +945,8 @@ export function MorningBrief() {
                           width: 28, height: 28, borderRadius: 'var(--sb-r-pill)',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           fontSize: 'var(--sb-t-body-s)', fontWeight: 700, flexShrink: 0,
-                          background: i === 0 ? '#1E40AF20' : 'var(--sb-field)',
-                          color: i === 0 ? '#7F77DD' : 'var(--sb-ink-3)',
+                          background: i === 0 ? 'color-mix(in srgb, var(--sb-info) 12.5%, transparent)' : 'var(--sb-field)',
+                          color: i === 0 ? 'var(--sb-info)' : 'var(--sb-ink-3)',
                         }}>
                           {i + 1}
                         </span>
@@ -957,7 +958,7 @@ export function MorningBrief() {
                         {co && (
                           <span style={{
                             fontSize: 'var(--sb-t-micro)', padding: '2px 8px', borderRadius: 'var(--sb-r-chip)', flexShrink: 0,
-                            color, background: `${color}18`, fontWeight: 500,
+                            color, background: alpha(color, 9.4), fontWeight: 500,
                           }}>
                             {CO_NAME[co]}
                           </span>
@@ -967,7 +968,7 @@ export function MorningBrief() {
                         {i === 0 && (
                           <div style={{
                             position: 'absolute', top: 0, left: 0,
-                            width: 3, height: '100%', background: '#7F77DD',
+                            width: 3, height: '100%', background: 'var(--sb-info)',
                             borderRadius: 'var(--sb-r-nav) 0 0 var(--sb-r-nav)',
                           }} />
                         )}
@@ -1011,7 +1012,7 @@ export function MorningBrief() {
                   {todayEvents.map(event => {
                     const status     = getEventStatus(event.start_time, event.end_time)
                     const isPast     = status === 'past'
-                    const accentClr  = event.calendarColor ?? '#7F77DD'
+                    const accentClr  = event.calendarColor ?? 'var(--sb-info)'
                     return (
                       <div
                         key={event.id}
@@ -1063,7 +1064,7 @@ export function MorningBrief() {
                             {event.calendarName && (
                               <span style={{
                                 fontSize: 'var(--sb-t-micro)', padding: '1px 6px', borderRadius: 'var(--sb-r-chip)',
-                                background: `${accentClr}15`, border: `1px solid ${accentClr}30`,
+                                background: alpha(accentClr, 8.2), border: `1px solid ${alpha(accentClr, 18.8)}`,
                                 color: accentClr, fontWeight: 500,
                               }}>
                                 {event.calendarName}
@@ -1092,7 +1093,7 @@ export function MorningBrief() {
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 14 }}>
                 <SectionLabel>Today's Habits</SectionLabel>
-                <span style={{ fontSize: 'var(--sb-t-meta)', color: checkedHabits === habits.length ? '#1D9E75' : 'var(--sb-ink-3)' }}>
+                <span style={{ fontSize: 'var(--sb-t-meta)', color: checkedHabits === habits.length ? 'var(--sb-positive)' : 'var(--sb-ink-3)' }}>
                   {checkedHabits}/{habits.length}
                 </span>
               </div>
@@ -1105,9 +1106,9 @@ export function MorningBrief() {
                     style={{
                       display: 'flex', alignItems: 'center', gap: 10,
                       padding: '10px 14px', borderRadius: 'var(--sb-r-sm)', width: '100%',
-                      background: habit.checked ? '#1D9E7512' : 'var(--sb-page)',
-                      border: `1px solid ${habit.checked ? '#1D9E7540' : 'var(--sb-border)'}`,
-                      color: habit.checked ? '#177C5B' : 'var(--sb-ink-3)',
+                      background: habit.checked ? 'color-mix(in srgb, var(--sb-positive) 7.1%, transparent)' : 'var(--sb-page)',
+                      border: `1px solid ${habit.checked ? 'color-mix(in srgb, var(--sb-positive) 25.1%, transparent)' : 'var(--sb-border)'}`,
+                      color: habit.checked ? 'var(--sb-positive)' : 'var(--sb-ink-3)',
                       fontSize: 'var(--sb-t-body)', cursor: 'pointer', textAlign: 'left',
                       transition: 'all 0.15s',
                     }}
@@ -1124,7 +1125,7 @@ export function MorningBrief() {
 
               {checkedHabits === habits.length && (
                 <p style={{
-                  margin: '14px 0 0', fontSize: 'var(--sb-t-body-s)', color: '#177C5B',
+                  margin: '14px 0 0', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-positive)',
                   textAlign: 'center', fontWeight: 500,
                 }}>
                   All habits done. Exceptional day ahead. ✓

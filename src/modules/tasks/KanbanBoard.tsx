@@ -293,7 +293,7 @@ function KanbanColumnComp({ column, onOpen, onColDragStart, onColDragOver, onCol
         onClick={() => setAdding(true)}
         style={{
           marginTop: 10, width: '100%', padding: '13px 0', fontSize: 'var(--sb-t-body-s)', fontWeight: 500,
-          background: 'transparent', border: '1px dashed #DED5BF', borderRadius: 'var(--sb-r-nav)',
+          background: 'transparent', border: '1px dashed var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
           color: 'var(--sb-ink-4)', cursor: 'pointer', fontFamily: 'inherit',
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
           transition: 'all 0.12s',
@@ -428,7 +428,7 @@ export function KanbanBoard({ onOpen, hideCompleted = false, filteredTaskIds }: 
         {
           id: BRAIN_DUMP_ID,
           label: 'Brain dump',
-          color: '#C0A03A',
+          color: 'var(--sb-accent)',
           tasks: sortUrgentFirst(dumped),
         },
         ...ordered.map(st => ({
@@ -459,7 +459,7 @@ export function KanbanBoard({ onOpen, hideCompleted = false, filteredTaskIds }: 
       cols.push({
         id:    'personal',
         label: 'Personal',
-        color: '#888780',
+        color: 'var(--sb-ink-4)',
         tasks: sortUrgentFirst(tasks.filter(t => !assigned.has(t.id))),
       })
       return cols
@@ -470,7 +470,7 @@ export function KanbanBoard({ onOpen, hideCompleted = false, filteredTaskIds }: 
       const cols: Column[] = allUsers.map(u => ({
         id:    u.id,
         label: u.name,
-        color: '#685FD7',
+        color: 'var(--sb-info)',
         tasks: sortUrgentFirst(tasks.filter(t => t.owner === u.id)),
       }))
       cols.push({
@@ -493,9 +493,9 @@ export function KanbanBoard({ onOpen, hideCompleted = false, filteredTaskIds }: 
 
     if (boardType === 'scheduled') {
       const buckets = [
-        { id: 'overdue',     label: 'Overdue',    color: '#EF4444' },
+        { id: 'overdue',     label: 'Overdue',    color: 'var(--sb-negative)' },
         { id: 'today',       label: 'Today',      color: 'var(--sb-accent)' },
-        { id: 'this-week',   label: 'This Week',  color: '#685FD7' },
+        { id: 'this-week',   label: 'This Week',  color: 'var(--sb-info)' },
         { id: 'next-week',   label: 'Next Week',  color: 'var(--sb-ink-4)' },
         { id: 'later',       label: 'Later',      color: 'var(--sb-ink-3)' },
         { id: 'unscheduled', label: 'Unscheduled',color: 'var(--sb-ink-4)' },
@@ -635,7 +635,7 @@ export function KanbanBoard({ onOpen, hideCompleted = false, filteredTaskIds }: 
 
         <DragOverlay>
           {activeTask && (
-            <div style={{ width: 268, transform: 'rotate(1.5deg)', filter: 'drop-shadow(0 12px 28px rgba(25,23,18,0.28))' }}>
+            <div style={{ width: 268, transform: 'rotate(1.5deg)', filter: 'drop-shadow(0 12px 28px color-mix(in srgb, var(--sb-ink-1) 28.0%, transparent))' }}>
               <TaskCard task={activeTask} onOpen={() => {}} />
             </div>
           )}

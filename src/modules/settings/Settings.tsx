@@ -2,6 +2,7 @@
 // (remaining chunks appended below)
 
 import { useState, useEffect, useMemo, useRef, type ReactNode } from 'react'
+import { C_COLORS, STATUS_COLORS_PRESETS } from '@/lib/palettes'
 import { Button, Pill } from '@/components/ui'
 import { NAV_H } from '@/App'
 import {
@@ -36,7 +37,7 @@ import { NotYet, Soon } from '@/components/ComingSoon'
 import { connectAdditionalGoogleAccount, signOut as googleSignOut, disconnectGoogleAccount } from '@/lib/google'
 import { useUIStore } from '@/store/uiStore'
 import { useAuthStore } from '@/store/authStore'
-import { THEMES, getTheme, applyThemeVars } from '@/lib/themes'
+import { THEMES, resolveThemeId, applyAppearance } from '@/lib/themes'
 import { syncTimezoneFromLocation } from '@/lib/weather'
 import { useHabitsStore, getHabitColors } from '@/store/habitsStore'
 import { HABIT_VIEWS, loadHabitView, saveHabitView, EmojiBtn, type HabitView } from '@/modules/habits/HabitsModule'
@@ -63,6 +64,7 @@ import {
   loadReminders, saveReminders, defaultReminder, dueDatesFor, reminderTitle,
   type MoneyReminder,
 } from '@/modules/finance/reminders'
+import { alpha } from '@/lib/alpha'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -140,7 +142,7 @@ const ALL_TZ = (() => {
 
 // Framework options live in FRAMEWORK_SEGMENTS (11A segmented control).
 const WORK_DAYS    = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
-const C_COLORS     = ['#7F77DD','#7F77DD','#1D9E75','#E05252','#888780','#5B9BD5','#E0944A']
+
 const BUFFER_STEPS = [0,15,30,45,60]
 const PHYS_STEPS   = [0,30,60,90]
 const FREQ_OPTS    = ['daily','weekdays','weekly'] as const
@@ -304,7 +306,7 @@ function GhostPill({ icon: Icon, children, onClick, tone, title }: {
       display: 'inline-flex', alignItems: 'center', gap: 6,
       cursor: 'pointer',
       color: tone === 'rust' ? 'var(--sb-negative)' : 'var(--sb-ink-1)',
-      borderColor: tone === 'rust' ? 'rgba(198,40,40,0.35)' : 'var(--sb-border)',
+      borderColor: tone === 'rust' ? 'color-mix(in srgb, var(--sb-negative) 35.0%, transparent)' : 'var(--sb-border)',
       background: tone === 'rust' ? 'var(--sb-card)' : 'var(--sb-field)',
     }}>
       {Icon && <Icon size={13} strokeWidth={2} />}
@@ -374,7 +376,7 @@ function VisaBadge() {
   return (
     <span style={{
       display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-      width: 30, height: 19, borderRadius: 'var(--sb-r-chip)', background: '#1A1F71',
+      width: 30, height: 19, borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-info)',
       color: 'var(--sb-card)', fontSize: 'var(--sb-t-micro)', fontWeight: 700, fontStyle: 'italic',
       letterSpacing: '0.04em', flexShrink: 0,
     }}>VISA</span>
@@ -659,7 +661,7 @@ function CompanyCard({
   }
 
   const tinp: React.CSSProperties = {
-    background: 'transparent', border: 'none', borderBottom: '1px solid #7F77DD',
+    background: 'transparent', border: 'none', borderBottom: '1px solid var(--sb-info)',
     outline: 'none', color: 'var(--sb-ink-1)', fontFamily: 'inherit', padding: '0 2px',
   }
 
@@ -675,7 +677,7 @@ function CompanyCard({
             title="Change color"
             style={{
               width: 18, height: 18, borderRadius: 'var(--sb-r-pill)', background: co.color, cursor: 'pointer',
-              border: `var(--sb-border-emphasis) solid ${co.color}60`, flexShrink: 0,
+              border: `var(--sb-border-emphasis) solid ${alpha(co.color, 37.6)}`, flexShrink: 0,
             }}
           />
           {colorOpen && (
@@ -737,8 +739,8 @@ function CompanyCard({
           title={co.accountId ? 'Linked Google account' : 'Not linked to a Google account'}
           style={{
             ...selectStyle, fontSize: 'var(--sb-t-meta)', padding: '3px 8px', maxWidth: 168, flexShrink: 0,
-            borderColor: co.accountId ? '#C8DAB0' : '#E0D6BC',
-            background: co.accountId ? 'rgba(12,129,64,0.08)' : 'var(--sb-card)',
+            borderColor: co.accountId ? 'var(--sb-positive-tint)' : 'var(--sb-border)',
+            background: co.accountId ? 'color-mix(in srgb, var(--sb-positive) 8.0%, transparent)' : 'var(--sb-card)',
             color: co.accountId ? 'var(--sb-positive)' : 'var(--sb-ink-4)',
           }}>
           <option value="">{accounts.length > 0 ? 'Link an account…' : 'No accounts connected'}</option>
@@ -837,8 +839,8 @@ function CompanyCard({
               style={{ ...inputStyle, fontSize: 'var(--sb-t-meta)', padding: '3px 7px', flex: 1 }} />
             <button onClick={addUser} disabled={!newUserName.trim()} style={{
               padding: '3px 10px', borderRadius: 'var(--sb-r-chip)', fontSize: 'var(--sb-t-meta)', fontWeight: 500, cursor: 'pointer',
-              background: 'rgba(var(--sb-accent-rgb),0.12)', border: '1px solid #7F77DD50',
-              color: '#685FD7', opacity: newUserName.trim() ? 1 : 0.4,
+              background: 'rgba(var(--sb-accent-rgb),0.12)', border: '1px solid color-mix(in srgb, var(--sb-info) 31.4%, transparent)',
+              color: 'var(--sb-info)', opacity: newUserName.trim() ? 1 : 0.4,
             }}>Add</button>
           </div>
         </div>
@@ -1181,7 +1183,7 @@ function SettingsHabitForm({
         <button onClick={() => valid && onSave(s)} disabled={!valid}
           style={{
             height: 38, padding: '0 18px', borderRadius: 'var(--sb-r-pill)', border: 'none',
-            background: valid ? 'var(--sb-accent)' : 'var(--sb-field)', color: valid ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)',
+            background: valid ? 'var(--sb-accent)' : 'var(--sb-field)', color: valid ? 'var(--sb-accent-ink)' : 'var(--sb-ink-4)',
             fontSize: 'var(--sb-t-label)', fontWeight: 600, fontFamily: 'inherit',
             cursor: valid ? 'pointer' : 'default',
             display: 'flex', gap: 6, alignItems: 'center',
@@ -1291,8 +1293,8 @@ function AppleHealthBlock({ habits }: { habits: { id: string; name: string; unit
         <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-4)' }}>Looking…</p>
       ) : links === null ? (
         <div style={{
-          fontSize: 'var(--sb-t-body-s)', color: '#7A5F09', lineHeight: 1.55, maxWidth: 720,
-          background: '#FBEBC8', border: '1px solid var(--sb-accent-border)', borderRadius: 'var(--sb-r-nav)', padding: '11px 14px',
+          fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-accent-deep)', lineHeight: 1.55, maxWidth: 720,
+          background: 'var(--sb-accent-tint)', border: '1px solid var(--sb-accent-border)', borderRadius: 'var(--sb-r-nav)', padding: '11px 14px',
         }}>
           Your database has nowhere to keep these yet — run{' '}
           <code style={{ fontFamily: 'var(--sb-font-mono)', fontSize: 'var(--sb-t-meta)' }}>supabase/migrations/20260012</code>{' '}
@@ -1528,7 +1530,6 @@ function HabitsSection() {
 
 // ─── Task Statuses Section ───────────────────────────────────────────────────
 
-const STATUS_COLORS_PRESETS = ['#6B7280','#3B82F6','#F59E0B','#EF4444','#F97316','#10B981','#8B5CF6','#EC4899','#14B8A6','#F97316']
 
 function TaskStatusesSection() {
   const [statuses, setStatuses] = useState<CustomStatus[]>(loadCustomStatuses)
@@ -1718,15 +1719,15 @@ function IntegrationBadge({ icon, label, active, onGrant }: {
     <span style={{
       display: 'inline-flex', alignItems: 'center', gap: 4,
       padding: '2px 7px', borderRadius: 'var(--sb-r-card)', fontSize: 'var(--sb-t-micro)', fontWeight: 500,
-      background: active ? 'rgba(29,158,117,0.1)' : 'rgba(100,116,139,0.1)',
-      border: `1px solid ${active ? 'rgba(29,158,117,0.3)' : 'rgba(100,116,139,0.25)'}`,
-      color: active ? '#177C5B' : '#64748B',
+      background: active ? 'color-mix(in srgb, var(--sb-positive) 10.0%, transparent)' : 'color-mix(in srgb, var(--sb-info) 10.0%, transparent)',
+      border: `1px solid ${active ? 'color-mix(in srgb, var(--sb-positive) 30.0%, transparent)' : 'color-mix(in srgb, var(--sb-info) 25.0%, transparent)'}`,
+      color: active ? 'var(--sb-positive)' : 'var(--sb-info)',
     }}>
       {icon}{label}
       {!active && onGrant && (
         <button onClick={onGrant} style={{
           marginLeft: 3, background: 'none', border: 'none', cursor: 'pointer',
-          color: '#3D3926', fontSize: 'var(--sb-t-micro)', fontWeight: 600, padding: 0,
+          color: 'var(--sb-ink-2)', fontSize: 'var(--sb-t-micro)', fontWeight: 600, padding: 0,
         }}>Grant</button>
       )}
     </span>
@@ -1848,7 +1849,7 @@ function AccountsSection({
             <IntegrationBadge icon={<HardDrive size={ICON.sm} />} label="Drive" active />
           </div>
         </div>
-        <span style={{ fontSize: 'var(--sb-t-micro)', padding: '3px 10px', borderRadius: 'var(--sb-r-card)', background: 'rgba(29,158,117,0.1)', color: '#177C5B', border: '1px solid rgba(29,158,117,0.2)' }}>
+        <span style={{ fontSize: 'var(--sb-t-micro)', padding: '3px 10px', borderRadius: 'var(--sb-r-card)', background: 'color-mix(in srgb, var(--sb-positive) 10.0%, transparent)', color: 'var(--sb-positive)', border: '1px solid color-mix(in srgb, var(--sb-positive) 20.0%, transparent)' }}>
           Active
         </span>
         {primaryToken && (
@@ -1884,11 +1885,11 @@ function AccountsSection({
             display: 'flex', alignItems: 'center', gap: 12,
             padding: '12px 14px', borderRadius: 'var(--sb-r-nav)', marginBottom: 8,
             background: 'var(--sb-field)',
-            border: `1px solid ${isStale ? 'rgba(224,165,36,0.35)' : 'var(--sb-border)'}`,
+            border: `1px solid ${isStale ? 'color-mix(in srgb, var(--sb-warning) 35.0%, transparent)' : 'var(--sb-border)'}`,
             opacity: hiddenAccts.has(acc.email) ? 0.5 : 1,
             transition: 'opacity 0.15s',
           }}>
-            <div style={{ width: 32, height: 32, borderRadius: 'var(--sb-r-pill)', flexShrink: 0, background: 'rgba(var(--sb-accent-rgb),0.12)', border: '1px solid #7F77DD40', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'var(--sb-t-label)', fontWeight: 700, color: '#685FD7' }}>
+            <div style={{ width: 32, height: 32, borderRadius: 'var(--sb-r-pill)', flexShrink: 0, background: 'rgba(var(--sb-accent-rgb),0.12)', border: '1px solid color-mix(in srgb, var(--sb-info) 25.1%, transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'var(--sb-t-label)', fontWeight: 700, color: 'var(--sb-info)' }}>
               {acc.email ? acc.email[0].toUpperCase() : 'G'}
             </div>
             <div style={{ flex: 1 }}>
@@ -1915,7 +1916,7 @@ function AccountsSection({
                 )
               })()}
               {isStale ? (
-                <p style={{ margin: '2px 0 0', fontSize: 'var(--sb-t-meta)', color: '#E0A524' }}>⚠ Access lost — reconnect to restore</p>
+                <p style={{ margin: '2px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-warning)' }}>⚠ Access lost — reconnect to restore</p>
               ) : (
                 <div style={{ margin: '5px 0 0', display: 'flex', gap: 5, flexWrap: 'wrap', alignItems: 'center' }}>
                   <IntegrationBadge icon={<CalendarDays size={ICON.sm} />} label="Calendar" active={acc.scopes.some(s => s.includes('calendar'))} />
@@ -1931,7 +1932,7 @@ function AccountsSection({
                 disabled={isRecon}
                 style={{
                   padding: '4px 10px', borderRadius: 'var(--sb-r-chip)', fontSize: 'var(--sb-t-meta)', fontWeight: 600, cursor: isRecon ? 'wait' : 'pointer',
-                  background: 'rgba(224,165,36,0.12)', border: '1px solid rgba(224,165,36,0.4)', color: '#E0A524',
+                  background: 'color-mix(in srgb, var(--sb-warning) 12.0%, transparent)', border: '1px solid color-mix(in srgb, var(--sb-warning) 40.0%, transparent)', color: 'var(--sb-warning)',
                   display: 'flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap',
                 }}
               >
@@ -1946,7 +1947,7 @@ function AccountsSection({
             <button
               onClick={() => toggleAccountVisibility(acc.email)}
               title={hiddenAccts.has(acc.email) ? 'Show in Calendar' : 'Hide from Calendar'}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, display: 'flex', color: hiddenAccts.has(acc.email) ? '#4B5268' : 'var(--sb-ink-3)' }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, display: 'flex', color: hiddenAccts.has(acc.email) ? 'var(--sb-ink-3)' : 'var(--sb-ink-3)' }}
             >
               {hiddenAccts.has(acc.email) ? <EyeOff size={ICON.sm} /> : <Eye size={ICON.sm} />}
             </button>
@@ -1991,8 +1992,8 @@ function AccountsSection({
             style={{
               display: 'flex', alignItems: 'center', gap: 6,
               padding: '12px 14px', borderRadius: 'var(--sb-r-sm)',
-              background: 'rgba(224,82,82,0.06)',
-              border: '1px solid rgba(224,82,82,0.25)',
+              background: 'color-mix(in srgb, var(--sb-negative) 6.0%, transparent)',
+              border: '1px solid color-mix(in srgb, var(--sb-negative) 25.0%, transparent)',
               color: 'var(--sb-negative)', fontSize: 'var(--sb-t-body-s)', fontWeight: 500, cursor: 'pointer',
               whiteSpace: 'nowrap',
             }}
@@ -2153,12 +2154,12 @@ function AppearanceSection({ s, set }: { s: AppSettings; set: (p: Partial<AppSet
   function pickTheme(id: string) {
     set({ theme: id })
     setThemeId(id)
-    applyThemeVars(getTheme(id))
+    applyAppearance({ themeId: id })
   }
 
   function pickAccent(id: string) {
     setAccent(id)
-    saveAccent(id)          // written, applied and announced in one gesture
+    saveAccent(id)          // written and announced; lib/themes.ts applies it
   }
 
   return (
@@ -2172,6 +2173,28 @@ function AppearanceSection({ s, set }: { s: AppSettings; set: (p: Partial<AppSet
           Every highlight in the app — chips, bars, the ring on today.
         </p>
         <div style={{ display: 'flex', gap: 9, flexWrap: 'wrap' }}>
+          {/* "None" is the default and it is not a colour: it means the theme's
+              own accent, which is the one its surfaces and tints were built
+              around. Picking one of the six overrides it everywhere. */}
+          <button onClick={() => pickAccent('')} title="The theme's own accent"
+            aria-pressed={accent === ''}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 8, height: 38, padding: '0 14px 0 10px',
+              borderRadius: 'var(--sb-r-pill)', cursor: 'pointer', fontFamily: 'inherit',
+              background: accent === '' ? 'var(--sb-card)' : 'var(--sb-field)',
+              border: `1px solid ${accent === '' ? 'var(--sb-ink-1)' : 'var(--sb-border)'}`,
+              boxShadow: accent === '' ? 'var(--sb-shadow-control)' : 'none',
+              color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', fontWeight: accent === '' ? 600 : 500,
+            }}>
+            <span style={{
+              width: 18, height: 18, borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
+              background: 'var(--sb-accent)', border: '1px solid color-mix(in srgb, var(--sb-ink-1) 12.0%, transparent)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              {accent === '' && <Check size={ICON.sm} strokeWidth={STROKE.active} color="var(--sb-accent-ink)" />}
+            </span>
+            Theme's own
+          </button>
           {ACCENTS.map(a => {
             const on = accent === a.id
             return (
@@ -2182,12 +2205,12 @@ function AppearanceSection({ s, set }: { s: AppSettings; set: (p: Partial<AppSet
                   borderRadius: 'var(--sb-r-pill)', cursor: 'pointer', fontFamily: 'inherit',
                   background: on ? 'var(--sb-card)' : 'var(--sb-field)',
                   border: `1px solid ${on ? 'var(--sb-ink-1)' : 'var(--sb-border)'}`,
-                  boxShadow: on ? '0 1px 3px rgba(25,23,18,.16)' : 'none',
+                  boxShadow: on ? '0 1px 3px color-mix(in srgb, var(--sb-ink-1) 16.0%, transparent)' : 'none',
                   color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', fontWeight: on ? 600 : 500,
                 }}>
                 <span style={{
                   width: 18, height: 18, borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
-                  background: a.hex, border: '1px solid rgba(25,23,18,0.12)',
+                  background: a.hex, border: '1px solid color-mix(in srgb, var(--sb-ink-1) 12.0%, transparent)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
                   {on && <Check size={ICON.sm} strokeWidth={STROKE.active} color="var(--sb-ink-1)" />}
@@ -2203,39 +2226,60 @@ function AppearanceSection({ s, set }: { s: AppSettings; set: (p: Partial<AppSet
         <Toggle checked={compact} onChange={v => { setCompact(v); saveCompact(v); set({ compact: v }) }} />
       </FieldRow>
 
-      {/* ── Behavioral OS palette ────────────────────────────────────────────
-          These five are the old dark theme, and the Behavioral OS screen is
-          the only thing still painted from them — the rest of the app is the
-          Sunlit design, in fixed colours. Saying so is better than a grid that
-          looks like it changes everything and changes one screen. */}
+      {/* ── Theme ────────────────────────────────────────────────────────────
+          Each tile is the theme itself: its page behind, its card on top, its
+          ink as the two lines of text a card actually holds, and its accent as
+          the mark on it — drawn from the same tokens the app will be drawn
+          from, so what you see is what you get rather than an artist's
+          impression of it. The name is set in the theme's own display face,
+          which is the other half of what changes. */}
       <div style={{ paddingTop: 16, borderTop: '1px solid var(--sb-border)', marginTop: 6 }}>
-        <p style={{ margin: '0 0 3px', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>Behavioral OS palette</p>
+        <p style={{ margin: '0 0 3px', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>Theme</p>
         <p style={{ margin: '0 0 11px', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', lineHeight: 1.5 }}>
-          The Behavioral OS screen is drawn dark. This is its palette — the rest of the app keeps the Sunlit design.
+          Surfaces, ink, accent and typeface, for the whole app.
         </p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 7 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10 }}>
           {THEMES.map(t => {
-            const active = s.theme === t.id
-            // The swatch is the theme's own tokens, read through the same
-            // contract everything else will read them through.
+            const active = resolveThemeId(s.theme) === t.id
             const tk = t.tokens
             return (
-              <button key={t.id} onClick={() => pickTheme(t.id)}
+              <button key={t.id} onClick={() => pickTheme(t.id)} aria-pressed={active}
                 style={{
-                  padding: '8px 4px', borderRadius: 'var(--sb-r-sm)', cursor: 'pointer', flexDirection: 'column',
-                  display: 'flex', alignItems: 'center', gap: 5,
-                  background: tk['--sb-card'],
-                  border: `var(--sb-border-emphasis) solid ${active ? tk['--sb-accent'] : tk['--sb-border']}`,
-                  boxShadow: active ? `0 0 10px rgba(${tk['--sb-accent-rgb']},0.25)` : 'none',
-                  transition: 'all 0.15s',
+                  padding: 0, cursor: 'pointer', textAlign: 'left', overflow: 'hidden',
+                  borderRadius: 'var(--sb-r-nav)', background: tk['--sb-page'],
+                  border: `var(--sb-border-emphasis) solid ${active ? 'var(--sb-ink-1)' : 'var(--sb-border)'}`,
+                  boxShadow: active ? 'var(--sb-shadow-control)' : 'none',
+                  fontFamily: 'inherit',
                 }}>
-                <div style={{ display: 'flex', gap: 3 }}>
-                  {[tk['--sb-accent'], tk['--sb-accent-deep'], tk['--sb-ink-4']].map((c, i) => (
-                    <div key={i} style={{ width: 8, height: 8, borderRadius: 'var(--sb-r-pill)', background: c }} />
-                  ))}
+                {/* The card, on the page, with what a card holds. */}
+                <div style={{ padding: 11 }}>
+                  <div style={{
+                    background: tk['--sb-card'], border: `1px solid ${tk['--sb-border']}`,
+                    borderRadius: 'var(--sb-r-chip)', padding: 9,
+                    display: 'flex', alignItems: 'center', gap: 8,
+                  }}>
+                    <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 5 }}>
+                      <span style={{ display: 'block', height: 6, width: '78%', borderRadius: 'var(--sb-r-pill)', background: tk['--sb-ink-1'] }} />
+                      <span style={{ display: 'block', height: 5, width: '52%', borderRadius: 'var(--sb-r-pill)', background: tk['--sb-ink-3'] }} />
+                    </div>
+                    <span style={{
+                      flexShrink: 0, height: 20, padding: '0 8px', borderRadius: 'var(--sb-r-pill)',
+                      background: tk['--sb-accent'], color: tk['--sb-accent-ink'],
+                      display: 'inline-flex', alignItems: 'center',
+                      fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.08em',
+                      fontFamily: tk['--sb-font-ui'],
+                    }}>AA</span>
+                  </div>
                 </div>
-                <span style={{ fontSize: 'var(--sb-t-body)' }}>{t.emoji}</span>
-                <span style={{ fontSize: 'var(--sb-t-micro)', color: tk['--sb-ink-1'], fontWeight: active ? 700 : 400, whiteSpace: 'nowrap' }}>{t.name}</span>
+                {/* The name, in the face the theme speaks in. */}
+                <div style={{
+                  padding: '0 12px 11px', display: 'flex', alignItems: 'center', gap: 6,
+                  color: tk['--sb-ink-1'], fontFamily: tk['--sb-font-num'],
+                  fontSize: 'var(--sb-t-body)', fontWeight: 600, letterSpacing: '-0.01em',
+                }}>
+                  {t.name}
+                  {active && <Check size={ICON.sm} strokeWidth={STROKE.active} color={tk['--sb-ink-1']} />}
+                </div>
               </button>
             )
           })}
@@ -2254,9 +2298,9 @@ const DETAIL_LEVELS: { value: DetailLevel; label: string; desc: string }[] = [
 ]
 
 const DETAIL_BADGE: Record<DetailLevel, { bg: string; color: string }> = {
-  busy:         { bg: 'rgba(224,82,82,0.12)',   color: 'var(--sb-negative)' },
-  focus_time:   { bg: 'rgba(29,158,117,0.12)',  color: '#177C5B' },
-  full_details: { bg: 'rgba(30,64,175,0.12)',   color: '#6B9FFF' },
+  busy:         { bg: 'color-mix(in srgb, var(--sb-negative) 12.0%, transparent)',   color: 'var(--sb-negative)' },
+  focus_time:   { bg: 'color-mix(in srgb, var(--sb-positive) 12.0%, transparent)',  color: 'var(--sb-positive)' },
+  full_details: { bg: 'color-mix(in srgb, var(--sb-info) 12.0%, transparent)',   color: 'var(--sb-info)' },
 }
 
 function BlockingRulesSection() {
@@ -2385,12 +2429,12 @@ function BlockingRulesSection() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3 }}>
               {badge(rule.detailLevel)}
               {rule.autoApply && (
-                <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 600, padding: '2px 7px', borderRadius: 'var(--sb-r-card)', background: 'rgba(29,158,117,0.12)', color: '#177C5B' }}>
+                <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 600, padding: '2px 7px', borderRadius: 'var(--sb-r-card)', background: 'color-mix(in srgb, var(--sb-positive) 12.0%, transparent)', color: 'var(--sb-positive)' }}>
                   Auto
                 </span>
               )}
               {rule.hideBlocked && (
-                <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 600, padding: '2px 7px', borderRadius: 'var(--sb-r-card)', background: 'rgba(127,119,221,0.12)', color: '#685FD7' }}>
+                <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 600, padding: '2px 7px', borderRadius: 'var(--sb-r-card)', background: 'color-mix(in srgb, var(--sb-info) 12.0%, transparent)', color: 'var(--sb-info)' }}>
                   Originals only
                 </span>
               )}
@@ -2474,8 +2518,8 @@ function BlockingRulesSection() {
             <div style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               padding: '10px 12px', borderRadius: 'var(--sb-r-chip)',
-              background: autoApply ? 'rgba(29,158,117,0.07)' : 'var(--sb-card)',
-              border: `1px solid ${autoApply ? 'rgba(29,158,117,0.3)' : 'var(--sb-border)'}`,
+              background: autoApply ? 'color-mix(in srgb, var(--sb-positive) 7.0%, transparent)' : 'var(--sb-card)',
+              border: `1px solid ${autoApply ? 'color-mix(in srgb, var(--sb-positive) 30.0%, transparent)' : 'var(--sb-border)'}`,
               transition: 'all 0.15s',
             }}>
               <div>
@@ -2491,8 +2535,8 @@ function BlockingRulesSection() {
             <div style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               padding: '10px 12px', borderRadius: 'var(--sb-r-chip)',
-              background: hideBlocked ? 'rgba(127,119,221,0.07)' : 'var(--sb-card)',
-              border: `1px solid ${hideBlocked ? 'rgba(127,119,221,0.3)' : 'var(--sb-border)'}`,
+              background: hideBlocked ? 'color-mix(in srgb, var(--sb-info) 7.0%, transparent)' : 'var(--sb-card)',
+              border: `1px solid ${hideBlocked ? 'color-mix(in srgb, var(--sb-info) 30.0%, transparent)' : 'var(--sb-border)'}`,
               transition: 'all 0.15s',
             }}>
               <div>
@@ -2550,7 +2594,7 @@ function BehavioralSection() {
   const { enabled, mode, setEnabled, setMode } = useBehavioralStore()
   const SB = {
     bg: 'var(--sb-page)', surface: 'var(--sb-card)', surface2: 'var(--sb-field)', border: 'var(--sb-border)',
-    accent: 'var(--sb-accent)', accentFill: 'rgba(var(--sb-accent-rgb),0.12)', accentBright: '#D4A827',
+    accent: 'var(--sb-accent)', accentFill: 'rgba(var(--sb-accent-rgb),0.12)', accentBright: 'var(--sb-warning)',
     text: 'var(--sb-ink-1)', textDim: 'var(--sb-ink-3)', textMuted: 'var(--sb-ink-4)',
   }
 
@@ -2578,7 +2622,7 @@ function BehavioralSection() {
         >
           <span style={{
             position: 'absolute', top: 2, left: enabled ? 22 : 2,
-            width: 20, height: 20, borderRadius: 'var(--sb-r-pill)', background: '#fff',
+            width: 20, height: 20, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-ink-on-fill)',
             transition: 'left 0.2s',
           }} />
         </button>
@@ -2617,8 +2661,8 @@ function BehavioralSection() {
 
       {/* Samurai info */}
       {enabled && mode === 'samurai' && (
-        <div style={{ padding: '12px 14px', borderRadius: 'var(--sb-r-nav)', background: 'rgba(139,26,26,0.08)', border: '1px solid rgba(139,26,26,0.25)' }}>
-          <div style={{ fontSize: 'var(--sb-t-body-s)', color: '#C0392B', fontWeight: 600, marginBottom: 4 }}>Samurai Mode Active</div>
+        <div style={{ padding: '12px 14px', borderRadius: 'var(--sb-r-nav)', background: 'color-mix(in srgb, var(--sb-negative-deep) 8.0%, transparent)', border: '1px solid color-mix(in srgb, var(--sb-negative-deep) 25.0%, transparent)' }}>
+          <div style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-negative)', fontWeight: 600, marginBottom: 4 }}>Samurai Mode Active</div>
           <div style={{ fontSize: 'var(--sb-t-body-s)', color: SB.textDim, lineHeight: 1.5 }}>
             The Behavioral OS page will appear in the sidebar. Your rank (Ronin → Shogun) is calculated from task completion, habit consistency, and planning quality. The AI assistant will adopt a tactical, no-filler communication style.
           </div>
@@ -2876,7 +2920,7 @@ function FinanceSection() {
           <rect x="4" y="4" width="44" height="28" rx="3" fill="var(--sb-field)"/>
           <rect x="4" y="4" width="44" height="20" rx="3" fill="var(--sb-accent)" opacity="0.7"/>
           <rect x="52" y="4" width="24" height="44" rx="3" fill="var(--sb-negative-tint)"/>
-          <rect x="52" y="4" width="24" height="48" rx="3" fill="#A31C1C" opacity="0.5"/>
+          <rect x="52" y="4" width="24" height="48" rx="3" fill="var(--sb-negative-deep)" opacity="0.5"/>
           <rect x="4" y="36" width="20" height="16" rx="3" fill="var(--sb-field)"/>
           <rect x="4" y="36" width="14" height="16" rx="3" fill="var(--sb-positive-tint)"/>
           <rect x="28" y="36" width="20" height="16" rx="3" fill="var(--sb-field)"/>
@@ -2896,7 +2940,7 @@ function FinanceSection() {
           <rect x="4" y="20" width="68" height="12" rx="3" fill="var(--sb-positive-tint)"/>
           <rect x="4" y="36" width="72" height="12" rx="3" fill="var(--sb-field)"/>
           <rect x="4" y="36" width="76" height="12" rx="3" fill="var(--sb-negative-tint)"/>
-          <rect x="4" y="36" width="72" height="12" rx="3" fill="#A31C1C" opacity="0.25"/>
+          <rect x="4" y="36" width="72" height="12" rx="3" fill="var(--sb-negative-deep)" opacity="0.25"/>
         </svg>
       ),
     },
@@ -2916,10 +2960,10 @@ function FinanceSection() {
             strokeDasharray="62.8" strokeDashoffset="16" strokeLinecap="round"/>
 
           <circle cx="55" cy="28" r="16" stroke="var(--sb-border)" strokeWidth="4" fill="none"/>
-          <circle cx="55" cy="28" r="16" stroke="#A31C1C" strokeWidth="4" fill="none"
+          <circle cx="55" cy="28" r="16" stroke="var(--sb-negative-deep)" strokeWidth="4" fill="none"
             strokeDasharray="100.5" strokeDashoffset="-4" strokeLinecap="round"/>
           <circle cx="55" cy="28" r="10" stroke="var(--sb-field)" strokeWidth="3" fill="none"/>
-          <circle cx="55" cy="28" r="10" stroke="#A31C1C" strokeWidth="3" fill="none" opacity="0.5"
+          <circle cx="55" cy="28" r="10" stroke="var(--sb-negative-deep)" strokeWidth="3" fill="none" opacity="0.5"
             strokeDasharray="62.8" strokeDashoffset="-8" strokeLinecap="round"/>
         </svg>
       ),
@@ -2962,7 +3006,7 @@ function FinanceSection() {
                     background: active ? 'var(--sb-accent)' : 'transparent',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>
-                    {active && <div style={{ width: 6, height: 6, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-ink-1)' }} />}
+                    {active && <div style={{ width: 6, height: 6, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-accent-ink)' }} />}
                   </div>
                   <div>
                     <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>{style.label}</p>
@@ -3145,8 +3189,8 @@ function FinanceSection() {
         <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--sb-ink-3)', display: 'block', marginBottom: 12 }}>PAYMENT DATES</span>
         {!paidAtSupported() ? (
           <div style={{
-            fontSize: 'var(--sb-t-body-s)', color: '#7A5F09', lineHeight: 1.55, maxWidth: 720,
-            background: '#FBEBC8', border: '1px solid var(--sb-accent-border)', borderRadius: 'var(--sb-r-nav)', padding: '11px 14px',
+            fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-accent-deep)', lineHeight: 1.55, maxWidth: 720,
+            background: 'var(--sb-accent-tint)', border: '1px solid var(--sb-accent-border)', borderRadius: 'var(--sb-r-nav)', padding: '11px 14px',
           }}>
             Your database has no payment-date column yet, so nothing can be marked paid or unpaid —
             run <code style={{ fontFamily: 'var(--sb-font-mono)', fontSize: 'var(--sb-t-meta)' }}>supabase/migrations/20260006</code> in
@@ -3314,12 +3358,12 @@ function BillingSection() {
     <NotYet text="Billing coming soon">
     <div>
       {/* Plan tile */}
-      <div style={{ padding: '16px 18px', borderRadius: 'var(--sb-r-nav)', background: '#FFFBEC', border: '1px solid var(--sb-accent)', marginBottom: 6 }}>
+      <div style={{ padding: '16px 18px', borderRadius: 'var(--sb-r-nav)', background: 'var(--sb-accent-tint)', border: '1px solid var(--sb-accent)', marginBottom: 6 }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
               <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h3)', fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--sb-ink-1)' }}>Professor Pro</span>
-              <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.1em', background: 'var(--sb-accent)', color: 'var(--sb-ink-1)', padding: '3px 7px', borderRadius: 'var(--sb-r-chip)' }}>ANNUAL</span>
+              <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.1em', background: 'var(--sb-accent)', color: 'var(--sb-accent-ink)', padding: '3px 7px', borderRadius: 'var(--sb-r-chip)' }}>ANNUAL</span>
             </div>
             <p style={{ margin: 0, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.45 }}>Renews 14 March 2027 · all four companies, unlimited AI drafts</p>
           </div>
@@ -3520,8 +3564,8 @@ function IntegrationsSection() {
           {integrations.map(tool => (
             <div key={tool.id} style={{
               padding: '11px 13px', borderRadius: 'var(--sb-r-nav)',
-              background: tool.status === 'disconnected' ? '#FDFCF9' : 'var(--sb-card)',
-              border: `1px solid ${tool.status === 'disconnected' ? 'var(--sb-border)' : tool.enabled ? '#C8DAB0' : 'var(--sb-border)'}`,
+              background: tool.status === 'disconnected' ? 'var(--sb-accent-tint)' : 'var(--sb-card)',
+              border: `1px solid ${tool.status === 'disconnected' ? 'var(--sb-border)' : tool.enabled ? 'var(--sb-positive-tint)' : 'var(--sb-border)'}`,
               borderStyle: tool.status === 'disconnected' ? 'dashed' : 'solid',
             }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
@@ -3533,7 +3577,7 @@ function IntegrationsSection() {
                     <span style={{ fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>{tool.name}</span>
                     <span style={{
                       fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.08em', padding: '2px 6px', borderRadius: 'var(--sb-r-chip)',
-                      background: tool.status === 'connected' ? 'rgba(12,129,64,0.1)' : 'rgba(155,145,128,0.12)',
+                      background: tool.status === 'connected' ? 'color-mix(in srgb, var(--sb-positive) 10.0%, transparent)' : 'color-mix(in srgb, var(--sb-ink-4) 12.0%, transparent)',
                       color: tool.status === 'connected' ? 'var(--sb-positive)' : 'var(--sb-ink-4)',
                       textTransform: 'uppercase',
                     }}>{tool.status === 'connected' ? 'Connected' : 'Not connected'}</span>
@@ -3652,8 +3696,8 @@ function AutomationSection() {
             display: 'flex', alignItems: 'flex-start', gap: 12,
             padding: '11px 13px', borderRadius: 'var(--sb-r-nav)', marginBottom: 10,
             breakInside: 'avoid',
-            background: rule.enabled ? '#FAFDF7' : '#FDFCF9',
-            border: `1px solid ${rule.enabled ? '#C8DAB0' : 'var(--sb-border)'}`,
+            background: rule.enabled ? 'var(--sb-positive-tint)' : 'var(--sb-accent-tint)',
+            border: `1px solid ${rule.enabled ? 'var(--sb-positive-tint)' : 'var(--sb-border)'}`,
             transition: 'all 0.15s',
           }}>
             <Toggle checked={rule.enabled} onChange={() => toggle(rule.id)} />
@@ -3748,13 +3792,13 @@ function DataPrivacySection() {
       {/* Account deletion */}
       <div>
         <p style={{ margin: '0 0 6px', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-negative)', textTransform: 'uppercase', letterSpacing: '0.09em' }}>Danger zone</p>
-        <div style={{ padding: '14px 16px', borderRadius: 'var(--sb-r-nav)', background: 'rgba(198,40,40,0.04)', border: '1px solid rgba(198,40,40,0.22)' }}>
+        <div style={{ padding: '14px 16px', borderRadius: 'var(--sb-r-nav)', background: 'color-mix(in srgb, var(--sb-negative) 4.0%, transparent)', border: '1px solid color-mix(in srgb, var(--sb-negative) 22.0%, transparent)' }}>
           <p style={{ margin: '0 0 10px', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', lineHeight: 1.5 }}>
             Permanently delete your account and all associated data. This cannot be undone.
           </p>
           <button style={{
             display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 'var(--sb-r-chip)',
-            background: 'rgba(198,40,40,0.08)', border: '1px solid rgba(198,40,40,0.3)',
+            background: 'color-mix(in srgb, var(--sb-negative) 8.0%, transparent)', border: '1px solid color-mix(in srgb, var(--sb-negative) 30.0%, transparent)',
             fontSize: 'var(--sb-t-body-s)', fontWeight: 500, color: 'var(--sb-negative)', cursor: 'pointer',
           }}>
             <Trash2 size={ICON.sm} /> Delete account
@@ -3872,7 +3916,7 @@ function Card({ icon: Icon, title, sub, children, actions, muted }: {
   return (
     <div style={{
       background: 'var(--sb-card)',
-      border: `1px solid ${muted ? 'var(--sb-border)' : '#E0D6BC'}`,
+      border: `1px solid ${muted ? 'var(--sb-border)' : 'var(--sb-border)'}`,
       borderRadius: 'var(--sb-r-card)',
       padding: '16px 20px 18px',
       boxShadow: 'var(--sb-shadow-control)',
@@ -4116,9 +4160,9 @@ export function Settings() {
       return (
         <button onClick={withSectionSave(id, fn)} style={{
           padding: '4px 12px', borderRadius: 'var(--sb-r-chip)', fontSize: 'var(--sb-t-meta)', fontWeight: 600, cursor: 'pointer',
-          background: saving === 'saved' ? 'rgba(12,129,64,0.12)' : saving === 'error' ? 'rgba(198,40,40,0.1)' : 'var(--sb-accent)',
-          border: saving === 'saved' ? '1px solid #C8DAB0' : saving === 'error' ? '1px solid rgba(198,40,40,0.3)' : '1px solid rgba(25,23,18,0.18)',
-          color: saving === 'saved' ? 'var(--sb-positive)' : saving === 'error' ? 'var(--sb-negative)' : 'var(--sb-ink-1)',
+          background: saving === 'saved' ? 'color-mix(in srgb, var(--sb-positive) 12.0%, transparent)' : saving === 'error' ? 'color-mix(in srgb, var(--sb-negative) 10.0%, transparent)' : 'var(--sb-accent)',
+          border: saving === 'saved' ? '1px solid var(--sb-positive-tint)' : saving === 'error' ? '1px solid color-mix(in srgb, var(--sb-negative) 30.0%, transparent)' : '1px solid color-mix(in srgb, var(--sb-ink-1) 18.0%, transparent)',
+          color: saving === 'saved' ? 'var(--sb-positive)' : saving === 'error' ? 'var(--sb-negative)' : 'var(--sb-accent-ink)',
           transition: 'all 0.15s',
         }}>{label}</button>
       )
@@ -4327,8 +4371,8 @@ export function Settings() {
         {badge !== null && (
           <span style={{
             height: 17, minWidth: 17, boxSizing: 'border-box', padding: '0 5px', borderRadius: 'var(--sb-r-pill)',
-            background: isActive ? 'rgba(255,255,255,0.18)' : 'var(--sb-field)',
-            color: isActive ? 'var(--sb-card)' : 'var(--sb-ink-3)',
+            background: isActive ? 'color-mix(in srgb, var(--sb-ink-on-dark) 18%, transparent)' : 'var(--sb-field)',
+            color: isActive ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
             fontSize: 'var(--sb-t-micro)', fontWeight: 700,
             display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
           }}>{badge}</span>

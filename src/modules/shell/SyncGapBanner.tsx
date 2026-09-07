@@ -27,28 +27,28 @@ export function SyncGapBanner() {
       margin: '0 22px 10px', padding: '11px 14px', borderRadius: 'var(--sb-r-nav)',
       background: 'rgba(var(--sb-accent-rgb),0.20)', border: '1px solid rgba(var(--sb-accent-rgb),0.65)',
     }}>
-      <AlertCircle size={ICON.md} color="#8A6D0B" style={{ flexShrink: 0, marginTop: 1 }} />
+      <AlertCircle size={ICON.md} color="var(--sb-accent-deep)" style={{ flexShrink: 0, marginTop: 1 }} />
       <div style={{ flex: 1, minWidth: 0 }}>
         {missing.length > 0 && (
-          <p style={{ ...T.body, margin: 0, color: '#3D3926' }}>
+          <p style={{ ...T.body, margin: 0, color: 'var(--sb-ink-2)' }}>
             {missing.map(g => g.entity).join(' and ')} are saving, but not everything about them —
             the database is missing columns, so pictures, notes and attachments stay on this device.
             Run {missing.map(g => MIGRATION_FOR[g.entity]).join(' and ')} in Supabase.
           </p>
         )}
         {stale.length > 0 && (
-          <p style={{ ...T.body, margin: missing.length ? '6px 0 0' : 0, color: '#3D3926' }}>
+          <p style={{ ...T.body, margin: missing.length ? '6px 0 0' : 0, color: 'var(--sb-ink-2)' }}>
             Supabase will not store everything about {stale.map(g => g.entity).join(' and ')} —
             pictures, notes and attachments are staying on this device. It reports a missing column
             and a not-yet-reloaded one the same way, so it is one of three things: the migration has
             not run, it ran against a different project, or the schema cache is stale. This build
             talks to project <strong>{supabaseProjectRef}</strong> — check the SQL editor is open on
-            that one, then run <code style={{ ...T.meta, background: 'rgba(25,23,18,0.06)', padding: '1px 5px', borderRadius: 'var(--sb-r-chip)' }}>
+            that one, then run <code style={{ ...T.meta, background: 'color-mix(in srgb, var(--sb-ink-1) 6.0%, transparent)', padding: '1px 5px', borderRadius: 'var(--sb-r-chip)' }}>
             notify pgrst, 'reload schema';</code>
           </p>
         )}
         {failing.length > 0 && (
-          <p style={{ ...T.body, margin: missing.length ? '6px 0 0' : 0, color: '#3D3926' }}>
+          <p style={{ ...T.body, margin: missing.length ? '6px 0 0' : 0, color: 'var(--sb-ink-2)' }}>
             {failing.map(g => `${g.entity}: ${g.detail ?? 'sync failed'}`).join(' · ')}
           </p>
         )}
@@ -57,7 +57,7 @@ export function SyncGapBanner() {
         style={{
           width: 26, height: 26, borderRadius: 'var(--sb-r-chip)', flexShrink: 0, padding: 0,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          background: 'none', border: 'none', color: '#8A6D0B', cursor: 'pointer',
+          background: 'none', border: 'none', color: 'var(--sb-accent-deep)', cursor: 'pointer',
         }}>
         <X size={ICON.sm} />
       </button>

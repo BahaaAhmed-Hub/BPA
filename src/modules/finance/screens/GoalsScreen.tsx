@@ -109,7 +109,7 @@ function GoalRow({ plan, place, selected, lifted, over, onSelect, onGrab, regRow
       style={{
         display: 'flex', flexDirection: 'column', gap: 8, cursor: 'pointer',
         padding: '11px 12px', borderRadius: 'var(--sb-r-nav)', boxSizing: 'border-box',
-        background: over ? '#FBF1D2' : selected ? C.accentBg : C.surface,
+        background: over ? 'var(--sb-accent-tint)' : selected ? C.accentBg : C.surface,
         border: `1px solid ${over ? C.accent : selected ? C.accentBr : C.hair}`,
         opacity: lifted ? 0.4 : 1,
       }}>
@@ -137,14 +137,14 @@ function GoalRow({ plan, place, selected, lifted, over, onSelect, onGrab, regRow
           title="Drag to change its rank"
           style={{
             display: 'inline-flex', flexShrink: 0, padding: '2px 0', marginLeft: 2,
-            color: lifted ? C.ink1 : '#CFC7B2', touchAction: 'none',
+            color: lifted ? C.ink1 : 'var(--sb-border)', touchAction: 'none',
             cursor: lifted ? 'grabbing' : 'grab',
           }}>
           <GripVertical size={ICON.sm} strokeWidth={STROKE.rest} />
         </span>
       </div>
 
-      <div style={{ height: 5, borderRadius: 'var(--sb-r-pill)', background: '#EFEADB', overflow: 'hidden' }}>
+      <div style={{ height: 5, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-hairline)', overflow: 'hidden' }}>
         <div style={{
           width: `${pct}%`, height: '100%', borderRadius: 'var(--sb-r-pill)',
           background: verdict === 'done' ? C.green : C.accent,
@@ -282,13 +282,15 @@ export function GoalsScreen(_props?: any) {
       setTimeout(() => { justDragged.current = false }, 0)
       setDrag(null)
     }
-    const prevSelect = document.body.style.userSelect
-    document.body.style.userSelect = 'none'
+    // A class rather than a style write: the document's inline style belongs
+    // to lib/themes.ts, and this is a state ("something is being dragged")
+    // rather than a value.
+    document.body.classList.add('sb-dragging')
     window.addEventListener('pointermove', move)
     window.addEventListener('pointerup', up)
     window.addEventListener('pointercancel', up)
     return () => {
-      document.body.style.userSelect = prevSelect
+      document.body.classList.remove('sb-dragging')
       window.removeEventListener('pointermove', move)
       window.removeEventListener('pointerup', up)
       window.removeEventListener('pointercancel', up)
@@ -551,8 +553,8 @@ function GoalDetail({ plan, place, policy, currency, surplus, onChange, onDelete
       </div>
 
       {/* The verdict, in a sentence */}
-      <div style={{ ...card, background: done || coveredNow ? '#E9F3EC' : plan.onTime === false || plan.eta === null ? '#FBEAEA' : C.accentBg,
-        border: `1px solid ${done || coveredNow ? '#BFDCC8' : plan.onTime === false || plan.eta === null ? '#EFCECE' : C.accentBr}` }}>
+      <div style={{ ...card, background: done || coveredNow ? 'var(--sb-positive-tint)' : plan.onTime === false || plan.eta === null ? 'var(--sb-negative-tint)' : C.accentBg,
+        border: `1px solid ${done || coveredNow ? 'var(--sb-positive-tint)' : plan.onTime === false || plan.eta === null ? 'var(--sb-negative-tint)' : C.accentBr}` }}>
         <div style={{ fontSize: 'var(--sb-t-body)', color: C.ink1, lineHeight: 1.6 }}>
           {done
             ? 'This one is there. Anything ranked below it now gets what it was taking.'
