@@ -336,6 +336,13 @@ there is no debounce and no merge.
 6. Archive newsletters · WHEN a thread is promotional and nobody replied in 3 days
 7. Close the week · WHEN Sunday 20:00, if the review has not been opened
 
+## Tasks — a date decides the quadrant
+A task with a `dueDate` and no quadrant goes into **schedule** — deciding when to do
+something is deciding about it, so it leaves the brain dump. `taskStore.updateTask`
+does it (and `addTask`, for one created with a date already on it), so every path
+gets it: the detail panel, the planner, the palette. Only from the dump — a task
+already in Do stays in Do — and clearing the date sends nothing back.
+
 ## Common Patterns
 ```tsx
 // Toggle component (used everywhere in Settings)

@@ -223,7 +223,15 @@ export const useTaskStore = create<TaskState>()(
 
       addTask: task =>
         set(s => {
-          const newTask: Task = { ...task, id: crypto.randomUUID(), createdAt: new Date().toISOString() }
+          const newTask: Task = {
+            ...task,
+            // A task with a day on it is a task that has been decided about —
+            // it belongs on the board, not in the pile of things not yet
+            // thought through. See `scheduled` below.
+            quadrant: task.quadrant ?? (task.dueDate ? 'schedule' : null),
+            id: crypto.randomUUID(),
+            createdAt: new Date().toISOString(),
+          }
           const next = [...s.tasks, newTask]
           scheduleDbSync(next)
           return {
@@ -303,7 +311,16 @@ export const useTaskStore = create<TaskState>()(
             }
           }
 
-          const next = s.tasks.map(t => t.id === id ? { ...t, ...updates } : t)
+          // Giving a task a date is deciding when to do it, so it stops being
+          // a brain dump entry and joins Schedule — the quadrant for the
+          // important things that are not urgent yet. Only from the dump: a
+          // task already put in Do stays in Do, and clearing the date does not
+          // send anything back.
+          const scheduled = old.quadrant == null && !!updates.dueDate && !('quadrant' in updates)
+          if (scheduled) desc.push('Moved from Inbox to Schedule')
+
+          const patch = scheduled ? { ...updates, quadrant: 'schedule' as const } : updates
+          const next = s.tasks.map(t => t.id === id ? { ...t, ...patch } : t)
           scheduleDbSync(next)
           const merged = desc.length
             ? pushActivity(s.activities, act(id, 'field_updated', desc.join('; ')))
