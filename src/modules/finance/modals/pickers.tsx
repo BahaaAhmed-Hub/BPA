@@ -10,25 +10,25 @@ import { CategoryGlyph } from '../components/CategoryGlyph'
 // hangs off; a black pill for the one action that commits. It lives here
 // rather than inside a modal so a second panel does not have to copy it.
 
-export const INK    = '#191712'
-export const MUTED  = '#6C6553'
+export const INK    = 'var(--sb-ink-1)'
+export const MUTED  = 'var(--sb-ink-3)'
 export const GHOST  = '#9B9180'
-export const LINE   = '#E8E1CE'
-export const HAIR   = '#F0EBDC'
-export const OLIVE  = '#0C8140'
-export const RUST   = '#C62828'
+export const LINE   = 'var(--sb-border)'
+export const HAIR   = 'var(--sb-hairline)'
+export const OLIVE  = 'var(--sb-positive)'
+export const RUST   = 'var(--sb-negative)'
 export const AMBER  = 'var(--sb-accent)'
 export const DISPLAY = "'Outfit', system-ui, sans-serif"
 
 export const PILL: React.CSSProperties = {
   display: 'inline-flex', alignItems: 'center', gap: 6, height: 42, boxSizing: 'border-box',
-  padding: '0 14px', borderRadius: 10, background: '#FFFFFF', border: `1px solid ${LINE}`,
+  padding: '0 14px', borderRadius: 10, background: 'var(--sb-card)', border: `1px solid ${LINE}`,
   color: INK, fontSize: 13.5, fontFamily: 'inherit', cursor: 'pointer', minWidth: 0,
 }
 export const ROUND: React.CSSProperties = {
   width: 30, height: 30, borderRadius: '50%', flexShrink: 0, padding: 0,
   display: 'flex', alignItems: 'center', justifyContent: 'center',
-  background: '#FFFFFF', border: `1px solid ${LINE}`, color: MUTED, cursor: 'pointer',
+  background: 'var(--sb-card)', border: `1px solid ${LINE}`, color: MUTED, cursor: 'pointer',
 }
 export const LABEL: React.CSSProperties = {
   width: 74, flexShrink: 0, fontSize: 13.5, color: MUTED, fontWeight: 500,
@@ -62,8 +62,8 @@ export function Glyph({ glyph, tint, size = 22 }: { glyph?: string; tint?: strin
     <span style={{
       width: size, height: size, borderRadius: 6, flexShrink: 0, overflow: 'hidden',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: tint ? `${tint}22` : '#F1ECDE',
-      color: tint ?? '#6C6553',
+      background: tint ? `${tint}22` : 'var(--sb-field)',
+      color: tint ?? 'var(--sb-ink-3)',
     }}>
       <CategoryGlyph icon={glyph} size={Math.round(size * 0.68)} />
     </span>
@@ -149,7 +149,7 @@ export function PillPicker({ value, options, onChange, placeholder, compact }: {
         <div ref={list} style={{
           position: 'fixed', top: place.top, left: place.left, width: place.width, zIndex: 2000,
           maxHeight: place.maxHeight, overflowY: 'auto', padding: 5, boxSizing: 'border-box',
-          background: '#FFFFFF', border: `1px solid ${LINE}`, borderRadius: 12,
+          background: 'var(--sb-card)', border: `1px solid ${LINE}`, borderRadius: 12,
           boxShadow: '0 12px 32px rgba(25,23,18,0.18)',
         }}>
           {options.length === 0 && (
