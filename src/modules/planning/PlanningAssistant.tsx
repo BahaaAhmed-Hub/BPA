@@ -143,14 +143,9 @@ function ContextMenu({ menu, onClose }: { menu: ContextMenuState; onClose: () =>
             action: onClose,
           },
         ].filter(Boolean).map((item, i) => item && (
-          <button key={i} onClick={item.action} style={{
-            width: '100%', display: 'flex', alignItems: 'center', gap: 10,
-            padding: '9px 14px', background: 'none', border: 'none', cursor: 'pointer',
-            fontSize: 'var(--sb-t-body)', color: '#3D3926', textAlign: 'left',
+          <button key={i} onClick={item.action} className="sb-menu-row" style={{
             borderBottom: i < 1 ? '1px solid var(--sb-border)' : 'none',
           }}
-            onMouseEnter={e => (e.currentTarget.style.background = 'var(--sb-field)')}
-            onMouseLeave={e => (e.currentTarget.style.background = 'none')}
           >
             {item.icon} {item.label}
           </button>

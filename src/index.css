@@ -125,8 +125,10 @@
      Everything else in the app is 1px. */
   --sb-border-emphasis: 2px;
 
-  /* The ink that reads on the accent — still to be decided */
-  --sb-accent-ink: ;
+  /* The ink that reads on a solid accent fill. Every accent in the set is
+     light enough to carry the dark ink; a theme with a dark accent overrides
+     it. (--sb-accent-deep is the other one: accent-coloured *text*, on tint.) */
+  --sb-accent-ink: var(--sb-ink-1);
 }
 
 /* ── Global resets ────────────────────────────────────────────────────────── */
@@ -197,18 +199,188 @@ html, body {
   to { transform: rotate(360deg); }
 }
 
-/* Hover lift on cards */
+/* ── The four primitives ──────────────────────────────────────────────────────
+   src/components/ui — Button, NavRow, Card, Pill. Every state they have is
+   here: hover, focus, disabled, active. None of it is in an event handler, so
+   the reduced-motion block below reaches all of it, :focus-visible is a real
+   state rather than something a mouse handler forgot, and the palette is named
+   once per state instead of once per component.                             */
+
+/* Button ------------------------------------------------------------------- */
+.sb-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  flex-shrink: 0;
+  height: var(--sb-h-pill);
+  padding: 0 16px;
+  border-radius: var(--sb-r-pill);
+  border: 1px solid transparent;
+  background: transparent;
+  font-family: var(--sb-font-ui);
+  font-size: var(--sb-t-label);
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 120ms ease-out, color 120ms ease-out,
+              border-color 120ms ease-out, box-shadow 120ms ease-out;
+}
+.sb-btn[data-size="sm"] { height: 28px; padding: 0 12px; font-size: var(--sb-t-body-s); gap: 6px; }
+.sb-btn[data-block]     { width: 100%; }
+.sb-btn[data-icon-only] { width: var(--sb-h-pill); padding: 0; }
+.sb-btn[data-icon-only][data-size="sm"] { width: 28px; }
+.sb-btn:disabled { opacity: 0.45; cursor: default; }
+
+.sb-btn[data-variant="primary"] {
+  background: var(--sb-ink-1);
+  color: var(--sb-ink-on-dark);
+}
+.sb-btn[data-variant="primary"]:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--sb-ink-1) 86%, var(--sb-ink-on-dark));
+}
+
+.sb-btn[data-variant="accent"] {
+  background: var(--sb-accent);
+  color: var(--sb-accent-ink);
+  box-shadow: var(--sb-shadow-accent);
+}
+.sb-btn[data-variant="accent"]:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--sb-accent) 88%, var(--sb-ink-1));
+}
+
+.sb-btn[data-variant="secondary"] {
+  background: var(--sb-card);
+  border-color: var(--sb-border);
+  color: var(--sb-ink-1);
+}
+.sb-btn[data-variant="secondary"]:hover:not(:disabled) { background: var(--sb-field); }
+
+.sb-btn[data-variant="ghost"] { color: var(--sb-ink-3); }
+.sb-btn[data-variant="ghost"]:hover:not(:disabled) {
+  background: var(--sb-field);
+  border-color: var(--sb-border);
+  color: var(--sb-ink-1);
+}
+
+.sb-btn[data-variant="danger"] { color: var(--sb-negative); }
+.sb-btn[data-variant="danger"]:hover:not(:disabled) {
+  background: var(--sb-negative-tint);
+  border-color: color-mix(in srgb, var(--sb-negative) 35%, transparent);
+}
+
+/* NavRow ------------------------------------------------------------------- */
+.sb-nav-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: var(--sb-h-nav);
+  padding: 0 12px;
+  border: none;
+  border-radius: var(--sb-r-nav);
+  background: transparent;
+  color: var(--sb-ink-4);
+  font-family: var(--sb-font-ui);
+  font-size: var(--sb-t-body);
+  font-weight: 400;
+  text-align: left;
+  cursor: pointer;
+  transition: background 120ms ease-out, color 120ms ease-out;
+}
+.sb-nav-row:hover { background: var(--sb-accent-tint); color: var(--sb-ink-1); }
+.sb-nav-row[data-active] {
+  background: var(--sb-accent-tint);
+  color: var(--sb-ink-1);
+  font-weight: 600;
+}
+.sb-nav-row[data-collapsed] { width: var(--sb-h-nav); padding: 0; justify-content: center; }
+.sb-nav-row-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sb-nav-row-dot {
+  width: 4px; height: 4px; flex-shrink: 0;
+  border-radius: var(--sb-r-pill);
+  background: var(--sb-accent);
+}
+
+/* Card --------------------------------------------------------------------- */
+.sb-card-surface {
+  background: var(--sb-card);
+  border: 1px solid var(--sb-border);
+  border-radius: var(--sb-r-card);
+  box-shadow: var(--sb-shadow-control);
+}
+.sb-card-surface[data-variant="interactive"] {
+  cursor: pointer;
+  transition: box-shadow 140ms ease-out, transform 140ms ease-out;
+}
+.sb-card-surface[data-variant="interactive"]:hover {
+  box-shadow: var(--sb-shadow-hover);
+  transform: translateY(-1px);
+}
+
+/* Pill --------------------------------------------------------------------- */
+.sb-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex-shrink: 0;
+  height: var(--sb-h-pill);
+  padding: 0 14px;
+  border: 1px solid var(--sb-border);
+  border-radius: var(--sb-r-pill);
+  background: var(--sb-card);
+  color: var(--sb-ink-3);
+  font-family: var(--sb-font-ui);
+  font-size: var(--sb-t-body-s);
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 120ms ease-out, color 120ms ease-out, border-color 120ms ease-out;
+}
+.sb-pill:hover { background: var(--sb-field); color: var(--sb-ink-1); }
+.sb-pill[data-on] {
+  background: var(--sb-ink-1);
+  border-color: var(--sb-ink-1);
+  color: var(--sb-ink-on-dark);
+  font-weight: 600;
+}
+
+/* Two hovers that are not a primitive: a figure that underlines to say it can
+   be opened, and a row that tints. Both were mouse handlers writing styles. */
+.sb-underline-hover { border-bottom: 1px solid transparent; padding-bottom: 1px; }
+.sb-underline-hover:hover { border-bottom-color: var(--sb-ink-4); }
+
+.sb-row-hover { transition: background 120ms ease-out; }
+.sb-row-hover:hover { background: var(--sb-field); }
+
+/* A row in a menu — full width, ghost until hovered. */
+.sb-menu-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 14px;
+  border: none;
+  background: none;
+  color: var(--sb-ink-2);
+  font-family: var(--sb-font-ui);
+  font-size: var(--sb-t-body);
+  text-align: left;
+  cursor: pointer;
+  transition: background 120ms ease-out;
+}
+.sb-menu-row:hover { background: var(--sb-field); }
+
+/* Hover lift on cards — the class the older cards use, same rule as Card's
+   interactive variant. */
 .sb-card-hover {
   transition: box-shadow 140ms ease-out, transform 140ms ease-out;
 }
 .sb-card-hover:hover {
   box-shadow: var(--sb-shadow-hover);
   transform: translateY(-1px);
-}
-
-/* Nav pill hover tint */
-.sb-nav-row:hover {
-  background: var(--sb-field) !important;
 }
 
 /* ── Reduced motion ────────────────────────────────────────────────────────── */

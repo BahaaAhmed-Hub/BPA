@@ -35,6 +35,7 @@ const MODE_ACCENT: Record<string, string> = {
 import { useUIStore } from '@/store/uiStore'
 import { useBehavioralStore } from '@/store/behavioralStore'
 import { ICON } from '@/lib/type'
+import { NavRow } from '@/components/ui'
 
 const NAV_ITEMS = [
   { id: 'dashboard',  label: 'Dashboard',      Icon: LayoutDashboard },
@@ -125,50 +126,15 @@ export function Sidebar() {
           {NAV_ITEMS.map(({ id, label, Icon }) => {
             const active = activeModule === id
             return (
-              <button
+              <NavRow
                 key={id}
                 onClick={() => setActiveModule(id)}
-                title={sidebarCollapsed ? label : undefined}
-                style={{
-                  width: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 10,
-                  padding: sidebarCollapsed ? '10px 0' : '10px 12px',
-                  justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
-                  background: active ? 'rgba(var(--sb-accent-rgb),0.15)' : 'transparent',
-                  border: 'none',
-                  borderRadius: 'var(--sb-r-chip)',
-                  cursor: 'pointer',
-                  color: active ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)',
-                  marginBottom: 2,
-                  transition: 'all 0.15s ease',
-                }}
-                onMouseEnter={e => {
-                  if (!active) {
-                    const el = e.currentTarget as HTMLElement
-                    el.style.background = 'rgba(var(--sb-accent-rgb),0.15)'
-                    el.style.color = 'var(--sb-ink-1)'
-                  }
-                }}
-                onMouseLeave={e => {
-                  if (!active) {
-                    const el = e.currentTarget as HTMLElement
-                    el.style.background = 'transparent'
-                    el.style.color = 'var(--sb-ink-4)'
-                  }
-                }}
-              >
-                <Icon size={18} strokeWidth={active ? 2.5 : 1.8} style={{ flexShrink: 0 }} />
-                {!sidebarCollapsed && (
-                  <span style={{ fontSize: 'var(--sb-t-body)', fontWeight: active ? 600 : 400, letterSpacing: '0.1px', whiteSpace: 'nowrap' }}>
-                    {label}
-                  </span>
-                )}
-                {active && !sidebarCollapsed && (
-                  <div style={{ marginLeft: 'auto', width: 4, height: 4, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-accent)' }} />
-                )}
-              </button>
+                active={active}
+                collapsed={sidebarCollapsed}
+                Icon={Icon}
+                label={label}
+                style={{ marginBottom: 2 }}
+              />
             )
           })}
         </div>
@@ -189,31 +155,14 @@ export function Sidebar() {
                   {modeLabel} MODE
                 </span>
               )}
-              <button
+              <NavRow
                 onClick={() => setActiveModule(id)}
-                title={sidebarCollapsed ? 'Behavioral OS' : undefined}
-                style={{
-                  width: '100%', display: 'flex', alignItems: 'center', gap: 10,
-                  padding: sidebarCollapsed ? '10px 0' : '10px 12px',
-                  justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
-                  background: active ? 'rgba(var(--sb-accent-rgb),0.15)' : 'transparent',
-                  border: 'none', borderRadius: 'var(--sb-r-chip)', cursor: 'pointer',
-                  color: active ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)',
-                  marginBottom: 2, transition: 'all 0.15s ease',
-                }}
-                onMouseEnter={e => { if (!active) { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(var(--sb-accent-rgb),0.15)'; el.style.color = 'var(--sb-ink-1)' } }}
-                onMouseLeave={e => { if (!active) { const el = e.currentTarget as HTMLElement; el.style.background = 'transparent'; el.style.color = 'var(--sb-ink-4)' } }}
-              >
-                <Swords size={ICON.lg} strokeWidth={active ? 2.5 : 1.8} style={{ flexShrink: 0 }} />
-                {!sidebarCollapsed && (
-                  <span style={{ fontSize: 'var(--sb-t-body)', fontWeight: active ? 600 : 400, letterSpacing: '0.1px', whiteSpace: 'nowrap' }}>
-                    Behavioral OS
-                  </span>
-                )}
-                {active && !sidebarCollapsed && (
-                  <div style={{ marginLeft: 'auto', width: 4, height: 4, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-accent)' }} />
-                )}
-              </button>
+                active={active}
+                collapsed={sidebarCollapsed}
+                Icon={Swords}
+                label="Behavioral OS"
+                style={{ marginBottom: 2 }}
+              />
             </div>
           )
         })()}
@@ -232,45 +181,15 @@ export function Sidebar() {
           {SYSTEM_ITEMS.map(({ id, label, Icon }) => {
             const active = activeModule === id
             return (
-              <button
+              <NavRow
                 key={id}
                 onClick={() => setActiveModule(id)}
-                title={sidebarCollapsed ? label : undefined}
-                style={{
-                  width: '100%',
-                  display: 'flex', alignItems: 'center', gap: 10,
-                  padding: sidebarCollapsed ? '10px 0' : '10px 12px',
-                  justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
-                  background: active ? 'rgba(var(--sb-accent-rgb),0.15)' : 'transparent',
-                  border: 'none', borderRadius: 'var(--sb-r-chip)', cursor: 'pointer',
-                  color: active ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)',
-                  marginBottom: 2, transition: 'all 0.15s ease',
-                }}
-                onMouseEnter={e => {
-                  if (!active) {
-                    const el = e.currentTarget as HTMLElement
-                    el.style.background = 'rgba(var(--sb-accent-rgb),0.15)'
-                    el.style.color = 'var(--sb-ink-1)'
-                  }
-                }}
-                onMouseLeave={e => {
-                  if (!active) {
-                    const el = e.currentTarget as HTMLElement
-                    el.style.background = 'transparent'
-                    el.style.color = 'var(--sb-ink-4)'
-                  }
-                }}
-              >
-                <Icon size={18} strokeWidth={active ? 2.5 : 1.8} style={{ flexShrink: 0 }} />
-                {!sidebarCollapsed && (
-                  <span style={{ fontSize: 'var(--sb-t-body)', fontWeight: active ? 600 : 400, letterSpacing: '0.1px', whiteSpace: 'nowrap' }}>
-                    {label}
-                  </span>
-                )}
-                {active && !sidebarCollapsed && (
-                  <div style={{ marginLeft: 'auto', width: 4, height: 4, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-accent)' }} />
-                )}
-              </button>
+                active={active}
+                collapsed={sidebarCollapsed}
+                Icon={Icon}
+                label={label}
+                style={{ marginBottom: 2 }}
+              />
             )
           })}
         </div>

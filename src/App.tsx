@@ -12,6 +12,7 @@ import { SettingsModule } from './modules/settings/SettingsModule'
 import { BehavioralOS } from './modules/behavioral/BehavioralOS'
 import { PlanningAssistant } from './modules/planning/PlanningAssistant'
 import { FinanceModule } from './modules/finance/FinanceModule'
+import { NavRow } from './components/ui'
 import { useUIStore } from './store/uiStore'
 import {
   collect, loadNotifSettings, inQuietHours, markSeen, unwiredKinds, NOTIF_EVENT,
@@ -547,39 +548,14 @@ function TopNav() {
         {NAV_ITEMS.map(item => {
           const active = activeModule === item.id
           return (
-            <button
+            <NavRow
               key={item.id}
               onClick={() => setActiveModule(item.id)}
-              style={{
-                height: 38, padding: '0 15px', borderRadius: 'var(--sb-r-pill)',
-                border: 'none', cursor: 'pointer',
-                background: active ? 'var(--sb-card)' : 'transparent',
-                boxShadow: active ? '0 1px 3px rgba(25,23,18,.16)' : 'none',
-                color:      active ? 'var(--sb-ink-1)' : 'var(--sb-ink-3)',
-                fontSize: 'var(--sb-t-body)', fontWeight: active ? 600 : 500,
-                fontFamily: 'var(--sb-font-ui)',
-                transition: 'background 120ms ease-out, color 120ms ease-out, box-shadow 120ms ease-out',
-                whiteSpace: 'nowrap',
-                display: 'flex', alignItems: 'center', gap: 7,
-              }}
-              onMouseEnter={e => {
-                if (!active) {
-                  const el = e.currentTarget as HTMLButtonElement
-                  el.style.background = 'var(--sb-card)'
-                  el.style.boxShadow = '0 1px 3px rgba(25,23,18,.08)'
-                }
-              }}
-              onMouseLeave={e => {
-                if (!active) {
-                  const el = e.currentTarget as HTMLButtonElement
-                  el.style.background = 'transparent'
-                  el.style.boxShadow = 'none'
-                }
-              }}
-            >
-              {NAV_ICONS[item.id]}
-              {item.label}
-            </button>
+              active={active}
+              icon={NAV_ICONS[item.id]}
+              label={item.label}
+              style={{ width: 'auto' }}
+            />
           )
         })}
       </nav>

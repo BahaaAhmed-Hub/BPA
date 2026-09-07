@@ -115,9 +115,7 @@ function CategoryRows({ row, tone, open, hidden, onToggleOpen, onToggleHide, onD
         title={`${label} — see the entries`}
         onClick={e => { e.stopPropagation(); onDrill(ids, label, month) }}
       >
-        <span style={{ borderBottom: '1px solid transparent', paddingBottom: 1 }}
-          onMouseEnter={e => { e.currentTarget.style.borderBottomColor = '#C5BCA8' }}
-          onMouseLeave={e => { e.currentTarget.style.borderBottomColor = 'transparent' }}>
+        <span className="sb-underline-hover">
           {fmt(v)}
         </span>
       </td>
@@ -634,8 +632,7 @@ export function ReflectionScreen(_props?: any) {
                       <span
                         onClick={() => { setDupesOpen(false); setEditing(t) }}
                         title="Open this entry"
-                        onMouseEnter={e => { e.currentTarget.style.background = 'var(--sb-field)' }}
-                        onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
+                        className="sb-row-hover"
                         style={{
                           flex: 1, minWidth: 0, display: 'flex', alignItems: 'baseline', gap: 8,
                           cursor: 'pointer', borderRadius: 'var(--sb-r-chip)', padding: '4px 6px', margin: '0 -6px',

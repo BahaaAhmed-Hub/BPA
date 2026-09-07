@@ -11,11 +11,16 @@ import { TransactionModal } from './modals/TransactionModal'
 import { BulkEntryModal } from './modals/BulkEntryModal'
 import { LockGate } from './FinanceLockScreen'
 import { useFinanceLock } from './useFinanceLock'
+import { NavRow } from '@/components/ui'
 import { lockNow } from './lock'
 
 // ─── Nav icon SVGs ────────────────────────────────────────────────────────────
 
-function IconToday({ color }: { color: string }) {
+/** The rail's own glyphs. They take the row's colour unless told otherwise,
+ *  and accept the props NavRow hands every icon. */
+interface RailIconProps { color?: string; size?: number; strokeWidth?: number; style?: React.CSSProperties }
+
+function IconToday({ color = 'currentColor' }: RailIconProps) {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
       <rect x="3" y="4.5" width="18" height="16" rx="2.5"/>
@@ -25,7 +30,7 @@ function IconToday({ color }: { color: string }) {
   )
 }
 
-function IconBalance({ color }: { color: string }) {
+function IconBalance({ color = 'currentColor' }: RailIconProps) {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
       <path d="M12 3v18"/>
@@ -35,7 +40,7 @@ function IconBalance({ color }: { color: string }) {
   )
 }
 
-function IconBudget({ color }: { color: string }) {
+function IconBudget({ color = 'currentColor' }: RailIconProps) {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
       <rect x="3" y="6" width="18" height="13" rx="2.5"/>
@@ -45,7 +50,7 @@ function IconBudget({ color }: { color: string }) {
   )
 }
 
-function IconReports({ color }: { color: string }) {
+function IconReports({ color = 'currentColor' }: RailIconProps) {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
       <path d="M21 12a9 9 0 1 1-9-9v9z"/>
@@ -54,7 +59,7 @@ function IconReports({ color }: { color: string }) {
   )
 }
 
-function IconFinancials({ color }: { color: string }) {
+function IconFinancials({ color = 'currentColor' }: RailIconProps) {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
       <rect x="4" y="3" width="16" height="18" rx="2"/>
@@ -64,7 +69,7 @@ function IconFinancials({ color }: { color: string }) {
 }
 
 
-function IconGoals({ color }: { color: string }) {
+function IconGoals({ color = 'currentColor' }: RailIconProps) {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
       <path d="M3 13l18-7-6 15-3-6z"/>
@@ -72,7 +77,7 @@ function IconGoals({ color }: { color: string }) {
   )
 }
 
-function IconPlan({ color }: { color: string }) {
+function IconPlan({ color = 'currentColor' }: RailIconProps) {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
       <path d="M13 3L5 14h6l-1 7 8-11h-6z"/>
@@ -80,7 +85,7 @@ function IconPlan({ color }: { color: string }) {
   )
 }
 
-function IconLock({ color }: { color: string }) {
+function IconLock({ color = 'currentColor' }: RailIconProps) {
   return (
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <rect x="4" y="10.5" width="16" height="10.5" rx="2.5"/>
@@ -89,7 +94,7 @@ function IconLock({ color }: { color: string }) {
   )
 }
 
-function IconPlus({ color }: { color: string }) {
+function IconPlus({ color = 'currentColor' }: RailIconProps) {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round">
       <line x1="12" y1="5" x2="12" y2="19"/>
@@ -105,7 +110,7 @@ function IconPlus({ color }: { color: string }) {
 // and puts the entry in the ledger where every total can see it.
 type FinanceScreen = 'today' | 'balance' | 'budget' | 'reports' | 'reflect' | 'goals' | 'plan'
 
-const NAV_ITEMS: { id: FinanceScreen; label: string; Icon: (p: { color: string }) => React.ReactElement }[] = [
+const NAV_ITEMS: { id: FinanceScreen; label: string; Icon: (p: RailIconProps) => React.ReactElement }[] = [
   { id: 'today',   label: 'Today',      Icon: IconToday },
   { id: 'balance', label: 'Balance',    Icon: IconBalance },
   { id: 'budget',  label: 'Budget',     Icon: IconBudget },
@@ -137,7 +142,7 @@ export function FinanceModule() {
   const [addOpen, setAddOpen] = useState(false)
   const [bulkOpen, setBulkOpen] = useState(false)
 
-  const [navItems, setNavItems] = useState<{ id: FinanceScreen; label: string; Icon: (p: { color: string }) => React.ReactElement }[]>(() => {
+  const [navItems, setNavItems] = useState<{ id: FinanceScreen; label: string; Icon: (p: RailIconProps) => React.ReactElement }[]>(() => {
     const saved = localStorage.getItem('finance-tab-order')
     if (saved) {
       try {
@@ -199,7 +204,7 @@ export function FinanceModule() {
             const isDragging = draggedTab === id
             const isDropTarget = dropTab === id && dropTab !== draggedTab
             return (
-              <div
+              <NavRow
                 key={id}
                 draggable
                 onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; setDraggedTab(id) }}
@@ -207,25 +212,15 @@ export function FinanceModule() {
                 onDrop={e => { e.preventDefault(); if (draggedTab) reorderTabs(draggedTab, id); setDropTab(null) }}
                 onDragEnd={() => { setDraggedTab(null); setDropTab(null) }}
                 onClick={() => handleSetScreen(id)}
+                active={active}
+                Icon={Icon}
+                label={label}
                 style={{
-                  display: 'flex', alignItems: 'center', gap: 5,
-                  padding: '4px 10px', borderRadius: 'var(--sb-r-chip)', cursor: 'grab',
-                  background: active ? 'var(--sb-accent)' : 'transparent',
-                  border: `1px solid ${isDropTarget ? 'var(--sb-accent)' : active ? 'rgba(25,23,18,0.18)' : 'transparent'}`,
-                  boxShadow: active ? '0 2px 0 rgba(25,23,18,0.1)' : 'none',
+                  width: 'auto', height: 30, cursor: 'grab',
                   opacity: isDragging ? 0.35 : 1,
-                  userSelect: 'none', flexShrink: 0,
-                } as React.CSSProperties}
-              >
-                <Icon color={active ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)'} />
-                <span style={{
-                  fontSize: 'var(--sb-t-body-s)', fontWeight: active ? 600 : 400,
-                  color: active ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)',
-                  whiteSpace: 'nowrap' as const, letterSpacing: '0.1px',
-                }}>
-                  {label}
-                </span>
-              </div>
+                  outline: isDropTarget ? '1px solid var(--sb-accent)' : 'none',
+                }}
+              />
             )
           })}
         </div>

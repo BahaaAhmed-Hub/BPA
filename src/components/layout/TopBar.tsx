@@ -1,10 +1,11 @@
 
 import { useState } from 'react'
+import { Button } from '@/components/ui'
 import { Bell, Search, Settings, LogOut } from 'lucide-react'
 import { useUIStore } from '@/store/uiStore'
 import { useAuthStore } from '@/store/authStore'
 import { signOut } from '@/lib/google'
-import { ICON } from '@/lib/type'
+import { ICON, STROKE } from '@/lib/type'
 
 interface TopBarProps {
   title: string
@@ -68,40 +69,14 @@ export function TopBar({ title, subtitle }: TopBarProps) {
       {/* Actions */}
       <div style={{ display: 'flex', gap: 4 }}>
         {[Search, Bell, Settings].map((Icon, i) => (
-          <button
+          <Button
             key={i}
+            variant="ghost"
+            iconOnly
             onClick={i === 2 ? () => setActiveModule('settings') : undefined}
-            style={{
-              width: 34,
-              height: 34,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: 'transparent',
-              border: '1px solid transparent',
-              borderRadius: 'var(--sb-r-chip)',
-              cursor: 'pointer',
-              color: 'var(--sb-ink-3)',
-              transition: 'all 0.15s ease',
-            }}
-            onMouseEnter={e => {
-              const el = e.currentTarget as HTMLElement
-              // White at 5% on a white bar is nothing at all — this row of
-              // controls had no hover state for as long as the bar has been
-              // cream. The field colour is what a hovered control sits on.
-              el.style.background = 'var(--sb-field)'
-              el.style.borderColor = 'var(--sb-border)'
-              el.style.color = 'var(--sb-ink-1)'
-            }}
-            onMouseLeave={e => {
-              const el = e.currentTarget as HTMLElement
-              el.style.background = 'transparent'
-              el.style.borderColor = 'transparent'
-              el.style.color = 'var(--sb-ink-3)'
-            }}
           >
-            <Icon size={15} strokeWidth={1.8} />
-          </button>
+            <Icon size={ICON.lg} strokeWidth={STROKE.rest} />
+          </Button>
         ))}
       </div>
 
@@ -130,14 +105,14 @@ export function TopBar({ title, subtitle }: TopBarProps) {
                 <p style={{ margin: 0, fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>{user?.name ?? 'User'}</p>
                 <p style={{ margin: '2px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>{user?.email}</p>
               </div>
-              <button
+              <Button
+                variant="danger"
+                block
                 onClick={() => { setMenuOpen(false); void signOut() }}
-                style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'transparent', border: 'none', borderRadius: 'var(--sb-r-chip)', color: 'var(--sb-negative)', fontSize: 'var(--sb-t-body)', cursor: 'pointer', textAlign: 'left' }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(224,82,82,0.08)' }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
+                style={{ justifyContent: 'flex-start', borderRadius: 'var(--sb-r-chip)' }}
               >
                 <LogOut size={ICON.lg} /> Sign out
-              </button>
+              </Button>
             </div>
           </>
         )}

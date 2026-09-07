@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { getTheme } from '@/lib/themes'
+import { Button } from '@/components/ui'
 import { RefreshCw, ChevronRight } from 'lucide-react'
 import { useBehavioralStore } from '@/store/behavioralStore'
 import { useTaskStore } from '@/store/taskStore'
@@ -245,22 +246,15 @@ export function BehavioralOS() {
             </p>
           </div>
 
-          <button
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={evaluate}
             disabled={evaluating}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 6,
-              background: 'none', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-chip)',
-              padding: '7px 14px', cursor: evaluating ? 'default' : 'pointer',
-              color: evaluating ? 'var(--sb-ink-4)' : 'var(--sb-ink-3)', fontSize: 'var(--sb-t-meta)', letterSpacing: '0.06em',
-              transition: 'border-color 0.15s, color 0.15s',
-            }}
-            onMouseEnter={e => { if (!evaluating) { (e.currentTarget as HTMLElement).style.borderColor = 'var(--sb-ink-3)'; (e.currentTarget as HTMLElement).style.color = 'var(--sb-ink-1)' } }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--sb-border)'; (e.currentTarget as HTMLElement).style.color = 'var(--sb-ink-3)' }}
           >
             <RefreshCw size={ICON.sm} style={{ animation: evaluating ? 'spin 1s linear infinite' : 'none' }} />
             {evaluating ? 'Evaluating…' : 'Refresh'}
-          </button>
+          </Button>
         </div>
 
         {/* ── Rank Panel ─────────────────────────────────────────────────── */}
