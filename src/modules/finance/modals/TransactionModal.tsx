@@ -229,7 +229,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
       <div style={{
         width: 'clamp(320px, 94vw, 460px)', maxHeight: '90vh', overflowY: 'auto',
         boxSizing: 'border-box', scrollbarWidth: 'thin',
-        background: '#FFFFFF', border: `1px solid ${LINE}`, borderRadius: 18,
+        background: 'var(--sb-card)', border: `1px solid ${LINE}`, borderRadius: 18,
         boxShadow: '0 24px 60px rgba(25,23,18,0.24)',
         padding: '18px 20px 22px',
       }}>
@@ -238,7 +238,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{
             display: 'inline-flex', alignItems: 'center', gap: 6, height: 26, padding: '0 11px',
-            borderRadius: 999, background: '#F1ECDE', color: '#4A4438', fontSize: 11.5,
+            borderRadius: 999, background: 'var(--sb-field)', color: 'var(--sb-ink-2)', fontSize: 11.5,
           }}>
             <span style={{ width: 7, height: 7, borderRadius: 999, background: typeColor, flexShrink: 0 }} />
             {isEdit ? 'Transaction' : 'New transaction'}
@@ -250,7 +250,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
         {/* Type — three choices you can see, rather than a title that cycles */}
         <div style={{
           display: 'flex', gap: 2, padding: 3, marginTop: 14,
-          borderRadius: 999, background: '#EDE7D9',
+          borderRadius: 999, background: 'var(--sb-field)',
         }}>
           {TYPES.map(t => {
             const on = type === t.id
@@ -260,7 +260,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
                 aria-pressed={on}
                 style={{
                   flex: 1, height: 32, borderRadius: 999, border: 'none', fontFamily: 'inherit',
-                  background: on ? INK : 'transparent', color: on ? '#FDF8E7' : MUTED,
+                  background: on ? INK : 'transparent', color: on ? 'var(--sb-ink-on-dark)' : MUTED,
                   fontSize: 12.5, fontWeight: on ? 600 : 500, cursor: 'pointer',
                 }}>{t.label}</button>
             )
@@ -271,12 +271,12 @@ export function TransactionModal({ transaction, accounts, categories, history = 
         <div style={{
           display: 'flex', alignItems: 'center', gap: 10, marginTop: 12,
           padding: '0 15px', height: 66, borderRadius: 12,
-          background: '#FAF7EC', border: `1px solid ${LINE}`,
+          background: 'var(--sb-field)', border: `1px solid ${LINE}`,
         }}>
           <span style={{ position: 'relative', display: 'flex', flexShrink: 0 }}>
             <span style={{
               display: 'inline-flex', alignItems: 'center', gap: 4, height: 30, padding: '0 10px',
-              borderRadius: 8, background: '#FFFFFF', border: `1px solid ${LINE}`,
+              borderRadius: 8, background: 'var(--sb-card)', border: `1px solid ${LINE}`,
               fontSize: 12, fontWeight: 600, color: MUTED,
             }}>
               {currency}
@@ -396,9 +396,9 @@ export function TransactionModal({ transaction, accounts, categories, history = 
                 title="Money has actually moved"
                 style={{
                   ...PILL, flexShrink: 0,
-                  background: isCleared ? INK : '#FFFFFF',
+                  background: isCleared ? INK : 'var(--sb-card)',
                   border: isCleared ? 'none' : `1px solid ${LINE}`,
-                  color: isCleared ? '#FDF8E7' : MUTED,
+                  color: isCleared ? 'var(--sb-ink-on-dark)' : MUTED,
                 }}>
                 {isCleared && <Check size={13} strokeWidth={2.5} />} Paid
               </button>
@@ -442,7 +442,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
                   <div style={{
                     position: 'absolute', top: 46, left: 0, right: 0, zIndex: 20, padding: 5,
                     maxHeight: 210, overflowY: 'auto',
-                    background: '#FFFFFF', border: `1px solid ${LINE}`, borderRadius: 12,
+                    background: 'var(--sb-card)', border: `1px solid ${LINE}`, borderRadius: 12,
                     boxShadow: '0 12px 32px rgba(25,23,18,0.18)',
                   }}>
                     {payeeHits.map(name => (
@@ -467,7 +467,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
                 placeholder="Anything worth remembering…"
                 style={{
                   flex: 1, minWidth: 0, boxSizing: 'border-box', resize: 'vertical',
-                  background: '#FFFFFF', border: `1px solid ${LINE}`, borderRadius: 9,
+                  background: 'var(--sb-card)', border: `1px solid ${LINE}`, borderRadius: 9,
                   padding: '9px 12px', fontSize: 13.5, color: INK, fontFamily: 'inherit',
                   outline: 'none', textAlign: 'left',
                 }} />
@@ -516,7 +516,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
                     <button onClick={() => setAttachments(prev => prev.filter((_, j) => j !== i))} title="Remove"
                       style={{
                         position: 'absolute', top: -6, right: -6, width: 19, height: 19, padding: 0,
-                        borderRadius: '50%', background: '#FFFFFF', border: `1px solid ${LINE}`,
+                        borderRadius: '50%', background: 'var(--sb-card)', border: `1px solid ${LINE}`,
                         color: MUTED, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
                         boxShadow: '0 1px 3px rgba(25,23,18,0.14)',
                       }}>
@@ -539,9 +539,9 @@ export function TransactionModal({ transaction, accounts, categories, history = 
               <button onClick={() => setIsRecurring(v => !v)}
                 style={{
                   ...PILL, flex: 1, justifyContent: 'flex-start',
-                  background: isRecurring ? INK : '#FFFFFF',
+                  background: isRecurring ? INK : 'var(--sb-card)',
                   border: isRecurring ? 'none' : `1px solid ${LINE}`,
-                  color: isRecurring ? '#FDF8E7' : MUTED,
+                  color: isRecurring ? 'var(--sb-ink-on-dark)' : MUTED,
                 }}>
                 {isRecurring ? <><Check size={13} strokeWidth={2.5} /> This one comes round again</> : 'One-off'}
               </button>
@@ -572,9 +572,9 @@ export function TransactionModal({ transaction, accounts, categories, history = 
                 style={{
                   flex: 1, height: 44, borderRadius: 11, cursor: filled && open ? 'default' : 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  background: filled ? 'rgba(var(--sb-accent-rgb),0.18)' : open ? '#FAF7EC' : 'transparent',
+                  background: filled ? 'rgba(var(--sb-accent-rgb),0.18)' : open ? 'var(--sb-field)' : 'transparent',
                   border: `1px solid ${filled ? AMBER : LINE}`,
-                  color: filled ? '#191712' : open ? MUTED : GHOST,
+                  color: filled ? 'var(--sb-ink-1)' : open ? MUTED : GHOST,
                 }}>
                 <Icon size={17} strokeWidth={1.6} />
               </button>
@@ -586,8 +586,8 @@ export function TransactionModal({ transaction, accounts, categories, history = 
         <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
           <button onClick={handleSave} disabled={!canSave} style={{
             ...PILL, flex: 1, justifyContent: 'center', fontWeight: 600,
-            background: canSave ? INK : '#EDE7D9',
-            border: 'none', color: canSave ? '#FDF8E7' : GHOST,
+            background: canSave ? INK : 'var(--sb-field)',
+            border: 'none', color: canSave ? 'var(--sb-ink-on-dark)' : GHOST,
             cursor: canSave ? 'pointer' : 'default',
           }}>{isEdit ? 'Save changes' : 'Add transaction'}</button>
           <button onClick={onClose} style={{ ...PILL, color: MUTED }}>Cancel</button>
