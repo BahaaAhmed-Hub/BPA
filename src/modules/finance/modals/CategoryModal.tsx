@@ -10,24 +10,24 @@ import { CategoryGlyph } from '../components/CategoryGlyph'
 // as everything else now — an eyebrow pill, one pill per value, a black pill
 // for the action that commits.
 
-const INK   = '#191712'
-const MUTED = '#6C6553'
+const INK   = 'var(--sb-ink-1)'
+const MUTED = 'var(--sb-ink-3)'
 const GHOST = '#9B9180'
-const LINE  = '#E8E1CE'
-const HAIR  = '#F0EBDC'
-const OLIVE = '#0C8140'
-const RUST  = '#C62828'
+const LINE  = 'var(--sb-border)'
+const HAIR  = 'var(--sb-hairline)'
+const OLIVE = 'var(--sb-positive)'
+const RUST  = 'var(--sb-negative)'
 const DISPLAY = "'Outfit', system-ui, sans-serif"
 
 const PILL: React.CSSProperties = {
   display: 'inline-flex', alignItems: 'center', gap: 6, height: 42, boxSizing: 'border-box',
-  padding: '0 14px', borderRadius: 10, background: '#FFFFFF', border: `1px solid ${LINE}`,
+  padding: '0 14px', borderRadius: 10, background: 'var(--sb-card)', border: `1px solid ${LINE}`,
   color: INK, fontSize: 13.5, fontFamily: 'inherit', cursor: 'pointer', minWidth: 0,
 }
 const ROUND: React.CSSProperties = {
   width: 30, height: 30, borderRadius: '50%', flexShrink: 0, padding: 0,
   display: 'flex', alignItems: 'center', justifyContent: 'center',
-  background: '#FFFFFF', border: `1px solid ${LINE}`, color: MUTED, cursor: 'pointer',
+  background: 'var(--sb-card)', border: `1px solid ${LINE}`, color: MUTED, cursor: 'pointer',
 }
 const LABEL: React.CSSProperties = { width: 62, flexShrink: 0, fontSize: 13.5, color: MUTED, fontWeight: 500 }
 const ROW: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 10 }
@@ -88,14 +88,14 @@ export function CategoryModal({ category, categories, onSave, onDelete, onClose 
       <div style={{
         width: 'clamp(320px, 94vw, 430px)', maxHeight: '90vh', overflowY: 'auto',
         boxSizing: 'border-box', scrollbarWidth: 'thin',
-        background: '#FFFFFF', border: `1px solid ${LINE}`, borderRadius: 18,
+        background: 'var(--sb-card)', border: `1px solid ${LINE}`, borderRadius: 18,
         boxShadow: '0 24px 60px rgba(25,23,18,0.24)', padding: '18px 20px 22px',
       }}>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{
             display: 'inline-flex', alignItems: 'center', gap: 6, height: 26, padding: '0 11px',
-            borderRadius: 999, background: '#F1ECDE', color: '#4A4438', fontSize: 11.5,
+            borderRadius: 999, background: 'var(--sb-field)', color: 'var(--sb-ink-2)', fontSize: 11.5,
           }}>
             <span style={{ width: 7, height: 7, borderRadius: 999, background: color, flexShrink: 0 }} />
             {isEdit ? 'Category' : txTypeLocked ? 'New sub-category' : 'New category'}
@@ -113,7 +113,7 @@ export function CategoryModal({ category, categories, onSave, onDelete, onClose 
               <button onClick={onClick} title="Pick an icon, or upload one"
                 style={{
                   width: 46, height: 46, borderRadius: 12, flexShrink: 0, padding: 0,
-                  border: `1px solid ${LINE}`, background: '#FAF7EC', cursor: 'pointer',
+                  border: `1px solid ${LINE}`, background: 'var(--sb-field)', cursor: 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
                 }}>
                 <CategoryGlyph icon={icon} size={24} color={INK} />
@@ -128,7 +128,7 @@ export function CategoryModal({ category, categories, onSave, onDelete, onClose 
             placeholder="Name it"
             style={{
               flex: 1, minWidth: 0, boxSizing: 'border-box',
-              background: '#FFFFFF', border: `1px solid ${LINE}`, borderRadius: 11,
+              background: 'var(--sb-card)', border: `1px solid ${LINE}`, borderRadius: 11,
               padding: '13px 15px', fontFamily: DISPLAY, fontSize: 18, fontWeight: 600,
               letterSpacing: '-0.02em', color: INK, outline: 'none',
             }} />
@@ -149,9 +149,9 @@ export function CategoryModal({ category, categories, onSave, onDelete, onClose 
                     title={txTypeLocked ? 'Set by the category this sits under' : undefined}
                     style={{
                       ...PILL, flex: 1, justifyContent: 'center',
-                      background: on ? (v === 'income' ? OLIVE : RUST) : '#FFFFFF',
+                      background: on ? (v === 'income' ? OLIVE : RUST) : 'var(--sb-card)',
                       border: on ? 'none' : `1px solid ${LINE}`,
-                      color: on ? '#FDF8E7' : MUTED,
+                      color: on ? 'var(--sb-ink-on-dark)' : MUTED,
                       fontWeight: on ? 600 : 400,
                       opacity: txTypeLocked && !on ? 0.45 : 1,
                       cursor: txTypeLocked ? 'default' : 'pointer',
@@ -188,10 +188,10 @@ export function CategoryModal({ category, categories, onSave, onDelete, onClose 
                 <button key={c} onClick={() => setColor(c)} title={c}
                   style={{
                     width: 30, height: 30, borderRadius: 9, cursor: 'pointer', padding: 0,
-                    background: c, border: color === c ? '2px solid #191712' : '1px solid rgba(25,23,18,0.12)',
+                    background: c, border: color === c ? '2px solid var(--sb-ink-1)' : '1px solid rgba(25,23,18,0.12)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>
-                  {color === c && <Check size={14} strokeWidth={3} color="#FFFFFF" />}
+                  {color === c && <Check size={14} strokeWidth={3} color="var(--sb-card)" />}
                 </button>
               ))}
             </span>
@@ -201,8 +201,8 @@ export function CategoryModal({ category, categories, onSave, onDelete, onClose 
         <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
           <button onClick={handleSave} disabled={!canSave} style={{
             ...PILL, flex: 1, justifyContent: 'center', fontWeight: 600,
-            background: canSave ? INK : '#EDE7D9',
-            border: 'none', color: canSave ? '#FDF8E7' : GHOST,
+            background: canSave ? INK : 'var(--sb-field)',
+            border: 'none', color: canSave ? 'var(--sb-ink-on-dark)' : GHOST,
             cursor: canSave ? 'pointer' : 'default',
           }}>{isEdit ? 'Save changes' : 'Add category'}</button>
           <button onClick={onClose} style={{ ...PILL, color: MUTED }}>Cancel</button>
