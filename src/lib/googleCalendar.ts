@@ -327,6 +327,44 @@ export async function fetchCalendarEventsWithToken(
   } catch { return [] }
 }
 
+// ─── Is that event still there? ──────────────────────────────────────────────
+//
+// A task remembers the id of the event it made and nothing else, so "on your
+// calendar" was a claim about a string. If the event was deleted in Google, or
+// written to a calendar you do not display, the task went on saying it for
+// good. This asks.
+//
+// `null` means the id is dead — deleted, or cancelled, which Google reports as
+// an event with `status: 'cancelled'` rather than a 404.
+
+export async function lookUpEvent(
+  token: string,
+  calendarId: string,
+  eventId: string,
+): Promise<GCalEvent | null> {
+  try {
+    const res = await gcalRequest(
+      token, `/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}`)
+    if (!res.ok) return null
+    const ev = await res.json() as GCalEvent
+    return ev.status === 'cancelled' ? null : ev
+  } catch { return null }
+}
+
+/** The same, for an account whose token never reaches the browser. */
+export async function efLookUpEvent(
+  accountId: string,
+  calendarId: string,
+  eventId: string,
+): Promise<GCalEvent | null> {
+  const { data, error } = await supabase.functions.invoke('google-calendar-write', {
+    body: { action: 'get_event', ...(await efAccount(accountId)), calendar_id: calendarId, event_id: eventId },
+  })
+  if (error || data?.error) return null
+  const ev = data?.event as GCalEvent | undefined
+  return ev && ev.status !== 'cancelled' ? ev : null
+}
+
 // ─── Fetch events from one calendar ──────────────────────────────────────────
 
 export async function fetchCalendarEvents(

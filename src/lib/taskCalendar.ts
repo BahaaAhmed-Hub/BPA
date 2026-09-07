@@ -66,3 +66,31 @@ export function resolveTaskCalendar(
     companyName: onOtherAccount ? co?.name : undefined,
   }
 }
+
+
+// ─── Is the event this task made still there? ────────────────────────────────
+//
+// A task remembers `gcalEventId` and nothing else. The event can be deleted in
+// Google, or moved, or written to a calendar this account can no longer read —
+// and the task would go on saying "on your calendar" for ever. So ask.
+
+export async function verifyTaskEvent(
+  task: { gcalEventId?: string; calendarId?: string; companyId?: string; company?: string },
+): Promise<{ found: boolean; when: string | null }> {
+  if (!task.gcalEventId) return { found: false, when: null }
+  const target = resolveTaskCalendar(task)
+  try {
+    const { lookUpEvent, efLookUpEvent, refreshPrimaryToken } = await import('@/lib/googleCalendar')
+    if (target.accountId) {
+      const ev = await efLookUpEvent(target.accountId, target.calendarId, task.gcalEventId)
+      return { found: !!ev, when: ev?.start?.dateTime ?? ev?.start?.date ?? null }
+    }
+    const token = await refreshPrimaryToken() || localStorage.getItem('google_provider_token')
+    if (!token) return { found: true, when: null }   // cannot ask: do not accuse
+    const ev = await lookUpEvent(token, target.calendarId, task.gcalEventId)
+    return { found: !!ev, when: ev?.start?.dateTime ?? ev?.start?.date ?? null }
+  } catch {
+    // A network failure is not evidence the event is gone.
+    return { found: true, when: null }
+  }
+}

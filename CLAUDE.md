@@ -382,14 +382,22 @@ Two different things were called status and neither could be changed from the
 task itself. `TaskDetailPanel` shows both, as **buttons, not a select** — three
 states is not a menu, and a menu you must open to see what is possible is the
 wrong shape for either:
-- **Its own state** — Open / Done / Cancelled, as a segmented row; plus a tick
-  in the panel header that finishes it (and turns into a reopen).
-- **Its column** — one of `loadCustomStatuses()`, as chips, written to
-  `boardStatus`.
+- **Its own state** — two switches in the panel header, beside expand/delete/
+  close: a tick (done) and a ban (not doing it). Open is neither being on, which
+  is what open means. No row of buttons in the body and no select.
+- **Its column** is the board's business — you move a task by dragging it there,
+  so the panel does not repeat it.
 Choosing a column on a finished task *is* the reopen: `completed: false`,
 `status: 'open'`, `completedAt` cleared. The tick could only toggle and the
 board hides what is finished, so a task done by accident had nowhere to go back
 to. `updateTask` logs which happened.
+
+**"On your calendar" is checked, not assumed.** A task keeps a `gcalEventId`
+and nothing else, so the row was a claim about a string: delete the event in
+Google and the task said it for ever. `verifyTaskEvent()` looks it up
+(`lookUpEvent` / `efLookUpEvent`, the latter through the edge function's new
+`get_event`), shows the time Google actually holds, and offers **put it back**
+when the id is dead. A network failure is not evidence — it stays quiet.
 
 **The grid opens at the earliest thing on it**, not at a fixed 07:00 —
 a task blocked at 04:00 was drawn, above the fold, and read as never scheduled.

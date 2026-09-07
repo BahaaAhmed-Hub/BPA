@@ -15,6 +15,7 @@
  *   delete_event   — Deletes an event. Body: { calendar_id, account_id, event_id }
  *   add_meet       — Adds Google Meet to an existing event (PATCH conferenceDataVersion=1).
  *                    Body: { calendar_id, account_id, event_id }
+ *   get_event      — Reads one event back. Body: { calendar_id, account_id, event_id }
  *
  * Required secrets: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET
  * Auto-injected: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
@@ -188,6 +189,7 @@ serve(async (req: Request) => {
       case 'delete_event': return await handleDelete(token, calendarId, body)
       case 'add_meet':     return await handleAddMeet(token, calendarId, body)
       case 'move_event':   return await handleMove(token, calendarId, body)
+      case 'get_event':    return await handleGet(token, calendarId, body)
       default:             return fail(`Unknown action: ${action}`)
     }
   } catch (e) {
@@ -197,6 +199,18 @@ serve(async (req: Request) => {
 })
 
 // ─── Action handlers ──────────────────────────────────────────────────────────
+
+/** Read one event back. The browser can already read a calendar it has a token
+ *  for; this is for the accounts whose token it never sees. */
+async function handleGet(token: string, calendarId: string, body: Record<string, unknown>) {
+  const eventId = body.event_id as string | undefined
+  if (!eventId) return fail('Missing event_id')
+  const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}`
+  const res = await fetchWithRetry(url, { headers: { Authorization: `Bearer ${token}` } })
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) return fail(data?.error?.message ?? 'Google API error', res.status)
+  return ok({ event: data })
+}
 
 async function handleCreate(token: string, calendarId: string, body: Record<string, unknown>) {
   const event = body.event as object | undefined

@@ -7,16 +7,15 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   X, Maximize2, ChevronDown, ChevronRight,
   Plus, Link2, Folder, FileText, Image as ImageIcon, CalendarDays, BarChart3, History, Trash2, Check, User, Paperclip,
-  RotateCcw, ExternalLink, Ban, Circle,
+  ExternalLink, Ban,
 } from 'lucide-react'
 import type { Task, TaskType, Priority, ChecklistStep, TaskAttachment, TaskActivity } from '@/types'
 import { PRIORITY_META, TASK_TYPE_META, getVisibleUsers, loadVisibleCompanies } from '@/types'
 import { useTaskStore } from '@/store/taskStore'
 import { useUIStore } from '@/store/uiStore'
 import { TASK_TYPE_ORDER, initials, resolveTaskVisuals, formatScheduleLabel } from './taskVisuals'
-import { loadCustomStatuses } from '@/lib/customStatuses'
 import { scheduleTaskToCalendar } from '@/lib/aiScheduler'
-import { resolveTaskCalendar } from '@/lib/taskCalendar'
+import { resolveTaskCalendar, verifyTaskEvent } from '@/lib/taskCalendar'
 import { SchedulePopover } from './SchedulePopover'
 
 const PRIORITIES: Priority[] = ['P0', 'P1', 'P2', 'P3']
@@ -39,12 +38,6 @@ const PRIORITIES: Priority[] = ['P0', 'P1', 'P2', 'P3']
 //
 // The three states are prefixed so they cannot collide with a status of your
 // own called "done".
-const STATE_OPTIONS = [
-  { value: '__open',      label: 'Open' },
-  { value: '__done',      label: 'Done' },
-  { value: '__cancelled', label: 'Cancelled' },
-] as const
-
 const todayKey = () => {
   const d = new Date()
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
@@ -133,10 +126,8 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
   // Your columns, from Settings. Read on every render so renaming one in
   // another tab shows here without a reload.
   const focusOn = useUIStore(s => s.focusOn)
-  const columns = loadCustomStatuses()
   const finished  = task.completed || task.status === 'done'
   const cancelled = task.status === 'cancelled'
-  const statusValue = finished ? '__done' : cancelled ? '__cancelled' : (task.boardStatus ?? '__open')
 
   // ─── Is it actually on the calendar? ───────────────────────────────────────
   //
@@ -147,12 +138,45 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
   // whichever quadrant it is in.
   const [pushing, setPushing] = useState(false)
   const [pushError, setPushError] = useState<string | null>(null)
+  // Whether the event the task remembers is actually there. A task keeps an
+  // id and nothing else, so "on your calendar" was a claim about a string:
+  // delete the event in Google, or write it to a calendar you do not display,
+  // and the task went on saying it for good. This asks Google.
+  const [eventState, setEventState] = useState<'checking' | 'there' | 'gone' | 'unknown'>('unknown')
+  const [eventWhen, setEventWhen] = useState<string | null>(null)
   // Which calendar it is aimed at, named on the row. A task carrying a company
   // goes to that company's calendar on that company's account — and when that
   // account has to be reconnected, the failure has to say so rather than the
   // row quietly reading "not on your calendar" forever.
   const calTarget = resolveTaskCalendar(task)
   const calWhere = calTarget.companyName ?? (calTarget.source === 'task' ? 'the chosen calendar' : 'your calendar')
+
+  useEffect(() => {
+    let alive = true
+    setEventWhen(null)
+    if (!task.gcalEventId) { setEventState('unknown'); return }
+    setEventState('checking')
+    void verifyTaskEvent(task).then(res => {
+      if (!alive) return
+      setEventState(res.found ? 'there' : 'gone')
+      setEventWhen(res.when)
+    })
+    return () => { alive = false }
+  }, [task.id, task.gcalEventId])
+
+  /** Forget the dead id and make it again — the only repair there is. */
+  async function remakeEvent() {
+    if (pushing) return
+    setPushing(true); setPushError(null)
+    try {
+      const res = await scheduleTaskToCalendar({ ...task, gcalEventId: undefined })
+      if (res.success && res.gcalEventId) {
+        patch({ gcalEventId: res.gcalEventId })
+        setEventState('there')
+      } else setPushError(res.error ?? 'Google would not take it.')
+    } catch { setPushError('Google would not take it.') }
+    finally { setPushing(false) }
+  }
 
   async function pushToCalendar() {
     if (!task.dueDate || pushing) return
@@ -260,6 +284,10 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
         {/* Finishing something is one gesture, and so is deciding it is not
             finished after all. The cell below says where the task stands; this
             is the button you reach for without reading it. */}
+        {/* Where the task stands, as two switches rather than a row of
+            buttons in the body: done, or not doing it. Open is neither of them
+            being on, which is what "open" means. Its board column is the
+            board's business — you move it by dragging it there. */}
         <button
           title={finished ? 'Not done after all — reopen it' : 'Mark it done'}
           aria-pressed={finished}
@@ -267,10 +295,22 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
           style={{
             ...ICON_BTN,
             background: finished ? '#0C8140' : 'transparent',
-            border: finished ? '1px solid #0C8140' : '1px solid #E8E1CE',
+            border: `1px solid ${finished ? '#0C8140' : '#E8E1CE'}`,
             color: finished ? '#FFFFFF' : '#6C6553',
           }}>
-          {finished ? <RotateCcw size={14} /> : <Check size={15} />}
+          <Check size={15} />
+        </button>
+        <button
+          title={cancelled ? 'Put it back — it is on again' : 'Not doing it'}
+          aria-pressed={cancelled}
+          onClick={() => setTaskStatus(cancelled ? '__open' : '__cancelled')}
+          style={{
+            ...ICON_BTN,
+            background: cancelled ? '#6C6553' : 'transparent',
+            border: `1px solid ${cancelled ? '#6C6553' : '#E8E1CE'}`,
+            color: cancelled ? '#FFFFFF' : '#6C6553',
+          }}>
+          <Ban size={14} />
         </button>
         <button title={expanded ? 'Narrow the panel' : 'Widen the panel'} onClick={() => setExpanded(x => !x)} style={ICON_BTN}><Maximize2 size={14} /></button>
         <button title="Delete task" onClick={() => { deleteTask(task.id); onClose() }} style={ICON_BTN}>
@@ -333,17 +373,37 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
           {/* On the calendar, or not — and the way to put it there */}
           {task.dueDate && (
             task.gcalEventId ? (
+              eventState === 'gone' ? (
+                // The id is dead: deleted in Google, or on a calendar this
+                // account can no longer read. Saying "on your calendar" here is
+                // the bug you spent an afternoon on.
+                <button
+                  onClick={() => void remakeEvent()}
+                  disabled={pushing}
+                  title="The event this task made is not in Google any more"
+                  style={{ ...CELL, gridColumn: '1 / -1', width: '100%', borderColor: '#E7C9C9', background: '#FBF0F0' }}>
+                  <CalendarDays size={14} strokeWidth={1.9} style={{ flexShrink: 0, color: '#C62828' }} />
+                  <span style={{ ...CELL_VALUE, color: '#C62828' }}>
+                    {pushing ? 'Putting it back…' : pushError ?? 'Not in Google any more — put it back'}
+                  </span>
+                </button>
+              ) : (
               <button
-                onClick={() => focusOn({ module: 'calendar', id: task.gcalEventId!, date: task.dueDate })}
-                title="Open the day it is blocked on"
+                onClick={() => focusOn({ module: 'calendar', id: task.gcalEventId!, date: (eventWhen ?? task.dueDate)?.slice(0, 10) })}
+                title={eventWhen ? `Blocked ${new Date(eventWhen).toLocaleString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}` : 'Open the day it is blocked on'}
                 style={{ ...CELL, gridColumn: '1 / -1', width: '100%' }}>
-                <CalendarDays size={14} strokeWidth={1.9} style={{ flexShrink: 0, color: '#0C8140' }} />
+                <CalendarDays size={14} strokeWidth={1.9} style={{ flexShrink: 0, color: eventState === 'checking' ? '#9B9180' : '#0C8140' }} />
                 <span style={{ ...CELL_VALUE, color: '#6C6553' }}>
-                  On {calTarget.companyName ? `${calTarget.companyName}'s calendar` : 'your calendar'}
-                  {task.plannedTime ? ` · ${task.plannedTime}` : ''}
+                  {eventState === 'checking' ? 'Checking the calendar…' : (
+                    <>On {calTarget.companyName ? `${calTarget.companyName}'s calendar` : 'your calendar'}
+                    {eventWhen
+                      ? ` · ${new Date(eventWhen).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`
+                      : task.plannedTime ? ` · ${task.plannedTime}` : ''}</>
+                  )}
                 </span>
                 <ExternalLink size={12} style={{ flexShrink: 0, color: '#9B9180' }} />
               </button>
+              )
             ) : (
               <button
                 onClick={() => void pushToCalendar()}
@@ -357,63 +417,6 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
               </button>
             )
           )}
-
-          {/* Where it stands. Two rows of buttons, not a select: the state of a
-              task is three choices and its column is a handful, and a menu you
-              have to open to see what is even possible is the wrong shape for
-              either. What it is now reads off the screen. */}
-          <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <div style={{ display: 'flex', gap: 6 }}>
-              {STATE_OPTIONS.map(o => {
-                const on = statusValue === o.value
-                const Icon = o.value === '__done' ? Check : o.value === '__cancelled' ? Ban : Circle
-                return (
-                  <button key={o.value} onClick={() => setTaskStatus(o.value)} aria-pressed={on}
-                    title={o.value === '__done' ? 'Finished' : o.value === '__cancelled' ? 'Not doing it' : 'Still to do'}
-                    style={{
-                      ...CELL, flex: 1, justifyContent: 'center', gap: 6, cursor: 'pointer',
-                      background: on ? (o.value === '__done' ? 'rgba(12,129,64,0.14)' : o.value === '__cancelled' ? 'rgba(155,145,128,0.18)' : 'rgba(245,209,78,0.22)') : '#FAF7EC',
-                      border: `1px solid ${on ? (o.value === '__done' ? '#0C8140' : o.value === '__cancelled' ? '#9B9180' : '#E0CE8A') : '#E8E1CE'}`,
-                      color: on ? '#191712' : '#6C6553',
-                      fontWeight: on ? 600 : 500, fontSize: 12.5,
-                    }}>
-                    <Icon size={13} strokeWidth={2} style={{ flexShrink: 0, color: on && o.value === '__done' ? '#0C8140' : 'currentColor' }} />
-                    {o.label}
-                  </button>
-                )
-              })}
-            </div>
-
-            {columns.length > 0 && (
-              <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-                {columns.map(c => {
-                  const on = !finished && !cancelled && task.boardStatus === c.id
-                  return (
-                    <button key={c.id} onClick={() => setTaskStatus(c.id)}
-                      title={finished ? `Reopen it in ${c.label}` : `Move it to ${c.label}`}
-                      style={{
-                        display: 'inline-flex', alignItems: 'center', gap: 5,
-                        height: 24, padding: '0 10px', borderRadius: 999, cursor: 'pointer',
-                        fontFamily: 'inherit', fontSize: 11, fontWeight: on ? 600 : 500,
-                        background: on ? '#191712' : '#FAF7EC',
-                        border: `1px solid ${on ? '#191712' : '#E8E1CE'}`,
-                        color: on ? '#FDF8E7' : '#6C6553',
-                      }}>
-                      <span style={{ width: 7, height: 7, borderRadius: '50%', background: c.color, flexShrink: 0 }} />
-                      {c.label}
-                    </button>
-                  )
-                })}
-              </div>
-            )}
-
-            {finished && task.completedAt && (
-              <span style={{ fontSize: 11, color: '#9B9180' }}>
-                Done {new Date(task.completedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
-                {' · '}pick a column to reopen it
-              </span>
-            )}
-          </div>
 
           {/* Type */}
           <label style={{ ...CELL, position: 'relative' }}>
