@@ -5,7 +5,7 @@ import {
   ChevronLeft, ChevronRight, ChevronDown, Layers, Calendar, Video,
   Sparkles, MapPin, RefreshCw, X, Eye, EyeOff,
   CheckCircle2, XCircle, Link, Check, Plus, Paperclip, FileText,
-  ExternalLink, AlertCircle, Shield, Copy, Trash2, Ban, Calendar as CalendarIcon, CheckSquare,
+  ExternalLink, AlertCircle, Shield, Copy, Trash2, Ban, CheckSquare,
 } from 'lucide-react'
 import { SchedulePopover, TimeSelect, formatTime, addMinutes } from '@/modules/tasks/SchedulePopover'
 import {
@@ -933,22 +933,29 @@ const EV_ROUND: React.CSSProperties = {
 }
 /** Four sizes in the whole panel: 27 title, 14 value, 13.5 label, 11.5 caption. */
 const EV_LABEL: React.CSSProperties = {
-  width: 70, flexShrink: 0, fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-3)', fontWeight: 500,
+  width: 84, flexShrink: 0, fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-3)', fontWeight: 500,
 }
 /** Every labelled row hangs off the same left edge. */
 const EV_ROW: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 10,
 }
+/** A section is named, not shouted: the design sets these in the muted step at
+ *  body size, with the count beside the word. */
 const EV_SECTION: React.CSSProperties = {
-  ...T.h3, color: 'var(--sb-ink-1)', flexShrink: 0,
+  fontSize: 'var(--sb-t-body)', fontWeight: 600, color: 'var(--sb-ink-3)', flexShrink: 0,
 }
 /** Every value in the panel sits in one of these, whether you can type in it,
  *  pick from it, or only read it. */
+/** Every value in the panel sits in one of these. It is plain until you reach
+ *  for it — a box around every value made the panel a form, and most of what is
+ *  in it is read far more often than it is changed. Hover and focus are in
+ *  index.css on `.sb-ev-field`; nothing here writes a style on an event. */
 const EV_FIELD: React.CSSProperties = {
-  display: 'flex', alignItems: 'center', gap: 8, height: 36, boxSizing: 'border-box',
-  width: '100%', minWidth: 0, padding: '0 12px', borderRadius: 'var(--sb-r-nav)',
-  background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)',
-  color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body)', fontFamily: 'inherit', textAlign: 'left',
+  display: 'flex', alignItems: 'center', gap: 8, height: 34, boxSizing: 'border-box',
+  width: '100%', minWidth: 0, padding: '0 9px', borderRadius: 'var(--sb-r-nav)',
+  background: 'transparent', border: 'var(--sb-border-width) solid transparent',
+  color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body)', fontWeight: 600,
+  fontFamily: 'inherit', textAlign: 'left',
 }
 const EV_GHOST_ICON: React.CSSProperties = {
   width: 26, height: 26, borderRadius: 'var(--sb-r-chip)', flexShrink: 0, padding: 0,
@@ -1403,6 +1410,42 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
           textDecoration: status === 'cancelled' ? 'line-through' : 'none',
         }} />
 
+      {/* The when is the panel's subtitle, the way the design reads it — under
+          the name, in one line, and still the way the time is changed. */}
+      <span ref={whenRef} style={{ display: 'block', position: 'relative', marginTop: 4 }}>
+        <button
+          onClick={() => setWhenOpen(o => !o)}
+          title="Change the day or the time"
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6, maxWidth: '100%',
+            background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+            fontFamily: 'inherit', fontSize: 'var(--sb-t-body)', fontWeight: 500,
+            color: 'var(--sb-ink-3)', textAlign: 'left',
+          }}>
+          <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {new Date(dateStr + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'long' })}
+            {isAllDay ? ' · All day' : ` · ${compactRange(fromTime, toTime)}`}
+          </span>
+          <ChevronDown size={ICON.sm} strokeWidth={STROKE.rest} style={{ color: 'var(--sb-ink-4)', flexShrink: 0 }} />
+        </button>
+        {whenOpen && (
+          <SchedulePopover
+            ignoreEventId={event.id}
+            date={dateStr}
+            start={isAllDay ? undefined : fromTime}
+            duration={Math.max(15, minutesBetween(fromTime, toTime))}
+            onApply={patch => {
+              const nextDate = patch.dueDate ?? dateStr
+              const nextFrom = patch.plannedTime ?? fromTime
+              const nextTo = addMinutes(nextFrom, patch.duration ?? Math.max(15, minutesBetween(fromTime, toTime)))
+              setDateStr(nextDate); setFromTime(nextFrom); setToTime(nextTo)
+              pushTimes(nextDate, nextFrom, nextTo)
+            }}
+            onClose={() => setWhenOpen(false)}
+          />
+        )}
+      </span>
+
       {/* ── The meeting itself ───────────────────────────────────────────── */}
       {/* Branding belongs to a link that exists. An event with no call shows
           nothing here — the way to add one is a plain icon on the row below. */}
@@ -1458,7 +1501,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
       <div style={{ ...EV_ROW, marginTop: 13 }}>
         <span style={EV_LABEL}>Location</span>
         <span ref={placeRef} style={{ flex: 1, minWidth: 0, display: 'flex', gap: 7, position: 'relative' }}>
-          <span style={{ ...EV_FIELD, flex: 1 }}>
+          <span className="sb-ev-field" style={{ ...EV_FIELD, flex: 1 }}>
             <MapPin size={ICON.md} color={location ? 'var(--sb-ink-3)' : 'var(--sb-ink-4)'} style={{ flexShrink: 0 }} />
             <input
               value={location}
@@ -1523,43 +1566,13 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
       {/* One pill, one popover: the date and both times together. Three
           controls could not share a line with the label column, and a row that
           breaks its own grid is worse than a row with one control in it. */}
-      <div style={{ ...EV_ROW, position: 'relative' }}>
-        <span style={EV_LABEL}>When</span>
-        <span ref={whenRef} style={{ flex: 1, minWidth: 0, position: 'relative' }}>
-          <button onClick={() => setWhenOpen(o => !o)}
-            style={{ ...EV_FIELD, width: '100%', cursor: 'pointer' }}>
-            <CalendarIcon size={ICON.md} color="var(--sb-ink-3)" style={{ flexShrink: 0 }} />
-            <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {new Date(dateStr + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}
-              {isAllDay ? ' · All day' : ` · ${compactRange(fromTime, toTime)}`}
-            </span>
-            <ChevronDown size={ICON.sm} strokeWidth={STROKE.rest} style={{ color: 'var(--sb-ink-4)', flexShrink: 0 }} />
-          </button>
-          {whenOpen && (
-            <SchedulePopover
-              ignoreEventId={event.id}
-              date={dateStr}
-              start={isAllDay ? undefined : fromTime}
-              duration={Math.max(15, minutesBetween(fromTime, toTime))}
-              onApply={patch => {
-                const nextDate = patch.dueDate ?? dateStr
-                const nextFrom = patch.plannedTime ?? fromTime
-                const nextTo = addMinutes(nextFrom, patch.duration ?? Math.max(15, minutesBetween(fromTime, toTime)))
-                setDateStr(nextDate); setFromTime(nextFrom); setToTime(nextTo)
-                pushTimes(nextDate, nextFrom, nextTo)
-              }}
-              onClose={() => setWhenOpen(false)}
-            />
-          )}
-        </span>
-      </div>
 
       {/* ── What it runs into ────────────────────────────────────────────── */}
       {liveClashes.length > 0 && !clashDismissed && (
         <div style={{ ...EV_ROW, marginTop: 12 }}>
           <span style={EV_LABEL} />
           <span style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <button
+            <button className="sb-ev-field"
               onClick={() => onOpenEvent?.(liveClashes[0])}
               title={`Open “${displayTitle(liveClashes[0].summary)}”`}
               style={{
@@ -1594,7 +1607,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
         <div style={{ ...EV_ROW, position: 'relative' }}>
           <span style={EV_LABEL}>Repeats</span>
           <span style={{ flex: 1, minWidth: 0, position: 'relative' }}>
-            <button onClick={() => setRepeatOpen(o => !o)} disabled={!onSave}
+            <button className="sb-ev-field" onClick={() => setRepeatOpen(o => !o)} disabled={!onSave}
               title={onSave ? 'How often this comes back' : 'You cannot edit this event'}
               style={{ ...EV_FIELD, width: '100%', cursor: onSave ? 'pointer' : 'default',
                 color: recurrence ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)', opacity: onSave ? 1 : 0.7 }}>
@@ -1620,7 +1633,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
 
         <div style={EV_ROW}>
           <span style={EV_LABEL}>Alert</span>
-          <label style={{ ...EV_FIELD, flex: 1, position: 'relative', cursor: 'pointer' }}>
+          <label className="sb-ev-field" style={{ ...EV_FIELD, flex: 1, position: 'relative', cursor: 'pointer' }}>
             <span style={{ flex: 1, minWidth: 0, color: alertMinutes === undefined ? 'var(--sb-ink-4)' : 'var(--sb-ink-1)' }}>
               {describeAlert(alertMinutes, event.reminders?.useDefault !== false)}
             </span>
@@ -1641,12 +1654,12 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
           <span style={EV_LABEL}>Prep held</span>
           <span style={{ flex: 1, minWidth: 0 }}>
             {prep ? (
-              <span style={{ ...EV_FIELD, width: '100%' }}>
+              <span className="sb-ev-field" style={{ ...EV_FIELD, width: '100%' }}>
                 <Sparkles size={ICON.sm} color="var(--sb-ink-3)" />
                 {prepPoints.length} point{prepPoints.length === 1 ? '' : 's'} gathered
               </span>
             ) : (
-              <button onClick={onPrepRequest} disabled={prepLoading}
+              <button className="sb-ev-field" onClick={onPrepRequest} disabled={prepLoading}
                 style={{ ...EV_FIELD, width: '100%', cursor: 'pointer', opacity: prepLoading ? 0.6 : 1 }}>
                 <Sparkles size={ICON.sm} color="var(--sb-ink-3)" /> {prepLoading ? 'Gathering prep…' : 'Gather prep'}
               </button>
@@ -1662,25 +1675,30 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
       <div style={{ height: 1, background: 'var(--sb-hairline)', margin: '20px 0' }} />
 
       {/* ── Attendees ────────────────────────────────────────────────────── */}
-      <div style={{ ...EV_SECTION, marginBottom: 6 }}>Attendees</div>
+      <div style={{ ...EV_SECTION, marginBottom: 4 }}>
+        Attendees{attendees.length > 0 ? ` · ${attendees.length}` : ''}
+      </div>
       <div style={{ display: 'flex', flexDirection: 'column' }}>
         {attendees.map(a => (
           <div key={a.email} style={{
-            display: 'flex', alignItems: 'center', gap: 12, padding: '7px 0', minWidth: 0,
+            display: 'flex', alignItems: 'center', gap: 10, padding: '5px 0', minWidth: 0,
             opacity: pendingAttendees ? 0.6 : 1, transition: 'opacity 0.15s',
           }}>
             <span style={{
-              width: 32, height: 32, borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
+              width: 28, height: 28, borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               background: 'var(--sb-field)', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-micro)', fontWeight: 700,
             }}>{evInitials(a.displayName, a.email)}</span>
-            <span style={{ flex: 1, minWidth: 0, fontSize: 'var(--sb-t-label)', color: 'var(--sb-ink-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <span style={{ flex: 1, minWidth: 0, fontSize: 'var(--sb-t-body)', fontWeight: 500, color: 'var(--sb-ink-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {a.displayName ?? a.email}
+            </span>
+            <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', flexShrink: 0 }}>
+              {evOrg(a.email)}
             </span>
             <span
               title={`${describeResponse(a.responseStatus)} · ${evOrg(a.email)}`}
               style={{
-                ...EV_ROUND, width: 32, height: 32, flexShrink: 0, fontSize: 'var(--sb-t-label)', fontWeight: 600,
+                ...EV_ROUND, width: 26, height: 26, flexShrink: 0, fontSize: 'var(--sb-t-meta)', fontWeight: 600,
                 color: responseTone(a.responseStatus),
                 borderColor: a.responseStatus === 'accepted' ? 'color-mix(in srgb, var(--sb-positive) 40.0%, transparent)'
                   : a.responseStatus === 'declined' ? 'color-mix(in srgb, var(--sb-negative) 35.0%, transparent)' : 'var(--sb-border)',
@@ -1689,7 +1707,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
               onClick={() => removeAttendee(a.email)}
               disabled={!onSave}
               title={`Take ${a.displayName ?? a.email} off the invite`}
-              style={{ ...EV_ROUND, width: 32, height: 32, flexShrink: 0, color: 'var(--sb-negative)', borderColor: 'color-mix(in srgb, var(--sb-negative) 35.0%, transparent)', opacity: onSave ? 1 : 0.45 }}>
+              style={{ ...EV_ROUND, width: 26, height: 26, flexShrink: 0, color: 'var(--sb-negative)', borderColor: 'color-mix(in srgb, var(--sb-negative) 35.0%, transparent)', opacity: onSave ? 1 : 0.45 }}>
               <Trash2 size={ICON.sm} />
             </button>
           </div>
@@ -1702,7 +1720,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               border: '1px dashed var(--sb-border)', color: 'var(--sb-ink-4)',
             }}><Plus size={ICON.md} /></span>
-            <input
+            <input className="sb-ev-field"
               autoFocus
               value={attendeeDraft}
               onChange={e => setAttendeeDraft(e.target.value)}
@@ -1735,7 +1753,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
             ? `Shared with the ${attendees.length} invitee${attendees.length === 1 ? '' : 's'}`
             : 'Only you can see these'}
         </span>
-        <button
+        <button className="sb-ev-field"
           onClick={() => { if (event.htmlLink) window.open(event.htmlLink, '_blank', 'noopener') }}
           disabled={!event.htmlLink}
           title="Google Calendar holds the file picker"

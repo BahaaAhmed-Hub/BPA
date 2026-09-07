@@ -460,6 +460,21 @@ html, body {
 .sb-segmented[data-size="sm"] .sb-segmented-opt { height: calc(var(--sb-h-pill) - 10px); padding: 0 10px; font-size: var(--sb-t-meta); gap: 5px; }
 .sb-segmented[data-size="lg"] .sb-segmented-opt { height: calc(var(--sb-h-pill) - 4px); padding: 0 14px; font-size: var(--sb-t-body); }
 
+/* The event panel's values. Plain text in the row until the pointer or the
+   keyboard reaches one, which is when it becomes evident that it is editable.
+   ------------------------------------------------------------------------- */
+.sb-ev-field { transition: background 120ms ease-out, border-color 120ms ease-out; }
+.sb-ev-field:hover:not(:disabled) {
+  background: var(--sb-field);
+  border-color: var(--sb-border);
+}
+.sb-ev-field:focus-visible,
+.sb-ev-field:focus-within {
+  background: var(--sb-card);
+  border-color: var(--sb-ink-1);
+  outline: none;
+}
+
 /* Two hovers that are not a primitive: a figure that underlines to say it can
    be opened, and a row that tints. Both were mouse handlers writing styles. */
 .sb-underline-hover { border-bottom: var(--sb-border-width) solid transparent; padding-bottom: 1px; }
