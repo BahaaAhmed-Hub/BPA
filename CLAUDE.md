@@ -431,6 +431,26 @@ history.
   account. It is offered as the id `primary`, which every consumer already
   reads as "use the primary token" by finding no account with that id.
 
+## Mail — several mailboxes, and the three ways of answering
+`lib/gmail.ts` takes a `MailAccount` on every call (`accessToken(account)`: the
+signed-in one from the session, a connected one from `tokenManager`). Nothing
+here is "the app's mail" any more — it is always *an account's*.
+- **`mailAccounts(primaryEmail)`** in `modules/inbox/mailAccounts.ts` is the
+  whole set: the account you signed in with is not in
+  `professor-connected-accounts`, so it is added here. `mail-account-view` holds
+  `'all'` or one address.
+- **All is the default.** Every mailbox is fetched in parallel and merged newest
+  first; one that will not open names itself and the rest still arrive. Each row
+  and the open message carry the mailbox, because otherwise a merged inbox is a
+  list you cannot act on — you would not know where a reply leaves from.
+- **`sendMail()` is the only sender.** Reply, reply-all, forward and new differ
+  only in the fields. It does Cc/Bcc, HTML with a plain-text alternative,
+  attachments (`multipart/mixed`), `In-Reply-To`/`References`, and RFC 2047
+  headers so a non-ASCII subject survives.
+- **`Composer.tsx`** is that panel. From defaults to the mailbox the message
+  arrived in. Reply-all drops **every** address of yours, not just that mailbox.
+  A forward leaves the thread (no `threadId`, no `In-Reply-To`).
+
 ## Settings — Section → Component Mapping (CONFIRMED CORRECT as of latest commit)
 | Nav group | Section id | Title shown | Component rendered |
 |---|---|---|---|

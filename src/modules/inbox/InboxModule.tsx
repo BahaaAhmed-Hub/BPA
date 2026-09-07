@@ -1,9 +1,11 @@
 
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
-import { Mail, Zap, Clock, Copy, CheckCheck, RefreshCw, ArrowRight, WifiOff, ListPlus, Plus, Archive, Search, X as XIcon, PenSquare } from 'lucide-react'
+import { Mail, Zap, Clock, Copy, CheckCheck, RefreshCw, ArrowRight, WifiOff, ListPlus, Plus, Archive, Search, X as XIcon, PenSquare, Reply, ReplyAll, Forward } from 'lucide-react'
 import { triageEmail } from '@/lib/professor'
 import type { EmailTriage, EmailData } from '@/lib/professor'
-import { listUnreadThreadIds, getThread, extractBody, extractHtmlBody, header, markAsRead, archiveMessage, sendReply, composeEmail } from '@/lib/gmail'
+import { listUnreadThreadIds, getThread, extractBody, extractHtmlBody, header, markAsRead, archiveMessage, sendReply, escapeHtml, type MailAccount } from '@/lib/gmail'
+import { mailAccounts, loadMailView, saveMailView, accountsFor, shortAddress, type MailView } from './mailAccounts'
+import { Composer, type ComposeSeed, type ComposeMode } from './Composer'
 import { signInWithGoogle } from '@/lib/google'
 import { useAuthStore } from '@/store/authStore'
 import { useTaskStore } from '@/store/taskStore'
@@ -24,6 +26,10 @@ interface EmailMessage {
 interface Email {
   id: string
   threadId: string
+  /** Which mailbox this arrived in — the one it is archived in, and the one a
+   *  reply leaves from. With several accounts open at once, nothing else can
+   *  answer either question. */
+  account: MailAccount
   fromName: string
   fromEmail: string
   to: string
@@ -140,6 +146,51 @@ function EmailBodyFrame({ html }: { html: string }) {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
+
+/** Everyone on a message except you: the sender, plus whoever else was on it.
+ *  Reply-all that quietly writes to yourself is worse than no reply-all. */
+function replyAllTo(email: Email, mineAll: MailAccount[]): { to: string; cc: string } {
+  // Every address that is yours, not just the mailbox it landed in: two of your
+  // own accounts on one thread is common, and writing to the other one is still
+  // writing to yourself.
+  const mine = [email.account.email, ...mineAll.map(a => a.email)].map(e => e.toLowerCase())
+  const addresses = (list: string) => list.split(',').map(a => a.trim()).filter(Boolean)
+  const isMine = (a: string) => mine.some(m => a.toLowerCase().includes(m))
+  const others = [...addresses(email.to), ...addresses(email.cc ?? '')]
+    .filter(a => !isMine(a) && !a.toLowerCase().includes(email.fromEmail.toLowerCase()))
+  return { to: email.fromEmail, cc: [...new Set(others)].join(', ') }
+}
+
+/** The original, as it will sit under the reply. */
+function quoteOf(email: Email): string {
+  const when = new Date(email.receivedAt).toLocaleString('en-GB', {
+    day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+  })
+  const head = `On ${when}, ${escapeHtml(email.fromName)} &lt;${escapeHtml(email.fromEmail)}&gt; wrote:`
+  const body = email.htmlBody ?? `<div>${escapeHtml(email.body).replace(/\n/g, '<br>')}</div>`
+  return `<div style="font-size:12px;color:#6C6553;margin-bottom:8px">${head}</div>${body}`
+}
+
+function composeSeed(email: Email, mode: ComposeMode, accounts: MailAccount[]): ComposeSeed {
+  const subject = email.subject.replace(/^((re|fwd?):\s*)+/i, '')
+  if (mode === 'forward') {
+    return {
+      mode, account: email.account, to: '', subject: `Fwd: ${subject}`,
+      quoted: quoteOf(email),
+    }
+  }
+  const { to, cc } = mode === 'replyAll'
+    ? replyAllTo(email, accounts)
+    : { to: email.fromEmail, cc: '' }
+  return {
+    mode, account: email.account, to, cc: cc || undefined,
+    subject: `Re: ${subject}`,
+    quoted: quoteOf(email),
+    threadId: email.threadId,
+    inReplyTo: email.inReplyTo,
+  }
+}
+
 export function InboxModule() {
   const user         = useAuthStore(s => s.user)
   const addTasksBatch = useTaskStore(s => s.addTasksBatch)
@@ -159,16 +210,13 @@ export function InboxModule() {
   const [searchQuery,    setSearchQuery]    = useState('')
   const [nextPageToken,  setNextPageToken]  = useState<string | undefined>(undefined)
   const [loadingMore,    setLoadingMore]    = useState(false)
-  const [composing,      setComposing]      = useState(false)
-  const [composeTo,      setComposeTo]      = useState('')
-  const [composeSubject, setComposeSubject] = useState('')
-  const [composeBody,    setComposeBody]    = useState('')
-  const [composeSending, setComposeSending] = useState(false)
-  const [composeSent,    setComposeSent]    = useState(false)
   const [selectedIds,    setSelectedIds]    = useState<Set<string>>(new Set())
   const [batchArchiving, setBatchArchiving] = useState(false)
 
   // ── Bulk task state ──────────────────────────────────────────────────────────
+  // Which mailbox, or all of them at once.
+  const [view, setView] = useState<MailView>(loadMailView)
+  const [compose, setCompose] = useState<ComposeSeed | null>(null)
   const [bulkOpen,   setBulkOpen]   = useState(false)
   const [bulkText,   setBulkText]   = useState('')
   const [bulkDone,   setBulkDone]   = useState(false)
@@ -207,15 +255,34 @@ export function InboxModule() {
   const selectedTriage = selectedId ? (triageMap[selectedId] ?? null) : null
   const triagedCount   = visibleEmails.filter(e => triageMap[e.id]?.result).length
 
+  const accounts = useMemo(() => mailAccounts(user?.email), [user?.email])
+  const viewed   = useMemo(() => accountsFor(view, accounts), [view, accounts])
+
   const loadEmails = useCallback(async () => {
     setLoading(true)
     setFetchError(null)
     setNoAuth(false)
     try {
-      const { ids: threadIds, nextPageToken: npt } = await listUnreadThreadIds(20)
-      setNextPageToken(npt)
-      const threads   = await Promise.all(threadIds.map(id => getThread(id)))
-      const parsed: Email[] = threads.map(thread => {
+      const boxes = accountsFor(view, mailAccounts(user?.email))
+      if (boxes.length === 0) { setNoAuth(true); setEmails([]); return }
+      // Every mailbox at once, and one that will not open does not take the
+      // others down with it — it says which, and the rest still arrive.
+      const perBox = await Promise.all(boxes.map(async account => {
+        try {
+          const { ids, nextPageToken } = await listUnreadThreadIds(20, undefined, account)
+          const threads = await Promise.all(ids.map(id => getThread(id, account)))
+          return { account, threads, nextPageToken, error: null as string | null }
+        } catch (e) {
+          return { account, threads: [], nextPageToken: undefined, error: e instanceof Error ? e.message : 'failed' }
+        }
+      }))
+      const failures = perBox.filter(b => b.error)
+      if (failures.length === boxes.length) throw new Error(failures[0].error ?? 'Failed to load emails.')
+      if (failures.length > 0) {
+        setFetchError(failures.map(f => `${f.account.email}: ${f.error}`).join(' · '))
+      }
+      setNextPageToken(perBox.find(b => b.nextPageToken)?.nextPageToken)
+      const parsed: Email[] = perBox.flatMap(({ account, threads }) => threads.map(thread => {
         const msg     = thread.messages[thread.messages.length - 1]
         const headers = msg.payload.headers
         const from    = header(headers, 'from')
@@ -223,6 +290,7 @@ export function InboxModule() {
         return {
           id:          msg.id,
           threadId:    thread.id,
+          account,
           fromName:    nameMatch ? nameMatch[1].trim() : from.split('@')[0],
           fromEmail:   from.match(/<(.+)>/)?.[1] ?? from,
           subject:     header(headers, 'subject') || '(no subject)',
@@ -244,7 +312,10 @@ export function InboxModule() {
             }
           }),
         }
-      })
+      }))
+      // Newest first, whichever mailbox it came from — a merged inbox sorted by
+      // account would be two inboxes drawn on top of each other.
+      parsed.sort((a, b) => b.receivedAt.localeCompare(a.receivedAt))
       setEmails(parsed)
       if (parsed.length > 0) setSelectedId(parsed[0].id)
     } catch (err) {
@@ -257,7 +328,7 @@ export function InboxModule() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [view, user?.email])
 
   useEffect(() => { void loadEmails() }, [loadEmails])
 
@@ -302,7 +373,7 @@ export function InboxModule() {
   const handleArchive = useCallback(async (email: Email) => {
     setArchiving(email.id)
     try {
-      await archiveMessage(email.id)
+      await archiveMessage(email.id, email.account)
       setEmails(prev => {
         const next = prev.filter(e => e.id !== email.id)
         setSelectedId(next.length > 0 ? next[0].id : null)
@@ -317,7 +388,7 @@ export function InboxModule() {
     if (!body) return
     setSending(email.id)
     try {
-      await sendReply({ to: email.fromEmail, subject: email.subject, body, threadId: email.threadId, inReplyTo: email.inReplyTo })
+      await sendReply({ to: email.fromEmail, subject: email.subject, body, threadId: email.threadId, inReplyTo: email.inReplyTo, account: email.account })
       setSentIds(prev => new Set([...prev, email.id]))
       setReplyText(prev => ({ ...prev, [email.id]: '' }))
     } catch (err) {
@@ -325,20 +396,24 @@ export function InboxModule() {
     } finally { setSending(null) }
   }, [replyText])
 
+
   const handleLoadMore = useCallback(async () => {
     if (!nextPageToken || loadingMore) return
     setLoadingMore(true)
     try {
-      const { ids, nextPageToken: npt } = await listUnreadThreadIds(20, nextPageToken)
+      // A page token belongs to one mailbox; when several are open, more
+      // arrives from the one that had more to give.
+      const box = viewed.length === 1 ? viewed[0] : (emails[emails.length - 1]?.account ?? viewed[0])
+      const { ids, nextPageToken: npt } = await listUnreadThreadIds(20, nextPageToken, box)
       setNextPageToken(npt)
-      const threads = await Promise.all(ids.map(id => getThread(id)))
+      const threads = await Promise.all(ids.map(id => getThread(id, box)))
       const parsed: Email[] = threads.map(thread => {
         const msg = thread.messages[thread.messages.length - 1]
         const headers = msg.payload.headers
         const from = header(headers, 'from')
         const nameMatch = from.match(/^"?([^"<]+)"?\s*</)
         return {
-          id: msg.id, threadId: thread.id,
+          id: msg.id, threadId: thread.id, account: box,
           fromName:  nameMatch ? nameMatch[1].trim() : from.split('@')[0],
           fromEmail: from.match(/<(.+)>/)?.[1] ?? from,
           to: header(headers, 'to') || '', cc: header(headers, 'cc') || undefined,
@@ -358,13 +433,15 @@ export function InboxModule() {
       setEmails(prev => [...prev, ...parsed])
     } catch { /* offline */ }
     finally { setLoadingMore(false) }
-  }, [nextPageToken, loadingMore])
+  }, [nextPageToken, loadingMore, viewed, emails])
 
   async function handleBatchArchive() {
     if (!selectedIds.size || batchArchiving) return
     setBatchArchiving(true)
     try {
-      await Promise.all([...selectedIds].map(id => archiveMessage(id).catch(() => {})))
+      // Each one goes back to the mailbox it came from.
+      const boxOf = new Map(emails.map(e => [e.id, e.account]))
+      await Promise.all([...selectedIds].map(id => archiveMessage(id, boxOf.get(id)).catch(() => {})))
       setEmails(prev => {
         const next = prev.filter(e => !selectedIds.has(e.id))
         setSelectedId(next.length > 0 ? next[0].id : null)
@@ -372,18 +449,6 @@ export function InboxModule() {
       })
       setSelectedIds(new Set())
     } finally { setBatchArchiving(false) }
-  }
-
-  async function handleComposeSend() {
-    if (!composeTo.trim() || !composeSubject.trim() || !composeBody.trim()) return
-    setComposeSending(true)
-    try {
-      await composeEmail({ to: composeTo.trim(), subject: composeSubject.trim(), body: composeBody.trim() })
-      setComposeSent(true)
-      setTimeout(() => { setComposing(false); setComposeTo(''); setComposeSubject(''); setComposeBody(''); setComposeSent(false) }, 1500)
-    } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to send.')
-    } finally { setComposeSending(false) }
   }
 
   // ─── Render helpers ──────────────────────────────────────────────────────
@@ -454,7 +519,7 @@ export function InboxModule() {
                 setSelectedId(email.id)
                 if (!readIds.has(email.id)) {
                   setReadIds(prev => new Set([...prev, email.id]))
-                  void markAsRead(email.id).catch(() => { /* offline */ })
+                  void markAsRead(email.id, email.account).catch(() => { /* offline */ })
                 }
               }}
               style={{
@@ -496,8 +561,19 @@ export function InboxModule() {
                     {email.preview}
                   </p>
                 </div>
-                <span style={{ fontSize: 10.5, color: '#6C6553', flexShrink: 0, paddingTop: 2 }}>
+                <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3, flexShrink: 0, paddingTop: 2 }}>
+                  {/* Which mailbox, when more than one is on screen. Without it
+                      a merged inbox is a list you cannot act on: you would not
+                      know which address a reply leaves from. */}
+                  {view === 'all' && accounts.length > 1 && (
+                    <span title={email.account.email} style={{
+                      fontSize: 9.5, color: '#9B9180', maxWidth: 120,
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    }}>{shortAddress(email.account.email)}</span>
+                  )}
+                  <span style={{ fontSize: 10.5, color: '#6C6553' }}>
                   {fmtRelTime(email.receivedAt)}
+                  </span>
                 </span>
               </div>
             </button>
@@ -581,6 +657,14 @@ export function InboxModule() {
               <span style={{ fontSize: 11, color: '#6C6553', marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
                 <Clock size={10} />{fmtRelTime(selectedEmail.receivedAt)}
               </span>
+              {accounts.length > 1 && (
+                <span title={`In ${selectedEmail.account.email}`}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', height: 20, padding: '0 8px',
+                    borderRadius: 999, background: '#FAF7EC', border: '1px solid #E8E1CE',
+                    fontSize: 10.5, color: '#6C6553', flexShrink: 0,
+                  }}>{shortAddress(selectedEmail.account.email)}</span>
+              )}
               <button
                 onClick={() => void handleArchive(selectedEmail)}
                 disabled={archiving === selectedEmail.id}
@@ -603,6 +687,42 @@ export function InboxModule() {
               </div>
             )}
           </div>
+
+          {/* The three ways of answering, and the composer they open. */}
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
+            {([
+              { mode: 'reply'    as ComposeMode, label: 'Reply',    Icon: Reply },
+              { mode: 'replyAll' as ComposeMode, label: 'Reply all', Icon: ReplyAll },
+              { mode: 'forward'  as ComposeMode, label: 'Forward',  Icon: Forward },
+            ]).map(({ mode, label, Icon }) => {
+              const on = compose?.mode === mode && compose.threadId === selectedEmail.threadId
+              return (
+                <button key={mode}
+                  onClick={() => setCompose(on ? null : composeSeed(selectedEmail, mode, accounts))}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 6, height: 30, padding: '0 14px',
+                    borderRadius: 999, cursor: 'pointer', fontFamily: 'inherit', fontSize: 12.5,
+                    background: on ? '#191712' : '#FFFFFF',
+                    border: `1px solid ${on ? '#191712' : '#E8E1CE'}`,
+                    color: on ? '#FDF8E7' : '#191712',
+                  }}>
+                  <Icon size={13} /> {label}
+                </button>
+              )
+            })}
+          </div>
+
+          {compose && compose.mode !== 'new' && (
+            <div style={{ marginBottom: 14 }}>
+              <Composer
+                seed={compose}
+                accounts={accounts}
+                onClose={() => setCompose(null)}
+                onSent={() => { setCompose(null); setSentIds(prev => new Set(prev).add(selectedEmail.id)) }}
+              />
+            </div>
+          )}
+
           {/* Thread history — older messages */}
           {selectedEmail.threadMessages.length > 0 && (
             <div style={{ marginBottom: 14 }}>
@@ -777,10 +897,42 @@ export function InboxModule() {
               <Zap size={14} color="#1D9E75" />
               <span style={{ fontSize: 13, color: '#191712' }}>{triagedCount} triaged</span>
             </div>
+            {accounts.length > 1 && (
+              <>
+                <div style={{ width: 1, height: 14, background: '#E8E1CE' }} />
+                {/* All of them, or one. A merged inbox is the useful default —
+                    the question "what is waiting for me" does not stop at an
+                    account boundary — but answering it must not hide which
+                    mailbox a message is in. */}
+                <div role="group" aria-label="Which mailbox"
+                  style={{ display: 'flex', alignItems: 'center', gap: 2, padding: 3, borderRadius: 999, background: '#EDE7D9' }}>
+                  {[{ id: 'all', label: 'All' }, ...accounts.map(a => ({ id: a.email, label: shortAddress(a.email) }))].map(opt => {
+                    const on = view === opt.id
+                    return (
+                      <button key={opt.id}
+                        onClick={() => { setView(opt.id); saveMailView(opt.id); setSelectedId(null) }}
+                        title={opt.id === 'all' ? 'Every account at once' : opt.id}
+                        style={{
+                          height: 24, padding: '0 10px', borderRadius: 999, border: 'none', cursor: 'pointer',
+                          fontFamily: 'inherit', fontSize: 11.5, fontWeight: on ? 600 : 500,
+                          background: on ? '#FFFFFF' : 'transparent', color: on ? '#191712' : '#6C6553',
+                          boxShadow: on ? '0 1px 3px rgba(25,23,18,0.16)' : 'none',
+                          maxWidth: 190, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                        }}>
+                        {opt.label}
+                      </button>
+                    )
+                  })}
+                </div>
+              </>
+            )}
             <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
               <button
-                onClick={() => setComposing(o => !o)}
-                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 7, background: composing ? 'rgba(30,64,175,0.12)' : 'transparent', border: `1px solid ${composing ? 'rgba(30,64,175,0.3)' : '#E8E1CE'}`, color: composing ? '#7F77DD' : '#6C6553', fontSize: 12, cursor: 'pointer' }}
+                onClick={() => {
+                  const box = viewed[0] ?? accounts[0]
+                  if (box) setCompose({ mode: 'new', account: box, to: '', subject: '' })
+                }}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 7, background: compose?.mode === 'new' ? 'rgba(30,64,175,0.12)' : 'transparent', border: `1px solid ${compose?.mode === 'new' ? 'rgba(30,64,175,0.3)' : '#E8E1CE'}`, color: compose?.mode === 'new' ? '#7F77DD' : '#6C6553', fontSize: 12, cursor: 'pointer' }}
               >
                 <PenSquare size={12} /> Compose
               </button>
@@ -812,27 +964,16 @@ export function InboxModule() {
         )}
 
         {/* Compose panel */}
-        {composing && (
-          <div style={{ marginBottom: 12, padding: '16px 20px', background: '#FFFFFF', border: '1px solid rgba(30,64,175,0.25)', borderRadius: 10 }}>
-            <p style={{ margin: '0 0 12px', fontSize: 12, fontWeight: 700, color: '#7F77DD', textTransform: 'uppercase', letterSpacing: '0.6px' }}>New Message</p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <input value={composeTo} onChange={e => setComposeTo(e.target.value)} placeholder="To"
-                style={{ padding: '8px 12px', borderRadius: 7, background: '#F7F4EA', border: '1px solid #E8E1CE', color: '#191712', fontSize: 13, outline: 'none' }} />
-              <input value={composeSubject} onChange={e => setComposeSubject(e.target.value)} placeholder="Subject"
-                style={{ padding: '8px 12px', borderRadius: 7, background: '#F7F4EA', border: '1px solid #E8E1CE', color: '#191712', fontSize: 13, outline: 'none' }} />
-              <textarea value={composeBody} onChange={e => setComposeBody(e.target.value)} placeholder="Write your message…" rows={6}
-                style={{ padding: '10px 12px', borderRadius: 7, resize: 'vertical', background: '#F7F4EA', border: '1px solid #E8E1CE', color: '#191712', fontSize: 13, lineHeight: 1.6, fontFamily: 'inherit', outline: 'none' }} />
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-                <button onClick={() => setComposing(false)} style={{ padding: '7px 14px', borderRadius: 7, background: 'transparent', border: '1px solid #E8E1CE', color: '#6C6553', fontSize: 12, cursor: 'pointer' }}>Cancel</button>
-                <button
-                  onClick={() => void handleComposeSend()}
-                  disabled={!composeTo.trim() || !composeSubject.trim() || !composeBody.trim() || composeSending}
-                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 18px', borderRadius: 7, background: composeSent ? 'rgba(29,158,117,0.12)' : 'rgba(30,64,175,0.12)', border: `1px solid ${composeSent ? 'rgba(29,158,117,0.3)' : 'rgba(30,64,175,0.25)'}`, color: composeSent ? '#1D9E75' : '#7F77DD', fontSize: 12, fontWeight: 500, cursor: 'pointer', opacity: composeSending ? 0.5 : 1 }}
-                >
-                  {composeSent ? <><CheckCheck size={12} /> Sent!</> : composeSending ? <><RefreshCw size={11} style={{ animation: 'spin 1s linear infinite' }} /> Sending…</> : <><ArrowRight size={11} /> Send</>}
-                </button>
-              </div>
-            </div>
+        {/* A new message uses the same panel as a reply, because it is the
+            same act with fewer fields filled in. */}
+        {compose?.mode === 'new' && (
+          <div style={{ marginBottom: 12 }}>
+            <Composer
+              seed={compose}
+              accounts={accounts}
+              onClose={() => setCompose(null)}
+              onSent={() => setCompose(null)}
+            />
           </div>
         )}
 

@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { getGoogleToken } from './tokenManager'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -30,8 +31,23 @@ export interface GmailThread {
 }
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
+//
+// Mail is read and sent for **an account**, not for "the app". The one you
+// signed in with keeps its token in the session; a connected account's token
+// never reaches the browser as a stored value and is fetched on demand.
 
-async function accessToken(): Promise<string> {
+export interface MailAccount {
+  email: string
+  name?: string
+  isPrimary: boolean
+}
+
+async function accessToken(account?: MailAccount): Promise<string> {
+  if (account && !account.isPrimary) {
+    const token = await getGoogleToken(account.email)
+    if (!token) throw new Error(`${account.email} needs reconnecting before its mail can be read.`)
+    return token
+  }
   const { data } = await supabase.auth.getSession()
   const token = data.session?.provider_token ?? localStorage.getItem('google_provider_token')
   if (!token) throw new Error('No Google access token — please sign in with Google.')
@@ -40,8 +56,8 @@ async function accessToken(): Promise<string> {
 
 // ─── Core fetch ───────────────────────────────────────────────────────────────
 
-async function gFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const token = await accessToken()
+async function gFetch<T>(path: string, init?: RequestInit, account?: MailAccount): Promise<T> {
+  const token = await accessToken(account)
   const res = await fetch(`https://gmail.googleapis.com/gmail/v1${path}`, {
     ...init,
     headers: {
@@ -147,73 +163,175 @@ export function extractBody(msg: GmailMessage): string {
 // ─── Gmail API calls ──────────────────────────────────────────────────────────
 
 /** Return unread thread IDs and an optional nextPageToken for pagination. */
-export async function listUnreadThreadIds(max = 20, pageToken?: string): Promise<{ ids: string[]; nextPageToken?: string }> {
+export async function listUnreadThreadIds(
+  max = 20, pageToken?: string, account?: MailAccount,
+): Promise<{ ids: string[]; nextPageToken?: string }> {
   const qs = `/users/me/threads?q=is:unread in:inbox&maxResults=${max}${pageToken ? `&pageToken=${pageToken}` : ''}`
-  const data = await gFetch<{ threads?: { id: string }[]; nextPageToken?: string }>(qs)
+  const data = await gFetch<{ threads?: { id: string }[]; nextPageToken?: string }>(qs, undefined, account)
   return { ids: (data.threads ?? []).map(t => t.id), nextPageToken: data.nextPageToken }
 }
 
 /** Fetch a full thread (all messages). */
-export async function getThread(threadId: string): Promise<GmailThread> {
-  return gFetch<GmailThread>(`/users/me/threads/${threadId}?format=full`)
+export async function getThread(threadId: string, account?: MailAccount): Promise<GmailThread> {
+  return gFetch<GmailThread>(`/users/me/threads/${threadId}?format=full`, undefined, account)
 }
 
 /** Mark a message as read (remove UNREAD label). Requires gmail.modify scope. */
-export async function markAsRead(messageId: string): Promise<void> {
+export async function markAsRead(messageId: string, account?: MailAccount): Promise<void> {
   await gFetch(`/users/me/messages/${messageId}/modify`, {
     method: 'POST',
     body: JSON.stringify({ removeLabelIds: ['UNREAD'] }),
-  })
+  }, account)
 }
 
 /** Archive a message (remove INBOX label). Requires gmail.modify scope. */
-export async function archiveMessage(messageId: string): Promise<void> {
+export async function archiveMessage(messageId: string, account?: MailAccount): Promise<void> {
   await gFetch(`/users/me/messages/${messageId}/modify`, {
     method: 'POST',
     body: JSON.stringify({ removeLabelIds: ['INBOX'] }),
-  })
+  }, account)
 }
 
-/** Send a new email (not a reply). Requires gmail.send scope. */
-export async function composeEmail(opts: {
-  to: string; subject: string; body: string
-}): Promise<void> {
-  const rfc = [
-    `To: ${opts.to}`,
-    `Subject: ${opts.subject}`,
-    'MIME-Version: 1.0',
-    'Content-Type: text/plain; charset=UTF-8',
-    '',
-    opts.body,
-  ].join('\r\n')
-  await gFetch('/users/me/messages/send', {
-    method: 'POST',
-    body: JSON.stringify({ raw: encodeBase64url(rfc) }),
-  })
+// ─── Sending ──────────────────────────────────────────────────────────────────
+//
+// One function, because a reply, a reply to everyone, a forward and a new
+// message differ only in what goes in the fields. What used to be here could
+// send a plain-text line to one address and nothing else — no Cc, no Bcc, no
+// attachment, no way to say which account it came from, and a subject that was
+// mangled the moment it left ASCII.
+
+export interface MailAttachment {
+  name: string
+  mime: string
+  /** Base64, no line breaks — a FileReader data URL with the prefix removed. */
+  data: string
 }
 
-/** Send a reply. Requires gmail.send scope. */
-export async function sendReply(opts: {
+export interface SendMailOptions {
+  /** Whose mailbox it leaves from. Omitted means the account you signed in with. */
+  account?: MailAccount
   to: string
+  cc?: string
+  bcc?: string
   subject: string
-  body: string
-  threadId: string
+  /** The message as HTML. A plain-text alternative is derived from it. */
+  html: string
+  /** Keeps a reply in its conversation. */
+  threadId?: string
   inReplyTo?: string
-}): Promise<void> {
-  const subj = opts.subject.replace(/^(re:\s*)+/i, '')
-  const rfc = [
-    `To: ${opts.to}`,
-    `Subject: Re: ${subj}`,
+  references?: string
+  attachments?: MailAttachment[]
+}
+
+/** A header value Google will read back the way it was typed, whatever alphabet
+ *  it is in. Anything outside ASCII goes as RFC 2047, or "مرحبا" arrives as
+ *  mojibake. */
+function encodeHeader(value: string): string {
+  // eslint-disable-next-line no-control-regex
+  if (/^[\x00-\x7F]*$/.test(value)) return value
+  return `=?UTF-8?B?${btoa(unescape(encodeURIComponent(value)))}?=`
+}
+
+/** A display name plus address, with only the name encoded. */
+function encodeAddressList(list: string): string {
+  return list.split(',').map(part => {
+    const t = part.trim()
+    if (!t) return ''
+    const m = t.match(/^(.*?)\s*<([^>]+)>$/)
+    if (!m) return t
+    const name = m[1].replace(/^"|"$/g, '')
+    return name ? `${encodeHeader(name)} <${m[2]}>` : `<${m[2]}>`
+  }).filter(Boolean).join(', ')
+}
+
+const b64Lines = (b64: string) => (b64.match(/.{1,76}/g) ?? []).join('\r\n')
+
+export async function sendMail(opts: SendMailOptions): Promise<void> {
+  const boundary = `bpa_${crypto.randomUUID().replace(/-/g, '')}`
+  const files = opts.attachments ?? []
+  const text = stripHtml(opts.html)
+
+  const head = [
+    `To: ${encodeAddressList(opts.to)}`,
+    opts.cc  ? `Cc: ${encodeAddressList(opts.cc)}`   : '',
+    opts.bcc ? `Bcc: ${encodeAddressList(opts.bcc)}` : '',
+    `Subject: ${encodeHeader(opts.subject)}`,
+    opts.inReplyTo  ? `In-Reply-To: ${opts.inReplyTo}` : '',
+    opts.references ? `References: ${opts.references}` : (opts.inReplyTo ? `References: ${opts.inReplyTo}` : ''),
     'MIME-Version: 1.0',
-    'Content-Type: text/plain; charset=UTF-8',
-    opts.inReplyTo ? `In-Reply-To: ${opts.inReplyTo}` : '',
-    opts.inReplyTo ? `References: ${opts.inReplyTo}` : '',
-    '',
-    opts.body,
-  ].filter((l, i) => l !== '' || i >= 6).join('\r\n')
+  ].filter(Boolean)
+
+  let rfc: string
+  if (files.length === 0) {
+    rfc = [
+      ...head,
+      `Content-Type: multipart/alternative; boundary="${boundary}"`,
+      '',
+      `--${boundary}`,
+      'Content-Type: text/plain; charset=UTF-8',
+      'Content-Transfer-Encoding: base64',
+      '',
+      b64Lines(btoa(unescape(encodeURIComponent(text)))),
+      `--${boundary}`,
+      'Content-Type: text/html; charset=UTF-8',
+      'Content-Transfer-Encoding: base64',
+      '',
+      b64Lines(btoa(unescape(encodeURIComponent(opts.html)))),
+      `--${boundary}--`,
+    ].join('\r\n')
+  } else {
+    const parts = [
+      `--${boundary}`,
+      'Content-Type: text/html; charset=UTF-8',
+      'Content-Transfer-Encoding: base64',
+      '',
+      b64Lines(btoa(unescape(encodeURIComponent(opts.html)))),
+    ]
+    for (const f of files) {
+      parts.push(
+        `--${boundary}`,
+        `Content-Type: ${f.mime}; name="${f.name}"`,
+        'Content-Transfer-Encoding: base64',
+        `Content-Disposition: attachment; filename="${f.name}"`,
+        '',
+        b64Lines(f.data),
+      )
+    }
+    parts.push(`--${boundary}--`)
+    rfc = [...head, `Content-Type: multipart/mixed; boundary="${boundary}"`, '', ...parts].join('\r\n')
+  }
 
   await gFetch('/users/me/messages/send', {
     method: 'POST',
-    body: JSON.stringify({ raw: encodeBase64url(rfc), threadId: opts.threadId }),
+    body: JSON.stringify({
+      raw: encodeBase64url(rfc),
+      ...(opts.threadId ? { threadId: opts.threadId } : {}),
+    }),
+  }, opts.account)
+}
+
+/** Send a new email. Kept for callers that only ever wanted the simple case. */
+export async function composeEmail(opts: {
+  to: string; subject: string; body: string; account?: MailAccount
+}): Promise<void> {
+  await sendMail({ ...opts, html: escapeHtml(opts.body).replace(/\n/g, '<br>') })
+}
+
+/** Send a reply into its own thread. */
+export async function sendReply(opts: {
+  to: string; subject: string; body: string; threadId: string
+  inReplyTo?: string; account?: MailAccount
+}): Promise<void> {
+  await sendMail({
+    account: opts.account,
+    to: opts.to,
+    subject: /^re:/i.test(opts.subject) ? opts.subject : `Re: ${opts.subject}`,
+    html: escapeHtml(opts.body).replace(/\n/g, '<br>'),
+    threadId: opts.threadId,
+    inReplyTo: opts.inReplyTo,
   })
+}
+
+export function escapeHtml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }
