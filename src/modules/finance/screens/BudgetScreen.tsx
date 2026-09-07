@@ -20,8 +20,9 @@ import { findDuplicates } from '../duplicates'
 import { DuplicateMark } from '../components/DuplicateMark'
 import { BudgetMark } from '../components/BudgetMark'
 import { isBudgetEntry } from '../budgetEntries'
-import { isUnpaid, unpaidRow, settled, whenPaid, UNPAID_TITLE } from '../unpaid'
+import { isUnpaid, settled, whenPaid, UNPAID_TITLE } from '../unpaid'
 import { ICON, STROKE } from '@/lib/type'
+import { TxRow, txDate } from '../components/TxRow'
 
 // ─── 16G · Budget Builder ─────────────────────────────────────────────────────
 // Categories tree with budget rules: amount, frequency, roll unspent,
@@ -1738,65 +1739,55 @@ export function BudgetScreen(_props?: any) {
                     const flag = txFlags[tx.id] as TxFlag | undefined
                     const subCat = tx.categoryId ? categories.find(c => c.id === tx.categoryId) : undefined
                     return (
-                      <div key={tx.id}
-                        title={isUnpaid(tx) ? UNPAID_TITLE : undefined}
-                        style={{
-                        display: 'flex', alignItems: 'center', gap: 10,
-                        padding: '10px 0', borderBottom: 'var(--sb-border-width) solid var(--sb-hairline)',
-                        opacity: flag === 'excluded' ? 0.5 : 1,
-                        ...unpaidRow(isUnpaid(tx)),
-                      }}>
-                        {/* Sub-cat icon */}
-                        <span style={{ fontSize: 'var(--sb-t-h2)', flexShrink: 0, width: 28, textAlign: 'center' }}>
-                          <CategoryGlyph icon={subCat?.icon ?? selectedCat.icon} size={14} />
-                        </span>
-
-                        {/* Main info */}
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-1)', display: 'flex', alignItems: 'center', gap: 6, textDecoration: flag === 'excluded' ? 'line-through' : 'none' }}>
-                            <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tx.payee}</span>
-                            <DuplicateMark scope={dupes.get(tx.id)} />
-                            <BudgetMark on={isBudgetEntry(tx)} />
-                          </div>
-                          <div style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', marginTop: 1, display: 'flex', gap: 6, minWidth: 0 }}>
-                            <span title={isUnpaid(tx) ? `Due ${tx.date}, not paid` : `Paid ${whenPaid(tx)}`}>
-                              {new Date(whenPaid(tx) + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      <TxRow
+                        key={tx.id}
+                        icon={subCat?.icon ?? selectedCat.icon}
+                        tone={subCat?.color ?? selectedCat.color}
+                        title={tx.payee}
+                        marks={<>
+                          <DuplicateMark scope={dupes.get(tx.id)} />
+                          <BudgetMark on={isBudgetEntry(tx)} />
+                        </>}
+                        meta={<>
+                          <span style={{ flexShrink: 0 }} title={isUnpaid(tx) ? `Due ${tx.date}, not paid` : `Paid ${whenPaid(tx)}`}>
+                            {txDate(whenPaid(tx))}
+                          </span>
+                          {subCat && subCat.id !== selectedId && <span style={{ flexShrink: 0 }}>· {subCat.name}</span>}
+                          {tx.note?.trim() && (
+                            <span title={tx.note.trim()} style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              ({tx.note.trim()})
                             </span>
-                            {subCat && subCat.id !== selectedId && <span>· {subCat.name}</span>}
-                            {tx.note?.trim() && (
-                              <span title={tx.note.trim()} style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                ({tx.note.trim()})
-                              </span>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Amount */}
-                        <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-label)', fontWeight: 700, color: flag === 'excluded' ? 'var(--sb-ink-4)' : RUST, flexShrink: 0 }}>
-                          {tx.currency ?? currency} {Math.abs(tx.amount).toLocaleString('en-US')}
-                        </span>
-
-                        {/* Decision flags */}
-                        <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-                          {(['approved', 'review', 'excluded'] as TxFlag[]).map(f => {
-                            const s = FLAG_STYLES[f]
-                            const active = flag === f
-                            return (
-                              <button key={f} title={f}
-                                onClick={() => setFlag(tx.id, active ? null : f)}
-                                style={{
-                                  padding: '3px 7px', borderRadius: 'var(--sb-r-chip)', border: `var(--sb-border-width) solid ${active ? s.border : 'var(--sb-border)'}`,
-                                  background: active ? s.bg : 'transparent',
-                                  color: active ? s.color : 'var(--sb-border)',
-                                  fontSize: 'var(--sb-t-micro)', fontWeight: active ? 700 : 400, cursor: 'pointer',
-                                  transition: 'all 0.12s',
-                                }}>
-                                {s.label}
-                              </button>
-                            )
-                          })}
-                        </div>
-                      </div>
+                          )}
+                        </>}
+                        type={tx.type === 'income' ? 'income' : tx.type === 'transfer' ? 'transfer' : 'expense'}
+                        amount={tx.amount}
+                        currency={tx.currency ?? currency}
+                        unpaid={isUnpaid(tx)}
+                        faded={flag === 'excluded'}
+                        struck={flag === 'excluded'}
+                        hoverTitle={isUnpaid(tx) ? UNPAID_TITLE : undefined}
+                        trailing={
+                          <span style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                            {(['approved', 'review', 'excluded'] as TxFlag[]).map(f => {
+                              const st = FLAG_STYLES[f]
+                              const active = flag === f
+                              return (
+                                <button key={f} title={f}
+                                  onClick={() => setFlag(tx.id, active ? null : f)}
+                                  style={{
+                                    padding: '3px 7px', borderRadius: 'var(--sb-r-chip)', border: `var(--sb-border-width) solid ${active ? st.border : 'var(--sb-border)'}`,
+                                    background: active ? st.bg : 'transparent',
+                                    color: active ? st.color : 'var(--sb-ink-4)',
+                                    fontSize: 'var(--sb-t-micro)', fontWeight: active ? 700 : 400, cursor: 'pointer',
+                                    transition: 'all 0.12s',
+                                  }}>
+                                  {st.label}
+                                </button>
+                              )
+                            })}
+                          </span>
+                        }
+                      />
                     )
                   })
                 )}

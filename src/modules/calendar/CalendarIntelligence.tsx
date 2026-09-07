@@ -725,9 +725,27 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
   //
   // The card keeps its calendar's colour whether the event is done, cancelled
   // or neither — the tick and the strike-through say what happened to it.
-  const evBg   = `color-mix(in srgb, ${color} 15%, var(--sb-card))`
-  const evInk  = `color-mix(in srgb, ${color} 70%, var(--sb-ink-1))`
-  const evTimeInk = `color-mix(in srgb, ${color} 32%, var(--sb-ink-3))`
+  //
+  // Two events are drawn inverted rather than tinted: the one happening right
+  // now, and the one you have selected. They are the two an eye should find
+  // without looking, and a slightly stronger wash of the same hue is not that.
+  // The tokens do the inverting, so on a dark theme — where --sb-ink-1 is the
+  // light end of the ramp — the block goes light and its text dark, which is
+  // the same statement the other way up.
+  const nowMs = Date.now()
+  const isNow = new Date(event.start.dateTime!).getTime() <= nowMs
+    && new Date(event.end.dateTime ?? event.start.dateTime!).getTime() > nowMs
+  const inverted = isNow || isSelected
+
+  const evBg   = inverted
+    ? 'var(--sb-ink-1)'
+    : `color-mix(in srgb, ${color} 15%, var(--sb-card))`
+  const evInk  = inverted
+    ? 'var(--sb-ink-on-dark)'
+    : `color-mix(in srgb, ${color} 70%, var(--sb-ink-1))`
+  const evTimeInk = inverted
+    ? 'color-mix(in srgb, var(--sb-ink-on-dark) 76%, transparent)'
+    : `color-mix(in srgb, ${color} 32%, var(--sb-ink-3))`
   // No outline in the ordinary case: a solid fill already has an edge. What is
   // left is the two states an edge is the only way to say — a tentative event,
   // and the one you have selected.
@@ -824,7 +842,7 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
         )}
         <span style={{
           textDecoration: isCancelled ? 'line-through' : 'none',
-          textDecorationColor: 'color-mix(in srgb, var(--sb-ink-1) 45.0%, transparent)',
+          textDecorationColor: `color-mix(in srgb, ${inverted ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-1)'} 45%, transparent)`,
           textDecorationThickness: 1.5,
         }}>{displayTitle(fromTask ? stripTaskMark(event.summary) : event.summary)}</span>
       </div>

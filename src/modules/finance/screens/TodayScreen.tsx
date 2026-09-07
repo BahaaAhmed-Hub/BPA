@@ -1,6 +1,5 @@
 import { useState, useMemo } from 'react'
 import { useFinanceStore } from '../financeStore'
-import { CategoryGlyph } from '../components/CategoryGlyph'
 import { TransactionModal } from '../modals/TransactionModal'
 import type { Transaction } from '../types'
 import { POSITIVE, NEGATIVE, POSITIVE_DEEP, NEGATIVE_DEEP, POSITIVE_TINT, NEGATIVE_TINT } from '../../../lib/moneyColors'
@@ -10,9 +9,9 @@ import { findDuplicates } from '../duplicates'
 import { DuplicateMark } from '../components/DuplicateMark'
 import { BudgetMark } from '../components/BudgetMark'
 import { isBudgetEntry } from '../budgetEntries'
-import { isUnpaid, unpaidRow, settled, whenPaid, UNPAID_TITLE } from '../unpaid'
+import { isUnpaid, settled, whenPaid, UNPAID_TITLE } from '../unpaid'
 import { isoDate } from '../dates'
-import { alpha } from '@/lib/alpha'
+import { TxRow, txDate } from '../components/TxRow'
 
 // ── Palette ───────────────────────────────────────────────────────────────────
 
@@ -42,23 +41,6 @@ function dayLabel(iso: string): string {
 
 // ── Pill ──────────────────────────────────────────────────────────────────────
 
-function Pill({ type, amount, currency }: { type: 'income' | 'expense' | 'transfer'; amount: number; currency?: string }) {
-  const cur = currency ?? 'EGP'
-  const isIncome   = type === 'income'
-  const isTransfer = type === 'transfer'
-  const color = isTransfer ? C.accent : isIncome ? GREEN : RED
-  const signed = isIncome || isTransfer ? Math.abs(amount) : -Math.abs(amount)
-  return (
-    <span style={{
-      fontSize: 'var(--sb-t-label)', fontWeight: 700,
-      color,
-      whiteSpace: 'nowrap',
-      flexShrink: 0,
-    }}>
-      {isTransfer ? '↔ ' : ''}{acct(signed, { currency: cur })}
-    </span>
-  )
-}
 
 interface TxModalState { open: boolean; tx: Transaction | null }
 
@@ -299,67 +281,44 @@ export function TodayScreen() {
     const isExp    = tx.type === 'expense'
     const isFuture = whenPaid(tx) > todayStr
     return (
-      <div
+      <TxRow
         key={tx.id}
-        onClick={() => setTxModal({ open: true, tx })}
-        title={isUnpaid(tx) ? UNPAID_TITLE : undefined}
-        style={{
-          display: 'flex', alignItems: 'center', gap: 12,
-          padding: '10px 0', borderBottom: `var(--sb-border-width) solid ${C.border}`,
-          cursor: 'pointer',
-          opacity: isFuture ? 0.75 : 1,
-          ...unpaidRow(isUnpaid(tx)),
-        }}
-      >
-        <div style={{
-          width: 40, height: 40, borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
-          background: acct ? alpha(acct.color, 13.3) : alpha(isExp ? RED : GREEN, 9.4),
-          border: `var(--sb-border-width) solid ${acct ? acct.color + '44' : isExp ? RED + '44' : GREEN + '44'}`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'var(--sb-t-h2)',
-        }}>
-          <CategoryGlyph icon={cat?.icon ?? acct?.emoji ?? (isExp ? '💳' : '💼')} size={18} />
-        </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 'var(--sb-t-body)', fontWeight: 500, color: C.textPri, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 6 }}>
-            {tx.payee?.trim() || cat?.name || 'Transaction'}
-            <DuplicateMark scope={dupes.get(tx.id)} />
-            <BudgetMark on={isBudgetEntry(tx)} />
-            {isFuture && (
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={C.textMuted} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, opacity: 0.7 }}>
-                <title>Planned (not yet paid)</title>
-                <circle cx="12" cy="12" r="10"/>
-                <polyline points="12 6 12 12 16 14"/>
-              </svg>
-            )}
-          </div>
-          <div style={{
-            fontSize: 'var(--sb-t-body-s)', color: C.textMuted, marginTop: 2, display: 'flex', gap: 6,
-            minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-          }}>
-            {/* The row is filed by the day the money moved, so that is the
-                date it shows. Where the two differ, the due date is on hover. */}
-            <span style={{ flexShrink: 0 }}
-              title={isUnpaid(tx) ? `Due ${tx.date}, not paid` : tx.paidAt && tx.paidAt !== tx.date ? `Due ${tx.date}` : undefined}>
-              {whenPaid(tx)}
-              {tx.paidAt && tx.paidAt !== tx.date && (
-                <span style={{ color: C.textMuted, opacity: 0.75 }}> · due {tx.date}</span>
-              )}
+        icon={cat?.icon ?? acct?.emoji ?? (isExp ? '💳' : '💼')}
+        tone={acct ? acct.color : isExp ? RED : GREEN}
+        title={tx.payee?.trim() || cat?.name || 'Transaction'}
+        marks={<>
+          <DuplicateMark scope={dupes.get(tx.id)} />
+          <BudgetMark on={isBudgetEntry(tx)} />
+          {isFuture && (
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--sb-ink-4)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, opacity: 0.7 }}>
+              <title>Planned (not yet paid)</title>
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 14"/>
+            </svg>
+          )}
+        </>}
+        meta={<>
+          {/* The row is filed by the day the money moved, so that is the date
+              it shows. Where the two differ, the due date is on hover. */}
+          <span style={{ flexShrink: 0 }}
+            title={isUnpaid(tx) ? `Due ${tx.date}, not paid` : tx.paidAt && tx.paidAt !== tx.date ? `Due ${tx.date}` : undefined}>
+            {txDate(whenPaid(tx))}
+          </span>
+          {cat && tx.payee?.trim() && <span style={{ flexShrink: 0 }}>· {cat.name}</span>}
+          {tx.note?.trim() && (
+            <span title={tx.note.trim()} style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              ({tx.note.trim()})
             </span>
-            {cat && tx.payee?.trim() && <span style={{ color: C.textMuted, flexShrink: 0 }}>· {cat.name}</span>}
-            {/* The note is an aside about the entry, so it reads as one. */}
-            {tx.note?.trim() && (
-              <span title={tx.note.trim()} style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                ({tx.note.trim()})
-              </span>
-            )}
-          </div>
-        </div>
-        <Pill
-          type={tx.type === 'income' ? 'income' : tx.type === 'transfer' ? 'transfer' : 'expense'}
-          amount={tx.amount}
-          currency={tx.currency}
-        />
-      </div>
+          )}
+        </>}
+        type={tx.type === 'income' ? 'income' : tx.type === 'transfer' ? 'transfer' : 'expense'}
+        amount={tx.amount}
+        currency={tx.currency}
+        unpaid={isUnpaid(tx)}
+        faded={isFuture}
+        hoverTitle={isUnpaid(tx) ? UNPAID_TITLE : undefined}
+        onClick={() => setTxModal({ open: true, tx })}
+      />
     )
   }
 

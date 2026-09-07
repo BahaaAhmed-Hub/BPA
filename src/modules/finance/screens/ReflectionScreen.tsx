@@ -5,16 +5,17 @@ import { useFinanceStore } from '../financeStore'
 import type { Category } from '../types'
 import { CategoryGlyph } from '../components/CategoryGlyph'
 import { toBase, baseCurrency, currenciesNeedingRates } from '../fx'
-import { acct, outflow, noted } from '../format'
+import { acct, outflow } from '../format'
 import { findDuplicates } from '../duplicates'
 import { DuplicateMark } from '../components/DuplicateMark'
 import { BudgetMark } from '../components/BudgetMark'
 import { isBudgetEntry } from '../budgetEntries'
-import { isUnpaid, unpaidRow, UNPAID_TITLE } from '../unpaid'
+import { isUnpaid, UNPAID_TITLE } from '../unpaid'
 import { TransactionModal } from '../modals/TransactionModal'
 import type { Transaction } from '../types'
 import { todayISO } from '../dates'
 import { ICON, STROKE } from '@/lib/type'
+import { TxRow, txDate } from '../components/TxRow'
 
 // ─── 16F · Financials YTD ─────────────────────────────────────────────────────
 // Spreadsheet-style table: each income/expense category as a row,
@@ -823,60 +824,45 @@ export function ReflectionScreen(_props?: any) {
               {drillTx.map(tx => {
                 const cat = categories.find(c => c.id === tx.categoryId)
                 return (
-                  <div key={tx.id}
-                    title={isUnpaid(tx) ? UNPAID_TITLE : undefined}
-                    style={{
-                    display: 'flex', alignItems: 'center', gap: 11,
-                    padding: '11px 0', borderBottom: 'var(--sb-border-width) solid var(--sb-hairline)',
-                    ...unpaidRow(isUnpaid(tx)),
-                  }}>
-                    <span
-                      onClick={() => setEditing(tx)}
-                      title="Open this entry"
-                      style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 11, cursor: 'pointer' }}>
-                      <span style={{
-                        width: 32, height: 32, borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        background: 'var(--sb-field)', color: cat?.color ?? 'var(--sb-ink-3)',
-                      }}>
-                        <CategoryGlyph icon={cat?.icon} size={15} />
-                      </span>
-                      <span style={{ flex: 1, minWidth: 0 }}>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)', fontWeight: 500 }}>
-                          <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {tx.payee?.trim() || cat?.name || 'Entry'}
-                          </span>
-                          <DuplicateMark scope={dupes.get(tx.id)} />
-                          <BudgetMark on={isBudgetEntry(tx)} />
+                  <TxRow
+                    key={tx.id}
+                    icon={cat?.icon}
+                    tone={cat?.color ?? (tx.type === 'income' ? 'var(--sb-positive)' : 'var(--sb-negative)')}
+                    title={tx.payee?.trim() || cat?.name || 'Entry'}
+                    marks={<>
+                      <DuplicateMark scope={dupes.get(tx.id)} />
+                      <BudgetMark on={isBudgetEntry(tx)} />
+                    </>}
+                    meta={<>
+                      <span style={{ flexShrink: 0 }}>{txDate(tx.date)}</span>
+                      {cat && tx.payee?.trim() && <span style={{ flexShrink: 0 }}>· {cat.name}</span>}
+                      {tx.note?.trim() && (
+                        <span title={tx.note.trim()} style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          ({tx.note.trim()})
                         </span>
-                        <span
-                          title={tx.note?.trim() || undefined}
-                          style={{
-                            display: 'block', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', marginTop: 1,
-                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                          }}>
-                          {tx.date}{cat && tx.payee?.trim() ? ` · ${cat.name}` : ''}{noted(tx.note)}
-                        </span>
-                      </span>
-                      <span style={{
-                        fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-label)', fontWeight: 600,
-                        color: tx.type === 'income' ? OLIVE : RUST, fontVariantNumeric: 'tabular-nums', flexShrink: 0,
-                      }}>
-                        {acct(tx.type === 'income' ? Math.abs(tx.amount) : -Math.abs(tx.amount), { currency: tx.currency })}
-                      </span>
-                    </span>
-                    <button
-                      onClick={() => {
-                        if (!window.confirm(`Delete ${tx.payee?.trim() || 'this entry'} of ${acct(Math.abs(tx.amount), { currency: tx.currency })}?`)) return
-                        void removeTransaction(tx.id)
-                      }}
-                      title="Delete this entry"
-                      style={{
-                        width: 28, height: 28, borderRadius: 'var(--sb-r-pill)', padding: 0, flexShrink: 0,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-4)', cursor: 'pointer',
-                      }}><Trash2 size={ICON.sm} /></button>
-                  </div>
+                      )}
+                    </>}
+                    type={tx.type === 'income' ? 'income' : tx.type === 'transfer' ? 'transfer' : 'expense'}
+                    amount={tx.amount}
+                    currency={tx.currency}
+                    unpaid={isUnpaid(tx)}
+                    hoverTitle={isUnpaid(tx) ? UNPAID_TITLE : undefined}
+                    onClick={() => setEditing(tx)}
+                    trailing={
+                      <button
+                        onClick={e => {
+                          e.stopPropagation()
+                          if (!window.confirm(`Delete ${tx.payee?.trim() || 'this entry'} of ${acct(Math.abs(tx.amount), { currency: tx.currency })}?`)) return
+                          void removeTransaction(tx.id)
+                        }}
+                        title="Delete this entry"
+                        style={{
+                          width: 28, height: 28, borderRadius: 'var(--sb-r-pill)', padding: 0, flexShrink: 0,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-4)', cursor: 'pointer',
+                        }}><Trash2 size={ICON.sm} /></button>
+                    }
+                  />
                 )
               })}
             </div>

@@ -16,46 +16,18 @@ import { TransactionModal } from '../modals/TransactionModal'
 import { IconPicker } from '../components/IconPicker'
 import type { Account, AccountType, Transaction } from '../types'
 import { acct } from '../format'
-import { CategoryGlyph } from '../components/CategoryGlyph'
 import { findDuplicates } from '../duplicates'
 import { DuplicateMark } from '../components/DuplicateMark'
 import { BudgetMark } from '../components/BudgetMark'
 import { isBudgetEntry } from '../budgetEntries'
-import { isUnpaid, unpaidRow, UNPAID_TITLE } from '../unpaid'
+import { isUnpaid, UNPAID_TITLE } from '../unpaid'
 import { liveBalances } from '../balances'
 import { todayISO as todayISO_, monthStartISO, monthEndISO } from '../dates'
 import { ICON } from '@/lib/type'
+import { TxRow, txDate as fmtTxDate } from '../components/TxRow'
 
 // ─── Pill ─────────────────────────────────────────────────────────────────────
 
-
-function AmountPill({ type, amount, currency, direction }: {
-  type: 'expense' | 'income' | 'transfer'; amount: number; currency: string
-  /** For a transfer being read from one account's side: out of it, or into it. */
-  direction?: 'out' | 'in'
-}) {
-  // Soft pill style: tinted background + matching text (no white text on colored bg)
-  const out = type === 'expense' || (type === 'transfer' && direction === 'out')
-  const inn = type === 'income'  || (type === 'transfer' && direction === 'in')
-  const bg    = out ? 'color-mix(in srgb, var(--sb-negative) 9.4%, transparent)'
-                  : inn ? 'color-mix(in srgb, var(--sb-positive) 9.4%, transparent)'
-                  : 'var(--sb-field)'
-  const color = out ? 'var(--sb-negative)' : inn ? 'var(--sb-positive)' : 'var(--sb-ink-3)'
-  return (
-    <span style={{
-      display: 'inline-block',
-      padding: '6px 13px',
-      borderRadius: 'var(--sb-r-sm)',
-      fontSize: 'var(--sb-t-label)',
-      fontWeight: 600,
-      background: bg,
-      color,
-      whiteSpace: 'nowrap',
-    }}>
-      {acct(out ? -Math.abs(amount) : Math.abs(amount), { currency })}
-    </span>
-  )
-}
 
 const RANGE_FIELD: React.CSSProperties = {
   border: 'none', background: 'transparent', outline: 'none',
@@ -600,69 +572,36 @@ export function BalanceScreen() {
               const title = tx.payee?.trim()
                 || (isMove && to ? `Money moved to ${to.name}` : null)
                 || cat?.name || 'Transaction'
-              const txDate = new Date(tx.date)
-              const dateStr = txDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+              const dateStr = fmtTxDate(tx.date)
               return (
-                <div
+                <TxRow
                   key={tx.id}
-                  onClick={() => setTxModal({ open: true, tx })}
-                  title={isUnpaid(tx) ? UNPAID_TITLE : undefined}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 12,
-                    padding: '11px 0',
-                    borderBottom: 'var(--sb-border-width) solid var(--sb-border)',
-                    cursor: 'pointer',
-                    ...unpaidRow(isUnpaid(tx)),
-                  }}
-                >
-                  <div style={{
-                    width: 40, height: 40, borderRadius: 'var(--sb-r-pill)',
-                    background: tx.type === 'income'
-                      ? 'color-mix(in srgb, var(--sb-positive) 13.3%, transparent)'
-                      : 'color-mix(in srgb, var(--sb-negative) 13.3%, transparent)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 'var(--sb-t-h2)', flexShrink: 0,
-                    color: tx.type === 'income' ? 'var(--sb-positive)' : 'var(--sb-negative)',
-                  }}>
-                    <CategoryGlyph icon={glyph} size={18} />
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{
-                      fontSize: 'var(--sb-t-body)', fontWeight: 500, color: 'var(--sb-ink-1)',
-                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                      display: 'flex', alignItems: 'center', gap: 6,
-                    }}>
-                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {title}
+                  icon={glyph}
+                  tone={tx.type === 'income' ? 'var(--sb-positive)' : 'var(--sb-negative)'}
+                  title={title}
+                  marks={<>
+                    <DuplicateMark scope={dupes.get(tx.id)} />
+                    <BudgetMark on={isBudgetEntry(tx)} />
+                  </>}
+                  meta={<>
+                    <span style={{ flexShrink: 0 }}>{dateStr}</span>
+                    {isMove && from && to
+                      ? <span style={{ flexShrink: 0 }}>· {from.name} → {to.name}</span>
+                      : cat && tx.payee?.trim() ? <span style={{ flexShrink: 0 }}>· {cat.name}</span> : null}
+                    {tx.note?.trim() && (
+                      <span title={tx.note.trim()} style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        ({tx.note.trim()})
                       </span>
-                      <DuplicateMark scope={dupes.get(tx.id)} />
-                      <BudgetMark on={isBudgetEntry(tx)} />
-                    </div>
-                    <div
-                      title={tx.note?.trim() || undefined}
-                      style={{
-                        fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-4)', marginTop: 1, display: 'flex', gap: 6,
-                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                      }}>
-                      <span style={{ flexShrink: 0 }}>{dateStr}</span>
-                      {isMove && from && to
-                        ? <span style={{ flexShrink: 0 }}>· {from.name} → {to.name}</span>
-                        : cat && tx.payee?.trim() ? <span style={{ flexShrink: 0 }}>· {cat.name}</span> : null}
-                      {tx.note?.trim() && (
-                        <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          ({tx.note.trim()})
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <AmountPill type={tx.type === 'income' ? 'income' : tx.type === 'transfer' ? 'transfer' : 'expense'}
-                    amount={tx.amount}
-                    currency={tx.currency}
-                    direction={moveDir}
-                  />
-                </div>
+                    )}
+                  </>}
+                  type={tx.type === 'income' ? 'income' : tx.type === 'transfer' ? 'transfer' : 'expense'}
+                  amount={tx.amount}
+                  currency={tx.currency}
+                  direction={moveDir}
+                  unpaid={isUnpaid(tx)}
+                  hoverTitle={isUnpaid(tx) ? UNPAID_TITLE : undefined}
+                  onClick={() => setTxModal({ open: true, tx })}
+                />
               )
             })}
           </div>
