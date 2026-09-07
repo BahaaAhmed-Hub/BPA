@@ -131,7 +131,7 @@ export const THEMES: AppTheme[] = [
       // towards its warmer ground, each still at or above 4.5:1 on white.
       '--sb-cat-1':       '#5A51C4',
       '--sb-cat-2':       '#3C5A46',
-      '--sb-cat-3':       '#B2622F',
+      '--sb-cat-3':       '#B0602D',
       '--sb-cat-4':       '#3B6797',
       '--sb-cat-5':       '#80569B',
       '--sb-cat-6':       '#2C7F63',
