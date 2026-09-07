@@ -11,6 +11,11 @@ import {
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { paidAtSupported } from '../finance/unpaid'
+import {
+  loadHealthLinks, createHealthLink, deleteHealthLink, ingestUrl,
+  isMovementHabit, suggestMetric, METRIC_LABEL, METRIC_SAMPLE,
+  type HealthLink, type HealthMetric,
+} from '@/lib/healthLink'
 import type { EnvelopeStyle as BudgetEnvelopeStyle } from '@/modules/finance/screens/BudgetScreen'
 import {
   biometricsAvailable, biometricName, deviceLabel, forgetPasskey, hashPassword,
@@ -1168,6 +1173,166 @@ function describeHabit(h: { type?: string; goal?: number; unit?: string; frequen
   return `Counts ${h.unit ?? 'times'} · ${how}`
 }
 
+// ─── Settings → Habits → Apple Health ────────────────────────────────────────
+//
+// A web page cannot read Apple Health. HealthKit is native to iOS: no web API,
+// no OAuth, nothing a browser can call — so this is not a connect button and
+// pretending otherwise would waste your afternoon.
+//
+// What does work is the phone pushing. A Shortcut reads the sample and POSTs
+// the number to a URL; an Automation runs it every morning without being
+// opened. Each link is one habit, one metric, one secret URL — so the setup is
+// a copy, a paste, and four taps in Shortcuts.
+
+function AppleHealthBlock({ habits }: { habits: { id: string; name: string; unit?: string; type?: string }[] }) {
+  const [links, setLinks]   = useState<HealthLink[] | null>(null)
+  const [ready, setReady]   = useState(false)
+  const [busy, setBusy]     = useState<string | null>(null)
+  const [copied, setCopied] = useState<string | null>(null)
+  const [err, setErr]       = useState<string | null>(null)
+  const [open, setOpen]     = useState<string | null>(null)
+
+  useEffect(() => { void loadHealthLinks().then(l => { setLinks(l); setReady(true) }) }, [])
+
+  // Only where it means something. A habit called "Read 20 pages" has nothing
+  // in Health to take.
+  const movement = habits.filter(h => isMovementHabit(h.name, h.unit))
+
+  async function add(habitId: string, metric: HealthMetric) {
+    setBusy(habitId); setErr(null)
+    try {
+      const link = await createHealthLink(habitId, metric)
+      setLinks(prev => [...(prev ?? []), link])
+      setOpen(link.id)
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Could not make the link.')
+    } finally { setBusy(null) }
+  }
+
+  async function drop(id: string) {
+    setBusy(id); setErr(null)
+    try {
+      await deleteHealthLink(id)
+      setLinks(prev => (prev ?? []).filter(l => l.id !== id))
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Could not remove it.')
+    } finally { setBusy(null) }
+  }
+
+  function copy(text: string, id: string) {
+    void navigator.clipboard.writeText(text).then(() => {
+      setCopied(id)
+      window.setTimeout(() => setCopied(null), 1800)
+    })
+  }
+
+  const pill = {
+    height: 28, padding: '0 11px', borderRadius: 8, cursor: 'pointer',
+    fontFamily: 'inherit', fontSize: 12, fontWeight: 600,
+    background: '#FFFFFF', border: '1px solid #E8E1CE', color: '#191712',
+  } as const
+
+  return (
+    <div style={{ marginTop: 22, paddingTop: 18, borderTop: '1px solid #F0EBDC' }}>
+      <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', color: '#6C6553', display: 'block', marginBottom: 10 }}>
+        APPLE HEALTH
+      </span>
+      <p style={{ margin: '0 0 14px', fontSize: 12.5, color: '#6C6553', lineHeight: 1.6, maxWidth: 660 }}>
+        Apple gives a web app no way to read Health — HealthKit is native to the phone, with no web
+        API to ask. What it does give is Shortcuts: your iPhone reads the number and sends it here
+        each morning. Link a habit below and you get a private address to paste into a Shortcut;
+        after that it fills itself in.
+      </p>
+
+      {movement.length === 0 ? (
+        <p style={{ margin: 0, fontSize: 12.5, color: '#9B9180', lineHeight: 1.6 }}>
+          Nothing to link yet. Add a habit about walking, running, steps or distance and it appears
+          here.
+        </p>
+      ) : !ready ? (
+        <p style={{ margin: 0, fontSize: 12.5, color: '#9B9180' }}>Looking…</p>
+      ) : links === null ? (
+        <div style={{
+          fontSize: 12.5, color: '#7A5F09', lineHeight: 1.55, maxWidth: 720,
+          background: '#FBEBC8', border: '1px solid #EFE1B4', borderRadius: 10, padding: '11px 14px',
+        }}>
+          Your database has nowhere to keep these yet — run{' '}
+          <code style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11.5 }}>supabase/migrations/20260012</code>{' '}
+          and deploy the <code style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11.5 }}>health-ingest</code> function,
+          then reload.
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxWidth: 720 }}>
+          {movement.map(h => {
+            const link = links.find(l => l.habitId === h.id)
+            const metric = link?.metric ?? suggestMetric(h.name, h.unit)
+            return (
+              <div key={h.id} style={{ border: '1px solid #E8E1CE', borderRadius: 10, background: '#FFFFFF' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 13px' }}>
+                  <span style={{ fontSize: 12.5, fontWeight: 600, color: '#191712', flex: 1, minWidth: 0 }}>
+                    {h.name}
+                    <span style={{ fontWeight: 400, color: '#9B9180' }}> · {METRIC_LABEL[metric]}</span>
+                  </span>
+                  {link ? (
+                    <>
+                      <span style={{ fontSize: 11, color: link.lastSeenAt ? '#0C8140' : '#9B9180' }}>
+                        {link.lastSeenAt
+                          ? `last sent ${new Date(link.lastSeenAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`
+                          : 'nothing sent yet'}
+                      </span>
+                      <button style={pill} onClick={() => setOpen(open === link.id ? null : link.id)}>
+                        {open === link.id ? 'Hide' : 'How to set it up'}
+                      </button>
+                      <button style={{ ...pill, color: '#C62828' }} disabled={busy === link.id}
+                        onClick={() => void drop(link.id)}>Unlink</button>
+                    </>
+                  ) : (
+                    <button style={{ ...pill, background: '#191712', border: '1px solid #191712', color: '#FDF8E7' }}
+                      disabled={busy === h.id} onClick={() => void add(h.id, suggestMetric(h.name, h.unit))}>
+                      {busy === h.id ? 'Linking…' : 'Link to Health'}
+                    </button>
+                  )}
+                </div>
+
+                {link && open === link.id && (
+                  <div style={{ borderTop: '1px solid #F0EBDC', padding: '12px 13px', background: '#FCFAF4' }}>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 10 }}>
+                      <code style={{
+                        flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                        fontFamily: 'JetBrains Mono, monospace', fontSize: 11, color: '#6C6553',
+                        background: '#FAF7EC', border: '1px solid #E8E1CE', borderRadius: 7, padding: '7px 9px',
+                      }}>{ingestUrl(link.token)}</code>
+                      <button style={pill} onClick={() => copy(ingestUrl(link.token), link.id)}>
+                        {copied === link.id ? 'Copied' : 'Copy'}
+                      </button>
+                    </div>
+                    <ol style={{ margin: 0, paddingLeft: 18, fontSize: 12.5, color: '#6C6553', lineHeight: 1.75 }}>
+                      <li>On the iPhone, open <b>Shortcuts</b> → <b>Automation</b> → <b>+</b> → <b>Time of Day</b>,
+                        pick a time (10pm catches the whole day) and <b>Run Immediately</b>.</li>
+                      <li>Add <b>Find Health Samples</b> — type <b>{METRIC_SAMPLE[link.metric]}</b>, sorted by
+                        Start Date, and <b>Calculate Statistics</b> → <b>Sum</b> over <b>Today</b>.</li>
+                      <li>Add <b>Get Contents of URL</b>, paste the address above, set <b>Method</b> to
+                        <b> POST</b>, <b>Request Body</b> to <b>JSON</b>, and one field named{' '}
+                        <code style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11 }}>value</code>{' '}
+                        holding the number from step 2.</li>
+                      <li>Run it once by hand. The line above turns green when the first number lands.</li>
+                    </ol>
+                    <p style={{ margin: '10px 0 0', fontSize: 11.5, color: '#9B9180', lineHeight: 1.6 }}>
+                      The address is the whole credential and it feeds this one habit — it can read nothing
+                      and write nowhere else. Unlink to make it stop working.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )
+          })}
+          {err && <p style={{ margin: 0, fontSize: 12, color: '#C62828' }}>{err}</p>}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function HabitsSection() {
   const COLORS = getHabitColors()
   const { habits, addHabit: storeAdd, updateHabit, deleteHabit: storeDel } = useHabitsStore()
@@ -1293,6 +1458,9 @@ function HabitsSection() {
           <Plus size={13} /> Add a habit
         </button>
       )}
+
+      {/* Steps and distance can come from the phone rather than from you. */}
+      <AppleHealthBlock habits={habits} />
     </div>
   )
 }

@@ -451,6 +451,24 @@ here is "the app's mail" any more — it is always *an account's*.
   arrived in. Reply-all drops **every** address of yours, not just that mailbox.
   A forward leaves the thread (no `threadId`, no `In-Reply-To`).
 
+## Habits — Apple Health, the only way it can work
+A web page cannot read Apple Health: HealthKit is native to iOS, with no web
+API and no OAuth. So the phone pushes. `lib/healthLink.ts` + Settings → Habits →
+APPLE HEALTH make one link per habit: a metric and a secret token, and the URL
+`/functions/v1/health-ingest?token=…` to paste into a Shortcut (Automation →
+Time of Day → Find Health Samples → Get Contents of URL).
+- **Offered only where it means something** — `isMovementHabit(name, unit)`
+  matches walk/run/steps/km/… so "Read 20 pages" never sees it; `suggestMetric`
+  picks steps vs distance vs minutes from the name.
+- **The token is the whole credential** and feeds exactly one habit: it reads
+  nothing, writes nowhere else, and unlinking revokes just that one.
+- **The habit's own goal decides the tick.** The function writes `quantity` and
+  sets `completed` from `habits.goal`, so 400 steps against 10,000 is a log, not
+  a tick. Upsert on `(habit_id, date)` — the table's own unique — so a daily
+  automation sending twice corrects the day.
+- `20260012_health_links.sql` + the `health-ingest` function must both be
+  deployed; the settings block says so when the table is missing.
+
 ## Settings — Section → Component Mapping (CONFIRMED CORRECT as of latest commit)
 | Nav group | Section id | Title shown | Component rendered |
 |---|---|---|---|
