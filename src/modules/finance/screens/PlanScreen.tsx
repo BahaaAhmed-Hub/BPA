@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { acct } from '../format'
 import { useFinanceStore } from '../financeStore'
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
@@ -27,7 +28,8 @@ const C = {
 }
 
 function fmt(n: number) {
-  return n.toLocaleString('en-US')
+  // Accounting convention, like the rest of the module: (1,200), never −1,200.
+  return acct(n)
 }
 
 // ─── Sample data ──────────────────────────────────────────────────────────────

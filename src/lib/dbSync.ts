@@ -266,16 +266,72 @@ export async function saveCompaniesToDB(companies: CompanyRow[]): Promise<void> 
       hidden:       c.hidden ?? false,
     }))
 
-    const { error } = await supabase.from('companies').upsert(rows, { onConflict: 'id' })
-    if (error) {
-      // Migration not run yet — fall back to base columns only
-      const baseRows = rows.map(({ id, user_id, name, color_tag, calendar_id, is_active }) =>
-        ({ id, user_id, name, color_tag, calendar_id, is_active })
-      )
-      const { error: baseError } = await supabase.from('companies').upsert(baseRows, { onConflict: 'id' })
-      if (baseError) throw new Error(baseError.message)
+    // Drop only the column the error names, and remember it.
+    //
+    // This used to fall back to "base columns only" on any failure, which threw
+    // away email_domain, users_data and **account_id** together — so one column
+    // the database had never heard of (hidden) cost a company its Google
+    // account, its domain and its people. Then the next load read those back as
+    // empty and wrote them over the browser's copy: link an account, refresh,
+    // and it was gone again.
+    let attempt = rows.map(r => strip(r, absentCompanyColumns))
+    for (let i = 0; i <= COMPANY_OPTIONAL.length; i++) {
+      const { error } = await supabase.from('companies').upsert(attempt, { onConflict: 'id' })
+      if (!error) { clearSyncGap('companies'); return }
+      const missing = missingColumn(error)
+      if (!missing || !COMPANY_OPTIONAL.includes(missing) || absentCompanyColumns.has(missing)) {
+        reportSyncGap('companies', columnProblem(error) ?? 'error', error.message)
+        throw new Error(error.message)
+      }
+      absentCompanyColumns.add(missing)
+      reportSyncGap('companies', 'columns', `companies.${missing} — run supabase/migrations/20260011`)
+      attempt = rows.map(r => strip(r, absentCompanyColumns))
     }
   }
+}
+
+/** Columns a database that has not been migrated may not have. Everything else
+ *  is required, and a failure naming one of those is a real failure. */
+const COMPANY_OPTIONAL = ['hidden', 'users_data', 'email_domain', 'account_id']
+const absentCompanyColumns = new Set<string>()
+
+function missingColumn(error: { message?: string }): string | null {
+  const msg = error.message ?? ''
+  return msg.match(/'([a-z_]+)' column/i)?.[1]
+      ?? msg.match(/column "?([a-z_]+)"?/i)?.[1]
+      ?? null
+}
+
+function strip<T extends Record<string, unknown>>(row: T, absent: Set<string>): T {
+  if (absent.size === 0) return row
+  const out = { ...row }
+  for (const key of absent) delete out[key]
+  return out
+}
+
+/**
+ *  What the server has, with anything it could not hold filled in from here.
+ *
+ *  The company list itself is the server's — deleting one on the laptop has to
+ *  reach the iPad. The *fields* are not, quite: a database missing a column
+ *  returns it empty, and writing that over the browser's copy is how linking an
+ *  account survived until the next refresh and no longer. So a blank from the
+ *  server never beats a value here; a different value always does.
+ */
+export function mergeCompanies(server: CompanyRow[], local: CompanyRow[]): CompanyRow[] {
+  const mine = new Map(local.map(c => [c.id, c]))
+  return server.map(row => {
+    const had = mine.get(row.id)
+    if (!had) return row
+    return {
+      ...row,
+      accountId:   row.accountId   || had.accountId,
+      emailDomain: row.emailDomain || had.emailDomain,
+      calendarId:  row.calendarId  || had.calendarId,
+      users:       row.users?.length ? row.users : (had.users ?? []),
+      hidden:      row.hidden ?? had.hidden,
+    }
+  })
 }
 
 export async function loadCompaniesFromDB(): Promise<CompanyRow[]> {

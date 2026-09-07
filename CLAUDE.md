@@ -227,6 +227,20 @@ figure is added to something denominated differently:
   *both* ends, so it shows for the account it came from and the one it went to. The
   pencil opens the editor — one gesture each.
 
+## Companies — linking one to an account
+`saveCompaniesToDB` used to answer *any* failed upsert by writing the row back
+with base columns only, which dropped `account_id`, `email_domain` and
+`users_data` together — so `hidden`, a column no migration ever added, cost each
+company its Google account. The next load read those back empty and
+`localStorage` was overwritten with them: link an account, refresh, gone.
+- **Drop only the column the error names** (`COMPANY_OPTIONAL`, remembered per
+  session), the same rule as `financeDb.upsertRows`, and report a sync gap.
+- **`mergeCompanies(server, local)` on load** — the *list* is the server's, so a
+  delete travels; a *blank field* from the server never beats a value this
+  browser has.
+- `20260011_company_hidden.sql` adds `hidden` (and re-asserts the three from
+  `20240002`).
+
 ## Finance — the envelope style is four real views
 `finance-envelope-style` was written by Settings and read by nothing: every
 choice drew the dial. `BudgetScreen` owns all four now (`loadEnvelopeStyle()`,
@@ -242,6 +256,8 @@ choice arrives too), and each answers a different question:
 - **mosaic** — `MosaicBoxes`: the side is √(spend), so **area is money**; rust
   and "burst" for an envelope past its budget; children take a strip along the
   bottom split the same way.
+`StylePicker` in the Budget header changes it on the fly and writes the same
+key and event as Settings, so the two never disagree.
 All four keep click-to-select, drag-to-reparent, the due-day chip and the
 currency badge — `Draggable`/`DropZone` take a `grow` prop for the views whose
 rows span the card. The row build carries `prev` and `trend` for them.

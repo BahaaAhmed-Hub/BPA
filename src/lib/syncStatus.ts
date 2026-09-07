@@ -6,7 +6,7 @@
 //
 // This records that gap so the app can say it out loud.
 
-export type SyncEntity = 'habits' | 'tasks'
+export type SyncEntity = 'habits' | 'tasks' | 'companies'
 
 export interface SyncGap {
   entity: SyncEntity
@@ -50,4 +50,5 @@ export function onSyncGapsChanged(fn: () => void): () => void {
 export const MIGRATION_FOR: Record<SyncEntity, string> = {
   habits: '20260002_habit_appearance.sql',
   tasks:  '20260003_task_full_sync.sql',
+  companies: '20260011_company_hidden.sql',
 }

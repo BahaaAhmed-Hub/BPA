@@ -138,7 +138,9 @@ function versusLast(actual: number, prev: number): { text: string; worse: boolea
 const MONTH_SHORT = ['J','F','M','A','M','J','J','A','S','O','N','D']
 
 function money(v: number, cur: string) {
-  return `${cur} ${v.toLocaleString('en-US', { maximumFractionDigits: 0 })}`
+  // Accounting convention, like everywhere else: a negative is bracketed and
+  // drops its minus — (EGP 85,875), never −EGP 85,875.
+  return acct(v, { currency: cur })
 }
 
 
@@ -208,6 +210,75 @@ interface EnvelopeRow {
   trend: number[]
 }
 
+// ─── Changing the view without leaving the page ──────────────────────────────
+// Settings decides what the page opens in; this changes it for the question you
+// are asking right now. Both write the same key and fire the same event, so
+// whichever you touch, the other agrees — and the choice still follows you to
+// your other devices.
+const STYLE_PICKS: { id: EnvelopeStyle; label: string; hint: string; icon: React.ReactNode }[] = [
+  {
+    id: 'dial', label: 'Dial', hint: 'Dial + trend — this month, plus a seven-day line',
+    icon: (
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round">
+        <path d="M4 17a8 8 0 1 1 16 0" /><path d="M12 17l4.5-4" />
+      </svg>
+    ),
+  },
+  {
+    id: 'ring', label: 'Rings', hint: 'Double rings — this month against last',
+    icon: (
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9">
+        <circle cx="12" cy="12" r="8.2" /><circle cx="12" cy="12" r="3.6" />
+      </svg>
+    ),
+  },
+  {
+    id: 'slip', label: 'Slips', hint: 'Till slips — figures in one column',
+    icon: (
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round">
+        <path d="M4 6h16M4 11h11M4 16h16M4 21h8" />
+      </svg>
+    ),
+  },
+  {
+    id: 'mosaic', label: 'Mosaic', hint: 'Proportional mosaic — area is money',
+    icon: (
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7">
+        <rect x="3" y="3" width="10" height="10" rx="1.5" />
+        <rect x="15" y="3" width="6" height="6" rx="1.5" />
+        <rect x="3" y="15" width="6" height="6" rx="1.5" />
+        <rect x="11" y="11" width="10" height="10" rx="1.5" />
+      </svg>
+    ),
+  },
+]
+
+function StylePicker({ value, onChange }: { value: EnvelopeStyle; onChange: (s: EnvelopeStyle) => void }) {
+  return (
+    <div role="group" aria-label="How to draw the envelopes"
+      style={{ display: 'flex', alignItems: 'center', gap: 2, padding: 3, borderRadius: 999, background: '#EDE7D9' }}>
+      {STYLE_PICKS.map(pick => {
+        const on = value === pick.id
+        return (
+          <button key={pick.id} onClick={() => onChange(pick.id)} title={pick.hint} aria-pressed={on}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 5, height: 28, padding: '0 10px',
+              borderRadius: 999, cursor: 'pointer', border: 'none', fontFamily: 'inherit',
+              fontSize: 12, fontWeight: on ? 600 : 500,
+              background: on ? '#FFFFFF' : 'transparent',
+              color: on ? '#191712' : '#6C6553',
+              boxShadow: on ? '0 1px 3px rgba(25,23,18,0.16)' : 'none',
+            }}>
+            {pick.icon}
+            <span style={{ display: 'none' }} />
+            {on && pick.label}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
 // ─── The four ways to look at an envelope ────────────────────────────────────
 //
 // Settings offers four and, until now, drew one. They are not decoration: each
@@ -274,7 +345,7 @@ function SlipRows({ rows, color, selectedId, onPick, rules, dragging, currency }
   currency: string
 }) {
   const MONO = 'JetBrains Mono, ui-monospace, SFMono-Regular, Menlo, monospace'
-  const fig = (n: number) => Math.round(n).toLocaleString('en-US')
+  const fig = (n: number) => acct(n)
   return (
     <div style={{ display: 'flex', flexDirection: 'column' }}>
       {rows.map(row => {
@@ -428,11 +499,11 @@ function MosaicBoxes({ rows, color, selectedId, onPick, rules, dragging, currenc
                       </span>
                       <span style={{ flex: 1 }} />
                       <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: size > 110 ? 15 : 12, fontWeight: 600, color: over ? RUST : '#191712', fontVariantNumeric: 'tabular-nums' }}>
-                        {Math.round(actual).toLocaleString('en-US')}
+                        {acct(actual)}
                       </span>
                       {budgeted ? (
                         <span style={{ fontSize: 9.5, color: over ? RUST : '#9B9180', fontVariantNumeric: 'tabular-nums' }}>
-                          of {Math.round(planned).toLocaleString('en-US')}{over ? ' · burst' : ''}
+                          of {acct(planned)}{over ? ' · burst' : ''}
                         </span>
                       ) : (
                         <span style={{ fontSize: 9.5, color: '#9B9180' }}>no budget</span>
@@ -593,7 +664,7 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
                 </span>
                 <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.3 }}>
                   <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 12, fontWeight: 600, color: spentOut ? color : '#191712', fontVariantNumeric: 'tabular-nums' }}>
-                    {actual.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                    {acct(actual)}
                   </span>
                   {budgeted ? (
                     <span style={{
@@ -602,7 +673,7 @@ function EnvelopeGroup({ title, rows, color, selectedId, onPick, currency, empty
                       // parts rather than something set on this category.
                       borderBottom: plannedFrom === 'parts' ? '1px dotted #C5BCA8' : 'none',
                     }}>
-                      {planned.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                      {acct(planned)}
                     </span>
                   ) : (
                     // Not a fact about the category — something to go and do.
@@ -743,7 +814,7 @@ function SummaryLine({ label, actual, planned, color, currency, strong }: {
       <span style={{ flex: 1 }} />
       <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
         <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: strong ? 20 : 17, fontWeight: 600, letterSpacing: '-0.02em', color, fontVariantNumeric: 'tabular-nums' }}>
-          {actual.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+          {acct(actual)}
         </span>
         <span style={{ fontSize: 10.5, color: '#9B9180', fontVariantNumeric: 'tabular-nums' }}>
           of {money(planned, currency)}
@@ -771,6 +842,12 @@ export function BudgetScreen(_props?: any) {
   // Which of the four views Settings chose. It is a shared preference, so it
   // arrives from another device too — hence the listener as well as the read.
   const [envStyle, setEnvStyle] = useState<EnvelopeStyle>(loadEnvelopeStyle)
+  function pickStyle(next: EnvelopeStyle) {
+    setEnvStyle(next)
+    try { localStorage.setItem('finance-envelope-style', next) } catch { /* quota */ }
+    // The same event Settings fires, so the two never disagree.
+    window.dispatchEvent(new CustomEvent('finance:envelopeStyleChanged', { detail: next }))
+  }
   useEffect(() => {
     const h = () => setEnvStyle(loadEnvelopeStyle())
     window.addEventListener('finance:envelopeStyleChanged', h)
@@ -1168,6 +1245,7 @@ export function BudgetScreen(_props?: any) {
             <button onClick={() => stepMonth(1)} title="Next month"
               style={{ ...HEAD_PILL, width: 28, padding: 0, justifyContent: 'center', border: 'none', background: 'transparent', color: '#6C6553' }}>›</button>
           </div>
+          <StylePicker value={envStyle} onChange={pickStyle} />
           <button onClick={addCategory} title="Add a category"
             style={{ height: 34, padding: '0 15px', borderRadius: 999, background: AMBER, border: 'none', color: '#191712', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 2px 0 rgba(25,23,18,0.14)' }}>
             + Category
@@ -1531,7 +1609,7 @@ export function BudgetScreen(_props?: any) {
                         </div>
                         <div style={{ fontSize: 11, color: '#6C6553', marginBottom: 3, whiteSpace: 'nowrap' }}>{cat?.name ?? selectedCat.name}</div>
                         <div style={{ fontSize: 13, fontWeight: 700, color: RUST, fontFamily: 'Outfit, sans-serif' }}>
-                          EGP {total.toLocaleString('en-US')}
+                          {acct(total, { currency: 'EGP' })}
                         </div>
                         <div style={{ fontSize: 10, color: '#9B9180' }}>{txs.length} txns</div>
                       </div>
@@ -1625,7 +1703,7 @@ export function BudgetScreen(_props?: any) {
                     )}
                   </div>
                   <div style={{ fontFamily: 'Outfit, sans-serif', fontSize: 18, fontWeight: 700, color: RUST, letterSpacing: '-0.02em' }}>
-                    EGP {totalSpend.toLocaleString('en-US')}
+                    {acct(totalSpend, { currency: 'EGP' })}
                   </div>
                 </div>
                 {excludedSpend > 0 && (
@@ -1641,7 +1719,7 @@ export function BudgetScreen(_props?: any) {
                     <div>
                       <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', color: '#9B9180' }}>NET</div>
                       <div style={{ fontFamily: 'Outfit, sans-serif', fontSize: 18, fontWeight: 700, color: '#191712', letterSpacing: '-0.02em' }}>
-                        EGP {netSpend.toLocaleString('en-US')}
+                        {acct(netSpend, { currency: 'EGP' })}
                       </div>
                     </div>
                   </>

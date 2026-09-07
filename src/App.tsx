@@ -19,7 +19,8 @@ import { useHabitsStore } from './store/habitsStore'
 import { supabase } from './lib/supabase'
 import { signInWithGoogle, getPendingAddAccount, clearPendingAddAccount } from './lib/google'
 import { addAccount, loadAccounts, saveAccounts } from './lib/multiAccount'
-import { saveAccountsToDB, loadCompaniesFromDB, loadRawSettingsFromDB, loadAccountsFromDB } from './lib/dbSync'
+import { saveAccountsToDB, loadCompaniesFromDB, loadRawSettingsFromDB, loadAccountsFromDB, mergeCompanies } from './lib/dbSync'
+import type { CompanyRow } from './lib/dbSync'
 import { startPrefSync } from './lib/prefSync'
 import { startLiveSync } from './lib/liveSync'
 import { useFinanceStore } from './modules/finance/financeStore'
@@ -516,8 +517,15 @@ async function loadAllFromDB(
     useFinanceStore.getState().loadFromDB(),
     // Companies
     loadCompaniesFromDB().then(companies => {
-      if (companies.length > 0)
-        localStorage.setItem('professor-companies', JSON.stringify(companies))
+      if (companies.length === 0) return
+      // Never write a blank over something this browser knows: a database
+      // missing a column hands back an empty account_id, and overwriting with
+      // it is what un-linked every company on each refresh.
+      const local = (() => {
+        try { return JSON.parse(localStorage.getItem('professor-companies') ?? '[]') as CompanyRow[] }
+        catch { return [] as CompanyRow[] }
+      })()
+      localStorage.setItem('professor-companies', JSON.stringify(mergeCompanies(companies, local)))
     }),
     // Settings (partial — Settings component merges with its own DEFAULTS)
     loadRawSettingsFromDB().then(partial => {
