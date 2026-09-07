@@ -26,8 +26,8 @@ export function TopBar({ title, subtitle }: TopBarProps) {
     <header
       style={{
         height: 64,
-        background: '#FFFFFF',
-        borderBottom: '1px solid #E8E1CE',
+        background: 'var(--sb-card)',
+        borderBottom: '1px solid var(--sb-border)',
         display: 'flex',
         alignItems: 'center',
         padding: '0 24px',
@@ -44,7 +44,7 @@ export function TopBar({ title, subtitle }: TopBarProps) {
             margin: 0,
             fontSize: 18,
             fontWeight: 700,
-            color: '#191712',
+            color: 'var(--sb-ink-1)',
             letterSpacing: '-0.3px',
             lineHeight: 1,
             fontFamily: "'Cabinet Grotesk', sans-serif",
@@ -53,14 +53,14 @@ export function TopBar({ title, subtitle }: TopBarProps) {
           {title}
         </h1>
         {subtitle && (
-          <p style={{ margin: 0, fontSize: 12, color: '#6C6553', marginTop: 2 }}>
+          <p style={{ margin: 0, fontSize: 12, color: 'var(--sb-ink-3)', marginTop: 2 }}>
             {subtitle}
           </p>
         )}
       </div>
 
       {/* Date */}
-      <span style={{ fontSize: 12, color: '#6C6553', letterSpacing: '0.2px' }}>
+      <span style={{ fontSize: 12, color: 'var(--sb-ink-3)', letterSpacing: '0.2px' }}>
         {dateStr}
       </span>
 
@@ -80,20 +80,20 @@ export function TopBar({ title, subtitle }: TopBarProps) {
               border: '1px solid transparent',
               borderRadius: 7,
               cursor: 'pointer',
-              color: '#6C6553',
+              color: 'var(--sb-ink-3)',
               transition: 'all 0.15s ease',
             }}
             onMouseEnter={e => {
               const el = e.currentTarget as HTMLElement
               el.style.background = 'rgba(255,255,255,0.05)'
-              el.style.borderColor = '#E8E1CE'
-              el.style.color = '#191712'
+              el.style.borderColor = 'var(--sb-border)'
+              el.style.color = 'var(--sb-ink-1)'
             }}
             onMouseLeave={e => {
               const el = e.currentTarget as HTMLElement
               el.style.background = 'transparent'
               el.style.borderColor = 'transparent'
-              el.style.color = '#6C6553'
+              el.style.color = 'var(--sb-ink-3)'
             }}
           >
             <Icon size={15} strokeWidth={1.8} />
@@ -111,7 +111,7 @@ export function TopBar({ title, subtitle }: TopBarProps) {
             <img src={user.avatarUrl} alt={user.name ?? ''} style={{ width: 32, height: 32, borderRadius: '50%', border: '1.5px solid var(--sb-accent)', objectFit: 'cover' }} />
           ) : (
             <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgba(var(--sb-accent-rgb),0.12)', border: '1.5px solid var(--sb-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <span style={{ fontSize: 12, fontWeight: 600, color: '#191712' }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--sb-ink-1)' }}>
                 {user?.name?.[0]?.toUpperCase() ?? 'P'}
               </span>
             </div>
@@ -121,14 +121,14 @@ export function TopBar({ title, subtitle }: TopBarProps) {
         {menuOpen && (
           <>
             <div onClick={() => setMenuOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 40 }} />
-            <div style={{ position: 'absolute', right: 0, top: 40, zIndex: 50, background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 10, padding: 8, minWidth: 200, boxShadow: '0 8px 24px rgba(0,0,0,0.5)' }}>
-              <div style={{ padding: '8px 12px 10px', borderBottom: '1px solid #E8E1CE', marginBottom: 6 }}>
-                <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#191712' }}>{user?.name ?? 'User'}</p>
-                <p style={{ margin: '2px 0 0', fontSize: 11, color: '#6C6553' }}>{user?.email}</p>
+            <div style={{ position: 'absolute', right: 0, top: 40, zIndex: 50, background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 10, padding: 8, minWidth: 200, boxShadow: '0 8px 24px rgba(0,0,0,0.5)' }}>
+              <div style={{ padding: '8px 12px 10px', borderBottom: '1px solid var(--sb-border)', marginBottom: 6 }}>
+                <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: 'var(--sb-ink-1)' }}>{user?.name ?? 'User'}</p>
+                <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--sb-ink-3)' }}>{user?.email}</p>
               </div>
               <button
                 onClick={() => { setMenuOpen(false); void signOut() }}
-                style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'transparent', border: 'none', borderRadius: 7, color: '#E05252', fontSize: 13, cursor: 'pointer', textAlign: 'left' }}
+                style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'transparent', border: 'none', borderRadius: 7, color: 'var(--sb-negative)', fontSize: 13, cursor: 'pointer', textAlign: 'left' }}
                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(224,82,82,0.08)' }}
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
               >
