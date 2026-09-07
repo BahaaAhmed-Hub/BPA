@@ -89,7 +89,7 @@ function DraggableTaskCard({ task, scheduled, creating, gcalDone }: {
       style={{
         transform: CSS.Translate.toString(transform),
         opacity: isDragging ? 0.4 : scheduled ? 0.65 : 1,
-        background: '#FFFFFF',
+        background: 'var(--sb-card)',
         border: `1px solid ${gcalDone ? '#D1FAE5' : '#E5E7EB'}`,
         borderRadius: 10, padding: '10px 12px', marginBottom: 8,
         display: 'flex', alignItems: 'flex-start', gap: 10,
@@ -161,16 +161,16 @@ function EventPopup({ event, color, onClose }: { event: GCalEvent; color: string
     <div ref={ref} style={{
       position: 'fixed', zIndex: 9999, top: '50%', left: '50%',
       transform: 'translate(-50%, -50%)',
-      background: '#FFFFFF',
-      border: '1px solid #E8E1CE',
+      background: 'var(--sb-card)',
+      border: '1px solid var(--sb-border)',
       borderRadius: 14, width: 340, maxHeight: '80vh', overflowY: 'auto',
       boxShadow: '0 24px 80px rgba(0,0,0,0.6)',
     }}>
       {/* Color bar + title */}
-      <div style={{ borderBottom: '1px solid #E8E1CE', padding: '14px 16px 12px', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+      <div style={{ borderBottom: '1px solid var(--sb-border)', padding: '14px 16px 12px', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
         <div style={{ width: 4, minHeight: 24, borderRadius: 2, background: color, flexShrink: 0, marginTop: 2 }} />
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 15, fontWeight: 700, color: '#191712', lineHeight: 1.3 }}>{event.summary ?? '(No title)'}</div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--sb-ink-1)', lineHeight: 1.3 }}>{event.summary ?? '(No title)'}</div>
           <div style={{ fontSize: 12, color: '#9B9180', marginTop: 3 }}>
             {isAllDay ? fmtDate(startISO) : `${fmt(startISO)} – ${fmt(endISO)}`}
           </div>
@@ -188,16 +188,16 @@ function EventPopup({ event, color, onClose }: { event: GCalEvent; color: string
           }}>🎥 Join meeting</a>
         )}
         {event.location && (
-          <div style={{ fontSize: 12, color: '#6C6553' }}>📍 {event.location}</div>
+          <div style={{ fontSize: 12, color: 'var(--sb-ink-3)' }}>📍 {event.location}</div>
         )}
         {attendees.length > 0 && (
-          <div style={{ fontSize: 12, color: '#6C6553' }}>
+          <div style={{ fontSize: 12, color: 'var(--sb-ink-3)' }}>
             👥 {attendees.slice(0, 4).map(a => a.displayName ?? a.email).join(', ')}
             {attendees.length > 4 && <span style={{ color: '#9B9180' }}> +{attendees.length - 4} more</span>}
           </div>
         )}
         {notes && (
-          <div style={{ fontSize: 11, color: '#9B9180', lineHeight: 1.5, borderTop: '1px solid #E8E1CE', paddingTop: 8, whiteSpace: 'pre-wrap' }}>
+          <div style={{ fontSize: 11, color: '#9B9180', lineHeight: 1.5, borderTop: '1px solid var(--sb-border)', paddingTop: 8, whiteSpace: 'pre-wrap' }}>
             {notes.slice(0, 300)}{notes.length > 300 ? '…' : ''}
           </div>
         )}
@@ -370,7 +370,7 @@ function AccountPickerOverlay({
           {allOptions.map(acct => (
             <button key={acct.id} onClick={() => setSelected(acct.id)} style={{
               padding: '10px 14px', borderRadius: 10, cursor: 'pointer', textAlign: 'left',
-              background: selected === acct.id ? 'rgba(249,115,22,0.06)' : '#FFFFFF',
+              background: selected === acct.id ? 'rgba(249,115,22,0.06)' : 'var(--sb-card)',
               border: `1.5px solid ${selected === acct.id ? '#F97316' : '#E5E7EB'}`,
               display: 'flex', alignItems: 'center', gap: 10,
             }}>
@@ -737,7 +737,7 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
           animation: 'sdp-in 0.3s cubic-bezier(0.16,1,0.3,1)', overflow: 'hidden',
         }}>
           {/* Header */}
-          <div style={{ padding: '18px 24px', background: '#FFFFFF', borderBottom: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+          <div style={{ padding: '18px 24px', background: 'var(--sb-card)', borderBottom: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
             <span style={{ fontSize: 22 }}>✦</span>
             <span style={{ fontSize: 17, fontWeight: 800, color: '#111827', flex: 1 }}>Smart Day Planner</span>
             <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6B7280', padding: 4, display: 'flex', borderRadius: 6 }}>
@@ -746,7 +746,7 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
           </div>
 
           {/* Sub-header */}
-          <div style={{ padding: '10px 24px', background: '#FFFFFF', borderBottom: '1px solid #F3F4F6', display: 'flex', alignItems: 'center', gap: 14, flexShrink: 0, flexWrap: 'wrap' }}>
+          <div style={{ padding: '10px 24px', background: 'var(--sb-card)', borderBottom: '1px solid #F3F4F6', display: 'flex', alignItems: 'center', gap: 14, flexShrink: 0, flexWrap: 'wrap' }}>
             <span style={{ fontSize: 13, color: '#6B7280' }}>📅 {dateLabel}</span>
             <span style={{ fontSize: 13, color: '#6B7280' }}>🕐 {timeLabel}</span>
             <span style={{ fontSize: 12, fontWeight: 600, background: '#F3F4F6', color: '#374151', borderRadius: 20, padding: '3px 10px' }}>
@@ -771,11 +771,11 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
             <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
               {/* Left: Timeline */}
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, borderRight: '1px solid #E5E7EB' }}>
-                <div style={{ padding: '12px 16px 8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#FFFFFF', borderBottom: '1px solid #F3F4F6', flexShrink: 0 }}>
+                <div style={{ padding: '12px 16px 8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--sb-card)', borderBottom: '1px solid #F3F4F6', flexShrink: 0 }}>
                   <span style={{ fontSize: 14, fontWeight: 700, color: '#111827' }}>Today's Schedule</span>
                   <button onClick={() => void generatePlan()} disabled={generating} style={{
                     display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 20,
-                    background: generating ? '#F3F4F6' : '#FFFFFF', border: '1.5px solid #E5E7EB',
+                    background: generating ? '#F3F4F6' : 'var(--sb-card)', border: '1.5px solid #E5E7EB',
                     color: '#374151', fontSize: 13, fontWeight: 600, cursor: generating ? 'wait' : 'pointer',
                   }}>
                     <RefreshCw size={13} style={{ animation: generating ? 'spin 1s linear infinite' : 'none' }} />
@@ -805,7 +805,7 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
               </div>
 
               {/* Right: Task list */}
-              <div style={{ width: 320, display: 'flex', flexDirection: 'column', minHeight: 0, background: '#FFFFFF' }}>
+              <div style={{ width: 320, display: 'flex', flexDirection: 'column', minHeight: 0, background: 'var(--sb-card)' }}>
                 <div style={{ padding: '12px 16px 8px', borderBottom: '1px solid #F3F4F6', flexShrink: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
                     <span style={{ fontSize: 14, fontWeight: 700, color: '#111827' }}>Tasks</span>
@@ -847,7 +847,7 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
           </DndContext>
 
           {/* Footer */}
-          <div style={{ padding: '14px 24px', background: '#FFFFFF', borderTop: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+          <div style={{ padding: '14px 24px', background: 'var(--sb-card)', borderTop: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
             <CalendarPlus size={14} color="#6B7280" />
             <span style={{ fontSize: 13, color: '#6B7280' }}>
               {blocks.length} task{blocks.length !== 1 ? 's' : ''} · {totalMinutes}m planned
@@ -858,7 +858,7 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
               )}
             </span>
             <div style={{ flex: 1 }} />
-            <button onClick={onClose} style={{ padding: '9px 20px', borderRadius: 20, background: '#FFFFFF', border: '1.5px solid #E5E7EB', color: '#374151', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+            <button onClick={onClose} style={{ padding: '9px 20px', borderRadius: 20, background: 'var(--sb-card)', border: '1.5px solid #E5E7EB', color: '#374151', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
               Cancel
             </button>
             <button onClick={applyPlan} disabled={!blocks.length} style={{
