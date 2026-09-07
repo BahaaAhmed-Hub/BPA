@@ -19,6 +19,8 @@ import { acct } from '../format'
 import { CategoryGlyph } from '../components/CategoryGlyph'
 import { findDuplicates } from '../duplicates'
 import { DuplicateMark } from '../components/DuplicateMark'
+import { BudgetMark } from '../components/BudgetMark'
+import { isBudgetEntry } from '../budgetEntries'
 import { isUnpaid, unpaidRow, UNPAID_TITLE } from '../unpaid'
 import { liveBalances } from '../balances'
 import { todayISO as todayISO_, monthStartISO, monthEndISO } from '../dates'
@@ -661,6 +663,7 @@ export function BalanceScreen() {
                         {title}
                       </span>
                       <DuplicateMark scope={dupes.get(tx.id)} />
+                      <BudgetMark on={isBudgetEntry(tx)} />
                     </div>
                     <div
                       title={tx.note?.trim() || undefined}

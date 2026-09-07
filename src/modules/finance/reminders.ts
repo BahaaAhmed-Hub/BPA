@@ -41,35 +41,6 @@ export function loadReminders(): MoneyReminder[] {
   } catch { return [] }
 }
 
-/** The budgets that carry a day of their own, as reminders.
- *
- *  A day set on the budget is the same statement as a reminder made by hand —
- *  this category, this day — so it goes through the same machinery rather than
- *  growing a second one beside it. The id is derived from the category, so
- *  changing the day moves the task the budget already made.
- *
- *  A hand-made reminder for the same category wins: two tasks for one bill is
- *  worse than either version of it. */
-export function remindersFromBudgets(
-  rules: Record<string, BudgetRule>,
-  handMade: MoneyReminder[] = [],
-): MoneyReminder[] {
-  const taken = new Set(handMade.filter(r => r.enabled).map(r => r.categoryId))
-  const out: MoneyReminder[] = []
-  for (const [categoryId, rule] of Object.entries(rules)) {
-    if (!rule || rule.dueDay == null || taken.has(categoryId)) continue
-    out.push({
-      id: `budget:${categoryId}`,
-      categoryId,
-      day: rule.dueDay,
-      leadDays: rule.dueLeadDays ?? 0,
-      monthsAhead: 3,
-      enabled: true,
-    })
-  }
-  return out
-}
-
 export function saveReminders(list: MoneyReminder[]): void {
   try { localStorage.setItem(KEY, JSON.stringify(list)) } catch { /* quota */ }
   window.dispatchEvent(new Event('professor:moneyRemindersChanged'))
@@ -152,11 +123,8 @@ export function runReminders(
   api: TaskApi,
   now = new Date(),
 ): { made: number; moved: number; dropped: number } {
-  const handMade = loadReminders()
+  const rules = loadReminders()
   const budgets = loadRules()
-  // A day written on a budget is a reminder; it just did not have to be typed
-  // twice. Both lists run through everything below unchanged.
-  const rules = [...handMade, ...remindersFromBudgets(budgets, handMade)]
   const made = madeKeys()
   const today = isoDate(now)
   let createdCount = 0, movedCount = 0, droppedCount = 0
@@ -207,6 +175,15 @@ export function runReminders(
   // A rule that is gone, off, or no longer covers a month takes its unfinished
   // future tasks with it. Anything already done is a record and stays.
   for (const [key, task] of byMarker) {
+    // A budget with a day on it used to make a task. It writes the entry
+    // itself now — unpaid, on the day, in the ledger — so these are cleared
+    // out wherever they still stand, past ones included. See budgetEntries.ts.
+    if (key.startsWith(`${MARK}:budget:`)) {
+      if (task.completed) continue
+      api.deleteTask(task.id)
+      droppedCount++
+      continue
+    }
     if (wanted.has(key)) continue
     if (task.completed) continue
     if (task.dueDate && task.dueDate < today) continue

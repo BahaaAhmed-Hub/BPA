@@ -42,7 +42,11 @@ export interface BudgetRule {
    *  short for the day takes its last day rather than skipping. Absent means
    *  the budget is a monthly allowance with no particular day to it. */
   dueDay?: number
-  /** Days before that day to be reminded. 0 is the day itself. */
+  /** Which account the money leaves. Only meaningful with a day: the entry
+   *  written for that day has to come from somewhere. */
+  dueAccountId?: string
+  /** Kept so a rule written before budgets made entries still reads. Nothing
+   *  uses it now — the entry lands on the day itself. */
   dueLeadDays?: number
 }
 
@@ -71,6 +75,15 @@ export function loadRules(): Record<string, BudgetRule> {
 
 /** 1st, 2nd, 3rd, 21st … — a day of the month reads as a day, not a number.
  *  The teens are the exception every naive version gets wrong. */
+/** "every month", "every quarter" — how often the entry lands. */
+export function freqPhrase(f: Frequency): string {
+  return f === 'weekly' ? 'every week'
+    : f === 'every_2_months' ? 'every two months'
+    : f === 'quarterly' ? 'every quarter'
+    : f === 'yearly' ? 'once a year'
+    : 'every month'
+}
+
 export function ordinal(n: number): string {
   const teen = n % 100
   if (teen >= 11 && teen <= 13) return `${n}th`
@@ -208,6 +221,8 @@ interface Props {
   transactions: Transaction[]
   monthKey: string          // YYYY-MM
   currency: string
+  /** Only so a budget with a day can say where its money comes from. */
+  accounts?: { id: string; name: string }[]
   onChange: (rule: BudgetRule) => void
   /** Clear the budget entirely, as opposed to setting it to nothing. */
   onDelete: () => void
@@ -223,7 +238,7 @@ interface Props {
 }
 
 export function BudgetRuleModal({
-  category, parent, partsBudget = 0, rule, subs, transactions, monthKey, currency,
+  category, parent, partsBudget = 0, rule, subs, transactions, monthKey, currency, accounts = [],
   onChange, onDelete, onPromote, onRename, onEditCategory, onAddSub, onEditSub, onDrill, onClose,
 }: Props) {
   const box = useRef<HTMLDivElement>(null)
@@ -243,6 +258,7 @@ export function BudgetRuleModal({
     return () => { document.removeEventListener('pointerdown', away); document.removeEventListener('keydown', esc) }
   }, [onClose])
 
+  const payFrom = accounts.find(a => a.id === rule.dueAccountId)
   const cur = rule.currency ?? currency
   const wanted = category.txType === 'income' ? 'income' : 'expense'
   const ids = new Set([category.id, ...subs.map(s => s.id)])
@@ -497,7 +513,10 @@ export function BudgetRuleModal({
                   onChange={e => onChange({
                     ...rule,
                     dueDay: e.target.value ? Number(e.target.value) : undefined,
-                    dueLeadDays: e.target.value ? (rule.dueLeadDays ?? 0) : undefined,
+                    // A day needs somewhere for the money to come from, and
+                    // the first account is a visible answer rather than a
+                    // silent one — it is named in the pill beside it.
+                    dueAccountId: e.target.value ? (rule.dueAccountId ?? accounts[0]?.id) : rule.dueAccountId,
                   })}
                   style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', border: 'none' }}>
                   <option value="">no fixed day</option>
@@ -508,19 +527,21 @@ export function BudgetRuleModal({
               </label>
               {rule.dueDay != null && (
                 <>
-                  <span style={{ fontSize: 11.5, color: GHOST, flexShrink: 0 }}>remind</span>
+                  <span style={{ fontSize: 11.5, color: GHOST, flexShrink: 0 }}>from</span>
                   <label style={{ ...PILL, flex: 1, position: 'relative', justifyContent: 'center' }}
-                    title="How far ahead the task lands on the board">
-                    {(rule.dueLeadDays ?? 0) === 0 ? 'on the day' : `${rule.dueLeadDays} day${rule.dueLeadDays === 1 ? '' : 's'} before`}
-                    <select value={rule.dueLeadDays ?? 0}
-                      onChange={e => onChange({ ...rule, dueLeadDays: Number(e.target.value) })}
+                    title="The account the money leaves. The entry is filed against it.">
+                    <span style={{
+                      color: payFrom ? INK : RUST, minWidth: 0,
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    }}>{payFrom?.name ?? 'which account?'}</span>
+                    <select value={rule.dueAccountId ?? ''}
+                      onChange={e => onChange({ ...rule, dueAccountId: e.target.value || undefined })}
                       style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', border: 'none' }}>
-                      {[0, 1, 2, 3, 5, 7, 14].map(n => (
-                        <option key={n} value={n}>{n === 0 ? 'on the day' : `${n} day${n === 1 ? '' : 's'} before`}</option>
-                      ))}
+                      <option value="">which account?</option>
+                      {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
                     </select>
                   </label>
-                  <button onClick={() => onChange({ ...rule, dueDay: undefined, dueLeadDays: undefined })}
+                  <button onClick={() => onChange({ ...rule, dueDay: undefined })}
                     title="No particular day" style={{ ...ROUND, width: 26, height: 26 }}><X size={12} /></button>
                 </>
               )}
@@ -528,8 +549,9 @@ export function BudgetRuleModal({
           </div>
           {rule.dueDay != null && (
             <div style={{ fontSize: 11, color: MUTED, lineHeight: 1.5, margin: '-2px 0 8px' }}>
-              A task lands on the board — and on your calendar — for that day, every
-              month this budget runs.
+              An entry is written for that day, {freqPhrase(rule.frequency)}, marked
+              unpaid until you tick it — so it is owed rather than spent, and in no
+              balance or total until the money moves.
             </div>
           )}
 

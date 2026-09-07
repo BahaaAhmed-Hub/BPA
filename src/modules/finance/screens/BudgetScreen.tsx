@@ -17,6 +17,8 @@ import type { Category, Transaction } from '../types'
 import { acct } from '../format'
 import { findDuplicates } from '../duplicates'
 import { DuplicateMark } from '../components/DuplicateMark'
+import { BudgetMark } from '../components/BudgetMark'
+import { isBudgetEntry } from '../budgetEntries'
 import { isUnpaid, unpaidRow, settled, whenPaid, UNPAID_TITLE } from '../unpaid'
 
 // ─── 16G · Budget Builder ─────────────────────────────────────────────────────
@@ -387,7 +389,7 @@ export function BudgetScreen(_props?: any) {
   // never mounted anywhere — so there was no way to create a category at all,
   // which left this screen with nothing to configure and every transaction
   // uncategorised.
-  const { categories, transactions, upsertCategory, removeCategory } = useFinanceStore()
+  const { categories, transactions, accounts, upsertCategory, removeCategory } = useFinanceStore()
   const year    = useFinanceStore(s => s.currentYear)
   const setYear = useFinanceStore(s => s.setYear)
   const [catModal, setCatModal] = useState<{ category: Category | null } | null>(null)
@@ -960,6 +962,7 @@ export function BudgetScreen(_props?: any) {
           transactions={transactions}
           monthKey={monthKey}
           currency={currency}
+          accounts={accounts}
           onChange={r => saveRule(selectedCat.id, r)}
           onDelete={() => deleteRule(selectedCat.id)}
           onPromote={() => void upsertCategory({ ...selectedCat, parentId: undefined })}
@@ -1155,6 +1158,7 @@ export function BudgetScreen(_props?: any) {
                           <div style={{ fontSize: 13, fontWeight: 600, color: '#191712', display: 'flex', alignItems: 'center', gap: 6, textDecoration: flag === 'excluded' ? 'line-through' : 'none' }}>
                             <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tx.payee}</span>
                             <DuplicateMark scope={dupes.get(tx.id)} />
+                            <BudgetMark on={isBudgetEntry(tx)} />
                           </div>
                           <div style={{ fontSize: 10.5, color: '#9B9180', marginTop: 1, display: 'flex', gap: 6, minWidth: 0 }}>
                             <span title={isUnpaid(tx) ? `Due ${tx.date}, not paid` : `Paid ${whenPaid(tx)}`}>

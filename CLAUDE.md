@@ -241,14 +241,24 @@ an overspend cannot run past its own pill. The title says which limit it used.
   a row — same pointer-event drag as the Financials table. `goalPlanning.ts` keeps
   the three locally until the migration runs; the server's value wins.
 
-## Finance — money reminders
-`reminders.ts` turns "this category, this day of the month" into tasks. A budget
-can carry that day itself (`BudgetRule.dueDay` + `dueLeadDays`, the **Paid on** row):
-`remindersFromBudgets()` turns those into the same `MoneyReminder` shape, keyed
-`budget:<categoryId>`, so one machine makes, moves and drops every task. A
-hand-made reminder for the same category wins — two tasks for one bill is worse
-than either. `putRules` fires `professor:moneyRemindersChanged` so the board keeps
-up without waiting for the next load. The task goes
+## Finance — a budget with a day writes the entry
+`budgetEntries.ts`. `BudgetRule.dueDay` + `dueAccountId` (the **Paid on** row) means
+the money leaves on that day, so the entry goes in the ledger on that day, **unpaid**
+— out of every balance and total, dotted red in the feeds, counted by Financials
+"when it is due". Ticking Paid is the whole gesture that turns a plan into a fact.
+- **`occurrencesFor(rule)`** follows the rule's own interval and keeps the phase its
+  `starts` month set — a quarterly rule starting in February is Feb/May/Aug/Nov.
+  Weekly steps 7 days; a day of the month means nothing to it.
+- **What stops a second copy is the ledger**: an entry already filed against that
+  category on that day is the entry, whoever wrote it. No flag to lose if `tags` is
+  missing, and recording the rent by hand suppresses the generated one.
+- Only dates inside `currentYear` are written — only that year is loaded to check
+  against. The rest arrive when the year turns.
+- The `budget` tag is the flag (`isBudgetEntry`, `BudgetMark` in all four feeds).
+  A day removed takes its **unpaid future** entries with it; anything paid stays.
+- It used to make tasks. `runReminders` deletes any `money-reminder:budget:*` task
+  it still finds, and nothing makes them any more. Hand-made money reminders in
+  Settings are untouched and still make tasks. The task goes
 into the **schedule** quadrant with a `dueDate`, which is what `TaskCommand` already
 pushes to Google Calendar — nothing here knows about calendars.
 - Each task carries `links: ['money-reminder:<ruleId>:<monthKey>']`, so a rule finds

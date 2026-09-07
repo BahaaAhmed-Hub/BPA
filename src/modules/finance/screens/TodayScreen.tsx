@@ -8,6 +8,8 @@ import { acct, group } from '../format'
 import { toBase, baseCurrency, currenciesNeedingRates } from '../fx'
 import { findDuplicates } from '../duplicates'
 import { DuplicateMark } from '../components/DuplicateMark'
+import { BudgetMark } from '../components/BudgetMark'
+import { isBudgetEntry } from '../budgetEntries'
 import { isUnpaid, unpaidRow, settled, whenPaid, UNPAID_TITLE } from '../unpaid'
 import { isoDate } from '../dates'
 
@@ -320,6 +322,7 @@ export function TodayScreen() {
           <div style={{ fontSize: 14, fontWeight: 500, color: C.textPri, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 6 }}>
             {tx.payee?.trim() || cat?.name || 'Transaction'}
             <DuplicateMark scope={dupes.get(tx.id)} />
+            <BudgetMark on={isBudgetEntry(tx)} />
             {isFuture && (
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={C.textMuted} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, opacity: 0.7 }}>
                 <title>Planned (not yet paid)</title>

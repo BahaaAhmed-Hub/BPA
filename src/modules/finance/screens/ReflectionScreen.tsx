@@ -7,6 +7,8 @@ import { toBase, baseCurrency, currenciesNeedingRates } from '../fx'
 import { acct, outflow, noted } from '../format'
 import { findDuplicates } from '../duplicates'
 import { DuplicateMark } from '../components/DuplicateMark'
+import { BudgetMark } from '../components/BudgetMark'
+import { isBudgetEntry } from '../budgetEntries'
 import { isUnpaid, unpaidRow, UNPAID_TITLE } from '../unpaid'
 import { TransactionModal } from '../modals/TransactionModal'
 import type { Transaction } from '../types'
@@ -853,6 +855,7 @@ export function ReflectionScreen(_props?: any) {
                             {tx.payee?.trim() || cat?.name || 'Entry'}
                           </span>
                           <DuplicateMark scope={dupes.get(tx.id)} />
+                          <BudgetMark on={isBudgetEntry(tx)} />
                         </span>
                         <span
                           title={tx.note?.trim() || undefined}

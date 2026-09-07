@@ -24,6 +24,8 @@ import { startPrefSync } from './lib/prefSync'
 import { startLiveSync } from './lib/liveSync'
 import { useFinanceStore } from './modules/finance/financeStore'
 import { runReminders } from './modules/finance/reminders'
+import { runBudgetEntries } from './modules/finance/budgetEntries'
+import { loadRules } from './modules/finance/modals/BudgetRuleModal'
 import { SyncGapBanner } from './modules/shell/SyncGapBanner'
 import { seedToken, seedFromLocalStorage, clearAllTokens, getGoogleToken } from './lib/tokenManager'
 import { refreshPrimaryToken } from './lib/googleCalendar'
@@ -838,6 +840,15 @@ function App() {
       runReminders(financeCategories, ts.tasks, {
         addTask: ts.addTask, updateTask: ts.updateTask, deleteTask: ts.deleteTask,
       })
+      // A budget with a day on it writes the entry itself, unpaid, rather than
+      // a task about it. Read at call time for the same reason: this writes to
+      // the ledger it is looking at.
+      const fs = useFinanceStore.getState()
+      runBudgetEntries(
+        fs.categories, loadRules(), fs.transactions,
+        fs.accounts[0]?.id, fs.currentYear,
+        { add: txs => void fs.upsertTransactions(txs), remove: id => void fs.removeTransaction(id) },
+      )
     }
     run()
     window.addEventListener('professor:moneyRemindersChanged', run)
