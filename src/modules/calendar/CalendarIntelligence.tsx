@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { Button } from '@/components/ui'
 import {
   ChevronLeft, ChevronRight, ChevronDown, Layers, Calendar, Video,
   Sparkles, MapPin, RefreshCw, X, Eye, EyeOff,
@@ -1809,11 +1810,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
               : 'Professor: this overlaps something already booked.'}
           </p>
           {freeAfterClash && (
-            <button onClick={moveClear} disabled={saving} style={{
-              ...EV_FIELD, width: 'auto', height: 40, marginTop: 12, cursor: 'pointer',
-              background: 'var(--sb-ink-1)', border: 'none', color: 'var(--sb-ink-on-dark)', fontWeight: 600,
-              opacity: saving ? 0.6 : 1,
-            }}>Move to {freeAfterClash}</button>
+            <Button variant="primary" onClick={moveClear} disabled={saving} style={{ width: 'auto', marginTop: 12 }}>Move to {freeAfterClash}</Button>
           )}
         </div>
       )}
@@ -3255,10 +3252,7 @@ export function CalendarIntelligence() {
               })}
               style={{ ...CAL_ICON_BTN }}><ChevronRight size={ICON.md} /></button>
             {!isThisWeek(weekStart) && (
-              <button
-                onClick={() => setAnchorDate(new Date())}
-                style={{ ...CAL_PILL, background: 'var(--sb-accent)', border: 'none', fontWeight: 600, boxShadow: 'var(--sb-shadow-control)' }}
-              >Today</button>
+              <Button variant="secondary" size="sm" onClick={() => setAnchorDate(new Date())}>Today</Button>
             )}
           </div>
 
@@ -3364,14 +3358,9 @@ export function CalendarIntelligence() {
                 : `${reconnectNeeded.length} accounts need reconnecting — their events are missing from this grid.`}
             </span>
             {reconnectNeeded.map(email => (
-              <button key={email}
-                onClick={() => void connectAdditionalGoogleAccount(email)}
-                style={{
-                  ...T.body, height: 34, padding: '0 14px', borderRadius: 'var(--sb-r-sm)', flexShrink: 0,
-                  background: 'var(--sb-ink-1)', border: 'none', color: 'var(--sb-ink-on-dark)', fontWeight: 600, cursor: 'pointer',
-                }}>
+              <Button variant="primary" key={email} onClick={() => void connectAdditionalGoogleAccount(email)} style={{ ...T.body, flexShrink: 0 }}>
                 Reconnect{reconnectNeeded.length > 1 ? ` ${email.split('@')[0]}` : ''}
-              </button>
+              </Button>
             ))}
           </div>
         )}

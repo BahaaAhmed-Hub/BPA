@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
+import { Button } from '@/components/ui'
 import {
   DndContext, DragOverlay, closestCenter,
   PointerSensor, useSensor, useSensors,
@@ -276,9 +277,9 @@ function KanbanColumnComp({ column, onOpen, onColDragStart, onColDragOver, onCol
               }}
             />
             <div style={{ display: 'flex', gap: 5, marginTop: 5 }}>
-              <button onClick={commitAdd} style={{ flex: 1, padding: '4px 0', fontSize: 'var(--sb-t-meta)', fontWeight: 600, background: 'var(--sb-accent)', color: 'var(--sb-ink-1)', border: 'none', borderRadius: 'var(--sb-r-chip)', cursor: 'pointer' }}>
+              <Button variant="accent" onClick={commitAdd} style={{ flex: 1 }}>
                 Add
-              </button>
+              </Button>
               <button onClick={() => { setAdding(false); setNewTitle('') }} style={{ padding: '4px 8px', fontSize: 'var(--sb-t-meta)', background: 'transparent', color: 'var(--sb-ink-3)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-chip)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
                 <XIcon size={ICON.sm} />
               </button>

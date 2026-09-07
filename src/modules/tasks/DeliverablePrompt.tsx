@@ -5,6 +5,7 @@
 // what is not optional is that Cancel leaves the task open.
 
 import { useState } from 'react'
+import { Button } from '@/components/ui'
 import { createPortal } from 'react-dom'
 import { X, Link2, Paperclip, Plus, Check, FileText } from 'lucide-react'
 import type { Task, TaskAttachment, TaskType } from '@/types'
@@ -185,12 +186,7 @@ export function DeliverablePrompt({ task, onComplete, onCancel }: {
             background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-3)',
             fontSize: 'var(--sb-t-body)', fontFamily: 'inherit',
           }}>Cancel</button>
-          <button onClick={() => onComplete({ links, attachments: files })} style={{
-            display: 'flex', alignItems: 'center', gap: 7,
-            height: 40, padding: '0 18px', borderRadius: 'var(--sb-r-sm)', cursor: 'pointer',
-            background: 'var(--sb-ink-1)', border: 'none', color: 'var(--sb-ink-on-dark)',
-            fontSize: 'var(--sb-t-label)', fontWeight: 600, fontFamily: 'inherit',
-          }}><Check size={ICON.sm} strokeWidth={STROKE.active} /> Complete</button>
+          <Button variant="primary" onClick={() => onComplete({ links, attachments: files })}><Check size={ICON.sm} strokeWidth={STROKE.active} /> Complete</Button>
         </div>
       </div>
     </div>,

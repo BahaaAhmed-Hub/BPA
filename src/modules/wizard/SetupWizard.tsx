@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react'
+import { Button } from '@/components/ui'
 import { X, ChevronLeft, ChevronRight, Check } from 'lucide-react'
 import { useUIStore } from '@/store/uiStore'
 import { useAuthStore } from '@/store/authStore'
@@ -266,19 +267,12 @@ export function SetupWizard({ onClose }: Props) {
                 </button>
               )}
               {step < TOTAL_STEPS ? (
-                <button onClick={goNext} className="wz-btn-next" style={{
-                  display: 'flex', alignItems: 'center', gap: 6,
-                  padding: '11px 26px', borderRadius: 'var(--sb-r-pill)',
-                  background: 'var(--sb-accent)', border: 'none',
-                  color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-label)', fontWeight: 700, cursor: 'pointer',
-                  // A glow, not a height: the button lifts in its own colour.
+                <Button variant="primary" onClick={goNext} className="wz-btn-next" style={{ // A glow, not a height: the button lifts in its own colour.
                   // The height tokens are neutral by design, so this is one of
                   // three shadows in the app that carries a colour on purpose.
-                  boxShadow: '0 4px 14px -2px rgba(var(--sb-accent-rgb),0.35)',
-                  transition: 'all 0.15s',
-                }}>
+                  boxShadow: '0 4px 14px -2px rgba(var(--sb-accent-rgb),0.35)' }}>
                   Next <ChevronRight size={ICON.md} />
-                </button>
+                </Button>
               ) : (
                 <button onClick={() => void handleFinish()} className="wz-btn-next" style={{
                   display: 'flex', alignItems: 'center', gap: 6,

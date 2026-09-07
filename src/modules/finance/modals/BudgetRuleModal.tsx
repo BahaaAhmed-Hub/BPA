@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { Button } from '@/components/ui'
 import { X, ChevronDown, Check } from 'lucide-react'
 import type { Category, Transaction } from '../types'
 import { IconPicker } from '../components/IconPicker'
@@ -613,12 +614,9 @@ export function BudgetRuleModal({
         </>)}
 
         <div style={{ display: 'flex', gap: 8, marginTop: 18 }}>
-          <button onClick={onClose} style={{
-            ...PILL, flex: 1, justifyContent: 'center', fontWeight: 600,
-            background: 'var(--sb-ink-1)', border: 'none', color: 'var(--sb-ink-on-dark)',
-          }}>
+          <Button variant="primary" onClick={onClose} block>
             <Check size={ICON.sm} strokeWidth={STROKE.active} /> Done
-          </button>
+          </Button>
           <button onClick={onEditCategory} title="Colour, type, parent, delete"
             style={{ ...PILL, color: 'var(--sb-ink-3)' }}>More…</button>
         </div>

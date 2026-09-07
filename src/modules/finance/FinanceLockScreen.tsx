@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { Button } from '@/components/ui'
 import {
   biometricName, checkPassword, loadLock, loadPasskey, verifyPasskey,
 } from './lock'
@@ -104,19 +105,10 @@ export function LockGate({ onUnlocked, compact = false, title, note }: LockGateP
       </p>
 
       {passkey && (
-        <button
-          onClick={useBiometrics}
-          disabled={busy !== null}
-          style={{
-            width: '100%', height: 42, borderRadius: 'var(--sb-r-nav)', marginBottom: 12,
-            background: 'var(--sb-ink-1)', border: '1px solid var(--sb-ink-1)', color: 'var(--sb-ink-on-dark)',
-            cursor: busy ? 'default' : 'pointer', fontFamily: 'inherit',
-            fontSize: 'var(--sb-t-label)', fontWeight: 600,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-          }}>
+        <Button variant="primary" onClick={useBiometrics} disabled={busy !== null} style={{ width: '100%', marginBottom: 12 }}>
           <IconFingerprint color="var(--sb-ink-on-dark)" />
           {busy === 'bio' ? 'Waiting for you…' : `Unlock with ${biometricName()}`}
-        </button>
+        </Button>
       )}
 
       {cfg.password && (

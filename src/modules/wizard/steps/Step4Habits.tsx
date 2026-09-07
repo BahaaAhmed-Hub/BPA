@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Button } from '@/components/ui'
 import { Check, X } from 'lucide-react'
 import { ICON, STROKE } from '@/lib/type'
 
@@ -160,7 +161,7 @@ export function Step4Habits({ data, onChange }: Props) {
             ))}
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={addCustom} style={{ padding: '8px 18px', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-accent)', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-label)', fontWeight: 600, border: 'none', cursor: 'pointer' }}>Add</button>
+            <Button variant="accent" onClick={addCustom}>Add</Button>
             <button onClick={() => setAddingCustom(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-4)', fontSize: 'var(--sb-t-label)' }}>Cancel</button>
           </div>
         </div>

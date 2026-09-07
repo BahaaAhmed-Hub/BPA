@@ -11,7 +11,7 @@ import { TransactionModal } from './modals/TransactionModal'
 import { BulkEntryModal } from './modals/BulkEntryModal'
 import { LockGate } from './FinanceLockScreen'
 import { useFinanceLock } from './useFinanceLock'
-import { NavRow } from '@/components/ui'
+import { NavRow, Button } from '@/components/ui'
 import { lockNow } from './lock'
 
 // ─── Nav icon SVGs ────────────────────────────────────────────────────────────
@@ -257,18 +257,9 @@ export function FinanceModule() {
         </button>
 
         {/* Add transaction button */}
-        <button
-          onClick={() => setAddOpen(true)}
-          title="Add one entry"
-          style={{
-            height: 30, paddingInline: 14, borderRadius: 'var(--sb-r-chip)',
-            background: 'var(--sb-accent)', border: '1px solid rgba(25,23,18,0.18)', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            flexShrink: 0, gap: 5, boxShadow: 'var(--sb-shadow-accent)',
-          }}
-        >
+        <Button variant="accent" onClick={() => setAddOpen(true)} title="Add one entry" style={{ flexShrink: 0 }}>
           <IconPlus color="var(--sb-ink-1)" />
-        </button>
+        </Button>
       </div>
 
       {/* Screen content */}

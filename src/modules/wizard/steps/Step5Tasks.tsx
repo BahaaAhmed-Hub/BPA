@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Button } from '@/components/ui'
 import { TODOIST_CONFIGURED, openTodoistAuth, fetchTodoistTasks } from '@/lib/todoistOAuth'
 import type { TodoistTask } from '@/lib/todoistOAuth'
 
@@ -83,13 +84,9 @@ export function Step5Tasks({ data, onChange }: Props) {
                 placeholder="Paste API token to test..."
                 style={{ background: 'var(--sb-page)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-chip)', padding: '8px 12px', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', outline: 'none', width: '100%', boxSizing: 'border-box', marginBottom: 8 }}
               />
-              <button
-                onClick={() => manualToken.trim() && loadTasks(manualToken.trim())}
-                disabled={!manualToken.trim() || loading}
-                style={{ width: '100%', padding: '8px', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-accent)', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-label)', fontWeight: 600, border: 'none', cursor: !manualToken.trim() ? 'not-allowed' : 'pointer', opacity: !manualToken.trim() ? 0.5 : 1 }}
-              >
+              <Button variant="primary" onClick={() => manualToken.trim() && loadTasks(manualToken.trim())} disabled={!manualToken.trim() || loading} style={{ width: '100%' }}>
                 {loading ? 'Loading…' : 'Load tasks →'}
-              </button>
+              </Button>
             </div>
           )}
 

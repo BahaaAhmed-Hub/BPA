@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
+import { Button } from '@/components/ui'
 import { CalendarClock } from 'lucide-react'
 import {
   DndContext, pointerWithin, PointerSensor, TouchSensor, useSensor, useSensors,
@@ -1532,19 +1533,16 @@ export function BudgetScreen(_props?: any) {
                   nothing to convert {needRates.length === 1 ? 'it' : 'them'} by, so {needRates.length === 1 ? 'it is' : 'they are'} in
                   none of these totals.
                 </div>
-                <button
+                <Button
+                  variant="primary"
                   onClick={() => {
                     // Rates are one setting, not a thing to re-enter per screen.
                     try { localStorage.setItem('settings-active-section', 'finance') } catch { /* private mode */ }
                     setActiveModule('settings')
                   }}
-                  style={{
-                    marginTop: 10, height: 30, padding: '0 13px', borderRadius: 'var(--sb-r-chip)',
-                    background: 'var(--sb-ink-1)', border: 'none', color: 'var(--sb-ink-on-dark)',
-                    fontFamily: 'inherit', fontSize: 'var(--sb-t-meta)', fontWeight: 600, cursor: 'pointer',
-                  }}>
+                  style={{ marginTop: 10 }}>
                   Set rates in Settings
-                </button>
+                </Button>
               </div>
             )}
             <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', marginTop: 14, lineHeight: 1.55 }}>

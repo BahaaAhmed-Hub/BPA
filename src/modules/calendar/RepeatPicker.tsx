@@ -9,6 +9,7 @@
 // Done, because a half-built custom rule is not a rule anybody meant.
 
 import { useEffect, useRef, useState } from 'react'
+import { Button } from '@/components/ui'
 import { Check, ChevronLeft, ChevronRight } from 'lucide-react'
 import { ICON, STROKE } from '@/lib/type'
 import {
@@ -156,10 +157,7 @@ export function RepeatPicker({ value, start, onApply, onClose }: {
               <ChevronLeft size={ICON.md} /> Repeat
             </button>
             <span style={{ flex: 1 }} />
-            <button onClick={() => { onApply(draft); onClose() }} style={{
-              height: 28, padding: '0 14px', borderRadius: 'var(--sb-r-pill)', border: 'none', cursor: 'pointer',
-              background: 'var(--sb-ink-1)', color: 'var(--sb-card)', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, fontFamily: 'inherit',
-            }}>Done</button>
+            <Button variant="primary" onClick={() => { onApply(draft); onClose() }}>Done</Button>
           </div>
 
           <div style={GROUP_LABEL}>Frequency</div>

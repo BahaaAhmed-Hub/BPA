@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Button } from '@/components/ui'
 import type { Account, AccountType, Currency } from '../types'
 import { IconPicker } from '../components/IconPicker'
 import { POSITIVE, NEGATIVE } from '../../../lib/moneyColors'
@@ -290,22 +291,9 @@ export function AccountModal({ account, onSave, onDelete, onClose }: Props) {
           )}
 
           {/* Save */}
-          <button
-            onClick={handleSave}
-            style={{
-              background: 'var(--sb-accent)',
-              border: 'none',
-              cursor: 'pointer',
-              fontSize: 'var(--sb-t-label)',
-              color: 'var(--sb-ink-1)',
-              padding: '8px 20px',
-              fontFamily: 'inherit',
-              borderRadius: 'var(--sb-r-chip)',
-              fontWeight: 600,
-            }}
-          >
+          <Button variant="primary" onClick={handleSave}>
             Save
-          </button>
+          </Button>
         </div>
 
       </div>

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Button } from '@/components/ui'
 import { loadAccounts } from '@/lib/multiAccount'
 import { X } from 'lucide-react'
 import { ICON } from '@/lib/type'
@@ -102,9 +103,9 @@ export function Step3Companies({ data, onChange }: Props) {
             </select>
           )}
           <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={addCompany} style={{ padding: '8px 18px', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-accent)', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-label)', fontWeight: 600, border: 'none', cursor: 'pointer' }}>
+            <Button variant="accent" onClick={addCompany}>
               Add
-            </button>
+            </Button>
             <button onClick={() => setAdding(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-4)', fontSize: 'var(--sb-t-label)' }}>
               Cancel
             </button>

@@ -5,6 +5,7 @@
 // which looks nothing like the rest of the app.
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { Button } from '@/components/ui'
 import { ChevronLeft, ChevronRight, Check } from 'lucide-react'
 import { T, ICON, STROKE } from '@/lib/type'
 import { useSlotConflicts } from '@/lib/slotConflicts'
@@ -281,13 +282,7 @@ export function SchedulePopover({ date, start, duration, onApply, onClose, align
               background: 'transparent', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body-s)', fontWeight: 500, fontFamily: 'inherit',
             }}>Clear</button>
         )}
-        <button
-          type="button"
-          onClick={() => { onApply({ dueDate: picked, plannedTime: from, duration: minutes || undefined }); onClose() }}
-          style={{
-            height: 30, padding: '0 14px', borderRadius: 'var(--sb-r-chip)', border: 'none', cursor: 'pointer',
-            background: 'var(--sb-accent)', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, fontFamily: 'inherit',
-          }}>Set block</button>
+        <Button variant="primary" type="button" onClick={() => { onApply({ dueDate: picked, plannedTime: from, duration: minutes || undefined }); onClose() }}>Set block</Button>
       </div>
     </div>
   )

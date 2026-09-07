@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useCallback, useRef, Fragment } from 'react'
+import { Button } from '@/components/ui'
 import { ChevronDown, ChevronRight, ChevronsUpDown, ChevronsDownUp, GripVertical, X, Trash2, Plus } from 'lucide-react'
 import { useFinanceStore } from '../financeStore'
 import type { Category } from '../types'
@@ -897,16 +898,9 @@ export function ReflectionScreen(_props?: any) {
                   : 'Pick the category on the entry itself'}
               </span>
               <span style={{ flex: 1 }} />
-              <button
-                onClick={() => setAdding(true)}
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 7, height: 38,
-                  padding: '0 18px', borderRadius: 'var(--sb-r-nav)', cursor: 'pointer',
-                  background: 'var(--sb-ink-1)', border: '1px solid var(--sb-ink-1)', color: 'var(--sb-ink-on-dark)',
-                  fontFamily: 'inherit', fontSize: 'var(--sb-t-label)', fontWeight: 600,
-                }}>
+              <Button variant="accent" onClick={() => setAdding(true)}>
                 <Plus size={ICON.sm} /> Add an entry
-              </button>
+              </Button>
             </div>
           </div>
         </div>

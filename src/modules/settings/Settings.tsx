@@ -2,6 +2,7 @@
 // (remaining chunks appended below)
 
 import { useState, useEffect, useMemo, useRef, type ReactNode } from 'react'
+import { Button } from '@/components/ui'
 import { NAV_H } from '@/App'
 import {
   Plus, Trash2, LogIn, LogOut,
@@ -1332,10 +1333,9 @@ function AppleHealthBlock({ habits }: { habits: { id: string; name: string; unit
                         onClick={() => void drop(link.id)}>Unlink</button>
                     </>
                   ) : (
-                    <button style={{ ...pill, background: 'var(--sb-ink-1)', border: '1px solid var(--sb-ink-1)', color: 'var(--sb-ink-on-dark)' }}
-                      disabled={busy === h.id} onClick={() => void add(h.id, suggestMetric(h.name, h.unit))}>
+                    <Button variant="primary" disabled={busy === h.id} onClick={() => void add(h.id, suggestMetric(h.name, h.unit))} style={{ ...pill }}>
                       {busy === h.id ? 'Linking…' : 'Link to Health'}
-                    </button>
+                    </Button>
                   )}
                 </div>
 
@@ -3169,20 +3169,17 @@ function FinanceSection() {
               year. Anything you meant to leave unpaid will need marking again afterwards.{' '}
               {undatedHere > 0 && `${undatedHere} ${undatedHere === 1 ? 'is' : 'are'} waiting in ${finYear} alone.`}
             </div>
-            <button
+            <Button
+              variant="primary"
               disabled={filling === 'working'}
               onClick={async () => {
                 if (!window.confirm('Mark every entry with no payment date as paid on its due date, in every year?')) return
                 setFilling('working')
                 setFilling(await markAllPaid())
               }}
-              style={{
-                height: 36, padding: '0 16px', borderRadius: 'var(--sb-r-nav)', flexShrink: 0, cursor: 'pointer',
-                fontFamily: 'inherit', fontSize: 'var(--sb-t-label)', fontWeight: 600,
-                background: 'var(--sb-ink-1)', border: '1px solid var(--sb-ink-1)', color: 'var(--sb-ink-on-dark)',
-              }}>
+              style={{ flexShrink: 0 }}>
               {filling === 'working' ? 'Working…' : 'Mark every entry paid on its due date'}
-            </button>
+            </Button>
             {typeof filling === 'number' && (
               <span style={{ fontSize: 'var(--sb-t-body-s)', color: filling > 0 ? 'var(--sb-positive)' : 'var(--sb-ink-3)', fontWeight: 600 }}>
                 {filling > 0 ? `${filling} updated` : 'nothing was waiting'}
@@ -3522,9 +3519,9 @@ function IntegrationsSection() {
             <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', fontWeight: 700, color: 'var(--sb-ink-1)' }}>Connected tools</p>
             <p style={{ margin: '1px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>Tasks and notes flow both ways — nothing is deleted on either side</p>
           </div>
-          <button style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 13px', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-accent)', border: '1px solid rgba(25,23,18,0.18)', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-1)', cursor: 'pointer', flexShrink: 0 }}>
+          <Button variant="accent" style={{ flexShrink: 0 }}>
             <Plus size={ICON.sm} /> <span style={{ whiteSpace: 'nowrap' }}>Add integration</span>
-          </button>
+          </Button>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>

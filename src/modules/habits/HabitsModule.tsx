@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
+import { Button } from '@/components/ui'
 import { stepFor } from '@/lib/habitSteps'
 import { Plus, Trash2, X, ChevronLeft, ChevronRight } from 'lucide-react'
 import {
@@ -1034,11 +1035,10 @@ export function HabitsModule() {
             ))}
           </span>
           {/* New habit CTA */}
-          <button onClick={createHabit}
-            style={{ display: 'flex', alignItems: 'center', gap: 8, boxSizing: 'border-box', height: 34, padding: '0 15px', borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-accent)', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, border: 'none', cursor: 'pointer', boxShadow: 'var(--sb-shadow-accent)', flexShrink: 0 }}>
+          <Button variant="accent" onClick={createHabit} style={{ boxSizing: 'border-box', flexShrink: 0 }}>
             <Plus size={ICON.md} />
             New habit
-          </button>
+          </Button>
         </span>
       </div>
 

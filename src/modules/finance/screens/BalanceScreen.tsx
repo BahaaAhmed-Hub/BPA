@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Button } from '@/components/ui'
 import { GripVertical, Pencil, X } from 'lucide-react'
 import {
   DndContext, closestCenter, PointerSensor, TouchSensor, useSensor, useSensors,
@@ -215,16 +216,9 @@ function AccountRow({ account, balance, unconverted, pending, selected, hovered,
       {/* Settling a card belongs here, next to what it owes, rather than inside
           the entry panel — that one records an amount, it does not clear a debt. */}
       {limit >= 0 && account.accountType === 'credit_card' && owed > 0 && (
-        <button
-          onClick={e => { e.stopPropagation(); onSettle(account, owed) }}
-          title={`Pay ${acct(owed, { currency: account.currency })} off ${account.name}`}
-          style={{
-            height: 26, paddingInline: 10, borderRadius: 'var(--sb-r-pill)', flexShrink: 0, marginLeft: 8,
-            background: 'var(--sb-ink-1)', border: '1px solid var(--sb-ink-1)', color: 'var(--sb-ink-on-dark)',
-            fontFamily: 'inherit', fontSize: 'var(--sb-t-meta)', fontWeight: 600, cursor: 'pointer',
-          }}>
+        <Button variant="primary" onClick={e => { e.stopPropagation(); onSettle(account, owed) }} title={`Pay ${acct(owed, { currency: account.currency })} off ${account.name}`} style={{ flexShrink: 0, marginLeft: 8 }}>
           Settle
-        </button>
+        </Button>
       )}
 
       {/* The row picks the account; this opens it. One gesture each. */}
@@ -401,11 +395,10 @@ export function BalanceScreen() {
               )
             })}
           </div>
-          <button onClick={() => setAccountModal({ open: true, account: null })}
-            style={{ height: 34, padding: '0 15px', borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-accent)', border: 'none', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, boxShadow: 'var(--sb-shadow-accent)' }}>
+          <Button variant="accent" onClick={() => setAccountModal({ open: true, account: null })}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
             Add account
-          </button>
+          </Button>
         </div>
       </div>
 

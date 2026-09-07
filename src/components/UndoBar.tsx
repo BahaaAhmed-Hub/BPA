@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Button } from '@/components/ui'
 import { RotateCcw } from 'lucide-react'
 import { inTextField, subscribeUndo, topUndo, undoLast, type UndoEntry } from '@/lib/undo'
 import { ICON, STROKE } from '@/lib/type'
@@ -76,18 +77,10 @@ export function UndoBar() {
     }}>
       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{visible}</span>
       {!isFlash && (
-        <button
-          onClick={() => void take()}
-          title="Undo — ⌘Z"
-          style={{
-            display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0,
-            height: 30, padding: '0 12px', borderRadius: 'var(--sb-r-sm)', cursor: 'pointer',
-            background: 'var(--sb-accent)', border: '1px solid rgba(25,23,18,0.18)',
-            color: 'var(--sb-ink-1)', fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
-          }}>
+        <Button variant="primary" onClick={() => void take()} title="Undo — ⌘Z" style={{ flexShrink: 0 }}>
           <RotateCcw size={ICON.sm} strokeWidth={STROKE.active} />
           Undo
-        </button>
+        </Button>
       )}
     </div>
   )

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
+import { Button } from '@/components/ui'
 import {
   DndContext, DragOverlay, closestCorners,
   KeyboardSensor, PointerSensor, useSensor, useSensors,
@@ -419,12 +420,10 @@ export function TaskCommand() {
           </span>
 
           {/* New task CTA */}
-          <button
-            onClick={handleNewTask}
-            style={{ display: 'flex', alignItems: 'center', gap: 8, height: 38, boxSizing: 'border-box', padding: '0 18px', borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-accent)', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-label)', fontWeight: 600, border: 'none', cursor: 'pointer', boxShadow: 'var(--sb-shadow-control)', flexShrink: 0, fontFamily: 'inherit' }}>
+          <Button variant="accent" onClick={handleNewTask} style={{ boxSizing: 'border-box', flexShrink: 0 }}>
             <Plus size={ICON.md} strokeWidth={STROKE.active} />
             New task
-          </button>
+          </Button>
         </span>
       </div>
 
