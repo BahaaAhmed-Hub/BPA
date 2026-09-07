@@ -29,6 +29,7 @@ import { runBudgetEntries } from './modules/finance/budgetEntries'
 import { loadRules } from './modules/finance/modals/BudgetRuleModal'
 import { SyncGapBanner } from './modules/shell/SyncGapBanner'
 import { UndoBar } from './components/UndoBar'
+import { BeLogo } from './components/BeLogo'
 import { useTaskCalendarPush } from './lib/taskAutoSchedule'
 import { seedToken, seedFromLocalStorage, clearAllTokens, getGoogleToken } from './lib/tokenManager'
 import { refreshPrimaryToken } from './lib/googleCalendar'
@@ -367,16 +368,8 @@ function TopNav() {
     }}>
       {/* Product mark — left 1/3 */}
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 9, minWidth: 0 }}>
-        <div style={{
-          width: 30, height: 30, borderRadius: 8, background: '#191712', flexShrink: 0,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-            stroke="#FDF8E7" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
-            <path d="M6 12v5c3.333 2 8.667 2 12 0v-5"/>
-          </svg>
-        </div>
+        {/* The Be mark, amber, at the handoff's sidebar size. */}
+        <BeLogo variant="amber" size={30} title="Be" />
         <span style={{
           fontFamily: "'Outfit', system-ui, sans-serif",
           fontWeight: 700, fontSize: 14.5, color: '#191712', letterSpacing: '-.02em',
