@@ -49,9 +49,9 @@ export function AccountModal({ account, onSave, onDelete, onClose }: Props) {
     width: '100%',
     padding: '10px 12px',
     borderRadius: 8,
-    border: `1px solid ${'#E8E1CE'}`,
-    background: '#F7F4EA',
-    color: '#191712',
+    border: `1px solid ${'var(--sb-border)'}`,
+    background: 'var(--sb-page)',
+    color: 'var(--sb-ink-1)',
     fontSize: 14,
     outline: 'none',
     boxSizing: 'border-box' as const,
@@ -61,7 +61,7 @@ export function AccountModal({ account, onSave, onDelete, onClose }: Props) {
   const labelStyle: React.CSSProperties = {
     display: 'block',
     fontSize: 12,
-    color: '#6C6553',
+    color: 'var(--sb-ink-3)',
     marginBottom: 5,
     fontWeight: 500,
   }
@@ -90,7 +90,7 @@ export function AccountModal({ account, onSave, onDelete, onClose }: Props) {
         width: 460,
         maxHeight: '90vh',
         overflowY: 'auto',
-        background: '#FFFFFF',
+        background: 'var(--sb-card)',
         borderRadius: 16,
         boxShadow: '0 24px 60px rgba(0,0,0,0.5)',
         padding: '24px 28px',
@@ -101,7 +101,7 @@ export function AccountModal({ account, onSave, onDelete, onClose }: Props) {
 
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: 18, fontWeight: 700, color: '#191712' }}>
+          <span style={{ fontSize: 18, fontWeight: 700, color: 'var(--sb-ink-1)' }}>
             {isEdit ? 'Edit Account' : 'New Account'}
           </span>
           <button
@@ -111,7 +111,7 @@ export function AccountModal({ account, onSave, onDelete, onClose }: Props) {
               border: 'none',
               cursor: 'pointer',
               fontSize: 20,
-              color: '#6C6553',
+              color: 'var(--sb-ink-3)',
               lineHeight: 1,
               padding: '0 4px',
               fontFamily: 'inherit',
@@ -251,7 +251,7 @@ export function AccountModal({ account, onSave, onDelete, onClose }: Props) {
           justifyContent: 'flex-end',
           gap: 8,
           paddingTop: 8,
-          borderTop: `1px solid ${'#E8E1CE'}`,
+          borderTop: `1px solid ${'var(--sb-border)'}`,
         }}>
           {/* Cancel */}
           <button
@@ -261,7 +261,7 @@ export function AccountModal({ account, onSave, onDelete, onClose }: Props) {
               border: 'none',
               cursor: 'pointer',
               fontSize: 14,
-              color: '#6C6553',
+              color: 'var(--sb-ink-3)',
               padding: '8px 14px',
               fontFamily: 'inherit',
               borderRadius: 8,
@@ -297,7 +297,7 @@ export function AccountModal({ account, onSave, onDelete, onClose }: Props) {
               border: 'none',
               cursor: 'pointer',
               fontSize: 14,
-              color: '#191712',
+              color: 'var(--sb-ink-1)',
               padding: '8px 20px',
               fontFamily: 'inherit',
               borderRadius: 8,
