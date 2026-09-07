@@ -42,7 +42,7 @@ export interface WizardData {
 
 const HABIT_TEMPLATES = [
   { id: 'water',       name: 'Drink Water',  emoji: '💧', color: '#60A5FA', type: 'quantity' as const, goal: 8,     unit: 'glasses', frequency: 'daily' as const },
-  { id: 'exercise',    name: 'Exercise',      emoji: '💪', color: '#E05252', type: 'boolean'  as const,                               frequency: 'daily' as const },
+  { id: 'exercise',    name: 'Exercise',      emoji: '💪', color: 'var(--sb-negative)', type: 'boolean'  as const,                               frequency: 'daily' as const },
   { id: 'reading',     name: 'Reading',       emoji: '📚', color: '#A855F7', type: 'quantity' as const, goal: 30,   unit: 'min',     frequency: 'daily' as const },
   { id: 'meditation',  name: 'Meditation',    emoji: '🧘', color: '#1D9E75', type: 'quantity' as const, goal: 10,   unit: 'min',     frequency: 'daily' as const },
   { id: 'sleep',       name: '8h Sleep',      emoji: '😴', color: '#7F77DD', type: 'boolean'  as const,                               frequency: 'daily' as const },
@@ -61,7 +61,7 @@ const TOTAL_STEPS = 6
 // Light-theme CSS variable overrides — applied inside the modal
 const LIGHT_VARS: React.CSSProperties = {
   '--color-bg':         '#F4F4F8',
-  '--color-surface':    '#FFFFFF',
+  '--color-surface':    'var(--sb-card)',
   '--color-border':     '#E5E5EA',
   '--color-text':       '#111827',
   '--color-text-dim':   '#374151',
@@ -184,7 +184,7 @@ export function SetupWizard({ onClose }: Props) {
         {/* Modal */}
         <div style={{
           ...LIGHT_VARS,
-          background: '#FFFFFF',
+          background: 'var(--sb-card)',
           borderRadius: 20,
           width: '100%', maxWidth: 640,
           maxHeight: '88vh',
@@ -269,7 +269,7 @@ export function SetupWizard({ onClose }: Props) {
                   display: 'flex', alignItems: 'center', gap: 6,
                   padding: '11px 26px', borderRadius: 100,
                   background: 'var(--sb-accent)', border: 'none',
-                  color: '#191712', fontSize: 14, fontWeight: 700, cursor: 'pointer',
+                  color: 'var(--sb-ink-1)', fontSize: 14, fontWeight: 700, cursor: 'pointer',
                   boxShadow: '0 4px 14px rgba(127,119,221,0.35)',
                   transition: 'all 0.15s',
                 }}>
