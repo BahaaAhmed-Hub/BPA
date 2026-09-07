@@ -2,6 +2,7 @@
 // (remaining chunks appended below)
 
 import { useState, useEffect, useMemo, useRef, type ReactNode } from 'react'
+import { NAV_H } from '@/App'
 import {
   Plus, Trash2, LogIn, LogOut,
   ChevronDown, ChevronUp, User, Clock, Building2, Flame,
@@ -4267,7 +4268,7 @@ export function Settings() {
     // window height. minHeight (not height) means a very short window grows the
     // page and scrolls it rather than silently clipping a card.
     <div style={{
-      minHeight: 'calc(100vh - 66px)', background: '#F7F4EA',
+      minHeight: `calc(100vh - ${NAV_H}px)`, background: '#F7F4EA',
       display: 'flex', flexDirection: 'column', padding: '26px 36px 0',
     }}>
 

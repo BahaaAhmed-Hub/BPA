@@ -337,6 +337,11 @@ const NAV_ICONS: Record<string, React.ReactNode> = {
   ),
 }
 
+/** The top bar's height. The mark sets it: 60px of logo needs somewhere to sit
+ *  with air around it, and everything that fills the rest of the window
+ *  measures itself against this. */
+export const NAV_H = 76
+
 const NAV_ITEMS = [
   { id: 'morning',   label: 'Today'    },
   { id: 'calendar',  label: 'Calendar' },
@@ -360,7 +365,7 @@ function TopNav() {
 
   return (
     <header style={{
-      height: 66, flexShrink: 0,
+      height: NAV_H, flexShrink: 0,
       background: '#FCFAF4',
       borderBottom: '1px solid #E8E1CE',
       display: 'flex', alignItems: 'center',
@@ -368,15 +373,10 @@ function TopNav() {
     }}>
       {/* Product mark — left 1/3 */}
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 9, minWidth: 0 }}>
-        {/* The Be mark, amber, at the handoff's sidebar size. */}
-        <BeLogo variant="amber" size={30} title="Be" />
-        <span style={{
-          fontFamily: "'Outfit', system-ui, sans-serif",
-          fontWeight: 700, fontSize: 14.5, color: '#191712', letterSpacing: '-.02em',
-          whiteSpace: 'nowrap',
-        }}>
-          The Professor
-        </span>
+        {/* The mark alone. The handoff is explicit about this — "never restate
+            the word beside the mark", because the mark already contains it —
+            and at this size the wordmark beside it was competing with it. */}
+        <BeLogo variant="amber" size={60} title="Be" />
       </div>
 
       {/* Nav pills — center */}
