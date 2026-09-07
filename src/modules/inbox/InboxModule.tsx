@@ -49,14 +49,14 @@ interface Email {
   threadMessages: EmailMessage[]
 }
 
-/** Every action on an open message is the same shape — a pill. Archive used to
- *  be a small square box beside three pills, which made it read as a different
- *  kind of thing than Reply. */
-const ACTION_PILL: React.CSSProperties = {
-  display: 'inline-flex', alignItems: 'center', gap: 6,
-  height: 30, padding: '0 14px', borderRadius: 999, flexShrink: 0,
-  background: '#FFFFFF', border: '1px solid #E8E1CE', color: '#191712',
-  fontFamily: 'inherit', fontSize: 12.5, cursor: 'pointer',
+/** Every action on an open message is the same shape: a round icon at the top
+ *  right, beside the subject. Words in pills across the card was a row of
+ *  buttons wider than most of the messages under it. */
+const ICON_ACTION: React.CSSProperties = {
+  width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
+  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+  background: 'transparent', border: '1px solid #E8E1CE', color: '#6C6553',
+  cursor: 'pointer', padding: 0,
 }
 
 interface TriageState {
@@ -85,17 +85,27 @@ const URGENCY_META = {
 
 const AVATAR_COLORS = ['#7F77DD','#7F77DD','#1D9E75','#E05252','#E0944A','#7C3AED','#0891B2','#059669']
 
+/** A stable colour per mailbox. Merged, the list is several inboxes at once and
+ *  the address alone is a line of grey text you have to read; a bar down the
+ *  edge of the row is something you can see without reading. */
+const ACCOUNT_COLORS = ['#2E3FBF', '#0C8140', '#C0761E', '#8B2FBF', '#C62828', '#3B7A8A']
+function accountColor(email: string): string {
+  let n = 0
+  for (let i = 0; i < email.length; i++) n = (n * 31 + email.charCodeAt(i)) >>> 0
+  return ACCOUNT_COLORS[n % ACCOUNT_COLORS.length]
+}
+
 function avatarColor(email: string): string {
   let hash = 0
   for (let i = 0; i < email.length; i++) hash = email.charCodeAt(i) + ((hash << 5) - hash)
   return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length]
 }
 
-function SenderAvatar({ name, email }: { name: string; email: string }) {
+function SenderAvatar({ name, email, size = 34 }: { name: string; email: string; size?: number }) {
   const initials = name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || '?'
   const bg = avatarColor(email)
   return (
-    <div style={{ width: 34, height: 34, borderRadius: '50%', background: bg, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: '#fff', letterSpacing: '0.02em' }}>
+    <div style={{ width: size, height: size, borderRadius: '50%', background: bg, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size < 30 ? 10 : 12, fontWeight: 700, color: '#fff', letterSpacing: '0.02em' }}>
       {initials}
     </div>
   )
@@ -589,6 +599,8 @@ export function InboxModule() {
             No emails match "{searchQuery}"
           </div>
         ) : filteredEmails.map((email, i) => {
+          // Several mailboxes on screen at once is the case the colour is for.
+          const multi = view === 'all' && accounts.length > 1
           const isSelected = selectedId === email.id
           const isRead     = readIds.has(email.id)
           const triage     = triageMap[email.id]
@@ -604,26 +616,31 @@ export function InboxModule() {
                 }
               }}
               style={{
-                width: '100%', padding: '12px 16px', textAlign: 'left',
+                width: '100%', padding: '7px 11px', textAlign: 'left',
                 background: isSelected ? 'rgba(30,64,175,0.06)' : 'transparent',
                 border: 'none',
-                borderBottom: i < visibleEmails.length - 1 ? '1px solid #E8E1CE' : 'none',
-                borderLeft: isSelected ? '3px solid #1E40AF' : '3px solid transparent',
+                borderBottom: i < visibleEmails.length - 1 ? '1px solid #F0EBDC' : 'none',
+                // The bar is the mailbox when several are merged, and the
+                // selection when only one is on screen.
+                borderLeft: `3px solid ${
+                  isSelected ? '#1E40AF'
+                  : multi ? accountColor(email.account.email)
+                  : 'transparent'}`,
                 cursor: 'pointer',
               }}
             >
-              <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                 <div style={{ position: 'relative', flexShrink: 0 }}
                   onClick={ev => { ev.stopPropagation(); setSelectedIds(prev => { const n = new Set(prev); n.has(email.id) ? n.delete(email.id) : n.add(email.id); return n }) }}>
                   {selectedIds.has(email.id)
-                    ? <div style={{ width: 34, height: 34, borderRadius: '50%', background: '#7F77DD', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><CheckCheck size={16} color="#fff" /></div>
-                    : <SenderAvatar name={email.fromName} email={email.fromEmail} />
+                    ? <div style={{ width: 26, height: 26, borderRadius: '50%', background: '#7F77DD', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><CheckCheck size={13} color="#fff" /></div>
+                    : <SenderAvatar name={email.fromName} email={email.fromEmail} size={26} />
                   }
-                  {!isRead && !selectedIds.has(email.id) && <div style={{ position: 'absolute', top: 0, right: 0, width: 9, height: 9, borderRadius: '50%', background: '#7F77DD', border: '2px solid #FFFFFF' }} />}
+                  {!isRead && !selectedIds.has(email.id) && <div style={{ position: 'absolute', top: -1, right: -1, width: 8, height: 8, borderRadius: '50%', background: '#7F77DD', border: '2px solid #FFFFFF' }} />}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 3 }}>
-                    <span style={{ fontSize: 13, fontWeight: isRead ? 400 : 700, color: isRead ? '#6C6553' : '#191712', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 1 }}>
+                    <span style={{ fontSize: 12, fontWeight: isRead ? 400 : 700, color: isRead ? '#6C6553' : '#191712', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '62%' }}>
                       {email.fromName}
                     </span>
                     {classMeta && (
@@ -635,24 +652,22 @@ export function InboxModule() {
                       <RefreshCw size={10} color="#7F77DD" style={{ animation: 'spin 1s linear infinite', flexShrink: 0 }} />
                     )}
                   </div>
-                  <p style={{ margin: '0 0 3px', fontSize: 12.5, color: isRead ? '#6C6553' : '#191712', fontWeight: isRead ? 400 : 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <p style={{ margin: 0, fontSize: 12, color: isRead ? '#6C6553' : '#191712', fontWeight: isRead ? 400 : 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.35 }}>
                     {email.subject}
-                  </p>
-                  <p style={{ margin: 0, fontSize: 11.5, color: '#6C6553', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {email.preview}
+                    <span style={{ fontWeight: 400, color: '#9B9180' }}> — {email.preview}</span>
                   </p>
                 </div>
-                <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3, flexShrink: 0, paddingTop: 2 }}>
-                  {/* Which mailbox, when more than one is on screen. Without it
-                      a merged inbox is a list you cannot act on: you would not
-                      know which address a reply leaves from. */}
-                  {view === 'all' && accounts.length > 1 && (
+                <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1, flexShrink: 0 }}>
+                  {/* Which mailbox, when more than one is on screen — in that
+                      mailbox's own colour, so the bar down the edge and the
+                      address say the same thing. */}
+                  {multi && (
                     <span title={email.account.email} style={{
-                      fontSize: 9.5, color: '#9B9180', maxWidth: 120,
-                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                      fontSize: 9, fontWeight: 600, color: accountColor(email.account.email),
+                      maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                     }}>{shortAddress(email.account.email)}</span>
                   )}
-                  <span style={{ fontSize: 10.5, color: '#6C6553' }}>
+                  <span style={{ fontSize: 10, color: '#9B9180' }}>
                   {fmtRelTime(email.receivedAt)}
                   </span>
                 </span>
@@ -728,9 +743,43 @@ export function InboxModule() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         {/* Email body */}
         <div style={{ background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 12, padding: '18px 22px' }}>
-          <p style={{ margin: '0 0 6px', fontSize: 18, fontWeight: 700, color: '#191712', fontFamily: "'Cabinet Grotesk', sans-serif", letterSpacing: '-0.3px', lineHeight: 1.25 }}>
-            {selectedEmail.subject}
-          </p>
+          {/* Subject on the left, everything you can do to the message on the
+              right — as icons, the way the task panel does it. Four words in
+              four pills was a row of buttons the width of the card. */}
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 6 }}>
+            <p style={{ margin: 0, flex: 1, minWidth: 0, fontSize: 18, fontWeight: 700, color: '#191712', fontFamily: "'Cabinet Grotesk', sans-serif", letterSpacing: '-0.3px', lineHeight: 1.25 }}>
+              {selectedEmail.subject}
+            </p>
+            <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+              {([
+                { mode: 'reply'    as ComposeMode, label: 'Reply',      Icon: Reply },
+                { mode: 'replyAll' as ComposeMode, label: 'Reply all',  Icon: ReplyAll },
+                { mode: 'forward'  as ComposeMode, label: 'Forward',    Icon: Forward },
+              ]).map(({ mode, label, Icon }) => {
+                const on = compose?.mode === mode && compose.threadId === selectedEmail.threadId
+                return (
+                  <button key={mode}
+                    onClick={() => setCompose(on ? null : composeSeed(selectedEmail, mode, accounts))}
+                    title={label} aria-label={label} aria-pressed={on}
+                    style={{
+                      ...ICON_ACTION,
+                      background: on ? '#191712' : 'transparent',
+                      border: `1px solid ${on ? '#191712' : '#E8E1CE'}`,
+                      color: on ? '#FDF8E7' : '#6C6553',
+                    }}>
+                    <Icon size={14} />
+                  </button>
+                )
+              })}
+              <button
+                onClick={() => void handleArchive(selectedEmail)}
+                disabled={archiving === selectedEmail.id}
+                title="Archive" aria-label="Archive"
+                style={{ ...ICON_ACTION, opacity: archiving === selectedEmail.id ? 0.5 : 1 }}>
+                <Archive size={14} />
+              </button>
+            </div>
+          </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginBottom: 10 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
               <span style={{ fontSize: 12.5, color: '#7F77DD', fontWeight: 600 }}>{selectedEmail.fromName}</span>
@@ -746,14 +795,7 @@ export function InboxModule() {
                     fontSize: 10.5, color: '#6C6553', flexShrink: 0,
                   }}>{shortAddress(selectedEmail.account.email)}</span>
               )}
-              <button
-                onClick={() => void handleArchive(selectedEmail)}
-                disabled={archiving === selectedEmail.id}
-                title="Archive"
-                style={{ ...ACTION_PILL, opacity: archiving === selectedEmail.id ? 0.5 : 1 }}
-              >
-                <Archive size={13} /> Archive
-              </button>
+
             </div>
             {selectedEmail.to && (
               <div style={{ display: 'flex', gap: 6, alignItems: 'baseline', lineHeight: 1.35 }}>
@@ -767,29 +809,6 @@ export function InboxModule() {
                 <span style={{ fontSize: 11.5, color: '#6C6553', wordBreak: 'break-word' }}>{selectedEmail.cc}</span>
               </div>
             )}
-          </div>
-
-          {/* The three ways of answering, and the composer they open. */}
-          <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginBottom: 12 }}>
-            {([
-              { mode: 'reply'    as ComposeMode, label: 'Reply',    Icon: Reply },
-              { mode: 'replyAll' as ComposeMode, label: 'Reply all', Icon: ReplyAll },
-              { mode: 'forward'  as ComposeMode, label: 'Forward',  Icon: Forward },
-            ]).map(({ mode, label, Icon }) => {
-              const on = compose?.mode === mode && compose.threadId === selectedEmail.threadId
-              return (
-                <button key={mode}
-                  onClick={() => setCompose(on ? null : composeSeed(selectedEmail, mode, accounts))}
-                  style={{
-                    ...ACTION_PILL,
-                    background: on ? '#191712' : '#FFFFFF',
-                    border: `1px solid ${on ? '#191712' : '#E8E1CE'}`,
-                    color: on ? '#FDF8E7' : '#191712',
-                  }}>
-                  <Icon size={13} /> {label}
-                </button>
-              )
-            })}
           </div>
 
           {compose && compose.mode !== 'new' && (
