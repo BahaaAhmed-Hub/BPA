@@ -32,6 +32,6 @@ export const CAPS: React.CSSProperties = {
 }
 
 /** Ink, in the three weights the palette gives you. */
-export const INK = '#191712'
-export const MUTED = '#6C6553'
+export const INK = 'var(--sb-ink-1)'
+export const MUTED = 'var(--sb-ink-3)'
 export const GHOST = '#9B9180'
