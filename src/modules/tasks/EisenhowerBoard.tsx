@@ -100,12 +100,45 @@ function QuadrantPanel({ spec, tasks, onOpen, onAction, groupBy }: {
           <p style={{ margin: '2px 0 0', fontSize: 11.5, color: '#9B9180', lineHeight: 1.35 }}>{spec.sub}</p>
         </div>
         <span style={{ paddingTop: 2 }}><CountBadge value={tasks.length} /></span>
+        {/* Adding to a quadrant is a small, frequent thing, so it is a small
+            control at the top rather than a full-width dashed slab under a
+            list it has to be scrolled past to reach. */}
+        <button
+          onClick={() => setAdding(true)}
+          title={`Add a task to ${spec.title}`}
+          style={{
+            flexShrink: 0, width: 26, height: 26, padding: 0, borderRadius: '50%',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: adding ? '#191712' : '#FFFFFF',
+            border: `1px solid ${adding ? '#191712' : '#E8E1CE'}`,
+            color: adding ? '#FDF8E7' : '#6C6553', cursor: 'pointer',
+          }}><Plus size={14} strokeWidth={2.2} /></button>
         <button onClick={() => onAction(spec, tasks)} style={{
           flexShrink: 0, height: 28, padding: '0 12px', borderRadius: 999,
           background: '#FFFFFF', border: '1px solid #E8E1CE', color: '#191712',
           fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit',
         }}>{spec.action}</button>
       </div>
+
+      {/* Typing a new one happens where it will land: at the top of the list,
+          not under it. */}
+      {adding && (
+        <input
+          autoFocus value={draft}
+          onChange={e => setDraft(e.target.value)}
+          onBlur={commit}
+          onKeyDown={e => {
+            if (e.key === 'Enter') commit()
+            if (e.key === 'Escape') { setAdding(false); setDraft('') }
+          }}
+          placeholder="What is it?"
+          style={{
+            width: '100%', boxSizing: 'border-box', background: '#FFFFFF',
+            border: '1px solid #F5D14E', borderRadius: 10, padding: '11px 13px',
+            fontSize: 13, color: '#191712', outline: 'none', fontFamily: 'inherit',
+          }}
+        />
+      )}
 
       {/* Rows */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minHeight: 0 }}>
@@ -136,33 +169,6 @@ function QuadrantPanel({ spec, tasks, onOpen, onAction, groupBy }: {
         })}
       </div>
 
-      {/* Add here */}
-      {adding ? (
-        <input
-          autoFocus value={draft}
-          onChange={e => setDraft(e.target.value)}
-          onBlur={commit}
-          onKeyDown={e => {
-            if (e.key === 'Enter') commit()
-            if (e.key === 'Escape') { setAdding(false); setDraft('') }
-          }}
-          placeholder="Task title…"
-          style={{
-            width: '100%', boxSizing: 'border-box', background: '#FFFFFF',
-            border: '1px solid #F5D14E', borderRadius: 10, padding: '11px 13px',
-            fontSize: 13, color: '#191712', outline: 'none', fontFamily: 'inherit',
-          }}
-        />
-      ) : (
-        <button onClick={() => setAdding(true)} style={{
-          width: '100%', padding: '11px 0', borderRadius: 10,
-          background: 'transparent', border: '1px dashed #DED5BF', color: '#9B9180',
-          fontSize: 12.5, cursor: 'pointer', fontFamily: 'inherit',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-        }}>
-          <Plus size={13} /> Add here
-        </button>
-      )}
     </div>
   )
 }
