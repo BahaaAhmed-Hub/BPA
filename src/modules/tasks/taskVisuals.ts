@@ -40,7 +40,7 @@ export const SLOT = 22
 /** A set attribute: cream chip. */
 export const slotFilled: React.CSSProperties = {
   width: SLOT, height: SLOT, borderRadius: 7, flexShrink: 0,
-  background: '#FAF7EC', border: '1px solid #E8E1CE', color: '#6C6553',
+  background: 'var(--sb-field)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-3)',
   display: 'flex', alignItems: 'center', justifyContent: 'center',
   cursor: 'pointer', padding: 0,
 }
@@ -58,7 +58,7 @@ export const slotScheduled: React.CSSProperties = {
   ...slotFilled,
   background: 'rgba(12,129,64,0.10)',
   border: '1px solid #C8DAB0',
-  color: '#0C8140',
+  color: 'var(--sb-positive)',
 }
 
 export function slotPriority(p: Priority): React.CSSProperties {
@@ -152,7 +152,7 @@ export function resolveTaskVisuals(task: Task): TaskVisuals {
 
   return {
     companyName:  company?.name ?? task.company ?? '',
-    companyColor: company?.color ?? '#6C6553',
+    companyColor: company?.color ?? 'var(--sb-ink-3)',
     type,
     TypeIcon:     TASK_TYPE_ICON[type],
     typeLabel:    TASK_TYPE_META[type].label,
@@ -179,8 +179,8 @@ export function sortUrgentFirst(tasks: Task[]): Task[] {
 }
 
 const STATUS_GROUPS: { key: string; label: string; color: string }[] = [
-  { key: 'open',      label: 'Open',      color: '#6C6553' },
-  { key: 'done',      label: 'Done',      color: '#0C8140' },
+  { key: 'open',      label: 'Open',      color: 'var(--sb-ink-3)' },
+  { key: 'done',      label: 'Done',      color: 'var(--sb-positive)' },
   { key: 'cancelled', label: 'Cancelled', color: '#9B9180' },
 ]
 
