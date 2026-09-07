@@ -31,19 +31,19 @@ import type { Task } from '@/types'
 // ─── Tokens ──────────────────────────────────────────────────────────────────
 
 const CARD: React.CSSProperties = {
-  background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 16,
+  background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 16,
   boxShadow: '0 1px 3px rgba(25,23,18,0.05)', minWidth: 0,
 }
-const INK = '#191712'
-const MUTED = '#6C6553'
+const INK = 'var(--sb-ink-1)'
+const MUTED = 'var(--sb-ink-3)'
 const GHOST = '#9B9180'
-const HAIR = '#F0EBDC'
-const FIELD = '#FAF7EC'
+const HAIR = 'var(--sb-hairline)'
+const FIELD = 'var(--sb-field)'
 const AMBER = 'var(--sb-accent)'
 
 const PILL: React.CSSProperties = {
   display: 'inline-flex', alignItems: 'center', gap: 6, height: 30, padding: '0 12px',
-  borderRadius: 999, background: '#FFFFFF', border: '1px solid #E8E1CE',
+  borderRadius: 999, background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
   color: INK, fontSize: 12.5, fontFamily: 'inherit', cursor: 'pointer',
 }
 const GHOST_BTN: React.CSSProperties = {
@@ -53,7 +53,7 @@ const GHOST_BTN: React.CSSProperties = {
 const ICON_TILE: React.CSSProperties = {
   width: 26, height: 26, borderRadius: 8, flexShrink: 0,
   display: 'flex', alignItems: 'center', justifyContent: 'center',
-  background: FIELD, border: '1px solid #E8E1CE', color: MUTED,
+  background: FIELD, border: '1px solid var(--sb-border)', color: MUTED,
 }
 
 // ─── Small helpers ───────────────────────────────────────────────────────────
@@ -230,11 +230,11 @@ function MailPopup({ row, onClose, onArchive, onAddTask }: {
   // The sender's HTML runs in a sandboxed frame — never in the app's document
   const doc = `<!DOCTYPE html><html><head><base target="_blank"><meta charset="utf-8"><style>
     body { margin:0; padding:4px 2px; font-family:-apple-system,system-ui,sans-serif; font-size:14px;
-           line-height:1.6; color:#191712; word-break:break-word; }
+           line-height:1.6; color:var(--sb-ink-1); word-break:break-word; }
     img { max-width:100%; height:auto; }
     a { color:#2563EB; }
     pre, blockquote { white-space:pre-wrap; }
-    blockquote { margin:0 0 0 12px; padding-left:10px; border-left:2px solid #E8E1CE; color:#6C6553; }
+    blockquote { margin:0 0 0 12px; padding-left:10px; border-left:2px solid var(--sb-border); color:var(--sb-ink-3); }
   </style></head><body>${row.html ?? `<pre>${row.body.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c] as string))}</pre>`}</body></html>`
 
   function fit() {
@@ -255,7 +255,7 @@ function MailPopup({ row, onClose, onArchive, onAddTask }: {
         onClick={e => e.stopPropagation()}
         style={{
           width: '100%', maxWidth: 760, maxHeight: '80vh', display: 'flex', flexDirection: 'column',
-          background: '#FFFFFF', border: '1px solid #E8E1CE', borderRadius: 16, overflow: 'hidden',
+          background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 16, overflow: 'hidden',
           boxShadow: '0 40px 80px -30px rgba(25,23,18,.55)',
         }}>
 
@@ -264,7 +264,7 @@ function MailPopup({ row, onClose, onArchive, onAddTask }: {
           <span style={{
             width: 38, height: 38, borderRadius: '50%', flexShrink: 0,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: '#F1ECDE', color: MUTED, fontSize: 12.5, fontWeight: 700,
+            background: 'var(--sb-field)', color: MUTED, fontSize: 12.5, fontWeight: 700,
           }}>{initialsOf(row.fromName || row.fromEmail)}</span>
           <div style={{ flex: 1, minWidth: 0 }}>
             <h2 style={{
@@ -663,7 +663,7 @@ function PlanCard({
       <CardHead
         title="Plan for today"
         meta={`${blocks.length} block${blocks.length === 1 ? '' : 's'} · ${fmtHours(focusMinutes)} focus · ${fmtHours(freeMinutes)} free`}>
-        <span style={{ fontSize: 11.5, color: dirty ? '#C62828' : GHOST, flexShrink: 0 }}>
+        <span style={{ fontSize: 11.5, color: dirty ? 'var(--sb-negative)' : GHOST, flexShrink: 0 }}>
           {dirty ? 'draft, not saved' : 'saved'}
         </span>
       </CardHead>
@@ -695,11 +695,11 @@ function PlanCard({
             {/* Now */}
             {nowMins >= fromHour * 60 && nowMins <= toHour * 60 && (
               <div style={{ position: 'absolute', top: topOf(nowMins), left: 0, right: 0, pointerEvents: 'none', zIndex: 3 }}>
-                <span style={{ position: 'absolute', top: -6, left: 0, fontSize: 10, fontWeight: 700, color: '#C62828', fontVariantNumeric: 'tabular-nums' }}>
+                <span style={{ position: 'absolute', top: -6, left: 0, fontSize: 10, fontWeight: 700, color: 'var(--sb-negative)', fontVariantNumeric: 'tabular-nums' }}>
                   {hhmm(now)}
                 </span>
-                <span style={{ position: 'absolute', top: 0, left: 44, right: 0, height: 1, background: '#C62828' }} />
-                <span style={{ position: 'absolute', top: -2.5, left: 42, width: 6, height: 6, borderRadius: 999, background: '#C62828' }} />
+                <span style={{ position: 'absolute', top: 0, left: 44, right: 0, height: 1, background: 'var(--sb-negative)' }} />
+                <span style={{ position: 'absolute', top: -2.5, left: 42, width: 6, height: 6, borderRadius: 999, background: 'var(--sb-negative)' }} />
               </div>
             )}
 
@@ -735,9 +735,9 @@ function PlanCard({
                     gap: tight ? 5 : 8, boxSizing: 'border-box',
                     padding: tall ? '6px 8px 0' : tight ? '0 7px' : '0 10px',
                     borderRadius: 9, minWidth: 0, overflow: 'hidden',
-                    background: status === 'cancelled' ? '#F1ECDE'
+                    background: status === 'cancelled' ? 'var(--sb-field)'
                       : b.kind === 'proposed' ? 'rgba(var(--sb-accent-rgb),0.20)' : FIELD,
-                    border: `1px solid ${b.kind === 'proposed' ? 'rgba(var(--sb-accent-rgb),0.6)' : '#E8E1CE'}`,
+                    border: `1px solid ${b.kind === 'proposed' ? 'rgba(var(--sb-accent-rgb),0.6)' : 'var(--sb-border)'}`,
                     borderLeft: `3px solid ${b.kind === 'proposed' ? AMBER : '#D8CFB8'}`,
                     boxShadow: dragging ? '0 10px 24px -10px rgba(25,23,18,.45)' : 'none',
                     opacity: past || status === 'cancelled' ? 0.6 : 1,
@@ -774,9 +774,9 @@ function PlanCard({
                         title={status === 'done' ? 'Not done after all' : 'Mark done'}
                         style={{
                           ...ICON_TILE, width: 20, height: 20, borderRadius: 999, cursor: 'pointer', flexShrink: 0,
-                          background: status === 'done' ? '#0C8140' : '#FFFFFF',
-                          borderColor: status === 'done' ? '#0C8140' : '#E8E1CE',
-                          color: status === 'done' ? '#FFFFFF' : MUTED,
+                          background: status === 'done' ? 'var(--sb-positive)' : 'var(--sb-card)',
+                          borderColor: status === 'done' ? 'var(--sb-positive)' : 'var(--sb-border)',
+                          color: status === 'done' ? 'var(--sb-card)' : MUTED,
                         }}>
                         <Check size={11} strokeWidth={2.6} />
                       </button>
@@ -786,9 +786,9 @@ function PlanCard({
                         title={status === 'cancelled' ? 'Restore' : 'Mark cancelled'}
                         style={{
                           ...ICON_TILE, width: 20, height: 20, borderRadius: 999, cursor: 'pointer', flexShrink: 0,
-                          background: status === 'cancelled' ? '#C62828' : '#FFFFFF',
-                          borderColor: status === 'cancelled' ? '#C62828' : '#E8E1CE',
-                          color: status === 'cancelled' ? '#FFFFFF' : MUTED,
+                          background: status === 'cancelled' ? 'var(--sb-negative)' : 'var(--sb-card)',
+                          borderColor: status === 'cancelled' ? 'var(--sb-negative)' : 'var(--sb-border)',
+                          color: status === 'cancelled' ? 'var(--sb-card)' : MUTED,
                         }}>
                         <X size={11} strokeWidth={2.6} />
                       </button>
@@ -817,8 +817,8 @@ function PlanCard({
           onClick={onAccept}
           disabled={proposed === 0}
           style={{
-            ...PILL, height: 28, background: proposed === 0 ? '#EDE7D9' : INK,
-            border: 'none', color: proposed === 0 ? GHOST : '#FDF8E7', fontWeight: 600,
+            ...PILL, height: 28, background: proposed === 0 ? 'var(--sb-field)' : INK,
+            border: 'none', color: proposed === 0 ? GHOST : 'var(--sb-ink-on-dark)', fontWeight: 600,
             cursor: proposed === 0 ? 'default' : 'pointer',
           }}>
           <Check size={12} strokeWidth={2.4} /> Accept plan
@@ -860,7 +860,7 @@ function HabitsCard({ habits, logs, qtyLogs, today, onToggle, onSetQty, onOpenTr
         title="Habits"
         meta={`${doneToday} of ${habits.length} today · ${weekPct}% this week · best streak ${best}d`}>
         {coldDays > 0 && (
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11.5, fontWeight: 600, color: '#C62828', flexShrink: 0 }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11.5, fontWeight: 600, color: 'var(--sb-negative)', flexShrink: 0 }}>
             <Flame size={12} strokeWidth={2} /> {coldDays} days cold
           </span>
         )}
@@ -918,7 +918,7 @@ function HabitsCard({ habits, logs, qtyLogs, today, onToggle, onSetQty, onOpenTr
                     return (
                       <span key={d} title={d} style={{
                         width: 15, height: 15, borderRadius: 4, boxSizing: 'border-box',
-                        background: on ? INK : '#EDE7D9',
+                        background: on ? INK : 'var(--sb-field)',
                         border: isToday ? `1.5px solid ${on ? INK : '#CFC6B0'}` : '1.5px solid transparent',
                       }} />
                     )
@@ -934,18 +934,18 @@ function HabitsCard({ habits, logs, qtyLogs, today, onToggle, onSetQty, onOpenTr
                       <button onClick={() => onSetQty(h, Math.max(0, qty - 1))} disabled={qty === 0}
                         style={{ ...ICON_TILE, width: 22, height: 22, cursor: qty === 0 ? 'default' : 'pointer', opacity: qty === 0 ? 0.4 : 1, fontSize: 13 }}>−</button>
                       <button onClick={() => onSetQty(h, qty + 1)}
-                        style={{ ...ICON_TILE, width: 22, height: 22, cursor: 'pointer', background: INK, borderColor: INK, color: '#FDF8E7', fontSize: 13 }}>+</button>
+                        style={{ ...ICON_TILE, width: 22, height: 22, cursor: 'pointer', background: INK, borderColor: INK, color: 'var(--sb-ink-on-dark)', fontSize: 13 }}>+</button>
                     </>
                   ) : (
                     <button onClick={() => onToggle(h.id)} title={done ? 'Undo' : 'Mark done'}
                       style={{
                         ...ICON_TILE, width: 22, height: 22, cursor: 'pointer',
-                        background: done ? '#0C8140' : INK, borderColor: done ? '#0C8140' : INK, color: '#FDF8E7',
+                        background: done ? 'var(--sb-positive)' : INK, borderColor: done ? 'var(--sb-positive)' : INK, color: 'var(--sb-ink-on-dark)',
                       }}>
                       <Check size={12} strokeWidth={2.6} />
                     </button>
                   )}
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2, fontSize: 11, color: streak > 0 ? '#0C8140' : GHOST, width: 30, justifyContent: 'flex-end', flexShrink: 0 }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2, fontSize: 11, color: streak > 0 ? 'var(--sb-positive)' : GHOST, width: 30, justifyContent: 'flex-end', flexShrink: 0 }}>
                     <Flame size={10} strokeWidth={2} /> {streak}d
                   </span>
                 </span>
@@ -1232,7 +1232,7 @@ export function TodayPage() {
       {/* ── Brief bar ─────────────────────────────────────────────────────── */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
-        padding: '14px 26px', borderBottom: '1px solid #E8E1CE', background: '#FCFAF4',
+        padding: '14px 26px', borderBottom: '1px solid var(--sb-border)', background: 'var(--sb-header)',
       }}>
         <span style={{ fontSize: 14.5, fontWeight: 700, color: INK, flexShrink: 0 }}>Morning Brief</span>
         <span style={{ fontSize: 12, color: MUTED, flexShrink: 0 }}>{dateLine}</span>
@@ -1280,7 +1280,7 @@ export function TodayPage() {
                 rows={4}
                 style={{
                   width: '100%', boxSizing: 'border-box', marginTop: 14, resize: 'vertical',
-                  background: FIELD, border: '1px solid #E8E1CE', borderRadius: 10, padding: '10px 12px',
+                  background: FIELD, border: '1px solid var(--sb-border)', borderRadius: 10, padding: '10px 12px',
                   fontSize: 13.5, color: INK, fontFamily: 'inherit', lineHeight: 1.6, outline: 'none', textAlign: 'left',
                 }} />
             )}
@@ -1349,7 +1349,7 @@ export function TodayPage() {
                         title="Complete"
                         style={{
                           width: 17, height: 17, borderRadius: 5, boxSizing: 'border-box', flexShrink: 0, padding: 0,
-                          border: '1.5px solid #CFC6B0', background: '#FFFFFF', cursor: 'pointer',
+                          border: '1.5px solid #CFC6B0', background: 'var(--sb-card)', cursor: 'pointer',
                         }} />
                       <span style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 600, color: INK, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {t.title}
