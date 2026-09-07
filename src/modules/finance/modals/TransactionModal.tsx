@@ -10,7 +10,7 @@ import { liveBalances } from '../balances'
 import { acct } from '../format'
 import { todayISO } from '../dates'
 import {
-  INK, MUTED, GHOST, LINE, OLIVE, RUST, AMBER, DISPLAY,
+  DISPLAY,
   PILL, ROUND, LABEL, ROW, RULE, PillPicker, categoryOptions,
 } from './pickers'
 export type { PickOption } from './pickers'
@@ -126,7 +126,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
 
   // Rust and olive are the platform's negative and positive. An expense should
   // still read as money leaving without a second palette to learn.
-  const typeColor = type === 'expense' ? RUST : type === 'income' ? OLIVE : INK
+  const typeColor = type === 'expense' ? 'var(--sb-negative)' : type === 'income' ? 'var(--sb-positive)' : 'var(--sb-ink-1)'
   const amount = parseFloat(amountStr) || 0
 
   function handleSave() {
@@ -229,7 +229,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
       <div style={{
         width: 'clamp(320px, 94vw, 460px)', maxHeight: '90vh', overflowY: 'auto',
         boxSizing: 'border-box', scrollbarWidth: 'thin',
-        background: 'var(--sb-card)', border: `1px solid ${LINE}`, borderRadius: 18,
+        background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 18,
         boxShadow: '0 24px 60px rgba(25,23,18,0.24)',
         padding: '18px 20px 22px',
       }}>
@@ -260,7 +260,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
                 aria-pressed={on}
                 style={{
                   flex: 1, height: 32, borderRadius: 999, border: 'none', fontFamily: 'inherit',
-                  background: on ? INK : 'transparent', color: on ? 'var(--sb-ink-on-dark)' : MUTED,
+                  background: on ? 'var(--sb-ink-1)' : 'transparent', color: on ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
                   fontSize: 12.5, fontWeight: on ? 600 : 500, cursor: 'pointer',
                 }}>{t.label}</button>
             )
@@ -271,16 +271,16 @@ export function TransactionModal({ transaction, accounts, categories, history = 
         <div style={{
           display: 'flex', alignItems: 'center', gap: 10, marginTop: 12,
           padding: '0 15px', height: 66, borderRadius: 12,
-          background: 'var(--sb-field)', border: `1px solid ${LINE}`,
+          background: 'var(--sb-field)', border: '1px solid var(--sb-border)',
         }}>
           <span style={{ position: 'relative', display: 'flex', flexShrink: 0 }}>
             <span style={{
               display: 'inline-flex', alignItems: 'center', gap: 4, height: 30, padding: '0 10px',
-              borderRadius: 8, background: 'var(--sb-card)', border: `1px solid ${LINE}`,
-              fontSize: 12, fontWeight: 600, color: MUTED,
+              borderRadius: 8, background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
+              fontSize: 12, fontWeight: 600, color: 'var(--sb-ink-3)',
             }}>
               {currency}
-              <ChevronDown size={11} strokeWidth={2} style={{ color: GHOST }} />
+              <ChevronDown size={11} strokeWidth={2} style={{ color: 'var(--sb-ink-4)' }} />
             </span>
             <select value={currency}
               onChange={e => { setCurrencyTouched(true); setCurrency(e.target.value as Currency) }}
@@ -366,7 +366,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
                   onClick={() => { setType('transfer'); setToAccountId(suggestedCard.id) }}
                   style={{
                     ...PILL, height: 30, paddingInline: 12, fontSize: 12, fontWeight: 600,
-                    color: INK, flexShrink: 0,
+                    color: 'var(--sb-ink-1)', flexShrink: 0,
                   }}>
                   {cards.length === 1 ? `Pay ${suggestedCard.name}` : 'Choose the card'}
                 </button>
@@ -380,7 +380,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
             <span style={{ flex: 1, minWidth: 0, display: 'flex', gap: 7 }}>
               <label style={{ ...PILL, flex: 1, position: 'relative', justifyContent: 'space-between' }}>
                 {new Date(date + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
-                <ChevronDown size={13} strokeWidth={2} style={{ color: GHOST, flexShrink: 0 }} />
+                <ChevronDown size={13} strokeWidth={2} style={{ color: 'var(--sb-ink-4)', flexShrink: 0 }} />
                 <input type="date" value={date} onChange={e => pickDate(e.target.value)}
                   style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', border: 'none', padding: 0 }} />
               </label>
@@ -396,9 +396,9 @@ export function TransactionModal({ transaction, accounts, categories, history = 
                 title="Money has actually moved"
                 style={{
                   ...PILL, flexShrink: 0,
-                  background: isCleared ? INK : 'var(--sb-card)',
-                  border: isCleared ? 'none' : `1px solid ${LINE}`,
-                  color: isCleared ? 'var(--sb-ink-on-dark)' : MUTED,
+                  background: isCleared ? 'var(--sb-ink-1)' : 'var(--sb-card)',
+                  border: isCleared ? 'none' : '1px solid var(--sb-border)',
+                  color: isCleared ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
                 }}>
                 {isCleared && <Check size={13} strokeWidth={2.5} />} Paid
               </button>
@@ -411,8 +411,8 @@ export function TransactionModal({ transaction, accounts, categories, history = 
               <label style={{ ...PILL, flex: 1, position: 'relative', justifyContent: 'space-between' }}>
                 {paidAt
                   ? new Date(paidAt + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
-                  : <span style={{ color: GHOST }}>Pick the day</span>}
-                <ChevronDown size={13} strokeWidth={2} style={{ color: GHOST, flexShrink: 0 }} />
+                  : <span style={{ color: 'var(--sb-ink-4)' }}>Pick the day</span>}
+                <ChevronDown size={13} strokeWidth={2} style={{ color: 'var(--sb-ink-4)', flexShrink: 0 }} />
                 <input type="date" value={paidAt}
                   onChange={e => { setPaidTouched(true); setPaidAt(e.target.value) }}
                   style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', border: 'none', padding: 0 }} />
@@ -442,7 +442,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
                   <div style={{
                     position: 'absolute', top: 46, left: 0, right: 0, zIndex: 20, padding: 5,
                     maxHeight: 210, overflowY: 'auto',
-                    background: 'var(--sb-card)', border: `1px solid ${LINE}`, borderRadius: 12,
+                    background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 12,
                     boxShadow: '0 12px 32px rgba(25,23,18,0.18)',
                   }}>
                     {payeeHits.map(name => (
@@ -451,7 +451,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
                         style={{
                           display: 'block', width: '100%', padding: '9px 10px', border: 'none',
                           borderRadius: 8, background: 'transparent', cursor: 'pointer',
-                          fontFamily: 'inherit', fontSize: 13.5, color: INK, textAlign: 'left',
+                          fontFamily: 'inherit', fontSize: 13.5, color: 'var(--sb-ink-1)', textAlign: 'left',
                           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                         }}>{name}</button>
                     ))}
@@ -467,8 +467,8 @@ export function TransactionModal({ transaction, accounts, categories, history = 
                 placeholder="Anything worth remembering…"
                 style={{
                   flex: 1, minWidth: 0, boxSizing: 'border-box', resize: 'vertical',
-                  background: 'var(--sb-card)', border: `1px solid ${LINE}`, borderRadius: 9,
-                  padding: '9px 12px', fontSize: 13.5, color: INK, fontFamily: 'inherit',
+                  background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 9,
+                  padding: '9px 12px', fontSize: 13.5, color: 'var(--sb-ink-1)', fontFamily: 'inherit',
                   outline: 'none', textAlign: 'left',
                 }} />
           </div>
@@ -485,7 +485,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
                   }}>
                     {tag}
                     <button onClick={() => setTags(prev => prev.filter(t => t !== tag))} title="Remove"
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: MUTED, padding: 0, display: 'flex' }}>
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', padding: 0, display: 'flex' }}>
                       <X size={12} />
                     </button>
                   </span>
@@ -511,13 +511,13 @@ export function TransactionModal({ transaction, accounts, categories, history = 
                 {attachments.map((src, i) => (
                   <span key={i} style={{ position: 'relative', flexShrink: 0, display: 'flex' }}>
                     <img src={src} alt={`Receipt ${i + 1}`} style={{
-                      width: 46, height: 46, borderRadius: 9, objectFit: 'cover', border: `1px solid ${LINE}`,
+                      width: 46, height: 46, borderRadius: 9, objectFit: 'cover', border: '1px solid var(--sb-border)',
                     }} />
                     <button onClick={() => setAttachments(prev => prev.filter((_, j) => j !== i))} title="Remove"
                       style={{
                         position: 'absolute', top: -6, right: -6, width: 19, height: 19, padding: 0,
-                        borderRadius: '50%', background: 'var(--sb-card)', border: `1px solid ${LINE}`,
-                        color: MUTED, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        borderRadius: '50%', background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
+                        color: 'var(--sb-ink-3)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
                         boxShadow: '0 1px 3px rgba(25,23,18,0.14)',
                       }}>
                       <X size={11} />
@@ -525,7 +525,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
                   </span>
                 ))}
                 <button onClick={() => fileRef.current?.click()}
-                  style={{ ...PILL, height: 46, color: MUTED, gap: 7 }}>
+                  style={{ ...PILL, height: 46, color: 'var(--sb-ink-3)', gap: 7 }}>
                   {attachments.length ? <Plus size={14} /> : <Paperclip size={14} />}
                   {attachments.length ? 'Add another' : 'Attach a receipt'}
                 </button>
@@ -539,9 +539,9 @@ export function TransactionModal({ transaction, accounts, categories, history = 
               <button onClick={() => setIsRecurring(v => !v)}
                 style={{
                   ...PILL, flex: 1, justifyContent: 'flex-start',
-                  background: isRecurring ? INK : 'var(--sb-card)',
-                  border: isRecurring ? 'none' : `1px solid ${LINE}`,
-                  color: isRecurring ? 'var(--sb-ink-on-dark)' : MUTED,
+                  background: isRecurring ? 'var(--sb-ink-1)' : 'var(--sb-card)',
+                  border: isRecurring ? 'none' : '1px solid var(--sb-border)',
+                  color: isRecurring ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
                 }}>
                 {isRecurring ? <><Check size={13} strokeWidth={2.5} /> This one comes round again</> : 'One-off'}
               </button>
@@ -573,8 +573,8 @@ export function TransactionModal({ transaction, accounts, categories, history = 
                   flex: 1, height: 44, borderRadius: 11, cursor: filled && open ? 'default' : 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   background: filled ? 'rgba(var(--sb-accent-rgb),0.18)' : open ? 'var(--sb-field)' : 'transparent',
-                  border: `1px solid ${filled ? AMBER : LINE}`,
-                  color: filled ? 'var(--sb-ink-1)' : open ? MUTED : GHOST,
+                  border: `1px solid ${filled ? 'var(--sb-accent)' : 'var(--sb-border)'}`,
+                  color: filled ? 'var(--sb-ink-1)' : open ? 'var(--sb-ink-3)' : 'var(--sb-ink-4)',
                 }}>
                 <Icon size={17} strokeWidth={1.6} />
               </button>
@@ -586,11 +586,11 @@ export function TransactionModal({ transaction, accounts, categories, history = 
         <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
           <button onClick={handleSave} disabled={!canSave} style={{
             ...PILL, flex: 1, justifyContent: 'center', fontWeight: 600,
-            background: canSave ? INK : 'var(--sb-field)',
-            border: 'none', color: canSave ? 'var(--sb-ink-on-dark)' : GHOST,
+            background: canSave ? 'var(--sb-ink-1)' : 'var(--sb-field)',
+            border: 'none', color: canSave ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-4)',
             cursor: canSave ? 'pointer' : 'default',
           }}>{isEdit ? 'Save changes' : 'Add transaction'}</button>
-          <button onClick={onClose} style={{ ...PILL, color: MUTED }}>Cancel</button>
+          <button onClick={onClose} style={{ ...PILL, color: 'var(--sb-ink-3)' }}>Cancel</button>
         </div>
 
         {isEdit && onDelete && (
@@ -599,7 +599,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
             style={{
               marginTop: 12, width: '100%', height: 34, borderRadius: 9,
               background: 'none', border: 'none', fontFamily: 'inherit',
-              color: RUST, fontSize: 12.5, cursor: 'pointer',
+              color: 'var(--sb-negative)', fontSize: 12.5, cursor: 'pointer',
             }}>
             Delete this transaction
           </button>

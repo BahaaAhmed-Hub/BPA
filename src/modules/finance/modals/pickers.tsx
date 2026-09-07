@@ -9,34 +9,25 @@ import { CategoryGlyph } from '../components/CategoryGlyph'
 // you type in it, pick from it or only read it; one label column everything
 // hangs off; a black pill for the one action that commits. It lives here
 // rather than inside a modal so a second panel does not have to copy it.
-
-export const INK    = 'var(--sb-ink-1)'
-export const MUTED  = 'var(--sb-ink-3)'
-export const GHOST  = '#9B9180'
-export const LINE   = 'var(--sb-border)'
-export const HAIR   = 'var(--sb-hairline)'
-export const OLIVE  = 'var(--sb-positive)'
-export const RUST   = 'var(--sb-negative)'
-export const AMBER  = 'var(--sb-accent)'
 export const DISPLAY = "'Outfit', system-ui, sans-serif"
 
 export const PILL: React.CSSProperties = {
   display: 'inline-flex', alignItems: 'center', gap: 6, height: 42, boxSizing: 'border-box',
-  padding: '0 14px', borderRadius: 10, background: 'var(--sb-card)', border: `1px solid ${LINE}`,
-  color: INK, fontSize: 13.5, fontFamily: 'inherit', cursor: 'pointer', minWidth: 0,
+  padding: '0 14px', borderRadius: 10, background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
+  color: 'var(--sb-ink-1)', fontSize: 13.5, fontFamily: 'inherit', cursor: 'pointer', minWidth: 0,
 }
 export const ROUND: React.CSSProperties = {
   width: 30, height: 30, borderRadius: '50%', flexShrink: 0, padding: 0,
   display: 'flex', alignItems: 'center', justifyContent: 'center',
-  background: 'var(--sb-card)', border: `1px solid ${LINE}`, color: MUTED, cursor: 'pointer',
+  background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-3)', cursor: 'pointer',
 }
 export const LABEL: React.CSSProperties = {
-  width: 74, flexShrink: 0, fontSize: 13.5, color: MUTED, fontWeight: 500,
+  width: 74, flexShrink: 0, fontSize: 13.5, color: 'var(--sb-ink-3)', fontWeight: 500,
 }
 export const ROW: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 10,
 }
-export const RULE: React.CSSProperties = { height: 1, background: HAIR, margin: '18px 0' }
+export const RULE: React.CSSProperties = { height: 1, background: 'var(--sb-hairline)', margin: '18px 0' }
 
 export interface PickOption {
   id: string
@@ -138,22 +129,22 @@ export function PillPicker({ value, options, onChange, placeholder, compact }: {
         <span title={chosen?.parent ? `${chosen.label} — inside ${chosen.parent}` : undefined}
           style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
           {chosen ? <Glyph glyph={chosen.glyph} tint={chosen.tint} size={compact ? 18 : 22} /> : null}
-          <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: chosen ? INK : GHOST }}>
+          <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: chosen ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)' }}>
             {chosen?.label ?? placeholder}
           </span>
         </span>
-        <ChevronDown size={13} strokeWidth={2} style={{ color: GHOST, flexShrink: 0 }} />
+        <ChevronDown size={13} strokeWidth={2} style={{ color: 'var(--sb-ink-4)', flexShrink: 0 }} />
       </button>
 
       {open && place && createPortal(
         <div ref={list} style={{
           position: 'fixed', top: place.top, left: place.left, width: place.width, zIndex: 2000,
           maxHeight: place.maxHeight, overflowY: 'auto', padding: 5, boxSizing: 'border-box',
-          background: 'var(--sb-card)', border: `1px solid ${LINE}`, borderRadius: 12,
+          background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 12,
           boxShadow: '0 12px 32px rgba(25,23,18,0.18)',
         }}>
           {options.length === 0 && (
-            <div style={{ padding: '10px 12px', fontSize: 12.5, color: GHOST }}>Nothing to choose from yet</div>
+            <div style={{ padding: '10px 12px', fontSize: 12.5, color: 'var(--sb-ink-4)' }}>Nothing to choose from yet</div>
           )}
           {options.map(o => {
             const on = o.id === value
@@ -166,13 +157,13 @@ export function PillPicker({ value, options, onChange, placeholder, compact }: {
                   padding: '9px 10px', paddingLeft: o.nested ? 26 : 10,
                   border: 'none', borderRadius: 8, cursor: 'pointer',
                   background: on ? 'rgba(var(--sb-accent-rgb),0.18)' : 'transparent',
-                  fontFamily: 'inherit', fontSize: 13.5, color: INK, textAlign: 'left',
+                  fontFamily: 'inherit', fontSize: 13.5, color: 'var(--sb-ink-1)', textAlign: 'left',
                 }}>
                 <Glyph glyph={o.glyph} tint={o.tint} />
                 <span style={{ flex: 1, minWidth: 0 }}>
                   <span style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.label}</span>
                   {o.hint && (
-                    <span style={{ display: 'block', fontSize: 11, color: GHOST, marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <span style={{ display: 'block', fontSize: 11, color: 'var(--sb-ink-4)', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {o.hint}
                     </span>
                   )}

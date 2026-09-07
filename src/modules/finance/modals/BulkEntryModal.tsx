@@ -8,7 +8,7 @@ import { todayISO, shiftDaysISO } from '../dates'
 import { baseCurrency } from '../fx'
 import { useFinanceStore } from '../financeStore'
 import {
-  INK, MUTED, GHOST, LINE, HAIR, OLIVE, RUST, AMBER, DISPLAY,
+  DISPLAY,
   PILL, ROUND, PillPicker, categoryOptions,
 } from './pickers'
 
@@ -94,7 +94,7 @@ export function datesFor(row: Pick<Draft, 'from' | 'to' | 'every'>): string[] {
 
 const CELL: React.CSSProperties = {
   height: 34, boxSizing: 'border-box', padding: '0 10px', borderRadius: 9,
-  background: 'var(--sb-card)', border: `1px solid ${LINE}`, color: INK,
+  background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-1)',
   fontSize: 12.5, fontFamily: 'inherit', outline: 'none', minWidth: 0, width: '100%',
 }
 
@@ -144,7 +144,7 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
   }, [onClose])
 
   const options = useMemo(() => categoryOptions(categories, kind), [categories, kind])
-  const tone    = kind === 'income' ? OLIVE : RUST
+  const tone    = kind === 'income' ? 'var(--sb-positive)' : 'var(--sb-negative)'
 
   // A line with nothing in it is not an entry, it is an empty row waiting to be
   // used — only what has an amount gets written. A line that repeats counts
@@ -227,7 +227,7 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
         onClick={e => e.stopPropagation()}
         style={{
           width: '100%', maxWidth: 1100, maxHeight: '88vh', display: 'flex', flexDirection: 'column',
-          background: 'var(--sb-header)', border: `1px solid ${LINE}`, borderRadius: 20,
+          background: 'var(--sb-header)', border: '1px solid var(--sb-border)', borderRadius: 20,
           boxShadow: '0 30px 80px rgba(25,23,18,0.28)', padding: '18px 20px 20px',
         }}>
 
@@ -236,7 +236,7 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
           <span style={{
             display: 'inline-flex', alignItems: 'center', gap: 7,
             background: '#F3EEE0', borderRadius: 999, padding: '5px 12px',
-            fontSize: 11.5, fontWeight: 600, color: MUTED,
+            fontSize: 11.5, fontWeight: 600, color: 'var(--sb-ink-3)',
           }}>
             <span style={{ width: 6, height: 6, borderRadius: '50%', background: tone }} />
             Bulk entry
@@ -253,7 +253,7 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
                   padding: '0 16px', height: 34, borderRadius: 8, border: 'none', cursor: 'pointer',
                   fontFamily: 'inherit', fontSize: 12.5, fontWeight: kind === k ? 700 : 500,
                   background: kind === k ? 'var(--sb-ink-1)' : 'transparent',
-                  color: kind === k ? 'var(--sb-ink-on-dark)' : MUTED,
+                  color: kind === k ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
                 }}>
                 {k === 'expense' ? 'Expenses' : 'Income'}
               </button>
@@ -268,7 +268,7 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
                   padding: '0 14px', height: 34, borderRadius: 8, border: 'none', cursor: 'pointer',
                   fontFamily: 'inherit', fontSize: 12.5, fontWeight: batchPaid === p ? 700 : 500,
                   background: batchPaid === p ? 'var(--sb-ink-1)' : 'transparent',
-                  color: batchPaid === p ? 'var(--sb-ink-on-dark)' : MUTED,
+                  color: batchPaid === p ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
                 }}>
                 {p ? 'Paid' : 'Not paid'}
               </button>
@@ -279,7 +279,7 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
               so, because everything below it is filed against this one field. */}
           <span style={{
             flex: 1, minWidth: 200, display: 'flex', borderRadius: 10,
-            boxShadow: account ? 'none' : `0 0 0 2px ${AMBER}`,
+            boxShadow: account ? 'none' : `0 0 0 2px var(--sb-accent)`,
           }}>
             <PillPicker
               value={accountId}
@@ -302,14 +302,14 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
           </span>
         </div>
 
-        <div style={{ height: 1, background: HAIR, margin: '16px 0 10px' }} />
+        <div style={{ height: 1, background: 'var(--sb-hairline)', margin: '16px 0 10px' }} />
 
         {/* Heads and lines share one sideways scroller, so they stay in step */}
         <div style={{ flex: 1, minHeight: 0, overflow: 'auto', margin: '0 -2px', padding: '0 2px' }}>
         <div style={{ minWidth: GRID_MIN }}>
         <div style={{
           display: 'grid', gridTemplateColumns: COLS, gap: 8,
-          fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: GHOST,
+          fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: 'var(--sb-ink-4)',
           textTransform: 'uppercase', padding: '0 2px 7px',
           position: 'sticky', top: 0, background: 'var(--sb-header)', zIndex: 1,
         }}>
@@ -339,18 +339,18 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
                   title={r.toTouched ? undefined : 'Following the start date until you change it'}
                   style={{
                     ...CELL, fontFamily: DISPLAY, padding: '0 8px',
-                    color: r.toTouched ? INK : GHOST,
+                    color: r.toTouched ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)',
                     borderStyle: r.toTouched ? 'solid' : 'dashed',
                   }} />
               </span>
               <span style={{ position: 'relative', display: 'flex', minWidth: 0 }}>
                 <span style={{
                   ...CELL, display: 'inline-flex', alignItems: 'center', justifyContent: 'space-between',
-                  color: r.every ? INK : GHOST,
+                  color: r.every ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)',
                 }}>
                   {INTERVALS.find(x => x.id === r.every)?.label ?? 'once'}
                   {repeats > 1 && (
-                    <span style={{ fontSize: 10, fontWeight: 700, color: MUTED }}>×{repeats}</span>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--sb-ink-3)' }}>×{repeats}</span>
                   )}
                 </span>
                 <select value={r.every} onChange={e => patch(r.key, { every: e.target.value as Interval })}
@@ -376,14 +376,14 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
                 style={{
                   ...CELL, textAlign: 'right', fontFamily: DISPLAY, fontWeight: 600,
                   fontVariantNumeric: 'tabular-nums',
-                  color: r.amount > 0 ? tone : GHOST,
+                  color: r.amount > 0 ? tone : 'var(--sb-ink-4)',
                 }} />
               </span>
               <span style={{ ...CELL_BOX, alignItems: 'center' }}>
                 <span style={{
                   ...CELL, display: 'inline-flex', alignItems: 'center', gap: 7, padding: '0 8px',
                   borderStyle: r.paid ? 'solid' : 'dotted',
-                  borderColor: r.paid ? LINE : RUST,
+                  borderColor: r.paid ? 'var(--sb-border)' : 'var(--sb-negative)',
                 }}>
                   <button
                     onClick={() => patch(r.key, { paid: !r.paid })}
@@ -391,8 +391,8 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
                     style={{
                       width: 17, height: 17, flexShrink: 0, padding: 0, borderRadius: 5, cursor: 'pointer',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      background: r.paid ? INK : 'transparent',
-                      border: `1.5px solid ${r.paid ? INK : RUST}`,
+                      background: r.paid ? 'var(--sb-ink-1)' : 'transparent',
+                      border: `1.5px solid ${r.paid ? 'var(--sb-ink-1)' : 'var(--sb-negative)'}`,
                       color: 'var(--sb-ink-on-dark)',
                     }}>
                     {r.paid && <Check size={11} strokeWidth={3} />}
@@ -404,15 +404,15 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
                       style={{
                         flex: 1, minWidth: 0, height: 30, padding: 0, border: 'none', background: 'transparent',
                         fontFamily: DISPLAY, fontSize: 12.5, outline: 'none',
-                        color: r.paidOnTouched ? INK : GHOST,
+                        color: r.paidOnTouched ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)',
                       }} />
                   ) : (
-                    <span style={{ fontSize: 12.5, color: RUST, fontWeight: 600 }}>Not paid</span>
+                    <span style={{ fontSize: 12.5, color: 'var(--sb-negative)', fontWeight: 600 }}>Not paid</span>
                   )}
                 </span>
               </span>
               <button onClick={() => dropRow(r.key)} title="Remove this line"
-                style={{ ...ROUND, width: 28, height: 28, color: GHOST }}>
+                style={{ ...ROUND, width: 28, height: 28, color: 'var(--sb-ink-4)' }}>
                 <Trash2 size={13} />
               </button>
             </div>
@@ -421,7 +421,7 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
 
           <button onClick={addRow}
             style={{
-              ...PILL, height: 34, fontSize: 12.5, color: MUTED, marginTop: 2,
+              ...PILL, height: 34, fontSize: 12.5, color: 'var(--sb-ink-3)', marginTop: 2,
               background: 'transparent', borderStyle: 'dashed',
             }}>
             <Plus size={13} /> Another line
@@ -429,11 +429,11 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
         </div>
         </div>
 
-        <div style={{ height: 1, background: HAIR, margin: '14px 0' }} />
+        <div style={{ height: 1, background: 'var(--sb-hairline)', margin: '14px 0' }} />
 
         {/* What is about to be written */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span style={{ fontSize: 12.5, color: !account && count > 0 ? INK : MUTED }}>
+          <span style={{ fontSize: 12.5, color: !account && count > 0 ? 'var(--sb-ink-1)' : 'var(--sb-ink-3)' }}>
             {count === 0
               ? 'Nothing to add yet — a line counts once it has an amount'
               : !account
@@ -445,8 +445,8 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
           {elsewhere.length > 0 && account && (
             <span style={{
               display: 'inline-flex', alignItems: 'center', gap: 6, borderRadius: 999,
-              background: '#FBF1D2', border: `1px solid ${AMBER}`, padding: '4px 11px',
-              fontSize: 11.5, color: INK,
+              background: '#FBF1D2', border: '1px solid var(--sb-accent)', padding: '4px 11px',
+              fontSize: 11.5, color: 'var(--sb-ink-1)',
             }}>
               dated {elsewhere.join(' & ')}, not {year} — saving goes there
             </span>
@@ -460,7 +460,7 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
             </span>
           )}
           <span style={{ flex: 1 }} />
-          <button onClick={onClose} style={{ ...PILL, height: 38, color: MUTED }}>Cancel</button>
+          <button onClick={onClose} style={{ ...PILL, height: 38, color: 'var(--sb-ink-3)' }}>Cancel</button>
           <button
             onClick={handleSave}
             disabled={!canSave}
@@ -468,8 +468,8 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
             style={{
               ...PILL, height: 38, paddingInline: 20, fontWeight: 600,
               background: canSave ? 'var(--sb-ink-1)' : 'var(--sb-field)',
-              border: `1px solid ${canSave ? 'var(--sb-ink-1)' : LINE}`,
-              color: canSave ? 'var(--sb-ink-on-dark)' : GHOST,
+              border: `1px solid ${canSave ? 'var(--sb-ink-1)' : 'var(--sb-border)'}`,
+              color: canSave ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-4)',
               cursor: canSave ? 'pointer' : 'default',
             }}>
             Add {count || ''} {count === 1 ? 'entry' : 'entries'}
