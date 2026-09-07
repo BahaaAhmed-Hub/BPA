@@ -59,7 +59,7 @@ interface Email {
 const ICON_ACTION: React.CSSProperties = {
   width: 30, height: 30, borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
   display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-  background: 'transparent', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-3)',
+  background: 'transparent', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-3)',
   cursor: 'pointer', padding: 0,
 }
 
@@ -577,7 +577,7 @@ export function InboxModule() {
     const ORDER: MailFolder[] = ['unread', 'inbox', 'sent', 'drafts', 'starred', 'archive']
     return (
       <nav style={{
-        background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
+        background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
         padding: 6, alignSelf: 'start', display: 'flex', flexDirection: 'column', gap: 2,
       }}>
         <button
@@ -624,9 +624,9 @@ export function InboxModule() {
   function renderLeft() {
     if (loading) {
       return (
-        <div style={{ background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', overflow: 'hidden' }}>
+        <div style={{ background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', overflow: 'hidden' }}>
           {[0,1,2,3].map(i => (
-            <div key={i} style={{ padding: '16px 18px', borderBottom: i < 3 ? '1px solid var(--sb-border)' : 'none' }}>
+            <div key={i} style={{ padding: '16px 18px', borderBottom: i < 3 ? 'var(--sb-border-width) solid var(--sb-border)' : 'none' }}>
               <div style={{ height: 12, borderRadius: 'var(--sb-r-chip)', background: 'linear-gradient(90deg, var(--sb-border) 25%, var(--sb-accent-border) 50%, var(--sb-border) 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.6s infinite', marginBottom: 8, width: '60%' }} />
               <div style={{ height: 10, borderRadius: 'var(--sb-r-chip)', background: 'linear-gradient(90deg, var(--sb-border) 25%, var(--sb-accent-border) 50%, var(--sb-border) 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.6s infinite', width: '80%' }} />
             </div>
@@ -646,7 +646,7 @@ export function InboxModule() {
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             placeholder="Search emails…"
-            style={{ width: '100%', boxSizing: 'border-box', padding: '8px 32px 8px 30px', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', outline: 'none' }}
+            style={{ width: '100%', boxSizing: 'border-box', padding: '8px 32px 8px 30px', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', outline: 'none' }}
           />
           {searchQuery && (
             <button onClick={() => setSearchQuery('')} style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', padding: 2, display: 'flex' }}>
@@ -657,10 +657,10 @@ export function InboxModule() {
 
         {/* Batch action bar */}
         {selectedIds.size > 0 && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: 'color-mix(in srgb, var(--sb-info) 8.0%, transparent)', border: '1px solid color-mix(in srgb, var(--sb-info) 20.0%, transparent)', borderRadius: 'var(--sb-r-chip)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: 'color-mix(in srgb, var(--sb-info) 8.0%, transparent)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-info) 20.0%, transparent)', borderRadius: 'var(--sb-r-chip)' }}>
             <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-info)', fontWeight: 500, flex: 1 }}>{selectedIds.size} selected</span>
             <button onClick={() => void handleBatchArchive()} disabled={batchArchiving}
-              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 'var(--sb-r-chip)', background: 'transparent', border: '1px solid color-mix(in srgb, var(--sb-info) 30.0%, transparent)', color: 'var(--sb-info)', fontSize: 'var(--sb-t-body-s)', cursor: 'pointer', opacity: batchArchiving ? 0.5 : 1 }}>
+              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 'var(--sb-r-chip)', background: 'transparent', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-info) 30.0%, transparent)', color: 'var(--sb-info)', fontSize: 'var(--sb-t-body-s)', cursor: 'pointer', opacity: batchArchiving ? 0.5 : 1 }}>
               <Archive size={ICON.sm} /> Archive all
             </button>
             <button onClick={() => setSelectedIds(new Set())}
@@ -670,7 +670,7 @@ export function InboxModule() {
           </div>
         )}
 
-        <div style={{ background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', overflow: 'hidden' }}>
+        <div style={{ background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', overflow: 'hidden' }}>
         {filteredEmails.length === 0 && searchQuery ? (
           <div style={{ padding: '24px 16px', textAlign: 'center', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body-s)' }}>
             No emails match "{searchQuery}"
@@ -696,7 +696,7 @@ export function InboxModule() {
                 width: '100%', padding: '7px 11px', textAlign: 'left',
                 background: isSelected ? 'color-mix(in srgb, var(--sb-info) 6.0%, transparent)' : 'transparent',
                 border: 'none',
-                borderBottom: i < visibleEmails.length - 1 ? '1px solid var(--sb-hairline)' : 'none',
+                borderBottom: i < visibleEmails.length - 1 ? 'var(--sb-border-width) solid var(--sb-hairline)' : 'none',
                 // The bar is the mailbox when several are merged, and the
                 // selection when only one is on screen.
                 borderLeft: `3px solid ${
@@ -778,7 +778,7 @@ export function InboxModule() {
           display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16,
           textAlign: 'center',
         }}>
-          <div style={{ width: 48, height: 48, borderRadius: 'var(--sb-r-nav)', background: 'color-mix(in srgb, var(--sb-info) 8.0%, transparent)', border: '1px solid color-mix(in srgb, var(--sb-info) 15.0%, transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ width: 48, height: 48, borderRadius: 'var(--sb-r-nav)', background: 'color-mix(in srgb, var(--sb-info) 8.0%, transparent)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-info) 15.0%, transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <WifiOff size={ICON.lg} color="var(--sb-info)" />
           </div>
           <div>
@@ -794,7 +794,7 @@ export function InboxModule() {
             style={{
               display: 'flex', alignItems: 'center', gap: 7,
               padding: '10px 22px', borderRadius: 'var(--sb-r-chip)',
-              background: 'color-mix(in srgb, var(--sb-info) 12.0%, transparent)', border: '1px solid color-mix(in srgb, var(--sb-info) 25.0%, transparent)',
+              background: 'color-mix(in srgb, var(--sb-info) 12.0%, transparent)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-info) 25.0%, transparent)',
               color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body)', fontWeight: 500, cursor: 'pointer',
             }}
           >
@@ -806,9 +806,9 @@ export function InboxModule() {
 
     if (fetchError) {
       return (
-        <div style={{ background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', padding: '32px', textAlign: 'center' }}>
+        <div style={{ background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', padding: '32px', textAlign: 'center' }}>
           <p style={{ margin: '0 0 14px', fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)' }}>{fetchError}</p>
-          <button onClick={() => void loadEmails()} style={{ padding: '7px 18px', borderRadius: 'var(--sb-r-chip)', background: 'rgba(var(--sb-accent-rgb),0.12)', border: '1px solid color-mix(in srgb, var(--sb-info) 18.8%, transparent)', color: 'var(--sb-info)', fontSize: 'var(--sb-t-body-s)', cursor: 'pointer' }}>
+          <button onClick={() => void loadEmails()} style={{ padding: '7px 18px', borderRadius: 'var(--sb-r-chip)', background: 'rgba(var(--sb-accent-rgb),0.12)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-info) 18.8%, transparent)', color: 'var(--sb-info)', fontSize: 'var(--sb-t-body-s)', cursor: 'pointer' }}>
             Retry
           </button>
         </div>
@@ -820,7 +820,7 @@ export function InboxModule() {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         {/* Email body */}
-        <div style={{ background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', padding: '18px 22px' }}>
+        <div style={{ background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', padding: '18px 22px' }}>
           {/* Subject on the left, everything you can do to the message on the
               right — as icons, the way the task panel does it. Four words in
               four pills was a row of buttons the width of the card. */}
@@ -842,7 +842,7 @@ export function InboxModule() {
                     style={{
                       ...ICON_ACTION,
                       background: on ? 'var(--sb-ink-1)' : 'transparent',
-                      border: `1px solid ${on ? 'var(--sb-ink-1)' : 'var(--sb-border)'}`,
+                      border: `var(--sb-border-width) solid ${on ? 'var(--sb-ink-1)' : 'var(--sb-border)'}`,
                       color: on ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
                     }}>
                     <Icon size={14} />
@@ -860,7 +860,7 @@ export function InboxModule() {
                 style={{
                   ...ICON_ACTION,
                   background: drafting === selectedEmail.id ? 'var(--sb-accent)' : 'transparent',
-                  border: `1px solid ${drafting === selectedEmail.id ? 'var(--sb-accent)' : 'var(--sb-border)'}`,
+                  border: `var(--sb-border-width) solid ${drafting === selectedEmail.id ? 'var(--sb-accent)' : 'var(--sb-border)'}`,
                   color: drafting === selectedEmail.id ? 'var(--sb-accent-ink)' : 'var(--sb-ink-3)',
                 }}>
                 <Sparkles size={ICON.sm} />
@@ -877,7 +877,7 @@ export function InboxModule() {
           {draftError && (
             <p style={{
               margin: '0 0 8px', fontSize: 'var(--sb-t-meta)', lineHeight: 1.5, color: 'var(--sb-negative)',
-              background: 'color-mix(in srgb, var(--sb-negative) 6.0%, transparent)', border: '1px solid color-mix(in srgb, var(--sb-negative) 25.0%, transparent)',
+              background: 'color-mix(in srgb, var(--sb-negative) 6.0%, transparent)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-negative) 25.0%, transparent)',
               borderRadius: 'var(--sb-r-chip)', padding: '7px 10px',
             }}>{draftError}</p>
           )}
@@ -892,7 +892,7 @@ export function InboxModule() {
                 <span title={`In ${selectedEmail.account.email}`}
                   style={{
                     display: 'inline-flex', alignItems: 'center', height: 20, padding: '0 8px',
-                    borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-field)', border: '1px solid var(--sb-border)',
+                    borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)',
                     fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)', flexShrink: 0,
                   }}>{accountLabel(selectedEmail.account.email, selectedEmail.account.isPrimary)}</span>
               )}
@@ -928,7 +928,7 @@ export function InboxModule() {
             <div style={{ marginBottom: 14 }}>
               <button
                 onClick={() => setExpandedThread(v => v === selectedEmail.id ? null : selectedEmail.id)}
-                style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', background: 'var(--sb-field)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-chip)', padding: '4px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}
+                style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-chip)', padding: '4px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}
               >
                 {expandedThread === selectedEmail.id ? '▲' : '▼'} {selectedEmail.threadMessages.length} earlier message{selectedEmail.threadMessages.length > 1 ? 's' : ''} in thread
               </button>
@@ -963,23 +963,23 @@ export function InboxModule() {
 
         {/* Triage panel */}
         {selectedTriage?.loading ? (
-          <div style={{ background: 'var(--sb-card)', border: '1px solid color-mix(in srgb, var(--sb-info) 20.0%, transparent)', borderRadius: 'var(--sb-r-nav)', padding: '22px 24px', display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ background: 'var(--sb-card)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-info) 20.0%, transparent)', borderRadius: 'var(--sb-r-nav)', padding: '22px 24px', display: 'flex', alignItems: 'center', gap: 12 }}>
             <RefreshCw size={ICON.md} color="var(--sb-info)" style={{ animation: 'spin 1s linear infinite' }} />
             <span style={{ fontSize: 'var(--sb-t-body)', color: 'var(--sb-info)' }}>The Professor is analyzing this email…</span>
           </div>
 
         ) : selectedTriage?.error ? (
-          <div style={{ background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', padding: '20px 24px' }}>
+          <div style={{ background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', padding: '20px 24px' }}>
             <p style={{ margin: '0 0 12px', fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)' }}>{selectedTriage.error}</p>
-            <button onClick={() => void handleTriage(selectedEmail)} style={{ padding: '7px 14px', borderRadius: 'var(--sb-r-chip)', background: 'rgba(var(--sb-accent-rgb),0.12)', border: '1px solid color-mix(in srgb, var(--sb-info) 18.8%, transparent)', color: 'var(--sb-info)', fontSize: 'var(--sb-t-body-s)', cursor: 'pointer' }}>
+            <button onClick={() => void handleTriage(selectedEmail)} style={{ padding: '7px 14px', borderRadius: 'var(--sb-r-chip)', background: 'rgba(var(--sb-accent-rgb),0.12)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-info) 18.8%, transparent)', color: 'var(--sb-info)', fontSize: 'var(--sb-t-body-s)', cursor: 'pointer' }}>
               Try again
             </button>
           </div>
 
         ) : selectedTriage?.result ? (
-          <div style={{ background: 'color-mix(in srgb, var(--sb-info) 5.0%, transparent)', border: '1px solid color-mix(in srgb, var(--sb-info) 20.0%, transparent)', borderRadius: 'var(--sb-r-nav)', padding: '22px 24px' }}>
+          <div style={{ background: 'color-mix(in srgb, var(--sb-info) 5.0%, transparent)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-info) 20.0%, transparent)', borderRadius: 'var(--sb-r-nav)', padding: '22px 24px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 18 }}>
-              <div style={{ width: 24, height: 24, borderRadius: 'var(--sb-r-chip)', background: 'color-mix(in srgb, var(--sb-info) 15.0%, transparent)', border: '1px solid color-mix(in srgb, var(--sb-info) 30.0%, transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ width: 24, height: 24, borderRadius: 'var(--sb-r-chip)', background: 'color-mix(in srgb, var(--sb-info) 15.0%, transparent)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-info) 30.0%, transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Zap size={ICON.sm} color="var(--sb-info)" />
               </div>
               <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-info)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
@@ -988,14 +988,14 @@ export function InboxModule() {
             </div>
 
             <div style={{ display: 'flex', gap: 10, marginBottom: 18 }}>
-              <div style={{ flex: 1, padding: '12px 14px', background: CLASS_META[selectedTriage.result.classification].bg, border: `1px solid ${alpha(CLASS_META[selectedTriage.result.classification].color, 18.8)}`, borderRadius: 'var(--sb-r-chip)' }}>
+              <div style={{ flex: 1, padding: '12px 14px', background: CLASS_META[selectedTriage.result.classification].bg, border: `var(--sb-border-width) solid ${alpha(CLASS_META[selectedTriage.result.classification].color, 18.8)}`, borderRadius: 'var(--sb-r-chip)' }}>
                 <div style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Classification</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 'var(--sb-t-label)', fontWeight: 600, color: CLASS_META[selectedTriage.result.classification].color }}>
                   {(() => { const C = CLASS_META[selectedTriage.result.classification].Icon; return <C size={ICON.sm} strokeWidth={STROKE.active} /> })()}
                   {CLASS_META[selectedTriage.result.classification].label}
                 </div>
               </div>
-              <div style={{ flex: 1, padding: '12px 14px', background: 'var(--sb-page)', border: `1px solid ${alpha(URGENCY_META[selectedTriage.result.urgency].color, 18.8)}`, borderRadius: 'var(--sb-r-chip)' }}>
+              <div style={{ flex: 1, padding: '12px 14px', background: 'var(--sb-page)', border: `var(--sb-border-width) solid ${alpha(URGENCY_META[selectedTriage.result.urgency].color, 18.8)}`, borderRadius: 'var(--sb-r-chip)' }}>
                 <div style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Urgency</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 'var(--sb-t-label)', fontWeight: 600, color: URGENCY_META[selectedTriage.result.urgency].color }}>
                   {(() => { const U = URGENCY_META[selectedTriage.result.urgency].Icon; return <U size={ICON.sm} strokeWidth={STROKE.active} /> })()}
@@ -1003,7 +1003,7 @@ export function InboxModule() {
                 </div>
               </div>
               {selectedTriage.result.followUpDate && (
-                <div style={{ flex: 1, padding: '12px 14px', background: 'var(--sb-page)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-chip)' }}>
+                <div style={{ flex: 1, padding: '12px 14px', background: 'var(--sb-page)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-chip)' }}>
                   <div style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Follow Up</div>
                   <div style={{ fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>{selectedTriage.result.followUpDate}</div>
                 </div>
@@ -1014,14 +1014,14 @@ export function InboxModule() {
               const draft = replyText[selectedEmail.id] ?? selectedTriage.result.suggestedReply
               const isSent = sentIds.has(selectedEmail.id)
               return (
-                <div style={{ background: 'var(--sb-page)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-chip)', padding: '14px 16px' }}>
+                <div style={{ background: 'var(--sb-page)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-chip)', padding: '14px 16px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
                     <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-ink-3)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                       Reply to {selectedEmail.fromName}
                     </span>
                     <button
                       onClick={() => handleCopyReply(selectedEmail.id, draft)}
-                      style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 9px', borderRadius: 'var(--sb-r-chip)', background: 'transparent', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-meta)', cursor: 'pointer' }}
+                      style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 9px', borderRadius: 'var(--sb-r-chip)', background: 'transparent', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-meta)', cursor: 'pointer' }}
                     >
                       {selectedTriage.copied ? <><CheckCheck size={ICON.sm} /><span>Copied</span></> : <><Copy size={ICON.sm} /><span>Copy</span></>}
                     </button>
@@ -1030,7 +1030,7 @@ export function InboxModule() {
                     value={draft}
                     onChange={e => setReplyText(prev => ({ ...prev, [selectedEmail.id]: e.target.value }))}
                     rows={6}
-                    style={{ width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 'var(--sb-r-chip)', resize: 'vertical', background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body)', lineHeight: 1.65, fontFamily: 'inherit', outline: 'none' }}
+                    style={{ width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 'var(--sb-r-chip)', resize: 'vertical', background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body)', lineHeight: 1.65, fontFamily: 'inherit', outline: 'none' }}
                   />
                   <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10 }}>
                     {isSent ? (
@@ -1041,7 +1041,7 @@ export function InboxModule() {
                       <button
                         onClick={() => void handleSendReply(selectedEmail)}
                         disabled={!draft.trim() || sending === selectedEmail.id}
-                        style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 18px', borderRadius: 'var(--sb-r-chip)', background: 'color-mix(in srgb, var(--sb-info) 12.0%, transparent)', border: '1px solid color-mix(in srgb, var(--sb-info) 25.0%, transparent)', color: 'var(--sb-info)', fontSize: 'var(--sb-t-body-s)', fontWeight: 500, cursor: 'pointer', opacity: sending === selectedEmail.id ? 0.5 : 1 }}
+                        style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 18px', borderRadius: 'var(--sb-r-chip)', background: 'color-mix(in srgb, var(--sb-info) 12.0%, transparent)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-info) 25.0%, transparent)', color: 'var(--sb-info)', fontSize: 'var(--sb-t-body-s)', fontWeight: 500, cursor: 'pointer', opacity: sending === selectedEmail.id ? 0.5 : 1 }}
                       >
                         {sending === selectedEmail.id
                           ? <><RefreshCw size={ICON.sm} style={{ animation: 'spin 1s linear infinite' }} /> Sending…</>
@@ -1056,7 +1056,7 @@ export function InboxModule() {
 
         ) : (
           <div style={{ background: 'var(--sb-card)', border: '1px dashed var(--sb-border)', borderRadius: 'var(--sb-r-nav)', padding: '36px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
-            <div style={{ width: 44, height: 44, borderRadius: 'var(--sb-r-nav)', background: 'color-mix(in srgb, var(--sb-info) 8.0%, transparent)', border: '1px solid color-mix(in srgb, var(--sb-info) 15.0%, transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: 44, height: 44, borderRadius: 'var(--sb-r-nav)', background: 'color-mix(in srgb, var(--sb-info) 8.0%, transparent)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-info) 15.0%, transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Zap size={ICON.lg} color="var(--sb-info)" />
             </div>
             <div style={{ textAlign: 'center' }}>
@@ -1065,7 +1065,7 @@ export function InboxModule() {
             </div>
             <button
               onClick={() => void handleTriage(selectedEmail)}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 20px', borderRadius: 'var(--sb-r-chip)', background: 'color-mix(in srgb, var(--sb-info) 12.0%, transparent)', border: '1px solid color-mix(in srgb, var(--sb-info) 25.0%, transparent)', color: 'var(--sb-info)', fontSize: 'var(--sb-t-body)', fontWeight: 500, cursor: 'pointer' }}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 20px', borderRadius: 'var(--sb-r-chip)', background: 'color-mix(in srgb, var(--sb-info) 12.0%, transparent)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-info) 25.0%, transparent)', color: 'var(--sb-info)', fontSize: 'var(--sb-t-body)', fontWeight: 500, cursor: 'pointer' }}
             >
               <Zap size={ICON.sm} /> Triage with AI <ArrowRight size={ICON.sm} />
             </button>
@@ -1089,7 +1089,7 @@ export function InboxModule() {
 
         {/* Stats bar */}
         {!noAuth && (
-          <div style={{ display: 'flex', gap: 20, marginBottom: bulkOpen ? 10 : 20, padding: '13px 20px', background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: 20, marginBottom: bulkOpen ? 10 : 20, padding: '13px 20px', background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
               <Mail size={ICON.sm} color="var(--sb-info)" />
               <span style={{ fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)' }}>{loading ? '…' : visibleEmails.length} unread</span>
@@ -1127,20 +1127,20 @@ export function InboxModule() {
                   const box = viewed[0] ?? accounts[0]
                   if (box) setCompose({ mode: 'new', account: box, to: '', subject: '' })
                 }}
-                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 'var(--sb-r-chip)', background: compose?.mode === 'new' ? 'color-mix(in srgb, var(--sb-info) 12.0%, transparent)' : 'transparent', border: `1px solid ${compose?.mode === 'new' ? 'color-mix(in srgb, var(--sb-info) 30.0%, transparent)' : 'var(--sb-border)'}`, color: compose?.mode === 'new' ? 'var(--sb-info)' : 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body-s)', cursor: 'pointer' }}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 'var(--sb-r-chip)', background: compose?.mode === 'new' ? 'color-mix(in srgb, var(--sb-info) 12.0%, transparent)' : 'transparent', border: `var(--sb-border-width) solid ${compose?.mode === 'new' ? 'color-mix(in srgb, var(--sb-info) 30.0%, transparent)' : 'var(--sb-border)'}`, color: compose?.mode === 'new' ? 'var(--sb-info)' : 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body-s)', cursor: 'pointer' }}
               >
                 <PenSquare size={ICON.sm} /> Compose
               </button>
               <button
                 onClick={() => { setBulkOpen(o => !o); setBulkText(''); setBulkDone(false); setTimeout(() => bulkRef.current?.focus(), 50) }}
-                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 'var(--sb-r-chip)', background: bulkOpen ? 'color-mix(in srgb, var(--sb-positive) 12.0%, transparent)' : 'transparent', border: `1px solid ${bulkOpen ? 'color-mix(in srgb, var(--sb-positive) 30.0%, transparent)' : 'var(--sb-border)'}`, color: bulkOpen ? 'var(--sb-positive)' : 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body-s)', cursor: 'pointer' }}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 'var(--sb-r-chip)', background: bulkOpen ? 'color-mix(in srgb, var(--sb-positive) 12.0%, transparent)' : 'transparent', border: `var(--sb-border-width) solid ${bulkOpen ? 'color-mix(in srgb, var(--sb-positive) 30.0%, transparent)' : 'var(--sb-border)'}`, color: bulkOpen ? 'var(--sb-positive)' : 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body-s)', cursor: 'pointer' }}
               >
                 <ListPlus size={ICON.sm} /> Bulk add tasks
               </button>
               <button
                 onClick={() => void loadEmails()}
                 disabled={loading}
-                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 'var(--sb-r-chip)', background: 'transparent', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body-s)', cursor: 'pointer', opacity: loading ? 0.5 : 1 }}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 'var(--sb-r-chip)', background: 'transparent', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body-s)', cursor: 'pointer', opacity: loading ? 0.5 : 1 }}
               >
                 <RefreshCw size={ICON.sm} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} />
                 Refresh
@@ -1149,7 +1149,7 @@ export function InboxModule() {
                 <button
                   onClick={() => void handleTriage(selectedEmail)}
                   disabled={triageMap[selectedEmail.id]?.loading}
-                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 'var(--sb-r-chip)', background: 'color-mix(in srgb, var(--sb-info) 12.0%, transparent)', border: '1px solid color-mix(in srgb, var(--sb-info) 25.0%, transparent)', color: 'var(--sb-info)', fontSize: 'var(--sb-t-body-s)', fontWeight: 500, cursor: 'pointer', opacity: triageMap[selectedEmail.id]?.loading ? 0.5 : 1 }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 'var(--sb-r-chip)', background: 'color-mix(in srgb, var(--sb-info) 12.0%, transparent)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-info) 25.0%, transparent)', color: 'var(--sb-info)', fontSize: 'var(--sb-t-body-s)', fontWeight: 500, cursor: 'pointer', opacity: triageMap[selectedEmail.id]?.loading ? 0.5 : 1 }}
                 >
                   <Zap size={ICON.sm} /> Triage with AI
                 </button>
@@ -1174,7 +1174,7 @@ export function InboxModule() {
 
         {/* Bulk task input panel */}
         {bulkOpen && (
-          <div style={{ marginBottom: 20, padding: '16px 20px', background: 'var(--sb-card)', border: '1px solid color-mix(in srgb, var(--sb-positive) 25.0%, transparent)', borderRadius: 'var(--sb-r-nav)' }}>
+          <div style={{ marginBottom: 20, padding: '16px 20px', background: 'var(--sb-card)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-positive) 25.0%, transparent)', borderRadius: 'var(--sb-r-nav)' }}>
             <p style={{ margin: '0 0 10px', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)' }}>
               Paste or type tasks — one per line. All land in your task inbox.
             </p>
@@ -1188,7 +1188,7 @@ export function InboxModule() {
               style={{
                 width: '100%', boxSizing: 'border-box',
                 padding: '10px 12px', borderRadius: 'var(--sb-r-chip)', resize: 'vertical',
-                background: 'var(--sb-page)', border: '1px solid var(--sb-border)',
+                background: 'var(--sb-page)', border: 'var(--sb-border-width) solid var(--sb-border)',
                 color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body)', lineHeight: 1.6,
                 fontFamily: 'inherit', outline: 'none',
               }}
@@ -1200,14 +1200,14 @@ export function InboxModule() {
               <div style={{ display: 'flex', gap: 8 }}>
                 <button
                   onClick={() => { setBulkOpen(false); setBulkText('') }}
-                  style={{ padding: '7px 14px', borderRadius: 'var(--sb-r-chip)', background: 'transparent', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body-s)', cursor: 'pointer' }}
+                  style={{ padding: '7px 14px', borderRadius: 'var(--sb-r-chip)', background: 'transparent', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body-s)', cursor: 'pointer' }}
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleBulkAdd}
                   disabled={bulkLines.length === 0 || bulkDone}
-                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 16px', borderRadius: 'var(--sb-r-chip)', background: bulkDone ? 'color-mix(in srgb, var(--sb-positive) 15.0%, transparent)' : 'color-mix(in srgb, var(--sb-positive) 12.0%, transparent)', border: `1px solid ${bulkDone ? 'color-mix(in srgb, var(--sb-positive) 50.0%, transparent)' : 'color-mix(in srgb, var(--sb-positive) 30.0%, transparent)'}`, color: 'var(--sb-positive)', fontSize: 'var(--sb-t-body-s)', fontWeight: 500, cursor: bulkLines.length === 0 ? 'default' : 'pointer', opacity: bulkLines.length === 0 ? 0.4 : 1, transition: 'all 0.15s' }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 16px', borderRadius: 'var(--sb-r-chip)', background: bulkDone ? 'color-mix(in srgb, var(--sb-positive) 15.0%, transparent)' : 'color-mix(in srgb, var(--sb-positive) 12.0%, transparent)', border: `var(--sb-border-width) solid ${bulkDone ? 'color-mix(in srgb, var(--sb-positive) 50.0%, transparent)' : 'color-mix(in srgb, var(--sb-positive) 30.0%, transparent)'}`, color: 'var(--sb-positive)', fontSize: 'var(--sb-t-body-s)', fontWeight: 500, cursor: bulkLines.length === 0 ? 'default' : 'pointer', opacity: bulkLines.length === 0 ? 0.4 : 1, transition: 'all 0.15s' }}
                 >
                   {bulkDone
                     ? <><CheckCheck size={ICON.sm} /> Added!</>

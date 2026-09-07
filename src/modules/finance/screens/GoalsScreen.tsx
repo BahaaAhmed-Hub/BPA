@@ -48,7 +48,7 @@ const EYEBROW: React.CSSProperties = {
 
 const FIELD: React.CSSProperties = {
   height: 38, boxSizing: 'border-box', padding: '0 12px', width: '100%',
-  borderRadius: 'var(--sb-r-nav)', background: C.field, border: `1px solid ${C.border}`,
+  borderRadius: 'var(--sb-r-nav)', background: C.field, border: `var(--sb-border-width) solid ${C.border}`,
   fontSize: 'var(--sb-t-label)', color: C.ink1, outline: 'none', fontFamily: 'inherit',
 }
 
@@ -111,7 +111,7 @@ function GoalRow({ plan, place, selected, lifted, over, onSelect, onGrab, regRow
         display: 'flex', flexDirection: 'column', gap: 8, cursor: 'pointer',
         padding: '11px 12px', borderRadius: 'var(--sb-r-nav)', boxSizing: 'border-box',
         background: over ? 'var(--sb-accent-tint)' : selected ? C.accentBg : C.surface,
-        border: `1px solid ${over ? C.accent : selected ? C.accentBr : C.hair}`,
+        border: `var(--sb-border-width) solid ${over ? C.accent : selected ? C.accentBr : C.hair}`,
         opacity: lifted ? 0.4 : 1,
       }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 9, minWidth: 0 }}>
@@ -311,7 +311,7 @@ export function GoalsScreen(_props?: any) {
         <div style={{
           display: 'flex', alignItems: 'flex-start', gap: 22, flexWrap: 'wrap',
           marginTop: 8, padding: '15px 18px', borderRadius: 'var(--sb-r-card)',
-          background: C.surface, border: `1px solid ${C.border}`,
+          background: C.surface, border: `var(--sb-border-width) solid ${C.border}`,
         }}>
           <Stat label="Spare now" value={money(capacity.free)}
             sub={`${group(Math.round(capacity.held))} held, less ${group(Math.round(capacity.buffer))} kept back`} />
@@ -360,7 +360,7 @@ export function GoalsScreen(_props?: any) {
       <div style={{ flex: 1, display: 'flex', gap: 14, padding: '14px 26px 22px', overflow: 'hidden', minHeight: 0 }}>
 
         <div style={{
-          width: 400, flexShrink: 0, background: C.surface, border: `1px solid ${C.border}`,
+          width: 400, flexShrink: 0, background: C.surface, border: `var(--sb-border-width) solid ${C.border}`,
           borderRadius: 'var(--sb-r-card)', padding: '15px 16px', display: 'flex', flexDirection: 'column',
           gap: 10, overflowY: 'auto', boxSizing: 'border-box',
         }}>
@@ -396,7 +396,7 @@ export function GoalsScreen(_props?: any) {
 
           {/* Add one */}
           <div style={{
-            marginTop: 'auto', paddingTop: 12, borderTop: `1px solid ${C.hair}`,
+            marginTop: 'auto', paddingTop: 12, borderTop: `var(--sb-border-width) solid ${C.hair}`,
             display: 'flex', flexDirection: 'column', gap: 8,
           }}>
             <span style={EYEBROW}>New goal</span>
@@ -434,7 +434,7 @@ export function GoalsScreen(_props?: any) {
                 height: 38, borderRadius: 'var(--sb-r-nav)', display: 'inline-flex', alignItems: 'center',
                 justifyContent: 'center', gap: 7, cursor: canAdd ? 'pointer' : 'default',
                 background: canAdd ? C.ink1 : 'var(--sb-field)',
-                border: `1px solid ${canAdd ? C.ink1 : C.border}`,
+                border: `var(--sb-border-width) solid ${canAdd ? C.ink1 : C.border}`,
                 color: canAdd ? 'var(--sb-ink-on-dark)' : C.ink4,
                 fontFamily: 'inherit', fontSize: 'var(--sb-t-label)', fontWeight: 600,
               }}>
@@ -458,7 +458,7 @@ export function GoalsScreen(_props?: any) {
               setSelectedId(null)
             }} /> : (
             <div style={{
-              background: C.surface, border: `1px solid ${C.border}`, borderRadius: 'var(--sb-r-card)',
+              background: C.surface, border: `var(--sb-border-width) solid ${C.border}`, borderRadius: 'var(--sb-r-card)',
               padding: '28px 26px', color: C.ink3, fontSize: 'var(--sb-t-label)', lineHeight: 1.6, maxWidth: 620,
             }}>
               <div style={{ fontFamily: DISPLAY, fontSize: 'var(--sb-t-h2)', fontWeight: 700, color: C.ink1, letterSpacing: '-.02em', marginBottom: 8 }}>
@@ -501,7 +501,7 @@ function GoalDetail({ plan, place, policy, currency, surplus, onChange, onDelete
   const shortfall = plan.required !== null ? plan.required - plan.monthly : 0
 
   const card: React.CSSProperties = {
-    background: C.surface, border: `1px solid ${C.border}`, borderRadius: 'var(--sb-r-card)',
+    background: C.surface, border: `var(--sb-border-width) solid ${C.border}`, borderRadius: 'var(--sb-r-card)',
     padding: '18px 20px', marginBottom: 12,
   }
 
@@ -525,7 +525,7 @@ function GoalDetail({ plan, place, policy, currency, surplus, onChange, onDelete
             style={{
               width: 30, height: 30, borderRadius: 'var(--sb-r-pill)', padding: 0, cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: C.surface, border: `1px solid ${C.border}`, color: C.ink4,
+              background: C.surface, border: `var(--sb-border-width) solid ${C.border}`, color: C.ink4,
             }}><Trash2 size={ICON.sm} /></button>
         </div>
 
@@ -548,7 +548,7 @@ function GoalDetail({ plan, place, policy, currency, surplus, onChange, onDelete
 
       {/* The verdict, in a sentence */}
       <div style={{ ...card, background: done || coveredNow ? 'var(--sb-positive-tint)' : plan.onTime === false || plan.eta === null ? 'var(--sb-negative-tint)' : C.accentBg,
-        border: `1px solid ${done || coveredNow ? 'var(--sb-positive-tint)' : plan.onTime === false || plan.eta === null ? 'var(--sb-negative-tint)' : C.accentBr}` }}>
+        border: `var(--sb-border-width) solid ${done || coveredNow ? 'var(--sb-positive-tint)' : plan.onTime === false || plan.eta === null ? 'var(--sb-negative-tint)' : C.accentBr}` }}>
         <div style={{ fontSize: 'var(--sb-t-body)', color: C.ink1, lineHeight: 1.6 }}>
           {done
             ? 'This one is there. Anything ranked below it now gets what it was taking.'
@@ -595,7 +595,7 @@ function GoalDetail({ plan, place, policy, currency, surplus, onChange, onDelete
                 alignItems: 'center', gap: 7, fontFamily: 'inherit', fontSize: 'var(--sb-t-label)', fontWeight: 600,
                 cursor: target === g.targetAmount && saved === g.currentAmount ? 'default' : 'pointer',
                 background: target === g.targetAmount && saved === g.currentAmount ? 'var(--sb-field)' : C.ink1,
-                border: `1px solid ${target === g.targetAmount && saved === g.currentAmount ? C.border : C.ink1}`,
+                border: `var(--sb-border-width) solid ${target === g.targetAmount && saved === g.currentAmount ? C.border : C.ink1}`,
                 color: target === g.targetAmount && saved === g.currentAmount ? C.ink4 : 'var(--sb-ink-on-dark)',
               }}>
               <Check size={ICON.sm} /> Save

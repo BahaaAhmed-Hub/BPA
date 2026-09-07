@@ -69,8 +69,8 @@ function LineCell({ name, value, onPick }: { name: string; value: string; onPick
       title={name.replace(/([a-z])([A-Z0-9])/g, '$1 $2')}
       onClick={() => onPick(id)}
       style={{
-        width: 34, height: 34, borderRadius: 'var(--sb-r-chip)',
-        border: on ? `1px solid ${'var(--sb-accent)'}` : '1px solid transparent',
+        width: 'var(--sb-h-pill)', height: 'var(--sb-h-pill)', borderRadius: 'var(--sb-r-chip)',
+        border: on ? `var(--sb-border-width) solid ${'var(--sb-accent)'}` : 'var(--sb-border-width) solid transparent',
         background: on ? 'rgba(var(--sb-accent-rgb),0.12)' : 'transparent',
         cursor: 'pointer', color: 'var(--sb-ink-2)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -168,7 +168,7 @@ export function IconPicker({ value, onChange, size = 44, trigger }: Props) {
           zIndex: 200,
           width: 320,
           background: 'var(--sb-card)',
-          border: `1px solid ${'var(--sb-border)'}`,
+          border: `var(--sb-border-width) solid ${'var(--sb-border)'}`,
           borderRadius: 'var(--sb-r-card)',
           boxShadow: 'var(--sb-shadow-frame)',
           overflow: 'hidden',
@@ -184,7 +184,7 @@ export function IconPicker({ value, onChange, size = 44, trigger }: Props) {
               onChange={e => setSearch(e.target.value)}
               style={{
                 flex: 1, padding: '7px 10px',
-                borderRadius: 'var(--sb-r-chip)', border: `1px solid ${'var(--sb-border)'}`,
+                borderRadius: 'var(--sb-r-chip)', border: `var(--sb-border-width) solid ${'var(--sb-border)'}`,
                 background: 'var(--sb-page)', color: 'var(--sb-ink-1)',
                 fontSize: 'var(--sb-t-body)', outline: 'none', boxSizing: 'border-box' as const,
                 fontFamily: 'inherit',
@@ -200,7 +200,7 @@ export function IconPicker({ value, onChange, size = 44, trigger }: Props) {
                 display: 'flex', alignItems: 'center', gap: 5,
                 padding: '7px 11px',
                 borderRadius: 'var(--sb-r-chip)',
-                border: `1px solid ${'var(--sb-accent)'}`,
+                border: `var(--sb-border-width) solid ${'var(--sb-accent)'}`,
                 background: 'rgba(var(--sb-accent-rgb),0.12)',
                 color: 'var(--sb-ink-1)',
                 fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
@@ -225,7 +225,7 @@ export function IconPicker({ value, onChange, size = 44, trigger }: Props) {
               padding: '6px 10px',
               borderRadius: 'var(--sb-r-chip)',
               background: 'var(--sb-page)',
-              border: `1px solid ${'var(--sb-border)'}`,
+              border: `var(--sb-border-width) solid ${'var(--sb-border)'}`,
             }}>
               <img src={value} alt="current" style={{ width: 28, height: 28, borderRadius: 'var(--sb-r-chip)', objectFit: 'cover', flexShrink: 0 }} />
               <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', flex: 1 }}>Current image</span>
@@ -256,7 +256,7 @@ export function IconPicker({ value, onChange, size = 44, trigger }: Props) {
                   background: tab === 'line' ? 'rgba(var(--sb-accent-rgb),0.12)' : 'transparent',
                   cursor: 'pointer', color: 'var(--sb-ink-3)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  outline: tab === 'line' ? '1px solid rgba(var(--sb-accent-rgb),0.27)' : 'none',
+                  outline: tab === 'line' ? 'var(--sb-border-width) solid rgba(var(--sb-accent-rgb),0.27)' : 'none',
                 }}
               >
                 <Shapes size={ICON.md} strokeWidth={STROKE.rest} />
@@ -272,7 +272,7 @@ export function IconPicker({ value, onChange, size = 44, trigger }: Props) {
                     borderRadius: 'var(--sb-r-chip)', border: 'none',
                     background: tab === g.id ? 'rgba(var(--sb-accent-rgb),0.12)' : 'transparent',
                     cursor: 'pointer', fontSize: 'var(--sb-t-h3)',
-                    outline: tab === g.id ? '1px solid rgba(var(--sb-accent-rgb),0.27)' : 'none',
+                    outline: tab === g.id ? 'var(--sb-border-width) solid rgba(var(--sb-accent-rgb),0.27)' : 'none',
                   }}
                 >
                   {g.label}
@@ -311,8 +311,8 @@ export function IconPicker({ value, onChange, size = 44, trigger }: Props) {
                 type="button"
                 onClick={() => { onChange(emoji); setOpen(false); setSearch('') }}
                 style={{
-                  width: 34, height: 34, borderRadius: 'var(--sb-r-chip)',
-                  border: value === emoji ? `1px solid ${'var(--sb-accent)'}` : '1px solid transparent',
+                  width: 'var(--sb-h-pill)', height: 'var(--sb-h-pill)', borderRadius: 'var(--sb-r-chip)',
+                  border: value === emoji ? `var(--sb-border-width) solid ${'var(--sb-accent)'}` : 'var(--sb-border-width) solid transparent',
                   background: value === emoji ? 'rgba(var(--sb-accent-rgb),0.12)' : 'transparent',
                   cursor: 'pointer', fontSize: 'var(--sb-t-h2)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',

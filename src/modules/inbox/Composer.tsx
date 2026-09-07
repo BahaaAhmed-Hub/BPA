@@ -43,7 +43,7 @@ const LABEL: React.CSSProperties = {
 }
 const INPUT: React.CSSProperties = {
   flex: 1, minWidth: 0, height: 30, padding: '0 9px', borderRadius: 'var(--sb-r-chip)', boxSizing: 'border-box',
-  background: C.field, border: `1px solid ${C.border}`,
+  background: C.field, border: `var(--sb-border-width) solid ${C.border}`,
   fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', color: C.ink, outline: 'none',
 }
 const TOOL: React.CSSProperties = {
@@ -147,14 +147,14 @@ export function Composer({ seed, accounts, onClose, onSent }: {
 
   return (
     <div className="sb-blur-surface" style={{
-      background: C.card, border: `1px solid ${C.border}`, borderRadius: 'var(--sb-r-nav)',
+      background: C.card, border: `var(--sb-border-width) solid ${C.border}`, borderRadius: 'var(--sb-r-nav)',
       boxShadow: 'var(--sb-shadow-menu)', overflow: 'hidden',
       display: 'flex', flexDirection: 'column', maxHeight: '68vh',
     }}>
       {/* Which of the four this is, and a way out */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px',
-        borderBottom: `1px solid ${C.hair}`, background: 'var(--sb-header)',
+        borderBottom: `var(--sb-border-width) solid ${C.hair}`, background: 'var(--sb-header)',
       }}>
         <span style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: C.ink }}>{MODE_LABEL[seed.mode]}</span>
         <span style={{ flex: 1 }} />
@@ -218,7 +218,7 @@ export function Composer({ seed, accounts, onClose, onSent }: {
           style={{
             minHeight: 150, maxHeight: '32vh', overflowY: 'auto', marginTop: 3,
             padding: '10px 11px', borderRadius: 'var(--sb-r-chip)', background: C.field,
-            border: `1px solid ${C.border}`, outline: 'none',
+            border: `var(--sb-border-width) solid ${C.border}`, outline: 'none',
             fontFamily: 'inherit', fontSize: 'var(--sb-t-body)', lineHeight: 1.55, color: C.ink,
           }}
         />
@@ -228,7 +228,7 @@ export function Composer({ seed, accounts, onClose, onSent }: {
             {files.map((f, i) => (
               <span key={i} style={{
                 display: 'inline-flex', alignItems: 'center', gap: 6, height: 24, padding: '0 8px',
-                borderRadius: 'var(--sb-r-pill)', background: C.field, border: `1px solid ${C.border}`,
+                borderRadius: 'var(--sb-r-pill)', background: C.field, border: `var(--sb-border-width) solid ${C.border}`,
                 fontSize: 'var(--sb-t-meta)', color: C.muted,
               }}>
                 <Paperclip size={ICON.sm} />
@@ -254,12 +254,12 @@ export function Composer({ seed, accounts, onClose, onSent }: {
       {/* Send, and the handful of things worth doing to the words first */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 4, padding: '9px 12px',
-        borderTop: `1px solid ${C.hair}`, background: 'var(--sb-header)',
+        borderTop: `var(--sb-border-width) solid ${C.hair}`, background: 'var(--sb-header)',
       }}>
         <button onClick={() => void send()} disabled={sending}
           style={{
             display: 'flex', alignItems: 'center', gap: 6, height: 32, padding: '0 15px',
-            borderRadius: 'var(--sb-r-sm)', background: C.amber, border: '1px solid color-mix(in srgb, var(--sb-ink-1) 18.0%, transparent)',
+            borderRadius: 'var(--sb-r-sm)', background: C.amber, border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-ink-1) 18.0%, transparent)',
             color: C.ink, fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
             cursor: sending ? 'default' : 'pointer', boxShadow: 'var(--sb-shadow-accent)',
           }}>

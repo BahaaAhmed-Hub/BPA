@@ -89,7 +89,7 @@ function QuadrantPanel({ spec, tasks, onOpen, onAction, groupBy }: {
       background: isOver ? 'var(--sb-accent-tint2)'
         : spec.accent ? 'color-mix(in srgb, var(--sb-accent) 6%, var(--sb-card))'
         : 'var(--sb-header)',
-      border: `1px solid ${isOver ? 'var(--sb-accent)' : spec.accent ? 'var(--sb-accent-border)' : 'var(--sb-border)'}`,
+      border: `var(--sb-border-width) solid ${isOver ? 'var(--sb-accent)' : spec.accent ? 'var(--sb-accent-border)' : 'var(--sb-border)'}`,
       borderRadius: 'var(--sb-r-nav)', padding: 14, transition: 'background .12s, border-color .12s',
       display: 'flex', flexDirection: 'column', gap: 10, minWidth: 0,
     }}>
@@ -117,12 +117,12 @@ function QuadrantPanel({ spec, tasks, onOpen, onAction, groupBy }: {
             flexShrink: 0, width: 26, height: 26, padding: 0, borderRadius: 'var(--sb-r-pill)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             background: adding ? 'var(--sb-ink-1)' : 'var(--sb-card)',
-            border: `1px solid ${adding ? 'var(--sb-ink-1)' : 'var(--sb-border)'}`,
+            border: `var(--sb-border-width) solid ${adding ? 'var(--sb-ink-1)' : 'var(--sb-border)'}`,
             color: adding ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)', cursor: 'pointer',
           }}><Plus size={ICON.sm} strokeWidth={STROKE.active} /></button>
         <button onClick={() => onAction(spec, tasks)} style={{
           flexShrink: 0, height: 28, padding: '0 12px', borderRadius: 'var(--sb-r-pill)',
-          background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-1)',
+          background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-1)',
           fontSize: 'var(--sb-t-body-s)', fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit',
         }}>{spec.action}</button>
       </div>
@@ -141,7 +141,7 @@ function QuadrantPanel({ spec, tasks, onOpen, onAction, groupBy }: {
           placeholder="What is it?"
           style={{
             width: '100%', boxSizing: 'border-box', background: 'var(--sb-card)',
-            border: '1px solid var(--sb-accent)', borderRadius: 'var(--sb-r-nav)', padding: '11px 13px',
+            border: 'var(--sb-border-width) solid var(--sb-accent)', borderRadius: 'var(--sb-r-nav)', padding: '11px 13px',
             fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)', outline: 'none', fontFamily: 'inherit',
           }}
         />

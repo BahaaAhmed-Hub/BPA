@@ -28,14 +28,14 @@ function formatBytes(n: number): string {
 
 const FIELD: React.CSSProperties = {
   width: '100%', boxSizing: 'border-box', height: 40, padding: '0 12px',
-  background: 'var(--sb-field)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-sm)',
+  background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-sm)',
   fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)', fontFamily: 'inherit', outline: 'none',
 }
 
 const ROUND: React.CSSProperties = {
   width: 40, height: 40, borderRadius: 'var(--sb-r-sm)', flexShrink: 0, padding: 0,
   display: 'flex', alignItems: 'center', justifyContent: 'center',
-  background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-3)', cursor: 'pointer',
+  background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-3)', cursor: 'pointer',
 }
 
 export function DeliverablePrompt({ task, onComplete, onCancel }: {
@@ -115,8 +115,8 @@ export function DeliverablePrompt({ task, onComplete, onCancel }: {
             {links.map(url => (
               <div key={url} style={{
                 display: 'flex', alignItems: 'center', gap: 9, minWidth: 0,
-                height: 36, padding: '0 10px', borderRadius: 'var(--sb-r-sm)',
-                background: 'var(--sb-field)', border: '1px solid var(--sb-border)',
+                height: 'var(--sb-h-nav)', padding: '0 10px', borderRadius: 'var(--sb-r-sm)',
+                background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)',
               }}>
                 <Link2 size={ICON.sm} color="var(--sb-ink-3)" style={{ flexShrink: 0 }} />
                 <span style={{ flex: 1, minWidth: 0, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-info)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -155,8 +155,8 @@ export function DeliverablePrompt({ task, onComplete, onCancel }: {
             {files.map(f => (
               <div key={f.id} style={{
                 display: 'flex', alignItems: 'center', gap: 9, minWidth: 0,
-                height: 36, padding: '0 10px', borderRadius: 'var(--sb-r-sm)',
-                background: 'var(--sb-field)', border: '1px solid var(--sb-border)',
+                height: 'var(--sb-h-nav)', padding: '0 10px', borderRadius: 'var(--sb-r-sm)',
+                background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)',
               }}>
                 <FileText size={ICON.sm} color="var(--sb-ink-3)" style={{ flexShrink: 0 }} />
                 <span style={{ flex: 1, minWidth: 0, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -179,7 +179,7 @@ export function DeliverablePrompt({ task, onComplete, onCancel }: {
           </span>
           <button onClick={onCancel} style={{
             height: 40, padding: '0 16px', borderRadius: 'var(--sb-r-sm)', cursor: 'pointer',
-            background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-3)',
+            background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-3)',
             fontSize: 'var(--sb-t-body)', fontFamily: 'inherit',
           }}>Cancel</button>
           <Button variant="primary" onClick={() => onComplete({ links, attachments: files })}><Check size={ICON.sm} strokeWidth={STROKE.active} /> Complete</Button>

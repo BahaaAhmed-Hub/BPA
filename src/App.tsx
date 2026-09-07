@@ -82,7 +82,7 @@ function LoginScreen() {
         borderRadius: 'var(--sb-r-frame)',
         boxShadow: 'var(--sb-shadow-frame)',
         overflow: 'hidden',
-        border: '1px solid var(--sb-border)',
+        border: 'var(--sb-border-width) solid var(--sb-border)',
       }}>
         {/* Left — promise */}
         <div style={{
@@ -160,7 +160,7 @@ function LoginScreen() {
               width: '100%', padding: '13px 20px',
               borderRadius: 'var(--sb-r-nav)',
               background: signing ? 'var(--sb-field)' : 'var(--sb-ink-1)',
-              border: '1px solid var(--sb-ink-1)',
+              border: 'var(--sb-border-width) solid var(--sb-ink-1)',
               color: 'var(--sb-ink-on-dark)',
               fontSize: 'var(--sb-t-label)', fontWeight: 600,
               cursor: signing ? 'wait' : 'pointer',
@@ -201,7 +201,7 @@ function LoginScreen() {
               disabled
               style={{
                 width: '100%', padding: '11px 14px', borderRadius: 'var(--sb-r-sm)',
-                background: 'var(--sb-field)', border: '1px solid var(--sb-border)',
+                background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)',
                 color: 'var(--sb-ink-4)', fontSize: 'var(--sb-t-body)',
                 outline: 'none', cursor: 'not-allowed',
                 fontFamily: 'inherit', boxSizing: 'border-box',
@@ -218,7 +218,7 @@ function LoginScreen() {
               disabled
               style={{
                 width: '100%', padding: '11px 14px', borderRadius: 'var(--sb-r-sm)',
-                background: 'var(--sb-field)', border: '1px solid var(--sb-border)',
+                background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)',
                 color: 'var(--sb-ink-4)', fontSize: 'var(--sb-t-body)',
                 outline: 'none', cursor: 'not-allowed',
                 fontFamily: 'inherit', boxSizing: 'border-box',
@@ -231,7 +231,7 @@ function LoginScreen() {
             style={{
               width: '100%', padding: '12px',
               borderRadius: 'var(--sb-r-nav)',
-              background: 'var(--sb-field)', border: '1px solid var(--sb-border)',
+              background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)',
               color: 'var(--sb-ink-4)', fontSize: 'var(--sb-t-label)', fontWeight: 600,
               cursor: 'not-allowed', fontFamily: 'inherit',
             }}
@@ -408,8 +408,8 @@ function NotificationBell() {
         aria-label="Notifications"
         aria-expanded={open}
         style={{
-          width: 34, height: 34, borderRadius: 'var(--sb-r-nav)', padding: 0,
-          background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
+          width: 'var(--sb-h-pill)', height: 'var(--sb-h-pill)', borderRadius: 'var(--sb-r-nav)', padding: 0,
+          background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           cursor: 'pointer', color: 'var(--sb-ink-3)', position: 'relative',
         }}>
@@ -432,10 +432,10 @@ function NotificationBell() {
         <div role="menu" style={{
           position: 'absolute', top: 'calc(100% + 8px)', right: 0, zIndex: 120,
           width: 340, maxHeight: 460, overflowY: 'auto', scrollbarWidth: 'thin',
-          background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-card)', padding: 6,
+          background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-card)', padding: 6,
           boxShadow: 'var(--sb-shadow-frame)',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px 10px', borderBottom: '1px solid var(--sb-hairline)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px 10px', borderBottom: 'var(--sb-border-width) solid var(--sb-hairline)' }}>
             <p style={{ margin: 0, flex: 1, fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>
               Notifications{count ? ` · ${count}` : ''}
             </p>
@@ -491,7 +491,7 @@ function NotificationBell() {
 
           <button onClick={() => { setOpen(false); setActiveModule('settings') }}
             style={{
-              display: 'flex', alignItems: 'center', gap: 8, width: '100%', height: 34, marginTop: 4,
+              display: 'flex', alignItems: 'center', gap: 8, width: '100%', height: 'var(--sb-h-pill)', marginTop: 4,
               padding: '0 10px', borderRadius: 'var(--sb-r-sm)', border: 'none', background: 'transparent',
               color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body-s)', fontFamily: 'inherit', cursor: 'pointer', textAlign: 'left',
             }}>
@@ -531,7 +531,7 @@ function TopNav() {
     <header style={{
       height: NAV_H, flexShrink: 0,
       background: 'var(--sb-header)',
-      borderBottom: '1px solid var(--sb-border)',
+      borderBottom: 'var(--sb-border-width) solid var(--sb-border)',
       display: 'flex', alignItems: 'center',
       padding: '0 22px', gap: 16,
     }}>
@@ -569,7 +569,7 @@ function TopNav() {
           style={{
             display: 'flex', alignItems: 'center', gap: 7,
             padding: '6px 12px',
-            background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
+            background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)',
             borderRadius: 'var(--sb-r-nav)', cursor: 'pointer',
           }}>
           <Search size={ICON.sm} color="var(--sb-ink-3)" />
@@ -607,10 +607,10 @@ function TopNav() {
           {menuOpen && (
             <div role="menu" style={{
               position: 'absolute', top: 'calc(100% + 8px)', right: 0, zIndex: 120, minWidth: 216,
-              background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-card)', padding: 6,
+              background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-card)', padding: 6,
               boxShadow: 'var(--sb-shadow-frame)',
             }}>
-              <div style={{ padding: '8px 10px 10px', borderBottom: '1px solid var(--sb-hairline)', marginBottom: 5 }}>
+              <div style={{ padding: '8px 10px 10px', borderBottom: 'var(--sb-border-width) solid var(--sb-hairline)', marginBottom: 5 }}>
                 <p style={{
                   margin: 0, fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-1)',
                   overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
@@ -624,7 +624,7 @@ function TopNav() {
                 role="menuitem"
                 onClick={() => { setMenuOpen(false); setActiveModule('settings') }}
                 style={{
-                  display: 'flex', alignItems: 'center', gap: 9, width: '100%', height: 36,
+                  display: 'flex', alignItems: 'center', gap: 9, width: '100%', height: 'var(--sb-h-nav)',
                   padding: '0 10px', borderRadius: 'var(--sb-r-sm)', border: 'none', cursor: 'pointer',
                   background: activeModule === 'settings' ? 'var(--sb-accent-tint)' : 'transparent',
                   color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body)', fontFamily: 'inherit', textAlign: 'left',
@@ -635,7 +635,7 @@ function TopNav() {
                 role="menuitem"
                 onClick={() => { setMenuOpen(false); void googleSignOut() }}
                 style={{
-                  display: 'flex', alignItems: 'center', gap: 9, width: '100%', height: 36,
+                  display: 'flex', alignItems: 'center', gap: 9, width: '100%', height: 'var(--sb-h-nav)',
                   padding: '0 10px', borderRadius: 'var(--sb-r-sm)', border: 'none', cursor: 'pointer',
                   background: 'transparent', color: 'var(--sb-negative)', fontSize: 'var(--sb-t-body)',
                   fontFamily: 'inherit', textAlign: 'left',

@@ -107,14 +107,14 @@ const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
 // ─── Date/time helpers ────────────────────────────────────────────────────────
 const CAL_ICON_BTN: React.CSSProperties = {
-  width: 36, height: 36, boxSizing: 'border-box', borderRadius: 'var(--sb-r-nav)', flexShrink: 0,
+  width: 'var(--sb-h-nav)', height: 'var(--sb-h-nav)', boxSizing: 'border-box', borderRadius: 'var(--sb-r-nav)', flexShrink: 0,
   display: 'flex', alignItems: 'center', justifyContent: 'center',
-  background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-3)', cursor: 'pointer', padding: 0,
+  background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-3)', cursor: 'pointer', padding: 0,
 }
 const CAL_PILL: React.CSSProperties = {
-  display: 'inline-flex', alignItems: 'center', gap: 7, height: 36, boxSizing: 'border-box',
+  display: 'inline-flex', alignItems: 'center', gap: 7, height: 'var(--sb-h-nav)', boxSizing: 'border-box',
   padding: '0 14px', borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
-  background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-1)',
+  background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-1)',
   fontSize: 'var(--sb-t-body)', fontFamily: 'inherit', cursor: 'pointer',
 }
 
@@ -624,7 +624,7 @@ function ColorPickerPopover({ current, onPick, onClose }: { current: string; onP
   return (
     <div className="sb-blur-surface" ref={ref} onClick={e => e.stopPropagation()} style={{
       position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 200,
-      background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
+      background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
       padding: '10px 10px 8px', boxShadow: 'var(--sb-shadow-menu)',
       display: 'flex', flexWrap: 'wrap', gap: 7, width: 152,
     }}>
@@ -650,13 +650,13 @@ function DayColumn({ dateStr, isToday, children }: { dateStr: string; isToday: b
   return (
     <div ref={setNodeRef} style={{
       flex: 1, position: 'relative', height: GRID_H,
-      borderRight: '1px solid var(--sb-border)',
+      borderRight: 'var(--sb-border-width) solid var(--sb-border)',
       background: isToday ? 'rgba(var(--sb-accent-rgb),0.045)' : isOver ? 'rgba(var(--sb-accent-rgb),0.09)' : 'transparent',
       transition: 'background 0.1s', minWidth: 0,
     }}>
       {/* Hour lines */}
       {Array.from({ length: 24 }, (_, h) => (
-        <div key={h} style={{ position: 'absolute', top: h * HOUR_PX, left: 0, right: 0, borderTop: '1px solid var(--sb-field)', pointerEvents: 'none' }} />
+        <div key={h} style={{ position: 'absolute', top: h * HOUR_PX, left: 0, right: 0, borderTop: 'var(--sb-border-width) solid var(--sb-field)', pointerEvents: 'none' }} />
       ))}
       {/* Half-hour lines */}
       {Array.from({ length: 24 }, (_, h) => (
@@ -733,7 +733,7 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
     ? `1px dashed ${color}`
     : isSelected
     ? `2px solid ${color}`
-    : `1px solid rgba(${rgb}, 0.34)`
+    : `var(--sb-border-width) solid rgba(${rgb}, 0.34)`
   const evInk = 'var(--sb-ink-1)'
   const evTimeInk = 'var(--sb-ink-3)'
 
@@ -907,13 +907,13 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
 
 const EV_PILL: React.CSSProperties = {
   display: 'inline-flex', alignItems: 'center', gap: 6, height: 42, boxSizing: 'border-box',
-  padding: '0 14px', borderRadius: 'var(--sb-r-nav)', background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
+  padding: '0 14px', borderRadius: 'var(--sb-r-nav)', background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)',
   color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body)', fontFamily: 'inherit', cursor: 'pointer', minWidth: 0,
 }
 const EV_ROUND: React.CSSProperties = {
   width: 30, height: 30, borderRadius: 'var(--sb-r-pill)', flexShrink: 0, padding: 0,
   display: 'flex', alignItems: 'center', justifyContent: 'center',
-  background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-3)', cursor: 'pointer',
+  background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-3)', cursor: 'pointer',
 }
 /** Four sizes in the whole panel: 27 title, 14 value, 13.5 label, 11.5 caption. */
 const EV_LABEL: React.CSSProperties = {
@@ -931,7 +931,7 @@ const EV_SECTION: React.CSSProperties = {
 const EV_FIELD: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 9, height: 48, boxSizing: 'border-box',
   width: '100%', minWidth: 0, padding: '0 15px', borderRadius: 'var(--sb-r-nav)',
-  background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
+  background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)',
   color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body)', fontFamily: 'inherit', textAlign: 'left',
 }
 const EV_GHOST_ICON: React.CSSProperties = {
@@ -1283,7 +1283,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
     <div ref={popupRef} onClick={e => e.stopPropagation()} onMouseDown={e => e.stopPropagation()} style={{
       width: 'clamp(320px, 34vw, 440px)', flexShrink: 0, alignSelf: 'stretch', minHeight: 0,
       overflowY: 'auto', scrollbarWidth: 'thin',
-      background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
+      background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
       boxShadow: 'var(--sb-shadow-control)',
       padding: '18px 22px 22px',
     }}>
@@ -1295,7 +1295,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
           <span
             title={onMoveCalendar ? 'Click to move this to another calendar' : calName}
             style={{
-              display: 'inline-flex', alignItems: 'center', gap: 7, height: 34, padding: '0 13px',
+              display: 'inline-flex', alignItems: 'center', gap: 7, height: 'var(--sb-h-pill)', padding: '0 13px',
               borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-accent-tint)', color: 'var(--sb-ink-2)', fontSize: 'var(--sb-t-body)',
               minWidth: 0, maxWidth: '100%', cursor: onMoveCalendar ? 'pointer' : 'default',
             }}>
@@ -1327,7 +1327,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
           onClick={() => onStatusToggle('done')}
           title={status === 'done' ? 'Not done after all' : 'Mark done'}
           style={{
-            ...EV_ROUND, width: 34, height: 34,
+            ...EV_ROUND, width: 'var(--sb-h-pill)', height: 'var(--sb-h-pill)',
             background: status === 'done' ? 'var(--sb-positive)' : 'var(--sb-card)',
             borderColor: status === 'done' ? 'var(--sb-positive)' : 'var(--sb-border)',
             color: status === 'done' ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
@@ -1337,7 +1337,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
           onClick={() => onStatusToggle('cancelled')}
           title={status === 'cancelled' ? 'Back on' : 'Mark cancelled'}
           style={{
-            ...EV_ROUND, width: 34, height: 34,
+            ...EV_ROUND, width: 'var(--sb-h-pill)', height: 'var(--sb-h-pill)',
             background: status === 'cancelled' ? 'var(--sb-ink-3)' : 'var(--sb-card)',
             borderColor: status === 'cancelled' ? 'var(--sb-ink-3)' : 'var(--sb-border)',
             color: status === 'cancelled' ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
@@ -1348,11 +1348,11 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
           disabled={!onDelete}
           title="Delete event"
           style={{
-            ...EV_ROUND, width: 34, height: 34,
+            ...EV_ROUND, width: 'var(--sb-h-pill)', height: 'var(--sb-h-pill)',
             color: 'var(--sb-negative)', borderColor: 'color-mix(in srgb, var(--sb-negative) 35.0%, transparent)', opacity: onDelete ? 1 : 0.45,
           }}><Trash2 size={ICON.md} /></button>
 
-        <button onClick={onClose} title="Close" style={{ ...EV_ROUND, width: 34, height: 34 }}><X size={ICON.md} /></button>
+        <button onClick={onClose} title="Close" style={{ ...EV_ROUND, width: 'var(--sb-h-pill)', height: 'var(--sb-h-pill)' }}><X size={ICON.md} /></button>
       </div>
 
       {/* A move that did not happen used to say nothing at all — the picker
@@ -1361,7 +1361,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
         <div style={{
           display: 'flex', alignItems: 'flex-start', gap: 7, marginTop: 8,
           padding: '8px 11px', borderRadius: 'var(--sb-r-nav)', fontSize: 'var(--sb-t-body-s)', lineHeight: 1.45,
-          background: 'var(--sb-negative-tint)', border: '1px solid color-mix(in srgb, var(--sb-negative) 26%, transparent)', color: 'var(--sb-negative-deep)',
+          background: 'var(--sb-negative-tint)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-negative) 26%, transparent)', color: 'var(--sb-negative-deep)',
         }}>
           <AlertCircle size={ICON.sm} style={{ flexShrink: 0, marginTop: 1 }} />
           <span style={{ minWidth: 0 }}>{moveError}</span>
@@ -1394,7 +1394,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
         <div style={{
           display: 'flex', alignItems: 'center', gap: 11, marginTop: 16,
           height: 58, padding: '0 15px', boxSizing: 'border-box',
-          borderRadius: 'var(--sb-r-nav)', background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
+          borderRadius: 'var(--sb-r-nav)', background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)',
         }}>
           <ProviderMark provider={provider} size={24} />
           <span style={{ fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-1)', flexShrink: 0 }}>
@@ -1422,7 +1422,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
       {videoLink && meetOpen && (
         <div style={{
           marginTop: 6, padding: '11px 15px', borderRadius: 'var(--sb-r-nav)',
-          background: 'var(--sb-field)', border: '1px solid var(--sb-border)',
+          background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)',
         }}>
           <a href={videoLink} target="_blank" rel="noreferrer" style={{
             display: 'block', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-info)', wordBreak: 'break-all', textDecoration: 'none',
@@ -1481,7 +1481,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
           {places.length > 0 && (
             <div style={{
               position: 'absolute', top: 'calc(100% + 5px)', left: 0, right: 0, zIndex: 90,
-              background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', padding: 5,
+              background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', padding: 5,
               boxShadow: 'var(--sb-shadow-frame)',
             }}>
               {places.map(pl => (
@@ -1548,7 +1548,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
               title={`Open “${displayTitle(liveClashes[0].summary)}”`}
               style={{
                 ...EV_FIELD, flex: 1,
-                background: 'rgba(var(--sb-accent-rgb),0.24)', border: '1px solid rgba(var(--sb-accent-rgb),0.7)',
+                background: 'rgba(var(--sb-accent-rgb),0.24)', border: 'var(--sb-border-width) solid rgba(var(--sb-accent-rgb),0.7)',
                 color: 'var(--sb-ink-2)', cursor: onOpenEvent ? 'pointer' : 'default',
                 overflow: 'hidden', whiteSpace: 'nowrap',
               }}>
@@ -1736,7 +1736,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
               <span style={{
                 width: 32, height: 32, borderRadius: 'var(--sb-r-sm)', flexShrink: 0,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: 'var(--sb-field)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-3)',
+                background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-3)',
               }}><FileText size={ICON.md} strokeWidth={STROKE.rest} /></span>
               <span style={{ flex: 1, minWidth: 0 }}>
                 <span style={{ display: 'block', fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -1763,7 +1763,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
         rows={3}
         style={{
           width: '100%', boxSizing: 'border-box', resize: 'vertical', minHeight: 88,
-          background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
+          background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
           padding: '13px 15px', fontFamily: 'inherit', fontSize: 'var(--sb-t-body)', lineHeight: 1.5,
           color: 'var(--sb-ink-1)', outline: 'none',
         }} />
@@ -1806,7 +1806,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
       {liveClashes.length > 0 && (
         <div style={{
           marginTop: 18, padding: '14px 15px', borderRadius: 'var(--sb-r-nav)',
-          background: 'var(--sb-field)', border: '1px solid var(--sb-border)',
+          background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)',
         }}>
           <p style={{ margin: 0, fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-2)', lineHeight: 1.5 }}>
             {freeAfterClash
@@ -1948,7 +1948,7 @@ function EventContextMenu({
         top: adjPos.y, left: adjPos.x,
         width: 210,
         background: 'var(--sb-card)',
-        border: '1px solid var(--sb-border)',
+        border: 'var(--sb-border-width) solid var(--sb-border)',
         borderRadius: 'var(--sb-r-nav)',
         boxShadow: 'var(--sb-shadow-menu)',
         zIndex: 1100,
@@ -2071,7 +2071,7 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
     <div ref={ref} onClick={e => e.stopPropagation()} onMouseDown={e => e.stopPropagation()} style={{
       width: 'clamp(320px, 34vw, 440px)', flexShrink: 0, alignSelf: 'stretch', minHeight: 0,
       overflowY: 'auto', scrollbarWidth: 'thin',
-      background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
+      background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
       boxShadow: 'var(--sb-shadow-control)',
       padding: '18px 20px 22px',
     }}>
@@ -2098,7 +2098,7 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
         placeholder="Event title"
         style={{
           width: '100%', boxSizing: 'border-box', marginTop: 14,
-          background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
+          background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
           padding: '13px 15px', fontFamily: DISPLAY, fontSize: 'var(--sb-t-h2)', fontWeight: 600,
           letterSpacing: '-0.02em', color: 'var(--sb-ink-1)', outline: 'none', textAlign: 'left',
         }} />
@@ -2121,7 +2121,7 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
         <button onClick={() => setAllDay(v => !v)} style={{
           ...EV_PILL,
           background: allDay ? 'var(--sb-ink-1)' : 'var(--sb-card)',
-          border: allDay ? 'none' : '1px solid var(--sb-border)',
+          border: allDay ? 'none' : 'var(--sb-border-width) solid var(--sb-border)',
           color: allDay ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
         }}>All day</button>
       </div>
@@ -2152,7 +2152,7 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
             <button onClick={() => setAddMeet(v => !v)} title="Add a Google Meet link" style={{
               ...EV_PILL, flexShrink: 0,
               background: addMeet ? 'var(--sb-ink-1)' : 'var(--sb-card)',
-              border: addMeet ? 'none' : '1px solid var(--sb-border)',
+              border: addMeet ? 'none' : 'var(--sb-border-width) solid var(--sb-border)',
               color: addMeet ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
             }}><Video size={ICON.sm} /> Meet</button>
           </span>
@@ -2186,7 +2186,7 @@ function NewEventForm({ draft, calendars, calColors, onSave, onCancel }: {
             placeholder="Anything worth remembering…"
             style={{
               flex: 1, minWidth: 0, boxSizing: 'border-box', resize: 'vertical',
-              background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-sm)',
+              background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-sm)',
               padding: '9px 12px', fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)', fontFamily: 'inherit',
               outline: 'none', textAlign: 'left',
             }} />
@@ -3308,7 +3308,7 @@ export function CalendarIntelligence() {
             style={{
               ...CAL_PILL,
               background: showCalendars ? 'var(--sb-ink-1)' : 'var(--sb-card)',
-              border: `1px solid ${showCalendars ? 'var(--sb-ink-1)' : 'var(--sb-border)'}`,
+              border: `var(--sb-border-width) solid ${showCalendars ? 'var(--sb-ink-1)' : 'var(--sb-border)'}`,
               color: showCalendars ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-1)',
             }}
           >
@@ -3344,7 +3344,7 @@ export function CalendarIntelligence() {
           <div style={{
             display: 'flex', alignItems: 'center', gap: 10, marginTop: 10,
             padding: '10px 14px', borderRadius: 'var(--sb-r-nav)',
-            background: 'rgba(var(--sb-accent-rgb),0.20)', border: '1px solid rgba(var(--sb-accent-rgb),0.65)',
+            background: 'rgba(var(--sb-accent-rgb),0.20)', border: 'var(--sb-border-width) solid rgba(var(--sb-accent-rgb),0.65)',
           }}>
             <AlertCircle size={ICON.md} color="var(--sb-accent-deep)" style={{ flexShrink: 0 }} />
             <span style={{ ...T.body, flex: 1, minWidth: 0, color: 'var(--sb-ink-2)' }}>
@@ -3378,7 +3378,7 @@ export function CalendarIntelligence() {
                     style={{
                       display: 'flex', alignItems: 'center', gap: 0,
                       borderRadius: 'var(--sb-r-card)', overflow: 'visible',
-                      border: `1px solid ${hidden ? 'var(--sb-border)' : color}`,
+                      border: `var(--sb-border-width) solid ${hidden ? 'var(--sb-border)' : color}`,
                       background: hidden ? 'var(--sb-page)' : alpha(color, 9.4),
                       transition: 'all 0.12s',
                     }}
@@ -3394,7 +3394,7 @@ export function CalendarIntelligence() {
                         flexShrink: 0,
                       }}
                     >
-                      <div style={{ width: 10, height: 10, borderRadius: 'var(--sb-r-pill)', background: hidden ? 'var(--sb-border)' : color, border: '1px solid color-mix(in srgb, var(--sb-ink-1) 12.0%, transparent)' }} />
+                      <div style={{ width: 10, height: 10, borderRadius: 'var(--sb-r-pill)', background: hidden ? 'var(--sb-border)' : color, border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-ink-1) 12.0%, transparent)' }} />
                     </button>
 
                     {/* Name + eye toggle */}
@@ -3441,7 +3441,7 @@ export function CalendarIntelligence() {
 
         {/* Fetch error — keep but make subtle */}
         {fetchError && (
-          <div style={{ marginTop: 6, padding: '5px 10px', background: 'color-mix(in srgb, var(--sb-negative) 8.0%, transparent)', border: '1px solid color-mix(in srgb, var(--sb-negative) 30.0%, transparent)', borderRadius: 'var(--sb-r-chip)', fontSize: 'var(--sb-t-micro)', color: 'var(--sb-negative)', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div style={{ marginTop: 6, padding: '5px 10px', background: 'color-mix(in srgb, var(--sb-negative) 8.0%, transparent)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-negative) 30.0%, transparent)', borderRadius: 'var(--sb-r-chip)', fontSize: 'var(--sb-t-micro)', color: 'var(--sb-negative)', display: 'flex', alignItems: 'center', gap: 6 }}>
             <AlertCircle size={ICON.sm} /> {fetchError}
           </div>
         )}
@@ -3455,7 +3455,7 @@ export function CalendarIntelligence() {
       <div style={{
         flex: 1, minWidth: 0, minHeight: 0, position: 'relative',
         display: 'flex', flexDirection: 'column', overflow: 'hidden',
-        background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
+        background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
         boxShadow: 'var(--sb-shadow-control)',
       }}>
 
@@ -3472,7 +3472,7 @@ export function CalendarIntelligence() {
           <div style={{
             flex: 1, minHeight: 0, display: 'grid',
             gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', gridAutoRows: 'minmax(96px, 1fr)',
-            background: 'var(--sb-border)', gap: 1, border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', overflow: 'hidden',
+            background: 'var(--sb-border)', gap: 1, border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', overflow: 'hidden',
           }}>
             {monthCells.map(day => {
               const ds = localDateStr(day)
@@ -3516,7 +3516,7 @@ export function CalendarIntelligence() {
                         style={{
                           display: 'flex', alignItems: 'center', gap: 5, minWidth: 0,
                           padding: '2px 6px', borderRadius: 'var(--sb-r-chip)', cursor: 'pointer',
-                          background: `rgba(${rgb}, 0.16)`, border: `1px solid rgba(${rgb}, 0.4)`,
+                          background: `rgba(${rgb}, 0.16)`, border: `var(--sb-border-width) solid rgba(${rgb}, 0.4)`,
                           fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-1)',
                           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                         }}>
@@ -3547,7 +3547,7 @@ export function CalendarIntelligence() {
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
           {/* Sticky day headers */}
-          <div style={{ display: 'flex', borderBottom: '1px solid var(--sb-border)', flexShrink: 0, background: 'var(--sb-header)' }}>
+          <div style={{ display: 'flex', borderBottom: 'var(--sb-border-width) solid var(--sb-border)', flexShrink: 0, background: 'var(--sb-header)' }}>
             {/* Time gutter spacer */}
             <div style={{ width: 58, flexShrink: 0 }} />
             {weekDays.map(day => {
@@ -3563,7 +3563,7 @@ export function CalendarIntelligence() {
                     color: isToday ? 'var(--sb-accent-ink)' : 'var(--sb-ink-1)',
                     background: isToday ? 'var(--sb-accent)' : 'transparent',
                     width: isToday ? 32 : undefined, height: isToday ? 32 : undefined,
-                    borderRadius: isToday ? '50%' : undefined,
+                    borderRadius: isToday ? 'var(--sb-r-pill)' : undefined,
                     display: isToday ? 'flex' : undefined, alignItems: isToday ? 'center' : undefined, justifyContent: isToday ? 'center' : undefined,
                     margin: isToday ? '3px auto 0' : undefined,
                     fontFamily: DISPLAY,
@@ -3577,7 +3577,7 @@ export function CalendarIntelligence() {
 
           {/* All-day events strip — only shown when the week has at least one all-day event */}
           {weekDays.some(day => (grouped.get(localDateStr(day)) ?? []).some(e => !e.start.dateTime)) && (
-            <div style={{ display: 'flex', borderBottom: '1px solid var(--sb-border)', flexShrink: 0, minHeight: 22 }}>
+            <div style={{ display: 'flex', borderBottom: 'var(--sb-border-width) solid var(--sb-border)', flexShrink: 0, minHeight: 22 }}>
               <div style={{ width: 58, flexShrink: 0, display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end', paddingRight: 6, paddingTop: 3, fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', letterSpacing: '0.4px' }}>
                 all day
               </div>
@@ -3585,7 +3585,7 @@ export function CalendarIntelligence() {
                 const ds = localDateStr(day)
                 const allDayEvts = (grouped.get(ds) ?? []).filter(e => !e.start.dateTime)
                 return (
-                  <div key={ds} style={{ flex: 1, padding: '2px 2px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1, borderRight: '1px solid var(--sb-border)', maxHeight: 68, overflowY: 'auto' }}>
+                  <div key={ds} style={{ flex: 1, padding: '2px 2px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1, borderRight: 'var(--sb-border-width) solid var(--sb-border)', maxHeight: 68, overflowY: 'auto' }}>
                     {allDayEvts.map(ev => {
                       const cal   = allCalendars.find(c => c.id === (ev as GCalEventExt).calendarId)
                       const color = cal ? calEffectiveColor(cal) : 'var(--sb-info)'
@@ -3622,7 +3622,7 @@ export function CalendarIntelligence() {
             style={{ flex: 1, overflowY: 'auto', display: 'flex', position: 'relative', background: 'var(--sb-card)' }}
           >
             {/* Time labels column, with the weather for the day it is showing */}
-            <div style={{ width: 58, flexShrink: 0, position: 'relative', height: GRID_H, background: 'var(--sb-header)', borderRight: '1px solid var(--sb-field)' }}>
+            <div style={{ width: 58, flexShrink: 0, position: 'relative', height: GRID_H, background: 'var(--sb-header)', borderRight: 'var(--sb-border-width) solid var(--sb-field)' }}>
               {Array.from({ length: 24 }, (_, h) => {
                 const w = weather[`${weatherDay}T${String(h).padStart(2, '0')}`]
                 return (
@@ -3664,7 +3664,7 @@ export function CalendarIntelligence() {
                     {isToday && (
                       <>
                         <div style={{ position: 'absolute', top: nowPx - 4, left: -4, width: 8, height: 8, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-negative)', zIndex: 5, pointerEvents: 'none' }} />
-                        <div style={{ position: 'absolute', top: nowPx, left: 0, right: 0, borderTop: '1px solid var(--sb-negative)', zIndex: 5, pointerEvents: 'none' }} />
+                        <div style={{ position: 'absolute', top: nowPx, left: 0, right: 0, borderTop: 'var(--sb-border-width) solid var(--sb-negative)', zIndex: 5, pointerEvents: 'none' }} />
                       </>
                     )}
 

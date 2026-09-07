@@ -33,7 +33,7 @@ interface Hit {
 
 const CHIP: React.CSSProperties = {
   display: 'inline-flex', alignItems: 'center', gap: 4, height: 22, padding: '0 8px',
-  borderRadius: 'var(--sb-r-chip)', background: FIELD, border: '1px solid var(--sb-border)',
+  borderRadius: 'var(--sb-r-chip)', background: FIELD, border: 'var(--sb-border-width) solid var(--sb-border)',
   fontSize: 'var(--sb-t-micro)', color: MUTED, fontFamily: 'inherit', flexShrink: 0,
 }
 
@@ -236,7 +236,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
         onClick={e => e.stopPropagation()}
         style={{
           width: '100%', maxWidth: 700, background: 'var(--sb-card)',
-          border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-card)', overflow: 'hidden',
+          border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-card)', overflow: 'hidden',
           boxShadow: 'var(--sb-shadow-frame)',
           display: 'flex', flexDirection: 'column', maxHeight: '72vh',
         }}>
@@ -258,7 +258,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
         </div>
 
         {/* Results */}
-        <div ref={listRef} style={{ flex: 1, minHeight: 0, overflowY: 'auto', borderTop: '1px solid var(--sb-hairline)', padding: '8px 0' }}>
+        <div ref={listRef} style={{ flex: 1, minHeight: 0, overflowY: 'auto', borderTop: 'var(--sb-border-width) solid var(--sb-hairline)', padding: '8px 0' }}>
           {!query ? (
             <p style={{ margin: 0, padding: '18px 18px 22px', fontSize: 'var(--sb-t-body-s)', color: GHOST }}>
               Type to search across the platform.
@@ -290,7 +290,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
                   <span style={{
                     width: 28, height: 28, borderRadius: 'var(--sb-r-chip)', flexShrink: 0,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    background: FIELD, border: '1px solid var(--sb-border)', color: MUTED,
+                    background: FIELD, border: 'var(--sb-border-width) solid var(--sb-border)', color: MUTED,
                   }}>
                     <Icon size={14} strokeWidth={1.9} />
                   </span>
@@ -314,7 +314,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
         {/* Footer */}
         <div style={{
           display: 'flex', alignItems: 'center', gap: 14, padding: '10px 18px',
-          background: FIELD, borderTop: '1px solid var(--sb-hairline)', fontSize: 'var(--sb-t-meta)', color: GHOST,
+          background: FIELD, borderTop: 'var(--sb-border-width) solid var(--sb-hairline)', fontSize: 'var(--sb-t-meta)', color: GHOST,
         }}>
           <span>↑↓ navigate</span>
           <span>↵ open</span>

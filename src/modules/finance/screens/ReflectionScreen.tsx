@@ -129,7 +129,7 @@ function CategoryRows({ row, tone, open, hidden, onToggleOpen, onToggleHide, onD
         onClick={() => onToggleHide(row.cat.id)}
         title={isHidden ? 'Click to include in totals' : 'Click to hide from totals'}
         style={{
-          borderBottom: '1px solid var(--sb-hairline)', cursor: 'pointer',
+          borderBottom: 'var(--sb-border-width) solid var(--sb-hairline)', cursor: 'pointer',
           background: isOver ? 'var(--sb-accent-tint)' : isHidden ? 'var(--sb-field)' : 'transparent',
           opacity: lifted ? 0.4 : isHidden ? 0.45 : 1,
         }}
@@ -179,7 +179,7 @@ function CategoryRows({ row, tone, open, hidden, onToggleOpen, onToggleHide, onD
             onClick={() => onToggleHide(kid.cat.id)}
             title={hidden(kid.cat.id) ? 'Click to include in totals' : 'Click to hide from totals'}
             style={{
-              borderBottom: '1px solid var(--sb-accent-tint)', cursor: 'pointer', background: kidBg,
+              borderBottom: 'var(--sb-border-width) solid var(--sb-accent-tint)', cursor: 'pointer', background: kidBg,
               opacity: kidLifted ? 0.4 : kidHidden ? 0.45 : 1,
             }}
           >
@@ -552,7 +552,7 @@ export function ReflectionScreen(_props?: any) {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--sb-page)', overflow: 'hidden' }}>
 
       {/* Header */}
-      <div style={{ flexShrink: 0, borderBottom: '1px solid var(--sb-border)', padding: '14px 26px 14px', display: 'flex', alignItems: 'flex-end', gap: 20 }}>
+      <div style={{ flexShrink: 0, borderBottom: 'var(--sb-border-width) solid var(--sb-border)', padding: '14px 26px 14px', display: 'flex', alignItems: 'flex-end', gap: 20 }}>
         <div>
           <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-3)', display: 'block', marginBottom: 4 }}>FINANCE · REFLECT</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -600,7 +600,7 @@ export function ReflectionScreen(_props?: any) {
                   display: 'inline-flex', alignItems: 'center', gap: 6, height: 28,
                   padding: '0 11px', borderRadius: 'var(--sb-r-pill)', cursor: 'pointer',
                   background: dupesOpen ? 'var(--sb-accent)' : 'var(--sb-accent-tint)',
-                  border: '1px solid var(--sb-accent-border)',
+                  border: 'var(--sb-border-width) solid var(--sb-accent-border)',
                   color: dupesOpen ? 'var(--sb-accent-ink)' : 'var(--sb-accent-deep)',
                   fontFamily: 'inherit', fontSize: 'var(--sb-t-meta)', fontWeight: 700,
                 }}>
@@ -616,7 +616,7 @@ export function ReflectionScreen(_props?: any) {
                   {suspects.map(t => (
                     <div key={t.id} style={{
                       display: 'flex', alignItems: 'center', gap: 8,
-                      padding: '5px 0', borderTop: '1px solid var(--sb-accent-tint)', fontSize: 'var(--sb-t-body-s)',
+                      padding: '5px 0', borderTop: 'var(--sb-border-width) solid var(--sb-accent-tint)', fontSize: 'var(--sb-t-body-s)',
                     }}>
                       {/* The whole line opens the entry — this list is where a
                           duplicate is noticed, so it should also be where it is
@@ -651,7 +651,7 @@ export function ReflectionScreen(_props?: any) {
                         style={{
                           width: 24, height: 24, borderRadius: 'var(--sb-r-pill)', padding: 0, flexShrink: 0,
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-4)', cursor: 'pointer',
+                          background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-4)', cursor: 'pointer',
                         }}><Trash2 size={ICON.sm} /></button>
                     </div>
                   ))}
@@ -691,7 +691,7 @@ export function ReflectionScreen(_props?: any) {
                       style={{
                         display: 'inline-flex', alignItems: 'center', gap: 4, height: 20,
                         padding: '0 7px', borderRadius: 'var(--sb-r-pill)', cursor: 'pointer',
-                        background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-3)',
+                        background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-3)',
                         fontFamily: 'inherit', fontSize: 'var(--sb-t-micro)', fontWeight: 600, letterSpacing: '0.04em',
                       }}>
                       {allOpen ? <ChevronsDownUp size={ICON.sm} strokeWidth={STROKE.active} /> : <ChevronsUpDown size={ICON.sm} strokeWidth={STROKE.active} />}
@@ -778,7 +778,7 @@ export function ReflectionScreen(_props?: any) {
             onClick={e => e.stopPropagation()}
             style={{
               width: '100%', maxWidth: 560, maxHeight: '84vh', display: 'flex', flexDirection: 'column',
-              background: 'var(--sb-header)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
+              background: 'var(--sb-header)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
               boxShadow: 'var(--sb-shadow-frame)', padding: '18px 20px 20px',
             }}>
 
@@ -795,7 +795,7 @@ export function ReflectionScreen(_props?: any) {
                 style={{
                   marginLeft: 'auto', width: 30, height: 30, borderRadius: 'var(--sb-r-pill)', padding: 0,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-3)', cursor: 'pointer',
+                  background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-3)', cursor: 'pointer',
                 }}><X size={ICON.sm} /></button>
             </div>
 
@@ -827,7 +827,7 @@ export function ReflectionScreen(_props?: any) {
                     title={isUnpaid(tx) ? UNPAID_TITLE : undefined}
                     style={{
                     display: 'flex', alignItems: 'center', gap: 11,
-                    padding: '11px 0', borderBottom: '1px solid var(--sb-hairline)',
+                    padding: '11px 0', borderBottom: 'var(--sb-border-width) solid var(--sb-hairline)',
                     ...unpaidRow(isUnpaid(tx)),
                   }}>
                     <span
@@ -874,7 +874,7 @@ export function ReflectionScreen(_props?: any) {
                       style={{
                         width: 28, height: 28, borderRadius: 'var(--sb-r-pill)', padding: 0, flexShrink: 0,
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-4)', cursor: 'pointer',
+                        background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-4)', cursor: 'pointer',
                       }}><Trash2 size={ICON.sm} /></button>
                   </div>
                 )
@@ -940,7 +940,7 @@ function SectionHeader({ label, colCount: _colCount, colWidth, nameWidth: _nameW
 }) {
   const f = out ? fmtOut : fmt
   return (
-    <tr style={{ background: 'var(--sb-hairline)', borderTop: '1px solid var(--sb-border)', borderBottom: '1px solid var(--sb-border)' }}>
+    <tr style={{ background: 'var(--sb-hairline)', borderTop: 'var(--sb-border-width) solid var(--sb-border)', borderBottom: 'var(--sb-border-width) solid var(--sb-border)' }}>
       <td style={{ padding: '5px 14px', position: 'sticky', left: 0, background: 'var(--sb-hairline)', zIndex: 2 }}>
         <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.1em', color: 'var(--sb-ink-3)' }}>{label}</span>
       </td>
@@ -992,7 +992,7 @@ function NetRow({ label, months, total, COL_W, NAME_W: _NAME_W2, onDrill }: {
   onDrill: (label: string, month: number | null) => void
 }) {
   return (
-    <tr style={{ background: 'var(--sb-header)', borderBottom: '1px solid var(--sb-border)' }}>
+    <tr style={{ background: 'var(--sb-header)', borderBottom: 'var(--sb-border-width) solid var(--sb-border)' }}>
       <td style={{ padding: '0 14px', height: 38, position: 'sticky', left: 0, background: 'var(--sb-header)', zIndex: 2 }}>
         <span style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 700, color: 'var(--sb-ink-1)' }}>{label}</span>
       </td>
@@ -1014,7 +1014,7 @@ function NetRow({ label, months, total, COL_W, NAME_W: _NAME_W2, onDrill }: {
 
 function CumulativeRow({ months, COL_W, NAME_W: _NAME_W3 }: { months: number[]; COL_W: number; NAME_W: number }) {
   return (
-    <tr style={{ background: 'var(--sb-ink-1)', borderBottom: '1px solid var(--sb-ink-1)' }}>
+    <tr style={{ background: 'var(--sb-ink-1)', borderBottom: 'var(--sb-border-width) solid var(--sb-ink-1)' }}>
       <td style={{ padding: '0 14px', height: 40, position: 'sticky', left: 0, background: 'var(--sb-ink-1)', zIndex: 2 }}>
         <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.1em', color: 'var(--sb-ink-4)' }}>CUMULATIVE CASH</span>
       </td>

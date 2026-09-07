@@ -15,13 +15,13 @@ const DISPLAY = 'var(--sb-font-num)'
 
 const PILL: React.CSSProperties = {
   display: 'inline-flex', alignItems: 'center', gap: 6, height: 42, boxSizing: 'border-box',
-  padding: '0 14px', borderRadius: 'var(--sb-r-nav)', background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
+  padding: '0 14px', borderRadius: 'var(--sb-r-nav)', background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)',
   color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body)', fontFamily: 'inherit', cursor: 'pointer', minWidth: 0,
 }
 const ROUND: React.CSSProperties = {
   width: 30, height: 30, borderRadius: 'var(--sb-r-pill)', flexShrink: 0, padding: 0,
   display: 'flex', alignItems: 'center', justifyContent: 'center',
-  background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-3)', cursor: 'pointer',
+  background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-3)', cursor: 'pointer',
 }
 const LABEL: React.CSSProperties = { width: 62, flexShrink: 0, fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-3)', fontWeight: 500 }
 const ROW: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 10 }
@@ -78,7 +78,7 @@ export function CategoryModal({ category, categories, onSave, onDelete, onClose 
       <div style={{
         width: 'clamp(320px, 94vw, 430px)', maxHeight: '90vh', overflowY: 'auto',
         boxSizing: 'border-box', scrollbarWidth: 'thin',
-        background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
+        background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
         boxShadow: 'var(--sb-shadow-frame)', padding: '18px 20px 22px',
       }}>
 
@@ -103,7 +103,7 @@ export function CategoryModal({ category, categories, onSave, onDelete, onClose 
               <button onClick={onClick} title="Pick an icon, or upload one"
                 style={{
                   width: 46, height: 46, borderRadius: 'var(--sb-r-nav)', flexShrink: 0, padding: 0,
-                  border: '1px solid var(--sb-border)', background: 'var(--sb-field)', cursor: 'pointer',
+                  border: 'var(--sb-border-width) solid var(--sb-border)', background: 'var(--sb-field)', cursor: 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
                 }}>
                 <CategoryGlyph icon={icon} size={24} color="var(--sb-ink-1)" />
@@ -118,7 +118,7 @@ export function CategoryModal({ category, categories, onSave, onDelete, onClose 
             placeholder="Name it"
             style={{
               flex: 1, minWidth: 0, boxSizing: 'border-box',
-              background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
+              background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
               padding: '13px 15px', fontFamily: DISPLAY, fontSize: 'var(--sb-t-h2)', fontWeight: 600,
               letterSpacing: '-0.02em', color: 'var(--sb-ink-1)', outline: 'none',
             }} />
@@ -140,7 +140,7 @@ export function CategoryModal({ category, categories, onSave, onDelete, onClose 
                     style={{
                       ...PILL, flex: 1, justifyContent: 'center',
                       background: on ? (v === 'income' ? 'var(--sb-positive)' : 'var(--sb-negative)') : 'var(--sb-card)',
-                      border: on ? 'none' : '1px solid var(--sb-border)',
+                      border: on ? 'none' : 'var(--sb-border-width) solid var(--sb-border)',
                       color: on ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
                       fontWeight: on ? 600 : 400,
                       opacity: txTypeLocked && !on ? 0.45 : 1,
@@ -178,7 +178,7 @@ export function CategoryModal({ category, categories, onSave, onDelete, onClose 
                 <button key={c} onClick={() => setColor(c)} title={c}
                   style={{
                     width: 30, height: 30, borderRadius: 'var(--sb-r-sm)', cursor: 'pointer', padding: 0,
-                    background: c, border: color === c ? '2px solid var(--sb-ink-1)' : '1px solid color-mix(in srgb, var(--sb-ink-1) 12.0%, transparent)',
+                    background: c, border: color === c ? '2px solid var(--sb-ink-1)' : 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-ink-1) 12.0%, transparent)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>
                   {color === c && <Check size={ICON.sm} strokeWidth={STROKE.active} color="var(--sb-card)" />}
@@ -203,7 +203,7 @@ export function CategoryModal({ category, categories, onSave, onDelete, onClose 
             onClick={() => { onDelete(category!.id); onClose() }}
             title="Its transactions stay; they simply stop being filed here"
             style={{
-              marginTop: 12, width: '100%', height: 34, borderRadius: 'var(--sb-r-sm)',
+              marginTop: 12, width: '100%', height: 'var(--sb-h-pill)', borderRadius: 'var(--sb-r-sm)',
               background: 'none', border: 'none', fontFamily: 'inherit',
               color: 'var(--sb-negative)', fontSize: 'var(--sb-t-body-s)', cursor: 'pointer',
             }}>

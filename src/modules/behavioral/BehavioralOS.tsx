@@ -115,7 +115,7 @@ function RankArtwork({ rank, rankMeta }: { rank: Rank; rankMeta: { label: string
     <div style={{
       width: 88, height: 88, borderRadius: 'var(--sb-r-chip)', flexShrink: 0,
       overflow: 'hidden',
-      border: '1px solid var(--sb-negative-deep)',
+      border: 'var(--sb-border-width) solid var(--sb-negative-deep)',
       background: 'var(--sb-page)',
       position: 'relative',
     }}>
@@ -144,7 +144,7 @@ function IdentityCard({ identity }: { identity: IdentityResult }) {
   return (
     <div style={{
       padding: '16px 18px',
-      border: `1px solid ${identity.stage === 'core' ? 'var(--sb-accent)' : 'var(--sb-border)'}`,
+      border: `var(--sb-border-width) solid ${identity.stage === 'core' ? 'var(--sb-accent)' : 'var(--sb-border)'}`,
       borderRadius: 'var(--sb-r-chip)',
       background: identity.stage === 'core' ? alpha('var(--sb-accent)', 3.9) : 'transparent',
       transition: 'border-color 0.2s',
@@ -236,7 +236,7 @@ export function BehavioralOS() {
               </h1>
               <span style={{
                 fontSize: 'var(--sb-t-micro)', letterSpacing: '0.18em', fontWeight: 600,
-                color: 'var(--sb-accent)', border: '1px solid var(--sb-accent)',
+                color: 'var(--sb-accent)', border: 'var(--sb-border-width) solid var(--sb-accent)',
                 padding: '3px 8px', borderRadius: 'var(--sb-r-chip)',
               }}>
                 {modeLabel}
@@ -262,7 +262,7 @@ export function BehavioralOS() {
         <section style={{ marginBottom: 48 }}>
           <div style={{
             padding: '28px 32px 24px',
-            border: '1px solid var(--sb-border)',
+            border: 'var(--sb-border-width) solid var(--sb-border)',
             borderRadius: 'var(--sb-r-chip)',
           }}>
             {rank ? (
@@ -307,7 +307,7 @@ export function BehavioralOS() {
                 )}
 
                 {/* Component breakdown — expandable */}
-                <div style={{ marginTop: 20, borderTop: '1px solid var(--sb-border)', paddingTop: 16 }}>
+                <div style={{ marginTop: 20, borderTop: 'var(--sb-border-width) solid var(--sb-border)', paddingTop: 16 }}>
                   <button
                     onClick={() => setExpandComponents(v => !v)}
                     style={{
@@ -347,16 +347,16 @@ export function BehavioralOS() {
           </div>
 
           {objectives.length === 0 ? (
-            <div style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-4)', padding: '16px 0', borderTop: '1px solid var(--sb-border)' }}>
+            <div style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-4)', padding: '16px 0', borderTop: 'var(--sb-border-width) solid var(--sb-border)' }}>
               No open objectives. The field is clear.
             </div>
           ) : (
-            <div style={{ borderTop: '1px solid var(--sb-border)' }}>
+            <div style={{ borderTop: 'var(--sb-border-width) solid var(--sb-border)' }}>
               {objectives.map((t, i) => (
                 <div key={t.id} style={{
                   display: 'flex', alignItems: 'center', gap: 16,
                   padding: '14px 0',
-                  borderBottom: '1px solid var(--sb-border)',
+                  borderBottom: 'var(--sb-border-width) solid var(--sb-border)',
                 }}>
                   <span style={{
                     fontSize: 'var(--sb-t-micro)', letterSpacing: '0.1em', color: 'var(--sb-ink-4)',
@@ -374,7 +374,7 @@ export function BehavioralOS() {
                   )}
                   <div style={{
                     width: 14, height: 14, borderRadius: 'var(--sb-r-chip)',
-                    border: `1px solid ${t.quadrant === 'do' ? 'var(--sb-accent)' : 'var(--sb-border)'}`,
+                    border: `var(--sb-border-width) solid ${t.quadrant === 'do' ? 'var(--sb-accent)' : 'var(--sb-border)'}`,
                     flexShrink: 0,
                   }} />
                 </div>
@@ -416,7 +416,7 @@ export function BehavioralOS() {
             }}>
               System Insights
             </div>
-            <div style={{ borderLeft: '1px solid var(--sb-border)', paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 18 }}>
+            <div style={{ borderLeft: 'var(--sb-border-width) solid var(--sb-border)', paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 18 }}>
               {cachedInsights.map((insight, i) => (
                 <p key={i} style={{ margin: 0, fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)', lineHeight: 1.7, letterSpacing: '0.01em' }}>
                   {insight}

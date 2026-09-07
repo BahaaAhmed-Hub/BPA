@@ -104,7 +104,7 @@ export function TaskCard({ task, onOpen, selected }: TaskCardProps) {
         position: 'relative',
         // 9B: neutral card. Company shows as coloured text, not as a tinted card.
         background: 'var(--sb-card)',
-        border: selected ? '2px solid var(--sb-ink-1)' : '1px solid var(--sb-border)',
+        border: selected ? '2px solid var(--sb-ink-1)' : 'var(--sb-border-width) solid var(--sb-border)',
         // keep the geometry identical whether or not the ink border is on
         padding: selected ? '8px 9px' : '9px 10px',
         borderRadius: 'var(--sb-r-nav)',

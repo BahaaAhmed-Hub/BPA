@@ -44,6 +44,17 @@ export type SbToken =
   | '--sb-shadow-frame' | '--sb-shadow-hover' | '--sb-shadow-control'
   | '--sb-shadow-menu' | '--sb-shadow-panel' | '--sb-shadow-accent'
   | '--sb-font-ui' | '--sb-font-num'
+  // ── Shape ─────────────────────────────────────────────────────────────────
+  // A concept is a shape as much as a palette: recolouring the app and leaving
+  // every corner, control and heading exactly where it was is half a theme.
+  // What is *not* here is the readability floor — the five smaller type steps,
+  // the icon sizes, the 999px pill and the mono face — which no theme moves.
+  | '--sb-r-chip' | '--sb-r-sm' | '--sb-r-nav' | '--sb-r-card' | '--sb-r-frame'
+  /** The weight of every surface's edge. 1px everywhere for now, and a token
+   *  so that it need not be. */
+  | '--sb-border-width'
+  | '--sb-h-pill' | '--sb-h-nav' | '--sb-h-header'
+  | '--sb-t-h2' | '--sb-t-h1' | '--sb-t-display'
 
 export interface AppTheme {
   id: string
@@ -98,6 +109,12 @@ export const THEMES: AppTheme[] = [
       '--sb-warning':       '#B26A00', '--sb-warning-tint': '#FBEEDC',
       '--sb-shadow-panel':  '-8px 0 40px -12px rgba(48,40,20,.28)',
       '--sb-shadow-accent': '0 2px 0 rgba(120,92,0,.25)',
+      // Shape. Verbatim: applying the default has to be a no-op.
+      '--sb-r-chip': '8px', '--sb-r-sm': '9px', '--sb-r-nav': '10px',
+      '--sb-r-card': '18px', '--sb-r-frame': '24px',
+      '--sb-border-width': '1px',
+      '--sb-h-pill': '34px', '--sb-h-nav': '36px', '--sb-h-header': '66px',
+      '--sb-t-h2': '18px', '--sb-t-h1': '27px', '--sb-t-display': '30px',
     },
   },
   {
@@ -139,6 +156,13 @@ export const THEMES: AppTheme[] = [
       '--sb-warning':       '#7E5410', '--sb-warning-tint': '#F3EADC',
       '--sb-shadow-panel':  '-8px 0 40px -12px rgba(40,34,20,.24)',
       '--sb-shadow-accent': '0 2px 0 rgba(120,60,30,.28)',
+      // Shape. Near-square and dense — this is the shape the
+      // specification gave the fourth theme, which Warm Minimal replaced.
+      '--sb-r-chip': '3px', '--sb-r-sm': '4px', '--sb-r-nav': '4px',
+      '--sb-r-card': '6px', '--sb-r-frame': '8px',
+      '--sb-border-width': '1px',
+      '--sb-h-pill': '30px', '--sb-h-nav': '32px', '--sb-h-header': '60px',
+      '--sb-t-h2': '20px', '--sb-t-h1': '30px', '--sb-t-display': '34px',
     },
   },
   {
@@ -184,6 +208,12 @@ export const THEMES: AppTheme[] = [
       '--sb-warning':       '#E8B24C', '--sb-warning-tint': 'rgba(232,178,76,.16)',
       '--sb-shadow-panel':  '-8px 0 44px -12px rgba(0,0,0,.7)',
       '--sb-shadow-accent': '0 2px 0 rgba(27,19,48,.45)',
+      // Shape. Soft and roomy, because it is blurred washes.
+      '--sb-r-chip': '10px', '--sb-r-sm': '12px', '--sb-r-nav': '12px',
+      '--sb-r-card': '22px', '--sb-r-frame': '28px',
+      '--sb-border-width': '1px',
+      '--sb-h-pill': '36px', '--sb-h-nav': '38px', '--sb-h-header': '72px',
+      '--sb-t-h2': '19px', '--sb-t-h1': '28px', '--sb-t-display': '34px',
     },
   },
   {
@@ -223,6 +253,12 @@ export const THEMES: AppTheme[] = [
       '--sb-warning':       '#7E5410', '--sb-warning-tint': '#F2EBDC',
       '--sb-shadow-panel':  '-8px 0 40px -12px rgba(19,26,23,.22)',
       '--sb-shadow-accent': '0 2px 0 rgba(8,44,34,.3)',
+      // Shape. Tighter, because it is a working tool.
+      '--sb-r-chip': '6px', '--sb-r-sm': '7px', '--sb-r-nav': '8px',
+      '--sb-r-card': '12px', '--sb-r-frame': '16px',
+      '--sb-border-width': '1px',
+      '--sb-h-pill': '32px', '--sb-h-nav': '34px', '--sb-h-header': '64px',
+      '--sb-t-h2': '18px', '--sb-t-h1': '26px', '--sb-t-display': '29px',
     },
   },
 ]

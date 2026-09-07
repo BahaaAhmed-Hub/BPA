@@ -127,7 +127,7 @@ function AccountRow({ account, balance, unconverted, pending, selected, hovered,
         display: 'flex', alignItems: 'center', gap: 11,
         minHeight: 46, padding: '0 12px 0 6px', borderRadius: 'var(--sb-r-nav)',
         background: selected ? 'var(--sb-accent-tint)' : hovered ? 'var(--sb-accent-tint)' : 'var(--sb-card)',
-        border: `1px solid ${selected ? 'var(--sb-accent)' : hovered ? 'var(--sb-border)' : 'var(--sb-hairline)'}`,
+        border: `var(--sb-border-width) solid ${selected ? 'var(--sb-accent)' : hovered ? 'var(--sb-border)' : 'var(--sb-hairline)'}`,
         boxSizing: 'border-box', position: 'relative', cursor: 'pointer',
         transform: CSS.Transform.toString(transform),
         transition,
@@ -228,7 +228,7 @@ function AccountRow({ account, balance, unconverted, pending, selected, hovered,
         style={{
           width: 26, height: 26, borderRadius: 'var(--sb-r-pill)', padding: 0, flexShrink: 0, marginLeft: 4,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
+          background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)',
           color: hovered || selected ? 'var(--sb-ink-3)' : 'var(--sb-border)', cursor: 'pointer',
         }}>
         <Pencil size={ICON.sm} />
@@ -364,7 +364,7 @@ export function BalanceScreen() {
       {/* Header */}
       <div style={{
         flexShrink: 0,
-        borderBottom: '1px solid var(--sb-border)',
+        borderBottom: 'var(--sb-border-width) solid var(--sb-border)',
         padding: '14px 26px 16px',
         display: 'flex', alignItems: 'flex-end', gap: 20,
       }}>
@@ -442,7 +442,7 @@ export function BalanceScreen() {
           flex: 1,
           overflowY: 'auto',
           padding: '22px 26px',
-          borderRight: '1px solid var(--sb-border)',
+          borderRight: 'var(--sb-border-width) solid var(--sb-border)',
         }}>
           {/* ── Account groups ── */}
           {[
@@ -521,7 +521,7 @@ export function BalanceScreen() {
               gap: 6,
               padding: '5px 8px 5px 12px',
               background: 'var(--sb-card)',
-              border: '1px solid var(--sb-border)',
+              border: 'var(--sb-border-width) solid var(--sb-border)',
               borderRadius: 'var(--sb-r-nav)',
             }}>
               <input type="date" value={rangeFrom} max={rangeTo || undefined}
@@ -558,9 +558,9 @@ export function BalanceScreen() {
                 onClick={() => setFocusId(null)}
                 title="Show every account again"
                 style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 7, height: 34,
+                  display: 'inline-flex', alignItems: 'center', gap: 7, height: 'var(--sb-h-pill)',
                   padding: '0 8px 0 12px', borderRadius: 'var(--sb-r-nav)', cursor: 'pointer',
-                  background: 'var(--sb-accent-tint)', border: '1px solid var(--sb-accent)', color: 'var(--sb-accent-deep)',
+                  background: 'var(--sb-accent-tint)', border: 'var(--sb-border-width) solid var(--sb-accent)', color: 'var(--sb-accent-deep)',
                   fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
                 }}>
                 {focused.name}
@@ -575,7 +575,7 @@ export function BalanceScreen() {
                 onClick={() => { setRangeFrom(''); setRangeTo('') }}
                 title={`Show all ${onFocused} entries on ${focused.name}`}
                 style={{
-                  height: 34, padding: '0 11px', borderRadius: 'var(--sb-r-nav)', cursor: 'pointer',
+                  height: 'var(--sb-h-pill)', padding: '0 11px', borderRadius: 'var(--sb-r-nav)', cursor: 'pointer',
                   background: 'transparent', border: '1px dashed var(--sb-border)', color: 'var(--sb-ink-3)',
                   fontFamily: 'inherit', fontSize: 'var(--sb-t-meta)', fontWeight: 500, whiteSpace: 'nowrap',
                 }}>
@@ -612,7 +612,7 @@ export function BalanceScreen() {
                     alignItems: 'center',
                     gap: 12,
                     padding: '11px 0',
-                    borderBottom: '1px solid var(--sb-border)',
+                    borderBottom: 'var(--sb-border-width) solid var(--sb-border)',
                     cursor: 'pointer',
                     ...unpaidRow(isUnpaid(tx)),
                   }}

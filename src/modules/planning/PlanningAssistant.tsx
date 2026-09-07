@@ -102,12 +102,12 @@ function ContextMenu({ menu, onClose }: { menu: ContextMenuState; onClose: () =>
       <div className="sb-blur-surface" style={{
         position: 'fixed', left: menu.x, top: menu.y, zIndex: 8001,
         background: 'var(--sb-card)',
-        border: '1px solid var(--sb-border)',
+        border: 'var(--sb-border-width) solid var(--sb-border)',
         borderRadius: 'var(--sb-r-nav)', overflow: 'hidden',
         boxShadow: 'var(--sb-shadow-menu)', minWidth: 220,
       }}>
         {/* Event info header */}
-        <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--sb-border)' }}>
+        <div style={{ padding: '10px 14px', borderBottom: 'var(--sb-border-width) solid var(--sb-border)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <div style={{ width: 10, height: 10, borderRadius: 'var(--sb-r-pill)', background: menu.color, flexShrink: 0 }} />
             <div style={{ fontSize: 'var(--sb-t-label)', fontWeight: 700, color: 'var(--sb-ink-1)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -141,7 +141,7 @@ function ContextMenu({ menu, onClose }: { menu: ContextMenuState; onClose: () =>
           },
         ].filter(Boolean).map((item, i) => item && (
           <button key={i} onClick={item.action} className="sb-menu-row" style={{
-            borderBottom: i < 1 ? '1px solid var(--sb-border)' : 'none',
+            borderBottom: i < 1 ? 'var(--sb-border-width) solid var(--sb-border)' : 'none',
           }}
           >
             {item.icon} {item.label}
@@ -173,7 +173,7 @@ function WeekCalendar({ events, weekStart, viewMode, selectedDay, onSelectDay, o
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
       {/* Day headers */}
-      <div style={{ display: 'flex', borderBottom: '1px solid var(--sb-border)', flexShrink: 0 }}>
+      <div style={{ display: 'flex', borderBottom: 'var(--sb-border-width) solid var(--sb-border)', flexShrink: 0 }}>
         <div style={{ width: 52, flexShrink: 0 }} />
         {visibleDays.map((d, i) => {
           const ds = d.toISOString().slice(0, 10)
@@ -181,7 +181,7 @@ function WeekCalendar({ events, weekStart, viewMode, selectedDay, onSelectDay, o
           return (
             <div key={i} onClick={() => onSelectDay(days.indexOf(d))} style={{
               flex: 1, padding: '8px 0', textAlign: 'center', cursor: 'pointer',
-              borderLeft: i > 0 ? '1px solid var(--sb-border)' : undefined,
+              borderLeft: i > 0 ? 'var(--sb-border-width) solid var(--sb-border)' : undefined,
             }}>
               <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', fontWeight: 600, letterSpacing: '0.04em' }}>
                 {d.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase()}
@@ -223,9 +223,9 @@ function WeekCalendar({ events, weekStart, viewMode, selectedDay, onSelectDay, o
           const totalMin = endMin - startMin
 
           return (
-            <div key={di} style={{ flex: 1, position: 'relative', borderLeft: '1px solid var(--sb-border)', minHeight: HOUR_PX * DAY_HOURS.length }}>
+            <div key={di} style={{ flex: 1, position: 'relative', borderLeft: 'var(--sb-border-width) solid var(--sb-border)', minHeight: HOUR_PX * DAY_HOURS.length }}>
               {DAY_HOURS.map(h => (
-                <div key={h} style={{ position: 'absolute', left: 0, right: 0, top: (h - DAY_HOURS[0]) * HOUR_PX, height: HOUR_PX, borderBottom: '1px solid rgba(255,255,255,0.04)' }} />
+                <div key={h} style={{ position: 'absolute', left: 0, right: 0, top: (h - DAY_HOURS[0]) * HOUR_PX, height: HOUR_PX, borderBottom: 'var(--sb-border-width) solid rgba(255,255,255,0.04)' }} />
               ))}
               {dayEvents.map((evt, ei) => {
                 const sMin = timeToMin(evt.start!.dateTime!)
@@ -358,7 +358,7 @@ export function PlanningAssistant() {
 
       <div style={{ flex: 1, display: 'flex', minHeight: 0, overflow: 'hidden' }}>
         {/* ── Left panel: fixed layout, no outer scroll ── */}
-        <div style={{ width: 380, flexShrink: 0, display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--sb-border)', overflow: 'hidden' }}>
+        <div style={{ width: 380, flexShrink: 0, display: 'flex', flexDirection: 'column', borderRight: 'var(--sb-border-width) solid var(--sb-border)', overflow: 'hidden' }}>
 
           {/* Scrollable top: insights + suggestions */}
           <div style={{ flex: '0 0 auto', overflowY: 'auto', padding: '20px 20px 0', maxHeight: '55%', minHeight: 0 }}>
@@ -390,7 +390,7 @@ export function PlanningAssistant() {
                     <div key={i} onClick={() => setChatInput(`Help me with: ${ins.message}`)} style={{
                       display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', borderRadius: 'var(--sb-r-chip)', marginBottom: 6, cursor: 'pointer',
                       background: ins.type === 'warning' ? 'color-mix(in srgb, var(--sb-accent) 8.0%, transparent)' : ins.type === 'win' ? 'color-mix(in srgb, var(--sb-positive) 8.0%, transparent)' : 'color-mix(in srgb, var(--sb-info) 8.0%, transparent)',
-                      border: `1px solid ${ins.type === 'warning' ? 'color-mix(in srgb, var(--sb-accent) 20.0%, transparent)' : ins.type === 'win' ? 'color-mix(in srgb, var(--sb-positive) 20.0%, transparent)' : 'color-mix(in srgb, var(--sb-info) 20.0%, transparent)'}`,
+                      border: `var(--sb-border-width) solid ${ins.type === 'warning' ? 'color-mix(in srgb, var(--sb-accent) 20.0%, transparent)' : ins.type === 'win' ? 'color-mix(in srgb, var(--sb-positive) 20.0%, transparent)' : 'color-mix(in srgb, var(--sb-info) 20.0%, transparent)'}`,
                     }}>
                       {ins.type === 'warning' && <AlertTriangle size={ICON.sm} color="var(--sb-accent)" />}
                       {ins.type === 'tip'     && <Lightbulb size={ICON.sm} color="var(--sb-info)" />}
@@ -420,7 +420,7 @@ export function PlanningAssistant() {
                 {WEEK_SUGGESTIONS.map((s, i) => (
                   <button key={i} onClick={() => setChatInput(s)} style={{
                     padding: '8px 12px', borderRadius: 'var(--sb-r-chip)', textAlign: 'left', cursor: 'pointer', fontSize: 'var(--sb-t-body-s)',
-                    background: 'var(--sb-page)', border: '1px solid var(--sb-border)',
+                    background: 'var(--sb-page)', border: 'var(--sb-border-width) solid var(--sb-border)',
                     color: 'var(--sb-ink-2)', fontWeight: 400,
                   }}>
                     {s}
@@ -434,7 +434,7 @@ export function PlanningAssistant() {
           <div ref={chatRef} style={{
             flex: 1, overflowY: 'auto', padding: '8px 20px',
             display: 'flex', flexDirection: 'column', gap: 8,
-            borderTop: '1px solid var(--sb-border)',
+            borderTop: 'var(--sb-border-width) solid var(--sb-border)',
           }}>
             {messages.length === 0 && (
               <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -450,20 +450,20 @@ export function PlanningAssistant() {
                 color: m.role === 'user' ? 'var(--sb-accent-ink)' : 'var(--sb-ink-2)',
                 alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start',
                 maxWidth: '85%',
-                border: m.role === 'assistant' ? '1px solid var(--sb-border)' : 'none',
+                border: m.role === 'assistant' ? 'var(--sb-border-width) solid var(--sb-border)' : 'none',
               }}>
                 {m.text}
               </div>
             ))}
             {chatLoading && (
-              <div style={{ padding: '8px 11px', borderRadius: 'var(--sb-r-chip)', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', border: '1px solid var(--sb-border)', background: 'var(--sb-page)', alignSelf: 'flex-start' }}>
+              <div style={{ padding: '8px 11px', borderRadius: 'var(--sb-r-chip)', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', border: 'var(--sb-border-width) solid var(--sb-border)', background: 'var(--sb-page)', alignSelf: 'flex-start' }}>
                 Thinking…
               </div>
             )}
           </div>
 
           {/* Chat input — pinned to bottom */}
-          <div style={{ flexShrink: 0, padding: '10px 20px 16px', borderTop: '1px solid var(--sb-border)' }}>
+          <div style={{ flexShrink: 0, padding: '10px 20px 16px', borderTop: 'var(--sb-border-width) solid var(--sb-border)' }}>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               <div style={{ flex: 1, position: 'relative' }}>
                 <input
@@ -473,7 +473,7 @@ export function PlanningAssistant() {
                   placeholder="Describe your ideal schedule…"
                   style={{
                     width: '100%', background: 'var(--sb-page)',
-                    border: `1px solid ${chatInput ? 'var(--sb-accent)' : 'var(--sb-border)'}`,
+                    border: `var(--sb-border-width) solid ${chatInput ? 'var(--sb-accent)' : 'var(--sb-border)'}`,
                     borderRadius: 'var(--sb-r-card)', padding: '9px 36px 9px 14px',
                     color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', outline: 'none',
                     boxSizing: 'border-box', transition: 'border-color 0.15s',
@@ -484,7 +484,7 @@ export function PlanningAssistant() {
                 </button>
               </div>
               <button onClick={() => void sendChat()} disabled={!chatInput.trim() || chatLoading} style={{
-                width: 36, height: 36, borderRadius: 'var(--sb-r-pill)', border: 'none', cursor: chatInput.trim() ? 'pointer' : 'default',
+                width: 'var(--sb-h-nav)', height: 'var(--sb-h-nav)', borderRadius: 'var(--sb-r-pill)', border: 'none', cursor: chatInput.trim() ? 'pointer' : 'default',
                 background: chatInput.trim() ? 'var(--sb-accent)' : 'var(--sb-border)',
                 color: chatInput.trim() ? 'var(--sb-accent-ink)' : 'var(--sb-ink-3)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                 transition: 'background 0.15s', flexShrink: 0,
@@ -497,7 +497,7 @@ export function PlanningAssistant() {
 
         {/* ── Right panel: calendar ── */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
-          <div style={{ padding: '10px 20px', borderBottom: '1px solid var(--sb-border)', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+          <div style={{ padding: '10px 20px', borderBottom: 'var(--sb-border-width) solid var(--sb-border)', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
             <button onClick={() => setWeekOffset(o => o - 1)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', display: 'flex', padding: 4, borderRadius: 'var(--sb-r-chip)' }}>
               <ChevronLeft size={ICON.lg} />
             </button>
@@ -505,7 +505,7 @@ export function PlanningAssistant() {
               <ChevronRight size={ICON.lg} />
             </button>
             <span style={{ fontSize: 'var(--sb-t-label)', fontWeight: 700, color: 'var(--sb-ink-1)', flex: 1 }}>{weekLabel}</span>
-            <div style={{ display: 'flex', background: 'var(--sb-page)', borderRadius: 'var(--sb-r-chip)', padding: 2, border: '1px solid var(--sb-border)' }}>
+            <div style={{ display: 'flex', background: 'var(--sb-page)', borderRadius: 'var(--sb-r-chip)', padding: 2, border: 'var(--sb-border-width) solid var(--sb-border)' }}>
               {(['day', 'week'] as const).map(m => (
                 <button key={m} onClick={() => setViewMode(m)} style={{
                   padding: '4px 12px', borderRadius: 'var(--sb-r-chip)', cursor: 'pointer', fontSize: 'var(--sb-t-body-s)', fontWeight: 600,

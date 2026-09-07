@@ -59,7 +59,7 @@ function TaskRow({ draft, index, expanded, users, onToggle, onChange, onDelete }
   const q        = Q_OPTIONS.find(o => o.value === draft.quadrant)
 
   const inp: React.CSSProperties = {
-    background: 'var(--sb-page)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-chip)',
+    background: 'var(--sb-page)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-chip)',
     color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', padding: '5px 8px', outline: 'none',
     fontFamily: 'inherit',
   }
@@ -67,7 +67,7 @@ function TaskRow({ draft, index, expanded, users, onToggle, onChange, onDelete }
   return (
     <div style={{
       borderRadius: 'var(--sb-r-nav)',
-      border: `1px solid ${expanded ? 'var(--sb-ink-2)' : 'var(--sb-border)'}`,
+      border: `var(--sb-border-width) solid ${expanded ? 'var(--sb-ink-2)' : 'var(--sb-border)'}`,
       background: expanded ? 'var(--sb-field)' : 'var(--sb-card)',
       overflow: 'hidden',
       transition: 'all 0.15s',
@@ -155,7 +155,7 @@ function TaskRow({ draft, index, expanded, users, onToggle, onChange, onDelete }
                     style={{
                       padding: '4px 10px', borderRadius: 'var(--sb-r-chip)', fontSize: 'var(--sb-t-meta)', fontWeight: active ? 700 : 500,
                       background: active ? alpha(opt.color, 13.3) : 'transparent',
-                      border: `1px solid ${active ? opt.color + '60' : 'var(--sb-border)'}`,
+                      border: `var(--sb-border-width) solid ${active ? opt.color + '60' : 'var(--sb-border)'}`,
                       color: active ? opt.color : 'var(--sb-ink-4)',
                       cursor: 'pointer', transition: 'all 0.1s',
                     }}
@@ -199,7 +199,7 @@ function TaskRow({ draft, index, expanded, users, onToggle, onChange, onDelete }
               onClick={onDelete}
               style={{
                 display: 'flex', alignItems: 'center', gap: 5,
-                background: 'transparent', border: '1px solid var(--sb-border)',
+                background: 'transparent', border: 'var(--sb-border-width) solid var(--sb-border)',
                 borderRadius: 'var(--sb-r-chip)', padding: '4px 10px', color: 'var(--sb-ink-4)',
                 fontSize: 'var(--sb-t-meta)', cursor: 'pointer',
               }}
@@ -209,7 +209,7 @@ function TaskRow({ draft, index, expanded, users, onToggle, onChange, onDelete }
             <button
               onClick={onToggle}
               style={{
-                background: 'rgba(var(--sb-accent-rgb),0.12)', border: '1px solid rgba(var(--sb-accent-rgb),0.45)',
+                background: 'rgba(var(--sb-accent-rgb),0.12)', border: 'var(--sb-border-width) solid rgba(var(--sb-accent-rgb),0.45)',
                 borderRadius: 'var(--sb-r-chip)', padding: '4px 14px', color: 'var(--sb-ink-1)',
                 fontSize: 'var(--sb-t-meta)', fontWeight: 600, cursor: 'pointer',
               }}
@@ -305,12 +305,12 @@ export function MeetingFollowUpPopup({ parentTask, onConfirm, onSkip }: Props) {
         {/* Header */}
         <div style={{
           padding: '16px 20px 14px',
-          borderBottom: '1px solid var(--sb-border)',
+          borderBottom: 'var(--sb-border-width) solid var(--sb-border)',
           display: 'flex', alignItems: 'flex-start', gap: 10,
         }}>
           <div style={{
-            width: 34, height: 34, borderRadius: 'var(--sb-r-nav)',
-            background: 'color-mix(in srgb, var(--sb-positive) 9.4%, transparent)', border: '1px solid color-mix(in srgb, var(--sb-positive) 18.8%, transparent)',
+            width: 'var(--sb-h-pill)', height: 'var(--sb-h-pill)', borderRadius: 'var(--sb-r-nav)',
+            background: 'color-mix(in srgb, var(--sb-positive) 9.4%, transparent)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-positive) 18.8%, transparent)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
           }}>
             <Check size={ICON.md} color="var(--sb-positive)" strokeWidth={STROKE.active} />
@@ -350,7 +350,7 @@ export function MeetingFollowUpPopup({ parentTask, onConfirm, onSkip }: Props) {
                 placeholder={'- Follow up with Ali on the API proposal\n- Schedule deep dive on Q3 metrics\n- John to send updated deck by Friday'}
                 style={{
                   width: '100%', minHeight: 140, resize: 'vertical',
-                  background: 'var(--sb-page)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-chip)',
+                  background: 'var(--sb-page)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-chip)',
                   color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', padding: '10px 12px',
                   outline: 'none', fontFamily: 'inherit', lineHeight: 1.5,
                   boxSizing: 'border-box',
@@ -365,7 +365,7 @@ export function MeetingFollowUpPopup({ parentTask, onConfirm, onSkip }: Props) {
               {error && (
                 <div style={{
                   marginTop: 10, padding: '8px 12px', borderRadius: 'var(--sb-r-chip)',
-                  background: 'color-mix(in srgb, var(--sb-negative) 9.4%, transparent)', border: '1px solid color-mix(in srgb, var(--sb-negative) 25.1%, transparent)',
+                  background: 'color-mix(in srgb, var(--sb-negative) 9.4%, transparent)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-negative) 25.1%, transparent)',
                   color: 'var(--sb-negative)', fontSize: 'var(--sb-t-meta)', lineHeight: 1.4,
                 }}>
                   {error}
@@ -425,12 +425,12 @@ export function MeetingFollowUpPopup({ parentTask, onConfirm, onSkip }: Props) {
         {/* Footer */}
         <div style={{
           padding: '12px 20px',
-          borderTop: '1px solid var(--sb-border)',
+          borderTop: 'var(--sb-border-width) solid var(--sb-border)',
           display: 'flex', gap: 8, justifyContent: 'flex-end', alignItems: 'center',
         }}>
           <button onClick={onSkip} style={{
             padding: '7px 16px', borderRadius: 'var(--sb-r-chip)', fontSize: 'var(--sb-t-body-s)',
-            background: 'transparent', border: '1px solid var(--sb-border)',
+            background: 'transparent', border: 'var(--sb-border-width) solid var(--sb-border)',
             color: 'var(--sb-ink-4)', cursor: 'pointer',
           }}>
             Skip
@@ -443,7 +443,7 @@ export function MeetingFollowUpPopup({ parentTask, onConfirm, onSkip }: Props) {
               style={{
                 padding: '7px 16px', borderRadius: 'var(--sb-r-chip)', fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
                 background: loading ? 'var(--sb-field)' : 'color-mix(in srgb, var(--sb-info) 10.0%, transparent)',
-                border: '1px solid color-mix(in srgb, var(--sb-info) 31.4%, transparent)',
+                border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-info) 31.4%, transparent)',
                 color: loading ? 'var(--sb-ink-4)' : 'var(--sb-info)',
                 cursor: loading ? 'not-allowed' : 'pointer',
                 display: 'flex', alignItems: 'center', gap: 6,
@@ -459,7 +459,7 @@ export function MeetingFollowUpPopup({ parentTask, onConfirm, onSkip }: Props) {
               style={{
                 padding: '7px 18px', borderRadius: 'var(--sb-r-chip)', fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
                 background: activeCount > 0 ? 'color-mix(in srgb, var(--sb-positive) 13.3%, transparent)' : 'var(--sb-field)',
-                border: `1px solid ${activeCount > 0 ? 'color-mix(in srgb, var(--sb-positive) 31.4%, transparent)' : 'var(--sb-border)'}`,
+                border: `var(--sb-border-width) solid ${activeCount > 0 ? 'color-mix(in srgb, var(--sb-positive) 31.4%, transparent)' : 'var(--sb-border)'}`,
                 color: activeCount > 0 ? 'var(--sb-positive)' : 'var(--sb-ink-4)',
                 cursor: activeCount > 0 ? 'pointer' : 'not-allowed',
                 display: 'flex', alignItems: 'center', gap: 6,

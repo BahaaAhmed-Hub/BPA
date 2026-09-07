@@ -25,7 +25,7 @@ export function SyncGapBanner() {
     <div style={{
       display: 'flex', alignItems: 'flex-start', gap: 10,
       margin: '0 22px 10px', padding: '11px 14px', borderRadius: 'var(--sb-r-nav)',
-      background: 'rgba(var(--sb-accent-rgb),0.20)', border: '1px solid rgba(var(--sb-accent-rgb),0.65)',
+      background: 'rgba(var(--sb-accent-rgb),0.20)', border: 'var(--sb-border-width) solid rgba(var(--sb-accent-rgb),0.65)',
     }}>
       <AlertCircle size={ICON.md} color="var(--sb-accent-deep)" style={{ flexShrink: 0, marginTop: 1 }} />
       <div style={{ flex: 1, minWidth: 0 }}>

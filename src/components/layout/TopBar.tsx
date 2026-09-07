@@ -28,9 +28,9 @@ export function TopBar({ title, subtitle }: TopBarProps) {
     <header
       className="sb-blur-surface"
       style={{
-        height: 64,
+        height: 'var(--sb-h-header)',
         background: 'var(--sb-card)',
-        borderBottom: '1px solid var(--sb-border)',
+        borderBottom: 'var(--sb-border-width) solid var(--sb-border)',
         display: 'flex',
         alignItems: 'center',
         padding: '0 24px',
@@ -102,7 +102,7 @@ export function TopBar({ title, subtitle }: TopBarProps) {
           <>
             <div onClick={() => setMenuOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 40 }} />
             <Card style={{ position: 'absolute', right: 0, top: 40, zIndex: 50, padding: 8, minWidth: 200 }}>
-              <div style={{ padding: '8px 12px 10px', borderBottom: '1px solid var(--sb-border)', marginBottom: 6 }}>
+              <div style={{ padding: '8px 12px 10px', borderBottom: 'var(--sb-border-width) solid var(--sb-border)', marginBottom: 6 }}>
                 <p style={{ margin: 0, fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>{user?.name ?? 'User'}</p>
                 <p style={{ margin: '2px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>{user?.email}</p>
               </div>

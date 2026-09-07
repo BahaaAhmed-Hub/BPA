@@ -41,7 +41,7 @@ const SLOTS: string[] = Array.from({ length: 96 }, (_, i) =>
 
 const FIELD: React.CSSProperties = {
   width: '100%', boxSizing: 'border-box', height: 32, padding: '0 10px',
-  background: 'var(--sb-field)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-chip)',
+  background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-chip)',
   ...T.meta, color: 'var(--sb-ink-1)', cursor: 'pointer',
   display: 'flex', alignItems: 'center', textAlign: 'left',
 }
@@ -95,14 +95,14 @@ export function TimeSelect({ value, onChange, label, size = 'compact' }: {
         ...FIELD, borderColor: open ? 'var(--sb-border)' : 'var(--sb-border)',
         ...(size === 'large' ? {
           height: 48, borderRadius: 'var(--sb-r-nav)', ...T.body,
-          border: '1px solid transparent', justifyContent: 'center',
+          border: 'var(--sb-border-width) solid transparent', justifyContent: 'center',
         } : null),
       }}>{formatTime(value)}</button>
 
       {open && (
         <div style={{
           position: 'absolute', top: 'calc(100% + 5px)', left: 0, zIndex: 90, width: '100%', minWidth: 124,
-          background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', padding: 6,
+          background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', padding: 6,
           boxShadow: 'var(--sb-shadow-frame)',
         }}>
           <input
@@ -112,7 +112,7 @@ export function TimeSelect({ value, onChange, label, size = 'compact' }: {
             placeholder="type e.g. 9:45"
             style={{
               width: '100%', boxSizing: 'border-box', height: 28, padding: '0 8px', marginBottom: 5,
-              background: 'var(--sb-field)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-chip)',
+              background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-chip)',
               ...T.meta, color: 'var(--sb-ink-1)', outline: 'none', textAlign: 'left',
             }} />
           <div ref={listRef} style={{ maxHeight: 196, overflowY: 'auto', scrollbarWidth: 'thin' }}>
@@ -195,7 +195,7 @@ export function SchedulePopover({ date, start, duration, onApply, onClose, align
       style={{
         position: 'absolute', top: 'calc(100% + 8px)', zIndex: 80, width: 292,
         ...(align === 'right' ? { right: 0 } : { left: 0 }),
-        background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-card)', padding: 14,
+        background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-card)', padding: 14,
         boxShadow: 'var(--sb-shadow-frame)', textAlign: 'left',
       }}>
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: 10 }}>
@@ -247,7 +247,7 @@ export function SchedulePopover({ date, start, duration, onApply, onClose, align
         ) : (
           <div style={{
             marginTop: 9, padding: '8px 10px', borderRadius: 'var(--sb-r-sm)',
-            background: 'rgba(var(--sb-accent-rgb),0.22)', border: '1px solid rgba(var(--sb-accent-rgb),0.7)',
+            background: 'rgba(var(--sb-accent-rgb),0.22)', border: 'var(--sb-border-width) solid rgba(var(--sb-accent-rgb),0.7)',
           }}>
             <p style={{ ...T.meta, margin: 0, fontWeight: 600, color: 'var(--sb-ink-2)' }}>
               {conflicts.length === 1 ? 'Clashes with' : `Clashes with ${conflicts.length} events`}
@@ -278,7 +278,7 @@ export function SchedulePopover({ date, start, duration, onApply, onClose, align
             type="button"
             onClick={() => { onApply({ dueDate: undefined, plannedTime: undefined, duration: undefined }); onClose() }}
             style={{
-              height: 30, padding: '0 12px', borderRadius: 'var(--sb-r-chip)', border: '1px solid var(--sb-border)', cursor: 'pointer',
+              height: 30, padding: '0 12px', borderRadius: 'var(--sb-r-chip)', border: 'var(--sb-border-width) solid var(--sb-border)', cursor: 'pointer',
               background: 'transparent', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body-s)', fontWeight: 500, fontFamily: 'inherit',
             }}>Clear</button>
         )}

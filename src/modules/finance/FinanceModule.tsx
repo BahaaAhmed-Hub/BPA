@@ -193,7 +193,7 @@ export function FinanceModule() {
       <div style={{
         height: 44, flexShrink: 0,
         background: 'var(--sb-header)',
-        borderBottom: '1px solid var(--sb-border)',
+        borderBottom: 'var(--sb-border-width) solid var(--sb-border)',
         display: 'flex', alignItems: 'center',
         padding: '0 12px', gap: 2,
       }}>
@@ -218,7 +218,7 @@ export function FinanceModule() {
                 style={{
                   width: 'auto', height: 30, cursor: 'grab',
                   opacity: isDragging ? 0.35 : 1,
-                  outline: isDropTarget ? '1px solid var(--sb-accent)' : 'none',
+                  outline: isDropTarget ? 'var(--sb-border-width) solid var(--sb-accent)' : 'none',
                 }}
               />
             )
@@ -232,7 +232,7 @@ export function FinanceModule() {
             title="Lock the finances"
             style={{
               height: 30, width: 30, borderRadius: 'var(--sb-r-chip)', marginRight: 7,
-              background: 'transparent', border: '1px solid var(--sb-border)', cursor: 'pointer',
+              background: 'transparent', border: 'var(--sb-border-width) solid var(--sb-border)', cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
             }}
           >
@@ -246,7 +246,7 @@ export function FinanceModule() {
           title="Add several entries at once"
           style={{
             height: 30, paddingInline: 12, borderRadius: 'var(--sb-r-chip)',
-            background: 'transparent', border: '1px solid var(--sb-border)', cursor: 'pointer',
+            background: 'transparent', border: 'var(--sb-border-width) solid var(--sb-border)', cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             flexShrink: 0, gap: 5, marginRight: 7,
             fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-3)',

@@ -150,7 +150,7 @@ export function Step1Welcome({ data, onChange }: Props) {
         {FEATURES.map(f => (
           <div key={f.title} className="wz-feature-card" style={{
             padding: '14px 12px', borderRadius: 'var(--sb-r-nav)', textAlign: 'center',
-            background: 'var(--sb-info-tint)', border: '1px solid color-mix(in srgb, var(--sb-info) 20%, transparent)',
+            background: 'var(--sb-info-tint)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-info) 20%, transparent)',
             boxShadow: 'var(--sb-shadow-control)',
           }}>
             <div style={{ fontSize: 'var(--sb-t-h1)', marginBottom: 8 }}>{f.emoji}</div>
@@ -172,7 +172,7 @@ export function Step1Welcome({ data, onChange }: Props) {
           placeholder="Your name..."
           autoFocus
           style={{
-            background: 'var(--sb-card)', border: '1px solid var(--sb-hairline)', borderRadius: 'var(--sb-r-nav)',
+            background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-hairline)', borderRadius: 'var(--sb-r-nav)',
             padding: '11px 14px', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body)', outline: 'none',
             width: '100%', boxSizing: 'border-box',
             boxShadow: 'var(--sb-shadow-control)',
@@ -208,7 +208,7 @@ export function Step1Welcome({ data, onChange }: Props) {
               }}>
                 <div style={{ padding: 9 }}>
                   <div style={{
-                    background: tk['--sb-card'], border: `1px solid ${tk['--sb-border']}`,
+                    background: tk['--sb-card'], border: `var(--sb-border-width) solid ${tk['--sb-border']}`,
                     borderRadius: 'var(--sb-r-chip)', padding: 8, display: 'flex', alignItems: 'center', gap: 7,
                   }}>
                     <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>

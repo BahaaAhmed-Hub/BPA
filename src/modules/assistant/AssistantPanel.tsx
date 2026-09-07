@@ -112,7 +112,7 @@ function MessageBubble({ msg }: { msg: DisplayMessage }) {
         <span style={{
           display: 'inline-flex', alignItems: 'center', gap: 5,
           padding: '3px 10px', borderRadius: 'var(--sb-r-card)', fontSize: 'var(--sb-t-meta)',
-          background: 'color-mix(in srgb, var(--sb-info) 10.0%, transparent)', border: '1px solid color-mix(in srgb, var(--sb-info) 20.0%, transparent)',
+          background: 'color-mix(in srgb, var(--sb-info) 10.0%, transparent)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-info) 20.0%, transparent)',
           color: 'var(--sb-info)',
         }}>
           <Wrench size={ICON.sm} style={{ animation: 'spin 1s linear infinite' }} />
@@ -127,7 +127,7 @@ function MessageBubble({ msg }: { msg: DisplayMessage }) {
       <div style={{ margin: '8px 12px' }}>
         <div style={{
           padding: '10px 12px', borderRadius: 'var(--sb-r-nav)', fontSize: 'var(--sb-t-body-s)', lineHeight: 1.55,
-          background: 'color-mix(in srgb, var(--sb-negative) 10.0%, transparent)', border: '1px solid color-mix(in srgb, var(--sb-negative) 20.0%, transparent)',
+          background: 'color-mix(in srgb, var(--sb-negative) 10.0%, transparent)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-negative) 20.0%, transparent)',
           color: 'var(--sb-negative-tint)',
         }}>
           {msg.content}
@@ -151,9 +151,13 @@ function MessageBubble({ msg }: { msg: DisplayMessage }) {
       )}
       <div style={{
         maxWidth: '80%', padding: '9px 12px',
-        borderRadius: isUser ? '14px 14px 4px 14px' : '4px 14px 14px 14px',
+        // Three corners on the card radius and one tucked in at the tail, so
+        // the bubble points at whoever said it — and both move with the theme.
+        borderRadius: isUser
+          ? 'var(--sb-r-nav) var(--sb-r-nav) var(--sb-r-chip) var(--sb-r-nav)'
+          : 'var(--sb-r-chip) var(--sb-r-nav) var(--sb-r-nav) var(--sb-r-nav)',
         background: isUser ? 'var(--sb-accent)' : 'var(--sb-field)',
-        border: isUser ? 'none' : '1px solid var(--sb-border)',
+        border: isUser ? 'none' : 'var(--sb-border-width) solid var(--sb-border)',
         fontSize: 'var(--sb-t-body)', lineHeight: 1.6,
         color: isUser ? 'var(--sb-accent-ink)' : 'var(--sb-ink-1)',
         whiteSpace: 'pre-wrap', wordBreak: 'break-word',
@@ -174,7 +178,7 @@ function ThinkingDot() {
       }}>
         <Brain size={ICON.sm} color="var(--sb-ink-on-fill)" />
       </div>
-      <div style={{ display: 'flex', gap: 4, padding: '10px 14px', background: 'var(--sb-field)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-chip) var(--sb-r-card) var(--sb-r-card) var(--sb-r-card)' }}>
+      <div style={{ display: 'flex', gap: 4, padding: '10px 14px', background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-chip) var(--sb-r-card) var(--sb-r-card) var(--sb-r-card)' }}>
         {[0, 1, 2].map(i => (
           <div key={i} style={{ width: 6, height: 6, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-info)', animation: `bounce 1.2s ease-in-out ${i * 0.2}s infinite` }} />
         ))}
@@ -402,7 +406,7 @@ export function AssistantPanel({ open, onClose }: AssistantPanelProps) {
         position: 'fixed', top: 0, right: 0, bottom: 0, width: 390, zIndex: 150,
         display: 'flex', flexDirection: 'column',
         background: 'var(--sb-page)',
-        borderLeft: '1px solid var(--sb-border)',
+        borderLeft: 'var(--sb-border-width) solid var(--sb-border)',
         transform: open ? 'translateX(0)' : 'translateX(100%)',
         transition: 'transform 0.25s cubic-bezier(0.4,0,0.2,1)',
         boxShadow: open ? '-8px 0 32px rgba(0,0,0,0.4)' : 'none',
@@ -411,7 +415,7 @@ export function AssistantPanel({ open, onClose }: AssistantPanelProps) {
         {/* Header */}
         <div style={{
           display: 'flex', alignItems: 'center', gap: 10,
-          padding: '14px 16px', borderBottom: '1px solid var(--sb-border)', flexShrink: 0,
+          padding: '14px 16px', borderBottom: 'var(--sb-border-width) solid var(--sb-border)', flexShrink: 0,
         }}>
           <div style={{
             width: 32, height: 32, borderRadius: 'var(--sb-r-sm)',
@@ -446,7 +450,7 @@ export function AssistantPanel({ open, onClose }: AssistantPanelProps) {
               <div style={{
                 width: 56, height: 56, borderRadius: 'var(--sb-r-card)', margin: '0 auto 16px',
                 background: 'linear-gradient(135deg, color-mix(in srgb, var(--sb-info) 20.0%, transparent) 0%, color-mix(in srgb, var(--sb-info) 10.0%, transparent) 100%)',
-                border: '1px solid color-mix(in srgb, var(--sb-info) 25.0%, transparent)',
+                border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-info) 25.0%, transparent)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
                 <Brain size={26} color="var(--sb-info)" />
@@ -460,7 +464,7 @@ export function AssistantPanel({ open, onClose }: AssistantPanelProps) {
                   <button key={s} onClick={() => void sendMessage(s)}
                     style={{
                       padding: '9px 14px', borderRadius: 'var(--sb-r-nav)', fontSize: 'var(--sb-t-body-s)', textAlign: 'left',
-                      background: 'var(--sb-field)', border: '1px solid var(--sb-border)',
+                      background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)',
                       color: 'var(--sb-ink-1)', cursor: 'pointer',
                       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     }}>
@@ -480,11 +484,11 @@ export function AssistantPanel({ open, onClose }: AssistantPanelProps) {
         </div>
 
         {/* Input */}
-        <div style={{ padding: '12px 14px 14px', borderTop: '1px solid var(--sb-border)', flexShrink: 0 }}>
+        <div style={{ padding: '12px 14px 14px', borderTop: 'var(--sb-border-width) solid var(--sb-border)', flexShrink: 0 }}>
           <div style={{
             display: 'flex', alignItems: 'flex-end', gap: 8,
             background: 'var(--sb-field)',
-            border: '1px solid var(--sb-border)',
+            border: 'var(--sb-border-width) solid var(--sb-border)',
             borderRadius: 'var(--sb-r-nav)', padding: '10px 12px',
           }}>
             <textarea

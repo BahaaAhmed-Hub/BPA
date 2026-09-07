@@ -226,7 +226,7 @@ async function checkSupabase(): Promise<boolean> {
 
 const inputStyle: React.CSSProperties = {
   background: 'var(--sb-field)',
-  border: '1px solid var(--sb-border)',
+  border: 'var(--sb-border-width) solid var(--sb-border)',
   borderRadius: 'var(--sb-r-chip)', color: 'var(--sb-ink-1)',
   fontSize: 'var(--sb-t-body)', padding: '7px 11px', outline: 'none',
   fontFamily: 'var(--sb-font-ui)', width: '100%', boxSizing: 'border-box' as const,
@@ -260,7 +260,7 @@ function FieldRow({ label, sub, children }: { label: string; sub?: string; child
     // it drops to its own line, instead of overflowing onto the next card.
     <div style={{
       display: 'flex', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap',
-      padding: '5px 0', borderBottom: '1px solid var(--sb-hairline)',
+      padding: '5px 0', borderBottom: 'var(--sb-border-width) solid var(--sb-hairline)',
     }}>
       <div style={{ flex: '1 1 150px', minWidth: 0, maxWidth: 172, paddingTop: 2 }}>
         <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)' }}>{label}</span>
@@ -280,7 +280,7 @@ function FieldRow({ label, sub, children }: { label: string; sub?: string; child
 /** Cream pill used for both read-outs and small actions. */
 const PILL_BASE: React.CSSProperties = {
   background: 'var(--sb-field)',
-  border: '1px solid var(--sb-border)',
+  border: 'var(--sb-border-width) solid var(--sb-border)',
   borderRadius: 'var(--sb-r-sm)',
   color: 'var(--sb-ink-1)',
   fontSize: 'var(--sb-t-body)',
@@ -328,7 +328,7 @@ function DRow({ label, sub, children, last }: {
     <div style={{
       display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16,
       padding: '12px 0',
-      borderBottom: last ? 'none' : '1px solid var(--sb-hairline)',
+      borderBottom: last ? 'none' : 'var(--sb-border-width) solid var(--sb-hairline)',
     }}>
       <div style={{ minWidth: 0 }}>
         <p style={{ margin: 0, fontSize: 'var(--sb-t-body)', fontWeight: 500, color: 'var(--sb-ink-1)', lineHeight: 1.3 }}>{label}</p>
@@ -412,13 +412,13 @@ function ProfileSection({
       {/* Identity block */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 14,
-        paddingBottom: 18, borderBottom: '1px solid var(--sb-hairline)',
+        paddingBottom: 18, borderBottom: 'var(--sb-border-width) solid var(--sb-hairline)',
       }}>
         {avatarUrl
-          ? <img src={avatarUrl} alt="" style={{ width: 46, height: 46, borderRadius: 'var(--sb-r-pill)', border: '1px solid var(--sb-border)', flexShrink: 0, objectFit: 'cover' }} />
+          ? <img src={avatarUrl} alt="" style={{ width: 46, height: 46, borderRadius: 'var(--sb-r-pill)', border: 'var(--sb-border-width) solid var(--sb-border)', flexShrink: 0, objectFit: 'cover' }} />
           : <div style={{
               width: 46, height: 46, borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
-              background: 'var(--sb-hairline)', border: '1px solid var(--sb-border)',
+              background: 'var(--sb-hairline)', border: 'var(--sb-border-width) solid var(--sb-border)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 'var(--sb-t-h3)', fontWeight: 700, color: 'var(--sb-ink-3)', letterSpacing: '0.02em',
             }}>{initials}</div>
@@ -476,9 +476,9 @@ function ProfileSection({
           disabled={tzSyncing}
           title="Set the timezone from where you are"
           style={{
-            width: 36, height: 36, borderRadius: 'var(--sb-r-sm)', flexShrink: 0, padding: 0,
+            width: 'var(--sb-h-nav)', height: 'var(--sb-h-nav)', borderRadius: 'var(--sb-r-sm)', flexShrink: 0, padding: 0,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
+            background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)',
             color: tzSyncing ? 'var(--sb-ink-4)' : 'var(--sb-ink-3)',
             cursor: tzSyncing ? 'default' : 'pointer',
           }}>
@@ -508,7 +508,7 @@ function ProfileSection({
                   fontFamily: 'inherit',
                   fontWeight: on ? 600 : 500,
                   background: on ? 'var(--sb-ink-1)' : 'var(--sb-field)',
-                  border: `1px solid ${on ? 'var(--sb-ink-1)' : 'var(--sb-border)'}`,
+                  border: `var(--sb-border-width) solid ${on ? 'var(--sb-ink-1)' : 'var(--sb-border)'}`,
                   color: on ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
                   transition: 'all 0.12s',
                 }}>{d}</button>
@@ -553,7 +553,7 @@ function ScheduleSection({
               style={{
                 padding: '4px 10px', borderRadius: 'var(--sb-r-chip)', fontSize: 'var(--sb-t-meta)', cursor: 'pointer', fontWeight: 500,
                 background: s.bufferMins === n ? 'rgba(var(--sb-accent-rgb),0.12)' : 'var(--sb-field)',
-                border: `1px solid ${s.bufferMins === n ? 'var(--sb-accent)' : 'var(--sb-border)'}`,
+                border: `var(--sb-border-width) solid ${s.bufferMins === n ? 'var(--sb-accent)' : 'var(--sb-border)'}`,
                 color: s.bufferMins === n ? 'var(--sb-accent)' : 'var(--sb-ink-3)',
               }}>{n === 0 ? 'None' : `${n}m`}</button>
           ))}
@@ -566,7 +566,7 @@ function ScheduleSection({
               style={{
                 padding: '4px 10px', borderRadius: 'var(--sb-r-chip)', fontSize: 'var(--sb-t-meta)', cursor: 'pointer', fontWeight: 500,
                 background: s.physicalBufferMins === n ? 'rgba(var(--sb-accent-rgb),0.12)' : 'var(--sb-field)',
-                border: `1px solid ${s.physicalBufferMins === n ? 'var(--sb-accent)' : 'var(--sb-border)'}`,
+                border: `var(--sb-border-width) solid ${s.physicalBufferMins === n ? 'var(--sb-accent)' : 'var(--sb-border)'}`,
                 color: s.physicalBufferMins === n ? 'var(--sb-accent)' : 'var(--sb-ink-3)',
               }}>{n === 0 ? 'None' : `${n}m`}</button>
           ))}
@@ -639,12 +639,12 @@ function CompanyCard({
   }
 
   const tinp: React.CSSProperties = {
-    background: 'transparent', border: 'none', borderBottom: '1px solid var(--sb-info)',
+    background: 'transparent', border: 'none', borderBottom: 'var(--sb-border-width) solid var(--sb-info)',
     outline: 'none', color: 'var(--sb-ink-1)', fontFamily: 'inherit', padding: '0 2px',
   }
 
   return (
-    <div style={{ background: 'var(--sb-page)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', marginBottom: 8, overflow: 'visible', opacity: co.hidden ? 0.55 : 1, transition: 'opacity 0.15s' }}>
+    <div style={{ background: 'var(--sb-page)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', marginBottom: 8, overflow: 'visible', opacity: co.hidden ? 0.55 : 1, transition: 'opacity 0.15s' }}>
       {/* Company header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px' }}>
 
@@ -661,7 +661,7 @@ function CompanyCard({
           {colorOpen && (
             <div style={{
               position: 'absolute', top: 24, left: 0, zIndex: 200,
-              background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
+              background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
               padding: '7px 8px', display: 'flex', gap: 5,
               boxShadow: 'var(--sb-shadow-hover)',
             }}>
@@ -729,7 +729,7 @@ function CompanyCard({
         <button onClick={() => setUsersOpen(o => !o)} title={usersOpen ? 'Collapse members' : 'Expand members'} style={{
           display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0,
           padding: '2px 7px', borderRadius: 'var(--sb-r-chip)', fontSize: 'var(--sb-t-micro)', cursor: 'pointer',
-          background: 'transparent', border: '1px solid var(--sb-border)',
+          background: 'transparent', border: 'var(--sb-border-width) solid var(--sb-border)',
           color: 'var(--sb-ink-3)',
         }}>
           <span style={{ color: co.color, fontWeight: 600 }}>{users.length}</span>
@@ -759,7 +759,7 @@ function CompanyCard({
 
       {/* Users tree */}
       {usersOpen && (
-        <div style={{ borderTop: '1px solid var(--sb-border)', padding: '8px 14px 10px 46px' }}>
+        <div style={{ borderTop: 'var(--sb-border-width) solid var(--sb-border)', padding: '8px 14px 10px 46px' }}>
           {users.length === 0 && (
             <p style={{ margin: '0 0 6px', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-border)', fontStyle: 'italic' }}>No members yet</p>
           )}
@@ -768,7 +768,7 @@ function CompanyCard({
             const isEditing = editingUserId === u.id
             const draft = userDrafts[u.id]
             return (
-              <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0', borderBottom: '1px solid var(--sb-border)' }}>
+              <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0', borderBottom: 'var(--sb-border-width) solid var(--sb-border)' }}>
                 <span style={{ width: 6, height: 6, borderRadius: 'var(--sb-r-pill)', background: co.color, flexShrink: 0 }} />
 
                 {isEditing ? (
@@ -817,7 +817,7 @@ function CompanyCard({
               style={{ ...inputStyle, fontSize: 'var(--sb-t-meta)', padding: '3px 7px', flex: 1 }} />
             <button onClick={addUser} disabled={!newUserName.trim()} style={{
               padding: '3px 10px', borderRadius: 'var(--sb-r-chip)', fontSize: 'var(--sb-t-meta)', fontWeight: 500, cursor: 'pointer',
-              background: 'rgba(var(--sb-accent-rgb),0.12)', border: '1px solid color-mix(in srgb, var(--sb-info) 31.4%, transparent)',
+              background: 'rgba(var(--sb-accent-rgb),0.12)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-info) 31.4%, transparent)',
               color: 'var(--sb-info)', opacity: newUserName.trim() ? 1 : 0.4,
             }}>Add</button>
           </div>
@@ -886,7 +886,7 @@ function CompaniesSection({
       ))}
 
       {adding ? (
-        <div style={{ marginTop: 14, padding: '14px', background: 'var(--sb-field)', borderRadius: 'var(--sb-r-nav)', border: '1px solid var(--sb-border)' }}>
+        <div style={{ marginTop: 14, padding: '14px', background: 'var(--sb-field)', borderRadius: 'var(--sb-r-nav)', border: 'var(--sb-border-width) solid var(--sb-border)' }}>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
             <input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Company name"
               style={{ ...inputStyle, width: 160 }} autoFocus />
@@ -907,11 +907,11 @@ function CompaniesSection({
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
             <button onClick={() => { setAdding(false); setNewName('') }}
-              style={{ padding: '6px 14px', borderRadius: 'var(--sb-r-chip)', background: 'transparent', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body-s)', cursor: 'pointer', display: 'flex', gap: 5, alignItems: 'center' }}>
+              style={{ padding: '6px 14px', borderRadius: 'var(--sb-r-chip)', background: 'transparent', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body-s)', cursor: 'pointer', display: 'flex', gap: 5, alignItems: 'center' }}>
               <X size={ICON.sm} /> Cancel
             </button>
             <button onClick={addCompany} disabled={!newName.trim()}
-              style={{ padding: '6px 16px', borderRadius: 'var(--sb-r-chip)', background: 'rgba(var(--sb-accent-rgb),0.12)', border: '1px solid rgba(var(--sb-accent-rgb),0.31)', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', fontWeight: 500, cursor: 'pointer', opacity: newName.trim() ? 1 : 0.4, display: 'flex', gap: 5, alignItems: 'center' }}>
+              style={{ padding: '6px 16px', borderRadius: 'var(--sb-r-chip)', background: 'rgba(var(--sb-accent-rgb),0.12)', border: 'var(--sb-border-width) solid rgba(var(--sb-accent-rgb),0.31)', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', fontWeight: 500, cursor: 'pointer', opacity: newName.trim() ? 1 : 0.4, display: 'flex', gap: 5, alignItems: 'center' }}>
               <Plus size={ICON.sm} /> Add Company
             </button>
           </div>
@@ -973,7 +973,7 @@ function HabitRowImage({ image, emoji, onChange }: {
         style={{
           width: 30, height: 30, borderRadius: 'var(--sb-r-chip)', flexShrink: 0, padding: 0, overflow: 'hidden',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          background: 'var(--sb-field)', border: '1px solid var(--sb-border)', cursor: 'pointer', fontSize: 'var(--sb-t-h3)',
+          background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)', cursor: 'pointer', fontSize: 'var(--sb-t-h3)',
         }}>
         {image
           ? <img src={image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
@@ -1022,7 +1022,7 @@ function SettingsHabitForm({
   return (
     <div style={{
       display: 'flex', flexDirection: 'column', gap: 18, marginTop: 12,
-      padding: 18, background: 'var(--sb-field)', borderRadius: 'var(--sb-r-nav)', border: '1px solid var(--sb-border)',
+      padding: 18, background: 'var(--sb-field)', borderRadius: 'var(--sb-r-nav)', border: 'var(--sb-border-width) solid var(--sb-border)',
     }}>
 
       {/* Picture, icon, name — the three things that identify a habit */}
@@ -1036,7 +1036,7 @@ function SettingsHabitForm({
               style={{
                 width: 46, height: 46, borderRadius: 'var(--sb-r-nav)', padding: 0, cursor: 'pointer', overflow: 'hidden',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 'var(--sb-t-h2)', color: 'var(--sb-ink-4)', background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
+                fontSize: 'var(--sb-t-h2)', color: 'var(--sb-ink-4)', background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)',
               }}>
               {s.image
                 ? <img src={s.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
@@ -1081,7 +1081,7 @@ function SettingsHabitForm({
             onKeyDown={e => { if (e.key === 'Enter' && valid) onSave(s); if (e.key === 'Escape') onCancel() }}
             style={{
               width: '100%', boxSizing: 'border-box', height: 42, padding: '0 14px',
-              background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
+              background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
               fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)', fontFamily: 'inherit', outline: 'none', textAlign: 'left',
             }} />
         </div>
@@ -1121,15 +1121,15 @@ function SettingsHabitForm({
             <input type="number" min={1} value={s.goal} onChange={e => update({ goal: e.target.value })}
               placeholder="8"
               style={{
-                width: 90, boxSizing: 'border-box', height: 36, padding: '0 12px',
-                background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-sm)',
+                width: 90, boxSizing: 'border-box', height: 'var(--sb-h-nav)', padding: '0 12px',
+                background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-sm)',
                 fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)', fontFamily: 'inherit', outline: 'none', textAlign: 'left',
               }} />
             <input value={s.unit} onChange={e => update({ unit: e.target.value })}
               placeholder="glasses / ml / minutes…"
               style={{
-                flex: 1, minWidth: 0, boxSizing: 'border-box', height: 36, padding: '0 12px',
-                background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-sm)',
+                flex: 1, minWidth: 0, boxSizing: 'border-box', height: 'var(--sb-h-nav)', padding: '0 12px',
+                background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-sm)',
                 fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)', fontFamily: 'inherit', outline: 'none', textAlign: 'left',
               }} />
           </div>
@@ -1143,8 +1143,8 @@ function SettingsHabitForm({
                 onChange={e => update({ step: e.target.value })}
                 placeholder={String(stepFor({ id: s.id ?? '', goal: Number(s.goal) || 0, unit: s.unit }))}
                 style={{
-                  width: 90, boxSizing: 'border-box', height: 36, padding: '0 12px',
-                  background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-sm)',
+                  width: 90, boxSizing: 'border-box', height: 'var(--sb-h-nav)', padding: '0 12px',
+                  background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-sm)',
                   fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)', fontFamily: 'inherit', outline: 'none', textAlign: 'left',
                 }} />
               <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)' }}>
@@ -1171,7 +1171,7 @@ function SettingsHabitForm({
         <button onClick={onCancel}
           style={{
             height: 38, padding: '0 16px', borderRadius: 'var(--sb-r-pill)',
-            background: 'transparent', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-3)',
+            background: 'transparent', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-3)',
             fontSize: 'var(--sb-t-body)', fontFamily: 'inherit', cursor: 'pointer',
             display: 'flex', gap: 6, alignItems: 'center',
           }}>
@@ -1247,11 +1247,11 @@ function AppleHealthBlock({ habits }: { habits: { id: string; name: string; unit
   const pill = {
     height: 28, padding: '0 11px', borderRadius: 'var(--sb-r-chip)', cursor: 'pointer',
     fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
-    background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-1)',
+    background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-1)',
   } as const
 
   return (
-    <div style={{ marginTop: 22, paddingTop: 18, borderTop: '1px solid var(--sb-hairline)' }}>
+    <div style={{ marginTop: 22, paddingTop: 18, borderTop: 'var(--sb-border-width) solid var(--sb-hairline)' }}>
       <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--sb-ink-3)', display: 'block', marginBottom: 10 }}>
         APPLE HEALTH
       </span>
@@ -1272,7 +1272,7 @@ function AppleHealthBlock({ habits }: { habits: { id: string; name: string; unit
       ) : links === null ? (
         <div style={{
           fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-accent-deep)', lineHeight: 1.55, maxWidth: 720,
-          background: 'var(--sb-accent-tint)', border: '1px solid var(--sb-accent-border)', borderRadius: 'var(--sb-r-nav)', padding: '11px 14px',
+          background: 'var(--sb-accent-tint)', border: 'var(--sb-border-width) solid var(--sb-accent-border)', borderRadius: 'var(--sb-r-nav)', padding: '11px 14px',
         }}>
           Your database has nowhere to keep these yet — run{' '}
           <code style={{ fontFamily: 'var(--sb-font-mono)', fontSize: 'var(--sb-t-meta)' }}>supabase/migrations/20260012</code>{' '}
@@ -1285,7 +1285,7 @@ function AppleHealthBlock({ habits }: { habits: { id: string; name: string; unit
             const link = links.find(l => l.habitId === h.id)
             const metric = link?.metric ?? suggestMetric(h.name, h.unit)
             return (
-              <div key={h.id} style={{ border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', background: 'var(--sb-card)' }}>
+              <div key={h.id} style={{ border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', background: 'var(--sb-card)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 13px' }}>
                   <span style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-1)', flex: 1, minWidth: 0 }}>
                     {h.name}
@@ -1312,12 +1312,12 @@ function AppleHealthBlock({ habits }: { habits: { id: string; name: string; unit
                 </div>
 
                 {link && open === link.id && (
-                  <div style={{ borderTop: '1px solid var(--sb-hairline)', padding: '12px 13px', background: 'var(--sb-header)' }}>
+                  <div style={{ borderTop: 'var(--sb-border-width) solid var(--sb-hairline)', padding: '12px 13px', background: 'var(--sb-header)' }}>
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 10 }}>
                       <code style={{
                         flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                         fontFamily: 'var(--sb-font-mono)', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)',
-                        background: 'var(--sb-field)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-chip)', padding: '7px 9px',
+                        background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-chip)', padding: '7px 9px',
                       }}>{ingestUrl(link.token) || 'This build has no Supabase address configured.'}</code>
                       <button style={pill} onClick={() => copy(ingestUrl(link.token), link.id)}>
                         {copied === link.id ? 'Copied' : 'Copy'}
@@ -1397,7 +1397,7 @@ function HabitsSection() {
       </p>
 
       {/* Which view the Habits page opens on — switching it there sticks too */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', paddingBottom: 14, marginBottom: 4, borderBottom: '1px solid var(--sb-border)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', paddingBottom: 14, marginBottom: 4, borderBottom: 'var(--sb-border-width) solid var(--sb-border)' }}>
         <div style={{ flex: '1 1 150px', minWidth: 0, maxWidth: 200 }}>
           <div style={{ fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)' }}>Default view</div>
           <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', marginTop: 2 }}>
@@ -1417,7 +1417,7 @@ function HabitsSection() {
         <div key={h.id}>
           <div style={{
             display: 'flex', alignItems: 'center', gap: 12,
-            padding: '10px 0', borderBottom: '1px solid var(--sb-border)',
+            padding: '10px 0', borderBottom: 'var(--sb-border-width) solid var(--sb-border)',
             opacity: h.isActive ? 1 : 0.5,
           }}>
             <HabitRowImage
@@ -1576,7 +1576,7 @@ function TaskStatusesSection() {
   const isEditingRow = (i: number) => editIdx === i && !adding
 
   const formEl = (
-    <div style={{ padding: '10px 14px', background: 'var(--sb-field)', borderRadius: 'var(--sb-r-chip)', border: '1px solid var(--sb-border)', marginTop: 4, display: 'flex', flexDirection: 'column', gap: 10 }}>
+    <div style={{ padding: '10px 14px', background: 'var(--sb-field)', borderRadius: 'var(--sb-r-chip)', border: 'var(--sb-border-width) solid var(--sb-border)', marginTop: 4, display: 'flex', flexDirection: 'column', gap: 10 }}>
       <div style={{ display: 'flex', gap: 8 }}>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', marginBottom: 4, fontWeight: 600 }}>Label</div>
@@ -1607,11 +1607,11 @@ function TaskStatusesSection() {
       </div>
       <div style={{ display: 'flex', gap: 8 }}>
         <button onClick={() => { setAdding(false); setEditIdx(null) }}
-          style={{ padding: '5px 12px', borderRadius: 'var(--sb-r-chip)', background: 'transparent', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body-s)', cursor: 'pointer', display: 'flex', gap: 4, alignItems: 'center' }}>
+          style={{ padding: '5px 12px', borderRadius: 'var(--sb-r-chip)', background: 'transparent', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body-s)', cursor: 'pointer', display: 'flex', gap: 4, alignItems: 'center' }}>
           <X size={ICON.sm} /> Cancel
         </button>
         <button onClick={confirmSave}
-          style={{ padding: '5px 14px', borderRadius: 'var(--sb-r-chip)', background: 'rgba(var(--sb-accent-rgb),0.12)', border: '1px solid rgba(var(--sb-accent-rgb),0.31)', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', fontWeight: 500, cursor: 'pointer', display: 'flex', gap: 4, alignItems: 'center' }}>
+          style={{ padding: '5px 14px', borderRadius: 'var(--sb-r-chip)', background: 'rgba(var(--sb-accent-rgb),0.12)', border: 'var(--sb-border-width) solid rgba(var(--sb-accent-rgb),0.31)', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', fontWeight: 500, cursor: 'pointer', display: 'flex', gap: 4, alignItems: 'center' }}>
           <Plus size={ICON.sm} /> {adding ? 'Add Status' : 'Save'}
         </button>
       </div>
@@ -1640,7 +1640,7 @@ function TaskStatusesSection() {
             onDragEnd={() => { dragIdx.current = null; setOverIdx(null) }}
             style={{
               display: 'flex', alignItems: 'center', gap: 10,
-              padding: '9px 0', borderBottom: '1px solid var(--sb-border)',
+              padding: '9px 0', borderBottom: 'var(--sb-border-width) solid var(--sb-border)',
               background: overIdx === i ? 'rgba(var(--sb-accent-rgb),0.10)' : 'transparent',
             }}>
             <span title="Drag to reorder" style={{ display: 'flex', color: 'var(--sb-ink-4)', cursor: 'grab', flexShrink: 0 }}>
@@ -1648,7 +1648,7 @@ function TaskStatusesSection() {
             </span>
             <div style={{ width: 10, height: 10, borderRadius: 'var(--sb-r-pill)', background: s.color, flexShrink: 0 }} />
             <span style={{ flex: 1, fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)' }}>{s.label}</span>
-            <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)', background: 'var(--sb-field)', padding: '2px 7px', borderRadius: 'var(--sb-r-chip)', border: '1px solid var(--sb-border)' }}>
+            <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)', background: 'var(--sb-field)', padding: '2px 7px', borderRadius: 'var(--sb-r-chip)', border: 'var(--sb-border-width) solid var(--sb-border)' }}>
               {s.id}
             </span>
             <button onClick={() => startEdit(i)} title="Edit"
@@ -1677,7 +1677,7 @@ function TaskStatusesSection() {
         </button>
         <button onClick={resetDefaults} title="Reset to defaults" style={{
           padding: '11px 14px', borderRadius: 'var(--sb-r-sm)', background: 'transparent',
-          border: '1px solid var(--sb-border)',
+          border: 'var(--sb-border-width) solid var(--sb-border)',
           color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body-s)', cursor: 'pointer',
           display: 'flex', alignItems: 'center', gap: 5,
         }}>
@@ -1698,7 +1698,7 @@ function IntegrationBadge({ icon, label, active, onGrant }: {
       display: 'inline-flex', alignItems: 'center', gap: 4,
       padding: '2px 7px', borderRadius: 'var(--sb-r-card)', fontSize: 'var(--sb-t-micro)', fontWeight: 500,
       background: active ? 'color-mix(in srgb, var(--sb-positive) 10.0%, transparent)' : 'color-mix(in srgb, var(--sb-info) 10.0%, transparent)',
-      border: `1px solid ${active ? 'color-mix(in srgb, var(--sb-positive) 30.0%, transparent)' : 'color-mix(in srgb, var(--sb-info) 25.0%, transparent)'}`,
+      border: `var(--sb-border-width) solid ${active ? 'color-mix(in srgb, var(--sb-positive) 30.0%, transparent)' : 'color-mix(in srgb, var(--sb-info) 25.0%, transparent)'}`,
       color: active ? 'var(--sb-positive)' : 'var(--sb-info)',
     }}>
       {icon}{label}
@@ -1810,11 +1810,11 @@ function AccountsSection({
         display: 'flex', alignItems: 'center', gap: 12,
         padding: '12px 14px', borderRadius: 'var(--sb-r-nav)', marginBottom: 10,
         background: 'var(--sb-field)',
-        border: '1px solid rgba(var(--sb-accent-rgb),0.19)',
+        border: 'var(--sb-border-width) solid rgba(var(--sb-accent-rgb),0.19)',
       }}>
         <div style={{
           width: 32, height: 32, borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
-          background: 'rgba(var(--sb-accent-rgb),0.12)', border: '1px solid rgba(var(--sb-accent-rgb),0.25)',
+          background: 'rgba(var(--sb-accent-rgb),0.12)', border: 'var(--sb-border-width) solid rgba(var(--sb-accent-rgb),0.25)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'var(--sb-t-label)', fontWeight: 700, color: 'var(--sb-ink-1)',
         }}>
           {primaryEmail ? primaryEmail[0].toUpperCase() : 'G'}
@@ -1827,7 +1827,7 @@ function AccountsSection({
             <IntegrationBadge icon={<HardDrive size={ICON.sm} />} label="Drive" active />
           </div>
         </div>
-        <span style={{ fontSize: 'var(--sb-t-micro)', padding: '3px 10px', borderRadius: 'var(--sb-r-card)', background: 'color-mix(in srgb, var(--sb-positive) 10.0%, transparent)', color: 'var(--sb-positive)', border: '1px solid color-mix(in srgb, var(--sb-positive) 20.0%, transparent)' }}>
+        <span style={{ fontSize: 'var(--sb-t-micro)', padding: '3px 10px', borderRadius: 'var(--sb-r-card)', background: 'color-mix(in srgb, var(--sb-positive) 10.0%, transparent)', color: 'var(--sb-positive)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-positive) 20.0%, transparent)' }}>
           Active
         </span>
         {primaryToken && (
@@ -1846,7 +1846,7 @@ function AccountsSection({
 
       {/* Show primary calendars */}
       {calendars['primary'] && (
-        <div style={{ marginBottom: 12, padding: '8px 14px', background: 'var(--sb-field)', borderRadius: 'var(--sb-r-chip)', border: '1px solid var(--sb-border)' }}>
+        <div style={{ marginBottom: 12, padding: '8px 14px', background: 'var(--sb-field)', borderRadius: 'var(--sb-r-chip)', border: 'var(--sb-border-width) solid var(--sb-border)' }}>
           <p style={{ margin: '0 0 6px', fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-ink-3)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>Calendars in this account</p>
           {calendars['primary'].map(name => (
             <p key={name} style={{ margin: '3px 0', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)' }}>• {name}</p>
@@ -1863,11 +1863,11 @@ function AccountsSection({
             display: 'flex', alignItems: 'center', gap: 12,
             padding: '12px 14px', borderRadius: 'var(--sb-r-nav)', marginBottom: 8,
             background: 'var(--sb-field)',
-            border: `1px solid ${isStale ? 'color-mix(in srgb, var(--sb-warning) 35.0%, transparent)' : 'var(--sb-border)'}`,
+            border: `var(--sb-border-width) solid ${isStale ? 'color-mix(in srgb, var(--sb-warning) 35.0%, transparent)' : 'var(--sb-border)'}`,
             opacity: hiddenAccts.has(acc.email) ? 0.5 : 1,
             transition: 'opacity 0.15s',
           }}>
-            <div style={{ width: 32, height: 32, borderRadius: 'var(--sb-r-pill)', flexShrink: 0, background: 'rgba(var(--sb-accent-rgb),0.12)', border: '1px solid color-mix(in srgb, var(--sb-info) 25.1%, transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'var(--sb-t-label)', fontWeight: 700, color: 'var(--sb-info)' }}>
+            <div style={{ width: 32, height: 32, borderRadius: 'var(--sb-r-pill)', flexShrink: 0, background: 'rgba(var(--sb-accent-rgb),0.12)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-info) 25.1%, transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'var(--sb-t-label)', fontWeight: 700, color: 'var(--sb-info)' }}>
               {acc.email ? acc.email[0].toUpperCase() : 'G'}
             </div>
             <div style={{ flex: 1 }}>
@@ -1883,7 +1883,7 @@ function AccountsSection({
                       <span key={c.id} style={{
                         display: 'inline-flex', alignItems: 'center', gap: 5,
                         padding: '2px 8px', borderRadius: 'var(--sb-r-pill)',
-                        background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
+                        background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)',
                         fontSize: 'var(--sb-t-micro)', fontWeight: 600, color: 'var(--sb-ink-3)',
                       }}>
                         <span style={{ width: 6, height: 6, borderRadius: 'var(--sb-r-pill)', background: c.color }} />
@@ -1910,7 +1910,7 @@ function AccountsSection({
                 disabled={isRecon}
                 style={{
                   padding: '4px 10px', borderRadius: 'var(--sb-r-chip)', fontSize: 'var(--sb-t-meta)', fontWeight: 600, cursor: isRecon ? 'wait' : 'pointer',
-                  background: 'color-mix(in srgb, var(--sb-warning) 12.0%, transparent)', border: '1px solid color-mix(in srgb, var(--sb-warning) 40.0%, transparent)', color: 'var(--sb-warning)',
+                  background: 'color-mix(in srgb, var(--sb-warning) 12.0%, transparent)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-warning) 40.0%, transparent)', color: 'var(--sb-warning)',
                   display: 'flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap',
                 }}
               >
@@ -1938,7 +1938,7 @@ function AccountsSection({
 
       {/* Show calendars for additional accounts */}
       {accounts.map(acc => calendars[acc.id] ? (
-        <div key={`${acc.id}-cals`} style={{ marginBottom: 8, padding: '8px 14px', background: 'var(--sb-field)', borderRadius: 'var(--sb-r-chip)', border: '1px solid var(--sb-border)' }}>
+        <div key={`${acc.id}-cals`} style={{ marginBottom: 8, padding: '8px 14px', background: 'var(--sb-field)', borderRadius: 'var(--sb-r-chip)', border: 'var(--sb-border-width) solid var(--sb-border)' }}>
           <p style={{ margin: '0 0 6px', fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-ink-3)', textTransform: 'uppercase' }}>{acc.email} calendars</p>
           {calendars[acc.id].map(name => <p key={name} style={{ margin: '3px 0', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)' }}>• {name}</p>)}
         </div>
@@ -1971,7 +1971,7 @@ function AccountsSection({
               display: 'flex', alignItems: 'center', gap: 6,
               padding: '12px 14px', borderRadius: 'var(--sb-r-sm)',
               background: 'color-mix(in srgb, var(--sb-negative) 6.0%, transparent)',
-              border: '1px solid color-mix(in srgb, var(--sb-negative) 25.0%, transparent)',
+              border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-negative) 25.0%, transparent)',
               color: 'var(--sb-negative)', fontSize: 'var(--sb-t-body-s)', fontWeight: 500, cursor: 'pointer',
               whiteSpace: 'nowrap',
             }}
@@ -2042,13 +2042,13 @@ function ProfessorSection() {
             onChange={e => setAI(ai.provider === 'groq' ? { groqKey: e.target.value } : { anthropicKey: e.target.value })}
             placeholder={ai.provider === 'groq' ? 'gsk_...' : 'sk-ant-...'}
             style={{ ...inputStyle, flex: 1, fontFamily: 'monospace', fontSize: 'var(--sb-t-meta)' }} />
-          <button onClick={() => setShowKey(v => !v)} style={{ background: 'transparent', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-chip)', padding: '4px 8px', cursor: 'pointer', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-meta)', flexShrink: 0 }}>
+          <button onClick={() => setShowKey(v => !v)} style={{ background: 'transparent', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-chip)', padding: '4px 8px', cursor: 'pointer', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-meta)', flexShrink: 0 }}>
             {showKey ? <EyeOff size={ICON.sm} /> : <Eye size={ICON.sm} />}
           </button>
         </div>
       </FieldRow>
 
-      <div style={{ height: 6, borderTop: '1px solid var(--sb-hairline)', marginTop: 12, marginBottom: 12 }} />
+      <div style={{ height: 6, borderTop: 'var(--sb-border-width) solid var(--sb-hairline)', marginTop: 12, marginBottom: 12 }} />
 
       {/* ── Autonomy ── */}
       <FieldRow label="Autonomy" sub="How far the assistant may act before asking you">
@@ -2095,7 +2095,7 @@ function AIVoiceSection({ s, set }: { s: AppSettings; set: (p: Partial<AppSettin
         </select>
       </FieldRow>
 
-      <div style={{ height: 6, borderTop: '1px solid var(--sb-hairline)', marginTop: 12, marginBottom: 12 }} />
+      <div style={{ height: 6, borderTop: 'var(--sb-border-width) solid var(--sb-hairline)', marginTop: 12, marginBottom: 12 }} />
       <FieldRow label="Proactive" sub="Offers advice unprompted">
         <Toggle checked={s.proactive} onChange={v => set({ proactive: v })} />
       </FieldRow>
@@ -2137,7 +2137,7 @@ function AppearanceSection({ s, set }: { s: AppSettings; set: (p: Partial<AppSet
       {/* ── Accent ───────────────────────────────────────────────────────────
           The one colour the whole app shares: every chip, bar, highlight and
           today-marker is drawn in it. It changes as you click. */}
-      <div style={{ paddingBottom: 16, borderBottom: '1px solid var(--sb-border)', marginBottom: 14 }}>
+      <div style={{ paddingBottom: 16, borderBottom: 'var(--sb-border-width) solid var(--sb-border)', marginBottom: 14 }}>
         <p style={{ margin: '0 0 3px', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>Accent</p>
         <p style={{ margin: '0 0 11px', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', lineHeight: 1.5 }}>
           Every highlight in the app — chips, bars, the ring on today.
@@ -2152,13 +2152,13 @@ function AppearanceSection({ s, set }: { s: AppSettings; set: (p: Partial<AppSet
               display: 'flex', alignItems: 'center', gap: 8, height: 38, padding: '0 14px 0 10px',
               borderRadius: 'var(--sb-r-pill)', cursor: 'pointer', fontFamily: 'inherit',
               background: accent === '' ? 'var(--sb-card)' : 'var(--sb-field)',
-              border: `1px solid ${accent === '' ? 'var(--sb-ink-1)' : 'var(--sb-border)'}`,
+              border: `var(--sb-border-width) solid ${accent === '' ? 'var(--sb-ink-1)' : 'var(--sb-border)'}`,
               boxShadow: accent === '' ? 'var(--sb-shadow-control)' : 'none',
               color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', fontWeight: accent === '' ? 600 : 500,
             }}>
             <span style={{
               width: 18, height: 18, borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
-              background: 'var(--sb-accent)', border: '1px solid color-mix(in srgb, var(--sb-ink-1) 12.0%, transparent)',
+              background: 'var(--sb-accent)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-ink-1) 12.0%, transparent)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
               {accent === '' && <Check size={ICON.sm} strokeWidth={STROKE.active} color="var(--sb-accent-ink)" />}
@@ -2174,13 +2174,13 @@ function AppearanceSection({ s, set }: { s: AppSettings; set: (p: Partial<AppSet
                   display: 'flex', alignItems: 'center', gap: 8, height: 38, padding: '0 14px 0 10px',
                   borderRadius: 'var(--sb-r-pill)', cursor: 'pointer', fontFamily: 'inherit',
                   background: on ? 'var(--sb-card)' : 'var(--sb-field)',
-                  border: `1px solid ${on ? 'var(--sb-ink-1)' : 'var(--sb-border)'}`,
+                  border: `var(--sb-border-width) solid ${on ? 'var(--sb-ink-1)' : 'var(--sb-border)'}`,
                   boxShadow: on ? '0 1px 3px color-mix(in srgb, var(--sb-ink-1) 16.0%, transparent)' : 'none',
                   color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', fontWeight: on ? 600 : 500,
                 }}>
                 <span style={{
                   width: 18, height: 18, borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
-                  background: a.hex, border: '1px solid color-mix(in srgb, var(--sb-ink-1) 12.0%, transparent)',
+                  background: a.hex, border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-ink-1) 12.0%, transparent)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
                   {on && <Check size={ICON.sm} strokeWidth={STROKE.active} color="var(--sb-ink-1)" />}
@@ -2203,7 +2203,7 @@ function AppearanceSection({ s, set }: { s: AppSettings; set: (p: Partial<AppSet
           from, so what you see is what you get rather than an artist's
           impression of it. The name is set in the theme's own display face,
           which is the other half of what changes. */}
-      <div style={{ paddingTop: 16, borderTop: '1px solid var(--sb-border)', marginTop: 6 }}>
+      <div style={{ paddingTop: 16, borderTop: 'var(--sb-border-width) solid var(--sb-border)', marginTop: 6 }}>
         <p style={{ margin: '0 0 3px', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>Theme</p>
         <p style={{ margin: '0 0 11px', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', lineHeight: 1.5 }}>
           Surfaces, ink, accent and typeface, for the whole app.
@@ -2224,7 +2224,7 @@ function AppearanceSection({ s, set }: { s: AppSettings; set: (p: Partial<AppSet
                 {/* The card, on the page, with what a card holds. */}
                 <div style={{ padding: 11 }}>
                   <div style={{
-                    background: tk['--sb-card'], border: `1px solid ${tk['--sb-border']}`,
+                    background: tk['--sb-card'], border: `var(--sb-border-width) solid ${tk['--sb-border']}`,
                     borderRadius: 'var(--sb-r-chip)', padding: 9,
                     display: 'flex', alignItems: 'center', gap: 8,
                   }}>
@@ -2386,7 +2386,7 @@ function BlockingRulesSection() {
           display: 'flex', alignItems: 'center', gap: 10,
           padding: '10px 14px', borderRadius: 'var(--sb-r-nav)', marginBottom: 8,
           background: 'var(--sb-field)',
-          border: `1px solid ${rule.enabled ? 'rgba(var(--sb-accent-rgb),0.19)' : 'var(--sb-border)'}`,
+          border: `var(--sb-border-width) solid ${rule.enabled ? 'rgba(var(--sb-accent-rgb),0.19)' : 'var(--sb-border)'}`,
           opacity: rule.enabled ? 1 : 0.6,
         }}>
           <Toggle checked={rule.enabled} onChange={() => toggleRule(rule.id)} />
@@ -2433,7 +2433,7 @@ function BlockingRulesSection() {
         <div style={{
           padding: '14px 16px', borderRadius: 'var(--sb-r-nav)', marginTop: 8,
           background: 'var(--sb-field)',
-          border: '1px solid rgba(var(--sb-accent-rgb),0.25)',
+          border: 'var(--sb-border-width) solid rgba(var(--sb-accent-rgb),0.25)',
         }}>
           <p style={{ margin: '0 0 12px', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>
             {editingRule ? 'Edit blocking rule' : 'New blocking rule'}
@@ -2475,7 +2475,7 @@ function BlockingRulesSection() {
                     style={{
                       flex: 1, padding: '7px 6px', borderRadius: 'var(--sb-r-chip)', cursor: 'pointer', textAlign: 'center',
                       background: detail === d.value ? DETAIL_BADGE[d.value].bg : 'var(--sb-card)',
-                      border: `1px solid ${detail === d.value ? DETAIL_BADGE[d.value].color + '80' : 'var(--sb-border)'}`,
+                      border: `var(--sb-border-width) solid ${detail === d.value ? DETAIL_BADGE[d.value].color + '80' : 'var(--sb-border)'}`,
                       color: detail === d.value ? DETAIL_BADGE[d.value].color : 'var(--sb-ink-3)',
                       transition: 'all 0.15s',
                     }}>
@@ -2489,7 +2489,7 @@ function BlockingRulesSection() {
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               padding: '10px 12px', borderRadius: 'var(--sb-r-chip)',
               background: autoApply ? 'color-mix(in srgb, var(--sb-positive) 7.0%, transparent)' : 'var(--sb-card)',
-              border: `1px solid ${autoApply ? 'color-mix(in srgb, var(--sb-positive) 30.0%, transparent)' : 'var(--sb-border)'}`,
+              border: `var(--sb-border-width) solid ${autoApply ? 'color-mix(in srgb, var(--sb-positive) 30.0%, transparent)' : 'var(--sb-border)'}`,
               transition: 'all 0.15s',
             }}>
               <div>
@@ -2506,7 +2506,7 @@ function BlockingRulesSection() {
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               padding: '10px 12px', borderRadius: 'var(--sb-r-chip)',
               background: hideBlocked ? 'color-mix(in srgb, var(--sb-info) 7.0%, transparent)' : 'var(--sb-card)',
-              border: `1px solid ${hideBlocked ? 'color-mix(in srgb, var(--sb-info) 30.0%, transparent)' : 'var(--sb-border)'}`,
+              border: `var(--sb-border-width) solid ${hideBlocked ? 'color-mix(in srgb, var(--sb-info) 30.0%, transparent)' : 'var(--sb-border)'}`,
               transition: 'all 0.15s',
             }}>
               <div>
@@ -2526,7 +2526,7 @@ function BlockingRulesSection() {
               style={{
                 flex: 1, padding: '8px 0', borderRadius: 'var(--sb-r-chip)', cursor: 'pointer',
                 background: (!srcCal || !tgtCal || srcCal === tgtCal) ? 'var(--sb-card)' : 'rgba(var(--sb-accent-rgb),0.12)',
-                border: '1px solid rgba(var(--sb-accent-rgb),0.31)',
+                border: 'var(--sb-border-width) solid rgba(var(--sb-accent-rgb),0.31)',
                 color: (!srcCal || !tgtCal || srcCal === tgtCal) ? 'var(--sb-ink-3)' : 'var(--sb-accent)',
                 fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
               }}>
@@ -2535,7 +2535,7 @@ function BlockingRulesSection() {
             <button onClick={resetForm}
               style={{
                 padding: '8px 16px', borderRadius: 'var(--sb-r-chip)', cursor: 'pointer',
-                background: 'transparent', border: '1px solid var(--sb-border)',
+                background: 'transparent', border: 'var(--sb-border-width) solid var(--sb-border)',
                 color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body-s)',
               }}>
               Cancel
@@ -2548,7 +2548,7 @@ function BlockingRulesSection() {
             display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px',
             borderRadius: 'var(--sb-r-chip)', cursor: 'pointer', marginTop: 4,
             background: 'rgba(var(--sb-accent-rgb),0.10)',
-            border: '1px solid rgba(var(--sb-accent-rgb),0.25)',
+            border: 'var(--sb-border-width) solid rgba(var(--sb-accent-rgb),0.25)',
             color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body-s)',
           }}>
           <Plus size={ICON.sm} /> Add Rule
@@ -2577,7 +2577,7 @@ function BehavioralSection() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       {/* Enable toggle */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', background: SB.surface2, borderRadius: 'var(--sb-r-nav)', border: `1px solid ${SB.border}` }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', background: SB.surface2, borderRadius: 'var(--sb-r-nav)', border: `var(--sb-border-width) solid ${SB.border}` }}>
         <div>
           <div style={{ fontSize: 'var(--sb-t-label)', fontWeight: 600, color: SB.text }}>Enable Behavioral OS</div>
           <div style={{ fontSize: 'var(--sb-t-body-s)', color: SB.textDim, marginTop: 2 }}>Activates rank tracking, identity detection & mode-aware AI</div>
@@ -2611,7 +2611,7 @@ function BehavioralSection() {
                 display: 'flex', alignItems: 'center', gap: 12,
                 padding: '12px 14px', borderRadius: 'var(--sb-r-nav)', cursor: m.available ? 'pointer' : 'default',
                 background: mode === m.id ? SB.accentFill : SB.surface2,
-                border: `1px solid ${mode === m.id ? SB.accent : SB.border}`,
+                border: `var(--sb-border-width) solid ${mode === m.id ? SB.accent : SB.border}`,
                 textAlign: 'left', width: '100%', opacity: m.available ? 1 : 0.5,
               }}
             >
@@ -2631,7 +2631,7 @@ function BehavioralSection() {
 
       {/* Samurai info */}
       {enabled && mode === 'samurai' && (
-        <div style={{ padding: '12px 14px', borderRadius: 'var(--sb-r-nav)', background: 'color-mix(in srgb, var(--sb-negative-deep) 8.0%, transparent)', border: '1px solid color-mix(in srgb, var(--sb-negative-deep) 25.0%, transparent)' }}>
+        <div style={{ padding: '12px 14px', borderRadius: 'var(--sb-r-nav)', background: 'color-mix(in srgb, var(--sb-negative-deep) 8.0%, transparent)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-negative-deep) 25.0%, transparent)' }}>
           <div style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-negative)', fontWeight: 600, marginBottom: 4 }}>Samurai Mode Active</div>
           <div style={{ fontSize: 'var(--sb-t-body-s)', color: SB.textDim, lineHeight: 1.5 }}>
             The Behavioral OS page will appear in the sidebar. Your rank (Ronin → Shogun) is calculated from task completion, habit consistency, and planning quality. The AI assistant will adopt a tactical, no-filler communication style.
@@ -2709,17 +2709,17 @@ function FinanceSecuritySection() {
   const pill = {
     height: 30, padding: '0 12px', borderRadius: 'var(--sb-r-sm)', cursor: 'pointer',
     fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
-    background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-1)',
+    background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-1)',
   } as const
-  const solid = { ...pill, background: 'var(--sb-ink-1)', border: '1px solid var(--sb-ink-1)', color: 'var(--sb-ink-on-dark)' }
+  const solid = { ...pill, background: 'var(--sb-ink-1)', border: 'var(--sb-border-width) solid var(--sb-ink-1)', color: 'var(--sb-ink-on-dark)' }
   const field = {
-    height: 34, width: 180, borderRadius: 'var(--sb-r-sm)', padding: '0 11px', boxSizing: 'border-box' as const,
-    background: 'var(--sb-field)', border: '1px solid var(--sb-border)',
+    height: 'var(--sb-h-pill)', width: 180, borderRadius: 'var(--sb-r-sm)', padding: '0 11px', boxSizing: 'border-box' as const,
+    background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)',
     fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)', outline: 'none',
   }
 
   return (
-    <div style={{ gridColumn: '1 / -1', marginTop: 22, paddingTop: 18, borderTop: '1px solid var(--sb-hairline)' }}>
+    <div style={{ gridColumn: '1 / -1', marginTop: 22, paddingTop: 18, borderTop: 'var(--sb-border-width) solid var(--sb-hairline)' }}>
       <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--sb-ink-3)', display: 'block', marginBottom: 12 }}>SECURITY</span>
 
       {!open ? (
@@ -2958,7 +2958,7 @@ function FinanceSection() {
                 onClick={() => saveStyle(style.id)}
                 style={{
                   background: active ? 'var(--sb-field)' : 'var(--sb-card)',
-                  border: `1px solid ${active ? 'var(--sb-accent)' : 'var(--sb-border)'}`,
+                  border: `var(--sb-border-width) solid ${active ? 'var(--sb-accent)' : 'var(--sb-border)'}`,
                   borderRadius: 'var(--sb-r-nav)', padding: '14px 14px 12px',
                   cursor: 'pointer', textAlign: 'left',
                   boxShadow: active ? '0 0 0 2px rgba(var(--sb-accent-rgb),0.25)' : 'none',
@@ -3022,8 +3022,8 @@ function FinanceSection() {
               .filter(c => c !== currency)
               .map(code => (
                 <label key={code} style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 7, height: 34, padding: '0 10px',
-                  borderRadius: 'var(--sb-r-sm)', border: '1px solid var(--sb-border)', background: 'var(--sb-card)',
+                  display: 'inline-flex', alignItems: 'center', gap: 7, height: 'var(--sb-h-pill)', padding: '0 10px',
+                  borderRadius: 'var(--sb-r-sm)', border: 'var(--sb-border-width) solid var(--sb-border)', background: 'var(--sb-card)',
                 }}>
                   <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, color: 'var(--sb-ink-3)' }}>1 {code}</span>
                   <input
@@ -3068,7 +3068,7 @@ function FinanceSection() {
             ] as const).map(o => (
               <button key={o.v} onClick={() => { setCategoryOrder(o.v); saveField('finance-category-order', o.v) }}
                 style={{
-                  padding: '6px 13px', borderRadius: 'var(--sb-r-pill)', border: '1px solid var(--sb-border)', cursor: 'pointer',
+                  padding: '6px 13px', borderRadius: 'var(--sb-r-pill)', border: 'var(--sb-border-width) solid var(--sb-border)', cursor: 'pointer',
                   background: categoryOrder === o.v ? 'var(--sb-ink-1)' : 'var(--sb-field)',
                   color: categoryOrder === o.v ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
                   fontSize: 'var(--sb-t-body-s)', fontWeight: categoryOrder === o.v ? 600 : 400,
@@ -3093,7 +3093,7 @@ function FinanceSection() {
             {(['due', 'paid'] as const).map(v => (
               <button key={v} onClick={() => { setCountOn(v); saveField('finance-count-on', v) }}
                 style={{
-                  padding: '6px 14px', borderRadius: 'var(--sb-r-chip)', border: '1px solid var(--sb-border)', cursor: 'pointer',
+                  padding: '6px 14px', borderRadius: 'var(--sb-r-chip)', border: 'var(--sb-border-width) solid var(--sb-border)', cursor: 'pointer',
                   background: countOn === v ? 'var(--sb-ink-1)' : 'var(--sb-field)',
                   color: countOn === v ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
                   fontSize: 'var(--sb-t-body-s)', fontWeight: countOn === v ? 600 : 400,
@@ -3155,12 +3155,12 @@ function FinanceSection() {
       </div>
       <FinanceSecuritySection />
 
-      <div style={{ gridColumn: '1 / -1', marginTop: 22, paddingTop: 18, borderTop: '1px solid var(--sb-hairline)' }}>
+      <div style={{ gridColumn: '1 / -1', marginTop: 22, paddingTop: 18, borderTop: 'var(--sb-border-width) solid var(--sb-hairline)' }}>
         <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--sb-ink-3)', display: 'block', marginBottom: 12 }}>PAYMENT DATES</span>
         {!paidAtSupported() ? (
           <div style={{
             fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-accent-deep)', lineHeight: 1.55, maxWidth: 720,
-            background: 'var(--sb-accent-tint)', border: '1px solid var(--sb-accent-border)', borderRadius: 'var(--sb-r-nav)', padding: '11px 14px',
+            background: 'var(--sb-accent-tint)', border: 'var(--sb-border-width) solid var(--sb-accent-border)', borderRadius: 'var(--sb-r-nav)', padding: '11px 14px',
           }}>
             Your database has no payment-date column yet, so nothing can be marked paid or unpaid —
             run <code style={{ fontFamily: 'var(--sb-font-mono)', fontSize: 'var(--sb-t-meta)' }}>supabase/migrations/20260006</code> in
@@ -3195,7 +3195,7 @@ function FinanceSection() {
         )}
       </div>
 
-      <div style={{ gridColumn: '1 / -1', marginTop: 22, paddingTop: 18, borderTop: '1px solid var(--sb-hairline)' }}>
+      <div style={{ gridColumn: '1 / -1', marginTop: 22, paddingTop: 18, borderTop: 'var(--sb-border-width) solid var(--sb-hairline)' }}>
         <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--sb-ink-3)', display: 'block', marginBottom: 12 }}>MONEY REMINDERS</span>
         <div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
@@ -3214,7 +3214,7 @@ function FinanceSection() {
               disabled={finCategories.length === 0}
               style={{
                 height: 28, padding: '0 11px', borderRadius: 'var(--sb-r-chip)', cursor: finCategories.length ? 'pointer' : 'default',
-                background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-3)',
+                background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-3)',
                 fontFamily: 'inherit', fontSize: 'var(--sb-t-meta)', fontWeight: 600,
               }}>+ Add a reminder</button>
           </div>
@@ -3231,14 +3231,14 @@ function FinanceSection() {
             return (
               <div key={r.id} style={{
                 display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' as const,
-                padding: '10px 0', borderTop: '1px solid var(--sb-hairline)',
+                padding: '10px 0', borderTop: 'var(--sb-border-width) solid var(--sb-hairline)',
               }}>
                 <select
                   value={r.categoryId}
                   onChange={e => putReminders(reminders.map(x => x.id === r.id ? { ...x, categoryId: e.target.value } : x))}
                   style={{
                     height: 32, minWidth: 168, maxWidth: 240, padding: '0 8px', borderRadius: 'var(--sb-r-chip)',
-                    border: '1px solid var(--sb-border)', background: 'var(--sb-card)', fontFamily: 'inherit',
+                    border: 'var(--sb-border-width) solid var(--sb-border)', background: 'var(--sb-card)', fontFamily: 'inherit',
                     fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)',
                   }}>
                   {finCategories.filter(c => !c.parentId).flatMap(parent => [
@@ -3257,7 +3257,7 @@ function FinanceSection() {
                       ? { ...x, day: Math.min(31, Math.max(1, parseInt(e.target.value) || 1)) } : x))}
                     style={{
                       width: 54, height: 32, boxSizing: 'border-box', padding: '0 8px', borderRadius: 'var(--sb-r-chip)',
-                      border: '1px solid var(--sb-border)', background: 'var(--sb-card)', fontFamily: 'inherit',
+                      border: 'var(--sb-border-width) solid var(--sb-border)', background: 'var(--sb-card)', fontFamily: 'inherit',
                       fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)', textAlign: 'right',
                     }} />
                 </label>
@@ -3271,7 +3271,7 @@ function FinanceSection() {
                       ? { ...x, leadDays: Math.min(30, Math.max(0, parseInt(e.target.value) || 0)) } : x))}
                     style={{
                       width: 50, height: 32, boxSizing: 'border-box', padding: '0 8px', borderRadius: 'var(--sb-r-chip)',
-                      border: '1px solid var(--sb-border)', background: 'var(--sb-card)', fontFamily: 'inherit',
+                      border: 'var(--sb-border-width) solid var(--sb-border)', background: 'var(--sb-card)', fontFamily: 'inherit',
                       fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)', textAlign: 'right',
                     }} />
                   days early
@@ -3294,7 +3294,7 @@ function FinanceSection() {
                   style={{
                     width: 28, height: 28, borderRadius: 'var(--sb-r-pill)', padding: 0, flexShrink: 0,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-4)', cursor: 'pointer',
+                    background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-4)', cursor: 'pointer',
                   }}>×</button>
               </div>
             )
@@ -3328,7 +3328,7 @@ function BillingSection() {
     <NotYet text="Billing coming soon">
     <div>
       {/* Plan tile */}
-      <div style={{ padding: '16px 18px', borderRadius: 'var(--sb-r-nav)', background: 'var(--sb-accent-tint)', border: '1px solid var(--sb-accent)', marginBottom: 6 }}>
+      <div style={{ padding: '16px 18px', borderRadius: 'var(--sb-r-nav)', background: 'var(--sb-accent-tint)', border: 'var(--sb-border-width) solid var(--sb-accent)', marginBottom: 6 }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
@@ -3373,7 +3373,7 @@ function BillingSection() {
           <div key={inv.date} style={{
             display: 'flex', alignItems: 'center', gap: 16,
             padding: '13px 0',
-            borderBottom: i === INVOICES.length - 1 ? 'none' : '1px solid var(--sb-hairline)',
+            borderBottom: i === INVOICES.length - 1 ? 'none' : 'var(--sb-border-width) solid var(--sb-hairline)',
           }}>
             <span style={{ width: 96, flexShrink: 0, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)' }}>{inv.date}</span>
             <span style={{ flex: 1, minWidth: 0, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{inv.desc}</span>
@@ -3389,7 +3389,7 @@ function BillingSection() {
       {/* Cancel */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16,
-        marginTop: 18, paddingTop: 16, borderTop: '1px solid var(--sb-hairline)',
+        marginTop: 18, paddingTop: 16, borderTop: 'var(--sb-border-width) solid var(--sb-hairline)',
       }}>
         <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-4)', lineHeight: 1.4 }}>
           Cancelling keeps your data readable until the term ends.
@@ -3434,7 +3434,7 @@ function NotificationsMatrixSection() {
   return (
     <div>
       {/* Column headers */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 10, borderBottom: '1px solid var(--sb-border)', marginBottom: 2 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 10, borderBottom: 'var(--sb-border-width) solid var(--sb-border)', marginBottom: 2 }}>
         <p style={{ margin: 0, fontSize: 'var(--sb-t-meta)', fontWeight: 700, color: 'var(--sb-ink-3)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>EVENT</p>
         <div style={{ display: 'flex', gap: 0 }}>
           <ChHead label="Push" />
@@ -3445,7 +3445,7 @@ function NotificationsMatrixSection() {
 
       {/* Event rows */}
       {events.map(e => (
-        <div key={e.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 0', borderBottom: '1px solid var(--sb-hairline)' }}>
+        <div key={e.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 0', borderBottom: 'var(--sb-border-width) solid var(--sb-hairline)' }}>
           <div style={{ minWidth: 0, flex: 1 }}>
             <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', fontWeight: 500, color: 'var(--sb-ink-1)', lineHeight: 1.3, display: 'flex', alignItems: 'center', gap: 7 }}>
               {e.label}
@@ -3466,7 +3466,7 @@ function NotificationsMatrixSection() {
       ))}
 
       {/* Quiet hours */}
-      <div style={{ marginTop: 18, padding: '14px 16px', borderRadius: 'var(--sb-r-nav)', background: 'var(--sb-field)', border: '1px solid var(--sb-border)' }}>
+      <div style={{ marginTop: 18, padding: '14px 16px', borderRadius: 'var(--sb-r-nav)', background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: quietOn ? 10 : 0 }}>
           <div>
             <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-1)' }}>Quiet hours</p>
@@ -3476,15 +3476,15 @@ function NotificationsMatrixSection() {
         </div>
         {quietOn && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <input type="time" value={quietStart} onChange={e => setQStart(e.target.value)} style={{ padding: '5px 10px', borderRadius: 'var(--sb-r-chip)', border: '1px solid var(--sb-border)', background: 'var(--sb-card)', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)' }} />
+            <input type="time" value={quietStart} onChange={e => setQStart(e.target.value)} style={{ padding: '5px 10px', borderRadius: 'var(--sb-r-chip)', border: 'var(--sb-border-width) solid var(--sb-border)', background: 'var(--sb-card)', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)' }} />
             <span style={{ color: 'var(--sb-ink-4)', fontSize: 'var(--sb-t-body-s)' }}>to</span>
-            <input type="time" value={quietEnd} onChange={e => setQEnd(e.target.value)} style={{ padding: '5px 10px', borderRadius: 'var(--sb-r-chip)', border: '1px solid var(--sb-border)', background: 'var(--sb-card)', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)' }} />
+            <input type="time" value={quietEnd} onChange={e => setQEnd(e.target.value)} style={{ padding: '5px 10px', borderRadius: 'var(--sb-r-chip)', border: 'var(--sb-border-width) solid var(--sb-border)', background: 'var(--sb-card)', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)' }} />
           </div>
         )}
       </div>
 
       {/* Mute button */}
-      <button style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-card)', border: '1px solid var(--sb-border)', fontSize: 'var(--sb-t-body-s)', fontWeight: 500, color: 'var(--sb-ink-3)', cursor: 'pointer' }}>
+      <button style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', fontSize: 'var(--sb-t-body-s)', fontWeight: 500, color: 'var(--sb-ink-3)', cursor: 'pointer' }}>
         🔕 Mute for 1h
       </button>
     </div>
@@ -3535,11 +3535,11 @@ function IntegrationsSection() {
             <div key={tool.id} style={{
               padding: '11px 13px', borderRadius: 'var(--sb-r-nav)',
               background: tool.status === 'disconnected' ? 'var(--sb-accent-tint)' : 'var(--sb-card)',
-              border: `1px solid ${tool.status === 'disconnected' ? 'var(--sb-border)' : tool.enabled ? 'var(--sb-positive-tint)' : 'var(--sb-border)'}`,
+              border: `var(--sb-border-width) solid ${tool.status === 'disconnected' ? 'var(--sb-border)' : tool.enabled ? 'var(--sb-positive-tint)' : 'var(--sb-border)'}`,
               borderStyle: tool.status === 'disconnected' ? 'dashed' : 'solid',
             }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-                <div style={{ width: 36, height: 36, borderRadius: 'var(--sb-r-sm)', background: 'var(--sb-page)', border: '1px solid var(--sb-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'var(--sb-t-h2)', flexShrink: 0 }}>
+                <div style={{ width: 'var(--sb-h-nav)', height: 'var(--sb-h-nav)', borderRadius: 'var(--sb-r-sm)', background: 'var(--sb-page)', border: 'var(--sb-border-width) solid var(--sb-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'var(--sb-t-h2)', flexShrink: 0 }}>
                   {tool.emoji}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -3555,14 +3555,14 @@ function IntegrationsSection() {
                   <p style={{ margin: '0 0 6px', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>{tool.account}</p>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
                     {tool.tags.map(tag => (
-                      <span key={tag} style={{ fontSize: 'var(--sb-t-micro)', padding: '2px 8px', borderRadius: 'var(--sb-r-card)', background: 'var(--sb-page)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-3)' }}>{tag}</span>
+                      <span key={tag} style={{ fontSize: 'var(--sb-t-micro)', padding: '2px 8px', borderRadius: 'var(--sb-r-card)', background: 'var(--sb-page)', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-3)' }}>{tag}</span>
                     ))}
                   </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
                   {tool.status === 'connected' && (
                     <select value={tool.syncMode} onChange={e => setIntegrations(prev => prev.map(i => i.id === tool.id ? { ...i, syncMode: e.target.value as Integration['syncMode'] } : i))}
-                      style={{ fontSize: 'var(--sb-t-meta)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-chip)', padding: '4px 8px', background: 'var(--sb-field)', color: 'var(--sb-ink-3)', cursor: 'pointer' }}>
+                      style={{ fontSize: 'var(--sb-t-meta)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-chip)', padding: '4px 8px', background: 'var(--sb-field)', color: 'var(--sb-ink-3)', cursor: 'pointer' }}>
                       <option value="two-way">Two-way</option>
                       <option value="import">Import only</option>
                       <option value="off">Off</option>
@@ -3570,7 +3570,7 @@ function IntegrationsSection() {
                   )}
                   {tool.status === 'connected'
                     ? <Toggle checked={tool.enabled} onChange={() => toggleEnabled(tool.id)} />
-                    : <button style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 500, color: 'var(--sb-ink-3)', background: 'var(--sb-page)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-chip)', padding: '5px 11px', cursor: 'pointer' }}>Connect</button>
+                    : <button style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 500, color: 'var(--sb-ink-3)', background: 'var(--sb-page)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-chip)', padding: '5px 11px', cursor: 'pointer' }}>Connect</button>
                   }
                 </div>
               </div>
@@ -3600,13 +3600,13 @@ function SyncRulesSection() {
       ].map((row, i, arr) => (
         <div key={row.label} style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
-          padding: '10px 0', borderBottom: i === arr.length - 1 ? 'none' : '1px solid var(--sb-hairline)',
+          padding: '10px 0', borderBottom: i === arr.length - 1 ? 'none' : 'var(--sb-border-width) solid var(--sb-hairline)',
         }}>
           <div style={{ minWidth: 0 }}>
             <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', fontWeight: 500, color: 'var(--sb-ink-1)' }}>{row.label}</p>
             <p style={{ margin: '1px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>{row.sub}</p>
           </div>
-          <select style={{ fontSize: 'var(--sb-t-body-s)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-chip)', padding: '5px 10px', background: 'var(--sb-field)', color: 'var(--sb-ink-1)', cursor: 'pointer', flexShrink: 0 }}>
+          <select style={{ fontSize: 'var(--sb-t-body-s)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-chip)', padding: '5px 10px', background: 'var(--sb-field)', color: 'var(--sb-ink-1)', cursor: 'pointer', flexShrink: 0 }}>
             <option>{row.value}</option>
           </select>
         </div>
@@ -3667,7 +3667,7 @@ function AutomationSection() {
             padding: '11px 13px', borderRadius: 'var(--sb-r-nav)', marginBottom: 10,
             breakInside: 'avoid',
             background: rule.enabled ? 'var(--sb-positive-tint)' : 'var(--sb-accent-tint)',
-            border: `1px solid ${rule.enabled ? 'var(--sb-positive-tint)' : 'var(--sb-border)'}`,
+            border: `var(--sb-border-width) solid ${rule.enabled ? 'var(--sb-positive-tint)' : 'var(--sb-border)'}`,
             transition: 'all 0.15s',
           }}>
             <Toggle checked={rule.enabled} onChange={() => toggle(rule.id)} />
@@ -3686,7 +3686,7 @@ function AutomationSection() {
       <button style={{
         marginTop: 14, display: 'flex', alignItems: 'center', gap: 6,
         padding: '8px 14px', borderRadius: 'var(--sb-r-sm)', background: 'var(--sb-card)',
-        border: '1px solid var(--sb-border)', fontSize: 'var(--sb-t-body-s)', fontWeight: 500,
+        border: 'var(--sb-border-width) solid var(--sb-border)', fontSize: 'var(--sb-t-body-s)', fontWeight: 500,
         color: 'var(--sb-ink-3)', cursor: 'pointer',
       }}>
         <Plus size={ICON.sm} /> New rule
@@ -3718,13 +3718,13 @@ function DataPrivacySection() {
       {/* Data export card */}
       <div style={{ marginBottom: 18 }}>
         <p style={{ margin: '0 0 6px', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-1)', textTransform: 'uppercase', letterSpacing: '0.09em' }}>Export</p>
-        <div style={{ padding: '14px 16px', borderRadius: 'var(--sb-r-nav)', background: 'var(--sb-field)', border: '1px solid var(--sb-border)' }}>
+        <div style={{ padding: '14px 16px', borderRadius: 'var(--sb-r-nav)', background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)' }}>
           <p style={{ margin: '0 0 10px', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', lineHeight: 1.5 }}>
             Download a copy of all your data — tasks, habits, companies, finance envelopes & settings.
           </p>
           <button onClick={handleExport} style={{
             display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 'var(--sb-r-chip)',
-            background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
+            background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)',
             fontSize: 'var(--sb-t-body-s)', fontWeight: 500, color: 'var(--sb-ink-1)', cursor: 'pointer',
           }}>
             <HardDrive size={ICON.sm} />
@@ -3746,7 +3746,7 @@ function DataPrivacySection() {
               <div key={item.key} style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 padding: '11px 0',
-                borderBottom: i < arr.length - 1 ? '1px solid var(--sb-hairline)' : 'none',
+                borderBottom: i < arr.length - 1 ? 'var(--sb-border-width) solid var(--sb-hairline)' : 'none',
               }}>
                 <div>
                   <p style={{ margin: 0, fontSize: 'var(--sb-t-body)', fontWeight: 500, color: 'var(--sb-ink-1)' }}>{item.label}</p>
@@ -3762,13 +3762,13 @@ function DataPrivacySection() {
       {/* Account deletion */}
       <div>
         <p style={{ margin: '0 0 6px', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-negative)', textTransform: 'uppercase', letterSpacing: '0.09em' }}>Danger zone</p>
-        <div style={{ padding: '14px 16px', borderRadius: 'var(--sb-r-nav)', background: 'color-mix(in srgb, var(--sb-negative) 4.0%, transparent)', border: '1px solid color-mix(in srgb, var(--sb-negative) 22.0%, transparent)' }}>
+        <div style={{ padding: '14px 16px', borderRadius: 'var(--sb-r-nav)', background: 'color-mix(in srgb, var(--sb-negative) 4.0%, transparent)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-negative) 22.0%, transparent)' }}>
           <p style={{ margin: '0 0 10px', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', lineHeight: 1.5 }}>
             Permanently delete your account and all associated data. This cannot be undone.
           </p>
           <button style={{
             display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 'var(--sb-r-chip)',
-            background: 'color-mix(in srgb, var(--sb-negative) 8.0%, transparent)', border: '1px solid color-mix(in srgb, var(--sb-negative) 30.0%, transparent)',
+            background: 'color-mix(in srgb, var(--sb-negative) 8.0%, transparent)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-negative) 30.0%, transparent)',
             fontSize: 'var(--sb-t-body-s)', fontWeight: 500, color: 'var(--sb-negative)', cursor: 'pointer',
           }}>
             <Trash2 size={ICON.sm} /> Delete account
@@ -3802,7 +3802,7 @@ function AccountsAndCompaniesSection({
       <div style={{
         display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
         padding: '9px 12px', marginBottom: 12,
-        background: 'var(--sb-field)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
+        background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
       }}>
         <p style={{ margin: 0, flex: 1, minWidth: 180, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.45 }}>
           Connect a Google account, then point a company at it. Mail, calendars and
@@ -3810,10 +3810,10 @@ function AccountsAndCompaniesSection({
           tagged, coloured and assigned.
         </p>
         <span style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-          <span style={{ padding: '3px 9px', borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-card)', border: '1px solid var(--sb-border)', fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-ink-3)' }}>
+          <span style={{ padding: '3px 9px', borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-ink-3)' }}>
             {accountCount} account{accountCount === 1 ? '' : 's'}
           </span>
-          <span style={{ padding: '3px 9px', borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-card)', border: '1px solid var(--sb-border)', fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-ink-3)' }}>
+          <span style={{ padding: '3px 9px', borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-ink-3)' }}>
             {companies.length} compan{companies.length === 1 ? 'y' : 'ies'}
           </span>
         </span>
@@ -3886,7 +3886,7 @@ function Card({ icon: Icon, title, sub, children, actions, muted }: {
   return (
     <div style={{
       background: 'var(--sb-card)',
-      border: `1px solid ${muted ? 'var(--sb-border)' : 'var(--sb-border)'}`,
+      border: `var(--sb-border-width) solid ${muted ? 'var(--sb-border)' : 'var(--sb-border)'}`,
       borderRadius: 'var(--sb-r-card)',
       padding: '16px 20px 18px',
       boxShadow: 'var(--sb-shadow-control)',
@@ -3900,7 +3900,7 @@ function Card({ icon: Icon, title, sub, children, actions, muted }: {
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 11, minWidth: 0 }}>
           <div style={{
             width: 30, height: 30, borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
-            background: 'var(--sb-field)', border: '1px solid var(--sb-border)',
+            background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
             <Icon size={14} strokeWidth={1.9} color="var(--sb-ink-3)" />
@@ -4131,7 +4131,7 @@ export function Settings() {
         <button onClick={withSectionSave(id, fn)} style={{
           padding: '4px 12px', borderRadius: 'var(--sb-r-chip)', fontSize: 'var(--sb-t-meta)', fontWeight: 600, cursor: 'pointer',
           background: saving === 'saved' ? 'color-mix(in srgb, var(--sb-positive) 12.0%, transparent)' : saving === 'error' ? 'color-mix(in srgb, var(--sb-negative) 10.0%, transparent)' : 'var(--sb-accent)',
-          border: saving === 'saved' ? '1px solid var(--sb-positive-tint)' : saving === 'error' ? '1px solid color-mix(in srgb, var(--sb-negative) 30.0%, transparent)' : '1px solid color-mix(in srgb, var(--sb-ink-1) 18.0%, transparent)',
+          border: saving === 'saved' ? 'var(--sb-border-width) solid var(--sb-positive-tint)' : saving === 'error' ? 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-negative) 30.0%, transparent)' : 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-ink-1) 18.0%, transparent)',
           color: saving === 'saved' ? 'var(--sb-positive)' : saving === 'error' ? 'var(--sb-negative)' : 'var(--sb-accent-ink)',
           transition: 'all 0.15s',
         }}>{label}</button>
@@ -4179,7 +4179,7 @@ export function Settings() {
       <div>
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.35fr) minmax(0, 1fr)', gap: 16, alignItems: 'start' }}>
           <SectionCard id="accounts" active={activeSection === 'accounts'} actions={
-            <button onClick={() => window.dispatchEvent(new CustomEvent('professor:openWizard'))} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-field)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-meta)', cursor: 'pointer' }}>
+            <button onClick={() => window.dispatchEvent(new CustomEvent('professor:openWizard'))} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-meta)', cursor: 'pointer' }}>
               <Wand2 size={ICON.sm} /> Wizard
             </button>
           }>
@@ -4329,7 +4329,7 @@ export function Settings() {
           width: '100%', display: 'flex', alignItems: 'center', gap: 10,
           padding: '5px 12px', borderRadius: 'var(--sb-r-sm)', cursor: 'pointer', marginBottom: 0,
           background: isActive ? 'var(--sb-ink-1)' : 'transparent',
-          border: '1px solid transparent',
+          border: 'var(--sb-border-width) solid transparent',
           color: isActive ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
           fontSize: 'var(--sb-t-body)', fontWeight: isActive ? 600 : 500, textAlign: 'left' as const,
           fontFamily: 'inherit',
@@ -4378,7 +4378,7 @@ export function Settings() {
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 7,
               padding: '10px 18px', borderRadius: 'var(--sb-r-pill)', cursor: 'pointer',
-              background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-1)',
+              background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-1)',
               fontSize: 'var(--sb-t-body)', fontWeight: 500, fontFamily: 'inherit',
               boxShadow: 'var(--sb-shadow-control)',
             }}>
@@ -4389,7 +4389,7 @@ export function Settings() {
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 7,
               padding: '10px 18px', borderRadius: 'var(--sb-r-pill)', cursor: 'pointer',
-              background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-1)',
+              background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-1)',
               fontSize: 'var(--sb-t-body)', fontWeight: 500, fontFamily: 'inherit',
               boxShadow: 'var(--sb-shadow-control)',
             }}>
@@ -4403,12 +4403,12 @@ export function Settings() {
         {/* ── LEFT RAIL — floating card ──────────────────────────────────── */}
         <div style={{
           width: 250, flexShrink: 0, display: 'flex', flexDirection: 'column',
-          background: 'var(--sb-header)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
+          background: 'var(--sb-header)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
           boxShadow: 'var(--sb-shadow-control)', overflow: 'hidden',
         }}>
           {/* Search */}
           <div style={{ padding: '12px 12px 8px', flexShrink: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--sb-field)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', padding: '8px 12px', cursor: 'text' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', padding: '8px 12px', cursor: 'text' }}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--sb-ink-4)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
               <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-4)', flex: 1, userSelect: 'none' }}>Find a setting</span>
               <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', opacity: 0.7 }}>⌘K</span>
@@ -4428,7 +4428,7 @@ export function Settings() {
           </div>
 
           {/* Footer */}
-          <div style={{ padding: '10px 18px 11px', borderTop: '1px solid var(--sb-hairline)', flexShrink: 0 }}>
+          <div style={{ padding: '10px 18px 11px', borderTop: 'var(--sb-border-width) solid var(--sb-hairline)', flexShrink: 0 }}>
             <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', display: 'flex', alignItems: 'center', gap: 7 }}>
               <span style={{ width: 6, height: 6, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-positive)', flexShrink: 0 }} />
               Every change saves itself

@@ -177,7 +177,7 @@ function KanbanColumnComp({ column, onOpen, onColDragStart, onColDragOver, onCol
               if (e.key === 'Escape') { setNameDraft(column.label); setRenaming(false) }
             }}
             style={{
-              flex: 1, minWidth: 0, background: 'var(--sb-card)', border: '1px solid var(--sb-accent)',
+              flex: 1, minWidth: 0, background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-accent)',
               borderRadius: 'var(--sb-r-chip)', padding: '2px 7px', outline: 'none',
               fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-1)', fontFamily: 'inherit',
             }}
@@ -208,7 +208,7 @@ function KanbanColumnComp({ column, onOpen, onColDragStart, onColDragOver, onCol
           {menuOpen && (
             <div style={{
               position: 'absolute', top: 'calc(100% + 6px)', right: 0, zIndex: 60, width: 190,
-              background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', padding: 6,
+              background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', padding: 6,
               boxShadow: 'var(--sb-shadow-frame)',
             }}>
               <p style={{ margin: 0, padding: '7px 9px 5px', fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '.12em', color: 'var(--sb-ink-4)' }}>BOARD COLUMNS</p>
@@ -271,7 +271,7 @@ function KanbanColumnComp({ column, onOpen, onColDragStart, onColDragOver, onCol
               placeholder="Task title…"
               style={{
                 width: '100%', boxSizing: 'border-box',
-                background: 'var(--sb-page)', border: '1px solid var(--sb-accent)',
+                background: 'var(--sb-page)', border: 'var(--sb-border-width) solid var(--sb-accent)',
                 borderRadius: 'var(--sb-r-chip)', padding: '6px 8px', fontSize: 'var(--sb-t-body-s)',
                 color: 'var(--sb-ink-1)', outline: 'none', fontFamily: 'inherit',
               }}
@@ -280,7 +280,7 @@ function KanbanColumnComp({ column, onOpen, onColDragStart, onColDragOver, onCol
               <Button variant="accent" onClick={commitAdd} style={{ flex: 1 }}>
                 Add
               </Button>
-              <button onClick={() => { setAdding(false); setNewTitle('') }} style={{ padding: '4px 8px', fontSize: 'var(--sb-t-meta)', background: 'transparent', color: 'var(--sb-ink-3)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-chip)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+              <button onClick={() => { setAdding(false); setNewTitle('') }} style={{ padding: '4px 8px', fontSize: 'var(--sb-t-meta)', background: 'transparent', color: 'var(--sb-ink-3)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-chip)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
                 <XIcon size={ICON.sm} />
               </button>
             </div>
@@ -342,7 +342,7 @@ function DatePickerOverlay({
             style={{
               width: '100%', boxSizing: 'border-box',
               background: 'var(--sb-page)',
-              border: '1px solid var(--sb-border)',
+              border: 'var(--sb-border-width) solid var(--sb-border)',
               borderRadius: 'var(--sb-r-chip)', padding: '7px 10px',
               fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)',
               outline: 'none', fontFamily: 'inherit',
@@ -352,13 +352,13 @@ function DatePickerOverlay({
         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
           <button onClick={onCancel} style={{
             padding: '7px 16px', borderRadius: 'var(--sb-r-chip)', background: 'transparent',
-            border: '1px solid var(--sb-border)',
+            border: 'var(--sb-border-width) solid var(--sb-border)',
             color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body-s)', cursor: 'pointer',
           }}>Cancel</button>
           <button onClick={() => date && onConfirm(date)} disabled={!date} style={{
             padding: '7px 18px', borderRadius: 'var(--sb-r-chip)',
             background: 'rgba(var(--sb-accent-rgb),0.15)',
-            border: '1px solid rgba(var(--sb-accent-rgb),0.5)',
+            border: 'var(--sb-border-width) solid rgba(var(--sb-accent-rgb),0.5)',
             color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
             cursor: date ? 'pointer' : 'default', opacity: date ? 1 : 0.5,
           }}>Set Date &amp; Plan</button>

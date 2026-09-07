@@ -50,7 +50,7 @@ export function AccountModal({ account, onSave, onDelete, onClose }: Props) {
     width: '100%',
     padding: '10px 12px',
     borderRadius: 'var(--sb-r-chip)',
-    border: `1px solid ${'var(--sb-border)'}`,
+    border: `var(--sb-border-width) solid ${'var(--sb-border)'}`,
     background: 'var(--sb-page)',
     color: 'var(--sb-ink-1)',
     fontSize: 'var(--sb-t-body)',
@@ -252,7 +252,7 @@ export function AccountModal({ account, onSave, onDelete, onClose }: Props) {
           justifyContent: 'flex-end',
           gap: 8,
           paddingTop: 8,
-          borderTop: `1px solid ${'var(--sb-border)'}`,
+          borderTop: `var(--sb-border-width) solid ${'var(--sb-border)'}`,
         }}>
           {/* Cancel */}
           <button

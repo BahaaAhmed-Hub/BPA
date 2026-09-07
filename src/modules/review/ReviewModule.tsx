@@ -147,7 +147,7 @@ function StatCard({
 }) {
   return (
     <div style={{
-      background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
+      background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)',
       borderRadius: 'var(--sb-r-nav)', padding: '18px 20px', position: 'relative', overflow: 'hidden',
     }}>
       <div style={{ position: 'absolute', top: 0, left: 0, width: 3, height: '100%', background: color, borderRadius: 'var(--sb-r-nav) 0 0 var(--sb-r-nav)' }} />
@@ -162,7 +162,7 @@ function StatCard({
           <div style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-4)', marginTop: 4 }}>{label}</div>
           <div style={{ fontSize: 'var(--sb-t-meta)', color, marginTop: 6, fontWeight: 500 }}>{sub}</div>
         </div>
-        <div style={{ width: 34, height: 34, borderRadius: 'var(--sb-r-chip)', background: alpha(color, 9.4), border: `1px solid ${alpha(color, 18.8)}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+        <div style={{ width: 'var(--sb-h-pill)', height: 'var(--sb-h-pill)', borderRadius: 'var(--sb-r-chip)', background: alpha(color, 9.4), border: `var(--sb-border-width) solid ${alpha(color, 18.8)}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
           <Icon size={15} color={color} />
         </div>
       </div>
@@ -186,7 +186,7 @@ function SectionHead({ label, count, color }: { label: string; count: number; co
 function EventRow({ event, cancelled }: { event: GCalEvent; cancelled?: boolean }) {
   const time = fmtEventTime(event)
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-page)', border: '1px solid var(--sb-field)', marginBottom: 5 }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-page)', border: 'var(--sb-border-width) solid var(--sb-field)', marginBottom: 5 }}>
       {cancelled
         ? <XCircle size={ICON.sm} color="var(--sb-ink-3)" style={{ flexShrink: 0 }} />
         : <CheckCircle2 size={ICON.sm} color="var(--sb-positive)" style={{ flexShrink: 0 }} />
@@ -220,7 +220,7 @@ function resolveCompanyLabel(task: Task): string | undefined {
 
 function TaskRow({ title, company, cancelled }: { title: string; company?: string; cancelled?: boolean }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-page)', border: '1px solid var(--sb-field)', marginBottom: 5 }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-page)', border: 'var(--sb-border-width) solid var(--sb-field)', marginBottom: 5 }}>
       {cancelled
         ? <XCircle size={ICON.sm} color="var(--sb-ink-3)" style={{ flexShrink: 0 }} />
         : <CheckSquare size={ICON.sm} color="var(--sb-positive)" style={{ flexShrink: 0 }} />
@@ -332,7 +332,7 @@ function PieChart({ slices, title }: { slices: PieSlice[]; title: string }) {
   const fmt = (m: number) => m >= 60 ? `${(m / 60).toFixed(1)}h` : `${Math.round(m)}m`
 
   return (
-    <div style={{ background: 'var(--sb-page)', border: '1px solid var(--sb-field)', borderRadius: 'var(--sb-r-nav)', padding: '14px 18px', marginBottom: 20 }}>
+    <div style={{ background: 'var(--sb-page)', border: 'var(--sb-border-width) solid var(--sb-field)', borderRadius: 'var(--sb-r-nav)', padding: '14px 18px', marginBottom: 20 }}>
       <div style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, color: 'var(--sb-ink-4)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 14 }}>{title}</div>
       <div style={{ display: 'flex', gap: 20, alignItems: 'center', flexWrap: 'wrap' }}>
         <svg width={136} height={136} style={{ flexShrink: 0 }}>
@@ -343,7 +343,7 @@ function PieChart({ slices, title }: { slices: PieSlice[]; title: string }) {
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 7, minWidth: 130 }}>
           {active.map((sl, i) => (
             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <div style={{ width: 9, height: 9, borderRadius: 'var(--sb-r-chip)', background: sl.color, border: '1px solid rgba(255,255,255,0.12)', flexShrink: 0 }} />
+              <div style={{ width: 9, height: 9, borderRadius: 'var(--sb-r-chip)', background: sl.color, border: 'var(--sb-border-width) solid rgba(255,255,255,0.12)', flexShrink: 0 }} />
               <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-2)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sl.label}</span>
               <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>{fmt(sl.minutes)}</span>
             </div>
@@ -378,7 +378,7 @@ function WeeklyDayCard({ dayStr, allEvents, statuses, tasks }: {
   const hasActivity = doneEvts.length > 0 || cancelledEvts.length > 0 || doneTasks.length > 0 || cancelledTasks.length > 0
 
   return (
-    <div style={{ borderBottom: '1px solid var(--sb-card)' }}>
+    <div style={{ borderBottom: 'var(--sb-border-width) solid var(--sb-card)' }}>
       {/* Day header */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -387,7 +387,7 @@ function WeeklyDayCard({ dayStr, allEvents, statuses, tasks }: {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
           {isToday && (
-            <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, color: 'var(--sb-info)', background: 'color-mix(in srgb, var(--sb-info) 15.0%, transparent)', border: '1px solid color-mix(in srgb, var(--sb-info) 30.0%, transparent)', borderRadius: 'var(--sb-r-chip)', padding: '1px 6px', flexShrink: 0 }}>TODAY</span>
+            <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, color: 'var(--sb-info)', background: 'color-mix(in srgb, var(--sb-info) 15.0%, transparent)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-info) 30.0%, transparent)', borderRadius: 'var(--sb-r-chip)', padding: '1px 6px', flexShrink: 0 }}>TODAY</span>
           )}
           <span style={{ fontSize: 'var(--sb-t-label)', fontWeight: 700, color: isToday ? 'var(--sb-info)' : 'var(--sb-ink-2)', whiteSpace: 'nowrap' }}>
             {dayLabel}
@@ -501,14 +501,14 @@ export function ReviewModule() {
         </div>
 
         {/* ─── Panel ──────────────────────────────────────────────────────── */}
-        <div style={{ background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-card)', overflow: 'hidden' }}>
+        <div style={{ background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-card)', overflow: 'hidden' }}>
 
           {/* Navigation header */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', borderBottom: '1px solid var(--sb-border)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', borderBottom: 'var(--sb-border-width) solid var(--sb-border)' }}>
 
             <button
               onClick={() => setSelectedDay(d => shiftDay(d, viewMode === 'weekly' ? -7 : -1))}
-              style={{ background: 'none', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-chip)', cursor: 'pointer', color: 'var(--sb-ink-3)', padding: '5px 8px', display: 'flex', alignItems: 'center' }}
+              style={{ background: 'none', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-chip)', cursor: 'pointer', color: 'var(--sb-ink-3)', padding: '5px 8px', display: 'flex', alignItems: 'center' }}
             ><ChevronLeft size={ICON.md} /></button>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -522,14 +522,14 @@ export function ReviewModule() {
               {(viewMode === 'daily' ? selectedDay !== todayStr() : !isCurrentWeek) && (
                 <button
                   onClick={() => setSelectedDay(todayStr())}
-                  style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-info)', background: 'color-mix(in srgb, var(--sb-info) 10.0%, transparent)', border: '1px solid color-mix(in srgb, var(--sb-info) 25.0%, transparent)', borderRadius: 'var(--sb-r-chip)', padding: '2px 8px', cursor: 'pointer' }}
+                  style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-info)', background: 'color-mix(in srgb, var(--sb-info) 10.0%, transparent)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-info) 25.0%, transparent)', borderRadius: 'var(--sb-r-chip)', padding: '2px 8px', cursor: 'pointer' }}
                 >Today</button>
               )}
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               {/* Daily / Weekly toggle */}
-              <div style={{ display: 'flex', background: 'var(--sb-page)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-chip)', overflow: 'hidden' }}>
+              <div style={{ display: 'flex', background: 'var(--sb-page)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-chip)', overflow: 'hidden' }}>
                 {(['daily', 'weekly'] as const).map(mode => (
                   <button
                     key={mode}
@@ -546,12 +546,12 @@ export function ReviewModule() {
             </div>
             <button
               onClick={() => setSelectedDay(d => shiftDay(d, viewMode === 'weekly' ? +7 : +1))}
-              style={{ background: 'none', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-chip)', cursor: 'pointer', color: 'var(--sb-ink-3)', padding: '5px 8px', display: 'flex', alignItems: 'center' }}
+              style={{ background: 'none', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-chip)', cursor: 'pointer', color: 'var(--sb-ink-3)', padding: '5px 8px', display: 'flex', alignItems: 'center' }}
             ><ChevronRight size={ICON.md} /></button>
           </div>
 
           {/* Analytics bar */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 24, padding: '11px 20px', borderBottom: '1px solid var(--sb-card)', background: 'var(--sb-page)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 24, padding: '11px 20px', borderBottom: 'var(--sb-border-width) solid var(--sb-card)', background: 'var(--sb-page)' }}>
             {viewMode === 'daily' ? (
               <>
                 <PillStat done={doneEvents.length} total={dayEvents.length} label="events done" color="var(--sb-info)" />

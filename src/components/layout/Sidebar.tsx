@@ -59,7 +59,7 @@ export function Sidebar() {
         width: sidebarCollapsed ? 64 : 220,
         minWidth: sidebarCollapsed ? 64 : 220,
         background: 'var(--sb-header)',
-        borderRight: `1px solid ${'var(--sb-border)'}`,
+        borderRight: `var(--sb-border-width) solid ${'var(--sb-border)'}`,
         height: '100vh',
         display: 'flex',
         flexDirection: 'column',
@@ -73,9 +73,9 @@ export function Sidebar() {
       {/* Logo — exact 64px height to align with TopBar */}
       <div
         style={{
-          height: 64, flexShrink: 0,
+          height: 'var(--sb-h-header)', flexShrink: 0,
           padding: sidebarCollapsed ? '0' : '0 20px',
-          borderBottom: `1px solid ${'var(--sb-border)'}`,
+          borderBottom: `var(--sb-border-width) solid ${'var(--sb-border)'}`,
           display: 'flex',
           alignItems: 'center',
           gap: 10,
@@ -143,7 +143,7 @@ export function Sidebar() {
           const active = activeModule === id
           const modeLabel = behavioralMode === 'samurai' ? 'SAMURAI' : behavioralMode === 'pharaoh' ? 'PHARAOH' : 'ASTRAL'
           return (
-            <div style={{ borderTop: `1px solid ${'var(--sb-border)'}`, paddingTop: 10, marginTop: 4 }}>
+            <div style={{ borderTop: `var(--sb-border-width) solid ${'var(--sb-border)'}`, paddingTop: 10, marginTop: 4 }}>
               {!sidebarCollapsed && (
                 <span style={{
                   display: 'block', padding: '4px 12px 6px',
@@ -166,7 +166,7 @@ export function Sidebar() {
         })()}
 
         {/* System section */}
-        <div style={{ borderTop: `1px solid ${'var(--sb-border)'}`, paddingTop: 10, marginTop: 4 }}>
+        <div style={{ borderTop: `var(--sb-border-width) solid ${'var(--sb-border)'}`, paddingTop: 10, marginTop: 4 }}>
           {!sidebarCollapsed && (
             <span style={{
               display: 'block', padding: '4px 12px 6px',
@@ -194,7 +194,7 @@ export function Sidebar() {
       </nav>
 
       {/* Collapse toggle */}
-      <div style={{ padding: '12px 8px', borderTop: `1px solid ${'var(--sb-border)'}` }}>
+      <div style={{ padding: '12px 8px', borderTop: `var(--sb-border-width) solid ${'var(--sb-border)'}` }}>
         <button
           onClick={toggleSidebar}
           style={{

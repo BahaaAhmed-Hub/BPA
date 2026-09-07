@@ -68,7 +68,7 @@ export function Step6Done({ data }: Props) {
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 32 }}>
         {stats.map(s => (
-          <div key={s.label} style={{ padding: '16px 8px', borderRadius: 'var(--sb-r-nav)', background: 'var(--sb-card)', border: '1px solid var(--sb-border)' }}>
+          <div key={s.label} style={{ padding: '16px 8px', borderRadius: 'var(--sb-r-nav)', background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)' }}>
             <div style={{ fontSize: 'var(--sb-t-h2)', marginBottom: 6 }}>{s.emoji}</div>
             <div style={{ fontSize: 'var(--sb-t-h1)', fontWeight: 800, color: s.color, lineHeight: 1 }}>
               <CountUp target={s.value} />
@@ -78,7 +78,7 @@ export function Step6Done({ data }: Props) {
         ))}
       </div>
 
-      <div style={{ padding: '14px 20px', borderRadius: 'var(--sb-r-nav)', background: 'color-mix(in srgb, var(--sb-info) 6.0%, transparent)', border: '1px solid color-mix(in srgb, var(--sb-info) 15.0%, transparent)', marginBottom: 16 }}>
+      <div style={{ padding: '14px 20px', borderRadius: 'var(--sb-r-nav)', background: 'color-mix(in srgb, var(--sb-info) 6.0%, transparent)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-info) 15.0%, transparent)', marginBottom: 16 }}>
         <p style={{ margin: 0, fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-3)', lineHeight: 1.6 }}>
           All your data syncs automatically. You can adjust everything in <strong style={{ color: 'var(--sb-ink-1)' }}>Settings</strong> at any time.
         </p>

@@ -35,7 +35,7 @@ function MetricCard({
       onClick={onClick}
       style={{
         background: 'var(--sb-card)',
-        border: '1px solid var(--sb-border)',
+        border: 'var(--sb-border-width) solid var(--sb-border)',
         borderRadius: 'var(--sb-r-nav)', padding: '20px 22px',
         display: 'flex', flexDirection: 'column', gap: 12,
         position: 'relative', overflow: 'hidden',
@@ -44,12 +44,12 @@ function MetricCard({
       }}
     >
       <div style={{
-        width: 36, height: 36, borderRadius: 'var(--sb-r-chip)',
+        width: 'var(--sb-h-nav)', height: 'var(--sb-h-nav)', borderRadius: 'var(--sb-r-chip)',
         // The tile is the card's colour at a fraction of itself. An eight-digit
         // hex could only ever say that about a hex, and one of these colours is
         // now a token — 24/255 and 48/255, the two alphas that were there.
         background: `color-mix(in srgb, ${color} 9.4%, transparent)`,
-        border: `1px solid color-mix(in srgb, ${color} 18.8%, transparent)`,
+        border: `var(--sb-border-width) solid color-mix(in srgb, ${color} 18.8%, transparent)`,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}>
         <Icon size={16} color={color} strokeWidth={2} />
@@ -90,7 +90,7 @@ function CompanyBadge({ name, color, count }: { name: string; color: string; cou
       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       padding: '10px 14px',
       background: 'var(--sb-field)',
-      borderRadius: 'var(--sb-r-chip)', border: '1px solid var(--sb-border)',
+      borderRadius: 'var(--sb-r-chip)', border: 'var(--sb-border-width) solid var(--sb-border)',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <div style={{ width: 8, height: 8, borderRadius: 'var(--sb-r-pill)', background: color }} />
@@ -114,7 +114,7 @@ function QuickAction({ label, onClick }: { label: string; onClick: () => void })
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         width: '100%', padding: '12px 16px',
         background: 'var(--sb-field)',
-        border: '1px solid var(--sb-border)',
+        border: 'var(--sb-border-width) solid var(--sb-border)',
         borderRadius: 'var(--sb-r-sm)', cursor: 'pointer', gap: 10,
         color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body)', fontWeight: 500,
         transition: 'border-color 0.15s',
@@ -213,7 +213,7 @@ export function ExecutiveDashboard() {
               display: 'flex', alignItems: 'center', gap: 7,
               padding: '9px 18px', borderRadius: 'var(--sb-r-sm)',
               background: 'rgba(var(--sb-accent-rgb),0.12)',
-              border: '1px solid rgba(var(--sb-accent-rgb),0.25)',
+              border: 'var(--sb-border-width) solid rgba(var(--sb-accent-rgb),0.25)',
               color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-label)', fontWeight: 600, cursor: 'pointer',
             }}
           >
@@ -298,7 +298,7 @@ export function ExecutiveDashboard() {
           {/* Company Breakdown */}
           <div style={{
             background: 'var(--sb-card)',
-            border: '1px solid var(--sb-border)',
+            border: 'var(--sb-border-width) solid var(--sb-border)',
             borderRadius: 'var(--sb-r-nav)', padding: '20px 22px',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
@@ -323,7 +323,7 @@ export function ExecutiveDashboard() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div style={{
               background: 'var(--sb-card)',
-              border: '1px solid var(--sb-border)',
+              border: 'var(--sb-border-width) solid var(--sb-border)',
               borderRadius: 'var(--sb-r-nav)', padding: '20px 22px',
             }}>
               <h3 style={{ margin: '0 0 14px', fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-3)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
@@ -345,7 +345,7 @@ export function ExecutiveDashboard() {
                     <div key={key} onClick={() => setModule('tasks')}
                       style={{
                         background: 'var(--sb-field)',
-                        border: `1px solid ${alpha(color, 18.8)}`,
+                        border: `var(--sb-border-width) solid ${alpha(color, 18.8)}`,
                         borderRadius: 'var(--sb-r-chip)', padding: '12px 14px',
                         display: 'flex', flexDirection: 'column', gap: 4,
                         cursor: 'pointer',
@@ -364,7 +364,7 @@ export function ExecutiveDashboard() {
             {/* Quick Actions */}
             <div style={{
               background: 'var(--sb-card)',
-              border: '1px solid var(--sb-border)',
+              border: 'var(--sb-border-width) solid var(--sb-border)',
               borderRadius: 'var(--sb-r-nav)', padding: '16px 18px',
             }}>
               <h3 style={{ margin: '0 0 12px', fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-ink-3)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
@@ -384,13 +384,13 @@ export function ExecutiveDashboard() {
         <div style={{
           marginTop: 14,
           background: 'color-mix(in srgb, var(--sb-info) 6.0%, transparent)',
-          border: '1px solid color-mix(in srgb, var(--sb-info) 20.0%, transparent)',
+          border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-info) 20.0%, transparent)',
           borderRadius: 'var(--sb-r-nav)', padding: '16px 20px',
           display: 'flex', gap: 14, alignItems: 'flex-start',
         }}>
           <div style={{
             width: 28, height: 28, borderRadius: 'var(--sb-r-chip)',
-            background: 'color-mix(in srgb, var(--sb-info) 15.0%, transparent)', border: '1px solid color-mix(in srgb, var(--sb-info) 30.0%, transparent)',
+            background: 'color-mix(in srgb, var(--sb-info) 15.0%, transparent)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-info) 30.0%, transparent)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             flexShrink: 0, marginTop: 1,
           }}>

@@ -376,7 +376,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{
             width: 28, height: 28, borderRadius: 'var(--sb-r-chip)',
-            background: 'color-mix(in srgb, var(--sb-info) 10.0%, transparent)', border: '1px solid color-mix(in srgb, var(--sb-info) 18.8%, transparent)',
+            background: 'color-mix(in srgb, var(--sb-info) 10.0%, transparent)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-info) 18.8%, transparent)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
             <Sparkles size={ICON.sm} color="var(--sb-info)" />
@@ -397,9 +397,9 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
         {error && (
           <div style={{
-            borderRadius: 'var(--sb-r-nav)', background: 'var(--sb-accent-tint)', border: '1px solid color-mix(in srgb, var(--sb-warning) 18.8%, transparent)', overflow: 'hidden',
+            borderRadius: 'var(--sb-r-nav)', background: 'var(--sb-accent-tint)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-warning) 18.8%, transparent)', overflow: 'hidden',
           }}>
-            <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '14px 16px', borderBottom: '1px solid color-mix(in srgb, var(--sb-warning) 18.8%, transparent)' }}>
+            <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '14px 16px', borderBottom: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-warning) 18.8%, transparent)' }}>
               <CreditCard size={ICON.sm} color="var(--sb-warning)" style={{ marginTop: 1, flexShrink: 0 }} />
               <div>
                 <p style={{ margin: '0 0 3px', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-warning)' }}>
@@ -481,7 +481,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                               display: 'flex', alignItems: 'center', gap: 9,
                               padding: '8px 10px', borderRadius: 'var(--sb-r-chip)',
                               background: isSelected ? alpha(group.color, 7.1) : 'var(--sb-page)',
-                              border: `1px solid ${isSelected ? `${group.color}40` : 'var(--sb-border)'}`,
+                              border: `var(--sb-border-width) solid ${isSelected ? `${group.color}40` : 'var(--sb-border)'}`,
                               cursor: 'pointer', textAlign: 'left',
                               transition: 'all 0.12s',
                             }}
@@ -490,7 +490,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                             <div style={{
                               width: 14, height: 14, borderRadius: 'var(--sb-r-chip)', flexShrink: 0,
                               background: isSelected ? group.color : 'transparent',
-                              border: `1px solid ${isSelected ? group.color : 'var(--sb-ink-4)'}`,
+                              border: `var(--sb-border-width) solid ${isSelected ? group.color : 'var(--sb-ink-4)'}`,
                               display: 'flex', alignItems: 'center', justifyContent: 'center',
                             }}>
                               {isSelected && <Check size={ICON.sm} color="var(--sb-ink-on-fill)" strokeWidth={STROKE.active} />}
@@ -507,7 +507,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                             {isDueToday && (
                               <span style={{
                                 fontSize: 'var(--sb-t-micro)', padding: '1px 5px', borderRadius: 'var(--sb-r-chip)', flexShrink: 0,
-                                background: 'color-mix(in srgb, var(--sb-negative) 9.4%, transparent)', border: '1px solid color-mix(in srgb, var(--sb-negative) 18.8%, transparent)', color: 'var(--sb-negative)',
+                                background: 'color-mix(in srgb, var(--sb-negative) 9.4%, transparent)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-negative) 18.8%, transparent)', color: 'var(--sb-negative)',
                               }}>
                                 today
                               </span>
@@ -515,7 +515,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                             {task.quadrant === 'do' && !isDueToday && (
                               <span style={{
                                 fontSize: 'var(--sb-t-micro)', padding: '1px 5px', borderRadius: 'var(--sb-r-chip)', flexShrink: 0,
-                                background: 'color-mix(in srgb, var(--sb-warning) 8.2%, transparent)', border: '1px solid color-mix(in srgb, var(--sb-warning) 18.8%, transparent)', color: 'var(--sb-warning)',
+                                background: 'color-mix(in srgb, var(--sb-warning) 8.2%, transparent)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-warning) 18.8%, transparent)', color: 'var(--sb-warning)',
                               }}>
                                 urgent
                               </span>
@@ -579,7 +579,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                     {ev.calendarName && (
                       <span style={{
                         fontSize: 'var(--sb-t-micro)', padding: '1px 5px', borderRadius: 'var(--sb-r-chip)', flexShrink: 0,
-                        background: alpha(color, 9.4), border: `1px solid ${alpha(color, 18.8)}`, color,
+                        background: alpha(color, 9.4), border: `var(--sb-border-width) solid ${alpha(color, 18.8)}`, color,
                       }}>
                         {ev.calendarName}
                       </span>
@@ -605,7 +605,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                   flex: 1, padding: '9px 0', borderRadius: 'var(--sb-r-chip)', cursor: 'pointer',
                   fontSize: 'var(--sb-t-body-s)', fontWeight: deepWork === opt ? 600 : 400,
                   background: deepWork === opt ? 'color-mix(in srgb, var(--sb-info) 10.0%, transparent)' : 'var(--sb-page)',
-                  border: `1px solid ${deepWork === opt ? 'color-mix(in srgb, var(--sb-info) 40%, transparent)' : 'var(--sb-border)'}`,
+                  border: `var(--sb-border-width) solid ${deepWork === opt ? 'color-mix(in srgb, var(--sb-info) 40%, transparent)' : 'var(--sb-border)'}`,
                   color: deepWork === opt ? 'var(--sb-info)' : 'var(--sb-ink-4)',
                   transition: 'all 0.15s',
                   textTransform: 'capitalize',
@@ -623,7 +623,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
             onClick={() => { setPhase('idle'); setError(null); setSelectedTaskIds(new Set()) }}
             style={{
               padding: '9px 16px', borderRadius: 'var(--sb-r-chip)', cursor: 'pointer',
-              background: 'transparent', border: '1px solid var(--sb-border)',
+              background: 'transparent', border: 'var(--sb-border-width) solid var(--sb-border)',
               color: 'var(--sb-ink-4)', fontSize: 'var(--sb-t-body-s)',
             }}
           >
@@ -698,7 +698,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                   display: 'flex', gap: 10, alignItems: 'stretch',
                   padding: '10px 12px', borderRadius: 'var(--sb-r-nav)',
                   background: isPast ? 'var(--sb-field)' : 'var(--sb-page)',
-                  border: `1px solid ${slot.decision === 'confirmed' ? `${color}30` : 'var(--sb-border)'}`,
+                  border: `var(--sb-border-width) solid ${slot.decision === 'confirmed' ? `${color}30` : 'var(--sb-border)'}`,
                   opacity: isPast ? 0.45 : 1,
                   transition: 'all 0.15s',
                 }}
@@ -714,7 +714,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                     </span>
                     <span style={{
                       fontSize: 'var(--sb-t-micro)', padding: '1px 6px', borderRadius: 'var(--sb-r-chip)',
-                      background: alpha(color, 8.2), border: `1px solid ${alpha(color, 14.5)}`, color,
+                      background: alpha(color, 8.2), border: `var(--sb-border-width) solid ${alpha(color, 14.5)}`, color,
                       fontWeight: 600,
                     }}>
                       {BLOCK_LABELS[slot.type]}
@@ -722,7 +722,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                     {slot.isExisting && (
                       <span style={{
                         fontSize: 'var(--sb-t-micro)', padding: '1px 6px', borderRadius: 'var(--sb-r-chip)',
-                        background: 'color-mix(in srgb, var(--sb-ink-2) 9.4%, transparent)', border: '1px solid color-mix(in srgb, var(--sb-ink-2) 25.1%, transparent)', color: 'var(--sb-ink-4)',
+                        background: 'color-mix(in srgb, var(--sb-ink-2) 9.4%, transparent)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-ink-2) 25.1%, transparent)', color: 'var(--sb-ink-4)',
                       }}>
                         existing
                       </span>
@@ -730,7 +730,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                     {slot.action === 'reschedule' && (
                       <span style={{
                         fontSize: 'var(--sb-t-micro)', padding: '1px 6px', borderRadius: 'var(--sb-r-chip)',
-                        background: 'color-mix(in srgb, var(--sb-warning) 8.2%, transparent)', border: '1px solid color-mix(in srgb, var(--sb-warning) 18.8%, transparent)', color: 'var(--sb-warning)',
+                        background: 'color-mix(in srgb, var(--sb-warning) 8.2%, transparent)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-warning) 18.8%, transparent)', color: 'var(--sb-warning)',
                       }}>
                         move
                       </span>
@@ -738,7 +738,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                     {slot.action === 'remove' && (
                       <span style={{
                         fontSize: 'var(--sb-t-micro)', padding: '1px 6px', borderRadius: 'var(--sb-r-chip)',
-                        background: 'color-mix(in srgb, var(--sb-negative) 8.2%, transparent)', border: '1px solid color-mix(in srgb, var(--sb-negative) 18.8%, transparent)', color: 'var(--sb-negative)',
+                        background: 'color-mix(in srgb, var(--sb-negative) 8.2%, transparent)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-negative) 18.8%, transparent)', color: 'var(--sb-negative)',
                       }}>
                         remove
                       </span>
@@ -768,7 +768,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                       title="Confirm"
                       style={{
                         width: 26, height: 26, borderRadius: 'var(--sb-r-chip)', cursor: 'pointer',
-                        background: 'color-mix(in srgb, var(--sb-positive) 9.4%, transparent)', border: '1px solid color-mix(in srgb, var(--sb-positive) 25.1%, transparent)',
+                        background: 'color-mix(in srgb, var(--sb-positive) 9.4%, transparent)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-positive) 25.1%, transparent)',
                         color: 'var(--sb-positive)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                       }}
                     >
@@ -780,7 +780,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                       title="Unconfirm"
                       style={{
                         width: 26, height: 26, borderRadius: 'var(--sb-r-chip)', cursor: 'pointer',
-                        background: 'color-mix(in srgb, var(--sb-positive) 18.8%, transparent)', border: '1px solid color-mix(in srgb, var(--sb-positive) 37.6%, transparent)',
+                        background: 'color-mix(in srgb, var(--sb-positive) 18.8%, transparent)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-positive) 37.6%, transparent)',
                         color: 'var(--sb-positive)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                       }}
                     >
@@ -794,7 +794,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                       title="Skip"
                       style={{
                         width: 26, height: 26, borderRadius: 'var(--sb-r-chip)', cursor: 'pointer',
-                        background: 'color-mix(in srgb, var(--sb-negative) 9.4%, transparent)', border: '1px solid color-mix(in srgb, var(--sb-negative) 18.8%, transparent)',
+                        background: 'color-mix(in srgb, var(--sb-negative) 9.4%, transparent)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-negative) 18.8%, transparent)',
                         color: 'var(--sb-negative)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                       }}
                     >
@@ -808,7 +808,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
                       title="Find next free slot"
                       style={{
                         width: 26, height: 26, borderRadius: 'var(--sb-r-chip)', cursor: 'pointer',
-                        background: 'color-mix(in srgb, var(--sb-warning) 9.4%, transparent)', border: '1px solid color-mix(in srgb, var(--sb-warning) 18.8%, transparent)',
+                        background: 'color-mix(in srgb, var(--sb-warning) 9.4%, transparent)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-warning) 18.8%, transparent)',
                         color: 'var(--sb-warning)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                       }}
                     >
@@ -874,7 +874,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
               <div style={{
                 width: 16, height: 16, borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
                 background: st === 'done' ? 'var(--sb-positive)' : st === 'error' ? 'var(--sb-negative)' : 'var(--sb-field)',
-                border: `1px solid ${st === 'done' ? 'var(--sb-positive)' : st === 'error' ? 'var(--sb-negative)' : 'var(--sb-info)'}`,
+                border: `var(--sb-border-width) solid ${st === 'done' ? 'var(--sb-positive)' : st === 'error' ? 'var(--sb-negative)' : 'var(--sb-info)'}`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
                 {st === 'done'  && <Check size={ICON.sm} color="var(--sb-ink-on-fill)" />}
@@ -904,12 +904,12 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <div style={{
         padding: '16px 18px', borderRadius: 'var(--sb-r-nav)',
-        background: 'var(--sb-positive-tint)', border: '1px solid color-mix(in srgb, var(--sb-positive) 25.1%, transparent)',
+        background: 'var(--sb-positive-tint)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-positive) 25.1%, transparent)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
           <div style={{
             width: 28, height: 28, borderRadius: 'var(--sb-r-chip)', flexShrink: 0,
-            background: 'color-mix(in srgb, var(--sb-positive) 9.4%, transparent)', border: '1px solid color-mix(in srgb, var(--sb-positive) 18.8%, transparent)',
+            background: 'color-mix(in srgb, var(--sb-positive) 9.4%, transparent)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-positive) 18.8%, transparent)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
             <Check size={ICON.sm} color="var(--sb-positive)" />
@@ -937,7 +937,7 @@ export function DayPlanner({ energyLevel, tasks, todayEvents, eventsLoading, dbU
         onClick={() => { setPhase('idle'); setSlots([]); setResults([]); setApplying({}) }}
         style={{
           padding: '9px 0', borderRadius: 'var(--sb-r-chip)', cursor: 'pointer',
-          background: 'transparent', border: '1px solid var(--sb-border)',
+          background: 'transparent', border: 'var(--sb-border-width) solid var(--sb-border)',
           color: 'var(--sb-ink-4)', fontSize: 'var(--sb-t-body-s)',
         }}
       >

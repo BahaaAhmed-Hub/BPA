@@ -67,8 +67,8 @@ const ICON_BTN: React.CSSProperties = {
 /** One attribute cell: same height and shape in every state, icon then value. */
 const CELL: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 8,
-  height: 34, padding: '0 11px', borderRadius: 'var(--sb-r-sm)', minWidth: 0,
-  background: 'var(--sb-field)', border: '1px solid var(--sb-border)',
+  height: 'var(--sb-h-pill)', padding: '0 11px', borderRadius: 'var(--sb-r-sm)', minWidth: 0,
+  background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)',
   cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
 }
 
@@ -249,7 +249,7 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
     <aside style={{
       width: expanded ? 'min(560px, 62vw)' : 'clamp(300px, 32vw, 400px)', flexShrink: 0, alignSelf: 'flex-start',
       maxHeight: 'calc(100vh - 212px)',
-      background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
+      background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
       display: 'flex', flexDirection: 'column', minWidth: 0,
       boxShadow: 'var(--sb-shadow-control)',
     }}>
@@ -264,7 +264,7 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
         <span style={{ position: 'relative', display: 'inline-flex', minWidth: 0, maxWidth: '100%' }}>
           <span style={{
             display: 'inline-flex', alignItems: 'center', height: 28, padding: '0 12px',
-            borderRadius: 'var(--sb-r-pill)', border: `1px solid ${v.companyColor}`, color: v.companyColor,
+            borderRadius: 'var(--sb-r-pill)', border: `var(--sb-border-width) solid ${v.companyColor}`, color: v.companyColor,
             fontSize: 'var(--sb-t-body-s)', fontWeight: 600, maxWidth: '100%',
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}>{v.companyName || 'No company'}</span>
@@ -296,7 +296,7 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
           style={{
             ...ICON_BTN,
             background: finished ? 'var(--sb-positive)' : 'transparent',
-            border: `1px solid ${finished ? 'var(--sb-positive)' : 'var(--sb-border)'}`,
+            border: `var(--sb-border-width) solid ${finished ? 'var(--sb-positive)' : 'var(--sb-border)'}`,
             color: finished ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
           }}>
           <Check size={ICON.md} />
@@ -308,7 +308,7 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
           style={{
             ...ICON_BTN,
             background: cancelled ? 'var(--sb-ink-3)' : 'transparent',
-            border: `1px solid ${cancelled ? 'var(--sb-ink-3)' : 'var(--sb-border)'}`,
+            border: `var(--sb-border-width) solid ${cancelled ? 'var(--sb-ink-3)' : 'var(--sb-border)'}`,
             color: cancelled ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
           }}>
           <Ban size={ICON.sm} />
@@ -340,7 +340,7 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
           placeholder="What is it?"
           style={{
             width: '100%', boxSizing: 'border-box', resize: 'none', overflow: 'hidden',
-            background: 'var(--sb-field)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
+            background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
             padding: '12px 14px', outline: 'none', fontFamily: 'var(--sb-font-num)',
             fontSize: 'var(--sb-t-h2)', fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--sb-ink-1)', lineHeight: 1.25,
           }}
@@ -450,7 +450,7 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
             <span style={{
               width: 18, height: 18, borderRadius: 'var(--sb-r-pill)', flexShrink: 0, boxSizing: 'border-box',
               background: owner ? 'var(--sb-ink-1)' : 'var(--sb-field)',
-              border: owner ? 'none' : '1px solid var(--sb-border)',
+              border: owner ? 'none' : 'var(--sb-border-width) solid var(--sb-border)',
               color: owner ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-4)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 'var(--sb-t-micro)', fontWeight: 700,
@@ -535,7 +535,7 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
             placeholder="Anything worth remembering…"
             style={{
               width: '100%', boxSizing: 'border-box', marginTop: 8, resize: 'vertical',
-              background: 'var(--sb-field)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
+              background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
               padding: '10px 12px', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)', outline: 'none',
               fontFamily: 'inherit', lineHeight: 1.5,
             }}
@@ -550,11 +550,11 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
               {(task.links ?? []).map((url, i) => (
                 <div key={`${url}-${i}`} style={{
                   display: 'flex', alignItems: 'center', gap: 10,
-                  border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', padding: '9px 11px',
+                  border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', padding: '9px 11px',
                 }}>
                   <span style={{
                     width: 28, height: 28, borderRadius: 'var(--sb-r-chip)', flexShrink: 0, background: 'var(--sb-field)',
-                    border: '1px solid var(--sb-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--sb-ink-3)',
+                    border: 'var(--sb-border-width) solid var(--sb-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--sb-ink-3)',
                   }}><Link2 size={ICON.sm} /></span>
                   <a href={url} target="_blank" rel="noreferrer" style={{
                     flex: 1, minWidth: 0, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-info)',
@@ -571,11 +571,11 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
                 return (
                   <div key={f.id} style={{
                     display: 'flex', alignItems: 'center', gap: 10,
-                    border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', padding: '9px 11px',
+                    border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', padding: '9px 11px',
                   }}>
                     <span style={{
                       width: 28, height: 28, borderRadius: 'var(--sb-r-chip)', flexShrink: 0, background: 'var(--sb-field)',
-                      border: '1px solid var(--sb-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--sb-ink-3)',
+                      border: 'var(--sb-border-width) solid var(--sb-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--sb-ink-3)',
                     }}>{isImage ? <ImageIcon size={ICON.sm} /> : <FileText size={ICON.sm} />}</span>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', fontWeight: 500, color: 'var(--sb-ink-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.name}</p>
@@ -628,7 +628,7 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
               <div key={a.id} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                 <span style={{
                   width: 20, height: 20, borderRadius: 'var(--sb-r-pill)', flexShrink: 0, marginTop: 1,
-                  background: 'var(--sb-field)', border: '1px solid var(--sb-border)',
+                  background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--sb-ink-4)',
                 }}>
                   <ActivityIcon type={a.type} />
@@ -646,7 +646,7 @@ export function TaskDetailPanel({ task, onClose }: { task: Task; onClose: () => 
       {/* ── Footer ───────────────────────────────────────────────────────── */}
       <div style={{
         display: 'flex', alignItems: 'center',
-        borderTop: '1px solid var(--sb-hairline)', padding: '10px 14px',
+        borderTop: 'var(--sb-border-width) solid var(--sb-hairline)', padding: '10px 14px',
       }}>
         <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>Every change saves itself</span>
       </div>

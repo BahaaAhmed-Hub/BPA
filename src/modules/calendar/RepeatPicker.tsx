@@ -20,7 +20,7 @@ import {
 
 const CARD: React.CSSProperties = {
   position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0, zIndex: 95,
-  background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
+  background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
   boxShadow: 'var(--sb-shadow-frame)',
   padding: 6, maxHeight: 'min(62vh, 460px)', overflowY: 'auto', scrollbarWidth: 'thin',
 }
@@ -63,8 +63,8 @@ function Seg<T extends string | number>({ value, options, onChange }: {
 function Cell({ on, label, onClick, wide }: { on: boolean; label: string; onClick: () => void; wide?: boolean }) {
   return (
     <button onClick={onClick} style={{
-      height: 30, minWidth: 0, width: '100%', borderRadius: wide ? 8 : '50%',
-      border: `1px solid ${on ? 'var(--sb-ink-1)' : 'var(--sb-border)'}`,
+      height: 30, minWidth: 0, width: '100%', borderRadius: wide ? 'var(--sb-r-chip)' : 'var(--sb-r-pill)',
+      border: `var(--sb-border-width) solid ${on ? 'var(--sb-ink-1)' : 'var(--sb-border)'}`,
       background: on ? 'var(--sb-ink-1)' : 'var(--sb-field)', color: on ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
       fontSize: 'var(--sb-t-body-s)', fontWeight: on ? 700 : 500, fontFamily: 'inherit', cursor: 'pointer', padding: 0,
     }}>{label}</button>
@@ -72,7 +72,7 @@ function Cell({ on, label, onClick, wide }: { on: boolean; label: string; onClic
 }
 
 const selectStyle: React.CSSProperties = {
-  height: 32, borderRadius: 'var(--sb-r-chip)', border: '1px solid var(--sb-border)', background: 'var(--sb-field)',
+  height: 32, borderRadius: 'var(--sb-r-chip)', border: 'var(--sb-border-width) solid var(--sb-border)', background: 'var(--sb-field)',
   color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', fontFamily: 'inherit', padding: '0 8px', cursor: 'pointer',
 }
 

@@ -17,7 +17,7 @@ interface Props {
 
 const inp: React.CSSProperties = {
   background: 'var(--sb-page)',
-  border: '1px solid var(--sb-border)',
+  border: 'var(--sb-border-width) solid var(--sb-border)',
   borderRadius: 'var(--sb-r-chip)', padding: '8px 12px',
   color: 'var(--sb-ink-1)',
   fontSize: 'var(--sb-t-body)', outline: 'none', width: '100%', boxSizing: 'border-box',
@@ -58,7 +58,7 @@ export function Step3Companies({ data, onChange }: Props) {
               display: 'flex', alignItems: 'center', gap: 10,
               padding: '10px 14px', borderRadius: 'var(--sb-r-nav)',
               background: 'var(--sb-card)',
-              border: '1px solid var(--sb-border)',
+              border: 'var(--sb-border-width) solid var(--sb-border)',
             }}>
               <div style={{ width: 14, height: 14, borderRadius: 'var(--sb-r-pill)', background: co.color, flexShrink: 0 }} />
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -79,7 +79,7 @@ export function Step3Companies({ data, onChange }: Props) {
       </div>
 
       {adding ? (
-        <div style={{ padding: '16px', borderRadius: 'var(--sb-r-nav)', background: 'var(--sb-card)', border: '1px solid var(--sb-border)', marginBottom: 12 }}>
+        <div style={{ padding: '16px', borderRadius: 'var(--sb-r-nav)', background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', marginBottom: 12 }}>
           <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
             <input value={name} onChange={e => setName(e.target.value)} placeholder="Company name" style={inp} onKeyDown={e => e.key === 'Enter' && addCompany()} autoFocus />
             <input value={domain} onChange={e => setDomain(e.target.value)} placeholder="e.g. acme.com" style={{ ...inp, width: 160 }} />

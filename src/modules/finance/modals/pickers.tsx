@@ -15,13 +15,13 @@ export const DISPLAY = 'var(--sb-font-num)'
 
 export const PILL: React.CSSProperties = {
   display: 'inline-flex', alignItems: 'center', gap: 6, height: 42, boxSizing: 'border-box',
-  padding: '0 14px', borderRadius: 'var(--sb-r-nav)', background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
+  padding: '0 14px', borderRadius: 'var(--sb-r-nav)', background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)',
   color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body)', fontFamily: 'inherit', cursor: 'pointer', minWidth: 0,
 }
 export const ROUND: React.CSSProperties = {
   width: 30, height: 30, borderRadius: 'var(--sb-r-pill)', flexShrink: 0, padding: 0,
   display: 'flex', alignItems: 'center', justifyContent: 'center',
-  background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-3)', cursor: 'pointer',
+  background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-3)', cursor: 'pointer',
 }
 export const LABEL: React.CSSProperties = {
   width: 74, flexShrink: 0, fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-3)', fontWeight: 500,
@@ -142,7 +142,7 @@ export function PillPicker({ value, options, onChange, placeholder, compact }: {
         <div className="sb-blur-surface" ref={list} style={{
           position: 'fixed', top: place.top, left: place.left, width: place.width, zIndex: 2000,
           maxHeight: place.maxHeight, overflowY: 'auto', padding: 5, boxSizing: 'border-box',
-          background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
+          background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
           boxShadow: 'var(--sb-shadow-menu)',
         }}>
           {options.length === 0 && (

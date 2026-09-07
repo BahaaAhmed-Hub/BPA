@@ -107,7 +107,7 @@ function DumpCard({ task, onOpen, onDelete }: {
       onMouseLeave={() => setHovered(false)}
       style={{
         background: s.inferred ? 'var(--sb-accent-tint)' : 'var(--sb-card)',
-        border: `1px solid ${s.inferred ? 'var(--sb-accent-tint)' : 'var(--sb-border)'}`,
+        border: `var(--sb-border-width) solid ${s.inferred ? 'var(--sb-accent-tint)' : 'var(--sb-border)'}`,
         borderRadius: 'var(--sb-r-nav)', padding: '10px 11px',
         display: 'flex', gap: 8, cursor: 'pointer', minWidth: 0,
         opacity: isDragging ? 0.4 : 1,
@@ -145,7 +145,7 @@ function DumpCard({ task, onOpen, onDelete }: {
             display: 'inline-flex', alignItems: 'center', gap: 5, minWidth: 0,
             padding: '3px 8px', borderRadius: 'var(--sb-r-pill)',
             background: s.inferred ? 'var(--sb-accent-tint)' : 'var(--sb-page)',
-            border: `1px solid ${s.inferred ? 'var(--sb-accent)' : 'var(--sb-border)'}`,
+            border: `var(--sb-border-width) solid ${s.inferred ? 'var(--sb-accent)' : 'var(--sb-border)'}`,
             fontSize: 'var(--sb-t-micro)', fontWeight: 600, color: 'var(--sb-ink-3)',
           }}>
             {s.inferred
@@ -229,7 +229,7 @@ export function BrainDumpRail({ tasks, onOpen, flexible }: {
     return (
       <div style={{
         width: 44, flexShrink: 0, alignSelf: 'start',
-        background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
+        background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
         display: 'flex', flexDirection: 'column', alignItems: 'center',
         padding: '10px 0 14px', gap: 10,
       }}>
@@ -253,7 +253,7 @@ export function BrainDumpRail({ tasks, onOpen, flexible }: {
         ? { flex: 1, minWidth: 0 }
         : { width: 'clamp(240px, 26vw, 360px)', flexShrink: 0 }),
       alignSelf: 'start',
-      background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
+      background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
       display: 'flex', flexDirection: 'column',
     }}>
       {/* Header */}
@@ -275,7 +275,7 @@ export function BrainDumpRail({ tasks, onOpen, flexible }: {
           width: '100%', marginTop: 11,
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
           height: 32, borderRadius: 'var(--sb-r-sm)',
-          background: 'var(--sb-field)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-1)',
+          background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-1)',
           fontSize: 'var(--sb-t-body-s)', fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit',
         }}>
           <Plus size={ICON.sm} strokeWidth={STROKE.rest} /> Capture
@@ -292,7 +292,7 @@ export function BrainDumpRail({ tasks, onOpen, flexible }: {
             placeholder={'One per line…'}
             style={{
               width: '100%', boxSizing: 'border-box', marginTop: 9, resize: 'vertical',
-              background: 'var(--sb-field)', border: '1px solid var(--sb-accent)', borderRadius: 'var(--sb-r-sm)',
+              background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-accent)', borderRadius: 'var(--sb-r-sm)',
               padding: '8px 10px', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)', outline: 'none',
               fontFamily: 'inherit', lineHeight: 1.5,
             }}
@@ -318,7 +318,7 @@ export function BrainDumpRail({ tasks, onOpen, flexible }: {
       </div>
 
       {/* Auto-distribute */}
-      <div style={{ borderTop: '1px solid var(--sb-hairline)', padding: '13px 14px 14px' }}>
+      <div style={{ borderTop: 'var(--sb-border-width) solid var(--sb-hairline)', padding: '13px 14px 14px' }}>
         <p style={{
           margin: 0, display: 'flex', alignItems: 'center', gap: 6,
           fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-3)', textTransform: 'uppercase',
@@ -337,7 +337,7 @@ export function BrainDumpRail({ tasks, onOpen, flexible }: {
           ].map(([from, to]) => (
             <div key={from} style={{
               display: 'flex', alignItems: 'center', gap: 8,
-              padding: '6px 0', borderBottom: '1px solid var(--sb-accent-tint)', fontSize: 'var(--sb-t-meta)',
+              padding: '6px 0', borderBottom: 'var(--sb-border-width) solid var(--sb-accent-tint)', fontSize: 'var(--sb-t-meta)',
             }}>
               <span style={{ color: 'var(--sb-ink-3)', flex: 1, minWidth: 0 }}>{from}</span>
               <span style={{ color: 'var(--sb-ink-4)', flexShrink: 0 }}>→ {to}</span>

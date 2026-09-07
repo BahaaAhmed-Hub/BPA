@@ -142,7 +142,7 @@ function MoneyCalendar({
 
   const ROUND_BTN = {
     width: 28, height: 28, borderRadius: 'var(--sb-r-pill)',
-    background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
+    background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)',
     color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-h3)', lineHeight: 1, cursor: 'pointer',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     flexShrink: 0,
@@ -185,7 +185,7 @@ function MoneyCalendar({
 
       {/* Calendar card */}
       <div style={{
-        background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
+        background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
         padding: 14, boxShadow: 'var(--sb-shadow-control)',
       }}>
         {/* Day headers */}
@@ -217,7 +217,7 @@ function MoneyCalendar({
                   display: 'flex', flexDirection: 'column', gap: 3,
                   minHeight: 78, minWidth: 0, overflow: 'hidden', boxSizing: 'border-box' as const,
                   background: isSelected ? 'var(--sb-accent-tint)' : 'var(--sb-field)',
-                  border: `1px solid ${isSelected ? 'var(--sb-accent)' : 'var(--sb-accent-tint)'}`,
+                  border: `var(--sb-border-width) solid ${isSelected ? 'var(--sb-accent)' : 'var(--sb-accent-tint)'}`,
                   boxShadow: isSelected ? '0 1px 4px color-mix(in srgb, var(--sb-ink-1) 10.0%, transparent)' : 'none',
                   cursor: 'pointer', transition: 'background 120ms, border-color 120ms',
                 }}
@@ -305,7 +305,7 @@ export function TodayScreen() {
         title={isUnpaid(tx) ? UNPAID_TITLE : undefined}
         style={{
           display: 'flex', alignItems: 'center', gap: 12,
-          padding: '10px 0', borderBottom: `1px solid ${C.border}`,
+          padding: '10px 0', borderBottom: `var(--sb-border-width) solid ${C.border}`,
           cursor: 'pointer',
           opacity: isFuture ? 0.75 : 1,
           ...unpaidRow(isUnpaid(tx)),
@@ -314,7 +314,7 @@ export function TodayScreen() {
         <div style={{
           width: 40, height: 40, borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
           background: acct ? alpha(acct.color, 13.3) : alpha(isExp ? RED : GREEN, 9.4),
-          border: `1px solid ${acct ? acct.color + '44' : isExp ? RED + '44' : GREEN + '44'}`,
+          border: `var(--sb-border-width) solid ${acct ? acct.color + '44' : isExp ? RED + '44' : GREEN + '44'}`,
           display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'var(--sb-t-h2)',
         }}>
           <CategoryGlyph icon={cat?.icon ?? acct?.emoji ?? (isExp ? '💳' : '💼')} size={18} />
@@ -373,7 +373,7 @@ export function TodayScreen() {
     <div style={{ display: 'flex', height: '100%', background: C.bg, flexDirection: 'column' }}>
 
       {/* Header bar */}
-      <div style={{ flexShrink: 0, borderBottom: `1px solid ${C.border}`, padding: '12px 26px 14px', display: 'flex', alignItems: 'flex-end', gap: 20 }}>
+      <div style={{ flexShrink: 0, borderBottom: `var(--sb-border-width) solid ${C.border}`, padding: '12px 26px 14px', display: 'flex', alignItems: 'flex-end', gap: 20 }}>
         <div>
           <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-ink-3)', display: 'block', marginBottom: 3 }}>MONEY</span>
           <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h1)', fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1, color: 'var(--sb-ink-1)' }}>Today</span>
@@ -391,7 +391,7 @@ export function TodayScreen() {
       {/* Left panel — calendar */}
       <div style={{
         flex: '0 1 52%', minWidth: 360, maxWidth: 780,
-        borderRight: `1px solid ${C.border}`,
+        borderRight: `var(--sb-border-width) solid ${C.border}`,
         padding: '20px 22px 26px', overflowY: 'auto',
       }}>
         <MoneyCalendar
@@ -451,7 +451,7 @@ export function TodayScreen() {
               <div style={{
                 display: 'flex', alignItems: 'baseline', gap: 12,
                 padding: strong ? '10px 0 0' : '5px 0',
-                borderTop: strong ? `1px solid ${C.border}` : 'none',
+                borderTop: strong ? `var(--sb-border-width) solid ${C.border}` : 'none',
                 marginTop: strong ? 6 : 0,
               }}>
                 <span style={{
@@ -466,7 +466,7 @@ export function TodayScreen() {
               </div>
             )
             return (
-              <div style={{ marginTop: 16, paddingTop: 12, borderTop: `1px solid ${C.border}` }}>
+              <div style={{ marginTop: 16, paddingTop: 12, borderTop: `var(--sb-border-width) solid ${C.border}` }}>
                 {line('In',  acct(inc, { currency: base }), GREEN)}
                 {line('Out', acct(-exp, { currency: base }), RED)}
                 {line('Net', acct(net, { currency: base }), net >= 0 ? GREEN : RED, true)}

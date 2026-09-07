@@ -44,7 +44,7 @@ const providerTileStyle: React.CSSProperties = {
   width: 140,
   height: 80,
   background: 'var(--sb-card)',
-  border: '1px solid var(--sb-border)',
+  border: 'var(--sb-border-width) solid var(--sb-border)',
   borderRadius: 'var(--sb-r-nav)',
   display: 'flex',
   flexDirection: 'column',
@@ -112,7 +112,7 @@ export function Step2Accounts({ data: _data, onChange: _onChange, onBeforeOAuth 
       {/* Primary account card */}
       <div style={{
         background: 'var(--sb-card)',
-        border: '1px solid var(--sb-border)',
+        border: 'var(--sb-border-width) solid var(--sb-border)',
         borderLeft: '3px solid var(--sb-accent)',
         borderRadius: 'var(--sb-r-nav)',
         padding: '14px 16px',
@@ -123,7 +123,7 @@ export function Step2Accounts({ data: _data, onChange: _onChange, onBeforeOAuth 
         {/* Avatar */}
         <div style={{
           width: 36,
-          height: 36,
+          height: 'var(--sb-h-nav)',
           borderRadius: 'var(--sb-r-pill)',
           background: 'var(--sb-accent)',
           display: 'flex',
@@ -172,7 +172,7 @@ export function Step2Accounts({ data: _data, onChange: _onChange, onBeforeOAuth 
           {extraAccounts.map(acct => (
             <div key={acct.id} style={{
               background: 'var(--sb-card)',
-              border: '1px solid var(--sb-border)',
+              border: 'var(--sb-border-width) solid var(--sb-border)',
               borderRadius: 'var(--sb-r-nav)',
               padding: '12px 16px',
               display: 'flex',

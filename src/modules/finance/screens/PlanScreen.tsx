@@ -139,11 +139,11 @@ export function PlanScreen() {
               { value: 'History'  as const, label: 'History' },
             ]}
           />
-          <button style={{ height: 34, padding: '0 14px', borderRadius: 'var(--sb-r-pill)', background: C.surface, border: `1px solid ${C.border}`, color: C.ink1, fontSize: 'var(--sb-t-body-s)', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button style={{ height: 'var(--sb-h-pill)', padding: '0 14px', borderRadius: 'var(--sb-r-pill)', background: C.surface, border: `var(--sb-border-width) solid ${C.border}`, color: C.ink1, fontSize: 'var(--sb-t-body-s)', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
             Change forecast
           </button>
-          <button style={{ height: 34, padding: '0 15px', borderRadius: 'var(--sb-r-pill)', background: C.accent, color: C.ink1, fontSize: 'var(--sb-t-body-s)', fontWeight: 600, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, boxShadow: 'var(--sb-shadow-accent)' }}>
+          <button style={{ height: 'var(--sb-h-pill)', padding: '0 15px', borderRadius: 'var(--sb-r-pill)', background: C.accent, color: C.ink1, fontSize: 'var(--sb-t-body-s)', fontWeight: 600, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, boxShadow: 'var(--sb-shadow-accent)' }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M13 3L5 14h6l-1 7 8-11h-6z"/></svg>
             Automate this plan
           </button>
@@ -165,7 +165,7 @@ export function PlanScreen() {
                   flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 9,
                   padding: '10px 11px', borderRadius: 'var(--sb-r-nav)',
                   background: active ? C.dark : C.surface,
-                  border: `1px solid ${active ? C.dark : C.border}`,
+                  border: `var(--sb-border-width) solid ${active ? C.dark : C.border}`,
                   cursor: 'pointer', boxSizing: 'border-box',
                 }}>
                   <span style={{ width: 26, height: 26, borderRadius: 'var(--sb-r-chip)', background: active ? 'color-mix(in srgb, var(--sb-accent-tint) 14.0%, transparent)' : 'var(--sb-accent-tint)', color: active ? C.accent : C.ink3, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 'var(--sb-t-label)' }}>
@@ -233,7 +233,7 @@ export function PlanScreen() {
           </div>
 
           {/* Month-by-month plan table */}
-          <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 'var(--sb-r-card)', padding: '15px 17px', display: 'flex', flexDirection: 'column', gap: 11, boxSizing: 'border-box', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+          <div style={{ background: C.surface, border: `var(--sb-border-width) solid ${C.border}`, borderRadius: 'var(--sb-r-card)', padding: '15px 17px', display: 'flex', flexDirection: 'column', gap: 11, boxSizing: 'border-box', flex: 1, minHeight: 0, overflow: 'hidden' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 11, flexShrink: 0 }}>
               <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.12em', color: C.ink3 }}>THE PLAN, MONTH BY MONTH</span>
               <span style={{ fontSize: 'var(--sb-t-meta)', color: C.ink3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>Free cash is forecast income minus everything already committed — the plan never spends money you need</span>
@@ -244,9 +244,9 @@ export function PlanScreen() {
             </div>
 
             {/* Table */}
-            <div style={{ flex: 1, minHeight: 0, border: `1px solid ${C.border}`, borderRadius: 'var(--sb-r-nav)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ flex: 1, minHeight: 0, border: `var(--sb-border-width) solid ${C.border}`, borderRadius: 'var(--sb-r-nav)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
               {/* Header */}
-              <div style={{ display: 'grid', gridTemplateColumns: '64px 1fr 1fr 1fr 1fr 118px 84px 1fr', height: 28, flexShrink: 0, background: 'var(--sb-accent-tint)', borderBottom: `1px solid ${C.border}` }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '64px 1fr 1fr 1fr 1fr 118px 84px 1fr', height: 28, flexShrink: 0, background: 'var(--sb-accent-tint)', borderBottom: `var(--sb-border-width) solid ${C.border}` }}>
                 {['', 'FORECAST IN', 'COMMITTED', 'FREE CASH', 'TO THE CARD', 'FROM', 'ON', 'CARD LEFT'].map((h, i) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: i > 0 && i < 5 ? 'flex-end' : 'flex-start', padding: '0 9px' }}>
                     <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.12em', color: C.ink3 }}>{h}</span>
@@ -256,7 +256,7 @@ export function PlanScreen() {
 
               {/* Rows */}
               {DEMO_PLAN.map((row, _idx) => (
-                <div key={row.month} style={{ display: 'grid', gridTemplateColumns: '64px 1fr 1fr 1fr 1fr 118px 84px 1fr', height: 36, flexShrink: 0, borderTop: `1px solid var(--sb-accent-tint)`, background: row.rowBg }}>
+                <div key={row.month} style={{ display: 'grid', gridTemplateColumns: '64px 1fr 1fr 1fr 1fr 118px 84px 1fr', height: 36, flexShrink: 0, borderTop: `var(--sb-border-width) solid var(--sb-accent-tint)`, background: row.rowBg }}>
                   {/* Month */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0 9px' }}>
                     <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, color: C.ink1 }}>{row.month}</span>
@@ -300,7 +300,7 @@ export function PlanScreen() {
               <div style={{ flex: 1, minHeight: 0, background: C.surface }} />
 
               {/* Totals row */}
-              <div style={{ display: 'grid', gridTemplateColumns: '64px 1fr 1fr 1fr 1fr 118px 84px 1fr', height: 34, flexShrink: 0, borderTop: `1px solid ${C.border}`, background: C.accentBg }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '64px 1fr 1fr 1fr 1fr 118px 84px 1fr', height: 34, flexShrink: 0, borderTop: `var(--sb-border-width) solid ${C.border}`, background: C.accentBg }}>
                 <div style={{ display: 'flex', alignItems: 'center', padding: '0 9px' }}><span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, color: C.ink1 }}>TOTAL</span></div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '0 9px', fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: C.olive, fontVariantNumeric: 'tabular-nums' }}>{fmt(totals.forecastIn)}</div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '0 9px', fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: C.ink2, fontVariantNumeric: 'tabular-nums' }}>{fmt(totals.committed)}</div>
@@ -318,7 +318,7 @@ export function PlanScreen() {
         <div style={{ width: 346, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 11 }}>
 
           {/* Strategy card */}
-          <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 'var(--sb-r-card)', padding: '15px 17px', display: 'flex', flexDirection: 'column', gap: 11, boxSizing: 'border-box', flexShrink: 0 }}>
+          <div style={{ background: C.surface, border: `var(--sb-border-width) solid ${C.border}`, borderRadius: 'var(--sb-r-card)', padding: '15px 17px', display: 'flex', flexDirection: 'column', gap: 11, boxSizing: 'border-box', flexShrink: 0 }}>
             <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.12em', color: C.ink3 }}>HOW TO ATTACK IT</span>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
               {([
@@ -331,13 +331,13 @@ export function PlanScreen() {
                   <button key={s.id} onClick={() => setStrategy(s.id)} style={{
                     display: 'flex', alignItems: 'center', gap: 9, padding: '10px 11px',
                     borderRadius: 'var(--sb-r-nav)', background: active ? C.accentBg : C.field,
-                    border: `1px solid ${active ? C.accentBr : C.border}`,
+                    border: `var(--sb-border-width) solid ${active ? C.accentBr : C.border}`,
                     cursor: 'pointer', boxSizing: 'border-box', textAlign: 'left',
                   }}>
                     <span style={{
                       width: 17, height: 17, borderRadius: 'var(--sb-r-pill)', flexShrink: 0, boxSizing: 'border-box',
                       background: active ? C.dark : C.surface,
-                      border: `1px solid ${active ? C.dark : 'var(--sb-border)'}`,
+                      border: `var(--sb-border-width) solid ${active ? C.dark : 'var(--sb-border)'}`,
                       color: 'var(--sb-ink-on-dark)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}>
                       {active && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg>}
@@ -351,7 +351,7 @@ export function PlanScreen() {
               })}
             </div>
             {/* AI note */}
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '10px 11px', borderRadius: 'var(--sb-r-nav)', background: C.field, border: `1px solid ${C.border}` }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '10px 11px', borderRadius: 'var(--sb-r-nav)', background: C.field, border: `var(--sb-border-width) solid ${C.border}` }}>
               <span style={{ color: C.ink3, display: 'flex', flexShrink: 0, paddingTop: 1 }}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5a3 3 0 00-3 3 3 3 0 00-2 5.3A3 3 0 009 19h6a3 3 0 002-5.7A3 3 0 0015 8a3 3 0 00-3-3z"/></svg>
               </span>
@@ -360,14 +360,14 @@ export function PlanScreen() {
           </div>
 
           {/* Automations card */}
-          <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 'var(--sb-r-card)', padding: '15px 17px', display: 'flex', flexDirection: 'column', gap: 11, boxSizing: 'border-box', flexShrink: 0 }}>
+          <div style={{ background: C.surface, border: `var(--sb-border-width) solid ${C.border}`, borderRadius: 'var(--sb-r-card)', padding: '15px 17px', display: 'flex', flexDirection: 'column', gap: 11, boxSizing: 'border-box', flexShrink: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 9, flexShrink: 0 }}>
               <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, letterSpacing: '0.12em', color: C.ink3 }}>WHAT GETS AUTOMATED</span>
               <span style={{ marginLeft: 'auto', fontSize: 'var(--sb-t-micro)', color: C.ink3 }}>{automations.filter(a => a.active).length} of {automations.length} on</span>
             </div>
             <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 7 }}>
               {automations.map(a => (
-                <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 10, height: 42, flexShrink: 0, padding: '0 12px', borderRadius: 'var(--sb-r-nav)', background: C.field, border: `1px solid ${C.border}`, boxSizing: 'border-box' }}>
+                <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 10, height: 42, flexShrink: 0, padding: '0 12px', borderRadius: 'var(--sb-r-nav)', background: C.field, border: `var(--sb-border-width) solid ${C.border}`, boxSizing: 'border-box' }}>
                   <span style={{ color: a.active ? C.olive : 'var(--sb-border)', display: 'flex', flexShrink: 0 }}>
                     {a.icon === '⚡'
                       ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M13 3L5 14h6l-1 7 8-11h-6z"/></svg>
@@ -395,7 +395,7 @@ export function PlanScreen() {
           </div>
 
           {/* Risk/scenario card */}
-          <div style={{ flex: 1, minHeight: 0, background: C.accentBg, border: `1px solid ${C.accentBr}`, borderRadius: 'var(--sb-r-card)', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ flex: 1, minHeight: 0, background: C.accentBg, border: `var(--sb-border-width) solid ${C.accentBr}`, borderRadius: 'var(--sb-r-card)', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
             <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.14em', color: 'var(--sb-warning)' }}>IF THE PAYROLL SLIPS AGAIN</span>
             <span style={{ fontSize: 'var(--sb-t-label)', fontWeight: 600, letterSpacing: '-0.015em', lineHeight: 1.35, color: C.ink1 }}>October's clearance needs the DX salary. If it misses, the plan pays the minimum and closes the card on 4 November instead.</span>
             <span style={{ marginTop: 2, display: 'flex', gap: 8 }}>

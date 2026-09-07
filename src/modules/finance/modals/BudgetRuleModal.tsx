@@ -113,13 +113,13 @@ export function monthlyAmount(rule?: Pick<BudgetRule, 'amount' | 'frequency'>): 
 
 const PILL: React.CSSProperties = {
   display: 'inline-flex', alignItems: 'center', gap: 6, height: 42, boxSizing: 'border-box',
-  padding: '0 14px', borderRadius: 'var(--sb-r-nav)', background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
+  padding: '0 14px', borderRadius: 'var(--sb-r-nav)', background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)',
   color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body)', fontFamily: 'inherit', cursor: 'pointer', minWidth: 0,
 }
 const ROUND: React.CSSProperties = {
   width: 30, height: 30, borderRadius: 'var(--sb-r-pill)', flexShrink: 0, padding: 0,
   display: 'flex', alignItems: 'center', justifyContent: 'center',
-  background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-3)', cursor: 'pointer',
+  background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-3)', cursor: 'pointer',
 }
 const LABEL: React.CSSProperties = { width: 74, flexShrink: 0, fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-3)', fontWeight: 500 }
 const ROW: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 10 }
@@ -150,7 +150,7 @@ function IntervalPicker({ value, onChange }: { value: Frequency; onChange: (f: F
       {open && (
         <div className="sb-blur-surface" style={{
           position: 'absolute', top: 46, right: 0, minWidth: 168, zIndex: 30, padding: 5,
-          background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
+          background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
           boxShadow: 'var(--sb-shadow-menu)',
         }}>
           {choices.map(v => {
@@ -294,7 +294,7 @@ export function BudgetRuleModal({
       <div ref={box} style={{
         width: 'clamp(320px, 94vw, 440px)', maxHeight: '90vh', overflowY: 'auto',
         boxSizing: 'border-box', scrollbarWidth: 'thin',
-        background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
+        background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
         boxShadow: 'var(--sb-shadow-frame)', padding: '18px 20px 22px',
       }}>
 
@@ -308,7 +308,7 @@ export function BudgetRuleModal({
               <button onClick={onClick} title="Change the icon"
                 style={{
                   width: 40, height: 40, borderRadius: 'var(--sb-r-nav)', flexShrink: 0, padding: 0,
-                  border: '1px solid var(--sb-border)', background: 'var(--sb-field)', cursor: 'pointer',
+                  border: 'var(--sb-border-width) solid var(--sb-border)', background: 'var(--sb-field)', cursor: 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
                 }}>
                 <CategoryGlyph icon={category.icon} size={21} color="var(--sb-ink-1)" />
@@ -329,7 +329,7 @@ export function BudgetRuleModal({
               title="Click to rename"
               style={{
                 width: '100%', boxSizing: 'border-box', padding: '2px 6px', marginLeft: -6,
-                background: 'transparent', border: '1px solid transparent', borderRadius: 'var(--sb-r-chip)',
+                background: 'transparent', border: 'var(--sb-border-width) solid transparent', borderRadius: 'var(--sb-r-chip)',
                 fontFamily: DISPLAY, fontSize: 'var(--sb-t-h2)', fontWeight: 600, letterSpacing: '-0.02em',
                 color: 'var(--sb-ink-1)', outline: 'none',
               }}
@@ -355,7 +355,7 @@ export function BudgetRuleModal({
         {/* Where it stands this month */}
         <div style={{
           marginTop: 14, padding: '13px 15px', borderRadius: 'var(--sb-r-nav)',
-          background: 'var(--sb-field)', border: '1px solid var(--sb-border)',
+          background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)',
         }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
             <span style={{ fontFamily: DISPLAY, fontSize: 'var(--sb-t-h2)', fontWeight: 700, letterSpacing: '-0.03em', color: over ? tone : 'var(--sb-ink-1)', fontVariantNumeric: 'tabular-nums' }}>
@@ -371,7 +371,7 @@ export function BudgetRuleModal({
             <span style={{ flex: 1 }} />
             {spent > 0 && (
               <button onClick={onDrill}
-                style={{ height: 26, padding: '0 10px', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-positive-tint)', border: '1px solid var(--sb-positive-tint)', color: 'var(--sb-positive)', fontSize: 'var(--sb-t-meta)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                style={{ height: 26, padding: '0 10px', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-positive-tint)', border: 'var(--sb-border-width) solid var(--sb-positive-tint)', color: 'var(--sb-positive)', fontSize: 'var(--sb-t-meta)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
                 View all →
               </button>
             )}
@@ -462,7 +462,7 @@ export function BudgetRuleModal({
                     style={{
                       ...PILL, flex: 1, justifyContent: 'center',
                       background: on ? (v === 'income' ? 'var(--sb-positive)' : 'var(--sb-negative)') : 'var(--sb-card)',
-                      border: on ? 'none' : '1px solid var(--sb-border)',
+                      border: on ? 'none' : 'var(--sb-border-width) solid var(--sb-border)',
                       color: on ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
                       fontWeight: on ? 600 : 400,
                     }}>{label}</button>
@@ -482,7 +482,7 @@ export function BudgetRuleModal({
                     style={{
                       ...PILL, flex: 1, justifyContent: 'center', whiteSpace: 'nowrap',
                       background: on ? 'var(--sb-ink-1)' : 'var(--sb-card)',
-                      border: on ? 'none' : '1px solid var(--sb-border)',
+                      border: on ? 'none' : 'var(--sb-border-width) solid var(--sb-border)',
                       color: on ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
                       fontWeight: on ? 600 : 400,
                     }}>{t === 'fixed' ? 'Fixed' : 'Flexible'}</button>
@@ -597,7 +597,7 @@ export function BudgetRuleModal({
             <button key={sub.id} onClick={() => onEditSub(sub)}
               style={{
                 display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '7px 0',
-                background: 'none', border: 'none', borderBottom: '1px solid var(--sb-hairline)',
+                background: 'none', border: 'none', borderBottom: 'var(--sb-border-width) solid var(--sb-hairline)',
                 cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
               }}>
               <CategoryGlyph icon={sub.icon} size={15} color="var(--sb-ink-3)" />
@@ -629,7 +629,7 @@ export function BudgetRuleModal({
             onClick={() => { onDelete(); onClose() }}
             title="Remove the budget — the category and its transactions stay"
             style={{
-              marginTop: 12, width: '100%', height: 34, borderRadius: 'var(--sb-r-sm)',
+              marginTop: 12, width: '100%', height: 'var(--sb-h-pill)', borderRadius: 'var(--sb-r-sm)',
               background: 'none', border: 'none', fontFamily: 'inherit',
               color: 'var(--sb-negative)', fontSize: 'var(--sb-t-body-s)', cursor: 'pointer',
             }}>

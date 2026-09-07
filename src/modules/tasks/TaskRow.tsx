@@ -46,7 +46,7 @@ export function TaskRow({ task, onOpen, dense }: {
       onClick={e => { if (!(e.target as HTMLElement).closest('[data-nm]')) onOpen(task.id) }}
       style={{
         display: 'flex', alignItems: 'flex-start', gap: 12,
-        background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
+        background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
         padding: dense ? '10px 13px' : '12px 14px',
         cursor: 'grab', minWidth: 0, touchAction: 'none',
         opacity: isDragging ? 0.35 : task.completed ? 0.55 : 1,
@@ -161,7 +161,7 @@ export function TaskRow({ task, onOpen, dense }: {
             style={{
               width: 22, height: 22, borderRadius: 'var(--sb-r-pill)', boxSizing: 'border-box',
               background: v.ownerInitials ? 'var(--sb-ink-1)' : 'var(--sb-field)',
-              border: v.ownerInitials ? 'none' : '1px solid var(--sb-border)',
+              border: v.ownerInitials ? 'none' : 'var(--sb-border-width) solid var(--sb-border)',
               color: v.ownerInitials ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-4)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.02em',

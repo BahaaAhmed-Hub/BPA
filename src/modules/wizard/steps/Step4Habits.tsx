@@ -33,7 +33,7 @@ interface Props {
 }
 
 const inp: React.CSSProperties = {
-  background: 'var(--sb-page)', border: '1px solid var(--sb-border)',
+  background: 'var(--sb-page)', border: 'var(--sb-border-width) solid var(--sb-border)',
   borderRadius: 'var(--sb-r-chip)', padding: '8px 12px', color: 'var(--sb-ink-1)',
   fontSize: 'var(--sb-t-body)', outline: 'none', boxSizing: 'border-box',
 }
@@ -84,7 +84,7 @@ export function Step4Habits({ data, onChange }: Props) {
             <button key={t.id} onClick={() => toggleTemplate(t.id)} style={{
               padding: '12px 10px', borderRadius: 'var(--sb-r-nav)', cursor: 'pointer', position: 'relative',
               background: selected ? alpha(t.color, 9.4) : 'var(--sb-card)',
-              border: `1px solid ${selected ? t.color : 'var(--sb-border)'}`,
+              border: `var(--sb-border-width) solid ${selected ? t.color : 'var(--sb-border)'}`,
               textAlign: 'left', transition: 'all 0.15s',
             }}>
               {selected && (
@@ -116,7 +116,7 @@ export function Step4Habits({ data, onChange }: Props) {
       {data.customHabits.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
           {data.customHabits.map((h, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-card)', border: '1px solid var(--sb-border)' }}>
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)' }}>
               <span style={{ fontSize: 'var(--sb-t-h2)' }}>{h.emoji}</span>
               <div style={{ width: 10, height: 10, borderRadius: 'var(--sb-r-pill)', background: h.color, flexShrink: 0 }} />
               <span style={{ flex: 1, fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)' }}>{h.name}</span>
@@ -130,16 +130,16 @@ export function Step4Habits({ data, onChange }: Props) {
       )}
 
       {addingCustom ? (
-        <div style={{ padding: 16, borderRadius: 'var(--sb-r-nav)', background: 'var(--sb-card)', border: '1px solid var(--sb-border)' }}>
+        <div style={{ padding: 16, borderRadius: 'var(--sb-r-nav)', background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)' }}>
           <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
             <input value={cEmoji} onChange={e => setCEmoji(e.target.value)} placeholder="💡" style={{ ...inp, width: 56, textAlign: 'center', fontSize: 'var(--sb-t-h2)' }} />
             <input value={cName} onChange={e => setCName(e.target.value)} placeholder="Habit name" style={{ ...inp, flex: 1 }} autoFocus />
           </div>
           <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-            <button onClick={() => setCType('boolean')} style={{ flex: 1, padding: '7px', borderRadius: 'var(--sb-r-chip)', border: `1px solid ${cType === 'boolean' ? 'var(--sb-accent)' : 'var(--sb-border)'}`, background: cType === 'boolean' ? 'color-mix(in srgb, var(--sb-info) 10.0%, transparent)' : 'transparent', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', cursor: 'pointer' }}>
+            <button onClick={() => setCType('boolean')} style={{ flex: 1, padding: '7px', borderRadius: 'var(--sb-r-chip)', border: `var(--sb-border-width) solid ${cType === 'boolean' ? 'var(--sb-accent)' : 'var(--sb-border)'}`, background: cType === 'boolean' ? 'color-mix(in srgb, var(--sb-info) 10.0%, transparent)' : 'transparent', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', cursor: 'pointer' }}>
               ✓ Boolean
             </button>
-            <button onClick={() => setCType('quantity')} style={{ flex: 1, padding: '7px', borderRadius: 'var(--sb-r-chip)', border: `1px solid ${cType === 'quantity' ? 'var(--sb-accent)' : 'var(--sb-border)'}`, background: cType === 'quantity' ? 'color-mix(in srgb, var(--sb-info) 10.0%, transparent)' : 'transparent', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', cursor: 'pointer' }}>
+            <button onClick={() => setCType('quantity')} style={{ flex: 1, padding: '7px', borderRadius: 'var(--sb-r-chip)', border: `var(--sb-border-width) solid ${cType === 'quantity' ? 'var(--sb-accent)' : 'var(--sb-border)'}`, background: cType === 'quantity' ? 'color-mix(in srgb, var(--sb-info) 10.0%, transparent)' : 'transparent', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', cursor: 'pointer' }}>
               # Quantity
             </button>
           </div>
@@ -151,7 +151,7 @@ export function Step4Habits({ data, onChange }: Props) {
           )}
           <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
             {(['daily','weekdays','weekly'] as const).map(f => (
-              <button key={f} onClick={() => setCFreq(f)} style={{ flex: 1, padding: '6px', borderRadius: 'var(--sb-r-chip)', border: `1px solid ${cFreq === f ? 'var(--sb-accent)' : 'var(--sb-border)'}`, background: cFreq === f ? 'color-mix(in srgb, var(--sb-info) 10.0%, transparent)' : 'transparent', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', cursor: 'pointer', textTransform: 'capitalize' }}>
+              <button key={f} onClick={() => setCFreq(f)} style={{ flex: 1, padding: '6px', borderRadius: 'var(--sb-r-chip)', border: `var(--sb-border-width) solid ${cFreq === f ? 'var(--sb-accent)' : 'var(--sb-border)'}`, background: cFreq === f ? 'color-mix(in srgb, var(--sb-info) 10.0%, transparent)' : 'transparent', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', cursor: 'pointer', textTransform: 'capitalize' }}>
                 {f}
               </button>
             ))}

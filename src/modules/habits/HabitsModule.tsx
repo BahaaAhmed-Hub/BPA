@@ -157,7 +157,7 @@ function HabitImagePicker({ image, emoji, onChange, size = 54 }: {
           title={image ? 'Change picture' : 'Add a picture'}
           style={{
             width: size, height: size, borderRadius: 'var(--sb-r-nav)', padding: 0, cursor: 'pointer',
-            overflow: 'hidden', background: 'var(--sb-field)', border: '1px solid var(--sb-border)',
+            overflow: 'hidden', background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: Math.round(size * 0.5), lineHeight: 1,
           }}>
@@ -209,14 +209,14 @@ export function EmojiBtn({ value, onSelect, size = 24 }: {
   return (
     <div ref={ref} style={{ position: 'relative' }}>
       <button onClick={() => setOpen(o => !o)} title="Change icon"
-        style={{ width: size, height: size, borderRadius: size >= 40 ? 13 : 7, background: 'var(--sb-field)', border: '1px solid var(--sb-border)', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: Math.round(size * 0.52) }}>
+        style={{ width: size, height: size, borderRadius: size >= 40 ? 'var(--sb-r-nav)' : 'var(--sb-r-chip)', background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: Math.round(size * 0.52) }}>
         {value}
       </button>
       {open && (
-        <div className="sb-blur-surface" style={{ position: 'absolute', top: size + 6, left: 0, zIndex: 300, background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', padding: '8px', display: 'flex', gap: 4, flexWrap: 'wrap', width: 252, maxHeight: 260, overflowY: 'auto', boxShadow: 'var(--sb-shadow-menu)' }}>
+        <div className="sb-blur-surface" style={{ position: 'absolute', top: size + 6, left: 0, zIndex: 300, background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', padding: '8px', display: 'flex', gap: 4, flexWrap: 'wrap', width: 252, maxHeight: 260, overflowY: 'auto', boxShadow: 'var(--sb-shadow-menu)' }}>
           {EMOJIS.map(e => (
             <button key={e} onClick={() => { onSelect(e); setOpen(false) }}
-              style={{ fontSize: 'var(--sb-t-h3)', width: 32, height: 32, borderRadius: 'var(--sb-r-chip)', cursor: 'pointer', border: '1px solid', borderColor: e === value ? 'var(--sb-border)' : 'transparent', background: e === value ? 'var(--sb-field)' : 'transparent' }}>{e}</button>
+              style={{ fontSize: 'var(--sb-t-h3)', width: 32, height: 32, borderRadius: 'var(--sb-r-chip)', cursor: 'pointer', border: 'var(--sb-border-width) solid', borderColor: e === value ? 'var(--sb-border)' : 'transparent', background: e === value ? 'var(--sb-field)' : 'transparent' }}>{e}</button>
           ))}
         </div>
       )}
@@ -241,7 +241,7 @@ function InlineEdit({ value, onSave, style }: { value: string; onSave: (v: strin
     <input ref={ref} value={draft} onChange={e => setDraft(e.target.value)}
       onBlur={commit}
       onKeyDown={e => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') { setDraft(value); setEditing(false) } }}
-      style={{ background: 'transparent', border: 'none', borderBottom: '1px solid var(--sb-border)', outline: 'none', color: 'var(--sb-ink-1)', fontFamily: 'inherit', padding: '0 2px', ...style }} />
+      style={{ background: 'transparent', border: 'none', borderBottom: 'var(--sb-border-width) solid var(--sb-border)', outline: 'none', color: 'var(--sb-ink-1)', fontFamily: 'inherit', padding: '0 2px', ...style }} />
   )
   return <span onClick={() => { setDraft(value); setEditing(true) }} title="Click to rename" style={{ cursor: 'text', ...style }}>{value}</span>
 }
@@ -254,20 +254,20 @@ function WeekCell({
   done: boolean; isToday: boolean; isFuture: boolean; onToggle: () => void
 }) {
   let bg = 'var(--sb-accent-tint)'
-  let border = '1px solid var(--sb-border)'
+  let border = 'var(--sb-border-width) solid var(--sb-border)'
   let content = null
 
   if (isFuture) {
-    bg = 'var(--sb-accent-tint)'; border = '1px solid var(--sb-border)'
+    bg = 'var(--sb-accent-tint)'; border = 'var(--sb-border-width) solid var(--sb-border)'
   } else if (done) {
-    bg = 'var(--sb-ink-1)'; border = '1px solid var(--sb-ink-1)'
+    bg = 'var(--sb-ink-1)'; border = 'var(--sb-border-width) solid var(--sb-ink-1)'
     content = (
       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--sb-ink-on-dark)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
         <path d="M5 13l4 4L19 7"/>
       </svg>
     )
   } else if (isToday) {
-    bg = 'var(--sb-card)'; border = '1px solid var(--sb-ink-1)'
+    bg = 'var(--sb-card)'; border = 'var(--sb-border-width) solid var(--sb-ink-1)'
   }
 
   return (
@@ -301,7 +301,7 @@ function QuantityControl({ value, goal, unit, onSet }: { value: number; goal?: n
   return (
     <span style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
       <button onClick={() => onSet(Math.max(0, value - 1))}
-        style={{ width: 22, height: 22, boxSizing: 'border-box', borderRadius: 'var(--sb-r-chip)', border: '1px solid var(--sb-border)', background: 'var(--sb-card)', cursor: 'pointer', color: 'var(--sb-ink-3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, padding: 0 }}>
+        style={{ width: 22, height: 22, boxSizing: 'border-box', borderRadius: 'var(--sb-r-chip)', border: 'var(--sb-border-width) solid var(--sb-border)', background: 'var(--sb-card)', cursor: 'pointer', color: 'var(--sb-ink-3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, padding: 0 }}>
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/></svg>
       </button>
       {editing ? (
@@ -309,15 +309,15 @@ function QuantityControl({ value, goal, unit, onSet }: { value: number; goal?: n
           onChange={e => setDraft(e.target.value)}
           onBlur={commit}
           onKeyDown={e => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') setEditing(false) }}
-          style={{ minWidth: 52, height: 22, boxSizing: 'border-box', textAlign: 'center', fontSize: 'var(--sb-t-meta)', fontWeight: 600, background: 'var(--sb-field)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-chip)', color: 'var(--sb-ink-1)', outline: 'none', padding: '0 8px' }} />
+          style={{ minWidth: 52, height: 22, boxSizing: 'border-box', textAlign: 'center', fontSize: 'var(--sb-t-meta)', fontWeight: 600, background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-chip)', color: 'var(--sb-ink-1)', outline: 'none', padding: '0 8px' }} />
       ) : (
         <button onClick={() => setEditing(true)} title="Click to enter value"
-          style={{ minWidth: 52, height: 22, boxSizing: 'border-box', padding: '0 8px', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-field)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-meta)', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontVariantNumeric: 'tabular-nums' }}>
+          style={{ minWidth: 52, height: 22, boxSizing: 'border-box', padding: '0 8px', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-meta)', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontVariantNumeric: 'tabular-nums' }}>
           {goal ? `${value} / ${goal}` : value}{unit ? ` ${unit}` : ''}
         </button>
       )}
       <button onClick={() => onSet(value + 1)}
-        style={{ width: 22, height: 22, boxSizing: 'border-box', borderRadius: 'var(--sb-r-chip)', border: '1px solid var(--sb-border)', background: 'var(--sb-card)', cursor: 'pointer', color: 'var(--sb-ink-1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, padding: 0 }}>
+        style={{ width: 22, height: 22, boxSizing: 'border-box', borderRadius: 'var(--sb-r-chip)', border: 'var(--sb-border-width) solid var(--sb-border)', background: 'var(--sb-card)', cursor: 'pointer', color: 'var(--sb-ink-1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, padding: 0 }}>
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14"/></svg>
       </button>
     </span>
@@ -337,7 +337,7 @@ function ProgressRing({ done, total, progress }: { done: number; total: number; 
       background: `conic-gradient(var(--sb-ink-1) 0deg, var(--sb-ink-1) ${deg}deg, var(--sb-accent-tint) ${deg}deg)`,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
     }}>
-      <span style={{ position: 'absolute', inset: 6, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-card)', border: '1px solid var(--sb-border)' }} />
+      <span style={{ position: 'absolute', inset: 6, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)' }} />
       <span style={{ position: 'relative', fontSize: 'var(--sb-t-label)', fontWeight: 700, color: 'var(--sb-ink-1)', fontVariantNumeric: 'tabular-nums' }}>
         {done}<span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)' }}>/{total}</span>
       </span>
@@ -365,10 +365,10 @@ function HabitLogControl({ isQty, todayDone, qtyValue, unit, tone, isToday = tru
 }) {
   const light = tone === 'light'
   const track: React.CSSProperties = {
-    display: 'flex', alignItems: 'center', gap: 6, height: 34, boxSizing: 'border-box',
+    display: 'flex', alignItems: 'center', gap: 6, height: 'var(--sb-h-pill)', boxSizing: 'border-box',
     width: '100%', padding: 3, borderRadius: 'var(--sb-r-pill)', minWidth: 0,
     background: light ? 'color-mix(in srgb, var(--sb-accent-tint) 16.0%, transparent)' : 'var(--sb-field)',
-    border: `1px solid ${light ? 'color-mix(in srgb, var(--sb-accent-tint) 40.0%, transparent)' : 'var(--sb-border)'}`,
+    border: `var(--sb-border-width) solid ${light ? 'color-mix(in srgb, var(--sb-accent-tint) 40.0%, transparent)' : 'var(--sb-border)'}`,
     ...(light ? { backdropFilter: 'blur(6px)' } : {}),
   }
   const round: React.CSSProperties = {
@@ -384,7 +384,7 @@ function HabitLogControl({ isQty, todayDone, qtyValue, unit, tone, isToday = tru
         style={{
           ...track, justifyContent: 'center', gap: 7, cursor: 'pointer', fontFamily: 'inherit',
           background: todayDone ? (light ? 'color-mix(in srgb, var(--sb-accent-tint) 90.0%, transparent)' : 'var(--sb-positive)') : track.background,
-          border: todayDone ? '1px solid transparent' : track.border,
+          border: todayDone ? 'var(--sb-border-width) solid transparent' : track.border,
           color: todayDone ? (light ? 'var(--sb-ink-1)' : 'var(--sb-ink-on-dark)') : ink,
           fontSize: 'var(--sb-t-meta)', fontWeight: 700,
         }}>
@@ -402,7 +402,7 @@ function HabitLogControl({ isQty, todayDone, qtyValue, unit, tone, isToday = tru
         style={{
           ...round,
           background: light ? 'color-mix(in srgb, var(--sb-accent-tint) 20.0%, transparent)' : 'var(--sb-card)',
-          border: `1px solid ${light ? 'color-mix(in srgb, var(--sb-accent-tint) 34.0%, transparent)' : 'var(--sb-border)'}`,
+          border: `var(--sb-border-width) solid ${light ? 'color-mix(in srgb, var(--sb-accent-tint) 34.0%, transparent)' : 'var(--sb-border)'}`,
           color: ink, opacity: qtyValue === 0 ? 0.45 : 1,
           cursor: qtyValue === 0 ? 'default' : 'pointer',
         }}>
@@ -449,7 +449,7 @@ function WallCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, o
       onClick={onSelect}
       style={{
         display: 'flex', minWidth: 0, minHeight: 0, borderRadius: 'var(--sb-r-card)', overflow: 'hidden',
-        border: isSelected ? '1px solid var(--sb-ink-1)' : '1px solid var(--sb-border)', background: 'var(--sb-card)',
+        border: isSelected ? 'var(--sb-border-width) solid var(--sb-ink-1)' : 'var(--sb-border-width) solid var(--sb-border)', background: 'var(--sb-card)',
         boxShadow: isSelected ? '0 0 0 3px rgba(var(--sb-accent-rgb),.45)' : 'none',
         cursor: onSelect ? 'pointer' : 'default',
       }}>
@@ -471,7 +471,7 @@ function WallCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, o
         {/* Content overlay */}
         <span style={{ position: 'absolute', inset: 0, pointerEvents: 'none', display: 'flex', flexDirection: 'column', padding: '12px 13px' }}>
           {/* Streak badge */}
-          <span style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto', height: 20, padding: '0 8px', borderRadius: 'var(--sb-r-pill)', background: 'color-mix(in srgb, var(--sb-ink-1) 42.0%, transparent)', border: '1px solid rgba(255,255,255,.36)', color: 'rgba(255,255,255,.96)', fontSize: 'var(--sb-t-micro)', fontWeight: 700, flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto', height: 20, padding: '0 8px', borderRadius: 'var(--sb-r-pill)', background: 'color-mix(in srgb, var(--sb-ink-1) 42.0%, transparent)', border: 'var(--sb-border-width) solid rgba(255,255,255,.36)', color: 'rgba(255,255,255,.96)', fontSize: 'var(--sb-t-micro)', fontWeight: 700, flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3c3 4 5 6 5 9a5 5 0 0 1-10 0c0-2 1-3.5 2.5-5"/></svg>
             {streak}d
           </span>
@@ -590,7 +590,7 @@ function FillCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, o
         flex: isSelected ? '2.4 1 0' : '1 1 0',
         minWidth: isSelected ? 190 : 92,
         borderRadius: 'var(--sb-r-card)', overflow: 'hidden',
-        border: isSelected ? '1px solid var(--sb-ink-1)' : '1px solid var(--sb-border)',
+        border: isSelected ? 'var(--sb-border-width) solid var(--sb-ink-1)' : 'var(--sb-border-width) solid var(--sb-border)',
         background: 'var(--sb-card)',
         boxShadow: isSelected ? '0 0 0 3px rgba(var(--sb-accent-rgb),.45)' : 'none',
         cursor: isSelected ? (dragRef.current ? 'grabbing' : 'grab') : 'pointer',
@@ -623,7 +623,7 @@ function FillCard({ habit, todayDone, streak, qtyValue, onToggle, onIncrement, o
       <span style={{ position: 'absolute', inset: 0, zIndex: 3, display: 'flex', flexDirection: 'column', padding: '12px 11px' }}>
         {/* Top */}
         <span style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: 4, height: 19, padding: '0 7px', borderRadius: 'var(--sb-r-pill)', background: 'color-mix(in srgb, var(--sb-accent-tint) 16.0%, transparent)', border: '1px solid color-mix(in srgb, var(--sb-accent-tint) 32.0%, transparent)', color: 'var(--sb-ink-on-dark)', fontSize: 'var(--sb-t-micro)', fontWeight: 700, alignSelf: 'flex-start', fontVariantNumeric: 'tabular-nums' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 4, height: 19, padding: '0 7px', borderRadius: 'var(--sb-r-pill)', background: 'color-mix(in srgb, var(--sb-accent-tint) 16.0%, transparent)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-accent-tint) 32.0%, transparent)', color: 'var(--sb-ink-on-dark)', fontSize: 'var(--sb-t-micro)', fontWeight: 700, alignSelf: 'flex-start', fontVariantNumeric: 'tabular-nums' }}>
             <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3c3 4 5 6 5 9a5 5 0 0 1-10 0c0-2 1-3.5 2.5-5"/></svg>
             {streak}d
           </span>
@@ -732,7 +732,7 @@ function HabitDetailPanel({
 
   return (
     <div style={{
-      width: 288, flexShrink: 0, background: 'var(--sb-card)', border: '1px solid var(--sb-border)',
+      width: 288, flexShrink: 0, background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)',
       borderRadius: 'var(--sb-r-card)', padding: '15px 17px', display: 'flex', flexDirection: 'column', gap: 10,
       alignSelf: 'flex-start',
     }}>
@@ -747,7 +747,7 @@ function HabitDetailPanel({
             placeholder="Name this habit"
             style={{
               width: '100%', boxSizing: 'border-box', background: 'transparent', border: 'none',
-              borderBottom: '1px solid transparent', outline: 'none', padding: '0 0 2px',
+              borderBottom: 'var(--sb-border-width) solid transparent', outline: 'none', padding: '0 0 2px',
               fontSize: 'var(--sb-t-h3)', fontWeight: 700, color: 'var(--sb-ink-1)', fontFamily: 'inherit', textAlign: 'left',
             }}
             onFocus={e => { e.currentTarget.style.borderBottomColor = 'var(--sb-border)' }}
@@ -768,7 +768,7 @@ function HabitDetailPanel({
       </div>
 
       {/* Today — the one thing you came here to change */}
-      <div style={{ background: 'var(--sb-field)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', padding: '12px 13px' }}>
+      <div style={{ background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', padding: '12px 13px' }}>
         <div style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.1em', color: 'var(--sb-ink-3)', marginBottom: 9 }}>
           {today === todayKey()
             ? 'TODAY'
@@ -778,7 +778,7 @@ function HabitDetailPanel({
           <>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <button onClick={() => onSetQuantity(Math.max(0, qtyToday - 1))} disabled={qtyToday === 0}
-                style={{ width: 30, height: 30, borderRadius: 'var(--sb-r-sm)', border: '1px solid var(--sb-border)', background: 'var(--sb-card)', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-h2)', lineHeight: 1, cursor: qtyToday === 0 ? 'default' : 'pointer', opacity: qtyToday === 0 ? 0.4 : 1, flexShrink: 0 }}>−</button>
+                style={{ width: 30, height: 30, borderRadius: 'var(--sb-r-sm)', border: 'var(--sb-border-width) solid var(--sb-border)', background: 'var(--sb-card)', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-h2)', lineHeight: 1, cursor: qtyToday === 0 ? 'default' : 'pointer', opacity: qtyToday === 0 ? 0.4 : 1, flexShrink: 0 }}>−</button>
               <div style={{ flex: 1, minWidth: 0, textAlign: 'center' }}>
                 <span style={{ fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h1)', fontWeight: 700, letterSpacing: '-0.03em', color: 'var(--sb-ink-1)', lineHeight: 1 }}>
                   {qtyToday}{hasGoal && <span style={{ fontSize: 'var(--sb-t-h3)', color: 'var(--sb-ink-4)' }}> / {habit.goal}</span>}
@@ -786,7 +786,7 @@ function HabitDetailPanel({
                 <div style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', marginTop: 2 }}>{habit.unit ?? 'times'}</div>
               </div>
               <button onClick={() => onSetQuantity(qtyToday + 1)}
-                style={{ width: 30, height: 30, borderRadius: 'var(--sb-r-sm)', border: '1px solid var(--sb-border)', background: 'var(--sb-card)', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-h2)', lineHeight: 1, cursor: 'pointer', flexShrink: 0 }}>+</button>
+                style={{ width: 30, height: 30, borderRadius: 'var(--sb-r-sm)', border: 'var(--sb-border-width) solid var(--sb-border)', background: 'var(--sb-card)', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-h2)', lineHeight: 1, cursor: 'pointer', flexShrink: 0 }}>+</button>
             </div>
             {hasGoal && (
               <div style={{ height: 6, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-field)', marginTop: 11, overflow: 'hidden' }}>
@@ -798,7 +798,7 @@ function HabitDetailPanel({
           <button onClick={onToggleToday}
             style={{
               width: '100%', padding: '9px 0', borderRadius: 'var(--sb-r-sm)', cursor: 'pointer',
-              border: `1px solid ${doneToday ? 'var(--sb-positive)' : 'var(--sb-border)'}`,
+              border: `var(--sb-border-width) solid ${doneToday ? 'var(--sb-positive)' : 'var(--sb-border)'}`,
               background: doneToday ? 'var(--sb-positive)' : 'var(--sb-card)',
               color: doneToday ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
             }}>
@@ -837,7 +837,7 @@ function HabitDetailPanel({
                 background: p > 0
                   ? `color-mix(in srgb, var(--sb-positive) ${Math.round(p * 100)}%, var(--sb-hairline))`
                   : isT ? 'rgba(var(--sb-accent-rgb),0.13)' : 'var(--sb-hairline)',
-                border: isT ? '1px solid var(--sb-accent)' : '1px solid transparent',
+                border: isT ? 'var(--sb-border-width) solid var(--sb-accent)' : 'var(--sb-border-width) solid transparent',
               }} />
             )
           })}
@@ -1048,7 +1048,7 @@ export function HabitsModule() {
       </div>
 
       {/* ─── Summary card ──────────────────────────────────────────────────── */}
-      <div style={{ flexShrink: 0, background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-card)', padding: '12px 18px', display: 'flex', alignItems: 'center', gap: 18, minWidth: 0 }}>
+      <div style={{ flexShrink: 0, background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-card)', padding: '12px 18px', display: 'flex', alignItems: 'center', gap: 18, minWidth: 0 }}>
         {/* Progress ring — for the day you are looking at */}
         <ProgressRing done={dayDone} total={totalActive} progress={dayTotal.progress} />
 
@@ -1230,7 +1230,7 @@ export function HabitsModule() {
 
       {/* ─── Habits table ───────────────────────────────────────────────────── */}
       {view === 'table' && <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
-      <div style={{ flex: 1, minWidth: 0, background: 'var(--sb-card)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-card)', padding: '14px 16px', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+      <div style={{ flex: 1, minWidth: 0, background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-card)', padding: '14px 16px', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
 
         {/* Table header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '0 4px 8px', minWidth: 0 }}>
@@ -1299,7 +1299,7 @@ export function HabitsModule() {
               }}
               style={{
                 display: 'flex', alignItems: 'center', gap: 12,
-                height: 46, borderTop: '1px solid var(--sb-hairline)', padding: '0 4px',
+                height: 46, borderTop: 'var(--sb-border-width) solid var(--sb-hairline)', padding: '0 4px',
                 background: 'transparent', minWidth: 0,
               }}
             >
@@ -1348,7 +1348,7 @@ export function HabitsModule() {
               {/* Frequency badge */}
               <button onClick={() => { const idx = FREQ_OPTS.indexOf(habit.frequency); updateHabit(habit.id, { frequency: FREQ_OPTS[(idx + 1) % FREQ_OPTS.length] }) }}
                 title="Click to change frequency"
-                style={{ height: 20, boxSizing: 'border-box', padding: '0 8px', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-micro)', fontWeight: 600, display: 'flex', alignItems: 'center', flexShrink: 0, cursor: 'pointer' }}>
+                style={{ height: 20, boxSizing: 'border-box', padding: '0 8px', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-micro)', fontWeight: 600, display: 'flex', alignItems: 'center', flexShrink: 0, cursor: 'pointer' }}>
                 {habit.frequency}
               </button>
 
@@ -1401,18 +1401,18 @@ export function HabitsModule() {
 
         {/* Archived habits section (collapsed) */}
         {habits.filter(h => !h.isActive).length > 0 && (
-          <details style={{ marginTop: 8, borderTop: '1px solid var(--sb-hairline)' }}>
+          <details style={{ marginTop: 8, borderTop: 'var(--sb-border-width) solid var(--sb-hairline)' }}>
             <summary style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', cursor: 'pointer', padding: '8px 4px', fontWeight: 600, letterSpacing: '0.08em' }}>
               ARCHIVED ({habits.filter(h => !h.isActive).length})
             </summary>
             {habits.filter(h => !h.isActive).map(habit => (
-              <div key={habit.id} style={{ display: 'flex', alignItems: 'center', gap: 12, height: 40, borderTop: '1px solid var(--sb-hairline)', padding: '0 4px', opacity: 0.6 }}>
+              <div key={habit.id} style={{ display: 'flex', alignItems: 'center', gap: 12, height: 40, borderTop: 'var(--sb-border-width) solid var(--sb-hairline)', padding: '0 4px', opacity: 0.6 }}>
                 <span style={{ width: 14, flexShrink: 0 }} />
                 <span style={{ width: 22, flexShrink: 0 }} />
                 <span style={{ width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'var(--sb-t-body)' }}>{habit.emoji}</span>
                 <span style={{ flex: 1, fontSize: 'var(--sb-t-body)', fontWeight: 500, color: 'var(--sb-ink-4)', textDecoration: 'line-through', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{habit.name}</span>
                 <button onClick={() => updateHabit(habit.id, { isActive: true })} title="Restore"
-                  style={{ fontSize: 'var(--sb-t-meta)', padding: '3px 10px', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-field)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-3)', cursor: 'pointer' }}>
+                  style={{ fontSize: 'var(--sb-t-meta)', padding: '3px 10px', borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-3)', cursor: 'pointer' }}>
                   Restore
                 </button>
                 <button onClick={() => deleteHabit(habit.id)} title="Delete permanently"
@@ -1447,7 +1447,7 @@ export function HabitsModule() {
 
       {/* ─── All-done banner ────────────────────────────────────────────────── */}
       {todayDone === totalActive && totalActive > 0 && (
-        <div style={{ padding: '14px 18px', borderRadius: 'var(--sb-r-nav)', background: 'color-mix(in srgb, var(--sb-ink-3) 8.0%, transparent)', border: '1px solid color-mix(in srgb, var(--sb-ink-3) 20.0%, transparent)', display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ padding: '14px 18px', borderRadius: 'var(--sb-r-nav)', background: 'color-mix(in srgb, var(--sb-ink-3) 8.0%, transparent)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-ink-3) 20.0%, transparent)', display: 'flex', alignItems: 'center', gap: 10 }}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--sb-ink-3)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3c3 4 5 6 5 9a5 5 0 0 1-10 0c0-2 1-3.5 2.5-5"/></svg>
           <p style={{ margin: 0, fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-3)', fontWeight: 500 }}>
             All habits complete for today. Exceptional discipline — keep the streak alive.

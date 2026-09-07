@@ -95,8 +95,8 @@ export function datesFor(row: Pick<Draft, 'from' | 'to' | 'every'>): string[] {
 }
 
 const CELL: React.CSSProperties = {
-  height: 34, boxSizing: 'border-box', padding: '0 10px', borderRadius: 'var(--sb-r-sm)',
-  background: 'var(--sb-card)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-1)',
+  height: 'var(--sb-h-pill)', boxSizing: 'border-box', padding: '0 10px', borderRadius: 'var(--sb-r-sm)',
+  background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-1)',
   fontSize: 'var(--sb-t-body-s)', fontFamily: 'inherit', outline: 'none', minWidth: 0, width: '100%',
 }
 
@@ -229,7 +229,7 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
         onClick={e => e.stopPropagation()}
         style={{
           width: '100%', maxWidth: 1100, maxHeight: '88vh', display: 'flex', flexDirection: 'column',
-          background: 'var(--sb-header)', border: '1px solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
+          background: 'var(--sb-header)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
           boxShadow: 'var(--sb-shadow-frame)', padding: '18px 20px 20px',
         }}>
 
@@ -289,7 +289,7 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
           </span>
 
           <span style={{ position: 'relative', display: 'inline-flex' }}>
-            <span style={{ ...PILL, height: 34, padding: '0 12px', fontSize: 'var(--sb-t-body-s)', fontWeight: 600 }}>{currency}</span>
+            <span style={{ ...PILL, height: 'var(--sb-h-pill)', padding: '0 12px', fontSize: 'var(--sb-t-body-s)', fontWeight: 600 }}>{currency}</span>
             <select value={currency} onChange={e => setCurrency(e.target.value as Currency)}
               style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', cursor: 'pointer', border: 'none' }}>
               {['EGP', 'USD', 'AED'].map(c => <option key={c} value={c}>{c}</option>)}
@@ -416,7 +416,7 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
 
           <button onClick={addRow}
             style={{
-              ...PILL, height: 34, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', marginTop: 2,
+              ...PILL, height: 'var(--sb-h-pill)', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', marginTop: 2,
               background: 'transparent', borderStyle: 'dashed',
             }}>
             <Plus size={ICON.sm} /> Another line
@@ -440,7 +440,7 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
           {elsewhere.length > 0 && account && (
             <span style={{
               display: 'inline-flex', alignItems: 'center', gap: 6, borderRadius: 'var(--sb-r-pill)',
-              background: 'var(--sb-accent-tint)', border: '1px solid var(--sb-accent)', padding: '4px 11px',
+              background: 'var(--sb-accent-tint)', border: 'var(--sb-border-width) solid var(--sb-accent)', padding: '4px 11px',
               fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-1)',
             }}>
               dated {elsewhere.join(' & ')}, not {year} — saving goes there
@@ -463,7 +463,7 @@ export function BulkEntryModal({ accounts, categories, onSave, onClose }: {
             style={{
               ...PILL, height: 38, paddingInline: 20, fontWeight: 600,
               background: canSave ? 'var(--sb-ink-1)' : 'var(--sb-field)',
-              border: `1px solid ${canSave ? 'var(--sb-ink-1)' : 'var(--sb-border)'}`,
+              border: `var(--sb-border-width) solid ${canSave ? 'var(--sb-ink-1)' : 'var(--sb-border)'}`,
               color: canSave ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-4)',
               cursor: canSave ? 'pointer' : 'default',
             }}>

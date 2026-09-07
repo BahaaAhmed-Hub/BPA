@@ -40,7 +40,7 @@ export const SLOT = 22
 /** A set attribute: cream chip. */
 export const slotFilled: React.CSSProperties = {
   width: SLOT, height: SLOT, borderRadius: 'var(--sb-r-chip)', flexShrink: 0,
-  background: 'var(--sb-field)', border: '1px solid var(--sb-border)', color: 'var(--sb-ink-3)',
+  background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-3)',
   display: 'flex', alignItems: 'center', justifyContent: 'center',
   cursor: 'pointer', padding: 0,
 }
@@ -57,13 +57,13 @@ export const slotEmpty: React.CSSProperties = {
 export const slotScheduled: React.CSSProperties = {
   ...slotFilled,
   background: 'color-mix(in srgb, var(--sb-positive) 10%, transparent)',
-  border: '1px solid color-mix(in srgb, var(--sb-positive) 35%, transparent)',
+  border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-positive) 35%, transparent)',
   color: 'var(--sb-positive)',
 }
 
 export function slotPriority(p: Priority): React.CSSProperties {
   const meta = PRIORITY_META[p]
-  return { ...slotFilled, background: meta.tint, border: `1px solid ${meta.border}`, color: meta.color }
+  return { ...slotFilled, background: meta.tint, border: `var(--sb-border-width) solid ${meta.border}`, color: meta.color }
 }
 
 // ─── Helpers shared across the module ────────────────────────────────────────

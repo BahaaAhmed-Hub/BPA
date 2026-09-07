@@ -93,15 +93,34 @@
      a no-op the browser can skip. */
   --sb-surface-blur: 0px;
 
-  /* ══ FIXED ═══════════════════════════════════════════════════════════════
-     The shape of the app. No theme writes these.                            */
+  /* ── Shape ───────────────────────────────────────────────────────────────
+     A concept is a shape as much as a palette. These are Sunlit Bento's, and
+     lib/themes.ts writes them like everything else above: the corner radii,
+     the weight of every surface's edge, the three control heights, and the
+     three type steps that are the theme's voice rather than its legibility.
 
-  /* Radii */
+     What stays fixed is under FIXED below: the five smaller type steps, the
+     icon sizes, the pill radius and the mono face. */
   --sb-r-chip:   8px;
   --sb-r-sm:     9px;
   --sb-r-nav:    10px;
   --sb-r-card:   18px;
   --sb-r-frame:  24px;
+
+  --sb-border-width: 1px;
+
+  --sb-h-pill:   34px;
+  --sb-h-nav:    36px;
+  --sb-h-header: 66px;
+
+  --sb-t-h2:      18px;
+  --sb-t-h1:      27px;
+  --sb-t-display: 30px;
+
+  /* ══ FIXED ═══════════════════════════════════════════════════════════════
+     The shape of the app. No theme writes these.                            */
+
+  /* The one radius no theme moves: a pill is a pill. */
   --sb-r-pill:   999px;
 
   /* ── Type scale ──────────────────────────────────────────────────────────
@@ -117,21 +136,17 @@
        h3       15    600                     a section inside a panel
        h2       18    600  -.02em             a form's heading, a day number
        h1       27    600  -.03em             a page's own name
-       display  30    600  -.03em             the one figure a screen is about */
+       display  30    600  -.03em             the one figure a screen is about
+
+     The first six are the readability floor and stay here. The last three —
+     h2, h1 and display — are the theme's voice rather than its legibility,
+     and are declared with the surfaces above. */
   --sb-t-micro:   10px;
   --sb-t-meta:    11.5px;
   --sb-t-body-s:  12.5px;
   --sb-t-body:    13.5px;
   --sb-t-label:   13.5px;
   --sb-t-h3:      15px;
-  --sb-t-h2:      18px;
-  --sb-t-h1:      27px;
-  --sb-t-display: 30px;
-
-  /* Control heights */
-  --sb-h-pill:   34px;
-  --sb-h-nav:    36px;
-  --sb-h-header: 66px;
 
   /* Icon sizes. lucide takes its size as an attribute rather than a style, so
      lib/type.ts holds the same three as numbers; these are for CSS that draws
@@ -195,7 +210,7 @@ html, body {
 /* Custom scrollbar — thin, warm */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--sb-border); border-radius: 99px; }
+::-webkit-scrollbar-thumb { background: var(--sb-border); border-radius: var(--sb-r-pill); }
 ::-webkit-scrollbar-thumb:hover { background: var(--sb-ink-4); }
 
 /* Skeleton shimmer animation */
@@ -237,7 +252,7 @@ html, body {
   height: var(--sb-h-pill);
   padding: 0 16px;
   border-radius: var(--sb-r-pill);
-  border: 1px solid transparent;
+  border: var(--sb-border-width) solid transparent;
   background: transparent;
   font-family: var(--sb-font-ui);
   font-size: var(--sb-t-label);
@@ -337,7 +352,7 @@ html, body {
 /* Card --------------------------------------------------------------------- */
 .sb-card-surface {
   background: var(--sb-card);
-  border: 1px solid var(--sb-border);
+  border: var(--sb-border-width) solid var(--sb-border);
   border-radius: var(--sb-r-card);
   box-shadow: var(--sb-shadow-control);
 }
@@ -371,7 +386,7 @@ html, body {
   flex-shrink: 0;
   height: var(--sb-h-pill);
   padding: 0 14px;
-  border: 1px solid var(--sb-border);
+  border: var(--sb-border-width) solid var(--sb-border);
   border-radius: var(--sb-r-pill);
   background: var(--sb-card);
   color: var(--sb-ink-3);
@@ -435,7 +450,7 @@ html, body {
 
 /* Two hovers that are not a primitive: a figure that underlines to say it can
    be opened, and a row that tints. Both were mouse handlers writing styles. */
-.sb-underline-hover { border-bottom: 1px solid transparent; padding-bottom: 1px; }
+.sb-underline-hover { border-bottom: var(--sb-border-width) solid transparent; padding-bottom: 1px; }
 .sb-underline-hover:hover { border-bottom-color: var(--sb-ink-4); }
 
 /* A row being dragged: stop the pointer selecting the text it passes over. */

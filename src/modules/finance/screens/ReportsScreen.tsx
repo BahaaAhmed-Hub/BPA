@@ -242,7 +242,7 @@ export function ReportsScreen(_props?: any) {
       {/* Header */}
       <div style={{
         flexShrink: 0,
-        borderBottom: '1px solid var(--sb-border)',
+        borderBottom: 'var(--sb-border-width) solid var(--sb-border)',
         padding: '14px 26px 16px',
         display: 'flex', alignItems: 'flex-end', gap: 20,
       }}>
@@ -293,7 +293,7 @@ export function ReportsScreen(_props?: any) {
           <div style={{
             display: 'inline-flex', alignItems: 'center', gap: 6,
             padding: '5px 8px 5px 12px',
-            background: C.surface, border: `1px solid ${C.border}`, borderRadius: 'var(--sb-r-nav)',
+            background: C.surface, border: `var(--sb-border-width) solid ${C.border}`, borderRadius: 'var(--sb-r-nav)',
           }}>
             <input type="date" value={rangeFrom} max={rangeTo || undefined}
               onChange={e => setRangeFrom(e.target.value)} style={RANGE_FIELD} />
@@ -423,7 +423,7 @@ export function ReportsScreen(_props?: any) {
                       borderRadius: 'var(--sb-r-chip)',
                       background: C.surface,
                       overflow: 'hidden',
-                      border: `1px solid ${C.border}`,
+                      border: `var(--sb-border-width) solid ${C.border}`,
                     }}>
                       <div
                         className="report-bar"

@@ -247,12 +247,12 @@ export function SetupWizard({ onClose }: Props) {
           </div>
 
           {/* ── Footer nav ───────────────────────────────────────────────── */}
-          <div style={{ padding: '18px 28px', borderTop: '1px solid var(--sb-page)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          <div style={{ padding: '18px 28px', borderTop: 'var(--sb-border-width) solid var(--sb-page)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
             {step > 1 && step < TOTAL_STEPS ? (
               <button onClick={goBack} className="wz-btn-back" style={{
                 display: 'flex', alignItems: 'center', gap: 6,
                 padding: '11px 22px', borderRadius: 'var(--sb-r-pill)',
-                background: 'transparent', border: '1px solid var(--sb-hairline)',
+                background: 'transparent', border: 'var(--sb-border-width) solid var(--sb-hairline)',
                 color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-label)', fontWeight: 600, cursor: 'pointer',
                 transition: 'all 0.15s',
               }}>
