@@ -599,17 +599,6 @@ function computeOverlaps(dayEvents: GCalEventExt[]): Map<string, EventLayout> {
   return layout
 }
 
-// ─── Sunlit Bento color helpers ───────────────────────────────────────────────
-function hexRgbStr(hex: string): string {
-  const h = hex.replace('#', '')
-  if (h.length === 3) {
-    const r = parseInt(h[0]+h[0], 16), g = parseInt(h[1]+h[1], 16), b = parseInt(h[2]+h[2], 16)
-    return `${r}, ${g}, ${b}`
-  }
-  const r = parseInt(h.slice(0,2),16), g = parseInt(h.slice(2,4),16), b = parseInt(h.slice(4,6),16)
-  if (isNaN(r)||isNaN(g)||isNaN(b)) return '127, 119, 221'
-  return `${r}, ${g}, ${b}`
-}
 
 // ─── Calendar color palette (macOS Calendar colors) ──────────────────────────
 
@@ -723,19 +712,28 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
   // Sunlit Bento event styles
   // Only a cancelled event goes grey. Done and simply-past events keep their
   // calendar's colour — an event you attended is not an event that went away.
-  const rgb = color.startsWith('#') ? hexRgbStr(color) : '127,119,221'
-  // A soft wash of the calendar's colour over parchment, the way the artboards
-  // draw it — not a saturated slab with a bar down its side.
+  // A solid tint of the calendar's colour, not a wash you can see the grid
+  // lines through: the ground is mixed in rather than left to show, so the
+  // card is an object on the grid instead of a stain on it. The title is the
+  // same colour taken down to text weight, which is what makes a block
+  // readable at a glance as *that* calendar rather than as a coloured smear.
+  //
+  // The mix is into --sb-card because that is what the grid is painted in.
+  // On Glass & Depth that token is itself a wash over the page, so the result
+  // there is translucent by the theme's own definition — every surface in it
+  // is.
+  //
   // The card keeps its calendar's colour whether the event is done, cancelled
   // or neither — the tick and the strike-through say what happened to it.
-  const evBg = `rgba(${rgb}, 0.10)`
+  const evBg   = `color-mix(in srgb, ${color} 15%, var(--sb-card))`
+  const evInk  = `color-mix(in srgb, ${color} 70%, var(--sb-ink-1))`
+  const evTimeInk = `color-mix(in srgb, ${color} 32%, var(--sb-ink-3))`
+  // No outline in the ordinary case: a solid fill already has an edge. What is
+  // left is the two states an edge is the only way to say — a tentative event,
+  // and the one you have selected.
   const evBorder = isTentative
-    ? `1px dashed ${color}`
-    : isSelected
-    ? `2px solid ${color}`
-    : `var(--sb-border-width) solid rgba(${rgb}, 0.34)`
-  const evInk = 'var(--sb-ink-1)'
-  const evTimeInk = 'var(--sb-ink-3)'
+    ? `var(--sb-border-width) dashed ${color}`
+    : 'var(--sb-border-width) solid transparent'
 
   // What a card can say depends on how much of it there is — in pixels, not in
   // percent, since a third of a day column is a different size on every screen.
@@ -798,7 +796,7 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
         // caption, and spreading T.micro would put it in capitals.
         fontFamily: SANS,
         fontSize: 'var(--sb-t-micro)',
-        fontWeight: 600,
+        fontWeight: 700,
         color: evInk,
         lineHeight: 1.25,
         overflow: 'hidden',
@@ -906,22 +904,22 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
 // suggestion.
 
 const EV_PILL: React.CSSProperties = {
-  display: 'inline-flex', alignItems: 'center', gap: 6, height: 42, boxSizing: 'border-box',
-  padding: '0 14px', borderRadius: 'var(--sb-r-nav)', background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)',
+  display: 'inline-flex', alignItems: 'center', gap: 6, height: 32, boxSizing: 'border-box',
+  padding: '0 12px', borderRadius: 'var(--sb-r-nav)', background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)',
   color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body)', fontFamily: 'inherit', cursor: 'pointer', minWidth: 0,
 }
 const EV_ROUND: React.CSSProperties = {
-  width: 30, height: 30, borderRadius: 'var(--sb-r-pill)', flexShrink: 0, padding: 0,
+  width: 28, height: 28, borderRadius: 'var(--sb-r-pill)', flexShrink: 0, padding: 0,
   display: 'flex', alignItems: 'center', justifyContent: 'center',
   background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-3)', cursor: 'pointer',
 }
 /** Four sizes in the whole panel: 27 title, 14 value, 13.5 label, 11.5 caption. */
 const EV_LABEL: React.CSSProperties = {
-  width: 78, flexShrink: 0, fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-3)', fontWeight: 500,
+  width: 70, flexShrink: 0, fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-3)', fontWeight: 500,
 }
 /** Every labelled row hangs off the same left edge. */
 const EV_ROW: React.CSSProperties = {
-  display: 'flex', alignItems: 'center', gap: 12,
+  display: 'flex', alignItems: 'center', gap: 10,
 }
 const EV_SECTION: React.CSSProperties = {
   ...T.h3, color: 'var(--sb-ink-1)', flexShrink: 0,
@@ -929,13 +927,13 @@ const EV_SECTION: React.CSSProperties = {
 /** Every value in the panel sits in one of these, whether you can type in it,
  *  pick from it, or only read it. */
 const EV_FIELD: React.CSSProperties = {
-  display: 'flex', alignItems: 'center', gap: 9, height: 48, boxSizing: 'border-box',
-  width: '100%', minWidth: 0, padding: '0 15px', borderRadius: 'var(--sb-r-nav)',
+  display: 'flex', alignItems: 'center', gap: 8, height: 36, boxSizing: 'border-box',
+  width: '100%', minWidth: 0, padding: '0 12px', borderRadius: 'var(--sb-r-nav)',
   background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)',
   color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body)', fontFamily: 'inherit', textAlign: 'left',
 }
 const EV_GHOST_ICON: React.CSSProperties = {
-  width: 30, height: 30, borderRadius: 'var(--sb-r-chip)', flexShrink: 0, padding: 0,
+  width: 26, height: 26, borderRadius: 'var(--sb-r-chip)', flexShrink: 0, padding: 0,
   display: 'flex', alignItems: 'center', justifyContent: 'center',
   background: 'none', border: 'none', color: 'var(--sb-ink-4)', cursor: 'pointer',
 }
@@ -1285,7 +1283,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
       overflowY: 'auto', scrollbarWidth: 'thin',
       background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
       boxShadow: 'var(--sb-shadow-control)',
-      padding: '18px 22px 22px',
+      padding: '16px 18px 18px',
     }}>
 
       {/* ── Which calendar, and what to do with the event ────────────────── */}
@@ -1380,7 +1378,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
         ref={el => { if (el) { el.style.height = 'auto'; el.style.height = `${el.scrollHeight}px` } }}
         placeholder="Event title"
         style={{
-          width: '100%', boxSizing: 'border-box', margin: '18px 0 0', resize: 'none', overflow: 'hidden',
+          width: '100%', boxSizing: 'border-box', margin: '14px 0 0', resize: 'none', overflow: 'hidden',
           background: 'transparent', border: 'none', padding: 0,
           fontFamily: DISPLAY, fontSize: 'var(--sb-t-h1)', fontWeight: 700,
           lineHeight: 1.18, letterSpacing: '-0.025em', color: 'var(--sb-ink-1)', outline: 'none', textAlign: 'left',
@@ -1392,8 +1390,8 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
           nothing here — the way to add one is a plain icon on the row below. */}
       {videoLink && (
         <div style={{
-          display: 'flex', alignItems: 'center', gap: 11, marginTop: 16,
-          height: 58, padding: '0 15px', boxSizing: 'border-box',
+          display: 'flex', alignItems: 'center', gap: 10, marginTop: 13,
+          height: 42, padding: '0 12px', boxSizing: 'border-box',
           borderRadius: 'var(--sb-r-nav)', background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)',
         }}>
           <ProviderMark provider={provider} size={24} />
@@ -1439,7 +1437,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
       {/* ── Where ────────────────────────────────────────────────────────── */}
       {/* One field you simply type in. What you type is looked up as you go, so
           a place can be pinned to a real one; Enter keeps it either way. */}
-      <div style={{ ...EV_ROW, marginTop: 16 }}>
+      <div style={{ ...EV_ROW, marginTop: 13 }}>
         <span style={EV_LABEL}>Location</span>
         <span ref={placeRef} style={{ flex: 1, minWidth: 0, display: 'flex', gap: 7, position: 'relative' }}>
           <span style={{ ...EV_FIELD, flex: 1 }}>
@@ -1473,7 +1471,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
               up once there is a link to brand. */}
           {!videoLink && canAddVideo && (
             <button onClick={addVideoCall} title={`Add a ${PROVIDER_NAME[provider]} link`}
-              style={{ ...EV_ROUND, width: 48, height: 48, borderRadius: 'var(--sb-r-nav)', flexShrink: 0 }}>
+              style={{ ...EV_ROUND, width: 34, height: 34, borderRadius: 'var(--sb-r-nav)', flexShrink: 0 }}>
               <Video size={ICON.md} />
             </button>
           )}
@@ -3504,7 +3502,6 @@ export function CalendarIntelligence() {
                   {shown.map(e => {
                     const cal = allCalendars.find(c => c.id === (e as GCalEventExt).calendarId)
                     const col = cal ? calEffectiveColor(cal) : 'var(--sb-info)'
-                    const rgb = col.startsWith('#') ? hexRgbStr(col) : '127,119,221'
                     const t = e.start.dateTime ? new Date(e.start.dateTime) : null
                     const st = eventStatuses[e.id]
                     return (
@@ -3516,8 +3513,13 @@ export function CalendarIntelligence() {
                         style={{
                           display: 'flex', alignItems: 'center', gap: 5, minWidth: 0,
                           padding: '2px 6px', borderRadius: 'var(--sb-r-chip)', cursor: 'pointer',
-                          background: `rgba(${rgb}, 0.16)`, border: `var(--sb-border-width) solid rgba(${rgb}, 0.4)`,
-                          fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-1)',
+                          // Solid, like the week grid: the same tint of the
+                          // calendar's colour, and its name in that colour
+                          // taken down to text weight.
+                          background: `color-mix(in srgb, ${col} 15%, var(--sb-card))`,
+                          border: 'var(--sb-border-width) solid transparent',
+                          fontSize: 'var(--sb-t-micro)', fontWeight: 700,
+                          color: `color-mix(in srgb, ${col} 70%, var(--sb-ink-1))`,
                           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                         }}>
                         {t && <span style={{ color: 'var(--sb-ink-3)', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>
@@ -3596,8 +3598,9 @@ export function CalendarIntelligence() {
                           onClick={e => handleEventClick(ev as GCalEventExt, e)}
                           onContextMenu={e => handleEventContextMenu(ev as GCalEventExt, e)}
                           style={{
-                            fontSize: 'var(--sb-t-micro)', fontWeight: 600, color: 'var(--sb-ink-on-fill)',
-                            background: alpha(color, 80.0),
+                            fontSize: 'var(--sb-t-micro)', fontWeight: 700,
+                            color: `color-mix(in srgb, ${color} 70%, var(--sb-ink-1))`,
+                            background: `color-mix(in srgb, ${color} 15%, var(--sb-card))`,
                             borderLeft: `var(--sb-border-emphasis) solid ${color}`,
                             borderRadius: 'var(--sb-r-chip)', padding: '1px 4px',
                             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',

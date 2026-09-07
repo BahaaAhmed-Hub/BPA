@@ -418,7 +418,11 @@ html, body {
   padding: 3px;
   box-sizing: border-box;
   border-radius: var(--sb-r-pill);
-  background: var(--sb-field);
+  /* Not --sb-field: on the page ground those two are a couple of units apart
+     and the track disappeared, which took the raised pill's meaning with it.
+     A wash of ink over the field goes the right way in both polarities — down
+     on a light theme, up on a dark one. */
+  background: color-mix(in srgb, var(--sb-ink-1) 18%, var(--sb-field));
 }
 .sb-segmented[data-block] { display: flex; width: 100%; }
 .sb-segmented[data-block] .sb-segmented-opt { flex: 1; justify-content: center; }
@@ -434,7 +438,9 @@ html, body {
   border: none;
   border-radius: var(--sb-r-pill);
   background: transparent;
-  color: var(--sb-ink-3);
+  /* Ink-2, not ink-3: the track is dark enough now that the muted step would
+     be 3.7:1 on it. */
+  color: var(--sb-ink-2);
   font-family: var(--sb-font-ui);
   font-size: var(--sb-t-body-s);
   font-weight: 500;
