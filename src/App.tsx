@@ -86,27 +86,10 @@ function LoginScreen() {
           flexDirection: 'column',
           justifyContent: 'space-between',
         }}>
-          {/* Mark */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 56 }}>
-            <div style={{
-              width: 38, height: 38, borderRadius: 10,
-              background: '#191712',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              flexShrink: 0,
-            }}>
-              {/* Graduation cap inline SVG */}
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
-                stroke="#FDF8E7" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
-                <path d="M6 12v5c3.333 2 8.667 2 12 0v-5"/>
-              </svg>
-            </div>
-            <span style={{
-              fontFamily: "'Outfit', system-ui, sans-serif",
-              fontWeight: 700, fontSize: 17, color: '#191712', letterSpacing: '-.02em',
-            }}>
-              The Professor
-            </span>
+          {/* Mark — the same one the app wears, at the size a first screen
+              can carry. It stands alone here too. */}
+          <div style={{ display: 'flex', alignItems: 'center', marginBottom: 56 }}>
+            <BeLogo variant="amber" size={88} title="Be" />
           </div>
 
           {/* Headline */}
