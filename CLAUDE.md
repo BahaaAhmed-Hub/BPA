@@ -143,6 +143,11 @@ needs the room for them: `--sb-r-card`,
 `--sb-shadow-control`, `--sb-t-h2` title / `--sb-t-body-s` rows /
 `--sb-t-meta` captions, `--sb-h-pill` controls, sections separated by a
 hairline. Measured side by side, the two panels differ in nothing but content.
+- **Completed and Cancelled carry their words where they fit.** A ResizeObserver
+  on the panel switches them to glyphs below 400px — a clamp from 320 to 440
+  cannot be answered with one guess, and at the narrow end the two labels plus
+  delete and close push the calendar name off the row. Set, either is a solid
+  fill, not a tint: a tint on a 28px circle is not a state you can read.
 - **Docked, never floating.** A modal over the grid hides the one thing you
   need while editing an event. It is a column beside the grid, the way the
   task panel sits beside the board.

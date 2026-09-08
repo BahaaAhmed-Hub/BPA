@@ -381,6 +381,17 @@ export function NewEventPanel({
   const [moveError, setMoveError] = useState<string | null>(null)
 
   const ref = useRef<HTMLDivElement>(null)
+  // Completed and Cancelled carry their words when the panel is wide enough
+  // for them beside the calendar name, and fall back to their glyphs when it
+  // is not. A clamp from 320 to 440 cannot be answered with one guess.
+  const [roomy, setRoomy] = useState(false)
+  useEffect(() => {
+    const el = ref.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(([e]) => setRoomy(e.contentRect.width >= 400))
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
   const titleRef = useRef<HTMLInputElement>(null)
   // An existing event is read far more often than it is retitled; stealing the
   // caret on open would put the cursor in the one field you rarely want.
@@ -542,28 +553,40 @@ export function NewEventPanel({
         {/* Set, these are solid — a tint on a 28px circle is not a state you
             can read at a glance, and knowing an event is cancelled is the
             whole reason to look at it. */}
-        <button
-          title={status === 'done' ? 'Not done after all' : 'Mark it done'}
-          onClick={() => setStatus(s => s === 'done' ? null : 'done')}
-          style={{
-            ...ROUND,
-            background: status === 'done' ? 'var(--sb-positive)' : 'transparent',
-            color: status === 'done' ? 'var(--sb-ink-on-fill)' : C.third,
-            boxShadow: status === 'done' ? '0 1px 3px color-mix(in srgb, var(--sb-ink-1) 22%, transparent)' : undefined,
-          }}>
-          <CheckCircle2 size={ICON.sm} strokeWidth={status === 'done' ? STROKE.active : STROKE.rest} />
-        </button>
-        <button
-          title={status === 'cancelled' ? 'Back on' : 'Mark it cancelled'}
-          onClick={() => setStatus(s => s === 'cancelled' ? null : 'cancelled')}
-          style={{
-            ...ROUND,
-            background: status === 'cancelled' ? 'var(--sb-negative)' : 'transparent',
-            color: status === 'cancelled' ? 'var(--sb-ink-on-fill)' : C.third,
-            boxShadow: status === 'cancelled' ? '0 1px 3px color-mix(in srgb, var(--sb-ink-1) 22%, transparent)' : undefined,
-          }}>
-          <XCircle size={ICON.sm} strokeWidth={status === 'cancelled' ? STROKE.active : STROKE.rest} />
-        </button>
+        {([
+          { id: 'done' as const,      label: 'Completed', Icon: CheckCircle2,
+            fill: 'var(--sb-positive)', ink: 'var(--sb-positive-deep)',
+            on: 'Not done after all', off: 'Mark it done' },
+          { id: 'cancelled' as const, label: 'Cancelled', Icon: XCircle,
+            fill: 'var(--sb-negative)', ink: C.bad,
+            on: 'Back on', off: 'Mark it cancelled' },
+        ]).map(({ id, label, Icon, fill, ink, on, off }) => {
+          const set = status === id
+          return (
+            <button
+              key={id}
+              title={set ? on : off}
+              aria-pressed={set}
+              onClick={() => setStatus(s => s === id ? null : id)}
+              style={roomy ? {
+                display: 'inline-flex', alignItems: 'center', gap: 5, flexShrink: 0,
+                height: 26, padding: '0 10px', borderRadius: 'var(--sb-r-pill)', cursor: 'pointer',
+                fontFamily: 'inherit', fontSize: 'var(--sb-t-meta)', fontWeight: 700,
+                background: set ? fill : C.card,
+                border: `var(--sb-border-width) solid ${set ? fill : C.border}`,
+                color: set ? 'var(--sb-ink-on-fill)' : ink,
+                boxShadow: set ? '0 1px 3px color-mix(in srgb, var(--sb-ink-1) 22%, transparent)' : undefined,
+              } : {
+                ...ROUND,
+                background: set ? fill : 'transparent',
+                color: set ? 'var(--sb-ink-on-fill)' : C.third,
+                boxShadow: set ? '0 1px 3px color-mix(in srgb, var(--sb-ink-1) 22%, transparent)' : undefined,
+              }}>
+              <Icon size={ICON.sm} strokeWidth={set ? STROKE.active : STROKE.rest} />
+              {roomy && label}
+            </button>
+          )
+        })}
         <button
           title={editing ? 'Delete this event' : 'Discard this event'}
           onClick={() => {
