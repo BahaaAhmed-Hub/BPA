@@ -121,7 +121,11 @@ gone, and with it the last of `--sb-ev-type`.
   are one row, and All day *dims* the times rather than removing them, so
   turning it back off is not starting again. Repeats and Alert are one row each,
   in When, with no rule between them: Alert is a fact about the time, not a
-  section of its own.
+  section of its own. **Every box in the card starts at the card's own left
+  edge** — the glyph sits inside the field and there is no label gutter, since
+  a label sized to its own word ("Repeats" against "Alert") starts each field
+  at a different x and the card reads as rows that have drifted. The value
+  carries what the label carried: "Never repeats", not a bare "Never".
 - **Ends belongs to Custom.** Choosing a preset after it means the preset, so
   the fields go and what they held goes with them — a stale "after 8 times"
   hanging off a plain Monthly is a rule nobody asked for.
