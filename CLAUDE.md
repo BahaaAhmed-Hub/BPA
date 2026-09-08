@@ -612,6 +612,30 @@ shows **what the message is** and, where it wants an answer, **the answer**.
 - Sending drops the row and forgets its brief. The `+` (add as task) left the
   row — the opened message still offers it.
 
+## Mail — an invitation is an RSVP, not a reply
+`lib/invitations.ts`. A Google Calendar invitation is an ordinary email carrying
+a `text/calendar` part with `METHOD:REQUEST`. Answering it in prose sends the
+organiser a pleasant note and **tells Google nothing** — your name stays in the
+Awaiting column and the event never shows as accepted on your own calendar. So
+an invitation row offers **Yes / Maybe / No / No, with a note** instead of a
+drafted reply, and the draft is suppressed for it.
+- **`UID` is the only shared identifier.** Google mints a different event id for
+  every attendee's copy, so `findEventByICalUid` (`events.list?iCalUID=`) is the
+  one way from the invitation to the row you can answer on. It asks `primary`
+  first, then every writable calendar, because Google files it wherever the
+  address is subscribed.
+- **Only `self`'s `responseStatus` is patched**, and by PATCH, so nothing else
+  on the event moves. `sendUpdates=all` lets Google tell the organiser — a
+  second iMIP reply from us would be a duplicate with worse headers.
+- **It never creates the event.** If Google has not put the invitation on a
+  calendar there is nothing to patch, and the row says so and points at Google
+  Calendar rather than inventing a copy the organiser's event knows nothing of.
+- A `CANCEL`, or `STATUS:CANCELLED`, is not something to answer: the row says
+  the organiser called it off. A `REPLY` is somebody answering an invitation
+  *you* sent, so it is not treated as one at all.
+- An invitation always counts as **to book** in the header, whatever the model
+  made of the wording.
+
 ## Habits — what one tap adds
 `lib/habitSteps.ts`. A measurable habit was counted one at a time, which is
 right for glasses and wrong for anything in real units: 200 ml at 1 ml a tap is

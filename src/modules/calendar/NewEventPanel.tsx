@@ -169,7 +169,11 @@ export function ComposerShell({ panelRef, onClose, expanded, children }: {
         // The row it sits in has a definite height, so this is the row's — a
         // fixed viewport offset put the footer four pixels below the fold,
         // because it did not know how tall the calendar's own header was.
-        maxHeight: '100%', overflowY: 'auto', scrollbarWidth: 'thin',
+        // Off the grid on one side and off the window on the other. Flush
+        // against both edges a panel reads as part of the frame rather than
+        // as a thing sitting on top of it.
+        margin: '0 14px 14px 6px',
+        maxHeight: 'calc(100% - 14px)', overflowY: 'auto', scrollbarWidth: 'thin',
         background: C.page, border: `var(--sb-border-width) solid ${C.border}`,
         borderRadius: 'var(--sb-r-frame)', boxShadow: 'var(--sb-shadow-control)',
         display: 'flex', flexDirection: 'column', gap: 10, padding: 10,

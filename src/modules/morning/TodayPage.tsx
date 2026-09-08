@@ -26,6 +26,7 @@ import { listUnreadThreadIds, getThread, header, extractBody, extractHtmlBody, a
 import type { GmailHeader, MailAccount } from '@/lib/gmail'
 import { mailAccounts } from '@/modules/inbox/mailAccounts'
 import { briefsFor, rememberDraft, forgetBrief, type InboxBrief, type MailAction } from '@/lib/mailBriefs'
+import { extractInvite, respondToInvite, RSVP_LABEL, type Invite, type Rsvp } from '@/lib/invitations'
 import { notify } from '@/lib/undo'
 import { TASK_TYPE_META, inferTaskType, isTaskHidden, loadDynamicCompanies } from '@/types'
 import { isMailHiddenByCompany } from '@/lib/companyVisibility'
@@ -225,6 +226,9 @@ interface MailRow {
   /** Which mailbox it arrived in. A merged list you cannot act on is a list
    *  you do not know where a reply would leave from. */
   account: MailAccount
+  /** Set when the message is a calendar invitation, which is answered by
+   *  RSVPing rather than by writing back. */
+  invite: Invite | null
 }
 
 /** The message itself, in a window that closes when you click away from it. */
@@ -332,6 +336,108 @@ function MailPopup({ row, onClose, onArchive, onAddTask }: {
           </button>
         </div>
       </div>
+    </div>
+  )
+}
+
+/**
+ * What an invitation offers instead of a draft.
+ *
+ * A calendar invitation is an RSVP. Replying in prose sends the organiser a
+ * pleasant email and tells Google nothing — your name stays in the "Awaiting"
+ * column and the event never shows as accepted on your own calendar. So the
+ * three answers write the real `responseStatus`, and the fourth does both,
+ * because a decline is the one that usually wants a sentence with it.
+ */
+function InviteActions({ invite, busy, answered, error, onRespond, onDeclineWithNote }: {
+  invite: Invite
+  busy: Rsvp | null
+  answered: Rsvp | null
+  error: string | null
+  onRespond: (r: Rsvp) => void
+  onDeclineWithNote: () => void
+}) {
+  const when = invite.startsAt
+    ? new Date(invite.startsAt).toLocaleString('en-GB', {
+        weekday: 'short', day: 'numeric', month: 'short',
+        ...(invite.startsAt.includes('T') ? { hour: '2-digit', minute: '2-digit' } : {}),
+      })
+    : ''
+
+  const TONE: Record<Rsvp, { bg: string; ink: string }> = {
+    accepted:  { bg: 'var(--sb-positive)', ink: 'var(--sb-ink-on-fill)' },
+    tentative: { bg: 'var(--sb-warning)',  ink: 'var(--sb-ink-on-fill)' },
+    declined:  { bg: 'var(--sb-negative)', ink: 'var(--sb-ink-on-fill)' },
+  }
+
+  return (
+    <div style={{
+      marginTop: 7, marginLeft: 38, padding: '9px 11px 10px', borderRadius: 'var(--sb-r-chip)',
+      background: FIELD, border: `var(--sb-border-width) solid ${HAIR}`,
+      display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0,
+    }}>
+      <span style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+        <CalendarClock size={ICON.sm} strokeWidth={STROKE.active} color={MUTED} />
+        <span style={{
+          fontSize: 'var(--sb-t-micro)', fontWeight: 800, letterSpacing: '0.08em',
+          color: MUTED, textTransform: 'uppercase', flexShrink: 0,
+        }}>{invite.cancelled ? 'Cancelled' : 'Invitation'}</span>
+        {when && (
+          <span style={{
+            fontSize: 'var(--sb-t-meta)', color: GHOST, minWidth: 0,
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>· {when}</span>
+        )}
+      </span>
+
+      {invite.cancelled ? (
+        <span style={{ fontSize: 'var(--sb-t-meta)', color: GHOST }}>
+          The organiser called it off — there is nothing to answer.
+        </span>
+      ) : (
+        <span style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+          {(['accepted', 'tentative', 'declined'] as Rsvp[]).map(r => {
+            const on = answered === r
+            return (
+              <button
+                key={r}
+                disabled={!!busy}
+                onClick={() => onRespond(r)}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 5, height: 26, padding: '0 11px',
+                  borderRadius: 'var(--sb-r-pill)', cursor: busy ? 'default' : 'pointer', fontFamily: 'inherit',
+                  fontSize: 'var(--sb-t-meta)', fontWeight: 700, flexShrink: 0,
+                  background: on ? TONE[r].bg : 'var(--sb-card)',
+                  border: `var(--sb-border-width) solid ${on ? TONE[r].bg : 'var(--sb-border)'}`,
+                  color: on ? TONE[r].ink : INK,
+                  opacity: busy && busy !== r ? 0.5 : 1,
+                }}>
+                {busy === r ? <Loader2 size={ICON.sm} className="sb-spin" /> : on ? <Check size={ICON.sm} /> : null}
+                {RSVP_LABEL[r]}
+              </button>
+            )
+          })}
+          <button
+            disabled={!!busy}
+            onClick={onDeclineWithNote}
+            title="Decline, and write a line to the organiser"
+            style={{
+              ...GHOST_BTN, gap: 4, flexShrink: 0, fontFamily: 'inherit',
+              fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: MUTED,
+            }}>
+            No, with a note <ArrowRight size={ICON.sm} />
+          </button>
+        </span>
+      )}
+
+      {error && (
+        <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-negative-deep)', lineHeight: 1.45 }}>{error}</span>
+      )}
+      {answered && !error && (
+        <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-positive-deep)' }}>
+          {RSVP_LABEL[answered]} — the organiser has been told.
+        </span>
+      )}
     </div>
   )
 }
@@ -705,6 +811,7 @@ const MAIL_SHOWN = 6
 function MailCard({
   rows, loading, error, boxes, newsletters, briefs, briefing, briefNote,
   onArchive, onArchiveAll, onOpenInbox, onOpen, onOpenDraft,
+  rsvpBusy, rsvpDone, rsvpError, onRespond,
 }: {
   rows: MailRow[]
   loading: boolean
@@ -722,6 +829,11 @@ function MailCard({
   onOpenInbox: () => void
   onOpen: (row: MailRow) => void
   onOpenDraft: (row: MailRow) => void
+  /** RSVP state, keyed by thread id, and the one way to change it. */
+  rsvpBusy: Record<string, Rsvp>
+  rsvpDone: Record<string, Rsvp>
+  rsvpError: Record<string, string>
+  onRespond: (row: MailRow, r: Rsvp) => void
 }) {
   const [showBulk, setShowBulk] = useState(false)
   const [filter, setFilter] = useState<MailAction | null>(null)
@@ -731,7 +843,7 @@ function MailCard({
   // about while the summaries land.
   const counts = useMemo(() => {
     const c: Record<MailAction, number> = { reply: 0, schedule: 0, decide: 0, read: 0 }
-    for (const r of rows) c[briefs[r.id]?.action ?? 'read'] += 1
+    for (const r of rows) c[r.invite ? 'schedule' : briefs[r.id]?.action ?? 'read'] += 1
     return c
   }, [rows, briefs])
   const wants = counts.reply + counts.schedule + counts.decide
@@ -739,7 +851,7 @@ function MailCard({
   // What the card actually lists. A filter that survives its own chip
   // disappearing would leave you looking at nothing and no way back.
   const shown = useMemo(
-    () => filter ? rows.filter(r => briefs[r.id]?.action === filter) : rows,
+    () => filter ? rows.filter(r => (r.invite ? 'schedule' : briefs[r.id]?.action) === filter) : rows,
     [rows, briefs, filter],
   )
   useEffect(() => { if (filter && counts[filter] === 0) setFilter(null) }, [filter, counts])
@@ -747,7 +859,7 @@ function MailCard({
   /** Who has been waiting longest for an answer, and how long. */
   const oldest = useMemo(() => {
     const waiting = rows
-      .filter(r => { const a = briefs[r.id]?.action; return a && a !== 'read' })
+      .filter(r => r.invite || (briefs[r.id]?.action && briefs[r.id]?.action !== 'read'))
       .sort((a, b) => a.receivedAt.localeCompare(b.receivedAt))[0]
       ?? rows.filter(r => r.needsYou).sort((a, b) => a.receivedAt.localeCompare(b.receivedAt))[0]
     if (!waiting) return null
@@ -762,7 +874,7 @@ function MailCard({
           ? 'reading your inbox…'
           : <MailStats
               counts={counts} boxes={boxes} bulk={newsletters.length} thinking={briefing}
-              classified={rows.some(r => briefs[r.id])}
+              classified={rows.some(r => briefs[r.id] || r.invite)}
               addressed={rows.filter(r => r.needsYou).length}
               filter={filter}
               onFilter={setFilter}
@@ -843,9 +955,21 @@ function MailCard({
                 </div>
               )}
 
+              {/* An invitation is answered, not replied to. */}
+              {r.invite ? (
+                <InviteActions
+                  invite={r.invite}
+                  busy={rsvpBusy[r.id] ?? null}
+                  answered={rsvpDone[r.id] ?? null}
+                  error={rsvpError[r.id] ?? null}
+                  onRespond={rr => onRespond(r, rr)}
+                  onDeclineWithNote={() => { onRespond(r, 'declined'); onOpenDraft(r) }}
+                />
+              ) : null}
+
               {/* And the answer to it, where it wants one. Clicking opens it to
                   be read; nothing is ever sent from the card. */}
-              {briefs[r.id]?.draft && (
+              {!r.invite && briefs[r.id]?.draft && (
                 <button
                   onClick={() => onOpenDraft(r)}
                   style={{
@@ -1435,6 +1559,10 @@ export function TodayPage() {
   const [briefing, setBriefing] = useState(false)
   const [briefNote, setBriefNote] = useState<string | null>(null)
   const [draftFor, setDraftFor] = useState<MailRow | null>(null)
+  /** Which invitation is being answered, and how each one was answered. */
+  const [rsvpBusy, setRsvpBusy] = useState<Record<string, Rsvp>>({})
+  const [rsvpDone, setRsvpDone] = useState<Record<string, Rsvp>>({})
+  const [rsvpError, setRsvpError] = useState<Record<string, string>>({})
 
   const today = dayKey(clock)
   const writtenAt = useRef(new Date())
@@ -1524,6 +1652,7 @@ export function TodayPage() {
           needsYou: !isBulk && !!me && to.includes(me),
           newsletter: isBulk,
           account,
+          invite: extractInvite(last),
         }
         ;(isBulk ? bulk : rows).push(row)
       }
@@ -1598,6 +1727,22 @@ export function TodayPage() {
   }, [briefContext])
 
   useEffect(() => { void runBriefs(mail) }, [mail, runBriefs])
+
+  /** Answer an invitation on the calendar it actually lives on. */
+  const respondToInvitation = useCallback(async (row: MailRow, answer: Rsvp) => {
+    if (!row.invite) return
+    setRsvpBusy(p => ({ ...p, [row.id]: answer }))
+    setRsvpError(p => { const n = { ...p }; delete n[row.id]; return n })
+    const res = await respondToInvite(row.invite, row.account, answer)
+    setRsvpBusy(p => { const n = { ...p }; delete n[row.id]; return n })
+    if (res.ok) {
+      setRsvpDone(p => ({ ...p, [row.id]: answer }))
+      notify(`${RSVP_LABEL[answer]} to ${row.invite.summary}`)
+    } else {
+      // Never a bare failure: the reason is the whole value of the message.
+      setRsvpError(p => ({ ...p, [row.id]: res.why ?? 'Google would not record the reply.' }))
+    }
+  }, [])
 
   /** Throw one brief away and write it again — the popup's Rewrite. */
   const rewriteDraft = useCallback(async (row: MailRow) => {
@@ -1866,6 +2011,10 @@ export function TodayPage() {
             onOpenInbox={() => setActiveModule('inbox')}
             onOpen={setOpenMail}
             onOpenDraft={setDraftFor}
+            rsvpBusy={rsvpBusy}
+            rsvpDone={rsvpDone}
+            rsvpError={rsvpError}
+            onRespond={(row, r) => void respondToInvitation(row, r)}
           />
         </div>
 

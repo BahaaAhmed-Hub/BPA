@@ -354,6 +354,57 @@ export async function lookUpEvent(
   } catch { return null }
 }
 
+/**
+ * Your own copy of an event, found by the identifier it shares with the
+ * invitation that announced it.
+ *
+ * `iCalUID` is not the event id: Google mints a different event id for every
+ * attendee's copy, and the UID is the one thing all of them agree on. It is
+ * the only way to get from an invitation email to the row you can RSVP on.
+ */
+export async function findEventByICalUid(
+  token: string,
+  calendarId: string,
+  iCalUID: string,
+): Promise<GCalEvent | null> {
+  try {
+    const res = await gcalRequest(
+      token,
+      `/calendars/${encodeURIComponent(calendarId)}/events` +
+      `?iCalUID=${encodeURIComponent(iCalUID)}&showDeleted=false&maxResults=2`)
+    if (!res.ok) return null
+    const data = await res.json() as { items?: GCalEvent[] }
+    return data.items?.find(e => e.status !== 'cancelled') ?? null
+  } catch { return null }
+}
+
+/** PATCH, so the fields not mentioned are left exactly as Google has them. */
+export async function patchCalendarEventWithToken(
+  token: string,
+  calendarId: string,
+  eventId: string,
+  patch: Partial<GCalEvent>,
+): Promise<{ ok: boolean; event?: GCalEvent; error?: string }> {
+  try {
+    const res = await gcalRequest(
+      token,
+      `/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}` +
+      `?sendUpdates=all`,
+      { method: 'PATCH', body: JSON.stringify(patch) },
+    )
+    if (!res.ok) {
+      const text = await res.text()
+      // Google's message names what it objected to; ours would not.
+      let why = `${res.status}`
+      try { why = (JSON.parse(text) as { error?: { message?: string } }).error?.message ?? why } catch { /* not JSON */ }
+      return { ok: false, error: why }
+    }
+    return { ok: true, event: await res.json() as GCalEvent }
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : 'The request did not complete.' }
+  }
+}
+
 /** The same, for an account whose token never reaches the browser. */
 export async function efLookUpEvent(
   accountId: string,
