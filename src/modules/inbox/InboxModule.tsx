@@ -1,16 +1,19 @@
 
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import { AVATAR_COLORS, ACCOUNT_COLORS } from '@/lib/palettes'
-import { Mail, Zap, Clock, Copy, CheckCheck, RefreshCw, ArrowRight, WifiOff, ListPlus, Plus, Archive, Search, X as XIcon, PenSquare, Reply, ReplyAll, Forward, ChevronDown, ChevronRight, Inbox, Send, FileEdit, Star, MailOpen, Sparkles, AlertTriangle, GitBranch, Info, UserPlus, Minus } from 'lucide-react'
+import { Mail, Zap, Clock, Copy, CheckCheck, RefreshCw, ArrowRight, WifiOff, ListPlus, Plus, Archive, Search, X as XIcon, PenSquare, Reply, ReplyAll, Forward, ChevronDown, ChevronRight, Inbox, Send, FileEdit, Star, MailOpen, Sparkles, AlertTriangle, GitBranch, Info, UserPlus, Minus, Check, Trash2 } from 'lucide-react'
 
 /** One glyph each, so the rail still says what it is when it is folded up. */
 const FOLDER_ICON: Record<MailFolder, typeof Mail> = {
   unread: MailOpen, inbox: Inbox, sent: Send, drafts: FileEdit,
   starred: Star, archive: Archive, spam: Mail, trash: Mail,
 }
-import { triageEmail, call as askModel } from '@/lib/professor'
+import { triageEmail, briefInbox, call as askModel } from '@/lib/professor'
+import { notify } from '@/lib/undo'
 import type { EmailTriage, EmailData } from '@/lib/professor'
-import { listUnreadThreadIds, getThread, getMessage, loadInlineImages, applyInlineImages, tidyDataUris, extractBody, extractHtmlBody, header, markAsRead, archiveMessage, sendReply, escapeHtml, FOLDER_QUERY, FOLDER_LABEL, FOLDER_SHOWS_RECIPIENT, type MailAccount, type MailFolder } from '@/lib/gmail'
+import { classifyMail, unsubscribeLink, CLASSES, CLASS_INFO, countByClass, type MailClass } from '@/lib/mailClasses'
+import { looksLikeInvitation } from '@/lib/invitations'
+import { listUnreadThreadIds, getThread, getMessage, loadInlineImages, applyInlineImages, tidyDataUris, extractBody, extractHtmlBody, header, markAsRead, archiveMessage, sendReply, escapeHtml, FOLDER_QUERY, FOLDER_LABEL, FOLDER_SHOWS_RECIPIENT, type MailAccount, type MailFolder, type GmailHeader } from '@/lib/gmail'
 import { mailAccounts, loadMailView, saveMailView, accountsFor, accountLabel, type MailView } from './mailAccounts'
 import { Composer, type ComposeSeed, type ComposeMode } from './Composer'
 import { signInWithGoogle } from '@/lib/google'
@@ -51,11 +54,27 @@ interface Email {
   receivedAt: string
   inReplyTo?: string
   threadMessages: EmailMessage[]
+  /** Kept, not discarded: the class of a message is decided from its headers,
+   *  and re-fetching them to ask would be a request per row. */
+  headers: GmailHeader[]
 }
 
 /** Every action on an open message is the same shape: a round icon at the top
  *  right, beside the subject. Words in pills across the card was a row of
  *  buttons wider than most of the messages under it. */
+/** A classification tab. Lit is ink, because it is a filter and you have to be
+ *  able to see at a glance that something is being hidden. */
+function classTab(on: boolean): React.CSSProperties {
+  return {
+    display: 'inline-flex', alignItems: 'center', gap: 5, height: 26, padding: '0 10px',
+    borderRadius: 'var(--sb-r-pill)', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0,
+    fontSize: 'var(--sb-t-meta)', fontWeight: 600, whiteSpace: 'nowrap',
+    background: on ? 'var(--sb-ink-1)' : 'var(--sb-card)',
+    border: `var(--sb-border-width) solid ${on ? 'var(--sb-ink-1)' : 'var(--sb-border)'}`,
+    color: on ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
+  }
+}
+
 const ICON_ACTION: React.CSSProperties = {
   width: 30, height: 30, borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
   display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
@@ -299,6 +318,9 @@ export function InboxModule() {
     try { return (localStorage.getItem('mail-folder') as MailFolder) || 'unread' } catch { return 'unread' }
   })
   const [compose, setCompose] = useState<ComposeSeed | null>(null)
+  /** Which kind of mail is on screen. `null` is all of it. */
+  const [mailClass, setMailClass] = useState<MailClass | null>(null)
+  const [bulkBusy, setBulkBusy] = useState<string | null>(null)
   const [bulkOpen,   setBulkOpen]   = useState(false)
   const [bulkText,   setBulkText]   = useState('')
   const [bulkDone,   setBulkDone]   = useState(false)
@@ -325,13 +347,47 @@ export function InboxModule() {
     emails.filter(e => !isMailHiddenByCompany({ from: e.fromEmail, to: e.to, accountEmail: user?.email }))
   , [emails, user?.email])
 
-  const filteredEmails = searchQuery.trim()
+  // ── What kind of thing each message is ─────────────────────────────────────
+  // Decided from the headers the row already carries, so the tabs are there the
+  // instant the mail is — no model call, and the same answer on every device.
+  const classOf = useMemo(() => {
+    const m = new Map<string, MailClass>()
+    for (const e of visibleEmails) {
+      m.set(e.id, classifyMail({
+        headers: e.headers,
+        fromEmail: e.fromEmail,
+        to: e.to,
+        cc: e.cc,
+        subject: e.subject,
+        body: e.body || e.preview,
+        mailbox: e.account.email,
+        isInvitation: looksLikeInvitation(e.subject)
+          || e.headers.some(h => /^content-type$/i.test(h.name) && /calendar/i.test(h.value)),
+      }))
+    }
+    return m
+  }, [visibleEmails])
+
+  const classCounts = useMemo(
+    () => countByClass(visibleEmails, e => classOf.get(e.id) ?? 'other'),
+    [visibleEmails, classOf])
+
+  const searchedEmails = searchQuery.trim()
     ? visibleEmails.filter(e => {
         const q = searchQuery.toLowerCase()
         return e.fromName.toLowerCase().includes(q) || e.fromEmail.toLowerCase().includes(q) ||
                e.subject.toLowerCase().includes(q)  || e.preview.toLowerCase().includes(q)
       })
     : visibleEmails
+
+  const filteredEmails = mailClass
+    ? searchedEmails.filter(e => classOf.get(e.id) === mailClass)
+    : searchedEmails
+
+  /** The messages a bulk action would act on: what the chosen tab holds. */
+  const inClass = useMemo(
+    () => mailClass ? visibleEmails.filter(e => classOf.get(e.id) === mailClass) : [],
+    [mailClass, visibleEmails, classOf])
 
   const selectedEmail  = visibleEmails.find(e => e.id === selectedId) ?? null
   const selectedTriage = selectedId ? (triageMap[selectedId] ?? null) : null
@@ -387,6 +443,7 @@ export function InboxModule() {
           htmlBody:    extractHtmlBody(msg) ?? undefined,
           receivedAt:  new Date(parseInt(msg.internalDate)).toISOString(),
           inReplyTo:   header(headers, 'message-id') || undefined,
+          headers,
           threadMessages: thread.messages.slice(0, -1).map(m => {
             const mh = m.payload.headers
             const mFrom = header(mh, 'from')
@@ -513,6 +570,92 @@ export function InboxModule() {
   }, [replyText])
 
 
+  // ─── What a whole class wants done with it ─────────────────────────────────
+  //
+  // The action is the class: a newsletter is archived, a notification is read,
+  // a message addressed to you gets an answer written. Nothing here ever sends
+  // anything — drafting fills the box under each message and stops.
+  const runBulk = useCallback(async (klass: MailClass) => {
+    const rows = visibleEmails.filter(e => classOf.get(e.id) === klass)
+    if (rows.length === 0 || bulkBusy) return
+    const what = CLASS_INFO[klass].bulk
+
+    if (what === 'archive') {
+      setBulkBusy(`Archiving ${rows.length}…`)
+      try {
+        await Promise.all(rows.map(e => archiveMessage(e.id, e.account).catch(() => {})))
+        const gone = new Set(rows.map(e => e.id))
+        setEmails(prev => prev.filter(e => !gone.has(e.id)))
+        setSelectedId(prev => (prev && gone.has(prev) ? null : prev))
+        notify(`${rows.length} archived`)
+      } finally { setBulkBusy(null) }
+      return
+    }
+
+    if (what === 'read') {
+      setBulkBusy(`Marking ${rows.length}…`)
+      try {
+        await Promise.all(rows.map(e => markAsRead(e.id, e.account).catch(() => {})))
+        setReadIds(prev => new Set([...prev, ...rows.map(e => e.id)]))
+        notify(`${rows.length} marked read`)
+      } finally { setBulkBusy(null) }
+      return
+    }
+
+    if (what === 'draft') {
+      // One call for the lot, the way the Today card does it: the model reads
+      // them together and answers each, which is one round trip rather than N.
+      const todo = rows.filter(e => !replyText[e.id]?.trim()).slice(0, 8)
+      if (todo.length === 0) { notify('Every one of these already has a draft'); return }
+      setBulkBusy(`Writing ${todo.length}…`)
+      try {
+        const written = await briefInbox({
+          user: buildMockUser(user),
+          companies: [],
+          me: user?.email ?? '',
+          messages: todo.map(e => ({
+            id: e.id,
+            fromName: e.fromName,
+            fromEmail: e.fromEmail,
+            subject: e.subject,
+            receivedAt: e.receivedAt,
+            addressedToMe: true,
+            body: e.body || e.preview,
+          })),
+        })
+        const drafts = Object.fromEntries(
+          written.filter(b => b.draft.trim()).map(b => [b.id, b.draft]))
+        setReplyText(prev => ({ ...prev, ...drafts }))
+        const n = Object.keys(drafts).length
+        notify(n ? `${n} ${n === 1 ? 'reply' : 'replies'} drafted — nothing sent` : 'None of these needed an answer')
+      } catch (err) {
+        notify(err instanceof Error ? err.message : 'The replies could not be written.')
+      } finally { setBulkBusy(null) }
+    }
+  }, [visibleEmails, classOf, bulkBusy, replyText, user])
+
+  /** One reply, for the message in front of you. */
+  const draftOne = useCallback(async (email: Email) => {
+    if (bulkBusy) return
+    setBulkBusy('Writing…')
+    try {
+      const [b] = await briefInbox({
+        user: buildMockUser(user),
+        companies: [],
+        me: user?.email ?? '',
+        messages: [{
+          id: email.id, fromName: email.fromName, fromEmail: email.fromEmail,
+          subject: email.subject, receivedAt: email.receivedAt,
+          addressedToMe: true, body: email.body || email.preview,
+        }],
+      })
+      if (b?.draft.trim()) setReplyText(prev => ({ ...prev, [email.id]: b.draft }))
+      else notify('This one does not look like it needs an answer')
+    } catch (err) {
+      notify(err instanceof Error ? err.message : 'The reply could not be written.')
+    } finally { setBulkBusy(null) }
+  }, [bulkBusy, user])
+
   const handleLoadMore = useCallback(async () => {
     if (!nextPageToken || loadingMore) return
     setLoadingMore(true)
@@ -537,6 +680,7 @@ export function InboxModule() {
           preview:   msg.snippet,
           body: extractBody(msg), htmlBody: extractHtmlBody(msg) ?? undefined,
           receivedAt: new Date(parseInt(msg.internalDate)).toISOString(),
+          headers,
           inReplyTo:  header(headers, 'message-id') || undefined,
           threadMessages: thread.messages.slice(0, -1).map(m => {
             const mh = m.payload.headers
@@ -655,6 +799,68 @@ export function InboxModule() {
           )}
         </div>
 
+        {/* ── What kind of mail this week held ─────────────────────────────
+            Every class implies a different action — that is what makes it a
+            class rather than a label. The tabs themselves do nothing but
+            narrow the list; the actions are the row under them. */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
+          <button
+            onClick={() => setMailClass(null)}
+            style={classTab(mailClass === null)}>
+            All <span style={{ opacity: 0.65, fontVariantNumeric: 'tabular-nums' }}>{visibleEmails.length}</span>
+          </button>
+          {CLASSES.map(c => (
+            <button
+              key={c}
+              onClick={() => setMailClass(mailClass === c ? null : c)}
+              title={classCounts[c] === 0 ? CLASS_INFO[c].empty : undefined}
+              style={{ ...classTab(mailClass === c), opacity: classCounts[c] === 0 ? 0.45 : 1 }}>
+              {CLASS_INFO[c].label}{' '}
+              <span style={{ opacity: 0.65, fontVariantNumeric: 'tabular-nums' }}>{classCounts[c]}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* ── What to do with the class in front of you ────────────────────── */}
+        {mailClass && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
+            padding: '7px 11px', borderRadius: 'var(--sb-r-chip)',
+            background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)',
+          }}>
+            <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', flex: 1, minWidth: 0 }}>
+              {inClass.length === 0
+                ? CLASS_INFO[mailClass].empty
+                : `${inClass.length} ${CLASS_INFO[mailClass].label.toLowerCase()}`}
+            </span>
+
+            {inClass.length > 0 && CLASS_INFO[mailClass].bulk !== 'none' && (
+              <button
+                onClick={() => void runBulk(mailClass)}
+                disabled={!!bulkBusy}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 5, height: 26, padding: '0 11px',
+                  borderRadius: 'var(--sb-r-pill)', cursor: bulkBusy ? 'default' : 'pointer',
+                  background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)',
+                  color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-meta)', fontWeight: 600,
+                  fontFamily: 'inherit', opacity: bulkBusy ? 0.55 : 1,
+                }}>
+                {CLASS_INFO[mailClass].bulk === 'archive' ? <Archive size={ICON.sm} />
+                  : CLASS_INFO[mailClass].bulk === 'read' ? <Check size={ICON.sm} />
+                  : <Sparkles size={ICON.sm} />}
+                {bulkBusy ?? CLASS_INFO[mailClass].bulkLabel}
+              </button>
+            )}
+
+            {/* Only where the sender offers a way off the list. */}
+            {mailClass === 'newsletter' && inClass.some(e => unsubscribeLink(e.headers)) && (
+              <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>
+                {inClass.filter(e => unsubscribeLink(e.headers)).length} offer an unsubscribe link
+              </span>
+            )}
+          </div>
+        )}
+
         {/* Batch action bar */}
         {selectedIds.size > 0 && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: 'color-mix(in srgb, var(--sb-info) 8.0%, transparent)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-info) 20.0%, transparent)', borderRadius: 'var(--sb-r-chip)' }}>
@@ -724,6 +930,14 @@ export function InboxModule() {
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 'var(--sb-t-micro)', padding: '1px 6px', borderRadius: 'var(--sb-r-chip)', flexShrink: 0, background: classMeta.bg, color: classMeta.color, fontWeight: 600 }}>
                         <classMeta.Icon size={10} strokeWidth={STROKE.active} />
                         {classMeta.label}
+                      </span>
+                    )}
+                    {/* A bulk draft writes into eight messages at once; without
+                        this the only way to know which got one is to open each. */}
+                    {replyText[email.id]?.trim() && !sentIds.has(email.id) && (
+                      <span title="A reply is drafted and waiting — nothing has been sent" style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 'var(--sb-t-micro)', padding: '1px 6px', borderRadius: 'var(--sb-r-chip)', flexShrink: 0, background: 'rgba(var(--sb-accent-rgb),0.16)', color: 'var(--sb-ink-2)', fontWeight: 600 }}>
+                        <FileEdit size={10} strokeWidth={STROKE.active} />
+                        Draft
                       </span>
                     )}
                     {triage?.loading && (
@@ -962,6 +1176,107 @@ export function InboxModule() {
         </div>
 
         {/* Triage panel */}
+        {/* ── The drafted reply, under the mail it answers ──────────────────
+            It appears the moment one is written — by the class action above or
+            by this message's own Draft button — and it is never sent by
+            anything but the Send here. Clicking the text opens the full
+            compose window, which is where a reply that needs more than a
+            paragraph gets written. */}
+        {!selectedTriage?.result && replyText[selectedEmail.id]?.trim()
+          && compose?.threadId !== selectedEmail.threadId && (
+          <div style={{
+            background: 'var(--sb-accent-tint)',
+            border: 'var(--sb-border-width) solid rgba(var(--sb-accent-rgb),0.45)',
+            borderRadius: 'var(--sb-r-nav)', padding: '12px 14px 13px',
+            display: 'flex', flexDirection: 'column', gap: 9,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+              <Sparkles size={ICON.sm} color="var(--sb-accent-deep)" />
+              <span style={{
+                fontSize: 'var(--sb-t-micro)', fontWeight: 800, letterSpacing: '0.08em',
+                color: 'var(--sb-accent-deep)', textTransform: 'uppercase',
+              }}>Draft reply · not sent</span>
+              <span style={{ flex: 1 }} />
+              <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-accent-deep)' }}>
+                Click it to write in full
+              </span>
+            </div>
+
+            <textarea
+              value={replyText[selectedEmail.id] ?? ''}
+              onChange={e => setReplyText(prev => ({ ...prev, [selectedEmail.id]: e.target.value }))}
+              onClick={() => setCompose({
+                ...composeSeed(selectedEmail, 'reply', accounts),
+                // The draft opens the full window with what is already written
+                // in it, so clicking through never costs you the paragraph.
+                // The margin is inline because the editor is a contenteditable
+                // with its own reset — a bare <p> arrives with none and the
+                // draft's paragraphs collapse into one block on the way over.
+                draft: (replyText[selectedEmail.id] ?? '').split(/\n{2,}/)
+                  .map(par => `<p style="margin:0 0 1em">${escapeHtml(par).replace(/\n/g, '<br>')}</p>`).join(''),
+              })}
+              // A draft that clips its own sign-off reads as unfinished. It
+              // grows to what was written, up to the point where the mail
+              // above it would be pushed off the screen.
+              rows={Math.min(16, Math.max(5, (replyText[selectedEmail.id] ?? '').split('\n').length + 1))}
+              style={{
+                width: '100%', boxSizing: 'border-box', padding: '10px 12px', resize: 'vertical',
+                borderRadius: 'var(--sb-r-chip)', background: 'var(--sb-card)',
+                border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-1)',
+                fontSize: 'var(--sb-t-body-s)', lineHeight: 1.6, fontFamily: 'inherit', outline: 'none',
+                cursor: 'text',
+              }} />
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', flex: 1, minWidth: 0 }}>
+                Leaves from {selectedEmail.account.email}
+              </span>
+              <button
+                onClick={() => setReplyText(prev => { const n = { ...prev }; delete n[selectedEmail.id]; return n })}
+                title="Throw this draft away"
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 5, height: 28, padding: '0 11px',
+                  borderRadius: 'var(--sb-r-pill)', cursor: 'pointer', fontFamily: 'inherit',
+                  background: 'transparent', border: 'var(--sb-border-width) solid var(--sb-border)',
+                  color: 'var(--sb-negative-deep)', fontSize: 'var(--sb-t-meta)', fontWeight: 600,
+                }}>
+                <Trash2 size={ICON.sm} /> Delete
+              </button>
+              <button
+                onClick={() => void handleSendReply(selectedEmail)}
+                disabled={sending === selectedEmail.id || sentIds.has(selectedEmail.id)}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 5, height: 28, padding: '0 13px',
+                  borderRadius: 'var(--sb-r-pill)', cursor: 'pointer', fontFamily: 'inherit',
+                  background: 'var(--sb-ink-1)', border: 'none', color: 'var(--sb-ink-on-dark)',
+                  fontSize: 'var(--sb-t-meta)', fontWeight: 700,
+                  opacity: sending === selectedEmail.id ? 0.55 : 1,
+                }}>
+                {sentIds.has(selectedEmail.id) ? <><CheckCheck size={ICON.sm} /> Sent</>
+                  : sending === selectedEmail.id ? <><RefreshCw size={ICON.sm} style={{ animation: 'spin 1s linear infinite' }} /> Sending…</>
+                  : <><ArrowRight size={ICON.sm} /> Send</>}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Where a message addressed to you has no draft yet. */}
+        {!selectedTriage?.result && !replyText[selectedEmail.id]?.trim()
+          && classOf.get(selectedEmail.id) === 'needs-you' && !sentIds.has(selectedEmail.id) && (
+          <button
+            onClick={() => void draftOne(selectedEmail)}
+            disabled={!!bulkBusy}
+            style={{
+              alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: 6,
+              height: 30, padding: '0 13px', borderRadius: 'var(--sb-r-pill)', cursor: 'pointer',
+              background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)',
+              color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, fontFamily: 'inherit',
+              opacity: bulkBusy ? 0.55 : 1,
+            }}>
+            <Sparkles size={ICON.sm} /> {bulkBusy ?? 'Draft a reply'}
+          </button>
+        )}
+
         {selectedTriage?.loading ? (
           <div style={{ background: 'var(--sb-card)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-info) 20.0%, transparent)', borderRadius: 'var(--sb-r-nav)', padding: '22px 24px', display: 'flex', alignItems: 'center', gap: 12 }}>
             <RefreshCw size={ICON.md} color="var(--sb-info)" style={{ animation: 'spin 1s linear infinite' }} />
@@ -1054,7 +1369,10 @@ export function InboxModule() {
             })()}
           </div>
 
-        ) : (
+        // A draft on screen already is the "ready-to-send reply" this card
+        // offers, so offering it again under the draft is one screen arguing
+        // with itself. Deleting the draft brings the card back.
+        ) : replyText[selectedEmail.id]?.trim() ? null : (
           <div style={{ background: 'var(--sb-card)', border: '1px dashed var(--sb-border)', borderRadius: 'var(--sb-r-nav)', padding: '36px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
             <div style={{ width: 44, height: 44, borderRadius: 'var(--sb-r-nav)', background: 'color-mix(in srgb, var(--sb-info) 8.0%, transparent)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-info) 15.0%, transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Zap size={ICON.lg} color="var(--sb-info)" />
