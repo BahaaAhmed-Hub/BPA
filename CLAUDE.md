@@ -24,6 +24,21 @@
 
 Typography: `Outfit` headings, system-ui body. Section titles: 28px Outfit 600, `letter-spacing: -0.03em`.
 
+## Contrast — the four themes are AA clean
+Every text/background pair in all seven modules is at or above 4.5:1, measured
+with `aa-theme.mjs` (compositing alpha, and reading Chrome's `color(srgb …)`
+form of `color-mix` correctly — as 0..1, or a pale tint audits as near-black).
+Two tokens carried every failure:
+- **`--sb-ink-4`** — darkened in the three light themes, lifted in Glass, each
+  by the minimum that clears 4.5 on **its worst ground**, which is a *tint*
+  (`--sb-accent-tint`, `--sb-positive-tint`) rather than the card. Solving
+  against the card alone leaves the "per year"-style captions failing.
+- **Warm Minimal's `--sb-accent`** — `#C4633F` → `#B05939`. The primary button
+  is a label on this fill at 12.5–13.5px/600, which WCAG counts as normal text.
+  A mid-tone terracotta cannot carry 4.5 either way — the specified off-white
+  read 3.78, pure white 4.04, near-black 4.39 — so the fill had to move. The
+  tints, the border and `--sb-accent-deep` are separate tokens and did not.
+
 ## Key Files
 | File | What it does |
 |---|---|

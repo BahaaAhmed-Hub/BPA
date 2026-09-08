@@ -80,7 +80,7 @@ export const THEMES: AppTheme[] = [
       '--sb-border': '#E8E1CE', '--sb-hairline': '#F0EBDC',
       '--sb-surface-blur': '0px',
       '--sb-ink-1': '#191712', '--sb-ink-2': '#4A4438',
-      '--sb-ink-3': '#6C6553', '--sb-ink-4': '#7C7565',
+      '--sb-ink-3': '#6C6553', '--sb-ink-4': '#6E6759',   // 4.58:1 on the accent tint, its worst ground; #7C7565 was 4.07
       '--sb-ink-on-dark': '#FDF8E7',
       '--sb-accent': '#F5D14E', '--sb-accent-ink': '#191712',
       '--sb-accent-tint': '#FEF7DE', '--sb-accent-tint2': '#FDF6DE',
@@ -125,9 +125,16 @@ export const THEMES: AppTheme[] = [
       '--sb-border': '#E7E2D8', '--sb-hairline': '#EFEBE1',
       '--sb-surface-blur': '0px',
       '--sb-ink-1': '#1A1814', '--sb-ink-2': '#54503F',
-      '--sb-ink-3': '#6E6656', '--sb-ink-4': '#7F7768',   // darkened from #A39C8C for AA
+      '--sb-ink-3': '#6E6656', '--sb-ink-4': '#6E665A',   // 4.55:1 on the accent tint, its worst ground; #7F7768 was 3.93
       '--sb-ink-on-dark': '#F4F1EA',
-      '--sb-accent': '#C4633F', '--sb-accent-ink': '#FFF6F0',
+      // Ten percent darker than the specified #C4633F. The primary button is a
+      // label on this fill — "Start the day", "New task" — at 12.5-13.5px/600,
+      // which WCAG counts as normal text and wants 4.5:1. #C4633F is a mid-tone
+      // terracotta: the specified off-white read 3.78, pure white 4.04, and
+      // near-black only 4.39, so no ink clears it and the fill had to move.
+      // The tints, the border and --sb-accent-deep are separate tokens and are
+      // unchanged, so the theme's lighter accent surfaces look as specified.
+      '--sb-accent': '#B05939', '--sb-accent-ink': '#FFF6F0',
       '--sb-accent-tint': '#F6E3D8', '--sb-accent-tint2': '#F6EFE3',
       '--sb-accent-border': '#E5DBCF',
       '--sb-positive': '#3C5A46', '--sb-positive-deep': '#2E4636',
@@ -142,7 +149,7 @@ export const THEMES: AppTheme[] = [
       '--sb-font-num': "'Plus Jakarta Sans', system-ui, sans-serif",
       // derived
       '--sb-ink-on-fill':   '#FFFFFF',
-      '--sb-accent-rgb':    '196,99,63',
+      '--sb-accent-rgb':    '176,89,57',
       '--sb-accent-deep':   '#8E4227',   // 5.71:1 on its own tint
       // Warm Minimal was not given a ramp: these are the Sunlit six pulled
       // towards its warmer ground, each still at or above 4.5:1 on white.
@@ -173,7 +180,7 @@ export const THEMES: AppTheme[] = [
       '--sb-border': 'rgba(255,255,255,.08)', '--sb-hairline': 'rgba(255,255,255,.045)',
       '--sb-surface-blur': '20px',
       '--sb-ink-1': '#EDEBF5', '--sb-ink-2': '#D6D2EA',
-      '--sb-ink-3': '#A5A1BC', '--sb-ink-4': '#8F8BAB',   // lifted from #7C7899 for AA
+      '--sb-ink-3': '#A5A1BC', '--sb-ink-4': '#9A97B3',   // 4.56:1 on the tints; #8F8BAB was 3.94
       '--sb-accent': '#A78BFA', '--sb-accent-ink': '#1B1330',
       '--sb-accent-tint': 'rgba(167,139,250,.20)',
       '--sb-accent-tint2': 'rgba(167,139,250,.13)',
@@ -228,7 +235,7 @@ export const THEMES: AppTheme[] = [
       '--sb-border': '#DCE7E3', '--sb-hairline': '#EDF1EF',
       '--sb-surface-blur': '0px',
       '--sb-ink-1': '#131A17', '--sb-ink-2': '#3E4842',
-      '--sb-ink-3': '#5D675F', '--sb-ink-4': '#757E77',   // darkened from #9AA29C for AA
+      '--sb-ink-3': '#5D675F', '--sb-ink-4': '#636B64',   // 4.55:1 on the positive tint, its worst ground; #757E77 was 3.90
       '--sb-ink-on-dark': '#EAF6F0',
       '--sb-accent': '#155E4B', '--sb-accent-ink': '#EAF6F0',
       '--sb-accent-tint': '#E4EFE8', '--sb-accent-tint2': '#EAF3EF',
