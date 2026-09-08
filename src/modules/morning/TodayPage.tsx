@@ -22,7 +22,8 @@ import type { GCalEvent } from '@/lib/googleCalendar'
 import type { EventStatus } from '@/lib/eventMetadata'
 import { loadEventStatuses, toggleEventStatus } from '@/lib/eventStatus'
 import { listUnreadThreadIds, getThread, header, extractBody, extractHtmlBody, archiveMessage } from '@/lib/gmail'
-import type { GmailHeader } from '@/lib/gmail'
+import type { GmailHeader, MailAccount } from '@/lib/gmail'
+import { mailAccounts } from '@/modules/inbox/mailAccounts'
 import { TASK_TYPE_META, inferTaskType, isTaskHidden } from '@/types'
 import { isMailHiddenByCompany } from '@/lib/companyVisibility'
 import { TASK_TYPE_ICON } from '@/modules/tasks/taskVisuals'
@@ -212,6 +213,9 @@ interface MailRow {
   receivedAt: string
   needsYou: boolean
   newsletter: boolean
+  /** Which mailbox it arrived in. A merged list you cannot act on is a list
+   *  you do not know where a reply would leave from. */
+  account: MailAccount
 }
 
 /** The message itself, in a window that closes when you click away from it. */
@@ -358,10 +362,12 @@ function looksLikeBulk(headers: GmailHeader[], email: string, body: string): boo
 /** How many of each kind the card shows before it stops. */
 const MAIL_SHOWN = 6
 
-function MailCard({ rows, loading, error, newsletters, onArchive, onArchiveAll, onOpenInbox, onAddTask, onOpen }: {
+function MailCard({ rows, loading, error, boxes, newsletters, onArchive, onArchiveAll, onOpenInbox, onAddTask, onOpen }: {
   rows: MailRow[]
   loading: boolean
   error: string | null
+  /** How many mailboxes were read, so the count and the empty state can say. */
+  boxes: number
   newsletters: MailRow[]
   onArchive: (row: MailRow) => void
   onArchiveAll: () => void
@@ -377,7 +383,9 @@ function MailCard({ rows, loading, error, newsletters, onArchive, onArchiveAll, 
     <div style={CARD}>
       <CardHead
         title="Mail"
-        meta={loading ? 'reading your inbox…' : `${unread} unread · ${needsYou} need${needsYou === 1 ? 's' : ''} you`}>
+        meta={loading
+          ? 'reading your inbox…'
+          : `${unread} unread · ${needsYou} need${needsYou === 1 ? 's' : ''} you${boxes > 1 ? ` · ${boxes} accounts` : ''}`}>
         <LinkOut label="Inbox" onClick={onOpenInbox} />
       </CardHead>
 
@@ -386,7 +394,10 @@ function MailCard({ rows, loading, error, newsletters, onArchive, onArchiveAll, 
       ) : loading ? (
         <div style={{ padding: '18px 16px', fontSize: 'var(--sb-t-body-s)', color: GHOST }}>Reading your inbox…</div>
       ) : rows.length === 0 ? (
-        <div style={{ padding: '18px 16px', fontSize: 'var(--sb-t-body-s)', color: GHOST }}>Nothing unread needs you.</div>
+        <div style={{ padding: '18px 16px', fontSize: 'var(--sb-t-body-s)', color: GHOST }}>
+          Nothing unread in {boxes === 1 ? 'your inbox' : `${boxes} inboxes`}. This card reads unread mail only —
+          anything already opened is in Mail.
+        </div>
       ) : (
         <div>
           {rows.map(r => (
@@ -988,6 +999,7 @@ export function TodayPage() {
   const [mailLoading, setMailLoading] = useState(true)
   const [openMail, setOpenMail] = useState<MailRow | null>(null)
   const [mailError, setMailError] = useState<string | null>(null)
+  const [mailBoxCount, setMailBoxCount] = useState(1)
 
   const today = dayKey(clock)
   const writtenAt = useRef(new Date())
@@ -1017,12 +1029,35 @@ export function TodayPage() {
   // Unread mail, split into what needs a person and what is a newsletter
   const loadMail = useCallback(async () => {
     setMailLoading(true); setMailError(null)
+    // Every mailbox, not just the one you signed in with. This card read the
+    // primary account only, so on a browser with two or three accounts
+    // connected most of the mail that needs you was never on the page — and
+    // the two business addresses are usually where all of it is.
+    const boxes = mailAccounts(user?.email)
+    setMailBoxCount(boxes.length)
     try {
-      const { ids } = await listUnreadThreadIds(14)
-      const threads = await Promise.all(ids.map(id => getThread(id).catch(() => null)))
+      if (boxes.length === 0) {
+        setMailError('Mail is not connected — link Google in Settings to see what needs you.')
+        return
+      }
+      const failed: string[] = []
+      const perBox = await Promise.all(boxes.map(async account => {
+        try {
+          const { ids } = await listUnreadThreadIds(14, undefined, account)
+          const threads = await Promise.all(ids.map(id => getThread(id, account).catch(() => null)))
+          return threads.map(th => ({ th, account }))
+        } catch (e) {
+          // One mailbox that will not open names itself; the rest still arrive.
+          // Some of these errors already name the address — "x needs
+          // reconnecting" — so it is not prefixed twice.
+          const why = e instanceof Error ? e.message : 'could not be read'
+          failed.push(why.includes(account.email) ? why : `${account.email}: ${why}`)
+          return []
+        }
+      }))
       const rows: MailRow[] = []
       const bulk: MailRow[] = []
-      for (const th of threads) {
+      for (const { th, account } of perBox.flat()) {
         const last = th?.messages?.at(-1)
         if (!th || !last) continue
         const headers = last.payload?.headers ?? []
@@ -1031,8 +1066,8 @@ export function TodayPage() {
         const email = from.match(/<(.+)>/)?.[1] ?? from
         const to = header(headers, 'To').toLowerCase()
         // A hidden company's mail is hidden too, the same as its tasks and calendars
-        if (isMailHiddenByCompany({ from, to, accountEmail: user?.email })) continue
-        const me = (user?.email ?? '').toLowerCase()
+        if (isMailHiddenByCompany({ from, to, accountEmail: account.email })) continue
+        const me = account.email.toLowerCase()
         const plain = extractBody(last)
         // A campaign addressed to you personally is still a campaign, so bulk
         // mail never counts as needing you.
@@ -1050,6 +1085,7 @@ export function TodayPage() {
           receivedAt: new Date(Number(last.internalDate ?? Date.now())).toISOString(),
           needsYou: !isBulk && !!me && to.includes(me),
           newsletter: isBulk,
+          account,
         }
         ;(isBulk ? bulk : rows).push(row)
       }
@@ -1058,8 +1094,18 @@ export function TodayPage() {
       bulk.sort((a, b) => b.receivedAt.localeCompare(a.receivedAt))
       setMail(rows.slice(0, MAIL_SHOWN))
       setNewsletters(bulk.slice(0, MAIL_SHOWN))
-    } catch {
-      setMailError('Mail is not connected — link Google in Settings to see what needs you.')
+      // Every mailbox failing is the "not connected" case; some of them
+      // failing is worth naming, because the rest of the list is short by
+      // exactly that much.
+      if (failed.length === boxes.length) {
+        setMailError(failed.join(' · '))
+      } else if (failed.length > 0) {
+        setMailError(`${failed.length} of ${boxes.length} mailboxes could not be read — ${failed.join(' · ')}`)
+      }
+    } catch (e) {
+      // Say what actually went wrong. "Not connected" was the answer to every
+      // failure, including an expired token and a Gmail quota.
+      setMailError(e instanceof Error ? e.message : 'Mail could not be read.')
     } finally {
       setMailLoading(false)
     }
@@ -1193,7 +1239,7 @@ export function TodayPage() {
   async function archiveMail(row: MailRow) {
     setMail(prev => prev.filter(r => r.id !== row.id))
     setNewsletters(prev => prev.filter(r => r.id !== row.id))
-    try { await archiveMessage(row.messageId) } catch { /* it stays archived here either way */ }
+    try { await archiveMessage(row.messageId, row.account) } catch { /* it stays archived here either way */ }
   }
 
   /** Sweeping the newsletters away really archives them in Gmail — it used to
@@ -1201,7 +1247,7 @@ export function TodayPage() {
   async function archiveNewsletters() {
     const going = newsletters
     setNewsletters([])
-    await Promise.all(going.map(r => archiveMessage(r.messageId).catch(() => null)))
+    await Promise.all(going.map(r => archiveMessage(r.messageId, r.account).catch(() => null)))
   }
 
   function mailToTask(row: MailRow) {
@@ -1305,6 +1351,7 @@ export function TodayPage() {
             rows={mail}
             loading={mailLoading}
             error={mailError}
+            boxes={mailBoxCount}
             newsletters={newsletters}
             onArchive={row => void archiveMail(row)}
             onArchiveAll={() => void archiveNewsletters()}
