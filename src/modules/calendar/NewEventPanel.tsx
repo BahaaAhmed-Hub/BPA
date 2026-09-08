@@ -269,9 +269,11 @@ export interface ComposerCalendar {
 
 /** What an alert can be set to. Google's own default is the first. */
 const ALERTS: [('default' | 'none' | number), string][] = [
-  ['default', "The calendar's default"], ['none', 'None'], [0, 'At the time'],
-  [5, '5 minutes before'], [10, '10 minutes before'], [30, '30 minutes before'],
-  [60, '1 hour before'], [120, '2 hours before'], [1440, '1 day before'],
+  ['default', "Alert — the calendar's default"], ['none', 'No alert'],
+  [0, 'Alert at the time'],
+  [5, 'Alert 5 minutes before'], [10, 'Alert 10 minutes before'],
+  [30, 'Alert 30 minutes before'], [60, 'Alert 1 hour before'],
+  [120, 'Alert 2 hours before'], [1440, 'Alert 1 day before'],
 ]
 function describeAlertMinutes(m: number): string {
   if (m % 1440 === 0) return `${m / 1440} day${m === 1440 ? '' : 's'} before`
@@ -746,28 +748,27 @@ export function NewEventPanel({
           {/* One line. Five presets as pills wrapped onto three rows in a
               400px column for a choice that is made once, if ever. */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-            <RefreshCw size={ICON.sm} strokeWidth={1.8} color={C.third} style={{ flexShrink: 0 }} />
-            <span style={{ ...LABEL, flexShrink: 0 }}>Repeats</span>
             <label style={{ ...FIELD, flex: 1, minWidth: 0, position: 'relative' }}>
+              <RefreshCw size={ICON.sm} strokeWidth={1.8} color={C.third} style={{ flexShrink: 0 }} />
               <span style={{
                 flex: 1, minWidth: 0, fontWeight: 600,
                 overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
               }}>
-                {preset === 'never' ? 'Never'
-                  : preset === 'weekly' ? `Weekly on ${weekday}`
-                  : preset === 'biweekly' ? 'Every 2 weeks'
-                  : preset === 'monthly' ? 'Monthly' : 'Custom'}
+                {preset === 'never' ? 'Never repeats'
+                  : preset === 'weekly' ? `Repeats weekly on ${weekday}`
+                  : preset === 'biweekly' ? 'Repeats every 2 weeks'
+                  : preset === 'monthly' ? 'Repeats monthly' : 'Repeats — custom'}
               </span>
               <ChevronDown size={ICON.sm} strokeWidth={1.8} color={C.faint} style={{ flexShrink: 0 }} />
               <select
                 value={preset}
                 onChange={e => setPreset(e.target.value as Parameters<typeof setPreset>[0])}
                 style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', border: 'none' }}>
-                <option value="never">Never</option>
-                <option value="weekly">{`Weekly on ${weekday}`}</option>
-                <option value="biweekly">Every 2 weeks</option>
-                <option value="monthly">Monthly</option>
-                <option value="custom">Custom — every 3 weeks</option>
+                <option value="never">Never repeats</option>
+                <option value="weekly">{`Repeats weekly on ${weekday}`}</option>
+                <option value="biweekly">Repeats every 2 weeks</option>
+                <option value="monthly">Repeats monthly</option>
+                <option value="custom">Repeats — custom</option>
               </select>
             </label>
             {repeat && endsMode === 'count' && (
@@ -780,7 +781,7 @@ export function NewEventPanel({
               pills wrapped onto three rows for a value that is set once. */}
           {repeat && preset === 'custom' && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 'var(--sb-t-meta)', color: C.faint }}>Ends</span>
+              <span style={{ fontSize: 'var(--sb-t-meta)', color: C.faint, flexShrink: 0 }}>Ends</span>
               <label style={{ ...FIELD, flex: '1 1 120px', minWidth: 0 }}>
                 <input type="date" value={until}
                   onChange={e => {
@@ -818,17 +819,16 @@ export function NewEventPanel({
 
           {editing && onAlert && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-              <Bell size={ICON.sm} strokeWidth={1.8} color={C.third} style={{ flexShrink: 0 }} />
-              <span style={{ ...LABEL, flexShrink: 0 }}>Alert</span>
               <label style={{ ...FIELD, flex: 1, minWidth: 0, position: 'relative' }}>
+                <Bell size={ICON.sm} strokeWidth={1.8} color={C.third} style={{ flexShrink: 0 }} />
                 <span style={{
                   flex: 1, minWidth: 0, fontWeight: 600,
                   overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                 }}>
-                  {alertMinutes === undefined ? "The calendar's default"
-                    : alertMinutes < 0 ? 'None'
-                    : alertMinutes === 0 ? 'At the time'
-                    : describeAlertMinutes(alertMinutes)}
+                  {alertMinutes === undefined ? "Alert — the calendar's default"
+                    : alertMinutes < 0 ? 'No alert'
+                    : alertMinutes === 0 ? 'Alert at the time'
+                    : `Alert ${describeAlertMinutes(alertMinutes)}`}
                 </span>
                 <ChevronDown size={ICON.sm} strokeWidth={1.8} color={C.faint} style={{ flexShrink: 0 }} />
                 <select
