@@ -497,6 +497,34 @@ here is "the app's mail" any more — it is always *an account's*.
   arrived in. Reply-all drops **every** address of yours, not just that mailbox.
   A forward leaves the thread (no `threadId`, no `In-Reply-To`).
 
+## Today — the mail card reads the mail and answers it
+`lib/mailBriefs.ts` + `professor.briefInbox()`. The card used to show the first
+140 characters of each message, which is a greeting and half a sentence. It now
+shows **what the message is** and, where it wants an answer, **the answer**.
+- **One call for the card, not one per message.** A morning inbox is six or
+  eight threads; the model is better for seeing them together — it can tell the
+  invitation from the thread the invitation is about — and it is one round trip
+  instead of eight. `briefRun` (a ref keyed on the message ids) makes StrictMode's
+  double effect, and any re-render, share the one call.
+- **A brief is cached against the message, not the thread** (`today-mail-briefs`,
+  7-day TTL). A new message in a thread is a new thing to answer; the same
+  message read twice is not.
+- **Never on the render path.** Rows draw the moment mail arrives; summaries land
+  after. No key is the ordinary case on a fresh browser and is said once under
+  the header, not down every row — and the header then counts what it honestly
+  can ("3 addressed to you"), never "nothing wants an answer" about mail nobody
+  has read.
+- **The header counts by what each message wants.** `MailStats`: an accent pill
+  for the mail that wants something — `to answer` / `to book` / `to decide`, each
+  with its own glyph — then a rule, then the informative counts in ghost. The 3px
+  `MailMeter` under the header is the proportion of the two.
+- **Nothing is sent from the card.** The draft area opens `DraftPopup` — To/Cc,
+  the editable text, the original one click away, Rewrite, and the mailbox it
+  leaves from named. A reply threads on the **RFC `Message-ID` header**, which is
+  not the Gmail message id; `MailRow` carries both. A failed send keeps the text.
+- Sending drops the row and forgets its brief. The `+` (add as task) left the
+  row — the opened message still offers it.
+
 ## Habits — what one tap adds
 `lib/habitSteps.ts`. A measurable habit was counted one at a time, which is
 right for glasses and wrong for anything in real units: 200 ml at 1 ml a tap is

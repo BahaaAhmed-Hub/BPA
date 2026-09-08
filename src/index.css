@@ -238,6 +238,8 @@ html, body {
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+/* Anything that is waiting on the network says so by turning. */
+.sb-spin { animation: spin 0.9s linear infinite; }
 
 /* ── The four primitives ──────────────────────────────────────────────────────
    src/components/ui — Button, NavRow, Card, Pill. Every state they have is

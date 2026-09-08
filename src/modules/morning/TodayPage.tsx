@@ -8,6 +8,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
  RefreshCw, ArrowRight, Zap, Archive, Plus,
   Clock, Check, Flame, Sun, Quote, CheckSquare, X, ChevronDown,
+  CornerUpLeft, CalendarClock, Scale, Send, Sparkles, Loader2, Eye,
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { useTaskStore } from '@/store/taskStore'
@@ -21,13 +22,16 @@ import { fetchVisibleEvents } from '@/lib/calendarEvents'
 import type { GCalEvent } from '@/lib/googleCalendar'
 import type { EventStatus } from '@/lib/eventMetadata'
 import { loadEventStatuses, toggleEventStatus } from '@/lib/eventStatus'
-import { listUnreadThreadIds, getThread, header, extractBody, extractHtmlBody, archiveMessage } from '@/lib/gmail'
+import { listUnreadThreadIds, getThread, header, extractBody, extractHtmlBody, archiveMessage, sendMail, escapeHtml } from '@/lib/gmail'
 import type { GmailHeader, MailAccount } from '@/lib/gmail'
 import { mailAccounts } from '@/modules/inbox/mailAccounts'
-import { TASK_TYPE_META, inferTaskType, isTaskHidden } from '@/types'
+import { briefsFor, rememberDraft, forgetBrief, type InboxBrief, type MailAction } from '@/lib/mailBriefs'
+import { notify } from '@/lib/undo'
+import { TASK_TYPE_META, inferTaskType, isTaskHidden, loadDynamicCompanies } from '@/types'
 import { isMailHiddenByCompany } from '@/lib/companyVisibility'
 import { TASK_TYPE_ICON } from '@/modules/tasks/taskVisuals'
 import type { Task } from '@/types'
+import type { DbUser, DbCompany } from '@/types/database'
 import { ICON, STROKE } from '@/lib/type'
 import { dayTotals, spanTotals } from '@/lib/habitProgress'
 
@@ -102,7 +106,7 @@ function initialsOf(name: string): string {
 
 function CardHead({ title, meta, children }: {
   title: string
-  meta?: string
+  meta?: React.ReactNode
   children?: React.ReactNode
 }) {
   return (
@@ -111,12 +115,12 @@ function CardHead({ title, meta, children }: {
       padding: '14px 16px 12px', borderBottom: `var(--sb-border-width) solid ${HAIR}`,
     }}>
       <span style={{ fontSize: 'var(--sb-t-label)', fontWeight: 700, color: INK, flexShrink: 0 }}>{title}</span>
-      {meta && (
+      {typeof meta === 'string' ? (
         <span style={{
           fontSize: 'var(--sb-t-meta)', color: GHOST, minWidth: 0,
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         }}>{meta}</span>
-      )}
+      ) : meta}
       <span style={{ flex: 1 }} />
       {children}
     </div>
@@ -202,9 +206,14 @@ function composeBrief(args: {
 interface MailRow {
   id: string
   messageId: string
+  /** The RFC Message-ID header — what a reply threads against. The Gmail id
+   *  above is a different thing entirely and Google will not accept it here. */
+  rfcMessageId: string
+  references: string
   fromName: string
   fromEmail: string
   to: string
+  cc: string
   subject: string
   snippet: string
   /** The message as it was sent, when it carried HTML. */
@@ -327,6 +336,180 @@ function MailPopup({ row, onClose, onArchive, onAddTask }: {
   )
 }
 
+/**
+ * The drafted reply, opened to be read before it goes.
+ *
+ * Nothing is sent from the card itself. A draft written by a model is a
+ * starting point and has to be looked at, so the only thing the card's draft
+ * area does is open this — where the message it answers is one click away, the
+ * text is editable, and the mailbox it leaves from is named.
+ */
+function DraftPopup({ row, brief, onClose, onSent, onRewrite, rewriting }: {
+  row: MailRow
+  brief: InboxBrief
+  onClose: () => void
+  onSent: () => void
+  onRewrite: () => void
+  rewriting: boolean
+}) {
+  const [text, setText] = useState(brief.draft)
+  const [to, setTo] = useState(row.fromEmail)
+  const [cc, setCc] = useState('')
+  const [sending, setSending] = useState(false)
+  const [failed, setFailed] = useState<string | null>(null)
+  const [showOriginal, setShowOriginal] = useState(false)
+
+  // The draft is rewritten under an open popup when Rewrite is used.
+  useEffect(() => { setText(brief.draft) }, [brief.draft])
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && !sending) onClose() }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [onClose, sending])
+
+  const subject = /^re:/i.test(row.subject) ? row.subject : `Re: ${row.subject}`
+
+  async function send() {
+    if (!text.trim() || sending) return
+    setSending(true); setFailed(null)
+    try {
+      await sendMail({
+        account: row.account,
+        to,
+        cc: cc.trim() || undefined,
+        subject,
+        html: text.trim().split(/\n{2,}/).map(p => `<p>${escapeHtml(p).replace(/\n/g, '<br>')}</p>`).join(''),
+        threadId: row.id,
+        inReplyTo: row.rfcMessageId || undefined,
+        references: [row.references, row.rfcMessageId].filter(Boolean).join(' ') || undefined,
+      })
+      rememberDraft(row.id, text.trim())
+      notify(`Replied to ${row.fromName || row.fromEmail}`)
+      onSent()
+    } catch (e) {
+      // The reply is still in the box. Losing what was written because Gmail
+      // was busy would be the worst possible answer to a failed send.
+      setFailed(e instanceof Error ? e.message : 'The reply could not be sent.')
+      setSending(false)
+    }
+  }
+
+  return (
+    <div
+      onClick={() => { if (!sending) onClose() }}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 320,
+        background: 'color-mix(in srgb, var(--sb-ink-1) 32%, transparent)', backdropFilter: 'blur(2px)',
+        display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '7vh 20px 20px', overflowY: 'auto',
+      }}>
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          width: '100%', maxWidth: 680, display: 'flex', flexDirection: 'column',
+          background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)',
+          borderRadius: 'var(--sb-r-card)', overflow: 'hidden', boxShadow: 'var(--sb-shadow-frame)',
+        }}>
+
+        {/* Who it answers, and what they said */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '16px 18px 13px', borderBottom: `var(--sb-border-width) solid ${HAIR}` }}>
+          <span style={{
+            width: 34, height: 34, borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'var(--sb-accent-tint)', color: 'var(--sb-accent-deep)', fontSize: 'var(--sb-t-meta)', fontWeight: 800,
+          }}>{initialsOf(row.fromName || row.fromEmail)}</span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <h2 style={{
+              margin: 0, fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h2)', fontWeight: 600,
+              letterSpacing: '-0.02em', color: INK, lineHeight: 1.25,
+            }}>{subject}</h2>
+            <p style={{ margin: '4px 0 0', fontSize: 'var(--sb-t-body-s)', color: MUTED }}>
+              {brief.summary || `${row.fromName || row.fromEmail} · ${relAge(row.receivedAt)}`}
+            </p>
+          </div>
+          <button onClick={onClose} title="Close" disabled={sending}
+            style={{ ...ICON_TILE, width: 28, height: 28, borderRadius: 'var(--sb-r-pill)', cursor: sending ? 'default' : 'pointer' }}>
+            <X size={ICON.sm} />
+          </button>
+        </div>
+
+        <div style={{ padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {/* Where it goes */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ width: 30, flexShrink: 0, fontSize: 'var(--sb-t-meta)', color: GHOST }}>To</span>
+            <input value={to} onChange={e => setTo(e.target.value)} style={DRAFT_FIELD} />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ width: 30, flexShrink: 0, fontSize: 'var(--sb-t-meta)', color: GHOST }}>Cc</span>
+            <input value={cc} onChange={e => setCc(e.target.value)} placeholder={row.cc || 'nobody'} style={DRAFT_FIELD} />
+          </div>
+
+          {/* The draft */}
+          <textarea
+            value={text}
+            onChange={e => setText(e.target.value)}
+            rows={9}
+            style={{
+              ...DRAFT_FIELD, height: 'auto', padding: '11px 12px', lineHeight: 1.55, resize: 'vertical',
+              fontSize: 'var(--sb-t-body-s)',
+            }} />
+
+          {/* What it is answering, if you want to check */}
+          <button onClick={() => setShowOriginal(v => !v)} style={{
+            ...GHOST_BTN, gap: 5, alignSelf: 'flex-start', color: GHOST, fontSize: 'var(--sb-t-meta)', fontFamily: 'inherit',
+          }}>
+            <ChevronDown size={ICON.sm} style={{ transform: showOriginal ? undefined : 'rotate(-90deg)', transition: 'transform .12s' }} />
+            {showOriginal ? 'Hide what they wrote' : 'Read what they wrote'}
+          </button>
+          {showOriginal && (
+            <pre style={{
+              margin: 0, maxHeight: 200, overflowY: 'auto', padding: '10px 12px', borderRadius: 'var(--sb-r-chip)',
+              background: FIELD, border: `var(--sb-border-width) solid ${HAIR}`, whiteSpace: 'pre-wrap',
+              fontFamily: 'inherit', fontSize: 'var(--sb-t-meta)', color: MUTED, lineHeight: 1.5,
+            }}>{row.body.trim().slice(0, 4000)}</pre>
+          )}
+
+          {failed && (
+            <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-negative-deep)' }}>{failed}</div>
+          )}
+        </div>
+
+        {/* Send it, or send it back to be rewritten */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 18px', background: FIELD, borderTop: `var(--sb-border-width) solid ${HAIR}` }}>
+          <span style={{ flex: 1, minWidth: 0, fontSize: 'var(--sb-t-meta)', color: GHOST, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            Leaves from {row.account.email}
+          </span>
+          <button onClick={onRewrite} disabled={rewriting || sending} style={{ ...PILL, height: 32, opacity: rewriting ? 0.6 : 1 }}>
+            {rewriting
+              ? <Loader2 size={ICON.sm} className="sb-spin" />
+              : <Sparkles size={ICON.sm} />}
+            {rewriting ? 'Rewriting…' : 'Rewrite'}
+          </button>
+          <button onClick={onClose} disabled={sending} style={{ ...PILL, height: 32 }}>Cancel</button>
+          <button
+            onClick={() => void send()}
+            disabled={sending || !text.trim()}
+            style={{
+              ...PILL, height: 32, border: 'none', fontWeight: 700,
+              background: text.trim() ? INK : 'var(--sb-border)',
+              color: text.trim() ? 'var(--sb-ink-on-dark)' : GHOST,
+              cursor: text.trim() && !sending ? 'pointer' : 'default',
+            }}>
+            {sending ? <Loader2 size={ICON.sm} className="sb-spin" /> : <Send size={ICON.sm} />}
+            {sending ? 'Sending…' : 'Send'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+const DRAFT_FIELD: React.CSSProperties = {
+  flex: 1, minWidth: 0, boxSizing: 'border-box', height: 34, padding: '0 11px',
+  borderRadius: 'var(--sb-r-chip)', background: FIELD, border: `var(--sb-border-width) solid ${HAIR}`,
+  color: INK, fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', outline: 'none',
+}
+
 /** Marketing and newsletters, recognised the several ways they announce
  *  themselves. A well-behaved sender sets List-Unsubscribe; plenty do not, so
  *  the sending address, the campaign headers the big platforms stamp on, and an
@@ -359,25 +542,144 @@ function looksLikeBulk(headers: GmailHeader[], email: string, body: string): boo
   return /unsubscribe|opt[- ]?out|manage (your )?(email )?preferences|view (this|it) in (your )?browser|إلغاء الاشتراك/i.test(body.slice(0, 4000))
 }
 
+/** What each action wants of you, and how it is drawn. */
+const ACTION_META: Record<MailAction, { verb: string; Icon: typeof CornerUpLeft }> = {
+  reply:    { verb: 'to answer',  Icon: CornerUpLeft },
+  schedule: { verb: 'to book',    Icon: CalendarClock },
+  decide:   { verb: 'to decide',  Icon: Scale },
+  read:     { verb: 'to read',    Icon: Eye },
+}
+
+/**
+ * The header count, split by what it asks of you.
+ *
+ * "9 unread · 2 needs you · 3 accounts" was three numbers of three different
+ * kinds run together, and you had to read all of it to find the one that
+ * mattered. This puts the mail that wants something from you on the left, in
+ * accent, with what it wants; everything that is only information sits after
+ * a rule in ghost ink; and the bar under the header is the proportion of the
+ * two, so the shape of the morning is legible before any of it is read.
+ */
+function MailStats({ counts, boxes, bulk, thinking, classified, addressed }: {
+  counts: Record<MailAction, number>
+  boxes: number
+  bulk: number
+  thinking: boolean
+  /** Whether anything has actually been read yet. Without it, "nothing wants
+   *  an answer" is a claim about mail nobody has looked at. */
+  classified: boolean
+  addressed: number
+}) {
+  const acts = (['reply', 'schedule', 'decide'] as MailAction[])
+    .filter(a => counts[a] > 0)
+    .map(a => ({ a, n: counts[a], ...ACTION_META[a] }))
+  const wants = acts.reduce((t, x) => t + x.n, 0)
+  const idle = counts.read + bulk
+
+  return (
+    <span style={{ display: 'flex', alignItems: 'center', gap: 9, minWidth: 0, flexWrap: 'wrap' }}>
+      {!classified ? (
+        // Nothing has been summarised, so the only thing that can honestly be
+        // counted is who each message was addressed to.
+        <span style={{
+          display: 'inline-flex', alignItems: 'center', gap: 5, height: 21, padding: '0 9px',
+          borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
+          background: addressed ? 'var(--sb-accent-tint)' : 'var(--sb-field)',
+          color: addressed ? 'var(--sb-accent-deep)' : MUTED, fontSize: 'var(--sb-t-meta)',
+        }}>
+          <CornerUpLeft size={ICON.sm} strokeWidth={STROKE.active} />
+          <strong style={{ fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>{addressed}</strong> addressed to you
+        </span>
+      ) : wants > 0 ? (
+        <span style={{
+          display: 'inline-flex', alignItems: 'center', gap: 7, height: 21, padding: '0 9px 0 7px',
+          borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
+          background: 'var(--sb-accent-tint)', border: `var(--sb-border-width) solid rgba(var(--sb-accent-rgb),0.55)`,
+          color: 'var(--sb-accent-deep)', fontSize: 'var(--sb-t-meta)',
+        }}>
+          {acts.map(({ a, n, verb, Icon }, i) => (
+            <span key={a} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+              {i > 0 && <span style={{ opacity: 0.4, marginRight: 3 }}>·</span>}
+              <Icon size={ICON.sm} strokeWidth={STROKE.active} />
+              <strong style={{ fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>{n}</strong> {verb}
+            </span>
+          ))}
+        </span>
+      ) : (
+        <span style={{
+          display: 'inline-flex', alignItems: 'center', gap: 5, height: 21, padding: '0 9px',
+          borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
+          background: 'var(--sb-positive-tint)', color: 'var(--sb-positive-deep)', fontSize: 'var(--sb-t-meta)',
+        }}>
+          <Check size={ICON.sm} strokeWidth={STROKE.active} /> nothing wants an answer
+        </span>
+      )}
+
+      <span style={{ width: 1, height: 12, background: 'var(--sb-border)', flexShrink: 0 }} />
+
+      <span style={{
+        fontSize: 'var(--sb-t-meta)', color: GHOST, minWidth: 0,
+        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+      }}>
+        {[
+          idle > 0 ? `${idle} to read` : '',
+          boxes > 1 ? `${boxes} mailboxes` : '',
+        ].filter(Boolean).join(' · ')}
+        {thinking && (
+          <span style={{ marginLeft: 7, opacity: 0.8 }}>· reading them…</span>
+        )}
+      </span>
+    </span>
+  )
+}
+
+/** The proportion of the two, 3px tall, directly under the header. */
+function MailMeter({ wants, idle }: { wants: number; idle: number }) {
+  const total = wants + idle
+  if (!total) return null
+  return (
+    <div style={{ display: 'flex', height: 3, background: 'var(--sb-field)' }}>
+      <span style={{ width: `${(wants / total) * 100}%`, background: 'var(--sb-accent-deep)' }} />
+      <span style={{ width: `${(idle / total) * 100}%`, background: 'var(--sb-border)' }} />
+    </div>
+  )
+}
+
 /** How many of each kind the card shows before it stops. */
 const MAIL_SHOWN = 6
 
-function MailCard({ rows, loading, error, boxes, newsletters, onArchive, onArchiveAll, onOpenInbox, onAddTask, onOpen }: {
+function MailCard({
+  rows, loading, error, boxes, newsletters, briefs, briefing, briefNote,
+  onArchive, onArchiveAll, onOpenInbox, onOpen, onOpenDraft,
+}: {
   rows: MailRow[]
   loading: boolean
   error: string | null
   /** How many mailboxes were read, so the count and the empty state can say. */
   boxes: number
   newsletters: MailRow[]
+  /** What each message is, and the answer to it — keyed by thread id. */
+  briefs: Record<string, InboxBrief>
+  briefing: boolean
+  /** Why there are no summaries, when there are none. Said quietly. */
+  briefNote: string | null
   onArchive: (row: MailRow) => void
   onArchiveAll: () => void
   onOpenInbox: () => void
-  onAddTask: (row: MailRow) => void
   onOpen: (row: MailRow) => void
+  onOpenDraft: (row: MailRow) => void
 }) {
-  const unread = rows.length + newsletters.length
-  const needsYou = rows.filter(r => r.needsYou).length
   const [showBulk, setShowBulk] = useState(false)
+
+  // Counted by what each one wants, which is the thing the header says. A row
+  // with no brief yet still counts — as reading, so the totals do not jump
+  // about while the summaries land.
+  const counts = useMemo(() => {
+    const c: Record<MailAction, number> = { reply: 0, schedule: 0, decide: 0, read: 0 }
+    for (const r of rows) c[briefs[r.id]?.action ?? 'read'] += 1
+    return c
+  }, [rows, briefs])
+  const wants = counts.reply + counts.schedule + counts.decide
 
   return (
     <div style={CARD}>
@@ -385,9 +687,24 @@ function MailCard({ rows, loading, error, boxes, newsletters, onArchive, onArchi
         title="Mail"
         meta={loading
           ? 'reading your inbox…'
-          : `${unread} unread · ${needsYou} need${needsYou === 1 ? 's' : ''} you${boxes > 1 ? ` · ${boxes} accounts` : ''}`}>
+          : <MailStats
+              counts={counts} boxes={boxes} bulk={newsletters.length} thinking={briefing}
+              classified={rows.some(r => briefs[r.id])}
+              addressed={rows.filter(r => r.needsYou).length}
+            />}>
         <LinkOut label="Inbox" onClick={onOpenInbox} />
       </CardHead>
+      {!loading && !error && rows.length > 0 && (
+        <MailMeter wants={wants} idle={counts.read + newsletters.length} />
+      )}
+      {/* No summaries is usually no key, which is a setting rather than a
+          fault — said once here, not repeated down every row. */}
+      {briefNote && !loading && !error && rows.length > 0 && (
+        <div style={{
+          padding: '8px 16px', fontSize: 'var(--sb-t-meta)', color: GHOST,
+          background: FIELD, borderBottom: `var(--sb-border-width) solid ${HAIR}`,
+        }}>{briefNote}</div>
+      )}
 
       {error ? (
         <div style={{ padding: '18px 16px', fontSize: 'var(--sb-t-body-s)', color: GHOST }}>{error}</div>
@@ -424,22 +741,52 @@ function MailCard({ rows, loading, error, boxes, newsletters, onArchive, onArchi
                   {r.subject}
                 </span>
                 <span style={{ fontSize: 'var(--sb-t-meta)', color: GHOST, flexShrink: 0 }}>{relAge(r.receivedAt)}</span>
-                <button onClick={() => onAddTask(r)} title="Add as a task"
-                  style={{ ...ICON_TILE, width: 26, height: 26, cursor: 'pointer' }}>
-                  <Plus size={ICON.sm} strokeWidth={STROKE.rest} />
-                </button>
                 <button onClick={() => onArchive(r)} title="Archive"
                   style={{ ...ICON_TILE, width: 26, height: 26, cursor: 'pointer' }}>
                   <Archive size={ICON.sm} strokeWidth={STROKE.rest} />
                 </button>
               </div>
-              {r.snippet && (
+
+              {/* What it says — one line, in place of the first 140 characters
+                  of it, which were a greeting and half a sentence. */}
+              {(briefs[r.id]?.summary || briefing) && (
                 <div style={{
-                  marginTop: 7, marginLeft: 38, padding: '7px 10px', borderRadius: 'var(--sb-r-chip)',
-                  background: FIELD, border: `var(--sb-border-width) solid ${HAIR}`,
-                  fontSize: 'var(--sb-t-body-s)', color: MUTED, lineHeight: 1.45,
+                  marginTop: 5, marginLeft: 38, fontSize: 'var(--sb-t-body-s)', lineHeight: 1.45,
+                  color: briefs[r.id] ? MUTED : GHOST,
                   overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                }}>{r.snippet}</div>
+                }}>
+                  {briefs[r.id]?.summary || 'Reading it…'}
+                </div>
+              )}
+
+              {/* And the answer to it, where it wants one. Clicking opens it to
+                  be read; nothing is ever sent from the card. */}
+              {briefs[r.id]?.draft && (
+                <button
+                  onClick={() => onOpenDraft(r)}
+                  style={{
+                    display: 'block', width: 'calc(100% - 38px)', textAlign: 'left', cursor: 'pointer',
+                    marginTop: 7, marginLeft: 38, padding: '8px 11px 9px', borderRadius: 'var(--sb-r-chip)',
+                    background: 'var(--sb-accent-tint)',
+                    border: `var(--sb-border-width) solid rgba(var(--sb-accent-rgb),0.45)`,
+                    fontFamily: 'inherit',
+                  }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+                    <Sparkles size={ICON.sm} strokeWidth={STROKE.active} color="var(--sb-accent-deep)" />
+                    <span style={{
+                      fontSize: 'var(--sb-t-micro)', fontWeight: 800, letterSpacing: '0.08em',
+                      color: 'var(--sb-accent-deep)', textTransform: 'uppercase',
+                    }}>Reply drafted</span>
+                    <span style={{ flex: 1 }} />
+                    <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-accent-deep)' }}>
+                      Review &amp; send →
+                    </span>
+                  </span>
+                  <span style={{
+                    display: 'block', fontSize: 'var(--sb-t-body-s)', color: INK, lineHeight: 1.45,
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  }}>{briefs[r.id].draft.replace(/\s+/g, ' ').trim()}</span>
+                </button>
               )}
             </div>
           ))}
@@ -999,6 +1346,11 @@ export function TodayPage() {
   const [openMail, setOpenMail] = useState<MailRow | null>(null)
   const [mailError, setMailError] = useState<string | null>(null)
   const [mailBoxCount, setMailBoxCount] = useState(1)
+  /** What each unread message is, and the reply to it. Keyed by thread id. */
+  const [briefs, setBriefs] = useState<Record<string, InboxBrief>>({})
+  const [briefing, setBriefing] = useState(false)
+  const [briefNote, setBriefNote] = useState<string | null>(null)
+  const [draftFor, setDraftFor] = useState<MailRow | null>(null)
 
   const today = dayKey(clock)
   const writtenAt = useRef(new Date())
@@ -1074,9 +1426,12 @@ export function TodayPage() {
         const row: MailRow = {
           id: th.id,
           messageId: last.id,
+          rfcMessageId: header(headers, 'Message-ID') || header(headers, 'Message-Id'),
+          references: header(headers, 'References'),
           fromName: name || email,
           fromEmail: email,
           to: header(headers, 'To'),
+          cc: header(headers, 'Cc'),
           subject: header(headers, 'Subject') || '(no subject)',
           snippet: plain.replace(/\s+/g, ' ').trim().slice(0, 140),
           html: extractHtmlBody(last),
@@ -1111,6 +1466,71 @@ export function TodayPage() {
   }, [user?.email])
 
   useEffect(() => { void loadMail() }, [loadMail])
+
+  // ── What the mail says, and the answer to it ───────────────────────────────
+  // Off the render path entirely: the rows are already on screen when this
+  // runs, and each row's summary appears as it lands. Cached briefs come back
+  // first, so the second look at an inbox costs nothing.
+  const briefContext = useCallback(() => ({
+    user: {
+      id: user?.id ?? 'me',
+      email: user?.email ?? '',
+      full_name: user?.name ?? null,
+      avatar_url: null,
+      active_framework: 'time_blocking',
+      schedule_rules: {},
+      created_at: new Date().toISOString(),
+    } as DbUser,
+    companies: loadDynamicCompanies().map(c => ({
+      id: c.id, user_id: user?.id ?? 'me', name: c.name,
+      color_tag: c.color ?? null, calendar_id: c.calendarId ?? null, is_active: true,
+    })) as DbCompany[],
+    me: user?.email ?? '',
+  }), [user?.id, user?.email, user?.name])
+
+  // One call per set of messages, however many times the effect fires. React's
+  // StrictMode runs it twice in development and a re-render can run it again;
+  // without this each of those is a second full call, because none of them has
+  // finished writing the cache the next one would have read.
+  const briefRun = useRef('')
+
+  const runBriefs = useCallback(async (rows: MailRow[]) => {
+    if (rows.length === 0) { setBriefs({}); briefRun.current = ''; return }
+    const key = rows.map(r => r.messageId).sort().join(',')
+    if (briefRun.current === key) return
+    briefRun.current = key
+    setBriefing(true)
+    const { briefs: got, unavailable } = await briefsFor(
+      rows.map(r => ({
+        id: r.id, messageId: r.messageId, fromName: r.fromName, fromEmail: r.fromEmail,
+        subject: r.subject, receivedAt: r.receivedAt, addressedToMe: r.needsYou, body: r.body,
+      })),
+      briefContext(),
+      partial => setBriefs(prev => ({ ...prev, ...partial })),
+    )
+    setBriefs(prev => ({ ...prev, ...got }))
+    setBriefNote(unavailable)
+    setBriefing(false)
+  }, [briefContext])
+
+  useEffect(() => { void runBriefs(mail) }, [mail, runBriefs])
+
+  /** Throw one brief away and write it again — the popup's Rewrite. */
+  const rewriteDraft = useCallback(async (row: MailRow) => {
+    forgetBrief(row.id)
+    briefRun.current = ''   // asking again for this set is the whole point
+    setBriefing(true)
+    const { briefs: got, unavailable } = await briefsFor(
+      [{
+        id: row.id, messageId: row.messageId, fromName: row.fromName, fromEmail: row.fromEmail,
+        subject: row.subject, receivedAt: row.receivedAt, addressedToMe: row.needsYou, body: row.body,
+      }],
+      briefContext(),
+    )
+    setBriefs(prev => ({ ...prev, ...got }))
+    setBriefNote(unavailable)
+    setBriefing(false)
+  }, [briefContext])
 
   // ── Derived ────────────────────────────────────────────────────────────────
 
@@ -1268,6 +1688,23 @@ export function TodayPage() {
   return (
     <div style={{ padding: '0 0 40px' }}>
 
+      {draftFor && briefs[draftFor.id] && (
+        <DraftPopup
+          row={draftFor}
+          brief={briefs[draftFor.id]}
+          rewriting={briefing}
+          onRewrite={() => void rewriteDraft(draftFor)}
+          onClose={() => setDraftFor(null)}
+          onSent={() => {
+            // Answered is dealt with: it leaves the card, and the brief goes
+            // with it so a new message in the thread is read afresh.
+            forgetBrief(draftFor.id)
+            setMail(prev => prev.filter(m => m.id !== draftFor.id))
+            setDraftFor(null)
+          }}
+        />
+      )}
+
       {openMail && (
         <MailPopup
           row={openMail}
@@ -1337,11 +1774,14 @@ export function TodayPage() {
             error={mailError}
             boxes={mailBoxCount}
             newsletters={newsletters}
+            briefs={briefs}
+            briefing={briefing}
+            briefNote={briefNote}
             onArchive={row => void archiveMail(row)}
             onArchiveAll={() => void archiveNewsletters()}
             onOpenInbox={() => setActiveModule('inbox')}
-            onAddTask={mailToTask}
             onOpen={setOpenMail}
+            onOpenDraft={setDraftFor}
           />
         </div>
 

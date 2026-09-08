@@ -670,3 +670,97 @@ ${systemContext ?? ''}`
     throw new ProfessorError('askProfessor failed', 'api_error', err)
   }
 }
+
+// ─── briefInbox ──────────────────────────────────────────────────────────────
+// One call for the whole card, not one per message. A morning inbox is six or
+// eight threads; six round trips is six times the latency and six times the
+// spend, for an answer that is better when the model can see them together —
+// it can tell the invitation from the thread the invitation is about.
+
+export type MailAction = 'reply' | 'schedule' | 'decide' | 'read'
+
+export const MAIL_ACTIONS: MailAction[] = ['reply', 'schedule', 'decide', 'read']
+
+export interface InboxBrief {
+  /** The id the caller passed in, so a batch can be matched back to its rows. */
+  id: string
+  /** What the message is, in one line. This replaces its first 140 characters. */
+  summary: string
+  /** What it wants. `read` is the only one that wants nothing. */
+  action: MailAction
+  /** A reply ready to send, when the message asks for one. Empty otherwise. */
+  draft: string
+}
+
+export interface InboxMessage {
+  id: string
+  fromName: string
+  fromEmail: string
+  subject: string
+  receivedAt: string
+  /** Whether it was addressed to the reader rather than copied to them. */
+  addressedToMe: boolean
+  body: string
+}
+
+/** As much of a message as is worth sending — the ask is nearly always at the
+ *  top, and a quoted thread underneath it is mostly the reader's own words. */
+const BODY_CHARS = 1400
+
+export async function briefInbox(
+  input: UserContext & { me: string; messages: InboxMessage[] },
+): Promise<InboxBrief[]> {
+  if (input.messages.length === 0) return []
+
+  const system = baseSystem(input.user, input.companies) + `
+
+TASK: Read the unread messages below and, for each one, say what it is and what
+it wants. Where it wants an answer from ${input.user.full_name ?? input.me},
+write that answer — ready to send, not a template.
+
+Return ONLY a valid JSON array, one object per message, in the order given:
+[{"id":"<the id given>","summary":"...","action":"reply|schedule|decide|read","draft":"..."}]
+
+summary — ONE sentence, under 130 characters, in the third person: what the
+  sender is saying or asking. Name the specific thing (a date, a figure, a
+  document) rather than describing the message. Never "this email is about".
+action — "reply" when it asks something answerable in words; "schedule" when it
+  proposes or asks for a time; "decide" when it needs a call only the reader can
+  make; "read" when it is information and wants nothing back.
+draft — for "reply" and "schedule", the full reply body: greeting, answer, sign
+  off as ${input.user.full_name ?? 'the reader'}. Plain text, short (under 90
+  words), in the reader's register — direct, warm, no corporate padding, no
+  placeholders like [name] or [date]. If a fact is genuinely missing, ask for it
+  in the reply rather than inventing it. For "decide" give the reply that states
+  the decision the reader most likely wants, so it can be edited rather than
+  written. For "read" use an empty string.
+Never invent an attachment, a figure, a commitment or a meeting that is not in
+the message.`
+
+  const userMsg = input.messages.map((m, i) => [
+    `--- MESSAGE ${i + 1} (id: ${m.id}) ---`,
+    `From: ${m.fromName} <${m.fromEmail}>`,
+    `Subject: ${m.subject}`,
+    `Received: ${m.receivedAt}`,
+    m.addressedToMe ? 'Addressed directly to the reader.' : 'The reader is copied, not addressed.',
+    '',
+    m.body.replace(/\s+\n/g, '\n').trim().slice(0, BODY_CHARS),
+  ].join('\n')).join('\n\n')
+
+  const raw = await call(system, `The reader is ${input.me}.\n\n${userMsg}`)
+  const parsed = parseJson<InboxBrief[]>(raw)
+  if (!Array.isArray(parsed)) {
+    throw new ProfessorError('The inbox brief came back in a shape we could not read', 'parse_error')
+  }
+
+  // Only what was asked for, and only for messages that were actually sent.
+  const known = new Set(input.messages.map(m => m.id))
+  return parsed
+    .filter(b => b && typeof b.id === 'string' && known.has(b.id))
+    .map(b => ({
+      id: b.id,
+      summary: typeof b.summary === 'string' ? b.summary.trim() : '',
+      action: MAIL_ACTIONS.includes(b.action) ? b.action : 'read',
+      draft: typeof b.draft === 'string' ? b.draft.trim() : '',
+    }))
+}
