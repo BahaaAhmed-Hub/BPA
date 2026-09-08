@@ -6,7 +6,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
-  Pencil, RefreshCw, ArrowRight, Zap, Archive, Plus,
+ RefreshCw, ArrowRight, Zap, Archive, Plus,
   Clock, Check, Flame, Sun, Quote, CheckSquare, X, ChevronDown,
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
@@ -991,7 +991,6 @@ export function TodayPage() {
   const [clock, setClock] = useState(() => new Date())
   const [planAccepted, setPlanAccepted] = useState(false)
   const [eventStatuses, setEventStatuses] = useState(loadEventStatuses)
-  const [briefEdit, setBriefEdit] = useState<string | null>(null)
   const [briefSeed, setBriefSeed] = useState(0)
 
   const [mail, setMail] = useState<MailRow[]>([])
@@ -1289,10 +1288,7 @@ export function TodayPage() {
           <Clock size={ICON.sm} /> {hhmm(clock)}
         </span>
         <span style={{ flex: 1 }} />
-        <button onClick={() => setBriefEdit(briefEdit === null ? brief.body : null)} style={PILL}>
-          <Pencil size={ICON.sm} /> {briefEdit === null ? 'Edit' : 'Done'}
-        </button>
-        <button onClick={() => { setBriefEdit(null); setBriefSeed(n => n + 1); void loadMail() }} style={PILL}>
+        <button onClick={() => { setBriefSeed(n => n + 1); void loadMail() }} style={PILL}>
           <RefreshCw size={ICON.sm} /> Regenerate
         </button>
         <button
@@ -1322,19 +1318,7 @@ export function TodayPage() {
               {tasks.filter(t => t.completed).length} closed all time · rank {rank.score} / 100 ·{' '}
               {events.filter(e => !!e.start.dateTime).length} meetings today
             </p>
-            {briefEdit === null ? (
-              <p style={{ margin: '14px 0 0', fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-2)', lineHeight: 1.65 }}>{brief.body}</p>
-            ) : (
-              <textarea
-                value={briefEdit}
-                onChange={e => setBriefEdit(e.target.value)}
-                rows={4}
-                style={{
-                  width: '100%', boxSizing: 'border-box', marginTop: 14, resize: 'vertical',
-                  background: FIELD, border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', padding: '10px 12px',
-                  fontSize: 'var(--sb-t-body)', color: INK, fontFamily: 'inherit', lineHeight: 1.6, outline: 'none', textAlign: 'left',
-                }} />
-            )}
+            <p style={{ margin: '14px 0 0', fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-2)', lineHeight: 1.65 }}>{brief.body}</p>
             {brief.callout && (
               <div style={{
                 display: 'flex', alignItems: 'center', gap: 9, marginTop: 16,
