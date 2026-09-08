@@ -560,7 +560,23 @@ const ACTION_META: Record<MailAction, { verb: string; Icon: typeof CornerUpLeft 
  * a rule in ghost ink; and the bar under the header is the proportion of the
  * two, so the shape of the morning is legible before any of it is read.
  */
-function MailStats({ counts, boxes, bulk, thinking, classified, addressed }: {
+/**
+ * The header count, split by what each message asks of you — and clickable.
+ *
+ * "9 unread · 2 needs you · 3 accounts" was three numbers of three different
+ * kinds run together, and you had to read all of it to find the one that
+ * mattered. Three things make this different:
+ *
+ * - **The chips are the filter.** A count you cannot act on is decoration; a
+ *   count that is also the control is worth the space. The lit chip is how you
+ *   know something is hidden.
+ * - **The second line says who and how long.** "Hasan waiting 1d" is the
+ *   sentence that decides whether you open the card, and no count is.
+ * - **The meter is the action share**, so a morning where everything wants you
+ *   is nearly full and a quiet one is nearly empty — which is the honest
+ *   reading of one actionable message in eight.
+ */
+function MailStats({ counts, boxes, bulk, thinking, classified, addressed, filter, onFilter }: {
   counts: Record<MailAction, number>
   boxes: number
   bulk: number
@@ -569,15 +585,16 @@ function MailStats({ counts, boxes, bulk, thinking, classified, addressed }: {
    *  an answer" is a claim about mail nobody has looked at. */
   classified: boolean
   addressed: number
+  filter: MailAction | null
+  onFilter: (a: MailAction | null) => void
 }) {
   const acts = (['reply', 'schedule', 'decide'] as MailAction[])
     .filter(a => counts[a] > 0)
     .map(a => ({ a, n: counts[a], ...ACTION_META[a] }))
   const wants = acts.reduce((t, x) => t + x.n, 0)
-  const idle = counts.read + bulk
 
   return (
-    <span style={{ display: 'flex', alignItems: 'center', gap: 9, minWidth: 0, flexWrap: 'wrap' }}>
+    <span style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, flexWrap: 'wrap' }}>
       {!classified ? (
         // Nothing has been summarised, so the only thing that can honestly be
         // counted is who each message was addressed to.
@@ -591,20 +608,26 @@ function MailStats({ counts, boxes, bulk, thinking, classified, addressed }: {
           <strong style={{ fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>{addressed}</strong> addressed to you
         </span>
       ) : wants > 0 ? (
-        <span style={{
-          display: 'inline-flex', alignItems: 'center', gap: 7, height: 21, padding: '0 9px 0 7px',
-          borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
-          background: 'var(--sb-accent-tint)', border: `var(--sb-border-width) solid rgba(var(--sb-accent-rgb),0.55)`,
-          color: 'var(--sb-accent-deep)', fontSize: 'var(--sb-t-meta)',
-        }}>
-          {acts.map(({ a, n, verb, Icon }, i) => (
-            <span key={a} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-              {i > 0 && <span style={{ opacity: 0.4, marginRight: 3 }}>·</span>}
+        acts.map(({ a, n, verb, Icon }) => {
+          const on = filter === a
+          return (
+            <button
+              key={a}
+              onClick={() => onFilter(on ? null : a)}
+              title={on ? 'Show everything again' : `Show only what is ${verb}`}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 5, height: 21, padding: '0 9px',
+                borderRadius: 'var(--sb-r-pill)', flexShrink: 0, cursor: 'pointer', fontFamily: 'inherit',
+                background: on ? 'var(--sb-accent-deep)' : 'var(--sb-accent-tint)',
+                border: `var(--sb-border-width) solid ${on ? 'var(--sb-accent-deep)' : 'rgba(var(--sb-accent-rgb),0.55)'}`,
+                color: on ? 'var(--sb-ink-on-dark)' : 'var(--sb-accent-deep)',
+                fontSize: 'var(--sb-t-meta)',
+              }}>
               <Icon size={ICON.sm} strokeWidth={STROKE.active} />
               <strong style={{ fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>{n}</strong> {verb}
-            </span>
-          ))}
-        </span>
+            </button>
+          )
+        })
       ) : (
         <span style={{
           display: 'inline-flex', alignItems: 'center', gap: 5, height: 21, padding: '0 9px',
@@ -614,22 +637,53 @@ function MailStats({ counts, boxes, bulk, thinking, classified, addressed }: {
           <Check size={ICON.sm} strokeWidth={STROKE.active} /> nothing wants an answer
         </span>
       )}
-
-      <span style={{ width: 1, height: 12, background: 'var(--sb-border)', flexShrink: 0 }} />
-
-      <span style={{
-        fontSize: 'var(--sb-t-meta)', color: GHOST, minWidth: 0,
-        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-      }}>
-        {[
-          idle > 0 ? `${idle} to read` : '',
-          boxes > 1 ? `${boxes} mailboxes` : '',
-        ].filter(Boolean).join(' · ')}
-        {thinking && (
-          <span style={{ marginLeft: 7, opacity: 0.8 }}>· reading them…</span>
-        )}
-      </span>
+      {thinking && (
+        <span style={{ fontSize: 'var(--sb-t-meta)', color: GHOST, flexShrink: 0 }}>reading them…</span>
+      )}
+      {boxes > 0 && bulk >= 0 && null}
     </span>
+  )
+}
+
+/**
+ * The line under the header: the one thing that decides whether you open the
+ * card. A name and a wait beat any count — "7 to read" never got anybody to
+ * act, and "Hasan waiting 1d" does.
+ */
+function MailWaiting({ oldest, idle, boxes, filtered, onClear }: {
+  oldest: { who: string; age: string } | null
+  idle: number
+  boxes: number
+  filtered: boolean
+  onClear: () => void
+}) {
+  const rest = [
+    idle > 0 ? `${idle} to read` : '',
+    boxes > 1 ? `${boxes} mailboxes` : '',
+  ].filter(Boolean).join(' · ')
+  if (!oldest && !rest && !filtered) return null
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 8, padding: '5px 16px 7px',
+      fontSize: 'var(--sb-t-meta)', color: GHOST, minWidth: 0,
+    }}>
+      {oldest && (
+        <span style={{ color: MUTED, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <strong style={{ fontWeight: 700, color: INK }}>{oldest.who}</strong> waiting {oldest.age}
+        </span>
+      )}
+      {oldest && rest && <span style={{ flexShrink: 0 }}>·</span>}
+      {rest && <span style={{ flexShrink: 0 }}>{rest}</span>}
+      <span style={{ flex: 1 }} />
+      {filtered && (
+        <button onClick={onClear} style={{
+          ...GHOST_BTN, gap: 4, flexShrink: 0, fontFamily: 'inherit',
+          fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: 'var(--sb-accent-deep)',
+        }}>
+          <X size={ICON.sm} /> showing one kind
+        </button>
+      )}
+    </div>
   )
 }
 
@@ -670,6 +724,7 @@ function MailCard({
   onOpenDraft: (row: MailRow) => void
 }) {
   const [showBulk, setShowBulk] = useState(false)
+  const [filter, setFilter] = useState<MailAction | null>(null)
 
   // Counted by what each one wants, which is the thing the header says. A row
   // with no brief yet still counts — as reading, so the totals do not jump
@@ -681,6 +736,24 @@ function MailCard({
   }, [rows, briefs])
   const wants = counts.reply + counts.schedule + counts.decide
 
+  // What the card actually lists. A filter that survives its own chip
+  // disappearing would leave you looking at nothing and no way back.
+  const shown = useMemo(
+    () => filter ? rows.filter(r => briefs[r.id]?.action === filter) : rows,
+    [rows, briefs, filter],
+  )
+  useEffect(() => { if (filter && counts[filter] === 0) setFilter(null) }, [filter, counts])
+
+  /** Who has been waiting longest for an answer, and how long. */
+  const oldest = useMemo(() => {
+    const waiting = rows
+      .filter(r => { const a = briefs[r.id]?.action; return a && a !== 'read' })
+      .sort((a, b) => a.receivedAt.localeCompare(b.receivedAt))[0]
+      ?? rows.filter(r => r.needsYou).sort((a, b) => a.receivedAt.localeCompare(b.receivedAt))[0]
+    if (!waiting) return null
+    return { who: (waiting.fromName || waiting.fromEmail).split(/[\s,]+/)[0], age: relAge(waiting.receivedAt) }
+  }, [rows, briefs])
+
   return (
     <div style={CARD}>
       <CardHead
@@ -691,11 +764,22 @@ function MailCard({
               counts={counts} boxes={boxes} bulk={newsletters.length} thinking={briefing}
               classified={rows.some(r => briefs[r.id])}
               addressed={rows.filter(r => r.needsYou).length}
+              filter={filter}
+              onFilter={setFilter}
             />}>
         <LinkOut label="Inbox" onClick={onOpenInbox} />
       </CardHead>
       {!loading && !error && rows.length > 0 && (
-        <MailMeter wants={wants} idle={counts.read + newsletters.length} />
+        <>
+          <MailMeter wants={wants} idle={counts.read + newsletters.length} />
+          <MailWaiting
+            oldest={oldest}
+            idle={counts.read + newsletters.length}
+            boxes={boxes}
+            filtered={filter !== null}
+            onClear={() => setFilter(null)}
+          />
+        </>
       )}
       {/* No summaries is usually no key, which is a setting rather than a
           fault — said once here, not repeated down every row. */}
@@ -717,7 +801,7 @@ function MailCard({
         </div>
       ) : (
         <div>
-          {rows.map(r => (
+          {shown.map(r => (
             <div
               key={r.id}
               onClick={e => { if (!(e.target as HTMLElement).closest('button')) onOpen(r) }}

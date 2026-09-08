@@ -573,10 +573,17 @@ shows **what the message is** and, where it wants an answer, **the answer**.
   the header, not down every row — and the header then counts what it honestly
   can ("3 addressed to you"), never "nothing wants an answer" about mail nobody
   has read.
-- **The header counts by what each message wants.** `MailStats`: an accent pill
-  for the mail that wants something — `to answer` / `to book` / `to decide`, each
-  with its own glyph — then a rule, then the informative counts in ghost. The 3px
-  `MailMeter` under the header is the proportion of the two.
+- **The header counts by what each message wants, and the counts are the
+  filter.** `MailStats` draws one chip per action — `to answer` / `to book` /
+  `to decide` — and tapping one narrows the card to it. A count you cannot act
+  on is decoration; the lit chip is how you know something is hidden, and
+  `MailWaiting` carries the way back out. A filter whose chip drops to zero
+  clears itself, or you are looking at nothing with no way back.
+- **`MailWaiting` is the line that gets the card opened**: who has been waiting
+  longest for an answer, by first name, and how long — "Hasan waiting 1d". No
+  count ever did that. The informative totals sit after it in ghost.
+- The 3px `MailMeter` is the action share, so a morning where everything wants
+  you is nearly full and a quiet one nearly empty.
 - **Nothing is sent from the card.** The draft area opens `DraftPopup` — To/Cc,
   the editable text, the original one click away, Rewrite, and the mailbox it
   leaves from named. A reply threads on the **RFC `Message-ID` header**, which is
