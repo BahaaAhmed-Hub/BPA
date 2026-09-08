@@ -31,12 +31,10 @@ const QUADRANT_SPECS: QuadrantSpec[] = [
   { id: 'eliminate', badge: 'DROP',     title: 'Not urgent & not important', sub: 'Archive unless something changes', action: 'Archive all' },
 ]
 
-/** The badge is a fixed square, so longer words step down a size to fit. */
-function badgeFontSize(word: string): number {
-  if (word.length <= 2) return 9
-  if (word.length <= 4) return 7.5
-  return 5.5
-}
+// The badge used to be a fixed 22px square, so the word shrank to fit it —
+// "DO" at 9px, "PLAN" at 7.5, and "DELEGATE" at 5.5, which is not a size text
+// is read at. The square was the thing worth giving up: it is a pill now, one
+// legible size, as wide as its own word.
 
 function QuadrantPanel({ spec, tasks, onOpen, onAction, groupBy }: {
   spec: QuadrantSpec
@@ -96,11 +94,11 @@ function QuadrantPanel({ spec, tasks, onOpen, onAction, groupBy }: {
       {/* Quadrant header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, minWidth: 0 }}>
         <span style={{
-          width: 22, height: 22, borderRadius: 'var(--sb-r-chip)', flexShrink: 0,
+          height: 22, padding: '0 8px', borderRadius: 'var(--sb-r-chip)', flexShrink: 0,
           background: 'var(--sb-ink-1)', color: 'var(--sb-ink-on-dark)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: badgeFontSize(spec.badge), fontWeight: 700, letterSpacing: '0.04em',
-          overflow: 'hidden',
+          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.06em',
+          whiteSpace: 'nowrap',
         }}>{spec.badge}</span>
         <div style={{ flex: 1, minWidth: 0 }}>
           <p style={{ margin: 0, fontSize: 'var(--sb-t-label)', fontWeight: 600, color: 'var(--sb-ink-1)', lineHeight: 1.3 }}>{spec.title}</p>
