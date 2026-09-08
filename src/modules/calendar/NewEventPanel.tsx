@@ -55,18 +55,17 @@ export const MONO: React.CSSProperties = {
   fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: C.third, textTransform: 'none',
 }
 /**
- * One section of a panel. At 300-400px wide a cream ground holding white cards
- * has no room to be a ground, so a section is a band of the card separated by a
- * hairline — which is how the task detail panel does it, and this is meant to
- * be the same object in a different module. The first section in a panel drops
- * its rule with `sectionTop`.
+ * One section of a panel: a white card on the shell's cream ground. The
+ * separation between sections is that ground rather than a rule — which is
+ * what makes a panel of eight sections readable at a glance instead of a
+ * single column of banded text.
  */
 export const CARD: React.CSSProperties = {
-  padding: '12px 14px',
-  borderTop: `var(--sb-border-width) solid ${'var(--sb-hairline)'}`,
+  background: C.card, borderRadius: 'var(--sb-r-card)', padding: '11px 13px',
   display: 'flex', flexDirection: 'column', minWidth: 0,
 }
-export const sectionTop: React.CSSProperties = { ...CARD, borderTop: 'none', paddingTop: 4 }
+/** The first card needs nothing of its own now; kept so callers need not change. */
+export const sectionTop: React.CSSProperties = CARD
 
 /** A section's name: the task panel's SECTION_LABEL, to the letter. */
 export const LABEL: React.CSSProperties = {
@@ -171,9 +170,9 @@ export function ComposerShell({ panelRef, onClose, expanded, children }: {
         // fixed viewport offset put the footer four pixels below the fold,
         // because it did not know how tall the calendar's own header was.
         maxHeight: '100%', overflowY: 'auto', scrollbarWidth: 'thin',
-        background: C.card, border: `var(--sb-border-width) solid ${C.border}`,
-        borderRadius: 'var(--sb-r-card)', boxShadow: 'var(--sb-shadow-control)',
-        display: 'flex', flexDirection: 'column',
+        background: C.page, border: `var(--sb-border-width) solid ${C.border}`,
+        borderRadius: 'var(--sb-r-frame)', boxShadow: 'var(--sb-shadow-control)',
+        display: 'flex', flexDirection: 'column', gap: 8, padding: 8,
       }}>
       {children}
     </aside>
@@ -951,7 +950,7 @@ export function NewEventPanel({
       </div>
 
       {/* ── 6 · The rest, folded away ──────────────────────────────────────── */}
-      <div style={{ ...CARD, gap: 10, paddingBottom: extrasOpen ? 14 : 12 }}>
+      <div style={{ ...CARD, gap: 10 }}>
         <button
           onClick={() => {
             const open = !extrasOpen
@@ -1023,8 +1022,8 @@ export function NewEventPanel({
           Cancel. */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 8,
-        position: 'sticky', bottom: 0, padding: '10px 56px 12px 14px',
-        background: C.card, borderTop: `var(--sb-border-width) solid ${C.hair}`,
+        position: 'sticky', bottom: -8, padding: '8px 56px 6px 6px', marginTop: -2,
+        background: C.page,
       }}>
         {editing ? (
           <span style={{ flex: 1, minWidth: 0, fontSize: 'var(--sb-t-meta)', color: C.faint }}>

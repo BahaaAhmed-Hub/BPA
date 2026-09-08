@@ -134,7 +134,9 @@ gone, and with it the last of `--sb-ev-type`.
 ## Calendar — both event panels are the task detail panel
 `NewEventPanel.tsx` holds the shell and every primitive; `EventPopup` (the panel
 for an event that exists) and the composer (for one that does not) are the same
-object on screen. `ComposerShell` is that shell, and it is **the task detail
+object on screen. `ComposerShell` is that shell: **a cream panel holding white
+cards**, the separation between sections being that ground rather than a rule —
+eight banded sections in one column do not scan. Its box is **the task detail
 panel's**, to the value: `clamp(300px, 32vw, 400px)`, `--sb-r-card`,
 `--sb-shadow-control`, `--sb-t-h2` title / `--sb-t-body-s` rows /
 `--sb-t-meta` captions, `--sb-h-pill` controls, sections separated by a
