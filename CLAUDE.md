@@ -143,11 +143,8 @@ needs the room for them: `--sb-r-card`,
 `--sb-shadow-control`, `--sb-t-h2` title / `--sb-t-body-s` rows /
 `--sb-t-meta` captions, `--sb-h-pill` controls, sections separated by a
 hairline. Measured side by side, the two panels differ in nothing but content.
-- **Completed and Cancelled carry their words where they fit.** A ResizeObserver
-  on the panel switches them to glyphs below 400px — a clamp from 320 to 440
-  cannot be answered with one guess, and at the narrow end the two labels plus
-  delete and close push the calendar name off the row. Set, either is a solid
-  fill, not a tint: a tint on a 28px circle is not a state you can read.
+- **Completed and Cancelled are glyphs**, solid in their own colour when set —
+  a tint on a 28px circle is not a state you can read.
 - **Docked, never floating.** A modal over the grid hides the one thing you
   need while editing an event. It is a column beside the grid, the way the
   task panel sits beside the board.
@@ -624,6 +621,17 @@ organiser a pleasant note and **tells Google nothing** — your name stays in th
 Awaiting column and the event never shows as accepted on your own calendar. So
 an invitation row offers **Yes / Maybe / No / No, with a note** instead of a
 drafted reply, and the draft is suppressed for it.
+- **The calendar part is usually not inline.** Gmail puts an inline copy in the
+  `multipart/alternative` *and* attaches `invite.ics`, and externalises whichever
+  it likes — leaving `attachmentId` and no `data`. Requiring inline bytes meant
+  every real invitation with an externalised part was missed, which is exactly
+  what happened. `extractInvite` fetches the attachment, so it is async, and the
+  read happens **after** the rows are drawn.
+- **The invitations are keyed by message id, beside the rows, not inside them.**
+  Written back into `mail` they were lost the moment the mail loaded again — and
+  a run guard on the row set then refused to look a second time.
+- **`METHOD` is read from the part's content type as well as the body**, since
+  senders set one or the other.
 - **`UID` is the only shared identifier.** Google mints a different event id for
   every attendee's copy, so `findEventByICalUid` (`events.list?iCalUID=`) is the
   one way from the invitation to the row you can answer on. It asks `primary`

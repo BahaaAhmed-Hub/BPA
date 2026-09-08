@@ -19,7 +19,7 @@
 //   any of your calendars there is nothing to patch, and the caller says so
 //   rather than inventing a copy that the organiser's event does not know about.
 
-import { header, type GmailMessage, type GmailPart, type MailAccount } from '@/lib/gmail'
+import { fetchAttachment, type GmailMessage, type GmailPart, type MailAccount } from '@/lib/gmail'
 import {
   findEventByICalUid, patchCalendarEventWithToken, listCalendarsWithToken,
   type GCalEvent,
@@ -54,8 +54,10 @@ function* parts(p: GmailPart | undefined): Generator<GmailPart> {
 
 function decode(data: string): string {
   try {
+    // base64url, and Gmail leaves the padding off — atob wants it back.
     const b64 = data.replace(/-/g, '+').replace(/_/g, '/')
-    const bin = atob(b64)
+    const padded = b64 + '='.repeat((4 - (b64.length % 4)) % 4)
+    const bin = atob(padded)
     return new TextDecoder('utf-8').decode(Uint8Array.from(bin, c => c.charCodeAt(0)))
   } catch { return '' }
 }
@@ -89,17 +91,38 @@ function icsDate(raw: string): string {
  * invitation *you* sent — there is nothing for you to RSVP to there, and
  * offering the buttons would be offering to answer your own meeting.
  */
-export function extractInvite(msg: GmailMessage): Invite | null {
-  let ics = ''
+export async function extractInvite(
+  msg: GmailMessage, account?: MailAccount,
+): Promise<Invite | null> {
+  // The calendar part, wherever it is. Gmail puts the inline copy inside a
+  // multipart/alternative and *also* attaches invite.ics — and it externalises
+  // whichever it likes, leaving `attachmentId` and no `data`. Requiring inline
+  // bytes meant every real invitation with an externalised part was missed.
+  let cal: GmailPart | undefined
   for (const p of parts(msg.payload)) {
-    const isCal = p.mimeType?.startsWith('text/calendar')
+    const isCal = p.mimeType?.toLowerCase().startsWith('text/calendar')
+      || p.mimeType?.toLowerCase().startsWith('application/ics')
       || /\.ics$/i.test(p.filename ?? '')
-    if (isCal && p.body?.data) { ics = decode(p.body.data); break }
+    if (!isCal) continue
+    // Prefer one we already have the bytes for; fall back to the first.
+    if (p.body?.data) { cal = p; break }
+    if (!cal) cal = p
   }
+  if (!cal) return null
+
+  let raw = cal.body?.data
+  if (!raw && cal.body?.attachmentId) {
+    raw = (await fetchAttachment(msg.id, cal.body.attachmentId, account)) ?? undefined
+  }
+  if (!raw) return null
+  const ics = decode(raw)
   if (!ics) return null
 
   const body = unfold(ics)
-  const method = (prop(body, 'METHOD') || header(msg.payload?.headers ?? [], 'X-Google-Calendar-Method')).toUpperCase()
+  // METHOD is a property of the calendar, but it is also a parameter on the
+  // part's own content type — and some senders set only one of the two.
+  const inType = /method=([a-z]+)/i.exec(cal.mimeType ?? '')?.[1] ?? ''
+  const method = (prop(body, 'METHOD') || inType).toUpperCase()
   if (method !== 'REQUEST' && method !== 'CANCEL') return null
 
   const uid = prop(body, 'UID')

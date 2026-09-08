@@ -23,7 +23,7 @@ import type { GCalEvent } from '@/lib/googleCalendar'
 import type { EventStatus } from '@/lib/eventMetadata'
 import { loadEventStatuses, toggleEventStatus } from '@/lib/eventStatus'
 import { listUnreadThreadIds, getThread, header, extractBody, extractHtmlBody, archiveMessage, sendMail, escapeHtml } from '@/lib/gmail'
-import type { GmailHeader, MailAccount } from '@/lib/gmail'
+import type { GmailHeader, GmailMessage, MailAccount } from '@/lib/gmail'
 import { mailAccounts } from '@/modules/inbox/mailAccounts'
 import { briefsFor, rememberDraft, forgetBrief, type InboxBrief, type MailAction } from '@/lib/mailBriefs'
 import { extractInvite, respondToInvite, RSVP_LABEL, type Invite, type Rsvp } from '@/lib/invitations'
@@ -226,9 +226,9 @@ interface MailRow {
   /** Which mailbox it arrived in. A merged list you cannot act on is a list
    *  you do not know where a reply would leave from. */
   account: MailAccount
-  /** Set when the message is a calendar invitation, which is answered by
-   *  RSVPing rather than by writing back. */
-  invite: Invite | null
+  /** The message itself. An invitation is read out of it after the rows are
+   *  drawn, because reading one can cost an attachment fetch. */
+  raw: GmailMessage
 }
 
 /** The message itself, in a window that closes when you click away from it. */
@@ -811,7 +811,7 @@ const MAIL_SHOWN = 6
 function MailCard({
   rows, loading, error, boxes, newsletters, briefs, briefing, briefNote,
   onArchive, onArchiveAll, onOpenInbox, onOpen, onOpenDraft,
-  rsvpBusy, rsvpDone, rsvpError, onRespond,
+  invites, rsvpBusy, rsvpDone, rsvpError, onRespond,
 }: {
   rows: MailRow[]
   loading: boolean
@@ -829,6 +829,8 @@ function MailCard({
   onOpenInbox: () => void
   onOpen: (row: MailRow) => void
   onOpenDraft: (row: MailRow) => void
+  /** Which messages are invitations, and the RSVP state of each. */
+  invites: Record<string, Invite>
   /** RSVP state, keyed by thread id, and the one way to change it. */
   rsvpBusy: Record<string, Rsvp>
   rsvpDone: Record<string, Rsvp>
@@ -843,28 +845,28 @@ function MailCard({
   // about while the summaries land.
   const counts = useMemo(() => {
     const c: Record<MailAction, number> = { reply: 0, schedule: 0, decide: 0, read: 0 }
-    for (const r of rows) c[r.invite ? 'schedule' : briefs[r.id]?.action ?? 'read'] += 1
+    for (const r of rows) c[invites[r.messageId] ? 'schedule' : briefs[r.id]?.action ?? 'read'] += 1
     return c
-  }, [rows, briefs])
+  }, [rows, briefs, invites])
   const wants = counts.reply + counts.schedule + counts.decide
 
   // What the card actually lists. A filter that survives its own chip
   // disappearing would leave you looking at nothing and no way back.
   const shown = useMemo(
-    () => filter ? rows.filter(r => (r.invite ? 'schedule' : briefs[r.id]?.action) === filter) : rows,
-    [rows, briefs, filter],
+    () => filter ? rows.filter(r => (invites[r.messageId] ? 'schedule' : briefs[r.id]?.action) === filter) : rows,
+    [rows, briefs, filter, invites],
   )
   useEffect(() => { if (filter && counts[filter] === 0) setFilter(null) }, [filter, counts])
 
   /** Who has been waiting longest for an answer, and how long. */
   const oldest = useMemo(() => {
     const waiting = rows
-      .filter(r => r.invite || (briefs[r.id]?.action && briefs[r.id]?.action !== 'read'))
+      .filter(r => invites[r.messageId] || (briefs[r.id]?.action && briefs[r.id]?.action !== 'read'))
       .sort((a, b) => a.receivedAt.localeCompare(b.receivedAt))[0]
       ?? rows.filter(r => r.needsYou).sort((a, b) => a.receivedAt.localeCompare(b.receivedAt))[0]
     if (!waiting) return null
     return { who: (waiting.fromName || waiting.fromEmail).split(/[\s,]+/)[0], age: relAge(waiting.receivedAt) }
-  }, [rows, briefs])
+  }, [rows, briefs, invites])
 
   return (
     <div style={CARD}>
@@ -874,7 +876,7 @@ function MailCard({
           ? 'reading your inbox…'
           : <MailStats
               counts={counts} boxes={boxes} bulk={newsletters.length} thinking={briefing}
-              classified={rows.some(r => briefs[r.id] || r.invite)}
+              classified={rows.some(r => briefs[r.id] || invites[r.messageId])}
               addressed={rows.filter(r => r.needsYou).length}
               filter={filter}
               onFilter={setFilter}
@@ -956,9 +958,9 @@ function MailCard({
               )}
 
               {/* An invitation is answered, not replied to. */}
-              {r.invite ? (
+              {invites[r.messageId] ? (
                 <InviteActions
-                  invite={r.invite}
+                  invite={invites[r.messageId]}
                   busy={rsvpBusy[r.id] ?? null}
                   answered={rsvpDone[r.id] ?? null}
                   error={rsvpError[r.id] ?? null}
@@ -969,7 +971,7 @@ function MailCard({
 
               {/* And the answer to it, where it wants one. Clicking opens it to
                   be read; nothing is ever sent from the card. */}
-              {!r.invite && briefs[r.id]?.draft && (
+              {!invites[r.messageId] && briefs[r.id]?.draft && (
                 <button
                   onClick={() => onOpenDraft(r)}
                   style={{
@@ -1560,6 +1562,8 @@ export function TodayPage() {
   const [briefNote, setBriefNote] = useState<string | null>(null)
   const [draftFor, setDraftFor] = useState<MailRow | null>(null)
   /** Which invitation is being answered, and how each one was answered. */
+  /** Which messages turned out to be invitations, by message id. */
+  const [invites, setInvites] = useState<Record<string, Invite>>({})
   const [rsvpBusy, setRsvpBusy] = useState<Record<string, Rsvp>>({})
   const [rsvpDone, setRsvpDone] = useState<Record<string, Rsvp>>({})
   const [rsvpError, setRsvpError] = useState<Record<string, string>>({})
@@ -1652,7 +1656,7 @@ export function TodayPage() {
           needsYou: !isBulk && !!me && to.includes(me),
           newsletter: isBulk,
           account,
-          invite: extractInvite(last),
+          raw: last,
         }
         ;(isBulk ? bulk : rows).push(row)
       }
@@ -1728,21 +1732,46 @@ export function TodayPage() {
 
   useEffect(() => { void runBriefs(mail) }, [mail, runBriefs])
 
+  // Which of these are invitations. Off the render path: the rows draw at once
+  // and the RSVP row appears when the calendar part has been read, which for an
+  // externalised invite.ics is a request of its own.
+  const inviteSeen = useRef<Set<string>>(new Set())
+  useEffect(() => {
+    const todo = mail.filter(r => !inviteSeen.current.has(r.messageId))
+    if (todo.length === 0) return
+    todo.forEach(r => inviteSeen.current.add(r.messageId))
+    let live = true
+    void (async () => {
+      const found = await Promise.all(todo.map(async r => {
+        try {
+          const invite = await extractInvite(r.raw, r.account)
+          return invite ? { messageId: r.messageId, invite } : null
+        } catch { return null }
+      }))
+      if (!live) return
+      const hits = found.filter((f): f is { messageId: string; invite: Invite } => !!f)
+      if (hits.length === 0) return
+      setInvites(prev => ({ ...prev, ...Object.fromEntries(hits.map(h => [h.messageId, h.invite])) }))
+    })()
+    return () => { live = false }
+  }, [mail])
+
   /** Answer an invitation on the calendar it actually lives on. */
   const respondToInvitation = useCallback(async (row: MailRow, answer: Rsvp) => {
-    if (!row.invite) return
+    const invite = invites[row.messageId]
+    if (!invite) return
     setRsvpBusy(p => ({ ...p, [row.id]: answer }))
     setRsvpError(p => { const n = { ...p }; delete n[row.id]; return n })
-    const res = await respondToInvite(row.invite, row.account, answer)
+    const res = await respondToInvite(invite, row.account, answer)
     setRsvpBusy(p => { const n = { ...p }; delete n[row.id]; return n })
     if (res.ok) {
       setRsvpDone(p => ({ ...p, [row.id]: answer }))
-      notify(`${RSVP_LABEL[answer]} to ${row.invite.summary}`)
+      notify(`${RSVP_LABEL[answer]} to ${invite.summary}`)
     } else {
       // Never a bare failure: the reason is the whole value of the message.
       setRsvpError(p => ({ ...p, [row.id]: res.why ?? 'Google would not record the reply.' }))
     }
-  }, [])
+  }, [invites])
 
   /** Throw one brief away and write it again — the popup's Rewrite. */
   const rewriteDraft = useCallback(async (row: MailRow) => {
@@ -2011,6 +2040,7 @@ export function TodayPage() {
             onOpenInbox={() => setActiveModule('inbox')}
             onOpen={setOpenMail}
             onOpenDraft={setDraftFor}
+            invites={invites}
             rsvpBusy={rsvpBusy}
             rsvpDone={rsvpDone}
             rsvpError={rsvpError}

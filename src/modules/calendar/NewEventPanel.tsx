@@ -176,7 +176,7 @@ export function ComposerShell({ panelRef, onClose, expanded, children }: {
         maxHeight: 'calc(100% - 14px)', overflowY: 'auto', scrollbarWidth: 'thin',
         background: C.page, border: `var(--sb-border-width) solid ${C.border}`,
         borderRadius: 'var(--sb-r-frame)', boxShadow: 'var(--sb-shadow-control)',
-        display: 'flex', flexDirection: 'column', gap: 10, padding: 10,
+        display: 'flex', flexDirection: 'column', gap: 10, padding: '10px 14px 12px',
       }}>
       {children}
     </aside>
@@ -381,17 +381,6 @@ export function NewEventPanel({
   const [moveError, setMoveError] = useState<string | null>(null)
 
   const ref = useRef<HTMLDivElement>(null)
-  // Completed and Cancelled carry their words when the panel is wide enough
-  // for them beside the calendar name, and fall back to their glyphs when it
-  // is not. A clamp from 320 to 440 cannot be answered with one guess.
-  const [roomy, setRoomy] = useState(false)
-  useEffect(() => {
-    const el = ref.current
-    if (!el || typeof ResizeObserver === 'undefined') return
-    const ro = new ResizeObserver(([e]) => setRoomy(e.contentRect.width >= 400))
-    ro.observe(el)
-    return () => ro.disconnect()
-  }, [])
   const titleRef = useRef<HTMLInputElement>(null)
   // An existing event is read far more often than it is retitled; stealing the
   // caret on open would put the cursor in the one field you rarely want.
@@ -554,13 +543,11 @@ export function NewEventPanel({
             can read at a glance, and knowing an event is cancelled is the
             whole reason to look at it. */}
         {([
-          { id: 'done' as const,      label: 'Completed', Icon: CheckCircle2,
-            fill: 'var(--sb-positive)', ink: 'var(--sb-positive-deep)',
+          { id: 'done' as const,      Icon: CheckCircle2, fill: 'var(--sb-positive)',
             on: 'Not done after all', off: 'Mark it done' },
-          { id: 'cancelled' as const, label: 'Cancelled', Icon: XCircle,
-            fill: 'var(--sb-negative)', ink: C.bad,
+          { id: 'cancelled' as const, Icon: XCircle,      fill: 'var(--sb-negative)',
             on: 'Back on', off: 'Mark it cancelled' },
-        ]).map(({ id, label, Icon, fill, ink, on, off }) => {
+        ]).map(({ id, Icon, fill, on, off }) => {
           const set = status === id
           return (
             <button
@@ -568,22 +555,13 @@ export function NewEventPanel({
               title={set ? on : off}
               aria-pressed={set}
               onClick={() => setStatus(s => s === id ? null : id)}
-              style={roomy ? {
-                display: 'inline-flex', alignItems: 'center', gap: 5, flexShrink: 0,
-                height: 26, padding: '0 10px', borderRadius: 'var(--sb-r-pill)', cursor: 'pointer',
-                fontFamily: 'inherit', fontSize: 'var(--sb-t-meta)', fontWeight: 700,
-                background: set ? fill : C.card,
-                border: `var(--sb-border-width) solid ${set ? fill : C.border}`,
-                color: set ? 'var(--sb-ink-on-fill)' : ink,
-                boxShadow: set ? '0 1px 3px color-mix(in srgb, var(--sb-ink-1) 22%, transparent)' : undefined,
-              } : {
+              style={{
                 ...ROUND,
                 background: set ? fill : 'transparent',
                 color: set ? 'var(--sb-ink-on-fill)' : C.third,
                 boxShadow: set ? '0 1px 3px color-mix(in srgb, var(--sb-ink-1) 22%, transparent)' : undefined,
               }}>
               <Icon size={ICON.sm} strokeWidth={set ? STROKE.active : STROKE.rest} />
-              {roomy && label}
             </button>
           )
         })}
@@ -1047,7 +1025,7 @@ export function NewEventPanel({
           Cancel. */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 8,
-        position: 'sticky', bottom: -10, padding: '10px 56px 4px 6px', marginTop: -2,
+        position: 'sticky', bottom: -12, padding: '10px 44px 6px 2px', marginTop: -2,
         background: C.page,
       }}>
         {editing ? (
