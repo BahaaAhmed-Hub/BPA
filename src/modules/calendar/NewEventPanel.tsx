@@ -21,7 +21,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   MapPin, Video, X, Trash2, CheckCircle2, XCircle, RefreshCw, Paperclip,
-  Upload, List, ChevronDown, ChevronRight, Plus, Bell,
+  Upload, List, ChevronDown, ChevronRight, Plus, Bell, ExternalLink,
 } from 'lucide-react'
 import { ICON, STROKE } from '@/lib/type'
 import { loadDynamicCompanies } from '@/types'
@@ -73,6 +73,18 @@ export const LABEL: React.CSSProperties = {
   margin: 0, fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: C.third,
 }
 export const NUM: React.CSSProperties = { fontVariantNumeric: 'tabular-nums' }
+
+/** The square that opens a row — place, call. Lit when the row is open. */
+export function GLYPH(on: boolean): React.CSSProperties {
+  return {
+    width: 'var(--sb-h-pill)', height: 'var(--sb-h-pill)', borderRadius: 'var(--sb-r-sm)',
+    flexShrink: 0, cursor: 'pointer', padding: 0,
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+    background: on ? C.ink : C.inset,
+    border: on ? 'var(--sb-border-width) solid transparent' : `var(--sb-border-width) solid ${C.border}`,
+    color: on ? C.onInk : C.third,
+  }
+}
 
 /** A pill: 999px, and the two states everything in here uses. */
 export function pill(on: boolean, h?: number): React.CSSProperties {
@@ -261,6 +273,14 @@ function describeAlertMinutes(m: number): string {
   return `${m} min before`
 }
 
+/** What each provider is called, and what the button can honestly promise.
+ *  The app never asks which one you use: it is a fact about the account the
+ *  calendar belongs to, settled when that account was connected. */
+const PROVIDER = {
+  google: { name: 'Google Meet', hint: 'Google mints the link on the event itself' },
+  teams:  { name: 'Teams',       hint: 'Outlook mints the link when the invitation goes out' },
+} as const
+
 const KINDS = ['Working session', 'Meeting', 'Focus', 'Class'] as const
 type Kind = typeof KINDS[number]
 
@@ -340,14 +360,12 @@ export function NewEventPanel({
   const [startTime, setStartTime] = useState(existing?.startTime ?? pad(startMin))
   const [endTime, setEndTime] = useState(existing?.endTime ?? pad(endMin))
   const [allDay, setAllDay] = useState(existing?.allDay ?? false)
-  const [kind, setKind] = useState<Kind>(memory.kind ?? 'Meeting')
 
   const [placeOpen, setPlaceOpen] = useState(!!existing?.location)
   const [onlineOpen, setOnlineOpen] = useState(!!existing?.meetLink)
   const [location, setLocation] = useState(existing?.location ?? '')
   const [meetLink, setMeetLink] = useState(existing?.meetLink ?? '')
   const [addMeet, setAddMeet] = useState(false)
-  const [conf, setConf] = useState<'google' | 'teams'>(provider)
 
   const [repeat, setRepeat] = useState<Recur | null>(existing?.repeat ?? null)
   const [endsMode, setEndsMode] = useState<'never' | 'count' | 'until'>(
@@ -357,12 +375,15 @@ export function NewEventPanel({
 
   const [people, setPeople] = useState<ComposerInvitee[]>(existing?.invitees ?? [])
   const [invitee, setInvitee] = useState('')
+  const [inviteeError, setInviteeError] = useState<string | null>(null)
+  const inviteeRef = useRef<HTMLInputElement>(null)
 
   const [files, setFiles] = useState<{ name: string; size: number; kind: string }[]>(existing?.files ?? [])
   const [dropping, setDropping] = useState(false)
 
   const [extrasOpen, setExtrasOpen] = useState(false)
   const [notes, setNotes] = useState(existing?.notes ?? '')
+  const notesRef = useRef<HTMLTextAreaElement>(null)
   const [visibility, setVisibility] = useState<'default' | 'private' | 'public'>(existing?.visibility ?? 'default')
   const [status, setStatus] = useState<'done' | 'cancelled' | null>(existing?.status ?? null)
   const [moveError, setMoveError] = useState<string | null>(null)
@@ -437,16 +458,25 @@ export function NewEventPanel({
 
   function addPerson(raw: string) {
     const email = raw.trim().toLowerCase().replace(/,$/, '')
-    if (email && email.includes('@') && !people.some(p => p.email === email)) {
-      const next = [...people, { email }]
-      setPeople(next); pushPeople(next)
+    if (!email) { setInvitee(''); setInviteeError(null); return }
+    // Silently dropping what you typed is the worst possible answer: it reads
+    // exactly like the field being broken, which is what it was reported as.
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setInviteeError(`${email} is not an email address`)
+      return
     }
-    setInvitee('')
+    if (people.some(p => p.email === email)) {
+      setInviteeError(`${email} is already invited`)
+      return
+    }
+    const next = [...people, { email }]
+    setPeople(next); pushPeople(next)
+    setInvitee(''); setInviteeError(null)
   }
 
   function submit() {
     if (!title.trim()) return
-    saveMemory({ minutes, venue: location.trim() || undefined, kind })
+    saveMemory({ minutes, venue: location.trim() || undefined })
     const rule: Recur | null = repeat
       ? { ...repeat, ...(endsMode === 'count' ? { count } : {}), ...(endsMode === 'until' && until ? { until } : {}) }
       : null
@@ -475,48 +505,65 @@ export function NewEventPanel({
             it — the picker is an invisible select the size of the chip. */}
         <span style={{ position: 'relative', display: 'inline-flex', flex: 1, minWidth: 0 }}>
           <span
-            title={onMoveCalendar ? 'Move this to another calendar' : company}
+            title={editing ? 'Move this to another calendar' : 'Which calendar it goes on'}
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 6, minWidth: 0, maxWidth: '100%',
               fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
               letterSpacing: '-.02em', color: C.text,
-              cursor: onMoveCalendar ? 'pointer' : 'default',
+              cursor: 'pointer',
             }}>
             <span style={{
               minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             }}>{company}</span>
-            {onMoveCalendar && <ChevronDown size={ICON.sm} strokeWidth={1.8} color={C.faint} style={{ flexShrink: 0 }} />}
+            <ChevronDown size={ICON.sm} strokeWidth={1.8} color={C.faint} style={{ flexShrink: 0 }} />
           </span>
-          {onMoveCalendar && (
+          {(
             <select
               value={calId}
               onChange={async e => {
                 const to = e.target.value
                 setMoveError(null)
+                // On an event that exists this is a move, and Google may
+                // refuse it; on one being composed it just picks where it
+                // lands, and nothing can fail.
+                if (!onMoveCalendar) { setCalId(to); return }
                 const why = await onMoveCalendar(to)
                 if (why) setMoveError(why); else setCalId(to)
               }}
               style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', border: 'none' }}>
               {writable.map(c => (
                 <option key={c.id} value={c.id}>
-                  {(c.summaryOverride ?? c.summary) + (c.accountEmail && c.accountEmail !== organiser ? ` — ${c.accountEmail}` : '')}
+                  {(c.summaryOverride ?? c.summary)}{c.accountEmail ? ` · ${c.accountEmail}` : ''}
                 </option>
               ))}
             </select>
           )}
         </span>
 
+        {/* Set, these are solid — a tint on a 28px circle is not a state you
+            can read at a glance, and knowing an event is cancelled is the
+            whole reason to look at it. */}
         <button
           title={status === 'done' ? 'Not done after all' : 'Mark it done'}
           onClick={() => setStatus(s => s === 'done' ? null : 'done')}
-          style={{ ...ROUND, background: status === 'done' ? C.goodSurf : 'transparent', color: status === 'done' ? C.goodInk : C.third }}>
-          <CheckCircle2 size={ICON.sm} strokeWidth={STROKE.rest} />
+          style={{
+            ...ROUND,
+            background: status === 'done' ? 'var(--sb-positive)' : 'transparent',
+            color: status === 'done' ? 'var(--sb-ink-on-fill)' : C.third,
+            boxShadow: status === 'done' ? '0 1px 3px color-mix(in srgb, var(--sb-ink-1) 22%, transparent)' : undefined,
+          }}>
+          <CheckCircle2 size={ICON.sm} strokeWidth={status === 'done' ? STROKE.active : STROKE.rest} />
         </button>
         <button
           title={status === 'cancelled' ? 'Back on' : 'Mark it cancelled'}
           onClick={() => setStatus(s => s === 'cancelled' ? null : 'cancelled')}
-          style={{ ...ROUND, background: status === 'cancelled' ? C.inset : 'transparent', color: status === 'cancelled' ? C.bad : C.third }}>
-          <XCircle size={ICON.sm} strokeWidth={STROKE.rest} />
+          style={{
+            ...ROUND,
+            background: status === 'cancelled' ? 'var(--sb-negative)' : 'transparent',
+            color: status === 'cancelled' ? 'var(--sb-ink-on-fill)' : C.third,
+            boxShadow: status === 'cancelled' ? '0 1px 3px color-mix(in srgb, var(--sb-ink-1) 22%, transparent)' : undefined,
+          }}>
+          <XCircle size={ICON.sm} strokeWidth={status === 'cancelled' ? STROKE.active : STROKE.rest} />
         </button>
         <button
           title={editing ? 'Delete this event' : 'Discard this event'}
@@ -544,88 +591,81 @@ export function NewEventPanel({
             letterSpacing: '-.03em', lineHeight: 1, color: C.text,
           }} />
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          {([
-            { on: placeOpen, set: setPlaceOpen, Icon: MapPin, title: 'Add a place' },
-            { on: onlineOpen, set: setOnlineOpen, Icon: Video, title: 'Add a call' },
-          ]).map(({ on, set, Icon, title: t }) => (
-            <button key={t} title={t} onClick={() => set(v => !v)}
-              style={{
-                width: 'var(--sb-h-pill)', height: 'var(--sb-h-pill)', borderRadius: 'var(--sb-r-sm)', flexShrink: 0, cursor: 'pointer',
-                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                background: on ? C.ink : C.inset,
-                border: on ? '1px solid transparent' : `1px solid ${C.border}`,
-                color: on ? C.onInk : C.third,
-              }}>
-              <Icon size={17} strokeWidth={1.8} />
-            </button>
-          ))}
-          {!placeOpen && !onlineOpen && (
-            <span style={{ fontSize: 'var(--sb-t-meta)', color: C.faint }}>Tap to add a place or a call</span>
+        {/* Place and call are one row each, opened by their own glyph — the
+            glyph, the field and the action on the same line, rather than a
+            row of buttons that reveals a second row of fields below it. */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+          <button
+            title={placeOpen ? 'Drop the place' : 'Add a place'}
+            onClick={() => { if (placeOpen && location) { setLocation(''); push({ location: '' }) } setPlaceOpen(v => !v) }}
+            style={GLYPH(placeOpen)}>
+            <MapPin size={17} strokeWidth={1.8} />
+          </button>
+          {placeOpen ? (
+            <label style={{ ...FIELD, flex: 1 }}>
+              <input
+                autoFocus
+                value={location}
+                onChange={e => { setLocation(e.target.value); pushWords({ location: e.target.value }) }}
+                placeholder="Room, office or address" style={BARE} />
+              {memory.venue && !location && (
+                <button onClick={() => { setLocation(memory.venue!); push({ location: memory.venue! }) }}
+                  style={{
+                    background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0,
+                    fontSize: 'var(--sb-t-meta)', color: C.faint,
+                  }}>
+                  {memory.venue}
+                </button>
+              )}
+            </label>
+          ) : (
+            <span style={{ fontSize: 'var(--sb-t-meta)', color: C.faint }}>Add a place</span>
           )}
         </div>
 
-        {(placeOpen || onlineOpen) && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {placeOpen && (
-              <label style={FIELD}>
-                <MapPin size={ICON.md} strokeWidth={1.8} color={C.third} style={{ flexShrink: 0 }} />
-                <input value={location}
-                  onChange={e => { setLocation(e.target.value); pushWords({ location: e.target.value }) }}
-                  placeholder="Add a place" style={BARE} />
-                {memory.venue && !location && (
-                  <button onClick={() => { setLocation(memory.venue!); push({ location: memory.venue! }) }}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'var(--sb-t-meta)', color: C.faint, flexShrink: 0 }}>
-                    Recent: {memory.venue}
-                  </button>
-                )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+          <button
+            title={onlineOpen ? 'Drop the call' : 'Add a call'}
+            onClick={() => setOnlineOpen(v => !v)}
+            style={GLYPH(onlineOpen || !!meetLink)}>
+            <Video size={17} strokeWidth={1.8} />
+          </button>
+          {onlineOpen || meetLink ? (
+            meetLink ? (
+              <label style={{ ...FIELD, flex: 1 }}>
+                <input value={meetLink} onChange={e => setMeetLink(e.target.value)}
+                  placeholder="Meeting link" style={BARE} />
+                <a href={meetLink} target="_blank" rel="noopener noreferrer"
+                  title="Open the call"
+                  style={{ display: 'inline-flex', flexShrink: 0, color: C.third }}>
+                  <ExternalLink size={ICON.sm} strokeWidth={1.8} />
+                </a>
               </label>
-            )}
-
-            {onlineOpen && (
-              <>
-                <label style={FIELD}>
-                  <Video size={ICON.md} strokeWidth={1.8} color={C.third} style={{ flexShrink: 0 }} />
-                  <input value={meetLink} onChange={e => setMeetLink(e.target.value)}
-                    placeholder="Paste a meeting link" style={BARE} />
-                  <button
-                    onClick={() => { if (editing) onAddMeet?.(); else setAddMeet(v => !v) }}
-                    title={conf === 'teams'
-                      ? 'A Teams link is made by Outlook when the invitation goes out'
-                      : 'Google makes the link when the event is created'}
-                    style={{
-                      display: 'inline-flex', alignItems: 'center', gap: 6, height: 'var(--sb-h-pill)', padding: '0 11px',
-                      borderRadius: 'var(--sb-r-sm)', border: 'none', cursor: 'pointer', flexShrink: 0,
-                      background: addMeet && !editing ? C.ink : C.card,
-                      color: addMeet && !editing ? C.onInk : C.text,
-                      fontFamily: 'inherit', fontSize: 'var(--sb-t-meta)', fontWeight: 600,
-                    }}>
-                    {conf === 'teams' ? 'Create Teams link' : 'Create Google Meet'}
-                    <ChevronDown size={ICON.sm} strokeWidth={1.8} />
-                  </button>
-                </label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: 'var(--sb-t-meta)', color: C.faint }}>Your workspace provider</span>
-                  {([['google', 'Google Meet'], ['teams', 'Microsoft Teams']] as const).map(([id, label]) => (
-                    <button key={id} onClick={() => setConf(id)}
-                      style={{ ...pill(false), background: conf === id ? C.inset : C.card }}>
-                      {conf === id && <span style={{ width: 6, height: 6, borderRadius: 'var(--sb-r-pill)', background: C.ink }} />}
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-        )}
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
-          {KINDS.map(k => (
-            <button key={k} onClick={() => setKind(k)} style={pill(kind === k)}>
-              {kind === k && <span style={{ width: 6, height: 6, borderRadius: 'var(--sb-r-pill)', background: C.gold }} />}
-              {k}
-            </button>
-          ))}
+            ) : (
+              <button
+                onClick={() => {
+                  // On an event that exists Google mints the link now; on one
+                  // being composed it is minted the moment it is created,
+                  // because there is no event to hang a conference on yet.
+                  if (editing) onAddMeet?.()
+                  else setAddMeet(v => !v)
+                }}
+                title={PROVIDER[provider].hint}
+                style={{
+                  ...FIELD, flex: 1, cursor: 'pointer', justifyContent: 'flex-start',
+                  background: addMeet && !editing ? C.ink : 'var(--sb-field)',
+                  border: `var(--sb-border-width) solid ${addMeet && !editing ? 'transparent' : C.border}`,
+                  color: addMeet && !editing ? C.onInk : C.text,
+                  fontWeight: 600,
+                }}>
+                {addMeet && !editing
+                  ? `${PROVIDER[provider].name} link on create`
+                  : `Create a ${PROVIDER[provider].name} link`}
+              </button>
+            )
+          ) : (
+            <span style={{ fontSize: 'var(--sb-t-meta)', color: C.faint }}>Add a call</span>
+          )}
         </div>
       </div>
 
@@ -642,66 +682,84 @@ export function NewEventPanel({
           </span>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        {/* Date, from, to and All day on one line. All day does not remove the
+            times — it dims them, so you can still see what they were and
+            turning it back off does not feel like starting again. */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
           <label style={{
-            display: 'inline-flex', alignItems: 'center', gap: 8, height: 'var(--sb-h-pill)', padding: '0 11px',
-            borderRadius: 'var(--sb-r-nav)', background: C.ink, color: C.onInk, cursor: 'pointer',
-            fontSize: 'var(--sb-t-body-s)', fontWeight: 600, ...NUM, flexShrink: 0,
+            position: 'relative',
+            display: 'inline-flex', alignItems: 'center', gap: 5, height: 'var(--sb-h-pill)', padding: '0 9px',
+            borderRadius: 'var(--sb-r-sm)', background: C.ink, color: C.onInk, cursor: 'pointer',
+            fontSize: 'var(--sb-t-meta)', fontWeight: 600, ...NUM, flexShrink: 0,
           }}>
-            {startDateObj.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}
+            {startDateObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
             <input type="date" value={startDate}
               onChange={e => { setStartDate(e.target.value); pushTimes(e.target.value, startTime, endTime) }}
-              style={{ width: 0, opacity: 0, position: 'absolute', pointerEvents: 'none' }} />
-            <ChevronDown size={ICON.sm} strokeWidth={1.8} />
+              style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', border: 'none', padding: 0 }} />
           </label>
 
-          {!allDay && (
-            <>
-              <label style={{ ...FIELD, flex: '1 1 96px', minWidth: 90, padding: '0 6px' }}>
-                <input type="time" value={startTime}
-                  onChange={e => {
-                    const v = e.target.value, to = pad(toMin(v) + minutes)
-                    setStartTime(v); setEndTime(to); pushTimes(startDate, v, to)
-                  }}
-                  style={{ ...BARE, ...NUM, fontSize: 'var(--sb-t-meta)' }} />
-              </label>
-              <span style={{ fontSize: 'var(--sb-t-meta)', color: C.faint, flexShrink: 0 }}>to</span>
-              <label style={{ ...FIELD, flex: '1 1 96px', minWidth: 90, padding: '0 6px' }}>
-                <input type="time" value={endTime}
-                  onChange={e => { setEndTime(e.target.value); pushTimes(startDate, startTime, e.target.value) }}
-                  style={{ ...BARE, ...NUM, fontSize: 'var(--sb-t-meta)' }} />
-              </label>
-            </>
-          )}
+          <span style={{
+            display: 'flex', alignItems: 'center', gap: 4, flex: 1, minWidth: 0,
+            opacity: allDay ? 0.4 : 1, pointerEvents: allDay ? 'none' : undefined,
+            transition: 'opacity 120ms ease-out',
+          }}>
+            <label style={{ ...FIELD, flex: '1 1 0', minWidth: 0, padding: '0 4px' }}>
+              <input type="time" value={startTime} disabled={allDay}
+                onChange={e => {
+                  const v = e.target.value, to = pad(toMin(v) + minutes)
+                  setStartTime(v); setEndTime(to); pushTimes(startDate, v, to)
+                }}
+                style={{ ...BARE, ...NUM, fontSize: 'var(--sb-t-meta)' }} />
+            </label>
+            <span style={{ fontSize: 'var(--sb-t-meta)', color: C.faint, flexShrink: 0 }}>–</span>
+            <label style={{ ...FIELD, flex: '1 1 0', minWidth: 0, padding: '0 4px' }}>
+              <input type="time" value={endTime} disabled={allDay}
+                onChange={e => { setEndTime(e.target.value); pushTimes(startDate, startTime, e.target.value) }}
+                style={{ ...BARE, ...NUM, fontSize: 'var(--sb-t-meta)' }} />
+            </label>
+          </span>
+
           <button
+            title={allDay ? 'Give it a time' : 'Make it all day'}
             onClick={() => { const v = !allDay; setAllDay(v); pushTimes(startDate, startTime, endTime, v) }}
-            style={pill(allDay)}>All day</button>
+            style={{ ...pill(allDay), padding: '0 9px', fontSize: 'var(--sb-t-meta)' }}>All day</button>
         </div>
 
         <div style={{ height: 1, background: C.hair }} />
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-            <RefreshCw size={ICON.sm} strokeWidth={1.8} color={C.third} />
-            <span style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: C.text }}>Repeats</span>
-            <span style={{ flex: 1 }} />
+          {/* One line. Five presets as pills wrapped onto three rows in a
+              400px column for a choice that is made once, if ever. */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+            <RefreshCw size={ICON.sm} strokeWidth={1.8} color={C.third} style={{ flexShrink: 0 }} />
+            <span style={{ ...LABEL, flexShrink: 0 }}>Repeats</span>
+            <label style={{ ...FIELD, flex: 1, minWidth: 0, position: 'relative' }}>
+              <span style={{
+                flex: 1, minWidth: 0, fontWeight: 600,
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              }}>
+                {preset === 'never' ? 'Never'
+                  : preset === 'weekly' ? `Weekly on ${weekday}`
+                  : preset === 'biweekly' ? 'Every 2 weeks'
+                  : preset === 'monthly' ? 'Monthly' : 'Custom'}
+              </span>
+              <ChevronDown size={ICON.sm} strokeWidth={1.8} color={C.faint} style={{ flexShrink: 0 }} />
+              <select
+                value={preset}
+                onChange={e => setPreset(e.target.value as Parameters<typeof setPreset>[0])}
+                style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', border: 'none' }}>
+                <option value="never">Never</option>
+                <option value="weekly">{`Weekly on ${weekday}`}</option>
+                <option value="biweekly">Every 2 weeks</option>
+                <option value="monthly">Monthly</option>
+                <option value="custom">Custom — every 3 weeks</option>
+              </select>
+            </label>
             {repeat && endsMode === 'count' && (
-              <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: C.goldInk, ...NUM }}>{count} occurrences</span>
+              <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 700, color: C.goldInk, ...NUM, flexShrink: 0 }}>×{count}</span>
             )}
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
-            {([
-              ['never', 'Never'],
-              ['weekly', `Weekly on ${weekday}`],
-              ['biweekly', 'Every 2 weeks'],
-              ['monthly', 'Monthly'],
-            ] as const).map(([id, label]) => (
-              <button key={id} onClick={() => setPreset(id)} style={pill(preset === id)}>{label}</button>
-            ))}
-            <button onClick={() => setPreset('custom')}
-              style={{ ...pill(preset === 'custom'), border: `1px dashed ${C.dashed}` }}>Custom…</button>
-          </div>
 
           {repeat && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
@@ -830,19 +888,26 @@ export function NewEventPanel({
         ))}
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '8px 0', borderTop: `1px solid ${C.hair}` }}>
-          <span style={{
-            width: 28, height: 28, borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
-            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-            border: `1px dashed ${C.dashed}`, color: C.faint,
-          }}><Plus size={ICON.sm} strokeWidth={1.8} /></span>
+          <button
+            title="Add an invitee"
+            onClick={() => inviteeRef.current?.focus()}
+            style={{
+              width: 28, height: 28, borderRadius: 'var(--sb-r-pill)', flexShrink: 0, padding: 0, cursor: 'pointer',
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              background: 'transparent', border: `1px dashed ${C.dashed}`, color: C.faint,
+            }}><Plus size={ICON.sm} strokeWidth={1.8} /></button>
           <input
+            ref={inviteeRef}
             value={invitee}
-            onChange={e => setInvitee(e.target.value)}
+            onChange={e => { setInvitee(e.target.value); if (inviteeError) setInviteeError(null) }}
             onKeyDown={e => { if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addPerson(invitee) } }}
-            onBlur={() => invitee && addPerson(invitee)}
+            onBlur={() => { if (invitee.trim()) addPerson(invitee) }}
             placeholder="name@company.com"
             style={{ ...BARE, fontSize: 'var(--sb-t-body-s)' }} />
         </div>
+        {inviteeError && (
+          <span style={{ fontSize: 'var(--sb-t-meta)', color: C.bad, paddingLeft: 39 }}>{inviteeError}</span>
+        )}
       </div>
 
       {/* ── 5 · Attachments ────────────────────────────────────────────────── */}
@@ -903,7 +968,13 @@ export function NewEventPanel({
       {/* ── 6 · The rest, folded away ──────────────────────────────────────── */}
       <div style={{ ...CARD, gap: 10, paddingBottom: extrasOpen ? 14 : 12 }}>
         <button
-          onClick={() => setExtrasOpen(v => !v)}
+          onClick={() => {
+            const open = !extrasOpen
+            setExtrasOpen(open)
+            // Opening a section to write in and leaving the caret where it was
+            // means every use of it costs an extra click.
+            if (open) window.setTimeout(() => notesRef.current?.focus(), 0)
+          }}
           style={{
             display: 'flex', alignItems: 'center', gap: 10, width: '100%',
             background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'inherit',
@@ -920,8 +991,9 @@ export function NewEventPanel({
         {extrasOpen && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 12 }}>
             <textarea
+              ref={notesRef}
               value={notes}
-              onChange={e => setNotes(e.target.value)}
+              onChange={e => { setNotes(e.target.value); pushWords({ description: e.target.value }) }}
               rows={3}
               placeholder="Anything worth remembering…"
               style={{

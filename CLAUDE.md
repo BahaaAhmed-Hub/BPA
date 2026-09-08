@@ -108,6 +108,16 @@ gone, and with it the last of `--sb-ev-type`.
 - What is only true of an event that exists arrives as props: `clashes`,
   `alertMinutes`/`onAlert`, `onAddMeet`, `onMoveCalendar`, `onDelete`, and
   `extra` for prep and "Open in Google Calendar".
+- **The provider is read, not asked.** Which conferencing an account uses is
+  settled when the account is connected; a "your workspace provider" picker in
+  the composer asked you to answer a question the app already knows. The Meet
+  button mints the link — on an event that exists, now (`onAddMeet`); on one
+  being composed, on create, because there is no event to hang a conference on
+  yet.
+- **One line each.** Place and call are a glyph, a field and its action on one
+  row. Date, from, to and All day are one row — All day *dims* the times rather
+  than removing them, so turning it back off is not starting again. Repeats is
+  one row: five presets as pills wrapped onto three in a 400px column.
 - **A bare click on the grid no longer creates anything.** Drawing a span says
   when it is and how long it runs; a click says neither, and a panel opening
   under every stray click is one you spend the day closing. The two ways in are
