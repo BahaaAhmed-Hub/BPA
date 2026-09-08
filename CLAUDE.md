@@ -137,14 +137,20 @@ for an event that exists) and the composer (for one that does not) are the same
 object on screen. `ComposerShell` is that shell: **a cream panel holding white
 cards**, the separation between sections being that ground rather than a rule —
 eight banded sections in one column do not scan. Its box is **the task detail
-panel's**, to the value — bar the width, which is `clamp(320px, 34vw, 440px)`
+panel's**, to the value — bar the width, which is `clamp(289px, 30.6vw, 400px)`
 because a shell holding cards carries two more edges than a panel of rows and
 needs the room for them: `--sb-r-card`,
 `--sb-shadow-control`, `--sb-t-h2` title / `--sb-t-body-s` rows /
 `--sb-t-meta` captions, `--sb-h-pill` controls, sections separated by a
 hairline. Measured side by side, the two panels differ in nothing but content.
 - **Completed and Cancelled are glyphs**, solid in their own colour when set —
-  a tint on a 28px circle is not a state you can read.
+  a tint on a 28px circle is not a state you can read. In edit mode they call
+  `onStatus`, because the only thing that ever sent `status` was the Create call
+  an existing event never makes.
+- **A time field has a floor of 84px** and its row wraps rather than crushing
+  it. A native time input clips inside its own shadow DOM, so nothing on the
+  page reports it — at the narrow end of the clamp they had shrunk to 37px and
+  measured as perfectly fine.
 - **Docked, never floating.** A modal over the grid hides the one thing you
   need while editing an event. It is a column beside the grid, the way the
   task panel sits beside the board.

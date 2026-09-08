@@ -129,8 +129,10 @@ export const BARE: React.CSSProperties = {
  * are by definition outside a panel which did not exist when the finger went
  * down — so a handler on anything outside opens and closes it in one gesture.
  */
-export const PANEL_W = 'clamp(340px, 36vw, 470px)'
-export const PANEL_W_WIDE = 'min(560px, 62vw)'
+// 15% off every stop of the clamp, and off the expanded width with it — the
+// panel keeps its proportions rather than only its widest case shrinking.
+export const PANEL_W = 'clamp(289px, 30.6vw, 400px)'
+export const PANEL_W_WIDE = 'min(476px, 52.7vw)'
 
 export function ComposerShell({ panelRef, onClose, expanded, children }: {
   panelRef: React.RefObject<HTMLDivElement | null>
@@ -700,7 +702,7 @@ export function NewEventPanel({
         {/* Date, from, to and All day on one line. All day does not remove the
             times — it dims them, so you can still see what they were and
             turning it back off does not feel like starting again. */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, flexWrap: 'wrap', rowGap: 8 }}>
           <label style={{
             position: 'relative',
             display: 'inline-flex', alignItems: 'center', gap: 5, height: 'var(--sb-h-pill)', padding: '0 9px',
@@ -714,11 +716,11 @@ export function NewEventPanel({
           </label>
 
           <span style={{
-            display: 'flex', alignItems: 'center', gap: 4, flex: 1, minWidth: 0,
+            display: 'flex', alignItems: 'center', gap: 4, flex: '1 1 180px', minWidth: 180,
             opacity: allDay ? 0.4 : 1, pointerEvents: allDay ? 'none' : undefined,
             transition: 'opacity 120ms ease-out',
           }}>
-            <label style={{ ...FIELD, flex: '1 1 0', minWidth: 0, padding: '0 4px' }}>
+            <label style={{ ...FIELD, flex: '1 1 84px', minWidth: 84, padding: '0 4px' }}>
               <input type="time" value={startTime} disabled={allDay}
                 onChange={e => {
                   const v = e.target.value, to = pad(toMin(v) + minutes)
@@ -727,7 +729,7 @@ export function NewEventPanel({
                 style={{ ...BARE, ...NUM, fontSize: 'var(--sb-t-meta)' }} />
             </label>
             <span style={{ fontSize: 'var(--sb-t-meta)', color: C.faint, flexShrink: 0 }}>–</span>
-            <label style={{ ...FIELD, flex: '1 1 0', minWidth: 0, padding: '0 4px' }}>
+            <label style={{ ...FIELD, flex: '1 1 84px', minWidth: 84, padding: '0 4px' }}>
               <input type="time" value={endTime} disabled={allDay}
                 onChange={e => { setEndTime(e.target.value); pushTimes(startDate, startTime, e.target.value) }}
                 style={{ ...BARE, ...NUM, fontSize: 'var(--sb-t-meta)' }} />
@@ -944,9 +946,14 @@ export function NewEventPanel({
             background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'inherit',
           }}>
           <List size={ICON.md} strokeWidth={1.8} color={C.third} />
-          <span style={{ fontSize: 'var(--sb-t-body-s)', color: C.third }}>Notes, files, calendar, visibility</span>
+          <span style={{
+            fontSize: 'var(--sb-t-body-s)', color: C.third, minWidth: 0,
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>Notes and more</span>
           <span style={{ flex: 1 }} />
-          <span style={{ fontSize: 'var(--sb-t-meta)', color: C.faint }}>defaults are fine</span>
+          <span style={{
+            fontSize: 'var(--sb-t-meta)', color: C.faint, flexShrink: 0,
+          }}>defaults are fine</span>
           {extrasOpen
             ? <ChevronDown size={ICON.sm} strokeWidth={1.8} color={C.faint} />
             : <ChevronRight size={ICON.sm} strokeWidth={1.8} color={C.faint} />}
