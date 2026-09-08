@@ -91,51 +91,91 @@ function icsDate(raw: string): string {
  * invitation *you* sent — there is nothing for you to RSVP to there, and
  * offering the buttons would be offering to answer your own meeting.
  */
-export async function extractInvite(
-  msg: GmailMessage, account?: MailAccount,
-): Promise<Invite | null> {
-  // The calendar part, wherever it is. Gmail puts the inline copy inside a
-  // multipart/alternative and *also* attaches invite.ics — and it externalises
-  // whichever it likes, leaving `attachmentId` and no `data`. Requiring inline
-  // bytes meant every real invitation with an externalised part was missed.
-  let cal: GmailPart | undefined
-  for (const p of parts(msg.payload)) {
-    const isCal = p.mimeType?.toLowerCase().startsWith('text/calendar')
-      || p.mimeType?.toLowerCase().startsWith('application/ics')
-      || /\.ics$/i.test(p.filename ?? '')
-    if (!isCal) continue
-    // Prefer one we already have the bytes for; fall back to the first.
-    if (p.body?.data) { cal = p; break }
-    if (!cal) cal = p
+/** Anything that could be a calendar, however the sender labelled it. */
+function isCalendarPart(p: GmailPart): boolean {
+  const t = (p.mimeType ?? '').toLowerCase()
+  return t.includes('calendar') || t.includes('/ics') || /\.ics$/i.test(p.filename ?? '')
+}
+
+/**
+ * Google's own subject prefixes. Used only to tell "this is not an invitation"
+ * from "this is one and something went wrong reading it" — never to build an
+ * Invite, since a subject carries no UID and there is nothing to answer with.
+ */
+export function looksLikeInvitation(subject: string): boolean {
+  return /^\s*(invitation|updated invitation|invitation with note|cancelled event|canceled event|accepted|declined|tentatively accepted|注意)\s*:/i.test(subject)
+}
+
+export type InviteRead =
+  | { kind: 'invite'; invite: Invite }
+  | { kind: 'not-one' }
+  /** It is one, and this is as far as we got. Said on the row rather than hidden. */
+  | { kind: 'unreadable'; why: string }
+
+/**
+ * Read the invitation out of a thread.
+ *
+ * Every message, newest first — a thread whose latest message is a reply still
+ * carries the invitation further up, and reading only the last one missed it.
+ */
+export async function readInvite(
+  msgs: GmailMessage[], subject: string, account?: MailAccount,
+): Promise<InviteRead> {
+  for (const msg of [...msgs].reverse()) {
+    // Prefer a part we already have the bytes for; an externalised one costs a
+    // request, and Gmail externalises whichever copy it likes.
+    const cals = [...parts(msg.payload)].filter(isCalendarPart)
+    const ordered = [...cals.filter(p => p.body?.data), ...cals.filter(p => !p.body?.data)]
+
+    for (const cal of ordered) {
+      let raw = cal.body?.data
+      if (!raw && cal.body?.attachmentId) {
+        raw = (await fetchAttachment(msg.id, cal.body.attachmentId, account)) ?? undefined
+      }
+      if (!raw) continue
+      const ics = decode(raw)
+      if (!ics) continue
+
+      const body = unfold(ics)
+      // METHOD is a property of the calendar and also a parameter on the part's
+      // own content type; senders set one or the other, and Gmail strips the
+      // parameters off mimeType, so the body is usually the only one left.
+      const inType = /method=([a-z]+)/i.exec(cal.mimeType ?? '')?.[1] ?? ''
+      const method = (prop(body, 'METHOD') || inType).toUpperCase()
+      // A REPLY is somebody answering an invitation *you* sent; there is
+      // nothing for you to answer there.
+      if (method === 'REPLY' || method === 'COUNTER' || method === 'REFRESH') return { kind: 'not-one' }
+
+      const uid = prop(body, 'UID')
+      if (!uid) continue
+
+      // No METHOD at all still leaves a VEVENT with a UID, which is enough to
+      // answer — some senders omit it, and refusing them helps nobody.
+      const cancelled = method === 'CANCEL' || /^STATUS:CANCELLED$/im.test(body)
+      return {
+        kind: 'invite',
+        invite: {
+          uid,
+          summary: prop(body, 'SUMMARY') || '(no title)',
+          startsAt: icsDate(prop(body, 'DTSTART')),
+          endsAt: icsDate(prop(body, 'DTEND')),
+          organizer: prop(body, 'ORGANIZER').replace(/^mailto:/i, ''),
+          cancelled,
+        },
+      }
+    }
+
+    if (cals.length > 0) {
+      return { kind: 'unreadable', why: 'Its calendar attachment could not be read.' }
+    }
   }
-  if (!cal) return null
 
-  let raw = cal.body?.data
-  if (!raw && cal.body?.attachmentId) {
-    raw = (await fetchAttachment(msg.id, cal.body.attachmentId, account)) ?? undefined
-  }
-  if (!raw) return null
-  const ics = decode(raw)
-  if (!ics) return null
-
-  const body = unfold(ics)
-  // METHOD is a property of the calendar, but it is also a parameter on the
-  // part's own content type — and some senders set only one of the two.
-  const inType = /method=([a-z]+)/i.exec(cal.mimeType ?? '')?.[1] ?? ''
-  const method = (prop(body, 'METHOD') || inType).toUpperCase()
-  if (method !== 'REQUEST' && method !== 'CANCEL') return null
-
-  const uid = prop(body, 'UID')
-  if (!uid) return null
-
-  return {
-    uid,
-    summary: prop(body, 'SUMMARY') || '(no title)',
-    startsAt: icsDate(prop(body, 'DTSTART')),
-    endsAt: icsDate(prop(body, 'DTEND')),
-    organizer: prop(body, 'ORGANIZER').replace(/^mailto:/i, ''),
-    cancelled: method === 'CANCEL' || /^STATUS:CANCELLED$/im.test(body),
-  }
+  // Google's subject prefix says it is one even when no part came back — which
+  // is worth saying, because a silent fallback to a drafted reply is what sent
+  // us round this loop in the first place.
+  return looksLikeInvitation(subject)
+    ? { kind: 'unreadable', why: 'No calendar attachment came back with this message.' }
+    : { kind: 'not-one' }
 }
 
 // ─── Answering it ────────────────────────────────────────────────────────────
@@ -209,6 +249,40 @@ export async function respondToInvite(
   const res = await patchCalendarEventWithToken(token, found.calendarId, found.event.id, { attendees })
   if (!res.ok) return { ok: false, why: res.error ?? 'Google would not record the reply.' }
   return { ok: true }
+}
+
+// ─── Remembering what you answered ───────────────────────────────────────────
+//
+// The reply lives on Google, and asking it costs a request per invitation on
+// every load. What the row needs is only "did I answer this, and how", so the
+// answer is kept here against the event's UID — which is stable across every
+// copy of the invitation and every refresh.
+
+const ANSWERS_KEY = 'cal-invite-answers'
+const ANSWER_TTL = 30 * 24 * 60 * 60 * 1000
+
+type Answers = Record<string, { response: Rsvp; at: number }>
+
+function loadAnswers(): Answers {
+  try {
+    const raw = localStorage.getItem(ANSWERS_KEY)
+    const all = raw ? JSON.parse(raw) as Answers : {}
+    const cut = Date.now() - ANSWER_TTL
+    return Object.fromEntries(Object.entries(all).filter(([, v]) => v?.at > cut))
+  } catch { return {} }
+}
+
+/** What you answered this invitation, if you have. */
+export function answerFor(uid: string): Rsvp | null {
+  return loadAnswers()[uid]?.response ?? null
+}
+
+export function rememberAnswer(uid: string, response: Rsvp): void {
+  try {
+    localStorage.setItem(ANSWERS_KEY, JSON.stringify({
+      ...loadAnswers(), [uid]: { response, at: Date.now() },
+    }))
+  } catch { /* quota */ }
 }
 
 /** How each answer reads on a button, and to a screen reader. */

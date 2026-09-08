@@ -23,6 +23,7 @@ import {
   createCalendarEventWithToken,
   deleteCalendarEventWithToken,
   addMeetingToEvent,
+  removeMeetingFromEvent,
   efUpdateEvent,
   moveCalendarEventWithToken,
   efMoveEvent,
@@ -1698,6 +1699,20 @@ export function CalendarIntelligence() {
     } catch { return null }
   }
 
+  async function handleRemoveMeet(ev: GCalEventExt) {
+    const cal = allCalendars.find(c => c.id === ev.calendarId)
+    if (!cal || !ev.calendarId) return
+    const token = cal.accountId
+      ? await getGoogleToken(cal.accountEmail)
+      : (await refreshPrimaryToken() || cal.accountToken)
+    if (!token) return notify('Google is not connected.')
+    const res = await removeMeetingFromEvent(token, ev.calendarId, ev.id)
+    if (!res.ok) return notify(res.error ?? 'The call could not be removed.')
+    const merged = { ...ev, conferenceData: undefined }
+    setEvents(prev => prev.map(e => e.id === ev.id ? { ...e, conferenceData: undefined } : e))
+    if (selectedEvent?.id === ev.id) setSelectedEvent(merged as GCalEventExt)
+  }
+
   async function handleAddMeet(ev: GCalEventExt) {
     const cal = allCalendars.find(c => c.id === ev.calendarId)
     if (!cal || !ev.calendarId) return
@@ -2660,6 +2675,14 @@ export function CalendarIntelligence() {
             onSave={() => { /* an event that exists writes as it is edited */ }}
             onCancel={closePopup}
             onAddMeet={() => void handleAddMeet(ev)}
+            onRemoveMeet={() => void handleRemoveMeet(ev)}
+            onStatus={next => {
+              // toggleStatus flips; this sets. Only act when they disagree.
+              const now = eventStatuses[ev.id] ?? null
+              if (now === next) return
+              if (now) toggleStatus(ev.id, now)
+              if (next) toggleStatus(ev.id, next)
+            }}
             alertMinutes={ev.reminders?.useDefault === false ? (ev.reminders.overrides?.[0]?.minutes ?? -1) : undefined}
             onAlert={v => {
               if (v === 'default') return void handleUpdateEvent(ev, { reminders: { useDefault: true } })

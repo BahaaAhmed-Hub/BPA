@@ -61,7 +61,7 @@ export const MONO: React.CSSProperties = {
  * single column of banded text.
  */
 export const CARD: React.CSSProperties = {
-  background: C.card, borderRadius: 'var(--sb-r-card)', padding: '14px 15px',
+  background: C.card, borderRadius: 'var(--sb-r-card)', padding: '16px 18px',
   display: 'flex', flexDirection: 'column', minWidth: 0,
 }
 /** The first card needs nothing of its own now; kept so callers need not change. */
@@ -129,7 +129,7 @@ export const BARE: React.CSSProperties = {
  * are by definition outside a panel which did not exist when the finger went
  * down — so a handler on anything outside opens and closes it in one gesture.
  */
-export const PANEL_W = 'clamp(320px, 34vw, 440px)'
+export const PANEL_W = 'clamp(340px, 36vw, 470px)'
 export const PANEL_W_WIDE = 'min(560px, 62vw)'
 
 export function ComposerShell({ panelRef, onClose, expanded, children }: {
@@ -176,7 +176,7 @@ export function ComposerShell({ panelRef, onClose, expanded, children }: {
         maxHeight: 'calc(100% - 14px)', overflowY: 'auto', scrollbarWidth: 'thin',
         background: C.page, border: `var(--sb-border-width) solid ${C.border}`,
         borderRadius: 'var(--sb-r-frame)', boxShadow: 'var(--sb-shadow-control)',
-        display: 'flex', flexDirection: 'column', gap: 10, padding: '10px 14px 12px',
+        display: 'flex', flexDirection: 'column', gap: 12, padding: '12px 16px 14px',
       }}>
       {children}
     </aside>
@@ -308,7 +308,7 @@ function initialsOf(s: string): string {
 export function NewEventPanel({
   draft, existing, calendars, organiser, provider = 'google',
   clashes, onSave, onCancel, onPush, onDelete, onMoveCalendar, extra,
-  alertMinutes, onAlert, onAddMeet,
+  alertMinutes, onAlert, onAddMeet, onRemoveMeet, onStatus,
 }: {
   draft: { dateStr: string; startMin: number; endMin: number }
   /** The event this panel is about, when it already exists. Absent means the
@@ -335,6 +335,12 @@ export function NewEventPanel({
   onAlert?: (v: 'default' | 'none' | number) => void
   /** Mint a Meet link on an event that already exists. */
   onAddMeet?: () => void
+  /** Take it off again. */
+  onRemoveMeet?: () => void
+  /** Edit mode: done / cancelled is a fact about the event, saved on the spot.
+   *  Without this the buttons lit up and wrote nothing, because the only thing
+   *  that ever sent `status` was the Create call an existing event never makes. */
+  onStatus?: (s: 'done' | 'cancelled' | null) => void
 }) {
   const writable = calendars.filter(c => c.accessRole === 'owner' || c.accessRole === 'writer')
   const memory = useMemo(loadMemory, [])
@@ -357,6 +363,13 @@ export function NewEventPanel({
     existing?.location ? 'place' : existing?.meetLink ? 'call' : null)
   const [location, setLocation] = useState(existing?.location ?? '')
   const [meetLink, setMeetLink] = useState(existing?.meetLink ?? '')
+  const minted = existing?.meetLink ?? ''
+  useEffect(() => {
+    // Only when Google's answer differs from what is shown: this must not
+    // fight the field while it is being typed into.
+    if (minted && minted !== meetLink) setMeetLink(minted)
+    if (!minted && editing && meetLink && !addMeet) setMeetLink('')
+  }, [minted]) // eslint-disable-line react-hooks/exhaustive-deps
   const [addMeet, setAddMeet] = useState(false)
 
   const [repeat, setRepeat] = useState<Recur | null>(existing?.repeat ?? null)
@@ -554,7 +567,11 @@ export function NewEventPanel({
               key={id}
               title={set ? on : off}
               aria-pressed={set}
-              onClick={() => setStatus(s => s === id ? null : id)}
+              onClick={() => {
+                const next = status === id ? null : id
+                setStatus(next)
+                onStatus?.(next)
+              }}
               style={{
                 ...ROUND,
                 background: set ? fill : 'transparent',
@@ -626,13 +643,27 @@ export function NewEventPanel({
             </label>
           ) : whereRow === 'call' ? (
             meetLink ? (
-              <label style={{ ...FIELD, flex: 1, minWidth: 0 }}>
+              <label style={{ ...FIELD, flex: 1, minWidth: 0, gap: 6 }}>
                 <input value={meetLink} onChange={e => setMeetLink(e.target.value)}
                   placeholder="Meeting link" style={BARE} />
                 <a href={meetLink} target="_blank" rel="noopener noreferrer" title="Open the call"
                   style={{ display: 'inline-flex', flexShrink: 0, color: C.third }}>
                   <ExternalLink size={ICON.sm} strokeWidth={1.8} />
                 </a>
+                <button
+                  title="Take the call off this event"
+                  onClick={e => {
+                    e.preventDefault()
+                    setMeetLink(''); setAddMeet(false)
+                    if (editing) onRemoveMeet?.()
+                  }}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                    width: 20, height: 20, borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
+                    padding: 0, background: 'none', border: 'none', cursor: 'pointer', color: C.faint,
+                  }}>
+                  <X size={ICON.sm} strokeWidth={1.8} />
+                </button>
               </label>
             ) : (
               <button
@@ -745,35 +776,6 @@ export function NewEventPanel({
           {/* Alert belongs to When — it is a fact about the time, not a section
               of its own — and it is one line, like Repeats above it. Seven
               pills wrapped onto three rows for a value that is set once. */}
-          {editing && onAlert && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-              <Bell size={ICON.sm} strokeWidth={1.8} color={C.third} style={{ flexShrink: 0 }} />
-              <span style={{ ...LABEL, flexShrink: 0 }}>Alert</span>
-              <label style={{ ...FIELD, flex: 1, minWidth: 0, position: 'relative' }}>
-                <span style={{
-                  flex: 1, minWidth: 0, fontWeight: 600,
-                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                }}>
-                  {alertMinutes === undefined ? "The calendar's default"
-                    : alertMinutes < 0 ? 'None'
-                    : alertMinutes === 0 ? 'At the time'
-                    : describeAlertMinutes(alertMinutes)}
-                </span>
-                <ChevronDown size={ICON.sm} strokeWidth={1.8} color={C.faint} style={{ flexShrink: 0 }} />
-                <select
-                  value={alertMinutes === undefined ? 'default' : alertMinutes < 0 ? 'none' : String(alertMinutes)}
-                  onChange={e => onAlert(e.target.value === 'default' ? 'default'
-                    : e.target.value === 'none' ? 'none' : Number(e.target.value))}
-                  style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', border: 'none' }}>
-                  {ALERTS.map(([v, label]) => (
-                    <option key={String(v)} value={String(v)}>{label}</option>
-                  ))}
-                </select>
-              </label>
-            </div>
-          )}
-
-
           {repeat && preset === 'custom' && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
               <span style={{ fontSize: 'var(--sb-t-meta)', color: C.faint }}>Ends</span>
@@ -811,6 +813,36 @@ export function NewEventPanel({
               </button>
             </div>
           )}
+
+          {editing && onAlert && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+              <Bell size={ICON.sm} strokeWidth={1.8} color={C.third} style={{ flexShrink: 0 }} />
+              <span style={{ ...LABEL, flexShrink: 0 }}>Alert</span>
+              <label style={{ ...FIELD, flex: 1, minWidth: 0, position: 'relative' }}>
+                <span style={{
+                  flex: 1, minWidth: 0, fontWeight: 600,
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                }}>
+                  {alertMinutes === undefined ? "The calendar's default"
+                    : alertMinutes < 0 ? 'None'
+                    : alertMinutes === 0 ? 'At the time'
+                    : describeAlertMinutes(alertMinutes)}
+                </span>
+                <ChevronDown size={ICON.sm} strokeWidth={1.8} color={C.faint} style={{ flexShrink: 0 }} />
+                <select
+                  value={alertMinutes === undefined ? 'default' : alertMinutes < 0 ? 'none' : String(alertMinutes)}
+                  onChange={e => onAlert(e.target.value === 'default' ? 'default'
+                    : e.target.value === 'none' ? 'none' : Number(e.target.value))}
+                  style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', border: 'none' }}>
+                  {ALERTS.map(([v, label]) => (
+                    <option key={String(v)} value={String(v)}>{label}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          )}
+
+
         </div>
       </div>
 
@@ -897,61 +929,6 @@ export function NewEventPanel({
         )}
       </div>
 
-      {/* ── 5 · Attachments ────────────────────────────────────────────────── */}
-      <div style={{ ...CARD, gap: 10 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={MONO}>Attachments</span>
-          <span style={{ flex: 1 }} />
-          <span style={{ ...pill(false), cursor: 'default', opacity: 0.55 }} title="Attaching needs Drive access, which this build does not ask for">
-            <Upload size={ICON.sm} strokeWidth={1.8} /> Upload
-          </span>
-        </div>
-
-        {files.map(f => (
-          <div key={f.name} style={{
-            display: 'flex', alignItems: 'center', gap: 11, padding: '11px 13px',
-            borderRadius: 'var(--sb-r-nav)', background: C.inset,
-          }}>
-            <span style={{
-              width: 26, height: 26, borderRadius: 'var(--sb-r-chip)', flexShrink: 0, background: C.card,
-              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              fontFamily: 'var(--sb-font-mono)', fontSize: 'var(--sb-t-micro)', fontWeight: 700, color: C.bad,
-            }}>{f.kind}</span>
-            <span style={{ flex: 1, minWidth: 0 }}>
-              <span style={{ display: 'block', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.name}</span>
-              <span style={{ display: 'block', fontSize: 'var(--sb-t-meta)', color: C.faint, ...NUM }}>
-                {(f.size / 1048576).toFixed(1)} MB · not attached yet
-              </span>
-            </span>
-            <button onClick={() => setFiles(prev => prev.filter(x => x.name !== f.name))}
-              style={{ width: 26, height: 26, borderRadius: 'var(--sb-r-pill)', border: 'none', background: 'none', color: C.faint, cursor: 'pointer', flexShrink: 0 }}>
-              <X size={ICON.sm} strokeWidth={1.8} />
-            </button>
-          </div>
-        ))}
-
-        <div
-          onDragOver={e => { e.preventDefault(); setDropping(true) }}
-          onDragLeave={() => setDropping(false)}
-          onDrop={e => {
-            e.preventDefault(); setDropping(false)
-            const dropped = [...e.dataTransfer.files].map(f => ({
-              name: f.name, size: f.size, kind: (f.name.split('.').pop() ?? 'FILE').slice(0, 4).toUpperCase(),
-            }))
-            setFiles(prev => [...prev, ...dropped.filter(d => !prev.some(p => p.name === d.name))])
-          }}
-          style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            padding: 13, borderRadius: 'var(--sb-r-nav)',
-            border: `1px dashed ${C.dashed}`,
-            background: dropping ? C.inset : 'transparent',
-            fontSize: 'var(--sb-t-meta)', color: C.third,
-          }}>
-          <Paperclip size={ICON.sm} strokeWidth={1.8} color={C.faint} />
-          Drop files here, or attach from Drive
-        </div>
-      </div>
-
       {/* ── 6 · The rest, folded away ──────────────────────────────────────── */}
       <div style={{ ...CARD, gap: 10 }}>
         <button
@@ -967,7 +944,7 @@ export function NewEventPanel({
             background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'inherit',
           }}>
           <List size={ICON.md} strokeWidth={1.8} color={C.third} />
-          <span style={{ fontSize: 'var(--sb-t-body-s)', color: C.third }}>Notes, calendar, visibility</span>
+          <span style={{ fontSize: 'var(--sb-t-body-s)', color: C.third }}>Notes, files, calendar, visibility</span>
           <span style={{ flex: 1 }} />
           <span style={{ fontSize: 'var(--sb-t-meta)', color: C.faint }}>defaults are fine</span>
           {extrasOpen
@@ -988,6 +965,58 @@ export function NewEventPanel({
                 borderRadius: 'var(--sb-r-nav)', background: C.inset, border: `1px solid ${C.border}`,
                 fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', color: C.text, outline: 'none', lineHeight: 1.55,
               }} />
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={MONO}>Attachments</span>
+            <span style={{ flex: 1 }} />
+            <span style={{ ...pill(false), cursor: 'default', opacity: 0.55 }} title="Attaching needs Drive access, which this build does not ask for">
+              <Upload size={ICON.sm} strokeWidth={1.8} /> Upload
+            </span>
+          </div>
+
+          {files.map(f => (
+            <div key={f.name} style={{
+              display: 'flex', alignItems: 'center', gap: 11, padding: '11px 13px',
+              borderRadius: 'var(--sb-r-nav)', background: C.inset,
+            }}>
+              <span style={{
+                width: 26, height: 26, borderRadius: 'var(--sb-r-chip)', flexShrink: 0, background: C.card,
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                fontFamily: 'var(--sb-font-mono)', fontSize: 'var(--sb-t-micro)', fontWeight: 700, color: C.bad,
+              }}>{f.kind}</span>
+              <span style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ display: 'block', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.name}</span>
+                <span style={{ display: 'block', fontSize: 'var(--sb-t-meta)', color: C.faint, ...NUM }}>
+                  {(f.size / 1048576).toFixed(1)} MB · not attached yet
+                </span>
+              </span>
+              <button onClick={() => setFiles(prev => prev.filter(x => x.name !== f.name))}
+                style={{ width: 26, height: 26, borderRadius: 'var(--sb-r-pill)', border: 'none', background: 'none', color: C.faint, cursor: 'pointer', flexShrink: 0 }}>
+                <X size={ICON.sm} strokeWidth={1.8} />
+              </button>
+            </div>
+          ))}
+
+          <div
+            onDragOver={e => { e.preventDefault(); setDropping(true) }}
+            onDragLeave={() => setDropping(false)}
+            onDrop={e => {
+              e.preventDefault(); setDropping(false)
+              const dropped = [...e.dataTransfer.files].map(f => ({
+                name: f.name, size: f.size, kind: (f.name.split('.').pop() ?? 'FILE').slice(0, 4).toUpperCase(),
+              }))
+              setFiles(prev => [...prev, ...dropped.filter(d => !prev.some(p => p.name === d.name))])
+            }}
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              padding: 13, borderRadius: 'var(--sb-r-nav)',
+              border: `1px dashed ${C.dashed}`,
+              background: dropping ? C.inset : 'transparent',
+              fontSize: 'var(--sb-t-meta)', color: C.third,
+            }}>
+            <Paperclip size={ICON.sm} strokeWidth={1.8} color={C.faint} />
+            Drop files here, or attach from Drive
+          </div>
 
             <label style={FIELD}>
               <span style={{ fontSize: 'var(--sb-t-meta)', color: C.faint, flexShrink: 0 }}>Calendar</span>

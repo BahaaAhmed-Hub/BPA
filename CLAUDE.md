@@ -630,8 +630,21 @@ drafted reply, and the draft is suppressed for it.
 - **The invitations are keyed by message id, beside the rows, not inside them.**
   Written back into `mail` they were lost the moment the mail loaded again — and
   a run guard on the row set then refused to look a second time.
+- **Every message in the thread is searched, newest first**, and every calendar
+  part in each — a thread whose latest message is a reply still carries the
+  invitation further up, and reading only the last one missed it.
 - **`METHOD` is read from the part's content type as well as the body**, since
-  senders set one or the other.
+  senders set one or the other, and Gmail strips the parameters off `mimeType`
+  so the body is usually the only one left. No METHOD at all still leaves a
+  VEVENT with a UID, which is enough to answer.
+- **An invitation nobody could read says so.** Google's subject prefixes
+  ("Invitation:", "Updated invitation:", …) tell "not one" from "one that went
+  wrong", and the row names which — a silent fallback to a drafted reply is what
+  sent us round this loop twice.
+- **The answer is remembered against the UID** (`cal-invite-answers`, 30 days)
+  and the message is **marked read**, so an answered invitation leaves a card
+  that reads unread mail only. Component state alone lost the answer on the
+  first refresh.
 - **`UID` is the only shared identifier.** Google mints a different event id for
   every attendee's copy, so `findEventByICalUid` (`events.list?iCalUID=`) is the
   one way from the invitation to the row you can answer on. It asks `primary`

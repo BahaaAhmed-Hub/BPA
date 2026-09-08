@@ -549,6 +549,29 @@ export async function createCalendarEventWithToken(
 }
 
 /** Patch an existing event to add a Google Meet link. */
+/** Take the conference off an event. `conferenceDataVersion=1` is what makes
+ *  Google act on the field at all; without it the null is ignored. */
+export async function removeMeetingFromEvent(
+  token: string,
+  calendarId: string,
+  eventId: string,
+): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const res = await gcalRequest(
+      token,
+      `/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}?conferenceDataVersion=1`,
+      { method: 'PATCH', body: JSON.stringify({ conferenceData: null }) },
+    )
+    if (res.ok) return { ok: true }
+    const text = await res.text()
+    let why = `${res.status}`
+    try { why = (JSON.parse(text) as { error?: { message?: string } }).error?.message ?? why } catch { /* not JSON */ }
+    return { ok: false, error: why }
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : 'The request did not complete.' }
+  }
+}
+
 export async function addMeetingToEvent(
   token: string,
   calendarId: string,

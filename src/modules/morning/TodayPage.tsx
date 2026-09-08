@@ -22,11 +22,14 @@ import { fetchVisibleEvents } from '@/lib/calendarEvents'
 import type { GCalEvent } from '@/lib/googleCalendar'
 import type { EventStatus } from '@/lib/eventMetadata'
 import { loadEventStatuses, toggleEventStatus } from '@/lib/eventStatus'
-import { listUnreadThreadIds, getThread, header, extractBody, extractHtmlBody, archiveMessage, sendMail, escapeHtml } from '@/lib/gmail'
+import { listUnreadThreadIds, getThread, header, extractBody, extractHtmlBody, archiveMessage, markAsRead, sendMail, escapeHtml } from '@/lib/gmail'
 import type { GmailHeader, GmailMessage, MailAccount } from '@/lib/gmail'
 import { mailAccounts } from '@/modules/inbox/mailAccounts'
 import { briefsFor, rememberDraft, forgetBrief, type InboxBrief, type MailAction } from '@/lib/mailBriefs'
-import { extractInvite, respondToInvite, RSVP_LABEL, type Invite, type Rsvp } from '@/lib/invitations'
+import {
+  readInvite, respondToInvite, RSVP_LABEL, answerFor, rememberAnswer,
+  type Invite, type Rsvp,
+} from '@/lib/invitations'
 import { notify } from '@/lib/undo'
 import { TASK_TYPE_META, inferTaskType, isTaskHidden, loadDynamicCompanies } from '@/types'
 import { isMailHiddenByCompany } from '@/lib/companyVisibility'
@@ -226,9 +229,10 @@ interface MailRow {
   /** Which mailbox it arrived in. A merged list you cannot act on is a list
    *  you do not know where a reply would leave from. */
   account: MailAccount
-  /** The message itself. An invitation is read out of it after the rows are
-   *  drawn, because reading one can cost an attachment fetch. */
-  raw: GmailMessage
+  /** The thread's messages. The invitation is read out of them after the rows
+   *  are drawn, because reading one can cost an attachment fetch — and a thread
+   *  whose latest message is a reply still carries the invitation further up. */
+  msgs: GmailMessage[]
 }
 
 /** The message itself, in a window that closes when you click away from it. */
@@ -811,7 +815,7 @@ const MAIL_SHOWN = 6
 function MailCard({
   rows, loading, error, boxes, newsletters, briefs, briefing, briefNote,
   onArchive, onArchiveAll, onOpenInbox, onOpen, onOpenDraft,
-  invites, rsvpBusy, rsvpDone, rsvpError, onRespond,
+  invites, inviteFailed, rsvpBusy, rsvpDone, rsvpError, onRespond,
 }: {
   rows: MailRow[]
   loading: boolean
@@ -831,6 +835,8 @@ function MailCard({
   onOpenDraft: (row: MailRow) => void
   /** Which messages are invitations, and the RSVP state of each. */
   invites: Record<string, Invite>
+  /** Messages that are invitations nobody could read, and why. */
+  inviteFailed: Record<string, string>
   /** RSVP state, keyed by thread id, and the one way to change it. */
   rsvpBusy: Record<string, Rsvp>
   rsvpDone: Record<string, Rsvp>
@@ -958,11 +964,19 @@ function MailCard({
               )}
 
               {/* An invitation is answered, not replied to. */}
+              {inviteFailed[r.messageId] && !invites[r.messageId] && (
+                <div style={{
+                  marginTop: 7, marginLeft: 38, fontSize: 'var(--sb-t-meta)', color: GHOST,
+                }}>
+                  This is a calendar invitation. {inviteFailed[r.messageId]} Answer it in Google Calendar.
+                </div>
+              )}
+
               {invites[r.messageId] ? (
                 <InviteActions
                   invite={invites[r.messageId]}
                   busy={rsvpBusy[r.id] ?? null}
-                  answered={rsvpDone[r.id] ?? null}
+                  answered={rsvpDone[r.id] ?? answerFor(invites[r.messageId].uid)}
                   error={rsvpError[r.id] ?? null}
                   onRespond={rr => onRespond(r, rr)}
                   onDeclineWithNote={() => { onRespond(r, 'declined'); onOpenDraft(r) }}
@@ -1564,6 +1578,8 @@ export function TodayPage() {
   /** Which invitation is being answered, and how each one was answered. */
   /** Which messages turned out to be invitations, by message id. */
   const [invites, setInvites] = useState<Record<string, Invite>>({})
+  /** Messages that are invitations we could not read, and why. */
+  const [inviteFailed, setInviteFailed] = useState<Record<string, string>>({})
   const [rsvpBusy, setRsvpBusy] = useState<Record<string, Rsvp>>({})
   const [rsvpDone, setRsvpDone] = useState<Record<string, Rsvp>>({})
   const [rsvpError, setRsvpError] = useState<Record<string, string>>({})
@@ -1656,7 +1672,7 @@ export function TodayPage() {
           needsYou: !isBulk && !!me && to.includes(me),
           newsletter: isBulk,
           account,
-          raw: last,
+          msgs: th.messages ?? [last],
         }
         ;(isBulk ? bulk : rows).push(row)
       }
@@ -1744,14 +1760,28 @@ export function TodayPage() {
     void (async () => {
       const found = await Promise.all(todo.map(async r => {
         try {
-          const invite = await extractInvite(r.raw, r.account)
-          return invite ? { messageId: r.messageId, invite } : null
-        } catch { return null }
+          const read = await readInvite(r.msgs, r.subject, r.account)
+          if (read.kind === 'invite') return { messageId: r.messageId, invite: read.invite }
+          if (read.kind === 'unreadable') return { messageId: r.messageId, why: read.why }
+          return null as { messageId: string; invite?: Invite; why?: string } | null
+        } catch (e) {
+          return { messageId: r.messageId, why: e instanceof Error ? e.message : 'It could not be read.' }
+        }
       }))
       if (!live) return
-      const hits = found.filter((f): f is { messageId: string; invite: Invite } => !!f)
+      type Hit = { messageId: string; invite?: Invite; why?: string }
+      const hits = found.filter((f): f is Hit => !!f)
       if (hits.length === 0) return
-      setInvites(prev => ({ ...prev, ...Object.fromEntries(hits.map(h => [h.messageId, h.invite])) }))
+      setInvites(prev => ({
+        ...prev,
+        ...Object.fromEntries(hits.filter(h => h.invite).map(h => [h.messageId, h.invite!])),
+      }))
+      // An invitation we could not read says so, rather than quietly offering a
+      // drafted reply that would tell Google nothing.
+      setInviteFailed(prev => ({
+        ...prev,
+        ...Object.fromEntries(hits.filter(h => h.why).map(h => [h.messageId, h.why!])),
+      }))
     })()
     return () => { live = false }
   }, [mail])
@@ -1766,6 +1796,11 @@ export function TodayPage() {
     setRsvpBusy(p => { const n = { ...p }; delete n[row.id]; return n })
     if (res.ok) {
       setRsvpDone(p => ({ ...p, [row.id]: answer }))
+      rememberAnswer(invite.uid, answer)
+      // An answered invitation is dealt with. This card reads *unread* mail, so
+      // marking it read is what takes it off the list — and it survives the
+      // refresh, which component state did not.
+      void markAsRead(row.messageId, row.account).catch(() => { /* the answer still stands */ })
       notify(`${RSVP_LABEL[answer]} to ${invite.summary}`)
     } else {
       // Never a bare failure: the reason is the whole value of the message.
@@ -2041,6 +2076,7 @@ export function TodayPage() {
             onOpen={setOpenMail}
             onOpenDraft={setDraftFor}
             invites={invites}
+            inviteFailed={inviteFailed}
             rsvpBusy={rsvpBusy}
             rsvpDone={rsvpDone}
             rsvpError={rsvpError}
