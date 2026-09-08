@@ -840,3 +840,36 @@ are there the instant the mail is and they are the same on every device.
   with its own reset, so a bare `<p>` arrives with no spacing). The small box
   hides while that window holds the same text, and the triage card's
   "ready-to-send reply" does not sit under a draft that already is one.
+
+## Mail — swiping a row, and acting on many
+`SwipeRow.tsx` wraps every list row. Right marks read — or **unread**, since a
+gesture that only works one way is a no-op half the time. Left pulls the row
+aside and leaves Archive and Delete behind it until you pick one, swipe back or
+tap elsewhere. Four rules it exists to keep:
+- **Vertical scrolling survives.** The axis is decided once, past an 8px slop,
+  and never revisited; `touch-action: pan-y` leaves the browser to scroll until
+  the pointer is captured.
+- **A swipe is not also a click.** A drag ending elsewhere still fires `click`
+  on the row. Swallowed in the capture phase — but the gesture's own click and a
+  real tap must be told apart by `moved`, or the click that *ends* the opening
+  swipe closes it again in the same gesture and the swipe looks broken.
+- **The action buttons are exempt from that guard** (`actions.current.contains`).
+  Closing on a tap there stopped the click before its own button saw it: the
+  buttons appeared and did nothing.
+- **One row open at a time**, owned by the list. Pointer events, not touch —
+  the same choice the Financials and goals drags made.
+
+Selection: the avatar toggles a row, **shift-click takes the run** from the last
+one picked. The bar offers Select all / Mark read (one toggle, not two buttons) /
+Move / Archive / Delete.
+
+**Every one of these is undoable** — both ways in are cheap enough to do by
+accident. Gmail is the truth, so undo puts the labels back rather than restoring
+a snapshot, and the row returns to the list with it.
+- `byAccount(rows)` groups first: ids and token both belong to one mailbox, so
+  an action over a merged inbox is one `batchModify` per mailbox.
+- **Only labels every visible mailbox shares** are offered to move to, or half a
+  selection moves and the rest fails.
+- **Delete means the Bin**, and says so. `gmail.modify` cannot erase a message —
+  that needs full `mail.google.com` — and a swipe should not destroy mail. No
+  batch endpoint bins mail, so that one is a call each via `messages/trash`.
