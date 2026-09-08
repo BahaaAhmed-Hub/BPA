@@ -815,3 +815,28 @@ git push -u origin claude/professor-web-app-dev-tnj0uk
 - `noUnusedLocals: true` — every declared variable must be used. Prefix unused params with `_`. For unused module-level functions/consts, delete them or export them.
 - Pre-existing unused vars scattered in `finance/screens/` — fix by prefixing or deleting if truly dead code.
 - `npm run build` = `tsc -b && vite build` — both must pass.
+
+## Mail — the week's mail, sorted by what it wants
+`lib/mailClasses.ts` decides the kind from the message itself — the list headers
+(`List-Unsubscribe`/`-Id`/`-Post`), `Precedence`, `Auto-Submitted`, the campaign
+headers the big platforms stamp on, the sending address and its subdomain, and
+failing all that an unsubscribe line in the body. **No model call**, so the tabs
+are there the instant the mail is and they are the same on every device.
+- **Six classes, each implying a different action.** A split that does not change
+  what you would do with the mail only costs you a decision, so "important / not
+  important" is not one: `needs-you` → draft, `invitation` → RSVP (nothing here),
+  `copied` → mark read, `notification` → archive, `newsletter` → archive,
+  `other` → nothing. Order binds strongest-first: an invitation is one whoever
+  sent it, a campaign is one even when it greets you by name.
+- **Every tab is always drawn, counts and all**, so one that empties does not
+  vanish and shift the ones beside it; an empty tab says what would live there.
+- **Nothing is ever sent by drafting.** The class action and the message's own
+  Draft button both do one batched `briefInbox` call (max 8) and fill the box
+  under the mail — "DRAFT REPLY · NOT SENT" with Delete and Send. **Send is the
+  only thing in the module that sends.** The list row carries a Draft pill, or a
+  bulk draft across eight messages is invisible until you open each one.
+- **Clicking the draft opens the full composer**, seeded with what is written,
+  paragraphs kept (`<p style="margin:0 0 1em">` — the editor is a contenteditable
+  with its own reset, so a bare `<p>` arrives with no spacing). The small box
+  hides while that window holds the same text, and the triage card's
+  "ready-to-send reply" does not sit under a draft that already is one.
