@@ -10,6 +10,11 @@ import { initAppearance } from './lib/themes'
 // move them afterwards.
 initAppearance()
 
+// Say which build this is, once, where a browser console can be asked. The
+// same string is in Settings for a device that has no console.
+console.info(`BPA build ${__BUILD_SHA__} · ${__BUILD_AT__}`)
+Object.assign(window, { __BPA_BUILD__: { sha: __BUILD_SHA__, at: __BUILD_AT__ } })
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />

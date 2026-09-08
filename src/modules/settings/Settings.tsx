@@ -4436,6 +4436,18 @@ export function Settings() {
               <span style={{ width: 6, height: 6, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-positive)', flexShrink: 0 }} />
               Every change saves itself
             </div>
+            {/* Which build this page is. "It is not deployed" and "your browser
+                is holding the last one" look identical from the outside, and
+                without this the only way to tell them apart is to guess. */}
+            <div
+              title={`Built ${new Date(__BUILD_AT__).toLocaleString('en-GB')}`}
+              style={{
+                marginTop: 5, fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)',
+                fontFamily: 'var(--sb-font-mono)', letterSpacing: '0.04em',
+              }}>
+              build {__BUILD_SHA__} · {new Date(__BUILD_AT__).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+              {' '}{new Date(__BUILD_AT__).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+            </div>
           </div>
         </div>
 
