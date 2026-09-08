@@ -114,10 +114,17 @@ gone, and with it the last of `--sb-ev-type`.
   button mints the link — on an event that exists, now (`onAddMeet`); on one
   being composed, on create, because there is no event to hang a conference on
   yet.
-- **One line each.** Place and call are a glyph, a field and its action on one
-  row. Date, from, to and All day are one row — All day *dims* the times rather
-  than removing them, so turning it back off is not starting again. Repeats is
-  one row: five presets as pills wrapped onto three in a 400px column.
+- **Every row is one line.** Place *and* call share one: both glyphs, then the
+  field of whichever you last touched — two fields cannot share a 400px row and
+  stay usable, and a glyph stays lit while its side has something in it, so you
+  can see there is a place while the link is open. Date, from, to and All day
+  are one row, and All day *dims* the times rather than removing them, so
+  turning it back off is not starting again. Repeats and Alert are one row each,
+  in When, with no rule between them: Alert is a fact about the time, not a
+  section of its own.
+- **Ends belongs to Custom.** Choosing a preset after it means the preset, so
+  the fields go and what they held goes with them — a stale "after 8 times"
+  hanging off a plain Monthly is a rule nobody asked for.
 - **A bare click on the grid no longer creates anything.** Drawing a span says
   when it is and how long it runs; a click says neither, and a panel opening
   under every stray click is one you spend the day closing. The two ways in are

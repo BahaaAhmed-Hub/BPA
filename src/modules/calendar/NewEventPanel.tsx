@@ -264,8 +264,9 @@ export interface ComposerCalendar {
 
 /** What an alert can be set to. Google's own default is the first. */
 const ALERTS: [('default' | 'none' | number), string][] = [
-  ['default', 'Default'], ['none', 'None'], [0, 'At the time'],
-  [10, '10 min'], [30, '30 min'], [60, '1 hour'], [1440, '1 day'],
+  ['default', "The calendar's default"], ['none', 'None'], [0, 'At the time'],
+  [5, '5 minutes before'], [10, '10 minutes before'], [30, '30 minutes before'],
+  [60, '1 hour before'], [120, '2 hours before'], [1440, '1 day before'],
 ]
 function describeAlertMinutes(m: number): string {
   if (m % 1440 === 0) return `${m / 1440} day${m === 1440 ? '' : 's'} before`
@@ -296,18 +297,6 @@ function saveMemory(m: Memory): void {
 
 const pad = (m: number) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
 const toMin = (hhmm: string) => { const [h, m] = hhmm.split(':').map(Number); return h * 60 + m }
-function niceTime(hhmm: string): string {
-  const [h, m] = hhmm.split(':').map(Number)
-  const suffix = h < 12 ? 'am' : 'pm'
-  return `${h % 12 === 0 ? 12 : h % 12}:${String(m).padStart(2, '0')} ${suffix}`
-}
-function niceDuration(mins: number): string {
-  if (mins <= 0) return 'no length'
-  const h = Math.floor(mins / 60), m = mins % 60
-  if (!h) return `${m} minutes`
-  const hs = h === 1 ? '1 hour' : `${h} hours`
-  return m ? `${hs} ${m}m` : hs
-}
 function initialsOf(s: string): string {
   const name = s.includes('@') ? s.split('@')[0].replace(/[._-]+/g, ' ') : s
   return name.trim().split(/\s+/).slice(0, 2).map(w => w[0]?.toUpperCase() ?? '').join('') || '?'
@@ -350,7 +339,6 @@ export function NewEventPanel({
 
   // Everything arrives answered: for a new event the length you usually give
   // this kind of thing, for an existing one what the event actually says.
-  const drafted = Math.max(15, draft.endMin - draft.startMin)
   const startMin = draft.startMin
   const endMin = memory.minutes && !editing ? startMin + memory.minutes : draft.endMin
 
@@ -361,8 +349,9 @@ export function NewEventPanel({
   const [endTime, setEndTime] = useState(existing?.endTime ?? pad(endMin))
   const [allDay, setAllDay] = useState(existing?.allDay ?? false)
 
-  const [placeOpen, setPlaceOpen] = useState(!!existing?.location)
-  const [onlineOpen, setOnlineOpen] = useState(!!existing?.meetLink)
+  /** Which of place or call the shared row is showing. */
+  const [whereRow, setWhereRow] = useState<'place' | 'call' | null>(
+    existing?.location ? 'place' : existing?.meetLink ? 'call' : null)
   const [location, setLocation] = useState(existing?.location ?? '')
   const [meetLink, setMeetLink] = useState(existing?.meetLink ?? '')
   const [addMeet, setAddMeet] = useState(false)
@@ -437,7 +426,6 @@ export function NewEventPanel({
   }, [calId, calendars, organiser])
 
   const minutes = Math.max(0, toMin(endTime) - toMin(startTime))
-  const usual = memory.minutes !== undefined && memory.minutes === minutes
   const guests = people.filter(p => !p.optional).length
 
   const startDateObj = useMemo(() => new Date(`${startDate}T12:00:00`), [startDate])
@@ -449,6 +437,14 @@ export function NewEventPanel({
       p === 'custom' ? { freq: 'WEEKLY', interval: 3 } :
       presetRecur(p === 'biweekly' ? 'biweekly' : p, startDateObj)
     setRepeat(next)
+    // Ends is Custom's to set. Choosing a preset after it means the preset,
+    // so the fields go and what they held goes with them — leaving a stale
+    // "after 8 times" attached to a plain Monthly is a rule nobody asked for.
+    if (p !== 'custom') {
+      setEndsMode('never'); setUntil(''); setCount(8)
+      pushRepeat(next, 'never', 8, '')
+      return
+    }
     pushRepeat(next, endsMode, count, until)
   }
   const preset: string = !repeat ? 'never'
@@ -591,18 +587,26 @@ export function NewEventPanel({
             letterSpacing: '-.03em', lineHeight: 1, color: C.text,
           }} />
 
-        {/* Place and call are one row each, opened by their own glyph — the
-            glyph, the field and the action on the same line, rather than a
-            row of buttons that reveals a second row of fields below it. */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+        {/* Where it is: both glyphs and one field, on one line. Two fields
+            cannot share a 400px row and stay usable, so the glyphs swap which
+            one is showing — and a glyph is lit when its side has something in
+            it, so you can see there is a place even while the link is open. */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
           <button
-            title={placeOpen ? 'Drop the place' : 'Add a place'}
-            onClick={() => { if (placeOpen && location) { setLocation(''); push({ location: '' }) } setPlaceOpen(v => !v) }}
-            style={GLYPH(placeOpen)}>
-            <MapPin size={17} strokeWidth={1.8} />
+            title={location ? `Where: ${location}` : 'Add a place'}
+            onClick={() => setWhereRow(r => r === 'place' ? null : 'place')}
+            style={GLYPH(whereRow === 'place' || !!location)}>
+            <MapPin size={16} strokeWidth={1.8} />
           </button>
-          {placeOpen ? (
-            <label style={{ ...FIELD, flex: 1 }}>
+          <button
+            title={meetLink ? 'The call link' : 'Add a call'}
+            onClick={() => setWhereRow(r => r === 'call' ? null : 'call')}
+            style={GLYPH(whereRow === 'call' || !!meetLink)}>
+            <Video size={16} strokeWidth={1.8} />
+          </button>
+
+          {whereRow === 'place' ? (
+            <label style={{ ...FIELD, flex: 1, minWidth: 0 }}>
               <input
                 autoFocus
                 value={location}
@@ -613,74 +617,50 @@ export function NewEventPanel({
                   style={{
                     background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0,
                     fontSize: 'var(--sb-t-meta)', color: C.faint,
-                  }}>
-                  {memory.venue}
-                </button>
+                  }}>{memory.venue}</button>
               )}
             </label>
-          ) : (
-            <span style={{ fontSize: 'var(--sb-t-meta)', color: C.faint }}>Add a place</span>
-          )}
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-          <button
-            title={onlineOpen ? 'Drop the call' : 'Add a call'}
-            onClick={() => setOnlineOpen(v => !v)}
-            style={GLYPH(onlineOpen || !!meetLink)}>
-            <Video size={17} strokeWidth={1.8} />
-          </button>
-          {onlineOpen || meetLink ? (
+          ) : whereRow === 'call' ? (
             meetLink ? (
-              <label style={{ ...FIELD, flex: 1 }}>
+              <label style={{ ...FIELD, flex: 1, minWidth: 0 }}>
                 <input value={meetLink} onChange={e => setMeetLink(e.target.value)}
                   placeholder="Meeting link" style={BARE} />
-                <a href={meetLink} target="_blank" rel="noopener noreferrer"
-                  title="Open the call"
+                <a href={meetLink} target="_blank" rel="noopener noreferrer" title="Open the call"
                   style={{ display: 'inline-flex', flexShrink: 0, color: C.third }}>
                   <ExternalLink size={ICON.sm} strokeWidth={1.8} />
                 </a>
               </label>
             ) : (
               <button
-                onClick={() => {
-                  // On an event that exists Google mints the link now; on one
-                  // being composed it is minted the moment it is created,
-                  // because there is no event to hang a conference on yet.
-                  if (editing) onAddMeet?.()
-                  else setAddMeet(v => !v)
-                }}
+                // On an event that exists Google mints the link now; on one
+                // being composed it is minted on create, because there is no
+                // event to hang a conference on yet.
+                onClick={() => { if (editing) onAddMeet?.(); else setAddMeet(v => !v) }}
                 title={PROVIDER[provider].hint}
                 style={{
-                  ...FIELD, flex: 1, cursor: 'pointer', justifyContent: 'flex-start',
+                  ...FIELD, flex: 1, minWidth: 0, cursor: 'pointer', justifyContent: 'flex-start', fontWeight: 600,
                   background: addMeet && !editing ? C.ink : 'var(--sb-field)',
                   border: `var(--sb-border-width) solid ${addMeet && !editing ? 'transparent' : C.border}`,
                   color: addMeet && !editing ? C.onInk : C.text,
-                  fontWeight: 600,
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                 }}>
-                {addMeet && !editing
-                  ? `${PROVIDER[provider].name} link on create`
-                  : `Create a ${PROVIDER[provider].name} link`}
+                {addMeet && !editing ? `${PROVIDER[provider].name} on create` : `Create a ${PROVIDER[provider].name} link`}
               </button>
             )
           ) : (
-            <span style={{ fontSize: 'var(--sb-t-meta)', color: C.faint }}>Add a call</span>
+            <span style={{
+              flex: 1, minWidth: 0, fontSize: 'var(--sb-t-meta)', color: location || meetLink ? C.third : C.faint,
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            }}>
+              {location || (meetLink ? PROVIDER[provider].name : 'Add a place or a call')}
+            </span>
           )}
         </div>
       </div>
 
       {/* ── 3 · When ───────────────────────────────────────────────────────── */}
       <div style={{ ...CARD, gap: 10 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={MONO}>When</span>
-          <span style={{ flex: 1 }} />
-          <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: C.goldInk, ...NUM }}>
-            {allDay
-              ? 'All day'
-              : `${niceTime(startTime)} – ${niceTime(endTime)} · ${niceDuration(minutes)}`}
-            {allDay ? '' : usual ? ' · your usual for this' : minutes === drafted ? ' · as drawn' : ''}
-          </span>
-        </div>
+        <span style={MONO}>When</span>
 
         {/* Date, from, to and All day on one line. All day does not remove the
             times — it dims them, so you can still see what they were and
@@ -725,8 +705,6 @@ export function NewEventPanel({
             style={{ ...pill(allDay), padding: '0 9px', fontSize: 'var(--sb-t-meta)' }}>All day</button>
         </div>
 
-        <div style={{ height: 1, background: C.hair }} />
-
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {/* One line. Five presets as pills wrapped onto three rows in a
               400px column for a choice that is made once, if ever. */}
@@ -760,8 +738,39 @@ export function NewEventPanel({
             )}
           </div>
 
+          {/* Alert belongs to When — it is a fact about the time, not a section
+              of its own — and it is one line, like Repeats above it. Seven
+              pills wrapped onto three rows for a value that is set once. */}
+          {editing && onAlert && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+              <Bell size={ICON.sm} strokeWidth={1.8} color={C.third} style={{ flexShrink: 0 }} />
+              <span style={{ ...LABEL, flexShrink: 0 }}>Alert</span>
+              <label style={{ ...FIELD, flex: 1, minWidth: 0, position: 'relative' }}>
+                <span style={{
+                  flex: 1, minWidth: 0, fontWeight: 600,
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                }}>
+                  {alertMinutes === undefined ? "The calendar's default"
+                    : alertMinutes < 0 ? 'None'
+                    : alertMinutes === 0 ? 'At the time'
+                    : describeAlertMinutes(alertMinutes)}
+                </span>
+                <ChevronDown size={ICON.sm} strokeWidth={1.8} color={C.faint} style={{ flexShrink: 0 }} />
+                <select
+                  value={alertMinutes === undefined ? 'default' : alertMinutes < 0 ? 'none' : String(alertMinutes)}
+                  onChange={e => onAlert(e.target.value === 'default' ? 'default'
+                    : e.target.value === 'none' ? 'none' : Number(e.target.value))}
+                  style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', border: 'none' }}>
+                  {ALERTS.map(([v, label]) => (
+                    <option key={String(v)} value={String(v)}>{label}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          )}
 
-          {repeat && (
+
+          {repeat && preset === 'custom' && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
               <span style={{ fontSize: 'var(--sb-t-meta)', color: C.faint }}>Ends</span>
               <label style={{ ...FIELD, flex: '1 1 120px', minWidth: 0 }}>
@@ -800,30 +809,6 @@ export function NewEventPanel({
           )}
         </div>
       </div>
-
-      {/* ── Alert ──────────────────────────────────────────────────────────── */}
-      {editing && onAlert && (
-        <div style={{ ...CARD, gap: 8 }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Bell size={ICON.sm} strokeWidth={1.8} color={C.third} />
-            <span style={LABEL}>Alert</span>
-            <span style={{ flex: 1 }} />
-            <span style={{ fontSize: 'var(--sb-t-meta)', color: C.faint }}>
-              {alertMinutes === undefined ? "the calendar's default"
-                : alertMinutes === 0 ? 'at the time'
-                : describeAlertMinutes(alertMinutes)}
-            </span>
-          </span>
-          <span style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-            {ALERTS.map(([v, label]) => (
-              <button key={String(v)} onClick={() => onAlert(v)}
-                style={pill(v === 'default' ? alertMinutes === undefined : v === alertMinutes)}>
-                {label}
-              </button>
-            ))}
-          </span>
-        </div>
-      )}
 
       {/* ── What it runs into ──────────────────────────────────────────────── */}
       {editing && clashes && clashes.length > 0 && (
