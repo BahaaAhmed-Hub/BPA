@@ -195,12 +195,28 @@ html, body {
 
 /* ── Focus ────────────────────────────────────────────────────────────────────
    Amber on a white card is 1.5:1 — a ring you cannot see is not a focus state.
-   Ink draws the ring and carries the contrast (17.9:1 on a card); the amber
-   halo outside it carries the brand and marks the ring as ours.             */
+   Ink draws the ring and carries the contrast (17.9:1 on a card); the accent
+   halo outside it carries the brand and marks the ring as ours.
+
+   The halo stops at anything you type into. A wash of colour around a field
+   with a caret in it is the shape every form on the web uses to say something
+   is wrong with what you have written — and on Warm Minimal, whose accent tint
+   is a pale terracotta, it read as exactly that while you were still typing
+   the title. Typing is not an error. The ink ring stays, so the field is still
+   plainly focused and still meets 2.4.7.                                   */
 :focus-visible {
   outline: 2px solid var(--sb-ink-1);
   outline-offset: 2px;
   box-shadow: 0 0 0 4px var(--sb-accent-tint);
+}
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+[contenteditable]:focus-visible,
+input:focus,
+textarea:focus,
+[contenteditable]:focus {
+  box-shadow: none;
 }
 
 /* ── What data-theme is for ───────────────────────────────────────────────────

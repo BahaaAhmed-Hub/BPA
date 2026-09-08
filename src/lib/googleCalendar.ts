@@ -11,13 +11,14 @@ export interface GCalEvent {
   end:   { dateTime?: string; date?: string; timeZone?: string }
   location?: string
   description?: string
-  attendees?: { email: string; displayName?: string; responseStatus?: string; self?: boolean }[]
+  attendees?: { email: string; displayName?: string; responseStatus?: string; self?: boolean; optional?: boolean }[]
   conferenceData?: { entryPoints?: { entryPointType: string; uri: string; label?: string; pin?: string }[] }
   status?: string
   organizer?: { email?: string; displayName?: string; self?: boolean }
   recurringEventId?: string
   recurrence?: string[]
   htmlLink?: string
+  visibility?: 'default' | 'public' | 'private' | 'confidential'
   reminders?: { useDefault: boolean; overrides?: { method: string; minutes: number }[] }
   /** Drive files attached to the event. Google returns no size or date for these. */
   attachments?: { fileId?: string; fileUrl: string; title?: string; mimeType?: string; iconLink?: string }[]

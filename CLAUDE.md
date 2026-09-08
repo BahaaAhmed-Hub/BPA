@@ -97,6 +97,23 @@ sends `account_email` as well so the function can resolve it either way.
 calendar, the account, or what Google objected to — is on `error.context`.
 `efFailure()` reads it, so a failed write says what happened.
 
+## Calendar — the event panel and the composer are one component
+`NewEventPanel` draws both. `existing` is the only difference: absent, it is
+composing and there is a Create button; present, it is editing and **every
+control writes straight through** (`onPush`), with words held 700ms so a
+keystroke is not a request. `EventPopup` — 790 lines of a second design — is
+gone, and with it the last of `--sb-ev-type`.
+- An occurrence of a series carries no RRULE of its own, so `seriesRules` is
+  fetched for one and the Repeats row opens on the right answer.
+- What is only true of an event that exists arrives as props: `clashes`,
+  `alertMinutes`/`onAlert`, `onAddMeet`, `onMoveCalendar`, `onDelete`, and
+  `extra` for prep and "Open in Google Calendar".
+- **A bare click on the grid no longer creates anything.** Drawing a span says
+  when it is and how long it runs; a click says neither, and a panel opening
+  under every stray click is one you spend the day closing. The two ways in are
+  drawing a span and **+ New event** in the header — which is the only one a
+  finger has, since touch cannot draw.
+
 ## Calendar — both event panels are the task detail panel
 `NewEventPanel.tsx` holds the shell and every primitive; `EventPopup` (the panel
 for an event that exists) and the composer (for one that does not) are the same

@@ -3,11 +3,10 @@ import { CAL_COLORS } from '@/lib/palettes'
 import { Button, Segmented } from '@/components/ui'
 import {
   ChevronLeft, ChevronRight, ChevronDown, Layers, Calendar, Video,
-  Sparkles, MapPin, RefreshCw, X, Eye, EyeOff,
-  CheckCircle2, XCircle, Link, Check, Plus, Paperclip, FileText,
-  ExternalLink, AlertCircle, Shield, Copy, Trash2, Ban, CheckSquare,
+  Sparkles, MapPin, RefreshCw, Eye, EyeOff,
+  CheckCircle2, XCircle, Link, Check, ExternalLink, AlertCircle, Shield, Copy, Trash2, CheckSquare, Plus,
 } from 'lucide-react'
-import { SchedulePopover, formatTime, addMinutes } from '@/modules/tasks/SchedulePopover'
+import { formatTime } from '@/modules/tasks/SchedulePopover'
 import {
   DndContext, DragOverlay, PointerSensor, useSensor, useSensors,
   useDraggable, useDroppable,
@@ -37,17 +36,16 @@ import { getGoogleToken, seedToken, getGoogleTokenViaSupabaseRefresh } from '@/l
 import { loadEventStatuses, saveEventStatuses } from '@/lib/eventStatus'
 import { isCalendarHiddenByCompany } from '@/lib/companyVisibility'
 import { isTaskEvent, stripTaskMark } from '@/lib/taskEvent'
-import { loadWeather, weatherGlyph, lookupPlaces, type WeatherByHour } from '@/lib/weather'
+import { loadWeather, weatherGlyph, type WeatherByHour } from '@/lib/weather'
 import { T, SANS, DISPLAY, ICON, STROKE } from '@/lib/type'
 import { generateMeetingPrep } from '@/lib/professor'
 import type { MeetingPrep } from '@/lib/professor'
 import { useAuthStore } from '@/store/authStore'
-import { NewEventPanel, ComposerShell, CARD } from './NewEventPanel'
+import { NewEventPanel, type ExistingEvent } from './NewEventPanel'
 import { pushUndo, notify, inTextField } from '@/lib/undo'
 import { loadWeekStart, useWeekStart, rotateDays, type Weekday } from '@/lib/weekStart'
 import { syncTaskToEvent } from '@/lib/taskEventLink'
-import { RepeatPicker } from './RepeatPicker'
-import { parseRecurrence, describeRecur, toRecurrence, type Recur } from './recurrence'
+import { parseRecurrence } from './recurrence'
 import { useUIStore } from '@/store/uiStore'
 import { loadAccounts, loadHiddenAccounts } from '@/lib/multiAccount'
 import { connectAdditionalGoogleAccount } from '@/lib/google'
@@ -153,34 +151,7 @@ export type WhereTarget =
   | { kind: 'place'; url: string; label: string }
   | { kind: 'empty' }
 
-/** The link as you would recognise it: host plus a little of the path,
- *  not the full query-string tail Google likes to append. */
-function prettyLink(url: string): string {
-  try {
-    const u = new URL(url)
-    const path = u.pathname.replace(/\/$/, '')
-    const shown = `${u.hostname.replace(/^www\./, '')}${path}`
-    return shown.length > 44 ? shown.slice(0, 43) + '…' : shown
-  } catch { return url }
-}
 
-function whereTarget(location: string, videoLink?: string): WhereTarget {
-  const text = location.trim()
-  if (!text) {
-    return videoLink ? { kind: 'link', url: videoLink, label: prettyLink(videoLink) } : { kind: 'empty' }
-  }
-  const inText = /https?:\/\/[^\s<>"')]+/.exec(text)?.[0]
-  if (inText) return { kind: 'link', url: inText, label: prettyLink(inText) }
-  // A bare host someone typed, e.g. "meet.google.com/abc-defg-hij"
-  if (/^[\w-]+(\.[\w-]+)+(\/\S*)?$/.test(text) && !/\s/.test(text)) {
-    return { kind: 'link', url: `https://${text}`, label: prettyLink(`https://${text}`) }
-  }
-  return {
-    kind: 'place',
-    url: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(text)}`,
-    label: text,
-  }
-}
 
 /** The week starts on whichever day Settings → Profile says — Sunday until
  *  somebody says otherwise. Every grid here goes through this one function, so
@@ -528,17 +499,7 @@ function displayTitle(summary?: string): string {
   return (summary ?? '(No title)').replace(STATUS_EMOJI, ' ').replace(/\s{2,}/g, ' ').trim() || '(No title)'
 }
 
-/** "2:00 pm – 8:00 pm" is mostly repetition; "2:00 – 8:00 pm" is not. */
-function compactRange(from: string, to: string): string {
-  const a = formatTime(from), b = formatTime(to)
-  const [, aMer] = a.split(' '), [, bMer] = b.split(' ')
-  return aMer === bMer ? `${a.replace(` ${aMer}`, '')} – ${b}` : `${a} – ${b}`
-}
 
-function minutesBetween(from: string, to: string): number {
-  const m = (t: string) => { const [h, x] = t.split(':').map(Number); return h * 60 + x }
-  return m(to) - m(from)
-}
 
 function nowTopPx(): number {
   const now = new Date()
@@ -932,956 +893,20 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
 // nothing multiplies its type any more: every size in it is the token the
 // task panel uses, so the two panels are one design in two modules.
 
-const EV_ROUND: React.CSSProperties = {
-  width: 28, height: 28, borderRadius: 'var(--sb-r-pill)', flexShrink: 0, padding: 0,
-  display: 'flex', alignItems: 'center', justifyContent: 'center',
-  background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-3)', cursor: 'pointer',
-}
-/** Four sizes in the whole panel: 27 title, 14 value, 13.5 label, 11.5 caption. */
-const EV_LABEL: React.CSSProperties = {
-  width: 84, flexShrink: 0, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', fontWeight: 500,
-}
-/** Every labelled row hangs off the same left edge. */
-const EV_ROW: React.CSSProperties = {
-  display: 'flex', alignItems: 'center', gap: 10,
-}
-/** A section is named, not shouted: the design sets these in the muted step at
- *  body size, with the count beside the word. */
-const EV_SECTION: React.CSSProperties = {
-  fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-3)', flexShrink: 0,
-}
-/** Every value in the panel sits in one of these, whether you can type in it,
- *  pick from it, or only read it. */
-/** Every value in the panel sits in one of these. It is plain until you reach
- *  for it — a box around every value made the panel a form, and most of what is
- *  in it is read far more often than it is changed. Hover and focus are in
- *  index.css on `.sb-ev-field`; nothing here writes a style on an event. */
-const EV_FIELD: React.CSSProperties = {
-  display: 'flex', alignItems: 'center', gap: 8, height: 34, boxSizing: 'border-box',
-  width: '100%', minWidth: 0, padding: '0 9px', borderRadius: 'var(--sb-r-nav)',
-  background: 'transparent', border: 'var(--sb-border-width) solid transparent',
-  color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
-  fontFamily: 'inherit', textAlign: 'left',
-}
-const EV_GHOST_ICON: React.CSSProperties = {
-  width: 26, height: 26, borderRadius: 'var(--sb-r-chip)', flexShrink: 0, padding: 0,
-  display: 'flex', alignItems: 'center', justifyContent: 'center',
-  background: 'none', border: 'none', color: 'var(--sb-ink-4)', cursor: 'pointer',
-}
 
-/** How long before the event you want telling, in the steps Google offers. */
-const ALERT_CHOICES = [0, 5, 10, 15, 30, 60, 120, 1440]
 
-function describeAlert(minutes: number | undefined, useDefault: boolean): string {
-  if (useDefault) return 'Calendar default'
-  if (minutes === undefined) return 'No alert'
-  if (minutes === 0) return 'At the time'
-  if (minutes < 60) return `${minutes} mins before`
-  if (minutes < 1440) return `${minutes / 60} hour${minutes === 60 ? '' : 's'} before`
-  return `${minutes / 1440} day${minutes === 1440 ? '' : 's'} before`
-}
 
-function describeResponse(status?: string): string {
-  if (status === 'accepted') return 'Coming'
-  if (status === 'declined') return 'Not coming'
-  if (status === 'tentative') return 'Maybe'
-  return 'No answer yet'
-}
-function responseGlyph(status?: string): string {
-  if (status === 'accepted') return '\u2713'
-  if (status === 'declined') return '\u2715'
-  return '?'
-}
-function responseTone(status?: string): string {
-  if (status === 'accepted') return 'var(--sb-positive)'
-  if (status === 'declined') return 'var(--sb-negative)'
-  return 'var(--sb-ink-4)'
-}
 
-/** Which video service this calendar makes links with. An event that already
- *  has a link says so itself; otherwise it comes from the account behind the
- *  calendar, since a Microsoft-hosted mailbox is a Teams shop and a Google one
- *  is a Meet shop. */
-type VideoProvider = 'meet' | 'teams' | 'other'
 
-const MS_MAIL_DOMAINS = /(^|\.)(outlook|hotmail|live|msn)\.[a-z.]{2,6}$/i
 
-function providerFromUrl(url: string): VideoProvider {
-  const host = (() => { try { return new URL(url).hostname } catch { return url } })().toLowerCase()
-  if (host.includes('meet.google')) return 'meet'
-  if (host.includes('teams.')) return 'teams'
-  return 'other'
-}
 
-function providerForAccount(email?: string): VideoProvider {
-  const domain = email?.split('@')[1]?.toLowerCase() ?? ''
-  return MS_MAIL_DOMAINS.test(domain) ? 'teams' : 'meet'
-}
 
-const PROVIDER_NAME: Record<VideoProvider, string> = {
-  meet: 'Google Meet', teams: 'Microsoft Teams', other: 'Video call',
-}
 
-/** The provider's own mark. Only ever drawn for a link that exists — an event
- *  with no call carries no branding at all. */
-function ProviderMark({ provider, size = 24 }: { provider: VideoProvider; size?: number }) {
-  if (provider === 'teams') {
-    return (
-      <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden focusable="false" style={{ flexShrink: 0 }}>
-        <circle fill="var(--sb-info)" cx="38.5" cy="11" r="4.5" />
-        <path fill="var(--sb-info)" d="M43.5 18H33v13.5a7 7 0 0 0 7 7h.2a5.3 5.3 0 0 0 5.3-5.3V20a2 2 0 0 0-2-2z" />
-        <circle fill="var(--sb-info)" cx="27" cy="9.5" r="6.5" />
-        <path fill="var(--sb-info)" d="M33.2 18H16.8A2.8 2.8 0 0 0 14 20.8v12.4A10.8 10.8 0 0 0 24.8 44h.4A10.8 10.8 0 0 0 36 33.2V20.8a2.8 2.8 0 0 0-2.8-2.8z" />
-        <path fill="#000" opacity=".12" d="M25 15.5V38a2.5 2.5 0 0 1-2.5 2.5H14.4a11 11 0 0 1-.4-3V20.8A2.8 2.8 0 0 1 16.8 18H25z" />
-        <rect fill="var(--sb-info)" x="2" y="13" width="24" height="24" rx="2.5" />
-        <path fill="#fff" d="M20 19H8v3.1h4.3V33h3.4V22.1H20z" />
-      </svg>
-    )
-  }
-  if (provider === 'meet') {
-    return (
-      <svg width={size} height={size * (72 / 87.5)} viewBox="0 0 87.5 72" aria-hidden focusable="false" style={{ flexShrink: 0 }}>
-        <path fill="var(--sb-positive)" d="M49.5 36l8.53 9.75 11.47 7.33 2-17.02-2-16.64-11.69 6.44z" />
-        <path fill="var(--sb-info)" d="M0 51.5V66c0 3.315 2.685 6 6 6h14.5l3-10.96-3-9.54-9.95-3z" />
-        <path fill="var(--sb-negative)" d="M20.5 0L0 20.5l10.55 3 9.95-3 2.95-9.41z" />
-        <path fill="var(--sb-info)" d="M20.5 20.5H0v31h20.5z" />
-        <path fill="var(--sb-positive)" d="M82.6 8.68L69.5 19.42v33.66l13.16 10.79c1.97 1.54 4.85.135 4.85-2.37V11c0-2.535-2.945-3.925-4.91-2.32zM49.5 36v15.5h-29V72h43c3.315 0 6-2.685 6-6V53.08z" />
-        <path fill="var(--sb-warning)" d="M63.5 0h-43v20.5h29V36l20-16.57V6c0-3.315-2.685-6-6-6z" />
-      </svg>
-    )
-  }
-  return <Video size={size - 4} color="var(--sb-ink-3)" style={{ flexShrink: 0 }} />
-}
 
-/** What to show for the link. A Meet code reads out loud — "omb-mppj-wyv" —
- *  so it is worth showing; a Teams or Zoom join URL is an opaque blob, so the
- *  host says more than the tail of the path does. */
-function meetingCode(url: string, provider: VideoProvider): string {
-  try {
-    const u = new URL(url)
-    if (provider === 'meet') {
-      const last = u.pathname.split('/').filter(Boolean).pop()
-      if (last) return last
-    }
-    return u.hostname.replace(/^www\./, '')
-  } catch { return url }
-}
 
-/** Google gives a mime type and nothing else — no size, no date. */
-function describeMime(mime: string | undefined): string {
-  if (!mime) return 'file'
-  if (mime.includes('spreadsheet') || mime.includes('excel')) return 'spreadsheet'
-  if (mime.includes('presentation') || mime.includes('powerpoint')) return 'presentation'
-  if (mime.includes('document') || mime.includes('word')) return 'document'
-  if (mime.includes('pdf')) return 'PDF'
-  if (mime.startsWith('image/')) return 'image'
-  if (mime.includes('folder')) return 'folder'
-  return mime.split('/').pop() ?? 'file'
-}
 
-/** "AB" from a name or an address, for the attendee circles. */
-function evInitials(name: string | undefined, email: string): string {
-  const src = (name ?? email.split('@')[0]).replace(/[._-]+/g, ' ')
-  return src.split(/\s+/).filter(Boolean).map(w => w[0]).join('').slice(0, 2).toUpperCase() || '?'
-}
 
-/** The organisation an address belongs to, as far as the address can say. */
-function evOrg(email: string): string {
-  const domain = email.split('@')[1] ?? ''
-  const name = domain.split('.')[0] ?? ''
-  return name ? name.charAt(0).toUpperCase() + name.slice(1) : ''
-}
 
-
-
-function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepError, onClose, onStatusToggle, onPrepRequest, onAddMeet, onSave, onDelete, calendars, onMoveCalendar, clashes, onOpenEvent, onLoadSeries }: {
-  event: GCalEventExt
-  status: EventStatus | undefined
-  calName: string
-  calColor: string
-  prep: MeetingPrep | null
-  prepLoading: boolean
-  prepError: string | null
-  onClose: () => void
-  onStatusToggle: (s: EventStatus) => void
-  onPrepRequest: () => void
-  onAddMeet?: () => Promise<void>
-  onSave?: (patch: Partial<GCalEventCreate>) => Promise<GCalEvent | null>
-  onDelete?: () => void
-  calendars?: CalWithAccount[]
-  /** Resolves to null when the move happened, or to why it did not. */
-  onMoveCalendar?: (targetCalId: string) => Promise<string | null>
-  /** Events on the same day that overlap this one. */
-  clashes?: GCalEventExt[]
-  onOpenEvent?: (e: GCalEventExt) => void
-  /** The RRULE lines of a series, for an event that is one of its occurrences. */
-  onLoadSeries?: (seriesId: string) => Promise<string[] | null>
-}) {
-  const popupRef = useRef<HTMLDivElement>(null)
-  const [saving, setSaving] = useState(false)
-  const [saveError, setSaveError] = useState<string | null>(null)
-  const [clashDismissed, setClashDismissed] = useState(false)
-  const [addingAttendee, setAddingAttendee] = useState(false)
-  const [pendingAttendees, setPendingAttendees] = useState<GCalEvent['attendees'] | null>(null)
-  const [attendeeDraft, setAttendeeDraft] = useState('')
-  const [prepChecked, setPrepChecked] = useState<Set<number>>(new Set())
-
-  const isAllDay = !event.start.dateTime
-  const startDate = new Date(event.start.dateTime ?? (event.start.date + 'T00:00:00'))
-  const endDate = new Date(event.end.dateTime ?? (event.end.date + 'T00:00:00'))
-  const pad = (n: number) => String(n).padStart(2, '0')
-
-  const [title, setTitle] = useState(event.summary ?? '')
-  const [dateStr, setDateStr] = useState(
-    `${startDate.getFullYear()}-${pad(startDate.getMonth() + 1)}-${pad(startDate.getDate())}`,
-  )
-  const [fromTime, setFromTime] = useState(`${pad(startDate.getHours())}:${pad(startDate.getMinutes())}`)
-  const [toTime, setToTime] = useState(`${pad(endDate.getHours())}:${pad(endDate.getMinutes())}`)
-  const [location, setLocation] = useState(event.location ?? '')
-  const [notes, setNotes] = useState(event.description ?? '')
-  const [meetOpen, setMeetOpen] = useState(false)
-  const [whenOpen, setWhenOpen] = useState(false)
-  const whenRef = useRef<HTMLSpanElement>(null)
-  const [places, setPlaces] = useState<string[]>([])
-  const [placeQuery, setPlaceQuery] = useState('')
-  const placeRef = useRef<HTMLSpanElement>(null)
-
-  useEffect(() => {
-    const fn = (e: MouseEvent) => { if (popupRef.current && !popupRef.current.contains(e.target as Node)) onClose() }
-    document.addEventListener('mousedown', fn)
-    return () => document.removeEventListener('mousedown', fn)
-  }, [onClose])
-
-  // What you type is looked up as a real place, a moment after you stop typing.
-  // The lookup knows towns and cities, so a street address or a room name comes
-  // back with nothing — it is still kept exactly as typed.
-  useEffect(() => {
-    const q = placeQuery.trim()
-    if (q.length < 3 || /https?:\/\//.test(q)) { setPlaces([]); return }
-    let live = true
-    const t = window.setTimeout(async () => {
-      const found = await lookupPlaces(q)
-      if (live) setPlaces(found.filter(pl => pl.toLowerCase() !== q.toLowerCase()).slice(0, 5))
-    }, 350)
-    return () => { live = false; window.clearTimeout(t) }
-  }, [placeQuery])
-
-  useEffect(() => {
-    if (places.length === 0) return
-    const h = (e: MouseEvent) => { if (placeRef.current && !placeRef.current.contains(e.target as Node)) setPlaces([]) }
-    document.addEventListener('mousedown', h)
-    return () => document.removeEventListener('mousedown', h)
-  }, [places.length])
-
-  const entryPoints = event.conferenceData?.entryPoints ?? []
-  const videoLink = entryPoints.find(ep => ep.entryPointType === 'video')?.uri
-  const phoneEntry = entryPoints.find(ep => ep.entryPointType === 'phone')
-  const accountEmail = (calendars ?? []).find(c => c.id === event.calendarId)?.accountEmail
-  const provider = videoLink ? providerFromUrl(videoLink) : providerForAccount(accountEmail)
-  /** Meet links this app can mint itself, through the Google Calendar it is
-   *  already talking to. A Teams link is made by the Teams add-in inside the
-   *  calendar, so that button opens the event there instead. */
-  const canAddVideo = provider === 'teams' ? !!event.htmlLink : !!onAddMeet
-  // The meeting link has its own card above, so Location speaks only about a place.
-  const where = whereTarget(location)
-  // An invitee appears the moment you type them, not when Google gets round to
-  // saying so — the round trip is seconds long, and watching a name you just
-  // added vanish and come back reads as a failure. The list Google returns wins
-  // as soon as it arrives, and a save that fails takes the optimistic row with
-  // it (the error line above says why).
-  const attendees = pendingAttendees ?? event.attendees ?? []
-  // An occurrence of a series carries no RRULE of its own — the rule lives on
-  // the series — so the sheet would have opened on "Never" for exactly the
-  // events that do repeat. Ask for the series and read it from there.
-  const [seriesRule, setSeriesRule] = useState<string[] | undefined>(undefined)
-  const ownRule = event.recurrence?.length ? event.recurrence : undefined
-  // The parent hands a fresh closure down every render, so it is held in a ref
-  // rather than watched — as a dependency it would fetch the series for ever.
-  const loadSeriesRef = useRef(onLoadSeries)
-  loadSeriesRef.current = onLoadSeries
-  const seriesId = ownRule ? undefined : event.recurringEventId
-  useEffect(() => {
-    setSeriesRule(undefined)
-    if (!seriesId || !loadSeriesRef.current) return
-    let live = true
-    void loadSeriesRef.current(seriesId).then(rules => { if (live) setSeriesRule(rules ?? undefined) })
-    return () => { live = false }
-  }, [event.id, seriesId])
-  const recur = useMemo(() => parseRecurrence(ownRule ?? seriesRule), [ownRule, seriesRule])
-  const recurrence = describeRecur(recur, startDate)
-  const [repeatOpen, setRepeatOpen] = useState(false)
-  // Every writable calendar, across every account. A calendar on another
-  // account is reachable — it just costs the event its identity, which is what
-  // the confirm is for — so it says whose it is rather than being left out.
-  const evAccount = (calendars ?? []).find(c => c.id === event.calendarId)?.accountEmail
-  const writable = (calendars ?? []).filter(c => c.accessRole === 'owner' || c.accessRole === 'writer')
-  const calLabel = (c: CalWithAccount) =>
-    `${c.summaryOverride ?? c.summary}${c.accountEmail && c.accountEmail !== evAccount ? ` — ${c.accountEmail}` : ''}`
-  const [moveError, setMoveError] = useState<string | null>(null)
-  const liveClashes = (clashes ?? []).filter(c => c.id !== event.id)
-
-  /** Every edit writes straight through — no Save button to forget. */
-  async function push(patch: Partial<GCalEventCreate>) {
-    if (!onSave) return
-    setSaving(true); setSaveError(null)
-    try {
-      const updated = await onSave(patch)
-      if (!updated) setSaveError('Could not save — check your permissions.')
-    } finally { setSaving(false) }
-  }
-
-  function pushTimes(nextDate: string, nextFrom: string, nextTo: string) {
-    if (isAllDay) { void push({ start: { date: nextDate }, end: { date: nextDate } }); return }
-    const tz = event.start.timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone
-    const [y, m, d] = nextDate.split('-').map(Number)
-    const [fh, fm] = nextFrom.split(':').map(Number)
-    const [th, tm] = nextTo.split(':').map(Number)
-    void push({
-      start: { dateTime: new Date(y, m - 1, d, fh, fm).toISOString(), timeZone: tz },
-      end:   { dateTime: new Date(y, m - 1, d, th, tm).toISOString(), timeZone: tz },
-    })
-  }
-
-  /** The first quarter-hour after every clash ends — where this could move to. */
-  const freeAfterClash = (() => {
-    if (!liveClashes.length || isAllDay) return null
-    const latestEnd = liveClashes
-      .map(c => new Date(c.end.dateTime ?? c.end.date + 'T00:00:00').getTime())
-      .reduce((a, b) => Math.max(a, b), 0)
-    const d = new Date(latestEnd)
-    d.setMinutes(Math.ceil(d.getMinutes() / 15) * 15, 0, 0)
-    return `${pad(d.getHours())}:${pad(d.getMinutes())}`
-  })()
-
-  function moveClear() {
-    if (!freeAfterClash) return
-    const span = (new Date(`2000-01-01T${toTime}`).getTime() - new Date(`2000-01-01T${fromTime}`).getTime()) / 60000
-    const [h, m] = freeAfterClash.split(':').map(Number)
-    const endMins = h * 60 + m + span
-    const nextTo = `${pad(Math.floor(endMins / 60) % 24)}:${pad(endMins % 60)}`
-    setFromTime(freeAfterClash); setToTime(nextTo)
-    pushTimes(dateStr, freeAfterClash, nextTo)
-    setClashDismissed(true)
-  }
-
-  function addAttendee() {
-    const email = attendeeDraft.trim().toLowerCase()
-    setAttendeeDraft(''); setAddingAttendee(false)
-    if (!email.includes('@')) return
-    if (attendees.some(a => a.email.toLowerCase() === email)) return
-    const next = [...attendees, { email, responseStatus: 'needsAction' }]
-    setPendingAttendees(next)
-    void push({ attendees: next.map(a => ({ email: a.email })) })
-      .finally(() => setPendingAttendees(null))
-  }
-
-  const files = event.attachments ?? []
-  const prepPoints = prep?.talkingPoints ?? []
-
-  const alertMinutes = event.reminders?.useDefault === false
-    ? event.reminders.overrides?.[0]?.minutes
-    : undefined
-
-  function setAlert(v: string) {
-    if (v === 'default') { void push({ reminders: { useDefault: true } }); return }
-    if (v === 'none')    { void push({ reminders: { useDefault: false, overrides: [] } }); return }
-    void push({ reminders: { useDefault: false, overrides: [{ method: 'popup', minutes: Number(v) }] } })
-  }
-
-  function addVideoCall() {
-    if (provider === 'teams') {
-      if (event.htmlLink) window.open(event.htmlLink, '_blank', 'noopener')
-      return
-    }
-    void onAddMeet?.()
-  }
-
-  function commitLocation() {
-    setPlaces([]); setPlaceQuery('')
-    if (location.trim() !== (event.location ?? '')) void push({ location: location.trim() })
-  }
-
-  function removeAttendee(email: string) {
-    const next = attendees.filter(a => a.email !== email)
-    setPendingAttendees(next)
-    void push({ attendees: next.map(a => ({ email: a.email })) })
-      .finally(() => setPendingAttendees(null))
-  }
-
-  return (
-    <ComposerShell panelRef={popupRef} onClose={onClose}>
-
-      {/* ── Which calendar, and what to do with the event ────────────────── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-        {/* The chip names the calendar and changes it — click to pick another */}
-        <span style={{ position: 'relative', display: 'inline-flex', minWidth: 0, flex: 1 }}>
-          <span
-            title={onMoveCalendar ? 'Click to move this to another calendar' : calName}
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: 7, height: 'var(--sb-h-pill)', padding: '0 13px',
-              borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-accent-tint)', color: 'var(--sb-ink-2)', fontSize: 'var(--sb-t-body-s)',
-              minWidth: 0, maxWidth: '100%', cursor: onMoveCalendar ? 'pointer' : 'default',
-            }}>
-            <span style={{ width: 8, height: 8, borderRadius: 'var(--sb-r-pill)', background: calColor, flexShrink: 0 }} />
-            <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {calName}
-            </span>
-            {onMoveCalendar && <ChevronDown size={ICON.sm} strokeWidth={STROKE.rest} style={{ color: 'var(--sb-ink-4)', flexShrink: 0 }} />}
-          </span>
-          {onMoveCalendar && (
-            <select
-              value={event.calendarId ?? ''}
-              onChange={async e => {
-                setMoveError(null)
-                const why = await onMoveCalendar(e.target.value)
-                if (why) setMoveError(why)
-              }}
-              style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', border: 'none' }}>
-              {writable.length === 0 && <option value={event.calendarId ?? ''}>{calName}</option>}
-              {writable.map(c => <option key={c.id} value={c.id}>{calLabel(c)}</option>)}
-            </select>
-          )}
-        </span>
-
-        {/* Done and cancelled are the two things you say about an event that
-            has already happened, so they sit together as the same kind of
-            control — pressed once to set, again to take back. */}
-        <button
-          onClick={() => onStatusToggle('done')}
-          title={status === 'done' ? 'Not done after all' : 'Mark done'}
-          style={{
-            ...EV_ROUND, width: 'var(--sb-h-pill)', height: 'var(--sb-h-pill)',
-            background: status === 'done' ? 'var(--sb-positive)' : 'var(--sb-card)',
-            borderColor: status === 'done' ? 'var(--sb-positive)' : 'var(--sb-border)',
-            color: status === 'done' ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
-          }}><Check size={ICON.md} strokeWidth={STROKE.active} /></button>
-
-        <button
-          onClick={() => onStatusToggle('cancelled')}
-          title={status === 'cancelled' ? 'Back on' : 'Mark cancelled'}
-          style={{
-            ...EV_ROUND, width: 'var(--sb-h-pill)', height: 'var(--sb-h-pill)',
-            background: status === 'cancelled' ? 'var(--sb-ink-3)' : 'var(--sb-card)',
-            borderColor: status === 'cancelled' ? 'var(--sb-ink-3)' : 'var(--sb-border)',
-            color: status === 'cancelled' ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
-          }}><Ban size={ICON.md} strokeWidth={STROKE.rest} /></button>
-
-        <button
-          onClick={() => onDelete?.()}
-          disabled={!onDelete}
-          title="Delete event"
-          style={{
-            ...EV_ROUND, width: 'var(--sb-h-pill)', height: 'var(--sb-h-pill)',
-            color: 'var(--sb-negative)', borderColor: 'color-mix(in srgb, var(--sb-negative) 35.0%, transparent)', opacity: onDelete ? 1 : 0.45,
-          }}><Trash2 size={ICON.md} /></button>
-
-        <button onClick={onClose} title="Close" style={{ ...EV_ROUND, width: 'var(--sb-h-pill)', height: 'var(--sb-h-pill)' }}><X size={ICON.md} /></button>
-      </div>
-
-      {/* A move that did not happen used to say nothing at all — the picker
-          simply snapped back to the calendar it was already on. */}
-      {moveError && (
-        <div style={{
-          display: 'flex', alignItems: 'flex-start', gap: 7, marginTop: 8,
-          padding: '8px 11px', borderRadius: 'var(--sb-r-nav)', fontSize: 'var(--sb-t-body-s)', lineHeight: 1.45,
-          background: 'var(--sb-negative-tint)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-negative) 26%, transparent)', color: 'var(--sb-negative-deep)',
-        }}>
-          <AlertCircle size={ICON.sm} style={{ flexShrink: 0, marginTop: 1 }} />
-          <span style={{ minWidth: 0 }}>{moveError}</span>
-        </div>
-      )}
-
-      <div style={{ ...CARD, gap: 12 }}>
-      {/* ── Title ────────────────────────────────────────────────────────── */}
-      {/* The title is the heading of the panel, not a form field, so it has no
-          box around it until you put the cursor in it. */}
-      <textarea
-        value={title}
-        rows={1}
-        onChange={e => setTitle(e.target.value)}
-        onBlur={() => { if (title.trim() && title !== event.summary) void push({ summary: title.trim() }) }}
-        onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur() } }}
-        ref={el => { if (el) { el.style.height = 'auto'; el.style.height = `${el.scrollHeight}px` } }}
-        placeholder="Event title"
-        style={{
-          width: '100%', boxSizing: 'border-box', margin: '14px 0 0', resize: 'none', overflow: 'hidden',
-          background: 'transparent', border: 'none', padding: 0,
-          fontFamily: DISPLAY, fontSize: 'var(--sb-t-h2)', fontWeight: 600,
-          lineHeight: 1.18, letterSpacing: '-0.025em', color: 'var(--sb-ink-1)', outline: 'none', textAlign: 'left',
-          textDecoration: status === 'cancelled' ? 'line-through' : 'none',
-        }} />
-
-      {/* The when is the panel's subtitle, the way the design reads it — under
-          the name, in one line, and still the way the time is changed. */}
-      <span ref={whenRef} style={{ display: 'block', position: 'relative', marginTop: 4 }}>
-        <button
-          onClick={() => setWhenOpen(o => !o)}
-          title="Change the day or the time"
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6, maxWidth: '100%',
-            background: 'none', border: 'none', padding: 0, cursor: 'pointer',
-            fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', fontWeight: 500,
-            color: 'var(--sb-ink-3)', textAlign: 'left',
-          }}>
-          <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {new Date(dateStr + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'long' })}
-            {isAllDay ? ' · All day' : ` · ${compactRange(fromTime, toTime)}`}
-          </span>
-          <ChevronDown size={ICON.sm} strokeWidth={STROKE.rest} style={{ color: 'var(--sb-ink-4)', flexShrink: 0 }} />
-        </button>
-        {whenOpen && (
-          <SchedulePopover
-            ignoreEventId={event.id}
-            date={dateStr}
-            start={isAllDay ? undefined : fromTime}
-            duration={Math.max(15, minutesBetween(fromTime, toTime))}
-            onApply={patch => {
-              const nextDate = patch.dueDate ?? dateStr
-              const nextFrom = patch.plannedTime ?? fromTime
-              const nextTo = addMinutes(nextFrom, patch.duration ?? Math.max(15, minutesBetween(fromTime, toTime)))
-              setDateStr(nextDate); setFromTime(nextFrom); setToTime(nextTo)
-              pushTimes(nextDate, nextFrom, nextTo)
-            }}
-            onClose={() => setWhenOpen(false)}
-          />
-        )}
-      </span>
-
-      {/* ── The meeting itself ───────────────────────────────────────────── */}
-      {/* Branding belongs to a link that exists. An event with no call shows
-          nothing here — the way to add one is a plain icon on the row below. */}
-      {videoLink && (
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 10, marginTop: 13,
-          height: 42, padding: '0 12px', boxSizing: 'border-box',
-          borderRadius: 'var(--sb-r-nav)', background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)',
-        }}>
-          <ProviderMark provider={provider} size={24} />
-          <span style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-1)', flexShrink: 0 }}>
-            {PROVIDER_NAME[provider]}
-          </span>
-          <a href={videoLink} target="_blank" rel="noreferrer"
-            title={videoLink}
-            style={{
-              flex: 1, minWidth: 0, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-info)', textDecoration: 'none',
-              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-            }}>{meetingCode(videoLink, provider)}</a>
-          <button
-            onClick={() => { void navigator.clipboard?.writeText(videoLink) }}
-            title="Copy the joining link"
-            style={{ ...EV_GHOST_ICON }}><Link size={ICON.md} /></button>
-          <button
-            onClick={() => setMeetOpen(o => !o)}
-            title={meetOpen ? 'Hide the details' : 'Show the full link and dial-in'}
-            style={{ ...EV_GHOST_ICON, transform: meetOpen ? 'rotate(180deg)' : undefined }}>
-            <ChevronDown size={ICON.md} />
-          </button>
-        </div>
-      )}
-
-      {videoLink && meetOpen && (
-        <div style={{
-          marginTop: 6, padding: '11px 15px', borderRadius: 'var(--sb-r-nav)',
-          background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)',
-        }}>
-          <a href={videoLink} target="_blank" rel="noreferrer" style={{
-            display: 'block', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-info)', wordBreak: 'break-all', textDecoration: 'none',
-          }}>{videoLink}</a>
-          {phoneEntry && (
-            <p style={{ margin: '7px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>
-              Dial in: {phoneEntry.label ?? phoneEntry.uri.replace('tel:', '')}
-              {phoneEntry.pin ? ` · PIN ${phoneEntry.pin}` : ''}
-            </p>
-          )}
-        </div>
-      )}
-
-      {/* ── Where ────────────────────────────────────────────────────────── */}
-      {/* One field you simply type in. What you type is looked up as you go, so
-          a place can be pinned to a real one; Enter keeps it either way. */}
-      <div style={{ ...EV_ROW, marginTop: 13 }}>
-        <span style={EV_LABEL}>Location</span>
-        <span ref={placeRef} style={{ flex: 1, minWidth: 0, display: 'flex', gap: 7, position: 'relative' }}>
-          <span className="sb-ev-field" style={{ ...EV_FIELD, flex: 1 }}>
-            <MapPin size={ICON.md} color={location ? 'var(--sb-ink-3)' : 'var(--sb-ink-4)'} style={{ flexShrink: 0 }} />
-            <input
-              value={location}
-              onChange={e => { setLocation(e.target.value); setPlaceQuery(e.target.value) }}
-              onFocus={() => { if (location.trim().length >= 3) setPlaceQuery(location) }}
-              onBlur={() => { window.setTimeout(commitLocation, 120) }}
-              onKeyDown={e => {
-                if (e.key === 'Enter') { e.preventDefault(); commitLocation(); (e.target as HTMLInputElement).blur() }
-                if (e.key === 'Escape') { setLocation(event.location ?? ''); setPlaces([]); (e.target as HTMLInputElement).blur() }
-              }}
-              placeholder="Add a place — room, office or address"
-              style={{
-                flex: 1, minWidth: 0, border: 'none', background: 'transparent', padding: 0,
-                fontSize: 'var(--sb-t-body-s)', fontFamily: 'inherit', color: 'var(--sb-ink-1)', outline: 'none',
-                textOverflow: 'ellipsis',
-              }} />
-            {where.kind !== 'empty' && (
-              <a href={where.url} target="_blank" rel="noreferrer"
-                title={where.kind === 'place' ? 'Open in Google Maps' : where.url}
-                onMouseDown={e => e.preventDefault()}
-                style={{ ...EV_GHOST_ICON, width: 22, height: 22, textDecoration: 'none' }}>
-                <ExternalLink size={ICON.sm} />
-              </a>
-            )}
-          </span>
-
-          {/* Adding a call is a plain icon — the provider's own mark only turns
-              up once there is a link to brand. */}
-          {!videoLink && canAddVideo && (
-            <button onClick={addVideoCall} title={`Add a ${PROVIDER_NAME[provider]} link`}
-              style={{ ...EV_ROUND, width: 34, height: 34, borderRadius: 'var(--sb-r-nav)', flexShrink: 0 }}>
-              <Video size={ICON.md} />
-            </button>
-          )}
-
-          {places.length > 0 && (
-            <div style={{
-              position: 'absolute', top: 'calc(100% + 5px)', left: 0, right: 0, zIndex: 90,
-              background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', padding: 5,
-              boxShadow: 'var(--sb-shadow-frame)',
-            }}>
-              {places.map(pl => (
-                <button key={pl} onMouseDown={e => e.preventDefault()}
-                  onClick={() => { setLocation(pl); setPlaces([]); void push({ location: pl }) }}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 8, width: '100%', height: 32,
-                    padding: '0 9px', borderRadius: 'var(--sb-r-chip)', border: 'none', background: 'transparent',
-                    color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', fontFamily: 'inherit', cursor: 'pointer', textAlign: 'left',
-                  }}>
-                  <MapPin size={ICON.sm} color="var(--sb-ink-4)" style={{ flexShrink: 0 }} />
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{pl}</span>
-                </button>
-              ))}
-            </div>
-          )}
-        </span>
-      </div>
-
-
-      </div>
-
-      <div style={{ ...CARD, gap: 12 }}>
-      {/* ── When ─────────────────────────────────────────────────────────── */}
-      {/* One pill, one popover: the date and both times together. Three
-          controls could not share a line with the label column, and a row that
-          breaks its own grid is worse than a row with one control in it. */}
-
-      {/* ── What it runs into ────────────────────────────────────────────── */}
-      {liveClashes.length > 0 && !clashDismissed && (
-        <div style={{ ...EV_ROW, marginTop: 12 }}>
-          <span style={EV_LABEL} />
-          <span style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <button className="sb-ev-field"
-              onClick={() => onOpenEvent?.(liveClashes[0])}
-              title={`Open “${displayTitle(liveClashes[0].summary)}”`}
-              style={{
-                ...EV_FIELD, flex: 1,
-                background: 'rgba(var(--sb-accent-rgb),0.24)', border: 'var(--sb-border-width) solid rgba(var(--sb-accent-rgb),0.7)',
-                color: 'var(--sb-ink-2)', cursor: onOpenEvent ? 'pointer' : 'default',
-                overflow: 'hidden', whiteSpace: 'nowrap',
-              }}>
-              <AlertCircle size={ICON.sm} style={{ flexShrink: 0 }} />
-              <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                Clashes with {displayTitle(liveClashes[0].summary)}
-                {liveClashes.length > 1 ? ` +${liveClashes.length - 1}` : ''}
-              </span>
-            </button>
-            <button
-              onClick={moveClear}
-              disabled={!freeAfterClash || saving}
-              title={freeAfterClash ? `Move this to ${freeAfterClash}, clear of the clash` : 'Nothing to move to'}
-              style={{ ...EV_ROUND, width: 48, height: 48, borderRadius: 'var(--sb-r-nav)', opacity: freeAfterClash ? 1 : 0.45 }}>
-              <Check size={ICON.md} strokeWidth={STROKE.active} />
-            </button>
-            <button onClick={() => setClashDismissed(true)} title="Leave it — I know"
-              style={{ ...EV_ROUND, width: 48, height: 48, borderRadius: 'var(--sb-r-nav)' }}>
-              <X size={ICON.md} />
-            </button>
-          </span>
-        </div>
-      )}
-
-      {/* ── Repeats · Alert · Prep ───────────────────────────────────────── */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 12 }}>
-        <div style={{ ...EV_ROW, position: 'relative' }}>
-          <span style={EV_LABEL}>Repeats</span>
-          <span style={{ flex: 1, minWidth: 0, position: 'relative' }}>
-            <button className="sb-ev-field" onClick={() => setRepeatOpen(o => !o)} disabled={!onSave}
-              title={onSave ? 'How often this comes back' : 'You cannot edit this event'}
-              style={{ ...EV_FIELD, width: '100%', cursor: onSave ? 'pointer' : 'default',
-                color: recurrence ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)', opacity: onSave ? 1 : 0.7 }}>
-              <RefreshCw size={ICON.sm} color="var(--sb-ink-3)" style={{ flexShrink: 0 }} />
-              <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {recurrence ?? 'Does not repeat'}
-              </span>
-              <ChevronDown size={ICON.sm} strokeWidth={STROKE.rest} style={{ color: 'var(--sb-ink-4)', flexShrink: 0 }} />
-            </button>
-            {repeatOpen && (
-              <RepeatPicker
-                value={recur}
-                start={startDate}
-                onApply={(r: Recur | null) => {
-                  // Google clears a rule with an empty array, not a missing key.
-                  setSeriesRule(toRecurrence(r))
-                  void push({ recurrence: toRecurrence(r) })
-                }}
-                onClose={() => setRepeatOpen(false)} />
-            )}
-          </span>
-        </div>
-
-        <div style={EV_ROW}>
-          <span style={EV_LABEL}>Alert</span>
-          <label className="sb-ev-field" style={{ ...EV_FIELD, flex: 1, position: 'relative', cursor: 'pointer' }}>
-            <span style={{ flex: 1, minWidth: 0, color: alertMinutes === undefined ? 'var(--sb-ink-4)' : 'var(--sb-ink-1)' }}>
-              {describeAlert(alertMinutes, event.reminders?.useDefault !== false)}
-            </span>
-            <ChevronDown size={ICON.sm} strokeWidth={STROKE.rest} style={{ color: 'var(--sb-ink-4)', flexShrink: 0 }} />
-            <select
-              value={event.reminders?.useDefault !== false ? 'default'
-                : alertMinutes === undefined ? 'none' : String(alertMinutes)}
-              onChange={e => setAlert(e.target.value)}
-              style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', border: 'none' }}>
-              <option value="default">Calendar default</option>
-              <option value="none">No alert</option>
-              {ALERT_CHOICES.map(m => <option key={m} value={m}>{describeAlert(m, false)}</option>)}
-            </select>
-          </label>
-        </div>
-
-        <div style={EV_ROW}>
-          <span style={EV_LABEL}>Prep held</span>
-          <span style={{ flex: 1, minWidth: 0 }}>
-            {prep ? (
-              <span className="sb-ev-field" style={{ ...EV_FIELD, width: '100%' }}>
-                <Sparkles size={ICON.sm} color="var(--sb-ink-3)" />
-                {prepPoints.length} point{prepPoints.length === 1 ? '' : 's'} gathered
-              </span>
-            ) : (
-              <button className="sb-ev-field" onClick={onPrepRequest} disabled={prepLoading}
-                style={{ ...EV_FIELD, width: '100%', cursor: 'pointer', opacity: prepLoading ? 0.6 : 1 }}>
-                <Sparkles size={ICON.sm} color="var(--sb-ink-3)" /> {prepLoading ? 'Gathering prep…' : 'Gather prep'}
-              </button>
-            )}
-          </span>
-        </div>
-      </div>
-
-      {prepError && (
-        <p style={{ margin: '8px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-negative)' }}>{prepError}</p>
-      )}
-
-
-      </div>
-
-      <div style={{ ...CARD, gap: 12 }}>
-      {/* ── Attendees ────────────────────────────────────────────────────── */}
-      <div style={{ ...EV_SECTION, marginBottom: 4 }}>
-        Attendees{attendees.length > 0 ? ` · ${attendees.length}` : ''}
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column' }}>
-        {attendees.map(a => (
-          <div key={a.email} style={{
-            display: 'flex', alignItems: 'center', gap: 10, padding: '5px 0', minWidth: 0,
-            opacity: pendingAttendees ? 0.6 : 1, transition: 'opacity 0.15s',
-          }}>
-            <span style={{
-              width: 28, height: 28, borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: 'var(--sb-field)', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-micro)', fontWeight: 700,
-            }}>{evInitials(a.displayName, a.email)}</span>
-            <span style={{ flex: 1, minWidth: 0, fontSize: 'var(--sb-t-body-s)', fontWeight: 500, color: 'var(--sb-ink-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {a.displayName ?? a.email}
-            </span>
-            <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', flexShrink: 0 }}>
-              {evOrg(a.email)}
-            </span>
-            <span
-              title={`${describeResponse(a.responseStatus)} · ${evOrg(a.email)}`}
-              style={{
-                ...EV_ROUND, width: 26, height: 26, flexShrink: 0, fontSize: 'var(--sb-t-meta)', fontWeight: 600,
-                color: responseTone(a.responseStatus),
-                borderColor: a.responseStatus === 'accepted' ? 'color-mix(in srgb, var(--sb-positive) 40.0%, transparent)'
-                  : a.responseStatus === 'declined' ? 'color-mix(in srgb, var(--sb-negative) 35.0%, transparent)' : 'var(--sb-border)',
-              }}>{responseGlyph(a.responseStatus)}</span>
-            <button
-              onClick={() => removeAttendee(a.email)}
-              disabled={!onSave}
-              title={`Take ${a.displayName ?? a.email} off the invite`}
-              style={{ ...EV_ROUND, width: 26, height: 26, flexShrink: 0, color: 'var(--sb-negative)', borderColor: 'color-mix(in srgb, var(--sb-negative) 35.0%, transparent)', opacity: onSave ? 1 : 0.45 }}>
-              <Trash2 size={ICON.sm} />
-            </button>
-          </div>
-        ))}
-
-        {addingAttendee ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '7px 0' }}>
-            <span style={{
-              width: 32, height: 32, borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              border: '1px dashed var(--sb-border)', color: 'var(--sb-ink-4)',
-            }}><Plus size={ICON.md} /></span>
-            <input className="sb-ev-field"
-              autoFocus
-              value={attendeeDraft}
-              onChange={e => setAttendeeDraft(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') addAttendee(); if (e.key === 'Escape') { setAttendeeDraft(''); setAddingAttendee(false) } }}
-              onBlur={addAttendee}
-              placeholder="name@company.com"
-              style={{ ...EV_FIELD, flex: 1, cursor: 'text', outline: 'none' }} />
-          </div>
-        ) : (
-          <button onClick={() => setAddingAttendee(true)} style={{
-            display: 'flex', alignItems: 'center', gap: 12, padding: '7px 0',
-            background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
-          }}>
-            <span style={{
-              width: 32, height: 32, borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              border: '1px dashed var(--sb-border)', color: 'var(--sb-ink-4)',
-            }}><Plus size={ICON.md} /></span>
-            <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-4)' }}>Add an invitee</span>
-          </button>
-        )}
-      </div>
-
-      </div>
-
-      <div style={{ ...CARD, gap: 12 }}>
-      {/* ── Attachments ──────────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <span style={EV_SECTION}>Attachments</span>
-        <span style={{ flex: 1, minWidth: 0, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {attendees.length > 0
-            ? `Shared with the ${attendees.length} invitee${attendees.length === 1 ? '' : 's'}`
-            : 'Only you can see these'}
-        </span>
-        <button className="sb-ev-field"
-          onClick={() => { if (event.htmlLink) window.open(event.htmlLink, '_blank', 'noopener') }}
-          disabled={!event.htmlLink}
-          title="Google Calendar holds the file picker"
-          style={{ ...EV_FIELD, width: 'auto', height: 40, gap: 8, cursor: 'pointer', flexShrink: 0, opacity: event.htmlLink ? 1 : 0.45 }}>
-          <Paperclip size={ICON.sm} /> Attach
-        </button>
-      </div>
-      {files.length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 8 }}>
-          {files.map(f => (
-            <a key={f.fileUrl} href={f.fileUrl} target="_blank" rel="noreferrer" style={{
-              display: 'flex', alignItems: 'center', gap: 12, padding: '6px 0', minWidth: 0, textDecoration: 'none',
-            }}>
-              <span style={{
-                width: 32, height: 32, borderRadius: 'var(--sb-r-sm)', flexShrink: 0,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-3)',
-              }}><FileText size={ICON.md} strokeWidth={STROKE.rest} /></span>
-              <span style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ display: 'block', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {f.title ?? f.fileUrl}
-                </span>
-                <span style={{ display: 'block', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', marginTop: 2 }}>
-                  {describeMime(f.mimeType)}
-                </span>
-              </span>
-              <ExternalLink size={ICON.sm} color="var(--sb-ink-4)" style={{ flexShrink: 0 }} />
-            </a>
-          ))}
-        </div>
-      )}
-
-      </div>
-
-      <div style={{ ...CARD, gap: 12 }}>
-      {/* ── Notes ────────────────────────────────────────────────────────── */}
-      <div style={{ ...EV_SECTION, marginBottom: 8 }}>Notes</div>
-      <textarea
-        value={notes}
-        onChange={e => setNotes(e.target.value)}
-        onBlur={() => { if (notes !== (event.description ?? '')) void push({ description: notes }) }}
-        placeholder="Add a note — agenda, decisions, anything to remember."
-        rows={3}
-        style={{
-          width: '100%', boxSizing: 'border-box', resize: 'vertical', minHeight: 88,
-          background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
-          padding: '13px 15px', fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', lineHeight: 1.5,
-          color: 'var(--sb-ink-1)', outline: 'none',
-        }} />
-
-      </div>
-
-      <div style={{ ...CARD, gap: 12 }}>
-      {/* ── Prep gathered ────────────────────────────────────────────────── */}
-      {prepPoints.length > 0 && (
-        <>
-              <div style={{ ...EV_SECTION, marginBottom: 8 }}>Prep gathered</div>
-          {prep?.goal && (
-            <p style={{ margin: '0 0 10px', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-2)', lineHeight: 1.5 }}>{prep.goal}</p>
-          )}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            {prepPoints.map((pt, i) => {
-              const on = prepChecked.has(i)
-              return (
-                <button key={i} onClick={() => setPrepChecked(prev => {
-                  const next = new Set(prev); if (on) next.delete(i); else next.add(i); return next
-                })} style={{
-                  display: 'flex', alignItems: 'flex-start', gap: 11, padding: '5px 0',
-                  background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit',
-                }}>
-                  <span style={{
-                    width: 19, height: 19, borderRadius: 'var(--sb-r-chip)', boxSizing: 'border-box', flexShrink: 0, marginTop: 1,
-                    border: on ? 'var(--sb-border-emphasis) solid var(--sb-ink-1)' : 'var(--sb-border-emphasis) solid var(--sb-border)',
-                    background: on ? 'var(--sb-ink-1)' : 'var(--sb-card)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>{on && <Check size={ICON.sm} color="var(--sb-ink-on-dark)" strokeWidth={STROKE.active} />}</span>
-                  <span style={{ fontSize: 'var(--sb-t-body-s)', color: on ? 'var(--sb-ink-4)' : 'var(--sb-ink-1)', lineHeight: 1.45, textDecoration: on ? 'line-through' : 'none' }}>
-                    {pt}
-                  </span>
-                </button>
-              )
-            })}
-          </div>
-        </>
-      )}
-
-      {/* ── What the Professor would do about it ─────────────────────────── */}
-      {liveClashes.length > 0 && (
-        <div style={{
-          marginTop: 18, padding: '14px 15px', borderRadius: 'var(--sb-r-nav)',
-          background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)',
-        }}>
-          <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-2)', lineHeight: 1.5 }}>
-            {freeAfterClash
-              ? `Professor: move this to ${freeAfterClash} and it stops costing you anything.`
-              : 'Professor: this overlaps something already booked.'}
-          </p>
-          {freeAfterClash && (
-            <Button variant="primary" onClick={moveClear} disabled={saving} style={{ width: 'auto', marginTop: 12 }}>Move to {freeAfterClash}</Button>
-          )}
-        </div>
-      )}
-
-      {saveError && (
-        <p style={{ margin: '12px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-negative)' }}>{saveError}</p>
-      )}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 14 }}>
-        <span style={{ flex: 1, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>
-          {saving ? 'Saving…' : 'Every change saves itself.'}
-        </span>
-        {event.htmlLink && (
-          <a href={event.htmlLink} target="_blank" rel="noreferrer"
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', textDecoration: 'none', flexShrink: 0 }}>
-            Open in Google Calendar <ExternalLink size={ICON.sm} />
-          </a>
-        )}
-      </div>
-      </div>
-    </ComposerShell>
-  )
-}
 
 // ─── EventContextMenu ─────────────────────────────────────────────────────────
 function EventContextMenu({
@@ -2128,10 +1153,6 @@ export function CalendarIntelligence() {
     }
   }, [!!creatingEvt]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  /** How long an event gets when you just point at an hour rather than drawing
-   *  one. Whatever it is, the form that opens can change it. */
-  const TAP_EVENT_MIN = 60
-
   // ─── Putting an event on the grid by hand ──────────────────────────────────
   // This only ever listened for mouse events, and only ever created anything
   // after an 8px drag — so on a touch screen there was no way to add an event
@@ -2161,13 +1182,7 @@ export function CalendarIntelligence() {
 
     const rawMin  = Math.max(0, Math.min(23 * 60 + 59, (relY / HOUR_PX) * 60))
     const dragMin = Math.round(rawMin / SNAP_MIN) * SNAP_MIN
-    // A tap means "this hour", so give it the whole hour it landed in rather
-    // than the nearest quarter — tapping the middle of the 3pm band and
-    // getting 3:30 is not what anyone points at an hour for.
-    const tapMin  = Math.floor(rawMin / 60) * 60
-
     const startX = e.clientX, startY = e.clientY
-    const downAt = Date.now()
     // A finger scrolls; only a mouse draws.
     const coarse = e.pointerType !== 'mouse'
     let started = false
@@ -2191,14 +1206,11 @@ export function CalendarIntelligence() {
       cleanup()
       if (started) return
       if (travelled(ue) > (coarse ? 12 : 4)) return          // a scroll, or a wobble
-      if (coarse && Date.now() - downAt > 700) return        // a long press is not a tap
+      // A bare tap does not create an event. Drawing a span says when it is
+      // and how long it runs; a tap says neither, and a composer opening under
+      // every stray click on the grid is a panel you spend the day closing.
+      // Touch, which cannot draw, uses New event in the header.
       setSelectedEvent(null)
-      setNewEventDraft({
-        dateStr,
-        startMin: tapMin,
-        endMin:   Math.min(24 * 60, tapMin + TAP_EVENT_MIN),
-        anchorX:  ue.clientX, anchorY: ue.clientY,
-      })
     }
     // iOS fires this the moment it decides the gesture is a scroll.
     const onCancelled = () => cleanup()
@@ -2658,6 +1670,19 @@ export function CalendarIntelligence() {
   }
 
   /** The RRULE lines of the series an occurrence belongs to. */
+  // An occurrence of a series carries no RRULE of its own — the rule is on the
+  // series — so the panel would open on "Never" for exactly the events that do
+  // repeat. Fetched once per selected event, and cleared when it changes.
+  const [seriesRules, setSeriesRules] = useState<string[] | null>(null)
+  useEffect(() => {
+    setSeriesRules(null)
+    const ev = selectedEvent as GCalEventExt | null
+    if (!ev || ev.recurrence?.length || !ev.recurringEventId) return
+    let live = true
+    void handleLoadSeries(ev, ev.recurringEventId).then(r => { if (live) setSeriesRules(r) })
+    return () => { live = false }
+  }, [selectedEvent?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
   async function handleLoadSeries(ev: GCalEventExt, seriesId: string): Promise<string[] | null> {
     const cal = allCalendars.find(c => c.id === ev.calendarId)
     if (!cal || !ev.calendarId) return null
@@ -3121,6 +2146,26 @@ export function CalendarIntelligence() {
               { value: 'month' as const, label: 'Month' },
             ]}
           />
+
+          {/* The one deliberate way in, now that a bare click on the grid does
+              nothing. Drawing a span on the grid is the other; a finger cannot
+              draw, so on a touch screen this is the only one. */}
+          <button
+            onClick={() => {
+              const d = localDateStr(calView === 'month' ? anchorDate : (weekDays.find(x => localDateStr(x) === today) ?? anchorDate))
+              const nextHour = Math.min(23, new Date().getHours() + 1) * 60
+              setSelectedEvent(null)
+              setNewEventDraft({ dateStr: d, startMin: nextHour, endMin: nextHour + 60, anchorX: 0, anchorY: 0 })
+            }}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0,
+              height: 'var(--sb-h-nav)', padding: '0 14px', borderRadius: 'var(--sb-r-pill)',
+              background: 'var(--sb-accent)', color: 'var(--sb-accent-ink)',
+              border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+              fontSize: 'var(--sb-t-body-s)', fontWeight: 700,
+            }}>
+            <Plus size={ICON.sm} strokeWidth={STROKE.active} /> New event
+          </button>
         </div>
 
         {/* Rules result toast */}
@@ -3557,40 +2602,110 @@ export function CalendarIntelligence() {
 
       {/* Event panel — a column of its own, beside the grid */}
       {selectedEvent && (() => {
-        const cal      = allCalendars.find(c => c.id === (selectedEvent as GCalEventExt).calendarId)
-        const calName  = cal?.summary ?? 'Calendar'
-        const calColor = cal ? calEffectiveColor(cal) : 'var(--sb-info)'
+        const ev = selectedEvent as GCalEventExt
+        const cal = allCalendars.find(c => c.id === ev.calendarId)
+        const allDay = !ev.start.dateTime
+        const s0 = new Date(ev.start.dateTime ?? `${ev.start.date}T00:00:00`)
+        const e0 = new Date(ev.end.dateTime ?? `${ev.end.date}T00:00:00`)
+        const p2 = (n: number) => String(n).padStart(2, '0')
+        const hhmm = (d: Date) => `${p2(d.getHours())}:${p2(d.getMinutes())}`
+        const entry = (ev.conferenceData?.entryPoints ?? []).find(x => x.entryPointType === 'video')?.uri ?? ''
+
+        // The rule lives on the series, not on one occurrence of it, so an
+        // occurrence would have opened on "Never" for exactly the events that
+        // do repeat. seriesRules is fetched when it is one.
+        const rules = ev.recurrence?.length ? ev.recurrence : (seriesRules ?? undefined)
+
+        const existing: ExistingEvent = {
+          id: ev.id,
+          title: ev.summary ?? '',
+          calId: ev.calendarId ?? '',
+          startDate: `${s0.getFullYear()}-${p2(s0.getMonth() + 1)}-${p2(s0.getDate())}`,
+          startTime: allDay ? '' : hhmm(s0),
+          endTime: allDay ? '' : hhmm(e0),
+          allDay,
+          timeZone: ev.start.timeZone,
+          location: ev.location ?? '',
+          meetLink: entry,
+          notes: ev.description ?? '',
+          invitees: (ev.attendees ?? []).map(a => ({ email: a.email, optional: a.optional, responseStatus: a.responseStatus })),
+          repeat: parseRecurrence(rules),
+          files: (ev.attachments ?? []).map(f => ({ name: f.title ?? 'Attachment', size: 0, kind: 'FILE' })),
+          visibility: (ev.visibility as ExistingEvent['visibility']) ?? 'default',
+          status: eventStatuses[ev.id] ?? null,
+          htmlLink: ev.htmlLink,
+        }
+
         return (
-          <EventPopup
-            event={selectedEvent}
-            status={eventStatuses[selectedEvent.id]}
-            calName={calName}
-            calColor={calColor}
-            prep={prep}
-            prepLoading={prepLoading}
-            prepError={prepError}
-            onClose={closePopup}
-            onStatusToggle={s => toggleStatus(selectedEvent.id, s)}
-            onPrepRequest={() => void generatePrep(selectedEvent)}
-            onAddMeet={() => handleAddMeet(selectedEvent)}
-            onSave={patch => handleUpdateEvent(selectedEvent, patch)}
-            onDelete={() => void handleDeleteEvent(selectedEvent)}
-            calendars={allCalendars.filter(c => c.accessRole === 'owner' || c.accessRole === 'writer')}
-            onMoveCalendar={targetCalId => handleMoveEvent(selectedEvent, targetCalId)}
-            clashes={(() => {
-              // Anything on the same day whose span overlaps this one
-              if (!selectedEvent.start.dateTime || !selectedEvent.end.dateTime) return []
-              const s0 = new Date(selectedEvent.start.dateTime).getTime()
-              const e0 = new Date(selectedEvent.end.dateTime).getTime()
-              return (displayedEvents as GCalEventExt[]).filter(e => {
-                if (e.id === selectedEvent.id || !e.start.dateTime || !e.end.dateTime) return false
-                const s1 = new Date(e.start.dateTime).getTime()
-                const e1 = new Date(e.end.dateTime).getTime()
-                return s1 < e0 && e1 > s0
+          <NewEventPanel
+            key={ev.id}
+            draft={{ dateStr: existing.startDate, startMin: 0, endMin: 0 }}
+            existing={existing}
+            calendars={allCalendars}
+            organiser={cal?.accountEmail ?? user?.email}
+            clashes={(displayedEvents as GCalEventExt[])
+              .filter(o => {
+                if (o.id === ev.id || !ev.start.dateTime || !ev.end.dateTime) return false
+                if (!o.start.dateTime || !o.end.dateTime) return false
+                return new Date(o.start.dateTime).getTime() < e0.getTime()
+                    && new Date(o.end.dateTime).getTime() > s0.getTime()
               })
-            })()}
-            onOpenEvent={e => setSelectedEvent(e)}
-            onLoadSeries={seriesId => handleLoadSeries(selectedEvent, seriesId)}
+              .map(o => ({
+                id: o.id, summary: o.summary,
+                when: `${formatTime(hhmm(new Date(o.start.dateTime!)))} – ${formatTime(hhmm(new Date(o.end.dateTime!)))}`,
+              }))}
+            onPush={patch => void handleUpdateEvent(ev, patch as Partial<GCalEventCreate>)}
+            onDelete={() => void handleDeleteEvent(ev)}
+            onMoveCalendar={targetCalId => handleMoveEvent(ev, targetCalId)}
+            onSave={() => { /* an event that exists writes as it is edited */ }}
+            onCancel={closePopup}
+            onAddMeet={() => void handleAddMeet(ev)}
+            alertMinutes={ev.reminders?.useDefault === false ? (ev.reminders.overrides?.[0]?.minutes ?? -1) : undefined}
+            onAlert={v => {
+              if (v === 'default') return void handleUpdateEvent(ev, { reminders: { useDefault: true } })
+              if (v === 'none') return void handleUpdateEvent(ev, { reminders: { useDefault: false, overrides: [] } })
+              void handleUpdateEvent(ev, { reminders: { useDefault: false, overrides: [{ method: 'popup', minutes: v }] } })
+            }}
+            extra={<>
+              {/* What the Professor has read about this meeting. */}
+              <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-3)' }}>Prep</span>
+                <span style={{ flex: 1 }} />
+                <button
+                  onClick={() => void generatePrep(ev)}
+                  disabled={prepLoading}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 5, height: 'var(--sb-h-pill)',
+                    padding: '0 11px', borderRadius: 'var(--sb-r-pill)', cursor: prepLoading ? 'default' : 'pointer',
+                    background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)',
+                    color: 'var(--sb-ink-3)', fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
+                  }}>
+                  <Sparkles size={ICON.sm} /> {prepLoading ? 'Reading…' : prep ? 'Again' : 'Gather prep'}
+                </button>
+              </span>
+              {prepError && (
+                <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-negative-deep)' }}>{prepError}</span>
+              )}
+              {prep?.contextSummary && (
+                <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-2)', lineHeight: 1.5 }}>
+                  {prep.contextSummary}
+                </span>
+              )}
+              {(prep?.talkingPoints ?? []).map((pt, i) => (
+                <span key={i} style={{ display: 'flex', gap: 7, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-2)', lineHeight: 1.5 }}>
+                  <span style={{ color: 'var(--sb-ink-4)', flexShrink: 0 }}>·</span>{pt}
+                </span>
+              ))}
+              {ev.htmlLink && (
+                <a href={ev.htmlLink} target="_blank" rel="noopener noreferrer"
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 5, alignSelf: 'flex-start', marginTop: 2,
+                    fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', textDecoration: 'none',
+                  }}>
+                  Open in Google Calendar <ExternalLink size={ICON.sm} />
+                </a>
+              )}
+            </>}
           />
         )
       })()}

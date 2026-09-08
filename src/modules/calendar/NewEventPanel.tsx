@@ -21,7 +21,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   MapPin, Video, X, Trash2, CheckCircle2, XCircle, RefreshCw, Paperclip,
-  Upload, List, ChevronDown, ChevronRight, Plus,
+  Upload, List, ChevronDown, ChevronRight, Plus, Bell,
 } from 'lucide-react'
 import { ICON, STROKE } from '@/lib/type'
 import { loadDynamicCompanies } from '@/types'
@@ -170,7 +170,22 @@ export function ComposerShell({ panelRef, onClose, expanded, children }: {
 
 // ─── What the composer is given, and what it gives back ──────────────────────
 
-export interface ComposerInvitee { email: string; optional?: boolean }
+export interface ComposerInvitee {
+  email: string
+  optional?: boolean
+  /** Google's own: needsAction | accepted | declined | tentative. */
+  responseStatus?: string
+}
+
+/** What a reply is called, and the colour it is said in. */
+export function rsvpOf(status: string | undefined): { label: string; bg: string; ink: string } {
+  switch (status) {
+    case 'accepted':  return { label: 'Yes',      bg: C.goodSurf, ink: C.goodInk }
+    case 'declined':  return { label: 'No',       bg: 'var(--sb-negative-tint)', ink: C.bad }
+    case 'tentative': return { label: 'Maybe',    bg: C.inset,    ink: C.third }
+    default:          return { label: 'Awaiting', bg: C.goldSurf, ink: C.goldInk }
+  }
+}
 
 export interface ComposerResult {
   title: string
@@ -190,6 +205,42 @@ export interface ComposerResult {
   status?: 'done' | 'cancelled'
 }
 
+/** What Google is told about an event that already exists. */
+export type EventPatch = Partial<{
+  summary: string
+  location: string
+  description: string
+  start: { date?: string; dateTime?: string; timeZone?: string }
+  end: { date?: string; dateTime?: string; timeZone?: string }
+  attendees: { email: string; optional?: boolean }[]
+  recurrence: string[]
+  visibility: 'default' | 'private' | 'public'
+  reminders: { useDefault: boolean; overrides?: { method: string; minutes: number }[] }
+}>
+
+/** An event that exists, in the shape the panel's own controls speak. */
+export interface ExistingEvent {
+  id: string
+  title: string
+  calId: string
+  startDate: string
+  /** '' when it is an all-day event. */
+  startTime: string
+  endTime: string
+  allDay: boolean
+  timeZone?: string
+  location: string
+  meetLink: string
+  notes: string
+  invitees: ComposerInvitee[]
+  repeat: Recur | null
+  files: { name: string; size: number; kind: string }[]
+  visibility: 'default' | 'private' | 'public'
+  status: 'done' | 'cancelled' | null
+  /** Where Google would open it. */
+  htmlLink?: string
+}
+
 export interface ComposerCalendar {
   id: string
   summary: string
@@ -197,6 +248,17 @@ export interface ComposerCalendar {
   primary?: boolean
   accessRole?: string
   accountEmail?: string
+}
+
+/** What an alert can be set to. Google's own default is the first. */
+const ALERTS: [('default' | 'none' | number), string][] = [
+  ['default', 'Default'], ['none', 'None'], [0, 'At the time'],
+  [10, '10 min'], [30, '30 min'], [60, '1 hour'], [1440, '1 day'],
+]
+function describeAlertMinutes(m: number): string {
+  if (m % 1440 === 0) return `${m / 1440} day${m === 1440 ? '' : 's'} before`
+  if (m % 60 === 0) return `${m / 60} hour${m === 60 ? '' : 's'} before`
+  return `${m} min before`
 }
 
 const KINDS = ['Working session', 'Meeting', 'Focus', 'Class'] as const
@@ -232,60 +294,118 @@ function initialsOf(s: string): string {
 }
 
 export function NewEventPanel({
-  draft, calendars, organiser, provider = 'google', onSave, onCancel,
+  draft, existing, calendars, organiser, provider = 'google',
+  clashes, onSave, onCancel, onPush, onDelete, onMoveCalendar, extra,
+  alertMinutes, onAlert, onAddMeet,
 }: {
   draft: { dateStr: string; startMin: number; endMin: number }
+  /** The event this panel is about, when it already exists. Absent means the
+   *  panel is composing a new one — the only difference between the two. */
+  existing?: ExistingEvent
   calendars: ComposerCalendar[]
   /** Whose calendar this is — the organiser row, and the company in the header. */
   organiser: string | undefined
   /** The tenant's conferencing: Teams for a Microsoft account, Meet otherwise. */
   provider?: 'google' | 'teams'
+  /** What else is on the day, overlapping this. */
+  clashes?: { id: string; summary?: string; when: string }[]
   onSave: (data: ComposerResult) => void
   onCancel: () => void
+  /** Edit mode only: every change writes straight through. */
+  onPush?: (patch: EventPatch) => void
+  onDelete?: () => void
+  /** Resolves to null on success, or to why the move did not happen. */
+  onMoveCalendar?: (calId: string) => Promise<string | null>
+  /** Anything only the existing-event panel has — prep, "open in Google". */
+  extra?: React.ReactNode
+  /** Minutes before the event, `undefined` for the calendar's own default. */
+  alertMinutes?: number
+  onAlert?: (v: 'default' | 'none' | number) => void
+  /** Mint a Meet link on an event that already exists. */
+  onAddMeet?: () => void
 }) {
   const writable = calendars.filter(c => c.accessRole === 'owner' || c.accessRole === 'writer')
   const memory = useMemo(loadMemory, [])
+  const editing = !!existing
 
-  // Everything arrives answered: the length you usually give this, the
-  // calendar the account writes to, the provider the tenant uses.
+  // Everything arrives answered: for a new event the length you usually give
+  // this kind of thing, for an existing one what the event actually says.
   const drafted = Math.max(15, draft.endMin - draft.startMin)
   const startMin = draft.startMin
-  const endMin = memory.minutes ? startMin + memory.minutes : draft.endMin
+  const endMin = memory.minutes && !editing ? startMin + memory.minutes : draft.endMin
 
-  const [title, setTitle] = useState('')
-  const [calId, setCalId] = useState((writable.find(c => c.primary) ?? writable[0])?.id ?? '')
-  const [startDate, setStartDate] = useState(draft.dateStr)
-  const [startTime, setStartTime] = useState(pad(startMin))
-  const [endTime, setEndTime] = useState(pad(endMin))
-  const [allDay, setAllDay] = useState(false)
+  const [title, setTitle] = useState(existing?.title ?? '')
+  const [calId, setCalId] = useState(existing?.calId ?? (writable.find(c => c.primary) ?? writable[0])?.id ?? '')
+  const [startDate, setStartDate] = useState(existing?.startDate ?? draft.dateStr)
+  const [startTime, setStartTime] = useState(existing?.startTime ?? pad(startMin))
+  const [endTime, setEndTime] = useState(existing?.endTime ?? pad(endMin))
+  const [allDay, setAllDay] = useState(existing?.allDay ?? false)
   const [kind, setKind] = useState<Kind>(memory.kind ?? 'Meeting')
 
-  const [placeOpen, setPlaceOpen] = useState(false)
-  const [onlineOpen, setOnlineOpen] = useState(false)
-  const [location, setLocation] = useState('')
-  const [meetLink, setMeetLink] = useState('')
+  const [placeOpen, setPlaceOpen] = useState(!!existing?.location)
+  const [onlineOpen, setOnlineOpen] = useState(!!existing?.meetLink)
+  const [location, setLocation] = useState(existing?.location ?? '')
+  const [meetLink, setMeetLink] = useState(existing?.meetLink ?? '')
   const [addMeet, setAddMeet] = useState(false)
   const [conf, setConf] = useState<'google' | 'teams'>(provider)
 
-  const [repeat, setRepeat] = useState<Recur | null>(null)
-  const [endsMode, setEndsMode] = useState<'never' | 'count' | 'until'>('never')
-  const [count, setCount] = useState(8)
-  const [until, setUntil] = useState('')
+  const [repeat, setRepeat] = useState<Recur | null>(existing?.repeat ?? null)
+  const [endsMode, setEndsMode] = useState<'never' | 'count' | 'until'>(
+    existing?.repeat?.count ? 'count' : existing?.repeat?.until ? 'until' : 'never')
+  const [count, setCount] = useState(existing?.repeat?.count ?? 8)
+  const [until, setUntil] = useState(existing?.repeat?.until ?? '')
 
-  const [people, setPeople] = useState<ComposerInvitee[]>([])
+  const [people, setPeople] = useState<ComposerInvitee[]>(existing?.invitees ?? [])
   const [invitee, setInvitee] = useState('')
 
-  const [files, setFiles] = useState<{ name: string; size: number; kind: string }[]>([])
+  const [files, setFiles] = useState<{ name: string; size: number; kind: string }[]>(existing?.files ?? [])
   const [dropping, setDropping] = useState(false)
 
   const [extrasOpen, setExtrasOpen] = useState(false)
-  const [notes, setNotes] = useState('')
-  const [visibility, setVisibility] = useState<'default' | 'private' | 'public'>('default')
-  const [status, setStatus] = useState<'done' | 'cancelled' | null>(null)
+  const [notes, setNotes] = useState(existing?.notes ?? '')
+  const [visibility, setVisibility] = useState<'default' | 'private' | 'public'>(existing?.visibility ?? 'default')
+  const [status, setStatus] = useState<'done' | 'cancelled' | null>(existing?.status ?? null)
+  const [moveError, setMoveError] = useState<string | null>(null)
 
   const ref = useRef<HTMLDivElement>(null)
   const titleRef = useRef<HTMLInputElement>(null)
-  useEffect(() => { titleRef.current?.focus() }, [])
+  // An existing event is read far more often than it is retitled; stealing the
+  // caret on open would put the cursor in the one field you rarely want.
+  useEffect(() => { if (!editing) titleRef.current?.focus() }, [editing])
+
+  // ── Write-through ──────────────────────────────────────────────────────────
+  // In edit mode there is no Save: each control writes as it is used. Words are
+  // held back until you stop typing, or every keystroke is a request.
+  const push = (patch: EventPatch) => { if (editing) onPush?.(patch) }
+  const wordTimer = useRef<number | undefined>(undefined)
+  const pushWords = (patch: EventPatch) => {
+    if (!editing) return
+    window.clearTimeout(wordTimer.current)
+    wordTimer.current = window.setTimeout(() => onPush?.(patch), 700)
+  }
+  useEffect(() => () => window.clearTimeout(wordTimer.current), [])
+
+  /** The times as Google wants them, from whatever the three controls now say. */
+  function timesPatch(d: string, from: string, to: string, whole: boolean): EventPatch {
+    if (whole) return { start: { date: d }, end: { date: d } }
+    const tz = existing?.timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone
+    const [y, mo, da] = d.split('-').map(Number)
+    const [fh, fm] = from.split(':').map(Number)
+    const [th, tm] = to.split(':').map(Number)
+    return {
+      start: { dateTime: new Date(y, mo - 1, da, fh, fm).toISOString(), timeZone: tz },
+      end:   { dateTime: new Date(y, mo - 1, da, th, tm).toISOString(), timeZone: tz },
+    }
+  }
+  const pushTimes = (d: string, from: string, to: string, whole = allDay) =>
+    push(timesPatch(d, from, to, whole))
+
+  function pushRepeat(r: Recur | null, mode: typeof endsMode, n: number, u: string) {
+    const rule = r ? { ...r, ...(mode === 'count' ? { count: n } : {}), ...(mode === 'until' && u ? { until: u } : {}) } : null
+    push({ recurrence: rule ? toRecurrence(rule) : [] })
+  }
+  const pushPeople = (next: ComposerInvitee[]) =>
+    push({ attendees: next.map(a => ({ email: a.email, ...(a.optional ? { optional: true } : {}) })) })
 
   const company = useMemo(() => {
     const cal = calendars.find(c => c.id === calId)
@@ -303,9 +423,12 @@ export function NewEventPanel({
   const weekday = startDateObj.toLocaleDateString('en-GB', { weekday: 'short' })
 
   function setPreset(p: 'never' | 'weekly' | 'biweekly' | 'monthly' | 'custom') {
-    if (p === 'never') { setRepeat(null); return }
-    if (p === 'custom') { setRepeat({ freq: 'WEEKLY', interval: 3 }); return }
-    setRepeat(presetRecur(p === 'biweekly' ? 'biweekly' : p, startDateObj))
+    const next: Recur | null =
+      p === 'never'  ? null :
+      p === 'custom' ? { freq: 'WEEKLY', interval: 3 } :
+      presetRecur(p === 'biweekly' ? 'biweekly' : p, startDateObj)
+    setRepeat(next)
+    pushRepeat(next, endsMode, count, until)
   }
   const preset: string = !repeat ? 'never'
     : repeat.freq === 'WEEKLY' && repeat.interval === 1 ? 'weekly'
@@ -315,7 +438,8 @@ export function NewEventPanel({
   function addPerson(raw: string) {
     const email = raw.trim().toLowerCase().replace(/,$/, '')
     if (email && email.includes('@') && !people.some(p => p.email === email)) {
-      setPeople(prev => [...prev, { email }])
+      const next = [...people, { email }]
+      setPeople(next); pushPeople(next)
     }
     setInvitee('')
   }
@@ -347,11 +471,40 @@ export function NewEventPanel({
 
       {/* ── 1 · Header ─────────────────────────────────────────────────────── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '12px 12px 0', minWidth: 0 }}>
-        <span style={{
-          fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
-          letterSpacing: '-.02em', color: C.text, flex: 1, minWidth: 0,
-          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-        }}>{company}</span>
+        {/* The chip names the calendar and, on an event that exists, changes
+            it — the picker is an invisible select the size of the chip. */}
+        <span style={{ position: 'relative', display: 'inline-flex', flex: 1, minWidth: 0 }}>
+          <span
+            title={onMoveCalendar ? 'Move this to another calendar' : company}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6, minWidth: 0, maxWidth: '100%',
+              fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
+              letterSpacing: '-.02em', color: C.text,
+              cursor: onMoveCalendar ? 'pointer' : 'default',
+            }}>
+            <span style={{
+              minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            }}>{company}</span>
+            {onMoveCalendar && <ChevronDown size={ICON.sm} strokeWidth={1.8} color={C.faint} style={{ flexShrink: 0 }} />}
+          </span>
+          {onMoveCalendar && (
+            <select
+              value={calId}
+              onChange={async e => {
+                const to = e.target.value
+                setMoveError(null)
+                const why = await onMoveCalendar(to)
+                if (why) setMoveError(why); else setCalId(to)
+              }}
+              style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', border: 'none' }}>
+              {writable.map(c => (
+                <option key={c.id} value={c.id}>
+                  {(c.summaryOverride ?? c.summary) + (c.accountEmail && c.accountEmail !== organiser ? ` — ${c.accountEmail}` : '')}
+                </option>
+              ))}
+            </select>
+          )}
+        </span>
 
         <button
           title={status === 'done' ? 'Not done after all' : 'Mark it done'}
@@ -366,8 +519,11 @@ export function NewEventPanel({
           <XCircle size={ICON.sm} strokeWidth={STROKE.rest} />
         </button>
         <button
-          title="Discard this event"
-          onClick={() => { if (window.confirm('Discard this event?')) onCancel() }}
+          title={editing ? 'Delete this event' : 'Discard this event'}
+          onClick={() => {
+            if (!window.confirm(editing ? 'Delete this event?' : 'Discard this event?')) return
+            if (editing) onDelete?.(); else onCancel()
+          }}
           style={{ ...ROUND, color: C.bad }}><Trash2 size={ICON.sm} strokeWidth={STROKE.rest} /></button>
         <button title="Close" onClick={onCancel} style={ROUND}>
           <X size={ICON.sm} strokeWidth={STROKE.rest} />
@@ -379,8 +535,8 @@ export function NewEventPanel({
         <input
           ref={titleRef}
           value={title}
-          onChange={e => setTitle(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter') submit() }}
+          onChange={e => { setTitle(e.target.value); pushWords({ summary: e.target.value }) }}
+          onKeyDown={e => { if (e.key === 'Enter' && !editing) submit() }}
           placeholder="Event title"
           style={{
             width: '100%', background: 'transparent', border: 'none', outline: 'none', padding: 0,
@@ -414,10 +570,11 @@ export function NewEventPanel({
             {placeOpen && (
               <label style={FIELD}>
                 <MapPin size={ICON.md} strokeWidth={1.8} color={C.third} style={{ flexShrink: 0 }} />
-                <input value={location} onChange={e => setLocation(e.target.value)}
+                <input value={location}
+                  onChange={e => { setLocation(e.target.value); pushWords({ location: e.target.value }) }}
                   placeholder="Add a place" style={BARE} />
                 {memory.venue && !location && (
-                  <button onClick={() => setLocation(memory.venue!)}
+                  <button onClick={() => { setLocation(memory.venue!); push({ location: memory.venue! }) }}
                     style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'var(--sb-t-meta)', color: C.faint, flexShrink: 0 }}>
                     Recent: {memory.venue}
                   </button>
@@ -432,15 +589,15 @@ export function NewEventPanel({
                   <input value={meetLink} onChange={e => setMeetLink(e.target.value)}
                     placeholder="Paste a meeting link" style={BARE} />
                   <button
-                    onClick={() => setAddMeet(v => !v)}
+                    onClick={() => { if (editing) onAddMeet?.(); else setAddMeet(v => !v) }}
                     title={conf === 'teams'
                       ? 'A Teams link is made by Outlook when the invitation goes out'
                       : 'Google makes the link when the event is created'}
                     style={{
                       display: 'inline-flex', alignItems: 'center', gap: 6, height: 'var(--sb-h-pill)', padding: '0 11px',
                       borderRadius: 'var(--sb-r-sm)', border: 'none', cursor: 'pointer', flexShrink: 0,
-                      background: addMeet ? C.ink : C.card,
-                      color: addMeet ? C.onInk : C.text,
+                      background: addMeet && !editing ? C.ink : C.card,
+                      color: addMeet && !editing ? C.onInk : C.text,
                       fontFamily: 'inherit', fontSize: 'var(--sb-t-meta)', fontWeight: 600,
                     }}>
                     {conf === 'teams' ? 'Create Teams link' : 'Create Google Meet'}
@@ -492,7 +649,8 @@ export function NewEventPanel({
             fontSize: 'var(--sb-t-body-s)', fontWeight: 600, ...NUM, flexShrink: 0,
           }}>
             {startDateObj.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}
-            <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
+            <input type="date" value={startDate}
+              onChange={e => { setStartDate(e.target.value); pushTimes(e.target.value, startTime, endTime) }}
               style={{ width: 0, opacity: 0, position: 'absolute', pointerEvents: 'none' }} />
             <ChevronDown size={ICON.sm} strokeWidth={1.8} />
           </label>
@@ -501,17 +659,23 @@ export function NewEventPanel({
             <>
               <label style={{ ...FIELD, flex: '1 1 96px', minWidth: 90, padding: '0 6px' }}>
                 <input type="time" value={startTime}
-                  onChange={e => { const v = e.target.value; setStartTime(v); setEndTime(pad(toMin(v) + minutes)) }}
+                  onChange={e => {
+                    const v = e.target.value, to = pad(toMin(v) + minutes)
+                    setStartTime(v); setEndTime(to); pushTimes(startDate, v, to)
+                  }}
                   style={{ ...BARE, ...NUM, fontSize: 'var(--sb-t-meta)' }} />
               </label>
               <span style={{ fontSize: 'var(--sb-t-meta)', color: C.faint, flexShrink: 0 }}>to</span>
               <label style={{ ...FIELD, flex: '1 1 96px', minWidth: 90, padding: '0 6px' }}>
-                <input type="time" value={endTime} onChange={e => setEndTime(e.target.value)}
+                <input type="time" value={endTime}
+                  onChange={e => { setEndTime(e.target.value); pushTimes(startDate, startTime, e.target.value) }}
                   style={{ ...BARE, ...NUM, fontSize: 'var(--sb-t-meta)' }} />
               </label>
             </>
           )}
-          <button onClick={() => setAllDay(v => !v)} style={pill(allDay)}>All day</button>
+          <button
+            onClick={() => { const v = !allDay; setAllDay(v); pushTimes(startDate, startTime, endTime, v) }}
+            style={pill(allDay)}>All day</button>
         </div>
 
         <div style={{ height: 1, background: C.hair }} />
@@ -544,7 +708,11 @@ export function NewEventPanel({
               <span style={{ fontSize: 'var(--sb-t-meta)', color: C.faint }}>Ends</span>
               <label style={{ ...FIELD, flex: '1 1 120px', minWidth: 0 }}>
                 <input type="date" value={until}
-                  onChange={e => { setUntil(e.target.value); setEndsMode(e.target.value ? 'until' : 'never') }}
+                  onChange={e => {
+                    const mode = e.target.value ? 'until' : 'never'
+                    setUntil(e.target.value); setEndsMode(mode)
+                    pushRepeat(repeat, mode, count, e.target.value)
+                  }}
                   style={{ ...BARE, ...NUM, fontSize: 'var(--sb-t-meta)' }} />
                 <ChevronDown size={ICON.sm} strokeWidth={1.8} color={C.faint} style={{ flexShrink: 0 }} />
               </label>
@@ -552,18 +720,21 @@ export function NewEventPanel({
                 <span style={{ ...pill(true), background: C.ink, gap: 5 }}>
                   After
                   <input type="number" min={1} max={99} value={count}
-                    onChange={e => setCount(Math.min(99, Math.max(1, Math.round(Number(e.target.value)) || 1)))}
+                    onChange={e => {
+                      const n = Math.min(99, Math.max(1, Math.round(Number(e.target.value)) || 1))
+                      setCount(n); pushRepeat(repeat, 'count', n, until)
+                    }}
                     style={{ ...BARE, ...NUM, flex: 'none', width: 26, padding: 0, textAlign: 'center',
                       fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: C.onInk }} />
                   times
                 </span>
               ) : (
-                <button onClick={() => { setEndsMode('count'); setUntil('') }}
+                <button onClick={() => { setEndsMode('count'); setUntil(''); pushRepeat(repeat, 'count', count, '') }}
                   style={{ ...pill(false), background: C.card }}>
                   After {count} times
                 </button>
               )}
-              <button onClick={() => { setEndsMode('never'); setUntil('') }}
+              <button onClick={() => { setEndsMode('never'); setUntil(''); pushRepeat(repeat, 'never', count, '') }}
                 style={{ ...pill(endsMode === 'never'), background: endsMode === 'never' ? C.ink : C.card }}>
                 Never
               </button>
@@ -571,6 +742,51 @@ export function NewEventPanel({
           )}
         </div>
       </div>
+
+      {/* ── Alert ──────────────────────────────────────────────────────────── */}
+      {editing && onAlert && (
+        <div style={{ ...CARD, gap: 8 }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Bell size={ICON.sm} strokeWidth={1.8} color={C.third} />
+            <span style={LABEL}>Alert</span>
+            <span style={{ flex: 1 }} />
+            <span style={{ fontSize: 'var(--sb-t-meta)', color: C.faint }}>
+              {alertMinutes === undefined ? "the calendar's default"
+                : alertMinutes === 0 ? 'at the time'
+                : describeAlertMinutes(alertMinutes)}
+            </span>
+          </span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+            {ALERTS.map(([v, label]) => (
+              <button key={String(v)} onClick={() => onAlert(v)}
+                style={pill(v === 'default' ? alertMinutes === undefined : v === alertMinutes)}>
+                {label}
+              </button>
+            ))}
+          </span>
+        </div>
+      )}
+
+      {/* ── What it runs into ──────────────────────────────────────────────── */}
+      {editing && clashes && clashes.length > 0 && (
+        <div style={{ ...CARD, gap: 6 }}>
+          <span style={{ ...LABEL, color: C.bad }}>
+            Runs into {clashes.length === 1 ? 'something else' : `${clashes.length} other things`}
+          </span>
+          {clashes.map(c => (
+            <span key={c.id} style={{
+              display: 'flex', alignItems: 'baseline', gap: 8, minWidth: 0,
+              fontSize: 'var(--sb-t-meta)', color: C.third,
+            }}>
+              <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {c.summary || 'Untitled'}
+              </span>
+              <span style={{ flex: 1 }} />
+              <span style={{ ...NUM, color: C.faint, flexShrink: 0 }}>{c.when}</span>
+            </span>
+          ))}
+        </div>
+      )}
 
       {/* ── 4 · Attendees ──────────────────────────────────────────────────── */}
       <div style={{ ...CARD, gap: 4 }}>
@@ -601,10 +817,15 @@ export function NewEventPanel({
             name={p.email.split('@')[0].replace(/[._-]+/g, ' ')}
             sub={p.email}
             optional={p.optional}
-            rsvp={{ label: 'Awaiting', bg: C.goldSurf, ink: C.goldInk }}
-            onToggleOptional={() => setPeople(prev => prev.map(x =>
-              x.email === p.email ? { ...x, optional: !x.optional } : x))}
-            onRemove={() => setPeople(prev => prev.filter(x => x.email !== p.email))}
+            rsvp={rsvpOf(p.responseStatus)}
+            onToggleOptional={() => {
+              const next = people.map(x => x.email === p.email ? { ...x, optional: !x.optional } : x)
+              setPeople(next); pushPeople(next)
+            }}
+            onRemove={() => {
+              const next = people.filter(x => x.email !== p.email)
+              setPeople(next); pushPeople(next)
+            }}
           />
         ))}
 
@@ -723,12 +944,18 @@ export function NewEventPanel({
             <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
               <span style={{ fontSize: 'var(--sb-t-meta)', color: C.faint }}>Visible as</span>
               {([['default', 'Calendar default'], ['private', 'Private'], ['public', 'Public']] as const).map(([id, label]) => (
-                <button key={id} onClick={() => setVisibility(id)} style={pill(visibility === id)}>{label}</button>
+                <button key={id} onClick={() => { setVisibility(id); push({ visibility: id }) }} style={pill(visibility === id)}>{label}</button>
               ))}
             </div>
           </div>
         )}
       </div>
+
+      {extra && <div style={{ ...CARD, gap: 8 }}>{extra}</div>}
+
+      {moveError && (
+        <div style={{ ...CARD, gap: 0, fontSize: 'var(--sb-t-meta)', color: C.bad }}>{moveError}</div>
+      )}
 
       {/* ── 7 · Footer ─────────────────────────────────────────────────────── */}
       {/* Sticky, because the panel scrolls: the one button that finishes the
@@ -742,6 +969,11 @@ export function NewEventPanel({
         position: 'sticky', bottom: 0, padding: '10px 56px 12px 14px',
         background: C.card, borderTop: `var(--sb-border-width) solid ${C.hair}`,
       }}>
+        {editing ? (
+          <span style={{ flex: 1, minWidth: 0, fontSize: 'var(--sb-t-meta)', color: C.faint }}>
+            Every change saves itself.
+          </span>
+        ) : (
         <button
           onClick={submit}
           disabled={!title.trim()}
@@ -755,12 +987,13 @@ export function NewEventPanel({
           }}>
           {guests > 0 ? `Create & invite ${guests}` : 'Create event'}
         </button>
+        )}
         <button onClick={onCancel}
           style={{
             height: 'var(--sb-h-nav)', padding: '0 14px', flexShrink: 0, borderRadius: 'var(--sb-r-pill)', cursor: 'pointer',
             background: C.inset, border: `var(--sb-border-width) solid ${C.border}`, color: C.third,
             fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
-          }}>Cancel</button>
+          }}>{editing ? 'Close' : 'Cancel'}</button>
       </div>
     </ComposerShell>
   )
