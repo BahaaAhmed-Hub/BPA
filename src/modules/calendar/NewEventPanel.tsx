@@ -11,8 +11,15 @@
 // follows a theme like the rest of the app; the handful with no exact token
 // (the inset #FAF8F2, the dashed #DED6C0, the rust #A8503A) are mixed from the
 // tokens either side of them.
+//
+// The radii are tokens too. The spec's 28 / 22 / 14 are, as it happens, exactly
+// Glass & Depth's --sb-r-frame / -card / -nav, so following the tokens leaves
+// that theme drawn to the spec and gives the other three their own corners —
+// Warm's 8/6, Evergreen's 16/10. A composer with one shape in all four themes
+// was the one place the shape contract did not reach.
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import {
   MapPin, Video, X, Trash2, CheckCircle2, XCircle, RefreshCw, Paperclip,
   Upload, List, ChevronDown, ChevronRight, Plus,
@@ -23,7 +30,7 @@ import { toRecurrence, presetRecur, type Recur } from './recurrence'
 
 // ─── The palette, once ───────────────────────────────────────────────────────
 
-const C = {
+export const C = {
   ink:      'var(--sb-ink-1)',
   onInk:    'var(--sb-ink-on-dark)',
   page:     'var(--sb-page)',
@@ -45,40 +52,101 @@ const C = {
   bad:      'var(--sb-negative-deep)',
 } as const
 
-const MONO: React.CSSProperties = {
+export const MONO: React.CSSProperties = {
   fontFamily: 'var(--sb-font-mono)', fontSize: 10.5, letterSpacing: '.14em',
   textTransform: 'uppercase', color: C.faint, fontWeight: 500,
 }
-const CARD: React.CSSProperties = {
-  background: C.card, borderRadius: 22, padding: '18px 20px',
+export const CARD: React.CSSProperties = {
+  background: C.card, borderRadius: 'var(--sb-r-card)', padding: '18px 20px',
   display: 'flex', flexDirection: 'column',
 }
-const NUM: React.CSSProperties = { fontVariantNumeric: 'tabular-nums' }
+export const NUM: React.CSSProperties = { fontVariantNumeric: 'tabular-nums' }
 
 /** A pill: 999px, and the two states everything in here uses. */
-function pill(on: boolean, h = 32): React.CSSProperties {
+export function pill(on: boolean, h = 32): React.CSSProperties {
   return {
     display: 'inline-flex', alignItems: 'center', gap: 7, height: h, padding: '0 13px',
-    borderRadius: 999, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0,
+    borderRadius: 'var(--sb-r-pill)', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0,
     fontSize: 12.5, fontWeight: 600, whiteSpace: 'nowrap',
     background: on ? C.ink : C.inset,
     border: on ? '1px solid transparent' : `1px solid ${C.border}`,
     color: on ? C.onInk : C.third,
   }
 }
-const ROUND: React.CSSProperties = {
-  width: 32, height: 32, borderRadius: 999, flexShrink: 0, padding: 0,
+export const ROUND: React.CSSProperties = {
+  width: 32, height: 32, borderRadius: 'var(--sb-r-pill)', flexShrink: 0, padding: 0,
   display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
   background: C.card, border: `1px solid ${C.border}`, cursor: 'pointer',
 }
-const FIELD: React.CSSProperties = {
+export const FIELD: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 9, height: 44, boxSizing: 'border-box',
-  padding: '0 13px', borderRadius: 14, background: C.inset, border: `1px solid ${C.border}`,
+  padding: '0 13px', borderRadius: 'var(--sb-r-nav)', background: C.inset, border: `1px solid ${C.border}`,
   color: C.text, fontSize: 13.5, fontFamily: 'inherit', minWidth: 0,
 }
-const BARE: React.CSSProperties = {
+export const BARE: React.CSSProperties = {
   flex: 1, minWidth: 0, background: 'transparent', border: 'none', outline: 'none',
   color: C.text, fontFamily: 'inherit', fontSize: 13.5,
+}
+
+/**
+ * The cream shell, and the backdrop it sits on.
+ *
+ * Both event panels are this: the composer before the event exists, the detail
+ * panel after. Centred over the grid and portalled to the body — 680px beside
+ * the grid left the thing you were looking at with nowhere to be, and the
+ * calendar module's own `overflow` clipped a backdrop rendered in place.
+ *
+ * The backdrop deliberately has no dismiss handler of its own. A touch screen
+ * replays a tap as a synthetic mousedown a moment after pointerup, at the same
+ * coordinates — which are, by definition, outside a panel that did not exist
+ * when the finger went down. `panelRef` + the 400ms guard below is the one
+ * place that decides, so the panel cannot be opened and closed by one tap.
+ */
+export function ComposerShell({ panelRef, onClose, children }: {
+  panelRef: React.RefObject<HTMLDivElement | null>
+  onClose: () => void
+  children: React.ReactNode
+}) {
+  useEffect(() => {
+    const openedAt = Date.now()
+    const away = (e: Event) => {
+      if (Date.now() - openedAt < 400) return
+      if (panelRef.current && !panelRef.current.contains(e.target as Node)) onClose()
+    }
+    const key = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('pointerdown', away)
+    document.addEventListener('mousedown', away)
+    document.addEventListener('keydown', key)
+    return () => {
+      document.removeEventListener('pointerdown', away)
+      document.removeEventListener('mousedown', away)
+      document.removeEventListener('keydown', key)
+    }
+  }, [onClose, panelRef])
+
+  return createPortal(
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 9000, display: 'flex',
+      alignItems: 'flex-start', justifyContent: 'center',
+      padding: '5vh 20px 40px', overflowY: 'auto',
+      background: 'color-mix(in srgb, var(--sb-ink-1) 34%, transparent)',
+    }}>
+      <div
+        ref={panelRef}
+        onClick={e => e.stopPropagation()}
+        onMouseDown={e => e.stopPropagation()}
+        className="sb-compose"
+        style={{
+          width: '100%', maxWidth: 680, alignSelf: 'flex-start',
+          background: C.page, borderRadius: 'var(--sb-r-frame)', padding: '24px 22px 22px',
+          display: 'flex', flexDirection: 'column', gap: 14, overflow: 'hidden',
+          boxShadow: '0 30px 80px -30px color-mix(in srgb, var(--sb-ink-1) 50%, transparent)',
+        }}>
+        {children}
+      </div>
+    </div>,
+    document.body,
+  )
 }
 
 // ─── What the composer is given, and what it gives back ──────────────────────
@@ -200,32 +268,6 @@ export function NewEventPanel({
   const titleRef = useRef<HTMLInputElement>(null)
   useEffect(() => { titleRef.current?.focus() }, [])
 
-  // Dismiss on a click outside — but not on the one that opened this. A touch
-  // screen replays the tap as a synthetic mousedown a moment after pointerup,
-  // at the same coordinates, which are by definition outside a panel that did
-  // not exist yet.
-  useEffect(() => {
-    const openedAt = Date.now()
-    const fn = (e: Event) => {
-      if (Date.now() - openedAt < 400) return
-      if (ref.current && !ref.current.contains(e.target as Node)) onCancel()
-    }
-    document.addEventListener('pointerdown', fn)
-    document.addEventListener('mousedown', fn)
-    return () => {
-      document.removeEventListener('pointerdown', fn)
-      document.removeEventListener('mousedown', fn)
-    }
-  }, [onCancel])
-
-  // Escape closes it from anywhere in the panel, including the fields — a form
-  // this large is mostly inputs, and the title's own handler reached none of them.
-  useEffect(() => {
-    const fn = (e: KeyboardEvent) => { if (e.key === 'Escape') onCancel() }
-    document.addEventListener('keydown', fn)
-    return () => document.removeEventListener('keydown', fn)
-  }, [onCancel])
-
   const company = useMemo(() => {
     const cal = calendars.find(c => c.id === calId)
     const cos = loadDynamicCompanies()
@@ -282,17 +324,7 @@ export function NewEventPanel({
   }
 
   return (
-    <div
-      ref={ref}
-      onClick={e => e.stopPropagation()}
-      onMouseDown={e => e.stopPropagation()}
-      className="sb-compose"
-      style={{
-        width: '100%', maxWidth: 680, alignSelf: 'flex-start',
-        background: C.page, borderRadius: 28, padding: '24px 22px 22px',
-        display: 'flex', flexDirection: 'column', gap: 14, overflow: 'hidden',
-        boxShadow: '0 30px 80px -30px color-mix(in srgb, var(--sb-ink-1) 50%, transparent)',
-      }}>
+    <ComposerShell panelRef={ref} onClose={onCancel}>
 
       {/* ── 1 · Header ─────────────────────────────────────────────────────── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '0 4px', flexWrap: 'wrap' }}>
@@ -342,7 +374,7 @@ export function NewEventPanel({
           ]).map(({ on, set, Icon, title: t }) => (
             <button key={t} title={t} onClick={() => set(v => !v)}
               style={{
-                width: 38, height: 38, borderRadius: 12, flexShrink: 0, cursor: 'pointer',
+                width: 38, height: 38, borderRadius: 'var(--sb-r-sm)', flexShrink: 0, cursor: 'pointer',
                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                 background: on ? C.ink : C.inset,
                 border: on ? '1px solid transparent' : `1px solid ${C.border}`,
@@ -385,7 +417,7 @@ export function NewEventPanel({
                       : 'Google makes the link when the event is created'}
                     style={{
                       display: 'inline-flex', alignItems: 'center', gap: 6, height: 32, padding: '0 11px',
-                      borderRadius: 10, border: 'none', cursor: 'pointer', flexShrink: 0,
+                      borderRadius: 'var(--sb-r-sm)', border: 'none', cursor: 'pointer', flexShrink: 0,
                       background: addMeet ? C.ink : C.card,
                       color: addMeet ? C.onInk : C.text,
                       fontFamily: 'inherit', fontSize: 12.5, fontWeight: 600,
@@ -399,7 +431,7 @@ export function NewEventPanel({
                   {([['google', 'Google Meet'], ['teams', 'Microsoft Teams']] as const).map(([id, label]) => (
                     <button key={id} onClick={() => setConf(id)}
                       style={{ ...pill(false, 30), background: conf === id ? C.inset : C.card }}>
-                      {conf === id && <span style={{ width: 6, height: 6, borderRadius: 999, background: C.ink }} />}
+                      {conf === id && <span style={{ width: 6, height: 6, borderRadius: 'var(--sb-r-pill)', background: C.ink }} />}
                       {label}
                     </button>
                   ))}
@@ -412,7 +444,7 @@ export function NewEventPanel({
         <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
           {KINDS.map(k => (
             <button key={k} onClick={() => setKind(k)} style={pill(kind === k)}>
-              {kind === k && <span style={{ width: 6, height: 6, borderRadius: 999, background: C.gold }} />}
+              {kind === k && <span style={{ width: 6, height: 6, borderRadius: 'var(--sb-r-pill)', background: C.gold }} />}
               {k}
             </button>
           ))}
@@ -435,7 +467,7 @@ export function NewEventPanel({
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <label style={{
             display: 'inline-flex', alignItems: 'center', gap: 8, height: 44, padding: '0 14px',
-            borderRadius: 14, background: C.ink, color: C.onInk, cursor: 'pointer',
+            borderRadius: 'var(--sb-r-nav)', background: C.ink, color: C.onInk, cursor: 'pointer',
             fontSize: 15, fontWeight: 600, ...NUM, flexShrink: 0,
           }}>
             {startDateObj.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}
@@ -557,7 +589,7 @@ export function NewEventPanel({
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '8px 0', borderTop: `1px solid ${C.hair}` }}>
           <span style={{
-            width: 34, height: 34, borderRadius: 999, flexShrink: 0,
+            width: 34, height: 34, borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
             display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
             border: `1px dashed ${C.dashed}`, color: C.faint,
           }}><Plus size={ICON.sm} strokeWidth={1.8} /></span>
@@ -584,10 +616,10 @@ export function NewEventPanel({
         {files.map(f => (
           <div key={f.name} style={{
             display: 'flex', alignItems: 'center', gap: 11, padding: '11px 13px',
-            borderRadius: 14, background: C.inset,
+            borderRadius: 'var(--sb-r-nav)', background: C.inset,
           }}>
             <span style={{
-              width: 30, height: 30, borderRadius: 8, flexShrink: 0, background: C.card,
+              width: 30, height: 30, borderRadius: 'var(--sb-r-chip)', flexShrink: 0, background: C.card,
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
               fontFamily: 'var(--sb-font-mono)', fontSize: 9, fontWeight: 700, color: C.bad,
             }}>{f.kind}</span>
@@ -598,7 +630,7 @@ export function NewEventPanel({
               </span>
             </span>
             <button onClick={() => setFiles(prev => prev.filter(x => x.name !== f.name))}
-              style={{ width: 26, height: 26, borderRadius: 999, border: 'none', background: 'none', color: C.faint, cursor: 'pointer', flexShrink: 0 }}>
+              style={{ width: 26, height: 26, borderRadius: 'var(--sb-r-pill)', border: 'none', background: 'none', color: C.faint, cursor: 'pointer', flexShrink: 0 }}>
               <X size={ICON.sm} strokeWidth={1.8} />
             </button>
           </div>
@@ -616,7 +648,7 @@ export function NewEventPanel({
           }}
           style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            padding: 13, borderRadius: 14,
+            padding: 13, borderRadius: 'var(--sb-r-nav)',
             border: `1px dashed ${C.dashed}`,
             background: dropping ? C.inset : 'transparent',
             fontSize: 12.5, color: C.third,
@@ -627,7 +659,7 @@ export function NewEventPanel({
       </div>
 
       {/* ── 6 · The rest, folded away ──────────────────────────────────────── */}
-      <div style={{ background: C.card, borderRadius: 18, padding: extrasOpen ? '14px 18px 16px' : '14px 18px' }}>
+      <div style={{ background: C.card, borderRadius: 'var(--sb-r-card)', padding: extrasOpen ? '14px 18px 16px' : '14px 18px' }}>
         <button
           onClick={() => setExtrasOpen(v => !v)}
           style={{
@@ -652,7 +684,7 @@ export function NewEventPanel({
               placeholder="Anything worth remembering…"
               style={{
                 width: '100%', boxSizing: 'border-box', resize: 'vertical', padding: '10px 12px',
-                borderRadius: 14, background: C.inset, border: `1px solid ${C.border}`,
+                borderRadius: 'var(--sb-r-nav)', background: C.inset, border: `1px solid ${C.border}`,
                 fontFamily: 'inherit', fontSize: 13.5, color: C.text, outline: 'none', lineHeight: 1.55,
               }} />
 
@@ -684,7 +716,7 @@ export function NewEventPanel({
           disabled={!title.trim()}
           aria-disabled={!title.trim()}
           style={{
-            flex: 1, height: 52, borderRadius: 999, border: 'none',
+            flex: 1, height: 52, borderRadius: 'var(--sb-r-pill)', border: 'none',
             background: C.ink, color: C.onInk, cursor: title.trim() ? 'pointer' : 'default',
             fontFamily: 'inherit', fontSize: 15, fontWeight: 600,
             opacity: title.trim() ? 1 : 0.45,
@@ -693,12 +725,12 @@ export function NewEventPanel({
         </button>
         <button onClick={onCancel}
           style={{
-            height: 52, padding: '0 22px', borderRadius: 999, cursor: 'pointer',
+            height: 52, padding: '0 22px', borderRadius: 'var(--sb-r-pill)', cursor: 'pointer',
             background: C.card, border: `1px solid ${C.border}`, color: C.third,
             fontFamily: 'inherit', fontSize: 14,
           }}>Cancel</button>
       </div>
-    </div>
+    </ComposerShell>
   )
 }
 
@@ -724,7 +756,7 @@ function PersonRow({
       ...(first ? null : { borderTop: `1px solid ${C.hair}` }),
     }}>
       <span style={{
-        width: 34, height: 34, borderRadius: 999, flexShrink: 0,
+        width: 34, height: 34, borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
         display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
         background: avatarBg, color: avatarInk, fontSize: 11.5, fontWeight: 700,
       }}>{initials}</span>
@@ -737,7 +769,7 @@ function PersonRow({
           }}>{name}</span>
           {optional && (
             <span style={{
-              height: 19, padding: '0 7px', borderRadius: 6, flexShrink: 0,
+              height: 19, padding: '0 7px', borderRadius: 'var(--sb-r-chip)', flexShrink: 0,
               display: 'inline-flex', alignItems: 'center',
               background: C.inset, border: `1px solid ${C.border}`, color: C.faint,
               fontSize: 10.5, fontWeight: 600,
@@ -751,7 +783,7 @@ function PersonRow({
       </span>
 
       <span style={{
-        height: 26, padding: '0 10px', borderRadius: 999, flexShrink: 0,
+        height: 26, padding: '0 10px', borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
         display: 'inline-flex', alignItems: 'center',
         background: rsvp.bg, color: rsvp.ink, fontSize: 11.5, fontWeight: 600,
       }}>{rsvp.label}</span>
@@ -761,7 +793,7 @@ function PersonRow({
           onClick={onToggleOptional}
           title={optional ? 'Required again' : 'Make optional'}
           style={{
-            width: 26, height: 26, borderRadius: 999, flexShrink: 0, cursor: 'pointer',
+            width: 26, height: 26, borderRadius: 'var(--sb-r-pill)', flexShrink: 0, cursor: 'pointer',
             display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
             background: optional ? C.ink : C.card,
             border: optional ? '1px solid transparent' : `1px solid ${C.border}`,
@@ -772,7 +804,7 @@ function PersonRow({
       {onRemove && (
         <button onClick={onRemove} title="Take them off the invite"
           style={{
-            width: 26, height: 26, borderRadius: 999, flexShrink: 0, cursor: 'pointer',
+            width: 26, height: 26, borderRadius: 'var(--sb-r-pill)', flexShrink: 0, cursor: 'pointer',
             background: 'none', border: 'none', color: C.faint,
             display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
           }}><X size={ICON.sm} strokeWidth={1.8} /></button>

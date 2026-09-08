@@ -127,6 +127,12 @@
   /* The one radius no theme moves: a pill is a pill. */
   --sb-r-pill:   999px;
 
+  /* The event panels multiply their type by this. It lived only as an inline
+     style on the old narrow panel, so any text of theirs drawn outside it had
+     an invalid calc() — and an invalid declaration is not an error anybody
+     sees, it is text that is simply not drawn. 1 is "the token, as written". */
+  --sb-ev-type: 1;
+
   /* ── Type scale ──────────────────────────────────────────────────────────
      Nine steps, and nothing between them. Each token is the step's *size*;
      its weight, tracking and case are the level's own and are set with it —

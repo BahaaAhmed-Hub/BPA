@@ -97,23 +97,40 @@ sends `account_email` as well so the function can resolve it either way.
 calendar, the account, or what Google objected to — is on `error.context`.
 `efFailure()` reads it, so a failed write says what happened.
 
-## Calendar — the New Event composer
-`NewEventPanel.tsx` replaced `NewEventForm`, which was a column beside the grid.
+## Calendar — both event panels are the composer
+`NewEventPanel.tsx` holds the shell and every primitive; `EventPopup` (the panel
+for an event that exists) and the composer (for one that does not) are the same
+object on screen. `ComposerShell` is the shared cream panel — 680px, portalled
+to `document.body`, centred over the grid.
+- **The backdrop has no dismiss handler.** It used to, and a touch screen
+  replays a tap as a synthetic `mousedown` a moment after `pointerup`, at
+  coordinates that are by definition outside a panel which did not exist when
+  the finger went down — so on an iPad the composer opened and vanished in one
+  gesture. `ComposerShell`'s own listener, with the 400ms guard, is the only
+  thing that decides.
+- **The radii are theme tokens.** The spec's 28 / 22 / 14 are exactly Glass &
+  Depth's `--sb-r-frame` / `-card` / `-nav`, so following the tokens draws Glass
+  to the spec and gives the other three their own corners (Warm 8/6,
+  Evergreen 16/10).
+- **`--sb-ev-type` has a default of 1 in `index.css`.** It used to be set only
+  as an inline style on the old narrow panel, so any of that panel's text drawn
+  outside it had an invalid `calc()` — text that is simply not drawn.
+- The detail panel is no longer `zoom: 0.75` in a 240–330px column. At 680px
+  nothing has to shrink, so `EV_SCALE`/`EV_TYPE`/`EV_PANEL_W` are gone and the
+  section hairlines with them: the cream ground between cards is the separation.
+  Every capability stays — write-through edits, place lookup, clash "move
+  clear", alerts, series RRULE, move-to-calendar, prep, attendees, delete.
+
 It is a **pre-answered form**: everything arrives with an answer in it, so the
 work is editing rather than filling.
 - **A cream shell holding white cards** (680px, radius 28, padding `24px 22px 22px`,
   gap 14; cards radius 22, padding `18px 20px`). The separation between cards is
   that ground, not a border.
-- **Centred over the grid, portalled to `document.body`.** 680px beside the grid
-  left the thing you were adding an event to with nowhere to be, and the module's
-  own `overflow` clipped a backdrop rendered in place.
 - **`cal-compose-memory`** remembers the length you usually give this, the venue
   and the kind, so the next one opens with them. The WHEN line says which it used
   — "your usual for this" or "as drawn".
 - **The spec is written in hexes and every one is a Sunlit Bento token**; the `C`
-  object at the top maps them, and mixes the three with no exact token. Its radii
-  are the spec's literals rather than `--sb-r-*`, so the composer keeps one shape
-  in all four themes.
+  object at the top maps them, and mixes the three with no exact token.
 - Repeats carry an **Ends**: a date, `After N times` (the N is an input in the
   pill), or Never — `Recur.count` → `COUNT=` in `recurrence.ts`, which `UNTIL`
   excludes. Attendees can be made **optional** (Google's own `optional` flag).

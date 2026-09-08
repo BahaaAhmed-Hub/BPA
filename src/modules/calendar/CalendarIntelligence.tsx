@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import { createPortal } from 'react-dom'
 import { CAL_COLORS } from '@/lib/palettes'
 import { Button, Segmented } from '@/components/ui'
 import {
@@ -43,7 +42,7 @@ import { T, SANS, DISPLAY, ICON, STROKE } from '@/lib/type'
 import { generateMeetingPrep } from '@/lib/professor'
 import type { MeetingPrep } from '@/lib/professor'
 import { useAuthStore } from '@/store/authStore'
-import { NewEventPanel } from './NewEventPanel'
+import { NewEventPanel, ComposerShell, CARD } from './NewEventPanel'
 import { pushUndo, notify, inTextField } from '@/lib/undo'
 import { loadWeekStart, useWeekStart, rotateDays, type Weekday } from '@/lib/weekStart'
 import { syncTaskToEvent } from '@/lib/taskEventLink'
@@ -926,52 +925,13 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
 // calendar, where, repeats, prep — over attendees, prep and the Professor's
 // suggestion.
 
-/** The whole detail panel is drawn at three quarters. Every size in it — type,
- *  icons, control heights, padding, the gaps between rows — comes from tokens
- *  or from the constants below, and scaling them one at a time would be forty
- *  numbers that drift apart the first time one of them changes. `zoom` takes
- *  the lot, which is the same mechanism the compact density setting uses.
- *  The panel's own box keeps its width: only what is inside it shrinks. */
-const EV_SCALE = 0.75
-/** …and its text a fifth larger again inside that. The panel is compact by
- *  design — small controls, tight rows — but the words in it are read, not
- *  operated, and at three quarters they had gone further down than the boxes
- *  needed them to. Every font size in the two panels is
- *  `calc(var(--sb-t-x) * var(--sb-ev-type))`, so the type scale stays the one
- *  in index.css and the themes keep owning h1, h2 and display. */
-const EV_TYPE = 1.2
-/** The box the scale is applied inside. Both panels take it from here. */
-const EV_PANEL_W = 'clamp(240px, 25.5vw, 330px)'
-const EV_PANEL_PAD = '16px 18px 18px'
-
-/** The panel both of the calendar's side panels are drawn in — the one that
- *  opens on an event and the one that opens on an empty slot. They hold
- *  different things and save in different ways (one pushes every change, the
- *  other collects a draft and saves it once), but they are the same object on
- *  screen and were two copies of one box: same width clamp, same scroll, same
- *  card and shadow, and then the two drifted a couple of pixels apart on
- *  padding. This is that box, including the three-quarter scale. */
-function EvPanel({ panelRef, children }: {
-  panelRef?: React.Ref<HTMLDivElement>
-  children: React.ReactNode
-}) {
-  return (
-    <div
-      ref={panelRef}
-      onClick={e => e.stopPropagation()}
-      onMouseDown={e => e.stopPropagation()}
-      style={{
-        width: EV_PANEL_W, flexShrink: 0, alignSelf: 'stretch', minHeight: 0,
-        overflowY: 'auto', scrollbarWidth: 'thin',
-        background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)',
-        borderRadius: 'var(--sb-r-card)', boxShadow: 'var(--sb-shadow-control)',
-      }}>
-      <div style={{ zoom: EV_SCALE, padding: EV_PANEL_PAD, '--sb-ev-type': EV_TYPE } as React.CSSProperties}>
-        {children}
-      </div>
-    </div>
-  )
-}
+// The detail panel used to be a 240-330px column beside the grid, drawn at
+// `zoom: 0.75` with its type a fifth larger again inside that, to fit. It is
+// the composer's 680px shell now — the same object as the panel that opens on
+// an empty slot, because they were always the same object on screen — so
+// nothing has to shrink and the scale constants are gone. `--sb-ev-type` is 1
+// in index.css, so every `calc(var(--sb-t-x) * var(--sb-ev-type))` in here
+// resolves to the token as written.
 
 const EV_ROUND: React.CSSProperties = {
   width: 28, height: 28, borderRadius: 'var(--sb-r-pill)', flexShrink: 0, padding: 0,
@@ -1350,7 +1310,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
   }
 
   return (
-    <EvPanel panelRef={popupRef}>
+    <ComposerShell panelRef={popupRef} onClose={onClose}>
 
       {/* ── Which calendar, and what to do with the event ────────────────── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
@@ -1432,6 +1392,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
         </div>
       )}
 
+      <div style={{ ...CARD, gap: 12 }}>
       {/* ── Title ────────────────────────────────────────────────────────── */}
       {/* The title is the heading of the panel, not a form field, so it has no
           box around it until you put the cursor in it. */}
@@ -1601,8 +1562,10 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
         </span>
       </div>
 
-      <div style={{ height: 1, background: 'var(--sb-hairline)', margin: '20px 0' }} />
 
+      </div>
+
+      <div style={{ ...CARD, gap: 12 }}>
       {/* ── When ─────────────────────────────────────────────────────────── */}
       {/* One pill, one popover: the date and both times together. Three
           controls could not share a line with the label column, and a row that
@@ -1713,8 +1676,10 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
         <p style={{ margin: '8px 0 0', fontSize: 'calc(var(--sb-t-meta) * var(--sb-ev-type))', color: 'var(--sb-negative)' }}>{prepError}</p>
       )}
 
-      <div style={{ height: 1, background: 'var(--sb-hairline)', margin: '20px 0' }} />
 
+      </div>
+
+      <div style={{ ...CARD, gap: 12 }}>
       {/* ── Attendees ────────────────────────────────────────────────────── */}
       <div style={{ ...EV_SECTION, marginBottom: 4 }}>
         Attendees{attendees.length > 0 ? ` · ${attendees.length}` : ''}
@@ -1785,8 +1750,10 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
         )}
       </div>
 
+      </div>
+
+      <div style={{ ...CARD, gap: 12 }}>
       {/* ── Attachments ──────────────────────────────────────────────────── */}
-      <div style={{ height: 1, background: 'var(--sb-hairline)', margin: '20px 0' }} />
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <span style={EV_SECTION}>Attachments</span>
         <span style={{ flex: 1, minWidth: 0, fontSize: 'calc(var(--sb-t-meta) * var(--sb-ev-type))', color: 'var(--sb-ink-4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -1827,8 +1794,10 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
         </div>
       )}
 
+      </div>
+
+      <div style={{ ...CARD, gap: 12 }}>
       {/* ── Notes ────────────────────────────────────────────────────────── */}
-      <div style={{ height: 1, background: 'var(--sb-hairline)', margin: '20px 0' }} />
       <div style={{ ...EV_SECTION, marginBottom: 8 }}>Notes</div>
       <textarea
         value={notes}
@@ -1843,11 +1812,13 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
           color: 'var(--sb-ink-1)', outline: 'none',
         }} />
 
+      </div>
+
+      <div style={{ ...CARD, gap: 12 }}>
       {/* ── Prep gathered ────────────────────────────────────────────────── */}
       {prepPoints.length > 0 && (
         <>
-          <div style={{ height: 1, background: 'var(--sb-hairline)', margin: '20px 0' }} />
-          <div style={{ ...EV_SECTION, marginBottom: 8 }}>Prep gathered</div>
+              <div style={{ ...EV_SECTION, marginBottom: 8 }}>Prep gathered</div>
           {prep?.goal && (
             <p style={{ margin: '0 0 10px', fontSize: 'calc(var(--sb-t-body) * var(--sb-ev-type))', color: 'var(--sb-ink-2)', lineHeight: 1.5 }}>{prep.goal}</p>
           )}
@@ -1908,7 +1879,8 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
           </a>
         )}
       </div>
-    </EvPanel>
+      </div>
+    </ComposerShell>
   )
 }
 
@@ -3626,29 +3598,18 @@ export function CalendarIntelligence() {
 
       </div>
 
-      {/* The composer. It is 680px of pre-answered form, so it is centred over
-          the grid rather than squeezed in beside it — a column that wide left
-          the thing you were adding an event to with nowhere to be. Portalled to
-          the body because the module's own overflow clipped the backdrop at the
-          top of the grid and left the app header sitting undimmed above it. */}
-      {newEventDraft && createPortal(
-        <div
-          onMouseDown={() => setNewEventDraft(null)}
-          style={{
-            position: 'fixed', inset: 0, zIndex: 9000, display: 'flex',
-            alignItems: 'flex-start', justifyContent: 'center',
-            padding: '5vh 20px 40px', overflowY: 'auto',
-            background: 'color-mix(in srgb, var(--sb-ink-1) 34%, transparent)',
-          }}>
-          <NewEventPanel
-            draft={newEventDraft}
-            calendars={allCalendars}
-            organiser={user?.email}
-            onSave={data => void handleCreateEvent(data)}
-            onCancel={() => setNewEventDraft(null)}
-          />
-        </div>,
-        document.body,
+      {/* The composer brings its own shell — see ComposerShell in NewEventPanel.
+          The backdrop used to carry an onMouseDown that closed this, which a
+          touch screen fired as the synthetic mousedown after its own opening
+          tap: the panel appeared and vanished in one gesture. */}
+      {newEventDraft && (
+        <NewEventPanel
+          draft={newEventDraft}
+          calendars={allCalendars}
+          organiser={user?.email}
+          onSave={data => void handleCreateEvent(data)}
+          onCancel={() => setNewEventDraft(null)}
+        />
       )}
 
       {/* Context menu */}
