@@ -82,6 +82,31 @@ sends `account_email` as well so the function can resolve it either way.
 calendar, the account, or what Google objected to — is on `error.context`.
 `efFailure()` reads it, so a failed write says what happened.
 
+## Calendar — the New Event composer
+`NewEventPanel.tsx` replaced `NewEventForm`, which was a column beside the grid.
+It is a **pre-answered form**: everything arrives with an answer in it, so the
+work is editing rather than filling.
+- **A cream shell holding white cards** (680px, radius 28, padding `24px 22px 22px`,
+  gap 14; cards radius 22, padding `18px 20px`). The separation between cards is
+  that ground, not a border.
+- **Centred over the grid, portalled to `document.body`.** 680px beside the grid
+  left the thing you were adding an event to with nowhere to be, and the module's
+  own `overflow` clipped a backdrop rendered in place.
+- **`cal-compose-memory`** remembers the length you usually give this, the venue
+  and the kind, so the next one opens with them. The WHEN line says which it used
+  — "your usual for this" or "as drawn".
+- **The spec is written in hexes and every one is a Sunlit Bento token**; the `C`
+  object at the top maps them, and mixes the three with no exact token. Its radii
+  are the spec's literals rather than `--sb-r-*`, so the composer keeps one shape
+  in all four themes.
+- Repeats carry an **Ends**: a date, `After N times` (the N is an input in the
+  pill), or Never — `Recur.count` → `COUNT=` in `recurrence.ts`, which `UNTIL`
+  excludes. Attendees can be made **optional** (Google's own `optional` flag).
+  Completed / Cancelled in the header set the status the moment the event has an id.
+- **Attachments cannot upload**: `GCalEventCreate` has no attachment field and the
+  build asks for no Drive scope. The card takes drops into local state and the
+  Upload pill says so.
+
 ## Calendar — dragging an event
 `CalendarIntelligence.tsx` moves events with dnd-kit and a `DragOverlay`. The
 overlay is what follows the pointer, so the source card must **not** take

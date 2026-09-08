@@ -41,6 +41,9 @@ export interface Recur {
   byMonth?: number[]
   /** Local `YYYY-MM-DD` of the last day it may fall on. */
   until?: string
+  /** …or a number of occurrences instead of a last day. RRULE allows one or
+   *  the other, never both, so setting one clears the other. */
+  count?: number
 }
 
 export type Preset = 'never' | 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'yearly' | 'custom'
@@ -109,6 +112,7 @@ export function parseRecurrence(lines: string[] | undefined): Recur | null {
     ...(nums('BYMONTHDAY')?.length ? { monthDays: nums('BYMONTHDAY') } : {}),
     ...(nums('BYMONTH')?.length ? { byMonth: nums('BYMONTH') } : {}),
     ...(parts.get('UNTIL') ? { until: untilToLocalDate(parts.get('UNTIL')!) } : {}),
+    ...(parts.get('COUNT') ? { count: Number(parts.get('COUNT')) || undefined } : {}),
   }
 }
 
@@ -136,7 +140,10 @@ export function toRecurrence(r: Recur | null): string[] {
     }
   }
   if (r.freq === 'YEARLY' && r.byMonth?.length) bits.push(`BYMONTH=${[...r.byMonth].sort((a, b) => a - b).join(',')}`)
+  // UNTIL and COUNT are mutually exclusive in RRULE; a rule carrying both is
+  // rejected outright, so the end date wins where something has set both.
   if (r.until) bits.push(`UNTIL=${untilStamp(r.until)}`)
+  else if (r.count && r.count > 0) bits.push(`COUNT=${Math.round(r.count)}`)
   return [`RRULE:${bits.join(';')}`]
 }
 

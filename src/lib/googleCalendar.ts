@@ -44,7 +44,8 @@ export interface GCalEventCreate {
   location?: string
   start: { dateTime?: string; date?: string; timeZone?: string }
   end: { dateTime?: string; date?: string; timeZone?: string }
-  attendees?: { email: string }[]
+  /** `optional` is Google's own flag — an invitee whose reply does not gate the room. */
+  attendees?: { email: string; optional?: boolean }[]
   conferenceData?: {
     createRequest: {
       requestId: string
@@ -54,6 +55,7 @@ export interface GCalEventCreate {
   reminders?: { useDefault: boolean; overrides?: { method: string; minutes: number }[] }
   /** RRULE lines. Carried when a repeating event is copied to another account. */
   recurrence?: string[]
+  visibility?: 'default' | 'public' | 'private' | 'confidential'
 }
 
 export interface GCalError {
