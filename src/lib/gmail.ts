@@ -231,6 +231,83 @@ export async function archiveMessage(messageId: string, account?: MailAccount): 
   }, account)
 }
 
+/** Mark it unread again — the other half of the read gesture. A swipe that
+ *  only ever works one way is a no-op half the time you reach for it. */
+export async function markAsUnread(messageId: string, account?: MailAccount): Promise<void> {
+  await gFetch(`/users/me/messages/${messageId}/modify`, {
+    method: 'POST',
+    body: JSON.stringify({ addLabelIds: ['UNREAD'] }),
+  }, account)
+}
+
+/** Put an archived message back in the inbox — what undoing an archive means. */
+export async function unarchiveMessage(messageId: string, account?: MailAccount): Promise<void> {
+  await gFetch(`/users/me/messages/${messageId}/modify`, {
+    method: 'POST',
+    body: JSON.stringify({ addLabelIds: ['INBOX'] }),
+  }, account)
+}
+
+/**
+ * Move to the Bin.
+ *
+ * This is what "delete" means here, and deliberately so: `gmail.modify` cannot
+ * erase a message outright — that needs the full `mail.google.com` scope — and
+ * a gesture as cheap as a swipe should not be able to destroy mail anyway.
+ * Gmail's own delete does exactly this, and the Bin keeps it for 30 days.
+ */
+export async function trashMessage(messageId: string, account?: MailAccount): Promise<void> {
+  await gFetch(`/users/me/messages/${messageId}/trash`, { method: 'POST' }, account)
+}
+
+export async function untrashMessage(messageId: string, account?: MailAccount): Promise<void> {
+  await gFetch(`/users/me/messages/${messageId}/untrash`, { method: 'POST' }, account)
+}
+
+// ─── Labels, and moving mail between them ────────────────────────────────────
+//
+// Gmail has no folders. A "move" is a label added and the inbox taken away —
+// which is also why it is undoable by exactly reversing those two.
+
+export interface GmailLabel {
+  id: string
+  name: string
+  /** `user` for the ones a person made; `system` for INBOX, SPAM and the rest. */
+  type?: string
+}
+
+/** The labels this mailbox can file something under, the person's own first. */
+export async function listLabels(account?: MailAccount): Promise<GmailLabel[]> {
+  const res = await gFetch<{ labels?: GmailLabel[] }>('/users/me/labels', undefined, account)
+  return (res.labels ?? []).filter(l => l.type === 'user').sort((a, b) => a.name.localeCompare(b.name))
+}
+
+/**
+ * One request for a whole selection, rather than one per message.
+ *
+ * Gmail takes up to 1000 ids and answers 204 with no body, so this cannot go
+ * through `gFetch` — that parses the response. A selection may span several
+ * mailboxes; each account needs its own call, because the ids and the token
+ * both belong to one.
+ */
+export async function batchModify(
+  ids: string[],
+  labels: { add?: string[]; remove?: string[] },
+  account?: MailAccount,
+): Promise<void> {
+  if (ids.length === 0) return
+  const token = await accessToken(account)
+  const res = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/batchModify', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ids, addLabelIds: labels.add ?? [], removeLabelIds: labels.remove ?? [] }),
+  })
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({})) as { error?: { message?: string } }
+    throw new Error(body?.error?.message ?? `Gmail ${res.status}`)
+  }
+}
+
 // ─── Sending ──────────────────────────────────────────────────────────────────
 //
 // One function, because a reply, a reply to everyone, a forward and a new

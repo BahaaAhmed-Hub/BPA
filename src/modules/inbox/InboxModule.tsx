@@ -1,7 +1,7 @@
 
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import { AVATAR_COLORS, ACCOUNT_COLORS } from '@/lib/palettes'
-import { Mail, Zap, Clock, Copy, CheckCheck, RefreshCw, ArrowRight, WifiOff, ListPlus, Plus, Archive, Search, X as XIcon, PenSquare, Reply, ReplyAll, Forward, ChevronDown, ChevronRight, Inbox, Send, FileEdit, Star, MailOpen, Sparkles, AlertTriangle, GitBranch, Info, UserPlus, Minus, Check, Trash2 } from 'lucide-react'
+import { Mail, Zap, Clock, Copy, CheckCheck, RefreshCw, ArrowRight, WifiOff, ListPlus, Plus, Archive, Search, X as XIcon, PenSquare, Reply, ReplyAll, Forward, ChevronDown, ChevronRight, Inbox, FolderInput, Send, FileEdit, Star, MailOpen, Sparkles, AlertTriangle, GitBranch, Info, UserPlus, Minus, Check, Trash2 } from 'lucide-react'
 
 /** One glyph each, so the rail still says what it is when it is folded up. */
 const FOLDER_ICON: Record<MailFolder, typeof Mail> = {
@@ -9,13 +9,14 @@ const FOLDER_ICON: Record<MailFolder, typeof Mail> = {
   starred: Star, archive: Archive, spam: Mail, trash: Mail,
 }
 import { triageEmail, briefInbox, call as askModel } from '@/lib/professor'
-import { notify } from '@/lib/undo'
+import { notify, pushUndo } from '@/lib/undo'
 import type { EmailTriage, EmailData } from '@/lib/professor'
 import { classifyMail, unsubscribeLink, CLASSES, CLASS_INFO, countByClass, type MailClass } from '@/lib/mailClasses'
 import { looksLikeInvitation } from '@/lib/invitations'
-import { listUnreadThreadIds, getThread, getMessage, loadInlineImages, applyInlineImages, tidyDataUris, extractBody, extractHtmlBody, header, markAsRead, archiveMessage, sendReply, escapeHtml, FOLDER_QUERY, FOLDER_LABEL, FOLDER_SHOWS_RECIPIENT, type MailAccount, type MailFolder, type GmailHeader } from '@/lib/gmail'
+import { listUnreadThreadIds, getThread, getMessage, loadInlineImages, applyInlineImages, tidyDataUris, extractBody, extractHtmlBody, header, markAsRead, markAsUnread, archiveMessage, unarchiveMessage, trashMessage, untrashMessage, listLabels, batchModify, sendReply, escapeHtml, FOLDER_QUERY, FOLDER_LABEL, FOLDER_SHOWS_RECIPIENT, type MailAccount, type MailFolder, type GmailHeader, type GmailLabel } from '@/lib/gmail'
 import { mailAccounts, loadMailView, saveMailView, accountsFor, accountLabel, type MailView } from './mailAccounts'
 import { Composer, type ComposeSeed, type ComposeMode } from './Composer'
+import { SwipeRow } from './SwipeRow'
 import { signInWithGoogle } from '@/lib/google'
 import { useAuthStore } from '@/store/authStore'
 import { useTaskStore } from '@/store/taskStore'
@@ -281,6 +282,31 @@ function composeSeed(email: Email, mode: ComposeMode, accounts: MailAccount[]): 
   }
 }
 
+/**
+ * Group rows by the mailbox they came from.
+ *
+ * Every Gmail call carries one account's token and one account's ids, so an
+ * action over a merged inbox is one request per mailbox, not one big one.
+ */
+function byAccount(rows: Email[]): [MailAccount, Email[]][] {
+  const groups = new Map<string, { acct: MailAccount; rows: Email[] }>()
+  for (const r of rows) {
+    const key = r.account.email
+    const g = groups.get(key) ?? { acct: r.account, rows: [] }
+    g.rows.push(r)
+    groups.set(key, g)
+  }
+  return [...groups.values()].map(g => [g.acct, g.rows])
+}
+
+/** Every control on the selection bar is the same pill. */
+const barBtn: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', gap: 5, padding: '5px 12px', height: 28,
+  borderRadius: 'var(--sb-r-chip)', background: 'transparent', fontFamily: 'inherit',
+  border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-info) 30.0%, transparent)',
+  color: 'var(--sb-info)', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, cursor: 'pointer',
+}
+
 export function InboxModule() {
   const user         = useAuthStore(s => s.user)
   const addTasksBatch = useTaskStore(s => s.addTasksBatch)
@@ -303,6 +329,21 @@ export function InboxModule() {
   const [nextPageToken,  setNextPageToken]  = useState<string | undefined>(undefined)
   const [loadingMore,    setLoadingMore]    = useState(false)
   const [selectedIds,    setSelectedIds]    = useState<Set<string>>(new Set())
+  /** Which row is swiped open. One at a time, or a tap belongs to nobody. */
+  const [swipedId,   setSwipedId]   = useState<string | null>(null)
+  /** Where a selection can be filed. Loaded once the mailboxes are known. */
+  const [labels,     setLabels]     = useState<GmailLabel[]>([])
+  const [moveOpen,   setMoveOpen]   = useState(false)
+  // A menu held open by a full-page backdrop takes every click on the page
+  // with it, so there has to be a way out that is not a click.
+  useEffect(() => {
+    if (!moveOpen) return
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') setMoveOpen(false) }
+    window.addEventListener('keydown', esc)
+    return () => window.removeEventListener('keydown', esc)
+  }, [moveOpen])
+  /** The last row clicked, so shift-click can take the run between them. */
+  const lastPicked = useRef<string | null>(null)
   const [batchArchiving, setBatchArchiving] = useState(false)
 
   // ── Bulk task state ──────────────────────────────────────────────────────────
@@ -395,6 +436,24 @@ export function InboxModule() {
 
   const accounts = useMemo(() => mailAccounts(user?.email), [user?.email])
   const viewed   = useMemo(() => accountsFor(view, accounts), [view, accounts])
+
+  // Where mail can be filed. Only the labels a person made themselves — the
+  // system ones are the folders in the rail, and offering INBOX as somewhere to
+  // move to would be offering to move a message to where it already is.
+  // A label belongs to one mailbox, so only labels the whole visible set shares
+  // are offered; anything else could move half a selection and fail the rest.
+  useEffect(() => {
+    let live = true
+    void (async () => {
+      const lists = await Promise.all(viewed.map(a => listLabels(a).catch(() => null)))
+      if (!live) return
+      const got = lists.filter((l): l is GmailLabel[] => l !== null)
+      if (got.length === 0) { setLabels([]); return }
+      const shared = got[0].filter(l => got.every(list => list.some(x => x.name === l.name)))
+      setLabels(shared)
+    })()
+    return () => { live = false }
+  }, [viewed])
 
   const loadEmails = useCallback(async () => {
     setLoading(true)
@@ -695,21 +754,155 @@ export function InboxModule() {
     finally { setLoadingMore(false) }
   }, [nextPageToken, loadingMore, viewed, emails, folder])
 
-  async function handleBatchArchive() {
-    if (!selectedIds.size || batchArchiving) return
-    setBatchArchiving(true)
+  // ─── Acting on mail, one row or a selection ────────────────────────────────
+  //
+  // Every one of these is undoable, because the two ways in are a swipe and a
+  // click on a bar — both cheap enough to do by accident that a mistake has to
+  // cost nothing. Gmail is the source of truth, so an undo puts the labels back
+  // rather than restoring a snapshot; the row returns to the list at the same
+  // time, or the screen would disagree with the mailbox.
+
+  /** Take rows off the list, remembering where each sat so undo can replace it. */
+  const removeRows = useCallback((ids: Set<string>) => {
+    setEmails(prev => {
+      const next = prev.filter(e => !ids.has(e.id))
+      setSelectedId(cur => (cur && ids.has(cur) ? (next[0]?.id ?? null) : cur))
+      return next
+    })
+  }, [])
+
+  const restoreRows = useCallback((rows: Email[]) => {
+    setEmails(prev => {
+      const have = new Set(prev.map(e => e.id))
+      const back = rows.filter(r => !have.has(r.id))
+      if (back.length === 0) return prev
+      // Newest first is the list's own order; putting them back by date keeps
+      // a restored row where it was rather than at the top.
+      return [...prev, ...back].sort((a, b) => b.receivedAt.localeCompare(a.receivedAt))
+    })
+  }, [])
+
+  /** One phrase for "these messages", so every bar and every undo reads alike. */
+  const many = (n: number) => (n === 1 ? 'message' : `${n} messages`)
+
+  const toggleRead = useCallback(async (email: Email) => {
+    const wasRead = readIds.has(email.id)
+    setReadIds(prev => {
+      const n = new Set(prev)
+      wasRead ? n.delete(email.id) : n.add(email.id)
+      return n
+    })
     try {
-      // Each one goes back to the mailbox it came from.
-      const boxOf = new Map(emails.map(e => [e.id, e.account]))
-      await Promise.all([...selectedIds].map(id => archiveMessage(id, boxOf.get(id)).catch(() => {})))
-      setEmails(prev => {
-        const next = prev.filter(e => !selectedIds.has(e.id))
-        setSelectedId(next.length > 0 ? next[0].id : null)
-        return next
+      await (wasRead ? markAsUnread(email.id, email.account) : markAsRead(email.id, email.account))
+      notify(wasRead ? 'Marked unread' : 'Marked read')
+    } catch {
+      // Put the dot back rather than claim something that did not happen.
+      setReadIds(prev => {
+        const n = new Set(prev)
+        wasRead ? n.add(email.id) : n.delete(email.id)
+        return n
       })
-      setSelectedIds(new Set())
-    } finally { setBatchArchiving(false) }
-  }
+      notify('Gmail would not change that one')
+    }
+  }, [readIds])
+
+  const archiveRows = useCallback(async (rows: Email[]) => {
+    if (rows.length === 0) return
+    const ids = new Set(rows.map(r => r.id))
+    pushUndo(`Archived ${many(rows.length)}`, async () => {
+      await Promise.all(rows.map(r => unarchiveMessage(r.id, r.account).catch(() => {})))
+      restoreRows(rows)
+    })
+    removeRows(ids)
+    try {
+      await Promise.all(byAccount(rows).map(([acct, group]) =>
+        batchModify(group.map(r => r.id), { remove: ['INBOX'] }, acct)))
+      notify(`Archived ${many(rows.length)}`)
+    } catch (err) {
+      restoreRows(rows)
+      notify(err instanceof Error ? err.message : 'Gmail would not archive those')
+    }
+  }, [removeRows, restoreRows])
+
+  const trashRows = useCallback(async (rows: Email[]) => {
+    if (rows.length === 0) return
+    const ids = new Set(rows.map(r => r.id))
+    pushUndo(`Binned ${many(rows.length)}`, async () => {
+      await Promise.all(rows.map(r => untrashMessage(r.id, r.account).catch(() => {})))
+      restoreRows(rows)
+    })
+    removeRows(ids)
+    try {
+      // No batch endpoint bins mail, so this is one call each — and `trash` is
+      // the documented way in, rather than adding the label by hand.
+      await Promise.all(rows.map(r => trashMessage(r.id, r.account)))
+      notify(`${rows.length === 1 ? 'Moved' : 'Moved ' + rows.length} to the Bin — recoverable for 30 days`)
+    } catch (err) {
+      restoreRows(rows)
+      notify(err instanceof Error ? err.message : 'Gmail would not bin those')
+    }
+  }, [removeRows, restoreRows])
+
+  const readRows = useCallback(async (rows: Email[], read: boolean) => {
+    if (rows.length === 0) return
+    const ids = rows.map(r => r.id)
+    const changed = rows.filter(r => readIds.has(r.id) !== read)
+    if (changed.length === 0) { notify(`Already ${read ? 'read' : 'unread'}`); return }
+    pushUndo(`Marked ${many(changed.length)} ${read ? 'read' : 'unread'}`, async () => {
+      await Promise.all(byAccount(changed).map(([acct, g]) =>
+        batchModify(g.map(r => r.id), read ? { add: ['UNREAD'] } : { remove: ['UNREAD'] }, acct)))
+      setReadIds(prev => {
+        const n = new Set(prev)
+        for (const r of changed) read ? n.delete(r.id) : n.add(r.id)
+        return n
+      })
+    })
+    setReadIds(prev => {
+      const n = new Set(prev)
+      for (const id of ids) read ? n.add(id) : n.delete(id)
+      return n
+    })
+    try {
+      await Promise.all(byAccount(rows).map(([acct, g]) =>
+        batchModify(g.map(r => r.id), read ? { remove: ['UNREAD'] } : { add: ['UNREAD'] }, acct)))
+      notify(`Marked ${many(changed.length)} ${read ? 'read' : 'unread'}`)
+    } catch (err) {
+      notify(err instanceof Error ? err.message : 'Gmail would not change those')
+    }
+  }, [readIds])
+
+  const moveRows = useCallback(async (rows: Email[], label: GmailLabel) => {
+    if (rows.length === 0) return
+    const ids = new Set(rows.map(r => r.id))
+    pushUndo(`Moved ${many(rows.length)} to ${label.name}`, async () => {
+      await Promise.all(byAccount(rows).map(([acct, g]) =>
+        batchModify(g.map(r => r.id), { add: ['INBOX'], remove: [label.id] }, acct).catch(() => {})))
+      restoreRows(rows)
+    })
+    removeRows(ids)
+    try {
+      // A label belongs to one mailbox, so a selection spanning several can
+      // only be moved where the label exists. The picker only offers labels
+      // from the mailboxes in the selection, so this is the leftover case.
+      await Promise.all(byAccount(rows).map(([acct, g]) =>
+        batchModify(g.map(r => r.id), { add: [label.id], remove: ['INBOX'] }, acct)))
+      notify(`Moved ${many(rows.length)} to ${label.name}`)
+    } catch (err) {
+      restoreRows(rows)
+      notify(err instanceof Error ? err.message : `Gmail would not move those to ${label.name}`)
+    }
+  }, [removeRows, restoreRows])
+
+  /** The rows the action bar acts on, in the order they are on screen. */
+  const chosen = useCallback(
+    () => filteredEmails.filter(e => selectedIds.has(e.id)),
+    [filteredEmails, selectedIds])
+
+  const afterBatch = useCallback(async (run: () => Promise<void>) => {
+    if (batchArchiving) return
+    setBatchArchiving(true)
+    try { await run(); setSelectedIds(new Set()) } finally { setBatchArchiving(false) }
+  }, [batchArchiving])
 
   // ─── Render helpers ──────────────────────────────────────────────────────
 
@@ -861,25 +1054,92 @@ export function InboxModule() {
           </div>
         )}
 
-        {/* Batch action bar */}
-        {selectedIds.size > 0 && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: 'color-mix(in srgb, var(--sb-info) 8.0%, transparent)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-info) 20.0%, transparent)', borderRadius: 'var(--sb-r-chip)' }}>
-            <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-info)', fontWeight: 500, flex: 1 }}>{selectedIds.size} selected</span>
-            <button onClick={() => void handleBatchArchive()} disabled={batchArchiving}
-              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 'var(--sb-r-chip)', background: 'transparent', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-info) 30.0%, transparent)', color: 'var(--sb-info)', fontSize: 'var(--sb-t-body-s)', cursor: 'pointer', opacity: batchArchiving ? 0.5 : 1 }}>
-              <Archive size={ICON.sm} /> Archive all
-            </button>
-            <button onClick={() => setSelectedIds(new Set())}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', padding: 2, display: 'flex' }}>
-              <XIcon size={ICON.sm} />
-            </button>
-          </div>
-        )}
+        {/* ── What to do with a selection ──────────────────────────────────
+            The same four things the swipe offers one row at a time, plus the
+            move a swipe has no room for. Every one is undoable. */}
+        {selectedIds.size > 0 && (() => {
+          const picked = chosen()
+          const allRead   = picked.every(e => readIds.has(e.id))
+          const everyOne  = picked.length === filteredEmails.length && filteredEmails.length > 0
+          const act = (run: () => Promise<void>) => () => void afterBatch(run)
+          return (
+            <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8, padding: '8px 12px', background: 'color-mix(in srgb, var(--sb-info) 8.0%, transparent)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-info) 20.0%, transparent)', borderRadius: 'var(--sb-r-chip)' }}>
+              <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-info)', fontWeight: 600 }}>
+                {selectedIds.size} selected
+              </span>
+
+              {/* Selecting a whole class or search is the point of having one. */}
+              <button
+                onClick={() => setSelectedIds(everyOne ? new Set() : new Set(filteredEmails.map(e => e.id)))}
+                style={{ ...barBtn, borderColor: 'transparent', color: 'var(--sb-info)' }}>
+                {everyOne ? 'Select none' : `Select all ${filteredEmails.length}`}
+              </button>
+
+              {/* Read is a toggle: a selection that is already read wants the
+                  other direction, and two buttons for one state is one too many. */}
+              <button onClick={act(() => readRows(picked, !allRead))} disabled={batchArchiving} style={barBtn}>
+                {allRead ? <Mail size={ICON.sm} /> : <MailOpen size={ICON.sm} />}
+                {allRead ? 'Mark unread' : 'Mark read'}
+              </button>
+
+              <div style={{ position: 'relative' }}>
+                <button onClick={() => setMoveOpen(o => !o)} disabled={batchArchiving || labels.length === 0}
+                  title={labels.length === 0 ? 'This mailbox has no labels of its own to file mail under' : 'File it under a label'}
+                  style={{ ...barBtn, opacity: labels.length === 0 ? 0.45 : 1 }}>
+                  <FolderInput size={ICON.sm} /> Move
+                </button>
+                {moveOpen && labels.length > 0 && (
+                  <>
+                    <div onClick={() => setMoveOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 40 }} />
+                    <div style={{
+                      position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 41, minWidth: 190,
+                      maxHeight: 260, overflowY: 'auto', background: 'var(--sb-card)',
+                      border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
+                      boxShadow: 'var(--sb-shadow-panel, 0 8px 24px rgba(25,23,18,.14))', padding: 5,
+                    }}>
+                      {labels.map(l => (
+                        <button key={l.id}
+                          onClick={() => { setMoveOpen(false); void afterBatch(() => moveRows(picked, l)) }}
+                          style={{
+                            display: 'block', width: '100%', textAlign: 'left', padding: '7px 10px',
+                            borderRadius: 'var(--sb-r-chip)', background: 'transparent', border: 'none',
+                            color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', cursor: 'pointer',
+                            fontFamily: 'inherit',
+                          }}>{l.name}</button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+
+              <button onClick={act(() => archiveRows(picked))} disabled={batchArchiving} style={barBtn}>
+                <Archive size={ICON.sm} /> Archive
+              </button>
+
+              <button onClick={act(() => trashRows(picked))} disabled={batchArchiving}
+                title="Moves them to the Bin, where Gmail keeps them for 30 days"
+                style={{ ...barBtn, color: 'var(--sb-negative)', borderColor: 'color-mix(in srgb, var(--sb-negative) 34%, transparent)' }}>
+                <Trash2 size={ICON.sm} /> Delete
+              </button>
+
+              <button onClick={() => setSelectedIds(new Set())} title="Clear the selection"
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', padding: 2, display: 'flex' }}>
+                <XIcon size={ICON.sm} />
+              </button>
+            </div>
+          )
+        })()}
 
         <div style={{ background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)', overflow: 'hidden' }}>
-        {filteredEmails.length === 0 && searchQuery ? (
-          <div style={{ padding: '24px 16px', textAlign: 'center', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body-s)' }}>
-            No emails match "{searchQuery}"
+        {/* An emptied list has to say so. Archiving or binning a whole
+            selection is one gesture away, and a card of nothing reads as the
+            mail having failed to load rather than as a finished inbox. */}
+        {filteredEmails.length === 0 ? (
+          <div style={{ padding: '30px 20px', textAlign: 'center', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-body-s)' }}>
+            {searchQuery ? `No emails match "${searchQuery}"`
+              : mailClass ? CLASS_INFO[mailClass].empty
+              : folder === 'unread' ? 'Nothing unread. That is the whole inbox dealt with.'
+              : `Nothing in ${FOLDER_LABEL[folder ?? 'inbox'].toLowerCase()}.`}
           </div>
         ) : filteredEmails.map((email, i) => {
           // Several mailboxes on screen at once is the case the colour is for.
@@ -889,10 +1149,23 @@ export function InboxModule() {
           const triage     = triageMap[email.id]
           const classMeta  = triage?.result ? CLASS_META[triage.result.classification] : null
           return (
-            <button
+            <SwipeRow
               key={email.id}
+              id={email.id}
+              isRead={isRead}
+              openId={swipedId}
+              setOpenId={setSwipedId}
+              // Nothing in the Bin is worth binning again, and archiving from
+              // there means nothing either.
+              disabled={folder === 'trash'}
+              onRead={() => void toggleRead(email)}
+              onArchive={() => void archiveRows([email])}
+              onDelete={() => void trashRows([email])}
+            >
+            <button
               onClick={() => {
                 setSelectedId(email.id)
+                lastPicked.current = email.id
                 if (!readIds.has(email.id)) {
                   setReadIds(prev => new Set([...prev, email.id]))
                   void markAsRead(email.id, email.account).catch(() => { /* offline */ })
@@ -914,7 +1187,30 @@ export function InboxModule() {
             >
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                 <div style={{ position: 'relative', flexShrink: 0 }}
-                  onClick={ev => { ev.stopPropagation(); setSelectedIds(prev => { const n = new Set(prev); n.has(email.id) ? n.delete(email.id) : n.add(email.id); return n }) }}>
+                  title={selectedIds.has(email.id) ? 'Deselect — shift-click for a run' : 'Select — shift-click for a run'}
+                  onClick={ev => {
+                    ev.stopPropagation()
+                    // Shift takes everything between the last one picked and
+                    // this one. Picking fifty messages one at a time is not
+                    // selecting, it is clicking fifty times.
+                    const anchor = lastPicked.current
+                    const run = (() => {
+                      if (!ev.shiftKey || !anchor || anchor === email.id) return [email.id]
+                      const ids = filteredEmails.map(e => e.id)
+                      const a = ids.indexOf(anchor), b = ids.indexOf(email.id)
+                      if (a < 0 || b < 0) return [email.id]
+                      return ids.slice(Math.min(a, b), Math.max(a, b) + 1)
+                    })()
+                    setSelectedIds(prev => {
+                      const n = new Set(prev)
+                      // The row you clicked decides for the whole run, so a
+                      // shift-click can clear a stretch as well as take one.
+                      const adding = !n.has(email.id)
+                      for (const id of run) adding ? n.add(id) : n.delete(id)
+                      return n
+                    })
+                    lastPicked.current = email.id
+                  }}>
                   {selectedIds.has(email.id)
                     ? <div style={{ width: 26, height: 26, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-info)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><CheckCheck size={ICON.sm} color="var(--sb-ink-on-fill)" /></div>
                     : <SenderAvatar name={email.fromName} email={email.fromEmail} size={26} />
@@ -965,6 +1261,7 @@ export function InboxModule() {
                 </span>
               </div>
             </button>
+            </SwipeRow>
           )
         })}
         </div>
