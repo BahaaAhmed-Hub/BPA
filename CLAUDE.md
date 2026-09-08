@@ -137,7 +137,9 @@ for an event that exists) and the composer (for one that does not) are the same
 object on screen. `ComposerShell` is that shell: **a cream panel holding white
 cards**, the separation between sections being that ground rather than a rule —
 eight banded sections in one column do not scan. Its box is **the task detail
-panel's**, to the value: `clamp(300px, 32vw, 400px)`, `--sb-r-card`,
+panel's**, to the value — bar the width, which is `clamp(320px, 34vw, 440px)`
+because a shell holding cards carries two more edges than a panel of rows and
+needs the room for them: `--sb-r-card`,
 `--sb-shadow-control`, `--sb-t-h2` title / `--sb-t-body-s` rows /
 `--sb-t-meta` captions, `--sb-h-pill` controls, sections separated by a
 hairline. Measured side by side, the two panels differ in nothing but content.

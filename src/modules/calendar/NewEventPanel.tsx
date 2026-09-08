@@ -61,7 +61,7 @@ export const MONO: React.CSSProperties = {
  * single column of banded text.
  */
 export const CARD: React.CSSProperties = {
-  background: C.card, borderRadius: 'var(--sb-r-card)', padding: '11px 13px',
+  background: C.card, borderRadius: 'var(--sb-r-card)', padding: '14px 15px',
   display: 'flex', flexDirection: 'column', minWidth: 0,
 }
 /** The first card needs nothing of its own now; kept so callers need not change. */
@@ -129,7 +129,7 @@ export const BARE: React.CSSProperties = {
  * are by definition outside a panel which did not exist when the finger went
  * down — so a handler on anything outside opens and closes it in one gesture.
  */
-export const PANEL_W = 'clamp(300px, 32vw, 400px)'
+export const PANEL_W = 'clamp(320px, 34vw, 440px)'
 export const PANEL_W_WIDE = 'min(560px, 62vw)'
 
 export function ComposerShell({ panelRef, onClose, expanded, children }: {
@@ -172,7 +172,7 @@ export function ComposerShell({ panelRef, onClose, expanded, children }: {
         maxHeight: '100%', overflowY: 'auto', scrollbarWidth: 'thin',
         background: C.page, border: `var(--sb-border-width) solid ${C.border}`,
         borderRadius: 'var(--sb-r-frame)', boxShadow: 'var(--sb-shadow-control)',
-        display: 'flex', flexDirection: 'column', gap: 8, padding: 8,
+        display: 'flex', flexDirection: 'column', gap: 10, padding: 10,
       }}>
       {children}
     </aside>
@@ -573,7 +573,7 @@ export function NewEventPanel({
       </div>
 
       {/* ── 2 · What ───────────────────────────────────────────────────────── */}
-      <div style={{ ...sectionTop, gap: 10 }}>
+      <div style={{ ...sectionTop, gap: 12 }}>
         <input
           ref={titleRef}
           value={title}
@@ -658,7 +658,7 @@ export function NewEventPanel({
       </div>
 
       {/* ── 3 · When ───────────────────────────────────────────────────────── */}
-      <div style={{ ...CARD, gap: 10 }}>
+      <div style={{ ...CARD, gap: 12 }}>
         <span style={MONO}>When</span>
 
         {/* Date, from, to and All day on one line. All day does not remove the
@@ -831,7 +831,7 @@ export function NewEventPanel({
       )}
 
       {/* ── 4 · Attendees ──────────────────────────────────────────────────── */}
-      <div style={{ ...CARD, gap: 4 }}>
+      <div style={{ ...CARD, gap: 6 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
           <span style={MONO}>Attendees</span>
           <span style={{ flex: 1 }} />
@@ -840,7 +840,6 @@ export function NewEventPanel({
 
         {/* The organiser is you, and is not a guest you can remove. */}
         <PersonRow
-          first
           initials={initialsOf(organiser ?? 'me')}
           avatarBg={C.ink}
           avatarInk={C.onInk}
@@ -852,7 +851,6 @@ export function NewEventPanel({
         {people.map((p, i) => (
           <PersonRow
             key={p.email}
-            first={false}
             initials={initialsOf(p.email)}
             avatarBg={i % 2 === 0 ? C.gold : `color-mix(in srgb, ${C.gold} 28%, var(--sb-field))`}
             avatarInk={C.text}
@@ -871,7 +869,7 @@ export function NewEventPanel({
           />
         ))}
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '8px 0', borderTop: `1px solid ${C.hair}` }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '6px 0', minWidth: 0 }}>
           <button
             title="Add an invitee"
             onClick={() => inviteeRef.current?.focus()}
@@ -895,7 +893,7 @@ export function NewEventPanel({
       </div>
 
       {/* ── 5 · Attachments ────────────────────────────────────────────────── */}
-      <div style={{ ...CARD, gap: 8 }}>
+      <div style={{ ...CARD, gap: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={MONO}>Attachments</span>
           <span style={{ flex: 1 }} />
@@ -1022,7 +1020,7 @@ export function NewEventPanel({
           Cancel. */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 8,
-        position: 'sticky', bottom: -8, padding: '8px 56px 6px 6px', marginTop: -2,
+        position: 'sticky', bottom: -10, padding: '10px 56px 4px 6px', marginTop: -2,
         background: C.page,
       }}>
         {editing ? (
@@ -1058,9 +1056,8 @@ export function NewEventPanel({
 // ─── One person in the list ──────────────────────────────────────────────────
 
 function PersonRow({
-  first, initials, avatarBg, avatarInk, name, sub, optional, rsvp, onToggleOptional, onRemove,
+  initials, avatarBg, avatarInk, name, sub, optional, rsvp, onToggleOptional, onRemove,
 }: {
-  first: boolean
   initials: string
   avatarBg: string
   avatarInk: string
@@ -1073,8 +1070,7 @@ function PersonRow({
 }) {
   return (
     <div style={{
-      display: 'flex', alignItems: 'center', gap: 11, padding: '8px 0', minWidth: 0,
-      ...(first ? null : { borderTop: `1px solid ${C.hair}` }),
+      display: 'flex', alignItems: 'center', gap: 11, padding: '6px 0', minWidth: 0,
     }}>
       <span style={{
         width: 28, height: 28, borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
