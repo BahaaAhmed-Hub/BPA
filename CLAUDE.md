@@ -97,17 +97,28 @@ sends `account_email` as well so the function can resolve it either way.
 calendar, the account, or what Google objected to — is on `error.context`.
 `efFailure()` reads it, so a failed write says what happened.
 
-## Calendar — both event panels are the composer
+## Calendar — both event panels are the task detail panel
 `NewEventPanel.tsx` holds the shell and every primitive; `EventPopup` (the panel
 for an event that exists) and the composer (for one that does not) are the same
-object on screen. `ComposerShell` is the shared cream panel — 680px, portalled
-to `document.body`, centred over the grid.
-- **The backdrop has no dismiss handler.** It used to, and a touch screen
+object on screen. `ComposerShell` is that shell, and it is **the task detail
+panel's**, to the value: `clamp(300px, 32vw, 400px)`, `--sb-r-card`,
+`--sb-shadow-control`, `--sb-t-h2` title / `--sb-t-body-s` rows /
+`--sb-t-meta` captions, `--sb-h-pill` controls, sections separated by a
+hairline. Measured side by side, the two panels differ in nothing but content.
+- **Docked, never floating.** A modal over the grid hides the one thing you
+  need while editing an event. It is a column beside the grid, the way the
+  task panel sits beside the board.
+- **`maxHeight: 100%`, not a viewport offset.** `calc(100vh - 212px)` did not
+  know how tall the calendar's own header was and put the footer 4px below the
+  fold. The row has a definite height; this is the row's.
+- **The sticky footer keeps the bottom-right corner clear** (`padding-right:
+  56px`). The assistant's floating button is fixed to the viewport and sat on
+  top of Cancel.
+- **One listener decides dismissal, with a 400ms guard.** A touch screen
   replays a tap as a synthetic `mousedown` a moment after `pointerup`, at
   coordinates that are by definition outside a panel which did not exist when
-  the finger went down — so on an iPad the composer opened and vanished in one
-  gesture. `ComposerShell`'s own listener, with the 400ms guard, is the only
-  thing that decides.
+  the finger went down — so an `onMouseDown` on anything outside opened and
+  closed the composer in one gesture on an iPad.
 - **The radii are theme tokens.** The spec's 28 / 22 / 14 are exactly Glass &
   Depth's `--sb-r-frame` / `-card` / `-nav`, so following the tokens draws Glass
   to the spec and gives the other three their own corners (Warm 8/6,
@@ -115,10 +126,9 @@ to `document.body`, centred over the grid.
 - **`--sb-ev-type` has a default of 1 in `index.css`.** It used to be set only
   as an inline style on the old narrow panel, so any of that panel's text drawn
   outside it had an invalid `calc()` — text that is simply not drawn.
-- The detail panel is no longer `zoom: 0.75` in a 240–330px column. At 680px
-  nothing has to shrink, so `EV_SCALE`/`EV_TYPE`/`EV_PANEL_W` are gone and the
-  section hairlines with them: the cream ground between cards is the separation.
-  Every capability stays — write-through edits, place lookup, clash "move
+- The detail panel is no longer `zoom: 0.75` in a 240–330px column, and
+  nothing multiplies its type: `EV_SCALE`, `EV_TYPE`, `EV_PANEL_W`, `EvPanel`
+  and every `--sb-ev-type` reference are gone. Every capability stays — write-through edits, place lookup, clash "move
   clear", alerts, series RRULE, move-to-calendar, prep, attendees, delete.
 
 It is a **pre-answered form**: everything arrives with an answer in it, so the

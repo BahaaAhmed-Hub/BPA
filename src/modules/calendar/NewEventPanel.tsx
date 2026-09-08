@@ -19,7 +19,6 @@
 // was the one place the shape contract did not reach.
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
 import {
   MapPin, Video, X, Trash2, CheckCircle2, XCircle, RefreshCw, Paperclip,
   Upload, List, ChevronDown, ChevronRight, Plus,
@@ -53,65 +52,90 @@ export const C = {
 } as const
 
 export const MONO: React.CSSProperties = {
-  fontFamily: 'var(--sb-font-mono)', fontSize: 10.5, letterSpacing: '.14em',
-  textTransform: 'uppercase', color: C.faint, fontWeight: 500,
+  fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: C.third, textTransform: 'none',
 }
+/**
+ * One section of a panel. At 300-400px wide a cream ground holding white cards
+ * has no room to be a ground, so a section is a band of the card separated by a
+ * hairline — which is how the task detail panel does it, and this is meant to
+ * be the same object in a different module. The first section in a panel drops
+ * its rule with `sectionTop`.
+ */
 export const CARD: React.CSSProperties = {
-  background: C.card, borderRadius: 'var(--sb-r-card)', padding: '18px 20px',
-  display: 'flex', flexDirection: 'column',
+  padding: '12px 14px',
+  borderTop: `var(--sb-border-width) solid ${'var(--sb-hairline)'}`,
+  display: 'flex', flexDirection: 'column', minWidth: 0,
+}
+export const sectionTop: React.CSSProperties = { ...CARD, borderTop: 'none', paddingTop: 4 }
+
+/** A section's name: the task panel's SECTION_LABEL, to the letter. */
+export const LABEL: React.CSSProperties = {
+  margin: 0, fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: C.third,
 }
 export const NUM: React.CSSProperties = { fontVariantNumeric: 'tabular-nums' }
 
 /** A pill: 999px, and the two states everything in here uses. */
-export function pill(on: boolean, h = 32): React.CSSProperties {
+export function pill(on: boolean, h?: number): React.CSSProperties {
   return {
-    display: 'inline-flex', alignItems: 'center', gap: 7, height: h, padding: '0 13px',
+    display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0 11px',
+    height: h ?? ('var(--sb-h-pill)' as unknown as number),
     borderRadius: 'var(--sb-r-pill)', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0,
-    fontSize: 12.5, fontWeight: 600, whiteSpace: 'nowrap',
+    fontSize: 'var(--sb-t-body-s)', fontWeight: 600, whiteSpace: 'nowrap',
     background: on ? C.ink : C.inset,
-    border: on ? '1px solid transparent' : `1px solid ${C.border}`,
+    border: on ? 'var(--sb-border-width) solid transparent' : `var(--sb-border-width) solid ${C.border}`,
     color: on ? C.onInk : C.third,
   }
 }
+/** The task panel's ICON_BTN: 28px, no chrome until you reach for it. */
 export const ROUND: React.CSSProperties = {
-  width: 32, height: 32, borderRadius: 'var(--sb-r-pill)', flexShrink: 0, padding: 0,
+  width: 28, height: 28, borderRadius: 'var(--sb-r-pill)', flexShrink: 0, padding: 0,
   display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-  background: C.card, border: `1px solid ${C.border}`, cursor: 'pointer',
+  background: 'transparent', border: 'none', cursor: 'pointer', color: C.third,
 }
+/** The task panel's CELL, to the letter. */
 export const FIELD: React.CSSProperties = {
-  display: 'flex', alignItems: 'center', gap: 9, height: 44, boxSizing: 'border-box',
-  padding: '0 13px', borderRadius: 'var(--sb-r-nav)', background: C.inset, border: `1px solid ${C.border}`,
-  color: C.text, fontSize: 13.5, fontFamily: 'inherit', minWidth: 0,
+  display: 'flex', alignItems: 'center', gap: 8, height: 'var(--sb-h-pill)', boxSizing: 'border-box',
+  padding: '0 11px', borderRadius: 'var(--sb-r-sm)', background: 'var(--sb-field)',
+  border: `var(--sb-border-width) solid ${C.border}`,
+  color: C.text, fontSize: 'var(--sb-t-body-s)', fontFamily: 'inherit', minWidth: 0,
 }
 export const BARE: React.CSSProperties = {
   flex: 1, minWidth: 0, background: 'transparent', border: 'none', outline: 'none',
-  color: C.text, fontFamily: 'inherit', fontSize: 13.5,
+  color: C.text, fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)',
 }
 
 /**
- * The cream shell, and the backdrop it sits on.
+ * The shell both event panels are drawn in.
  *
- * Both event panels are this: the composer before the event exists, the detail
- * panel after. Centred over the grid and portalled to the body — 680px beside
- * the grid left the thing you were looking at with nowhere to be, and the
- * calendar module's own `overflow` clipped a backdrop rendered in place.
+ * It is docked, not floating: a column beside the grid, exactly the way the
+ * task detail panel sits beside the board — same width clamp and expanded
+ * width, same max height, same card, border, radius and shadow. A modal over
+ * the calendar hid the thing the panel is about, which is the one thing you
+ * need to see while you edit an event.
  *
- * The backdrop deliberately has no dismiss handler of its own. A touch screen
- * replays a tap as a synthetic mousedown a moment after pointerup, at the same
- * coordinates — which are, by definition, outside a panel that did not exist
- * when the finger went down. `panelRef` + the 400ms guard below is the one
- * place that decides, so the panel cannot be opened and closed by one tap.
+ * `panelRef` + the 400ms guard is what dismisses it. A touch screen replays a
+ * tap as a synthetic mousedown a moment after pointerup, at coordinates that
+ * are by definition outside a panel which did not exist when the finger went
+ * down — so a handler on anything outside opens and closes it in one gesture.
  */
-export function ComposerShell({ panelRef, onClose, children }: {
+export const PANEL_W = 'clamp(300px, 32vw, 400px)'
+export const PANEL_W_WIDE = 'min(560px, 62vw)'
+
+export function ComposerShell({ panelRef, onClose, expanded, children }: {
   panelRef: React.RefObject<HTMLDivElement | null>
   onClose: () => void
+  expanded?: boolean
   children: React.ReactNode
 }) {
   useEffect(() => {
     const openedAt = Date.now()
     const away = (e: Event) => {
       if (Date.now() - openedAt < 400) return
-      if (panelRef.current && !panelRef.current.contains(e.target as Node)) onClose()
+      const t = e.target as HTMLElement
+      // A click on the grid picks another event or draws a new one; it should
+      // not also have to close this first.
+      if (t.closest('.event-card, .sb-compose')) return
+      if (panelRef.current && !panelRef.current.contains(t)) onClose()
     }
     const key = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
     document.addEventListener('pointerdown', away)
@@ -124,28 +148,23 @@ export function ComposerShell({ panelRef, onClose, children }: {
     }
   }, [onClose, panelRef])
 
-  return createPortal(
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 9000, display: 'flex',
-      alignItems: 'flex-start', justifyContent: 'center',
-      padding: '5vh 20px 40px', overflowY: 'auto',
-      background: 'color-mix(in srgb, var(--sb-ink-1) 34%, transparent)',
-    }}>
-      <div
-        ref={panelRef}
-        onClick={e => e.stopPropagation()}
-        onMouseDown={e => e.stopPropagation()}
-        className="sb-compose"
-        style={{
-          width: '100%', maxWidth: 680, alignSelf: 'flex-start',
-          background: C.page, borderRadius: 'var(--sb-r-frame)', padding: '24px 22px 22px',
-          display: 'flex', flexDirection: 'column', gap: 14, overflow: 'hidden',
-          boxShadow: '0 30px 80px -30px color-mix(in srgb, var(--sb-ink-1) 50%, transparent)',
-        }}>
-        {children}
-      </div>
-    </div>,
-    document.body,
+  return (
+    <aside
+      ref={panelRef}
+      className="sb-compose"
+      style={{
+        width: expanded ? PANEL_W_WIDE : PANEL_W,
+        flexShrink: 0, alignSelf: 'flex-start', minWidth: 0,
+        // The row it sits in has a definite height, so this is the row's — a
+        // fixed viewport offset put the footer four pixels below the fold,
+        // because it did not know how tall the calendar's own header was.
+        maxHeight: '100%', overflowY: 'auto', scrollbarWidth: 'thin',
+        background: C.card, border: `var(--sb-border-width) solid ${C.border}`,
+        borderRadius: 'var(--sb-r-card)', boxShadow: 'var(--sb-shadow-control)',
+        display: 'flex', flexDirection: 'column',
+      }}>
+      {children}
+    </aside>
   )
 }
 
@@ -327,34 +346,36 @@ export function NewEventPanel({
     <ComposerShell panelRef={ref} onClose={onCancel}>
 
       {/* ── 1 · Header ─────────────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '0 4px', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '12px 12px 0', minWidth: 0 }}>
         <span style={{
-          fontFamily: 'var(--sb-font-num)', fontSize: 15.5, fontWeight: 600,
-          letterSpacing: '-.03em', color: C.text, flex: 1, minWidth: 0,
+          fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
+          letterSpacing: '-.02em', color: C.text, flex: 1, minWidth: 0,
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         }}>{company}</span>
 
-        <button onClick={() => setStatus(s => s === 'done' ? null : 'done')}
-          style={{ ...pill(false), height: 32, background: status === 'done' ? C.goodSurf : C.card, color: C.goodInk }}>
-          <CheckCircle2 size={ICON.sm} strokeWidth={STROKE.rest} /> Completed
+        <button
+          title={status === 'done' ? 'Not done after all' : 'Mark it done'}
+          onClick={() => setStatus(s => s === 'done' ? null : 'done')}
+          style={{ ...ROUND, background: status === 'done' ? C.goodSurf : 'transparent', color: status === 'done' ? C.goodInk : C.third }}>
+          <CheckCircle2 size={ICON.sm} strokeWidth={STROKE.rest} />
         </button>
-        <button onClick={() => setStatus(s => s === 'cancelled' ? null : 'cancelled')}
-          style={{ ...pill(false), height: 32, background: status === 'cancelled' ? C.goodSurf : C.card, color: C.bad }}>
-          <XCircle size={ICON.sm} strokeWidth={STROKE.rest} /> Cancelled
+        <button
+          title={status === 'cancelled' ? 'Back on' : 'Mark it cancelled'}
+          onClick={() => setStatus(s => s === 'cancelled' ? null : 'cancelled')}
+          style={{ ...ROUND, background: status === 'cancelled' ? C.inset : 'transparent', color: status === 'cancelled' ? C.bad : C.third }}>
+          <XCircle size={ICON.sm} strokeWidth={STROKE.rest} />
         </button>
-
-        <span style={{ width: 1, height: 22, background: `color-mix(in srgb, ${C.border} 88%, var(--sb-ink-4))`, flexShrink: 0 }} />
-
         <button
           title="Discard this event"
           onClick={() => { if (window.confirm('Discard this event?')) onCancel() }}
           style={{ ...ROUND, color: C.bad }}><Trash2 size={ICON.sm} strokeWidth={STROKE.rest} /></button>
-        <button title="Close" onClick={onCancel} style={{ ...ROUND, color: C.third }}>
+        <button title="Close" onClick={onCancel} style={ROUND}>
           <X size={ICON.sm} strokeWidth={STROKE.rest} />
         </button>
       </div>
 
       {/* ── 2 · What ───────────────────────────────────────────────────────── */}
-      <div style={{ ...CARD, gap: 13 }}>
+      <div style={{ ...sectionTop, gap: 10 }}>
         <input
           ref={titleRef}
           value={title}
@@ -363,7 +384,7 @@ export function NewEventPanel({
           placeholder="Event title"
           style={{
             width: '100%', background: 'transparent', border: 'none', outline: 'none', padding: 0,
-            fontFamily: 'var(--sb-font-num)', fontSize: 27, fontWeight: 600,
+            fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h2)', fontWeight: 600,
             letterSpacing: '-.03em', lineHeight: 1, color: C.text,
           }} />
 
@@ -374,7 +395,7 @@ export function NewEventPanel({
           ]).map(({ on, set, Icon, title: t }) => (
             <button key={t} title={t} onClick={() => set(v => !v)}
               style={{
-                width: 38, height: 38, borderRadius: 'var(--sb-r-sm)', flexShrink: 0, cursor: 'pointer',
+                width: 'var(--sb-h-pill)', height: 'var(--sb-h-pill)', borderRadius: 'var(--sb-r-sm)', flexShrink: 0, cursor: 'pointer',
                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                 background: on ? C.ink : C.inset,
                 border: on ? '1px solid transparent' : `1px solid ${C.border}`,
@@ -384,7 +405,7 @@ export function NewEventPanel({
             </button>
           ))}
           {!placeOpen && !onlineOpen && (
-            <span style={{ fontSize: 12.5, color: C.faint }}>Tap to add a place or a call</span>
+            <span style={{ fontSize: 'var(--sb-t-meta)', color: C.faint }}>Tap to add a place or a call</span>
           )}
         </div>
 
@@ -397,7 +418,7 @@ export function NewEventPanel({
                   placeholder="Add a place" style={BARE} />
                 {memory.venue && !location && (
                   <button onClick={() => setLocation(memory.venue!)}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 11.5, color: C.faint, flexShrink: 0 }}>
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'var(--sb-t-meta)', color: C.faint, flexShrink: 0 }}>
                     Recent: {memory.venue}
                   </button>
                 )}
@@ -416,21 +437,21 @@ export function NewEventPanel({
                       ? 'A Teams link is made by Outlook when the invitation goes out'
                       : 'Google makes the link when the event is created'}
                     style={{
-                      display: 'inline-flex', alignItems: 'center', gap: 6, height: 32, padding: '0 11px',
+                      display: 'inline-flex', alignItems: 'center', gap: 6, height: 'var(--sb-h-pill)', padding: '0 11px',
                       borderRadius: 'var(--sb-r-sm)', border: 'none', cursor: 'pointer', flexShrink: 0,
                       background: addMeet ? C.ink : C.card,
                       color: addMeet ? C.onInk : C.text,
-                      fontFamily: 'inherit', fontSize: 12.5, fontWeight: 600,
+                      fontFamily: 'inherit', fontSize: 'var(--sb-t-meta)', fontWeight: 600,
                     }}>
                     {conf === 'teams' ? 'Create Teams link' : 'Create Google Meet'}
                     <ChevronDown size={ICON.sm} strokeWidth={1.8} />
                   </button>
                 </label>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: 11.5, color: C.faint }}>Your workspace provider</span>
+                  <span style={{ fontSize: 'var(--sb-t-meta)', color: C.faint }}>Your workspace provider</span>
                   {([['google', 'Google Meet'], ['teams', 'Microsoft Teams']] as const).map(([id, label]) => (
                     <button key={id} onClick={() => setConf(id)}
-                      style={{ ...pill(false, 30), background: conf === id ? C.inset : C.card }}>
+                      style={{ ...pill(false), background: conf === id ? C.inset : C.card }}>
                       {conf === id && <span style={{ width: 6, height: 6, borderRadius: 'var(--sb-r-pill)', background: C.ink }} />}
                       {label}
                     </button>
@@ -452,11 +473,11 @@ export function NewEventPanel({
       </div>
 
       {/* ── 3 · When ───────────────────────────────────────────────────────── */}
-      <div style={{ ...CARD, gap: 14 }}>
+      <div style={{ ...CARD, gap: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={MONO}>WHEN</span>
+          <span style={MONO}>When</span>
           <span style={{ flex: 1 }} />
-          <span style={{ fontSize: 12.5, fontWeight: 600, color: C.goldInk, ...NUM }}>
+          <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: C.goldInk, ...NUM }}>
             {allDay
               ? 'All day'
               : `${niceTime(startTime)} – ${niceTime(endTime)} · ${niceDuration(minutes)}`}
@@ -466,9 +487,9 @@ export function NewEventPanel({
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <label style={{
-            display: 'inline-flex', alignItems: 'center', gap: 8, height: 44, padding: '0 14px',
+            display: 'inline-flex', alignItems: 'center', gap: 8, height: 'var(--sb-h-pill)', padding: '0 11px',
             borderRadius: 'var(--sb-r-nav)', background: C.ink, color: C.onInk, cursor: 'pointer',
-            fontSize: 15, fontWeight: 600, ...NUM, flexShrink: 0,
+            fontSize: 'var(--sb-t-body-s)', fontWeight: 600, ...NUM, flexShrink: 0,
           }}>
             {startDateObj.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}
             <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
@@ -478,19 +499,19 @@ export function NewEventPanel({
 
           {!allDay && (
             <>
-              <label style={{ ...FIELD, width: 134, padding: '0 10px', flexShrink: 0 }}>
+              <label style={{ ...FIELD, flex: '1 1 96px', minWidth: 90, padding: '0 6px' }}>
                 <input type="time" value={startTime}
                   onChange={e => { const v = e.target.value; setStartTime(v); setEndTime(pad(toMin(v) + minutes)) }}
-                  style={{ ...BARE, ...NUM }} />
+                  style={{ ...BARE, ...NUM, fontSize: 'var(--sb-t-meta)' }} />
               </label>
-              <span style={{ fontSize: 12.5, color: C.faint }}>to</span>
-              <label style={{ ...FIELD, width: 134, padding: '0 10px', flexShrink: 0 }}>
+              <span style={{ fontSize: 'var(--sb-t-meta)', color: C.faint, flexShrink: 0 }}>to</span>
+              <label style={{ ...FIELD, flex: '1 1 96px', minWidth: 90, padding: '0 6px' }}>
                 <input type="time" value={endTime} onChange={e => setEndTime(e.target.value)}
-                  style={{ ...BARE, ...NUM }} />
+                  style={{ ...BARE, ...NUM, fontSize: 'var(--sb-t-meta)' }} />
               </label>
             </>
           )}
-          <button onClick={() => setAllDay(v => !v)} style={pill(allDay, 34)}>All day</button>
+          <button onClick={() => setAllDay(v => !v)} style={pill(allDay)}>All day</button>
         </div>
 
         <div style={{ height: 1, background: C.hair }} />
@@ -498,10 +519,10 @@ export function NewEventPanel({
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
             <RefreshCw size={ICON.sm} strokeWidth={1.8} color={C.third} />
-            <span style={{ fontSize: 13.5, fontWeight: 600, color: C.text }}>Repeats</span>
+            <span style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: C.text }}>Repeats</span>
             <span style={{ flex: 1 }} />
             {repeat && endsMode === 'count' && (
-              <span style={{ fontSize: 12.5, fontWeight: 600, color: C.goldInk, ...NUM }}>{count} occurrences</span>
+              <span style={{ fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: C.goldInk, ...NUM }}>{count} occurrences</span>
             )}
           </div>
 
@@ -512,38 +533,38 @@ export function NewEventPanel({
               ['biweekly', 'Every 2 weeks'],
               ['monthly', 'Monthly'],
             ] as const).map(([id, label]) => (
-              <button key={id} onClick={() => setPreset(id)} style={pill(preset === id, 34)}>{label}</button>
+              <button key={id} onClick={() => setPreset(id)} style={pill(preset === id)}>{label}</button>
             ))}
             <button onClick={() => setPreset('custom')}
-              style={{ ...pill(preset === 'custom', 34), border: `1px dashed ${C.dashed}` }}>Custom…</button>
+              style={{ ...pill(preset === 'custom'), border: `1px dashed ${C.dashed}` }}>Custom…</button>
           </div>
 
           {repeat && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 11.5, color: C.faint }}>Ends</span>
-              <label style={{ ...FIELD, height: 38, width: 168, flexShrink: 0 }}>
+              <span style={{ fontSize: 'var(--sb-t-meta)', color: C.faint }}>Ends</span>
+              <label style={{ ...FIELD, flex: '1 1 120px', minWidth: 0 }}>
                 <input type="date" value={until}
                   onChange={e => { setUntil(e.target.value); setEndsMode(e.target.value ? 'until' : 'never') }}
-                  style={{ ...BARE, ...NUM, fontSize: 12.5 }} />
+                  style={{ ...BARE, ...NUM, fontSize: 'var(--sb-t-meta)' }} />
                 <ChevronDown size={ICON.sm} strokeWidth={1.8} color={C.faint} style={{ flexShrink: 0 }} />
               </label>
               {endsMode === 'count' ? (
-                <span style={{ ...pill(true, 30), background: C.ink, gap: 5 }}>
+                <span style={{ ...pill(true), background: C.ink, gap: 5 }}>
                   After
                   <input type="number" min={1} max={99} value={count}
                     onChange={e => setCount(Math.min(99, Math.max(1, Math.round(Number(e.target.value)) || 1)))}
                     style={{ ...BARE, ...NUM, flex: 'none', width: 26, padding: 0, textAlign: 'center',
-                      fontSize: 12.5, fontWeight: 600, color: C.onInk }} />
+                      fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: C.onInk }} />
                   times
                 </span>
               ) : (
                 <button onClick={() => { setEndsMode('count'); setUntil('') }}
-                  style={{ ...pill(false, 30), background: C.card }}>
+                  style={{ ...pill(false), background: C.card }}>
                   After {count} times
                 </button>
               )}
               <button onClick={() => { setEndsMode('never'); setUntil('') }}
-                style={{ ...pill(endsMode === 'never', 30), background: endsMode === 'never' ? C.ink : C.card }}>
+                style={{ ...pill(endsMode === 'never'), background: endsMode === 'never' ? C.ink : C.card }}>
                 Never
               </button>
             </div>
@@ -552,11 +573,11 @@ export function NewEventPanel({
       </div>
 
       {/* ── 4 · Attendees ──────────────────────────────────────────────────── */}
-      <div style={{ ...CARD, gap: 6 }}>
+      <div style={{ ...CARD, gap: 4 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-          <span style={MONO}>ATTENDEES</span>
+          <span style={MONO}>Attendees</span>
           <span style={{ flex: 1 }} />
-          <span style={{ fontSize: 11.5, color: C.faint }}>Tap ? to make someone optional</span>
+          <span style={{ fontSize: 'var(--sb-t-meta)', color: C.faint }}>Tap ? to make someone optional</span>
         </div>
 
         {/* The organiser is you, and is not a guest you can remove. */}
@@ -589,7 +610,7 @@ export function NewEventPanel({
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '8px 0', borderTop: `1px solid ${C.hair}` }}>
           <span style={{
-            width: 34, height: 34, borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
+            width: 28, height: 28, borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
             display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
             border: `1px dashed ${C.dashed}`, color: C.faint,
           }}><Plus size={ICON.sm} strokeWidth={1.8} /></span>
@@ -599,16 +620,16 @@ export function NewEventPanel({
             onKeyDown={e => { if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addPerson(invitee) } }}
             onBlur={() => invitee && addPerson(invitee)}
             placeholder="name@company.com"
-            style={{ ...BARE, fontSize: 13 }} />
+            style={{ ...BARE, fontSize: 'var(--sb-t-body-s)' }} />
         </div>
       </div>
 
       {/* ── 5 · Attachments ────────────────────────────────────────────────── */}
-      <div style={{ ...CARD, gap: 9 }}>
+      <div style={{ ...CARD, gap: 8 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={MONO}>ATTACHMENTS</span>
+          <span style={MONO}>Attachments</span>
           <span style={{ flex: 1 }} />
-          <span style={{ ...pill(false, 30), cursor: 'default', opacity: 0.55 }} title="Attaching needs Drive access, which this build does not ask for">
+          <span style={{ ...pill(false), cursor: 'default', opacity: 0.55 }} title="Attaching needs Drive access, which this build does not ask for">
             <Upload size={ICON.sm} strokeWidth={1.8} /> Upload
           </span>
         </div>
@@ -619,13 +640,13 @@ export function NewEventPanel({
             borderRadius: 'var(--sb-r-nav)', background: C.inset,
           }}>
             <span style={{
-              width: 30, height: 30, borderRadius: 'var(--sb-r-chip)', flexShrink: 0, background: C.card,
+              width: 26, height: 26, borderRadius: 'var(--sb-r-chip)', flexShrink: 0, background: C.card,
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              fontFamily: 'var(--sb-font-mono)', fontSize: 9, fontWeight: 700, color: C.bad,
+              fontFamily: 'var(--sb-font-mono)', fontSize: 'var(--sb-t-micro)', fontWeight: 700, color: C.bad,
             }}>{f.kind}</span>
             <span style={{ flex: 1, minWidth: 0 }}>
-              <span style={{ display: 'block', fontSize: 13, fontWeight: 600, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.name}</span>
-              <span style={{ display: 'block', fontSize: 11.5, color: C.faint, ...NUM }}>
+              <span style={{ display: 'block', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.name}</span>
+              <span style={{ display: 'block', fontSize: 'var(--sb-t-meta)', color: C.faint, ...NUM }}>
                 {(f.size / 1048576).toFixed(1)} MB · not attached yet
               </span>
             </span>
@@ -651,7 +672,7 @@ export function NewEventPanel({
             padding: 13, borderRadius: 'var(--sb-r-nav)',
             border: `1px dashed ${C.dashed}`,
             background: dropping ? C.inset : 'transparent',
-            fontSize: 12.5, color: C.third,
+            fontSize: 'var(--sb-t-meta)', color: C.third,
           }}>
           <Paperclip size={ICON.sm} strokeWidth={1.8} color={C.faint} />
           Drop files here, or attach from Drive
@@ -659,7 +680,7 @@ export function NewEventPanel({
       </div>
 
       {/* ── 6 · The rest, folded away ──────────────────────────────────────── */}
-      <div style={{ background: C.card, borderRadius: 'var(--sb-r-card)', padding: extrasOpen ? '14px 18px 16px' : '14px 18px' }}>
+      <div style={{ ...CARD, gap: 10, paddingBottom: extrasOpen ? 14 : 12 }}>
         <button
           onClick={() => setExtrasOpen(v => !v)}
           style={{
@@ -667,9 +688,9 @@ export function NewEventPanel({
             background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'inherit',
           }}>
           <List size={ICON.md} strokeWidth={1.8} color={C.third} />
-          <span style={{ fontSize: 13.5, color: C.third }}>Notes, calendar, visibility</span>
+          <span style={{ fontSize: 'var(--sb-t-body-s)', color: C.third }}>Notes, calendar, visibility</span>
           <span style={{ flex: 1 }} />
-          <span style={{ fontSize: 12.5, color: C.faint }}>defaults are fine</span>
+          <span style={{ fontSize: 'var(--sb-t-meta)', color: C.faint }}>defaults are fine</span>
           {extrasOpen
             ? <ChevronDown size={ICON.sm} strokeWidth={1.8} color={C.faint} />
             : <ChevronRight size={ICON.sm} strokeWidth={1.8} color={C.faint} />}
@@ -685,11 +706,11 @@ export function NewEventPanel({
               style={{
                 width: '100%', boxSizing: 'border-box', resize: 'vertical', padding: '10px 12px',
                 borderRadius: 'var(--sb-r-nav)', background: C.inset, border: `1px solid ${C.border}`,
-                fontFamily: 'inherit', fontSize: 13.5, color: C.text, outline: 'none', lineHeight: 1.55,
+                fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', color: C.text, outline: 'none', lineHeight: 1.55,
               }} />
 
             <label style={FIELD}>
-              <span style={{ fontSize: 12.5, color: C.faint, flexShrink: 0 }}>Calendar</span>
+              <span style={{ fontSize: 'var(--sb-t-meta)', color: C.faint, flexShrink: 0 }}>Calendar</span>
               <select value={calId} onChange={e => setCalId(e.target.value)}
                 style={{ ...BARE, cursor: 'pointer', appearance: 'none' }}>
                 {writable.map(c => (
@@ -700,9 +721,9 @@ export function NewEventPanel({
             </label>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 12.5, color: C.faint }}>Visible as</span>
+              <span style={{ fontSize: 'var(--sb-t-meta)', color: C.faint }}>Visible as</span>
               {([['default', 'Calendar default'], ['private', 'Private'], ['public', 'Public']] as const).map(([id, label]) => (
-                <button key={id} onClick={() => setVisibility(id)} style={pill(visibility === id, 30)}>{label}</button>
+                <button key={id} onClick={() => setVisibility(id)} style={pill(visibility === id)}>{label}</button>
               ))}
             </div>
           </div>
@@ -710,24 +731,35 @@ export function NewEventPanel({
       </div>
 
       {/* ── 7 · Footer ─────────────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      {/* Sticky, because the panel scrolls: the one button that finishes the
+          job must not be somewhere you have to go looking for. */}
+      {/* Sticky, because the panel scrolls. The right inset keeps the buttons
+          out of the corner the assistant's floating button occupies — it is
+          fixed to the viewport and sits over whatever is under it, which was
+          Cancel. */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 8,
+        position: 'sticky', bottom: 0, padding: '10px 56px 12px 14px',
+        background: C.card, borderTop: `var(--sb-border-width) solid ${C.hair}`,
+      }}>
         <button
           onClick={submit}
           disabled={!title.trim()}
           aria-disabled={!title.trim()}
           style={{
-            flex: 1, height: 52, borderRadius: 'var(--sb-r-pill)', border: 'none',
+            flex: '1 1 0', minWidth: 0, height: 'var(--sb-h-nav)', borderRadius: 'var(--sb-r-pill)', border: 'none',
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             background: C.ink, color: C.onInk, cursor: title.trim() ? 'pointer' : 'default',
-            fontFamily: 'inherit', fontSize: 15, fontWeight: 600,
+            fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
             opacity: title.trim() ? 1 : 0.45,
           }}>
           {guests > 0 ? `Create & invite ${guests}` : 'Create event'}
         </button>
         <button onClick={onCancel}
           style={{
-            height: 52, padding: '0 22px', borderRadius: 'var(--sb-r-pill)', cursor: 'pointer',
-            background: C.card, border: `1px solid ${C.border}`, color: C.third,
-            fontFamily: 'inherit', fontSize: 14,
+            height: 'var(--sb-h-nav)', padding: '0 14px', flexShrink: 0, borderRadius: 'var(--sb-r-pill)', cursor: 'pointer',
+            background: C.inset, border: `var(--sb-border-width) solid ${C.border}`, color: C.third,
+            fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
           }}>Cancel</button>
       </div>
     </ComposerShell>
@@ -756,15 +788,15 @@ function PersonRow({
       ...(first ? null : { borderTop: `1px solid ${C.hair}` }),
     }}>
       <span style={{
-        width: 34, height: 34, borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
+        width: 28, height: 28, borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
         display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-        background: avatarBg, color: avatarInk, fontSize: 11.5, fontWeight: 700,
+        background: avatarBg, color: avatarInk, fontSize: 'var(--sb-t-meta)', fontWeight: 700,
       }}>{initials}</span>
 
       <span style={{ flex: 1, minWidth: 0 }}>
         <span style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
           <span style={{
-            fontSize: 13.5, fontWeight: 600, color: C.text, textTransform: 'capitalize',
+            fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: C.text, textTransform: 'capitalize',
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}>{name}</span>
           {optional && (
@@ -772,12 +804,12 @@ function PersonRow({
               height: 19, padding: '0 7px', borderRadius: 'var(--sb-r-chip)', flexShrink: 0,
               display: 'inline-flex', alignItems: 'center',
               background: C.inset, border: `1px solid ${C.border}`, color: C.faint,
-              fontSize: 10.5, fontWeight: 600,
+              fontSize: 'var(--sb-t-micro)', fontWeight: 600,
             }}>Optional</span>
           )}
         </span>
         <span style={{
-          display: 'block', fontSize: 11.5, color: C.faint, marginTop: 1,
+          display: 'block', fontSize: 'var(--sb-t-meta)', color: C.faint, marginTop: 1,
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         }}>{sub}</span>
       </span>
@@ -785,7 +817,7 @@ function PersonRow({
       <span style={{
         height: 26, padding: '0 10px', borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
         display: 'inline-flex', alignItems: 'center',
-        background: rsvp.bg, color: rsvp.ink, fontSize: 11.5, fontWeight: 600,
+        background: rsvp.bg, color: rsvp.ink, fontSize: 'var(--sb-t-meta)', fontWeight: 600,
       }}>{rsvp.label}</span>
 
       {onToggleOptional && (
@@ -798,7 +830,7 @@ function PersonRow({
             background: optional ? C.ink : C.card,
             border: optional ? '1px solid transparent' : `1px solid ${C.border}`,
             color: optional ? C.onInk : C.faint,
-            fontFamily: 'inherit', fontSize: 12, fontWeight: 700,
+            fontFamily: 'inherit', fontSize: 'var(--sb-t-meta)', fontWeight: 700,
           }}>?</button>
       )}
       {onRemove && (

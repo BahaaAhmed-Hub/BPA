@@ -929,9 +929,8 @@ function EventBlock({ event, layout, status, isSelected, isDragSrc, isDragOverla
 // `zoom: 0.75` with its type a fifth larger again inside that, to fit. It is
 // the composer's 680px shell now — the same object as the panel that opens on
 // an empty slot, because they were always the same object on screen — so
-// nothing has to shrink and the scale constants are gone. `--sb-ev-type` is 1
-// in index.css, so every `calc(var(--sb-t-x) * var(--sb-ev-type))` in here
-// resolves to the token as written.
+// nothing multiplies its type any more: every size in it is the token the
+// task panel uses, so the two panels are one design in two modules.
 
 const EV_ROUND: React.CSSProperties = {
   width: 28, height: 28, borderRadius: 'var(--sb-r-pill)', flexShrink: 0, padding: 0,
@@ -940,7 +939,7 @@ const EV_ROUND: React.CSSProperties = {
 }
 /** Four sizes in the whole panel: 27 title, 14 value, 13.5 label, 11.5 caption. */
 const EV_LABEL: React.CSSProperties = {
-  width: 84, flexShrink: 0, fontSize: 'calc(var(--sb-t-body) * var(--sb-ev-type))', color: 'var(--sb-ink-3)', fontWeight: 500,
+  width: 84, flexShrink: 0, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', fontWeight: 500,
 }
 /** Every labelled row hangs off the same left edge. */
 const EV_ROW: React.CSSProperties = {
@@ -949,7 +948,7 @@ const EV_ROW: React.CSSProperties = {
 /** A section is named, not shouted: the design sets these in the muted step at
  *  body size, with the count beside the word. */
 const EV_SECTION: React.CSSProperties = {
-  fontSize: 'calc(var(--sb-t-body) * var(--sb-ev-type))', fontWeight: 600, color: 'var(--sb-ink-3)', flexShrink: 0,
+  fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-3)', flexShrink: 0,
 }
 /** Every value in the panel sits in one of these, whether you can type in it,
  *  pick from it, or only read it. */
@@ -961,7 +960,7 @@ const EV_FIELD: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 8, height: 34, boxSizing: 'border-box',
   width: '100%', minWidth: 0, padding: '0 9px', borderRadius: 'var(--sb-r-nav)',
   background: 'transparent', border: 'var(--sb-border-width) solid transparent',
-  color: 'var(--sb-ink-1)', fontSize: 'calc(var(--sb-t-body) * var(--sb-ev-type))', fontWeight: 600,
+  color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
   fontFamily: 'inherit', textAlign: 'left',
 }
 const EV_GHOST_ICON: React.CSSProperties = {
@@ -1320,7 +1319,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
             title={onMoveCalendar ? 'Click to move this to another calendar' : calName}
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 7, height: 'var(--sb-h-pill)', padding: '0 13px',
-              borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-accent-tint)', color: 'var(--sb-ink-2)', fontSize: 'calc(var(--sb-t-body) * var(--sb-ev-type))',
+              borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-accent-tint)', color: 'var(--sb-ink-2)', fontSize: 'var(--sb-t-body-s)',
               minWidth: 0, maxWidth: '100%', cursor: onMoveCalendar ? 'pointer' : 'default',
             }}>
             <span style={{ width: 8, height: 8, borderRadius: 'var(--sb-r-pill)', background: calColor, flexShrink: 0 }} />
@@ -1384,7 +1383,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
       {moveError && (
         <div style={{
           display: 'flex', alignItems: 'flex-start', gap: 7, marginTop: 8,
-          padding: '8px 11px', borderRadius: 'var(--sb-r-nav)', fontSize: 'calc(var(--sb-t-body-s) * var(--sb-ev-type))', lineHeight: 1.45,
+          padding: '8px 11px', borderRadius: 'var(--sb-r-nav)', fontSize: 'var(--sb-t-body-s)', lineHeight: 1.45,
           background: 'var(--sb-negative-tint)', border: 'var(--sb-border-width) solid color-mix(in srgb, var(--sb-negative) 26%, transparent)', color: 'var(--sb-negative-deep)',
         }}>
           <AlertCircle size={ICON.sm} style={{ flexShrink: 0, marginTop: 1 }} />
@@ -1407,7 +1406,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
         style={{
           width: '100%', boxSizing: 'border-box', margin: '14px 0 0', resize: 'none', overflow: 'hidden',
           background: 'transparent', border: 'none', padding: 0,
-          fontFamily: DISPLAY, fontSize: 'calc(var(--sb-t-h1) * var(--sb-ev-type))', fontWeight: 700,
+          fontFamily: DISPLAY, fontSize: 'var(--sb-t-h2)', fontWeight: 600,
           lineHeight: 1.18, letterSpacing: '-0.025em', color: 'var(--sb-ink-1)', outline: 'none', textAlign: 'left',
           textDecoration: status === 'cancelled' ? 'line-through' : 'none',
         }} />
@@ -1421,7 +1420,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 6, maxWidth: '100%',
             background: 'none', border: 'none', padding: 0, cursor: 'pointer',
-            fontFamily: 'inherit', fontSize: 'calc(var(--sb-t-body) * var(--sb-ev-type))', fontWeight: 500,
+            fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', fontWeight: 500,
             color: 'var(--sb-ink-3)', textAlign: 'left',
           }}>
           <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -1458,13 +1457,13 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
           borderRadius: 'var(--sb-r-nav)', background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)',
         }}>
           <ProviderMark provider={provider} size={24} />
-          <span style={{ fontSize: 'calc(var(--sb-t-label) * var(--sb-ev-type))', fontWeight: 600, color: 'var(--sb-ink-1)', flexShrink: 0 }}>
+          <span style={{ fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-1)', flexShrink: 0 }}>
             {PROVIDER_NAME[provider]}
           </span>
           <a href={videoLink} target="_blank" rel="noreferrer"
             title={videoLink}
             style={{
-              flex: 1, minWidth: 0, fontSize: 'calc(var(--sb-t-label) * var(--sb-ev-type))', color: 'var(--sb-info)', textDecoration: 'none',
+              flex: 1, minWidth: 0, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-info)', textDecoration: 'none',
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             }}>{meetingCode(videoLink, provider)}</a>
           <button
@@ -1486,10 +1485,10 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
           background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)',
         }}>
           <a href={videoLink} target="_blank" rel="noreferrer" style={{
-            display: 'block', fontSize: 'calc(var(--sb-t-meta) * var(--sb-ev-type))', color: 'var(--sb-info)', wordBreak: 'break-all', textDecoration: 'none',
+            display: 'block', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-info)', wordBreak: 'break-all', textDecoration: 'none',
           }}>{videoLink}</a>
           {phoneEntry && (
-            <p style={{ margin: '7px 0 0', fontSize: 'calc(var(--sb-t-meta) * var(--sb-ev-type))', color: 'var(--sb-ink-3)' }}>
+            <p style={{ margin: '7px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>
               Dial in: {phoneEntry.label ?? phoneEntry.uri.replace('tel:', '')}
               {phoneEntry.pin ? ` · PIN ${phoneEntry.pin}` : ''}
             </p>
@@ -1517,7 +1516,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
               placeholder="Add a place — room, office or address"
               style={{
                 flex: 1, minWidth: 0, border: 'none', background: 'transparent', padding: 0,
-                fontSize: 'calc(var(--sb-t-body) * var(--sb-ev-type))', fontFamily: 'inherit', color: 'var(--sb-ink-1)', outline: 'none',
+                fontSize: 'var(--sb-t-body-s)', fontFamily: 'inherit', color: 'var(--sb-ink-1)', outline: 'none',
                 textOverflow: 'ellipsis',
               }} />
             {where.kind !== 'empty' && (
@@ -1551,7 +1550,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
                   style={{
                     display: 'flex', alignItems: 'center', gap: 8, width: '100%', height: 32,
                     padding: '0 9px', borderRadius: 'var(--sb-r-chip)', border: 'none', background: 'transparent',
-                    color: 'var(--sb-ink-1)', fontSize: 'calc(var(--sb-t-body) * var(--sb-ev-type))', fontFamily: 'inherit', cursor: 'pointer', textAlign: 'left',
+                    color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', fontFamily: 'inherit', cursor: 'pointer', textAlign: 'left',
                   }}>
                   <MapPin size={ICON.sm} color="var(--sb-ink-4)" style={{ flexShrink: 0 }} />
                   <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{pl}</span>
@@ -1673,7 +1672,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
       </div>
 
       {prepError && (
-        <p style={{ margin: '8px 0 0', fontSize: 'calc(var(--sb-t-meta) * var(--sb-ev-type))', color: 'var(--sb-negative)' }}>{prepError}</p>
+        <p style={{ margin: '8px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-negative)' }}>{prepError}</p>
       )}
 
 
@@ -1693,18 +1692,18 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
             <span style={{
               width: 28, height: 28, borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: 'var(--sb-field)', color: 'var(--sb-ink-3)', fontSize: 'calc(var(--sb-t-micro) * var(--sb-ev-type))', fontWeight: 700,
+              background: 'var(--sb-field)', color: 'var(--sb-ink-3)', fontSize: 'var(--sb-t-micro)', fontWeight: 700,
             }}>{evInitials(a.displayName, a.email)}</span>
-            <span style={{ flex: 1, minWidth: 0, fontSize: 'calc(var(--sb-t-body) * var(--sb-ev-type))', fontWeight: 500, color: 'var(--sb-ink-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <span style={{ flex: 1, minWidth: 0, fontSize: 'var(--sb-t-body-s)', fontWeight: 500, color: 'var(--sb-ink-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {a.displayName ?? a.email}
             </span>
-            <span style={{ fontSize: 'calc(var(--sb-t-meta) * var(--sb-ev-type))', color: 'var(--sb-ink-4)', flexShrink: 0 }}>
+            <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', flexShrink: 0 }}>
               {evOrg(a.email)}
             </span>
             <span
               title={`${describeResponse(a.responseStatus)} · ${evOrg(a.email)}`}
               style={{
-                ...EV_ROUND, width: 26, height: 26, flexShrink: 0, fontSize: 'calc(var(--sb-t-meta) * var(--sb-ev-type))', fontWeight: 600,
+                ...EV_ROUND, width: 26, height: 26, flexShrink: 0, fontSize: 'var(--sb-t-meta)', fontWeight: 600,
                 color: responseTone(a.responseStatus),
                 borderColor: a.responseStatus === 'accepted' ? 'color-mix(in srgb, var(--sb-positive) 40.0%, transparent)'
                   : a.responseStatus === 'declined' ? 'color-mix(in srgb, var(--sb-negative) 35.0%, transparent)' : 'var(--sb-border)',
@@ -1745,7 +1744,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               border: '1px dashed var(--sb-border)', color: 'var(--sb-ink-4)',
             }}><Plus size={ICON.md} /></span>
-            <span style={{ fontSize: 'calc(var(--sb-t-body) * var(--sb-ev-type))', color: 'var(--sb-ink-4)' }}>Add an invitee</span>
+            <span style={{ fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-4)' }}>Add an invitee</span>
           </button>
         )}
       </div>
@@ -1756,7 +1755,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
       {/* ── Attachments ──────────────────────────────────────────────────── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <span style={EV_SECTION}>Attachments</span>
-        <span style={{ flex: 1, minWidth: 0, fontSize: 'calc(var(--sb-t-meta) * var(--sb-ev-type))', color: 'var(--sb-ink-4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <span style={{ flex: 1, minWidth: 0, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {attendees.length > 0
             ? `Shared with the ${attendees.length} invitee${attendees.length === 1 ? '' : 's'}`
             : 'Only you can see these'}
@@ -1781,10 +1780,10 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
                 background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-3)',
               }}><FileText size={ICON.md} strokeWidth={STROKE.rest} /></span>
               <span style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ display: 'block', fontSize: 'calc(var(--sb-t-body) * var(--sb-ev-type))', color: 'var(--sb-ink-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <span style={{ display: 'block', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {f.title ?? f.fileUrl}
                 </span>
-                <span style={{ display: 'block', fontSize: 'calc(var(--sb-t-meta) * var(--sb-ev-type))', color: 'var(--sb-ink-4)', marginTop: 2 }}>
+                <span style={{ display: 'block', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', marginTop: 2 }}>
                   {describeMime(f.mimeType)}
                 </span>
               </span>
@@ -1808,7 +1807,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
         style={{
           width: '100%', boxSizing: 'border-box', resize: 'vertical', minHeight: 88,
           background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
-          padding: '13px 15px', fontFamily: 'inherit', fontSize: 'calc(var(--sb-t-body) * var(--sb-ev-type))', lineHeight: 1.5,
+          padding: '13px 15px', fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', lineHeight: 1.5,
           color: 'var(--sb-ink-1)', outline: 'none',
         }} />
 
@@ -1820,7 +1819,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
         <>
               <div style={{ ...EV_SECTION, marginBottom: 8 }}>Prep gathered</div>
           {prep?.goal && (
-            <p style={{ margin: '0 0 10px', fontSize: 'calc(var(--sb-t-body) * var(--sb-ev-type))', color: 'var(--sb-ink-2)', lineHeight: 1.5 }}>{prep.goal}</p>
+            <p style={{ margin: '0 0 10px', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-2)', lineHeight: 1.5 }}>{prep.goal}</p>
           )}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             {prepPoints.map((pt, i) => {
@@ -1838,7 +1837,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
                     background: on ? 'var(--sb-ink-1)' : 'var(--sb-card)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>{on && <Check size={ICON.sm} color="var(--sb-ink-on-dark)" strokeWidth={STROKE.active} />}</span>
-                  <span style={{ fontSize: 'calc(var(--sb-t-body) * var(--sb-ev-type))', color: on ? 'var(--sb-ink-4)' : 'var(--sb-ink-1)', lineHeight: 1.45, textDecoration: on ? 'line-through' : 'none' }}>
+                  <span style={{ fontSize: 'var(--sb-t-body-s)', color: on ? 'var(--sb-ink-4)' : 'var(--sb-ink-1)', lineHeight: 1.45, textDecoration: on ? 'line-through' : 'none' }}>
                     {pt}
                   </span>
                 </button>
@@ -1854,7 +1853,7 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
           marginTop: 18, padding: '14px 15px', borderRadius: 'var(--sb-r-nav)',
           background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)',
         }}>
-          <p style={{ margin: 0, fontSize: 'calc(var(--sb-t-body) * var(--sb-ev-type))', color: 'var(--sb-ink-2)', lineHeight: 1.5 }}>
+          <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-2)', lineHeight: 1.5 }}>
             {freeAfterClash
               ? `Professor: move this to ${freeAfterClash} and it stops costing you anything.`
               : 'Professor: this overlaps something already booked.'}
@@ -1866,15 +1865,15 @@ function EventPopup({ event, status, calName, calColor, prep, prepLoading, prepE
       )}
 
       {saveError && (
-        <p style={{ margin: '12px 0 0', fontSize: 'calc(var(--sb-t-meta) * var(--sb-ev-type))', color: 'var(--sb-negative)' }}>{saveError}</p>
+        <p style={{ margin: '12px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-negative)' }}>{saveError}</p>
       )}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 14 }}>
-        <span style={{ flex: 1, fontSize: 'calc(var(--sb-t-meta) * var(--sb-ev-type))', color: 'var(--sb-ink-4)' }}>
+        <span style={{ flex: 1, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>
           {saving ? 'Saving…' : 'Every change saves itself.'}
         </span>
         {event.htmlLink && (
           <a href={event.htmlLink} target="_blank" rel="noreferrer"
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 'calc(var(--sb-t-meta) * var(--sb-ev-type))', color: 'var(--sb-ink-3)', textDecoration: 'none', flexShrink: 0 }}>
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', textDecoration: 'none', flexShrink: 0 }}>
             Open in Google Calendar <ExternalLink size={ICON.sm} />
           </a>
         )}
@@ -3596,12 +3595,7 @@ export function CalendarIntelligence() {
         )
       })()}
 
-      </div>
-
-      {/* The composer brings its own shell — see ComposerShell in NewEventPanel.
-          The backdrop used to carry an onMouseDown that closed this, which a
-          touch screen fired as the synthetic mousedown after its own opening
-          tap: the panel appeared and vanished in one gesture. */}
+      {/* The composer is the same column, in the state before the event exists. */}
       {newEventDraft && (
         <NewEventPanel
           draft={newEventDraft}
@@ -3611,6 +3605,8 @@ export function CalendarIntelligence() {
           onCancel={() => setNewEventDraft(null)}
         />
       )}
+
+      </div>
 
       {/* Context menu */}
       {ctxMenu && (
