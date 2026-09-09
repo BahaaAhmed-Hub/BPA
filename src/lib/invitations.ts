@@ -67,21 +67,89 @@ function unfold(ics: string): string {
   return ics.replace(/\r\n/g, '\n').replace(/\n[ \t]/g, '')
 }
 
-/** The value of a property, ignoring whatever parameters it carries. */
-function prop(ics: string, name: string): string {
-  const m = new RegExp(`^${name}(?:;[^:\\n]*)?:(.*)$`, 'im').exec(ics)
-  return m ? m[1].trim() : ''
+/**
+ * The VEVENT, cut out of the calendar object.
+ *
+ * **Every event property has to be read from inside this**, and reading them
+ * from the whole file is the bug this function exists to stop. A Google
+ * invitation carries a `VTIMEZONE` *before* the event, and each of its DAYLIGHT
+ * and STANDARD blocks has a `DTSTART` of its own — the moment that rule takes
+ * effect, conventionally in 1970. A search over the whole calendar finds that
+ * one first, so every invitation from a sender in Cairo showed
+ * `19700424T000000`: the last Friday of April, on every row, identically.
+ */
+function veventOf(body: string): string {
+  const from = body.search(/^BEGIN:VEVENT\s*$/im)
+  if (from < 0) return ''
+  const rest = body.slice(from)
+  const to = rest.search(/^END:VEVENT\s*$/im)
+  return to < 0 ? rest : rest.slice(0, to)
 }
 
-/** `20260908T120000Z`, `20260908T120000` or `20260908` → ISO, or ''. */
-function icsDate(raw: string): string {
+/** The value of a property, ignoring whatever parameters it carries. */
+function prop(ics: string, name: string): string {
+  return propLine(ics, name).value
+}
+
+/** A property's value *and* its parameters — `DTSTART;TZID=Africa/Cairo:…`. */
+function propLine(ics: string, name: string): { value: string; params: string } {
+  const m = new RegExp(`^${name}(;[^:\\n]*)?:(.*)$`, 'im').exec(ics)
+  return m ? { value: m[2].trim(), params: m[1] ?? '' } : { value: '', params: '' }
+}
+
+function param(params: string, key: string): string {
+  const m = new RegExp(`;${key}=([^;:]*)`, 'i').exec(params)
+  return m ? m[1].trim().replace(/^"|"$/g, '') : ''
+}
+
+/**
+ * How far a zone is from UTC at a given instant, by asking Intl what the clock
+ * there reads. The zone's own rules — including whether summer time is on that
+ * day — come from the browser's tz database rather than from the VTIMEZONE.
+ */
+function zoneOffset(at: number, tz: string): number {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: tz, hour12: false,
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+  }).formatToParts(new Date(at))
+  const p: Record<string, string> = {}
+  for (const part of parts) p[part.type] = part.value
+  // Some ICU builds write midnight as hour 24 under hour12:false.
+  return Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour % 24, +p.minute, +p.second) - at
+}
+
+/** The instant a wall-clock reading in `tz` corresponds to. */
+function fromZone(y: number, mo: number, d: number, h: number, mi: number, s: number, tz: string): number {
+  const wall = Date.UTC(y, mo - 1, d, h, mi, s)
+  // Guess that the wall clock is UTC, measure how far that lands from the zone,
+  // and correct. The second pass settles the hour a clock change falls in.
+  let t = wall - zoneOffset(wall, tz)
+  t = wall - zoneOffset(t, tz)
+  return t
+}
+
+/**
+ * `20260908T120000Z`, `20260908T120000` or `20260908` → ISO, or ''.
+ *
+ * A time with no `Z` is a **wall clock in the zone its `TZID` names**, not in
+ * the reader's. Interpreting it locally is right only by luck — for a Cairo
+ * event read in Cairo — and silently hours out for an invitation from anywhere
+ * else. With no TZID at all the local reading is the only one available, which
+ * is what floating time means anyway.
+ */
+function icsDate(raw: string, tzid = ''): string {
   const m = /^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})(Z)?)?$/.exec(raw.trim())
   if (!m) return ''
   const [, y, mo, d, h, mi, sec, z] = m
   if (!h) return `${y}-${mo}-${d}`
-  return z
-    ? new Date(Date.UTC(+y, +mo - 1, +d, +h, +mi, +sec)).toISOString()
-    : new Date(+y, +mo - 1, +d, +h, +mi, +sec).toISOString()
+  if (z) return new Date(Date.UTC(+y, +mo - 1, +d, +h, +mi, +sec)).toISOString()
+  if (tzid) {
+    try {
+      return new Date(fromZone(+y, +mo, +d, +h, +mi, +sec, tzid)).toISOString()
+    } catch { /* a TZID this browser has never heard of */ }
+  }
+  return new Date(+y, +mo - 1, +d, +h, +mi, +sec).toISOString()
 }
 
 /**
@@ -104,6 +172,30 @@ function isCalendarPart(p: GmailPart): boolean {
  */
 export function looksLikeInvitation(subject: string): boolean {
   return /^\s*(invitation|updated invitation|invitation with note|cancelled event|canceled event|accepted|declined|tentatively accepted|注意)\s*:/i.test(subject)
+}
+
+/**
+ * The invitation inside one already-decoded ICS, or null.
+ *
+ * Split out from `readInvite` so the parsing can be tested on its own: the
+ * caller's half is Gmail plumbing, and this half is the half that was wrong.
+ */
+export function parseIcs(ics: string): Invite | null {
+  const body = unfold(ics)
+  const ev = veventOf(body)
+  if (!ev) return null
+  const uid = prop(ev, 'UID')
+  if (!uid) return null
+  const start = propLine(ev, 'DTSTART')
+  const end = propLine(ev, 'DTEND')
+  return {
+    uid,
+    summary: prop(ev, 'SUMMARY') || '(no title)',
+    startsAt: icsDate(start.value, param(start.params, 'TZID')),
+    endsAt: icsDate(end.value, param(end.params, 'TZID')),
+    organizer: prop(ev, 'ORGANIZER').replace(/^mailto:/i, ''),
+    cancelled: prop(body, 'METHOD').toUpperCase() === 'CANCEL' || /^STATUS:CANCELLED$/im.test(ev),
+  }
 }
 
 export type InviteRead =
@@ -146,22 +238,14 @@ export async function readInvite(
       // nothing for you to answer there.
       if (method === 'REPLY' || method === 'COUNTER' || method === 'REFRESH') return { kind: 'not-one' }
 
-      const uid = prop(body, 'UID')
-      if (!uid) continue
-
       // No METHOD at all still leaves a VEVENT with a UID, which is enough to
       // answer — some senders omit it, and refusing them helps nobody.
-      const cancelled = method === 'CANCEL' || /^STATUS:CANCELLED$/im.test(body)
+      const invite = parseIcs(ics)
+      if (!invite) continue
       return {
         kind: 'invite',
-        invite: {
-          uid,
-          summary: prop(body, 'SUMMARY') || '(no title)',
-          startsAt: icsDate(prop(body, 'DTSTART')),
-          endsAt: icsDate(prop(body, 'DTEND')),
-          organizer: prop(body, 'ORGANIZER').replace(/^mailto:/i, ''),
-          cancelled,
-        },
+        // The part's own content type can say CANCEL where the body does not.
+        invite: method === 'CANCEL' ? { ...invite, cancelled: true } : invite,
       }
     }
 
