@@ -1,4 +1,4 @@
-import type { Account, Goal, Transaction } from './types'
+import type { Account, AccountType, Goal, Transaction } from './types'
 import { liveBalances } from './balances'
 import { toBase, baseCurrency } from './fx'
 import { settled, whenPaid } from './unpaid'
@@ -33,12 +33,23 @@ export const WINDOW_MONTHS = 6
  *  something breaks. */
 export const DEFAULT_BUFFER_MONTHS = 1
 
+/** What can actually be put into a goal this month. Gold, a flat and anything
+ *  else filed as an asset is wealth, not cash — counting it as spare made every
+ *  goal "fundable now" and left nothing to plan. It is reported separately
+ *  instead, so the screen can say what it is leaving out. */
+export const SPENDABLE: AccountType[] = ['payment', 'wallet']
+
 export interface Capacity {
-  /** Everything held across accounts — the positive balances only. What is
-   *  owed on cards is not netted off here: each debt is a goal of its own
+  /** Cash: the positive balances of the spendable accounts. What is owed on
+   *  cards is not netted off here — each debt is a goal of its own
    *  (`debtGoals`), with a target of clearing it, so it takes its place in the
    *  ranking rather than silently shrinking every goal at once. */
   held: number
+  /** Held in assets — named, never spent by the plan. */
+  assets: number
+  /** Already saved into goals. That money is sitting in the same accounts, so
+   *  without this the same pound funds two things. */
+  earmarked: number
   /** What the cards owe, in the base currency — the sum the debt goals carry. */
   owed: number
   /** Kept back for ordinary life. */
@@ -83,6 +94,7 @@ export function capacityFrom(
   transactions: Transaction[],
   bufferMonths = DEFAULT_BUFFER_MONTHS,
   today = todayISO(),
+  goals: Goal[] = [],
 ): Capacity {
   const base = baseCurrency()
 
@@ -90,12 +102,21 @@ export function capacityFrom(
   // left out rather than added at face value — the same rule as everywhere.
   const { balances } = liveBalances(accounts, transactions)
   let held = 0
+  let assets = 0
   let owed = 0
   for (const a of accounts) {
     const v = toBase(balances.get(a.id) ?? a.balance, a.currency, base)
     if (v === null) continue
-    if (v >= 0) held += v
-    else owed += -v
+    if (v < 0) { owed += -v; continue }
+    if (SPENDABLE.includes(a.accountType)) held += v
+    else assets += v
+  }
+
+  // What the goals already hold is in those same accounts and is spoken for.
+  let earmarked = 0
+  for (const g of goals) {
+    const v = toBase(g.currentAmount, g.currency ?? base, base)
+    if (v !== null) earmarked += Math.max(0, v)
   }
 
   // A normal month, from what actually moved.
@@ -131,9 +152,11 @@ export function capacityFrom(
   const buffer = Math.max(0, monthlyOut * bufferMonths)
   return {
     held,
+    assets,
+    earmarked,
     owed,
     buffer,
-    free: Math.max(0, held - buffer - Math.max(0, committed)),
+    free: Math.max(0, held - buffer - Math.max(0, committed) - earmarked),
     monthlyIn,
     monthlyOut,
     surplus: monthlyIn - monthlyOut,
@@ -153,11 +176,16 @@ export interface GoalPlan {
   remaining: number
   /** Taken from what is spare today. */
   lump: number
-  /** Taken from each month's surplus. */
+  /** What next month puts into it. Zero for a goal that is still queued
+   *  behind another — `startsIn` says when that changes. */
   monthly: number
+  /** Months until anything reaches it: 0 for one being funded now, null for
+   *  one nothing ever reaches. */
+  startsIn: number | null
   /** What it would need each month to land on its deadline. Null with none. */
   required: number | null
-  /** The month it lands in at this rate, `null` if nothing reaches it. */
+  /** The month it lands in, worked out by running the plan forward. `null` if
+   *  nothing reaches it inside the horizon. */
   eta: string | null
   /** Whether the eta is on or before the deadline. Null with no deadline. */
   onTime: boolean | null
@@ -185,22 +213,168 @@ function addMonths(today: string, n: number): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
 }
 
+/** How far ahead the plan is run before it gives up and says "not at this
+ *  rate". Ten years is longer than any goal on this screen deserves. */
+const HORIZON = 120
+
+// ─── Running the plan forward ────────────────────────────────────────────────
+//
+//  Dividing what there is once and calling that the plan gets the *first*
+//  month right and every month after it wrong. Under **ladder**, everything
+//  goes to rank 1: rank 2 gets nothing, so "left ÷ nothing" said *nothing is
+//  reaching this goal* — about a goal that starts being funded the moment the
+//  one above it lands. That is the whole question the screen is asked, and it
+//  was answering it with a division.
+//
+//  So the plan is run forward instead, a month at a time: the spare cash goes
+//  in first, then each month's surplus is divided again among whatever still
+//  needs money. A goal completing hands its share to the next one, which is
+//  exactly what will happen.
+//
+//  Two ways to divide it, and the difference matters more than any other
+//  setting on the screen:
+//
+//  **Ladder** — rank 1 is filled before rank 2 sees a pound. Things arrive one
+//  after another, each as early as it possibly can. Use it when the order is a
+//  real order: the deposit before the car.
+//
+//  **Share** — every goal moves at once, by a weight of 1/rank, so the first
+//  goal gets twice the third's. Nothing arrives as early, but nothing sits
+//  still either. Use it when the goals are not really in competition.
+//
+//  Spare cash today is always poured down the ladder first under both, because
+//  a lump sum sitting in an account is not a monthly flow to be shared out —
+//  it is money that could finish something now.
+
+export interface MonthShare {
+  goalId: string
+  amount: number
+  /** This is the month it reaches its target. */
+  lands: boolean
+}
+
+export interface MonthRow {
+  /** 'YYYY-MM'. */
+  month: string
+  /** Month 0 only: what the spare cash did. */
+  fromSpare: number
+  /** What that month's surplus did. */
+  fromSurplus: number
+  shares: MonthShare[]
+}
+
+export interface Schedule {
+  rows: MonthRow[]
+  /** Goal id → the month it lands in. */
+  landsIn: Map<string, string>
+  /** Goal id → what the spare cash put in today. */
+  lump: Map<string, number>
+  /** Goal id → what the first month it is funded in puts in, and how many
+   *  months away that is. */
+  monthly: Map<string, number>
+  startsIn: Map<string, number>
+  /** True where the horizon ran out with money still needed. */
+  unfinished: boolean
+}
+
+function remainingOf(g: Goal, base: string): number {
+  const target = toBase(g.targetAmount, g.currency ?? base, base) ?? g.targetAmount
+  const saved  = toBase(g.currentAmount, g.currency ?? base, base) ?? g.currentAmount
+  return Math.max(0, target - saved)
+}
+
 /**
- *  Two ways to divide what there is, and the difference matters more than any
- *  other setting on the screen:
- *
- *  **Ladder** — rank 1 is filled before rank 2 sees a pound. Things arrive one
- *  after another, each as early as it possibly can. Use it when the order is a
- *  real order: the deposit before the car.
- *
- *  **Share** — every goal moves at once, by a weight of 1/rank, so the first
- *  goal gets twice the third's. Nothing arrives as early, but nothing sits
- *  still either. Use it when the goals are not really in competition.
- *
- *  Spare cash today is always poured down the ladder first under both, because
- *  a lump sum sitting in an account is not a monthly flow to be shared out —
- *  it is money that could finish something now.
+ * The whole plan, month by month, until everything lands or the horizon runs
+ * out. This is the one piece of arithmetic the screen shows its working from.
  */
+export function scheduleGoals(
+  goals: Goal[],
+  capacity: Capacity,
+  policy: Policy = 'ladder',
+  today = todayISO(),
+  horizon = HORIZON,
+): Schedule {
+  const base = capacity.currency
+  const ordered = byRank(goals)
+  const need = new Map(ordered.map(g => [g.id, remainingOf(g, base)]))
+  const lump = new Map<string, number>()
+  const monthly = new Map<string, number>()
+  const startsIn = new Map<string, number>()
+  const landsIn = new Map<string, string>()
+  const rows: MonthRow[] = []
+
+  const put = (g: Goal, amount: number, month: number, shares: MonthShare[]) => {
+    const left = need.get(g.id) ?? 0
+    const take = Math.min(left, amount)
+    if (take <= 0) return 0
+    need.set(g.id, left - take)
+    if (month > 0 && !startsIn.has(g.id)) { startsIn.set(g.id, month); monthly.set(g.id, take) }
+    const lands = (need.get(g.id) ?? 0) <= 0.005
+    if (lands && !landsIn.has(g.id)) landsIn.set(g.id, addMonths(today, month))
+    const at = shares.find(x => x.goalId === g.id)
+    if (at) { at.amount += take; at.lands = at.lands || lands }
+    else shares.push({ goalId: g.id, amount: take, lands })
+    return take
+  }
+
+  // A goal that is already there lands now, before anything is divided.
+  for (const g of ordered) if ((need.get(g.id) ?? 0) <= 0) landsIn.set(g.id, monthKey(today))
+
+  // Month 0: the spare cash, down the ladder under either policy.
+  const first: MonthShare[] = []
+  let free = Math.max(0, capacity.free)
+  for (const g of ordered) {
+    const took = put(g, free, 0, first)
+    lump.set(g.id, took)
+    free -= took
+  }
+  const surplus = Math.max(0, capacity.surplus)
+  if (first.length) rows.push({ month: monthKey(today), fromSpare: first.reduce((n, s) => n + s.amount, 0), fromSurplus: 0, shares: first })
+
+  // Then each month's surplus, divided again among whatever still needs money.
+  for (let m = 1; m <= horizon && surplus > 0; m++) {
+    const hungry = ordered.filter(g => (need.get(g.id) ?? 0) > 0)
+    if (hungry.length === 0) break
+    const shares: MonthShare[] = []
+    let left = surplus
+
+    if (policy === 'share') {
+      // 1/rank over what still needs money. Anything a finished goal would
+      // have taken is re-divided rather than lost.
+      const weights = hungry.map((g, i) => 1 / (rankOf(g, i) + 1))
+      const total = weights.reduce((a, b) => a + b, 0) || 1
+      let spare = 0
+      hungry.forEach((g, i) => { spare += surplus * (weights[i] / total) - put(g, surplus * (weights[i] / total), m, shares) })
+      // A goal that finished mid-month leaves change; it goes down the ladder.
+      for (const g of hungry) { if (spare <= 0) break; spare -= put(g, spare, m, shares) }
+      left = 0
+    } else {
+      for (const g of hungry) {
+        if (left <= 0) break
+        const owing = need.get(g.id) ?? 0
+        // A goal with a deadline takes what that deadline asks for and no
+        // more, so the one behind it is not starved for the sake of arriving
+        // early.
+        const months = g.deadline ? Math.max(1, monthsUntil(g.deadline, today) - m + 1) : 1
+        const wanted = g.deadline ? Math.min(owing, owing / months) : owing
+        left -= put(g, Math.min(left, wanted), m, shares)
+      }
+      // Whatever a deadline left on the table still has to go somewhere.
+      for (const g of hungry) { if (left <= 0) break; left -= put(g, left, m, shares) }
+    }
+
+    if (shares.length) {
+      rows.push({ month: addMonths(today, m), fromSpare: 0, fromSurplus: shares.reduce((n, s) => n + s.amount, 0), shares })
+    }
+  }
+
+  return {
+    rows, landsIn, lump, monthly, startsIn,
+    unfinished: ordered.some(g => (need.get(g.id) ?? 0) > 0),
+  }
+}
+
+/** Each goal, with what the schedule does to it. */
 export function planGoals(
   goals: Goal[],
   capacity: Capacity,
@@ -209,59 +383,23 @@ export function planGoals(
 ): GoalPlan[] {
   const base = capacity.currency
   const ordered = byRank(goals)
-
-  const remainingOf = (g: Goal) => {
-    const target = toBase(g.targetAmount, g.currency ?? base, base) ?? g.targetAmount
-    const saved  = toBase(g.currentAmount, g.currency ?? base, base) ?? g.currentAmount
-    return Math.max(0, target - saved)
-  }
-
-  // 1. The lump, down the ladder, whatever the policy.
-  let free = capacity.free
-  const lump = new Map<string, number>()
-  for (const g of ordered) {
-    const take = Math.min(free, remainingOf(g))
-    lump.set(g.id, take)
-    free -= take
-  }
-
-  // 2. The monthly surplus.
-  const need = new Map(ordered.map(g => [g.id, remainingOf(g) - (lump.get(g.id) ?? 0)]))
-  const monthly = new Map<string, number>()
-  const hungry = ordered.filter(g => (need.get(g.id) ?? 0) > 0)
-  let surplus = Math.max(0, capacity.surplus)
-
-  if (policy === 'share') {
-    // 1/rank, normalised over what still needs money.
-    const weights = hungry.map((g, i) => 1 / (rankOf(g, i) + 1))
-    const total = weights.reduce((s, w) => s + w, 0) || 1
-    hungry.forEach((g, i) => monthly.set(g.id, surplus * (weights[i] / total)))
-  } else {
-    for (const g of hungry) {
-      if (surplus <= 0) { monthly.set(g.id, 0); continue }
-      const left = need.get(g.id)!
-      // A goal with a deadline takes what that deadline asks for and no more,
-      // so the one behind it is not starved for the sake of arriving early.
-      const wanted = g.deadline ? Math.min(left, left / monthsUntil(g.deadline, today)) : left
-      const take = Math.min(surplus, wanted)
-      monthly.set(g.id, take)
-      surplus -= take
-    }
-  }
+  const s = scheduleGoals(goals, capacity, policy, today)
 
   return ordered.map(g => {
-    const remaining = remainingOf(g)
-    const l = lump.get(g.id) ?? 0
-    const m = monthly.get(g.id) ?? 0
+    const remaining = remainingOf(g, base)
+    const l = s.lump.get(g.id) ?? 0
+    const starts = s.startsIn.get(g.id) ?? null
     const left = Math.max(0, remaining - l)
-    const required = g.deadline ? left / monthsUntil(g.deadline, today) : null
-    const eta = left <= 0 ? monthKey(today) : m > 0 ? addMonths(today, Math.ceil(left / m)) : null
+    const eta = s.landsIn.get(g.id) ?? null
     return {
       goal: g,
       remaining,
       lump: l,
-      monthly: m,
-      required,
+      // What *next* month puts in — nothing, for a goal still queued behind
+      // another. `startsIn` is where the screen gets "starts in March".
+      monthly: starts === 1 ? (s.monthly.get(g.id) ?? 0) : 0,
+      startsIn: left <= 0 ? 0 : starts,
+      required: g.deadline ? left / monthsUntil(g.deadline, today) : null,
       eta,
       onTime: g.deadline == null ? null : eta !== null && eta <= monthKey(g.deadline),
     }

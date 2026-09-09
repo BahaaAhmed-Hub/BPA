@@ -407,13 +407,31 @@ an overspend cannot run past its own pill. The title says which limit it used.
   and expense over the last `WINDOW_MONTHS`. Median, not mean — one bonus or one
   boiler must not reset the plan. Months with nothing in them are dropped, or a
   ledger that starts halfway through the window halves its own median.
-- **`planGoals(goals, capacity, policy)`** pours it down the ranking. Spare cash goes
-  down the ladder first under both policies — a lump is not a flow to be shared.
-  Then the monthly surplus: **ladder** fills rank 1 before rank 2 sees anything (a
-  goal with a deadline takes only what that deadline asks, so it does not starve the
-  one behind it); **share** splits by 1/rank so everything moves at once.
-- Each goal comes back with `lump`, `monthly`, `required` (to hit its deadline),
-  `eta` and `onTime`, and the screen says which of those is the problem in a sentence.
+- **Spare is cash, not everything you own.** Only `SPENDABLE` accounts (`payment`,
+  `wallet`) count toward `held`; gold, a flat, anything filed as an `asset` comes
+  back as `assets` and is never spent by the plan. Counting it made every goal
+  "fundable now" and left nothing to plan — 1.7M "spare" against a 3,160 card.
+  What the goals already hold is `earmarked` and comes off `free` too, or the same
+  pound funds two things. The header names all three, so a figure that dropped
+  says why.
+- **The plan is run forward, not divided once.** Dividing what there is once gets
+  the first month right and every month after it wrong: under ladder everything
+  goes to rank 1, so rank 2 read "left ÷ nothing" → **"nothing reaching it"** about
+  a goal that starts being funded the moment the one above it lands. That is the
+  question the screen exists to answer, and it was answering it with a division.
+  `scheduleGoals()` walks month by month — spare cash first, then each month's
+  surplus divided again among whatever still needs money, a finished goal handing
+  its share to the next — and returns the rows, `landsIn`, `lump`, `monthly` and
+  `startsIn`. `planGoals` takes its `eta` from that run, so every goal has a real
+  date. Horizon 10 years; `unfinished` says when even that was not enough.
+- Each goal comes back with `lump`, `monthly` (what **next** month puts in — zero
+  for one still queued), `startsIn`, `required`, `eta` and `onTime`.
+- **The screen shows its working.** `SchedulePlan` draws the run month by month —
+  what goes into which goal, and where each lands — under the open goal and in
+  place of the empty state. The detail adds *How it gets there*: "X now, then Y a
+  month → there in March 2027", or for a queued goal the month the ones above it
+  finish, plus a chip per month of its own funding. A queued goal's row says
+  "starts Dec 2026" rather than nothing.
 - **Rank is stored** (`20260010`: `rank`, `deadline`, `currency`) and set by dragging
   a row — same pointer-event drag as the Financials table. `goalPlanning.ts` keeps
   the three locally until the migration runs; the server's value wins.
