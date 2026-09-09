@@ -705,6 +705,24 @@ drafted reply, and the draft is suppressed for it.
 - An invitation always counts as **to book** in the header, whatever the model
   made of the wording.
 
+## Habits — one way a log reaches the server
+**`commitHabitLogs(logs?, quantities?)` in `habitsStore` is the only write
+path.** Today's card wrote localStorage and stopped — no `markLocalWrite`, no
+push — so the next load pulled the server's copy straight back over the tap:
+"it reset on refresh" on one device, and never existed on a second. The Habits
+page did it properly, which is why it looked intermittent — it depended on which
+screen you tapped from. Today, Habits and `assistantTools.log_habit_completion`
+all go through the one function now, and the 1.5s debounce lives there rather
+than one copy per screen. It **re-reads localStorage at push time**: eight
+glasses is eight taps and a later one may have landed.
+
+**A row is written for every day with a tick *or* a quantity.**
+`saveHabitLogsToDB` built rows from the ticked dates with `completed: true` by
+construction, so three glasses of eight was written *nowhere* — it lived locally
+until the next load and vanished. `completed` now says which kind of day it is,
+and `loadHabitLogsFromDB` reads it back rather than ticking every row it finds.
+A `quantity` of 0 is not a day.
+
 ## Habits — what one tap adds
 `lib/habitSteps.ts`. A measurable habit was counted one at a time, which is
 right for glasses and wrong for anything in real units: 200 ml at 1 ml a tap is
