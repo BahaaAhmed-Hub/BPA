@@ -16,6 +16,7 @@ import { classifyMail, unsubscribeLink, CLASSES, CLASS_INFO, countByClass, type 
 import { looksLikeInvitation } from '@/lib/invitations'
 import { listUnreadThreadIds, getThread, getMessage, loadInlineImages, applyInlineImages, tidyDataUris, extractBody, extractHtmlBody, header, markAsRead, markAsUnread, archiveMessage, unarchiveMessage, trashMessage, untrashMessage, listLabels, batchModify, sendReply, escapeHtml, FOLDER_QUERY, FOLDER_LABEL, FOLDER_SHOWS_RECIPIENT, type MailAccount, type MailFolder, type GmailHeader, type GmailLabel } from '@/lib/gmail'
 import { cachedDraft } from '@/lib/mailBriefs'
+import { forgetWaiting } from '@/lib/mailWaiting'
 import { mailAccounts, loadMailView, saveMailView, accountsFor, accountLabel, type MailView } from './mailAccounts'
 import { Composer, type ComposeSeed, type ComposeMode } from './Composer'
 import { SwipeRow } from './SwipeRow'
@@ -633,6 +634,9 @@ export function InboxModule() {
     setSending(email.id)
     try {
       await sendReply({ to: email.fromEmail, subject: email.subject, body, threadId: email.threadId, inReplyTo: email.inReplyTo, account: email.account })
+      // Answered here is answered everywhere: the bell reads a note of what
+      // was waiting, and this thread is not waiting any more.
+      forgetWaiting(email.threadId)
       setSentIds(prev => new Set([...prev, email.id]))
       setReplyText(prev => ({ ...prev, [email.id]: '' }))
     } catch (err) {
@@ -833,6 +837,7 @@ export function InboxModule() {
       restoreRows(rows)
     })
     removeRows(ids)
+    for (const r of rows) forgetWaiting(r.threadId)
     try {
       await Promise.all(byAccount(rows).map(([acct, group]) =>
         batchModify(group.map(r => r.id), { remove: ['INBOX'] }, acct)))
@@ -851,6 +856,7 @@ export function InboxModule() {
       restoreRows(rows)
     })
     removeRows(ids)
+    for (const r of rows) forgetWaiting(r.threadId)
     try {
       // No batch endpoint bins mail, so this is one call each — and `trash` is
       // the documented way in, rather than adding the label by hand.

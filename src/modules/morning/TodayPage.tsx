@@ -26,6 +26,7 @@ import { listUnreadThreadIds, getThread, header, extractBody, extractHtmlBody, a
 import type { GmailHeader, GmailMessage, MailAccount } from '@/lib/gmail'
 import { mailAccounts } from '@/modules/inbox/mailAccounts'
 import { briefsFor, rememberDraft, forgetBrief, type InboxBrief, type MailAction } from '@/lib/mailBriefs'
+import { rememberWaiting, forgetWaiting } from '@/lib/mailWaiting'
 import {
   readInvite, respondToInvite, removeFromCalendar, RSVP_LABEL, answerFor, rememberAnswer,
   type Invite, type Rsvp,
@@ -1719,6 +1720,12 @@ export function TodayPage() {
       bulk.sort((a, b) => b.receivedAt.localeCompare(a.receivedAt))
       setMail(rows.slice(0, MAIL_SHOWN))
       setNewsletters(bulk.slice(0, MAIL_SHOWN))
+      // The bell cannot fetch mail, so what this read found is written down for
+      // it. Campaigns are left out: nothing waits on them.
+      rememberWaiting(rows.map(r => ({
+        id: r.id, messageId: r.messageId, fromName: r.fromName, fromEmail: r.fromEmail,
+        subject: r.subject, receivedAt: r.receivedAt, mailbox: r.account.email, needsYou: r.needsYou,
+      })))
       // Every mailbox failing is the "not connected" case; some of them
       // failing is worth naming, because the rest of the list is short by
       // exactly that much.
@@ -1839,6 +1846,7 @@ export function TodayPage() {
       // marking it read is what takes it off the list — and it survives the
       // refresh, which component state did not.
       void markAsRead(row.messageId, row.account).catch(() => { /* the answer still stands */ })
+      forgetWaiting(row.id)
       notify(`${RSVP_LABEL[answer]} to ${invite.summary}`)
     } else {
       // Never a bare failure: the reason is the whole value of the message.
@@ -1857,6 +1865,7 @@ export function TodayPage() {
     if (res.ok) {
       setRsvpRemoved(p => ({ ...p, [row.id]: true }))
       void markAsRead(row.messageId, row.account).catch(() => { /* it is still gone */ })
+      forgetWaiting(row.id)
       notify(`${invite.summary} taken off your calendar`)
     } else {
       setRsvpError(p => ({ ...p, [row.id]: res.why ?? 'Google would not remove it.' }))
@@ -2006,6 +2015,7 @@ export function TodayPage() {
   async function archiveMail(row: MailRow) {
     setMail(prev => prev.filter(r => r.id !== row.id))
     setNewsletters(prev => prev.filter(r => r.id !== row.id))
+    forgetWaiting(row.id)
     try { await archiveMessage(row.messageId, row.account) } catch { /* it stays archived here either way */ }
   }
 
@@ -2047,6 +2057,7 @@ export function TodayPage() {
             // Answered is dealt with: it leaves the card, and the brief goes
             // with it so a new message in the thread is read afresh.
             forgetBrief(draftFor.id)
+            forgetWaiting(draftFor.id)
             setMail(prev => prev.filter(m => m.id !== draftFor.id))
             setDraftFor(null)
           }}

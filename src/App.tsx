@@ -15,9 +15,10 @@ import { FinanceModule } from './modules/finance/FinanceModule'
 import { NavRow } from './components/ui'
 import { useUIStore } from './store/uiStore'
 import {
-  collect, loadNotifSettings, inQuietHours, markSeen, unwiredKinds, NOTIF_EVENT,
+  collect, loadNotifSettings, inQuietHours, markSeen, dormantKinds, NOTIF_EVENT,
   type Notification, type NotifSetting,
 } from './lib/notifications'
+import { checkRank } from '@/lib/rankWatch'
 import { useAuthStore } from './store/authStore'
 import { useTaskStore } from './store/taskStore'
 import { useHabitsStore } from './store/habitsStore'
@@ -369,6 +370,10 @@ function NotificationBell() {
   // a slow tick so "not logged today" and Sunday evening arrive on their own.
   useEffect(() => {
     const refresh = () => {
+      // The rank is worked out here rather than only on the Behavioral OS page,
+      // or a promotion would be announced when you happened to open that page
+      // rather than when it happened.
+      checkRank()
       const next = loadNotifSettings()
       setSettings(next)
       setItems(collect(next))
@@ -392,7 +397,7 @@ function NotificationBell() {
   }, [open])
 
   const quiet = inQuietHours()
-  const unwired = unwiredKinds(settings)
+  const dormant = dormantKinds(settings)
   const count = items.length
 
   function goTo(n: Notification) {
@@ -485,13 +490,13 @@ function NotificationBell() {
             </p>
           )}
 
-          {unwired.length > 0 && (
-            <p style={{ margin: '4px 6px 0', padding: '8px 10px', fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', lineHeight: 1.45 }}>
-              {unwired.map(u => u.label).join(', ')} {unwired.length === 1
-                ? 'is switched on but has nothing behind it yet.'
-                : 'are switched on but have nothing behind them yet.'}
+          {/* A kind that is on and cannot speak yet says what it is waiting
+              on. An empty bell for a reason is not the same as a quiet day. */}
+          {dormant.map(d => (
+            <p key={d.setting.id} style={{ margin: '4px 6px 0', padding: '8px 10px', fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', lineHeight: 1.45 }}>
+              {d.setting.label} — {d.why}.
             </p>
-          )}
+          ))}
 
           <button onClick={() => { setOpen(false); setActiveModule('settings') }}
             style={{

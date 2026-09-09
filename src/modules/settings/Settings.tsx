@@ -18,7 +18,7 @@ import { stepFor, setHabitStep, loadHabitSteps } from '@/lib/habitSteps'
 import { loadWeekStart, saveWeekStart, WEEKDAY_NAMES, type Weekday } from '@/lib/weekStart'
 import { ACCENTS, loadAccent, saveAccent, loadCompact, saveCompact, COMPACT_SCALE } from '@/lib/accent'
 import {
-  loadNotifSettings, saveNotifSettings, loadQuietHours, saveQuietHours, DERIVABLE,
+  loadNotifSettings, saveNotifSettings, loadQuietHours, saveQuietHours, dormantWhy,
   type NotifSetting, type NotifChannel,
 } from '@/lib/notifications'
 import {
@@ -33,7 +33,7 @@ import {
   RELOCK_CHOICES, type DevicePasskey, type LockConfig, type Relock,
 } from '@/modules/finance/lock'
 import { LockGate } from '@/modules/finance/FinanceLockScreen'
-import { NotYet, Soon } from '@/components/ComingSoon'
+import { NotYet } from '@/components/ComingSoon'
 import { loadAutomationRules, saveAutomationRules, loadRunLog, runAutomation, AUTOMATION_EVENT, type AutomationRule, type RunEntry } from '@/lib/automation'
 import { connectAdditionalGoogleAccount, signOut as googleSignOut, disconnectGoogleAccount } from '@/lib/google'
 import { useUIStore } from '@/store/uiStore'
@@ -3454,10 +3454,17 @@ function NotificationsMatrixSection() {
             <p style={{ margin: 0, fontSize: 'var(--sb-t-body-s)', fontWeight: 500, color: 'var(--sb-ink-1)', lineHeight: 1.3, display: 'flex', alignItems: 'center', gap: 7 }}>
               {e.label}
               {/* Push is the channel this app delivers — a list under the bell.
-                  Three of these kinds need a triage or a ranking engine that
-                  reports nothing yet, and saying so beats a bell that stays
+                  Every kind is worked out; one whose source has not run yet
+                  says what it is waiting on, which beats a bell that stays
                   empty for reasons nobody can see. */}
-              {!DERIVABLE.includes(e.id) && <Soon text="not wired yet" />}
+              {dormantWhy(e.id, events) && (
+                <span style={{
+                  fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', fontWeight: 500,
+                  padding: '1px 7px', borderRadius: 'var(--sb-r-pill)',
+                  background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-hairline)',
+                  whiteSpace: 'nowrap',
+                }}>{dormantWhy(e.id, events)}</span>
+              )}
             </p>
             <p style={{ margin: '1px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', lineHeight: 1.3 }}>{e.sub}</p>
           </div>

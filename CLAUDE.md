@@ -1008,6 +1008,39 @@ a snapshot, and the row returns to the list with it.
   that needs full `mail.google.com` — and a swipe should not destroy mail. No
   batch endpoint bins mail, so that one is a call each via `messages/trash`.
 
+## Notifications — all seven kinds are worked out
+`lib/notifications.ts`. Push is the only channel this app delivers (the list
+under the bell), and every kind in the Settings matrix now produces something.
+Three of them could not, because mail and a rank are not in localStorage by
+themselves, so each reads a **note left by whoever does know**:
+- **`needsyou`** — `lib/mailWaiting.ts` holds what the last read of the mail
+  found (thread, sender, subject, mailbox, `needsYou`, and a `readAt`). Today's
+  mail load and the automation's draft sweep both call `rememberWaiting(rows)`,
+  which *replaces* the note: merging would keep answered mail alive. A note
+  older than 3 days is ignored rather than shown — "Hasan has been waiting" is
+  worth saying about mail read this morning, not about a snapshot from a laptop
+  that has been shut all week. Sending, archiving, binning or answering an
+  invitation calls `forgetWaiting(threadId)` in both Today and Mail. The
+  threshold is the automation's own four hours: below that a reply is not late,
+  it is recent. A thread that already has a draft is left to the next kind, or
+  one thread is two notifications.
+- **`draft`** — `pendingDrafts()` in `mailBriefs.ts`. The cache now keeps
+  `fromName`/`subject` beside each brief so a draft can be named where the mail
+  is not loaded. Sending calls `forgetBrief`, so what is left is exactly what is
+  waiting on a click.
+- **`rank`** — `lib/rankWatch.ts`. `evaluateRank` says what the rank *is*; a
+  notification is about a **change**, so this keeps a history
+  (`professor-rank-history`) and `checkRank()` appends to it when the rank
+  moves. It runs on the bell's own tick in App, not only when the Behavioral OS
+  page is open, or a promotion would be announced when you next visited that
+  page. The first sighting is a baseline, never news, and it does nothing while
+  Behavioral OS is off.
+**A kind that is on and cannot speak yet says what it is waiting on**
+(`dormantKinds` / `dormantWhy`, replacing `unwiredKinds`): "once the mail has
+been read here", "needs Behavioral OS switched on". Shown in the bell panel and
+as a chip on the Settings row. An empty bell for a reason is not a quiet day,
+and "not wired yet" was the wrong thing to say about either.
+
 ## Overlays — a modal is not a card
 `--sb-overlay` and `--sb-scrim`. Every modal panel used to be painted with
 `--sb-card`, which in Glass & Depth is `rgba(255,255,255,.05)` — a wash that is

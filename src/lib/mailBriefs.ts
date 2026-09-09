@@ -26,6 +26,10 @@ interface Cached extends InboxBrief {
   /** The message the brief was written for. A newer one re-drafts. */
   messageId: string
   at: number
+  /** Who it answers and what about — so a draft can be named somewhere the
+   *  mail itself is not loaded, like the notification bell. */
+  fromName?: string
+  subject?: string
 }
 
 type Store = Record<string, Cached>
@@ -110,7 +114,7 @@ export async function briefsFor(
     for (const b of written) {
       const row = missing.find(r => r.id === b.id)
       if (!row) continue
-      next[b.id] = { ...b, messageId: row.messageId, at: Date.now() }
+      next[b.id] = { ...b, messageId: row.messageId, at: Date.now(), fromName: row.fromName, subject: row.subject }
       have[b.id] = b
     }
     save(next)
@@ -123,6 +127,28 @@ export async function briefsFor(
       : `Summaries could not be written: ${err instanceof Error ? err.message : 'unknown'}`
     return { briefs: have, unavailable: why }
   }
+}
+
+export interface PendingDraft {
+  threadId: string
+  messageId: string
+  fromName: string
+  subject: string
+  draft: string
+  /** When it was written. */
+  at: number
+}
+
+/** Every reply that is written and has not been sent. Sending forgets the
+ *  brief, so what is left here is exactly what is waiting on a click. */
+export function pendingDrafts(): PendingDraft[] {
+  return Object.entries(load())
+    .filter(([, c]) => c?.draft?.trim())
+    .map(([threadId, c]) => ({
+      threadId, messageId: c.messageId, draft: c.draft,
+      fromName: c.fromName ?? '', subject: c.subject ?? '', at: c.at,
+    }))
+    .sort((a, b) => b.at - a.at)
 }
 
 /** The draft already written for this message, if the cache has one — what the

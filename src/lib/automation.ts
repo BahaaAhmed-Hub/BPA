@@ -28,6 +28,7 @@ import {
 } from '@/lib/gmail'
 import { looksLikeBulk, classifyMail } from '@/lib/mailClasses'
 import { briefsFor, cachedDraft } from '@/lib/mailBriefs'
+import { rememberWaiting, type WaitingMail } from '@/lib/mailWaiting'
 import { weeklyInsight } from '@/lib/professor'
 import { loadHabits, loadLogs, calcStreak } from '@/store/habitsStore'
 import { mondayOf, todayLocal, wasReviewOpened, saveWeekInsight, loadWeekInsight } from '@/lib/weekReview'
@@ -169,9 +170,13 @@ async function morningBrief(c: Ctx): Promise<void> {
 async function draftReplies(c: Ctx): Promise<void> {
   const me = c.user.email.toLowerCase()
   const rows: Parameters<typeof briefsFor>[0] = []
+  // Everything this sweep saw, for the bell — which cannot fetch mail itself.
+  const seen: WaitingMail[] = []
+  let read = false
   for (const account of mailAccounts(c.user.email)) {
     let ids: string[] = []
     try { ids = (await listUnreadThreadIds(15, undefined, account)).ids } catch { continue }
+    read = true
     for (const id of ids) {
       let msgs: GmailMessage[] = []
       try { msgs = (await getThread(id, account)).messages ?? [] } catch { continue }
@@ -183,17 +188,26 @@ async function draftReplies(c: Ctx): Promise<void> {
       const { name, email } = fromOf(last)
       const body = extractBody(last)
       const age = c.now.getTime() - Number(last.internalDate ?? c.now.getTime())
+      const invite = carriesInvitation(last)
       const needsYou = !looksLikeBulk(headers, email, body) && to.includes(mine) && email.toLowerCase() !== mine
-      if (!needsYou || age < 4 * HOUR || carriesInvitation(last)) continue
+      const subject = header(headers, 'Subject') || '(no subject)'
+      const receivedAt = new Date(Number(last.internalDate ?? Date.now())).toISOString()
+      // An invitation wants an RSVP, not a reply, so it is not something
+      // waiting on an answer here either.
+      seen.push({ id, messageId: last.id, fromName: name, fromEmail: email, subject, receivedAt,
+        mailbox: account.email, needsYou: needsYou && !invite })
+      if (!needsYou || age < 4 * HOUR || invite) continue
       if (cachedDraft(id, last.id)) continue
       rows.push({
         id, messageId: last.id, fromName: name, fromEmail: email,
-        subject: header(headers, 'Subject') || '(no subject)',
-        receivedAt: new Date(Number(last.internalDate)).toISOString(),
+        subject,
+        receivedAt,
         addressedToMe: true, body,
       })
     }
   }
+  // A sweep that reached at least one mailbox is a fresh reading, empty or not.
+  if (read) rememberWaiting(seen)
   if (rows.length === 0) return
   const { briefs, unavailable } = await briefsFor(rows.slice(0, 8), { user: buildMockUser(c.user), companies: [], me })
   if (unavailable) { log('draft-replies', unavailable, 0, false); return }

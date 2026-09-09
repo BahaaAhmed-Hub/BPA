@@ -11,6 +11,11 @@
 
 import { useTaskStore } from '@/store/taskStore'
 import { loadHabits, loadLogs } from '@/store/habitsStore'
+import { loadWaiting, mailEverRead } from '@/lib/mailWaiting'
+import { pendingDrafts } from '@/lib/mailBriefs'
+import { lastRankChange } from '@/lib/rankWatch'
+import { useBehavioralStore } from '@/store/behavioralStore'
+import { RANK_META } from '@/lib/behavioralEngine'
 
 export type NotifKind = 'decision' | 'needsyou' | 'draft' | 'conflict' | 'habit' | 'review' | 'rank'
 export type NotifChannel = 'push' | 'mail' | 'digest'
@@ -55,10 +60,13 @@ const QUIET_KEY  = 'professor-quiet-hours'
 const SEEN_KEY   = 'professor-notif-seen'
 export const NOTIF_EVENT = 'professor:notificationsChanged'
 
-/** The kinds this app can actually work out from what it holds. The rest are
- *  in the matrix because they belong to a mail triage and a ranking engine
- *  that do not report anything yet. */
-export const DERIVABLE: NotifKind[] = ['decision', 'conflict', 'habit', 'review']
+/** All seven are worked out from what the device holds. Three of them read a
+ *  note left by something else — the last read of the mail, the drafts written
+ *  for it, and the rank the Behavioral OS last evaluated — because mail and a
+ *  rank are not in localStorage by themselves. A kind whose source has not run
+ *  yet says what it is waiting on (`dormantKinds`) rather than staying quietly
+ *  empty. */
+export const DERIVABLE: NotifKind[] = ['decision', 'needsyou', 'draft', 'conflict', 'habit', 'review', 'rank']
 
 export function loadNotifSettings(defaults: NotifSetting[] = DEFAULT_NOTIF_EVENTS): NotifSetting[] {
   try {
@@ -161,6 +169,15 @@ function overlaps(a: CachedEvent, b: CachedEvent): boolean {
 }
 
 const TWO_DAYS = 2 * 86400_000
+const FOUR_HOURS = 4 * 3600_000
+
+/** "2h", "3 days" — long enough to be a reason to open the mail. */
+function howLong(ms: number): string {
+  const hours = Math.floor(ms / 3600_000)
+  if (hours < 24) return `waiting ${hours}h`
+  const days = Math.floor(hours / 24)
+  return `waiting ${days} day${days === 1 ? '' : 's'}`
+}
 
 export function collect(settings: NotifSetting[], now = new Date()): Notification[] {
   const on = (kind: NotifKind) => settings.find(s => s.id === kind)?.push !== false
@@ -233,14 +250,84 @@ export function collect(settings: NotifSetting[], now = new Date()): Notificatio
     })
   }
 
+  // Mail addressed to you that nobody has answered. The threshold is the same
+  // four hours the automation waits before drafting: below that, a reply is
+  // not late, it is just recent.
+  if (on('needsyou')) {
+    const note = loadWaiting()
+    const drafted = new Set(pendingDrafts().map(d => d.threadId))
+    for (const row of note?.rows ?? []) {
+      if (!row.needsYou) continue
+      const at = new Date(row.receivedAt).getTime()
+      const waited = now.getTime() - at
+      if (!at || waited < FOUR_HOURS) continue
+      // One that already has an answer written is the other notification's
+      // business; saying both about one thread is saying it twice.
+      if (drafted.has(row.id)) continue
+      out.push({
+        id: `needsyou:${row.id}:${row.messageId}`, kind: 'needsyou',
+        title: `${row.fromName || row.fromEmail} is waiting`,
+        detail: `${row.subject || '(no subject)'} · ${howLong(waited)}`,
+        at: new Date(at + FOUR_HOURS).toISOString(),
+        go: { module: 'mail', id: row.id },
+      })
+    }
+  }
+
+  // A reply that is written and has not been sent. Sending forgets the brief,
+  // so anything still here is one click from gone.
+  if (on('draft')) {
+    for (const d of pendingDrafts()) {
+      out.push({
+        id: `draft:${d.threadId}:${d.messageId}`, kind: 'draft',
+        title: d.fromName ? `A reply to ${d.fromName} is written` : 'A reply is written',
+        detail: `${d.subject || 'Not sent yet'} · nothing has been sent`,
+        at: new Date(d.at).toISOString(),
+        go: { module: 'mail', id: d.threadId },
+      })
+    }
+  }
+
+  // The rank moved. Only while Behavioral OS is on — see rankWatch.
+  if (on('rank')) {
+    const change = lastRankChange(now)
+    if (change) {
+      out.push({
+        id: `rank:${change.at}:${change.to}`, kind: 'rank',
+        title: `${change.up ? 'Up' : 'Down'} to ${RANK_META[change.to].label}`,
+        detail: `From ${RANK_META[change.from].label} · ${change.score}/100 · ${RANK_META[change.to].philosophy}`,
+        at: change.at,
+        go: { module: 'behavioral' },
+      })
+    }
+  }
+
   const seen = loadSeen()
   return out
     .filter(n => !seen[n.id])
     .sort((a, b) => b.at.localeCompare(a.at))
 }
 
-/** The kinds that are switched on but have nothing behind them yet — said out
- *  loud in the panel, rather than looking like a quiet day. */
-export function unwiredKinds(settings: NotifSetting[]): NotifSetting[] {
-  return settings.filter(s => s.push && !DERIVABLE.includes(s.id))
+/**
+ * A kind that is switched on and cannot say anything yet, with what it is
+ * waiting on. Every kind is wired; some read a note that something else has to
+ * leave first, and an empty bell for that reason is worth saying out loud —
+ * it is the difference between a quiet day and a switch that does nothing.
+ */
+export function dormantKinds(settings: NotifSetting[]): { setting: NotifSetting; why: string }[] {
+  const out: { setting: NotifSetting; why: string }[] = []
+  const read = mailEverRead()
+  for (const s of settings) {
+    if (!s.push) continue
+    if ((s.id === 'needsyou' || s.id === 'draft') && !read)
+      out.push({ setting: s, why: 'once the mail has been read here' })
+    if (s.id === 'rank' && !useBehavioralStore.getState().enabled)
+      out.push({ setting: s, why: 'needs Behavioral OS switched on' })
+  }
+  return out
+}
+
+/** What a kind is waiting on, for the row in Settings. Null when it is live. */
+export function dormantWhy(kind: NotifKind, settings: NotifSetting[]): string | null {
+  return dormantKinds(settings).find(d => d.setting.id === kind)?.why ?? null
 }
