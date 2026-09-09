@@ -12,6 +12,7 @@ import {
   type Policy, type GoalPlan,
 } from '../goalPlan'
 import { Segmented } from '@/components/ui'
+import { CategoryGlyph } from '../components/CategoryGlyph'
 
 // ─── 21 · Goals ───────────────────────────────────────────────────────────────
 // A target and a date are a wish. What makes a plan is knowing what is spare,
@@ -126,7 +127,9 @@ function GoalRow({ plan, place, selected, lifted, over, onSelect, onGrab, regRow
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           background: C.ink1, color: 'var(--sb-ink-on-dark)', fontSize: 'var(--sb-t-micro)', fontWeight: 700,
         }}>{place}</span>
-        <span style={{ fontSize: 'var(--sb-t-h3)', flexShrink: 0 }}>{g.icon}</span>
+        {/* An account's picture arrives here as its icon — a data URL, which
+            printed as text is a line of base64 where the name should be. */}
+        <span style={{ display: 'inline-flex', flexShrink: 0 }}><CategoryGlyph icon={g.icon} size={18} /></span>
         <span style={{
           fontSize: 'var(--sb-t-label)', fontWeight: 600, color: C.ink1, minWidth: 0,
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
@@ -541,7 +544,7 @@ function GoalDetail({ plan, place, policy, currency, surplus, onChange, onDelete
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             background: C.ink1, color: 'var(--sb-ink-on-dark)', fontSize: 'var(--sb-t-meta)', fontWeight: 700,
           }}>{place}</span>
-          <span style={{ fontSize: 'var(--sb-t-h2)' }}>{g.icon}</span>
+          <span style={{ display: 'inline-flex', flexShrink: 0 }}><CategoryGlyph icon={g.icon} size={24} /></span>
           <span style={{ fontFamily: DISPLAY, fontSize: 'var(--sb-t-h2)', fontWeight: 700, letterSpacing: '-.03em', color: C.ink1 }}>
             {g.name}
           </span>
