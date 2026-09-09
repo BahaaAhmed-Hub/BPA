@@ -14,7 +14,7 @@ import { useAuthStore } from '@/store/authStore'
 import { useTaskStore } from '@/store/taskStore'
 import { useUIStore } from '@/store/uiStore'
 import {
-  useHabitsStore, loadLogs, saveLogs, loadQuantityLogs, saveQuantityLogs, calcStreak,
+  useHabitsStore, loadLogs, loadQuantityLogs, commitHabitLogs, calcStreak,
   type HabitLogs, type Habit,
 } from '@/store/habitsStore'
 import { evaluateRank } from '@/lib/behavioralEngine'
@@ -1945,7 +1945,7 @@ export function TodayPage() {
       const existing = prev[id] ?? []
       const updated = existing.includes(today) ? existing.filter(d => d !== today) : [...existing, today]
       const next = { ...prev, [id]: updated }
-      saveLogs(next)
+      commitHabitLogs(next)
       return next
     })
   }
@@ -1953,7 +1953,7 @@ export function TodayPage() {
   function setHabitQty(h: Habit, value: number) {
     setQtyLogs(prev => {
       const next = { ...prev, [h.id]: { ...(prev[h.id] ?? {}), [today]: value } }
-      saveQuantityLogs(next)
+      commitHabitLogs(undefined, next)
       return next
     })
     const goal = h.goal && h.goal > 0 ? h.goal : 1
@@ -1963,7 +1963,7 @@ export function TodayPage() {
       if (met === existing.includes(today)) return prev
       const updated = met ? [...existing, today] : existing.filter(d => d !== today)
       const next = { ...prev, [h.id]: updated }
-      saveLogs(next)
+      commitHabitLogs(next)
       return next
     })
   }

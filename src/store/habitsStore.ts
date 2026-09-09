@@ -100,6 +100,32 @@ export function loadQuantityLogs(): HabitQuantityLogs {
   } catch { return {} }
 }
 
+/**
+ * The one way a habit log reaches the server.
+ *
+ * Every screen that records a tap has to go through this. Today's water card
+ * wrote to localStorage and stopped — no `markLocalWrite`, no push — so the
+ * next load pulled the server's copy, which had never heard of it, straight
+ * back over the top. On the same device that reads as "it reset on refresh";
+ * on a second device the tap simply never existed.
+ *
+ * localStorage is written now and the server after a pause, because filling a
+ * glass at a time is eight taps and eight round trips is seven too many. The
+ * push re-reads localStorage rather than closing over what it was handed: by
+ * then a later tap may have landed, and the last write is the true one.
+ */
+let pushTimer: ReturnType<typeof setTimeout> | undefined
+export function commitHabitLogs(logs?: HabitLogs, quantities?: HabitQuantityLogs): void {
+  if (logs) saveLogs(logs)
+  if (quantities) saveQuantityLogs(quantities)
+  markLocalWrite('habits')
+  if (pushTimer) clearTimeout(pushTimer)
+  pushTimer = setTimeout(() => {
+    markLocalWrite('habits')
+    void saveHabitLogsToDB(loadLogs(), loadQuantityLogs()).catch(() => { /* offline */ })
+  }, 1500)
+}
+
 export function saveQuantityLogs(logs: HabitQuantityLogs): void {
   try { localStorage.setItem(QTY_LOGS_KEY, JSON.stringify(logs)) } catch { /* quota */ }
 }

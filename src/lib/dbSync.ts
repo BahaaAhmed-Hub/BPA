@@ -637,16 +637,37 @@ export async function saveHabitLogsToDB(logs: HabitLogs, quantities?: HabitQuant
   const session = await getSession()
   const userId  = session.user.id
 
-  const rows: (Omit<DbHabitLog, 'id'> & { quantity?: number | null })[] = []
-  const keep = new Set<string>()
+  // Every day that has *something* on it, which is not the same as every day
+  // that was finished. Three glasses of eight is not a tick, and building the
+  // rows from the ticked dates alone meant a part-filled day was written
+  // nowhere at all: it survived until the next load and then vanished, because
+  // the server had never heard of it. `completed` says which kind of day it is
+  // rather than being true by construction.
+  const days = new Map<string, { habitId: string; date: string; done: boolean; qty: number | null }>()
   for (const [habitId, dates] of Object.entries(logs)) {
     for (const date of dates) {
-      rows.push({
-        habit_id: habitId, user_id: userId, date, completed: true,
-        quantity: quantities?.[habitId]?.[date] ?? null,
+      days.set(`${habitId}|${date}`, {
+        habitId, date, done: true, qty: quantities?.[habitId]?.[date] ?? null,
       })
-      keep.add(`${habitId}|${date}`)
     }
+  }
+  for (const [habitId, byDate] of Object.entries(quantities ?? {})) {
+    for (const [date, qty] of Object.entries(byDate)) {
+      if (qty === 0) continue      // nothing drunk is nothing to keep
+      const key = `${habitId}|${date}`
+      const had = days.get(key)
+      days.set(key, { habitId, date, done: had?.done ?? false, qty })
+    }
+  }
+
+  const rows: (Omit<DbHabitLog, 'id'> & { quantity?: number | null })[] = []
+  const keep = new Set<string>()
+  for (const [key, d] of days) {
+    rows.push({
+      habit_id: d.habitId, user_id: userId, date: d.date,
+      completed: d.done, quantity: d.qty,
+    })
+    keep.add(key)
   }
 
   // Un-ticking a day only ever removed it locally: this function inserted and
@@ -718,15 +739,15 @@ export async function loadHabitLogsFromDB(): Promise<{ logs: HabitLogs; quantiti
   const userId  = session.user.id
 
   let withQuantity = true
-  let rows: { habit_id: string; date: string; quantity?: number | null }[] = []
+  let rows: { habit_id: string; date: string; quantity?: number | null; completed?: boolean }[] = []
 
   const full = await supabase
-    .from('habit_logs').select('habit_id, date, quantity').eq('user_id', userId)
+    .from('habit_logs').select('habit_id, date, quantity, completed').eq('user_id', userId)
   if (full.error) {
     if (!columnProblem(full.error)) return { logs: {}, quantities: null }
     withQuantity = false
     const bare = await supabase
-      .from('habit_logs').select('habit_id, date').eq('user_id', userId)
+      .from('habit_logs').select('habit_id, date, completed').eq('user_id', userId)
     if (bare.error || !bare.data) return { logs: {}, quantities: null }
     rows = bare.data
   } else {
@@ -736,7 +757,10 @@ export async function loadHabitLogsFromDB(): Promise<{ logs: HabitLogs; quantiti
   const logs: HabitLogs = {}
   const quantities: HabitQuantities = {}
   for (const row of rows) {
-    ;(logs[row.habit_id] ??= []).push(row.date)
+    // A part-filled day is a row too now, so the tick has to come from
+    // `completed` rather than from the row existing — otherwise three glasses
+    // of eight would come back as a finished day.
+    if (row.completed !== false) (logs[row.habit_id] ??= []).push(row.date)
     if (row.quantity != null) (quantities[row.habit_id] ??= {})[row.date] = row.quantity
   }
   return { logs, quantities: withQuantity ? quantities : null }

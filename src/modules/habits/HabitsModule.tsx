@@ -4,27 +4,14 @@ import { Button, Segmented } from '@/components/ui'
 import { stepFor } from '@/lib/habitSteps'
 import { Plus, Trash2, X, ChevronLeft, ChevronRight } from 'lucide-react'
 import {
-  useHabitsStore, loadLogs, saveLogs, loadQuantityLogs, saveQuantityLogs,
+  useHabitsStore, loadLogs, loadQuantityLogs, commitHabitLogs,
   calcStreak, getHabitColors,
-  type HabitLogs, type Habit,
+  type Habit,
 } from '@/store/habitsStore'
-import { saveHabitLogsToDB } from '@/lib/dbSync'
-import { markLocalWrite } from '@/lib/liveSync'
 import { ICON, STROKE } from '@/lib/type'
 import { alpha } from '@/lib/alpha'
 import { dayProgress, dayTotals, spanTotals } from '@/lib/habitProgress'
 
-let logsDbTimer: ReturnType<typeof setTimeout> | null = null
-function scheduleLogsSync(logs: HabitLogs) {
-  markLocalWrite('habits')
-  if (logsDbTimer) clearTimeout(logsDbTimer)
-  logsDbTimer = setTimeout(() => {
-    markLocalWrite('habits')
-    // Read at push time: the quantity map was written synchronously by whoever
-    // scheduled this, so localStorage is the one copy that is certainly current.
-    void saveHabitLogsToDB(logs, loadQuantityLogs()).catch(() => { /* offline */ })
-  }, 1500)
-}
 
 // ─── Date helpers ─────────────────────────────────────────────────────────────
 
@@ -900,7 +887,7 @@ export function HabitsModule() {
       const existing = prev[habitId] ?? []
       const updated  = existing.includes(day) ? existing.filter(x => x !== day) : [...existing, day]
       const next = { ...prev, [habitId]: updated }
-      saveLogs(next); scheduleLogsSync(next)
+      commitHabitLogs(next)
       return next
     })
   }, [])
@@ -910,7 +897,7 @@ export function HabitsModule() {
     setQtyLogs(prev => {
       const habitQty = { ...(prev[habitId] ?? {}), [day]: value }
       const next = { ...prev, [habitId]: habitQty }
-      saveQuantityLogs(next)
+      commitHabitLogs(undefined, next)
       return next
     })
     setLogs(prev => {
@@ -922,8 +909,7 @@ export function HabitsModule() {
         : { ...prev, [habitId]: met ? [...existing, day] : existing.filter(x => x !== day) }
       // Always push. Changing 3 glasses to 4 does not cross the goal and so
       // did not touch the tick — and used to sync nowhere as a result.
-      if (next !== prev) saveLogs(next)
-      scheduleLogsSync(next)
+      commitHabitLogs(next)
       return next
     })
   }, [])
@@ -932,12 +918,12 @@ export function HabitsModule() {
     storeDelete(habitId)
     setLogs(prev => {
       const next = { ...prev }; delete next[habitId]
-      saveLogs(next); scheduleLogsSync(next)
+      commitHabitLogs(next)
       return next
     })
     setQtyLogs(prev => {
       const next = { ...prev }; delete next[habitId]
-      saveQuantityLogs(next)
+      commitHabitLogs(undefined, next)
       return next
     })
   }

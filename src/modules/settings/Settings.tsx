@@ -49,7 +49,7 @@ import {
   saveAccountsToDB, loadAccountsFromDB,
   type CompanyRow as DbSyncCompanyRow,
 } from '@/lib/dbSync'
-import { loadLogs } from '@/store/habitsStore'
+import { loadLogs, loadQuantityLogs } from '@/store/habitsStore'
 import {
   loadBlockingRules, saveBlockingRules,
   type BlockingRule, type DetailLevel,
@@ -4123,7 +4123,7 @@ export function Settings() {
       const fns: Partial<Record<SectionId, () => Promise<void>>> = {
         schedule: () => saveProfileToDB(settingsRef.current),
         professor:() => savePrefsToDB(settingsRef.current),
-        habits:   async () => { const { habits } = useHabitsStore.getState(); await saveHabitsToDB(habits); await saveHabitLogsToDB(loadLogs()) },
+        habits:   async () => { const { habits } = useHabitsStore.getState(); await saveHabitsToDB(habits); await saveHabitLogsToDB(loadLogs(), loadQuantityLogs()) },
         appearance:() => savePrefsToDB(settingsRef.current),
       }
       const fn = fns[id]

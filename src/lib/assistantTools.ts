@@ -4,7 +4,7 @@ import { archiveMessage, extractBody, type GmailMessage } from './gmail'
 import { type ConnectedAccount } from './multiAccount'
 import { getGoogleToken } from './tokenManager'
 import { refreshPrimaryToken } from './googleCalendar'
-import { loadLogs, saveLogs } from '@/store/habitsStore'
+import { loadLogs, commitHabitLogs } from '@/store/habitsStore'
 
 // ─── Context provided by the React component ─────────────────────────────────
 
@@ -614,7 +614,7 @@ export async function executeTool(
       const entries = logs[input.habit_id as string] ?? []
       if (!entries.includes(date)) {
         logs[input.habit_id as string] = [...entries, date]
-        saveLogs(logs)
+        commitHabitLogs(logs)
       }
       const habit = ctx.habits.find(h => h.id === input.habit_id)
       return { success: true, message: `${habit?.emoji ?? '✓'} ${habit?.name ?? 'Habit'} logged for ${date}` }
