@@ -38,6 +38,7 @@ const SHARED_KEYS = [
   'finance-money-reminders',
   'finance-credit-limits',
   'finance-transfer-targets',
+  'finance-debt-goal-ranks',     // where each card-to-clear sits among the goals
   'finance-tx-flags',
   'finance-payees',              // who you have paid before
   'finance-category-order',

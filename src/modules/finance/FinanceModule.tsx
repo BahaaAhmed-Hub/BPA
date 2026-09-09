@@ -6,7 +6,6 @@ import { BudgetScreen } from './screens/BudgetScreen'
 import { ReportsScreen } from './screens/ReportsScreen'
 import { ReflectionScreen } from './screens/ReflectionScreen'
 import { GoalsScreen } from './screens/GoalsScreen'
-import { PlanScreen } from './screens/PlanScreen'
 import { TransactionModal } from './modals/TransactionModal'
 import { BulkEntryModal } from './modals/BulkEntryModal'
 import { LockGate } from './FinanceLockScreen'
@@ -77,14 +76,6 @@ function IconGoals({ color = 'currentColor' }: RailIconProps) {
   )
 }
 
-function IconPlan({ color = 'currentColor' }: RailIconProps) {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M13 3L5 14h6l-1 7 8-11h-6z"/>
-    </svg>
-  )
-}
-
 function IconLock({ color = 'currentColor' }: RailIconProps) {
   return (
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -108,7 +99,10 @@ function IconPlus({ color = 'currentColor' }: RailIconProps) {
 // Bills was a second place to write down a recurring payment, and it wrote to
 // nothing: a budget rule with a day on it already says what leaves and when,
 // and puts the entry in the ledger where every total can see it.
-type FinanceScreen = 'today' | 'balance' | 'budget' | 'reports' | 'reflect' | 'goals' | 'plan'
+// Plan was a debt payoff drawn on sample data beside a Goals screen that planned
+// from the ledger. A card with a balance is a goal with a target of zero, so
+// the cards are in Goals now and there is one screen for what money has to do.
+type FinanceScreen = 'today' | 'balance' | 'budget' | 'reports' | 'reflect' | 'goals'
 
 const NAV_ITEMS: { id: FinanceScreen; label: string; Icon: (p: RailIconProps) => React.ReactElement }[] = [
   { id: 'today',   label: 'Today',      Icon: IconToday },
@@ -117,7 +111,6 @@ const NAV_ITEMS: { id: FinanceScreen; label: string; Icon: (p: RailIconProps) =>
   { id: 'reports', label: 'Reports',    Icon: IconReports },
   { id: 'reflect', label: 'Financials', Icon: IconFinancials },
   { id: 'goals',   label: 'Goals',      Icon: IconGoals },
-  { id: 'plan',    label: 'Plan',       Icon: IconPlan },
 ]
 
 // ─── Finance Module ───────────────────────────────────────────────────────────
@@ -178,7 +171,6 @@ export function FinanceModule() {
       case 'reports': return <ReportsScreen {...props} />
       case 'reflect': return <ReflectionScreen {...props} />
       case 'goals':   return <GoalsScreen />
-      case 'plan':    return <PlanScreen />
     }
   }
 

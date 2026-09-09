@@ -34,8 +34,13 @@ export const WINDOW_MONTHS = 6
 export const DEFAULT_BUFFER_MONTHS = 1
 
 export interface Capacity {
-  /** Everything held across accounts, net of what is owed on cards. */
+  /** Everything held across accounts — the positive balances only. What is
+   *  owed on cards is not netted off here: each debt is a goal of its own
+   *  (`debtGoals`), with a target of clearing it, so it takes its place in the
+   *  ranking rather than silently shrinking every goal at once. */
   held: number
+  /** What the cards owe, in the base currency — the sum the debt goals carry. */
+  owed: number
   /** Kept back for ordinary life. */
   buffer: number
   /** Held less the buffer, never below zero: what could go into goals today. */
@@ -85,9 +90,12 @@ export function capacityFrom(
   // left out rather than added at face value — the same rule as everywhere.
   const { balances } = liveBalances(accounts, transactions)
   let held = 0
+  let owed = 0
   for (const a of accounts) {
     const v = toBase(balances.get(a.id) ?? a.balance, a.currency, base)
-    if (v !== null) held += v
+    if (v === null) continue
+    if (v >= 0) held += v
+    else owed += -v
   }
 
   // A normal month, from what actually moved.
@@ -123,6 +131,7 @@ export function capacityFrom(
   const buffer = Math.max(0, monthlyOut * bufferMonths)
   return {
     held,
+    owed,
     buffer,
     free: Math.max(0, held - buffer - Math.max(0, committed)),
     monthlyIn,
@@ -257,4 +266,51 @@ export function planGoals(
       onTime: g.deadline == null ? null : eta !== null && eta <= monthKey(g.deadline),
     }
   })
+}
+
+// ─── A card with a balance is a goal with a target of zero ───────────────────
+//
+// The old Plan screen drew a debt payoff on sample data beside a Goals screen
+// that planned from the ledger. There was never a second problem to solve:
+// clearing a card is finding a sum of money by some date, which is exactly what
+// a goal is. So every account that owes something appears in the ranking as a
+// goal — "Clear CIB World", target the balance, nothing saved yet — and is
+// funded, laddered or shared, by the same arithmetic. Paying the card down in
+// Balances shrinks the target; settling it makes the goal disappear.
+
+export const DEBT_PREFIX = 'debt:'
+
+export const isDebtGoal = (g: Pick<Goal, 'id'>): boolean => g.id.startsWith(DEBT_PREFIX)
+
+/** The account a debt goal stands for. */
+export const debtAccountId = (g: Pick<Goal, 'id'>): string => g.id.slice(DEBT_PREFIX.length)
+
+/**
+ * One goal per account in the red. `ranks` is where each was dragged to; one
+ * never ranked goes to the front, since interest on a card outruns any saving.
+ */
+export function debtGoals(
+  accounts: Account[],
+  transactions: Transaction[],
+  ranks: Record<string, number> = {},
+): Goal[] {
+  const { balances } = liveBalances(accounts, transactions)
+  const out: Goal[] = []
+  accounts.forEach((a, i) => {
+    const bal = balances.get(a.id) ?? a.balance
+    if (bal >= 0) return
+    const id = `${DEBT_PREFIX}${a.id}`
+    out.push({
+      id,
+      name: `Clear ${a.name}`,
+      icon: a.emoji || '💳',
+      targetAmount: Math.round(-bal * 100) / 100,
+      currentAmount: 0,
+      color: a.color,
+      sub: `owed on ${a.bank}${a.last4 ? ` ·· ${a.last4}` : ''}`,
+      rank: ranks[id] ?? -1000 + i,
+      currency: a.currency,
+    })
+  })
+  return out
 }

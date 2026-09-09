@@ -7,7 +7,7 @@ import { acct, group } from '../format'
 import { todayISO } from '../dates'
 import { ICON, STROKE } from '@/lib/type'
 import {
-  capacityFrom, planGoals, byRank, monthsUntil,
+  capacityFrom, planGoals, byRank, monthsUntil, debtGoals, isDebtGoal,
   DEFAULT_BUFFER_MONTHS, WINDOW_MONTHS,
   type Policy, type GoalPlan,
 } from '../goalPlan'
@@ -19,6 +19,11 @@ import { Segmented } from '@/components/ui'
 // which the ledger already knows. See goalPlan.ts for the arithmetic; this
 // screen's job is to show its working, because a number nobody can check is
 // worth about as much as the wish was.
+//
+// A card with a balance is here too, as a goal with a target of zero (see
+// `debtGoals`). It is ranked and funded like any other; what it cannot be is
+// edited or deleted here — the balance is the ledger's, and it is paid down or
+// settled from Balances.
 
 const C = {
   bg:      'var(--sb-page)',
@@ -40,6 +45,7 @@ const C = {
 const DISPLAY = 'var(--sb-font-num)'
 const BUFFER_KEY = 'finance-goal-buffer-months'
 const POLICY_KEY = 'finance-goal-policy'
+const DEBT_RANKS_KEY = 'finance-debt-goal-ranks'
 
 const EYEBROW: React.CSSProperties = {
   fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '.12em',
@@ -188,6 +194,18 @@ export function GoalsScreen(_props?: any) {
     setBufferMonths(n)
     try { localStorage.setItem(BUFFER_KEY, String(n)) } catch { /* private mode */ }
   }
+  // Where each card-to-clear was dragged to. Real goals keep their rank on the
+  // server; a debt goal is made from an account and has no row of its own.
+  const [debtRanks, setDebtRanks] = useState<Record<string, number>>(() => {
+    try { return JSON.parse(localStorage.getItem(DEBT_RANKS_KEY) ?? '{}') as Record<string, number> } catch { return {} }
+  })
+  function setDebtRank(id: string, n: number) {
+    setDebtRanks(prev => {
+      const next = { ...prev, [id]: n }
+      try { localStorage.setItem(DEBT_RANKS_KEY, JSON.stringify(next)) } catch { /* private mode */ }
+      return next
+    })
+  }
 
   // New goal
   const [newName, setNewName]     = useState('')
@@ -202,9 +220,13 @@ export function GoalsScreen(_props?: any) {
   const capacity = useMemo(
     () => capacityFrom(accounts, transactions, bufferMonths),
     [accounts, transactions, bufferMonths])
+  const allGoals = useMemo(
+    () => [...goals, ...debtGoals(accounts, transactions, debtRanks)],
+    [goals, accounts, transactions, debtRanks])
+  const debts = allGoals.length - goals.length
   const plans = useMemo(
-    () => planGoals(goals, capacity, policy),
-    [goals, capacity, policy])
+    () => planGoals(allGoals, capacity, policy),
+    [allGoals, capacity, policy])
 
   const selected = plans.find(p => p.goal.id === selectedId) ?? plans[0] ?? null
 
@@ -220,7 +242,7 @@ export function GoalsScreen(_props?: any) {
       sub: newBy ? `by ${newBy}` : 'no deadline',
       // A new goal joins the back of the queue. Nothing already planned for
       // gets pushed down by something typed in a hurry.
-      rank: goals.length,
+      rank: allGoals.length,
       deadline: newBy || undefined,
       currency: capacity.currency as Goal['currency'],
     }
@@ -250,7 +272,7 @@ export function GoalsScreen(_props?: any) {
 
   useEffect(() => {
     if (!drag) return
-    const order = byRank(goals).map(g => g.id)
+    const order = byRank(allGoals).map(g => g.id)
 
     const move = (e: PointerEvent) => {
       let over: string | null = null
@@ -273,9 +295,10 @@ export function GoalsScreen(_props?: any) {
           // Positions, not whatever numbers were there: a list where nothing
           // has a rank still comes out in an order.
           next.forEach((gid, n) => {
-            const g = goals.find(x => x.id === gid)
+            const g = allGoals.find(x => x.id === gid)
             if (!g || g.rank === n) return
-            void upsertGoal({ ...g, rank: n })
+            if (isDebtGoal(g)) setDebtRank(g.id, n)
+            else void upsertGoal({ ...g, rank: n })
           })
         }
       }
@@ -296,7 +319,7 @@ export function GoalsScreen(_props?: any) {
       window.removeEventListener('pointerup', up)
       window.removeEventListener('pointercancel', up)
     }
-  }, [drag, goals, upsertGoal])
+  }, [drag, allGoals, upsertGoal])
 
   const cur = capacity.currency
   const money = (n: number) => acct(n, { currency: cur })
@@ -314,7 +337,7 @@ export function GoalsScreen(_props?: any) {
           background: C.surface, border: `var(--sb-border-width) solid ${C.border}`,
         }}>
           <Stat label="Spare now" value={money(capacity.free)}
-            sub={`${group(Math.round(capacity.held))} held, less ${group(Math.round(capacity.buffer))} kept back`} />
+            sub={`${group(Math.round(capacity.held))} held, less ${group(Math.round(capacity.buffer))} kept back${capacity.owed > 0 ? ` · ${group(Math.round(capacity.owed))} owed on cards, ranked below` : ''}`} />
           <Stat label="A normal month" value={money(capacity.surplus)}
             tone={capacity.surplus >= 0 ? C.green : C.red}
             sub={capacity.months > 0
@@ -367,14 +390,16 @@ export function GoalsScreen(_props?: any) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <span style={EYEBROW}>In order</span>
             <span style={{ marginLeft: 'auto', fontSize: 'var(--sb-t-meta)', color: C.ink4 }}>
-              {goals.length === 0 ? 'none yet' : `${goals.length} goal${goals.length === 1 ? '' : 's'} · drag to re-rank`}
+              {plans.length === 0 ? 'none yet'
+                : `${goals.length} goal${goals.length === 1 ? '' : 's'}${debts ? ` · ${debts} card${debts === 1 ? '' : 's'} to clear` : ''} · drag to re-rank`}
             </span>
           </div>
 
           {plans.length === 0 && (
             <div style={{ padding: '18px 0', color: C.ink3, fontSize: 'var(--sb-t-body-s)', lineHeight: 1.55 }}>
               Nothing here yet. Add one below — a name and an amount is enough, and a
-              date if it has to be there by one.
+              date if it has to be there by one. A card that owes something will appear
+              here on its own, as a goal to clear it.
             </div>
           )}
 
@@ -470,7 +495,8 @@ export function GoalsScreen(_props?: any) {
               over (the median of the last {WINDOW_MONTHS} months of money that actually
               moved — the median so one strange month does not reset the plan), and then it
               pours both down the <b>ranking</b>. Drag a goal up and everything behind it
-              re-plans.
+              re-plans. A <b>card with a balance</b> is in the ranking too, as a goal to
+              clear it — pay it down in Balances and the target shrinks.
             </div>
           )}
         </div>
@@ -491,6 +517,7 @@ function GoalDetail({ plan, place, policy, currency, surplus, onChange, onDelete
   onDelete: (g: Goal) => void
 }) {
   const g = plan.goal
+  const debt = isDebtGoal(g)
   const money = (n: number) => acct(n, { currency: g.currency ?? currency })
   const [saved, setSaved] = useState(g.currentAmount)
   const [target, setTarget] = useState(g.targetAmount)
@@ -519,20 +546,24 @@ function GoalDetail({ plan, place, policy, currency, surplus, onChange, onDelete
             {g.name}
           </span>
           <span style={{ flex: 1 }} />
-          <button
-            onClick={() => onDelete(g)}
-            title="Delete this goal"
-            style={{
-              width: 30, height: 30, borderRadius: 'var(--sb-r-pill)', padding: 0, cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: C.surface, border: `var(--sb-border-width) solid ${C.border}`, color: C.ink4,
-            }}><Trash2 size={ICON.sm} /></button>
+          {debt ? (
+            <span style={{ fontSize: 'var(--sb-t-meta)', color: C.ink4 }}>{g.sub}</span>
+          ) : (
+            <button
+              onClick={() => onDelete(g)}
+              title="Delete this goal"
+              style={{
+                width: 30, height: 30, borderRadius: 'var(--sb-r-pill)', padding: 0, cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: C.surface, border: `var(--sb-border-width) solid ${C.border}`, color: C.ink4,
+              }}><Trash2 size={ICON.sm} /></button>
+          )}
         </div>
 
         <div style={{ display: 'flex', gap: 26, marginTop: 16, flexWrap: 'wrap' }}>
-          <Stat label="Still to find" value={money(plan.remaining)}
+          <Stat label={debt ? 'Still owed' : 'Still to find'} value={money(plan.remaining)}
             tone={done ? C.green : C.ink1}
-            sub={done ? 'reached' : `${group(g.currentAmount)} of ${group(g.targetAmount)} saved`} />
+            sub={done ? (debt ? 'cleared' : 'reached') : debt ? 'the live balance, from the ledger' : `${group(g.currentAmount)} of ${group(g.targetAmount)} saved`} />
           <Stat label="From what is spare" value={money(plan.lump)}
             sub={plan.lump > 0 ? 'available today' : 'nothing spare reaches it'} />
           <Stat label="Each month" value={money(plan.monthly)}
@@ -551,7 +582,7 @@ function GoalDetail({ plan, place, policy, currency, surplus, onChange, onDelete
         border: `var(--sb-border-width) solid ${done || coveredNow ? 'var(--sb-positive-tint)' : plan.onTime === false || plan.eta === null ? 'var(--sb-negative-tint)' : C.accentBr}` }}>
         <div style={{ fontSize: 'var(--sb-t-body)', color: C.ink1, lineHeight: 1.6 }}>
           {done
-            ? 'This one is there. Anything ranked below it now gets what it was taking.'
+            ? (debt ? 'This card is clear. Anything ranked below it now gets what it was taking.' : 'This one is there. Anything ranked below it now gets what it was taking.')
             : coveredNow
             ? `There is enough spare today to finish this outright — ${money(plan.remaining)} of the ${money(plan.lump + 0)} it can draw on. Nothing has to be waited for.`
             : plan.eta === null
@@ -566,7 +597,20 @@ function GoalDetail({ plan, place, policy, currency, surplus, onChange, onDelete
         </div>
       </div>
 
-      {/* What can be changed about it */}
+      {/* What can be changed about it — for a card, nothing here: the balance
+          is the ledger's, and it moves from Balances. */}
+      {debt ? (
+        <div style={card}>
+          <span style={EYEBROW}>The card itself</span>
+          <div style={{ fontSize: 'var(--sb-t-body-s)', color: C.ink3, lineHeight: 1.6, marginTop: 8 }}>
+            This is {g.name.replace(/^Clear /, '')}'s balance as the ledger has it, {g.sub}. Every
+            payment recorded against the card brings the target down; <b>Settle</b> on its row in
+            Balances clears it in one transfer, and the goal goes with it. Drag it in the ranking
+            to decide what it waits behind — by default a card comes first, because its interest
+            outruns anything a goal below it would earn.
+          </div>
+        </div>
+      ) : (
       <div style={card}>
         <span style={EYEBROW}>The goal itself</span>
         <div style={{ display: 'flex', gap: 12, marginTop: 10, flexWrap: 'wrap' }}>
@@ -608,6 +652,7 @@ function GoalDetail({ plan, place, policy, currency, surplus, onChange, onDelete
           </div>
         )}
       </div>
+      )}
     </div>
   )
 }

@@ -417,6 +417,18 @@ an overspend cannot run past its own pill. The title says which limit it used.
 - **Rank is stored** (`20260010`: `rank`, `deadline`, `currency`) and set by dragging
   a row — same pointer-event drag as the Financials table. `goalPlanning.ts` keeps
   the three locally until the migration runs; the server's value wins.
+- **A card with a balance is a goal with a target of zero.** The Plan screen
+  drew a debt payoff on sample data beside this one; there was never a second
+  problem. `debtGoals(accounts, txs, ranks)` makes one goal per account in the
+  red — `debt:<accountId>`, "Clear CIB World", target the live balance, nothing
+  saved — and it is ranked and funded like any other. `capacityFrom` therefore
+  counts **positive balances only** in `held` and returns the cards' sum as
+  `owed`; netting the debt off `held` *and* asking for it as a goal would count
+  it twice. A debt goal cannot be edited or deleted here — the balance is the
+  ledger's and moves from Balances (Settle) — and its rank lives in
+  `finance-debt-goal-ranks` (prefSync) since it has no row. Unranked, a card
+  goes to the front: its interest outruns anything below it. Plan tab, screen
+  and icon are gone.
 
 ## Finance — Bills is gone, table and all
 There were two places to write down a recurring payment and only one of them
@@ -889,9 +901,9 @@ built on sample data:
 - **Settings → Integrations** — Notion/Asana/Trello/Apple Notes accounts are
   illustrative and the switches reach nothing. Google, in the same section, is
   real and is *not* marked.
-- **Finance → Plan** — `DEMO_TARGETS` / `DEMO_PLAN`, not your ledger.
 Everything else in all seven modules has a live handler. Settings → Automation
-used to be on this list; it has an engine now (below).
+and Finance → Plan used to be on this list: Automation has an engine now
+(below), and Plan is folded into Goals.
 
 ## Common Patterns
 ```tsx
