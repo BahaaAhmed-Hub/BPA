@@ -913,6 +913,31 @@ a snapshot, and the row returns to the list with it.
   that needs full `mail.google.com` — and a swipe should not destroy mail. No
   batch endpoint bins mail, so that one is a call each via `messages/trash`.
 
+## Overlays — a modal is not a card
+`--sb-overlay` and `--sb-scrim`. Every modal panel used to be painted with
+`--sb-card`, which in Glass & Depth is `rgba(255,255,255,.05)` — a wash that is
+legible only when the blur behind it lands. A modal's job is to *hide* what is
+under it, so on an iPad the New transaction form and the calendar were drawn on
+top of one another.
+- **`--sb-overlay` is opaque in every theme.** Glass gets `#1C1B26` — its own
+  card colour composited onto the page, so it still reads as that surface
+  without being see-through. Cards *on* the page keep `--sb-card` and the glass.
+- **`--sb-scrim` is a shadow, not an ink.** It was `color-mix(--sb-ink-1 45%)`,
+  and ink-1 in a dark theme is near-white, so the dim was a 45% white veil.
+Used by 11 modal panels and 10 scrims across 17 files. Reach for these, never
+`--sb-card`, for anything drawn over the page.
+
+## Finance — the lock, on a second device
+A passkey lives in one device's secure element and never travels, so a second
+device has none — which the lock screen *stated* and then left you with: the
+only way to enrol was to unlock with the password and find Settings → Finance →
+SECURITY. That is why it worked on a laptop and not on an iPad.
+The offer now happens where it means something — **right after the password
+proves who you are**: "Use Touch ID or Face ID on this iPad?" / Set it up / Not
+now. Registration runs **from that tap**: WebAuthn needs the gesture and cannot
+be done for you afterwards. A refusal names what the platform actually said and
+opens the finances anyway — the password already answered that question.
+
 ## Ink — the colour of text is derived, not declared
 `lib/ink.ts`. A theme token cannot say what reads on a **colour somebody chose**
 — an avatar's swatch, a habit's, a company's, the accent behind a chip. Those
