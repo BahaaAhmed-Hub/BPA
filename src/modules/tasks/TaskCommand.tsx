@@ -13,7 +13,7 @@ import { TaskDetailPanel } from './TaskDetailPanel'
 import { TaskCard } from './TaskCard'
 import { useTaskStore } from '@/store/taskStore'
 import { useUIStore } from '@/store/uiStore'
-import { Search, X, Plus, SlidersHorizontal, LayoutGrid, Target, List as ListIcon } from 'lucide-react'
+import { Search, X, Plus, SlidersHorizontal, LayoutGrid, Target, List as ListIcon, CalendarClock } from 'lucide-react'
 import type { Quadrant, Task } from '@/types'
 import { isTaskHidden, loadVisibleCompanies, getVisibleUsers, TASK_TYPE_META, inferTaskType } from '@/types'
 import { SmartDayPlanner } from './SmartDayPlanner'
@@ -406,6 +406,16 @@ export function TaskCommand() {
               { value: 'list',       label: <><ListIcon size={ICON.sm} strokeWidth={STROKE.active} /> List</> },
             ]}
           />
+
+          {/* The planner has existed all along with nothing to open it —
+              `showPlanner` was set false and never set true. It belongs beside
+              New task: one makes a thing to do, the other decides when. */}
+          <Button variant="secondary" onClick={() => setShowPlanner(true)}
+            title="Lay today's tasks out against the calendar"
+            style={{ boxSizing: 'border-box', flexShrink: 0 }}>
+            <CalendarClock size={ICON.md} strokeWidth={STROKE.active} />
+            Plan my day
+          </Button>
 
           {/* New task CTA */}
           <Button variant="accent" onClick={handleNewTask} style={{ boxSizing: 'border-box', flexShrink: 0 }}>

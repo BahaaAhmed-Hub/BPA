@@ -21,8 +21,8 @@
 
 import { fetchAttachment, type GmailMessage, type GmailPart, type MailAccount } from '@/lib/gmail'
 import {
-  findEventByICalUid, patchCalendarEventWithToken, listCalendarsWithToken,
-  type GCalEvent,
+  lookUpICalUid, patchCalendarEventWithToken, listCalendarsWithToken,
+  deleteCalendarEventWithToken, type GCalEvent,
 } from '@/lib/googleCalendar'
 import { getGoogleToken } from '@/lib/tokenManager'
 import { supabase } from '@/lib/supabase'
@@ -166,6 +166,20 @@ function isCalendarPart(p: GmailPart): boolean {
 }
 
 /**
+ * A meeting whose *title* says it is off.
+ *
+ * Not every cancellation is a `METHOD:CANCEL`. An organiser who renames the
+ * event to "[Cancelled] Contract Signing" and sends the update has, as far as
+ * Google is concerned, changed an event that is still live and still waiting
+ * for your answer — but nobody reading that row thinks a meeting is happening.
+ * The row says what the title says; what it offers is a different question,
+ * answered below, because the event really is still on the calendar.
+ */
+export function titleSaysCancelled(summary: string): boolean {
+  return /^\s*[[(]?\s*(cancell?ed|postponed)\s*[\])]?\s*[-–—:]?\s/i.test(summary)
+}
+
+/**
  * Google's own subject prefixes. Used only to tell "this is not an invitation"
  * from "this is one and something went wrong reading it" — never to build an
  * Invite, since a subject carries no UID and there is nothing to answer with.
@@ -188,13 +202,18 @@ export function parseIcs(ics: string): Invite | null {
   if (!uid) return null
   const start = propLine(ev, 'DTSTART')
   const end = propLine(ev, 'DTEND')
+  const summary = prop(ev, 'SUMMARY') || '(no title)'
   return {
     uid,
-    summary: prop(ev, 'SUMMARY') || '(no title)',
+    summary,
     startsAt: icsDate(start.value, param(start.params, 'TZID')),
     endsAt: icsDate(end.value, param(end.params, 'TZID')),
     organizer: prop(ev, 'ORGANIZER').replace(/^mailto:/i, ''),
-    cancelled: prop(body, 'METHOD').toUpperCase() === 'CANCEL' || /^STATUS:CANCELLED$/im.test(ev),
+    // Three ways a meeting says it is off, and the third is the one people
+    // actually use: renaming it to "[Cancelled] …" and sending an update.
+    cancelled: prop(body, 'METHOD').toUpperCase() === 'CANCEL'
+      || /^STATUS:CANCELLED$/im.test(ev)
+      || titleSaysCancelled(summary),
   }
 }
 
@@ -283,6 +302,38 @@ export interface RsvpResult {
 }
 
 /**
+ * Your copy of the event, wherever Google filed it.
+ *
+ * The primary first, then anything writable, because Google puts an invitation
+ * on whichever calendar the invited address is subscribed as. A calendar that
+ * refuses to be read is remembered rather than skipped: coming back empty
+ * because nobody would answer is not the same as coming back empty.
+ */
+async function findOnCalendars(
+  token: string, uid: string,
+): Promise<{ found: { calendarId: string; event: GCalEvent } | null; error?: string }> {
+  let calendarIds = ['primary']
+  try {
+    const { calendars } = await listCalendarsWithToken(token)
+    calendarIds = [
+      'primary',
+      ...calendars
+        .filter(c => c.accessRole === 'owner' || c.accessRole === 'writer')
+        .map(c => c.id)
+        .filter(id => id !== 'primary'),
+    ]
+  } catch { /* the primary alone is the usual case anyway */ }
+
+  let error: string | undefined
+  for (const calendarId of calendarIds) {
+    const res = await lookUpICalUid(token, calendarId, uid)
+    if (res.event) return { found: { calendarId, event: res.event } }
+    if (res.error && !error) error = res.error
+  }
+  return { found: null, error }
+}
+
+/**
  * Set your reply on your own copy of the event.
  *
  * The invitation may have landed on any of the account's calendars — Google
@@ -297,28 +348,15 @@ export async function respondToInvite(
     return { ok: false, why: e instanceof Error ? e.message : 'Google is not connected.' }
   }
 
-  // Which calendars to look on: the primary, then anything writable.
-  let calendarIds = ['primary']
-  try {
-    const { calendars } = await listCalendarsWithToken(token)
-    calendarIds = [
-      'primary',
-      ...calendars
-        .filter(c => c.accessRole === 'owner' || c.accessRole === 'writer')
-        .map(c => c.id)
-        .filter(id => id !== 'primary'),
-    ]
-  } catch { /* the primary alone is the usual case anyway */ }
-
-  let found: { calendarId: string; event: GCalEvent } | null = null
-  for (const calendarId of calendarIds) {
-    const event = await findEventByICalUid(token, calendarId, invite.uid)
-    if (event) { found = { calendarId, event }; break }
-  }
+  const { found, error } = await findOnCalendars(token, invite.uid)
   if (!found) {
+    // Say which of the two it is. They point at different fixes, and the old
+    // message asserted the first for both.
     return {
       ok: false,
-      why: 'This invitation is not on any of your calendars yet, so there is no reply to set. Open it in Google Calendar and answer there.',
+      why: error
+        ? `Your calendars could not be searched. ${error}`
+        : 'Google has not put this invitation on any of your calendars, so there is no reply to set here. That is usually the "Add invitations to my calendar" setting in Google Calendar — answer it there and it will stick.',
     }
   }
 
@@ -333,6 +371,35 @@ export async function respondToInvite(
   const res = await patchCalendarEventWithToken(token, found.calendarId, found.event.id, { attendees })
   if (!res.ok) return { ok: false, why: res.error ?? 'Google would not record the reply.' }
   return { ok: true }
+}
+
+/**
+ * Take your copy of the event off your calendar.
+ *
+ * **Nothing does this on its own.** A cancellation is somebody else's decision
+ * about the meeting; what happens to your calendar is yours, and deleting a row
+ * from it cannot be undone. So this is a button on the row rather than something
+ * that runs when the mail arrives.
+ *
+ * It deletes *your* copy. The organiser's event is theirs, and Google would
+ * refuse anyway unless you are the organiser — in which case declining to delete
+ * your own meeting from the mail card is the right answer too.
+ */
+export async function removeFromCalendar(
+  invite: Invite, account: MailAccount,
+): Promise<RsvpResult> {
+  let token: string
+  try { token = await tokenFor(account) } catch (e) {
+    return { ok: false, why: e instanceof Error ? e.message : 'Google is not connected.' }
+  }
+
+  const { found, error } = await findOnCalendars(token, invite.uid)
+  if (!found) {
+    if (error) return { ok: false, why: `Your calendars could not be searched. ${error}` }
+    return { ok: false, why: 'It is not on any of your calendars — there is nothing to remove.' }
+  }
+  const gone = await deleteCalendarEventWithToken(token, found.calendarId, found.event.id)
+  return gone ? { ok: true } : { ok: false, why: 'Google would not remove it.' }
 }
 
 // ─── Remembering what you answered ───────────────────────────────────────────

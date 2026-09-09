@@ -367,15 +367,49 @@ export async function findEventByICalUid(
   calendarId: string,
   iCalUID: string,
 ): Promise<GCalEvent | null> {
+  return (await lookUpICalUid(token, calendarId, iCalUID)).event
+}
+
+/**
+ * The same lookup, saying **why** when it comes back empty.
+ *
+ * "It is not on any of your calendars" is a claim, and the bare version could
+ * not tell it apart from a refused token, an expired one, or a network that was
+ * not there — every failure returned `null` and the caller said the same
+ * confident thing about all of them. A person who is told their invitation is
+ * missing when really the token needs reconnecting has been sent to look in the
+ * wrong place.
+ */
+export async function lookUpICalUid(
+  token: string,
+  calendarId: string,
+  iCalUID: string,
+): Promise<{ event: GCalEvent | null; error?: string }> {
   try {
     const res = await gcalRequest(
       token,
       `/calendars/${encodeURIComponent(calendarId)}/events` +
-      `?iCalUID=${encodeURIComponent(iCalUID)}&showDeleted=false&maxResults=2`)
-    if (!res.ok) return null
+      // `singleEvents` stays off: a series is answered on its master, and the
+      // master is what carries the attendee list.
+      `?iCalUID=${encodeURIComponent(iCalUID)}&showDeleted=false&maxResults=5`)
+    if (!res.ok) {
+      // 404 is a calendar this account cannot see, which is a fact about that
+      // calendar rather than an error worth repeating for each of them.
+      if (res.status === 404) return { event: null }
+      const body = await res.json().catch(() => null) as { error?: { message?: string } } | null
+      const why = body?.error?.message
+      return {
+        event: null,
+        error: res.status === 401 || res.status === 403
+          ? `Google would not let this account read that calendar (${res.status}${why ? `: ${why}` : ''}). It may need reconnecting.`
+          : `Google answered ${res.status}${why ? `: ${why}` : ''}.`,
+      }
+    }
     const data = await res.json() as { items?: GCalEvent[] }
-    return data.items?.find(e => e.status !== 'cancelled') ?? null
-  } catch { return null }
+    return { event: data.items?.find(e => e.status !== 'cancelled') ?? null }
+  } catch (e) {
+    return { event: null, error: e instanceof Error ? e.message : 'The calendar could not be reached.' }
+  }
 }
 
 /** PATCH, so the fields not mentioned are left exactly as Google has them. */

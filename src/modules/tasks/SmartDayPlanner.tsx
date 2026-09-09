@@ -446,6 +446,15 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
   const [generating, setGenerating] = useState(false)
   const [todayEvents, setTodayEvents] = useState<GCalEvent[]>([])
   const [creatingSet, setCreatingSet] = useState<Set<string>>(new Set())
+
+  // A modal over the whole page has to close on Escape. Until it had a button
+  // to open it nobody found this; now that it has one, the way out is the first
+  // thing a keyboard reaches for.
+  useEffect(() => {
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', esc)
+    return () => window.removeEventListener('keydown', esc)
+  }, [onClose])
   const [accountPicker, setAccountPicker] = useState<{ task: Task; block: ScheduledBlock } | null>(null)
   const timelineRef = useRef<HTMLDivElement>(null)
 

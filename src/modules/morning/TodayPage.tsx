@@ -7,7 +7,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
  RefreshCw, ArrowRight, Zap, Archive, Plus,
-  Clock, Check, Flame, Sun, Quote, CheckSquare, X, ChevronDown,
+  Clock, Check, Flame, Sun, Quote, CheckSquare, X, ChevronDown, Trash2,
   CornerUpLeft, CalendarClock, Scale, Send, Sparkles, Loader2, Eye,
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
@@ -27,7 +27,7 @@ import type { GmailHeader, GmailMessage, MailAccount } from '@/lib/gmail'
 import { mailAccounts } from '@/modules/inbox/mailAccounts'
 import { briefsFor, rememberDraft, forgetBrief, type InboxBrief, type MailAction } from '@/lib/mailBriefs'
 import {
-  readInvite, respondToInvite, RSVP_LABEL, answerFor, rememberAnswer,
+  readInvite, respondToInvite, removeFromCalendar, RSVP_LABEL, answerFor, rememberAnswer,
   type Invite, type Rsvp,
 } from '@/lib/invitations'
 import { notify } from '@/lib/undo'
@@ -353,13 +353,16 @@ function MailPopup({ row, onClose, onArchive, onAddTask }: {
  * three answers write the real `responseStatus`, and the fourth does both,
  * because a decline is the one that usually wants a sentence with it.
  */
-function InviteActions({ invite, busy, answered, error, onRespond, onDeclineWithNote }: {
+function InviteActions({ invite, busy, answered, error, removed, onRespond, onDeclineWithNote, onRemove }: {
   invite: Invite
-  busy: Rsvp | null
+  /** An RSVP in flight, or the removal. */
+  busy: Rsvp | 'removing' | null
   answered: Rsvp | null
   error: string | null
+  removed: boolean
   onRespond: (r: Rsvp) => void
   onDeclineWithNote: () => void
+  onRemove: () => void
 }) {
   const when = invite.startsAt
     ? new Date(invite.startsAt).toLocaleString('en-GB', {
@@ -395,8 +398,33 @@ function InviteActions({ invite, busy, answered, error, onRespond, onDeclineWith
       </span>
 
       {invite.cancelled ? (
-        <span style={{ fontSize: 'var(--sb-t-meta)', color: GHOST }}>
-          The organiser called it off — there is nothing to answer.
+        /* Called off. There is no reply to send — but the meeting may still be
+           sitting on the calendar, and what happens to that is your decision
+           rather than the organiser's, so it is offered rather than done. */
+        <span style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 'var(--sb-t-meta)', color: GHOST }}>
+            The organiser called it off — there is nothing to answer.
+          </span>
+          {removed ? (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 'var(--sb-t-meta)', color: MUTED, fontWeight: 600 }}>
+              <Check size={ICON.sm} /> Off your calendar
+            </span>
+          ) : (
+            <button
+              disabled={!!busy}
+              onClick={onRemove}
+              title="Delete your copy of this meeting. The organiser's is theirs."
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 5, height: 26, padding: '0 11px',
+                borderRadius: 'var(--sb-r-pill)', cursor: busy ? 'default' : 'pointer', fontFamily: 'inherit',
+                fontSize: 'var(--sb-t-meta)', fontWeight: 700, flexShrink: 0,
+                background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)',
+                color: INK, opacity: busy ? 0.5 : 1,
+              }}>
+              {busy === 'removing' ? <Loader2 size={ICON.sm} className="sb-spin" /> : <Trash2 size={ICON.sm} />}
+              Remove it from my calendar
+            </button>
+          )}
         </span>
       ) : (
         <span style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
@@ -815,7 +843,7 @@ const MAIL_SHOWN = 6
 function MailCard({
   rows, loading, error, boxes, newsletters, briefs, briefing, briefNote,
   onArchive, onArchiveAll, onOpenInbox, onOpen, onOpenDraft,
-  invites, inviteFailed, rsvpBusy, rsvpDone, rsvpError, onRespond,
+  invites, inviteFailed, rsvpBusy, rsvpDone, rsvpError, rsvpRemoved, onRespond, onRemoveFromCalendar,
 }: {
   rows: MailRow[]
   loading: boolean
@@ -838,9 +866,12 @@ function MailCard({
   /** Messages that are invitations nobody could read, and why. */
   inviteFailed: Record<string, string>
   /** RSVP state, keyed by thread id, and the one way to change it. */
-  rsvpBusy: Record<string, Rsvp>
+  rsvpBusy: Record<string, Rsvp | 'removing'>
   rsvpDone: Record<string, Rsvp>
   rsvpError: Record<string, string>
+  /** Rows whose cancelled meeting has been taken off the calendar. */
+  rsvpRemoved: Record<string, boolean>
+  onRemoveFromCalendar: (row: MailRow) => void
   onRespond: (row: MailRow, r: Rsvp) => void
 }) {
   const [showBulk, setShowBulk] = useState(false)
@@ -978,8 +1009,10 @@ function MailCard({
                   busy={rsvpBusy[r.id] ?? null}
                   answered={rsvpDone[r.id] ?? answerFor(invites[r.messageId].uid)}
                   error={rsvpError[r.id] ?? null}
+                  removed={!!rsvpRemoved[r.id]}
                   onRespond={rr => onRespond(r, rr)}
                   onDeclineWithNote={() => { onRespond(r, 'declined'); onOpenDraft(r) }}
+                  onRemove={() => onRemoveFromCalendar(r)}
                 />
               ) : null}
 
@@ -1580,7 +1613,8 @@ export function TodayPage() {
   const [invites, setInvites] = useState<Record<string, Invite>>({})
   /** Messages that are invitations we could not read, and why. */
   const [inviteFailed, setInviteFailed] = useState<Record<string, string>>({})
-  const [rsvpBusy, setRsvpBusy] = useState<Record<string, Rsvp>>({})
+  const [rsvpBusy, setRsvpBusy] = useState<Record<string, Rsvp | 'removing'>>({})
+  const [rsvpRemoved, setRsvpRemoved] = useState<Record<string, boolean>>({})
   const [rsvpDone, setRsvpDone] = useState<Record<string, Rsvp>>({})
   const [rsvpError, setRsvpError] = useState<Record<string, string>>({})
 
@@ -1805,6 +1839,23 @@ export function TodayPage() {
     } else {
       // Never a bare failure: the reason is the whole value of the message.
       setRsvpError(p => ({ ...p, [row.id]: res.why ?? 'Google would not record the reply.' }))
+    }
+  }, [invites])
+
+  /** Take a called-off meeting off the calendar, on request and never before. */
+  const removeCancelled = useCallback(async (row: MailRow) => {
+    const invite = invites[row.messageId]
+    if (!invite) return
+    setRsvpBusy(p => ({ ...p, [row.id]: 'removing' }))
+    setRsvpError(p => { const n = { ...p }; delete n[row.id]; return n })
+    const res = await removeFromCalendar(invite, row.account)
+    setRsvpBusy(p => { const n = { ...p }; delete n[row.id]; return n })
+    if (res.ok) {
+      setRsvpRemoved(p => ({ ...p, [row.id]: true }))
+      void markAsRead(row.messageId, row.account).catch(() => { /* it is still gone */ })
+      notify(`${invite.summary} taken off your calendar`)
+    } else {
+      setRsvpError(p => ({ ...p, [row.id]: res.why ?? 'Google would not remove it.' }))
     }
   }, [invites])
 
@@ -2085,7 +2136,9 @@ export function TodayPage() {
             rsvpBusy={rsvpBusy}
             rsvpDone={rsvpDone}
             rsvpError={rsvpError}
+            rsvpRemoved={rsvpRemoved}
             onRespond={(row, r) => void respondToInvitation(row, r)}
+            onRemoveFromCalendar={row => void removeCancelled(row)}
           />
         </div>
 
