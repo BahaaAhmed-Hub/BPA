@@ -811,6 +811,26 @@ does it (and `addTask`, for one created with a date already on it), so every pat
 gets it: the detail panel, the planner, the palette. Only from the dump — a task
 already in Do stays in Do — and clearing the date sends nothing back.
 
+## Login — the bento grid under the card
+`components/ui/bento-grid.tsx` + `components/LoginFeatures.tsx`. Magic UI's
+bento-grid, reimplemented because the reference imports it from
+`@/registry/magicui/bento-grid` and that registry is not installed. Same props
+(`name`, `description`, `Icon`, `background`, `className`, optional
+`href`/`cta`), so a card written against the original drops in.
+- **Tailwind v4 is wired up** (`@tailwindcss/vite` + `@import "tailwindcss"`),
+  which is why these two files use classes at all — everything else in the app
+  is inline styles.
+- **The classes carry `--sb-*`, not Tailwind's palette.** `bg-white` is one
+  theme's answer and there are four; arbitrary values (`bg-[var(--sb-card)]`)
+  make the grid follow the theme with no dark-mode branch.
+- **Icons are lucide**, not `@radix-ui/react-icons` — one icon library is enough.
+- **The CTA renders only when an `href` is passed.** The reference gives every
+  card `href: "/"` and a "Learn more" that goes nowhere, which is exactly what
+  `ComingSoon.tsx` exists to prevent. The login passes none.
+- **The grid needs a height.** `grid-rows-3` makes rows fractions of the grid's
+  own height; without one the tall cards stretch to the column beside them and
+  stand half empty. One-row cells carry one line.
+
 ## What is drawn but not wired
 `components/ComingSoon.tsx`. A control that looks live and does nothing is
 worse than no control. `NotYet` wraps a block — half opacity, `pointer-events:
