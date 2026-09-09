@@ -458,6 +458,34 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
   const [accountPicker, setAccountPicker] = useState<{ task: Task; block: ScheduledBlock } | null>(null)
   const timelineRef = useRef<HTMLDivElement>(null)
 
+  // The grid opens at the earliest thing still on it — a planned block or an
+  // event that has not ended — or at the current hour when there is none. It
+  // used to open at 12 AM with the whole morning empty above the fold, and
+  // scrolled only after Generate Plan. Runs again as blocks and events land,
+  // until the person scrolls it themselves: from then on it is theirs.
+  const autoTop   = useRef<number | null>(null)
+  const userMoved = useRef(false)
+  useEffect(() => {
+    const el = timelineRef.current
+    if (!el || userMoved.current) return
+    const now = new Date()
+    const nowH = now.getHours()
+    const starts = [nowH]
+    for (const b of blocks) if (b.startHour + b.durationHours > nowH) starts.push(b.startHour)
+    for (const e of todayEvents) {
+      if (!e.start?.dateTime) continue
+      const s   = new Date(e.start.dateTime)
+      const end = e.end?.dateTime ? new Date(e.end.dateTime) : new Date(s.getTime() + 3600000)
+      if (end.getTime() > now.getTime()) starts.push(s.getHours())
+    }
+    el.scrollTop = Math.min(...starts) * HOUR_PX
+    autoTop.current = el.scrollTop   // what the browser could actually reach
+  }, [blocks, todayEvents])
+  const onTimelineScroll = () => {
+    const el = timelineRef.current
+    if (el && autoTop.current !== null && Math.abs(el.scrollTop - autoTop.current) > 2) userMoved.current = true
+  }
+
   const today = new Date()
   const todayStr = todayDateStr()
 
@@ -793,7 +821,7 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
                     {blocks.length > 0 ? 'Regenerate Plan' : 'Generate Plan'}
                   </button>
                 </div>
-                <div ref={timelineRef} style={{ flex: 1, overflowY: 'auto', background: 'var(--sb-header)' }}>
+                <div ref={timelineRef} onScroll={onTimelineScroll} style={{ flex: 1, overflowY: 'auto', background: 'var(--sb-header)' }}>
                   {HOURS.map(hour => {
                     const block   = blocks.find(b => b.startHour === hour)
                     const task    = block ? tasks.find(t => t.id === block.taskId) : undefined

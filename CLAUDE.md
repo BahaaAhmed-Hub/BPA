@@ -803,6 +803,13 @@ Time of Day → Find Health Samples → Get Contents of URL).
 task: one makes a thing to do, the other decides when. `showPlanner` was
 initialised false and set true nowhere, so the whole planner was unreachable.
 It closes on Escape — worth having, and unnoticed while nothing could open it.
+**The grid opens at the earliest thing still on it** — a planned block or an
+event that has not ended — or at the current hour when there is none. It used
+to open at 12 AM with the whole morning empty above the fold and scrolled only
+after Generate Plan. `autoTop`/`userMoved` in `SmartDayPlanner`: the auto
+scroll re-runs as blocks and events land, and stops for good the moment the
+person scrolls it themselves. Checked with the page clock fixed at 10:20 —
+nothing → 10 AM, a meeting running since 9 → 9 AM, a meeting at 2 PM → 10 AM.
 
 ## Tasks — a date decides the quadrant
 A task with a `dueDate` and no quadrant goes into **schedule** — deciding when to do
