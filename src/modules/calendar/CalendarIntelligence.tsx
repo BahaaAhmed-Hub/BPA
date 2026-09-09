@@ -32,6 +32,7 @@ import {
   lookUpEvent,
   efLookUpEvent,
 } from '@/lib/googleCalendar'
+import { uploadToDrive } from '@/lib/googleDrive'
 import type { GCalEvent, GCalCalendar, GCalEventCreate } from '@/lib/googleCalendar'
 import { getGoogleToken, seedToken, getGoogleTokenViaSupabaseRefresh } from '@/lib/tokenManager'
 import { loadEventStatuses, saveEventStatuses } from '@/lib/eventStatus'
@@ -86,6 +87,8 @@ interface NewEventData {
   visibility?:  'default' | 'private' | 'public'
   /** Marked done or cancelled from the composer, before it is even saved. */
   status?:      EventStatus
+  /** Drive files uploaded while composing. */
+  attachments?: { fileUrl: string; fileId?: string; title?: string; mimeType?: string }[]
 }
 
 interface CalWithAccount extends GCalCalendar {
@@ -1632,6 +1635,13 @@ export function CalendarIntelligence() {
       : `Copied to ${destCal.summaryOverride ?? destCal.summary}, but the original could not be deleted — it is still on ${srcCal.summaryOverride ?? srcCal.summary}.`
   }
 
+  /** A file for an event goes to the Drive of the account whose calendar it is
+   *  — a connected account's own token when there is one, else yours. */
+  const uploadForCalendar = (file: File, calId: string) => {
+    const cal = allCalendars.find(c => c.id === calId)
+    return uploadToDrive(file, cal?.accountToken || undefined)
+  }
+
   async function handleUpdateEvent(ev: GCalEventExt, patch: Partial<GCalEventCreate>): Promise<GCalEvent | null> {
     const cal = allCalendars.find(c => c.id === ev.calendarId)
     if (!cal || !ev.calendarId) return null
@@ -1976,6 +1986,7 @@ export function CalendarIntelligence() {
       }),
       ...(data.recurrence?.length && { recurrence: data.recurrence }),
       ...(data.visibility && data.visibility !== 'default' && { visibility: data.visibility }),
+      ...(data.attachments?.length && { attachments: data.attachments }),
       ...(data.addMeet && {
         conferenceData: {
           createRequest: {
@@ -2645,7 +2656,11 @@ export function CalendarIntelligence() {
           notes: ev.description ?? '',
           invitees: (ev.attendees ?? []).map(a => ({ email: a.email, optional: a.optional, responseStatus: a.responseStatus })),
           repeat: parseRecurrence(rules),
-          files: (ev.attachments ?? []).map(f => ({ name: f.title ?? 'Attachment', size: 0, kind: 'FILE' })),
+          files: (ev.attachments ?? []).map(f => ({
+            name: f.title ?? 'Attachment', size: 0,
+            kind: ((f.title ?? '').split('.').pop() ?? 'FILE').slice(0, 4).toUpperCase(),
+            fileUrl: f.fileUrl, fileId: f.fileId, mimeType: f.mimeType,
+          })),
           visibility: (ev.visibility as ExistingEvent['visibility']) ?? 'default',
           status: eventStatuses[ev.id] ?? null,
           htmlLink: ev.htmlLink,
@@ -2670,6 +2685,7 @@ export function CalendarIntelligence() {
                 when: `${formatTime(hhmm(new Date(o.start.dateTime!)))} – ${formatTime(hhmm(new Date(o.end.dateTime!)))}`,
               }))}
             onPush={patch => void handleUpdateEvent(ev, patch as Partial<GCalEventCreate>)}
+            uploadFile={uploadForCalendar}
             onDelete={() => void handleDeleteEvent(ev)}
             onMoveCalendar={targetCalId => handleMoveEvent(ev, targetCalId)}
             onSave={() => { /* an event that exists writes as it is edited */ }}
@@ -2740,6 +2756,7 @@ export function CalendarIntelligence() {
           calendars={allCalendars}
           organiser={user?.email}
           onSave={data => void handleCreateEvent(data)}
+          uploadFile={uploadForCalendar}
           onCancel={() => setNewEventDraft(null)}
         />
       )}

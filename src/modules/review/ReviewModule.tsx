@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { CheckSquare, Clock, Users, TrendingUp, ChevronLeft, ChevronRight, CheckCircle2, XCircle, CalendarDays } from 'lucide-react'
 import { useTaskStore } from '@/store/taskStore'
 import type { Task } from '@/types'
@@ -6,6 +6,7 @@ import { isTaskHidden, loadDynamicCompanies } from '@/types'
 import type { GCalEvent } from '@/lib/googleCalendar'
 import { ICON } from '@/lib/type'
 import { alpha } from '@/lib/alpha'
+import { markReviewOpened, loadWeekInsight } from '@/lib/weekReview'
 
 type ExtEvent = GCalEvent & { calendarColor?: string; calendarId?: string }
 
@@ -480,6 +481,11 @@ export function ReviewModule() {
 
   const isCurrentWeek = weekStart === getMondayOf(todayStr())
 
+  // Opening this page is what "Close the week" waits for: the rule writes the
+  // insight itself only when nobody has been here by Sunday evening.
+  useEffect(() => { markReviewOpened() }, [])
+  const insight = loadWeekInsight(weekStart)
+
   return (
     <div>
 
@@ -499,6 +505,15 @@ export function ReviewModule() {
           <StatCard label="Focus Hours" value={focusHours} sub="Click to edit" icon={Clock} color="var(--sb-info)" editable onChange={v => { setFocusHours(v); saveHours(v, meetingHours) }} />
           <StatCard label="Meeting Hours" value={meetingHours} sub="Click to edit" icon={Users} color="var(--sb-info)" editable onChange={v => { setMeetingHours(v); saveHours(focusHours, v) }} />
         </div>
+
+        {insight && (
+          <div style={{ marginBottom: 28, padding: '16px 20px', borderRadius: 'var(--sb-r-card)', background: 'var(--sb-accent-tint)', border: 'var(--sb-border-width) solid var(--sb-accent-border)' }}>
+            <p style={{ margin: '0 0 6px', fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--sb-ink-3)' }}>
+              The week, closed · {new Date(insight.at).toLocaleString('en-GB', { weekday: 'short', hour: '2-digit', minute: '2-digit' })}
+            </p>
+            <p style={{ margin: 0, fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-1)', lineHeight: 1.55, whiteSpace: 'pre-wrap' }}>{insight.text}</p>
+          </div>
+        )}
 
         {/* ─── Panel ──────────────────────────────────────────────────────── */}
         <div style={{ background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-card)', overflow: 'hidden' }}>

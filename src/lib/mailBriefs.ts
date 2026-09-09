@@ -125,6 +125,13 @@ export async function briefsFor(
   }
 }
 
+/** The draft already written for this message, if the cache has one — what the
+ *  Mail module opens with, so a reply drafted by the automation is there. */
+export function cachedDraft(threadId: string, messageId: string): string | null {
+  const c = load()[threadId]
+  return c && c.messageId === messageId && c.draft.trim() ? c.draft : null
+}
+
 /** Overwrite one brief's draft — what the review popup saves when it is edited. */
 export function rememberDraft(threadId: string, draft: string): void {
   const s = load()

@@ -26,6 +26,8 @@ import {
 } from '@/lib/googleCalendar'
 import { getGoogleToken } from '@/lib/tokenManager'
 import { supabase } from '@/lib/supabase'
+import { parseRecurrence, nextOccurrence, describeRecur } from '@/modules/calendar/recurrence'
+import { fromZone, knownZone, wallAsLocal, wallOf } from '@/lib/zones'
 
 export type Rsvp = 'accepted' | 'tentative' | 'declined'
 
@@ -41,6 +43,10 @@ export interface Invite {
   responseStatus?: string
   /** A cancellation is not something to RSVP to. */
   cancelled: boolean
+  /** A series: how it repeats, in words, and when it began. `startsAt` is then
+   *  the next occurrence still to come, not the first one ever. */
+  repeats?: string
+  seriesStartsAt?: string
 }
 
 // ─── Reading the ICS ─────────────────────────────────────────────────────────
@@ -100,33 +106,6 @@ function propLine(ics: string, name: string): { value: string; params: string } 
 function param(params: string, key: string): string {
   const m = new RegExp(`;${key}=([^;:]*)`, 'i').exec(params)
   return m ? m[1].trim().replace(/^"|"$/g, '') : ''
-}
-
-/**
- * How far a zone is from UTC at a given instant, by asking Intl what the clock
- * there reads. The zone's own rules — including whether summer time is on that
- * day — come from the browser's tz database rather than from the VTIMEZONE.
- */
-function zoneOffset(at: number, tz: string): number {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: tz, hour12: false,
-    year: 'numeric', month: '2-digit', day: '2-digit',
-    hour: '2-digit', minute: '2-digit', second: '2-digit',
-  }).formatToParts(new Date(at))
-  const p: Record<string, string> = {}
-  for (const part of parts) p[part.type] = part.value
-  // Some ICU builds write midnight as hour 24 under hour12:false.
-  return Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour % 24, +p.minute, +p.second) - at
-}
-
-/** The instant a wall-clock reading in `tz` corresponds to. */
-function fromZone(y: number, mo: number, d: number, h: number, mi: number, s: number, tz: string): number {
-  const wall = Date.UTC(y, mo - 1, d, h, mi, s)
-  // Guess that the wall clock is UTC, measure how far that lands from the zone,
-  // and correct. The second pass settles the hour a clock change falls in.
-  let t = wall - zoneOffset(wall, tz)
-  t = wall - zoneOffset(t, tz)
-  return t
 }
 
 /**
@@ -194,7 +173,7 @@ export function looksLikeInvitation(subject: string): boolean {
  * Split out from `readInvite` so the parsing can be tested on its own: the
  * caller's half is Gmail plumbing, and this half is the half that was wrong.
  */
-export function parseIcs(ics: string): Invite | null {
+export function parseIcs(ics: string, now = new Date()): Invite | null {
   const body = unfold(ics)
   const ev = veventOf(body)
   if (!ev) return null
@@ -203,11 +182,47 @@ export function parseIcs(ics: string): Invite | null {
   const start = propLine(ev, 'DTSTART')
   const end = propLine(ev, 'DTEND')
   const summary = prop(ev, 'SUMMARY') || '(no title)'
+  let startsAt = icsDate(start.value, param(start.params, 'TZID'))
+  let endsAt = icsDate(end.value, param(end.params, 'TZID'))
+
+  // A series carries the DTSTART of its first occurrence — a weekly meeting
+  // that began in March read as a meeting in March. The rule says where the
+  // rest fall, so the row shows the next one still to come and says how often.
+  const rule = parseRecurrence(ev.split(/\r?\n/).filter(l => /^RRULE/i.test(l)))
+  let repeats: string | undefined
+  let seriesStartsAt: string | undefined
+  if (rule && startsAt) {
+    const allDay = !startsAt.includes('T')
+    const first = allDay ? new Date(`${startsAt}T00:00:00`) : new Date(startsAt)
+    const duration = endsAt
+      ? Math.max(0, (allDay ? new Date(`${endsAt}T00:00:00`) : new Date(endsAt)).getTime() - first.getTime())
+      : 0
+    // The rule is walked on the clock the series was written against — its
+    // TZID, UTC for a `Z` time, the reader's for a floating one — so a Cairo
+    // Tuesday stays a Tuesday when read in Tokyo, and summer time moves the
+    // instant rather than the hour.
+    const tzid = param(start.params, 'TZID')
+    const zone = allDay ? undefined : /Z$/i.test(start.value) ? 'UTC' : (tzid && knownZone(tzid) ? tzid : undefined)
+    const next = nextOccurrence(first, rule, now, duration, zone)
+    repeats = describeRecur(rule, wallAsLocal(wallOf(first.getTime(), zone))) ?? undefined
+    seriesStartsAt = startsAt
+    if (next) {
+      const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+      startsAt = allDay ? ymd(next) : next.toISOString()
+      endsAt = endsAt
+        ? (allDay ? ymd(new Date(next.getTime() + duration)) : new Date(next.getTime() + duration).toISOString())
+        : endsAt
+    }
+    // No `next` means the series has run its course: the first occurrence
+    // stays on the row, and the words say it repeated.
+  }
+
   return {
     uid,
     summary,
-    startsAt: icsDate(start.value, param(start.params, 'TZID')),
-    endsAt: icsDate(end.value, param(end.params, 'TZID')),
+    startsAt,
+    endsAt,
+    ...(repeats ? { repeats, seriesStartsAt } : {}),
     organizer: prop(ev, 'ORGANIZER').replace(/^mailto:/i, ''),
     // Three ways a meeting says it is off, and the third is the one people
     // actually use: renaming it to "[Cancelled] …" and sending an update.

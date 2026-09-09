@@ -66,7 +66,7 @@ export function suggestPlacement(task: Task): Suggestion {
 }
 
 /** Which board column the same fields imply. */
-function suggestColumn(task: Task): string {
+export function suggestColumn(task: Task): string {
   if (task.completed) return 'done'
   if (!task.dueDate) return task.priority === 'P0' ? 'decide' : 'later'
   const d = daysUntil(task.dueDate)

@@ -1,3 +1,5 @@
+import { wallOf, instantOf } from '@/lib/zones'
+
 // ─── Repeats ─────────────────────────────────────────────────────────────────
 // The panel could say "Every Wednesday" and nothing else: reading an RRULE was
 // all this app could do with one. Writing one is the other half, and the shape
@@ -240,4 +242,123 @@ export function summarise(r: Recur | null, start: Date): string {
   const said = describeRecur(r, start)
   if (!said) return 'Event will occur once.'
   return `Event will occur ${said.charAt(0).toLowerCase()}${said.slice(1)}.`
+}
+
+// ─── Walking a series ────────────────────────────────────────────────────────
+//
+// An invitation to a series carries the DTSTART of its *first* occurrence, so
+// a weekly meeting that began in March read as a meeting in March. The rule
+// says where the rest fall; this walks it. The walk happens on a **wall
+// clock** — a Date whose UTC fields carry the reading, see `lib/zones.ts` — so
+// there is no DST in the calendar arithmetic, and each occurrence is turned
+// back into an instant in the zone the series was written against.
+
+function onClock(clock: Date, y: number, m: number, d: number): Date {
+  return new Date(Date.UTC(y, m, d, clock.getUTCHours(), clock.getUTCMinutes(), clock.getUTCSeconds()))
+}
+
+function daysIn(y: number, m: number): number {
+  return new Date(Date.UTC(y, m + 1, 0)).getUTCDate()
+}
+
+/** The `pos`-th (1..5, or -1 for last) weekday `day` of a month, or null. */
+function nthWeekday(y: number, m: number, day: number, pos: number, clock: Date): Date | null {
+  if (pos > 0) {
+    const first = new Date(Date.UTC(y, m, 1)).getUTCDay()
+    const date = 1 + ((day - first + 7) % 7) + (pos - 1) * 7
+    if (date > daysIn(y, m)) return null
+    return onClock(clock, y, m, date)
+  }
+  const last = new Date(Date.UTC(y, m + 1, 0))
+  return onClock(clock, y, m, last.getUTCDate() - ((last.getUTCDay() - day + 7) % 7))
+}
+
+/**
+ * Every occurrence of a series as wall clocks, in order, starting with `start`
+ * itself (a wall clock too). Stops at UNTIL or COUNT, or after `cap` for a rule
+ * that never ends.
+ */
+export function* occurrences(start: Date, r: Recur, cap = 1000): Generator<Date> {
+  let untilMs = Infinity
+  if (r.until) {
+    const [uy, um, ud] = r.until.split('-').map(Number)
+    untilMs = Date.UTC(uy, um - 1, ud, 23, 59, 59, 999)
+  }
+  let given = 0
+  const step = Math.max(1, r.interval)
+  // True when the walk is over.
+  const emit = function* (d: Date): Generator<Date, boolean> {
+    if (d.getTime() < start.getTime()) return false
+    if (d.getTime() > untilMs) return true
+    if ((r.count && given >= r.count) || given >= cap) return true
+    given++
+    yield d
+    return false
+  }
+  const y0 = start.getUTCFullYear(), m0 = start.getUTCMonth(), d0 = start.getUTCDate()
+
+  if (r.freq === 'DAILY') {
+    for (let k = 0; ; k += step) if (yield* emit(onClock(start, y0, m0, d0 + k))) return
+  }
+
+  if (r.freq === 'WEEKLY') {
+    const days = (r.byDay?.length ? r.byDay.map(d => RRULE_DAYS.indexOf(d)) : [start.getUTCDay()]).sort((a, b) => a - b)
+    // The week the series starts in, anchored on its Sunday.
+    const sunday = d0 - start.getUTCDay()
+    for (let w = 0; ; w += step) {
+      for (const day of days) if (yield* emit(onClock(start, y0, m0, sunday + w * 7 + day))) return
+    }
+  }
+
+  if (r.freq === 'MONTHLY') {
+    for (let k = 0; k <= 12 * 200; k += step) {
+      const m = m0 + k
+      const cands: Date[] = []
+      if (r.setPos !== undefined && r.byDay?.length) {
+        for (const d of r.byDay) {
+          const c = nthWeekday(y0, m, RRULE_DAYS.indexOf(d), r.setPos, start)
+          if (c) cands.push(c)
+        }
+      } else if (r.monthDays?.length) {
+        for (const md of r.monthDays) if (md >= 1 && md <= daysIn(y0, m)) cands.push(onClock(start, y0, m, md))
+      } else if (d0 <= daysIn(y0, m)) {
+        cands.push(onClock(start, y0, m, d0))
+      }
+      for (const d of cands.sort((a, b) => a.getTime() - b.getTime())) if (yield* emit(d)) return
+    }
+  }
+
+  if (r.freq === 'YEARLY') {
+    const months = (r.byMonth?.length ? r.byMonth.map(m => m - 1) : [m0]).sort((a, b) => a - b)
+    for (let k = 0; k <= 500; k += step) {
+      const y = y0 + k
+      const cands: Date[] = []
+      for (const m of months) {
+        if (r.setPos !== undefined && r.byDay?.length) {
+          for (const d of r.byDay) {
+            const c = nthWeekday(y, m, RRULE_DAYS.indexOf(d), r.setPos, start)
+            if (c) cands.push(c)
+          }
+        } else if (d0 <= daysIn(y, m)) {
+          cands.push(onClock(start, y, m, d0))
+        }
+      }
+      for (const d of cands.sort((a, b) => a.getTime() - b.getTime())) if (yield* emit(d)) return
+    }
+  }
+}
+
+/**
+ * The first occurrence that has not yet ended at `now` — `durationMs` is what
+ * makes a meeting running right now still count. `zone` is the clock the series
+ * was written against (its TZID, `'UTC'`, or none for the reader's own). Null
+ * once the series is over.
+ */
+export function nextOccurrence(start: Date, r: Recur | null, now: Date, durationMs = 0, zone?: string): Date | null {
+  if (!r) return start.getTime() + durationMs > now.getTime() ? start : null
+  for (const wall of occurrences(wallOf(start.getTime(), zone), r)) {
+    const at = instantOf(wall, zone)
+    if (at + durationMs > now.getTime()) return new Date(at)
+  }
+  return null
 }

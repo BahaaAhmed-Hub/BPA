@@ -195,9 +195,16 @@ work is editing rather than filling.
   pill), or Never — `Recur.count` → `COUNT=` in `recurrence.ts`, which `UNTIL`
   excludes. Attendees can be made **optional** (Google's own `optional` flag).
   Completed / Cancelled in the header set the status the moment the event has an id.
-- **Attachments cannot upload**: `GCalEventCreate` has no attachment field and the
-  build asks for no Drive scope. The card takes drops into local state and the
-  Upload pill says so.
+- **Attachments upload.** A calendar attachment is a Drive file and nothing else,
+  so a drop or the Upload pill goes through `uploadToDrive()` (`googleDrive.ts`,
+  multipart, `drive.file` scope — the narrowest that lets a file in) and the
+  event's `attachments` then points at it. Every calendar write sends
+  `supportsAttachments=true` — the primary paths, the token paths, and the
+  edge function — because without it Google drops the field silently. In edit
+  mode each upload or removal pushes the whole list; composing carries them on
+  Create. A token minted before the scope was asked for gets a 403 and the row
+  says to sign in again. Sharing the file with guests is Drive's decision, and
+  Google Calendar asks about it itself.
 
 ## Calendar — dragging an event
 `CalendarIntelligence.tsx` moves events with dnd-kit and a `DragOverlay`. The
@@ -411,14 +418,16 @@ an overspend cannot run past its own pill. The title says which limit it used.
   a row — same pointer-event drag as the Financials table. `goalPlanning.ts` keeps
   the three locally until the migration runs; the server's value wins.
 
-## Finance — Bills is gone
+## Finance — Bills is gone, table and all
 There were two places to write down a recurring payment and only one of them
 did anything. A budget rule with a `dueDay` says what leaves and when **and**
 puts the unpaid entry in the ledger, where every balance, envelope and feed
 already knows what to do with it; the Bills screen kept its own list that
-nothing else read. Tab, screen and modal removed. The `finance_bills` rows and
-the store's CRUD are untouched — the data is still there if the screen is ever
-wanted back.
+nothing else read. Tab, screen, modal, the `Bill` type, the store's CRUD, the
+`financeDb` helpers and the `liveSync` table entry are all gone, and
+`20260013_drop_finance_bills.sql` drops the table (out of the Realtime
+publication first). Anything still in it is folded into budget rules by hand
+before running it — the drop is not undoable.
 
 ## Finance — a budget with a day writes the entry
 `budgetEntries.ts`. `BudgetRule.dueDay` + `dueAccountId` (the **Paid on** row) means
@@ -702,6 +711,18 @@ drafted reply, and the draft is suppressed for it.
   apart from "we could not look" — they point at different fixes. When Google
   genuinely has not filed it, that is the "Add invitations to my calendar"
   setting, and the row says so rather than sending you nowhere.
+- **A series shows its next occurrence, not its first.** The DTSTART of an
+  invitation to a weekly meeting is the day the series began, so "Bugs Review"
+  read as a meeting in March. `parseIcs` reads the VEVENT's RRULE
+  (`parseRecurrence`) and `nextOccurrence()` in `recurrence.ts` walks it — the
+  first occurrence that has not *ended* at `now`, so one in progress still
+  counts — and the row says "next Tue 15 Sept, 17:00 · every Tuesday", with
+  the series start in the tooltip. A series that has run out keeps its first
+  date and still says it repeated. The walk happens on the **event's own
+  clock** (`lib/zones.ts`: a wall clock is a Date whose UTC fields carry the
+  reading; TZID, `UTC` for a `Z` time, the reader's for floating), so a Cairo
+  Tuesday is a Tuesday read in Tokyo and summer time moves the instant rather
+  than the hour. `recur.mjs` runs the cases in four zones.
 - An invitation always counts as **to book** in the header, whatever the model
   made of the wording.
 
@@ -789,7 +810,45 @@ Time of Day → Find Health Samples → Get Contents of URL).
 | 11G Finance settings | ✅ Done | FinanceSection with envelope/figures/dates fields |
 | 20E Envelope drill-down | ✅ Done | 520px right overlay, period selector, tx flags |
 
-## Automation Rules (11F — stored in localStorage `professor-automation-rules`)
+## Automation — the seven rules have an engine
+`lib/automation.ts`. `startAutomation()` (App, while signed in) ticks once a
+minute, on wake, and five seconds after mount; `runAutomation({ force })` is one
+pass and the **Run now** button in Settings. Each rule keeps its last run in
+`professor-automation-last` so a daily rule fires once after its time, not on
+every tick; a pass that did nothing writes nothing. `professor-automation-log`
+(200 entries, `professor:automationRan` event) is the footer in Settings — what
+ran, not a number somebody typed — and failures are in it as failures ("no AI
+key"). Nothing here sends, deletes or moves money.
+- **Write the morning brief** (06:40) — `writeMorningPlan()` in
+  `morning/dayPlan.ts`, the plan builders moved out of `MorningBrief` so a plan
+  can exist before the page is opened. Skips when today's is cached.
+- **Draft replies** (every 30 min) — unread, addressed to you, not bulk, not an
+  invitation, older than 4h, no draft yet → one `briefsFor` call (max 8). Drafts
+  land in `today-mail-briefs`; Today reads it already, and Mail seeds its reply
+  box from `cachedDraft(threadId, messageId)` on load.
+- **Block focus for P0** (09:00) — a P0 that is placed, open and *undated* (or
+  past) is dated today; `useTaskCalendarPush` then makes the block, as for any
+  dated task. Dated ones the hook already handles.
+- **Distribute the dump** (checked every 5 min) — over 12 → `suggestPlacement`
+  / `suggestColumn` for each, one undo entry.
+- **Roll forward** (00:05) — placed, open, due before today → due today. The
+  calendar block stays where it was: moving an event unasked at midnight is not
+  a thing to do.
+- **Archive newsletters** (every 6h) — `in:inbox older_than:3d`, not starred,
+  no message from you in the thread, `classifyMail` says newsletter → one
+  `batchModify` per mailbox removing INBOX. Still in All Mail.
+- **Close the week** (Sunday 20:00) — unless `wasReviewOpened()` for this week
+  (`lib/weekReview.ts`; the Weekly Review page marks it on mount) → tasks
+  shipped and slipped, the hours from the review page, habits from the logs →
+  `weeklyInsight()` → `professor-week-insight-<monday>`, shown at the top of
+  Weekly Review, and one `notify`.
+There is no "New rule": a rule is a switch on an engine, and a switch with
+nothing behind it is what the section used to be. Verified with the page clock
+at 09:30 on a Wednesday: 13 in the dump distributed, an undated P0 dated and
+its block created, yesterday's task rolled, the brief's failure named, the mail
+rules quiet on an empty inbox, close-week untouched.
+
+The rules (`professor-automation-rules`, a prefSync key):
 1. Write the morning brief · WHEN every day at 06:40, before you wake
 2. Draft replies for NEEDS YOU mail · WHEN a thread is marked needs-you and sits over 4 hours
 3. Block focus time for P0 tasks · WHEN a P0 task has no calendar block by 09:00
@@ -830,10 +889,9 @@ built on sample data:
 - **Settings → Integrations** — Notion/Asana/Trello/Apple Notes accounts are
   illustrative and the switches reach nothing. Google, in the same section, is
   real and is *not* marked.
-- **Settings → Automation** — the rules are saved and synced; nothing reads them
-  back. The copy used to claim they run in the background.
 - **Finance → Plan** — `DEMO_TARGETS` / `DEMO_PLAN`, not your ledger.
-Everything else in all seven modules has a live handler.
+Everything else in all seven modules has a live handler. Settings → Automation
+used to be on this list; it has an engine now (below).
 
 ## Common Patterns
 ```tsx

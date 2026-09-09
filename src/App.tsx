@@ -30,6 +30,7 @@ import { startPrefSync } from './lib/prefSync'
 import { startLiveSync } from './lib/liveSync'
 import { useFinanceStore } from './modules/finance/financeStore'
 import { runReminders } from './modules/finance/reminders'
+import { startAutomation } from './lib/automation'
 import { runBudgetEntries } from './modules/finance/budgetEntries'
 import { loadRules } from './modules/finance/modals/BudgetRuleModal'
 import { SyncGapBanner } from './modules/shell/SyncGapBanner'
@@ -1059,6 +1060,9 @@ function App() {
   // A dated task belongs on the calendar wherever it was given its date — the
   // Today screen, the palette, the planner — not only while the board is open.
   useTaskCalendarPush()
+  // The seven rules in Settings → Automation run from here — a minute tick,
+  // while signed in; the stop function goes with the session.
+  useEffect(() => (user ? startAutomation() : undefined), [user])
 
   const [searchOpen, setSearchOpen] = useState(false)
 

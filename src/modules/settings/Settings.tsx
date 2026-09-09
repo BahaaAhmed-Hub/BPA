@@ -34,6 +34,7 @@ import {
 } from '@/modules/finance/lock'
 import { LockGate } from '@/modules/finance/FinanceLockScreen'
 import { NotYet, Soon } from '@/components/ComingSoon'
+import { loadAutomationRules, saveAutomationRules, loadRunLog, runAutomation, AUTOMATION_EVENT, type AutomationRule, type RunEntry } from '@/lib/automation'
 import { connectAdditionalGoogleAccount, signOut as googleSignOut, disconnectGoogleAccount } from '@/lib/google'
 import { useUIStore } from '@/store/uiStore'
 import { useAuthStore } from '@/store/authStore'
@@ -3619,49 +3620,54 @@ function SyncRulesSection() {
 }
 
 // ─── Automation Section (11F) ─────────────────────────────────────────────────
-
-interface AutomationRule {
-  id: string
-  action: string
-  trigger: string
-  enabled: boolean
-}
-
-const DEFAULT_AUTOMATION_RULES: AutomationRule[] = [
-  { id: 'morning-brief',    action: 'Write the morning brief',             trigger: 'every day at 06:40, before you wake',                        enabled: true  },
-  { id: 'draft-replies',    action: 'Draft replies for NEEDS YOU mail',    trigger: 'a thread is marked needs-you and sits over 4 hours',          enabled: true  },
-  { id: 'block-focus',      action: 'Block focus time for P0 tasks',       trigger: 'a P0 task has no calendar block by 09:00',                    enabled: true  },
-  { id: 'distribute-dump',  action: 'Distribute the dump',                 trigger: 'the brain dump passes 12 tasks',                             enabled: false },
-  { id: 'roll-forward',     action: 'Roll unfinished tasks forward',        trigger: 'a scheduled task ends the day untouched',                    enabled: true  },
-  { id: 'archive-news',     action: 'Archive newsletters',                  trigger: 'a thread is promotional and nobody replied in 3 days',       enabled: true  },
-  { id: 'close-week',       action: 'Close the week',                       trigger: 'Sunday 20:00, if the review has not been opened',            enabled: false },
-]
+// The switches are read by `lib/automation.ts`, which ticks once a minute while
+// you are signed in; the footer is its run log, live. There is no "New rule":
+// a rule is a switch on an engine, and a switch with nothing behind it is what
+// this section used to be.
 
 function AutomationSection() {
-  const [rules, setRules] = useState<AutomationRule[]>(() => {
-    try {
-      const saved = localStorage.getItem('professor-automation-rules')
-      return saved ? JSON.parse(saved) : DEFAULT_AUTOMATION_RULES
-    } catch { return DEFAULT_AUTOMATION_RULES }
-  })
+  const [rules, setRules] = useState<AutomationRule[]>(loadAutomationRules)
+  const [runs, setRuns] = useState<RunEntry[]>(loadRunLog)
+  const [logOpen, setLogOpen] = useState(false)
+  const [busy, setBusy] = useState(false)
+
+  useEffect(() => {
+    const refresh = () => setRuns(loadRunLog())
+    window.addEventListener(AUTOMATION_EVENT, refresh)
+    return () => window.removeEventListener(AUTOMATION_EVENT, refresh)
+  }, [])
 
   function toggle(id: string) {
     const next = rules.map(r => r.id === id ? { ...r, enabled: !r.enabled } : r)
     setRules(next)
-    try { localStorage.setItem('professor-automation-rules', JSON.stringify(next)) } catch { /**/ }
+    saveAutomationRules(next)
   }
+
+  async function runNow() {
+    setBusy(true)
+    try { await runAutomation({ force: true }) } finally { setBusy(false); setRuns(loadRunLog()) }
+  }
+
+  const today = new Date().toDateString()
+  const todays = runs.filter(r => new Date(r.at).toDateString() === today)
+  const actions = todays.reduce((n, r) => n + r.count, 0)
+  const ruleName = (id: string) => rules.find(r => r.id === id)?.action ?? id
 
   return (
     <div>
-      {/* These are written down and they follow you between devices; nothing
-          reads them back and acts yet. The old copy said they run in the
-          background, which is the one thing they do not do. */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '0 0 16px' }}>
         <p style={{ margin: 0, flex: 1, fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)', lineHeight: 1.5 }}>
-          What Professor will run for you, once each rule has an engine behind it. Set them up now —
-          the choices are saved and follow you between devices.
+          What Professor runs for you while the app is open, checked once a minute. Nothing here sends,
+          deletes or moves money — every action is one you could take back.
         </p>
-        <Soon />
+        <button onClick={() => void runNow()} disabled={busy} style={{
+          display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 'var(--sb-r-chip)',
+          background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)',
+          fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: 'var(--sb-ink-2)', cursor: busy ? 'wait' : 'pointer', flexShrink: 0,
+        }} title="Run every rule that is on, now, whatever the clock says">
+          <RefreshCw size={ICON.sm} style={{ animation: busy ? 'spin 1s linear infinite' : 'none' }} />
+          {busy ? 'Running…' : 'Run now'}
+        </button>
       </div>
       <div style={{ columns: 2, columnGap: 12 }}>
         {rules.map(rule => (
@@ -3686,20 +3692,34 @@ function AutomationSection() {
           </div>
         ))}
       </div>
-      <button style={{
-        marginTop: 14, display: 'flex', alignItems: 'center', gap: 6,
-        padding: '8px 14px', borderRadius: 'var(--sb-r-sm)', background: 'var(--sb-card)',
-        border: 'var(--sb-border-width) solid var(--sb-border)', fontSize: 'var(--sb-t-body-s)', fontWeight: 500,
-        color: 'var(--sb-ink-3)', cursor: 'pointer',
-      }}>
-        <Plus size={ICON.sm} /> New rule
-      </button>
 
-      {/* Run log footer */}
+      {/* Run log footer — what actually ran, not a number somebody typed. */}
       <p style={{ margin: '14px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', lineHeight: 1.5 }}>
-        Five rules ran yesterday · 41 actions taken, 2 reverted by you &nbsp;
-        <button style={{ background: 'none', border: 'none', color: 'var(--sb-positive)', fontSize: 'var(--sb-t-meta)', cursor: 'pointer', fontWeight: 600, padding: 0 }}>Run log</button>
+        {todays.length === 0
+          ? (runs.length === 0 ? 'Nothing has run yet.' : 'Nothing has run today.')
+          : `${todays.length} ${todays.length === 1 ? 'run' : 'runs'} today · ${actions} ${actions === 1 ? 'action' : 'actions'} taken`}
+        &nbsp;
+        {runs.length > 0 && (
+          <button onClick={() => setLogOpen(o => !o)} style={{ background: 'none', border: 'none', color: 'var(--sb-positive)', fontSize: 'var(--sb-t-meta)', cursor: 'pointer', fontWeight: 600, padding: 0 }}>
+            {logOpen ? 'Hide log' : 'Run log'}
+          </button>
+        )}
       </p>
+      {logOpen && (
+        <div style={{ marginTop: 8, borderRadius: 'var(--sb-r-nav)', border: 'var(--sb-border-width) solid var(--sb-border)', background: 'var(--sb-field)', maxHeight: 260, overflowY: 'auto' }}>
+          {runs.slice(0, 40).map((r, i) => (
+            <div key={`${r.at}-${i}`} style={{ display: 'flex', gap: 10, padding: '8px 12px', borderBottom: 'var(--sb-border-width) solid var(--sb-hairline)', alignItems: 'baseline' }}>
+              <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', fontVariantNumeric: 'tabular-nums', flexShrink: 0, width: 92 }}>
+                {new Date(r.at).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+              </span>
+              <span style={{ minWidth: 0, flex: 1 }}>
+                <span style={{ display: 'block', fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: r.ok ? 'var(--sb-ink-1)' : 'var(--sb-negative)' }}>{ruleName(r.ruleId)}</span>
+                <span style={{ display: 'block', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)' }}>{r.text}</span>
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { pushUndo } from '@/lib/undo'
 import { persist } from 'zustand/middleware'
 import { supabase } from '@/lib/supabase'
-import type { Account, Category, Transaction, Bill, Goal, Budget } from './types'
+import type { Account, Category, Transaction, Goal, Budget } from './types'
 import { rememberLimit, withLocalLimits } from './creditLimits'
 import { rememberTarget, forgetTarget, withLocalTargets } from './transferTargets'
 import { rememberGoalPlanning, forgetGoalPlanning, withLocalPlanning } from './goalPlanning'
@@ -15,11 +15,10 @@ import {
   loadPlans, savePlan,
   loadActualsOverride, saveActualOverride, deleteActualOverride,
   loadCellComments, saveCellComment, deleteCellComment,
-  loadBills, saveBill, deleteBill as dbDeleteBill,
   loadGoals, saveGoal, deleteGoal as dbDeleteGoal,
   loadBudgets, saveBudget, deleteBudget as dbDeleteBudget,
   type PlanRow, type OverrideRow, type CommentRow,
-  type BillRow, type GoalRow, type BudgetRow,
+  type GoalRow, type BudgetRow,
 } from './financeDb'
 
 type FinanceScreen = 'today' | 'balance' | 'budget' | 'reports' | 'reflect'
@@ -30,7 +29,6 @@ interface FinanceState {
   accounts: Account[]
   categories: Category[]
   transactions: Transaction[]
-  bills: Bill[]
   goals: Goal[]
   budgets: Budget[]
   plans: PlanRow[]
@@ -64,10 +62,6 @@ interface FinanceState {
    *  paid, in every year, and say how many that was. Asked for, never
    *  automatic. */
   markAllPaidOnDueDate: () => Promise<number>
-
-  // Bills CRUD
-  upsertBill: (b: Bill) => Promise<void>
-  removeBill: (id: string) => Promise<void>
 
   // Goals CRUD
   upsertGoal: (g: Goal) => Promise<void>
@@ -112,13 +106,6 @@ const txToRow = (tx: Transaction, userId: string) => ({
   created_at: tx.createdAt,
 })
 
-const billToRow = (b: Bill, userId: string): BillRow => ({
-  id: b.id, user_id: userId, name: b.name, amount: b.amount,
-  currency: b.currency, category_id: b.categoryId ?? null,
-  account_id: b.accountId ?? null, frequency: b.frequency,
-  next_due: b.nextDue, is_active: b.isActive, is_income: b.isIncome, icon: b.icon,
-})
-
 const goalToRow = (g: Goal, userId: string): GoalRow => ({
   id: g.id, user_id: userId, name: g.name, icon: g.icon,
   target_amount: g.targetAmount, current_amount: g.currentAmount,
@@ -132,7 +119,7 @@ const budgetToRow = (b: Budget, userId: string): BudgetRow => ({
   start_date: b.startDate, end_date: b.endDate ?? null, rollover: b.rollover,
 })
 
-/** Bills and goals were local-only for as long as they have existed, so the
+/** Goals and budgets were local-only for as long as they have existed, so the
  *  first load after they became real finds empty tables and a device full of
  *  them. Reading that as "you have none" would delete the lot. Until the local
  *  set is known to be on the server, an empty table means "not yet", not
@@ -148,15 +135,6 @@ const SEEDED_KEY = 'professor-finance-seeded'
 function markSeeded(): void {
   try { localStorage.setItem(SEEDED_KEY, '1') } catch { /* quota */ }
 }
-
-const billFromRow = (r: BillRow): Bill => ({
-  id: r.id, name: r.name, amount: r.amount,
-  currency: r.currency as Bill['currency'],
-  categoryId: r.category_id ?? undefined,
-  accountId:  r.account_id ?? undefined,
-  frequency: r.frequency as Bill['frequency'],
-  nextDue: r.next_due, isActive: r.is_active, icon: r.icon, isIncome: r.is_income,
-})
 
 const goalFromRow = (r: GoalRow): Goal => ({
   id: r.id, name: r.name, icon: r.icon,
@@ -186,7 +164,6 @@ export const useFinanceStore = create<FinanceState>()(
       accounts: [],
       categories: [],
       transactions: [],
-      bills: [],
       goals: [],
       budgets: [],
       plans: [],
@@ -207,7 +184,7 @@ export const useFinanceStore = create<FinanceState>()(
         try {
           const year = get().currentYear
           const [accounts, categories, transactions, plans, overrides, comments,
-                 bills, goals, budgets] = await Promise.all([
+                 goals, budgets] = await Promise.all([
             loadAccounts().catch(() => [] as Awaited<ReturnType<typeof loadAccounts>>),
             loadCategories().catch(() => [] as Awaited<ReturnType<typeof loadCategories>>),
             loadTransactions(year).catch(() => [] as Awaited<ReturnType<typeof loadTransactions>>),
@@ -217,7 +194,6 @@ export const useFinanceStore = create<FinanceState>()(
             // null from any of these means the read failed — finance_budgets
             // does not exist until 20260005 runs — and the store keeps what
             // this device has rather than reading it as "you have none".
-            loadBills().catch(() => null),
             loadGoals().catch(() => null),
             loadBudgets().catch(() => null),
           ])
@@ -333,8 +309,6 @@ export const useFinanceStore = create<FinanceState>()(
             plans,
             overrides,
             comments,
-            bills:   adopt(bills,   billFromRow,   prev.bills,
-                           b => saveBill(billToRow(b, userId!))),
             goals:   withLocalPlanning(adopt(goals, goalFromRow, prev.goals,
                            g => saveGoal(goalToRow(g, userId!)))),
             // finance_budgets only exists from 20260005. Until the migration
@@ -505,24 +479,6 @@ export const useFinanceStore = create<FinanceState>()(
         forgetTarget(id)
         set(s => ({ transactions: s.transactions.filter(x => x.id !== id) }))
         dbDeleteTransaction(id).catch(console.warn)
-      },
-
-      // ─── Bills CRUD ─────────────────────────────────────────────────────────
-
-      upsertBill: async (b: Bill) => {
-        set(s => ({
-          bills: s.bills.some(x => x.id === b.id)
-            ? s.bills.map(x => x.id === b.id ? b : x)
-            : [...s.bills, b],
-        }))
-        const userId = await getUserId()
-        if (!userId) return
-        saveBill(billToRow(b, userId)).catch(console.warn)
-      },
-
-      removeBill: async (id: string) => {
-        set(s => ({ bills: s.bills.filter(x => x.id !== id) }))
-        dbDeleteBill(id).catch(console.warn)
       },
 
       // ─── Goals CRUD ─────────────────────────────────────────────────────────

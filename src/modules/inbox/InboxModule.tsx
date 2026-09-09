@@ -15,6 +15,7 @@ import type { EmailTriage, EmailData } from '@/lib/professor'
 import { classifyMail, unsubscribeLink, CLASSES, CLASS_INFO, countByClass, type MailClass } from '@/lib/mailClasses'
 import { looksLikeInvitation } from '@/lib/invitations'
 import { listUnreadThreadIds, getThread, getMessage, loadInlineImages, applyInlineImages, tidyDataUris, extractBody, extractHtmlBody, header, markAsRead, markAsUnread, archiveMessage, unarchiveMessage, trashMessage, untrashMessage, listLabels, batchModify, sendReply, escapeHtml, FOLDER_QUERY, FOLDER_LABEL, FOLDER_SHOWS_RECIPIENT, type MailAccount, type MailFolder, type GmailHeader, type GmailLabel } from '@/lib/gmail'
+import { cachedDraft } from '@/lib/mailBriefs'
 import { mailAccounts, loadMailView, saveMailView, accountsFor, accountLabel, type MailView } from './mailAccounts'
 import { Composer, type ComposeSeed, type ComposeMode } from './Composer'
 import { SwipeRow } from './SwipeRow'
@@ -523,6 +524,13 @@ export function InboxModule() {
       // account would be two inboxes drawn on top of each other.
       parsed.sort((a, b) => b.receivedAt.localeCompare(a.receivedAt))
       setEmails(parsed)
+      // A reply the automation drafted in the background is already written;
+      // it opens in the box under the mail rather than being asked for again.
+      setReplyText(prev => {
+        const next = { ...prev }
+        for (const e of parsed) if (!next[e.id]) { const d = cachedDraft(e.threadId, e.id); if (d) next[e.id] = d }
+        return next
+      })
       if (parsed.length > 0) setSelectedId(parsed[0].id)
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to load emails.'
@@ -754,6 +762,13 @@ export function InboxModule() {
         }
       })
       setEmails(prev => [...prev, ...parsed])
+      // A reply the automation drafted in the background is already written;
+      // it opens in the box under the mail rather than being asked for again.
+      setReplyText(prev => {
+        const next = { ...prev }
+        for (const e of parsed) if (!next[e.id]) { const d = cachedDraft(e.threadId, e.id); if (d) next[e.id] = d }
+        return next
+      })
     } catch { /* offline */ }
     finally { setLoadingMore(false) }
   }, [nextPageToken, loadingMore, viewed, emails, folder])

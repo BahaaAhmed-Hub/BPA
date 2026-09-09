@@ -57,6 +57,9 @@ export interface GCalEventCreate {
   /** RRULE lines. Carried when a repeating event is copied to another account. */
   recurrence?: string[]
   visibility?: 'default' | 'public' | 'private' | 'confidential'
+  /** Drive files. Google only takes them with `supportsAttachments=true` on
+   *  the request, which every write here sends. */
+  attachments?: { fileUrl: string; fileId?: string; title?: string; mimeType?: string }[]
 }
 
 export interface GCalError {
@@ -423,7 +426,7 @@ export async function patchCalendarEventWithToken(
     const res = await gcalRequest(
       token,
       `/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}` +
-      `?sendUpdates=all`,
+      `?sendUpdates=all&supportsAttachments=true`,
       { method: 'PATCH', body: JSON.stringify(patch) },
     )
     if (!res.ok) {
@@ -526,7 +529,7 @@ export async function createCalendarEvent(
   event: GCalEventCreate,
 ): Promise<{ event: GCalEvent | null; noAuth: boolean; error?: string }> {
   const result = await withAuth(token =>
-    gcalRequest(token, `/calendars/${encodeURIComponent(calendarId)}/events`, {
+    gcalRequest(token, `/calendars/${encodeURIComponent(calendarId)}/events?supportsAttachments=true`, {
       method: 'POST',
       body: JSON.stringify(event),
     })
@@ -549,7 +552,7 @@ export async function updateCalendarEvent(
   event: Partial<GCalEventCreate>,
 ): Promise<{ event: GCalEvent | null; noAuth: boolean; error?: string }> {
   const result = await withAuth(token =>
-    gcalRequest(token, `/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}`, {
+    gcalRequest(token, `/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}?supportsAttachments=true`, {
       method: 'PATCH',
       body: JSON.stringify(event),
     })
@@ -571,8 +574,9 @@ export async function createCalendarEventWithToken(
   event: GCalEventCreate,
 ): Promise<{ event: GCalEvent | null; error?: string }> {
   try {
-    // conferenceDataVersion=1 is required for Google Meet link generation
-    const qs  = event.conferenceData ? '?conferenceDataVersion=1' : ''
+    // conferenceDataVersion=1 is required for Google Meet link generation;
+    // supportsAttachments lets a Drive file through.
+    const qs  = `?supportsAttachments=true${event.conferenceData ? '&conferenceDataVersion=1' : ''}`
     const res = await gcalRequest(token, `/calendars/${encodeURIComponent(calendarId)}/events${qs}`, {
       method: 'POST',
       body: JSON.stringify(event),

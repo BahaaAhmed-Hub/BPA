@@ -1,7 +1,6 @@
 export type TxType = 'expense' | 'income' | 'transfer' | 'asset_purchase' | 'asset_sale' | 'liability_acq' | 'liability_dis'
 export type Currency = 'EGP' | 'USD' | 'AED'
 export type AccountType = 'payment' | 'credit_card' | 'asset' | 'wallet'
-export type BillFrequency = 'monthly' | 'weekly' | 'yearly' | 'quarterly'
 
 export interface Account {
   id: string
@@ -61,20 +60,6 @@ export interface Budget {
   startDate: string   // 'YYYY-MM'
   endDate?: string    // 'YYYY-MM', undefined = never
   rollover: boolean
-}
-
-export interface Bill {
-  id: string
-  name: string
-  amount: number
-  currency: Currency
-  categoryId?: string
-  accountId?: string
-  frequency: BillFrequency
-  nextDue: string
-  isActive: boolean
-  icon: string
-  isIncome: boolean
 }
 
 export interface Goal {

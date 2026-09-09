@@ -390,10 +390,14 @@ function InviteActions({ invite, busy, answered, error, removed, onRespond, onDe
           color: MUTED, textTransform: 'uppercase', flexShrink: 0,
         }}>{invite.cancelled ? 'Cancelled' : 'Invitation'}</span>
         {when && (
-          <span style={{
-            fontSize: 'var(--sb-t-meta)', color: GHOST, minWidth: 0,
-            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-          }}>· {when}</span>
+          <span
+            title={invite.repeats && invite.seriesStartsAt
+              ? `${invite.repeats} — since ${new Date(invite.seriesStartsAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
+              : undefined}
+            style={{
+              fontSize: 'var(--sb-t-meta)', color: GHOST, minWidth: 0,
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            }}>· {invite.repeats ? `next ${when} · ${invite.repeats.toLowerCase()}` : when}</span>
         )}
       </span>
 

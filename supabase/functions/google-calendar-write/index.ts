@@ -216,7 +216,8 @@ async function handleCreate(token: string, calendarId: string, body: Record<stri
   const event = body.event as object | undefined
   if (!event) return fail('Missing event')
 
-  const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`
+  // supportsAttachments: a Drive file on the event is dropped silently without it.
+  const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?supportsAttachments=true`
   const res = await fetchWithRetry(url, {
     method:  'POST',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -234,7 +235,7 @@ async function handleUpdate(token: string, calendarId: string, body: Record<stri
   if (!eventId) return fail('Missing event_id')
   if (!patch)   return fail('Missing patch')
 
-  const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}`
+  const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}?supportsAttachments=true`
   const res = await fetchWithRetry(url, {
     method:  'PATCH',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },

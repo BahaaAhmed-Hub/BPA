@@ -5,17 +5,17 @@ import {
   X, MapPin, ExternalLink, Copy, Link,
 } from 'lucide-react'
 import { planMyDay } from '@/lib/professor'
-import type { DayPlan, DayContext } from '@/lib/professor'
+import type { DayPlan } from '@/lib/professor'
 import { detectMeetingType } from '@/lib/googleCalendar'
 import type { GCalEvent } from '@/lib/googleCalendar'
 import { fetchVisibleEvents } from '@/lib/calendarEvents'
 import { useAuthStore } from '@/store/authStore'
 import { useTaskStore } from '@/store/taskStore'
-import type { DbUser, DbCompany, DbCalendarEvent, DbTask } from '@/types/database'
 import type { Task } from '@/types'
 import { isTaskHidden } from '@/types'
 import type { RichMeetingEvent } from './MorningBriefTypes'
 import { DayPlanner } from './DayPlanner'
+import { todayKey, buildMockUser, buildContext, loadCachedPlan, savePlan, MOCK_COMPANIES } from './dayPlan'
 import { ICON } from '@/lib/type'
 import { alpha } from '@/lib/alpha'
 
@@ -44,20 +44,6 @@ const ENERGY_META = [
   { label: 'Peak',     color: 'var(--sb-info)' },
 ] as const
 
-const QUADRANT_MAP: Record<string, DbTask['quadrant']> = {
-  do:       'urgent_important',
-  schedule: 'important_not_urgent',
-  delegate: 'urgent_not_important',
-  eliminate:'neither',
-}
-
-const MOCK_COMPANIES: DbCompany[] = [
-  { id: 'teradix',    user_id: 'demo', name: 'Teradix',    color_tag: 'var(--sb-info)', calendar_id: null, is_active: true },
-  { id: 'dxtech',     user_id: 'demo', name: 'DX Tech',    color_tag: 'var(--sb-info)', calendar_id: null, is_active: true },
-  { id: 'consulting', user_id: 'demo', name: 'Consulting', color_tag: 'var(--sb-positive)', calendar_id: null, is_active: true },
-  { id: 'personal',   user_id: 'demo', name: 'Personal',   color_tag: 'var(--sb-ink-4)', calendar_id: null, is_active: true },
-]
-
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function loadStoredHabits(): { id: string; name: string }[] {
@@ -66,10 +52,6 @@ function loadStoredHabits(): { id: string; name: string }[] {
     if (!raw) return []
     return (JSON.parse(raw) as { id: string; name: string }[]).slice(0, 6)
   } catch { return [] }
-}
-
-function todayKey(): string {
-  return new Date().toISOString().slice(0, 10)
 }
 
 function fmtTime(iso: string): string {
@@ -123,67 +105,6 @@ function responseSymbol(status?: string): string {
 function getFirstName(name: string | null | undefined, email: string): string {
   if (name) return name.trim().split(' ')[0]
   return email.split('@')[0]
-}
-
-function buildMockUser(user: { id: string; email: string; name?: string; avatarUrl?: string } | null): DbUser {
-  return {
-    id: user?.id ?? 'demo',
-    email: user?.email ?? 'bahaa@example.com',
-    full_name: user?.name ?? 'Bahaa Ahmed',
-    avatar_url: user?.avatarUrl ?? null,
-    active_framework: 'time_blocking',
-    schedule_rules: {
-      focus_hours: '09:00–12:00',
-      buffer_minutes: 15,
-      no_meeting_days: 'Wednesday',
-      max_meetings_per_day: 4,
-    },
-    created_at: new Date().toISOString(),
-  }
-}
-
-function buildContext(dbUser: DbUser, tasks: Task[], energyLevel: number | null, todayEvents: DbCalendarEvent[]): DayContext {
-  const pendingTasks: DbTask[] = tasks
-    .filter(t => !t.completed)
-    .map(t => ({
-      id: t.id,
-      user_id: dbUser.id,
-      company_id: t.company,
-      title: t.title,
-      description: t.description ?? null,
-      quadrant: t.quadrant ? (QUADRANT_MAP[t.quadrant] ?? null) : null,
-      effort_minutes: null,
-      due_date: t.dueDate ?? null,
-      status: 'todo' as const,
-      delegated_to: null,
-      done_looks_like: null,
-      created_at: t.createdAt,
-      completed_at: null,
-    }))
-
-  return {
-    user: dbUser,
-    companies: MOCK_COMPANIES,
-    todayEvents,
-    pendingTasks,
-    energyLevel: energyLevel ?? undefined,
-    date: todayKey(),
-  }
-}
-
-function loadCachedPlan(): DayPlan | null {
-  try {
-    const raw = localStorage.getItem(`professor-dayplan-${todayKey()}`)
-    return raw ? (JSON.parse(raw) as DayPlan) : null
-  } catch {
-    return null
-  }
-}
-
-function savePlan(plan: DayPlan): void {
-  try {
-    localStorage.setItem(`professor-dayplan-${todayKey()}`, JSON.stringify(plan))
-  } catch { /* quota full — skip */ }
 }
 
 function matchCompany(title: string, tasks: Task[]): string | null {

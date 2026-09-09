@@ -13,6 +13,9 @@ export async function signInWithGoogle() {
         'https://www.googleapis.com/auth/gmail.send',
         'https://www.googleapis.com/auth/gmail.modify',
         'https://www.googleapis.com/auth/drive.readonly',
+        // drive.file reaches only what this app uploads — an event attachment
+        // has to be a Drive file, and this is the narrowest scope that lets one in.
+        'https://www.googleapis.com/auth/drive.file',
       ].join(' '),
       redirectTo: window.location.origin + import.meta.env.BASE_URL,
       queryParams: {
@@ -54,6 +57,9 @@ export async function connectAdditionalGoogleAccount(emailHint?: string) {
         'https://www.googleapis.com/auth/gmail.send',
         'https://www.googleapis.com/auth/gmail.modify',
         'https://www.googleapis.com/auth/drive.readonly',
+        // drive.file reaches only what this app uploads — an event attachment
+        // has to be a Drive file, and this is the narrowest scope that lets one in.
+        'https://www.googleapis.com/auth/drive.file',
       ].join(' '),
       redirectTo: window.location.origin + import.meta.env.BASE_URL,
       queryParams: {

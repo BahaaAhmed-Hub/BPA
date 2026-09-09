@@ -430,54 +430,11 @@ export async function deleteCellComment(
   if (error) throw new Error(error.message)
 }
 
-// ─── Bills, goals and budgets ─────────────────────────────────────────────────
-// finance_bills and finance_goals have been in the schema since 20260001 and
-// nothing ever wrote to them: the store's upsertBill and upsertGoal only ever
-// touched local state, so a bill entered on the laptop did not exist anywhere
-// else. finance_budgets did not exist at all until 20260005.
-
-export interface BillRow {
-  id: string
-  user_id: string
-  name: string
-  amount: number
-  currency: string
-  category_id?: string | null
-  account_id?: string | null
-  frequency: string
-  next_due: string
-  is_active: boolean
-  is_income: boolean
-  icon: string
-  created_at?: string
-}
-
-/** null when the read failed — a missing table, or offline. An empty array
- *  means the table is genuinely empty, which is a different fact and leads to
- *  a different decision in the store: one keeps what the device has, the other
- *  is allowed to clear it. */
-export async function loadBills(): Promise<BillRow[] | null> {
-  const userId = await uid()
-  const { data, error } = await supabase
-    .from('finance_bills')
-    .select('*')
-    .eq('user_id', userId)
-    .order('next_due', { ascending: true })
-  if (error) return null
-  return (data ?? []) as BillRow[]
-}
-
-export async function saveBill(row: BillRow): Promise<void> {
-  markLocalWrite('finance')
-  const { error } = await supabase.from('finance_bills').upsert(row, { onConflict: 'id' })
-  if (error) throw new Error(error.message)
-}
-
-export async function deleteBill(id: string): Promise<void> {
-  markLocalWrite('finance')
-  const { error } = await supabase.from('finance_bills').delete().eq('id', id)
-  if (error) throw new Error(error.message)
-}
+// ─── Goals and budgets ────────────────────────────────────────────────────────
+// finance_goals has been in the schema since 20260001 and nothing wrote to it
+// until the store's upsertGoal became real; finance_budgets did not exist at
+// all until 20260005. finance_bills went in 20260013 — a budget rule with a due
+// day is the recurring payment now, and nothing read the bills table.
 
 export interface GoalRow {
   id: string

@@ -221,6 +221,23 @@ export interface ComposerResult {
   visibility?: 'default' | 'private' | 'public'
   /** Set on the event the moment it exists, without leaving the composer. */
   status?: 'done' | 'cancelled'
+  /** Drive files already uploaded while composing. */
+  attachments?: EventAttachment[]
+}
+
+/** What Google keeps about a file on an event. */
+export interface EventAttachment { fileUrl: string; fileId?: string; title?: string; mimeType?: string }
+
+/** A file in the Attachments card: in Drive, on its way there, or refused. */
+export interface ComposerFile {
+  name: string
+  size: number
+  kind: string
+  fileUrl?: string
+  fileId?: string
+  mimeType?: string
+  pending?: boolean
+  error?: string
 }
 
 /** What Google is told about an event that already exists. */
@@ -234,6 +251,7 @@ export type EventPatch = Partial<{
   recurrence: string[]
   visibility: 'default' | 'private' | 'public'
   reminders: { useDefault: boolean; overrides?: { method: string; minutes: number }[] }
+  attachments: EventAttachment[]
 }>
 
 /** An event that exists, in the shape the panel's own controls speak. */
@@ -252,7 +270,7 @@ export interface ExistingEvent {
   notes: string
   invitees: ComposerInvitee[]
   repeat: Recur | null
-  files: { name: string; size: number; kind: string }[]
+  files: ComposerFile[]
   visibility: 'default' | 'private' | 'public'
   status: 'done' | 'cancelled' | null
   /** Where Google would open it. */
@@ -312,7 +330,7 @@ function initialsOf(s: string): string {
 
 export function NewEventPanel({
   draft, existing, calendars, organiser, provider = 'google',
-  clashes, onSave, onCancel, onPush, onDelete, onMoveCalendar, extra,
+  clashes, onSave, onCancel, onPush, onDelete, onMoveCalendar, extra, uploadFile,
   alertMinutes, onAlert, onAddMeet, onRemoveMeet, onStatus,
 }: {
   draft: { dateStr: string; startMin: number; endMin: number }
@@ -330,6 +348,9 @@ export function NewEventPanel({
   onCancel: () => void
   /** Edit mode only: every change writes straight through. */
   onPush?: (patch: EventPatch) => void
+  /** Puts a file in Drive for the calendar's account. Absent, the card says
+   *  uploads are not available rather than pretending to take the file. */
+  uploadFile?: (file: File, calId: string) => Promise<{ fileUrl: string; fileId: string; title: string; mimeType: string; size: number }>
   onDelete?: () => void
   /** Resolves to null on success, or to why the move did not happen. */
   onMoveCalendar?: (calId: string) => Promise<string | null>
@@ -394,8 +415,43 @@ export function NewEventPanel({
   const [inviteeError, setInviteeError] = useState<string | null>(null)
   const inviteeRef = useRef<HTMLInputElement>(null)
 
-  const [files, setFiles] = useState<{ name: string; size: number; kind: string }[]>(existing?.files ?? [])
+  const [files, setFiles] = useState<ComposerFile[]>(existing?.files ?? [])
   const [dropping, setDropping] = useState(false)
+  const fileInput = useRef<HTMLInputElement>(null)
+  // Only what is actually in Drive is told to Google; a row still uploading or
+  // refused is this panel's business.
+  const attached = (list: ComposerFile[]): EventAttachment[] =>
+    list.filter(f => f.fileUrl).map(f => ({ fileUrl: f.fileUrl!, fileId: f.fileId, title: f.name, mimeType: f.mimeType }))
+  const kindOf = (name: string) => (name.split('.').pop() ?? 'FILE').slice(0, 4).toUpperCase()
+  const filesRef = useRef(files); filesRef.current = files
+  const commitFiles = (next: ComposerFile[]) => {
+    filesRef.current = next
+    setFiles(next)
+    if (editing) onPush?.({ attachments: attached(next) })
+  }
+  const addFiles = async (picked: File[]) => {
+    const fresh = picked.filter(f => !filesRef.current.some(p => p.name === f.name))
+    if (fresh.length === 0) return
+    // Every row appears at once, marked; each settles on its own.
+    setFiles(prev => {
+      const next = [...prev, ...fresh.map(f => ({ name: f.name, size: f.size, kind: kindOf(f.name),
+        ...(uploadFile ? { pending: true } : { error: 'uploads need Drive access — sign in again to grant it' }) }))]
+      filesRef.current = next
+      return next
+    })
+    if (!uploadFile) return
+    for (const f of fresh) {
+      try {
+        const up = await uploadFile(f, calId)
+        commitFiles(filesRef.current.map(x => x.name === f.name
+          ? { name: f.name, size: up.size, kind: kindOf(f.name), fileUrl: up.fileUrl, fileId: up.fileId, mimeType: up.mimeType }
+          : x))
+      } catch (e) {
+        const why = e instanceof Error ? e.message : 'Drive refused it'
+        setFiles(prev => { const next = prev.map(x => x.name === f.name ? { ...x, pending: false, error: why } : x); filesRef.current = next; return next })
+      }
+    }
+  }
 
   const [extrasOpen, setExtrasOpen] = useState(false)
   const [notes, setNotes] = useState(existing?.notes ?? '')
@@ -516,6 +572,7 @@ export function NewEventPanel({
       ...(rule ? { recurrence: toRecurrence(rule) } : {}),
       ...(visibility !== 'default' ? { visibility } : {}),
       ...(status ? { status } : {}),
+      ...(attached(files).length ? { attachments: attached(files) } : {}),
     })
   }
 
@@ -986,9 +1043,13 @@ export function NewEventPanel({
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <span style={MONO}>Attachments</span>
             <span style={{ flex: 1 }} />
-            <span style={{ ...pill(false), cursor: 'default', opacity: 0.55 }} title="Attaching needs Drive access, which this build does not ask for">
+            <input ref={fileInput} type="file" multiple hidden
+              onChange={e => { void addFiles([...(e.target.files ?? [])]); e.target.value = '' }} />
+            <button type="button" onClick={() => fileInput.current?.click()}
+              style={{ ...pill(false), cursor: 'pointer' }}
+              title={uploadFile ? 'Goes to your Drive, then onto the event' : 'Uploads need Drive access — sign in again to grant it'}>
               <Upload size={ICON.sm} strokeWidth={1.8} /> Upload
-            </span>
+            </button>
           </div>
 
           {files.map(f => (
@@ -1002,12 +1063,19 @@ export function NewEventPanel({
                 fontFamily: 'var(--sb-font-mono)', fontSize: 'var(--sb-t-micro)', fontWeight: 700, color: C.bad,
               }}>{f.kind}</span>
               <span style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ display: 'block', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.name}</span>
-                <span style={{ display: 'block', fontSize: 'var(--sb-t-meta)', color: C.faint, ...NUM }}>
-                  {(f.size / 1048576).toFixed(1)} MB · not attached yet
+                {f.fileUrl ? (
+                  <a href={f.fileUrl} target="_blank" rel="noreferrer"
+                    style={{ display: 'block', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textDecoration: 'none' }}>{f.name}</a>
+                ) : (
+                  <span style={{ display: 'block', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.name}</span>
+                )}
+                <span style={{ display: 'block', fontSize: 'var(--sb-t-meta)', color: f.error ? C.bad : C.faint, ...NUM, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                  title={f.error}>
+                  {f.size ? `${(f.size / 1048576).toFixed(1)} MB · ` : ''}
+                  {f.error ? f.error : f.pending ? 'uploading to Drive…' : 'in Drive, on the event'}
                 </span>
               </span>
-              <button onClick={() => setFiles(prev => prev.filter(x => x.name !== f.name))}
+              <button onClick={() => commitFiles(filesRef.current.filter(x => x.name !== f.name))}
                 style={{ width: 26, height: 26, borderRadius: 'var(--sb-r-pill)', border: 'none', background: 'none', color: C.faint, cursor: 'pointer', flexShrink: 0 }}>
                 <X size={ICON.sm} strokeWidth={1.8} />
               </button>
@@ -1019,10 +1087,7 @@ export function NewEventPanel({
             onDragLeave={() => setDropping(false)}
             onDrop={e => {
               e.preventDefault(); setDropping(false)
-              const dropped = [...e.dataTransfer.files].map(f => ({
-                name: f.name, size: f.size, kind: (f.name.split('.').pop() ?? 'FILE').slice(0, 4).toUpperCase(),
-              }))
-              setFiles(prev => [...prev, ...dropped.filter(d => !prev.some(p => p.name === d.name))])
+              void addFiles([...e.dataTransfer.files])
             }}
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
@@ -1032,7 +1097,7 @@ export function NewEventPanel({
               fontSize: 'var(--sb-t-meta)', color: C.third,
             }}>
             <Paperclip size={ICON.sm} strokeWidth={1.8} color={C.faint} />
-            Drop files here, or attach from Drive
+            Drop files here — they go to your Drive, then onto the event
           </div>
 
             <label style={FIELD}>
