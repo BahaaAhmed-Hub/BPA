@@ -14,6 +14,7 @@
 // order that depended on which one happened to run last.
 
 import { accentById, accentTokens, loadAccent, loadCompact, COMPACT_SCALE } from './accent'
+import { resetInkCache } from '@/lib/ink'
 import { useBehavioralStore, type BehavioralMode } from '@/store/behavioralStore'
 
 /** Every `--sb-*` token a theme owns. */
@@ -105,7 +106,11 @@ export const THEMES: AppTheme[] = [
       '--sb-cat-4':       '#3E6FA3',
       '--sb-cat-5':       '#8B5FA8',
       '--sb-cat-6':       '#2F8C6E',
-      '--sb-info':          '#685FD7', '--sb-info-tint':    '#EDEBFA',
+      // #685FD7 read 4.25 as a label on its own tint — the AI buttons are
+      // exactly that pairing. Four percent darker is the least that clears
+      // 4.5, and it lifts every other use of the token rather than trading:
+      // 4.99 → 5.33 on the card, and 4.99 → 5.33 for white on it as a fill.
+      '--sb-info':          '#645BCE', '--sb-info-tint':    '#EDEBFA',
       '--sb-warning':       '#B26A00', '--sb-warning-tint': '#FBEEDC',
       '--sb-shadow-panel':  '-8px 0 40px -12px rgba(48,40,20,.28)',
       '--sb-shadow-accent': '0 2px 0 rgba(120,92,0,.25)',
@@ -324,6 +329,9 @@ export function applyThemeVars(theme: AppTheme, overlay?: TokenOverlay): void {
   // `color-scheme` reaches the native date pickers, scrollbars and autofill,
   // and how index.css knows whether a surface has anything to blur.
   document.documentElement.setAttribute('data-theme', theme.isDark ? 'dark' : 'light')
+  // Every `var()` these components resolved is now a different colour, and the
+  // ink derived from one has to be worked out again.
+  resetInkCache()
 }
 
 function persistedThemeId(): string {

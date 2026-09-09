@@ -9,6 +9,7 @@ import { loadAIConfig, type AIConfig } from '@/modules/settings/Settings'
 import { loadAccounts } from '@/lib/multiAccount'
 import { useBehavioralStore } from '@/store/behavioralStore'
 import { ICON } from '@/lib/type'
+import { useInkOnKeeping } from '@/lib/ink'
 
 // ─── Groq types (OpenAI-compatible) ──────────────────────────────────────────
 
@@ -545,6 +546,7 @@ export function AssistantPanel({ open, onClose }: AssistantPanelProps) {
 interface AssistantToggleProps { open: boolean; onClick: () => void }
 
 export function AssistantToggle({ open, onClick }: AssistantToggleProps) {
+  const ink2 = useInkOnKeeping()
   return (
     <button
       onClick={onClick}
@@ -560,7 +562,12 @@ export function AssistantToggle({ open, onClick }: AssistantToggleProps) {
         zIndex: 148,
         transition: 'right 0.25s cubic-bezier(0.4,0,0.2,1), background 0.2s, box-shadow 0.2s',
       }}>
-      {open ? <X size={ICON.lg} color="var(--sb-ink-3)" /> : <Brain size={ICON.lg} color="var(--sb-accent)" />}
+      {/* The mark is drawn in the accent where the accent can be seen on the
+          fill under it, and in whatever can be seen where it cannot: on
+          `--sb-ink-1` the accent is 9:1 in Sunlit, and 2.3 in Evergreen. */}
+      {open
+        ? <X size={ICON.lg} color="var(--sb-ink-3)" />
+        : <Brain size={ICON.lg} color={ink2('var(--sb-accent)', 'var(--sb-ink-1)')} />}
     </button>
   )
 }

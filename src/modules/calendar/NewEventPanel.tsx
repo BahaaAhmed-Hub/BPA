@@ -26,6 +26,7 @@ import {
 import { ICON, STROKE } from '@/lib/type'
 import { loadDynamicCompanies } from '@/types'
 import { toRecurrence, presetRecur, type Recur } from './recurrence'
+import { useInkOn } from '@/lib/ink'
 
 // ─── The palette, once ───────────────────────────────────────────────────────
 
@@ -383,6 +384,12 @@ export function NewEventPanel({
   const [until, setUntil] = useState(existing?.repeat?.until ?? '')
 
   const [people, setPeople] = useState<ComposerInvitee[]>(existing?.invitees ?? [])
+  // Every avatar in the Attendees card takes its ink from its own swatch. The
+  // hook, not the bare function, because both swatches are `var()`s and the
+  // answer stops being true the moment the theme moves.
+  const ink = useInkOn()
+  const peopleBg = (i: number) =>
+    i % 2 === 0 ? C.gold : `color-mix(in srgb, ${C.gold} 28%, var(--sb-field))`
   const [invitee, setInvitee] = useState('')
   const [inviteeError, setInviteeError] = useState<string | null>(null)
   const inviteeRef = useRef<HTMLInputElement>(null)
@@ -881,7 +888,7 @@ export function NewEventPanel({
         <PersonRow
           initials={initialsOf(organiser ?? 'me')}
           avatarBg={C.ink}
-          avatarInk={C.onInk}
+          avatarInk={ink(C.ink)}
           name={organiser ?? 'You'}
           sub="Organiser"
           rsvp={{ label: 'Organiser', bg: C.inset, ink: C.third }}
@@ -891,8 +898,11 @@ export function NewEventPanel({
           <PersonRow
             key={p.email}
             initials={initialsOf(p.email)}
-            avatarBg={i % 2 === 0 ? C.gold : `color-mix(in srgb, ${C.gold} 28%, var(--sb-field))`}
-            avatarInk={C.text}
+            avatarBg={peopleBg(i)}
+            // Not `C.text`. The swatch under it is the accent, which is a
+            // terracotta in Warm Minimal and a deep green in Evergreen, and a
+            // near-black on either is 3.66 and 2.30 against a needed 4.5.
+            avatarInk={ink(peopleBg(i))}
             name={p.email.split('@')[0].replace(/[._-]+/g, ' ')}
             sub={p.email}
             optional={p.optional}

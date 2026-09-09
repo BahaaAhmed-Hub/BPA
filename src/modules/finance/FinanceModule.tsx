@@ -258,7 +258,11 @@ export function FinanceModule() {
 
         {/* Add transaction button */}
         <Button variant="accent" onClick={() => setAddOpen(true)} title="Add one entry" style={{ flexShrink: 0 }}>
-          <IconPlus color="var(--sb-ink-1)" />
+          {/* Inherited, not restated. The accent variant already carries
+              `--sb-accent-ink`, which is the ink chosen for that fill in each
+              theme; naming `--sb-ink-1` here overrode it with a colour that is
+              2.3 on Evergreen's green and 2.31 on Glass's violet. */}
+          <IconPlus />
         </Button>
       </div>
 

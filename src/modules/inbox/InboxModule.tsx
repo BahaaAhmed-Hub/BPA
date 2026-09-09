@@ -10,6 +10,7 @@ const FOLDER_ICON: Record<MailFolder, typeof Mail> = {
 }
 import { triageEmail, briefInbox, call as askModel } from '@/lib/professor'
 import { notify, pushUndo } from '@/lib/undo'
+import { inkOn } from '@/lib/ink'
 import type { EmailTriage, EmailData } from '@/lib/professor'
 import { classifyMail, unsubscribeLink, CLASSES, CLASS_INFO, countByClass, type MailClass } from '@/lib/mailClasses'
 import { looksLikeInvitation } from '@/lib/invitations'
@@ -131,8 +132,11 @@ function avatarColor(email: string): string {
 function SenderAvatar({ name, email, size = 34 }: { name: string; email: string; size?: number }) {
   const initials = name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || '?'
   const bg = avatarColor(email)
+  // A fixed hex out of `palettes.ts`, so the ink is worked out from the swatch
+  // rather than from the theme: `--sb-ink-on-fill` is white in three of the
+  // four themes, and white reads at 3.68 on this palette's cyan.
   return (
-    <div style={{ width: size, height: size, borderRadius: 'var(--sb-r-pill)', background: bg, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size < 30 ? 10 : 12, fontWeight: 700, color: 'var(--sb-ink-on-fill)', letterSpacing: '0.02em' }}>
+    <div style={{ width: size, height: size, borderRadius: 'var(--sb-r-pill)', background: bg, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size < 30 ? 10 : 12, fontWeight: 700, color: inkOn(bg), letterSpacing: '0.02em' }}>
       {initials}
     </div>
   )

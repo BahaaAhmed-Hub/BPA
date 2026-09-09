@@ -2039,7 +2039,12 @@ export function TodayPage() {
         {/* Left */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
           <div style={{ ...CARD, padding: '22px 24px 24px' }}>
-            <Quote size={ICON.md} strokeWidth={STROKE.rest} style={{ color: 'var(--sb-border)' }} />
+            {/* Decoration above the headline, not a thing to read: it is drawn
+                in the border colour on purpose, carries nothing the sentence
+                under it does not, and a screen reader announcing "quote" here
+                would be announcing furniture. Marked so, which is also how the
+                contrast audit knows not to hold it to 3:1. */}
+            <Quote aria-hidden size={ICON.md} strokeWidth={STROKE.rest} style={{ color: 'var(--sb-border)' }} />
             <h1 style={{
               margin: '8px 0 0', fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h1)', fontWeight: 600,
               letterSpacing: '-0.03em', lineHeight: 1.2, color: INK,

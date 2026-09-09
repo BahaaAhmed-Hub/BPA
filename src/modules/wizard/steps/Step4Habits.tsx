@@ -4,6 +4,7 @@ import { Button } from '@/components/ui'
 import { Check, X } from 'lucide-react'
 import { ICON, STROKE } from '@/lib/type'
 import { alpha } from '@/lib/alpha'
+import { inkOn } from '@/lib/ink'
 
 const HABIT_TEMPLATES = [
   { id: 'water',       name: 'Drink Water',   emoji: '💧', color: 'var(--sb-info)', type: 'quantity' as const, goal: 8,     unit: 'glasses', frequency: 'daily' as const },
@@ -92,7 +93,10 @@ export function Step4Habits({ data, onChange }: Props) {
                   position: 'absolute', top: 6, right: 6, width: 16, height: 16, borderRadius: 'var(--sb-r-pill)',
                   background: t.color, display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
-                  <Check size={ICON.sm} color="var(--sb-ink-on-fill)" strokeWidth={STROKE.active} />
+                  {/* The tick sits on the habit's own colour, not on a theme
+                      fill, and this palette runs to a bright amber: white on
+                      `#FBBF24` is 1.67. */}
+                  <Check size={ICON.sm} color={inkOn(t.color)} strokeWidth={STROKE.active} />
                 </div>
               )}
               <div style={{ fontSize: 'var(--sb-t-h2)', marginBottom: 6 }}>{t.emoji}</div>
