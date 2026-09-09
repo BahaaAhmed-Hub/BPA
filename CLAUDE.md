@@ -687,6 +687,21 @@ drafted reply, and the draft is suppressed for it.
 - A `CANCEL`, or `STATUS:CANCELLED`, is not something to answer: the row says
   the organiser called it off. A `REPLY` is somebody answering an invitation
   *you* sent, so it is not treated as one at all.
+- **A `[Cancelled] …` title counts too** (`titleSaysCancelled`). Plenty of
+  organisers rename the event and send an update rather than cancelling, which
+  leaves Google holding a live event that still wants an answer — so the row
+  offered Yes/Maybe/No for a meeting its own summary said was off.
+- **A cancellation removes nothing on its own.** Deleting a calendar row cannot
+  be undone and the decision is yours, not the organiser's, so the cancelled row
+  *offers* **Remove it from my calendar** (`removeFromCalendar` → find by UID,
+  delete your copy only) and says "Off your calendar" once done.
+- **"Not on any of your calendars" is a claim, and it used to cover failures.**
+  `findEventByICalUid` returned `null` for a 403, an expired token and a dead
+  network alike. `lookUpICalUid` returns the reason instead; `findOnCalendars`
+  keeps the first one, and the message tells "we looked and it is not there"
+  apart from "we could not look" — they point at different fixes. When Google
+  genuinely has not filed it, that is the "Add invitations to my calendar"
+  setting, and the row says so rather than sending you nowhere.
 - An invitation always counts as **to book** in the header, whatever the model
   made of the wording.
 
@@ -764,6 +779,12 @@ Time of Day → Find Health Samples → Get Contents of URL).
 5. Roll unfinished tasks forward · WHEN a scheduled task ends the day untouched
 6. Archive newsletters · WHEN a thread is promotional and nobody replied in 3 days
 7. Close the week · WHEN Sunday 20:00, if the review has not been opened
+
+## Tasks — the planner has a door
+`SmartDayPlanner` is opened by **Plan my day** in the Tasks header, beside New
+task: one makes a thing to do, the other decides when. `showPlanner` was
+initialised false and set true nowhere, so the whole planner was unreachable.
+It closes on Escape — worth having, and unnoticed while nothing could open it.
 
 ## Tasks — a date decides the quadrant
 A task with a `dueDate` and no quadrant goes into **schedule** — deciding when to do
