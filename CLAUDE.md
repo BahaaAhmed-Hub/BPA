@@ -647,6 +647,24 @@ drafted reply, and the draft is suppressed for it.
   senders set one or the other, and Gmail strips the parameters off `mimeType`
   so the body is usually the only one left. No METHOD at all still leaves a
   VEVENT with a UID, which is enough to answer.
+- **Every event property comes out of the VEVENT** (`veventOf`), never out of
+  the whole calendar. A Google invitation carries a `VTIMEZONE` *first*, and each
+  DAYLIGHT/STANDARD block has a `DTSTART` of its own — the moment that rule
+  starts, conventionally in 1970. Searching the file found Cairo's
+  `19700424T000000` and every invitation rendered "Fri 24 Apr, 00:00". The same
+  date on every row is the tell: it was not reading the event at all. `METHOD`
+  is the exception — it belongs to the calendar, not the event.
+- **A `DTSTART` with no `Z` is a wall clock in the zone its `TZID` names.**
+  Reading it locally is right only by luck, for a Cairo event read in Cairo.
+  `icsDate(raw, tzid)` takes the TZID off the property's own parameters and asks
+  `Intl` for the offset *on that date*, so summer time comes from the browser's
+  tz database rather than from the VTIMEZONE. An unknown TZID falls back to
+  local rather than throwing.
+- **`parseIcs` is exported so the parsing can be tested without Gmail around
+  it.** The cases that matter: the Cairo invitation, a UTC time, a cancellation,
+  an all-day date, London in summer and winter, a quoted TZID, a TZID that does
+  not exist, and a folded SUMMARY — run with the clock set to several zones,
+  because the answer must not depend on where it is read.
 - **An invitation nobody could read says so.** Google's subject prefixes
   ("Invitation:", "Updated invitation:", …) tell "not one" from "one that went
   wrong", and the row names which — a silent fallback to a drafted reply is what
