@@ -23,7 +23,6 @@ import { useTaskStore } from './store/taskStore'
 import { useHabitsStore } from './store/habitsStore'
 import { supabase } from './lib/supabase'
 import { signInWithGoogle, signOut as googleSignOut, getPendingAddAccount, clearPendingAddAccount } from './lib/google'
-import { LoginFeatures } from './components/LoginFeatures'
 import { addAccount, loadAccounts, saveAccounts } from './lib/multiAccount'
 import { saveAccountsToDB, loadCompaniesFromDB, loadRawSettingsFromDB, loadAccountsFromDB, mergeCompanies } from './lib/dbSync'
 import type { CompanyRow } from './lib/dbSync'
@@ -67,10 +66,8 @@ function LoginScreen() {
       minHeight: '100vh',
       background: 'linear-gradient(160deg, var(--sb-page) 0%, var(--sb-accent-tint) 100%)',
       display: 'flex',
-      flexDirection: 'column',
       alignItems: 'center',
       justifyContent: 'center',
-      gap: 22,
       padding: '32px 24px',
       fontFamily: 'var(--sb-font-ui)',
     }}>
@@ -249,12 +246,6 @@ function LoginScreen() {
             <span style={{ color: 'var(--sb-ink-2)', textDecoration: 'underline', cursor: 'pointer' }}>Privacy Policy</span>.
           </p>
         </div>
-      </div>
-
-      {/* What it is, under the door. The page had ~190px of empty ground above
-          and below a 960px card; this is what that space is for. */}
-      <div style={{ width: '100%', maxWidth: 960 }}>
-        <LoginFeatures />
       </div>
     </div>
   )
