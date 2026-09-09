@@ -873,3 +873,38 @@ a snapshot, and the row returns to the list with it.
 - **Delete means the Bin**, and says so. `gmail.modify` cannot erase a message —
   that needs full `mail.google.com` — and a swipe should not destroy mail. No
   batch endpoint bins mail, so that one is a call each via `messages/trash`.
+
+## Ink — the colour of text is derived, not declared
+`lib/ink.ts`. A theme token cannot say what reads on a **colour somebody chose**
+— an avatar's swatch, a habit's, a company's, the accent behind a chip. Those
+come from `palettes.ts` or from Google, they do not move when the theme does,
+and one fixed `--sb-ink-on-fill` over a palette of a dozen hues is unreadable on
+some of them. `--sb-ink-on-fill` stays right for a *theme* fill (the primary
+button, the solid nav pill), where the fill is a token too and the pair was
+chosen together.
+- **`inkOn(bg)`** measures both candidates and takes the better. Not a luminance
+  threshold — "over 0.5 is light" is wrong through the middle of the range,
+  which is exactly where a mid-tone accent sits.
+- **`inkOnKeeping(preferred, bg, min)`** keeps a colour that is there on purpose
+  where it can still be read: the assistant's mark is the accent at 9:1 on
+  Sunlit's near-black fill and 2.3 on Evergreen's.
+- **`color-mix()` does not compute to `rgb()`.** Chrome answers
+  `color(srgb 0.68 0.58 0.98 / 0.31)` — 0..1, not 0..255. Miss that and every
+  tint resolves to nothing and falls back, which is how a pale pink got white
+  ink. `aa-theme.mjs` learnt this once already.
+- **The ground is a stack.** Glass's `--sb-field` is `rgba(255,255,255,.035)`,
+  so a 28% accent mix lands at alpha 0.31 on a card that is itself translucent.
+  `solidify()` composites down to the theme's base; one layer gives a pale
+  answer on a dark violet.
+- **The answer expires.** The theme picker, the accent picker and the behavioral
+  mode all go through `applyThemeVars`, so that is where the cache drops and a
+  version bumps. Use `useInkOn()` for anything resolved through a `var()`; the
+  bare function is fine for a fixed hex.
+- **Decoration is exempt and says so.** `aria-hidden` on Today's quote mark —
+  the same mark that stops a screen reader announcing furniture is how the audit
+  knows not to hold it to 3:1.
+
+`node scripts/ink-audit.mjs <port>` against a dev server is the measurement:
+nine screens × four themes, every text against the background it is *actually*
+drawn on. 21 failing pairs when written, none now. Re-run it after touching a
+token or a palette.
