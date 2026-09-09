@@ -271,14 +271,14 @@ function MailPopup({ row, onClose, onArchive, onAddTask }: {
       onClick={onClose}
       style={{
         position: 'fixed', inset: 0, zIndex: 300,
-        background: 'color-mix(in srgb, var(--sb-ink-1) 28.0%, transparent)', backdropFilter: 'blur(2px)',
+        background: 'var(--sb-scrim)', backdropFilter: 'blur(2px)',
         display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '8vh 20px 20px',
       }}>
       <div
         onClick={e => e.stopPropagation()}
         style={{
           width: '100%', maxWidth: 760, maxHeight: '80vh', display: 'flex', flexDirection: 'column',
-          background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-card)', overflow: 'hidden',
+          background: 'var(--sb-overlay)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-card)', overflow: 'hidden',
           boxShadow: 'var(--sb-shadow-frame)',
         }}>
 
@@ -538,14 +538,14 @@ function DraftPopup({ row, brief, onClose, onSent, onRewrite, rewriting }: {
       onClick={() => { if (!sending) onClose() }}
       style={{
         position: 'fixed', inset: 0, zIndex: 320,
-        background: 'color-mix(in srgb, var(--sb-ink-1) 32%, transparent)', backdropFilter: 'blur(2px)',
+        background: 'var(--sb-scrim)', backdropFilter: 'blur(2px)',
         display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '7vh 20px 20px', overflowY: 'auto',
       }}>
       <div
         onClick={e => e.stopPropagation()}
         style={{
           width: '100%', maxWidth: 680, display: 'flex', flexDirection: 'column',
-          background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)',
+          background: 'var(--sb-overlay)', border: 'var(--sb-border-width) solid var(--sb-border)',
           borderRadius: 'var(--sb-r-card)', overflow: 'hidden', boxShadow: 'var(--sb-shadow-frame)',
         }}>
 

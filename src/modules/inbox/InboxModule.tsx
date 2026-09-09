@@ -1097,7 +1097,7 @@ export function InboxModule() {
                     <div onClick={() => setMoveOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 40 }} />
                     <div style={{
                       position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 41, minWidth: 190,
-                      maxHeight: 260, overflowY: 'auto', background: 'var(--sb-card)',
+                      maxHeight: 260, overflowY: 'auto', background: 'var(--sb-overlay)',
                       border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-nav)',
                       boxShadow: 'var(--sb-shadow-panel, 0 8px 24px rgba(25,23,18,.14))', padding: 5,
                     }}>

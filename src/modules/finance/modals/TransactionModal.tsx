@@ -220,7 +220,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
       onClick={e => { if (e.target === e.currentTarget) onClose() }}
       style={{
         position: 'fixed', inset: 0, zIndex: 1000,
-        background: 'color-mix(in srgb, var(--sb-ink-1) 45.0%, transparent)',
+        background: 'var(--sb-scrim)',
         display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 18,
       }}>
 
@@ -230,7 +230,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
       <div style={{
         width: 'clamp(320px, 94vw, 460px)', maxHeight: '90vh', overflowY: 'auto',
         boxSizing: 'border-box', scrollbarWidth: 'thin',
-        background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
+        background: 'var(--sb-overlay)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
         boxShadow: 'var(--sb-shadow-frame)',
         padding: '18px 20px 22px',
       }}>

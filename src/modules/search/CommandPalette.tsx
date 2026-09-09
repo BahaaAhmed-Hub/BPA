@@ -229,13 +229,13 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
       onClick={onClose}
       style={{
         position: 'fixed', inset: 0, zIndex: 400,
-        background: 'color-mix(in srgb, var(--sb-ink-1) 28.0%, transparent)', backdropFilter: 'blur(2px)',
+        background: 'var(--sb-scrim)', backdropFilter: 'blur(2px)',
         display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '12vh 20px 20px',
       }}>
       <div
         onClick={e => e.stopPropagation()}
         style={{
-          width: '100%', maxWidth: 700, background: 'var(--sb-card)',
+          width: '100%', maxWidth: 700, background: 'var(--sb-overlay)',
           border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-card)', overflow: 'hidden',
           boxShadow: 'var(--sb-shadow-frame)',
           display: 'flex', flexDirection: 'column', maxHeight: '72vh',

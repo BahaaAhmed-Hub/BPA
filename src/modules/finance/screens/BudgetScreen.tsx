@@ -1663,7 +1663,7 @@ export function BudgetScreen(_props?: any) {
         return (
           <div style={{
             position: 'fixed', inset: 0, zIndex: 200,
-            background: 'color-mix(in srgb, var(--sb-ink-1) 45.0%, transparent)', backdropFilter: 'blur(2px)',
+            background: 'var(--sb-scrim)', backdropFilter: 'blur(2px)',
             display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end',
           }}
             onClick={() => setDrillOpen(false)}

@@ -92,6 +92,15 @@
   /* How much the surfaces blur what is behind them. 0 on an opaque theme —
      a no-op the browser can skip. */
   --sb-surface-blur: 0px;
+  /* The ground for anything that has to *hide* what is behind it — a modal, a
+     menu, a popover. Not `--sb-card`: in Glass & Depth that is
+     rgba(255,255,255,.05), which is a wash over the page and reads straight
+     through unless the blur behind it lands. A modal you can read the calendar
+     through is not a modal. And the scrim is a shadow rather than an ink, so it
+     is dark in every theme — built from `--sb-ink-1` it was 45% *near-white*
+     over a dark page, which veiled the app instead of dimming it. */
+  --sb-overlay: #FFFFFF;
+  --sb-scrim: rgba(25,23,18,.45);
 
   /* ── Shape ───────────────────────────────────────────────────────────────
      A concept is a shape as much as a palette. These are Sunlit Bento's, and

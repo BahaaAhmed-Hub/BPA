@@ -748,7 +748,7 @@ export function SmartDayPlanner({ onClose, onOpenTask }: SmartDayPlannerProps) {
           animation: 'sdp-in 0.3s cubic-bezier(0.16,1,0.3,1)', overflow: 'hidden',
         }}>
           {/* Header */}
-          <div style={{ padding: '18px 24px', background: 'var(--sb-card)', borderBottom: 'var(--sb-border-width) solid var(--sb-hairline)', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+          <div style={{ padding: '18px 24px', background: 'var(--sb-overlay)', borderBottom: 'var(--sb-border-width) solid var(--sb-hairline)', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
             <span style={{ fontSize: 'var(--sb-t-h2)' }}>✦</span>
             <span style={{ fontSize: 'var(--sb-t-h2)', fontWeight: 800, color: 'var(--sb-ink-1)', flex: 1 }}>Smart Day Planner</span>
             <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', padding: 4, display: 'flex', borderRadius: 'var(--sb-r-chip)' }}>

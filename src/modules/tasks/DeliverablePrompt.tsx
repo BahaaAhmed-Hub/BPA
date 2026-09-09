@@ -75,7 +75,7 @@ export function DeliverablePrompt({ task, onComplete, onCancel }: {
       onMouseDown={e => { if (e.target === e.currentTarget) onCancel() }}
       style={{
         position: 'fixed', inset: 0, zIndex: 300,
-        background: 'color-mix(in srgb, var(--sb-ink-1) 34.0%, transparent)', backdropFilter: 'blur(2px)',
+        background: 'var(--sb-scrim)', backdropFilter: 'blur(2px)',
         display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
       }}>
       <Card style={{ width: 460, maxHeight: '86vh', overflowY: 'auto', boxSizing: 'border-box', padding: '20px 22px 18px' }}>

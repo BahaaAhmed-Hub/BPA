@@ -101,7 +101,7 @@ function ContextMenu({ menu, onClose }: { menu: ContextMenuState; onClose: () =>
       <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 8000 }} />
       <div className="sb-blur-surface" style={{
         position: 'fixed', left: menu.x, top: menu.y, zIndex: 8001,
-        background: 'var(--sb-card)',
+        background: 'var(--sb-overlay)',
         border: 'var(--sb-border-width) solid var(--sb-border)',
         borderRadius: 'var(--sb-r-nav)', overflow: 'hidden',
         boxShadow: 'var(--sb-shadow-menu)', minWidth: 220,

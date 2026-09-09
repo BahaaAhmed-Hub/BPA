@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui'
 import {
-  biometricName, checkPassword, loadLock, loadPasskey, verifyPasskey,
+  biometricName, biometricsAvailable, checkPassword, deviceLabel, loadLock,
+  loadPasskey, registerPasskey, verifyPasskey,
 } from './lock'
 
 // ─── The door ────────────────────────────────────────────────────────────────
@@ -46,8 +47,15 @@ export function LockGate({ onUnlocked, compact = false, title, note }: LockGateP
   const cfg = loadLock()
   const passkey = loadPasskey()
   const [password, setPassword] = useState('')
-  const [busy, setBusy] = useState<'bio' | 'pw' | null>(null)
+  const [busy, setBusy] = useState<'bio' | 'pw' | 'enrol' | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // A passkey belongs to one device and never travels, so a second device has
+  // none — which the screen used to *state* and leave you with. The offer to
+  // set this one up belongs here, right after the password has proved who you
+  // are, rather than buried in a settings page you would have to know about.
+  const [offerEnrol, setOfferEnrol] = useState(false)
+  const [canBio, setCanBio] = useState(false)
+  useEffect(() => { void biometricsAvailable().then(setCanBio) }, [])
   const fieldRef = useRef<HTMLInputElement>(null)
 
   // A device with a passkey should not have to reach for the keyboard; one
@@ -72,12 +80,67 @@ export function LockGate({ onUnlocked, compact = false, title, note }: LockGateP
     if (!password) return
     setError(null); setBusy('pw')
     try {
-      if (await checkPassword(password, cfg)) { setPassword(''); onUnlocked() }
+      if (await checkPassword(password, cfg)) {
+        setPassword('')
+        // Right answer. If this device could unlock by face or finger and has
+        // never been asked, ask now — it is the one moment the offer makes
+        // sense, and the alternative is typing the password here for ever.
+        if (canBio && !passkey) setOfferEnrol(true)
+        else onUnlocked()
+      }
       else { setError('That is not the password.'); setPassword('') }
     } finally { setBusy(null); fieldRef.current?.focus() }
   }
 
-  const body = (
+  /** Register this device, from the tap that asked for it — WebAuthn needs the
+   *  gesture, so this cannot be done for you after the fact. */
+  async function enrolThisDevice() {
+    setError(null); setBusy('enrol')
+    try {
+      let name = 'Finance'
+      try { name = localStorage.getItem('professor-display-name') || name } catch { /* noop */ }
+      await registerPasskey(name)
+      onUnlocked()
+    } catch (e) {
+      // The password already proved who you are, so a refused passkey is a
+      // disappointment rather than a reason to keep you out.
+      const n = (e as { name?: string })?.name
+      setError(n === 'NotAllowedError'
+        ? 'Cancelled — opening the finances anyway.'
+        : `${deviceLabel()} would not register one (${n ?? 'no reason given'}). Opening the finances anyway.`)
+      window.setTimeout(onUnlocked, 1400)
+    } finally { setBusy(null) }
+  }
+
+  const enrolBody = (
+    <div style={{
+      width: compact ? '100%' : 380, maxWidth: '100%',
+      background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
+      padding: compact ? '18px 20px 20px' : '30px 30px 26px',
+    }}>
+      <h2 style={{
+        margin: 0, fontFamily: 'var(--sb-font-num)',
+        fontSize: compact ? 17 : 23, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--sb-ink-1)',
+      }}>Use {biometricName()} on this {deviceLabel().replace(/^This /, '')}?</h2>
+      <p style={{ margin: '7px 0 18px', fontSize: 'var(--sb-t-body-s)', lineHeight: 1.55, color: 'var(--sb-ink-3)' }}>
+        A passkey lives on one device and cannot travel, so the one on your
+        other browser does not work here. This sets one up for this one — the
+        password keeps working either way.
+      </p>
+      {error && (
+        <p style={{ margin: '0 0 12px', fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-negative)' }}>{error}</p>
+      )}
+      <Button variant="primary" onClick={enrolThisDevice} disabled={busy !== null} style={{ width: '100%', marginBottom: 10 }}>
+        <IconFingerprint color="var(--sb-ink-on-dark)" />
+        {busy === 'enrol' ? 'Waiting for you…' : 'Set it up'}
+      </Button>
+      <Button variant="ghost" onClick={onUnlocked} disabled={busy !== null} style={{ width: '100%' }}>
+        Not now
+      </Button>
+    </div>
+  )
+
+  const body = offerEnrol ? enrolBody : (
     <div style={{
       width: compact ? '100%' : 380, maxWidth: '100%',
       background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',

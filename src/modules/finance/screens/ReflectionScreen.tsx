@@ -772,7 +772,7 @@ export function ReflectionScreen(_props?: any) {
           onClick={() => setDrill(null)}
           style={{
             position: 'fixed', inset: 0, zIndex: 900,
-            background: 'color-mix(in srgb, var(--sb-ink-1) 42.0%, transparent)', backdropFilter: 'blur(3px)',
+            background: 'var(--sb-scrim)', backdropFilter: 'blur(3px)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
           }}>
           <div

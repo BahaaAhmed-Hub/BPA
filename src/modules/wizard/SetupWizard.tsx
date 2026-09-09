@@ -186,7 +186,7 @@ export function SetupWizard({ onClose }: Props) {
         {/* Modal */}
         <div style={{
           ...LIGHT_VARS,
-          background: 'var(--sb-card)',
+          background: 'var(--sb-overlay)',
           borderRadius: 'var(--sb-r-card)',
           width: '100%', maxWidth: 640,
           maxHeight: '88vh',

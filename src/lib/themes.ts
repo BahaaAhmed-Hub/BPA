@@ -21,6 +21,7 @@ import { useBehavioralStore, type BehavioralMode } from '@/store/behavioralStore
 export type SbToken =
   | '--sb-page' | '--sb-header' | '--sb-card' | '--sb-field'
   | '--sb-border' | '--sb-hairline' | '--sb-surface-blur'
+  | '--sb-overlay' | '--sb-scrim'
   | '--sb-ink-1' | '--sb-ink-2' | '--sb-ink-3' | '--sb-ink-4' | '--sb-ink-on-dark'
   /** What a label on a solid *semantic* fill is drawn in — a tick on green, a
    *  count on red. Near-white where those fills are saturated and dark,
@@ -80,6 +81,7 @@ export const THEMES: AppTheme[] = [
       '--sb-card': '#FFFFFF', '--sb-field': '#FAF7EC',
       '--sb-border': '#E8E1CE', '--sb-hairline': '#F0EBDC',
       '--sb-surface-blur': '0px',
+      '--sb-overlay': '#FFFFFF', '--sb-scrim': 'rgba(25,23,18,.45)',
       '--sb-ink-1': '#191712', '--sb-ink-2': '#4A4438',
       '--sb-ink-3': '#6C6553', '--sb-ink-4': '#6E6759',   // 4.58:1 on the accent tint, its worst ground; #7C7565 was 4.07
       '--sb-ink-on-dark': '#FDF8E7',
@@ -130,6 +132,7 @@ export const THEMES: AppTheme[] = [
       '--sb-border': '#E7E2D8', '--sb-hairline': '#EFEBE1',
       '--sb-surface-blur': '0px',
       '--sb-ink-1': '#1A1814', '--sb-ink-2': '#54503F',
+      '--sb-overlay': '#FFFFFF', '--sb-scrim': 'rgba(30,26,20,.45)',
       '--sb-ink-3': '#6E6656', '--sb-ink-4': '#6E665A',   // 4.55:1 on the accent tint, its worst ground; #7F7768 was 3.93
       '--sb-ink-on-dark': '#F4F1EA',
       // Ten percent darker than the specified #C4633F. The primary button is a
@@ -185,6 +188,7 @@ export const THEMES: AppTheme[] = [
       '--sb-border': 'rgba(255,255,255,.08)', '--sb-hairline': 'rgba(255,255,255,.045)',
       '--sb-surface-blur': '20px',
       '--sb-ink-1': '#EDEBF5', '--sb-ink-2': '#D6D2EA',
+      '--sb-overlay': '#1C1B26', '--sb-scrim': 'rgba(5,4,10,.62)',
       '--sb-ink-3': '#A5A1BC', '--sb-ink-4': '#9A97B3',   // 4.56:1 on the tints; #8F8BAB was 3.94
       '--sb-accent': '#A78BFA', '--sb-accent-ink': '#1B1330',
       '--sb-accent-tint': 'rgba(167,139,250,.20)',
@@ -240,6 +244,7 @@ export const THEMES: AppTheme[] = [
       '--sb-border': '#DCE7E3', '--sb-hairline': '#EDF1EF',
       '--sb-surface-blur': '0px',
       '--sb-ink-1': '#131A17', '--sb-ink-2': '#3E4842',
+      '--sb-overlay': '#FFFFFF', '--sb-scrim': 'rgba(16,26,22,.45)',
       '--sb-ink-3': '#5D675F', '--sb-ink-4': '#636B64',   // 4.55:1 on the positive tint, its worst ground; #757E77 was 3.90
       '--sb-ink-on-dark': '#EAF6F0',
       '--sb-accent': '#155E4B', '--sb-accent-ink': '#EAF6F0',
