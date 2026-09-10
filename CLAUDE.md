@@ -630,7 +630,29 @@ month, unpaid, envelopes over, a normal month, spare, goals with dates),
 `list_finance_accounts`, `list_transactions`, `spending_by_category`,
 `list_budget_envelopes`, `list_goals`, `find_duplicate_entries`. Writing:
 `add_transaction`, `update_transaction`, `set_transaction_paid`,
-`delete_transaction`, `add_goal`, `update_goal`, `set_exchange_rate`.
+`delete_transaction`, `add_goal`, `update_goal`, `set_exchange_rate`,
+`set_budget_envelope`, `remove_budget_envelope`.
+- **A budget was the one thing it could read and not change**, and an envelope
+  *is* the budget — there is no second object to edit, so "budget Groceries at
+  14,000" and "raise it" are one call. `set_budget_envelope` changes **only what
+  it is named**, so raising an amount does not silently drop the due day, the
+  bucket or the account the money leaves.
+- **`saveRules` in `BudgetRuleModal.tsx` is the only writer of
+  `finance-budget-rules`**, and it fires `finance:budgetRulesChanged` as well as
+  `professor:moneyRemindersChanged`. `BudgetScreen` held the copy it read at
+  mount, so a change made from the assistant panel — which opens *over* that
+  screen — left the figure behind it unmoved, which reads as the change being
+  refused. It now re-reads on that event and on `storage`, so another device's
+  edit arrives too.
+- **It refuses a dated budget rather than flattening it.** Four instalments
+  cannot be described by one repeating figure, and turning them into a monthly
+  average is exactly the thing the dated shapes exist to stop.
+- **A due day with no account is refused**: the entry it writes has to leave
+  from somewhere, or no balance can ever answer for it. Setting one writes the
+  year's remaining unpaid entries; `remove_budget_envelope` (confirm-gated)
+  takes them back out, through the same `runBudgetEntries` pass App already runs
+  on `professor:moneyRemindersChanged`. Verified: a day of the 12th wrote Sept
+  through Dec, and removing the budget left none.
 - **One year is loaded at a time**, so `ensureYear()` switches the year for a
   range in another one and refuses a range that spans two — otherwise "nothing"
   is an answer about a year that was never fetched.

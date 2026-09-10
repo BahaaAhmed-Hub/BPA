@@ -13,6 +13,7 @@ import { toBase, rateFor, currenciesNeedingRates } from '../fx'
 import { useUIStore } from '@/store/uiStore'
 import {
   BudgetRuleModal, defaultRule, monthlyAmount, activeIn, ordinal, bucketOf, BUCKETS,
+  loadRules, saveRules, BUDGET_RULES_EVENT,
   isDated, budgetTotal, linesOf,
   type BudgetRule, type Bucket,
 } from '../modals/BudgetRuleModal'
@@ -1120,9 +1121,21 @@ export function BudgetScreen(_props?: any) {
    *  next load or the twelve-hour sweep. */
   function putRules(next: Record<string, BudgetRule>) {
     setRules(next)
-    localStorage.setItem('finance-budget-rules', JSON.stringify(next))
-    window.dispatchEvent(new Event('professor:moneyRemindersChanged'))
+    saveRules(next)
   }
+  // Another device's edit arrives through prefSync as a `storage` event, and
+  // the assistant writes from a panel over this very screen. Either way the
+  // copy read at mount is stale, and a budget that changed and did not redraw
+  // reads as the change having been refused.
+  useEffect(() => {
+    const sync = () => setRules(loadRules())
+    window.addEventListener(BUDGET_RULES_EVENT, sync)
+    window.addEventListener('storage', sync)
+    return () => {
+      window.removeEventListener(BUDGET_RULES_EVENT, sync)
+      window.removeEventListener('storage', sync)
+    }
+  }, [])
 
   function deleteRule(catId: string) {
     const next = { ...rules }

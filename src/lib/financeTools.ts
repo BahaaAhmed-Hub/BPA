@@ -17,6 +17,15 @@
 // - **A write is one entry, it says what it did, and it can be taken back.**
 //   Deleting asks for `confirm`, deletion goes through the store's undo, and
 //   every write calls `notify()` so it lands in the corner where you can see it.
+//
+// Budgets are here too, because "budget" was the one thing the assistant could
+// read and not change, and an envelope *is* the budget — there is nothing else
+// to edit. `set_budget_envelope` writes through the Budget screen's own writer
+// (`saveRules`), which fires the event that screen listens on, so a change made
+// from a panel opened over it is visible behind the panel rather than waiting
+// for a reload. It changes **only what it is named**, so raising an amount does
+// not silently drop the due day, and it refuses a budget written as instalments
+// on their own dates rather than flattening four dates into a monthly average.
 
 import type Anthropic from '@anthropic-ai/sdk'
 import { useFinanceStore } from '@/modules/finance/financeStore'
@@ -26,7 +35,10 @@ import { toBase, baseCurrency, loadRates, setRate, rateFor } from '@/modules/fin
 import { settled, whenPaid, isUnpaid } from '@/modules/finance/unpaid'
 import { findDuplicates } from '@/modules/finance/duplicates'
 import { capacityFrom, planGoals, debtGoals, isDebtGoal } from '@/modules/finance/goalPlan'
-import { loadRules, monthlyAmount, activeIn } from '@/modules/finance/modals/BudgetRuleModal'
+import {
+  loadRules, saveRules, defaultRule, monthlyAmount, activeIn, scheduleOf,
+  type BudgetRule,
+} from '@/modules/finance/modals/BudgetRuleModal'
 import { todayISO } from '@/modules/finance/dates'
 import type { Account, Category, Currency, Goal, Transaction, TxType } from '@/modules/finance/types'
 import { notify } from '@/lib/undo'
@@ -87,6 +99,17 @@ function inBase(amount: number, currency: string): number | null {
 function catName(id: string | undefined, cats: Category[]): string {
   return cats.find(c => c.id === id)?.name ?? 'Uncategorised'
 }
+
+/** A budget whose instalments carry their own dates cannot be described by one
+ *  repeating figure, and must not be quietly turned into one. */
+function isDatedRule(r: BudgetRule): boolean {
+  const kind = scheduleOf(r)
+  return kind === 'once' || kind === 'custom'
+}
+
+const freqWord = (f: BudgetRule['frequency']) =>
+  f === 'weekly' ? 'a week' : f === 'quarterly' ? 'a quarter' : f === 'yearly' ? 'a year'
+    : f === 'every_2_months' ? 'every two months' : 'a month'
 
 function acctName(id: string | undefined, accts: Account[]): string {
   return accts.find(a => a.id === id)?.name ?? 'unknown account'
@@ -164,7 +187,9 @@ export const FINANCE_TOOLS: Anthropic.Tool[] = [
   },
   {
     name: 'list_budget_envelopes',
-    description: 'Every category with a budget: what it allows a month, what has been spent against it, what is left, and the day the money is due.',
+    description:
+      'Every category with a budget: what it allows a month, what has been spent against it, what is left, and the day '
+      + 'the money is due. `set_budget_envelope` changes any of it — the envelope is the budget, there is no second thing to edit.',
     input_schema: {
       type: 'object' as const,
       properties: { month: { type: 'string', description: 'YYYY-MM (defaults to this month)' } },
@@ -295,6 +320,44 @@ export const FINANCE_TOOLS: Anthropic.Tool[] = [
         rate:     { type: 'number', description: 'What one unit is worth in the base currency' },
       },
       required: ['currency', 'rate'],
+    },
+  },
+  {
+    name: 'set_budget_envelope',
+    description:
+      'Set or change what a category is allowed. Use it whenever the user says to budget, cap, raise, lower or re-plan a '
+      + "category — the envelope is the budget, there is nothing else to edit. Only what is named is changed; everything "
+      + 'else on the envelope stays as it was, so raising an amount does not silently drop its due day or its bucket. '
+      + 'It cannot set instalments on their own dates (school fees) — say so and point at Budget for those.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        category:  { type: 'string', description: 'The category or sub-category, by name' },
+        amount:    { type: 'number', description: 'What it is allowed, per `frequency`. Positive. Omit to leave it alone.' },
+        frequency: { type: 'string', enum: ['weekly', 'monthly', 'quarterly', 'yearly'], description: 'How often that amount is allowed. Defaults to monthly on a new envelope.' },
+        currency:  { type: 'string', description: 'What the figure is in, and therefore which entries it counts. Defaults to the base currency.' },
+        bucket:    { type: 'string', enum: ['fixed', 'investment', 'savings', 'guiltfree'], description: 'Fixed costs, investments, savings, or guilt-free spending.' },
+        due_day:   { type: 'number', description: '1–31, the day the money actually leaves. Setting this writes an unpaid entry in the ledger on that day each period. Use 0 to take the day off.' },
+        due_account: { type: 'string', description: 'Which account that money leaves, by name. Only meaningful with a due day.' },
+        starts:    { type: 'string', description: "YYYY-MM, the first month it applies to. Omit for every month; '' clears one that is set." },
+        ends:      { type: 'string', description: "YYYY-MM, the last month. '' clears it and lets it run on." },
+        rollover:  { type: 'boolean', description: 'Whether what is unspent carries into the next period.' },
+      },
+      required: ['category'],
+    },
+  },
+  {
+    name: 'remove_budget_envelope',
+    description:
+      'Take the budget off a category. The category and its entries stay; only the limit goes, along with any unpaid '
+      + 'future entries the budget wrote. Needs `confirm: true`.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        category: { type: 'string', description: 'The category, by name' },
+        confirm:  { type: 'boolean', description: 'Must be true. Ask first.' },
+      },
+      required: ['category', 'confirm'],
     },
   },
 ]
@@ -693,6 +756,131 @@ export async function executeFinanceTool(
       setRate(cur, rate)
       notify(`1 ${cur} = ${rate} ${base}`)
       return { ok: true, rates: loadRates(), base, note: `Totals now count ${cur}.` }
+    }
+
+    // ── Budgets ───────────────────────────────────────────────────────────
+    //
+    //  An envelope *is* the budget — there is no separate object to edit — so
+    //  "set the budget for Groceries" and "raise it" are the same call. The
+    //  rule it writes is the Budget screen's own shape, through the Budget
+    //  screen's own writer, so the two can never hold different answers.
+
+    case 'set_budget_envelope': {
+      const cat = pick('category', categories, str('category'))
+      if (isErr(cat)) return cat
+      const rules = loadRules()
+      const had = rules[cat.hit.id]
+      const rule: BudgetRule = { ...(had ?? defaultRule()) }
+
+      const amount = num('amount')
+      if (amount !== undefined) {
+        // A budget is a limit, and a negative limit is not one. Filing an
+        // envelope at -6,000 would read as "spend six thousand more".
+        if (amount < 0) return { error: 'A budget is a positive figure — it is what the category is allowed, not a movement.' }
+        rule.amount = amount
+      }
+      if (had && amount === undefined && !isDatedRule(rule)) {
+        // Nothing to change and nothing set: the honest answer is a question.
+        if (Object.keys(input).length === 1) return { error: `${cat.hit.name} already allows ${had.amount} ${had.currency ?? base}. What should it be?` }
+      }
+
+      // A rule with instalments on their own dates cannot be reduced to one
+      // figure, so this refuses rather than flattening four dates into a
+      // monthly average nobody agreed to.
+      if (isDatedRule(rule) && amount !== undefined) {
+        return {
+          error: `${cat.hit.name}'s budget is a set of dates, not one repeating figure. `
+               + 'Changing that here would flatten the instalments into a monthly average. Open Finance → Budget to edit the dates.',
+        }
+      }
+
+      const freq = str('frequency')
+      if (freq) rule.frequency = freq as BudgetRule['frequency']
+      const cur = str('currency')
+      if (cur) rule.currency = cur.toUpperCase()
+      const bucket = str('bucket')
+      if (bucket) rule.bucket = bucket as NonNullable<BudgetRule['bucket']>
+      const roll = bool('rollover')
+      if (roll !== undefined) rule.rollover = roll
+
+      const day = num('due_day')
+      if (day !== undefined) {
+        if (day === 0) { delete rule.dueDay; delete rule.dueAccountId }
+        else if (day < 1 || day > 31) return { error: 'A due day is 1–31, or 0 to take it off.' }
+        else rule.dueDay = Math.round(day)
+      }
+      const acctTerm = str('due_account')
+      if (acctTerm) {
+        const a = pick('account', accounts, acctTerm)
+        if (isErr(a)) return a
+        rule.dueAccountId = a.hit.id
+      }
+      // A day with nowhere for the money to leave from writes an entry against
+      // no account, which is an entry no balance can ever answer for.
+      if (rule.dueDay && !rule.dueAccountId) {
+        return { error: `A due day says the money leaves on the ${rule.dueDay}th — say which account it leaves, and the entry can be written.` }
+      }
+
+      for (const k of ['starts', 'ends'] as const) {
+        const v = input[k]
+        if (typeof v !== 'string') continue
+        if (v.trim() === '') { delete rule[k]; continue }
+        if (!/^\d{4}-\d{2}$/.test(v.trim())) return { error: `\`${k}\` is a month, YYYY-MM.` }
+        rule[k] = v.trim()
+      }
+      if (rule.starts && rule.ends && rule.ends < rule.starts) {
+        return { error: `It cannot end (${rule.ends}) before it starts (${rule.starts}).` }
+      }
+      if (rule.amount <= 0) return { error: 'What should the budget be? A budget of nothing is the same as having none — use remove_budget_envelope for that.' }
+
+      saveRules({ ...rules, [cat.hit.id]: rule })
+      const month = monthOf(today)
+      const perMonth = monthlyAmount(rule, month)
+      notify(`${cat.hit.name}: ${rule.amount} ${rule.currency ?? base} ${freqWord(rule.frequency)}`)
+      return {
+        ok: true,
+        category: cat.hit.name,
+        was: had ? { amount: had.amount, frequency: had.frequency, currency: had.currency ?? base, due_day: had.dueDay ?? null } : null,
+        now: {
+          amount: rule.amount, frequency: rule.frequency, currency: rule.currency ?? base,
+          bucket: rule.bucket ?? 'guiltfree',
+          due_day: rule.dueDay ?? null,
+          due_account: rule.dueAccountId ? acctName(rule.dueAccountId, accounts) : null,
+          starts: rule.starts ?? 'every month',
+          ends: rule.ends ?? 'runs on',
+          rollover: rule.rollover,
+        },
+        a_month: money(perMonth),
+        applies_this_month: activeIn(rule, month),
+        note: rule.dueDay
+          ? `An unpaid entry is written on the ${rule.dueDay}th of each period, out of every balance until it is ticked paid.`
+          : 'An allowance with no particular day to it — nothing is written in the ledger for it.',
+      }
+    }
+
+    case 'remove_budget_envelope': {
+      const cat = pick('category', categories, str('category'))
+      if (isErr(cat)) return cat
+      const rules = loadRules()
+      const had = rules[cat.hit.id]
+      if (!had) return { error: `${cat.hit.name} has no budget to take off.` }
+      if (bool('confirm') !== true) {
+        return {
+          error: `That would take the ${had.amount} ${had.currency ?? base} budget off ${cat.hit.name}`
+               + `${had.dueDay ? `, and delete the unpaid future entries it was writing on the ${had.dueDay}th` : ''}`
+               + '. Ask, then call again with confirm: true.',
+        }
+      }
+      const next = { ...rules }
+      delete next[cat.hit.id]
+      saveRules(next)
+      notify(`Budget taken off ${cat.hit.name}`)
+      return {
+        ok: true, category: cat.hit.name,
+        removed: { amount: had.amount, frequency: had.frequency, currency: had.currency ?? base, due_day: had.dueDay ?? null },
+        note: 'The category and everything filed under it are untouched — only the limit is gone'
+            + (had.dueDay ? ', with the unpaid entries it had written ahead.' : '.'),
+      }
     }
 
     default:

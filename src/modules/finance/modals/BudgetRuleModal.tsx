@@ -111,6 +111,24 @@ export function loadRules(): Record<string, BudgetRule> {
   } catch { return {} }
 }
 
+/** Anything that changes a budget fires this, so a Budget screen already open
+ *  redraws instead of holding the copy it read when it mounted. The assistant
+ *  writes rules too, and it writes them from a panel that opens over that very
+ *  screen — a silent write there reads as the assistant having done nothing. */
+export const BUDGET_RULES_EVENT = 'finance:budgetRulesChanged'
+
+/** The only writer. `loadRules` reads this file's shape and so does this, and
+ *  both the Budget screen and the assistant go through them — a second place
+ *  that writes the key is a second answer to what a budget is. */
+export function saveRules(next: Record<string, BudgetRule>): void {
+  try { localStorage.setItem('finance-budget-rules', JSON.stringify(next)) }
+  catch { /* private mode */ }
+  // A budget with a day makes a task; saying so is what brings the board in
+  // line without waiting for the next load or the twelve-hour sweep.
+  window.dispatchEvent(new Event('professor:moneyRemindersChanged'))
+  window.dispatchEvent(new Event(BUDGET_RULES_EVENT))
+}
+
 /** 1st, 2nd, 3rd, 21st … — a day of the month reads as a day, not a number.
  *  The teens are the exception every naive version gets wrong. */
 /** "every month", "every quarter" — how often the entry lands. */
