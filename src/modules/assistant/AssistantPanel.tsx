@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import Anthropic from '@anthropic-ai/sdk'
-import { Brain, X, Send, Loader2, ChevronDown, Wrench , Paperclip, FileText, Image as ImageIcon, X as CloseIcon } from 'lucide-react'
+import { Brain, X, Send, Loader2, ChevronDown, ChevronRight, ChevronLeft, Wrench, Paperclip, FileText, Image as ImageIcon, X as CloseIcon } from 'lucide-react'
 import { useTaskStore } from '@/store/taskStore'
 import { useAuthStore } from '@/store/authStore'
 import { useHabitsStore } from '@/store/habitsStore'
@@ -238,9 +238,13 @@ const SUGGESTIONS = [
 interface AssistantPanelProps {
   open: boolean
   onClose: () => void
+  /** Slid out of the way, but still here — the conversation is untouched. */
+  minimised?: boolean
+  onMinimise?: () => void
+  onRestore?: () => void
 }
 
-export function AssistantPanel({ open, onClose }: AssistantPanelProps) {
+export function AssistantPanel({ open, onClose, minimised = false, onMinimise, onRestore }: AssistantPanelProps) {
   const user          = useAuthStore(s => s.user)
   const tasks         = useTaskStore(s => s.tasks)
   const addTask       = useTaskStore(s => s.addTask)
@@ -488,9 +492,12 @@ export function AssistantPanel({ open, onClose }: AssistantPanelProps) {
         display: 'flex', flexDirection: 'column',
         background: 'var(--sb-page)',
         borderLeft: 'var(--sb-border-width) solid var(--sb-border)',
-        transform: open ? 'translateX(0)' : 'translateX(100%)',
+        // Minimised is slid out, not unmounted: the thread, the draft in the
+        // box and an answer still streaming all carry on behind it.
+        transform: open && !minimised ? 'translateX(0)' : 'translateX(100%)',
         transition: 'transform 0.25s cubic-bezier(0.4,0,0.2,1)',
-        boxShadow: open ? '-8px 0 32px rgba(0,0,0,0.4)' : 'none',
+        boxShadow: open && !minimised ? '-8px 0 32px rgba(0,0,0,0.4)' : 'none',
+        visibility: open ? 'visible' : 'hidden',
       }}>
 
         {/* Header */}
@@ -518,7 +525,15 @@ export function AssistantPanel({ open, onClose }: AssistantPanelProps) {
               Clear
             </button>
           )}
-          <button onClick={onClose}
+          {onMinimise && (
+            <button onClick={onMinimise} title="Put it aside — the conversation stays"
+              aria-label="Put the assistant aside"
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', padding: 4, display: 'flex' }}>
+              <ChevronRight size={ICON.md} />
+            </button>
+          )}
+          <button onClick={onClose} title="Close, and forget the conversation" aria-label="Close the assistant"
+
             style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--sb-ink-3)', padding: 4, display: 'flex' }}>
             <X size={ICON.md} />
           </button>
@@ -675,7 +690,37 @@ export function AssistantPanel({ open, onClose }: AssistantPanelProps) {
         </div>
       </div>
 
+      {/* Minimised: a tab on the edge, which is the whole way back. Without
+          one the panel would be gone with no sign it was ever there. */}
+      {open && minimised && (
+        <button
+          onClick={onRestore}
+          title="Bring the assistant back"
+          aria-label="Bring the assistant back"
+          style={{
+            position: 'fixed', right: 0, top: '50%', transform: 'translateY(-50%)', zIndex: 149,
+            width: 34, height: 104, padding: 0, cursor: 'pointer',
+            borderRadius: 'var(--sb-r-nav) 0 0 var(--sb-r-nav)',
+            border: 'var(--sb-border-width) solid var(--sb-border)', borderRight: 'none',
+            background: 'var(--sb-card)', color: 'var(--sb-ink-3)',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 7,
+            boxShadow: '-4px 0 14px color-mix(in srgb, var(--sb-ink-1) 12.0%, transparent)',
+          }}>
+          <ChevronLeft size={ICON.md} />
+          <Brain size={ICON.sm} color="var(--sb-info)" />
+          {/* An answer arriving while it is put aside has to be visible, or it
+              looks as though nothing happened. */}
+          {thinking && (
+            <span style={{
+              width: 6, height: 6, borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-info)',
+              animation: 'pulse 1.2s ease-in-out infinite',
+            }} />
+          )}
+        </button>
+      )}
+
       <style>{`
+        @keyframes pulse { 0%,100% { opacity: .25 } 50% { opacity: 1 } }
         @keyframes bounce { 0%,80%,100%{transform:translateY(0)} 40%{transform:translateY(-5px)} }
         @keyframes spin { to { transform: rotate(360deg); } }
       `}</style>

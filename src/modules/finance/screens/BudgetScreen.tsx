@@ -1156,7 +1156,7 @@ export function BudgetScreen(_props?: any) {
       // month's spending, and comparing it raw made every non-monthly envelope
       // look untouched. And a budget that has not begun, or has ended, is not
       // a budget this month — both ends were collected and never consulted.
-      const own = activeIn(rule, monthKey) ? monthlyAmount(rule) : 0
+      const own = activeIn(rule, monthKey) ? monthlyAmount(rule, monthKey) : 0
 
       // A sub-category keeps its budget in its own currency. Added at face
       // value, a 250 USD sub-budget put 250 onto a 5,000 EGP parent — so each
@@ -1164,7 +1164,7 @@ export function BudgetScreen(_props?: any) {
       // cannot be converted is named rather than counted.
       const children = categories.filter(c => c.parentId === cat.id).map(child => {
         const r = rules[child.id]
-        const own = activeIn(r, monthKey) ? monthlyAmount(r) : 0
+        const own = activeIn(r, monthKey) ? monthlyAmount(r, monthKey) : 0
         const childCur = r?.currency ?? cur
         const inBase = own === 0 ? 0 : toBase(own, childCur, currency)
         if (own > 0 && (inBase === null || rate === null)) currencies.add(childCur)
@@ -1229,7 +1229,7 @@ export function BudgetScreen(_props?: any) {
     () => currenciesNeedingRates([
       ...transactions.filter(t => whenPaid(t).startsWith(monthKey)),
       ...Object.values(rules)
-        .filter(r => r && monthlyAmount(r) > 0)
+        .filter(r => r && monthlyAmount(r, monthKey) > 0)
         .map(r => ({ currency: r.currency })),
     ], currency),
     [transactions, monthKey, currency, rules, fxTick],
@@ -1555,7 +1555,7 @@ export function BudgetScreen(_props?: any) {
           parent={selectedCat.parentId ? categories.find(c => c.id === selectedCat.parentId) : null}
           partsBudget={categories
             .filter(c => c.parentId === selectedCat.id)
-            .reduce((n, c) => n + (activeIn(rules[c.id], monthKey) ? monthlyAmount(rules[c.id]) : 0), 0)}
+            .reduce((n, c) => n + (activeIn(rules[c.id], monthKey) ? monthlyAmount(rules[c.id], monthKey) : 0), 0)}
           rule={rule ?? defaultRule()}
           subs={subs(selectedCat.id)}
           transactions={transactions}

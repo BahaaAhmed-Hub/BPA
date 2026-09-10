@@ -509,6 +509,30 @@ nothing else read. Tab, screen, modal, the `Bill` type, the store's CRUD, the
 publication first). Anything still in it is folded into budget rules by hand
 before running it — the drop is not undoable.
 
+## Finance — a budget has three shapes
+A budget could only ever say "this much, every so often". School fees are four
+instalments, on four different dates, for four different amounts — and forcing
+that into one monthly figure makes eight months look poorer than they are and
+four look impossible. `BudgetRule.schedule` (absent = `repeat`, so every rule
+written before this reads unchanged):
+- **`repeat`** — the original: `amount` every `frequency`, on `dueDay`.
+- **`once`** — one `amount` on one `onDate`. It had no shape at all before: with
+  no day-of-the-month and no interval it never reached the writer, so nothing
+  was ever written for it.
+- **`custom`** — `lines[]`, each a date and its own amount, with `linesRepeat`
+  for a set that comes round every year (school fees) against one that does not
+  (a build's payment plan).
+- **`monthlyAmount(rule, monthKey?)`** — without a month it is the year's
+  average, which is what an envelope is *worth*; with one it is what that month
+  actually asks for, which is what the envelope is *measured against*. Every
+  call site that has a month in scope passes it, so a custom schedule stops
+  reporting a quarter of the year in a month with nothing in it.
+- `occurrencesFor` returns `{date, amount}` rather than dates, since a custom
+  schedule gives each date its own; the writer takes the amount from there.
+- The **Paid on** row is hidden for the two dated shapes — they carry their own
+  dates, and leaving a day set would write a second entry every month beside the
+  instalments.
+
 ## Finance — a budget with a day writes the entry
 `budgetEntries.ts`. `BudgetRule.dueDay` + `dueAccountId` (the **Paid on** row) means
 the money leaves on that day, so the entry goes in the ledger on that day, **unpaid**
@@ -1108,6 +1132,15 @@ themselves, so each reads a **note left by whoever does know**:
 been read here", "needs Behavioral OS switched on". Shown in the bell panel and
 as a chip on the Settings row. An empty bell for a reason is not a quiet day,
 and "not wired yet" was the wrong thing to say about either.
+
+## The assistant can be put aside
+An arrow in the panel header slides it out and leaves a tab on the right edge;
+the tab, or the floating button, brings it back. `minimised` lives in **App**
+beside `open`, because the floating button has to return to its "open me" state
+while it is aside. The panel is **slid out, never unmounted** — the thread, a
+half-typed message, staged attachments and an answer still streaming all carry
+on behind it, and the tab shows a pulsing dot while one is arriving. Closing is
+still closing: it clears the conversation.
 
 ## The assistant takes files
 `lib/chatAttachments.ts` + the composer in `AssistantPanel`. A screenshot of an

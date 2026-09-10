@@ -360,14 +360,14 @@ export async function executeFinanceTool(
 
       const rules = loadRules()
       const over = Object.entries(rules)
-        .filter(([id, r]) => activeIn(r, month) && monthlyAmount(r) > 0 && categories.some(c => c.id === id))
+        .filter(([id, r]) => activeIn(r, month) && monthlyAmount(r, month) > 0 && categories.some(c => c.id === id))
         .map(([id, r]) => {
           const cat = categories.find(c => c.id === id)!
           const kids = categories.filter(c => c.parentId === id).map(c => c.id)
           const spent = paid
             .filter(t => t.type === 'expense' && (t.categoryId === id || kids.includes(t.categoryId ?? '')))
             .reduce((n, t) => n + (inBase(t.amount, t.currency) ?? 0), 0)
-          return { category: cat.name, budget: money(monthlyAmount(r)), spent: money(spent), left: money(monthlyAmount(r) - spent) }
+          return { category: cat.name, budget: money(monthlyAmount(r, month)), spent: money(spent), left: money(monthlyAmount(r, month) - spent) }
         })
         .filter(e => e.left < 0)
 
@@ -495,11 +495,11 @@ export async function executeFinanceTool(
       const out = []
       for (const [id, rule] of Object.entries(rules)) {
         const cat = cur.categories.find(c => c.id === id)
-        if (!cat || !activeIn(rule, month) || monthlyAmount(rule) <= 0) continue
+        if (!cat || !activeIn(rule, month) || monthlyAmount(rule, month) <= 0) continue
         const kids = cur.categories.filter(c => c.parentId === id).map(c => c.id)
         const spent = paid.filter(t => t.categoryId === id || kids.includes(t.categoryId ?? ''))
           .reduce((n, t) => n + (inBase(t.amount, t.currency) ?? 0), 0)
-        const budget = monthlyAmount(rule)
+        const budget = monthlyAmount(rule, month)
         out.push({
           category: cat.name, budget: money(budget), spent: money(spent), left: money(budget - spent),
           used: `${Math.round((spent / (budget || 1)) * 100)}%`,

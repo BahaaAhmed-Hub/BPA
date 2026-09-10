@@ -1,5 +1,5 @@
 import type { Category, Transaction } from './types'
-import { activeIn, type BudgetRule } from './modals/BudgetRuleModal'
+import { activeIn, linesOf, scheduleOf, type BudgetRule } from './modals/BudgetRuleModal'
 import { baseCurrency } from './fx'
 import { isoDate, shiftDaysISO } from './dates'
 
@@ -46,20 +46,55 @@ const monthsPer: Record<string, number> = {
  *  quarters. Weekly is the odd one out: a day of the month means nothing to
  *  it, so it steps seven days at a time from the first one on or after today.
  */
+export interface Occurrence {
+  date: string
+  /** What lands on that date. A custom schedule gives each date its own. */
+  amount: number
+}
+
 export function occurrencesFor(
   rule: BudgetRule,
   now = new Date(),
   monthsAhead = MONTHS_AHEAD,
-): string[] {
-  if (rule.dueDay == null) return []
+): Occurrence[] {
   const today = isoDate(now)
-  const out: string[] = []
+  const out: Occurrence[] = []
+  const kind = scheduleOf(rule)
+  const horizon = isoDate(new Date(now.getFullYear(), now.getMonth() + monthsAhead + 1, 0))
+
+  // One payment, on one day. It has no day-of-the-month and no frequency, so
+  // it never reached the code below and nothing was ever written for it.
+  if (kind === 'once') {
+    if (!rule.onDate || !(rule.amount > 0)) return []
+    if (rule.onDate < today || rule.onDate > horizon) return []
+    return [{ date: rule.onDate, amount: rule.amount }]
+  }
+
+  // Four instalments, four dates, four amounts — school fees, and everything
+  // shaped like them. Repeating means the same month and day next year.
+  if (kind === 'custom') {
+    for (const line of linesOf(rule)) {
+      const years = rule.linesRepeat
+        ? [Number(line.date.slice(0, 4)), now.getFullYear(), now.getFullYear() + 1, now.getFullYear() + 2]
+        : [Number(line.date.slice(0, 4))]
+      for (const y of [...new Set(years)]) {
+        const date = `${y}${line.date.slice(4)}`
+        if (date < today || date > horizon) continue
+        if (!activeIn(rule, date.slice(0, 7))) continue
+        if (out.some(o => o.date === date)) continue
+        out.push({ date, amount: line.amount })
+      }
+    }
+    return out.sort((a, b) => a.date.localeCompare(b.date))
+  }
+
+  if (rule.dueDay == null) return []
 
   if (rule.frequency === 'weekly') {
     let d = onDay(now.getFullYear(), now.getMonth(), rule.dueDay)
     while (d < today) d = shiftDaysISO(d, 7)
     const end = onDay(now.getFullYear(), now.getMonth() + monthsAhead, rule.dueDay)
-    while (d <= end) { out.push(d); d = shiftDaysISO(d, 7) }
+    while (d <= end) { out.push({ date: d, amount: rule.amount }); d = shiftDaysISO(d, 7) }
     return out
   }
 
@@ -76,7 +111,7 @@ export function occurrencesFor(
     if (!activeIn(rule, monthKey)) continue
     const date = onDay(d.getFullYear(), d.getMonth(), rule.dueDay)
     if (date < today) continue
-    out.push(date)
+    out.push({ date, amount: rule.amount })
   }
   return out
 }
@@ -163,14 +198,22 @@ export function runBudgetEntries(
   ])
 
   for (const [categoryId, rule] of Object.entries(rules)) {
-    if (!rule || rule.dueDay == null || !(rule.amount > 0)) continue
+    if (!rule) continue
+    // What makes a budget write entries is knowing *when* the money moves.
+    // A repeating rule says that with a day of the month; the other two say it
+    // with dates of their own, and used to be turned away here for having no
+    // dueDay at all.
+    const kind = scheduleOf(rule)
+    if (kind === 'repeat' && (rule.dueDay == null || !(rule.amount > 0))) continue
+    if (kind === 'once' && !rule.onDate) continue
+    if (kind === 'custom' && linesOf(rule).length === 0) continue
     const cat = categories.find(c => c.id === categoryId)
     if (!cat) continue
     // The money has to come from somewhere. A rule that names no account and
     // has nothing to fall back on writes nothing, rather than guessing.
     const accountId = rule.dueAccountId ?? fallbackAccountId
     if (!accountId) continue
-    for (const date of occurrencesFor(rule, now)) {
+    for (const { date, amount } of occurrencesFor(rule, now)) {
       if (!date.startsWith(String(year))) continue
       const key = `${categoryId}|${date}`
       wanted.add(key)
@@ -180,7 +223,7 @@ export function runBudgetEntries(
       fresh.push({
         id: crypto.randomUUID(),
         accountId,
-        amount: rule.amount,
+        amount,
         currency: (rule.currency ?? base) as Transaction['currency'],
         type: cat.txType === 'income' ? 'income' : 'expense',
         payee: cat.name,

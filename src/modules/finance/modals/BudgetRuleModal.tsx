@@ -18,7 +18,38 @@ const DISPLAY = 'var(--sb-font-num)'
 
 export type Frequency = 'weekly' | 'monthly' | 'every_2_months' | 'quarterly' | 'yearly'
 
+/**
+ * How a budget is laid out across the year.
+ *
+ * `repeat` is the same amount every so often, which is what every rule was
+ * until now. It cannot say what school fees actually do: four instalments, on
+ * four different dates, for four different amounts. Forcing that into one
+ * monthly figure makes eight months look poorer than they are and four look
+ * impossible — so `custom` takes the dates and amounts as they are, and `once`
+ * is the single-payment case that used to have no shape at all.
+ */
+export type Schedule = 'repeat' | 'once' | 'custom'
+
+/** One dated amount inside a custom schedule. */
+export interface BudgetLine {
+  id: string
+  /** YYYY-MM-DD. */
+  date: string
+  amount: number
+  /** What this instalment is, where that is worth writing down. */
+  note?: string
+}
+
 export interface BudgetRule {
+  /** Absent means `repeat` — every rule written before this reads unchanged. */
+  schedule?: Schedule
+  /** `once`: the day it falls. YYYY-MM-DD. */
+  onDate?: string
+  /** `custom`: the instalments, each with its own date and amount. */
+  lines?: BudgetLine[]
+  /** `custom`: whether those dates come round again next year. School fees do;
+   *  a one-off set of build payments does not. */
+  linesRepeat?: boolean
   amount: number
   frequency: Frequency
   rollover: boolean
@@ -89,7 +120,26 @@ export function defaultRule(): BudgetRule {
     amount: 0, frequency: 'monthly', rollover: false, warn80: true,
     starts: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
     fixedType: 'flexible',
+    schedule: 'repeat',
   }
+}
+
+/** Absent is `repeat`, so nothing written before this changed meaning. */
+export const scheduleOf = (r?: Pick<BudgetRule, 'schedule'>): Schedule => r?.schedule ?? 'repeat'
+
+/** The instalments of a custom rule, sorted, with anything unusable dropped. */
+export function linesOf(rule: Pick<BudgetRule, 'lines'>): BudgetLine[] {
+  return (rule.lines ?? [])
+    .filter(l => l && /^\d{4}-\d{2}-\d{2}$/.test(l.date) && l.amount > 0)
+    .sort((a, b) => a.date.localeCompare(b.date))
+}
+
+/** What a custom or one-off rule asks for across a whole year. */
+export function yearlyTotal(rule: BudgetRule): number {
+  const kind = scheduleOf(rule)
+  if (kind === 'once') return rule.amount > 0 ? rule.amount : 0
+  if (kind === 'custom') return linesOf(rule).reduce((n, l) => n + l.amount, 0)
+  return monthlyAmount(rule) * 12
 }
 
 /** Whether this budget is one that applies to the month being looked at.
@@ -106,8 +156,32 @@ export function activeIn(rule: Pick<BudgetRule, 'starts' | 'ends'> | undefined, 
 /** What this envelope is worth in a single month. The frequency was collected
  *  and then ignored: a yearly budget of 12,000 was compared against one
  *  month's spending as though it were 12,000 a month. */
-export function monthlyAmount(rule?: Pick<BudgetRule, 'amount' | 'frequency'>): number {
-  if (!rule?.amount) return 0
+export function monthlyAmount(rule?: BudgetRule, monthKey?: string): number {
+  if (!rule) return 0
+  const kind = scheduleOf(rule)
+
+  if (kind === 'once') {
+    if (!(rule.amount > 0)) return 0
+    // With a month in hand the answer is exact: the whole amount in the month
+    // it falls, nothing in any other. Without one it is the year's average,
+    // which is what an envelope is "worth" over twelve months.
+    if (!monthKey) return rule.amount / 12
+    return rule.onDate?.slice(0, 7) === monthKey ? rule.amount : 0
+  }
+
+  if (kind === 'custom') {
+    const lines = linesOf(rule)
+    if (lines.length === 0) return 0
+    if (!monthKey) return lines.reduce((n, l) => n + l.amount, 0) / 12
+    return lines
+      // A repeating set comes round every year, so only the month and day matter.
+      .filter(l => rule.linesRepeat
+        ? l.date.slice(5, 7) === monthKey.slice(5, 7)
+        : l.date.slice(0, 7) === monthKey)
+      .reduce((n, l) => n + l.amount, 0)
+  }
+
+  if (!rule.amount) return 0
   return rule.amount * (FREQ_OPTS.find(f => f.v === rule.frequency)?.per ?? 1)
 }
 
@@ -121,8 +195,112 @@ const ROUND: React.CSSProperties = {
   display: 'flex', alignItems: 'center', justifyContent: 'center',
   background: 'var(--sb-card)', border: 'var(--sb-border-width) solid var(--sb-border)', color: 'var(--sb-ink-3)', cursor: 'pointer',
 }
+function isoToday(d = new Date()): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 const LABEL: React.CSSProperties = { width: 74, flexShrink: 0, fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-3)', fontWeight: 500 }
 const ROW: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 10 }
+
+/**
+ * The instalments of a custom schedule.
+ *
+ * School fees are four payments, on four dates, for four different amounts.
+ * Every shape this modal had before — an amount and an interval — can only say
+ * one of those things, so it said the wrong one: a quarter of the year's total
+ * on an evenly spaced day. These are the dates as they actually are.
+ */
+function LinesEditor({ rule, cur, onChange }: {
+  rule: BudgetRule
+  cur: string
+  onChange: (r: BudgetRule) => void
+}) {
+  const lines = rule.lines ?? []
+  const set = (next: BudgetLine[]) => onChange({ ...rule, lines: next })
+  const total = linesOf(rule).reduce((n, l) => n + l.amount, 0)
+  const fmt = (v: number) => v.toLocaleString('en-US', { maximumFractionDigits: 0 })
+
+  const add = () => {
+    const last = linesOf(rule).at(-1)
+    const d = new Date()
+    // The next one is most likely three months after the last, which is the
+    // shape of every instalment plan anybody types in here.
+    const seed = last
+      ? new Date(Number(last.date.slice(0, 4)), Number(last.date.slice(5, 7)) - 1 + 3, Number(last.date.slice(8, 10)))
+      : d
+    set([...lines, {
+      id: crypto.randomUUID(),
+      date: `${seed.getFullYear()}-${String(seed.getMonth() + 1).padStart(2, '0')}-${String(seed.getDate()).padStart(2, '0')}`,
+      amount: last?.amount ?? 0,
+    }])
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+      {lines.map((line, i) => (
+        <div key={line.id} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+          <span style={{
+            width: 18, flexShrink: 0, textAlign: 'right',
+            fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', fontVariantNumeric: 'tabular-nums',
+          }}>{i + 1}</span>
+          <input
+            type="date"
+            value={line.date}
+            onChange={e => set(lines.map(l => l.id === line.id ? { ...l, date: e.target.value } : l))}
+            aria-label={`Date of instalment ${i + 1}`}
+            style={{
+              ...PILL, flex: '1 1 130px', minWidth: 0, cursor: 'text',
+              background: 'var(--sb-field)', color: 'var(--sb-ink-1)',
+              fontFamily: DISPLAY, fontSize: 'var(--sb-t-body-s)',
+            }} />
+          <span style={{ ...PILL, flex: '1 1 110px', minWidth: 0, cursor: 'text', background: 'var(--sb-field)', gap: 6 }}>
+            <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, color: 'var(--sb-ink-4)', flexShrink: 0 }}>{cur}</span>
+            <MoneyInput
+              value={line.amount || 0}
+              min={0}
+              onChange={n => set(lines.map(l => l.id === line.id ? { ...l, amount: n } : l))}
+              placeholder="0"
+              style={{
+                flex: 1, minWidth: 0, background: 'transparent', border: 'none', outline: 'none',
+                fontFamily: DISPLAY, fontSize: 'var(--sb-t-body)', fontWeight: 600, color: 'var(--sb-ink-1)',
+                textAlign: 'right', fontVariantNumeric: 'tabular-nums', padding: 0,
+              }} />
+          </span>
+          <button type="button" onClick={() => set(lines.filter(l => l.id !== line.id))}
+            title="Remove this date"
+            style={{ ...ROUND, flexShrink: 0 }}>
+            <X size={ICON.sm} strokeWidth={STROKE.active} />
+          </button>
+        </div>
+      ))}
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 9, flexWrap: 'wrap' }}>
+        <button type="button" onClick={add}
+          style={{ ...PILL, gap: 6, color: 'var(--sb-ink-2)', fontWeight: 600 }}>
+          + Add a date
+        </button>
+        {lines.length > 0 && (
+          <label style={{
+            display: 'inline-flex', alignItems: 'center', gap: 7, cursor: 'pointer',
+            fontSize: 'var(--sb-t-body-s)', color: 'var(--sb-ink-3)',
+          }}>
+            <input
+              type="checkbox"
+              checked={rule.linesRepeat !== false}
+              onChange={e => onChange({ ...rule, linesRepeat: e.target.checked })}
+              style={{ width: 16, height: 16, accentColor: 'var(--sb-positive)' }} />
+            the same dates every year
+          </label>
+        )}
+        {total > 0 && (
+          <span style={{ marginLeft: 'auto', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', whiteSpace: 'nowrap' }}>
+            {linesOf(rule).length} dates · {cur} {fmt(total)} a year
+          </span>
+        )}
+      </div>
+    </div>
+  )
+}
 
 /** An honest dropdown. The interval was a native select under a pill, which
  *  works but does not look like anything you can press. */
@@ -401,6 +579,49 @@ export function BudgetRuleModal({
 
         {/* The budget itself: one number, and how often it renews */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {/* How the money is laid out. A budget that is one payment, or four
+              dated instalments, could only be typed here as an average before —
+              and an average is the one thing it is not. */}
+          <div style={ROW}>
+            <span style={LABEL}>Shape</span>
+            <span style={{ flex: 1, minWidth: 0, display: 'flex', gap: 7 }}>
+              {([
+                ['repeat', 'Every…', 'The same amount, again and again'],
+                ['once',   'Once',   'One payment, on one date'],
+                ['custom', 'Set dates', 'Each instalment on its own date, for its own amount'],
+              ] as const).map(([v, label, title]) => {
+                const on = scheduleOf(rule) === v
+                return (
+                  <button key={v} type="button" title={title}
+                    onClick={() => onChange({
+                      ...rule,
+                      schedule: v,
+                      // Moving to dates of its own means the day-of-the-month no
+                      // longer says anything, and leaving it set would write a
+                      // second entry every month beside the instalments.
+                      ...(v === 'custom' ? { dueDay: undefined, lines: rule.lines ?? [] } : {}),
+                      ...(v === 'once' ? { dueDay: undefined, onDate: rule.onDate ?? isoToday() } : {}),
+                    })}
+                    style={{
+                      ...PILL, flex: 1, justifyContent: 'center',
+                      background: on ? 'var(--sb-ink-1)' : 'var(--sb-card)',
+                      border: on ? 'none' : 'var(--sb-border-width) solid var(--sb-border)',
+                      color: on ? 'var(--sb-ink-on-dark)' : 'var(--sb-ink-3)',
+                      fontWeight: on ? 600 : 500,
+                    }}>{label}</button>
+                )
+              })}
+            </span>
+          </div>
+
+          {scheduleOf(rule) === 'custom' ? (
+            <div style={{ ...ROW, alignItems: 'flex-start' }}>
+              <span style={{ ...LABEL, paddingTop: 11 }}>Dates</span>
+              <span style={{ flex: 1, minWidth: 0 }}>
+                <LinesEditor rule={rule} cur={cur} onChange={onChange} />
+              </span>
+            </div>
+          ) : (
           <div style={ROW}>
             <span style={LABEL}>Budget</span>
             <span style={{ flex: 1, minWidth: 0, display: 'flex', gap: 7 }}>
@@ -429,9 +650,23 @@ export function BudgetRuleModal({
                     textAlign: 'right', fontVariantNumeric: 'tabular-nums', padding: 0,
                   }} />
               </span>
-              <IntervalPicker value={rule.frequency} onChange={f => onChange({ ...rule, frequency: f })} />
+              {scheduleOf(rule) === 'once' ? (
+                <input
+                  type="date"
+                  value={rule.onDate ?? ''}
+                  onChange={e => onChange({ ...rule, onDate: e.target.value || undefined })}
+                  title="The day this payment falls"
+                  aria-label="The day this payment falls"
+                  style={{
+                    ...PILL, flexShrink: 0, cursor: 'text', background: 'var(--sb-field)',
+                    color: 'var(--sb-ink-1)', fontFamily: DISPLAY, fontSize: 'var(--sb-t-body-s)',
+                  }} />
+              ) : (
+                <IntervalPicker value={rule.frequency} onChange={f => onChange({ ...rule, frequency: f })} />
+              )}
             </span>
           </div>
+          )}
 
           {fromParts && (
             <div style={{ ...ROW, marginTop: -4 }}>
@@ -443,11 +678,14 @@ export function BudgetRuleModal({
             </div>
           )}
 
-          {rule.frequency !== 'monthly' && rule.amount > 0 && (
+          {budget > 0 && (scheduleOf(rule) !== 'repeat' || rule.frequency !== 'monthly') && (
             <div style={{ ...ROW, marginTop: -4 }}>
               <span style={LABEL} />
               <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)' }}>
-                {cur} {fmt(budget)} a month, which is what the envelope is measured against
+                {scheduleOf(rule) === 'repeat'
+                  ? `${cur} ${fmt(budget)} a month, which is what the envelope is measured against`
+                  : `${cur} ${fmt(budget)} a month on average — the envelope is measured against what each `
+                    + `month actually asks for, so the months with nothing in them ask for nothing`}
               </span>
             </div>
           )}
@@ -492,7 +730,10 @@ export function BudgetRuleModal({
           </div>
 
           {/* When the money actually has to move. A budget on its own is an
-              allowance for the month; a rent is a day. */}
+              allowance for the month; a rent is a day. The other two shapes
+              carry their own dates, so asking for one here would write a second
+              entry every month beside the instalments. */}
+          {scheduleOf(rule) === 'repeat' && (<>
           <div style={ROW}>
             <span style={LABEL}>Paid on</span>
             <span style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 7 }}>
@@ -545,6 +786,17 @@ export function BudgetRuleModal({
               An entry is written for that day, {freqPhrase(rule.frequency)}, marked
               unpaid until you tick it — so it is owed rather than spent, and in no
               balance or total until the money moves.
+            </div>
+          )}
+          </>)}
+
+          {scheduleOf(rule) !== 'repeat' && (
+            <div style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-3)', lineHeight: 1.5, margin: '-2px 0 8px' }}>
+              {scheduleOf(rule) === 'once'
+                ? 'One entry is written for that date, marked unpaid until you tick it.'
+                : `An entry is written for each date above, for its own amount, marked unpaid `
+                  + `until you tick it${rule.linesRepeat !== false ? ' — and the same dates come round next year' : ''}.`}
+              {' '}Until then it is owed rather than spent, and in no balance or total.
             </div>
           )}
 

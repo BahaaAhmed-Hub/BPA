@@ -1062,6 +1062,8 @@ function App() {
   }, [user, categoryKey, financeLoading])
 
   const [assistantOpen, setAssistantOpen] = useState(false)
+  // Put aside, not closed: the thread survives and the tab brings it back.
+  const [assistantAside, setAssistantAside] = useState(false)
   // A dated task belongs on the calendar wherever it was given its date — the
   // Today screen, the palette, the planner — not only while the board is open.
   useTaskCalendarPush()
@@ -1132,8 +1134,21 @@ function App() {
       </div>
       <UndoBar />
       <CommandPalette open={searchOpen} onClose={() => setSearchOpen(false)} />
-      <AssistantPanel open={assistantOpen} onClose={() => setAssistantOpen(false)} />
-      <AssistantToggle open={assistantOpen} onClick={() => setAssistantOpen(o => !o)} />
+      <AssistantPanel
+        open={assistantOpen}
+        minimised={assistantAside}
+        onMinimise={() => setAssistantAside(true)}
+        onRestore={() => setAssistantAside(false)}
+        onClose={() => { setAssistantOpen(false); setAssistantAside(false) }} />
+      {/* While it is put aside the button is back in its "open me" state, so
+          either the tab or the button brings it back. */}
+      <AssistantToggle
+        open={assistantOpen && !assistantAside}
+        onClick={() => {
+          if (assistantOpen && !assistantAside) { setAssistantOpen(false); return }
+          setAssistantOpen(true)
+          setAssistantAside(false)
+        }} />
       {showWizard && <SetupWizard onClose={() => setShowWizard(false)} />}
     </div>
   )
