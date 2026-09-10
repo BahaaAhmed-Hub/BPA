@@ -334,12 +334,22 @@ function LinesEditor({ rule, cur, onChange }: {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-      {lines.map((line, i) => (
-        <div key={line.id} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-          <span style={{
-            width: 18, flexShrink: 0, textAlign: 'right',
-            fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', fontVariantNumeric: 'tabular-nums',
-          }}>{i + 1}</span>
+      {lines.map((line, i) => {
+        // A date that has already gone writes nothing. The ledger records what
+        // is owed, and money that was due in June either moved — in which case
+        // it is already an entry — or did not, which is not something a budget
+        // should invent three months later. Said here, because a line sitting
+        // in the list looking exactly like the others is how you end up
+        // wondering where its entry went.
+        const past = line.date < isoToday()
+        return (
+        <div key={line.id} style={{ display: 'flex', alignItems: 'center', gap: 7, opacity: past ? 0.6 : 1 }}>
+          <span
+            title={past ? 'This date has gone — no entry is written for it. It still counts in the total.' : undefined}
+            style={{
+              width: 18, flexShrink: 0, textAlign: 'right',
+              fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', fontVariantNumeric: 'tabular-nums',
+            }}>{past ? '✓' : i + 1}</span>
           <input
             type="date"
             value={line.date}
@@ -369,7 +379,7 @@ function LinesEditor({ rule, cur, onChange }: {
             <X size={ICON.sm} strokeWidth={STROKE.active} />
           </button>
         </div>
-      ))}
+      )})}
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 9, flexWrap: 'wrap' }}>
         <button type="button" onClick={add}

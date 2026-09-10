@@ -130,6 +130,10 @@ export interface EntryApi {
  *  it — both looked at a list without the entry and both wrote one. That is
  *  where the duplicates came from, and why deleting them did not help: the next
  *  pass made them again, in pairs.
+ *
+ *  Keyed by category, date **and amount**: without the amount, a rule whose
+ *  figure changed could not write the corrected entry in the same session as
+ *  the one it was correcting.
  */
 const writtenThisSession = new Set<string>()
 
@@ -186,16 +190,26 @@ export function runBudgetEntries(
 ): { made: number; dropped: number } {
   const today = isoDate(now)
   const base = baseCurrency()
-  const wanted = new Set<string>()   // `${categoryId}|${date}`
-  const fresh: Transaction[] = []
   const stamp = new Date().toISOString()
 
-  // The ledger, plus what this session has already written and may not have
-  // read back yet.
-  const filed = new Set([
-    ...transactions.filter(t => t.categoryId).map(t => `${t.categoryId}|${t.date}`),
-    ...writtenThisSession,
-  ])
+  // ── 1. What the rules ask for, amount and all ───────────────────────────
+  //
+  // `wanted` used to be a set of `categoryId|date`, which answered "is there
+  // an entry on that day?" and never "is it for the right money?". So an
+  // entry the budget itself had written stayed exactly as first written: put a
+  // rule on the 15th at 44,000, switch it to dated instalments, and the 15th
+  // of October kept its 44,000 for ever while the 135,000 the rule now asked
+  // for was never written — the date matched, so the day counted as done.
+  interface Want {
+    categoryId: string; date: string
+    amount: number; currency: string; accountId: string
+    type: 'income' | 'expense'; payee: string
+  }
+  /** What identifies one entry *as written*: the day and the money on it. Keyed
+   *  without the amount, a correction made in the same session was blocked by
+   *  the very write it was correcting. */
+  const stampOf = (w: Want) => `${w.categoryId}|${w.date}|${Math.round(w.amount)}|${w.currency}`
+  const wanted = new Map<string, Want>()   // `${categoryId}|${date}` → what it should be
 
   for (const [categoryId, rule] of Object.entries(rules)) {
     if (!rule) continue
@@ -215,40 +229,37 @@ export function runBudgetEntries(
     if (!accountId) continue
     for (const { date, amount } of occurrencesFor(rule, now)) {
       if (!date.startsWith(String(year))) continue
-      const key = `${categoryId}|${date}`
-      wanted.add(key)
-      if (filed.has(key)) continue
-      filed.add(key)
-      writtenThisSession.add(key)
-      fresh.push({
-        id: crypto.randomUUID(),
-        accountId,
-        amount,
-        currency: (rule.currency ?? base) as Transaction['currency'],
-        type: cat.txType === 'income' ? 'income' : 'expense',
-        payee: cat.name,
+      wanted.set(`${categoryId}|${date}`, {
         categoryId,
         date,
-        // No payment date is the point: it is owed, not spent.
-        paidAt: undefined,
-        isCleared: false,
-        isRecurring: true,
-        tags: [BUDGET_TAG],
-        createdAt: stamp,
+        amount,
+        currency: rule.currency ?? base,
+        accountId,
+        type: cat.txType === 'income' ? 'income' : 'expense',
+        payee: cat.name,
       })
     }
   }
 
-  // What this made before and would not make now. Only its own — an entry
-  // typed by hand is nobody's to remove — and only while it is still unpaid
-  // and still ahead.
+  // ── 2. What this made before and would not make now ─────────────────────
+  //
+  // Only its own — an entry typed by hand is nobody's to remove — and only
+  // while it is still unpaid and still ahead. An entry for the right day but
+  // the wrong money is as wrong as one for a day the rule dropped, and is
+  // taken out here so the next pass can write the right one.
   let dropped = 0
+  const removed = new Set<string>()
   for (const tx of transactions) {
     if (!isBudgetEntry(tx) || !tx.categoryId) continue
     if (tx.paidAt) continue
     if (tx.date < today) continue
-    if (wanted.has(`${tx.categoryId}|${tx.date}`)) continue
+    const want = wanted.get(`${tx.categoryId}|${tx.date}`)
+    const stale = !want
+      || Math.round(want.amount) !== Math.round(tx.amount)
+      || want.currency !== tx.currency
+    if (!stale) continue
     api.remove(tx.id)
+    removed.add(tx.id)
     dropped++
   }
 
@@ -256,8 +267,46 @@ export function runBudgetEntries(
   // button is deliberate: the duplicates were made silently, and clearing them
   // up should be silent too.
   for (const id of duplicateBudgetEntries(transactions)) {
+    if (removed.has(id)) continue
     api.remove(id)
+    removed.add(id)
     dropped++
+  }
+
+  // ── 3. The ledger, as it will be once those are gone ────────────────────
+  //
+  // An entry already filed against that category on that day is the entry,
+  // whoever wrote it — recording the rent by hand still suppresses the
+  // generated one. What was just taken out is not in it.
+  const filed = new Set(
+    transactions.filter(t => t.categoryId && !removed.has(t.id)).map(t => `${t.categoryId}|${t.date}`),
+  )
+
+  // ── 4. Whatever is still missing ────────────────────────────────────────
+  const fresh: Transaction[] = []
+  for (const [key, want] of wanted) {
+    if (filed.has(key)) continue
+    // Written a moment ago and not read back yet. The amount is in the stamp,
+    // so a rule whose figure has changed is not mistaken for one already done.
+    if (writtenThisSession.has(stampOf(want))) continue
+    filed.add(key)
+    writtenThisSession.add(stampOf(want))
+    fresh.push({
+      id: crypto.randomUUID(),
+      accountId: want.accountId,
+      amount: want.amount,
+      currency: want.currency as Transaction['currency'],
+      type: want.type,
+      payee: want.payee,
+      categoryId: want.categoryId,
+      date: want.date,
+      // No payment date is the point: it is owed, not spent.
+      paidAt: undefined,
+      isCleared: false,
+      isRecurring: true,
+      tags: [BUDGET_TAG],
+      createdAt: stamp,
+    })
   }
 
   if (fresh.length > 0) api.add(fresh)

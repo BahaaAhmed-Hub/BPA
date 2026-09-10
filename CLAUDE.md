@@ -608,6 +608,26 @@ the money leaves on that day, so the entry goes in the ledger on that day, **unp
 - **What stops a second copy is the ledger**: an entry already filed against that
   category on that day is the entry, whoever wrote it. No flag to lose if `tags` is
   missing, and recording the rent by hand suppresses the generated one.
+- **The day is not the whole of it — the money on it counts too.** `wanted` was a
+  set of `categoryId|date`, so it only ever answered "is there an entry that
+  day?". An entry the budget itself wrote therefore stayed as first written:
+  put a rule on the 15th at 44,000, switch it to dated instalments, and the
+  15th of October kept its 44,000 for ever while the 135,000 the rule now asked
+  for was never written — the date matched, so the day counted as done.
+  `wanted` is a **Map to what the entry should be**, and the run is four passes:
+  work out what the rules ask for, remove its own unpaid future entries that are
+  unwanted *or wanted for a different amount or currency*, build `filed` from
+  the ledger **minus what was just removed**, then write whatever is missing.
+  `writtenThisSession` is keyed with the amount for the same reason — without
+  it, a correction was blocked by the very write it was correcting.
+  A **paid** entry is still never touched, and one typed by hand still
+  suppresses the generated one: both are outside the "its own, unpaid, ahead"
+  gate.
+- **A line whose date has gone writes nothing, and the editor says so** — a tick
+  instead of its number, dimmed, with the reason on hover. The ledger records
+  what is owed; money due in June either moved, in which case it is already an
+  entry, or it did not, which is not something a budget should invent in
+  September. The line still counts in the total.
 - Only dates inside `currentYear` are written — only that year is loaded to check
   against. The rest arrive when the year turns.
 - The `budget` tag is the flag (`isBudgetEntry`, `BudgetMark` in all four feeds).
