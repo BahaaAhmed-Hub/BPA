@@ -26,6 +26,29 @@ export function group(n: number, decimals = 0): string {
   })
 }
 
+/** A magnitude short enough for a chart label or a day cell.
+ *
+ *  Past a thousand the digits stop carrying information and start costing
+ *  space: "1745K" is a number you have to count the characters of to read,
+ *  where "1.7M" is one you take in. So each step up the scale keeps three
+ *  significant figures at most and switches unit at a thousand of the last:
+ *  950 → `950`, 12,200 → `12.2K`, 1,745,000 → `1.7M`, 2,000,000 → `2M`.
+ *  A round figure drops its `.0` — `2.0M` claims a precision it does not have.
+ */
+export function compact(n: number): string {
+  const a = Math.abs(n)
+  const step = (v: number, unit: string) => {
+    const dp = v >= 100 ? 0 : 1
+    return `${v.toFixed(dp).replace(/\.0$/, '')}${unit}`
+  }
+  // Rounding decides the unit, not the raw figure: 999,999 rounds to 1000K,
+  // and a thousand of a unit is one of the next one up.
+  if (a >= 999_500_000) return step(a / 1_000_000_000, 'B')
+  if (a >= 999_500)     return step(a / 1_000_000, 'M')
+  if (a >= 999.5)       return step(a / 1_000, 'K')
+  return group(a)
+}
+
 /** A signed figure in accounting form. */
 export function acct(n: number, opts: AcctOpts = {}): string {
   const { currency, zero, decimals = 0 } = opts

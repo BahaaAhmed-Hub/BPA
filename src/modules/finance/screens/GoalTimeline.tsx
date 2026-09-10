@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import type { Goal } from '../types'
 import type { Schedule, MonthRow } from '../goalPlan'
-import { byRank } from '../goalPlan'
+import { byRank, isDebtGoal } from '../goalPlan'
 import { acct, group } from '../format'
 
 // ─── Every goal on one timeline ──────────────────────────────────────────────
@@ -49,6 +49,14 @@ interface Cell { row: MonthRow; into: Map<string, number>; total: number }
 // readable belongs in the fixed name block. A "lands" column on the far right
 // is a column you never see without scrolling past everything it summarises.
 const NAME = 210, COL = 58
+
+/** Debts first, then goals. Both are funded from the same pot and ranked in
+ *  one list; they are drawn apart because they are answers to two different
+ *  questions — what you owe, and what you are saving for. */
+const SECTIONS = [
+  { key: 'debts', debts: true,  title: 'Debts to clear', blurb: 'money you already owe — the balance is the ledger\u2019s, and it moves from Balances' },
+  { key: 'goals', debts: false, title: 'Goals',          blurb: 'money you are putting aside' },
+] as const
 
 export function GoalTimeline({ schedule, goals, currency, months = 48 }: {
   schedule: Schedule
@@ -130,9 +138,25 @@ export function GoalTimeline({ schedule, goals, currency, months = 48 }: {
             })}
           </div>
 
-          {/* One lane per goal */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {ranked.map((g, rank) => {
+          {/* Two sections, because they are two different things. A card in
+              the red is money you already owe somebody; a goal is money you
+              have not put aside yet. Both are funded out of the same pot and
+              both are ranked in one list, but reading them in one block makes
+              "clear the card" look like a thing you chose to want. */}
+          {SECTIONS.map(section => {
+            const lanes = ranked.filter(g => (section.debts ? isDebtGoal(g) : !isDebtGoal(g)))
+            if (lanes.length === 0) return null
+            return (
+            <div key={section.key} style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, paddingTop: 4 }}>
+                <span style={{
+                  width: NAME, flexShrink: 0, fontSize: 'var(--sb-t-micro)', fontWeight: 700,
+                  letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--sb-ink-4)',
+                }}>{section.title}</span>
+                <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)' }}>{section.blurb}</span>
+              </div>
+            {lanes.map(g => {
+              const rank = ranked.indexOf(g)
               const per = cells.map(c => c.into.get(g.id) ?? 0)
               const most = Math.max(1, ...per)
               const into = per.reduce((a, b) => a + b, 0)
@@ -224,7 +248,9 @@ export function GoalTimeline({ schedule, goals, currency, months = 48 }: {
                 </div>
               )
             })}
-          </div>
+            </div>
+            )
+          })}
 
           {/* What left on a date of its own — a lane too, because it is the
               reason a month above it is empty, and that belongs on the same

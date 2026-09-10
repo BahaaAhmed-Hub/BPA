@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
-import { GripVertical, Plus, Trash2, Check } from 'lucide-react'
+import { GripVertical, Plus, Trash2, Check, X } from 'lucide-react'
 import { useFinanceStore } from '../financeStore'
 import type { Goal } from '../types'
 import { MoneyInput } from '../components/MoneyInput'
@@ -80,13 +80,19 @@ function monthLabel(key: string | null): string {
   return new Date(y, m - 1, 1).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })
 }
 
-/** A figure with its label under it — the shape every summary tile uses. */
-function Stat({ label, value, tone, sub }: {
-  label: string; value: string; tone?: string; sub?: string
+/** A figure with its label under it — the shape every summary tile uses.
+ *
+ *  `help` is a plain sentence saying what the figure *is*, on the label. Every
+ *  one of these used to be named by its own arithmetic, which tells you how it
+ *  was worked out and never what it means. */
+function Stat({ label, value, tone, sub, help }: {
+  label: string; value: string; tone?: string; sub?: string; help?: string
 }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
-      <span style={EYEBROW}>{label}</span>
+      <span style={{ ...EYEBROW, cursor: help ? 'help' : undefined }} title={help}>
+        {label}{help ? <span aria-hidden style={{ marginLeft: 4, opacity: 0.55 }}>?</span> : null}
+      </span>
       <span style={{
         fontFamily: DISPLAY, fontSize: 'var(--sb-t-h2)', fontWeight: 700, letterSpacing: '-.02em',
         color: tone ?? C.ink1, fontVariantNumeric: 'tabular-nums',
@@ -157,8 +163,8 @@ function GoalRow({ plan, place, selected, lifted, over, onSelect, onGrab, regRow
         <span style={{ flex: 1 }} />
         <span style={{ fontSize: 'var(--sb-t-meta)', color: tone, fontWeight: 600, flexShrink: 0 }}>
           {verdict === 'done' ? 'Reached'
-            : verdict === 'now' ? 'Fundable now'
-            : verdict === 'stalled' ? 'Nothing reaching it'
+            : verdict === 'now' ? 'Can finish today'
+            : verdict === 'stalled' ? 'No money reaches it'
             : monthLabel(plan.eta)}
         </span>
         <span
@@ -241,6 +247,7 @@ export function GoalsScreen(_props?: any) {
   // Setting the value back to 0 does not clear that — the field has to be a
   // new one, or the amount you just used stays in the form.
   const [formTick, setFormTick]   = useState(0)
+  const [formOpen, setFormOpen]   = useState(false)
 
   // ── The forecast ───────────────────────────────────────────────────────────
   // `capacityFrom` answers what a *normal* month leaves over, which is the
@@ -312,6 +319,7 @@ export function GoalsScreen(_props?: any) {
     setSelectedId(g.id)
     setNewName(''); setNewTarget(0); setNewBy(''); setNewIcon('🎯')
     setFormTick(n => n + 1)
+    setFormOpen(false)
   }
 
   // ─── Ranking by drag ───────────────────────────────────────────────────────
@@ -414,52 +422,65 @@ export function GoalsScreen(_props?: any) {
           marginTop: 8, padding: '15px 18px', borderRadius: 'var(--sb-r-card)',
           background: C.surface, border: `var(--sb-border-width) solid ${C.border}`,
         }}>
-          <Stat label="Spare now" value={money(capacity.free)}
+          {/* Two numbers fund everything below: what you could move today, and
+              what a month leaves over. Both used to be named by their
+              arithmetic — "spare now", "a normal month" — which says how they
+              were worked out and not what they *are*. */}
+          <Stat label="You could put in today" value={money(capacity.free)}
+            help="Money you could move into a goal right now: what your payment accounts and wallets hold, less the cushion you asked to keep, less what your goals already hold, less any bill dated ahead that is still unpaid."
             sub={[
-              `${group(Math.round(capacity.held))} in cash`,
-              capacity.buffer > 0 ? `less ${group(Math.round(capacity.buffer))} kept back` : null,
-              capacity.earmarked > 0 ? `less ${group(Math.round(capacity.earmarked))} already saved into goals` : null,
+              `${group(Math.round(capacity.held))} in current accounts and wallets`,
+              capacity.buffer > 0 ? `less ${group(Math.round(capacity.buffer))} kept as a cushion` : null,
+              capacity.earmarked > 0 ? `less ${group(Math.round(capacity.earmarked))} your goals already hold` : null,
               // Gold, a flat, an investment: wealth, but not what next month's
-              // saving comes out of. Counting it made every goal "fundable
-              // now" and left nothing to plan.
-              capacity.assets > 0 ? `${group(Math.round(capacity.assets))} in assets, not counted` : null,
-              capacity.owed > 0 ? `${group(Math.round(capacity.owed))} owed on cards, ranked below` : null,
+              // saving comes out of. Counting it made every goal fundable
+              // today and left nothing to plan.
+              capacity.assets > 0 ? `${group(Math.round(capacity.assets))} in gold and other assets is not counted — the plan never sells them` : null,
+              capacity.owed > 0 ? `${group(Math.round(capacity.owed))} owed on cards is not subtracted here — it is a debt to clear, below` : null,
             ].filter(Boolean).join(' · ')} />
-          <Stat label="A normal month" value={money(capacity.surplus)}
+          <Stat label="A month leaves over" value={money(capacity.surplus)}
             tone={capacity.surplus >= 0 ? C.green : C.red}
+            help={`What is left after a typical month's spending, and therefore what can go into goals each month from now on. It is the middle month of the last ${WINDOW_MONTHS} — the middle, so one bonus or one boiler does not reset the plan.`}
             sub={capacity.months > 0
-              ? `${group(Math.round(capacity.monthlyIn))} in, ${group(Math.round(capacity.monthlyOut))} out · median of ${capacity.months} month${capacity.months === 1 ? '' : 's'}`
-              : `no paid entries in the last ${WINDOW_MONTHS} months`} />
+              ? `${group(Math.round(capacity.monthlyIn))} comes in, ${group(Math.round(capacity.monthlyOut))} goes out · your middle month of the last ${capacity.months}`
+              : `nothing paid in the last ${WINDOW_MONTHS} months, so there is nothing to read`} />
           {capacity.committed > 0 && (
-            <Stat label="Already spoken for" value={money(-capacity.committed)} tone={C.red}
-              sub="unpaid entries dated ahead" />
+            <Stat label="Owed but not yet paid" value={money(-capacity.committed)} tone={C.red}
+              help="Entries dated in the future with no payment date. The money has an owner already, so it is taken off what you could put in today."
+              sub="already taken off the figure on the left" />
           )}
 
           <div style={{ flex: 1 }} />
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <span style={EYEBROW}>How to divide it</span>
+            <span style={EYEBROW} title="Whether the money goes to the top of the list first, or is split down it">
+              Which gets the money
+            </span>
             <Segmented
-              aria-label="How to divide it"
+              aria-label="Which gets the money"
               value={policy}
               onChange={pickPolicy}
               options={[
-                { value: 'ladder' as const, label: 'Ladder', title: 'Rank 1 is filled before rank 2 gets anything — things arrive one after another, each as early as it can' },
-                { value: 'share'  as const, label: 'Share',  title: 'Every goal moves at once, weighted by rank — nothing arrives as early, nothing sits still' },
+                { value: 'ladder' as const, label: 'Top first', title: 'Number 1 is filled before number 2 gets anything. Things arrive one after another, each as early as it can.' },
+                { value: 'share'  as const, label: 'Split',     title: 'Every goal gets something every month, more the higher it is ranked. Nothing arrives as early, but nothing sits still.' },
               ]}
             />
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <span style={EYEBROW}>Keep back</span>
+            <span style={EYEBROW} title="Months of typical spending held out of the plan, so a bad month does not empty the account">
+              Cushion (months)
+            </span>
             <Segmented
-              aria-label="Keep back"
+              aria-label="Cushion in months"
               value={String(bufferMonths)}
               onChange={v => pickBuffer(Number(v))}
               options={[0, 1, 2, 3, 6].map(n => ({
                 value: String(n),
                 label: String(n),
-                title: n === 0 ? 'Nothing held back' : `${n} month${n === 1 ? '' : 's'} of typical spending held back before any goal is funded`,
+                title: n === 0
+                  ? 'Nothing held back — every pound you hold is available to the plan'
+                  : `${n} month${n === 1 ? '' : 's'} of your typical spending (${group(Math.round(capacity.monthlyOut * n))}) held out of the plan before any goal is funded`,
               }))}
             />
           </div>
@@ -510,10 +531,10 @@ export function GoalsScreen(_props?: any) {
           gap: 10, boxSizing: 'border-box',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={EYEBROW}>In order</span>
+            <span style={EYEBROW} title="Money goes down this list in order — what is at the top is funded first">Paid in this order</span>
             <span style={{ marginLeft: 'auto', fontSize: 'var(--sb-t-meta)', color: C.ink4 }}>
               {plans.length === 0 ? 'none yet'
-                : `${goals.length} goal${goals.length === 1 ? '' : 's'}${debts ? ` · ${debts} card${debts === 1 ? '' : 's'} to clear` : ''} · drag to re-rank`}
+                : `${goals.length} goal${goals.length === 1 ? '' : 's'}${debts ? ` · ${debts} card${debts === 1 ? '' : 's'} to clear` : ''} · drag to change the order they are paid in`}
             </span>
           </div>
 
@@ -542,12 +563,36 @@ export function GoalsScreen(_props?: any) {
             ))}
           </div>
 
-          {/* Add one */}
+          {/* Add one. Folded away until asked for — an empty form standing
+              open under the list is four controls you step past every time you
+              come to read the ranking, which is what the list is for. */}
           <div style={{
             marginTop: 'auto', paddingTop: 12, borderTop: `var(--sb-border-width) solid ${C.hair}`,
             display: 'flex', flexDirection: 'column', gap: 8,
           }}>
-            <span style={EYEBROW}>New goal</span>
+            {!formOpen ? (
+              <button
+                onClick={() => setFormOpen(true)}
+                style={{
+                  height: 38, borderRadius: 'var(--sb-r-nav)', display: 'inline-flex', alignItems: 'center',
+                  justifyContent: 'center', gap: 7, cursor: 'pointer',
+                  background: 'transparent', border: `var(--sb-border-width) dashed ${C.border}`,
+                  color: C.ink3, fontFamily: 'inherit', fontSize: 'var(--sb-t-label)', fontWeight: 600,
+                }}>
+                <Plus size={ICON.sm} /> New goal
+              </button>
+            ) : (<>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={EYEBROW}>New goal</span>
+              <span style={{ flex: 1 }} />
+              <button onClick={() => { setFormOpen(false); setNewName(''); setNewTarget(0); setNewBy(''); setFormTick(n => n + 1) }}
+                title="Never mind"
+                style={{
+                  width: 24, height: 24, borderRadius: 'var(--sb-r-pill)', padding: 0, cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: C.surface, border: `var(--sb-border-width) solid ${C.border}`, color: C.ink4,
+                }}><X size={ICON.sm} /></button>
+            </div>
             <div style={{ display: 'flex', gap: 8 }}>
               <input
                 value={newIcon}
@@ -588,6 +633,7 @@ export function GoalsScreen(_props?: any) {
               }}>
               <Plus size={ICON.sm} /> Add goal
             </button>
+            </>)}
           </div>
         </div>
 
@@ -697,21 +743,27 @@ function GoalDetail({ plan, place, policy, currency, surplus, startMonth, schedu
 
         <div style={{ display: 'flex', gap: 26, marginTop: 16, flexWrap: 'wrap' }}>
           <Stat label={debt ? 'Still owed' : 'Still to find'} value={money(plan.remaining)}
+            help={debt
+              ? 'What the card owes right now. It is the ledger\u2019s figure — pay the card down and this comes with it.'
+              : 'The target less what the goal already holds.'}
             tone={done ? C.green : C.ink1}
             sub={done ? (debt ? 'cleared' : 'reached') : debt ? 'the live balance, from the ledger' : `${group(g.currentAmount)} of ${group(g.targetAmount)} saved`} />
-          <Stat label="From what is spare" value={money(plan.lump)}
-            sub={plan.lump > 0 ? 'available today' : 'nothing spare reaches it'} />
-          <Stat label="Each month"
+          <Stat label="Goes in today" value={money(plan.lump)}
+            help="Taken from what you could put in today. It is spent on this goal the moment the plan runs, before any month's surplus is divided."
+            sub={plan.lump > 0 ? 'out of what you hold now' : 'nothing goes in today'} />
+          <Stat label="Then each month"
             value={plan.monthly > 0 ? money(plan.monthly) : queued ? '—' : money(0)}
             tone={plan.monthly > 0 ? C.green : queued ? C.ink1 : C.red}
+            help="What next month puts in. Zero for a goal still waiting behind another — the line under it says which month that changes."
             sub={plan.monthly > 0
-              ? (policy === 'ladder' ? 'down the ranking' : 'its share of the surplus')
-              : queued ? `starts ${monthLabel(startMonth)}` : 'nothing is reaching it'} />
-          <Stat label="Lands" value={done ? 'Reached' : coveredNow ? 'Now' : monthLabel(plan.eta)}
+              ? (policy === 'ladder' ? 'it is top of the queue' : 'its share of what a month leaves over')
+              : queued ? `waiting until ${monthLabel(startMonth)}` : 'no money reaches it'} />
+          <Stat label="Fully funded" value={done ? 'Reached' : coveredNow ? 'Today' : monthLabel(plan.eta)}
             tone={plan.onTime === false ? C.red : plan.onTime ? C.green : C.ink1}
+            help="The month the last of the money goes in, worked out by running the plan forward from today — not a division."
             sub={g.deadline
-              ? `wanted by ${monthLabel(g.deadline.slice(0, 7))}`
-              : 'no deadline set'} />
+              ? `you wanted it by ${monthLabel(g.deadline.slice(0, 7))}`
+              : 'no date set for it'} />
         </div>
       </div>
 
@@ -722,11 +774,11 @@ function GoalDetail({ plan, place, policy, currency, surplus, startMonth, schedu
           {done
             ? (debt ? 'This card is clear. Anything ranked below it now gets what it was taking.' : 'This one is there. Anything ranked below it now gets what it was taking.')
             : coveredNow
-            ? `There is enough spare today to finish this outright — ${money(plan.remaining)} of the ${money(plan.lump + 0)} it can draw on. Nothing has to be waited for.`
+            ? `You could finish this today: it needs ${money(plan.remaining)}, and that comes out of what you could put in now. Nothing has to be waited for.`
             : queued
-              ? `It waits its turn: ${monthLabel(startMonth)} is when the goals above it are done and the money starts coming here, and it is there by ${monthLabel(plan.eta)}. Drag it up the list to be paid first.`
+              ? `Nothing reaches this yet because the ones above it come first. They finish in ${monthLabel(startMonth)}, the money starts coming here, and it is fully funded by ${monthLabel(plan.eta)}. Drag it up the list to be paid sooner.`
             : plan.eta === null
-              ? `Nothing is reaching this goal${surplus <= 0 ? ' — a normal month leaves nothing over at all, so no plan can be made from it' : ', and nothing will inside ten years'}.`
+              ? `No money reaches this${surplus <= 0 ? ' — a typical month leaves nothing over at all, so there is nothing to plan with' : ', and none will inside the next ten years'}.`
               : plan.onTime === false
                 ? `At ${money(plan.monthly)} a month this lands in ${monthLabel(plan.eta)}, after the ${monthLabel(g.deadline!.slice(0, 7))} you wanted. It needs ${money(plan.required ?? 0)} a month to be on time — ${money(shortfall)} more than it is getting.`
                 : g.deadline
@@ -740,11 +792,11 @@ function GoalDetail({ plan, place, policy, currency, surplus, startMonth, schedu
         <div style={card}>
           <span style={EYEBROW}>How it gets there</span>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap', marginTop: 8, fontSize: 'var(--sb-t-body-s)', color: C.ink2 }}>
-            {plan.lump > 0 && <span><b style={{ fontFamily: DISPLAY }}>{money(plan.lump)}</b> now, from what is spare</span>}
+            {plan.lump > 0 && <span><b style={{ fontFamily: DISPLAY }}>{money(plan.lump)}</b> today, out of what you hold</span>}
             {plan.lump > 0 && !coveredNow && <span style={{ color: C.ink4 }}>then</span>}
             {!coveredNow && (
               queued
-                ? <span><b style={{ fontFamily: DISPLAY }}>{monthLabel(startMonth)}</b> — when the goals above it are done</span>
+                ? <span>nothing until <b style={{ fontFamily: DISPLAY }}>{monthLabel(startMonth)}</b>, when the ones above it finish</span>
                 : plan.monthly > 0
                   ? <span><b style={{ fontFamily: DISPLAY }}>{money(plan.monthly)}</b> a month</span>
                   : <span style={{ color: C.red }}>nothing, at this rate</span>

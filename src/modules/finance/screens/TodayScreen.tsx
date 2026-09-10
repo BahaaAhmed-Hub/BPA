@@ -3,7 +3,7 @@ import { useFinanceStore } from '../financeStore'
 import { TransactionModal } from '../modals/TransactionModal'
 import type { Transaction } from '../types'
 import { POSITIVE, NEGATIVE, POSITIVE_DEEP, NEGATIVE_DEEP, POSITIVE_TINT, NEGATIVE_TINT } from '../../../lib/moneyColors'
-import { acct, group } from '../format'
+import { acct, group, compact } from '../format'
 import { toBase, baseCurrency, currenciesNeedingRates } from '../fx'
 import { findDuplicates } from '../duplicates'
 import { DuplicateMark } from '../components/DuplicateMark'
@@ -45,14 +45,11 @@ function dayLabel(iso: string): string {
 interface TxModalState { open: boolean; tx: Transaction | null }
 
 /** A day cell is about six characters wide. Anything past a hundred thousand
- *  gets abbreviated rather than clipped — "100k" reads, "+100…" does not. */
+ *  is shortened rather than clipped — "100K" reads, "+100…" does not. The
+ *  shortening is `compact`, so a figure abbreviated here and one abbreviated
+ *  on a chart are abbreviated the same way. */
 function cellAmount(n: number): string {
-  const a = Math.abs(n)
-  if (a >= 100000) {
-    const k = a / 1000
-    return `${k >= 1000 ? `${(k / 1000).toFixed(k % 1000 === 0 ? 0 : 1)}m` : `${k.toFixed(k % 1 === 0 ? 0 : 1)}k`}`
-  }
-  return group(a)
+  return Math.abs(n) >= 100_000 ? compact(n) : group(Math.abs(n))
 }
 
 // ── Money Calendar (16D design) ───────────────────────────────────────────────

@@ -4,6 +4,7 @@ import { useFinanceStore } from '../financeStore'
 import { settled, whenPaid } from '../unpaid'
 import { toBase, baseCurrency, currenciesNeedingRates } from '../fx'
 import { Segmented } from '@/components/ui'
+import { compact } from '../format'
 
 // ─── Donut chart helpers ───────────────────────────────────────────────────────
 
@@ -384,7 +385,7 @@ export function ReportsScreen(_props?: any) {
                       EGP/DAY
                     </span>
                     <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)', marginTop: 4 }}>
-                      {TOTAL > 0 ? `${(TOTAL / 1000).toFixed(0)}K total` : 'no data'}
+                      {TOTAL > 0 ? `${compact(TOTAL)} total` : 'no data'}
                     </span>
                   </div>
                 </div>
