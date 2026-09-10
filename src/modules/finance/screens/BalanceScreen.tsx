@@ -536,7 +536,10 @@ export function BalanceScreen() {
                   padding: '0 8px 0 12px', borderRadius: 'var(--sb-r-nav)', cursor: 'pointer', flexShrink: 0,
                   background: 'var(--sb-accent-tint)', border: 'var(--sb-border-width) solid var(--sb-accent)', color: 'var(--sb-accent-deep)',
                   fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
-                  maxWidth: 220,
+                  // Belt and braces on a fixed-height pill: nothing inside it
+                  // may wrap, and anything that still would not fit is clipped
+                  // by the button rather than drawn outside its own border.
+                  maxWidth: 220, whiteSpace: 'nowrap', overflow: 'hidden', lineHeight: 1,
                 }}>
                 {/* A pill is one line tall. An account name long enough to wrap
                     was breaking out of the bottom of its own rounded box, so

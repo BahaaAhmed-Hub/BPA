@@ -56,14 +56,35 @@ const INK:   [number, number, number] = [25, 23, 18]
 /** Glass & Depth's page, which is what a tint on a dark theme sits on. */
 const NIGHT: [number, number, number] = [14, 17, 22]
 
-/** WCAG relative luminance — the one honest way to ask whether a fill is light
- *  or dark, rather than eyeballing the hex. */
+/** WCAG relative luminance. */
 function luminance(hex: string): number {
   const [r, g, b] = rgb(hex).map(c => {
     const s = c / 255
     return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4)
   })
   return 0.2126 * r + 0.7152 * g + 0.0722 * b
+}
+
+const ratio = (a: string, b: string) => {
+  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x)
+  return (hi + 0.05) / (lo + 0.05)
+}
+
+/** What a label drawn *on* the accent has to be.
+ *
+ *  Both candidates are measured and the better one wins. It used to be a
+ *  luminance threshold — over 0.32 take near-black, under it take near-white —
+ *  and a threshold is wrong exactly through the middle of the range, which is
+ *  where a mid-tone accent sits. A picked brick red came out with near-black on
+ *  it and the button was unreadable.
+ *
+ *  `lib/ink.ts` is the general version of this and says the same thing, but it
+ *  resolves colours through a DOM probe. This runs before the first paint, on
+ *  a plain hex that needs no resolving. */
+const ON_LIGHT = '#191712'
+const ON_DARK  = '#F7F8FC'
+export function inkOnAccent(hex: string): string {
+  return ratio(ON_DARK, hex) >= ratio(ON_LIGHT, hex) ? ON_DARK : ON_LIGHT
 }
 
 /** The accent family derived from one colour: the fills, the tints, the border
@@ -75,7 +96,7 @@ export function accentTokens(hex: string, isDark = false): Partial<Record<SbToke
   return {
     '--sb-accent':        hex,
     '--sb-accent-rgb':    rgb(hex).join(','),
-    '--sb-accent-ink':    luminance(hex) > 0.32 ? '#191712' : '#F7F8FC',
+    '--sb-accent-ink':    inkOnAccent(hex),
     '--sb-accent-deep':   isDark ? mix(hex, 0.72, PAPER) : mix(hex, 0.70, INK),
     '--sb-accent-tint':   mix(hex, isDark ? 0.18 : 0.14, ground),
     '--sb-accent-tint2':  mix(hex, isDark ? 0.24 : 0.17, ground),

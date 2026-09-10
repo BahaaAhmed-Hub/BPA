@@ -33,7 +33,6 @@ import { TxRow, txDate } from '../components/TxRow'
 
 const OLIVE = 'var(--sb-positive)'
 const RUST  = 'var(--sb-negative)'
-const AMBER = 'var(--sb-accent)'
 
 // ─── A ring that says how much of an envelope is gone ─────────────────────────
 // The reference draws every category as a circle whose rim fills as it is
@@ -1561,10 +1560,15 @@ export function BudgetScreen(_props?: any) {
               style={{ ...HEAD_PILL, width: 28, padding: 0, justifyContent: 'center', border: 'none', background: 'transparent', color: 'var(--sb-ink-3)' }}>›</button>
           </div>
           <StylePicker value={envStyle} onChange={pickStyle} />
-          <button onClick={addCategory} title="Add a category"
-            style={{ height: 'var(--sb-h-pill)', padding: '0 15px', borderRadius: 'var(--sb-r-pill)', background: AMBER, border: 'none', color: 'var(--sb-ink-1)', fontSize: 'var(--sb-t-body-s)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', boxShadow: 'var(--sb-shadow-accent)' }}>
+          {/* The shared accent button, not a hand-rolled one. This drew the
+              accent fill with `--sb-ink-1` on it — right while the accent is
+              Sunlit's pale amber, and unreadable the moment it is a brick red,
+              because the ink never moved with the fill. `--sb-accent-ink` is
+              the token that does, and `variant="accent"` is what reads it. */}
+          <Button variant="accent" onClick={addCategory} title="Add a category"
+            style={{ borderRadius: 'var(--sb-r-pill)', padding: '0 15px' }}>
             + Category
-          </button>
+          </Button>
         </div>
       </div>
 

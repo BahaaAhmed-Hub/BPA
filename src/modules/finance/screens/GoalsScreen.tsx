@@ -134,25 +134,22 @@ function Stat({ label, value, tone, sub, help, terms }: {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
       <span style={EYEBROW}>{label}</span>
-      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-        <span style={{
+      {/* The tooltip is on the figure itself. A `?` badge beside it was one
+          more mark on a page of numbers, and a thing to aim at — the figure is
+          what raises the question, so the figure is what answers it. The
+          dotted underline says there is something to hover without adding an
+          object; `cursor: help` is the other half of that. */}
+      <span
+        title={tip || undefined}
+        style={{
           fontFamily: DISPLAY, fontSize: 'var(--sb-t-h2)', fontWeight: 700, letterSpacing: '-.02em',
           color: tone ?? C.ink1, fontVariantNumeric: 'tabular-nums',
+          cursor: tip ? 'help' : undefined,
+          textDecoration: tip ? 'underline dotted' : undefined,
+          textDecorationColor: tip ? C.border : undefined,
+          textUnderlineOffset: 5,
+          width: 'fit-content',
         }}>{value}</span>
-        {tip && (
-          // Beside the figure, because the figure is what raises the question.
-          <span
-            role="note"
-            aria-label={tip}
-            title={tip}
-            style={{
-              width: 15, height: 15, flexShrink: 0, cursor: 'help', borderRadius: 'var(--sb-r-pill)',
-              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              border: `var(--sb-border-width) solid ${C.border}`, color: C.ink4,
-              fontFamily: 'inherit', fontSize: 9.5, fontWeight: 700, lineHeight: 1,
-            }}>?</span>
-        )}
-      </span>
       {sub && <span style={{ fontSize: 'var(--sb-t-micro)', color: C.ink4 }}>{sub}</span>}
     </div>
   )
@@ -622,7 +619,7 @@ export function GoalsScreen(_props?: any) {
             background: C.surface, border: `var(--sb-border-width) solid ${C.border}`,
             borderRadius: 'var(--sb-r-card)', padding: '16px 18px',
           }}>
-            <GoalTimeline schedule={schedule} goals={allGoals} currency={cur} />
+            <GoalTimeline schedule={schedule} goals={allGoals} currency={cur} surplus={capacity.surplus} />
           </div>
         </div>
       )}

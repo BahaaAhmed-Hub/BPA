@@ -26,6 +26,20 @@ import { acct, group } from '../format'
 
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
+/** 'YYYY-MM', `n` months on. */
+function addMonths(key: string, n: number): string {
+  const [y, m] = key.split('-').map(Number)
+  const d = new Date(y, m - 1 + n, 1)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+}
+
+/** How many months from `a` to `b`. */
+function monthsBetween(a: string, b: string): number {
+  const [ay, am] = a.split('-').map(Number)
+  const [by, bm] = b.split('-').map(Number)
+  return (by - ay) * 12 + (bm - am)
+}
+
 /** 'Mar 2027' from '2027-03'. */
 export function monthName(key: string): string {
   const [y, m] = key.split('-').map(Number)
@@ -58,10 +72,15 @@ const SECTIONS = [
   { key: 'goals', debts: false, title: 'Goals',          blurb: 'money you are putting aside' },
 ] as const
 
-export function GoalTimeline({ schedule, goals, currency, months = 48 }: {
+export function GoalTimeline({ schedule, goals, currency, surplus, months = 48 }: {
   schedule: Schedule
   goals: Goal[]
   currency: string
+  /** What a typical month leaves over. Negative or zero means nothing accrues
+   *  after today's cash is spent, and a lane that never fills is not a bug —
+   *  it is the plan's answer. The screen has to say so, because silent empty
+   *  lanes read as a chart that failed to draw. */
+  surplus: number
   /** How many months to draw. The plan runs for ten years; nobody reads ten. */
   months?: number
 }) {
@@ -75,14 +94,37 @@ export function GoalTimeline({ schedule, goals, currency, months = 48 }: {
   // runs eight years past the last thing on it is mostly empty, and the empty
   // part is what earns the horizontal scroll.
   const cells: Cell[] = useMemo(() => {
-    const lands = new Set(schedule.landsIn.values())
-    const last = schedule.rows.reduce((n, r, i) => (lands.has(r.month) ? i : n), -1)
-    const reach = last >= 0 ? last + 2 : schedule.rows.length
-    return schedule.rows.slice(0, Math.min(months, Math.max(6, reach))).map(row => {
+    if (schedule.rows.length === 0) return []
+    // **Every month, in order, whether or not anything happened in it.**
+    //
+    // `schedule.rows` holds only the months the plan *did* something — a month
+    // where nothing went anywhere writes no row. Drawn straight, that gave an
+    // axis reading Sep, Oct, Dec, 2027, Jun, Aug: not a timeline, a list of
+    // events with month names on it. A quiet month is a fact about the plan
+    // and the most important one there is, because it is the answer to "why is
+    // this taking so long".
+    const byMonth = new Map(schedule.rows.map(r => [r.month, r]))
+    // The plan starts now, so the axis does. Starting at the first row's month
+    // meant a plan whose first move is next March opened at March, with no way
+    // to see that the months before it were the wait.
+    const now = new Date()
+    const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+    const first = schedule.rows[0].month < thisMonth ? schedule.rows[0].month : thisMonth
+    const lands = [...schedule.landsIn.values()]
+    const lastKey = lands.length ? lands.reduce((a, b) => (a > b ? a : b)) : schedule.rows[schedule.rows.length - 1].month
+    const span = Math.max(6, Math.min(months, monthsBetween(first, lastKey) + 2))
+
+    const out: Cell[] = []
+    for (let i = 0; i < span; i++) {
+      const month = addMonths(first, i)
+      const row: MonthRow = byMonth.get(month) ?? {
+        month, fromSpare: 0, fromSurplus: 0, shares: [], came: 0, went: 0, carried: 0,
+      }
       const into = new Map<string, number>()
-      for (const s of row.shares) into.set(s.goalId, (into.get(s.goalId) ?? 0) + s.amount)
-      return { row, into, total: [...into.values()].reduce((a, b) => a + b, 0) }
-    })
+      for (const sh of row.shares) into.set(sh.goalId, (into.get(sh.goalId) ?? 0) + sh.amount)
+      out.push({ row, into, total: [...into.values()].reduce((a, b) => a + b, 0) })
+    }
+    return out
   }, [schedule, months])
 
   if (cells.length === 0 || ranked.length === 0) {
@@ -95,6 +137,7 @@ export function GoalTimeline({ schedule, goals, currency, months = 48 }: {
 
   const width = NAME + cells.length * COL
   const anyOut = cells.some(c => c.row.went > 0)
+  const unreached = ranked.filter(g => !schedule.landsIn.has(g.id))
 
   return (
     <div>
@@ -111,6 +154,27 @@ export function GoalTimeline({ schedule, goals, currency, months = 48 }: {
           {cells.length} month{cells.length === 1 ? '' : 's'} · tap a month for it in full
         </span>
       </div>
+
+      {/* Why the lanes below stop. A plan that can only ever spend what is
+          already in the account is not a plan yet, and saying nothing about it
+          leaves four empty lanes looking like a chart that failed. */}
+      {unreached.length > 0 && (
+        <div style={{
+          display: 'flex', gap: 8, alignItems: 'baseline', flexWrap: 'wrap',
+          padding: '9px 12px', marginBottom: 12, borderRadius: 'var(--sb-r-nav)',
+          background: surplus <= 0 ? 'var(--sb-negative-tint)' : 'var(--sb-accent-tint)',
+          fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-2)', lineHeight: 1.5,
+        }}>
+          <b style={{ fontWeight: 700 }}>
+            {unreached.length} of these never fill{unreached.length === 1 ? 's' : ''}.
+          </b>
+          <span>
+            {surplus <= 0
+              ? `A typical month spends ${money(-surplus)} more than it earns, so once today\u2019s cash is spent nothing more goes in. Until a month leaves something over, only what you already hold can fund anything — the fix is on the ledger, not on this screen.`
+              : `A typical month leaves ${money(surplus)} over, and that is not enough to reach ${unreached.length === 1 ? 'it' : 'them all'} inside ten years. Raise a target\u2019s rank, lower it, or find more each month.`}
+          </span>
+        </div>
+      )}
 
       <div style={{ overflowX: 'auto', paddingBottom: 2 }}>
         <div style={{ minWidth: width }}>
@@ -189,7 +253,7 @@ export function GoalTimeline({ schedule, goals, currency, months = 48 }: {
                         <b style={{
                           fontWeight: 700,
                           color: lands ? (late ? 'var(--sb-negative)' : 'var(--sb-positive)') : 'var(--sb-ink-4)',
-                        }}>{lands ? monthName(lands) : 'not reached'}</b>
+                        }}>{lands ? monthName(lands) : (surplus <= 0 ? 'never, at this rate' : 'not in ten years')}</b>
                         {due ? ` · ${late ? 'due' : 'by'} ${monthName(due)}` : ''}
                         {' · '}{group(Math.round(into))} of {group(Math.round(g.targetAmount))}
                       </span>
