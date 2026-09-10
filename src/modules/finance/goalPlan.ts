@@ -54,7 +54,29 @@ export interface Capacity {
   owed: number
   /** Kept back for ordinary life. */
   buffer: number
-  /** Held less the buffer, never below zero: what could go into goals today. */
+  /** ── The one ladder both screens read ────────────────────────────────────
+   *
+   *  "What can I spend" is asked twice in this app and the two answers are
+   *  genuinely different — Balances means *now*, Goals means *commit to a goal
+   *  for years*. They were computed in two places, and the Balances one drifted
+   *  until it was inventing a 10% card repayment and counting the gold.
+   *
+   *  So they are two rungs of one ladder, each named, each computed here:
+   *
+   *    held             cash in spendable accounts, positive balances only
+   *    − committed      entries dated ahead with no payment date
+   *    = spendable      **what Balances shows.** Money you could spend today.
+   *    − buffer         months of typical spending you asked to keep back
+   *    − earmarked      what the goals already hold
+   *    = free           **what Goals shows.** Money you could commit.
+   *
+   *  Neither screen may subtract anything of its own. A screen that wants a
+   *  different figure asks for a different rung, and if it needs a rung that is
+   *  not here, the rung goes here. */
+  /** Cash, less what is already owed on a date ahead. What Balances shows. */
+  spendable: number
+  /** `spendable` less the cushion and what the goals already hold. What Goals
+   *  shows: money you could commit to something years out. */
   free: number
   /** Median month, from what has actually been paid. */
   monthlyIn: number
@@ -185,13 +207,18 @@ export function capacityFrom(
   }
 
   const buffer = Math.max(0, monthlyOut * bufferMonths)
+  // The ladder, once. Every rung comes off the one above it, and the two
+  // screens each name the rung they are showing.
+  const spendable = Math.max(0, held - Math.max(0, committed))
+  const free = Math.max(0, spendable - buffer - earmarked)
   return {
     held,
     assets,
     earmarked,
     owed,
     buffer,
-    free: Math.max(0, held - buffer - Math.max(0, committed) - earmarked),
+    spendable,
+    free,
     monthlyIn,
     monthlyOut,
     surplus: monthlyIn - monthlyOut,

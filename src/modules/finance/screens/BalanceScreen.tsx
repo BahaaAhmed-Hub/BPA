@@ -346,13 +346,15 @@ export function BalanceScreen() {
   //    explicit that the plan never sells them. Two screens, one question,
   //    opposite answers.
   //
-  //  `capacityFrom` already answers this and the Goals screen already trusts
-  //  it: cash in spendable accounts, less what is dated ahead and unpaid.
-  const spendable = useMemo(
+  //  `capacityFrom` answers it, and both screens now read a *named rung* of the
+  //  one ladder rather than doing their own subtraction: `spendable` is cash
+  //  less what is dated ahead, and `free` is that less the cushion and what the
+  //  goals hold. Balances shows the first, Goals the second, and neither may
+  //  take anything off its own figure.
+  const cap = useMemo(
     () => capacityFrom(accounts, transactions, 0),
     [accounts, transactions],
   )
-  const safeToSpend = Math.max(0, spendable.held - Math.max(0, spendable.committed))
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, height: '100%', overflow: 'hidden' }}>
@@ -423,14 +425,21 @@ export function BalanceScreen() {
         <div style={{ width: 160, flexShrink: 0 }}>
           <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.12em', opacity: 0.55, display: 'block', marginBottom: 4 }}>SAFE TO SPEND</span>
           <span
-            title={`${group(Math.round(spendable.held))} in current accounts and wallets`
-              + (spendable.committed > 0 ? `, less ${group(Math.round(spendable.committed))} dated ahead and unpaid` : '')
-              + (spendable.assets > 0 ? `. ${group(Math.round(spendable.assets))} in assets is not counted — you cannot spend a flat or a bar of gold without selling it first.` : '')}
+            title={[
+              `${group(Math.round(cap.held))} in current accounts and wallets`,
+              cap.committed > 0 ? `less ${group(Math.round(cap.committed))} dated ahead and unpaid` : null,
+              `= ${group(Math.round(cap.spendable))} you could spend today`,
+              cap.assets > 0 ? `\n${group(Math.round(cap.assets))} in assets is not counted — you cannot spend a flat or a bar of gold without selling it first.` : null,
+              // The two figures are asked to differ, so say by how much and why
+              // — one screen showing a bigger number than another is the thing
+              // that makes people stop trusting both.
+              `\nGoals shows a smaller figure, and should: it also holds back your cushion and what the goals already have. This one is about today.`,
+            ].filter(Boolean).join('\n')}
             style={{ fontFamily: 'var(--sb-font-num)', fontSize: 'var(--sb-t-h2)', fontWeight: 600, letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums', display: 'block', cursor: 'help' }}>
-            {acct(safeToSpend, { currency: base })}
+            {acct(cap.spendable, { currency: base })}
           </span>
           <span style={{ fontSize: 'var(--sb-t-micro)', opacity: 0.6, display: 'block', marginTop: 2 }}>
-            {spendable.assets > 0 ? 'Cash only, after unpaid bills' : 'After unpaid bills'}
+            {cap.assets > 0 ? 'Cash only, after unpaid bills' : 'After unpaid bills'}
           </span>
         </div>
       </div>

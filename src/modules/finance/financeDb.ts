@@ -171,6 +171,46 @@ export async function loadTransactions(year: number): Promise<TransactionRow[]> 
   return data as TransactionRow[]
 }
 
+/** A span of years, in one query.
+ *
+ *  `loadTransactions` fetches one year because the store holds one year — a
+ *  deliberate bound, and everything that writes depends on it. This is for a
+ *  *reading* that needs more: "what has this category cost me over five years"
+ *  is a question the app could not answer at all, because the only way to see
+ *  another year was to leave this one.
+ *
+ *  It never touches the store's list. The screen that asks for it keeps the
+ *  answer to itself, so no write path, no poll and no year change has to know
+ *  this exists. */
+export async function loadTransactionsSpan(fromYear: number, toYear: number): Promise<TransactionRow[]> {
+  const userId = await uid()
+  const lo = Math.min(fromYear, toYear)
+  const hi = Math.max(fromYear, toYear)
+  const { data, error } = await supabase
+    .from('finance_transactions')
+    .select('*')
+    .eq('user_id', userId)
+    .gte('date', `${lo}-01-01`)
+    .lte('date', `${hi}-12-31`)
+    .order('date', { ascending: false })
+  if (error || !data) return []
+  return data as TransactionRow[]
+}
+
+/** The first and last year this ledger has anything in, so a span control can
+ *  offer "all of it" without guessing how far back the data goes. */
+export async function loadYearBounds(): Promise<{ first: number; last: number } | null> {
+  const userId = await uid()
+  const [lo, hi] = await Promise.all([
+    supabase.from('finance_transactions').select('date').eq('user_id', userId).order('date', { ascending: true }).limit(1),
+    supabase.from('finance_transactions').select('date').eq('user_id', userId).order('date', { ascending: false }).limit(1),
+  ])
+  const a = lo.data?.[0]?.date as string | undefined
+  const b = hi.data?.[0]?.date as string | undefined
+  if (!a || !b) return null
+  return { first: Number(a.slice(0, 4)), last: Number(b.slice(0, 4)) }
+}
+
 /** Every entry with no payment date, in any year — the year bound the normal
  *  load uses would leave the rest of the ledger untouched, and a repair that
  *  fixes one year at a time is one you have to remember to run again. */

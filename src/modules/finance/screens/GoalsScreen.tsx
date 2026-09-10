@@ -91,73 +91,119 @@ export interface Term {
   muted?: boolean
 }
 
-/** The breakdown as the text of an ordinary tooltip.
- *
- *  A styled popover was a second kind of tooltip to learn: it needed its own
- *  dismissal, it covered the figures beside it, and it behaved like nothing
- *  else on the page. The browser's own is the one people already know — hover
- *  the mark, read the lines, move away. It takes plain text, so the lines are
- *  padded into two columns rather than laid out.
- */
-function termsText(terms: Term[]): string {
-  if (terms.length === 0) return ''
-  const rows = terms.map(t => ({
-    left: `${t.kind === 'less' ? '\u2212 ' : t.kind === 'note' ? '\u00b7 ' : '  '}${t.label}`,
-    right: t.amount ? (t.kind === 'less' ? `\u2212${t.amount}` : t.amount) : '',
-  }))
-  const w = Math.max(...rows.map(r => r.left.length))
-  return rows
-    .map((r, i) => {
-      const line = `${r.left.padEnd(w + 3)}${r.right}`
-      // A rule of dashes before the total: plain text has no borders, and a
-      // sum that runs on from the lines above it reads as another line.
-      return terms[i].kind === 'total'
-        ? `${'\u2500'.repeat(Math.min(52, line.length))}\n${line}`
-        : line
-    })
-    .join('\n')
-}
-
-/** A figure with its label under it — the shape every summary tile uses.
- *
- *  `help` is a plain sentence saying what the figure *is*. `terms` is where it
- *  came from, line by line, opened by the `?`. Every one of these used to be
- *  named by its own arithmetic and explained by nothing. */
 function Stat({ label, value, tone, sub, help, terms }: {
   label: string; value: string; tone?: string; sub?: string; help?: string
   terms?: Term[]
 }) {
-  // One tooltip, the browser's own: what the figure is, then where it came
-  // from, line by line.
-  const tip = [help, terms && terms.length > 0 ? termsText(terms) : null]
-    .filter(Boolean).join('\n\n')
+  // Hovering says *what* the figure is, in a sentence. Clicking opens *where it
+  // came from*, in a box. A run-on line of six clauses under the figure was
+  // where the breakdown used to live, and a paragraph is not a way to compare
+  // eight numbers — it belongs in a panel with a column of figures in it.
+  const [open, setOpen] = useState(false)
+  const box = useRef<HTMLSpanElement | null>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const away = (e: MouseEvent) => { if (!box.current?.contains(e.target as Node)) setOpen(false) }
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false) }
+    // Capture, so a click that opens another one of these closes this first.
+    document.addEventListener('mousedown', away, true)
+    document.addEventListener('keydown', esc)
+    return () => {
+      document.removeEventListener('mousedown', away, true)
+      document.removeEventListener('keydown', esc)
+    }
+  }, [open])
+
+  const has = !!terms && terms.length > 0
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+    <span ref={box} style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0, position: 'relative' }}>
       <span style={EYEBROW}>{label}</span>
-      {/* The tooltip is on the figure itself. A `?` badge beside it was one
-          more mark on a page of numbers, and a thing to aim at — the figure is
-          what raises the question, so the figure is what answers it. The
-          dotted underline says there is something to hover without adding an
-          object; `cursor: help` is the other half of that. */}
       <span
-        title={tip || undefined}
+        role={has ? 'button' : undefined}
+        tabIndex={has ? 0 : undefined}
+        aria-expanded={has ? open : undefined}
+        title={help}
+        onClick={() => has && setOpen(o => !o)}
+        onKeyDown={e => { if (has && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); setOpen(o => !o) } }}
         style={{
           fontFamily: DISPLAY, fontSize: 'var(--sb-t-h2)', fontWeight: 700, letterSpacing: '-.02em',
           color: tone ?? C.ink1, fontVariantNumeric: 'tabular-nums',
-          cursor: tip ? 'help' : undefined,
-          textDecoration: tip ? 'underline dotted' : undefined,
-          textDecorationColor: tip ? C.border : undefined,
+          cursor: has ? 'pointer' : help ? 'help' : undefined,
+          textDecoration: has || help ? 'underline dotted' : undefined,
+          textDecorationColor: open ? C.ink3 : C.border,
           textUnderlineOffset: 5,
-          width: 'fit-content',
+          width: 'fit-content', outline: 'none',
         }}>{value}</span>
       {sub && <span style={{ fontSize: 'var(--sb-t-micro)', color: C.ink4 }}>{sub}</span>}
-    </div>
+      {open && terms && <Breakdown title={label} note={help} terms={terms} onClose={() => setOpen(false)} />}
+    </span>
+  )
+}
+
+/** Where a figure came from, as a column you can read down.
+ *
+ *  This is a panel and not a native tooltip because a native one is text: it
+ *  cannot align a column of figures, it goes away the moment you move to read
+ *  it, and it cannot be left open beside the thing it explains. */
+function Breakdown({ title, note, terms, onClose }: {
+  title: string; note?: string; terms: Term[]; onClose: () => void
+}) {
+  return (
+    <span
+      role="dialog"
+      aria-label={`Where ${title} comes from`}
+      style={{
+        position: 'absolute', top: 'calc(100% + 8px)', left: 0, zIndex: 60,
+        width: 340, maxWidth: '84vw', boxSizing: 'border-box',
+        background: 'var(--sb-overlay)', border: `var(--sb-border-width) solid ${C.border}`,
+        borderRadius: 'var(--sb-r-card)', boxShadow: 'var(--sb-shadow-frame)',
+        padding: '12px 14px 13px', textAlign: 'left', cursor: 'default',
+        display: 'flex', flexDirection: 'column',
+      }}>
+      <span style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: note ? 6 : 9 }}>
+        <span style={EYEBROW}>{title}</span>
+        <span style={{ flex: 1 }} />
+        <button onClick={onClose} title="Close"
+          style={{
+            width: 20, height: 20, borderRadius: 'var(--sb-r-pill)', padding: 0, cursor: 'pointer',
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+            background: C.surface, border: `var(--sb-border-width) solid ${C.border}`, color: C.ink4,
+          }}><X size={ICON.sm} /></button>
+      </span>
+      {note && (
+        <span style={{ fontSize: 'var(--sb-t-micro)', color: C.ink3, lineHeight: 1.5, marginBottom: 9 }}>{note}</span>
+      )}
+      {terms.map((t, i) => (
+        <span key={i} style={{
+          display: 'flex', gap: 12, alignItems: 'baseline',
+          padding: t.kind === 'total' ? '6px 0 3px' : '3px 0',
+          borderTop: t.kind === 'total' ? `var(--sb-border-width) solid ${C.border}` : undefined,
+          marginTop: t.kind === 'total' ? 4 : undefined,
+          fontSize: 'var(--sb-t-meta)', lineHeight: 1.45,
+          color: t.kind === 'note' || t.muted ? C.ink4 : t.kind === 'total' ? C.ink1 : C.ink2,
+          fontWeight: t.kind === 'total' ? 700 : 400,
+        }}>
+          <span style={{ minWidth: 0 }}>
+            {t.kind === 'less' ? <span style={{ color: C.ink4 }}>less </span> : null}
+            {t.label}
+          </span>
+          <span style={{ flex: 1 }} />
+          {t.amount && (
+            <span style={{
+              fontFamily: DISPLAY, fontVariantNumeric: 'tabular-nums', flexShrink: 0, whiteSpace: 'nowrap',
+              color: t.kind === 'less' ? C.red : t.kind === 'note' || t.muted ? C.ink4 : 'inherit',
+            }}>{t.kind === 'less' ? `\u2212${t.amount}` : t.amount}</span>
+          )}
+        </span>
+      ))}
+    </span>
   )
 }
 
 // ─── One goal in the ranked list ─────────────────────────────────────────────
 
-function GoalRow({ plan, place, selected, lifted, over, onSelect, onGrab, regRow, currency, startMonth }: {
+function GoalRow({ plan, place, selected, lifted, over, dropAbove, onSelect, onGrab, regRow, currency, startMonth }: {
   plan: GoalPlan
   /** 'YYYY-MM' the money first reaches it, for a goal still in the queue. */
   startMonth: string | null
@@ -165,6 +211,8 @@ function GoalRow({ plan, place, selected, lifted, over, onSelect, onGrab, regRow
   selected: boolean
   lifted: boolean
   over: boolean
+  /** Which side of this row the dragged one will land on. */
+  dropAbove: boolean
   onSelect: () => void
   onGrab: (e: React.PointerEvent) => void
   regRow: (el: HTMLDivElement | null) => void
@@ -194,12 +242,40 @@ function GoalRow({ plan, place, selected, lifted, over, onSelect, onGrab, regRow
       ref={regRow}
       onClick={onSelect}
       style={{
-        display: 'flex', flexDirection: 'column', gap: 8, cursor: 'pointer',
-        padding: '11px 12px', borderRadius: 'var(--sb-r-nav)', boxSizing: 'border-box',
-        background: over ? 'var(--sb-accent-tint)' : selected ? C.accentBg : C.surface,
-        border: `var(--sb-border-width) solid ${over ? C.accent : selected ? C.accentBr : C.hair}`,
+        display: 'flex', alignItems: 'stretch', gap: 8, cursor: 'pointer', position: 'relative',
+        padding: '11px 12px 11px 4px', borderRadius: 'var(--sb-r-nav)', boxSizing: 'border-box',
+        background: selected ? C.accentBg : C.surface,
+        border: `var(--sb-border-width) solid ${selected ? C.accentBr : C.hair}`,
         opacity: lifted ? 0.4 : 1,
       }}>
+      {/* Where the row lands, drawn while you are still holding it. A row that
+          only highlights tells you which one you are over, not where the thing
+          you are dragging is going to end up. */}
+      {over && (
+        <span aria-hidden style={{
+          position: 'absolute', left: 4, right: 4, height: 2, borderRadius: 2,
+          background: C.accent, ...(dropAbove ? { top: -5 } : { bottom: -5 }),
+        }} />
+      )}
+
+      {/* The grip is a gutter down the left, at the same x on every row — the
+          same column it is in on the Financials table, because it is the same
+          gesture. On the right it sat past the verdict text, a long way from
+          the name it moves, and read as furniture. */}
+      <span
+        onPointerDown={onGrab}
+        onClick={e => e.stopPropagation()}
+        title={`Drag to change where ${g.name} is paid in the order`}
+        style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          width: 16, flexShrink: 0, alignSelf: 'stretch',
+          color: lifted ? C.ink1 : 'var(--sb-border)', touchAction: 'none',
+          cursor: lifted ? 'grabbing' : 'grab',
+        }}>
+        <GripVertical size={ICON.sm} strokeWidth={STROKE.rest} />
+      </span>
+
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 9, minWidth: 0 }}>
         <span style={{
           width: 20, height: 20, borderRadius: 'var(--sb-r-chip)', flexShrink: 0,
@@ -219,17 +295,6 @@ function GoalRow({ plan, place, selected, lifted, over, onSelect, onGrab, regRow
             : verdict === 'now' ? 'Can finish today'
             : verdict === 'stalled' ? 'No money reaches it'
             : monthLabel(plan.eta)}
-        </span>
-        <span
-          onPointerDown={onGrab}
-          onClick={e => e.stopPropagation()}
-          title="Drag to change its rank"
-          style={{
-            display: 'inline-flex', flexShrink: 0, padding: '2px 0', marginLeft: 2,
-            color: lifted ? C.ink1 : 'var(--sb-border)', touchAction: 'none',
-            cursor: lifted ? 'grabbing' : 'grab',
-          }}>
-          <GripVertical size={ICON.sm} strokeWidth={STROKE.rest} />
         </span>
       </div>
 
@@ -252,6 +317,7 @@ function GoalRow({ plan, place, selected, lifted, over, onSelect, onGrab, regRow
         ) : queued ? (
           <span>starts {monthLabel(startMonth)}</span>
         ) : null}
+      </div>
       </div>
     </div>
   )
@@ -379,7 +445,7 @@ export function GoalsScreen(_props?: any) {
   // Same as the Financials table: pointer events, because dragstart never
   // fires for a finger and this is a list you reorder on a tablet.
   const rowEls = useRef(new Map<string, HTMLDivElement>())
-  const [drag, setDrag] = useState<{ id: string; over: string | null } | null>(null)
+  const [drag, setDrag] = useState<{ id: string; over: string | null; above: boolean } | null>(null)
   const justDragged = useRef(false)
 
   const regRow = useCallback((id: string) => (el: HTMLDivElement | null) => {
@@ -390,7 +456,7 @@ export function GoalsScreen(_props?: any) {
   const grab = useCallback((id: string) => (e: React.PointerEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    setDrag({ id, over: null })
+    setDrag({ id, over: null, above: true })
   }, [])
 
   useEffect(() => {
@@ -398,23 +464,44 @@ export function GoalsScreen(_props?: any) {
     const order = byRank(allGoals).map(g => g.id)
 
     const move = (e: PointerEvent) => {
+      // Which row, and which *half* of it. Half is the whole difference
+      // between "put it here" and "put it after here", and without it a drop
+      // landed one place off whenever you dragged downwards.
       let over: string | null = null
+      let above = true
       for (const id of order) {
         const el = rowEls.current.get(id)
         if (!el) continue
         const r = el.getBoundingClientRect()
-        if (e.clientY >= r.top && e.clientY <= r.bottom) { over = id; break }
+        if (e.clientY >= r.top && e.clientY <= r.bottom) {
+          over = id
+          above = e.clientY < r.top + r.height / 2
+          break
+        }
       }
-      setDrag(d => (d && d.over !== over ? { ...d, over } : d))
+      // Past the last row, or above the first: the two places a list has that
+      // are not inside any row, and both are somewhere you mean to drop.
+      if (!over && order.length) {
+        const firstEl = rowEls.current.get(order[0])
+        const lastEl = rowEls.current.get(order[order.length - 1])
+        if (firstEl && e.clientY < firstEl.getBoundingClientRect().top) { over = order[0]; above = true }
+        else if (lastEl && e.clientY > lastEl.getBoundingClientRect().bottom) { over = order[order.length - 1]; above = false }
+      }
+      setDrag(d => (d && (d.over !== over || d.above !== above) ? { ...d, over, above } : d))
     }
+
     const up = () => {
-      const { id, over } = drag
+      const { id, over, above } = drag
       if (over && over !== id) {
         const from = order.indexOf(id)
-        const to = order.indexOf(over)
-        if (from >= 0 && to >= 0) {
-          const next = order.slice()
-          next.splice(to, 0, next.splice(from, 1)[0])
+        const target = order.indexOf(over)
+        if (from >= 0 && target >= 0) {
+          // Take it out, then put it where the line was. The insertion point
+          // is worked out in the list *without* the dragged row in it, or the
+          // index shifts under you when the row came from above the target.
+          const rest = order.filter(x => x !== id)
+          const at = rest.indexOf(over) + (above ? 0 : 1)
+          const next = [...rest.slice(0, at), id, ...rest.slice(at)]
           // Positions, not whatever numbers were there: a list where nothing
           // has a rank still comes out in an order.
           next.forEach((gid, n) => {
@@ -474,6 +561,9 @@ export function GoalsScreen(_props?: any) {
       ? [{ label: 'bills dated ahead, unpaid', amount: fig(capacity.committed), kind: 'less' as const }]
       : []),
     { label: 'you could put in today', amount: fig(capacity.free), kind: 'total' as const },
+    // Balances shows the rung above this one. Two screens with two figures for
+    // "what can I spend" is fine as long as each says so.
+    { label: `Balances says ${fig(capacity.spendable)} — that is today\u2019s money, before the cushion and the goals`, kind: 'note' as const },
     ...(!d.assetsCounted
       ? d.accounts.filter(a => a.counts === 'asset')
           .map(a => ({ label: `${a.name} — an asset, the plan never sells it`, amount: fig(a.amount), kind: 'note' as const }))
@@ -529,22 +619,15 @@ export function GoalsScreen(_props?: any) {
           <Stat label="You could put in today" value={money(capacity.free)}
             terms={readyTerms}
             help="Money you could move into a goal right now: what your payment accounts and wallets hold, less the cushion you asked to keep, less what your goals already hold, less any bill dated ahead that is still unpaid."
-            sub={[
-              `${group(Math.round(capacity.held))} in current accounts and wallets`,
-              capacity.buffer > 0 ? `less ${group(Math.round(capacity.buffer))} kept as a cushion` : null,
-              capacity.earmarked > 0 ? `less ${group(Math.round(capacity.earmarked))} your goals already hold` : null,
-              // Gold, a flat, an investment: wealth, but not what next month's
-              // saving comes out of. Counting it made every goal fundable
-              // today and left nothing to plan.
-              capacity.assets > 0 ? `${group(Math.round(capacity.assets))} in gold and other assets is not counted — the plan never sells them` : null,
-              capacity.owed > 0 ? `${group(Math.round(capacity.owed))} owed on cards is not subtracted here — it is a debt to clear, below` : null,
-            ].filter(Boolean).join(' · ')} />
+            // Six clauses in a run-on line is not a way to compare six figures.
+            // They are a column in the box now; this says only how to open it.
+            sub="click for the breakdown" />
           <Stat label="A month leaves over" value={money(capacity.surplus)}
             tone={capacity.surplus >= 0 ? C.green : C.red}
             terms={monthTerms}
             help={`What is left after a typical month's spending, and therefore what can go into goals each month from now on. It is the middle month of the last ${WINDOW_MONTHS} — the middle, so one bonus or one boiler does not reset the plan.`}
             sub={capacity.months > 0
-              ? `${group(Math.round(capacity.monthlyIn))} comes in, ${group(Math.round(capacity.monthlyOut))} goes out · your middle month of the last ${capacity.months}`
+              ? 'click for the breakdown'
               : `nothing paid in the last ${WINDOW_MONTHS} months, so there is nothing to read`} />
           {capacity.committed > 0 && (
             <Stat label="Owed but not yet paid" value={money(-capacity.committed)} tone={C.red}
@@ -659,6 +742,7 @@ export function GoalsScreen(_props?: any) {
                 selected={selected?.goal.id === p.goal.id}
                 lifted={drag?.id === p.goal.id}
                 over={drag?.over === p.goal.id && drag?.id !== p.goal.id}
+                dropAbove={drag?.above ?? true}
                 onSelect={() => { if (!justDragged.current) setSelectedId(p.goal.id) }}
                 onGrab={grab(p.goal.id)}
                 regRow={regRow(p.goal.id)} />
