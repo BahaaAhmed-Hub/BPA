@@ -601,7 +601,6 @@ export function GoalsScreen(_props?: any) {
             surplus={capacity.surplus}
             startMonth={monthsOn(selected.startsIn)}
             schedule={schedule}
-            goals={allGoals}
             onChange={g => void upsertGoal(g)}
             onDelete={g => {
               if (!window.confirm(`Delete the goal "${g.name}"?`)) return
@@ -614,11 +613,6 @@ export function GoalsScreen(_props?: any) {
             }}>
               Pick a goal on the left and what it would take is worked out here — what goes
               in each month, when it lands, and what is in front of it.
-            </div>
-          )}
-          {!selected && plans.length > 0 && (
-            <div style={{ marginTop: 12 }}>
-              <SchedulePlan schedule={schedule} goals={allGoals} currency={cur} selectedId={null} />
             </div>
           )}
         </div>
@@ -636,107 +630,9 @@ export function GoalsScreen(_props?: any) {
   )
 }
 
-// ─── The plan, month by month ────────────────────────────────────────────────
-//
-// The verdict sentence says *when*; this says *how*, which is the part nobody
-// can check otherwise. Every row is a month, what goes into which goal that
-// month, and the ones that land in it. It is the same run of the plan the
-// figures above come from — not a second calculation that could disagree.
-
-function SchedulePlan({ schedule, goals, currency, selectedId, months = 18 }: {
-  schedule: Schedule
-  goals: Goal[]
-  currency: string
-  selectedId: string | null
-  months?: number
-}) {
-  const [all, setAll] = useState(false)
-  const byId = new Map(goals.map(g => [g.id, g]))
-  const rows = all ? schedule.rows : schedule.rows.slice(0, months)
-  const hidden = schedule.rows.length - rows.length
-  const money = (n: number) => acct(n, { currency })
-
-  if (schedule.rows.length === 0) {
-    return (
-      <div style={{
-        background: C.surface, border: `var(--sb-border-width) solid ${C.border}`, borderRadius: 'var(--sb-r-card)',
-        padding: '18px 20px', color: C.ink3, fontSize: 'var(--sb-t-body-s)', lineHeight: 1.6,
-      }}>
-        <span style={EYEBROW}>The plan, month by month</span>
-        <div style={{ marginTop: 8 }}>
-          Nothing is going into these goals yet — there is no spare cash and a normal
-          month leaves nothing over. The plan starts the month that changes.
-        </div>
-      </div>
-    )
-  }
-
-  return (
-    <div style={{
-      background: C.surface, border: `var(--sb-border-width) solid ${C.border}`, borderRadius: 'var(--sb-r-card)',
-      padding: '16px 18px 14px',
-    }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 10 }}>
-        <span style={EYEBROW}>The plan, month by month</span>
-        <span style={{ marginLeft: 'auto', fontSize: 'var(--sb-t-meta)', color: C.ink4 }}>
-          {schedule.unfinished
-            ? 'not everything lands inside ten years'
-            : `everything lands by ${monthLabel(schedule.rows[schedule.rows.length - 1].month)}`}
-        </span>
-      </div>
-
-      <div style={{ display: 'flex', flexDirection: 'column' }}>
-        {rows.map((r, i) => {
-          const lands = r.shares.filter(x => x.lands)
-          return (
-            <div key={r.month} style={{
-              display: 'flex', alignItems: 'flex-start', gap: 12, padding: '7px 8px',
-              borderRadius: 'var(--sb-r-chip)',
-              background: lands.length ? 'var(--sb-positive-tint)' : i % 2 ? C.field : 'transparent',
-            }}>
-              <span style={{
-                width: 76, flexShrink: 0, fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: C.ink2,
-                fontFamily: DISPLAY, fontVariantNumeric: 'tabular-nums',
-              }}>{monthLabel(r.month)}</span>
-              <span style={{ flex: 1, minWidth: 0, display: 'flex', flexWrap: 'wrap', gap: '3px 10px' }}>
-                {r.shares.map(sh => {
-                  const g = byId.get(sh.goalId)
-                  const mine = sh.goalId === selectedId
-                  return (
-                    <span key={sh.goalId} style={{
-                      fontSize: 'var(--sb-t-meta)', color: mine ? C.ink1 : C.ink3,
-                      fontWeight: mine ? 600 : 400, whiteSpace: 'nowrap',
-                    }}>
-                      <span style={{ fontVariantNumeric: 'tabular-nums' }}>{money(Math.round(sh.amount))}</span>
-                      {' → '}{g?.name ?? 'a goal'}
-                      {sh.lands && <span style={{ color: C.green, fontWeight: 600 }}> ✓ there</span>}
-                    </span>
-                  )
-                })}
-              </span>
-              {r.fromSpare > 0 && (
-                <span style={{ fontSize: 'var(--sb-t-micro)', color: C.ink4, flexShrink: 0 }}>from what is spare</span>
-              )}
-            </div>
-          )
-        })}
-      </div>
-
-      {hidden > 0 && (
-        <button onClick={() => setAll(true)} style={{
-          marginTop: 8, background: 'none', border: 'none', padding: 0, cursor: 'pointer',
-          fontFamily: 'inherit', fontSize: 'var(--sb-t-meta)', fontWeight: 600, color: C.accent,
-        }}>
-          Show the other {hidden} month{hidden === 1 ? '' : 's'}
-        </button>
-      )}
-    </div>
-  )
-}
-
 // ─── The open goal ────────────────────────────────────────────────────────────
 
-function GoalDetail({ plan, place, policy, currency, surplus, startMonth, schedule, goals, onChange, onDelete }: {
+function GoalDetail({ plan, place, policy, currency, surplus, startMonth, schedule, onChange, onDelete }: {
   plan: GoalPlan
   place: number
   policy: Policy
@@ -745,7 +641,6 @@ function GoalDetail({ plan, place, policy, currency, surplus, startMonth, schedu
   /** 'YYYY-MM' the money first reaches it, when it is still in the queue. */
   startMonth: string | null
   schedule: Schedule
-  goals: Goal[]
   onChange: (g: Goal) => void
   onDelete: (g: Goal) => void
 }) {
@@ -939,7 +834,6 @@ function GoalDetail({ plan, place, policy, currency, surplus, startMonth, schedu
       </div>
       )}
 
-      <SchedulePlan schedule={schedule} goals={goals} currency={currency} selectedId={g.id} />
     </div>
   )
 }

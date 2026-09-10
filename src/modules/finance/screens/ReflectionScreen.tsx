@@ -873,6 +873,7 @@ export function ReflectionScreen(_props?: any) {
   /** The one category the chart is narrowed to, if any. Clicking a row picks
    *  it; clicking it again, or anywhere that is not a row, puts them all back. */
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const selectedCat = selectedId ? categories.find(c => c.id === selectedId) ?? null : null
   function pickRow(id: string) {
     if (justDragged.current) return
     setSelectedId(cur => (cur === id ? null : id))
@@ -1214,16 +1215,35 @@ export function ReflectionScreen(_props?: any) {
           // Anywhere that is not a row puts every category back on the chart.
           if (!(e.target as HTMLElement).closest('.sb-fin-row, .sb-keep-selection')) setSelectedId(null)
         }}>
-      {/* The chart sits *above* the table rather than instead of it: a shape and
-          the figures that make it are one question, and picking a row here is
-          what narrows the chart to it. */}
-      {view === 'lines' && (
-        <div style={{ flexShrink: 0, padding: '14px 26px 4px' }}>
+      {/* Table or chart, one at a time. Stacked, the chart took the top of the
+          page and the figures under it were half a screen down — and the two
+          answer the same question in two shapes, so you are reading one of
+          them. Picking a row still narrows the chart; the selection survives
+          the toggle, so you pick in the table and switch to see it. */}
+      {view === 'lines' ? (
+        <div style={{ flex: 1, overflow: 'auto', padding: '18px 26px 26px' }}>
           <Card style={{ padding: '18px 20px 16px' }}>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
               <span style={{ fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--sb-ink-3)' }}>
-                {depth === 'part' ? 'EVERY SUB-CATEGORY' : 'EVERY CATEGORY'}, {year}
+                {selectedCat
+                  ? `${selectedCat.name.toUpperCase()}, ${year}`
+                  : `${depth === 'part' ? 'EVERY SUB-CATEGORY' : 'EVERY CATEGORY'}, ${year}`}
               </span>
+              {/* The narrowing is done in the table, and with the table hidden
+                  a chart of one line looks like a chart with lines missing.
+                  This says which row it is and is the way back. */}
+              {selectedCat && (
+                <button onClick={() => setSelectedId(null)}
+                  title="Put every category back on the chart"
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 5, height: 20, padding: '0 8px',
+                    borderRadius: 'var(--sb-r-pill)', cursor: 'pointer',
+                    background: 'var(--sb-accent-tint)', border: 'var(--sb-border-width) solid var(--sb-accent-border)',
+                    color: 'var(--sb-ink-2)', fontFamily: 'inherit', fontSize: 'var(--sb-t-micro)', fontWeight: 600,
+                  }}>
+                  picked in the table <X size={11} />
+                </button>
+              )}
               <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-4)' }}>
                 {series.length - hiddenIds.size > 0
                   ? `${series.filter(x => !hiddenIds.has(x.id)).length} of ${series.length} on the chart · tap a line or its name to take it off`
@@ -1242,8 +1262,8 @@ export function ReflectionScreen(_props?: any) {
               fmt={v => acct(v, { currency: base, zero: '–' })} />
           </Card>
         </div>
-      )}
-
+      ) : (
+      <>
       {/* Table scroll area */}
       <div style={{ flex: 1, overflow: 'auto' }}>
         <table style={{ borderCollapse: 'collapse', minWidth: NAME_W + COL_W * 12 + 120 }}>
@@ -1337,6 +1357,8 @@ export function ReflectionScreen(_props?: any) {
           </tbody>
         </table>
       </div>
+      </>
+      )}
       </div>
 
       {/* What one figure was summed from, beside it rather than over it. */}
@@ -1344,9 +1366,14 @@ export function ReflectionScreen(_props?: any) {
         <aside
           className="sb-keep-selection"
           style={{
+            // A card beside the table, not a wall bolted to its edge — the
+            // calendar's panel is a rounded frame floating on the page ground
+            // and this is the same object doing the same job.
             width: 'clamp(320px, 31vw, 420px)', flexShrink: 0, display: 'flex', flexDirection: 'column',
-            background: 'var(--sb-header)', borderLeft: 'var(--sb-border-width) solid var(--sb-border)',
-            padding: '18px 20px 20px', overflowY: 'auto',
+            background: 'var(--sb-overlay)', border: 'var(--sb-border-width) solid var(--sb-border)',
+            borderRadius: 'var(--sb-r-frame, var(--sb-r-card))',
+            boxShadow: 'var(--sb-shadow-control, 0 1px 3px rgba(25,23,18,.10))',
+            margin: '10px 12px 12px 0', padding: '18px 20px 20px', overflowY: 'auto',
           }}>
 
             {openTx ? <EntryFace tx={openTx} categories={categories} accounts={accounts}

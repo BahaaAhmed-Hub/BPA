@@ -354,18 +354,61 @@ export function scheduleGoals(
     return take
   }
 
+  /** Divide a pot among the goals that still need money, the way the chosen
+   *  policy says to. Both the spare cash and every month's surplus go through
+   *  this, or the control means nothing in the case it matters most. */
+  const divide = (amount: number, month: number, shares: MonthShare[]): number => {
+    const hungry = ordered.filter(g => (need.get(g.id) ?? 0) > 0)
+    let left = Math.max(0, amount)
+    if (left <= 0 || hungry.length === 0) return 0
+
+    if (policy === 'share') {
+      // 1/rank over what still needs money. Anything a finished goal would
+      // have taken is re-divided rather than lost.
+      const weights = hungry.map((g, i) => 1 / (rankOf(g, i) + 1))
+      const total = weights.reduce((a, b) => a + b, 0) || 1
+      let spare = 0
+      hungry.forEach((g, i) => {
+        const cut = left * (weights[i] / total)
+        spare += cut - put(g, cut, month, shares)
+      })
+      // A goal that finished mid-month leaves change; it goes down the ladder.
+      for (const g of hungry) { if (spare <= 0) break; spare -= put(g, spare, month, shares) }
+      return left - Math.max(0, spare)
+    }
+
+    let spent = 0
+    for (const g of hungry) {
+      if (left <= 0) break
+      const owing = need.get(g.id) ?? 0
+      // A goal with a deadline takes what that deadline asks for and no more,
+      // so the one behind it is not starved for the sake of arriving early.
+      const months = g.deadline ? Math.max(1, monthsUntil(g.deadline, today) - month + 1) : 1
+      const wanted = g.deadline ? Math.min(owing, owing / months) : owing
+      const took = put(g, Math.min(left, wanted), month, shares)
+      left -= took; spent += took
+    }
+    // Whatever a deadline left on the table still has to go somewhere.
+    for (const g of hungry) {
+      if (left <= 0) break
+      const took = put(g, left, month, shares)
+      left -= took; spent += took
+    }
+    return spent
+  }
+
   // A goal that is already there lands now, before anything is divided.
   for (const g of ordered) if ((need.get(g.id) ?? 0) <= 0) landsIn.set(g.id, monthKey(today))
 
-  // Month 0: the spare cash, down the ladder under either policy.
+  // Month 0: the spare cash. It used to go down the ladder whatever the policy
+  // said, which made Share a control that did nothing in the ordinary case —
+  // spare cash covers the first goals outright, so both policies drew the same
+  // three lumps in the same month and the toggle read as broken.
   const first: MonthShare[] = []
   const startFree = Math.max(0, capacity.free)
   let pot = startFree
-  for (const g of ordered) {
-    const took = put(g, pot, 0, first)
-    lump.set(g.id, took)
-    pot -= took
-  }
+  pot -= divide(startFree, 0, first)
+  for (const g of ordered) lump.set(g.id, first.find(x => x.goalId === g.id)?.amount ?? 0)
   if (first.length) {
     rows.push({
       month: monthKey(today), fromSpare: first.reduce((n, s) => n + s.amount, 0), fromSurplus: 0,
@@ -393,11 +436,9 @@ export function scheduleGoals(
     const came = comes(m)
     const went = goes(m)
     pot += came - went
-    const hungry = ordered.filter(g => (need.get(g.id) ?? 0) > 0)
     const shares: MonthShare[] = []
-    let left = Math.max(0, pot)
-    const before = left
-    if (left <= 0) {
+    const before = Math.max(0, pot)
+    if (before <= 0) {
       // A month that took something out is worth a row even though it put
       // nothing in — that *is* the news. One where simply nothing happened is
       // not, and a run of them is a wall.
@@ -405,30 +446,7 @@ export function scheduleGoals(
       continue
     }
 
-    if (policy === 'share') {
-      // 1/rank over what still needs money. Anything a finished goal would
-      // have taken is re-divided rather than lost.
-      const weights = hungry.map((g, i) => 1 / (rankOf(g, i) + 1))
-      const total = weights.reduce((a, b) => a + b, 0) || 1
-      let spare = 0
-      hungry.forEach((g, i) => { spare += before * (weights[i] / total) - put(g, before * (weights[i] / total), m, shares) })
-      // A goal that finished mid-month leaves change; it goes down the ladder.
-      for (const g of hungry) { if (spare <= 0) break; spare -= put(g, spare, m, shares) }
-      left = 0
-    } else {
-      for (const g of hungry) {
-        if (left <= 0) break
-        const owing = need.get(g.id) ?? 0
-        // A goal with a deadline takes what that deadline asks for and no
-        // more, so the one behind it is not starved for the sake of arriving
-        // early.
-        const months = g.deadline ? Math.max(1, monthsUntil(g.deadline, today) - m + 1) : 1
-        const wanted = g.deadline ? Math.min(owing, owing / months) : owing
-        left -= put(g, Math.min(left, wanted), m, shares)
-      }
-      // Whatever a deadline left on the table still has to go somewhere.
-      for (const g of hungry) { if (left <= 0) break; left -= put(g, left, m, shares) }
-    }
+    divide(before, m, shares)
 
     const spent = shares.reduce((n, s) => n + s.amount, 0)
     pot -= spent
