@@ -16,6 +16,7 @@ import type { Transaction } from '../types'
 import { todayISO } from '../dates'
 import { ICON, STROKE } from '@/lib/type'
 import { TxRow, txDate } from '../components/TxRow'
+import { notify } from '@/lib/undo'
 
 // ─── 16F · Financials YTD ─────────────────────────────────────────────────────
 // Spreadsheet-style table: each income/expense category as a row,
@@ -58,13 +59,18 @@ const byOrder = (a: Category, b: Category) =>
  *  Pointer events rather than HTML5 drag-and-drop: this table is reordered on
  *  a tablet as often as on a desktop, and `dragstart` never fires for a
  *  finger. `touchAction: none` is what stops the drag from scrolling the page
- *  instead. */
+ *  instead.
+ *
+ *  A drag does two things, and which one is decided by where in the target row
+ *  the pointer is: near an edge it lands *beside* that row, in the middle of a
+ *  top-level row it goes *inside* it. One gesture, because reordering and
+ *  re-parenting are the same thought — "this belongs there". */
 function Grip({ onGrab, lifted }: { onGrab: (e: React.PointerEvent) => void; lifted: boolean }) {
   return (
     <span
       onPointerDown={onGrab}
       onClick={e => e.stopPropagation()}
-      title="Drag to reorder"
+      title="Drag to reorder — or onto a category to file it inside"
       style={{
         display: 'inline-flex', flexShrink: 0, padding: '4px 1px',
         color: lifted ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)',
@@ -75,7 +81,28 @@ function Grip({ onGrab, lifted }: { onGrab: (e: React.PointerEvent) => void; lif
   )
 }
 
-function CategoryRows({ row, tone, open, hidden, onToggleOpen, onToggleHide, onDrill, onGrab, regRow, dragId, overId, months, ROW_H, numCell, fmt }: {
+export type DropMode = 'before' | 'after' | 'into'
+
+/** The 2px line that says "it lands here". */
+const EDGE = '2px solid var(--sb-accent-deep)'
+const HAIR = 'var(--sb-border-width) solid var(--sb-hairline)'
+
+/** The pill beside a name during a drag: what dropping here would do, or why
+ *  it would not do the thing the pointer is over. Saying nothing at all in the
+ *  refused case leaves a reorder happening where a nest was aimed. */
+function DropMark({ blocked }: { blocked?: boolean }) {
+  return (
+    <span style={{
+      fontSize: 'var(--sb-t-micro)', fontWeight: 700, letterSpacing: '0.06em',
+      padding: '1px 7px', borderRadius: 'var(--sb-r-pill)', flexShrink: 0,
+      background: blocked ? 'var(--sb-field)' : 'var(--sb-accent-deep)',
+      color: blocked ? 'var(--sb-ink-4)' : 'var(--sb-card)',
+      border: blocked ? 'var(--sb-border-width) solid var(--sb-border)' : 'none',
+    }}>{blocked ? 'HAS PARTS OF ITS OWN' : 'INSIDE'}</span>
+  )
+}
+
+function CategoryRows({ row, tone, open, hidden, onToggleOpen, onToggleHide, onDrill, onGrab, regRow, dragId, overId, overMode, nestBlocked, months, ROW_H, numCell, fmt }: {
   row: Row
   tone: string
   open: boolean
@@ -88,9 +115,13 @@ function CategoryRows({ row, tone, open, hidden, onToggleOpen, onToggleHide, onD
   onGrab: (cat: Category) => (e: React.PointerEvent) => void
   /** Lends the row's element out, so a drag can tell what it is over. */
   regRow: (id: string) => (el: HTMLTableRowElement | null) => void
-  /** The row being carried, and the row it is currently over. */
+  /** The row being carried, the row it is over, and what dropping would do:
+   *  land beside it, or go inside it. */
   dragId: string | null
   overId: string | null
+  overMode: DropMode
+  /** The pointer is where a nest would go, and a nest is not possible. */
+  nestBlocked: boolean
   months: number[]
   ROW_H: number
   numCell: (v: number, isNet?: boolean) => React.CSSProperties
@@ -98,7 +129,10 @@ function CategoryRows({ row, tone, open, hidden, onToggleOpen, onToggleHide, onD
 }) {
   const isHidden = hidden(row.cat.id)
   const lifted  = dragId === row.cat.id
-  const isOver  = overId === row.cat.id && !lifted
+  const overMe  = overId === row.cat.id && !lifted
+  const isOver  = overMe && overMode === 'into'
+  const lineTop = overMe && overMode === 'before'
+  const lineBot = overMe && overMode === 'after'
   // A dragged-over row is tinted, and the tint has to reach the sticky name
   // cell too — it paints its own background over whatever the row has.
   const bg = isOver ? 'var(--sb-accent-tint)' : isHidden ? 'var(--sb-field)' : 'var(--sb-card)'
@@ -130,7 +164,8 @@ function CategoryRows({ row, tone, open, hidden, onToggleOpen, onToggleHide, onD
         onClick={() => onToggleHide(row.cat.id)}
         title={isHidden ? 'Click to include in totals' : 'Click to hide from totals'}
         style={{
-          borderBottom: 'var(--sb-border-width) solid var(--sb-hairline)', cursor: 'pointer',
+          borderTop: lineTop ? EDGE : undefined,
+          borderBottom: lineBot ? EDGE : HAIR, cursor: 'pointer',
           background: isOver ? 'var(--sb-accent-tint)' : isHidden ? 'var(--sb-field)' : 'transparent',
           opacity: lifted ? 0.4 : isHidden ? 0.45 : 1,
         }}
@@ -158,6 +193,7 @@ function CategoryRows({ row, tone, open, hidden, onToggleOpen, onToggleHide, onD
             {kids.length > 0 && !open && (
               <span style={{ fontSize: 'var(--sb-t-micro)', color: 'var(--sb-border)' }}>+{kids.length}</span>
             )}
+            {overMe && (isOver || nestBlocked) && <DropMark blocked={nestBlocked} />}
           </div>
         </td>
         {months.map((v, mi) => (
@@ -170,8 +206,10 @@ function CategoryRows({ row, tone, open, hidden, onToggleOpen, onToggleHide, onD
       {open && kids.map(kid => {
         const kidHidden = hidden(kid.cat.id) || isHidden
         const kidLifted = dragId === kid.cat.id
-        const kidOver   = overId === kid.cat.id && !kidLifted
-        const kidBg = kidOver ? 'var(--sb-accent-tint)' : kidHidden ? 'var(--sb-field)' : 'var(--sb-accent-tint)'
+        const kidOverMe = overId === kid.cat.id && !kidLifted
+        const kidTop    = kidOverMe && overMode === 'before'
+        const kidBot    = kidOverMe && overMode === 'after'
+        const kidBg = kidHidden ? 'var(--sb-field)' : 'var(--sb-accent-tint)'
         const kidTotal = kid.amounts.reduce((s, v) => s + v, 0)
         return (
           <tr key={kid.cat.id}
@@ -179,7 +217,9 @@ function CategoryRows({ row, tone, open, hidden, onToggleOpen, onToggleHide, onD
             onClick={() => onToggleHide(kid.cat.id)}
             title={hidden(kid.cat.id) ? 'Click to include in totals' : 'Click to hide from totals'}
             style={{
-              borderBottom: 'var(--sb-border-width) solid var(--sb-accent-tint)', cursor: 'pointer', background: kidBg,
+              borderTop: kidTop ? EDGE : undefined,
+              borderBottom: kidBot ? EDGE : 'var(--sb-border-width) solid var(--sb-accent-tint)',
+              cursor: 'pointer', background: kidBg,
               opacity: kidLifted ? 0.4 : kidHidden ? 0.45 : 1,
             }}
           >
@@ -326,13 +366,33 @@ export function ReflectionScreen(_props?: any) {
     return { incomeRows, expenseRows, monthlyIncome, monthlyExpense }
   }, [transactions, categories, year, base, fxTick, filedIn])
 
-  // ─── Dragging a row into place ──────────────────────────────────────────
-  // A row moves among its own siblings and nowhere else: the top-level rows of
-  // one section, or the parts of one category. The set it may be dropped into
-  // is worked out when it is picked up, so a parent can never land inside
-  // somebody else's sub-categories however far the pointer wanders.
+  /** Which categories have their parts showing. Declared here because a drop
+   *  that nests a row opens the row it landed in. */
+  const [openIds, setOpenIds] = useState<Set<string>>(new Set())
+
+  // ─── Dragging a row into place, or into another row ─────────────────────
+  //
+  //  One gesture does both jobs, because they are the same thought: *this
+  //  belongs there*. Where in the target row the pointer sits decides which:
+  //
+  //    near its top or bottom edge → land **beside** it, as its sibling
+  //    in the middle of a top-level row → go **inside** it, as its part
+  //
+  //  Landing beside a row therefore also un-nests: drop a sub-category beside
+  //  a top-level one and it becomes top-level. There is no separate promote.
+  //
+  //  Only rows in the same section are candidates — spending cannot be filed
+  //  inside earning, and the totals would stop meaning anything if it could.
   const rowEls = useRef(new Map<string, HTMLTableRowElement>())
-  const [drag, setDrag] = useState<{ id: string; scope: string[]; over: string | null } | null>(null)
+  const [drag, setDrag] = useState<{
+    id: string
+    kind: 'income' | 'expense'
+    over: string | null
+    mode: DropMode
+    /** True where the pointer is in a row's nest zone but the move is not one
+     *  this model can make — one level of nesting is all it has. */
+    blocked: boolean
+  } | null>(null)
   // A drag ends in a click on whatever was under the finger. That click would
   // otherwise hide the row it landed on.
   const justDragged = useRef(false)
@@ -347,57 +407,109 @@ export function ReflectionScreen(_props?: any) {
     // browser starts selecting text across the table as the pointer moves.
     e.preventDefault()
     e.stopPropagation()
-    const scope = (cat.parentId
-      ? categories.filter(c => c.parentId === cat.parentId)
-      : categories.filter(c => !c.parentId && (c.txType === kind || c.txType === 'both'))
-    ).slice().sort(byOrder).map(c => c.id)
-    setDrag({ id: cat.id, scope, over: null })
+    setDrag({ id: cat.id, kind, over: null, mode: 'before', blocked: false })
+  }, [])
+
+  /** Every category drawn in one section: its top-level rows, and the parts of
+   *  them. A part belongs to whichever section its parent is in. */
+  const sectionOf = useCallback((c: Category, kind: 'income' | 'expense') => {
+    const top = c.parentId ? categories.find(x => x.id === c.parentId) : c
+    return !!top && (top.txType === kind || top.txType === 'both')
   }, [categories])
+
+  /**
+   *  Carry out a drop, or say why it cannot happen. Three rules, and they are
+   *  the Budget screen's word for word — the two screens move the same
+   *  categories and must not disagree about what is allowed.
+   */
+  const applyDrop = useCallback((moved: Category, target: Category, mode: DropMode, kind: 'income' | 'expense') => {
+    const hasKids = categories.some(c => c.parentId === moved.id)
+    const newParent = mode === 'into' ? target.id : (target.parentId ?? undefined)
+    if (newParent === moved.id) return
+    if ((moved.parentId ?? null) === (newParent ?? null) && mode === 'into') return
+
+    // One level of nesting is all this models, so a category with children of
+    // its own cannot itself become a child — its children would need
+    // grandparents, and nothing here knows what those are.
+    if (newParent && hasKids) {
+      notify(`${moved.name} has sub-categories of its own — empty it first, or move those instead.`)
+      return
+    }
+    const parentCat = newParent ? categories.find(c => c.id === newParent) : null
+    // Spending inside earning would make the totals lie about which is which.
+    if (parentCat && (parentCat.txType === 'income') !== (moved.txType === 'income')) {
+      notify(`${moved.name} and ${parentCat.name} are not the same kind of money.`)
+      return
+    }
+
+    // The list it lands in, without it, in the order it is drawn.
+    const sibs = (newParent
+      ? categories.filter(c => c.parentId === newParent)
+      : categories.filter(c => !c.parentId && (c.txType === kind || c.txType === 'both'))
+    ).filter(c => c.id !== moved.id).sort(byOrder)
+
+    let at = sibs.length
+    if (mode !== 'into') {
+      const k = sibs.findIndex(c => c.id === target.id)
+      if (k >= 0) at = mode === 'before' ? k : k + 1
+    }
+    const next = [...sibs.slice(0, at), moved, ...sibs.slice(at)]
+
+    const moving = (moved.parentId ?? null) !== (newParent ?? null)
+    next.forEach((c, i) => {
+      if (c.id === moved.id) {
+        if (!moving && c.sortOrder === i) return
+        void upsertCategory({
+          ...moved, parentId: newParent, sortOrder: i,
+          // A part takes its parent's kind, or one section's total would be
+          // summed out of the other's rows.
+          txType: parentCat ? parentCat.txType : moved.txType,
+        })
+      } else if (c.sortOrder !== i) {
+        void upsertCategory({ ...c, sortOrder: i })
+      }
+    })
+    // Nesting something into a folded row would otherwise look like a delete.
+    if (mode === 'into') setOpenIds(prev => new Set(prev).add(target.id))
+    if (moving) notify(newParent
+      ? `${moved.name} is now inside ${parentCat?.name ?? 'it'}`
+      : `${moved.name} is a category of its own again`)
+  }, [categories, upsertCategory])
 
   useEffect(() => {
     if (!drag) return
-
-    /** What a row occupies on screen. An open parent stands over its parts as
-     *  well, so dragging across an expanded neighbour still points at it. */
-    const spanOf = (id: string): { top: number; bottom: number } | null => {
-      const el = rowEls.current.get(id)
-      if (!el) return null
-      const r = el.getBoundingClientRect()
-      let bottom = r.bottom
-      for (const kid of categories.filter(c => c.parentId === id)) {
-        const k = rowEls.current.get(kid.id)
-        if (k) bottom = Math.max(bottom, k.getBoundingClientRect().bottom)
-      }
-      return { top: r.top, bottom }
-    }
+    const moved = categories.find(c => c.id === drag.id)
+    if (!moved) return
+    const hasKids = categories.some(c => c.parentId === drag.id)
 
     const move = (e: PointerEvent) => {
       let over: string | null = null
-      for (const id of drag.scope) {
-        const span = spanOf(id)
-        if (span && e.clientY >= span.top && e.clientY <= span.bottom) { over = id; break }
+      let mode: DropMode = 'before'
+      let blocked = false
+      for (const c of categories) {
+        if (!sectionOf(c, drag.kind)) continue
+        const el = rowEls.current.get(c.id)
+        if (!el) continue
+        const r = el.getBoundingClientRect()
+        if (e.clientY < r.top || e.clientY > r.bottom) continue
+        const f = (e.clientY - r.top) / Math.max(1, r.height)
+        // The middle of a top-level row means *inside it* — but only where
+        // that is a move this model can make, or the pointer would promise
+        // something the drop then refuses.
+        const nestZone = !c.parentId && c.id !== drag.id && f > 0.3 && f < 0.7
+        const canNest = nestZone && !hasKids && moved.parentId !== c.id
+        over = c.id
+        mode = canNest ? 'into' : f < 0.5 ? 'before' : 'after'
+        blocked = nestZone && !canNest && hasKids
+        break
       }
-      setDrag(d => (d && d.over !== over ? { ...d, over } : d))
+      setDrag(d => (d && (d.over !== over || d.mode !== mode || d.blocked !== blocked) ? { ...d, over, mode, blocked } : d))
     }
 
     const up = () => {
-      const { id, over, scope } = drag
-      if (over && over !== id) {
-        const from = scope.indexOf(id)
-        const to   = scope.indexOf(over)
-        if (from >= 0 && to >= 0) {
-          const next = scope.slice()
-          next.splice(to, 0, next.splice(from, 1)[0])
-          // Written back as positions rather than whatever numbers were there,
-          // so a list where everything shares one sort order still comes out
-          // in an order. Only what actually moved is written.
-          next.forEach((cid, n) => {
-            const c = categories.find(x => x.id === cid)
-            if (!c || c.sortOrder === n) return
-            void upsertCategory({ ...c, sortOrder: n })
-          })
-        }
-      }
+      const { id, over, mode, kind } = drag
+      const target = over ? categories.find(c => c.id === over) : null
+      if (target && target.id !== id) applyDrop(moved, target, mode, kind)
       justDragged.current = true
       setTimeout(() => { justDragged.current = false }, 0)
       setDrag(null)
@@ -416,7 +528,7 @@ export function ReflectionScreen(_props?: any) {
       window.removeEventListener('pointerup', up)
       window.removeEventListener('pointercancel', up)
     }
-  }, [drag, categories, upsertCategory])
+  }, [drag, categories, sectionOf, applyDrop])
 
   // Hidden rows (by category id) — toggling removes row from totals
   const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set())
@@ -478,7 +590,6 @@ export function ReflectionScreen(_props?: any) {
   }, [drill, year])
 
   // Which parents are showing their parts.
-  const [openIds, setOpenIds] = useState<Set<string>>(new Set())
   function toggleOpen(id: string) {
     setOpenIds(prev => {
       const next = new Set(prev)
@@ -718,6 +829,7 @@ export function ReflectionScreen(_props?: any) {
               <CategoryRows key={row.cat.id} row={row} tone={OLIVE}
                 onGrab={grab('income')} regRow={regRow}
                 dragId={drag?.id ?? null} overId={drag?.over ?? null}
+                overMode={drag?.mode ?? 'before'} nestBlocked={!!drag?.blocked}
                 open={openIds.has(row.cat.id)} hidden={id => hiddenIds.has(id)}
                 onToggleOpen={toggleOpen} onToggleHide={toggleHide}
                 months={rowMonths(row)} ROW_H={ROW_H} numCell={numCell} fmt={fmt}
@@ -740,6 +852,7 @@ export function ReflectionScreen(_props?: any) {
               <CategoryRows key={row.cat.id} row={row} tone={RUST}
                 onGrab={grab('expense')} regRow={regRow}
                 dragId={drag?.id ?? null} overId={drag?.over ?? null}
+                overMode={drag?.mode ?? 'before'} nestBlocked={!!drag?.blocked}
                 open={openIds.has(row.cat.id)} hidden={id => hiddenIds.has(id)}
                 onToggleOpen={toggleOpen} onToggleHide={toggleHide}
                 months={rowMonths(row)} ROW_H={ROW_H} numCell={numCell} fmt={fmtOut}

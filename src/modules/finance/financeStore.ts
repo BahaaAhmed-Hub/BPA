@@ -219,7 +219,9 @@ export const useFinanceStore = create<FinanceState>()(
             name: r.name,
             icon: r.icon,
             color: r.color,
-            parentId: r.parent_id,
+            // The column is nullable; the app's type is not. A top-level row
+            // has no parent, and `undefined` is what every consumer tests for.
+            parentId: r.parent_id ?? undefined,
             isSystem: r.is_system,
             txType: r.tx_type as Category['txType'],
             // Never read, so every category arrived without an order and the
@@ -379,7 +381,12 @@ export const useFinanceStore = create<FinanceState>()(
           name: c.name,
           icon: c.icon,
           color: c.color,
-          parent_id: c.parentId,
+          // `?? null`, not the bare value: `undefined` is dropped on the way
+          // to JSON, so the upsert's ON CONFLICT never *sets* parent_id and a
+          // category promoted back to the top level stayed nested on the
+          // server. It came back nested on the next load, which read as the
+          // move being refused.
+          parent_id: c.parentId ?? null,
           tx_type: c.txType,
           // Hardcoded to 0, so every edit to a category quietly flattened the
           // order of all of them — renaming one was enough to reshuffle a list.

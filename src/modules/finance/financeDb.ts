@@ -29,7 +29,9 @@ export interface CategoryRow {
   name: string
   icon: string
   color: string
-  parent_id?: string
+  /** `null` clears it. Left `undefined` the key never reaches the upsert, so
+   *  the column keeps whatever it had and un-nesting is a no-op. */
+  parent_id?: string | null
   tx_type: string
   sort_order: number
   is_system: boolean
