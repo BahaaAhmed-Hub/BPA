@@ -981,7 +981,7 @@ export function BudgetRuleModal({
                 {rule.starts ? monthLabel(rule.starts) : 'every month'}
                 <input type="month" value={rule.starts ?? ''}
                   onChange={e => onChange({ ...rule, starts: e.target.value || undefined })}
-                  style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', border: 'none', padding: 0 }} />
+                  style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', border: 'none', padding: 0, pointerEvents: 'none' }} />
               </label>
               <span style={{ fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', flexShrink: 0 }}>to</span>
               <label onClick={openPicker}
@@ -990,7 +990,7 @@ export function BudgetRuleModal({
                 <span style={{ color: rule.ends ? 'var(--sb-ink-1)' : 'var(--sb-ink-4)' }}>{rule.ends ? monthLabel(rule.ends) : 'no end'}</span>
                 <input type="month" value={rule.ends ?? ''} min={rule.starts}
                   onChange={e => onChange({ ...rule, ends: e.target.value || undefined })}
-                  style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', border: 'none', padding: 0 }} />
+                  style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', border: 'none', padding: 0, pointerEvents: 'none' }} />
               </label>
               {rule.ends && (
                 <button onClick={() => onChange({ ...rule, ends: undefined })} title="Let it run on"

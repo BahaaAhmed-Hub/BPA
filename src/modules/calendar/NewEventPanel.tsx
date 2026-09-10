@@ -779,7 +779,7 @@ export function NewEventPanel({
             {startDateObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
             <input type="date" value={startDate}
               onChange={e => { setStartDate(e.target.value); pushTimes(e.target.value, startTime, endTime) }}
-              style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', border: 'none', padding: 0 }} />
+              style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', border: 'none', padding: 0, pointerEvents: 'none' }} />
           </label>
 
           <span style={{

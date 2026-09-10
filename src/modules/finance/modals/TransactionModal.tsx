@@ -225,38 +225,14 @@ export function TransactionModal({ transaction, accounts, categories, history = 
 
   const canSave = amount > 0 && !!accountId && (type !== 'transfer' || !!toAccountId)
 
-  // Docked, the panel around it already is the card: it draws no second box,
-  // no shadow and no scrim, and takes the width it is given.
-  const Shell = ({ children }: { children: React.ReactNode }) => docked ? (
+  // The form itself, drawn once. It used to be handed to a `Shell` component
+  // declared inside this function — a new component *type* on every render, so
+  // React threw the whole subtree away and built it again on each keystroke.
+  // The field you were typing in was destroyed and replaced, which is why the
+  // amount lost focus after one digit and the date picker vanished the instant
+  // it opened. An element, not a component: nothing remounts.
+  const body = (
     <>
-      <input ref={fileRef} type="file" accept="image/*,application/pdf" multiple
-        style={{ display: 'none' }} onChange={handleFileChange} />
-      <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>{children}</div>
-    </>
-  ) : (
-    <div
-      onClick={e => { if (e.target === e.currentTarget) onClose() }}
-      style={{
-        position: 'fixed', inset: 0, zIndex: 1000,
-        background: 'var(--sb-scrim)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 18,
-      }}>
-
-      <input ref={fileRef} type="file" accept="image/*,application/pdf" multiple
-        style={{ display: 'none' }} onChange={handleFileChange} />
-
-      <div style={{
-        width: 'clamp(320px, 94vw, 460px)', maxHeight: '90vh', overflowY: 'auto',
-        boxSizing: 'border-box', scrollbarWidth: 'thin',
-        background: 'var(--sb-overlay)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
-        boxShadow: 'var(--sb-shadow-frame)',
-        padding: '18px 20px 22px',
-      }}>{children}</div>
-    </div>
-  )
-
-  return (
-    <Shell>
         {/* Which kind of thing this is, and the way out */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {lead}
@@ -406,7 +382,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
                 {new Date(date + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
                 <ChevronDown size={ICON.sm} strokeWidth={STROKE.rest} style={{ color: 'var(--sb-ink-4)', flexShrink: 0 }} />
                 <input type="date" value={date} onChange={e => pickDate(e.target.value)}
-                  style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', border: 'none', padding: 0 }} />
+                  style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', border: 'none', padding: 0, pointerEvents: 'none' }} />
               </label>
               <button
                 onClick={() => {
@@ -439,7 +415,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
                 <ChevronDown size={ICON.sm} strokeWidth={STROKE.rest} style={{ color: 'var(--sb-ink-4)', flexShrink: 0 }} />
                 <input type="date" value={paidAt}
                   onChange={e => { setPaidTouched(true); setPaidAt(e.target.value) }}
-                  style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', cursor: 'pointer', border: 'none', padding: 0 }} />
+                  style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', height: '100%', border: 'none', padding: 0, pointerEvents: 'none' }} />
               </label>
             </div>
           )}
@@ -628,6 +604,40 @@ export function TransactionModal({ transaction, accounts, categories, history = 
             Delete this transaction
           </button>
         )}
-    </Shell>
+    </>
+  )
+
+  // Docked, the panel around it already is the card: no second box, no shadow
+  // and no scrim, and it takes the width it is given.
+  if (docked) {
+    return (
+      <>
+        <input ref={fileRef} type="file" accept="image/*,application/pdf" multiple
+          style={{ display: 'none' }} onChange={handleFileChange} />
+        <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>{body}</div>
+      </>
+    )
+  }
+
+  return (
+    <div
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 1000,
+        background: 'var(--sb-scrim)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 18,
+      }}>
+
+      <input ref={fileRef} type="file" accept="image/*,application/pdf" multiple
+        style={{ display: 'none' }} onChange={handleFileChange} />
+
+      <div style={{
+        width: 'clamp(320px, 94vw, 460px)', maxHeight: '90vh', overflowY: 'auto',
+        boxSizing: 'border-box', scrollbarWidth: 'thin',
+        background: 'var(--sb-overlay)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
+        boxShadow: 'var(--sb-shadow-frame)',
+        padding: '18px 20px 22px',
+      }}>{body}</div>
+    </div>
   )
 }
