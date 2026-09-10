@@ -55,6 +55,7 @@ const SHARED_KEYS = [
   'finance-round-whole',
   'finance-show-cents',
   'finance-lock',                // whether the finance pages ask who you are
+  'finance-forecast',            // which forecast rules are on, and any you corrected
 ] as const
 
 // Deliberately not synced: tokens and caches (google_provider_token,

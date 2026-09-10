@@ -261,6 +261,15 @@ export interface MonthRow {
   /** What that month's surplus did. */
   fromSurplus: number
   shares: MonthShare[]
+  /** What that month had to work with, before anything was put anywhere. */
+  came: number
+  /** What left it on a date of its own — a school-fee instalment, a premium.
+   *  Zero unless a forecast is supplying them. */
+  went: number
+  /** What was carried into the next month. Negative means the month ran at a
+   *  deficit and the buffer covered it; later months pay it back before any
+   *  goal is funded again, which is what actually happens. */
+  carried: number
 }
 
 export interface Schedule {
@@ -287,13 +296,41 @@ function remainingOf(g: Goal, base: string): number {
  * The whole plan, month by month, until everything lands or the horizon runs
  * out. This is the one piece of arithmetic the screen shows its working from.
  */
+export interface ScheduleOptions {
+  policy?: Policy
+  today?: string
+  horizon?: number
+  /**
+   *  What month `m` leaves over, where `m` is months from today.
+   *
+   *  Absent, every month leaves what a normal one does, which is what the
+   *  screen has always assumed. A forecast supplies this instead, so a raise
+   *  in March or inflation carried forward can move one month and not the
+   *  rest.
+   */
+  surplusAt?: (m: number) => number
+  /**
+   *  What leaves in month `m` on a date of its own — a school-fee instalment,
+   *  an annual premium. Kept apart from the surplus because it is *lumpy*: the
+   *  whole point is that three months of the year are heavy and the rest are
+   *  not, which a monthly average can never say.
+   */
+  outflowAt?: (m: number) => number
+}
+
 export function scheduleGoals(
   goals: Goal[],
   capacity: Capacity,
-  policy: Policy = 'ladder',
-  today = todayISO(),
-  horizon = HORIZON,
+  policyOrOptions: Policy | ScheduleOptions = 'ladder',
+  todayArg = todayISO(),
+  horizonArg = HORIZON,
 ): Schedule {
+  const opts: ScheduleOptions = typeof policyOrOptions === 'string'
+    ? { policy: policyOrOptions, today: todayArg, horizon: horizonArg }
+    : policyOrOptions
+  const policy  = opts.policy  ?? 'ladder'
+  const today   = opts.today   ?? todayArg
+  const horizon = opts.horizon ?? horizonArg
   const base = capacity.currency
   const ordered = byRank(goals)
   const need = new Map(ordered.map(g => [g.id, remainingOf(g, base)]))
@@ -322,21 +359,51 @@ export function scheduleGoals(
 
   // Month 0: the spare cash, down the ladder under either policy.
   const first: MonthShare[] = []
-  let free = Math.max(0, capacity.free)
+  const startFree = Math.max(0, capacity.free)
+  let pot = startFree
   for (const g of ordered) {
-    const took = put(g, free, 0, first)
+    const took = put(g, pot, 0, first)
     lump.set(g.id, took)
-    free -= took
+    pot -= took
   }
-  const surplus = Math.max(0, capacity.surplus)
-  if (first.length) rows.push({ month: monthKey(today), fromSpare: first.reduce((n, s) => n + s.amount, 0), fromSurplus: 0, shares: first })
+  if (first.length) {
+    rows.push({
+      month: monthKey(today), fromSpare: first.reduce((n, s) => n + s.amount, 0), fromSurplus: 0,
+      shares: first, came: startFree, went: 0, carried: pot,
+    })
+  }
 
-  // Then each month's surplus, divided again among whatever still needs money.
-  for (let m = 1; m <= horizon && surplus > 0; m++) {
+  // Then each month, divided again among whatever still needs money.
+  //
+  // The pot is carried. Without a forecast every month brings the same figure
+  // and nothing is ever left over — the ladder pours the remainder into the
+  // goals behind, so carrying changes nothing. With one, a month can bring
+  // less than nothing: an instalment leaves on its own date and the month runs
+  // at a deficit, which the buffer covers and the months after it pay back
+  // before any goal is funded again. That is what actually happens, and a flat
+  // monthly average can never say it.
+  const flat = Math.max(0, capacity.surplus)
+  const comes = opts.surplusAt ?? (() => flat)
+  const goes  = opts.outflowAt ?? (() => 0)
+  // Nothing arrives and nothing is dated: every month would be the same empty
+  // row, a hundred and twenty times.
+  const barren = !opts.surplusAt && !opts.outflowAt && flat <= 0
+  for (let m = 1; m <= horizon && !barren; m++) {
+    if (ordered.every(g => (need.get(g.id) ?? 0) <= 0)) break
+    const came = comes(m)
+    const went = goes(m)
+    pot += came - went
     const hungry = ordered.filter(g => (need.get(g.id) ?? 0) > 0)
-    if (hungry.length === 0) break
     const shares: MonthShare[] = []
-    let left = surplus
+    let left = Math.max(0, pot)
+    const before = left
+    if (left <= 0) {
+      // A month that took something out is worth a row even though it put
+      // nothing in — that *is* the news. One where simply nothing happened is
+      // not, and a run of them is a wall.
+      if (went > 0) rows.push({ month: addMonths(today, m), fromSpare: 0, fromSurplus: 0, shares, came, went, carried: pot })
+      continue
+    }
 
     if (policy === 'share') {
       // 1/rank over what still needs money. Anything a finished goal would
@@ -344,7 +411,7 @@ export function scheduleGoals(
       const weights = hungry.map((g, i) => 1 / (rankOf(g, i) + 1))
       const total = weights.reduce((a, b) => a + b, 0) || 1
       let spare = 0
-      hungry.forEach((g, i) => { spare += surplus * (weights[i] / total) - put(g, surplus * (weights[i] / total), m, shares) })
+      hungry.forEach((g, i) => { spare += before * (weights[i] / total) - put(g, before * (weights[i] / total), m, shares) })
       // A goal that finished mid-month leaves change; it goes down the ladder.
       for (const g of hungry) { if (spare <= 0) break; spare -= put(g, spare, m, shares) }
       left = 0
@@ -363,8 +430,10 @@ export function scheduleGoals(
       for (const g of hungry) { if (left <= 0) break; left -= put(g, left, m, shares) }
     }
 
-    if (shares.length) {
-      rows.push({ month: addMonths(today, m), fromSpare: 0, fromSurplus: shares.reduce((n, s) => n + s.amount, 0), shares })
+    const spent = shares.reduce((n, s) => n + s.amount, 0)
+    pot -= spent
+    if (spent > 0 || went > 0) {
+      rows.push({ month: addMonths(today, m), fromSpare: 0, fromSurplus: spent, shares, came, went, carried: pot })
     }
   }
 

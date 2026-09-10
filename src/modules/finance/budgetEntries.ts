@@ -74,8 +74,12 @@ export function occurrencesFor(
   // shaped like them. Repeating means the same month and day next year.
   if (kind === 'custom') {
     for (const line of linesOf(rule)) {
+      // How many years the horizon actually reaches. Fixed at +2, a forecast
+      // asking for ten years of instalments got three and read as a school
+      // that stops charging in 2029.
+      const reach = Math.ceil(monthsAhead / 12) + 1
       const years = rule.linesRepeat
-        ? [Number(line.date.slice(0, 4)), now.getFullYear(), now.getFullYear() + 1, now.getFullYear() + 2]
+        ? [Number(line.date.slice(0, 4)), ...Array.from({ length: reach + 1 }, (_, k) => now.getFullYear() + k)]
         : [Number(line.date.slice(0, 4))]
       for (const y of [...new Set(years)]) {
         const date = `${y}${line.date.slice(4)}`

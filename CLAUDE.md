@@ -514,6 +514,42 @@ an overspend cannot run past its own pill. The title says which limit it used.
   goes to the front: its interest outruns anything below it. Plan tab, screen
   and icon are gone.
 
+## Finance — the forecast, and why the goal dates move
+`forecast.ts`. `capacityFrom` answers what a *normal* month leaves over, out of
+the last six. That is the right answer to its own question and the wrong one to
+plan a goal with: next year is not six flat copies of a normal month. School
+fees land on four dates, a bonus arrives in one, a premium once a year — so a
+plan built on the flat figure says the laptop arrives in May and then quietly
+fails to buy it. This turns the ledger and the budgets into a **month-by-month**
+picture, as a set of rules you can see and switch off.
+- **Nothing is invented.** Every figure traces to the ledger, to a budget you
+  wrote, or to a rate you gave. A rule that cannot find its figure goes
+  **dormant** and names what it is missing — inflation stays off and says "no
+  rate has been given" rather than assuming one.
+- **A rule is a switch that means something.** Off, its effect is gone from
+  every date on screen; that is the whole reason to show the working. **Your
+  figure beats ours** — a corrected value is kept in `state.values` and marked
+  `yours`, and nothing later overwrites it.
+- **`scheduleGoals` takes the months rather than one flat figure.**
+  `ScheduleOptions.surplusAt(m)` / `outflowAt(m)`, and the pot is **carried**: a
+  month can bring less than nothing, the buffer covers it, and the months after
+  pay it back before any goal is funded again. Without a forecast every month
+  brings the same figure and nothing is ever left over, so carrying changes
+  nothing — the old signature still works and all 23 planner tests pass
+  unchanged. `MonthRow` gained `came` / `went` / `carried`.
+- **Month 0 is charged nothing.** An instalment dated later *this* month is
+  already an unpaid entry, which is what `committed` is, and the spare cash the
+  plan starts from has had it taken off already. `dated[0]` is still filled in,
+  because a screen drawing the year should show it.
+- **A monthly budget rule is skipped**, because it is already inside the median;
+  only `once` and `custom` shapes are added. What the median *already* carries
+  is counted and said, so an instalment paid inside the window is not charged
+  twice.
+- `occurrencesFor` now reaches as far as it is asked to. Fixed at +2 years, a
+  ten-year plan got three and read as a school that stops charging in 2029.
+- `finance-forecast` is a prefSync key: which rules are off, which figures are
+  yours, and your own rules (a raise, a car sold, a loan starting).
+
 ## Finance — what the assistant may do with the money
 `lib/financeTools.ts`, merged into `ASSISTANT_TOOLS` and dispatched ahead of the
 switch in `assistantTools.ts` (`FINANCE_TOOL_NAMES`). The assistant could read
