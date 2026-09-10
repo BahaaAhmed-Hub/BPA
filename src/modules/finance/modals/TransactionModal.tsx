@@ -34,6 +34,15 @@ interface Props {
   onSave: (tx: Transaction) => void
   onDelete?: (id: string) => void
   onClose: () => void
+  /** Draw the same form docked in a column rather than floating over the page.
+   *  There is one entry form in this app; a panel that needs one renders this
+   *  with `docked`, because a second design of the same thing is two answers to
+   *  what an entry is. Docked, it loses the scrim, the fixed width and the
+   *  centring, and fills whatever column it is put in. */
+  docked?: boolean
+  /** Rendered into the docked header, left of the close button — the panel's
+   *  own way back to the list it came from. */
+  lead?: React.ReactNode
 }
 
 const TYPES: { id: TxType; label: string }[] = [
@@ -42,7 +51,7 @@ const TYPES: { id: TxType; label: string }[] = [
   { id: 'transfer', label: 'Transfer' },
 ]
 
-export function TransactionModal({ transaction, accounts, categories, history = [], initial, onSave, onDelete, onClose }: Props) {
+export function TransactionModal({ transaction, accounts, categories, history = [], initial, onSave, onDelete, onClose, docked, lead }: Props) {
   const isEdit = !!transaction
   const todayStr = todayISO()
 
@@ -215,7 +224,15 @@ export function TransactionModal({ transaction, accounts, categories, history = 
 
   const canSave = amount > 0 && !!accountId && (type !== 'transfer' || !!toAccountId)
 
-  return (
+  // Docked, the panel around it already is the card: it draws no second box,
+  // no shadow and no scrim, and takes the width it is given.
+  const Shell = ({ children }: { children: React.ReactNode }) => docked ? (
+    <>
+      <input ref={fileRef} type="file" accept="image/*,application/pdf" multiple
+        style={{ display: 'none' }} onChange={handleFileChange} />
+      <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>{children}</div>
+    </>
+  ) : (
     <div
       onClick={e => { if (e.target === e.currentTarget) onClose() }}
       style={{
@@ -233,10 +250,15 @@ export function TransactionModal({ transaction, accounts, categories, history = 
         background: 'var(--sb-overlay)', border: 'var(--sb-border-width) solid var(--sb-border)', borderRadius: 'var(--sb-r-card)',
         boxShadow: 'var(--sb-shadow-frame)',
         padding: '18px 20px 22px',
-      }}>
+      }}>{children}</div>
+    </div>
+  )
 
+  return (
+    <Shell>
         {/* Which kind of thing this is, and the way out */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {lead}
           <span style={{
             display: 'inline-flex', alignItems: 'center', gap: 6, height: 26, padding: '0 11px',
             borderRadius: 'var(--sb-r-pill)', background: 'var(--sb-field)', color: 'var(--sb-ink-2)', fontSize: 'var(--sb-t-meta)',
@@ -605,7 +627,6 @@ export function TransactionModal({ transaction, accounts, categories, history = 
             Delete this transaction
           </button>
         )}
-      </div>
-    </div>
+    </Shell>
   )
 }
