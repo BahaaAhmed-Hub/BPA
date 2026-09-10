@@ -208,6 +208,10 @@ export interface ServerAccount {
   avatarUrl?: string | null
   isPrimary:  boolean
   connectedAt: string
+  /** What the grant carried the last time a token was read for this account.
+   *  A record of a real consent, not a guess — but about the token that was
+   *  live then, which is why it is only ever a fallback for a live reading. */
+  scopes?:    string[] | null
 }
 
 /**
@@ -218,7 +222,7 @@ export interface ServerAccount {
 export async function loadAccountsFromServer(): Promise<ServerAccount[] | null> {
   const { data, error } = await supabase
     .from('google_accounts')
-    .select('id, email, name, avatar_url, is_primary, connected_at')
+    .select('id, email, name, avatar_url, is_primary, connected_at, scopes')
     .order('is_primary', { ascending: false })
     .order('connected_at', { ascending: true })
 
@@ -234,5 +238,6 @@ export async function loadAccountsFromServer(): Promise<ServerAccount[] | null> 
     avatarUrl:   row.avatar_url as string | null,
     isPrimary:   row.is_primary as boolean,
     connectedAt: row.connected_at as string,
+    scopes:      Array.isArray(row.scopes) ? row.scopes as string[] : null,
   }))
 }

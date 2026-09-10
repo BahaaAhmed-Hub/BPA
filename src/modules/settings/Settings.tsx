@@ -1706,8 +1706,11 @@ function TaskStatusesSection() {
  *  Drive was in the request, Google did grant it, and the badge then wrote the
  *  same three strings back and looked exactly as it had before.
  */
-function IntegrationBadge({ icon, label, active, onGrant }: {
-  icon: ReactNode; label: string; active: boolean | null; onGrant?: () => void
+function IntegrationBadge({ icon, label, active, fresh = true, onGrant }: {
+  icon: ReactNode; label: string; active: boolean | null
+  /** Read off the token just now, rather than off the last record of one. */
+  fresh?: boolean
+  onGrant?: () => void
 }) {
   const tone = active === true ? 'var(--sb-positive)' : active === null ? 'var(--sb-ink-4)' : 'var(--sb-info)'
   const wash = active === true ? 'color-mix(in srgb, var(--sb-positive) 10.0%, transparent)'
@@ -1718,17 +1721,24 @@ function IntegrationBadge({ icon, label, active, onGrant }: {
              : 'color-mix(in srgb, var(--sb-info) 25.0%, transparent)'
   return (
     <span
-      title={active === true ? `${label} access is on this account's token`
-           : active === null ? `We could not read this account's token, so we cannot say whether ${label} is granted`
-           : `${label} is not on this account's token`}
+      title={active === null
+        ? `We could not read this account's token just now, so we cannot say whether ${label} is granted. Granting again always settles it.`
+        : active
+          ? (fresh ? `${label} access is on this account's token`
+                   : `${label} was on this account's last recorded grant — we could not read the token just now`)
+          : (fresh ? `${label} is not on this account's token`
+                   : `${label} was not on this account's last recorded grant — we could not read the token just now`)}
       style={{
         display: 'inline-flex', alignItems: 'center', gap: 4,
         padding: '2px 7px', borderRadius: 'var(--sb-r-card)', fontSize: 'var(--sb-t-micro)', fontWeight: 500,
-        background: wash, border: `var(--sb-border-width) solid ${edge}`, color: tone,
+        background: wash, color: tone,
+        // A dashed edge is the whole difference between "this token says so"
+        // and "this is what it said last time we could ask".
+        border: `var(--sb-border-width) ${fresh ? 'solid' : 'dashed'} ${edge}`,
       }}>
       {icon}{label}
       {active === null && <span style={{ opacity: 0.8 }}>?</span>}
-      {active === false && onGrant && (
+      {active !== true && onGrant && (
         <button onClick={onGrant} style={{
           marginLeft: 3, background: 'none', border: 'none', cursor: 'pointer',
           color: 'var(--sb-ink-2)', fontSize: 'var(--sb-t-micro)', fontWeight: 600, padding: 0,
@@ -1836,37 +1846,53 @@ function AccountsSection({
    *  be answered — the badges draw those two differently, and only one of them
    *  offers a button.
    */
-  const [grantsBy, setGrantsBy] = useState<Record<string, string[] | null>>({})
+  const [grantsBy, setGrantsBy] = useState<Record<string, { scopes: string[]; live: boolean } | null>>({})
   useEffect(() => {
     let live = true
+    const put = (email: string, v: { scopes: string[]; live: boolean } | null) => {
+      if (live) setGrantsBy(g => ({ ...g, [email.toLowerCase()]: v }))
+    }
     const ask = async () => {
       const targets: { email: string; token: string }[] = []
-      if (primaryEmail && primaryToken) targets.push({ email: primaryEmail, token: primaryToken })
+      if (primaryEmail) {
+        // The copy in localStorage goes stale in about an hour, and a stale
+        // token makes tokeninfo answer 400 — which read as "we cannot say" on
+        // an account that had granted everything. The live session holds a
+        // fresher one whenever there is one.
+        const { data } = await supabase.auth.getSession()
+        targets.push({ email: primaryEmail, token: data.session?.provider_token || primaryToken })
+      }
       for (const a of accounts) {
-        const t = a.providerToken || (await getProviderTokenForAccount(a)) || ''
-        if (t) targets.push({ email: a.email, token: t })
-        else if (live) setGrantsBy(g => ({ ...g, [a.email.toLowerCase()]: null }))
+        targets.push({ email: a.email, token: a.providerToken || (await getProviderTokenForAccount(a)) || '' })
       }
       for (const { email, token } of targets) {
         const known = cachedScopes(email)
-        if (known && !scopesAreStale(email)) { if (live) setGrantsBy(g => ({ ...g, [email.toLowerCase()]: known })); continue }
-        const sc = await readScopes(email, token)
+        if (known && !scopesAreStale(email)) { put(email, { scopes: known, live: true }); continue }
+        const sc = token ? await readScopes(email, token) : null
         if (!live) continue
-        // A failed read keeps whatever we last measured. Losing the network is
-        // not evidence that a grant went away.
-        setGrantsBy(g => ({ ...g, [email.toLowerCase()]: sc ?? known ?? null }))
-        if (sc) setAccountScopes(email, sc)
+        if (sc) { put(email, { scopes: sc, live: true }); setAccountScopes(email, sc); continue }
+        // No live reading. Last measurement first, then what the server has on
+        // record from the last one — both are records of a real consent, and
+        // saying nothing about an account that plainly works is worse than
+        // saying what it was last known to carry.
+        const recorded = known
+          ?? accounts.find(a => a.email.toLowerCase() === email.toLowerCase())?.scopes
+          ?? serverAccounts.find(a => a.email.toLowerCase() === email.toLowerCase())?.scopes
+          ?? null
+        put(email, recorded && recorded.length ? { scopes: recorded, live: false } : null)
       }
     }
     void ask()
     return () => { live = false }
-  }, [accounts, primaryEmail, primaryToken])
+  }, [accounts, serverAccounts, primaryEmail, primaryToken])
 
   /** True / false / null — see IntegrationBadge. */
   const can = (email: string, part: string): boolean | null => {
-    const sc = grantsBy[email.toLowerCase()]
-    return sc === undefined || sc === null ? null : sc.some(x => x.includes(part))
+    const hit = grantsBy[email.toLowerCase()]
+    return hit == null ? null : hit.scopes.some(x => x.includes(part))
   }
+  /** Whether that answer came from the token just now, or off a record. */
+  const fresh = (email: string): boolean => !!grantsBy[email.toLowerCase()]?.live
 
   return (
     <div>
@@ -1893,9 +1919,11 @@ function AccountsSection({
                 one you signed in with, but signing in is not consent to
                 everything, and a stale grant is exactly what the row should
                 say. */}
-            <IntegrationBadge icon={<CalendarDays size={ICON.sm} />} label="Calendar" active={can(primaryEmail, 'calendar')} />
-            <IntegrationBadge icon={<Mail size={ICON.sm} />} label="Gmail" active={can(primaryEmail, 'gmail')} />
-            <IntegrationBadge icon={<HardDrive size={ICON.sm} />} label="Drive" active={can(primaryEmail, 'drive')}
+            <IntegrationBadge icon={<CalendarDays size={ICON.sm} />} label="Calendar" active={can(primaryEmail, 'calendar')} fresh={fresh(primaryEmail)}
+              onGrant={() => { forgetScopes(primaryEmail); void signInWithGoogle() }} />
+            <IntegrationBadge icon={<Mail size={ICON.sm} />} label="Gmail" active={can(primaryEmail, 'gmail')} fresh={fresh(primaryEmail)}
+              onGrant={() => { forgetScopes(primaryEmail); void signInWithGoogle() }} />
+            <IntegrationBadge icon={<HardDrive size={ICON.sm} />} label="Drive" active={can(primaryEmail, 'drive')} fresh={fresh(primaryEmail)}
               onGrant={() => { forgetScopes(primaryEmail); void signInWithGoogle() }} />
           </div>
         </div>
@@ -1969,9 +1997,11 @@ function AccountsSection({
                 <p style={{ margin: '2px 0 0', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-warning)' }}>⚠ Access lost — reconnect to restore</p>
               ) : (
                 <div style={{ margin: '5px 0 0', display: 'flex', gap: 5, flexWrap: 'wrap', alignItems: 'center' }}>
-                  <IntegrationBadge icon={<CalendarDays size={ICON.sm} />} label="Calendar" active={can(acc.email, 'calendar')} />
-                  <IntegrationBadge icon={<Mail size={ICON.sm} />} label="Gmail" active={can(acc.email, 'gmail')} />
-                  <IntegrationBadge icon={<HardDrive size={ICON.sm} />} label="Drive" active={can(acc.email, 'drive')}
+                  <IntegrationBadge icon={<CalendarDays size={ICON.sm} />} label="Calendar" active={can(acc.email, 'calendar')} fresh={fresh(acc.email)}
+                    onGrant={() => void reconnectAccount(acc)} />
+                  <IntegrationBadge icon={<Mail size={ICON.sm} />} label="Gmail" active={can(acc.email, 'gmail')} fresh={fresh(acc.email)}
+                    onGrant={() => void reconnectAccount(acc)} />
+                  <IntegrationBadge icon={<HardDrive size={ICON.sm} />} label="Drive" active={can(acc.email, 'drive')} fresh={fresh(acc.email)}
                     onGrant={() => void reconnectAccount(acc)} />
                 </div>
               )}
