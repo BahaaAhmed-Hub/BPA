@@ -73,8 +73,13 @@ Three rules any change here must keep:
   and the wrong one won. `professor-habits-edited` is the second list: written only by
   `addHabit`/`updateHabit`/`deleteHabit`, cleared on a successful push, **never
   seeded**, and it is the only thing the field merge may read. Absence of an edit is
-  not evidence of one. **`taskStore.loadFromDB` still reads `professor-tasks-dirty` for
-  both questions and has the same bug.**
+  not evidence of one. `professor-tasks-edited` is the same split in
+  `taskStore`, where it was worse: `scheduleDbSync(tasks)` marked the **whole
+  list** dirty on every edit, so touching one task on the iPad claimed all of
+  them. It now takes the ids the change actually touched —
+  `scheduleDbSync(next, [id])` — with `[]` for the two pushes that are not
+  edits: the hydration push-back, and a reorder (order is not a column, so
+  nothing about a task travels when it moves).
 - **Push the hydration merge back only when it differs from what the server just sent**,
   or two open devices trade writes forever.
 
@@ -1103,6 +1108,31 @@ themselves, so each reads a **note left by whoever does know**:
 been read here", "needs Behavioral OS switched on". Shown in the bell panel and
 as a chip on the Settings row. An empty bell for a reason is not a quiet day,
 and "not wired yet" was the wrong thing to say about either.
+
+## The assistant takes files
+`lib/chatAttachments.ts` + the composer in `AssistantPanel`. A screenshot of an
+invoice or a PDF statement is the fastest way to tell the assistant something,
+and it had no way to receive one. Three ways in — the clip, a paste (a
+screenshot goes straight from the clipboard), a drop on the composer — and three
+kinds out, because there are three things a model can be given:
+- **image** — Anthropic base64 blocks; Groq a data URL, vision models only.
+  Anything longer than 1568px on an edge is drawn down a canvas to JPEG first,
+  which is Anthropic's own ceiling and takes the token cost with it. A small PNG
+  keeps its encoding: re-encoding a screenshot as JPEG smears the text in it.
+- **pdf** — a `document` block. **Groq cannot read one at all**, so
+  `unsupported()` says so before the request rather than dropping it silently,
+  which would read as the model ignoring what you just handed it.
+- **text** (CSV, MD, JSON, logs) — inlined into the message between
+  `--- name ---` fences so the model knows what it is looking at, truncated at
+  200 KB and told when it was.
+Caps: 5 MB an image after scaling, 24 MB a PDF, 24 MB the message. A file with
+no message is a message — dropping a receipt in asks the obvious question — so
+Send is live with an empty box. The chips above the input remove one at a time,
+and the sent bubble lists what went with it, or the thread shows a question
+about a document nobody can see was handed over. Verified by intercepting the
+API: image, document and text blocks all arrive, the tools still ride along, and
+the reply renders (the mock has to *stream*, or the SDK ends "without sending
+any chunks").
 
 ## Overlays — a modal is not a card
 `--sb-overlay` and `--sb-scrim`. Every modal panel used to be painted with

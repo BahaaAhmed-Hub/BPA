@@ -1,10 +1,14 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import Anthropic from '@anthropic-ai/sdk'
-import { Brain, X, Send, Loader2, ChevronDown, Wrench } from 'lucide-react'
+import { Brain, X, Send, Loader2, ChevronDown, Wrench , Paperclip, FileText, Image as ImageIcon, X as CloseIcon } from 'lucide-react'
 import { useTaskStore } from '@/store/taskStore'
 import { useAuthStore } from '@/store/authStore'
 import { useHabitsStore } from '@/store/habitsStore'
 import { ASSISTANT_TOOLS, executeTool, type ToolContext } from '@/lib/assistantTools'
+import {
+  readAttachment, kindOf, toAnthropicContent, toGroqContent, unsupported, tooLarge, prettySize,
+  type Attachment,
+} from '@/lib/chatAttachments'
 import { loadAIConfig, type AIConfig } from '@/modules/settings/Settings'
 import { loadAccounts } from '@/lib/multiAccount'
 import { useBehavioralStore } from '@/store/behavioralStore'
@@ -20,7 +24,7 @@ interface GroqToolCall {
 }
 
 type GroqMessage =
-  | { role: 'user';      content: string }
+  | { role: 'user';      content: unknown }
   | { role: 'assistant'; content: string | null; tool_calls?: GroqToolCall[] }
   | { role: 'tool';      tool_call_id: string; content: string }
 
@@ -38,6 +42,8 @@ interface DisplayMessage {
   id: string
   role: 'user' | 'assistant' | 'tool' | 'error'
   content: string
+  /** What was sent alongside the words, so the thread shows it too. */
+  files?: { name: string; kind: Attachment['kind'] }[]
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -84,6 +90,7 @@ You have tools to:
 - List, create, and complete tasks
 - Search Google Drive files
 - Read and write the finance ledger: balances, spending, budgets, goals, and entries
+- Read images, PDFs and text files the user attaches to a message
 
 Use tools immediately when action is required. Summarize results with minimal words. Ask one focused question when clarification is needed.`
   }
@@ -98,6 +105,11 @@ You have tools to:
 - List, create, and complete tasks
 - Search Google Drive files
 - Read and write the finance ledger
+
+Files: the user can attach images, PDFs and text files to a message. Read what
+they attach and answer from it — an invoice, a statement, a screenshot of a bill
+— and use your tools to act on it when they ask, for instance recording what a
+receipt says. Never claim you cannot see an attachment that is there.
 
 On money:
 - Start with finance_overview for anything about money — it answers most questions in one call.
@@ -172,6 +184,23 @@ function MessageBubble({ msg }: { msg: DisplayMessage }) {
         color: isUser ? 'var(--sb-accent-ink)' : 'var(--sb-ink-1)',
         whiteSpace: 'pre-wrap', wordBreak: 'break-word',
       }}>
+        {/* What went with the message. Without this the thread shows a question
+            about a document nobody can see was ever handed over. */}
+        {msg.files?.length ? (
+          <span style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: msg.content ? 6 : 0 }}>
+            {msg.files.map(f => (
+              <span key={f.name} style={{
+                display: 'inline-flex', alignItems: 'center', gap: 5, maxWidth: '100%',
+                padding: '2px 8px', borderRadius: 'var(--sb-r-chip)',
+                background: 'color-mix(in srgb, var(--sb-ink-1) 12%, transparent)',
+                fontSize: 'var(--sb-t-meta)',
+              }}>
+                {f.kind === 'image' ? <ImageIcon size={12} /> : <FileText size={12} />}
+                <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.name}</span>
+              </span>
+            ))}
+          </span>
+        ) : null}
         {msg.content}
       </div>
     </div>
@@ -225,7 +254,30 @@ export function AssistantPanel({ open, onClose }: AssistantPanelProps) {
   const [groqMsgs,      setGroqMsgs]      = useState<GroqMessage[]>([])
   const [input,         setInput]          = useState('')
   const [thinking,      setThinking]       = useState(false)
+  // A screenshot of an invoice or a PDF statement is the fastest way to tell
+  // the assistant something. Three ways in: the clip, a paste, a drop.
+  const [attachments,   setAttachments]    = useState<Attachment[]>([])
+  const [attachError,   setAttachError]    = useState<string | null>(null)
+  const [dropping,      setDropping]       = useState(false)
+  const fileInput = useRef<HTMLInputElement>(null)
   const lastProviderRef = useRef<string>('')
+
+  const addFiles = useCallback(async (files: File[]) => {
+    const usable = files.filter(f => kindOf(f))
+    const refused = files.filter(f => !kindOf(f))
+    if (refused.length) setAttachError(`${refused.map(f => f.name).join(', ')} — images, PDFs and text files only.`)
+    else if (usable.length) setAttachError(null)
+    for (const f of usable) {
+      try {
+        const a = await readAttachment(f)
+        // Each one lands as it is read; a big photo being scaled must not hold
+        // up the small one behind it.
+        setAttachments(prev => (prev.some(p => p.name === a.name && p.size === a.size) ? prev : [...prev, a]))
+      } catch (e) {
+        setAttachError(e instanceof Error ? e.message : 'That file could not be read.')
+      }
+    }
+  }, [])
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef       = useRef<HTMLTextAreaElement>(null)
@@ -244,9 +296,14 @@ export function AssistantPanel({ open, onClose }: AssistantPanelProps) {
 
   // ── Anthropic agentic loop (streaming) ─────────────────────────────────────
 
-  async function runAnthropic(trimmed: string, cfg: AIConfig, system: string, history: Anthropic.MessageParam[]) {
+  async function runAnthropic(trimmed: string, cfg: AIConfig, system: string, history: Anthropic.MessageParam[], atts: Attachment[] = []) {
     const client = new Anthropic({ apiKey: cfg.anthropicKey, dangerouslyAllowBrowser: true })
-    let msgs: Anthropic.MessageParam[] = [...history, { role: 'user', content: trimmed }]
+    // A message with nothing attached stays a plain string — the block form is
+    // only needed when there is something to put beside the words.
+    const content = atts.length
+      ? toAnthropicContent(trimmed, atts) as Anthropic.ContentBlockParam[]
+      : trimmed
+    let msgs: Anthropic.MessageParam[] = [...history, { role: 'user', content }]
 
     while (true) {
       // Stream text in real-time; collect final message for tool-use detection
@@ -296,8 +353,8 @@ export function AssistantPanel({ open, onClose }: AssistantPanelProps) {
 
   // ── Groq agentic loop ───────────────────────────────────────────────────────
 
-  async function runGroq(trimmed: string, cfg: AIConfig, system: string, history: GroqMessage[]) {
-    let msgs: GroqMessage[] = [...history, { role: 'user', content: trimmed }]
+  async function runGroq(trimmed: string, cfg: AIConfig, system: string, history: GroqMessage[], atts: Attachment[] = []) {
+    let msgs: GroqMessage[] = [...history, { role: 'user', content: atts.length ? toGroqContent(trimmed, atts) : trimmed }]
 
     while (true) {
       const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -349,9 +406,15 @@ export function AssistantPanel({ open, onClose }: AssistantPanelProps) {
 
   const sendMessage = useCallback(async (text: string) => {
     const trimmed = text.trim()
-    if (!trimmed || thinking) return
+    // A file on its own is a message: "what is this?" is implied by dropping it.
+    if ((!trimmed && attachments.length === 0) || thinking) return
 
     const cfg = loadAIConfig()
+
+    // What this provider cannot take is said before the request, not after it
+    // fails — and never by quietly dropping the thing you just attached.
+    const cannot = unsupported(cfg.provider, attachments) ?? tooLarge(attachments)
+    if (cannot) { setAttachError(cannot); return }
 
     // Validate key for selected provider
     if (cfg.provider === 'anthropic' && !cfg.anthropicKey) {
@@ -374,15 +437,21 @@ export function AssistantPanel({ open, onClose }: AssistantPanelProps) {
     const userName = user?.name?.split(' ')[0] ?? user?.email ?? 'there'
     const system   = buildSystemPrompt(userName, today, samuraiActive)
 
+    const sending = attachments
     setInput('')
+    setAttachments([])
+    setAttachError(null)
     setThinking(true)
-    setDisplayMessages(prev => [...prev, { id: crypto.randomUUID(), role: 'user', content: trimmed }])
+    setDisplayMessages(prev => [...prev, {
+      id: crypto.randomUUID(), role: 'user', content: trimmed,
+      ...(sending.length ? { files: sending.map(a => ({ name: a.name, kind: a.kind })) } : {}),
+    }])
 
     try {
       if (cfg.provider === 'groq') {
-        await runGroq(trimmed, cfg, system, groqMsgs)
+        await runGroq(trimmed, cfg, system, groqMsgs, sending)
       } else {
-        await runAnthropic(trimmed, cfg, system, anthropicMsgs)
+        await runAnthropic(trimmed, cfg, system, anthropicMsgs, sending)
       }
     } catch (err) {
       const msg     = err instanceof Error ? err.message : String(err)
@@ -395,13 +464,15 @@ export function AssistantPanel({ open, onClose }: AssistantPanelProps) {
       setThinking(false)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [anthropicMsgs, groqMsgs, thinking, user, tasks])
+  }, [anthropicMsgs, groqMsgs, thinking, user, tasks, attachments])
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void sendMessage(input) }
   }
 
   function clearConversation() {
+    setAttachments([])
+    setAttachError(null)
     setDisplayMessages([])
     setAnthropicMsgs([])
     setGroqMsgs([])
@@ -494,19 +565,81 @@ export function AssistantPanel({ open, onClose }: AssistantPanelProps) {
         </div>
 
         {/* Input */}
-        <div style={{ padding: '12px 14px 14px', borderTop: 'var(--sb-border-width) solid var(--sb-border)', flexShrink: 0 }}>
+        <div
+          onDragOver={e => { e.preventDefault(); setDropping(true) }}
+          onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDropping(false) }}
+          onDrop={e => { e.preventDefault(); setDropping(false); void addFiles([...e.dataTransfer.files]) }}
+          style={{ padding: '12px 14px 14px', borderTop: 'var(--sb-border-width) solid var(--sb-border)', flexShrink: 0 }}>
+
+          {/* What is going with the message, and the way to take one back out. */}
+          {attachments.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+              {attachments.map(a => (
+                <span key={a.id} style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6, maxWidth: '100%',
+                  padding: '4px 6px 4px 8px', borderRadius: 'var(--sb-r-chip)',
+                  background: 'var(--sb-field)', border: 'var(--sb-border-width) solid var(--sb-border)',
+                  fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-2)',
+                }}>
+                  {a.kind === 'image'
+                    ? <ImageIcon size={ICON.sm} color="var(--sb-ink-3)" />
+                    : <FileText size={ICON.sm} color="var(--sb-ink-3)" />}
+                  <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 150 }}>{a.name}</span>
+                  <span style={{ color: 'var(--sb-ink-4)', fontVariantNumeric: 'tabular-nums' }}>{prettySize(a.size)}</span>
+                  <button
+                    onClick={() => setAttachments(prev => prev.filter(x => x.id !== a.id))}
+                    title={`Take ${a.name} back out`}
+                    style={{
+                      width: 18, height: 18, padding: 0, borderRadius: 'var(--sb-r-pill)', border: 'none',
+                      background: 'none', color: 'var(--sb-ink-4)', cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                    }}><CloseIcon size={12} /></button>
+                </span>
+              ))}
+            </div>
+          )}
+
+          {attachError && (
+            <p style={{ margin: '0 0 8px', fontSize: 'var(--sb-t-meta)', color: 'var(--sb-negative)', lineHeight: 1.45 }}>
+              {attachError}
+            </p>
+          )}
+
           <div style={{
             display: 'flex', alignItems: 'flex-end', gap: 8,
             background: 'var(--sb-field)',
-            border: 'var(--sb-border-width) solid var(--sb-border)',
+            border: `var(--sb-border-width) solid ${dropping ? 'var(--sb-info)' : 'var(--sb-border)'}`,
             borderRadius: 'var(--sb-r-nav)', padding: '10px 12px',
+            transition: 'border-color 0.15s',
           }}>
+            <input
+              ref={fileInput}
+              type="file"
+              multiple
+              accept="image/*,application/pdf,text/*,.csv,.md,.json,.yaml,.yml,.log"
+              hidden
+              onChange={e => { void addFiles([...(e.target.files ?? [])]); e.target.value = '' }} />
+            <button
+              onClick={() => fileInput.current?.click()}
+              disabled={thinking}
+              title="Attach an image, a PDF or a text file"
+              style={{
+                width: 26, height: 26, padding: 0, borderRadius: 'var(--sb-r-sm)', border: 'none',
+                background: 'none', color: 'var(--sb-ink-3)', cursor: thinking ? 'default' : 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+              }}><Paperclip size={ICON.md} /></button>
             <textarea
               ref={inputRef}
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Ask about your emails, tasks, calendar…"
+              // A screenshot goes straight from the clipboard into the message —
+              // saving it to disk first to attach it is two steps nobody wants.
+              onPaste={e => {
+                const files = [...e.clipboardData.files]
+                if (files.length) { e.preventDefault(); void addFiles(files) }
+              }}
+              placeholder={dropping ? 'Drop it here' : 'Ask, or drop a file in…'}
               disabled={thinking}
               rows={1}
               style={{
@@ -522,22 +655,22 @@ export function AssistantPanel({ open, onClose }: AssistantPanelProps) {
             />
             <button
               onClick={() => void sendMessage(input)}
-              disabled={!input.trim() || thinking}
+              disabled={(!input.trim() && attachments.length === 0) || thinking}
               style={{
                 width: 32, height: 32, borderRadius: 'var(--sb-r-sm)', border: 'none', cursor: 'pointer',
-                background: !input.trim() || thinking ? 'color-mix(in srgb, var(--sb-info) 20.0%, transparent)' : 'linear-gradient(135deg, var(--sb-info) 0%, color-mix(in srgb, var(--sb-info) 58%, var(--sb-ink-on-fill)) 100%)',
+                background: (!input.trim() && attachments.length === 0) || thinking ? 'color-mix(in srgb, var(--sb-info) 20.0%, transparent)' : 'linear-gradient(135deg, var(--sb-info) 0%, color-mix(in srgb, var(--sb-info) 58%, var(--sb-ink-on-fill)) 100%)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
                 transition: 'background 0.15s',
-                boxShadow: !input.trim() || thinking ? 'none' : '0 0 10px color-mix(in srgb, var(--sb-info) 40.0%, transparent)',
+                boxShadow: (!input.trim() && attachments.length === 0) || thinking ? 'none' : '0 0 10px color-mix(in srgb, var(--sb-info) 40.0%, transparent)',
               }}>
               {thinking
                 ? <Loader2 size={ICON.md} color="var(--sb-info)" style={{ animation: 'spin 1s linear infinite' }} />
-                : <Send size={ICON.sm} color={!input.trim() ? 'var(--sb-info)' : 'var(--sb-ink-on-fill)'} />
+                : <Send size={ICON.sm} color={!input.trim() && attachments.length === 0 ? 'var(--sb-info)' : 'var(--sb-ink-on-fill)'} />
               }
             </button>
           </div>
           <p style={{ margin: '6px 0 0', fontSize: 'var(--sb-t-micro)', color: 'var(--sb-ink-3)', textAlign: 'center' }}>
-            Enter to send · Shift+Enter for new line · Actions are real
+            Enter to send · Shift+Enter for a new line · paste or drop a file in
           </p>
         </div>
       </div>

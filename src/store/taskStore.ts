@@ -104,18 +104,38 @@ function fromRow(r: TaskRow): Task {
 // every delete undo itself. A task the server *does* have is only allowed to
 // overwrite what is on screen if nobody here is mid-edit.
 
-const DIRTY_KEY = 'professor-tasks-dirty'
+// Two lists, because the merge asks two questions and they are not the same
+// one — the habits store learnt this the hard way. `DIRTY_KEY` means "this task
+// might not be on the server", and is seeded with every local id on a device
+// that predates it, because dropping a task that never reached the server is
+// worse than a redundant push. `EDITED_KEY` means "someone changed this here
+// and it has not been pushed yet", is written only by an actual edit, and is
+// **never seeded** — it is the only thing allowed to outrank the server's copy
+// of a task's fields.
+//
+// With one list doing both, a device that had merely *opened* the app claimed
+// every task as newer, and every edit made anywhere else lost to it. Worse than
+// habits, in fact: the push marks the whole list, so editing one task on the
+// iPad claimed all of them.
 
-function loadDirtyTasks(): Set<string> {
+const DIRTY_KEY  = 'professor-tasks-dirty'
+const EDITED_KEY = 'professor-tasks-edited'
+
+function loadIdSet(key: string): Set<string> {
   try {
-    const raw = localStorage.getItem(DIRTY_KEY)
+    const raw = localStorage.getItem(key)
     return new Set(raw ? (JSON.parse(raw) as string[]) : [])
   } catch { return new Set() }
 }
 
-function saveDirtyTasks(ids: Set<string>): void {
-  try { localStorage.setItem(DIRTY_KEY, JSON.stringify([...ids])) } catch { /* quota */ }
+function saveIdSet(key: string, ids: Set<string>): void {
+  try { localStorage.setItem(key, JSON.stringify([...ids])) } catch { /* quota */ }
 }
+
+const loadDirtyTasks  = () => loadIdSet(DIRTY_KEY)
+const saveDirtyTasks  = (ids: Set<string>) => saveIdSet(DIRTY_KEY, ids)
+const loadEditedTasks = () => loadIdSet(EDITED_KEY)
+const saveEditedTasks = (ids: Set<string>) => saveIdSet(EDITED_KEY, ids)
 
 // A device that predates this list gives no way to tell what it has pushed and
 // what it has not. Assume nothing, or the first reload treats every task that
@@ -128,29 +148,45 @@ if (localStorage.getItem(DIRTY_KEY) == null) {
     if (ids.length) saveDirtyTasks(new Set(ids))
   } catch { /* nothing stored, nothing to protect */ }
 }
+// Never seeded: an edit made before this list existed and never pushed defers
+// to the server, which is the safe direction. The other way round is what let
+// an untouched device overwrite everyone else.
+if (localStorage.getItem(EDITED_KEY) == null) saveEditedTasks(new Set())
 
-function markTasksDirty(tasks: Task[]): void {
+function markTasksDirty(tasks: Task[], edited: string[]): void {
   markLocalWrite('tasks')
-  const set = loadDirtyTasks()
-  for (const t of tasks) set.add(t.id)
-  saveDirtyTasks(set)
+  const dirty = loadDirtyTasks()
+  for (const t of tasks) dirty.add(t.id)
+  saveDirtyTasks(dirty)
+  // Only what actually changed. The whole list is *written*, but the whole list
+  // was not *edited*, and saying it was is what let one device speak for every
+  // task it happened to be holding.
+  if (edited.length) {
+    const set = loadEditedTasks()
+    for (const id of edited) set.add(id)
+    saveEditedTasks(set)
+  }
 }
 
-// Debounced DB push — batches rapid mutations into one write
+// Debounced DB push — batches rapid mutations into one write.
+// `edited` is the ids this change actually touched: [] for a push that is not
+// an edit at all (hydration, a reorder — order is not a column, so nothing
+// about a task travels when it moves).
 let dbTimer: ReturnType<typeof setTimeout> | null = null
-function scheduleDbSync(tasks: Task[]) {
-  // Every caller reaches here after changing something, and the whole list is
-  // what gets written, so this is the one place that has to record it.
-  markTasksDirty(tasks)
+function scheduleDbSync(tasks: Task[], edited: string[] = []) {
+  markTasksDirty(tasks, edited)
   if (dbTimer) clearTimeout(dbTimer)
   dbTimer = setTimeout(() => {
     markLocalWrite('tasks')
     const pushing = loadDirtyTasks()
+    const pushingEdits = loadEditedTasks()
     saveTasksToDB(tasks.map(toRow))
       .then(() => {
-        const still = loadDirtyTasks()
+        const still = loadDirtyTasks(), edits = loadEditedTasks()
         for (const id of pushing) still.delete(id)
+        for (const id of pushingEdits) edits.delete(id)
         saveDirtyTasks(still)
+        saveEditedTasks(edits)
       })
       .catch(console.warn)
   }, 1500)
@@ -190,7 +226,9 @@ export const useTaskStore = create<TaskState>()(
         const activities = get().activities
         pushUndo(label, () => {
           set({ tasks, activities })
-          scheduleDbSync(tasks)
+          // Taking something back is an edit like any other, and which task it
+          // touched is exactly what a snapshot cannot say.
+          scheduleDbSync(tasks, tasks.map(t => t.id))
         }, { coalesceKey })
       },
 
@@ -199,6 +237,7 @@ export const useTaskStore = create<TaskState>()(
           const rows = await loadTasksFromDB()
           if (rows.length > 0) {
             const dirty = loadDirtyTasks()
+            const edited = loadEditedTasks()
             let joined: Task[] = []
             set(s => {
               // Merge: the server wins on fields, local order is preserved —
@@ -212,7 +251,8 @@ export const useTaskStore = create<TaskState>()(
                 .map(t => {
                   const fromDb = dbMap.get(t.id)
                   if (!fromDb) return t                       // made here, not pushed yet
-                  return dirty.has(t.id) ? { ...fromDb, ...t } : { ...t, ...fromDb }
+                  // Only a real unpushed edit made here outranks the server.
+                  return edited.has(t.id) ? { ...fromDb, ...t } : { ...t, ...fromDb }
                 })
               // Append tasks that exist in DB but not locally
               const localIds = new Set(local.map(t => t.id))
@@ -233,7 +273,9 @@ export const useTaskStore = create<TaskState>()(
             const changed =
               joined.length !== rows.length ||
               joined.some(t => onServer.get(t.id) !== JSON.stringify(toRow(t)))
-            if (changed) scheduleDbSync(joined)
+            // Hydration, not an edit: this pushes what the merge produced, and
+            // claiming it as an edit would make this device speak for the lot.
+            if (changed) scheduleDbSync(joined, [])
           }
         } catch { /* offline — keep local */ }
       },
@@ -251,7 +293,7 @@ export const useTaskStore = create<TaskState>()(
             createdAt: new Date().toISOString(),
           }
           const next = [...s.tasks, newTask]
-          scheduleDbSync(next)
+          scheduleDbSync(next, [newTask.id])
           return {
             tasks: next,
             activities: [...s.activities, act(newTask.id, 'created', 'Task created')],
@@ -266,7 +308,7 @@ export const useTaskStore = create<TaskState>()(
             ...t, id: crypto.randomUUID(), createdAt: new Date().toISOString(),
           }))
           const next = [...s.tasks, ...newTasks]
-          scheduleDbSync(next)
+          scheduleDbSync(next, newTasks.map(t => t.id))
           return {
             tasks: next,
             activities: [
@@ -367,7 +409,7 @@ export const useTaskStore = create<TaskState>()(
 
           const patch = scheduled ? { ...updates, quadrant: 'schedule' as const } : updates
           const next = s.tasks.map(t => t.id === id ? { ...t, ...patch } : t)
-          scheduleDbSync(next)
+          scheduleDbSync(next, [id])
           const merged = desc.length
             ? pushActivity(s.activities, act(id, 'field_updated', desc.join('; ')))
             : s.activities
@@ -386,7 +428,7 @@ export const useTaskStore = create<TaskState>()(
           const from = old?.quadrant ? QUADRANT_META[old.quadrant].label : 'Inbox'
           const to = quadrant ? QUADRANT_META[quadrant].label : 'Inbox'
           const next = s.tasks.map(t => t.id === id ? { ...t, quadrant } : t)
-          scheduleDbSync(next)
+          scheduleDbSync(next, [id])
           return {
             tasks: next,
             activities: [...s.activities, act(id, 'moved', `Moved from ${from} to ${to}`)],
@@ -410,7 +452,7 @@ export const useTaskStore = create<TaskState>()(
             { ...dragged, quadrant: target.quadrant },
             ...without.slice(targetIdx),
           ]
-          scheduleDbSync(next)
+          scheduleDbSync(next, [activeId])
           return {
             tasks: next,
             activities: [...s.activities, act(activeId, 'moved', `Moved from ${from} to ${to}`)],
@@ -429,7 +471,8 @@ export const useTaskStore = create<TaskState>()(
           const inboxSet = new Set(inboxIds)
           const others   = s.tasks.filter(t => !inboxSet.has(t.id))
           const next     = [...others, ...reorderedInbox.map(id => s.tasks.find(t => t.id === id)!)]
-          scheduleDbSync(next)
+          // Order is not a column, so nothing about a task changed here.
+          scheduleDbSync(next, [])
           return { tasks: next }
         })
       },
@@ -449,7 +492,7 @@ export const useTaskStore = create<TaskState>()(
           const qSet = new Set(qIds)
           const others = s.tasks.filter(t => !qSet.has(t.id))
           const next = [...others, ...reordered.map(id => s.tasks.find(t => t.id === id)!)]
-          scheduleDbSync(next)
+          scheduleDbSync(next, [])
           return { tasks: next }
         })
       },
@@ -463,7 +506,7 @@ export const useTaskStore = create<TaskState>()(
           const updated = { ...task, urgent: newUrgent }
           if (!newUrgent) {
             const next = s.tasks.map(t => t.id === id ? updated : t)
-            scheduleDbSync(next)
+            scheduleDbSync(next, [id])
             return { tasks: next }
           }
           // Move to top of section, right after the last already-urgent task in the same section
@@ -482,7 +525,7 @@ export const useTaskStore = create<TaskState>()(
             const at = without.findIndex(t => t.id === insertBeforeId)
             next = [...without.slice(0, at), updated, ...without.slice(at)]
           }
-          scheduleDbSync(next)
+          scheduleDbSync(next, [id])
           return { tasks: next }
         })
       },
@@ -499,7 +542,7 @@ export const useTaskStore = create<TaskState>()(
         }
         set(s => {
           const next = s.tasks.filter(t => t.id !== id)
-          scheduleDbSync(next)
+          scheduleDbSync(next, [id])
           return {
             tasks: next,
             activities: s.activities.filter(a => a.taskId !== id),
@@ -559,6 +602,7 @@ export const useTaskStore = create<TaskState>()(
       clearAll: () => {
         get()._remember('Cleared every task')
         saveDirtyTasks(new Set())
+        saveEditedTasks(new Set())
         set({ tasks: [], activities: [] })
       },
     }),
