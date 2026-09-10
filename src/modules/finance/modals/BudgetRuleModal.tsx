@@ -8,6 +8,7 @@ import { MoneyInput } from '../components/MoneyInput'
 import { toBase } from '../fx'
 import { settled, whenPaid } from '../unpaid'
 import { ICON, STROKE } from '@/lib/type'
+import { openPicker } from '@/lib/nativePicker'
 
 // ─── What an envelope is set to ──────────────────────────────────────────────
 // This was a whole right-hand column: an amount, a fixed-or-flexible pair, five
@@ -318,25 +319,6 @@ function isoToday(d = new Date()): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-/**
- *  Open a native date or month picker from a control that is hiding one.
- *
- *  These two pills are a label with an invisible `<input type="month">` laid
- *  over them, so the pill can be styled like everything else here. Clicking one
- *  therefore lands inside the input's own segments — which are invisible — and
- *  the calendar itself only ever opens from the indicator, which is invisible
- *  too. So the pill looked like a button and did nothing at all. `showPicker`
- *  is the only way to ask for it; it throws where the browser will not oblige,
- *  and then focus is at least something.
- */
-function openPicker(e: React.MouseEvent<HTMLElement>) {
-  const input = (e.currentTarget as HTMLElement).querySelector('input')
-  if (!input) return
-  e.preventDefault()
-  try { (input as HTMLInputElement & { showPicker?: () => void }).showPicker?.() }
-  catch { /* not allowed here — the focus below is the fallback */ }
-  input.focus()
-}
 
 const LABEL: React.CSSProperties = { width: 74, flexShrink: 0, fontSize: 'var(--sb-t-body)', color: 'var(--sb-ink-3)', fontWeight: 500 }
 const ROW: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 10 }

@@ -10,6 +10,7 @@ import { liveBalances } from '../balances'
 import { acct } from '../format'
 import { todayISO } from '../dates'
 import { ICON, STROKE } from '@/lib/type'
+import { openPicker } from '@/lib/nativePicker'
 import {
   DISPLAY,
   PILL, ROUND, LABEL, ROW, RULE, PillPicker, categoryOptions,
@@ -401,7 +402,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
           <div style={ROW}>
             <span style={LABEL}>Due</span>
             <span style={{ flex: 1, minWidth: 0, display: 'flex', gap: 7 }}>
-              <label style={{ ...PILL, flex: 1, position: 'relative', justifyContent: 'space-between' }}>
+              <label onClick={openPicker} style={{ ...PILL, flex: 1, position: 'relative', justifyContent: 'space-between' }}>
                 {new Date(date + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
                 <ChevronDown size={ICON.sm} strokeWidth={STROKE.rest} style={{ color: 'var(--sb-ink-4)', flexShrink: 0 }} />
                 <input type="date" value={date} onChange={e => pickDate(e.target.value)}
@@ -431,7 +432,7 @@ export function TransactionModal({ transaction, accounts, categories, history = 
           {isCleared && (
             <div style={ROW}>
               <span style={LABEL}>Paid on</span>
-              <label style={{ ...PILL, flex: 1, position: 'relative', justifyContent: 'space-between' }}>
+              <label onClick={openPicker} style={{ ...PILL, flex: 1, position: 'relative', justifyContent: 'space-between' }}>
                 {paidAt
                   ? new Date(paidAt + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
                   : <span style={{ color: 'var(--sb-ink-4)' }}>Pick the day</span>}

@@ -24,6 +24,7 @@ import {
   Upload, List, ChevronDown, ChevronRight, Plus, Bell, ExternalLink,
 } from 'lucide-react'
 import { ICON, STROKE } from '@/lib/type'
+import { openPicker } from '@/lib/nativePicker'
 import { loadDynamicCompanies } from '@/types'
 import { toRecurrence, presetRecur, type Recur } from './recurrence'
 import { useInkOn } from '@/lib/ink'
@@ -769,7 +770,7 @@ export function NewEventPanel({
             times — it dims them, so you can still see what they were and
             turning it back off does not feel like starting again. */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, flexWrap: 'wrap', rowGap: 8 }}>
-          <label style={{
+          <label onClick={openPicker} style={{
             position: 'relative',
             display: 'inline-flex', alignItems: 'center', gap: 5, height: 'var(--sb-h-pill)', padding: '0 9px',
             borderRadius: 'var(--sb-r-sm)', background: C.ink, color: C.onInk, cursor: 'pointer',
