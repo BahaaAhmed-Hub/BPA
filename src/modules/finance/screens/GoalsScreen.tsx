@@ -91,44 +91,31 @@ export interface Term {
   muted?: boolean
 }
 
-/** The panel behind the `?`. A sentence can say what a figure means; only a
- *  list can say where it came from, and "where did 170,433 come from" is the
- *  question this screen kept being asked. */
-function Breakdown({ title, terms }: { title: string; terms: Term[] }) {
-  return (
-    <div role="tooltip" style={{
-      position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 40, width: 320, maxWidth: '86vw',
-      background: 'var(--sb-overlay)', border: `var(--sb-border-width) solid ${C.border}`,
-      borderRadius: 'var(--sb-r-card)', boxShadow: 'var(--sb-shadow-frame)',
-      padding: '12px 14px', textAlign: 'left', cursor: 'default',
-      fontSize: 'var(--sb-t-meta)', color: C.ink2, lineHeight: 1.5, letterSpacing: 0,
-      textTransform: 'none', fontWeight: 400,
-    }}>
-      <div style={{ ...EYEBROW, marginBottom: 8 }}>{title}</div>
-      {terms.map((t, i) => (
-        <div key={i} style={{
-          display: 'flex', gap: 12, alignItems: 'baseline', padding: '3px 0',
-          borderTop: t.kind === 'total' ? `var(--sb-border-width) solid ${C.border}` : undefined,
-          marginTop: t.kind === 'total' ? 6 : undefined,
-          paddingTop: t.kind === 'total' ? 6 : 3,
-          color: t.kind === 'note' || t.muted ? C.ink4 : t.kind === 'total' ? C.ink1 : C.ink2,
-          fontWeight: t.kind === 'total' ? 700 : 400,
-        }}>
-          <span style={{ minWidth: 0 }}>
-            {t.kind === 'less' ? <span style={{ color: C.ink4 }}>less </span> : null}
-            {t.label}
-          </span>
-          <span style={{ flex: 1 }} />
-          {t.amount && (
-            <span style={{
-              fontFamily: DISPLAY, fontVariantNumeric: 'tabular-nums', flexShrink: 0,
-              color: t.kind === 'less' ? C.red : t.kind === 'note' || t.muted ? C.ink4 : 'inherit',
-            }}>{t.kind === 'less' ? `−${t.amount}` : t.amount}</span>
-          )}
-        </div>
-      ))}
-    </div>
-  )
+/** The breakdown as the text of an ordinary tooltip.
+ *
+ *  A styled popover was a second kind of tooltip to learn: it needed its own
+ *  dismissal, it covered the figures beside it, and it behaved like nothing
+ *  else on the page. The browser's own is the one people already know — hover
+ *  the mark, read the lines, move away. It takes plain text, so the lines are
+ *  padded into two columns rather than laid out.
+ */
+function termsText(terms: Term[]): string {
+  if (terms.length === 0) return ''
+  const rows = terms.map(t => ({
+    left: `${t.kind === 'less' ? '\u2212 ' : t.kind === 'note' ? '\u00b7 ' : '  '}${t.label}`,
+    right: t.amount ? (t.kind === 'less' ? `\u2212${t.amount}` : t.amount) : '',
+  }))
+  const w = Math.max(...rows.map(r => r.left.length))
+  return rows
+    .map((r, i) => {
+      const line = `${r.left.padEnd(w + 3)}${r.right}`
+      // A rule of dashes before the total: plain text has no borders, and a
+      // sum that runs on from the lines above it reads as another line.
+      return terms[i].kind === 'total'
+        ? `${'\u2500'.repeat(Math.min(52, line.length))}\n${line}`
+        : line
+    })
+    .join('\n')
 }
 
 /** A figure with its label under it — the shape every summary tile uses.
@@ -140,37 +127,32 @@ function Stat({ label, value, tone, sub, help, terms }: {
   label: string; value: string; tone?: string; sub?: string; help?: string
   terms?: Term[]
 }) {
-  const [open, setOpen] = useState(false)
+  // One tooltip, the browser's own: what the figure is, then where it came
+  // from, line by line.
+  const tip = [help, terms && terms.length > 0 ? termsText(terms) : null]
+    .filter(Boolean).join('\n\n')
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
-      <span
-        style={{ ...EYEBROW, cursor: help || terms ? 'help' : undefined, position: 'relative', display: 'inline-flex', alignItems: 'center' }}
-        title={terms ? undefined : help}
-        onMouseEnter={() => terms && setOpen(true)}
-        onMouseLeave={() => terms && setOpen(false)}>
-        {label}
-        {(help || terms) && (
-          <button
-            aria-label={`Where ${label} comes from`}
-            aria-expanded={open}
-            onClick={e => { e.stopPropagation(); setOpen(o => !o) }}
-            onFocus={() => terms && setOpen(true)}
-            onBlur={() => terms && setOpen(false)}
-            title={help}
+      <span style={EYEBROW}>{label}</span>
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+        <span style={{
+          fontFamily: DISPLAY, fontSize: 'var(--sb-t-h2)', fontWeight: 700, letterSpacing: '-.02em',
+          color: tone ?? C.ink1, fontVariantNumeric: 'tabular-nums',
+        }}>{value}</span>
+        {tip && (
+          // Beside the figure, because the figure is what raises the question.
+          <span
+            role="note"
+            aria-label={tip}
+            title={tip}
             style={{
-              marginLeft: 5, width: 14, height: 14, flexShrink: 0, padding: 0, cursor: 'pointer',
-              borderRadius: 'var(--sb-r-pill)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              background: open ? C.ink1 : 'transparent', color: open ? 'var(--sb-ink-on-dark)' : C.ink4,
-              border: `var(--sb-border-width) solid ${open ? C.ink1 : C.border}`,
-              fontFamily: 'inherit', fontSize: 9, fontWeight: 700, lineHeight: 1,
-            }}>?</button>
+              width: 15, height: 15, flexShrink: 0, cursor: 'help', borderRadius: 'var(--sb-r-pill)',
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              border: `var(--sb-border-width) solid ${C.border}`, color: C.ink4,
+              fontFamily: 'inherit', fontSize: 9.5, fontWeight: 700, lineHeight: 1,
+            }}>?</span>
         )}
-        {open && terms && <Breakdown title={label} terms={terms} />}
       </span>
-      <span style={{
-        fontFamily: DISPLAY, fontSize: 'var(--sb-t-h2)', fontWeight: 700, letterSpacing: '-.02em',
-        color: tone ?? C.ink1, fontVariantNumeric: 'tabular-nums',
-      }}>{value}</span>
       {sub && <span style={{ fontSize: 'var(--sb-t-micro)', color: C.ink4 }}>{sub}</span>}
     </div>
   )

@@ -485,8 +485,10 @@ export function BalanceScreen() {
           overflowY: 'auto',
           padding: '22px 26px',
         }}>
-          {/* Date range */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+          {/* Date range. It wraps: three controls and an account name do not fit
+              a narrow right pane on one line, and a row that cannot wrap
+              clips whatever is last rather than moving it. */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20, flexWrap: 'wrap', rowGap: 8 }}>
             <div style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -528,15 +530,21 @@ export function BalanceScreen() {
             {focused && (
               <button
                 onClick={() => setFocusId(null)}
-                title="Show every account again"
+                title={`Show every account again — currently ${focused.name} only`}
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 7, height: 'var(--sb-h-pill)',
-                  padding: '0 8px 0 12px', borderRadius: 'var(--sb-r-nav)', cursor: 'pointer',
+                  padding: '0 8px 0 12px', borderRadius: 'var(--sb-r-nav)', cursor: 'pointer', flexShrink: 0,
                   background: 'var(--sb-accent-tint)', border: 'var(--sb-border-width) solid var(--sb-accent)', color: 'var(--sb-accent-deep)',
                   fontFamily: 'inherit', fontSize: 'var(--sb-t-body-s)', fontWeight: 600,
+                  maxWidth: 220,
                 }}>
-                {focused.name}
-                <span style={{
+                {/* A pill is one line tall. An account name long enough to wrap
+                    was breaking out of the bottom of its own rounded box, so
+                    it shortens instead — the whole name is on the button. */}
+                <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {focused.name}
+                </span>
+                <span style={{ flexShrink: 0,
                   display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                   width: 18, height: 18, borderRadius: 'var(--sb-r-pill)', background: 'color-mix(in srgb, var(--sb-ink-1) 8.0%, transparent)',
                 }}><X size={ICON.sm} /></span>
