@@ -13,6 +13,14 @@ import {
 } from '../goalPlan'
 import { Segmented } from '@/components/ui'
 import { CategoryGlyph } from '../components/CategoryGlyph'
+import { GoalTimeline } from './GoalTimeline'
+import { ForecastRulesCard, OwnRulesCard } from './ForecastRules'
+import {
+  buildForecast, loadForecast, saveForecast, FORECAST_EVENT,
+  type ForecastState,
+} from '../forecast'
+import { loadRules } from '../modals/BudgetRuleModal'
+
 
 // ─── 21 · Goals ───────────────────────────────────────────────────────────────
 // A target and a date are a wish. What makes a plan is knowing what is spare,
@@ -194,7 +202,7 @@ function GoalRow({ plan, place, selected, lifted, over, onSelect, onGrab, regRow
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function GoalsScreen(_props?: any) {
-  const { goals, accounts, transactions, upsertGoal, removeGoal } = useFinanceStore()
+  const { goals, accounts, transactions, categories, upsertGoal, removeGoal } = useFinanceStore()
 
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [bufferMonths, setBufferMonths] = useState(() => {
@@ -234,21 +242,53 @@ export function GoalsScreen(_props?: any) {
   // new one, or the amount you just used stays in the form.
   const [formTick, setFormTick]   = useState(0)
 
-  const capacity = useMemo(
+  // ── The forecast ───────────────────────────────────────────────────────────
+  // `capacityFrom` answers what a *normal* month leaves over, which is the
+  // right answer to its own question and the wrong one to plan a goal with:
+  // next year is not twelve copies of a normal month. `buildForecast` turns
+  // the same ledger into a month-by-month picture — the school fees on their
+  // four dates, the March bonus in March — as rules you can see and switch off.
+  const [forecastState, setForecastState] = useState<ForecastState>(loadForecast)
+  useEffect(() => {
+    const sync = () => setForecastState(loadForecast())
+    window.addEventListener(FORECAST_EVENT, sync)
+    window.addEventListener('storage', sync)
+    return () => {
+      window.removeEventListener(FORECAST_EVENT, sync)
+      window.removeEventListener('storage', sync)
+    }
+  }, [])
+  function putForecast(next: ForecastState) {
+    setForecastState(next)
+    saveForecast(next)
+  }
+
+  const flatCapacity = useMemo(
     () => capacityFrom(accounts, transactions, bufferMonths, undefined, goals),
     [accounts, transactions, bufferMonths, goals])
+  const forecast = useMemo(() => buildForecast({
+    accounts, transactions, categories, budgets: loadRules(),
+    capacity: flatCapacity, state: forecastState,
+  }), [accounts, transactions, categories, flatCapacity, forecastState])
+  // Everything below plans on the forecast's capacity, not the flat one — the
+  // buffer, the cash rule and any figure you corrected are all in it.
+  const capacity = forecast.capacity
+
   const allGoals = useMemo(
     () => [...goals, ...debtGoals(accounts, transactions, debtRanks)],
     [goals, accounts, transactions, debtRanks])
   const debts = allGoals.length - goals.length
+  const runOpts = useMemo(
+    () => ({ policy, surplusAt: forecast.surplusAt, outflowAt: forecast.outflowAt }),
+    [policy, forecast])
   const plans = useMemo(
-    () => planGoals(allGoals, capacity, policy),
-    [allGoals, capacity, policy])
+    () => planGoals(allGoals, capacity, runOpts),
+    [allGoals, capacity, runOpts])
   // The same run of the plan the figures come from, kept so the screen can
   // show its working month by month rather than asserting a date.
   const schedule = useMemo(
-    () => scheduleGoals(allGoals, capacity, policy),
-    [allGoals, capacity, policy])
+    () => scheduleGoals(allGoals, capacity, runOpts),
+    [allGoals, capacity, runOpts])
 
   const selected = plans.find(p => p.goal.id === selectedId) ?? plans[0] ?? null
 
@@ -347,8 +387,24 @@ export function GoalsScreen(_props?: any) {
   const money = (n: number) => acct(n, { currency: cur })
   const canAdd = newName.trim().length > 0 && newTarget > 0
 
+  // One line about the forecast, and it has to be about *this* ledger or it is
+  // decoration. What is applied, what you corrected, and the one thing a flat
+  // monthly figure could never have said.
+  const applied = forecast.rules.filter(r => r.on && !r.dormant)
+  const yours = forecast.rules.filter(r => r.yours).length
+  const forecastLine = [
+    `${applied.length} of ${forecast.rules.length} forecast rules applied`,
+    forecast.datedYearly > 0
+      ? `${money(forecast.datedYearly)} of the next year lands on dates of its own, not spread across it`
+      : 'nothing in the next year lands on a date of its own',
+    yours > 0 ? `${yours} figure${yours === 1 ? '' : 's'} yours` : null,
+  ].filter(Boolean).join(' · ')
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, height: '100%', overflow: 'hidden', background: C.bg }}>
+    // The tab is one scrolling column now: the timeline sits above the two
+    // columns, and squeezing everything into the viewport left the open goal's
+    // detail cut off at the fold rather than reachable.
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, height: '100%', overflowY: 'auto', background: C.bg }}>
 
       {/* ── What there is to work with ── */}
       <div style={{ padding: '18px 26px 0' }}>
@@ -407,16 +463,51 @@ export function GoalsScreen(_props?: any) {
               }))}
             />
           </div>
+
+          {/* What the forecast is doing to all of this, in one line, with the
+              way to argue with it. Anything folded away needs a reason on the
+              screen to open it. */}
+          <div style={{
+            flexBasis: '100%', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px 12px',
+            paddingTop: 12, borderTop: `var(--sb-border-width) solid ${C.hair}`,
+          }}>
+            <span style={{ fontSize: 'var(--sb-t-meta)', color: C.ink3, lineHeight: 1.5 }}>
+              {forecastLine}
+            </span>
+            <button onClick={() => {
+              const el = document.getElementById('sb-forecast-rules') as HTMLDetailsElement | null
+              if (!el) return
+              el.open = true
+              el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            }}
+              style={{
+                border: 'none', cursor: 'pointer', padding: '3px 9px', borderRadius: 'var(--sb-r-pill)',
+                background: C.accentBg, color: C.ink2, fontFamily: 'inherit',
+                fontSize: 'var(--sb-t-micro)', fontWeight: 700, whiteSpace: 'nowrap',
+              }}>See the rules ↓</button>
+          </div>
         </div>
       </div>
 
+      {/* ── Every goal on one timeline, across the whole tab ── */}
+      {plans.length > 0 && (
+        <div style={{ padding: '14px 26px 0' }}>
+          <div style={{
+            background: C.surface, border: `var(--sb-border-width) solid ${C.border}`,
+            borderRadius: 'var(--sb-r-card)', padding: '16px 18px',
+          }}>
+            <GoalTimeline schedule={schedule} goals={allGoals} currency={cur} />
+          </div>
+        </div>
+      )}
+
       {/* ── The goals, and the one that is open ── */}
-      <div style={{ flex: 1, display: 'flex', gap: 14, padding: '14px 26px 22px', overflow: 'hidden', minHeight: 0 }}>
+      <div style={{ display: 'flex', gap: 14, padding: '14px 26px 14px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
 
         <div style={{
           width: 400, flexShrink: 0, background: C.surface, border: `var(--sb-border-width) solid ${C.border}`,
           borderRadius: 'var(--sb-r-card)', padding: '15px 16px', display: 'flex', flexDirection: 'column',
-          gap: 10, overflowY: 'auto', boxSizing: 'border-box',
+          gap: 10, boxSizing: 'border-box',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <span style={EYEBROW}>In order</span>
@@ -501,7 +592,7 @@ export function GoalsScreen(_props?: any) {
         </div>
 
         {/* ── What it would take ── */}
-        <div style={{ flex: 1, minWidth: 0, overflowY: 'auto' }}>
+        <div style={{ flex: 1, minWidth: 300 }}>
           {selected ? <GoalDetail
             plan={selected}
             place={plans.findIndex(p => p.goal.id === selected.goal.id) + 1}
@@ -519,21 +610,10 @@ export function GoalsScreen(_props?: any) {
             }} /> : (
             <div style={{
               background: C.surface, border: `var(--sb-border-width) solid ${C.border}`, borderRadius: 'var(--sb-r-card)',
-              padding: '28px 26px', color: C.ink3, fontSize: 'var(--sb-t-label)', lineHeight: 1.6, maxWidth: 620,
+              padding: '22px 24px', color: C.ink3, fontSize: 'var(--sb-t-label)', lineHeight: 1.6,
             }}>
-              <div style={{ fontFamily: DISPLAY, fontSize: 'var(--sb-t-h2)', fontWeight: 700, color: C.ink1, letterSpacing: '-.02em', marginBottom: 8 }}>
-                How this plans
-              </div>
-              Add a goal and this works out three things from the ledger you already keep:
-              what is <b>spare now</b> (what the accounts hold, less what you said to keep
-              back and anything unpaid but already due), what a <b>normal month</b> leaves
-              over (the median of the last {WINDOW_MONTHS} months of money that actually
-              moved — the median so one strange month does not reset the plan), and then it
-              pours both down the <b>ranking</b>, a month at a time, until everything
-              lands — so a goal queued behind another still gets a date rather than a
-              shrug. Drag a goal up and everything behind it re-plans. A <b>card with a
-              balance</b> is in the ranking too, as a goal to clear it — pay it down in
-              Balances and the target shrinks.
+              Pick a goal on the left and what it would take is worked out here — what goes
+              in each month, when it lands, and what is in front of it.
             </div>
           )}
           {!selected && plans.length > 0 && (
@@ -542,6 +622,15 @@ export function GoalsScreen(_props?: any) {
             </div>
           )}
         </div>
+      </div>
+
+      {/* ── Folded away until a date looks wrong ── */}
+      <div style={{ padding: '0 26px 22px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div id="sb-forecast-rules">
+          <ForecastRulesCard rules={forecast.rules} state={forecastState}
+            onChange={putForecast} currency={cur} />
+        </div>
+        <OwnRulesCard state={forecastState} onChange={putForecast} currency={cur} />
       </div>
     </div>
   )

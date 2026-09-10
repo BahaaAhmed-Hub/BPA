@@ -280,7 +280,7 @@ export function buildForecast(input: ForecastInput): Forecast {
       yours: mine('budgets') != null,
       dormant: datedYearly > 0 ? undefined : 'no budget carries dates of its own yet',
       title: 'Budgets with dates land on those dates, not as a monthly average',
-      when: 'Fires for every budget whose shape is <b>once</b> or <b>set dates</b>.',
+      when: 'Fires for every budget whose shape is once, or a set of dates.',
       why: [
         `${money(datedYearly, base)} falls in the next twelve months, across ${dated.slice(0, 12).filter(v => v !== 0).length} of them.`,
         `Spread flat that would be ${money(datedYearly / 12, base)} a month — a figure that leaves the account on no day of the year.`,
@@ -319,7 +319,7 @@ export function buildForecast(input: ForecastInput): Forecast {
       yours: mine('cash') != null,
       dormant: capacity.assets > 0 ? undefined : 'no account is filed as an asset',
       title: 'Only cash is spare — gold, a flat, an investment is not',
-      when: 'Fires for every account filed as an <b>asset</b> rather than a payment account or a wallet.',
+      when: 'Fires for every account filed as an asset rather than a payment account or a wallet.',
       why: [
         `${money(capacity.assets, base)} is held in assets and never spent by the plan.`,
         `Spare cash without it: ${money(capacity.held, base)}.`,

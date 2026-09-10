@@ -447,7 +447,10 @@ export function scheduleGoals(
 export function planGoals(
   goals: Goal[],
   capacity: Capacity,
-  policy: Policy = 'ladder',
+  /** A bare policy, or the same options `scheduleGoals` takes — so a forecast
+   *  that knows March is heavier than April reaches the dates on the rows and
+   *  not only the run drawn under them. */
+  policy: Policy | ScheduleOptions = 'ladder',
   today = todayISO(),
 ): GoalPlan[] {
   const base = capacity.currency
