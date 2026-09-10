@@ -80,18 +80,92 @@ function monthLabel(key: string | null): string {
   return new Date(y, m - 1, 1).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })
 }
 
+/** One line of a breakdown: what it is, what it is worth, and whether it adds
+ *  to the figure, comes off it, or is only being mentioned. */
+export interface Term {
+  label: string
+  amount?: string
+  /** `add` and `less` make up the total; `note` is a figure deliberately left
+   *  out, which is exactly the thing people ask about. */
+  kind?: 'add' | 'less' | 'note' | 'total'
+  muted?: boolean
+}
+
+/** The panel behind the `?`. A sentence can say what a figure means; only a
+ *  list can say where it came from, and "where did 170,433 come from" is the
+ *  question this screen kept being asked. */
+function Breakdown({ title, terms }: { title: string; terms: Term[] }) {
+  return (
+    <div role="tooltip" style={{
+      position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 40, width: 320, maxWidth: '86vw',
+      background: 'var(--sb-overlay)', border: `var(--sb-border-width) solid ${C.border}`,
+      borderRadius: 'var(--sb-r-card)', boxShadow: 'var(--sb-shadow-frame)',
+      padding: '12px 14px', textAlign: 'left', cursor: 'default',
+      fontSize: 'var(--sb-t-meta)', color: C.ink2, lineHeight: 1.5, letterSpacing: 0,
+      textTransform: 'none', fontWeight: 400,
+    }}>
+      <div style={{ ...EYEBROW, marginBottom: 8 }}>{title}</div>
+      {terms.map((t, i) => (
+        <div key={i} style={{
+          display: 'flex', gap: 12, alignItems: 'baseline', padding: '3px 0',
+          borderTop: t.kind === 'total' ? `var(--sb-border-width) solid ${C.border}` : undefined,
+          marginTop: t.kind === 'total' ? 6 : undefined,
+          paddingTop: t.kind === 'total' ? 6 : 3,
+          color: t.kind === 'note' || t.muted ? C.ink4 : t.kind === 'total' ? C.ink1 : C.ink2,
+          fontWeight: t.kind === 'total' ? 700 : 400,
+        }}>
+          <span style={{ minWidth: 0 }}>
+            {t.kind === 'less' ? <span style={{ color: C.ink4 }}>less </span> : null}
+            {t.label}
+          </span>
+          <span style={{ flex: 1 }} />
+          {t.amount && (
+            <span style={{
+              fontFamily: DISPLAY, fontVariantNumeric: 'tabular-nums', flexShrink: 0,
+              color: t.kind === 'less' ? C.red : t.kind === 'note' || t.muted ? C.ink4 : 'inherit',
+            }}>{t.kind === 'less' ? `−${t.amount}` : t.amount}</span>
+          )}
+        </div>
+      ))}
+    </div>
+  )
+}
+
 /** A figure with its label under it — the shape every summary tile uses.
  *
- *  `help` is a plain sentence saying what the figure *is*, on the label. Every
- *  one of these used to be named by its own arithmetic, which tells you how it
- *  was worked out and never what it means. */
-function Stat({ label, value, tone, sub, help }: {
+ *  `help` is a plain sentence saying what the figure *is*. `terms` is where it
+ *  came from, line by line, opened by the `?`. Every one of these used to be
+ *  named by its own arithmetic and explained by nothing. */
+function Stat({ label, value, tone, sub, help, terms }: {
   label: string; value: string; tone?: string; sub?: string; help?: string
+  terms?: Term[]
 }) {
+  const [open, setOpen] = useState(false)
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
-      <span style={{ ...EYEBROW, cursor: help ? 'help' : undefined }} title={help}>
-        {label}{help ? <span aria-hidden style={{ marginLeft: 4, opacity: 0.55 }}>?</span> : null}
+      <span
+        style={{ ...EYEBROW, cursor: help || terms ? 'help' : undefined, position: 'relative', display: 'inline-flex', alignItems: 'center' }}
+        title={terms ? undefined : help}
+        onMouseEnter={() => terms && setOpen(true)}
+        onMouseLeave={() => terms && setOpen(false)}>
+        {label}
+        {(help || terms) && (
+          <button
+            aria-label={`Where ${label} comes from`}
+            aria-expanded={open}
+            onClick={e => { e.stopPropagation(); setOpen(o => !o) }}
+            onFocus={() => terms && setOpen(true)}
+            onBlur={() => terms && setOpen(false)}
+            title={help}
+            style={{
+              marginLeft: 5, width: 14, height: 14, flexShrink: 0, padding: 0, cursor: 'pointer',
+              borderRadius: 'var(--sb-r-pill)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              background: open ? C.ink1 : 'transparent', color: open ? 'var(--sb-ink-on-dark)' : C.ink4,
+              border: `var(--sb-border-width) solid ${open ? C.ink1 : C.border}`,
+              fontFamily: 'inherit', fontSize: 9, fontWeight: 700, lineHeight: 1,
+            }}>?</button>
+        )}
+        {open && terms && <Breakdown title={label} terms={terms} />}
       </span>
       <span style={{
         fontFamily: DISPLAY, fontSize: 'var(--sb-t-h2)', fontWeight: 700, letterSpacing: '-.02em',
@@ -395,6 +469,53 @@ export function GoalsScreen(_props?: any) {
   const money = (n: number) => acct(n, { currency: cur })
   const canAdd = newName.trim().length > 0 && newTarget > 0
 
+  // ── Where each headline figure came from, line by line ────────────────────
+  // Built from `capacity.detail`, which the same pass that produced the totals
+  // emitted, so a breakdown can never disagree with the figure it explains.
+  const d = capacity.detail
+  const fig = (n: number) => group(Math.round(n))
+
+  const readyTerms: Term[] = [
+    ...d.accounts.filter(a => a.counts === 'cash')
+      .map(a => ({ label: a.name, amount: fig(a.amount), kind: 'add' as const })),
+    ...(d.assetsCounted
+      ? d.accounts.filter(a => a.counts === 'asset')
+          .map(a => ({ label: `${a.name} (asset, counted by a rule)`, amount: fig(a.amount), kind: 'add' as const }))
+      : []),
+    ...(capacity.buffer > 0
+      ? [{
+          // A months figure is a setting, not a measurement: two decimals is
+          // the most it could honestly carry, and a whole number carries none.
+          label: `cushion — ${Number(d.bufferMonths.toFixed(2))} month${d.bufferMonths === 1 ? '' : 's'} of typical spending`,
+          amount: fig(capacity.buffer), kind: 'less' as const,
+        }]
+      : []),
+    ...d.earmarks.map(e => ({ label: `${e.name} already holds`, amount: fig(e.amount), kind: 'less' as const })),
+    ...(capacity.committed > 0
+      ? [{ label: 'bills dated ahead, unpaid', amount: fig(capacity.committed), kind: 'less' as const }]
+      : []),
+    { label: 'you could put in today', amount: fig(capacity.free), kind: 'total' as const },
+    ...(!d.assetsCounted
+      ? d.accounts.filter(a => a.counts === 'asset')
+          .map(a => ({ label: `${a.name} — an asset, the plan never sells it`, amount: fig(a.amount), kind: 'note' as const }))
+      : []),
+    ...d.accounts.filter(a => a.counts === 'owed')
+      .map(a => ({ label: `${a.name} — owed, and a debt to clear below`, amount: fig(a.amount), kind: 'note' as const })),
+    ...d.accounts.filter(a => a.counts === 'no-rate')
+      .map(a => ({ label: `${a.name} — no ${a.currency} rate set, so it is in nothing`, amount: fig(a.amount), kind: 'note' as const })),
+  ]
+
+  const monthTerms: Term[] = d.months.length === 0 ? [] : [
+    ...d.months.map(m => ({
+      label: `${monthLabel(m.key)}${m.used ? '' : ' — nothing recorded, dropped'}`,
+      amount: m.used ? `${fig(m.inc)} − ${fig(m.out)}` : '—',
+      kind: 'add' as const,
+      muted: !m.used,
+    })),
+    { label: `middle of the ${capacity.months} that count`, amount: `${fig(capacity.monthlyIn)} − ${fig(capacity.monthlyOut)}`, kind: 'add' as const },
+    { label: 'a month leaves over', amount: fig(capacity.surplus), kind: 'total' as const },
+  ]
+
   // One line about the forecast, and it has to be about *this* ledger or it is
   // decoration. What is applied, what you corrected, and the one thing a flat
   // monthly figure could never have said.
@@ -427,6 +548,7 @@ export function GoalsScreen(_props?: any) {
               arithmetic — "spare now", "a normal month" — which says how they
               were worked out and not what they *are*. */}
           <Stat label="You could put in today" value={money(capacity.free)}
+            terms={readyTerms}
             help="Money you could move into a goal right now: what your payment accounts and wallets hold, less the cushion you asked to keep, less what your goals already hold, less any bill dated ahead that is still unpaid."
             sub={[
               `${group(Math.round(capacity.held))} in current accounts and wallets`,
@@ -440,6 +562,7 @@ export function GoalsScreen(_props?: any) {
             ].filter(Boolean).join(' · ')} />
           <Stat label="A month leaves over" value={money(capacity.surplus)}
             tone={capacity.surplus >= 0 ? C.green : C.red}
+            terms={monthTerms}
             help={`What is left after a typical month's spending, and therefore what can go into goals each month from now on. It is the middle month of the last ${WINDOW_MONTHS} — the middle, so one bonus or one boiler does not reset the plan.`}
             sub={capacity.months > 0
               ? `${group(Math.round(capacity.monthlyIn))} comes in, ${group(Math.round(capacity.monthlyOut))} goes out · your middle month of the last ${capacity.months}`
@@ -523,7 +646,7 @@ export function GoalsScreen(_props?: any) {
       )}
 
       {/* ── The goals, and the one that is open ── */}
-      <div style={{ display: 'flex', gap: 14, padding: '14px 26px 14px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: 14, padding: '14px 26px 22px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
 
         <div style={{
           width: 400, flexShrink: 0, background: C.surface, border: `var(--sb-border-width) solid ${C.border}`,
@@ -638,7 +761,7 @@ export function GoalsScreen(_props?: any) {
         </div>
 
         {/* ── What it would take ── */}
-        <div style={{ flex: 1, minWidth: 300 }}>
+        <div style={{ flex: '2 1 460px', minWidth: 320 }}>
           {selected ? <GoalDetail
             plan={selected}
             place={plans.findIndex(p => p.goal.id === selected.goal.id) + 1}
@@ -662,15 +785,20 @@ export function GoalsScreen(_props?: any) {
             </div>
           )}
         </div>
-      </div>
 
-      {/* ── Folded away until a date looks wrong ── */}
-      <div style={{ padding: '0 26px 22px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <div id="sb-forecast-rules">
-          <ForecastRulesCard rules={forecast.rules} state={forecastState}
-            onChange={putForecast} currency={cur} />
+        {/* ── Folded away until a date looks wrong ──
+            Beside the open goal rather than under everything: the detail card
+            is capped at 720 and left a column of empty page to its right, and
+            these two were a scroll away at the bottom of it. */}
+        <div style={{
+          flex: '1 1 300px', minWidth: 280, display: 'flex', flexDirection: 'column', gap: 12,
+        }}>
+          <div id="sb-forecast-rules">
+            <ForecastRulesCard rules={forecast.rules} state={forecastState}
+              onChange={putForecast} currency={cur} />
+          </div>
+          <OwnRulesCard state={forecastState} onChange={putForecast} currency={cur} />
         </div>
-        <OwnRulesCard state={forecastState} onChange={putForecast} currency={cur} />
       </div>
     </div>
   )

@@ -304,7 +304,11 @@ export function buildForecast(input: ForecastInput): Forecast {
     },
     {
       id: 'buffer', source: 'setting', unit: 'months held back', on: !isOff('buffer'),
-      value: mine('buffer') ?? (capacity.months > 0 && medOut > 0 ? capacity.buffer / medOut : null),
+      // The number of months is a setting somebody chose, so say that number.
+      // It used to be re-derived as buffer ÷ this file's own median, which is
+      // not the median the buffer was built from once a rule corrects the
+      // spending — and one month came back as 0.9649122807017544.
+      value: mine('buffer') ?? capacity.detail.bufferMonths,
       yours: mine('buffer') != null,
       title: 'Keep some months back before anything is called spare',
       when: 'Fires always. The number is yours, on this screen.',
@@ -407,6 +411,14 @@ export function buildForecast(input: ForecastInput): Forecast {
       monthlyIn: income,
       monthlyOut: spend,
       surplus: income - spend,
+      // The rules can move the cushion and can fold the assets into what is
+      // held, so the breakdown has to be told — otherwise a tooltip explains a
+      // figure with the terms of the one before it.
+      detail: {
+        ...capacity.detail,
+        bufferMonths,
+        assetsCounted: !(rules.find(r => r.id === 'cash')?.on ?? true),
+      },
     },
   }
 }

@@ -66,6 +66,35 @@ export interface Capacity {
   /** Entries dated ahead that have not been paid — already spoken for. */
   committed: number
   currency: string
+  /** The line items behind the two headline figures.
+   *
+   *  A number nobody can take apart is a number nobody can check, and these
+   *  two are the ones the whole screen rests on. They are emitted by the same
+   *  pass that produces the totals, so a breakdown can never disagree with the
+   *  figure it explains. */
+  detail: CapacityDetail
+}
+
+export interface CapacityDetail {
+  /** Every account, what it holds in the base currency, and how it counted. */
+  accounts: {
+    id: string; name: string; amount: number
+    /** `cash` is in `held`; `asset` is named and never spent; `owed` is a card
+     *  in the red, which becomes a goal to clear rather than a subtraction;
+     *  `no-rate` could not be converted and is in nothing at all. */
+    counts: 'cash' | 'asset' | 'owed' | 'no-rate'
+    currency: string
+  }[]
+  /** Each goal's saved amount — what comes off as already earmarked. */
+  earmarks: { id: string; name: string; amount: number }[]
+  /** The window the medians were read from, month by month. `used` is false
+   *  for a month with nothing in it, which is dropped before the median. */
+  months: { key: string; inc: number; out: number; used: boolean }[]
+  /** How the cushion was arrived at. */
+  bufferMonths: number
+  /** True when a forecast rule has folded the assets into what is held, so the
+   *  breakdown can say they are counted rather than named and set aside. */
+  assetsCounted?: boolean
 }
 
 const monthKey = (iso: string) => iso.slice(0, 7)
@@ -104,19 +133,25 @@ export function capacityFrom(
   let held = 0
   let assets = 0
   let owed = 0
+  const acctRows: CapacityDetail['accounts'] = []
   for (const a of accounts) {
-    const v = toBase(balances.get(a.id) ?? a.balance, a.currency, base)
-    if (v === null) continue
-    if (v < 0) { owed += -v; continue }
-    if (SPENDABLE.includes(a.accountType)) held += v
-    else assets += v
+    const raw = balances.get(a.id) ?? a.balance
+    const v = toBase(raw, a.currency, base)
+    if (v === null) { acctRows.push({ id: a.id, name: a.name, amount: raw, counts: 'no-rate', currency: a.currency }); continue }
+    if (v < 0) { owed += -v; acctRows.push({ id: a.id, name: a.name, amount: -v, counts: 'owed', currency: base }); continue }
+    if (SPENDABLE.includes(a.accountType)) { held += v; acctRows.push({ id: a.id, name: a.name, amount: v, counts: 'cash', currency: base }) }
+    else { assets += v; acctRows.push({ id: a.id, name: a.name, amount: v, counts: 'asset', currency: base }) }
   }
 
   // What the goals already hold is in those same accounts and is spoken for.
   let earmarked = 0
+  const earmarks: CapacityDetail['earmarks'] = []
   for (const g of goals) {
     const v = toBase(g.currentAmount, g.currency ?? base, base)
-    if (v !== null) earmarked += Math.max(0, v)
+    if (v === null) continue
+    const amount = Math.max(0, v)
+    earmarked += amount
+    if (amount > 0) earmarks.push({ id: g.id, name: g.name, amount })
   }
 
   // A normal month, from what actually moved.
@@ -163,6 +198,12 @@ export function capacityFrom(
     months: live.length,
     committed,
     currency: base,
+    detail: {
+      accounts: acctRows,
+      earmarks,
+      months: keys.map(k => ({ key: k, inc: inBy.get(k)!, out: outBy.get(k)!, used: live.includes(k) })),
+      bufferMonths,
+    },
   }
 }
 

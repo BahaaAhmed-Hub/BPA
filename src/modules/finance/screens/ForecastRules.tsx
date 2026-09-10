@@ -22,13 +22,17 @@ const CARD: React.CSSProperties = {
 }
 const SUMMARY: React.CSSProperties = {
   cursor: 'pointer', listStyle: 'none', padding: '12px 16px',
-  display: 'flex', alignItems: 'center', gap: 10,
+  // Wrap rather than squeeze. Beside the open goal these cards are about
+  // 300px, and a row of title-then-caption broke the title across three lines
+  // to keep the caption on the same line as it.
+  display: 'flex', alignItems: 'baseline', gap: '2px 10px', flexWrap: 'wrap',
   fontFamily: 'var(--sb-font-display)', fontSize: 'var(--sb-t-body)', fontWeight: 600,
   letterSpacing: '-0.02em', color: 'var(--sb-ink-1)',
 }
 const WHY: React.CSSProperties = {
-  marginLeft: 'auto', fontFamily: 'system-ui', fontWeight: 400,
+  marginLeft: 'auto', flexBasis: '100%', fontFamily: 'system-ui', fontWeight: 400,
   fontSize: 'var(--sb-t-meta)', color: 'var(--sb-ink-4)', letterSpacing: 0,
+  lineHeight: 1.45,
 }
 const INNER: React.CSSProperties = {
   padding: '14px 16px 16px', borderTop: 'var(--sb-border-width) solid var(--sb-hairline)',
